@@ -31,20 +31,27 @@ Directories used by More than One Role
     placed on a local filesystem on each machine.  By default, they
     are placed in the ``LOG`` directory.
 
-Directories use by the Submi Role
-=================================
+Directories use by the Submit Role
+==================================
 
  ``SPOOL``
-    The :macro:`SPOOL` directory holds the job queue and history files,
-    and the files transferred, if any, when a job which set
-    ``when_to_transfer_files`` to ``EXIT_OR_EVICT`` is evicted.  It
-    also holds the input and output files of remotely-submitted jobs.
+    The :macro:`SPOOL` directory holds two types of files: system
+    data and (user) job data.  The former includes the job queue and
+    history files.  The latter includes:
+
+    - the files transferred, if any, when a job which set
+      ``when_to_transfer_files`` to ``EXIT_OR_EVICT`` is evicted.
+    - the input and output files of remotely-submitted jobs.
+    - the checkpoint files stored by self-checkpointing jobs.
+
     Disk usage therefore varies widely based on the job mix, but
     since the schedd will abort if it can't append to the job queue log,
     you want to make sure this directory is on a partition which
-    won't run out of space.  You may also set
-    :macro:`JOB_QUEUE_LOG` to separate the (system) job queue
-    log from (user) job data.  This can also be used to increase performance
+    won't run out of space.
+
+    To help ensure this, you may set
+    :macro:`JOB_QUEUE_LOG` to separate the job queue log (system data)
+    from the (user) job data.  This can also be used to increase performance
     (or reliability) by moving the job queue log to specialized hardware (an
     SSD or a a high-redudancy RAID, for example).
 

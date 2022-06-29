@@ -4,7 +4,7 @@
 #include "condor_commands.h"
 
 #include "ce-audit-plugin.h"
-#include "Regex.h"
+#include "condor_regex.h"
 
 #include <algorithm>
 #include <iterator>

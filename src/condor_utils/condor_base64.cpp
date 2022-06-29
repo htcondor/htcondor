@@ -23,18 +23,15 @@
 #include "condor_base64.h"
 
 // For base64 encoding
-#if HAVE_EXT_OPENSSL
 # include <openssl/sha.h>
 # include <openssl/hmac.h>
 # include <openssl/evp.h>
 # include <openssl/bio.h>
 # include <openssl/buffer.h>
-#endif
 
 // Caller needs to free the returned pointer
 char* condor_base64_encode(const unsigned char *input, int length, bool include_newline)
 {
-#if HAVE_EXT_OPENSSL
 	BIO *bmem, *b64;
 	BUF_MEM *bptr;
 
@@ -57,18 +54,11 @@ char* condor_base64_encode(const unsigned char *input, int length, bool include_
 	BIO_free_all(b64);
 
 	return buff;
-#else
-	(void) input;
-	(void) length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
-	return NULL;
-#endif
 }
 
 // Caller needs to free *output if non-NULL
 void condor_base64_decode(const char *input,unsigned char **output, int *output_length, bool require_newline)
 {
-#if HAVE_EXT_OPENSSL
 	BIO *b64, *bmem;
 
 	ASSERT( input );
@@ -96,11 +86,5 @@ void condor_base64_decode(const char *input,unsigned char **output, int *output_
 	}
 
 	BIO_free_all(bmem);
-#else
-	(void) input;
-	(void) output;
-	(void) output_length;
-	EXCEPT( "condor_base64_encode() not available: HAVE_EXT_OPENSSL is false" );
-#endif
 }
 

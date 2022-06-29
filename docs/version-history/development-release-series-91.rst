@@ -4,6 +4,41 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.11.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.11.0 released on Month Date, 2022.
+
+- HTCondor version 9.11.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9015`.
+
+New Features:
+
+- Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
+  :jira:`1173`
+
+- The ``ADVERTISE_MASTER``, ``ADVERTISE_SCHEDD``, and
+  ``ADVERTISE_STARTD`` authorization levels now also provide ``READ``
+  level authorization.
+  :jira:`1164`
+
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs
+  :jira:`1180`
+
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
+Bugs Fixed:
+
+- None.
+
 Version 9.10.0
 --------------
 
@@ -28,6 +63,12 @@ Release Notes:
   has been changed to ``False``.
   :jira:`1161`
 
+- Removed support for the WriteUserLog class from libcondorapi.a.  This
+  class was difficult to use correctly, and to our knowledge it is not
+  currently in use.  Programmer who need to read the condor event
+  log are recommended to do so from the HTCondor python bindings.
+  :jira:`1163`
+
 New Features:
 
 - Added support for running on Linux systems that ship with openssl version 3
@@ -37,10 +78,10 @@ New Features:
   a technology preview and still not ready for general use.
   :jira:`1063`
   
-- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
-  to allow passed variables to be initalized before or after DAG jobs are
+- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initialized before or after DAG jobs are
   submitted. Any ``VARS`` without these options will have behavior derived
-  from ``DAGMAN_DEFAULT_APPEND_VARS`` config variable.
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
   :jira:`1080`
 
 - The remote administration capability in daemon ads sent to the
@@ -54,7 +95,7 @@ New Features:
   authentication with the ARC CE server.
   :jira:`1061`
 
-- All regular expressions in configuration and in the classad regexp function
+- All regular expressions in configuration and in the ClassAd regexp function
   now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
   will break no existing regular expressions.
   :jira:`1087`
@@ -65,10 +106,22 @@ New Features:
   work in the future.
   :jira:`1137`
 
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
+
+- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
+  on Alma Linux 8 and equivalent platforms.
+  :jira:`1150`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
-  ``SizeBytesTotal`` values from overflowing and becoming negative when transfering
+  ``SizeBytesTotal`` values from overflowing and becoming negative when transferring
   files greater than two gigabytes via plugin.
   :jira:`1103`
   
@@ -86,9 +139,7 @@ Version 9.9.1
 
 Release Notes:
 
-.. HTCondor version 9.9.1 released on Month Date, 2022.
-
-- HTCondor version 9.9.1 not yet released.
+- HTCondor version 9.9.1 released on June 14, 2022.
 
 New Features:
 

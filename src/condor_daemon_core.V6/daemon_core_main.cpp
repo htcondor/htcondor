@@ -687,7 +687,7 @@ check_parent( )
 		dprintf(D_ALWAYS,
 			"Our parent process (pid %d) went away; shutting down fast\n",
 			daemonCore->getppid());
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT ); // SIGQUIT means shutdown fast
+		daemonCore->Signal_Myself(SIGQUIT); // SIGQUIT means shutdown fast
 	}
 }
 #endif
@@ -1499,7 +1499,7 @@ handle_off_fast(int, Stream* stream)
 		return FALSE;
 	}
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 	}
 	return TRUE;
 }
@@ -1513,7 +1513,7 @@ handle_off_graceful(int, Stream* stream)
 		return FALSE;
 	}
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -1540,7 +1540,7 @@ handle_off_force(int, Stream* stream)
 	if (daemonCore) {
 		daemonCore->SetPeacefulShutdown( false );
 		SigtermContinue::sigterm_should_continue();
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -1557,7 +1557,7 @@ handle_off_peaceful(int, Stream* stream)
 	}
 	if (daemonCore) {
 		daemonCore->SetPeacefulShutdown(true);
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -2381,7 +2381,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 	} else {
-#if defined(HAVE_EXT_OPENSSL)
 		auto &token_request = *(iter->second);
 		CondorError err;
 		std::string token;
@@ -2401,10 +2400,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 			token_request.setToken(token);
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 0);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Support for tokens not available");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
-#endif
 	}
 
 	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
@@ -2708,7 +2703,6 @@ handle_dc_session_token(int, Stream* stream)
 	}
 	else
 	{
-#if defined(HAVE_EXT_OPENSSL)
 		std::string token;
 		if (!Condor_Auth_Passwd::generate_token(
 			auth_user,
@@ -2724,10 +2718,6 @@ handle_dc_session_token(int, Stream* stream)
 		} else {
 			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
-#endif
 	}
 
 	stream->encode();
@@ -3091,7 +3081,7 @@ void
 unix_sighup(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+		daemonCore->Signal_Myself(SIGHUP);
 	}
 }
 
@@ -3100,7 +3090,7 @@ void
 unix_sigterm(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
@@ -3109,7 +3099,7 @@ void
 unix_sigquit(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 	}
 }
 
@@ -3118,7 +3108,7 @@ void
 unix_sigchld(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+		daemonCore->Signal_Myself(SIGCHLD);
 	}
 }
 
@@ -3127,7 +3117,7 @@ void
 unix_sigusr1(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+		daemonCore->Signal_Myself(SIGUSR1);
 	}
 	
 }
@@ -3136,7 +3126,7 @@ void
 unix_sigusr2(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+		daemonCore->Signal_Myself(SIGUSR2);
 	}
 }
 
@@ -3255,16 +3245,16 @@ TimerHandler_main_shutdown_fast()
 int
 handle_dc_sigterm(int )
 {
+	const char * xful = daemonCore->GetPeacefulShutdown() ? "peaceful" : "graceful";
 		// Introduces a race condition.
 		// What if SIGTERM received while we are here?
 	if( !SigtermContinue::should_sigterm_continue() ) {
-		dprintf( D_FULLDEBUG, 
-				 "Got SIGTERM, but we've already done graceful shutdown.  Ignoring.\n" );
+		dprintf(D_STATUS, "Got SIGTERM, but we've already started %s shutdown.  Ignoring.\n", xful );
 		return TRUE;
 	}
 	SigtermContinue::sigterm_should_not_continue(); // After this
 
-	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
+	dprintf(D_STATUS, "Got SIGTERM. Performing %s shutdown.\n", xful);
 
 #if defined(WIN32) && 0
 	if ( line_where_service_stopped != 0 ) {

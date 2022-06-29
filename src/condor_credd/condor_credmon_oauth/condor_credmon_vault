@@ -46,7 +46,7 @@ def signal_handler(logger, send_queue, signum, frame):
 
 def main():
 
-    htcondor.set_subsystem("CREDMON_OAUTH", True, htcondor.SubsystemType.Daemon)
+    htcondor.set_subsystem("CREDMON_OAUTH", htcondor.SubsystemType.Daemon)
     (options, args) = parser.parse_args()
 
     cred_dir = get_cred_dir(cred_dir = options.cred_dir)

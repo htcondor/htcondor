@@ -118,7 +118,7 @@ elseif ( DEB_SYSTEM_NAME AND CONDOR_PACKAGE_BUILD)
 						DESTINATION	"${C_ETC}"
 						RENAME	condor_config)
 
-elseif( DARWIN )
+elseif( APPLE )
 
 	install(FILES         condor_config.tarball
 	        DESTINATION   "${C_ETC}"

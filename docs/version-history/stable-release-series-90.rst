@@ -7,6 +7,40 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.15 released on Month Date, 2022.
+
+- HTCondor version 9.0.15 not yet released.
+
+New Features:
+
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs.
+  :jira:`1193`
+
+Bugs Fixed:
+
+- Fixed a bug on Windows that caused a misleading error message about
+  the SharedPortEndpoint when a daemon exits.
+  :jira:`1178`
+
+- Fixed a bug where the *condor_check_config* tool raised an UnboundLocalError
+  due to an undefined variable.
+  :jira:`1186`
+
+- Fixed a file descriptor leak when using SciTokens for authentication.
+  :jira:`1188`
+
+- Fixed a bug in *condor_gpu_discovery* which would cause the tool to crash
+  when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
+  :jira:`1191`
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
@@ -43,6 +77,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+
+- Make ``condor-externals`` package dependency less strict to ease transition
+  between CHTC and OSG RPM repositories.
+  :jira:`1177`
 
 .. _lts-version-history-9013:
 

@@ -756,7 +756,7 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY );
+	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY, condorState );
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
@@ -822,7 +822,7 @@ int BaseJob::EvalOnExitJobExpr()
 	// TODO: We should just mark the job as done running
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT );
+	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT, condorState );
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 

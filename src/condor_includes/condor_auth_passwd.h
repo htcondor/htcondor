@@ -21,11 +21,6 @@
 #ifndef CONDOR_AUTH_PASSWD
 #define CONDOR_AUTH_PASSWD
 
-// Where HAVE_EXT_OPENSSL is defined.
-#include "config.h"
-
-#if defined(HAVE_EXT_OPENSSL)
-
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
 
@@ -372,7 +367,5 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 	static bool m_should_search_for_tokens; // Should we search for tokens?
 	static bool m_tokens_avail; // Are any tokens known to be available?
 };
-
-#endif /* HAVE_EXT_OPENSSL */
 
 #endif /* CONDOR_AUTH_PASSWD */

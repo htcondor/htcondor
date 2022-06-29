@@ -20,12 +20,13 @@
 #include <algorithm>
 #include "compat_classad.h"
 
+#include "MyString.h"
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
 #include "condor_config.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"
@@ -2321,72 +2322,6 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 
 	return true;
 }
-	
-int
-_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
-{
-	classad::ClassAd::const_iterator itr;
-
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true, true );
-	std::string value;
-
-	const classad::ClassAd *parent = ad.GetChainedParentAd();
-
-	std::map< std::string, std::string > attributes;
-	if ( parent ) {
-		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
-				continue; // not in white-list
-			}
-			if ( ad.LookupIgnoreChain(itr->first) ) {
-				continue; // attribute exists in child ad; we will print it below
-			}
-			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-				value = "";
-				unp.Unparse( value, itr->second );
-				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
-				attributes[ itr->first ] = value;
-			}
-		}
-	}
-
-	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
-			continue; // not in white-list
-		}
-		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-			value = "";
-			unp.Unparse( value, itr->second );
-			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
-			attributes[ itr->first ] = value;
-		}
-	}
-
-	std::vector< std::string> keys;
-	for( auto i = attributes.begin(); i != attributes.end(); ++i ) {
-		keys.push_back( i->first );
-	}
-	std::sort( keys.begin(), keys.end() );
-	for( auto i = keys.begin(); i != keys.end(); ++i ) {
-		output.formatstr_cat( "%s = %s\n", i->c_str(), attributes[ *i ].c_str() );
-	}
-
-	return TRUE;
-}
-
-int
-sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
-	return _sPrintAd( output, ad, true, attr_include_list );
-}
-
-int
-sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
-	return _sPrintAd( output, ad, false, attr_include_list );
-}
-
 
 int
 sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
@@ -2442,34 +2377,6 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 /** Format the given attributes from the ClassAd as an old ClassAd into the given string
 	@param output The std::string to write into
 	@return TRUE
-	Note: this function and its sister that outputs to std::string do not call each other for reasons of efficiency...
-*/
-int
-sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References &attrs )
-{
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true, true );
-	std::string line;
-
-	classad::References::const_iterator it;
-	for (it = attrs.begin(); it != attrs.end(); ++it) {
-		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
-		if (tree) {
-			line = *it;
-			line += " = ";
-			unp.Unparse( line, tree );
-			line += "\n";
-			output += line;
-		}
-	}
-
-	return TRUE;
-}
-
-/** Format the given attributes from the ClassAd as an old ClassAd into the given string
-	@param output The std::string to write into
-	@return TRUE
-	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
 */
 int
 sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )

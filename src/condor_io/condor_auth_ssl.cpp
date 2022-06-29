@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 
-#if defined(HAVE_EXT_OPENSSL)
 #define ouch(x) dprintf(D_SECURITY,"SSL Auth: %s",x)
 #include "authentication.h"
 #include "condor_auth_ssl.h"
@@ -1830,4 +1829,3 @@ Condor_Auth_SSL::should_try_auth()
 	m_cert_avail = true;
 	return true;
 }
-#endif

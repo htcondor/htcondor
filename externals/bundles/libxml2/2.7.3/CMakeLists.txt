@@ -16,7 +16,7 @@
  #
  ###############################################################
 
-if (LINUX OR DARWIN)
+if (LINUX OR APPLE)
   option(WITH_LIBXML2 "Compiling with support for LIBXML2" ON)
 endif()
 

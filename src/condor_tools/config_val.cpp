@@ -51,7 +51,7 @@
 #include "string_list.h"
 #include "simplelist.h"
 #include "subsystem_info.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #ifdef WIN32
  #include "exception_handling.WINDOWS.h"
 #endif

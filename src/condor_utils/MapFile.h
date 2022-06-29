@@ -21,7 +21,7 @@
 #define _MAPFILE_H
 
 #include "condor_common.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "extArray.h"
 #include "MyString.h"
 
