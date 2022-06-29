@@ -24,6 +24,7 @@ namespace manifest {
 
     int  getNumberFromFileName( const std::string & fileName );
     bool validateFile( const std::string & fileName );
+    bool validateFilesListedIn( const std::string & fileName, std::string & error );
     std::string FileFromLine( const std::string & manifestLine );
     std::string ChecksumFromLine( const std::string & manifestLine );
 }

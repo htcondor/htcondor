@@ -94,4 +94,44 @@ ChecksumFromLine( const std::string & manifestLine ) {
 	return manifestLine.substr(0, pos);
 }
 
+bool
+validateFilesListedIn(
+  const std::string & manifestFileName,
+  std::string & error
+) {
+	std::ifstream ifs( manifestFileName.c_str() );
+	if(! ifs.good() ) {
+		error = "Failed to open MANIFEST, aborting.";
+		return false;
+	}
+
+	// This doesn't check the checksum on the last line, because
+	// that's what the validator does.
+	std::string manifestLine;
+	std::string nextManifestLine;
+	std::getline( ifs, manifestLine );
+	std::getline( ifs, nextManifestLine );
+	for( ; ifs.good(); ) {
+		std::string file = manifest::FileFromLine( manifestLine );
+		std::string listedChecksum = manifest::ChecksumFromLine( manifestLine );
+
+		std::string computedChecksum;
+		if(! compute_file_checksum( file, computedChecksum )) {
+			formatstr( error, "Failed to open checkpoint file ('%s') to compute checksum.", file.c_str() );
+			return false;
+		}
+
+		if( listedChecksum != computedChecksum ) {
+			formatstr( error, "Checkpoint file '%s' did not have expected checksum (%s vs %s).", file.c_str(), computedChecksum.c_str(), listedChecksum.c_str() );
+			return false;
+		}
+
+		manifestLine = nextManifestLine;
+		std::getline( ifs, nextManifestLine );
+	}
+
+	ifs.close();
+	return true;
+}
+
 } /* end namespace 'manifest' */

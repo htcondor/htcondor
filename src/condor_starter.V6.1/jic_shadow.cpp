@@ -2625,43 +2625,13 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 					EXCEPT( "%s\n", message.c_str() );
 				}
 
-				std::ifstream ifs( manifestFileName.c_str() );
-				if(! ifs.good() ) {
-					std::string message = "Failed to open MANIFEST, aborting.";
-					notifyStarterError( message.c_str(), true, 0, 0 );
-					EXCEPT( "%s\n", message.c_str() );
+				std::string error;
+				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					formatstr( error, "%s, aborting.", error.c_str() );
+					notifyStarterError( error.c_str(), true, 0, 0 );
+					EXCEPT( "%s\n", error.c_str() );
 				}
 
-				// This doesn't check the checksum on the last line, because
-				// that's what the validator does.
-				std::string manifestLine;
-				std::string nextManifestLine;
-				std::getline( ifs, manifestLine );
-				std::getline( ifs, nextManifestLine );
-				for( ; ifs.good(); ) {
-					std::string file = manifest::FileFromLine( manifestLine );
-					std::string listedChecksum = manifest::ChecksumFromLine( manifestLine );
-
-					std::string computedChecksum;
-					if(! compute_file_checksum( file, computedChecksum )) {
-						std::string message;
-						formatstr( message, "Failed to open checkpoint file ('%s') to compute checksum.", file.c_str() );
-						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( "%s\n", message.c_str() );
-					}
-
-					if( listedChecksum != computedChecksum ) {
-						std::string message;
-						formatstr( message, "Checkpoint file '%s' did not have expected checksum (%s vs %s).", file.c_str(), computedChecksum.c_str(), listedChecksum.c_str() );
-						notifyStarterError( message.c_str(), true, 0, 0 );
-						EXCEPT( "%s\n", message.c_str() );
-					}
-
-					manifestLine = nextManifestLine;
-					std::getline( ifs, nextManifestLine );
-				}
-
-				ifs.close();
 				unlink( manifestFileName.c_str() );
 			}
 		}
