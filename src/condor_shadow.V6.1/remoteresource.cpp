@@ -1864,10 +1864,6 @@ RemoteResource::beginExecution( void )
 	//
 	time_t now = time(NULL);
 	activation.StartExecutionTime = now;
-	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
-    // Where would this attribute get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
-	shadow->updateJobInQueue(U_STATUS);
 
 	if( began_execution ) {
 		return;
@@ -1878,6 +1874,14 @@ RemoteResource::beginExecution( void )
 
 	// add the execution start time into the job ad.
 	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
+
+	// add ActivationSetupDuration into the job ad.
+	// note: we do this just once after the the first exectution, we do not
+	// want to update after every exectuion (if the job checkpoints).
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
 
 	startCheckingProxy();
 
