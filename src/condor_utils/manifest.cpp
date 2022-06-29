@@ -35,7 +35,7 @@ getNumberFromFileName( const std::string & fn ) {
 	if( fileName == strstr( fileName, "MANIFEST." ) ) {
 		char * endptr;
 		const char * suffix = fileName + 9;
-		if( *suffix != '\0' ) {
+		if( *suffix != '\0' && isdigit(*suffix) ) {
 			int manifestNumber = strtol( suffix, & endptr, 10 );
 			if( *endptr == '\0' ) {
 				return manifestNumber;
@@ -107,6 +107,7 @@ validateFilesListedIn(
 
 	// This doesn't check the checksum on the last line, because
 	// that's what the validator does.
+	bool readOneLine = false;
 	std::string manifestLine;
 	std::string nextManifestLine;
 	std::getline( ifs, manifestLine );
@@ -128,10 +129,11 @@ validateFilesListedIn(
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );
+		readOneLine = true;
 	}
 
 	ifs.close();
-	return true;
+	return readOneLine;
 }
 
 } /* end namespace 'manifest' */

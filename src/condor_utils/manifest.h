@@ -22,9 +22,21 @@
 
 namespace manifest {
 
-    int  getNumberFromFileName( const std::string & fileName );
+    // If `fileName` matches `/^MANIFEST.(d\+)$/`, return (\d+) as an int;
+    // otherwise return -1.
+    int getNumberFromFileName( const std::string & fileName );
+
     bool validateFile( const std::string & fileName );
+
+    // Return true if each line in fileName lists the correct SHA256 checksum
+    // for the file it lists.  Returns false it the file doesn't exist or
+    // doesn't have at least two lines in it.
+    //
+    // MANIFEST files contain relative paths, so this function must be run
+    // from the same relative path as was used to generate the MANIFEST file
+    // (which should always be the containing directory).
     bool validateFilesListedIn( const std::string & fileName, std::string & error );
+
     std::string FileFromLine( const std::string & manifestLine );
     std::string ChecksumFromLine( const std::string & manifestLine );
 }
