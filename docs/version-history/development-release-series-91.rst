@@ -4,6 +4,23 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.10.1
+-------------
+
+Release Notes:
+
+- HTCondor version 9.10.1 released on Month Date, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed inflated values for job attribute ``ActivationSetupDuration`` if
+  the job checkpoints.
+  :jira:`1190`
+
 Version 9.10.0
 --------------
 
