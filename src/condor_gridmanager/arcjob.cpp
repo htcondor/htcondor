@@ -228,7 +228,8 @@ ArcJob::ArcJob( ClassAd *classad )
 		goto error_exit;
 	}
 	snprintf( buff, sizeof(buff), "ARC/%s#%s",
-	          jobProxy ? jobProxy->subject->fqan : "", m_tokenFile.c_str() );
+	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
+	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -267,7 +268,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
-	                                                jobProxy, m_tokenFile );
+	                 m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
@@ -360,7 +361,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			if ( jobProxy && gahp->Initialize( jobProxy ) == false ) {
+			if ( m_tokenFile.empty() && jobProxy && gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 
