@@ -381,7 +381,7 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if (jobProxy) {
+			if (m_tokenFile.empty() && jobProxy) {
 				gahp->setDelegProxy( jobProxy );
 			}
 
@@ -449,7 +449,7 @@ void ArcJob::doEvaluateState()
 			std::string deleg_id;
 
 			rc = gahp->arc_delegation_new( resourceManagerString,
-			                               deleg_id );
+			                               jobProxy->proxy_filename, deleg_id );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
