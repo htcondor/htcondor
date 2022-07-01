@@ -118,6 +118,10 @@ New Features:
   on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
 
+- The *condor_schedd* now adds the ``ServerTime`` attribute to the job
+  ads of a query only if the client (i.e. *condor_q*) requests it.
+  :jira:`1125`
+
 Bugs Fixed:
 
 - Fixed the ``TransferInputStats`` nested attributes ``SizeBytesLastRun`` and
