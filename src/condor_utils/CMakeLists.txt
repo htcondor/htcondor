@@ -147,6 +147,8 @@ build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checksum.cpp
+checksum.h
 classad_collection.cpp
 classad_collection.h
 classad_command_util.cpp
@@ -349,6 +351,8 @@ log_rotate.h
 log_transaction.cpp
 log_transaction.h
 make_printmask.cpp
+manifest.cpp
+manifest.h
 MapFile.cpp
 MapFile.h
 mark_thread.cpp
