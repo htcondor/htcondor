@@ -327,12 +327,12 @@ SINGULARITY = ${PILOT_DIR}/singularity.sh
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
 
-# Create dynamic slots 3 GB at a time.  This number was chosen because it's
-# the amount of RAM requested per core on the OS Pool, but we actually bother
+# Create dynamic slots 2 GB at a time.  This number was chosen because it's
+# the amount of RAM handed out per core on Expanse, but we actually bother
 # to set it because we start seeing weird scaling issues with more than 64
 # or so slots.  Since we can't fix that problem right now, avoid it.
 MUST_MODIFY_REQUEST_EXPRS = TRUE
-MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 3072, quantize(RequestMemory, {128}) })
+MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 2048, quantize(RequestMemory, {128}) })
 
 " > local/config.d/00-basic-pilot
 
