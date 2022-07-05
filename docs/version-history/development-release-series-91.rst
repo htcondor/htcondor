@@ -35,6 +35,11 @@ New Features:
   the admin has intentionally stopped the negotiator.
   :jira:`1185`
 
+- When an **arc** grid universe job has both a token and an X.509
+  proxy, now only the token is used for authentication with the ARC CE
+  server. The proxy is still delegated for use by the job.
+  :jira:`1194`
+
 Bugs Fixed:
 
 - None.
