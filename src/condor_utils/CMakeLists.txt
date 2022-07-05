@@ -432,6 +432,7 @@ spooled_job_files.cpp
 spooled_job_files.h
 spool_version.cpp
 spool_version.h
+ssl_version_hack.h
 stat_info.cpp
 stat_info.h
 status_string.cpp

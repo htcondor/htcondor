@@ -26,6 +26,7 @@
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <ssl_version_hack.h>
 
 #include "safe_open.h"
 #include "AWSv4-impl.h"
@@ -37,10 +38,10 @@ compute_checksum( int fd, std::string & checksum ) {
     unsigned char * buffer = (unsigned char *)calloc(BUF_SIZ, 1);
     ASSERT( buffer != NULL );
 
-    EVP_MD_CTX * context = EVP_MD_CTX_new();
+    EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
     if( context == NULL ) { return false; }
     if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
-        EVP_MD_CTX_free( context );
+        condor_EVP_MD_CTX_free( context );
         return false;
     }
 
@@ -59,10 +60,10 @@ compute_checksum( int fd, std::string & checksum ) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     memset( hash, 0, sizeof(hash) );
     if(! EVP_DigestFinal_ex( context, hash, NULL )) {
-        EVP_MD_CTX_destroy( context );
+        condor_EVP_MD_CTX_free( context );
         return false;
     }
-    EVP_MD_CTX_destroy( context );
+    condor_EVP_MD_CTX_free( context );
 
     if( bytesRead == -1 ) { return false; }
 

@@ -24,6 +24,7 @@
 
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include "ssl_version_hack.h"
 
 #include "manifest.h"
 #include "checksum.h"
@@ -51,10 +52,10 @@ getNumberFromFileName( const std::string & fn ) {
 
 bool
 validateFile( const std::string & fileName ) {
-	EVP_MD_CTX * context = EVP_MD_CTX_new();
+	EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
 	if( context == NULL ) { return false; }
 	if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
-		EVP_MD_CTX_free( context );
+		condor_EVP_MD_CTX_free( context );
 		return false;
 	}
 
@@ -74,10 +75,10 @@ validateFile( const std::string & fileName ) {
 	unsigned char hash[SHA256_DIGEST_LENGTH];
 	memset( hash, 0, sizeof(hash) );
 	if(! EVP_DigestFinal_ex( context, hash, NULL )) {
-		EVP_MD_CTX_destroy( context );
+		condor_EVP_MD_CTX_free( context );
 		return false;
 	}
-	EVP_MD_CTX_destroy( context );
+	condor_EVP_MD_CTX_free( context );
 
 	std::string file_hash;
 	AWSv4Impl::convertMessageDigestToLowercaseHex(
