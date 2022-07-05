@@ -40,7 +40,7 @@ extern const MACRO_SOURCE DefaultMacro;
 
 class YourString ystr; // most recent lookup
 auto_free_ptr gstr;    // holds a pointer from the most recent lookup that should be freed
-MyString gmstr;   // holds a formatted string that results from dumping a macro set
+std::string gmstr;   // holds a formatted string that results from dumping a macro set
 
 bool dash_verbose = false;
 int fail_count;
@@ -279,7 +279,7 @@ static void clear_macro_set(MACRO_SET & set)
 	}
 }
 
-static void dump_macro_set(MACRO_SET & set, MyString & str, const char * prefix) {
+static void dump_macro_set(MACRO_SET & set, std::string & str, const char * prefix) {
 	str.clear();
 	HASHITER it = hash_iter_begin(set, HASHITER_NO_DEFAULTS | HASHITER_SHOW_DUPS);
 	while( ! hash_iter_done(it)) {

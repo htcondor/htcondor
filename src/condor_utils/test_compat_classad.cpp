@@ -43,7 +43,6 @@ bool test_sPrintAdAsXML(int verbose); //I guess if fPrintAdAsXML works,
 bool test_ChainCollapse(ClassAd *c2, ClassAd *c3, int verbose);
 bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose);
 bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose);
-bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose);
 bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose);
 
 bool test_NextDirtyExpr(ClassAd *c1, int verbose);
@@ -595,79 +594,6 @@ bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose)
 }
 //}}}
 
-//{{{test_EvalStringMyString
-bool test_EvalStringMyString(ClassAd *c1, ClassAd *c2, int verbose)
-{
-    bool passed = false;
-    bool passedTest[4];
-    int esRetVal[2]; //evalstring return value
-
-    for(int i = 0; i < 4; i++)
-    {
-        passedTest[i] = false;
-    }
-
-    classad::AttrList::iterator itr;
-    itr = c1->begin();
-
-    MyString tmpValue; 
-
-    passedTest[0] = c1->EvalString((*itr).first.c_str(), c1, tmpValue);
-
-    //if it's not "hello", something bad happened.
-    if(strcmp(tmpValue.Value(), "hello"))
-    {
-        passedTest[0] = false;
-    }
-
-    if(verbose)
-        printf("EvalStringMyString w/ real attr, this target %s.\n", 
-            passedTest[0] ? "passed" : "failed");
-
-    tmpValue = "";
-
-    passedTest[1] = c1->EvalString((*itr).first.c_str(), c2, tmpValue);
-    
-    if(strcmp(tmpValue.Value(), "hello"))
-    {
-        passedTest[1] = false;
-    }
-
-    if(verbose)
-        printf("EvalStringMyString w/ real attr, c2 target %s.\n", 
-            passedTest[1] ? "passed" : "failed");
-
-    esRetVal[0] = c1->EvalString("fred", c1, tmpValue);
-    
-    if(esRetVal[0] == 0)
-    {
-        passedTest[2] = true;
-    }
-
-    if(verbose)
-        printf("EvalStringMyString w/ fake attr, this target %s.\n", 
-            passedTest[2] ? "passed" : "failed");
-
-    esRetVal[1] = c1->EvalString("fred", c2, tmpValue);
-    
-    //it should fail
-    if(esRetVal[1] == 0)
-    {
-        passedTest[3] = true;
-    }
-
-    if(verbose)
-        printf("EvalStringMyString w/ fake attr, c2 target %s.\n", 
-            passedTest[3] ? "passed" : "failed");
-
-
-    passed = passedTest[0] && passedTest[1] && passedTest[2] &&
-                passedTest[3];
-
-    return passed;
-}
-//}}}
-
 //{{{test_EvalStringStdString
 bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
 {
@@ -694,7 +620,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
     }
 
     if(verbose)
-        printf("EvalStringMyString w/ real attr, this target %s.\n", 
+        printf("EvalStringStdString w/ real attr, this target %s.\n", 
             passedTest[0] ? "passed" : "failed");
 
     tmpValue = "";
@@ -707,7 +633,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
     }
 
     if(verbose)
-        printf("EvalStringMyString w/ real attr, c2 target %s.\n", 
+        printf("EvalStringStdString w/ real attr, c2 target %s.\n", 
             passedTest[1] ? "passed" : "failed");
 
     esRetVal[0] = c1->EvalString("fred", c1, tmpValue);
@@ -718,7 +644,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
     }
 
     if(verbose)
-        printf("EvalStringMyString w/ fake attr, this target %s.\n", 
+        printf("EvalStringStdString w/ fake attr, this target %s.\n", 
             passedTest[2] ? "passed" : "failed");
 
     esRetVal[1] = c1->EvalString("fred", c2, tmpValue);
@@ -730,7 +656,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
     }
 
     if(verbose)
-        printf("EvalStringMyString w/ fake attr, c2 target %s.\n", 
+        printf("EvalStringStdString w/ fake attr, c2 target %s.\n", 
             passedTest[3] ? "passed" : "failed");
 
 
@@ -1459,12 +1385,6 @@ void setUpAndRun(int verbose)
     printf("Testing EvalStringChar**...\n");
     passedTest[5] = test_EvalStringCharStarStar(compC4, compC2, verbose);
     printf("EvalStringChar** %s.\n", passedTest[5] ? "passed" : "failed");
-    printf("-------------\n");
-
-
-    printf("Testing EvalStringMyString...\n");
-    passedTest[6] = test_EvalStringMyString(compC4, compC2, verbose);
-    printf("EvalStringMyString %s.\n", passedTest[6] ? "passed" : "failed");
     printf("-------------\n");
 
 

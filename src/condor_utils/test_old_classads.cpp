@@ -311,7 +311,7 @@ main(
 			classad::ClassAdXMLUnParser unparser;
 			classad::ClassAdXMLParser   parser;
 			ClassAd            *after_classad;
-			MyString before_classad_string, after_classad_string;
+			std::string before_classad_string, after_classad_string;
 			std::string xml;
 			
 			// 1) Print each ClassAd to a string.
@@ -328,10 +328,10 @@ main(
 			parser.ParseClassAd(xml, *after_classad);
 
 			sPrintAd(after_classad_string, *after_classad);
-			if (strcmp(before_classad_string.Value(), after_classad_string.Value()) != 0) {
+			if (strcmp(before_classad_string.c_str(), after_classad_string.c_str()) != 0) {
 				printf("Failed: XML Parse and UnParse for classad %d\n", classad_index);
-				printf("---- Original ClassAd:\n%s\n", before_classad_string.Value());
-				printf("---- After ClassAd:\n%s\n", after_classad_string.Value());
+				printf("---- Original ClassAd:\n%s\n", before_classad_string.c_str());
+				printf("---- After ClassAd:\n%s\n", after_classad_string.c_str());
 				printf("---- Intermediate XML:\n%s\n", xml.c_str));
 				test_results.AddResult(false);
 			} else {
@@ -1226,13 +1226,13 @@ test_printed_version(
 	int         line_number,      // IN: The line number to print
     TestResults *results)         // OUT: Modified to reflect result of test
 {
-	MyString printed_version;
+	std::string printed_version;
 	ExprTree  *tree;
 
 	tree = classad->LookupExpr(attribute_name);
-	printed_version.formatstr( "%s = %s", attribute_name, ExprTreeToString( tree ) );
+	formatstr( printed_version, "%s = %s", attribute_name, ExprTreeToString( tree ) );
 
-	if (!strcmp(expected_string, printed_version.Value())) {
+	if (!strcmp(expected_string, printed_version.c_str())) {
 		printf("Passed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" prints correctly in line %d.\n", line_number);
@@ -1241,7 +1241,7 @@ test_printed_version(
 		printf("Failed: ");
 		print_truncated_string(attribute_name, 40);
 		printf(" does not print correctly in line %d.\n", line_number);
-		printf("Printed as: %s\n", printed_version.Value());
+		printf("Printed as: %s\n", printed_version.c_str());
 		printf("Expected  : %s\n", expected_string);
 		results->AddResult(false);
 	}
@@ -4418,7 +4418,7 @@ void test_random(
 void test_equality(TestResults *results)
 {
     ExprTree *e1, *e2, *e3;
-	MyString n1, n2, n3;
+    std::string n1, n2, n3;
     const char *s1 = "Foo = 3";
     const char *s3 = "Bar = 5";
 
