@@ -130,6 +130,16 @@ def mutateFilePath(pathToManifestFile):
     logger.debug(f"Mutated file path in '{pathToManifestFile}'");
     return pathToManifestFile
 
+def sha256sum(pathToFile):
+    args = ["sha256sum", "--binary", pathToFile.name]
+    rv = subprocess.run( args,
+            cwd=pathToFile.parent,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20)
+    assert(rv.returncode == 0)
+    return rv.stdout
+
 def makeManifestForDirectory(pathToManifestDir):
     args = ["condor_manifest", "generateFileForDir", pathToManifestDir.as_posix() ]
     rv = subprocess.run( args,
@@ -241,3 +251,52 @@ class TestManifestFiles:
 
     def test_validateFilesListedIn(self, test_case, list_expected, list_result):
         assert list_expected == list_result
+
+    CRYPTO_TEST_CASES = [
+        ( lambda p: validButUseless(p),                         0, 1 ),
+        ( lambda p: emptyOtherFile(p),                          0, 0 ),
+        ( lambda p: singleOtherFile(p),                         0, 0 ),
+        ( lambda p: theComplicatedOne(p),                       0, 0 ),
+    ]
+
+    @pytest.fixture(params=CRYPTO_TEST_CASES)
+    def crypto_test_case(self, request, test_dir):
+        case = request.param
+        return (case[0](test_dir), case[1], case[2])
+
+    @pytest.fixture
+    def crypto_result(self, crypto_test_case):
+        return Path(crypto_test_case[0]).read_bytes()
+
+    @pytest.fixture
+    def crypto_expected(self, crypto_test_case):
+        pathToManifestDir = Path(crypto_test_case[0]).parent
+
+        manifestText = b''
+        for pathToFile in pathToManifestDir.iterdir():
+            if pathToFile.name == "MANIFEST.0000":
+                continue
+
+            if pathToFile.is_block_device():
+                continue
+            if pathToFile.is_char_device():
+                continue
+            if pathToFile.is_dir():
+                continue
+            if pathToFile.is_fifo():
+                continue
+
+            manifestText += sha256sum(pathToFile)
+
+        pathToPartialManifest = pathToManifestDir / "MANIFEST.256"
+        pathToPartialManifest.write_bytes(manifestText)
+
+        lastManifestLine = sha256sum(pathToPartialManifest)
+        # s/MANIFEST.256/MANIFEST.0000
+        lastManifestLine = lastManifestLine[:-4] + b'0000\n'
+
+        pathToPartialManifest.write_bytes(manifestText + lastManifestLine)
+        return pathToPartialManifest.read_bytes()
+
+    def test_compute_file_checksum(self, crypto_test_case, crypto_expected, crypto_result):
+        assert crypto_expected == crypto_result
