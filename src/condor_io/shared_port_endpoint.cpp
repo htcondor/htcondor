@@ -565,7 +565,7 @@ SharedPortEndpoint::PipeListenerThread()
 	void *dst = NULL, *src = NULL;
 	int dst_fd = 0, src_fd = 0;
 	std::string msgs;
-	MyString wake_status;
+	std::string wake_status;
 
 	while(true)
 	{
