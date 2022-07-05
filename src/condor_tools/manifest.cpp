@@ -20,13 +20,15 @@
 #include <stdio.h>
 #include <string>
 
-#include <sys/types.h>
-#include <dirent.h>
 #include <errno.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "stl_string_utils.h"
+
+// Why can't Windows implement opendir()/readdir()?
+#include "directory.h"
+#include "stat_wrapper.h"
 
 #include "manifest.h"
 #include "checksum.h"
@@ -48,39 +50,27 @@ bool
 generateFileForDir( const std::string & dirName, std::string & error ) {
     std::string manifestText;
 
-    DIR * dir = opendir( dirName.c_str() );
-    if( dir == NULL ) {
-        formatstr( error, "opendir(%s) failed: %s (%d)", dirName.c_str(), strerror(errno), errno );
-        return false;
-    }
+    Directory dir( dirName.c_str() );
 
-    struct dirent * dentry;
-    while( (dentry = readdir(dir)) != NULL ) {
-        switch( dentry->d_type ) {
-            case DT_BLK:
-            case DT_CHR:
-            case DT_DIR:
-            case DT_FIFO:
-            case DT_UNKNOWN:
-                continue;
-            default:
-                break;
-        }
-
-        std::string fileName = dentry->d_name;
-        // if( fileName == "." || fileName == ".." ) { continue; }
+    const char * fileName = NULL;
+    while( (fileName = dir.Next()) != NULL ) {
+        StatWrapper sw( fileName );
+        auto mode = sw.GetBuf()->st_mode;
+        if( mode & S_IFBLK ) { continue; }
+        if( mode & S_IFCHR ) { continue; }
+        if( mode & S_IFDIR ) { continue; }
+        if( mode & S_IFIFO ) { continue; }
 
         std::string fileHash;
         if(! compute_file_checksum( fileName, fileHash)) {
-            formatstr( error, "Failed to compute file (%s) checksum", fileName.c_str() );
+            formatstr( error, "Failed to compute file (%s) checksum", fileName );
             return false;
         }
         // The '*' marks the hash as having been computed in binary mode.
         formatstr_cat(
-            manifestText, "%s *%s\n", fileHash.c_str(), fileName.c_str()
+            manifestText, "%s *%s\n", fileHash.c_str(), fileName
         );
     }
-    closedir(dir);
 
     std::string manifestFileName = "MANIFEST.0000";
     if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
