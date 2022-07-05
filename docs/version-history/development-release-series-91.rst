@@ -5,11 +5,13 @@ We release new features in these releases of HTCondor. The details of each
 version are described below.
 
 Version 9.10.1
--------------
+--------------
 
 Release Notes:
 
-- HTCondor version 9.10.1 released on Month Date, 2022.
+.. HTCondor version 9.10.1 released on Month Date, 2022.
+
+- HTCondor version 9.10.1 not yet released.
 
 New Features:
 
@@ -85,6 +87,10 @@ New Features:
 - Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
   on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
+
+- The *condor_schedd* now adds the ``ServerTime`` attribute to the job
+  ads of a query only if the client (i.e. *condor_q*) requests it.
+  :jira:`1125`
 
 Bugs Fixed:
 
