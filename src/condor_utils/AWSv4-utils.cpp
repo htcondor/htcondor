@@ -10,6 +10,7 @@
 #include "CondorError.h"
 #include "shortfile.h"
 #include "AWSv4-utils.h"
+#include "AWSv4-impl.h"
 
 #include "stl_string_utils.h"
 #include "stat_wrapper.h"

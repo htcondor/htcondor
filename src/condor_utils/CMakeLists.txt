@@ -141,6 +141,7 @@ ad_transforms.cpp
 ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
+AWSv4-impl.h
 backward_file_reader.cpp
 binary_search.h
 build_job_env.cpp

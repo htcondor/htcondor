@@ -19,13 +19,17 @@
 
 #include <string.h>
 #include <string>
+#include <map>
 #include <fstream>
+
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
 
 #include "manifest.h"
 #include "checksum.h"
 #include "stl_string_utils.h"
+#include "AWSv4-impl.h"
 
-#include <openssl/sha.h>
 
 namespace manifest {
 
@@ -47,8 +51,12 @@ getNumberFromFileName( const std::string & fn ) {
 
 bool
 validateFile( const std::string & fileName ) {
-	SHA256_CTX context;
-	SHA256_Init( &context );
+	EVP_MD_CTX * context = EVP_MD_CTX_new();
+	if( context == NULL ) { return false; }
+	if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
+		EVP_MD_CTX_free( context );
+		return false;
+	}
 
 	std::ifstream ifs( fileName );
 	std::string manifestLine;
@@ -56,8 +64,8 @@ validateFile( const std::string & fileName ) {
 	std::getline( ifs, manifestLine );
 	std::getline( ifs, nextManifestLine );
 	for( ; ifs.good(); ) {
-	    manifestLine += "\n";
-		SHA256_Update( &context, manifestLine.c_str(), manifestLine.length() );
+		manifestLine += "\n";
+		EVP_DigestUpdate( context, manifestLine.c_str(), manifestLine.length() );
 
 		manifestLine = nextManifestLine;
 		std::getline( ifs, nextManifestLine );
@@ -65,11 +73,16 @@ validateFile( const std::string & fileName ) {
 
 	unsigned char hash[SHA256_DIGEST_LENGTH];
 	memset( hash, 0, sizeof(hash) );
-	SHA256_Final( hash, &context );
+	if(! EVP_DigestFinal_ex( context, hash, NULL )) {
+		EVP_MD_CTX_destroy( context );
+		return false;
+	}
+	EVP_MD_CTX_destroy( context );
 
-	// Ask TJ why this is +4 instead of +1.
-	char file_hash[SHA256_DIGEST_LENGTH * 2 + 4];
-	encode_hex( file_hash, sizeof(file_hash), hash, sizeof(hash) );
+	std::string file_hash;
+	AWSv4Impl::convertMessageDigestToLowercaseHex(
+		hash, SHA256_DIGEST_LENGTH, file_hash
+	);
 
 	std::string manifestFileName = FileFromLine( manifestLine );
 	std::string manifestChecksum = ChecksumFromLine( manifestLine );
@@ -77,7 +90,7 @@ validateFile( const std::string & fileName ) {
 	// These don't have to match exactly because the shadow calls this
 	// function with the full path to the file name.
 	if(! ends_with( fileName, manifestFileName )) { return false; }
-	if( strcmp( manifestChecksum.c_str(), file_hash ) != 0 ) { return false; }
+	if( manifestChecksum != file_hash ) { return false; }
 	return true;
 }
 

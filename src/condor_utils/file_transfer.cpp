@@ -47,6 +47,7 @@
 #include "utc_time.h"
 #include "data_reuse.h"
 #include "AWSv4-utils.h"
+#include "AWSv4-impl.h"
 #include "condor_random_num.h"
 #include "condor_sys.h"
 
