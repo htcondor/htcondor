@@ -47,17 +47,6 @@ static const int	DAY = 24 * 60 * 60;
 static const int	MATCH = 0;
 #endif
 
-/*
-  These are the well known file descriptors used for remote system call and
-  logging functions.
-*/
-#ifndef CLIENT_LOG
-static const int CLIENT_LOG = 18;
-static const int RSC_SOCK = 17;
-#endif
-static const int REQ_SOCK = 16;
-static const int RPL_SOCK = 17;
-
 #if defined(WIN32)
 static const char DIR_DELIM_CHAR = '\\';
 static const char DIR_DELIM_STRING[] = "\\";
@@ -110,17 +99,10 @@ static const size_t IP_STRING_BUF_SIZE = 48;
 
 #define MYPROXY_MAX_PASSWORD_BUFLEN 256
 
-/* Max space needed to hold a null-terminated
- * user name such as the value of ATTR_JOB_OWNER
- */
-#define MAX_CONDOR_USERNAME_LEN 100
-
 #define CONDOR_HOSTNAME_MAX 256
 
 // years of careful research, I am told...
 #define DEFAULT_CEDAR_TIMEOUT 20
-
-#define MAX_PARAM_LEN 1024
 
 #define DEFAULT_SHORT_COMMAND_DEADLINE 600
 

@@ -23,6 +23,8 @@
    reliance on other Condor files to ease distribution.  -Jim B. */
 
 #include "condor_event.h"
+#include "read_user_log.h"
+#include "user_log_header.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -364,6 +366,25 @@ public:
 	/** switch to user priv?         */  bool       m_set_user_priv;
 	/** Creator Name (schedd name)   */  char     * m_creator_name;
 	/** Mask for events              */  std::vector<ULogEventNumber> mask;
+};
+
+// Simple class to extract info from a log file header event
+class WriteUserLogHeader : public UserLogHeader
+{
+public:
+	WriteUserLogHeader( void )
+		{ };
+	WriteUserLogHeader( const UserLogHeader &other )
+		: UserLogHeader( other )
+		{ };
+	~WriteUserLogHeader( void )
+		{ };
+
+	// Read the header from a file
+	int Write( WriteUserLog &writer, int fd = -1 );
+	bool GenerateEvent( GenericEvent &event );
+
+private:
 };
 
 #endif /* _CONDOR_USER_LOG_CPP_H */

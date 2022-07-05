@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "job.h"
 #include "scriptQ.h"
-#include "condor_constants.h"      /* from condor_includes/ directory */
 #include "condor_daemon_core.h"
 #include "read_multiple_logs.h"
 #include "check_events.h"

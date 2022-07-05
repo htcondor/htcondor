@@ -21,7 +21,6 @@
 #define COMPAT_CLASSAD_H
 
 #include "classad/classad_distribution.h"
-#include "MyString.h"
 #include "classad_oldnew.h"
 
 using classad::ClassAd;

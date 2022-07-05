@@ -933,7 +933,7 @@ else ()
   endif()
 
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/curl/7.31.0-p1 )
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/1.0.1e)
+  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/openssl/packaged)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/pcre2/10.39)
   add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/krb5/1.12)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
@@ -941,7 +941,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libcgroup/0.41)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
-	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.5.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.7.0)
 
 	# globus is an odd *beast* which requires a bit more config.
 	# old globus builds on manylinux1 (centos5 docker image)
@@ -971,10 +971,6 @@ else ()
 endif(WINDOWS)
 
 add_subdirectory(${CONDOR_SOURCE_DIR}/src/safefile)
-
-if (APPLE)
-	include_directories( ${DARWIN_OPENSSL_INCLUDE} )
-endif()
 
 ### addition of a single externals target which allows you to
 if (CONDOR_EXTERNALS)
@@ -1072,19 +1068,21 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 ###########################################
 #extra build flags and link libs.
 
-if (NOT HAVE_EXT_OPENSSL)
-	message (FATAL_ERROR "openssl libraries not found!")
-endif()
-
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
 if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
-	set (SECURITY_LIBS "")
-	set (SECURITY_LIBS_STATIC "")
+	if (WITH_SCITOKENS)
+	set (SECURITY_LIBS SciTokens-headers;crypto)
+	else()
+	set (SECURITY_LIBS crypto)
+	endif()
 else()
-	set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};${SCITOKENS_FOUND};${EXPAT_FOUND}")
-	set (SECURITY_LIBS_STATIC "${VOMS_FOUND_STATIC};${GLOBUS_FOUND_STATIC};${EXPAT_FOUND}")
+	if (WITH_SCITOKENS)
+		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
+	else()
+		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};openssl;crypto;${EXPAT_FOUND}")
+	endif()
 endif()
 
 ###########################################
@@ -1094,12 +1092,11 @@ if (LINUX)
 endif()
 
 
-set (CONDOR_LIBS_STATIC "condor_utils_s;classads;${SECURITY_LIBS_STATIC};${RT_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${RT_FOUND};${MUNGE_FOUND}")
-set (CONDOR_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${MUNGE_FOUND}")
+set (CONDOR_LIBS      "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${MUNGE_FOUND}")
 set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${MUNGE_FOUND}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX)
-  set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND};${SCITOKENS_FOUND};${OPENSSL_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
+	set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;openssl-headers;${SECURITY_LIBS};${RT_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()

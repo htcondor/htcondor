@@ -25,7 +25,6 @@
 #endif
 
 #include "sock.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "internet.h"

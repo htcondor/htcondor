@@ -42,7 +42,7 @@ static const char *SECRET_MARKER = "ZKM"; // "it's a Zecret Klassad, Mon!"
 bool getClassAd( Stream *sock, classad::ClassAd& ad )
 {
 	int 					numExprs;
-	MyString				inputLine;
+	std::string				inputLine;
 
 	ad.Clear( );
 
@@ -404,7 +404,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	int 					numExprs = 0; // Initialization clears Coverity warning
 	std::string					buffer;
 	classad::ClassAd		*upd=NULL;
-	MyString				inputLine;
+	std::string				inputLine;
 
 	parser.SetOldClassAd( true );
 
@@ -432,10 +432,7 @@ getClassAdNoTypes( Stream *sock, classad::ClassAd& ad )
 	    free( secret_line );
         }
 
-		if ( strncmp( inputLine.c_str(), "ConcurrencyLimit.", 17 ) == 0 ) {
-			inputLine.setAt( 16, '_' );
-		}
-		buffer += std::string(inputLine.c_str()) + ";";
+		buffer += inputLine + ";";
 	}
 	buffer += "]";
 

@@ -20,7 +20,6 @@
 #ifndef FILE_LOCK_H
 #define FILE_LOCK_H
 
-#include "condor_constants.h"
 #include <stdio.h>	// for FILE
 #include <string>
 

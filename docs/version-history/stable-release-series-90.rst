@@ -20,11 +20,26 @@ Release Notes:
 
 New Features:
 
-- None.
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs.
+  :jira:`1193`
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug on Windows that caused a misleading error message about
+  the SharedPortEndpoint when a daemon exits.
+  :jira:`1178`
+
+- Fixed a bug where the *condor_check_config* tool raised an UnboundLocalError
+  due to an undefined variable.
+  :jira:`1186`
+
+- Fixed a file descriptor leak when using SciTokens for authentication.
+  :jira:`1188`
+
+- Fixed a bug in *condor_gpu_discovery* which would cause the tool to crash
+  when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
+  :jira:`1191`
 
 .. _lts-version-history-9014:
 

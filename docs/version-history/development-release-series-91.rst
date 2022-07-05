@@ -25,6 +25,16 @@ New Features:
   level authorization.
   :jira:`1164`
 
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs
+  :jira:`1180`
+
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
 Bugs Fixed:
 
 - None.
@@ -52,6 +62,12 @@ Release Notes:
 - The default value of configuration parameter ``USE_VOMS_ATTRIBUTES``
   has been changed to ``False``.
   :jira:`1161`
+
+- Removed support for the WriteUserLog class from libcondorapi.a.  This
+  class was difficult to use correctly, and to our knowledge it is not
+  currently in use.  Programmer who need to read the condor event
+  log are recommended to do so from the HTCondor python bindings.
+  :jira:`1163`
 
 New Features:
 
@@ -90,9 +106,21 @@ New Features:
   work in the future.
   :jira:`1137`
 
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
+
 - Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
   on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
+
+- The *condor_schedd* now adds the ``ServerTime`` attribute to the job
+  ads of a query only if the client (i.e. *condor_q*) requests it.
+  :jira:`1125`
 
 Bugs Fixed:
 
