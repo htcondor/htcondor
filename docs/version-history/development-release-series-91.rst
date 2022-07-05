@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed inflated values for job attribute ``ActivationSetupDuration`` if
+  the job checkpoints.
+  :jira:`1190`
 
 Version 9.10.0
 --------------
