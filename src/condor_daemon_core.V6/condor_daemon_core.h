@@ -1716,7 +1716,7 @@ class DaemonCore : public Service
 		/**
 			check hotness of wakeup select socket from an async thread. used for debugging
 		*/
-	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, MyString & status);
+	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, std::string & status);
 
 	/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
@@ -2138,8 +2138,7 @@ class DaemonCore : public Service
 		LONG deallocate;
 		HANDLE watcherEvent;
 #endif
-        MyString sinful_string;
-        MyString parent_sinful_string;
+        std::string sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;
@@ -2155,7 +2154,7 @@ class DaemonCore : public Service
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
 		PidEnvID penvid;
-		MyString shared_port_fname;
+		std::string shared_port_fname;
 		//Session ID and key for child process.
 		char* child_session_id;
     };
@@ -2355,7 +2354,7 @@ class DaemonCore : public Service
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
-	MyString m_daemon_sock_name;
+	std::string m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.

@@ -439,6 +439,7 @@ private:
 		// When HTCondor manages dedicated disk space, this tracks
 		// the maximum permitted disk usage and the polling timer
 		//
+#if defined(LINUX)
 	int64_t m_lvm_max_size_kb{0};
 	int m_lvm_poll_tid{-1};
 	time_t m_lvm_last_space_issue{-1};
@@ -446,6 +447,7 @@ private:
 	std::string m_lvm_thin_volume;
 	std::string m_lvm_thin_pool;
 	std::string m_lvm_volume_group;
+#endif
 
 	UserProc* pre_script;
 	UserProc* post_script;

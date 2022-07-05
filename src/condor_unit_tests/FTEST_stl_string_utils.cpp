@@ -737,7 +737,7 @@ static bool tokenize_end() {
 }
 
 static bool tokenize_empty() {
-	emit_test("Test GetNextToken() on an empty MyString.");
+	emit_test("Test GetNextToken() on an empty string.");
 	Tokenize("");
 	const char* tok = GetNextToken(" ", false);
 	emit_input_header();
