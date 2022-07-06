@@ -22,11 +22,9 @@
 
 #include <errno.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "stl_string_utils.h"
 
-// Why can't Windows implement opendir()/readdir()?
 #include "directory.h"
 #include "stat_wrapper.h"
 
