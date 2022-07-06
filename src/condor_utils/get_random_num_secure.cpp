@@ -27,9 +27,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "condor_random_num.h"
-#ifdef HAVE_EXT_OPENSSL
 #include <openssl/rand.h>
-#endif
 
 #include <chrono>
 
@@ -38,7 +36,6 @@ static bool prng_initialized = false;
 static void add_seed_prng() {
 	if (prng_initialized) return;
 
-#ifdef HAVE_EXT_OPENSSL
 	constexpr int size = 128;
 	unsigned char * buf = (unsigned char *) malloc(size);
 	ASSERT(buf);
@@ -56,9 +53,6 @@ static void add_seed_prng() {
 	}
 	RAND_seed(buf, size);
 	free(buf);
-#else
-	#error OpenSSL is required to build this function
-#endif
 	prng_initialized = true;
 }
 
@@ -71,11 +65,7 @@ int get_csrng_int( void )
 	add_seed_prng();
 
 	int retval = 0;
-#ifdef HAVE_EXT_OPENSSL
 	RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
-#else
-	#error OpenSSL is required to build this function
-#endif
 	return retval & INT_MAX;
 }
 
@@ -87,10 +77,6 @@ unsigned int get_csrng_uint( void )
 	add_seed_prng();
 
         unsigned retval = 0;
-#ifdef HAVE_EXT_OPENSSL
         RAND_bytes(reinterpret_cast<unsigned char *>(&retval), sizeof(retval));
-#else
-	#error OpenSSL is required to build this function
-#endif
 	return retval;
 }

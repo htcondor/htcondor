@@ -829,7 +829,6 @@ main( int argc, const char *argv[] )
 	set_mySubSystem( "SUBMIT", false, SUBSYSTEM_TYPE_SUBMIT );
 
 	MyName = condor_basename(argv[0]);
-	myDistro->Init( argc, argv );
 	config();
 
 
@@ -841,10 +840,7 @@ main( int argc, const char *argv[] )
 				verbose = true;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "debug", &pcolon, 3)) {
 				// dprintf to console
-				dprintf_set_tool_debug("TOOL", 0);
-				if (pcolon && pcolon[1]) {
-					set_debug_flags(++pcolon, 0);
-				}
+				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			} else if (is_dash_arg_colon_prefix(ptr[0], "clusterad", &pcolon, 1)) {
 				if (!(--argc) || !(*(++ptr))) {
 					fprintf(stderr, "%s: -clusterad requires another argument\n", MyName);

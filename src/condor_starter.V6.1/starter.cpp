@@ -50,7 +50,7 @@
 #include "sshd_proc.h"
 #include "condor_base64.h"
 #include "my_username.h"
-#include <Regex.h>
+#include "condor_regex.h"
 #include "starter_util.h"
 #include "condor_random_num.h"
 #include "data_reuse.h"
@@ -321,11 +321,13 @@ Starter::StarterExit( int code )
 
 void Starter::FinalCleanup()
 {
+#if defined(LINUX)
 		// Not useful to have the volume management code trigger
 		// while we are trying to cleanup.
 	if (m_lvm_poll_tid >= 0) {
 		daemonCore->Cancel_Timer(m_lvm_poll_tid);
 	}
+#endif
 
 	RemoveRecoveryFile();
 	removeTempExecuteDir();

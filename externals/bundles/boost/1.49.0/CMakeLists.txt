@@ -87,7 +87,7 @@ if (NOT PROPER) # AND (NOT Boost_FOUND OR SYSTEM_NOT_UP_TO_SNUFF) )
 
 		set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 
-	if (DARWIN)
+	if (APPLE)
 		if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 			set(TOOLSET clang-darwin)
 		else()

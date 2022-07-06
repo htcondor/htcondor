@@ -21,7 +21,6 @@
 #define COMPAT_CLASSAD_H
 
 #include "classad/classad_distribution.h"
-#include "MyString.h"
 #include "classad_oldnew.h"
 
 using classad::ClassAd;
@@ -64,13 +63,6 @@ int	fPrintAd(FILE *file, const classad::ClassAd &ad, bool exclude_private = true
 	*/
 void dPrintAd( int level, const classad::ClassAd &ad, bool exclude_private = true );
 
-	/** Format the ClassAd as an old ClassAd into the MyString.
-		@param output The MyString to write into
-		@return TRUE
-	*/
-int sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
-int sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_white_list = NULL );
-
 	/** Format the ClassAd as an old ClassAd into the std::string.
 		@param output The std::string to write into
 		@return TRUE
@@ -97,7 +89,6 @@ int sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool ex
 		@return TRUE
 	*/
 int sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References & attrs, const char * indent=NULL );
-int sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References & attrs);
 
 bool initAdFromString(char const *str, classad::ClassAd &ad);
 

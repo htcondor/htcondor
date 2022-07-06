@@ -359,8 +359,7 @@ private:
         }
         if (statistics.size())
         {
-            std::string result = quote_classads_string(statistics);
-            query.addExtraAttribute("STATISTICS_TO_PUBLISH", result.c_str());
+            query.addExtraAttributeString("STATISTICS_TO_PUBLISH", statistics);
         }
         if (locationName.size())
         {

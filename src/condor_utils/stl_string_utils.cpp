@@ -25,21 +25,6 @@
 
 #include "stl_string_utils.h"
 
-bool operator==(const MyString& L, const std::string& R) { return R == L.c_str(); }
-bool operator==(const std::string& L, const MyString& R) { return L == R.c_str(); }
-bool operator!=(const MyString& L, const std::string& R) { return R != L.c_str(); }
-bool operator!=(const std::string& L, const MyString& R) { return L != R.c_str(); }
-bool operator<(const MyString& L, const std::string& R) { return R > L.c_str(); }
-bool operator<(const std::string& L, const MyString& R) { return L < R.c_str(); }
-bool operator>(const MyString& L, const std::string& R) { return R < L.c_str(); }
-bool operator>(const std::string& L, const MyString& R) { return L > R.c_str(); }
-bool operator<=(const MyString& L, const std::string& R) { return R >= L.c_str(); }
-bool operator<=(const std::string& L, const MyString& R) { return L <= R.c_str(); }
-bool operator>=(const MyString& L, const std::string& R) { return R <= L.c_str(); }
-bool operator>=(const std::string& L, const MyString& R) { return L >= R.c_str(); }
-
-
-static
 int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs) {
     char fixbuf[STL_STRING_UTILS_FIXBUF];
     const int fixlen = sizeof(fixbuf)/sizeof(fixbuf[0]);
@@ -122,32 +107,11 @@ int formatstr(std::string& s, const char* format, ...) {
     return r;
 }
 
-int formatstr(MyString& s, const char* format, ...) {
-    va_list args;
-    std::string t;
-    va_start(args, format);
-    // this gets me the sprintf-standard return value (# chars printed)
-    int r = vformatstr_impl(t, false, format, args);
-    va_end(args);
-    s = t;
-    return r;
-}
-
 int formatstr_cat(std::string& s, const char* format, ...) {
     va_list args;
     va_start(args, format);
     int r = vformatstr_impl(s, true, format, args);
     va_end(args);
-    return r;
-}
-
-int formatstr_cat(MyString& s, const char* format, ...) {
-    va_list args;
-    std::string t;
-    va_start(args, format);
-    int r = vformatstr_impl(t, false, format, args);
-    va_end(args);
-    s += t.c_str();
     return r;
 }
 
@@ -178,13 +142,6 @@ bool readLine(std::string& str, FILE *fp, bool append)
 		}
 	}
 }
-
-// populate a std::string from any MyStringSource
-//
-bool readLine( std::string &dst, MyStringSource & src, bool append /*= false*/) {
-	return src.readLine(dst, append);
-}
-
 
 bool chomp(std::string &str)
 {
@@ -436,11 +393,6 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 }
 
 #if 1
-static MyStringTokener tokenbuf;
-void Tokenize(const char *str) { tokenbuf.Tokenize(str); }
-void Tokenize(const MyString &str) { Tokenize(str.c_str()); }
-void Tokenize(const std::string &str) { Tokenize(str.c_str()); }
-const char *GetNextToken(const char *delim, bool skipBlankTokens) { return tokenbuf.GetNextToken(delim, skipBlankTokens); }
 #else
 static char *tokenBuf = NULL;
 static char *nextToken = NULL;
@@ -657,13 +609,6 @@ const std::string * StringTokenIterator::next_string()
 	ixNext = ix;
 #endif
 	return &current;
-}
-
-bool StringTokenIterator::next(MyString & tok)
-{
-	const char * p = next(); 
-	tok = p;
-	return p != NULL; 
 }
 
 int

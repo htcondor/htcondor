@@ -527,7 +527,6 @@ main( int argc, const char *argv[] )
 	set_mySubSystem( "SUBMIT", false, SUBSYSTEM_TYPE_SUBMIT );
 
 	MyName = condor_basename(argv[0]);
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	classad::ClassAdSetExpressionCaching(false);
@@ -550,8 +549,6 @@ main( int argc, const char *argv[] )
 		// condor.
 	check_umask();
 
-	set_debug_flags(NULL, D_EXPR);
-
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
 #endif
@@ -568,9 +565,9 @@ main( int argc, const char *argv[] )
 				terse = true; verbose = false;
 			} else if (is_dash_arg_prefix(ptr[0], "disable", 1)) {
 				DisableFileChecks = 1;
-			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
+			} else if (is_dash_arg_colon_prefix(ptr[0], "debug", &pcolon, 2)) {
 				// dprintf to console
-				dprintf_set_tool_debug("TOOL", 0);
+				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 				debug = true;
 			} else if (is_dash_arg_colon_prefix(ptr[0], "dry-run", &pcolon, 3)) {
 				DashDryRun = 1;

@@ -20,8 +20,6 @@
 #ifndef _FS_UTIL_H
 #define _FS_UTIL_H
 
-#include "condor_constants.h"
-
 /* Prototypes */
 
 /** Determine whether the given path is on NFS (note that if path points

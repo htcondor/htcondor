@@ -66,9 +66,9 @@ MACRO (CONDOR_EXE _CNDR_TARGET _SRCS_PARAM _INSTALL_LOC _LINK_LIBS _COPY_PDBS)
 
     endif( WINDOWS )
 
-    if ( DARWIN )
+    if ( APPLE )
         # Fix up the share library dependencies
         install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${_INSTALL_LOC}/${_CNDR_TARGET})" )
-    endif ( DARWIN )
+    endif ( APPLE )
 
 ENDMACRO (CONDOR_EXE)

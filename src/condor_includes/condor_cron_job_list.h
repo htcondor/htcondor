@@ -30,7 +30,7 @@ class CronJobMgr;
 class CondorCronJobList
 {
   public:
-	CondorCronJobList( CronJobMgr &mgr );
+	CondorCronJobList();
 	~CondorCronJobList( );
 
 	// Methods to manipulate the job list
@@ -58,8 +58,6 @@ class CondorCronJobList
 
   private:
 	std::list<CronJob *>		 m_job_list;
-	CronJobMgr			&m_mgr;			// My manager
-
 };
 
 #endif /* _CONDOR_CRON_JOB_LIST_H */

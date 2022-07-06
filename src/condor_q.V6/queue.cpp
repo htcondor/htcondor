@@ -505,7 +505,6 @@ int main (int argc, const char **argv)
 	app.init();
 
 	// load up configuration file
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
@@ -1459,10 +1458,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "debug", &pcolon, 3)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
-			if (pcolon && pcolon[1]) {
-				set_debug_flags( ++pcolon, 0 );
-			}
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
@@ -2797,7 +2793,7 @@ union _jobid {
 	long long id;
 };
 
-static union _jobid sequence_id = { 0, INT_MAX };
+static union _jobid sequence_id = { {0, INT_MAX} };
 static bool assume_cluster_ad_if_no_proc_id = false; // set to true when we expect to get clusterad ads that don't have a ProcId attribute
 
 // callback function for processing a job from the Q query that just adds the job into a IdToClassaAdMap.

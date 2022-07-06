@@ -114,8 +114,6 @@ int main(int argc, char* argv[])
   std::string TimeFileName;
   char* pool = NULL;
 
-  myDistro->Init( argc, argv );
-
   for(int i=1; i<argc; i++) {
 
     // Analyze date specifiers

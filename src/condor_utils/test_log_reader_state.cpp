@@ -23,7 +23,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
-#include "MyString.h"
 #include "subsystem_info.h"
 #include "simple_arg.h"
 #include <stdio.h>
@@ -206,7 +205,6 @@ main(int argc, const char **argv)
 	set_mySubSystem( "TEST_LOG_READER_STATE", false, SUBSYSTEM_TYPE_TOOL );
 
 		// initialize to read from config file
-	myDistro->Init( argc, argv );
 	config();
 
 		// Set up the dprintf stuff...

@@ -1184,10 +1184,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_stime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 		}
-		
-		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
@@ -1201,10 +1204,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_utime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
+
 		}
-		
-		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
@@ -1864,10 +1871,6 @@ RemoteResource::beginExecution( void )
 	//
 	time_t now = time(NULL);
 	activation.StartExecutionTime = now;
-	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
-    // Where would this attribute get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
-	shadow->updateJobInQueue(U_STATUS);
 
 	if( began_execution ) {
 		return;
@@ -1878,6 +1881,14 @@ RemoteResource::beginExecution( void )
 
 	// add the execution start time into the job ad.
 	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
+
+	// add ActivationSetupDuration into the job ad.
+	// note: we do this just once after the the first exectution, we do not
+	// want to update after every exectuion (if the job checkpoints).
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
 
 	startCheckingProxy();
 

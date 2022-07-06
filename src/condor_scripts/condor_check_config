@@ -56,7 +56,8 @@ def check_dead_allow_write():
     """
     Look for extraneous ALLOW_WRITE_<daemon>
     """
-    if 'ALLOW_WRITE_COLLECTOR' in htcondor.param : allow_write = 'ALLOW_WRITE_COLLECTOR '
+    allow_write = ''
+    if 'ALLOW_WRITE_COLLECTOR' in htcondor.param : allow_write += 'ALLOW_WRITE_COLLECTOR '
     if 'ALLOW_WRITE_STARTD' in htcondor.param : allow_write += 'ALLOW_WRITE_STARTD '
 
     if len(allow_write) :
@@ -65,7 +66,7 @@ def check_dead_allow_write():
     longer happens.  You should use
        condor_config_val -verbose -dump ALLOW_WRITE_
     To find obsolete uses of ALLOW_WRITE and either delete them, or change them to ALLOW_DAEMON
-""" % allow_write
+""" % allow_write.rstrip()
 
 def main():
 

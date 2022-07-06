@@ -7098,7 +7098,6 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrn
 
 	// is there an existing jobset ad with this name?
 	// if not, create a new jobset ad using the passed-in cluster_id as the jobset_id
-	bool new_jobset = false;
 	int jobset_id = scheduler.jobSets->find(JobSets::makeAlias(name, username));
 	if ( ! jobset_id) {
 		// no existing jobset, so make a new one
@@ -7113,7 +7112,6 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrn
 			return -1;
 		}
 		jobset_id = cluster_id;
-		new_jobset = true;
 	}
 
 
@@ -7129,7 +7127,6 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrn
 		unparse.SetOldClassAd(true, true);
 		std::string rhs; rhs.reserve(120);
 
-		int rval = 0;
 		for (auto it : ad) {
 			if (! it.second) continue; // skip if the ExprTree is nullptr
 
@@ -8178,7 +8175,7 @@ GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
 	if (constraint && !constraint[0]) constraint = nullptr;
 
 	while(JobQueue->Iterate(key,ad)) {
-		if (ad->IsCluster() || ad->IsJob() && 
+		if ((ad->IsCluster() || ad->IsJob()) &&
 			(!constraint || EvalExprBool(ad, constraint))) {
 			return static_cast<JobQueueJob*>(ad);
 		}

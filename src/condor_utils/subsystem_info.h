@@ -46,7 +46,7 @@ typedef enum {
 	SUBSYSTEM_TYPE_MIN = 1,	// Min valid subsystem type, don't start at zero
 
 	// Daemon types
-	SUBSYSTEM_TYPE_MASTER,
+	SUBSYSTEM_TYPE_MASTER = SUBSYSTEM_TYPE_MIN,
 	SUBSYSTEM_TYPE_COLLECTOR,
 	SUBSYSTEM_TYPE_NEGOTIATOR,
 	SUBSYSTEM_TYPE_SCHEDD,
@@ -179,6 +179,7 @@ class SubsystemInfo
 
 	// Subsystem trusted privileges
 	bool isTrusted( void ) { return m_trusted; };
+	void setIsTrusted ( bool is_trusted ) { m_trusted = is_trusted; }
 
   private:
 	const char					*m_Name;

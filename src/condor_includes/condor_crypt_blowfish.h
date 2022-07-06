@@ -21,8 +21,6 @@
 #ifndef CONDOR_CRYPTO_BLOWFISH_H
 #define CONDOR_CRYPTO_BLOWFISH_H
 
-#ifdef HAVE_EXT_OPENSSL
-
 #include "condor_common.h"
 #include "condor_crypt.h"          // base class
 
@@ -47,7 +45,5 @@ class Condor_Crypt_Blowfish : public Condor_Crypt_Base {
     virtual int ciphertext_size_with_cs(int ciphertext, StreamCryptoState *) const { return ciphertext; }
 
 };
-
-#endif
 
 #endif

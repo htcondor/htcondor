@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "ad_printmask.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "tokener.h"
 #include <string>
 

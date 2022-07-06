@@ -186,7 +186,6 @@ main(int argc, const char* argv[])
   std::string tmp;
 
   int i;
-  myDistro->Init( argc, argv );
 
   set_priv_initialize(); // allow uid switching if root
   config();
@@ -468,9 +467,9 @@ main(int argc, const char* argv[])
 		formatstr (jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
 		constraint.addCustomOR(jobconst.c_str());
     }
-    else if (is_dash_arg_prefix(argv[i],"debug",1)) {
+    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,1)) {
           // dprintf to console
-          dprintf_set_tool_debug("TOOL", 0);
+          dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
     else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
           // dprintf to console

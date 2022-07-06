@@ -163,7 +163,7 @@ elsif ($taskname eq $NATIVE_TASK || $taskname eq $NATIVE_DEBUG_TASK) {
         print "Detected OS is Debian or Ubuntu.  Creating Deb package.\n";
         $execstr = create_deb($is_debug);
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Creating RPM package.\n";
         $execstr = create_rpm($is_debug);
     }
@@ -182,7 +182,7 @@ elsif ($taskname eq $CHECK_NATIVE_TASK) {
         print "Detected OS is Debian.  Validating Deb package.\n";
         $execstr = check_deb();
     }
-    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|amazonlinux|centos|rocky|sl)/i) {
+    elsif ($ENV{NMI_PLATFORM} =~ /(rha|redhat|fedora|almalinux|amazonlinux|centos|rocky|sl)/i) {
         print "Detected OS is Red Hat.  Validating RPM package.\n";
         $execstr = check_rpm();
     }
@@ -246,10 +246,15 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
         $execstr= "nmi_tools\\glue\\build\\build.win.bat ZIP $VCVER $win64 $buildid";
     }
 }
-else {
-    $ENV{PATH} ="$ENV{PATH}:/opt/local/bin:/sw/bin:/sw/sbin:/usr/kerberos/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/opt/local/bin:/usr/local/sbin:/usr/bin/X11:/usr/X11R6/bin:/usr/local/condor/bin:/usr/local/condor/sbin:/usr/local/bin:/bin:/usr/bin:/usr/X11R6/bin:/usr/ccs/bin:/usr/lib/java/bin";
-    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
+    # CRUFT Once 9.0 is EOL, remove the python.org version of python3
+    #   from the mac build machines and remove this setting of PATH.
+    # Ensure we're using the system python3
+    $ENV{PATH} ="/usr/bin:$ENV{PATH}";
     $ENV{DYLD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
+    $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
+} else {
+    $ENV{LD_LIBRARY_PATH} ="$BaseDir/release_dir/lib:$BaseDir/release_dir/lib/condor";
     $ENV{PYTHONPATH} ="$BaseDir/release_dir/lib/python";
 }
 
@@ -306,7 +311,7 @@ sub get_tarball_check_script {
 }
 
 sub get_extract_tarballs_script {
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         return dirname($0) . "/make-tarball-from-rpms";
     }
     if ($ENV{NMI_PLATFORM} =~ /(deb|ubuntu)/i) {
@@ -327,7 +332,7 @@ sub get_tarball_name {
 
 sub create_rpm {
     my $is_debug = $_[0];
-    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
+    if ($ENV{NMI_PLATFORM} =~ /(RedHat|AlmaLinux|AmazonLinux|CentOS|Fedora|Rocky|SL)/) {
         # Use native packaging tool
         return dirname($0) . "/build_uw_rpm.sh";
     } else {

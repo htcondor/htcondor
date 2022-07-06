@@ -607,11 +607,6 @@ filterAds (ClassAdList &in, ClassAdList &out)
 	return Q_OK;
 }
 
-int 
-CondorQuery::addExtraAttribute(const char *name, const char *value) {
-	return extraAttrs.AssignExpr(name, value);
-}
-
 
 const char *
 getStrQueryResult(QueryResult q)

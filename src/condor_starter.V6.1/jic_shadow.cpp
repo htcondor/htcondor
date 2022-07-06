@@ -2374,7 +2374,7 @@ JICShadow::syscall_sock_disconnect()
 			"job_lease_expired",
 			this );
 	dprintf(D_ALWAYS,
-		"Lost connection to shadow, last activity was %d secs ago, waiting %d secs for reconnect\n",
+		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
 		(now - syscall_last_rpc_time), lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  

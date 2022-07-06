@@ -23,7 +23,6 @@
 /* Note: this code needs to have error handling overhauled */
 
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_debug.h"
 #include "internet.h"

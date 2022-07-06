@@ -98,7 +98,7 @@ usage()
 
 
 int
-main( int argc, char *argv[] )
+main( int /*argc*/, char *argv[] )
 {
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
@@ -112,7 +112,6 @@ main( int argc, char *argv[] )
 	
 		// Initialize things
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 	get_mySubSystem()->setName( "WRITELOG");
 	config();
 	dprintf_config(get_mySubSystem()->getName());

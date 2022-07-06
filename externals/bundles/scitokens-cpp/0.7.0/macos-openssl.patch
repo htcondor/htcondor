@@ -1,0 +1,12 @@
+diff -ru scitokens-cpp-0.5.0/src/scitokens_internal.cpp scitokens-cpp-0.5.0-patched/src/scitokens_internal.cpp
+--- scitokens-cpp-0.5.0/src/scitokens_internal.cpp	2019-12-08 14:59:39.000000000 -0600
++++ scitokens-cpp-0.5.0-patched/src/scitokens_internal.cpp	2019-12-27 14:11:20.339388020 -0600
+@@ -265,7 +265,7 @@
+     std::unique_ptr<BIGNUM, decltype(&BN_free)> n_bignum(BN_bin2bn(reinterpret_cast<const unsigned char *>(n_decode.c_str()), n_decode.size(), nullptr), BN_free);
+ 
+     std::unique_ptr<RSA, decltype(&RSA_free)> rsa(RSA_new(), RSA_free);
+-#if OPENSSL_VERSION_NUMBER < 0x10100000L
++#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+     rsa->e = e_bignum.get();
+     rsa->n = n_bignum.get();
+     rsa->d = nullptr;

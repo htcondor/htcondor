@@ -748,7 +748,7 @@ static bool test_xml() {
 	classad::ClassAdXMLUnParser unparser;
 	classad::ClassAdXMLParser parser;
 	ClassAd classad, *classadAfter;
-	MyString before, after;
+	std::string before, after;
 	std::string xml;
 	initAdFromString(classad_string, classad);
 	sPrintAd(before, classad);
@@ -763,8 +763,8 @@ static bool test_xml() {
 	emit_param("Before", classad_string);
 	emit_param("After", classad_string);
 	emit_output_actual_header();
-	emit_param("Before", before.Value());
-	emit_param("After", after.Value());
+	emit_param("Before", before.c_str());
+	emit_param("After", after.c_str());
 	if(!classad.SameAs(classadAfter)) {
 		delete classadAfter;
 		FAIL;
@@ -7278,7 +7278,7 @@ static bool test_random_range() {
 
 static bool test_equality() {
 	emit_test("Test equality after parsing a classad string into an ExprTree "
-		"and MyString.");
+		"and std::string.");
 	const char* classad_string = "\tFoo = 3";
 	ExprTree *e1, *e2;
 	std::string n1, n2;
@@ -7288,10 +7288,10 @@ static bool test_equality() {
 	emit_param("STRING", classad_string);
 	emit_output_expected_header();
 	emit_param("ExprTree Equality", "TRUE");
-	emit_param("MyString Equality", "TRUE");
+	emit_param("std::string Equality", "TRUE");
 	emit_output_actual_header();
 	emit_param("ExprTree Equality", tfstr((*e1) == (*e2)));
-	emit_param("MyString Equality", tfstr(n1 == n2));
+	emit_param("std::string Equality", tfstr(n1 == n2));
 	emit_param("n1", n1.c_str());
 	emit_param("n2", n2.c_str());
 	if(!((*e1) == (*e2)) || !(n1 == n2)) {
@@ -7304,7 +7304,7 @@ static bool test_equality() {
 
 static bool test_inequality() {
 	emit_test("Test inequality after parsing a classad string into an "
-		"ExprTree and MyString.");
+		"ExprTree and std::string.");
 	const char* classad_string1  = "Foo = 3";
 	const char* classad_string2  = "Bar = 5";
 	ExprTree *e1, *e2;
@@ -7316,10 +7316,10 @@ static bool test_inequality() {
 	emit_param("STRING 2", classad_string2);
 	emit_output_expected_header();
 	emit_param("ExprTree Inequality", "TRUE");
-	emit_param("MyString Inequality", "TRUE");
+	emit_param("std::string Inequality", "TRUE");
 	emit_output_actual_header();
 	emit_param("ExprTree Inequality", tfstr(!((*e1) == (*e2))));
-	emit_param("MyString Inequality", tfstr(!(n1 == n2)));
+	emit_param("std::string Inequality", tfstr(!(n1 == n2)));
 	if(((*e1) == (*e2)) || (n1 == n2)) {
 		delete e1; delete e2;
 		FAIL;
