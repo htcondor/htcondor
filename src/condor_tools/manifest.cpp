@@ -17,6 +17,13 @@
  *
  ***************************************************************/
 
+//
+// Sigh.  Windows doesn't implement opendir()/readir(), so I had to use
+// our Directory object... which doesn't fully duplicate that API, so I
+// had to use our StatWrapper object... which requires condor_common.h.
+//
+#include "condor_common.h"
+
 #include <stdio.h>
 #include <string>
 
