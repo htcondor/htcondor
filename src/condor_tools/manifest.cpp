@@ -61,10 +61,12 @@ generateFileForDir( const std::string & dirName, std::string & error ) {
     while( (fileName = dir.Next()) != NULL ) {
         StatWrapper sw( fileName );
         auto mode = sw.GetBuf()->st_mode;
+#if       !defined(WIN32)
         if( mode & S_IFBLK ) { continue; }
+        if( mode & S_IFIFO ) { continue; }
+#endif /* !defined(WIN32) */
         if( mode & S_IFCHR ) { continue; }
         if( mode & S_IFDIR ) { continue; }
-        if( mode & S_IFIFO ) { continue; }
 
         std::string fileHash;
         if(! compute_file_checksum( fileName, fileHash)) {
