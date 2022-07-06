@@ -26,11 +26,6 @@
 #include <openssl/rand.h>              // SSLeay rand function
 #include "condor_debug.h"
 
-// for manipulating per-method keys.  see new below about moving to static
-// function in each method object.
-#include <openssl/des.h>
-#include <openssl/blowfish.h>
-
 #include "condor_crypt_aesgcm.h"
 
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
@@ -45,8 +40,9 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     // CURRENTLY UNUSED: m_additional = NULL;
     m_ivec_len = 0;
     m_ivec = NULL;
-    m_method_key_data_len = 0;
-    m_method_key_data = NULL;
+    //Get new encryption/decryption cipher contexts
+	enc_ctx = EVP_CIPHER_CTX_new();
+	dec_ctx = EVP_CIPHER_CTX_new();
 
     // there should probably be a static function in each crypto object to do
     // these conversions so that the state object doesn't need any specifc
@@ -54,32 +50,23 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 
     switch(proto) {
         case CONDOR_3DES: {
-            // triple des requires a key of 8 x 3 = 24 bytes
-            // so pad the key out to at least 24 bytes if needed
-            unsigned char * keyData = m_keyInfo.getPaddedKeyData(24);
-            ASSERT(keyData);
-
-            const int des_ks = sizeof(DES_key_schedule);
-            m_method_key_data_len = 3*des_ks;
-            m_method_key_data = (unsigned char*)malloc(m_method_key_data_len);
-            DES_set_key((DES_cblock *)  keyData    , (DES_key_schedule*)(m_method_key_data));
-            DES_set_key((DES_cblock *) (keyData+8) , (DES_key_schedule*)(m_method_key_data + des_ks));
-            DES_set_key((DES_cblock *) (keyData+16), (DES_key_schedule*)(m_method_key_data + 2*des_ks));
-
-            free(keyData);
-
+			
             m_ivec_len = 8;
             m_ivec = (unsigned char*)malloc(m_ivec_len);
+			memset(m_ivec, 0, m_ivec_len);
+			//Initialize cipher context as triple DES
+			EVP_EncryptInit_ex(enc_ctx, EVP_des_ede3_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
+			EVP_DecryptInit_ex(dec_ctx, EVP_des_ede3_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
             break;
         }
         case CONDOR_BLOWFISH: {
-            const int bf_ks = sizeof(BF_KEY);
-            m_method_key_data_len = bf_ks;
-            m_method_key_data = (unsigned char*)malloc(m_method_key_data_len);
-            BF_set_key((BF_KEY*)m_method_key_data, m_keyInfo.getKeyLength(), m_keyInfo.getKeyData());
 
             m_ivec_len = 8;
             m_ivec = (unsigned char*)malloc(m_ivec_len);
+			memset(m_ivec, 0, m_ivec_len);
+			//Initialize cipher context as blowfish
+			EVP_EncryptInit_ex(enc_ctx, EVP_bf_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
+			EVP_DecryptInit_ex(dec_ctx, EVP_bf_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
             break;
         }
         case CONDOR_AESGCM: {
@@ -99,7 +86,8 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 
 Condor_Crypto_State::~Condor_Crypto_State() {
     if(m_ivec) free(m_ivec);
-    if(m_method_key_data) free(m_method_key_data);
+	EVP_CIPHER_CTX_free(enc_ctx);
+	EVP_CIPHER_CTX_free(dec_ctx);
 }
 
 void Condor_Crypto_State::reset() {
