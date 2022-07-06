@@ -110,9 +110,7 @@ src/condor_schedd.V6/condor_schedd
 src/condor_schedd.V6/temp_diff.patch
 src/condor_shadow.V6.1/condor_shadow
 src/condor_shared_port/condor_shared_port
-src/condor_startd.V6/condor_glexec_wrapper
 src/condor_startd.V6/condor_startd
-src/condor_starter.V6.1/condor_glexec_job_wrapper
 src/condor_starter.V6.1/condor_ssh_to_job_sshd_config_template
 src/condor_starter.V6.1/condor_starter
 src/condor_status.V6/condor_status

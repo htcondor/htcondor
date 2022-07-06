@@ -541,11 +541,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		job_not_started = true;
 		free(affinity_mask);
 		return 0;
-	} else if( Starter->glexecPrivSepHelper() ) {
-			// TODO: if there is some way to figure out the final username,
-			// print it out here or after starting the job.
-		dprintf(D_ALWAYS,"Running job via glexec\n");
-	}
+	} 
 #else
 	if( false ) {
 	}

@@ -308,11 +308,6 @@ void
 Starter::StarterExit( int code )
 {
 	FinalCleanup();
-#if !defined(WIN32)
-	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
-		exitAfterGlexec( code );
-	}
-#endif
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
@@ -356,21 +351,6 @@ Starter::Config()
 			Execute = strdup( orig_cwd );
 		} else {
 			EXCEPT("Execute directory not specified in config file.");
-		}
-	}
-	if (!m_configured) {
-		bool gl = param_boolean("GLEXEC_JOB", false);
-#if !defined(LINUX)
-		dprintf(D_ALWAYS,
-		        "GLEXEC_JOB not supported on this platform; "
-		            "ignoring\n");
-		gl = false;
-#endif
-		if (gl) {
-#if defined(LINUX)
-			m_privsep_helper = new GLExecPrivSepHelper;
-			ASSERT(m_privsep_helper != NULL);
-#endif
 		}
 	}
 
@@ -1921,11 +1901,6 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		free(who);
 
-#if defined(LINUX)
-		if(glexecPrivSepHelper()) {
-			dir_perms = 0755;
-		}
-#endif
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
@@ -2066,25 +2041,6 @@ Starter::createTempExecuteDir( void )
 int
 Starter::jobEnvironmentReady( void )
 {
-#if defined(LINUX)
-		//
-		// For the GLEXEC_JOB case, we should now be able to
-		// initialize our helper object.
-		//
-	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
-	if (gpsh != NULL) {
-		std::string proxy_path;
-		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
-		                                     proxy_path))
-		{
-			EXCEPT("configuration specifies use of glexec, "
-			           "but job has no proxy");
-		}
-		const char* proxy_name = condor_basename(proxy_path.c_str());
-		gpsh->initialize(proxy_name, WorkingDir.c_str());
-	}
-#endif
-
 		//
 		// Now that we are done preparing the job's environment,
 		// change the sandbox ownership to the user before spawning
@@ -3786,18 +3742,6 @@ Starter::removeTempExecuteDir( void )
 	std::string dir_name = "dir_";
 	dir_name += std::to_string( daemonCore->getpid() );
 
-#if defined(LINUX)
-	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
-		m_all_jobs_done == false) {
-
-		PrivSepError err;
-		if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
-			dprintf(D_ALWAYS, "Failed to chown glexec sandbox to condor on shutdown\n");
-			return false;
-		}
-	}
-#endif
-
 	bool has_failed = false;
 
 	// since we chdir()'d to the execute directory, we can't
@@ -3839,34 +3783,6 @@ Starter::removeTempExecuteDir( void )
 	}
 	return !has_failed;
 }
-
-#if !defined(WIN32)
-void
-Starter::exitAfterGlexec( int code )
-{
-	// tell Daemon Core to uninitialize its process family tracking
-	// subsystem. this will make sure that we tell our ProcD to exit,
-	// if we started one
-	daemonCore->Proc_Family_Cleanup();
-
-	// now we blow away the directory that the startd set up for us
-	// using glexec. this directory will be the parent directory of
-	// EXECUTE. we first "cd /", so that our working directory
-	// is not in the directory we're trying to delete
-	if (chdir( "/" )) {
-		dprintf(D_ALWAYS, "Error: chdir(\"/\") failed: %s\n", strerror(errno));
-	}
-	char* glexec_dir_path = condor_dirname( Execute );
-	ASSERT( glexec_dir_path );
-	Directory glexec_dir( glexec_dir_path );
-	glexec_dir.Remove_Entire_Directory();
-	rmdir( glexec_dir_path );
-	free( glexec_dir_path );
-
-	// all done
-	exit( code );
-}
-#endif
 
 bool
 Starter::WriteAdFiles() const
