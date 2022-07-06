@@ -7,6 +7,7 @@
 *.so.*
 *.dylib
 *.a
+*.DS_STORE
 CMakeCache.txt
 CMakeFiles/
 DartConfiguration.tcl
