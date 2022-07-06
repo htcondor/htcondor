@@ -679,8 +679,9 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     );
 		*/
 
+		OptionalCreateProcessArgs cpArgs;
 		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
-			OptionalCreateProcessArgs().priv(PRIV_USER_FINAL)
+			 cpArgs.priv(PRIV_USER_FINAL)
 			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
@@ -688,6 +689,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			.errorReturnMsg(create_process_err_msg).remap(fs_remap)
 			.asHardLimit(rlimit_as_hard_limit)
 		);
+		create_process_err_msg = cpArgs.getErrorReturnMsg();
 	}
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
