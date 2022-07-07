@@ -413,6 +413,8 @@ echo "
 ${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
+# Expanse specific:
+#SBATCH --constraint=\"lustre\"
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
 " >> ${PILOT_DIR}/expanse.slurm
