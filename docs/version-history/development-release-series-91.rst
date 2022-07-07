@@ -42,7 +42,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where **arc** grid universe jobs would remain in idle
+  status indefinitely when delegation of the job's X.509 proxy
+  certificate failed.
+  Now, the jobs go to held status.
+  :jira:`1194`
 
 Version 9.10.0
 --------------
