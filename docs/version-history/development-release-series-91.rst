@@ -48,6 +48,29 @@ Bugs Fixed:
   Now, the jobs go to held status.
   :jira:`1194`
 
+- Fixed the classad shared library extension mechanism.  An earlier
+  development series broke the ability for users to add custom
+  classad functions as documented in 
+  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  :jira:`1196`
+
+Version 9.10.1
+--------------
+
+.. HTCondor version 9.10.1 released on Month Date, 2022.
+
+- HTCondor version 9.10.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed inflated values for job attribute ``ActivationSetupDuration`` if
+  the job checkpoints.
+  :jira:`1190`
+
 Version 9.10.0
 --------------
 
@@ -126,6 +149,10 @@ New Features:
 - Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
   on Alma Linux 8 and equivalent platforms.
   :jira:`1150`
+
+- The *condor_schedd* now adds the ``ServerTime`` attribute to the job
+  ads of a query only if the client (i.e. *condor_q*) requests it.
+  :jira:`1125`
 
 Bugs Fixed:
 

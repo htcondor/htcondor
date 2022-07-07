@@ -23,7 +23,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
-#include "MyString.h"
 #include "subsystem_info.h"
 #include "simple_arg.h"
 #include <stdio.h>
