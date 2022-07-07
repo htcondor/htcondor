@@ -35,6 +35,10 @@ New Features:
   the admin has intentionally stopped the negotiator.
   :jira:`1185`
 
+- If a job that is a Unix script with a ``#!`` interpreter fails to run because
+  the interpeter doesn't exist, a clearer error message is written to the
+  job log and in the job's ``HoldReason`` attribute.
+
 - When an **arc** grid universe job has both a token and an X.509
   proxy, now only the token is used for authentication with the ARC CE
   server. The proxy is still delegated for use by the job.

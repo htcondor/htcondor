@@ -336,6 +336,14 @@ class OptionalCreateProcessArgs {
   friend class DaemonCore;
 
   public:
+    OptionalCreateProcessArgs(/*very not-const*/ std::string &_err_return_msg) :
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
+        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
+        nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
+        affinity_mask(NULL), daemon_sock(NULL),
+        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l)
+	{}
     OptionalCreateProcessArgs() :
         _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
         want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
@@ -391,7 +399,6 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & coreHardLimit(size_t * core_hard_limit ) { this->core_hard_limit = core_hard_limit; return *this; }
     OptionalCreateProcessArgs & affinityMask(int * affinity_mask) { this->affinity_mask = affinity_mask; return *this; }
     OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
-    OptionalCreateProcessArgs & errorReturnMsg(std::string & erm) { this->err_return_msg = erm; return *this; }
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
 
