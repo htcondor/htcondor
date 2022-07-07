@@ -37,7 +37,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed the classad shared library extension mechanism.  An earlier
+  development series broke the ability for users to add custom
+  classad functions as documented in 
+  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  :jira:`1196`
 
 Version 9.10.1
 --------------
