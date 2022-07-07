@@ -158,6 +158,12 @@ xmlSource.cpp
 #####################################################################
 
 add_library(classads_objects OBJECT ${ClassadSrcs})
+
+# Unix like oses need -DUNIX to get dlopen'ing code
+if (UNIX)
+target_compile_definitions(classads_objects PRIVATE UNIX)
+endif()
+
 # Older cmakes don't allow target_link_libraries to OBJECT libraries
 # remove this when we drop Ubuntu 18
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 

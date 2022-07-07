@@ -321,11 +321,13 @@ Starter::StarterExit( int code )
 
 void Starter::FinalCleanup()
 {
+#if defined(LINUX)
 		// Not useful to have the volume management code trigger
 		// while we are trying to cleanup.
 	if (m_lvm_poll_tid >= 0) {
 		daemonCore->Cancel_Timer(m_lvm_poll_tid);
 	}
+#endif
 
 	RemoveRecoveryFile();
 	removeTempExecuteDir();

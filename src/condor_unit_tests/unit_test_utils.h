@@ -119,10 +119,10 @@ MyString* convert_string_array(const char** str, int size,
 void delete_helper(char** array, int num_strs);
 
 /* 
- Adds a string representation of the tm struct into the MyString based on the 
+ Adds a string representation of the tm struct into the string based on the 
  ISO8601Type. 
  */
-void get_tm(ISO8601Type type, const struct tm &time, MyString* str);
+void get_tm(ISO8601Type type, const struct tm &time, std::string& str);
 
 /*
  Checks if the ClassAd has the following attributes with the given values

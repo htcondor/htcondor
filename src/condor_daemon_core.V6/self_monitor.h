@@ -23,7 +23,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "condor_classad.h"
 
 /*

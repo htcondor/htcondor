@@ -35,13 +35,45 @@ New Features:
   the admin has intentionally stopped the negotiator.
   :jira:`1185`
 
-- If a job that is a Unix script with a #! interpreter fails to run because
+- If a job that is a Unix script with a ``#!`` interpreter fails to run because
   the interpeter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
 
+- When an **arc** grid universe job has both a token and an X.509
+  proxy, now only the token is used for authentication with the ARC CE
+  server. The proxy is still delegated for use by the job.
+  :jira:`1194`
+
 Bugs Fixed:
 
+- Fixed a bug where **arc** grid universe jobs would remain in idle
+  status indefinitely when delegation of the job's X.509 proxy
+  certificate failed.
+  Now, the jobs go to held status.
+  :jira:`1194`
+
+- Fixed the classad shared library extension mechanism.  An earlier
+  development series broke the ability for users to add custom
+  classad functions as documented in 
+  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  :jira:`1196`
+
+Version 9.10.1
+--------------
+
+.. HTCondor version 9.10.1 released on Month Date, 2022.
+
+- HTCondor version 9.10.1 not yet released.
+
+New Features:
+
 - None.
+
+Bugs Fixed:
+
+- Fixed inflated values for job attribute ``ActivationSetupDuration`` if
+  the job checkpoints.
+  :jira:`1190`
 
 Version 9.10.0
 --------------

@@ -79,7 +79,9 @@ ArcResource::ArcResource( const char *resource_name,
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s#%s", proxyFQAN ? proxyFQAN : "", m_tokenFile.c_str() );
+	formatstr( buff, "ARC/%s#%s",
+	           (m_tokenFile.empty() && proxyFQAN) ? proxyFQAN : "",
+	           m_tokenFile.c_str() );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
