@@ -22,12 +22,7 @@
 
 #include "condor_classad.h"
 
-extern char * JobEpochInstDir;
-
-
 // Function for Shadow to call to write Job Ad per Epoch
 void writeJobEpochFile(classad::ClassAd const *job_ad);
-
-
 
 #endif

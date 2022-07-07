@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -46,24 +45,31 @@ $testname = "job_ad_epoch_recording";
 $dir = getcwd;
 CondorTest::debug("Path to working directory: $dir\n",1);
 
+runCondorTool("condor_config_val -dump JOB_EPOCH_INSTANCE_DIR",\@tooloutput,2,{emit_output=>1});
+
 @jobSubmitFiles = ();
 #Cluster Id needed to determine epoch file name
 $clusterId = 0;
 $currTestNum = 0;
 
-##======================================Start Personal Condor================================================
+##========================================Configure Condor=====================================================
 
-$append_config = "
-JOB_EPOCH_INSTANCE_DIR = $dir/epoch_ads";
+#$append_config = "
+#JOB_EPOCH_INSTANCE_DIR = $dir/epoch_ads";
 
-$configfile = CondorTest::CreateLocalConfig($append_config,"epochappendconfig");
+#$configfile = CondorTest::CreateLocalConfig($append_config,"epochappendconfig");
 
-CondorTest::StartCondorWithParams(
-	condor_name => "epochappend",
-	fresh_local => "TRUE",
-	condorlocalsrc => "$configfile",
-);
+#CondorTest::StartCondorWithParams(
+#	condor_name => "epochappend",
+#	fresh_local => "TRUE",
+#	condorlocalsrc => "$configfile",
+#);
 
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	JOB_EPOCH_INSTANCE_DIR = $(TEST_DIR)/epoch_ads
+CONDOR_TESTREQ_CONFIG
+#endtestreq
 ##==========================================File Creation====================================================
 
 sub emit_file {
@@ -107,7 +113,7 @@ sub check_epoch_files{
 	} else {
 		# Check for one Job file with appended epochs
 		# Check each Proc
-		$epochfile = "Epoch.$clusterId.0.append";
+		$epochfile = "job.runs.$clusterId.0.ads";
 		CondorTest::debug("Attempting to analyze $epochfile\n",1);
 		my $line = "";
 		my $matches = 0;
@@ -129,7 +135,7 @@ sub check_epoch_files{
 		if($matches == $wantedMatches) {
 			CondorTest::debug("PASSED $epochfile had correct number of job ads ($matches) written to it\n",1);
 		} else {
-			CondorTest::debug("FAILED $epochfile had $matches matche(s) when looking for $wantedMatches\n",1);
+			CondorTest::debug("FAILED $epochfile had $matches match(es) when looking for $wantedMatches\n",1);
 			return 0;
 		}
 		return 1;
@@ -170,12 +176,16 @@ $executed = sub
 
 $submitted = sub
 {
-	CondorTest::debug("Submitted: This test will see submit, executing, and successful completion\n",1);
+	if ($currTestNum%2 == 0) {
+		CondorTest::debug("Submitted(Normal): This test will see submit, executing, and successful completion\n",1);
+	} else {
+		CondorTest::debug("Submitted(Cron): this test will see submit, execution and eviction 3 times, and then successful abortion\n");
+	}
 };
 
 $evicted = sub
 {
-	if ($currTestNum%2 == 1) { CondorTest::debug("Cron job. Eviction expected\n",1); }
+	if ($currTestNum%2 == 1) { CondorTest::debug("Cron job evicted as expected\n",1); }
 	else { die "Unexpected eviction"; }
 };
 

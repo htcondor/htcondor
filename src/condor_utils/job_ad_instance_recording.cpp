@@ -26,39 +26,46 @@
 //--------------------------------------------------------------
 //                       Data members
 //--------------------------------------------------------------
-static bool 	file_per_epoch = false;
+//TODO: Make a structor to hold all this data
+static bool file_per_epoch = false;
 static bool	isInitialized = false;
-char * 		JobEpochInstDir = NULL;
+static char *JobEpochInstDir = NULL;
 
 //--------------------------------------------------------------
-//                      Write Functions
+//                     Helper Functions
 //--------------------------------------------------------------
 
-//Initialize all needed data members if not already done
+/*
+*	Function to set the job epoch directory from configuration variable
+*	JOB_EPOCH_INSTANCE_DIR if it is set and a valid directory.
+*/
 static void
-InitJobEpochFile(){
-	if (isInitialized) return;
-	//TODO: Add file_per_epoch param call
+setEpochDir(){
 	if (JobEpochInstDir != NULL) free(JobEpochInstDir);
+	// Attempt to grab job epoch instance directory
 	if ((JobEpochInstDir = param("JOB_EPOCH_INSTANCE_DIR")) != NULL) {
+		// If param was found and not null check if it is a valid directory
 		StatInfo si(JobEpochInstDir);
-        	if (!si.IsDirectory()) {
-            		dprintf(D_ALWAYS | D_FAILURE,
-                    		"invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
-                    		"valid directory; disabling per-epoch job recording.\n",
-                    		JobEpochInstDir);
-            		free(JobEpochInstDir);
-            		JobEpochInstDir = NULL;
-        	}
-        	else {
-            		dprintf(D_ALWAYS,
-                    		"Logging per-epoch job recording files to: %s\n",
-                    		JobEpochInstDir);
-        	}
+        if (!si.IsDirectory()) {
+			// Not a valid directory. Log message and set data member to NULL
+            dprintf(D_ALWAYS | D_ERROR,
+                    "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
+                    "valid directory; disabling per-epoch job recording.\n",
+                    JobEpochInstDir);
+            free(JobEpochInstDir);
+            JobEpochInstDir = NULL;
+        } else {
+            dprintf(D_ALWAYS,
+                    "Logging per-epoch job recording files to: %s\n",
+                    JobEpochInstDir);
+        }
 	}
 	isInitialized = true;
 }
 
+//--------------------------------------------------------------
+//                      Write Functions
+//--------------------------------------------------------------
 /*
 *	Write/Append job ad to one file per job with banner seperation
 *
@@ -66,6 +73,11 @@ InitJobEpochFile(){
 */
 static void
 appendJobEpochFile(const classad::ClassAd *job_ad){
+	// If not initialized then set up job epoch directory
+	if (!isInitialized) { setEpochDir(); }
+	// Verify that a directory is set if not return
+	if (!JobEpochInstDir) { return; }
+	
 	//Get various information needed for writing epoch file
 	int clusterId, procId, numShadow;
 	if (!job_ad->LookupInteger("ClusterId", clusterId)) {
@@ -78,19 +90,18 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 		//TODO: Replace Using NumShadowStarts with a better counter for epoch
 		numShadow = -1;
 	}
-	//Format file name and banner to print at end of Job Ad
+	//Format file name to print at end of Job Ad
 	std::string file_name, buffer;
-	formatstr(file_name,"%s/Epoch.%d.%d.append",JobEpochInstDir,clusterId,procId);
+	formatstr(file_name,"%s/job.runs.%d.%d.ads",JobEpochInstDir,clusterId,procId);
 	sPrintAd(buffer,*job_ad,nullptr,nullptr);
 	//Open file and append Job Ad to it
-	int fd = safe_open_wrapper_follow(file_name.c_str(), O_RDWR | O_CREAT | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0644);
+	int fd = safe_open_wrapper_follow(file_name.c_str(), O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT, 0644);
 	FILE* fp = fdopen(fd, "r+");
 	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_FAILURE,
+		dprintf(D_ALWAYS | D_ERROR,
 		        "error %d (%s) opening file stream for epoch file for job %d.%d\n",
 		        errno, strerror(errno), clusterId, procId);
 		close(fd);
-		unlink(file_name.c_str());
 		return;
 	}
 	//Print Job ad and Banner to file
@@ -117,21 +128,18 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 */
 void
 writeJobEpochFile(const classad::ClassAd *job_ad) {
-	InitJobEpochFile();
-	//If Instance Directory is declared then attempt to write epoch file
-	if (JobEpochInstDir) {
-		//If no Job Ad then log error and return
-		if (!job_ad) {
-			dprintf(D_ALWAYS | D_FAILURE,
-				"ERROR: No Job Ad. Not able to write to Job Epoch File");
-			return;
-		}
 
-		if (file_per_epoch) { // Check If user wants 1 file per job epoch/instance
-			;//writeJobEpochInstance(job_ad);
-		} else { // Otherwise write to single file per job
-			appendJobEpochFile(job_ad);
-		}
+	//If no Job Ad then log error and return
+	if (!job_ad) {
+		dprintf(D_ALWAYS | D_ERROR,
+			"ERROR: No Job Ad. Not able to write to Job Epoch File");
+		return;
+	}
+
+	if (file_per_epoch) { // Check If user wants 1 file per job epoch/instance
+		;//writeJobEpochInstance(job_ad);
+	} else { // Otherwise write to single file per job
+		appendJobEpochFile(job_ad);
 	}
 }
 
