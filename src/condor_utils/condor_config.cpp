@@ -1324,8 +1324,9 @@ void do_smart_auto_use(int /*options*/)
 			if ( ! trigger_value)
 				continue;
 
-			int meta_id = param_default_get_source_meta_id(tags[0].c_str(), tags[1].c_str());
-			if (meta_id < 0) {
+			int meta_id = 0;
+			const char * raw_template = param_meta_value(tags[0].c_str(), tags[1].c_str(), &meta_id);
+			if ( ! raw_template) {
 				fprintf(stderr, "Configuration error while interpreting %s : no template named %s:%s\n",
 					name, tags[0].c_str(), tags[1].c_str());
 				continue;
@@ -1334,10 +1335,7 @@ void do_smart_auto_use(int /*options*/)
 			insert_source(name, ConfigMacroSet, src);
 			src.meta_id = (short int)meta_id;
 
-			MACRO_DEF_ITEM * mdi = param_meta_source_by_id(src.meta_id);
-			ASSERT(mdi && mdi->def && mdi->def->psz);
-
-			auto_free_ptr expanded(expand_meta_args(mdi->def->psz, args));
+			auto_free_ptr expanded(expand_meta_args(raw_template, args));
 			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
 		}
 	}
