@@ -71,7 +71,7 @@ MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param,
 const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param, int * meta_offset);
 //int param_default_get_source_meta_id(const char * meta, const char * param);
 const char * param_meta_value(const char * meta, const char * param, int * meta_id);
-MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id, MACRO_TABLE_PAIR ** ptable);
 
 
 // Returns -1 if param is not of the specified type.

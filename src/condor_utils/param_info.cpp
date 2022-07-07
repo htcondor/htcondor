@@ -157,25 +157,20 @@ const char * param_meta_value(const char * meta, const char * param, int * pmeta
 	return param_meta_value(condor_params::def_metaknobsets, meta, param, pmeta_id);
 }
 
-MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id)
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id, MACRO_TABLE_PAIR ** ptable)
 {
 	// the meta_id is the sum of the index within the table
 	// and sum of entries in all of the tables before
-#if 1
 	if (meta_id < 0)
 		return NULL;
 	for (int ix = 0; ix < condor_params::metaknobsets_count; ++ix) {
 		if (meta_id < condor_params::metaknobsets[ix].cElms) {
+			if (ptable) *ptable = &condor_params::metaknobsets[ix];
 			return condor_params::metaknobsets[ix].aTable + meta_id;
 		}
 		meta_id -= condor_params::metaknobsets[ix].cElms;
 	}
 	return NULL;
-#else
-	if (meta_id < 0 || meta_id >= condor_params::metaknobsources_count)
-		return NULL;
-	return &condor_params::metaknobsources[meta_id];
-#endif
 }
 
 // lookup a knob by metaname and by knobname.

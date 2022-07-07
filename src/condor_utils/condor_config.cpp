@@ -2708,9 +2708,10 @@ const char * param_append_location(const MACRO_META * pmet, MyString & value)
 	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
 		value.formatstr_cat(", line %d", pmet->source_line);
-		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
+		MACRO_TABLE_PAIR * ptable = nullptr;
+		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id, &ptable);
 		if (pmsi) {
-			value.formatstr_cat(", use %s+%d", pmsi->key, pmet->source_meta_off);
+			value.formatstr_cat(", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
 		}
 	}
 	return value.c_str();
