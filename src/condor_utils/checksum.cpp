@@ -75,7 +75,7 @@ compute_checksum( int fd, std::string & checksum ) {
 
 bool
 compute_file_checksum( const std::string & file_name, std::string & checksum ) {
-    int fd = safe_open_wrapper( file_name.c_str(), O_RDONLY | O_LARGEFILE | _O_BINARY, 0 );
+    int fd = safe_open_wrapper_follow( file_name.c_str(), O_RDONLY | O_LARGEFILE | _O_BINARY, 0 );
     if( fd < 0 ) { return false; }
     bool rv = compute_checksum( fd, checksum );
     close(fd); fd = -1;

@@ -100,7 +100,7 @@ def theComplicatedOne(test_dir):
     ( pathToManifestDir / "e" / "a" ).write_text("aaaaa")
     ( pathToManifestDir / "e" / "b" ).write_text("bbbb")
     ( pathToManifestDir / "e" / "c" ).mkdir(parents=True, exist_ok=True)
-    ( pathToManifestDir / "e" / "d" ).symlink_to(( pathToManifestDir / "d" ))
+    ( pathToManifestDir / "e" / "d" ).symlink_to(( pathToManifestDir / "c" ))
 
     return makeManifestForDirectory(pathToManifestDir)
 
@@ -140,21 +140,60 @@ def sha256sum(pathToFile):
     assert(rv.returncode == 0)
     return rv.stdout
 
+def makeManifestForDirectoryWith(pathToManifestDir, args, suffix=None):
+    manifestText = mmfdw_impl(pathToManifestDir, pathToManifestDir, args, suffix)
+
+    manifestFileName = "MANIFEST.0000"
+    if suffix is not None:
+        manifestFileName += suffix
+    pathToPartialManifest = pathToManifestDir / manifestFileName
+    pathToPartialManifest.write_bytes(manifestText)
+
+    lastManifestLine = sha256sum(pathToPartialManifest)
+    # s/MANIFEST.0000{suffix}/MANIFEST.0000
+    if suffix is not None:
+        lastManifestLine = lastManifestLine[:-(len(suffix) + 1)] + b'\n'
+
+    pathToPartialManifest.write_bytes(manifestText + lastManifestLine)
+    return pathToPartialManifest.as_posix()
+
+def mmfdw_impl(pathToManifestDir, prefix, args, suffix):
+    manifestText = b''
+
+    # The semantics for HTCondor file transfer are that symlinks to files
+    # copy the target, and that symlinks to directories put the job on hold.
+    #
+    # This code therefore just ignores symlinks to directories, although
+    # it should never see any.
+    for pathToFile in pathToManifestDir.iterdir():
+        if pathToFile.name == "MANIFEST.0000":
+            continue
+
+        if pathToFile.is_block_device():
+            continue
+        if pathToFile.is_char_device():
+            continue
+        if pathToFile.is_dir():
+            if not pathToFile.is_symlink():
+                manifestText += mmfdw_impl(pathToFile, prefix, args, suffix)
+            continue
+        if pathToFile.is_fifo():
+            continue
+
+        relativePath = pathToFile.relative_to(prefix)
+        rv = subprocess.run( args + [relativePath.as_posix()],
+                cwd=prefix,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=20)
+        assert(rv.returncode == 0)
+        manifestText += rv.stdout
+
+    return manifestText
+
 def makeManifestForDirectory(pathToManifestDir):
-    args = ["condor_manifest", "generateFileForDir", pathToManifestDir.as_posix() ]
-    rv = subprocess.run( args,
-            cwd = pathToManifestDir,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=20)
-
-    logger.debug(f"[command] {' '.join(args)}")
-    logger.debug(f"[returned] {rv.returncode}")
-    logger.debug(f"[stdout] {rv.stdout}")
-    logger.debug(f"[stderr] {rv.stderr}")
-
-    return (pathToManifestDir / "MANIFEST.0000").as_posix()
-
+    args = [ 'condor_manifest', 'compute_file_checksum' ]
+    return makeManifestForDirectoryWith(pathToManifestDir, args)
 
 class TestManifestFiles:
 
@@ -270,33 +309,11 @@ class TestManifestFiles:
 
     @pytest.fixture
     def crypto_expected(self, crypto_test_case):
+        args = ["sha256sum", "--binary"]
         pathToManifestDir = Path(crypto_test_case[0]).parent
-
-        manifestText = b''
-        for pathToFile in pathToManifestDir.iterdir():
-            if pathToFile.name == "MANIFEST.0000":
-                continue
-
-            if pathToFile.is_block_device():
-                continue
-            if pathToFile.is_char_device():
-                continue
-            if pathToFile.is_dir():
-                continue
-            if pathToFile.is_fifo():
-                continue
-
-            manifestText += sha256sum(pathToFile)
-
-        pathToPartialManifest = pathToManifestDir / "MANIFEST.256"
-        pathToPartialManifest.write_bytes(manifestText)
-
-        lastManifestLine = sha256sum(pathToPartialManifest)
-        # s/MANIFEST.256/MANIFEST.0000
-        lastManifestLine = lastManifestLine[:-4] + b'0000\n'
-
-        pathToPartialManifest.write_bytes(manifestText + lastManifestLine)
-        return pathToPartialManifest.read_bytes()
+        return Path(makeManifestForDirectoryWith(
+          pathToManifestDir, args, '.sha256sum')
+        ).read_bytes()
 
     def test_compute_file_checksum(self, crypto_test_case, crypto_expected, crypto_result):
         assert crypto_expected == crypto_result
