@@ -35,7 +35,18 @@ New Features:
   the admin has intentionally stopped the negotiator.
   :jira:`1185`
 
+- When an **arc** grid universe job has both a token and an X.509
+  proxy, now only the token is used for authentication with the ARC CE
+  server. The proxy is still delegated for use by the job.
+  :jira:`1194`
+
 Bugs Fixed:
+
+- Fixed a bug where **arc** grid universe jobs would remain in idle
+  status indefinitely when delegation of the job's X.509 proxy
+  certificate failed.
+  Now, the jobs go to held status.
+  :jira:`1194`
 
 - Fixed the classad shared library extension mechanism.  An earlier
   development series broke the ability for users to add custom
