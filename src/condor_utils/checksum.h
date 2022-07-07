@@ -25,6 +25,4 @@
 bool compute_checksum( int fd, std::string & checksum );
 bool compute_file_checksum( const std::string & file_name, std::string & checksum );
 
-const char * encode_hex( char * buf, int bufsiz, const unsigned char * data, int datalen );
-
 #endif /* _COMPUTE_CHECKSUM_H */

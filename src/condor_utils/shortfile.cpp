@@ -82,4 +82,3 @@ htcondor::appendShortFile( const std::string & fileName, const std::string & con
 
     return true;
 }
-

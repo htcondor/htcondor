@@ -20,11 +20,8 @@
 #include <stdio.h>
 #include <string>
 
-#include <sys/types.h>
-#include <dirent.h>
 #include <errno.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "stl_string_utils.h"
 
@@ -41,70 +38,8 @@ usage( const char * argv0 ) {
     fprintf( stderr, "  validateFilesListedIn\n" );
     fprintf( stderr, "  FileFromLine\n" );
     fprintf( stderr, "  ChecksumFromLine\n" );
+    fprintf( stderr, "  compute_file_checksum\n" );
     return 1;
-}
-
-bool
-generateFileForDir( const std::string & dirName, std::string & error ) {
-    std::string manifestText;
-
-    DIR * dir = opendir( dirName.c_str() );
-    if( dir == NULL ) {
-        formatstr( error, "opendir(%s) failed: %s (%d)", dirName.c_str(), strerror(errno), errno );
-        return false;
-    }
-
-    struct dirent * dentry;
-    while( (dentry = readdir(dir)) != NULL ) {
-        switch( dentry->d_type ) {
-            case DT_BLK:
-            case DT_CHR:
-            case DT_DIR:
-            case DT_FIFO:
-            case DT_UNKNOWN:
-                continue;
-            default:
-                break;
-        }
-
-        std::string fileName = dentry->d_name;
-        // if( fileName == "." || fileName == ".." ) { continue; }
-
-        std::string fileHash;
-        if(! compute_file_checksum( fileName, fileHash)) {
-            formatstr( error, "Failed to compute file (%s) checksum", fileName.c_str() );
-            return false;
-        }
-        // The '*' marks the hash as having been computed in binary mode.
-        formatstr_cat(
-            manifestText, "%s *%s\n", fileHash.c_str(), fileName.c_str()
-        );
-    }
-    closedir(dir);
-
-    std::string manifestFileName = "MANIFEST.0000";
-    if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
-        formatstr( error, "Failed to write manifest file" );
-        return false;
-    }
-
-    std::string manifestHash;
-    if(! compute_file_checksum( manifestFileName, manifestHash )) {
-        formatstr( error, "Failed to compute MANIFEST checksum" );
-        unlink( manifestFileName.c_str() );
-        return false;
-    }
-
-    std::string append;
-    formatstr( append,
-        "%s *%s\n", manifestHash.c_str(), manifestFileName.c_str()
-    );
-    if(! htcondor::appendShortFile( manifestFileName, append )) {
-        formatstr( error, "Failed to append MANIFEST checksum to MANIFEST file" );
-        return false;
-    }
-
-    return true;
 }
 
 int
@@ -140,11 +75,11 @@ main( int argc, char ** argv ) {
         std::string checksum = manifest::ChecksumFromLine( argument );
         fprintf( stdout, "%s\n", checksum.c_str() ) ;
         return 0;
-    } else if( function == "generateFileForDir" ) {
-        std::string error;
-        bool ok = generateFileForDir( argument, error );
-        if(! ok) {
-            fprintf( stdout, "%s\n", error.c_str() );
+    } else if( function == "compute_file_checksum" ) {
+        std::string checksum;
+        bool ok = compute_file_checksum( argument, checksum );
+        if( ok ) {
+            fprintf( stdout, "%s *%s\n", checksum.c_str(), argument.c_str() );
         }
         return ok ? 0 : 1;
     } else {

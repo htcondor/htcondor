@@ -22,74 +22,60 @@
 #include "condor_system.h"
 
 #include <string>
+#include <map>
+
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
+#include <ssl_version_hack.h>
 
 #include "safe_open.h"
+#include "AWSv4-impl.h"
 
-#include <openssl/sha.h>
 
-//
-// The functions hex_digit() and encode_hex() were copied from
-// condor_had/Utils.cpp.  compute[_file]_checksum() were adapted from the
-// same source, but don't include the deliberate text-mode bug.
-//
-
-// encode an unsigned character array as a null terminated hex string
-// the caller must supply an input buffer that is at least 2*datalen+1 in size
-static char hex_digit(unsigned char n) { return n + ((n < 10) ? '0' : ('a' - 10)); }
-const char * encode_hex(char * buf, int bufsiz, const unsigned char * data, int datalen)
-{
-    if (!buf || bufsiz < 3) return "";
-    const unsigned char * d = data;
-    char * p = buf;
-    char * endp = buf + bufsiz - 2; // we advance by 2 each loop iteration
-    while (datalen-- > 0) {
-        unsigned char ch = *d++;
-        *p++ = hex_digit((ch >> 4) & 0xF);
-        *p++ = hex_digit(ch & 0xF);
-        if (p >= endp) break;
-    }
-    *p = 0;
-    return buf;
-}
-
-// FIXME: this uses deprecated OpenSSL APIs.
 bool
 compute_checksum( int fd, std::string & checksum ) {
     const size_t BUF_SIZ = 1024 * 1024;
     unsigned char * buffer = (unsigned char *)calloc(BUF_SIZ, 1);
     ASSERT( buffer != NULL );
 
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX context;
-    SHA256_Init( &context );
+    EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
+    if( context == NULL ) { return false; }
+    if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
+        condor_EVP_MD_CTX_free( context );
+        return false;
+    }
 
     ssize_t bytesTotal = 0;
     // FIXME: This doesn't handle EAGAIN, but really should.  Look at
     // full_read(), instead.
     ssize_t bytesRead = read( fd, buffer, BUF_SIZ );
     while( bytesRead > 0 ) {
-        SHA256_Update( &context, buffer, bytesRead );
+        EVP_DigestUpdate( context, buffer, bytesRead );
         memset( buffer, 0, BUF_SIZ );
         bytesTotal += bytesRead;
         bytesRead = read( fd, buffer, BUF_SIZ );
     }
     free(buffer); buffer = NULL;
 
+    unsigned char hash[SHA256_DIGEST_LENGTH];
     memset( hash, 0, sizeof(hash) );
-    SHA256_Final( hash, &context );
-
-    // Ask TJ why this is +4 instead of +1.
-    char file_hash[SHA256_DIGEST_LENGTH * 2 + 4];
-    encode_hex( file_hash, sizeof(file_hash), hash, sizeof(hash) );
-    checksum.assign( file_hash, strlen(file_hash) );
+    if(! EVP_DigestFinal_ex( context, hash, NULL )) {
+        condor_EVP_MD_CTX_free( context );
+        return false;
+    }
+    condor_EVP_MD_CTX_free( context );
 
     if( bytesRead == -1 ) { return false; }
+
+    AWSv4Impl::convertMessageDigestToLowercaseHex(
+        hash, SHA256_DIGEST_LENGTH, checksum
+    );
     return true;
 }
 
 bool
 compute_file_checksum( const std::string & file_name, std::string & checksum ) {
-    int fd = safe_open_wrapper( file_name.c_str(), O_RDONLY | O_LARGEFILE | _O_BINARY, 0 );
+    int fd = safe_open_wrapper_follow( file_name.c_str(), O_RDONLY | O_LARGEFILE | _O_BINARY, 0 );
     if( fd < 0 ) { return false; }
     bool rv = compute_checksum( fd, checksum );
     close(fd); fd = -1;

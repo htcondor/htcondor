@@ -35,7 +35,6 @@ add_library(condor_version_obj STATIC condor_version.cpp)
 # Ideally, as we break dependencies, more of these move into just libcondor_utils
 set(CONDOR_API_AND_UTILS_SRC
 basename.cpp
-checksum.cpp
 chomp.cpp
 classad_merge.cpp
 classad_merge.h
@@ -64,8 +63,6 @@ HashTable.cpp
 HashTable.h
 iso_dates.cpp
 iso_dates.h
-manifest.cpp
-manifest.h
 MyString.cpp
 MyString.h
 read_user_log.cpp
@@ -144,12 +141,15 @@ ad_transforms.cpp
 ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
+AWSv4-impl.h
 backward_file_reader.cpp
 binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checksum.cpp
+checksum.h
 classad_collection.cpp
 classad_collection.h
 classad_command_util.cpp
@@ -352,6 +352,8 @@ log_rotate.h
 log_transaction.cpp
 log_transaction.h
 make_printmask.cpp
+manifest.cpp
+manifest.h
 MapFile.cpp
 MapFile.h
 mark_thread.cpp
@@ -430,6 +432,7 @@ spooled_job_files.cpp
 spooled_job_files.h
 spool_version.cpp
 spool_version.h
+ssl_version_hack.h
 stat_info.cpp
 stat_info.h
 status_string.cpp

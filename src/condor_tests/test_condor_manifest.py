@@ -100,7 +100,7 @@ def theComplicatedOne(test_dir):
     ( pathToManifestDir / "e" / "a" ).write_text("aaaaa")
     ( pathToManifestDir / "e" / "b" ).write_text("bbbb")
     ( pathToManifestDir / "e" / "c" ).mkdir(parents=True, exist_ok=True)
-    ( pathToManifestDir / "e" / "d" ).symlink_to(( pathToManifestDir / "d" ))
+    ( pathToManifestDir / "e" / "d" ).symlink_to(( pathToManifestDir / "c" ))
 
     return makeManifestForDirectory(pathToManifestDir)
 
@@ -130,21 +130,70 @@ def mutateFilePath(pathToManifestFile):
     logger.debug(f"Mutated file path in '{pathToManifestFile}'");
     return pathToManifestFile
 
-def makeManifestForDirectory(pathToManifestDir):
-    args = ["condor_manifest", "generateFileForDir", pathToManifestDir.as_posix() ]
+def sha256sum(pathToFile):
+    args = ["sha256sum", "--binary", pathToFile.name]
     rv = subprocess.run( args,
-            cwd = pathToManifestDir,
+            cwd=pathToFile.parent,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             timeout=20)
+    assert(rv.returncode == 0)
+    return rv.stdout
 
-    logger.debug(f"[command] {' '.join(args)}")
-    logger.debug(f"[returned] {rv.returncode}")
-    logger.debug(f"[stdout] {rv.stdout}")
-    logger.debug(f"[stderr] {rv.stderr}")
+def makeManifestForDirectoryWith(pathToManifestDir, args, suffix=None):
+    manifestText = mmfdw_impl(pathToManifestDir, pathToManifestDir, args, suffix)
 
-    return (pathToManifestDir / "MANIFEST.0000").as_posix()
+    manifestFileName = "MANIFEST.0000"
+    if suffix is not None:
+        manifestFileName += suffix
+    pathToPartialManifest = pathToManifestDir / manifestFileName
+    pathToPartialManifest.write_bytes(manifestText)
 
+    lastManifestLine = sha256sum(pathToPartialManifest)
+    # s/MANIFEST.0000{suffix}/MANIFEST.0000
+    if suffix is not None:
+        lastManifestLine = lastManifestLine[:-(len(suffix) + 1)] + b'\n'
+
+    pathToPartialManifest.write_bytes(manifestText + lastManifestLine)
+    return pathToPartialManifest.as_posix()
+
+def mmfdw_impl(pathToManifestDir, prefix, args, suffix):
+    manifestText = b''
+
+    # The semantics for HTCondor file transfer are that symlinks to files
+    # copy the target, and that symlinks to directories put the job on hold.
+    #
+    # This code therefore just ignores symlinks to directories, although
+    # it should never see any.
+    for pathToFile in pathToManifestDir.iterdir():
+        if pathToFile.name == "MANIFEST.0000":
+            continue
+
+        if pathToFile.is_block_device():
+            continue
+        if pathToFile.is_char_device():
+            continue
+        if pathToFile.is_dir():
+            if not pathToFile.is_symlink():
+                manifestText += mmfdw_impl(pathToFile, prefix, args, suffix)
+            continue
+        if pathToFile.is_fifo():
+            continue
+
+        relativePath = pathToFile.relative_to(prefix)
+        rv = subprocess.run( args + [relativePath.as_posix()],
+                cwd=prefix,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=20)
+        assert(rv.returncode == 0)
+        manifestText += rv.stdout
+
+    return manifestText
+
+def makeManifestForDirectory(pathToManifestDir):
+    args = [ 'condor_manifest', 'compute_file_checksum' ]
+    return makeManifestForDirectoryWith(pathToManifestDir, args)
 
 class TestManifestFiles:
 
@@ -241,3 +290,30 @@ class TestManifestFiles:
 
     def test_validateFilesListedIn(self, test_case, list_expected, list_result):
         assert list_expected == list_result
+
+    CRYPTO_TEST_CASES = [
+        ( lambda p: validButUseless(p),                         0, 1 ),
+        ( lambda p: emptyOtherFile(p),                          0, 0 ),
+        ( lambda p: singleOtherFile(p),                         0, 0 ),
+        ( lambda p: theComplicatedOne(p),                       0, 0 ),
+    ]
+
+    @pytest.fixture(params=CRYPTO_TEST_CASES)
+    def crypto_test_case(self, request, test_dir):
+        case = request.param
+        return (case[0](test_dir), case[1], case[2])
+
+    @pytest.fixture
+    def crypto_result(self, crypto_test_case):
+        return Path(crypto_test_case[0]).read_bytes()
+
+    @pytest.fixture
+    def crypto_expected(self, crypto_test_case):
+        args = ["sha256sum", "--binary"]
+        pathToManifestDir = Path(crypto_test_case[0]).parent
+        return Path(makeManifestForDirectoryWith(
+          pathToManifestDir, args, '.sha256sum')
+        ).read_bytes()
+
+    def test_compute_file_checksum(self, crypto_test_case, crypto_expected, crypto_result):
+        assert crypto_expected == crypto_result
