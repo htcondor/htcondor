@@ -400,6 +400,10 @@ struct Param
             pyresult = object(result);
             break;
         }
+        default :
+            // PARAM_TYPE_KVP and PARAM_TYPE_KTP and the other 4 billion possible values
+            // are not handled explicitly in this switch and GCC gets pissy about that without a default case
+            break;
         }
         return pyresult;
     }
