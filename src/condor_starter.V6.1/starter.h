@@ -29,7 +29,6 @@
 #include "exit.h"
 
 #if defined(LINUX)
-#include "glexec_privsep_helper.linux.h"
 #include "../condor_startd.V6/VolumeManager.h"
 #endif
 
@@ -318,13 +317,6 @@ public:
 	{
 		return m_privsep_helper;
 	}
-#if defined(LINUX)
-		/** This will return NULL if we're not using PrivSep */
-	GLExecPrivSepHelper* glexecPrivSepHelper()
-	{
-		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
-	}
-#endif
 
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
@@ -356,11 +348,6 @@ private:
 
 		/// Remove the execute/dir_<pid> directory
 	virtual bool removeTempExecuteDir( void );
-
-#if !defined(WIN32)
-		/// Special cleanup for exiting after being invoked via glexec
-	void exitAfterGlexec( int code );
-#endif
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
