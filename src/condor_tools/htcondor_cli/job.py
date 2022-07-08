@@ -317,7 +317,7 @@ class Status(Verb):
             elif job_status == htcondor.JobStatus.HELD:
                 job_held_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
                 logger.info(f"Job {job_id} is currently held.")
-                logger.info(f"It was been held for {readable_time(job_held_time.seconds)}")
+                logger.info(f"It has been held for {readable_time(job_held_time.seconds)}.")
                 logger.info(f"""It was held because "{job_ad['HoldReason']}".""")
                 logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
                 logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
