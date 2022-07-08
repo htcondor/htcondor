@@ -96,6 +96,14 @@ typedef struct _allocation_pool {
 	// get total used size, total number of system allocations and amount of free space in the pool.
 	int  usage(int & cHunks, int & cbFree);
 
+	template <class T> T* consume(int num) { return reinterpret_cast<T*>(consume(sizeof(T)*num, sizeof(T))); }
+	template <class T> T* consume(int num, int align) { return reinterpret_cast<T*>(consume(sizeof(T)*num, align)); }
+	template <class T> const T* insert(const T& val, int align) {
+		char * pb = this->consume(sizeof(val), align);
+		if (pb) memcpy(pb, &val, sizeof(val));
+		return reinterpret_cast<const T*>(pb);
+	}
+
 } ALLOCATION_POOL;
 
 

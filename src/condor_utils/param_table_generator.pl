@@ -330,7 +330,9 @@ sub reconstitute {
 		. "typedef struct ranged_long_value { const char * psz; int flags; long long val; long long min; long long max; } ranged_long_value;\n"
 		. "typedef struct ranged_double_value { const char * psz; int flags; double val; double min; double max; } ranged_double_value;\n"
 		. "typedef struct key_value_pair { const char * key; const nodef_value * def; } key_value_pair;\n"
+		. "typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;\n"
 		. "typedef struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; } key_table_pair;\n"
+		. "typedef struct ktp_value { const char * label; int flags; const key_table_pair * aTables; int cTables; } ktp_value;\n"
 		. "\n");
 	
 	# everything after this will be inside ifdef PARAM_DECLARE_TABLES.
@@ -693,6 +695,7 @@ sub reconstitute {
 	}
 	continue_output("}; // subsystems[]\n");
 	continue_output("const int subsystems_count = sizeof(subsystems)/sizeof(key_table_pair);\n\n");
+	continue_output("const ktp_value def_subsystems = { \"subsys\", PARAM_TYPE_KTP_TABLE, subsystems, subsystems_count };\n\n");
 
 	# output metaknob  key/value table
 	#
@@ -719,19 +722,21 @@ sub reconstitute {
 		continue_output("\t{ \"$key\", ${meta_prefix}knobs, ${meta_prefix}knobs_count },\n");
 	}
 	continue_output("}; // metaknobsets[]\n");
-	continue_output("const int metaknobsets_count = sizeof(metaknobsets)/sizeof(key_table_pair);\n\n");
+	continue_output("const int metaknobsets_count = sizeof(metaknobsets)/sizeof(key_table_pair);\n");
+	continue_output("const ktp_value def_metaknobsets = { \"\$\", PARAM_TYPE_KTP_TABLE, metaknobsets, metaknobsets_count };\n\n");
 	# output metaknob  key.value source map
 	continue_output("\n/*==========================================\n"
 					. " * metaknob source table \n"
 					. " *==========================================*/\n");
-	continue_output("const key_value_pair metaknobsources[] = {\n");
+	continue_output("//const key_value_pair metaknobsources[] = {\n");
 	foreach my $key (sort  { lc($a) cmp lc($b) } keys %var_metas) {
 		foreach (sort { lc($a) cmp lc($b) } @{$var_metas{$key}}) {
-			continue_output("\t{ \"${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
+			continue_output("//\t{ \"${key}:$_\", (const nodef_value*)&def_\$${key}\$$_ },\n");
 		}
 	}
-	continue_output("}; // metaknobsources[]\n");
-	continue_output("const int metaknobsources_count = sizeof(metaknobsources)/sizeof(key_value_pair);\n\n");
+	continue_output("//}; // metaknobsources[]\n");
+	continue_output("//const int metaknobsources_count = sizeof(metaknobsources)/sizeof(key_value_pair);\n\n");
+	continue_output("//const kvp_value def_metaknobsources = { \"\$:\", PARAM_TYPE_KVP_TABLE, metaknobsources, metaknobsources_count };\n\n");
 
 	# end of table declarations, everthing after this should be extern or type declarations.
 	#
@@ -740,10 +745,12 @@ sub reconstitute {
 					. "extern const int defaults_count;\n"
 					. "extern const key_table_pair subsystems[];\n"
 					. "extern const int subsystems_count;\n"
-					. "extern const key_table_pair metaknobsets[];\n"
-					. "extern const int metaknobsets_count;\n"
-					. "extern const key_value_pair metaknobsources[];\n"
-					. "extern const int metaknobsources_count;\n"
+					. "//extern const key_table_pair metaknobsets[];\n"
+					. "//extern const int metaknobsets_count;\n"
+					. "extern const ktp_value def_metaknobsets;\n"
+					. "//extern const key_value_pair metaknobsources[];\n"
+					. "//extern const int metaknobsources_count;\n"
+					. "//extern const kvp_value def_metaknobsources;\n"
 					);
 
 	# output an enum of param indexs into the global defaults table

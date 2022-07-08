@@ -27,99 +27,20 @@ typedef enum param_info_t_type_e {
 	PARAM_TYPE_BOOL = 2,
 	PARAM_TYPE_DOUBLE = 3,
 	PARAM_TYPE_LONG = 4,
+	PARAM_TYPE_KVP_TABLE = 14,
+	PARAM_TYPE_KTP_TABLE = 15,
 } param_info_t_type_t;
 
-// This struct is common to all params, int and double params
-// will be followed by an int or double when default_valid is true,
-// ranged params will have min and max values following that if range_valid is true.
-typedef struct param_info_t_s {
-    // The commented out things are structures defined in the param table but
-    // not currently utilized by Condor.  They were removed to decrease overall
-    // memory size of the param table.
-
-	const char * name;
-    //char const *  aliases;
-	const char * str_val;
-    //const char * version;
-    //char const *  range;
-    //const char * friendly_name;
-    //const char * usage;
-    //const char * url;
-    //const char * tags;
-
-    //int		id;
-
-    param_info_t_type_t  	type;
-    //int 	state;
-    //int 	customization;
-    //int 	reconfig;
-    //int 	is_macro;
-	int		default_valid;
-	int 	range_valid;
-
-} param_info_t;
-
-struct param_info_str_t_s {
-   param_info_t hdr;
-//   const char * str_val;
-};
-
-struct param_info_str_ranged_t_s {
-   param_info_t hdr;
-   char * str_val;
-   char * range;
-};
-
-struct param_info_int_t_s {
-   param_info_t hdr;
-   int int_val;
-};
-
-struct param_info_int_ranged_t_s {
-   param_info_t hdr;
-   int int_val;
-   int int_min;
-   int int_max;
-};
-
-struct param_info_dbl_t_s {
-   param_info_t hdr;
-   double dbl_val;
-};
-
-struct param_info_dbl_ranged_t_s {
-   param_info_t hdr;
-   double dbl_val;
-   double dbl_min;
-   double dbl_max;
-};
-
-typedef struct param_info_str_t_s param_info_PARAM_TYPE_STRING;
-typedef struct param_info_int_t_s param_info_PARAM_TYPE_BOOL;
-typedef struct param_info_int_t_s param_info_PARAM_TYPE_INT;
-typedef struct param_info_dbl_t_s param_info_PARAM_TYPE_DOUBLE;
-typedef struct param_info_str_t_s        param_info_PARAM_TYPE_STRING_ranged;
-typedef struct param_info_int_ranged_t_s param_info_PARAM_TYPE_INT_ranged;
-typedef struct param_info_dbl_ranged_t_s param_info_PARAM_TYPE_DOUBLE_ranged;
-
-typedef union param_info_storage_u {
-   struct param_info_t_s hdr;
-   param_info_PARAM_TYPE_STRING type_string;
-   param_info_PARAM_TYPE_BOOL type_bool;
-   param_info_PARAM_TYPE_INT type_int;
-   param_info_PARAM_TYPE_DOUBLE type_double;
-   param_info_PARAM_TYPE_STRING_ranged type_string_ranged;
-   param_info_PARAM_TYPE_INT_ranged type_int_ranged;
-   param_info_PARAM_TYPE_DOUBLE_ranged type_double_ranged;
-} param_info_storage_t;
-
+#define PARAM_DEFAULTS_SORTED
 
 namespace condor_params {
 	typedef struct key_value_pair key_value_pair;
 	typedef struct key_table_pair key_table_pair;
+	typedef struct ktp_value ktp_value;
 }
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
+typedef const struct condor_params::ktp_value      MACRO_META_TABLES;
 
 int param_info_init(const void ** pvdefaults);
 
@@ -144,11 +65,13 @@ MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name
 MACRO_DEF_ITEM *param_default_lookup(const char *name);
 int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable);
 
-MACRO_TABLE_PAIR * param_meta_table(const char * meta);
-MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param);
-const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param);
-int param_default_get_source_meta_id(const char * meta, const char * param);
-MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
+MACRO_TABLE_PAIR * param_meta_table(const char * meta, int * base_meta_id);
+MACRO_TABLE_PAIR * param_meta_table(MACRO_META_TABLES & knobsets, const char * meta, int * base_meta_id);
+MACRO_DEF_ITEM * param_meta_table_lookup(MACRO_TABLE_PAIR *, const char * param, int * meta_offset);
+const char * param_meta_table_string(MACRO_TABLE_PAIR *, const char * param, int * meta_offset);
+//int param_default_get_source_meta_id(const char * meta, const char * param);
+const char * param_meta_value(const char * meta, const char * param, int * meta_id);
+MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id, MACRO_TABLE_PAIR ** ptable);
 
 
 // Returns -1 if param is not of the specified type.
@@ -157,57 +80,7 @@ MACRO_DEF_ITEM * param_meta_source_by_id(int meta_id);
 int param_range_integer(const char* param, int* min, int* max);
 int param_range_long(const char* param, long long* min, long long* max);
 int param_range_double(const char* param, double* min, double* max);
-	
-// Iterate the list of parameter information.
-// See param_info_hash_iterate below.
-void iterate_params(int (*callPerElement)
-		(const param_info_t* /*value*/, void* /*user data*/), void* user_data);
 
-///////////////////
-// hash table stuff
-///////////////////
-
-// Picked a table size by looking for a prime number about equal to the
-// half the occupancy number as of July 2012.  Because we're cramped for memory,
-// we prefer hash collisions over memory usage.
-#define PARAM_INFO_TABLE_SIZE	389
-
-struct bucket_t {
-	param_info_storage_t param;
-	struct bucket_t* next;
-};
-typedef struct bucket_t bucket_t;
-
-typedef bucket_t** param_info_hash_t;
-
-void param_info_hash_insert(param_info_hash_t param_info, const param_info_storage_t* p);
-
-//returns a pointer to an internal object, do not free the returned pointer
-const param_info_t* param_info_hash_lookup(param_info_hash_t param_info, const char* param);
-
-//must call this on a param_info_hash_t* to initialize it
-void param_info_hash_create(param_info_hash_t* param_info);
-
-///////////////////////////////
-// stuff to make iterating work
-///////////////////////////////
-
-// The function is called on every element as the hash table is iterated.
-// Continues as long as callPerElement returns 0, or until it iterates
-// everything.  user_data is passed to every call of callPerElement.
-void param_info_hash_iterate(param_info_hash_t param_info,
-		int (*callPerElement) (const param_info_t* /*value*/, void* /*user_data*/),
-		void* user_data);
-
-// Dump the whole hash table.
-void param_info_hash_dump(param_info_hash_t param_info);
-
-// Print out information for one given value.  Typed to be used with
-// param_info_hash_iterate.
-int param_info_hash_dump_value(const param_info_t* param_value, void* unused);
-
-// Optimize the memory layout of the hash table.
-void param_info_hash_optimize(param_info_hash_t param_info);
 
 // binary search of an array of structures containing a member psz
 // find the (case insensitive) matching element in the array
