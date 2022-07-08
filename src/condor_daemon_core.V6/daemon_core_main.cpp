@@ -55,6 +55,10 @@
 #include <sys/prctl.h>
 #endif
 
+#if HAVE_BACKTRACE
+#include <execinfo.h>
+#endif
+
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
 #include "authentication.h"
@@ -3999,6 +4003,14 @@ int dc_main( int argc, char** argv )
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
+
+#if defined(HAVE_BACKTRACE)
+	// On linux, the first call to backtrace() may trigger a dlopen() of
+	// libgcc, which includes a malloc(). This is not safe in a signal
+	// handler triggered by memory corruption, so call it here.
+	void* trace[10];
+	backtrace(trace, 10);
+#endif
 
 	// write dprintf's contribution to the daemon header.
 	dprintf_print_daemon_header();
