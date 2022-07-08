@@ -11,13 +11,15 @@ Synopsis
 
 **htcondor** [ **-h** | **--help** ] [ **-v** | **-q** ]
 
-**htcondor** **job** [ *submit* | *status* | *resources* ] [**--resource** *resource-type*] 
+**htcondor** **job** [ *submit* | *status* | *resources* ]
+[**--resource** *resource-type*]
 [**--runtime** *time-seconds*]
 [**--email** *email-address*]
+[**--skip-history**]
 
 | **htcondor** **jobset** *submit* description-file
 | **htcondor** **jobset** *list* [**--allusers**]
-| **htcondor** **jobset** [ *status* | *remove* ] job-set-name [**--owner** *user-name*] [**--nobatch**]
+| **htcondor** **jobset** [ *status* | *remove* ] job-set-name [**--owner** *user-name*] [**--nobatch**] [**--skip-history]
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id
@@ -57,6 +59,9 @@ Job Options
  **--email**
     Email address to receive notification messages.
     Used in conjunction with the *--resource* flag.
+ **--skip-history**
+    Passed to the *status* subcommand to skip checking history
+    if job not found in the active job queue.
 
 Job Set Options
 ---------------
@@ -72,6 +77,9 @@ Job Set Options
     submitted by the specified user instead of the current
     user. Using this option to *remove* job sets requires superuser
     permissions.
+ **--skip-history**
+    Passed to the *status* subcommand to skip checking history
+    if job clusters are not found in the active job queue.
 
 
 Exit Status
