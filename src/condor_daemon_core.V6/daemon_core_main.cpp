@@ -894,6 +894,10 @@ DC_Exit( int status, const char *shutdown_program )
 			 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 			 exit_status );
 
+	// Disable log rotation during process teardown (i.e. calling
+	// destructors of global or static objects).
+	dprintf_allow_log_rotation(false);
+
 		// Finally, exit with the appropriate status.
 	exit( exit_status );
 }
