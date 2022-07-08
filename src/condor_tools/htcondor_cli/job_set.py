@@ -410,12 +410,13 @@ class List(Verb):
 
        schedd = htcondor.Schedd()
 
-       constraint = "(InJobSet == True)"
+       constraint = """(MyType == "JobSet")"""
        if not options["allusers"]:
            constraint += f" && (Owner == {classad.quote(getpass.getuser())})"
        job_set_ads = schedd.query(
             constraint = constraint,
-            projection = ["Owner", "JobSetName"]
+            projection = ["Owner", "JobSetName"],
+            opts = htcondor.QueryOpts.IncludeJobsetAds,
         )
 
        if len(job_set_ads) == 0:
