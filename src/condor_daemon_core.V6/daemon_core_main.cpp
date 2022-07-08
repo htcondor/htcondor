@@ -55,6 +55,10 @@
 #include <sys/prctl.h>
 #endif
 
+#if HAVE_BACKTRACE
+#include <execinfo.h>
+#endif
+
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
 #include "authentication.h"
@@ -889,6 +893,10 @@ DC_Exit( int status, const char *shutdown_program )
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
 			 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 			 exit_status );
+
+	// Disable log rotation during process teardown (i.e. calling
+	// destructors of global or static objects).
+	dprintf_allow_log_rotation(false);
 
 		// Finally, exit with the appropriate status.
 	exit( exit_status );
@@ -3999,6 +4007,14 @@ int dc_main( int argc, char** argv )
 		// chdir() into our log directory so if we drop core, that's
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
+
+#if defined(HAVE_BACKTRACE)
+	// On linux, the first call to backtrace() may trigger a dlopen() of
+	// libgcc, which includes a malloc(). This is not safe in a signal
+	// handler triggered by memory corruption, so call it here.
+	void* trace[10];
+	backtrace(trace, 10);
+#endif
 
 	// write dprintf's contribution to the daemon header.
 	dprintf_print_daemon_header();

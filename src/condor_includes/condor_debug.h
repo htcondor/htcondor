@@ -208,6 +208,12 @@ void condor_except_should_dump_core(int flag);
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
 
+/* Set whether daemon log rotation is allowed.
+ * Sets DebugRotateLog.
+ * Returns previous value of DebugRotateLog.
+ */
+bool dprintf_allow_log_rotation(bool allow_rotate);
+
 /* must call this before clone(CLONE_VM|CLONE_VFORK) */
 void dprintf_before_shared_mem_clone( void );
 

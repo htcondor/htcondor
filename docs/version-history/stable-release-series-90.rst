@@ -41,6 +41,10 @@ Bugs Fixed:
   when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
   :jira:`1191`
 
+- Fix a bug that could cause daemons to crash if their log rotates
+  during shutdown.
+  :jira:`1200`
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
