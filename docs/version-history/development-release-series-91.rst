@@ -44,6 +44,10 @@ New Features:
   server. The proxy is still delegated for use by the job.
   :jira:`1194`
 
+- The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
+  status messages for the *job* and *jobset* subcommands.
+  :jira:`1149`
+
 Bugs Fixed:
 
 - Fixed a bug where **arc** grid universe jobs would remain in idle
