@@ -299,10 +299,6 @@ class Matchmaker : public Service
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
 
-		/* ODBC insert functions */
-		void insert_into_rejects(char const *userName, ClassAd& job);
-		void insert_into_matches(char const *userName, ClassAd& request, ClassAd& offer);
-
 			// Returns a pslot to the match list (after consumption policies have been applied).
 			// Recalculates ranks and re-sorts match list.
 			// ASSUMES NO_PREEMPTION for pslots.

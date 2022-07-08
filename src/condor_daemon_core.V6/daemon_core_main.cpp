@@ -112,9 +112,6 @@ int condor_main_argc;
 char **condor_main_argv;
 time_t daemon_stop_time;
 
-/* ODBC object */
-//extern ODBC *DBObj;
-
 #ifdef WIN32
 int line_where_service_stopped = 0;
 #endif
