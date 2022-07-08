@@ -14,6 +14,17 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+@standup
+def condor(test_dir):
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            "USE_JOBSETS": True,
+        },
+    ) as condor:
+        yield condor
+
+
 @action
 def jobset_list_empty(default_condor):
     p = default_condor.run_command(["htcondor", "jobset", "list"])
