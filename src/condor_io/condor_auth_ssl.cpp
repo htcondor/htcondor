@@ -1373,6 +1373,8 @@ std::string get_x509_encoded(X509 *cert)
 		dprintf(D_SECURITY, "Failed to base64 encode certificate.\n");
 		return "";
 	}
+	// Ensure that the final base64 block is written to underlying memory.
+	BIO_flush(b64.get());
 
 	char* dt;
 	auto len = BIO_get_mem_data(mem.get(), &dt);
