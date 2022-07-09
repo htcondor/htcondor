@@ -93,7 +93,6 @@ Starter::Starter() :
 	deferral_tid(-1),
 	pre_script(NULL),
 	post_script(NULL),
-	m_privsep_helper(NULL),
 	m_configured(false),
 	m_job_environment_is_ready(false),
 	m_all_jobs_done(false),
@@ -1430,41 +1429,22 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	if( privSepHelper() ) {
-	    std::string error_msg;
-		privSepHelper()->create_process(
-			ssh_to_job_sshd_setup.c_str(),
-			setup_args,
-			setup_env,
-			GetWorkingDir(0),
-			setup_std_fds,
-			NULL,
-			0,
-			NULL,
-			setup_reaper,
-			setup_opt_mask,
-			NULL,
-			NULL,
-			error_msg);
-	}
-	else {
-		daemonCore->Create_Process(
-			ssh_to_job_sshd_setup.c_str(),
-			setup_args,
-			PRIV_USER_FINAL,
-			setup_reaper,
-			FALSE,
-			FALSE,
-			&setup_env,
-			GetWorkingDir(0),
-			NULL,
-			NULL,
-			setup_std_fds,
-			NULL,
-			0,
-			NULL,
-			setup_opt_mask);
-	}
+	daemonCore->Create_Process(
+		ssh_to_job_sshd_setup.c_str(),
+		setup_args,
+		PRIV_USER_FINAL,
+		setup_reaper,
+		FALSE,
+		FALSE,
+		&setup_env,
+		GetWorkingDir(0),
+		NULL,
+		NULL,
+		setup_std_fds,
+		NULL,
+		0,
+		NULL,
+		setup_opt_mask);
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
 
@@ -2041,35 +2021,6 @@ Starter::createTempExecuteDir( void )
 int
 Starter::jobEnvironmentReady( void )
 {
-		//
-		// Now that we are done preparing the job's environment,
-		// change the sandbox ownership to the user before spawning
-		// any job processes. VM universe jobs are special-cased
-		// here: chowning of the sandbox occurs in the VMGahp after
-		// it has had a chance to operate on the VM description
-		// file(s)
-		//
-	if (m_privsep_helper != NULL) {
-		int univ = -1;
-		if (!jic->jobClassAd()->LookupInteger(ATTR_JOB_UNIVERSE, univ) ||
-		    (univ != CONDOR_UNIVERSE_VM))
-		{
-			PrivSepError err;
-			if( !m_privsep_helper->chown_sandbox_to_user(err) ) {
-				jic->notifyStarterError(
-					err.holdReason(),
-					true,
-					err.holdCode(),
-					err.holdSubCode());
-				EXCEPT("failed to chown sandbox to user");
-			}
-		}
-		else if( univ == CONDOR_UNIVERSE_VM ) {
-				// the vmgahp will chown the sandbox to the user
-			m_privsep_helper->set_sandbox_owned_by_user();
-		}
-	}
-
 	m_job_environment_is_ready = true;
 
 		//
@@ -2954,25 +2905,6 @@ Starter::allJobsDone( void )
 {
 	m_all_jobs_done = true;
 	bool bRet=false;
-
-		// now that all user processes are complete, change the
-		// sandbox ownership back over to condor. if this is a VM
-		// universe job, this chown will have already been
-		// performed by the VMGahp, since it does some post-
-		// processing on files in the sandbox
-	if (m_privsep_helper != NULL) {
-		if (jobUniverse != CONDOR_UNIVERSE_VM) {
-			PrivSepError err;
-			if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
-				jic->notifyStarterError(
-					err.holdReason(),
-					false,
-					err.holdCode(),
-					err.holdSubCode());
-				EXCEPT("failed to chown sandbox to condor after job completed");
-			}
-		}
-	}
 
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
