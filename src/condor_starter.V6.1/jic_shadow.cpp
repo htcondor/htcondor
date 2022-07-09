@@ -52,6 +52,7 @@
 
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
+time_t syscall_last_rpc_time = 0;
 extern const char* JOB_AD_FILENAME;
 extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
@@ -115,6 +116,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 		Starter->StarterExit( STARTER_EXIT_GENERAL_FAILURE );
 	}
 	syscall_sock = (ReliSock *)socks[0];
+	syscall_last_rpc_time = time(nullptr);
 	socks++;
 
 	m_proxy_expiration_tid = -1;
@@ -754,6 +756,7 @@ JICShadow::reconnect( ReliSock* s, ClassAd* ad )
 	delete syscall_sock;
 	syscall_sock = s;
 	syscall_sock->timeout(param_integer( "STARTER_UPLOAD_TIMEOUT", 300));
+	syscall_last_rpc_time = time(nullptr);
 	dprintf( D_FULLDEBUG, "Using new syscall sock %s\n",
 			generate_sinful(syscall_sock->peer_ip_str(),
 					syscall_sock->peer_port()).c_str());
@@ -1792,33 +1795,8 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 	        path);
 
 	std::string tmp_path;
-#if defined(LINUX)
-	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
-#else
-	// dummy for non-linux platforms.
-	int* gpsh = NULL;
-#endif
-	if (gpsh != NULL) {
-		// in glexec mode, we may not have permission to write the
-		// new proxy directly into the sandbox, so we stage it into
-		// /tmp first, then use a GLExec helper script
-		//
-		char tmp[] = "/tmp/condor_proxy_XXXXXX";
-		int fd = condor_mkstemp(tmp);
-		if (fd == -1) {
-			dprintf(D_ALWAYS,
-			        "updateX509Proxy: error creating temp file "
-			            "for proxy: %s\n",
-			        strerror(errno));
-			return 0;
-		}
-		close(fd);
-		tmp_path = tmp;
-	}
-	else {
-		tmp_path = path;
-		tmp_path += ".tmp";
-	}
+	tmp_path = path;
+	tmp_path += ".tmp";
 
 	priv_state old_priv = set_priv(PRIV_USER);
 
@@ -1835,38 +1813,21 @@ updateX509Proxy(int cmd, ReliSock * rsock, const char * path)
 		         cmd );
 		rc = -1;
 	}
+
 	if ( rc < 0 ) {
 			// transfer failed
 		reply = 0; // == failure
-	} else {
-		if (gpsh != NULL) {
-#if defined(LINUX)
-			// use our glexec helper object, which will
-			// call out to GLExec
-			//
-			if (gpsh->update_proxy(tmp_path.c_str())) {
-				reply = 1;
-			}
-			else {
-				reply = 0;
-			}
-#else
-			EXCEPT("not on a linux platform and encounterd GLEXEC code!");
-#endif
-		}
-		else {
-				// transfer worked, now rename the file to
-				// final_proxy_path
-			if ( rotate_file(tmp_path.c_str(), path) < 0 ) 
-			{
-					// the rename failed!!?!?!
-				dprintf( D_ALWAYS,
-				         "updateX509Proxy failed, "
-				             "could not rename file\n");
-				reply = 0; // == failure
-			} else {
-				reply = 1; // == success
-			}
+	} else { // transfer worked, now rename the file to
+		// final_proxy_path
+		if ( rotate_file(tmp_path.c_str(), path) < 0 ) 
+		{
+			// the rename failed!!?!?!
+			dprintf( D_ALWAYS,
+					"updateX509Proxy failed, "
+					"could not rename file\n");
+			reply = 0; // == failure
+		} else {
+			reply = 1; // == success
 		}
 	}
 	set_priv(old_priv);
@@ -1952,54 +1913,7 @@ JICShadow::setX509ProxyExpirationTimer()
 	if( ! job_ad->LookupString(ATTR_X509_USER_PROXY, path) ) {
 		return;
 	}
-	const char * proxyfilename = condor_basename(path.c_str());
-
-#if defined(LINUX)
-	GLExecPrivSepHelper* gpsh = Starter->glexecPrivSepHelper();
-#else
-	// dummy for non-linux platforms.
-	int* gpsh = NULL;
-#endif
-	if(gpsh) {
-		// if there was a timer registered, cancel it
-		if( m_proxy_expiration_tid != -1 ) {
-			daemonCore->Cancel_Timer(m_proxy_expiration_tid);
-			m_proxy_expiration_tid = -1;
-		}
-
-		// for the new timer, start with the payload proxy expiration time
-		time_t expiration = x509_proxy_expiration_time(proxyfilename);
-		time_t now = time(NULL);
-
-		if( (int)expiration == -1 ) {
-			char const *err = x509_error_string();
-			dprintf(D_ALWAYS,"Failed to read proxy expiration time for %s: %s\n",
-					proxyfilename,
-					err ? err : "");
-		}
-		else {
-				// now subtract the configurable time allowed for eviction
-				// years of careful research show the default should be one minute.
-			int evict_window = param_integer("PROXY_EXPIRING_EVICTION_TIME", 60);
-			int expiration_delta = (expiration - now) - evict_window;
-			if( expiration_delta < 0 ) {
-				expiration_delta = 0;
-			}
-
-			m_proxy_expiration_tid = daemonCore->Register_Timer(
-				expiration_delta,
-				(TimerHandlercpp)&JICShadow::proxyExpiring,
-				"proxy expiring",
-				this );
-			if (m_proxy_expiration_tid > 0) {
-				dprintf(D_FULLDEBUG, "Set timer %i for PROXY_EXPIRING to %d seconds from now (proxy expires at time %i)\n", m_proxy_expiration_tid, (int)expiration_delta, (int)expiration);
-			} else {
-				dprintf(D_ALWAYS, "FAILED to set timer for PROXY_EXPIRING: %i\n", m_proxy_expiration_tid);
-			}
-		}
-	}
 }
-
 
 bool
 JICShadow::recordDelayedUpdate( const std::string &name, const classad::ExprTree &expr )
@@ -2361,19 +2275,18 @@ JICShadow::syscall_sock_disconnect()
 	}
 	int lease_duration = -1;
 	job_ad->LookupInteger(ATTR_JOB_LEASE_DURATION,lease_duration);
-	if (lease_duration > 0) {
-		syscall_sock_lost_tid = daemonCore->Register_Timer(
-				lease_duration,
-				(TimerHandlercpp)&JICShadow::job_lease_expired,
-				"job_lease_expired",
-				this );
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, waiting %d secs for reconnect\n",
-			lease_duration);
-	} else {
-		dprintf(D_ALWAYS,
-			"Lost connection to shadow, no job lease specified\n");
+	lease_duration -= now - syscall_last_rpc_time;
+	if (lease_duration < 0) {
+		lease_duration = 0;
 	}
+	syscall_sock_lost_tid = daemonCore->Register_Timer(
+			lease_duration,
+			(TimerHandlercpp)&JICShadow::job_lease_expired,
+			"job_lease_expired",
+			this );
+	dprintf(D_ALWAYS,
+		"Lost connection to shadow, last activity was %ld secs ago, waiting %d secs for reconnect\n",
+		(now - syscall_last_rpc_time), lease_duration);
 
 	// Close up the syscall_socket and wait for a reconnect.  
 	if (syscall_sock) {
@@ -2451,7 +2364,8 @@ JICShadow::job_lease_expired() const
 {
 	/* 
 	  This method is invoked by a daemoncore timer, which is set
-	  to fire ATTR_JOB_LEASE_DURATION seconds after the syscall_sock disappears.
+	  to fire ATTR_JOB_LEASE_DURATION seconds after the last activity
+	  on the syscall_sock
 	*/
 
 	dprintf( D_ALWAYS, "No reconnect from shadow for %d seconds, aborting job execution!\n", (int)(time(NULL) - syscall_sock_lost_time) );

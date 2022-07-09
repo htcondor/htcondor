@@ -65,9 +65,6 @@ int main(int argc, char *argv[])
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-		// Initialize our Distribution object -- condor vs. hawkeye, etc.
-	myDistro->Init( argc, argv );
-
 		// Save submit append lines from DAG file here (see gittrac #5107).
 	std::list<std::string> dagFileAttrLines;
 

@@ -119,7 +119,7 @@ usage()
 
 
 int
-main( int argc, char *argv[] )
+main( int /*argc*/, char *argv[] )
 {
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
@@ -132,7 +132,6 @@ main( int argc, char *argv[] )
 	
 		// Initialize things
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

@@ -44,7 +44,6 @@ int main( int argc, char *argv[] )
 	int i;
 	std::string condor_prefix;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

@@ -65,7 +65,7 @@ auto_approve(const std::string &pool, const std::string &name, daemon_t dtype,
 		daemon.reset(new Daemon( dtype, name.c_str() ));
 	}
 
-	if (!(daemon->locate(Daemon::LOCATE_FOR_LOOKUP))) {
+	if (!(daemon->locate(Daemon::LOCATE_FOR_ADMIN))) {
 		if (!name.empty()) {
 			fprintf(stderr, "ERROR: couldn't locate daemon %s!\n", name.c_str());
 		} else {
@@ -116,13 +116,13 @@ void printRemainingRequests(std::unique_ptr<Daemon> daemon) {
 	printf("To approve these requests, please run condor_token_request_approve manually.\n");
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
 	daemon_t dtype = DT_COLLECTOR;
+	const char * pcolon;
 	std::string pool;
 	std::string name;
 	std::string netblock;
@@ -173,9 +173,9 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(argv[0]);
 			exit(1);

@@ -1651,3 +1651,63 @@ WriteUserLog::getLock(CondorError &err) {
 	}
 	return nullptr;
 }
+
+//
+// WriteUserLogHeader methods
+//
+
+// Write a header event
+int
+WriteUserLogHeader::Write( WriteUserLog &writer, int fd )
+{
+	GenericEvent	event;
+
+	if ( 0 == m_ctime ) {
+		m_ctime = time( NULL );
+	}
+	if ( !GenerateEvent( event ) ) {
+		return ULOG_UNK_ERROR;
+	}
+	return writer.writeGlobalEvent( event, fd, true );
+}
+
+// Generate a header event
+bool
+WriteUserLogHeader::GenerateEvent( GenericEvent &event )
+{
+	int len = snprintf( event.info, COUNTOF(event.info),
+			  "Global JobLog:"
+			  " ctime=%d"
+			  " id=%s"
+			  " sequence=%d"
+			  " size=" FILESIZE_T_FORMAT""
+			  " events=%" PRId64""
+			  " offset=" FILESIZE_T_FORMAT""
+			  " event_off=%" PRId64""
+			  " max_rotation=%d"
+			  " creator_name=<%s>",
+			  (int) getCtime(),
+			  getId().c_str(),
+			  getSequence(),
+			  getSize(),
+			  getNumEvents(),
+			  getFileOffset(),
+			  getEventOffset(),
+			  getMaxRotation(),
+			  getCreatorName().c_str()
+			  );
+	if (len < 0 || len == sizeof(event.info)) {
+		// not enough room in the buffer
+		len = (int)COUNTOF(event.info)-1;
+		event.info[len] = 0; // make sure it's null terminated.
+		::dprintf( D_FULLDEBUG, "Generated (truncated) log header: '%s'\n", event.info );
+	}  else {
+		::dprintf( D_FULLDEBUG, "Generated log header: '%s'\n", event.info );
+		while( len < 256 ) {
+			event.info[len++] = ' ';
+			event.info[len] = 0;
+		}
+	}
+
+	return true;
+}

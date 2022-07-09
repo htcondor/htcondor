@@ -229,18 +229,16 @@ void delete_helper(char** array, int num_strs) {
 	free(array);
 }
 
-void get_tm(ISO8601Type type, const struct tm &time, MyString* str)
+void get_tm(ISO8601Type type, const struct tm &time, std::string& str)
 {
-	if(str) {
-		if (type == ISO8601_DateOnly) {
-			str->formatstr("%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
-		} else if (type == ISO8601_TimeOnly) {
-			str->formatstr("%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
-		} else {
-			str->formatstr("%d-%d-%dT%d:%d:%d",
-						 time.tm_year, time.tm_mon, time.tm_mday,
-						 time.tm_hour, time.tm_min, time.tm_sec);
-		}
+	if (type == ISO8601_DateOnly) {
+		formatstr(str, "%d-%d-%d", time.tm_year, time.tm_mon, time.tm_mday);
+	} else if (type == ISO8601_TimeOnly) {
+		formatstr(str, "%d:%d:%d", time.tm_hour, time.tm_min, time.tm_sec);
+	} else {
+		formatstr(str, "%d-%d-%dT%d:%d:%d",
+		          time.tm_year, time.tm_mon, time.tm_mday,
+		          time.tm_hour, time.tm_min, time.tm_sec);
 	}
 
 }

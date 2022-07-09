@@ -15,6 +15,8 @@ typedef enum param_info_t_type_e {
 	PARAM_TYPE_BOOL = 2,
 	PARAM_TYPE_DOUBLE = 3,
 	PARAM_TYPE_LONG = 4,
+	PARAM_TYPE_KVP_TABLE = 14,
+	PARAM_TYPE_KTP_TABLE = 15,
 } param_info_t_type_t;
 
 #define PARAM_DECLARE_TABLES

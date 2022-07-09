@@ -983,11 +983,16 @@
 
     ARC_DELEGATION_NEW
 
-    Delegate the currently-active X.509 proxy credential to the server.
+    Delegate the given X.509 proxy credential to the server.
 
     + Request Line:
 
-        ARC_DELEGATION_NEW <SP> <request-ID> <SP> <service-URL> <CRLF>
+        ARC_DELEGATION_NEW <SP> <request-ID> <SP> <service-URL> <SP>
+            <proxy-file> <CRLF>
+
+        * proxy-file = a fully-qualified pathname to a file local to the
+                       GAHP server which contains a valid X.509 proxy
+                       certificate.
 
     + Result Line:
 
@@ -1006,9 +1011,13 @@
     + Request Line:
 
         ARC_DELEGATION_RENEW <SP> <request-ID> <SP> <service-URL>
-            <SP> <deleg-id> <CRLF>
+            <SP> <deleg-id> <SP> <proxy-file> <CRLF>
 
         * deleg-id = delegation id (as returned by ARC_DELEGATION_NEW) 
                      of the credential to replace
+
+        * proxy-file = a fully-qualified pathname to a file local to the
+                       GAHP server which contains a valid X.509 proxy
+                       certificate.
 
     -----------------------------------------------

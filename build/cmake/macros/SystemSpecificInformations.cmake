@@ -123,6 +123,15 @@ if(UNIX)
 	set(SYSTEM_NAME "fc${CMAKE_MATCH_1}")
 	set(RPM_SYSTEM_NAME "${SYSTEM_NAME}")
       endif(LINUX_ISSUE MATCHES "Fedora")
+      # AlmaLinux case
+      # AlmaLinux release 8.6 (Sky Tiger)
+      if(LINUX_ISSUE MATCHES "AlmaLinux")
+       string(REGEX MATCH "release ([0-9]+\\.*[0-9]*)" ALMALINUX "${LINUX_ISSUE}")
+       set(LINUX_NAME "AlmaLinux")
+       set(LINUX_VER "${CMAKE_MATCH_1}")
+       set(SYSTEM_NAME "almalinux${CMAKE_MATCH_1}")
+       set(RPM_SYSTEM_NAME "${SYSTEM_NAME}")
+      endif(LINUX_ISSUE MATCHES "AlmaLinux")
       # Amazon Linux case
       # Amazon Linux release 2 (Karoo)
       if(LINUX_ISSUE MATCHES "Amazon Linux")
@@ -291,7 +300,6 @@ if(UNIX)
     set( FREEBSD_VERSION "${CMAKE_SYSTEM_VERSION}" )
     set( SYSTEM_NAME "freebsd_${FREEBSD_RELEASE}" )
     set( CONDOR_FREEBSD ON )
-    set( BSD_UNIX ON )
     # FIXME: Is there a >= to replace all the MATCHES operators below?
     if(FREEBSD_MAJOR MATCHES "4" )
       set( CONDOR_FREEBSD4 ON )
@@ -322,9 +330,6 @@ if(UNIX)
       set( SYS_ARCH "x86")
     endif( )
     set( PLATFORM "${SYS_ARCH}_freebsd_${FREEBSD_RELEASE}")
-
-  elseif(OS_NAME MATCHES "DARWIN")
-    set( BSD_UNIX ON )
 
   endif(CMAKE_SYSTEM_NAME MATCHES "Linux")
 

@@ -90,6 +90,7 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 
 class JobQueueCluster;
 class JobQueueJobSet;
+class JobQueueBase;
 
 //typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 class LocalJobRec {
@@ -510,7 +511,7 @@ class Scheduler : public Service
 
 	JobTransforms	jobTransforms;
 	friend	int		NewProc(int cluster_id);
-	friend	int		count_a_job(JobQueueJob*, const JOB_ID_KEY&, void* );
+	friend	int		count_a_job(JobQueueBase*, const JOB_ID_KEY&, void* );
 //	friend	void	job_prio(ClassAd *);
 	void			AddRunnableLocalJobs();
 	bool			IsLocalJobEligibleToRun(JobQueueJob* job);

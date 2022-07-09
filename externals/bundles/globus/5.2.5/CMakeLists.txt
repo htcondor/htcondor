@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if (LINUX OR DARWIN)
+if (LINUX)
     option(WITH_GLOBUS "Compiling with support for GLOBUS" OFF)
 endif()
 
@@ -24,7 +24,7 @@ if (WITH_GLOBUS)
 
 	if (NOT PROPER)
 
-		if (NOT HAVE_LIBLTDL AND NOT DARWIN)
+		if (NOT HAVE_LIBLTDL AND NOT APPLE)
 			message(FATAL_ERROR "Can't find libltdl, needed to build globus external!")
 		endif()
 
@@ -53,7 +53,7 @@ if (WITH_GLOBUS)
 		# install location. Then add it to the include and link paths.
 		# (For our 10.7 binaries to run on 10.6 or 10.8, we can't
 		#  use the OS's libltdl. So always build our own on Darwin.)
-		if ( DARWIN )
+		if ( APPLE )
 			condor_pre_external( LIBTOOL libtool-2.4.2 "lib;include" "done")
 
 			ExternalProject_Add(libtool
@@ -99,7 +99,7 @@ if (WITH_GLOBUS)
 						cp tcp/Makefile.in popen/Makefile.in &&
 						sed -i.old -e s/tcp/popen/g popen/Makefile.in )
 
-		if(DARWIN)
+		if(APPLE)
 			set ( GLOBUS_PATCH ${GLOBUS_PATCH} &&
 				cd ../../../../ &&
 				patch -N -i ${CMAKE_CURRENT_SOURCE_DIR}/xio-plugins-2.patch -p1 &&
@@ -153,7 +153,7 @@ if (WITH_GLOBUS)
 
 			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.so;${HAVE_LIBLTDL}")
 			set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${HAVE_LIBLTDL}")
-		elseif( DARWIN )
+		elseif( APPLE )
 			set (GLOBUS_FOUND "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.dylib")
 			set (GLOBUS_FOUND_STATIC "${GLOBUS_INSTALL_LOC}/lib/libglobus_gss_assist.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_gsi.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_proxy_core.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_credential.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_callback.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_sysconfig.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_oldgaa.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_gsi_cert_utils.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_openssl_error.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_proxy_ssl.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_callout.a;${GLOBUS_INSTALL_LOC}/lib/libglobus_common.a;${GLOBUS_INSTALL_LOC}/lib/libltdl.a")
 		else()
@@ -170,7 +170,7 @@ if (WITH_GLOBUS)
 		if ( LINUX )
 			set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_io.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl.so")
-		elseif ( DARWIN )
+		elseif ( APPLE )
 			set (GLOBUS_GRID_UNIVERSE_COMMON
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_gssapi_error.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_xio.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_io.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_rsl.dylib")
 		else()
@@ -181,7 +181,7 @@ if (WITH_GLOBUS)
 		if ( LINUX )
 			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.so;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.so")
-		elseif ( DARWIN )
+		elseif ( APPLE )
 			set (GLOBUS_GRID_UNIVERSE_NORDUGRID
 				"${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_client.dylib;${GLOBUS_INSTALL_LOC}/lib/libglobus_ftp_control.dylib")
 		else()
@@ -209,7 +209,7 @@ if (WITH_GLOBUS)
 					COMMAND xargs strip)" )
 			endif()
 		endif()
-		if ( DARWIN )
+		if ( APPLE )
 			# Install the Globus libraries manually.
 			# In order to use an install(FILES) command,
 			# we'd have to explicitly list evey file.

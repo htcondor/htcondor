@@ -130,7 +130,7 @@ BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 BuildRequires: cmake
 BuildRequires: %_bindir/flex
 BuildRequires: %_bindir/byacc
-BuildRequires: pcre-devel
+BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
 BuildRequires: libvirt-devel
@@ -220,11 +220,9 @@ BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
-%ifarch x86_64
 BuildRequires: python36-devel
 BuildRequires: boost169-devel
 BuildRequires: boost169-static
-%endif
 %endif
 
 %if 0%{?rhel} >= 8
@@ -271,14 +269,10 @@ Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
-%if %uw_build
-Requires: %name-externals = %version-%release
-%endif
-
 Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
 # However, Amazon Linux 2 has Python 3.7
 %if ! 0%{?amzn}
@@ -290,7 +284,7 @@ Requires: python3-requests
 %endif
 
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 # For some reason OSG VMU tests need python-request
 Requires: python-requests
 %endif
@@ -457,7 +451,7 @@ compatibility of jobs and workstations where they may be run.
 Summary: Headers for HTCondor's classified advertisement language
 Group: Development/System
 Requires: %name-classads = %version-%release
-Requires: pcre-devel
+Requires: pcre2-devel
 %if 0%{?osg} || 0%{?hcc}
 Obsoletes: classads-devel <= 1.0.10
 Provides: classads-devel = %version-%release
@@ -503,9 +497,7 @@ Requires: python >= 2.2
 Requires: %name = %version-%release
 %{?python_provide:%python_provide python2-condor}
 %if 0%{?rhel} >= 7
-%ifarch x86_64
 Requires: boost169-python2
-%endif
 %endif
 # Remove before F30
 Provides: %{name}-python = %{version}-%{release}
@@ -519,7 +511,6 @@ the ClassAd library and HTCondor from python
 
 
 %if 0%{?rhel} >= 7 || 0%{?fedora}
-%ifarch x86_64
 #######################
 %package -n python3-condor
 Summary: Python bindings for HTCondor.
@@ -537,7 +528,6 @@ The python bindings allow one to directly invoke the C++ implementations of
 the ClassAd library and HTCondor from python
 %endif
 %endif
-%endif
 
 
 #######################
@@ -546,14 +536,14 @@ Summary: OAuth2 credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
 %if 0%{?rhel} == 7
-Requires: python2-condor
+Requires: python2-condor = %{version}-%{release}
 Requires: python2-requests-oauthlib
 Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
 %else
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-requests-oauthlib
 Requires: python3-six
 Requires: python3-flask
@@ -573,7 +563,7 @@ OAuth2 endpoints and to use those credentials securely inside running jobs.
 Summary: Vault credmon for HTCondor.
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: python3-condor
+Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
@@ -590,9 +580,9 @@ htgettoken and to use those credentials securely inside running jobs.
 #######################
 %package blahp
 Summary: BLAHP daemon
-Url: https://github.com/htcondor/BLAH
 Group: System/Libraries
 BuildRequires:  docbook-style-xsl, libxslt
+Requires: %name = %version-%release
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 Requires: python3
 %else
@@ -622,9 +612,8 @@ shortens many timers to be more responsive.
 
 #######################
 %package externals
-Summary: Empty package to ensure yum gets the blahp from its own package
+Summary: Empty package without strict version requirement to help yum out.
 Group: Applications/System
-Requires: %name = %version-%release
 
 %description externals
 Dummy package to help yum out
@@ -669,10 +658,6 @@ Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
 %endif
-%if %uw_build
-Requires: %name-externals = %version-%release
-%endif
-
 
 %description all
 Include dependencies for all condor packages in a typical installation
@@ -745,14 +730,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%ifarch x86_64
        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
-%else
-       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
-       -DLIB_INSTALL_DIR:PATH=/usr/lib \
-%endif 
        -DBUILD_SHARED_LIBS:BOOL=ON
 
 %else
@@ -781,14 +761,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
        -DSHARE_INSTALL_PREFIX:PATH=/usr/share \
-%ifarch x86_64
        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib64 \
        -DLIB_INSTALL_DIR:PATH=/usr/lib64 \
        -DLIB_SUFFIX=64 \
-%else
-       -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
-       -DLIB_INSTALL_DIR:PATH=/usr/lib \
-%endif
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
@@ -1425,23 +1400,10 @@ rm -rf %{buildroot}
 
 #################
 %files devel
-%{_includedir}/condor/MyString.h
 %{_includedir}/condor/chirp_client.h
-%{_includedir}/condor/compat_classad.h
-%{_includedir}/condor/compat_classad_list.h
-%{_includedir}/condor/compat_classad_util.h
-%{_includedir}/condor/condor_classad.h
-%{_includedir}/condor/condor_constants.h
 %{_includedir}/condor/condor_event.h
-%{_includedir}/condor/condor_header_features.h
-%{_includedir}/condor/condor_holdcodes.h
 %{_includedir}/condor/file_lock.h
-%{_includedir}/condor/iso_dates.h
 %{_includedir}/condor/read_user_log.h
-%{_includedir}/condor/stl_string_utils.h
-%{_includedir}/condor/user_log.README
-%{_includedir}/condor/user_log.c++.h
-%{_includedir}/condor/write_user_log.h
 %{_libdir}/condor/libchirp_client.a
 %{_libdir}/condor/libcondorapi.a
 %{_libdir}/libclassad.a
@@ -1560,7 +1522,6 @@ rm -rf %{buildroot}
 %endif
 
 %if 0%{?rhel} >= 7 || 0%{?fedora}
-%ifarch x86_64
 %files -n python3-condor
 %defattr(-,root,root,-)
 %_bindir/condor_top
@@ -1576,7 +1537,6 @@ rm -rf %{buildroot}
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
 /usr/lib64/python%{python3_version}/site-packages/htcondor_cli/
-%endif
 %endif
 %endif
 
@@ -1677,6 +1637,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jun 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.1-1
+- Fix bug where jobs would not match when using a child collector
+
+* Tue May 31 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.0-1
+- A new authentication method for remote HTCondor administration
+- Several changes to improve the security of connections
+- Fix issue where DAGMan direct submission failed when using Kerberos
+- The submission method is now recorded in the job ClassAd
+- Singularity jobs can now pull from Docker style repositories
+- The OWNER authorization level has been folded into the ADMINISTRATOR level
+
+* Thu May 26 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.13-1
+- Schedd and startd cron jobs can now log output upon non-zero exit
+- condor_config_val now produces correct syntax for multi-line values
+- The condor_run tool now reports submit errors and warnings to the terminal
+- Fix issue where Kerberos authentication would fail within DAGMan
+- Fix HTCondor startup failure with certain complex network configurations
+
 * Mon Apr 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.8.1-1
 - Fix HTCondor startup failure with certain complex network configurations
 

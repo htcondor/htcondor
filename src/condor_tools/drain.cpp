@@ -74,8 +74,6 @@ int
 main( int argc, const char *argv[] )
 {
 
-	myDistro->Init( argc, argv );
-
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
@@ -85,7 +83,7 @@ main( int argc, const char *argv[] )
 
 	DCStartd startd( target, pool );
 
-	if( ! startd.locate() ) {
+	if( ! startd.locate(Daemon::LOCATE_FOR_ADMIN) ) {
 		fprintf( stderr, "ERROR: %s\n", startd.error() );
 		exit( 1 );
 	}

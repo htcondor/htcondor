@@ -149,7 +149,6 @@ static void dprintf_set_output_intercept (
 int main(int argc, const char *argv[])
 {
 	MyName = argv[0];
-    myDistro->Init( argc, argv );
 	set_priv_initialize();
 	set_mySubSystem("TOOL", true, SUBSYSTEM_TYPE_TOOL);
 	config();

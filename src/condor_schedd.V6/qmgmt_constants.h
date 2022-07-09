@@ -17,6 +17,10 @@
  *
  ***************************************************************/
 
+// Key 2 values for CONDOR_SendJobQueueAd when the ad is not a Job classad
+#define SENDJOBAD_TYPE_CLUSTER    -1  /* tj*/
+#define SENDJOBAD_TYPE_JOBSET   -100  /* tj*/
+
 #define	CONDOR_InitializeConnection 10001
 #define	CONDOR_NewCluster 			10002
 #define	CONDOR_NewProc 				10003
@@ -56,3 +60,6 @@
 #define CONDOR_SetJobFactory        10037 /* tj */
 #define CONDOR_SetMaterializeData   10038 /* tj - abandoned */
 #define CONDOR_SendMaterializeData  10039 /* tj */
+#define CONDOR_SendJobQueueAd       10040 /* tj */
+
+

@@ -22,7 +22,6 @@
 #define JOB_H
 
 #include "condor_common.h"      /* for <stdio.h> */
-#include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
 #include "condor_id.h"
 #include "throttle_by_category.h"

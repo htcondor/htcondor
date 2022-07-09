@@ -22,7 +22,6 @@
 
 #include <time.h>
 #include "read_user_log_state.h"
-#include "write_user_log.h"
 
 // User log header info
 
@@ -131,25 +130,6 @@ public:
 
 	// Read the header from a file
 	int Read( ReadUserLog &reader );
-
-private:
-};
-
-// Simple class to extract info from a log file header event
-class WriteUserLogHeader : public UserLogHeader
-{
-public:
-	WriteUserLogHeader( void )
-		{ };
-	WriteUserLogHeader( const UserLogHeader &other )
-		: UserLogHeader( other )
-		{ };
-	~WriteUserLogHeader( void )
-		{ };
-
-	// Read the header from a file
-	int Write( WriteUserLog &writer, int fd = -1 );
-	bool GenerateEvent( GenericEvent &event );
 
 private:
 };

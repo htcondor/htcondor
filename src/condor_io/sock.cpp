@@ -25,7 +25,6 @@
 #endif
 
 #include "sock.h"
-#include "condor_constants.h"
 #include "condor_io.h"
 #include "condor_uid.h"
 #include "internet.h"
@@ -2867,11 +2866,9 @@ Sock::wrap(const unsigned char* d_in,int l_in,
                     unsigned char*& d_out,int& l_out)
 {    
     bool coded = false;
-#ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
         coded = crypto_->encrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
-#endif
     return coded;
 }
 
@@ -2880,24 +2877,20 @@ Sock::unwrap(const unsigned char* d_in,int l_in,
                       unsigned char*& d_out, int& l_out)
 {
     bool coded = false;
-#ifdef HAVE_EXT_OPENSSL
     if (get_encryption()) {
         coded = crypto_->decrypt(crypto_state_, d_in, l_in, d_out, l_out);
     }
-#endif
     return coded;
 }
 
 void Sock::resetCrypto()
 {
-#ifdef HAVE_EXT_OPENSSL
   if (crypto_state_) {
     crypto_state_->reset();
     if (crypto_state_->getkey().getProtocol() == CONDOR_AESGCM) {
         Condor_Crypt_AESGCM::initState(&(crypto_state_->m_stream_crypto_state));
     }
   }
-#endif
 }
 
 bool 
@@ -2973,11 +2966,9 @@ const KeyInfo& Sock :: get_crypto_key() const
 
 const KeyInfo& Sock :: get_md_key() const
 {
-#ifdef HAVE_EXT_OPENSSL
     if (mdKey_) {
         return *mdKey_;
     }
-#endif
     ASSERT(0);
     return *mdKey_;
 }
@@ -2987,7 +2978,6 @@ bool
 Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 {
     bool inited = true;
-#ifdef HAVE_EXT_OPENSSL
 
     if (key != 0) {
         inited = initialize_crypto(key);
@@ -3029,8 +3019,6 @@ Sock::set_crypto_key(bool enable, KeyInfo * key, const char * keyId)
 		}
 		set_crypto_mode(enable);
     }
-
-#endif /* HAVE_EXT_OPENSSL */
 
     return inited;
 }

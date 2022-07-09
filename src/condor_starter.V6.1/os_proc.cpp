@@ -541,11 +541,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		job_not_started = true;
 		free(affinity_mask);
 		return 0;
-	} else if( Starter->glexecPrivSepHelper() ) {
-			// TODO: if there is some way to figure out the final username,
-			// print it out here or after starting the job.
-		dprintf(D_ALWAYS,"Running job via glexec\n");
-	}
+	} 
 #else
 	if( false ) {
 	}
@@ -679,13 +675,14 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     );
 		*/
 
+		OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
-			OptionalCreateProcessArgs().priv(PRIV_USER_FINAL)
+			 cpArgs.priv(PRIV_USER_FINAL)
 			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
 			.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
-			.errorReturnMsg(create_process_err_msg).remap(fs_remap)
+			.remap(fs_remap)
 			.asHardLimit(rlimit_as_hard_limit)
 		);
 	}

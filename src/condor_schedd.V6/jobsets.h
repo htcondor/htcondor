@@ -24,19 +24,17 @@
 class JobSets {
 public:
 
-	JobSets() : next_setid_num(1) {};
+	JobSets() {};
 
 	~JobSets() = default;
 
-	//enum class garbagePolicyEnum { immediateAfterEmpty, delayedAferEmpty };
-
-	bool addJobToSet(JobQueueJob & job, std::vector<unsigned int> & new_ids);
+	// called when we commit a transaction to add the cluster to the jobset
+	// and on startup to initialize the jobset membership counters and the ids of the jobs
+	bool addToSet(JobQueueJob & job);
 
 	void status_change(JobQueueJob & job, int new_status);
 
 	bool removeJobFromSet(JobQueueJob & job);
-
-	void setNextSetId(int id);
 
 	void reconfig();
 
@@ -44,9 +42,13 @@ public:
 
 	bool garbageCollectSet(JobQueueJobSet* & ad);
 
-	int getOrCreateSet(const std::string & setName, const std::string & user, std::vector<unsigned int> & new_ids);
-
 	size_t count() { return mapAliasToId.size(); };
+
+	int find(const std::string & alias) {
+		auto it = mapAliasToId.find(alias);
+		if (it != mapAliasToId.end()) return it->second;
+		return 0;
+	}
 
 	static std::string makeAlias(const std::string name, const std::string owner) {
 		std::string ret = name + "/" + owner;
@@ -56,11 +58,9 @@ public:
 	
 private:
 
-	unsigned int next_setid_num;
 	std::unordered_map<std::string, unsigned int> mapAliasToId;
 
 	// helper implementation methods
-	JobQueueJobSet* getSet(JobQueueJob & job);
 	bool removeSet(JobQueueJobSet* & jobset);
 };
 

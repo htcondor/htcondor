@@ -745,15 +745,16 @@ main( int argc, const char** argv)
 	int filteredDeviceCount = 0;
 	for( dev = 0; dev < deviceCount; ++dev ) {
 
+		bool has_uuid = dev < (int)enumeratedDevices.size() && ! enumeratedDevices[dev].uuid.empty();
+
 		// Skip devices not on the whitelist, this skips nothing when the whitelist is not index based
 		if( dwl.ignore_device(dev) ) {
 			print_error(MODE_DIAGNOSTIC_MSG, "diag: skipping %d uuid=%s during CUDA enumeration because of index\n",
-				dev, enumeratedDevices[dev].uuid.empty() ? "<none>" : enumeratedDevices[dev].uuid.c_str());
+				dev, !has_uuid ? "<none>" : enumeratedDevices[dev].uuid.c_str());
 			continue;
 		}
 
 		// check device against the uuid whitelist
-		bool has_uuid = dev < (int)enumeratedDevices.size() && ! enumeratedDevices[dev].uuid.empty();
 		if (has_uuid) {
 			std::string id = gpuIDFromUUID( enumeratedDevices[dev].uuid, false );
 			if ( ! dwl.is_whitelisted(id, dev)) {
@@ -766,7 +767,7 @@ main( int argc, const char** argv)
 		std::string gpuID = constructGPUID(opt_pre, dev, opt_uuid, has_uuid, opt_short_uuid, enumeratedDevices);
 
 		// Skip devices which have MIG instances associated with them.
-		if(!migDevices.empty()) {
+		if(!migDevices.empty() && has_uuid) {
 			// The "UUIDs" from NVML have "GPU-" as a prefix.
 			std::string id = "GPU-" + enumeratedDevices[dev].uuid;
 			if( migDevices.find( id ) != migDevices.end() ) {

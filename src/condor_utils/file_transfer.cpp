@@ -3088,8 +3088,8 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			return_and_resetpriv( -1 );
 		}
 		*total_bytes_ptr += bytes;
-		thisFileStats.TransferFileBytes += bytes;
-		thisFileStats.TransferTotalBytes += bytes;
+		thisFileStats.TransferFileBytes += static_cast<long long>(bytes);
+		thisFileStats.TransferTotalBytes += static_cast<long long>(bytes);
 		bytes = 0;
 
 		numFiles++;
@@ -3275,7 +3275,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	}
 	int result = -1;
 	if(!ad.LookupInteger(ATTR_RESULT,result)) {
-		MyString ad_str;
+		std::string ad_str;
 		sPrintAd(ad_str, ad);
 		dprintf(D_ALWAYS,"Download acknowledgment missing attribute: %s.  Full classad: [\n%s]\n",ATTR_RESULT,ad_str.c_str());
 		success = false;
@@ -3670,7 +3670,7 @@ FileTransfer::UploadThread(void *arg, Stream *s)
  *   of bytes to use for the transfer summary.
  */
 TransferPluginResult
-FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long &upload_bytes)
+FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::string &input, ReliSock &sock, bool send_trailing_eom, CondorError &err, long long &upload_bytes)
 {
 	std::vector<std::unique_ptr<ClassAd>> result_ads;
 	auto result = InvokeMultipleFileTransferPlugin(err, pluginPath, input,
@@ -3753,7 +3753,7 @@ FileTransfer::InvokeMultiUploadPlugin(const std::string &pluginPath, const std::
 			dprintf(D_FULLDEBUG, "DoDownload: When sending upload summaries to the remote side, a socket communication failed.\n");
 			return TransferPluginResult::Error;
 		}
-		int bytes = 0;
+		long long bytes = 0;
 		if (xfer_result->EvaluateAttrInt("TransferTotalBytes", bytes)) {
 			upload_bytes += bytes;
 		}
@@ -4456,7 +4456,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		// Flush out any transfers if we can no longer defer the prior work we had built up.
 		// We can't defer if the plugin name changed *or* we hit a transfer that doesn't
 		// require a plugin at all.
-		long upload_bytes = 0;
+		long long upload_bytes = 0;
 		if (!currentUploadPlugin.empty() && (multifilePluginPath != currentUploadPlugin)) {
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
@@ -4653,7 +4653,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					// If we cannot defer uploads, we must execute the plugin now -- with one file.
 					if (!can_defer_uploads) {
 						dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
-						long upload_bytes = 0;
+						long long upload_bytes = 0;
 						TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, false, errstack, upload_bytes);
 						if (result == TransferPluginResult::Error) {
 							return_and_resetpriv( -1 );
@@ -4702,7 +4702,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					// same length.  Since the size will be wrong anyway, simplify
 					// future security audits but not printing the private attrs.
 					//
-					MyString junkbuf;
+					std::string junkbuf;
 					sPrintAd(junkbuf, file_info);
 					bytes = junkbuf.length();
 				}
@@ -4900,7 +4900,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	xfer_queue.ReleaseTransferQueueSlot();
 
 	// Clear out the multi-upload queue; we must do the error handling locally if it fails.
-	long upload_bytes = 0;
+	long long upload_bytes = 0;
 	if (!currentUploadRequests.empty()) {
 		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
@@ -5198,7 +5198,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 
 		go_ahead = GO_AHEAD_UNDEFINED;
 		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
-			MyString msg_str;
+			std::string msg_str;
 			sPrintAd(msg_str, msg);
 			error_desc.formatstr("GoAhead message missing attribute: %s.  "
 							   "Full classad: [\n%s]",
@@ -6125,8 +6125,8 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	stats.Assign( "JobOwner", owner );
 
 	// Output statistics to file
-	MyString stats_string;
-	MyString stats_output = "***\n";
+	std::string stats_string;
+	std::string stats_output = "***\n";
 	sPrintAd( stats_string, stats );
 	stats_output += stats_string;
 
@@ -6161,9 +6161,9 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 			num_files++;
 			Info.stats.InsertAttr(attr_count, num_files);
 
-			int this_size_bytes;
+			long long this_size_bytes;
 			if (stats.LookupInteger("TransferTotalBytes", this_size_bytes)) {
-				int prev_size_bytes;
+				long long prev_size_bytes;
 				if (!Info.stats.LookupInteger(attr_size, prev_size_bytes)) {
 					prev_size_bytes = 0;
 				}

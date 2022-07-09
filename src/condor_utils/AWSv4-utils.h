@@ -11,6 +11,7 @@
 
 #include "classad.h"
 #include "CondorError.h"
+#include "shortfile.h"
  *
  */
 
@@ -47,9 +48,6 @@ convertMessageDigestToLowercaseHex( const unsigned char * messageDigest,
 bool
 doSha256( const std::string & payload, unsigned char * messageDigest,
 	unsigned int * mdLength );
-
-bool
-readShortFile( const std::string & fileName, std::string & contents );
 
 bool
 createSignature( const std::string & secretAccessKey,

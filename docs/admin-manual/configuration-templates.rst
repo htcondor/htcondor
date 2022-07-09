@@ -315,6 +315,23 @@ incorporates.
        ``HOLD_REASON_CPU_EXCEEDED`` and ``HOLD_SUBCODE_CPU_EXCEEDED``
        respectively.
 
+    -  ``Preempt_If_Disk_Exceeded``
+
+       If the startd observes the amount of disk space used by the job
+       exceed the disk in the slot, preempt the job immediately
+       ignoring any job retirement time.
+
+    -  ``Hold_If_Disk_Exceeded``
+
+       If the startd observes the amount of disk space used by the job
+       exceed the disk in the slot, immediately place the job on hold
+       ignoring any job retirement time. The job will go on hold with a
+       reasonable hold reason in job attribute ``HoldReason`` and a
+       value of 104 in job attribute ``HoldReasonCode``. The hold reason
+       and code can be customized by specifying
+       ``HOLD_REASON_DISK_EXCEEDED`` and ``HOLD_SUBCODE_DISK_EXCEEDED``
+       respectively.
+
     -  ``Preempt_If_Memory_Exceeded``
 
        If the startd observes the memory usage of the job exceed the

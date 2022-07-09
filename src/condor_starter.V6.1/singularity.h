@@ -55,9 +55,11 @@ public:
 
 private:
   static bool detect(CondorError &err);
+  static std::string environmentPrefix();
 
   static bool m_enabled;
   static bool m_probed;
+  static bool m_apptainer;
   static int m_default_timeout;
   static std::string m_singularity_version;
 };

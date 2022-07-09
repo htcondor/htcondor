@@ -121,6 +121,7 @@ int SimScheddQ::destroy_Cluster(int cluster_id, const char * /*reason*/) {
 int SimScheddQ::get_Capabilities(ClassAd & caps) {
 	caps.Assign("LateMaterialize", true);
 	caps.Assign("LateMaterializeVersion", 2);
+	caps.Assign("UseJobsets", param_boolean("USE_JOBSETS", false));
 	return true;
 }
 
@@ -232,6 +233,18 @@ int SimScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 	return 0;
 }
 
+int SimScheddQ::send_Jobset(int cluster_id, const ClassAd * jobset_ad)
+{
+	ASSERT(cluster_id == cluster);
+	if (fp) { 
+		fprintf(fp, "::send_Jobset(%d,%p):\n", cluster_id, jobset_ad);
+		if (jobset_ad) {
+			std::string buf; buf.reserve(1000);
+			fputs(formatAd(buf, *jobset_ad, "  ", nullptr, false), fp);
+		}
+	}
+	return 0;
+}
 
 int SimScheddQ::send_SpoolFile(char const * filename) {
 	if (fp) { fprintf(fp, "::send_SpoolFile: %s\n", filename); }

@@ -505,7 +505,6 @@ int main (int argc, const char **argv)
 	app.init();
 
 	// load up configuration file
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
@@ -1218,19 +1217,9 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_Format | QDO_Custom;
-#if 1 // parse -format and -af late
 			autoformat_args.push_back(argv[i]);
 			autoformat_args.push_back(argv[i+1]);
 			autoformat_args.push_back(argv[i+2]);
-#else
-			app.prmask.registerFormatF( argv[i+1], argv[i+2], FormatOptionNoTruncate );
-			if ( ! dash_autocluster) {
-				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
-			}
-			GetAllReferencesFromClassAdExpr(argv[i+2], app.attrs);
-			//summarize = 0;
-			customHeadFoot = HF_BARE;
-#endif
 			i+=2;
 		}
 		else
@@ -1242,7 +1231,6 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit( 1 );
 			}
 			qdo_mode = QDO_AutoFormat | QDO_Custom;
-#if 1 // parse -format and -af late
 			autoformat_args.push_back(argv[i]);
 			// process all arguments that don't begin with "-" as part of autoformat.
 			while (i+1 < argc && *(argv[i+1]) != '-') {
@@ -1253,76 +1241,6 @@ processCommandLineArguments (int argc, const char *argv[])
 			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
 				++i;
 			}
-#else
-			if ( ! dash_autocluster) {
-				app.attrs.initializeFromString("ClusterId ProcId"); // this is needed to prevent some DAG code from faulting.
-			}
-			AttrListPrintMask & prmask = app.prmask;
-			StringList & attrs = app.attrs;
-			bool flabel = false;
-			bool fCapV  = false;
-			bool fheadings = false;
-			bool fJobId = false;
-			bool fRaw = false;
-			const char * prowpre = NULL;
-			const char * pcolpre = " ";
-			const char * pcolsux = NULL;
-			if (pcolon) {
-				++pcolon;
-				while (*pcolon) {
-					switch (*pcolon)
-					{
-						case ',': pcolsux = ","; break;
-						case 'n': pcolsux = "\n"; break;
-						case 'g': pcolpre = NULL; prowpre = "\n"; break;
-						case 't': pcolpre = "\t"; break;
-						case 'l': flabel = true; break;
-						case 'V': fCapV = true; break;
-						case 'r': case 'o': fRaw = true; break;
-						case 'h': fheadings = true; break;
-						case 'j': fJobId = true; break;
-					}
-					++pcolon;
-				}
-			}
-			if (fJobId) {
-				if (fheadings || prmask.has_headings()) {
-					prmask.set_heading(" ID");
-					prmask.registerFormat (flabel ? "ID = %4d." : "%4d.", 5, FormatOptionAutoWidth | FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-					prmask.set_heading(" ");
-					prmask.registerFormat ("%-3d", 3, FormatOptionAutoWidth | FormatOptionNoPrefix, ATTR_PROC_ID);
-				} else {
-					prmask.registerFormat (flabel ? "ID = %d." : "%d.", 0, FormatOptionNoSuffix, ATTR_CLUSTER_ID);
-					prmask.registerFormat ("%d", 0, FormatOptionNoPrefix, ATTR_PROC_ID);
-				}
-			}
-			// process all arguments that don't begin with "-" as part
-			// of autoformat.
-			while (i+1 < argc && *(argv[i+1]) != '-') {
-				++i;
-				GetAllReferencesFromClassAdExpr(argv[i], attrs);
-				std::string lbl = "";
-				int wid = 0;
-				int opts = FormatOptionNoTruncate;
-				if (fheadings || prmask.has_headings()) {
-					const char * hd = fheadings ? argv[i] : "(expr)";
-					wid = 0 - (int)strlen(hd);
-					opts = FormatOptionAutoWidth | FormatOptionNoTruncate; 
-					prmask.set_heading(hd);
-				}
-				else if (flabel) { formatstr(lbl, "%s = ", argv[i]); wid = 0; opts = 0; }
-				lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
-				prmask.registerFormat(lbl.c_str(), wid, opts, argv[i]);
-			}
-			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, "\n");
-			//summarize = 0;
-			customHeadFoot = HF_BARE;
-			if (fheadings) { customHeadFoot = (printmask_headerfooter_t)(customHeadFoot & ~HF_NOHEADER); }
-			// if autoformat list ends in a '-' without any characters after it, just eat the arg and keep going.
-			if (i+1 < argc && '-' == (argv[i+1])[0] && 0 == (argv[i+1])[1]) {
-				++i;
-			}
-#endif
 		}
 		else
 		if (is_dash_arg_colon_prefix(argv[i], "print-format", &pcolon, 2)) {
@@ -1540,10 +1458,7 @@ processCommandLineArguments (int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "debug", &pcolon, 3)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
-			if (pcolon && pcolon[1]) {
-				set_debug_flags( ++pcolon, 0 );
-			}
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "io", 2)) {
@@ -2878,7 +2793,7 @@ union _jobid {
 	long long id;
 };
 
-static union _jobid sequence_id = { 0, INT_MAX };
+static union _jobid sequence_id = { {0, INT_MAX} };
 static bool assume_cluster_ad_if_no_proc_id = false; // set to true when we expect to get clusterad ads that don't have a ProcId attribute
 
 // callback function for processing a job from the Q query that just adds the job into a IdToClassaAdMap.
@@ -3226,7 +3141,7 @@ static void print_a_result(std::string & buf, JobRowOfData & jrod)
 	buf.clear();
 	app.prmask.display(buf, jrod.rov);
 	if (widescreen) trim_whitespace_before_newline(buf);
-	printf("%s", buf.c_str());
+	fputs(buf.c_str(), stdout);
 	jrod.flags |= JROD_PRINTED; // for debugging, keep track of what we already printed.
 }
 
@@ -3276,6 +3191,11 @@ void print_results(ROD_MAP_BY_ID & results, KeyToIdMap order, bool children_unde
 			}
 		}
 	}
+
+	// This fixes a random failure we see where condor_q correctly prints out
+	// the results to stdout, but they don't make it to the stdout of a
+	// backtick'ed caller in a perl test script.
+	fflush(stdout);
 }
 
 void clear_results(ROD_MAP_BY_ID & results, KeyToIdMap & order)
@@ -4226,7 +4146,15 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	if (dash_dry_run) {
 		fetchResult = dryFetchQueue(dry_run_file, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess);
 	} else {
+		if (dash_long || pattrs->contains_anycase(ATTR_SERVER_TIME)) {
+			// Ask the schedd to add the ServerTime attribute to the each of the job ads.
+			// this was the default before 9.10.0 (see HTCONDOR-1125)
+			// we do this so that a subsequent "condor_q -jobs <file> -nobatch" will show the correct job times.
+			Q.requestServerTime(true);
+		}
 		fetchResult = Q.fetchQueueFromHostAndProcess(scheddAddress, *pattrs, fetch_opts, g_match_limit, pfnProcess, pvProcess, useFastPath, &errstack, &summary_ad);
+		// In support of HTCONDOR-1125, grab queue time from summary ad if it is there.
+		if (summary_ad) { summary_ad->LookupInteger(ATTR_SERVER_TIME, queue_time); }
 	}
 	cleanup_cache_optimizer();
 	if (fetchResult != Q_OK) {

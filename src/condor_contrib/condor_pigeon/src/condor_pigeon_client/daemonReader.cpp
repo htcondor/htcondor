@@ -72,7 +72,6 @@ char* getQpidPort(char *hName){
 }
 
 int main(int argc, char **argv){
-  myDistro->Init(argc,argv);
   char *hostname = NULL;
   if (argc > 1) {
   	hostname = argv[1];

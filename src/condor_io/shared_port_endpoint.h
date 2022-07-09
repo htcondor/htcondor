@@ -103,11 +103,7 @@ class SharedPortEndpoint: Service {
 
 	static int PipeListenerHelper(void* pthis, void* data);
 	static int DebugLogHelper(void* pthis, void* data);
-
-	//Event used to notify the class that the thread is dead.
-	HANDLE thread_killed;
-#endif
-#ifndef WIN32
+#else
 		// Remove named socket
 	static bool RemoveSocket( char const *fname );
 #endif
@@ -152,13 +148,13 @@ class SharedPortEndpoint: Service {
 #ifdef WIN32
 	//Lock for accessing the queue that holds onto the received data structures.
 	CRITICAL_SECTION received_lock;
-	//Lock that synchronizes access to the kill thread signal.
-	CRITICAL_SECTION kill_lock;
 
 	//Queue that holds the received data structures.
 	std::queue<WSAPROTOCOL_INFO*> received_sockets;
-	//Kill thread signal.  Best to use an event but previous tests with events proved problematic.
-	bool kill_thread;
+
+	//set to true to tell the thread to exit
+	volatile LONG thread_should_exit;
+
 	//Handle to the pipe that listens for connections.
 	HANDLE pipe_end;
 	//temporary inheritable handle to above pipe

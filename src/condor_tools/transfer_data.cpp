@@ -176,10 +176,10 @@ main(int argc, char *argv[])
 	char* pool = NULL;
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
+	const char * pcolon;
 	std::string method;
 	char *tmp;
 
-	myDistro->Init( argc, argv );
 	MyName = condor_basename(argv[0]);
 	set_priv_initialize(); // allow uid switching if root
 	config();
@@ -210,7 +210,12 @@ main(int argc, char *argv[])
 			switch( arg[1] ) {
 			case 'd':
 				// dprintf to console
-				dprintf_set_tool_debug("TOOL", 0);
+				if (is_dash_arg_colon_prefix(arg, "debug", &pcolon, 1)) {
+					dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
+				} else {
+					fprintf(stderr, "%s: unknown argument %s\n", MyName, arg);
+					exit(1);
+				}
 				break;
 			case 'c':
 				args[nArgs] = arg;

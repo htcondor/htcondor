@@ -22,7 +22,6 @@
 #include "condor_debug.h"
 #include "condor_fix_assert.h"
 #include "condor_io.h"
-#include "condor_constants.h"
 #include "condor_classad.h"
 #include "condor_sys.h"
 #include "starter.h"
@@ -37,6 +36,7 @@
 
 static int CurrentSysCall;
 extern ReliSock *syscall_sock;
+extern time_t syscall_last_rpc_time;
 extern Starter *Starter;
 
 extern "C" {
@@ -80,10 +80,12 @@ REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -131,9 +133,11 @@ REMOTE_CONDOR_register_job_info( ClassAd* ad )
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -173,12 +177,14 @@ REMOTE_CONDOR_get_job_info(ClassAd *ad)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = getClassAd(syscall_sock, *ad);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -216,12 +222,14 @@ REMOTE_CONDOR_get_user_info(ClassAd *ad)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = getClassAd(syscall_sock, *ad);
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -260,6 +268,7 @@ REMOTE_CONDOR_get_executable(char *destination)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 
@@ -267,6 +276,7 @@ REMOTE_CONDOR_get_executable(char *destination)
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 #endif
@@ -311,9 +321,11 @@ REMOTE_CONDOR_job_exit(int status, int reason, ClassAd *ad)
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -357,10 +369,12 @@ REMOTE_CONDOR_job_termination( ClassAd* ad )
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -398,10 +412,12 @@ REMOTE_CONDOR_begin_execution( void )
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -444,10 +460,12 @@ REMOTE_CONDOR_open( char const *  path , open_flags_t flags , int   lastarg)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -486,10 +504,12 @@ REMOTE_CONDOR_close(int   fd)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = syscall_sock->end_of_message();
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -530,12 +550,14 @@ REMOTE_CONDOR_read(int   fd , void *  buf , size_t   len)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->code_bytes_bool(buf, rval) );
 		ON_ERROR_RETURN( result );
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -578,10 +600,12 @@ REMOTE_CONDOR_write(int   fd , void *  buf , size_t   len)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -625,10 +649,12 @@ REMOTE_CONDOR_lseek(int   fd , off_t   offset , int   whence)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -667,10 +693,12 @@ REMOTE_CONDOR_unlink( char *  path )
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -711,10 +739,12 @@ REMOTE_CONDOR_rename( char *  from , char *  to)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -758,10 +788,12 @@ REMOTE_CONDOR_register_mpi_master_info( ClassAd* ad )
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -802,10 +834,12 @@ REMOTE_CONDOR_mkdir( char *  path, int mode )
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -844,10 +878,12 @@ REMOTE_CONDOR_rmdir( char *  path )
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -886,10 +922,12 @@ REMOTE_CONDOR_fsync(int   fd)
 				ON_ERROR_RETURN( result );
                 errno = terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         result = ( syscall_sock->end_of_message() );
 		ON_ERROR_RETURN( result );
+        syscall_last_rpc_time = time(nullptr);
         return rval;
 }
 
@@ -923,10 +961,12 @@ REMOTE_CONDOR_get_file_info_new(char *  logical_name , char *&actual_url)
                 ON_ERROR_RETURN( syscall_sock->end_of_message() );
                 errno = (int)terrno;
                 dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+                syscall_last_rpc_time = time(nullptr);
                 return rval;
         }
         ON_ERROR_RETURN( syscall_sock->get(actual_url) );
         ON_ERROR_RETURN( syscall_sock->end_of_message() );
+        syscall_last_rpc_time = time(nullptr);
 
         return rval;
 }                                                                              
@@ -990,6 +1030,7 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 
 	//NOTE: we expect no response.
 
@@ -1023,6 +1064,7 @@ REMOTE_CONDOR_phase( char *phase )
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 
 	//NOTE: we expect no response.
 
@@ -1057,10 +1099,12 @@ REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	ON_ERROR_RETURN( syscall_sock->code(expr) );
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1093,9 +1137,11 @@ REMOTE_CONDOR_set_job_attr(char *  attrname , char *  expr)
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1127,9 +1173,11 @@ REMOTE_CONDOR_constrain( char *  expr)
 		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 		errno = (int)terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	ON_ERROR_RETURN( syscall_sock->end_of_message() );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1191,6 +1239,7 @@ int REMOTE_CONDOR_get_sec_session_info(
 	if( !socket_default_crypto ) {
 		syscall_sock->set_crypto_mode( false );  // restore default
 	}
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1233,12 +1282,14 @@ REMOTE_CONDOR_pread(int fd , void* buf , size_t len, size_t offset)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buf, rval) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1282,10 +1333,12 @@ REMOTE_CONDOR_pwrite(int fd , void* buf ,size_t len, size_t offset)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1332,12 +1385,14 @@ REMOTE_CONDOR_sread(int fd , void* buf , size_t len, size_t offset,
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buf, rval) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1386,10 +1441,12 @@ REMOTE_CONDOR_swrite(int fd , void* buf ,size_t len, size_t offset,
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1427,10 +1484,12 @@ REMOTE_CONDOR_rmall(char *path)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1468,6 +1527,7 @@ REMOTE_CONDOR_getfile(char *path, char **buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	*buffer = (char*)malloc(rval);
@@ -1475,6 +1535,7 @@ REMOTE_CONDOR_getfile(char *path, char **buffer)
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1517,6 +1578,7 @@ REMOTE_CONDOR_putfile(char *path, int mode, int length)
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1554,12 +1616,14 @@ REMOTE_CONDOR_getlongdir(char *path, char *&buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem(%d), errno = %d\n", rval, errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code(buffer) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1597,12 +1661,14 @@ REMOTE_CONDOR_getdir(char *path, char *&buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code(buffer) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1640,12 +1706,14 @@ REMOTE_CONDOR_whoami(int length, void *buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, rval) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1685,12 +1753,14 @@ REMOTE_CONDOR_whoareyou(char *host, int length, void *buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, rval) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1728,12 +1798,14 @@ REMOTE_CONDOR_fstat(int fd, char* buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1771,12 +1843,14 @@ REMOTE_CONDOR_fstatfs(int fd, char* buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1818,10 +1892,12 @@ REMOTE_CONDOR_fchown(int fd, int uid, int gid)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1861,10 +1937,12 @@ REMOTE_CONDOR_fchmod(int fd, int mode)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1904,10 +1982,12 @@ REMOTE_CONDOR_ftruncate(int fd, int length)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1946,6 +2026,7 @@ REMOTE_CONDOR_putfile_buffer(void *buffer, int length)
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -1985,10 +2066,12 @@ REMOTE_CONDOR_link(char *path, char *newpath)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2028,10 +2111,12 @@ REMOTE_CONDOR_symlink(char *path, char *newpath)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2071,6 +2156,7 @@ REMOTE_CONDOR_readlink(char *path, int length, char **buffer )
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	*buffer = (char*)malloc(rval);
@@ -2078,6 +2164,7 @@ REMOTE_CONDOR_readlink(char *path, int length, char **buffer )
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2115,12 +2202,14 @@ REMOTE_CONDOR_stat(char *path, char *buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2158,12 +2247,14 @@ REMOTE_CONDOR_lstat(char *path, char *buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2201,12 +2292,14 @@ REMOTE_CONDOR_statfs(char *path, char *buffer)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->code_bytes_bool(buffer, 1024) );
 	ON_ERROR_RETURN( result );
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2246,10 +2339,12 @@ REMOTE_CONDOR_access(char *path, int mode)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2289,10 +2384,12 @@ REMOTE_CONDOR_chmod(char *path, int mode)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2334,10 +2431,12 @@ REMOTE_CONDOR_chown(char *path, int uid, int gid)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2379,10 +2478,12 @@ REMOTE_CONDOR_lchown(char *path, int uid, int gid)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2422,10 +2523,12 @@ REMOTE_CONDOR_truncate(char *path, int length)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2467,10 +2570,12 @@ REMOTE_CONDOR_utime(char *path, int actime, int modtime)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2507,10 +2612,12 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 		ON_ERROR_RETURN( result );
 		errno = terrno;
 		dprintf ( D_SYSCALLS, "Return val problem, errno = %d\n", errno );
+		syscall_last_rpc_time = time(nullptr);
 		return rval;
 	}
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return rval;
 }
 
@@ -2613,6 +2720,7 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 
 	// return status
 	// >0:  Success
@@ -2659,6 +2767,7 @@ REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* pr
 	// Wait for end_of_message and return
 	result = ( syscall_sock->end_of_message() );
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 	return get_x509_rc;
 }
 
@@ -2693,6 +2802,7 @@ REMOTE_CONDOR_event_notification( ClassAd * event ) {
 	ON_ERROR_RETURN( result );
 	result = syscall_sock->end_of_message();
 	ON_ERROR_RETURN( result );
+	syscall_last_rpc_time = time(nullptr);
 
 	return rval;
 }

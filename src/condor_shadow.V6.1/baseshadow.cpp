@@ -1615,7 +1615,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 
 		// Lookup the value of this attribute. We only count integer values.
 		classad::Value attr_val;
-		int value;
+		long long value;
 		it->second->Evaluate(attr_val);
 		if (!attr_val.IsIntegerValue(value)) {
 			continue;
@@ -1623,7 +1623,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 		updated_stats->InsertAttr(attr_lastrun, value);
 
 		// If this attribute has a previous Total value, add that to the new total
-		int old_total = 0;
+		long long old_total = 0;
 		if (old_stats.LookupInteger(attr_total, old_total)) {
 			value += old_total;
 		}

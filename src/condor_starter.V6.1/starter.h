@@ -29,7 +29,6 @@
 #include "exit.h"
 
 #if defined(LINUX)
-#include "glexec_privsep_helper.linux.h"
 #include "../condor_startd.V6/VolumeManager.h"
 #endif
 
@@ -318,13 +317,6 @@ public:
 	{
 		return m_privsep_helper;
 	}
-#if defined(LINUX)
-		/** This will return NULL if we're not using PrivSep */
-	GLExecPrivSepHelper* glexecPrivSepHelper()
-	{
-		return dynamic_cast<GLExecPrivSepHelper*>(m_privsep_helper);
-	}
-#endif
 
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
@@ -356,11 +348,6 @@ private:
 
 		/// Remove the execute/dir_<pid> directory
 	virtual bool removeTempExecuteDir( void );
-
-#if !defined(WIN32)
-		/// Special cleanup for exiting after being invoked via glexec
-	void exitAfterGlexec( int code );
-#endif
 
 		/**
 		   Iterate through a UserProc list and have each UserProc
@@ -439,6 +426,7 @@ private:
 		// When HTCondor manages dedicated disk space, this tracks
 		// the maximum permitted disk usage and the polling timer
 		//
+#if defined(LINUX)
 	int64_t m_lvm_max_size_kb{0};
 	int m_lvm_poll_tid{-1};
 	time_t m_lvm_last_space_issue{-1};
@@ -446,6 +434,7 @@ private:
 	std::string m_lvm_thin_volume;
 	std::string m_lvm_thin_pool;
 	std::string m_lvm_volume_group;
+#endif
 
 	UserProc* pre_script;
 	UserProc* post_script;

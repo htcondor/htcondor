@@ -35,6 +35,31 @@ class MyStringSource;
 //   buf[trim_in_place(buf, strlen(buf))] = 0;
 int trim_in_place(char* buf, int length);
 
+// Global functions
+int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
+//
+// comparison ops between the two houses divided
+bool operator==(const MyString& L, const std::string& R);
+bool operator!=(const MyString& L, const std::string& R);
+bool operator<(const MyString& L, const std::string& R);
+bool operator>(const MyString& L, const std::string& R);
+bool operator<=(const MyString& L, const std::string& R);
+bool operator>=(const MyString& L, const std::string& R);
+bool operator==(const std::string& L, const MyString& R);
+bool operator!=(const std::string& L, const MyString& R);
+bool operator<(const std::string& L, const MyString& R);
+bool operator>(const std::string& L, const MyString& R);
+bool operator<=(const std::string& L, const MyString& R);
+bool operator>=(const std::string& L, const MyString& R);
+
+bool readLine(std::string& dst, MyStringSource& src, bool append = false);
+void Tokenize(const MyString &str);
+
+void Tokenize(const std::string &str);
+void Tokenize(const char *str);
+const char *GetNextToken(const char *delim, bool skipBlankTokens);
+
 /** The MyString class is a C++ representation of a string. It was
  * written before we could reliably use the standard string class.
  * For an example of how to use it, see test_mystring.C.
