@@ -1233,6 +1233,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_set_shutdown.1.gz
 %_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
+%_mandir/man1/condor_ssl_fingerprint.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
 %_mandir/man1/condor_store_cred.1.gz
@@ -1317,6 +1318,7 @@ rm -rf %{buildroot}
 %_bindir/condor_power
 %_bindir/condor_gather_info
 %_bindir/condor_continue
+%_bindir/condor_ssl_fingerprint
 %_bindir/condor_suspend
 %_bindir/condor_test_match
 %_bindir/condor_token_create

@@ -29,6 +29,7 @@
 #include "directory.h"
 
 #include <sstream>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 
@@ -245,20 +246,6 @@ std::unique_ptr<X509_NAME, decltype(&X509_NAME_free)> generate_cert_name(const s
 }
 
 
-std::string get_known_hosts_filename()
-{
-	std::string fname;
-	if (!param(fname, "SEC_KNOWN_HOSTS")) {
-		std::string file_location;
-		if (find_user_file(file_location, "known_hosts", false, false)) {
-			fname = file_location;
-		} else {
-			param(fname, "SEC_SYSTEM_KNOWN_HOSTS");
-		}
-	}
-	return fname;
-}
-
 std::unique_ptr<FILE, decltype(&fclose)> get_known_hosts()
 {
 	TemporaryPrivSentry tps;
@@ -267,7 +254,7 @@ std::unique_ptr<FILE, decltype(&fclose)> get_known_hosts()
 		set_priv(PRIV_ROOT);
 	}
 
-	std::string fname = get_known_hosts_filename();
+	std::string fname = htcondor::get_known_hosts_filename();
 	make_parents_if_needed(fname.c_str(), 0755);
 
 	std::unique_ptr<FILE, decltype(&fclose)> fp(nullptr, &fclose);
@@ -318,6 +305,51 @@ bool check_known_hosts_any_match(const std::string &hostname, bool permitted, st
 
 
 } // namespace
+
+
+std::string htcondor::get_known_hosts_filename()
+{
+	std::string fname;
+	if (!param(fname, "SEC_KNOWN_HOSTS")) {
+		std::string file_location;
+		if (find_user_file(file_location, "known_hosts", false, false)) {
+			fname = file_location;
+		} else {
+			param(fname, "SEC_SYSTEM_KNOWN_HOSTS");
+		}
+	}
+	return fname;
+}
+
+
+// Given a non-newline, base64-encoded certificate, decode to an X509 object.
+std::unique_ptr<X509, decltype(&X509_free)> htcondor::load_x509_from_b64(const std::string &info, CondorError &err)
+{
+        std::unique_ptr<BIO, decltype(&BIO_free)> b64( BIO_new(BIO_f_base64()), &BIO_free);
+        BIO_set_flags(b64.get(), BIO_FLAGS_BASE64_NO_NL);
+        if (!b64) {
+		err.push("X509", 1, "Failed to initialize base64 buffer");
+		return std::unique_ptr<X509, decltype(&X509_free)>(nullptr, &X509_free);
+	}
+
+        decltype(b64) mem(BIO_new_mem_buf(info.c_str(), info.size()), &BIO_free);
+        if (!mem) {
+		err.push("X509", 2, "Failed to initialize memory buffer");
+		return std::unique_ptr<X509, decltype(&X509_free)>(nullptr, &X509_free);
+	}
+        BIO_push(b64.get(), mem.get());
+
+	std::unique_ptr<X509, decltype(&X509_free)> result(d2i_X509_bio(b64.get(), nullptr), &X509_free);
+        if (!result) {
+                err.push("X509", 3, "Failed to parse X.509 object from data");
+		auto err_msg = ERR_error_string(ERR_get_error(), nullptr);
+		if (err_msg) err.pushf("X509", 3, "OpenSSL error: %s", err_msg);
+		return std::unique_ptr<X509, decltype(&X509_free)>(nullptr, &X509_free);
+        }
+
+        return result;
+}
+
 
 
 bool htcondor::generate_x509_ca(const std::string &cafile, const std::string &cakeyfile)
@@ -520,6 +552,36 @@ bool htcondor::add_known_hosts(const std::string &hostname, bool permitted, cons
 			errno);
 		return false;
 	}
+	return true;
+}
+
+
+// Given a reference to an X509 object, produce a human-readable fingerprint
+bool htcondor::generate_fingerprint(const X509 *cert, std::string &fingerprint, CondorError &err)
+{
+	unsigned char md[EVP_MAX_MD_SIZE];
+	auto digest = EVP_get_digestbyname("sha256");
+	if (!digest) {
+		err.push("FINGERPRINT", 1, "sha256 digest is not available");
+		return false;
+	}
+	unsigned int len;
+	if (1 != X509_digest(cert, digest, md, &len)) {
+		err.push("FINGERPRINT", 2, "Failed to create a digest of the provided X.509 certificate");
+		auto err_msg = ERR_error_string(ERR_get_error(), nullptr);
+		if (err_msg) err.pushf("FINGERPRINT", 3, "OpenSSL error message: %s\n", err_msg);
+		return false;
+	}
+
+	std::stringstream ss;
+	ss << std::hex << std::setw(2) << std::setfill('0');
+	bool first = true;
+	for (unsigned idx = 0; idx < len; idx++) {
+		if (!first) ss << ":";
+		ss << std::setw(2) << static_cast<int>(md[idx]);
+		first = false;
+	}
+	fingerprint = ss.str();
 	return true;
 }
 

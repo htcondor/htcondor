@@ -23,6 +23,8 @@
 
 #include <openssl/x509.h>
 
+class CondorError;
+
 namespace htcondor {
 
 bool generate_x509_ca(const std::string &cafile, const std::string &cakeyfile);
@@ -30,6 +32,11 @@ bool generate_x509_cert(const std::string &certfile, const std::string &keyfile,
 
 bool get_known_hosts_first_match(const std::string &hostname, bool &permitted, std::string &method, std::string &method_info);
 bool add_known_hosts(const std::string &hostname, bool permitted, const std::string &method, const std::string &method_info);
+std::string get_known_hosts_filename();
+
+bool generate_fingerprint(const X509 *x509, std::string &fingerprint, CondorError &err);
+
+std::unique_ptr<X509, decltype(&X509_free)> load_x509_from_b64(const std::string &info, CondorError &err);
 
 // Ask the terminal user if a given certificate is acceptable.
 bool ask_cert_confirmation(const std::string &host_alias, const std::string &fingerprint, const std::string &dn, bool is_ca_cert);
