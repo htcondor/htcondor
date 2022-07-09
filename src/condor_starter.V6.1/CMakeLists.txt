@@ -39,7 +39,6 @@ local_user_log.cpp
 NTsenders.cpp
 os_proc.cpp
 parallel_proc.cpp
-privsep_helper.cpp
 remote_proc.cpp
 script_proc.cpp
 singularity.cpp

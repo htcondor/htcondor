@@ -571,11 +571,6 @@ JobInfoCommunicator::initUserPrivNoOwner( void )
 	}
 #endif
 
-		// if we're using PrivSep, we need ATTR_OWNER
-	if (Starter->privSepHelper() != NULL) {
-		return false;
-	}
-
 		// otherwise, we can't switch privs anyway, so consider
 		// ourselves done. :) 
 	dprintf( D_FULLDEBUG, 
