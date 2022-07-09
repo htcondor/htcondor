@@ -111,6 +111,7 @@ std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> generate_key(const std::stri
 	if (1 != PEM_write_PrivateKey(fp.get(), key.get(), nullptr, nullptr, 0, 0, nullptr)) {
 		dprintf(D_ALWAYS, "Key generation: failed to write private key to file %s: %s (errno=%d)\n",
 			keyfile.c_str(), strerror(errno), errno);
+		unlink(keyfile.c_str());
 		return result;
 	}
 	fflush(fp.get());
@@ -330,15 +331,6 @@ bool htcondor::generate_x509_ca(const std::string &cafile, const std::string &ca
 		return false;
 	}
 
-	std::unique_ptr<FILE, decltype(&fclose)> fp(
-		safe_fcreate_fail_if_exists(cafile.c_str(), "w"),
-		&fclose);
-	if (!fp) {
-		dprintf(D_ALWAYS, "CA generation: failed to create a new CA file at %s: %s (errno=%d)\n",
-			cafile.c_str(), strerror(errno), errno);
-		return false;
-	}
-
 	auto x509_name = generate_ca_name();
 	if (!x509_name) {return false;}
 	auto cert = generate_generic_cert(x509_name.get(), ca_private_key.get(), 10*365);
@@ -358,9 +350,19 @@ bool htcondor::generate_x509_ca(const std::string &cafile, const std::string &ca
 		return false;
 	}
 
+	std::unique_ptr<FILE, decltype(&fclose)> fp(
+		safe_fcreate_fail_if_exists(cafile.c_str(), "w"),
+		&fclose);
+	if (!fp) {
+		dprintf(D_ALWAYS, "CA generation: failed to create a new CA file at %s: %s (errno=%d)\n",
+			cafile.c_str(), strerror(errno), errno);
+		return false;
+	}
+
 	if (1 != PEM_write_X509(fp.get(), cert.get())) {
 		dprintf(D_ALWAYS, "CA generation: failed to write the CA certificate %s: %s (errno=%d)\n",
 			cafile.c_str(), strerror(errno), errno);
+		unlink(cafile.c_str());
 		return false;
 	}
 
@@ -389,15 +391,6 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 	std::string host_alias;
 	if (!param(host_alias, "HOST_ALIAS")) {
 		dprintf(D_ALWAYS, "Cannot generate new certificate - HOST_ALIAS is not set.");
-		return false;
-	}
-
-	std::unique_ptr<FILE, decltype(&fclose)> fp(
-		safe_fcreate_fail_if_exists(certfile.c_str(), "w"),
-		&fclose);
-	if (!fp) {
-		dprintf(D_ALWAYS, "Certificate generation: failed to create a new file at %s: %s (errno=%d)\n",
-			certfile.c_str(), strerror(errno), errno);
 		return false;
 	}
 
@@ -441,14 +434,26 @@ bool htcondor::generate_x509_cert(const std::string &certfile, const std::string
 		return false;
 	}
 
+	std::unique_ptr<FILE, decltype(&fclose)> fp(
+		safe_fcreate_fail_if_exists(certfile.c_str(), "w"),
+		&fclose);
+	if (!fp) {
+		dprintf(D_ALWAYS, "Certificate generation: failed to create a new file at %s: %s (errno=%d)\n",
+			certfile.c_str(), strerror(errno), errno);
+		return false;
+	}
+
+
 	if (1 != PEM_write_X509(fp.get(), cert.get())) {
 		dprintf(D_ALWAYS, "Certificate generation: failed to write the certificate %s: %s (errno=%d)\n",
 			certfile.c_str(), strerror(errno), errno);
+		unlink(certfile.c_str());
 		return false;
 	}
 	if (1 != PEM_write_X509(fp.get(), ca_cert.get())) {
 		dprintf(D_ALWAYS, "Certificate generation: failed to write the CA certificate %s: %s (errno=%d)\n",
 			certfile.c_str(), strerror(errno), errno);
+		unlink(certfile.c_str());
 		return false;
 	}
 
