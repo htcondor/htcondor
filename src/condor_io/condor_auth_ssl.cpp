@@ -1413,23 +1413,6 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 			bool is_ca_cert = (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) || (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) ||
 				(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN);
 
-			unsigned char         md[EVP_MAX_MD_SIZE];
-			auto digest = EVP_get_digestbyname("sha256");
-			unsigned int len;
-			if (1 != (*X509_digest_ptr)(cert, digest, md, &len)) {
-				dprintf(D_SECURITY, "Failed to create a digest of the provided X.509 certificate.\n");
-				return ok;
-			}
-			std::stringstream ss;
-			ss << std::hex << std::setw(2) << std::setfill('0');
-			bool first = true;
-			for (unsigned idx = 0; idx < len; idx++) {
-				ss << static_cast<int>(md[idx]);
-				if (!first) ss << ":";
-				first = false;
-			}
-			std::string fingerprint = ss.str();
-
 			auto host_alias = *(verify_ptr->m_host_alias);
 			if (!encoded_cert.empty() &&
 				htcondor::get_known_hosts_first_match(host_alias, is_permitted,
@@ -1457,6 +1440,23 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 				if (!permitted && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
 					get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT)) && isatty(0))
 				{
+					unsigned char md[EVP_MAX_MD_SIZE];
+					auto digest = EVP_get_digestbyname("sha256");
+					unsigned int len;
+					if (1 != (*X509_digest_ptr)(cert, digest, md, &len)) {
+						dprintf(D_SECURITY, "Failed to create a digest of the provided X.509 certificate.\n");
+						return ok;
+					}
+					std::stringstream ss;
+					ss << std::hex << std::setw(2) << std::setfill('0');
+					bool first = true;
+					for (unsigned idx = 0; idx < len; idx++) {
+						if (!first) ss << ":";
+						ss << std::setw(2) << static_cast<int>(md[idx]);
+						first = false;
+					}
+					std::string fingerprint = ss.str();
+
 					permitted = htcondor::ask_cert_confirmation(host_alias, fingerprint, dn, is_ca_cert);
 				}
 				htcondor::add_known_hosts(host_alias, permitted, "SSL", encoded_cert);
