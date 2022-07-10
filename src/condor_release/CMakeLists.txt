@@ -22,7 +22,7 @@ if (NOT WINDOWS)
 	install ( DIRECTORY examples
 			DESTINATION ${C_SHARE_EXAMPLES} )
 
-	install(FILES ../../LICENSE-2.0.txt ../../NOTICE.txt README
+	install(FILES ../../LICENSE ../../NOTICE.txt README
 			DESTINATION ${C_DOC})
 
 endif (NOT WINDOWS)

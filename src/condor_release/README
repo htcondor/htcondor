@@ -1,13 +1,13 @@
 README for Condor
 
-Please read the file LICENSE-2.0.txt before proceeding.  Installation
+Please read the file LICENSE before proceeding.  Installation
 and use of Condor is acknowledgement that you have read and agree to
-the terms listed in the LICENSE-2.0.txt.
+the terms listed in the LICENSE.
 
 This directory contains the following files:
 
-LICENSE-2.0.txt  - by installing Condor, you agree to the contents of
-                   the LICENSE-2.0.txt file
+LICENSE  - by installing Condor, you agree to the contents of
+                   the LICENSE file
 README	         - this file
 bin              - directory containing command-line tools
 bosco_install    - perl script to install Bosco
