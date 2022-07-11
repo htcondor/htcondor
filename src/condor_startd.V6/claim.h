@@ -118,7 +118,6 @@ private:
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
 	char	*c_proxyfile;   // file holding delegated proxy
-		                // (used when using GLEXEC_STARTER)
 	char	*c_concurrencyLimits; // limits, if any
     char*   c_rmtgrp;   // the submitter's accounting group
     char*   c_neggrp;   // the negotiating accounting group
