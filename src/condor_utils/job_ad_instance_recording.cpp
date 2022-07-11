@@ -21,6 +21,7 @@
 #include "condor_config.h"
 #include "condor_debug.h"
 #include "directory.h" // for StatInfo
+#include "directory_util.h"
 #include "job_ad_instance_recording.h"
 
 //--------------------------------------------------------------
@@ -78,34 +79,66 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	// Verify that a directory is set if not return
 	if (!JobEpochInstDir) { return; }
 	
-	//Get various information needed for writing epoch file
-	int clusterId, procId, numShadow;
+	//Get various information needed for writing epoch file and banner
+	int clusterId, procId, numShadow, completion;
+	std::string owner, missingAttrs;
+	
 	if (!job_ad->LookupInteger("ClusterId", clusterId)) {
 		clusterId = -1;
+		missingAttrs += "ClusterId";
 	}
 	if (!job_ad->LookupInteger("ProcId", procId)) {
 		procId = -1;
+		if (!missingAttrs.empty()) { missingAttrs += ',';}
+		missingAttrs += "ProcId";
 	}
 	if (!job_ad->LookupInteger("NumShadowStarts", numShadow)) {
 		//TODO: Replace Using NumShadowStarts with a better counter for epoch
 		numShadow = -1;
+		if (!missingAttrs.empty()) { missingAttrs += ',';}
+		missingAttrs += "NumShadowStarts";
 	}
-	//Format file name to print at end of Job Ad
-	std::string file_name, buffer;
-	formatstr(file_name,"%s/job.runs.%d.%d.ads",JobEpochInstDir,clusterId,procId);
+	if (!job_ad->LookupInteger("CompletionDate", completion)) {
+		completion = -1;
+	}
+	if (!job_ad->LookupString("Owner", owner)) {
+		owner = "?";
+	}
+	
+	//TODO:Until better Job Attribute is added decrement numShadow to start RunInstanceId at 0
+	numShadow--;
+	
+	//Write job ad to a buffer
+	std::string buffer;
 	sPrintAd(buffer,*job_ad,nullptr,nullptr);
+	//If any attributes are set to -1 write to shadow log and return
+	if (clusterId < 0 || procId < 0 || numShadow < 0){
+		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),buffer.c_str());
+		return;
+	}
+	
+	//Format file name to print at end of Job Ad
+	std::string file_name,file_path;
+	formatstr(file_name,"job.runs.%d.%d.ads",clusterId,procId);
+	dircat(JobEpochInstDir,file_name.c_str(),file_path);
 	//Open file and append Job Ad to it
-	int fd = safe_open_wrapper_follow(file_name.c_str(), O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT, 0644);
+	int fd = safe_open_wrapper_follow(file_path.c_str(), O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT, 0644);
 	FILE* fp = fdopen(fd, "r+");
 	if (fp == NULL) {
 		dprintf(D_ALWAYS | D_ERROR,
-		        "error %d (%s) opening file stream for epoch file for job %d.%d\n",
-		        errno, strerror(errno), clusterId, procId);
+				"error %d (%s) opening file stream for epoch file for job %d.%d\n",
+				errno, strerror(errno), clusterId, procId);
 		close(fd);
 		return;
 	}
 	//Print Job ad and Banner to file
-	fprintf(fp,"%s#=====<Job:%d.%d|Epoch:%d>=====#\n",buffer.c_str(),clusterId,procId,numShadow);
+	if (fputs(buffer.c_str(),fp) == EOF){
+		dprintf(D_ALWAYS,"ERROR: Failed to write job ad for job %d.%d run instance %d\n",clusterId,procId,numShadow);
+		fclose(fp);
+		return;
+	}
+	fprintf(fp,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CompletionDate=%d\n"
+			  ,clusterId,procId,numShadow,owner.c_str(),completion);
 	fclose(fp);
 }
 

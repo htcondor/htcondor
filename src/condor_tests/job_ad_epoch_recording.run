@@ -53,18 +53,6 @@ $clusterId = 0;
 $currTestNum = 0;
 
 ##========================================Configure Condor=====================================================
-
-#$append_config = "
-#JOB_EPOCH_INSTANCE_DIR = $dir/epoch_ads";
-
-#$configfile = CondorTest::CreateLocalConfig($append_config,"epochappendconfig");
-
-#CondorTest::StartCondorWithParams(
-#	condor_name => "epochappend",
-#	fresh_local => "TRUE",
-#	condorlocalsrc => "$configfile",
-#);
-
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
 	JOB_EPOCH_INSTANCE_DIR = $(TEST_DIR)/epoch_ads
@@ -125,7 +113,7 @@ sub check_epoch_files{
 		while(<OUT>) {
 			chomp();
 			my $line = $_;
-			if($line =~ m/#=====<Job:\d.\d|Epoch:\d>=====#/){
+			if($line =~ m/\*\*\* ClusterId=\d ProcId=\d RunInstanceId=\d/){
 				$matches++;
 				CondorTest::debug("Found banner: $line\n",1);	
 			}

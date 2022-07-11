@@ -350,13 +350,13 @@ BaseShadow::shutDownFast( int reason ) {
 void
 BaseShadow::shutDown( int reason ) 
 {
-		//Attempt to write Job ad to epoch file
-		//If knob isn't set or ther is no job ad the function will just log and return
-	writeJobEpochFile(getJobAd());
 		// exit now if there is no job ad
 	if ( !getJobAd() ) {
 		DC_Exit( reason );
 	}
+		//Attempt to write Job ad to epoch file
+		//If knob isn't set or there is no job ad the function will just log and return
+	writeJobEpochFile(getJobAd());
 		// if we are being called from the exception handler, return
 		// now to prevent infinite loop in case we call EXCEPT below.
 	if ( reason == JOB_EXCEPTION ) {
