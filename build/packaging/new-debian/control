@@ -50,7 +50,7 @@ Build-Conflicts: liblog4cpp5-dev
 Standards-Version: 3.9.8
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-exppsy/condor.git
 Vcs-Git: git://anonscm.debian.org/pkg-exppsy/condor.git
-Homepage: http://research.cs.wisc.edu/htcondor
+Homepage: https://htcondor.org
 
 Package: htcondor
 Architecture: any
