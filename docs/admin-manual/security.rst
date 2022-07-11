@@ -465,18 +465,21 @@ described.
     advertise a *condor_master* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_MASTER`` level of access implies ``READ`` access. 
 
 ``ADVERTISE_STARTD``
     This access level is used specifically for commands used to
     advertise a *condor_startd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_STARTD`` level of access implies ``READ`` access. 
 
 ``ADVERTISE_SCHEDD``
     This access level is used specifically for commands used to
     advertise a *condor_schedd* daemon to the collector. Any setting
     for this access level that is not defined will default to the
     corresponding setting in the ``DAEMON`` access level.
+    The ``ADVERTISE_SCHEDD`` level of access implies ``READ`` access. 
 
 ``CLIENT``
     This access level is different from all the others. Whereas all of
@@ -1587,7 +1590,11 @@ the user is given the name unauthenticated@unmapped.
 With the integration of VOMS for authentication, the interpretation
 of the regular expression representing the authenticated name may
 change. First, the full serialized DN and FQAN are used in attempting a
-match. If no match is found using the full DN and FQAN, then the DN is
+match.
+See the description of job attribute ``X509UserProxyFQAN`` in
+:ref:`classad-attributes/job-classad-attributes:job classad attributes`
+for details on how the DN and FQAN are serialized.
+If no match is found using the full DN and FQAN, then the DN is
 then used on its own without the FQAN. Using this, roles or user names
 from the VOMS attributes may be extracted to be used as the target for
 mapping. And, in this case the FQAN are verified, permitting reliance on

@@ -151,10 +151,10 @@ warn_on_gsi_config()
 	SubsystemInfo* my_subsys = get_mySubSystem();
 	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
 	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
-		fprintf(stderr, "WARNING: GSI authentication is enabled by your security configuration! GSI will not work in future releases.\n");
+		fprintf(stderr, "WARNING: GSI authentication is enabled by your security configuration! GSI is no longer supported.\n");
 		fprintf(stderr, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	} else {
-		dprintf(D_ALWAYS, "WARNING: GSI authentication is is enabled by your security configuration! GSI will not work in future releases. (Will warn again after 12 hours)\n");
+		dprintf(D_ALWAYS, "WARNING: GSI authentication is is enabled by your security configuration! GSI is no longer supported. (Will warn again after 12 hours)\n");
 		dprintf(D_ALWAYS, "For details, see https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=PlanToReplaceGridCommunityToolkit\n");
 	}
 }
@@ -787,7 +787,7 @@ extract_VOMS_info( X509 *cert, STACK_OF(X509) *chain, int verify_type, char **vo
 	// calling this function on something that doesn't have VOMS attributes
 	// should return error 1.  when the config knob disables VOMS, behave the
 	// same way.
-	if (!param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+	if (!param_boolean("USE_VOMS_ATTRIBUTES", false)) {
 		return 1;
 	}
 

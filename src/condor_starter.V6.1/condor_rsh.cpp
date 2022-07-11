@@ -59,7 +59,6 @@ int main ( int argc, char *argv[] ) {
 
 	char *tmp;
 	std::string buf;
-	myDistro->Init( argc, argv );
     buf = argv[1];
     for ( int i=2 ; i<argc ; i++ ) {
         buf += " ";

@@ -34,7 +34,7 @@ public:
 		: m_streamresults(false), m_stream_ptr(NULL), m_reqs(reqs), m_since(since), m_proj(proj), m_match(match), m_stream(stream)
 	{}
 
-	~HistoryHelperState() { if (m_stream.get() && m_stream.unique()) daemonCore->Cancel_Socket(m_stream.get()); }
+	~HistoryHelperState() { if (m_stream.get() && (m_stream.use_count() == 1)) daemonCore->Cancel_Socket(m_stream.get()); }
 
 	Stream * GetStream() const { return m_stream_ptr ? m_stream_ptr : m_stream.get(); }
 

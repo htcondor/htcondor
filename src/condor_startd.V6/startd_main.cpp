@@ -782,14 +782,12 @@ startd_exit()
 		
 			// clean-up stale claim-id files
 		int i;
-		char* filename;
+		std::string filename;
 		for( i = 0; i <= resmgr->numSlots(); i++ ) { 
 			filename = startdClaimIdFile( i );
-			if (unlink(filename) < 0) {
-				dprintf( D_FULLDEBUG, "startd_exit: Failed to remove file '%s'\n", filename );
+			if (unlink(filename.c_str()) < 0) {
+				dprintf( D_FULLDEBUG, "startd_exit: Failed to remove file '%s'\n", filename.c_str());
 			}
-			free( filename );
-			filename = NULL;
 		}
 
 		delete resmgr;
@@ -959,7 +957,7 @@ startd_check_free()
 int
 main( int argc, char **argv )
 {
-	set_mySubSystem( "STARTD", SUBSYSTEM_TYPE_STARTD );
+	set_mySubSystem( "STARTD", true, SUBSYSTEM_TYPE_STARTD );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

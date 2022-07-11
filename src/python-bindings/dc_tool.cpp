@@ -126,7 +126,7 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
     bool result;
     {
     condor::ModuleLock ml;
-    result = !d.locate();
+    result = !d.locate(Daemon::LOCATE_FOR_ADMIN);
     }
     if (result)
     {
@@ -282,7 +282,12 @@ enable_log()
 void
 set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
 {
-    set_mySubSystem(subsystem.c_str(), type);
+    //Assume Python Tool Subsystem is false
+    set_mySubSystem(subsystem.c_str(), false, type);
+    //Get the Subsystem
+    SubsystemInfo *subsys = get_mySubSystem();
+    //If Subsystem is a Daemon class the set m_trusted to true
+    if (subsys->isDaemon()) { subsys->setIsTrusted(true); }
 }
 
 
@@ -521,6 +526,6 @@ export_dc_tool()
         boost::python::args("level", "msg"))
         ;
 
-    if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", SUBSYSTEM_TYPE_TOOL); }
+    if ( ! has_mySubSystem()) { set_mySubSystem("TOOL", false, SUBSYSTEM_TYPE_TOOL); }
     dprintf_pause_buffering();
 }

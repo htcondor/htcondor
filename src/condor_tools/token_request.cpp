@@ -105,13 +105,13 @@ request_remote_token(const std::string &pool, const std::string &name, daemon_t 
 	return htcondor::write_out_token(token_name, token, "");
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
 	daemon_t dtype = DT_COLLECTOR;
+	const char * pcolon;
 	std::string pool;
 	std::string name;
 	std::string identity;
@@ -178,9 +178,9 @@ int main(int argc, char *argv[]) {
 				print_usage(argv[0]);
 				exit(1);
 			}
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if(is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(argv[0]);
 			exit(1);

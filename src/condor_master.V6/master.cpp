@@ -90,7 +90,7 @@ int	admin_command_handler(int, Stream *);
 int	ready_command_handler(int, Stream *);
 int	handle_subsys_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
-int     set_shutdown_program( const char * name );
+static int set_shutdown_program(char * program, const char * tag);
 void	time_skip_handler(void * /*data*/, int delta);
 void	restart_everyone();
 
@@ -107,6 +107,7 @@ int		new_bin_delay;
 StopStateT new_bin_restart_mode = GRACEFUL;
 char	*MasterName = NULL;
 char	*shutdown_program = NULL;
+std::string shutdown_program_tag;
 
 int		master_backoff_constant = 9;
 int		master_backoff_ceiling = 3600;
@@ -324,8 +325,7 @@ master_exit(int retval)
 	if ( !shutdown_program ) {
 		char *defshut = param("DEFAULT_MASTER_SHUTDOWN_SCRIPT");
 		if (defshut) {
-			set_shutdown_program(defshut);
-			free(defshut);
+			set_shutdown_program(defshut, NULL);
 		}
 	}
 
@@ -843,10 +843,10 @@ admin_command_handler(int cmd, Stream* stream )
 		daemons.DaemonsOffPeaceful();
 		return TRUE;
 	case MASTER_OFF:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 		return TRUE;
 	case MASTER_OFF_FAST:
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 		return TRUE;
 
 	case SET_SHUTDOWN_PROGRAM:
@@ -1028,48 +1028,70 @@ handle_shutdown_program( int cmd, Stream* stream )
 	if ( name.empty() ) {
 		return FALSE;
 	}
+	upper_case(name); // because we print this
 
 	// Can we find it in the configuration?
-	std::string	pname;
-	pname =  "master_shutdown_";
-	pname += name;
-	char	*path = param( pname.c_str() );
-	if ( NULL == path ) {
-		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", name.c_str() );
+	std::string pname("MASTER_SHUTDOWN_");
+	pname += name.c_str();
+	char * path = param(pname.c_str());
+	if ( ! path && ! param_defined(pname.c_str())) {
+		dprintf( D_ALWAYS, "No shutdown program defined for '%s'\n", pname.c_str() );
 		return FALSE;
 	}
 
-	int ret_val = set_shutdown_program( path );
-
-	if (path) free(path);
-
-	return ret_val;
+	// path will be NULL here when MASTER_SHUTDOWN_<NAME> is configured but expands to nothing
+	// we still want to override a previous shutdown program
+	return set_shutdown_program(path, name.c_str());
 }
 
-int
-set_shutdown_program(const char *path)
+static int
+set_shutdown_program(char *path, const char * tag)
 {
-	// Try to access() it
-# if defined(HAVE_ACCESS)
-	priv_state	priv = set_root_priv();
-	int status = access( path, X_OK );
-	if ( status ) {
-		dprintf( D_ALWAYS,
-				 "WARNING: no execute access to shutdown program (%s)"
-				 ": %d/%s\n", path, errno, strerror(errno) );
+	shutdown_program_tag.clear();
+	if (tag) { shutdown_program_tag = tag; }
+
+	if (path) {
+		// Try to access() it
+	#if defined(HAVE_ACCESS)
+		priv_state	priv = set_root_priv();
+		int status = access(path, X_OK);
+		if (status) {
+			dprintf(D_ALWAYS,
+				"WARNING: no execute access to shutdown program (%s)"
+				": %d/%s\n", path, errno, strerror(errno));
+		}
+		set_priv(priv);
+	#endif
 	}
-	set_priv( priv );
-# endif
 
 	// OK, let's run with that
-	if ( shutdown_program ) {
-		free( shutdown_program );
-	}
-	shutdown_program = strdup(path);
-	dprintf( D_ALWAYS,
-			 "Shutdown program path set to %s\n", shutdown_program );
+	if (shutdown_program) { free( shutdown_program ); }
+	shutdown_program = path;
+	dprintf(D_ALWAYS, "Setting shutdown program %s path to %s\n",
+			shutdown_program_tag.c_str(),
+			shutdown_program ? shutdown_program : "");
 	return TRUE;
 }
+
+bool advertise_shutdown_program(ClassAd & ad)
+{
+	// if a MASTER_SHUTDOWN_<tag> knob will be used when the master exits
+	// advertise that into the given ad as
+	// MASTER_SHUTDOWN = "TAG"
+	// MASTER_SHUTDOWN_TAG = "/path/to/tag_shutdown_program"
+	if ( ! shutdown_program_tag.empty()) {
+		ad.Assign("MASTER_SHUTDOWN", shutdown_program_tag);
+		std::string knob("MASTER_SHUTDOWN_"); knob += shutdown_program_tag;
+		if (shutdown_program) {
+			ad.Assign(knob, shutdown_program);
+		} else {
+			ad.AssignExpr(knob, "undefined");
+		}
+		return true;
+	}
+	return false;
+}
+
 
 void
 init_params()
@@ -1946,7 +1968,7 @@ main( int argc, char **argv )
     bool is_daemon = dc_args_is_background(argc, argv);
 #endif
 
-	set_mySubSystem( "MASTER", SUBSYSTEM_TYPE_MASTER );
+	set_mySubSystem( "MASTER", true, SUBSYSTEM_TYPE_MASTER );
 
 	dc_main_init = main_init;
 	dc_main_config = main_config;

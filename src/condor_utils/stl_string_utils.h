@@ -23,7 +23,6 @@
 #include <string>
 #include <vector>
 #include "condor_header_features.h"
-#include "MyString.h"
 
 // formatstr() will try to write to a fixed buffer first, for reasons of 
 // efficiency.  This is the size of that buffer.
@@ -32,8 +31,8 @@
 // Analogous to standard sprintf(), but writes to std::string 's', and is
 // memory/buffer safe.
 int formatstr(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int formatstr(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr(std::string& s, const char* format, va_list pargs);
+int vformatstr_impl(std::string& s, bool concat, const char* format, va_list pargs);
 
 // Returns number of replacements actually performed, or -1 if from is empty.
 int replace_str( std::string & str, const std::string & from, const std::string & to, size_t start = 0 );
@@ -41,26 +40,10 @@ int replace_str( std::string & str, const std::string & from, const std::string 
 // Appending versions of above.
 // These return number of new chars appended.
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
-int formatstr_cat(MyString& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr_cat(std::string& s, const char* format, va_list pargs);
-
-// comparison ops between the two houses divided
-bool operator==(const MyString& L, const std::string& R);
-bool operator==(const std::string& L, const MyString& R);
-bool operator!=(const MyString& L, const std::string& R);
-bool operator!=(const std::string& L, const MyString& R);
-bool operator<(const MyString& L, const std::string& R);
-bool operator<(const std::string& L, const MyString& R);
-bool operator>(const MyString& L, const std::string& R);
-bool operator>(const std::string& L, const MyString& R);
-bool operator<=(const MyString& L, const std::string& R);
-bool operator<=(const std::string& L, const MyString& R);
-bool operator>=(const MyString& L, const std::string& R);
-bool operator>=(const std::string& L, const MyString& R);
 
 // to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& dst, FILE *fp, bool append = false);
-bool readLine(std::string& dst, MyStringSource& src, bool append = false);
 
 //Return true iff the given string is a blank line.
 int blankline ( const char *str );
@@ -96,11 +79,6 @@ bool ends_with(const std::string& str, const std::string& post);
 // case insensitive sort functions for use with std::sort
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b);
 bool sort_decending_ignore_case(std::string const & a, std::string const & b);
-
-void Tokenize(const MyString &str);
-void Tokenize(const std::string &str);
-void Tokenize(const char *str);
-const char *GetNextToken(const char *delim, bool skipBlankTokens);
 
 void join(const std::vector< std::string > &v, char const *delim, std::string &result);
 
@@ -143,7 +121,6 @@ public:
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
 	const char * first() { ixNext = 0; return next(); }
 	const char * remain() { if (!str || !str[ixNext]) return NULL; return str + ixNext; }
-	bool next(MyString & tok);
 
 	int next_token(int & length); // return start and length of next token or -1 if no tokens remain
 	const std::string * next_string(); // return NULL or a pointer to current token

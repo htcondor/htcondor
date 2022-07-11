@@ -22,7 +22,6 @@
 #define __CONDOR_STRING_LIST_H
 
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "list.h"
 
 

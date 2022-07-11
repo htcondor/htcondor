@@ -679,13 +679,14 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		                                     );
 		*/
 
+		OptionalCreateProcessArgs cpArgs(create_process_err_msg);
 		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
-			OptionalCreateProcessArgs().priv(PRIV_USER_FINAL)
+			 cpArgs.priv(PRIV_USER_FINAL)
 			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
 			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
 			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
 			.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
-			.errorReturnMsg(create_process_err_msg).remap(fs_remap)
+			.remap(fs_remap)
 			.asHardLimit(rlimit_as_hard_limit)
 		);
 	}
@@ -1036,7 +1037,17 @@ OsProc::ShutdownGraceful()
 	if ( findRmKillSig(JobAd) != -1 ) {
 		daemonCore->Send_Signal(JobPid, rm_kill_sig);
 	} else {
-		daemonCore->Send_Signal(JobPid, soft_kill_sig);
+		bool sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
+		if (!sent) {
+			dprintf(D_ALWAYS, "Send (softkill) signal failed, retrying...\n");
+			sleep(1);
+			sent = daemonCore->Send_Signal(JobPid, soft_kill_sig);
+			if (!sent) {
+				dprintf(D_ALWAYS, "Send (softkill) signal failed twice, hardkill will fire after timeout\n");
+			} else {
+				dprintf(D_ALWAYS, "Send (softkill) signal worked the second time\n");
+			}
+		}
 	}
 	return false;	// return false says shutdown is pending	
 }

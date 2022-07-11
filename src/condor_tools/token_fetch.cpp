@@ -114,13 +114,13 @@ generate_remote_schedd_token(const std::string &pool, const std::string &name,
 }
 
 
-int main(int argc, char *argv[]) {
+int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
 	daemon_t dtype = DT_SCHEDD;
+	const char * pcolon;
 	std::string key;
 	std::string pool;
 	std::string name;
@@ -191,9 +191,9 @@ int main(int argc, char *argv[]) {
 			}
 		} else if (is_dash_arg_prefix(argv[i], "remote", 1)) {
 			remote_fetch = true;
-		} else if(!strcmp(argv[i],"-debug")) {
+		} else if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if (is_dash_arg_prefix(argv[i], "help", 1)) {
 			print_usage(argv[0]);
 			exit(1);

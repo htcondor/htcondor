@@ -387,6 +387,10 @@ Dagman::Config()
 		ASSERT( condorRmExe );
 	}
 
+	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n",
+		doAppendVars ? "True" : "False" );
+
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",
@@ -1932,7 +1936,7 @@ int
 main( int argc, char **argv )
 {
 
-	set_mySubSystem( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
+	set_mySubSystem( "DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN );
 
 		// Record the workingDir before invoking daemoncore (which hijacks it)
 	condor_getcwd( dagman.workingDir );

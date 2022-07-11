@@ -38,9 +38,9 @@
 		time_t TransferEndTime;
 		time_t TransferStartTime;
 		
-		long TransferFileBytes;
+		long long TransferFileBytes;
 		long TransferHTTPStatusCode;
-		long TransferTotalBytes;
+		long long TransferTotalBytes;
 		long TransferTries;
 		
 		std::string HttpCacheHitOrMiss;

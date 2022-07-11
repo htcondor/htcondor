@@ -38,6 +38,8 @@ GCC_DIAG_OFF(invalid-offsetof)
 #error This header must be included before condor_qmgr.h for code internal to the SCHEDD, and not at all for external code
 #endif
 
+#define JOB_QUEUE_PAYLOAD_IS_BASE 1
+
 class Service;
 
 class QmgmtPeer {
@@ -144,7 +146,22 @@ private:
 	qelm *nxt;
 	qelm *prv;
 };
-	
+
+const int JOBSETID_qkey2 = -100;
+const int CLUSTERID_qkey2 = -1;
+// jobset ids are id.-100
+inline int JOBSETID_to_qkey1(unsigned int jobset_id) {
+    if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey1 called with id=%ud", jobset_id);
+	ASSERT(jobset_id > 0);
+	return (int)(jobset_id);
+}
+
+// map jobqueue key2 to jobset id
+inline unsigned int qkey1_to_JOBSETID(int cluster) {
+	if (cluster <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "qkey1_to_JOBSETID called with key1=%d", cluster);
+	ASSERT(cluster > 0);
+	return (unsigned int)(cluster);
+}
 
 // used to store a ClassAd + basic information in a condor hashtable.
 class JobQueueBase : public ClassAd {
@@ -153,10 +170,8 @@ public:
 protected:
 	char entry_type;    // Job queue entry type: header, cluster or job (i.e. one of entry_type_xxx enum codes, 0 is unknown)	
 public:
-	JobQueueBase(int _etype=0) 
-		: jid(0, 0)
-		, entry_type(_etype)		
-	{};
+	JobQueueBase(int _etype=entry_type_unknown)  : jid(), entry_type(_etype) {};
+	JobQueueBase(const JOB_ID_KEY & key, int _etype)  : jid(key), entry_type(_etype) {};
 	virtual ~JobQueueBase() {};
 
 	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
@@ -168,27 +183,21 @@ public:
 		entry_type_cluster,
 		entry_type_job,
 	};
-	void SetJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
+	static int TypeOfJid(const JOB_ID_KEY &key) {
+		if (key.cluster > 0) {
+			if (key.proc >= 0) { return entry_type_job; }
+			if (key.proc == JOBSETID_qkey2) { return entry_type_jobset; }
+			if (key.proc == CLUSTERID_qkey2) { return entry_type_cluster; }
+		} else if ( ! key.cluster && ! key.proc) { return entry_type_header; }
+		return entry_type_unknown;
+	}
+	void CheckJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
 	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
 	bool IsJob() { return IsType(entry_type_job); }
 	bool IsHeader() { return IsType(entry_type_header); }
 	bool IsJobSet() { return IsType(entry_type_jobset); }
 	bool IsCluster() { return IsType(entry_type_cluster); }
 };
-
-// map jobset id to jobqueue key2
-inline int JOBSETID_to_qkey2(unsigned int jobset_id) {
-    if (jobset_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "JOBSETID_to_qkey2 called with id=%ud", jobset_id);
-	ASSERT(jobset_id > 0);
-	return (int)(0 - jobset_id);
-}
-
-// map jobqueue key2 to jobset id
-inline unsigned int qkey2_to_JOBSETID(int proc) {
-	if (proc >= 0) dprintf(D_ALWAYS | D_BACKTRACE, "qkey2_to_JOBSETID called with key2=%d", proc);
-	ASSERT(proc < 0);
-	return (unsigned int)(0 - proc);
-}
 
 
 class JobQueueJob : public JobQueueBase {
@@ -212,8 +221,8 @@ protected:
 	qelm qe;
 
 public:
-	JobQueueJob(int _etype=0)
-		: JobQueueBase(_etype)
+	JobQueueJob(const JOB_ID_KEY & key)
+		: JobQueueBase(key, (key.proc < 0) ? entry_type_cluster : entry_type_job)
 		//TT , jid(0,0)
 		, universe(0)
 		, has_noop_attr(2) // value of 2 forces IsNoopJob() to populate this field
@@ -265,7 +274,7 @@ protected:
 
 public:
 	JobQueueCluster(JOB_ID_KEY & job_id)
-		: JobQueueJob(entry_type_cluster)
+		: JobQueueJob(job_id)
 		, factory(NULL)
 		, cluster_size(0)
 		, num_attached(0)
@@ -273,9 +282,6 @@ public:
 		, num_running(0)
 		, num_held(0)
 		{
-			jid.cluster = job_id.cluster;
-			jid.proc = -1;
-			parent = NULL;
 		}
 	virtual ~JobQueueCluster();
 
@@ -301,22 +307,17 @@ public:
 // and assume that they are looking at a JobQueueJob without checking the type
 // so (until we can refactor out this behavior). 
 //
-#if 1 // JobQueueJobSet from JobQueueJob
-class JobQueueJobSet : public JobQueueJob {
-#else
+#ifdef JOB_QUEUE_PAYLOAD_IS_BASE // JobQueueJobSet from JobQueueJob
 class JobQueueJobSet : public JobQueueBase {
+#else
+class JobQueueJobSet : public JobQueueJob {
 #endif
 public:
 	//inherited from JobQueueBase JOB_ID_KEY jid;
 	//inherited from JobQueueBase char entry_type;
 	enum class garbagePolicyEnum { immediateAfterEmpty, delayedAferEmpty };
 
-#if 1 // JobQueueJobSet from JobQueueJob
-public:
-	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
-	unsigned int member_count = 0;
-	LiveJobCounters jobStatusAggregates;
-#else
+#ifdef JOB_QUEUE_PAYLOAD_IS_BASE // JobQueueJobSet from JobQueueJob
 protected:
 	// 3 bytes needed to align the next int
 	char spareA = 0;
@@ -324,28 +325,30 @@ protected:
 	bool dirty = false;
 public:
 	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
-	unsigned int id = 0;
 	unsigned int member_count = 0;
 	struct OwnerInfo * ownerinfo = nullptr;
 	LiveJobCounters jobStatusAggregates;
-	unsigned int Jobset() const { return id; }
+	unsigned int Jobset() const { return (unsigned int)jid.cluster; }
+#else
+public:
+	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
+	unsigned int member_count = 0;
+	LiveJobCounters jobStatusAggregates;
 #endif
 
 public:
-#if 1 // JobQueueJobSet from JobQueueJob
+#ifdef JOB_QUEUE_PAYLOAD_IS_BASE // JobQueueJobSet from JobQueueJob
 	JobQueueJobSet(unsigned int jobset_id)
-		: JobQueueJob(entry_type_jobset)
+		: JobQueueBase(JOB_ID_KEY(jobset_id,JOBSETID_qkey2), entry_type_jobset)
 	{
-		jid.cluster = 0;
-		jid.proc = JOBSETID_to_qkey2(jobset_id);
-		set_id = jobset_id;
 	}
 #else
 	JobQueueJobSet(unsigned int jobset_id)
 		: JobQueueBase(entry_type_jobset)
 		, id(jobset_id)
 	{
-		jid.proc = JOBSETID_to_qkey2(jobset_id);
+		jid.cluster = JOBSETID_to_qkey1(jobset_id);
+		jid.proc = JOBSETID_qkey2;
 	}
 #endif
 	virtual ~JobQueueJobSet() = default;
@@ -412,6 +415,9 @@ void ScheduleClusterForJobMaterializeNow(int cluster_id);
 int QmgmtHandleSetJobFactory(int cluster_id, const char* filename, const char * digest_text);
 int QmgmtHandleSendMaterializeData(int cluster_id, ReliSock * sock, std::string & filename, int& row_count, int &terrno);
 
+// called by qmgmt_receivers to handle CONDOR_SendJobQueueAd RPC call
+int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrno);
+
 void SetMaxHistoricalLogs(int max_historical_logs);
 time_t GetOriginalJobQueueBirthdate();
 void DestroyJobQueue( void );
@@ -463,7 +469,6 @@ const SetAttributeFlags_t SetAttribute_LateMaterialization = (1 << 17);
 const SetAttributeFlags_t SetAttribute_Delete              = (1 << 18);
 
 JobQueueJob* GetNextJob(int initScan);
-JobQueueJob* GetNextJobByCluster( int, int );
 JobQueueJob* GetNextJobByConstraint(const char *constraint, int initScan);
 JobQueueJob* GetNextJobOrClusterByConstraint(const char *constraint, int initScan);
 JobQueueJob* GetNextDirtyJobByConstraint(const char *constraint, int initScan);
@@ -516,14 +521,18 @@ public:
 };
 
 typedef JOB_ID_KEY JobQueueKey;
+#ifdef JOB_QUEUE_PAYLOAD_IS_BASE
+typedef JobQueueBase* JobQueuePayload;
+#else
 typedef JobQueueJob* JobQueuePayload;
+#endif
 // new for 8.3, use a non-string type as the key for the JobQueue
 // and a type derived from ClassAd for the payload.
 typedef ClassAdLog<JOB_ID_KEY, JobQueuePayload> JobQueueLogType;
 
 // specialize the helper class for create/destroy of hashtable entries for the ClassAdLog class
 template <>
-class ConstructClassAdLogTableEntry<JobQueueJob*> : public ConstructLogEntry
+class ConstructClassAdLogTableEntry<JobQueuePayload> : public ConstructLogEntry
 {
 public:
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
@@ -532,13 +541,13 @@ public:
 
 // specialize the helper class for used by ClassAdLog transactional insert/remove functions
 template <>
-class ClassAdLogTable<JOB_ID_KEY,JobQueueJob*> : public LoggableClassAdTable {
+class ClassAdLogTable<JOB_ID_KEY,JobQueuePayload> : public LoggableClassAdTable {
 public:
-	ClassAdLogTable(HashTable<JOB_ID_KEY,JobQueueJob*> & _table) : table(_table) {}
+	ClassAdLogTable(HashTable<JOB_ID_KEY,JobQueuePayload> & _table) : table(_table) {}
 	virtual ~ClassAdLogTable() {};
 	virtual bool lookup(const char * key, ClassAd*& ad) {
 		JOB_ID_KEY k(key);
-		JobQueueJob * Ad=NULL;
+		JobQueuePayload Ad=nullptr;
 		int iret = table.lookup(k, Ad);
 		ad=Ad;
 		return iret >= 0;
@@ -549,6 +558,11 @@ public:
 	}
 	virtual bool insert(const char * key, ClassAd * ad) {
 		JOB_ID_KEY k(key);
+	#ifdef JOB_QUEUE_PAYLOAD_IS_BASE
+		JobQueuePayload payload = dynamic_cast<JobQueuePayload>(ad);
+		ASSERT(payload);
+		return table.insert(k, payload) >= 0;
+	#else
 		bool new_ad = false;
 		JobQueuePayload Ad = dynamic_cast<JobQueuePayload>(ad);
 		// if the incoming ad is really a ClassAd and not a JobQueue object, then make a new object.
@@ -573,11 +587,12 @@ public:
 			}
 		}
 		return iret >= 0;
+	#endif
 	}
 	virtual void startIterations() { table.startIterations(); } // begin iterations
 	virtual bool nextIteration(const char*& key, ClassAd*&ad) {
 		current_key.set(NULL); // make sure to clear out the string value for the current key
-		JobQueueJob* Ad=NULL;
+		JobQueuePayload Ad=NULL;
 		int iret = table.iterate(current_key, Ad);
 		if (iret != 1) {
 			key = NULL;
@@ -589,7 +604,7 @@ public:
 		return true;
 	}
 protected:
-	HashTable<JOB_ID_KEY,JobQueueJob*> & table;
+	HashTable<JOB_ID_KEY,JobQueuePayload> & table;
 	JOB_ID_KEY_BUF current_key; // used during iteration, so we can return a const char *
 };
 
@@ -640,11 +655,13 @@ class schedd_runtime_probe;
 #define WJQ_WITH_CLUSTERS 1  // include cluster ads when walking the job queue
 #define WJQ_WITH_JOBSETS  2  // include jobset ads when walking the job queue
 #define WJQ_WITH_NO_JOBS  4  // do not include job (proc) ads when walking the job queue
-typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
-void WalkJobQueueEntries(int with, queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
-#define WalkJobQueue(fn) WalkJobQueueEntries(0, (fn), NULL, WalkJobQ_ ## fn ## _runtime )
-#define WalkJobQueue2(fn,pv) WalkJobQueueEntries(0, (fn), (pv), WalkJobQ_ ## fn ## _runtime )
+typedef int (*queue_scan_func)(JobQueuePayload ad, const JobQueueKey& key, void* user);
+void WalkJobQueueEntries(int with, queue_scan_func fn, void* pv, schedd_runtime_probe & ftm);
 #define WalkJobQueueWith(with,fn,pv) WalkJobQueueEntries(with, (fn), pv, WalkJobQ_ ## fn ## _runtime )
+typedef int (*queue_job_scan_func)(JobQueueJob *ad, const JobQueueKey& key, void* user);
+void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm);
+#define WalkJobQueue(fn) WalkJobQueue3((fn), NULL, WalkJobQ_ ## fn ## _runtime )
+#define WalkJobQueue2(fn,pv) WalkJobQueue3((fn), (pv), WalkJobQ_ ## fn ## _runtime )
 
 bool InWalkJobQueue();
 

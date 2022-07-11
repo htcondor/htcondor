@@ -229,7 +229,6 @@ int __cdecl main(int argc, const char * argv[])
 	}
 
 	config_continue_if_no_config(true);
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	if (root_config) {
 		fprintf_s(fp, "\nUsing this root config: %s\n", root_config);

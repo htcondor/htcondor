@@ -36,7 +36,7 @@
 #include "ad_printmask.h"
 #include "condor_version.h"
 #include "submit_utils.h" // for queue iteration stuff
-#include "Regex.h"
+#include "condor_regex.h"
 #include "xform_utils.h"
 
 #include "list.h"
@@ -93,6 +93,7 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 	{ "Step",      &UnliveStepMacroDef },
 	{ "XFormId",    &UnliveProcessMacroDef },
 };
+static MACRO_DEFAULTS XFormDefaults = { COUNTOF(XFormMacroDefaults), XFormMacroDefaults, NULL };
 
 static MACRO_DEF_ITEM XFormBasicMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
@@ -242,11 +243,6 @@ void XFormHash::setup_macro_defaults()
 		LocalMacroSet.sources.push_back("<Live>");
 	}
 
-	if (flavor == Basic) {
-		// use minimal defaults table. this uses less memory, but disables all of the live looping variables
-		LocalMacroSet.defaults = &XFormBasicDefaults;
-		return;
-	} else
 	if (flavor == ParamTable) {
 		// use param table as defaults table.  this uses less memory, but disables all of the live looping variables
 		// warning, don't use this option if you plan to use a MACRO_EVAL_CONTEXT with also_in_config=true
@@ -255,19 +251,30 @@ void XFormHash::setup_macro_defaults()
 		return;
 	}
 
-	// flavor == Iterating
+	MACRO_DEFAULTS * defs = &XFormDefaults;
+	if (flavor == Basic) {
+		// use minimal defaults table. this uses less memory, but disables all of the live looping variables
+		defs = &XFormBasicDefaults;
+	} else {
+		// flavor == Iterating
 
-	// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
-	init_xform_default_macros();
+		// init the global xform default macros table (ARCH, OPSYS, etc) in case this hasn't happened already.
+		init_xform_default_macros();
+	}
 
-	// make an copy of the global xform default macros table that is private to this function.
+	// make a copy of the global xform default macros table that is private to this function.
 	// we do this because of the 'live' keys in the defaults table
-	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (LocalMacroSet.apool.consume(sizeof(XFormMacroDefaults), sizeof(void*)));
-	memcpy((void*)pdi, XFormMacroDefaults, sizeof(XFormMacroDefaults));
+	int tblsize = defs->size * sizeof(defs->table[0]);
+	char * pdi = LocalMacroSet.apool.consume(tblsize, sizeof(void*));
+	memcpy(pdi, defs->table, tblsize);
 	LocalMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(LocalMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
-	LocalMacroSet.defaults->size = COUNTOF(XFormMacroDefaults);
-	LocalMacroSet.defaults->table = pdi;
+	LocalMacroSet.defaults->size = defs->size;
+	LocalMacroSet.defaults->table = reinterpret_cast<struct condor_params::key_value_pair*>(pdi);
 	LocalMacroSet.defaults->metat = NULL;
+
+	if (flavor == Basic) {
+		return;
+	}
 
 	// allocate space for the 'live' macro default string_values and for the strings themselves.
 	LiveProcessString = allocate_live_default_string(LocalMacroSet, UnliveProcessMacroDef, 24)->psz;
@@ -279,7 +286,7 @@ void XFormHash::setup_macro_defaults()
 
 
 
-XFormHash::XFormHash(Flavor _flavor /* = Iterating*/)
+XFormHash::XFormHash(Flavor _flavor /* = Basic*/)
 	: flavor(_flavor), LiveProcessString(NULL), LiveRowString(NULL), LiveStepString(NULL)
 	, LiveRulesFileMacroDef(NULL), LiveIteratingMacroDef(NULL)
 {
@@ -429,14 +436,14 @@ void XFormHash::clear_live_variables() const
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
-	sprintf(LiveProcessString, "%d", proc);
-	sprintf(LiveStepString, "%d", step);
+	if (LiveProcessString) sprintf(LiveProcessString, "%d", proc);
+	if (LiveStepString) sprintf(LiveStepString, "%d", step);
 }
 
 void XFormHash::set_iterate_row(int row, bool iterating)
 {
-	sprintf(LiveRowString, "%d", row);
-	LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
+	if (LiveRowString) sprintf(LiveRowString, "%d", row);
+	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
 }
 
 void XFormHash::set_local_param_used(const char *name) 
@@ -499,7 +506,7 @@ void XFormHash::clear()
 	if (LocalMacroSet.sources.size() > 3) {
 		LocalMacroSet.sources.resize(3);
 	}
-	if (flavor == Iterating) {
+	if (flavor != ParamTable) {
 		// setup a defaults table for the macro_set. have to re-do this when we clear the apool
 		// if the defaults were allocated from that pool
 		setup_macro_defaults();
@@ -626,12 +633,12 @@ void XFormHash::insert_source(const char * filename, MACRO_SOURCE & source)
 void XFormHash::set_RulesFile(const char * filename, MACRO_SOURCE & source)
 {
 	this->insert_source(filename, source);
-	LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
+	if (LiveRulesFileMacroDef) LiveRulesFileMacroDef->psz = const_cast<char*>(filename);
 }
 
 const char* XFormHash::get_RulesFilename()
 {
-	return LiveRulesFileMacroDef->psz;
+	return LiveRulesFileMacroDef ? LiveRulesFileMacroDef->psz : nullptr;
 }
 
 void XFormHash::warn_unused(FILE* out, const char *app)
@@ -1351,9 +1358,9 @@ static const KeywordTable ActionKeywords = SORTED_TOKENER_TABLE(ActionKeywordIte
 // TODO: move this to stl_string_utils
 const char * append_substituted_regex (
 	std::string &output,      // substituted regex will be appended to this
-	const char * input,       // original input passed to pcre_exec (ovector has offsets into this)
-	const int ovector[], // output vector from pcre_exec
-	int cvec,      // output count from pcre_exec
+	const char * input,       // original input passed to pcre2_match (ovector has offsets into this)
+	const PCRE2_SIZE ovector[], // output vector from pcre2_match
+	int cvec,      // output count from pcre2_match
 	const char * replacement, // replacement template string
 	char tagChar)  // char that introduces a subtitution in replacement string, usually \ or $
 {
@@ -1377,16 +1384,16 @@ const char * append_substituted_regex (
 
 // Handle kw_COPY, kw_RENAME and kw_DELETE when the first argument is a regex.
 // 
-static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, const char * replacement, struct _parse_rules_args *verbose)
+static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre2_code* re, uint32_t re_options, const char * replacement, struct _parse_rules_args *verbose)
 {
-	const int max_group_count = 11; // only \0 through \9 allowed.
-	int ovector[3 * (max_group_count + 1)]; // +1 for the string itself
 	std::string newAttr;
 	const char tagChar = '\\';
 	newAttr.reserve(100);
 
+	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+
 	// pcre_exec doesn't like to see these flags.
-	re_options &= ~(PCRE_CASELESS | PCRE_UNGREEDY | PCRE_MULTILINE);
+	re_options &= ~(PCRE2_CASELESS | PCRE2_UNGREEDY | PCRE2_MULTILINE);
 
 	// keep track of matching attributes, we will only modify the input ad
 	// after we are done iterating through it.
@@ -1394,13 +1401,15 @@ static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, co
 
 	for (ClassAd::iterator it = ad->begin(); it != ad->end(); ++it) {
 		const char * input = it->first.c_str();
-		int cchin = (int)it->first.length();
-		int cvec = pcre_exec(re, NULL, input, cchin, 0, re_options, ovector, (int)COUNTOF(ovector));
+		PCRE2_SPTR input_pcre2str = reinterpret_cast<const unsigned char *>(input);
+		PCRE2_SIZE cchin = it->first.length();
+		int cvec = pcre2_match(re, input_pcre2str, cchin, 0, re_options, matchdata, NULL);
 		if (cvec <= 0)
 			continue; // does not match
 
 		newAttr = "";
 		if (kw_value != kw_DELETE) {
+			PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 			append_substituted_regex(newAttr, input, ovector, cvec, replacement, tagChar);
 		}
 		matched[it->first] = newAttr;
@@ -1414,6 +1423,8 @@ static int DoRegexAttrOp(int kw_value, ClassAd *ad, pcre* re, int re_options, co
 			case kw_COPY:   DoCopyAttr(ad, it->first, it->second.c_str(), verbose); break;
 		}
 	}
+
+	pcre2_match_data_free(matchdata);
 
 	return (int)matched.size();
 }
@@ -1482,14 +1493,14 @@ static int ValidateRulesCallback(void* /*pv*/, MACRO_SOURCE& /*source*/, MACRO_S
 	// in some cases, that attribute name is is allowed to be a regex,
 	// if it is a regex it will begin with a /
 	std::string attr;
-	int regex_flags = 0;
+	uint32_t regex_flags = 0;
 	if ((pkw->options & kw_opt_regex) && toke.is_regex()) {
 		std::string opts;
 		if ( ! toke.copy_regex(attr, regex_flags)) {
 			errmsg = "invalid regex";
 			return -1;
 		}
-		regex_flags |= PCRE_CASELESS;
+		regex_flags |= PCRE2_CASELESS;
 	} else {
 		toke.copy_token(attr);
 		// if attr ends with , or =, just strip those off. the tokener only splits on whitespace, not other characters
@@ -1540,7 +1551,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	// if it is a regex it will begin with a /
 	std::string attr;
 	bool attr_is_regex = false;
-	int regex_flags = 0;
+	uint32_t regex_flags = 0;
 	if ((pkw->options & kw_opt_regex) && toke.is_regex()) {
 		std::string opts;
 		attr_is_regex = true;
@@ -1548,7 +1559,7 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 			errmsg = "invalid regex";
 			return -1;
 		}
-		regex_flags |= PCRE_CASELESS;
+		regex_flags |= PCRE2_CASELESS;
 	} else {
 		toke.copy_token(attr);
 		// if attr ends with , or =, just strip those off. the tokener only splits on whitespace, not other characters
@@ -1675,14 +1686,15 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 	case kw_RENAME:
 	case kw_COPY:
 		if (attr_is_regex) {
-			const char *errptr;
-			int erroffset;
-			pcre * re = pcre_compile(attr.c_str(), regex_flags, &errptr, &erroffset, NULL);
+			int errorcode;
+			PCRE2_SIZE erroffset;
+			PCRE2_SPTR attr_pcre2str = reinterpret_cast<const unsigned char *>(attr.c_str());
+			pcre2_code * re = pcre2_compile(attr_pcre2str, PCRE2_ZERO_TERMINATED, regex_flags, &errorcode, &erroffset, NULL);
 			if (! re) {
-				if (log) log(*pargs, true, "ERROR: Error compiling regex '%s'. %s. this entry will be ignored.\n", attr.c_str(), errptr);
+				if (log) log(*pargs, true, "ERROR: Error compiling regex '%s'. %d. this entry will be ignored.\n", attr.c_str(), errorcode);
 			} else {
 				DoRegexAttrOp(pkw->value, ad, re, regex_flags, rhs.ptr(), pargs);
-				pcre_free(re);
+				pcre2_code_free(re);
 			}
 		} else {
 			switch (pkw->value) {

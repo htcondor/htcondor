@@ -28,11 +28,12 @@
 #include "reli_sock.h"
 #include "command_strings.h"
 #include "condor_distribution.h"
+#include "match_prefix.h"
 
 int handleHistoryDir(ReliSock *);
 
 void
-usage( char *cmd )
+usage( const char *cmd )
 {
 	fprintf(stderr,"Usage: %s [options] <machine-name> <subsystem>[.ext]\n",cmd);
 	fprintf(stderr,"Where options are:\n");
@@ -72,16 +73,16 @@ version()
 	printf( "%s\n%s\n", CondorVersion(), CondorPlatform() );
 }
 
-int main( int argc, char *argv[] )
+int main( int argc, const char *argv[] )
 {
-	char *machine_name = 0;
-	char *log_name = 0;
-	char *pool=0;
+	const char *machine_name = 0;
+	const char *log_name = 0;
+	const char *pool=0;
+	const char *pcolon=0;
 	int i;
 
 	daemon_t type = DT_MASTER;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
@@ -100,8 +101,8 @@ int main( int argc, char *argv[] )
 		} else if(!strcmp(argv[i],"-version")) {
 			version();
 			exit(0);
-		} else if(!strcmp(argv[i],"-debug")) {
-            dprintf_set_tool_debug("TOOL", 0);
+		} else if(is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,1)) {
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else if(argv[i][0]=='-') {
 			type = stringToDaemonType(&argv[i][1]);
 			if( type == DT_NONE || type == DT_DAGMAN) {
@@ -146,7 +147,7 @@ int main( int argc, char *argv[] )
 		
 	dprintf(D_FULLDEBUG,"Locating daemon process on %s...\n",machine_name);
 
-	if(!daemon->locate()) {
+	if(!daemon->locate(Daemon::LOCATE_FOR_ADMIN)) {
 		fprintf(stderr,"Couldn't locate daemon on %s: %s\n",machine_name,daemon->error());
 		exit(1);
 	}

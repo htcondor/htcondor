@@ -2481,13 +2481,13 @@ const std::string & IssuerKeyNameCache::NameList(CondorError * err)
 	if (dirpath) {
 		auto_free_ptr excludeRegex(param("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP"));
 		if (excludeRegex) {
-			const char* _errstr;
+			int _errcode;
 			int _erroffset;
-			if (!excludeFilesRegex.compile(excludeRegex.ptr(), &_errstr, &_erroffset)) {
+			if (!excludeFilesRegex.compile(excludeRegex.ptr(), &_errcode, &_erroffset)) {
 				if (err) err->pushf("TOKEN", 1, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 					"config parameter is not a valid "
-					"regular expression.  Value: %s,  Error: %s",
-					excludeRegex.ptr(), _errstr ? _errstr : "");
+					"regular expression.  Value: %s,  Error Code: %d",
+					excludeRegex.ptr(), _errcode);
 				return m_name_list;
 			}
 			if (!excludeFilesRegex.isInitialized()) {

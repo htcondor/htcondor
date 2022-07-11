@@ -16,7 +16,7 @@
  # 
  ############################################################### 
 
-if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAVE_PTHREADS )
+if( EXPAT_FOUND AND HAVE_EXT_CURL AND HAVE_PTHREADS )
 
 	include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 	include_directories(${CMAKE_CURRENT_BINARY_DIR})
@@ -30,11 +30,11 @@ if( EXPAT_FOUND AND HAVE_EXT_OPENSSL AND HAVE_EXT_CURL AND HAVE_EXT_PCRE AND HAV
 	request.cpp
 	)
 
-    # Build the GAHP; curl requires libz on some systems.
 	condor_exe( ec2_gahp
-    	"${SourceFiles}"	${C_SBIN}
-	    "${CONDOR_TOOL_LIBS};${EXPAT_FOUND};${CURL_FOUND};${ZLIB_FOUND}"
-    	OFF )
+		"${SourceFiles}"
+		${C_SBIN}
+		"${CONDOR_TOOL_LIBS};${EXPAT_FOUND};${CURL_FOUND}"
+		OFF )
 
     # Build an executable needed by the tests.
 	condor_exe_test( queryAPI-sim "queryAPI-sim.cpp" "" )

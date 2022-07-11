@@ -4,6 +4,7 @@
 #include "condor_attributes.h"
 #include "dc_schedd.h"
 
+
 int usage( const char * self ) {
 	fprintf( stderr,
 "Usage: %s [-name <scheduler> [-pool <central-manager]] [-debug]\n"

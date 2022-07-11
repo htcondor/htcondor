@@ -13,7 +13,7 @@ for filename in "$@" ; do
   type=`file -h $filename`
   if echo $type | grep -q -e 'dynamically linked shared library' -e 'executable' ; then
     basefile=`basename $filename`
-    libraries=`otool -L $filename | grep '^[[:space:]][^@]' | sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v '^/Library/' | grep -v "$basefile "`
+    libraries=`otool -L $filename | grep -e '^[[:space:]][^@]' -e '@rpath/libSciTokens' |sed 's|^.\([^ ]*\) .*|\1|' | grep -v '^/usr/lib' | grep -v '^/System/' | grep -v '^/Library/' | grep -v "$basefile "`
     external_resolver="@executable_path/../lib/condor"
     internal_resolver="@executable_path/../lib"
     tool_args=""

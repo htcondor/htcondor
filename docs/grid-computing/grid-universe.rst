@@ -255,17 +255,19 @@ command specifies the name of the ARC CE service as follows:
 Only the hostname portion of the URL is required.
 Appropriate defaults will be used for the other components.
 
-ARC uses X.509 credentials for authentication, usually in the form
-a proxy certificate. *condor_submit* looks in default locations for the
-proxy. The submit description file command
+ARC accepts X.509 credentials and SciTokens for authentication.
+You must specify one of these two credential types for your **arc**
+grid jobs.
+The submit description file command
 **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` may be
-used to give the full path name to the directory containing the proxy,
-when the proxy is not in a default location. If this optional command is
-not present in the submit description file, then the value of the
-environment variable ``X509_USER_PROXY`` is checked for the location of
-the proxy. If this environment variable is not present, then the proxy
-in the file ``/tmp/x509up_uXXXX`` is used, where the characters XXXX in
-this file name are replaced with the Unix user id.
+used to give the full path name of an X.509 proxy file.
+The submit description file command
+**scitokens_file** :index:`scitokens_file<single: scitokens_file; submit commands>`
+may be used to give the full path name of a SciTokens file.
+If both an X.509 proxy and a SciTokens file are provided, then only
+the SciTokens file is used for authentication.
+Whenever an X.509 proxy is provided, it is delegated to the ARC CE for
+use by the job.
 
 ARC CE allows sites to define Runtime Environment (RTE) labels that alter
 the environment in which a job runs.

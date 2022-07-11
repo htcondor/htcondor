@@ -24,7 +24,7 @@
 #include "condor_debug.h"
 #include "MyString.h"
 #include "extArray.h"
-#include "regex.h"
+//#include "regex.h"
 #include "date_util.h"
 
 //
@@ -367,14 +367,13 @@ CronTab::initRegexObject() {
 		// So we only need to compile the pattern once
 		//
 	if ( ! CronTab::regex.isInitialized() ) {
-		const char *errptr;
-		int erroffset;
+		int errcode, erroffset;
 		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
 			//
 			// It's a big problem if we can't compile the pattern, so
 			// we'll want to dump out right now
 			//
-		if ( ! CronTab::regex.compile( pattern, &errptr, &erroffset )) {
+		if ( ! CronTab::regex.compile( pattern, &errcode, &erroffset )) {
 			MyString error = "CronTab: Failed to compile Regex - ";
 			error += pattern;
 			EXCEPT( "%s", error.c_str() );

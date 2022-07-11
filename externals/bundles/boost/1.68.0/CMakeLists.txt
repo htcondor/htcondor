@@ -114,7 +114,7 @@ else (WINDOWS)
 
 			set(BUILD_OPTIONS --layout=system variant=release cxxflags=-fPIC linkflags=-fPIC)
 
-			if (DARWIN)
+			if (APPLE)
 				if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 					set(TOOLSET clang-darwin)
 				else()
@@ -144,7 +144,7 @@ else (WINDOWS)
 		unset(BOOST_INCLUDE)
 
 		if (PYTHONINTERP_FOUND AND PYTHONLIBS_FOUND)
-			message(STATUS "Bootstrapping python for boost")
+			message(STATUS "Bootstrapping python 2 and 3 for boost")
 			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
 
 			# We should probably change how we write this file
@@ -154,6 +154,16 @@ else (WINDOWS)
 				"using python : ${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR} : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
 			)
 			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR},${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR})
+		else()
+			message(STATUS "Bootstrapping python 3 for boost")
+			set(Boost_PYTHON_LIBRARY "external" PARENT_SCOPE)
+
+			# We should probably change how we write this file
+			# depending on which Pythons we actually found.
+			file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/python-config.jam
+				"using python : ${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR} : ${PYTHON3_EXECUTABLE} : ${PYTHON3_INCLUDE_DIRS} ;\n"
+			)
+			set(BUILD_OPTIONS ${BUILD_OPTIONS} --user-config=${CMAKE_CURRENT_BINARY_DIR}/python-config.jam python=${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR})
 		endif()
 
 		# so the idea of privately staging boost is silly.

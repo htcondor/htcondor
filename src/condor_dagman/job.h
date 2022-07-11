@@ -22,7 +22,6 @@
 #define JOB_H
 
 #include "condor_common.h"      /* for <stdio.h> */
-#include "condor_constants.h"   /* from condor_includes/ directory */
 #include "simplelist.h"         /* from condor_utils/ directory */
 #include "condor_id.h"
 #include "throttle_by_category.h"
@@ -278,7 +277,7 @@ class Job {
 	// before passing it to this function
 	bool AddChildren(std::forward_list<Job*> & children, std::string &whynot);
 
-	bool AddVar(const char * name, const char * value, const char* filename, int lineno);
+	bool AddVar(const char * name, const char * value, const char* filename, int lineno, bool prepend);
 	void ShrinkVars() { /*varsFromDag.shrink_to_fit();*/ }
 	bool HasVars() const { return ! varsFromDag.empty(); }
 	int PrintVars(std::string &vars);
@@ -453,7 +452,8 @@ public:
 	struct NodeVar {
 		const char * _name; // stringspace string, not owned by this struct
 		const char * _value; // stringspace string, not owned by this struct
-		NodeVar(const char * n, const char * v) : _name(n), _value(v) {}
+		bool _prepend; //bool to determine if variable is prepended or appended
+		NodeVar(const char * n, const char * v, bool p) : _name(n), _value(v), _prepend(p) {}
 	};
 	std::forward_list<NodeVar> varsFromDag;
 

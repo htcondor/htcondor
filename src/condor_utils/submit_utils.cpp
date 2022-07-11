@@ -480,9 +480,10 @@ SetGridParams >> SetRequestResources
 */
 
 SubmitHash::SubmitHash()
-	: clusterAd(NULL)
-	, procAd(NULL)
-	, job(NULL)
+	: clusterAd(nullptr)
+	, procAd(nullptr)
+	, jobsetAd(nullptr)
+	, job(nullptr)
 	, submit_time(0)
 	, abort_code(0)
 	, abort_macro_name(NULL)
@@ -528,12 +529,13 @@ SubmitHash::~SubmitHash()
 	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
 	SubmitMacroSet.errors = NULL;
 
-	delete job; job = NULL;
-	delete procAd; procAd = NULL;
+	delete job; job = nullptr;
+	delete procAd; procAd = nullptr;
+	delete jobsetAd; jobsetAd = nullptr;
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
-	clusterAd = NULL;
+	clusterAd = nullptr;
 }
 
 void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
@@ -1074,6 +1076,39 @@ void SubmitHash::set_submit_param_used( const char *name )
 	increment_macro_use_count(name, SubmitMacroSet);
 }
 
+int SubmitHash::AssignJOBSETExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
+{
+	ExprTree *tree = NULL;
+	if (ParseClassAdRvalExpr(expr, tree)!=0 || ! tree) {
+		push_error(stderr, "Parse error in JOBSET expression: \n\t%s = %s\n\t", attr, expr);
+		if ( ! SubmitMacroSet.errors) {
+			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
+		}
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Insert (attr, tree)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = %s\n", attr, expr);
+		ABORT_AND_RETURN( 1 );
+	}
+
+	return 0;
+}
+
+bool SubmitHash::AssignJOBSETString (const char * attr, const char *sval)
+{
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Assign (attr, sval)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = \"%s\"\n", attr, sval);
+		abort_code = 1;
+		return false;
+	}
+
+	return true;
+}
 
 int SubmitHash::AssignJobExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
 {
@@ -2431,9 +2466,7 @@ int SubmitHash::SetGSICredentials()
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
 
 	YourStringNoCase gridType(JobGridType.c_str());
-	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
-		(gridType == "arc" ||
-		 gridType == "nordugrid" ) )
+	if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "nordugrid")
 	{
 		use_proxy = true;
 	}
@@ -2842,6 +2875,63 @@ int SubmitHash::SetForcedAttributes()
 	} else {
 		AssignJobVal(ATTR_PROC_ID, jid.proc);
 	}
+	return 0;
+}
+
+int SubmitHash::ProcessJobsetAttributes()
+{
+	RETURN_IF_ABORT();
+	// jobset attributes must be common for all the jobs in a cluster
+	// so when processing procid=0 anything is ok.  but when processing proc > 0 we have to make sure that the values are consistent
+	if (jid.proc <= 0) {
+		HASHITER it = hash_iter_begin(SubmitMacroSet);
+		for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			const char *name = hash_iter_key(it);
+			if ( ! starts_with_ignore_case(name, "JOBSET.")) continue;
+
+			const char *raw_value = hash_iter_value(it);
+			auto_free_ptr value(submit_param(name));
+
+			// For now, treat JOBSET.Name = x as a synonym for JOBSET.JobSetName = "x"
+			name += sizeof("JOBSET.")-1;
+			if (YourStringNoCase("name") == name) {
+				if (value) {
+					AssignJOBSETString(ATTR_JOB_SET_NAME, trim_and_strip_quotes_in_place(value.ptr()));
+				}
+			} else if (value) {
+				AssignJOBSETExpr(name, value);
+			}
+			RETURN_IF_ABORT();
+		}
+		hash_iter_delete(&it);
+
+		std::string name;
+		if (job->LookupString(ATTR_JOB_SET_NAME, name)) {
+			AssignJOBSETString(ATTR_JOB_SET_NAME, name.c_str());
+		} else if (jobsetAd) {
+			if ( ! jobsetAd->LookupString(ATTR_JOB_SET_NAME, name)) {
+				// use the clusterid as the jobset name
+				formatstr(name, "%d", jid.cluster);
+				jobsetAd->Assign(ATTR_JOB_SET_NAME, name);
+			}
+			job->Assign(ATTR_JOB_SET_NAME, name.c_str());
+		}
+
+	} else {
+		if (procAd->GetChainedParentAd() && procAd->LookupIgnoreChain(ATTR_JOB_SET_NAME)) {
+			// We cannot handle the case where multiple jobs in a cluster are in different JOBSETs
+			// so error out if that is attempted
+			classad::ClassAd * clusterAd = procAd->GetChainedParentAd();
+			std::string name1, name2;
+			clusterAd->LookupString(ATTR_JOB_SET_NAME, name1);
+			procAd->LookupString(ATTR_JOB_SET_NAME, name2);
+			push_error( stderr, "(%d.%d:%s != %d.%d:%s) All jobs from a single submission must be in the same JOBSET\n",
+				jid.cluster,0, name1.c_str(),
+				jid.cluster,jid.proc, name2.c_str());
+			ABORT_AND_RETURN( 1 );
+		}
+	}
+
 	return 0;
 }
 
@@ -4990,6 +5080,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	{SUBMIT_KEY_AllowedJobDuration, ATTR_JOB_ALLOWED_JOB_DURATION, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_AllowedExecuteDuration, ATTR_JOB_ALLOWED_EXECUTE_DURATION, SimpleSubmitKeyword::f_as_expr},
+
+	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -7852,15 +7944,14 @@ bool SubmitHash::NeedsOAuthServices(
 	// and create a list of individual tokens (with handles)
 	// that we need to have.
 
-	const char *errptr;
-	int erroffset;
-	pcre * re = pcre_compile("_oauth_(permissions|resource)", PCRE_CASELESS, &errptr, &erroffset, NULL);
+	int errcode;
+	PCRE2_SIZE erroffset;
+	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char*>("_oauth_(permissions|resource)"),
+		PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errcode, &erroffset, NULL);
 	if ( ! re) {
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
 		return true;
 	}
-	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
-	int ovec[3 * ocount];
 	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
 	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
 
@@ -7873,10 +7964,13 @@ bool SubmitHash::NeedsOAuthServices(
 	for (; !hash_iter_done(it); hash_iter_next(it)) {
 		const char *key = hash_iter_key(it);
 		if (*key == '+' || starts_with_ignore_case(key, "MY.")) continue;	// ignore job attrs, we care only about submit keywords
-		int cch = (int)strlen(key);
-		int onum = pcre_exec(re, NULL, key, cch, 0, PCRE_NOTBOL, ovec, ocount);
-		if (onum >= 0 && ovec[ovec_service_end] > 0) {
-			service.assign(key, ovec[ovec_service_end]);
+		PCRE2_SIZE cch = strlen(key);
+		PCRE2_SPTR key_pcre2str = reinterpret_cast<const unsigned char *>(key);
+		pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+		int onum = pcre2_match(re, key_pcre2str, cch, 0, PCRE2_NOTBOL, matchdata, NULL);
+		PCRE2_SIZE* ovec = pcre2_get_ovector_pointer(matchdata);
+		if (onum >= 0) {
+			service.assign(key, static_cast<int>(ovec[ovec_service_end]));
 			if (enabled_services.count(service) > 0) {
 
 				// does this key have a handle suffix? of so append the suffix to the service name
@@ -7893,9 +7987,10 @@ bool SubmitHash::NeedsOAuthServices(
 				service_names.insert(service);
 			}
 		}
+		pcre2_match_data_free(matchdata);
 	}
 	hash_iter_delete(&it);
-	pcre_free(re);
+	pcre2_code_free(re);
 
 	// The services names that did *not* have a PERMISSIONS or RESOURCE key have not yet been added
 	// we want to add these only if that service has not already been added with a handle
@@ -8387,6 +8482,10 @@ ClassAd* SubmitHash::make_job_ad (
 		// SetForcedAttributes should be last so that it trumps values
 		// set by normal submit attributes
 	SetForcedAttributes();
+
+		// process and validate JOBSET.* attributes
+		// and verify that the jobset membership request is valid (i.e. jobset memebership is a cluster attribute, not a job attribute)
+	ProcessJobsetAttributes();
 
 	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().

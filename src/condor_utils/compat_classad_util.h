@@ -21,6 +21,7 @@
 #define COMPAT_CLASSAD_UTIL_H
 
 #include "compat_classad.h"
+#include "MyString.h"
 
 // parse str into attr=expression, returning the attr and the expression and true on success
 bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree, int*pos = NULL);

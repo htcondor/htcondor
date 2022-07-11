@@ -21,7 +21,7 @@
 #define _MAPFILE_H
 
 #include "condor_common.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "extArray.h"
 #include "MyString.h"
 
@@ -104,7 +104,7 @@ class MapFile
 	CanonicalMapList* GetMapList(const char * method);
 
 	// add CanonicalMapEntry of type regex or hash (if regex_opts==0) to the given list
-	void AddEntry(CanonicalMapList* list, int regex_opts, const char * principal, const char * canonicalization);
+	void AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char * principal, const char * canonicalization);
 
 	bool
 	FindMapping(CanonicalMapList* list,       // in: the mapping data set
@@ -146,7 +146,7 @@ class MapFile
 #endif
 
 	size_t
-	ParseField(const std::string & line, size_t offset, std::string & field, int * popts = NULL);
+	ParseField(const std::string & line, size_t offset, std::string & field, uint32_t * popts = NULL);
 };
 
 #endif

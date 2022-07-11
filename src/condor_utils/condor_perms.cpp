@@ -89,6 +89,9 @@ DCpermissionHierarchy(DCpermission perm) {
 		case WRITE:
 		case NEGOTIATOR:
 		case CONFIG_PERM:
+		case ADVERTISE_STARTD_PERM:
+		case ADVERTISE_SCHEDD_PERM:
+		case ADVERTISE_MASTER_PERM:
 			m_implied_perms[i++] = READ;
 			break;
 		default:
@@ -105,6 +108,9 @@ DCpermissionHierarchy(DCpermission perm) {
 		m_directly_implied_by_perms[i++] = WRITE;
 		m_directly_implied_by_perms[i++] = NEGOTIATOR;
 		m_directly_implied_by_perms[i++] = CONFIG_PERM;
+		m_directly_implied_by_perms[i++] = ADVERTISE_STARTD_PERM;
+		m_directly_implied_by_perms[i++] = ADVERTISE_SCHEDD_PERM;
+		m_directly_implied_by_perms[i++] = ADVERTISE_MASTER_PERM;
 		break;
 	case WRITE:
 		m_directly_implied_by_perms[i++] = ADMINISTRATOR;

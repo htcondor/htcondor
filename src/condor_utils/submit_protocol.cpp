@@ -90,12 +90,16 @@ ActualScheddQ::~ActualScheddQ()
 bool ActualScheddQ::Connect(DCSchedd & MySchedd, CondorError & errstack) {
 	if (qmgr) return true;
 	qmgr = ConnectQ(MySchedd, 0 /* default */, false /* default */, &errstack);
-	allows_late = has_late = false;
+	use_jobsets = has_jobsets = allows_late = has_late = false;
 	if (qmgr) {
 		CondorVersionInfo cvi(MySchedd.version());
 		if (cvi.built_since_version(8,7,1)) {
 			has_late = true;
 			allows_late = param_boolean("SCHEDD_ALLOW_LATE_MATERIALIZE",has_late);
+		}
+		if (cvi.built_since_version(9,10,0)) {
+			has_jobsets = true;
+			use_jobsets = param_boolean("USE_JOBSETS",has_jobsets);
 		}
 	}
 	return qmgr != NULL;
@@ -135,8 +139,18 @@ int ActualScheddQ::init_capabilities() {
 				late_ver = 1;
 			}
 		}
+		use_jobsets = false;
+		if ( ! capabilities.LookupBool("UseJobsets", use_jobsets)) {
+			use_jobsets = false;
+		}
+		//has_jobsets = use_jobsets;
 	}
 	return rval;
+}
+bool ActualScheddQ::has_send_jobset(int &ver) {
+	init_capabilities();
+	ver = jobsets_ver;
+	return use_jobsets;
 }
 bool ActualScheddQ::has_late_materialize(int &ver) {
 	init_capabilities();
@@ -228,6 +242,15 @@ int ActualScheddQ::send_Itemdata(int cluster_id, SubmitForeachArgs & o)
 			return -1;
 		}
 		o.foreach_mode = foreach_from;
+	}
+	return 0;
+}
+
+int ActualScheddQ::send_Jobset(int cluster_id, const ClassAd * jobset_ad)
+{
+	// JOBSET_TODO: error handling ?
+	if (jobset_ad) {
+		return SendJobsetAd(cluster_id, *jobset_ad, 0);
 	}
 	return 0;
 }

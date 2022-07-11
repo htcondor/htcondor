@@ -1670,7 +1670,7 @@ int
 daemon::SetupHighAvailability( void )
 {
 	char		*tmp;
-	char		*url;
+	std::string url;
 	std::string	name;
 
 	// Get the URL
@@ -1725,7 +1725,7 @@ daemon::SetupHighAvailability( void )
 
 	// Now, create the lock object
 	if ( ha_lock ) {
-		int status = ha_lock->SetLockParams( url,
+		int status = ha_lock->SetLockParams( url.c_str(),
 											 name_in_config_file,
 											 poll_period,
 											 lock_hold_time,
@@ -1735,11 +1735,11 @@ daemon::SetupHighAvailability( void )
 		} else {
 			dprintf( D_FULLDEBUG,
 					 "Set HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
-					 name_in_config_file, url, (long)poll_period, 
+					 name_in_config_file, url.c_str(), (long)poll_period, 
 					 (long)lock_hold_time );
 		}
 	} else {
-		ha_lock = new CondorLock( url,
+		ha_lock = new CondorLock( url.c_str(),
 								  name_in_config_file,
 								  this,
 								  (LockEvent) &daemon::HaLockAcquired,
@@ -1752,16 +1752,15 @@ daemon::SetupHighAvailability( void )
 		if ( ha_lock ) {
 			dprintf( D_FULLDEBUG,
 					 "Created HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
-					 name_in_config_file, url, (long)poll_period, 
+					 name_in_config_file, url.c_str(), (long)poll_period, 
 					 (long)lock_hold_time );
 		}
 	}
-	free( url );
 
 	// And, if it failed, log it
 	if ( ! ha_lock ) {
 		dprintf( D_ALWAYS, "HA Lock creation failed for URL '%s' / '%s'\n",
-				 url, name_in_config_file );
+				 url.c_str(), name_in_config_file );
 		return -1;
 	}
 
@@ -2087,6 +2086,7 @@ Daemons::DeferredQueryReadyReply()
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
+	advertise_shutdown_program(readyAd);
 	bool is_ready = InitDaemonReadyAd(readyAd);
 	dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - %d\n", is_ready);
 
@@ -2145,6 +2145,7 @@ Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
+	advertise_shutdown_program(readyAd);
 	bool is_ready = InitDaemonReadyAd(readyAd);
 
 	// if there is a requirements expression, check the requirements and use

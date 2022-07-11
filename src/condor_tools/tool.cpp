@@ -101,6 +101,8 @@ usage( const char *str, int iExitCode )
 	const char* tmp = strchr( str, '_' );
 	if( !tmp ) {
 		fprintf( stderr, "Usage: %s [command] ", str );
+	} else if (cmd == SET_SHUTDOWN_PROGRAM) {
+		fprintf( stderr, "Usage: %s -exec <name> ", str );
 	} else {
 		fprintf( stderr, "Usage: %s ", str );
 	}
@@ -108,6 +110,10 @@ usage( const char *str, int iExitCode )
 	fprintf( stderr, "[general-options] [targets]" );
 	if( takes_subsys ) {
 		fprintf( stderr, " [daemon]" );
+	}
+	if (cmd == SET_SHUTDOWN_PROGRAM) {
+		fprintf( stderr, "\n    -exec <name>\tTell the master to run the program is has configured as\n"
+						   "                \tMASTER_SHUTDOWN_<name> the next time it shuts down");
 	}
 	fprintf( stderr, "\nwhere [general-options] can be zero or more of:\n" );
 	fprintf( stderr, "    -help\t\tgives this usage information\n" );
@@ -178,6 +184,9 @@ usage( const char *str, int iExitCode )
 		fprintf( stderr, "  %s causes specified daemon to restart itself.\n", str );
 		fprintf( stderr, 
 				 "  If sent to the master, all daemons on that host will restart.\n" );
+		break;
+	case SET_SHUTDOWN_PROGRAM:
+		fprintf( stderr, "  %s causes the master to run a pre-configured program when it exits.\n", str );
 		break;
 
 	case DC_RECONFIG_FULL:
@@ -326,6 +335,7 @@ main( int argc, char *argv[] )
 	int rc;
 	int got_name_or_addr = 0;
 	StringList unresolved_names;
+	const char * pcolon;
 
 #ifndef WIN32
 	// Ignore SIGPIPE so if we cannot connect to a daemon we do not
@@ -333,7 +343,6 @@ main( int argc, char *argv[] )
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
@@ -521,8 +530,8 @@ main( int argc, char *argv[] )
 			break;
 		case 'd':
 			// -de can be debug, but we don't want it to match -defrag!
-			if (is_dash_arg_prefix(*tmp, "debug", 1)) {
-				dprintf_set_tool_debug("TOOL", 0);
+			if (is_dash_arg_colon_prefix(*tmp, "debug", &pcolon, 1)) {
+				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			} else if ((*tmp)[2] == 'a')  {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 

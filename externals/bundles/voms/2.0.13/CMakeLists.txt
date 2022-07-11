@@ -21,9 +21,9 @@
 # tag v2.0.13.
 # Applied patch no_gsoap.patch and ran ./autogen.sh before creating tarball.
 
-if (LINUX OR DARWIN)
+if (LINUX)
   option( WITH_VOMS "Compiling with support for VOMS" ON )
-endif(LINUX OR DARWIN)
+endif(LINUX)
 
 if ( WITH_VOMS )
 
@@ -33,7 +33,7 @@ if ( WITH_VOMS )
 			message(FATAL_ERROR "Can't find expat, needed to build voms external!")
 		endif()
 
-		if ( DARWIN )
+		if ( APPLE )
 			set ( VOMS_PATCH patch -N -p0 < ${CMAKE_CURRENT_SOURCE_DIR}/netdb.patch &&
 				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/undeclared_funcs.patch &&
 				patch -N -p1 -i ${CMAKE_CURRENT_SOURCE_DIR}/libressl.patch )
@@ -70,7 +70,7 @@ if ( WITH_VOMS )
 		if ( LINUX )
 			set( LIBVOMSAPI_SO "libvomsapi.so.1" PARENT_SCOPE )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.so" )
-		elseif ( DARWIN )
+		elseif ( APPLE )
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.dylib" )
 		else()
 			set( VOMS_FOUND "${VOMS_INSTALL_LOC}/lib/libvomsapi.a" )
@@ -108,7 +108,7 @@ if ( WITH_VOMS )
 			 		 )" )
 			endif()
 		endif()
-		if ( DARWIN )
+		if ( APPLE )
 			# Install the VOMS libraries manually.
 			# In order to use an install(FILES) command, we'd
 			# have to explicitly list evey file.

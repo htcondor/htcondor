@@ -1,3 +1,30 @@
+condor (9.9.1-1) stable; urgency=medium
+
+  * Fix bug where jobs would not match when using a child collector
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 13 Jun 2022 21:32:00 -0500
+
+condor (9.9.0-1) stable; urgency=medium
+
+  * A new authentication method for remote HTCondor administration
+  * Several changes to improve the security of connections
+  * Fix issue where DAGMan direct submission failed when using Kerberos
+  * The submission method is now recorded in the job ClassAd
+  * Singularity jobs can now pull from Docker style repositories
+  * The OWNER authorization level has been folded into the ADMINISTRATOR level
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 28 May 2022 13:28:00 -0500
+
+condor (9.0.13-1) stable; urgency=medium
+
+  * Schedd and startd cron jobs can now log output upon non-zero exit
+  * condor_config_val now produces correct syntax for multi-line values
+  * The condor_run tool now reports submit errors and warnings to the terminal
+  * Fix issue where Kerberos authentication would fail within DAGMan
+  * Fix HTCondor startup failure with certain complex network configurations
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 May 2022 14:28:00 -0500
+
 condor (9.8.1-1) stable; urgency=medium
 
   * Fix HTCondor startup failure with certain complex network configurations
