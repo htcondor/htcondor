@@ -45,17 +45,17 @@ ln -s sbin/condor_install condor_install
 if [ -d usr/share/doc/htcondor/examples/etc ]; then
     # Debian and Ubuntu
     ln -s usr/share/doc/htcondor/examples/etc examples
-    cp -p /usr/share/common-licenses/Apache-2.0 LICENSE-2.0.txt
+    cp -p /usr/share/common-licenses/Apache-2.0 LICENSE
     ln -s usr/share/doc/htcondor/NOTICE.txt NOTICE.txt
 elif [ -d usr/share/doc/condor/examples ]; then
     # Modern RPM
     ln -s usr/share/doc/condor/examples examples
-    ln -s usr/share/doc/condor/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor/LICENSE LICENSE
     ln -s usr/share/doc/condor/NOTICE.txt NOTICE.txt
 else
     # Old RPM
     ln -s usr/share/doc/condor-[0-9]*/examples examples
-    ln -s usr/share/doc/condor-[0-9]*/LICENSE-2.0.txt LICENSE-2.0.txt
+    ln -s usr/share/doc/condor-[0-9]*/LICENSE LICENSE
     ln -s usr/share/doc/condor-[0-9]*/NOTICE.txt NOTICE.txt
 fi
 ln -s ../examples etc/examples
