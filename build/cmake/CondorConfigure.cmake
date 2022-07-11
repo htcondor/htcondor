@@ -560,7 +560,13 @@ if( NOT WINDOWS)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
 	check_function_exists("readdir64" HAVE_READDIR64)
-	check_function_exists("backtrace" HAVE_BACKTRACE)
+
+	# The backtrace library call exists, but seems to crash
+	# when running under qemu ppc64le.  Let's skip that case
+	if (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le"))
+		check_function_exists("backtrace" HAVE_BACKTRACE)
+	endif()
+
 	check_function_exists("unshare" HAVE_UNSHARE)
 
 	# we can likely put many of the checks below in here.
