@@ -43,6 +43,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+  
+- Fixed a bug where ``RemoteUserCpu`` and ``RemoteSysCpu`` attributes are occassionally
+  set to ``0`` for successfully completed jobs.
+  :jira:`1162`
 
 - Make ``condor-externals`` package dependency less strict to ease transition
   between CHTC and OSG RPM repositories.
