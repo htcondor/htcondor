@@ -270,7 +270,6 @@ static	bool		dash_idle = false;
 static	bool		dash_goodput = false;
 static	bool		dash_dry_run = false;
 static	bool		dash_unmatchable = false;
-static  bool		suspend_updates = param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false);
 static  const char * dry_run_file = NULL;
 static  const char * capture_raw_results = NULL;
 static  FILE*        capture_raw_fp = NULL;
@@ -1857,7 +1856,7 @@ local_render_job_status_char (std::string & result, ClassAd*ad, Formatter &)
 	*/
 	if (param_boolean("REAL_TIME_JOB_SUSPEND_UPDATES", false)) {
 		int last_susp_time;
-		if (!suspend_updates)
+		if (!ad->LookupInteger(ATTR_LAST_SUSPENSION_TIME,last_susp_time))
 		{
 			last_susp_time = 0;
 		}

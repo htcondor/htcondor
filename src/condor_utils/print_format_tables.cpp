@@ -143,7 +143,7 @@ const char * extractUniqueStrings ( const classad::Value & value, Formatter &, s
 	return list_out.c_str();
 }
 
-bool platform_includes_arch = true;
+static const bool platform_includes_arch = true;
 bool format_platform_name (std::string & str, ClassAd* al)
 {
 	std::string opsys, arch;
@@ -428,7 +428,7 @@ bool render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt
 	if ( ! ad->LookupInteger(ATTR_GRID_JOB_STATUS, jobStatus))
 		return false;
 
-	const struct {
+	static const struct {
 		int status;
 		const char * psz;
 	} states[] = {
