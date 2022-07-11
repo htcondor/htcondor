@@ -5659,10 +5659,8 @@ void exit(int status)
 // should be used for the new process family. if group is non-NULL
 // then we will ask the ProcD to track by supplementary group
 // ID - the ID that the ProcD chooses for this purpose is returned
-// in the location pointed to by the argument. the last argument
-// optionally specifies a proxy to give to the ProcD so that
-// it can use glexec to signal the processes in this family
-//
+// in the location pointed to by the argument.
+
 bool
 DaemonCore::Register_Family(pid_t       child_pid,
                             pid_t       parent_pid,
@@ -5670,8 +5668,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-			    const char* cgroup,
-                            const char* glexec_proxy)
+			    const char* cgroup)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5742,18 +5739,6 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		EXCEPT("Internal error: "
 			    "cgroup-based tracking unsupported in this condor build");
 #endif
-	}
-	if (glexec_proxy != NULL) {
-		if (!m_proc_family->use_glexec_for_family(child_pid,
-		                                          glexec_proxy))
-		{
-			dprintf(D_ALWAYS,
-			        "Create_Process: error using GLExec for "
-				    "family with root %u\n",
-			        child_pid);
-			goto REGISTER_FAMILY_DONE;
-		}
-		runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -6480,8 +6465,7 @@ void CreateProcessForkit::exec() {
 				                            penvid_ptr,
 				                            m_family_info->login,
 				                            tracking_gid_ptr,
-							    m_family_info->cgroup,
-				                            m_family_info->glexec_proxy);
+							    m_family_info->cgroup);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				writeExecError(errno);
@@ -7879,8 +7863,7 @@ int DaemonCore::Create_Process(
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
-		                          family_info->cgroup,
-		                          family_info->glexec_proxy);
+		                          family_info->cgroup);
 		if (!okrf) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -8424,8 +8407,7 @@ int DaemonCore::Create_Process(
 		                &pidtmp->penvid,
 		                family_info->login,
 		                NULL,
-				family_info->cgroup,
-		                family_info->glexec_proxy);
+				family_info->cgroup);
 	}
 #endif
 

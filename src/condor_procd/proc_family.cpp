@@ -23,10 +23,6 @@
 #include "proc_family_monitor.h"
 #include "procd_common.h"
 
-#if !defined(WIN32)
-#include "glexec_kill.unix.h"
-#endif
-
 #if defined(HAVE_EXT_LIBCGROUP)
 #include "libcgroup.h"
 
@@ -810,12 +806,6 @@ ProcFamily::aggregate_usage(ProcFamilyUsage* usage)
 void
 ProcFamily::signal_root(int sig)
 {
-#if !defined(WIN32)
-	if (m_proxy != NULL) {
-		glexec_kill(m_proxy, m_root_pid, sig);
-		return;
-	}
-#endif
 	send_signal(m_root_pid, sig);
 }
 
@@ -830,14 +820,6 @@ ProcFamily::spree(int sig)
 
 	ProcFamilyMember* member;
 	for (member = m_member_list; member != NULL; member = member->m_next) {
-#if !defined(WIN32)
-		if (m_proxy != NULL) {
-			glexec_kill(m_proxy,
-			            member->m_proc_info->pid,
-			            sig);
-			continue;
-		}
-#endif
 		send_signal(member->m_proc_info->pid, sig);
 	}
 }
