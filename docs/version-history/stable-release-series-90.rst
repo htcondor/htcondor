@@ -52,23 +52,21 @@ Version 9.0.14
 
 Release Notes:
 
-.. HTCondor version 9.0.14 released on Month Date, 2022.
-
-- HTCondor version 9.0.14 not yet released.
+- HTCondor version 9.0.14 released on July 12, 2022.
 
 New Features:
+
+- Made SciTokens mapping failures more prominent in the daemon logs.
+  :jira:`1072`
 
 - The manual page, usage and logging of the *condor_set_shutdown* tool
   has been improved to clarify what this tool does and how to use it.
   :jira:`1102`
 
-- Made SciTokens mapping failures more prominent in the daemon logs.
-  :jira:`1072`
-
 Bugs Fixed:
 
 - Fixed a bug where if a job's output and error were directed to the same
-  file, no other output files would be transfered.
+  file, no other output files would be transferred.
   :jira:`1101`
 
 - Ensure that the matching set of Python bindings is installed when HTCondor
@@ -81,6 +79,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+  
+- Fixed a bug where ``RemoteUserCpu`` and ``RemoteSysCpu`` attributes are occasionally
+  set to ``0`` for successfully completed jobs.
+  :jira:`1162`
 
 - Make ``condor-externals`` package dependency less strict to ease transition
   between CHTC and OSG RPM repositories.
