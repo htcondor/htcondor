@@ -51,13 +51,13 @@ setEpochDir(){
 			// Not a valid directory. Log message and set data member to NULL
             dprintf(D_ALWAYS | D_ERROR,
                     "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
-                    "valid directory; disabling per-epoch job recording.\n",
+                    "valid directory; disabling per-job run instance recording.\n",
                     JobEpochInstDir);
             free(JobEpochInstDir);
             JobEpochInstDir = NULL;
         } else {
             dprintf(D_ALWAYS,
-                    "Logging per-epoch job recording files to: %s\n",
+                    "Writing per-job run instance recording files to: %s\n",
                     JobEpochInstDir);
         }
 	}
@@ -80,7 +80,7 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	if (!JobEpochInstDir) { return; }
 	
 	//Get various information needed for writing epoch file and banner
-	int clusterId, procId, numShadow, completion;
+	int clusterId, procId, numShadow;
 	std::string owner, missingAttrs;
 	
 	if (!job_ad->LookupInteger("ClusterId", clusterId)) {
@@ -98,14 +98,11 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
 		missingAttrs += "NumShadowStarts";
 	}
-	if (!job_ad->LookupInteger("CompletionDate", completion)) {
-		completion = -1;
-	}
 	if (!job_ad->LookupString("Owner", owner)) {
 		owner = "?";
 	}
 	
-	//TODO:Until better Job Attribute is added decrement numShadow to start RunInstanceId at 0
+	//TODO:Until better Job Attribute is added, decrement numShadow to start RunInstanceId at 0
 	numShadow--;
 	
 	//Write job ad to a buffer
@@ -117,28 +114,37 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 		return;
 	}
 	
-	//Format file name to print at end of Job Ad
+	//Construct file_name and file_path for writing job ad to
 	std::string file_name,file_path;
 	formatstr(file_name,"job.runs.%d.%d.ads",clusterId,procId);
 	dircat(JobEpochInstDir,file_name.c_str(),file_path);
 	//Open file and append Job Ad to it
 	int fd = safe_open_wrapper_follow(file_path.c_str(), O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT, 0644);
+	if (fd < 0) {
+		dprintf(D_ALWAYS | D_ERROR,"ERROR (%d): Opening job run instance file (%s): %s",
+									errno, file_name.c_str(), strerror(errno));
+		return;
+	}
 	FILE* fp = fdopen(fd, "r+");
 	if (fp == NULL) {
 		dprintf(D_ALWAYS | D_ERROR,
-				"error %d (%s) opening file stream for epoch file for job %d.%d\n",
-				errno, strerror(errno), clusterId, procId);
+				"ERROR (%d): Opening file stream for run instance file for job %d.%d: %s\n",
+				errno, clusterId, procId, strerror(errno));
 		close(fd);
 		return;
 	}
-	//Print Job ad and Banner to file
+	//Buffer contains just the job ad at this point
+	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
+	std::string banner;
+	time_t currentTime = time(NULL); //Get current time to print in banner
+	formatstr(banner,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+					 clusterId, procId, numShadow, owner.c_str(), (long long)currentTime);
+	if (buffer.back() != '\n') { buffer += '\n'; }
+	buffer += banner;
+	//Write buffer with job ad and banner to epoch file
 	if (fputs(buffer.c_str(),fp) == EOF){
-		dprintf(D_ALWAYS,"ERROR: Failed to write job ad for job %d.%d run instance %d\n",clusterId,procId,numShadow);
-		fclose(fp);
-		return;
+		dprintf(D_ALWAYS,"ERROR: Failed to write job ad for job %d.%d run instance %d to file: %s\n",clusterId,procId,numShadow,file_name.c_str());
 	}
-	fprintf(fp,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CompletionDate=%d\n"
-			  ,clusterId,procId,numShadow,owner.c_str(),completion);
 	fclose(fp);
 }
 
@@ -165,7 +171,7 @@ writeJobEpochFile(const classad::ClassAd *job_ad) {
 	//If no Job Ad then log error and return
 	if (!job_ad) {
 		dprintf(D_ALWAYS | D_ERROR,
-			"ERROR: No Job Ad. Not able to write to Job Epoch File");
+			"ERROR: No Job Ad. Not able to write to Job Run Instance File");
 		return;
 	}
 
