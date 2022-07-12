@@ -125,14 +125,7 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 									errno, file_name.c_str(), strerror(errno));
 		return;
 	}
-	FILE* fp = fdopen(fd, "r+");
-	if (fp == NULL) {
-		dprintf(D_ALWAYS | D_ERROR,
-				"ERROR (%d): Opening file stream for run instance file for job %d.%d: %s\n",
-				errno, clusterId, procId, strerror(errno));
-		close(fd);
-		return;
-	}
+
 	//Buffer contains just the job ad at this point
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
@@ -142,10 +135,11 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	if (buffer.back() != '\n') { buffer += '\n'; }
 	buffer += banner;
 	//Write buffer with job ad and banner to epoch file
-	if (fputs(buffer.c_str(),fp) == EOF){
-		dprintf(D_ALWAYS,"ERROR: Failed to write job ad for job %d.%d run instance %d to file: %s\n",clusterId,procId,numShadow,file_name.c_str());
+	if (write(fd,buffer.c_str(),buffer.length()) < 0){
+		dprintf(D_ALWAYS,"ERROR (%d): Failed to write job ad for job %d.%d run instance %d to file (%s): %s\n",
+						  errno, clusterId, procId, numShadow, file_name.c_str(), strerror(errno));
 	}
-	fclose(fp);
+	close(fd);
 }
 
 /*

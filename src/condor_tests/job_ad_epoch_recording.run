@@ -45,7 +45,8 @@ $testname = "job_ad_epoch_recording";
 $dir = getcwd;
 CondorTest::debug("Path to working directory: $dir\n",1);
 
-runCondorTool("condor_config_val -dump JOB_EPOCH_INSTANCE_DIR",\@tooloutput,2,{emit_output=>1});
+#Used to verify configuration of JOB_EPOCH_INSTANCE_DIR
+#runCondorTool("condor_config_val -dump JOB_EPOCH_INSTANCE_DIR",\@tooloutput,2,{emit_output=>1});
 
 @jobSubmitFiles = ();
 #Cluster Id needed to determine epoch file name
