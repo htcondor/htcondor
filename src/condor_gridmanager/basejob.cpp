@@ -35,13 +35,13 @@
 #include "classad_merge.h"
 #include "condor_holdcodes.h"
 #include "exit.h"
-
+#include <unordered_map>
 
 int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
-HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( hashFuncPROC_ID );
+std::unordered_map<PROC_ID, BaseJob*> BaseJob::JobsByProcId;
 HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( hashFunction );
 
 void BaseJob::BaseJobReconfig()
@@ -95,7 +95,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-	JobsByProcId.insert( procID, this );
+	JobsByProcId[procID] = this;
 
 	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
@@ -146,7 +146,7 @@ BaseJob::~BaseJob()
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( jobLeaseReceivedExpiredTid );
 	}
-	JobsByProcId.remove( procID );
+	JobsByProcId.erase( procID );
 
 	std::string remote_id;
 	if ( jobAd ) {
@@ -736,13 +736,10 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 void BaseJob::EvalAllPeriodicJobExprs()
 {
-	BaseJob *curr_job;
-
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
-	JobsByProcId.startIterations();
-	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
-		curr_job->EvalPeriodicJobExpr();
+	for (auto& itr: JobsByProcId) {
+		itr.second->EvalPeriodicJobExpr();
 	}
 }
 
@@ -862,15 +859,12 @@ int BaseJob::EvalOnExitJobExpr()
 
 void BaseJob::CheckAllRemoteStatus()
 {
-	BaseJob *curr_job;
-
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 
 		// TODO Reset timer based on shortest time that a job status could
 		//   become stale?
-	JobsByProcId.startIterations();
-	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
-		curr_job->CheckRemoteStatus();
+	for (auto& iter: JobsByProcId) {
+		iter.second->CheckRemoteStatus();
 	}
 }
 

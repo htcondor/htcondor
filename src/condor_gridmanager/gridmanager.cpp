@@ -439,12 +439,8 @@ Reconfig()
 	}
 
 	// Tell all the job objects to deal with their new config values
-	BaseJob *next_job;
-
-	BaseJob::JobsByProcId.startIterations();
-
-	while ( BaseJob::JobsByProcId.iterate( next_job ) != 0 ) {
-		next_job->Reconfig();
+	for (auto& itr: BaseJob::JobsByProcId) {
+		itr.second->Reconfig();
 	}
 }
 
@@ -648,9 +644,8 @@ doContactSchedd()
 
 		// Grab the lease attributes of all the jobs in our global hashtable.
 
-		BaseJob::JobsByProcId.startIterations();
-
-		while ( BaseJob::JobsByProcId.iterate( curr_job ) != 0 ) {
+		for (auto& itr: BaseJob::JobsByProcId) {
+			curr_job = itr.second;
 			int new_expiration;
 
 			rc = GetAttributeInt( curr_job->procID.cluster,
@@ -726,7 +721,6 @@ doContactSchedd()
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
-			BaseJob *old_job;
 			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
@@ -734,8 +728,8 @@ doContactSchedd()
 			bool job_is_managed = jobExternallyManaged(next_ad);
 			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
-			if ( BaseJob::JobsByProcId.lookup( procID, old_job ) != 0 ) {
-
+			auto itr = BaseJob::JobsByProcId.find(procID);
+			if (itr == BaseJob::JobsByProcId.end()) {
 				JobType *job_type = NULL;
 				BaseJob *new_job = NULL;
 
@@ -855,18 +849,18 @@ contact_schedd_next_add_job:
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
-			BaseJob *next_job;
 			int curr_status;
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 			next_ad->LookupInteger( ATTR_JOB_STATUS, curr_status );
 
-			if ( BaseJob::JobsByProcId.lookup( procID, next_job ) == 0 ) {
+			auto itr = BaseJob::JobsByProcId.find(procID);
+			if (itr != BaseJob::JobsByProcId.end()) {
 				// Should probably skip jobs we already have marked as
 				// held or removed
 
-				next_job->JobAdUpdateFromSchedd( next_ad, true );
+				itr->second->JobAdUpdateFromSchedd( next_ad, true );
 				num_ads++;
 
 			} else if ( curr_status == REMOVED ) {
@@ -940,8 +934,9 @@ contact_schedd_next_add_job:
 				dprintf (D_FULLDEBUG, "Retrieved updated attributes for job %d.%d\n", job_id.cluster, job_id.proc);
 				dPrintAd(D_JOB, updates);
 			}
-			if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
-				curr_job->JobAdUpdateFromSchedd( &updates, false );
+			auto itr = BaseJob::JobsByProcId.find(job_id);
+			if (itr != BaseJob::JobsByProcId.end()) {
+				itr->second->JobAdUpdateFromSchedd( &updates, false );
 				ProcIdToStr( job_id, str );
 				dirty_job_ids.append( str );
 			}
@@ -1196,7 +1191,7 @@ contact_schedd_next_add_job:
 	}
 
 	// Check if we have any jobs left to manage. If not, exit.
-	if ( BaseJob::JobsByProcId.getNumElements() == 0 ) {
+	if ( BaseJob::JobsByProcId.size() == 0 ) {
 		dprintf( D_ALWAYS, "No jobs left, shutting down\n" );
 		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
 	}
@@ -1214,8 +1209,9 @@ contact_schedd_next_add_job:
 	dirty_job_ids.rewind();
 	while ( (job_id_str = dirty_job_ids.next()) != NULL ) {
 		StrToProcIdFixMe(job_id_str, job_id);
-		if ( BaseJob::JobsByProcId.lookup( job_id, curr_job ) == 0 ) {
-			curr_job->EvalPeriodicJobExpr();
+		auto itr = BaseJob::JobsByProcId.find(job_id);
+		if (itr != BaseJob::JobsByProcId.end()) {
+			itr->second->EvalPeriodicJobExpr();
 		}
 	}
 
