@@ -5401,6 +5401,12 @@ These macros control the *condor_schedd*.
     determining the sets of jobs considered as a unit (an auto cluster)
     in negotiation, when auto clustering is enabled.
 
+:macro-def:`SCHEDD_SEND_RESCHEDULE`
+    A boolean value which defaults to true.  Set to false for 
+    schedds like those in the HTCondor-CE that have no negotiator
+    associated with them, in order to reduce spurious error messages
+    in the SchedLog file.
+
 :macro-def:`SCHEDD_AUDIT_LOG`
     The path and file name of the *condor_schedd* log that records
     user-initiated commands that modify the job queue. If not defined,
