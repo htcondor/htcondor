@@ -83,6 +83,7 @@
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
+#define ATTR_CONTAINER_TARGET_DIR "ContainerTargetDir"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
 #define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"

@@ -266,6 +266,7 @@
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
+#define SUBMIT_KEY_ContainerTargetDir "container_target_dir"
 
 //
 // VM universe Parameters
