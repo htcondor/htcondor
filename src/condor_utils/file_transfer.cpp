@@ -4217,7 +4217,13 @@ FileTransfer::computeFileList(
 				    local_output_url += '/';
 				}
 				if( uploadCheckpointFiles ) {
-					formatstr_cat( local_output_url, "%.4d/", this->checkpointNumber );
+					std::string globalJobID;
+					jobAd.LookupString(ATTR_GLOBAL_JOB_ID, globalJobID);
+					ASSERT(! globalJobID.empty());
+					formatstr_cat( local_output_url, "%s/%.4d/",
+					    globalJobID.c_str(),
+					    this->checkpointNumber
+					);
 				}
 				//
 				// For whatever reason we don't just write the std{out,err}

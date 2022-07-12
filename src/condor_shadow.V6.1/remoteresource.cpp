@@ -2291,6 +2291,10 @@ RemoteResource::initFileTransfer()
 		return; // FIMXE
 	}
 
+	std::string globalJobID;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+	ASSERT(! globalJobID.empty());
+
 	std::string manifestLine;
 	std::string nextManifestLine;
 	std::getline( ifs, manifestLine );
@@ -2298,8 +2302,8 @@ RemoteResource::initFileTransfer()
 	for( ; ifs.good(); ) {
 		std::string checkpointURL;
 		std::string checkpointFile = manifest::FileFromLine( manifestLine );
-		formatstr( checkpointURL, "%s/%.4d/%s", checkpointDestination.c_str(),
-		  manifestNumber, checkpointFile.c_str() );
+		formatstr( checkpointURL, "%s/%s/%.4d/%s", checkpointDestination.c_str(),
+		  globalJobID.c_str(), manifestNumber, checkpointFile.c_str() );
 		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
 
 		manifestLine = nextManifestLine;
