@@ -42,7 +42,7 @@ int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
 std::unordered_map<PROC_ID, BaseJob*> BaseJob::JobsByProcId;
-HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( hashFunction );
+std::unordered_map<std::string, BaseJob *> BaseJob::JobsByRemoteId;
 
 void BaseJob::BaseJobReconfig()
 {
@@ -100,7 +100,7 @@ BaseJob::BaseJob( ClassAd *classad )
 	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	if ( !remote_id.empty() ) {
-		ASSERT( JobsByRemoteId.insert( remote_id, this ) == 0 );
+		JobsByRemoteId[remote_id] = this;
 	}
 
 	condorState = IDLE; // Just in case lookup fails
@@ -153,7 +153,7 @@ BaseJob::~BaseJob()
 		jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	}
 	if ( !remote_id.empty() ) {
-		JobsByRemoteId.remove( remote_id );
+		JobsByRemoteId.erase(remote_id);
 	}
 
 	if ( jobAd ) {
@@ -442,7 +442,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		return;
 	}
 	if ( !old_job_id.empty() ) {
-		JobsByRemoteId.remove( old_job_id );
+		JobsByRemoteId.erase(old_job_id);
 		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
 	} else {
 		//  old job id was NULL
@@ -450,7 +450,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
 	if ( !new_job_id.empty() ) {
-		ASSERT( JobsByRemoteId.insert( new_job_id, this ) == 0 );
+		JobsByRemoteId[new_job_id] = this;
 		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id );
 	} else {
 		// new job id is NULL

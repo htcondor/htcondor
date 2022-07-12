@@ -81,7 +81,7 @@ class BaseJob : public Service
 	virtual void NotifyResourceUp();
 
 	static std::unordered_map<PROC_ID, BaseJob *> JobsByProcId;
-	static HashTable<std::string, BaseJob *> JobsByRemoteId;
+	static std::unordered_map<std::string, BaseJob *> JobsByRemoteId;
 
 	ClassAd *jobAd;
 	PROC_ID procID;
