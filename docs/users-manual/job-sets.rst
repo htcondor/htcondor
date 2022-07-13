@@ -214,8 +214,8 @@ You can check on your job set with the
 
     $ htcondor jobset status MyJobSet
 
-    NewSet currently has 3 jobs idle, 5 jobs running, and 0 jobs completed.
-    NewSet contains:
+    MyJobSet currently has 3 jobs idle, 5 jobs running, and 0 jobs completed.
+    MyJobSet contains:
         Job cluster 1234 with 4 total jobs
         Job cluster 1235 with 4 total jobs
 
