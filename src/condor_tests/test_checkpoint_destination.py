@@ -428,7 +428,7 @@ TEST_CASES = {
 }
 
 @action
-def the_job_handles(request, test_dir, default_condor, the_job_description, plugin_shell_file):
+def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_file):
     job_handles = {}
     for name, test_case in TEST_CASES.items():
         test_case = {key: value.format(test_dir=test_dir, plugin_shell_file=plugin_shell_file) for key, value in test_case.items()}
@@ -585,3 +585,27 @@ class TestCheckpointDestination:
             "Completed all 14 steps.\n"
         ]
         assert expected_stdout == the_completed_job_stdout
+
+
+    # We could explicitly test that using same checkpoint destination in
+    # in two (or more) concurrent jobs, but race conditions would make that
+    # (set of) test(s) very difficult to write.  Instead, just verify that
+    # the local:// test job created a directory named its global job ID.
+    #
+    # It would be better* if PyTest let me specify that this test has to run
+    # after all the test cases had finished, but that would seem to require
+    # duplicating a lot of code to give each of them their own fixture.
+    #
+    # *: in that the current check has false positive if the test case
+    # submitted with a checkpoint destination somehow doesn't have one
+    # by the time it finishes.
+    def test_checkpoint_location(self, test_dir, default_condor, the_completed_job):
+        schedd = default_condor.get_local_schedd()
+        constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
+        result = schedd.query(
+            constraint=constraint,
+            projection=["CheckpointDestination", "GlobalJobID"],
+        )
+        jobAd = result[0]
+        if jobAd.get("CheckpointDestination") is not None:
+            assert (test_dir / jobAd["globalJobID"]).is_dir()
