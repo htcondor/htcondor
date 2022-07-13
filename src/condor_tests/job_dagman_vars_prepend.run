@@ -32,6 +32,7 @@ $cmd = 'job_dagman_vars_prepend.dag';
 $testdesc =  'Condor submit dag - VARS PREPEND/APPEND test - scheduler U';
 $testname = "job_dagman_vars_prepend";
 $dagman_args = "-verbose";
+$curr_check;
 
 $dir = getcwd;
 CondorTest::debug("Path to working directory: $dir\n",1);
@@ -183,11 +184,9 @@ $success = sub
 			$line = $_;
 
 			# Using eq here to avoid having to escape regexp special chars.
-			for $outline (@outlines){
-				if( $line eq $outline ) {
-					CondorTest::debug("$name: $line\n",1);
-					$passed = 1;
-				}
+			if( $line eq $outlines[$curr_check%2] ) {
+				CondorTest::debug("$name: $line\n",1);
+				$passed = 1;
 			}
 		}
 		close(OUT);
@@ -195,6 +194,7 @@ $success = sub
 			;
 		} else {
 			CondorTest::debug("FAILED $name: $line\n",1);
+			CondorTest::debug("EXPECTED: $outlines[$curr_check%2]\n");
 			$diditpass = 0;
 		}
 	}
@@ -217,6 +217,7 @@ CondorTest::RegisterSubmit( $testname, $submitted );
 # for each checkpoint
 for ($checknum = 0; $checknum <= $#ckptsdesc; $checknum++){
 	$check = $ckptsdesc[$checknum];
+	$curr_check = $checknum;
 
 	# Go back to parent directory
 	chdir $dir;

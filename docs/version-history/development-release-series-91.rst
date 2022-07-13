@@ -43,6 +43,13 @@ New Features:
   proxy, now only the token is used for authentication with the ARC CE
   server. The proxy is still delegated for use by the job.
   :jira:`1194`
+  
+- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be set at the beginning or end of a DAG
+  job's submit file. Any ``VARS`` without these options will have behavior
+  derived from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
+  Which defaults to PREPEND.
+  :jira:`1080`
 
 Bugs Fixed:
 
