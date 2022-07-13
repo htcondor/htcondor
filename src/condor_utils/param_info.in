@@ -3194,6 +3194,11 @@ default=
 type=string
 tags=schedd
 
+[JOB_EPOCH_INSTANCE_DIR]
+default=
+type=string
+tags=schedd
+
 [SCHEDD_MIN_INTERVAL]
 default=5
 type=int
