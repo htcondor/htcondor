@@ -416,28 +416,45 @@ def the_job_description(test_dir, path_to_the_job_script):
     }
 
 
-@action(params={
+# This construction allows us to run test jobs concurrently.  It's clumsy,
+# in that the test cases should be directly parameterizing a fixture, but
+# there's no native support for concurrency in pytest, so this will do.
+TEST_CASES = {
     "local": {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
     "spool": {},
-})
-def the_job_handle(request, test_dir, default_condor, the_job_description, plugin_shell_file):
-    test_case = request.param
-    test_case = {key: value.format(test_dir=test_dir, plugin_shell_file=plugin_shell_file) for key, value in test_case.items()}
+}
 
-    complete_job_description = {
-        ** the_job_description,
-        ** test_case,
-    }
-    the_job_handle = default_condor.submit(
-        description=complete_job_description,
-        count=1,
-    )
-    yield the_job_handle
+@action
+def the_job_handles(request, test_dir, default_condor, the_job_description, plugin_shell_file):
+    job_handles = {}
+    for name, test_case in TEST_CASES.items():
+        test_case = {key: value.format(test_dir=test_dir, plugin_shell_file=plugin_shell_file) for key, value in test_case.items()}
 
-    the_job_handle.remove()
+        complete_job_description = {
+            ** the_job_description,
+            ** test_case,
+        }
+        job_handle = default_condor.submit(
+            description=complete_job_description,
+            count=1,
+        )
+
+        job_handles[name] = job_handle
+    yield job_handles
+
+    for job_handle in job_handles:
+        job_handles[job_handle].remove()
+
+
+# This looks dumb, but the key is used by pytest to report which test case
+# we're looking at, and the value is used for the lookup (which may be
+# redundant, but I don't know how to get the key out of the `request`).
+@action(params={name: name for name in TEST_CASES})
+def the_job_handle(request, the_job_handles):
+    return the_job_handles[request.param]
 
 
 @action
