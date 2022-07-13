@@ -65,9 +65,6 @@ ProcFamily::ProcFamily(ProcFamilyMonitor* monitor,
 	, m_last_signal_was_sigstop(false)
 #endif
 {
-#if !defined(WIN32)
-	m_proxy = NULL;
-#endif
 #ifdef LINUX
 	m_perf_counter.start();
 #endif
@@ -88,14 +85,6 @@ ProcFamily::~ProcFamily()
 		delete member;
 		member = next_member;
 	}
-
-#if !defined(WIN32)
-	// delete the proxy if we've been given one
-	//
-	if (m_proxy != NULL) {
-		free(m_proxy);
-	}
-#endif
 }
 
 #if defined(HAVE_EXT_LIBCGROUP)
@@ -968,18 +957,6 @@ ProcFamily::fold_into_parent(ProcFamily* parent)
 	parent->m_member_list = m_member_list;
 	m_member_list = NULL;
 }
-
-#if !defined(WIN32)
-void
-ProcFamily::set_proxy(char* proxy)
-{
-	if (m_proxy != NULL) {
-		free(m_proxy);
-	}
-	m_proxy = strdup(proxy);
-	ASSERT(m_proxy != NULL);
-}
-#endif
 
 void
 ProcFamily::dump(ProcFamilyDump& fam)
