@@ -24,6 +24,10 @@ New Features:
   directory, not in tmpfs.
   :jira:`1193`
 
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
 Bugs Fixed:
 
 - Fixed a bug on Windows that caused a misleading error message about
