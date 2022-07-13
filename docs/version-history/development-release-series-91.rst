@@ -30,7 +30,7 @@ Release Notes:
 
 New Features:
 
-- Added support for running on Linux systems that ship with openssl version 3
+- Added support for running on Linux systems that ship with OpenSSL version 3.
   :jira:`1148`
 
 - *condor_submit* now has support for submitting jobsets. Jobsets are still
