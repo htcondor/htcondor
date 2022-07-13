@@ -137,8 +137,8 @@ public:
 						int timeout, classy_counted_ptr<DCMsgCallback> cb);
 
 		/** Before activating a claim, attempt to delegate the user proxy
-			(if there is one). We do this from the shadow if
-			GLEXEC_STARTER is set, since if the startd requires that
+			(if there is one). We used do this from the shadow if
+			GLEXEC_STARTER was set, since if the startd requires that
 			glexec be used to spawn the starter, then it needs to get
 			the proxy early (since glexec uses it to determine what UID
 			to run the starter under). The normal way of delegating the

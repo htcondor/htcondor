@@ -70,8 +70,6 @@ public:
 	
 	virtual bool unregister_family(pid_t) = 0;
 
-	virtual bool use_glexec_for_family(pid_t, const char* proxy) = 0;
-
 	// call prior to destroying the ProcFamily class to insure that cleanup happens before we exit.
 	virtual bool quit(void(*notify)(void*me, int pid, int status),void*me) = 0;
 };

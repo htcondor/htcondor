@@ -1424,7 +1424,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	setup_args.AppendArg(sshd_config_template.c_str());
 	setup_args.AppendArg(ssh_keygen_cmd.c_str());
 
-		// Would like to use my_popen here, but we need to support glexec.
+		// Would like to use my_popen here, but we needed to support glexec.
 		// Use the default reaper, even though it doesn't know anything
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
@@ -1862,10 +1862,6 @@ Starter::createTempExecuteDir( void )
 		// WIN32
 	priv_state priv = set_condor_priv();
 #endif
-
-	// we might be using glexec.  glexec relies on being able to read the
-	// contents of the execute directory as a non-condor user, so in that
-	// case, use 0755.  for all other cases, use the more-restrictive 0700.
 
 	int dir_perms = 0700;
 

@@ -214,7 +214,6 @@ struct FamilyInfo {
 #if defined(LINUX)
 	gid_t* group_ptr;
 #endif
-	const char* glexec_proxy;
 	bool want_pid_namespace;
 	const char* cgroup;
 
@@ -224,7 +223,6 @@ struct FamilyInfo {
 #if defined(LINUX)
 		group_ptr = NULL;
 #endif
-		glexec_proxy = NULL;
 		want_pid_namespace = false;
 		cgroup = NULL;
 	}
@@ -1455,7 +1453,7 @@ class DaemonCore : public Service
 
 	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
-	    case the DaemonCore destructor won't be called. also used by a glexec'd starter before it exits)
+	    case the DaemonCore destructor won't be called.
 	*/
 	void Proc_Family_Cleanup();
 
@@ -1967,8 +1965,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
-			     const char* cgroup,
-	                     const char* glexec_proxy);
+			     const char* cgroup);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
