@@ -14153,6 +14153,13 @@ Scheduler::needReschedule()
 void
 Scheduler::sendReschedule()
 {
+	// If SCHEDD_SEND_RESCHEDULE is false (eg on a CE or schedd
+	// without a negotiator, don't spam the logs with messages
+	// about a missing negotiator.
+	if (!param_boolean("SCHEDD_SEND_RESCHEDULE", true)) {
+		return;
+	}
+
 	if( !m_negotiate_timeslice.isTimeToRun() ) {
 			// According to our negotiate timeslice object, we are
 			// spending too much of our time negotiating, so delay

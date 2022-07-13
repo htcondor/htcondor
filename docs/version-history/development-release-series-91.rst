@@ -44,6 +44,12 @@ New Features:
   server. The proxy is still delegated for use by the job.
   :jira:`1194`
 
+- A new knob, ``SCHEDD_SEND_RESCHEDULE`` has been added.  When set
+  to false, the schedd never tries to send a reschedule command to the
+  negotiator.  The default is true. Set this to false in the HTCondor-CE
+  and other systems that have no negotiator.
+  :jira:`1192`
+
 Bugs Fixed:
 
 - Fixed a bug where **arc** grid universe jobs would remain in idle

@@ -3123,6 +3123,12 @@ tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
+[SCHEDD_SEND_RESCHEDULE]
+default=true
+type=bool
+tags=schedd
+description=
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
