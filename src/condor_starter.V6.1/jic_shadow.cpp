@@ -1095,12 +1095,12 @@ JICShadow::uploadCheckpointFiles(int checkpointNumber)
 
 	if( !rval ) {
 		// Failed to transfer.
-		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
-		// FIXME: this doesn't appear to actually do much of anything, but
-		// we should probably put the job on hold.
+		dprintf( D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed.\n" );
+		holdJob( "Starter failed to upload checkpoint",
+		         CONDOR_HOLD_CODE::FailedToCheckpoint, -1 );
 		return false;
 	}
-	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );
+	dprintf( D_FULLDEBUG, "JICShadow::uploadCheckpointFiles() succeeded.\n" );
 	return true;
 }
 

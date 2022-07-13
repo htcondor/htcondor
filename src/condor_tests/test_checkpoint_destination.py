@@ -325,7 +325,7 @@ def path_to_the_job_script(default_condor, test_dir):
     while num_completed_steps < total_steps:
         print(f"Starting step {num_completed_steps}.")
 
-        time.sleep(3)
+        time.sleep(1)
         num_completed_steps += 1
 
         if num_completed_steps == 7 and epoch_number == 0:
@@ -512,6 +512,36 @@ def event_types_in_order(types, events):
         return False
 
 
+@action
+def failed_checkpoint_handle(test_dir, default_condor, the_job_description, plugin_shell_file):
+    # Make sure this isn't a directory, since local:// creates them as needed.
+    (test_dir / "missing").touch()
+
+    complete_job_description = {
+        ** the_job_description,
+        "+CheckpointDestination":       f'"local://{test_dir}/missing"',
+        "transfer_plugins":             f'local={plugin_shell_file}',
+    }
+    job_handle = default_condor.submit(
+        description=complete_job_description,
+        count=1,
+    )
+
+    yield job_handle
+
+    job_handle.remove()
+
+
+@action
+def failed_checkpoint_job(failed_checkpoint_handle):
+    failed_checkpoint_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_held,
+    )
+
+    return failed_checkpoint_handle
+
+
 class TestCheckpointDestination:
 
     #
@@ -609,3 +639,18 @@ class TestCheckpointDestination:
         jobAd = result[0]
         if jobAd.get("CheckpointDestination") is not None:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
+
+    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, failed_checkpoint_job):
+        assert failed_checkpoint_job.state.all_held()
+
+        schedd = default_condor.get_local_schedd()
+        constraint = f'ClusterID == {failed_checkpoint_job.clusterid} && ProcID == 0'
+        result = schedd.query(
+            constraint=constraint,
+            projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
+        )
+        jobAd = result[0]
+
+        assert jobAd["HoldReasonCode"] == 36
+        assert jobAd["HoldReasonSubCode"] == -1
+        assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
