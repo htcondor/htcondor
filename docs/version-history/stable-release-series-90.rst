@@ -22,6 +22,10 @@ New Features:
 
 - None.
 
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
 Bugs Fixed:
 
 - None.
