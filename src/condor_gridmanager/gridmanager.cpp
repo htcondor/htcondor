@@ -59,24 +59,6 @@ struct JobType
 
 List<JobType> jobTypes;
 
-struct VacateRequest {
-	BaseJob *job;
-	action_result_t result;
-};
-
-HashTable <PROC_ID, VacateRequest> pendingScheddVacates( hashFuncPROC_ID );
-HashTable <PROC_ID, VacateRequest> completedScheddVacates( hashFuncPROC_ID );
-
-struct JobStatusRequest {
-	PROC_ID job_id;
-	int tid;
-	int job_status;
-};
-
-HashTable <PROC_ID, JobStatusRequest> pendingJobStatus( hashFuncPROC_ID );
-HashTable <PROC_ID, JobStatusRequest> completedJobStatus( hashFuncPROC_ID );
-
-
 SimpleList<int> scheddUpdateNotifications;
 
 struct ScheddUpdateRequest {
@@ -199,61 +181,6 @@ requestScheddUpdateNotification( int timer_id )
 		scheddUpdateNotifications.Append( timer_id );
 		RequestContactSchedd();
 	}
-}
-
-bool
-requestScheddVacate( BaseJob *job, action_result_t &result )
-{
-	VacateRequest hashed_request;
-
-	// Check if this is an old request that's completed
-	if ( completedScheddVacates.lookup( job->procID, hashed_request ) == 0 ) {
-		// If the request is done, remove it from the hashtable and return
-		// the result
-		completedScheddVacates.remove( job->procID );
-		result = hashed_request.result;
-		return true;
-	}
-
-	if ( pendingScheddVacates.lookup( job->procID, hashed_request ) != 0 ) {
-		// A new request; add it to the hash table
-		hashed_request.job = job;
-		pendingScheddVacates.insert( job->procID, hashed_request );
-		RequestContactSchedd();
-	}
-
-	return false;
-}
-
-bool
-requestJobStatus( PROC_ID job_id, int tid, int &job_status )
-{
-	JobStatusRequest hashed_request;
-
-	// Check if this is an old request that's completed
-	if ( completedJobStatus.lookup( job_id, hashed_request ) == 0 ) {
-		// If the request is done, remove it from the hashtable and return
-		// the job status
-		completedJobStatus.remove( job_id );
-		job_status = hashed_request.job_status;
-		return true;
-	}
-
-	if ( pendingJobStatus.lookup( job_id, hashed_request ) != 0 ) {
-		// A new request; add it to the hash table
-		hashed_request.job_id = job_id;
-		hashed_request.tid = tid;
-		pendingJobStatus.insert( job_id, hashed_request );
-		RequestContactSchedd();
-	}
-
-	return false;
-}
-
-bool
-requestJobStatus( BaseJob *job, int &job_status )
-{
-	return requestJobStatus( job->procID, job->evaluateStateTid, job_status );
 }
 
 void
@@ -575,59 +502,6 @@ doContactSchedd()
 	initJobExprs();
 
 	contactScheddTid = TIMER_UNSET;
-
-	// vacateJobs
-	/////////////////////////////////////////////////////
-	if ( pendingScheddVacates.getNumElements() != 0 ) {
-		std::string buff;
-		StringList job_ids;
-		VacateRequest curr_request;
-
-		int result;
-		ClassAd* rval;
-
-		pendingScheddVacates.startIterations();
-		while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-			formatstr( buff, "%d.%d", curr_request.job->procID.cluster,
-						  curr_request.job->procID.proc );
-			job_ids.append( buff.c_str() );
-		}
-
-		char *tmp = job_ids.print_to_string();
-		if ( tmp ) {
-			dprintf( D_FULLDEBUG, "Calling vacateJobs on %s\n", tmp );
-			free(tmp);
-			tmp = NULL;
-		}
-
-		rval = ScheddObj->vacateJobs( &job_ids, VACATE_FAST, &errstack );
-		if ( rval == NULL ) {
-			formatstr( error_str, "vacateJobs returned NULL, CondorError: %s!",
-							   errstack.getFullText().c_str() );
-			goto contact_schedd_failure;
-		} else {
-			pendingScheddVacates.startIterations();
-			while ( pendingScheddVacates.iterate( curr_request ) != 0 ) {
-				formatstr( buff, "job_%d_%d", curr_request.job->procID.cluster,
-							  curr_request.job->procID.proc );
-				if ( !rval->LookupInteger( buff, result ) ) {
-					dprintf( D_FULLDEBUG, "vacateJobs returned malformed ad\n" );
-					EXCEPT( "vacateJobs returned malformed ad" );
-				} else {
-					dprintf( D_FULLDEBUG, "   %d.%d vacate result: %d\n",
-							 curr_request.job->procID.cluster,
-							 curr_request.job->procID.proc,result);
-					pendingScheddVacates.remove( curr_request.job->procID );
-					curr_request.result = (action_result_t)result;
-					curr_request.job->SetEvaluateState();
-					completedScheddVacates.insert( curr_request.job->procID,
-												   curr_request );
-				}
-			}
-			delete rval;
-		}
-	}
-
 
 	schedd = ConnectQ( *ScheddObj, QMGMT_TIMEOUT, false, NULL, myUserName );
 	if ( !schedd ) {
@@ -961,45 +835,6 @@ contact_schedd_next_add_job:
 	}
 
 
-	// requestJobStatus
-	/////////////////////////////////////////////////////
-	if ( pendingJobStatus.getNumElements() != 0 ) {
-		JobStatusRequest curr_request;
-
-		pendingJobStatus.startIterations();
-		while ( pendingJobStatus.iterate( curr_request ) != 0 ) {
-
-			int status;
-
-			rc = GetAttributeInt( curr_request.job_id.cluster,
-								  curr_request.job_id.proc,
-								  ATTR_JOB_STATUS, &status );
-			if ( rc < 0 ) {
-				if ( errno == ETIMEDOUT ) {
-					failure_line_num = __LINE__;
-					commit_transaction = false;
-					goto contact_schedd_disconnect;
-				} else {
-						// The job is not in the schedd's job queue. This
-						// probably means that the user did a condor_rm -f,
-						// so return a job status of REMOVED.
-					status = REMOVED;
-				}
-			}
-				// return status
-			dprintf( D_FULLDEBUG, "%d.%d job status: %d\n",
-					 curr_request.job_id.cluster,
-					 curr_request.job_id.proc, status );
-			pendingJobStatus.remove( curr_request.job_id );
-			curr_request.job_status = status;
-			daemonCore->Reset_Timer( curr_request.tid, 0 );
-			completedJobStatus.insert( curr_request.job_id,
-									   curr_request );
-		}
-
-	}
-
-
 	// Update existing jobs
 	/////////////////////////////////////////////////////
 	ScheddUpdateRequest *curr_request;
@@ -1160,10 +995,6 @@ contact_schedd_next_add_job:
 				send_reschedule = true;
 			}
 			pendingScheddUpdates.remove( curr_job->procID );
-			pendingScheddVacates.remove( curr_job->procID );
-			pendingJobStatus.remove( curr_job->procID );
-			completedJobStatus.remove( curr_job->procID );
-			completedScheddVacates.remove( curr_job->procID );
 			delete curr_job;
 
 		} else {
