@@ -2164,7 +2164,7 @@ execute machine that has GPUs:
 
       use feature : GPUs
 
-Use of this configuration tempdate invokes the *condor_gpu_discovery*
+Use of this configuration template invokes the *condor_gpu_discovery*
 tool to create a custom resource, with a custom resource name of
 ``GPUs``, and it generates the ClassAd attributes needed to advertise
 the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
@@ -2189,8 +2189,8 @@ default to using nested ClassAds for GPU properties.  The administrator
 can be explict about which form to use for properties by adding either the
 ``-nested`` or ``-not-nested`` option to ``GPU_DISCOVERY_EXTRA``. 
 
-The format of GPU properties, whether nested or not is reflected
-in the slot ClassAd.  The use of nested GPU property ads is necessary
+The format -- nested or not -- of GPU properties in the slot ad is the same as published
+by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
 to do GPU matchmaking and to properly support heterogenous GPUs.  
 For pools that have execute nodes running older versions of HTCondor,
 you may want to config ``-not-nested`` on newer machines for consistency with older
