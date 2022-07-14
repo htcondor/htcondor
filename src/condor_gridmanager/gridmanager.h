@@ -56,9 +56,6 @@ void Register();
 void Reconfig();
 
 void requestScheddUpdate( BaseJob *job, bool notify );
-bool requestScheddVacate( BaseJob *job, action_result_t &result );
-bool requestJobStatus( BaseJob *job, int &job_status );
-bool requestJobStatus( PROC_ID job_id, int tid, int &job_status );
 void requestScheddUpdateNotification( int timer_id );
 
 extern std::map<std::string, BaseJob*> FetchProxyList;

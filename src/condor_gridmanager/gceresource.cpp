@@ -242,12 +242,11 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 		formatstr( remote_job_id, "gce %s %s %s", resourceName,
 				   instance_name.c_str(), instance_id.c_str() );
 
-		BaseJob * tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
+		auto itr = BaseJob::JobsByRemoteId.find(remote_job_id);
 
-		if( rc == 0 ) {
-			ASSERT( tmp );
-			GCEJob * job = dynamic_cast< GCEJob * >( tmp );
+		if( itr != BaseJob::JobsByRemoteId.end() ) {
+			ASSERT( itr->second );
+			GCEJob * job = dynamic_cast< GCEJob * >( itr->second );
 			if( job == NULL ) {
 				EXCEPT( "Found non-GCEJob identified by '%s'.",
 						remote_job_id.c_str() );
@@ -266,12 +265,11 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 		formatstr( remote_job_id, "gce %s %s", resourceName,
 				   instance_name.c_str() );
 
-		tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
+		itr = BaseJob::JobsByRemoteId.find(remote_job_id);
 
-		if( rc == 0 ) {
-			ASSERT( tmp );
-			GCEJob * job = dynamic_cast< GCEJob * >( tmp );
+		if( itr != BaseJob::JobsByRemoteId.end() ) {
+			ASSERT( itr->second );
+			GCEJob * job = dynamic_cast< GCEJob * >( itr->second );
 			if( job == NULL ) {
 				EXCEPT( "Found non-GCEJob identified by '%s'.",
 						remote_job_id.c_str() );
