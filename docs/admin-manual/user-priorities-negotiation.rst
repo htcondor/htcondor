@@ -367,7 +367,7 @@ As described above, the *condor_negotiator* tries to match each job
 to all slots in the pool.  Assume that five slots match one request for
 three jobs, and that their ``NEGOTIATOR_PRE_JOB_RANK``, ``Job.Rank``, 
 and ``NEGOTIATOR_POST_JOB_RANK`` expressions evaluate (in the context 
-of both the slot ad and the job ad to the following values).
+of both the slot ad and the job ad) to the following values.
 
 +------------+-------------------------+----------+-------------------------+
 |Slot Name   |  NEGOTIATOR_PRE_JOB_RANK|  Job.Rank| NEGOTIATOR_POST_JOB_RANK|
