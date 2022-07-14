@@ -385,9 +385,9 @@ of both the slot ad and the job ad) to the following values.
 
 Table 3.1: Example of slots before sorting
 
-Given that, the top three slots would be handed to the *condor_schedd* after
-sorting them first on ``NEGOTIATOR_PRE_JOB_RANK``, then sorting all ties based on ``Job.Rank``
-and any remaining ties sorted by ``NEGOTIATOR_POST_JOB_RANK``.  This
+These slots would be sorted first on `NEGOTIATOR_PRE_JOB_RANK``, then sorting all ties based on ``Job.Rank``
+and any remaining ties sorted by ``NEGOTIATOR_POST_JOB_RANK``.  After that, the first three slots would be
+handed to the *condor_schedd*.  This
 means that ``NEGOTIATOR_PRE_JOB_RANK`` is very strong, and overrides any
 ranking expression by the submitter of the job.  After sorting, the slots would look
 like this, and the schedd would be given slot5, slot3 and slot2:
