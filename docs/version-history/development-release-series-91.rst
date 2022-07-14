@@ -83,6 +83,9 @@ Bugs Fixed:
   lease.
   :jira:`960`
 
+- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
+  :jira:`1074`
+
 Version 9.9.1
 -------------
 
@@ -186,9 +189,6 @@ Bugs Fixed:
 - Fix a rare bug where the starter will fail to start a job, and the job will
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
-
-- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
-  :jira:`1074`
 
 Version 9.8.1
 -------------
