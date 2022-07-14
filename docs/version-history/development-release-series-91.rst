@@ -36,7 +36,7 @@ New Features:
   :jira:`1185`
 
 - If a job that is a Unix script with a ``#!`` interpreter fails to run because
-  the interpeter doesn't exist, a clearer error message is written to the
+  the interpreter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
 
 - When an **arc** grid universe job has both a token and an X.509
@@ -46,7 +46,7 @@ New Features:
   
 - DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
   to allow passed variables to be set at the beginning or end of a DAG
-  job's submit file. Any ``VARS`` without these options will have behavior
+  job's submit description. Any ``VARS`` without these options will have behavior
   derived from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
   Which defaults to PREPEND.
   :jira:`1080`
@@ -65,9 +65,9 @@ Bugs Fixed:
   Now, the jobs go to held status.
   :jira:`1194`
 
-- Fixed the classad shared library extension mechanism.  An earlier
+- Fixed the ClassAd shared library extension mechanism.  An earlier
   development series broke the ability for users to add custom
-  classad functions as documented in 
+  ClassAd functions as documented in 
   :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
   :jira:`1196`
 
