@@ -192,7 +192,7 @@ def mmfdw_impl(pathToManifestDir, prefix, args, suffix):
     return manifestText
 
 def makeManifestForDirectory(pathToManifestDir):
-    args = [ 'condor_manifest', 'compute_file_checksum' ]
+    args = [ 'condor_manifest', 'compute_file_sha256_checksum' ]
     return makeManifestForDirectoryWith(pathToManifestDir, args)
 
 class TestManifestFiles:
@@ -264,13 +264,17 @@ class TestManifestFiles:
 
     @pytest.fixture
     def file_result(self, test_case):
-        rv = subprocess.run(["condor_manifest", "validateFile", test_case[0] ],
+        rv = subprocess.run([
+                    "condor_manifest",
+                    "validateManifestFile",
+                    test_case[0],
+                ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 timeout=20)
         return rv.returncode
 
-    def test_validateFile(self, test_case, file_expected, file_result):
+    def test_validateManifestFile(self, test_case, file_expected, file_result):
         assert file_expected == file_result
 
     @pytest.fixture
@@ -315,5 +319,5 @@ class TestManifestFiles:
           pathToManifestDir, args, '.sha256sum')
         ).read_bytes()
 
-    def test_compute_file_checksum(self, crypto_test_case, crypto_expected, crypto_result):
+    def test_compute_file_sha256_checksum(self, crypto_test_case, crypto_expected, crypto_result):
         assert crypto_expected == crypto_result

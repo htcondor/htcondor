@@ -30,6 +30,7 @@
 #include "checksum.h"
 #include "stl_string_utils.h"
 #include "AWSv4-impl.h"
+#include "safe_fopen.h"
 
 
 namespace manifest {
@@ -51,7 +52,7 @@ getNumberFromFileName( const std::string & fn ) {
 }
 
 bool
-validateFile( const std::string & fileName ) {
+validateManifestFile( const std::string & fileName ) {
 	EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
 	if( context == NULL ) { return false; }
 	if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
@@ -59,18 +60,29 @@ validateFile( const std::string & fileName ) {
 		return false;
 	}
 
-	std::ifstream ifs( fileName );
+	FILE * fp = safe_fopen_no_create( fileName.c_str(), "r" );
+	if( fp == NULL ) {
+		condor_EVP_MD_CTX_free( context );
+		return false;
+	}
+
 	std::string manifestLine;
+	if(! readLine( manifestLine, fp )) {
+		condor_EVP_MD_CTX_free( context );
+		fclose(fp);
+		return false;
+	}
+
 	std::string nextManifestLine;
-	std::getline( ifs, manifestLine );
-	std::getline( ifs, nextManifestLine );
-	for( ; ifs.good(); ) {
-		manifestLine += "\n";
+	bool rv = readLine( nextManifestLine, fp );
+
+	while( rv ) {
 		EVP_DigestUpdate( context, manifestLine.c_str(), manifestLine.length() );
 
 		manifestLine = nextManifestLine;
-		std::getline( ifs, nextManifestLine );
+		rv = readLine( nextManifestLine, fp );
 	}
+	fclose(fp);
 
 	unsigned char hash[SHA256_DIGEST_LENGTH];
 	memset( hash, 0, sizeof(hash) );
@@ -85,6 +97,7 @@ validateFile( const std::string & fileName ) {
 		hash, SHA256_DIGEST_LENGTH, file_hash
 	);
 
+	trim( manifestLine );
 	std::string manifestFileName = FileFromLine( manifestLine );
 	std::string manifestChecksum = ChecksumFromLine( manifestLine );
 
@@ -98,6 +111,7 @@ validateFile( const std::string & fileName ) {
 std::string
 FileFromLine( const std::string & manifestLine ) {
 	auto pos = manifestLine.find(' ');
+	if( pos == std::string::npos ) { return std::string(); }
 	if( manifestLine[++pos] == '*' ) { ++pos; }
 	return manifestLine.substr(pos);
 }
@@ -113,8 +127,9 @@ validateFilesListedIn(
   const std::string & manifestFileName,
   std::string & error
 ) {
-	std::ifstream ifs( manifestFileName.c_str() );
-	if(! ifs.good() ) {
+
+	FILE * fp = safe_fopen_no_create( manifestFileName.c_str(), "r" );
+	if( fp == NULL ) {
 		error = "Failed to open MANIFEST, aborting.";
 		return false;
 	}
@@ -123,30 +138,39 @@ validateFilesListedIn(
 	// that's what the validator does.
 	bool readOneLine = false;
 	std::string manifestLine;
+	if(! readLine( manifestLine, fp )) {
+		error = "Failed to read first line of MANIFEST, aborting.";
+		fclose(fp);
+		return false;
+	}
+
 	std::string nextManifestLine;
-	std::getline( ifs, manifestLine );
-	std::getline( ifs, nextManifestLine );
-	for( ; ifs.good(); ) {
+	bool rv = readLine( nextManifestLine, fp );
+
+	while( rv ) {
+		trim( manifestLine );
 		std::string file = manifest::FileFromLine( manifestLine );
 		std::string listedChecksum = manifest::ChecksumFromLine( manifestLine );
 
 		std::string computedChecksum;
-		if(! compute_file_checksum( file, computedChecksum )) {
+		if(! compute_file_sha256_checksum( file, computedChecksum )) {
 			formatstr( error, "Failed to open checkpoint file ('%s') to compute checksum.", file.c_str() );
+			fclose(fp);
 			return false;
 		}
 
 		if( listedChecksum != computedChecksum ) {
 			formatstr( error, "Checkpoint file '%s' did not have expected checksum (%s vs %s).", file.c_str(), computedChecksum.c_str(), listedChecksum.c_str() );
+			fclose(fp);
 			return false;
 		}
 
 		manifestLine = nextManifestLine;
-		std::getline( ifs, nextManifestLine );
+		rv = readLine( nextManifestLine, fp );
 		readOneLine = true;
 	}
+	fclose(fp);
 
-	ifs.close();
 	return readOneLine;
 }
 

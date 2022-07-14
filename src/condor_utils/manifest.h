@@ -26,7 +26,9 @@ namespace manifest {
     // otherwise return -1.
     int getNumberFromFileName( const std::string & fileName );
 
-    bool validateFile( const std::string & fileName );
+    // Return true if the SHA256 checksum on the last line of this MANIFEST
+    // file is SHA256 checksum of the previous lines in this MANIFEST file.
+    bool validateManifestFile( const std::string & fileName );
 
     // Return true if each line in fileName lists the correct SHA256 checksum
     // for the file it lists.  Returns false it the file doesn't exist or
@@ -37,7 +39,12 @@ namespace manifest {
     // (which should always be the containing directory).
     bool validateFilesListedIn( const std::string & fileName, std::string & error );
 
+    // Returns the line after its first space (and first '*', if present),
+    // or the empty string if the line contains no space.
     std::string FileFromLine( const std::string & manifestLine );
+
+    // Return the line up to its first space, or the whole line if it
+    // contains no space.
     std::string ChecksumFromLine( const std::string & manifestLine );
 }
 

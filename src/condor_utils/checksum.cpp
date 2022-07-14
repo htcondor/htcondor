@@ -33,7 +33,7 @@
 
 
 bool
-compute_checksum( int fd, std::string & checksum ) {
+compute_sha256_checksum( int fd, std::string & checksum ) {
     const size_t BUF_SIZ = 1024 * 1024;
     unsigned char * buffer = (unsigned char *)calloc(BUF_SIZ, 1);
     ASSERT( buffer != NULL );
@@ -74,10 +74,10 @@ compute_checksum( int fd, std::string & checksum ) {
 }
 
 bool
-compute_file_checksum( const std::string & file_name, std::string & checksum ) {
+compute_file_sha256_checksum( const std::string & file_name, std::string & checksum ) {
     int fd = safe_open_wrapper_follow( file_name.c_str(), O_RDONLY | O_LARGEFILE | _O_BINARY, 0 );
     if( fd < 0 ) { return false; }
-    bool rv = compute_checksum( fd, checksum );
+    bool rv = compute_sha256_checksum( fd, checksum );
     close(fd); fd = -1;
     return rv;
 }
