@@ -50,6 +50,13 @@ New Features:
   and other systems that have no negotiator.
   :jira:`1192`
 
+- Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
+  updated man page to document them and to expand the documentation of the
+  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
+  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
+  option is used for discovery.
+  :jira:`711`
+
 Bugs Fixed:
 
 - Fixed a bug where **arc** grid universe jobs would remain in idle
