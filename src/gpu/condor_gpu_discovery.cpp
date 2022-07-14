@@ -401,7 +401,7 @@ main( int argc, const char** argv)
 	int opt_hetero = 0;  // don't assume properties are homogeneous
 	int opt_simulate = 0; // pretend to detect GPUs
 	int opt_config = 0;
-	int opt_nested = 0;  // publish properties using nested ads
+	int opt_nested = 1;  // publish properties using nested ads
 	int opt_uuid = -1;   // publish DetectedGPUs as a list of GPU-<uuid> rather than than CUDA<N>
 	int opt_short_uuid = -1; // use shortened uuids
 	std::set<std::string> whitelist; // combined whitelist from CUDA_VISIBLE_DEVICES, GPU_DEVICE_ORDINAL and/or -devices arg
@@ -457,6 +457,9 @@ main( int argc, const char** argv)
 		}
 		else if (is_dash_arg_prefix(argv[i], "nested", 2)) {
 			opt_nested = 1;
+		}
+		else if (is_dash_arg_prefix(argv[i], "not-nested", 6) || is_dash_arg_prefix(argv[i], "no-nested", 5)) {
+			opt_nested = 0;
 		}
 		else if (is_dash_arg_prefix(argv[i], "dynamic", 3)) {
 			// We need the basic properties in order to determine the
@@ -1113,18 +1116,24 @@ void usage(FILE* out, const char * argv0)
 		"    -extra            Include extra GPU device properties\n"
 		"    -dynamic          Include dynamic GPU device properties\n"
 		"    -mixed            Assume mixed GPU configuration\n"
-//		"    -nested           Print properties using nested ClassAds\n"
+		"    -nested           Print properties using nested ClassAds. (default)\n"
+		"    -not-nested       Print properties using prefixed attributes. Disables -nested\n"
 		"    -device <N>       Include properties only for GPU device N\n"
 		"    -tag <string>     use <string> as resource tag, default is GPUs\n"
-		"    -prefix <string>  use <string> as property prefix, default is CUDA or OCL\n"
+		"    -prefix <string>  use <string> as -not-nested property prefix, default is CUDA or OCL\n"
 		"    -cuda             Detection via CUDA only, ignore OpenCL devices\n"
 		"    -opencl           Prefer detection via OpenCL rather than CUDA\n"
 		"    -uuid             Use GPU uuid instead of index as GPU id\n"
 		"    -short-uuid       Use first 8 characters of GPU uuid as GPU id (default)\n"
 		"    -by-index         Use GPU index as the GPU id\n"
-		"    -simulate[:D[,N]] Simulate detection of N devices of type D\n"
-		"           where D is 0 - GeForce GT 330, default N=1\n"
+		"    -simulate[:D[,N[,D2...]] Simulate detection of N devices of type D\n"
+		"           where D is 0 - GeForce GT 330\n"
 		"                      1 - GeForce GTX 480, default N=2\n"
+		"                      2 - Tesla V100-PCIE-16GB\n"
+		"                      3 - TITAN RTX\n"
+		"                      4 - A100-SXM4-40GB\n"
+		"                      5 - NVIDIA A100-SXM4-40GB MIG 1g.5gb\n"
+		"                      6 - NVIDIA A100-SXM4-40GB MIG 3g.20gb\n"
 		"    -config           Output in HTCondor config syntax\n"
 		"    -repeat [<N>]     Repeat list of detected GPUs N (default 2) times\n"
 		"                      (e.g., DetectedGPUS = \"CUDA0, CUDA1, CUDA0, CUDA1\")\n"
