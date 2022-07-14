@@ -45,6 +45,11 @@ Bugs Fixed:
   during shutdown.
   :jira:`1200`
 
+- Fixed a bug where the *condor_starter* would wait forever for a
+  reconnect from the *condor_shadow* if a network failure occurred
+  during cleanup after the job completed.
+  :jira:`1213`
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
