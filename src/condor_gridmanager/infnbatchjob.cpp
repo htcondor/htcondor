@@ -1283,6 +1283,9 @@ void INFNBatchJob::ProcessRemoteAd( ClassAd *remote_ad )
 		ATTR_JOB_REMOTE_USER_CPU,
 		ATTR_NUM_RESTARTS,
 		ATTR_JOB_REMOTE_WALL_CLOCK,
+		"CpusProvisioned",
+		"DiskProvisioned",
+		"MemoryProvisioned",
 		NULL };		// list must end with a NULL
 
 	if ( remote_ad == NULL ) {

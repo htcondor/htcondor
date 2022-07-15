@@ -887,6 +887,10 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 					// If we're doing a fast shutdown, ignore any failures
 					// in talking to the shadow.
 				if ( !fast_exit ) {
+					// force disconnect, start a timer to exit after lease gone
+					// We just unregistered the syscall socket from DaemonCore,
+					// so it won't call us back later about the bad socket
+					syscall_sock_disconnect();
 					return false;
 				}
 			}

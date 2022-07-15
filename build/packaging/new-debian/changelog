@@ -1,3 +1,12 @@
+condor (9.10.0-1) stable; urgency=medium
+
+  * With collector administrator access, can manage all HTCondor pool daemons
+  * SciTokens can now be used for authentication with ARC CE servers
+  * Preliminary support for ARM and POWER RC on AlmaLinux 8
+  * Prevent negative values when using huge files with a file transfer plugin
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Jul 2022 16:22:00 -0600
+
 condor (9.0.14-1) stable; urgency=medium
 
   * SciToken mapping failures are now recorded in the daemon logs

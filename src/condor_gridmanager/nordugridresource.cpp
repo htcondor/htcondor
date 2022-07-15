@@ -253,15 +253,13 @@ void NordugridResource::DoJobStatus()
 					// We just reached the end of a record. Process it.
 					// If we don't have the attributes we expect, skip it.
 				if ( next_job_id && next_status ) {
-					int rc2;
 					const char *id;
-					BaseJob *base_job = NULL;
 					NordugridJob *job = NULL;
 					id = strrchr( next_job_id, '/' );
 					id = (id != NULL) ? (id + 1) : "";
 					formatstr( key, "nordugrid %s %s", resourceName, id );
-					rc2 = BaseJob::JobsByRemoteId.lookup( key, base_job );
-					if ( rc2 == 0 && (job = dynamic_cast<NordugridJob*>(base_job)) ) {
+					auto itr = BaseJob::JobsByRemoteId.find(key);
+					if ( itr != BaseJob::JobsByRemoteId.end() && (job = dynamic_cast<NordugridJob*>(itr->second)) ) {
 						job->NotifyNewRemoteStatus( strchr( next_status, ' ' ) + 1 );
 					}
 				}

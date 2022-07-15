@@ -88,11 +88,6 @@ public:
 	//
 	bool unregister_family(pid_t);
 
-	// tell the procd it'll need to use glexec (with the given
-	// proxy) in order to send signals to this family
-	//
-	bool use_glexec_for_family(pid_t, const char* proxy);
-
 	// called by the master prior to exiting to insure that the procd child process is reaped
 	//
 	bool quit(void(*notify)(void*me, int pid, int status),void*me);

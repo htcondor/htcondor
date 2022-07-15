@@ -53,7 +53,7 @@ SUPPORTED_DAILY_DISTROS = [
 ]
 DISTRO_IMAGE = {
          "el7": "centos:7",
-         "el8": "centos:8",
+         "el8": "rockylinux:8",
     "ubu18.04": "ubuntu:18.04",
     "ubu20.04": "ubuntu:20.04",
 }

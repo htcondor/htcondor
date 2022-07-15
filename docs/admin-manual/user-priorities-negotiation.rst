@@ -353,6 +353,7 @@ the following ordered list of items.
                     ``machine.RANK`` on this job is not worse than the
                     currently running job, add this machine to the
                     potential match list by reason of Priority.
+                    See example below.
 
            -  Of machines in the potential match list, sort by
               ``NEGOTIATOR_PRE_JOB_RANK``, ``job.RANK``,
@@ -361,6 +362,52 @@ the following ordered list of items.
            -  The job is assigned to the top machine on the potential
               match list. The machine is removed from the list of
               resources to match (on this negotiation cycle).
+
+As described above, the *condor_negotiator* tries to match each job
+to all slots in the pool.  Assume that five slots match one request for
+three jobs, and that their ``NEGOTIATOR_PRE_JOB_RANK``, ``Job.Rank``, 
+and ``NEGOTIATOR_POST_JOB_RANK`` expressions evaluate (in the context 
+of both the slot ad and the job ad) to the following values.
+
++------------+-------------------------+----------+-------------------------+
+|Slot Name   |  NEGOTIATOR_PRE_JOB_RANK|  Job.Rank| NEGOTIATOR_POST_JOB_RANK|
++============+=========================+==========+=========================+
+|slot1       |                      100|         1|                       10|
++------------+-------------------------+----------+-------------------------+
+|slot2       |                      100|         2|                       20|
++------------+-------------------------+----------+-------------------------+
+|slot3       |                      100|         2|                       30|
++------------+-------------------------+----------+-------------------------+
+|slot4       |                        0|         1|                       40|
++------------+-------------------------+----------+-------------------------+
+|slot5       |                      200|         1|                       50|
++------------+-------------------------+----------+-------------------------+
+
+Table 3.1: Example of slots before sorting
+
+These slots would be sorted first on `NEGOTIATOR_PRE_JOB_RANK``, then sorting all ties based on ``Job.Rank``
+and any remaining ties sorted by ``NEGOTIATOR_POST_JOB_RANK``.  After that, the first three slots would be
+handed to the *condor_schedd*.  This
+means that ``NEGOTIATOR_PRE_JOB_RANK`` is very strong, and overrides any
+ranking expression by the submitter of the job.  After sorting, the slots would look
+like this, and the schedd would be given slot5, slot3 and slot2:
+
++-------------+-------------------------+----------+-------------------------+
+| Slot Name   | NEGOTIATOR_PRE_JOB_RANK | Job.Rank | NEGOTIATOR_POST_JOB_RANK|
++=============+=========================+==========+=========================+
+| slot5       |                      200|         1|                       50|
++-------------+-------------------------+----------+-------------------------+
+| slot3       |                      100|         2|                       30|
++-------------+-------------------------+----------+-------------------------+
+| slot2       |                      100|         2|                       20|
++-------------+-------------------------+----------+-------------------------+
+| slot1       |                      100|         1|                       10|
++-------------+-------------------------+----------+-------------------------+
+| slot4       |                        0|         1|                       40|
++-------------+-------------------------+----------+-------------------------+
+
+Table 3.2: Example of slots after sorting
+
 
 The *condor_negotiator* asks the *condor_schedd* for the "next job"
 from a given submitter/user. Typically, the *condor_schedd* returns
@@ -671,7 +718,7 @@ attributes for sorting with ``GROUP_SORT_EXPR``
 | GroupResourcesAllocated | Quota allocated this cycle               |
 +-------------------------+------------------------------------------+
 
-Table 3.1: Attributes visible to GROUP_SORT_EXPR
+Table 3.3: Attributes visible to GROUP_SORT_EXPR
 
 
 One possible group quota policy is strict priority. For example, a site

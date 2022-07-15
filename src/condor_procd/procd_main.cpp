@@ -29,7 +29,6 @@
 #endif
 
 #if !defined(WIN32)
-#include "glexec_kill.unix.h"
 #include <syslog.h>
 #endif
 
@@ -74,16 +73,6 @@ static gid_t max_tracking_gid = 0;
 static char* windows_softkill_binary = NULL;
 #endif
 
-#if !defined(WIN32)
-// when the GLEXEC_JOB feature is used, we will be configured with
-// paths to glexec and a helper script to use for killing processes
-//
-static char* glexec_kill_path = NULL;
-static char* glexec_path = NULL;
-static int glexec_retries = 0;
-static int glexec_retry_delay = 0;
-#endif
-
 // Determines if the procd should assign GIDs to family groups internally using
 // the range denoted by -G, or if there will be an external method like
 // gidd_alloc (which is used by OSG) in which case the associated gid must
@@ -121,11 +110,7 @@ usage(void)
 	"                         out of this range for process family tracking.\n"
 	"                         If -E is specified then procd_ctl must be used\n"
 	"                         to allocate gids which must then be in this\n"
-	"                         range.\n"
-	"  -I <glexec-kill-path> <glexec-path> <glexec-retries> <glexec-retry-delay>\n"
-	"                         Specify the binary which will send a signal\n"
-	"                         to a pid and the glexec binary which will run\n"
-	"                         the program under the right priviledges.\n");
+	"                         range.\n");
 }
 
 static inline void
@@ -281,25 +266,6 @@ parse_command_line(int argc, char* argv[])
 				windows_softkill_binary = argv[index];
 				break;
 #endif
-
-#if !defined(WIN32)
-			// glexec and kill script paths
-			//
-			case 'I':
-				if (index + 4 >= argc) {
-					fail_option_args("-I", 4);
-				}
-				index++;
-				glexec_kill_path = argv[index];
-				index++;
-				glexec_path = argv[index];
-				index++;
-				glexec_retries = atoi(argv[index]);
-				index++;
-				glexec_retry_delay = atoi(argv[index]);
-				break;
-#endif
-
 			// default case
 			//
 			default:
@@ -437,15 +403,6 @@ main(int argc, char* argv[])
 	//
 	if (windows_softkill_binary != NULL) {
 		set_windows_soft_kill_binary(windows_softkill_binary);
-	}
-#endif
-
-#if !defined(WIN32)
-	// if we were given arguments for using glexec to kill processes,
-	// initialize the glexec_kill module
-	//
-	if (glexec_kill_path != NULL) {
-		glexec_kill_init(glexec_kill_path, glexec_path, glexec_retries, glexec_retry_delay);
 	}
 #endif
 
