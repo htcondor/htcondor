@@ -28,9 +28,7 @@ Version 9.10.0
 
 Release Notes:
 
-.. HTCondor version 9.10.0 released on Month Date, 2022.
-
-- HTCondor version 9.10.0 not yet released.
+- HTCondor version 9.10.0 released on July 14, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-9014`.
 
@@ -49,19 +47,6 @@ Release Notes:
 
 New Features:
 
-- Added support for running on Linux systems that ship with openssl version 3
-  :jira:`1148`
-
-- *condor_submit* now has support for submitting jobsets. Jobsets are still
-  a technology preview and still not ready for general use.
-  :jira:`1063`
-  
-- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
-  to allow passed variables to be initialized before or after DAG jobs are
-  submitted. Any ``VARS`` without these options will have behavior derived
-  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
-  :jira:`1080`
-
 - The remote administration capability in daemon ads sent to the
   **condor_collector** (configuration parameter
   ``SEC_ENABLE_REMOTE_ADMINISTRATION``) is now enabled be default.
@@ -73,6 +58,17 @@ New Features:
   authentication with the ARC CE server.
   :jira:`1061`
 
+- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
+  on Alma Linux 8 and equivalent platforms.
+  :jira:`1150`
+
+- Added support for running on Linux systems that ship with OpenSSL version 3.
+  :jira:`1148`
+
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
+  
 - All regular expressions in configuration and in the ClassAd regexp function
   now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
   will break no existing regular expressions.
@@ -83,10 +79,6 @@ New Features:
   prevents apptainer from displaying ugly warnings about how this won't
   work in the future.
   :jira:`1137`
-
-- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
-  on Alma Linux 8 and equivalent platforms.
-  :jira:`1150`
 
 - The *condor_schedd* now adds the ``ServerTime`` attribute to the job
   ads of a query only if the client (i.e. *condor_q*) requests it.
@@ -107,6 +99,9 @@ Bugs Fixed:
   *condor_starter* handle network disruptions and jobs that have no
   lease.
   :jira:`960`
+
+- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
+  :jira:`1074`
 
 Version 9.9.1
 -------------
@@ -211,9 +206,6 @@ Bugs Fixed:
 - Fix a rare bug where the starter will fail to start a job, and the job will
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
-
-- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
-  :jira:`1074`
 
 Version 9.8.1
 -------------

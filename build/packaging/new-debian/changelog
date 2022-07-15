@@ -1,3 +1,23 @@
+condor (9.10.0-1) stable; urgency=medium
+
+  * With collector administrator access, can manage all HTCondor pool daemons
+  * SciTokens can now be used for authentication with ARC CE servers
+  * Preliminary support for ARM and POWER RC on AlmaLinux 8
+  * Prevent negative values when using huge files with a file transfer plugin
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Jul 2022 16:22:00 -0600
+
+condor (9.0.14-1) stable; urgency=medium
+
+  * SciToken mapping failures are now recorded in the daemon logs
+  * Fix bug that stopped file transfers when output and error are the same
+  * Ensure that the Python bindings version matches the installed HTCondor
+  * $(OPSYSANDVER) now expand properly in job transforms
+  * Fix bug where context managed Python htcondor.SecMan sessions would crash
+  * Fix bug where remote CPU times would rarely be set to zero
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Jul 2022 15:18:00 -0600
+
 condor (9.9.1-1) stable; urgency=medium
 
   * Fix bug where jobs would not match when using a child collector

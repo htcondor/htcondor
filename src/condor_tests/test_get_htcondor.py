@@ -75,9 +75,11 @@ IMAGES_BY_CHANNEL = {
         "debian:10",
         "debian:11",
         "centos:7",
-        "rockylinux:8",
+        "almalinux:8",
         "amazonlinux:2",
         "scientificlinux/sl:7",
+        "arm64v8/almalinux:8",
+        "ppc64le/almalinux:8",
     ],
 }
 

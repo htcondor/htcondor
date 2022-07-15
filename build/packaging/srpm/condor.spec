@@ -1648,6 +1648,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.0-1
+- With collector administrator access, can manage all HTCondor pool daemons
+- SciTokens can now be used for authentication with ARC CE servers
+- Preliminary support for ARM and POWER RC on AlmaLinux 8
+- Prevent negative values when using huge files with a file transfer plugin
+
+* Tue Jul 12 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.14-1
+- SciToken mapping failures are now recorded in the daemon logs
+- Fix bug that stopped file transfers when output and error are the same
+- Ensure that the Python bindings version matches the installed HTCondor
+- $(OPSYSANDVER) now expand properly in job transforms
+- Fix bug where context managed Python htcondor.SecMan sessions would crash
+- Fix bug where remote CPU times would rarely be set to zero
+
 * Tue Jun 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.1-1
 - Fix bug where jobs would not match when using a child collector
 
