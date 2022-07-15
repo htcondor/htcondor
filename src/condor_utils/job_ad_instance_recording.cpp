@@ -118,11 +118,44 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	std::string file_name,file_path;
 	formatstr(file_name,"job.runs.%d.%d.ads",clusterId,procId);
 	dircat(JobEpochInstDir,file_name.c_str(),file_path);
+
 	//Open file and append Job Ad to it
-	int fd = safe_open_wrapper_follow(file_path.c_str(), O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT, 0644);
+	int fd = -1;
+	const char * errmsg = nullptr;
+	const int   open_flags = O_RDWR | O_CREAT | O_APPEND | _O_BINARY | O_LARGEFILE | _O_NOINHERIT;
+#ifdef WIN32
+	DWORD err = 0;
+	const DWORD attrib =  FILE_ATTRIBUTE_NORMAL;
+	const DWORD create_mode = (open_flags & O_CREAT) ? OPEN_ALWAYS : OPEN_EXISTING;
+	const DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
+	HANDLE hf = CreateFile(file_path.c_str(), FILE_APPEND_DATA, share_mode, NULL, create_mode, attrib, NULL);
+	if (hf == INVALID_HANDLE_VALUE) {
+		err = GetLastError();
+	} else {
+		fd = _open_osfhandle((intptr_t)hf, open_flags & (_O_TEXT | _O_WTEXT));
+		if (fd < 0) {
+			// open_osfhandle can sometimes set errno and sometimes _doserrno (i.e. GetLastError()),
+			// the only non-windows error code it sets is EMFILE when the c-runtime fd table is full.
+			if (errno == EMFILE) {
+				err = ERROR_TOO_MANY_OPEN_FILES;
+			} else {
+				err = _doserrno;
+				if (err == NO_ERROR) err = ERROR_INVALID_FUNCTION; // make sure we get an error code
+			}
+		}
+		errmsg = GetLastErrorString(err);
+	}
+#else
+	int err = 0;
+	fd = safe_open_wrapper_follow(file_path.c_str(), open_flags, 0644);
+	if (fd < 0) {
+		err = errno;
+		errmsg = strerror(errno);
+	}
+#endif
 	if (fd < 0) {
 		dprintf(D_ALWAYS | D_ERROR,"ERROR (%d): Opening job run instance file (%s): %s",
-									errno, file_name.c_str(), strerror(errno));
+									err, file_name.c_str(), errmsg);
 		return;
 	}
 
