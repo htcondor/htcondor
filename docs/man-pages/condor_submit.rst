@@ -2482,7 +2482,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
 COMMANDS FOR THE CONTAINER UNIVERSE
     :index:`container_image<single: container_image; submit commands>`
  container_image = < image-name >
-    Defines the name of the container image. Can be a singularity .sif file
+    Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
     repository
 
