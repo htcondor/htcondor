@@ -142,9 +142,10 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 				err = _doserrno;
 				if (err == NO_ERROR) err = ERROR_INVALID_FUNCTION; // make sure we get an error code
 			}
+			CloseHandle(hf);
 		}
-		errmsg = GetLastErrorString(err);
 	}
+	if (fd < 0) errmsg = GetLastErrorString(err);
 #else
 	int err = 0;
 	fd = safe_open_wrapper_follow(file_path.c_str(), open_flags, 0644);
