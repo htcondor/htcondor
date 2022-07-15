@@ -24,6 +24,10 @@ New Features:
   directory, not in tmpfs.
   :jira:`1193`
 
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
 Bugs Fixed:
 
 - Fixed a bug on Windows that caused a misleading error message about
@@ -44,6 +48,11 @@ Bugs Fixed:
 - Fix a bug that could cause daemons to crash if their log rotates
   during shutdown.
   :jira:`1200`
+
+- Fixed a bug where the *condor_starter* would wait forever for a
+  reconnect from the *condor_shadow* if a network failure occurred
+  during cleanup after the job completed.
+  :jira:`1213`
 
 .. _lts-version-history-9014:
 
