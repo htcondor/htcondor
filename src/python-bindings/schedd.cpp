@@ -696,7 +696,7 @@ struct SubmitStepFromPyIter {
 	{
 		if (num > 0) { m_fea.queue_num = num; }
 
-		// get an interator for the foreach data. this grabs a refcount
+		// get an iterator for the foreach data. this grabs a refcount
 		if (PyIter_Check(from.ptr())) {
 			m_items = PyObject_GetIter(from.ptr());
 		}
@@ -706,7 +706,7 @@ struct SubmitStepFromPyIter {
 		// release the iterator refcount (if any)
 		Py_XDECREF(m_items);
 
-		// disconnnect the hashtable from our livevars pointers
+		// disconnect the hashtable from our livevars pointers
 		unset_live_vars();
 	}
 
@@ -3334,7 +3334,7 @@ public:
 			bool allows_late = false;
 			if (capabilities && capabilities->LookupBool("LateMaterialize", allows_late) && allows_late) {
 				int late_ver = 0;
-				// we require materialize version 2 or later (digest is pruned, requirments generated from job ad)
+				// we require materialize version 2 or later (digest is pruned, requirements generated from job ad)
 				if (capabilities->LookupInteger("LateMaterializeVersion", late_ver) && late_ver >= 2) {
 					factory_submit = true;
 				} else {
@@ -3505,7 +3505,7 @@ public:
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
 			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
-				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materilize.");
+				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materialize.");
 			}
 
 		} else {
@@ -3667,7 +3667,7 @@ public:
 			// send the submit digest to the schedd. the schedd will parse the digest at this point
 			// and return success or failure.
 			if (SetJobFactory(cluster, (int)max_materialize, NULL, submit_digest.c_str()) < 0) {
-				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materilize.");
+				THROW_EX(HTCondorIOError, "Failed to send job factory for max_materialize.");
 			}
 
 
@@ -3835,7 +3835,7 @@ public:
 		bool use_remainder = true;
 
 		if ( ! qline.empty()) {
-			// incase they sent a string that starts with the word "queue", skip over that now.
+			// in case they sent a string that starts with the word "queue", skip over that now.
 			pqargs = SubmitHash::is_queue_statement(qline.c_str());
 			if ( ! pqargs) pqargs = qline.c_str();
 			use_remainder = false;
@@ -4325,8 +4325,9 @@ void export_schedd()
             :param bool spool: If ``True``, jobs will be submitted in a spooling hold mode
                so that input files can be spooled to a remote *condor_schedd* daemon before starting the jobs.
                This parameter is necessary for jobs submitted to a remote *condor_schedd* that use HTCondor file transfer.
+               When True, job will be left in the HOLD state until the :func:`spool` method is called.
             :param ad_results: deprecated. If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
-                that were submitted. These are passed to the spool method to send files to the remote Schedd.
+                that were submitted.
             :type ad_results: list[:class:`~classad.ClassAd`]
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
                 range of Job ids of the submitted job(s).  If using the deprecated first argument, the return value
@@ -4374,13 +4375,13 @@ void export_schedd()
             :param list proc_ads: A list of 2-tuples; each tuple has the format of ``(proc_ad, count)``.
                 For each list entry, this will result in count jobs being submitted inheriting from
                 both ``cluster_ad`` and ``proc_ad``.
-            :param bool spool: If ``True``, the clinent inserts the necessary attributes
+            :param bool spool: If ``True``, the client inserts the necessary attributes
                 into the job for it to have the input files spooled to a remote
                 *condor_schedd* daemon. This parameter is necessary for jobs submitted
                 to a remote *condor_schedd* that use HTCondor file transfer.
+                When True, job will be left in the HOLD state until the :func:`spool` method is called.
             :param ad_results: If set to a list, the list object will contain the job ads
                 resulting from the job submission.
-                These are needed for interacting with the job spool after submission.
             :type ad_results: list[:class:`~classad.ClassAd`]
             :return: The newly created cluster ID.
             :rtype: int
@@ -4395,7 +4396,7 @@ void export_schedd()
             to the *condor_schedd*.
 
             :param ad_list: A list of job descriptions; typically, this is the list
-                filled by the ``ad_results`` argument of the :meth:`submit` method call.
+                returned by the :meth:`jobs` method on the submit result object.
             :type ad_list: list[:class:`~classad.ClassAds`]
             :raises RuntimeError: if there are any errors.
             )C0ND0R",
@@ -4495,7 +4496,7 @@ void export_schedd()
             R"C0ND0R(
             Import results from previously exported jobs, and take those jobs back out of the externally managed state.
 
-            :param str import_dir: The path to the modified form of a previously-exported direcory.
+            :param str import_dir: The path to the modified form of a previously-exported directory.
             :return: A ClassAd containing information about the import operation.
             :rtype: :class:`~classad.ClassAd`
             )C0ND0R",
@@ -4749,7 +4750,7 @@ void export_schedd()
             )
         .def("getQArgs", &Submit::getQArgs,
             R"C0ND0R(
-            Returns arguments specified in the ``QUEUE`` statement passed to the contructor.
+            Returns arguments specified in the ``QUEUE`` statement passed to the constructor.
             These are the arguments that will be used by the :meth:`Submit.queue`
             and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
             )C0ND0R",
