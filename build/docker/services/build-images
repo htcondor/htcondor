@@ -61,7 +61,7 @@ DISTRO_IMAGE = {
 
 
 IMAGES = ["execute", "submit", "cm", "mini"]
-SERIES_FOR_LATEST_TAGS = "9.1"
+SERIES_FOR_LATEST_TAGS = "9.x"
 DISTRO_FOR_LATEST_TAGS = "el7"
 
 
@@ -123,6 +123,48 @@ def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
             raise RuntimeError("Can't parse CondorVersion: %s" % condor_version_str)
 
 
+def is_lts_series(series: str) -> bool:
+    """Return True if the given series string is an LTS series, False if devel/feature
+    series_str should be a major.minor, like "8.8", "9.0", "9.4", "9.x"
+    Raises ValueError if an invalid string is given, or if given something indeterminate like 8.x.
+
+    """
+    series_match = re.match(r"([0-9]+)[.](x|[0-9]+)", series)
+    if not series_match:
+        raise ValueError(f"{series} cannot be parsed as an HTCondor series")
+    major, minor = series_match.groups()
+
+    if int(major) < 9:
+        if minor == "x":
+            raise ValueError(f"{series} cannot be determined to be LTS or not")
+        return (int(minor) % 2) == 0  # old style: even versions are LTS
+    # new style: .0 versions are LTS
+    return minor == "0"
+
+
+def series_from_version(version: str) -> str:
+    """Return the series string from the given version string.
+
+    For old style (pre-9.0), this is just the first two numbers;
+    for new style, "9.0.*" turns into "9.0"; "9.1.*", "9.2.*", "9.3.*" etc
+    turn into "9.x".
+
+    """
+    version_match = re.match(r"([0-9]+)[.]([0-9]+)[.][0-9]+", version)
+    if not version_match:
+        raise ValueError(f"{version} cannot be parsed as an HTCondor version")
+    major, minor = version_match.groups()
+
+    if int(major) < 9:
+        # old style: return first two numbers
+        return f"{major}.{minor}"
+    # new style: feature series minor number turns into an x
+    if minor == "0":
+        return f"{major}.{minor}"
+    else:
+        return f"{major}.x"
+
+
 class VersionInfo:
     """Contains the information that can be extracted from the output of condor_version"""
 
@@ -142,7 +184,7 @@ class Builder:
     Fields:
     - executable: `docker` or `podman`
 
-    - series: str, a numeric series like `8.9`
+    - series: str, a series like `8.9` or `9.x`
     - want_latest_series: bool, `latest` was passed to the `series` argument of the constructor
 
     - version: the desired version -- can be numbers (`8.9.9`, `daily`, or `latest`)
@@ -337,6 +379,8 @@ org.htcondor.version="%s"
                 # "latest" was requested
                 if self.want_latest_version:
                     real_image_names.append(f"{self.prefix}base:{real_series}-{distro}")
+                    if self.series.endswith("x"):  # 9.x, 10.x, etc.
+                        real_image_names.append(f"{self.prefix}base:{self.series}-{distro}")
                     if self.want_latest_series:
                         real_image_names.append(f"{self.prefix}base:{distro}")
                         if distro == DISTRO_FOR_LATEST_TAGS:
@@ -424,7 +468,7 @@ def parse_arguments(argv):
     parser.add_argument(
         "--series",
         help="The release series for daily or latest builds (default '%(default)s'). "
-        f"Either numeric (e.g. '8.9') or 'latest' (which is '{SERIES_FOR_LATEST_TAGS}'). "
+        f"Either an explicit series (e.g. '9.0', '9.x') or 'latest' (which is '{SERIES_FOR_LATEST_TAGS}'). "
         "Only used if version is 'daily' or 'latest'.",
         default="latest",
     )

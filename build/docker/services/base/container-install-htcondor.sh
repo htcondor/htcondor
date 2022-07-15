@@ -42,6 +42,25 @@ if [[ $HTCONDOR_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
 fi
 
 
+if [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.([0-9]+) ]]; then
+    # turn a post-9.0 feature series like 9.5 into 9.x
+    series_major=${BASH_REMATCH[1]}
+    series_minor=${BASH_REMATCH[2]}
+
+    if [[ $series_major -gt 8 && $series_minor -gt 0 ]]; then
+        series_str=${series_major}.x
+    else
+        series_str=${series_major}.${series_minor}
+    fi
+elif [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.x ]]; then
+    series_str=$HTCONDOR_SERIES
+else
+    echo "Could not parse \$HTCONDOR_SERIES $HTCONDOR_SERIES" >&2
+    exit 2
+fi
+
+
+
 if ! getent passwd condor; then
     if ! getent group condor; then
         groupadd -g 64 -r condor
@@ -68,7 +87,7 @@ if [[ $OS_ID == centos ]]; then
         # enable CentOS PowerTools repo (whose name changed between CentOS releases)
         (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools)
     fi
-    $yum install "${repo_base_centos}/${HTCONDOR_SERIES}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
+    $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
     rpm --import /etc/pki/rpm-gpg/*
     if [[ $HTCONDOR_VERSION == daily ]]; then
         if [[ $OS_VERSION_ID == 7 ]]; then
@@ -103,15 +122,15 @@ elif [[ $OS_ID == ubuntu ]]; then
     $apt_install gnupg2 wget
 
     set -o pipefail
-    if [[ $HTCONDOR_SERIES = 8.9 ]]; then
+    if [[ $series_str = 8.9 ]]; then
         wget -qO - "https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key" | apt-key add -
     else
-        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${HTCONDOR_SERIES}-Key" | apt-key add -
+        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Key" | apt-key add -
     fi
     set +o pipefail
 
-    echo "deb     ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    echo "deb-src ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
 
     apt-get update -q
     $apt_install "${extra_packages_ubuntu[@]}"
