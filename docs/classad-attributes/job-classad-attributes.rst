@@ -244,6 +244,10 @@ all attributes.
     For Container universe jobs, the string that names the container image to be run
     the job in.
 
+:classad-attribute:`ContainerTargetDir`
+    For Container universe jobs, a filename that becomes the working directory of
+    the job.  Mapped to the scratch directory.
+
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute:`CumulativeSlotTime`
