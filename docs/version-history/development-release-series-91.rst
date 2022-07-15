@@ -86,6 +86,10 @@ Bugs Fixed:
   Now, the jobs go to held status.
   :jira:`1194`
 
+- Fixed a problem when condor_submit -i would sometimes fail trying
+  to start an interactive docker universe job
+  :jira:`1210`
+
 - Fixed the ClassAd shared library extension mechanism.  An earlier
   development series broke the ability for users to add custom
   ClassAd functions as documented in 
