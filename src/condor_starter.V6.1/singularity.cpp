@@ -187,7 +187,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	std::string target_dir;
-	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	bool has_target = hasTargetDir(jobAd, target_dir); 
 
 	// If we have a process to exec, remove it from the args
 	if (exec.length() > 0) {
@@ -447,6 +447,19 @@ Singularity::convertEnv(Env *job_env) {
 		}
 	}
 	return true;
+}
+
+bool 
+Singularity::hasTargetDir(const ClassAd &jobAd, /* not const */ std::string &target_dir) {
+	target_dir = "";
+	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+
+	// If the admin hasn't specification as target_dir, let the job select one
+	// We assume that the job has also selected the image as well
+	if (!has_target) {
+		has_target = jobAd.LookupString(ATTR_CONTAINER_TARGET_DIR, target_dir);
+	}
+	return has_target;
 }
 
 bool 

@@ -1245,7 +1245,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 
 	std::string target_dir;
-        bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	bool has_target = htcondor::Singularity::hasTargetDir(*JobAd, target_dir);
+
 	if (has_target) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}

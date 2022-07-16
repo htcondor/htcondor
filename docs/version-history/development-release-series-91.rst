@@ -45,6 +45,10 @@ New Features:
   the interpreter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
 
+- Added a new submit option ``container_target_dir`` that allows singularity
+  jobs to specify the target directory
+  :jira:`1171`
+
 - When an **arc** grid universe job has both a token and an X.509
   proxy, now only the token is used for authentication with the ARC CE
   server. The proxy is still delegated for use by the job.
