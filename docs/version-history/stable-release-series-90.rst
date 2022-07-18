@@ -75,7 +75,6 @@ Bugs Fixed:
 
 - None.
 
-
 .. _lts-version-history-9014:
 
 Version 9.0.14
