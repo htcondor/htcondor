@@ -57,6 +57,24 @@ Bugs Fixed:
 - The ``condor-credmon-oath`` package now properly pulls in ``python3-mod_wsgi``
   on Enterprise Linux 8.
   :jira:`1217`
+  
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+.. HTCondor version 9.0.15 released on Month Date, 2022.
+
+- HTCondor version 9.0.15 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 
 .. _lts-version-history-9014:
 
