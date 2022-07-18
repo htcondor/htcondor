@@ -54,6 +54,23 @@ Bugs Fixed:
   during cleanup after the job completed.
   :jira:`1213`
 
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+.. HTCondor version 9.0.15 released on Month Date, 2022.
+
+- HTCondor version 9.0.15 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
