@@ -7,16 +7,16 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-9015:
+.. _lts-version-history-9016:
 
-Version 9.0.15
+Version 9.0.16
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.0.15 released on Month Date, 2022.
+.. HTCondor version 9.0.16 released on Month Date, 2022.
 
-- HTCondor version 9.0.15 not yet released.
+- HTCondor version 9.0.16 not yet released.
 
 New Features:
 
