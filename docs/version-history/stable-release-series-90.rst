@@ -73,6 +73,10 @@ Bugs Fixed:
   during cleanup after the job completed.
   :jira:`1213`
 
+- The ``condor-credmon-oath`` package now properly pulls in ``python3-mod_wsgi``
+  on Enterprise Linux 8.
+  :jira:`1217`
+  
 .. _lts-version-history-9015:
 
 Version 9.0.15
