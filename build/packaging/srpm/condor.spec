@@ -548,6 +548,7 @@ Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
+Requires: mod_wsgi
 %else
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-requests-oauthlib
@@ -555,9 +556,9 @@ Requires: python3-six
 Requires: python3-flask
 Requires: python3-cryptography
 Requires: python3-scitokens
+Requires: python3-mod_wsgi
 %endif
 Requires: httpd
-Requires: mod_wsgi
 
 %description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
