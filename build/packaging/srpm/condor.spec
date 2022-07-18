@@ -1648,6 +1648,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.1-1
+- ActivationSetupDuration is now correct for jobs that checkpoint
+
 * Thu Jul 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.0-1
 - With collector administrator access, can manage all HTCondor pool daemons
 - SciTokens can now be used for authentication with ARC CE servers
