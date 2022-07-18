@@ -1,3 +1,9 @@
+condor (9.10.1-1) stable; urgency=medium
+
+  * ActivationSetupDuration is now correct for jobs that checkpoint
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 18 Jul 2022 07:33:00 -0500
+
 condor (9.10.0-1) stable; urgency=medium
 
   * With collector administrator access, can manage all HTCondor pool daemons
@@ -5,7 +11,7 @@ condor (9.10.0-1) stable; urgency=medium
   * Preliminary support for ARM and POWER RC on AlmaLinux 8
   * Prevent negative values when using huge files with a file transfer plugin
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Jul 2022 16:22:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 14 Jul 2022 16:22:00 -0500
 
 condor (9.0.14-1) stable; urgency=medium
 
@@ -16,7 +22,7 @@ condor (9.0.14-1) stable; urgency=medium
   * Fix bug where context managed Python htcondor.SecMan sessions would crash
   * Fix bug where remote CPU times would rarely be set to zero
 
- -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Jul 2022 15:18:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Jul 2022 15:18:00 -0500
 
 condor (9.9.1-1) stable; urgency=medium
 
