@@ -24,6 +24,9 @@
 #include <mongo/client/dbclient.h>
 #include <time.h>
 
+// sorting
+#include <algorithm>
+
 // condor includes
 #include "condor_config.h"
 #include "condor_classad.h"
@@ -67,7 +70,7 @@ static void print_usage(char* name)
 static void readHistoryFromFiles(char *JobHistoryFileName);
 static char **findHistoryFiles(int *numHistoryFiles);
 static bool isHistoryBackup(const char *fullFilename, time_t *backup_time);
-static int compareHistoryFilenames(const void *item1, const void *item2);
+static bool compareHistoryFilenames(const char *item1, const char *item2);
 static void readHistoryFromFile(char *JobHistoryFileName);
 
 //------------------------------------------------------------------------
@@ -243,7 +246,7 @@ static char **findHistoryFiles(int *numHistoryFiles)
         if ((*numHistoryFiles) > 2) {
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
-            qsort(historyFiles, (*numHistoryFiles)-1, sizeof(char*), compareHistoryFilenames);
+            std::sort(historyFiles, historyFiles + (*numHistoryFiles - 1), compareHistoryFilenames);
         }
         
         free(historyDir);
@@ -293,14 +296,14 @@ static bool isHistoryBackup(const char *fullFilename, time_t *backup_time)
     return is_history_filename;
 }
 
-// Used by qsort in findHistoryFiles() to sort history files. 
-static int compareHistoryFilenames(const void *item1, const void *item2)
+// Used by std::sort in findHistoryFiles() to sort history files.
+static bool compareHistoryFilenames(const char *item1, const char *item2)
 {
     time_t time1, time2;
 
-    isHistoryBackup((const char *) item1, &time1);
-    isHistoryBackup((const char *) item2, &time2);
-    return time1 - time2;
+    isHistoryBackup(item1, &time1);
+    isHistoryBackup(item2, &time2);
+    return time1 - time2 < 0;
 }
 
 // Given a history file, returns the position offset of the last delimiter
