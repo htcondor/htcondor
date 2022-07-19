@@ -77,7 +77,7 @@ please realize that it sometimes takes a while to do so.
 
 ===== License ===== 
 The Condor ClassAd library is an open source release, under the terms
-of the Apache License, Version 2.0. Please see the LICENSE-2.0.txt file
+of the Apache License, Version 2.0. Please see the LICENSE file
 for more information.
 
 ===== Building ===== 

@@ -504,7 +504,6 @@ if( NOT WINDOWS)
 
 	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
 
-    find_multiple( "z" ZLIB_FOUND)
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
 		# UUID appears to be available in the C runtime on Darwin.
@@ -561,7 +560,13 @@ if( NOT WINDOWS)
 	check_function_exists("vasprintf" HAVE_VASPRINTF)
 	check_function_exists("getifaddrs" HAVE_GETIFADDRS)
 	check_function_exists("readdir64" HAVE_READDIR64)
-	check_function_exists("backtrace" HAVE_BACKTRACE)
+
+	# The backtrace library call exists, but seems to crash
+	# when running under qemu ppc64le.  Let's skip that case
+	if (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le"))
+		check_function_exists("backtrace" HAVE_BACKTRACE)
+	endif()
+
 	check_function_exists("unshare" HAVE_UNSHARE)
 
 	# we can likely put many of the checks below in here.
@@ -710,7 +715,6 @@ option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" OFF)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
 option(WANT_CONTRIB "Enable building of contrib modules" OFF)
-option(WANT_GLEXEC "Build and install condor glexec functionality" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)

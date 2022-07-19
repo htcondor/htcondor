@@ -357,20 +357,6 @@ ProcFamilyProxy::unregister_family(pid_t pid)
 }
 
 bool
-ProcFamilyProxy::use_glexec_for_family(pid_t pid, const char* proxy)
-{
-	// see "HACK" comment in register_subfamily for why we don't try
-	// to recover from errors here
-	//
-	bool response;
-	if (!m_client->use_glexec_for_family(pid, proxy, response)) {
-		dprintf(D_ALWAYS, "use_glexec_for_family: ProcD communication error\n");
-		return false;
-	}
-	return response;
-}
-
-bool
 ProcFamilyProxy::quit(void(*notify)(void*me, int pid, int status), void* me)
 {
 	if (m_procd_pid != -1) {
@@ -535,31 +521,6 @@ ProcFamilyProxy::start_procd()
 		args.AppendArg(max_tracking_gid);
 	}
 #endif
-
-	// for the GLEXEC_JOB feature, we'll need to pass the ProcD paths
-	// to glexec and the condor_glexec_kill script
-	//
-	if (param_boolean("GLEXEC_JOB", false)) {
-		args.AppendArg("-I");
-		char* libexec = param("LIBEXEC");
-		if (libexec == NULL) {
-			EXCEPT("GLEXEC_JOB is defined, but LIBEXEC not configured");
-		}
-		MyString glexec_kill;
-		glexec_kill.formatstr("%s/condor_glexec_kill", libexec);
-		free(libexec);
-		args.AppendArg(glexec_kill.c_str());
-		char* glexec = param("GLEXEC");
-		if (glexec == NULL) {
-			EXCEPT("GLEXEC_JOB is defined, but GLEXEC not configured");
-		}
-		args.AppendArg(glexec);
-		free(glexec);
-		int glexec_retries = param_integer("GLEXEC_RETRIES",3,0);
-		int glexec_retry_delay = param_integer("GLEXEC_RETRY_DELAY",5,0);
-		args.AppendArg(glexec_retries);
-		args.AppendArg(glexec_retry_delay);
-	}
 
 	// done constructing the argument list; now register a reaper for
 	// notification when the procd exits

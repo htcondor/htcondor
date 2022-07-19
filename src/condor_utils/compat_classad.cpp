@@ -747,15 +747,15 @@ ArgsToList( const char * name,
 		return true;
 	}
 	ArgList arg_list;
-	MyString error_msg;
-	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
+	std::string error_msg;
+	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
+	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
@@ -867,22 +867,22 @@ ListToArgs(const char * name,
 		}
 		arg_list.AppendArg(tmp_str.c_str());
 	}
-	MyString error_msg, result_mystr;
-	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
+	std::string error_msg, result_mystr;
+	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(result_mystr, error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
+	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(result_mystr))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	result.SetStringValue(result_mystr.c_str());
+	result.SetStringValue(result_mystr);
 	return true;
 }
 
@@ -924,17 +924,17 @@ EnvironmentV1ToV2(const char * name,
 		return true;
 	}
 	Env env;
-	MyString error_msg;
-	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
+	std::string error_msg;
+	if (!env.MergeFromV1Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to environment V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	MyString result_mystr;
-	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.c_str());
+	std::string result_mystr;
+	env.getDelimitedStringV2Raw(result_mystr);
+	result.SetStringValue(result_mystr);
 	return true;
 }
 
@@ -972,8 +972,8 @@ MergeEnvironment(const char * /*name*/,
 			problemExpression(ss.str(), *it, result);
 			return true;
 		}
-		MyString error_msg;
-		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
+		std::string error_msg;
+		if (!env.MergeFromV2Raw(env_str.c_str(), error_msg))
 		{
 			std::stringstream ss;
 			ss << "Argument " << idx << " cannot be parsed as environment string.";
@@ -981,9 +981,9 @@ MergeEnvironment(const char * /*name*/,
 			return true;
 		}
 	}
-	MyString result_mystr;
-	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.c_str());
+	std::string result_mystr;
+	env.getDelimitedStringV2Raw(result_mystr);
+	result.SetStringValue(result_mystr);
 	return true;
 }
 

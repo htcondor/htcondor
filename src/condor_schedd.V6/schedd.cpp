@@ -14153,6 +14153,13 @@ Scheduler::needReschedule()
 void
 Scheduler::sendReschedule()
 {
+	// If SCHEDD_SEND_RESCHEDULE is false (eg on a CE or schedd
+	// without a negotiator, don't spam the logs with messages
+	// about a missing negotiator.
+	if (!param_boolean("SCHEDD_SEND_RESCHEDULE", true)) {
+		return;
+	}
+
 	if( !m_negotiate_timeslice.isTimeToRun() ) {
 			// According to our negotiate timeslice object, we are
 			// spending too much of our time negotiating, so delay
@@ -15262,6 +15269,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 
 		if( !starter.createJobOwnerSecSession(ltimeout,job_claimid,match_sec_session_id,job_owner_session_info.c_str(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
+			retry_is_sensible = true; // This can mean the starter is blocked fetching a docker image
 			goto error_wrapup; // error_msg already set
 		}
 	}

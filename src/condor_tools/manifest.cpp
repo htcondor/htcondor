@@ -38,7 +38,7 @@ usage( const char * argv0 ) {
     fprintf( stderr, "  validateFilesListedIn\n" );
     fprintf( stderr, "  FileFromLine\n" );
     fprintf( stderr, "  ChecksumFromLine\n" );
-    fprintf( stderr, "  compute_file_checksum\n" );
+    fprintf( stderr, "  compute_file_sha256_checksum\n" );
     return 1;
 }
 
@@ -55,8 +55,8 @@ main( int argc, char ** argv ) {
         int no = manifest::getNumberFromFileName( argument );
         fprintf( stdout, "%d\n", no );
         return no;
-    } else if( function == "validateFile" ) {
-        bool valid = manifest::validateFile( argument );
+    } else if( function == "validateManifestFile" ) {
+        bool valid = manifest::validateManifestFile( argument );
         fprintf( stdout, "%s\n", valid ? "true" : "false" );
         return valid ? 0 : 1;
     } else if( function == "validateFilesListedIn" ) {
@@ -75,9 +75,9 @@ main( int argc, char ** argv ) {
         std::string checksum = manifest::ChecksumFromLine( argument );
         fprintf( stdout, "%s\n", checksum.c_str() ) ;
         return 0;
-    } else if( function == "compute_file_checksum" ) {
+    } else if( function == "compute_file_sha256_checksum" ) {
         std::string checksum;
-        bool ok = compute_file_checksum( argument, checksum );
+        bool ok = compute_file_sha256_checksum( argument, checksum );
         if( ok ) {
             fprintf( stdout, "%s *%s\n", checksum.c_str(), argument.c_str() );
         }

@@ -18,6 +18,7 @@
 #define NOIME
 #include <Windows.h>
 #endif /* defined(WIN32) */
+#include <algorithm>
 
 #include "pi_sleep.h"
 #include "pi_dynlink.h"
@@ -29,16 +30,8 @@
 unsigned debug = 0;
 time_t reportInterval = 10;
 
-int compareSamples( const void * vpA, const void * vpB ) {
-	const nvmlSample_t * a = (const nvmlSample_t *)vpA;
-	const nvmlSample_t * b = (const nvmlSample_t *)vpB;
-	if( a->timeStamp < b->timeStamp ) {
-		return -1;
-	} else if( a->timeStamp == b->timeStamp ) {
-		return 0;
-	} else {
-		return 1;
-	}
+bool compareSamples( const nvmlSample_t &a, const nvmlSample_t &b ) {
+	return a.timeStamp < b.timeStamp;
 }
 
 #ifndef WINDOWS
@@ -76,7 +69,7 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 	(* runningSampleCount) += sampleCount;
 
 	// Samples are usually but not always in order.
-	qsort( &samples[0], sampleCount, sizeof( nvmlSample_t ), compareSamples );
+	std::sort(samples.begin(), samples.end(), compareSamples);
 
 	// Convert the percentage to elapsed time, since that's what we
 	// actually care about (and the data representation is simpler).

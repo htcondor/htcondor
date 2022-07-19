@@ -17,13 +17,12 @@
  *
  ***************************************************************/
 
-#ifndef _GLEXEC_KILL_H
-#define _GLEXEC_KILL_H
+#ifndef _JOB_AD_INSTANCE_RECORDING_H
+#define _JOB_AD_INSTANCE_RECORDING_H
 
-void glexec_kill_init(char* glexec_kill, char* glexec, int glexec_retries, int glexec_retry_delay);
+#include "condor_classad.h"
 
-bool glexec_kill_check();
-
-bool glexec_kill(char* proxy, pid_t target_pid, int sig);
+// Function for Shadow to call to write Job Ad per Epoch
+void writeJobEpochFile(classad::ClassAd const *job_ad);
 
 #endif

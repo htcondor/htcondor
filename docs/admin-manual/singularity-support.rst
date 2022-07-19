@@ -228,6 +228,11 @@ still map to the scratch directory outside the container.
       # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
       SINGULARITY_TARGET_DIR = /srv
 
+If ``SINGULARITY_TARGET_DIR`` is not specified by the admin,
+it may be specified in the job submit file via the submit command
+``container_target_dir``.  If both are set, the config knob
+version takes precedence.
+
 When the HTCondor starter runs a job under Singularity, it always
 prints to the log the exact command line used.  This can be helpful
 for debugging or for the curious.  An example command line printed

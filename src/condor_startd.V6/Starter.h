@@ -110,20 +110,6 @@ private:
 	int 	execBOINCStarter( Claim * );
 #endif /* HAVE_BOINC */
 
-#if !defined(WIN32)
-		// support for spawning starter using glexec
-	bool    prepareForGlexec( const ArgList&,
-	                          const Env*,
-	                          const int[3],
-	                          ArgList&,
-	                          Env&,
-	                          int[3],
-	                          int[2],
-	                          int&);
-	bool    handleGlexecEnvironment(pid_t, Env&, int[2], int);
-	void    cleanupAfterGlexec(Claim *);
-#endif
-
 	void	initRunData( void );
 
 	int	startKillTimer( int timeout );		// Timer for how long we're willing

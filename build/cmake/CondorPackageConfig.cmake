@@ -72,7 +72,7 @@ set(CPACK_DEBIAN_DESCRIPTION_SUMMARY "a workload management system for compute-i
  to run the jobs based upon a policy, carefully monitors their progress,
  and ultimately informs the user upon completion.")
 
-set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE-2.0.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE")
 #set(CPACK_RESOURCE_FILE_README "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/README")
 #set(CPACK_RESOURCE_FILE_WELCOME "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/DOC") # this should be more of a Hiya welcome.
 

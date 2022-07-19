@@ -79,7 +79,9 @@ ArcResource::ArcResource( const char *resource_name,
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s#%s", proxyFQAN ? proxyFQAN : "", m_tokenFile.c_str() );
+	formatstr( buff, "ARC/%s#%s",
+	           (m_tokenFile.empty() && proxyFQAN) ? proxyFQAN : "",
+	           m_tokenFile.c_str() );
 
 	gahp = new GahpClient( buff.c_str() );
 	gahp->setNotificationTimerId( pingTimerId );
@@ -244,12 +246,10 @@ void ArcResource::DoJobStatus()
 			job_states.rewind();
 			while ( (next_job_id = job_ids.next()) && (next_job_state = job_states.next()) ) {
 
-				int rc2;
-				BaseJob *base_job = NULL;
 				ArcJob *job = NULL;
 				formatstr( key, "arc %s %s", resourceName, next_job_id );
-				rc2 = BaseJob::JobsByRemoteId.lookup( key, base_job );
-				if ( rc2 == 0 && (job = dynamic_cast<ArcJob*>(base_job)) ) {
+				auto itr = BaseJob::JobsByRemoteId.find(key);
+				if ( itr != BaseJob::JobsByRemoteId.end() && (job = dynamic_cast<ArcJob*>(itr->second)) ) {
 					job->NotifyNewRemoteStatus( next_job_state );
 				}
 			}

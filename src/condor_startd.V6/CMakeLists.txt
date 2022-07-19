@@ -61,7 +61,6 @@ endif(WINDOWS)
 if (LINUX)
 	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
 	list(APPEND startdElements
-		glexec_starter.linux.cpp
 		VolumeManager.cpp
 	)
 endif(LINUX)
@@ -72,8 +71,3 @@ list(APPEND startdElements boinc_mgr.cpp)
 endif()
 
 condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")
-
-if (LINUX AND GLOBUS_FOUND AND WANT_GLEXEC)
-  condor_exe(condor_glexec_wrapper "glexec_wrapper.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF )
-  install (FILES glexec_starter_setup.sh DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-endif()

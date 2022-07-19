@@ -694,13 +694,13 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 		}
 	} else {
 std::string msg = "    update_succeeded:";
-		BaseJob *curr_job;
 		PROC_ID curr_id;
 		update_succeeded.Rewind();
 		while ( update_succeeded.Next( curr_id ) ) {
 formatstr_cat(msg, " %d.%d", curr_id.cluster, curr_id.proc);
-			if ( BaseJob::JobsByProcId.lookup( curr_id, curr_job ) == 0 ) {
-				curr_job->UpdateJobLeaseSent( m_sharedLeaseExpiration );
+			auto itr = BaseJob::JobsByProcId.find(curr_id);
+			if (itr != BaseJob::JobsByProcId.end()) {
+				itr->second->UpdateJobLeaseSent(m_sharedLeaseExpiration);
 			}
 		}
 dprintf(D_FULLDEBUG,"%s\n",msg.c_str());

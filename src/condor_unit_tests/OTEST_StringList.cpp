@@ -4200,7 +4200,7 @@ static bool test_string_compare_equal_same_beg() {
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 0);
-	int retVal = string_compare(strs, strs);
+	int retVal = string_compare(*strs, *strs);
 	emit_input_header();
 	emit_param("StringList", list);
 	emit_param("STRING", *strs);
@@ -4225,7 +4225,7 @@ static bool test_string_compare_equal_same_mid() {
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 1);
-	int retVal = string_compare(strs, strs);
+	int retVal = string_compare(*strs, *strs);
 	emit_input_header();
 	emit_param("StringList", list);
 	emit_param("STRING", *strs);
@@ -4250,7 +4250,7 @@ static bool test_string_compare_equal_same_end() {
 	StringList sl("a;b;c", ";");
 	char* list = sl.print_to_string();
 	char** strs = string_compare_helper(&sl, 2);
-	int retVal = string_compare(strs, strs);
+	int retVal = string_compare(*strs, *strs);
 	emit_input_header();
 	emit_param("StringList", list);
 	emit_param("STRING", *strs);
@@ -4278,7 +4278,7 @@ static bool test_string_compare_equal_different_list() {
 	char* list2 = sl2.print_to_string();
 	char** strs1 = string_compare_helper(&sl1,1);
 	char** strs2 = string_compare_helper(&sl2,1);
-	int retVal = string_compare(strs1, strs2);
+	int retVal = string_compare(*strs1, *strs2);
 	emit_input_header();
 	emit_param("StringList", list1);
 	emit_param("StringList", list2);
@@ -4308,7 +4308,7 @@ static bool test_string_compare_copy() {
 	char* list2  = sl2.print_to_string();
 	char** strs1 = string_compare_helper(&sl1,0);
 	char** strs2 = string_compare_helper(&sl2,0);
-	int retVal = string_compare(strs1, strs2);
+	int retVal = string_compare(*strs1, *strs2);
 	emit_input_header();
 	emit_param("StringList", list1);
 	emit_param("StringList", list2);
@@ -4337,7 +4337,7 @@ static bool test_string_compare_not_equal_same() {
 	char* list = sl.print_to_string();
 	char** strs1 = string_compare_helper(&sl, 0);
 	char** strs2 = string_compare_helper(&sl, 1);
-	int retVal = string_compare(strs1, strs2);
+	int retVal = string_compare(*strs1, *strs2);
 	emit_input_header();
 	emit_param("StringList", list);
 	emit_param("STRING", *strs1);
@@ -4365,7 +4365,7 @@ static bool test_string_compare_not_equal_different() {
 	char* list2  = sl2.print_to_string();
 	char** strs1 = string_compare_helper(&sl1,1);
 	char** strs2 = string_compare_helper(&sl2,0);
-	int retVal = string_compare(strs1, strs2);
+	int retVal = string_compare(*strs1, *strs2);
 	emit_input_header();
 	emit_param("StringList", list1);
 	emit_param("StringList", list2);

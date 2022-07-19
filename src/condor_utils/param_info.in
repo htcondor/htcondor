@@ -922,11 +922,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[GLEXEC_STARTER]
-default=false
-type=bool
-tags=shadow,remoteresource
-
 [SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
 default=false
 type=bool
@@ -1334,16 +1329,6 @@ type=int
 default=20
 range=0,
 type=int
-tags=daemon_core
-
-[GLEXEC_JOB]
-default=false
-type=bool
-tags=daemon_core
-
-[GLEXEC_HOLD_ON_INITIAL_FAILURE]
-default=true
-type=bool
 tags=daemon_core
 
 [WINDOWS_SOFTKILL]
@@ -1778,16 +1763,6 @@ default=$(RELEASE_DIR)/sbin
 win32_default=$(BIN)
 type=path
 tags=startd,starter_mgr
-
-[GLEXEC]
-default=
-type=string
-tags=startd,glexec_starter
-
-[GLEXEC_USER_DIR]
-default=
-type=string
-tags=startd,command
 
 [SINGULARITY]
 default=/usr/bin/singularity
@@ -3148,6 +3123,12 @@ tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
+[SCHEDD_SEND_RESCHEDULE]
+default=true
+type=bool
+tags=schedd
+description=
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
@@ -3215,6 +3196,11 @@ type=bool
 tags=schedd
 
 [PER_JOB_HISTORY_DIR]
+default=
+type=string
+tags=schedd
+
+[JOB_EPOCH_INSTANCE_DIR]
 default=
 type=string
 tags=schedd
@@ -4668,22 +4654,6 @@ version=7.9.4
 type=string
 description=List of timespans for reporting file transfer I/O statistics
 tags=schedd
-
-[GLEXEC_RETRIES]
-default=3
-version=7.8.8
-range=0,
-type=int
-description=Number of times to retry calls to glexec
-tags=startd
-
-[GLEXEC_RETRY_DELAY]
-default=5
-version=7.8.8
-range=0,
-type=int
-description=Minimum time delay in exponential backoff for glexec retries
-tags=startd
 
 [GRACEFULLY_REMOVE_JOBS]
 default=true

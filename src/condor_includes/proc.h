@@ -92,6 +92,16 @@ size_t hashFunction(const PROC_ID &);
 void procids_to_string(const std::vector<PROC_ID> *procids, std::string &str);
 std::vector<PROC_ID>* string_to_procids(const std::string &str);
 
+namespace std {
+  template <> struct hash<PROC_ID>
+  {
+    size_t operator()(const PROC_ID & x) const
+    {
+		return hashFuncPROC_ID(x);
+    }
+  };
+}
+
 // result MUST be of size PROC_ID_STR_BUFLEN
 void ProcIdToStr(const PROC_ID a, char *result);
 void ProcIdToStr(int cluster, int proc, char *result);

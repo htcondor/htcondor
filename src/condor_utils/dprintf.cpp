@@ -45,7 +45,7 @@
 #include "basename.h"
 #include "file_lock.h"
 #if HAVE_BACKTRACE
-#include "execinfo.h"
+#include <execinfo.h>
 #elif defined WIN32
 # if NTDDI_VERSION > NTDDI_WINXP
 #   include "winnt.h" // for CaptureStackBackTrace
@@ -2515,6 +2515,14 @@ dprintf_dump_stack(void) {
 #endif
 
 #endif
+
+// Allow explicit disabling of log rotation
+bool dprintf_allow_log_rotation(bool allow_rotate)
+{
+	bool prev_val = DebugRotateLog;
+	DebugRotateLog = allow_rotate;
+	return prev_val;
+}
 
 // If outputs haven't been configured yet, stop buffering dprintf()
 // output until they are configured.

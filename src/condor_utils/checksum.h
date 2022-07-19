@@ -22,7 +22,7 @@
 
 // #include <string>
 
-bool compute_checksum( int fd, std::string & checksum );
-bool compute_file_checksum( const std::string & file_name, std::string & checksum );
+bool compute_sha256_checksum( int fd, std::string & checksum );
+bool compute_file_sha256_checksum( const std::string & file_name, std::string & checksum );
 
 #endif /* _COMPUTE_CHECKSUM_H */

@@ -333,6 +333,8 @@ java_config.cpp
 java_config.h
 JobLogMirror.cpp
 JobLogMirror.h
+job_ad_instance_recording.cpp
+job_ad_instance_recording.h
 KeyCache.cpp
 killfamily.cpp
 killfamily.h

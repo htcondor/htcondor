@@ -542,6 +542,7 @@ Requires: python-six
 Requires: python-flask
 Requires: python2-cryptography
 Requires: python2-scitokens
+Requires: mod_wsgi
 %else
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-requests-oauthlib
@@ -549,9 +550,9 @@ Requires: python3-six
 Requires: python3-flask
 Requires: python3-cryptography
 Requires: python3-scitokens
+Requires: python3-mod_wsgi
 %endif
 Requires: httpd
-Requires: mod_wsgi
 
 %description credmon-oauth
 The OAuth2 credmon allows users to obtain credentials from configured
@@ -946,7 +947,7 @@ mv %{buildroot}/usr/lib64/condor/libpyclassad3*.so %{buildroot}/usr/lib64
 #rm -rf %{buildroot}/usr/lib64/condor/libchirp_client.a
 #rm -rf %{buildroot}/usr/lib64/condor/libcondorapi.a
 #rm -rf %{buildroot}/usr/lib64/libclassad.a
-rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE-2.0.txt
+rm -rf %{buildroot}/usr/share/doc/condor-%{version}/LICENSE
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/NOTICE.txt
 rm -rf %{buildroot}/usr/share/doc/condor-%{version}/README
 
@@ -982,7 +983,7 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_usrsrc}/startd_factory
 #rm -rf %{buildroot}/usr/DOC
 #rm -rf %{buildroot}/usr/INSTALL
-#rm -rf %{buildroot}/usr/LICENSE-2.0.txt
+#rm -rf %{buildroot}/usr/LICENSE
 #rm -rf %{buildroot}/usr/NOTICE.txt
 #rm -rf %{buildroot}/usr/README
 #rm -rf %{buildroot}/usr/examples/
@@ -1085,7 +1086,7 @@ rm -rf %{buildroot}
 %files
 %exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt examples
+%doc LICENSE NOTICE.txt examples
 %dir %_sysconfdir/condor/
 %config %_sysconfdir/condor/condor_config
 %{_tmpfilesdir}/%{name}.conf
@@ -1429,26 +1430,26 @@ rm -rf %{buildroot}
 #################
 %files kbdd
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
+%doc LICENSE NOTICE.txt
 %_sbindir/condor_kbdd
 
 #################
 %files vm-gahp
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
+%doc LICENSE NOTICE.txt
 %_sbindir/condor_vm-gahp
 %_libexecdir/condor/libvirt_simple_script.awk
 
 #################
 %files classads
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
+%doc LICENSE NOTICE.txt
 %_libdir/libclassad.so.*
 
 #################
 %files classads-devel
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt NOTICE.txt
+%doc LICENSE NOTICE.txt
 %_bindir/classad_functional_tester
 %_bindir/classad_version
 %_libdir/libclassad.so
@@ -1636,6 +1637,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.1-1
+- ActivationSetupDuration is now correct for jobs that checkpoint
+
+* Thu Jul 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.0-1
+- With collector administrator access, can manage all HTCondor pool daemons
+- SciTokens can now be used for authentication with ARC CE servers
+- Preliminary support for ARM and POWER RC on AlmaLinux 8
+- Prevent negative values when using huge files with a file transfer plugin
+
+* Tue Jul 12 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.14-1
+- SciToken mapping failures are now recorded in the daemon logs
+- Fix bug that stopped file transfers when output and error are the same
+- Ensure that the Python bindings version matches the installed HTCondor
+- $(OPSYSANDVER) now expand properly in job transforms
+- Fix bug where context managed Python htcondor.SecMan sessions would crash
+- Fix bug where remote CPU times would rarely be set to zero
+
 * Tue Jun 14 2022 Tim Theisen <tim@cs.wisc.edu> - 9.9.1-1
 - Fix bug where jobs would not match when using a child collector
 

@@ -1253,7 +1253,7 @@ void main_init (int argc, char ** const argv) {
 	for (auto & it : sl) {
 		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it.c_str() );
 
-		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd, dagman.doAppendVars )) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1318,7 +1318,7 @@ void main_init (int argc, char ** const argv) {
 		parseSetDoNameMunge( false );
 
 		if( !parse( dagman.dag, dagman.rescueFileToRun.c_str(),
-					dagman.useDagDir, dagman._schedd ) ) {
+					dagman.useDagDir, dagman._schedd, dagman.doAppendVars ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.

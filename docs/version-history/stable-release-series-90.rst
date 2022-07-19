@@ -7,22 +7,45 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-9015:
+.. _lts-version-history-9017:
 
-Version 9.0.15
+Version 9.0.17
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.0.15 released on Month Date, 2022.
+.. HTCondor version 9.0.16 released on Month Date, 2022.
 
-- HTCondor version 9.0.15 not yet released.
+- HTCondor version 9.0.16 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+.. _lts-version-history-9016:
+
+Version 9.0.16
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.16 released on Month Date, 2022.
+
+- HTCondor version 9.0.16 not yet released.
 
 New Features:
 
 - Singularity jobs now mount /tmp and /var/tmp under the scratch
   directory, not in tmpfs.
   :jira:`1193`
+
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
 
 Bugs Fixed:
 
@@ -41,6 +64,36 @@ Bugs Fixed:
   when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
   :jira:`1191`
 
+- Fix a bug that could cause daemons to crash if their log rotates
+  during shutdown.
+  :jira:`1200`
+
+- Fixed a bug where the *condor_starter* would wait forever for a
+  reconnect from the *condor_shadow* if a network failure occurred
+  during cleanup after the job completed.
+  :jira:`1213`
+
+- The ``condor-credmon-oath`` package now properly pulls in ``python3-mod_wsgi``
+  on Enterprise Linux 8.
+  :jira:`1217`
+  
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+.. HTCondor version 9.0.15 released on Month Date, 2022.
+
+- HTCondor version 9.0.15 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
@@ -48,23 +101,21 @@ Version 9.0.14
 
 Release Notes:
 
-.. HTCondor version 9.0.14 released on Month Date, 2022.
-
-- HTCondor version 9.0.14 not yet released.
+- HTCondor version 9.0.14 released on July 12, 2022.
 
 New Features:
+
+- Made SciTokens mapping failures more prominent in the daemon logs.
+  :jira:`1072`
 
 - The manual page, usage and logging of the *condor_set_shutdown* tool
   has been improved to clarify what this tool does and how to use it.
   :jira:`1102`
 
-- Made SciTokens mapping failures more prominent in the daemon logs.
-  :jira:`1072`
-
 Bugs Fixed:
 
 - Fixed a bug where if a job's output and error were directed to the same
-  file, no other output files would be transfered.
+  file, no other output files would be transferred.
   :jira:`1101`
 
 - Ensure that the matching set of Python bindings is installed when HTCondor
@@ -77,6 +128,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+  
+- Fixed a bug where ``RemoteUserCpu`` and ``RemoteSysCpu`` attributes are occasionally
+  set to ``0`` for successfully completed jobs.
+  :jira:`1162`
 
 - Make ``condor-externals`` package dependency less strict to ease transition
   between CHTC and OSG RPM repositories.

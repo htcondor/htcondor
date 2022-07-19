@@ -38,10 +38,6 @@
 #include "ipv6_hostname.h"
 #include "shared_port_endpoint.h"
 
-#if defined(LINUX)
-#include "glexec_starter.linux.h"
-#endif
-
 ClassAd* Starter::s_ad = nullptr; // starter capabilities ad, (not the job ad!)
 char* Starter::s_path = nullptr;
 
@@ -587,12 +583,6 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
         }
 #endif // LINUX
 	
-
-#if defined(LINUX)
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		cleanupAfterGlexec(claim);
-	}
-#endif
 }
 
 
@@ -982,40 +972,6 @@ int Starter::execDCStarter(
 		EXCEPT("Failed to register ClassAd update socket.");
 	}
 
-#if defined(LINUX)
-	// see if we should be using glexec to spawn the starter.
-	// if we are, the cmd, args, env, and stdin to use will be
-	// modified
-	ArgList glexec_args;
-	Env glexec_env;
-	int glexec_std_fds[3];
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		if ( ! claim) {
-			dprintf(D_ALWAYS, "ERROR: GLEXEC_STARTER is true, so a Starter cannot be created if there is no claim\n");
-			s_pid = 0;
-			return s_pid;
-		}
-		if( ! glexec_starter_prepare( s_path,
-		                              claim->client()->proxyFile(),
-		                              args,
-		                              env,
-		                              std_fds,
-		                              glexec_args,
-		                              glexec_env,
-		                              glexec_std_fds ) )
-		{
-			// something went wrong; prepareForGlexec will
-			// have already logged it
-			cleanupAfterGlexec(claim);
-			return 0;
-		}
-		final_path = glexec_args.GetArg(0);
-		final_args = &glexec_args;
-		env = &glexec_env;
-		std_fds = glexec_std_fds;
-	}
-#endif
-
 	int reaper_id;
 	if( s_reaper_id > 0 ) {
 		reaper_id = s_reaper_id;
@@ -1045,43 +1001,8 @@ int Starter::execDCStarter(
 		s_pid = 0;
 	}
 
-#if defined(LINUX)
-	if( param_boolean( "GLEXEC_STARTER", false ) ) {
-		// if we used glexec to spawn the Starter, we now need to send
-		// the Starter's environment to our glexec wrapper script so it
-		// can exec the Starter with all the environment variablew we rely
-		// on it inheriting
-		//
-		if ( !glexec_starter_handle_env(s_pid) ) {
-			// something went wrong; handleGlexecEnvironment will
-			// have already logged it
-			cleanupAfterGlexec(claim);
-			return 0;
-		}
-	}
-#endif
-
 	return s_pid;
 }
-
-#if defined(LINUX)
-void
-Starter::cleanupAfterGlexec(Claim * claim)
-{
-	// remove the copy of the user proxy that we own
-	// (the starter should remove the one glexec created for it)
-	if( claim && claim->client()->proxyFile() != NULL ) {
-		if ( unlink( claim->client()->proxyFile() ) == -1) {
-			dprintf( D_ALWAYS,
-			         "error removing temporary proxy %s: %s (%d)\n",
-			         claim->client()->proxyFile(),
-			         strerror(errno),
-			         errno );
-		}
-		claim->client()->setProxyFile(NULL);
-	}
-}
-#endif
 
 bool
 Starter::active() const

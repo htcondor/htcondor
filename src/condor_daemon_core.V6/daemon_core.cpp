@@ -643,7 +643,7 @@ bool DaemonCore::setChildSharedPortID( pid_t pid, const char * sock ) {
 		return false;
 	}
 
-	if( pidinfo->sinful_string[0] == '\0' ) {
+	if( pidinfo->sinful_string.empty() ) {
 		return false;
 	}
 
@@ -1071,8 +1071,8 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 			i = j;
 		}
 		if ( comTable[j].num == command ) {
-			MyString msg;
-			msg.formatstr("DaemonCore: Same command registered twice (id=%d)", command);
+			std::string msg;
+			formatstr(msg, "DaemonCore: Same command registered twice (id=%d)", command);
 			EXCEPT("%s",msg.c_str());
 		}
 	}
@@ -1176,7 +1176,7 @@ char const * DaemonCore::InfoCommandSinfulString(int pid)
 			// we have no information on this pid
 			return NULL;
 		}
-		if ( pidinfo->sinful_string[0] == '\0' ) {
+		if ( pidinfo->sinful_string.empty() ) {
 			// this pid is apparently not a daemon core process
 			return NULL;
 		}
@@ -2024,15 +2024,15 @@ int DaemonCore::Create_Pipe( int *pipe_ends,
 	dprintf(D_DAEMONCORE,"Entering Create_Pipe()\n");
 #ifdef WIN32
 	static unsigned pipe_counter = 0;
-	MyString pipe_name;
-	pipe_name.formatstr("\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
+	std::string pipe_name;
+	formatstr(pipe_name, "\\\\.\\pipe\\condor_pipe_%u_%u", GetCurrentProcessId(), pipe_counter++);
 	return Create_Named_Pipe(pipe_ends,
 		can_register_read,
 		can_register_write,
 		nonblocking_read,
 		nonblocking_write,
 		psize,
-		pipe_name.Value());
+		pipe_name.c_str());
 #else // unix
 	return Create_Named_Pipe(
 		pipe_ends,
@@ -3399,7 +3399,7 @@ DaemonCore::Async_test_Wake_up_select(
 	int & dst_fd,
 	void* &src,
 	int & src_fd,
-	MyString & status)
+	std::string & status)
 {
 	int hotness = AsyncInfo_Wake_up_select(dst, dst_fd, src, src_fd) ? 2 : 0;
 	status.clear();
@@ -5307,7 +5307,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	//
 	PidEntry* pidinfo;
 	if ((pidTable->lookup(pid, pidinfo) != -1) &&
-	    (pidinfo->sinful_string[0] != '\0'))
+	    (!pidinfo->sinful_string.empty()))
 	{
 		dprintf(D_PROCFAMILY,
 		        "Shutdown_Graceful: Sending pid %d SIGTERM\n",
@@ -5659,10 +5659,8 @@ void exit(int status)
 // should be used for the new process family. if group is non-NULL
 // then we will ask the ProcD to track by supplementary group
 // ID - the ID that the ProcD chooses for this purpose is returned
-// in the location pointed to by the argument. the last argument
-// optionally specifies a proxy to give to the ProcD so that
-// it can use glexec to signal the processes in this family
-//
+// in the location pointed to by the argument.
+
 bool
 DaemonCore::Register_Family(pid_t       child_pid,
                             pid_t       parent_pid,
@@ -5670,8 +5668,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-			    const char* cgroup,
-                            const char* glexec_proxy)
+			    const char* cgroup)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5742,18 +5739,6 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		EXCEPT("Internal error: "
 			    "cgroup-based tracking unsupported in this condor build");
 #endif
-	}
-	if (glexec_proxy != NULL) {
-		if (!m_proc_family->use_glexec_for_family(child_pid,
-		                                          glexec_proxy))
-		{
-			dprintf(D_ALWAYS,
-			        "Create_Process: error using GLExec for "
-				    "family with root %u\n",
-			        child_pid);
-			goto REGISTER_FAMILY_DONE;
-		}
-		runtime = dc_stats.AddRuntimeSample("DCRuse_glexec_for_family", IF_VERBOSEPUB, runtime);
 	}
 	success = true;
 REGISTER_FAMILY_DONE:
@@ -6389,7 +6374,7 @@ void CreateProcessForkit::exec() {
 	}
 		// END pid family environment id propogation 
 
-	MyString cookie;
+	std::string cookie;
 	bool has_cookie = m_envobject.GetEnv("CONDOR_PRIVATE_SHARED_PORT_COOKIE", cookie);
         if (m_want_command_port && !has_cookie) {
                 std::string value;
@@ -6416,8 +6401,8 @@ void CreateProcessForkit::exec() {
 	}
 	else {
 		if(IsDebugLevel(D_DAEMONCORE)) {
-			MyString arg_string;
-			m_args.GetArgsStringForDisplay(&arg_string);
+			std::string arg_string;
+			m_args.GetArgsStringForDisplay(arg_string);
 			dprintf(D_DAEMONCORE, "Create_Process: Arg: %s\n", arg_string.c_str());
 		}
 		m_unix_args = m_args.GetStringArray();
@@ -6480,8 +6465,7 @@ void CreateProcessForkit::exec() {
 				                            penvid_ptr,
 				                            m_family_info->login,
 				                            tracking_gid_ptr,
-							    m_family_info->cgroup,
-				                            m_family_info->glexec_proxy);
+							    m_family_info->cgroup);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				writeExecError(errno);
@@ -7879,8 +7863,7 @@ int DaemonCore::Create_Process(
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
-		                          family_info->cgroup,
-		                          family_info->glexec_proxy);
+		                          family_info->cgroup);
 		if (!okrf) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -8424,8 +8407,7 @@ int DaemonCore::Create_Process(
 		                &pidtmp->penvid,
 		                family_info->login,
 		                NULL,
-				family_info->cgroup,
-		                family_info->glexec_proxy);
+				family_info->cgroup);
 	}
 #endif
 
@@ -9001,7 +8983,7 @@ DaemonCore::Inherit( void )
 		PidEntry *pidtmp = new PidEntry;
 		pidtmp->pid = ppid;
 		dprintf(D_DAEMONCORE,"Parent Command Sock = %s\n",saved_sinful_string.c_str());
-		pidtmp->sinful_string = saved_sinful_string.c_str();
+		pidtmp->sinful_string = saved_sinful_string;
 		pidtmp->is_local = TRUE;
 		pidtmp->parent_is_local = TRUE;
 		pidtmp->reaper_id = 0;
@@ -9250,7 +9232,7 @@ DaemonCore::Inherit( void )
 void
 DaemonCore::SetDaemonSockName( char const *sock_name )
 {
-	m_daemon_sock_name = sock_name;
+	m_daemon_sock_name = sock_name ? sock_name : "";
 }
 
 void
@@ -9353,7 +9335,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			}
 		}
 
-		MyString proto = "";
+		std::string proto = "";
 		if(it->has_relisock()) { proto = "TCP (ReliSock)"; }
 		if(it->has_safesock()) {
 			if(proto.length()) { proto += " and "; }
@@ -10170,9 +10152,9 @@ static bool assign_sock(condor_protocol proto, Sock * sock, bool fatal)
 		default: type = "unknown"; break;
 	}
 
-	MyString protoname = condor_protocol_to_str(proto);
-	MyString msg;
-	msg.formatstr( "Failed to create a %s/%s socket.  Does this computer have %s support?",
+	std::string protoname = condor_protocol_to_str(proto);
+	std::string msg;
+	formatstr( msg, "Failed to create a %s/%s socket.  Does this computer have %s support?",
 		type,
 		protoname.c_str(),
 		protoname.c_str());
@@ -10242,8 +10224,8 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 		// a dynamic UDP socket, do that now, so we can make the port
 		// numbers match.
 		if(! BindAnyCommandPort( rsock, dynamicUDPSocket, proto ) ) {
-			MyString msg;
-			msg.formatstr( "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).c_str() );
+			std::string msg;
+			formatstr( msg, "BindAnyCommandPort() failed. Does this computer have %s support?", condor_protocol_to_str( proto ).c_str() );
 			if( fatal ) {
 				EXCEPT( "%s", msg.c_str() );
 			} else {
@@ -10294,8 +10276,8 @@ InitCommandSocket( condor_protocol proto, int tcp_port, int udp_port, DaemonCore
 
 		// This version of ReliSock::listen() calls bind() for us.
 		if(! rsock->listen( proto, tcp_port ) ) {
-			MyString msg;
-			msg.formatstr( "Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?",
+			std::string msg;
+			formatstr( msg, "Failed to listen(%d) on TCP/%s command socket. Does this computer have %s support?",
 				tcp_port,
 				condor_protocol_to_str( proto ).c_str(),
 				condor_protocol_to_str( proto ).c_str() );
@@ -10651,8 +10633,8 @@ DaemonCore::CheckConfigAttrSecurity( const char* name, Sock* sock )
 			// so, now see if the connection qualifies for this access
 			// level.
 
-		MyString command_desc;
-		command_desc.formatstr("remote config %s",name);
+		std::string command_desc;
+		formatstr(command_desc, "remote config %s",name);
 
 		std::string perm_name = PermString(static_cast<DCpermission>(i));
 
@@ -10743,7 +10725,7 @@ DaemonCore::InitSettableAttrsLists( void )
 bool
 DaemonCore::InitSettableAttrsList( const char* /* subsys */, int i )
 {
-	MyString param_name;
+	std::string param_name;
 	char* tmp;
 
 /* XXX Comment this out and let subsys.SETTABLE_ATTRS_* work instead */
@@ -10987,8 +10969,8 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 	}
 
     if( fname ) {
-		MyString newLocalAdFile;
-		newLocalAdFile.formatstr("%s.new",fname);
+		std::string newLocalAdFile;
+		formatstr(newLocalAdFile,"%s.new",fname);
         if( (AD_FILE = safe_fopen_wrapper_follow(newLocalAdFile.c_str(), "w")) ) {
             fPrintAd(AD_FILE, *daemonAd);
             fclose( AD_FILE );
@@ -11001,7 +10983,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 #ifdef WIN32
 				dprintf( D_ALWAYS,
 						 "DaemonCore: WARNING: failed to rotate %s to %s\n",
-						 newLocalAdFile.Value(),
+						 newLocalAdFile.c_str(),
 						 fname);
 #else
 				dprintf( D_ALWAYS,

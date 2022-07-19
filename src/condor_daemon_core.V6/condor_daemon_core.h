@@ -214,7 +214,6 @@ struct FamilyInfo {
 #if defined(LINUX)
 	gid_t* group_ptr;
 #endif
-	const char* glexec_proxy;
 	bool want_pid_namespace;
 	const char* cgroup;
 
@@ -224,7 +223,6 @@ struct FamilyInfo {
 #if defined(LINUX)
 		group_ptr = NULL;
 #endif
-		glexec_proxy = NULL;
 		want_pid_namespace = false;
 		cgroup = NULL;
 	}
@@ -336,6 +334,14 @@ class OptionalCreateProcessArgs {
   friend class DaemonCore;
 
   public:
+    OptionalCreateProcessArgs(/*very not-const*/ std::string &_err_return_msg) :
+        _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
+        want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
+        socket_inherit_list(NULL), _std(NULL), fd_inherit_list(NULL),
+        nice_inc(0), sig_mask(NULL), job_opt_mask(0), core_hard_limit(NULL),
+        affinity_mask(NULL), daemon_sock(NULL),
+        err_return_msg(_err_return_msg), _remap(NULL), as_hard_limit(0l)
+	{}
     OptionalCreateProcessArgs() :
         _priv(PRIV_UNKNOWN), reaper_id(1), want_command_port(TRUE),
         want_udp_command_port(TRUE), _env(NULL), _cwd(NULL), family_info(NULL),
@@ -391,7 +397,6 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & coreHardLimit(size_t * core_hard_limit ) { this->core_hard_limit = core_hard_limit; return *this; }
     OptionalCreateProcessArgs & affinityMask(int * affinity_mask) { this->affinity_mask = affinity_mask; return *this; }
     OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
-    OptionalCreateProcessArgs & errorReturnMsg(std::string & erm) { this->err_return_msg = erm; return *this; }
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
 
@@ -1448,7 +1453,7 @@ class DaemonCore : public Service
 
 	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
-	    case the DaemonCore destructor won't be called. also used by a glexec'd starter before it exits)
+	    case the DaemonCore destructor won't be called.
 	*/
 	void Proc_Family_Cleanup();
 
@@ -1716,7 +1721,7 @@ class DaemonCore : public Service
 		/**
 			check hotness of wakeup select socket from an async thread. used for debugging
 		*/
-	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, MyString & status);
+	int Async_test_Wake_up_select(void * &dst, int & dst_fd, void* &src, int & src_fd, std::string & status);
 
 	/** Registers a socket for read and then calls HandleReq to
 			process a command on the socket once one becomes
@@ -1960,8 +1965,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
-			     const char* cgroup,
-	                     const char* glexec_proxy);
+			     const char* cgroup);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
@@ -2138,8 +2142,7 @@ class DaemonCore : public Service
 		LONG deallocate;
 		HANDLE watcherEvent;
 #endif
-        MyString sinful_string;
-        MyString parent_sinful_string;
+        std::string sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;
@@ -2155,7 +2158,7 @@ class DaemonCore : public Service
 		/* the environment variables which allow me the track the pidfamily
 			of this pid (where applicable) */
 		PidEnvID penvid;
-		MyString shared_port_fname;
+		std::string shared_port_fname;
 		//Session ID and key for child process.
 		char* child_session_id;
     };
@@ -2355,7 +2358,7 @@ class DaemonCore : public Service
 
 	class CCBListeners *m_ccb_listeners;
 	class SharedPortEndpoint *m_shared_port_endpoint;
-	MyString m_daemon_sock_name;
+	std::string m_daemon_sock_name;
 	Sinful m_sinful;     // full contact info (public, private, ccb, etc.)
 	bool m_dirty_sinful; // true if m_sinful needs to be reinitialized
 	std::vector<Sinful> m_command_sock_sinfuls; // Cached copy of our command sockets' sinful strings.
