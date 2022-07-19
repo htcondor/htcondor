@@ -54,7 +54,6 @@ private:
     static bool RemoveVG(const std::string &lv_name, CondorError &err);
     static bool RemovePV(const std::string &lv_name, CondorError &err);
     static bool RemoveLoopDev(const std::string &lv_name, CondorError &err);
-    static std::vector<std::string> ListPoolLVs(const std::string &pool_name, CondorError &err);
     static bool GetPoolSize(const std::string &pool_name, const std::string &vg_name, uint64_t &used, uint64_t &total, CondorError &err);
 
 
