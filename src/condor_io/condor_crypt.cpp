@@ -42,23 +42,31 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     // these conversions so that the state object doesn't need any specifc
     // method manipulation here.
 
+    const char* cipher_name = nullptr;
     switch(proto) {
         case CONDOR_3DES: {
             // reset() will initialize everything else
+            cipher_name = "3DES";
             break;
         }
         case CONDOR_BLOWFISH: {
             // reset() will initialize everything else
+            cipher_name = "BLOWFISH";
             break;
         }
         case CONDOR_AESGCM: {
             // AESGCM provides a method to init the StreamCryptoState object, use that.
             Condor_Crypt_AESGCM::initState(&m_stream_crypto_state);
+            cipher_name = "AES";
             break;
         }
         default:
             dprintf(D_ALWAYS, "CRYPTO: WARNING: Initialized crypto state for unknown proto %i.\n", proto);
             break;
+    }
+
+    if (cipher_name) {
+        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: New crypto state with protocol %s\n", cipher_name);
     }
 
     // initialize contexts for BLOWFISH and 3DES
