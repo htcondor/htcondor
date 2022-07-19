@@ -2534,7 +2534,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 				// This file should have been transferred via CEDAR, so this
 				// check shouldn't be necessary, but it also ensures that we
 				// haven't had a name collision with the job.
-				if(! manifest::validateFile( manifestFileName )) {
+				if(! manifest::validateManifestFile( manifestFileName )) {
 					std::string message = "Invalid MANIFEST file, aborting.";
 					notifyStarterError( message.c_str(), true, 0, 0 );
 					EXCEPT( "%s\n", message.c_str() );
