@@ -33,11 +33,8 @@ bool Condor_Crypt_3des :: encrypt(Condor_Crypto_State *cs,
 {
 	output_len = input_len;
     output = (unsigned char *) malloc(input_len);
-	int temp_len = 0;
     if (output) {	
 		EVP_EncryptUpdate(cs->enc_ctx, output, &output_len, input, input_len);
-		EVP_EncryptFinal_ex(cs->enc_ctx, output + output_len, &temp_len);
-		output_len += temp_len;
 		
         return true;   
     }
@@ -54,11 +51,8 @@ bool Condor_Crypt_3des :: decrypt(Condor_Crypto_State *cs,
 {
 	output_len = input_len;
     output = (unsigned char *) malloc(input_len);
-	int temp_len = 0;
     if (output) {	
 		EVP_DecryptUpdate(cs->dec_ctx, output, &output_len, input, input_len);
-		EVP_DecryptFinal_ex(cs->dec_ctx, output + output_len, &temp_len);
-		output_len += temp_len;
 		
         return true;           // Should be changed
     }

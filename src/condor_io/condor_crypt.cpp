@@ -31,18 +31,12 @@
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     m_keyInfo(key)
 {
-
     // m_keyInfo (initialized above) stores the key object,
     // which includes: protocol, len, data, duration
 
     // zero everything;
-    // CURRENTLY UNUSED: m_additional_len = 0;
-    // CURRENTLY UNUSED: m_additional = NULL;
-    m_ivec_len = 0;
-    m_ivec = NULL;
-    //Get new encryption/decryption cipher contexts
-	enc_ctx = EVP_CIPHER_CTX_new();
-	dec_ctx = EVP_CIPHER_CTX_new();
+    enc_ctx = nullptr;
+    dec_ctx = nullptr;
 
     // there should probably be a static function in each crypto object to do
     // these conversions so that the state object doesn't need any specifc
@@ -50,23 +44,11 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 
     switch(proto) {
         case CONDOR_3DES: {
-			
-            m_ivec_len = 8;
-            m_ivec = (unsigned char*)malloc(m_ivec_len);
-			memset(m_ivec, 0, m_ivec_len);
-			//Initialize cipher context as triple DES
-			EVP_EncryptInit_ex(enc_ctx, EVP_des_ede3_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
-			EVP_DecryptInit_ex(dec_ctx, EVP_des_ede3_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
+            // reset() will initialize everything else
             break;
         }
         case CONDOR_BLOWFISH: {
-
-            m_ivec_len = 8;
-            m_ivec = (unsigned char*)malloc(m_ivec_len);
-			memset(m_ivec, 0, m_ivec_len);
-			//Initialize cipher context as blowfish
-			EVP_EncryptInit_ex(enc_ctx, EVP_bf_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
-			EVP_DecryptInit_ex(dec_ctx, EVP_bf_cfb64(), NULL, m_keyInfo.getKeyData(), m_ivec);
+            // reset() will initialize everything else
             break;
         }
         case CONDOR_AESGCM: {
@@ -79,28 +61,48 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
             break;
     }
 
-    // zero m_ivec and m_num
+    // initialize contexts for BLOWFISH and 3DES
     reset();
 
 }
 
 Condor_Crypto_State::~Condor_Crypto_State() {
-    if(m_ivec) free(m_ivec);
-	EVP_CIPHER_CTX_free(enc_ctx);
-	EVP_CIPHER_CTX_free(dec_ctx);
+	if(enc_ctx) EVP_CIPHER_CTX_free(enc_ctx);
+	if(dec_ctx) EVP_CIPHER_CTX_free(dec_ctx);
 }
 
 void Condor_Crypto_State::reset() {
-    if(m_keyInfo.getProtocol() == CONDOR_AESGCM) {
-        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: protocol(AES), not clearing StreamCryptoState.\n");
-    } else {
-        dprintf(D_SECURITY | D_VERBOSE, "CRYPTO: simple reset m_ivec(len %i) and m_num\n", m_ivec_len);
+	const EVP_CIPHER *cipher_type = nullptr;
+	switch(m_keyInfo.getProtocol()) {
+	case CONDOR_3DES:
+		cipher_type = EVP_des_ede3_cfb64();
+		break;
+	case CONDOR_BLOWFISH:
+		cipher_type = EVP_bf_cfb64();
+		break;
+	case CONDOR_AESGCM:
+	default:
+		// Do nothing
+		break;
+	}
+	if (cipher_type) {
+		// Intialize the ivec with all zeros
+		unsigned char ivec[8] = { };
 
-        if(m_ivec) {
-            memset(m_ivec, 0, m_ivec_len);
-        }
-        m_num = 0;
-    }
+		// (re)initialize the cipher context
+		if(enc_ctx) EVP_CIPHER_CTX_free(enc_ctx);
+		if(dec_ctx) EVP_CIPHER_CTX_free(dec_ctx);
+		enc_ctx = EVP_CIPHER_CTX_new();
+		dec_ctx = EVP_CIPHER_CTX_new();
+
+		EVP_EncryptInit_ex(enc_ctx, cipher_type, NULL, NULL, NULL);
+		EVP_CIPHER_CTX_set_key_length(enc_ctx, m_keyInfo.getKeyLength());
+		EVP_EncryptInit_ex(enc_ctx, NULL, NULL, m_keyInfo.getKeyData(), ivec);
+
+		EVP_DecryptInit_ex(dec_ctx, cipher_type, NULL, NULL, NULL);
+		EVP_CIPHER_CTX_set_key_length(dec_ctx, m_keyInfo.getKeyLength());
+		EVP_DecryptInit_ex(dec_ctx, NULL, NULL, m_keyInfo.getKeyData(), ivec);
+	}
 }
 
 int Condor_Crypt_Base :: encryptedSize(int inputLength, int blockSize)
