@@ -19,9 +19,6 @@ Release Notes:
 - HTCondor version 9.0.15 not yet released.
 
 New Features:
-
-- None.
-
 - For **batch** grid universe jobs, report resources provisioned by the batch
   scheduler when available.
   :jira:`1199`
