@@ -959,7 +959,9 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
-				SetRemoteJobId( NULL );
+				if ( condorState != COMPLETED && condorState != REMOVED ) {
+					SetRemoteJobId( NULL );
+				}
 				myResource->CancelSubmit( this );
 			}
 			gmState = GM_DELETE_SANDBOX;
