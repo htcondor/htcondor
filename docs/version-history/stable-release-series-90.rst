@@ -30,6 +30,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
+
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.
   :jira:`1178`
