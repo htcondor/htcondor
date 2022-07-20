@@ -63,13 +63,13 @@ Bugs Fixed:
 Version 9.0.15
 --------------
 
-.. HTCondor version 9.0.15 released on Month Date, 2022.
-
-- HTCondor version 9.0.15 not yet released.
+- HTCondor version 9.0.15 released on July 21, 2022.
 
 New Features:
 
-- None.
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
 
 Bugs Fixed:
 
