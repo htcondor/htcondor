@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
 
 .. _lts-version-history-9016:
 
