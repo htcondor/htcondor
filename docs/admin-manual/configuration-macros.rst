@@ -8998,9 +8998,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     default setting if no others are specified.
 
 :macro-def:`SEC_*_CRYPTO_METHODS`
-    When encryption is enabled for a session at a specified authorization,
-    the cryptographic algorithm used to encrypt the conversation.  Possible
-    values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
+    An ordered list of allowed cryptographic algorithms to use for
+    encrypting a network session at a specified authorization level.
+    The server will select the first entry in its list that both
+    server and client allow.
+    Possible values are ``AES``, ``3DES``, and ``BLOWFISH``.
+    The special parameter name ``SEC_DEFAULT_CRYPTO_METHODS`` controls the
+    default setting if no others are specified.
+    There is little benefit in varying
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
