@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- When a failure occurs with a grid universe job of type ``batch``,
+  the local job is now always put on hold, instead of the remote job
+  being canceled and automatically resubmitted.
+  :jira:`1226`
 
 .. _lts-version-history-9016:
 
