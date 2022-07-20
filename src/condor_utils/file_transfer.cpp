@@ -4222,6 +4222,8 @@ FileTransfer::computeFileList(
 				//
 				std::string outputName = fileitem.srcName();
 				if(! uploadCheckpointFiles) {
+					// This doesn't do anything useful if the user specified
+					// an absolute path for their logs.  See HTCONDOR-1221.
 					if( outputName == StdoutRemapName ) {
 						jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
 					} else if( outputName == StderrRemapName ) {

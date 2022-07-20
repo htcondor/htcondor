@@ -30,7 +30,7 @@ def plugin_shell_file(test_dir, plugin_python_file, plugin_log_file):
     contents = format_script(
     f"""
         #!/bin/bash
-        exec {plugin_python_file} $@ 2>&1 >> {plugin_log_file}
+        exec {plugin_python_file} "$@" 2>&1 >> {plugin_log_file}
     """
     )
     write_file(plugin_shell_file, contents)
@@ -303,15 +303,27 @@ def path_to_the_job_script(default_condor, test_dir):
     print(f"Starting from my checkpoint number {my_checkpoint_number}")
 
     # Oddly enough, `condor_chirp` gets the wrong answer here.
-    the_checkpoint_number = 0
-    rv = subprocess.run(
-        ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        timeout=20
-    )
-    if rv.returncode == 0 and b"undefined" not in rv.stdout:
-        the_checkpoint_number = int(rv.stdout.strip())
+    #
+    # The shadow updates the schedd on a timer (and not when the starter
+    # sends an update), so there's a delay between the starter incrementing
+    # the checkpoint number (before it restarts the job) and the update
+    # becoming visible in the schedd.  By default, we test with that interval
+    # set to two seconds, so sleep for three to make sure it passes before
+    # we try again.
+    for i in range(1,3):
+        the_checkpoint_number = 0
+        rv = subprocess.run(
+            ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20
+        )
+        if rv.returncode == 0 and b"undefined" not in rv.stdout:
+            the_checkpoint_number = int(rv.stdout.strip())
+        if the_checkpoint_number == my_checkpoint_number:
+            break
+        else:
+            time.sleep(3)
     print(f"Found the checkpoint number {the_checkpoint_number}")
 
     total_steps = 14
@@ -420,11 +432,25 @@ def the_job_description(test_dir, path_to_the_job_script):
 # in that the test cases should be directly parameterizing a fixture, but
 # there's no native support for concurrency in pytest, so this will do.
 TEST_CASES = {
+    "spool": {},
     "local": {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
-    "spool": {},
+    # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
+    # checking the results.  For now, we're just going to ignore the
+    # output_destination -related problems and only check to make sure
+    # that output_destination doesn't screw up checkpoint_destination.
+    "with_output_destination": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "output_destination":           'local://{test_dir}/',
+
+        # Absolute paths and output_destination make no sense together,
+        # so put these logs where the test logic expects to find them.
+        "output":                       "test_job_$(CLUSTER).out",
+        "error":                        "test_job_$(CLUSTER).err",
+    },
 }
 
 @action

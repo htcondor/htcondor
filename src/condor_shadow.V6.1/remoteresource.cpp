@@ -1265,7 +1265,15 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		shadow->watchJobAttr(ATTR_JOB_TOE);
 	}
 
-    CopyAttribute( ATTR_JOB_CHECKPOINT_NUMBER, *jobAd, *update_ad );
+    // You MUST NOT use CopyAttribute() here, because the starter doesn't
+    // send this on every update: CopyAttribute() deletes the target's
+    // attribute if it doesn't exist in the source, which means the schedd
+    // may never see this update (because update the schedd on a timer
+    // instead of after receiving an update).
+    int checkpointNumber = -1;
+    if( update_ad->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
+        jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+    }
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
