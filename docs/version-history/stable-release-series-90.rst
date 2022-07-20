@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
 
 .. _lts-version-history-9016:
 
