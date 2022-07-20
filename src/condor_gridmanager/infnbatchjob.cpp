@@ -786,7 +786,7 @@ void INFNBatchJob::doEvaluateState()
 							 "(%d.%d) blah_download_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
 					errorString = m_xfer_gahp->getErrorString();
-					gmState = GM_CANCEL;
+					gmState = GM_HOLD;
 					break;
 				}
 				gmState = GM_REFRESH_PROXY;
@@ -820,7 +820,7 @@ void INFNBatchJob::doEvaluateState()
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
 					errorString = gahp->getErrorString();
-					gmState = GM_CANCEL;
+					gmState = GM_HOLD;
 					break;
 				}
 				remoteProxyExpireTime = jobProxy->expiration_time;
