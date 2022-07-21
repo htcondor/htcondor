@@ -4471,15 +4471,27 @@ FileTransfer::computeFileList(
 	// we want to preserve the earlier one, rather than the later one.
 	//
 	std::set<std::string> names;
+	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item before duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
 		auto & item = * iter;
 		if( item.isDestUrl() ) { continue; }
 		if( item.isDirectory() ) { continue; }
 
-		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
+		std::string prefix = item.destDir();
+		if(! prefix.empty()) { prefix += DIR_DELIM_CHAR; }
+		std::string rd_path = prefix + condor_basename(item.srcName().c_str());
+
 		if( names.insert(rd_path).second == false ) {
 			// This incancation converts a reverse to a forward iterator.
 			filelist.erase( (iter + 1).base() );
+		} else {
+			// We rename the file whose _source_ matches ExecFile, so
+			// make sure to update ExecFile if the source may have changed
+			// (because remote submission spooled the executable).
+			if( ExecFile && rd_path == ExecFile ) {
+				free( ExecFile );
+				ExecFile = strdup(item.srcName().c_str());
+			}
 		}
 	}
 	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after duplicate removal:" );

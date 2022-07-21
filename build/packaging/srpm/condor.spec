@@ -1637,6 +1637,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jul 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.15-1
+- Report resources provisioned by the Slurm batch scheduler when available
+
 * Mon Jul 18 2022 Tim Theisen <tim@cs.wisc.edu> - 9.10.1-1
 - ActivationSetupDuration is now correct for jobs that checkpoint
 
