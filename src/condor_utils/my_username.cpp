@@ -27,7 +27,7 @@
 #endif /* ! WIN32 */
 
 char *
-my_username( int uuid ) {
+my_username() {
 #if defined(WIN32)
    char username[UNLEN+1];
    unsigned long usernamelen = UNLEN+1;
@@ -36,13 +36,10 @@ my_username( int uuid ) {
    }
    return strdup(username);
 #else
-   if( uuid < 0 ) {
-		uuid = geteuid();
-   }
    passwd_cache * my_cache = pcache();
    ASSERT(my_cache);
    char * name = 0;
-   if( ! my_cache->get_user_name(uuid, name) ) {
+   if( ! my_cache->get_user_name(geteuid(), name) ) {
 	   free(name); // Just in case;
 	   name = 0;
    }
