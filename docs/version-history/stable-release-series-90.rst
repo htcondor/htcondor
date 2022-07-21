@@ -29,6 +29,19 @@ Bugs Fixed:
   being canceled and automatically resubmitted.
   :jira:`1226`
 
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
+
+- Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
+  grid universe job would fail.
+  :jira:`1222`
+
 .. _lts-version-history-9016:
 
 Version 9.0.16
@@ -85,13 +98,13 @@ Bugs Fixed:
 Version 9.0.15
 --------------
 
-.. HTCondor version 9.0.15 released on Month Date, 2022.
-
-- HTCondor version 9.0.15 not yet released.
+- HTCondor version 9.0.15 released on July 21, 2022.
 
 New Features:
 
-- None.
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
 
 Bugs Fixed:
 
