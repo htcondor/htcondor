@@ -1,3 +1,9 @@
+condor (9.0.15-1) stable; urgency=medium
+
+  * Report resources provisioned by the Slurm batch scheduler when available
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 20 Jul 2022 15:18:00 -0500
+
 condor (9.0.14-1) stable; urgency=medium
 
   * SciToken mapping failures are now recorded in the daemon logs
@@ -7,7 +13,7 @@ condor (9.0.14-1) stable; urgency=medium
   * Fix bug where context managed Python htcondor.SecMan sessions would crash
   * Fix bug where remote CPU times would rarely be set to zero
 
- -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Jul 2022 15:18:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 12 Jul 2022 15:18:00 -0500
 
 condor (9.0.13-1) stable; urgency=medium
 
@@ -17,14 +23,14 @@ condor (9.0.13-1) stable; urgency=medium
   * Fix issue where Kerberos authentication would fail within DAGMan
   * Fix HTCondor startup failure with certain complex network configurations
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 May 2022 14:28:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 26 May 2022 14:28:00 -0500
 
 condor (9.0.12-1) stable; urgency=medium
 
   * Fix bug in parallel universe that could cause the schedd to crash
   * Fix rare crash where a daemon tries to use a discarded security session
 
- -- Tim Theisen <tim@cs.wisc.edu>  Tue, 19 Apr 2022 14:26:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 19 Apr 2022 14:26:00 -0500
 
 condor (9.0.11-1) stable; urgency=medium
 
