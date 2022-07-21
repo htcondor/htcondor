@@ -24,6 +24,11 @@ New Features:
 
 Bugs Fixed:
 
+- When a failure occurs with a grid universe job of type ``batch``,
+  the local job is now always put on hold, instead of the remote job
+  being canceled and automatically resubmitted.
+  :jira:`1226`
+
 - Job attribute ``GridJobId`` is no longer altered for **batch** grid
   universe jobs when the job enters ``Removed`` status.
   :jira:`1224`
