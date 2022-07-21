@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
+  grid universe job would fail.
+  :jira:`1222`
 
 .. _lts-version-history-9016:
 
