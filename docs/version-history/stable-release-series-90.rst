@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
+
 - Fixed a bug where the *condor_gridmanager* would delete the job's
   X.509 proxy file when it meant to delete a temporary copy of the
   proxy file.
