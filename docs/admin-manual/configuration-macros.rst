@@ -5483,6 +5483,48 @@ These macros control the *condor_schedd*.
              acounting_group_user = error
           @end
 
+:macro-def:`SUBMIT_TEMPLATE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain a set of submit commands.  Each name in the list will be used in the name of
+    the configuration variable ``SUBMIT_TEMPLATE_<Name>``.
+	Names are not case-sensitive. There is no default value.  Submit templates are
+	used by *condor_submit* when parsing submit files, so administrators or users can
+	add submit templates to the configuration of *condor_submit* to customize the
+	schema or to simplify the creation of submit files.
+
+:macro-def:`SUBMIT_TEMPLATE_<Name>`
+    A single submit template containing one or more submit commands.
+    The template can be invoked with or without arguments.  The template
+	can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
+	a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
+	``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
+	The argument number can be followed by ``?`` to test if the argument
+	was specfied, or by ``+`` to expand to that argument and all subsequent
+	arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
+
+	For example:
+
+    .. code-block:: condor-config
+
+          SUBMIT_TEMPLATE_NAMES = $(SUBMIT_TEMPLATE_NAMES) Slurm
+          SUBMIT_TEMPLATE_Slurm @=tpl
+             if ! $(1?)
+                error : Template:Slurm requires at least 1 argument - Slurm(project, [queue [, resource_args...])
+             endif
+             universe = Grid
+             grid_resource = batch slurm $(3)
+             batch_project = $(1)
+             batch_queue = $(2:Default)
+          @tpl
+
+	This could be used in a submit file in this way:
+
+    .. code-block:: condor-submit
+
+          use template : Slurm(Blue Book)
+
+
 :macro-def:`JOB_TRANSFORM_NAMES`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will

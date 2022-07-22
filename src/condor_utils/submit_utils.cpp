@@ -269,6 +269,11 @@ static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
 static char rec[] = "$(RequestCPUs)";
 static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 
+// placeholder for admin defined submit templates
+static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
+	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
+};
+
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
 	"SubmitFailEmptyMatches=false\n"
@@ -299,6 +304,7 @@ static MACRO_DEF_ITEM SubmitStrictTemplates[] = {
 
 static condor_params::key_table_pair SubmitTemplateTables[] = {
 	{ "STRICT", SubmitStrictTemplates, COUNTOF(SubmitStrictTemplates) },
+	{ "TEMPLATE", SubmitOptTemplates, COUNTOF(SubmitOptTemplates) },
 };
 static condor_params::ktp_value SubmitTemplateTablesDef = { "$", PARAM_TYPE_KTP_TABLE, SubmitTemplateTables, COUNTOF(SubmitTemplateTables) };
 
@@ -1159,8 +1165,11 @@ bool SubmitHash::AssignJobString(const char * attr, const char * val)
 
 static void sort_prunable_keywords();
 
+static int aligned_size(size_t cb, size_t align) { return (cb + align-1) & ~(align-1); }
+
 const char * init_submit_default_macros()
 {
+	//PRAGMA_REMIND("tj: fix to reconfig properly")
 	static bool initialized = false;
 	if (initialized)
 		return NULL;
@@ -1170,7 +1179,73 @@ const char * init_submit_default_macros()
 
 	const char * ret = NULL; // null return is success.
 
-	//PRAGMA_REMIND("tj: fix to reconfig properly")
+	// load submit templates into a condor_params::key_value_pair table
+	// and attach that table into the global static submit defaults
+	classad::References tpl_names;
+	if (param_and_insert_attrs("SUBMIT_TEMPLATE_NAMES", tpl_names)) {
+		tpl_names.erase("NAMES");
+
+		// build a collection of pointers to the template data sorted by key
+		// and also calculate how much space we need to store all of
+		// this as a condor_params table of param strings
+		size_t size = 0;
+		std::string knob;
+		std::map<std::string, std::string, classad::CaseIgnLTStr> templates;
+		for (auto name : tpl_names) {
+			knob = "SUBMIT_TEMPLATE_"; knob += name;
+			const char * raw_tpl = param_unexpanded(knob.c_str());
+			if (raw_tpl) {
+				std::string & tpl = templates[name];
+				tpl.assign(raw_tpl);
+				expand_defined_config_macros(tpl);
+				size += aligned_size(sizeof(condor_params::key_value_pair), sizeof(void*));
+				size += aligned_size(sizeof(condor_params::string_value), sizeof(void*));
+				size += aligned_size(name.size() + 1 + tpl.size() + 1, sizeof(void*));
+			}
+		}
+
+		// now allocate space for the runtime SubmitOptTemplates table and all of the strings that it holds.
+		// we use a temporary allocation pool to manage the memory as we build up the data structures
+		ALLOCATION_POOL ap;
+		ap.reserve(size);
+
+		// allocate the main table first. This will be the thing that gets freed when we want to
+		// throw the option templates away on reconfig (if we ever support that)
+		condor_params::key_value_pair* aTable = ap.consume<condor_params::key_value_pair>(templates.size());
+
+		// allocate space for the string values, we do this as a single hunk because on 64-bit platforms, we
+		// need the start of each string_value to be pointer aligned, the alignment member of the allocation pool consume method
+		// does not currently align the start of the memory, only the size.
+		size_t string_size = aligned_size(sizeof(condor_params::string_value), sizeof(void*));
+		condor_params::string_value* defs = reinterpret_cast<condor_params::string_value*>(ap.consume(templates.size()*string_size, sizeof(void*)));
+
+		// now copy the templates and fill in the data structures that map to them
+		int ix = 0;
+		for (auto it : templates) {
+			aTable[ix].key = ap.insert(it.first.c_str());
+			defs[ix].psz = const_cast<char*>(ap.insert(it.second.c_str()));
+			defs[ix].flags = PARAM_TYPE_STRING;
+			aTable[ix].def = &defs[ix];
+			++ix;
+		}
+
+		// hook the dynamic table into the static defaults for submit utils
+		// TODO: handle reconfig, freeing the old aTable if it is not the compile time default table
+		for (int ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
+			if (YourStringNoCase("TEMPLATE") == SubmitTemplateTables[ii].key) {
+				SubmitTemplateTables[ii].aTable = aTable;
+				SubmitTemplateTables[ii].cElms = ix;
+				break;
+			}
+		}
+
+		// detach the allocation of the option templates from the temporary allocation pool
+		// since we just attached it to the submit hash defaults
+		char * pb = nullptr;
+		ap.collapse(&pb);
+		ASSERT(pb == (char*)aTable);
+	}
+
 
 	ArchMacroDef.psz = param( "ARCH" );
 	if ( ! ArchMacroDef.psz) {
@@ -2903,7 +2978,7 @@ int SubmitHash::ProcessJobsetAttributes()
 			const char *name = hash_iter_key(it);
 			if ( ! starts_with_ignore_case(name, "JOBSET.")) continue;
 
-			const char *raw_value = hash_iter_value(it);
+			//const char *raw_value = hash_iter_value(it);
 			auto_free_ptr value(submit_param(name));
 
 			// For now, treat JOBSET.Name = x as a synonym for JOBSET.JobSetName = "x"
@@ -9275,23 +9350,25 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 	if (SubmitMacroSet.size <= 0) return;
 	if ( ! app) app = "condor_submit";
 
-	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
-	// these are specified for all DAG node jobs (see dagman_submit.cpp).
-	// wenger 2012-03-26 (refactored by TJ 2015-March)
-	increment_macro_use_count("DAG_STATUS", SubmitMacroSet);
-	increment_macro_use_count("FAILED_COUNT", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.Iwd", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.Requirements", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.AppendReq", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.AppendRank", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.CREDD_HOST", SubmitMacroSet);
+	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT and other
+	// variables may be set by templates but only sometimes used by submit.
+	static const char * const suppress[] = { "DAG_STATUS", "FAILED_COUNT",
+		"SubmitWarnEmptyMatches", "SubmitFailEmptyMatches", "SubmitWarnDuplicateMatches", "SubmitFailEmptyFields", "SubmitWarnEmptyFields",
+		// these are covered by the supression of warnings for dotted variables
+		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",
+	};
+	for (int ii = 0; ii < COUNTOF(suppress); ++ii) {
+		increment_macro_use_count(suppress[ii], SubmitMacroSet);
+	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
 		MACRO_META * pmeta = hash_iter_meta(it);
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
-			if (*key && (*key=='+' || starts_with_ignore_case(key, "MY."))) { continue; }
+			// no warning for +attr or MY.attr since those are handled later
+			// also no warning for other dotted names like FACTORY. or tmp.
+			if (*key && (*key=='+' || strchr(key, '.'))) { continue; }
 			if (pmeta->source_id == LiveMacro.id) {
 				push_warning(out, "the Queue variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {
@@ -9315,6 +9392,33 @@ void SubmitHash::dump(FILE* out, int flags)
 	}
 	hash_iter_delete(&it);
 }
+
+void SubmitHash::dump_templates(FILE* out, const char * category, int flags)
+{
+	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", SubmitMacroSet, 0);
+	if ( ! pdmt || ! pdmt->def)
+		return;
+
+	if ((pdmt->def->flags & 0x0F) != PARAM_TYPE_KTP_TABLE) {
+		fprintf(out, "template tables in unexpected format 0x%x\n", pdmt->def->flags);
+		return;
+	}
+
+	const condor_params::ktp_value* def = reinterpret_cast<const condor_params::ktp_value*>(pdmt->def);
+	for (int ix = 0; ix < def->cTables; ++ix) {
+		const condor_params::key_table_pair & tbl = def->aTables[ix];
+		if (category && MATCH != strcasecmp(tbl.key, category)) continue;
+		//fprintf(out, "%s\n", tbl.key);
+		for (int jj = 0; jj < tbl.cElms; ++jj) {
+			if (tbl.aTable[jj].def && tbl.aTable[jj].def->psz) {
+				fprintf(out, "%s:%s @=end\n%s\n@end\n\n", tbl.key, tbl.aTable[jj].key, tbl.aTable[jj].def->psz);
+			} else {
+				fprintf(out, "%s:%s=\n", tbl.key, tbl.aTable[jj].key);
+			}
+		}
+	}
+}
+
 
 const char* SubmitHash::to_string(std::string & out, int flags)
 {

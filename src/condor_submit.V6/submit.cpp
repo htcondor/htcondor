@@ -133,6 +133,7 @@ int		DashDryRun = 0;
 int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an error
 int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
 const char * DashDryRunOutName = NULL;
+int     DashDryRunFullAds = 0;
 int		DumpSubmitHash = 0;
 int		DumpSubmitDigest = 0;
 int		DumpJOBSETClassad = 0;
@@ -207,7 +208,7 @@ bool		DumpClassAdToFile = false;
 FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
 
-void usage();
+void usage(FILE * out);
 // this is in submit_help.cpp
 void help_info(FILE* out, int num_topics, const char ** topics);
 void init_params();
@@ -579,10 +580,14 @@ main( int argc, const char *argv[] )
 							DumpSubmitHash |= 0x100 | HASHITER_NO_DEFAULTS;
 						} else if (YourString(opt) == "def") {
 							DumpSubmitHash &= ~HASHITER_NO_DEFAULTS;
+						} else if (YourString(opt) == "full") {
+							DashDryRunFullAds = 1;
 						} else if (YourString(opt) == "digest") {
 							DumpSubmitDigest = 1;
 						} else if (YourString(opt) == "jobset") {
 							DumpJOBSETClassad = 1;
+						} else if (YourString(opt) == "tpl" || starts_with(opt, "template")) {
+							DumpSubmitHash |= 0x80;
 						} else if (starts_with(opt, "cluster=")) {
 							sim_current_condor_version = true;
 							sim_starting_cluster = atoi(strchr(opt, '=') + 1);
@@ -835,17 +840,14 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "allow-crlf-script", 8)) {
 				allow_crlf_script = true;
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
-				if (!(--argc) || !(*(++ptr))) {
-					usage();
-				}
-				help_info(stdout, argc, ptr);
+				help_info(stdout, --argc, ++ptr);
 				exit( 0 );
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.
 				dash_interactive = 1;
 				extraLines.Append( "+InteractiveJob=True" );
 			} else {
-				usage();
+				usage(stderr);
 				exit( 1 );
 			}
 		} else if (strchr(ptr[0],'=')) {
@@ -889,7 +891,7 @@ main( int argc, const char *argv[] )
 	if (STMethod == STM_UNKNOWN) {
 		fprintf( stderr, 
 			"%s: Unknown sandbox transfer method: %s\n", MyName, method.c_str());
-		usage();
+		usage(stderr);
 		exit(1);
 	}
 
@@ -899,7 +901,7 @@ main( int argc, const char *argv[] )
 		fprintf( stderr, 
 			"%s: Dumping ClassAds to a file is not compatible with sandbox "
 			"transfer method: %s\n", MyName, method.c_str());
-		usage();
+		usage(stderr);
 		exit(1);
 	}
 
@@ -1258,6 +1260,31 @@ main( int argc, const char *argv[] )
 		if( ProcId != -1 ) {
 			reschedule();
 		}
+	}
+
+	if (DashDryRun && DashDryRunFullAds) {
+		FILE* dryfile = NULL;
+		bool  close_it = false;
+		if (MATCH == strcmp(DashDryRunOutName, "-")) {
+			dryfile = stdout; close_it = false;
+			fputs("\n", stdout);
+		} else {
+			dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"wb");
+			if ( ! dryfile) {
+				fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
+				exit(1);
+			}
+			close_it = true;
+		}
+		std::string out;
+		for (size_t idx=0;idx<JobAdsArray.size();idx++) {
+			if (idx > 0) { out = "\n"; }
+			// for testing...
+			//formatstr_cat(out, "-- %d %p chainedto %p\n", (int)idx, JobAdsArray[idx], JobAdsArray[idx]->GetChainedParentAd());
+			formatAd(out, *JobAdsArray[idx]);
+			fputs(out.c_str(), dryfile);
+		}
+		if (close_it) { fclose(dryfile); }
 	}
 
 	// Deallocate some memory just to keep Purify happy
@@ -1976,6 +2003,10 @@ int submit_jobs (
 			if (DashDryRun && DumpSubmitHash) {
 				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
 				submit_hash.dump(stdout, DumpSubmitHash & 0xF);
+				if (DumpSubmitHash & 0x80) {
+					fprintf(stdout, "\n----- templates -----\n");
+					submit_hash.dump_templates(stdout, "TEMPLATE", DumpSubmitHash & 0xFF);
+				}
 				fprintf(stdout, "-----\n");
 			}
 
@@ -2003,6 +2034,10 @@ int submit_jobs (
 			if (DashDryRun && DumpSubmitHash) {
 				fprintf(stdout, "\n----- submit hash at queue begin -----\n");
 				submit_hash.dump(stdout, DumpSubmitHash & 0xF);
+				if (DumpSubmitHash & 0x80) {
+					fprintf(stdout, "\n----- templates -----\n");
+					submit_hash.dump_templates(stdout, "TEMPLATE", DumpSubmitHash & 0xFF);
+				}
 				fprintf(stdout, "-----\n");
 			}
 
@@ -2126,19 +2161,21 @@ int queue_connect()
 		if (DumpClassAdToFile || DashDryRun) {
 			SimScheddQ* SimQ = new SimScheddQ(sim_starting_cluster);
 			if (DumpFileIsStdout) {
-				SimQ->Connect(stdout, false, false);
+				SimQ->Connect(DashDryRunFullAds ? nullptr : stdout, false, false);
 			} else if (DashDryRun) {
 				FILE* dryfile = NULL;
 				bool  free_it = false;
-				if (MATCH == strcmp(DashDryRunOutName, "-")) {
-					dryfile = stdout; free_it = false;
-				} else {
-					dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"w");
-					if ( ! dryfile) {
-						fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
-						exit(1);
+				if ( ! DashDryRunFullAds) {
+					if (MATCH == strcmp(DashDryRunOutName, "-")) {
+						dryfile = stdout; free_it = false;
+					} else {
+						dryfile = safe_fopen_wrapper_follow(DashDryRunOutName,"w");
+						if ( ! dryfile) {
+							fprintf( stderr, "\nERROR: Failed to open file -dry-run output file (%s)\n", strerror(errno));
+							exit(1);
+						}
+						free_it = true;
 					}
-					free_it = true;
 				}
 				SimQ->Connect(dryfile, free_it, (DashDryRun&2)!=0);
 			} else {
@@ -2443,12 +2480,14 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		// If spooling entire job "sandbox" to the schedd, then we need to keep
 		// the classads in an array to later feed into the filetransfer object.
-		if ( dash_remote ) {
+		if (dash_remote || (DashDryRun && DashDryRunFullAds)) {
 			ClassAd * tmp = new ClassAd(*job);
 			tmp->Assign(ATTR_CLUSTER_ID, ClusterId);
 			tmp->Assign(ATTR_PROC_ID, ProcId);
 			if (0 == ProcId) {
 				JobAdsArrayLastClusterIndex = JobAdsArray.size();
+				tmp->Unchain();
+				tmp->UpdateFromChain(*job);
 			} else {
 				// proc ad to cluster ad (if there is one)
 				tmp->ChainToAd(JobAdsArray[JobAdsArrayLastClusterIndex]);
@@ -2470,50 +2509,50 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 
 void
-usage()
+usage(FILE* out)
 {
-	fprintf( stderr, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
-	fprintf( stderr, "    [options] are\n" );
-	fprintf( stderr, "\t-file <submit-file>\tRead Submit commands from <submit-file>\n");
-	fprintf( stderr, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
-	fprintf( stderr, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
-	fprintf( stderr, "\t-debug  \t\tDisplay debugging output\n" );
-	fprintf( stderr, "\t-append <line>\t\tadd line to submit file before processing\n"
-					 "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
-	fprintf( stderr, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
-					 "\t                   \t(submit file must not already have a Queue statement)\n" );
-	fprintf( stderr, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
+	fprintf( out, "Usage: %s [options] [<attrib>=<value>] [- | <submit-file>]\n", MyName );
+	fprintf( out, "    [options] are\n" );
+	fprintf( out, "\t-file <submit-file>\tRead Submit commands from <submit-file>\n");
+	fprintf( out, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
+	fprintf( out, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
+	fprintf( out, "\t-debug  \t\tDisplay debugging output\n" );
+	fprintf( out, "\t-append <line>\t\tadd line to submit file before processing\n"
+				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );
+	fprintf( out, "\t-queue <queue-opts>\tappend Queue statement to submit file before processing\n"
+				  "\t                   \t(submit file must not already have a Queue statement)\n" );
+	fprintf( out, "\t-batch-name <name>\tappend a line to submit file that sets the batch name\n"
 					/* "\t                  \t(overrides batch_name in submit file)\n" */);
-	fprintf( stderr, "\t-disable\t\tdisable file permission checks\n" );
-	fprintf( stderr, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
-					 "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
-	fprintf( stderr, "\t-maxjobs <maxjobs>\tDo not submit if number of jobs would exceed <maxjobs>.\n" );
-	fprintf( stderr, "\t-single-cluster\t\tDo not submit if more than one ClusterId is needed.\n" );
-	fprintf( stderr, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
+	fprintf( out, "\t-disable\t\tdisable file permission checks\n" );
+	fprintf( out, "\t-dry-run <filename>\tprocess submit file and write ClassAd attributes to <filename>\n"
+				  "\t        \t\tbut do not actually submit the job(s) to the SCHEDD\n" );
+	fprintf( out, "\t-maxjobs <maxjobs>\tDo not submit if number of jobs would exceed <maxjobs>.\n" );
+	fprintf( out, "\t-single-cluster\t\tDo not submit if more than one ClusterId is needed.\n" );
+	fprintf( out, "\t-unused\t\t\ttoggles unused or unexpanded macro warnings\n"
 					 "\t       \t\t\t(overrides config file; multiple -u flags ok)\n" );
 	//fprintf( stderr, "\t-force-mpi-universe\tAllow submission of obsolete MPI universe\n );
-	fprintf( stderr, "\t-allow-crlf-script\tAllow submitting #! executable script with DOS/CRLF line endings\n" );
-	fprintf( stderr, "\t-dump <filename>\tWrite job ClassAds to <filename> instead of\n"
+	fprintf( out, "\t-allow-crlf-script\tAllow submitting #! executable script with DOS/CRLF line endings\n" );
+	fprintf( out, "\t-dump <filename>\tWrite job ClassAds to <filename> instead of\n"
 					 "\t                \tsubmitting to a schedd.\n" );
 #if !defined(WIN32)
-	fprintf( stderr, "\t-interactive\t\tsubmit an interactive session job\n" );
+	fprintf( out, "\t-interactive\t\tsubmit an interactive session job\n" );
 #endif
-	fprintf( stderr, "\t-factory\t\tSubmit a late materialization job factory\n");
-	fprintf( stderr, "\t-name <name>\t\tsubmit to the specified schedd\n" );
-	fprintf( stderr, "\t-remote <name>\t\tsubmit to the specified remote schedd\n"
+	fprintf( out, "\t-factory\t\tSubmit a late materialization job factory\n");
+	fprintf( out, "\t-name <name>\t\tsubmit to the specified schedd\n" );
+	fprintf( out, "\t-remote <name>\t\tsubmit to the specified remote schedd\n"
 					 "\t              \t\t(implies -spool)\n" );
-    fprintf( stderr, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
-	fprintf( stderr, "\t-spool\t\t\tspool all files to the schedd\n" );
-	fprintf( stderr, "\t-password <password>\tspecify password to MyProxy server\n" );
-	fprintf( stderr, "\t-pool <host>\t\tUse host as the central manager to query\n" );
-	fprintf( stderr, "\t-stm <method>\t\tHow to move a sandbox into HTCondor\n" );
-	fprintf( stderr, "\t             \t\t<methods> is one of: stm_use_schedd_only\n" );
-	fprintf( stderr, "\t             \t\t                     stm_use_transferd\n" );
+    fprintf( out, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
+	fprintf( out, "\t-spool\t\t\tspool all files to the schedd\n" );
+	fprintf( out, "\t-password <password>\tspecify password to MyProxy server\n" );
+	fprintf( out, "\t-pool <host>\t\tUse host as the central manager to query\n" );
+	fprintf( out, "\t-stm <method>\t\tHow to move a sandbox into HTCondor\n" );
+	fprintf( out, "\t             \t\t<methods> is one of: stm_use_schedd_only\n" );
+	fprintf( out, "\t             \t\t                     stm_use_transferd\n" );
 
-	fprintf( stderr, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
+	fprintf( out, "\t<attrib>=<value>\tSet <attrib>=<value> before reading the submit file.\n" );
 
-	fprintf( stderr, "\n    If <submit-file> is omitted or is -, and a -queue is not provided, submit commands\n"
-					"     are read from stdin. Use of - implies verbose output unless -terse is specified\n");
+	fprintf( out, "\n    If <submit-file> is omitted or is -, and a -queue is not provided, submit commands\n"
+				  "     are read from stdin. Use of - implies verbose output unless -terse is specified\n");
 }
 
 

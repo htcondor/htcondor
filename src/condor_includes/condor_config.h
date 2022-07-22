@@ -304,8 +304,17 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 
 	// do macro expansion in-place in a std::string, expanding only macros not in the skip list
 	// returns the number of macros that were skipped.
+	// used by submit_utils to selectively expand submit hash keys when creating the submit digest
 	unsigned int selective_expand_macro (std::string &value, classad::References & skip_knobs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
 
+	// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
+	// returns the number of $() and $func() patterns that were skipped.
+	unsigned int expand_defined_macros (std::string &value, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
+
+	// do macro expansion in-place in a std::string, expanding only macros that are defined in the config
+	// returns the number of $() and $func() patterns that were skipped
+	// used by submit_utils to selectively submit templates against the config at load time
+	unsigned int expand_defined_config_macros (std::string &value);
 
 	// this is the lowest level primative to doing a lookup in the macro set.
 	// it looks ONLY for an exact match of "name" in the given macro set and does
