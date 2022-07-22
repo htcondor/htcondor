@@ -744,7 +744,10 @@ bool JobRouter::CreateIDTokenFile(const char * name, const char * props)
 	int fd = safe_create_keep_if_exists(tmp.c_str(), O_CREAT | O_WRONLY | _O_BINARY, 0600);
 	if (fd >= 0) {
 		(void)full_write(fd, token.c_str(), token.size());
-		ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
+		int r = ftruncate(fd, token.size()); // incase the data in the file is less than it was before.
+		if (r < 0) {
+			dprintf(D_ALWAYS, "Cannot ftruncate %s %d: %s\n", tmp.c_str(), errno, strerror(errno)); 
+		}
 		close(fd);
 
 		// save the filepath
