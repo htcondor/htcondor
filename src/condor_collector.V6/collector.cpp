@@ -2127,15 +2127,18 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
 		delete selfAd;
 	}
-	collector.identifySelfAd(self_rec);
 
-	// inserting the selfAd into the collector hashtable will stomp the update counters
-	// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
-	// and re-publish the global collector stats.
-	//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
-	selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
-	selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
-	collectorStats.publishGlobal(selfAd, NULL);
+	if (self_rec) {
+		collector.identifySelfAd(self_rec);
+
+		// inserting the selfAd into the collector hashtable will stomp the update counters
+		// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
+		// and re-publish the global collector stats.
+		//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
+		selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
+		selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
+		collectorStats.publishGlobal(selfAd, NULL);
+	}
 
 	// Send the ad
 	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
