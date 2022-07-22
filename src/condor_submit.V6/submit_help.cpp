@@ -39,7 +39,7 @@
 #include <string>
 #include <set>
 
-void usage(); // from submit.cpp
+void usage(FILE * out); // from submit.cpp
 
 // this is debug code: it must be kept in sync with submit_utils.cpp
 struct SimpleSubmitKeyword {
@@ -90,7 +90,7 @@ enum {
 void help_info(FILE* out, int num_topics, const char ** topics)
 {
 	if (num_topics <= 0 || !*topics) {
-		usage();
+		usage(out);
 		return;
 	}
 
@@ -119,10 +119,6 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 			if (doclist) ++doclist;
 		}
 	}
-	if ( ! options) {
-		usage();
-		return;
-	}
 
 	std::string line;
 	const struct SimpleSubmitKeyword * submit_keywords = get_submit_keywords();
@@ -133,6 +129,7 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 	for (auto k = submit_keywords; k->key || k->attr; ++k) { if (k->attr) submitattrs.insert(k->attr); }
 
 	// print a table based on condor_attributes.h
+	int lines = 0;
 	if (options & HELP_INFO_TABLE) {
 
 		bool show_attrs = options & HELP_INFO_ATTRIBUTES;
@@ -162,22 +159,31 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 
 				if (show_attrs) {
 					fprintf(out, "%s\n", k->attr);
+					++lines;
 				} else {
 					if (opts == 0x1000) typ = "  JOB";
 					else if (opts == 0x2000) typ = " SLOT";
 					else if (opts == 0x5000) typ = "   UN";
 					else if (opts == 0x6000) typ = "   NO";
 					fprintf(out, "%s_ATTR%s(%s,%d) // \"%s\"\n", typ, is_prefix ? "_PRE" : "", k->key, is_doc, k->attr);
+					++lines;
 				}
 			} else {
 				if (unk_only) {
 					fprintf(out, "%s\n", k->key);
+					++lines;
 				} else {
 					fprintf(out, "    ATTR(%s,\"%s\",0)\n", k->key, k->attr);
+					++lines;
 				}
 			}
 
 		}
+
+		if ( ! lines) {
+			usage(stdout);
+		}
+
 		return;
 	}
 
@@ -198,6 +204,7 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 		if (! line.empty()) {
 			line += "\n";
 			fputs(line.c_str(), out);
+			++lines;
 		}
 	}
 
@@ -219,8 +226,13 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 			if (! line.empty()) {
 				line += "\n";
 				fputs(line.c_str(), out);
+				++lines;
 			}
 		}
+	}
+
+	if ( ! lines) {
+		usage(stdout);
 	}
 }
 

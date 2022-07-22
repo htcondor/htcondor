@@ -2535,6 +2535,18 @@ public:
 	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
 };
 
+class ConfigMacroSkipCount : public ConfigMacroBodyCheck {
+public:
+	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
+	int skip_count = 0;
+};
+
+unsigned int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	ConfigMacroSkipCount & skb,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx);
+
 enum {
 	MACRO_ID_DOUBLEDOLLAR=-2,
 	MACRO_ID_NORMAL=-1,
@@ -4656,11 +4668,10 @@ unsigned int expand_macro (
 }
 
 // select only macros that we want to pre-expand when building the submit digest.
-class SkipKnobsBody : public ConfigMacroBodyCheck {
+class SkipKnobsBody : public ConfigMacroSkipCount {
 public:
 	classad::References & skip_knobs;
-	int skip_count;
-	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs), skip_count(0) {}
+	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
 		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
@@ -4689,14 +4700,27 @@ public:
 	}
 };
 
-
+// expand macros that do not match the names passed in the skip_knobs collection
+// used by submit_utils to selectively expand submit hash keys when creating the submit digest
 unsigned int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	classad::References &skip_knobs,
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	int unexpanded_knob_count = 0;
+	SkipKnobsBody skb(skip_knobs);
+	return selective_expand_macro(value, skb, macro_set, ctx);
+}
+
+// expand only macros that the skb callback does not indicate should be skipped
+// returns the count of skipped expansions
+//
+unsigned int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	ConfigMacroSkipCount & skb,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx)
+{
 	int iteration_count = 0;
 
 	MACRO_POSITION pos; pos.clear();
@@ -4706,9 +4730,7 @@ unsigned int selective_expand_macro (
 	int special_id = 0;
 	do {
 		const char * tmp = value.c_str();
-		SkipKnobsBody skb(skip_knobs); // prevents $(DOLLAR) from being matched by next_config_macro
 		special_id = next_config_macro(is_config_macro, skb, tmp, pos.dollar, pos);
-		unexpanded_knob_count += skb.skip_count;
 		if (special_id) {
 			body.clear(); body.append(value, pos.dollar, pos.right - pos.dollar);
 			if (++iteration_count > 10000) {
@@ -4734,9 +4756,56 @@ unsigned int selective_expand_macro (
 		}
 	} while (special_id);
 
-	return unexpanded_knob_count;
+	return skb.skip_count;
 }
 
+
+// select only macros that have defined values in the config macro set
+class SkipUndefinedBody : public ConfigMacroSkipCount {
+public:
+	MACRO_SET& mset;
+	MACRO_EVAL_CONTEXT & ctx;
+
+	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c) : mset(m), ctx(c) {}
+	virtual bool skip(int func_id, const char * body, int len) {
+		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
+		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+			// skip $(dollar)
+			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				++skip_count;
+				return true;
+			}
+
+			int namelen = len;
+			const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
+			if (colon) {
+				int colonlen = (int)(colon - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is not defined in the current config
+			std::string knob(body, namelen);
+			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
+			if ( ! pval || ! pval[0]) {
+				++skip_count;
+				return true;
+			}
+			return false;
+		}
+		++skip_count;
+		return true;
+	}
+};
+
+// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
+// returns the number of $() and $func() patterns that were skipped.
+unsigned int expand_defined_macros (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx)
+{
+	SkipUndefinedBody skub(macro_set, ctx);
+	return selective_expand_macro(value, skub, macro_set, ctx);
+}
 
 
 // MACRO self expansion ----
