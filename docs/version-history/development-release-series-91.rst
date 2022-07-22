@@ -18,7 +18,7 @@ Release Notes:
 New Features:
 
 - Added submit templates.  These are configured using new configuration variables
-  ``SUBMIT_TEMPLATE_NAMES`` and ``SUBMIT_TEMPLATE_<name>``.
+  macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
 
 Bugs Fixed:

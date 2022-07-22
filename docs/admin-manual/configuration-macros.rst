@@ -5498,7 +5498,7 @@ These macros control the *condor_schedd*.
     The template can be invoked with or without arguments.  The template
 	can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
 	a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
-	``$(1)`` to the first argument, ``$(2)`` to the second argument and so on.
+	``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
 	The argument number can be followed by ``?`` to test if the argument
 	was specfied, or by ``+`` to expand to that argument and all subsequent
 	arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
