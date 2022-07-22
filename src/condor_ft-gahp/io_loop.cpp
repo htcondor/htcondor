@@ -36,6 +36,7 @@
 #include "condor_claimid_parser.h"
 #include "authentication.h"
 #include "condor_version.h"
+#include "util_lib_proto.h"
 
 
 const char * version = "$GahpVersion 2.0.1 Jul 30 2012 Condor_FT_GAHP $";
@@ -851,9 +852,18 @@ download_proxy( const std::string &sid, const ClassAd &ad,
 
 	rsock.decode();
 
+	std::string tmp_path = proxy_path + ".tmp";
+
 		// Receive the gsi proxy
-	if ( rsock.get_x509_delegation( proxy_path.c_str(), false, NULL ) != ReliSock::delegation_ok ) {
+	if ( rsock.get_x509_delegation( tmp_path.c_str(), false, NULL ) != ReliSock::delegation_ok ) {
 		err = "Failed to receive proxy file";
+		return false;
+	}
+
+		// transfer worked, now rename temp file to proxy_path
+	if ( rotate_file(tmp_path.c_str(), proxy_path.c_str()) < 0 ) {
+		err = "Failed to rename proxy file";
+		unlink(tmp_path.c_str());
 		return false;
 	}
 
