@@ -5486,8 +5486,8 @@ These macros control the *condor_schedd*.
 :macro-def:`SUBMIT_TEMPLATE_NAMES`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
-    contain a set of submit commands. Each name in the list will be used in the name of
-    configuration variable ``SUBMIT_TEMPLATE_<Name>``.
+    contain a set of submit commands.  Each name in the list will be used in the name of
+    the configuration variable ``SUBMIT_TEMPLATE_<Name>``.
 	Names are not case-sensitive. There is no default value.  Submit templates are
 	used by *condor_submit* when parsing submit files, so administrators or users can
 	add submit templates to the configuration of *condor_submit* to customize the
