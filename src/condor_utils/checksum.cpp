@@ -39,9 +39,10 @@ compute_sha256_checksum( int fd, std::string & checksum ) {
     ASSERT( buffer != NULL );
 
     EVP_MD_CTX * context = condor_EVP_MD_CTX_new();
-    if( context == NULL ) { return false; }
+    if( context == NULL ) { free(buffer) ; return false; }
     if(! EVP_DigestInit_ex( context, EVP_sha256(), NULL )) {
         condor_EVP_MD_CTX_free( context );
+        free(buffer);
         return false;
     }
 
