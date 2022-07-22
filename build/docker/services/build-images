@@ -35,7 +35,7 @@ import sys
 import argparse
 import time
 import random
-from typing import Dict, List
+from typing import Dict, List, Union
 
 # mypy: no-strict-optional
 
@@ -121,6 +121,29 @@ def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
             return parsed
         else:
             raise RuntimeError("Can't parse CondorVersion: %s" % condor_version_str)
+
+
+def get_latest_git_tag() -> str:
+    """Return the parsed version ("X.Y.Z") if the latest git tag in the current repo.
+
+    """
+    ret = subprocess.run(
+        ["git", "tag" "--list" "V*_*_*"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        check=True,
+    )
+    version_regex = re.compile(rb"^V([0-9]+)_([0-9]+)_([0-9]+)$")
+    versions = set()
+    for line in ret.stdout.split(b"\n"):
+        match = version_regex.match(line)
+        if match:
+            major, minor, patch = [int(x) for x in match.groups((1,2,3))]
+            versions.add((major, minor, patch))
+
+    assert versions, "We should have found some versions or errored out"
+
+    return ".".join(sorted(versions)[-1])
 
 
 def is_lts_series(series: str) -> bool:
@@ -446,7 +469,7 @@ org.htcondor.version="%s"
             self.docker("rmi", image_with_registry, check=False)
 
 
-def parse_arguments(argv):
+def parse_arguments(argv, latest_series):
     parser = argparse.ArgumentParser(
         prog=argv[0],
         description=__doc__,
@@ -468,7 +491,7 @@ def parse_arguments(argv):
     parser.add_argument(
         "--series",
         help="The release series for daily or latest builds (default '%(default)s'). "
-        f"Either an explicit series (e.g. '9.0', '9.x') or 'latest' (which is '{SERIES_FOR_LATEST_TAGS}'). "
+        f"Either an explicit series (e.g. '9.0', '9.x') or 'latest' (which is '{latest_series}'). "
         "Only used if version is 'daily' or 'latest'.",
         default="latest",
     )
@@ -547,10 +570,16 @@ def parse_arguments(argv):
     return args, distros, images
 
 
-def main(argv) -> int:
+def main(argv) -> Union[int,str]:
     locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
 
-    args, distros, images = parse_arguments(argv)
+    try:
+        latest_version = get_latest_git_tag()
+    except (OSError, subprocess.SubprocessError) as err:
+        return "Failed to get latest tag using git: %s" % err
+
+    latest_series = series_from_version(latest_version)
+    args, distros, images = parse_arguments(argv, latest_series)
 
     builder = Builder(
         executable=args.executable,
