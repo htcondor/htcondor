@@ -1659,33 +1659,23 @@ FileTransfer::HandleCommands(int command, Stream *s)
 				if (transobject->UserLogFile &&
 						!file_strcmp(transobject->UserLogFile,currFile))
 				{
-						// Don't send the userlog from the shadow to starter
+					// Don't send the userlog from the shadow to starter
 					continue;
 				} else {
-						// We aren't looking at the userlog file... ship it!
-					const char *filename = spool_space.GetFullPath();
-
-					// If the spool contains a file with the same full path as a
-					// file in the input list, do nothing (don't duplicate it).
+					// We aren't looking at the userlog file... ship it!
 					//
-					// If the spool contains a file whose basename is in the input list,
-					// prefer the copy of the file in spool, because it might have been
-					// uploaded as part of a checkpoint.
-					if( transobject->InputFiles->file_contains(filename) ) {
-						// dprintf( D_ALWAYS, "[FT] Found full path %s in input files and SPOOL, doing nothing.\n", filename );
-					} else if( transobject->InputFiles->file_contains(condor_basename(filename)) ) {
-						transobject->InputFiles->remove(condor_basename(filename));
-						transobject->InputFiles->append(filename);
-						// dprintf( D_ALWAYS, "[FT] Found base name %s in input files and SPOOL, removing it and adding %s.\n", condor_basename(filename), filename );
-						if( transobject->ExecFile && strcmp( condor_basename(filename), transobject->ExecFile ) == 0 ) {
-							// dprintf( D_ALWAYS, "[FT] Changing executable name from %s to %s.\n", transobject->ExecFile, filename );
-							free(transobject->ExecFile);
-							transobject->ExecFile = strdup(filename);
-						}
-					} else {
-						// dprintf( D_ALWAYS, "[FT] Full path %s not in SPOOL but not input files, appending to intput files.\n", filename );
-						transobject->InputFiles->append(filename);
-					}
+					// Do NOT try to avoid duplicating files here.  Because
+					// we append the SPOOL entries to the input list, they'll
+					// win even if the de-duplication code in DoUpload()
+					// doesn't detect them.  This avoids a bunch of ugly code
+					// duplication, and also a bug caused by assuming all
+					// entries in SPOOL were files, so that directories at
+					// the root of SPOOL would be removed from the input list,
+					// causing an incomplete transfer if the user hadn't
+					// put the whole directory in TransferCheckpointFiles.
+					const char * filename = spool_space.GetFullPath();
+					// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
+					transobject->InputFiles->append(filename);
 				}
 			}
 			// Similarly, we want to look through any data reuse file and treat them as input
@@ -1699,7 +1689,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 					transobject->InputFiles->append(info.filename().c_str());
 			}
 
-			// dprintf( D_ALWAYS, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles->to_string().c_str() );
+			// dprintf( D_ZKM, "HandleCommands(): InputFiles = %s\n", transobject->InputFiles->to_string().c_str() );
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
@@ -3934,9 +3924,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
 	FileTransferList filelist;
-	// dprintf( D_ALWAYS, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
+	// dprintf( D_ZKM, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
@@ -4267,22 +4257,35 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	// we want to preserve the earlier one, rather than the later one.
 	//
 	std::set<std::string> names;
+	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item before duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
 		auto & item = * iter;
 
 		if( item.isSrcUrl() ) { continue; }
 		if( item.isDestUrl() ) { continue; }
+		if( item.isDirectory() ) { continue; }
 
-		std::string rd_path = item.destDir() + DIR_DELIM_CHAR + condor_basename(item.srcName().c_str());
+		std::string prefix = item.destDir();
+		if(! prefix.empty()) { prefix += DIR_DELIM_CHAR; }
+		std::string rd_path = prefix + condor_basename(item.srcName().c_str());
+
 		if( names.insert(rd_path).second == false ) {
 			// This incancation converts a reverse to a forward iterator.
 			filelist.erase( (iter + 1).base() );
+		} else {
+			// We rename the file whose _source_ matches ExecFile, so
+			// make sure to update ExecFile if the source may have changed
+			// (because remote submission spooled the executable).
+			if( ExecFile && rd_path == ExecFile ) {
+				free( ExecFile );
+				ExecFile = strdup(item.srcName().c_str());
+			}
 		}
 	}
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 
 	std::stable_sort(filelist.begin(), filelist.end());
-	// for( auto & i: filelist ) { dprintf( D_ALWAYS, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
@@ -6477,20 +6480,20 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 
 bool
 FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::set<std::string> & pathsAlreadyPreserved ) {
-	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
+	// dprintf( D_ZKM, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
 
 	// Fill a stack with path components from right to left.
 	std::string dir, file;
 	std::string path( src_path );
 	std::vector< std::string > splitPath;
-	// dprintf( D_ALWAYS, ">>> initial path-to-preserve = %s\n", path.c_str() );
+	// dprintf( D_ZKM, ">>> initial path-to-preserve = %s\n", path.c_str() );
 	while( filename_split( path.c_str(), dir, file ) ) {
-		// dprintf( D_ALWAYS, ">>> found trailing path-component %s\n", file.c_str() );
+		// dprintf( D_ZKM, ">>> found trailing path-component %s\n", file.c_str() );
 		splitPath.emplace_back( file );
 		path = path.substr( 0, path.length() - file.length() - 1 );
-		// dprintf( D_ALWAYS, ">>> proceeding with path-to-preserve = %s\n", path.c_str() );
+		// dprintf( D_ZKM, ">>> proceeding with path-to-preserve = %s\n", path.c_str() );
 	}
-	// dprintf( D_ALWAYS, ">>> found root path-component %s\n", file.c_str() );
+	// dprintf( D_ZKM, ">>> found root path-component %s\n", file.c_str() );
 	splitPath.emplace_back( file );
 
 	// Empty the stack to add directories from the root down.  Note
@@ -6541,7 +6544,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	ASSERT( dest_dir );
 	ASSERT( iwd );
 
-	// dprintf( D_ALWAYS, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, iwd, max_depth, preserveRelativePaths );
+	// dprintf( D_ZKM, ">>> EFTL( %s, %s, %s, %d, ..., %d )\n", src_path, dest_dir, iwd, max_depth, preserveRelativePaths );
 
 		// To simplify error handling, we always want to include an
 		// entry for the specified path, except two cases which are
@@ -6565,7 +6568,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	}
 	full_src_path += src_path;
 
-	// dprintf( D_ALWAYS, ">>> Calling stat(%s)\n", full_src_path.c_str() );
+	// dprintf( D_ZKM, ">>> Calling stat(%s)\n", full_src_path.c_str() );
 	StatInfo st( full_src_path.c_str() );
 	if( st.Error() != 0 ) {
 		return false;
@@ -6606,17 +6609,17 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 
 				// This is really clumsy.  Where's std::contains(container, value)?
 				if( pathsAlreadyPreserved.find( dirname ) == pathsAlreadyPreserved.end() ) {
-					// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", dirname.c_str(), file_xfer_item.srcName().c_str() );
+					// dprintf( D_ZKM, "Creating '%s' for '%s'\n", dirname.c_str(), file_xfer_item.srcName().c_str() );
 
 					// ExpandParentDirectories() adds this back in the correct place.
 					expanded_list.pop_back();
 
-					// dprintf( D_ALWAYS, ">>> expanding parent directories of named file %s\n", UrlSafePrint(src_path) );
+					// dprintf( D_ZKM, ">>> expanding parent directories of named file %s\n", UrlSafePrint(src_path) );
 					// N.B.: This isn't an infinite loop because
 					// ExpandParentDirectories() calls ExpandFileTransferList()
 					// with preserveRelativePaths turned off -- the whole point
 					// of it being to generate paths one level at a time.
-					// dprintf( D_ALWAYS, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
+					// dprintf( D_ZKM, ">>> [c] ExpandParentDirectories( %s, %s )\n", src_path, iwd );
 					if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
 						return false;
 					}
@@ -6624,7 +6627,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 			}
 		}
 
-		// dprintf( D_ALWAYS, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
+		// dprintf( D_ZKM, ">>> file added: %s in %s\n", file_xfer_item.srcName().c_str(), file_xfer_item.destDir().c_str() );
 		return true;
 	}
 
@@ -6657,32 +6660,32 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	// items (otherwise, the remote side won't know what permissions to set).
 	//
 
-	// dprintf( D_ALWAYS, ">>> transferring contents of directory %s\n", src_path );
+	// dprintf( D_ZKM, ">>> transferring contents of directory %s\n", src_path );
 	std::string destination = dest_dir;
 
 	if( trailing_slash ) {
-		// dprintf( D_ALWAYS, ">>> detected trailing slash.\n" );
+		// dprintf( D_ZKM, ">>> detected trailing slash.\n" );
 		expanded_list.pop_back();
 	} else {
 		if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
 
 		if(! preserveRelativePaths) {
-			// dprintf( D_ALWAYS, ">>> not preserving relative path.\n" );
+			// dprintf( D_ZKM, ">>> not preserving relative path.\n" );
 			destination += condor_basename(src_path);
 		} else {
 			if(! fullpath(src_path)) {
-				// dprintf( D_ALWAYS, ">>> preserving relative path of relative path %s\n", src_path );
+				// dprintf( D_ZKM, ">>> preserving relative path of relative path %s\n", src_path );
 
 				if( destination.length() > 0 ) { destination += DIR_DELIM_CHAR; }
 				destination += src_path;
 
 				if( pathsAlreadyPreserved.find( src_path ) == pathsAlreadyPreserved.end() ) {
-					// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", src_path, src_path );
+					// dprintf( D_ZKM, "Creating '%s' for '%s'\n", src_path, src_path );
 
 					// ExpandParentDirectories() adds this back in the correct place.
 					expanded_list.pop_back();
 
-					// dprintf( D_ALWAYS, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
+					// dprintf( D_ZKM, ">>> [b] ExpandParentDirectories( %s, %s, ..., ... )\n", src_path, iwd );
 					if(! ExpandParentDirectories( src_path, iwd, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
 						return false;
 					}
@@ -6702,10 +6705,10 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 				if( SpoolSpace != nullptr && starts_with(src_path, SpoolSpace) ) {
 					const char * relative_path = &src_path[strlen(SpoolSpace)];
 					if( IS_ANY_DIR_DELIM_CHAR(relative_path[0]) ) { ++relative_path; }
-					// dprintf( D_ALWAYS, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
+					// dprintf( D_ZKM, ">>> preserving relative path of directory (%s) in SPOOL (as %s)\n", src_path, relative_path );
 
 					if( pathsAlreadyPreserved.find( relative_path ) == pathsAlreadyPreserved.end() ) {
-						// dprintf( D_ALWAYS, "Creating '%s' for '%s'\n", relative_path, src_path );
+						// dprintf( D_ZKM, "Creating '%s' for '%s'\n", relative_path, src_path );
 
 						// ExpandParentDirectories() adds this back in the correct place.
 						expanded_list.pop_back();
@@ -6713,7 +6716,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 						// ExpandParentDirectories() needs its first argument to
 						// be the path relative to SPOOL, and its second argument
 						// needs to be SPOOL (to parallel the non-SPOOL use).
-						// dprintf( D_ALWAYS, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
+						// dprintf( D_ZKM, ">>> [a] ExpandParentDirectories( %s, %s, ..., ... )\n", relative_path, SpoolSpace );
 						if(! ExpandParentDirectories( relative_path, SpoolSpace, expanded_list, SpoolSpace, pathsAlreadyPreserved )) {
 							return false;
 						}
@@ -6749,7 +6752,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 	//
 	// Transfer the contents of the directory.
 	//
-	// dprintf( D_ALWAYS, ">>> transferring contents of directory %s to %s\n", src_path, destination.c_str() );
+	// dprintf( D_ZKM, ">>> transferring contents of directory %s to %s\n", src_path, destination.c_str() );
 
 	Directory dir( &st );
 	dir.Rewind();
@@ -6765,7 +6768,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		}
 		file_full_path += file_in_dir;
 
-		// dprintf( D_ALWAYS, ">>> calling ExpandFileTransferList( %s, %s, %s, ... )\n", file_full_path.c_str(), destination.c_str(), iwd );
+		// dprintf( D_ZKM, ">>> calling ExpandFileTransferList( %s, %s, %s, ... )\n", file_full_path.c_str(), destination.c_str(), iwd );
 		if( !ExpandFileTransferList( file_full_path.c_str(), destination.c_str(), iwd, max_depth, expanded_list, preserveRelativePaths, SpoolSpace, pathsAlreadyPreserved ) ) {
 			rc = false;
 		}
