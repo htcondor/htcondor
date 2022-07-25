@@ -20,7 +20,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Increased the length of the password generated for Windows default
+  slot user accounts from 14 characters to 32 characters, and added
+  some code to insure that complexity measures that look at
+  character set and not length will still be satisfied.
+  :jira:`1232`
 
 Bugs Fixed:
 
