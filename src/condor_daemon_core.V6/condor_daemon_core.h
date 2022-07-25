@@ -511,7 +511,6 @@ class DaemonCore : public Service
         @param handler_descrip Not_Yet_Documented
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
-        @param dprintf_flag    Not_Yet_Documented
 		@param force_authentication This command _must_ be authenticated.
         @param wait_for_payload Do a non-blocking select for read for this
                                 many seconds (0 means none) before calling
@@ -523,7 +522,6 @@ class DaemonCore : public Service
                           CommandHandler  handler, 
                           const char *    handler_descrip,
                           DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
                           int             wait_for_payload = 0,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -535,7 +533,6 @@ class DaemonCore : public Service
         @param handler_descrip Not_Yet_Documented
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
-        @param dprintf_flag    Not_Yet_Documented
 		@param force_authentication This command _must_ be authenticated.
         @param wait_for_payload Do a non-blocking select for read for this
                                 many seconds (0 means none) before calling
@@ -548,7 +545,6 @@ class DaemonCore : public Service
                           const char *       handler_descrip,
                           Service *          s,
                           DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND,
                           bool               force_authentication = false,
                           int                wait_for_payload = 0,
                           std::vector<DCpermission> * alternate_perms = nullptr);
@@ -575,7 +571,6 @@ class DaemonCore : public Service
                           CommandHandler  handler, 
                           const char *    handler_descrip,
                           DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND,
                           bool            force_authentication = false,
                           int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -587,7 +582,6 @@ class DaemonCore : public Service
                           const char *       handler_descrip,
                           Service *          s,
                           DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND,
                           bool               force_authentication = false,
                           int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> * alternate_perms = nullptr);
@@ -1916,7 +1910,6 @@ class DaemonCore : public Service
                          const char *handler_descrip,
                          Service* s, 
                          DCpermission perm,
-                         int dprintf_flag,
                          int is_cpp,
                          bool force_authentication,
                          int wait_for_payload,
@@ -1999,13 +1992,12 @@ class DaemonCore : public Service
         char*           command_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-        int             dprintf_flag;
 	int             wait_for_payload;
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
 	std::vector<DCpermission> *alternate_perm{nullptr};
 
-		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), dprintf_flag(0), wait_for_payload(0) {}
+		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), wait_for_payload(0) {}
     };
 
     void                DumpCommandTable(int, const char* = NULL);

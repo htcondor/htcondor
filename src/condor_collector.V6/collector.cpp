@@ -427,12 +427,12 @@ void CollectorDaemon::Init()
 		// restrictions to their contents (such as the user must be authenticated, not
 		// unmapped, and must match the Owner attribute).
 	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
-		receive_update,"receive_update", DAEMON, D_COMMAND, false,
+		receive_update,"receive_update", DAEMON, false,
 		0, &allow_perms);
 		//
 	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
 		schedd_token_request, "schedd_token_request", DAEMON,
-		D_COMMAND, true, 0, &allow_perms);
+		true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
 

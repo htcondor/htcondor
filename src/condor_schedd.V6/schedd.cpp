@@ -13604,44 +13604,44 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE, D_COMMAND,
+			"actOnJobs", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			"requestSandboxLocation", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
-			"RecycleShadow", this, DAEMON, D_COMMAND,
+			"RecycleShadow", this, DAEMON,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -13663,14 +13663,13 @@ Scheduler::Register()
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
 								  &attempt_access_handler,
-								  "attempt_access_handler", WRITE,
-								  D_FULLDEBUG );
+								  "attempt_access_handler", WRITE );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
 								&store_cred_handler,
 								"cred_access_handler", WRITE,
-								D_FULLDEBUG, true /*force authentication*/);
+								true /*force authentication*/);
 #endif
 
     // command handler in support of condor_status -direct query of our ads
@@ -13699,14 +13698,14 @@ Scheduler::Register()
 
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
-				"command_query_job_ads", this, READ, D_FULLDEBUG, true /*force authentication*/);
+				"command_query_job_ads", this, READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  &handle_q,
-								  "handle_q", READ, D_FULLDEBUG );
+								  "handle_q", READ );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13715,18 +13714,18 @@ Scheduler::Register()
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
 								  &handle_q,
-								  "handle_q", WRITE, D_FULLDEBUG,
+								  "handle_q", WRITE,
 								  true /* force authentication */ );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
 								  &get_myproxy_password_handler,
-								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
+								  "get_myproxy_password", WRITE );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
@@ -13735,15 +13734,15 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
 								  "export_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
 								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
 								  "import_exported_job_results_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
 								  "unexport_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -13766,7 +13765,7 @@ Scheduler::Register()
 		//
 	daemonCore->Register_CommandWithPayload( COLLECTOR_TOKEN_REQUEST, "DC_COLLECTOR_TOKEN_REQUEST",
 			(CommandHandlercpp)&Scheduler::handle_collector_token_request,
-			"handle_collector_token_request()", this, ALLOW, D_COMMAND, true );
+			"handle_collector_token_request()", this, ALLOW, true );
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(

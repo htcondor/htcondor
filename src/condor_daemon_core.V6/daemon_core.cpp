@@ -666,46 +666,46 @@ void DaemonCore::Set_Default_Reaper( int reaper_id )
  ********************************************************/
 int	DaemonCore::Register_Command(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip,
-				DCpermission perm, int dprintf_flag, bool force_authentication,
+				DCpermission perm, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, nullptr,
-							 perm, dprintf_flag, FALSE, force_authentication,
+							 perm, FALSE, force_authentication,
 							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, int dprintf_flag,
+								 Service* s, DCpermission perm,
 				bool force_authentication, int wait_for_payload,
 				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 handler_descrip, s, perm, TRUE,
 							 force_authentication, wait_for_payload,
 							 alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char* com_descrip,
 				CommandHandler handler, const char* handler_descrip,
-				DCpermission perm, int dprintf_flag, bool force_authentication,
+				DCpermission perm, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, handler,
 							(CommandHandlercpp)NULL, handler_descrip, nullptr,
-							 perm, dprintf_flag, FALSE, force_authentication,
+							 perm, FALSE, force_authentication,
 							 wait_for_payload, alternate_perm) );
 }
 
 int	DaemonCore::Register_CommandWithPayload(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, int dprintf_flag,
+				Service* s, DCpermission perm,
 				bool force_authentication, int wait_for_payload,
 				std::vector<DCpermission> *alternate_perm)
 {
 	return( Register_Command(command, com_descrip, NULL, handlercpp,
-							 handler_descrip, s, perm, dprintf_flag, TRUE,
+							 handler_descrip, s, perm, TRUE,
 							 force_authentication, wait_for_payload,
 							 alternate_perm) );
 }
@@ -1050,7 +1050,7 @@ int DaemonCore::Register_UnregisteredCommandHandler(
 int DaemonCore::Register_Command(int command, const char* command_descrip,
 				CommandHandler handler, CommandHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, DCpermission perm,
-				int dprintf_flag, int is_cpp, bool force_authentication,
+				int is_cpp, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
 	int i = -1;
@@ -1093,7 +1093,6 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 	comTable[i].force_authentication = force_authentication;
 	comTable[i].service = s;
 	comTable[i].data_ptr = NULL;
-	comTable[i].dprintf_flag = dprintf_flag;
 	comTable[i].wait_for_payload = wait_for_payload;
 	if (alternate_perm) {
 		comTable[i].alternate_perm = new std::vector<DCpermission>(*alternate_perm);
@@ -9412,8 +9411,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			// we can detect if any of our kids are hung.
 		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
 			(CommandHandlercpp)&DaemonKeepAlive::HandleChildAliveCommand,
-			"HandleChildAliveCommand", &m_DaemonKeepAlive, DAEMON,
-			D_FULLDEBUG );
+			"HandleChildAliveCommand", &m_DaemonKeepAlive );
 	}
 }
 
