@@ -2,6 +2,7 @@
 
 import os
 import time
+import subprocess
 
 from ornithology import (
     action,
@@ -274,6 +275,7 @@ def path_to_the_job_script(default_condor, test_dir):
     from pathlib import Path
 
     os.environ['CONDOR_CONFIG'] = '{default_condor.config_file}'
+    posix_test_dir = '{test_dir.as_posix()}'
 """ + """
     condor_libexec = Path(os.environ['_CONDOR_BIN']) / ".." / "libexec"
     os.environ['PATH'] = condor_libexec.as_posix() + os.pathsep + os.environ.get('PATH', '') + os.pathsep + os.environ['_CONDOR_BIN']
@@ -325,6 +327,12 @@ def path_to_the_job_script(default_condor, test_dir):
         else:
             time.sleep(3)
     print(f"Found the checkpoint number {the_checkpoint_number}")
+
+    # Dump the sandbox contents for later inspection.
+    if the_checkpoint_number == 1:
+        # This is a hack.
+        target = Path(posix_test_dir) / sys.argv[1]
+        os.system(f'/bin/cp -a . {target.as_posix()}')
 
     total_steps = 14
     num_completed_steps = 0
@@ -451,6 +459,12 @@ TEST_CASES = {
         "output":                       "test_job_$(CLUSTER).out",
         "error":                        "test_job_$(CLUSTER).err",
     },
+    "check_files_local": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         '{test_dir}/check_files_local/',
+        "transfer_checkpoint_files":    'saved-state, a, b, c, d, e',
+    },
 }
 
 @action
@@ -458,6 +472,32 @@ def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_
     job_handles = {}
     for name, test_case in TEST_CASES.items():
         test_case = {key: value.format(test_dir=test_dir, plugin_shell_file=plugin_shell_file) for key, value in test_case.items()}
+
+        # This is clumsy, but less clumsy that duplicating the basic
+        # functionality tests for more-complicated checkpoint structures.
+        input_path = test_dir / name
+        input_path.mkdir(parents=True, exist_ok=True)
+
+        if name == "check_files_local":
+            ( input_path / "a" ).write_text("a")
+            ( input_path / "b" ).write_text("b")
+            ( input_path / "c" ).write_text("c")
+            ( input_path / "d" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d" / "a" ).write_text("aa")
+            ( input_path / "d" / "b" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d" / "b" / "a" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d" / "b" / "a" / "a" ).write_text("aaa")
+            ( input_path / "d" / "b" / "b" ).write_text("bb")
+            ( input_path / "d" / "b" / "c" ).write_text("cc")
+            ( input_path / "d" / "c" ).write_text("ccc")
+            ( input_path / "d" / "d" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d" / "d" / "a" ).write_text("aaaa")
+            ( input_path / "d" / "d" / "b" ).write_text("bbb")
+            ( input_path / "e" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "e" / "a" ).write_text("aaaaa")
+            ( input_path / "e" / "b" ).write_text("bbbb")
+            ( input_path / "e" / "c" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "e" / "d" ).symlink_to(( input_path / "c" ))
 
         complete_job_description = {
             ** the_job_description,
@@ -469,18 +509,31 @@ def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_
         )
 
         job_handles[name] = job_handle
+
     yield job_handles
 
+    # In the future, when we actually delete checkpoints when the job
+    # leaves the queue -- and check when we do -- we'll have to be
+    # cleverer about which jobs get removed here, because some of them
+    # we definitely want to stay in the queue long enough to check
+    # their checkpoint directories.
     for job_handle in job_handles:
         job_handles[job_handle].remove()
 
 
-# This looks dumb, but the key is used by pytest to report which test case
-# we're looking at, and the value is used for the lookup (which may be
-# redundant, but I don't know how to get the key out of the `request`).
 @action(params={name: name for name in TEST_CASES})
-def the_job_handle(request, the_job_handles):
-    return the_job_handles[request.param]
+def the_job_pair(request, the_job_handles):
+    return (request.param, the_job_handles[request.param])
+
+
+@action
+def the_job_name(the_job_pair):
+    return the_job_pair[0]
+
+
+@action
+def the_job_handle(the_job_pair):
+    return the_job_pair[1]
 
 
 @action
@@ -515,6 +568,14 @@ def the_completed_job_stdout(test_dir, the_completed_job):
     cluster = the_completed_job.clusterid
     with open(test_dir / f"test_job_{cluster}.out" ) as output:
         return output.readlines()
+
+
+@action
+def the_completed_job_stderr(test_dir, the_completed_job):
+    cluster = the_completed_job.clusterid
+    with open(test_dir / f"test_job_{cluster}.err" ) as error:
+        return error.readlines()
+
 
 #
 # Assertion functions for the tests.  From test_allowed_execute_duration.py,
@@ -666,6 +727,7 @@ class TestCheckpointDestination:
         if jobAd.get("CheckpointDestination") is not None:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
 
+
     def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, failed_checkpoint_job):
         assert failed_checkpoint_job.state.all_held()
 
@@ -680,3 +742,81 @@ class TestCheckpointDestination:
         assert jobAd["HoldReasonCode"] == 36
         assert jobAd["HoldReasonSubCode"] == -1
         assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
+
+
+    def test_checkpoint_structure(self,
+      test_dir, default_condor,
+      the_job_name, the_completed_job,
+    ):
+        # FIXME: Much of this code should be moved into fixtures, because
+        # it's a set-up error if it fails.
+
+        # Since we don't delete checkpoints until the job exits the queue,
+        # we can check that the checkpoint was uploaded correctly by checking
+        # the MANIFEST file against the checkpoint destination.  (This assumes
+        # that the MANIFEST file was created correctly, but that's tested
+        # elsewhere.)
+
+        check_path = test_dir / f"{the_completed_job.clusterid}.0"
+        manifest_file = test_dir / "condor" / "spool" / f"{the_completed_job.clusterid}" / "0" / f"cluster{the_completed_job.clusterid}.proc0.subproc0" / "MANIFEST.0000"
+        rv = subprocess.run(
+            ['condor_manifest', 'validateFilesListedIn', manifest_file],
+            cwd=check_path,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20,
+        )
+        logger.debug(rv.stdout)
+        logger.debug(rv.stderr)
+
+        # We don't create a MANIFEST file when checkpointing to spool.
+        if the_job_name is not "spool":
+            assert rv.returncode == 0
+
+        # The job makes a copy of its sandbox after downloading its first
+        # checkpoint, which we can check against the input directory,
+        # because the job does not modify its input.
+
+        input_path = test_dir / the_job_name
+        rv = subprocess.run(
+            ["/usr/bin/diff", "-r", input_path, check_path],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            timeout=20,
+        )
+
+        extra_files = [
+            # Created at run-time by HTCondor.
+            ".chirp.config",
+            ".job.ad",
+            ".local.sh.in",
+            ".local.sh.out",
+            ".machine.ad",
+            ".update.ad",
+
+            # Created at run-time by the job.
+            "saved-state",
+
+            # Downloaded at run-time by HTCondor.
+            "local.sh",
+
+            # Created at run-time by HTCondor.
+            "_condor_stdout",
+            "_condor_stderr",
+            "condor_exec.exe",
+        ]
+
+        extra_file_in_check_path = f"Only in {check_path}: "
+        for line in rv.stdout.splitlines():
+            assert line.startswith(extra_file_in_check_path)
+            extra_file = line[len(extra_file_in_check_path):]
+            assert extra_file in extra_files
+
+        # None of this checked that HTCondor could upload a file changed
+        # during as a part of a checkpoint and download the same bits
+        # later; the correctness tests _do_ check this, but only for the
+        # saved-state file, which is one of the easy ones to get right.
+        #
+        # If that test becomes necessary, the job can just 'cp -a' after
+        # the changes, as well.
