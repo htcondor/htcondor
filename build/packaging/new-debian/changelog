@@ -273,7 +273,7 @@ condor (9.0.4-1) stable; urgency=high
 condor (8.8.15-1) stable; urgency=high
 
   * Fix for security issue
-    https://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003
+    https://htcondor.org/security/vulnerabilities/HTCONDOR-2021-0003.html
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Jul 2021 10:35:12 -0500
 
