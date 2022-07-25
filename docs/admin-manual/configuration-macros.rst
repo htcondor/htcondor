@@ -3583,6 +3583,34 @@ perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring
 htcondor for running backfill jobs` for details.
 
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
+    This boolean value, which is only evaluated on Linux systems, tells
+    the *condor_startd* whether to make an ephemeral filesystem for the
+    scratch execute directory for jobs.  The default is ``False``. This
+    should only be set to true on HTCondor installations that have root.
+    When true, both THINPOOL_NAME and THINPOOL_VOLUME_GROUP_NAME but be
+    set, OR, THINPOOL_BACKING_FILE should be set.
+
+:macro-def:`THINPOOL_NAME`
+    This string-valued parameter has no default, and should be set to the
+    Linux LVM logical volume to be used for ephemeral execute directories.
+    "htcondor_lv" might be a good choice.  Only matters when 
+    `STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root.
+
+:macro-def:`THINPOOL_VOLUME_GROUP_NAME`
+    This string-valued parameter has no default, and should be set to the
+    name of the Linux LVM volume group to be used for logical volumes
+    for ephemeral execute directories.
+    "htcondor_vg" might be a good choice.  Only matters when 
+    `STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root.
+
+:macro-def:`THINPOOL_BACKING_FILE`
+    This string-valued parameter has no default.  If a rootly HTCondor
+    does not have a Linux LVM configured, a single large file can be used
+    as the backing store for ephemeral file systems for execute directories.
+    This parameter should be set to the path of a large, pre-created file
+    to hold the blocks these filesystems are created from.
+
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
     willing to perform backfill computations when it would otherwise be
