@@ -206,7 +206,7 @@ on machines with GPUs -- using the options described in
 * The rest of the :doc:`../admin-manual/index`, particularly the section on
   :doc:`../admin-manual/monitoring`.
 * Slides from
-  `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_
+  `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_
   -- our annual conference -- include a number of tutorials and talks on
   administrative topics, including monitoring and examples of policies and
   their implementations.

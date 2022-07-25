@@ -1007,7 +1007,7 @@ to communicate with Azure.
 You can also set up a service account in Azure for HTCondor to use. This
 lets you limit the level of access HTCondor has to your Azure account.
 Instructions for creating a service account can be found here:
-`http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx <http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx>`_.
+`https://htcondor.org/gahp/AzureGAHPSetup.docx <https://htcondor.org/gahp/AzureGAHPSetup.docx>`_.
 
 Once you have created a file containing the service account credentials,
 you can specify its location in the submit description file using the

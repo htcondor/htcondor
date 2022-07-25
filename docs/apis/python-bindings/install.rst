@@ -13,7 +13,7 @@ Linux System Packages
 
 The bindings are available as a package in various Linux system package repositories.
 The packages will automatically be installed if you install HTCondor itself from our
-`repositories <https://research.cs.wisc.edu/htcondor/instructions/>`_.
+`repositories <https://htcondor.org/downloads/htcondor>`_.
 This method will let you use the Python bindings in your system Python installation.
 
 
@@ -24,7 +24,7 @@ Windows Installer
 
 The bindings are packaged in the Windows installer.
 Download the ``.msi`` for the version of your choice from
-`the table here <https://research.cs.wisc.edu/htcondor/downloads/>`_
+`the table here <https://htcondor.org/downloads/htcondor>`_
 and run it.
 After installation, the bindings packages will be in
 ``lib\python`` in your install directory (e.g., ``C:\condor\lib\python``).
