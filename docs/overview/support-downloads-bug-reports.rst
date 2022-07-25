@@ -14,7 +14,7 @@ Downloads
 ---------
 
 A list of recent HTCondor software releases is available on our downloads page:
-https://research.cs.wisc.edu/htcondor/downloads.
+https://htcondor.org/downloads.
 
 Selecting a release channel will lead you to the
 :doc:`../getting-htcondor/index` section of the HTCondor Manual, which describes
@@ -59,7 +59,7 @@ of HTCondor you are running.
 
 Finally, we have several options for users who require additional support for
 HTCondor beyond the free support listed above. All details are available on
-our website: https://research.cs.wisc.edu/htcondor/htcondor-support/
+our website: https://htcondor.org/htcondor-support/
 
 
 Reporting Bugs
