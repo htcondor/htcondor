@@ -4469,7 +4469,8 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 void
 deallocMatchRec( match_rec* mrec )
 {
-	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec\n");
+	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec(%d.%d)\n",
+	         mrec ? mrec->cluster : -1, mrec ? mrec->proc : -1);
 		// We might call this with a NULL mrec, so don't seg fault.
 	if( ! mrec ) {
 		return;
