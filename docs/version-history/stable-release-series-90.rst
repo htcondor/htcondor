@@ -26,6 +26,9 @@ New Features:
   character set and not length will still be satisfied.
   :jira:`1232`
 
+- Added ``-debug`` option to *condor_drain* tool.
+  :jira:`1236`
+
 Bugs Fixed:
 
 - When a failure occurs with a grid universe job of type ``batch``,
