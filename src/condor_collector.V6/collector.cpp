@@ -1435,19 +1435,19 @@ int CollectorDaemon::receive_update_expect_ack(int command,
         
     }
 
-    /* let the off-line plug-in have at it */
-	if(record)
-    offline_plugin_.update ( command, *record->m_publicAd );
+	if(record) {
+		offline_plugin_.update ( command, *record->m_publicAd );
 
 #if defined(UNIX) && !defined(DARWIN)
-	// JEF TODO Should we use the private ad here?
-    CollectorPluginManager::Update ( command, *record->m_publicAd );
+		// JEF TODO Should we use the private ad here?
+		CollectorPluginManager::Update ( command, *record->m_publicAd );
 #endif
 
-	if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
-		forward_classad_to_view_collector(command,
+		if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
+			forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  record->m_pvtAd);
+		}
 	}
 
 	// let daemon core clean up the socket
