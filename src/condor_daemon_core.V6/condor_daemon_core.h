@@ -1003,15 +1003,13 @@ class DaemonCore : public Service
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Pipe (int		           pipe_end,
                          const char *      pipe_descrip,
                          PipeHandler       handler,
                          const char *      handler_descrip,
-                         HandlerType       handler_type     = HANDLE_READ,    
-                         DCpermission      perm             = ALLOW);
+                         HandlerType       handler_type     = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param pipe_end         Not_Yet_Documented
@@ -1019,7 +1017,6 @@ class DaemonCore : public Service
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Pipe (int					  pipe_end,
@@ -1027,8 +1024,7 @@ class DaemonCore : public Service
                          PipeHandlercpp       handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         HandlerType          handler_type = HANDLE_READ,    
-                         DCpermission         perm = ALLOW);
+                         HandlerType          handler_type = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param pipe_end           Not_Yet_Documented
@@ -1941,7 +1937,6 @@ class DaemonCore : public Service
                         const char *handler_descrip,
                         Service* s, 
 					    HandlerType handler_type, 
-					    DCpermission perm,
                         int is_cpp);
 
     int Register_Reaper(int rid,
@@ -2085,7 +2080,6 @@ class DaemonCore : public Service
         void*           data_ptr;
 		PidEntry*		pentry;
         int				index;		// index into the pipeHandleTable
-        DCpermission    perm;
 		HandlerType		handler_type;
         bool            is_cpp;
 		bool			call_handler;

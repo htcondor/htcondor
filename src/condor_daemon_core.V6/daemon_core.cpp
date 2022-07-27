@@ -846,19 +846,19 @@ int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandler handler, const char* handler_descrip,
-				HandlerType handler_type, DCpermission perm)
+				HandlerType handler_type)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, handler,
 							NULL, handler_descrip, nullptr,
-							handler_type, perm, FALSE) );
+							handler_type, FALSE) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, HandlerType handler_type, DCpermission perm)
+				Service* s, HandlerType handler_type)
 {
 	return( Register_Pipe(pipe_end, pipe_descrip, NULL, handlercpp,
-							handler_descrip, s, handler_type, perm, TRUE) );
+							handler_descrip, s, handler_type, TRUE) );
 }
 
 int	DaemonCore::Register_Reaper(const char* reap_descrip, ReaperHandler handler,
@@ -2193,8 +2193,7 @@ int DaemonCore::Inherit_Pipe(int fd, bool is_write, bool can_register, bool nonb
 int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				PipeHandler handler, PipeHandlercpp handlercpp,
 				const char *handler_descrip, Service* s,
-				HandlerType handler_type, DCpermission perm,
-				int is_cpp)
+				HandlerType handler_type, int is_cpp)
 {
     int     i;
     int     j;
@@ -2231,7 +2230,6 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	(*pipeTable)[i].handler_type = handler_type;
 	(*pipeTable)[i].handlercpp = handlercpp;
 	(*pipeTable)[i].is_cpp = (bool)is_cpp;
-	(*pipeTable)[i].perm = perm;
 	(*pipeTable)[i].service = s;
 	(*pipeTable)[i].data_ptr = NULL;
 	free((*pipeTable)[i].pipe_descrip);
