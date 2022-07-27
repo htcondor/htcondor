@@ -1004,7 +1004,7 @@ Claim::sendAlive()
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
 			  (SocketHandlercpp)&Claim::sendAliveConnectHandler,
-			  to_schedd, this, ALLOW );
+			  to_schedd, this );
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
@@ -1087,7 +1087,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
 			  (SocketHandlercpp)&Claim::sendAliveResponseHandler,
-			  to_schedd, this, ALLOW );
+			  to_schedd, this );
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,

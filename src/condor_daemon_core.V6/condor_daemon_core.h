@@ -881,14 +881,12 @@ class DaemonCore : public Service
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*           iosock,
                          const char *      iosock_descrip,
                          SocketHandler     handler,
                          const char *      handler_descrip,
-                         DCpermission      perm             = ALLOW,
                          HandlerType       handler_type = HANDLE_READ,
                          void **           prev_entry = NULL);
 
@@ -898,7 +896,6 @@ class DaemonCore : public Service
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*              iosock,
@@ -906,7 +903,6 @@ class DaemonCore : public Service
                          SocketHandlercpp     handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         DCpermission         perm = ALLOW,
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
 
@@ -924,7 +920,6 @@ class DaemonCore : public Service
                                 (SocketHandlercpp)NULL,
                                 "DC Command Handler",
                                 NULL,
-                                ALLOW,
 				HANDLE_READ,
                                 0); 
     }
@@ -1925,7 +1920,6 @@ class DaemonCore : public Service
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
                         Service* s, 
-                        DCpermission perm,
 			HandlerType handler_type,
                         int is_cpp,
                         void **prev_entry = NULL);
@@ -2031,7 +2025,6 @@ class DaemonCore : public Service
         char*           iosock_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-        DCpermission    perm;
         bool            is_cpp;
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;

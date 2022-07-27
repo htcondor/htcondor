@@ -2363,7 +2363,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
-			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Job Ads Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -2700,7 +2700,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryAggregatesContinuation::finish,
-			"Query Aggregates Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Aggregates Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -5723,7 +5723,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if (result == ReliSock::delegation_continue) {
 		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
 			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
-			"UpdateGSI Response Continuation", continuation, ALLOW, HANDLE_READ);
+			"UpdateGSI Response Continuation", continuation, HANDLE_READ);
 			// If we fail to register the socket, continue in blocking mode.
 		if (retval < 0) {
 			continuation->finish_update(rsock, result);
@@ -7165,7 +7165,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back

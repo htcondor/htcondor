@@ -827,21 +827,19 @@ bool DaemonCore::TooManyRegisteredSockets(int fd,std::string *msg,int num_fds)
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandler handler, const char* handler_descrip,
-				DCpermission perm, HandlerType handler_type,
-				void **prev_entry)
+				HandlerType handler_type, void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, handler,
 							(SocketHandlercpp)NULL, handler_descrip, nullptr,
-							perm, handler_type, FALSE, prev_entry) );
+							handler_type, FALSE, prev_entry) );
 }
 
 int	DaemonCore::Register_Socket(Stream* iosock, const char* iosock_descrip,
 				SocketHandlercpp handlercpp, const char* handler_descrip,
-				Service* s, DCpermission perm, HandlerType handler_type,
-				void **prev_entry)
+				Service* s, HandlerType handler_type, void **prev_entry)
 {
 	return( Register_Socket(iosock, iosock_descrip, NULL, handlercpp,
-							handler_descrip, s, perm, handler_type, TRUE, prev_entry) );
+							handler_descrip, s, handler_type, TRUE, prev_entry) );
 }
 
 int	DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
@@ -1693,7 +1691,7 @@ int DaemonCore::Cancel_Signal( int sig )
 
 int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				SocketHandler handler, SocketHandlercpp handlercpp,
-				const char *handler_descrip, Service* s, DCpermission perm,
+				const char *handler_descrip, Service* s,
 				HandlerType handler_type,
 				int is_cpp, void **prev_entry)
 {
@@ -1836,7 +1834,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	(*sockTable)[i].handler = handler;
 	(*sockTable)[i].handlercpp = handlercpp;
 	(*sockTable)[i].is_cpp = (bool)is_cpp;
-	(*sockTable)[i].perm = perm;
 	(*sockTable)[i].handler_type = handler_type;
 	(*sockTable)[i].service = s;
 	(*sockTable)[i].data_ptr = NULL;

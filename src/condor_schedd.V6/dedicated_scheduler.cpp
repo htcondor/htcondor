@@ -764,7 +764,7 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back

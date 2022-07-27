@@ -194,7 +194,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 			(SocketHandlercpp)&DaemonCommandProtocol::SocketCallback,
 			WaitForSocketDataString.c_str(),
 			this,
-			ALLOW,
 			HANDLE_READ,
 			&m_prev_sock_ent);
 
