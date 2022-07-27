@@ -21,6 +21,11 @@ New Features:
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
 
+- Added extended submit help which can be defined in the schedd using the new
+  configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
+  *condor_submit* using the new ``-capabilities`` argument.
+  :jira:`1238`
+
 Bugs Fixed:
 
 - None.
