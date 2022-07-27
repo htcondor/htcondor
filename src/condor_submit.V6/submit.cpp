@@ -129,6 +129,7 @@ bool	NoCmdFileNeeded = false; // set if there is no need for a commmand file (i.
 bool	GotCmdlineKeys = false; // key=value or -append specifed on the command line
 int		WarnOnUnusedMacros = 1;
 int		DisableFileChecks = 0;
+int     DashQueryCapabilities = 0; // get capabilites from schedd and print the
 int		DashDryRun = 0;
 int		DashMaxJobs = 0;	 // maximum number of jobs to create before generating an error
 int		DashMaxClusters = 0; // maximum number of clusters to create before generating an error.
@@ -209,8 +210,10 @@ FILE		*DumpFile = NULL;
 bool		DumpFileIsStdout = 0;
 
 void usage(FILE * out);
-// this is in submit_help.cpp
+// these are in submit_help.cpp
 void help_info(FILE* out, int num_topics, const char ** topics);
+void schedd_capabilities_help(FILE * out, const ClassAd &ad, const std::string &helpex, DCSchedd* schedd, int options);
+
 void init_params();
 void reschedule();
 int submit_jobs (
@@ -842,6 +845,12 @@ main( int argc, const char *argv[] )
 			} else if (is_dash_arg_prefix(ptr[0], "help")) {
 				help_info(stdout, --argc, ++ptr);
 				exit( 0 );
+			} else if (is_dash_arg_colon_prefix(ptr[0], "capabilities", &pcolon, 3)) {
+				DashQueryCapabilities = 1;
+				if (pcolon && pcolon[0]) {
+					int opt = atoi(++pcolon);
+					if (opt) DashQueryCapabilities = opt;
+				}
 			} else if (is_dash_arg_prefix(ptr[0], "interactive", 1)) {
 				// we don't currently support -interactive on Windows, but we parse for it anyway.
 				dash_interactive = 1;
@@ -937,6 +946,26 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	if (DashQueryCapabilities) {
+		queue_connect();
+		if ( ! MyQ) {
+			fprintf(stderr, "Could not connect to schedd to query capabilities");
+			exit(1);
+		}
+
+		ClassAd ad;
+		std::string helpex;
+		MyQ->get_Capabilities(ad);
+		if (MyQ->has_extended_help(helpex) && ! IsUrl(helpex.c_str())) {
+			MyQ->get_ExtendedHelp(helpex);
+		}
+		schedd_capabilities_help(stdout, ad, helpex, MySchedd, DashQueryCapabilities);
+
+		// TODO: report errors?? can this even fail?
+		CondorError errstk;
+		MyQ->disconnect(false, errstk);
+		exit(0);
+	}
 
 	// make sure our shadow will have access to our credential
 	// (check is disabled for "-n" and "-r" submits)
@@ -2516,6 +2545,7 @@ usage(FILE* out)
 	fprintf( out, "\t-file <submit-file>\tRead Submit commands from <submit-file>\n");
 	fprintf( out, "\t-terse  \t\tDisplay terse output, jobid ranges only\n" );
 	fprintf( out, "\t-verbose\t\tDisplay verbose output, jobid and full job ClassAd\n" );
+	fprintf( out, "\t-capabilities\t\tDisplay configured capabilities of the schedd\n" );
 	fprintf( out, "\t-debug  \t\tDisplay debugging output\n" );
 	fprintf( out, "\t-append <line>\t\tadd line to submit file before processing\n"
 				  "\t              \t\t(overrides submit file; multiple -a lines ok)\n" );

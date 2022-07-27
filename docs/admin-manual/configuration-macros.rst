@@ -5483,6 +5483,11 @@ These macros control the *condor_schedd*.
              acounting_group_user = error
           @end
 
+:macro-def:`EXTENDED_SUBMIT_HELPFILE`
+    A URL or file path to text describing how the *condor_schedd* extends the submit schema. Use this to document
+	for users the extended submit commands defined by the configuration variable ``EXTENDED_SUBMIT_COMMANDS``.
+	*condor_submit* will display this URL or the text of this file when the user uses the ``-capabilities`` option.
+
 :macro-def:`SUBMIT_TEMPLATE_NAMES`
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will

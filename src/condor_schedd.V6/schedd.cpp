@@ -12988,6 +12988,7 @@ Scheduler::Init()
 		initAdFromString(extended_cmds, m_extendedSubmitCommands);
 		extended_cmds.clear();
 	}
+	param(m_extendedSubmitHelpFile, "EXTENDED_SUBMIT_HELPFILE");
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
 
