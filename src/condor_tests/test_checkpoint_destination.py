@@ -465,6 +465,48 @@ TEST_CASES = {
         "transfer_input_files":         '{test_dir}/check_files_local/',
         "transfer_checkpoint_files":    'saved-state, a, b, c, d, e',
     },
+    # To get preserve_relative_paths to work right, we need `iwd` to be
+    # the directory where we created the input tree.  But if we leave
+    # `transfer_output_files` unset, we get all the changes back in that
+    # directory... including the last checkpoint, which is NOT the one
+    # we're comparing against.  So only transfer the files we know won't
+    # change to the output directory.
+    "HTCONDOR_1218_1_spool": {
+        "iwd":                          '{test_dir}/HTCONDOR_1218_1_spool',
+        "transfer_output_files":        "d1",
+
+        "transfer_input_files":         'd1/d2',
+        "transfer_checkpoint_files":    'saved-state, d1/d2/a',
+        "preserve_relative_paths":      'true',
+    },
+    "HTCONDOR_1218_2_spool": {
+        "iwd":                          '{test_dir}/HTCONDOR_1218_2_spool',
+        "transfer_output_files":        "d1",
+
+        "transfer_input_files":         'd1',
+        "transfer_checkpoint_files":    'saved-state, d1/a',
+        "preserve_relative_paths":      'true',
+    },
+    "HTCONDOR_1218_1": {
+        "iwd":                          '{test_dir}/HTCONDOR_1218_1',
+        "transfer_output_files":        "d1",
+
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         'd1/d2',
+        "transfer_checkpoint_files":    'saved-state, d1/d2/a',
+        "preserve_relative_paths":      'true',
+    },
+    "HTCONDOR_1218_2": {
+        "iwd":                          '{test_dir}/HTCONDOR_1218_2',
+        "transfer_output_files":        "d1",
+
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         'd1',
+        "transfer_checkpoint_files":    'saved-state, d1/a',
+        "preserve_relative_paths":      'true',
+    },
 }
 
 @action
@@ -498,6 +540,15 @@ def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_
             ( input_path / "e" / "b" ).write_text("bbbb")
             ( input_path / "e" / "c" ).mkdir(parents=True, exist_ok=True)
             ( input_path / "e" / "d" ).symlink_to(( input_path / "c" ))
+        elif name.startswith("HTCONDOR_1218_1"):
+            ( input_path / "d1" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d1" / "d2" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d1" / "d2" / "a" ).write_text("a")
+            ( input_path / "d1" / "d2" / "b" ).write_text("b")
+        elif name.startswith("HTCONDOR_1218_2"):
+            ( input_path / "d1" ).mkdir(parents=True, exist_ok=True)
+            ( input_path / "d1" / "a" ).write_text("a")
+            ( input_path / "d1" / "b" ).write_text("b")
 
         complete_job_description = {
             ** the_job_description,
@@ -770,7 +821,7 @@ class TestCheckpointDestination:
         logger.debug(rv.stderr)
 
         # We don't create a MANIFEST file when checkpointing to spool.
-        if the_job_name is not "spool":
+        if not "spool" in the_job_name:
             assert rv.returncode == 0
 
         # The job makes a copy of its sandbox after downloading its first
