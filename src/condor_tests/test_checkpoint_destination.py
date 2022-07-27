@@ -520,6 +520,8 @@ def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_
         input_path = test_dir / name
         input_path.mkdir(parents=True, exist_ok=True)
 
+        # If I were feeling clever, I'd rewrite TEST_CASES to include these
+        # sequences as lambdas, or maybe just function references.
         if name == "check_files_local":
             ( input_path / "a" ).write_text("a")
             ( input_path / "b" ).write_text("b")
@@ -821,7 +823,9 @@ class TestCheckpointDestination:
         logger.debug(rv.stderr)
 
         # We don't create a MANIFEST file when checkpointing to spool.
-        if not "spool" in the_job_name:
+        if "spool" in the_job_name:
+            assert not manifest_file.exists()
+        else:
             assert rv.returncode == 0
 
         # The job makes a copy of its sandbox after downloading its first
