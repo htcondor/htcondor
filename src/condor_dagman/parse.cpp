@@ -2218,8 +2218,11 @@ parse_splice(
 	}
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.c_str());
 
-	// pop the just pushed value off of the end of the ext array
+	// pop the just pushed value off of the end of the vector and free it
+	char *tmp = _spliceScope.back();
 	_spliceScope.pop_back();
+	free(tmp);
+
 	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %zu\n", _spliceScope.size());
 
 	return true;
