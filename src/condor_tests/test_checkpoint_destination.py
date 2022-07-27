@@ -261,6 +261,28 @@ def plugin_python_file(test_dir):
 
 
 @action
+def path_to_symlink_script(test_dir):
+    script = f"""
+    #!/usr/bin/python3
+
+    import os
+    import sys
+    from pathlib import Path
+
+    d = Path( "d" )
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "a").write_text("a")
+    Path( "s" ).symlink_to( d )
+    sys.exit(17)
+    """
+
+    path = test_dir / "symlink.py"
+    write_file(path, format_script(script))
+
+    return path
+
+
+@action
 def path_to_the_job_script(default_condor, test_dir):
     # This script can't have embedded newlines for stupid reasons.
     script = f"""
@@ -682,6 +704,37 @@ def failed_checkpoint_job(failed_checkpoint_handle):
     return failed_checkpoint_handle
 
 
+@action
+def symlink_to_dir_handle(test_dir, default_condor, the_job_description, path_to_symlink_script):
+    complete_job_description = {
+        ** the_job_description,
+        "executable":                   path_to_symlink_script.as_posix(),
+        "transfer_checkpoint_files":    "s"
+    }
+    job_handle = default_condor.submit(
+        description=complete_job_description,
+        count=1,
+    )
+
+    yield job_handle
+
+    job_handle.remove()
+
+
+@action
+def symlink_to_dir_job(symlink_to_dir_handle):
+    symlink_to_dir_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_held,
+    )
+
+    return symlink_to_dir_handle
+
+
+# FIXME: failed_checkpoint_handle and symlink_to_dir_handle should both be
+# submitted before we wait() for either, ideally with the other test jobs.
+
+
 class TestCheckpointDestination:
 
     #
@@ -781,22 +834,6 @@ class TestCheckpointDestination:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
 
 
-    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, failed_checkpoint_job):
-        assert failed_checkpoint_job.state.all_held()
-
-        schedd = default_condor.get_local_schedd()
-        constraint = f'ClusterID == {failed_checkpoint_job.clusterid} && ProcID == 0'
-        result = schedd.query(
-            constraint=constraint,
-            projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
-        )
-        jobAd = result[0]
-
-        assert jobAd["HoldReasonCode"] == 36
-        assert jobAd["HoldReasonSubCode"] == -1
-        assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
-
-
     def test_checkpoint_structure(self,
       test_dir, default_condor,
       the_job_name, the_completed_job,
@@ -875,3 +912,37 @@ class TestCheckpointDestination:
         #
         # If that test becomes necessary, the job can just 'cp -a' after
         # the changes, as well.
+
+
+    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, failed_checkpoint_job):
+        assert failed_checkpoint_job.state.all_held()
+
+        schedd = default_condor.get_local_schedd()
+        constraint = f'ClusterID == {failed_checkpoint_job.clusterid} && ProcID == 0'
+        result = schedd.query(
+            constraint=constraint,
+            projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
+        )
+        jobAd = result[0]
+
+        assert jobAd["HoldReasonCode"] == 36
+        assert jobAd["HoldReasonSubCode"] == -1
+        assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
+
+
+    # This turns out to be identical to the previous test, which suggests
+    # we should combin them.
+    def test_symlink_to_dir(self, default_condor, symlink_to_dir_job):
+        assert symlink_to_dir_job.state.all_held()
+
+        schedd = default_condor.get_local_schedd()
+        constraint = f'ClusterID == {symlink_to_dir_job.clusterid} && ProcID == 0'
+        result = schedd.query(
+            constraint=constraint,
+            projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
+        )
+        jobAd = result[0]
+
+        assert jobAd["HoldReasonCode"] == 36
+        assert jobAd["HoldReasonSubCode"] == -1
+        assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
