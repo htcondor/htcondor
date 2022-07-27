@@ -5484,7 +5484,7 @@ These macros control the *condor_schedd*.
           @end
 
 :macro-def:`EXTENDED_SUBMIT_HELPFILE`
-    A URL or file path to text describes how the *condor_schedd* extends the submit schema. Use this to document
+    A URL or file path to text describing how the *condor_schedd* extends the submit schema. Use this to document
 	for users the extended submit commands defined by the configuration variable ``EXTENDED_SUBMIT_COMMANDS``.
 	*condor_submit* will display this URL or the text of this file when the user uses the ``-capabilities`` option.
 
