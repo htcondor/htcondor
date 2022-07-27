@@ -677,7 +677,7 @@ int	DaemonCore::Register_Command(int command, const char* com_descrip,
 
 int	DaemonCore::Register_Command(int command, const char *com_descrip,
 				CommandHandlercpp handlercpp, const char* handler_descrip,
-								 Service* s, DCpermission perm,
+				Service* s, DCpermission perm,
 				bool force_authentication, int wait_for_payload,
 				std::vector<DCpermission> *alternate_perm)
 {
@@ -9411,7 +9411,7 @@ DaemonCore::InitDCCommandSocket( int command_port )
 			// we can detect if any of our kids are hung.
 		daemonCore->Register_CommandWithPayload( DC_CHILDALIVE,"DC_CHILDALIVE",
 			(CommandHandlercpp)&DaemonKeepAlive::HandleChildAliveCommand,
-			"HandleChildAliveCommand", &m_DaemonKeepAlive );
+			"HandleChildAliveCommand", &m_DaemonKeepAlive, DAEMON );
 	}
 }
 
