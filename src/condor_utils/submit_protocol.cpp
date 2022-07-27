@@ -194,7 +194,7 @@ int ActualScheddQ::get_ExtendedHelp(std::string &content) {
 	if (has_extended_help(content)) {
 		content.clear();
 		ClassAd ad;
-		GetScheddCapabilites(1, ad);
+		GetScheddCapabilites(GetsScheddCapabilities_F_HELPTEXT, ad);
 		ad.LookupString("ExtendedSubmitHelp", content);
 	}
 	return content.size();

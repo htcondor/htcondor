@@ -128,6 +128,7 @@ int DestroyProc(int cluster_id, int proc_id);
 int DestroyCluster(int cluster_id, const char *reason = NULL);
 
 // add schedd capabilities into the given ad, based on the mask. (mask is for future use)
+#define GetsScheddCapabilities_F_HELPTEXT      0x01
 bool GetScheddCapabilites(int mask, ClassAd & ad);
 
 // either factory filename or factory text may be null, but not both.

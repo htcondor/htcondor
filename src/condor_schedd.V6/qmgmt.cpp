@@ -736,7 +736,7 @@ int GetSchedulerCapabilities(int mask, ClassAd & reply)
 	auto helpfile = scheduler.getExtendedSubmitHelpFile();
 	if ( ! helpfile.empty()) {
 		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
-		if ((mask & 1) && ! IsUrl(helpfile.c_str())) {
+		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
 			std::string contents;
 			htcondor::readShortFile(helpfile, contents);
 			reply.Assign("ExtendedSubmitHelp", contents);
