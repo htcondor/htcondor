@@ -7165,7 +7165,7 @@ int DaemonCore::Create_Process(
 				inheritbuf += " 2 ";
 				ptmp = it->ssock()->serialize();
 				inheritbuf += ptmp;
-				delete []ptmp;
+				free(ptmp);
 			}
 
 				// now put the actual fds into the list of fds to inherit

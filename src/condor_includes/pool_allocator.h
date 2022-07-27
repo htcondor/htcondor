@@ -104,6 +104,23 @@ typedef struct _allocation_pool {
 		return reinterpret_cast<const T*>(pb);
 	}
 
+	// clear the allocator after first (optionally) detaching and returning the primary allocation
+	void collapse(char** mem=nullptr, int* pcb=nullptr, int * pcbAlloc=nullptr) {
+		if (mem) {
+			if (cMaxHunks && phunks) {
+				if (pcb) *pcb = phunks[0].ixFree;
+				if (pcbAlloc) *pcbAlloc = phunks[0].cbAlloc;
+				*mem = phunks[0].pb;
+				phunks[0].pb = nullptr;
+			} else {
+				*mem = nullptr;
+				if (pcb) *pcb = 0;
+				if (pcbAlloc) *pcbAlloc = 0;
+			}
+		}
+		clear();
+	}
+
 } ALLOCATION_POOL;
 
 

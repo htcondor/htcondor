@@ -17,17 +17,18 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added submit templates.  These are configured using new configuration variables
+  macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
+  :jira:`1231`
+
+- Added extended submit help which can be defined in the schedd using the new
+  configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
+  *condor_submit* using the new ``-capabilities`` argument.
+  :jira:`1238`
 
 Bugs Fixed:
 
-- Fixed two bugs which could occur when resuming from a checkpoint with
-  ``preserve_relative_paths`` set.  Both involved the checkpoint transfer
-  list including a file at a relative path which was itself listed in the
-  input transfer list.  The job would either go on hold (if the relative
-  path included more than one directory) or silently fail to transfer files
-  from that relative path that weren't in the checkpoint (otherwise).
-  :jira:`1218`
+- None.
 
 Version 9.11.0
 --------------
@@ -108,6 +109,14 @@ New Features:
   :jira:`740`
 
 Bugs Fixed:
+
+- Fixed two bugs which could occur when resuming from a checkpoint with
+  ``preserve_relative_paths`` set.  Both involved the checkpoint transfer
+  list including a file at a relative path which was itself listed in the
+  input transfer list.  The job would either go on hold (if the relative
+  path included more than one directory) or silently fail to transfer files
+  from that relative path that weren't in the checkpoint (otherwise).
+  :jira:`1218`
 
 - Fixed a bug where **arc** grid universe jobs would remain in idle
   status indefinitely when delegation of the job's X.509 proxy

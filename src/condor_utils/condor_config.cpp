@@ -2078,6 +2078,14 @@ bool param_defined(const char* name) {
 	return false;
 }
 
+unsigned int expand_defined_config_macros (std::string &value)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	return expand_defined_macros(value, ConfigMacroSet, ctx);
+}
+
+
 char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);

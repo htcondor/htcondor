@@ -786,7 +786,7 @@ void INFNBatchJob::doEvaluateState()
 							 "(%d.%d) blah_download_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, m_xfer_gahp->getErrorString() );
 					errorString = m_xfer_gahp->getErrorString();
-					gmState = GM_CANCEL;
+					gmState = GM_HOLD;
 					break;
 				}
 				gmState = GM_REFRESH_PROXY;
@@ -820,7 +820,7 @@ void INFNBatchJob::doEvaluateState()
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
 					errorString = gahp->getErrorString();
-					gmState = GM_CANCEL;
+					gmState = GM_HOLD;
 					break;
 				}
 				remoteProxyExpireTime = jobProxy->expiration_time;
@@ -959,7 +959,9 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_CLEAR_REQUEST;
 					break;
 				}
-				SetRemoteJobId( NULL );
+				if ( condorState != COMPLETED && condorState != REMOVED ) {
+					SetRemoteJobId( NULL );
+				}
 				myResource->CancelSubmit( this );
 			}
 			gmState = GM_DELETE_SANDBOX;
@@ -1077,14 +1079,14 @@ void INFNBatchJob::doEvaluateState()
 			// a remote blahp, when file transfer may send back the
 			// .lmt file.
 			if ( jobProxy ) {
-				std::string proxy;
-				formatstr( proxy, "%s.lmt", jobProxy->proxy_filename );
+				std::string limited_proxy;
+				formatstr( limited_proxy, "%s.lmt", jobProxy->proxy_filename );
 				struct stat statbuf;
-				int rc = lstat( jobProxy->proxy_filename, &statbuf );
+				int rc = lstat( limited_proxy.c_str(), &statbuf );
 				if ( rc == 0 ) {
 					char *spooldir = param("SPOOL");
-					if ( !strncmp( spooldir, jobProxy->proxy_filename, strlen( spooldir ) ) ) {
-						unlink( jobProxy->proxy_filename );
+					if ( !strncmp( spooldir, limited_proxy.c_str(), strlen( spooldir ) ) ) {
+						unlink( limited_proxy.c_str() );
 					}
 					free( spooldir );
 				}

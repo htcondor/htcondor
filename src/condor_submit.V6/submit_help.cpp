@@ -39,7 +39,7 @@
 #include <string>
 #include <set>
 
-void usage(); // from submit.cpp
+void usage(FILE * out); // from submit.cpp
 
 // this is debug code: it must be kept in sync with submit_utils.cpp
 struct SimpleSubmitKeyword {
@@ -90,7 +90,7 @@ enum {
 void help_info(FILE* out, int num_topics, const char ** topics)
 {
 	if (num_topics <= 0 || !*topics) {
-		usage();
+		usage(out);
 		return;
 	}
 
@@ -119,10 +119,6 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 			if (doclist) ++doclist;
 		}
 	}
-	if ( ! options) {
-		usage();
-		return;
-	}
 
 	std::string line;
 	const struct SimpleSubmitKeyword * submit_keywords = get_submit_keywords();
@@ -133,6 +129,7 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 	for (auto k = submit_keywords; k->key || k->attr; ++k) { if (k->attr) submitattrs.insert(k->attr); }
 
 	// print a table based on condor_attributes.h
+	int lines = 0;
 	if (options & HELP_INFO_TABLE) {
 
 		bool show_attrs = options & HELP_INFO_ATTRIBUTES;
@@ -162,22 +159,31 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 
 				if (show_attrs) {
 					fprintf(out, "%s\n", k->attr);
+					++lines;
 				} else {
 					if (opts == 0x1000) typ = "  JOB";
 					else if (opts == 0x2000) typ = " SLOT";
 					else if (opts == 0x5000) typ = "   UN";
 					else if (opts == 0x6000) typ = "   NO";
 					fprintf(out, "%s_ATTR%s(%s,%d) // \"%s\"\n", typ, is_prefix ? "_PRE" : "", k->key, is_doc, k->attr);
+					++lines;
 				}
 			} else {
 				if (unk_only) {
 					fprintf(out, "%s\n", k->key);
+					++lines;
 				} else {
 					fprintf(out, "    ATTR(%s,\"%s\",0)\n", k->key, k->attr);
+					++lines;
 				}
 			}
 
 		}
+
+		if ( ! lines) {
+			usage(stdout);
+		}
+
 		return;
 	}
 
@@ -198,6 +204,7 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 		if (! line.empty()) {
 			line += "\n";
 			fputs(line.c_str(), out);
+			++lines;
 		}
 	}
 
@@ -219,8 +226,89 @@ void help_info(FILE* out, int num_topics, const char ** topics)
 			if (! line.empty()) {
 				line += "\n";
 				fputs(line.c_str(), out);
+				++lines;
 			}
 		}
+	}
+
+	if ( ! lines) {
+		usage(stdout);
+	}
+}
+
+void schedd_capabilities_help(FILE * out, const ClassAd &ad, const std::string &helpex, DCSchedd * schedd, int options)
+{
+	std::string attr;
+
+	fprintf (out, "Schedd %s\n", schedd ? schedd->name() : "");
+
+	if (!ad.size()) {
+		fprintf(out, "Has no capabilities ad\n");
+	}
+
+	if (options > 1) {
+		formatAd(attr, ad, "#  ");
+		if (attr.back() != '\n') { attr += '\n'; }
+		fprintf(out, "# Raw ad:\n%s###\n", attr.c_str());
+		attr.clear();
+	}
+
+	bool latemat=false, jobsets=false;
+	int latematver=0, jobsetsver=0;
+	ad.LookupBool("LateMaterialize", latemat);
+	ad.LookupInteger("LateMaterializeVersion", latematver);
+	ad.LookupBool("UseJobsets", jobsets);
+	ad.LookupInteger("UseJobsetsVersion", jobsetsver);
+
+	if (latemat) {
+		fprintf(out, " Has Late Materialization enabled\n");
+		//fprintf(out, " Has Late Materialization v%d\n", latematver);
+	}
+	if (jobsets) {
+		fprintf(out, " Has Jobsets enabled\n");
+		//fprintf(out, " Has Jobsets v%d\n", jobsetsver);
+	}
+
+	ExprTree * extensions = ad.Lookup("ExtendedSubmitCommands");
+	if (extensions && (extensions->GetKind() == classad::ExprTree::CLASSAD_NODE)) {
+		fprintf(out, " Has Extended submit commands:\n");
+
+		classad::ClassAd* extendedCmds = dynamic_cast<classad::ClassAd*>(extensions);
+		std::map<std::string, std::string, CaseIgnLTYourString> cmd_info;
+		size_t keywidth = 0;
+		for (auto it = extendedCmds->begin(); it != extendedCmds->end(); ++it) {
+			classad::Value val;
+			if (keywidth < it->first.size()) { keywidth = it->first.size(); }
+			cmd_info[it->first] = "expression";
+			if (ExprTreeIsLiteral(it->second, val)) {
+				if (val.GetType() == classad::Value::UNDEFINED_VALUE) {
+					continue; // not a real extended command
+				} else if (val.GetType() == classad::Value::ERROR_VALUE) {
+					cmd_info[it->first] = "forbidden";
+				} else if (val.GetType() == classad::Value::BOOLEAN_VALUE) {
+					cmd_info[it->first] = "boolean true/false"; 
+				} else if (val.GetType() == classad::Value::INTEGER_VALUE) {
+					long long ll;
+					val.IsIntegerValue(ll);
+					cmd_info[it->first] = (ll < 0) ? "signed integer" : "unsigned integer";
+				} else if (val.GetType() == classad::Value::STRING_VALUE) {
+					std::string str;
+					val.IsStringValue(str);
+					bool is_list = strchr(str.c_str(), ',') != NULL;
+					bool is_file = starts_with_ignore_case(str, "file");
+					cmd_info[it->first] = is_file ? (is_list ? "filename list" : "filename") : (is_list ? "stringlist" : "string");
+				}
+			}
+		}
+		for (auto it : cmd_info) {
+			attr = it.first;
+			attr.append(keywidth + 1 - it.first.size(), ' ');
+			fprintf(out, "\t%s value is %s\n", attr.c_str(), it.second.c_str());
+		}
+	}
+
+	if ( ! helpex.empty()) {
+		fprintf(out, " Has Extended help:\n\t%s\n", helpex.c_str());
 	}
 }
 
