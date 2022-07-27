@@ -725,8 +725,7 @@ main_init( int argc, char* argv[] )
 	// Command handler for stashing the pool password
 	daemonCore->Register_Command( STORE_POOL_CRED, "STORE_POOL_CRED",
 								&store_pool_cred_handler,
-								"store_pool_cred_handler", CONFIG_PERM,
-								D_FULLDEBUG );
+								"store_pool_cred_handler", CONFIG_PERM );
 
 	// Command handler for handling the ready state
 	daemonCore->Register_CommandWithPayload( DC_SET_READY, "DC_SET_READY",

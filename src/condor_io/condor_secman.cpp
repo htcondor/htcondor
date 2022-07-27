@@ -2940,8 +2940,7 @@ SecManStartCommand::WaitForSocketCallback()
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
 		req_description.c_str(),
-		this,
-		ALLOW);
+		this);
 
 	if(reg_rc < 0) {
 		std::string msg;
