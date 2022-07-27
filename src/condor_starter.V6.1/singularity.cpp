@@ -535,14 +535,14 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 bool
 Singularity::canRunSIF() {
 	std::string libexec_dir;
-	libexec_dir = param("LIBEXEC");
+	param(libexec_dir, "LIBEXEC");
 	return Singularity::canRun(libexec_dir + "/exit_37.sif");
 }
 
 bool
 Singularity::canRunSandbox() {
 	std::string sbin_dir;
-	sbin_dir = param("SBIN");
+	param(sbin_dir, "SBIN");
 	return Singularity::canRun(sbin_dir);
 }
 
