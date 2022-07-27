@@ -521,7 +521,7 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          DCpermission    perm             = ALLOW,
+                          DCpermission    perm,
                           bool            force_authentication = false,
                           int             wait_for_payload = 0,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -544,7 +544,7 @@ class DaemonCore : public Service
                           CommandHandlercpp  handlercpp, 
                           const char *       handler_descrip,
                           Service *          s,
-                          DCpermission       perm             = ALLOW,
+                          DCpermission       perm,
                           bool               force_authentication = false,
                           int                wait_for_payload = 0,
                           std::vector<DCpermission> * alternate_perms = nullptr);
@@ -570,7 +570,7 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          DCpermission    perm             = ALLOW,
+                          DCpermission    perm,
                           bool            force_authentication = false,
                           int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -581,7 +581,7 @@ class DaemonCore : public Service
                           CommandHandlercpp  handlercpp, 
                           const char *       handler_descrip,
                           Service *          s,
-                          DCpermission       perm             = ALLOW,
+                          DCpermission       perm,
                           bool               force_authentication = false,
                           int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> * alternate_perms = nullptr);
