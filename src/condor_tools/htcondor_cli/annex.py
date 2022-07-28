@@ -93,6 +93,16 @@ class Create(Verb):
             "type": int,
             "default": None,
         },
+        "login_name": {
+            "args": ("--login-name","--login",),
+            "help": "The (SSH) login name to use for this capacity request.  Defaults to your current login name.",
+            "default": None,
+        },
+        "login_host": {
+            "args": ("--login-host","--host",),
+            "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
+            "default": None,
+        },
     }
 
     def __init__(self, logger, **options):

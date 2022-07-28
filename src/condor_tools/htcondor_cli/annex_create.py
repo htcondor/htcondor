@@ -631,6 +631,8 @@ def annex_inner_func(
     control_path,
     cpus,
     mem_mb,
+    login_name,
+    login_host,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -723,9 +725,17 @@ def annex_inner_func(
         f'ControlPath="{control_path}/master-%C"',
     ]
 
-    # Defaults.
-    ssh_user_name = getpass.getuser()
-    ssh_host_name = SYSTEM_TABLE[system]["host_name"]
+    ssh_user_name = htcondor.param.get(
+        f"HPC_ANNEX_{system}_USER_NAME", getpass.getuser(),
+    )
+    if login_name is not None:
+        ssh_user_name = login_name
+
+    ssh_host_name = htcondor.param.get(
+        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system]["host_name"],
+    )
+    if login_host is not None:
+        ssh_host_name = login_host
 
     ##
     ## While we're requiring that jobs are submitted before creating the
