@@ -191,6 +191,7 @@ void
 parseArgv( int argc, const char* argv[] )
 {
 	int i;
+	const char * pcolon = nullptr;
 
 	my_name = argv[0];
 	cmd = DRAIN_JOBS;
@@ -201,6 +202,13 @@ parseArgv( int argc, const char* argv[] )
 		}
 		else if (is_dash_arg_prefix(argv[i], "version", 1)) {
 			version();
+		}
+		else if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 3)) {
+			// dprintf to console
+			dprintf_set_tool_debug("TOOL", 0);
+			if (pcolon && pcolon[1]) {
+				set_debug_flags( ++pcolon, 0 );
+			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			dash_verbose = 1;
@@ -297,6 +305,7 @@ usage( const char *str )
 	fprintf( stderr, "Usage: %s [OPTIONS] machine\n", str );
 	fprintf( stderr, "\nOPTIONS:\n" );
 	fprintf( stderr, "-cancel           Stop draining.\n" );
+	fprintf( stderr, "-debug            Display debugging info to console\n" );
 	fprintf( stderr, "-graceful         (the default) Honor MaxVacateTime and MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-quick            Honor MaxVacateTime but not MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-fast             Honor neither MaxVacateTime nor MaxJobRetirementTime.\n" );
