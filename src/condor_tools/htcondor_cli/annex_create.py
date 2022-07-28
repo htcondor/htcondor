@@ -215,12 +215,17 @@ def make_initial_ssh_connection(
     ssh_user_name,
     ssh_host_name,
 ):
+
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     proc = subprocess.Popen(
         [
             "ssh",
             "-f",
             *ssh_connection_sharing,
-            f"{ssh_user_name}@{ssh_host_name}",
+            ssh_target,
             "exit",
             "0",
         ],
@@ -239,13 +244,17 @@ def make_initial_ssh_connection(
 def remove_remote_temporary_directory(
     logger, ssh_connection_sharing, ssh_user_name, ssh_host_name, remote_script_dir
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     if remote_script_dir is not None:
         logger.debug("Cleaning up remote temporary directory...")
         proc = subprocess.Popen(
             [
                 "ssh",
                 *ssh_connection_sharing,
-                f"{ssh_user_name}@{ssh_host_name}",
+                ssh_target,
                 "rm",
                 "-fr",
                 remote_script_dir,
@@ -268,13 +277,17 @@ def make_remote_temporary_directory(
     ssh_user_name,
     ssh_host_name,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     remote_command = r'mkdir -p \${HOME}/.hpc-annex/scratch && ' \
         r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory remote_script.XXXXXXXX'
     proc = subprocess.Popen(
         [
             "ssh",
             *ssh_connection_sharing,
-            f"{ssh_user_name}@{ssh_host_name}",
+            ssh_target,
             "sh",
             "-c",
             f"\"{remote_command}\"",
@@ -381,8 +394,12 @@ def transfer_files(
     files,
     task,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     # FIXME: Pass an actual list to Popen
-    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_user_name}@{ssh_host_name} tar -C {remote_script_dir} -x -f-'
+    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} tar -C {remote_script_dir} -x -f-'
     proc = subprocess.Popen(
         [
             full_command
@@ -464,10 +481,14 @@ def invoke_pilot_script(
     cpus,
     mem_mb,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     args = [
         "ssh",
         *ssh_connection_sharing,
-        f"{ssh_user_name}@{ssh_host_name}",
+        ssh_target,
         str(remote_script_dir / f"{system}.sh"),
         annex_name,
         queue_name,
@@ -725,9 +746,7 @@ def annex_inner_func(
         f'ControlPath="{control_path}/master-%C"',
     ]
 
-    ssh_user_name = htcondor.param.get(
-        f"HPC_ANNEX_{system}_USER_NAME", getpass.getuser(),
-    )
+    ssh_user_name = htcondor.param.get(f"HPC_ANNEX_{system}_USER_NAME")
     if login_name is not None:
         ssh_user_name = login_name
 
@@ -814,8 +833,11 @@ def annex_inner_func(
         f"enter your XSEDE user name and password at the prompt "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
     logger.debug(
-        f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_user_name}@{ssh_host_name}' to use the shared connection.)"
+        f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
     )
     rc = make_initial_ssh_connection(
         ssh_connection_sharing,
