@@ -29,6 +29,7 @@
 #include "condor_debug.h"
 #include "condor_version.h"
 #include "condor_io.h"
+#include "basename.h"
 #include "my_hostname.h"
 #include "get_daemon_name.h"
 #include "internet.h"
@@ -41,6 +42,7 @@
 #include "condor_distribution.h"
 #include "condor_query.h"
 #include "daemon_list.h"
+#include "my_username.h"
 #include "string_list.h"
 #include "HashTable.h"
 
@@ -48,15 +50,15 @@
 void computeRealAction( void );
 bool resolveNames( DaemonList* daemon_list, StringList* name_list, StringList* unresolved_names_list );
 void doCommand( Daemon* d );
-int doCommands(int argc,char *argv[],char *MyName, StringList & unresolved_names);
+int doCommands(int argc,const char *argv[],const char *MyName, StringList & unresolved_names);
 void version();
 void handleAll();
 void doSquawk( const char *addr );
 int handleSquawk( char *line, char *addr );
 int doSquawkReconnect( char *addr );
-int  printAdToFile(ClassAd *ad, char* filename);
+bool printAdToFile(ClassAd *ad, char* filename);
 int strncmp_auto(const char *s1, const char *s2);
-void PREFAST_NORETURN usage( const char *str, int iExitCode=1 );
+void PREFAST_NORETURN usage( const char *str, int iExitCode=1, FILE* out=nullptr );
 
 // Global variables
 int cmd = 0;
@@ -73,6 +75,17 @@ const char* constraint = NULL;
 std::string annexString;
 const char* subsys = NULL;
 const char* exec_program = NULL;
+bool can_exec = false;
+bool can_drain = false;
+bool dash_drain = false;
+bool dash_quick = false;
+const char * drain_reason = nullptr;
+const char * draining_check_expr = nullptr;
+const char * draining_start_expr = nullptr;
+bool dash_fast = false;
+bool dash_graceful = false;
+bool dash_peaceful = false;
+
 int takes_subsys = 0;
 int cmd_set = 0;
 const char *subsys_arg = NULL;
@@ -90,119 +103,139 @@ HashTable<std::string, bool> addresses_sent( hashFunction );
 #	define stderr stdout
 #endif
 
-void
-usage( const char *str, int iExitCode )
+static const char * drain_cmd_verb(int cmd)
 {
-	if( ! str ) {
-		fprintf( stderr, "Use \"-help\" to see usage information\n" );
+	switch (cmd) {
+	case SET_SHUTDOWN_PROGRAM: return "shutdown";
+	case DAEMONS_OFF: return "shutdown";
+	case DC_RECONFIG_FULL: return "reconfig";
+	case RESTART: return "restart";
+	default: break;
+	}
+	return "proceeding";
+}
+
+void
+usage( const char *myname, int iExitCode, FILE* out )
+{
+	if ( ! out) out = stderr;
+	if ( ! myname ) {
+		fprintf( out, "Use \"-help\" to see usage information\n" );
 		exit( 1 );
 	}
 
-	const char* tmp = strchr( str, '_' );
-	if( !tmp ) {
-		fprintf( stderr, "Usage: %s [command] ", str );
+	if( !strchr( myname, '_' ) ) {
+		fprintf( out, "Usage: %s [command] ", myname );
 	} else if (cmd == SET_SHUTDOWN_PROGRAM) {
-		fprintf( stderr, "Usage: %s -exec <name> ", str );
+		fprintf( out, "Usage: %s -exec <name> ", myname );
 	} else {
-		fprintf( stderr, "Usage: %s ", str );
+		fprintf( out, "Usage: %s ", myname );
 	}
 
-	fprintf( stderr, "[general-options] [targets]" );
-	if( takes_subsys ) {
-		fprintf( stderr, " [daemon]" );
+	fprintf( out, "[general-options]%s [targets]%s\n",
+		can_drain ? " [drain-options]" : "",
+		takes_subsys ? " [daemon]" : "");
+
+	fprintf( out, "\nwhere [general-options] can be zero or more of:\n" );
+	fprintf( out, "    -help\t\tgives this usage information\n" );
+	fprintf( out, "    -version\t\tprints the version\n" );
+	fprintf( out, "    -pool <hostname>\tuse the given central manager to find daemons\n" );
+	if (can_exec) {
+		fprintf( out, "    -exec <name>\tTell the master to run the program is has configured as\n"
+				      "                \tMASTER_SHUTDOWN_<name> on next %s\n", drain_cmd_verb(cmd));
 	}
-	if (cmd == SET_SHUTDOWN_PROGRAM) {
-		fprintf( stderr, "\n    -exec <name>\tTell the master to run the program is has configured as\n"
-						   "                \tMASTER_SHUTDOWN_<name> the next time it shuts down");
-	}
-	fprintf( stderr, "\nwhere [general-options] can be zero or more of:\n" );
-	fprintf( stderr, "    -help\t\tgives this usage information\n" );
-	fprintf( stderr, "    -version\t\tprints the version\n" );
-	fprintf( stderr, 
-			 "    -pool hostname\tuse the given central manager to find daemons\n" );
 	if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF || cmd == RESTART ) {
-		fprintf( stderr, "    -graceful\t\tThe default. If jobs are running, wait for up to the configured \n\t\t\tgrace period for them to finish, then exit\n");
-		fprintf( stderr, "    -fast\t\tquickly shutdown daemons, immediately evicting any running jobs\n" );
-		fprintf( stderr, "    -peaceful\t\twait indefinitely for jobs to finish before shutdown\n" );
-		fprintf( stderr, "    -force-graceful\tupgrade a peaceful shutdown to a graceful shutdown\n" );
+		fprintf( out, "    -graceful\t\tThe default. If jobs are running, wait for up to the configured \n\t\t\tgrace period for them to finish, then exit\n");
+		fprintf( out, "    -fast\t\tquickly shutdown daemons, immediately evicting any running jobs\n" );
+		fprintf( out, "    -peaceful\t\twait indefinitely for jobs to finish before shutdown\n" );
+		fprintf( out, "    -force-graceful\tupgrade a peaceful shutdown to a graceful shutdown\n" );
 	}
 	if( cmd == VACATE_CLAIM ) {
-		fprintf( stderr, 
+		fprintf( out,
 				 "    -graceful\t\tgracefully vacate the jobs (the default)\n" );
-		fprintf( stderr, 
+		fprintf( out,
 				 "    -fast\t\tquickly vacate the jobs (no checkpointing)\n" );
 	}
-	fprintf( stderr, "where [targets] can be zero or more of:\n" );
-	fprintf( stderr, 
-			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
-	fprintf( stderr,
-			 "    -annex-name <name>\tall annex hosts in the named annex\n" );
-	fprintf( stderr,
-			 "    -annex-slots\tall annex hosts in your pool\n" );
-	fprintf( stderr, "    hostname\t\tgiven host\n" );
-	fprintf( stderr, "    <ip.address:port>\tgiven \"sinful string\"\n" );
-	fprintf( stderr,
-			 "  (for compatibility with other Condor tools, you can also use:)\n" );
-	fprintf( stderr, "    -name name\tgiven host\n" );
-	fprintf( stderr, "    -constraint constraint\tconstraint\n" );
-	fprintf( stderr, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
-	fprintf( stderr, "  (if no targets are specified, the local host is used)\n" );
-	if( takes_subsys ) {
-		fprintf( stderr, "where [daemon] can be one of:\n" );
-		fprintf( stderr, 
-			 "    -daemon <name>\tspecify the target daemon by name.\n" );
-		fprintf( stderr,
-			"    The following named daemon options are deprecated, and\n");
-		fprintf( stderr, "    may be discontinued in a future release:\n");
-		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
-			fprintf( stderr, "    -master\n" );
-		} else {
-			fprintf( stderr, "    -master\t\t(the default)\n" );
-		}
-		fprintf( stderr, "    -startd\n" );
-		fprintf( stderr, "    -schedd\n" );
-		fprintf( stderr, "    -collector\n" );
-		fprintf( stderr, "    -negotiator\n" );
-		fprintf( stderr, "    -kbdd\n" );
+	if (can_drain) {
+		fprintf( out, "    -drain\t\tdrain before %s. (target must be 9.12 or later)\n", drain_cmd_verb(cmd) );
+		fprintf( out, "\nwhere [drain-options] modify -drain and are zero or more of: \n"
+			"    -reason <text>    While draining, advertise <text> as the reason.\n"
+			"    -request-id <id>  Specific request id to cancel (optional).\n"
+			"    -check <expr>     Must be true for all slots to be drained or request is aborted.\n"
+			"    -start <expr>     Change START expression to this while draining.\n");
+		fprintf( out,
+			"    -deadline <expr>  How long to drain before %s\n", drain_cmd_verb(cmd));
 	}
-	fprintf( stderr, "\n" );
+	fprintf( out, "\nwhere [targets] can be zero or more of:\n" );
+	fprintf( out, 
+			 "    -all\t\tall hosts in your pool (overrides other targets)\n" );
+	fprintf( out,
+			 "    -annex-name <name>\tall annex hosts in the named annex\n" );
+	fprintf( out,
+			 "    -annex-slots\tall annex hosts in your pool\n" );
+	fprintf( out, "    hostname\t\tgiven host\n" );
+	fprintf( out, "    <ip.address:port>\tgiven \"sinful string\"\n" );
+	fprintf( out,
+			 "  (for compatibility with other Condor tools, you can also use:)\n" );
+	fprintf( out, "    -name name\tgiven host\n" );
+	fprintf( out, "    -constraint constraint\tconstraint\n" );
+	fprintf( out, "    -addr <addr:port>\tgiven \"sinful string\"\n" );
+	fprintf( out, "  (if no targets are specified, the local host is used)\n" );
+	if( takes_subsys ) {
+		fprintf( out, "\nwhere [daemon] can be one of:\n" );
+		fprintf( out,
+			 "    -daemon <name>\tspecify the target daemon by name.\n" );
+		fprintf( out,
+			"    Or use one of the following options to select one of the standard daemons\n");
+		if( cmd == DAEMONS_OFF || cmd == DAEMON_OFF ) {
+			fprintf( out, "    -master\n" );
+		} else {
+			fprintf( out, "    -master\t\t(the default)\n" );
+		}
+		fprintf( out, "    -startd\n" );
+		fprintf( out, "    -schedd\n" );
+		fprintf( out, "    -collector\n" );
+		fprintf( out, "    -negotiator\n" );
+		fprintf( out, "    -kbdd\n" );
+	}
+	fprintf( out, "\n" );
 
 	switch( cmd ) {
 	case DAEMONS_ON:
-		fprintf( stderr, 
+		fprintf( out,
 				 "  %s turns on the condor daemons specified in the config file.\n", 
-				 str);
+				 myname);
 		break;
 	case DAEMONS_OFF:
 	case DC_OFF_GRACEFUL:
-		fprintf( stderr, "  %s turns off the specified daemon.\n", 
-				 str );
-		fprintf( stderr, 
+		fprintf( out, "  %s turns off the specified daemon.\n", 
+				 myname );
+		fprintf( out,
 				 "  If no daemon is given, everything except the master is shut down.\n" );
 		break;
 	case RESTART:
-		fprintf( stderr, "  %s causes specified daemon to restart itself.\n", str );
-		fprintf( stderr, 
+		fprintf( out, "  %s causes specified daemon to restart itself.\n", myname );
+		fprintf( out,
 				 "  If sent to the master, all daemons on that host will restart.\n" );
 		break;
 	case SET_SHUTDOWN_PROGRAM:
-		fprintf( stderr, "  %s causes the master to run a pre-configured program when it exits.\n", str );
+		fprintf( out, "  %s causes the master to run a pre-configured program when it exits.\n", myname );
 		break;
 
 	case DC_RECONFIG_FULL:
-		fprintf( stderr, 
+		fprintf( out,
 				 "  %s causes the specified daemon to reconfigure itself.\n", 
-				 str );
-		fprintf( stderr, 
+				 myname );
+		fprintf( out,
 				 "  If sent to the master, all daemons on that host will reconfigure.\n" );
 		break;
 	case RESCHEDULE:
-		fprintf( stderr, "  %s %s\n  %s\n", str, 
+		fprintf( out, "  %s %s\n  %s\n", myname, 
 				 "causes the condor_schedd to update the central manager",
 				 "and initiate a new negotiation cycle." );
 		break;
 	case VACATE_CLAIM:
-		fprintf( stderr, 
+		fprintf( out,
 				 "  %s causes the condor_startd to vacate the running\n"
 				 "  job(s) on specific machines.  If you specify a slot\n"
 				 "  (for example, \"slot1@hostname\"), only that slot will be\n"
@@ -210,26 +243,26 @@ usage( const char *str, int iExitCode )
 				 "  any slots at that host will be vacated.  By default,\n"
 				 "  the jobs will be checkpointed (if possible), though if you\n"
 				 "  specify the -fast option, they will be immediately killed.\n",
-				 str );
+				 myname );
 		break;
 	case PCKPT_JOB:
-		fprintf( stderr,
+		fprintf( out,
 				 "  %s\n"
 				 "  causes the condor_startd to perform a periodic"
 				 "checkpoint on running jobs on specific machines.\n"
 				 "  The jobs continue to run once "
 				 "they are done checkpointing.\n",
-				 str);
+				 myname);
 		break;
 	default:
-		fprintf( stderr, "  Valid commands are:\n%s%s",
+		fprintf( out, "  Valid commands are:\n%s%s",
 				 "\toff, on, restart, reconfig, reschedule, ",
 				 "vacate, checkpoint, set_shutdown\n\n" );
-		fprintf( stderr, "  Use \"%s [command] -help\" for more information %s\n", 
-				 str, "on a given command." );
+		fprintf( out, "  Use \"%s [command] -help\" for more information %s\n",
+				 myname, "on a given command." );
 		break;
 	}
-	fprintf(stderr, "\n" );
+	fprintf(out, "\n" );
 	exit( iExitCode );
 }
 
@@ -256,6 +289,9 @@ cmdToStr( int c )
 		return "Kill-All-Daemons-Fast";
 	case DAEMONS_OFF_PEACEFUL:
 		return "Kill-All-Daemons-Peacefully";
+	case DAEMONS_OFF_FLEX:
+	case MASTER_OFF:
+		return "Shutdown-Daemons";
 	case DAEMON_OFF:
 	case DC_OFF_GRACEFUL:
 	case DC_OFF_FORCE:
@@ -309,7 +345,7 @@ cmdToStr( int c )
 	
 
 void
-subsys_check( char* MyName )
+subsys_check( const char* MyName )
 {
 	if( ! takes_subsys ) {
 		fprintf( stderr, 
@@ -326,11 +362,16 @@ subsys_check( char* MyName )
 
 bool skipAfterAnnex = false;
 
-int
-main( int argc, char *argv[] )
+static void
+another(  const char* opt )
 {
-	char *MyName = argv[0];
-	char *cmd_str, **tmp;
+	fprintf( stderr, "ERROR: %s requires another argument\n", opt );
+	usage( NULL );
+}
+
+int
+main( int argc, const char *argv[] )
+{
 	int size;
 	int rc;
 	int got_name_or_addr = 0;
@@ -346,35 +387,18 @@ main( int argc, char *argv[] )
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	MyName = strrchr( argv[0], DIR_DELIM_CHAR );
-	if( !MyName ) {
-		MyName = argv[0];
-	} else {
-		MyName++;
-	}
+	const char *MyName = condor_basename(argv[0]);
+
 		// See if there's an '-' in our name, if not, append argv[1]. 
-	cmd_str = strchr( MyName, '_');
+	const char *cmd_str = strchr( MyName, '_');
 	if( !cmd_str ) {
-
-			// If there's no argv[1], print usage.
-		if( ! argv[1] ) { usage( MyName ); }
-
-			// If argv[1] begins with '-', print usage, don't append.
-		if( argv[1][0] == '-' ) { 
-				// The one exception is if we got a "condor -v", we
-				// should print the version, not give an error.
-			if( argv[1][1] == 'v' ) {
-				version();
-			} else {
-				usage( MyName );
-			}
+			// If argv[1] is version, we know what to do, otherwise print usage
+		if (argv[1] && is_dash_arg_prefix(argv[1], "version")) {
+			version(); // this calls exit(0)
 		}
-		size = strlen( argv[1] );
-		MyName = (char*)malloc( size + 8 );
-		sprintf( MyName, "condor_%s", argv[1] );
-		cmd_str = MyName+6;
-		argv++; argc--;
+		usage( MyName );
 	}
+
 		// Figure out what kind of tool we are.
         // We use strncmp instead of strcmp because 
         // we want to work on windows when invoked as 
@@ -387,12 +411,17 @@ main( int argc, char *argv[] )
     } else if( !strncmp_auto( cmd_str, "_reconfig" ) ) {
 		cmd = DC_RECONFIG_FULL;
 		takes_subsys = 1;
+		can_drain = 1;
 	} else if( !strncmp_auto( cmd_str, "_restart" ) ) {
 		cmd = RESTART;
 		takes_subsys = 1;
+		can_drain = 1;
+		can_exec = 1; // TODO: make this work
 	} else if( !strncmp_auto( cmd_str, "_off" ) ) {
 		cmd = DAEMONS_OFF;
 		takes_subsys = 1;
+		can_drain = 1;
+		can_exec = 1; // TODO: make this work
 	} else if( !strncmp_auto( cmd_str, "_on" ) ) {
 		cmd = DAEMONS_ON;
 		takes_subsys = 1;
@@ -410,29 +439,30 @@ main( int argc, char *argv[] )
 		cmd = PCKPT_JOB;
 	} else if ( !strncmp_auto( cmd_str, "_set_shutdown" ) ) {
 		cmd = SET_SHUTDOWN_PROGRAM;
+		can_exec = 1;
 	} else {
 		fprintf( stderr, "ERROR: unknown command %s\n", MyName );
 		usage( "condor" );
 	}
 
+	std::vector<const char *> names_and_addrs; names_and_addrs.reserve(argc+1);
 
 		// First, deal with options (begin with '-')
-	tmp = argv;
-	for( tmp++; *tmp; tmp++ ) {
-		if( (*tmp)[0] != '-' ) {
+	for (int i = 1; i < argc; ++i) {
+		if (*argv[i] != '-') {
 				// If it doesn't start with '-', skip it
 			++got_name_or_addr;
+			names_and_addrs.push_back(argv[i]);
 			continue;
 		}
-		switch( (*tmp)[1] ) {
-		case 'v':
+		if (is_dash_arg_prefix(argv[i], "version")) {
 			version();
-			break;
-		case 'h':
+		}
+		else if (is_dash_arg_prefix(argv[i], "help")) {
 			usage( MyName, 0 );
-			break;
-		case 'p':
-			if((*tmp)[2] == 'e') { // -peaceful
+		}
+		else if (is_dash_arg_prefix(argv[i], "peaceful", 2)) {
+				dash_peaceful = true;
 				peaceful_shutdown = true;
 				fast = false;
 				force_shutdown = false;
@@ -446,11 +476,10 @@ main( int argc, char *argv[] )
 							 "is not valid with %s\n", MyName );
 					usage( NULL );
 				}
-			}
-			else if( (*tmp)[2] == '\0' || (*tmp)[2] == 'o' ) { //-pool
-				tmp++;
-				if( tmp && *tmp ) {
-					pool = new DCCollector( *tmp );
+		}
+		else if (is_dash_arg_prefix(argv[i], "pool", 1)) {
+				if (argv[i+1]) {
+					pool = new DCCollector(argv[++i]);
 					if( ! pool->addr() ) {
 						fprintf( stderr, "%s: %s\n", MyName, pool->error() );
 						exit( 1 );
@@ -459,22 +488,13 @@ main( int argc, char *argv[] )
 					fprintf( stderr, "ERROR: -pool requires another argument\n" );
 					usage( NULL );
 				}
-			}
-			else if (is_dash_arg_prefix(*tmp, "preen", -1)) {
+		}
+		else if (is_dash_arg_prefix(argv[i], "preen", -1)) {
 				subsys_check(MyName);
 				dt = DT_GENERIC;
 				subsys_arg = "preen";
-			}
-			else {
-				fprintf( stderr, "ERROR: \"%s\" "
-						 "is not a valid option\n", (*tmp) );
-				usage( NULL );
-			}
-			break;
-		case 'f':
-			if( (*tmp)[2] ) {
-				switch( (*tmp)[2] ) {
-				case 'u':
+		}
+		else if (is_dash_arg_prefix(argv[i], "full", 2)) {
 					// CRUFT: -full is a deprecated argument to
 					//   condor_reconfig. It was removed in 7.5.3.
 					if( cmd != DC_RECONFIG_FULL ) {
@@ -482,8 +502,9 @@ main( int argc, char *argv[] )
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
 					}
-					break;
-				case 'a':
+		}
+		else if (is_dash_arg_prefix(argv[i], "fast", 2)) {
+					dash_fast = true;
 					fast = true;
 					peaceful_shutdown = false;
 					force_shutdown = false;
@@ -498,8 +519,8 @@ main( int argc, char *argv[] )
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
 					}
-					break;
-				case 'o': // -force-graceful
+		}
+		else if (is_dash_arg_prefix(argv[i], "force-graceful", 2)) {
 					fast = false;
 					peaceful_shutdown = false;
 					force_shutdown = true;
@@ -511,34 +532,22 @@ main( int argc, char *argv[] )
 								 "is not valid with %s\n", MyName );
 						usage( NULL );
 					}
-					break;
-				default:
-					fprintf( stderr, 
-							 "ERROR: unknown parameter: \"%s\"\n",
-							 *tmp ); 
-					usage( NULL );
-					break;
-				}
-			} else {
+		}
+		else if (is_dash_arg_prefix(argv[i], "f", -1)) {
 				fprintf( stderr, 
-						 "ERROR: ambiguous parameter: \"%s\"\n",
-						 *tmp ); 
-				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"-f\"\n"
 						 "Please specify \"-full\" or \"-fast\"\n" );
 				usage( NULL );
-			}
-			break;
-		case 'd':
-			// -de can be debug, but we don't want it to match -defrag!
-			if (is_dash_arg_colon_prefix(*tmp, "debug", &pcolon, 1)) {
+		}
+		else if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 1)) {
 				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
-			} else if ((*tmp)[2] == 'a')  {
+		}
+		else if (is_dash_arg_prefix(argv[i], "daemon", 2)) {
 				subsys_check( MyName );
 					// We got a "-daemon", make sure we've got 
 					// something else after it
-				tmp++;
-				if( tmp && *tmp ) {
-					subsys_arg = *tmp;
+				if (argv[i+1]) {
+					subsys_arg = argv[++i];
 					dt = stringToDaemonType(subsys_arg);
 					if( dt == DT_NONE ) {
 						dt = DT_GENERIC;
@@ -549,82 +558,81 @@ main( int argc, char *argv[] )
 					usage( NULL );
 					exit( 1 );
 				}
-			} else {
-				fprintf( stderr, 
-						 "ERROR: unknown parameter: \"%s\"\n",
-						 *tmp );  
-				usage( NULL );
-			}
-			break;
-		case 'e':
-			if ( strcmp( *tmp, "-exec" ) ) {
-				fprintf( stderr, "Unknown option '%s'\n", *tmp );
-				usage( NULL );
-				break;
-			}
-			if ( cmd != SET_SHUTDOWN_PROGRAM ) {
+		}
+		else if (is_dash_arg_prefix(argv[i], "drain", 2) && can_drain) {
+			dash_drain = true;
+		}
+		else if (is_dash_arg_prefix(argv[i], "quick", 1) && can_drain) {
+			dash_quick = true;
+		}
+		else if (is_dash_arg_prefix(argv[i], "reason", 3) && dash_drain) {
+			if (i+1 >= argc) another(argv[i]);
+			drain_reason = argv[++i];
+		}
+		else if (is_dash_arg_prefix(argv[i], "check", 2) && dash_drain) {
+			if( i+1 >= argc ) another(argv[i]);
+			draining_check_expr = argv[++i];
+		}
+		else if( is_dash_arg_prefix( argv[i], "start", 5 ) && dash_drain) {
+			if( i+1 >= argc ) another(argv[i]);
+			draining_start_expr = argv[++i];
+		}
+		else if (is_dash_arg_prefix(argv[i], "exec", 2)) {
+			// TODO: allow -exec with condor_off and condor_restart even if -drain is not specified.
+			if ( cmd != SET_SHUTDOWN_PROGRAM && ! dash_drain) {
 				fprintf( stderr,
-						 "ERROR: \"-exec\" is not valid with %s\n", MyName );
+						 "ERROR: \"-exec\" is not valid with %s%s\n", MyName,
+						dash_drain ? "" : " without -drain"
+						);
 				usage( NULL );
 				break;
 			}
-			tmp++;
-			if( ! (tmp && *tmp) ) {
-				fprintf( stderr, 
-						 "ERROR: \"-exec\" requires another argument\n" ); 
-				usage( NULL );
-				break;
-			}
-			exec_program = *tmp;
+			if( i+1 >= argc ) another(argv[i]);
+			exec_program = argv[++i];
 			printf( "Set exec to %s\n", exec_program );
-			break;
-		case 'g':
-			if ( is_dash_arg_prefix( *tmp, "graceful", 1 ) ) {
+		}
+		else if (is_dash_arg_prefix(argv[i], "graceful", 1)) {
+				dash_graceful = true;
 				fast = false;
 				peaceful_shutdown = false;
-			} else {
-				fprintf( stderr,
-						 "ERROR: unknown parameter: \"%s\"\n",
-						 *tmp );
-				usage( NULL );
-			}
-			break;
-		case 'a':
-			if( (*tmp)[2] ) {
-				switch( (*tmp)[2] ) {
-				case 'd':
+		}
+		else if (is_dash_arg_prefix(argv[i], "addr", 2)) {
 						// We got a -addr, make sure we've got 
 						// something else after it
-					tmp++;
-					if( ! (tmp && *tmp) ) {
+					if (! argv[i+1] || *argv[i+1] == '-') {
 						fprintf( stderr, 
 								 "ERROR: -addr requires another argument\n" ); 
 						usage( NULL );
 					}
 					++got_name_or_addr;
-					break;
-				case 'l':
+					names_and_addrs.push_back(argv[++i]);
+		}
+		else if (is_dash_arg_prefix(argv[i], "all", 2)) {
 						// We got a "-all", remember that
 					all = true;
-					break;
-				case 'n': {
+		}
+		else if (is_dash_arg_prefix(argv[i], "a", -1)) {
+				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"-a\"\n"
+						 "Please specify \"-addr\" or \"-all\"\n" );
+				usage( NULL );
+		}
+		else if (starts_with(argv[i], "-annex")) {
 					// We got -annex*, all of which default to the master.
 					if( cmd == DAEMONS_OFF ) {
 						subsys_check( MyName );
 						dt = DT_MASTER;
 					}
 
-					char * option = * tmp;
-					++tmp;
-					char * argument = NULL;
-					if( tmp ) { argument = * tmp; }
-					--tmp;
+					const char * option = argv[i];
+					const char * argument = NULL;
+					if( argv[i+1] ) { argument = argv[i+1]; }
 
 					if( strcmp( option, "-annex-name" ) == 0 ) {
 						if( argument ) {
 							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
 							skipAfterAnnex = true;
-							++tmp;
+							++i;
 						} else {
 							fprintf( stderr, "ERROR: -annex-name requires an annex name\n" );
 							usage( NULL );
@@ -635,7 +643,7 @@ main( int argc, char *argv[] )
 						if( argument && argument[0] != '-' ) {
 							formatstr( annexString, ATTR_ANNEX_NAME " =?= \"%s\"", argument );
 							skipAfterAnnex = true;
-							++tmp;
+							++i;
 						} else {
 							annexString = "IsAnnex";
 						}
@@ -645,75 +653,42 @@ main( int argc, char *argv[] )
 						formatstr( annexString, "(%s) && (%s)", constraint, annexString.c_str() );
 					}
 					constraint = annexString.c_str();
-					} break;
-				default:
-					fprintf( stderr, 
-							 "ERROR: unknown parameter: \"%s\"\n",
-							 *tmp ); 
-					usage( NULL );
-					break;
-				}
-			} else {
-				fprintf( stderr, 
-						 "ERROR: ambiguous parameter: \"%s\"\n",
-						 *tmp ); 
-				fprintf( stderr, 
-						 "Please specify \"-addr\" or \"-all\"\n" );
-				usage( NULL );
-			}
-			break;
-		case 'n':
-			if( (*tmp)[2] ) {
-				switch( (*tmp)[2] ) {
-				case 'a': 
+		}
+		else if (is_dash_arg_prefix(argv[i], "name", 2)) {
 						// We got a "-name", make sure we've got 
 						// something else after it
-					tmp++;
-					if( ! (tmp && *tmp) ) {
+					if (! argv[i+1] || *argv[i+1] == '-') {
 						fprintf( stderr, 
 								 "ERROR: -name requires another argument\n" );
 						usage( NULL );
 					}
-					break;
-				case 'e':
-						// We got a "-negotiator"
+					++got_name_or_addr;
+					names_and_addrs.push_back(argv[++i]);
+		}
+		else if (is_dash_arg_prefix(argv[i], "negotiator", 2)) {
 					subsys_check( MyName );
 					dt = DT_NEGOTIATOR;
-					break;
-				default:
-					fprintf( stderr, 
-							 "ERROR: invalid option: \"%s\"\n",
-							 *tmp );  
-					usage( NULL );
-					break;
-				}
-			} else {
+		}
+		else if (is_dash_arg_prefix(argv[i], "n", -1)) {
 				fprintf( stderr, 
-						 "ERROR: ambiguous option: \"%s\"\n",
-						 *tmp ); 
-				fprintf( stderr, 
+						 "ERROR: ambiguous parameter: \"-n\"\n"
 						 "Please specify \"-name\" or \"-negotiator\"\n" );
 				usage( NULL );
-			}
-			break;
-		case 'm':
+		}
+		else if (is_dash_arg_prefix(argv[i], "master", 1)) {
 			subsys_check( MyName );
 			dt = DT_MASTER;
-			break;
-		case 'c':
-			if( (*tmp)[2] ) {
-				switch( (*tmp)[2] ) {
-				case 'm': 
+		}
+		else if (is_dash_arg_prefix(argv[i], "cmd", 2)) {
 						// We got a "-cmd", make sure we've got 
 						// something else after it
-					tmp++;
-					if( tmp && *tmp ) {
-						cmd = atoi( *tmp );
+					if( argv[i+1] ) {
+						cmd = atoi( argv[++i] );
 						cmd_set = 1;
 						if( !cmd ) {
 							fprintf( stderr, 
 									 "ERROR: invalid argument to -cmd (\"%s\")\n",
-									 *tmp );
+									 argv[i] );
 							exit( 1 );
 						}
 					} else {
@@ -721,81 +696,49 @@ main( int argc, char *argv[] )
 								 "ERROR: -cmd requires another argument\n" ); 
 						exit( 1 );
 					}
-					break;
-				case 'o':
-					if( (*tmp)[3] ) {
-						switch( (*tmp)[3] ) {
-						case 'n':
+		}
+		else if (is_dash_arg_prefix(argv[i], "constraint", 3)) {
 							// We got a "-constraint", make sure we've got
 							// something else after it
-							tmp++;
 							if (constraint) {
 								fprintf(stderr, "ERROR: only one -constraint argument is allowed\n");
 								exit (1);
 							}
-							if( tmp && *tmp ) {
-								constraint = *tmp;
+							if( argv[i+1] ) {
+								constraint = argv[++i];
 							} else {
 								fprintf( stderr, "ERROR: -constraint requires another argument\n" );
 								usage( NULL );
 							}
-							break;
-
-						case 'l':
+		}
+		else if (is_dash_arg_prefix(argv[i], "collector", 3)) {
 							subsys_check( MyName );
 							dt = DT_COLLECTOR;
-							break;
-						default:
-							fprintf( stderr,
-								"ERROR: unknown parameter: \"%s\"\n",
-								*tmp );
-							usage( NULL );
-							break;
-						}
-					} else {
+		}
+		else if (is_dash_arg_prefix(argv[i], "co", -1)) {
 						fprintf( stderr,
-							"ERROR: ambigous parameter: \"%s\"\n",
-							*tmp );
-						fprintf( stderr,
+							"ERROR: ambigous parameter: \"-co\"\n"
 							"Please specify \"-collector\" or \"-constraint\"\n" );
 						usage( NULL );
-					}
-					break;
-				default:
-					fprintf( stderr, 
-							 "ERROR: unknown parameter: \"%s\"\n",
-							 *tmp );  
-					usage( NULL );
-					break;
-				}
-			} else {
-				fprintf( stderr, 
-						 "ERROR: ambiguous parameter: \"%s\"\n",
-						 *tmp ); 
-				usage( NULL );
-			}
-			break;
-		case 'k':
+		}
+		else if (is_dash_arg_prefix(argv[i], "kbdd", 1)) {
 			subsys_check( MyName );
 			dt = DT_KBDD;
-			break;
-		case 's':
+		}
+		else if (is_dash_arg_prefix(argv[i], "schedd", 2)) {
 			subsys_check( MyName );
-			if( (*tmp)[2] ) {
-				switch( (*tmp)[2] ) {
-				case 'c':
-					dt = DT_SCHEDD;
-					break;
-				case 't':
-					dt = DT_STARTD;
-					break;
-				case 'u': 
+			dt = DT_SCHEDD;
+		}
+		else if (is_dash_arg_prefix(argv[i], "startd", 2)) {
+			subsys_check( MyName );
+			dt = DT_STARTD;
+		}
+		else if (is_dash_arg_prefix(argv[i], "subsystem", 2)) {
 						// We got a "-subsystem", make sure we've got 
 						// something else after it
-					tmp++;
-					if( tmp && *tmp ) {
+					if( argv[i+1] ) {
 						subsys_check( MyName );
-						subsys_arg = *tmp;
+						subsys_arg = argv[++i];
 						dt = stringToDaemonType(subsys_arg);
 						if( dt == DT_NONE ) {
 							dt = DT_GENERIC;
@@ -806,26 +749,16 @@ main( int argc, char *argv[] )
 						usage( NULL );
 						exit( 1 );
 					}
-					break;
-				default: 
-					fprintf( stderr, 
-							 "ERROR: unknown parameter: \"%s\"\n",
-							 *tmp );  
-					usage( NULL );
-					break;
-				}
-			} else {
+		}
+		else if (is_dash_arg_prefix(argv[i], "s", -1)) {
 				fprintf( stderr, 
-						 "ERROR: ambiguous argument \"%s\"\n",
-						 *tmp );
-				fprintf( stderr, 
+						 "ERROR: ambiguous argument \"-s\"\n"
 				"Please specify \"-subsystem\", \"-startd\" or \"-schedd\"\n" );
 				usage( NULL );
-			}
-			break;
-		default:
+		}
+		else {
 			fprintf( stderr, "ERROR: invalid argument \"%s\"\n",
-					 *tmp );
+					 argv[i] );
 			usage( MyName );
 		}
 	}
@@ -838,6 +771,9 @@ main( int argc, char *argv[] )
 			"to your constraint.\n");
 		usage(NULL);
 	}
+
+	// add a null name at the end like argv
+	names_and_addrs.push_back(nullptr);
 
 		// it's not always obvious what daemon we want to talk to and
 		// what command we want to send.  for example, with
@@ -890,7 +826,7 @@ main( int argc, char *argv[] )
 	// relavent children.  Currently, only the startd and schedd have
 	// special peaceful behavior.
 
-	if( (peaceful_shutdown || force_shutdown ) && real_dt == DT_MASTER ) {
+	if( ! dash_drain && (peaceful_shutdown || force_shutdown ) && real_dt == DT_MASTER ) {
 		if( (real_cmd == DAEMONS_OFF) ||
 			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"startd")) ||
 			(real_cmd == DAEMON_OFF && subsys && !strcmp(subsys,"schedd")) ||
@@ -916,12 +852,12 @@ main( int argc, char *argv[] )
 
 			if( !subsys || !strcmp(subsys,"startd") ) {
 				real_dt = DT_STARTD;
-				rc = doCommands(argc,argv,MyName,unresolved_names);
+				rc = doCommands(got_name_or_addr,&names_and_addrs[0],MyName,unresolved_names);
 				if(rc) return rc;
 			}
 			if( !subsys || !strcmp(subsys,"schedd") ) {
 				real_dt = DT_SCHEDD;
-				rc = doCommands(argc,argv,MyName,unresolved_names);
+				rc = doCommands(got_name_or_addr,&names_and_addrs[0],MyName,unresolved_names);
 				if(rc) return rc;
 			}
 
@@ -933,7 +869,7 @@ main( int argc, char *argv[] )
 		}
 	}
 
-	rc = doCommands(argc,argv,MyName,unresolved_names);
+	rc = doCommands(got_name_or_addr,&names_and_addrs[0],MyName,unresolved_names);
 
 	if ( ! unresolved_names.isEmpty()) {
 		for (const char * name = unresolved_names.first(); name; name = unresolved_names.next()) {
@@ -947,7 +883,7 @@ main( int argc, char *argv[] )
 }
 
 int
-doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names)
+doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unresolved_names)
 {
 	StringList names;
 	StringList addrs;
@@ -963,73 +899,11 @@ doCommands(int /*argc*/,char * argv[],char *MyName,StringList & unresolved_names
 		return 0;
 	}
 
-		// Now, process real args, and ignore - options.
-		// At this point, we just save all the real args in lists so
-		// we can just send one query to the collector to get all the
-		// sinful strings at once.  We keep seperate lists for sinful
-		// strings we were passed on the command line and host/daemon
-		// names, since in some cases, we have to send different
-		// commands if we're only passed a sinful string and don't
-		// know what kind of daemon we're talking to.  Aside from
-		// being significantly more efficient to do it this way, it
-		// also helps with security session problems once we reconfig
-		// the collector (if we're doing a reconfig)
-	for( argv++; *argv; argv++ ) {
+	// the incoming "argv" is just the arguments that are names and/or addresses
+	// it used to be the full argv passed to main, but that changed in 9.12
+	// We still call it argv to avoid a lot of code churn
+	for( argv; *argv; argv++ ) {
 		switch( (*argv)[0] ) {
-		case '-':
-				// we've already handled all the args that start with
-				// '-'.  however, some of them have a 2nd arg that
-				// we've also already looked at, so we need to deal
-				// with those again and skip over the arguments to
-				// options we've handled.  this includes:
-				//  -pool XXX    (but not "-peaceful")
-				//  -constraint XXX    (but not "-collector")
-				//  -cmd XXX     (but not "-collector")
-				//  -subsys XXX  (but not "-schedd" or "-startd")
-			switch( (*argv)[1] ) {
-			case 'a':
-				if( (*argv)[2] == 'n' && skipAfterAnnex ) {
-					// this is -annex, skip the next one.
-					++argv;
-				}
-				break;
-			case 'p':
-				if( (*argv)[2] == '\0' || (*argv)[2] == 'o' ) {
-						// this is -pool, skip the next one.
-					argv++;
-				}
-				break;
-			case 'c':
-				if( (*argv)[2] == 'm' ) {
-						// this is -cmd, skip the next one.
-					argv++;
-				} else if( (*argv)[3] == 'n' ) {
-						// this is -constraint, skip the next one.
-					argv++;
-				}
-				break;
-			case 'd':
-				if( (*argv)[2] == 'a' ) {
-						// this is -daemon, skip the next one.
-					argv++;
-				}
-				break;
-			case 's':
-				if( (*argv)[2] == 'u' ) {
-						// this is -subsys, skip the next one.
-					argv++;
-				}
-				break;
-			case 'e':
-				if( (*argv)[2] == 'x' ) {
-						// this is -exec, skip the next one.
-					argv++;
-				}
-				break;
-			}
-				// no matter what, we're done with this arg, so we
-				// should move onto the next one...
-			continue;
 		case '<':
 				// This is probably a sinful string, use it
 			found_one = true;
@@ -1139,11 +1013,17 @@ computeRealAction( void )
 	switch( cmd ) {
 
 	case DC_RECONFIG_FULL:
-			// no magic
+		if (dash_drain) {
+			real_dt = DT_MASTER;
+			real_cmd = DAEMONS_OFF_FLEX;
+		}
 		break;
 
 	case RESTART:
-		if( subsys && dt != DT_MASTER ) {
+		if (dash_drain) {
+			real_dt = DT_MASTER;
+			real_cmd = DAEMONS_OFF_FLEX;
+		} else if (subsys && dt != DT_MASTER) {
 				// We're trying to restart something and we were told
 				// a specific daemon to restart.  So, just send a
 				// DC_OFF to that daemon, and the master will restart
@@ -1155,7 +1035,10 @@ computeRealAction( void )
 		break;
 
 	case DAEMONS_OFF:
-		if( subsys ) {
+		if (dash_drain) {
+			real_dt = DT_MASTER;
+			real_cmd = DAEMONS_OFF_FLEX;
+		}  else if (subsys) {
 				// If we were told the subsys, we need a different
 				// cmd, and we want to send it to the master. 
 				// If we were told to use the master, we want to send
@@ -1457,9 +1340,45 @@ doCommand( Daemon* d )
 	int	my_cmd = real_cmd;
 	CondorError errstack;
 	bool error = true;
+	bool want_reply = false;
 	const char* name;
 	bool is_local;
 	daemon_t d_type;
+
+	ClassAd cmdAd;
+	if (real_cmd == DAEMONS_OFF_FLEX) {
+		if ( ! d->version() || ! CondorVersionInfo(d->version()).built_since_version(9,11,0)) {
+			fprintf(stderr, "condor_master must be version 9.12 or later for this command\n");
+			all_good = false;
+			return;
+		}
+		if (dash_drain) {
+			want_reply = true;
+			cmdAd.Assign("Drain", "STARTDS");
+			cmdAd.Assign(ATTR_HOW_FAST, fast ? DRAIN_FAST : (dash_quick ? DRAIN_QUICK : DRAIN_GRACEFUL));
+			// master will choose what to do on completion...
+			//cmdAd.Assign(ATTR_RESUME_ON_COMPLETION, (cmd==DC_RECONFIG_FULL) ? DRAIN_NOTHING_ON_COMPLETION : DRAIN_EXIT_ON_COMPLETION);
+			if (drain_reason) {
+				cmdAd.Assign(ATTR_DRAIN_REASON, drain_reason);
+			} else {
+				auto_free_ptr username(my_username());
+				if (! username) username.set(strdup("command"));
+				std::string reason("by "); reason += username.ptr();
+				cmdAd.Assign(ATTR_DRAIN_REASON, reason);
+			}
+			if (draining_check_expr) cmdAd.AssignExpr(ATTR_CHECK_EXPR, draining_check_expr);
+			if (draining_start_expr) cmdAd.AssignExpr(ATTR_START_EXPR, draining_start_expr);
+		}
+		if (exec_program) {
+			cmdAd.Assign("ShutdownTask", exec_program);
+			want_reply = true;
+			if (cmd == DAEMONS_OFF) cmd = MASTER_OFF; // use MASTER_OFF so the master exits also
+		} else if (dt == DT_MASTER) {
+			if (cmd == DAEMONS_OFF) cmd = MASTER_OFF; // use MASTER_OFF so the master exits also
+		}
+		cmdAd.Assign("WantReply", want_reply);
+		cmdAd.Assign("Command", cmd);
+	}
 
 	do {
 		// Grab some info about the daemon which is frequently used.
@@ -1598,6 +1517,35 @@ doCommand( Daemon* d )
 				my_cmd = RESTART_PEACEFUL;
 			}
 			break;
+
+		case DAEMONS_OFF_FLEX: {
+			ClassAd replyAd;
+			if (!d->startCommand(my_cmd, &sock, 0, &errstack)) {
+				fprintf(stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str());
+			}
+			if (!putClassAd(&sock, cmdAd) || !sock.end_of_message()) {
+				fprintf(stderr, "Can't send %s command to %s\n",
+					cmdToStr(my_cmd), d->idStr());
+				all_good = false;
+				return;
+			} else {
+				done = true;
+			}
+			if (want_reply) {
+				replyAd.Clear();
+				sock.decode();
+				if ( ! getClassAd(&sock, replyAd) || ! sock.end_of_message()) {
+					fprintf(stderr, "No response for %s command to %s\n",
+						cmdToStr(cmd), d->idStr());
+				} else {
+					// got a reply, what do we do with it?
+					std::string buf;
+					fprintf(stdout, "Response to %s command from %s\n%s\n",
+						cmdToStr(cmd), d->idStr(), formatAd(buf, replyAd, "\t"));
+				}
+			}
+
+		} break;
 
 		case DAEMONS_OFF:
 				// if -fast is used, we need to send a different command.
@@ -2004,32 +1952,34 @@ void squawkHelp( const char *token ) {
 	}
 }
 
-int 
+bool
 printAdToFile(ClassAd *ad, char* filename) {
 
 	FILE *fp;
 
 	if ( filename ) {
-	    if ( (fp = safe_fopen_wrapper_follow(filename,"a")) == NULL ) {
-			printf ( "ERROR appending to %s.\n", filename );
+	    if ( (fp = safe_fopen_wrapper_follow(filename,"ab")) == NULL ) {
+			printf ( "ERROR appending to %s. could not open file.\n", filename );
 			return FALSE;
 		}
 	} else {
 		fp = stdout;
 	}
 
-    if (!fPrintAd(fp, *ad)) {
-        printf( "ERROR - failed to write ad to file.\n" );
-        if ( filename ) fclose(fp);
-        return FALSE;
+	std::string buf;
+	formatAd(buf, *ad);
+	buf += "****\n";    // separator
+
+	int result = fputs(buf.c_str(), fp);
+	if (result < 0) {
+        printf( "ERROR - failed to write ad to file. errno=%d\n", errno );
     }
-    fprintf(fp,"***\n");   // separator
 	
 	if ( filename ) {
 		fclose(fp);
-	} 		
+	}
 
-    return TRUE;
+	return !(result<0);
 }
 
 

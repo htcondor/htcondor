@@ -26,6 +26,11 @@ New Features:
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
+- Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
+  This allows a command to be sent to the *condor_master* to drain the *condor_startd*
+  and then shutdown or restart all of the HTCondor daemons.
+  :jira:`1151`
+
 Bugs Fixed:
 
 - None.
