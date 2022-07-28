@@ -95,7 +95,7 @@ class Create(Verb):
         },
         "login_name": {
             "args": ("--login-name","--login",),
-            "help": "The (SSH) login name to use for this capacity request.  Defaults to your current login name.",
+            "help": "The (SSH) login name to use for this capacity request.  Uses SSH's default.",
             "default": None,
         },
         "login_host": {
