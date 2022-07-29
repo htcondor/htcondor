@@ -127,6 +127,7 @@
 #define ATTR_CPU_BUSY_TIME  "CpuBusyTime"
 #define ATTR_CPU_IS_BUSY  "CpuIsBusy"
 #define ATTR_CPUS  "Cpus"
+#define ATTR_CPUS_USAGE  "CpusUsage"
 #define ATTR_CPU_MODEL_NUMBER  "CpuModelNumber"
 #define ATTR_CPU_FAMILY  "CpuFamily"
 #define ATTR_CPU_CACHE_SIZE  "CpuCacheSize"
