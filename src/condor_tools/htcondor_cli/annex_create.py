@@ -829,8 +829,8 @@ def annex_inner_func(
     ##
     logger.info(
         f"{ANSI_BRIGHT}This command will access the system named "
-        f"'{SYSTEM_TABLE[system]['pretty_name']}' via XSEDE.  To proceed, "
-        f"enter your XSEDE user name and password at the prompt "
+        f"'{SYSTEM_TABLE[system]['pretty_name']}' via SSH.  To proceed, "
+        f"follow the prompts from that system "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
     ssh_target = ssh_host_name
