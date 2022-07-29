@@ -108,6 +108,10 @@ New Features:
   jobs.
   :jira:`740`
 
+- The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
+  status messages for the *job* and *jobset* subcommands.
+  :jira:`1149`
+
 Bugs Fixed:
 
 - Fixed bug where specifying more than 2TB of ``RESERVED_DISK`` would
