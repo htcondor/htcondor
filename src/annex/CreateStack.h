@@ -14,11 +14,11 @@ class CreateStack : public Functor {
 			const std::string & su, const std::string & pkf, const std::string & skf,
 			const std::string & sn, const std::string & stu,
 			const std::map< std::string, std::string > & p,
-			ClassAdCollection * c, const std::string & cid ) :
+			ClassAdCollection *, const std::string & cid ) :
 			reply( r ), cfGahp( g ), scratchpad( s ),
 			service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
 			stackName( sn ), stackURL( stu ), stackParameters( p ),
-			commandState( c ), commandID( cid )
+			commandID( cid )
 		{ }
 		virtual ~CreateStack() { }
 
@@ -35,7 +35,6 @@ class CreateStack : public Functor {
 		std::string stackName, stackURL;
 		std::map< std::string, std::string > stackParameters;
 
-		ClassAdCollection * commandState;
 		std::string commandID;
 };
 
