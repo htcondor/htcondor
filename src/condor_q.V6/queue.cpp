@@ -709,6 +709,8 @@ int main (int argc, const char **argv)
 		}
 		Q.useDefaultingOperator(v.built_since_version(8,6,0));
 		retval = show_schedd_queue(scheddAddr, scheddName, scheddMachine.c_str(), useFastScheddQuery, writer);
+		free(scheddName);
+		free(scheddAddr);
 	}
 
 	// close list
