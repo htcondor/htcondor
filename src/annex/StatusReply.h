@@ -12,10 +12,10 @@ class StatusReply : public Functor {
 	public:
 		StatusReply( ClassAd * r, ClassAd * cad,
 			EC2GahpClient * g, ClassAd * s, bool w,
-			ClassAdCollection * c, const std::string & cid ) :
+			ClassAdCollection *, const std::string & cid ) :
 			reply( r ), command( cad ),
 			gahp( g ), scratchpad( s ), wantClassAds( w ),
-			commandState( c ), commandID( cid )
+			commandID( cid )
 		{ }
 
 		virtual ~StatusReply() { }
@@ -31,7 +31,6 @@ class StatusReply : public Functor {
 
 		bool wantClassAds;
 
-		ClassAdCollection * commandState;
 		std::string commandID;
 };
 
