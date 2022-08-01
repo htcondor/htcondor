@@ -82,6 +82,10 @@ New Features:
   jobs.
   :jira:`740`
 
+- The *blahp* now repots the number of cpus allocated to the job when
+  that data is provided by SLURM.
+  :jira:`1207`
+
 Bugs Fixed:
 
 - Fixed two bugs which could occur when resuming from a checkpoint with
