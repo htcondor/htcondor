@@ -475,7 +475,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
-		SetupSingularitySsh();
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+		if( ssh_enabled ) {
+			SetupSingularitySsh();
+		}
+
 		if (fs_remap) {
 			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
 			fs_remap = NULL;
