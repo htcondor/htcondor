@@ -103,7 +103,10 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_noopIDHash			  ({}),
     _numNodesDone         (0),
     _numNodesFailed       (0),
+	_numJobsRunning       (0),
     _numJobsSubmitted     (0),
+	_totalJobsSubmitted   (0),
+	_totalJobsCompleted   (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
@@ -596,7 +599,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				ProcessSubmitEvent(job, recovery, submitEventIsSane);
 				ProcessIsIdleEvent( job, event->proc );
 				break;
-
+				
 			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
@@ -614,7 +617,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_EXECUTE:
-				ProcessNotIdleEvent( job, event->proc );
+				ProcessNotIdleEvent( job, event->proc, true );
 				break;
 
 			case ULOG_JOB_RELEASED:
@@ -723,7 +726,8 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-
+		
+		if ( job->GetProcIsExecuting(event->proc) ) { _numJobsRunning--; }
 		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
 
 		DecrementProcCount( job );
@@ -784,6 +788,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		} else {
 			// job succeeded
 			ASSERT( termEvent->returnValue == 0 );
+			_totalJobsCompleted++;
 
 				// Only change the node status if we haven't already
 				// gotten an error on this node.
@@ -1095,6 +1100,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
 		job->_numSubmittedProcs++;
+		_totalJobsSubmitted++;
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1176,6 +1182,7 @@ Dag::ProcessIsIdleEvent( Job *job, int proc ) {
 				( job->GetStatus() == Job::STATUS_SUBMITTED ) ) {
 		job->SetProcIsIdle( proc, true );
 		_numIdleJobProcs++;
+		if ( job->GetProcIsExecuting(proc) ) { _numJobsRunning--; }
 	}
 
 	// Do some consistency checks here.
@@ -1193,7 +1200,7 @@ Dag::ProcessIsIdleEvent( Job *job, int proc ) {
 
 //---------------------------------------------------------------------------
 void
-Dag::ProcessNotIdleEvent( Job *job, int proc ) {
+Dag::ProcessNotIdleEvent( Job *job, int proc, bool isExecuting ) {
 
 	if ( !job ) {
 		return;
@@ -1222,6 +1229,8 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 	}
 
 	job->SetProcEvent( proc, EXEC_MASK );
+	if ( isExecuting ) { _numJobsRunning++; }
+	
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);

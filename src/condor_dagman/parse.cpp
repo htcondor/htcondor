@@ -46,7 +46,7 @@ static const char * ILLEGAL_CHARS = "+";
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
-static bool _appendVars = true;
+static bool _appendVars = false;
 
 // _thisDagNum will be incremented for each DAG specified on the
 // condor_submit_dag command line.

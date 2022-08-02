@@ -118,10 +118,11 @@ class DagmanClassad : public ScheddClassad {
 		@param A ClassAd of DAGMan runtime statistics
 	*/
 	void Update( int total, int done, int pre, int submitted, int post,
-				int hold, int ready, int failed, int unready,
-				DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-				int &maxJobs, int &maxIdle, int &maxPreScripts, 
-				int &maxPostScripts, int &maxHoldScripts );
+				int hold, int ready, int failed, int unready, int jobs_submitted,
+				int jobs_completed, int jobs_idle, int jobs_held,
+				int jobs_running, DagStatus dagStatus, bool recovery,
+				const DagmanStats &stats, int &maxJobs, int &maxIdle,
+				int &maxPreScripts, int &maxPostScripts, int &maxHoldScripts );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.

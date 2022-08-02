@@ -1138,7 +1138,7 @@ all attributes.
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:classad-attribute:`LastMatchTime``
+:classad-attribute:`LastMatchTime`
     An integer containing the epoch time when the job was last
     successfully matched with a resource (gatekeeper) Ad.
 
@@ -2113,6 +2113,21 @@ information for the DAG.
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
 
+:classad-attribute:`DAG_JobsSubmitted`
+    The total number of job processes submitted by all the nodes in the DAG.
+
+:classad-attribute:`DAG_JobsIdle`
+    The number of job processes currently idle within the DAG. 
+
+:classad-attribute:`DAG_JobsHeld`
+    The number of job processes currently held within the DAG.
+
+:classad-attribute:`DAG_JobsRunning`
+    The number of job processes currently executing within the DAG.
+
+:classad-attribute:`DAG_JobsCompleted`
+    The total number of job processes within the DAG that have successfully
+    completed.
 
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd

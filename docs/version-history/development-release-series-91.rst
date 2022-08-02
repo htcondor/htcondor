@@ -26,6 +26,11 @@ New Features:
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
+- Added new DAG job classad attributes ``DAG_JobsSubmitted``, ``DAG_JobsIdle``,
+  ``DAG_JobsHeld``, ``DAG_JobsRunning``, and ``DAG_JobsCompleted`` to better
+  record information about job processes throughout all nodes within the DAG.
+  :jira:`1216` 
+
 Bugs Fixed:
 
 - None.

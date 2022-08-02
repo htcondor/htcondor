@@ -255,7 +255,7 @@ class Dag {
 		a different method.
 		@param The job corresponding to this event.
 	*/
-	void ProcessNotIdleEvent( Job *job, int proc );
+	void ProcessNotIdleEvent( Job *job, int proc, bool isExecuting = false );
 
 	/** Process a held event for a job.
 		@param The job corresponding to this event.
@@ -350,10 +350,22 @@ class Dag {
     /** @return the number of nodes that failed in the DAG
      */
     inline int NumNodesFailed() const { return _numNodesFailed; }
+	
+    /** @return the number of jobs currently running in batch system(s)
+     */
+    inline int NumJobsRunning() const { return _numJobsRunning; }
 
     /** @return the number of jobs currently submitted to batch system(s)
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+	
+	/** @return the total number of jobs submitted to batch system(s)
+	*/
+	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+		
+	/** @return the total number of jobs in batch system(s) completed
+	*/
+	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
     /** @return the number of nodes ready to submit job to batch system
      */
@@ -603,7 +615,7 @@ class Dag {
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
 	int NumHeldJobProcs();
-
+	
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
 			@param level: debug level for output.
@@ -1083,8 +1095,17 @@ private:
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
 
+	//Number of batch system jobs currently running
+	int _numJobsRunning;
+	
     // Number of batch system jobs currently submitted
     int _numJobsSubmitted;
+	
+	//Number of batch system jobs submitted 
+	int _totalJobsSubmitted;
+	
+	//Number of batch system jobs completed
+	int _totalJobsCompleted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited

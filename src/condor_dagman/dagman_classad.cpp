@@ -182,8 +182,10 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 void
 DagmanClassad::Update( int total, int done, int pre, int submitted,
 			int post, int hold, int ready, int failed, int unready,
-			DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-			int &maxJobs, int &maxIdle, int &maxPreScripts, int &maxPostScripts,
+			int jobs_submitted, int jobs_completed, int jobs_idle,
+			int jobs_held, int jobs_running, DagStatus dagStatus,
+			bool recovery, const DagmanStats &stats, int &maxJobs,
+			int &maxIdle, int &maxPreScripts, int &maxPostScripts,
 			int &maxHoldScripts )
 {
 	if ( !_valid ) {
@@ -208,6 +210,11 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 	SetAttribute( ATTR_DAG_NODES_UNREADY, unready );
 	SetAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetAttribute( ATTR_DAG_IN_RECOVERY, recovery );
+	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, jobs_submitted);
+	SetAttribute( ATTR_DAG_JOBS_IDLE, jobs_idle);
+	SetAttribute( ATTR_DAG_JOBS_HELD, jobs_held);
+	SetAttribute( ATTR_DAG_JOBS_RUNNING, jobs_running);
+	SetAttribute( ATTR_DAG_JOBS_COMPLETED, jobs_completed);
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;

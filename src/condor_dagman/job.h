@@ -229,6 +229,12 @@ class Job {
     */
 	bool SetStatus( status_t newStatus );
 
+	/** Get whether the specified proc is executing
+		@param proc The proc for which we're getting the executing status
+		@return true if the specified proc is executing; false otherwise
+	*/
+	bool GetProcIsExecuting( int proc );
+	
 	/** Get whether the specified proc is idle.
 		@param proc The proc for which we're getting idle status
 		@return true iff the specified proc is idle; false otherwise

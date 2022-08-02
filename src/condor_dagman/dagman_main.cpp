@@ -1646,13 +1646,24 @@ jobad_update() {
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
 	int unready = dagman.dag->NumNodesUnready( true );
+	int jobs_submitted = dagman.dag->TotalJobsSubmitted();
+	int jobs_completed = dagman.dag->TotalJobsCompleted();
+	int jobs_idle = dagman.dag->NumIdleJobProcs();
+	int jobs_held = dagman.dag->NumHeldJobProcs();
+	int temp = dagman.dag->NumJobsSubmitted();
+	int jobs_running = dagman.dag->NumJobsRunning();
+	
+	// 	In dag.cpp held jobs are counted in the number of idle jobs
+	jobs_idle -= jobs_held;
 
 	if ( dagman._dagmanClassad ) {
 		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					hold, ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery(), dagman._dagmanStats,
-					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts, dagman.maxHoldScripts );
+					hold, ready, failed, unready, jobs_submitted,
+					jobs_completed, jobs_idle, jobs_held, jobs_running,
+					dagman.dag->_dagStatus, dagman.dag->Recovery(),
+					dagman._dagmanStats, dagman.maxJobs, dagman.maxIdle,
+					dagman.maxPreScripts, dagman.maxPostScripts,
+					dagman.maxHoldScripts );
 
 		// It's possible that certain DAGMan attributes were changed in the job ad.
 		// If this happened, update the internal values in our dagman data structure.
