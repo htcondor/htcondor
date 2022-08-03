@@ -1179,7 +1179,16 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         int fds[3];
         sns = ((ReliSock*)stream)->accept();
 
+		if (sns == nullptr) {
+			dprintf(D_ALWAYS, "Could not accept new connection from ssh_to_job client %d: %s\n", errno, strerror(errno));
+
+			// We have seen this error on production clusters, not sure what causes it.  To be safe
+			// let's cancel the socket, so we won't get caught in an infinite loop if the socket stays hot
+			daemonCore->Cancel_Socket(stream);
+			return KEEP_STREAM;
+		}
         dprintf(D_ALWAYS, "Accepted new connection from ssh client for container job\n");
+
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
