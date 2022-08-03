@@ -28,7 +28,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that might cause a job to restart with a "disconnected starter"
+  error if the job was running in a container, and there was an error
+  handling ``condor_ssh_to_job``
+  :jira:`1245`
 
 Version 9.11.0
 --------------
