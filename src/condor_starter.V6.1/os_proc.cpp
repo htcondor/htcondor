@@ -1133,6 +1133,12 @@ void
 OsProc::SetupSingularitySsh() {
 #ifdef LINUX
 	
+	static bool first_time = true;
+	if (first_time) {
+		first_time = false;
+	} else {
+		return;
+	}
 	// First, create a unix domain socket that we can listen on
 	int uds = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (uds < 0) {
