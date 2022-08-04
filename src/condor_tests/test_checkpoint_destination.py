@@ -474,7 +474,7 @@ TEST_CASES = {
     "with_output_destination": {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
-        "output_destination":           'local://{test_dir}/',
+        "output_destination":           'local://{test_dir}/od/',
 
         # Absolute paths and output_destination make no sense together,
         # so put these logs where the test logic expects to find them.
@@ -642,9 +642,13 @@ def the_completed_job(default_condor, the_job_handle):
 
 
 @action
-def the_completed_job_stdout(test_dir, the_completed_job):
+def the_completed_job_stdout(test_dir, the_job_name, the_completed_job):
     cluster = the_completed_job.clusterid
-    with open(test_dir / f"test_job_{cluster}.out" ) as output:
+    output_log_path = test_dir / f"test_job_{cluster}.out"
+    if the_job_name == "with_output_destination":
+        output_log_path = test_dir / "od" / f"test_job_{cluster}.out"
+
+    with open(test_dir / output_log_path) as output:
         return output.readlines()
 
 
