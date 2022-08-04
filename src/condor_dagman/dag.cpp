@@ -229,6 +229,10 @@ Dag::~Dag()
 		delete job;
 	}
 
+	for (auto &nv_pair : _splices) {
+		delete nv_pair.second;;
+	}
+
 	// And remove them from the vector
 	_jobs.clear();
 
