@@ -535,7 +535,10 @@ TEST_CASES = {
 def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_file):
     job_handles = {}
     for name, test_case in TEST_CASES.items():
-        test_case = {key: value.format(test_dir=test_dir, plugin_shell_file=plugin_shell_file) for key, value in test_case.items()}
+        test_case = {key: value.format(
+            test_dir=test_dir,
+            plugin_shell_file=plugin_shell_file,
+        ) for key, value in test_case.items()}
 
         # This is clumsy, but less clumsy that duplicating the basic
         # functionality tests for more-complicated checkpoint structures.
@@ -653,6 +656,80 @@ def the_completed_job_stderr(test_dir, the_completed_job):
 
 
 #
+# These jobs are expected to go on hold, so they need to be treated differently.
+#
+
+HOLD_CASES = {
+    "missing_destination": {
+        "+CheckpointDestination":       '"local://{test_dir}/missing"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+    },
+    "symlink_to_dir": {
+        "executable":                   '{path_to_symlink_script}',
+        "transfer_checkpoint_files":    "s"
+    },
+}
+
+
+@action
+def hold_job_handles(test_dir, default_condor, the_job_description, plugin_shell_file, path_to_symlink_script):
+    job_handles = {}
+    for name, hold_case in HOLD_CASES.items():
+        hold_case = {key: value.format(
+            test_dir=test_dir,
+            plugin_shell_file=plugin_shell_file,
+            path_to_symlink_script=path_to_symlink_script,
+        ) for key, value in hold_case.items()}
+
+        if name == "missing_destination":
+            # Make sure this isn't a directory, since the local:// plugin
+            # creates them as needed.
+            (test_dir / "missing").touch()
+
+        complete_job_description = {
+            ** the_job_description,
+            ** hold_case,
+        }
+
+        job_handle = default_condor.submit(
+            description=complete_job_description,
+            count=1,
+        )
+
+        job_handles[name] = job_handle
+
+    yield job_handles
+
+    for job_handle in job_handles:
+        job_handles[job_handle].remove()
+
+
+@action(params={name: name for name in HOLD_CASES})
+def hold_job_pair(request, hold_job_handles):
+    return (request.param, hold_job_handles[request.param])
+
+
+@action
+def hold_job_name(hold_job_pair):
+    return hold_job_pair[0]
+
+
+@action
+def hold_job_handle(hold_job_pair):
+    return hold_job_pair[1]
+
+
+@action
+def hold_job(hold_job_handle):
+    hold_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_held,
+    )
+
+    return hold_job_handle
+
+
+#
 # Assertion functions for the tests.  From test_allowed_execute_duration.py,
 # which means we should probably drop them in Ornithology somewhere.
 #
@@ -672,67 +749,6 @@ def event_types_in_order(types, events):
                 return True
     else:
         return False
-
-
-@action
-def failed_checkpoint_handle(test_dir, default_condor, the_job_description, plugin_shell_file):
-    # Make sure this isn't a directory, since local:// creates them as needed.
-    (test_dir / "missing").touch()
-
-    complete_job_description = {
-        ** the_job_description,
-        "+CheckpointDestination":       f'"local://{test_dir}/missing"',
-        "transfer_plugins":             f'local={plugin_shell_file}',
-    }
-    job_handle = default_condor.submit(
-        description=complete_job_description,
-        count=1,
-    )
-
-    yield job_handle
-
-    job_handle.remove()
-
-
-@action
-def failed_checkpoint_job(failed_checkpoint_handle):
-    failed_checkpoint_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_held,
-    )
-
-    return failed_checkpoint_handle
-
-
-@action
-def symlink_to_dir_handle(test_dir, default_condor, the_job_description, path_to_symlink_script):
-    complete_job_description = {
-        ** the_job_description,
-        "executable":                   path_to_symlink_script.as_posix(),
-        "transfer_checkpoint_files":    "s"
-    }
-    job_handle = default_condor.submit(
-        description=complete_job_description,
-        count=1,
-    )
-
-    yield job_handle
-
-    job_handle.remove()
-
-
-@action
-def symlink_to_dir_job(symlink_to_dir_handle):
-    symlink_to_dir_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_held,
-    )
-
-    return symlink_to_dir_handle
-
-
-# FIXME: failed_checkpoint_handle and symlink_to_dir_handle should both be
-# submitted before we wait() for either, ideally with the other test jobs.
 
 
 class TestCheckpointDestination:
@@ -914,11 +930,11 @@ class TestCheckpointDestination:
         # the changes, as well.
 
 
-    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, failed_checkpoint_job):
-        assert failed_checkpoint_job.state.all_held()
+    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, hold_job):
+        assert hold_job.state.all_held()
 
         schedd = default_condor.get_local_schedd()
-        constraint = f'ClusterID == {failed_checkpoint_job.clusterid} && ProcID == 0'
+        constraint = f'ClusterID == {hold_job.clusterid} && ProcID == 0'
         result = schedd.query(
             constraint=constraint,
             projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
@@ -929,20 +945,3 @@ class TestCheckpointDestination:
         assert jobAd["HoldReasonSubCode"] == -1
         assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
 
-
-    # This turns out to be identical to the previous test, which suggests
-    # we should combin them.
-    def test_symlink_to_dir(self, default_condor, symlink_to_dir_job):
-        assert symlink_to_dir_job.state.all_held()
-
-        schedd = default_condor.get_local_schedd()
-        constraint = f'ClusterID == {symlink_to_dir_job.clusterid} && ProcID == 0'
-        result = schedd.query(
-            constraint=constraint,
-            projection=["HoldReason", "HoldReasonCode", "HoldReasonSubCode",],
-        )
-        jobAd = result[0]
-
-        assert jobAd["HoldReasonCode"] == 36
-        assert jobAd["HoldReasonSubCode"] == -1
-        assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
