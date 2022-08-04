@@ -109,9 +109,10 @@ ProcFamilyServer::track_family_via_environment()
 		err = PROC_FAMILY_ERROR_BAD_ENVIRONMENT_INFO;
 	}
 	else {
-		PidEnvID penvid;
-		read_from_client(&penvid, sizeof(PidEnvID));
-		err = m_monitor.track_family_via_environment(pid, &penvid);
+		PidEnvID* penvid = new PidEnvID;
+		ASSERT(penvid != NULL);
+		read_from_client(penvid, sizeof(PidEnvID));
+		err = m_monitor.track_family_via_environment(pid, penvid);
 	}
 
 	write_to_client(&err, sizeof(proc_family_error_t));
