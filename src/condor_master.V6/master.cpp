@@ -44,6 +44,11 @@
 #include "shared_port_server.h"
 #include "shared_port_endpoint.h"
 #include "credmon_interface.h"
+#include "ipv6_hostname.h"
+#include "dc_vpn.h"
+#ifdef LINUX
+#include "vpn_common.h"
+#endif // LINUX
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
@@ -129,6 +134,13 @@ int		StartDaemons = TRUE;
 int		GotDaemonsOff = FALSE;
 int		MasterShuttingDown = FALSE;
 static int dummyGlobal;
+
+
+// Variables related to the built-in VPN
+std::unique_ptr<DCVPN> g_vpn;
+int g_vpn_tid = -1;
+unsigned g_vpn_lease_interval;
+std::string g_vpn_lease;
 
 // daemons in this list are used when DAEMON_LIST is not configured
 // all will added to the list of daemons that condor_on can use
@@ -419,6 +431,196 @@ DoCleanup(int,int,const char*)
 }
 
 #if defined( LINUX )
+void
+vpn_heartbeat() {
+	dprintf(D_FULLDEBUG, "Sending out a VPN heartbeat.\n");
+	if (g_vpn) {
+		CondorError err;
+		unsigned lease_interval;
+		if (!g_vpn->heartbeat(g_vpn_lease, lease_interval, err)) {
+			dprintf(D_ALWAYS, "VPN heartbeat failed: %s\n", err.getFullText().c_str());
+		} else if (g_vpn_lease_interval != lease_interval) {
+			daemonCore->Cancel_Timer(g_vpn_tid);
+			g_vpn_lease_interval = lease_interval;
+			g_vpn_tid = daemonCore->Register_Timer(
+				g_vpn_lease_interval, g_vpn_lease_interval,
+				&vpn_heartbeat,
+				"VPN status heartbeat");
+		}
+	}
+}
+
+
+void
+invalidate_vpn() {
+	if (g_vpn) {
+		dprintf(D_FULLDEBUG, "Shutting down the VPN.\n");
+		CondorError err;
+		if (!g_vpn->cancel(g_vpn_lease, err)) {
+			dprintf(D_ALWAYS, "Failure when shutting down the VPN: %s\n", err.getFullText().c_str());
+		}
+	}
+}
+
+bool exec_boringtun(int uapi_sock, int ready_fd)
+{
+	auto tun_fd = recvfd(uapi_sock);
+	if (tun_fd < 0) {
+		dprintf(D_ALWAYS, "Parent process failed to send TUN fd.\n");
+		_exit(1);
+	}
+
+	std::string boringtun_executable;
+	param(boringtun_executable, "BORINGTUN", "/usr/bin/boringtun");
+
+	std::string log_level;
+	param(log_level, "BORINGTUN_DEBUG", "info");
+
+	ArgList boringtun_args;
+	boringtun_args.AppendArg("condor_boringtun");
+	boringtun_args.AppendArg("-f");
+	boringtun_args.AppendArg("condor0");
+
+	std::string wg_uapi_fd;
+	formatstr(wg_uapi_fd, "%d", uapi_sock);
+	std::string wg_tun_fd;
+	formatstr(wg_tun_fd, "%d", tun_fd);
+
+	Env boringtun_env;
+	boringtun_env.SetEnv("WG_UAPI_FD", wg_uapi_fd);
+	boringtun_env.SetEnv("WG_TUN_FD", wg_tun_fd);
+	boringtun_env.SetEnv("WG_LOG_LEVEL", log_level);
+		// Disables attempts at dropping privilege.
+	boringtun_env.SetEnv("WG_SUDO", "1");
+
+	auto exec_args_array = boringtun_args.GetStringArray();
+	auto env_array = boringtun_env.getStringArray();
+	execve(boringtun_executable.c_str(), exec_args_array, env_array);
+
+	dprintf(D_ALWAYS, "Failed to exec %s (errno=%d, %s).\n", boringtun_executable.c_str(), errno, strerror(errno));
+
+		// Notify the parent of the failure to exec.
+	full_write(ready_fd, "1", 1);
+	_exit(1);
+}
+
+
+bool launch_vpn(
+	const std::string &ipaddr_str, const std::string &netmask_str,
+	const std::string &gwaddr_str, const std::string &base64_server_pubkey,
+	const std::string &server_endpoint, const std::string &base64_key_str)
+{
+	in_addr_t ipaddr = htonl(inet_network(ipaddr_str.c_str()));
+	if (!ipaddr) {
+		dprintf(D_ALWAYS, "Failed to parse IP address: %s\n", ipaddr_str.c_str());
+		return false;
+	}
+	in_addr_t netmask = htonl(inet_network(netmask_str.c_str()));
+	if (!netmask) {
+		dprintf(D_ALWAYS, "Failed to parse network address: %s\n", netmask_str.c_str());
+		return false;
+	}
+	in_addr_t gw = htonl(inet_network(gwaddr_str.c_str()));
+	if (!gw) {
+		dprintf(D_ALWAYS, "Failed to parse gateway IP address: %s\n", gwaddr_str.c_str());
+		return false;
+	}
+
+	int uapi_sock[2];
+	if (socketpair(AF_LOCAL, SOCK_STREAM, 0, uapi_sock) < 0) {
+		dprintf(D_ALWAYS, "Failed to create new communications pipe (errno=%d, %s)\n", errno, strerror(errno));
+		return false;
+	}
+	int ready_fd[2];
+	if (pipe2(ready_fd, O_CLOEXEC) < 0) {
+		dprintf(D_ALWAYS, "Failed to create new 'ready pipe' (errno=%d, %s)\n", errno, strerror(errno));
+		return false;
+	}
+
+	{
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+			// Fork a child process.  This process will live in the original network namespace and
+			// eventually exec to boringtun.
+		auto pid = fork();
+		if (pid == -1) {
+			dprintf(D_ALWAYS, "Failed to fork the boringtun process (errno=%d, %s)\n", errno, strerror(errno));
+			return false;
+		}
+		if (pid == 0) { // Child process
+			close(uapi_sock[1]);
+			close(ready_fd[0]);
+			exec_boringtun(uapi_sock[0], ready_fd[1]);
+			_exit(1);
+		}
+		close(uapi_sock[0]);
+		close(ready_fd[1]);
+	}
+
+	int ns = CLONE_NEWNET;
+	bool running_as_root = can_switch_ids();
+	ns |= running_as_root ? 0 : CLONE_NEWUSER;
+
+	auto uid = running_as_root ? -1 : geteuid();
+	auto gid = running_as_root ? -1 : getegid();
+
+
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	if (unshare(ns) < 0) {
+		dprintf(D_ALWAYS, "Failed to create new namespaces - fatal!  Check "
+			"your system configuration to ensure these are enabled "
+			"(errno=%d, %s)\n", errno, strerror(errno));
+		return false;
+	}
+
+	if (!running_as_root && setup_uidgid_map(-1, -1, uid, gid)) {
+		dprintf(D_ALWAYS, "Failed to set UID/GID mapping in the new user namespace.\n");
+		return false;
+	}
+
+	int tun_fd;
+	if ((tun_fd = open_tun("condor0")) < 0) {
+		return false;
+	}
+
+	if (configure_tun("condor0", ipaddr, gw, netmask)) {
+		dprintf(D_ALWAYS, "Failed to configure the TUN device.\n");
+		return false;
+	}
+
+	if (sendfd(uapi_sock[1], tun_fd) < 0) {
+		dprintf(D_ALWAYS, "Failed to send TUN fd to parent.\n");
+		return false;
+	}
+
+	char notification[2];
+	notification[1] = '\0';
+	int rval;
+	if ( (rval = full_read(ready_fd[0], notification, 1)) != 0) {
+		if (rval < 0) dprintf(D_ALWAYS, "Child boringtun failed to launch (errno=%d, %s)!\n", errno, strerror(errno));
+		else dprintf(D_ALWAYS, "Child boringtun failed to launch (code %s)!\n", notification);
+		return false;
+	}
+
+	std::string command;
+	formatstr(command, "set=1\n"
+		"private_key=%s\n"
+		"public_key=%s\n"
+		"endpoint=%s\n"
+		"allowed_ip=0.0.0.0/0\n"
+		"\n",
+		base64_key_to_hex(base64_key_str).c_str(),
+		base64_key_to_hex(base64_server_pubkey).c_str(),
+		server_endpoint.c_str());
+
+	std::unordered_map<std::string, std::string> response_map;
+	auto boring_err = boringtun_command(uapi_sock[1], command, response_map);
+	dprintf(D_FULLDEBUG, "Results of server %s registration: %d\n", base64_server_pubkey.c_str(), boring_err);
+
+	return boring_err == 0;
+}
+
+
 void do_linux_kernel_tuning() {
 	std::string kernelTuningScript;
 	if(! param( kernelTuningScript, "LINUX_KERNEL_TUNING_SCRIPT" )) {
@@ -1560,7 +1762,10 @@ void
 main_shutdown_fast()
 {
 	invalidate_ads();
-	
+#ifdef LINUX
+	invalidate_vpn();
+#endif // LINUX
+
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1607,7 +1812,10 @@ void
 main_shutdown_graceful()
 {
 	invalidate_ads();
-	
+#ifdef LINUX
+	invalidate_vpn();
+#endif // LINUX
+
 	MasterShuttingDown = TRUE;
 	daemons.SetAllGoneAction( MASTER_EXIT );
 
@@ -1898,6 +2106,80 @@ main_pre_command_sock_init()
 	}
 
 #ifdef LINUX
+
+	std::string vpn_addr;
+	param(vpn_addr, "MASTER_VPN_ADDRESS");
+	std::string pool;
+	param(pool, "COLLECTOR_HOST");
+	std::string vpn_name;
+	if (!vpn_addr.empty()) {
+		g_vpn.reset(new DCVPN(vpn_addr.c_str()));
+		vpn_name = vpn_addr;
+	} else {
+		param(vpn_name, "MASTER_VPN_NAME");
+		if (!vpn_name.empty()) {
+			g_vpn.reset(new DCVPN(vpn_name.empty() ? nullptr : vpn_name.c_str(),
+				pool.empty() ? nullptr : pool.c_str()));
+		}
+	}
+	if (g_vpn) {
+
+		if (!g_vpn->locate(Daemon::LOCATE_FOR_LOOKUP)) {
+			dprintf(D_ALWAYS, "Couldn't locate VPN (pool=%s, name=%s)\n",
+				pool.c_str(), vpn_name.c_str());
+			EXCEPT("Failed to bootstrap VPN for condor_master");
+		}
+
+		struct x25519_key privkey;
+		if (!vpn_generate_x25519_secret_key(privkey)) {
+			EXCEPT("Failed to create X25519 private key for condor_master");
+		}
+		struct x25519_key pubkey;
+		if (!vpn_generate_x25519_pubkey(privkey, pubkey)) {
+			EXCEPT("Failed to create X25519 public key for condor_master");
+		}
+		auto base64_pubkey = vpn_x25519_key_to_base64(pubkey);
+		std::string base64_pubkey_str(base64_pubkey);
+		vpn_x25519_key_to_str_free(base64_pubkey);
+		auto base64_key = vpn_x25519_key_to_base64(privkey);
+		std::string base64_key_str(base64_key);
+		vpn_x25519_key_to_str_free(base64_key);
+
+		CondorError err;
+		std::string ipaddr;
+		std::string netmask;
+		std::string network;
+		std::string gwaddr;
+		std::string base64_server_pubkey;
+		std::string server_endpoint;
+		std::string lease;
+		unsigned lease_interval;
+		if (!g_vpn->registerClient(base64_pubkey_str, ipaddr, netmask, network, gwaddr,
+			base64_server_pubkey, server_endpoint, lease, lease_interval, err))
+		{
+			dprintf(D_ALWAYS, "Failed to register condor_master as VPN client: %s\n",
+				err.getFullText().c_str());
+			EXCEPT("Unable to start VPN.");
+		}
+
+		if (!launch_vpn(ipaddr, netmask, gwaddr,
+			base64_server_pubkey, server_endpoint, base64_key_str))
+		{
+			EXCEPT("Failed to setup VPN for condor_master.");
+		}
+
+		g_vpn_tid = daemonCore->Register_Timer(lease_interval, lease_interval,
+			static_cast<TimerHandler>(&vpn_heartbeat),
+			"VPN status heartbeat");
+		g_vpn_lease_interval = lease_interval;
+		g_vpn_lease = lease;
+
+			// All our network device & hostname information is definitely incorrect...
+		sysapi_clear_network_device_info_cache();
+		reset_local_hostname();
+		if (!init_network_interfaces(nullptr)) { EXCEPT("Failed to reinitialize the condor_master network interface info"); }
+	}
+
 	if (param_boolean("DISABLE_SETUID", false)) {
 		prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
 	}

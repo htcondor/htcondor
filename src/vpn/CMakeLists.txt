@@ -1,6 +1,7 @@
  ###############################################################
  # 
- # Copyright 2011 Red Hat, Inc. 
+ # Copyright 2020 Condor Team, Computer Sciences Department,
+ # University of Wisconsin-Madison, WI.
  # 
  # Licensed under the Apache License, Version 2.0 (the "License"); you 
  # may not use this file except in compliance with the License.  You may 
@@ -16,20 +17,18 @@
  # 
  ############################################################### 
 
-set (DAEMON_CLIENT_UTIL_SRCS
-${CMAKE_CURRENT_SOURCE_DIR}/daemon.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_annexd.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_message.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_shadow.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_transfer_queue.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/daemon_list.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/daemon_types.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_collector.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_master.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_schedd.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_startd.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_starter.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_transferd.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/dc_vpn.cpp
-PARENT_SCOPE
-)
+if (LINUX)
+
+  set(VPN
+	vpn_main.cpp
+	vpn_common.cpp
+	vpn_lease_mgr.cpp
+  )
+
+  set(VPN_CLIENT vpn_client.cpp vpn_common.cpp)
+
+  condor_exe( condor_vpn "${VPN}" ${C_LIBEXEC} "${CONDOR_LIBS}" OFF )
+  condor_exe( condor_vpn_client "${VPN_CLIENT}" ${C_BIN} "${CONDOR_LIBS}" OFF )
+
+endif()
+

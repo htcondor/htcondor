@@ -417,6 +417,10 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 		m_wants_dc_udp_self = false;
 	}
 #endif
+		// Separate VPN server uses the UDP socket; DC shouldn't.
+	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_VPN)) {
+		m_wants_dc_udp_self = false;
+	}
 	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHARED_PORT) ) {
 		m_wants_dc_udp_self = false;
 	}

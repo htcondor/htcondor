@@ -29,6 +29,7 @@ enum daemon_t { DT_NONE, DT_ANY,  DT_MASTER, DT_SCHEDD, DT_STARTD,
 				DT_DAGMAN, DT_VIEW_COLLECTOR, DT_CLUSTER,  
 				DT_SHADOW, DT_STARTER, DT_CREDD, DT_STORK, 
 				DT_TRANSFERD, DT_LEASE_MANAGER, DT_HAD,
+				DT_VPN,
 				DT_GENERIC, _dt_threshold_ };
 
 const char* daemonString( daemon_t dt );

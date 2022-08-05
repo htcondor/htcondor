@@ -51,6 +51,7 @@ static const Lookup adtypes [] =
 	{ LEASE_MANAGER_ADTYPE,	LEASE_MANAGER_AD, },	/* No longer used */
 	{ DEFRAG_ADTYPE,		DEFRAG_AD, },
 	{ ACCOUNTING_ADTYPE,	ACCOUNTING_AD, },
+	{ VPN_ADTYPE,		VPN_AD, },
 	{ "",		NO_AD, },
 };
 

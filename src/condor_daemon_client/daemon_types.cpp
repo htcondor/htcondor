@@ -40,6 +40,7 @@ static const char* daemon_names[] = {
 	"transferd",
 	"lease_manager",
 	"had",
+	"vpn",
 	"generic"
 };
 
