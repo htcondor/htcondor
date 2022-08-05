@@ -371,6 +371,11 @@ sub DoChild
         if ($python =~ /python/i) {
             $perl = $python;
         } elsif ($iswindows) {
+            system("condor_config_val -dump PYTHON3");
+            print "\nSetup Failure - don't know how to find python3 which is need to run the test\n";
+            exit(136); # metronome wants 136 for setup error
+
+            # TODO: remove this vestigial code someday...
             my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
             my $pyver = "3.6";
 
@@ -403,6 +408,7 @@ sub DoChild
                     last;
                 }
             }
+          }
         }
 
         print "\tPython version: ";
