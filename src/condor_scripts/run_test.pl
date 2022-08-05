@@ -408,7 +408,6 @@ sub DoChild
                     last;
                 }
             }
-          }
         }
 
         print "\tPython version: ";
