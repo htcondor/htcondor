@@ -365,7 +365,12 @@ sub DoChild
         print "\tPYTHONPATH=$ENV{PYTHONPATH}\n";
         $perl = "python3";
 
-        if ($iswindows) {
+        my $python = `condor_config_val PYTHON3`;
+        fullchomp($python);
+        print "\tcondor_config_val says PYTHON3 = $python\n";
+        if ($python =~ /python/i) {
+            $perl = $python;
+        } elsif ($iswindows) {
             my $regkey = "HKLM\\Software\\Python\\PythonCore\\3.6\\InstallPath";
             my $pyver = "3.6";
 
