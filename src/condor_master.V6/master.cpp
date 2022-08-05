@@ -89,10 +89,10 @@ int	handle_agent_fetch_log(ReliSock *);
 int	admin_command_handler(int, Stream *);
 int	ready_command_handler(int, Stream *);
 int	handle_subsys_command(int, Stream *);
+int	handle_flexible_daemons_command(int, Stream *);
 int     handle_shutdown_program( int cmd, Stream* stream );
 static int set_shutdown_program(char * program, const char * tag);
 void	time_skip_handler(void * /*data*/, int delta);
-void	restart_everyone();
 
 extern "C" int	DoCleanup(int,int,const char*);
 
@@ -190,45 +190,51 @@ public:
 
 	void status_handler()
 	{
+		// assume success
+		const char * status = "All daemons are responding";
+		const char * format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
+
 		char *name;
 		class daemon *daemon;
 
+		// check for missing daemons
 		daemons.ordered_daemon_names.rewind();
-		std::stringstream ss;
-		ss << "Problems: ";
-		bool had_prior = false;
 		bool missing_daemons = false;
-		while( (name = daemons.ordered_daemon_names.next()) ) {
-			daemon = daemons.FindDaemon( name );
-			if (!daemon->pid)
-			{
-				if (had_prior) { ss << ", "; }
-				else { had_prior = true; }
+		while ((name = daemons.ordered_daemon_names.next())) {
+			daemon = daemons.FindDaemon(name);
+			if (!daemon->pid && !daemon->OnHold()) {
 				missing_daemons = true;
-				time_t starttime = daemon->GetNextRestart();
-				if (starttime)
-				{
-					time_t secs_to_start = starttime-time(NULL);
-					if (secs_to_start > 0)
-					{ ss << name << "=RESTART in " << secs_to_start << "s"; }
-					else
-					{ ss << name << "=RESTARTNG"; }
-				}
-				else
-				{ ss << name << "=STOPPED"; }
+				break;
 			}
 		}
-		std::string status = ss.str();
 
-		const char * format_string = "STATUS=%s\nWATCHDOG=1";
-		if (!missing_daemons)
-		{
-			format_string = "READY=1\nSTATUS=%s\nWATCHDOG=1";
-			status = "All daemons are responding";
+		// build a detailed status string if there are missing daemons
+		std::string buf;
+		if (missing_daemons) {
+			buf.reserve(100);
+			while( (name = daemons.ordered_daemon_names.next()) ) {
+				daemon = daemons.FindDaemon( name );
+				if (!daemon->pid)
+				{
+					if ( ! buf.empty()) { buf += ", "; }
+					time_t starttime = daemon->GetNextRestart();
+					if (starttime)
+					{
+						time_t secs_to_start = starttime-time(NULL);
+						if (secs_to_start > 0)
+						{ formatstr_cat(buf, "%s=RESTART in %llds", name, (long long)secs_to_start); }
+						else
+						{ formatstr_cat(buf, "%s=RESTARTNG", name); }
+					}
+					else { formatstr_cat(buf, "%s=STOPPED", name); }
+				}
+			}
+			status = buf.c_str();
+			format_string = "STATUS=Problems: %s\nWATCHDOG=1";
 		}
 
 		const condor_utils::SystemdManager &sd = condor_utils::SystemdManager::GetInstance();
-		int result = sd.Notify(format_string, status.c_str());
+		int result = sd.Notify(format_string, status);
 		if (result == 0)
 		{
 			dprintf(D_ALWAYS, "systemd watchdog notification support not available.\n");
@@ -674,6 +680,9 @@ main_init( int argc, char* argv[] )
 	g_systemd_notifier.config();
 
 		// Register admin commands
+	daemonCore->Register_Command( DAEMONS_OFF_FLEX, "DAEMONS_OFF_FLEX",
+								  admin_command_handler,
+								  "admin_command_handler", ADMINISTRATOR );
 	daemonCore->Register_Command( RESTART, "RESTART",
 								  admin_command_handler, 
 								  "admin_command_handler", ADMINISTRATOR );
@@ -810,20 +819,14 @@ ready_command_handler(int cmd, Stream* stm )
 	return FALSE;
 }
 
+
 int
-admin_command_handler(int cmd, Stream* stream )
+do_basic_admin_command(int cmd)
 {
-	if(! AllowAdminCommands ) {
-		dprintf( D_FULLDEBUG, 
-				 "Got admin command (%d) while not allowed. Ignoring.\n",
-				 cmd );
-		return FALSE;
-	}
-	dprintf( D_FULLDEBUG, 
-			 "Got admin command (%d) and allowing it.\n", cmd );
-	switch( cmd ) {
+	switch (cmd) {
 	case RESTART:
-		restart_everyone();
+		daemons.immediate_restart = TRUE;
+		daemons.RestartMaster();
 		return TRUE;
 	case RESTART_PEACEFUL:
 		daemons.immediate_restart = TRUE;
@@ -836,20 +839,91 @@ admin_command_handler(int cmd, Stream* stream )
 		daemons.DaemonsOff();
 		return TRUE;
 	case DAEMONS_OFF_FAST:
-		daemons.DaemonsOff( 1 );
+		daemons.DaemonsOff(1);
 		return TRUE;
 	case DAEMONS_OFF_PEACEFUL:
 		daemons.DaemonsOffPeaceful();
 		return TRUE;
+	case DC_OFF_PEACEFUL: // internal use, the real command handler is in daemoncore
+		daemonCore->SetPeacefulShutdown(true);
+		// fall through
 	case MASTER_OFF:
+#if 0
+		// DC pump will call our main_shutdown_normal via dc_main_shutdown_graceful
 		daemonCore->Signal_Myself(SIGTERM);
+#else
+		// if we are doing peaceful tell the children, and set a timer to do the real shutdown
+		// so the children have a chance to notice the messages
+		//
+		if (daemonCore->GetPeacefulShutdown()) {
+			int timeout = 5;
+			if (daemons.SetPeacefulShutdown(timeout) > 0) {
+				int tid = daemonCore->Register_Timer(timeout+1, 0,
+								(TimerHandler)main_shutdown_graceful,
+								"main_shutdown_graceful");
+				if (tid != -1)
+					return TRUE;
+
+				dprintf(D_ALWAYS, "ERROR! Can't register DaemonCore timer for peaceful shutdown. Shutting down now...\n");
+			}
+		}
+		// fall through
+	case DC_OFF_GRACEFUL: // used internally to ignore daemoncore peaceful/graceful flag
+		if (MasterShuttingDown)
+			return TRUE;
+		invalidate_ads();
+		MasterShuttingDown = TRUE;
+		daemons.SetAllGoneAction( MASTER_EXIT );
+		daemons.CancelRestartTimers();
+		daemons.StopAllDaemons();
+#endif
 		return TRUE;
 	case MASTER_OFF_FAST:
+#if 0
+		// DC pump will call our main_shutdown_fast
 		daemonCore->Signal_Myself(SIGQUIT);
+#else
+	case DC_OFF_FAST:  // internal use, the real command handler for this is in daemoncore
+		invalidate_ads();
+		MasterShuttingDown = TRUE;
+		daemons.SetAllGoneAction( MASTER_EXIT );
+		daemons.CancelRestartTimers();
+		daemons.StopFastAllDaemons();
+#endif
 		return TRUE;
+	}
+	return FALSE;
+}
+
+int
+admin_command_handler(int cmd, Stream* stream )
+{
+	if(! AllowAdminCommands ) {
+		dprintf(D_STATUS, "Got admin command %s while not allowed. Ignoring.\n", getCommandStringSafe(cmd));
+		return FALSE;
+	}
+	if (cmd != DAEMONS_OFF_FLEX && (cmd < DAEMON_OFF || cmd > DAEMON_OFF_PEACEFUL)) {
+		// log the command, we let handle_subsys_command and handle_flexible_daemons_command
+		// do their own logging. (the CHILD_* commands are for HAD, not worth a special case here..)
+		dprintf(D_STATUS, "Handling admin command %s.\n", getCommandStringSafe(cmd));
+	}
+
+	switch( cmd ) {
+	case RESTART:
+	case RESTART_PEACEFUL:
+	case DAEMONS_ON:
+	case DAEMONS_OFF:
+	case DAEMONS_OFF_FAST:
+	case DAEMONS_OFF_PEACEFUL:
+	case MASTER_OFF:
+	case MASTER_OFF_FAST:
+		return do_basic_admin_command(cmd);
 
 	case SET_SHUTDOWN_PROGRAM:
 		return handle_shutdown_program( cmd, stream );
+
+	case DAEMONS_OFF_FLEX:
+		return handle_flexible_daemons_command(cmd, stream);
 
 			// These commands are special, since they all need to read
 			// off the subsystem before they know what to do.  So, we
@@ -941,41 +1015,202 @@ handle_agent_fetch_log (ReliSock* stream) {
 }
 
 
+int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd /* = nullptr */)
+{
+	int rval = TRUE;
+	bool success = false;
+	int how_fast = DRAIN_GRACEFUL;
+	int on_completion = DRAIN_EXIT_ON_COMPLETION;
+	std::string drain, drain_reason;
+	ExprTree *drain_check = nullptr, *drain_start = nullptr;
+	StringList drain_list;
+	ClassAd drain_request_ids;
+	auto_free_ptr shutdown_path; // full path to the shutdown exe
+	std::string shutdown_task; // knob tag name
+	bool set_shutdown = false;
+	class daemon* daemon;
+
+	int real_cmd = 0;
+	cmdAd.LookupInteger("Command", real_cmd);
+	switch (real_cmd) {
+		case 0:
+		case RESTART:
+		case MASTER_OFF:
+		case MASTER_OFF_FAST:
+		case DAEMONS_OFF:
+			break;
+		case DC_RECONFIG_FULL:
+			on_completion = DRAIN_RECONFIG_ON_COMPLETION;
+			break;
+		default:
+			dprintf(D_STATUS, "Invalid payload command %s in %s\n", getCommandStringSafe(real_cmd), getCommandStringSafe(cmd));
+			rval = FALSE;
+			goto bail;
+			break;
+	}
+
+	//dprintf(D_STATUS, "Got %s in %s\n", getCommandStringSafe(real_cmd), getCommandStringSafe(cmd));
+
+	if (cmdAd.LookupString("Drain", drain)) {
+		upper_case(drain); // so we can use this with FindDaemon
+		cmdAd.LookupInteger(ATTR_HOW_FAST, how_fast);
+		cmdAd.LookupString(ATTR_DRAIN_REASON, drain_reason);
+		drain_check = cmdAd.Lookup(ATTR_CHECK_EXPR);
+		drain_start = cmdAd.Lookup(ATTR_START_EXPR);
+	}
+
+	// SetShutdown should be either the empty string or a valid MASTER_SHUTDOWN_<tag> tag value
+	// the empty string will remove an existing shutdown task, otherwise it will set the
+	// shutdown task after draining completes but before shutdown.
+	set_shutdown = cmdAd.LookupString("ShutdownTask", shutdown_task);
+	if ( ! shutdown_task.empty()) {
+		std::string pname("MASTER_SHUTDOWN_"); pname += shutdown_task.c_str();
+		shutdown_path.set(param(pname.c_str()));
+		// it is not an error for a dummy shutdown task to exist, but we want to report
+		// if they try to use a task for which there is no knob at all
+		if (! shutdown_path && ! param_defined(pname.c_str())) {
+			dprintf(D_STATUS, "Aborting %s because no shutdown program defined for '%s'\n", getCommandStringSafe(real_cmd), pname.c_str());
+			rval = FALSE;
+			goto bail;
+		}
+	}
+
+	if ( ! drain.empty()) {
+		dprintf(D_STATUS, "Handling %s : %s Drain=%s\n", getCommandStringSafe(cmd), getCommandStringSafe(real_cmd), drain.c_str());
+		if (drain == "STARTDS") {
+			// build a list of daemon names for the startds
+			daemons.ChildrenOfType(DT_STARTD, &drain_list);
+		} else {
+			drain_list.initializeFromString(drain.c_str());
+		}
+		dprintf(D_FULLDEBUG, "Effective drain list is %s\n", drain_list.to_string().c_str());
+	} else {
+		dprintf(D_STATUS, "Handling %s : %s\n", getCommandStringSafe(cmd), getCommandStringSafe(real_cmd));
+	}
+
+	drain_request_ids.Clear();
+	for (const char * subsys = drain_list.first(); subsys; subsys = drain_list.next()) {
+		if (!(daemon = daemons.FindDaemon(subsys))) {
+			dprintf(D_ERROR, "Error: Can't find daemon %s to drain for %s\n", subsys, getCommandStringSafe(real_cmd));
+		} else {
+			dprintf(D_STATUS, "Sending drain command to %s\n", subsys);
+			std::string request_id;
+			int drain_started = daemon->Drain(request_id, how_fast, on_completion, drain_reason.c_str(), drain_check, drain_start);
+			if (drain_started > 0) {
+				drain_request_ids.Assign(daemon->name_in_config_file, request_id);
+				dprintf(D_FULLDEBUG, "Drain of %s started, id=%s\n", subsys, request_id.c_str());
+			} else if (drain_started < 0) {
+				// unable to drain a child, abort the command
+				dprintf(D_ERROR, "Aborting %s because of failure to start drain of %s\n", getCommandStringSafe(real_cmd), daemon->daemon_name);
+				rval = FALSE;
+				goto bail;
+			} else {
+				dprintf(D_FULLDEBUG, "%s did not need to drain\n", subsys);
+			}
+		}
+	}
+
+	if (drain_request_ids.size() > 0) {
+		// If children are draining, we want to setup a deferred handler for the
+		// command that should execute when draining completes
+		ClassAd * ad = new ClassAd();
+		CopyAttribute("Command", *ad, cmdAd);
+		CopyAttribute("ShutdownTask", *ad, cmdAd);
+		daemons.cmd_after_drain = ad;
+
+		success = true;
+		if (replyAd) {
+			replyAd->Insert("Draining", drain_request_ids.Copy());
+		}
+	} else {
+		if (set_shutdown) {
+			set_shutdown_program(shutdown_path.detach(), shutdown_task.c_str());
+			if (replyAd) { advertise_shutdown_program(*replyAd); }
+		}
+		if (real_cmd) {
+			rval = do_basic_admin_command(real_cmd);
+		}
+		success = rval == TRUE;
+	}
+
+bail:
+	if (replyAd) {
+		daemons.InitDaemonReadyAd(*replyAd, false);
+		replyAd->Assign("Success", success);
+	}
+
+	return rval;
+}
+
+int
+handle_flexible_daemons_command( int cmd, Stream* stream )
+{
+	ClassAd cmdAd, replyAd;
+
+	stream->decode();
+	if( ! getClassAd(stream, cmdAd) ) {
+		dprintf( D_ERROR, "Can't read command payload for %s\n", getCommandStringSafe(cmd) );
+		return FALSE;
+	}
+	if( ! stream->end_of_message() ) {
+		dprintf( D_ERROR, "Can't read end_of_message for %s\n", getCommandStringSafe(cmd) );
+		return FALSE;
+	}
+
+	bool want_reply = false;
+	cmdAd.LookupBool("WantReply", want_reply);
+	int real_cmd = 0; // for logging
+	cmdAd.LookupInteger("Command", real_cmd);
+
+	int rval = do_flexible_daemons_command(cmd, cmdAd, want_reply ? &replyAd : nullptr);
+
+	if (want_reply) {
+		stream->encode();
+		if (!putClassAd(stream, replyAd) || !stream->end_of_message()) {
+			dprintf(D_ERROR, "Error: can't send reply ad for %s in %s\n",
+				getCommandStringSafe(real_cmd), getCommandStringSafe(cmd));
+			rval = FALSE;
+		} else {
+			std::string buf;
+			dprintf(D_STATUS, "Reply for %s in %s :\n%s\n",
+				getCommandStringSafe(real_cmd), getCommandStringSafe(cmd),
+				formatAd(buf, replyAd, "\t"));
+		}
+	}
+
+	return rval;
+}
+
+
 int
 handle_subsys_command( int cmd, Stream* stream )
 {
-	char* subsys = NULL;
+	std::string subsys;
 	class daemon* daemon;
 
 	stream->decode();
 	if( ! stream->code(subsys) ) {
 		dprintf( D_ALWAYS, "Can't read subsystem name\n" );
-		free( subsys );
 		return FALSE;
 	}
 	if( ! stream->end_of_message() ) {
 		dprintf( D_ALWAYS, "Can't read end_of_message\n" );
-		free( subsys );
 		return FALSE;
 	}
+
+	upper_case(subsys); // so we can use this with FindDaemon
 
 	// for testing condor_on -preen is allowed, but preen is not really a daemon
 	// so we intercept it here and 
-	if (strcasecmp(subsys, "preen") == MATCH) {
-		free(subsys);
+	if (strcasecmp(subsys.c_str(), "preen") == MATCH) {
 		return run_preen_now();
 	}
 
-	subsys = strupr( subsys );
-	if( !(daemon = daemons.FindDaemon(subsys)) ) {
-		dprintf( D_ALWAYS, "Error: Can't find daemon of type \"%s\"\n", 
-				 subsys );
-		free( subsys );
+	if( !(daemon = daemons.FindDaemon(subsys.c_str())) ) {
+		dprintf( D_ALWAYS, "Error: Can't find daemon of type %s\n", subsys.c_str());
 		return FALSE;
 	}
-	dprintf( D_ALWAYS, "Handling daemon-specific command for \"%s\"\n", 
-			 subsys );
-	free( subsys );
+	dprintf(D_STATUS, "Handling %s command for %s\n", getCommandStringSafe(cmd), subsys.c_str());
 
 	switch( cmd ) {
 	case DAEMON_ON:
@@ -1005,7 +1240,7 @@ handle_subsys_command( int cmd, Stream* stream )
 		daemon->StopFast( true );
 		return TRUE;
 	default:
-		EXCEPT( "Unknown command (%d) in handle_subsys_command", cmd );
+		EXCEPT( "Unknown command %s in handle_subsys_command", getCommandStringSafe(cmd));
 	}
 	return FALSE;
 }
@@ -1175,27 +1410,7 @@ init_params()
 	new_bin_restart_mode = GRACEFUL;
 	char * restart_mode = param("MASTER_NEW_BINARY_RESTART");
 	if (restart_mode) {
-#if 1
 		StopStateT mode = StringToStopState(restart_mode);
-#else
-		static const struct {
-			const char * text;
-			StopStateT   mode;
-			} modes[] = {
-				{ "GRACEFUL", GRACEFUL },
-				{ "PEACEFUL", PEACEFUL },
-				{ "NEVER", NONE }, { "NONE", NONE }, { "NO", NONE },
-			//	{ "FAST", FAST },
-			//	{ "KILL", KILL },
-			};
-		StopStateT mode = (StopStateT)-1; // prime with -1 so we can detect bad input.
-		for (int ii = 0; ii < (int)COUNTOF(modes); ++ii) {
-			if (MATCH == strcasecmp(restart_mode, modes[ii].text)) {
-				mode = modes[ii].mode;
-				break;
-			}
-		}
-#endif
 		if (mode == (StopStateT)-1)	{
 			dprintf(D_ALWAYS, "%s is not a valid value for MASTER_NEW_BINARY_RESTART. using GRACEFUL\n", restart_mode);
 		}
@@ -1502,7 +1717,7 @@ main_config()
 	while( (daemon_name = old_daemon_list.next()) ) {
 		if( !daemons.ordered_daemon_names.contains(daemon_name) ) {
 			if( NULL != daemons.FindDaemon(daemon_name) ) {
-				daemons.StopDaemon(daemon_name);
+				daemons.RemoveDaemon(daemon_name);
 			}
 		}
 	}
@@ -1534,7 +1749,7 @@ main_config()
 				dprintf( D_ALWAYS,
 						"ERROR: Setup of controller for daemon %s failed\n",
 						daemon_name );
-				daemons.StopDaemon( daemon_name );
+				daemons.RemoveDaemon( daemon_name );
 			}
 			else if( !old_daemon_list.contains(daemon_name) ) {
 				daemons.StartDaemonHere(adaemon);
@@ -1554,11 +1769,14 @@ main_config()
 }
 
 /*
- ** Kill all daemons and go away.
+ ** SIGQUIT callback from daemon-core Kill all daemons and go away.
  */
 void
 main_shutdown_fast()
 {
+#if 1
+	do_basic_admin_command(MASTER_OFF_FAST);
+#else
 	invalidate_ads();
 	
 	MasterShuttingDown = TRUE;
@@ -1570,14 +1788,19 @@ main_shutdown_fast()
 
 	daemons.CancelRestartTimers();
 	daemons.StopFastAllDaemons();
+#endif
 }
 
 /*
- ** Callback from daemon-core kill all daemons and go away. 
+ ** SIGTERM Callback from daemon-core kill all daemons and go away. 
  */
 void
 main_shutdown_normal()
 {
+#if 1
+	// peaceful or graceful depending on daemoncore variable
+	do_basic_admin_command(MASTER_OFF);
+#else
 	// if we are doing peaceful tell the children, and set a timer to do the real shutdown
 	// so the children have a chance to notice the messages
 	//
@@ -1598,6 +1821,7 @@ main_shutdown_normal()
 	if ( ! fTimer) {
 		main_shutdown_graceful();
 	}
+#endif
 }
 
 /*
@@ -1606,6 +1830,9 @@ main_shutdown_normal()
 void
 main_shutdown_graceful()
 {
+#if 1
+	do_basic_admin_command(DC_OFF_GRACEFUL);
+#else
 	invalidate_ads();
 	
 	MasterShuttingDown = TRUE;
@@ -1617,6 +1844,7 @@ main_shutdown_graceful()
 
 	daemons.CancelRestartTimers();
 	daemons.StopAllDaemons();
+#endif
 }
 
 void
@@ -2190,14 +2418,9 @@ void init_firewall_exceptions() {
 #endif
 }
 
-void restart_everyone() {
-		daemons.immediate_restart = TRUE;
-		daemons.RestartMaster();
-}
-
 	// We could care less about our arguments.
 void time_skip_handler(void * /*data*/, int delta)
 {
 	dprintf(D_ALWAYS, "The system clocked jumped %d seconds unexpectedly.  Restarting all daemons\n", delta);
-	restart_everyone();
+	do_basic_admin_command(RESTART);
 }

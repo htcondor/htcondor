@@ -104,7 +104,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define SET_PRIORITY		(SCHED_VERS+49)		// negotiator(priviliged) cmd 
 //#define GIVE_CLASSAD		(SCHED_VERS+50)		/* Not used */
 #define GET_PRIORITY		(SCHED_VERS+51)		// negotiator
-//#define GIVE_REQUEST_AD		(SCHED_VERS+52)		// Starter -> Startd, Not used
+#define DAEMONS_OFF_FLEX	(SCHED_VERS+52)		// DAEMON_OFF but with a classad payload and optional reply
 #define RESTART				(SCHED_VERS+53)
 #define DAEMONS_OFF			(SCHED_VERS+54)
 #define DAEMONS_ON			(SCHED_VERS+55)
@@ -194,9 +194,9 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define UNEXPORT_JOBS (SCHED_VERS+128) // Schedd: undo previous export of selected jobs, taking them out of managed state
 
 // values used for "HowFast" in the draining request
-#define DRAIN_GRACEFUL 0
-#define DRAIN_QUICK 10
-#define DRAIN_FAST 20
+#define DRAIN_GRACEFUL 0  // retirement time and vacate time are honored
+#define DRAIN_QUICK 10	  // retirement time will not be honored, but vacate time will
+#define DRAIN_FAST 20	  // neither retirement time nor vacate time will be honored
 
 // values for OnCompletion for draining request
 // note that prior to 8.9.11 only Resume and Nothing are recognised
@@ -204,6 +204,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DRAIN_RESUME_ON_COMPLETION  1
 #define DRAIN_EXIT_ON_COMPLETION    2
 #define DRAIN_RESTART_ON_COMPLETION 3
+#define DRAIN_RECONFIG_ON_COMPLETION 4 // New for 9.11.0
 
 // HAD-related commands
 #define HAD_ALIVE_CMD                   (HAD_COMMANDS_BASE + 0)

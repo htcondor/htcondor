@@ -1173,6 +1173,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_RESUME_ON_COMPLETION  "ResumeOnCompletion"
 #define ATTR_DRAINING  "Draining"
 #define ATTR_DRAINING_REQUEST_ID  "DrainingRequestId"
+#define ATTR_DRAINING_DEADLINE "DrainingDeadline"
 #define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION  "ExpectedMachineGracefulDrainingCompletion"
 #define ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION  "ExpectedMachineQuickDrainingCompletion"
 #define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT  "ExpectedMachineGracefulDrainingBadput"

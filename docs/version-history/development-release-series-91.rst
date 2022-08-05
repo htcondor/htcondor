@@ -26,6 +26,11 @@ New Features:
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
+- Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
+  This allows a command to be sent to the *condor_master* to drain the *condor_startd*
+  and then shutdown or restart all of the HTCondor daemons.
+  :jira:`1151`
+
 - When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
   false, and the starter runs a container job, we no longer create the helper
   unix domain sockets required for *condor_ssh_to_job* to work.
