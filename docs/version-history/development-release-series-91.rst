@@ -26,9 +26,22 @@ New Features:
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
+- Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
+  This allows a command to be sent to the *condor_master* to drain the *condor_startd*
+  and then shutdown or restart all of the HTCondor daemons.
+  :jira:`1151`
+
+- When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+  false, and the starter runs a container job, we no longer create the helper
+  unix domain sockets required for *condor_ssh_to_job* to work.
+  :jira:1244`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug that might cause a job to restart with a "disconnected starter"
+  error if the job was running in a container, and there was an error
+  handling ``condor_ssh_to_job``.
+  :jira:`1245`
 
 Version 9.11.0
 --------------
@@ -108,7 +121,16 @@ New Features:
   jobs.
   :jira:`740`
 
+- The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
+  status messages for the *job* and *jobset* subcommands.
+  :jira:`1149`
+
 Bugs Fixed:
+
+- Fixed bug where specifying more than 2TB of ``RESERVED_DISK`` would
+  cause HTCondor to instead pretend that available disk space was larger,
+  rather than smaller.
+  `jira`:1228
 
 - Fixed two bugs which could occur when resuming from a checkpoint with
   ``preserve_relative_paths`` set.  Both involved the checkpoint transfer

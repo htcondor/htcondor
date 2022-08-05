@@ -3,13 +3,14 @@ import re
 import getpass
 
 from datetime import datetime
-from copy import deepcopy
+from collections import defaultdict
 
 import htcondor
 import classad
 
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
+from htcondor_cli.utils import readable_time, readable_size, s
 
 JSM_HTC_JOBSET_SUBMIT = 5
 
@@ -310,140 +311,86 @@ class Status(Verb):
             "args": ("job_set_name",),
             "help": "Job set name",
         },
-        "nobatch": {
-            "args": ("--nobatch",),
-            "help": "Display individual job clusters",
-            "action": "store_true",
-        },
         "owner": {
             "args": ("--owner",),
             "help": "Show sets from the named user instead of your own sets",
             "default": getpass.getuser(),
         },
+        "skip_history": {
+            "args": ("--skip-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Skip checking history for completed or removed job clusters",
+        },
     }
 
     def __init__(self, logger, job_set_name, **options):
 
+        status_mapping = {
+            "NumIdle":      "{jobs} job{s} idle",
+            "NumRunning":   "{jobs} job{s} running",
+            "NumHeld":      "{jobs} job{s} held",
+            "NumCompleted": "{jobs} job{s} completed",
+            "NumSuspended": "{jobs} job{s} suspended",
+            "NumRemoved":   "{jobs} job{s} removed",
+            "NumSchedulerIdle":      "{jobs} DAGMan scheduler job{s} idle",
+            "NumSchedulerRunning":   "{jobs} DAGMan scheduler job{s} running",
+            "NumSchedulerHeld":      "{jobs} DAGMan scheduler job{s} held",
+            "NumSchedulerCompleted": "{jobs} DAGMan scheduler job{s} completed",
+            "NumSchedulerRemoved":   "{jobs} DAGMan scheduler job{s} removed",
+        }
+        status_order = ["NumIdle", "NumRunning", "NumHeld", "NumCompleted", "NumSuspended", "NumRemoved",
+            "NumSchedulerIdle", "NumSchedulerRunning", "NumSchedulerHeld", "NumSchedulerCompleted", "NumSchedulerRemoved"]
+        status_required = {"NumIdle", "NumRunning", "NumCompleted"}
+
         schedd = htcondor.Schedd()
 
+        # Get the job set info
         job_set_ads = schedd.query(
-            constraint = f"(JobSetName == {classad.quote(job_set_name)}) && (Owner == {classad.quote(options['owner'])})",
-            projection = ["ClusterId", "ProcId", "JobStatus", "QDate", "JobBatchName", "JobSetName"]
+            constraint = f"""(MyType == "JobSet") && (JobSetName == {classad.quote(job_set_name)}) && (Owner == {classad.quote(options["owner"])})""",
+            opts = htcondor.QueryOpts.IncludeJobsetAds,
         )
-
         if len(job_set_ads) == 0:
-            logger.error(f"""No active job sets found matching "{job_set_name}" for user {options['owner']}.""")
+            logger.error(f"""No active job sets found matching "{job_set_name}" for user {options["owner"]}.""")
+            # TODO: check history?
             return
+        if len(job_set_ads) > 1:  # This should never happen.
+            logger.warning(f"""Found multiple job sets matching "{job_set_name}" for user {options["owner"]}, displaying JobSetId {job_set_ads[0]["JobSetId"]}.""")
+        job_set_ad = job_set_ads[0]
+        job_set_id = job_set_ad["JobSetId"]
+        job_set_name = job_set_ad["JobSetName"]
 
-        template = {
-            "BATCH_NAME": "",
-            "DONE": 0,
-            "RUN": 0,
-            "IDLE": 0,
-            "REMOVED": 0,
-            "HOLD": 0,
-            "SUSPENDED": 0,
-            "TOTAL": 0,
-            "JobIds": [],
-            "QDates": [],
-        }
+        # Build the list of job statuses
+        statuses = []
+        for status in status_order:
+            if status in status_required or job_set_ad.get(status, 0) > 0:
+                n = job_set_ad.get(status, 0)
+                statuses.append(status_mapping[status].format(jobs=n, s=s(n)))
 
-        job_set = deepcopy(template)
-        job_set["QDates"] = []
+        # Get the cluster ids from all of the jobs in the job set
+        # (completed/removed jobs may be in the history)
+        job_ads_in_queue = schedd.query(constraint = f"JobSetId == {job_set_id}", projection = ["ClusterId"])
+        job_ads_in_history = []
+        if (len(job_ads_in_queue) < (job_set_ad["NumJobs"] + job_set_ad["NumSchedulerJobs"])) and not options["skip_history"]:
+            try:
+                logger.info(f"{job_set_name} may contain completed and/or removed jobs, checking history...")
+                logger.info("(This may take a while, Ctrl-C to skip.)")
+                job_ads_in_history = schedd.history(constraint = f"JobSetId == {job_set_id}", projection = ["ClusterId"])
+            except KeyboardInterrupt:
+                logger.warning(f"History check skipped.")
+        job_ads = list(job_ads_in_queue) + list(job_ads_in_history)
 
-        clusters = {}
-        for ad in job_set_ads:
-            job_set["BATCH_NAME"] = f"Set: {ad['JobSetName']}"
-            job_set["JobIds"].append(f"{ad['ClusterId']}.{ad['ProcId']}")
-            job_set["QDates"].append(ad.get("QDate", int(time.time())))
-            job_set["DONE"] += ad["JobStatus"] == 4
-            job_set["RUN"] += ad["JobStatus"] == 2 or ad["JobStatus"] == 6
-            job_set["IDLE"] += ad["JobStatus"] == 1
-            job_set["REMOVED"] += ad["JobStatus"] == 3
-            job_set["HOLD"] += ad["JobStatus"] == 5
-            job_set["SUSPENDED"] += ad["JobStatus"] == 7
-            job_set["TOTAL"] += 1
+        # Total up the number of jobs in each cluster
+        clusters = defaultdict(int)
+        for job_ad in job_ads:
+            clusters[job_ad["ClusterId"]] += 1
+        clusters = [f"\tJob cluster {cid} with {n} total job{s(n)}" for cid, n in clusters.items()]
+        clusters.sort()
 
-            if options["nobatch"]:
-                cluster = ad["ClusterId"]
-                if cluster not in clusters:
-                    clusters[cluster] = deepcopy(template)
-                    del clusters[cluster]["JobIds"]
-                    clusters[cluster]["ProcIds"] = []
-                    clusters[cluster]["BATCH_NAME"] = ad.get("JobBatchName", f"ID: {cluster}")
-                clusters[cluster]["ProcIds"].append(ad['ProcId'])
-                clusters[cluster]["QDates"].append(ad.get("QDate", int(time.time())))
-                clusters[cluster]["DONE"] += ad["JobStatus"] == 4
-                clusters[cluster]["RUN"] += ad["JobStatus"] == 2 or ad["JobStatus"] == 6
-                clusters[cluster]["IDLE"] += ad["JobStatus"] == 1
-                clusters[cluster]["REMOVED"] += ad["JobStatus"] == 3
-                clusters[cluster]["HOLD"] += ad["JobStatus"] == 5
-                clusters[cluster]["SUSPENDED"] += ad["JobStatus"] == 7
-                clusters[cluster]["TOTAL"] += 1
-
-        if len(job_set["JobIds"]) > 1:
-            job_set["JobIds"].sort()
-            job_set["JOB_IDS"] = f"{job_set['JobIds'][0]}-{job_set['JobIds'][-1]}"
-            job_set["QDates"].sort()
-        else:
-            job_set["JOB_IDS"] = job_set["JobIds"][0]
-        job_set["SUBMITTED"] = datetime.fromtimestamp(job_set["QDates"][0]).strftime("%m/%d %H:%M")
-
-        if options["nobatch"]:
-            for cluster in clusters:
-                if len(clusters[cluster]["ProcIds"]) > 1:
-                    clusters[cluster]["ProcIds"].sort()
-                    clusters[cluster]["JOB_IDS"] = f"{cluster}.{clusters[cluster]['ProcIds'][0]}-{clusters[cluster]['ProcIds'][-1]}"
-                    clusters[cluster]["QDates"].sort()
-                else:
-                    clusters[cluster]["JOB_IDS"] = f"{cluster}.{clusters[cluster]['ProcIds'][0]}"
-                clusters[cluster]["SUBMITTED"] = datetime.fromtimestamp(clusters[cluster]["QDates"][0]).strftime("%m/%d %H:%M")
-
-
-        print_job_set = deepcopy(job_set)
-        cols = ["BATCH_NAME", "SUBMITTED", "DONE", "RUN", "IDLE", "REMOVED", "HOLD", "SUSPENDED", "TOTAL", "JOB_IDS"]
-        skip_cols = {"REMOVED", "HOLD", "SUSPENDED"}
-        left_justify_cols = {"BATCH_NAME", "JOB_IDS"}
-        col_len = {}
-        col_jus = {}
-        del_cols = []
-        for i, col in enumerate(cols):
-            if (col in skip_cols) and (print_job_set[col] == 0):
-                del_cols.append(i)
-                continue
-            elif isinstance(print_job_set[col], int):
-                if print_job_set[col] == 0:
-                    print_job_set[col] = "-"
-                else:
-                    print_job_set[col] = str(print_job_set[col])
-            col_len[col] = max(len(col), len(print_job_set[col]))
-            if col in left_justify_cols:
-                col_jus[col] = "<"
-            else:
-                col_jus[col] = ">"
-
-        del_cols.reverse()
-        deleted_cols = [cols.pop(i) for i in del_cols]
-
-        status_fmt = "  ".join([f"{{{col}:{col_jus[col]}{col_len[col]}.{col_len[col]}}}" for col in cols])
-
-        header = status_fmt.format(**{col:col for col in cols})
-        print()
-        print(f"-- Schedd: {htcondor.param['FULL_HOSTNAME']} : {schedd.location.address.split('?')[0]}?... @ {datetime.now().strftime('%m/%d/%y %H:%M:%S')}")
-        print(header)
-        if options["nobatch"]:
-            for cluster in sorted(list(clusters.keys())):
-                for col in cols:
-                    if isinstance(clusters[cluster][col], int):
-                        if clusters[cluster][col] == 0:
-                            clusters[cluster][col] = "-"
-                        else:
-                            clusters[cluster][col] = str(clusters[cluster][col])
-                print(status_fmt.format(**clusters[cluster]))
-            print("-"*len(header))
-        print(status_fmt.format(**print_job_set))
-        print(f"{job_set['TOTAL']} jobs; {job_set['DONE']} completed; {job_set['REMOVED']} removed; {job_set['IDLE']} idle; {job_set['RUN']} running; {job_set['HOLD']} held; {job_set['SUSPENDED']} suspended")
-        print()
+        # Print info
+        logger.info(f"{job_set_name} currently has {', '.join(statuses[:-1])}, and {statuses[-1]}.")
+        logger.info(f"{job_set_name} contains:")
+        logger.info("\n".join(clusters))
 
 
 class List(Verb):
@@ -463,12 +410,13 @@ class List(Verb):
 
        schedd = htcondor.Schedd()
 
-       constraint = "(InJobSet == True)"
+       constraint = """(MyType == "JobSet")"""
        if not options["allusers"]:
            constraint += f" && (Owner == {classad.quote(getpass.getuser())})"
        job_set_ads = schedd.query(
             constraint = constraint,
-            projection = ["Owner", "JobSetName"]
+            projection = ["Owner", "JobSetName"],
+            opts = htcondor.QueryOpts.IncludeJobsetAds,
         )
 
        if len(job_set_ads) == 0:

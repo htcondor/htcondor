@@ -366,9 +366,16 @@ Singularity::setup(ClassAd &machineAd,
 
 	// For some reason, singularity really wants /usr/sbin near the beginning of the PATH
 	// when running /usr/sbin/mksquashfs when running docker: images
-	std::string oldPath;
-	job_env.GetEnv("PATH", oldPath);
-	job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
+	//
+	// Update:  If PATH wasn't set, singularity will set it from the
+	// image.  In this case, we are injecting a new PATH which prevents
+	// the image path from being set, which breaks all kinds of things.
+	// comment this out for now until we find a better solution.
+	// This means that to run docker images, the user will have to have
+	// /usr/sbin in their path
+	//std::string oldPath;
+	//job_env.GetEnv("PATH", oldPath);
+	//job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these

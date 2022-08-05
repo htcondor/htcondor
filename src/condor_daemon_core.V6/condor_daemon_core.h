@@ -511,7 +511,6 @@ class DaemonCore : public Service
         @param handler_descrip Not_Yet_Documented
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
-        @param dprintf_flag    Not_Yet_Documented
 		@param force_authentication This command _must_ be authenticated.
         @param wait_for_payload Do a non-blocking select for read for this
                                 many seconds (0 means none) before calling
@@ -522,8 +521,7 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND,
+                          DCpermission    perm,
                           bool            force_authentication = false,
                           int             wait_for_payload = 0,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -535,7 +533,6 @@ class DaemonCore : public Service
         @param handler_descrip Not_Yet_Documented
         @param s               Not_Yet_Documented
         @param perm            Not_Yet_Documented
-        @param dprintf_flag    Not_Yet_Documented
 		@param force_authentication This command _must_ be authenticated.
         @param wait_for_payload Do a non-blocking select for read for this
                                 many seconds (0 means none) before calling
@@ -547,8 +544,7 @@ class DaemonCore : public Service
                           CommandHandlercpp  handlercpp, 
                           const char *       handler_descrip,
                           Service *          s,
-                          DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND,
+                          DCpermission       perm,
                           bool               force_authentication = false,
                           int                wait_for_payload = 0,
                           std::vector<DCpermission> * alternate_perms = nullptr);
@@ -574,8 +570,7 @@ class DaemonCore : public Service
                           const char *    com_descrip,
                           CommandHandler  handler, 
                           const char *    handler_descrip,
-                          DCpermission    perm             = ALLOW,
-                          int             dprintf_flag     = D_COMMAND,
+                          DCpermission    perm,
                           bool            force_authentication = false,
                           int             wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> *alternate_perms = nullptr);
@@ -586,8 +581,7 @@ class DaemonCore : public Service
                           CommandHandlercpp  handlercpp, 
                           const char *       handler_descrip,
                           Service *          s,
-                          DCpermission       perm             = ALLOW,
-                          int                dprintf_flag     = D_COMMAND,
+                          DCpermission       perm,
                           bool               force_authentication = false,
                           int                wait_for_payload = STANDARD_COMMAND_PAYLOAD_TIMEOUT,
                           std::vector<DCpermission> * alternate_perms = nullptr);
@@ -887,14 +881,12 @@ class DaemonCore : public Service
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*           iosock,
                          const char *      iosock_descrip,
                          SocketHandler     handler,
                          const char *      handler_descrip,
-                         DCpermission      perm             = ALLOW,
                          HandlerType       handler_type = HANDLE_READ,
                          void **           prev_entry = NULL);
 
@@ -904,7 +896,6 @@ class DaemonCore : public Service
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return -1 if iosock is NULL, -2 is reregister, 0 or above on success
     */
     int Register_Socket (Stream*              iosock,
@@ -912,7 +903,6 @@ class DaemonCore : public Service
                          SocketHandlercpp     handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         DCpermission         perm = ALLOW,
                          HandlerType          handler_type = HANDLE_READ,
                          void **              prev_entry = NULL);
 
@@ -930,7 +920,6 @@ class DaemonCore : public Service
                                 (SocketHandlercpp)NULL,
                                 "DC Command Handler",
                                 NULL,
-                                ALLOW,
 				HANDLE_READ,
                                 0); 
     }
@@ -1009,15 +998,13 @@ class DaemonCore : public Service
         @param handler          Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Pipe (int		           pipe_end,
                          const char *      pipe_descrip,
                          PipeHandler       handler,
                          const char *      handler_descrip,
-                         HandlerType       handler_type     = HANDLE_READ,    
-                         DCpermission      perm             = ALLOW);
+                         HandlerType       handler_type     = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param pipe_end         Not_Yet_Documented
@@ -1025,7 +1012,6 @@ class DaemonCore : public Service
         @param handlercpp       Not_Yet_Documented
         @param handler_descrip  Not_Yet_Documented
         @param s                Not_Yet_Documented
-        @param perm             Not_Yet_Documented
         @return Not_Yet_Documented
     */
     int Register_Pipe (int					  pipe_end,
@@ -1033,8 +1019,7 @@ class DaemonCore : public Service
                          PipeHandlercpp       handlercpp,
                          const char *         handler_descrip,
                          Service*             s,
-                         HandlerType          handler_type = HANDLE_READ,    
-                         DCpermission         perm = ALLOW);
+                         HandlerType          handler_type = HANDLE_READ);
 
     /** Not_Yet_Documented
         @param pipe_end           Not_Yet_Documented
@@ -1916,7 +1901,6 @@ class DaemonCore : public Service
                          const char *handler_descrip,
                          Service* s, 
                          DCpermission perm,
-                         int dprintf_flag,
                          int is_cpp,
                          bool force_authentication,
                          int wait_for_payload,
@@ -1936,7 +1920,6 @@ class DaemonCore : public Service
                         SocketHandlercpp handlercpp,
                         const char *handler_descrip,
                         Service* s, 
-                        DCpermission perm,
 			HandlerType handler_type,
                         int is_cpp,
                         void **prev_entry = NULL);
@@ -1948,7 +1931,6 @@ class DaemonCore : public Service
                         const char *handler_descrip,
                         Service* s, 
 					    HandlerType handler_type, 
-					    DCpermission perm,
                         int is_cpp);
 
     int Register_Reaper(int rid,
@@ -1999,13 +1981,12 @@ class DaemonCore : public Service
         char*           command_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-        int             dprintf_flag;
 	int             wait_for_payload;
 		// If there are alternate permission levels where the
 		// command is permitted, they will be listed here.
 	std::vector<DCpermission> *alternate_perm{nullptr};
 
-		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), dprintf_flag(0), wait_for_payload(0) {}
+		CommandEnt() : num(0), is_cpp(true), force_authentication(false), handler(0), handlercpp(0), perm(ALLOW), service(0), command_descrip(0), handler_descrip(0), data_ptr(0), wait_for_payload(0) {}
     };
 
     void                DumpCommandTable(int, const char* = NULL);
@@ -2044,7 +2025,6 @@ class DaemonCore : public Service
         char*           iosock_descrip;
         char*           handler_descrip;
         void*           data_ptr;
-        DCpermission    perm;
         bool            is_cpp;
 		bool			is_connect_pending;
 		bool			is_reverse_connect_pending;
@@ -2093,7 +2073,6 @@ class DaemonCore : public Service
         void*           data_ptr;
 		PidEntry*		pentry;
         int				index;		// index into the pipeHandleTable
-        DCpermission    perm;
 		HandlerType		handler_type;
         bool            is_cpp;
 		bool			call_handler;

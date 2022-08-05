@@ -4199,12 +4199,12 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  handle_config,
 								  "handle_config()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms);
+								  false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  handle_config,
 								  "handle_config()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms);
+								  false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  handle_off_fast,
@@ -4322,7 +4322,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								handle_dc_session_token,
 								"handle_dc_session_token()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// Start a token request workflow.
@@ -4330,7 +4330,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								handle_dc_start_token_request,
 								"handle_dc_start_token_request()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// Poll for token request completion.
@@ -4338,7 +4338,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								handle_dc_finish_token_request,
 								"handle_dc_finish_token_request()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// List the outstanding token requests.
@@ -4348,7 +4348,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		handle_dc_list_token_request,
-		"handle_dc_list_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_list_token_request", DAEMON, true, 0, &allow_perms );
 
 		//
 		// Approve a token request.
@@ -4359,7 +4359,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_approve_token_request", DAEMON, true, 0, &allow_perms );
 
 		//
 		// Install an auto-approval rule
@@ -4373,7 +4373,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
 		handle_dc_exchange_scitoken,
-		"handle_dc_exchange_scitoken", WRITE, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_exchange_scitoken", WRITE, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

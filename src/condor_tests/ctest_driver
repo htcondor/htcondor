@@ -7,34 +7,30 @@ import argparse
 
 
 BASE_CONFIG_TEMPLATE = """
+# Start with a standard personal condor configuration
+# (This is based on make-personal-from-tarball)
 RELEASE_DIR={prefix_path}
-# This is overwritten by CondorPersonal.pm
-DAEMON_LIST = MASTER SCHEDD COLLECTOR NEGOTIATOR STARTD
-LOCAL_CONFIG_FILE=/
-CONDOR_HOST=$(FULL_HOSTNAME)
-COLLECTOR_HOST=$(FULL_HOSTNAME):0
-ALLOW_READ=*
-ALLOW_WRITE=*
-ALLOW_ADMINISTRATOR=*
-ALLOW_DAEMON=*
-ALLOW_NEGOTIATOR=*
+LOCAL_DIR = {pwd}/local_dir
+LOCAL_CONFIG_DIR = $(LOCAL_DIR)/config.d
+use security: user_based
+use role: personal
+CONDOR_HOST = $(FULL_HOSTNAME)
+
+# Add some tweaks for the testing environment
 NEGOTIATOR_CYCLE_DELAY=1
 NEGOTIATOR_INTERVAL=1
 NEGOTIATOR_MIN_INTERVAL=1
 SCHEDD_INTERVAL=1
 SCHEDD_MIN_INTERVAL=1
 DAGMAN_USER_LOG_SCAN_INTERVAL = 1
-SCHEDD_DEBUG=D_FULLDEBUG
-RUNBENCHMARKS=false
 MAIL=/bin/true
 SENDMAIL=/bin/true
-FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
+
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
 DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500
-LOCAL_DIR={pwd}/local_dir
 {extra_args}
 """
 

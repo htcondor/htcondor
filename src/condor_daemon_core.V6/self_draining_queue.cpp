@@ -50,6 +50,13 @@ SelfDrainingQueue::~SelfDrainingQueue()
 {
 	cancelTimer();
 
+	ServiceData *sd = nullptr;
+	while (!queue.empty()) {
+		sd = queue.front();
+		queue.pop();
+		delete sd;
+	}
+
 	if( name ) {
 		free( name );
 		name = NULL;

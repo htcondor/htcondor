@@ -306,7 +306,7 @@ TransferD::setup_transfer_request_handler(int  /*cmd*/, Stream *sock)
 	// register the handler for any future transfer requests on this socket.
 	int retval = daemonCore->Register_Socket((Sock*)rsock, _sock_id,
 		(SocketHandlercpp)&TransferD::accept_transfer_request_handler,
-		"TransferD::accept_transfer_request_handler", this, ALLOW);
+		"TransferD::accept_transfer_request_handler", this);
 	
 	free( _sock_id );
 	

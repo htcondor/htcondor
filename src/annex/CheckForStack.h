@@ -13,11 +13,11 @@ class CheckForStack : public Functor {
 		CheckForStack( ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
 			const std::string & sn, const std::string & sd,
-			ClassAdCollection * c, const std::string & cid ) :
+			ClassAdCollection *, const std::string & cid ) :
 			reply( r ), cfGahp( g ), scratchpad( s ),
 			service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
 			stackName( sn ), stackDescription( sd ), introduced( false ),
-			commandState( c ), commandID( cid )
+			commandID( cid )
 		{ }
 		virtual ~CheckForStack() { }
 
@@ -34,7 +34,6 @@ class CheckForStack : public Functor {
 		std::string stackName, stackDescription;
 		bool introduced;
 
-		ClassAdCollection * commandState;
 		std::string commandID;
 };
 

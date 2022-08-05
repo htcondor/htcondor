@@ -172,9 +172,9 @@ another( const char* opt )
 
 const char * on_completion_name(int completion)
 {
-	const char * const opts[] = { "-resume-on-completion", "-exit-on-completion", "-restart-on-completion", "on-completion" };
+	const char * const opts[] = { "-resume-on-completion", "-exit-on-completion", "-restart-on-completion", "-reconfig-on-completion", "on-completion" };
 	int ix = completion - 1;
-	if (ix < 0 || ix > 3) ix = 3;
+	if (ix < 0 || ix > 4) ix = 4;
 	return opts[ix];
 }
 
@@ -189,6 +189,7 @@ void
 parseArgv( int argc, const char* argv[] )
 {
 	int i;
+	const char * pcolon = nullptr;
 
 	my_name = argv[0];
 	cmd = DRAIN_JOBS;
@@ -199,6 +200,13 @@ parseArgv( int argc, const char* argv[] )
 		}
 		else if (is_dash_arg_prefix(argv[i], "version", 1)) {
 			version();
+		}
+		else if (is_dash_arg_colon_prefix(argv[i], "debug", &pcolon, 3)) {
+			// dprintf to console
+			dprintf_set_tool_debug("TOOL", 0);
+			if (pcolon && pcolon[1]) {
+				set_debug_flags( ++pcolon, 0 );
+			}
 		}
 		else if (is_dash_arg_prefix(argv[i], "verbose", 4)) {
 			dash_verbose = 1;
@@ -230,6 +238,10 @@ parseArgv( int argc, const char* argv[] )
 		else if (is_dash_arg_prefix(argv[i], "restart-on-completion", 4)) {
 			if (on_completion) conflict(argv[i], on_completion);
 			on_completion = DRAIN_RESTART_ON_COMPLETION;
+		}
+		else if (is_dash_arg_prefix(argv[i], "reconfig-on-completion", 3)) {
+			if (on_completion) conflict(argv[i], on_completion);
+			on_completion = DRAIN_RECONFIG_ON_COMPLETION;
 		}
 		else if (is_dash_arg_prefix(argv[i], "reason", 3)) {
 			if (i+1 >= argc) another(argv[i]);
@@ -295,6 +307,7 @@ usage( const char *str )
 	fprintf( stderr, "Usage: %s [OPTIONS] machine\n", str );
 	fprintf( stderr, "\nOPTIONS:\n" );
 	fprintf( stderr, "-cancel           Stop draining.\n" );
+	fprintf( stderr, "-debug            Display debugging info to console\n" );
 	fprintf( stderr, "-graceful         (the default) Honor MaxVacateTime and MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-quick            Honor MaxVacateTime but not MaxJobRetirementTime.\n" );
 	fprintf( stderr, "-fast             Honor neither MaxVacateTime nor MaxJobRetirementTime.\n" );
