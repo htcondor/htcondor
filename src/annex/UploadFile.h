@@ -11,11 +11,11 @@
 class UploadFile : public Functor {
 	public:
 		UploadFile( const::std::string & f, const std::string & t,
-			ClassAd * r, EC2GahpClient * g, ClassAd * s,
+			ClassAd * r, EC2GahpClient * g, ClassAd *,
 			const std::string & su, const std::string & pkf, const std::string & skf,
 			ClassAdCollection * c, const std::string & cid, const std::string & aid ) :
 			uploadFrom( f ), uploadTo( t ),
-			reply( r ), gahp( g ), scratchpad( s ),
+			reply( r ), gahp( g ),
             service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
             commandID( cid ), commandState( c ), annexID( aid )
 		{ ASSERT( (!uploadFrom.empty()) && (!uploadTo.empty()) ); }
@@ -31,7 +31,6 @@ class UploadFile : public Functor {
 
 		ClassAd * reply;
 		EC2GahpClient * gahp;
-		ClassAd * scratchpad;
 
 		std::string service_url, public_key_file, secret_key_file;
 

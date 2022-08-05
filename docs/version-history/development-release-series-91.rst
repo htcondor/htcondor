@@ -31,9 +31,17 @@ New Features:
   and then shutdown or restart all of the HTCondor daemons.
   :jira:`1151`
 
+- When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+  false, and the starter runs a container job, we no longer create the helper
+  unix domain sockets required for *condor_ssh_to_job* to work.
+  :jira:1244`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug that might cause a job to restart with a "disconnected starter"
+  error if the job was running in a container, and there was an error
+  handling ``condor_ssh_to_job``.
+  :jira:`1245`
 
 Version 9.11.0
 --------------
@@ -112,6 +120,10 @@ New Features:
   The periodic release job policy expressions are now ignored for these
   jobs.
   :jira:`740`
+
+- The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
+  status messages for the *job* and *jobset* subcommands.
+  :jira:`1149`
 
 Bugs Fixed:
 

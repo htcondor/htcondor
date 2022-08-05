@@ -40,11 +40,6 @@ Bugs Fixed:
   universe jobs when the job enters ``Removed`` status.
   :jira:`1224`
 
-- Fixed a bug where the *condor_gridmanager* would delete the job's
-  X.509 proxy file when it meant to delete a temporary copy of the
-  proxy file.
-  :jira:`1223`
-
 - Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
   grid universe job would fail.
   :jira:`1222`
@@ -71,6 +66,11 @@ New Features:
   :jira:`1199`
 
 Bugs Fixed:
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
 
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.

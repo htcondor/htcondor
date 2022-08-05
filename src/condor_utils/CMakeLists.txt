@@ -137,6 +137,7 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
 AWSv4-utils.cpp

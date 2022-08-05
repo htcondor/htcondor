@@ -715,6 +715,7 @@ main (int argc, char *argv[])
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
+	const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
 
 	// The arguments take two passes to process --- the first pass
 	// figures out the mode, after which we can instantiate the required
@@ -994,7 +995,7 @@ main (int argc, char *argv[])
 				ConstraintHolder constrReduced(SkipExprParens(tree)->Copy());
 				pmms.where_expression = constrReduced.c_str();
 			}
-			const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+			const CustomFormatFnTable * pFnTable = &GlobalFnTable;
 
 			temp.clear();
 			temp.reserve(4096);
@@ -1024,7 +1025,7 @@ main (int argc, char *argv[])
 		if ( ! mainPP.pm.has_headings()) {
 			if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
 		}
-		mainPP.pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
+		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -1477,7 +1478,7 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
-					*getCondorStatusPrintFormats(),
+					NULL,
 					pm,
 					pmopt,
 					group_by_keys,
