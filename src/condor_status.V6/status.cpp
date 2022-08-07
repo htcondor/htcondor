@@ -1317,6 +1317,8 @@ main (int argc, char *argv[])
 		}
 	}
 
+	fflush(stdout);
+
 	delete query;
 	return 0;
 }
