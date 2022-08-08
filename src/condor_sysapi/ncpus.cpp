@@ -83,22 +83,7 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 	need_cpu_detection = false;
 
 	{
-#if defined(sequent)
-	int     cpus = 0;
-	int     eng;
-
-	if ((eng = tmp_ctl(TMP_NENG,0)) < 0) {
-		perror( "tmp_ctl(TMP_NENG,0)" );
-		exit(1);
-	}
-
-	while (eng--) {
-		if( tmp_ctl(TMP_QUERY,eng) == TMP_ENG_ONLINE )
-			cpus++;
-	}
-	if( num_cpus ) *num_cpus = cpus;
-	if( num_hyperthread_cpus ) *num_hyperthread_cpus = cpus;
-#elif defined(WIN32)
+#if defined(WIN32)
 		int coreCount = 0;
 		int logicalCoreCount = 0;
 

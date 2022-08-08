@@ -1045,6 +1045,8 @@ main( int argc, const char *argv[] )
 	if (free_out && out) {
 		fclose(out); out = NULL;
 	}
+
+	delete factory;
 	return 0;
 }
 
