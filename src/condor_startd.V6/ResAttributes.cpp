@@ -1363,10 +1363,10 @@ MachAttributes::publish_static(ClassAd* cp)
 #endif
 
 	// Advertise processor flags.
-	const char * pflags = sysapi_processor_flags()->processor_flags;
-	if (pflags) {
+	std::string pflags = sysapi_processor_flags()->processor_flags;
+	if (!pflags.empty()) {
 		char * savePointer = NULL;
-		char * processor_flags = strdup( pflags );
+		char * processor_flags = strdup( pflags.c_str());
 		char * flag = strtok_r( processor_flags, " ", & savePointer );
 		std::string attributeName;
 		while( flag != NULL ) {
@@ -1388,6 +1388,11 @@ MachAttributes::publish_static(ClassAd* cp)
 	if ((cache = sysapi_processor_flags()->cache) > 0) {
 		cp->Assign(ATTR_CPU_CACHE_SIZE, cache);
 	}
+	std::string microarch = sysapi_processor_flags()->processor_microarch;
+	if (!microarch.empty()) {
+		cp->Assign(ATTR_MICROARCH, microarch);
+	}
+
 
 #ifdef LINUX
 	if (hasUnprivUserNamespace()) {

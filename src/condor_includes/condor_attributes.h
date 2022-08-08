@@ -488,6 +488,7 @@
 #define ATTR_LOAD_AVG  "LoadAvg"
 #define ATTR_MACHINE  "Machine"
 #define ATTR_MACHINE_COUNT  "MachineCount"
+#define ATTR_MICROARCH  "Microarch"
 #define ATTR_REF_COUNT "RefCount"
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"

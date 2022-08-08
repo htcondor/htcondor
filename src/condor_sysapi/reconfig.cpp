@@ -81,10 +81,6 @@ bool _sysapi_getload = false;
 
 bool _sysapi_net_devices_cached = false;
 
-/* needed by processor_flags.c */
-const char * _sysapi_processor_flags_raw = NULL;
-const char * _sysapi_processor_flags = NULL;
-
 /*
    The function that configures the above variables each time it is called.
    This function is meant to be called outside of the library to configure it
