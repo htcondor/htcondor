@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
+  x86_64 microarchitecture, like *x86_64-v3*
+  :jira:`1252`
+
 - Added submit templates.  These are configured using new configuration variables
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
