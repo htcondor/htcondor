@@ -64,14 +64,7 @@ GangliaD::GangliaD():
 GangliaD::~GangliaD()
 {
 	ganglia_config_destroy(&m_ganglia_context,&m_ganglia_config,&m_ganglia_channels);
-	if (m_gstat_argv) {
-		int i = 0;
-		while (m_gstat_argv[i] != nullptr) {
-			free(m_gstat_argv[i]);
-			i++;
-		}
-		free(m_gstat_argv);
-	}
+	deleteStringArray(m_gstat_argv);
 }
 
 Metric *
