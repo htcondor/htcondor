@@ -39,12 +39,6 @@ list(APPEND ProcdElements
 	)
 endif(LINUX)
 
-if (NOT WINDOWS)
-list(APPEND ProcdElements
-	glexec_kill.unix.cpp
-	)
-endif(NOT WINDOWS)
-
 set(ProcClientElements
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_io.cpp
@@ -76,13 +70,13 @@ condor_static_lib( procdutils "${ProcdUtilsSrcs}" )
 condor_daemon(EXE condor_procd SOURCES "${ProcdElements};${ProcClientElements}" LIBRARIES "procdutils;${PROCD_WIN_LINK_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
 if (LINUX)
-	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp;dprintf_lite.cpp" ${C_SBIN} "procdutils" OFF)
+	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp;dprintf_lite.cpp" ${C_SBIN} "procdutils" OFF)
 
 	condor_exe( gidd_alloc "gidd_alloc.cpp" ${C_SBIN} "" OFF)
 endif(LINUX)
 
 if (WINDOWS)
-	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/distribution.cpp;../condor_utils/my_distribution.cpp;../condor_utils/condor_pidenvid.cpp" ${C_SBIN} "procdutils;condor_utils" OFF)
+	condor_exe( procd_ctl "procd_ctl.cpp;${ProcClientElements};${SAFE_OPEN_SRC};../condor_utils/condor_pidenvid.cpp" ${C_SBIN} "procdutils;condor_utils" OFF)
 endif(WINDOWS)
 
 set( PROCD_CLIENT_UTIL_SRCS "${ProcClientElements}" PARENT_SCOPE )

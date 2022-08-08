@@ -20,35 +20,23 @@
 #ifndef _CONDOR_DISTRIBUTION_H_
 #define _CONDOR_DISTRIBUTION_H_
 
-// Max length of the distribution name
-static const int MAX_DISTRIBUTION_NAME = 20;
+#define MY_DISTRO_NAME     "condor"
+#define MY_DISTRO_NAME_UC  "CONDOR"
+#define MY_DISTRO_NAME_Cap "Condor"
+#define MY_DISTRO_NAME_Len 6
 
 class Distribution
 {
   public:
-	int Init( int argc, char **argv );
-	int Init( int argc, const char **argv );
-
 	// Get my distribution name..
-	const char *Get(void) { return distribution; };
-	const char *GetUc() { return distribution_uc; };
-	const char *GetCap() { return distribution_cap; };
-	int GetLen() const { return distribution_length; };
-
-	Distribution( );
-	~Distribution( );
-
-  private:
-	const char * distribution;
-	const char * distribution_uc;
-	const char * distribution_cap;
-	int		distribution_length;
-
-	int Init( const char *argv0 );
-	void	SetDistribution( const char *names );
+	const char *Get(void) const { return MY_DISTRO_NAME;     };
+	const char *GetUc()   const { return MY_DISTRO_NAME_UC;  };
+	const char *GetCap()  const { return MY_DISTRO_NAME_Cap; };
+	        int GetLen()  const { return MY_DISTRO_NAME_Len; };
 };
 
-extern Distribution	myDistribution, *myDistro;
+constexpr const Distribution myDistribution;
+constexpr const Distribution *myDistro = &myDistribution;
 
 #endif	/* _CONDOR_DISTRIBUTION_H */
 

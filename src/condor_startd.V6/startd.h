@@ -144,5 +144,7 @@ extern CleanupReminderMap cleanup_reminders;
 
 // Check to see if we're all free
 void	startd_check_free();
+// so we can call this to reconfig on command
+void	main_config();
 
 #endif /* _CONDOR_STARTD_H */

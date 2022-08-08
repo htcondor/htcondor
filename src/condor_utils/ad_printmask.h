@@ -396,7 +396,7 @@ typedef struct PrintMaskMakeSettings {
 //
 int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
-	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
+	const CustomFormatFnTable * FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & prmask, // out: columns and headers set in SELECT
 	PrintMaskMakeSettings & settings, // in,out: modifed by parsing the stream. BUT NOT CLEARED FIRST! (so the caller can set defaults)
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
@@ -412,5 +412,48 @@ int PrintPrintMask(std::string & output,
 	const std::vector<GroupByKeyInfo> & group_by,
 	AttrListPrintMask * summask // out: columns and headers set in SUMMMARY
 	); // in: ordered set of attributes/expressions in GROUP BY
+
+//Print format table function prototypes
+const CustomFormatFnTableItem * getGlobalPrintFormats(); //Get function for global print format table items
+const CustomFormatFnTable getGlobalPrintFormatTable(); //Get function for global print format table
+bool 		render_activity_code (std::string & act, ClassAd *al, Formatter &);
+bool 		render_activity_time (long long & atime, ClassAd *al, Formatter &);
+bool		render_batch_name (std::string & out, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_buffer_io_misc (std::string & misc, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_condor_platform(std::string & str, ClassAd*, Formatter & /*fmt*/);
+bool 		render_cpu_time (double & cputime, ClassAd *ad, Formatter &);
+bool 		render_cpu_util (double & cputime, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_dag_owner (std::string & out, ClassAd *ad, Formatter & fmt);
+bool 		render_due_date (long long & dt, ClassAd *al, Formatter &);
+bool 		render_elapsed_time (long long & tm, ClassAd *al , Formatter &);
+bool 		render_goodput (double & goodput_time, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_grid_job_id (std::string & jid, ClassAd *ad, Formatter & /*fmt*/ );
+bool 		render_grid_resource (std::string & result, ClassAd * ad, Formatter & /*fmt*/ );
+bool 		render_grid_status ( std::string & result, ClassAd * ad, Formatter & /* fmt */ );
+bool		render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/);
+bool 		render_job_cmd_and_args (std::string & val, ClassAd * ad, Formatter & /*fmt*/);
+bool 		render_job_description (std::string & out, ClassAd *ad, Formatter &);
+bool 		render_job_id (std::string & result, ClassAd* ad, Formatter &);
+bool 		render_job_status_char (std::string & result, ClassAd*ad, Formatter &);
+bool 		render_mbps (double & mbps, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_memory_usage (double & mem_used_mb, ClassAd *ad, Formatter &);
+bool 		render_owner (std::string & out, ClassAd *ad, Formatter & /*fmt*/);
+bool 		render_platform (std::string & str, ClassAd* al, Formatter & /*fmt*/);
+bool 		render_remote_host (std::string & result, ClassAd *ad, Formatter &);
+bool 		render_strings_from_list ( classad::Value & value, ClassAd*, Formatter & fmt );
+bool 		render_unique_strings ( classad::Value & value, ClassAd*, Formatter & fmt );
+bool 		render_version (std::string & str, ClassAd*, Formatter & fmt);
+const char * 	format_job_factory_mode (const classad::Value &val, Formatter &);
+const char * 	format_job_status_raw (long long job_status, Formatter &);
+const char * 	format_job_status_char (long long status, Formatter & /*fmt*/);
+const char * 	format_job_universe (long long job_universe, Formatter &);
+const char * 	format_load_avg (double fl, Formatter &);
+const char * 	format_real_date (long long dt, Formatter &);
+const char * 	format_readable_bytes (const classad::Value &val, Formatter &);
+const char * 	format_readable_kb (const classad::Value &val, Formatter &);
+const char * 	format_readable_mb (const classad::Value &val, Formatter &);
+const char * 	format_real_time (long long t, Formatter &);
+const char * 	format_utime_double (double utime, Formatter & /*fmt*/);
+
 
 #endif // __AD_PRINT_MASK__

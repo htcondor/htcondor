@@ -1517,7 +1517,8 @@ SecManStartCommand::sendAuthInfo_inner()
 			}
 		}
 	}
-	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() ) {
+	// The family session is only available in the primary session cache
+	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() && m_sec_man.m_tag.empty() ) {
 		// We have a process family security session.
 		// Try using it if the following are all true:
 		// 1) Peer is on a local network interface
@@ -2940,8 +2941,7 @@ SecManStartCommand::WaitForSocketCallback()
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
 		req_description.c_str(),
-		this,
-		ALLOW);
+		this);
 
 	if(reg_rc < 0) {
 		std::string msg;
@@ -3481,17 +3481,17 @@ SecMan::IsAuthenticationSufficient(DCpermission perm, const Sock &sock, CondorEr
 	}
 
 	std::string methods_allowed = getAuthenticationMethods(perm);
-	const char* method_used = sock.getAuthenticationMethodUsed();
-	bool allowed_method = getAuthBitmask(methods_allowed.c_str()) & sec_char_to_auth_method(method_used);
+	bool allowed_method = getAuthBitmask(methods_allowed.c_str()) & sec_char_to_auth_method(authentication_method);
 	if (!allowed_method &&
-		(!strcasecmp(method_used, AUTH_METHOD_FAMILY) ||
-		 !strcasecmp(method_used, AUTH_METHOD_MATCH))) {
+		(authentication_method == nullptr ||
+		 !strcasecmp(authentication_method, AUTH_METHOD_FAMILY) ||
+		 !strcasecmp(authentication_method, AUTH_METHOD_MATCH))) {
 		allowed_method = true;
 	}
 
 	if (!allowed_method) {
 		err.pushf("SECMAN", 80, "Used authentication method %s is not valid for permission level %s",
-			method_used, PermString(perm));
+		          authentication_method, PermString(perm));
 		return false;
 	}
 

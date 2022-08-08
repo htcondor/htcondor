@@ -387,6 +387,10 @@ Dagman::Config()
 		ASSERT( condorRmExe );
 	}
 
+	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
+	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n",
+		doAppendVars ? "True" : "False" );
+
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",
@@ -1249,7 +1253,7 @@ void main_init (int argc, char ** const argv) {
 	for (auto & it : sl) {
 		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it.c_str() );
 
-		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd, dagman.doAppendVars )) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1314,7 +1318,7 @@ void main_init (int argc, char ** const argv) {
 		parseSetDoNameMunge( false );
 
 		if( !parse( dagman.dag, dagman.rescueFileToRun.c_str(),
-					dagman.useDagDir, dagman._schedd ) ) {
+					dagman.useDagDir, dagman._schedd, dagman.doAppendVars ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1932,7 +1936,7 @@ int
 main( int argc, char **argv )
 {
 
-	set_mySubSystem( "DAGMAN", SUBSYSTEM_TYPE_DAGMAN );
+	set_mySubSystem( "DAGMAN", false, SUBSYSTEM_TYPE_DAGMAN );
 
 		// Record the workingDir before invoking daemoncore (which hijacks it)
 	condor_getcwd( dagman.workingDir );

@@ -5057,6 +5057,7 @@ GahpClient::arc_job_clean(const std::string &service_url,
 
 int
 GahpClient::arc_delegation_new(const std::string &service_url,
+                               const std::string &proxy_file,
                                std::string &deleg_id)
 {
 	static const char* command = "ARC_DELEGATION_NEW";
@@ -5069,8 +5070,10 @@ GahpClient::arc_delegation_new(const std::string &service_url,
 		// Generate request line
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service_url) );
-	int x = formatstr(reqline,"%s", esc1 );
+	char *esc2 = strdup( escapeGahpString(proxy_file) );
+	int x = formatstr(reqline,"%s %s", esc1, esc2 );
 	free( esc1 );
+	free( esc2 );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 
@@ -5124,9 +5127,10 @@ GahpClient::arc_delegation_new(const std::string &service_url,
 
 int
 GahpClient::arc_delegation_renew(const std::string &service_url,
-                                 const std::string &deleg_id)
+                                 const std::string &deleg_id,
+                                 const std::string &proxy_file)
 {
-	static const char* command = "ARC_DELEGATION_NEW";
+	static const char* command = "ARC_DELEGATION_RENEW";
 
 		// Check if this command is supported
 	if  (server->m_commands_supported->contains_anycase(command)==FALSE) {
@@ -5137,9 +5141,11 @@ GahpClient::arc_delegation_renew(const std::string &service_url,
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service_url) );
 	char *esc2 = strdup( escapeGahpString(deleg_id) );
-	int x = formatstr(reqline,"%s %s", esc1, esc2 );
+	char *esc3 = strdup( escapeGahpString(proxy_file) );
+	int x = formatstr(reqline,"%s %s %s", esc1, esc2, esc3 );
 	free( esc1 );
 	free( esc2 );
+	free( esc3 );
 	ASSERT( x > 0 );
 	const char *buf = reqline.c_str();
 

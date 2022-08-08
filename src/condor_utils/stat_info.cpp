@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "stat_info.h"
 #include "status_string.h"

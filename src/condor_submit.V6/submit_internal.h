@@ -57,6 +57,7 @@ public:
 	virtual int get_NewCluster();
 	virtual int get_NewProc(int cluster_id);
 	virtual int get_Capabilities(ClassAd& reply);
+	virtual int get_ExtendedHelp(std::string &content);
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
@@ -67,8 +68,11 @@ public:
 	virtual bool has_late_materialize(int &ver) { ver = 2; return true; }
 	virtual bool allows_late_materialize() { return true; }
 	virtual bool has_extended_submit_commands(ClassAd &cmds);
+	virtual bool has_extended_help(std::string & filename); // helpfile for extended submit commands
+	virtual bool has_send_jobset(int & /*ver*/) { return true; }
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);
+	virtual int send_Jobset(int cluster, const ClassAd * jobset_ad);
 
 	// set a file that send_Itemdata should "echo" items into. If this file is not set
 	// items are sent but not echoed.

@@ -124,19 +124,19 @@ if you run them as root.
 
 .. code-block:: shell
 
-    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
+    curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --central-manager $central_manager_name
 
 .. rubric:: Submit
 
 .. code-block:: shell
 
-    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --submit $central_manager_name
+    curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --submit $central_manager_name
 
 .. rubric:: Execute
 
 .. code-block:: shell
 
-    curl -fsSL https://get.htcondor.org | GET_HTCONDOR_PASSWORD="$htcondor_password" sudo /bin/bash -s -- --no-dry-run --execute $central_manager_name
+    curl -fsSL https://get.htcondor.org | sudo GET_HTCONDOR_PASSWORD="$htcondor_password" /bin/bash -s -- --no-dry-run --execute $central_manager_name
 
 At this point, users logged in on the submit machine should be able to see
 execute machines in the pool (using ``condor_status``), submit jobs
@@ -206,7 +206,7 @@ on machines with GPUs -- using the options described in
 * The rest of the :doc:`../admin-manual/index`, particularly the section on
   :doc:`../admin-manual/monitoring`.
 * Slides from
-  `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_
+  `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_
   -- our annual conference -- include a number of tutorials and talks on
   administrative topics, including monitoring and examples of policies and
   their implementations.

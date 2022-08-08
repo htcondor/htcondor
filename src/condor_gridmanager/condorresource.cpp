@@ -381,9 +381,7 @@ void CondorResource::DoScheddPoll()
 		if ( rc == 0 ) {
 			for ( int i = 0; i < num_status_ads; i++ ) {
 				int cluster, proc;
-				int rc2;
 				std::string job_id_string;
-				BaseJob *base_job = NULL;
 				CondorJob *job;
 
 				if( status_ads[i] == NULL ) {
@@ -397,9 +395,9 @@ void CondorResource::DoScheddPoll()
 				formatstr( job_id_string, "condor %s %s %d.%d", scheddName,
 									   poolName, cluster, proc );
 
-				rc2 = BaseJob::JobsByRemoteId.lookup( job_id_string, base_job );
-				job = dynamic_cast<CondorJob*>( base_job );
-				if ( rc2 == 0 ) {
+				auto itr = BaseJob::JobsByRemoteId.find(job_id_string);
+				if ( itr != BaseJob::JobsByRemoteId.end() ) {
+					job = dynamic_cast<CondorJob*>(itr->second);
 					job->NotifyNewRemoteStatus( status_ads[i] );
 					poll_info->m_submittedJobs.Delete( job );
 				} else {
@@ -532,8 +530,9 @@ dprintf( D_FULLDEBUG, "*** Lease udpate succeeded!\n" );
 		while ( updated.Next( curr_id ) ) {
 			formatstr( id_str, "condor %s %s %d.%d", scheddName, poolName,
 							curr_id.cluster, curr_id.proc );
-			if ( BaseJob::JobsByRemoteId.lookup( id_str, curr_job ) == 0 ) {
-				update_succeeded.Append( curr_job->procID );
+			auto itr = BaseJob::JobsByRemoteId.find(id_str);
+			if ( itr != BaseJob::JobsByRemoteId.end() ) {
+				update_succeeded.Append( itr->second->procID );
 			}
 		}
 	}

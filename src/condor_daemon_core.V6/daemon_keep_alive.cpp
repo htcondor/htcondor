@@ -193,18 +193,6 @@ DaemonKeepAlive::SendAliveToParent() const
 		return FALSE;
 	}
 
-		// If we are using glexec, then keepalives from the starter
-		// to the startd will likely fail unless the user really went out
-		// of their way to set things up so the starter and startd can authenticate
-		// over the network.  So in the event that glexec
-		// is being used, clear our first time flag so we do not
-		// EXCEPT on failure and so we only try once.
-	if ( get_mySubSystem()->isType( SUBSYSTEM_TYPE_STARTER) && 
-		 param_boolean("GLEXEC_STARTER",false) )
-	{
-		first_time = false;
-	}
-
 	double dprintf_lock_delay = dprintf_get_lock_delay();
 	dprintf_reset_lock_delay();
 

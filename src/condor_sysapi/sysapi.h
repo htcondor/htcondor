@@ -41,7 +41,7 @@ int sysapi_phys_memory(void);
 int sysapi_phys_memory_raw_no_param(void);
 
 /* How to get the free disk blocks from a full pathname, answer in KB */
-int sysapi_reserve_for_fs();
+long long sysapi_reserve_for_fs();
 long long sysapi_disk_space_raw(const char *filename);
 long long sysapi_disk_space(const char *filename);
 
@@ -174,13 +174,6 @@ public:
 		m_name(the_name),
 		m_ip(the_ip),
 		m_up(the_up)
-	{
-	}
-
-	NetworkDeviceInfo(NetworkDeviceInfo const &other):
-		m_name(other.m_name),
-		m_ip(other.m_ip),
-		m_up(other.m_up)
 	{
 	}
 

@@ -1024,7 +1024,7 @@ TDMan::transferd_registration(int cmd, Stream *sock)
 
 	daemonCore->Register_Socket(sock, sock_id.c_str(),
 		(SocketHandlercpp)&TDMan::transferd_update,
-		"TDMan::transferd_update", this, ALLOW);
+		"TDMan::transferd_update", this);
 	
 	// stash an identifier with the registered socket so I can find this
 	// transferd later when this socket gets an update. I can't just shove

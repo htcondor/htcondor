@@ -7,6 +7,159 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9017:
+
+Version 9.0.17
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.16 released on Month Date, 2022.
+
+- HTCondor version 9.0.16 not yet released.
+
+New Features:
+
+- Increased the length of the password generated for Windows default
+  slot user accounts from 14 characters to 32 characters, and added
+  some code to insure that complexity measures that look at
+  character set and not length will still be satisfied.
+  :jira:`1232`
+
+- Added ``-debug`` option to *condor_drain* tool.
+  :jira:`1236`
+
+Bugs Fixed:
+
+- When a failure occurs with a grid universe job of type ``batch``,
+  the local job is now always put on hold, instead of the remote job
+  being canceled and automatically resubmitted.
+  :jira:`1226`
+
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
+
+- Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
+  grid universe job would fail.
+  :jira:`1222`
+
+.. _lts-version-history-9016:
+
+Version 9.0.16
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.16 released on Month Date, 2022.
+
+- HTCondor version 9.0.16 not yet released.
+
+New Features:
+
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs.
+  :jira:`1193`
+
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
+Bugs Fixed:
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
+
+- Fixed a bug on Windows that caused a misleading error message about
+  the SharedPortEndpoint when a daemon exits.
+  :jira:`1178`
+
+- Fixed a bug where the *condor_check_config* tool raised an UnboundLocalError
+  due to an undefined variable.
+  :jira:`1186`
+
+- Fixed a file descriptor leak when using SciTokens for authentication.
+  :jira:`1188`
+
+- Fixed a bug in *condor_gpu_discovery* which would cause the tool to crash
+  when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
+  :jira:`1191`
+
+- Fix a bug that could cause daemons to crash if their log rotates
+  during shutdown.
+  :jira:`1200`
+
+- Fixed a bug where the *condor_starter* would wait forever for a
+  reconnect from the *condor_shadow* if a network failure occurred
+  during cleanup after the job completed.
+  :jira:`1213`
+
+- The ``condor-credmon-oath`` package now properly pulls in ``python3-mod_wsgi``
+  on Enterprise Linux 8.
+  :jira:`1217`
+  
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+- HTCondor version 9.0.15 released on July 21, 2022.
+
+New Features:
+
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
+Bugs Fixed:
+
+- None.
+
+.. _lts-version-history-9014:
+
+Version 9.0.14
+--------------
+
+Release Notes:
+
+- HTCondor version 9.0.14 released on July 12, 2022.
+
+New Features:
+
+- Made SciTokens mapping failures more prominent in the daemon logs.
+  :jira:`1072`
+
+- The manual page, usage and logging of the *condor_set_shutdown* tool
+  has been improved to clarify what this tool does and how to use it.
+  :jira:`1102`
+
+Bugs Fixed:
+
+- Fixed a bug where if a job's output and error were directed to the same
+  file, no other output files would be transferred.
+  :jira:`1101`
+
+- Ensure that the matching set of Python bindings is installed when HTCondor
+  is upgraded on RPM based platforms.
+  :jira:`1127`
+
+- Fixed a bug that caused ``$(OPSYSANDVER)`` to expand to nothing in a JOB_TRANSFORM.
+  :jira:`1121`
+
+- Fixed a bug in the Python bindings that prevented context managed
+  ``htcondor.SecMan`` sessions from working.
+  :jira:`924`
+  
+- Fixed a bug where ``RemoteUserCpu`` and ``RemoteSysCpu`` attributes are occasionally
+  set to ``0`` for successfully completed jobs.
+  :jira:`1162`
+
+- Make ``condor-externals`` package dependency less strict to ease transition
+  between CHTC and OSG RPM repositories.
+  :jira:`1177`
+
 .. _lts-version-history-9013:
 
 Version 9.0.13
@@ -14,33 +167,35 @@ Version 9.0.13
 
 Release Notes:
 
-.. HTCondor version 9.0.13 released on Month Date, 2022.
-
-- HTCondor version 9.0.13 not yet released.
+- HTCondor version 9.0.13 released on May 26, 2022.
 
 New Features:
-
-- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
-  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
-  mode output.
-  :jira:`1032`
 
 - If the configuration macro ``[SCHEDD|STARTD]_CRON_LOG_NON_ZERO_EXIT`` is
   set to true, the corresponding daemon will write the cron job's non-zero
   exit code to the log, followed by the cron job's output.
   :jira:`971`
 
+- *condor_config_val* will now print an ``@=end/@end`` pair rather than simply ``=``
+  when printing multi-line configuration values for ``-dump``, ``-summary``, and ``-verbose``
+  mode output.
+  :jira:`1032`
+
+- Add a ``SEC_CREDENTIAL_STORECRED_OPTS`` variable to *condor_vault_storer*
+  to enable sending additional options to every *condor_store_cred* command.
+  :jira:`1091`
+
+- Recognize the new format of vault tokens, beginning with ``hvs.`` in addition
+  to the old format beginning with ``s.`` .
+  :jira:`1091`
+
 Bugs Fixed:
 
 - The *condor_run* tool now reports job submit errors
-  and warnings rather than writing them into a log file.
+  and warnings to the terminal rather than writing them into a log file.
   :jira:`1002`
 
-- Updated the Windows build of HTCondor to use SSL 1.1.1m.
-  :jira:`840`
-
-- Fixed a bug where Kerberos Authentication would fail for
-  dagman.
+- Fixed a bug where Kerberos Authentication would fail for DAGMan.
   :jira:`1060`
 
 - Fix problem that can cause HTCondor to not start up when the network
@@ -48,6 +203,9 @@ Bugs Fixed:
   Long hostnames, multiple CCB addresses, having both IPv4 and IPv6 addresses,
   and long private network names all contribute to complexity.
   :jira:`1070`
+
+- Updated the Windows build of HTCondor to use SSL 1.1.1m.
+  :jira:`840`
 
 .. _lts-version-history-9012:
 
@@ -232,7 +390,7 @@ Bugs Fixed:
   status when the job policy indicated it should be held.
   :jira:`869`
 
-- Fixed a bug running jobs in a Singularity container where 
+- Fixed a bug running jobs in a Singularity container where
   the environment variables added by HTCondor could include incorrect
   pathnames to the location of the job's scratch directory.
   This occurred when setting the ``SINGULARITY_TARGET_DIR`` configuration option.
@@ -733,7 +891,7 @@ Known Issues:
 
 New Features:
 
-- The Windows MSI installer now sets up user-based authentication and creates 
+- The Windows MSI installer now sets up user-based authentication and creates
   an IDTOKEN for local administration.
   :jira:`407`
 

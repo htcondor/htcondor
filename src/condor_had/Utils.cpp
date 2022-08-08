@@ -27,9 +27,7 @@
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
 // for MD5
-#ifdef HAVE_EXT_OPENSSL
 #include <openssl/md5.h>
-#endif
 // for SHA-2 (SHA256)
 #include <openssl/sha.h>
 
@@ -344,7 +342,6 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 	unsigned char *buffer = (unsigned char *)calloc(BUF_SIZ, 1);
 	ASSERT(buffer != NULL);
 
-	ssize_t bytesTotal = 0;
 	ssize_t bytesRead  = 0;
 
 	int hash_diff = 0;
@@ -359,7 +356,6 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 		while (bytesRead > 0) {
 			SHA256_Update(&context, buffer, bytesRead);
 			memset(buffer, 0, BUF_SIZ);
-			bytesTotal += bytesRead;
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
 
@@ -380,7 +376,6 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 		while (bytesRead > 0) {
 			// generating MAC gradually, chunk by chunk
 			MD5_Update(& md5Context, buffer, bytesRead);
-			bytesTotal += bytesRead;
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
 

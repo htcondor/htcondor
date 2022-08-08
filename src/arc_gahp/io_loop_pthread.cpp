@@ -155,7 +155,7 @@ main( int argc, char ** const argv )
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
 
-	set_mySubSystem("ARC_GAHP", SUBSYSTEM_TYPE_GAHP);
+	set_mySubSystem("ARC_GAHP", false, SUBSYSTEM_TYPE_GAHP);
 
 	config();
 	dprintf_config( "ARC_GAHP" );
@@ -270,7 +270,8 @@ verify_gahp_command(char ** argv, int argc) {
 	if (strcasecmp(argv[0], GAHP_COMMAND_INITIALIZE_FROM_FILE) == 0 ||
 			strcasecmp (argv[0], GAHP_COMMAND_REFRESH_PROXY_FROM_FILE) == 0 ||
 			strcasecmp (argv[0], GAHP_COMMAND_USE_CACHED_PROXY) == 0 ||
-			strcasecmp (argv[0], GAHP_COMMAND_UNCACHE_PROXY) == 0) {
+			strcasecmp (argv[0], GAHP_COMMAND_UNCACHE_PROXY) == 0 ||
+			strcasecmp (argv[0], GAHP_COMMAND_UPDATE_TOKEN) == 0) {
 		// These are 1-arg commands
 		return verify_number_args (argc, 2);
 	}
@@ -459,6 +460,7 @@ IOProcess::stdinPipeHandler()
 				commands[i++] = GAHP_COMMAND_CACHE_PROXY_FROM_FILE;
 				commands[i++] = GAHP_COMMAND_USE_CACHED_PROXY;
 				commands[i++] = GAHP_COMMAND_UNCACHE_PROXY;
+				commands[i++] = GAHP_COMMAND_UPDATE_TOKEN;
 
 				arc_commands.rewind();
 				char *one_arc_command = NULL;
@@ -491,6 +493,9 @@ IOProcess::stdinPipeHandler()
 				if (m_active_proxy == args.argv[1]) {
 					m_active_proxy = DEFAULT_PROXY_NAME;
 				}
+				gahp_output_return_success();
+			} else if (strcasecmp (args.argv[0], GAHP_COMMAND_UPDATE_TOKEN) == 0) {
+				m_active_token = args.argv[1];
 				gahp_output_return_success();
 			} else {
 				// got new command
@@ -593,7 +598,7 @@ IOProcess::addNewRequest(const char *cmd)
 		return NULL;
 	}
 
-	GahpRequest* new_req = new GahpRequest(cmd, m_cached_proxies[m_active_proxy]);
+	GahpRequest* new_req = new GahpRequest(cmd, m_cached_proxies[m_active_proxy], m_active_token);
 	ASSERT(new_req);
 
 	// check if there is available worker process

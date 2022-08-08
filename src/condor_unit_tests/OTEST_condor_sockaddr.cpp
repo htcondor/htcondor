@@ -28,17 +28,17 @@
 
 
 static bool sockaddr_equivalance(const condor_sockaddr & s,
-	MyString expected_ip_string, int expected_port) {
+	std::string expected_ip_string, int expected_port) {
 
 	int port = s.get_port();
-	MyString ip_string = s.to_ip_string();
+	std::string ip_string = s.to_ip_string();
 
 	emit_output_expected_header();
 	emit_param("get_port()", "%d", expected_port);
-	emit_param("to_ip_string()", "%s", expected_ip_string.Value());
+	emit_param("to_ip_string()", "%s", expected_ip_string.c_str());
 	emit_output_actual_header();
 	emit_param("get_port()", "%d", port);
-	emit_param("to_ip_string()", "%s", ip_string.Value());
+	emit_param("to_ip_string()", "%s", ip_string.c_str());
 
 	return (port == expected_port) && (ip_string == expected_ip_string);
 }
@@ -89,9 +89,9 @@ static bool test_from_ip_string_simple_v4() {
 }
 
 static bool is_private_network(const char * ip_string, bool expect_private) {
-	MyString header;
-	header.formatstr("Is %s a private network?", ip_string);
-	emit_test(header.Value());
+	std::string header;
+	formatstr(header, "Is %s a private network?", ip_string);
+	emit_test(header.c_str());
 
 	emit_input_header();
 	emit_param("ip_string", "%s", ip_string);

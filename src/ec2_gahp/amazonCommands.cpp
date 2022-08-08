@@ -30,11 +30,13 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 #include "AWSv4-utils.h"
+#include "AWSv4-impl.h"
+#include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>
 #include "stat_wrapper.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include <algorithm>
 #include <openssl/hmac.h>
 #include <curl/curl.h>
@@ -59,35 +61,6 @@ const char * nullStringIfEmpty( const std::string & str ) {
 std::string amazonURLEncode( const std::string & input )
 {
     return AWSv4Impl::amazonURLEncode( input );
-}
-
-//
-// Utility function.
-//
-bool writeShortFile( const std::string & fileName, const std::string & contents ) {
-    int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
-
-    if( fd < 0 ) {
-        dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-        return false;
-    }
-
-    unsigned long written = full_write( fd, contents.c_str(), contents.length() );
-    close( fd );
-    if( written != contents.length() ) {
-        dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-                 fileName.c_str(), (unsigned long)contents.length(), written );
-        return false;
-    }
-
-    return true;
-}
-
-//
-// Utility function; inefficient.
-//
-bool readShortFile( const std::string & fileName, std::string & contents ) {
-	return AWSv4Impl::readShortFile( fileName, contents );
 }
 
 //
@@ -338,8 +311,8 @@ bool parseURL(	const std::string & url,
 				std::string & protocol,
 				std::string & host,
 				std::string & path ) {
-    Regex r; int errCode = 0; const char * errString = 0;
-    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", & errString, & errCode );
+    Regex r; int errCode = 0; int errOffset = 0;
+    bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
     ASSERT( patternOK );
     ExtArray<std::string> groups(5);
     if(! r.match_str( url.c_str(), & groups )) { return false; }
@@ -505,7 +478,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		}
 		headers[ "X-Amz-Security-Token" ] = token;
 	} else {
-		if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+		if( ! htcondor::readShortFile( this->secretKeyFile, saKey ) ) {
 			this->errorCode = "E_FILE_IO";
 			this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
 			dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
@@ -513,7 +486,7 @@ bool AmazonRequest::createV4Signature(	const std::string & payload,
 		}
 		trim( saKey );
 
-		if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+		if( ! htcondor::readShortFile( this->accessKeyFile, keyID ) ) {
 			this->errorCode = "E_FILE_IO";
 			this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
 			dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
@@ -795,7 +768,7 @@ bool AmazonRequest::sendV2Request() {
     //
     std::string keyID;
     if( protocol != "x509" ) {
-        if( ! readShortFile( this->accessKeyFile, keyID ) ) {
+        if( ! htcondor::readShortFile( this->accessKeyFile, keyID ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from accesskey file '" + this->accessKeyFile + "'.";
             dprintf( D_ALWAYS, "Unable to read accesskey file '%s', failing.\n", this->accessKeyFile.c_str() );
@@ -853,7 +826,7 @@ bool AmazonRequest::sendV2Request() {
         saKey = std::string( "not-the-DN" );
         dprintf( D_FULLDEBUG, "Using '%s' as secret key for x.509\n", saKey.c_str() );
     } else {
-        if( ! readShortFile( this->secretKeyFile, saKey ) ) {
+        if( ! htcondor::readShortFile( this->secretKeyFile, saKey ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Unable to read from secretkey file '" + this->secretKeyFile + "'.";
             dprintf( D_ALWAYS, "Unable to read secretkey file '%s', failing.\n", this->secretKeyFile.c_str() );
@@ -1746,7 +1719,7 @@ bool AmazonVMStart::workerFunction(char **argv, int argc, std::string &result_st
     if( strcasecmp( argv[8], NULLSTRING ) ) {
         std::string udFileName = argv[8];
         std::string udFileContents;
-        if( ! readShortFile( udFileName, udFileContents ) ) {
+        if( ! htcondor::readShortFile( udFileName, udFileContents ) ) {
             result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
             dprintf( D_ALWAYS, "Failed to read userdata file '%s'.\n", udFileName.c_str() );
             return false;
@@ -1955,7 +1928,7 @@ bool AmazonVMStartSpot::workerFunction( char ** argv, int argc, std::string & re
     if( strcasecmp( argv[9], NULLSTRING ) ) {
         std::string udFileName = argv[9];
         std::string udFileContents;
-        if( ! readShortFile( udFileName, udFileContents ) ) {
+        if( ! htcondor::readShortFile( udFileName, udFileContents ) ) {
             result_string = create_failure_result( requestID, "Failed to read userdata file.", "E_FILE_IO" );
             dprintf( D_ALWAYS, "failed to read userdata file '%s'.\n", udFileName.c_str() ) ;
             return false;
@@ -2831,7 +2804,7 @@ bool AmazonVMCreateKeypair::SendRequest() {
         XML_Parse( xp, this->resultString.c_str(), this->resultString.length(), 1 );
         XML_ParserFree( xp );
 
-        if( ! writeShortFile( this->privateKeyFileName, pkud.keyMaterial ) ) {
+        if( ! htcondor::writeShortFile( this->privateKeyFileName, pkud.keyMaterial ) ) {
             this->errorCode = "E_FILE_IO";
             this->errorMessage = "Failed to write private key to file.";
             dprintf( D_ALWAYS, "Failed to write private key material to '%s', failing.\n",
@@ -4075,7 +4048,7 @@ AmazonS3Upload::~AmazonS3Upload() { }
 bool AmazonS3Upload::SendRequest() {
 	httpVerb = "PUT";
 	std::string payload;
-	if( ! readShortFile( this->path, payload ) ) {
+	if( ! htcondor::readShortFile( this->path, payload ) ) {
 		this->errorCode = "E_FILE_IO";
 		this->errorMessage = "Unable to read file to upload '" + this->path + "'.";
 		dprintf( D_ALWAYS, "Unable to read from file to upload '%s', failing.\n", this->path.c_str() );
@@ -4153,8 +4126,8 @@ AmazonCreateStack::~AmazonCreateStack() { }
 bool AmazonCreateStack::SendRequest() {
 	bool result = AmazonRequest::SendRequest();
 	if( result ) {
-		Regex r; int errCode = 0; const char * errString = 0;
-		bool patternOK = r.compile( "<StackId>(.*)</StackId>", & errString, & errCode );
+		Regex r; int errCode = 0; int errOffset;
+		bool patternOK = r.compile( "<StackId>(.*)</StackId>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		ExtArray<std::string> groups(2);
 		if( r.match_str( resultString, & groups ) ) {
@@ -4231,10 +4204,10 @@ AmazonDescribeStacks::~AmazonDescribeStacks() { }
 bool AmazonDescribeStacks::SendRequest() {
 	bool result = AmazonRequest::SendRequest();
 	if( result ) {
-		int errCode = 0; const char * errString = 0;
+		int errCode = 0; int errOffset;
 
 		Regex r;
-		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", & errString, & errCode );
+		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		ExtArray<std::string> statusGroups( 2 );
 		if( r.match_str( resultString, & statusGroups ) ) {
@@ -4242,7 +4215,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		}
 
 		Regex s;
-		patternOK = s.compile( "<Outputs>(.*)</Outputs>", & errString, & errCode, Regex::multiline | Regex::dotall );
+		patternOK = s.compile( "<Outputs>(.*)</Outputs>", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
 		ExtArray<std::string> outputGroups( 2 );
 		if( s.match_str( resultString, & outputGroups ) ) {
@@ -4250,7 +4223,7 @@ bool AmazonDescribeStacks::SendRequest() {
 			std::string membersRemaining = outputGroups[1];
 
 			Regex t;
-			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", & errString, & errCode, Regex::multiline | Regex::dotall );
+			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 			ASSERT( patternOK );
 
 			ExtArray<std::string> memberGroups( 2 );
@@ -4259,7 +4232,7 @@ bool AmazonDescribeStacks::SendRequest() {
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
 				Regex u;
-				patternOK = u.compile( "<OutputKey>(.*)</OutputKey>", & errString, & errCode );
+				patternOK = u.compile( "<OutputKey>(.*)</OutputKey>", &errCode, &errOffset);
 				ASSERT( patternOK );
 
 				std::string outputKey;
@@ -4269,7 +4242,7 @@ bool AmazonDescribeStacks::SendRequest() {
 				}
 
 				Regex v;
-				patternOK = v.compile( "<OutputValue>(.*)</OutputValue>", & errString, & errCode );
+				patternOK = v.compile( "<OutputValue>(.*)</OutputValue>", &errCode, &errOffset);
 				ASSERT( patternOK );
 
 				std::string outputValue;

@@ -89,7 +89,6 @@ public:
 	char*	accountingGroup() {return c_acctgrp;};
 	char*	host()	{return c_host;};
 	char*	addr() 	{return c_addr;};
-	char*   proxyFile() {return c_proxyfile; };
 	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
     char*   rmtgrp() {return c_rmtgrp;}
     char*   neggrp() {return c_neggrp;}
@@ -101,7 +100,6 @@ public:
 	void	setAccountingGroup(const char* grp);
 	void	setaddr(const char* addr);
 	void	sethost(const char* host);
-	void    setProxyFile(const char* pf);
 	void    setConcurrencyLimits(const char* limits);
     void    setrmtgrp(const char* rmtgrp);
     void    setneggrp(const char* neggrp);
@@ -117,8 +115,6 @@ private:
 	char	*c_acctgrp; // name of the accounting group, if any
 	char	*c_host;	// hostname of the clientmachine
 	char	*c_addr;	// <ip:port> of the client
-	char	*c_proxyfile;   // file holding delegated proxy
-		                // (used when using GLEXEC_STARTER)
 	char	*c_concurrencyLimits; // limits, if any
     char*   c_rmtgrp;   // the submitter's accounting group
     char*   c_neggrp;   // the negotiating accounting group

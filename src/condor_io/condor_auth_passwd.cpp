@@ -21,7 +21,6 @@
 #include "condor_common.h"
 #include "CondorError.h"
 
-#if defined(HAVE_EXT_OPENSSL)
 #include <openssl/evp.h>
 #include <openssl/err.h>
 #include <openssl/hmac.h>
@@ -40,7 +39,7 @@
 #include "classad/source.h"
 #include "condor_attributes.h"
 #include "condor_base64.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "directory.h"
 #include "subsystem_info.h"
 #include "secure_file.h"
@@ -220,8 +219,7 @@ findTokens(const std::string &issuer,
 	}
 	dprintf(D_FULLDEBUG, "Looking for tokens in directory %s for issuer %s\n", dirpath.c_str(), issuer.c_str());
 
-	const char* _errstr;
-	int _erroffset;
+	int _errcode, _erroffset;
 	std::string excludeRegex;
 		// We simply fail invalid regex as the config subsys should have EXCEPT'd
 		// in this case.
@@ -230,11 +228,11 @@ findTokens(const std::string &issuer,
 		return false;
 	}
 	Regex excludeFilesRegex;
-	if (!excludeFilesRegex.compile(excludeRegex, &_errstr, &_erroffset)) {
+	if (!excludeFilesRegex.compile(excludeRegex, &_errcode, &_erroffset)) {
 		dprintf(D_FULLDEBUG, "LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 			"config parameter is not a valid "
-			"regular expression.  Value: %s,  Error: %s",
-			excludeRegex.c_str(), _errstr ? _errstr : "");
+			"regular expression.  Value: %s,  Error Code: %d",
+			excludeRegex.c_str(), _errcode);
 		return false;
 	}
 	if(!excludeFilesRegex.isInitialized() ) {
@@ -1536,16 +1534,13 @@ Condor_Auth_Passwd::hkdf(const unsigned char *sk, size_t sk_len,
 #ifdef EVP_PKEY_HKDF
 	// I had to fix two simple syntax errors in this code before
 	// it would build.  I rather suspect it's never been tested.
-	// Also had to insert four const_cast<>s, which is worrisome.
-	// The last three may have been correctable by changing the
-	// argument types, but we can worry about that later.
 	// See ticket #6962.
 	EVP_PKEY_CTX *pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_HKDF, NULL);
 	if (EVP_PKEY_derive_init(pctx) <= 0) {goto fail;}
-	if (EVP_PKEY_CTX_set_hkdf_md(pctx, const_cast<void *>((const void *)EVP_sha256())) <= 0) {goto fail;}
-	if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, const_cast<void *>((const void *)salt), salt_len) <= 0) {goto fail;}
-	if (EVP_PKEY_CTX_set1_hkdf_key(pctx, const_cast<void *>((const void *)sk), sk_len) <= 0) {goto fail;}
-	if (EVP_PKEY_CTX_add1_hkdf_info(pctx, const_cast<void *>((const void *)info), info_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set_hkdf_md(pctx, EVP_sha256()) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_salt(pctx, salt, salt_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_set1_hkdf_key(pctx, sk, sk_len) <= 0) {goto fail;}
+	if (EVP_PKEY_CTX_add1_hkdf_info(pctx, info, info_len) <= 0) {goto fail;}
 	if (EVP_PKEY_derive(pctx, result, &result_len) <= 0) {goto fail;}
 	EVP_PKEY_CTX_free(pctx);
 	return 0;
@@ -3028,5 +3023,3 @@ Condor_Auth_Passwd::set_remote_keys(const std::vector<std::string> &keys) {
 		m_server_keys.insert(key);
 	}
 }
-
-#endif	// of if defined(HAVE_EXT_OPENSSL)

@@ -77,26 +77,26 @@ int
 main( int argc, char* argv[] )
 {
 	int		i;
+	const char* pcolon;
 	
-	set_mySubSystem( "DAEMON-TOOL", SUBSYSTEM_TYPE_TOOL );
+	set_mySubSystem( "DAEMON-TOOL", false, SUBSYSTEM_TYPE_TOOL );
 
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 
 	FILE *input_fp = stdin;
 
 	for( i=1; i<argc; i++ ) {
-		if( match_prefix( argv[i], "-daemontype" ) ) {
+		if( is_dash_arg_prefix( argv[i], "daemontype", 2 ) ) {
 			if( argv[i + 1] ) {
 				get_mySubSystem()->setName( argv[++i] );
 				get_mySubSystem()->setTypeFromName( );
 			} else {
 				usage();
 			}
-		} else if( match_prefix( argv[i], "-debug" ) ) {
+		} else if( is_dash_arg_colon_prefix( argv[i], "debug", &pcolon ) ) {
 				// dprintf to console
-			dprintf_set_tool_debug("DAEMON-TOOL", 0);
-			set_debug_flags(NULL, D_FULLDEBUG|D_SECURITY);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
+			if ( ! pcolon) { set_debug_flags(NULL, D_FULLDEBUG | D_SECURITY); }
 		} else if( match_prefix( argv[i], "-" ) ) {
 			usage();
 		} else {

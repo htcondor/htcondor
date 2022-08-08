@@ -161,6 +161,8 @@
 #define SUBMIT_KEY_UseOAuthServices "use_oauth_services"
 #define SUBMIT_KEY_UseOAuthServicesAlt "UseOAuthServices"
 
+#define SUBMIT_KEY_JobSet "jobset"
+
 #ifdef HAVE_HTTP_PUBLIC_FILES
     #define SUBMIT_KEY_PublicInputFiles "public_input_files"
 #endif
@@ -264,6 +266,7 @@
 #define SUBMIT_KEY_ContainerImage "container_image"
 #define SUBMIT_KEY_ContainerServiceNames "container_service_names"
 #define SUBMIT_KEY_ContainerPortSuffix "_container_port"
+#define SUBMIT_KEY_ContainerTargetDir "container_target_dir"
 
 //
 // VM universe Parameters
@@ -640,6 +643,10 @@ public:
 	bool AssignJobVal(const char * attr, long val) { return AssignJobVal(attr, (long long)val); }
 	//bool AssignJobVal(const char * attr, time_t val)  { return AssignJobVal(attr, (long long)val); }
 
+	int AssignJOBSETExpr(const char *attr, const char * expr, const char * source_label=NULL);
+	bool AssignJOBSETString(const char * name, const char * sval);
+	const ClassAd * getJOBSET() { return jobsetAd; }
+
 	//Set job submit method to enum equal to passed value if value is in range
 	void setSubmitMethod(int value) { s_method = value; }
 	int getSubmitMethod(){ return s_method; }//Return job submit method value given s_method enum
@@ -649,6 +656,7 @@ public:
 
 	void optimize() { if (SubmitMacroSet.sorted < SubmitMacroSet.size) optimize_macros(SubmitMacroSet); }
 	void dump(FILE* out, int flags); // print the hash to the given FILE*
+	void dump_templates(FILE* out, const char * category, int flags); // print the templates to the given FILE*
 	const char* to_string(std::string & buf, int flags); // print (append) the hash to the supplied buffer
 	const char* make_digest(std::string & buf, int cluster_id, StringList & vars, int options);
 	void setup_macro_defaults(); // setup live defaults table
@@ -688,6 +696,7 @@ protected:
 	ClassAd baseJob; // defaults for job attributes, set by init_cluster_ad
 	ClassAd * clusterAd; // use instead of baseJob if non-null. THIS POINTER IS NOT OWNED BY THE submit_utils class. It points back to the JobQueueJob that 
 	ClassAd * procAd;
+	ClassAd * jobsetAd;
 	DeltaClassAd * job; // this wraps the procAd or baseJob and tracks changes to the underlying ad.
 	JOB_ID_KEY jid; // id of the current job being built
 	time_t     submit_time;
@@ -823,6 +832,8 @@ protected:
 
 	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
+
+	int ProcessJobsetAttributes();
 
 	// construct the Requirements expression for a VM uinverse job.
 	int AppendVMRequirements(MyString & vmanswer, bool VMCheckpoint, bool VMNetworking, const MyString &VMNetworkType, bool VMHardwareVT, bool vm_need_fsdomain);

@@ -427,12 +427,12 @@ void CollectorDaemon::Init()
 		// restrictions to their contents (such as the user must be authenticated, not
 		// unmapped, and must match the Owner attribute).
 	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
-		receive_update,"receive_update", DAEMON, D_COMMAND, false,
+		receive_update,"receive_update", DAEMON, false,
 		0, &allow_perms);
 		//
 	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
 		schedd_token_request, "schedd_token_request", DAEMON,
-		D_COMMAND, true, 0, &allow_perms);
+		true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
 
@@ -1435,19 +1435,19 @@ int CollectorDaemon::receive_update_expect_ack(int command,
         
     }
 
-    /* let the off-line plug-in have at it */
-	if(record)
-    offline_plugin_.update ( command, *record->m_publicAd );
+	if(record) {
+		offline_plugin_.update ( command, *record->m_publicAd );
 
 #if defined(UNIX) && !defined(DARWIN)
-	// JEF TODO Should we use the private ad here?
-    CollectorPluginManager::Update ( command, *record->m_publicAd );
+		// JEF TODO Should we use the private ad here?
+		CollectorPluginManager::Update ( command, *record->m_publicAd );
 #endif
 
-	if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
-		forward_classad_to_view_collector(command,
+		if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
+			forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  record->m_pvtAd);
+		}
 	}
 
 	// let daemon core clean up the socket
@@ -2127,15 +2127,18 @@ void CollectorDaemon::sendCollectorAd()
 		dprintf( D_ALWAYS | D_FAILURE, "Failed to add my own ad to myself (%d).\n", error );
 		delete selfAd;
 	}
-	collector.identifySelfAd(self_rec);
 
-	// inserting the selfAd into the collector hashtable will stomp the update counters
-	// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
-	// and re-publish the global collector stats.
-	//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
-	selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
-	selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
-	collectorStats.publishGlobal(selfAd, NULL);
+	if (self_rec) {
+		collector.identifySelfAd(self_rec);
+
+		// inserting the selfAd into the collector hashtable will stomp the update counters
+		// so clear out the per-daemon Updates* stats to avoid confusion with the global stats
+		// and re-publish the global collector stats.
+		//PRAGMA_REMIND("tj: remove this code once the collector generates it's ad when queried.")
+		selfAd->Delete(ATTR_UPDATESTATS_HISTORY);
+		selfAd->Delete(ATTR_UPDATESTATS_SEQUENCED);
+		collectorStats.publishGlobal(selfAd, NULL);
+	}
 
 	// Send the ad
 	int num_updated = collectorsToUpdate->sendUpdates(UPDATE_COLLECTOR_AD, ad, NULL, false);
@@ -2209,7 +2212,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 				type.c_str(), getCommandString(cmd));
 	}
 
-	ClassAd *pvtAd = NULL;
+	ClassAd *pvtAd = nullptr;
 	if (cmd == UPDATE_STARTD_AD) {
 		// Forward the startd private ad as well.  This allows the
 		// target collector to act as an aggregator for multiple collectors
@@ -2218,12 +2221,11 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
 		AdNameHashKey hk;
 		ASSERT( makeStartdAdHashKey (hk, theAd) );
 		CollectorRecord* pvt_rec = collector.lookup(STARTD_PVT_AD,hk);
+		pvtAd = pvt_rec ? pvt_rec->m_pvtAd : nullptr;
 		if (pvt_rec && !forwardClaimedPrivateAds){
 			std::string state;
 			if (theAd->LookupString(ATTR_STATE, state) && state == "Claimed") {
-				pvtAd = NULL;
-			} else {
-				pvtAd = pvt_rec->m_pvtAd;
+				pvtAd = nullptr;
 			}
 		}
 	}

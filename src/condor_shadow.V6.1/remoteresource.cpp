@@ -181,49 +181,6 @@ RemoteResource::activateClaim( int starterVersion )
 		return false;
 	}
 
-	// as part of the initial hack at glexec integration, we need
-	// to provide the startd with our user proxy before it
-	// executes the starter (since glexec takes the proxy as input
-	// in order to determine the UID and GID to use).
-	char* proxy;
-	if( param_boolean( "GLEXEC_STARTER", false ) &&
-	    (jobAd->LookupString( ATTR_X509_USER_PROXY, &proxy ) == 1) ) {
-		dprintf( D_FULLDEBUG,
-	                 "trying early delegation (for glexec) of proxy: %s\n", proxy );
-		time_t expiration_time = GetDesiredDelegatedJobCredentialExpiration(jobAd);
-		int dReply = dc_startd->delegateX509Proxy( proxy, expiration_time, NULL );
-		if( dReply == OK ) {
-			// early delegation was successful. this means the startd
-			// is going to launch the starter using glexec, so we need
-			// to add the user to our ALLOW_DAEMON list. for now, we'll
-			// just pull the user name from the job ad. if we wanted to be
-			// airtight here, we'd run the proxy subject through our mapfile,
-			// since its possible it could result in a different user
-
-			// TODO: we don't actually need to do the above, since we
-			// already open up ALLOW_DAEMON to */<execute_host> (!?!?)
-			// in initStartdInfo(). that needs to be fixed, in which case
-			// the previous comment will apply and we'll need to open
-			// ALLOW_DAEMON here
-
-			dprintf( D_FULLDEBUG,
-			         "successfully delegated user proxy to the startd\n" );
-		}
-		else if( dReply == NOT_OK ) {
-			dprintf( D_FULLDEBUG,
-			         "proxy delegation waived by startd\n" );
-		}
-		else {
-			// delegation did not work. we log a message and just keep
-			// going since it may just be that the startd is old and
-			// doesn't know the DELETGATE_GSI_CRED_STARTD command
-			dprintf( D_FULLDEBUG,
-			         "error delegating credential to startd: %s\n    ",
-			         dc_startd->error() );
-		}
-		free(proxy);
-	}
-
 		// we'll eventually return out of this loop...
 	while( 1 ) {
 		reply = dc_startd->activateClaim( jobAd, starterVersion,
@@ -1184,10 +1141,13 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_SYS_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_stime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 		}
-		
-		remote_rusage.ru_stime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_SYS_CPU, real_value);
 	}
 
 	if( update_ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU, real_value) ) {
@@ -1201,10 +1161,14 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 			double prevTotalUsage = 0.0;
 			jobAd->LookupFloat(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage);
 			jobAd->Assign(ATTR_JOB_CUMULATIVE_REMOTE_USER_CPU, prevTotalUsage + (real_value - prevUsage));
+
+			// Also, do not reset remote cpu unless there was an increase, to guard
+			// against the case starter sending a zero value (perhaps right when the
+			// job terminates).
+			remote_rusage.ru_utime.tv_sec = (time_t)real_value;
+			jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
+
 		}
-		
-		remote_rusage.ru_utime.tv_sec = (time_t) real_value;
-		jobAd->Assign(ATTR_JOB_REMOTE_USER_CPU, real_value);
 	}
 
 	if( update_ad->LookupInteger(ATTR_IMAGE_SIZE, long_value) ) {
@@ -1864,10 +1828,6 @@ RemoteResource::beginExecution( void )
 	//
 	time_t now = time(NULL);
 	activation.StartExecutionTime = now;
-	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
-    // Where would this attribute get rotated?  Here?
-	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
-	shadow->updateJobInQueue(U_STATUS);
 
 	if( began_execution ) {
 		return;
@@ -1878,6 +1838,14 @@ RemoteResource::beginExecution( void )
 
 	// add the execution start time into the job ad.
 	jobAd->Assign( ATTR_JOB_CURRENT_START_EXECUTING_DATE, now);
+
+	// add ActivationSetupDuration into the job ad.
+	// note: we do this just once after the the first exectution, we do not
+	// want to update after every exectuion (if the job checkpoints).
+	time_t ActivationSetUpDuration = activation.StartExecutionTime - activation.StartTime;
+    // Where would this attribute get rotated?  Here?
+	jobAd->InsertAttr( ATTR_JOB_ACTIVATION_SETUP_DURATION, ActivationSetUpDuration );
+	shadow->updateJobInQueue(U_STATUS);
 
 	startCheckingProxy();
 
@@ -1905,7 +1873,7 @@ RemoteResource::supportsReconnect( void )
 		return false;
 	}
 	int tmp;
-	if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, tmp) ) {
+	if( ! jobAd->LookupInteger(ATTR_JOB_LEASE_DURATION, tmp) || tmp <= 0 ) {
 		return false;
 	}
 

@@ -2432,7 +2432,7 @@ ImpersonationTokenContinuation::startCommandCallback(bool success, Sock *sock, C
 	auto rc = daemonCore->Register_Socket(sock, "Impersonation Token Request",
 		(SocketHandlercpp)&ImpersonationTokenContinuation::finish,
 		"Finish impersonation token request",
-		callback_ptr.get(), ALLOW, HANDLE_READ);
+		callback_ptr.get(), HANDLE_READ);
 	if (rc < 0) {
 		errstack->push("DCSCHEDD", 4, "Failed to register callback for schedd response");
 		callback_data.m_callback(false, "", *errstack, callback_data.m_misc_data);

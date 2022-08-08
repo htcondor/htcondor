@@ -23,6 +23,7 @@
 #include "string_list.h"
 #include "gcegahp_common.h"
 #include "gceCommands.h"
+#include "shortfile.h"
 
 #include "condor_base64.h"
 #include <sstream>
@@ -40,60 +41,6 @@ using std::vector;
 const char * nullStringIfEmpty( const string & str ) {
 	if( str.empty() ) { return NULLSTRING; }
 	else { return str.c_str(); }
-}
-
-//
-// Utility function.
-//
-bool writeShortFile( const string & fileName, const string & contents ) {
-	int fd = safe_open_wrapper_follow( fileName.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0600 );
-
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "Failed to open file '%s' for writing: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-		return false;
-	}
-
-	unsigned long written = full_write( fd, contents.c_str(), contents.length() );
-	close( fd );
-	if( written != contents.length() ) {
-		dprintf( D_ALWAYS, "Failed to completely write file '%s'; wanted to write %lu but only put %lu.\n",
-				 fileName.c_str(), (unsigned long)contents.length(), written );
-		return false;
-	}
-
-	return true;
-}
-
-//
-// Utility function; inefficient.
-// FIXME: GT #3924.  Also, broken for binary data with embedded NULs.
-//
-bool readShortFile( const string & fileName, string & contents ) {
-	int fd = safe_open_wrapper_follow( fileName.c_str(), O_RDONLY, 0600 );
-
-	if( fd < 0 ) {
-		dprintf( D_ALWAYS, "Failed to open file '%s' for reading: '%s' (%d).\n", fileName.c_str(), strerror( errno ), errno );
-		return false;
-	}
-
-	StatWrapper sw( fd );
-	unsigned long fileSize = sw.GetBuf()->st_size;
-
-	char * rawBuffer = (char *)malloc( fileSize + 1 );
-	assert( rawBuffer != NULL );
-	unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
-	close( fd );
-	if( totalRead != fileSize ) {
-		dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
-				 fileName.c_str(), fileSize, totalRead );
-		free( rawBuffer );
-		return false;
-	}
-	rawBuffer[ fileSize ] = '\0';
-	contents = rawBuffer;
-	free( rawBuffer );
-
-	return true;
 }
 
 // Utility function for parsing the JSON response returned by the server.
@@ -1183,7 +1130,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[11], file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1196,7 +1143,7 @@ bool GceInstanceInsert::workerFunction(char **argv, int argc, string &result_str
 	}
 	string json_file_contents;
 	if ( strcasecmp( argv[13], NULLSTRING ) ) {
-		if ( !readShortFile( argv[13], json_file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}
@@ -1713,7 +1660,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 	if ( strcasecmp( argv[11], NULLSTRING ) ) {
 		string file_contents;
-		if ( !readShortFile( argv[11], file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[11], file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open metadata file" );
 			return true;
 		}
@@ -1726,7 +1673,7 @@ bool GceGroupInsert::workerFunction(char **argv, int argc, string &result_string
 	}
 	string json_file_contents;
 	if ( strcasecmp( argv[13], NULLSTRING ) ) {
-		if ( !readShortFile( argv[13], json_file_contents ) ) {
+		if ( !htcondor::readShortFile( argv[13], json_file_contents ) ) {
 			result_string = create_failure_result( requestID, "Failed to open additional JSON file" );
 			return true;
 		}

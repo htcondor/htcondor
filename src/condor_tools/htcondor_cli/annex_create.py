@@ -33,7 +33,7 @@ TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 # do that for now and just tell the user to size their requests with the
 # units appropriate to the queue.
 #
-MACHINE_TABLE = {
+SYSTEM_TABLE = {
 
     # The key is currently both the value of the command-line option
     # and part of the name of some files in condor_scripts/annex.  This
@@ -117,6 +117,43 @@ MACHINE_TABLE = {
                 "ram_per_node":         384,
 
                 "max_jobs_in_queue":    24,
+            },
+        },
+    },
+
+    "anvil": {
+        "pretty_name":      "Anvil",
+        "gsissh_name":      "anvil",
+        "default_queue":    "wholenode",
+
+        # GPUs are completed untested, see above.
+        "queues": {
+            "wholenode": {
+                "max_nodes_per_job":    16,
+                "max_duration":         96 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         (25600 // 1024),
+
+                "max_jobs_in_queue":    128,
+            },
+            "wide": {
+                "max_nodes_per_job":    56,
+                "max_duration":         12 * 60 * 60,
+                "allocation_type":      "node",
+                "cores_per_node":       128,
+                "ram_per_node":         (25600 // 1024),
+
+                "max_jobs_in_queue":    10,
+            },
+            "shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         96 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       128,
+                "ram_per_node":         (25600 // 1024),
+
+                "max_jobs_in_queue":    999999,  # unlimited
             },
         },
     },
@@ -312,16 +349,16 @@ def populate_remote_temporary_directory(
     ssh_connection_sharing,
     ssh_target,
     ssh_indirect_command,
-    target,
+    system,
     local_script_dir,
     remote_script_dir,
     token_file,
     password_file,
 ):
     files = [
-        f"-C {local_script_dir} {target}.sh",
-        f"-C {local_script_dir} {target}.pilot",
-        f"-C {local_script_dir} {target}.multi-pilot",
+        f"-C {local_script_dir} {system}.sh",
+        f"-C {local_script_dir} {system}.pilot",
+        f"-C {local_script_dir} {system}.multi-pilot",
         f"-C {str(token_file.parent)} {token_file.name}",
         f"-C {str(password_file.parent)} {password_file.name}",
     ]
@@ -390,14 +427,24 @@ def extract_full_lines(buffer):
     return buffer[last_newline + 1 :], lines
 
 
+previous_line_was_update = False
 def process_line(line, update_function):
+    global previous_line_was_update
+
     control = "=-.-= "
     if line.startswith(control):
         command = line[len(control) :]
         attribute, value = command.split(" ")
         update_function(attribute, value)
+        previous_line_was_update = False
+    elif line.startswith('\r'):
+        print("\r   ", line[1:], end='')
+        previous_line_was_update = True
     else:
+        if previous_line_was_update:
+            print('')
         print("   ", line)
+        previous_line_was_update = False
 
 
 def invoke_pilot_script(
@@ -405,7 +452,7 @@ def invoke_pilot_script(
     ssh_target,
     ssh_indirect_command,
     remote_script_dir,
-    target,
+    system,
     annex_name,
     queue_name,
     collector,
@@ -425,16 +472,16 @@ def invoke_pilot_script(
         *ssh_connection_sharing,
         ssh_target,
         *ssh_indirect_command,
-        str(remote_script_dir / f"{target}.sh"),
+        str(remote_script_dir / f"{system}.sh"),
         annex_name,
         queue_name,
         collector,
         str(remote_script_dir / token_file.name),
         str(lifetime),
-        str(remote_script_dir / f"{target}.pilot"),
+        str(remote_script_dir / f"{system}.pilot"),
         owners,
         str(nodes),
-        str(remote_script_dir / f"{target}.multi-pilot"),
+        str(remote_script_dir / f"{system}.multi-pilot"),
         str(allocation),
         request_id,
         str(remote_script_dir / password_file.name),
@@ -580,7 +627,7 @@ def annex_inner_func(
     nodes,
     lifetime,
     allocation,
-    queue_at_machine,
+    queue_at_system,
     owners,
     collector,
     token_file,
@@ -590,24 +637,24 @@ def annex_inner_func(
     cpus,
     mem_mb,
 ):
-    if '@' in queue_at_machine:
-        (queue_name, target) = queue_at_machine.split('@', 1)
+    if '@' in queue_at_system:
+        (queue_name, system) = queue_at_system.split('@', 1)
     else:
-        error_string = "Target must have the form queue@machine."
+        error_string = "Argument must have the form queue@system."
 
-        target = queue_at_machine.casefold()
-        if target not in MACHINE_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_machine}' is not a known machine."
+        system = queue_at_system.casefold()
+        if system not in SYSTEM_TABLE:
+            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a known system."
         else:
-            default_queue = MACHINE_TABLE[target]['default_queue']
-            queue_list = "\n    ".join([q for q in MACHINE_TABLE[target]['queues']])
+            default_queue = SYSTEM_TABLE[system]['default_queue']
+            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system]['queues']])
             error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
 
         raise ValueError(error_string)
 
     #
     # We'll need to validate the requested nodes (or CPUs and memory)
-    # against the requested queue[-machine pair].  We also need to
+    # against the requested queue[-system pair].  We also need to
     # check the lifetime (and idle time, once we support it).  Once
     # all of that's been validated, we should print something like:
     #
@@ -623,9 +670,9 @@ def annex_inner_func(
     # so even if it's wrong, it will at least consistently so.
     username = getpass.getuser()
 
-    target = target.casefold()
-    if target not in MACHINE_TABLE:
-        raise ValueError(f"{target} is not a known machine.")
+    system = system.casefold()
+    if system not in SYSTEM_TABLE:
+        raise ValueError(f"{system} is not a known system.")
 
     # Location of the local universe script files
     local_script_dir = (
@@ -680,7 +727,7 @@ def annex_inner_func(
         "-o",
         f'ControlPath="{control_path}/master-%C"',
     ]
-    ssh_indirect_command = ["gsissh", MACHINE_TABLE[target]["gsissh_name"]]
+    ssh_indirect_command = ["gsissh", SYSTEM_TABLE[system]["gsissh_name"]]
 
     ##
     ## While we're requiring that jobs are submitted before creating the
@@ -713,7 +760,38 @@ def annex_inner_func(
         logger.debug(f"Got sif files: {sif_files}")
     else:
         logger.debug("No sif files found, continuing...")
-    # The .sif files will be transferred to the target machine later.
+    # The .sif files will be transferred to the target system later.
+
+    #
+    # Print out what's going to be done, along with how to change the
+    # values that came from defaults rather than the command-line.
+    #
+    # FIXME: add --idle, once that's implemented.
+    #
+    resources = ""
+    if cpus is not None:
+        resources = f"{cpus} CPUs "
+        if mem_mb is not None:
+            resources = f"{resources}and "
+    if mem_mb is not None:
+        resources = f"{resources}{mem_mb}MB of RAM "
+    if resources is "":
+        resources = f"{nodes} nodes "
+    resources = f"{resources}for {lifetime/(60*60):.2f} hours"
+
+    as_project = " (as the default project) "
+    if allocation is not None:
+        as_project = f" (as the project '{allocation}') "
+
+    logger.info(
+        f"This will{as_project}request {resources} for an annex named '{annex_name}'"
+        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'."
+        f"  To change the project, use --project."
+        f"  To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
+        f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
+        f"\n"
+    )
+
 
     # Distinguish our text from SSH's text.
     ANSI_BRIGHT = "\033[1m"
@@ -723,8 +801,8 @@ def annex_inner_func(
     ## The user will do the 2FA/SSO dance here.
     ##
     logger.info(
-        f"{ANSI_BRIGHT}This command will access "
-        f"{MACHINE_TABLE[target]['pretty_name']} via XSEDE.  To proceed, "
+        f"{ANSI_BRIGHT}This command will access the system named "
+        f"'{SYSTEM_TABLE[system]['pretty_name']}' via XSEDE.  To proceed, "
         f"enter your XSEDE user name and password at the prompt "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
@@ -738,7 +816,7 @@ def annex_inner_func(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to {MACHINE_TABLE[target]['pretty_name']}, aborting ({rc})."
+            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system]['pretty_name']}', aborting ({rc})."
         )
     logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
@@ -773,20 +851,25 @@ def annex_inner_func(
     )
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
 
+    #
+    # This operation can fail or take a while, but (HTCONDOR-1058) should
+    # not need to display two lines.
+    #
+    logging.StreamHandler.terminator = " ";
     logger.info(f"Populating annex temporary directory...")
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
         ssh_target,
         ssh_indirect_command,
-        target,
+        system,
         local_script_dir,
         remote_script_dir,
         token_file,
         password_file,
     )
     if sif_files:
-        logger.debug("... transferring container images ...")
+        logger.debug("(transferring container images)")
         transfer_sif_files(
             logger,
             ssh_connection_sharing,
@@ -795,7 +878,8 @@ def annex_inner_func(
             remote_script_dir,
             sif_files,
         )
-    logger.info("... populated.")
+    logging.StreamHandler.terminator = "\n";
+    logger.info("done.")
 
     # Submit local universe job.
     logger.debug("Submitting state-tracking job...")
@@ -807,7 +891,7 @@ def annex_inner_func(
     #
     # The magic in this job description is thus:
     #   * hpc_annex_start_time is undefined until the job runs and finds
-    #     a machine ad with a matching hpc_annex_request_id.
+    #     a startd ad with a matching hpc_annex_request_id.
     #   * The job will go idle (because it can't start) at that poing,
     #     based on its Requirements.
     #   * Before then, the job's on_exit_remove must be false -- not
@@ -818,7 +902,7 @@ def annex_inner_func(
         {
             "universe": "local",
             # hpc_annex_start time is set by the job script when it finds
-            # a machine with a matching request ID.  At that point, we can
+            # a startd ad with a matching request ID.  At that point, we can
             # stop runnig this script, but we don't remove it to simplify
             # the UI/UX code; instead, we wait until an hour past the end
             # of the request's lifetime to trigger a peridic remove.
@@ -923,13 +1007,13 @@ def annex_inner_func(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on {MACHINE_TABLE[target]['pretty_name']}...\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_target,
         ssh_indirect_command,
         remote_script_dir,
-        target,
+        system,
         annex_name,
         queue_name,
         collector,
@@ -947,7 +1031,7 @@ def annex_inner_func(
 
     if rc == 0:
         logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for {MACHINE_TABLE[target]['pretty_name']} to establish the requested annex.")
+        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
         error = f"Failed to start annex, SLURM returned code {rc}"

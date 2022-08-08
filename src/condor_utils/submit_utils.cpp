@@ -217,6 +217,9 @@ bool SubmitHash::AssignJobVal(const char * attr, long long val) { return job->As
 namespace condor_params {
 	typedef struct string_value { char * psz; int flags; } string_value;
 	struct key_value_pair { const char * key; const string_value * def; };
+	struct key_table_pair { const char * key; const key_value_pair * aTable; int cElms; }; // metaknob table
+	typedef struct kvp_value { const char * key; int flags; const key_value_pair * aTable; int cElms; } kvp_value;
+	typedef struct ktp_value { const char * label; int flags; const key_table_pair * aTables; int cTables; } ktp_value;
 }
 
 // values for submit hashtable defaults, these are declared as char rather than as const char to make g++ on fedora shut up.
@@ -266,36 +269,53 @@ static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
 static char rec[] = "$(RequestCPUs)";
 static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
 
+// placeholder for admin defined submit templates
+static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
+	{ "$", &UnliveSubmitFileMacroDef }, // placeholder because the table is not allowed to be empty in all compilers
+};
+
 static char StrictFalseMetaKnob[] = 
 	"SubmitWarnEmptyMatches=false\n"
 	"SubmitFailEmptyMatches=false\n"
 	"SubmitWarnDuplicateMatches=false\n"
 	"SubmitFailEmptyFields=false\n"
-	"SubmitWarnEmptyFields=false\n";
+	"SubmitWarnEmptyFields=false";
 static char StrictTrueMetaKnob[] = 
 	"SubmitWarnEmptyMatches=true\n"
 	"SubmitFailEmptyMatches=true\n"
 	"SubmitWarnDuplicateMatches=true\n"
 	"SubmitFailEmptyFields=false\n"
-	"SubmitWarnEmptyFields=true\n";
+	"SubmitWarnEmptyFields=true";
 static char StrictHarshMetaKnob[] = 
 	"SubmitWarnEmptyMatches=true\n"
 	"SubmitFailEmptyMatches=true\n"
 	"SubmitWarnDuplicateMatches=true\n"
 	"SubmitFailEmptyFields=true\n"
-	"SubmitWarnEmptyFields=true\n";
+	"SubmitWarnEmptyFields=true";
 static condor_params::string_value StrictFalseMetaDef = { StrictFalseMetaKnob, 0 };
 static condor_params::string_value StrictTrueMetaDef = { StrictTrueMetaKnob, 0 };
 static condor_params::string_value StrictHarshMetaDef = { StrictHarshMetaKnob, 0 };
+
+static MACRO_DEF_ITEM SubmitStrictTemplates[] = {
+	{ "FALSE", &StrictFalseMetaDef },
+	{ "HARSH", &StrictHarshMetaDef },
+	{ "TRUE", &StrictTrueMetaDef },
+};
+
+static condor_params::key_table_pair SubmitTemplateTables[] = {
+	{ "STRICT", SubmitStrictTemplates, COUNTOF(SubmitStrictTemplates) },
+	{ "TEMPLATE", SubmitOptTemplates, COUNTOF(SubmitOptTemplates) },
+};
+static condor_params::ktp_value SubmitTemplateTablesDef = { "$", PARAM_TYPE_KTP_TABLE, SubmitTemplateTables, COUNTOF(SubmitTemplateTables) };
+
 
 // Table of submit macro 'defaults'. This provides a convenient way to inject things into the submit
 // hashtable without actually running a bunch of code to stuff the table.
 // Because they are defaults they will be ignored when scanning for unreferenced macros.
 // NOTE: TABLE MUST BE SORTED BY THE FIRST FIELD!!
 static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
-	{ "$STRICT.FALSE", &StrictFalseMetaDef },
-	{ "$STRICT.HARSH", &StrictHarshMetaDef },
-	{ "$STRICT.TRUE", &StrictTrueMetaDef },
+	// private metaknob tables are hung off the Defaults table under the key "$"
+	{ "$",       (const condor_params::string_value *)&SubmitTemplateTablesDef },
 	{ "ARCH",      &ArchMacroDef },
 	{ "Cluster",   &UnliveClusterMacroDef },
 	{ "ClusterId", &UnliveClusterMacroDef },
@@ -361,7 +381,7 @@ static bool check_expr_and_wrap_for_op(std::string &expr_str, classad::Operation
 
 condor_params::string_value * allocate_live_default_string(MACRO_SET &set, const condor_params::string_value & Def, int cch)
 {
-	condor_params::string_value * NewDef = reinterpret_cast<condor_params::string_value*>(set.apool.consume(sizeof(condor_params::string_value), sizeof(void*)));
+	condor_params::string_value * NewDef = set.apool.consume<condor_params::string_value>(1, sizeof(void*));
 	NewDef->flags = Def.flags;
 	if (cch > 0) {
 		NewDef->psz = set.apool.consume(cch, sizeof(void*));
@@ -387,9 +407,9 @@ void SubmitHash::setup_macro_defaults()
 {
 	// make an instance of the defaults table that is private to this function. 
 	// we do this because of the 'live' keys in the 
-	struct condor_params::key_value_pair* pdi = reinterpret_cast<struct condor_params::key_value_pair*> (SubmitMacroSet.apool.consume(sizeof(SubmitMacroDefaults), sizeof(void*)));
-	memcpy((void*)pdi, SubmitMacroDefaults, sizeof(SubmitMacroDefaults));
-	SubmitMacroSet.defaults = reinterpret_cast<MACRO_DEFAULTS*>(SubmitMacroSet.apool.consume(sizeof(MACRO_DEFAULTS), sizeof(void*)));
+	struct condor_params::key_value_pair* pdi = SubmitMacroSet.apool.consume<struct condor_params::key_value_pair>(COUNTOF(SubmitMacroDefaults), sizeof(void*));
+	memcpy(pdi, SubmitMacroDefaults, sizeof(SubmitMacroDefaults));
+	SubmitMacroSet.defaults = SubmitMacroSet.apool.consume<MACRO_DEFAULTS>(1, sizeof(void*));
 	SubmitMacroSet.defaults->size = COUNTOF(SubmitMacroDefaults);
 	SubmitMacroSet.defaults->table = pdi;
 	SubmitMacroSet.defaults->metat = NULL;
@@ -421,7 +441,7 @@ void SubmitHash::insert_submit_filename(const char * filename, MACRO_SOURCE & so
 	condor_params::key_value_pair *pdi = const_cast<condor_params::key_value_pair *>(SubmitMacroSet.defaults->table);
 	for (int ii = 0; ii < SubmitMacroSet.defaults->size; ++ii) {
 		if (pdi[ii].def == &UnliveSubmitFileMacroDef) { 
-			condor_params::string_value * NewDef = reinterpret_cast<condor_params::string_value*>(SubmitMacroSet.apool.consume(sizeof(condor_params::string_value), sizeof(void*)));
+			condor_params::string_value * NewDef = SubmitMacroSet.apool.consume<condor_params::string_value>(1, sizeof(void*));
 			NewDef->flags = UnliveSubmitFileMacroDef.flags;
 			NewDef->psz = const_cast<char*>(macro_source_filename(source, SubmitMacroSet));
 			pdi[ii].def = NewDef;
@@ -434,7 +454,7 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 	condor_params::string_value * sv;
 
 	// allocate space for yyyy-mm-dd string for the $(SUBMIT_TIME) $(YEAR) $(MONTH) and $(DAY) default macros
-	char * times = SubmitMacroSet.apool.consume(24, 4);
+	char * times = SubmitMacroSet.apool.consume(24, sizeof(void*));
 	strftime(times, 12, "%Y_%m_%d", localtime(&stime));
 	times[4] = times[7] = 0;
 
@@ -480,9 +500,10 @@ SetGridParams >> SetRequestResources
 */
 
 SubmitHash::SubmitHash()
-	: clusterAd(NULL)
-	, procAd(NULL)
-	, job(NULL)
+	: clusterAd(nullptr)
+	, procAd(nullptr)
+	, jobsetAd(nullptr)
+	, job(nullptr)
 	, submit_time(0)
 	, abort_code(0)
 	, abort_macro_name(NULL)
@@ -528,12 +549,13 @@ SubmitHash::~SubmitHash()
 	if (SubmitMacroSet.errors) delete SubmitMacroSet.errors;
 	SubmitMacroSet.errors = NULL;
 
-	delete job; job = NULL;
-	delete procAd; procAd = NULL;
+	delete job; job = nullptr;
+	delete procAd; procAd = nullptr;
+	delete jobsetAd; jobsetAd = nullptr;
 
 	// detach but do not delete the cluster ad
 	//PRAGMA_REMIND("tj: should we copy/delete the cluster ad?")
-	clusterAd = NULL;
+	clusterAd = nullptr;
 }
 
 void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PRINTF_FORMAT(3,4);
@@ -1074,6 +1096,39 @@ void SubmitHash::set_submit_param_used( const char *name )
 	increment_macro_use_count(name, SubmitMacroSet);
 }
 
+int SubmitHash::AssignJOBSETExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
+{
+	ExprTree *tree = NULL;
+	if (ParseClassAdRvalExpr(expr, tree)!=0 || ! tree) {
+		push_error(stderr, "Parse error in JOBSET expression: \n\t%s = %s\n\t", attr, expr);
+		if ( ! SubmitMacroSet.errors) {
+			fprintf(stderr,"Error in %s\n", source_label ? source_label : "submit file");
+		}
+		ABORT_AND_RETURN( 1 );
+	}
+
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Insert (attr, tree)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = %s\n", attr, expr);
+		ABORT_AND_RETURN( 1 );
+	}
+
+	return 0;
+}
+
+bool SubmitHash::AssignJOBSETString (const char * attr, const char *sval)
+{
+	if ( ! jobsetAd) { jobsetAd = new ClassAd(); }
+
+	if ( ! jobsetAd->Assign (attr, sval)) {
+		push_error(stderr, "Unable to insert JOBSET expression: %s = \"%s\"\n", attr, sval);
+		abort_code = 1;
+		return false;
+	}
+
+	return true;
+}
 
 int SubmitHash::AssignJobExpr (const char * attr, const char *expr, const char * source_label /*=NULL*/)
 {
@@ -1110,8 +1165,11 @@ bool SubmitHash::AssignJobString(const char * attr, const char * val)
 
 static void sort_prunable_keywords();
 
+static int aligned_size(size_t cb, size_t align) { return (cb + align-1) & ~(align-1); }
+
 const char * init_submit_default_macros()
 {
+	//PRAGMA_REMIND("tj: fix to reconfig properly")
 	static bool initialized = false;
 	if (initialized)
 		return NULL;
@@ -1121,7 +1179,73 @@ const char * init_submit_default_macros()
 
 	const char * ret = NULL; // null return is success.
 
-	//PRAGMA_REMIND("tj: fix to reconfig properly")
+	// load submit templates into a condor_params::key_value_pair table
+	// and attach that table into the global static submit defaults
+	classad::References tpl_names;
+	if (param_and_insert_attrs("SUBMIT_TEMPLATE_NAMES", tpl_names)) {
+		tpl_names.erase("NAMES");
+
+		// build a collection of pointers to the template data sorted by key
+		// and also calculate how much space we need to store all of
+		// this as a condor_params table of param strings
+		size_t size = 0;
+		std::string knob;
+		std::map<std::string, std::string, classad::CaseIgnLTStr> templates;
+		for (auto name : tpl_names) {
+			knob = "SUBMIT_TEMPLATE_"; knob += name;
+			const char * raw_tpl = param_unexpanded(knob.c_str());
+			if (raw_tpl) {
+				std::string & tpl = templates[name];
+				tpl.assign(raw_tpl);
+				expand_defined_config_macros(tpl);
+				size += aligned_size(sizeof(condor_params::key_value_pair), sizeof(void*));
+				size += aligned_size(sizeof(condor_params::string_value), sizeof(void*));
+				size += aligned_size(name.size() + 1 + tpl.size() + 1, sizeof(void*));
+			}
+		}
+
+		// now allocate space for the runtime SubmitOptTemplates table and all of the strings that it holds.
+		// we use a temporary allocation pool to manage the memory as we build up the data structures
+		ALLOCATION_POOL ap;
+		ap.reserve(size);
+
+		// allocate the main table first. This will be the thing that gets freed when we want to
+		// throw the option templates away on reconfig (if we ever support that)
+		condor_params::key_value_pair* aTable = ap.consume<condor_params::key_value_pair>(templates.size());
+
+		// allocate space for the string values, we do this as a single hunk because on 64-bit platforms, we
+		// need the start of each string_value to be pointer aligned, the alignment member of the allocation pool consume method
+		// does not currently align the start of the memory, only the size.
+		size_t string_size = aligned_size(sizeof(condor_params::string_value), sizeof(void*));
+		condor_params::string_value* defs = reinterpret_cast<condor_params::string_value*>(ap.consume(templates.size()*string_size, sizeof(void*)));
+
+		// now copy the templates and fill in the data structures that map to them
+		int ix = 0;
+		for (auto it : templates) {
+			aTable[ix].key = ap.insert(it.first.c_str());
+			defs[ix].psz = const_cast<char*>(ap.insert(it.second.c_str()));
+			defs[ix].flags = PARAM_TYPE_STRING;
+			aTable[ix].def = &defs[ix];
+			++ix;
+		}
+
+		// hook the dynamic table into the static defaults for submit utils
+		// TODO: handle reconfig, freeing the old aTable if it is not the compile time default table
+		for (int ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
+			if (YourStringNoCase("TEMPLATE") == SubmitTemplateTables[ii].key) {
+				SubmitTemplateTables[ii].aTable = aTable;
+				SubmitTemplateTables[ii].cElms = ix;
+				break;
+			}
+		}
+
+		// detach the allocation of the option templates from the temporary allocation pool
+		// since we just attached it to the submit hash defaults
+		char * pb = nullptr;
+		ap.collapse(&pb);
+		ASSERT(pb == (char*)aTable);
+	}
+
 
 	ArchMacroDef.psz = param( "ARCH" );
 	if ( ! ArchMacroDef.psz) {
@@ -2431,9 +2555,7 @@ int SubmitHash::SetGSICredentials()
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
 
 	YourStringNoCase gridType(JobGridType.c_str());
-	if (JobUniverse == CONDOR_UNIVERSE_GRID &&
-		(gridType == "arc" ||
-		 gridType == "nordugrid" ) )
+	if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "nordugrid")
 	{
 		use_proxy = true;
 	}
@@ -2842,6 +2964,63 @@ int SubmitHash::SetForcedAttributes()
 	} else {
 		AssignJobVal(ATTR_PROC_ID, jid.proc);
 	}
+	return 0;
+}
+
+int SubmitHash::ProcessJobsetAttributes()
+{
+	RETURN_IF_ABORT();
+	// jobset attributes must be common for all the jobs in a cluster
+	// so when processing procid=0 anything is ok.  but when processing proc > 0 we have to make sure that the values are consistent
+	if (jid.proc <= 0) {
+		HASHITER it = hash_iter_begin(SubmitMacroSet);
+		for( ; ! hash_iter_done(it); hash_iter_next(it)) {
+			const char *name = hash_iter_key(it);
+			if ( ! starts_with_ignore_case(name, "JOBSET.")) continue;
+
+			//const char *raw_value = hash_iter_value(it);
+			auto_free_ptr value(submit_param(name));
+
+			// For now, treat JOBSET.Name = x as a synonym for JOBSET.JobSetName = "x"
+			name += sizeof("JOBSET.")-1;
+			if (YourStringNoCase("name") == name) {
+				if (value) {
+					AssignJOBSETString(ATTR_JOB_SET_NAME, trim_and_strip_quotes_in_place(value.ptr()));
+				}
+			} else if (value) {
+				AssignJOBSETExpr(name, value);
+			}
+			RETURN_IF_ABORT();
+		}
+		hash_iter_delete(&it);
+
+		std::string name;
+		if (job->LookupString(ATTR_JOB_SET_NAME, name)) {
+			AssignJOBSETString(ATTR_JOB_SET_NAME, name.c_str());
+		} else if (jobsetAd) {
+			if ( ! jobsetAd->LookupString(ATTR_JOB_SET_NAME, name)) {
+				// use the clusterid as the jobset name
+				formatstr(name, "%d", jid.cluster);
+				jobsetAd->Assign(ATTR_JOB_SET_NAME, name);
+			}
+			job->Assign(ATTR_JOB_SET_NAME, name.c_str());
+		}
+
+	} else {
+		if (procAd->GetChainedParentAd() && procAd->LookupIgnoreChain(ATTR_JOB_SET_NAME)) {
+			// We cannot handle the case where multiple jobs in a cluster are in different JOBSETs
+			// so error out if that is attempted
+			classad::ClassAd * clusterAd = procAd->GetChainedParentAd();
+			std::string name1, name2;
+			clusterAd->LookupString(ATTR_JOB_SET_NAME, name1);
+			procAd->LookupString(ATTR_JOB_SET_NAME, name2);
+			push_error( stderr, "(%d.%d:%s != %d.%d:%s) All jobs from a single submission must be in the same JOBSET\n",
+				jid.cluster,0, name1.c_str(),
+				jid.cluster,jid.proc, name2.c_str());
+			ABORT_AND_RETURN( 1 );
+		}
+	}
+
 	return 0;
 }
 
@@ -4854,6 +5033,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
 
@@ -4990,6 +5170,8 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 
 	{SUBMIT_KEY_AllowedJobDuration, ATTR_JOB_ALLOWED_JOB_DURATION, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_AllowedExecuteDuration, ATTR_JOB_ALLOWED_EXECUTE_DURATION, SimpleSubmitKeyword::f_as_expr},
+
+	{SUBMIT_KEY_JobSet, ATTR_JOB_SET_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 
 	// items declared above this banner are inserted by SetSimpleJobExprs
 	// -- SPECIAL HANDLING REQUIRED FOR THESE ---
@@ -7852,15 +8034,14 @@ bool SubmitHash::NeedsOAuthServices(
 	// and create a list of individual tokens (with handles)
 	// that we need to have.
 
-	const char *errptr;
-	int erroffset;
-	pcre * re = pcre_compile("_oauth_(permissions|resource)", PCRE_CASELESS, &errptr, &erroffset, NULL);
+	int errcode;
+	PCRE2_SIZE erroffset;
+	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char*>("_oauth_(permissions|resource)"),
+		PCRE2_ZERO_TERMINATED, PCRE2_CASELESS, &errcode, &erroffset, NULL);
 	if ( ! re) {
 		dprintf(D_ALWAYS, "could not compile Oauth key regex!\n");
 		return true;
 	}
-	const int ocount = 2; // 1 for (permissions|resource) capture group, and 1 for whole pattern
-	int ovec[3 * ocount];
 	const int ovec_service_end = 0;  // index into ovec for the end of the service name (start of pattern)
 	const int ovec_handle_start = 1; // index into ovec for the start of the handle (end of the pattern)
 
@@ -7873,10 +8054,13 @@ bool SubmitHash::NeedsOAuthServices(
 	for (; !hash_iter_done(it); hash_iter_next(it)) {
 		const char *key = hash_iter_key(it);
 		if (*key == '+' || starts_with_ignore_case(key, "MY.")) continue;	// ignore job attrs, we care only about submit keywords
-		int cch = (int)strlen(key);
-		int onum = pcre_exec(re, NULL, key, cch, 0, PCRE_NOTBOL, ovec, ocount);
-		if (onum >= 0 && ovec[ovec_service_end] > 0) {
-			service.assign(key, ovec[ovec_service_end]);
+		PCRE2_SIZE cch = strlen(key);
+		PCRE2_SPTR key_pcre2str = reinterpret_cast<const unsigned char *>(key);
+		pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
+		int onum = pcre2_match(re, key_pcre2str, cch, 0, PCRE2_NOTBOL, matchdata, NULL);
+		PCRE2_SIZE* ovec = pcre2_get_ovector_pointer(matchdata);
+		if (onum >= 0) {
+			service.assign(key, static_cast<int>(ovec[ovec_service_end]));
 			if (enabled_services.count(service) > 0) {
 
 				// does this key have a handle suffix? of so append the suffix to the service name
@@ -7893,9 +8077,10 @@ bool SubmitHash::NeedsOAuthServices(
 				service_names.insert(service);
 			}
 		}
+		pcre2_match_data_free(matchdata);
 	}
 	hash_iter_delete(&it);
-	pcre_free(re);
+	pcre2_code_free(re);
 
 	// The services names that did *not* have a PERMISSIONS or RESOURCE key have not yet been added
 	// we want to add these only if that service has not already been added with a handle
@@ -8387,6 +8572,10 @@ ClassAd* SubmitHash::make_job_ad (
 		// SetForcedAttributes should be last so that it trumps values
 		// set by normal submit attributes
 	SetForcedAttributes();
+
+		// process and validate JOBSET.* attributes
+		// and verify that the jobset membership request is valid (i.e. jobset memebership is a cluster attribute, not a job attribute)
+	ProcessJobsetAttributes();
 
 	// Must be called _after_ SetTransferFiles(), SetJobDeferral(),
 	// SetCronTab(), SetPerFileEncryption(), SetAutoAttributes().
@@ -9161,23 +9350,25 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 	if (SubmitMacroSet.size <= 0) return;
 	if ( ! app) app = "condor_submit";
 
-	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT
-	// these are specified for all DAG node jobs (see dagman_submit.cpp).
-	// wenger 2012-03-26 (refactored by TJ 2015-March)
-	increment_macro_use_count("DAG_STATUS", SubmitMacroSet);
-	increment_macro_use_count("FAILED_COUNT", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.Iwd", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.Requirements", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.AppendReq", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.AppendRank", SubmitMacroSet);
-	increment_macro_use_count("FACTORY.CREDD_HOST", SubmitMacroSet);
+	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT and other
+	// variables may be set by templates but only sometimes used by submit.
+	static const char * const suppress[] = { "DAG_STATUS", "FAILED_COUNT",
+		"SubmitWarnEmptyMatches", "SubmitFailEmptyMatches", "SubmitWarnDuplicateMatches", "SubmitFailEmptyFields", "SubmitWarnEmptyFields",
+		// these are covered by the supression of warnings for dotted variables
+		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",
+	};
+	for (int ii = 0; ii < COUNTOF(suppress); ++ii) {
+		increment_macro_use_count(suppress[ii], SubmitMacroSet);
+	}
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for ( ; !hash_iter_done(it); hash_iter_next(it) ) {
 		MACRO_META * pmeta = hash_iter_meta(it);
 		if (pmeta && !pmeta->use_count && !pmeta->ref_count) {
 			const char *key = hash_iter_key(it);
-			if (*key && (*key=='+' || starts_with_ignore_case(key, "MY."))) { continue; }
+			// no warning for +attr or MY.attr since those are handled later
+			// also no warning for other dotted names like FACTORY. or tmp.
+			if (*key && (*key=='+' || strchr(key, '.'))) { continue; }
 			if (pmeta->source_id == LiveMacro.id) {
 				push_warning(out, "the Queue variable '%s' was unused by %s. Is it a typo?\n", key, app);
 			} else {
@@ -9201,6 +9392,33 @@ void SubmitHash::dump(FILE* out, int flags)
 	}
 	hash_iter_delete(&it);
 }
+
+void SubmitHash::dump_templates(FILE* out, const char * category, int flags)
+{
+	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", SubmitMacroSet, 0);
+	if ( ! pdmt || ! pdmt->def)
+		return;
+
+	if ((pdmt->def->flags & 0x0F) != PARAM_TYPE_KTP_TABLE) {
+		fprintf(out, "template tables in unexpected format 0x%x\n", pdmt->def->flags);
+		return;
+	}
+
+	const condor_params::ktp_value* def = reinterpret_cast<const condor_params::ktp_value*>(pdmt->def);
+	for (int ix = 0; ix < def->cTables; ++ix) {
+		const condor_params::key_table_pair & tbl = def->aTables[ix];
+		if (category && MATCH != strcasecmp(tbl.key, category)) continue;
+		//fprintf(out, "%s\n", tbl.key);
+		for (int jj = 0; jj < tbl.cElms; ++jj) {
+			if (tbl.aTable[jj].def && tbl.aTable[jj].def->psz) {
+				fprintf(out, "%s:%s @=end\n%s\n@end\n\n", tbl.key, tbl.aTable[jj].key, tbl.aTable[jj].def->psz);
+			} else {
+				fprintf(out, "%s:%s=\n", tbl.key, tbl.aTable[jj].key);
+			}
+		}
+	}
+}
+
 
 const char* SubmitHash::to_string(std::string & out, int flags)
 {

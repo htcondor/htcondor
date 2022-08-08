@@ -162,8 +162,8 @@ int dprintf_config(
 	struct dprintf_output_settings *p_info = NULL, // in,out: if != NULL results of config parsing returned here
 	int c_info = 0); // in: number of entries in p_info array on input.                  
 
-int dprintf_config_tool(const char* subsys = NULL, int flags = 0, const char * logfile = NULL);
-int dprintf_config_tool_on_error(int flags = 0);
+int dprintf_config_tool(const char* subsys, const char * flags, const char * logfile = nullptr);
+int dprintf_config_tool_on_error(const char * flags);
 
 // parse a string of the form "NNN Unit" where NNN is an integer, and Unit is b, Kb, Mb, Gb, or Tb (size units) or s, m, h, d, or w (time units)
 bool dprintf_parse_log_size(const char * input, long long  & value, bool & is_time);
@@ -200,6 +200,12 @@ void _condor_dprintf_saved_lines( void );
 void condor_except_should_dump_core(int flag);
 
 int  dprintf_config_ContinueOnFailure( int fContinue );
+
+/* Set whether daemon log rotation is allowed.
+ * Sets DebugRotateLog.
+ * Returns previous value of DebugRotateLog.
+ */
+bool dprintf_allow_log_rotation(bool allow_rotate);
 
 /* must call this before clone(CLONE_VM|CLONE_VFORK) */
 void dprintf_before_shared_mem_clone( void );

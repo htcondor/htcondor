@@ -78,7 +78,7 @@ BOOL InitService()
 // complete
 VOID StopService() 
 {	
-	if( daemonCore->Send_Signal(daemonCore->getpid(), SIGQUIT) ) {
+	if( daemonCore->Signal_Myself(SIGQUIT) ) {
 		runningService=FALSE;
 	}
 }
@@ -320,7 +320,7 @@ ServiceCtrlHandler (
 		// Do nothing in a shutdown. Could do cleanup
 		// here but it must be very quick.
 		case SERVICE_CONTROL_SHUTDOWN:
-			daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+			daemonCore->Signal_Myself(SIGQUIT);
 			line_where_service_stopped = __LINE__;
 #if HAVE_HIBERNATION
 			return NO_ERROR;

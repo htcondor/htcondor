@@ -30,7 +30,6 @@
 #ifndef _TIMERMANAGER_H_
 #define _TIMERMANAGER_H_
 
-#include "condor_constants.h"
 #include "dc_service.h"
 #include "condor_timeslice.h"
 

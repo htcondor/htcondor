@@ -387,7 +387,10 @@ bool DockerProc::JobReaper( int pid, int status ) {
 				polling_interval, (TimerHandlercpp)&DockerProc::getStats, 
 					"DockerProc::getStats",this);
 
-		SetupDockerSsh();
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+		if( ssh_enabled ) {
+			SetupDockerSsh();
+		}
 
 		++num_pids; // Used by OsProc::PublishUpdateAd().
 		return false; // don't exit

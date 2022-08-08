@@ -1877,6 +1877,8 @@ Define slot types.
     In addition to the standard resources of CPUs, memory, disk, and
     swap, the administrator may also define custom resources on a
     localized per-machine basis.
+    In addition to GPUs (see :ref:`admin-manual/policy-configuration:Configuring GPUs`.)
+    the administrator can define other types of custom resources.
 
     The resource names and quantities of available resources are defined
     using configuration variables of the form
@@ -1885,7 +1887,7 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        MACHINE_RESOURCE_gpus = 16
+        MACHINE_RESOURCE_Cogs = 16
         MACHINE_RESOURCE_actuator = 8
 
     If the configuration uses the optional configuration variable
@@ -1896,7 +1898,7 @@ Define slot types.
     .. code-block:: condor-config
 
         if defined MACHINE_RESOURCE_NAMES
-          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) gpus actuator
+          MACHINE_RESOURCE_NAMES = $(MACHINE_RESOURCE_NAMES) Cogs actuator
         endif
 
     Local machine resource names defined in this way may now be used in
@@ -1907,15 +1909,15 @@ Define slot types.
 
     .. code-block:: condor-config
 
-        # declare one partitionable slot with half of the GPUs, 6 actuators, and
+        # declare one partitionable slot with half of the Cogs, 6 actuators, and
         # 50% of all other resources:
-        SLOT_TYPE_1 = gpus=50%,actuator=6,50%
+        SLOT_TYPE_1 = cogs=50%,actuator=6,50%
         SLOT_TYPE_1_PARTITIONABLE = TRUE
         NUM_SLOTS_TYPE_1 = 1
 
-        # declare two static slots, each with 25% of the GPUs, 1 actuator, and
+        # declare two static slots, each with 25% of the Cogs, 1 actuator, and
         # 25% of all other resources:
-        SLOT_TYPE_2 = gpus=25%,actuator=1,25%
+        SLOT_TYPE_2 = cogs=25%,actuator=1,25%
         SLOT_TYPE_2_PARTITIONABLE = FALSE
         NUM_SLOTS_TYPE_2 = 2
 
@@ -1923,14 +1925,14 @@ Define slot types.
     **request_<name>** :index:`request_<name><single: request_<name>; submit commands>`,
     as described in :ref:`admin-manual/policy-configuration:*condor_startd*
     policy configuration`. This example shows a portion of a submit description
-    file that requests GPUs and an actuator:
+    file that requests cogs and an actuator:
 
     .. code-block:: condor-submit
 
         universe = vanilla
 
-        # request two GPUs and one actuator:
-        request_gpus = 2
+        # request two cogs and one actuator:
+        request_cogs = 2
         request_actuator = 1
 
         queue
@@ -1948,12 +1950,12 @@ Define slot types.
         ``<name>``: the amount of the resource identified by ``<name>``
         available to be used on this slot
 
-    From the example given, the ``gpus`` resource would be represented by
-    the ClassAd attributes ``TotalGpus``, ``DetectedGpus``,
-    ``TotalSlotGpus``, and ``Gpus``. In the job ClassAd, the amount of the
+    From the example given, the ``Cogs`` resource would be represented by
+    the ClassAd attributes ``TotalCogs``, ``DetectedCogs``,
+    ``TotalSlotCogs``, and ``Cogs``. In the job ClassAd, the amount of the
     requested machine resource appears in a job ClassAd attribute named
     ``Request<name>``. For this example, the two attributes will be
-    ``RequestGpus`` and ``RequestActuator``.
+    ``RequestCogs`` and ``RequestActuator``.
 
     The number of each type being reported can be changed at run time,
     by issuing a reconfiguration command to the *condor_startd* daemon
@@ -2162,7 +2164,7 @@ execute machine that has GPUs:
 
       use feature : GPUs
 
-Use of this configuration templdate invokes the *condor_gpu_discovery*
+Use of this configuration template invokes the *condor_gpu_discovery*
 tool to create a custom resource, with a custom resource name of
 ``GPUs``, and it generates the ClassAd attributes needed to advertise
 the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
@@ -2179,6 +2181,68 @@ which can be used to define additional command line arguments for the
 
 causes the *condor_gpu_discovery* tool to output more attributes that
 describe the detected GPUs on the machine.
+
+Prior to HTCondor version 9.11 *condor_gpu_discovery* would publish GPU
+properties using attributes with a name prefix that indicated which GPU
+the property referred to.  Beginning with version 9.11, discovery would
+default to using nested ClassAds for GPU properties.  The administrator
+can be explict about which form to use for properties by adding either the
+``-nested`` or ``-not-nested`` option to ``GPU_DISCOVERY_EXTRA``. 
+
+The format -- nested or not -- of GPU properties in the slot ad is the same as published
+by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
+to do GPU matchmaking and to properly support heterogenous GPUs.  
+For pools that have execute nodes running older versions of HTCondor,
+you may want to config ``-not-nested`` on newer machines for consistency with older
+machines. However jobs that use the ``require_gpus`` keyword will never match machines
+that are configured to use ``-not-nested`` gpu discovery.
+
+For resources like GPUs that have individual properties, when configuring slots
+the slot configuration can specify a constraint on those properties
+for the purpose of choosing which GPUs are assigned to which slots.  This serves
+the same purpose as the ``require_gpus`` submit keyword, but in this case
+it controls the slot configuration on startup.
+
+The resource constraint can be specified by following the resource quantity 
+with a colon and then a constraint expression.  The constraint expression can
+refer to resource property attributes like the GPU properties from
+*condor_gpu_discovery* ``-nested`` output.  If the constraint expression is 
+a string literal, it will be matched automatically against the resource id,
+otherwise it will be evaluated against each of the resource property ads.
+
+When using resource constraints, it is recommended that you put each
+resource quantity on a separate line as in the following example, otherwise the
+constraint expression may be truncated.
+
+    .. code-block:: condor-config
+
+        # Assuming a machine that has two types of GPUs, 2 of which have Capability 8.0
+        # and the remaining GPUs are less powerful
+
+        # declare a partitionable slot that has the 2 powerful GPUs
+        # and 90% of the other resources:
+        SLOT_TYPE_1 @=slot
+           GPUs = 2 : Capability >= 8.0
+           90%
+        @slot
+        SLOT_TYPE_1_PARTITIONABLE = TRUE
+        NUM_SLOTS_TYPE_1 = 1
+
+        # declare a small static slot and assign it a specific GPU by id
+        SLOT_TYPE_2 @=slot
+           GPUs = 1 : "GPU-6a96bd13"
+           CPUs = 1
+		   Memory = 10
+        @slot
+        SLOT_TYPE_2_PARTITIONABLE = FALSE
+        NUM_SLOTS_TYPE_2 = 1
+
+        # declare two static slots that split up the remaining resources which may or may not include GPUs
+        SLOT_TYPE_3 = auto
+        SLOT_TYPE_3_PARTITIONABLE = FALSE
+        NUM_SLOTS_TYPE_3 = 2
+
+
 
 Configuring STARTD_ATTRS on a per-slot basis
 '''''''''''''''''''''''''''''''''''''''''''''
@@ -2462,6 +2526,44 @@ their defaults are
     MODIFY_REQUEST_EXPR_REQUESTCPUS = quantize(RequestCpus, {1})
     MODIFY_REQUEST_EXPR_REQUESTMEMORY = quantize(RequestMemory, {128})
     MODIFY_REQUEST_EXPR_REQUESTDISK = quantize(RequestDisk, {1024})
+
+Enforcing scratch disk usage with on-the-fly, HTCondor managed, per-job scratch filesystems.
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+:index:`DISK usage`
+:index:`per job scratch fileystem`
+
+
+On Linux systems, when HTCondor is started as root, it optionally has the ability to create
+a custom filesystem for the job's scratch directory.  This allows HTCondor to prevent the job
+from using more scratch space than provisioned.  This also requires that the disk is managed
+with the LVM disk management system.  Three HTCondor configuration knobs need to be set for
+this to work, in addition to the above requirements:
+
+.. code-block:: condor-config
+
+    THINPOOL_VOLUME_GROUP_NAME = vgname
+    THINPOOL_NAME = htcondor
+    STARTD_ENFORCE_DISK_USAGE = true
+
+
+THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
+disk space to provision all the scratch directories for all running jobs on a worker node.
+THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
+be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_USAGE is a boolean.  When
+true, if a job fills up the filesystem created for it, the starter will put the job on hold
+with the out of resources hold code (34).  This is the recommended value.  If false, should
+the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors
+and exit with an appropriate code in every part of the job that writes to the filesystem, including
+third party libraries.
+
+Note that the ephemeral filesystem created for the job is private to the job, so the contents
+of that filesytem are not visible outside the process hierarchy.  The administrator can use
+the nsenter command to enter this namespace, if they need to inspect the job's sandbox.
+As this filesytem will never live through a system reboot, it is mounted with mount options
+that optimize for performance, not reliability, and may improve performance for I/O heavy
+jobs.
+
+
 
 condor_negotiator-Side Resource Consumption Policies
 ''''''''''''''''''''''''''''''''''''''''''''''''''''

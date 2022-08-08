@@ -159,6 +159,7 @@ get_distribution() {
 		#     ubuntu focal
 		#     centos 7
 		#     rocky 8
+		#     alma 8
 		#     amzn 2
 		#
 
@@ -208,7 +209,7 @@ get_distribution() {
 			esac
 		;;
 
-		scientific|centos|rhel|rocky)
+		scientific|centos|rhel|alma|rocky)
 			if [[ ! $dist_version ]] && [ -r /etc/os-release ]; then
 				dist_version=$(. /etc/os-release && echo "$VERSION_ID")
 			fi
@@ -333,7 +334,7 @@ do_install() {
 				To remove: $sh_c "apt-get -y remove --purge ${PACKAGE} && apt-get -y autoremove --purge && rm -fr /etc/condor"
 			EOF
 			;;
-		scientific|centos|rhel|rocky|amzn)
+		scientific|centos|rhel|alma|rocky|amzn)
 			PACKAGE="condor"
 			if [[ ! $ROLE ]]; then
 				PACKAGE="minicondor"
@@ -431,7 +432,7 @@ do_install() {
 				fi
 			)
 			;;
-		scientific|centos|rhel|rocky|amzn)
+		scientific|centos|rhel|alma|rocky|amzn)
 			(
 			if ! is_dry_run; then
 				set -x
@@ -445,7 +446,7 @@ do_install() {
 
 			repo_dist=$lsb_dist
 			case $lsb_dist in
-				scientific|centos|rhel|rocky)
+				scientific|centos|rhel|alma|rocky)
 					repo_dist="el"
 			esac
 			repo_suffix="${repo_dist}${dist_version}"
@@ -464,9 +465,9 @@ do_install() {
 			# RHEL and Rocky and between version 7 and 8.
 			#
 			case ${lsb_dist}.${dist_version} in
-				rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
-				          $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
-				          ;;
+				alma.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
+				                 $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
+				                 ;;
 				# subscription-manager only works if you've already
 				# "register"ed and "attach"ed the system.
 				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
@@ -615,6 +616,9 @@ do_download() {
 			;;
 		scientific|centos|rhel)
 			OS_NAME="CentOS"
+			;;
+		alma)
+			OS_NAME="AlmaLinux"
 			;;
 		rocky)
 			OS_NAME="Rocky"

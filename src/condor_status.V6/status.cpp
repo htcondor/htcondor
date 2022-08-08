@@ -184,7 +184,7 @@ char		*myName;
 ClassadSortSpecs sortSpecs;
 bool			noSort = false; // set to true to disable sorting entirely
 bool			naturalSort = true;
-int				dash_snapshot = 0; // for direct query, just return current state, do *not* recompute anything
+const char *	dash_snapshot = 0; // for direct query, just return current state, do *not* recompute anything
 
 classad::References projList;
 StringList dashAttributes; // Attributes specifically requested via the -attributes argument
@@ -711,11 +711,11 @@ main (int argc, char *argv[])
 #endif
 
 	// initialize to read from config file
-	myDistro->Init( argc, argv );
 	myName = argv[0];
 	set_priv_initialize(); // allow uid switching if root
 	config();
 	dprintf_config_tool_on_error(0);
+	const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
 
 	// The arguments take two passes to process --- the first pass
 	// figures out the mode, after which we can instantiate the required
@@ -747,8 +747,7 @@ main (int argc, char *argv[])
 		query->setResultLimit(result_limit);
 	}
 	if (dash_snapshot) {
-		std::string snap; formatstr(snap, "%d", dash_snapshot);
-		query->addExtraAttribute("snapshot", snap.c_str());
+		query->addExtraAttribute("Snapshot", dash_snapshot);
 	}
 
 		// if there was a generic type specified
@@ -996,7 +995,7 @@ main (int argc, char *argv[])
 				ConstraintHolder constrReduced(SkipExprParens(tree)->Copy());
 				pmms.where_expression = constrReduced.c_str();
 			}
-			const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+			const CustomFormatFnTable * pFnTable = &GlobalFnTable;
 
 			temp.clear();
 			temp.reserve(4096);
@@ -1026,7 +1025,7 @@ main (int argc, char *argv[])
 		if ( ! mainPP.pm.has_headings()) {
 			if (mainPP.pm_head.Length() > 0) pheadings = &mainPP.pm_head;
 		}
-		mainPP.pm.dump(style_text, getCondorStatusPrintFormats(), pheadings);
+		mainPP.pm.dump(style_text, &GlobalFnTable, pheadings);
 		fprintf(fout, "\nPrintMask:\n%s\n", style_text.c_str());
 
 		ClassAd queryAd;
@@ -1318,6 +1317,8 @@ main (int argc, char *argv[])
 		}
 	}
 
+	fflush(stdout);
+
 	delete query;
 	return 0;
 }
@@ -1479,7 +1480,7 @@ int PrettyPrinter::set_status_print_mask_from_stream (
 	//PRAGMA_REMIND("tj: fix to handle summary formatting.")
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
-					*getCondorStatusPrintFormats(),
+					NULL,
 					pm,
 					pmopt,
 					group_by_keys,
@@ -1865,9 +1866,9 @@ firstPass (int argc, char *argv[])
 			diagnose = 1;
 			if (pcolon) diagnostics_ads_file = ++pcolon;
 		} else
-		if (is_dash_arg_prefix (argv[i], "debug", 2)) {
+		if (is_dash_arg_colon_prefix (argv[i], "debug", &pcolon, 2)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else
 		if (is_dash_arg_prefix (argv[i], "defrag", 3)) {
 			mainPP.setMode (SDO_Defrag, i, argv[i]);
@@ -1991,11 +1992,8 @@ firstPass (int argc, char *argv[])
 			mainPP.setPPstyle (PP_STARTD_STATE, i, argv[i]);
 		} else
 		if (is_dash_arg_colon_prefix (argv[i],"snapshot", &pcolon, 4)){
-			if (pcolon) {
-				dash_snapshot = atoi(pcolon + 1);
-			} else {
-				dash_snapshot = 1;
-			}
+			dash_snapshot = "1";
+			if (pcolon && pcolon[1]) { dash_snapshot = pcolon + 1; }
 		} else
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			if( statistics ) {
@@ -2312,11 +2310,10 @@ secondPass (int argc, char *argv[])
 
 		if (is_dash_arg_prefix (argv[i], "statistics", 5)) {
 			i += 2;
-			sprintf(buffer,"\"%s\"", statistics);
 			if (diagnose) {
-				printf ("[STATISTICS_TO_PUBLISH = %s]\n", buffer);
+				printf ("[STATISTICS_TO_PUBLISH = %s]\n", statistics);
 			}
-			query->addExtraAttribute("STATISTICS_TO_PUBLISH", buffer);
+			query->addExtraAttributeString("STATISTICS_TO_PUBLISH", statistics);
 			continue;
 		}
 

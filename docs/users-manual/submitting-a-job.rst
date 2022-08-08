@@ -1416,7 +1416,7 @@ Displaying the Factory
 *condor_q* can be use to show late materialization job factories in the *condor_schedd* by
 using the ``-factory`` option.
 
-.. code-block::
+.. code-block:: console
 
     > condor_q -factory
     -- Schedd: submit.example.org : <192.168.101.101:9618?... @ 12/01/20 13:35:00

@@ -43,6 +43,8 @@ public:
 	// it must be named SINGULARITYENV_FOO.  This method does that.
   static bool convertEnv(Env *job_env);
 
+  static bool hasTargetDir(const classad::ClassAd &jobAd, std::string &target_dir);
+
 	// if SINGULARITY_TARGET_DIR is set, reset environment variables
 	// for the scratch directory path as mounted inside the container
   static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
@@ -55,9 +57,11 @@ public:
 
 private:
   static bool detect(CondorError &err);
+  static std::string environmentPrefix();
 
   static bool m_enabled;
   static bool m_probed;
+  static bool m_apptainer;
   static int m_default_timeout;
   static std::string m_singularity_version;
 };

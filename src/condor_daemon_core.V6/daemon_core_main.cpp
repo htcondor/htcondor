@@ -55,6 +55,10 @@
 #include <sys/prctl.h>
 #endif
 
+#if HAVE_BACKTRACE
+#include <execinfo.h>
+#endif
+
 #include "condor_auth_passwd.h"
 #include "condor_auth_ssl.h"
 #include "authentication.h"
@@ -111,9 +115,6 @@ static char *core_name = NULL;
 int condor_main_argc;
 char **condor_main_argv;
 time_t daemon_stop_time;
-
-/* ODBC object */
-//extern ODBC *DBObj;
 
 #ifdef WIN32
 int line_where_service_stopped = 0;
@@ -687,7 +688,7 @@ check_parent( )
 		dprintf(D_ALWAYS,
 			"Our parent process (pid %d) went away; shutting down fast\n",
 			daemonCore->getppid());
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT ); // SIGQUIT means shutdown fast
+		daemonCore->Signal_Myself(SIGQUIT); // SIGQUIT means shutdown fast
 	}
 }
 #endif
@@ -887,6 +888,10 @@ DC_Exit( int status, const char *shutdown_program )
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
 			 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
 			 exit_status );
+
+	// Disable log rotation during process teardown (i.e. calling
+	// destructors of global or static objects).
+	dprintf_allow_log_rotation(false);
 
 		// Finally, exit with the appropriate status.
 	exit( exit_status );
@@ -1499,7 +1504,7 @@ handle_off_fast(int, Stream* stream)
 		return FALSE;
 	}
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 	}
 	return TRUE;
 }
@@ -1513,7 +1518,7 @@ handle_off_graceful(int, Stream* stream)
 		return FALSE;
 	}
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -1540,7 +1545,7 @@ handle_off_force(int, Stream* stream)
 	if (daemonCore) {
 		daemonCore->SetPeacefulShutdown( false );
 		SigtermContinue::sigterm_should_continue();
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -1557,7 +1562,7 @@ handle_off_peaceful(int, Stream* stream)
 	}
 	if (daemonCore) {
 		daemonCore->SetPeacefulShutdown(true);
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 	return TRUE;
 }
@@ -2381,7 +2386,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 		result_ad.InsertAttr(ATTR_ERROR_CODE, error_code);
 		result_ad.InsertAttr(ATTR_ERROR_STRING, error_string);
 	} else {
-#if defined(HAVE_EXT_OPENSSL)
 		auto &token_request = *(iter->second);
 		CondorError err;
 		std::string token;
@@ -2401,10 +2405,6 @@ handle_dc_approve_token_request(int, Stream* stream)
 			token_request.setToken(token);
 			result_ad.InsertAttr(ATTR_ERROR_CODE, 0);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Support for tokens not available");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 3);
-#endif
 	}
 
 	if (!putClassAd(stream, result_ad) || !stream->end_of_message())
@@ -2708,7 +2708,6 @@ handle_dc_session_token(int, Stream* stream)
 	}
 	else
 	{
-#if defined(HAVE_EXT_OPENSSL)
 		std::string token;
 		if (!Condor_Auth_Passwd::generate_token(
 			auth_user,
@@ -2724,10 +2723,6 @@ handle_dc_session_token(int, Stream* stream)
 		} else {
 			result_ad.InsertAttr(ATTR_SEC_TOKEN, token);
 		}
-#else
-		result_ad.InsertAttr(ATTR_ERROR_STRING, "Not implemented");
-		result_ad.InsertAttr(ATTR_ERROR_CODE, 1);
-#endif
 	}
 
 	stream->encode();
@@ -2827,11 +2822,11 @@ handle_config_val(int idCmd, Stream* stream )
 		if (is_arg_colon_prefix(param_name, "?names", &pcolon, -1)) {
 			const char * restr = ".*";
 			if (pcolon) { restr = ++pcolon; }
-			Regex re; int err = 0; const char * pszMsg = 0;
+			Regex re; int errcode = 0, erroffset = 0;
 
-			if ( ! re.compile(restr, &pszMsg, &err, PCRE_CASELESS)) {
+			if ( ! re.compile(restr, &errcode, &erroffset, PCRE2_CASELESS)) {
 				dprintf( D_ALWAYS, "Can't compile regex for DC_CONFIG_VAL ?names query\n" );
-				MyString errmsg; errmsg.formatstr("!error:regex:%d: %s", err, pszMsg ? pszMsg : "");
+				MyString errmsg; errmsg.formatstr("!error:regex:%d: error code %d", erroffset, errcode);
 				if (!stream->code(errmsg)) {
 						dprintf( D_ALWAYS, "and remote side disconnected from use\n" );
 				}
@@ -3091,7 +3086,7 @@ void
 unix_sighup(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGHUP );
+		daemonCore->Signal_Myself(SIGHUP);
 	}
 }
 
@@ -3100,7 +3095,7 @@ void
 unix_sigterm(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
@@ -3109,7 +3104,7 @@ void
 unix_sigquit(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGQUIT );
+		daemonCore->Signal_Myself(SIGQUIT);
 	}
 }
 
@@ -3118,7 +3113,7 @@ void
 unix_sigchld(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGCHLD );
+		daemonCore->Signal_Myself(SIGCHLD);
 	}
 }
 
@@ -3127,7 +3122,7 @@ void
 unix_sigusr1(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR1 );
+		daemonCore->Signal_Myself(SIGUSR1);
 	}
 	
 }
@@ -3136,7 +3131,7 @@ void
 unix_sigusr2(int)
 {
 	if (daemonCore) {
-		daemonCore->Send_Signal( daemonCore->getpid(), SIGUSR2 );
+		daemonCore->Signal_Myself(SIGUSR2);
 	}
 }
 
@@ -3255,16 +3250,16 @@ TimerHandler_main_shutdown_fast()
 int
 handle_dc_sigterm(int )
 {
+	const char * xful = daemonCore->GetPeacefulShutdown() ? "peaceful" : "graceful";
 		// Introduces a race condition.
 		// What if SIGTERM received while we are here?
 	if( !SigtermContinue::should_sigterm_continue() ) {
-		dprintf( D_FULLDEBUG, 
-				 "Got SIGTERM, but we've already done graceful shutdown.  Ignoring.\n" );
+		dprintf(D_STATUS, "Got SIGTERM, but we've already started %s shutdown.  Ignoring.\n", xful );
 		return TRUE;
 	}
 	SigtermContinue::sigterm_should_not_continue(); // After this
 
-	dprintf(D_ALWAYS, "Got SIGTERM. Performing graceful shutdown.\n");
+	dprintf(D_STATUS, "Got SIGTERM. Performing %s shutdown.\n", xful);
 
 #if defined(WIN32) && 0
 	if ( line_where_service_stopped != 0 ) {
@@ -3454,7 +3449,6 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	myDistro->Init( argc, argv );
 	if ( EnvInit() < 0 ) {
 		exit( 1 );
 	}
@@ -4021,6 +4015,14 @@ int dc_main( int argc, char** argv )
 		// where it goes.  We also do some NT-specific stuff in here.
 	drop_core_in_log();
 
+#if defined(HAVE_BACKTRACE)
+	// On linux, the first call to backtrace() may trigger a dlopen() of
+	// libgcc, which includes a malloc(). This is not safe in a signal
+	// handler triggered by memory corruption, so call it here.
+	void* trace[10];
+	backtrace(trace, 10);
+#endif
+
 	// write dprintf's contribution to the daemon header.
 	dprintf_print_daemon_header();
 
@@ -4197,12 +4199,12 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_Command( DC_CONFIG_PERSIST, "DC_CONFIG_PERSIST",
 								  handle_config,
 								  "handle_config()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms);
+								  false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_CONFIG_RUNTIME, "DC_CONFIG_RUNTIME",
 								  handle_config,
 								  "handle_config()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms);
+								  false, 0, &allow_perms);
 
 	daemonCore->Register_Command( DC_OFF_FAST, "DC_OFF_FAST",
 								  handle_off_fast,
@@ -4320,7 +4322,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_GET_SESSION_TOKEN, "DC_GET_SESSION_TOKEN",
 								handle_dc_session_token,
 								"handle_dc_session_token()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// Start a token request workflow.
@@ -4328,7 +4330,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_START_TOKEN_REQUEST, "DC_START_TOKEN_REQUEST",
 								handle_dc_start_token_request,
 								"handle_dc_start_token_request()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// Poll for token request completion.
@@ -4336,7 +4338,7 @@ int dc_main( int argc, char** argv )
 	daemonCore->Register_CommandWithPayload( DC_FINISH_TOKEN_REQUEST, "DC_FINISH_TOKEN_REQUEST",
 								handle_dc_finish_token_request,
 								"handle_dc_finish_token_request()", DAEMON,
-								  D_COMMAND, false, 0, &allow_perms );
+								  false, 0, &allow_perms );
 
 		//
 		// List the outstanding token requests.
@@ -4346,7 +4348,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_LIST_TOKEN_REQUEST, "DC_LIST_TOKEN_REQUEST",
 		handle_dc_list_token_request,
-		"handle_dc_list_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_list_token_request", DAEMON, true, 0, &allow_perms );
 
 		//
 		// Approve a token request.
@@ -4357,7 +4359,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_APPROVE_TOKEN_REQUEST, "DC_APPROVE_TOKEN_REQUEST",
 		handle_dc_approve_token_request,
-		"handle_dc_approve_token_request", DAEMON, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_approve_token_request", DAEMON, true, 0, &allow_perms );
 
 		//
 		// Install an auto-approval rule
@@ -4371,7 +4373,7 @@ int dc_main( int argc, char** argv )
 		//
 	daemonCore->Register_CommandWithPayload( DC_EXCHANGE_SCITOKEN, "DC_EXCHANGE_SCITOKEN",
 		handle_dc_exchange_scitoken,
-		"handle_dc_exchange_scitoken", WRITE, D_COMMAND, true, 0, &allow_perms );
+		"handle_dc_exchange_scitoken", WRITE, true, 0, &allow_perms );
 
 	// Call daemonCore's reconfig(), which reads everything from
 	// the config file that daemonCore cares about and initializes

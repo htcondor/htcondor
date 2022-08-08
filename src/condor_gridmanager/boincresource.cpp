@@ -659,9 +659,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				dprintf( D_ALWAYS, "Failed to parse job id '%s'\n", j->first.c_str() );
 				continue;
 			}
-			BaseJob *base_job;
-			if ( BaseJob::JobsByProcId.lookup( proc_id, base_job ) == 0 ) {
-				BoincJob *boinc_job = dynamic_cast<BoincJob*>( base_job );
+			auto itr = BaseJob::JobsByProcId.find(proc_id);
+			if (itr != BaseJob::JobsByProcId.end()) {
+				BoincJob* boinc_job = dynamic_cast<BoincJob*>(itr->second);
 				ASSERT( boinc_job != NULL );
 				boinc_job->NewBoincState( j->second.c_str() );
 			}

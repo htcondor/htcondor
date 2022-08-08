@@ -50,6 +50,7 @@
 #include "schedd_negotiate.h"
 
 #include <vector>
+#include <algorithm>
 
 extern Scheduler scheduler;
 extern DedicatedScheduler dedicated_scheduler;
@@ -338,7 +339,7 @@ ResList::sortByRank(ClassAd *rankAd) {
 	}
 
 		// and sort it
-	qsort(array, index, sizeof(struct rankSortRec), ResList::machineSortByRank );
+	std::sort(array, array + index, ResList::machineSortByRank);
 
 		// Now, rebuild our list in order
 	for (int i = 0; i < index; i++) {
@@ -348,12 +349,9 @@ ResList::sortByRank(ClassAd *rankAd) {
 	delete [] array;
 }
 
-/* static */ int
-ResList::machineSortByRank(const void *left, const void *right) {
-	const struct rankSortRec *lhs = (const struct rankSortRec *)left;
-	const struct rankSortRec *rhs = (const struct rankSortRec *)right;
-
-	return lhs->rank < rhs->rank;
+/* static */ bool
+ResList::machineSortByRank(const struct rankSortRec &lhs, const struct rankSortRec &rhs) {
+	return lhs.rank > rhs.rank;
 }
 
 void
@@ -766,7 +764,7 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -2581,8 +2579,7 @@ DedicatedScheduler::computeSchedule( void )
 					// Now we've got an array from 0 to num_candidates
 					// of PreemptCandidateNodes sort by rank,
 					// cluster_id;
-				qsort( preempt_candidate_array, num_candidates,
-					   sizeof(struct PreemptCandidateNode), RankSorter );
+				std::sort( preempt_candidate_array, preempt_candidate_array + num_candidates, RankSorter );
 
 				int num_preemptions = 0;
 				for( int cand = 0; cand < num_candidates; cand++) {
@@ -3896,8 +3893,9 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
 	for( i=0; i<last_cluster; i++ ) {
 		cluster = (*idle_clusters)[i];
 		holdJob( cluster, 0, 
-				 "No condor_shadow installed that supports MPI jobs",
-				 true, true, true, should_notify_admin );
+		         "No condor_shadow installed that supports MPI jobs",
+		         CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
+		         false, should_notify_admin );
 		if( should_notify_admin ) {
 				// only send email to the admin once per lifetime of
 				// the schedd, so we don't swamp them w/ email...
@@ -4471,7 +4469,8 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 void
 deallocMatchRec( match_rec* mrec )
 {
-	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec\n");
+	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec(%d.%d)\n",
+	         mrec ? mrec->cluster : -1, mrec ? mrec->proc : -1);
 		// We might call this with a NULL mrec, so don't seg fault.
 	if( ! mrec ) {
 		return;
@@ -4487,20 +4486,17 @@ deallocMatchRec( match_rec* mrec )
 }
 
 // Comparision function for sorting machines
-int
-RankSorter(const void *ptr1, const void *ptr2) {
-	const PreemptCandidateNode *n1 = (const PreemptCandidateNode *) ptr1;
-	const PreemptCandidateNode *n2 = (const PreemptCandidateNode *) ptr2;
-
-	if (n1->rank < n2->rank) {
-		return -1;
+bool
+RankSorter(const PreemptCandidateNode &n1, const PreemptCandidateNode &n2) {
+	if (n1.rank < n2.rank) {
+		return true;
 	}
 
-	if (n1->rank > n2->rank) {
-		return 1;
+	if (n1.rank > n2.rank) {
+		return false;
 	}
 
-	return n1->cluster_id - n2->cluster_id;
+	return n1.cluster_id - n2.cluster_id < 0;
 }
 
 ClassAd *

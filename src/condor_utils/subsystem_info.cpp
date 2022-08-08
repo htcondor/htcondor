@@ -31,16 +31,16 @@ SubsystemInfo* has_mySubSystem() { return mySubSystem; }
 SubsystemInfo* get_mySubSystem()
 {
 	if ( mySubSystem == NULL ) {
-		mySubSystem = new SubsystemInfo( "TOOL", SUBSYSTEM_TYPE_TOOL );
+		mySubSystem = new SubsystemInfo( "TOOL", false, SUBSYSTEM_TYPE_TOOL );
 	}
 	return mySubSystem;
 }
 
-void set_mySubSystem( const char *subsystem_name,
+void set_mySubSystem( const char *subsystem_name, bool _trust,
 					  SubsystemType _type )
 {
 	delete mySubSystem;
-	mySubSystem = new SubsystemInfo( subsystem_name, _type );
+	mySubSystem = new SubsystemInfo( subsystem_name, _trust, _type );
 }
 
 //
@@ -321,7 +321,7 @@ SubsystemInfoTable::lookup( const char *_name ) const
 // C++ 'main' SubsystemInfo methods
 // *****************************************
 
-SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
+SubsystemInfo::SubsystemInfo( const char *_name, bool _trust, SubsystemType _type )
 {
 	m_Name = NULL;
 	m_TempName = NULL;
@@ -329,6 +329,7 @@ SubsystemInfo::SubsystemInfo( const char *_name, SubsystemType _type )
 	m_Info = NULL;
 	m_InfoTable = new SubsystemInfoTable( );
 	setName( _name );
+	m_trusted = _trust;
 	if ( _type == SUBSYSTEM_TYPE_AUTO ) {
 		setTypeFromName( _name );
 	}

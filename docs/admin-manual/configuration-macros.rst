@@ -4257,6 +4257,22 @@ details.
     InfiniBand) regardless of this setting. The default value is
     ``docker0``,\ ``virbr0``.
 
+These macros control the startds (and starters) capability to
+create a private filesystem for the scratch directory for each job.
+
+:macro-def:`THINPOOL_VOLUME_GROUP_NAME`
+    A string that names the Linux LVM volume group the administrator 
+    has configured as the storage for per-job scratch directories.
+
+:macro-def:`THINPOOL_NAME`
+    A string that names the Linux LVM logical volume for storage 
+    for per-job scratch directories.
+
+:macro-def:`STARTD_ENFORCE_DISK_USAGE`
+    A boolean that defaults to false that controls whether the
+    starter puts a job on hold that fills the per-job filesystem.
+
+
 condor_schedd Configuration File Entries
 -----------------------------------------
 
@@ -5038,7 +5054,8 @@ These macros control the *condor_schedd*.
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
     contain an expression that will be periodically evaluated for each
-    job that is not in the ``HOLD`` state. Each name in the list will be used in the name of
+    job that is not in the ``HELD``, ``COMPLETED``, or ``REMOVED``
+    state. Each name in the list will be used in the name of
     configuration variable ``SYSTEM_PERIODIC_HOLD_<Name>``. The named expressions
     are evaluated in the order in which names appear in this list. Names are
     not case-sensitive. After all of the named expressions are evaluated,
@@ -5088,12 +5105,13 @@ These macros control the *condor_schedd*.
     A comma and/or space separated list of unique names, where each is
     used in the formation of a configuration variable name that will
     contain an expression that will be periodically evaluated for each
-    job that is in the ``HOLD`` state. Each name in the list will be used in the name of
+    job that is in the ``HELD`` state (jobs with a ``HoldReasonCode``
+    value of ``1`` are ignored). Each name in the list will be used in the name of
     configuration variable ``SYSTEM_PERIODIC_RELEASE_<Name>``. The named expressions
     are evaluated in the order in which names appear in this list. Names are
     not case-sensitive. After all of the named expressions are evaluated,
     the nameless ``SYSTEM_PERIODIC_RELEASE`` expression will be evaluated. If any
-    of these expressions evaluates to ``True`` the job will be held.  See also
+    of these expressions evaluates to ``True`` the job will be released.  See also
     ``SYSTEM_PERIODIC_RELEASE``
     There is no default value.
 
@@ -5149,7 +5167,9 @@ These macros control the *condor_schedd*.
     local *condor_startd*. This allows for a machine that is acting as
     both a submit and execute node to run jobs locally if it cannot
     communicate with the central manager. The default value, if not
-    specified, is 1200 (20 minutes).
+    specified, is 2,000,000 seconds (effectively never).  If this
+    feature is desired, we recommend setting it to some small multiple
+    of the negotiation cycle, say, 1200 seconds, or 20 minutes.
 
 .. _GRACEFULLY_REMOVE_JOBS:
 
@@ -5381,6 +5401,12 @@ These macros control the *condor_schedd*.
     determining the sets of jobs considered as a unit (an auto cluster)
     in negotiation, when auto clustering is enabled.
 
+:macro-def:`SCHEDD_SEND_RESCHEDULE`
+    A boolean value which defaults to true.  Set to false for 
+    schedds like those in the HTCondor-CE that have no negotiator
+    associated with them, in order to reduce spurious error messages
+    in the SchedLog file.
+
 :macro-def:`SCHEDD_AUDIT_LOG`
     The path and file name of the *condor_schedd* log that records
     user-initiated commands that modify the job queue. If not defined,
@@ -5456,6 +5482,53 @@ These macros control the *condor_schedd*.
              SomeFile = "filename"
              acounting_group_user = error
           @end
+
+:macro-def:`EXTENDED_SUBMIT_HELPFILE`
+    A URL or file path to text describing how the *condor_schedd* extends the submit schema. Use this to document
+	for users the extended submit commands defined by the configuration variable ``EXTENDED_SUBMIT_COMMANDS``.
+	*condor_submit* will display this URL or the text of this file when the user uses the ``-capabilities`` option.
+
+:macro-def:`SUBMIT_TEMPLATE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain a set of submit commands.  Each name in the list will be used in the name of
+    the configuration variable ``SUBMIT_TEMPLATE_<Name>``.
+	Names are not case-sensitive. There is no default value.  Submit templates are
+	used by *condor_submit* when parsing submit files, so administrators or users can
+	add submit templates to the configuration of *condor_submit* to customize the
+	schema or to simplify the creation of submit files.
+
+:macro-def:`SUBMIT_TEMPLATE_<Name>`
+    A single submit template containing one or more submit commands.
+    The template can be invoked with or without arguments.  The template
+	can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
+	a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
+	``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
+	The argument number can be followed by ``?`` to test if the argument
+	was specfied, or by ``+`` to expand to that argument and all subsequent
+	arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
+
+	For example:
+
+    .. code-block:: condor-config
+
+          SUBMIT_TEMPLATE_NAMES = $(SUBMIT_TEMPLATE_NAMES) Slurm
+          SUBMIT_TEMPLATE_Slurm @=tpl
+             if ! $(1?)
+                error : Template:Slurm requires at least 1 argument - Slurm(project, [queue [, resource_args...])
+             endif
+             universe = Grid
+             grid_resource = batch slurm $(3)
+             batch_project = $(1)
+             batch_queue = $(2:Default)
+          @tpl
+
+	This could be used in a submit file in this way:
+
+    .. code-block:: condor-submit
+
+          use template : Slurm(Blue Book)
+
 
 :macro-def:`JOB_TRANSFORM_NAMES`
     A comma and/or space separated list of unique names, where each is
@@ -8335,6 +8408,12 @@ General
     problem, release the job and continue their DAG execution. Defaults 
     to ``False``.
 
+:macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
+    A boolean value that defaults to ``False``. When ``True``, variables
+    parsed in the DAG file *VARS* line will be appended to the given Job
+    submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
+    When ``False``, the parsed variables will be prepended unless specified.
+
 Throttling
 ''''''''''
 
@@ -8966,9 +9045,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     default setting if no others are specified.
 
 :macro-def:`SEC_*_CRYPTO_METHODS`
-    When encryption is enabled for a session at a specified authorization,
-    the cryptographic algorithm used to encrypt the conversation.  Possible
-    values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
+    An ordered list of allowed cryptographic algorithms to use for
+    encrypting a network session at a specified authorization level.
+    The server will select the first entry in its list that both
+    server and client allow.
+    Possible values are ``AES``, ``3DES``, and ``BLOWFISH``.
+    The special parameter name ``SEC_DEFAULT_CRYPTO_METHODS`` controls the
+    default setting if no others are specified.
+    There is little benefit in varying
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
@@ -9021,6 +9105,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     :index:`SHADOW_CHECKPROXY_INTERVAL`. To ensure that the
     delegated proxy remains valid, the interval for checking the proxy
     should be, at most, half of the interval for refreshing it.
+
+:macro-def:`USE_VOMS_ATTRIBUTES`
+    A boolean value that controls whether HTCondor will attempt to extract
+    and verify VOMS attributes from X.509 credentials.
+    The default is ``False``.
 
 :macro-def:`SEC_<access-level>_SESSION_DURATION`
     The amount of time in seconds before a communication session
@@ -9313,7 +9402,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     commands to the daemon.
     The **condor_collector** will only provide this key to clients who
     are authorized at the ADMINISTRATOR level to the **condor_collector**.
-    The default value is ``False``.
+    The default value is ``True``.
 
     When this parameter is enabled for all daemons, control of who is
     allowed to administer the pool can be consolidated in the

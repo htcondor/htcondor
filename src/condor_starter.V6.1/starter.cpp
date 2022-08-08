@@ -50,7 +50,7 @@
 #include "sshd_proc.h"
 #include "condor_base64.h"
 #include "my_username.h"
-#include <Regex.h>
+#include "condor_regex.h"
 #include "starter_util.h"
 #include "condor_random_num.h"
 #include "data_reuse.h"
@@ -93,7 +93,6 @@ Starter::Starter() :
 	deferral_tid(-1),
 	pre_script(NULL),
 	post_script(NULL),
-	m_privsep_helper(NULL),
 	m_configured(false),
 	m_job_environment_is_ready(false),
 	m_all_jobs_done(false),
@@ -308,11 +307,6 @@ void
 Starter::StarterExit( int code )
 {
 	FinalCleanup();
-#if !defined(WIN32)
-	if ( GetEnv( "CONDOR_GLEXEC_STARTER_CLEANUP_FLAG" ) ) {
-		exitAfterGlexec( code );
-	}
-#endif
 	// Once libc starts calling global destructors, we can't reliably
 	// notify anyone of an EXCEPT().
 	_EXCEPT_Cleanup = NULL;
@@ -321,11 +315,13 @@ Starter::StarterExit( int code )
 
 void Starter::FinalCleanup()
 {
+#if defined(LINUX)
 		// Not useful to have the volume management code trigger
 		// while we are trying to cleanup.
 	if (m_lvm_poll_tid >= 0) {
 		daemonCore->Cancel_Timer(m_lvm_poll_tid);
 	}
+#endif
 
 	RemoveRecoveryFile();
 	removeTempExecuteDir();
@@ -354,21 +350,6 @@ Starter::Config()
 			Execute = strdup( orig_cwd );
 		} else {
 			EXCEPT("Execute directory not specified in config file.");
-		}
-	}
-	if (!m_configured) {
-		bool gl = param_boolean("GLEXEC_JOB", false);
-#if !defined(LINUX)
-		dprintf(D_ALWAYS,
-		        "GLEXEC_JOB not supported on this platform; "
-		            "ignoring\n");
-		gl = false;
-#endif
-		if (gl) {
-#if defined(LINUX)
-			m_privsep_helper = new GLExecPrivSepHelper;
-			ASSERT(m_privsep_helper != NULL);
-#endif
 		}
 	}
 
@@ -1443,46 +1424,27 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	setup_args.AppendArg(sshd_config_template.c_str());
 	setup_args.AppendArg(ssh_keygen_cmd.c_str());
 
-		// Would like to use my_popen here, but we need to support glexec.
+		// Would like to use my_popen here, but we needed to support glexec.
 		// Use the default reaper, even though it doesn't know anything
 		// about this task.  We avoid needing to know the final exit status
 		// by checking for a magic success string at the end of the output.
 	int setup_reaper = 1;
-	if( privSepHelper() ) {
-	    std::string error_msg;
-		privSepHelper()->create_process(
-			ssh_to_job_sshd_setup.c_str(),
-			setup_args,
-			setup_env,
-			GetWorkingDir(0),
-			setup_std_fds,
-			NULL,
-			0,
-			NULL,
-			setup_reaper,
-			setup_opt_mask,
-			NULL,
-			NULL,
-			error_msg);
-	}
-	else {
-		daemonCore->Create_Process(
-			ssh_to_job_sshd_setup.c_str(),
-			setup_args,
-			PRIV_USER_FINAL,
-			setup_reaper,
-			FALSE,
-			FALSE,
-			&setup_env,
-			GetWorkingDir(0),
-			NULL,
-			NULL,
-			setup_std_fds,
-			NULL,
-			0,
-			NULL,
-			setup_opt_mask);
-	}
+	daemonCore->Create_Process(
+		ssh_to_job_sshd_setup.c_str(),
+		setup_args,
+		PRIV_USER_FINAL,
+		setup_reaper,
+		FALSE,
+		FALSE,
+		&setup_env,
+		GetWorkingDir(0),
+		NULL,
+		NULL,
+		setup_std_fds,
+		NULL,
+		0,
+		NULL,
+		setup_opt_mask);
 
 	daemonCore->Close_Pipe(setup_pipe_fds[1]); // write-end of pipe
 
@@ -1901,10 +1863,6 @@ Starter::createTempExecuteDir( void )
 	priv_state priv = set_condor_priv();
 #endif
 
-	// we might be using glexec.  glexec relies on being able to read the
-	// contents of the execute directory as a non-condor user, so in that
-	// case, use 0755.  for all other cases, use the more-restrictive 0700.
-
 	int dir_perms = 0700;
 
 	// Parameter JOB_EXECDIR_PERMISSIONS can be user / group / world and
@@ -1919,11 +1877,6 @@ Starter::createTempExecuteDir( void )
 			dir_perms = 0755;
 		free(who);
 
-#if defined(LINUX)
-		if(glexecPrivSepHelper()) {
-			dir_perms = 0755;
-		}
-#endif
 		if( mkdir(WorkingDir.c_str(), dir_perms) < 0 ) {
 			dprintf( D_FAILURE|D_ALWAYS,
 			         "couldn't create dir %s: %s\n",
@@ -2064,54 +2017,6 @@ Starter::createTempExecuteDir( void )
 int
 Starter::jobEnvironmentReady( void )
 {
-#if defined(LINUX)
-		//
-		// For the GLEXEC_JOB case, we should now be able to
-		// initialize our helper object.
-		//
-	GLExecPrivSepHelper* gpsh = glexecPrivSepHelper();
-	if (gpsh != NULL) {
-		std::string proxy_path;
-		if (!jic->jobClassAd()->LookupString(ATTR_X509_USER_PROXY,
-		                                     proxy_path))
-		{
-			EXCEPT("configuration specifies use of glexec, "
-			           "but job has no proxy");
-		}
-		const char* proxy_name = condor_basename(proxy_path.c_str());
-		gpsh->initialize(proxy_name, WorkingDir.c_str());
-	}
-#endif
-
-		//
-		// Now that we are done preparing the job's environment,
-		// change the sandbox ownership to the user before spawning
-		// any job processes. VM universe jobs are special-cased
-		// here: chowning of the sandbox occurs in the VMGahp after
-		// it has had a chance to operate on the VM description
-		// file(s)
-		//
-	if (m_privsep_helper != NULL) {
-		int univ = -1;
-		if (!jic->jobClassAd()->LookupInteger(ATTR_JOB_UNIVERSE, univ) ||
-		    (univ != CONDOR_UNIVERSE_VM))
-		{
-			PrivSepError err;
-			if( !m_privsep_helper->chown_sandbox_to_user(err) ) {
-				jic->notifyStarterError(
-					err.holdReason(),
-					true,
-					err.holdCode(),
-					err.holdSubCode());
-				EXCEPT("failed to chown sandbox to user");
-			}
-		}
-		else if( univ == CONDOR_UNIVERSE_VM ) {
-				// the vmgahp will chown the sandbox to the user
-			m_privsep_helper->set_sandbox_owned_by_user();
-		}
-	}
-
 	m_job_environment_is_ready = true;
 
 		//
@@ -2997,25 +2902,6 @@ Starter::allJobsDone( void )
 	m_all_jobs_done = true;
 	bool bRet=false;
 
-		// now that all user processes are complete, change the
-		// sandbox ownership back over to condor. if this is a VM
-		// universe job, this chown will have already been
-		// performed by the VMGahp, since it does some post-
-		// processing on files in the sandbox
-	if (m_privsep_helper != NULL) {
-		if (jobUniverse != CONDOR_UNIVERSE_VM) {
-			PrivSepError err;
-			if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
-				jic->notifyStarterError(
-					err.holdReason(),
-					false,
-					err.holdCode(),
-					err.holdSubCode());
-				EXCEPT("failed to chown sandbox to condor after job completed");
-			}
-		}
-	}
-
 		// No more jobs, notify our JobInfoCommunicator.
 	if (jic->allJobsDone()) {
 			// JIC::allJobsDone returned true: we're ready to move on.
@@ -3533,12 +3419,14 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 		std::string pat;
 		pat.insert(0, pre, 0, (psub - pre));
 
-		const char * errstr = NULL; int erroff= 0;
-		int re_opts = 0;
-		pcre *re = pcre_compile(pat.c_str(), re_opts, &errstr, &erroff, NULL);
+		//const char * errstr = NULL; int erroff= 0;
+		int errcode = 0; PCRE2_SIZE erroff = 0;
+
+		PCRE2_SPTR pat_pcre2str = reinterpret_cast<const unsigned char *>(pat.c_str());
+		pcre2_code *re = pcre2_compile(pat_pcre2str, PCRE2_ZERO_TERMINATED, 0, &errcode, &erroff, NULL);
 		if ( ! re) {
-			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex error %s at offset %d in: %s\n",
-				tag, env_name.c_str(), errstr ? errstr : "", erroff, pat.c_str());
+			dprintf(D_ALWAYS | D_FAILURE, "Assigned%s environment '%s' regex PCRE2 error code %d at offset %d in: %s\n",
+				tag, env_name.c_str(), errcode, static_cast<int>(erroff), pat.c_str());
 			break;
 		}
 
@@ -3550,10 +3438,7 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			}
 		} else {
 			const char * resid;
-			int cGroups = 0;
-			pcre_fullinfo(re, NULL, PCRE_INFO_CAPTURECOUNT, &cGroups);
-			int ovecsize = 3 * (cGroups + 1); // +1 for the string itself
-			int * ovector = (int *) malloc(ovecsize * sizeof(int));
+			pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
 			dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' pattern: %s\n", tag, env_name.c_str(), peq);
 
@@ -3562,9 +3447,11 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 			while ((resid = ids.next())) {
 				if ( ! rhs.empty()) { rhs += env_id_separator; }
 				int cchresid = (int)strlen(resid);
-				int status = pcre_exec(re, NULL, resid, cchresid, 0, 0, ovector, ovecsize);
+				PCRE2_SPTR resid_pcre2str = reinterpret_cast<const unsigned char *>(resid);
+				int status = pcre2_match(re, resid_pcre2str, static_cast<PCRE2_SIZE>(cchresid), 0, 0, matchdata, NULL);
 				if (status >= 0) {
-					const struct _pcre_vector { int start; int end; } * groups = (const struct _pcre_vector*)ovector;
+					const struct _pcre_vector { int start; int end; } * groups
+						= (const struct _pcre_vector*) pcre2_get_ovector_pointer(matchdata);
 					dprintf(D_ALWAYS | D_FULLDEBUG, "Assigned%s environment '%s' match at %d,%d of pattern: %s\n", tag, env_name.c_str(), groups[0].start, groups[0].end, pat.c_str());
 					if (groups[0].start > 0) { rhs.append(resid, 0, groups[0].start); }
 					const char * ps = psub;
@@ -3582,10 +3469,10 @@ static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, cons
 					rhs += resid;
 				}
 			}
-			free(ovector);
+			pcre2_match_data_free(matchdata);
 		}
 
-		pcre_free(re);
+		pcre2_code_free(re);
 
 		proc_env->SetEnv(env_name.c_str(), rhs.c_str());
 
@@ -3783,18 +3670,6 @@ Starter::removeTempExecuteDir( void )
 	std::string dir_name = "dir_";
 	dir_name += std::to_string( daemonCore->getpid() );
 
-#if defined(LINUX)
-	if (glexecPrivSepHelper() != NULL && m_job_environment_is_ready == true &&
-		m_all_jobs_done == false) {
-
-		PrivSepError err;
-		if( !m_privsep_helper->chown_sandbox_to_condor(err) ) {
-			dprintf(D_ALWAYS, "Failed to chown glexec sandbox to condor on shutdown\n");
-			return false;
-		}
-	}
-#endif
-
 	bool has_failed = false;
 
 	// since we chdir()'d to the execute directory, we can't
@@ -3836,34 +3711,6 @@ Starter::removeTempExecuteDir( void )
 	}
 	return !has_failed;
 }
-
-#if !defined(WIN32)
-void
-Starter::exitAfterGlexec( int code )
-{
-	// tell Daemon Core to uninitialize its process family tracking
-	// subsystem. this will make sure that we tell our ProcD to exit,
-	// if we started one
-	daemonCore->Proc_Family_Cleanup();
-
-	// now we blow away the directory that the startd set up for us
-	// using glexec. this directory will be the parent directory of
-	// EXECUTE. we first "cd /", so that our working directory
-	// is not in the directory we're trying to delete
-	if (chdir( "/" )) {
-		dprintf(D_ALWAYS, "Error: chdir(\"/\") failed: %s\n", strerror(errno));
-	}
-	char* glexec_dir_path = condor_dirname( Execute );
-	ASSERT( glexec_dir_path );
-	Directory glexec_dir( glexec_dir_path );
-	glexec_dir.Remove_Entire_Directory();
-	rmdir( glexec_dir_path );
-	free( glexec_dir_path );
-
-	// all done
-	exit( code );
-}
-#endif
 
 bool
 Starter::WriteAdFiles() const

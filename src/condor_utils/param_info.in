@@ -737,6 +737,12 @@ type=bool
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_DEFAULT_APPEND_VARS]
+default=false
+type=bool
+tags=dagman,dagman_main
+restart=never
+
 [DAGMAN_REPORT_GRAPH_METRICS]
 default=false
 type=bool
@@ -916,11 +922,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[GLEXEC_STARTER]
-default=false
-type=bool
-tags=shadow,remoteresource
-
 [SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
 default=false
 type=bool
@@ -945,7 +946,7 @@ usage=Restrict what authorizations can be enabled with impersonation toekns.
 tags=schedd
 
 [SEC_ENABLE_REMOTE_ADMINISTRATION]
-default=false
+default=true
 type=bool
 tags=master
 usage=Set to true to allow the collector administrator(s) to manage the daemon
@@ -954,6 +955,10 @@ usage=Set to true to allow the collector administrator(s) to manage the daemon
 default=true
 type=bool
 tags=shadow,remoteresource
+
+[USE_VOMS_ATTRIBUTES]
+default=false
+type=bool
 
 [USE_AFS]
 default=
@@ -1324,16 +1329,6 @@ type=int
 default=20
 range=0,
 type=int
-tags=daemon_core
-
-[GLEXEC_JOB]
-default=false
-type=bool
-tags=daemon_core
-
-[GLEXEC_HOLD_ON_INITIAL_FAILURE]
-default=true
-type=bool
 tags=daemon_core
 
 [WINDOWS_SOFTKILL]
@@ -1768,16 +1763,6 @@ default=$(RELEASE_DIR)/sbin
 win32_default=$(BIN)
 type=path
 tags=startd,starter_mgr
-
-[GLEXEC]
-default=
-type=string
-tags=startd,glexec_starter
-
-[GLEXEC_USER_DIR]
-default=
-type=string
-tags=startd,command
 
 [SINGULARITY]
 default=/usr/bin/singularity
@@ -3125,12 +3110,24 @@ type=bool
 tags=schedd
 description=Set to false to have Schedd refuse late materialization submits
 
+[SCHEDD_ASSUME_NEGOTIATOR_GONE]
+default=2000000000
+type=int
+tags=schedd
+description=
+
 [SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
 default=true
 type=bool
 tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
+
+[SCHEDD_SEND_RESCHEDULE]
+default=true
+type=bool
+tags=schedd
+description=
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
@@ -3199,6 +3196,11 @@ type=bool
 tags=schedd
 
 [PER_JOB_HISTORY_DIR]
+default=
+type=string
+tags=schedd
+
+[JOB_EPOCH_INSTANCE_DIR]
 default=
 type=string
 tags=schedd
@@ -4653,22 +4655,6 @@ type=string
 description=List of timespans for reporting file transfer I/O statistics
 tags=schedd
 
-[GLEXEC_RETRIES]
-default=3
-version=7.8.8
-range=0,
-type=int
-description=Number of times to retry calls to glexec
-tags=startd
-
-[GLEXEC_RETRY_DELAY]
-default=5
-version=7.8.8
-range=0,
-type=int
-description=Minimum time delay in exponential backoff for glexec retries
-tags=startd
-
 [GRACEFULLY_REMOVE_JOBS]
 default=true
 version=7.9.0
@@ -6055,6 +6041,33 @@ default : @end
   use POLICY : WANT_HOLD_IF( CPU_EXCEEDED, $(HOLD_SUBCODE_CPU_EXCEEDED:101), $(HOLD_REASON_CPU_EXCEEDED) )
 @end
 
+[$POLICY.PREEMPT_IF_DISK_EXCEEDED]
+description=Preempt jobs that use more disk than in slot
+default : @end
+  #
+  # If the startd sees the disk usage of the job exceed the
+  # disk in the slot, preempt the job immediately ignoring
+  # any retirement time.  VM universe jobs can't go over their
+  # disk allocations, so we ignore them.
+  #
+  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  use POLICY : PREEMPT_IF(DISK_EXCEEDED)
+@end
+
+[$POLICY.HOLD_IF_DISK_EXCEEDED]
+description=Hold jobs that use more disk than in slot
+default : @end
+  #
+  # If the startd preempted a job because disk usage exceeded
+  # the amount of memory in the slot, put the job on hold.  VM
+  # universe jobs can't go over their disk allocations, so
+  # we ignore them.
+  #
+  DISK_EXCEEDED = (JobUniverse != 13 && DiskUsage =!= UNDEFINED && DiskUsage > Disk)
+  HOLD_REASON_DISK_EXCEEDED = disk usage exceeded allocated disk
+  use POLICY : WANT_HOLD_IF( DISK_EXCEEDED, $(HOLD_SUBCODE_DISK_EXCEEDED:104), $(HOLD_REASON_DISK_EXCEEDED) )
+@end
+
 [$POLICY.PREEMPT_IF_MEMORY_EXCEEDED]
 description=Preempt jobs that use more memory than in slot
 default : @end
@@ -6081,7 +6094,6 @@ default : @end
   HOLD_REASON_MEMORY_EXCEEDED = memory usage exceeded request_memory
   use POLICY : WANT_HOLD_IF( MEMORY_EXCEEDED, $(HOLD_SUBCODE_MEMORY_EXCEEDED:102), $(HOLD_REASON_MEMORY_EXCEEDED) )
 @end
-
 
 [$POLICY.PREEMPT_IF]
 description=Configure a PREEMPT expression args:(policy_variable)

@@ -48,7 +48,7 @@ bool is_utc;
 char time_string[ISO8601_DateAndTimeBufferMax*2];
 unsigned long sub_second;
 long microsec;
-static MyString iso8601_str, time_str;
+static std::string iso8601_str, time_str;
 
 bool OTEST_Iso_Dates(void) {
 	emit_object("Iso Dates");
@@ -85,17 +85,17 @@ static bool test_basic_date() {
 								  ISO8601_DateOnly, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_DateOnly, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_DateOnly, parsed_time, &time_str);
+	get_tm(ISO8601_DateOnly, broken_down_time, iso8601_str);
+	get_tm(ISO8601_DateOnly, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_DateOnly");
 	emit_output_expected_header();
-	emit_param("Broken down time", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -110,17 +110,17 @@ static bool test_extended_date() {
 								  ISO8601_DateOnly, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, NULL, &is_utc);
-	get_tm(ISO8601_DateOnly, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_DateOnly, parsed_time, &time_str);
+	get_tm(ISO8601_DateOnly, broken_down_time, iso8601_str);
+	get_tm(ISO8601_DateOnly, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_DateOnly");
 	emit_output_expected_header();
-	emit_param("Broken down time", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -135,17 +135,17 @@ static bool test_basic_time() {
 								  ISO8601_TimeOnly, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_TimeOnly, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_TimeOnly, parsed_time, &time_str);
+	get_tm(ISO8601_TimeOnly, broken_down_time, iso8601_str);
+	get_tm(ISO8601_TimeOnly, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_TimeOnly");
 	emit_output_expected_header();
-	emit_param("Broken down time", "%s", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -160,17 +160,17 @@ static bool test_extended_time() {
 								  ISO8601_TimeOnly, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, NULL, &is_utc);
-	get_tm(ISO8601_TimeOnly, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_TimeOnly, parsed_time, &time_str);
+	get_tm(ISO8601_TimeOnly, broken_down_time, iso8601_str);
+	get_tm(ISO8601_TimeOnly, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_TimeOnly");
 	emit_output_expected_header();
-	emit_param("Broken down time", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -185,17 +185,17 @@ static bool test_basic_date_time() {
 								  ISO8601_DateAndTime, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_DateAndTime, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, broken_down_time, iso8601_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Broken down time", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -210,17 +210,17 @@ static bool test_extended_date_time() {
 								  ISO8601_DateAndTime, 
 								  false);
 	iso8601_to_time(time_string, &parsed_time, NULL, &is_utc);
-	get_tm(ISO8601_DateAndTime, broken_down_time, &iso8601_str);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, broken_down_time, iso8601_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", time_string);
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Broken down time", time_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", time_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	emit_output_actual_header();
-	emit_param("Broken down time", "%s", iso8601_str.Value());
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Broken down time", "%s", iso8601_str.c_str());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(iso8601_str != time_str) {
 		FAIL;
 	}
@@ -229,16 +229,16 @@ static bool test_extended_date_time() {
 
 static bool test_empty() {
 	emit_test("Test that iso8601_to_time() correctly parses the empty string.");
-	MyString expect("-1--1--1T-1:-1:-1");
+	std::string expect("-1--1--1T-1:-1:-1");
 	iso8601_to_time("", &parsed_time, NULL, &is_utc);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", "");
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Parsed time", "%s", expect.Value());
+	emit_param("Parsed time", "%s", expect.c_str());
 	emit_output_actual_header();
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(time_str != expect) {
 		FAIL;
 	}
@@ -248,16 +248,16 @@ static bool test_empty() {
 static bool test_year_only() {
 	emit_test("Test that iso8601_to_time() correctly parses a string that only "
 		"contains the year.");
-	MyString expect("110--1--1T-1:-1:-1");
+	std::string expect("110--1--1T-1:-1:-1");
 	iso8601_to_time("2010", &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", "2010");
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Parsed time", "%s", expect.Value());
+	emit_param("Parsed time", "%s", expect.c_str());
 	emit_output_actual_header();
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(time_str != expect) {
 		FAIL;
 	}
@@ -267,16 +267,16 @@ static bool test_year_only() {
 static bool test_char() {
 	emit_test("Test that iso8601_to_time() correctly parses a string that only "
 		"contains the character 'T'.");
-	MyString expect("-1--1--1T-1:-1:-1");
+	std::string expect("-1--1--1T-1:-1:-1");
 	iso8601_to_time("T", &parsed_time, NULL, &is_utc);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", "T");
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Parsed time", "%s", expect.Value());
+	emit_param("Parsed time", "%s", expect.c_str());
 	emit_output_actual_header();
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(time_str != expect) {
 		FAIL;
 	}
@@ -286,16 +286,16 @@ static bool test_char() {
 static bool test_time() {
 	emit_test("Test that iso8601_to_time() correctly parses a string that only "
 		"contains a time.");
-	MyString expect("-1--1--1T1:2:3");
+	std::string expect("-1--1--1T1:2:3");
 	iso8601_to_time("01:02:03", &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", "01:02:03");
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Parsed time", "%s", expect.Value());
+	emit_param("Parsed time", "%s", expect.c_str());
 	emit_output_actual_header();
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(time_str != expect) {
 		FAIL;
 	}
@@ -305,16 +305,16 @@ static bool test_time() {
 static bool test_time_char() {
 	emit_test("Test that iso8601_to_time() correctly parses a string that only "
 		"contains a time with a 'T' preceding it.");
-	MyString expect("-1--1--1T1:2:3");
+	std::string expect("-1--1--1T1:2:3");
 	iso8601_to_time("T01:02:03", &parsed_time, &microsec, &is_utc);
-	get_tm(ISO8601_DateAndTime, parsed_time, &time_str);
+	get_tm(ISO8601_DateAndTime, parsed_time, time_str);
 	emit_input_header();
 	emit_param("Time String", "%s", "T01:02:03");
 	emit_param("ISO8601Type", "ISO8601_DateAndTime");
 	emit_output_expected_header();
-	emit_param("Parsed time", "%s", expect.Value());
+	emit_param("Parsed time", "%s", expect.c_str());
 	emit_output_actual_header();
-	emit_param("Parsed time", "%s", time_str.Value());
+	emit_param("Parsed time", "%s", time_str.c_str());
 	if(time_str != expect) {
 		FAIL;
 	}

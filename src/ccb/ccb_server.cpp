@@ -157,7 +157,6 @@ CCBServer::RegisterHandlers()
 		"CCBServer::HandleRegistration",
 		this,
 		DAEMON,
-		D_COMMAND,
 		false,
 		STANDARD_COMMAND_PAYLOAD_TIMEOUT,
 		&alternate_perms);

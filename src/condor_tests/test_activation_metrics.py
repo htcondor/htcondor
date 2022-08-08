@@ -166,6 +166,7 @@ def job_two_execution_durations(default_condor, job_two_handle):
     start = time.time()
     durations = []
     current_duration = None
+    job_terminated = False
     while time.time() - start < 60:
         time.sleep(3)
 
@@ -181,9 +182,17 @@ def job_two_execution_durations(default_condor, job_two_handle):
         except KeyError:
             pass
 
+        if job_terminated:
+            break
+
         job_two_handle.state.read_events()
         if job_two_handle.state.all_terminal():
-            break
+            # If job is done, don't just break here; instead, set a flag and go
+            # back through the while loop one last time to ensure we get the
+            # last execution duration.  I.e. we want to avoid the race condition
+            # between seeing ActivationExecutionDuration updated -vs- seeing the
+            # job complete.
+            job_terminated = True
 
     job_two_handle.state.read_events()
     assert job_two_handle.state.all_complete()
@@ -230,4 +239,17 @@ class TestActivationMetrics:
         logger.info(f"job_two_duration = {job_two_duration}")
         logger.info(f"first execution duration = {job_two_execution_durations[0]}")
         logger.info(f"second execution duration = {job_two_execution_durations[1]}")
+        logger.info(f"third execution duration = {job_two_execution_durations[2]}")
         assert( job_two_execution_durations[0] + job_two_execution_durations[1] ) <= job_two_duration
+
+
+        # Make sure ActivationSetupDuration and ActivationTeardownDuration numbers are not inflated
+        # due to multiple executions (resulting from user checkpoints).  HTCONDOR-1190
+        job_two_setup = job_two_ad["ActivationSetupDuration"]
+        assert job_two_setup is not None
+        job_two_teardown = job_two_ad["ActivationTeardownDuration"]
+        assert job_two_teardown is not None
+        logger.info(f"job_two_setup = {job_two_setup}")
+        logger.info(f"job_two_teardown = {job_two_teardown}")
+        # We will allow one second of slop in all this, thus below 'job_two_duration + 1'
+        assert( job_two_setup + job_two_execution_durations[0] + job_two_execution_durations[1] + job_two_execution_durations[2] + job_two_teardown ) <= ( job_two_duration + 1 )

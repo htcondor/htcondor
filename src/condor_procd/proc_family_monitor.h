@@ -85,13 +85,6 @@ public:
 	//
 	proc_family_error_t unregister_subfamily(pid_t);
 
-#if !defined(WIN32)
-	// associate a proxy with a family for cases when we need to use
-	// glexec to signal processes
-	//
-	proc_family_error_t use_glexec_for_family(pid_t, char* proxy);
-#endif
-
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Turn on the ability to track via a cgroup
 	void enable_cgroup_tracking();

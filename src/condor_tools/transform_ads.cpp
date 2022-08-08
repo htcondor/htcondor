@@ -36,7 +36,7 @@
 #include "match_prefix.h"
 #include "condor_version.h"
 #include "ad_printmask.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "tokener.h"
 #include <submit_utils.h>
 #include <xform_utils.h>
@@ -147,16 +147,13 @@ main( int argc, const char *argv[] )
 
 	setbuf( stdout, NULL );
 
-	set_mySubSystem( MySubsys, SUBSYSTEM_TYPE_TOOL );
+	set_mySubSystem( MySubsys, false, SUBSYSTEM_TYPE_TOOL );
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
-	XFormHash xform_hash;
+	XFormHash xform_hash(XFormHash::Flavor::Iterating);
 	xform_hash.init();
-
-	set_debug_flags(NULL, D_EXPR);
 
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, (SIG_HANDLER)SIG_IGN );
@@ -171,9 +168,9 @@ main( int argc, const char *argv[] )
 				dash_verbose = true; dash_terse = false;
 			} else if (is_dash_arg_prefix(ptr[0], "terse", 3)) {
 				dash_terse = true; dash_verbose = false;
-			} else if (is_dash_arg_prefix(ptr[0], "debug", 2)) {
+			} else if (is_dash_arg_colon_prefix(ptr[0], "debug", &pcolon, 2)) {
 				// dprintf to console
-				dprintf_set_tool_debug("TOOL", 0);
+				dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 			} else if (is_dash_arg_prefix(ptr[0], "rules", 1)) {
 				const char * pfilearg = ptr[1];
 				if ( ! pfilearg || (*pfilearg == '-' && (MATCH != strcmp(pfilearg,"-"))) ) {

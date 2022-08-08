@@ -82,7 +82,7 @@
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "filename_tools.h"
 #include "which.h"
 #include "classad_helpers.h"
@@ -629,9 +629,9 @@ bool validate_config(bool abort_if_invalid, int opt)
 	MyString deprecated_out;
 	Regex re;
 	if (deprecation_check) {
-		int err = 0; const char * pszMsg = 0;
+		int errcode, erroffset;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS)) {
+		if (!re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS)) {
 			EXCEPT("Programmer error in condor_config: invalid regexp\n");
 		}
 	}
@@ -1272,28 +1272,34 @@ process_locals( const char* param_name, const char* host )
 }
 
 
-template <class T> bool re_match(const char * str, pcre * re, int options, T& tags)
+template <class T> bool re_match(const char * str, pcre2_code * re, PCRE2_SIZE options, T& tags)
 {
 	if ( ! re) return false;
 
-	const size_t ctags = sizeof(tags) / sizeof(tags[0]);
-	const int cvec = (int)(3 * (1 + ctags));
-	int ovec[cvec];
+	PCRE2_SPTR str_pcre2 = reinterpret_cast<const unsigned char *>(str);
+	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 
-	int rc = pcre_exec(re, NULL, str, (int)strlen(str), 0, options, ovec, cvec);
+	int rc = pcre2_match(re, str_pcre2, strlen(str), 0, options, matchdata, NULL);
+	PCRE2_SIZE * ovec = pcre2_get_ovector_pointer(matchdata);
 
 	for (int ii = 1; ii < rc; ++ii) {
-		tags[ii-1].set(str + ovec[ii * 2], ovec[ii * 2 + 1] - ovec[ii * 2]);
+		tags[ii-1].set(str + ovec[ii * 2], 
+			static_cast<int>(ovec[ii * 2 + 1] - ovec[ii * 2]));
 	}
+
+	pcre2_match_data_free(matchdata);
+
 	return rc > 0;
 }
 
 void do_smart_auto_use(int /*options*/)
 {
-	int erroffset = 0; const char * errmsg = 0;
-	pcre * re = pcre_compile("AUTO_USE_([A-Za-z]+)_(.+)",
-		PCRE_CASELESS | PCRE_ANCHORED,
-		&errmsg, &erroffset, NULL);
+	PCRE2_SIZE erroffset = 0;
+	int errcode;
+	pcre2_code * re = pcre2_compile(reinterpret_cast<const unsigned char *>("AUTO_USE_([A-Za-z]+)_(.+)"),
+		PCRE2_ZERO_TERMINATED,
+		PCRE2_CASELESS | PCRE2_ANCHORED,
+		&errcode, &erroffset, NULL);
 	ASSERT(re);
 
 	MyString tags[2];
@@ -1305,7 +1311,7 @@ void do_smart_auto_use(int /*options*/)
 	HASHITER it = hash_iter_begin(ConfigMacroSet);
 	for (; !hash_iter_done(it); hash_iter_next(it)) {
 		const char *name = hash_iter_key(it);
-		if (re_match(name, re, PCRE_NOTEMPTY, tags)) {
+		if (re_match(name, re, PCRE2_NOTEMPTY, tags)) {
 			// check trigger
 			auto_free_ptr trigger(param(name));
 			bool trigger_value = false;
@@ -1318,8 +1324,9 @@ void do_smart_auto_use(int /*options*/)
 			if ( ! trigger_value)
 				continue;
 
-			int meta_id = param_default_get_source_meta_id(tags[0].c_str(), tags[1].c_str());
-			if (meta_id < 0) {
+			int meta_id = 0;
+			const char * raw_template = param_meta_value(tags[0].c_str(), tags[1].c_str(), &meta_id);
+			if ( ! raw_template) {
 				fprintf(stderr, "Configuration error while interpreting %s : no template named %s:%s\n",
 					name, tags[0].c_str(), tags[1].c_str());
 				continue;
@@ -1328,15 +1335,12 @@ void do_smart_auto_use(int /*options*/)
 			insert_source(name, ConfigMacroSet, src);
 			src.meta_id = (short int)meta_id;
 
-			MACRO_DEF_ITEM * mdi = param_meta_source_by_id(src.meta_id);
-			ASSERT(mdi && mdi->def && mdi->def->psz);
-
-			auto_free_ptr expanded(expand_meta_args(mdi->def->psz, args));
+			auto_free_ptr expanded(expand_meta_args(raw_template, args));
 			Parse_config_string(src, 1, expanded, ConfigMacroSet, ctx);
 		}
 	}
 	hash_iter_delete(&it);
-	pcre_free(re);
+	pcre2_code_free(re);
 }
 
 
@@ -1347,16 +1351,16 @@ int compareFiles(const void *a, const void *b) {
 static void
 get_exclude_regex(Regex &excludeFilesRegex)
 {
-	const char* _errstr;
+	int _errcode;
 	int _erroffset;
 	char* excludeRegex = param("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP");
 	if(excludeRegex) {
 		if (!excludeFilesRegex.compile(excludeRegex,
-									&_errstr, &_erroffset)) {
+									&_errcode, &_erroffset)) {
 			EXCEPT("LOCAL_CONFIG_DIR_EXCLUDE_REGEXP "
 				   "config parameter is not a valid "
-				   "regular expression.  Value: %s,  Error: %s",
-				   excludeRegex, _errstr ? _errstr : "");
+				   "regular expression.  Value: %s,  Error Code: %d",
+				   excludeRegex, _errcode);
 		}
 		if(!excludeFilesRegex.isInitialized() ) {
 			EXCEPT("Could not init regex "
@@ -2074,6 +2078,14 @@ bool param_defined(const char* name) {
 	return false;
 }
 
+unsigned int expand_defined_config_macros (std::string &value)
+{
+	MACRO_EVAL_CONTEXT ctx;
+	init_macro_eval_context(ctx);
+	return expand_defined_macros(value, ConfigMacroSet, ctx);
+}
+
+
 char *param(const char * name) {
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
@@ -2704,9 +2716,10 @@ const char * param_append_location(const MACRO_META * pmet, MyString & value)
 	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
 		value.formatstr_cat(", line %d", pmet->source_line);
-		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id);
+		MACRO_TABLE_PAIR * ptable = nullptr;
+		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id, &ptable);
 		if (pmsi) {
-			value.formatstr_cat(", use %s+%d", pmsi->key, pmet->source_meta_off);
+			value.formatstr_cat(", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
 		}
 	}
 	return value.c_str();

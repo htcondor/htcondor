@@ -134,7 +134,6 @@ int main( int argc, char *argv[] )
 	bool allow_multiple = false;
 	bool many_connections = false;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

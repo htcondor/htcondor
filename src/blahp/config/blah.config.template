@@ -36,7 +36,7 @@ blah_shared_directories=/
 #A shell variable escaped or in single quotes will be resolved on the 
 #worker node in the job environment. Non-escaped variables will be resolved 
 #on the submit node in the submit environment.
-#blah_wn_temporary_home_dir='$GLITE_LOCATION_TMP'
+#blah_wn_temporary_home_dir='$BLAHP_LOCATION_TMP'
 
 #These two attributes allow to change the directory on the worker node where 
 #the batch system is instructed to transfer input/output sandbox files to 

@@ -175,7 +175,10 @@ class CondorQuery
 
 	// Add a non-requirements attribute to send along with the
 	// query.  The server will decide what, if anything to do with it
-	int addExtraAttribute(const char *name, const char *value);
+	int addExtraAttribute(const char *name, const char *expression)          { return extraAttrs.AssignExpr(name, expression); }
+	int addExtraAttributeString(const char *name, const std::string & value) { return extraAttrs.Assign(name, value); }
+	int addExtraAttributeNumber(const char *name, long long value)           { return extraAttrs.Assign(name, value); }
+	int addExtraAttributeBool(const char *name, bool value)                  { return extraAttrs.Assign(name, value); }
 
 		// Set the list of desired attributes
 		// to be returned in the queried ads.

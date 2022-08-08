@@ -22,9 +22,9 @@ using namespace htcondor;
 
 bool Singularity::m_enabled = false;
 bool Singularity::m_probed = false;
+bool Singularity::m_apptainer = false;
 int  Singularity::m_default_timeout = 120;
 std::string Singularity::m_singularity_version;
-
 
 static bool find_singularity(std::string &exec)
 {
@@ -42,7 +42,14 @@ static bool find_singularity(std::string &exec)
 #endif
 }
 
-
+// If singularity is really "apptainer", we need to
+// pass environment variables from host to container by
+// prefixing them with APPTAINERENV_.  Otherwise, they need
+// to be prefixed with SINGULARITY_ENV
+std::string 
+Singularity::environmentPrefix() {
+	return Singularity::m_apptainer ? "APPTAINERENV_" : "SINGULARITYENV_";
+}
 bool
 Singularity::advertise(ClassAd &ad)
 {
@@ -123,6 +130,9 @@ Singularity::detect(CondorError &err)
 		}
 	}
 
+	if (m_singularity_version.find("apptainer") != std::string::npos) {
+		m_apptainer = true;
+	}
 	m_enabled = ! m_singularity_version.empty();
 
 	return true;
@@ -177,7 +187,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	std::string target_dir;
-	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	bool has_target = hasTargetDir(jobAd, target_dir); 
 
 	// If we have a process to exec, remove it from the args
 	if (exec.length() > 0) {
@@ -223,6 +233,10 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("-B");
 		sing_args.AppendArg(job_iwd.c_str());
 	}
+
+	sing_args.AppendArg("-W");
+	sing_args.AppendArg(execute_dir.c_str());
+
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
@@ -352,9 +366,16 @@ Singularity::setup(ClassAd &machineAd,
 
 	// For some reason, singularity really wants /usr/sbin near the beginning of the PATH
 	// when running /usr/sbin/mksquashfs when running docker: images
-	std::string oldPath;
-	job_env.GetEnv("PATH", oldPath);
-	job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
+	//
+	// Update:  If PATH wasn't set, singularity will set it from the
+	// image.  In this case, we are injecting a new PATH which prevents
+	// the image path from being set, which breaks all kinds of things.
+	// comment this out for now until we find a better solution.
+	// This means that to run docker images, the user will have to have
+	// /usr/sbin in their path
+	//std::string oldPath;
+	//job_env.GetEnv("PATH", oldPath);
+	//job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these
@@ -396,7 +417,7 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 		std::string  value = myValue;
 		auto index_execute_dir = value.find(execute_dir);
 		if (index_execute_dir != std::string::npos) {
-			std::string new_name = "SINGULARITYENV_" + name;
+			std::string new_name = environmentPrefix() + name;
 			job_env.SetEnv(
 				new_name.c_str(),
 				value.replace(index_execute_dir, execute_dir.length(), target_dir)
@@ -420,10 +441,10 @@ Singularity::convertEnv(Env *job_env) {
 
 		// Skip env vars that already start with SINGULARITYENV_, as they
 		// have already been converted (probably via retargetEnvs()).
-		if (name.rfind("SINGULARITYENV_",0)==0) continue;
+		if (name.rfind(environmentPrefix(),0)==0) continue;
 
 		job_env->GetEnv(name.c_str(), value);
-		std::string new_name = "SINGULARITYENV_" + name;
+		std::string new_name = environmentPrefix() + name;
 		// Only copy over the value to the new_name if the new_name
 		// does not already exist because perhaps it was already set
 		// in retargetEnvs().  Note that 'value' is not touched if
@@ -433,6 +454,19 @@ Singularity::convertEnv(Env *job_env) {
 		}
 	}
 	return true;
+}
+
+bool 
+Singularity::hasTargetDir(const ClassAd &jobAd, /* not const */ std::string &target_dir) {
+	target_dir = "";
+	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+
+	// If the admin hasn't specification as target_dir, let the job select one
+	// We assume that the job has also selected the image as well
+	if (!has_target) {
+		has_target = jobAd.LookupString(ATTR_CONTAINER_TARGET_DIR, target_dir);
+	}
+	return has_target;
 }
 
 bool 
@@ -508,14 +542,14 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 bool
 Singularity::canRunSIF() {
 	std::string libexec_dir;
-	libexec_dir = param("LIBEXEC");
+	param(libexec_dir, "LIBEXEC");
 	return Singularity::canRun(libexec_dir + "/exit_37.sif");
 }
 
 bool
 Singularity::canRunSandbox() {
 	std::string sbin_dir;
-	sbin_dir = param("SBIN");
+	param(sbin_dir, "SBIN");
 	return Singularity::canRun(sbin_dir);
 }
 

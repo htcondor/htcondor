@@ -138,7 +138,7 @@ main( int argc, char ** const argv )
 	sigprocmask( SIG_UNBLOCK, &sigSet, NULL );
 #endif
 
-	set_mySubSystem("GCE_GAHP", SUBSYSTEM_TYPE_GAHP);
+	set_mySubSystem("GCE_GAHP", false, SUBSYSTEM_TYPE_GAHP);
 
 	config();
 	dprintf_config( "GCE_GAHP" );

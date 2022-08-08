@@ -136,7 +136,7 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	daemonCore->
 		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
 						  &cred_get_cred_handler,
-						  "cred_get_cred_handler", DAEMON, D_COMMAND,
+						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
 }
 
@@ -197,16 +197,8 @@ UniShadow::cleanUp( bool graceful )
 void
 UniShadow::gracefulShutDown( void )
 {
-	if (remRes) {
-		int remain = remRes->remainingLeaseDuration();
-		if (!remain) {
-			// Only attempt to deactivate (gracefully) the claim if
-			// there's no lease or it has already expired.
-			remRes->killStarter(true);
-		} else {
-			DC_Exit( JOB_SHOULD_REQUEUE );
-		}
-	}
+	remRes->setExitReason(JOB_SHOULD_REQUEUE);
+	remRes->killStarter(true);
 }
 
 

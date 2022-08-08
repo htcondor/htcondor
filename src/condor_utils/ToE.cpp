@@ -7,6 +7,7 @@
 #include "ToE.h"
 #include "iso_dates.h"
 #include "utc_time.h"
+#include "stl_string_utils.h"
 
 namespace ToE {
 

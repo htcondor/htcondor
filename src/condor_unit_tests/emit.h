@@ -58,9 +58,9 @@ private:
 	bool print_failures;
 	bool print_successes;
 
-	MyString *buf, *test_buf;
+	std::string buf, test_buf;
 
-	MyString *cur_test_name;
+	std::string cur_test_name;
 
 	time_t start, global_start;
 

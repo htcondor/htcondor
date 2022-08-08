@@ -89,6 +89,14 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 	m_registered_listener(false),
 	m_retry_remote_addr_timer(-1),
 	m_max_accepts(8),
+#ifdef WIN32
+	thread_should_exit(0),
+	pipe_end(INVALID_HANDLE_VALUE),
+	inheritable_to_child(INVALID_HANDLE_VALUE),
+	thread_handle(INVALID_HANDLE_VALUE),
+	wake_select_source(nullptr),
+	wake_select_dest(nullptr),
+#endif
 	m_socket_check_timer(-1)
 {
 
@@ -110,19 +118,7 @@ SharedPortEndpoint::SharedPortEndpoint(char const *sock_name):
 		m_local_id = GenerateEndpointName(daemon_name);
 	}
 #ifdef WIN32
-	wake_select_source = NULL;
-	wake_select_dest = NULL;
-
-	kill_thread = false;
-	thread_killed = INVALID_HANDLE_VALUE;
-
-	pipe_end = INVALID_HANDLE_VALUE;
-	inheritable_to_child = INVALID_HANDLE_VALUE;
-
-	thread_handle = INVALID_HANDLE_VALUE;
-
 	InitializeCriticalSection(&received_lock);
-	InitializeCriticalSection(&kill_lock);
 #endif
 }
 
@@ -131,19 +127,16 @@ SharedPortEndpoint::~SharedPortEndpoint()
 	StopListener();
 
 #ifdef WIN32
-	
+
+	InterlockedOr(&thread_should_exit, 1);
+
 	if(wake_select_source)
 	{
 		delete wake_select_source;
 		delete wake_select_dest;
 	}
 
-	if( thread_killed != INVALID_HANDLE_VALUE ) {
-		DWORD wait_result = WaitForSingleObject(thread_killed, 100);
-		if(wait_result != WAIT_OBJECT_0)
-			dprintf(D_ALWAYS, "SharedPortEndpoint: Destructor: Problem in thread shutdown notification: %d\n", GetLastError());
-		CloseHandle(thread_killed); thread_killed = INVALID_HANDLE_VALUE;
-	}
+	DeleteCriticalSection(&received_lock);
 #endif
 }
 
@@ -186,6 +179,9 @@ void
 SharedPortEndpoint::StopListener()
 {
 #ifdef WIN32
+	// tell the listener thread to exit, this won't necessarily wake it up, we do that below if needed.
+	InterlockedOr(&thread_should_exit, 1);
+
 	/*
 	On Windows we only need to close the pipe ends for the
 	two pipes we're using.
@@ -196,20 +192,15 @@ SharedPortEndpoint::StopListener()
 	}
 	if ( ! m_registered_listener) {
 		if (pipe_end && pipe_end != INVALID_HANDLE_VALUE) { CloseHandle(pipe_end); pipe_end = INVALID_HANDLE_VALUE; }
-		ASSERT (thread_killed == INVALID_HANDLE_VALUE && thread_handle == INVALID_HANDLE_VALUE);
+		ASSERT (thread_handle == INVALID_HANDLE_VALUE);
 	} else {
 		bool tried = false;
 		HANDLE child_pipe = INVALID_HANDLE_VALUE;
-		EnterCriticalSection(&kill_lock);
-		kill_thread = true;
-		LeaveCriticalSection(&kill_lock);
 		while(true)
 		{
 			if(tried)
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Failed to cleanly terminate pipe listener\n");
-				MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
-				TerminateThread(thread_handle, 0);
 				break;
 			}
 			child_pipe = CreateFile(
@@ -224,8 +215,6 @@ SharedPortEndpoint::StopListener()
 			if(child_pipe == INVALID_HANDLE_VALUE)
 			{
 				dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Named pipe does not exist.\n");
-				MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
-				TerminateThread(thread_handle, 0);
 				break;
 			}
 
@@ -234,8 +223,6 @@ SharedPortEndpoint::StopListener()
 				if (!WaitNamedPipe(m_full_name.c_str(), 20000))
 				{
 					dprintf(D_ALWAYS, "ERROR: SharedPortEndpoint: Wait for named pipe for sending socket timed out: %d\n", GetLastError());
-					MSC_SUPPRESS_WARNING_FOREVER(6258) // warning: Using TerminateThread does not allow proper thread clean up
-					TerminateThread(thread_handle, 0);
 					break;
 				}
 
@@ -250,8 +237,15 @@ SharedPortEndpoint::StopListener()
 			CloseHandle(child_pipe); child_pipe = INVALID_HANDLE_VALUE;
 		}
 
-		CloseHandle(thread_handle); thread_handle = INVALID_HANDLE_VALUE;
-		DeleteCriticalSection(&received_lock);
+		if (thread_handle != INVALID_HANDLE_VALUE) {
+			// wait at most 2 seconds for the thread to exit. Normally this will take no time at all
+			// the only time we need to wait here is when the thread is currently dealing with a socket handoff
+			DWORD wait_result = WaitForSingleObject(thread_handle, 2*1000);
+			if (wait_result != WAIT_OBJECT_0) {
+				dprintf(D_ERROR, "SharedPortEndpoint: StopListener could not stop the listener thread: %d\n", GetLastError());
+			}
+			CloseHandle(thread_handle); thread_handle = INVALID_HANDLE_VALUE;
+		}
 	}
 #else
 	if( m_registered_listener && daemonCore ) {
@@ -475,10 +469,7 @@ SharedPortEndpoint::StartListenerWin32()
 		return true;
 
 	m_registered_listener = true;
-	kill_thread = false;
-	thread_killed = CreateEvent(NULL, TRUE, FALSE, NULL);
-	if(thread_killed == INVALID_HANDLE_VALUE)
-		EXCEPT("SharedPortEndpoint: Failed to create cleanup event: %d", GetLastError());
+	InterlockedAnd(&thread_should_exit, 0);
 
 	DWORD threadID;
 	thread_handle = CreateThread(NULL,
@@ -490,8 +481,7 @@ SharedPortEndpoint::StartListenerWin32()
 	if(thread_handle == INVALID_HANDLE_VALUE)
 	{
 		m_registered_listener = false;
-		kill_thread = true;
-		CloseHandle(thread_killed); thread_killed = INVALID_HANDLE_VALUE;
+		InterlockedOr(&thread_should_exit, 1);
 		EXCEPT("SharedPortEndpoint: Failed to create listener thread: %d", GetLastError());
 	}
 	dprintf(D_DAEMONCORE|D_FULLDEBUG, "SharedPortEndpoint: StartListenerWin32: Thread spun off, listening on pipes.\n");
@@ -503,12 +493,8 @@ DWORD WINAPI
 InstanceThread(void* instance)
 {
 	SharedPortEndpoint *endpoint = (SharedPortEndpoint*)instance;
-
 	endpoint->PipeListenerThread();
-/*
-	if(!SetEvent(endpoint->thread_killed))
-		dprintf(D_ALWAYS, "SharedPortEndpoint: Error: Failed to signal thread termination.\n");
-*/	return 0;
+	return 0;
 }
 
 #if 0 // set this to 1 if you need logging to visual studio debugger of the threaded code that cannot use dprintf
@@ -565,7 +551,7 @@ SharedPortEndpoint::PipeListenerThread()
 	void *dst = NULL, *src = NULL;
 	int dst_fd = 0, src_fd = 0;
 	std::string msgs;
-	MyString wake_status;
+	std::string wake_status;
 
 	while(true)
 	{
@@ -577,18 +563,13 @@ SharedPortEndpoint::PipeListenerThread()
 			continue;
 		}
 
-		EnterCriticalSection(&kill_lock);
-		if(kill_thread)
+		if (thread_should_exit)
 		{
-			LeaveCriticalSection(&kill_lock);
 			ThreadSafeLogError("SharedPortEndpoint: Listener thread received kill request.", 0);
 			DisconnectNamedPipe(pipe_end);
 			CloseHandle(pipe_end); pipe_end = INVALID_HANDLE_VALUE;
-			DeleteCriticalSection(&kill_lock);
 			return;
 		}
-
-		LeaveCriticalSection(&kill_lock);
 
 		ThreadSafeLogError("SharedPortEndpoint: Pipe connected", 0);
 		DWORD pID = GetProcessId(GetCurrentProcess());

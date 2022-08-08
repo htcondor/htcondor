@@ -1,108 +1,100 @@
- ###############################################################
- #
- # Copyright (C) 2022, Condor Team, Computer Sciences Department,
- # University of Wisconsin-Madison, WI.
- #
- # Licensed under the Apache License, Version 2.0 (the "License"); you
- # may not use this file except in compliance with the License.  You may
- # obtain a copy of the License at
- #
- #    http://www.apache.org/licenses/LICENSE-2.0
- #
- # Unless required by applicable law or agreed to in writing, software
- # distributed under the License is distributed on an "AS IS" BASIS,
- # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- # See the License for the specific language governing permissions and
- # limitations under the License.
- #
- ###############################################################
+###############################################################
+#
+# Copyright (C) 2022, Condor Team, Computer Sciences Department,
+# University of Wisconsin-Madison, WI.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you
+# may not use this file except in compliance with the License.  You may
+# obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+###############################################################
 
-if ( NOT PROPER AND NOT LINUX )
+# If proper, we'll find pcre2 from an installed package on the local filesytem
+# Otherwise, download and install it locally
 
-  if (WINDOWS)
-    condor_pre_external( PCRE2 pcre2-10.39 "lib;include" "include/pcre.h")
-		set (PCRE2_INSTALL cp pcre2-8.lib ${PCRE2_INSTALL_LOC}/lib \r\n
-						  cp pcre2-8.dll ${PCRE2_INSTALL_LOC}/lib \r\n
-						  cp pcre2.h ${PCRE2_INSTALL_LOC}/include )
+if ( NOT PROPER )
+	# Some PCRE2 settings 
+	set(PCRE2_BUILD_TESTS OFF CACHE INTERNAL "") # No need to build the pcre test suite
+	set(PCRE2_BUILD_PCRE2GREP OFF CACHE INTERNAL "")  # No need to build the pcre2grep binary
+	set(BUILD_SHARED_LIBS ON CACHE INTERNAL "")  # Build shared pcre lib
+	set(BUILD_STATIC_LIBS OFF CACHE INTERNAL "")  # But not a static one
 
-	set (PCRE2_DOWNLOAD ${PCRE2_VER}-VC140-Win64.tar.gz)
-	set (PCRE2_DOWNLOAD_MD5SUM 8e75a8000d3f6c3302b2f1918430e6bc}
+	include(FetchContent)
 
-    set (PCRE2_CONFIGURE echo "No configuration necessary")
-    set (PCRE2_MAKE echo "No make necessary")
-  else()
-    set (PCRE2_DOWNLOAD ${PCRE2_VER}.tar.gz)
-    set (PCRE2_DOWNLOAD_MD5SUM 7389e3524de2cda3d21fde8c224febf1}
-    # Currently not attempting to deal with newer version of PCRE on other platforms
-  endif()
+	# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of pcre2_ variables
+	FetchContent_declare(
+			pcre2
+			URL ${EXTERNALS_SOURCE_URL}/pcre2-10.39.tar.gz
+			URL_HASH MD5=7389e3524de2cda3d21fde8c224febf1
+			)
 
-	ExternalProject_Add(pcre
-    #-- Download Step ----------
-    DOWNLOAD_DIR ${PCRE2_STAGE}/dl
-    URL ${EXTERNALS_SOURCE_URL}/${PCRE2_DOWNLOAD}
-    URL_MD5 ${PCRE2_DOWNLOAD_MD5SUM}
-    #--Patch step ----------
-    PATCH_COMMAND ${PCRE2_PATCH}
-    #--Configure step ----------
-    CONFIGURE_COMMAND ${PCRE2_CONFIGURE}
-    #--Build Step ----------
-    BUILD_COMMAND ${PCRE2_MAKE}
-    BUILD_IN_SOURCE 1
-    #--install Step ----------
-    INSTALL_DIR ${PCRE2_INSTALL_LOC}
-    INSTALL_COMMAND ${PCRE2_INSTALL} )
+	# Check if population has already been performed
+	FetchContent_GetProperties(pcre2)
+	if(NOT pcre2_POPULATED)
+		# Fetch the content using previously declared details
+		FetchContent_Populate(pcre2)
 
-	#################################################################
-	# Set the target dependencies which the rest of condor depends on.
-	if (WINDOWS)
-		set(PCRE2_FOUND "${PCRE2_INSTALL_LOC}/lib/pcre2-8.lib")
-		install ( FILES ${PCRE2_INSTALL_LOC}/lib/pcre2-8.dll DESTINATION ${C_LIB} )
-	elseif(DARWIN)
-		set(PCRE2_FOUND "${PCRE2_INSTALL_LOC}/lib/libpcre2-8.dylib")
+		# Load the pcre2 cmake file, but exclude the install target, so nothing gets installed
+		add_subdirectory(${pcre2_SOURCE_DIR} ${pcre2_BINARY_DIR} EXCLUDE_FROM_ALL)
+	endif()
+
+	# pcre2-8 is the cmake target for 8 bit characters, which expands to the proper platform-specific filename(s)
+	set(PCRE2_FOUND pcre2-8)
+
+	# pcre2 10.41 will do this for us, but for now attach the include dir to the library target
+	target_include_directories(pcre2-8-shared INTERFACE "${pcre2_BINARY_DIR}")
+
+	# Remove this when we drop Ubuntu 18 (and cmake 3.10)
+	set(PCRE2_INCLUDE ${pcre2_BINARY_DIR})
+	set(PCRE2_INCLUDE ${PCRE2_INCLUDE} PARENT_SCOPE)
+
+	# PCRE2_REF is used as the dependency to chain classads/condor_utils to pcre2
+	set(PCRE2_REF "${PCRE2_FOUND}")
+	set(PCRE2_REF ${PCRE2_REF} PARENT_SCOPE)
+
+	# We turned off pcre2 install rule, just install the shared libraries in our directory
+	if (UNIX)
+		set_target_properties(pcre2-8-shared PROPERTIES INSTALL_NAME_DIR "${C_LIB}/condor")
+	endif()
+	
+	if (APPLE)
+		set_target_properties(pcre2-8-shared PROPERTIES INSTALL_RPATH "@executable_path/../lib/condor")
+	endif()
+
+	if (UNIX)
+		install(TARGETS pcre2-8-shared 
+			RUNTIME DESTINATION "${C_LIB}/condor"
+			LIBRARY DESTINATION "${C_LIB}/condor")
 	else()
-		set(PCRE2_FOUND "${PCRE2_INSTALL_LOC}/lib/libpcre2-8.a")
+		install(TARGETS pcre2-8-shared 
+			RUNTIME DESTINATION "${C_LIB}"
+			LIBRARY DESTINATION "${C_LIB}")
 	endif()
-	#
-	#################################################################
+else()
+	# Proper, i.e. pre-installed 
+	find_library(PCRE2_FOUND "pcre2-8")
+	
+	# Make a library target for the installed on disk shared library
+	# that looks just like a target we would build
+	add_library(pcre2-8 SHARED IMPORTED GLOBAL)
+	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION "${PCRE2_FOUND}")
 
-	condor_post_external( pcre include OFF "${PCRE2_FOUND}" )
+endif( NOT PROPER)
 
-	if ( DARWIN )
-		# Install the PCRE libraries manually.
-		# In order to use an install(FILES) command, we'd
-		# have to explicitly list evey file.
-		# We can't use a file(GLOB) because that's evaluated
-		# when cmake is run, which may be before the
-		# external is built.
-		install( CODE "execute_process(COMMAND mkdir -p \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-		install( CODE "execute_process(COMMAND find ${PCRE2_INSTALL_LOC}/lib -maxdepth 1 -name *.dylib*
-			COMMAND xargs -I src cp -pPR src \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB})" )
-		if ( CONDOR_STRIP_PACKAGES )
-			# Strip the libraries manually.
-			# Since cmake didn't create the libraries
-			# itself, it doesn't know to strip them.
-			install( CODE "execute_process(COMMAND find \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${EXTERNALS_LIB} -name libpcre*.dylib*
-				COMMAND xargs strip -x)" )
-		endif()
-	endif()
-
-	set( HAVE_PCRE2_H ON PARENT_SCOPE )
-
-else( NOT PROPER AND NOT LINUX )
-
-		if (HAVE_PCRE2_H OR HAVE_PCRE2_PCRE2_H)
-			find_multiple( "pcre2" PCRE2_FOUND )
-		endif()
-
-endif( NOT PROPER AND NOT LINUX )
-
-
-#####################
-## Hard failure if there is no PCRE
+## Hard failure if there is no PCRE2
 if (PCRE2_FOUND)
 	message (STATUS "external configured (PCRE2_FOUND=${PCRE2_FOUND})")
-	set( PCRE2_FOUND ${PCRE2_FOUND} PARENT_SCOPE )
-	set( HAVE_EXT_PCRE ON PARENT_SCOPE )
+
+	# Globalize the variable
+	set(HAVE_EXT_PCRE2 ON PARENT_SCOPE )
 else()
-	message (FATAL_ERROR "pcre not found and is required to build")
+	message (FATAL_ERROR "pcre2 not found and is required to build")
 endif(PCRE2_FOUND)

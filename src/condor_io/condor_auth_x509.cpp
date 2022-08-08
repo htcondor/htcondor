@@ -900,7 +900,7 @@ int Condor_Auth_X509::authenticate_client_gss(CondorError* errstack)
 		setRemoteDomain( UNMAPPED_DOMAIN );
 
 		// extract and store VOMS attributes
-		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+		if (param_boolean("USE_VOMS_ATTRIBUTES", false)) {
 
 			// get the voms attributes from the peer
 			globus_gsi_cred_handle_t peer_cred_handle = context_handle->peer_cred_handle->cred_handle;
@@ -994,11 +994,10 @@ bool Condor_Auth_X509::CheckServerName(char const *fqh,char const *ip,ReliSock *
 	std::string skip_check_pattern;
 	if( param(skip_check_pattern,"GSI_SKIP_HOST_CHECK_CERT_REGEX") ) {
 		Regex re;
-		const char *errptr=NULL;
-		int erroffset=0;
+		int errcode = 0, erroffset=0;
 		std::string full_pattern;
 		formatstr(full_pattern,"^(%s)$",skip_check_pattern.c_str());
-		if( !re.compile(full_pattern.c_str(),&errptr,&erroffset) ) {
+		if( !re.compile(full_pattern.c_str(),&errcode,&erroffset) ) {
 			dprintf(D_ALWAYS,"GSI_SKIP_HOST_CHECK_CERT_REGEX is not a valid regular expression: %s\n",skip_check_pattern.c_str());
 			return false;
 		}
@@ -1326,7 +1325,7 @@ Condor_Auth_X509::authenticate_server_gss(CondorError* errstack, bool non_blocki
 			free(email_name);
 		}
 
-		if (param_boolean("USE_VOMS_ATTRIBUTES", true)) {
+		if (param_boolean("USE_VOMS_ATTRIBUTES", false)) {
 
 			// get the voms attributes from the peer
 

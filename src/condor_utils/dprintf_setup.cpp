@@ -27,7 +27,6 @@
 #if !defined(WIN32)
 #include "dprintf_syslog.h"
 #endif
-#include "condor_constants.h"
 
 #include <sys/stat.h>
 #include <vector>

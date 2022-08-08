@@ -214,11 +214,11 @@ ArcJob::ArcJob( ClassAd *classad )
 
 	jobProxy = AcquireProxy( jobAd, error_string,
 							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
-	if ( jobProxy == NULL ) {
-		if ( error_string == "" ) {
-			formatstr( error_string, "%s is not set in the job ad",
-								  ATTR_X509_USER_PROXY );
-		}
+
+	jobAd->LookupString( ATTR_SCITOKENS_FILE, m_tokenFile );
+
+	if (jobProxy == nullptr && m_tokenFile.empty()) {
+		error_string = "ARC job has no credentials";
 		goto error_exit;
 	}
 
@@ -227,8 +227,9 @@ ArcJob::ArcJob( ClassAd *classad )
 		error_string = "ARC_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "ARC/%s",
-			  jobProxy->subject->fqan );
+	snprintf( buff, sizeof(buff), "ARC/%s#%s",
+	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
+	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
@@ -267,7 +268,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
-														  jobProxy );
+	                 m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
@@ -360,7 +361,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			if ( gahp->Initialize( jobProxy ) == false ) {
+			if ( m_tokenFile.empty() && jobProxy && gahp->Initialize( jobProxy ) == false ) {
 				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
 						 procID.cluster, procID.proc );
 
@@ -369,8 +370,20 @@ void ArcJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
+			// TODO Ensure gahp command isn't issued for every new job
+			if ( !m_tokenFile.empty() && !gahp->UpdateToken( m_tokenFile ) ) {
+				dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
+				         procID.cluster, procID.proc );
 
-			gahp->setDelegProxy( jobProxy );
+				jobAd->InsertAttr( ATTR_HOLD_REASON,
+				                   "Failed to provide GAHP with token" );
+				gmState = GM_HOLD;
+				break;
+			}
+
+			if (m_tokenFile.empty() && jobProxy) {
+				gahp->setDelegProxy( jobProxy );
+			}
 
 			gmState = GM_START;
 			} break;
@@ -428,7 +441,7 @@ void ArcJob::doEvaluateState()
 				gmState = GM_UNSUBMITTED;
 				break;
 			}
-			if ( ! delegationId.empty() ) {
+			if ( ! jobProxy || ! delegationId.empty() ) {
 				gmState = GM_SUBMIT;
 				break;
 			}
@@ -436,7 +449,7 @@ void ArcJob::doEvaluateState()
 			std::string deleg_id;
 
 			rc = gahp->arc_delegation_new( resourceManagerString,
-			                               deleg_id );
+			                               jobProxy->proxy_filename, deleg_id );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -451,7 +464,7 @@ void ArcJob::doEvaluateState()
 				dprintf(D_ALWAYS,"(%d.%d) proxy delegation failed: %s\n",
 				        procID.cluster, procID.proc,
 				        errorString.c_str() );
-				gmState = GM_UNSUBMITTED;
+				gmState = GM_HOLD;
 			}
 
 			} break;
@@ -1200,9 +1213,11 @@ bool ArcJob::buildJobADL()
 
 	// Now handle the <DataStaging> element.
 	RSL += "<DataStaging>";
-	RSL += "<ng-adl:DelegationID>";
-	RSL += escapeXML(delegationId);
-	RSL += "</ng-adl:DelegationID>";
+	if ( ! delegationId.empty() ) {
+		RSL += "<ng-adl:DelegationID>";
+		RSL += escapeXML(delegationId);
+		RSL += "</ng-adl:DelegationID>";
+	}
 
 	stage_list = buildStageInList();
 

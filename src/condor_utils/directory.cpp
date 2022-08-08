@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_open.h"
-#include "condor_constants.h"
 #include "condor_debug.h"
 #include "directory.h"
 #include "status_string.h"

@@ -197,7 +197,6 @@ main(int argc, const char *argv[])
 	StringList job_list; // list of job ids (or mixed job & cluster id's to modify)
 	std::map<std::string, std::string> kvp_list; // Classad of attr=value pairs to set
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
@@ -241,10 +240,7 @@ main(int argc, const char *argv[])
 		else
 		if (is_dash_arg_colon_prefix(parg, "debug", &pcolon, 1)) {
 			// output dprintf messages to stderror at TOOL_DEBUG level
-			dprintf_set_tool_debug("TOOL", 0);
-			if (pcolon && pcolon[1]) {
-				set_debug_flags( ++pcolon, 0 );
-			}
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		}
 		else
 		if (is_dash_arg_colon_prefix(parg, "diagnostic", &pcolon, 4)) {

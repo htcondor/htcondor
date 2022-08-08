@@ -36,6 +36,7 @@
 #include "limit_directory_access.h"
 #include "spooled_job_files.h"
 #include <math.h>
+#include "job_ad_instance_recording.h"
 
 // these are declared static in baseshadow.h; allocate space here
 BaseShadow* BaseShadow::myshadow_ptr = NULL;
@@ -353,7 +354,9 @@ BaseShadow::shutDown( int reason )
 	if ( !getJobAd() ) {
 		DC_Exit( reason );
 	}
-	
+		//Attempt to write Job ad to epoch file
+		//If knob isn't set or there is no job ad the function will just log and return
+	writeJobEpochFile(getJobAd());
 		// if we are being called from the exception handler, return
 		// now to prevent infinite loop in case we call EXCEPT below.
 	if ( reason == JOB_EXCEPTION ) {
@@ -1615,7 +1618,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 
 		// Lookup the value of this attribute. We only count integer values.
 		classad::Value attr_val;
-		int value;
+		long long value;
 		it->second->Evaluate(attr_val);
 		if (!attr_val.IsIntegerValue(value)) {
 			continue;
@@ -1623,7 +1626,7 @@ BaseShadow::updateFileTransferStats(const ClassAd& old_stats, const ClassAd &new
 		updated_stats->InsertAttr(attr_lastrun, value);
 
 		// If this attribute has a previous Total value, add that to the new total
-		int old_total = 0;
+		long long old_total = 0;
 		if (old_stats.LookupInteger(attr_total, old_total)) {
 			value += old_total;
 		}

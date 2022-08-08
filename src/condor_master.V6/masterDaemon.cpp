@@ -41,6 +41,7 @@
 #include "ipv6_hostname.h"
 #include "setenv.h"
 #include "systemd_manager.h"
+#include "dc_startd.h"
 
 #if defined(WANT_CONTRIB) && defined(WITH_MANAGEMENT)
 #include "MasterPlugin.h"
@@ -177,6 +178,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	stop_fast_tid = -1;
  	hard_kill_tid = -1;
 	stop_state = NONE;
+	draining = TRUE;
 	needs_update = FALSE;
 	num_controllees = 0;
 
@@ -298,7 +300,7 @@ daemon::NextStart() const
 }
 
 
-int daemon::Restart()
+int daemon::Restart(bool by_command)
 {
 	int		n;
 
@@ -311,10 +313,14 @@ int daemon::Restart()
 	if( on_hold ) {
 		return FALSE;
 	}
-	if(newExec == TRUE) {
+	if (newExec == TRUE) {
+		// The path to this daemon has changed in the config file
 		restarts = 0;
-		newExec = FALSE; 
+		newExec = FALSE;
 		n = new_bin_delay;
+	} else if (by_command) {
+		n = 1; // TODO: can this be 0 ?
+		restarts = 0;
 	} else {
 		n = NextStart();
 		restarts++;
@@ -495,6 +501,37 @@ daemon::DoConfig( bool init )
 	}
 }
 
+int
+daemon::Drain(std::string & request_id, int how_fast, int on_completion, const char * reason, ExprTree* check, ExprTree * start)
+{
+	// Not running or not a STARTD?  can't drain
+	if ( ! pid || type != DT_STARTD) {
+		return 0;
+	}
+
+	const char * addr = daemonCore->InfoCommandSinfulString(pid);
+	if ( ! addr) {
+		dprintf(D_STATUS, "Ignoring drain request of %s because address is not known\n", daemon_name);
+		return -1;
+	}
+
+	std::string check_buf, start_buf;
+	const char * check_str = nullptr;
+	const char * start_str = nullptr;
+	if (check) { check_str = ExprTreeToString(check, check_buf); }
+	if (start) { start_str = ExprTreeToString(start, start_buf); }
+
+	DCStartd startd(addr);
+	if (startd.drainJobs( how_fast, reason, on_completion, check_str, start_str, request_id )) {
+		// drain command sent successfully, so mark the daemon as in the process of exiting
+		stop_state = PEACEFUL;
+		draining = true;
+		return 1;
+	}
+
+	return -1;
+}
+
 void
 daemon::Hold( bool hold, bool never_forward )
 {
@@ -602,7 +639,7 @@ int daemon::RealStart( )
 	}
 
 	if( !m_after_startup_wait_for_file.empty() ) {
-		if (0 != remove( m_after_startup_wait_for_file.c_str())) {
+		if (0 != remove(m_after_startup_wait_for_file.c_str()) && errno != ENOENT) {
 			dprintf(D_ALWAYS, "Cannot remove wait-for-startup file %s\n", m_after_startup_wait_for_file.c_str());
 			// Now what?  restart?  exit?
 		}
@@ -1141,7 +1178,7 @@ daemon::Stop( bool never_forward )
 			// We're not running, just return.
 		return;
 	}
-	if( stop_state == GRACEFUL ) {
+	if( stop_state == GRACEFUL || stop_state == PEACEFUL ) {
 			// We've already been here, just return.
 		return;
 	}
@@ -1177,7 +1214,7 @@ daemon::StopPeaceful()
 			// We're not running, just return.
 		return;
 	}
-	if( stop_state == PEACEFUL ) {
+	if (stop_state == PEACEFUL || stop_state == GRACEFUL) {
 			// We've already been here, just return.
 		return;
 	}
@@ -1234,6 +1271,7 @@ daemon::StopFast( bool never_forward )
 		return;
 	}
 	stop_state = FAST;
+	draining = FALSE;
 
 	if( stop_fast_tid != -1 ) {
 		dprintf( D_ALWAYS, 
@@ -1266,6 +1304,7 @@ daemon::HardKill()
 		return;
 	}
 	stop_state = KILL;
+	draining = FALSE;
 
 	if( hard_kill_tid != -1 ) {
 		dprintf( D_ALWAYS, 
@@ -1282,9 +1321,10 @@ daemon::HardKill()
 }
 
 
-void
-daemon::Exited( int status )
+bool
+daemon::Exited(int status)
 {
+	bool expected = false;
 	std::string msg;
 	formatstr( msg, "The %s (pid %d) ", name_in_config_file, pid );
 	bool had_failure = true;
@@ -1307,8 +1347,9 @@ daemon::Exited( int status )
 				// immediately), and it doesn't check executable
 				// timestamps and restart based on that, either.
 			on_hold = true;
-		} else if (WEXITSTATUS(status) == 0 && (on_hold || MasterShuttingDown)) {
+		} else if (WEXITSTATUS(status) == 0 && (on_hold || MasterShuttingDown || (stop_state != NONE))) {
 			had_failure = false;
+			expected = true;
 		}
 	}
 	int d_flag = D_ALWAYS;
@@ -1353,6 +1394,9 @@ daemon::Exited( int status )
 	pid = 0;
 	CancelAllTimers();
 	stop_state = NONE;
+	draining = false;
+
+	return expected;
 }
 
 
@@ -1575,7 +1619,7 @@ daemon::KillFamily( void ) const
 void
 daemon::Reconfig()
 {
-	if( stop_state != NONE ) {
+	if (stop_state != NONE && stop_state != PEACEFUL) {
 			// If we're currently trying to shutdown this daemon,
 			// there's no need to reconfig it.
 		return;
@@ -1665,12 +1709,23 @@ void daemon::SetReadyState(const char * state)
 	}
 }
 
+const char * daemon::Stopping()
+{
+	if ((stop_state == PEACEFUL) && draining) {
+		return "Shutdown,Drain";
+	} else if (stop_state >= PEACEFUL && stop_state <= FAST) {
+		static const char * const aStops[] = { "Shutdown,Peaceful", "Shutdown,Graceful", "Shutdown,Fast", "Shutdown,Hard" };
+		return aStops[stop_state];
+	}
+	return nullptr;
+}
+
 
 int
 daemon::SetupHighAvailability( void )
 {
 	char		*tmp;
-	char		*url;
+	std::string url;
 	std::string	name;
 
 	// Get the URL
@@ -1725,7 +1780,7 @@ daemon::SetupHighAvailability( void )
 
 	// Now, create the lock object
 	if ( ha_lock ) {
-		int status = ha_lock->SetLockParams( url,
+		int status = ha_lock->SetLockParams( url.c_str(),
 											 name_in_config_file,
 											 poll_period,
 											 lock_hold_time,
@@ -1735,11 +1790,11 @@ daemon::SetupHighAvailability( void )
 		} else {
 			dprintf( D_FULLDEBUG,
 					 "Set HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
-					 name_in_config_file, url, (long)poll_period, 
+					 name_in_config_file, url.c_str(), (long)poll_period, 
 					 (long)lock_hold_time );
 		}
 	} else {
-		ha_lock = new CondorLock( url,
+		ha_lock = new CondorLock( url.c_str(),
 								  name_in_config_file,
 								  this,
 								  (LockEvent) &daemon::HaLockAcquired,
@@ -1752,16 +1807,15 @@ daemon::SetupHighAvailability( void )
 		if ( ha_lock ) {
 			dprintf( D_FULLDEBUG,
 					 "Created HA lock for %s; URL='%s' poll=%lds hold=%lds\n",
-					 name_in_config_file, url, (long)poll_period, 
+					 name_in_config_file, url.c_str(), (long)poll_period, 
 					 (long)lock_hold_time );
 		}
 	}
-	free( url );
 
 	// And, if it failed, log it
 	if ( ! ha_lock ) {
 		dprintf( D_ALWAYS, "HA Lock creation failed for URL '%s' / '%s'\n",
-				 url, name_in_config_file );
+				 url.c_str(), name_in_config_file );
 		return -1;
 	}
 
@@ -1902,6 +1956,7 @@ Daemons::Daemons()
 	preen_tid = -1;
 	reaper = NO_R;
 	all_daemons_gone_action = MASTER_RESET;
+	cmd_after_drain = nullptr;
 	immediate_restart = FALSE;
 	immediate_restart_master = FALSE;
 	stop_other_daemons_when_startds_gone = NONE;
@@ -1955,7 +2010,7 @@ DeferredQuery::~DeferredQuery()
 }
 
 
-bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
+bool Daemons::InitDaemonReadyAd(ClassAd & readyAd, bool include_addrs)
 {
 	bool all_daemons_alive = true;
 	int  num_alive = 0;
@@ -1973,12 +2028,24 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 		readyAd.Assign(attr, dmn->pid);
 		++num_daemons;
 
+		if (include_addrs) {
+			const char * addr = nullptr;
+			if (dmn->type == DT_MASTER) {
+				addr = daemonCore->InfoCommandSinfulStringMyself(false);
+			} else if (dmn->pid) {
+				addr = daemonCore->InfoCommandSinfulString(dmn->pid);
+			}
+			if (addr) {
+				attr = dmn->name_in_config_file; attr += "_Addr";
+				readyAd.Assign(attr, addr);
+			}
+		}
+
 		if (dmn->ready_state) {
 			attr = dmn->name_in_config_file; attr += "_State";
 			readyAd.Assign(attr, dmn->ready_state);
 		}
 
-		//const char * state = dmn->ready_state;
 		const char * state;
 		if (dmn->pid) {
 			bool hung = false;
@@ -1999,6 +2066,8 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 				state = "Startup";
 				++num_startup;
 			}
+			const char * stopping = dmn->Stopping();
+			if (stopping) state = stopping;
 		} else {
 			bool for_file = false;
 			int hold = dmn->OnHold();
@@ -2030,6 +2099,9 @@ bool Daemons::InitDaemonReadyAd(ClassAd & readyAd)
 	readyAd.Assign("NumHold", num_held);
 	readyAd.Assign("NumDead", num_dead);
 	readyAd.Assign("IsReady", all_daemons_alive && ! (num_hung || num_dead));
+	if (cmd_after_drain) {
+		readyAd.Insert("PostDrain", cmd_after_drain->Copy());
+	}
 
 	return all_daemons_alive;
 }
@@ -2087,7 +2159,8 @@ Daemons::DeferredQueryReadyReply()
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
-	bool is_ready = InitDaemonReadyAd(readyAd);
+	advertise_shutdown_program(readyAd);
+	bool is_ready = InitDaemonReadyAd(readyAd, false);
 	dprintf(D_FULLDEBUG, "DeferredQueryReadyReply - %d\n", is_ready);
 
 	// check for expired queries, and those that have requirements satisfied
@@ -2139,13 +2212,22 @@ Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
 {
 	time_t wait_time = 0;
 	cmdAd.LookupInteger("WaitTimeout", wait_time);
+	bool want_addrs = false;
+	cmdAd.LookupBool("WantAddrs", want_addrs);
 	ExprTree * requirements = cmdAd.Lookup("ReadyRequirements");
 
 	// make a reply ad containing daemon ready states
 	// we will return this, and may also use it to evaluate ready requirements.
 	// the default is_ready value is true when all non-held daemons are alive.
 	ClassAd readyAd;
-	bool is_ready = InitDaemonReadyAd(readyAd);
+	advertise_shutdown_program(readyAd);
+	if (MasterShuttingDown) {
+		const char * action = "Reset";
+		if (all_daemons_gone_action == MASTER_EXIT) action = "Exit";
+		else if (all_daemons_gone_action == MASTER_RESTART) action = "Restart";
+		readyAd.Assign("InShutdownMode", action);
+	}
+	bool is_ready = InitDaemonReadyAd(readyAd, want_addrs);
 
 	// if there is a requirements expression, check the requirements and use
 	// it to override the is_ready flag.  At this time we also validate
@@ -2196,7 +2278,7 @@ Daemons::QueryReady(ClassAd & cmdAd, Stream* stm)
 
 	} else if (stm) {
 		// send a reply now
-		dprintf(D_ALWAYS, "QueryReady - replying %d\n", is_ready);
+		dprintf(D_COMMAND, "QueryReady - replying %d\n", is_ready);
 		stm->encode();
 		if (!putClassAd(stm, readyAd) || !stm->end_of_message())
 		{
@@ -2489,7 +2571,7 @@ Daemons::StopAllDaemons()
 	int startds_running = 0;
 
 	// first check to see if any startd's are running, if there are, request
-	// that they
+	// that they exit
 	std::map<std::string, class daemon*>::iterator iter;
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->pid && iter->second->runs_here &&
@@ -2504,10 +2586,10 @@ Daemons::StopAllDaemons()
 	}
 
 	// if there are daemons running, but no startd's running.
-	// request that the daemons peacefully exit.
+	// request that the daemons exit.
 	//
 	if (startds_running) {
-		// tell the all-reaper (actually the AllStartdsGone method) to stop-peaceful
+		// tell the all-reaper (actually the AllStartdsGone method) to stop
 		// the remaining daemons instead of actually stopping them here.
 		stop_other_daemons_when_startds_gone = GRACEFUL;
 	} else if (any_running) {
@@ -2523,27 +2605,31 @@ Daemons::StopAllDaemons()
 
 	if( !any_running ) {
 		AllDaemonsGone();
-	}	   
+	}
 }
 
-
+// called when a reconfig removes a daemon from the DAEMON_LIST
+// We want to move it from the daemons collection
+// to the removed_daemons collection until it can be reaped
 void
-Daemons::StopDaemon( char* name )
+Daemons::RemoveDaemon( char* name )
 {
 	std::map<std::string, class daemon*>::iterator iter;
 
 	iter = daemon_ptr.find( name );
 	if( iter != daemon_ptr.end() ) {
-		if( iter->second->pid > 0 ) {
-			exit_allowed.insert( std::pair<int, class daemon*>(iter->second->pid, iter->second) );
-			iter->second->Stop();
-		}
-		else {
-			iter->second->CancelAllTimers();
-			iter->second->DetachController();
-			delete iter->second;
-		}
+		auto d = iter->second;
+		// take the daemon our of our live daemon collection
+		// and then either delete it or add it to the list of removed daemons
 		daemon_ptr.erase( iter );
+		if (d->pid > 0) {
+			removed_daemons[d->pid] = d;
+			d->Stop();
+		} else {
+			d->CancelAllTimers();
+			d->DetachController();
+			delete d;
+		}
 	}
 }
 
@@ -2566,7 +2652,7 @@ Daemons::StopFastAllDaemons()
 	}
 	if( !running ) {
 		AllDaemonsGone();
-	}	   
+	}
 }
 
 
@@ -2966,48 +3052,68 @@ Daemons::SignalAll( int signal )
 #endif
 
 
-// This function returns the number of active child processes currently being
-// supervised by the master.
-int Daemons::NumberOfChildren()
-{
-	int result = 0;
-	std::map<std::string, class daemon*>::iterator iter;
-
-	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
-		if( iter->second->runs_here && iter->second->pid
-			&& !iter->second->OnlyStopWhenMasterStops() ) {
-			result++;
-		}
-	}
-	dprintf(D_FULLDEBUG,"NumberOfChildren() returning %d\n",result);
-	return result;
-}
-
 // This function returns the number of active child processes with the given daemon type
 // currently being supervised by the master.
-int Daemons::NumberOfChildrenOfType(daemon_t type)
+int Daemons::ChildrenOfType(daemon_t type, StringList * names /*=nullptr*/)
 {
 	int result = 0;
-	std::map<std::string, class daemon*>::iterator iter;
-
-	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+	for (auto iter = daemon_ptr.begin(); iter != daemon_ptr.end(); ++iter) {
 		if( iter->second->runs_here && iter->second->pid
-			&& !iter->second->OnlyStopWhenMasterStops() 
-			&& iter->second->type == type) {
+			&& !iter->second->OnlyStopWhenMasterStops()
+			&& (type == DT_ANY || type == iter->second->type)) {
+			if (names) { names->append(iter->second->name_in_config_file); }
 			result++;
 		}
 	}
-	dprintf(D_FULLDEBUG,"NumberOfChildrenOfType(%d) returning %d\n",type,result);
+	dprintf(D_FULLDEBUG,"ChildrenOfType(%d) returning %d\n",type,result);
 	return result;
 }
 
+int
+Daemons::ReapPreen(int /*pid*/, int status)
+{
+	if (WIFSIGNALED(status)) {
+		dprintf(D_ALWAYS, "Preen (pid %d) died due to %s\n", preen_pid,
+			daemonCore->GetExceptionString(status));
+	} else {
+		dprintf(D_ALWAYS, "Preen (pid %d) exited with status %d\n",
+			preen_pid, WEXITSTATUS(status));
+	}
+	preen_pid = -1;
+	return TRUE;
+}
 
 int
 Daemons::AllReaper(int pid, int status)
 {
+#if 1
+	if (pid == preen_pid) {
+		return ReapPreen(pid, status);
+	}
+
+	// if the pid belongs to a daemon object we have already removed we can now forget it
+	auto removed_it = removed_daemons.find(pid);
+	if (removed_it != removed_daemons.end()) {
+		auto d = removed_it->second;
+		removed_daemons.erase(removed_it);
+		d->Exited(status);
+		delete d;
+	}
+
+	// we need a count of the daemons that we are still waiting to reap
+	// and we need to include the daemons that have been removed from the daemon
+	// list but have not yet been reaped.
+	int daemons = 0, startds = 0;
+	for (auto it : removed_daemons) {
+		const auto d = it.second;
+		if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
+			++daemons;
+			if (d->type == DT_STARTD) ++startds;
+		}
+	}
+#else
 	std::map<std::string, class daemon*>::iterator iter;
 	std::map<int, class daemon*>::iterator valid_iter;
-
 		// find out which daemon died
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
@@ -3016,24 +3122,31 @@ Daemons::AllReaper(int pid, int status)
 		exit_allowed.erase( valid_iter );
 		if( NumberOfChildren() == 0 ) {
 			AllDaemonsGone();
-		} else if ( NumberOfChildrenOfType(DT_STARTD) == 0 ) {
+		} else if ( ChildrenOfType(DT_STARTD) == 0 ) {
 			AllStartdsGone();
 		}
 		return TRUE;
 	} else {
 		dprintf( D_ALWAYS, "AllReaper unexpectedly called on pid %i, status %i.\n", pid, status);
 	}
+#endif
 
-	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
-		if( pid == iter->second->pid ) {
-			iter->second->Exited( status );
-			if( NumberOfChildren() == 0 ) {
-				AllDaemonsGone();
-			} else if ( NumberOfChildrenOfType(DT_STARTD) == 0 ) {
-				AllStartdsGone();
-			}
-			return TRUE;
+	// if we have not  yet recorded this pid as reaped, do that now
+	// at this same time count the daemons that are still alive and in the daemon list
+	for (auto it : daemon_ptr) {
+		auto d = it.second;
+		if (pid == d->pid) { d->Exited(status); }
+		else if (d->runs_here && d->pid && !d->OnlyStopWhenMasterStops()) {
+			++daemons;
+			if (d->type == DT_STARTD) ++startds;
 		}
+	}
+
+	// when we get to 0 startd's and/or 0 children, we have stuff to do
+	if ( ! daemons) {
+		AllDaemonsGone();
+	} else if ( ! startds) {
+		AllStartdsGone();
 	}
 
 	return TRUE;
@@ -3043,9 +3156,23 @@ Daemons::AllReaper(int pid, int status)
 int
 Daemons::DefaultReaper(int pid, int status)
 {
+#if 1
+	if (pid == preen_pid) {
+		return ReapPreen(pid, status);
+	}
+
+	// if the pid belongs to a daemon object we have already removed we can now forget it
+	auto removed_it = removed_daemons.find(pid);
+	if (removed_it != removed_daemons.end()) {
+		auto d = removed_it->second;
+		removed_daemons.erase(removed_it);
+		d->Exited(status);
+		delete d;
+	}
+
+#else
 	std::map<std::string, class daemon*>::iterator iter;
 	std::map<int, class daemon*>::iterator valid_iter;
-
 	valid_iter = exit_allowed.find(pid);
 	if( valid_iter != exit_allowed.end() ) {
 		valid_iter->second->Exited( status );
@@ -3065,17 +3192,34 @@ Daemons::DefaultReaper(int pid, int status)
 	} else {
 		dprintf( D_ALWAYS, "DefaultReaper unexpectedly called on pid %i, status %i.\n", pid, status);
 	}
+#endif
 
-	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
+	for(auto iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( pid == iter->second->pid ) {
-			iter->second->Exited( status );
-			if( PublishObituaries ) {
-				iter->second->Obituary( status );
-			}
-			iter->second->Restart();
-			return TRUE;
+			auto d = iter->second;
+			bool expected_exit = d->Exited(status);
+			if (PublishObituaries) { d->Obituary(status); }
+			d->Restart(expected_exit);
+			break;
 		}
 	}
+
+	// if we have a post-drain command to run, check to see if we have drained all of the startds
+	// TODO: handle post drain shutdown command
+	// TODO: handle cancel of post drain command
+	if (cmd_after_drain) {
+		int startds = 0;
+		for (auto it : removed_daemons) { if (it.second->type == DT_STARTD) ++startds; }
+		for (auto it : daemon_ptr) { if (it.second->pid && (it.second->type == DT_STARTD)) ++startds; }
+		dprintf(D_FULLDEBUG, "Reaper has PostDrainCmd, and %d living STARTDS\n", startds);
+		if ( ! startds) {
+			ClassAd * cmdAd = cmd_after_drain;
+			cmd_after_drain = nullptr;
+			do_flexible_daemons_command(DAEMONS_OFF_FLEX, *cmdAd);
+			delete cmdAd;
+		}
+	}
+
 	return TRUE;
 }
 
@@ -3095,6 +3239,13 @@ Daemons::SetAllReaper(bool fStartdsFirst)
 							  "Daemons::AllReaper()",this);
 	reaper = ALL_R;
 	stop_other_daemons_when_startds_gone = fStartdsFirst ? GRACEFUL : NONE;
+	// setting the all reaper cancels a post-drain command
+	if (cmd_after_drain) {
+		std::string buf;
+		dprintf(D_STATUS, "Discarding post-drain command due to later shutdown command:\n%s\n",
+			formatAd(buf, *cmd_after_drain, "\t"));
+		delete cmd_after_drain; cmd_after_drain = nullptr;
+	}
 }
 
 

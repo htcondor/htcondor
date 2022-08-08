@@ -21,8 +21,6 @@
 #ifndef CONDOR_AUTHENTICATOR_OPENSSL
 #define CONDOR_AUTHENTICATOR_OPENSSL
 
-#if defined(HAVE_EXT_OPENSSL)
-
 #include <openssl/ssl.h>
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
@@ -242,7 +240,5 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	static bool m_should_search_for_cert; // Should we search for TLS certificates?
 	static bool m_cert_avail; // Is there a known available TLS certificate?
 };
-
-#endif
 
 #endif

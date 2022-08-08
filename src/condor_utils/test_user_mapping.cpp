@@ -470,7 +470,7 @@ int main( int /*argc*/, const char ** argv) {
 
 	// if we don't init dprintf, calls to it will be will be malloc'ed and stored
 	// for later. this form of init will match the fewest possible issues.
-	dprintf_config_tool_on_error(D_ERROR);
+	dprintf_config_tool_on_error("D_ERROR");
 	dprintf_OnExitDumpOnErrorBuffer(stderr);
 
 	for (int ii = 1; argv[ii]; ++ii) {
@@ -540,10 +540,7 @@ int main( int /*argc*/, const char ** argv) {
 			dump_map = true;
 		} else if (is_dash_arg_colon_prefix(arg, "debug", &pcolon, 3)) {
 			// dprintf to console
-			dprintf_set_tool_debug("TOOL", 0);
-			if (pcolon && pcolon[1]) {
-				set_debug_flags( ++pcolon, 0 );
-			}
+			dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
 		} else {
 			fprintf(stderr, "unknown argument %s\n", arg);
 			Usage(argv[0], stderr);

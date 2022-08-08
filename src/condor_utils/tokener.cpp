@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "ad_printmask.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "tokener.h"
 #include <string>
 
@@ -135,7 +135,7 @@ bool tokener::next()
 	return ix_cur != std::string::npos;
 };
 
-bool tokener::copy_regex(std::string & value, int & pcre_flags)
+bool tokener::copy_regex(std::string & value, uint32_t & pcre2_flags)
 {
 	if ( ! is_regex()) return false;
 	size_t ix = line.find('/', ix_cur+1);
@@ -150,13 +150,13 @@ bool tokener::copy_regex(std::string & value, int & pcre_flags)
 	if (ix == std::string::npos) { ix = line.size(); }
 
 	// regex options will follow right after, or they will not exist.
-	pcre_flags = 0;
+	pcre2_flags = 0;
 	while (ix_next < ix) {
 		switch (line[ix_next++]) {
-		case 'g': pcre_flags |= 0x80000000; break;
-		case 'm': pcre_flags |= PCRE_MULTILINE; break;
-		case 'i': pcre_flags |= PCRE_CASELESS; break;
-		case 'U': pcre_flags |= PCRE_UNGREEDY; break;
+		case 'g': pcre2_flags |= 0x80000000; break;
+		case 'm': pcre2_flags |= PCRE2_MULTILINE; break;
+		case 'i': pcre2_flags |= PCRE2_CASELESS; break;
+		case 'U': pcre2_flags |= PCRE2_UNGREEDY; break;
 		default: return false;
 		}
 	}

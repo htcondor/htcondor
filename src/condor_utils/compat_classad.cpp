@@ -20,12 +20,13 @@
 #include <algorithm>
 #include "compat_classad.h"
 
+#include "MyString.h"
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
 #include "classad/xmlSink.h"
 #include "condor_config.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #include "classad/classadCache.h"
 #include "env.h"
 #include "condor_arglist.h"
@@ -354,9 +355,9 @@ bool stringListMember_func( const char *name,
 	return true;
 }
 
-static int regexp_str_to_options( const char *option_str )
+static uint32_t regexp_str_to_options( const char *option_str )
 {
-	int options = 0;
+	uint32_t options = 0;
 	while (*option_str) {
 		switch (*option_str) {
 			case 'i':
@@ -428,13 +429,13 @@ bool stringListRegexpMember_func( const char * /*name*/,
 	}
 
 	Regex r;
-	const char *errstr = 0;
+	int errcode;
 	int errpos = 0;
 	bool valid;
-	int options = regexp_str_to_options(options_str.c_str());
+	uint32_t options = regexp_str_to_options(options_str.c_str());
 
 	/* can the pattern be compiled */
-	valid = r.compile(pattern_str.c_str(), &errstr, &errpos, options);
+	valid = r.compile(pattern_str.c_str(), &errcode, &errpos, options);
 	if (!valid) {
 		result.SetErrorValue();
 		return true;
@@ -746,15 +747,15 @@ ArgsToList( const char * name,
 		return true;
 	}
 	ArgList arg_list;
-	MyString error_msg;
-	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), &error_msg))
+	std::string error_msg;
+	if ((vers == 1) && !arg_list.AppendArgsV1Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), &error_msg))
+	else if ((vers == 2) && !arg_list.AppendArgsV2Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
@@ -866,22 +867,22 @@ ListToArgs(const char * name,
 		}
 		arg_list.AppendArg(tmp_str.c_str());
 	}
-	MyString error_msg, result_mystr;
-	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(&result_mystr, &error_msg))
+	std::string error_msg, result_mystr;
+	if ((vers == 1) && !arg_list.GetArgsStringV1Raw(result_mystr, error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(&result_mystr, &error_msg))
+	else if ((vers == 2) && !arg_list.GetArgsStringV2Raw(result_mystr))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to arg V2: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	result.SetStringValue(result_mystr.c_str());
+	result.SetStringValue(result_mystr);
 	return true;
 }
 
@@ -923,17 +924,17 @@ EnvironmentV1ToV2(const char * name,
 		return true;
 	}
 	Env env;
-	MyString error_msg;
-	if (!env.MergeFromV1Raw(args.c_str(), &error_msg))
+	std::string error_msg;
+	if (!env.MergeFromV1Raw(args.c_str(), error_msg))
 	{
 		std::stringstream ss;
 		ss << "Error when parsing argument to environment V1: " << error_msg.c_str();
 		problemExpression(ss.str(), arguments[0], result);
 		return true;
 	}
-	MyString result_mystr;
-	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.c_str());
+	std::string result_mystr;
+	env.getDelimitedStringV2Raw(result_mystr);
+	result.SetStringValue(result_mystr);
 	return true;
 }
 
@@ -971,8 +972,8 @@ MergeEnvironment(const char * /*name*/,
 			problemExpression(ss.str(), *it, result);
 			return true;
 		}
-		MyString error_msg;
-		if (!env.MergeFromV2Raw(env_str.c_str(), &error_msg))
+		std::string error_msg;
+		if (!env.MergeFromV2Raw(env_str.c_str(), error_msg))
 		{
 			std::stringstream ss;
 			ss << "Argument " << idx << " cannot be parsed as environment string.";
@@ -980,9 +981,9 @@ MergeEnvironment(const char * /*name*/,
 			return true;
 		}
 	}
-	MyString result_mystr;
-	env.getDelimitedStringV2Raw(&result_mystr, NULL);
-	result.SetStringValue(result_mystr.c_str());
+	std::string result_mystr;
+	env.getDelimitedStringV2Raw(result_mystr);
+	result.SetStringValue(result_mystr);
 	return true;
 }
 
@@ -2321,72 +2322,6 @@ _sPrintAd( std::string &output, const classad::ClassAd &ad, bool exclude_private
 
 	return true;
 }
-	
-int
-_sPrintAd( MyString &output, const classad::ClassAd &ad, bool exclude_private, StringList *attr_include_list )
-{
-	classad::ClassAd::const_iterator itr;
-
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true, true );
-	std::string value;
-
-	const classad::ClassAd *parent = ad.GetChainedParentAd();
-
-	std::map< std::string, std::string > attributes;
-	if ( parent ) {
-		for ( itr = parent->begin(); itr != parent->end(); itr++ ) {
-			if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
-				continue; // not in white-list
-			}
-			if ( ad.LookupIgnoreChain(itr->first) ) {
-				continue; // attribute exists in child ad; we will print it below
-			}
-			if ( !exclude_private ||
-				 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-				value = "";
-				unp.Unparse( value, itr->second );
-				// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
-				attributes[ itr->first ] = value;
-			}
-		}
-	}
-
-	for ( itr = ad.begin(); itr != ad.end(); itr++ ) {
-		if ( attr_include_list && !attr_include_list->contains_anycase(itr->first.c_str()) ) {
-			continue; // not in white-list
-		}
-		if ( !exclude_private ||
-			 !ClassAdAttributeIsPrivateAny( itr->first ) ) {
-			value = "";
-			unp.Unparse( value, itr->second );
-			// output.formatstr_cat( "%s = %s\n", itr->first.c_str(), value.c_str() );
-			attributes[ itr->first ] = value;
-		}
-	}
-
-	std::vector< std::string> keys;
-	for( auto i = attributes.begin(); i != attributes.end(); ++i ) {
-		keys.push_back( i->first );
-	}
-	std::sort( keys.begin(), keys.end() );
-	for( auto i = keys.begin(); i != keys.end(); ++i ) {
-		output.formatstr_cat( "%s = %s\n", i->c_str(), attributes[ *i ].c_str() );
-	}
-
-	return TRUE;
-}
-
-int
-sPrintAd( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
-	return _sPrintAd( output, ad, true, attr_include_list );
-}
-
-int
-sPrintAdWithSecrets( MyString &output, const classad::ClassAd &ad, StringList *attr_include_list ) {
-	return _sPrintAd( output, ad, false, attr_include_list );
-}
-
 
 int
 sPrintAd( std::string &output, const classad::ClassAd &ad, StringList *attr_include_list, const classad::References *excludeAttrs )
@@ -2442,34 +2377,6 @@ sGetAdAttrs( classad::References &attrs, const classad::ClassAd &ad, bool exclud
 /** Format the given attributes from the ClassAd as an old ClassAd into the given string
 	@param output The std::string to write into
 	@return TRUE
-	Note: this function and its sister that outputs to std::string do not call each other for reasons of efficiency...
-*/
-int
-sPrintAdAttrs( MyString &output, const classad::ClassAd &ad, const classad::References &attrs )
-{
-	classad::ClassAdUnParser unp;
-	unp.SetOldClassAd( true, true );
-	std::string line;
-
-	classad::References::const_iterator it;
-	for (it = attrs.begin(); it != attrs.end(); ++it) {
-		const ExprTree * tree = ad.Lookup(*it); // use Lookup rather than find in case we have a parent ad.
-		if (tree) {
-			line = *it;
-			line += " = ";
-			unp.Unparse( line, tree );
-			line += "\n";
-			output += line;
-		}
-	}
-
-	return TRUE;
-}
-
-/** Format the given attributes from the ClassAd as an old ClassAd into the given string
-	@param output The std::string to write into
-	@return TRUE
-	Note: this function and its sister the outputs to MyString do not call each other for reasons of efficiency...
 */
 int
 sPrintAdAttrs( std::string &output, const classad::ClassAd &ad, const classad::References &attrs, const char * indent /*=NULL*/ )

@@ -22,7 +22,6 @@
 #include "condor_io.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "condor_fix_assert.h"
 #include "condor_secman.h"
 #include "condor_attributes.h"
 #include "condor_uid.h"
@@ -34,11 +33,7 @@
 
 #define syscall_sock qmgmt_sock
 
-#if defined(assert)
-#undef assert
-#endif
-
-#define assert(x) if (!(x)) return -1;
+#define neg_on_error(x) if (!(x)) return -1;
 
 extern char *CondorCertDir;
 
@@ -63,7 +58,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	ReliSock *syscall_sock = Q_PEER.getReliSock();
 	syscall_sock->decode();
 
-	assert( syscall_sock->code(request_num) );
+	neg_on_error( syscall_sock->code(request_num) );
 
 	dprintf(D_SYSCALLS, "Got request #%d\n", request_num);
 
@@ -123,18 +118,18 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int val;
 		int terrno;
 
-		assert( syscall_sock->get(val) );
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->get(val) );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		rval = QmgmtSetAllowProtectedAttrChanges( val );
 		terrno = errno;
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		dprintf(D_SYSCALLS, "\tSetAllowProtectedAttrChanges(%d)\n", val);
 		dprintf(D_SYSCALLS, "\trval %d, errno %d\n", rval, terrno);
@@ -147,18 +142,18 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		MyString owner;
 		int terrno;
 
-		assert( syscall_sock->get(owner) );
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->get(owner) );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		rval = QmgmtSetEffectiveOwner( owner.c_str() );
 		terrno = errno;
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		char const *fqu = syscall_sock->getFullyQualifiedUser();
 		dprintf(D_SYSCALLS, "\tSetEffectiveOwner\n");
@@ -174,7 +169,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 
 		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = NewCluster( );
@@ -187,11 +182,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
 
@@ -204,9 +199,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = NewProc( cluster_id );
@@ -218,11 +213,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		dprintf(D_FULLDEBUG,"schedd: NewProc rval %d errno %d\n",rval,terrno);
 
@@ -235,11 +230,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int proc_id = -1;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = DestroyProc( cluster_id, proc_id );
@@ -247,11 +242,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		dprintf(D_FULLDEBUG,"schedd: DestroyProc cluster %d proc %d rval %d errno %d\n",cluster_id,proc_id,rval,terrno);
 
@@ -263,9 +258,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int cluster_id = -1;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = DestroyCluster( cluster_id );
@@ -273,11 +268,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -287,8 +282,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		char *constraint=NULL;
 		int terrno;
 
-		assert( syscall_sock->code(constraint) );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->code(constraint) );
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = DestroyClusterByConstraint( constraint );
@@ -296,12 +291,12 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		free( (char *)constraint );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 #endif
@@ -315,16 +310,16 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		SetAttributeFlags_t flags = 0;
 
-		assert( syscall_sock->code(constraint) );
+		neg_on_error( syscall_sock->code(constraint) );
 		dprintf( D_SYSCALLS, "  constraint = %s\n",constraint);
-		assert( syscall_sock->code(attr_value) );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_value) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttributeByConstraint2 ) {
 			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
-			assert( syscall_sock->code( wflags ) );
+			neg_on_error( syscall_sock->code( wflags ) );
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		if (strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
@@ -346,13 +341,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		free( (char *)constraint );
 		free( (char *)attr_value );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -366,19 +361,19 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		SetAttributeFlags_t flags = 0;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_value) );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_value) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		if( request_num == CONDOR_SetAttribute2 ) {
 			SetAttributePublicFlags_t wflags = (SetAttributePublicFlags_t)flags;
-			assert( syscall_sock->code( wflags ) );
+			neg_on_error( syscall_sock->code( wflags ) );
 			flags = (SetAttributeFlags_t)(wflags & SetAttribute_PublicFlagsMask);
 		}
 		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		if (attr_value) { 
 			dprintf(D_SYSCALLS,"\tattr_value = %s\n",attr_value);		
 		} else {
@@ -390,9 +385,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			syscall_sock->encode();
 			rval = -1;
 			terrno = EINVAL; 
-			assert( syscall_sock->code(rval) );
-			assert( syscall_sock->code(terrno) );
-			assert( syscall_sock->end_of_message() );
+			neg_on_error( syscall_sock->code(rval) );
+			neg_on_error( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->end_of_message() );
 			return -1;
 		}
 
@@ -453,30 +448,63 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 		else {
 			syscall_sock->encode();
-			assert( syscall_sock->code(rval) );
+			neg_on_error( syscall_sock->code(rval) );
 			if( rval < 0 ) {
-				assert( syscall_sock->code(terrno) );
+				neg_on_error( syscall_sock->code(terrno) );
 			}
-			assert( syscall_sock->end_of_message() );
+			neg_on_error( syscall_sock->end_of_message() );
 		}
 		return 0;
 	}
+
+	case CONDOR_SendJobQueueAd:
+	{
+		int cluster_id, ad_type;
+		unsigned int flags;
+		neg_on_error( syscall_sock->code(cluster_id) );
+		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
+		neg_on_error( syscall_sock->code(ad_type) );
+		dprintf( D_SYSCALLS, "	ad_type = %d\n", ad_type );
+		neg_on_error( syscall_sock->code(flags) );
+		dprintf( D_SYSCALLS, "	flags = %d\n", flags );
+
+		ClassAd ad;
+		neg_on_error( getClassAd(qmgmt_sock, ad) );
+		dprintf( D_SYSCALLS, "	ad = %p (%d attrs)\n", &ad, ad.size() );
+		neg_on_error ( syscall_sock->end_of_message() );
+
+		int terrno = 0;
+		int rval = -1;
+		if (ad_type == SENDJOBAD_TYPE_JOBSET) {
+			rval = QmgmtHandleSendJobsetAd(cluster_id, ad, flags, terrno);
+		} else {
+			terrno = EINVAL;
+			rval = -1;
+		}
+
+		syscall_sock->encode();
+		if ( ! syscall_sock->code(rval) || ((rval < 0) && !syscall_sock->code(terrno))) {
+			return -1;
+		}
+		neg_on_error( syscall_sock->end_of_message() );;
+		return 0;
+	} break;
 
 	case CONDOR_SetJobFactory:
 	case CONDOR_SetMaterializeData:
 	{
 		int cluster_id, num;
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(num) );
+		neg_on_error( syscall_sock->code(num) );
 		dprintf( D_SYSCALLS, "	num = %d\n", num );
 		char * filename = NULL;
-		assert( syscall_sock->code(filename) );
+		neg_on_error( syscall_sock->code(filename) );
 		dprintf( D_SYSCALLS, "	factory_filename = %s\n", filename ? filename : "NULL" );
 		char * text = NULL;
-		assert( syscall_sock->code(text) );
+		neg_on_error( syscall_sock->code(text) );
 		if (text) { dprintf( D_SYSCALLS, "	factory_text = %s\n", text ); }
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 			// this is only valid during submission of a cluster
 		int terrno = 0;
@@ -508,20 +536,20 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		// send a status reply
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	} break;
 
 	case CONDOR_SendMaterializeData:
 	{
 		int cluster_id, flags, row_count = 0;
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(flags) );
+		neg_on_error( syscall_sock->code(flags) );
 		dprintf( D_SYSCALLS, "	flags = 0x%x\n", flags );
 
 		int terrno = 0;
@@ -536,31 +564,31 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			errno = terrno;
 			return rval;
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		// send a status reply and also the name of the file we wrote the itemdata to
 		syscall_sock->encode();
-		assert( syscall_sock->code(filename) );
-		assert( syscall_sock->code(row_count) );
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(filename) );
+		neg_on_error( syscall_sock->code(row_count) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	} break;
 
 	case CONDOR_GetCapabilities: {
 		int mask;
-		assert( syscall_sock->code(mask) );
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->code(mask) );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		errno = 0;
 		ClassAd reply;
 		GetSchedulerCapabilities(mask, reply);
 		syscall_sock->encode();
-		assert( putClassAd( syscall_sock, reply ) );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( putClassAd( syscall_sock, reply ) );
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	} break;
 
@@ -572,15 +600,15 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int duration = 0;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		if (!attr_name.empty()) dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		assert( syscall_sock->code(duration) );
+		neg_on_error( syscall_sock->code(duration) );
 		dprintf(D_SYSCALLS,"\tduration = %d\n",duration);
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 
@@ -593,11 +621,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 				 cluster_id, proc_id, attr_name.c_str(), duration);
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -606,7 +634,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		g_transaction_error.reset(new CondorError());
 
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = 0;	// BeginTransaction returns void (sigh), so always success
@@ -615,11 +643,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -628,7 +656,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		g_transaction_error.reset();
 
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = 0;	// AbortTransaction returns void (sigh), so always success
@@ -639,12 +667,12 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -655,12 +683,12 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int flags;
 
 		if( request_num == CONDOR_CommitTransaction ) {
-			assert( syscall_sock->code(flags) );
+			neg_on_error( syscall_sock->code(flags) );
 		}
 		else {
 			flags = 0;
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		std::unique_ptr<CondorError> errstack;
 		if (g_transaction_error && !g_transaction_error->empty()) {
@@ -678,12 +706,12 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\tflags = %d, rval = %d, errno = %d\n", flags, rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		const CondorVersionInfo *vers = syscall_sock->get_peer_version();
 		bool send_classad = vers && vers->built_since_version(8, 3, 4);
 		bool always_send_classad = vers && vers->built_since_version(8, 7, 4);
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval < 0 && send_classad ) {
 			// Send a classad, for less backwards-incompatibility.
@@ -697,7 +725,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			ClassAd reply;
 			reply.Assign( "ErrorCode", code );
 			reply.Assign( "ErrorReason", reason );
-			assert( putClassAd( syscall_sock, reply ) );
+			neg_on_error( putClassAd( syscall_sock, reply ) );
 		} else if( always_send_classad ) {
 			ClassAd reply;
 
@@ -707,10 +735,10 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 				reply.Assign( "WarningReason", reason );
 			}
 
-			assert( putClassAd( syscall_sock, reply ) );
+			neg_on_error( putClassAd( syscall_sock, reply ) );
 		}
 
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -722,13 +750,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		float value = 0.0;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
@@ -742,14 +770,14 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value) );
+			neg_on_error( syscall_sock->code(value) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -761,13 +789,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int value = 0;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		dprintf( D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str() );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
@@ -787,14 +815,14 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value) );
+			neg_on_error( syscall_sock->code(value) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -806,13 +834,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		std::string value;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name));
+		neg_on_error( syscall_sock->code(attr_name));
 		dprintf(D_SYSCALLS, "\tattr_name = %s\n", attr_name.c_str());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		if( QmgmtMayAccessAttribute( attr_name.c_str())) {
@@ -827,14 +855,14 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( syscall_sock->code(value));
+			neg_on_error( syscall_sock->code(value));
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	}
 
@@ -846,13 +874,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		char *value = NULL;
 
@@ -886,7 +914,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			}
 		}
 		free( (char *)value );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -898,11 +926,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = GetDirtyAttributes( cluster_id, proc_id, &updates );
@@ -921,9 +949,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			}
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, updates) );
+			neg_on_error( putClassAd(syscall_sock, updates) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -934,13 +962,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		std::string attr_name;
 		int terrno;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->code(attr_name) );
+		neg_on_error( syscall_sock->code(attr_name) );
 		dprintf(D_SYSCALLS,"\tattr_name = %s\n",attr_name.c_str());
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = DeleteAttribute( cluster_id, proc_id, attr_name.c_str());
@@ -948,11 +976,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -964,11 +992,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 		bool delete_ad = false;
 
-		assert( syscall_sock->code(cluster_id) );
+		neg_on_error( syscall_sock->code(cluster_id) );
 		dprintf( D_SYSCALLS, "	cluster_id = %d\n", cluster_id );
-		assert( syscall_sock->code(proc_id) );
+		neg_on_error( syscall_sock->code(proc_id) );
 		dprintf( D_SYSCALLS, "	proc_id = %d\n", proc_id );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		// dprintf( D_ALWAYS, "(%d.%d) isAuthenticated() = %d\n", cluster_id, proc_id, syscall_sock->isAuthenticated() );
 		// dprintf( D_ALWAYS, "(%d.%d) getOwner() = %s\n", cluster_id, proc_id, syscall_sock->getOwner() );
@@ -1000,19 +1028,19 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
+			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		// If we called GetJobAd() with the third bool argument set
 		// to True (expandedAd), it does a deep copy of the ad in the
 		// queue in order to expand the $$() attributes.  So we must
 		// delete it.
 		if (delete_ad) delete ad;
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -1022,8 +1050,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		ClassAd *ad;
 		int terrno;
 
-		assert( syscall_sock->code(constraint) );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->code(constraint) );
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		ad = GetJobByConstraint_as_ClassAd( constraint );
@@ -1032,16 +1060,16 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
+			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -1051,9 +1079,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int initScan = 0;
 		int terrno;
 
-		assert( syscall_sock->code(initScan) );
+		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		ad = GetNextJob( initScan );
@@ -1062,15 +1090,15 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
+			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -1081,7 +1109,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int initScan = 0;
 		int terrno;
 
-		assert( syscall_sock->code(initScan) );
+		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "	initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
 			if (constraint != NULL) {
@@ -1090,7 +1118,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			}
 			return -1;
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		ad = GetNextJobByConstraint( constraint, initScan );
@@ -1099,16 +1127,16 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
+			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return 0;
 	}
 	case CONDOR_GetNextDirtyJobByConstraint:
@@ -1118,7 +1146,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int initScan = 0;
 		int terrno;
 
-		assert( syscall_sock->code(initScan) );
+		neg_on_error( syscall_sock->code(initScan) );
 		dprintf( D_SYSCALLS, "  initScan = %d\n", initScan );
 		if ( !(syscall_sock->code(constraint)) ) {
 			if (constraint != NULL) {
@@ -1127,7 +1155,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			}
 			return -1;
 		}
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 
 		errno = 0;
 		ad = GetNextDirtyJobByConstraint( constraint, initScan );
@@ -1136,16 +1164,16 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
 		if( rval >= 0 ) {
-			assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
+			neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE) );
 		}
 		FreeJobAd(ad);
 		free( (char *)constraint );
-		assert( syscall_sock->end_of_message() );
+		neg_on_error( syscall_sock->end_of_message() );
 		return 0;
 	}
 
@@ -1154,8 +1182,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		char *filename=NULL;
 		int terrno;
 
-		assert( syscall_sock->code(filename) );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->code(filename) );
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = SendSpoolFile( filename );
@@ -1164,11 +1192,11 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 #if 0
 		// SendSpoolFile() sends the reply before receiving the file.
 		syscall_sock->encode();
-		assert( syscall_sock->code(rval) );
+		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
-			assert( syscall_sock->code(terrno) );
+			neg_on_error( syscall_sock->code(terrno) );
 		}
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 #endif
 		free( (char *)filename );
 		return 0;
@@ -1179,8 +1207,8 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int terrno;
 
 		ClassAd ad;
-		assert( getClassAd(syscall_sock, ad) );
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( getClassAd(syscall_sock, ad) );
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
 		rval = SendSpoolFileIfNeeded(ad);
@@ -1217,7 +1245,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		dprintf( D_SYSCALLS, "	constraint = %s\n", constraint );
 		dprintf( D_SYSCALLS, "	projection = %s\n", projection ? projection : "");
 
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		// if there is a projection, convert it into a set of attribute names
 		if (projection) {
@@ -1238,18 +1266,19 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			rval = ad ? 0 : -1;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 
-			assert( syscall_sock->code(rval) );
+			neg_on_error( syscall_sock->code(rval) );
 
 			if( rval < 0 ) {
-				assert( syscall_sock->code(terrno) );
+				neg_on_error( syscall_sock->code(terrno) );
 			}
 
+			// Condor-C relies on the ServerTimer attribute
 			if( rval >= 0 ) {
-				assert( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE, proj.empty() ? NULL : &proj) );
+				neg_on_error( putClassAd(syscall_sock, *ad, PUT_CLASSAD_NO_PRIVATE | PUT_CLASSAD_SERVER_TIME, proj.empty() ? NULL : &proj) );
 				FreeJobAd(ad);
 			}
 		} while (rval >= 0);
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 
 		free( (char *)constraint );
 		free( (char *)projection );
@@ -1258,7 +1287,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_CloseSocket:
 	{
-		assert( syscall_sock->end_of_message() );;
+		neg_on_error( syscall_sock->end_of_message() );;
 		return -1;
 	}
 

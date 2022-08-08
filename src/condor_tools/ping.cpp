@@ -388,7 +388,6 @@ int main( int argc, char *argv[] )
 	std::vector<int> worklist_number;
 	Daemon * daemon = NULL;
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 

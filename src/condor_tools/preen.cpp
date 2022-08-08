@@ -119,7 +119,7 @@ usage()
 
 
 int
-main( int argc, char *argv[] )
+main( int /*argc*/, char *argv[] )
 {
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
@@ -132,7 +132,6 @@ main( int argc, char *argv[] )
 	
 		// Initialize things
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 	set_priv_initialize(); // allow uid switching if root
 	config();
 
@@ -1038,8 +1037,8 @@ init_params()
 		// In addition to EXECUTE, there may be SLOT1_EXECUTE, ...
 #if 1
 	ExtArray<const char *> params;
-	Regex re; int err = 0; const char * pszMsg = 0;
-	ASSERT(re.compile("slot([0-9]*)_execute", &pszMsg, &err, PCRE_CASELESS));
+	Regex re; int errnumber = 0, erroffset = 0;
+	ASSERT(re.compile("slot([0-9]*)_execute", &errnumber, &erroffset, PCRE2_CASELESS));
 	if (param_names_matching(re, params)) {
 		for (int ii = 0; ii < params.length(); ++ii) {
 			Execute = param(params[ii]);

@@ -1,0 +1,262 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+#################################################################
+## This tests the DAGMan VARS line ability to prepend or append
+## variables to the job submit files for use in conditionals
+#################################################################
+
+use CondorTest;
+use CondorUtils;
+use Cwd qw(getcwd);
+
+$cmd = 'job_dagman_vars_prepend.dag';
+$testdesc =  'Condor submit dag - VARS PREPEND/APPEND test - scheduler U';
+$testname = "job_dagman_vars_prepend";
+$dagman_args = "-verbose";
+$curr_check;
+
+$dir = getcwd;
+CondorTest::debug("Path to working directory: $dir\n",1);
+
+@ckptsdesc = ("Check 1: Direct Submit = True and Append VARS = False",
+              "Check 2: Direct Submit = True and Append VARS = True",
+              "Check 3: Direct Submit = False and Append VARS = False",
+              "Check 4: Direct Submit = False and Append VARS = True");
+
+@logfiles = ("job_dagman_vars_prepend.dag.dagman.out");
+@outfiles = ("job_dagman_vars_prepend-Job.out");
+@outlines = ("Passed Prepend:Passed Append|Inner:Nonspecified Prepend",
+             "Passed Prepend:Passed Append|Outer:Nonspecified Append");
+
+##=============================================================================================================
+
+sub emit_file {
+	my $namex = shift;
+	my $content = shift;
+
+	my $fname = $testname . $namex;
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
+
+# Make files: .dag, .cmd(sub), .config
+$dagfile=
+"CONFIG job_dagman_vars_prepend.config
+JOB test job_dagman_vars_prepend.cmd
+VARS test PREPEND pass_var1=\"Passed Prepend\"
+VARS test APPEND test_var2=\"Passed Append\"
+VARS test test_var3=\"Outer\"";
+
+$submitfile=
+"executable = \$CHOICE(isWindows, /bin/echo, ..\\appendmsg.exe)
+if defined pass_var1
+     test_var1 = \$(pass_var1)
+else
+     test_var1 = Failed Prepend
+endif
+test_var2 = Failed Append
+if defined test_var3
+     check_base = Nonspecified Prepend
+else
+     check_base = Nonspecified Append
+endif
+test_var3 = Inner
+Arguments = \"\$(test_var1):\$(test_var2)|\$(test_var3):\$(check_base)\"
+output    = job_dagman_vars_prepend-Job.out
+log       = job_dagman_vars_prepend-Job.log
+error     = job_dagman_vars_prepend-Job.err
+queue";
+
+$dagconfig=
+"#Normal Global config values
+#DAGMAN_USE_DIRECT_SUBMIT=True
+#DAGMAN_DEFAULT_APPEND_VARS=False
+#Knobs past this will win in setting values";
+
+##=============================================================================================================
+
+# truly const variables in perl
+sub IDLE{1};
+sub HELD{5};
+sub RUNNING{2};
+
+# Remove Sub-directories if exist
+for ($i = 0; $i <= $#ckptsdesc; $i++){
+	if (-d "check_$i"){
+		system("rm -rf check_$i");
+		CondorTest::debug("Directory: check_$i already exists. Removing\n",1);
+	}
+}
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	die "Abort event NOT expected\n";
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+
+	CondorTest::debug("Good. We need the dag to run<$info{cluster}>\n",1);
+};
+
+$submitted = sub
+{
+	CondorTest::debug("submitted: This test will see submit, executing, and successful completion\n",1);
+};
+
+$success = sub
+{
+	CondorTest::debug("executed successfully\n",1);
+	CondorTest::debug("Verifying output\n",1);
+	$diditpass = 1;
+
+	# Check the dagman.out file for successful completion.
+	foreach $name (@logfiles) {
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+
+			if( $line =~ /EXITING WITH STATUS 0/ ) {
+				CondorTest::debug("$name: $line\n",1);
+				$passed = 1;
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("FAILED $name: $line\n",1);
+			$diditpass = 0;
+		}
+	}
+
+	# Check the node job output files for proper output.
+	for ($filenum = 0; $filenum <= $#outfiles; $filenum++) {
+		$name = $outfiles[$filenum];
+		$line = "";
+		$passed = 0;
+		$canopen = open(OUT,"<$name");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$name>:$!\n",1);
+			$diditpass = 0;
+		}
+		while(<OUT>) {
+			chomp();
+			$line = $_;
+
+			# Using eq here to avoid having to escape regexp special chars.
+			if( $line eq $outlines[$curr_check%2] ) {
+				CondorTest::debug("$name: $line\n",1);
+				$passed = 1;
+			}
+		}
+		close(OUT);
+		if($passed == 1 ) {
+			;
+		} else {
+			CondorTest::debug("FAILED $name: $line\n",1);
+			CondorTest::debug("EXPECTED: $outlines[$curr_check%2]\n");
+			$diditpass = 0;
+		}
+	}
+
+	if($diditpass == 0) {
+		die "All expected files and correct output FAILED\n";
+	}
+};
+
+##=============================================================================================================
+
+# Register events for checks
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+# for each checkpoint
+for ($checknum = 0; $checknum <= $#ckptsdesc; $checknum++){
+	$check = $ckptsdesc[$checknum];
+	$curr_check = $checknum;
+
+	# Go back to parent directory
+	chdir $dir;
+	# Set up sub directory
+	mkdir "check_$checknum";
+	if ( ! CondorUtils::is_windows()) { chmod (0755, "check_$checknum"); }
+	if ( CondorUtils::is_windows()) {
+		chdir "$dir\\check_$checknum";
+	} else {
+		chdir "$dir/check_$checknum";
+	}
+	# Make files
+	emit_file(".dag",$dagfile);
+	emit_file(".cmd",$submitfile);
+	emit_file(".config",$dagconfig);
+
+	# Append config knobs with different values to job_dagman_vars_prepend.config (dag config)
+	# Config vals will go: direct/append  1:T/F 2:T/T 3:F/F 4:F/T
+	if ($checknum != 0){
+		open(CONFIG, ">>", "$testname.config") or die "Config file couldn't open";
+		if ($checknum % 2 == 0) {
+
+			print CONFIG "\nDAGMAN_DEFAULT_APPEND_VARS = False";
+		} else {
+			print CONFIG "\nDAGMAN_DEFAULT_APPEND_VARS = True";
+		}
+		if ($checknum > 1){
+			print CONFIG "\nDAGMAN_USE_DIRECT_SUBMIT = False";
+		}
+		close CONFIG or "Config file failed to close";
+	}
+
+	# Run check 
+	if( CondorTest::RunDagTest($testname, $cmd, 0, $dagman_args) ) {
+		CondorTest::debug("$testname|$check: SUCCESS\n",1);
+	} else {
+		die "$testname|$check: CondorTest::RunDagTest() FAILED\n";
+	}
+}
+
+CondorTest::EndTest();
+

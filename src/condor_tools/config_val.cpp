@@ -51,7 +51,7 @@
 #include "string_list.h"
 #include "simplelist.h"
 #include "subsystem_info.h"
-#include "Regex.h"
+#include "condor_regex.h"
 #ifdef WIN32
  #include "exception_handling.WINDOWS.h"
 #endif
@@ -594,7 +594,6 @@ main( int argc, const char* argv[] )
 	ModeType mt = CONDOR_QUERY;
 
 	MyName = argv[0];
-	myDistro->Init( argc, argv );
 
 	for (int i = 1; i < argc; ++i) {
 		// arguments that don't begin with "-" are params to be looked up.
@@ -824,7 +823,7 @@ main( int argc, const char* argv[] )
 
 	// Set subsystem to tool, and subsystem name to either "TOOL" or what was 
 	// specified on the command line.
-	set_mySubSystem(subsys, SUBSYSTEM_TYPE_TOOL);
+	set_mySubSystem(subsys, false, SUBSYSTEM_TYPE_TOOL);
 
 		// Honor any local name we might want to use for the param system
 		// while looking up variables.
@@ -885,8 +884,7 @@ main( int argc, const char* argv[] )
 
 
 	if (dash_debug) {
-		dprintf_set_tool_debug("TOOL", 0);
-		if (debug_flags) set_debug_flags(debug_flags, 0);
+		dprintf_set_tool_debug("TOOL", debug_flags);
 	}
 
 	// temporary, to get rid of build warning.
@@ -913,9 +911,9 @@ main( int argc, const char* argv[] )
 	// Check for obsolete syntax in config file
 	check_config_for_obsolete_syntax = param_boolean("ENABLE_DEPRECATION_WARNINGS", check_config_for_obsolete_syntax);
 	if (check_config_for_obsolete_syntax) {
-		Regex re; int err = 0; const char * pszMsg = 0;
+		Regex re; int errcode = 0; int erroffset = 0;
 		// check for knobs of the form SUBSYS.LOCALNAME.*
-		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &pszMsg, &err, PCRE_CASELESS));
+		ASSERT(re.compile("^[A-Za-z_]*\\.[A-Za-z_0-9]*\\.", &errcode, &erroffset, PCRE2_CASELESS));
 		std::string obsolete_vars;
 		foreach_param_matching(re, HASHITER_NO_DEFAULTS,
 #ifdef HAS_LAMBDA
@@ -1022,8 +1020,8 @@ main( int argc, const char* argv[] )
 				if (tmp && tmp[0]) { fprintf(stdout, "\n# Parameters with names that match %s:\n", tmp); }
 				std::vector<std::string> names;
 				std::string rawvalbuf;
-				Regex re; int err = 0; const char * pszMsg = 0;
-				if (re.compile(tmp, &pszMsg, &err, PCRE_CASELESS)) {
+				Regex re; int errcode = 0; int errindex;
+				if (re.compile(tmp, &errcode, &errindex, PCRE2_CASELESS)) {
 					if (show_by_usage) {
 						// condor_config_val doesn't normally have any valid use counts
 						// so to get some, we expand everthing in the default param table.
@@ -1154,39 +1152,7 @@ main( int argc, const char* argv[] )
 		if( addr ) {
 			target = new DaemonAllowLocateFull( dt, addr, NULL );
 		} else {
-			char* collector_addr = NULL;
-			if( pool ) {
-				collector_addr = strdup(pool);
-			} else { 
-				CollectorList * collectors = CollectorList::create();
-				Daemon * collector = NULL;
-				ReliSock sock;
-				while (collectors->next (collector)) {
-					if (collector->locate() &&
-					    sock.connect(collector->addr(), 0)) {
-						// Do something with the connection, 
-						// such that we won't end up with 
-						// noise in the collector log
-						collector->startCommand( DC_NOP, &sock, 30 );
-						sock.encode();
-						sock.end_of_message();
-						// If we can connect to the
-						// collector, then we accept
-						// it as valid
-						break;
-					}
-				}
-				if( (!collector) || (!collector->addr()) ) {
-					fprintf( stderr, 
-							 "%s, Unable to locate a collector\n", 
-							 MyName);
-					my_exit( 1 );
-				}
-				collector_addr = strdup(collector->addr());
-				delete collectors;
-			}
-			target = new DaemonAllowLocateFull( dt, name, collector_addr );
-			free( collector_addr );
+			target = new DaemonAllowLocateFull(dt, name, pool);
 		}
 		if( ! target->locate(evaluate_daemon_vars ? Daemon::LOCATE_FULL : Daemon::LOCATE_FOR_LOOKUP) ) {
 			fprintf( stderr, "Can't find address for this %s\n", 
@@ -2169,7 +2135,8 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose);
 void PrintExpandedMetaParams(const char * category, const char * rhs, bool verbose)
 {
 	if (verbose) printf(" #begin-expanding# use %s : %s\n", category, rhs);
-	MACRO_TABLE_PAIR* ptable = param_meta_table(category);
+	int base_meta_id = 0, meta_offset = 0;
+	MACRO_TABLE_PAIR* ptable = param_meta_table(category, &base_meta_id);
 	if ( ! ptable) {
 		printf ("error: %s is not a valid use category\n", category);
 		return;
@@ -2182,7 +2149,7 @@ void PrintExpandedMetaParams(const char * category, const char * rhs, bool verbo
 		if ( ! ep || ep == remain) break;
 		remain = ep;
 
-		const char * pmeta = param_meta_table_string(ptable, mag.knob.c_str());
+		const char * pmeta = param_meta_table_string(ptable, mag.knob.c_str(), &meta_offset);
 		if (pmeta) {
 			metaval.set(expand_meta_args(pmeta, mag.args));
 			PrintMetaKnob(metaval.ptr(), true, verbose);
@@ -2239,7 +2206,7 @@ void PrintMetaParam(const char * name, bool expand, bool verbose)
 	// separate the metaknob name from the args (if any)
 	MetaKnobAndArgs mag(parm);
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(use);
+	MACRO_TABLE_PAIR* ptable = param_meta_table(use, nullptr);
 	MACRO_DEF_ITEM * pdef = NULL;
 	if (ptable) {
 		// if only a metaknob category was passed, print out all of the 
@@ -2255,7 +2222,7 @@ void PrintMetaParam(const char * name, bool expand, bool verbose)
 		}
 
 		// lookup the given metaknob name in that category
-		pdef = param_meta_table_lookup(ptable, mag.knob.c_str());
+		pdef = param_meta_table_lookup(ptable, mag.knob.c_str(), nullptr);
 	}
 	if (pdef) {
 		if (expand || ! mag.args.empty()) {
@@ -2470,13 +2437,13 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsolete("","\n");
 	if (opts.hide_obsolete) {
-		const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARD");
+		const char * items = param_meta_value("UPGRADE", "DISCARD", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD=\n%s\n", items);
 			obsolete.initializeFromString(items);
 			//fprintf(stderr, "obsolete=\n%s\n", obsolete.print_to_delimed_string("\n"));
 		}
-		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDX");
+		items = param_meta_value("UPGRADE", "DISCARDX", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD_OPSYS=\n%s\n", items);
 			obsolete.initializeFromString(items);
@@ -2488,13 +2455,13 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsoleteif("","\n");
 	if (opts.hide_if_match) {
-		const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF");
+		const char * items = param_meta_value("UPGRADE", "DISCARDIF", nullptr);
 		if (items && items[0]) {
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
 		}
 
-		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIFX");
+		items = param_meta_value("UPGRADE", "DISCARDIFX", nullptr);
 		if (items && items[0]) {
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
@@ -2507,7 +2474,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		if (vm_type) { free(vm_type); }
 		else
 		{
-			items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
+			items = param_meta_value("UPGRADE", "DISCARDIF_VMWARE", nullptr);
 			if (items && items[0]) {
 				obsoleteif.initializeFromString(items);
 				args.obsoleteif = &obsoleteif;

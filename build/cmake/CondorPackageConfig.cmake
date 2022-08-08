@@ -72,7 +72,7 @@ set(CPACK_DEBIAN_DESCRIPTION_SUMMARY "a workload management system for compute-i
  to run the jobs based upon a policy, carefully monitors their progress,
  and ultimately informs the user upon completion.")
 
-set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE-2.0.txt")
+set(CPACK_RESOURCE_FILE_LICENSE "${CONDOR_SOURCE_DIR}/LICENSE")
 #set(CPACK_RESOURCE_FILE_README "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/README")
 #set(CPACK_RESOURCE_FILE_WELCOME "${CONDOR_SOURCE_DIR}/build/backstage/release_notes/DOC") # this should be more of a Hiya welcome.
 
@@ -178,7 +178,7 @@ if ( ${OS_NAME} STREQUAL "LINUX" )
             set( PYTHON_RPATH "$ORIGIN/../../:/lib64:/usr/lib64:$ORIGIN/../../condor" )
         endif()
 	endif()
-elseif( ${OS_NAME} STREQUAL "DARWIN" )
+elseif( APPLE )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
 endif()
 
@@ -197,13 +197,7 @@ if ( CONDOR_RPMBUILD )
 	endif ()
 endif()
 
-#this needs to be evaluated in order due to WIN collision.
-if(${OS_NAME} STREQUAL "DARWIN")
-	# enable if we desire native packaging.
-	# set ( CPACK_GENERATOR "${CPACK_GENERATOR};PackageMaker" ) ;
-	# set (CPACK_OSX_PACKAGE_VERSION)
-
-elseif ( ${OS_NAME} STREQUAL "FREEBSD" )
+if ( ${OS_NAME} STREQUAL "FREEBSD" )
 
 	# Condor installs nothing useful to FreeBSD in C_INIT, so
 	# just tuck it out of the way.  FreeBSD RC scripts come from
@@ -219,7 +213,7 @@ elseif ( ${OS_NAME} STREQUAL "FREEBSD" )
 	set( C_SHARE_EXAMPLES	share/examples/condor )
 	set( C_DOC		share/doc/condor )
 	
-elseif ( ${OS_NAME} MATCHES "WIN" )
+elseif ( ${OS_NAME} MATCHES "^WIN" )
 
 	# override for windows.
 	set( C_BIN bin )

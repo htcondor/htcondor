@@ -118,7 +118,6 @@ static int getDisplayWidth();
 
 //------------------------------------------------------------------------
 
-static CollectorList * Collectors = NULL;
 static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
@@ -170,8 +169,6 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 int
 main(int argc, const char* argv[])
 {
-  Collectors = NULL;
-
   const char *owner=NULL;
   bool readfromfile = true;
   bool fileisuserlog = false;
@@ -189,7 +186,6 @@ main(int argc, const char* argv[])
   std::string tmp;
 
   int i;
-  myDistro->Init( argc, argv );
 
   set_priv_initialize(); // allow uid switching if root
   config();
@@ -471,9 +467,9 @@ main(int argc, const char* argv[])
 		formatstr (jobconst, "%s == %d", ATTR_CLUSTER_ID, cluster);
 		constraint.addCustomOR(jobconst.c_str());
     }
-    else if (is_dash_arg_prefix(argv[i],"debug",1)) {
+    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,1)) {
           // dprintf to console
-          dprintf_set_tool_debug("TOOL", 0);
+          dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
     else if (is_dash_arg_prefix(argv[i],"diagnostic",4)) {
           // dprintf to console
@@ -597,123 +593,6 @@ static int getDisplayWidth() {
 	return wide_format_width;
 }
 
-static bool
-render_hist_runtime (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
-{
-	double utime;
-	if(!ad->LookupFloat(ATTR_JOB_REMOTE_WALL_CLOCK,utime)) {
-		if(!ad->LookupFloat(ATTR_JOB_REMOTE_USER_CPU,utime)) {
-			utime = 0;
-		}
-	}
-	out = format_time((time_t)utime);
-	return (time_t)utime != 0;
-}
-
-static const char *
-format_utime_double (double utime, Formatter & /*fmt*/)
-{
-	return format_time((time_t)utime);
-}
-
-static const char *
-format_int_date(long long date, Formatter & /*fmt*/)
-{
-	return format_date((int)date);
-}
-
-static const char *
-format_readable_mb(const classad::Value &val, Formatter &)
-{
-	long long kbi;
-	double kb;
-	if (val.IsIntegerValue(kbi)) {
-		kb = kbi * 1024.0 * 1024.0;
-	} else if (val.IsRealValue(kb)) {
-		kb *= 1024.0 * 1024.0;
-	} else {
-		return "        ";
-	}
-	return metric_units(kb);
-}
-
-static const char *
-format_readable_kb(const classad::Value &val, Formatter &)
-{
-	long long kbi;
-	double kb;
-	if (val.IsIntegerValue(kbi)) {
-		kb = kbi*1024.0;
-	} else if (val.IsRealValue(kb)) {
-		kb *= 1024.0;
-	} else {
-		return "        ";
-	}
-	return metric_units(kb);
-}
-
-static const char *
-format_int_job_status(long long status, Formatter & /*fmt*/)
-{
-	const char * ret = " ";
-	switch( status ) 
-	{
-	case IDLE:      ret = "I"; break;
-	case RUNNING:   ret = "R"; break;
-	case COMPLETED: ret = "C"; break;
-	case REMOVED:   ret = "X"; break;
-	case TRANSFERRING_OUTPUT: ret = ">"; break;
-	}
-	return ret;
-}
-
-static const char *
-format_job_status_raw(long long job_status, Formatter &)
-{
-	switch(job_status) {
-	case IDLE:      return "Idle   ";
-	case HELD:      return "Held   ";
-	case RUNNING:   return "Running";
-	case COMPLETED: return "Complet";
-	case REMOVED:   return "Removed";
-	case SUSPENDED: return "Suspend";
-	case TRANSFERRING_OUTPUT: return "XFerOut";
-	default:        return "Unk    ";
-	}
-}
-
-static const char *
-format_job_universe(long long job_universe, Formatter &)
-{
-	return CondorUniverseNameUcFirst((int)job_universe);
-}
-
-static bool
-render_job_id(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
-{
-	int clusterId, procId;
-	if( ! ad->LookupInteger(ATTR_CLUSTER_ID,clusterId)) clusterId = 0;
-	if( ! ad->LookupInteger(ATTR_PROC_ID,procId)) procId = 0;
-	formatstr(val, "%4d.%-3d", clusterId, procId);
-	return true;
-}
-
-static bool
-render_job_cmd_and_args(std::string & val, ClassAd * ad, Formatter & /*fmt*/)
-{
-	if ( ! ad->LookupString(ATTR_JOB_CMD, val))
-		return false;
-
-	char * args;
-	if (ad->LookupString (ATTR_JOB_ARGUMENTS1, &args) || 
-		ad->LookupString (ATTR_JOB_ARGUMENTS2, &args)) {
-		val += " ";
-		val += args;
-		free(args);
-	}
-	return true;
-}
-
 static void AddPrintColumn(const char * heading, int width, int opts, const char * expr)
 {
 	mask.set_heading(heading);
@@ -737,10 +616,10 @@ static void init_default_custom_format()
 	int opts = wide_format ? (FormatOptionNoTruncate | FormatOptionAutoWidth) : 0;
 	AddPrintColumn(" ID",        -7, FormatOptionNoTruncate | FormatOptionAutoWidth, ATTR_CLUSTER_ID, render_job_id);
 	AddPrintColumn("OWNER",     -14, FormatOptionAutoWidth | opts, ATTR_OWNER);
-	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_int_date);
+	AddPrintColumn("SUBMITTED",  11,    0, ATTR_Q_DATE, format_real_date);
 	AddPrintColumn("RUN_TIME",   12,    0, ATTR_CLUSTER_ID, render_hist_runtime);
-	AddPrintColumn("ST",         -2,    0, ATTR_JOB_STATUS, format_int_job_status);
-	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_int_date);
+	AddPrintColumn("ST",         -2,    0, ATTR_JOB_STATUS, format_job_status_char);
+	AddPrintColumn("COMPLETED",  11,    0, ATTR_COMPLETION_DATE, format_real_date);
 	AddPrintColumn("CMD",       -15, FormatOptionLeftAlign | FormatOptionNoTruncate, ATTR_JOB_CMD, render_job_cmd_and_args);
 
 	static const char* const attrs[] = {
@@ -1480,20 +1359,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 	reader.Close();
 }
 
-// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
-static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "DATE",            ATTR_Q_DATE, 0, format_int_date, NULL },
-	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
-	{ "JOB_ID",          ATTR_CLUSTER_ID, 0, render_job_id, ATTR_PROC_ID "\0" },
-	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, format_int_job_status, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" },
-	{ "JOB_STATUS_RAW",  ATTR_JOB_STATUS, 0, format_job_status_raw, NULL },
-	{ "JOB_UNIVERSE",    ATTR_JOB_UNIVERSE, 0, format_job_universe, NULL },
-	{ "READABLE_KB",     ATTR_REQUEST_DISK, 0, format_readable_kb, NULL },
-	{ "READABLE_MB",     ATTR_REQUEST_MEMORY, 0, format_readable_mb, NULL },
-	{ "RUNTIME",         ATTR_JOB_REMOTE_WALL_CLOCK, 0, format_utime_double, NULL },
-};
-static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
-
 //PRAGMA_REMIND("tj: TODO fix to handle summary print format")
 static int set_print_mask_from_stream(
 	AttrListPrintMask & print_mask,
@@ -1524,7 +1389,7 @@ static int set_print_mask_from_stream(
 
 	int err = SetAttrListPrintMaskFromStream(
 					*pstream,
-					LocalPrintFormatsTable,
+					NULL,
 					print_mask,
 					propt,
 					group_by_keys,

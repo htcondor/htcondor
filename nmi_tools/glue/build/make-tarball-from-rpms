@@ -47,7 +47,7 @@ if [[ $dist == amzn2 ]]; then
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
-    arch_dist="${arch}_Rocky8"
+    arch_dist="${arch}_AlmaLinux8"
 elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
@@ -75,6 +75,7 @@ common_externals="boost169-python3 \
     libcgroup \
     libgomp \
     munge-libs \
+    pcre2 \
     scitokens-cpp \
     voms"
 
@@ -86,7 +87,7 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-six \
         python36-urllib3"
     externals="$common_externals $el7_externals"
-elif [[ $arch_dist =~ Rocky8 ]]; then
+elif [[ $arch_dist =~ AlmaLinux8 ]]; then
     externals="$common_externals"
 elif [[ $arch_dist =~ Fedora32 ]]; then
     externals="$common_externals"

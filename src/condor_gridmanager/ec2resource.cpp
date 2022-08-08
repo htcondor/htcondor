@@ -287,12 +287,11 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
                 std::string remoteJobID;
                 formatstr( remoteJobID, "ec2 %s %s", resourceName, clientToken.c_str() );
 
-                BaseJob * tmp = NULL;
-                rc = BaseJob::JobsByRemoteId.lookup( remoteJobID, tmp );
+                auto itr = BaseJob::JobsByRemoteId.find(remoteJobID);
 
-                if( rc == 0 ) {
-                    ASSERT( tmp );
-                    EC2Job * job = dynamic_cast< EC2Job * >( tmp );
+                if( itr != BaseJob::JobsByRemoteId.end() ) {
+                    ASSERT( itr->second );
+                    EC2Job * job = dynamic_cast< EC2Job * >( itr->second );
                     if( job == NULL ) {
                         EXCEPT( "Found non-EC2Job identified by '%s'.", remoteJobID.c_str() );
                     }
