@@ -189,14 +189,7 @@ GangliaD::initAndReconfig()
 	}
 
 	param(m_gstat_command, "GANGLIA_GSTAT_COMMAND");
-	if (m_gstat_argv) {
-		int i = 0;
-		while (m_gstat_argv[i] != nullptr) {
-			free(m_gstat_argv[i]);
-			i++;
-		}
-		free(m_gstat_argv);
-	}
+	deleteStringArray(m_gstat_argv);
     split_args(m_gstat_command.c_str(), &m_gstat_argv);
 
     m_send_data_for_all_hosts = param_boolean("GANGLIA_SEND_DATA_FOR_ALL_HOSTS", false);
