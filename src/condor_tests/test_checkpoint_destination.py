@@ -744,16 +744,21 @@ def hold_job(hold_job_handle):
 #
 
 FAIL_CASES = {
-    "mutated_manifest_a": {
+    "missing_file": {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         "{path_to_mutate_script_a}",
     },
-#    "mutated_manifest_b": {
-#        "+CheckpointDestination":       '"local://{test_dir}/"',
-#        "transfer_plugins":             'local={plugin_shell_file}',
-#        "transfer_input_files":         "{path_to_mutate_script_b}",
-#    },
+    "corrupt_file": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         "{path_to_mutate_script_b}",
+    },
+    "corrupt_manifest": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         "{path_to_mutate_script_c}",
+    },
 }
 
 
@@ -778,17 +783,35 @@ def path_to_mutate_script_b(test_dir):
     script = f"""
     #!/usr/bin/python3
     import os
+    from pathlib import Path
 
-    # OK, this can't work because the starter only knows to validate
-    # the checkpoint if the MANIFEST file is there.  Replace with one of the
-    # other tests, instead.
-    os.system("ls -la > /tmp/f00")
-    # Remove MANIFEST file.
-    os.unlink("MANIFEST.0000")
-    os.system("ls -la >> /tmp/f00")
+    # Corrupt a checkpoint file.
+    path = Path("saved-state")
+    path.write_text("-1\\n")
+
     """
 
     path = test_dir / "b" / "mutate_checkpoint.py"
+    write_file(path, format_script(script))
+
+    return path
+
+
+@action
+def path_to_mutate_script_c(test_dir):
+    script = f"""
+    #!/usr/bin/python3
+    import os
+    from pathlib import Path
+
+    # Corrupt the MANIFEST hash by swapping its first two bytes.
+    path = Path("MANIFEST.0000")
+    contents = path.read_text().splitlines()
+    contents[-1] = contents[-1][1] + contents[-1][0] + contents[-1][2:]
+    path.write_text("\\n".join(contents) + "\\n")
+    """
+
+    path = test_dir / "c" / "mutate_checkpoint.py"
     write_file(path, format_script(script))
 
     return path
@@ -799,6 +822,7 @@ def fail_job_handles(test_dir, default_condor, the_job_description,
     plugin_shell_file,
     path_to_mutate_script_a,
     path_to_mutate_script_b,
+    path_to_mutate_script_c,
 ):
     job_handles = {}
     for name, fail_case in FAIL_CASES.items():
@@ -807,6 +831,7 @@ def fail_job_handles(test_dir, default_condor, the_job_description,
             plugin_shell_file=plugin_shell_file,
             path_to_mutate_script_a=path_to_mutate_script_a,
             path_to_mutate_script_b=path_to_mutate_script_b,
+            path_to_mutate_script_c=path_to_mutate_script_c,
         ) for key, value in fail_case.items()}
 
         complete_job_description = {
@@ -865,14 +890,15 @@ def fail_job(default_condor, fail_job_handle):
     # means we can't wait() the shadow exception, because it happens
     # before the execute event.
 
+    # FIXME
     fail_job_handle.wait(
-        timeout=60,
+        timeout=10,
         condition=ClusterState.all_running,
         fail_condition=ClusterState.any_held,
     )
 
     fail_job_handle.wait(
-        timeout=60,
+        timeout=10,
         condition=ClusterState.all_idle,
         fail_condition=ClusterState.any_held,
     )
@@ -1097,7 +1123,7 @@ class TestCheckpointDestination:
         assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
 
 
-    def test_checkpoint_download_integrity(self, default_condor, fail_job):
+    def test_checkpoint_download_integrity(self, default_condor, fail_job, fail_job_name):
         # For now, all that we're looking for is a shadow exception
         # in the job event log that indicates that the starter noticed
         # the problem.  We have some design decisions to make before we
@@ -1111,5 +1137,12 @@ class TestCheckpointDestination:
                 break
 
         assert shadow_exception is not None
-        assert "Failed to open checkpoint file" in shadow_exception["message"]
-        assert "to compute checksum" in shadow_exception["message"]
+
+        # This should be part of the test case, instead.
+        if "missing_file" in fail_job_name:
+            assert "Failed to open checkpoint file" in shadow_exception["message"]
+            assert "to compute checksum" in shadow_exception["message"]
+        elif "corrupt_manifest" in fail_job_name:
+            assert "Invalid MANIFEST file, aborting" in shadow_exception["message"]
+        elif "corrupt_file" in fail_job_name:
+            assert "did not have expected checksum" in shadow_exception["message"]

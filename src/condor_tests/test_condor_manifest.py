@@ -116,7 +116,7 @@ def mutateManifestHash(pathToManifestFile):
 def mutateFileHash(pathToManifestFile):
     path = Path(pathToManifestFile)
     contents = path.read_text().splitlines()
-    # Swap the first two bytest to make sure we'r testing the hasher.
+    # Swap the first two bytes to make sure we're testing the hasher.
     contents[0] = contents[0][1] + contents[0][0] + contents[0][2:]
     path.write_text("\n".join(contents) + "\n")
     logger.debug(f"Mutated file hash in '{pathToManifestFile}'");
