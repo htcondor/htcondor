@@ -11,6 +11,7 @@ from ornithology import (
     ClusterState,
 )
 
+import htcondor
 from htcondor import (
     JobEventType,
 )
@@ -290,6 +291,10 @@ def path_to_symlink_script(test_dir):
 
 @action
 def path_to_the_job_script(default_condor, test_dir):
+    with default_condor.use_config():
+        condor_libexec = htcondor.param["LIBEXEC"]
+        condor_bin = htcondor.param["BIN"]
+
     # This script can't have embedded newlines for stupid reasons.
     script = f"""
     #!/usr/bin/python3
@@ -304,9 +309,10 @@ def path_to_the_job_script(default_condor, test_dir):
 
     os.environ['CONDOR_CONFIG'] = '{default_condor.config_file}'
     posix_test_dir = '{test_dir.as_posix()}'
+    condor_libexec = '{condor_libexec}'
+    condor_bin = '{condor_bin}'
 """ + """
-    condor_libexec = Path(os.environ['_CONDOR_BIN']) / ".." / "libexec"
-    os.environ['PATH'] = condor_libexec.as_posix() + os.pathsep + os.environ.get('PATH', '') + os.pathsep + os.environ['_CONDOR_BIN']
+    os.environ['PATH'] = condor_libexec + os.pathsep + os.environ.get('PATH', '') + os.pathsep + condor_bin
 
     epoch_number = 0
     rv = subprocess.run(
