@@ -342,7 +342,7 @@ Register()
 								  "FETCH_PROXY_DELEGATION",
 								  &FetchProxyDelegationHandler,
 								  "FetchProxyDelegationHandler",
-								  DAEMON, D_COMMAND, true );
+								  DAEMON, true );
 
 	Reconfig();
 }

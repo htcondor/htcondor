@@ -2378,6 +2378,9 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	int on_completion = DRAIN_NOTHING_ON_COMPLETION;
 	ad.LookupInteger(ATTR_RESUME_ON_COMPLETION,on_completion);
 
+	time_t deadline = 0;
+	ad.LookupInteger("Deadline", deadline);
+
 	// get the drain reason out of the command. if no reason supplied, 
 	// assume that the command is coming from the Defrag daemon unless the peer version is 8.9.12 or later
 	// an 8.9.12 defrag will never send an empty reason, so the caller must be a tool
@@ -2395,7 +2398,7 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	std::string new_request_id;
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->startDraining(how_fast,reason,on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
+	bool ok = resmgr->startDraining(how_fast,deadline,reason,on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}
@@ -2437,10 +2440,11 @@ command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 
 	std::string request_id;
 	ad.LookupString(ATTR_REQUEST_ID,request_id);
+	bool reconfig = false; // set to true to reconfig after cancelling the drain
 
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->cancelDraining(request_id,error_msg,error_code);
+	bool ok = resmgr->cancelDraining(request_id,reconfig,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to cancel draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}

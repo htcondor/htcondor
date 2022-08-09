@@ -27,7 +27,7 @@
 #include "function_test_driver.h"
 #include "emit.h"
 #include "unit_test_utils.h"
-#include "string_list.cpp"
+#include "string_list.h"
 
 static bool test_constructor(void);
 static bool test_constructor_empty_list(void);
@@ -241,6 +241,10 @@ static bool test_get_delimiters_empty_no(void);
 static bool test_get_delimiters_empty_yes(void);
 static bool test_get_delimiters_non_empty_no(void);
 static bool test_get_delimiters_non_empty_yes(void);
+
+static bool string_compare(const char *x, const char *y) {
+	return strcmp(x, y) < 0;
+}
 
 bool OTEST_StringList(void) {
 	emit_object("StringList");

@@ -475,7 +475,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
-		SetupSingularitySsh();
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+		if( ssh_enabled ) {
+			SetupSingularitySsh();
+		}
+
 		if (fs_remap) {
 			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
 			fs_remap = NULL;
@@ -1179,7 +1183,16 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         int fds[3];
         sns = ((ReliSock*)stream)->accept();
 
+		if (sns == nullptr) {
+			dprintf(D_ALWAYS, "Could not accept new connection from ssh_to_job client %d: %s\n", errno, strerror(errno));
+
+			// We have seen this error on production clusters, not sure what causes it.  To be safe
+			// let's cancel the socket, so we won't get caught in an infinite loop if the socket stays hot
+			daemonCore->Cancel_Socket(stream);
+			return KEEP_STREAM;
+		}
         dprintf(D_ALWAYS, "Accepted new connection from ssh client for container job\n");
+
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());

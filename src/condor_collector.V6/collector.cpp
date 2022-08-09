@@ -427,12 +427,12 @@ void CollectorDaemon::Init()
 		// restrictions to their contents (such as the user must be authenticated, not
 		// unmapped, and must match the Owner attribute).
 	daemonCore->Register_CommandWithPayload(UPDATE_OWN_SUBMITTOR_AD,"UPDATE_OWN_SUBMITTOR_AD",
-		receive_update,"receive_update", DAEMON, D_COMMAND, false,
+		receive_update,"receive_update", DAEMON, false,
 		0, &allow_perms);
 		//
 	daemonCore->Register_CommandWithPayload(IMPERSONATION_TOKEN_REQUEST, "IMPERSONATION_TOKEN_REQUEST",
 		schedd_token_request, "schedd_token_request", DAEMON,
-		D_COMMAND, true, 0, &allow_perms);
+		true, 0, &allow_perms);
 
     // install command handlers for updates with acknowledgement
 
@@ -1435,19 +1435,19 @@ int CollectorDaemon::receive_update_expect_ack(int command,
         
     }
 
-    /* let the off-line plug-in have at it */
-	if(record)
-    offline_plugin_.update ( command, *record->m_publicAd );
+	if(record) {
+		offline_plugin_.update ( command, *record->m_publicAd );
 
 #if defined(UNIX) && !defined(DARWIN)
-	// JEF TODO Should we use the private ad here?
-    CollectorPluginManager::Update ( command, *record->m_publicAd );
+		// JEF TODO Should we use the private ad here?
+		CollectorPluginManager::Update ( command, *record->m_publicAd );
 #endif
 
-	if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
-		forward_classad_to_view_collector(command,
+		if (viewCollectorTypes || UPDATE_STARTD_AD_WITH_ACK == command) {
+			forward_classad_to_view_collector(command,
 										  ATTR_MY_TYPE,
 										  record->m_pvtAd);
+		}
 	}
 
 	// let daemon core clean up the socket

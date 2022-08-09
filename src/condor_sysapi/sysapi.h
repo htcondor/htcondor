@@ -41,7 +41,7 @@ int sysapi_phys_memory(void);
 int sysapi_phys_memory_raw_no_param(void);
 
 /* How to get the free disk blocks from a full pathname, answer in KB */
-int sysapi_reserve_for_fs();
+long long sysapi_reserve_for_fs();
 long long sysapi_disk_space_raw(const char *filename);
 long long sysapi_disk_space(const char *filename);
 

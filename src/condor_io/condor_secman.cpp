@@ -1517,7 +1517,8 @@ SecManStartCommand::sendAuthInfo_inner()
 			}
 		}
 	}
-	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() ) {
+	// The family session is only available in the primary session cache
+	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() && m_sec_man.m_tag.empty() ) {
 		// We have a process family security session.
 		// Try using it if the following are all true:
 		// 1) Peer is on a local network interface
@@ -2940,8 +2941,7 @@ SecManStartCommand::WaitForSocketCallback()
 		m_sock->peer_description(),
 		(SocketHandlercpp)&SecManStartCommand::SocketCallback,
 		req_description.c_str(),
-		this,
-		ALLOW);
+		this);
 
 	if(reg_rc < 0) {
 		std::string msg;

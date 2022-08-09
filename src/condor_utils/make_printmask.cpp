@@ -124,7 +124,7 @@ static void expected_token(std::string & message, const char * reason, const cha
 //
 int SetAttrListPrintMaskFromStream (
 	SimpleInputStream & stream, // in: fetch lines from this stream until nextline() returns NULL
-	const CustomFormatFnTable & FnTable, // in: table of custom output functions for SELECT
+	const CustomFormatFnTable * FnTable, // in: table of custom output functions for SELECT
 	AttrListPrintMask & prmask, // out: columns and headers set in SELECT
 	PrintMaskMakeSettings & pmms,
 	std::vector<GroupByKeyInfo> & group_by, // out: ordered set of attributes/expressions in GROUP BY
@@ -145,6 +145,7 @@ int SetAttrListPrintMaskFromStream (
 	AttrListPrintMask * mask = NULL;
 	classad::References * attrs = NULL;
 	classad::References * scopes = NULL;
+	const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
 
 	error_message.clear();
 
@@ -294,7 +295,10 @@ int SetAttrListPrintMaskFromStream (
 				} break;
 				case kw_PRINTAS: {
 					if (toke.next()) {
-						const CustomFormatFnTableItem * pcffi = FnTable.lookup_token(toke);
+						const CustomFormatFnTableItem * pcffi = NULL;
+						if (FnTable){ pcffi = FnTable->lookup_token(toke); } //Check for local print format table options
+						if (!pcffi) { pcffi = GlobalFnTable.lookup_token(toke); } //If pcffi is Null then check for global print format table options
+
 						if (pcffi) {
 							cust = pcffi->cust;
 							fmt = pcffi->printfFmt;

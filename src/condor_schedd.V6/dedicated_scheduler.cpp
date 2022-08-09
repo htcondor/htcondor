@@ -764,7 +764,7 @@ DedicatedScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -4469,7 +4469,8 @@ displayRequest( ClassAd* ad, char* str, int debug_level )
 void
 deallocMatchRec( match_rec* mrec )
 {
-	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec\n");
+	dprintf( D_ALWAYS, "DedicatedScheduler::deallocMatchRec(%d.%d)\n",
+	         mrec ? mrec->cluster : -1, mrec ? mrec->proc : -1);
 		// We might call this with a NULL mrec, so don't seg fault.
 	if( ! mrec ) {
 		return;
