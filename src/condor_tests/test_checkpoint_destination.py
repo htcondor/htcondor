@@ -14,6 +14,7 @@ from ornithology import (
 import htcondor
 from htcondor import (
     JobEventType,
+    FileTransferEventType,
 )
 
 import logging
@@ -895,19 +896,36 @@ def fail_job(default_condor, fail_job_handle):
     # is idle stays that way even if input transfer has started, which
     # means we can't wait() the shadow exception, because it happens
     # before the execute event.
+    #
+    # Thankfuly, if a state change causes a fail or success condition
+    # to fire, ClusterHandle.wait() stops immediately after reading
+    # the event which caused the state change.
 
-    # FIXME
-    fail_job_handle.wait(
-        timeout=10,
-        condition=ClusterState.all_running,
-        fail_condition=ClusterState.any_held,
-    )
+    # This is mildly incestuous; it should be moved into an Ornithology
+    # API and/or all but the last line of this function replace by
+    # `fail_job_handle.wait_for_event(
+    #       of_type=EventType.SHADOW_EXCEPTION,
+    #       timeout=60,
+    # )`.
+    last_event_read = fail_job_handle.state._last_event_read
 
-    fail_job_handle.wait(
-        timeout=10,
-        condition=ClusterState.all_idle,
-        fail_condition=ClusterState.any_held,
-    )
+    countdown = 60
+    found_event = False
+    while not found_event:
+        fail_job_handle.state.read_events()
+        events = fail_job_handle.event_log.events[last_event_read + 1:]
+        for event in events:
+            last_event_read += 1
+
+            if event.type is JobEventType.SHADOW_EXCEPTION:
+                found_event = True
+                break
+
+        if not found_event:
+            countdown -= 1
+            if countdown == 0:
+                break
+            time.sleep(1)
 
     return fail_job_handle
 
@@ -1073,7 +1091,8 @@ class TestCheckpointDestination:
             ["/usr/bin/diff", "-r", input_path, check_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
+            # Should be `text=True`, but we have some old Pythons.
+            universal_newlines=True,
             timeout=20,
         )
 
