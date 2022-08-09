@@ -45,6 +45,7 @@ def plugin_python_file(test_dir):
     """
         #!/usr/bin/python3
 
+        import os
         import sys
         import time
         import shutil
@@ -254,6 +255,11 @@ def plugin_python_file(test_dir):
 
             except Exception:
                 sys.exit(EXIT_FAILURE)
+
+            if not args['upload']:
+                mutator = Path('mutate_checkpoint.py')
+                if mutator.exists():
+                    os.system(f"./{mutator}")
     """
     )
     write_file(plugin_python_file, contents)
@@ -660,7 +666,7 @@ def the_completed_job_stderr(test_dir, the_completed_job):
 
 
 #
-# These jobs are expected to go on hold, so they need to be treated differently.
+# These jobs are expected to go on hold when they try to checkpoint.
 #
 
 HOLD_CASES = {
@@ -731,6 +737,147 @@ def hold_job(hold_job_handle):
     )
 
     return hold_job_handle
+
+
+#
+# These jobs are expected to fail when downloading the checkpoint.
+#
+
+FAIL_CASES = {
+    "mutated_manifest_a": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "transfer_input_files":         "{path_to_mutate_script_a}",
+    },
+#    "mutated_manifest_b": {
+#        "+CheckpointDestination":       '"local://{test_dir}/"',
+#        "transfer_plugins":             'local={plugin_shell_file}',
+#        "transfer_input_files":         "{path_to_mutate_script_b}",
+#    },
+}
+
+
+@action
+def path_to_mutate_script_a(test_dir):
+    script = f"""
+    #!/usr/bin/python3
+    import os
+
+    # Remove a file from the checkpoint.
+    os.unlink("saved-state")
+    """
+
+    path = test_dir / "a" / "mutate_checkpoint.py"
+    write_file(path, format_script(script))
+
+    return path
+
+
+@action
+def path_to_mutate_script_b(test_dir):
+    script = f"""
+    #!/usr/bin/python3
+    import os
+
+    # OK, this can't work because the starter only knows to validate
+    # the checkpoint if the MANIFEST file is there.  Replace with one of the
+    # other tests, instead.
+    os.system("ls -la > /tmp/f00")
+    # Remove MANIFEST file.
+    os.unlink("MANIFEST.0000")
+    os.system("ls -la >> /tmp/f00")
+    """
+
+    path = test_dir / "b" / "mutate_checkpoint.py"
+    write_file(path, format_script(script))
+
+    return path
+
+
+@action
+def fail_job_handles(test_dir, default_condor, the_job_description,
+    plugin_shell_file,
+    path_to_mutate_script_a,
+    path_to_mutate_script_b,
+):
+    job_handles = {}
+    for name, fail_case in FAIL_CASES.items():
+        fail_case = {key: value.format(
+            test_dir=test_dir,
+            plugin_shell_file=plugin_shell_file,
+            path_to_mutate_script_a=path_to_mutate_script_a,
+            path_to_mutate_script_b=path_to_mutate_script_b,
+        ) for key, value in fail_case.items()}
+
+        complete_job_description = {
+            ** the_job_description,
+            ** fail_case,
+        }
+
+        job_handle = default_condor.submit(
+            description=complete_job_description,
+            count=1,
+        )
+
+        job_handles[name] = job_handle
+
+    yield job_handles
+
+    for job_handle in job_handles:
+        job_handles[job_handle].remove()
+
+
+@action(params={name: name for name in FAIL_CASES})
+def fail_job_pair(request, fail_job_handles):
+    return (request.param, fail_job_handles[request.param])
+
+
+@action
+def fail_job_name(fail_job_pair):
+    return fail_job_pair[0]
+
+
+@action
+def fail_job_handle(fail_job_pair):
+    return fail_job_pair[1]
+
+
+@action
+def fail_job(default_condor, fail_job_handle):
+    # The job will evict itself part of the way through.  To avoid a long
+    # delay waiting for the schedd to reschedule it, call condor_reschedule.
+    fail_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_running,
+        fail_condition=ClusterState.any_held,
+    )
+
+    fail_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_idle,
+        fail_condition=ClusterState.any_held,
+    )
+
+    default_condor.run_command(['condor_reschedule'])
+
+    # Presently, from the point of view of ornithology, a job which
+    # is idle stays that way even if input transfer has started, which
+    # means we can't wait() the shadow exception, because it happens
+    # before the execute event.
+
+    fail_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_running,
+        fail_condition=ClusterState.any_held,
+    )
+
+    fail_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_idle,
+        fail_condition=ClusterState.any_held,
+    )
+
+    return fail_job_handle
 
 
 #
@@ -949,3 +1096,20 @@ class TestCheckpointDestination:
         assert jobAd["HoldReasonSubCode"] == -1
         assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
 
+
+    def test_checkpoint_download_integrity(self, default_condor, fail_job):
+        # For now, all that we're looking for is a shadow exception
+        # in the job event log that indicates that the starter noticed
+        # the problem.  We have some design decisions to make before we
+        # decide what to other than just retry (which won't help if the
+        # original _upload_ failed).
+
+        shadow_exception = None
+        for event in fail_job.event_log.events:
+            if event.type is JobEventType.SHADOW_EXCEPTION:
+                shadow_exception = event
+                break
+
+        assert shadow_exception is not None
+        assert "Failed to open checkpoint file" in shadow_exception["message"]
+        assert "to compute checksum" in shadow_exception["message"]

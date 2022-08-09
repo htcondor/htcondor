@@ -460,6 +460,10 @@ class ClusterState:
             num_events_read += 1
 
             new_status = JOB_EVENT_STATUS_TRANSITIONS.get(event.type, None)
+            if event.type is htcondor.JobEventType.FILE_TRANSFER:
+                if event["Type"] == htcondor.FileTransferEventType.IN_STARTED:
+                    new_status = jobs.JobStatus.RUNNING
+
             if new_status is not None:
                 key = event.proc - self._offset
 
