@@ -434,7 +434,7 @@ UnparseAux(string &buffer, Operation::OpKind op, ExprTree *t1, ExprTree *t2,
 		buffer += opString[op];
 	} else {
 		const char *opstring = opString[op];
-		int  length    = strlen(opstring);
+		int  length    = (int)strlen(opstring);
 		for(int i = 0; i < length; i++) {
 			char c = *opstring;
 			switch (c) {
