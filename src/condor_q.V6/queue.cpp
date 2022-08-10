@@ -3870,6 +3870,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 	// we just need to write the footer/summary
 	if (g_stream_results) {
 		print_full_footer(summary_ad, &writer);
+		delete summary_ad;
 		return true;
 	}
 
@@ -3888,6 +3889,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		
 		//PRAGMA_REMIND("TJ: shouldn't this be using scheddAddress instead of scheddName?")
 		DaemonAllowLocateFull schedd(DT_SCHEDD, scheddName, pool ? pool->addr() : NULL );
+		delete summary_ad;
 
 		return print_jobs_analysis(ads, source_label.c_str(), &schedd);
 	}
@@ -3904,6 +3906,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 			}
 		}
 		print_full_footer(summary_ad, &writer);
+		delete summary_ad;
 		return true;
 	}
 
@@ -3944,6 +3947,7 @@ show_schedd_queue(const char* scheddAddress, const char* scheddName, const char*
 		print_full_footer(summary_ad, &writer);
 	}
 
+	delete summary_ad;
 	return true;
 }
 
