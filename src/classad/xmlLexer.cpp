@@ -301,7 +301,7 @@ BreakdownTag(const char *complete_tag)
 	int length, i;
 	int start, count;
 
-	length = strlen(complete_tag);
+	length = (int)strlen(complete_tag);
 	
 	// Skip whitespace
 	for (i = 0; i < length && isspace(complete_tag[i]); i++) {

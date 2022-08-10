@@ -111,7 +111,7 @@ void convert_escapes(string &text, bool &validStr)
 	if (text.empty())
 		return;
 
-	int length = text.length();
+	int length = (int)text.length();
 	int dest = 0;
 
 	for (int source = 0; source < length; ++source) {
@@ -186,7 +186,7 @@ void convert_escapes_json(string &text, bool &validStr, bool &quotedExpr)
 	if (text.empty())
 		return;
 
-	int length = text.length();
+	int length = (int)text.length();
 	int dest = 0;
 
 	if ( length >= 4 && text[0] == '\\' && text[1] == '/' &&
