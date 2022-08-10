@@ -161,7 +161,7 @@ join_vector_to_string(const std::vector<std::string> &input) {
 static std::string
 cpuflags_to_microarch_string(std::vector<std::string> &cpuinfoFlags) {
 #ifdef X86_64
-	// Defined in https://en.wikipedia.org/x86-64#Microarchitecture_levels
+	// Defined in https://en.wikipedia.org/wiki/x86-64#Microarchitecture_levels
 	//
 	// These must be sorted!
 	static const std::array<const std::string, 6> v2insns = { "cx16", "lahf_lm", "popcnt", "sse4_1", "sse4_2", "ssse3"};
