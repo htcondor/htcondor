@@ -255,7 +255,7 @@ class Dag {
 		a different method.
 		@param The job corresponding to this event.
 	*/
-	void ProcessNotIdleEvent( Job *job, int proc, bool isExecuting = false );
+	void ProcessNotIdleEvent( Job *job, int proc );
 
 	/** Process a held event for a job.
 		@param The job corresponding to this event.
@@ -350,10 +350,6 @@ class Dag {
     /** @return the number of nodes that failed in the DAG
      */
     inline int NumNodesFailed() const { return _numNodesFailed; }
-	
-    /** @return the number of jobs currently running in batch system(s)
-     */
-    inline int NumJobsRunning() const { return _numJobsRunning; }
 
     /** @return the number of jobs currently submitted to batch system(s)
      */
@@ -615,6 +611,17 @@ class Dag {
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
 	int NumHeldJobProcs();
+	
+		/** Count number of Job Procs throughout the entire DAG
+		 	in states held, idle, running, and terminated.
+			@param n_held: pointer to set number of held job processes
+			@param n_idle: pointer to set number of idle job processes
+			@param n_running: pointer to set number of 'running' job processes
+			@param n_terminated: pointer to set number of terminated/aborted job processes
+	
+			Note: running job process = number of processes not idle, held, or terminated
+		*/
+	void NumJobProcStates(int* n_held=NULL, int* n_idle=NULL, int* n_running=NULL, int* n_terminated=NULL);
 	
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
@@ -1094,9 +1101,6 @@ private:
     
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
-
-	//Number of batch system jobs currently running
-	int _numJobsRunning;
 	
     // Number of batch system jobs currently submitted
     int _numJobsSubmitted;

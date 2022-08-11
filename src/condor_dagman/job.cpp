@@ -282,20 +282,6 @@ Job::SetStatus( status_t newStatus )
 		// TODO: add some state transition sanity-checking here?
 	return true;
 }
-	
-//---------------------------------------------------------------------------
-bool
-Job::GetProcIsExecuting( int proc )
-{
-	if ( GetNoop() ) {
-		proc = 0;
-	}
-
-	if (proc >= static_cast<int>(_gotEvents.size())) {
-		_gotEvents.resize(proc + 1, 0);
-	}
-	return (_gotEvents[proc] & EXEC_MASK) != 0;
-}
 
 //---------------------------------------------------------------------------
 bool

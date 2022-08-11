@@ -2112,6 +2112,11 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
+	
+The following job ClassAd attributes appear in the job ClassAd only for
+the *condor_dagman* job submitted under DAGMan. They represent job process
+information about the DAG. These values will reset when a DAG is run via
+rescue and be retained when a DAG is run via recovery mode.
 
 :classad-attribute:`DAG_JobsSubmitted`
     The total number of job processes submitted by all the nodes in the DAG.

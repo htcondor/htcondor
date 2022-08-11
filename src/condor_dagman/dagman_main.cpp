@@ -1637,33 +1637,28 @@ print_status( bool forceScheddUpdate ) {
 void
 jobad_update() {
 
-	int total = dagman.dag->NumNodes( true );
-	int done = dagman.dag->NumNodesDone( true );
-	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
-	int post = dagman.dag->PostRunNodeCount();
-	int hold = dagman.dag->HoldRunNodeCount();
-	int ready =  dagman.dag->NumNodesReady();
-	int failed = dagman.dag->NumNodesFailed();
-	int unready = dagman.dag->NumNodesUnready( true );
-	int jobs_submitted = dagman.dag->TotalJobsSubmitted();
-	int jobs_completed = dagman.dag->TotalJobsCompleted();
-	int jobs_idle = dagman.dag->NumIdleJobProcs();
-	int jobs_held = dagman.dag->NumHeldJobProcs();
-	int temp = dagman.dag->NumJobsSubmitted();
-	int jobs_running = dagman.dag->NumJobsRunning();
-	
-	// 	In dag.cpp held jobs are counted in the number of idle jobs
-	jobs_idle -= jobs_held;
+	DagClassadInfo counts = { dagman.dag->NumNodes( true ),			//Total number nodes
+							 dagman.dag->NumNodesDone( true ),		//Nodes done
+							 dagman.dag->PreRunNodeCount(),			//Node Pre script
+							 dagman.dag->NumJobsSubmitted(),		//Nodes submitted
+							 dagman.dag->PostRunNodeCount(),		//Node Post script
+							 dagman.dag->HoldRunNodeCount(),		//Node Hold script
+							 dagman.dag->NumNodesReady(),			//Nodes Ready
+							 dagman.dag->NumNodesFailed(),			//Nodes Failed
+							 dagman.dag->NumNodesUnready( true ),	//Nodes Unready
+							 dagman.dag->TotalJobsSubmitted(),		//Total Job Procs Submitted
+							 dagman.dag->TotalJobsCompleted(),		//Total Job Procs Successfully completed
+							 0,										//Job Procs Idle
+							 0,										//Job Procs Held
+							 0										//Job Procs 'Running'
+							};
+	dagman.dag->NumJobProcStates(&counts.jobsHeld,&counts.jobsIdle,&counts.jobsRunning);
 
 	if ( dagman._dagmanClassad ) {
-		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					hold, ready, failed, unready, jobs_submitted,
-					jobs_completed, jobs_idle, jobs_held, jobs_running,
-					dagman.dag->_dagStatus, dagman.dag->Recovery(),
-					dagman._dagmanStats, dagman.maxJobs, dagman.maxIdle,
-					dagman.maxPreScripts, dagman.maxPostScripts,
-					dagman.maxHoldScripts );
+		dagman._dagmanClassad->Update( counts, dagman.dag->_dagStatus,
+					dagman.dag->Recovery(), dagman._dagmanStats,
+					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
+					dagman.maxPostScripts, dagman.maxHoldScripts );
 
 		// It's possible that certain DAGMan attributes were changed in the job ad.
 		// If this happened, update the internal values in our dagman data structure.
@@ -1760,6 +1755,7 @@ void condor_event_timer () {
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
+	int currJobsHeld = dagman.dag->NumHeldJobProcs();
 	// print status if anything's changed (or we're in a high debug level)
 	if( prevJobsDone != dagman.dag->NumNodesDone( true )
 		|| prevJobs != dagman.dag->NumNodes( true )
@@ -1767,7 +1763,7 @@ void condor_event_timer () {
 		|| prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
 		|| prevJobsReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
-		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
+		|| prevJobsHeld != currJobsHeld
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
@@ -1777,7 +1773,7 @@ void condor_event_timer () {
 		prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
 		prevJobsReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
-		prevJobsHeld = dagman.dag->NumHeldJobProcs();
+		prevJobsHeld = currJobsHeld;
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

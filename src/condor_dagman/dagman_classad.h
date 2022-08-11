@@ -27,6 +27,27 @@
 #include "condor_qmgr.h"
 #include "../condor_utils/dagman_utils.h"
 
+//Struct to hold node & job proc counts to be written to
+//DAGs classad
+struct DagClassadInfo {
+	//Node counts
+	int nodesTotal;
+	int nodesDone;
+	int nodesPre;
+	int nodesSubmitted;
+	int nodesPost;
+	int nodesHold;
+	int nodesReady;
+	int nodesFailed;
+	int nodesUnready;
+	//Job Procs counts
+	int jobsSubmitted;
+	int jobsCompleted;
+	int jobsIdle;
+	int jobsHeld;
+	int jobsRunning;
+};
+
 class DCSchedd;
 
 class ScheddClassad {
@@ -117,10 +138,7 @@ class DagmanClassad : public ScheddClassad {
 		@param Whether the DAG is in recovery mode
 		@param A ClassAd of DAGMan runtime statistics
 	*/
-	void Update( int total, int done, int pre, int submitted, int post,
-				int hold, int ready, int failed, int unready, int jobs_submitted,
-				int jobs_completed, int jobs_idle, int jobs_held,
-				int jobs_running, DagStatus dagStatus, bool recovery,
+	void Update( DagClassadInfo counts, DagStatus dagStatus, bool recovery,
 				const DagmanStats &stats, int &maxJobs, int &maxIdle,
 				int &maxPreScripts, int &maxPostScripts, int &maxHoldScripts );
 

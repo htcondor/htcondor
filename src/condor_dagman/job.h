@@ -173,6 +173,8 @@ class Job {
 	const char* GetPostScriptName() const;
 	const char* GetHoldScriptName() const;
 	static const char* JobTypeString() { return "HTCondor"; }
+	inline int GetProcEventsSize() const { return _gotEvents.size(); }
+	inline unsigned char GetProcEvent( int proc ) const { return _gotEvents[proc]; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, std::string &whynot );
@@ -228,12 +230,6 @@ class Job {
         @return true: status change was successful, false: otherwise
     */
 	bool SetStatus( status_t newStatus );
-
-	/** Get whether the specified proc is executing
-		@param proc The proc for which we're getting the executing status
-		@return true if the specified proc is executing; false otherwise
-	*/
-	bool GetProcIsExecuting( int proc );
 	
 	/** Get whether the specified proc is idle.
 		@param proc The proc for which we're getting idle status

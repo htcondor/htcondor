@@ -180,10 +180,7 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::Update( int total, int done, int pre, int submitted,
-			int post, int hold, int ready, int failed, int unready,
-			int jobs_submitted, int jobs_completed, int jobs_idle,
-			int jobs_held, int jobs_running, DagStatus dagStatus,
+DagmanClassad::Update( DagClassadInfo counts, DagStatus dagStatus,
 			bool recovery, const DagmanStats &stats, int &maxJobs,
 			int &maxIdle, int &maxPreScripts, int &maxPostScripts,
 			int &maxHoldScripts )
@@ -199,22 +196,22 @@ DagmanClassad::Update( int total, int done, int pre, int submitted,
 		return;
 	}
 
-	SetAttribute( ATTR_DAG_NODES_TOTAL, total );
-	SetAttribute( ATTR_DAG_NODES_DONE, done );
-	SetAttribute( ATTR_DAG_NODES_PRERUN, pre );
-	SetAttribute( ATTR_DAG_NODES_QUEUED, submitted );
-	SetAttribute( ATTR_DAG_NODES_POSTRUN, post );
-	SetAttribute( ATTR_DAG_NODES_HOLDRUN, hold );
-	SetAttribute( ATTR_DAG_NODES_READY, ready );
-	SetAttribute( ATTR_DAG_NODES_FAILED, failed );
-	SetAttribute( ATTR_DAG_NODES_UNREADY, unready );
+	SetAttribute( ATTR_DAG_NODES_TOTAL, counts.nodesTotal );
+	SetAttribute( ATTR_DAG_NODES_DONE, counts.nodesDone );
+	SetAttribute( ATTR_DAG_NODES_PRERUN, counts.nodesPre );
+	SetAttribute( ATTR_DAG_NODES_QUEUED, counts.nodesSubmitted );
+	SetAttribute( ATTR_DAG_NODES_POSTRUN, counts.nodesPost );
+	SetAttribute( ATTR_DAG_NODES_HOLDRUN, counts.nodesHold );
+	SetAttribute( ATTR_DAG_NODES_READY, counts.nodesReady );
+	SetAttribute( ATTR_DAG_NODES_FAILED, counts.nodesFailed );
+	SetAttribute( ATTR_DAG_NODES_UNREADY, counts.nodesUnready );
 	SetAttribute( ATTR_DAG_STATUS, (int)dagStatus );
 	SetAttribute( ATTR_DAG_IN_RECOVERY, recovery );
-	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, jobs_submitted);
-	SetAttribute( ATTR_DAG_JOBS_IDLE, jobs_idle);
-	SetAttribute( ATTR_DAG_JOBS_HELD, jobs_held);
-	SetAttribute( ATTR_DAG_JOBS_RUNNING, jobs_running);
-	SetAttribute( ATTR_DAG_JOBS_COMPLETED, jobs_completed);
+	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, counts.jobsSubmitted );
+	SetAttribute( ATTR_DAG_JOBS_IDLE, counts.jobsIdle );
+	SetAttribute( ATTR_DAG_JOBS_HELD, counts.jobsHeld );
+	SetAttribute( ATTR_DAG_JOBS_RUNNING, counts.jobsRunning );
+	SetAttribute( ATTR_DAG_JOBS_COMPLETED, counts.jobsCompleted );
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
