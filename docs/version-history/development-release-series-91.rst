@@ -25,6 +25,12 @@ New Features:
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
 
+- Added support for ephermal per-job execute directories
+  allocated from LVM or from a backing file on disk, when HTCondor is running
+  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
+  enables this, see :ref:`admin-manual/directories` for more details.
+  :jira:`912`
+
 - Added extended submit help which can be defined in the schedd using the new
   configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
   *condor_submit* using the new ``-capabilities`` argument.
