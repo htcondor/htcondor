@@ -372,7 +372,6 @@ another(  const char* opt )
 int
 main( int argc, const char *argv[] )
 {
-	int size;
 	int rc;
 	int got_name_or_addr = 0;
 	StringList unresolved_names;
@@ -902,7 +901,7 @@ doCommands(int /*argc*/,const char * argv[],const char *MyName,StringList & unre
 	// the incoming "argv" is just the arguments that are names and/or addresses
 	// it used to be the full argv passed to main, but that changed in 9.12
 	// We still call it argv to avoid a lot of code churn
-	for( argv; *argv; argv++ ) {
+	for(; *argv; argv++ ) {
 		switch( (*argv)[0] ) {
 		case '<':
 				// This is probably a sinful string, use it
