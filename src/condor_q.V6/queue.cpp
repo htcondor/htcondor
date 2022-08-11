@@ -56,6 +56,7 @@
 
 #include "queue_internal.h"
 
+
 static int cleanup_globals(int exit_code); // called on exit to do necessary cleanup
 #define exit(n) (exit)(cleanup_globals(n))
 
@@ -4166,12 +4167,13 @@ show_file_queue(const char* jobads, const char* userlog)
 			}
 		}
 
-		ClassAd * summary_ad = new ClassAd();
+		std::unique_ptr<ClassAd> summary_ad(new ClassAd);
+
 		summary_ad->Assign(ATTR_MY_TYPE, "Summary");
-		app.sumy.publish(*summary_ad, NULL);
+		app.sumy.publish(*summary_ad.get(), NULL);
 
 		if (dash_long) {
-			print_full_footer(summary_ad, &writer);
+			print_full_footer(summary_ad.get(), &writer);
 			writer.writeFooter(stdout, always_write_xml_footer);
 			return true;
 		}
@@ -4190,7 +4192,7 @@ show_file_queue(const char* jobads, const char* userlog)
 		print_results(rod_result_map, rod_sort_key_map, dash_dag);
 		clear_results(rod_result_map, rod_sort_key_map);
 
-		print_full_footer(summary_ad, &writer);
+		print_full_footer(summary_ad.get(), &writer);
 	}
 	if (dash_long) { writer.writeFooter(stdout, always_write_xml_footer); }
 
