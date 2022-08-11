@@ -4665,7 +4665,7 @@ Dag::LiftSplices(SpliceLayer layer)
 
 	// Now delete all of them.
 	for (auto &nv_pair : _splices) {
-		delete nv_pair.second;;
+		delete nv_pair.second;
 	}
 	_splices.clear();
 
