@@ -415,7 +415,8 @@ org.htcondor.version="%s"
         if self.one_tag:
             return tags
 
-        if self.known_versions.version_lists_by_series[self.series][-1] == real_version:
+        latest_version_for_this_series = self.known_versions.version_lists_by_series[self.series][-1]
+        if latest_version_for_this_series == real_version:
             major_minor = ".".join(real_version.split(".")[0:2])
             tags.add(f"{major_minor}-{distro}")
             tags.add(f"{self.series}-{distro}")
@@ -427,6 +428,10 @@ org.htcondor.version="%s"
                 tags.add(f"lts-{distro}")
                 if distro == DISTRO_FOR_LATEST_TAGS:
                     tags.add("lts")
+        elif self.want_latest_version:
+            # XXX how should we _really_ handle this?
+            print(f"Not adding extra image tags because the installed version {real_version}"
+                  " does not match the latest Git tagged version for this series {latest_version_for_this_series}")
 
         return tags
 
