@@ -407,6 +407,7 @@ org.htcondor.version="%s"
         - `:SERIES-DISTRO` (e.g. `9.x-el7`)
         - `:MAJOR.MINOR-DISTRO` (e.g. `9.11-el7`)
         - `:latest-DISTRO` or `:lts-DISTRO` if appropriate
+        - `:DISTRO` as a synonym for `:latest-DISTRO` if appropriate
         - `:latest` or `:lts` for the default distro defined in `DISTRO_FOR_LATEST_TAGS`
         """
         tags = set()
@@ -422,6 +423,7 @@ org.htcondor.version="%s"
             tags.add(f"{self.series}-{distro}")
             if self.series == self.known_versions.latest_series:
                 tags.add(f"latest-{distro}")
+                tags.add(distro)
                 if distro == DISTRO_FOR_LATEST_TAGS:
                     tags.add("latest")
             if self.series == self.known_versions.latest_lts_series:
