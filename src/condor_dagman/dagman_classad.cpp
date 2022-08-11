@@ -25,6 +25,7 @@
 #include "debug.h"
 #include "dagman_metrics.h"
 #include "basename.h"
+#include "dagman_main.h"
 
 //---------------------------------------------------------------------------
 Qmgr_connection *
@@ -180,10 +181,7 @@ DagmanClassad::Initialize( int maxJobs, int maxIdle, int maxPreScripts,
 
 //---------------------------------------------------------------------------
 void
-DagmanClassad::Update( DagClassadInfo counts, DagStatus dagStatus,
-			bool recovery, const DagmanStats &stats, int &maxJobs,
-			int &maxIdle, int &maxPreScripts, int &maxPostScripts,
-			int &maxHoldScripts )
+DagmanClassad::Update( const Dagman &dagman )
 {
 	if ( !_valid ) {
 		debug_printf( DEBUG_VERBOSE,
@@ -196,28 +194,32 @@ DagmanClassad::Update( DagClassadInfo counts, DagStatus dagStatus,
 		return;
 	}
 
-	SetAttribute( ATTR_DAG_NODES_TOTAL, counts.nodesTotal );
-	SetAttribute( ATTR_DAG_NODES_DONE, counts.nodesDone );
-	SetAttribute( ATTR_DAG_NODES_PRERUN, counts.nodesPre );
-	SetAttribute( ATTR_DAG_NODES_QUEUED, counts.nodesSubmitted );
-	SetAttribute( ATTR_DAG_NODES_POSTRUN, counts.nodesPost );
-	SetAttribute( ATTR_DAG_NODES_HOLDRUN, counts.nodesHold );
-	SetAttribute( ATTR_DAG_NODES_READY, counts.nodesReady );
-	SetAttribute( ATTR_DAG_NODES_FAILED, counts.nodesFailed );
-	SetAttribute( ATTR_DAG_NODES_UNREADY, counts.nodesUnready );
-	SetAttribute( ATTR_DAG_STATUS, (int)dagStatus );
-	SetAttribute( ATTR_DAG_IN_RECOVERY, recovery );
-	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, counts.jobsSubmitted );
-	SetAttribute( ATTR_DAG_JOBS_IDLE, counts.jobsIdle );
-	SetAttribute( ATTR_DAG_JOBS_HELD, counts.jobsHeld );
-	SetAttribute( ATTR_DAG_JOBS_RUNNING, counts.jobsRunning );
-	SetAttribute( ATTR_DAG_JOBS_COMPLETED, counts.jobsCompleted );
+	//Get counts for DAG job process states: idle, held, running
+	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
+	dagman.dag->NumJobProcStates(&jobProcsHeld,&jobProcsIdle,&jobProcsRunning);
+	
+	SetAttribute( ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes( true ) );
+	SetAttribute( ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone( true ) );
+	SetAttribute( ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount() );
+	SetAttribute( ATTR_DAG_NODES_QUEUED, dagman.dag->NumJobsSubmitted() );
+	SetAttribute( ATTR_DAG_NODES_POSTRUN, dagman.dag->PostRunNodeCount() );
+	SetAttribute( ATTR_DAG_NODES_HOLDRUN, dagman.dag->HoldRunNodeCount() );
+	SetAttribute( ATTR_DAG_NODES_READY, dagman.dag->NumNodesReady() );
+	SetAttribute( ATTR_DAG_NODES_FAILED, dagman.dag->NumNodesFailed() );
+	SetAttribute( ATTR_DAG_NODES_UNREADY, dagman.dag->NumNodesUnready( true ) );
+	SetAttribute( ATTR_DAG_STATUS, (int)dagman.dag->_dagStatus );
+	SetAttribute( ATTR_DAG_IN_RECOVERY, dagman.dag->Recovery() );
+	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, dagman.dag->TotalJobsSubmitted() );
+	SetAttribute( ATTR_DAG_JOBS_IDLE, jobProcsIdle );
+	SetAttribute( ATTR_DAG_JOBS_HELD, jobProcsHeld );
+	SetAttribute( ATTR_DAG_JOBS_RUNNING, jobProcsRunning );
+	SetAttribute( ATTR_DAG_JOBS_COMPLETED, dagman.dag->TotalJobsCompleted() );
 
 	// Publish DAGMan stats to a classad, then update those also
 	ClassAd stats_ad;
-	stats.Publish( stats_ad );
+	dagman._dagmanStats.Publish( stats_ad );
 	SetAttribute( ATTR_DAG_STATS, stats_ad );
-
+	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
 	// users. Start by declaring variables for these properties.
 	int jobAdMaxIdle;
@@ -233,13 +235,14 @@ DagmanClassad::Update( DagClassadInfo counts, DagStatus dagStatus,
 	GetAttribute( ATTR_DAGMAN_MAXPOSTSCRIPTS, jobAdMaxPostScripts );
 	GetAttribute( ATTR_DAGMAN_MAXHOLDSCRIPTS, jobAdMaxHoldScripts );
 
+	// It's possible that certain DAGMan attributes were changed in the job ad.
+	// If this happened, update the internal values in our dagman data structure.
 	// Update our internal dag values according to whatever is in the job ad.
-	maxIdle = jobAdMaxIdle;
-	maxJobs = jobAdMaxJobs;
-	maxPreScripts = jobAdMaxPreScripts;
-	maxPostScripts = jobAdMaxPostScripts;
-	maxHoldScripts = jobAdMaxHoldScripts;
-
+	dagman.dag->SetMaxIdleJobProcs(jobAdMaxIdle);
+	dagman.dag->SetMaxJobsSubmitted(jobAdMaxJobs);
+	dagman.dag->SetMaxPreScripts(jobAdMaxPreScripts);
+	dagman.dag->SetMaxPostScripts(jobAdMaxPostScripts);
+	dagman.dag->SetMaxHoldScripts(jobAdMaxHoldScripts);
 
 	CloseConnection( queue );
 }

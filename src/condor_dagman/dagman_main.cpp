@@ -1637,37 +1637,7 @@ print_status( bool forceScheddUpdate ) {
 void
 jobad_update() {
 
-	DagClassadInfo counts = { dagman.dag->NumNodes( true ),			//Total number nodes
-							 dagman.dag->NumNodesDone( true ),		//Nodes done
-							 dagman.dag->PreRunNodeCount(),			//Node Pre script
-							 dagman.dag->NumJobsSubmitted(),		//Nodes submitted
-							 dagman.dag->PostRunNodeCount(),		//Node Post script
-							 dagman.dag->HoldRunNodeCount(),		//Node Hold script
-							 dagman.dag->NumNodesReady(),			//Nodes Ready
-							 dagman.dag->NumNodesFailed(),			//Nodes Failed
-							 dagman.dag->NumNodesUnready( true ),	//Nodes Unready
-							 dagman.dag->TotalJobsSubmitted(),		//Total Job Procs Submitted
-							 dagman.dag->TotalJobsCompleted(),		//Total Job Procs Successfully completed
-							 0,										//Job Procs Idle
-							 0,										//Job Procs Held
-							 0										//Job Procs 'Running'
-							};
-	dagman.dag->NumJobProcStates(&counts.jobsHeld,&counts.jobsIdle,&counts.jobsRunning);
-
-	if ( dagman._dagmanClassad ) {
-		dagman._dagmanClassad->Update( counts, dagman.dag->_dagStatus,
-					dagman.dag->Recovery(), dagman._dagmanStats,
-					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts, dagman.maxHoldScripts );
-
-		// It's possible that certain DAGMan attributes were changed in the job ad.
-		// If this happened, update the internal values in our dagman data structure.
-		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
-		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
-		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
-		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
-		dagman.dag->SetMaxHoldScripts(dagman.maxHoldScripts);
-	}
+	if ( dagman._dagmanClassad ) { dagman._dagmanClassad->Update( dagman ); }
 
 }
 

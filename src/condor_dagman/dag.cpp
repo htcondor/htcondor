@@ -616,7 +616,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				break;
 
 			case ULOG_EXECUTE:
-				ProcessNotIdleEvent( job, event->proc);
+				ProcessNotIdleEvent( job, event->proc );
 				break;
 
 			case ULOG_JOB_RELEASED:
@@ -3401,62 +3401,48 @@ Dag::CheckAllJobs()
 void
 Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_terminated)
 {
-	/*	Totals for states to be returned.
-	*	Index : Item counted
-	*	    0 : Number of Held Job Procs
-	*	    1 : Number of Idle Job Procs
-	*	    2 : Number of Aborted or Terminated Job Procs
-	*	    3 : Number of 'Running' Job Procs
-	*/
-	int totals[4] = {0,0,0,0};
-	int held = 0, idle = 0, run = 0, term = 0, numProcs = 0;
+	//These are total counters
+	int held = 0, idle = 0, run = 0, term = 0;
+	//These are per node counters
+	int node_held = 0, numProcs = 0;
+	
 	//For each job in the dag look a job proc events vector
 	for (auto & _job : _jobs) {
 		//Reset state counters
-		held = idle = run = term = 0;
+		node_held = 0;
 		numProcs = _job->GetProcEventsSize();
 		//For each Job Proc event
 		for (int i=0; i < numProcs; i++) {
 			//Get unsigned char representing the event bitmap
 			//and check states
 			const unsigned char procEvent = _job->GetProcEvent(i);
-			if((procEvent & ABORT_TERM_MASK) != 0) { term++; }
-			else if ((procEvent & HOLD_MASK) != 0) { held++; }
+			if ((procEvent & HOLD_MASK) != 0) { held++; node_held++; }
 			else if ((procEvent & IDLE_MASK) != 0) { idle++; }
+			else if ((procEvent & ABORT_TERM_MASK) != 0) { term++; }
+			else { run++; }
 		}
 		
-		totals[0] += held;
-		totals[1] += idle;
-		totals[2] += term;
-		//Number of running procs is the number of non-state found procs
-		run += (numProcs - held - idle - term);
 		//Perform some sanity checks per Node
-		if (held != _job->_jobProcsOnHold) { //Held job procs check
+		if (node_held != _job->_jobProcsOnHold) { //Held job procs check
 			debug_printf( DEBUG_NORMAL,
 						"Warning: Number of counted held job processes (%d) is not equivalent to Job %s's internal count of held job processes count (%d).\n",
 						held, _job->GetJobName(), _job->_jobProcsOnHold);
 		}
-		if (run < 0) { //Running job procs isn't negative
-	        debug_printf( DEBUG_NORMAL,
-						"Warning:  Job %s believes it has %d job processes running. Setting the number of running processes to 0.\n",
-						_job->GetJobName(), run );
-			run = 0;
-		}
-		totals[3] += run;
+		
 	}
 	
 	//Perform whole DAG sanity checks
 	//Internal DAG counts held job procs as idle
-	if ((totals[0]+totals[1]) != NumIdleJobProcs()) { //Idle job procs check
+	if ((idle+held) != NumIdleJobProcs()) { //Idle job procs check
 		debug_printf( DEBUG_NORMAL,
 					"Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes count (%d).\n",
 					idle, NumIdleJobProcs());
 	}
 	//If passed counter then set to totals found in DAG
-	if (n_held) { *n_held = totals[0]; }
-	if (n_idle) { *n_idle = totals[1]; }
-	if (n_terminated) { *n_terminated = totals[2]; }
-	if (n_running) { *n_running = totals[3]; }
+	if (n_held) { *n_held = held; }
+	if (n_idle) { *n_idle = idle; }
+	if (n_terminated) { *n_terminated = term; }
+	if (n_running) { *n_running = run; }
 }
 	
 //-------------------------------------------------------------------------
