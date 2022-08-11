@@ -21,6 +21,8 @@
 #ifndef __CONDOR_SYSAPI_H__
 #define __CONDOR_SYSAPI_H__
 
+#include <string>
+
 /* For debugging */
 #if defined(LINUX)
 typedef struct {
@@ -41,7 +43,7 @@ int sysapi_phys_memory(void);
 int sysapi_phys_memory_raw_no_param(void);
 
 /* How to get the free disk blocks from a full pathname, answer in KB */
-int sysapi_reserve_for_fs();
+long long sysapi_reserve_for_fs();
 long long sysapi_disk_space_raw(const char *filename);
 long long sysapi_disk_space(const char *filename);
 
@@ -145,14 +147,16 @@ const char* sysapi_kernel_version( void );
  * classad-free layer */
 struct sysapi_cpuinfo {
 	sysapi_cpuinfo() :
-		processor_flags(0), model_no(-1), family(-1), cache(-1) {}
-	const char *processor_flags;
+		model_no(-1), family(-1), cache(-1), initialized(false) {}
+	std::string processor_flags;
+	std::string processor_flags_full;
+	std::string processor_microarch;
 	int model_no;
 	int family;
 	int cache;
+	bool initialized;
 };
 
-const struct sysapi_cpuinfo *sysapi_processor_flags_raw( void );
 const struct sysapi_cpuinfo *sysapi_processor_flags( void );
 
 /* Produce a unique identifier for the disk partition containing the

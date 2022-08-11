@@ -20,7 +20,14 @@ Release Notes:
 
 New Features:
 
-- None.
+- Increased the length of the password generated for Windows default
+  slot user accounts from 14 characters to 32 characters, and added
+  some code to insure that complexity measures that look at
+  character set and not length will still be satisfied.
+  :jira:`1232`
+
+- Added ``-debug`` option to *condor_drain* tool.
+  :jira:`1236`
 
 Bugs Fixed:
 
@@ -32,11 +39,6 @@ Bugs Fixed:
 - Job attribute ``GridJobId`` is no longer altered for **batch** grid
   universe jobs when the job enters ``Removed`` status.
   :jira:`1224`
-
-- Fixed a bug where the *condor_gridmanager* would delete the job's
-  X.509 proxy file when it meant to delete a temporary copy of the
-  proxy file.
-  :jira:`1223`
 
 - Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
   grid universe job would fail.
@@ -64,6 +66,11 @@ New Features:
   :jira:`1199`
 
 Bugs Fixed:
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
 
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.

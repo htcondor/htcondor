@@ -254,8 +254,7 @@ main_init( int, char* argv[] )
 		// you need DAEMON permission.
 	daemonCore->Register_Command( ALIVE, "ALIVE", 
 								  command_handler,
-								  "command_handler", DAEMON,
-								  D_FULLDEBUG ); 
+								  "command_handler", DAEMON ); 
 	daemonCore->Register_Command( DEACTIVATE_CLAIM,
 								  "DEACTIVATE_CLAIM",  
 								  command_handler,
@@ -316,8 +315,7 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( X_EVENT_NOTIFICATION,
 								  "X_EVENT_NOTIFICATION",
 								  command_x_event,
-								  "command_x_event", ALLOW,
-								  D_FULLDEBUG ); 
+								  "command_x_event", ALLOW ); 
 	daemonCore->Register_Command( PCKPT_ALL_JOBS, "PCKPT_ALL_JOBS", 
 								  command_pckpt_all,
 								  "command_pckpt_all", DAEMON );
@@ -370,31 +368,26 @@ main_init( int, char* argv[] )
 		daemonCore->Register_Command( VM_REGISTER,
 				"VM_REGISTER",
 				command_vm_register,
-				"command_vm_register", DAEMON,
-				D_FULLDEBUG );
+				"command_vm_register", DAEMON );
 	}
 
 		// Commands from starter for VM universe
 	daemonCore->Register_Command( VM_UNIV_GAHP_ERROR, 
 								"VM_UNIV_GAHP_ERROR",
 								command_vm_universe, 
-								"command_vm_universe", DAEMON, 
-								D_FULLDEBUG );
+								"command_vm_universe", DAEMON );
 	daemonCore->Register_Command( VM_UNIV_VMPID, 
 								"VM_UNIV_VMPID",
 								command_vm_universe, 
-								"command_vm_universe", DAEMON, 
-								D_FULLDEBUG );
+								"command_vm_universe", DAEMON );
 	daemonCore->Register_Command( VM_UNIV_GUEST_IP, 
 								"VM_UNIV_GUEST_IP",
 								command_vm_universe, 
-								"command_vm_universe", DAEMON, 
-								D_FULLDEBUG );
+								"command_vm_universe", DAEMON );
 	daemonCore->Register_Command( VM_UNIV_GUEST_MAC, 
 								"VM_UNIV_GUEST_MAC",
 								command_vm_universe, 
-								"command_vm_universe", DAEMON, 
-								D_FULLDEBUG );
+								"command_vm_universe", DAEMON );
 
 	daemonCore->Register_CommandWithPayload( DRAIN_JOBS,
 								  "DRAIN_JOBS",

@@ -607,7 +607,7 @@ sub check_status {
 	}
 },
 'State' => sub{return $_[1] =~ /Unclaimed|Claimed/;},
-'Activity' => sub{return $_[1] eq 'Idle';},
+'Activity' => sub{return $_[1] =~ /Idle|Busy/;},
 'LoadAv' => sub{
 	my $loadavg = sprintf "%.3f",$Attr_new{$_[0]-1}{CondorLoadAvg};
 	if ($_[1] eq $loadavg){

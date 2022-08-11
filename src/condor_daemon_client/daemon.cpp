@@ -1588,7 +1588,6 @@ Daemon::findCmDaemon( const char* cm_name )
 			return false;
 		}
 		sinful.setHost(saddr.to_ip_string().c_str());
-		sinful.setAlias(fqdn.c_str());
 		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
 		New_full_hostname(strdup(fqdn.c_str()));

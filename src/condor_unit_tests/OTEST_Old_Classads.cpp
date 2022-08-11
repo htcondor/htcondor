@@ -2652,7 +2652,7 @@ static bool test_init_from_string_formattime() {
 	emit_output_expected_header();
 	emit_param("Classad != NULL", "TRUE");
 	emit_output_actual_header();
-	emit_param("Classad != NULL", tfstr(classad != NULL));
+	emit_param("Classad != NULL", "%s", tfstr(classad != NULL));
 	if(classad == NULL) {
 		delete classad;
 		FAIL;
@@ -6157,7 +6157,7 @@ static bool test_formattime_int() {
 	const char* expect = "03/24/07";
 	int retVal = classad.LookupString("A1", actual);
 	emit_input_header();
-	emit_param("ClassAd", classad_string);
+	emit_param("ClassAd", "%s", classad_string);
 	emit_param("Attribute", "A1");
 	emit_param("Target", "NULL");
 	emit_param("STRING", "");

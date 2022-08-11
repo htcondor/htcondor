@@ -76,13 +76,13 @@ TruncateStorageFile()
 		}
 		m=m+'\n';
 		if (m[0]!='*'){
-			if (write(new_filed,(void *)(m.c_str()),m.size())<0){
+			if (write(new_filed,(void *)(m.c_str()),(unsigned int)m.size())<0){
 				close(new_filed);
 				return false;
 			} else {
 				fsync(filed);
 				ptr->second=cur_set; 
-				cur_set+=m.size();
+				cur_set+=(int)m.size();
 			}
 		}
 	}
@@ -177,7 +177,7 @@ WriteBack(string key, string ad)
 	int k=lseek(filed,0,SEEK_END);
 	Index[key]=k;
 	ad=ad+"\n";
-	if (write(filed,(void *)(ad.c_str()),ad.size())<0){
+	if (write(filed,(void *)(ad.c_str()),(unsigned int)ad.size())<0){
 		return false;
 	} else {
 		fsync(filed);
@@ -221,7 +221,7 @@ DeleteFromStorageFile(string key)
 		m[0]='*';
 		m=m+'\n';
 		lseek(filed,offset,SEEK_SET);
-		int ret = write(filed,(void *)(m.c_str()),m.size());
+		int ret = write(filed,(void *)(m.c_str()),(unsigned int)m.size());
 		if (ret < 0) {
 			fsync(filed);
 			return false;

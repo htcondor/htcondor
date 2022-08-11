@@ -10,13 +10,13 @@
 
 class CondorStatusReply : public Functor {
 	public:
-		CondorStatusReply( ClassAd * r, ClassAd * cad,
+		CondorStatusReply( ClassAd * r, ClassAd *,
 			EC2GahpClient * g, ClassAd * s,
-			ClassAdCollection * c, const std::string & cid,
+			ClassAdCollection *, const std::string & cid,
 			int _argc, char ** _argv, int sci ) :
-			reply( r ), command( cad ),
+			reply( r ),
 			gahp( g ), scratchpad( s ),
-			commandState( c ), commandID( cid ),
+			commandID( cid ),
 			argc( _argc ), argv( _argv ), subCommandIndex( sci )
 		{ }
 
@@ -27,11 +27,9 @@ class CondorStatusReply : public Functor {
 
 	private:
 		ClassAd * reply;
-		ClassAd * command;
 		EC2GahpClient * gahp;
 		ClassAd * scratchpad;
 
-		ClassAdCollection * commandState;
 		std::string commandID;
 
 		int argc;

@@ -495,7 +495,7 @@ void DCMessenger::startReceiveMsg( classy_counted_ptr<DCMsg> msg, Sock *sock )
 	int reg_rc = daemonCore->
 		Register_Socket( sock, peerDescription(),
 						 (SocketHandlercpp)&DCMessenger::receiveMsgCallback,
-						 name.c_str(), this, ALLOW );
+						 name.c_str(), this );
 	if(reg_rc < 0) {
 		msg->addError(
 			CEDAR_ERR_REGISTER_SOCK_FAILED,

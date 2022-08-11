@@ -71,6 +71,11 @@ public:
 		return false;
 	}
 
+	bool remove_head(T* tag_ptr = nullptr)
+	{
+		return m_head ? remove_mapping(m_head->family, tag_ptr) : false;
+	}
+
 	ProcFamily* find_family(procInfo* pi)
 	{
 		ListNode* node = m_head;

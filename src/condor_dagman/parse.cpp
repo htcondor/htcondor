@@ -2169,6 +2169,7 @@ parse_splice(
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to directory %s: %s\n",
 					directory.c_str(), errMsg.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
@@ -2176,6 +2177,7 @@ parse_splice(
 	if (!parse(splice_dag, spliceFile.c_str(), _useDagDir, _schedd, _appendVars, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.c_str(), spliceFile.c_str());
+		delete splice_dag;
 		return false;
 	}
 
@@ -2184,6 +2186,7 @@ parse_splice(
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to original directory: %s\n",
 					errMsg.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
@@ -2191,6 +2194,7 @@ parse_splice(
 	if ( splice_dag->HasFinalNode() ) {
 		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
 					"splices cannot have final nodes\n", spliceName.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
@@ -2214,12 +2218,16 @@ parse_splice(
 		debug_printf( DEBUG_QUIET, "ERROR: Splice name '%s' used for multiple "
 			"splices. Splice names must be unique per dag file.\n", 
 			spliceName.c_str());
+		delete splice_dag;
 		return false;
 	}
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.c_str());
 
-	// pop the just pushed value off of the end of the ext array
+	// pop the just pushed value off of the end of the vector and free it
+	char *tmp = _spliceScope.back();
 	_spliceScope.pop_back();
+	free(tmp);
+
 	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %zu\n", _spliceScope.size());
 
 	return true;

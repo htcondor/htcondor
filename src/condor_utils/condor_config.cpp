@@ -1777,6 +1777,35 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 	return config_source;
 }
 
+#ifdef WIN32
+char * get_winreg_string_value(const char * key, const char * valuename)
+{
+	char * pval = nullptr;
+	DWORD valType;
+	DWORD valSize = 0;
+	if (RegGetValue(HKEY_LOCAL_MACHINE, key, valuename, RRF_RT_REG_SZ, &valType, NULL, &valSize) == ERROR_SUCCESS)
+	{
+		valSize += 2;
+		pval = (char*)malloc(valSize);
+		if (RegGetValue(HKEY_LOCAL_MACHINE, key, valuename, RRF_RT_REG_SZ, &valType, pval, &valSize) != ERROR_SUCCESS)
+		{
+			free(pval); pval = nullptr;
+		}
+	}
+	return pval;
+}
+#endif
+
+char * find_python3_dot(int minor_ver) {
+#ifdef WIN32
+	std::string regKey;
+	formatstr(regKey, "Software\\Python\\PythonCore\\3.%d\\InstallPath", minor_ver);
+	return get_winreg_string_value(regKey.c_str(), "ExecutablePath");
+#else
+	// TODO: add non-windows implementation
+	return nullptr;
+#endif
+}
 
 void
 fill_attributes()
@@ -1793,7 +1822,7 @@ fill_attributes()
 		   Amended -Pete Keller 06/01/99 */
 
 	const char *tmp;
-	MyString val;
+	std::string val;
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 
@@ -1810,7 +1839,7 @@ fill_attributes()
 
 		int ver = sysapi_opsys_version();
 		if (ver > 0) {
-			val.formatstr("%d", ver);
+			formatstr(val,"%d", ver);
 			insert_macro("OPSYSVER", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 		}
 	}
@@ -1825,7 +1854,7 @@ fill_attributes()
 
 	int major_ver = sysapi_opsys_major_version();
 	if (major_ver > 0) {
-		val.formatstr("%d", major_ver);
+		formatstr(val,"%d", major_ver);
 		insert_macro("OPSYSMAJORVER", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 	}
 
@@ -1868,6 +1897,25 @@ fill_attributes()
 	}
 #endif
 
+	// if the defaults table has a non-zero default python3 minor version
+	// locate the appropriate python3 executable for that minor version
+	// This is presumed to be the required python minor version needed by the bindings
+	int py3minor = param_default_integer("PYTHON3_VERSION_MINOR",nullptr,nullptr,nullptr,nullptr);
+	if (py3minor > 0) {
+		auto_free_ptr py3val(find_python3_dot(py3minor));
+		if (py3val) {
+			insert_macro("PYTHON3", py3val, ConfigMacroSet, DetectedMacro, ctx);
+		}
+	}
+
+#ifdef WIN32
+	// on windows it is also useful to know the location of the perl binary
+	auto_free_ptr perlval(get_winreg_string_value("Software\\Perl", "BinDir"));
+	if (perlval) {
+		insert_macro("PERL", perlval, ConfigMacroSet, DetectedMacro, ctx);
+	}
+#endif
+
 	insert_macro("CondorIsAdmin", can_switch_ids() ? "true" : "false", ConfigMacroSet, DetectedMacro, ctx);
 
 	insert_macro("SUBSYSTEM", get_mySubSystem()->getName(), ConfigMacroSet, DetectedMacro, ctx);
@@ -1876,7 +1924,7 @@ fill_attributes()
 	if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
 	insert_macro("LOCALNAME", localname, ConfigMacroSet, DetectedMacro, ctx);
 
-	val.formatstr("%d",sysapi_phys_memory_raw_no_param());
+	formatstr(val, "%d",sysapi_phys_memory_raw_no_param());
 	insert_macro("DETECTED_MEMORY", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 		// Currently, num_hyperthread_cores is defined as everything
@@ -1891,19 +1939,19 @@ fill_attributes()
 	sysapi_ncpus_raw(&num_cpus,&num_hyperthread_cpus);
 
 	// DETECTED_PHYSICAL_CPUS will always be the number of real CPUs not counting hyperthreads.
-	val.formatstr("%d",num_cpus);
+	formatstr(val,"%d",num_cpus);
 	insert_macro("DETECTED_PHYSICAL_CPUS", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 	int def_valid = 0;
 	bool count_hyper = param_default_boolean("COUNT_HYPERTHREAD_CPUS", get_mySubSystem()->getName(), &def_valid);
 	if ( ! def_valid) count_hyper = true;
 	// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
-	val.formatstr("%d", count_hyper ? num_hyperthread_cpus : num_cpus);
+	formatstr(val,"%d", count_hyper ? num_hyperthread_cpus : num_cpus);
 	insert_macro("DETECTED_CPUS", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 
 	// DETECTED_CORES is not a good name, but we're stuck with it now...
 	// it will ALWAYS be the number of hyperthreaded cores.
-	val.formatstr("%d",num_hyperthread_cpus);
+	formatstr(val,"%d",num_hyperthread_cpus);
 	insert_macro("DETECTED_CORES", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 }
 

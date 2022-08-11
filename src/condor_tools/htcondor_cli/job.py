@@ -16,8 +16,8 @@ import htcondor
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli.dagman import DAGMan
-from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
+from htcondor_cli.utils import readable_time, readable_size, s
 
 JSM_HTC_JOB_SUBMIT = 3
 
@@ -175,6 +175,12 @@ class Status(Verb):
             "args": ("job_id",),
             "help": "Job ID",
         },
+        "skip_history": {
+            "args": ("--skip-history",),
+            "action": "store_true",
+            "default": False,
+            "help": "Skip checking history for completed or removed jobs",
+        },
     }
 
 
@@ -183,19 +189,39 @@ class Status(Verb):
         job_status = "IDLE"
         resource_type = "htcondor"
 
+        # Split job id into cluster and proc
+        if "." in job_id:
+            cluster_id, proc_id = [int(i) for i in job_id.split(".")][:2]
+        else:
+            cluster_id = int(job_id)
+            proc_id = 0
+
         # Get schedd
         schedd = htcondor.Schedd()
 
         # Query schedd
+        constraint = f"ClusterId == {cluster_id} && ProcId == {proc_id}"
+        projection = ["JobStartDate", "JobStatus", "QDate", "CompletionDate", "EnteredCurrentStatus",
+            "RequestMemory", "MemoryUsage", "RequestDisk", "DiskUsage", "HoldReason",
+            "ResourceType", "TargetAnnexName", "NumShadowStarts", "NumJobStarts", "NumHolds",
+            "JobCurrentStartTransferOutputDate", "TotalSuspensions"]
         try:
-            job = schedd.query(
-                constraint=f"ClusterId == {job_id}",
-                projection=["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "ResourceType", "TargetAnnexName"]
-            )
+            job = schedd.query(constraint=constraint, projection=projection, limit=1)
         except IndexError:
             raise RuntimeError(f"No job found for ID {job_id}.")
         except Exception as e:
             raise RuntimeError(f"Error looking up job status: {str(e)}")
+
+        # Check the history if no jobs found
+        if len(job) == 0 and not options["skip_history"]:
+            try:
+                logger.info(f"Job {job_id} was not found in the active queue, checking history...")
+                logger.info("(This may take a while, Ctrl-C to cancel.)")
+                job = list(schedd.history(constraint=constraint, projection=projection, match=1))
+            except KeyboardInterrupt:
+                logger.warning("History check cancelled.")
+                job = []
+
         if len(job) == 0:
             raise RuntimeError(f"No job found for ID {job_id}.")
 
@@ -204,21 +230,128 @@ class Status(Verb):
 
         # Now, produce job status based on the resource type
         if resource_type == "htcondor":
-            annex_info = ""
-            target_annex_name = job[0].get('TargetAnnexName')
-            if target_annex_name is not None:
-                annex_info = " on the annex named '{target_annex_name}' "
 
-            if JobStatus[job[0]['JobStatus']] == "RUNNING":
-                job_running_time = datetime.now() - datetime.fromtimestamp(job[0]["JobStartDate"])
-                logger.info(f"Job has been running {annex_info}for {round(job_running_time.seconds/3600)} hour(s), {round(job_running_time.seconds/60)} minute(s), and {(job_running_time.seconds%60)} second(s).")
-            elif JobStatus[job[0]['JobStatus']] == "HELD":
-                job_held_time = datetime.now() - datetime.fromtimestamp(job[0]["EnteredCurrentStatus"])
-                logger.info(f"Job has been held for {round(job_held_time.seconds/3600)} hour(s), {round(job_held_time.seconds/60)} minute(s), and {(job_held_time.seconds%60)} second(s).\nHold Reason: {job[0]['HoldReason']}")
-            elif JobStatus[job[0]['JobStatus']] == "COMPLETED":
-                logger.info("Job completed.")
+            job_ad = job[0]
+
+            try:
+                job_status = job_ad["JobStatus"]
+            except IndexError as err:
+                logger.error(f"Job {job_id} has unknown status")
+                raise err
+
+            # Get annex info
+            annex_info = ""
+            target_annex_name = job_ad.get('TargetAnnexName')
+            if target_annex_name is not None:
+                annex_info = " on the annex named '{target_annex_name}'"
+
+            # Get some common numbers
+            job_queue_time = datetime.now() - datetime.fromtimestamp(job_ad["QDate"])
+            job_atts = job_ad.get("NumShadowStarts", 0)
+            job_execs = job_ad.get("NumJobStarts", 0)
+            job_holds = job_ad.get("NumHolds", 0)
+            job_suspends = job_ad.get("TotalSuspensions", 0)
+
+            # Compute memory and disk usage if available
+            memory_usage, disk_usage = None, None
+            if "MemoryUsage" in job_ad:
+                memory_usage = (
+                        f"{readable_size(job_ad.eval('MemoryUsage')*10**6)} out of "
+                        f"{readable_size(job_ad.eval('RequestMemory')*10**6)} requested"
+                    )
+            if "DiskUsage" in job_ad:
+                disk_usage = (
+                        f"{readable_size(job_ad.eval('DiskUsage')*10**3)} out of "
+                        f"{readable_size(job_ad.eval('RequestDisk')*10**3)} requested"
+                    )
+
+            # Print information relevant to each job status
+            if job_status == htcondor.JobStatus.IDLE:
+                logger.info(f"Job {job_id} is currently idle.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestMemory')*10**6)} of memory.")
+                logger.info(f"It requested {readable_size(job_ad.eval('RequestDisk')*10**3)} of disk space.")
+                if job_holds > 0:
+                    logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
+                if job_atts > 0:
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+
+            elif job_status == htcondor.JobStatus.RUNNING:
+                job_running_time = datetime.now() - datetime.fromtimestamp(job_ad["JobStartDate"])
+                logger.info(f"Job {job_id} is currently running{annex_info}.")
+                logger.info(f"It started running {readable_time(job_running_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                if memory_usage:
+                    logger.info(f"Its current memory usage is {memory_usage}.")
+                if disk_usage:
+                    logger.info(f"Its current disk usage is {disk_usage}.")
+                if job_suspends > 0:
+                    logger.info(f"It has been suspended {job_suspends} time{s(job_suspends)}.")
+                if job_holds > 0:
+                    logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
+                if job_atts > 1:
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+
+            elif job_status == htcondor.JobStatus.SUSPENDED:
+                job_suspended_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                logger.info(f"Job {job_id} is currently suspended{annex_info}.")
+                logger.info(f"It has been suspended for {readable_time(job_suspended_time.seconds)}.")
+                logger.info(f"It has been suspended {job_suspends} time{s(job_suspends)}.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                if memory_usage:
+                    logger.info(f"Its last memory usage was {memory_usage}.")
+                if disk_usage:
+                    logger.info(f"Its last disk usage was {disk_usage}.")
+
+            elif job_status == htcondor.JobStatus.TRANSFERRING_OUTPUT:
+                job_transfer_time = datetime.now() - datetime.fromtimestamp(job_ad["JobCurrentStartTransferOutputDate"])
+                logger.info(f"Job {job_id} is currently transferring output{annex_info}.")
+                logger.info(f"It started transferring output {readable_time(job_transfer_time.seconds)} ago.")
+                if memory_usage:
+                    logger.info(f"Its last memory usage was {memory_usage}.")
+                if disk_usage:
+                    logger.info(f"Its last disk usage was {disk_usage}.")
+
+            elif job_status == htcondor.JobStatus.HELD:
+                job_held_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                logger.info(f"Job {job_id} is currently held.")
+                logger.info(f"It has been held for {readable_time(job_held_time.seconds)}.")
+                logger.info(f"""It was held because "{job_ad['HoldReason']}".""")
+                logger.info(f"It has been held {job_holds} time{s(job_holds)}.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                if job_execs >= 1:
+                    if memory_usage:
+                        logger.info(f"Its last memory usage was {memory_usage}.")
+                    if disk_usage:
+                        logger.info(f"Its last disk usage was {disk_usage}.")
+                if job_atts >= 1:
+                    logger.info(f"HTCondor has attempted to start the job {job_atts} time{s(job_atts)}.")
+                    logger.info(f"The job has started {job_execs} time{s(job_execs)}.")
+
+            elif job_status == htcondor.JobStatus.REMOVED:
+                job_removed_time = datetime.now() - datetime.fromtimestamp(job_ad["EnteredCurrentStatus"])
+                logger.info(f"Job {job_id} was removed.")
+                logger.info(f"It was removed {readable_time(job_removed_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                if memory_usage:
+                    logger.info(f"Its last memory usage was {memory_usage}.")
+                if disk_usage:
+                    logger.info(f"Its last disk usage was {disk_usage}.")
+
+            elif job_status == htcondor.JobStatus.COMPLETED:
+                job_completed_time = datetime.now() - datetime.fromtimestamp(job_ad["CompletionDate"])
+                logger.info(f"Job {job_id} has completed.")
+                logger.info(f"It completed {readable_time(job_completed_time.seconds)} ago.")
+                logger.info(f"It was submitted {readable_time(job_queue_time.seconds)} ago.")
+                if memory_usage:
+                    logger.info(f"Its last memory usage was {memory_usage}.")
+                if disk_usage:
+                    logger.info(f"Its last disk usage was {disk_usage}.")
+
             else:
-                logger.info(f"Job is {JobStatus[job[0]['JobStatus']]}.")
+                logger.info(f"Job {job_id} is in an unknown state (JobStatus = {job_status}).")
 
         # Jobs running on provisioned Slurm or EC2 resources need to retrieve
         # additional information from the provisioning DAGMan log

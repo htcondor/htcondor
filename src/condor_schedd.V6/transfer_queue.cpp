@@ -403,7 +403,7 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 	int rc = daemonCore->Register_Socket(client->m_sock,
 		"<file transfer request>",
 		(SocketHandlercpp)&TransferQueueManager::HandleReport,
-		"TransferQueueManager::HandleReport TRANSFER_QUEUE_REQUEST", this, ALLOW);
+		"TransferQueueManager::HandleReport TRANSFER_QUEUE_REQUEST", this);
 
 	if( rc < 0 ) {
 		dprintf(D_ALWAYS,

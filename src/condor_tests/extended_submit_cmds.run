@@ -41,6 +41,7 @@ EXTENDED_SUBMIT_COMMANDS @=end
     getReal =1.0
     some_expression=a+b
 @end
+EXTENDED_SUBMIT_HELPFILE = http://example.com/condor_submit
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -177,6 +178,30 @@ print "\tcondor_submit $args returned exit code=$rt (expected=1):\n";
 for (@results) { print "\t: $_"; }
 $res = $rt;
 CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'invalid-command');
+
+## -- extended help test ---
+
+TLOG("Checking for extended help text\n");
+my @helpex = `condor_submit -capabilities`;
+my $validhelp = 0;
+for my $hline (@helpex) {
+	print "\t$hline";
+	if ($hline =~ /http:\/\/example.com\/condor_submit/) { $validhelp += 1; }
+	elsif ($hline =~ /LongJob\s+value is boolean/) { $validhelp += 1; }
+	elsif ($hline =~ /ShortJob\s+value is boolean/) { $validhelp += 1; }
+	elsif ($hline =~ /accounting_group_user\s+value is forbidden/) { $validhelp += 1; }
+	elsif ($hline =~ /JobSite\s+value is string/) { $validhelp += 1; }
+	elsif ($hline =~ /FavoriteFruit\s+value is stringlist/) { $validhelp += 1; }
+	elsif ($hline =~ /SomeFile\s+value is filename/) { $validhelp += 1; }
+	elsif ($hline =~ /SomeInt\s+value is signed integer/) { $validhelp += 1; }
+	elsif ($hline =~ /SomeUint\s+value is unsigned integer/) { $validhelp += 1; }
+	elsif ($hline =~ /getReal\s+value is expression/) { $validhelp += 1; }
+	elsif ($hline =~ /some_expression\s+value is expression/) { $validhelp += 1; }
+	#print "  $validhelp\n";
+}
+$res = 0;
+$res = 1 if ($validhelp == 11);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'extended-help');
 
 ## -- late materialization test ---
 

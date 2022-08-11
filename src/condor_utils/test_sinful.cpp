@@ -140,6 +140,7 @@ int main( int, char ** ) {
 	v = s.getAddrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 0 );
+	delete v;
 
 	sinfulString = s.getSinful();
 	REQUIRE( sinfulString != NULL );
@@ -149,6 +150,7 @@ int main( int, char ** ) {
 	v = t.getAddrs();
 	REQUIRE( v != NULL );
 	REQUIRE( v->size() == 0 );
+	delete v;
 
 	sinfulString = t.getSinful();
 	REQUIRE( sinfulString != NULL );

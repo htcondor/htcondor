@@ -653,6 +653,7 @@ class Scheduler : public Service
 	bool			getAllowLateMaterialize() const { return AllowLateMaterialize; }
 	bool			getNonDurableLateMaterialize() const { return NonDurableLateMaterialize; }
 	const ClassAd * getExtendedSubmitCommands() const { return &m_extendedSubmitCommands; }
+	const std::string & getExtendedSubmitHelpFile() const { return m_extendedSubmitHelpFile; }
 	bool			getEnableJobQueueTimestamps() const { return EnableJobQueueTimestamps; }
 	int				getMaxJobsRunning() const { return MaxJobsRunning; }
 	int				getJobsTotalAds() const { return JobsTotalAds; };
@@ -798,6 +799,7 @@ private:
 	ClassAd*			m_adSchedd;
 	ClassAd*        	m_adBase;
 	ClassAd             m_extendedSubmitCommands;
+	std::string         m_extendedSubmitHelpFile;
 
 	// information about the command port which Shadows use
 	char*			MyShadowSockName;

@@ -351,7 +351,7 @@ help( void )
 int
 findCommand( string cmdStr )
 {
-	int cmd = 0, len = cmdStr.length();
+	int cmd = 0, len = (int)cmdStr.length();
 
 	for( int i = 0 ; i < len ; i++ ) {
 		cmdStr[i] = tolower( cmdStr[i] );

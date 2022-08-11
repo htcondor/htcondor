@@ -102,7 +102,7 @@ format_time( int tot_secs )
 char *
 format_time_short( int tot_secs )
 {
-     //Get time in ddd+hh:mm:ss fromat
+     //Get time in ddd+hh:mm:ss format
      char *time = format_time(tot_secs);
 
      int offset = 0;

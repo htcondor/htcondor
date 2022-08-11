@@ -87,7 +87,7 @@ MakeAbsTime(string timeStr )
 	int tzhr = 0; // corresponds to 1st "dd" in -|+dd:dd
 	int tzmin = 0; // corresponds to 2nd "dd" in -|+dd:dd
 	
-	int len = timeStr.length();
+	int len = (int)timeStr.length();
 	int i=len-1; 
 	prevNonSpaceChar(timeStr,i);
 	if ((i > 0) && ((timeStr[i] == 'z') || (timeStr[i] == 'Z'))) { // z|Z corresponds to a timezone offset of 0
@@ -103,7 +103,7 @@ MakeAbsTime(string timeStr )
     }
 
 	i=0;
-	len = timeStr.length();
+	len = (int)timeStr.length();
 	
 	nextDigitChar(timeStr,i);
 	if(i > len-4) { // string has to contain dddd (year)
@@ -225,7 +225,7 @@ MakeRelTime(const string &timeStr)
 	Value val;  
 	double rsecs;
 	
-	int len = timeStr.length();
+	int len = (int)timeStr.length();
 	double secs = 0;
 	int mins = 0;
 	int hrs = 0;
@@ -314,7 +314,7 @@ MakeRelTime(const string &timeStr)
  */
 static inline void nextDigitChar(const string &Str, int &index) 
 {
-	int len = Str.length();
+	int len = (int)Str.length();
     while((index<len) &&(!isdigit(Str[index]))) {
 		index++;
     }
@@ -341,7 +341,7 @@ static int revInt(const string &revNumStr)
 	string numStr = "";
     int number;
 
-	int len = revNumStr.length();
+	int len = (int)revNumStr.length();
 	for(int i=len-1; i>=0 ; i--) {
 		numStr += revNumStr[i];
 	}
@@ -359,7 +359,7 @@ static double revDouble(const string &revNumStr)
     double number;
     const char *cNumStr;
 
-	int len = revNumStr.length();
+	int len = (int)revNumStr.length();
 	for(int i=len-1; i>=0 ; i--) {
 		numStr += revNumStr[i];
 	}
@@ -453,7 +453,7 @@ _Flatten( EvalState &state, Value &val, ExprTree *&tree, int*) const
 
 static bool extractTimeZone(string &timeStr, int &tzhr, int &tzmin) 
 {
-	int    len    = timeStr.length();
+	int    len    = (int)timeStr.length();
 	int    i      = len-1; 
     bool   offset = false;
     string offStr = timeStr.substr(i-4,5);
