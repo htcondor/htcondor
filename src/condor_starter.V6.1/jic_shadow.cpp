@@ -160,6 +160,9 @@ JICShadow::~JICShadow()
 	}
 	free(m_reconnect_sec_session);
 	free(m_filetrans_sec_session);
+	delete syscall_sock;
+	syscall_sock = nullptr;
+	delete m_job_startd_update_sock;
 }
 
 
