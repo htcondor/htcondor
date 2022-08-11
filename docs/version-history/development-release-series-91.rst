@@ -21,8 +21,9 @@ New Features:
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
 
-- Added support on rootly Linux systems for ephermal per-job execute directories
-  allocated from LVM or from a backing store on disk.  ``STARTD_ENFORCE_DISK_USAGE``
+- Added support for ephermal per-job execute directories
+  allocated from LVM or from a backing file on disk, when HTCondor is running
+  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
   enables this, see :ref:`admin-manual/directories` for more details.
   :jira:`912`
 
