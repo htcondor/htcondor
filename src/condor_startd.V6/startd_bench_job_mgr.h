@@ -33,7 +33,6 @@ public:
 	StartdBenchJobMgrParams( const char &base, const CronJobMgr &mgr );
 
 private:
-	const StartdBenchJobMgr	&m_mgr;
 	char * GetDefault( const char *item ) const;
 	void GetDefault( const char *item, double &dv ) const;
 };

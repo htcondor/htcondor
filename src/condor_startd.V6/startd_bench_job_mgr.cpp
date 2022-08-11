@@ -31,9 +31,8 @@
  */
 StartdBenchJobMgrParams::StartdBenchJobMgrParams(
 	const char			&base,
-	const CronJobMgr	&mgr )
-		: CronJobMgrParams( base ),
-		  m_mgr( static_cast<const StartdBenchJobMgr &>(mgr) )
+	const CronJobMgr	& )
+		: CronJobMgrParams( base )
 {
 }
 
