@@ -272,7 +272,8 @@ class Builder:
 
     """
 
-    def __init__(self, executable, series, version, prefix, one_tag: bool, known_versions: KnownVersions):
+    def __init__(self, executable, series, version, prefix, one_tag: bool, known_versions: KnownVersions,
+                 no_cache: bool):
         self.executable = executable
         self.series = series
         self.prefix = prefix
@@ -281,6 +282,7 @@ class Builder:
         self.want_daily = version == "daily"
         self.one_tag = one_tag
         self.known_versions = known_versions
+        self.no_cache = no_cache
 
     def docker(self, *args, **kwargs):
         """Runs a single docker/podman command with subprocess.run() and returns the result.
@@ -459,6 +461,8 @@ org.htcondor.version="%s"
         # for the hash); we'll change the name once we know what's in there.
         tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
         args.extend(["-t", tmp_image_name, "-f", f"base/Dockerfile", "base"])
+        if self.no_cache:
+            args.append("--no-cache")
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
@@ -586,6 +590,11 @@ def parse_arguments(argv, known_versions):
         help="Use podman",
     )
     parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Tell docker build/podman build not to use cached layers and always start building from scratch",
+    )
+    parser.add_argument(
         "--base-only", action="store_true", help="Build htcondor/base only"
     )
     parser.add_argument(
@@ -687,6 +696,7 @@ def main(argv) -> Union[int,str]:
         prefix=args.prefix,
         one_tag=args.one_tag,
         known_versions=known_versions,
+        no_cache=args.no_cache,
     )
 
     images_to_push = []
