@@ -27,6 +27,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(PREFER_CPP11 ON) # Still have some ifdefs on this
 
+# Remove warnings in cmake 3.24+.  This setting 
+# forces cmake to not update the timestamps on downloaded
+# tarballs.  The autoconf-built externals need this old setting
+cmake_policy(SET CMP0135 OLD)
+
 ##########################################################################
 #Setup package meta-data (used in packaging)
 set(PACKAGE "condor")
