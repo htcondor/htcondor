@@ -30,7 +30,9 @@ set(PREFER_CPP11 ON) # Still have some ifdefs on this
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
 # tarballs.  The autoconf-built externals need this old setting
-cmake_policy(SET CMP0135 OLD)
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.24)
+  cmake_policy(SET CMP0135 OLD)
+endif()
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
