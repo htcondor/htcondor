@@ -508,8 +508,6 @@ if( NOT WINDOWS)
 
 	set( CMAKE_SUPPRESS_REGENERATION FALSE )
 
-	set(HAVE_PTHREAD_H ${CMAKE_HAVE_PTHREAD_H})
-
 	find_multiple( "expat" EXPAT_FOUND )
 	find_multiple( "uuid" LIBUUID_FOUND )
 		# UUID appears to be available in the C runtime on Darwin.
@@ -669,8 +667,7 @@ if(${OS_NAME} STREQUAL "LINUX")
         find_so_name(LIBSYSTEMD_DAEMON_SO ${LIBSYSTEMD_DAEMON_PATH})
     endif()
 
-	dprint("Threaded functionality only enabled in Linux, Windows, and Mac OS X > 10.6")
-	set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
+	set(HAVE_PTHREADS TRUE)
 
 	# Even if the flavor of linux we are compiling on doesn't
 	# have Pss in /proc/pid/smaps, the binaries we generate
@@ -692,23 +689,7 @@ elseif(APPLE)
 	find_library( COREFOUNDATION_FOUND CoreFoundation )
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 
-	dprint("Threaded functionality only enabled in Linux, Windows and Mac OS X > 10.6")
-
-	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER)
-	check_symbol_exists(PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP "pthread.h" HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
-	if (HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER OR HAVE_DECL_PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP)
-		set(HAVE_PTHREADS ${CMAKE_USE_PTHREADS_INIT})
-	else()
-		set(HAVE_PTHREADS FALSE)
-	endif()
-
-	exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE TEST_VER)
-	if(${TEST_VER} MATCHES "10.([67])")
-		set (HAVE_OLD_SCANDIR 1)
-		dprint("Using old function signature for scandir()")
-	else()
-		dprint("Using POSIX function signature for scandir()")
-	endif()
+	set(HAVE_PTHREADS TRUE)
 endif()
 
 ##################################################
