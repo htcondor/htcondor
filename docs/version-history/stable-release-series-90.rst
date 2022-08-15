@@ -31,6 +31,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug that would cause the *condor_schedd* to leak 
+  file descriptors, eventually run out, and crash, when
+  unable to launch the scheduler universe job for any reason.
+  :jira:`1261`
+
 - When a failure occurs with a grid universe job of type ``batch``,
   the local job is now always put on hold, instead of the remote job
   being canceled and automatically resubmitted.
