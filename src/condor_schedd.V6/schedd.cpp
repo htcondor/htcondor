@@ -10213,7 +10213,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	MyString env_error_msg;
     int niceness = 0;
 	MyString tmpCwd;
-	int inouterr[3];
+	int inouterr[3] = {-1, -1, -1};
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
@@ -10230,6 +10230,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
+
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
@@ -10579,13 +10580,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	                                  core_size_ptr );
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
-	// now close those open fds - we don't want them here.
-	for ( i=0 ; i<3 ; i++ ) {
-		if ( close( inouterr[i] ) == -1 ) {
-			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
-		}
-	}
-
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		goto wrapup;
@@ -10634,6 +10628,14 @@ wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
+	}
+	// now close those open fds - we don't want to leak them if there was an error
+	for (i=0 ; i < 3; i++ ) {
+		if (inouterr[i] != -1) {
+				if (close(inouterr[i] ) == -1) {
+					dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
+				}
+		}
 	}
 	return retval;
 }
