@@ -10460,35 +10460,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 	
+	set_priv( priv );  // back to regular privs...
 	if ( cannot_open_files ) {
-	/* I'll close the opened files in the same priv state I opened them
-		in just in case the OS cares about such things. */
-		if (inouterr[0] >= 0) {
-			if (close(inouterr[0]) == -1) {
-				dprintf(D_ALWAYS, 
-					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input.Value(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[1] >= 0) {
-			if (close(inouterr[1]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output.Value(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[2] >= 0) {
-			if (close(inouterr[2]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output.Value(), errno, strerror(errno));
-			}
-		}
-		set_priv( priv );  // back to regular privs...
 		goto wrapup;
 	}
-	
-	set_priv( priv );  // back to regular privs...
 	
 	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
