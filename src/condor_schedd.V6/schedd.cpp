@@ -13657,8 +13657,7 @@ Scheduler::Register()
 			"release_claim", this, READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, READ,
-			D_PROTOCOL ); 
+			"receive_startd_alive", this, READ);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
