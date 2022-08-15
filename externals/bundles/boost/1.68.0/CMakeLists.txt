@@ -75,35 +75,10 @@ else (WINDOWS)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
 	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
 
-	# always prefer system libraries where possible
-	if(Boost_FOUND)
-
-		if (NOT PREFER_CPP11)
-			check_cxx_source_compiles("
-				#include <boost/unordered_map.hpp>
-				int main() {
-				boost::unordered_map<int,int> foo;
-				return 0;
-				}
-				" HAVE_BOOST_UNORDER_MAP )
-
-			# we don't have any unordered map?
-			if (NOT HAVE_BOOST_UNORDER_MAP)
-				message (STATUS "WARNING did not detect unordered_map")
-				set ( SYSTEM_NOT_UP_TO_SNUFF TRUE )
-			endif()
-
-		endif()
-
-		# set vars b/c we are good to go.
-		if (NOT SYSTEM_NOT_UP_TO_SNUFF)
-			append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-			set (BOOST_VER ${Boost_VERSION})
-			set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
-			set (BOOST_LD ${Boost_LIBRARY_DIRS})
-		endif()
-
-	endif(Boost_FOUND)
+	append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
+	set (BOOST_VER ${Boost_VERSION})
+	set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
+	set (BOOST_LD ${Boost_LIBRARY_DIRS})
 
 	# we only use our version of boost if the system is not good enough
 	if (NOT PROPER)

@@ -50,8 +50,6 @@ class XInterface
 
     Display     *_display;
     char*       _display_name;
-    Window      _window;
-    int         _screen;
     time_t      _last_event;
 
     Window       _pointer_root;

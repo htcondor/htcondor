@@ -31,10 +31,6 @@ if(${OS_NAME} MATCHES "^WIN")
 	endif()
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
-	if(NOT (MSVC_VERSION LESS 1700))
-		set(PREFER_CPP11 TRUE)
-	endif()
-
 	set(CMD_TERM \r\n)
 	set(C_WIN_BIN ${CONDOR_SOURCE_DIR}/msconfig) #${CONDOR_SOURCE_DIR}/build/backstage/win)
 	#set(CMAKE_SUPPRESS_REGENERATION TRUE)
