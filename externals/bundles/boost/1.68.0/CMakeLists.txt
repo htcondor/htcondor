@@ -80,8 +80,6 @@ else (WINDOWS)
 	set (BOOST_INCLUDE ${Boost_INCLUDE_DIRS})
 	set (BOOST_LD ${Boost_LIBRARY_DIRS})
 
-	endif(Boost_FOUND)
-
 	# we only use our version of boost if the system is not good enough
 	if (NOT PROPER)
 
