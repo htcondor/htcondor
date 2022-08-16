@@ -1015,142 +1015,12 @@ command_delegate_gsi_cred(int, Stream* stream )
 		dprintf( D_ALWAYS, "end of message error (1)\n" );
 		return FALSE;
 	}
-	if ( ! param_boolean( "GLEXEC_STARTER", false ) ) {
-		dprintf( D_ALWAYS,
-		         "GLEXEC_STARTER is false, cancelling delegation\n" );
-		if( ! reply( sock, NOT_OK ) ) {
-			dprintf( D_ALWAYS,
-			         "error sending NOT_OK to cancel delegation\n" );
+
+	dprintf( D_ALWAYS, "GLEXEC_STARTER is no longer supported, cancelling delegation\n" );
+	if( ! reply( sock, NOT_OK ) ) {
+		dprintf( D_ALWAYS, "error sending NOT_OK to cancel delegation\n" );
 			return FALSE;
 		}
-		return TRUE;
-	}
-	if( ! reply( sock, OK ) ) {
-		dprintf( D_ALWAYS, "error sending OK to begin delegation\n");
-		return FALSE;
-	}
-
-	//
-	// 2) get claim id and delegated proxy off the wire; send OK
-	//    if all secceeds
-	//
-	sock->decode();			 
-	char* id = NULL;
-    if( ! sock->code(id) ) {
-        dprintf( D_ALWAYS, "error reading claim id\n" );
-			// If we couldn't read it, no sense trying to reply ERROR.
-        return FALSE;
-    }
-
-    Claim* claim = resmgr->getClaimById( id );
-    if( !claim ) {
-        dprintf( D_ALWAYS,
-                 "error finding resource with claim id (%s)\n", id );
-        free( id );
-		reply( sock, CONDOR_ERROR );
-        return FALSE;
-    }
-    free( id );
-
-	// Make sure the claim is idle
-	if (claim->state() != CLAIM_IDLE) {
-		Resource* rip = claim->rip();
-		rip->dprintf(D_ALWAYS,
-					 "Got %s for a %s claim (not idle), ignoring.\n",
-					 getCommandString(DELEGATE_GSI_CRED_STARTD),
-					 getClaimStateString(claim->state()));
-		reply( sock, CONDOR_ERROR );
-		return FALSE;
-	}
-
-	// create a temporary file to hold the proxy and set it
-	// to mode 600
-	std::string proxy_file;
-	char* glexec_user_dir = param("GLEXEC_USER_DIR");
-	if (glexec_user_dir != NULL) {
-		proxy_file = glexec_user_dir;
-		free(glexec_user_dir);
-	}
-	else {
-		proxy_file = "/tmp";
-	}
-	proxy_file += "/startd-tmp-proxy-XXXXXX";
-	char* proxy_file_tmp = strdup(proxy_file.c_str());
-	ASSERT(proxy_file_tmp != NULL);
-	int fd = condor_mkstemp( proxy_file_tmp );
-	proxy_file = proxy_file_tmp;
-	free( proxy_file_tmp );
-	if( fd == -1 ) {
-		dprintf( D_ALWAYS,
-		         "error creating temp file for proxy: %s (%d)\n",
-		         strerror( errno ), errno );
-		sock->end_of_message();
-		reply( sock, CONDOR_ERROR );
-		return FALSE;
-	}
-	close( fd );
-
-	dprintf( D_FULLDEBUG,
-	         "writing temporary proxy to: %s\n",
-	         proxy_file.c_str() );
-
-	// sender decides whether to use delegation or simply copy
-	int use_delegation = 0;
-	if( ! sock->code(use_delegation) ) {
-		dprintf( D_ALWAYS, "error reading delegation request\n" );
-		return FALSE;
-	}
-
-	int rv;
-	filesize_t dont_care;
-	if( use_delegation ) {
-		rv = sock->get_x509_delegation( proxy_file.c_str(), false, NULL );
-	}
-	else {
-		dprintf( D_FULLDEBUG,
-		         "DELEGATE_JOB_GSI_CREDENTIALS is False; using direct copy\n");
-		if( ! sock->get_encryption() ) {
-			dprintf( D_ALWAYS,
-			         "cannot copy: encryption not enabled on channel\n" );
-			sock->end_of_message();
-			reply( sock, CONDOR_ERROR );
-			return FALSE;
-		}
-		rv = sock->get_file( &dont_care, proxy_file.c_str() );
-	}
-	if( rv == -1 ) {
-		dprintf( D_ALWAYS, "Error: couldn't get proxy\n");
-		sock->end_of_message();
-		reply( sock, NOT_OK );
-		return FALSE;
-	}
-	if ( !sock->end_of_message() ) {
-		dprintf( D_ALWAYS, "end of message error (2)\n" );
-		reply( sock, NOT_OK );
-		return FALSE;
-	}
-	
-	// that's it - return success
-	reply( sock, OK );
-
-	// if the claim already has an associated proxy, delete it
-	// before replacing it with the one we just got
-	char* old_proxy = claim->client()->proxyFile();
-	if (old_proxy != NULL) {
-		if (unlink(old_proxy) == -1) {
-			dprintf(D_ALWAYS,
-			        "error deleting old proxy %s before updating: %s (%d)\n",
-			        old_proxy,
-			        strerror(errno),
-			        errno);
-		}
-	}
-
-	// we have the proxy - now stash its location in the Claim's
-	// Client object so we can get at it when we launch the
-	// starter
-	claim->client()->setProxyFile( proxy_file.c_str() );
-
 	return TRUE;
 }
 #endif
@@ -2508,6 +2378,9 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	int on_completion = DRAIN_NOTHING_ON_COMPLETION;
 	ad.LookupInteger(ATTR_RESUME_ON_COMPLETION,on_completion);
 
+	time_t deadline = 0;
+	ad.LookupInteger("Deadline", deadline);
+
 	// get the drain reason out of the command. if no reason supplied, 
 	// assume that the command is coming from the Defrag daemon unless the peer version is 8.9.12 or later
 	// an 8.9.12 defrag will never send an empty reason, so the caller must be a tool
@@ -2525,7 +2398,7 @@ command_drain_jobs(int /*dc_cmd*/, Stream* s )
 	std::string new_request_id;
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->startDraining(how_fast,reason,on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
+	bool ok = resmgr->startDraining(how_fast,deadline,reason,on_completion,check_expr,start_expr,new_request_id,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to start draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}
@@ -2567,10 +2440,11 @@ command_cancel_drain_jobs(int /*dc_cmd*/, Stream* s )
 
 	std::string request_id;
 	ad.LookupString(ATTR_REQUEST_ID,request_id);
+	bool reconfig = false; // set to true to reconfig after cancelling the drain
 
 	std::string error_msg;
 	int error_code = 0;
-	bool ok = resmgr->cancelDraining(request_id,error_msg,error_code);
+	bool ok = resmgr->cancelDraining(request_id,reconfig,error_msg,error_code);
 	if( !ok ) {
 		dprintf(D_ALWAYS,"Failed to cancel draining, error code %d: %s\n",error_code,error_msg.c_str());
 	}

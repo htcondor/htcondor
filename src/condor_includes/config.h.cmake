@@ -76,9 +76,6 @@
 /* Define if pthreads are available (USED)*/
 #cmakedefine HAVE_PTHREADS 1
 
-/* Define to 1 if you have the <pthread.h> header file. (USED)*/
-#cmakedefine HAVE_PTHREAD_H 1
-
 /* Define to 1 if you have the 'access' function. */
 #cmakedefine HAVE_ACCESS 1
 

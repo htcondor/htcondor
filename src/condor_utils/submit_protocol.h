@@ -10,6 +10,7 @@ public:
 	virtual int get_NewProc(int cluster_id) = 0;
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL) = 0;
 	virtual int get_Capabilities(ClassAd& reply) = 0;
+	virtual int get_ExtendedHelp(std::string &content) = 0;
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 ) = 0;
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 ) = 0;
 	virtual int send_SpoolFile(char const *filename) = 0;
@@ -19,6 +20,7 @@ public:
 	virtual bool has_late_materialize(int &ver) = 0;
 	virtual bool allows_late_materialize() = 0;
 	virtual bool has_extended_submit_commands(ClassAd &cmds) = 0;
+	virtual bool has_extended_help(std::string &filename) = 0;
 	virtual bool has_send_jobset(int &ver) = 0;
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text) = 0;
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o) = 0;
@@ -51,6 +53,7 @@ public:
 	virtual int get_NewProc(int cluster_id);
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
 	virtual int get_Capabilities(ClassAd& reply);
+	virtual int get_ExtendedHelp(std::string &content);
 	virtual int set_Attribute(int cluster, int proc, const char *attr, const char *value, SetAttributeFlags_t flags=0 );
 	virtual int set_AttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
 	virtual int send_SpoolFile(char const *filename);
@@ -60,6 +63,7 @@ public:
 	virtual bool has_late_materialize(int &ver); // version check for late materialize
 	virtual bool allows_late_materialize(); // capabilities check ffor late materialize enabled.
 	virtual bool has_extended_submit_commands(ClassAd &cmds); // capabilities check for extended submit commands
+	virtual bool has_extended_help(std::string & filename); // helpfile for extended submit commands
 	virtual bool has_send_jobset(int &ver);
 	virtual int set_Factory(int cluster, int qnum, const char * filename, const char * text);
 	virtual int send_Itemdata(int cluster, SubmitForeachArgs & o);

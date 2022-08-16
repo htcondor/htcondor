@@ -758,6 +758,7 @@ int generate_files(const char * dir)
 	const int bufsize = 0x1000 * 0x1000;
 	ssize_t pv = (ssize_t)malloc(bufsize*2); // allocate a 2x buffer so we can guarantee aligment
 	char * buf = (char*)((pv+bufsize-1) & ~(bufsize-1)); // align to even multiple of bufsize
+	auto_free_ptr buf_holder((char *)pv);
 
 #if 1
 

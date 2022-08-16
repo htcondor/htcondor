@@ -39,7 +39,6 @@ local_user_log.cpp
 NTsenders.cpp
 os_proc.cpp
 parallel_proc.cpp
-privsep_helper.cpp
 remote_proc.cpp
 script_proc.cpp
 singularity.cpp
@@ -61,7 +60,6 @@ if (LINUX)
 	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
 	list(APPEND starterElements
 		cgroup.linux.cpp  
-		glexec_privsep_helper.linux.cpp
 		../condor_startd.V6/VolumeManager.cpp
 	)
 endif(LINUX)
@@ -78,11 +76,6 @@ endif()
 
 # need to add all the other install targets for libexec.
 install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
-
-if(LINUX AND WANT_GLEXEC)
-	install (FILES condor_glexec_setup condor_glexec_run condor_glexec_cleanup condor_glexec_kill condor_glexec_update_proxy DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-	condor_exe(condor_glexec_job_wrapper "glexec_job_wrapper.linux.cpp" ${C_LIBEXEC} "${CONDOR_TOOL_LIBS}" OFF)
-endif()
 
 if (HAVE_SSH_TO_JOB)
 	install ( FILES condor_ssh_to_job_sshd_setup condor_ssh_to_job_shell_setup DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

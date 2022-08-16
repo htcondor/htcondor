@@ -264,6 +264,10 @@ used to give the full path name of an X.509 proxy file.
 The submit description file command
 **scitokens_file** :index:`scitokens_file<single: scitokens_file; submit commands>`
 may be used to give the full path name of a SciTokens file.
+If both an X.509 proxy and a SciTokens file are provided, then only
+the SciTokens file is used for authentication.
+Whenever an X.509 proxy is provided, it is delegated to the ARC CE for
+use by the job.
 
 ARC CE allows sites to define Runtime Environment (RTE) labels that alter
 the environment in which a job runs.
@@ -1003,7 +1007,7 @@ to communicate with Azure.
 You can also set up a service account in Azure for HTCondor to use. This
 lets you limit the level of access HTCondor has to your Azure account.
 Instructions for creating a service account can be found here:
-`http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx <http://research.cs.wisc.edu/htcondor/gahp/AzureGAHPSetup.docx>`_.
+`https://htcondor.org/gahp/AzureGAHPSetup.docx <https://htcondor.org/gahp/AzureGAHPSetup.docx>`_.
 
 Once you have created a file containing the service account credentials,
 you can specify its location in the submit description file using the

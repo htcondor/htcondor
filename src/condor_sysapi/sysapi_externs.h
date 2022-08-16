@@ -56,10 +56,6 @@ extern int _sysapi_config;
 extern int _sysapi_detected_phys_cpus;
 extern int _sysapi_detected_hyper_cpus;
 
-/* needed by processor_flags.c */
-extern const char * _sysapi_processor_flags_raw;
-extern const char * _sysapi_processor_flags;
-
 /* needed by phys_mem.c */
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;

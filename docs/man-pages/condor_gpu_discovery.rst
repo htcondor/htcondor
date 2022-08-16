@@ -47,7 +47,9 @@ output
     DetectedGPUs="CUDA0, CUDA1"
 
 Further command line options use ``"CUDA"`` either with or without one
-of the integer values 0 or 1 as the *prefix string* in attribute names.
+of the integer values 0 or 1 as the name of the device properties ad 
+for ``-nested`` properties, or as the *prefix string* in attribute names when ``-not-nested``
+properties are chosen.
 
 For machines with more than one or two NVIDIA devices, it is recommended that you
 also use the ``-short-uuid`` or ``-uuid`` option.  The uuid value assigned by
@@ -82,22 +84,35 @@ Options
     Print usage information and exit.
  **-properties**
     In addition to the ``DetectedGPUs`` attribute, display some of the
-    attributes of the GPUs. Each of these attributes will have a *prefix
-    string* at the beginning of its name. The displayed CUDA attributes
+    attributes of the GPUs. Each of these attributes will be in a nested
+    ClassAd (``-nested``) or have a *prefix string* at the beginning of its name (``-not-nested``).
+    The displayed CUDA attributes
     are ``Capability``, ``DeviceName``, ``DriverVersion``,
     ``ECCEnabled``, ``GlobalMemoryMb``, and ``RuntimeVersion``. The
     displayed Open CL attributes are ``DeviceName``, ``ECCEnabled``,
     ``OpenCLVersion``, and ``GlobalMemoryMb``.
+ **-nested**
+    Default. Display properties that are common to all GPUs in a ``Common`` nested ClassAd,
+	and properties that are not common to all in a nested ClassAd using the GPUid
+	as the ClassAd name.  Use the ``-not-nested`` argument to disable nested ClassAds and
+	return to the older behavior of using a *prefix string* for individual property attributes.
+ **-not-nested**
+    Display properties that are common to all GPUs using a ``CUDA`` or ``OCL`` as
+	the attribute prefix, and properties that are not common to all using a GPUid
+	prefix.  Versions of *condor_gpu_discovery* prior to 9.11.0 support only this mode.
  **-extra**
-    Display more attributes of the GPUs. Each of these attribute names
-    will have a *prefix string* at the beginning of its name. The
-    additional CUDA attributes are ``ClockMhz``, ``ComputeUnits``, and
+    Display more attributes of the GPUs. Each of these attributes
+    will be added to a nested property ClassAd (``-nested``) or
+    have a *prefix string* at the beginning of its name (``-not-nested``).
+    The additional CUDA attributes are ``ClockMhz``, ``ComputeUnits``, and
     ``CoresPerCU``. The additional Open CL attributes are ``ClockMhz``
     and ``ComputeUnits``.
  **-dynamic**
     Display attributes of NVIDIA devices that change values as the GPU
-    is working. Each of these attribute names will have a *prefix
-    string* at the beginning of its name. These are ``FanSpeedPct``,
+    is working. Each of these attributes
+    will be added to the the nested property ClassAd (``-nested``) or
+    have a *prefix string* at the beginning of its name (``-not-nested``).
+    These are ``FanSpeedPct``,
     ``BoardTempC``, ``DieTempC``, ``EccErrorsSingleBit``, and
     ``EccErrorsDoubleBit``.
  **-mixed**
@@ -117,7 +132,7 @@ Options
     is not specified, the resource tag is ``"GPUs"``, resulting in
     attribute name ``DetectedGPUs``.
  **-prefix** *str*
-    When naming attributes, use *str* as the *prefix string*. When this
+    When naming ``-not-nested`` attributes, use *str* as the *prefix string*. When this
     option is not specified, the *prefix string* is either ``CUDA`` or
     ``OCL`` unless ``-uuid`` or ``-short-uuid`` is also used.
  **-by-index**
@@ -130,11 +145,49 @@ Options
     or drained.
  **-uuid**
     Use the full NVIDIA uuid as the device identifier rather than the device index.
- **-simulate:D,N**
-    For testing purposes, assume that N devices of type D were detected.
-    No discovery software is invoked. If D is 0, it refers to GeForce GT
-    330, and a default value for N is 1. If D is 1, it refers to GeForce
-    GTX 480, and a default value for N is 2.
+ **-simulate:[D,N[,D2,...]]**
+    For testing purposes, assume that N devices of type D were detected,
+    And N2 devices of type D2, etc.
+    No discovery software is invoked. D can be a value from 0 to 6 which
+    selects a simulated a GPU from the following table.
+
+    .. list-table:: Simulated GPUs
+        :widths: 2 35 10 14
+        :header-rows: 1
+
+        * - 
+          - DeviceName
+          - Capability
+          - GlobalMemoryMB
+        * - 0
+          - GeForce GT 330
+          - 1.2
+          - 1024
+        * - 1
+          - GeForce GTX 480
+          - 2.0
+          - 1536
+        * - 2
+          - Tesla V100-PCIE-16GB
+          - 7.0
+          -	24220
+        * - 3
+          - TITAN RTX
+          - 7.5
+          - 24220
+        * - 4
+          - A100-SXM4-40GB
+          - 8.0
+          - 40536
+        * - 5
+          - NVIDIA A100-SXM4-40GB MIG 3g.20gb
+          - 8.0
+          - 20096
+        * - 6
+          - NVIDIA A100-SXM4-40GB MIG 1g.5gb
+          - 8.0
+          - 4864
+
  **-opencl**
     Prefer detection via OpenCL rather than CUDA. Without this option,
     CUDA detection software is invoked first, and no further Open CL

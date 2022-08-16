@@ -27,6 +27,14 @@ if(BUILD_DATE)
 	set_source_files_properties(condor_version.cpp PROPERTIES COMPILE_DEFINITIONS BUILD_DATE="${BUILD_DATE}")
 endif()
 
+# publish python3 minor version and module extension in the param table
+if (PYTHON3_VERSION_MINOR)
+	set_source_files_properties(condor_config.cpp param_info.cpp PROPERTIES
+		 COMPILE_DEFINITIONS "PYTHON3_MODULE_SUFFIX=\"${PYTHON3_MODULE_SUFFIX}\";PYTHON3_VERSION_MINOR=${PYTHON3_VERSION_MINOR}"
+	)
+endif()
+
+
 # We need this .o statically linked into every exe for the version object
 # to parse.  Make this an object library to link everywhere.
 add_library(condor_version_obj STATIC condor_version.cpp)
@@ -137,16 +145,20 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
+AWSv4-impl.h
 backward_file_reader.cpp
 binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checksum.cpp
+checksum.h
 classad_collection.cpp
 classad_collection.h
 classad_command_util.cpp
@@ -330,6 +342,8 @@ java_config.cpp
 java_config.h
 JobLogMirror.cpp
 JobLogMirror.h
+job_ad_instance_recording.cpp
+job_ad_instance_recording.h
 KeyCache.cpp
 killfamily.cpp
 killfamily.h
@@ -349,6 +363,8 @@ log_rotate.h
 log_transaction.cpp
 log_transaction.h
 make_printmask.cpp
+manifest.cpp
+manifest.h
 MapFile.cpp
 MapFile.h
 mark_thread.cpp
@@ -427,6 +443,7 @@ spooled_job_files.cpp
 spooled_job_files.h
 spool_version.cpp
 spool_version.h
+ssl_version_hack.h
 stat_info.cpp
 stat_info.h
 status_string.cpp
@@ -572,10 +589,6 @@ set_source_files_properties(../condor_sysapi/clinpack.cpp PROPERTIES COMPILE_FLA
 set_source_files_properties(../condor_daemon_core.V6/self_monitor.cpp ../classad_analysis/analysis.cpp ../classad_analysis/interval.cpp generic_stats.cpp generic_query.cpp PROPERTIES COMPILE_FLAGS -Wno-float-equal)
 endif(UNIX)
 
-if (SCITOKENS_FOUND)
-include_directories(${SCITOKENS_INCLUDE_DIRS})
-endif(SCITOKENS_FOUND)
-
 # Turn off the OpenSSL deprecation warnings until we decide on the long-term direction with OpenSSL on Mac.
 if (APPLE)
 	set_source_files_properties(condor_base64.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
@@ -594,17 +607,22 @@ add_library(condor_api_and_utils_objects OBJECT ${CONDOR_API_AND_UTILS_SRC})
 # The utils need pcre2
 # Older cmakes don't allow target_link_libraries to OBJECT libraries
 # remove this when we drop Ubuntu 18
+include_directories(${PCRE2_INCLUDE})
+include_directories(${OPENSSL_INCLUDE})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
 	include_directories(${PCRE2_INCLUDE})
 else()
-	target_link_libraries(condor_api_and_utils_objects pcre2-8)
+	target_link_libraries(condor_api_and_utils_objects INTERFACE pcre2-8)
 endif()
 
 add_library(condor_utils_objects OBJECT ${CONDOR_UTILS_SRC})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
 	include_directories(${PCRE2_INCLUDE})
 else()
-	target_link_libraries(condor_utils_objects pcre2-8)
+	target_link_libraries(condor_utils_objects INTERFACE pcre2-8)
+	if (WITH_SCITOKENS)
+		target_link_libraries(condor_utils_objects PRIVATE SciTokens-headers)
+	endif()
 endif()
 
 add_dependencies(condor_utils_objects utils_genparams)
@@ -614,7 +632,10 @@ add_library(condor_extra_objects OBJECT ${EXTRA_SRCS})
 if (${CMAKE_VERSION} VERSION_LESS 3.12.0) 
 	include_directories(${PCRE2_INCLUDE})
 else()
-	target_link_libraries(condor_extra_objects pcre2-8)
+	target_link_libraries(condor_extra_objects PUBLIC pcre2-8)
+	if (WITH_SCITOKENS)
+		target_link_libraries(condor_extra_objects PRIVATE SciTokens-headers)
+	endif()
 endif()
 
 add_library(condor_safe_objects OBJECT ${SAFE_OPEN_SRC})
@@ -633,7 +654,7 @@ else()
 endif()
 set_target_properties( condor_utils PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
 if (HAVE_GNU_LD)
-	target_link_libraries( condor_utils -Wl,--wrap,exit )
+	target_link_libraries( condor_utils PRIVATE -Wl,--wrap,exit )
 endif()
 
 # for linux also make a static version of condor_utils
@@ -671,16 +692,20 @@ if ( LINUX )
 endif()
 
 if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} crypto )
 else()
-	target_link_libraries(condor_utils ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} ${SCITOKENS_FOUND} ${OPENSSL_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} openssl crypto ${KRB5_FOUND} ${MUNGE_FOUND} )
+	if (WITH_SCITOKENS)
+		target_link_libraries(condor_utils PUBLIC SciTokens)
+	endif()
+
 endif()
 if (LINUX AND LIBUUID_FOUND)
-	target_link_libraries(condor_utils ${LIBUUID_FOUND})
+	target_link_libraries(condor_utils PUBLIC ${LIBUUID_FOUND})
 endif()
 
 if ( APPLE )
-	target_link_libraries( condor_utils ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
+	target_link_libraries( condor_utils PUBLIC ${IOKIT_FOUND} ${COREFOUNDATION_FOUND} resolv )
 	set_target_properties( condor_utils PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 	install( CODE "execute_process(COMMAND ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_rewrite_libs \$ENV{DESTDIR}/${CMAKE_INSTALL_PREFIX}/${C_LIB}/lib${UTILS_LIB_NAME}.dylib)" )
 endif()
@@ -716,7 +741,7 @@ if (DOCKER_ALLOW_RUN_AS_ROOT)
 	set_source_files_properties(docker-api.cpp PROPERTIES COMPILE_DEFINITIONS DOCKER_ALLOW_RUN_AS_ROOT=1)
 endif()
 
-target_link_libraries(condorapi classads;${RT_FOUND})
+target_link_libraries(condorapi classads)
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condorapi ${LIBUUID_FOUND})
 endif()

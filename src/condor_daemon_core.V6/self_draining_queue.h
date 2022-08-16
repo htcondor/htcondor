@@ -39,6 +39,10 @@
    appropriate momemnt (deallocating in your handler method is
    probably the best place).  
 
+   But... if there are any ServiceData * instances in the queue
+   at queue deletion time, the SelfDrainingQueue will call delete
+   on any remaining item.
+
    @see ServiceData
 */
 

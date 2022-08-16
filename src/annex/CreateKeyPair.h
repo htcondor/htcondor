@@ -12,10 +12,10 @@ class CreateKeyPair : public Functor {
 	public:
 		CreateKeyPair( ClassAd * r, EC2GahpClient * g, ClassAd * s,
 			const std::string & su, const std::string & pkf, const std::string & skf,
-			ClassAdCollection * c, const std::string & cid ) :
+			ClassAdCollection *, const std::string & cid ) :
 			reply( r ), gahp( g ), scratchpad( s ),
 			service_url( su ), public_key_file( pkf ), secret_key_file( skf ),
-			commandID( cid ), commandState( c )
+			commandID( cid )
 		{ }
 		virtual ~CreateKeyPair() { }
 
@@ -30,7 +30,6 @@ class CreateKeyPair : public Functor {
 		std::string service_url, public_key_file, secret_key_file;
 
 		std::string commandID;
-		ClassAdCollection * commandState;
 };
 
 #endif /* _CONDOR_CREATE_KEYPAIR_H */

@@ -53,6 +53,7 @@ ResMgr::ResMgr() :
 	draining_is_graceful = false;
 	on_completion_of_draining = DRAIN_NOTHING_ON_COMPLETION;
 	draining_id = 0;
+	drain_deadline = 0;
 	last_drain_start_time = 0;
 	last_drain_stop_time = 0;
 	expected_graceful_draining_completion = 0;
@@ -2417,7 +2418,7 @@ ResMgr::check_use( void )
 				 "No resources have been claimed for %d seconds\n",
 				 startd_noclaim_shutdown );
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
-		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
+		daemonCore->Signal_Myself(SIGTERM);
 	}
 }
 
@@ -2573,6 +2574,7 @@ ExprTree * globalDrainingStartExpr = NULL;
 bool
 ResMgr::startDraining(
 	int how_fast,
+	time_t deadline,
 	const std::string & reason,
 	int on_completion,
 	ExprTree *check_expr,
@@ -2620,6 +2622,7 @@ ResMgr::startDraining(
 	formatstr(new_request_id,"%d",draining_id);
 	this->on_completion_of_draining = on_completion;
 	this->drain_reason = reason;
+	this->drain_deadline = deadline;
 
 	// Insert draining attributes into the resource ads, in case the
 	// retirement expression uses them.
@@ -2629,6 +2632,7 @@ ResMgr::startDraining(
 		ad.InsertAttr( ATTR_DRAIN_REASON, reason );
 		ad.InsertAttr( ATTR_DRAINING, true );
 		ad.InsertAttr( ATTR_DRAINING_REQUEST_ID, new_request_id );
+		if (deadline) { ad.InsertAttr(ATTR_DRAINING_DEADLINE, deadline); } else { ad.Delete(ATTR_DRAINING_DEADLINE); }
 		ad.InsertAttr( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
 		ad.InsertAttr( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
@@ -2687,7 +2691,7 @@ ResMgr::startDraining(
 }
 
 bool
-ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_code)
+ResMgr::cancelDraining(std::string request_id,bool reconfig,std::string &error_msg,int &error_code)
 {
 	if( !this->draining ) {
 		if( request_id.empty() ) {
@@ -2710,7 +2714,11 @@ ResMgr::cancelDraining(std::string request_id,std::string &error_msg,int &error_
 	setLastDrainStopTime();
 
 	walk(&Resource::enable);
-	update_all();
+	if (reconfig) {
+		main_config();
+	} else {
+		update_all();
+	}
 	return true;
 }
 
@@ -2787,6 +2795,11 @@ ResMgr::considerResumingAfterDraining()
 		}
 	}
 
+	bool reconfig = false;
+	if (on_completion_of_draining == DRAIN_RECONFIG_ON_COMPLETION) {
+		reconfig = true;
+	}
+	else
 	if (on_completion_of_draining != DRAIN_RESUME_ON_COMPLETION) {
 		bool restart = (on_completion_of_draining != DRAIN_EXIT_ON_COMPLETION);
 		dprintf(D_ALWAYS,"As specified in draining request, %s after completion of draining.\n",
@@ -2799,7 +2812,7 @@ ResMgr::considerResumingAfterDraining()
 	dprintf(D_ALWAYS,"As specified in draining request, resuming normal operation after completion of draining.\n");
 	std::string error_msg;
 	int error_code = 0;
-	if( !cancelDraining("",error_msg,error_code) ) {
+	if( !cancelDraining("",reconfig,error_msg,error_code) ) {
 			// should never happen!
 		EXCEPT("failed to cancel draining: (code %d) %s",error_code,error_msg.c_str());
 	}

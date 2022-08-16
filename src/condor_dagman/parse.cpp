@@ -46,6 +46,7 @@ static const char * ILLEGAL_CHARS = "+";
 static std::vector<char*> _spliceScope;
 static bool _useDagDir = false;
 static bool _useDirectSubmit = true;
+static bool _appendVars = true;
 
 // _thisDagNum will be incremented for each DAG specified on the
 // condor_submit_dag command line.
@@ -54,8 +55,6 @@ static bool _mungeNames = true;
 
 // DAGMan global schedd object. Only used here to hand off to a splice DAG.
 DCSchedd *_schedd = NULL;
-
-static Dagman dagman;
 
 static bool parse_subdag( Dag *dag,
 						const char* nodeTypeKeyword,
@@ -173,7 +172,7 @@ int parse_up_to_close_brace(SubmitHash & hash, MacroStream &ms, std::string & er
 
 //-----------------------------------------------------------------------------
 bool parse(Dag *dag, const char *filename, bool useDagDir,
-			DCSchedd *schedd, bool incrementDagNum)
+			DCSchedd *schedd, bool appendVars, bool incrementDagNum )
 {
 	ASSERT( dag != NULL );
 
@@ -183,6 +182,7 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 
 	_useDagDir = useDagDir;
 	_useDirectSubmit = param_boolean("DAGMAN_USE_DIRECT_SUBMIT", true);
+	_appendVars = appendVars;
 	_schedd = schedd;
 
 		//
@@ -1757,7 +1757,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 *	the original varsStr pointer to point at char after option. -Cole Bollig
 */
 
-        if (starts_with(varsStr,"PREPEND") ){//See if PREPEND is at beginning of token
+	if (starts_with(varsStr,"PREPEND") ){//See if PREPEND is at beginning of token
 		prepend = true;
 		varsStr += 7;
 	} else if ( starts_with(varsStr,"APPEND") ){//See if APPEND is at beginning of token
@@ -1766,7 +1766,7 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 	} else {
 		//If options aren't found then set to global knob
 		// !append -> prepend
-		prepend = dagman.doAppendVars;
+		prepend = !_appendVars;
 	}
 
 	Job *job;
@@ -2169,13 +2169,15 @@ parse_splice(
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to directory %s: %s\n",
 					directory.c_str(), errMsg.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
 	// parse the splice file into a separate dag.
-	if (!parse(splice_dag, spliceFile.c_str(), _useDagDir, _schedd, false)) {
+	if (!parse(splice_dag, spliceFile.c_str(), _useDagDir, _schedd, _appendVars, false)) {
 		debug_error(1, DEBUG_QUIET, "ERROR: Failed to parse splice %s in file %s\n",
 			spliceName.c_str(), spliceFile.c_str());
+		delete splice_dag;
 		return false;
 	}
 
@@ -2184,6 +2186,7 @@ parse_splice(
 		debug_printf( DEBUG_QUIET,
 					"ERROR: can't change to original directory: %s\n",
 					errMsg.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
@@ -2191,6 +2194,7 @@ parse_splice(
 	if ( splice_dag->HasFinalNode() ) {
 		debug_printf( DEBUG_QUIET, "ERROR: splice %s has a final node; "
 					"splices cannot have final nodes\n", spliceName.c_str() );
+		delete splice_dag;
 		return false;
 	}
 
@@ -2214,12 +2218,16 @@ parse_splice(
 		debug_printf( DEBUG_QUIET, "ERROR: Splice name '%s' used for multiple "
 			"splices. Splice names must be unique per dag file.\n", 
 			spliceName.c_str());
+		delete splice_dag;
 		return false;
 	}
 	debug_printf(DEBUG_DEBUG_1, "Done parsing splice %s\n", spliceName.c_str());
 
-	// pop the just pushed value off of the end of the ext array
+	// pop the just pushed value off of the end of the vector and free it
+	char *tmp = _spliceScope.back();
 	_spliceScope.pop_back();
+	free(tmp);
+
 	debug_printf(DEBUG_DEBUG_1, "_spliceScope has length %zu\n", _spliceScope.size());
 
 	return true;
@@ -2791,7 +2799,7 @@ parse_include(
 		// include file path is always relative to the submit directory,
 		// *not* relative to the DAG file's directory, even if
 		// 'condor_submit -usedagdir' is specified.
-	return parse( dag, tmpFilename.c_str(), false, _schedd, false );
+	return parse( dag, tmpFilename.c_str(), false, _schedd, _appendVars, false);
 }
 
 static std::string munge_job_name(const char *jobName)

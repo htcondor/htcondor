@@ -50,6 +50,7 @@
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"
+#include "shortfile.h"
 
 #include "list.h"
 #include "condor_vm_universe_types.h"
@@ -124,6 +125,13 @@ int SimScheddQ::get_Capabilities(ClassAd & caps) {
 	caps.Assign("UseJobsets", param_boolean("USE_JOBSETS", false));
 	return true;
 }
+int SimScheddQ::get_ExtendedHelp(std::string &content) {
+	auto_free_ptr helpfile = param("EXTENDED_SUBMIT_HELPFILE");
+	if (helpfile) {
+		htcondor::readShortFile(helpfile.ptr(), content);
+	}
+	return (int)content.size();
+}
 
 bool SimScheddQ::has_extended_submit_commands(ClassAd &cmds) {
 	auto_free_ptr extended_cmds(param("EXTENDED_SUBMIT_COMMANDS"));
@@ -132,7 +140,9 @@ bool SimScheddQ::has_extended_submit_commands(ClassAd &cmds) {
 	}
 	return cmds.size() > 0;
 }
-
+bool SimScheddQ::has_extended_help(std::string & filename) {
+	return param(filename, "EXTENDED_SUBMIT_HELPFILE");
+}
 
 // hack for 8.7.8 testing
 extern int attr_chain_depth;

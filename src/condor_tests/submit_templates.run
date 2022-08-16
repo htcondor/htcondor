@@ -1,0 +1,156 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use CondorPersonal;
+use strict;
+use warnings;
+
+# request that a personal HTCondor be started before the test, and that it have
+# the following appended to its config file.
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+# add submit templates
+SUBMIT_TEMPLATE_NAMES = Slurm Pilot FlockTo
+
+SUBMIT_TEMPLATE_Slurm @=tpl
+   if ! $(2?)
+      error : Template:Slurm requires at least 2 arguments - Slurm(project, queue [,resource_args...])
+   endif
+   universe = grid
+   grid_resource = batch slurm $(3)
+   batch_project = $(1)
+   batch_queue = $(2)
+@tpl
+
+SUBMIT_TEMPLATE_Pilot @=tpl
+	use template : Slurm(CHTC, $(1:primary), $(2:$(USERNAME)@wisc.edu) --rgahp-glite ~/bosco/glite --rgahp-nobatchmode)
+	TPL.BASE_ID = $(3:$RANDOM_INTEGER(0,999999999))
+	TPL.PILOT_ID = $INT(TPL.BASE_ID,%08X)-$INT(ClusterId,%08X)-$INT(ProcId,%06X)
+	My.Pilotid = $Fq(TPL.PILOT_ID)
+@tpl
+
+DEFAULT_FLOCK_LIST = NEST,UTA.tx.edu
+SUBMIT_TEMPLATE_FlockTo @=tpl
+   WantFlocking = true
+   WantGlidein = true
+   FlockList = $(0:$(DEFAULT_FLOCK_LIST))
+@tpl
+
+EXTENDED_SUBMIT_COMMANDS @=end
+   FlockList = "a,b"
+   WantFlocking = true
+   WantGlidein = true
+@end
+
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = "submit_templates";
+
+# level 1 is default, level 2 will show all userlog events
+#Condor::DebugLevel(2);
+
+my $pid = $$;
+my $basefile = "$testname$pid";
+my $submitfile = "$basefile.A.sub";
+
+my $basesubmit = '
+	executable = x_cat.pl
+	arguments = .job.ad
+	output = $(BASE)$(procid).ad
+	error  = $(BASE)$(procid).err
+	log = $(BASE).log
+	# use file transfer so that IWD is the job sandbox
+	should_transfer_files = yes
+' . "\tBASE=$basefile\n";
+
+TLOG("creating submit file $submitfile\n");
+print $basesubmit;
+print "\tuse template : Pilot\n";
+
+# create the submit file
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF $basesubmit;
+print SF "\tuse template : Pilot\n";
+print SF "\n\tQueue 2\n";
+close(SF);
+
+# dry submit a job to get the resulting job classads
+# then check to see if the jobs have the expected attributes
+#
+TLOG("Dry-run $submitfile to test submit templates\n");
+my $cmdtorun = "condor_submit -dry:full $submitfile.ads $submitfile";
+my $rc = system("$cmdtorun");
+my $res = 1; if ($rc) { $res = 0; }
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'submit.A-ok');
+
+TLOG("Check dry ads\n");
+my $num_ok = 0;
+my @results = `condor_q -job $submitfile.ads -af JobUniverse PilotId GridResource`;
+for my $line (@results) {
+   print $line;
+   if ($line =~ /^9 [0-9A-F]+-[0-9A-F]+-00000([01]) batch slurm (.+)$/) {
+      ++$num_ok;
+   }
+}
+
+$res = 0;
+$res = 1 if ($num_ok == 2);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'job.A-attrs-expected');
+
+# second test
+$submitfile = "$basefile.B.sub";
+TLOG("creating submit file $submitfile\n");
+print $basesubmit;
+print "\tuse template : Pilot(Secondary, Me, 10+10*16)\n";
+print "\tuse template : FlockTo(Thither, Yon)\n";
+
+open(SF,">$submitfile") or die "Failed to open '$submitfile' : $!\n";
+print SF $basesubmit;
+print SF "\tuse template : Pilot(Secondary, Me, 10+10*16)\n";
+print SF "\tuse template : FlockTo(Thither, Yon)\n";
+print SF "\n\tQueue 3\n";
+close(SF);
+
+TLOG("Dry-run $submitfile to test submit templates\n");
+$cmdtorun = "condor_submit -dry:full $submitfile.ads $submitfile";
+$rc = system("$cmdtorun");
+$res = 1; if ($rc) { $res = 0; }
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'submit.B-ok');
+
+TLOG("Check dry ads\n");
+$num_ok = 0;
+@results = `condor_q -job $submitfile.ads -af JobUniverse PilotId WantFlocking WantGlidein FlockList GridResource`;
+for my $line (@results) {
+   print $line;
+   if ($line =~ /^9 [0]+AA-[0-9A-F]+-00000([012]) true true Thither,Yon batch slurm Me --rgahp-glite/) {
+      ++$num_ok;
+   }
+}
+
+$res = 0;
+$res = 1 if ($num_ok == 3);
+CondorTest::RegisterResult($res, test_name=>$testname, check_name=>'job.B-attrs-expected');
+
+
+CondorTest::EndTest();
+

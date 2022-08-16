@@ -520,11 +520,13 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		arc_delegation_new(const std::string &service_url,
+		                   const std::string &proxy_file,
 		                   std::string &deleg_id);
 
 		int
 		arc_delegation_renew(const std::string &service_url,
-		                     const std::string &deleg_id);
+		                     const std::string &deleg_id,
+		                     const std::string &proxy_file);
 
 		int gce_ping( const std::string &service_url,
 					  const std::string &auth_file,

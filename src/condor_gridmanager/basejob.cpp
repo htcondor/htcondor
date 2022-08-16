@@ -35,14 +35,14 @@
 #include "classad_merge.h"
 #include "condor_holdcodes.h"
 #include "exit.h"
-
+#include <unordered_map>
 
 int BaseJob::periodicPolicyEvalTid = TIMER_UNSET;
 
 int BaseJob::m_checkRemoteStatusTid = TIMER_UNSET;
 
-HashTable<PROC_ID, BaseJob *> BaseJob::JobsByProcId( hashFuncPROC_ID );
-HashTable<std::string, BaseJob *> BaseJob::JobsByRemoteId( hashFunction );
+std::unordered_map<PROC_ID, BaseJob*> BaseJob::JobsByProcId;
+std::unordered_map<std::string, BaseJob *> BaseJob::JobsByRemoteId;
 
 void BaseJob::BaseJobReconfig()
 {
@@ -95,12 +95,12 @@ BaseJob::BaseJob( ClassAd *classad )
 	jobAd->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 	jobAd->LookupInteger( ATTR_PROC_ID, procID.proc );
 
-	JobsByProcId.insert( procID, this );
+	JobsByProcId[procID] = this;
 
 	std::string remote_id;
 	jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	if ( !remote_id.empty() ) {
-		ASSERT( JobsByRemoteId.insert( remote_id, this ) == 0 );
+		JobsByRemoteId[remote_id] = this;
 	}
 
 	condorState = IDLE; // Just in case lookup fails
@@ -146,14 +146,14 @@ BaseJob::~BaseJob()
 	if ( jobLeaseReceivedExpiredTid != TIMER_UNSET ) {
 		daemonCore->Cancel_Timer( jobLeaseReceivedExpiredTid );
 	}
-	JobsByProcId.remove( procID );
+	JobsByProcId.erase( procID );
 
 	std::string remote_id;
 	if ( jobAd ) {
 		jobAd->LookupString( ATTR_GRID_JOB_ID, remote_id );
 	}
 	if ( !remote_id.empty() ) {
-		JobsByRemoteId.remove( remote_id );
+		JobsByRemoteId.erase(remote_id);
 	}
 
 	if ( jobAd ) {
@@ -442,7 +442,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		return;
 	}
 	if ( !old_job_id.empty() ) {
-		JobsByRemoteId.remove( old_job_id );
+		JobsByRemoteId.erase(old_job_id);
 		jobAd->AssignExpr( ATTR_GRID_JOB_ID, "Undefined" );
 	} else {
 		//  old job id was NULL
@@ -450,7 +450,7 @@ void BaseJob::SetRemoteJobId( const char *job_id )
 		jobAd->Assign( ATTR_LAST_REMOTE_STATUS_UPDATE, m_lastRemoteStatusUpdate );
 	}
 	if ( !new_job_id.empty() ) {
-		ASSERT( JobsByRemoteId.insert( new_job_id, this ) == 0 );
+		JobsByRemoteId[new_job_id] = this;
 		jobAd->Assign( ATTR_GRID_JOB_ID, new_job_id );
 	} else {
 		// new job id is NULL
@@ -736,13 +736,10 @@ void BaseJob::JobAdUpdateFromSchedd( const ClassAd *new_ad, bool full_ad )
 
 void BaseJob::EvalAllPeriodicJobExprs()
 {
-	BaseJob *curr_job;
-
 	dprintf( D_FULLDEBUG, "Evaluating periodic job policy expressions.\n" );
 
-	JobsByProcId.startIterations();
-	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
-		curr_job->EvalPeriodicJobExpr();
+	for (auto& itr: JobsByProcId) {
+		itr.second->EvalPeriodicJobExpr();
 	}
 }
 
@@ -756,7 +753,7 @@ int BaseJob::EvalPeriodicJobExpr()
 
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY );
+	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_ONLY, condorState );
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
@@ -822,7 +819,7 @@ int BaseJob::EvalOnExitJobExpr()
 	// TODO: We should just mark the job as done running
 	UpdateJobTime( &old_run_time, &old_run_time_dirty );
 
-	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT );
+	int action = user_policy.AnalyzePolicy( *jobAd, PERIODIC_THEN_EXIT, condorState );
 
 	RestoreJobTime( old_run_time, old_run_time_dirty );
 
@@ -862,15 +859,12 @@ int BaseJob::EvalOnExitJobExpr()
 
 void BaseJob::CheckAllRemoteStatus()
 {
-	BaseJob *curr_job;
-
 	dprintf( D_FULLDEBUG, "Evaluating staleness of remote job statuses.\n" );
 
 		// TODO Reset timer based on shortest time that a job status could
 		//   become stale?
-	JobsByProcId.startIterations();
-	while ( JobsByProcId.iterate( curr_job ) != 0  ) {
-		curr_job->CheckRemoteStatus();
+	for (auto& iter: JobsByProcId) {
+		iter.second->CheckRemoteStatus();
 	}
 }
 

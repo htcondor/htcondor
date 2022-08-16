@@ -4,6 +4,61 @@ Version 9 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 9.12.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.12.0 released on Month Date, 2022.
+
+- HTCondor version 9.12.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-9016`.
+
+New Features:
+
+- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
+  x86_64 microarchitecture, like *x86_64-v3*
+  :jira:`1252`
+
+- Added submit templates.  These are configured using new configuration variables
+  macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
+  :jira:`1231`
+
+- Added support for ephermal per-job execute directories
+  allocated from LVM or from a backing file on disk, when HTCondor is running
+  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
+  enables this, see :ref:`admin-manual/directories` for more details.
+  :jira:`912`
+
+- Added extended submit help which can be defined in the schedd using the new
+  configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
+  *condor_submit* using the new ``-capabilities`` argument.
+  :jira:`1238`
+
+- Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
+  This allows a command to be sent to the *condor_master* to drain the *condor_startd*
+  and then shutdown or restart all of the HTCondor daemons.
+  :jira:`1151`
+
+- When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+  false, and the starter runs a container job, we no longer create the helper
+  unix domain sockets required for *condor_ssh_to_job* to work.
+  :jira:1244`
+
+Bugs Fixed:
+
+- Fixed a bug that might cause a job to restart with a "disconnected starter"
+  error if the job was running in a container, and there was an error
+  handling ``condor_ssh_to_job``.
+  :jira:`1245`
+
+- HTCondor’s security library no longer tries to resolve the provided hostname
+  to a fully-qualified canonical name when authenticating with SSL, matching
+  the behavior of ``curl``.  Services using a DNS CNAME no longer need to
+  implement workarounds in the host certificate to support the prior behavior.
+  :jira:`692`
+
 Version 9.11.0
 --------------
 
@@ -15,6 +70,12 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-9015`.
 
+- Removed support for the WriteUserLog class from libcondorapi.a.  This
+  class was difficult to use correctly, and to our knowledge it is not
+  currently in use.  Programmer who need to read the condor event
+  log are recommended to do so from the HTCondor python bindings.
+  :jira:`1163`
+
 New Features:
 
 - Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
@@ -25,18 +86,115 @@ New Features:
   level authorization.
   :jira:`1164`
 
+- Singularity jobs now mount /tmp and /var/tmp under the scratch
+  directory, not in tmpfs
+  :jira:`1180`
+
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
+- If a job that is a Unix script with a ``#!`` interpreter fails to run because
+  the interpreter doesn't exist, a clearer error message is written to the
+  job log and in the job's ``HoldReason`` attribute.
+
+- Added a new submit option ``container_target_dir`` that allows singularity
+  jobs to specify the target directory
+  :jira:`1171`
+
+- When an **arc** grid universe job has both a token and an X.509
+  proxy, now only the token is used for authentication with the ARC CE
+  server. The proxy is still delegated for use by the job.
+  :jira:`1194`
+  
+- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be set at the beginning or end of a DAG
+  job's submit description. Any ``VARS`` without these options will have behavior
+  derived from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
+  Which defaults to PREPEND.
+  :jira:`1080`
+
+- A new knob, ``SCHEDD_SEND_RESCHEDULE`` has been added.  When set
+  to false, the schedd never tries to send a reschedule command to the
+  negotiator.  The default is true. Set this to false in the HTCondor-CE
+  and other systems that have no negotiator.
+  :jira:`1192`
+
+- Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
+  updated man page to document them and to expand the documentation of the
+  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
+  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
+  option is used for discovery.
+  :jira:`711`
+
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
+
+- The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
+  status messages for the *job* and *jobset* subcommands.
+  :jira:`1149`
+
 Bugs Fixed:
 
+- Fixed bug where specifying more than 2TB of ``RESERVED_DISK`` would
+  cause HTCondor to instead pretend that available disk space was larger,
+  rather than smaller.
+  `jira`:1228
+
+- Fixed two bugs which could occur when resuming from a checkpoint with
+  ``preserve_relative_paths`` set.  Both involved the checkpoint transfer
+  list including a file at a relative path which was itself listed in the
+  input transfer list.  The job would either go on hold (if the relative
+  path included more than one directory) or silently fail to transfer files
+  from that relative path that weren't in the checkpoint (otherwise).
+  :jira:`1218`
+
+- Fixed a bug where **arc** grid universe jobs would remain in idle
+  status indefinitely when delegation of the job's X.509 proxy
+  certificate failed.
+  Now, the jobs go to held status.
+  :jira:`1194`
+
+- Fixed a problem when condor_submit -i would sometimes fail trying
+  to start an interactive docker universe job
+  :jira:`1210`
+
+- Fixed the ClassAd shared library extension mechanism.  An earlier
+  development series broke the ability for users to add custom
+  ClassAd functions as documented in 
+  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  :jira:`1196`
+
+Version 9.10.1
+--------------
+
+Release Notes:
+
+- HTCondor version 9.10.1 released on July 18, 2022.
+
+New Features:
+
 - None.
+
+Bugs Fixed:
+
+- Fixed inflated values for job attribute ``ActivationSetupDuration`` if
+  the job checkpoints.
+  :jira:`1190`
 
 Version 9.10.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.10.0 released on Month Date, 2022.
-
-- HTCondor version 9.10.0 not yet released.
+- HTCondor version 9.10.0 released on July 14, 2022.
 
 - This version includes all the updates from :ref:`lts-version-history-9014`.
 
@@ -53,26 +211,7 @@ Release Notes:
   has been changed to ``False``.
   :jira:`1161`
 
-- Removed support for the WriteUserLog class from libcondorapi.a.  This
-  class was difficult to use correctly, and to our knowledge it is not
-  currently in use.  Programmer who need to read the condor event
-  log are recommended to do so from the HTCondor python bindings.
-  :jira:`1163`
-
 New Features:
-
-- Added support for running on Linux systems that ship with openssl version 3
-  :jira:`1148`
-
-- *condor_submit* now has support for submitting jobsets. Jobsets are still
-  a technology preview and still not ready for general use.
-  :jira:`1063`
-  
-- DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
-  to allow passed variables to be initialized before or after DAG jobs are
-  submitted. Any ``VARS`` without these options will have behavior derived
-  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
-  :jira:`1080`
 
 - The remote administration capability in daemon ads sent to the
   **condor_collector** (configuration parameter
@@ -85,6 +224,17 @@ New Features:
   authentication with the ARC CE server.
   :jira:`1061`
 
+- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
+  on Alma Linux 8 and equivalent platforms.
+  :jira:`1150`
+
+- Added support for running on Linux systems that ship with OpenSSL version 3.
+  :jira:`1148`
+
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
+  
 - All regular expressions in configuration and in the ClassAd regexp function
   now use the pcre2 10.39 library. (http://www.pcre.org). We believe that this
   will break no existing regular expressions.
@@ -96,9 +246,9 @@ New Features:
   work in the future.
   :jira:`1137`
 
-- Preliminary support for ARM (aarch64) and Power PC (ppc64le) CPU architectures
-  on Alma Linux 8 and equivalent platforms.
-  :jira:`1150`
+- The *condor_schedd* now adds the ``ServerTime`` attribute to the job
+  ads of a query only if the client (i.e. *condor_q*) requests it.
+  :jira:`1125`
 
 Bugs Fixed:
 
@@ -115,6 +265,9 @@ Bugs Fixed:
   *condor_starter* handle network disruptions and jobs that have no
   lease.
   :jira:`960`
+
+- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
+  :jira:`1074`
 
 Version 9.9.1
 -------------
@@ -219,9 +372,6 @@ Bugs Fixed:
 - Fix a rare bug where the starter will fail to start a job, and the job will
   immediately transition back to the idle state to be run elsewhere.
   :jira:`1040`
-
-- The ``condor-blahp`` RPM now requires the matching ``condor`` RPM version.
-  :jira:`1074`
 
 Version 9.8.1
 -------------

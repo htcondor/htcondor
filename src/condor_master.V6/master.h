@@ -82,7 +82,8 @@ public:
 	int		NextStart() const;
 	int		Start( bool never_forward = false );
 	int		RealStart();
-	int		Restart();
+	int		Restart(bool by_command=false);
+	int		Drain(std::string & request_id, int how_fast, int on_completion, const char * reason, ExprTree* check, ExprTree * Start);
 	void    Hold( bool on_hold, bool never_forward = false );
 	int		OnHold( void ) const { return on_hold; };
 	bool	WaitingforStartup(bool & for_file) { for_file = ! m_after_startup_wait_for_file.empty(); return m_waiting_for_startup; }
@@ -91,7 +92,7 @@ public:
 	void	StopFastTimer();
 	void	StopPeaceful();
 	void	HardKill();
-	void	Exited( int );
+	bool	Exited(int status);
 	void	Obituary( int );
 	void	CancelAllTimers();
 	void	CancelRestartTimers();
@@ -100,6 +101,7 @@ public:
 	void	Reconfig();
 	void	InitParams();
 	void	SetReadyState(const char * state);
+	const char * Stopping(); // return non-null if the daemon is in the process of stopping
 
 	int		SetupController( void );
 	int		DetachController( void );
@@ -135,6 +137,7 @@ private:
 
 	int		needs_update;
 	StopStateT stop_state;
+	int		draining;
 
 	int		was_not_responding;
 
@@ -189,7 +192,7 @@ public:
 	int 	StartDaemonHere(class daemon *);
 	void	StopAllDaemons();
 	void	StopFastAllDaemons();
-	void	StopDaemon( char* name );
+	void	RemoveDaemon( char* name );
 	void	HardKillAllDaemons();
 	void	StopPeacefulAllDaemons();
 	int		SetPeacefulShutdown(int timeout);
@@ -207,9 +210,9 @@ public:
 	const char*	DaemonLog(int pid);			// full log file path name
 #if 0
 	void	SignalAll(int signal);		// send signal to all children
-#endif
 	int		NumberOfChildren();
-	int		NumberOfChildrenOfType(daemon_t type);
+#endif
+	int		ChildrenOfType(daemon_t type, StringList * names=nullptr);
 
 	int		AllReaper(int, int);
 	int		DefaultReaper(int, int);
@@ -227,9 +230,10 @@ public:
 	int		SetupControllers( );
 	int		QueryReady(ClassAd & cmdAd, Stream* stm);
 
-	int		immediate_restart;
-	int		immediate_restart_master;
-	StopStateT	stop_other_daemons_when_startds_gone;
+	int		immediate_restart = FALSE;
+	int		immediate_restart_master = FALSE;
+	StopStateT	stop_other_daemons_when_startds_gone = NONE;
+	ClassAd * cmd_after_drain = nullptr; // when draining startds in order to shutdown/restart/etc this will be non-null
 
 	StringList	ordered_daemon_names;
 
@@ -240,18 +244,20 @@ public:
 	class daemon*	FindDaemon( const char * );
 	class daemon*	FindDaemonByPID( int pid );
 
+	friend int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd);
+
 private:
 	std::map<std::string, class daemon*> daemon_ptr;
-	std::map<int, class daemon*> exit_allowed;
-	int check_new_exec_tid;
-	int update_tid;
-	int preen_tid;
-	class daemon* master;  	// the master in our daemon table
-	AllGoneT all_daemons_gone_action;
-	ReaperT reaper;
-	int prevLHF;
-	int m_retry_start_all_daemons_tid;
-	int m_deferred_query_ready_tid;
+	std::map<int, class daemon*> removed_daemons; // never or no longer in the daemon list, but we still want to reap them
+	int check_new_exec_tid = -1;
+	int update_tid = -1;
+	int preen_tid = -1;
+	class daemon* master = nullptr;  	// the master in our daemon table
+	AllGoneT all_daemons_gone_action = MASTER_RESET;
+	ReaperT reaper = NO_R;
+	int prevLHF = 0;
+	int m_retry_start_all_daemons_tid = -1;
+	int m_deferred_query_ready_tid = -1;
 	std::list<DeferredQuery*> deferred_queries;
 	DCTokenRequester m_token_requester;
 
@@ -259,10 +265,11 @@ private:
 	void CancelRetryStartAllDaemons();
 	void RetryStartAllDaemons();
 	void DeferredQueryReadyReply();
-	bool InitDaemonReadyAd(ClassAd & readyAd);
+	bool InitDaemonReadyAd(ClassAd & readyAd, bool include_addrs);
 	//bool GetDaemonReadyStates(std::string & ready);
 	int  SendSetPeacefulShutdown(class daemon*, int timeout);
 	void DoPeacefulShutdown(int timeout, void (Daemons::*pfn)(void), const char * lbl);
+	int  ReapPreen(int pid, int status);
 
 		// returns true if there are no remaining daemons
 	bool StopDaemonsBeforeMasterStops();
@@ -271,5 +278,9 @@ private:
 
 	static void token_request_callback(bool success, void *miscdata);
 };
+
+int do_basic_admin_command(int cmd);
+int do_flexible_daemons_command(int cmd, ClassAd & cmdAd, ClassAd * replyAd=nullptr);
+
 
 #endif /* _CONDOR_MASTER_H */

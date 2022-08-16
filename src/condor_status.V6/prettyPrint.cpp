@@ -48,48 +48,6 @@ void printJSON       	(ClassAd &, bool first_ad, classad::References * attrs=NUL
 void printNewClassad	(ClassAd &, bool first_ad, classad::References * attrs=NULL);
 void printCustom    	(ClassAd *);
 
-static bool renderActivityTime(long long & atime, ClassAd* , Formatter &);
-static bool renderActivityCode(std::string & str, ClassAd* , Formatter &);
-static bool renderDueDate(long long & atime, ClassAd* , Formatter &);
-static bool renderElapsedTime(long long & etime, ClassAd* , Formatter &);
-static bool renderVersion(std::string & str, ClassAd*, Formatter & fmt);
-static bool renderCondorPlatform(std::string & str, ClassAd*, Formatter & fmt);
-static bool renderPlatform(std::string & str, ClassAd*, Formatter & fmt);
-static const char* formatVersion(const char * condorver, Formatter &);
-static const char *formatRealTime( long long , Formatter &);
-static const char *formatRealDate( long long , Formatter &);
-static const char *formatLoadAvg (double, Formatter &);
-static bool renderStringsFromList( classad::Value &, ClassAd*, Formatter & );
-
-static const char *
-format_readable_mb(const classad::Value &val, Formatter &)
-{
-	long long kbi;
-	double kb;
-	if (val.IsIntegerValue(kbi)) {
-		kb = kbi * 1024.0 * 1024.0;
-	} else if (val.IsRealValue(kb)) {
-		kb *= 1024.0 * 1024.0;
-	} else {
-		return "        ";
-	}
-	return metric_units(kb);
-}
-
-static const char *
-format_readable_kb(const classad::Value &val, Formatter &)
-{
-	long long kbi;
-	double kb;
-	if (val.IsIntegerValue(kbi)) {
-		kb = kbi*1024.0;
-	} else if (val.IsRealValue(kb)) {
-		kb *= 1024.0;
-	} else {
-		return "        ";
-	}
-	return metric_units(kb);
-}
 
 int PrettyPrinter::getDisplayWidth(bool * is_piped) const {
 	if (is_piped) *is_piped = false;
@@ -154,7 +112,7 @@ void PrettyPrinter::ppSetColumnFormat(const char * print, int width, bool trunca
 void PrettyPrinter::ppSetColumnFormat(const CustomFormatFn & fmt, const char * print, int width, bool truncate, ivfield alt, const char * attr)
 {
 	int opts = ppWidthOpts(width, truncate) | ppAltOpts(alt);
-	if (width == 11 && fmt.IsNumber() && (fmt.Is(renderElapsedTime) || fmt.Is(formatRealTime))) {
+	if (width == 11 && fmt.IsNumber() && (fmt.Is(render_elapsed_time) || fmt.Is(format_real_time))) {
 		opts |= FormatOptionNoPrefix;
 		width = 12;
 	}
@@ -418,106 +376,12 @@ void PrettyPrinter::prettyPrintAd(ppOption pps, ClassAd *ad, int output_index, S
 	}
 }
 
-const char *
-extractStringsFromList( const classad::Value & value, Formatter &, std::string &prettyList ) {
-	const classad::ExprList * list = NULL;
-	if( ! value.IsListValue( list ) ) {
-		return "[Attribute not a list.]";
-	}
-
-	prettyList.clear();
-	classad::ExprList::const_iterator i = list->begin();
-	for( ; i != list->end(); ++i ) {
-		std::string item;
-		if ((*i)->GetKind() != classad::ExprTree::LITERAL_NODE) continue;
-		classad::Value val;
-		reinterpret_cast<classad::Literal*>(*i)->GetValue(val);
-		if (val.IsStringValue(item)) {
-			prettyList += item + ", ";
-		}
-	}
-	if( prettyList.length() > 0 ) {
-		prettyList.erase( prettyList.length() - 2 );
-	}
-
-	return prettyList.c_str();
-}
-
-bool renderStringsFromList( classad::Value & value, ClassAd*, Formatter & fmt )
-{
-	if( ! value.IsListValue() ) {
-		return false;
-	}
-	std::string prettyList;
-	value.SetStringValue(extractStringsFromList(value, fmt, prettyList));
-	return true;
-}
-
-// extract the set of unique items from the given list.
-const char *
-extractUniqueStrings( const classad::Value & value, Formatter &, std::string &list_out ) {
-	std::set<std::string> uniq;
-
-	classad::ClassAdUnParser unparser;
-	unparser.SetOldClassAd( true, true );
-
-	const classad::ExprList * list = NULL;
-	if (value.IsListValue(list)) {
-		// for lists, unparse each item into the uniqueness set.
-		for(classad::ExprList::const_iterator it = list->begin() ; it != list->end(); ++it ) {
-			std::string item;
-			if ((*it)->GetKind() != classad::ExprTree::LITERAL_NODE) {
-				unparser.Unparse( item, *it );
-			} else {
-				classad::Value val;
-				reinterpret_cast<classad::Literal*>(*it)->GetValue(val);
-				if ( ! val.IsStringValue(item)) {
-					unparser.Unparse( item, *it );
-				}
-			}
-			uniq.insert(item);
-		}
-	} else if (value.IsStringValue(list_out)) {
-		// for strings, parse as a string list, and add each unique item into the set
-		StringList lst(list_out.c_str());
-		for (const char * psz = lst.first(); psz; psz = lst.next()) {
-			uniq.insert(psz);
-		}
-	} else {
-		// for other types treat as a single item, no need to uniqify
-		list_out.clear();
-		ClassAdValueToString(value, list_out);
-		return list_out.c_str();
-	}
-
-	list_out.clear();
-	for (std::set<std::string>::const_iterator it = uniq.begin(); it != uniq.end(); ++it) {
-		if (list_out.empty()) list_out = *it;
-		else {
-			list_out += ", ";
-			list_out += *it;
-		}
-	}
-
-	return list_out.c_str();
-}
-
-bool renderUniqueStrings( classad::Value & value, ClassAd*, Formatter & fmt )
-{
-	if( ! value.IsListValue() ) {
-		return false;
-	}
-	std::string buffer;
-	value.SetStringValue(extractUniqueStrings(value, fmt, buffer));
-	return true;
-}
-
 void PrettyPrinter::ppSetStartdOfflineCols()
 {
 		ppSetColumn( ATTR_NAME, -34, ! wide_display );
 		// A custom printer for filtering out the ints would be handy.
 		ppSetColumn( "OfflineUniverses", Lbl( "Offline Universes" ),
-					 renderStringsFromList, -42, ! wide_display );
+					 render_strings_from_list, -42, ! wide_display );
 
 		// How should I print out the offline reasons and timestamps?
 
@@ -528,8 +392,8 @@ void PrettyPrinter::ppSetStartdAbsentCols()
 		ppSetColumn(ATTR_NAME, -34, ! wide_display);
 		ppSetColumn(ATTR_OPSYS, -10, true);
 		ppSetColumn(ATTR_ARCH, -8, true);
-		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), formatRealDate, -11, true);
-		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), renderDueDate, "%Y", -11, true);
+		ppSetColumn(ATTR_LAST_HEARD_FROM, Lbl("Went Absent"), format_real_date, -11, true);
+		ppSetColumn(ATTR_CLASSAD_LIFETIME, Lbl("Will Forget"), render_due_date, "%Y", -11, true);
 }
 
 const char * const startdCompact_PrintFormat = "SELECT\n"
@@ -591,7 +455,7 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 	ppSetColumn(ATTR_STATE,    -9, true);
 	ppSetColumn(ATTR_ACTIVITY, -8, true);
 
-	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), format_load_avg, NULL, 6, true);
 
 	if (vmMode) {
 		ppSetColumn(ATTR_VM_MEMORY, Lbl("VMMem"), "%4d", false);
@@ -600,7 +464,7 @@ void PrettyPrinter::ppSetStartdNormalCols (int width)
 	}
 	pm_head.Append(wide_display ? "ActivityTime" : "  ActvtyTime");
 	pm.registerFormat("%T", 12, FormatOptionAutoWidth | (wide_display ? 0 : FormatOptionNoPrefix) | AltDash,
-		renderActivityTime, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
+		render_activity_time, ATTR_ENTERED_CURRENT_ACTIVITY /* "   [Unknown]"*/);
 }
 
 const char * const serverCompact_PrintFormat = "SELECT\n"
@@ -643,7 +507,7 @@ void PrettyPrinter::ppSetServerCols (int width, const char * & constr)
 	ppSetColumn(ATTR_NAME,    name_width, ! wide_display);
 	ppSetColumn(ATTR_OPSYS,  -11, true);
 	ppSetColumn(ATTR_ARCH,    -6, true);
-	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), format_load_avg, NULL, 6, true);
 	ppSetColumn(ATTR_MEMORY, "%8d",  true);
 	ppSetColumn(ATTR_DISK, "%9d",  true);
 	ppSetColumn(ATTR_MIPS, "%7d", true);
@@ -693,12 +557,12 @@ void PrettyPrinter::ppSetStateCols (int width)
 	ppSetColumn(ATTR_CPUS, Lbl("Cpu"), 3, true);
 	ppSetColumn(ATTR_MEMORY, Lbl(" Mem"), 5, true);
 	//ppSetColumn(ATTR_LOAD_AVG, Lbl("Load "), "%.3f", true);
-	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
-	ppSetColumn(ATTR_KEYBOARD_IDLE, Lbl("  KbdIdle"), formatRealTime, timewid, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), format_load_avg, NULL, 6, true);
+	ppSetColumn(ATTR_KEYBOARD_IDLE, Lbl("  KbdIdle"), format_real_time, timewid, true);
 	ppSetColumn(ATTR_STATE, -7,  true);
-	ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), renderElapsedTime, "%T", timewid, true);
+	ppSetColumn(ATTR_ENTERED_CURRENT_STATE, Lbl("  StateTime"), render_elapsed_time, "%T", timewid, true);
 	ppSetColumn(ATTR_ACTIVITY, Lbl("Activ"), -5, true);
-	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), renderElapsedTime, "%T", timewid, true);
+	ppSetColumn(ATTR_ENTERED_CURRENT_ACTIVITY, Lbl("  ActvtyTime"), render_elapsed_time, "%T", timewid, true);
 }
 
 const char * const claimedCompact_PrintFormat = "SELECT\n"
@@ -743,7 +607,7 @@ void PrettyPrinter::ppSetRunCols (int width)
 		ppSetColumn(ATTR_OPSYS,  -11, true);
 		ppSetColumn(ATTR_ARCH,    -6, true);
 	}
-	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), formatLoadAvg, NULL, 6, true);
+	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), format_load_avg, NULL, 6, true);
 	ppSetColumn(ATTR_REMOTE_USER,    -20, ! wide_display);
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
 }
@@ -1214,7 +1078,8 @@ int ppAdjustProjection(void*pv, int index, Formatter * fmt, const char * attr)
 		}
 	}
 	if (fmt->sf) {
-		const CustomFormatFnTable * pFnTable = getCondorStatusPrintFormats();
+		const CustomFormatFnTable GlobalFnTable = getGlobalPrintFormatTable();
+		const CustomFormatFnTable * pFnTable = &GlobalFnTable;
 		if (pFnTable) {
 			const CustomFormatFnTableItem * ptable = pFnTable->pTable;
 			for (int ii = 0; ii < (int)pFnTable->cItems; ++ii) {
@@ -1376,235 +1241,4 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 	pm.adjust_formats(ppAdjustProjection, &wid_info);
 }
 
-static const char *
-formatLoadAvg (double fl, Formatter &)
-{
-	static char buf[60];
-	sprintf(buf, "%.3f", fl);
-	return buf;
-}
-
-static bool
-renderActivityTime (long long & atime, ClassAd *al, Formatter &)
-{
-	long long now = 0;
-	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now)
-		|| al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
-		atime = now - atime; // format_time
-		return true;
-	}
-	return false; // print "   [Unknown]"
-}
-
-const char* digest_state_and_activity(char * sa, State st, Activity ac)
-{
-	static const char state_letters[] = "~OUMCPSXFD#?";
-	static const char act_letters[] = "0ibrvsek#?";
-
-	sa[1] = sa[0] = ' ';
-	sa[2] = 0;
-	if (st > no_state && st <= _state_threshold_) {
-		sa[0] = state_letters[st];
-	}
-	if (ac > no_act && ac <= _act_threshold_) {
-		sa[1] = act_letters[ac];
-	}
-	return sa;
-}
-
-static bool
-renderActivityCode (std::string & act, ClassAd *al, Formatter &)
-{
-
-	char sa[4] = "  ";
-	bool ok = false;
-
-	// Input might be state OR activity, so try looking up both
-	State st = no_state;
-	Activity ac = string_to_activity(act.c_str());
-	if (ac > no_act && ac < _act_threshold_) {
-		ok = true;
-		// if it's a valid Activity, then fetch the state.
-		al->LookupString(ATTR_STATE, act);
-		st = string_to_state(act.c_str());
-	} else {
-		st = string_to_state(act.c_str());
-		if (st > no_state && st < _state_threshold_) {
-			ok = true;
-			// if the input was a valid state, then it can't have been a valid activity
-			// try and lookup the activity now
-			al->LookupString(ATTR_ACTIVITY, act);
-			ac = string_to_activity(act.c_str());
-		}
-	}
-	digest_state_and_activity(sa, st, ac);
-	act = sa;
-	return ok;
-}
-
-static bool
-renderDueDate (long long & dt, ClassAd *al, Formatter &)
-{
-	long long now;
-	if (al->LookupInteger(ATTR_LAST_HEARD_FROM , now)) {
-		dt = now + dt; // format_date
-		return true;
-	}
-	return false;
-}
-
-static bool
-renderElapsedTime (long long & tm, ClassAd *al , Formatter &)
-{
-	long long now;
-	if (al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
-		tm = now - tm; // format_time
-		return true;
-	}
-	return false;
-}
-
-static const char *
-formatRealDate (long long dt, Formatter &)
-{
-	return format_date(dt);
-}
-
-static const char *
-formatRealTime(long long t, Formatter &)
-{
-	return format_time( t );
-}
-
-// extract version and build id from $CondorVersion string
-static const char *
-formatVersion(const char * condorver, Formatter & fmt)
-{
-	bool no_build_id = !(fmt.options & FormatOptionAutoWidth) && (fmt.width > -10 && fmt.width < 10);
-	static char ret[9+12+2];
-	char * r = ret;
-	char * rend = ret+sizeof(ret)-2;
-	const char * p = condorver;
-	while (*p && *p != ' ') ++p;  // skip $CondorVersion:
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') {
-		if (r < rend) *r++ = *p++; // copy X.Y.Z version
-		else p++;
-	}
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip Feb
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip 12
-	while (*p == ' ') ++p;
-	while (*p && *p != ' ') ++p; // skip 2016
-	while (*p == ' ') ++p;
-	// *p now points to a BuildId:, or "PRE-RELEASE"
-	if (*p == 'B') {
-		while (*p && *p != ' ') ++p; // skip BuildId:
-		while (*p == ' ') ++p;
-	}
-	if (*p != '$' && ! no_build_id) {
-		*r++ = '.';
-		while (*p && *p != '-' && *p != ' ') {
-			if (r < rend) *r++ = *p++; // copy PRE or NNNNN buildid
-			else p++;
-		}
-	}
-	*r = 0;
-	return ret;
-}
-
-static bool renderVersion(std::string & str, ClassAd*, Formatter & fmt)
-{
-	if ( ! str.empty()) {
-		str = formatVersion(str.c_str(), fmt);
-		return true;
-	}
-	return false;
-}
-
-// reduce CondorPlatform attribute to a more useful string
-static bool renderCondorPlatform(std::string & str, ClassAd*, Formatter & /*fmt*/)
-{
-	if ( ! str.empty()) {
-		size_t ix = str.find_first_of(' ');
-		ix = str.find_first_not_of(' ', ix);
-		size_t ixe = str.find_first_of(" .$", ix);
-		str = str.substr(ix, ixe - ix);
-		if (str[0] == 'X') str[0] = 'x';
-		ix = str.find_first_of('-');
-		while (ix != std::string::npos) {
-			str[ix] = '_';
-			ix = str.find_first_of('-');
-		}
-		ix = str.find("WINDOWS_");
-		if (ix != std::string::npos) { str.erase(ix+7, std::string::npos); }
-		return true;
-	}
-	return false;
-}
-
-bool platform_includes_arch = true;
-bool renderPlatformName(std::string & str, ClassAd* al)
-{
-	std::string opsys, arch;
-	bool got_name = false;
-	if (al->LookupString(ATTR_OPSYS, opsys) && opsys == "WINDOWS") {
-		got_name = al->LookupString(ATTR_OPSYS_SHORT_NAME, opsys);
-	} else {
-		got_name = al->LookupString(ATTR_OPSYS_AND_VER, opsys);
-	}
-	if (got_name) {
-		if (platform_includes_arch) {
-			al->LookupString(ATTR_ARCH, str);
-			if (str == "X86_64") str = "x64";
-			else if (str == "X86") str = "x86";
-			str += "/";
-			str += opsys;
-		} else {
-			str = opsys;
-		}
-		return true;
-	}
-	return false;
-}
-// render Arch, OpSys, OpSysAndVer and OpSysShortName into a NMI style platform string
-static bool renderPlatform(std::string & str, ClassAd* al, Formatter & /*fmt*/)
-{
-	return renderPlatformName(str, al);
-}
-
-/*
-# default condor_status output
-SELECT
-   Name       AS Name     WIDTH -18 TRUNCATE
-   OpSys      AS OpSys    WIDTH -10
-   Arch       AS Arch     WIDTH -6
-   State      AS State    WIDTH -9
-   Activity   AS Activity WIDTH -8
-   CondorLoadAvg    AS LoadAv       PRINTAS LOAD_AVG
-   Memory     AS Mem                PRINTF "%4d"
-   EnteredCurrentActivity AS "  ActvtyTime" NOPREFIX PRINTAS ACTIVITY_TIME
-SUMMARY STANDARD
-*/
-
-// !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
-static const CustomFormatFnTableItem LocalPrintFormats[] = {
-	{ "ACTIVITY_CODE", ATTR_ACTIVITY, 0, renderActivityCode, ATTR_STATE "\0" },
-	{ "ACTIVITY_TIME", ATTR_ENTERED_CURRENT_ACTIVITY, "%T", renderActivityTime, ATTR_LAST_HEARD_FROM "\0" ATTR_MY_CURRENT_TIME "\0"  },
-	{ "CONDOR_PLATFORM", "CondorPlatform", 0, renderCondorPlatform, NULL },
-	{ "CONDOR_VERSION", ATTR_CONDOR_VERSION, 0, renderVersion, NULL },
-	{ "DATE",         NULL, 0, formatRealDate, NULL },
-	{ "DUE_DATE",     ATTR_CLASSAD_LIFETIME, "%Y", renderDueDate, ATTR_LAST_HEARD_FROM "\0" },
-	{ "ELAPSED_TIME", ATTR_LAST_HEARD_FROM, "%T", renderElapsedTime, ATTR_LAST_HEARD_FROM "\0" },
-	{ "LOAD_AVG",     NULL, 0, formatLoadAvg, NULL },
-	{ "PLATFORM",     ATTR_OPSYS, 0, renderPlatform, ATTR_ARCH "\0" ATTR_OPSYS_AND_VER "\0" ATTR_OPSYS_SHORT_NAME "\0" },
-	{ "READABLE_KB",  ATTR_DISK, 0, format_readable_kb, NULL },
-	{ "READABLE_MB",  ATTR_MEMORY, 0, format_readable_mb, NULL },
-	{ "STRINGS_FROM_LIST", NULL, 0, renderStringsFromList, NULL },
-	{ "TIME",         ATTR_KEYBOARD_IDLE, 0, formatRealTime, NULL },
-	{ "UNIQUE",       NULL, 0, renderUniqueStrings, NULL },
-};
-static const CustomFormatFnTable LocalPrintFormatsTable = SORTED_TOKENER_TABLE(LocalPrintFormats);
-const CustomFormatFnTable * getCondorStatusPrintFormats() { return &LocalPrintFormatsTable; }
 

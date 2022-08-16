@@ -325,7 +325,6 @@ bool update_job_status( classad::ClassAd const & orig, classad::ClassAd & newgri
 		ATTR_JOB_REMOTE_WALL_CLOCK,
 		ATTR_JOB_LAST_REMOTE_WALL_CLOCK,
 		ATTR_JOB_CORE_DUMPED,
-		ATTR_EXECUTABLE_SIZE,
 		ATTR_IMAGE_SIZE,
 		ATTR_MEMORY_USAGE,
 		ATTR_RESIDENT_SET_SIZE,

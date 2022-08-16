@@ -8,7 +8,7 @@
 # not make sense if you have a multi-server pool.
 #
 # See the Quick Start Installation guide at:
-#     https://research.cs.wisc.edu/htcondor/manual/quickstart.html
+#     https://htcondor.org/manual/quickstart.html
 #
 
 # ---  NODE ROLES  ---

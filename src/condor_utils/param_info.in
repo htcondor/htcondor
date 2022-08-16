@@ -922,11 +922,6 @@ type=string
 usage=Restrict when slots can be preempted for user priority
 tags=matchmaker
 
-[GLEXEC_STARTER]
-default=false
-type=bool
-tags=shadow,remoteresource
-
 [SEC_SCITOKENS_ALLOW_EXTRA_SLASH]
 default=false
 type=bool
@@ -1334,16 +1329,6 @@ type=int
 default=20
 range=0,
 type=int
-tags=daemon_core
-
-[GLEXEC_JOB]
-default=false
-type=bool
-tags=daemon_core
-
-[GLEXEC_HOLD_ON_INITIAL_FAILURE]
-default=true
-type=bool
 tags=daemon_core
 
 [WINDOWS_SOFTKILL]
@@ -1779,16 +1764,6 @@ win32_default=$(BIN)
 type=path
 tags=startd,starter_mgr
 
-[GLEXEC]
-default=
-type=string
-tags=startd,glexec_starter
-
-[GLEXEC_USER_DIR]
-default=
-type=string
-tags=startd,command
-
 [SINGULARITY]
 default=/usr/bin/singularity
 win32_default=
@@ -2018,6 +1993,7 @@ tags=classad,ast
 
 [CLASSAD_USER_PYTHON_LIB]
 default=$(LIBEXEC)/libclassad_python_user.so
+win32_default=$(BIN)\classad_python_user$(PYTHON3_MODULE_SUFFIX:.pyd)
 type=string
 description=ClassAd python library path
 tags=classad
@@ -3135,12 +3111,24 @@ type=bool
 tags=schedd
 description=Set to false to have Schedd refuse late materialization submits
 
+[SCHEDD_ASSUME_NEGOTIATOR_GONE]
+default=2000000000
+type=int
+tags=schedd
+description=
+
 [SCHEDD_NON_DURABLE_LATE_MATERIALIZE]
 default=true
 type=bool
 tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
+
+[SCHEDD_SEND_RESCHEDULE]
+default=true
+type=bool
+tags=schedd
+description=
 
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
@@ -3209,6 +3197,11 @@ type=bool
 tags=schedd
 
 [PER_JOB_HISTORY_DIR]
+default=
+type=string
+tags=schedd
+
+[JOB_EPOCH_INSTANCE_DIR]
 default=
 type=string
 tags=schedd
@@ -4663,22 +4656,6 @@ type=string
 description=List of timespans for reporting file transfer I/O statistics
 tags=schedd
 
-[GLEXEC_RETRIES]
-default=3
-version=7.8.8
-range=0,
-type=int
-description=Number of times to retry calls to glexec
-tags=startd
-
-[GLEXEC_RETRY_DELAY]
-default=5
-version=7.8.8
-range=0,
-type=int
-description=Minimum time delay in exponential backoff for glexec retries
-tags=startd
-
 [GRACEFULLY_REMOVE_JOBS]
 default=true
 version=7.9.0
@@ -5688,6 +5665,15 @@ default=true
 type=bool
 customization=const
 
+[IsSubmit]
+default=false
+type=bool
+customization=const
+[SUBMIT.IsSubmit]
+default=true
+type=bool
+customization=const
+
 [CONDOR_VERSION]
 macro=CONDOR_VERSION
 default=8.*
@@ -5698,6 +5684,18 @@ customization=const
 macro=PLATFORM
 default=undefined
 type=string
+customization=const
+
+[PYTHON3_MODULE_SUFFIX]
+macro=PYTHON3_MODULE_SUFFIX
+default=.pyd
+type=string
+customization=const
+
+[PYTHON3_VERSION_MINOR]
+macro=PYTHON3_VERSION_MINOR
+default=0
+type=int
 customization=const
 
 [HAVE_EXT_GLOBUS]

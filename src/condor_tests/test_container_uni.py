@@ -114,6 +114,8 @@ def test_job_hash():
             "container_image": "ignored.sif",
             "executable": "/bin/cat",
             "arguments": "/etc/hosts",
+            "should_transfer_files": "yes",
+            "when_to_transfer_output": "on_exit",
             "output": "output",
             "error": "error",
             "log": "log",
@@ -133,6 +135,26 @@ def completed_test_job(condor, test_job_hash):
     )
     return ctj
 
+@action
+def test_job_hash_with_target_dir(test_job_hash):
+    test_job_hash["container_target_dir"] = "/foo"
+    return test_job_hash
+
+@action
+def completed_test_job_with_target_dir(condor, test_job_hash_with_target_dir):
+
+    ctj = condor.submit(
+        {**test_job_hash_with_target_dir}, count=1
+    )
+    assert ctj.wait(
+        condition=ClusterState.all_terminal,
+        timeout=60,
+        verbose=True,
+        fail_condition=ClusterState.any_held,
+    )
+
 class TestContainerUni:
     def test_container_uni(self, completed_test_job):
+            assert True
+    def test_container_uni_with_target_dir(self, completed_test_job_with_target_dir):
             assert True

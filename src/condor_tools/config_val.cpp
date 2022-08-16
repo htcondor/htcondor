@@ -2135,7 +2135,8 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose);
 void PrintExpandedMetaParams(const char * category, const char * rhs, bool verbose)
 {
 	if (verbose) printf(" #begin-expanding# use %s : %s\n", category, rhs);
-	MACRO_TABLE_PAIR* ptable = param_meta_table(category);
+	int base_meta_id = 0, meta_offset = 0;
+	MACRO_TABLE_PAIR* ptable = param_meta_table(category, &base_meta_id);
 	if ( ! ptable) {
 		printf ("error: %s is not a valid use category\n", category);
 		return;
@@ -2148,7 +2149,7 @@ void PrintExpandedMetaParams(const char * category, const char * rhs, bool verbo
 		if ( ! ep || ep == remain) break;
 		remain = ep;
 
-		const char * pmeta = param_meta_table_string(ptable, mag.knob.c_str());
+		const char * pmeta = param_meta_table_string(ptable, mag.knob.c_str(), &meta_offset);
 		if (pmeta) {
 			metaval.set(expand_meta_args(pmeta, mag.args));
 			PrintMetaKnob(metaval.ptr(), true, verbose);
@@ -2205,7 +2206,7 @@ void PrintMetaParam(const char * name, bool expand, bool verbose)
 	// separate the metaknob name from the args (if any)
 	MetaKnobAndArgs mag(parm);
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(use);
+	MACRO_TABLE_PAIR* ptable = param_meta_table(use, nullptr);
 	MACRO_DEF_ITEM * pdef = NULL;
 	if (ptable) {
 		// if only a metaknob category was passed, print out all of the 
@@ -2221,7 +2222,7 @@ void PrintMetaParam(const char * name, bool expand, bool verbose)
 		}
 
 		// lookup the given metaknob name in that category
-		pdef = param_meta_table_lookup(ptable, mag.knob.c_str());
+		pdef = param_meta_table_lookup(ptable, mag.knob.c_str(), nullptr);
 	}
 	if (pdef) {
 		if (expand || ! mag.args.empty()) {
@@ -2436,13 +2437,13 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsolete("","\n");
 	if (opts.hide_obsolete) {
-		const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARD");
+		const char * items = param_meta_value("UPGRADE", "DISCARD", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD=\n%s\n", items);
 			obsolete.initializeFromString(items);
 			//fprintf(stderr, "obsolete=\n%s\n", obsolete.print_to_delimed_string("\n"));
 		}
-		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDX");
+		items = param_meta_value("UPGRADE", "DISCARDX", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD_OPSYS=\n%s\n", items);
 			obsolete.initializeFromString(items);
@@ -2454,13 +2455,13 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsoleteif("","\n");
 	if (opts.hide_if_match) {
-		const char * items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF");
+		const char * items = param_meta_value("UPGRADE", "DISCARDIF", nullptr);
 		if (items && items[0]) {
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
 		}
 
-		items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIFX");
+		items = param_meta_value("UPGRADE", "DISCARDIFX", nullptr);
 		if (items && items[0]) {
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
@@ -2473,7 +2474,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 		if (vm_type) { free(vm_type); }
 		else
 		{
-			items = param_meta_table_string(param_meta_table("UPGRADE"), "DISCARDIF_VMWARE");
+			items = param_meta_value("UPGRADE", "DISCARDIF_VMWARE", nullptr);
 			if (items && items[0]) {
 				obsoleteif.initializeFromString(items);
 				args.obsoleteif = &obsoleteif;

@@ -220,12 +220,11 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 		std::string remote_job_id;
 		formatstr( remote_job_id, "azure %s", vm_name.c_str() );
 
-		BaseJob * tmp = NULL;
-		rc = BaseJob::JobsByRemoteId.lookup( remote_job_id, tmp );
+		auto itr = BaseJob::JobsByRemoteId.find(remote_job_id);
 
-		if( rc == 0 ) {
-			ASSERT( tmp );
-			AzureJob * job = dynamic_cast< AzureJob * >( tmp );
+		if( itr != BaseJob::JobsByRemoteId.end() ) {
+			ASSERT( itr->second );
+			AzureJob * job = dynamic_cast< AzureJob * >( itr->second );
 			if( job == NULL ) {
 				EXCEPT( "Found non-AzureJob identified by '%s'.",
 				        remote_job_id.c_str() );

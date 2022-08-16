@@ -26,6 +26,8 @@
 #include "strcasestr.h"
 #include "condor_random_num.h"
 
+#include <algorithm>
+
 // initialize the List<char> from the VALID_*_FILES variable in the
 // config file; the files are separated by commas
 	//changed isSeparator to allow constructor to redefine
@@ -669,8 +671,8 @@ StringList::deleteCurrent() {
 }
 
 
-static int string_compare(const void *x, const void *y) {
-	return strcmp(*(char * const *) x, *(char * const *) y);
+static bool string_compare(const char *x, const char *y) {
+	return strcmp(x, y) < 0;
 }
 
 void
@@ -688,7 +690,7 @@ StringList::qsort() {
 		list[i] = strdup(str); // If only we had InsertAt on List...
 	}
 
-	::qsort(list, count, sizeof(char *), string_compare);
+	std::sort(list, list + count, string_compare);
 
 	for (i = 0, clearAll(); i < count; i++) {
 		m_strings.Append(list[i]);

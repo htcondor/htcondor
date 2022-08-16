@@ -2363,7 +2363,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
-			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Job Ads Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -2700,7 +2700,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryAggregatesContinuation::finish,
-			"Query Aggregates Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Aggregates Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -3752,7 +3752,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 #endif
 				holdJob(job_id.cluster, job_id.proc, msg.c_str(), 
 						CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-					false, true, false, false);
+					false, true);
 				return;
 			}
 			int kill_sig = -1;
@@ -3937,7 +3937,7 @@ PeriodicExprEval(JobQueueJob *jobad, const JOB_ID_KEY & /*jid*/, void * pvUser)
 	UserPolicy & policy = *(UserPolicy*)pvUser;
 
 	policy.ResetTriggers();
-	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY);
+	int action = policy.AnalyzePolicy(*jobad, PERIODIC_ONLY, status);
 
 	// Build a "reason" string for logging
 	std::string reason;
@@ -5723,7 +5723,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if (result == ReliSock::delegation_continue) {
 		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
 			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
-			"UpdateGSI Response Continuation", continuation, ALLOW, HANDLE_READ);
+			"UpdateGSI Response Continuation", continuation, HANDLE_READ);
 			// If we fail to register the socket, continue in blocking mode.
 		if (retval < 0) {
 			continuation->finish_update(rsock, result);
@@ -6009,8 +6009,8 @@ Scheduler::actOnJobs(int, Stream* s)
 				ATTR_JOB_STATUS_ON_RELEASE,REMOVED);
 			break;
 		case JA_HOLD_JOBS:
-				// Don't hold held/removed/completed jobs (but do match cluster ads - so late materialization works)
-			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, HELD, ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
+				// Don't hold removed/completed jobs (but do match cluster ads - so late materialization works)
+			snprintf( buf, 256, "(ProcId is undefined || (%s!=%d && %s!=%d)) && (", ATTR_JOB_STATUS, REMOVED, ATTR_JOB_STATUS, COMPLETED );
 			break;
 		case JA_RELEASE_JOBS:
 				// Only release held jobs which aren't waiting for
@@ -6240,9 +6240,14 @@ Scheduler::actOnJobs(int, Stream* s)
 			break;
 		case JA_HOLD_JOBS:
 			if( status == HELD ) {
-				results.record( tmp_id, AR_ALREADY_DONE );
-				jobs[i].cluster = -1;
-				continue;
+				int hold_code = 0;
+				GetAttributeInt(tmp_id.cluster, tmp_id.proc,
+				                ATTR_HOLD_REASON_CODE, &hold_code);
+				if( hold_code == CONDOR_HOLD_CODE::UserRequest || hold_code == CONDOR_HOLD_CODE::SpoolingInput ) {
+					results.record( tmp_id, AR_ALREADY_DONE );
+					jobs[i].cluster = -1;
+					continue;
+				}
 			}
 			if ( status == REMOVED || status == COMPLETED )
 			{
@@ -7160,7 +7165,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -9893,7 +9898,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 				 job_id->proc );
 		holdJob( job_id->cluster, job_id->proc,
 				 "No condor_starter installed that supports local universe",
-				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0,
+				 CONDOR_HOLD_CODE::NoCompatibleShadow, 0, false,
 				 false, notify_admin, true );
 		delete_shadow_rec( srec );
 		notify_admin = false;
@@ -10135,7 +10140,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 #endif
 		holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 				CONDOR_HOLD_CODE::FailedToAccessUserAccount, 0,
-				false, true, false, false);
+				false, true);
 		goto wrapup;
 	}
 
@@ -10164,7 +10169,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Spooled executable is not executable!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-				false, true, false, false );
+				false, true);
 
 			delete filestat;
 			filestat = NULL;
@@ -10189,7 +10194,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			holdJob(job_id->cluster, job_id->proc, 
 				"Executable unknown - not specified in job ad!",
 					CONDOR_HOLD_CODE::FailedToCreateProcess, ENOENT,
-				false, true, false, false );
+				false, true);
 			goto wrapup;
 		}
 
@@ -10213,7 +10218,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 			set_priv( priv );  // back to regular privs...
 			holdJob(job_id->cluster, job_id->proc, tmpstr.c_str(),
 					CONDOR_HOLD_CODE::FailedToCreateProcess, EACCES,
-					false, true, false, false);
+					false, true);
 			goto wrapup;
 		}
 	}
@@ -12983,6 +12988,7 @@ Scheduler::Init()
 		initAdFromString(extended_cmds, m_extendedSubmitCommands);
 		extended_cmds.clear();
 	}
+	param(m_extendedSubmitHelpFile, "EXTENDED_SUBMIT_HELPFILE");
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
 
@@ -13599,44 +13605,44 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE, D_COMMAND,
+			"actOnJobs", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			"requestSandboxLocation", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
-			"RecycleShadow", this, DAEMON, D_COMMAND,
+			"RecycleShadow", this, DAEMON,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -13651,21 +13657,19 @@ Scheduler::Register()
 			"release_claim", this, READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, READ,
-			D_PROTOCOL ); 
+			"receive_startd_alive", this, READ);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
 								  &attempt_access_handler,
-								  "attempt_access_handler", WRITE,
-								  D_FULLDEBUG );
+								  "attempt_access_handler", WRITE );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
 								&store_cred_handler,
 								"cred_access_handler", WRITE,
-								D_FULLDEBUG, true /*force authentication*/);
+								true /*force authentication*/);
 #endif
 
     // command handler in support of condor_status -direct query of our ads
@@ -13694,14 +13698,14 @@ Scheduler::Register()
 
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
-				"command_query_job_ads", this, READ, D_FULLDEBUG, true /*force authentication*/);
+				"command_query_job_ads", this, READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  &handle_q,
-								  "handle_q", READ, D_FULLDEBUG );
+								  "handle_q", READ );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13710,18 +13714,18 @@ Scheduler::Register()
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
 								  &handle_q,
-								  "handle_q", WRITE, D_FULLDEBUG,
+								  "handle_q", WRITE,
 								  true /* force authentication */ );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
 								  &get_myproxy_password_handler,
-								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
+								  "get_myproxy_password", WRITE );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
@@ -13730,15 +13734,15 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
 								  "export_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
 								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
 								  "import_exported_job_results_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
 								  "unexport_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -13761,7 +13765,7 @@ Scheduler::Register()
 		//
 	daemonCore->Register_CommandWithPayload( COLLECTOR_TOKEN_REQUEST, "DC_COLLECTOR_TOKEN_REQUEST",
 			(CommandHandlercpp)&Scheduler::handle_collector_token_request,
-			"handle_collector_token_request()", this, ALLOW, D_COMMAND, true );
+			"handle_collector_token_request()", this, ALLOW, true );
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
@@ -14148,6 +14152,13 @@ Scheduler::needReschedule()
 void
 Scheduler::sendReschedule()
 {
+	// If SCHEDD_SEND_RESCHEDULE is false (eg on a CE or schedd
+	// without a negotiator, don't spam the logs with messages
+	// about a missing negotiator.
+	if (!param_boolean("SCHEDD_SEND_RESCHEDULE", true)) {
+		return;
+	}
+
 	if( !m_negotiate_timeslice.isTimeToRun() ) {
 			// According to our negotiate timeslice object, we are
 			// spending too much of our time negotiating, so delay
@@ -15257,6 +15268,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 
 		if( !starter.createJobOwnerSecSession(ltimeout,job_claimid,match_sec_session_id,job_owner_session_info.c_str(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
+			retry_is_sensible = true; // This can mean the starter is blocked fetching a docker image
 			goto error_wrapup; // error_msg already set
 		}
 	}
@@ -15685,9 +15697,19 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		return false;
 	}
 	if( status == HELD ) {
-		dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
-				 cluster, proc );
-		return false;
+		// Allow a held job's reason code to be changed to UserRequest
+		int old_reason_code = 0;
+		if( reason_code == CONDOR_HOLD_CODE::UserRequest ) {
+			GetAttributeInt(cluster, proc, ATTR_HOLD_REASON_CODE, &old_reason_code);
+		}
+		if( old_reason_code == CONDOR_HOLD_CODE::UserRequest ||
+		    old_reason_code == CONDOR_HOLD_CODE::SpoolingInput ||
+		    reason_code != CONDOR_HOLD_CODE::UserRequest ) {
+
+			dprintf( D_ALWAYS, "Job %d.%d is already on hold\n",
+			         cluster, proc );
+			return false;
+		}
 	}
 
 	if( reason ) {
@@ -16160,9 +16182,9 @@ Scheduler::claimLocalStartd()
 
 		// Check when we last had a negotiation cycle; if recent, return.
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-				20 * 60);
+			2000000000);
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
-			// we have negotiated recently, no need to calim the local startd
+			// we have negotiated recently, no need to claim the local startd
 		return false;
 	}
 
@@ -16601,7 +16623,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			//
 		holdJob( id.cluster, id.proc, reason.c_str(),
 				 CONDOR_HOLD_CODE::InvalidCronSettings, 0,
-				 true, true, false, false );
+				 true, true );
 	}
 	
 	return ( valid );

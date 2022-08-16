@@ -39,12 +39,6 @@ list(APPEND ProcdElements
 	)
 endif(LINUX)
 
-if (NOT WINDOWS)
-list(APPEND ProcdElements
-	glexec_kill.unix.cpp
-	)
-endif(NOT WINDOWS)
-
 set(ProcClientElements
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/proc_family_io.cpp

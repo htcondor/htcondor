@@ -334,7 +334,7 @@ char * is_valid_config_assignment(const char *config)
 			char * opt;
 			while ((opt = opts.next())) {
 				// lookup name,val as a metaknob, a return of -1 means not found
-				if ( ! is_valid && param_default_get_source_meta_id(name+1, opt) >= 0) {
+				if ( ! is_valid && param_meta_value(name+1, opt, nullptr)) {
 					is_valid = true;
 					// append the value to the metaknob name.
 					*tmp++ = '.';
@@ -462,101 +462,33 @@ const char* MetaKnobAndArgs::init_from_string(const char * p)
 
 int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const char * rhs, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx)
 {
-#ifdef GUESS_METAKNOB_CATEGORY
-	std::string nameguess;
-	if ( ! name || ! name[0]) {
-		// guess the name by looking for matches on the rhs.
-		for (int id = 0; ; ++id) {
-			MACRO_DEF_ITEM * pmet = param_meta_source_by_id(id);
-			if ( ! pmet) break;
-			const char * pcolon = strchr(pmet->key, ':');
-			if ( ! pcolon) continue;
-			if (MATCH == strcasecmp(rhs, pcolon+1)) {
-				nameguess = pmet->key;
-				nameguess[pcolon - pmet->key] = 0;
-				name = nameguess.c_str();
-				break;
-			}
-		}
-	}
-#endif
-
 	if ( ! name || ! name[0]) {
 		macro_set.push_error(stderr, -1, NULL, "Error: use needs a keyword before : %s\n", rhs);
 		return -1;
 	}
 
-	// the SUBMIT macro set stores metaknobs directly in it's defaults table.
-	if (macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX) {
+	MACRO_TABLE_PAIR* ptable = nullptr;
+	int base_meta_id = 0;
 
-#ifdef METAKNOBS_WITH_ARGS
-		MetaKnobAndArgs mag;
-		const char * rhs_remain = rhs;
-		while (*rhs_remain) {
-			// mag.init_from_string returns a pointer to the point at which it stopped parsing
-			const char * e = mag.init_from_string(rhs_remain);
-			if ( ! e || e == rhs_remain) break;
-			rhs_remain = e;
-			const char * item = mag.knob.c_str();
-
-			const char * psz = NULL;
-			const MACRO_ITEM * p = find_macro_item(item, name, macro_set);
-			if (p) {
-				if (p && macro_set.metat) {
-					macro_set.metat[p - macro_set.table].use_count += 1;
-				}
-				psz = p->raw_value;
-			} else {
-				std::string metaname;
-				formatstr(metaname, "$%s.%s", name, item);
-				const MACRO_DEF_ITEM * pd = find_macro_def_item(metaname.c_str(), macro_set, ctx.use_mask);
-				if (pd && pd->def) psz = pd->def->psz;
-			}
-			if ( ! psz) {
-				macro_set.push_error(stderr, -1, "\n", "ERROR: use %s: does not recognise %s\n", name, mag.knob.c_str());
-				return -1;
-			}
-			auto_free_ptr expanded(NULL);
-			if ( ! mag.args.empty() || has_meta_args(psz)) {
-				expanded.set(expand_meta_args(psz, mag.args));
-				psz = expanded.ptr();
-			}
-#else
-		StringList items(rhs);
-		items.rewind();
-		char * item;
-		while ((item = items.next()) != NULL) {
-			std::string metaname;
-			formatstr(metaname, "$%s.%s", name, item);
-			const MACRO_DEF_ITEM * p = find_macro_def_item(metaname.c_str(), macro_set, ctx.use_mask);
-			if ( ! p) {
-				macro_set.push_error(stderr, -1, "\n", "ERROR: use %s: does not recognise %s\n", name, item);
-				return -1;
-			}
-			const char * psz = p->def->psz;
-#endif
-			int ret = Parse_config_string(source, depth, psz, macro_set, ctx);
-			if (ret < 0) {
-				if (ret == -1111 || ret == -2222) {
-					const char * pre = "Internal Submit";
-					const char * msg = "Error: use %s: %s is invalid\n";
-					if (ret == -2222) {
-						pre = "\n";
-						msg = "ERROR: use %s: %s nesting too deep\n"; 
-					}
-					macro_set.push_error(stderr, ret, pre, msg, name, item);
-				}
-				return ret;
-			}
-		}
-		return 0;
+	// the SUBMIT macro set stores metaknobs directly in the macro_set defaults table.
+	// in the future other macro sets may do the same
+	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", macro_set, ctx.use_mask);
+	if (pdmt && pdmt->def && ((pdmt->def->flags & 0x0F) == PARAM_TYPE_KTP_TABLE)) {
+		const condor_params::ktp_value* def = reinterpret_cast<const condor_params::ktp_value*>(pdmt->def);
+		ptable = param_meta_table(*def, name, &base_meta_id);
 	}
 
-	MACRO_TABLE_PAIR* ptable = param_meta_table(name);
+	// for submit, we don't want to use the global metaknob table when the macro set
+	// does not have its own metaknob table but for other macro sets we do
+	if (macro_set.options & CONFIG_OPT_SUBMIT_SYNTAX) {
+	} else if ( ! ptable) {
+		// get the global param meta table
+		ptable = param_meta_table(name, &base_meta_id);
+	}
+
 	if ( ! ptable)
 		return -1;
 
-#ifdef METAKNOBS_WITH_ARGS
 	MetaKnobAndArgs mag;
 	const char * rhs_remain = rhs;
 	while (*rhs_remain) {
@@ -565,27 +497,20 @@ int read_meta_config(MACRO_SOURCE & source, int depth, const char *name, const c
 		if ( ! e || e == rhs_remain) break;
 		rhs_remain = e;
 		const char * item = mag.knob.c_str();
-#else
-	StringList items(rhs);
-	items.rewind();
-	char * item;
-	while ((item = items.next()) != NULL) {
-#endif
-		const char * value = param_meta_table_string(ptable, item);
+		int meta_offset = 0;
+		const char * value = param_meta_table_string(ptable, item, &meta_offset);
 		if ( ! value) {
 			macro_set.push_error(stderr, -1, NULL, 
 					"Error: use %s: does not recognise %s\n",
 					name, item);
 			return -1;
 		}
-		source.meta_id = param_default_get_source_meta_id(name, item);
-#ifdef METAKNOBS_WITH_ARGS
+		source.meta_id = base_meta_id + meta_offset;
 		auto_free_ptr expanded(NULL);
 		if ( ! mag.args.empty() || has_meta_args(value)) {
 			expanded.set(expand_meta_args(value, mag.args));
 			value = expanded.ptr();
 		}
-#endif
 		int ret = Parse_config_string(source, depth, value, macro_set, ctx);
 		if (ret < 0) {
 			if (ret == -1111 || ret == -2222) {
@@ -852,11 +777,11 @@ static bool Evaluate_config_if(const char * expr, bool & result, std::string & e
 				ptr += 4; // skip over "use ";
 				while (isspace(*ptr)) ++ptr;
 				// there are two allowed forms "if defined use <cat>", and "if defined use <cat>:<val>"
-				MACRO_TABLE_PAIR * tbl = param_meta_table(ptr);
+				MACRO_TABLE_PAIR * tbl = param_meta_table(ptr, nullptr);
 				result = false;
 				if (tbl) {
 					const char * pcolon = strchr(ptr, ':');
-					if ( ! pcolon || !pcolon[1] || param_meta_table_string(tbl, pcolon+1))
+					if ( ! pcolon || !pcolon[1] || param_meta_table_string(tbl, pcolon+1, nullptr))
 						result = true;
 				}
 				if (strchr(ptr, ' ') || strchr(ptr, '\t') || strchr(ptr, '\r')) { // catch most common syntax error
@@ -2609,6 +2534,18 @@ class ConfigMacroBodyCheck {
 public:
 	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
 };
+
+class ConfigMacroSkipCount : public ConfigMacroBodyCheck {
+public:
+	virtual bool skip(int func_id, const char * body, int bodylen) = 0;
+	int skip_count = 0;
+};
+
+unsigned int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	ConfigMacroSkipCount & skb,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx);
 
 enum {
 	MACRO_ID_DOUBLEDOLLAR=-2,
@@ -4731,11 +4668,10 @@ unsigned int expand_macro (
 }
 
 // select only macros that we want to pre-expand when building the submit digest.
-class SkipKnobsBody : public ConfigMacroBodyCheck {
+class SkipKnobsBody : public ConfigMacroSkipCount {
 public:
 	classad::References & skip_knobs;
-	int skip_count;
-	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs), skip_count(0) {}
+	SkipKnobsBody(classad::References & knobs) : skip_knobs(knobs) {}
 	virtual bool skip(int func_id, const char * body, int len) {
 		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
 		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
@@ -4764,14 +4700,27 @@ public:
 	}
 };
 
-
+// expand macros that do not match the names passed in the skip_knobs collection
+// used by submit_utils to selectively expand submit hash keys when creating the submit digest
 unsigned int selective_expand_macro (
 	std::string &value,        // in,out  expands $() macros in place in this string
 	classad::References &skip_knobs,
 	MACRO_SET& macro_set,
 	MACRO_EVAL_CONTEXT & ctx)
 {
-	int unexpanded_knob_count = 0;
+	SkipKnobsBody skb(skip_knobs);
+	return selective_expand_macro(value, skb, macro_set, ctx);
+}
+
+// expand only macros that the skb callback does not indicate should be skipped
+// returns the count of skipped expansions
+//
+unsigned int selective_expand_macro (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	ConfigMacroSkipCount & skb,
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx)
+{
 	int iteration_count = 0;
 
 	MACRO_POSITION pos; pos.clear();
@@ -4781,9 +4730,7 @@ unsigned int selective_expand_macro (
 	int special_id = 0;
 	do {
 		const char * tmp = value.c_str();
-		SkipKnobsBody skb(skip_knobs); // prevents $(DOLLAR) from being matched by next_config_macro
 		special_id = next_config_macro(is_config_macro, skb, tmp, pos.dollar, pos);
-		unexpanded_knob_count += skb.skip_count;
 		if (special_id) {
 			body.clear(); body.append(value, pos.dollar, pos.right - pos.dollar);
 			if (++iteration_count > 10000) {
@@ -4809,9 +4756,56 @@ unsigned int selective_expand_macro (
 		}
 	} while (special_id);
 
-	return unexpanded_knob_count;
+	return skb.skip_count;
 }
 
+
+// select only macros that have defined values in the config macro set
+class SkipUndefinedBody : public ConfigMacroSkipCount {
+public:
+	MACRO_SET& mset;
+	MACRO_EVAL_CONTEXT & ctx;
+
+	SkipUndefinedBody(MACRO_SET& m, MACRO_EVAL_CONTEXT &c) : mset(m), ctx(c) {}
+	virtual bool skip(int func_id, const char * body, int len) {
+		if (func_id == SPECIAL_MACRO_ID_ENV) return false;
+		if (func_id == MACRO_ID_NORMAL || (func_id >= SPECIAL_MACRO_ID_DIRNAME && func_id <= SPECIAL_MACRO_ID_FILENAME)) {
+			// skip $(dollar)
+			if (len == DOLLAR_ID_LEN && MATCH == strncasecmp(body, DOLLAR_ID, DOLLAR_ID_LEN)) {
+				++skip_count;
+				return true;
+			}
+
+			int namelen = len;
+			const char * colon = strchr(body, ':'); // this might return the pos of a colon AFTER len
+			if (colon) {
+				int colonlen = (int)(colon - body);
+				namelen = MIN(namelen, colonlen);
+			}
+			// skip $(knob) when knob is not defined in the current config
+			std::string knob(body, namelen);
+			const char * pval = lookup_macro(knob.c_str(), mset, ctx);
+			if ( ! pval || ! pval[0]) {
+				++skip_count;
+				return true;
+			}
+			return false;
+		}
+		++skip_count;
+		return true;
+	}
+};
+
+// do macro expansion in-place in a std::string, expanding only macros that are defined in the given macro table
+// returns the number of $() and $func() patterns that were skipped.
+unsigned int expand_defined_macros (
+	std::string &value,        // in,out  expands $() macros in place in this string
+	MACRO_SET& macro_set,
+	MACRO_EVAL_CONTEXT & ctx)
+{
+	SkipUndefinedBody skub(macro_set, ctx);
+	return selective_expand_macro(value, skub, macro_set, ctx);
+}
 
 
 // MACRO self expansion ----

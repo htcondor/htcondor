@@ -325,9 +325,9 @@ public:
 	bool considerResumingAfterDraining();
 
 		// how_fast: DRAIN_GRACEFUL, DRAIN_QUICK, DRAIN_FAST
-	bool startDraining(int how_fast,const std::string & reason, int on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
+	bool startDraining(int how_fast,time_t deadline,const std::string & reason, int on_completion,ExprTree *check_expr,ExprTree *start_expr,std::string &new_request_id,std::string &error_msg,int &error_code);
 
-	bool cancelDraining(std::string request_id,std::string &error_msg,int &error_code);
+	bool cancelDraining(std::string request_id,bool reconfig,std::string &error_msg,int &error_code);
 
 	void publish_draining_attrs(Resource *rip, ClassAd *cap);
 
@@ -434,6 +434,7 @@ private:
 	bool draining_is_graceful;
 	unsigned char on_completion_of_draining;
 	int draining_id;
+	time_t drain_deadline;
 	time_t last_drain_start_time;
 	time_t last_drain_stop_time;
 	int expected_graceful_draining_completion;
