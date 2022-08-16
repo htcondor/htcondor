@@ -21,6 +21,7 @@ Synopsis
 [**--startd_history_max_ads** *NUM_ADS*]
 [**--schedd_history_timeout** *SECONDS*]
 [**--startd_history_timeout** *SECONDS*]
+[**--json_local**]
 [**--es_host** *HOST[:PORT]*] [**--es_username** *USERNAME*]
 [**--es_use_https** ] [**--es_bunch_size** *NUM_DOCS*]
 [**--es_index_name** *INDEX_NAME*]
@@ -98,6 +99,8 @@ Options
     Abort if reading from a *condor_schedd* takes more than this many seconds
  **--startd_history_timeout** *SECONDS*
     Abort if reading from a *condor_startd* takes more than this many seconds
+ **--json_local**
+    Skip Elasticsearch and write ads to JSON files in the current directory
  **--es_host** *HOST[:PORT]*
     Address of the Elasticsearch instance to be used
  **--es_username** *USERNAME*

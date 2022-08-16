@@ -46,6 +46,10 @@ New Features:
   unix domain sockets required for *condor_ssh_to_job* to work.
   :jira:1244`
 
+- Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
+  instead writes ads to JSON files in the working directory.
+  :jira:`1264`
+
 Bugs Fixed:
 
 - Fixed a bug that might cause a job to restart with a "disconnected starter"
