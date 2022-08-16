@@ -9066,6 +9066,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK` for ways
     to disable this validation step.
 
+:macro-def:`USE_COLLECTOR_HOST_CNAME`
+    A boolean value that determines what hostname a client should
+    expect when validating the collector's certificate during SSL
+    authentication.
+    When set to ``True``, the hostname given to the client is used.
+    When set to ``False``, if the given hostname is a DNS CNAME, the
+    client resolves it to a DNS A record and uses that hostname.
+    The default value is ``True``.
+
 :macro-def:`DELEGATE_JOB_GSI_CREDENTIALS`
     A boolean value that defaults to ``True`` for HTCondor version
     6.7.19 and more recent versions. When ``True``, a job's X.509
