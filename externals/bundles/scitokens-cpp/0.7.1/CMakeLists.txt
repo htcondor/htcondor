@@ -48,10 +48,9 @@ if (WITH_SCITOKENS)
 		# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of scitokens_ variables
 		FetchContent_declare(
 			scitokens
-			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.7.0.tar.gz
-			URL_HASH MD5=625bbedd620796707b85ddd50f85dee9
-			PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch &&
-				patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3-leak.patch
+			URL ${EXTERNALS_SOURCE_URL}/scitokens-cpp-0.7.1.tar.gz
+			URL_HASH MD5=b74d1640a2307cb3a0425550b8327afc
+			PATCH_COMMAND patch -N -p1 < ${CMAKE_CURRENT_SOURCE_DIR}/macos-openssl.patch
 		)
 
 		# Check if population has already been performed
