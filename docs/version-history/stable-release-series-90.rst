@@ -14,9 +14,7 @@ Version 9.0.16
 
 Release Notes:
 
-.. HTCondor version 9.0.16 released on Month Date, 2022.
-
-- HTCondor version 9.0.16 not yet released.
+- HTCondor version 9.0.16 released on August 16, 2022.
 
 New Features:
 
@@ -24,16 +22,19 @@ New Features:
   directory, not in tmpfs.
   :jira:`1193`
 
-- For **batch** grid universe jobs, report resources provisioned by the batch
-  scheduler when available.
-  :jira:`1199`
-
 Bugs Fixed:
+
+- Fixed a bug where if the submit file set ``checkpoint_exit_code``, and the administrator
+  enabled Singularity support on the execute node, the job would go on hold at checkpoint time.
+  :jira:`837`
 
 - Fixed a bug where the *condor_gridmanager* would delete the job's
   X.509 proxy file when it meant to delete a temporary copy of the
   proxy file.
   :jira:`1223`
+
+- Fixed a file descriptor leak when using SciTokens for authentication.
+  :jira:`1188`
 
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.
@@ -42,9 +43,6 @@ Bugs Fixed:
 - Fixed a bug where the *condor_check_config* tool raised an UnboundLocalError
   due to an undefined variable.
   :jira:`1186`
-
-- Fixed a file descriptor leak when using SciTokens for authentication.
-  :jira:`1188`
 
 - Fixed a bug in *condor_gpu_discovery* which would cause the tool to crash
   when OpenCL devices were detected and ``GPU_DEVICE_ORDINAL`` was set in the environment.
@@ -67,6 +65,8 @@ Bugs Fixed:
 
 Version 9.0.15
 --------------
+
+Release Notes:
 
 - HTCondor version 9.0.15 released on July 21, 2022.
 
@@ -536,7 +536,7 @@ Bugs Fixed:
   when the ``-opencl`` argument was used.
   :jira:`729`
 
-- Fixed a bug that prevented Singularity jobs from running when the singularity
+- Fixed a bug that prevented Singularity jobs from running when the Singularity
   binary emitted many warning messages to stderr.
   :jira:`698`
 

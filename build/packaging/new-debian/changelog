@@ -1,3 +1,12 @@
+condor (9.0.16-1) stable; urgency=medium
+
+  * Singularity now mounts /tmp and /var/tmp under the scratch directory
+  * Fix bug where Singularity jobs go on hold at the first checkpoint
+  * Fix bug where gridmanger deletes the X.509 proxy file instead of the copy
+  * Fix file descriptor leak when using SciTokens for authentication
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 16 Aug 2022 09:29:00 -0500
+
 condor (9.0.15-1) stable; urgency=medium
 
   * Report resources provisioned by the Slurm batch scheduler when available
