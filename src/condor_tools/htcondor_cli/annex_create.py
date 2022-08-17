@@ -207,6 +207,27 @@ SYSTEM_TABLE = {
             },
         },
     },
+
+    "path-facility": {
+        "pretty_name":      "PATh Facilty",
+        "host_name":        "ap1.facility.path-cc.io",
+        "default_queue":    "HTCondor",
+
+        "queues": {
+            "default": {
+                # This is actually max-jobs-per-request for this system,
+                # but for now, it's easier to think about each request
+                # being a single job like it is for SLURM.
+                "max_nodes_per_job":    1, # FIXME
+                "max_duration":         60 * 60 * 72, # FIXME
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         244, # GB; what are the others?
+
+                "max_jobs_in_queue":    1000, # FIXME
+            },
+        },
+    },
 }
 
 
