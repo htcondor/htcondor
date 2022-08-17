@@ -157,6 +157,10 @@ tags=config
 description=Preferred DNS alias for this host
 customization=expert
 
+[USE_COLLECTOR_HOST_CNAME]
+default=true
+type=bool
+
 [HOSTNAME]
 default=
 type=string

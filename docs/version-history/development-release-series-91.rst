@@ -61,6 +61,8 @@ Bugs Fixed:
   to a fully-qualified canonical name when authenticating with SSL, matching
   the behavior of ``curl``.  Services using a DNS CNAME no longer need to
   implement workarounds in the host certificate to support the prior behavior.
+  The old behavior can be restored by setting new configuration
+  parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
   :jira:`692`
 
 Version 9.11.0
