@@ -309,8 +309,23 @@ bool Dag::Bootstrap (bool recovery)
 			TerminateJob( job, false, true );
 		}
     }
+    int nodesDone = NumNodesDone( true );
     debug_printf( DEBUG_VERBOSE, "Number of pre-completed nodes: %d\n",
-				  NumNodesDone( true ) );
+				  nodesDone );
+
+    //User defined DONE nodes may result in children being 'done' before parent nodes
+    //Check for this use case and write a warning if found
+    int count = 0;
+    jobs.ToBeforeFirst();
+    while( jobs.Next( job ) ) {
+        bool done = job->GetStatus() == Job::STATUS_DONE;
+        if ( done ) { count++; }
+        if ( job->IsWaiting() && done ) {
+            debug_printf( DEBUG_VERBOSE, "Warning: Node %s was marked as done even though parent nodes aren't complete."
+                        " Child nodes may run out of order.\n", job->GetJobName());
+        }
+        if ( count >= nodesDone) { break; }
+    }
     
 	_recovery = recovery;
 
@@ -385,6 +400,29 @@ bool Dag::Bootstrap (bool recovery)
 	}
 
     return true;
+}
+
+//-------------------------------------------------------------------------
+void Dag::SetPreDoneNodes() {
+	//If there are nodes in the vector of JOBs with DONE
+	if ( !m_dagFileDoneNodes.empty() ){
+		for (int i=m_dagFileDoneNodes.size()-1; i >=0; i--) {
+			//Sanity check that Node pointer isn't NULL
+			if ( m_dagFileDoneNodes.at(i) != NULL ) {
+				//Set given node to STATUS_DONE and remove node pointer from vector
+				m_dagFileDoneNodes.at(i)->SetStatus( Job::STATUS_DONE );
+				m_dagFileDoneNodes.pop_back();
+			}
+			else {
+				//Print warning that somehow a NULL was set for a Node
+				debug_printf( DEBUG_NORMAL, "Warning: NULL set for node marked as DONE in dag file.\n");
+			}
+		}
+		//Double check vector was emptied
+		if ( !m_dagFileDoneNodes.empty() ) {
+			debug_printf( DEBUG_NORMAL, "Warning: Vector holding nodes specified as DONE in dag file not emptied.\n");
+		}
+	}
 }
 
 //-------------------------------------------------------------------------

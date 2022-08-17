@@ -48,6 +48,10 @@ Bugs Fixed:
 - Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
   grid universe job would fail.
   :jira:`1222`
+  
+- Fixed a bug where DAGMan would fail when the keyword **DONE** was added
+  to the **JOB** line in a **DAG input file**.
+  :jira:`1267` 
 
 .. _lts-version-history-9016:
 
