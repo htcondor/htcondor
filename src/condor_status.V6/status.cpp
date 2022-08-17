@@ -1094,6 +1094,7 @@ main (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
+		delete d;
 	}
 
 	if (dash_group_by) {
