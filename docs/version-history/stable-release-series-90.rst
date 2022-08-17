@@ -28,6 +28,11 @@ Bugs Fixed:
   grid universe job would fail.
   :jira:`1222`
 
+- Fixed a bug where the FS and MUNGE authentication methods would
+  treat local user accounts with very large UID values (greater than
+  2^31) as the ``condor`` user.
+  :jira:`1229`
+
 .. _lts-version-history-9016:
 
 Version 9.0.16
