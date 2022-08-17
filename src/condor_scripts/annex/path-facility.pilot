@@ -1,0 +1,25 @@
+#!/bin/bash
+BASENAME=$1
+
+tar -z -x -f pilot.tar.gz
+cd pilot
+cd condor-*
+
+
+echo "RELEASE_DIR = $(pwd)" >> etc/condor_config
+export CONDOR_CONFIG=$(pwd)/etc/condor_config
+export PATH=$(pwd)/bin:$(pwd)/sbin:${PATH}
+
+if [[ -n $PYTHONPATH ]]; then
+    PYTHONPATH=$(pwd)/lib/python3:${PYTHONPATH}
+else
+    PYTHONPATH=$(pwd)/lib/python3
+fi
+
+echo "CONDOR_IDS = $(id -u).$(id -g)" >> etc/condor_config
+LOCK=$(mktemp -d /tmp/condor-lock-XXXXXX)
+echo "LOCK = ${LOCK}" >> etc/condor_config
+
+
+condor_master -f
+exit $?
