@@ -3747,6 +3747,11 @@ into its own job ClassAd. The attributes are fully described in
 -  ``DAG_NodesUnready``
 -  ``DAG_Status``
 -  ``DAG_InRecovery``
+-  ``DAG_JobsSubmitted``
+-  ``DAG_JobsIdle``
+-  ``DAG_JobsHeld``
+-  ``DAG_JobsRunning``
+-  ``DAG_JobsCompleted``
 
 Note that most of this information is also available in the
 ``dagman.out`` file as described in

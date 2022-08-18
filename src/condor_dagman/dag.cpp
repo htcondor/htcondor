@@ -104,6 +104,8 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
     _numNodesDone         (0),
     _numNodesFailed       (0),
     _numJobsSubmitted     (0),
+	_totalJobsSubmitted   (0),
+	_totalJobsCompleted   (0),
     _maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
@@ -600,7 +602,7 @@ bool Dag::ProcessOneEvent (ULogEventOutcome outcome,
 				ProcessSubmitEvent(job, recovery, submitEventIsSane);
 				ProcessIsIdleEvent( job, event->proc );
 				break;
-
+				
 			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_JOB_EVICTED:
 			case ULOG_JOB_SUSPENDED:
@@ -727,7 +729,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		bool recovery) {
 
 	if( job ) {
-
+		
 		job->SetProcEvent( event->proc, ABORT_TERM_MASK );
 
 		DecrementProcCount( job );
@@ -788,6 +790,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 		} else {
 			// job succeeded
 			ASSERT( termEvent->returnValue == 0 );
+			_totalJobsCompleted++;
 
 				// Only change the node status if we haven't already
 				// gotten an error on this node.
@@ -1099,6 +1102,7 @@ Dag::ProcessSubmitEvent(Job *job, bool recovery, bool &submitEventIsSane) {
 	if ( submitEventIsSane || job->GetStatus() != Job::STATUS_SUBMITTED ) {
 		job->_queuedNodeJobProcs++;
 		job->_numSubmittedProcs++;
+		_totalJobsSubmitted++;
 	}
 
 		// Note:  in non-recovery mode, we increment _numJobsSubmitted
@@ -1225,7 +1229,7 @@ Dag::ProcessNotIdleEvent( Job *job, int proc ) {
 		_numIdleJobProcs = 0;
 	}
 
-	job->SetProcEvent( proc, EXEC_MASK );
+	job->SetProcEvent( proc, EXEC_MASK );	
 
 	debug_printf( DEBUG_VERBOSE, "Number of idle job procs: %d\n",
 				_numIdleJobProcs);
@@ -3101,8 +3105,8 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	int nodesQueued = NumJobsSubmitted();
 	int nodesPost = PostRunNodeCount();
 	int nodesFailed = NumNodesFailed();
-	int nodesHeld = NumHeldJobProcs();
-	int nodesIdle = NumIdleJobProcs();
+	int nodesHeld = 0, nodesIdle = 0;
+	NumJobProcStates(&nodesHeld,&nodesIdle);
 	if ( markNodesError ) {
 			// Adjust state counts to reflect "pending" removes of node
 			// jobs, etc.
@@ -3397,6 +3401,54 @@ Dag::CheckAllJobs()
 	}
 }
 
+//-------------------------------------------------------------------------
+void
+Dag::NumJobProcStates(int* n_held, int* n_idle, int* n_running, int* n_terminated)
+{
+	//These are total counters
+	int held = 0, idle = 0, run = 0, term = 0;
+	//These are per node counters
+	int node_held = 0, numProcs = 0;
+	
+	//For each job in the dag look a job proc events vector
+	for (auto & _job : _jobs) {
+		//Reset state counters
+		node_held = 0;
+		numProcs = _job->GetProcEventsSize();
+		//For each Job Proc event
+		for (int i=0; i < numProcs; i++) {
+			//Get unsigned char representing the event bitmap
+			//and check states
+			const unsigned char procEvent = _job->GetProcEvent(i);
+			if ((procEvent & HOLD_MASK) != 0) { held++; node_held++; }
+			else if ((procEvent & IDLE_MASK) != 0) { idle++; }
+			else if ((procEvent & ABORT_TERM_MASK) != 0) { term++; }
+			else { run++; }
+		}
+		
+		//Perform some sanity checks per Node
+		if (node_held != _job->_jobProcsOnHold) { //Held job procs check
+			debug_printf( DEBUG_NORMAL,
+						"Warning: Number of counted held job processes (%d) is not equivalent to Job %s's internal count of held job processes count (%d).\n",
+						held, _job->GetJobName(), _job->_jobProcsOnHold);
+		}
+		
+	}
+	
+	//Perform whole DAG sanity checks
+	//Internal DAG counts held job procs as idle
+	if ((idle+held) != NumIdleJobProcs()) { //Idle job procs check
+		debug_printf( DEBUG_NORMAL,
+					"Warning: Number of counted idle job processes (%d) is not equivalent to DAGs internal idle job processes count (%d).\n",
+					idle, NumIdleJobProcs());
+	}
+	//If passed counter then set to totals found in DAG
+	if (n_held) { *n_held = held; }
+	if (n_idle) { *n_idle = idle; }
+	if (n_terminated) { *n_terminated = term; }
+	if (n_running) { *n_running = run; }
+}
+	
 //-------------------------------------------------------------------------
 int
 Dag::NumHeldJobProcs()
