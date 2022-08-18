@@ -896,15 +896,16 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 			}
 
 			const std::string& algo = jwt.get_algorithm();
+			std::error_code ec;
 			if (algo == "HS256") {
 				auto signer = jwt::algorithm::hs256{jwt_key_str};
-				signature = signer.sign(init_text);
+				signature = signer.sign(init_text, ec);
 			} else if (algo == "HS384") {
 				auto signer = jwt::algorithm::hs384{jwt_key_str};
-				signature = signer.sign(init_text);
+				signature = signer.sign(init_text, ec);
 			} else if (algo == "HS512") {
 				auto signer = jwt::algorithm::hs512{jwt_key_str};
-				signature = signer.sign(init_text);
+				signature = signer.sign(init_text, ec);
 			}
 		} catch (...) {
 			dprintf(D_SECURITY, "Failed to deserialize JWT.\n");
@@ -942,7 +943,7 @@ Condor_Auth_Passwd::setup_shared_keys(struct sk_buf *sk, const std::string &init
 
 
 bool
-Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt &jwt)
+Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt)
 {
 	if (!m_token_revocation_expr) {
 		return false;
@@ -953,24 +954,24 @@ Condor_Auth_Passwd::isTokenRevoked(const jwt::decoded_jwt &jwt)
 		bool inserted = true;
 		const auto &claim = pair.second;
 		switch (claim.get_type()) {
-		case jwt::claim::type::null:
-			inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
-			break;
-		case jwt::claim::type::boolean:
+		//case jwt::json::type::null:
+		//	inserted = ad.InsertLiteral(pair.first, classad::Literal::MakeUndefined());
+		//	break;
+		case jwt::json::type::boolean:
 			inserted = ad.InsertAttr(pair.first, pair.second.as_bool());
 			break;
-		case jwt::claim::type::int64:
+		case jwt::json::type::integer:
 			inserted = ad.InsertAttr(pair.first, pair.second.as_int());
 			break;
-		case jwt::claim::type::number:
+		case jwt::json::type::number:
 			inserted = ad.InsertAttr(pair.first, pair.second.as_number());
 			break;
-		case jwt::claim::type::string:
+		case jwt::json::type::string:
 			inserted = ad.InsertAttr(pair.first, pair.second.as_string());
 			break;
 		// TODO: these are not currently supported
-		case jwt::claim::type::array: // fallthrough
-		case jwt::claim::type::object: // fallthrough
+		case jwt::json::type::array: // fallthrough
+		case jwt::json::type::object: // fallthrough
 		default:
 			break;
 		}
@@ -1614,7 +1615,7 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 			ss << authz_full << " ";
 		}
 		const std::string &authz_set = ss.str();
-		jwt_builder.set_payload_claim("scope", authz_set.substr(0, authz_set.size()-1));
+		jwt_builder.set_payload_claim("scope", jwt::claim(authz_set.substr(0, authz_set.size()-1)));
 	}
 	if (lifetime >= 0) {
 		jwt_builder.set_expires_at(std::chrono::system_clock::now() + std::chrono::seconds(lifetime));
