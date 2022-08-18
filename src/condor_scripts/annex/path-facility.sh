@@ -99,7 +99,7 @@ fi
 
 MEM_MB=${14}
 if [[ $MEM_MB == "None" ]]; then
-    MEM_MB="2048MB"
+    MEM_MB="2048"
 fi
 
 
@@ -177,7 +177,7 @@ batch_name                  = ${JOB_NAME}
 
 executable                  = path-facility.pilot
 transfer_executable         = true
-arguments                   = ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID).\$(ProcID)
+arguments                   = ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID)_\$(ProcID) ${CPUS} ${MEM_MB}
 
 transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}, token_file, password_file
 transfer_output_files       = \"\"
