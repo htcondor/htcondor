@@ -49,6 +49,10 @@ Bugs Fixed:
   grid universe job would fail.
   :jira:`1222`
 
+- Fixed a bug with the *condor_credmon_oauth* where scope and audience
+  claims were dropped from OAuth refresh tokens on their first renewal.
+  :jira:`1270`
+
 .. _lts-version-history-9016:
 
 Version 9.0.16
