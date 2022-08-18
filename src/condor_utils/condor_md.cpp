@@ -23,19 +23,16 @@
 #include "condor_open.h"
 #include "condor_debug.h"
 
-#ifdef FIPS_MODE
-#include <openssl/sha.h>
-#else
-#include <openssl/md5.h>
+#include <openssl/evp.h>
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#  define EVP_MD_CTX_new   EVP_MD_CTX_create
+#  define EVP_MD_CTX_free  EVP_MD_CTX_destroy
 #endif
 
 class MD_Context {
 public:
-#ifdef FIPS_MODE
-    SHA256_CTX          sha256_;     // SHA256 context
-#else
-    MD5_CTX             md5_;        // MD5 context
-#endif
+	EVP_MD_CTX			*mdctx_ = NULL;
 };
 
 Condor_MD_MAC::Condor_MD_MAC()
@@ -55,21 +52,26 @@ Condor_MD_MAC::Condor_MD_MAC(KeyInfo * key)
 
 Condor_MD_MAC :: ~Condor_MD_MAC()
 {
+	EVP_MD_CTX_free(context_->mdctx_);
     delete key_;
     delete context_;
 }
 
 void Condor_MD_MAC :: init()
 {
+	//If a message digest context already exists free it and get a new one
+	if (context_->mdctx_) {
+		EVP_MD_CTX_free(context_->mdctx_);
+		context_->mdctx_ = NULL;
+	}
+	context_->mdctx_ = EVP_MD_CTX_new();
 #ifdef FIPS_MODE
-    SHA256_Init(&(context_->sha256_));
-
+	EVP_DigestInit_ex(context_->mdctx_, EVP_sha256(), NULL);
     if (key_) {
         addMD(key_->getKeyData(), key_->getKeyLength());
     }
 #else
-    MD5_Init(&(context_->md5_));
-
+	EVP_DigestInit_ex(context_->mdctx_, EVP_md5(), NULL);
     if (key_) {
         addMD(key_->getKeyData(), key_->getKeyLength());
     }
@@ -79,39 +81,41 @@ void Condor_MD_MAC :: init()
 unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer, unsigned long length)
 {
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
-
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
 #ifdef FIPS_MODE
-    return SHA256(buffer, (unsigned long) length, md);
+	EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
 #else
-    return MD5(buffer, (unsigned long) length, md);
+	EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 #endif
+	EVP_DigestUpdate(mdctx, buffer, length);
+	EVP_DigestFinal_ex(mdctx, md, NULL);
+	EVP_MD_CTX_free(mdctx);
+	
+	return md;
 }
 
 unsigned char * Condor_MD_MAC::computeOnce(const unsigned char * buffer,
-                                           unsigned long   length, 
+                                           unsigned long length, 
                                            KeyInfo       * key)
 {
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
 #ifdef FIPS_MODE
-    SHA256_CTX  context;
-    SHA256_Init(&context);
-    SHA256_Update(&context, key->getKeyData(), key->getKeyLength());
-    SHA256_Update(&context, buffer, length);
-    SHA256_Final(md, &context);
+	EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
 #else
-    MD5_CTX  context;
-    MD5_Init(&context);
-    MD5_Update(&context, key->getKeyData(), key->getKeyLength());
-    MD5_Update(&context, buffer, length);
-    MD5_Final(md, &context);
+	EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 #endif
+	EVP_DigestUpdate(mdctx, key->getKeyData(), key->getKeyLength());
+	EVP_DigestUpdate(mdctx, buffer, length);
+	EVP_DigestFinal_ex(mdctx, md, NULL);
+	EVP_MD_CTX_free(mdctx);
 
     return md;
 }
 
 bool Condor_MD_MAC::verifyMD(const unsigned char * md,
                              const unsigned char * buffer,
-                             unsigned long   length)
+                             unsigned long length)
 {
     unsigned char * myMd = Condor_MD_MAC::computeOnce(buffer, length);
     bool match = (memcmp(md, myMd, MAC_SIZE) == 0);
@@ -121,7 +125,7 @@ bool Condor_MD_MAC::verifyMD(const unsigned char * md,
 
 bool Condor_MD_MAC::verifyMD(const unsigned char * md,
                              const unsigned char * buffer,
-                             unsigned long   length, 
+                             unsigned long length, 
                              KeyInfo       * key)
 {
    unsigned char * myMd = Condor_MD_MAC::computeOnce(buffer, length, key); 
@@ -132,11 +136,7 @@ bool Condor_MD_MAC::verifyMD(const unsigned char * md,
   
 void Condor_MD_MAC::addMD(const unsigned char * buffer, unsigned long length)
 {
-#ifdef FIPS_MODE
-   SHA256_Update(&(context_->sha256_), buffer, length);
-#else
-   MD5_Update(&(context_->md5_), buffer, length);
-#endif
+	EVP_DigestUpdate(context_->mdctx_, buffer, length);
 }
 
 bool Condor_MD_MAC::addMDFile(const char * filePathName)
@@ -160,11 +160,7 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 	bool ok = true;
 	ssize_t count = read(fd, buffer, 1024*1024); 
 	while( count > 0) {
-#ifdef FIPS_MODE
-		SHA256_Update(&(context_->sha256_), buffer, count);
-#else
-		MD5_Update(&(context_->md5_), buffer, count);
-#endif
+		EVP_DigestUpdate(context_->mdctx_, buffer, count);
 		memset(buffer, 0, 1024*1024);
 		count = read(fd, buffer, 1024*1024); 
 	}
@@ -184,13 +180,9 @@ bool Condor_MD_MAC::addMDFile(const char * filePathName)
 unsigned char * Condor_MD_MAC::computeMD()
 {
     unsigned char * md = (unsigned char *) malloc(MAC_SIZE);
-    
-#ifdef FIPS_MODE
-    SHA256_Final(md, &(context_->sha256_));
-#else
-    MD5_Final(md, &(context_->md5_));
-#endif
 
+	EVP_DigestFinal_ex(context_->mdctx_, md, NULL);
+	
     init(); // reinitialize for the next round
 
     return md;

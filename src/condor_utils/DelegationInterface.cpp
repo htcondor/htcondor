@@ -58,7 +58,7 @@ static int rand_serial(ASN1_INTEGER *ai) {
   int ret = 0;
   BIGNUM *btmp = BN_new();
   if(!btmp) goto error;
-  if(!BN_pseudo_rand(btmp, SERIAL_RAND_BITS, 0, 0)) goto error;
+  if(!BN_rand(btmp, SERIAL_RAND_BITS, 0, 0)) goto error;
   if(ai && !BN_to_ASN1_INTEGER(btmp, ai)) goto error;
   ret = 1;
 error:
@@ -259,8 +259,19 @@ void X509Credential::CleanError(void) {
 
 bool X509Credential::GenerateKey(void) {
   bool res = false;
-  int num = 2048;
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+  unsigned int num = 2048;
+  EVP_PKEY *pkey = EVP_RSA_gen(num);
+  if (!pkey) {
+	  LogError();
+	  dprintf(D_ALWAYS, "EVP_RSA_gen failed\n");
+  } else {
+	  if (key_) { EVP_PKEY_free(key_); }
+	  key_=pkey; pkey=NULL; res=true;
+  }
+#else
   //BN_GENCB cb;
+  int num = 2048;
   BIGNUM *bn = BN_new();
   RSA *rsa = RSA_new();
   EVP_PKEY* pkey = EVP_PKEY_new();
@@ -291,6 +302,7 @@ bool X509Credential::GenerateKey(void) {
   };
   if(bn) BN_free(bn);
   if(rsa) RSA_free(rsa);
+#endif
   if(pkey) EVP_PKEY_free(pkey);
   return res;
 }
