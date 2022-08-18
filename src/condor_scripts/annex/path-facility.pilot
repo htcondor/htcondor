@@ -8,6 +8,7 @@ COLLECTOR_HOST=$2
 LIFETIME=$3
 OWNERS=$4
 REQUEST_ID=$5
+STARTD_NAME=$6
 
 
 #
@@ -61,6 +62,8 @@ use feature:PartitionableSLot
 COLLECTOR_HOST = ${COLLECTOR_HOST}
 
 SHARED_PORT_PORT = 0
+
+STARTD_NAME = ${STARTD_NAME}
 
 # FIXME: use same-AuthenticatedIdentity once that becomes available, instead.
 # Allows condor_off (et alia) to work from the submit node.

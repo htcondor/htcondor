@@ -86,14 +86,20 @@ if [[ -z $PASSWORD_FILE ]]; then
     exit 1
 fi
 
+
+#
+# Site-specific defaults.  Should probably be set in the Python front-end
+# code, but we don't do that yet.
+#
+
 CPUS=${13}
 if [[ $CPUS == "None" ]]; then
-    CPUS=""
+    CPUS="1"
 fi
 
 MEM_MB=${14}
 if [[ $MEM_MB == "None" ]]; then
-    MEM_MB=""
+    MEM_MB="2048MB"
 fi
 
 
@@ -171,7 +177,7 @@ batch_name                  = ${JOB_NAME}
 
 executable                  = path-facility.pilot
 transfer_executable         = true
-arguments                   = ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID}
+arguments                   = ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID).\$(ProcID)
 
 transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}, token_file, password_file
 transfer_output_files       = \"\"
@@ -185,12 +191,13 @@ requirements                = GLIDEIN_Site == \"UNL-PATH\"
 
 ${ALLOCATION_LINE}
 
-# FIXME
-request_cpus                = 1
-request_memory              = 2GB
-request_disk                = 8GB
+# This is a bit under the average amount of disk per core in the facility.
+request_disk                = \$(request_cpus) * 15000 * 1024
 
-queue 1
+request_cpus                = ${CPUS}
+request_memory              = ${MEM_MB}
+
+queue ${NODES}
 " > ${PILOT_DIR}/path-facility.submit
 
 #
