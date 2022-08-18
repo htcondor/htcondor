@@ -832,12 +832,12 @@ class Dag {
 	*/
 	inline bool Recovery() const { return _recovery; }
 	
-	/**	Add a node marked by DONE in the dag file
+	/**	Add a node marked by DONE in the dag file to data structure
 		@param node: Node to be marked as done later
 	*/
-	void AddPreDoneNode(Job* node) { m_userDefinedDoneNodes.emplace(m_userDefinedDoneNodes.begin(),node); }
+	void AddPreDoneNode(Job* node) { m_userDefinedDoneNodes.push_back(node); }
 	
-	/** Sets all found nodes in done at submission time vector
+	/** Sets all found nodes in done at submission time data structure
 		to STATUS_DONE
 	*/
 	void SetPreDoneNodes();
@@ -859,9 +859,9 @@ class Dag {
 	std::vector<Job*> _splice_terminal_nodes;
 	
 	// These are nodes in dag file marked as: JOB NAME SUBFILE DONE
-	// This vector is here to hold nodes at submissions time to mark
+	// This data structure is here to hold nodes at submissions time to mark
 	// as done once DAG is finished being created (Mainly due to edge adjustment)
-	std::vector<Job*> m_userDefinedDoneNodes;
+	std::deque<Job*> m_userDefinedDoneNodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
