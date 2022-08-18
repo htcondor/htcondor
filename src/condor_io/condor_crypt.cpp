@@ -81,12 +81,20 @@ Condor_Crypto_State::~Condor_Crypto_State() {
 
 void Condor_Crypto_State::reset() {
 	const EVP_CIPHER *cipher_type = nullptr;
+	int key_length = 0;
+	const unsigned char* key_data = nullptr;
+	unsigned char* free_key_data = nullptr;
 	switch(m_keyInfo.getProtocol()) {
 	case CONDOR_3DES:
 		cipher_type = EVP_des_ede3_cfb64();
+		key_length = 24;
+		free_key_data = m_keyInfo.getPaddedKeyData(key_length);
+		key_data = free_key_data;
 		break;
 	case CONDOR_BLOWFISH:
 		cipher_type = EVP_bf_cfb64();
+		key_length = m_keyInfo.getKeyLength();
+		key_data = m_keyInfo.getKeyData();
 		break;
 	case CONDOR_AESGCM:
 	default:
@@ -104,12 +112,16 @@ void Condor_Crypto_State::reset() {
 		dec_ctx = EVP_CIPHER_CTX_new();
 
 		EVP_EncryptInit_ex(enc_ctx, cipher_type, NULL, NULL, NULL);
-		EVP_CIPHER_CTX_set_key_length(enc_ctx, m_keyInfo.getKeyLength());
-		EVP_EncryptInit_ex(enc_ctx, NULL, NULL, m_keyInfo.getKeyData(), ivec);
+		EVP_CIPHER_CTX_set_key_length(enc_ctx, key_length);
+		EVP_EncryptInit_ex(enc_ctx, NULL, NULL, key_data, ivec);
 
 		EVP_DecryptInit_ex(dec_ctx, cipher_type, NULL, NULL, NULL);
-		EVP_CIPHER_CTX_set_key_length(dec_ctx, m_keyInfo.getKeyLength());
-		EVP_DecryptInit_ex(dec_ctx, NULL, NULL, m_keyInfo.getKeyData(), ivec);
+		EVP_CIPHER_CTX_set_key_length(dec_ctx, key_length);
+		EVP_DecryptInit_ex(dec_ctx, NULL, NULL, key_data, ivec);
+
+		if (free_key_data) {
+			free(free_key_data);
+		}
 	}
 }
 
