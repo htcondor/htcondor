@@ -231,6 +231,10 @@ Dag::~Dag()
 		delete job;
 	}
 
+	for (auto &nv_pair : _splices) {
+		delete nv_pair.second;;
+	}
+
 	// And remove them from the vector
 	_jobs.clear();
 
@@ -4712,10 +4716,11 @@ Dag::LiftSplices(SpliceLayer layer)
 	}
 
 	// Now delete all of them.
-	auto it = _splices.begin();
-	while(it != _splices.end()) {
-		it = _splices.erase(it);
+	for (auto &nv_pair : _splices) {
+		delete nv_pair.second;
 	}
+	_splices.clear();
+
 	ASSERT( _splices.size() == 0 );
 
 	// and prefix them if there was a DIR for the dag.

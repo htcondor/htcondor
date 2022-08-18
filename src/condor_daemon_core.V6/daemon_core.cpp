@@ -11408,6 +11408,7 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 	}
 
 		// What should the collector admin be able to do to this daemon?
+		// - 452: DAEMONS_OFF_FLEX
 		// - 453: RESTART
 		// - 454: DAEMONS_OFF
 		// - 455: DAEMONS_ON
@@ -11429,7 +11430,7 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 		// - 60016: DC_SET_PEACEFUL_SHUTDOWN
 		// - 60041: DC_SET_FORCE_SHUTDOWN
 
-	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
+	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"452,453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
 
 	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		ADMINISTRATOR,

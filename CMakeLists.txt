@@ -25,7 +25,13 @@ cmake_minimum_required(VERSION 3.8)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(PREFER_CPP11 ON) # Still have some ifdefs on this
+
+# Remove warnings in cmake 3.24+.  This setting 
+# forces cmake to not update the timestamps on downloaded
+# tarballs.  The autoconf-built externals need this old setting
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.24)
+  cmake_policy(SET CMP0135 OLD)
+endif()
 
 ##########################################################################
 #Setup package meta-data (used in packaging)

@@ -3583,6 +3583,38 @@ perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring
 htcondor for running backfill jobs` for details.
 
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
+    This boolean value, which is only evaluated on Linux systems, tells
+    the *condor_startd* whether to make an ephemeral filesystem for the
+    scratch execute directory for jobs.  The default is ``False``. This
+    should only be set to true on HTCondor installations that have root
+    privilege.
+    When ``true``, you must set :macro:`THINPOOL_NAME` and
+    :macro:`THINPOOL_VOLUME_GROUP_NAME`,
+    or alternatively set :macro:`THINPOOL_BACKING_FILE`.
+
+:macro-def:`THINPOOL_NAME`
+    This string-valued parameter has no default, and should be set to the
+    Linux LVM logical volume to be used for ephemeral execute directories.
+    ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
+    :macro:`STARTD_ENFORCE_DISK_USAGE` is ``True``, and HTCondor has root
+    privilege.
+
+:macro-def:`THINPOOL_VOLUME_GROUP_NAME`
+    This string-valued parameter has no default, and should be set to the
+    name of the Linux LVM volume group to be used for logical volumes
+    for ephemeral execute directories.
+    ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
+    :macro:`STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root
+    privilege.
+
+:macro-def:`THINPOOL_BACKING_FILE`
+    This string-valued parameter has no default.  If a rootly HTCondor
+    does not have a Linux LVM configured, a single large file can be used
+    as the backing store for ephemeral file systems for execute directories.
+    This parameter should be set to the path of a large, pre-created file
+    to hold the blocks these filesystems are created from.
+
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
     willing to perform backfill computations when it would otherwise be
@@ -9065,6 +9097,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     records for the host they are connected to. See
     ``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK` for ways
     to disable this validation step.
+
+:macro-def:`USE_COLLECTOR_HOST_CNAME`
+    A boolean value that determines what hostname a client should
+    expect when validating the collector's certificate during SSL
+    authentication.
+    When set to ``True``, the hostname given to the client is used.
+    When set to ``False``, if the given hostname is a DNS CNAME, the
+    client resolves it to a DNS A record and uses that hostname.
+    The default value is ``True``.
 
 :macro-def:`DELEGATE_JOB_GSI_CREDENTIALS`
     A boolean value that defaults to ``True`` for HTCondor version

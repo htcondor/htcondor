@@ -1094,6 +1094,7 @@ main (int argc, char *argv[])
 				exit( 1 );
 			}
 		}
+		delete d;
 	}
 
 	if (dash_group_by) {
@@ -1316,6 +1317,8 @@ main (int argc, char *argv[])
 			fputs(output.c_str(), stdout);
 		}
 	}
+
+	fflush(stdout);
 
 	delete query;
 	return 0;

@@ -172,9 +172,9 @@ another( const char* opt )
 
 const char * on_completion_name(int completion)
 {
-	const char * const opts[] = { "-resume-on-completion", "-exit-on-completion", "-restart-on-completion", "on-completion" };
+	const char * const opts[] = { "-resume-on-completion", "-exit-on-completion", "-restart-on-completion", "-reconfig-on-completion", "on-completion" };
 	int ix = completion - 1;
-	if (ix < 0 || ix > 3) ix = 3;
+	if (ix < 0 || ix > 4) ix = 4;
 	return opts[ix];
 }
 
@@ -238,6 +238,10 @@ parseArgv( int argc, const char* argv[] )
 		else if (is_dash_arg_prefix(argv[i], "restart-on-completion", 4)) {
 			if (on_completion) conflict(argv[i], on_completion);
 			on_completion = DRAIN_RESTART_ON_COMPLETION;
+		}
+		else if (is_dash_arg_prefix(argv[i], "reconfig-on-completion", 3)) {
+			if (on_completion) conflict(argv[i], on_completion);
+			on_completion = DRAIN_RECONFIG_ON_COMPLETION;
 		}
 		else if (is_dash_arg_prefix(argv[i], "reason", 3)) {
 			if (i+1 >= argc) another(argv[i]);

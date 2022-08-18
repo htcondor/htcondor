@@ -287,8 +287,7 @@ Claim::publish( ClassAd* cad )
 		// put the image size value from the last call to updateUsage into the ad.
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
-		cad->Assign("CPUsUsage", c_cpus_usage);
-		//PRAGMA_REMIND("put CpusUsage into the standard attributes header file.")
+		cad->Assign(ATTR_CPUS_USAGE, c_cpus_usage);
 	}
 
 	// If this claim is for vm universe, update some info about VM

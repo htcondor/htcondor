@@ -1517,7 +1517,8 @@ SecManStartCommand::sendAuthInfo_inner()
 			}
 		}
 	}
-	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() ) {
+	// The family session is only available in the primary session cache
+	if( !m_have_session && !m_raw_protocol && !m_use_tmp_sec_session && daemonCore && !daemonCore->m_family_session_id.empty() && m_sec_man.m_tag.empty() ) {
 		// We have a process family security session.
 		// Try using it if the following are all true:
 		// 1) Peer is on a local network interface
@@ -3033,24 +3034,19 @@ SecMan::FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> my
 	std::unique_ptr<unsigned char, decltype(&free)> der_peerkey(der_peerkey_raw, &free);
 
 		// We must feed d2i_PublicKey a valid EVP_PKEY with the right curve setup.
+	EVP_PKEY *peerkey_raw;
 
-	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> ec_key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1), &EC_KEY_free);
-	if (!ec_key) {
-		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
-			"Failed to create EC key object for deserialization");
-		return false;
-	}
-	EVP_PKEY *peerkey_raw = EVP_PKEY_new();
+	// Note: due to the following bug:
+	// 	https://github.com/openssl/openssl/commit/2aa2beb06cc25c1f8accdc3d87b946205becfd86
+	// d2i_PublicKey is broken until OpenSSL 3.0.  Hence, we use the low-level deserialize...
+	
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	peerkey_raw = EVP_EC_gen("prime256v1");
 	if (!peerkey_raw) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to create pubkey object for deserialization");
 		return false;
 	}
-	// Note: due to the following bug:
-	// 	https://github.com/openssl/openssl/commit/2aa2beb06cc25c1f8accdc3d87b946205becfd86
-	// d2i_PublicKey is broken until OpenSSL 3.0.  Hence, we use the low-level deserialize...
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	EVP_PKEY_set1_EC_KEY(peerkey_raw, ec_key.get());
 	if (!(peerkey_raw = d2i_PublicKey(EVP_PKEY_base_id(mykey.get()), &peerkey_raw,
 		const_cast<const unsigned char**>(&der_peerkey_raw), peerkey_length))) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
@@ -3058,6 +3054,18 @@ SecMan::FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> my
 		return false;
 	}
 #else
+	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> ec_key(EC_KEY_new_by_curve_name(NID_X9_62_prime256v1), &EC_KEY_free);
+	if (!ec_key) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to create EC key object for deserialization");
+		return false;
+	}
+	peerkey_raw = EVP_PKEY_new();
+	if (!peerkey_raw) {
+		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
+			"Failed to create pubkey object for deserialization");
+		return false;
+	}
 	EC_KEY *ec_key_copy = ec_key.get();
 	if (!o2i_ECPublicKey(&ec_key_copy, const_cast<const unsigned char**>(&der_peerkey_raw), peerkey_length)) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,

@@ -17,9 +17,19 @@ Release Notes:
 
 New Features:
 
+- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
+  x86_64 microarchitecture, like *x86_64-v3*
+  :jira:`1252`
+
 - Added submit templates.  These are configured using new configuration variables
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
+
+- Added support for ephermal per-job execute directories
+  allocated from LVM or from a backing file on disk, when HTCondor is running
+  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
+  enables this, see :ref:`admin-manual/directories` for more details.
+  :jira:`912`
 
 - Added extended submit help which can be defined in the schedd using the new
   configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
@@ -31,9 +41,34 @@ New Features:
   record information about job processes throughout all nodes within the DAG.
   :jira:`1216` 
 
+- Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
+  This allows a command to be sent to the *condor_master* to drain the *condor_startd*
+  and then shutdown or restart all of the HTCondor daemons.
+  :jira:`1151`
+
+- When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+  false, and the starter runs a container job, we no longer create the helper
+  unix domain sockets required for *condor_ssh_to_job* to work.
+  :jira:1244`
+
+- Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
+  instead writes ads to JSON files in the working directory.
+  :jira:`1264`
+
 Bugs Fixed:
 
-- None.
+- Fixed a bug that might cause a job to restart with a "disconnected starter"
+  error if the job was running in a container, and there was an error
+  handling ``condor_ssh_to_job``.
+  :jira:`1245`
+
+- HTCondor’s security library no longer tries to resolve the provided hostname
+  to a fully-qualified canonical name when authenticating with SSL, matching
+  the behavior of ``curl``.  Services using a DNS CNAME no longer need to
+  implement workarounds in the host certificate to support the prior behavior.
+  The old behavior can be restored by setting new configuration
+  parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
+  :jira:`692`
 
 Version 9.11.0
 --------------

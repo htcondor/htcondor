@@ -60,12 +60,6 @@ class Create(Verb):
             "help": "Collector that the annex reports to. Defaults to %(default)s",
             "default": htcondor.param.get("ANNEX_COLLECTOR", "htcondor-cm-hpcannex.osgdev.chtc.io"),
         },
-        "ssh_target": {
-            "args": ("--ssh_target",),
-            #"help": "SSH target to use to talk with the HPC scheduler. Defaults to %(default)s",
-            "help": argparse.SUPPRESS,  # hidden option
-            "default": f"{getpass.getuser()}@{htcondor.param.get('ANNEX_SSH_HOST', 'login.xsede.org')}",
-        },
         "token_file": {
             "args": ("--token_file",),
             "help": "Token file.  Normally obtained automatically.",
@@ -97,6 +91,16 @@ class Create(Verb):
             # TODO: Parse units instead of requiring this to be a number of MBs
             "help": "Memory (in MB) to request (shared queues only).  Unset by default.",
             "type": int,
+            "default": None,
+        },
+        "login_name": {
+            "args": ("--login-name","--login",),
+            "help": "The (SSH) login name to use for this capacity request.  Uses SSH's default.",
+            "default": None,
+        },
+        "login_host": {
+            "args": ("--login-host","--host",),
+            "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
             "default": None,
         },
     }

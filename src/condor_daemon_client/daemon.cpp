@@ -1588,7 +1588,14 @@ Daemon::findCmDaemon( const char* cm_name )
 			return false;
 		}
 		sinful.setHost(saddr.to_ip_string().c_str());
-		sinful.setAlias(fqdn.c_str());
+		// Older versions resolved a CNAME to the final A record FQDN and
+		// set that as the alias for the collector sinful here.
+		// This runs counter to how SSL host certificate validation is
+		// expected to work, and our setting of the alias for this Daemon
+		// object.
+		if(!param_boolean("USE_COLLECTOR_HOST_CNAME", true)) {
+			sinful.setAlias(fqdn.c_str());
+		}
 		dprintf( D_HOSTNAME, "Found CM IP address and port %s\n",
 				 sinful.getSinful() ? sinful.getSinful() : "NULL" );
 		New_full_hostname(strdup(fqdn.c_str()));
