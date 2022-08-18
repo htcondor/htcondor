@@ -211,10 +211,10 @@ SYSTEM_TABLE = {
     "path-facility": {
         "pretty_name":      "PATh Facilty",
         "host_name":        "ap1.facility.path-cc.io",
-        "default_queue":    "HTCondor",
+        "default_queue":    "cpu",
 
         "queues": {
-            "default": {
+            "cpu": {
                 # This is actually max-jobs-per-request for this system,
                 # but for now, it's easier to think about each request
                 # being a single job like it is for SLURM.
@@ -226,6 +226,16 @@ SYSTEM_TABLE = {
 
                 "max_jobs_in_queue":    1000, # FIXME
             },
+            # When we formally support GPUs, we'll need to add the GPU
+            # queue here, and -- because HTCondor doesn't have multiple
+            # queues -- some special code somewhere to insert request_gpus.
+            # (Seems like we should allow the user to specify how many
+            # GPUs per node for the PATh Facility, too, so check that
+            # against the queue name (warn if cpu queue?) and also default
+            # it to 1 if the queue name is 'gpu'?)
+            #
+            # Also, we may not want to call them "nodes" for the PATh
+            # facility.
         },
     },
 }
