@@ -21,7 +21,11 @@ import traceback
 import multiprocessing
 
 import htcondor
-import elasticsearch
+
+if args.es_use_opensearch:
+    import opensearchpy as elasticsearch
+else:
+    import elasticsearch
 
 from . import elastic, utils, convert
 

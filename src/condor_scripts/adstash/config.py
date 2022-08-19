@@ -42,6 +42,7 @@ def get_default_config(name="ADSTASH"):
         "startd_history_timeout": 2 * 60,
         "es_host": "localhost:9200",
         "es_use_https": False,
+        "es_use_opensearch": False,
         "es_timeout": 2 * 60,
         "es_bunch_size": 250,
         "es_index_name": "htcondor-000001",
@@ -73,6 +74,7 @@ def get_htcondor_config(name="ADSTASH"):
         "es_username": p.get(f"{name}_ES_USERNAME"),
         "es_password_file": p.get(f"{name}_ES_PASSWORD_FILE"),
         "es_use_https": p.get(f"{name}_ES_USE_HTTPS"),
+        "es_use_opensearch": p.get(f"{name}_ES_USE_OPENSEARCH")
         "es_timeout": p.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": p.get(f"{name}_ES_INDEX_NAME"),
@@ -134,6 +136,7 @@ def get_environment_config(name="ADSTASH"):
         "es_username": env.get(f"{name}_ES_USERNAME"),
         "es_password": env.get(f"{name}_ES_PASSWORD"),
         "es_use_https": env.get(f"{name}_ES_USE_HTTPS"),
+        "es_use_opensearch": env.get(f"{name}_ES_USE_OPENSEARCH"),
         "es_timeout": env.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": env.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": env.get(f"{name}_ES_INDEX_NAME"),
@@ -204,7 +207,7 @@ def normalize_config_types(conf):
         "es_timeout",
         "es_bunch_size",
     ]
-    bools = ["standalone", "schedd_history", "startd_history", "es_use_https", "json_local"]
+    bools = ["standalone", "schedd_history", "startd_history", "es_use_https", "es_use_opensearch", "json_local"]
 
     # integers
     for key in integers:
@@ -420,6 +423,11 @@ def get_config(argv=None):
         "--es_use_https",
         action="store_true",
         help=("Use HTTPS when connecting to Elasticsearch " "[default: %(default)s]"),
+    )
+    parser.add_argument(
+        "--es_use_opensearch",
+        action="store_true",
+        help=("Use an OpenSearch cluster rather than Elasticsearch" "[default: %(default)s]"),
     )
     #parser.add_argument(
     #    "--es_timeout",

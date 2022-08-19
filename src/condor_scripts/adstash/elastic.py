@@ -19,7 +19,11 @@ import logging
 import collections
 import datetime
 
-import elasticsearch
+if args.es_use_opensearch:
+    import opensearchpy as elasticsearch
+else:
+    import elasticsearch
+
 import importlib.util
 
 from pathlib import Path
@@ -214,7 +218,10 @@ class ElasticInterface(GenericInterface):
             es_client["use_ssl"] = True
             es_client["verify_certs"] = True
 
-        self.handle = elasticsearch.Elasticsearch([es_client])
+        if args.es_use_opensearch:
+            self.handle = elasticsearch.OpenSearch([es_client])
+        else:
+            self.handle = elasticsearch.Elasticsearch([es_client])
         super().__init__(self, logdir)
 
     def make_mapping(self, idx):
