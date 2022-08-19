@@ -36,6 +36,11 @@ New Features:
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
+- Added new DAG job classad attributes ``DAG_JobsSubmitted``, ``DAG_JobsIdle``,
+  ``DAG_JobsHeld``, ``DAG_JobsRunning``, and ``DAG_JobsCompleted`` to better
+  record information about job processes throughout all nodes within the DAG.
+  :jira:`1216` 
+
 - Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
   This allows a command to be sent to the *condor_master* to drain the *condor_startd*
   and then shutdown or restart all of the HTCondor daemons.
@@ -61,6 +66,8 @@ Bugs Fixed:
   to a fully-qualified canonical name when authenticating with SSL, matching
   the behavior of ``curl``.  Services using a DNS CNAME no longer need to
   implement workarounds in the host certificate to support the prior behavior.
+  The old behavior can be restored by setting new configuration
+  parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
   :jira:`692`
 
 Version 9.11.0

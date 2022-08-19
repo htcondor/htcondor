@@ -28,6 +28,7 @@
 #include "../condor_utils/dagman_utils.h"
 
 class DCSchedd;
+class Dagman;
 
 class ScheddClassad {
 
@@ -104,24 +105,9 @@ class DagmanClassad : public ScheddClassad {
 
 
 	/** Update the status information in the DAGMan job's classad.
-		@param The total number of nodes
-		@param The number of nodes that are done
-		@param The number of nodes in the prerun state
-		@param The number of nodes submitted/queued
-		@param The number of nodes in the postrun state
-		@param The number of nodes in the hold state
-		@param The number of nodes that are ready (but not submitted, etc.)
-		@param The number of nodes that have failed
-		@param The number of nodes that are unready
-		@param The overall DAG status
-		@param Whether the DAG is in recovery mode
-		@param A ClassAd of DAGMan runtime statistics
+		@param dagman: Dagman object to pull status information from
 	*/
-	void Update( int total, int done, int pre, int submitted, int post,
-				int hold, int ready, int failed, int unready,
-				DagStatus dagStatus, bool recovery, const DagmanStats &stats,
-				int &maxJobs, int &maxIdle, int &maxPreScripts, 
-				int &maxPostScripts, int &maxHoldScripts );
+	void Update( const Dagman &dagman );
 
 		/** Get information we need from our own ClassAd.
 			@param owner: A string to receive the Owner value.

@@ -43,7 +43,11 @@ namespace classad {
 	class ClassAd;
 }
 namespace jwt {
+	template<typename json_traits>
 	class decoded_jwt;
+	namespace traits {
+		struct kazuho_picojson;
+	}
 }
 
 /** A class to implement the AKEP2 protocol for password-based authentication.
@@ -331,7 +335,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 		/** Check to see if a given token has been revoked; returns
 		    true if the token is revoked. */
-	bool isTokenRevoked(const jwt::decoded_jwt &jwt);
+	bool isTokenRevoked(const jwt::decoded_jwt<jwt::traits::kazuho_picojson> &jwt);
 
 	int m_client_status;
 	int m_server_status;

@@ -9,6 +9,11 @@ my $jobid = $ARGV[0];
 my $nodename = $ARGV[1];
 
 @NodeA = ("DAG_InRecovery = 0",
+	"DAG_JobsCompleted = 0",
+	"DAG_JobsHeld = 0",
+	"DAG_JobsIdle = 0",
+	"DAG_JobsRunning = 1",
+	"DAG_JobsSubmitted = 1",
 	"DAG_NodesDone = 0",
 	"DAG_NodesFailed = 0",
 	"DAG_NodesHoldrun = 0",
@@ -23,6 +28,11 @@ my $nodename = $ARGV[1];
 	#"Node NodeA succeeded");
 
 @NodeB = ("DAG_InRecovery = 0",
+	"DAG_JobsCompleted = 1",
+	"DAG_JobsHeld = 0",
+	"DAG_JobsIdle = 0",
+	"DAG_JobsRunning = 1",
+	"DAG_JobsSubmitted = 2",
 	"DAG_NodesDone = 1",
 	"DAG_NodesFailed = 0",
 	"DAG_NodesHoldrun = 0",
@@ -37,6 +47,11 @@ my $nodename = $ARGV[1];
 	#"Node NodeB succeeded");
 
 @NodeC = ("DAG_InRecovery = 0",
+	"DAG_JobsCompleted = 2",
+	"DAG_JobsHeld = 0",
+	"DAG_JobsIdle = 0",
+	"DAG_JobsRunning = 1",
+	"DAG_JobsSubmitted = 3",
 	"DAG_NodesDone = 2",
 	"DAG_NodesFailed = 0",
 	"DAG_NodesHoldrun = 0",
