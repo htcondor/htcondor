@@ -149,16 +149,37 @@ trap cleanup EXIT
 #
 # Likewise, we don't pre-stage .sif files for the PATh facility.
 #
-# Therefore, all we need to do here is make sure that the token and password
-# files exist when the pilot job starts.
-#
-# FIXME: ... and to garbage-collect old ones.  (Delete the whole pilot
-# directory if the token has expired.)
+# Therefore, all we need to do here is make sure that the pilot script and
+# token and password files exist when the pilot job starts.
 #
 
 mv ${PILOT_BIN} ${PILOT_DIR}/path-facility.pilot
 mv ${TOKEN_FILE} ${PILOT_DIR}/token_file
 mv ${PASSWORD_FILE} ${PILOT_DIR}/password_file
+
+
+#
+# Clean up other pilot directories if the corresponding token file
+# has expired.
+#
+cd ${PILOT_DIR}; cd ..
+for dir in pilot.*; do
+    if [[ ! -d $dir ]]; then
+        continue
+    fi
+
+    NOW=`date +%s`
+    TOKENS=`condor_token_list -dir $dir`
+    IFS='
+'
+    for line in $TOKENS; do
+        EXPIRY=`echo $line | sed -e's/^.*"exp"://' | sed -e's/,.*$//'`
+        if [[ $EXPIRY < $NOW ]]; then
+            rm -fr $dir
+        fi
+    done
+done
+
 
 
 #
