@@ -212,7 +212,7 @@ if [[ $SUBMIT_ERROR != 0 ]]; then
     cat ${SUBMIT_LOG}
     exit 6
 fi
-JOB_ID="FIXME"
+JOB_ID=`cat ${SUBMIT_LOG} | awk  '/submitted to cluster/{print $6}' | sed -e 's/\.//'`
 echo "${CONTROL_PREFIX} JOB_ID ${JOB_ID}"
 echo ""
 
