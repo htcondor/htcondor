@@ -48,10 +48,6 @@ New Features:
   level authorization.
   :jira:`1164`
 
-- Singularity jobs now mount /tmp and /var/tmp under the scratch
-  directory, not in tmpfs
-  :jira:`1180`
-
 - The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
   from 20 minutes to a practically infinite value.  This is to prevent
   surprises when the schedd starts running vanilla universe jobs even when
@@ -62,7 +58,7 @@ New Features:
   the interpreter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
 
-- Added a new submit option ``container_target_dir`` that allows singularity
+- Added a new submit option ``container_target_dir`` that allows Singularity
   jobs to specify the target directory
   :jira:`1171`
 
@@ -439,7 +435,7 @@ New Features:
   variables to be evaluated for periodic job policy.
   :jira:`905`
 
-- Container universe now supports running singularity jobs where the 
+- Container universe now supports running Singularity jobs where the 
   command executable is hardcoded in to the runfile.  We call this 
   running the container as the job.
   :jira:`966`
@@ -465,7 +461,7 @@ New Features:
   the ADL job description given to the ARC CE REST service.
   :jira:`932`
 
-- Reduce the size of the singularity test executable by not linking in
+- Reduce the size of the Singularity test executable by not linking in
   libraries it doesn't need.
   :jira:`927`
 
@@ -674,7 +670,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug where if the submit file set a checkpoint_exit_code, and the administrator
-  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  enabled Singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
 Version 9.4.1
@@ -965,7 +961,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that prevented Singularity jobs from running when the singularity
+- Fixed a bug that prevented Singularity jobs from running when the Singularity
   binary emitted many warning messages to stderr.
   :jira:`698`
 

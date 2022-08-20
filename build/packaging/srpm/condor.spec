@@ -1640,7 +1640,7 @@ fi
 * Tue Aug 16 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.16-1
 - Singularity now mounts /tmp and /var/tmp under the scratch directory
 - Fix bug where Singularity jobs go on hold at the first checkpoint
-- Fix bug where gridmanger deletes the X.509 proxy file instead of the copy
+- Fix bug where gridmanager deletes the X.509 proxy file instead of the copy
 - Fix file descriptor leak when using SciTokens for authentication
 
 * Thu Jul 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.15-1
