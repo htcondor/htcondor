@@ -10075,7 +10075,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	MyString env_error_msg;
     int niceness = 0;
 	std::string tmpCwd;
-	int inouterr[3];
+	int inouterr[3] = {-1, -1, -1};
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
@@ -10092,6 +10092,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
+
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
@@ -10321,35 +10322,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 	
+	set_priv( priv );  // back to regular privs...
 	if ( cannot_open_files ) {
-	/* I'll close the opened files in the same priv state I opened them
-		in just in case the OS cares about such things. */
-		if (inouterr[0] >= 0) {
-			if (close(inouterr[0]) == -1) {
-				dprintf(D_ALWAYS, 
-					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[1] >= 0) {
-			if (close(inouterr[1]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[2] >= 0) {
-			if (close(inouterr[2]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		set_priv( priv );  // back to regular privs...
 		goto wrapup;
 	}
-	
-	set_priv( priv );  // back to regular privs...
 	
 	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
@@ -10441,13 +10417,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	                                  core_size_ptr );
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
-	// now close those open fds - we don't want them here.
-	for ( i=0 ; i<3 ; i++ ) {
-		if ( close( inouterr[i] ) == -1 ) {
-			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
-		}
-	}
-
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		goto wrapup;
@@ -10496,6 +10465,14 @@ wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
+	}
+	// now close those open fds - we don't want to leak them if there was an error
+	for (i=0 ; i < 3; i++ ) {
+		if (inouterr[i] != -1) {
+				if (close(inouterr[i] ) == -1) {
+					dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
+				}
+		}
 	}
 	return retval;
 }
