@@ -3166,10 +3166,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 		// now, stuff the starter knows about, instead of individual
 		// procs under its control
-	std::string base;
-	base = "_";
-	base += myDistro->GetUc();
-	base += '_';
+	const char * base = "_CONDOR_";
  
 	std::string env_name;
 

@@ -864,7 +864,7 @@ DC_Exit( int status, const char *shutdown_program )
 	if ( shutdown_program ) {
 #     if !defined(WIN32)
 		dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING BY EXECING %s\n",
-				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
+				 myName, MY_condor_NAME, get_mySubSystem()->getName(), pid,
 				 shutdown_program );
 		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
@@ -874,7 +874,7 @@ DC_Exit( int status, const char *shutdown_program )
 #     else
 		dprintf( D_ALWAYS,
 				 "**** %s (%s_%s) pid %lu EXECING SHUTDOWN PROGRAM %s\n",
-				 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
+				 myName, MY_condor_NAME, get_mySubSystem()->getName(), pid,
 				 shutdown_program );
 		priv_state p = set_root_priv( );
 		int exec_status = execl( shutdown_program, shutdown_program, NULL );
@@ -886,7 +886,7 @@ DC_Exit( int status, const char *shutdown_program )
 #     endif
 	}
 	dprintf( D_ALWAYS, "**** %s (%s_%s) pid %lu EXITING WITH STATUS %d\n",
-			 myName, myDistro->Get(), get_mySubSystem()->getName(), pid,
+			 myName, MY_condor_NAME, get_mySubSystem()->getName(), pid,
 			 exit_status );
 
 	// Disable log rotation during process teardown (i.e. calling
@@ -1203,9 +1203,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
-	MyString env_str( "_" );
-	env_str += myDistro->Get();
-	env_str += "_";
+	MyString env_str( "_condor_" );
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
@@ -1252,9 +1250,9 @@ handle_dynamic_dirs()
 		// variable, so that the startd will have a unique name. 
 	std::string cur_startd_name;
 	if(param(cur_startd_name, "STARTD_NAME")) {
-		sprintf( buf, "_%s_STARTD_NAME=%d@%s", myDistro->Get(), mypid, cur_startd_name.c_str());
+		sprintf( buf, "_condor_STARTD_NAME=%d@%s", mypid, cur_startd_name.c_str());
 	} else {
-		sprintf( buf, "_%s_STARTD_NAME=%d", myDistro->Get(), mypid );
+		sprintf( buf, "_condor_STARTD_NAME=%d", mypid );
 	}
 
 		// insert modified startd name
@@ -3533,10 +3531,9 @@ int dc_main( int argc, char** argv )
 				ptmp = *ptr;
 				dcargs += 2;
 
-				ptmp1 = 
-					(char *)malloc( strlen(ptmp) + myDistro->GetLen() + 10 );
+				ptmp1 = (char *)malloc( strlen(ptmp) + 16 );
 				if ( ptmp1 ) {
-					sprintf(ptmp1,"%s_CONFIG=%s", myDistro->GetUc(), ptmp);
+					sprintf(ptmp1,"CONDOR_CONFIG=%s", ptmp);
 					SetEnv(ptmp1);
 					free(ptmp1);
 				}
@@ -3942,7 +3939,7 @@ int dc_main( int argc, char** argv )
 		// configured now, so the dprintf()s will work.
 	dprintf(D_ALWAYS,"******************************************************\n");
 	dprintf(D_ALWAYS,"** %s (%s_%s) STARTING UP\n",
-			myName,myDistro->GetUc(), get_mySubSystem()->getName() );
+			myName, MY_CONDOR_NAME_UC, get_mySubSystem()->getName() );
 	if( myFullName ) {
 		dprintf( D_ALWAYS, "** %s\n", myFullName );
 		free( myFullName );
