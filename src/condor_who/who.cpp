@@ -1526,6 +1526,10 @@ main( int argc, char *argv[] )
 				}
 				if ( ! App.show_daemons) {
 					// if we aren't printing the daemons table, just quit now.
+					for (const auto &keyvalue : info) {
+						delete keyvalue.second;
+					}
+					info.clear();
 					continue;
 				}
 			}
@@ -1624,6 +1628,10 @@ main( int argc, char *argv[] )
 								print_daemon_info(info, false);
 							}
 							free(logdir);
+							for (const auto &keyvalue : info) {
+								delete keyvalue.second;
+							}
+							info.clear();
 						}
 					}
 				}

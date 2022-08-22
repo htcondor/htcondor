@@ -564,6 +564,7 @@ main(int argc, const char* argv[])
   else {
       readHistoryRemote(constraintExpr, want_startd_history);
   }
+  delete constraintExpr;
 
   if (writetosocket) {
 	ClassAd ad;
