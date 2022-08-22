@@ -9647,9 +9647,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		std::string usermap;
 		p->getUseridMap(usermap);
 		if( !usermap.empty() ) {
-			std::string envname;
-			formatstr(envname,"_%s_USERID_MAP",myDistro->Get());
-			extra_env.SetEnv(envname.c_str(),usermap.c_str());
+			extra_env.SetEnv("_condor_USERID_MAP",usermap.c_str());
 		}
 	}
 #endif
@@ -9947,9 +9945,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	CommitNonDurableTransactionOrDieTrying();
 
 	Env starter_env;
-	std::string execute_env;
-	formatstr( execute_env, "_%s_EXECUTE", myDistro->Get());
-	starter_env.SetEnv(execute_env.c_str(),LocalUnivExecuteDir);
+	starter_env.SetEnv("_condor_EXECUTE",LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
 							   &starter_env, "starter", true );

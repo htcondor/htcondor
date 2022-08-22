@@ -959,30 +959,25 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		! continue_if_no_config)
 	{
 		if( wantsQuiet ) {
-			fprintf( stderr, "%s error: can't find config source.\n",
-					 myDistro->GetCap() );
+			fprintf( stderr, "Condor error: can't find config source.\n");
 			if (config_options & CONFIG_OPT_NO_EXIT) { return false; }
 			else { exit(1); }
 		}
-		fprintf(stderr,"\nNeither the environment variable %s_CONFIG,\n",
-				myDistro->GetUc() );
+		fprintf(stderr,"\nNeither the environment variable CONDOR_CONFIG,\n");
 #	  if defined UNIX
-		fprintf(stderr,"/etc/%s/, /usr/local/etc/, nor ~%s/ contain a %s_config source.\n",
-				myDistro->Get(), myDistro->Get(), myDistro->Get() );
+		fprintf(stderr,"/etc/condor/, /usr/local/etc/, nor ~condor/ contain a condor_config source.\n");
 #	  elif defined WIN32
-		fprintf(stderr,"nor the registry contains a %s_config source.\n", myDistro->Get() );
+		fprintf(stderr,"nor the registry contains a condor_config source.\n" );
 #	  else
 #		error "Unknown O/S"
 #	  endif
-		fprintf( stderr,"Either set %s_CONFIG to point to a valid config "
-				"source,\n", myDistro->GetUc() );
+		fprintf( stderr,"Either set CONDOR_CONFIG to point to a valid config "
+				"source,\n");
 #	  if defined UNIX
-		fprintf( stderr,"or put a \"%s_config\" file in /etc/%s/ /usr/local/etc/ or ~%s/\n",
-				 myDistro->Get(), myDistro->Get(), myDistro->Get() );
+		fprintf( stderr,"or put a \"condor_config\" file in /etc/condor/ /usr/local/etc/ or ~condor/\n");
 #	  elif defined WIN32
-		fprintf( stderr,"or put a \"%s_config\" source in the registry at:\n"
-				 " HKEY_LOCAL_MACHINE\\Software\\%s\\%s_CONFIG",
-				 myDistro->Get(), myDistro->Get(), myDistro->GetUc() );
+		fprintf( stderr,"or put a \"condor_config\" source in the registry at:\n"
+				 " HKEY_LOCAL_MACHINE\\Software\\Condor\\CONDOR_CONFIG");
 #	  else
 #		error "Unknown O/S"
 #	  endif
@@ -1060,15 +1055,11 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 		// Build "magic_prefix" with _condor_, or w/e distro we are
 
-	std::string magic_prefix;
-	magic_prefix += "_";
-	magic_prefix += myDistro->Get();
-	magic_prefix += "_";
-	int prefix_len = (int)magic_prefix.size();
+	const size_t prefix_len = sizeof("_condor_")-1;
 
 	for( int i = 0; my_environ[i]; i++ ) {
 		// proceed only if we see the magic prefix
-		if( strncasecmp( my_environ[i], magic_prefix.c_str(), prefix_len ) != 0 ) {
+		if( strncasecmp( my_environ[i], "_condor_",  prefix_len ) != 0 ) {
 			continue;
 		}
 
@@ -1088,6 +1079,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// isolate Condor macro_name by skipping magic prefix
 		char *macro_name = varname + prefix_len;
 
+	#if 0 // TJ disabled on 8/18/2022 in preparation for the 10.0 series
 		// special macro START_owner needs to be expanded (for the
 		// glide-in code) [which should probably be fixed to use
 		// the general mechanism and set START itself --pfc]
@@ -1097,7 +1089,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 			insert_macro("START", ownerstr.c_str(), ConfigMacroSet, EnvMacro, ctx);
 		}
 		// ignore "_CONDOR_" without any macro name attached
-		else if( macro_name[0] != '\0' ) {
+		else
+	#endif
+		if( macro_name[0] != '\0' ) {
 			insert_macro(macro_name, varvalue, ConfigMacroSet, EnvMacro, ctx);
 		}
 
@@ -1386,7 +1380,7 @@ bool check_config_file_access(
 	if (MATCH == strcasecmp(username, "root") || MATCH == strcasecmp(username, "SYSTEM")) {
 		// no need to check access again for root. 
 		return true;
-	} else if (MATCH == strcasecmp(username, "condor")) {
+	} else if (MATCH == strcasecmp(username, MY_condor_NAME)) {
 		priv_to_check = PRIV_CONDOR;
 	} else {
 		priv_to_check = PRIV_USER;
@@ -1493,15 +1487,13 @@ init_tilde()
 	}
 # if defined UNIX
 	struct passwd *pw;
-	if( (pw=getpwnam( myDistro->Get() )) ) {
+	if( (pw=getpwnam( MY_condor_NAME )) ) {
 		tilde = strdup( pw->pw_dir );
 	}
 # else
 	// On Windows, we'll just look in the registry for TILDE.
 	HKEY	handle;
-	std::string regKey("Software\\"); regKey += myDistro->GetCap();
-
-	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
+	if ( RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Condor",
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 
 		// got the reg key open; now we just need to see if
@@ -1539,9 +1531,7 @@ get_tilde()
 const char*
 find_global(int config_options, MyString & config_file)
 {
-	MyString	file;
-	file.formatstr( "%s_config", myDistro->Get() );
-	return find_file( EnvGetName(ENV_CONFIG), file.c_str(), config_options, config_file);
+	return find_file( EnvGetName(ENV_CONFIG), "condor_config", config_options, config_file);
 }
 
 // Find user-specific location of a file
@@ -1567,18 +1557,18 @@ find_user_file(std::string &file_location, const char * basename, bool check_acc
 		if ( !pw || !pw->pw_dir) {
 			return false;
 		}
-		formatstr(file_location, "%s/.%s/%s", pw->pw_dir, myDistro->Get(), basename);
+		formatstr(file_location, "%s/.condor/%s", pw->pw_dir, basename);
 #elif defined WIN32
 		// %USERPROFILE%\.condor\user_config
 		const char * pw_dir = getenv("USERPROFILE");
 		if ( !pw_dir)
 			return false;
-		formatstr(file_location, "%s\\.%s\\%s", pw_dir, myDistro->Get(), basename);
+		formatstr(file_location, "%s\\.condor\\%s", pw_dir, basename);
 #else
 		const char * pw_dir = getenv("HOME");
 		if ( !pw_dir)
 			return false;
-		formatstr(file_location, "%s/.%s/%s", pw_dir, myDistro->Get(), basename);
+		formatstr(file_location, "%s/.condor/%s", pw_dir, basename);
 #endif
 	}
 	if (check_access) {
@@ -1659,7 +1649,7 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 		// $HOME/.condor/condor_config was added for BOSCO and never used, We are removing it in 8.3.1, but may put it back if users complain.
 		//find_user_file(locations[0], file_name, false);
 			// 2) /etc/condor/condor_config
-		locations[1].formatstr( "/etc/%s/%s", myDistro->Get(), file_name );
+		locations[1].formatstr( "/etc/condor/%s", file_name );
 			// 3) /usr/local/etc/condor_config (FreeBSD)
 		locations[2].formatstr( "/usr/local/etc/%s", file_name );
 		if (tilde) {
@@ -1689,9 +1679,7 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 # elif defined WIN32	// ifdef UNIX
 	// Only look in the registry on WinNT.
 	HKEY	handle;
-	std::string regKey("Software\\"); regKey += myDistro->GetCap();
-
-	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, regKey.c_str(),
+	if ( !config_source && RegOpenKeyEx(HKEY_LOCAL_MACHINE, "Software\\Condor",
 		0, KEY_READ, &handle) == ERROR_SUCCESS ) {
 		// We have found a registry key for Condor, which
 		// means this user has a pulse and has actually run the
@@ -3207,10 +3195,10 @@ init_dynamic_config()
 			return;
 		} else {
 				// we are a daemon.  if we fail, we must exit.
-			fprintf( stderr, "%s error: ENABLE_PERSISTENT_CONFIG is TRUE, "
+			fprintf( stderr, "Condor error: ENABLE_PERSISTENT_CONFIG is TRUE, "
 					 "but neither %s nor PERSISTENT_CONFIG_DIR is "
 					 "specified in the configuration file\n",
-					 myDistro->GetCap(), filename_parameter.c_str() );
+					 filename_parameter.c_str() );
 			exit( 1 );
 		}
 	}

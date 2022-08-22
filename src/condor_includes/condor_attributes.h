@@ -107,8 +107,8 @@
 #define ATTR_MATCHED_PSG  "Matched_PSG"
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
 #define ATTR_PREEMPTING_CONCURRENCY_LIMITS  "PreemptingConcurrencyLimits"
-#define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
-#define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
+#define ATTR_CONDOR_LOAD_AVG			"CondorLoadAvg"
+#define ATTR_CONDOR_ADMIN				"CondorAdmin"
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
 #define ATTR_CONTAINER_IMAGE "ContainerImage"
 #define ATTR_CONTINUE  "Continue"
@@ -583,7 +583,7 @@
 #define ATTR_PARALLEL_SCRIPT_STARTER  "ParallelScriptStarter" 
 #define ATTR_PARALLEL_SHUTDOWN_POLICY  "ParallelShutdownPolicy" 
 #define ATTR_PERIODIC_CHECKPOINT  "PeriodicCheckpoint"
-#define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
+#define ATTR_PLATFORM					"CondorPlatform"
 #define ATTR_PREEMPTING_ACCOUNTING_GROUP  "PreemptingAccountingGroup"
 #define ATTR_PREEMPTING_RANK  "PreemptingRank"
 #define ATTR_PREEMPTING_OWNER  "PreemptingOwner"
@@ -708,7 +708,7 @@
 #define ATTR_TOTAL_CLAIM_RUN_TIME  "TotalClaimRunTime"
 #define ATTR_TOTAL_CLAIM_SUSPEND_TIME  "TotalClaimSuspendTime"
 #define ATTR_TOTAL_CLUSTER_ADS  "TotalClusterAds"
-#define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
+#define ATTR_TOTAL_CONDOR_LOAD_AVG			"TotalCondorLoadAvg"
 #define ATTR_TOTAL_CPUS  "TotalCpus"
 #define ATTR_TOTAL_SLOT_CPUS  "TotalSlotCpus"
 #define ATTR_TOTAL_DISK  "TotalDisk"
@@ -817,7 +817,7 @@
 #define ATTR_NUM_HOSTS_UNCLAIMED  "HostsUnclaimed"
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
-#define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
+#define ATTR_VERSION					"CondorVersion"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
@@ -1228,6 +1228,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
+#if 0
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
@@ -1242,12 +1243,12 @@ typedef enum
 // Prototypes
 int AttrInit( void );
 const char *AttrGetName( CONDOR_ATTR );
-
+#endif
 
 // ------------------------------------------------------
 // Stuff private to the environment variable manager
 // ------------------------------------------------------
-#if defined _CONDOR_ATTR_MAIN
+#if 0 // defined _CONDOR_ATTR_MAIN
 
 // Flags available
 typedef enum

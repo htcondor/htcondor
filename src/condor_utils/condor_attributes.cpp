@@ -19,10 +19,11 @@
 
 
 #include "condor_common.h"
-#include "condor_distribution.h"
+//#include "condor_distribution.h"
 #define _CONDOR_ATTR_MAIN
 #include "condor_attributes.h"
 
+#if 0
 // Initialize our logic
 int
 AttrInit( void )
@@ -92,3 +93,4 @@ AttrGetName( CONDOR_ATTR which )
 #define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
 #define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
 
+#endif

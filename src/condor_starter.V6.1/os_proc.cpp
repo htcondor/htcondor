@@ -1046,10 +1046,7 @@ OsProc::PublishToEnv( Env * proc_env ) {
 	UserProc::PublishToEnv( proc_env );
 
 	if( howCode != -1 ) {
-		std::string name;
-		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
-		upper_case(name);
-		proc_env->SetEnv( name, std::to_string( howCode ) );
+		proc_env->SetEnv( "_CONDOR_HOW_CODE", std::to_string( howCode ) );
 	}
 }
 
