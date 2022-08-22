@@ -110,7 +110,8 @@ fi
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
+# WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.10.1/release/condor-9.10.1-x86_64_CentOS8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -201,14 +202,26 @@ transfer_executable         = true
 arguments                   = ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID)_\$(ProcID) ${CPUS} ${MEM_MB}
 
 transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}, token_file, password_file
-transfer_output_files       = \"\"
+# Transfer nothing back.
+# transfer_output_files       = \"\"
+# Debug: transfer back the log files.
+# transfer_output_files       = condor-9.5.4-1-x86_64_Rocky8-stripped/local/log
+transfer_output_files       = condor-9.10.1-1-x86_64_AlmaLinux8-stripped/local/log
+transfer_output_remaps      = \"log = log.\$(ClusterID).\$(ProcID)\"
 
 output                      = out.\$(ClusterID).\$(ProcID)
 error                       = err.\$(ClusterID).\$(ProcID)
 log                         = log.\$(ClusterID).\$(ProcID)
 
-# The WISC-PATH site runs CentOS 7.
-requirements                = GLIDEIN_Site == \"UNL-PATH\"
+# Some -- but not all! -- WISC-PATH sites run CentOS7!
+# requirements                = GLIDEIN_Site == \"UNL-PATH\"
+# requirements                = GLIDEIN_Site == \"WISC-PATH\"
+requirements                = OpSysAndVer == \"CentOS8\"
+
+# BrianL thinks this is way more likely to work than using the
+# host's Singularity, which may not exist nor be configured
+# to run "unprivileged."
+SINGULARITY                 = /cvmfs/oasis.opensciencegrid.org/mis/singularity/current/bin/singularity
 
 ${ALLOCATION_LINE}
 
