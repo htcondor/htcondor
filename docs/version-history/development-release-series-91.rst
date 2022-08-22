@@ -62,6 +62,10 @@ Bugs Fixed:
   handling ``condor_ssh_to_job``.
   :jira:`1245`
 
+- Fixed a memory leak in the *condor_schedd* triggered by spooling sandboxes
+  to the schedd.
+  :jira:`1233`
+
 - HTCondor’s security library no longer tries to resolve the provided hostname
   to a fully-qualified canonical name when authenticating with SSL, matching
   the behavior of ``curl``.  Services using a DNS CNAME no longer need to
