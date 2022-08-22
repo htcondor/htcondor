@@ -375,8 +375,8 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 
 struct job_data_transfer_t {
 	int mode;
-	char *peer_version;
 	ExtArray<PROC_ID> *jobs;
+	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
 match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
@@ -5123,7 +5123,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			}
 			return FALSE;
 		}
-		if ( peer_version != NULL ) {
+		if ( peer_version[0] != '\0' ) {
 			ftrans.setPeerVersion( peer_version );
 		}
 
@@ -5216,10 +5216,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 	}
 
-	if ( peer_version ) {
-		free( peer_version );
-	}
-
 	dprintf( D_AUDIT, *rsock, (answer==OK) ? "Transfer completed\n" :
 			 "Error received from client\n" );
    return ((answer == OK)?TRUE:FALSE);
@@ -5241,7 +5237,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	static int transfer_reaper_id = -1;
 	PROC_ID a_job;
 	int tid;
-	char *peer_version = NULL;
+	std::string peer_version;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -5273,15 +5269,13 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	switch(mode) {
 		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
-			peer_version = NULL;
+			peer_version = "";
 			if ( !rsock->code(peer_version) ) {
 				dprintf(D_AUDIT | D_FAILURE, *rsock, 
 					 	"spoolJobFiles(): failed to read peer_version\n" );
 				refuse(s);
 				return FALSE;
 			}
-				// At this point, we are responsible for deallocating
-				// peer_version with free()
 			break;
 
 		default:
@@ -5440,14 +5434,12 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
-		// exits, but we need to free anything pointed to by
-		// job_data_transfer_t ourselves. generalJobFilesWorkerThread()
-		// will free 'peer_version' and our reaper will free 'jobs' (the
-		// reaper needs 'jobs' for some of its work).
-	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+		// exits, 
+	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) + peer_version.length());
 	ASSERT( thread_arg != NULL );
 	thread_arg->mode = mode;
-	thread_arg->peer_version = peer_version;
+	thread_arg->peer_version[0] = '\0';
+	strcpy(thread_arg->peer_version, peer_version.c_str());
 	thread_arg->jobs = jobs;
 
 	switch(mode) {
@@ -5502,9 +5494,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
-		if ( peer_version ) {
-			free( peer_version );
-		}
 		delete jobs;
 		refuse(s);
 		return FALSE;
