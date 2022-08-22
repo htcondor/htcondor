@@ -1203,7 +1203,6 @@ main (int argc, char *argv[])
 		q = collectors->query( * query, rightCallback, rightArg, & errstack );
 		delete collectors;
 	}
-	delete d;
 
 	for( auto i = leftSet.begin(); i != leftSet.end(); ++i ) {
 		if( marked( * i ) ) {
@@ -1254,6 +1253,8 @@ main (int argc, char *argv[])
 		// fail
 		exit (1);
 	}
+
+	delete d;
 
 	if(! mergeMode) {
 		doNormalOutput( right_ai, adType );
