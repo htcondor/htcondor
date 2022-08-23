@@ -54,7 +54,7 @@ New Features:
 - When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
   false, and the starter runs a container job, we no longer create the helper
   unix domain sockets required for *condor_ssh_to_job* to work.
-  :jira:1244`
+  :jira:`1244`
 
 - Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
   instead writes ads to JSON files in the working directory.
@@ -78,6 +78,10 @@ Bugs Fixed:
   The old behavior can be restored by setting new configuration
   parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
   :jira:`692`
+  
+- Fixed bug where a DAGMan job would write a warning for not using the keywords
+  **JOB** and **RETRY** in node submit file to the ``.dagman.out`` file.
+  :jira:`1273`
 
 Version 9.11.0
 --------------
