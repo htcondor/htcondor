@@ -98,6 +98,12 @@ Release Notes:
 
 New Features:
 
+- SSL authentication will automatically be configured in the **condor_collector**,
+  providing a mechanism to more easily bootstrap secure authentication within the
+  pool.  Tools will allow users to setup trust with the generated CA similarly to
+  how SSH enables trust on first use of a remote host.
+  :jira:`501`
+
 - Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
   :jira:`1173`
 
@@ -232,6 +238,19 @@ Release Notes:
   :jira:`1161`
 
 New Features:
+  
+- Added support for running on Linux systems that ship with openssl version 3
+  :jira:`1148`
+
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
+
+- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initalized before or after DAG jobs are
+  submitted. Any ``VARS`` without these options will have behavior derived
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
+  :jira:`1080`
 
 - The remote administration capability in daemon ads sent to the
   **condor_collector** (configuration parameter

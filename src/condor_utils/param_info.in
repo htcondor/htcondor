@@ -2559,6 +2559,30 @@ tags=condor_auth_ssl
 default=false
 type=bool
 
+[BOOTSTRAP_SSL_SERVER_TRUST]
+default=false
+description=Automatically trust the remote CA over SSL
+type=bool
+tags=io,condor_auth_ssl
+
+[TRUST_DOMAIN_CAFILE]
+default=/etc/condor/trust_domain_ca.pem
+win32_default=$(RELEASE_DIR)\certs\ca.pem
+type=path
+tags=io,condor_auth_ssl
+
+[TRUST_DOMAIN_CAKEY]
+default=/etc/condor/trust_domain_ca_privkey.pem
+win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+type=path
+tags=io,condor_auth_ssl
+
+[SEC_SYSTEM_KNOWN_HOSTS]
+default=/etc/condor/known_hosts
+win32_default=$(RELEASE_DIR)\known_hosts
+type=path
+tags=io
+
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
 type=string

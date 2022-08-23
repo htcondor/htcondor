@@ -984,7 +984,8 @@ SSL Authentication
 
 :index:`SSL<single: SSL; authentication>`
 
-SSL authentication utilizes X.509 certificates.
+SSL authentication utilizes X.509 certificates to establish trust between
+a client and a server.
 
 SSL authentication may be mutual or server-only.
 That is, the server always needs a certificate that can be verified by
@@ -1027,6 +1028,66 @@ issued by trusted certificate authorities. Similarly,
 specify a directory with one or more files, each which may contain a
 single CA certificate. The directories must be prepared using the
 OpenSSL ``c_rehash`` utility.
+
+Bootstrapping SSL Authentication
+''''''''''''''''''''''''''''''''
+HTCondor daemons exposed to the Internet may utilize server certificates provided
+by well-known authorities; however, SSL can be difficult to bootstrap for non-public
+hosts.
+
+Accordingly, on first startup, the **condor_collector** generates a new CA and key
+in the locations pointed to by ``TRUST_DOMAIN_CAFILE`` :index:`TRUST_DOMAIN_CAFILE`
+and ``TRUST_DOMAIN_CAKEY`` :index:`TRUST_DOMAIN_CAKEY`,
+respectively.  If ``AUTH_SSL_SERVER_CERTFILE`` or ``AUTH_SSL_SERVER_KEYFILE`` does
+not exist, the collector will generate a host certificate and key using the generated
+CA and write them to the respective locations.
+
+The first time an unknown CA is encountered by tool such as ``condor_status``, the tool
+will prompt the user on whether it should trust the CA; the prompt looks like the following:
+
+.. code-block:: text
+
+   $ condor_status
+   The remote host collector.wisc.edu presented an untrusted CA certificate with the following fingerprint:
+   SHA-256: 781b:1d:1:ca:b:f7:ab:b6:e4:a3:31:80:ae:28:9d:b0:a9:ee:1b:c1:63:8b:62:29:83:1f:e7:88:29:75:6:
+   Subject: /O=condor/CN=hcc-briantest7.unl.edu
+   Would you like to trust this server for current and future communications?
+   Please type 'yes' or 'no':
+
+The result will be persisted in a file at ``.condor/known_hosts`` inside the user's home directory.
+
+Similarly, a daemon authenticating as a client against a remote server will record the result
+of the authentication in a system-wide trust whose location is kept in the configuration variable
+``SEC_SYSTEM_KNOWN_HOSTS`` :index:`SEC_SYSTEM_KNOWN_HOSTS`.  Since a daemon cannot prompt the
+administrator for a decision, it will always deny unknown CAs _unless_ ``BOOTSTRAP_SSL_SERVER_TRUST``
+:index:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
+
+The first time any daemon is authenticated, even if it's not through SSL, it will be noted in the
+``known_hosts`` file.
+
+The format of the ``known_hosts`` file is line-oriented and has three fields,
+
+.. code-block:: text
+
+   HOSTNAME METHOD CERTIFICATE_DATA
+
+Any blank line or line prefixed with ``#`` will be ignored.
+Any line prefixed with ``!`` will result in the CA certificate to _not_ be trusted.  To easily switch
+an untrusted CA to be trusted, simply delete the ``!`` prefix.
+
+For example, collector.wisc.edu would be trusted with this file entry using SSL:
+
+.. code-block:: text
+
+   collector.wisc.edu SSL MIIBvjCCAWSgAwIBAgIJAJRheVnN5ZDyMAoGCCqGSM49BAMCMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTAeFw0yMTA1MTcxOTQ3MjRaFw0zMTA1MTUxOTQ3MjNaMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPN7qu+qdsfP6WR++UucrZYvMhssre8jvgWsnPBdzCYU/EqHYp+wri/aAKyDrLM5R1lWX44jSykgIpTOCLJUS/ajYzBhMB0GA1UdDgQWBBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAfBgNVHSMEGDAWgBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwICBDAKBggqhkjOPQQDAgNIADBFAiARfW+suELxSzSdi9u20hFs/aSXpd+gwJ6Ne8jjG+y/2AIhAO6f3ff9nnYRmesFbvt1lv+LosOMbeiUdVoaKFOGIyuJ
+
+
+The following line would cause collector.wisc.edu to _not_ be trusted:
+
+.. code-block:: text
+
+   !collector.wisc.edu SSL MIIBvjCCAWSgAwIBAgIJAJRheVnN5ZDyMAoGCCqGSM49BAMCMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTAeFw0yMTA1MTcxOTQ3MjRaFw0zMTA1MTUxOTQ3MjNaMDIxDzANBgNVBAoMBmNvbmRvcjEfMB0GA1UEAwwWaGNjLWJyaWFudGVzdDcudW5sLmVkdTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPN7qu+qdsfP6WR++UucrZYvMhssre8jvgWsnPBdzCYU/EqHYp+wri/aAKyDrLM5R1lWX44jSykgIpTOCLJUS/ajYzBhMB0GA1UdDgQWBBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAfBgNVHSMEGDAWgBRBPe8Ga9Q7X3F198fWBSg6VT1DZDAPBgNVHRMBAf8EBTADAQH/MA4GA1UdDwEB/wQEAwICBDAKBggqhkjOPQQDAgNIADBFAiARfW+suELxSzSdi9u20hFs/aSXpd+gwJ6Ne8jjG+y/2AIhAO6f3ff9nnYRmesFbvt1lv+LosOMbeiUdVoaKFOGIyuJ
+
 
 Kerberos Authentication
 '''''''''''''''''''''''
