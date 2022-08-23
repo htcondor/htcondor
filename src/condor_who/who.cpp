@@ -1348,7 +1348,7 @@ void init_condor_config()
 	// a CONDOR_UIDS environment variable, set one to keep config happy.
 	//
 	if (is_root()) {
-		const char *env_name = EnvGetName(ENV_UG_IDS);
+		const char *env_name = ENV_CONDOR_UG_IDS;
 		if (env_name) {
 			bool fSetUG_IDS = false;
 			char * env = getenv(env_name);
@@ -1370,7 +1370,7 @@ void init_condor_config()
 	}
 #endif
 
-	const char *env_name = EnvGetName(ENV_CONFIG);
+	const char *env_name = ENV_CONDOR_CONFIG;
 	char * env = getenv(env_name);
 	if ( ! env) {
 		// If no CONDOR_CONFIG environment variable, we don't want to fail if there

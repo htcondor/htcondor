@@ -32,6 +32,7 @@
 #include "condor_adtypes.h"
 #include "condor_io.h"
 #include "condor_distribution.h"
+#include "condor_environ.h"
 #include "condor_ver_info.h"
 #if !defined(WIN32)
 #include <pwd.h>
@@ -3182,7 +3183,7 @@ setupAuthentication()
 	if( Rendezvous ) {
 		dprintf( D_FULLDEBUG,"setting RENDEZVOUS_DIRECTORY=%s\n", Rendezvous );
 			//SetEnv because Authentication::authenticate() expects them there.
-		SetEnv( "RENDEZVOUS_DIRECTORY", Rendezvous );
+		SetEnv(ENV_RENDEZVOUS_DIRECTORY, Rendezvous);
 		free( Rendezvous );
 	}
 }

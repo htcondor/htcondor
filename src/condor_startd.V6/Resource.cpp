@@ -2918,7 +2918,6 @@ Resource::makeChildClaimIds() {
 void
 Resource::publishDeathTime( ClassAd* cap )
 {
-    const char *death_time_env_name;
     char       *death_time_string;
     bool        have_death_time;
     int         death_time;
@@ -2931,8 +2930,7 @@ Resource::publishDeathTime( ClassAd* cap )
 	//TODO: move setup of death time to global initialization
 
     have_death_time     = false;
-    death_time_env_name = EnvGetName(ENV_DAEMON_DEATHTIME);
-    death_time_string   = getenv(death_time_env_name);
+    death_time_string   = getenv(ENV_DAEMON_DEATHTIME);
 
     // Lookup the death time that we have.
     if ( death_time_string ) {

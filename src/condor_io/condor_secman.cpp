@@ -3787,7 +3787,7 @@ char* SecMan::my_parent_unique_id() {
 		_should_check_env_for_unique_id = false;
 
 		// look in the env for ENV_PARENT_ID
-		const char* envName = EnvGetName ( ENV_PARENT_ID );
+		const char* envName = ENV_CONDOR_PARENT_ID;
 		MyString value;
 		GetEnv( envName, value );
 

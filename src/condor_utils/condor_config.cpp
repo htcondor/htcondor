@@ -945,7 +945,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 			have_config_source = false;
 		}
 	} else {
-		char* env = getenv( EnvGetName(ENV_CONFIG) );
+		char* env = getenv(ENV_CONDOR_CONFIG);
 		if( env && strcasecmp(env, "ONLY_ENV") == MATCH ) {
 				// special case, no config source desired
 			have_config_source = false;
@@ -1531,7 +1531,7 @@ get_tilde()
 const char*
 find_global(int config_options, MyString & config_file)
 {
-	return find_file( EnvGetName(ENV_CONFIG), "condor_config", config_options, config_file);
+	return find_file( ENV_CONDOR_CONFIG, "condor_config", config_options, config_file);
 }
 
 // Find user-specific location of a file

@@ -6283,10 +6283,10 @@ void CreateProcessForkit::exec() {
 
 			// add/override the inherit variable with the correct value
 			// for this process.
-		m_envobject.SetEnv( EnvGetName( ENV_INHERIT ), m_inheritbuf.c_str() );
+		m_envobject.SetEnv( ENV_CONDOR_INHERIT, m_inheritbuf.c_str() );
 
 		if( !m_privateinheritbuf.empty() ) {
-			m_envobject.SetEnv( EnvGetName( ENV_PRIVATE ), m_privateinheritbuf.c_str() );
+			m_envobject.SetEnv( ENV_CONDOR_PRIVATE, m_privateinheritbuf.c_str() );
 		}
 	}
 
@@ -7454,10 +7454,10 @@ int DaemonCore::Create_Process(
 
 
 		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(job_opt_mask) ) {
-			job_environ.SetEnv( EnvGetName( ENV_INHERIT ), inheritbuf.Value() );
+			job_environ.SetEnv( ENV_CONDOR_INHERIT, inheritbuf.Value() );
 
 			if( !privateinheritbuf.IsEmpty() ) {
-				job_environ.SetEnv( EnvGetName( ENV_PRIVATE ), privateinheritbuf.Value() );
+				job_environ.SetEnv( ENV_CONDOR_PRIVATE, privateinheritbuf.Value() );
 			}
 		}
 
@@ -8930,7 +8930,7 @@ DaemonCore::Inherit( void )
 	 		"1" for relisock, a "2" for safesock, and a "0" when done.
 		*	command sockets.  first the rsock, then the ssock, then a "0".
 	*/
-	const char *envName = EnvGetName( ENV_INHERIT );
+	const char *envName = ENV_CONDOR_INHERIT;
 	const char *tmp = GetEnv( envName );
 #ifdef REFACTOR_SOCK_INHERIT
 	if (tmp) {
@@ -9126,7 +9126,7 @@ DaemonCore::Inherit( void )
 	}	// end of if we read out CONDOR_INHERIT ok
 
 	std::string family_session_info;
-	const char *privEnvName = EnvGetName( ENV_PRIVATE );
+	const char *privEnvName = ENV_CONDOR_PRIVATE;
 	const char *privTmp = GetEnv( privEnvName );
 	if ( privTmp != NULL ) {
 		dprintf ( D_DAEMONCORE, "Processing %s from parent\n", privEnvName );
