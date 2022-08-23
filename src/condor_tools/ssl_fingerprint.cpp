@@ -117,7 +117,6 @@ int print_known_hosts_file(std::string desired_fname = "")
 
 int main(int argc, const char *argv[]) {
 
-	myDistro->Init( argc, argv );
 	set_priv_initialize();
 	config();
 
