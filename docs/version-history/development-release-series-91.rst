@@ -17,6 +17,12 @@ Release Notes:
 
 New Features:
 
+- SSL authentication can be automatically configured in the *condor_collector*,
+  providing a mechanism to more easily bootstrap secure authentication within the
+  pool.  Tools will allow users to setup trust with the generated CA similarly to
+  how SSH enables trust on first use of a remote host.
+  :jira:`501`
+
 - HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
   for replication, so they will be unable to replicate with HTCondor daemons
   that are older than version 8.8.13. see macro:`HAD_FIPS_MODE` for more information.
@@ -97,12 +103,6 @@ Release Notes:
   :jira:`1163`
 
 New Features:
-
-- SSL authentication will automatically be configured in the **condor_collector**,
-  providing a mechanism to more easily bootstrap secure authentication within the
-  pool.  Tools will allow users to setup trust with the generated CA similarly to
-  how SSH enables trust on first use of a remote host.
-  :jira:`501`
 
 - Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
   :jira:`1173`
