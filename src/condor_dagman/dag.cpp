@@ -404,22 +404,18 @@ bool Dag::Bootstrap (bool recovery)
 
 //-------------------------------------------------------------------------
 void Dag::SetPreDoneNodes() {
-	//If there are nodes in the vector of JOBs with DONE
-	if ( !m_userDefinedDoneNodes.empty() ){
-		Job* node = NULL;
-		while ( m_userDefinedDoneNodes.begin() != m_userDefinedDoneNodes.end() ) {
-			node = m_userDefinedDoneNodes.back();
-			//Sanity check that Node pointer isn't NULL
-			if ( node != NULL ) {
-				//Set given node to STATUS_DONE and remove node pointer from vector
-				node->SetStatus( Job::STATUS_DONE );
-			}
-			else {
-				//Print warning that somehow a NULL was set for a Node
-				debug_printf( DEBUG_NORMAL, "Warning: NULL set for node marked as DONE in dag file.\n");
-			}
-			m_userDefinedDoneNodes.pop_back();
+	while ( m_userDefinedDoneNodes.begin() != m_userDefinedDoneNodes.end() ) {
+		Job* node = m_userDefinedDoneNodes.back();
+		//Sanity check that Node pointer isn't NULL
+		if ( node != NULL ) {
+			//Set given node to STATUS_DONE and remove node pointer from vector
+			node->SetStatus( Job::STATUS_DONE );
 		}
+		else {
+			//Print warning that somehow a NULL was set for a Node
+			debug_printf( DEBUG_NORMAL, "Warning: NULL set for node marked as DONE in dag file.\n");
+		}
+		m_userDefinedDoneNodes.pop_back();
 	}
 }
 
