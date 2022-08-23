@@ -62,7 +62,8 @@ void main_init(int argc, char *argv[])
 #endif
 
 	std::string cafile, cakeyfile;
-	if (param(cafile, "TRUST_DOMAIN_CAFILE") &&
+	if (param_boolean("COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE", false) &&
+		param(cafile, "TRUST_DOMAIN_CAFILE") &&
 		param(cakeyfile, "TRUST_DOMAIN_CAKEY"))
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT);

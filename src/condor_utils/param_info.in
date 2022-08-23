@@ -2565,6 +2565,10 @@ description=Automatically trust the remote CA over SSL
 type=bool
 tags=io,condor_auth_ssl
 
+[COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
+default=false
+type=bool
+
 [TRUST_DOMAIN_CAFILE]
 default=/etc/condor/trust_domain_ca.pem
 win32_default=$(RELEASE_DIR)\certs\ca.pem
