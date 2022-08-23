@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
+  for replication, so they will be unable to replicate with HTCondor daemons
+  that are older than version 8.8.13. see macro:`HAD_FIPS_MODE` for more information.
+  :jira:`1234`
+
 - Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
   x86_64 microarchitecture, like *x86_64-v3*
   :jira:`1252`

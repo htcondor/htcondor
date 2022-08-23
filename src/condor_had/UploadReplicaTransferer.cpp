@@ -168,7 +168,7 @@ UploadReplicaTransferer::uploadFile( const std::string& filePath, const std::str
     dprintf( D_ALWAYS, "UploadReplicaTransferer::uploadFile %s.%s started\n", 
 			 filePath.c_str( ), extension.c_str( ) );
 
-	int fips_mode = param_integer("HAD_FIPS_MODE", 0);
+	int fips_mode = param_integer("HAD_FIPS_MODE", 1);
 
     // sending the temporary file through the opened socket
 	if( ! utilSafePutFile( *m_socket, filePath + "." + extension, fips_mode ) ){
