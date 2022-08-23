@@ -31,7 +31,7 @@
 std::string
 which(const std::string &strFilename, const std::string &strAdditionalSearchDirs)
 {
-	const char *strPath = getenv( EnvGetName( ENV_PATH ) );
+	const char *strPath = getenv(ENV_PATH);
 	if (strPath == NULL) {
 		strPath = "";
 	}

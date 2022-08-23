@@ -3447,10 +3447,6 @@ int dc_main( int argc, char** argv )
 		}
 	}
 
-	if ( EnvInit() < 0 ) {
-		exit( 1 );
-	}
-
 		// call out to the handler for pre daemonCore initialization
 		// stuff so that our client side can do stuff before we start
 		// messing with argv[]
@@ -3982,7 +3978,7 @@ int dc_main( int argc, char** argv )
 		dprintf(D_ALWAYS, "Using config source: %s\n", 
 				global_config_source.c_str());
 	} else {
-		const char* env_name = EnvGetName( ENV_CONFIG );
+		const char* env_name = ENV_CONDOR_CONFIG;
 		char* env = getenv( env_name );
 		if( env ) {
 			dprintf(D_ALWAYS, 
@@ -4379,7 +4375,7 @@ int dc_main( int argc, char** argv )
 
 	// zmiller
 	// look in the env for ENV_PARENT_ID
-	const char* envName = EnvGetName ( ENV_PARENT_ID );
+	const char* envName = ENV_CONDOR_PARENT_ID;
 	MyString parent_id;
 
 	GetEnv( envName, parent_id );

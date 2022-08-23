@@ -702,7 +702,7 @@ void main_init (int argc, char ** const argv) {
 
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
-	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
+	dagman.DAGManJobId.SetFromString( getenv( ENV_CONDOR_ID ) );
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId, dagman._schedd );
 
