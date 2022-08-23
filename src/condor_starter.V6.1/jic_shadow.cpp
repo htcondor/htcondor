@@ -887,6 +887,10 @@ JICShadow::notifyJobExit( int exit_status, int reason, UserProc*
 					// If we're doing a fast shutdown, ignore any failures
 					// in talking to the shadow.
 				if ( !fast_exit ) {
+					// force disconnect, start a timer to exit after lease gone
+					// We just unregistered the syscall socket from DaemonCore,
+					// so it won't call us back later about the bad socket
+					syscall_sock_disconnect();
 					return false;
 				}
 			}
@@ -1977,7 +1981,7 @@ JICShadow::publishStartdUpdates( ClassAd* ad ) {
 	// because you can theoretically run more than one, but we'll ignore
 	// that for now (and the startd doesn't produce the list itself).
 	if(! m_job_update_attrs_set) {
-		m_job_update_attrs.append( "CPUsUsage" );
+		m_job_update_attrs.append( ATTR_CPUS_USAGE );
 
 		std::string scjl;
 		if( param( scjl, "STARTD_CRON_JOBLIST" ) ) {
@@ -2324,7 +2328,7 @@ JICShadow::syscall_sock_reconnect()
 		int reg_rc = daemonCore->
 			Register_Socket( syscall_sock, "syscall sock to shadow",
 			  (SocketHandlercpp)&JICShadow::syscall_sock_handler,
-			  "JICShadow::syscall_sock_handler", this, ALLOW );
+			  "JICShadow::syscall_sock_handler", this );
 		if(reg_rc < 0) {
 			dprintf( D_ALWAYS,
 		         "Failed to register syscall socket to shadow\n" );

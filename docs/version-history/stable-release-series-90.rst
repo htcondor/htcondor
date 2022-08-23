@@ -7,16 +7,62 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-9015:
+.. _lts-version-history-9017:
 
-Version 9.0.15
+Version 9.0.17
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.0.15 released on Month Date, 2022.
+.. HTCondor version 9.0.16 released on Month Date, 2022.
 
-- HTCondor version 9.0.15 not yet released.
+- HTCondor version 9.0.16 not yet released.
+
+New Features:
+
+- Increased the length of the password generated for Windows default
+  slot user accounts from 14 characters to 32 characters, and added
+  some code to insure that complexity measures that look at
+  character set and not length will still be satisfied.
+  :jira:`1232`
+
+- Added ``-debug`` option to *condor_drain* tool.
+  :jira:`1236`
+
+Bugs Fixed:
+
+- Fixed a bug that would cause the *condor_schedd* to leak 
+  file descriptors, eventually run out, and crash, when
+  unable to launch the scheduler universe job for any reason.
+  :jira:`1261`
+
+- When a failure occurs with a grid universe job of type ``batch``,
+  the local job is now always put on hold, instead of the remote job
+  being canceled and automatically resubmitted.
+  :jira:`1226`
+
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
+
+- Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
+  grid universe job would fail.
+  :jira:`1222`
+
+- Fixed a bug with the *condor_credmon_oauth* where scope and audience
+  claims were dropped from OAuth refresh tokens on their first renewal.
+  :jira:`1270`
+
+.. _lts-version-history-9016:
+
+Version 9.0.16
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.16 released on Month Date, 2022.
+
+- HTCondor version 9.0.16 not yet released.
 
 New Features:
 
@@ -24,7 +70,20 @@ New Features:
   directory, not in tmpfs.
   :jira:`1193`
 
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
 Bugs Fixed:
+
+- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  :jira:`837`
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
 
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.
@@ -45,6 +104,32 @@ Bugs Fixed:
   during shutdown.
   :jira:`1200`
 
+- Fixed a bug where the *condor_starter* would wait forever for a
+  reconnect from the *condor_shadow* if a network failure occurred
+  during cleanup after the job completed.
+  :jira:`1213`
+
+- The ``condor-credmon-oath`` package now properly pulls in ``python3-mod_wsgi``
+  on Enterprise Linux 8.
+  :jira:`1217`
+  
+.. _lts-version-history-9015:
+
+Version 9.0.15
+--------------
+
+- HTCondor version 9.0.15 released on July 21, 2022.
+
+New Features:
+
+- For **batch** grid universe jobs, report resources provisioned by the batch
+  scheduler when available.
+  :jira:`1199`
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9014:
 
 Version 9.0.14
@@ -52,23 +137,21 @@ Version 9.0.14
 
 Release Notes:
 
-.. HTCondor version 9.0.14 released on Month Date, 2022.
-
-- HTCondor version 9.0.14 not yet released.
+- HTCondor version 9.0.14 released on July 12, 2022.
 
 New Features:
+
+- Made SciTokens mapping failures more prominent in the daemon logs.
+  :jira:`1072`
 
 - The manual page, usage and logging of the *condor_set_shutdown* tool
   has been improved to clarify what this tool does and how to use it.
   :jira:`1102`
 
-- Made SciTokens mapping failures more prominent in the daemon logs.
-  :jira:`1072`
-
 Bugs Fixed:
 
 - Fixed a bug where if a job's output and error were directed to the same
-  file, no other output files would be transfered.
+  file, no other output files would be transferred.
   :jira:`1101`
 
 - Ensure that the matching set of Python bindings is installed when HTCondor
@@ -81,6 +164,10 @@ Bugs Fixed:
 - Fixed a bug in the Python bindings that prevented context managed
   ``htcondor.SecMan`` sessions from working.
   :jira:`924`
+  
+- Fixed a bug where ``RemoteUserCpu`` and ``RemoteSysCpu`` attributes are occasionally
+  set to ``0`` for successfully completed jobs.
+  :jira:`1162`
 
 - Make ``condor-externals`` package dependency less strict to ease transition
   between CHTC and OSG RPM repositories.

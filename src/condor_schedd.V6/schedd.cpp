@@ -375,8 +375,8 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 
 struct job_data_transfer_t {
 	int mode;
-	char *peer_version;
 	ExtArray<PROC_ID> *jobs;
+	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
 match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
@@ -2363,7 +2363,7 @@ QueryJobAdsContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryJobAdsContinuation::finish,
-			"Query Job Ads Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Job Ads Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -2700,7 +2700,7 @@ QueryAggregatesContinuation::finish(Stream *stream) {
 	if (has_backlog && !registered_socket) {
 		int retval = daemonCore->Register_Socket(stream, "Client Response",
 			(SocketHandlercpp)&QueryAggregatesContinuation::finish,
-			"Query Aggregates Continuation", this, ALLOW, HANDLE_WRITE);
+			"Query Aggregates Continuation", this, HANDLE_WRITE);
 		if (retval < 0) {
 			delete this;
 			return sendJobErrorAd(sock, 4, "Failed to write ClassAd to wire");
@@ -5123,7 +5123,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			}
 			return FALSE;
 		}
-		if ( peer_version != NULL ) {
+		if ( peer_version[0] != '\0' ) {
 			ftrans.setPeerVersion( peer_version );
 		}
 
@@ -5216,10 +5216,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 	}
 
-	if ( peer_version ) {
-		free( peer_version );
-	}
-
 	dprintf( D_AUDIT, *rsock, (answer==OK) ? "Transfer completed\n" :
 			 "Error received from client\n" );
    return ((answer == OK)?TRUE:FALSE);
@@ -5241,7 +5237,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	static int transfer_reaper_id = -1;
 	PROC_ID a_job;
 	int tid;
-	char *peer_version = NULL;
+	std::string peer_version;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -5273,15 +5269,13 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	switch(mode) {
 		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
-			peer_version = NULL;
+			peer_version = "";
 			if ( !rsock->code(peer_version) ) {
 				dprintf(D_AUDIT | D_FAILURE, *rsock, 
 					 	"spoolJobFiles(): failed to read peer_version\n" );
 				refuse(s);
 				return FALSE;
 			}
-				// At this point, we are responsible for deallocating
-				// peer_version with free()
 			break;
 
 		default:
@@ -5440,14 +5434,12 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
-		// exits, but we need to free anything pointed to by
-		// job_data_transfer_t ourselves. generalJobFilesWorkerThread()
-		// will free 'peer_version' and our reaper will free 'jobs' (the
-		// reaper needs 'jobs' for some of its work).
-	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+		// exits, 
+	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) + peer_version.length());
 	ASSERT( thread_arg != NULL );
 	thread_arg->mode = mode;
-	thread_arg->peer_version = peer_version;
+	thread_arg->peer_version[0] = '\0';
+	strcpy(thread_arg->peer_version, peer_version.c_str());
 	thread_arg->jobs = jobs;
 
 	switch(mode) {
@@ -5502,9 +5494,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
-		if ( peer_version ) {
-			free( peer_version );
-		}
 		delete jobs;
 		refuse(s);
 		return FALSE;
@@ -5723,7 +5712,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 	if (result == ReliSock::delegation_continue) {
 		int retval = daemonCore->Register_Socket(rsock, "UpdateGSI Response",
 			(SocketHandlercpp)&UpdateGSICredContinuation::finish,
-			"UpdateGSI Response Continuation", continuation, ALLOW, HANDLE_READ);
+			"UpdateGSI Response Continuation", continuation, HANDLE_READ);
 			// If we fail to register the socket, continue in blocking mode.
 		if (retval < 0) {
 			continuation->finish_update(rsock, result);
@@ -7165,7 +7154,7 @@ MainScheddNegotiate::scheduler_handleNegotiationFinished( Sock *sock )
 		daemonCore->Register_Socket(
 			sock, "<Negotiator Socket>", 
 			(SocketHandlercpp)&Scheduler::negotiatorSocketHandler,
-			"<Negotiator Command>", &scheduler, ALLOW);
+			"<Negotiator Command>", &scheduler);
 
 	if( rval >= 0 ) {
 			// do not delete this sock until we get called back
@@ -9647,9 +9636,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		std::string usermap;
 		p->getUseridMap(usermap);
 		if( !usermap.empty() ) {
-			std::string envname;
-			formatstr(envname,"_%s_USERID_MAP",myDistro->Get());
-			extra_env.SetEnv(envname.c_str(),usermap.c_str());
+			extra_env.SetEnv("_condor_USERID_MAP",usermap.c_str());
 		}
 	}
 #endif
@@ -9947,9 +9934,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	CommitNonDurableTransactionOrDieTrying();
 
 	Env starter_env;
-	std::string execute_env;
-	formatstr( execute_env, "_%s_EXECUTE", myDistro->Get());
-	starter_env.SetEnv(execute_env.c_str(),LocalUnivExecuteDir);
+	starter_env.SetEnv("_condor_EXECUTE",LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
 							   &starter_env, "starter", true );
@@ -10075,7 +10060,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	MyString env_error_msg;
     int niceness = 0;
 	std::string tmpCwd;
-	int inouterr[3];
+	int inouterr[3] = {-1, -1, -1};
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
@@ -10092,6 +10077,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
+
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
@@ -10321,35 +10307,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 	
+	set_priv( priv );  // back to regular privs...
 	if ( cannot_open_files ) {
-	/* I'll close the opened files in the same priv state I opened them
-		in just in case the OS cares about such things. */
-		if (inouterr[0] >= 0) {
-			if (close(inouterr[0]) == -1) {
-				dprintf(D_ALWAYS, 
-					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[1] >= 0) {
-			if (close(inouterr[1]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[2] >= 0) {
-			if (close(inouterr[2]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		set_priv( priv );  // back to regular privs...
 		goto wrapup;
 	}
-	
-	set_priv( priv );  // back to regular privs...
 	
 	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
@@ -10441,13 +10402,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	                                  core_size_ptr );
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
-	// now close those open fds - we don't want them here.
-	for ( i=0 ; i<3 ; i++ ) {
-		if ( close( inouterr[i] ) == -1 ) {
-			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
-		}
-	}
-
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		goto wrapup;
@@ -10496,6 +10450,14 @@ wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
+	}
+	// now close those open fds - we don't want to leak them if there was an error
+	for (i=0 ; i < 3; i++ ) {
+		if (inouterr[i] != -1) {
+				if (close(inouterr[i] ) == -1) {
+					dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
+				}
+		}
 	}
 	return retval;
 }
@@ -12988,6 +12950,7 @@ Scheduler::Init()
 		initAdFromString(extended_cmds, m_extendedSubmitCommands);
 		extended_cmds.clear();
 	}
+	param(m_extendedSubmitHelpFile, "EXTENDED_SUBMIT_HELPFILE");
 
 	EnableJobQueueTimestamps = param_boolean("SCHEDD_JOB_QUEUE_TIMESTAMPS", false);
 
@@ -13604,44 +13567,44 @@ Scheduler::Register()
 			"reschedule_negotiator", this, WRITE);
 	 daemonCore->Register_CommandWithPayload(ACT_ON_JOBS, "ACT_ON_JOBS", 
 			(CommandHandlercpp)&Scheduler::actOnJobs, 
-			"actOnJobs", this, WRITE, D_COMMAND,
+			"actOnJobs", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES, "SPOOL_JOB_FILES", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA, "TRANSFER_DATA", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(SPOOL_JOB_FILES_WITH_PERMS,
 			"SPOOL_JOB_FILES_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(TRANSFER_DATA_WITH_PERMS,
 			"TRANSFER_DATA_WITH_PERMS", 
 			(CommandHandlercpp)&Scheduler::spoolJobFiles, 
-			"spoolJobFiles", this, WRITE, D_COMMAND,
+			"spoolJobFiles", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(UPDATE_GSI_CRED,"UPDATE_GSI_CRED",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(DELEGATE_GSI_CRED_SCHEDD,
 			"DELEGATE_GSI_CRED_SCHEDD",
 			(CommandHandlercpp)&Scheduler::updateGSICred,
-			"updateGSICred", this, WRITE, D_COMMAND,
+			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
 			"REQUEST_SANDBOX_LOCATION",
 			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE, D_COMMAND,
+			"requestSandboxLocation", this, WRITE,
 			true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
-			"RecycleShadow", this, DAEMON, D_COMMAND,
+			"RecycleShadow", this, DAEMON,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
@@ -13656,21 +13619,19 @@ Scheduler::Register()
 			"release_claim", this, READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, READ,
-			D_PROTOCOL ); 
+			"receive_startd_alive", this, READ);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
 	daemonCore->Register_CommandWithPayload( ATTEMPT_ACCESS, "ATTEMPT_ACCESS",
 								  &attempt_access_handler,
-								  "attempt_access_handler", WRITE,
-								  D_FULLDEBUG );
+								  "attempt_access_handler", WRITE );
 #ifdef WIN32
 	// Command handler for stashing credentials.
 	daemonCore->Register_CommandWithPayload( STORE_CRED, "STORE_CRED",
 								&store_cred_handler,
 								"cred_access_handler", WRITE,
-								D_FULLDEBUG, true /*force authentication*/);
+								true /*force authentication*/);
 #endif
 
     // command handler in support of condor_status -direct query of our ads
@@ -13699,14 +13660,14 @@ Scheduler::Register()
 
 	daemonCore->Register_CommandWithPayload(QUERY_JOB_ADS_WITH_AUTH, "QUERY_JOB_ADS_WITH_AUTH",
 				(CommandHandlercpp)&Scheduler::command_query_job_ads,
-				"command_query_job_ads", this, READ, D_FULLDEBUG, true /*force authentication*/);
+				"command_query_job_ads", this, READ, true /*force authentication*/);
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.
 	// This is ok, because authorization to do write operations is verified
 	// internally in the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_READ_CMD, "QMGMT_READ_CMD",
 								  &handle_q,
-								  "handle_q", READ, D_FULLDEBUG );
+								  "handle_q", READ );
 
 	// This command always requires authentication.  Therefore, it is
 	// more efficient to force authentication when establishing the
@@ -13715,18 +13676,18 @@ Scheduler::Register()
 	// the command handler.
 	daemonCore->Register_CommandWithPayload( QMGMT_WRITE_CMD, "QMGMT_WRITE_CMD",
 								  &handle_q,
-								  "handle_q", WRITE, D_FULLDEBUG,
+								  "handle_q", WRITE,
 								  true /* force authentication */ );
 
 	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
 								  &get_myproxy_password_handler,
-								  "get_myproxy_password", WRITE, D_FULLDEBUG  );
+								  "get_myproxy_password", WRITE );
 
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	daemonCore->Register_CommandWithPayload( CLEAR_DIRTY_JOB_ATTRS, "CLEAR_DIRTY_JOB_ATTRS",
 								  (CommandHandlercpp)&Scheduler::clear_dirty_job_attrs_handler,
@@ -13735,15 +13696,15 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload( EXPORT_JOBS, "EXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::export_jobs_handler,
 								  "export_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( IMPORT_EXPORTED_JOB_RESULTS, "IMPORT_EXPORTED_JOB_RESULTS",
 								  (CommandHandlercpp)&Scheduler::import_exported_job_results_handler,
 								  "import_exported_job_results_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 	daemonCore->Register_CommandWithPayload( UNEXPORT_JOBS, "UNEXPORT_JOBS",
 								  (CommandHandlercpp)&Scheduler::unexport_jobs_handler,
 								  "unexport_jobs_handler", this, WRITE,
-								  D_COMMAND, true /*force authentication*/);
+								  true /*force authentication*/);
 
 	 // These commands are for a startd reporting directly to the schedd sans negotiation
 	daemonCore->Register_CommandWithPayload(UPDATE_STARTD_AD,"UPDATE_STARTD_AD",
@@ -13766,7 +13727,7 @@ Scheduler::Register()
 		//
 	daemonCore->Register_CommandWithPayload( COLLECTOR_TOKEN_REQUEST, "DC_COLLECTOR_TOKEN_REQUEST",
 			(CommandHandlercpp)&Scheduler::handle_collector_token_request,
-			"handle_collector_token_request()", this, ALLOW, D_COMMAND, true );
+			"handle_collector_token_request()", this, ALLOW, true );
 
 	 // reaper
 	shadowReaperId = daemonCore->Register_Reaper(
@@ -14153,6 +14114,13 @@ Scheduler::needReschedule()
 void
 Scheduler::sendReschedule()
 {
+	// If SCHEDD_SEND_RESCHEDULE is false (eg on a CE or schedd
+	// without a negotiator, don't spam the logs with messages
+	// about a missing negotiator.
+	if (!param_boolean("SCHEDD_SEND_RESCHEDULE", true)) {
+		return;
+	}
+
 	if( !m_negotiate_timeslice.isTimeToRun() ) {
 			// According to our negotiate timeslice object, we are
 			// spending too much of our time negotiating, so delay
@@ -15262,6 +15230,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		}
 
 		if( !starter.createJobOwnerSecSession(ltimeout,job_claimid,match_sec_session_id,job_owner_session_info.c_str(),starter_claim_id,error_msg,starter_version,starter_addr) ) {
+			retry_is_sensible = true; // This can mean the starter is blocked fetching a docker image
 			goto error_wrapup; // error_msg already set
 		}
 	}

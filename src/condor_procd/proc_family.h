@@ -114,13 +114,6 @@ public:
 	//
 	void fold_into_parent(ProcFamily*);
 
-#if !defined(WIN32)
-	// set a proxy for this family, implying we need to use glexec to
-	// send signals
-	//
-	void set_proxy(char*);
-#endif
-
 #if defined(HAVE_EXT_LIBCGROUP)
 	// Set the cgroup to use for this family
 	int set_cgroup(const std::string&); 
@@ -172,13 +165,6 @@ private:
 	// consdered to have exited
 	//
 	ProcFamilyMember* m_member_list;
-
-#if !defined(WIN32)
-	// if glexec is needed to send signals to this family, we'll need
-	// a proxy to hand to glexec
-	//
-	char* m_proxy;
-#endif
 
 #ifdef LINUX
 	PerfCounter m_perf_counter;

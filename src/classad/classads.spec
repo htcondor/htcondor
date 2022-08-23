@@ -75,7 +75,7 @@ make check
 
 %files
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
+%doc LICENSE README CHANGELOG NOTICE.txt
 %_libdir/libclassad.so.0
 %_libdir/libclassad.so.0.0.0
 %_libdir/libclassad_ns.so.0
@@ -84,7 +84,7 @@ make check
 
 %files devel
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
+%doc LICENSE README CHANGELOG NOTICE.txt
 %_bindir/classad_version
 %_bindir/classad_version_ns
 %_bindir/classad_functional_tester
@@ -126,7 +126,7 @@ make check
 
 %files static
 %defattr(-,root,root,-)
-%doc LICENSE-2.0.txt README CHANGELOG NOTICE.txt
+%doc LICENSE README CHANGELOG NOTICE.txt
 %_libdir/libclassad.a
 %_libdir/libclassad_ns.a
 
@@ -138,7 +138,7 @@ make check
 %changelog
 * Thu Jan 24 2008  <mfarrellee@redhat> - 1.0-0.1.rc3
 - Updated to Apache Licensed version, 1.0.0rc3
-- Added LICENSE-2.0.txt and NOTICE.txt to doc lines
+- Added LICENSE and NOTICE.txt to doc lines
 
 * Fri Aug 17 2007  <mfarrellee@redhat> - 1.0-0.1.rc2
 - Fixed Release tag

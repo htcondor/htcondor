@@ -27,6 +27,14 @@ if(BUILD_DATE)
 	set_source_files_properties(condor_version.cpp PROPERTIES COMPILE_DEFINITIONS BUILD_DATE="${BUILD_DATE}")
 endif()
 
+# publish python3 minor version and module extension in the param table
+if (PYTHON3_VERSION_MINOR)
+	set_source_files_properties(condor_config.cpp param_info.cpp PROPERTIES
+		 COMPILE_DEFINITIONS "PYTHON3_MODULE_SUFFIX=\"${PYTHON3_MODULE_SUFFIX}\";PYTHON3_VERSION_MINOR=${PYTHON3_VERSION_MINOR}"
+	)
+endif()
+
+
 # We need this .o statically linked into every exe for the version object
 # to parse.  Make this an object library to link everywhere.
 add_library(condor_version_obj STATIC condor_version.cpp)
@@ -137,16 +145,20 @@ adcluster.cpp
 adcluster.h
 ad_printmask.cpp
 ad_printmask.h
+print_format_tables.cpp
 ad_transforms.cpp
 ad_transforms.h
 AWSv4-utils.cpp
 AWSv4-utils.h
+AWSv4-impl.h
 backward_file_reader.cpp
 binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
 check_events.h
+checksum.cpp
+checksum.h
 classad_collection.cpp
 classad_collection.h
 classad_command_util.cpp
@@ -330,6 +342,8 @@ java_config.cpp
 java_config.h
 JobLogMirror.cpp
 JobLogMirror.h
+job_ad_instance_recording.cpp
+job_ad_instance_recording.h
 KeyCache.cpp
 killfamily.cpp
 killfamily.h
@@ -349,6 +363,8 @@ log_rotate.h
 log_transaction.cpp
 log_transaction.h
 make_printmask.cpp
+manifest.cpp
+manifest.h
 MapFile.cpp
 MapFile.h
 mark_thread.cpp
@@ -427,6 +443,7 @@ spooled_job_files.cpp
 spooled_job_files.h
 spool_version.cpp
 spool_version.h
+ssl_version_hack.h
 stat_info.cpp
 stat_info.h
 status_string.cpp

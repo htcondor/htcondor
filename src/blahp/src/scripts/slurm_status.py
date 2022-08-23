@@ -322,7 +322,7 @@ def get_finished_job_stats(jobid, cluster):
     log("Querying sacct for completed job for jobid: %s" % (jobid))
 
     # List of attributes required from sacct
-    attributes = "JobID,UserCPU,SystemCPU,MaxRSS,ExitCode"
+    attributes = "JobID,UserCPU,SystemCPU,MaxRSS,ExitCode,AllocCPUS"
     child_stdout = os.popen("%s -j %s --noconvert -P --format %s" % (sacct, jobid, attributes))
     sacct_data = child_stdout.readlines()
     ret = child_stdout.close()
@@ -356,6 +356,13 @@ def get_finished_job_stats(jobid, cluster):
                 return_dict['RemoteSysCpu'] += convert_cpu_to_seconds(row["SystemCPU"])
             except:
                 log("Failed to parse CPU usage for job id %s: %s" % (jobid, row["SystemCPU"]))
+                raise
+
+        if row["AllocCPUS"] != "" and row["JobID"] == jobid:
+            try:
+                return_dict['CpusProvisioned'] = int(row["AllocCPUS"])
+            except:
+                log("Failed to parse CPU allocation for job id %s: %s" % (jobid, row["SystemCPU"]))
                 raise
 
         # Take the largest value of MaxRSS across all lines

@@ -136,7 +136,7 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 	daemonCore->
 		Register_Command( CREDD_GET_CRED, "CREDD_GET_CRED",
 						  &cred_get_cred_handler,
-						  "cred_get_cred_handler", DAEMON, D_COMMAND,
+						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
 }
 

@@ -13,9 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import json
 import logging
 import collections
+import datetime
 
 import elasticsearch
 import importlib.util
@@ -125,6 +127,9 @@ def get_server_handle(args=None):
                 "Call get_server_handle with args first to create ES interface instance"
             )
             return _ES_HANDLE
+        if args.json_local:
+            _ES_HANDLE = GenericInterface()
+            return _ES_HANDLE
         if ":" in args.es_host:
             if len(args.es_host.split(":")) == 2:
                 (es_host, es_port) = args.es_host.split(":")
@@ -148,7 +153,27 @@ def get_server_handle(args=None):
     return _ES_HANDLE
 
 
-class ElasticInterface(object):
+class GenericInterface(object):
+    """Generic interface, only stores locally"""
+
+    def __init__(
+        self,
+        logdir=Path.cwd(),
+    ):
+        self.logdir = Path(logdir)
+        self.handle = None
+
+    def make_mapping(self, idx):
+        mappings = make_mappings()
+        settings = make_settings()
+
+        body = json.dumps({"mappings": mappings, "settings": {"index": settings}})
+
+        with Path(self.logdir / "es_push_last_mappings.json").open("w") as jsonfile:
+            json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
+
+
+class ElasticInterface(GenericInterface):
     """Interface to elasticsearch"""
 
     def __init__(
@@ -190,7 +215,7 @@ class ElasticInterface(object):
             es_client["verify_certs"] = True
 
         self.handle = elasticsearch.Elasticsearch([es_client])
-        self.logdir = Path(logdir)
+        super().__init__(self, logdir)
 
     def make_mapping(self, idx):
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
@@ -242,6 +267,19 @@ def make_es_body(ads, metadata=None):
     return body
 
 
+def make_json_body(ads, metadata=None):
+    metadata = metadata or {}
+    body = []
+    for id_, ad in ads:
+        if metadata:
+            ad.setdefault("metadata", {}).update(metadata)
+
+        ad.update({"_id": id_})
+        body.append(json.dumps(ad) + "\n")
+
+    return body
+
+
 def parse_errors(result):
     reasons = [
         d.get("index", {}).get("error", {}).get("reason", None) for d in result["items"]
@@ -255,6 +293,14 @@ def parse_errors(result):
 
 
 def post_ads(es, idx, ads, metadata=None):
+    if not es:
+        body = make_json_body(ads, metadata)
+        t = datetime.datetime.now().timestamp()
+        f = f"{t}.json"
+        with Path(_ES_HANDLE.logdir / f).open("w") as jsonfile:
+            for b in body:
+                json.dump(json.loads(b), jsonfile, indent=2, sort_keys=True)
+            return
     body = make_es_body(ads, metadata)
     res = es.bulk(body=body, index=idx, request_timeout=60)
     if res.get("errors"):

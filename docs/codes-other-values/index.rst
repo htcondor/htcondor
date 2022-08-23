@@ -7,7 +7,7 @@ Codes and Other Needed Values
    
    condor_shadow-exit-codes
    job-event-log-codes
-   well-known-port-numbers
+   job-universe-numbers
    daemoncore-command-numbers
    daemoncore-daemon-exit-codes
       

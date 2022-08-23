@@ -5,7 +5,7 @@ We provide the following containers for HTCondor services:
 - Minicondor (`htcondor/mini`)
 - Execute Node (`htcondor/execute`)
 - Central Manager (`htcondor/cm`)
-- Submit Node (`htcondor/submit`)
+- Submit Node (Access Point) (`htcondor/submit`)
 
 
 
@@ -219,8 +219,8 @@ To add additional configuration, see the [Providing Additional
 Configuration](#providing-additional-configuration) section below.
 
 
-Using the Submit Container
---------------------------
+Using the Submit (Access Point) Container
+-----------------------------------------
 
 ### Overview
 
@@ -229,7 +229,8 @@ scheduler daemon as described in [the machine roles section of the HTCondor
 manual](https://htcondor.readthedocs.io/en/latest/admin-manual/introduction-admin-manual.html#the-different-roles-a-machine-can-play)
 and can connect to an existing HTCondor pool via token authentication
 (recommended) or pool password.  Token authentication requires HTCondor 8.9.2+
-on both sides of the connection.  This container needs no inbound connectivity.
+on both sides of the connection.  This container requires inbound connectivity
+on port 9618.
 
 You must specify the address of the pool's central manager in the `CONDOR_HOST`
 environment variable or `CONDOR_SERVICE_HOST` environment variable.

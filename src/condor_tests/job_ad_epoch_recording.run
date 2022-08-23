@@ -1,0 +1,240 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+## 
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+## 
+##    http://www.apache.org/licenses/LICENSE-2.0
+## 
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+#################################################################
+## This tests that Job Ads are written per Job epoch to the epoch
+## files if user specifies a directory to write these files.
+## There are two options to writing these:
+##	1. A single file per job that appends the job ad per epoch
+##	2. A unique file per epoch for each job that writes the
+##	   current job epoch job ad
+#################################################################
+
+use CondorTest;
+use CondorUtils;
+use Cwd qw(getcwd);
+
+@cmd = ('simple_append.sub', #1 queued sleep job
+	'cron_append.sub',   #1 queued cron sleep job that runs 3 times 
+	);
+@testOutput = ( "Append epoch to single Job File (simple)",
+		"Append epoch to single Job File (cron)",
+		);
+@expectedNumAds = (1,3); #Count of expected number of Job Ads to be written in the append files
+$filePerEpoch = 0; #Treated as bool for if we are using append files or per epoch files
+
+$testname = "job_ad_epoch_recording";
+
+$dir = getcwd;
+CondorTest::debug("Path to working directory: $dir\n",1);
+
+#Used to verify configuration of JOB_EPOCH_INSTANCE_DIR
+#runCondorTool("condor_config_val -dump JOB_EPOCH_INSTANCE_DIR",\@tooloutput,2,{emit_output=>1});
+
+@jobSubmitFiles = ();
+#Cluster Id needed to determine epoch file name
+$clusterId = 0;
+$currTestNum = 0;
+
+##========================================Configure Condor=====================================================
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	JOB_EPOCH_INSTANCE_DIR = $(TEST_DIR)/epoch_ads
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+##==========================================File Creation====================================================
+
+sub emit_file {
+	my $namex = shift;
+	my $content = shift;
+
+	my $fname = $namex;
+	open (FH, ">$fname") || die "error writing to $fname: $!\n";
+	print FH $content;
+	close (FH);
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $fname); }
+}
+
+# Simple Append job
+$submitfileSimple = "universe = vanilla
+executable = ../x_sleep.pl
+log = simple.log
+arguments = 1
+queue";
+
+# Cron Append Job
+$submitfileCron = "universe = vanilla
+executable = ../x_sleep.pl
+log = cron.log
+arguments = 1
+on_exit_remove = false
+periodic_remove = NumShadowStarts >= 3
+cron_minute = *
+queue";
+
+push(@jobSubmitFiles, ($submitfileSimple, $submitfileCron));
+
+##========================================Subroutines======================================================
+
+sub check_epoch_files{
+	# Check the Epoch Files
+	if ($filePerEpoch) {
+		# Check for each Job Epoch has a unique file
+		#TODO: Add check for per epoch files once added
+		;
+	} else {
+		# Check for one Job file with appended epochs
+		# Check each Proc
+		$epochfile = "job.runs.$clusterId.0.ads";
+		CondorTest::debug("Attempting to analyze $epochfile\n",1);
+		my $line = "";
+		my $matches = 0;
+		my $canopen = open(OUT,"<$dir/epoch_ads/$epochfile");
+		if( ! (defined $canopen)) {
+			CondorTest::debug("Can not open logfile<$epochfile>:$!\n",1);
+			return 0;
+		}
+		while(<OUT>) {
+			chomp();
+			my $line = $_;
+			if($line =~ m/\*\*\* ClusterId=\d ProcId=\d RunInstanceId=\d/){
+				$matches++;
+				CondorTest::debug("Found banner: $line\n",1);	
+			}
+		}
+		close(OUT);
+		$wantedMatches = $expectedNumAds[$currTestNum%2];
+		if($matches == $wantedMatches) {
+			CondorTest::debug("PASSED $epochfile had correct number of job ads ($matches) written to it\n",1);
+		} else {
+			CondorTest::debug("FAILED $epochfile had $matches match(es) when looking for $wantedMatches\n",1);
+			return 0;
+		}
+		return 1;
+	}
+};
+##=====================================Event Subroutines===================================================
+
+$abnormal = sub 
+{
+	die "Want to see only submit, execute and successful completion\n";
+};
+
+$aborted = sub 
+{
+	if ($currTestNum%2 == 1) {
+		CondorTest::debug("Executed Cron Job successfully\n",1);
+		CondorTest::debug("Verifying output\n",1);
+		my $diditpass = check_epoch_files();
+		if($diditpass == 0) {
+			die "All expected files and correct output FAILED\n";
+		}
+	} else {
+		die "Abort not expected";
+	}
+};
+
+$held = sub 
+{
+	die "Held event NOT expected\n";
+};
+
+$executed = sub
+{
+	my %info = @_;
+	$clusterId = $info{cluster};
+	CondorTest::debug("Job <$info{cluster}> running as expected\n",1);
+};
+
+$submitted = sub
+{
+	if ($currTestNum%2 == 0) {
+		CondorTest::debug("Submitted(Normal): This test will see submit, executing, and successful completion\n",1);
+	} else {
+		CondorTest::debug("Submitted(Cron): this test will see submit, execution and eviction 3 times, and then successful abortion\n");
+	}
+};
+
+$evicted = sub
+{
+	if ($currTestNum%2 == 1) { CondorTest::debug("Cron job evicted as expected\n",1); }
+	else { die "Unexpected eviction"; }
+};
+
+$success = sub
+{
+	if ($currTestNum%2 == 0) {
+		CondorTest::debug("Executed Normal Job successfully\n",1);
+		CondorTest::debug("Verifying output\n",1);
+		my $diditpass = check_epoch_files();
+		if($diditpass == 0) {
+			die "All expected files and correct output FAILED\n";
+		}
+	} else {
+		die "Successful execution not expected";
+	}
+};
+
+##=============================================================================================================
+
+# Register events for checks
+CondorTest::RegisterExitedSuccess( $testname, $success);
+CondorTest::RegisterExecute($testname, $executed);
+CondorTest::RegisterEvictedWithRequeue($testname, $evicted);
+CondorTest::RegisterExitedAbnormal( $testname, $abnormal );
+CondorTest::RegisterAbort( $testname, $aborted );
+CondorTest::RegisterHold( $testname, $held );
+CondorTest::RegisterSubmit( $testname, $submitted );
+
+mkdir "epoch_ads"; #Make directory for epoch records to live
+if ( ! CondorUtils::is_windows()) { chmod (0755, "epoch_ads"); }
+
+# Test each submit file
+for ($submitnum = 0; $submitnum <= $#cmd; $submitnum++){
+	#TODO: Add check for switching types epoch writing and reconfig condor?
+	$currTestNum = $submitnum;
+	$submit = $cmd[$submitnum];
+	$submitdesc = $jobSubmitFiles[$submitnum];
+	$output = $testOutput[$submitnum];
+
+	# Make sub-directory for each test
+	$subDir = substr($submit,0,length($submit)-4);
+	# Go back to parent directory
+	chdir $dir;
+	# Set up sub directory
+	mkdir $subDir;
+	if ( ! CondorUtils::is_windows()) { chmod (0755, $subDir); }
+	chdir "$dir/$subDir";
+
+	# Make submit file
+	emit_file($submit,$submitdesc);
+
+	CondorTest::debug("Testing epoch writing for $submit\n",1);
+	# Run Test
+	$res = CondorTest::RunTest($testname, $submit, 0);
+	CondorTest::RegisterResult($res, test_name=>"$testname($subDir)");
+	if($res == 1) {
+		CondorTest::debug("$output: SUCCESS\n",1);
+	} else {
+		CondorTest::debug("$output: FAILED\n",1);
+	}
+}
+
+CondorTest::EndTest();

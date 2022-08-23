@@ -157,6 +157,10 @@ tags=config
 description=Preferred DNS alias for this host
 customization=expert
 
+[USE_COLLECTOR_HOST_CNAME]
+default=true
+type=bool
+
 [HOSTNAME]
 default=
 type=string
@@ -1111,6 +1115,11 @@ default=300
 type=string
 tags=had,StateMachine
 
+[HAD_FIPS_MODE]
+default=1
+type=int
+tags=had,StateMachine
+
 [REPLICATION_LIST]
 default=
 type=string
@@ -1993,6 +2002,7 @@ tags=classad,ast
 
 [CLASSAD_USER_PYTHON_LIB]
 default=$(LIBEXEC)/libclassad_python_user.so
+win32_default=$(BIN)\classad_python_user$(PYTHON3_MODULE_SUFFIX:.pyd)
 type=string
 description=ClassAd python library path
 tags=classad
@@ -3147,6 +3157,12 @@ tags=schedd
 customization=devel
 description=Set to false to use slow but durable transaction semantics for each materialized job.
 
+[SCHEDD_SEND_RESCHEDULE]
+default=true
+type=bool
+tags=schedd
+description=
+
 [DEDICATED_SCHEDULER_USE_FIFO]
 default=true
 type=bool
@@ -3214,6 +3230,11 @@ type=bool
 tags=schedd
 
 [PER_JOB_HISTORY_DIR]
+default=
+type=string
+tags=schedd
+
+[JOB_EPOCH_INSTANCE_DIR]
 default=
 type=string
 tags=schedd
@@ -5677,6 +5698,15 @@ default=true
 type=bool
 customization=const
 
+[IsSubmit]
+default=false
+type=bool
+customization=const
+[SUBMIT.IsSubmit]
+default=true
+type=bool
+customization=const
+
 [CONDOR_VERSION]
 macro=CONDOR_VERSION
 default=8.*
@@ -5687,6 +5717,18 @@ customization=const
 macro=PLATFORM
 default=undefined
 type=string
+customization=const
+
+[PYTHON3_MODULE_SUFFIX]
+macro=PYTHON3_MODULE_SUFFIX
+default=.pyd
+type=string
+customization=const
+
+[PYTHON3_VERSION_MINOR]
+macro=PYTHON3_VERSION_MINOR
+default=0
+type=int
 customization=const
 
 [HAVE_EXT_GLOBUS]

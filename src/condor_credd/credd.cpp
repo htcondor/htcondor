@@ -45,19 +45,18 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 	daemonCore->Register_Command( STORE_CRED, "STORE_CRED", 
 								&store_cred_handler, 
 								"store_cred_handler", WRITE, 
-								D_FULLDEBUG, true /*force authentication*/ );
+								true /*force authentication*/ );
 
 		// Command handler for daemons to get the password
 	daemonCore->Register_Command( CREDD_GET_PASSWD, "CREDD_GET_PASSWD", 
 								&cred_get_password_handler,
 								"cred_get_password_handler", DAEMON,
-								D_FULLDEBUG, true /*force authentication*/ );
+								true /*force authentication*/ );
 
 		// NOP command for testing authentication
 	daemonCore->Register_Command( CREDD_NOP, "CREDD_NOP",
 								(CommandHandlercpp)&CredDaemon::nop_handler,
-								"nop_handler", this, DAEMON,
-								D_FULLDEBUG );
+								"nop_handler", this, DAEMON );
 
 		// NOP command for testing authentication
 #if 1
@@ -65,15 +64,13 @@ CredDaemon::CredDaemon() : m_name(NULL), m_update_collector_tid(-1)
 #else
 	daemonCore->Register_Command( CREDD_REFRESH_ALL, "CREDD_REFRESH_ALL",
 								(CommandHandlercpp)&CredDaemon::refresh_all_handler,
-								"refresh_all_handler", this, DAEMON,
-								D_FULLDEBUG );
+								"refresh_all_handler", this, DAEMON );
 #endif
 
 		// See if creds are present for all modules requested
 	daemonCore->Register_Command( CREDD_CHECK_CREDS, "CREDD_CHECK_CREDS",
 								(CommandHandlercpp)&CredDaemon::check_creds_handler,
-								"check_creds_handler", this, WRITE,
-								D_FULLDEBUG, true);
+								"check_creds_handler", this, WRITE, true);
 
 		// set timer to periodically advertise ourself to the collector
 	daemonCore->Register_Timer(0, m_update_collector_interval,

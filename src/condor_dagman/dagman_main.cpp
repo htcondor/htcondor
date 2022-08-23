@@ -1253,7 +1253,7 @@ void main_init (int argc, char ** const argv) {
 	for (auto & it : sl) {
 		debug_printf( DEBUG_VERBOSE, "Parsing %s ...\n", it.c_str() );
 
-		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd ) ) {
+		if( !parse( dagman.dag, it.c_str(), dagman.useDagDir, dagman._schedd, dagman.doAppendVars )) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1318,7 +1318,7 @@ void main_init (int argc, char ** const argv) {
 		parseSetDoNameMunge( false );
 
 		if( !parse( dagman.dag, dagman.rescueFileToRun.c_str(),
-					dagman.useDagDir, dagman._schedd ) ) {
+					dagman.useDagDir, dagman._schedd, dagman.doAppendVars ) ) {
 			if ( dagman.dumpRescueDag ) {
 					// Dump the rescue DAG so we can see what we got
 					// in the failed parse attempt.
@@ -1637,31 +1637,7 @@ print_status( bool forceScheddUpdate ) {
 void
 jobad_update() {
 
-	int total = dagman.dag->NumNodes( true );
-	int done = dagman.dag->NumNodesDone( true );
-	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
-	int post = dagman.dag->PostRunNodeCount();
-	int hold = dagman.dag->HoldRunNodeCount();
-	int ready =  dagman.dag->NumNodesReady();
-	int failed = dagman.dag->NumNodesFailed();
-	int unready = dagman.dag->NumNodesUnready( true );
-
-	if ( dagman._dagmanClassad ) {
-		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					hold, ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery(), dagman._dagmanStats,
-					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts, dagman.maxHoldScripts );
-
-		// It's possible that certain DAGMan attributes were changed in the job ad.
-		// If this happened, update the internal values in our dagman data structure.
-		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
-		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
-		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
-		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
-		dagman.dag->SetMaxHoldScripts(dagman.maxHoldScripts);
-	}
+	if ( dagman._dagmanClassad ) { dagman._dagmanClassad->Update( dagman ); }
 
 }
 
@@ -1749,6 +1725,7 @@ void condor_event_timer () {
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
+	int currJobsHeld = dagman.dag->NumHeldJobProcs();
 	// print status if anything's changed (or we're in a high debug level)
 	if( prevJobsDone != dagman.dag->NumNodesDone( true )
 		|| prevJobs != dagman.dag->NumNodes( true )
@@ -1756,7 +1733,7 @@ void condor_event_timer () {
 		|| prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
 		|| prevJobsReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
-		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
+		|| prevJobsHeld != currJobsHeld
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
@@ -1766,7 +1743,7 @@ void condor_event_timer () {
 		prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
 		prevJobsReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
-		prevJobsHeld = dagman.dag->NumHeldJobProcs();
+		prevJobsHeld = currJobsHeld;
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

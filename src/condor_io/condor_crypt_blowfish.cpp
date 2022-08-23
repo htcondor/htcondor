@@ -22,7 +22,8 @@
 #include "condor_crypt_blowfish.h"
 #include "condor_debug.h"
 
-#include <openssl/blowfish.h>
+#include <memory>
+#include <openssl/evp.h>
 
 bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
                                       const unsigned char *  input,
@@ -30,12 +31,11 @@ bool Condor_Crypt_Blowfish :: encrypt(Condor_Crypto_State *cs,
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-    output_len = input_len;
-
-    output = (unsigned char *) malloc(output_len);
-
+	output_len = input_len;
+    output = (unsigned char *) malloc(input_len);
     if (output) {
-        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_ENCRYPT);
+		EVP_EncryptUpdate(cs->enc_ctx, output, &output_len, input, input_len);
+		
         return true;
     }
     else {
@@ -49,16 +49,17 @@ bool Condor_Crypt_Blowfish :: decrypt(Condor_Crypto_State *cs,
                                       unsigned char *& output, 
                                       int&             output_len)
 {
-    output_len = input_len;
-
-    output = (unsigned char *) malloc(output_len);
-
+	output_len = input_len;
+    output = (unsigned char *) malloc(input_len);
     if (output) {
-        BF_cfb64_encrypt(input, output, output_len, (BF_KEY*)cs->m_method_key_data, cs->m_ivec, &cs->m_num, BF_DECRYPT);
+		EVP_DecryptUpdate(cs->dec_ctx, output, &output_len, input, input_len);
+		
         return true;
     }
     else {
         return false;
     }
 }
+
+
 

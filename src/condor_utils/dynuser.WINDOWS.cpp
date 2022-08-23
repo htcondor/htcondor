@@ -390,6 +390,7 @@ void dynuser::enable_account() {
 	}
 }
 
+
 // sets the 'DISABLED' flag on the current account
 void dynuser::disable_account() {
 
@@ -413,10 +414,10 @@ void dynuser::disable_account() {
 	} else if ( ERROR_ACCESS_DENIED == rval ) {
 		dprintf(D_ALWAYS, "Error disabling account %s (ACCESS DENIED)\n",
 		   	accountname );
-	} else if ( ERROR_INVALID_PARAMETER ) {
+	} else if (ERROR_INVALID_PARAMETER == rval) {
 			dprintf(D_ALWAYS, "Error disabling account %s (INVALID PARAMETER)\n",
 		   	accountname );
-	} else if ( NERR_UserNotFound ) {
+	} else if (NERR_UserNotFound == rval) {
 			dprintf(D_ALWAYS, "Error disabling account %s (User Not Found)\n",
 		   	accountname );
 	} else {
@@ -431,20 +432,27 @@ void dynuser::createpass() {
 	
 	ASSERT( password != NULL );
 		
-	for ( int i = 0; i < 14; i++ ) {
-		int c = 32 + rand() % 96;
+	const int password_len = 32;
 
-		if ( !isprint( c ) ) { // For sanity.  This leaves many characters 
-							   // to chose from.
-			i--;
-		} else {
-			password[i] = (char)c;
+	//                     0 2 4 6
+	const char groups[] = "09AZ!/az";
+
+	// generate a random printable ASCII password
+	// with specific character groups salted into it to insure
+	// that stupid complexity meters see it as "complex"
+	int ix = 0;
+	while (ix < password_len) {
+		int c = 32 + (rand() % 95);
+		if (!(ix & 3)) { // every 4th character we will restrict to a char subset
+			int ig = (ix/2) & 6;
+			if (c < groups[ig] || c > groups[ig+1]) {
+				c = groups[ig] + (c % (groups[ig+1] - groups[ig]));
+			}
 		}
+		password[ix++] = (char)c;
 	}
 
-	password[14] = '\0';
-	
-	// cout << "Shhhh... the password is "<<password<<endl;
+	password[ix++] = 0;
 }
 
 
@@ -536,6 +544,8 @@ void dynuser::createaccount() {
 	} else if ( NERR_UserExists == nerr ) {
 		dprintf(D_ALWAYS, "Account %s already exists!\n",accountname);
 //		EXCEPT("createaccount: User %s already exists",accountname);
+	} else if (NERR_PasswordTooShort == nerr) {
+		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d) generated password %s does not meet complexity requirement.\n",accountname,password);
 	} else {
 		dprintf(D_ALWAYS, "Account %s creation failed! (err=%d)\n",accountname,nerr);
 	}

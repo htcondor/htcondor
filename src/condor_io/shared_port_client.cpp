@@ -411,8 +411,7 @@ SharedPortState::Handle(Stream *s)
 			m_requested_by.c_str(),
 			(SocketHandlercpp)&SharedPortState::Handle,
 			"Shared Port state handler",
-			this,
-			ALLOW);
+			this);
 
 		if(reg_rc < 0) {
 			dprintf(D_ALWAYS, "Socket passing to %s failed because "

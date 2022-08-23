@@ -187,7 +187,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	std::string target_dir;
-	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	bool has_target = hasTargetDir(jobAd, target_dir); 
 
 	// If we have a process to exec, remove it from the args
 	if (exec.length() > 0) {
@@ -366,9 +366,16 @@ Singularity::setup(ClassAd &machineAd,
 
 	// For some reason, singularity really wants /usr/sbin near the beginning of the PATH
 	// when running /usr/sbin/mksquashfs when running docker: images
-	std::string oldPath;
-	job_env.GetEnv("PATH", oldPath);
-	job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
+	//
+	// Update:  If PATH wasn't set, singularity will set it from the
+	// image.  In this case, we are injecting a new PATH which prevents
+	// the image path from being set, which breaks all kinds of things.
+	// comment this out for now until we find a better solution.
+	// This means that to run docker images, the user will have to have
+	// /usr/sbin in their path
+	//std::string oldPath;
+	//job_env.GetEnv("PATH", oldPath);
+	//job_env.SetEnv("PATH", std::string("/usr/sbin:" + oldPath));
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these
@@ -450,6 +457,19 @@ Singularity::convertEnv(Env *job_env) {
 }
 
 bool 
+Singularity::hasTargetDir(const ClassAd &jobAd, /* not const */ std::string &target_dir) {
+	target_dir = "";
+	bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+
+	// If the admin hasn't specification as target_dir, let the job select one
+	// We assume that the job has also selected the image as well
+	if (!has_target) {
+		has_target = jobAd.LookupString(ATTR_CONTAINER_TARGET_DIR, target_dir);
+	}
+	return has_target;
+}
+
+bool 
 Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage) {
 
 	TemporaryPrivSentry sentry(PRIV_USER);
@@ -522,14 +542,14 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 bool
 Singularity::canRunSIF() {
 	std::string libexec_dir;
-	libexec_dir = param("LIBEXEC");
+	param(libexec_dir, "LIBEXEC");
 	return Singularity::canRun(libexec_dir + "/exit_37.sif");
 }
 
 bool
 Singularity::canRunSandbox() {
 	std::string sbin_dir;
-	sbin_dir = param("SBIN");
+	param(sbin_dir, "SBIN");
 	return Singularity::canRun(sbin_dir);
 }
 

@@ -26,8 +26,13 @@
 #include "condor_commands.h"
 // for 'getHostFromAddr' and 'getPortFromAddr'
 #include "internet.h"
-// for MD5
-#include <openssl/md5.h>
+
+#include <openssl/evp.h>
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#  define EVP_MD_CTX_new   EVP_MD_CTX_create
+#  define EVP_MD_CTX_free  EVP_MD_CTX_destroy
+#endif
+
 // for SHA-2 (SHA256)
 #include <openssl/sha.h>
 
@@ -204,40 +209,36 @@ utilSafePutFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 	unsigned char *buffer = (unsigned char *)calloc(BUF_SIZ, 1);
 	ASSERT(buffer != NULL);
 
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
 	if (fips_mode) {
 		unsigned char hash[SHA256_DIGEST_LENGTH];  // TODO: support other sizes of SHA-2 hash here?
-
-		SHA256_CTX  context;
-		SHA256_Init(&context);
+		EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
 
 		bytesRead = read(fd, buffer, BUF_SIZ);
 		while (bytesRead > 0) {
-			SHA256_Update(&context, buffer, bytesRead);
+			EVP_DigestUpdate(mdctx, buffer, bytesRead);
 			memset(buffer, 0, BUF_SIZ);
 			bytesTotal += bytesRead;
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
 
 		memset(hash, 0, sizeof(hash));
-		SHA256_Final(hash, &context);
+		EVP_DigestFinal_ex(mdctx, hash, NULL);
 		encode_hex(file_hash, sizeof(file_hash), hash, sizeof(hash));
 	} else {
-
-		// initializing MD5 structures
-		MD5_CTX  md5Context;
-		MD5_Init(&md5Context);
+		EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
 		bytesRead = read(fd, buffer, BUF_SIZ);
 		while (bytesRead > 0) {
 			// generating MAC gradually, chunk by chunk
-			MD5_Update(& md5Context, buffer, bytesRead);
+			EVP_DigestUpdate(mdctx, buffer, bytesRead);
 			bytesTotal += bytesRead;
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
-
-		MD5_Final((unsigned char*)md, & md5Context);
+		EVP_DigestFinal_ex(mdctx, (unsigned char*)md, NULL);
 	}
-
+	
+	EVP_MD_CTX_free(mdctx);
 	close(fd); fd = -1;
 	free(buffer); buffer = NULL;
 
@@ -345,22 +346,23 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 	ssize_t bytesRead  = 0;
 
 	int hash_diff = 0;
+	
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_new();
 	if (fips_mode) {
 		unsigned char hash[SHA256_DIGEST_LENGTH];	 // TODO: support other sizes of SHA-2 hash here?
 		char hex_hash[SHA256_DIGEST_LENGTH * 2 + 4]; // the SHA256 checksum as a hex string
 
-		SHA256_CTX  context;
-		SHA256_Init(&context);
+		EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL);
 
 		bytesRead = read(fd, buffer, BUF_SIZ);
 		while (bytesRead > 0) {
-			SHA256_Update(&context, buffer, bytesRead);
+			EVP_DigestUpdate(mdctx, buffer, bytesRead);
 			memset(buffer, 0, BUF_SIZ);
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
 
 		memset(hash, 0, sizeof(hash));
-		SHA256_Final(hash, &context);
+		EVP_DigestFinal_ex(mdctx, hash, NULL);
 		encode_hex(hex_hash, sizeof(hex_hash), hash, sizeof(hash));
 
 		hash_diff = strcasecmp(file_hash.c_str(), hex_hash);
@@ -368,18 +370,16 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 			dprintf(D_ALWAYS, "utilSafeGetFile %s received with errors: local SHA-2 hash does not match remote SHA-2 hash\n", filePath.c_str());
 		}
 	} else {
-		MD5_CTX  md5Context;
-		// initializing MD5 structures
-		MD5_Init(& md5Context);
+		EVP_DigestInit_ex(mdctx, EVP_md5(), NULL);
 
 		bytesRead = read(fd, buffer, BUF_SIZ);
 		while (bytesRead > 0) {
 			// generating MAC gradually, chunk by chunk
-			MD5_Update(& md5Context, buffer, bytesRead);
+			EVP_DigestUpdate(mdctx, buffer, bytesRead);
 			bytesRead = read(fd, buffer, BUF_SIZ);
 		}
 
-		MD5_Final((unsigned char*)localMd, & md5Context);
+		EVP_DigestFinal_ex(mdctx, (unsigned char*)localMd, NULL);
 
 		hash_diff = memcmp(wireMd, localMd, sizeof(wireMd));
 		if (hash_diff) {
@@ -387,6 +387,7 @@ utilSafeGetFile( ReliSock& socket, const std::string& filePath, int fips_mode )
 		}
 	}
 
+	EVP_MD_CTX_free(mdctx);
 	free(buffer);
 	close(fd);
 

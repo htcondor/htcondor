@@ -43,6 +43,11 @@ Machine ClassAd Attributes
     ``"X86_64"``
         AMD/Intel 64-bit X86
 
+:classad-attribute:`Microarch`
+    On X86_64 Linux machines, this advertises the x86_64 microarchitecture,
+    like `x86_64-v2`.  See https://en.wikipedia.org/wiki/X86-64#Microarchitecture_levels
+    for details.
+
 :classad-attribute:`CanHibernate`
     The *condor_startd* has the capability to shut down or hibernate a
     machine when certain configurable criteria are met. However, before

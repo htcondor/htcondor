@@ -244,6 +244,10 @@ all attributes.
     For Container universe jobs, the string that names the container image to be run
     the job in.
 
+:classad-attribute:`ContainerTargetDir`
+    For Container universe jobs, a filename that becomes the working directory of
+    the job.  Mapped to the scratch directory.
+
 :index:`SYSTEM_JOB_MACHINE_ATTRS`
 
 :classad-attribute:`CumulativeSlotTime`
@@ -1134,7 +1138,7 @@ all attributes.
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:classad-attribute:`LastMatchTime``
+:classad-attribute:`LastMatchTime`
     An integer containing the epoch time when the job was last
     successfully matched with a resource (gatekeeper) Ad.
 
@@ -2108,7 +2112,27 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
+	
+The following job ClassAd attributes appear in the job ClassAd only for
+the *condor_dagman* job submitted under DAGMan. They represent job process
+information about the DAG. These values will reset when a DAG is run via
+rescue and be retained when a DAG is run via recovery mode.
 
+:classad-attribute:`DAG_JobsSubmitted`
+    The total number of job processes submitted by all the nodes in the DAG.
+
+:classad-attribute:`DAG_JobsIdle`
+    The number of job processes currently idle within the DAG. 
+
+:classad-attribute:`DAG_JobsHeld`
+    The number of job processes currently held within the DAG.
+
+:classad-attribute:`DAG_JobsRunning`
+    The number of job processes currently executing within the DAG.
+
+:classad-attribute:`DAG_JobsCompleted`
+    The total number of job processes within the DAG that have successfully
+    completed.
 
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd

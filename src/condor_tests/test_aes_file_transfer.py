@@ -107,7 +107,7 @@ class TestAESFileTransfer:
     ):
         aes_in_log = False
         for line in shadow_log:
-            if "CRYPTO: protocol(AES), not clearing StreamCryptoState" in line:
+            if "CRYPTO: New crypto state with protocol AES" in line:
                 aes_in_log = True
                 break
         assert aes_in_log

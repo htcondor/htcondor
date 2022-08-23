@@ -287,8 +287,7 @@ Claim::publish( ClassAd* cad )
 		// put the image size value from the last call to updateUsage into the ad.
 		cad->Assign(ATTR_IMAGE_SIZE, c_image_size);
 		// also the CpusUsage value
-		cad->Assign("CPUsUsage", c_cpus_usage);
-		//PRAGMA_REMIND("put CpusUsage into the standard attributes header file.")
+		cad->Assign(ATTR_CPUS_USAGE, c_cpus_usage);
 	}
 
 	// If this claim is for vm universe, update some info about VM
@@ -1004,7 +1003,7 @@ Claim::sendAlive()
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
 			  (SocketHandlercpp)&Claim::sendAliveConnectHandler,
-			  to_schedd, this, ALLOW );
+			  to_schedd, this );
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
@@ -1087,7 +1086,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 	int reg_rc = daemonCore->
 			Register_Socket( sock, "<Alive Contact Socket>",
 			  (SocketHandlercpp)&Claim::sendAliveResponseHandler,
-			  to_schedd, this, ALLOW );
+			  to_schedd, this );
 
 	if(reg_rc < 0) {
 		dprintf( D_ALWAYS,
@@ -2142,7 +2141,6 @@ Client::Client()
 	c_acctgrp = NULL;
 	c_addr = NULL;
 	c_host = NULL;
-	c_proxyfile = NULL;
 	c_concurrencyLimits = NULL;
     c_rmtgrp = NULL;
     c_neggrp = NULL;
@@ -2249,19 +2247,6 @@ Client::sethost( const char* updated_host )
 		c_host = strdup( updated_host );
 	} else {
 		c_host = NULL;
-	}
-}
-
-void
-Client::setProxyFile( const char* pf )
-{
-	if( c_proxyfile ) {
-		free( c_proxyfile );
-	}
-	if ( pf ) {
-		c_proxyfile = strdup( pf );
-	} else {
-		c_proxyfile = NULL;
 	}
 }
 

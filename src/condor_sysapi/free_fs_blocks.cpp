@@ -131,21 +131,10 @@ reserve_for_afs_cache()
   How much disk space we need to reserve for the regular file system.
   Answer is in kilobytes.
 */
-int
+long long
 sysapi_reserve_for_fs()
 {
-	/* XXX make cleaner */
-	int	answer = -1;
-
-	if( answer < 0 ) {
-		answer = _sysapi_reserve_disk;
-		if( answer < 0 ) {
-			answer = 0;
-		}
-	}
-
-	answer = _sysapi_reserve_disk;
-	return answer;
+	return _sysapi_reserve_disk;
 }
 
 

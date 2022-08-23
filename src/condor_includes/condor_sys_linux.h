@@ -20,18 +20,9 @@
 #ifndef CONDOR_SYS_LINUX_H
 #define CONDOR_SYS_LINUX_H
 
-#ifndef _BSD_SOURCE
-#define _BSD_SOURCE
 # ifndef _DEFAULT_SOURCE
 #  define _DEFAULT_SOURCE
 # endif
-#endif
-
-#if defined(__GLIBC__)
-# ifndef _GNU_SOURCE
-#  define _GNU_SOURCE
-# endif
-#endif
 
 #include <sys/types.h>
 

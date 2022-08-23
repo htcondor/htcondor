@@ -112,11 +112,6 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	const char* job_iwd = Starter->jic->jobRemoteIWD();
 	dprintf( D_ALWAYS, "IWD: %s\n", job_iwd );
 
-		// some operations below will require a PrivSepHelper if
-		// PrivSep is enabled (if it's not, privsep_helper will be
-		// NULL)
-	PrivSepHelper* privsep_helper = Starter->privSepHelper();
-
 		// // // // // //
 		// Arguments
 		// // // // // //
@@ -257,54 +252,24 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	priv_state priv;
 	priv = set_user_priv();
 
-		// if we're in PrivSep mode, we won't necessarily be able to
-		// open the files for the job. getStdFile will return us an
-		// open FD in some situations, but otherwise will give us
-		// a filename that we'll pass to the PrivSep Switchboard
-		//
 	bool stdin_ok;
 	bool stdout_ok;
 	bool stderr_ok;
-	std::string privsep_stdin_name;
-	std::string privsep_stdout_name;
-	std::string privsep_stderr_name;
-	if (privsep_helper != NULL) {
-		stdin_ok = getStdFile(SFT_IN,
-		                      NULL,
-		                      true,
-		                      "Input file",
-		                      &fds[0],
-		                      privsep_stdin_name);
-		stdout_ok = getStdFile(SFT_OUT,
-		                       NULL,
-		                       true,
-		                       "Output file",
-		                       &fds[1],
-		                       privsep_stdout_name);
-		stderr_ok = getStdFile(SFT_ERR,
-		                       NULL,
-		                       true,
-		                       "Error file",
-		                       &fds[2],
-		                       privsep_stderr_name);
-	}
-	else {
-		fds[0] = openStdFile( SFT_IN,
-		                      NULL,
-		                      true,
-		                      "Input file");
-		stdin_ok = (fds[0] != -1);
-		fds[1] = openStdFile( SFT_OUT,
-		                      NULL,
-		                      true,
-		                      "Output file");
-		stdout_ok = (fds[1] != -1);
-		fds[2] = openStdFile( SFT_ERR,
-		                      NULL,
-		                      true,
-		                      "Error file");
-		stderr_ok = (fds[2] != -1);
-	}
+	fds[0] = openStdFile( SFT_IN,
+	                      NULL,
+	                      true,
+	                      "Input file");
+	stdin_ok = (fds[0] != -1);
+	fds[1] = openStdFile( SFT_OUT,
+	                      NULL,
+	                      true,
+	                      "Output file");
+	stdout_ok = (fds[1] != -1);
+	fds[2] = openStdFile( SFT_ERR,
+	                      NULL,
+	                      true,
+	                      "Error file");
+	stderr_ok = (fds[2] != -1);
 
 	/* Bail out if we couldn't open the std files correctly */
 	if( !stdin_ok || !stdout_ok || !stderr_ok ) {
@@ -510,7 +475,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
 	if (sing_result == htcondor::Singularity::SUCCESS) {
 		dprintf(D_ALWAYS, "Running job via singularity.\n");
-		SetupSingularitySsh();
+		bool ssh_enabled = param_boolean("ENABLE_SSH_TO_JOB",true,true,Starter->jic->machClassAd(),JobAd);
+		if( ssh_enabled ) {
+			SetupSingularitySsh();
+		}
+
 		if (fs_remap) {
 			dprintf(D_ALWAYS, "Disabling filesystem remapping; singularity will perform these features.\n");
 			fs_remap = NULL;
@@ -597,100 +566,78 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
     // from create-process operation.
     std::string create_process_err_msg;
 
-	if (privsep_helper != NULL) {
-		const char* std_file_names[3] = {
-			privsep_stdin_name.c_str(),
-			privsep_stdout_name.c_str(),
-			privsep_stderr_name.c_str()
-		};
-		JobPid = privsep_helper->create_process(JobName.c_str(),
-		                                        args,
-		                                        job_env,
-		                                        job_iwd,
-		                                        fds,
-		                                        std_file_names,
-		                                        nice_inc,
-		                                        core_size_ptr,
-		                                        1,
-		                                        job_opt_mask,
-		                                        family_info,
-												affinity_mask,
-												create_process_err_msg );
-	}
-	else {
-		//
-		// The following two commented-out Create_Process() calls were
-		// left in as examples of (respectively) that bad old way,
-		// the bad new way (in case you actually need to set all of
-		// the default arguments), and the good new way (in case you
-		// don't, in which case it's both shorter and clearer).
-		//
-		/*
-		JobPid = daemonCore->Create_Process( JobName.c_str(),
-		                                     args,
-		                                     PRIV_USER_FINAL,
-		                                     1,
-		                                     FALSE,
-		                                     FALSE,
-		                                     &job_env,
-		                                     job_iwd,
-		                                     family_info,
-		                                     NULL,
-		                                     fds,
-		                                     NULL,
-		                                     nice_inc,
-		                                     NULL,
-		                                     job_opt_mask,
-		                                     core_size_ptr,
-		                                     affinity_mask,
-		                                     NULL,
-		                                     create_process_err_msg,
-		                                     fs_remap,
-		                                     rlimit_as_hard_limit);
-		*/
-		/*
-		JobPid = daemonCore->CreateProcessNew( JobName.c_str(),
-		                                     args,
-		                                     {
-		                                     PRIV_USER_FINAL,
-		                                     1,
-		                                     FALSE,
-		                                     FALSE,
-		                                     &job_env,
-		                                     job_iwd,
-		                                     family_info,
-		                                     NULL,
-		                                     fds,
-		                                     NULL,
-		                                     nice_inc,
-		                                     NULL,
-		                                     job_opt_mask,
-		                                     core_size_ptr,
-		                                     affinity_mask,
-		                                     NULL,
-		                                     create_process_err_msg,
-		                                     fs_remap,
-		                                     rlimit_as_hard_limit
-		                                     }
-		                                     );
-		*/
+	//
+	// The following two commented-out Create_Process() calls were
+	// left in as examples of (respectively) that bad old way,
+	// the bad new way (in case you actually need to set all of
+	// the default arguments), and the good new way (in case you
+	// don't, in which case it's both shorter and clearer).
+	//
+	/*
+	JobPid = daemonCore->Create_Process( JobName.c_str(),
+	                                     args,
+	                                     PRIV_USER_FINAL,
+	                                     1,
+	                                     FALSE,
+	                                     FALSE,
+	                                     &job_env,
+	                                     job_iwd,
+	                                     family_info,
+	                                     NULL,
+	                                     fds,
+	                                     NULL,
+	                                     nice_inc,
+	                                     NULL,
+	                                     job_opt_mask,
+	                                     core_size_ptr,
+	                                     affinity_mask,
+	                                     NULL,
+	                                     create_process_err_msg,
+	                                     fs_remap,
+	                                     rlimit_as_hard_limit);
+	*/
+	/*
+	JobPid = daemonCore->CreateProcessNew( JobName.c_str(),
+	                                     args,
+	                                     {
+	                                     PRIV_USER_FINAL,
+	                                     1,
+	                                     FALSE,
+	                                     FALSE,
+	                                     &job_env,
+	                                     job_iwd,
+	                                     family_info,
+	                                     NULL,
+	                                     fds,
+	                                     NULL,
+	                                     nice_inc,
+	                                     NULL,
+	                                     job_opt_mask,
+	                                     core_size_ptr,
+	                                     affinity_mask,
+	                                     NULL,
+	                                     create_process_err_msg,
+	                                     fs_remap,
+	                                     rlimit_as_hard_limit
+	                                     }
+	                                     );
+	*/
 
-		OptionalCreateProcessArgs cpArgs(create_process_err_msg);
-		JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
-			 cpArgs.priv(PRIV_USER_FINAL)
-			.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
-			.env(&job_env).cwd(job_iwd).familyInfo(family_info)
-			.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
-			.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
-			.remap(fs_remap)
-			.asHardLimit(rlimit_as_hard_limit)
-		);
-	}
+	OptionalCreateProcessArgs cpArgs(create_process_err_msg);
+	JobPid = daemonCore->CreateProcessNew( JobName.c_str(), args,
+		 cpArgs.priv(PRIV_USER_FINAL)
+		.wantCommandPort(FALSE).wantUDPCommandPort(FALSE)
+		.env(&job_env).cwd(job_iwd).familyInfo(family_info)
+		.std(fds).niceInc(nice_inc).jobOptMask(job_opt_mask)
+		.coreHardLimit(core_size_ptr).affinityMask(affinity_mask)
+		.remap(fs_remap)
+		.asHardLimit(rlimit_as_hard_limit)
+	);
 
 	// Create_Process() saves the errno for us if it is an "interesting" error.
 	int create_process_errno = errno;
 
-    // errno is 0 in the privsep case.  This executes for the daemon core create-process logic
+    // This executes for the daemon core create-process logic
     if ((FALSE == JobPid) && (0 != create_process_errno)) {
         if (create_process_err_msg != "") create_process_err_msg += " ";
         std::string errbuf;
@@ -900,48 +847,29 @@ OsProc::JobExit( void )
 void
 OsProc::checkCoreFile( void )
 {
-	// we must act differently depending on whether PrivSep is enabled.
-	// if it's not, we rename any core file we find to
-	// core.<cluster>.<proc>. if PrivSep is enabled, we may not have the
-	// permissions to do the rename, so we don't. in either case, we
-	// add the core file if present to the list of output files
-	// (that happens in renameCoreFile for the non-PrivSep case)
+	// We rename any core file we find to core.<cluster>.<proc>.
+	// We add the core file if present to the list of output files
+	// (that happens in renameCoreFile)
 
 	// Since Linux now writes out "core.pid" by default, we should
 	// search for that.  Try the JobPid of our first child:
 	std::string name_with_pid;
 	formatstr( name_with_pid, "core.%d", JobPid );
 
-	if (Starter->privSepHelper() != NULL) {
+	std::string new_name;
+	formatstr( new_name, "core.%d.%d",
+	                  Starter->jic->jobCluster(), 
+	                  Starter->jic->jobProc() );
 
-#if defined(WIN32)
-		EXCEPT("PrivSep not yet available on Windows");
-#else
-		struct stat stat_buf;
-		if (stat(name_with_pid.c_str(), &stat_buf) != -1) {
-			Starter->jic->addToOutputFiles(name_with_pid.c_str());
-		}
-		else if (stat("core", &stat_buf) != -1) {
-			Starter->jic->addToOutputFiles("core");
-		}
-#endif
+	if( renameCoreFile(name_with_pid.c_str(), new_name.c_str()) ) {
+		// great, we found it, renameCoreFile() took care of
+		// everything we need to do... we're done.
+		return;
 	}
-	else {
-		std::string new_name;
-		formatstr( new_name, "core.%d.%d",
-		                  Starter->jic->jobCluster(), 
-		                  Starter->jic->jobProc() );
 
-		if( renameCoreFile(name_with_pid.c_str(), new_name.c_str()) ) {
-			// great, we found it, renameCoreFile() took care of
-			// everything we need to do... we're done.
-			return;
-		}
-
-		// Now, just see if there's a file called "core"
-		if( renameCoreFile("core", new_name.c_str()) ) {
-			return;
-		}
+	// Now, just see if there's a file called "core"
+	if( renameCoreFile("core", new_name.c_str()) ) {
+		return;
 	}
 
 	/*
@@ -1118,10 +1046,7 @@ OsProc::PublishToEnv( Env * proc_env ) {
 	UserProc::PublishToEnv( proc_env );
 
 	if( howCode != -1 ) {
-		std::string name;
-		formatstr( name, "_%s_HOW_CODE", myDistro->Get() );
-		upper_case(name);
-		proc_env->SetEnv( name, std::to_string( howCode ) );
+		proc_env->SetEnv( "_CONDOR_HOW_CODE", std::to_string( howCode ) );
 	}
 }
 
@@ -1255,7 +1180,16 @@ OsProc::AcceptSingSshClient(Stream *stream) {
         int fds[3];
         sns = ((ReliSock*)stream)->accept();
 
+		if (sns == nullptr) {
+			dprintf(D_ALWAYS, "Could not accept new connection from ssh_to_job client %d: %s\n", errno, strerror(errno));
+
+			// We have seen this error on production clusters, not sure what causes it.  To be safe
+			// let's cancel the socket, so we won't get caught in an infinite loop if the socket stays hot
+			daemonCore->Cancel_Socket(stream);
+			return KEEP_STREAM;
+		}
         dprintf(D_ALWAYS, "Accepted new connection from ssh client for container job\n");
+
         fds[0] = fdpass_recv(sns->get_file_desc());
         fds[1] = fdpass_recv(sns->get_file_desc());
         fds[2] = fdpass_recv(sns->get_file_desc());
@@ -1321,7 +1255,8 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	}
 
 	std::string target_dir;
-        bool has_target = param(target_dir, "SINGULARITY_TARGET_DIR") && !target_dir.empty();
+	bool has_target = htcondor::Singularity::hasTargetDir(*JobAd, target_dir);
+
 	if (has_target) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
 	}

@@ -57,6 +57,7 @@
 #include "jobsets.h"
 #include <algorithm>
 #include <param_info.h>
+#include <shortfile.h>
 
 #include "ScheddPlugin.h"
 
@@ -722,7 +723,7 @@ ClusterCleanup(int cluster_id)
 	}
 }
 
-int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
+int GetSchedulerCapabilities(int mask, ClassAd & reply)
 {
 	reply.Assign( "LateMaterialize", scheduler.getAllowLateMaterialize() );
 	reply.Assign("LateMaterializeVersion", 2);
@@ -732,8 +733,21 @@ int GetSchedulerCapabilities(int /*mask*/, ClassAd & reply)
 	if (cmds && (cmds->size() > 0)) {
 		reply.Insert("ExtendedSubmitCommands", cmds->Copy());
 	}
-	dprintf(D_ALWAYS, "GetSchedulerCapabilities called, returning\n");
-	dPrintAd(D_ALWAYS, reply);
+	auto helpfile = scheduler.getExtendedSubmitHelpFile();
+	if ( ! helpfile.empty()) {
+		// if EXTENDED_SUBMIT_HELPFILE is not a URL, assume it is a small local file and return the content
+		if ((mask & GetsScheddCapabilities_F_HELPTEXT) && ! IsUrl(helpfile.c_str())) {
+			std::string contents;
+			htcondor::readShortFile(helpfile, contents);
+			reply.Assign("ExtendedSubmitHelp", contents);
+		} else {
+			reply.Assign("ExtendedSubmitHelpFile", helpfile);
+		}
+	}
+	if (IsDebugVerbose(D_COMMAND)) {
+		std::string buf;
+		dprintf(D_COMMAND | D_VERBOSE, "GetSchedulerCapabilities(%d) returning:\n%s", mask, formatAd(buf, reply, "\t"));
+	}
 	return 0;
 }
 

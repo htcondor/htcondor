@@ -25,7 +25,6 @@
 #include "list.h"
 #include "user_proc.h"
 #include "job_info_communicator.h"
-#include "privsep_helper.h"
 #include "exit.h"
 
 #if defined(LINUX)
@@ -312,12 +311,6 @@ public:
 	int PeekRetry(Stream *s,char const *fmt,...) CHECK_PRINTF_FORMAT(3,4);
 
 
-		/** This will return NULL if we're not using GLExec */
-	PrivSepHelper* privSepHelper()
-	{
-		return m_privsep_helper;
-	}
-
 	int GetShutdownExitCode() const { return m_shutdown_exit_code; };
 	void SetShutdownExitCode( int code ) { m_shutdown_exit_code = code; };
 
@@ -438,12 +431,6 @@ private:
 
 	UserProc* pre_script;
 	UserProc* post_script;
-
-		//
-		// If we're using PrivSep, we'll need a helper object to
-		// manage sandbox ownership and to launch the job.
-		//
-	PrivSepHelper* m_privsep_helper;
 
 		//
 		// Flag to indicate whether Config() has been run

@@ -83,6 +83,7 @@
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
+#define ATTR_CONTAINER_TARGET_DIR "ContainerTargetDir"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
 #define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"
@@ -106,8 +107,8 @@
 #define ATTR_MATCHED_PSG  "Matched_PSG"
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
 #define ATTR_PREEMPTING_CONCURRENCY_LIMITS  "PreemptingConcurrencyLimits"
-#define ATTR_CONDOR_LOAD_AVG			AttrGetName( ATTRE_CONDOR_LOAD_AVG )
-#define ATTR_CONDOR_ADMIN				AttrGetName( ATTRE_CONDOR_ADMIN )
+#define ATTR_CONDOR_LOAD_AVG			"CondorLoadAvg"
+#define ATTR_CONDOR_ADMIN				"CondorAdmin"
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
 #define ATTR_CONTAINER_IMAGE "ContainerImage"
 #define ATTR_CONTINUE  "Continue"
@@ -126,6 +127,7 @@
 #define ATTR_CPU_BUSY_TIME  "CpuBusyTime"
 #define ATTR_CPU_IS_BUSY  "CpuIsBusy"
 #define ATTR_CPUS  "Cpus"
+#define ATTR_CPUS_USAGE  "CpusUsage"
 #define ATTR_CPU_MODEL_NUMBER  "CpuModelNumber"
 #define ATTR_CPU_FAMILY  "CpuFamily"
 #define ATTR_CPU_CACHE_SIZE  "CpuCacheSize"
@@ -153,6 +155,11 @@
 #define ATTR_DAG_NODES_READY "DAG_NodesReady"
 #define ATTR_DAG_NODES_TOTAL "DAG_NodesTotal"
 #define ATTR_DAG_NODES_UNREADY "DAG_NodesUnready"
+#define ATTR_DAG_JOBS_SUBMITTED "DAG_JobsSubmitted"
+#define ATTR_DAG_JOBS_IDLE "DAG_JobsIdle"
+#define ATTR_DAG_JOBS_RUNNING "DAG_JobsRunning"
+#define ATTR_DAG_JOBS_HELD "DAG_JobsHeld"
+#define ATTR_DAG_JOBS_COMPLETED "DAG_JobsCompleted"
 #define ATTR_DAG_STATUS "DAG_Status"
 #define ATTR_DAG_STATS "DAG_Stats"
 #define ATTR_DAGMAN_MAXIDLE "DAGMan_MaxIdle"
@@ -486,6 +493,7 @@
 #define ATTR_LOAD_AVG  "LoadAvg"
 #define ATTR_MACHINE  "Machine"
 #define ATTR_MACHINE_COUNT  "MachineCount"
+#define ATTR_MICROARCH  "Microarch"
 #define ATTR_REF_COUNT "RefCount"
 #define ATTR_MASTER_IP_ADDR  "MasterIpAddr"
 #define ATTR_MAX_HOSTS  "MaxHosts"
@@ -575,7 +583,7 @@
 #define ATTR_PARALLEL_SCRIPT_STARTER  "ParallelScriptStarter" 
 #define ATTR_PARALLEL_SHUTDOWN_POLICY  "ParallelShutdownPolicy" 
 #define ATTR_PERIODIC_CHECKPOINT  "PeriodicCheckpoint"
-#define ATTR_PLATFORM					AttrGetName( ATTRE_PLATFORM )
+#define ATTR_PLATFORM					"CondorPlatform"
 #define ATTR_PREEMPTING_ACCOUNTING_GROUP  "PreemptingAccountingGroup"
 #define ATTR_PREEMPTING_RANK  "PreemptingRank"
 #define ATTR_PREEMPTING_OWNER  "PreemptingOwner"
@@ -700,7 +708,7 @@
 #define ATTR_TOTAL_CLAIM_RUN_TIME  "TotalClaimRunTime"
 #define ATTR_TOTAL_CLAIM_SUSPEND_TIME  "TotalClaimSuspendTime"
 #define ATTR_TOTAL_CLUSTER_ADS  "TotalClusterAds"
-#define ATTR_TOTAL_CONDOR_LOAD_AVG			AttrGetName( ATTRE_TOTAL_LOAD )
+#define ATTR_TOTAL_CONDOR_LOAD_AVG			"TotalCondorLoadAvg"
 #define ATTR_TOTAL_CPUS  "TotalCpus"
 #define ATTR_TOTAL_SLOT_CPUS  "TotalSlotCpus"
 #define ATTR_TOTAL_DISK  "TotalDisk"
@@ -809,7 +817,7 @@
 #define ATTR_NUM_HOSTS_UNCLAIMED  "HostsUnclaimed"
 #define ATTR_NUM_HOSTS_OWNER  "HostsOwner"
 #define ATTR_MAX_RUNNING_JOBS  "MaxRunningJobs"
-#define ATTR_VERSION					AttrGetName( ATTRE_VERSION )
+#define ATTR_VERSION					"CondorVersion"
 #define ATTR_SHADOW_VERSION  "ShadowVersion"
 #define ATTR_SHOULD_TRANSFER_FILES  "ShouldTransferFiles"
 #define ATTR_WHEN_TO_TRANSFER_OUTPUT  "WhenToTransferOutput"
@@ -1171,6 +1179,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_RESUME_ON_COMPLETION  "ResumeOnCompletion"
 #define ATTR_DRAINING  "Draining"
 #define ATTR_DRAINING_REQUEST_ID  "DrainingRequestId"
+#define ATTR_DRAINING_DEADLINE "DrainingDeadline"
 #define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_COMPLETION  "ExpectedMachineGracefulDrainingCompletion"
 #define ATTR_EXPECTED_MACHINE_QUICK_DRAINING_COMPLETION  "ExpectedMachineQuickDrainingCompletion"
 #define ATTR_EXPECTED_MACHINE_GRACEFUL_DRAINING_BADPUT  "ExpectedMachineGracefulDrainingBadput"
@@ -1219,6 +1228,7 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
+#if 0
 // Enumerate the ones that can't be constant strings..
 typedef enum
 {
@@ -1233,12 +1243,12 @@ typedef enum
 // Prototypes
 int AttrInit( void );
 const char *AttrGetName( CONDOR_ATTR );
-
+#endif
 
 // ------------------------------------------------------
 // Stuff private to the environment variable manager
 // ------------------------------------------------------
-#if defined _CONDOR_ATTR_MAIN
+#if 0 // defined _CONDOR_ATTR_MAIN
 
 // Flags available
 typedef enum

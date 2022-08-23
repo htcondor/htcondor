@@ -17,19 +17,12 @@
  *
  ***************************************************************/
 
-#include "condor_common.h"
-#include "privsep_helper.h"
+#ifndef _JOB_AD_INSTANCE_RECORDING_H
+#define _JOB_AD_INSTANCE_RECORDING_H
 
-PrivSepError::PrivSepError():
-	hold_code(0),
-	hold_subcode(0)
-{
-}
+#include "condor_classad.h"
 
-void
-PrivSepError::setHoldInfo(int hold_code_arg,int hold_subcode_arg,char const *hold_reason_arg)
-{
-	hold_code = hold_code_arg;
-	hold_subcode = hold_subcode_arg;
-	hold_reason = hold_reason_arg;
-}
+// Function for Shadow to call to write Job Ad per Epoch
+void writeJobEpochFile(classad::ClassAd const *job_ad);
+
+#endif

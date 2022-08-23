@@ -133,11 +133,11 @@ static const char * const aVerTrue[] = {
 	"version > 6.0", "!version >%D.%S", "version > 8.1.1",
 	"version > 8.1.4", "version > 7.24.29",
 	"version >= " CONDOR_VERSION, "version == %D.%S", "version != 8.0",
-	"version == " CONDOR_VERSION, "version <= %D.%S.%N", "version <= %D.%S.19", "version >= %D.%S.%L",
-	"version <= %D.%S", "version < %D.%S.19", "version < %D.%S.16",
+	"version == " CONDOR_VERSION, "version <= %D.%S.%N", "version <= %D.%S.%P", "version >= %D.%S.%L",
+	"version <= %D.%S", "version < %D.%S.%P", "version < %D.%S.%N",
 	"version > %D.%S.%L", "version > %D.%R.%M", "version > %D.%R",
 	"version < %D.%S.99", "version < %D.%T", "version < %E.0",
-	"version < 10.0", " VERSION < 10.0 ", " Version < 10.0"
+	"version < 12.0", " VERSION < 12.0 ", " Version < 12.0"
 };
 
 static const char * const aVerFalse[] = {
@@ -145,10 +145,10 @@ static const char * const aVerFalse[] = {
 	"version < 8.1.4", " version < 8.1.4", "version < 8.1.4 ",
 	"  version  <  8.1.4  ", "version < 7.24.29", " ! version <= " CONDOR_VERSION,
 	"version == 8.0", "version == 8.0.6", "version <= 8.0.5",
-	"!version >= %D.%S", "version > " CONDOR_VERSION, "version > %D.%S.16",
+	"!version >= %D.%S", "version > " CONDOR_VERSION, "version > %D.%S.%N",
 	"version < %D.%S.%L", "version < %D.%R.%M", "version < %D.%R",
 	"version > %D.%S.99", "version > %D.%S", "version > %E.0",
-	"version > 10.0",
+	"version > 12.0",
 };
 
 static const char * const aDefTrue[] = {

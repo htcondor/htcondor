@@ -43,8 +43,8 @@ Apache License
 Version 2.0, January 2004
 http://www.apache.org/licenses/
 
-Copyright © 1990-2019 Center for High Throughput Computing, Computer Sciences
-Department, University of Wisconsin-Madison, WI.
+Copyright © 1990-2022 HTCondor Team, Center for High Throughput Computing,
+Computer Sciences Department, University of Wisconsin-Madison, WI.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use
 this file except in compliance with the License. You may obtain a copy of the

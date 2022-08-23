@@ -3583,6 +3583,38 @@ perform backfill computations whenever resources would otherwise be
 idle. See :ref:`admin-manual/setting-up-special-environments:configuring
 htcondor for running backfill jobs` for details.
 
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
+    This boolean value, which is only evaluated on Linux systems, tells
+    the *condor_startd* whether to make an ephemeral filesystem for the
+    scratch execute directory for jobs.  The default is ``False``. This
+    should only be set to true on HTCondor installations that have root
+    privilege.
+    When ``true``, you must set :macro:`THINPOOL_NAME` and
+    :macro:`THINPOOL_VOLUME_GROUP_NAME`,
+    or alternatively set :macro:`THINPOOL_BACKING_FILE`.
+
+:macro-def:`THINPOOL_NAME`
+    This string-valued parameter has no default, and should be set to the
+    Linux LVM logical volume to be used for ephemeral execute directories.
+    ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
+    :macro:`STARTD_ENFORCE_DISK_USAGE` is ``True``, and HTCondor has root
+    privilege.
+
+:macro-def:`THINPOOL_VOLUME_GROUP_NAME`
+    This string-valued parameter has no default, and should be set to the
+    name of the Linux LVM volume group to be used for logical volumes
+    for ephemeral execute directories.
+    ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
+    :macro:`STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root
+    privilege.
+
+:macro-def:`THINPOOL_BACKING_FILE`
+    This string-valued parameter has no default.  If a rootly HTCondor
+    does not have a Linux LVM configured, a single large file can be used
+    as the backing store for ephemeral file systems for execute directories.
+    This parameter should be set to the path of a large, pre-created file
+    to hold the blocks these filesystems are created from.
+
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
     willing to perform backfill computations when it would otherwise be
@@ -5401,6 +5433,12 @@ These macros control the *condor_schedd*.
     determining the sets of jobs considered as a unit (an auto cluster)
     in negotiation, when auto clustering is enabled.
 
+:macro-def:`SCHEDD_SEND_RESCHEDULE`
+    A boolean value which defaults to true.  Set to false for 
+    schedds like those in the HTCondor-CE that have no negotiator
+    associated with them, in order to reduce spurious error messages
+    in the SchedLog file.
+
 :macro-def:`SCHEDD_AUDIT_LOG`
     The path and file name of the *condor_schedd* log that records
     user-initiated commands that modify the job queue. If not defined,
@@ -5476,6 +5514,53 @@ These macros control the *condor_schedd*.
              SomeFile = "filename"
              acounting_group_user = error
           @end
+
+:macro-def:`EXTENDED_SUBMIT_HELPFILE`
+    A URL or file path to text describing how the *condor_schedd* extends the submit schema. Use this to document
+	for users the extended submit commands defined by the configuration variable ``EXTENDED_SUBMIT_COMMANDS``.
+	*condor_submit* will display this URL or the text of this file when the user uses the ``-capabilities`` option.
+
+:macro-def:`SUBMIT_TEMPLATE_NAMES`
+    A comma and/or space separated list of unique names, where each is
+    used in the formation of a configuration variable name that will
+    contain a set of submit commands.  Each name in the list will be used in the name of
+    the configuration variable ``SUBMIT_TEMPLATE_<Name>``.
+	Names are not case-sensitive. There is no default value.  Submit templates are
+	used by *condor_submit* when parsing submit files, so administrators or users can
+	add submit templates to the configuration of *condor_submit* to customize the
+	schema or to simplify the creation of submit files.
+
+:macro-def:`SUBMIT_TEMPLATE_<Name>`
+    A single submit template containing one or more submit commands.
+    The template can be invoked with or without arguments.  The template
+	can refer arguments by number using the ``$(<N>)`` where ``<N>`` is
+	a value from 0 thru 9.  ``$(0)`` expands to all of the arguments,
+	``$(1)`` to the first argument, ``$(2)`` to the second argument, and so on.
+	The argument number can be followed by ``?`` to test if the argument
+	was specfied, or by ``+`` to expand to that argument and all subsequent
+	arguments.  Thus ``$(0)`` and ``$(1+)`` will expand to the same thing.
+
+	For example:
+
+    .. code-block:: condor-config
+
+          SUBMIT_TEMPLATE_NAMES = $(SUBMIT_TEMPLATE_NAMES) Slurm
+          SUBMIT_TEMPLATE_Slurm @=tpl
+             if ! $(1?)
+                error : Template:Slurm requires at least 1 argument - Slurm(project, [queue [, resource_args...])
+             endif
+             universe = Grid
+             grid_resource = batch slurm $(3)
+             batch_project = $(1)
+             batch_queue = $(2:Default)
+          @tpl
+
+	This could be used in a submit file in this way:
+
+    .. code-block:: condor-submit
+
+          use template : Slurm(Blue Book)
+
 
 :macro-def:`JOB_TRANSFORM_NAMES`
     A comma and/or space separated list of unique names, where each is
@@ -8992,9 +9077,14 @@ macros are described in the :doc:`/admin-manual/security` section.
     default setting if no others are specified.
 
 :macro-def:`SEC_*_CRYPTO_METHODS`
-    When encryption is enabled for a session at a specified authorization,
-    the cryptographic algorithm used to encrypt the conversation.  Possible
-    values are ``3DES`` or ``BLOWFISH``.  There is little benefit in varying
+    An ordered list of allowed cryptographic algorithms to use for
+    encrypting a network session at a specified authorization level.
+    The server will select the first entry in its list that both
+    server and client allow.
+    Possible values are ``AES``, ``3DES``, and ``BLOWFISH``.
+    The special parameter name ``SEC_DEFAULT_CRYPTO_METHODS`` controls the
+    default setting if no others are specified.
+    There is little benefit in varying
     the setting per authorization level; it is recommended to leave these
     settings untouched.
 
@@ -9007,6 +9097,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     records for the host they are connected to. See
     ``SSL_SKIP_HOST_CHECK`` :index:`SSL_SKIP_HOST_CHECK` for ways
     to disable this validation step.
+
+:macro-def:`USE_COLLECTOR_HOST_CNAME`
+    A boolean value that determines what hostname a client should
+    expect when validating the collector's certificate during SSL
+    authentication.
+    When set to ``True``, the hostname given to the client is used.
+    When set to ``False``, if the given hostname is a DNS CNAME, the
+    client resolves it to a DNS A record and uses that hostname.
+    The default value is ``True``.
 
 :macro-def:`DELEGATE_JOB_GSI_CREDENTIALS`
     A boolean value that defaults to ``True`` for HTCondor version
@@ -9830,13 +9929,13 @@ These macros affect the high availability operation of HTCondor.
 
 :macro-def:`HAD_FIPS_MODE`
     Controls what type of checksum will be sent along with files that are replicated.
-    Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums. Default value is 0.
-    Prior to versions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 9.0 and
+    Set it to 0 for MD5 checksums and to 1 for SHA-2 checksums.
+    Prior to versions 8.8.13 and 8.9.12 only MD5 checksums are supported. In the 10.0 and
     later release of HTCondor, MD5 support will be removed and only SHA-2 will be
     supported.  This configuration variable is intended to provide a transition
-    between the 8.8 and 9.0 releases.  As soon as all of machines involved in replication
-    are running HTCondor 8.8.13 or 8.9.12 or later you should set this configuration variable
-    to 1 to prepare for the transition to 9.0
+    between the 8.8 and 9.0 releases.  Once all machines in your pool involved in HAD replication
+    have been upgraded to 9.0 or later, you should set the value of this configuration
+    variable to 1. Default value is 0 in HTCondor versions before 9.12 and 1 in version 9.12 and later.
 
 :macro-def:`REPLICATION_LIST`
     A comma-separated list of all *condor_replication* daemons in the

@@ -207,34 +207,17 @@ for all users on the current access point:
 Checking on the progress of job sets
 ------------------------------------
 
-You can check on your jobs with the
+You can check on your job set with the
 ``htcondor jobset status <job set name>`` command.
-By default, it displays only the total job set status:
 
 .. code-block:: console
 
     $ htcondor jobset status MyJobSet
 
-    -- Schedd: submit.chtc.wisc.edu : <127.0.0.1:9618?... @ 01/01/1970 00:05:00
-    BATCH_NAME       SUBMITTED  DONE  RUN  IDLE  TOTAL  JOB_IDS
-    Set: MyJobSet  01/01 00:02     -    5     3      8  1234.0-1235.3
-    8 jobs; 0 completed; 0 removed; 3 idle; 5 running; 0 held; 0 suspended
-
-The argument ``--nobatch`` will list the individual jobs in the job set
-along with the totals for the entire job set:
-
-.. code-block:: console
-
-    $ htcondor jobset status MyJobSet --nobatch
-
-    -- Schedd: submit.chtc.wisc.edu : <127.0.0.1:9618?... @ 01/01/1970 00:05:00
-    BATCH_NAME       SUBMITTED  DONE  RUN  IDLE  TOTAL  JOB_IDS
-    ID: 1234       01/01 00:02     -    3     1      4  1234.0-3
-    ID: 1235       01/01 00:02     -    2     2      4  1235.0-3
-    -----------------------------------------------------------------
-    Set: MyJobSet  01/01 00:02     -    5     3      8  1234.0-1235.3
-    8 jobs; 0 completed; 0 removed; 3 idle; 5 running; 0 held; 0 suspended
-
+    MyJobSet currently has 3 jobs idle, 5 jobs running, and 0 jobs completed.
+    MyJobSet contains:
+        Job cluster 1234 with 4 total jobs
+        Job cluster 1235 with 4 total jobs
 
 Removing a job set
 --------------------------------

@@ -49,13 +49,9 @@ int main( int argc, char *argv[] )
 	int i;
 	const char* pcolon = nullptr;
 	const char* timeout_multiplier = "1";
-	std::string condor_prefix;
 
 	set_priv_initialize(); // allow uid switching if root
 	config();
-
-	// Set prefix to be "condor_" 
-	formatstr(condor_prefix,"%s_",myDistro->Get());
 
 	for( i=1; i<argc; i++ ) {
 		if(is_dash_arg_prefix(argv[i],"help")) {
@@ -88,8 +84,9 @@ int main( int argc, char *argv[] )
 				exit(1);
 			}
 		} else
-		if (match_prefix(argv[i],condor_prefix.c_str())) { 		
-			// here we have a command line arg that matches condor_*
+		if (match_prefix(argv[i],MY_condor_NAME)) {
+			// here we have a command line arg that matches condor*
+			// we will assume that this is the start of the command line to SOS
 			int result, save_errno;
 			// Set env to always use super port, and a nice long timeout
 			SetEnv("_condor_USE_SUPER_PORT","true");

@@ -40,33 +40,30 @@ class CSysinfo
 	CSysinfo();
 	~CSysinfo();
 	int GetPIDs (std::vector<pid_t> & dest);
-	DWORD NumThreads (pid_t pid);
 	BOOL GetProcessName (pid_t pid, char *dest, int sz);
-#if 0
-	int GetTIDs (pid_t pid, std::vector<DWORD> & tids, 
-		std::vector<DWORD> & status);
+#ifdef USE_NTQUERY_SYS_INFO
+	DWORD NumThreads (pid_t pid);
+	DWORD GetHandleCount (pid_t pid);
+	void Explore(DWORD pid);
 #endif
 	int GetTIDs (pid_t pid, std::vector<DWORD> & tids);
 	HANDLE OpenThread (DWORD tid, DWORD accessflag = THREAD_ALL_ACCESS);
 	pid_t FindThreadProcess (DWORD find_tid);
-	DWORD GetHandleCount (pid_t pid);
-	DWORD GetParentPID (pid_t pid);
+	pid_t GetParentPID (pid_t pid);
 	int GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 );
 	void CloseThread (HANDLE hthread);
-	bool IsWin2korXP() { return IsWin2k; }
 	bool GetProcessBirthday(pid_t pid, FILETIME *ft);
 	int ComparePidAge(pid_t pid1, pid_t pid2 );
-#if 0
-	void Explore(DWORD pid);
-#endif
 
 	protected:
+#ifdef USE_NTQUERY_SYS_INFO
 	static DWORD *memptr;
 	static DWORD memptr_size;
 	void Refresh (void);
 	void MakeAnsiString (WORD *unistring, char *ansistring);
 	DWORD* NextBlock (DWORD* oldblock);
 	DWORD* FindBlock (DWORD pid);
+#endif
 
 	static HINSTANCE hNtDll;
 	static HINSTANCE hKernel32Dll;
@@ -78,12 +75,11 @@ class CSysinfo
 	static FPThread32First Thread32First;
 	static FPThread32Next Thread32Next;
 
-	static bool IsWin2k;
 
 	private:
 	static int reference_count;
 
 };
 
-#endif
+#endif // NTSYSINFO_H
 

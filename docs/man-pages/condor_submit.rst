@@ -2479,6 +2479,18 @@ COMMANDS FOR THE DOCKER UNIVERSE
     which contains the port number on the host forwarding to the corresponding
     service.
 
+COMMANDS FOR THE CONTAINER UNIVERSE
+    :index:`container_image<single: container_image; submit commands>`
+ container_image = < image-name >
+    Defines the name of the container image. Can be a singularity .sif file,
+    a singularity exploded directory, or a path to an image in a docker style 
+    repository
+
+    :index:`container_target_dir<single: container_target_dir; submit commands>`
+ container_target_dir = < path-to-directory-inside-container >
+    Defines the working directory of the job inside the container.  Will be mapped
+    to the scratch directory on the worker node.
+
 ADVANCED COMMANDS
 
     :index:`accounting_group<single: accounting_group; submit commands>`

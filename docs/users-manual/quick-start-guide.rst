@@ -457,7 +457,7 @@ Where to Go from Here
 * `Additional tutorials <https://www.youtube.com/playlist?list=PLO7gMRGDPNumCuo3pCdRk23GDLNKFVjHn>`_
   about other aspects of using HTCondor are available
   in our `YouTube channel <https://www.youtube.com/channel/UCd1UBXmZIgB4p85t2tu-gLw>`_.
-* Slides from `past HTCondor Weeks <https://research.cs.wisc.edu/htcondor/past_condor_weeks.html>`_ -- our annual conference -- include the tutorials given there.
+* Slides from `past HTCondor Weeks <https://htcondor.org/past_condor_weeks.html>`_ -- our annual conference -- include the tutorials given there.
 * The :doc:`../users-manual/index` is a good reference.
 * If you like what you've seen but want to run more jobs simultaneously, the
   :doc:`administrator's quick start guide <../getting-htcondor/admin-quick-start>`
