@@ -1115,6 +1115,11 @@ default=300
 type=string
 tags=had,StateMachine
 
+[HAD_FIPS_MODE]
+default=1
+type=int
+tags=had,StateMachine
+
 [REPLICATION_LIST]
 default=
 type=string
