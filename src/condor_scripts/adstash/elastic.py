@@ -17,12 +17,6 @@ import sys
 import json
 import logging
 import collections
-import datetime
-
-if args.es_use_opensearch:
-    import opensearchpy as elasticsearch
-else:
-    import elasticsearch
 
 import importlib.util
 
@@ -131,9 +125,6 @@ def get_server_handle(args=None):
                 "Call get_server_handle with args first to create ES interface instance"
             )
             return _ES_HANDLE
-        if args.json_local:
-            _ES_HANDLE = GenericInterface()
-            return _ES_HANDLE
         if ":" in args.es_host:
             if len(args.es_host.split(":")) == 2:
                 (es_host, es_port) = args.es_host.split(":")
@@ -152,32 +143,13 @@ def get_server_handle(args=None):
             username=args.es_username,
             password=args.es_password,
             use_https=args.es_use_https,
+            use_opensearch=args.es_use_opensearch,
             ca_certs=args.ca_certs,
         )
     return _ES_HANDLE
 
 
-class GenericInterface(object):
-    """Generic interface, only stores locally"""
-
-    def __init__(
-        self,
-        logdir=Path.cwd(),
-    ):
-        self.logdir = Path(logdir)
-        self.handle = None
-
-    def make_mapping(self, idx):
-        mappings = make_mappings()
-        settings = make_settings()
-
-        body = json.dumps({"mappings": mappings, "settings": {"index": settings}})
-
-        with Path(self.logdir / "es_push_last_mappings.json").open("w") as jsonfile:
-            json.dump(json.loads(body), jsonfile, indent=2, sort_keys=True)
-
-
-class ElasticInterface(GenericInterface):
+class ElasticInterface(object):
     """Interface to elasticsearch"""
 
     def __init__(
@@ -187,10 +159,16 @@ class ElasticInterface(GenericInterface):
         username=None,
         password=None,
         use_https=False,
+        use_opensearch=False,
         ca_certs=None,
         logdir=Path.cwd(),
     ):
 
+        if use_opensearch:
+            import opensearchpy as elasticsearch
+        else:
+            import elasticsearch
+            
         es_client = {
             "host": hostname,
             "port": port,
@@ -216,15 +194,23 @@ class ElasticInterface(GenericInterface):
                 logging.error("Using HTTPS with Elasticsearch requires that either ca_certs be provided or certifi library be installed")
                 sys.exit(1)
             es_client["use_ssl"] = True
-            es_client["verify_certs"] = True
+            es_client["verify_certs"] = False
 
-        if args.es_use_opensearch:
+        if use_opensearch:
+            self.use_opensearch = True
             self.handle = elasticsearch.OpenSearch([es_client])
         else:
+            self.use_opensearch = False
             self.handle = elasticsearch.Elasticsearch([es_client])
-        super().__init__(self, logdir)
+        self.logdir = Path(logdir)
 
     def make_mapping(self, idx):
+
+        if self.use_opensearch:
+            import opensearchpy as elasticsearch
+        else:
+            import elasticsearch
+        
         idx_clt = elasticsearch.client.IndicesClient(self.handle)
         mappings = make_mappings()
         settings = make_settings()
@@ -274,19 +260,6 @@ def make_es_body(ads, metadata=None):
     return body
 
 
-def make_json_body(ads, metadata=None):
-    metadata = metadata or {}
-    body = []
-    for id_, ad in ads:
-        if metadata:
-            ad.setdefault("metadata", {}).update(metadata)
-
-        ad.update({"_id": id_})
-        body.append(json.dumps(ad) + "\n")
-
-    return body
-
-
 def parse_errors(result):
     reasons = [
         d.get("index", {}).get("error", {}).get("reason", None) for d in result["items"]
@@ -300,14 +273,6 @@ def parse_errors(result):
 
 
 def post_ads(es, idx, ads, metadata=None):
-    if not es:
-        body = make_json_body(ads, metadata)
-        t = datetime.datetime.now().timestamp()
-        f = f"{t}.json"
-        with Path(_ES_HANDLE.logdir / f).open("w") as jsonfile:
-            for b in body:
-                json.dump(json.loads(b), jsonfile, indent=2, sort_keys=True)
-            return
     body = make_es_body(ads, metadata)
     res = es.bulk(body=body, index=idx, request_timeout=60)
     if res.get("errors"):
