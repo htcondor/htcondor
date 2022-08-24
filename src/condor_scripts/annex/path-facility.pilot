@@ -93,7 +93,10 @@ RUNBENCHMARKS = FALSE
 CCB_ADDRESS = \$(COLLECTOR_HOST)
 
 # Commit suicide after being idle for five minutes.
+# This appears to have broken some time after 9.5.4?
 STARTD_NOCLAIM_SHUTDOWN = 300
+# GregT wanted me to give this a go, but it doesn't seem to have helped much.
+SINGULARITY_RUN_TEST_BEFORE_JOB = false
 
 # Don't run for any longer than was requested.
 MASTER.DAEMON_SHUTDOWN_FAST = (CurrentTime - DaemonStartTime) > ${REMAINING_LIFETIME}
@@ -107,6 +110,11 @@ AnnexName = \"${JOB_NAME}\"
 hpc_annex_request_id = \"${REQUEST_ID}\"
 STARTD_ATTRS = \$(STARTD_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
+
+# BrianL thinks this is way more likely to work than using the
+# host's Singularity, which may not exist nor be configured
+# to run "unprivileged."
+SINGULARITY                 = /cvmfs/oasis.opensciencegrid.org/mis/singularity/current/bin/singularity
 
 " > local/config.d/00-basic-pilot
 
