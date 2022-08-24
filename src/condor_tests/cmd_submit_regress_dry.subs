@@ -264,12 +264,6 @@ arguments=10s
 x509UserProxy = $Fp(SUBMIT_FILE)proxy
 use_x509userproxy = true
 delegate_job_gsi_credentials_lifetime = 2600
-myProxyHost = example
-myProxyServerDN = example.com
-myProxyCredentialName = bob
-myProxyPassword = really-secure-huh
-myProxyRefreshThreshold = 2*60
-myProxyNewProxyLifetime = 1*60+20
 
 queue 2
 

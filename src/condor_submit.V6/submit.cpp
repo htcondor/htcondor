@@ -237,7 +237,6 @@ static int MySendJobAttributes(const JOB_ID_KEY & key, const classad::ClassAd & 
 int  DoUnitTests(int options);
 
 char *username = NULL;
-char *myproxy_password = NULL;
 
 int process_job_credentials();
 
@@ -786,12 +785,6 @@ main( int argc, const char *argv[] )
 				}
 			} else if (is_dash_arg_prefix (ptr[0], "single-cluster", 3)) {
 				DashMaxClusters = 1;
-			} else if (is_dash_arg_prefix( ptr[0], "password", 1)) {
-				if( !(--argc) || !(*(++ptr)) ) {
-					fprintf( stderr, "%s: -password requires another argument\n",
-							 MyName );
-				}
-				myproxy_password = strdup (*ptr);
 			} else if (is_dash_arg_prefix(ptr[0], "pool", 2)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -pool requires another argument\n",
@@ -1089,7 +1082,6 @@ main( int argc, const char *argv[] )
 	submit_hash.setDisableFileChecks(DisableFileChecks);
 	submit_hash.setFakeFileCreationChecks(DashDryRun);
 	submit_hash.setScheddVersion(MySchedd ? MySchedd->version() : CondorVersion());
-	if (myproxy_password) submit_hash.setMyProxyPassword(myproxy_password);
 	submit_hash.init_base_ad(get_submit_time(), username);
 
 	if ( !DumpClassAdToFile ) {
@@ -2573,7 +2565,6 @@ usage(FILE* out)
 					 "\t              \t\t(implies -spool)\n" );
     fprintf( out, "\t-addr <ip:port>\t\tsubmit to schedd at given \"sinful string\"\n" );
 	fprintf( out, "\t-spool\t\t\tspool all files to the schedd\n" );
-	fprintf( out, "\t-password <password>\tspecify password to MyProxy server\n" );
 	fprintf( out, "\t-pool <host>\t\tUse host as the central manager to query\n" );
 	fprintf( out, "\t-stm <method>\t\tHow to move a sandbox into HTCondor\n" );
 	fprintf( out, "\t             \t\t<methods> is one of: stm_use_schedd_only\n" );
@@ -2618,9 +2609,6 @@ DoCleanup(int,int,const char*)
 	if (username) {
 		free(username);
 		username = NULL;
-	}
-	if (myproxy_password) {
-		free (myproxy_password);
 	}
 
 	return 0;		// For historical reasons...

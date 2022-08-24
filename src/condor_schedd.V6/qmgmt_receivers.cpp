@@ -321,6 +321,9 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		}
 		neg_on_error( syscall_sock->end_of_message() );;
 
+		// CRUFT: ATTR_MYPROXY_PASSWORD is no supported in 9.12.0+, but we
+		//   reject attempts to set the attribute from earlier clients to
+		//   avoid exposing a password in the job ad
 		if (strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "SetAttributeByConstraint (MyProxyPassword) not supported...\n");
 			rval = 0;
@@ -401,13 +404,16 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			return 0;
 		}
 
+		// CRUFT: ATTR_MYPROXY_PASSWORD is no supported in 9.12.0+, but we
+		//   reject attempts to set the attribute from earlier clients to
+		//   avoid exposing a password in the job ad
 		// ckireyev:
 		// We do NOT want to include MyProxy password in the ClassAd (since it's a secret)
 		// I'm not sure if this is the best place to do this, but....
 		if (!attr_name.empty() && strcmp (attr_name.c_str(), ATTR_MYPROXY_PASSWORD) == 0) {
 			dprintf( D_SYSCALLS, "Got MyProxyPassword, stashing...\n");
 			errno = 0;
-			rval = SetMyProxyPassword (cluster_id, proc_id, attr_value);
+			rval = -1;
 			terrno = errno;
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 			

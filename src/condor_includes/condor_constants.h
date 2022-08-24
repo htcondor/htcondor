@@ -97,8 +97,6 @@ static const size_t IP_STRING_BUF_SIZE = 48;
 // TODO: [IPV6] Should be increased
 #define SINFUL_STRING_BUF_SIZE 64
 
-#define MYPROXY_MAX_PASSWORD_BUFLEN 256
-
 #define CONDOR_HOSTNAME_MAX 256
 
 // years of careful research, I am told...

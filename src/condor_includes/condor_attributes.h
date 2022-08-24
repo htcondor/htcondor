@@ -248,15 +248,7 @@
 #define ATTR_GRID_JOB_ID  "GridJobId"
 #define ATTR_GRID_JOB_STATUS  "GridJobStatus"
 #define ATTR_GRIDMANAGER_SELECTION_VALUE "GridmanagerSelectionValue"
-// ckireyev myproxy
-#define ATTR_MYPROXY_SERVER_DN  "MyProxyServerDN"
-#define ATTR_MYPROXY_HOST_NAME  "MyProxyHost"
 #define ATTR_MYPROXY_PASSWORD  "MyProxyPassword"
-#define ATTR_MYPROXY_PASSWORD_EXISTS  "MyProxyPasswordExists"
-#define ATTR_MYPROXY_CRED_NAME  "MyProxyCredentialName"
-#define ATTR_MYPROXY_REFRESH_THRESHOLD  "MyProxyRefreshThreshold"
-#define ATTR_MYPROXY_NEW_PROXY_LIFETIME  "MyProxyNewProxyLifetime"
-// END ckireyev myproxy
 #define ATTR_HARDWARE_ADDRESS  "HardwareAddress"
 #define ATTR_HAS_CHECKPOINTING  "HasCheckpointing"
 #define ATTR_HAS_CONTAINER  "HasContainer"
