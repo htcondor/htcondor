@@ -9,11 +9,9 @@ Version 9.11.0
 
 Release Notes:
 
-.. HTCondor version 9.11.0 released on Month Date, 2022.
+- HTCondor version 9.11.0 released on August 24, 2022.
 
-- HTCondor version 9.11.0 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-9015`.
+- This version includes all the updates from :ref:`lts-version-history-9016`.
 
 - Removed support for the WriteUserLog class from libcondorapi.a.  This
   class was difficult to use correctly, and to our knowledge it is not
@@ -23,6 +21,15 @@ Release Notes:
 
 New Features:
 
+- The format of GPU attributes in the Machine ClassAd has been modified
+  to support the new ``require_gpus`` submit command.
+  Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
+  updated man page to document them and to expand the documentation of the
+  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
+  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
+  option is used for discovery.
+  :jira:`711`
+
 - Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
   :jira:`1173`
 
@@ -31,15 +38,18 @@ New Features:
   level authorization.
   :jira:`1164`
 
-- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
-  from 20 minutes to a practically infinite value.  This is to prevent
-  surprises when the schedd starts running vanilla universe jobs even when
-  the admin has intentionally stopped the negotiator.
-  :jira:`1185`
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
 
 - If a job that is a Unix script with a ``#!`` interpreter fails to run because
   the interpreter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
+  :jira:`1198`
 
 - Added a new submit option ``container_target_dir`` that allows Singularity
   jobs to specify the target directory
@@ -50,6 +60,12 @@ New Features:
   server. The proxy is still delegated for use by the job.
   :jira:`1194`
   
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
 - DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
   to allow passed variables to be set at the beginning or end of a DAG
   job's submit description. Any ``VARS`` without these options will have behavior
@@ -63,23 +79,8 @@ New Features:
   and other systems that have no negotiator.
   :jira:`1192`
 
-- Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
-  updated man page to document them and to expand the documentation of the
-  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
-  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
-  option is used for discovery.
-  :jira:`711`
-
-- Using *condor_hold* to put jobs on hold now overrides other hold
-  conditions. Jobs already held for other reasons will be updated (i.e.
-  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
-  held with the updated hold reason until released with *condor_release*.
-  The periodic release job policy expressions are now ignored for these
-  jobs.
-  :jira:`740`
-
-- The *blahp* now repots the number of cpus allocated to the job when
-  that data is provided by SLURM.
+- The *blahp* now reports the number of CPUs allocated to the job when
+  that data is provided by Slurm.
   :jira:`1207`
 
 Bugs Fixed:
@@ -397,7 +398,7 @@ Bugs Fixed:
 
 - Fixed bug introduced in HTCondor v9.7.0 where job may go on hold without
   setting a ``HoldReason`` and/or ``HoldReasonCode`` and ``HoldReasonSubCode``
-  attributes in the job classad.  In particular, this could happen when file transfer
+  attributes in the job ClassAd.  In particular, this could happen when file transfer
   using a file transfer plugin failed.
   :jira:`1035`
 
@@ -492,7 +493,7 @@ Bugs Fixed:
 - Fixed several bugs in file transfer where unexpected failures by file
   transfer plugins would not get handled correctly, resulting in empty
   Hold Reason messages and meaningless Hold Reason Subcodes reported in the
-  job's classad.
+  job's ClassAd.
   :jira:`842`
 
 Version 9.6.0
