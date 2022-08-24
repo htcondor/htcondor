@@ -1035,7 +1035,9 @@ HTCondor daemons exposed to the Internet may utilize server certificates provide
 by well-known authorities; however, SSL can be difficult to bootstrap for non-public
 hosts.
 
-Accordingly, on first startup, the **condor_collector** generates a new CA and key
+Accordingly, on first startup, if
+``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` is ``True``,
+the *condor_collector* generates a new CA and key
 in the locations pointed to by ``TRUST_DOMAIN_CAFILE`` :index:`TRUST_DOMAIN_CAFILE`
 and ``TRUST_DOMAIN_CAKEY`` :index:`TRUST_DOMAIN_CAKEY`,
 respectively.  If ``AUTH_SSL_SERVER_CERTFILE`` or ``AUTH_SSL_SERVER_KEYFILE`` does

@@ -176,7 +176,6 @@ static decltype(&X509_free) X509_free_ptr = nullptr;
 static decltype(&X509_STORE_CTX_get_ex_data) X509_STORE_CTX_get_ex_data_ptr = nullptr;
 static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
 static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
-static decltype(&SSL_get_ex_new_index) SSL_get_ex_new_index_ptr = nullptr;
 static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
 
 bool Condor_Auth_SSL::m_initTried = false;
@@ -280,7 +279,6 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
-		 !(SSL_get_ex_new_index_ptr = reinterpret_cast<decltype(SSL_get_ex_new_index_ptr)>(dlsym(dl_hdl, "SSL_get_ex_new_index"))) ||
 		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
@@ -1932,7 +1930,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     }
 
 	if (g_last_verify_error_index < 0)
-		g_last_verify_error_index = (*SSL_get_ex_new_index_ptr)(0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
+		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
 
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
@@ -1941,8 +1939,12 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
         goto setup_server_ctx_err;
     }
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		// Enable the automatic ephemeral ECDH setup.
+		// This is automatic in OpenSSL 1.1.0+ and this value has been
+		// removed there.
 	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL );
+#endif
 
     if(cafile)          free(cafile);
     if(cadir)           free(cadir);
