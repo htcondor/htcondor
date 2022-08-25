@@ -1948,16 +1948,6 @@ default=
 type=string
 tags=startd,startd_main
 
-[VMP_HOST_MACHINE]
-default=
-type=string
-tags=startd,startd_main
-
-[VMP_VM_LIST]
-default=
-type=string
-tags=startd,startd_main
-
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
 type=bool

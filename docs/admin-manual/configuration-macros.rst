@@ -9730,20 +9730,6 @@ machine software.
     A required full path and executable for the Xen bootloader, if the
     kernel image includes a disk image.
 
-The following two macros affect the configuration of HTCondor where
-HTCondor is running on a host machine, the host machine is running an
-inner virtual machine, and HTCondor is also running on that inner
-virtual machine. These two variables have nothing to do with the **vm**
-universe.
-
-:macro-def:`VMP_HOST_MACHINE`
-    A configuration variable for the inner virtual machine, which
-    specifies the host name.
-
-:macro-def:`VMP_VM_LIST`
-    For the host, a comma separated list of the host names or IP
-    addresses for machines running inner virtual machines on a host.
-
 Configuration File Entries Relating to High Availability
 --------------------------------------------------------
 

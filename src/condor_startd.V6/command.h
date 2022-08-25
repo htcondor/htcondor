@@ -91,7 +91,6 @@ int	command_give_state(int, Stream* );
 int	command_give_totals_classad( int, Stream* );
 int command_give_request_ad(int, Stream* );
 int command_query_ads(int, Stream* );
-int command_vm_register( int, Stream* );
 int command_vm_universe( int, Stream* );
 
 /*

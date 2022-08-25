@@ -26,9 +26,6 @@
  */
 #define _STARTD_NO_DECLARE_GLOBALS 1
 #include "startd.h"
-#include "vm_common.h"
-#include "VMManager.h"
-#include "VMRegister.h"
 #include "classadHistory.h"
 #include "misc_utils.h"
 #include "slot_builder.h"
@@ -363,14 +360,6 @@ main_init( int, char* argv[] )
 								  command_classad_handler,
 								  "command_classad_handler", WRITE );
 
-	// Virtual Machine commands
-	if( vmapi_is_host_machine() == TRUE ) {
-		daemonCore->Register_Command( VM_REGISTER,
-				"VM_REGISTER",
-				command_vm_register,
-				"command_vm_register", DAEMON );
-	}
-
 		// Commands from starter for VM universe
 	daemonCore->Register_Command( VM_UNIV_GAHP_ERROR, 
 								"VM_UNIV_GAHP_ERROR",
@@ -596,30 +585,6 @@ init_params( int first_time)
 	if (tmp) {
 		valid_cod_users = new StringList();
 		valid_cod_users->initializeFromString( tmp );
-	}
-
-	if( vmapi_is_virtual_machine() == TRUE ) {
-		vmapi_destroy_vmregister();
-	}
-	tmp.set(param("VMP_HOST_MACHINE"));
-	if (tmp) {
-		if (vmapi_is_my_machine(tmp.ptr())) {
-			dprintf( D_ALWAYS, "WARNING: VMP_HOST_MACHINE should be the hostname of host machine. In host machine, it doesn't need to be defined\n");
-		} else {
-			vmapi_create_vmregister(tmp.ptr());
-		}
-	}
-
-	if( vmapi_is_host_machine() == TRUE ) {
-		vmapi_destroy_vmmanager();
-	}
-	tmp.set(param("VMP_VM_LIST"));
-	if (tmp) {
-		if( vmapi_is_virtual_machine() == TRUE ) {
-			dprintf( D_ALWAYS, "WARNING: both VMP_HOST_MACHINE and VMP_VM_LIST are defined. Assuming this machine is a virtual machine\n");
-		}else {
-			vmapi_create_vmmanager(tmp.ptr());
-		}
 	}
 
 	InitJobHistoryFile( "STARTD_HISTORY" , "STARTD_PER_JOB_HISTORY_DIR");
