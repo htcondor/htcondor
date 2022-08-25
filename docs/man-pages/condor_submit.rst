@@ -2348,34 +2348,9 @@ COMMANDS FOR THE VM UNIVERSE
     specified, the default value is ``False``.
 
     :index:`vm_type<single: vm_type; submit commands>`
- vm_type = <vmware | xen | kvm>
+ vm_type = <xen | kvm>
     Specifies the underlying virtual machine software that this job
     expects.
-
-    :index:`vmware_dir<single: vmware_dir; submit commands>`
- vmware_dir = <pathname>
-    The complete path and name of the directory where VMware-specific
-    files and applications such as the VMDK (Virtual Machine Disk
-    Format) and VMX (Virtual Machine Configuration) reside. This command
-    is optional; when not specified, all relevant VMware image files are
-    to be listed using
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
-
-    :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`
- vmware_should_transfer_files = <True | False>
-    Specifies whether HTCondor will transfer VMware-specific files
-    located as specified by
-    **vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` to the
-    execute machine (``True``) or rely on access through a shared file
-    system (``False``). Omission of this required command (for VMware vm
-    universe jobs) results in an error message from *condor_submit*,
-    and the job will not be submitted.
-
-    :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
- vmware_snapshot_disk = <True | False>
-    When ``True``, causes HTCondor to utilize a VMware snapshot disk for
-    new or modified files. If not specified, the default value is
-    ``True``.
 
     :index:`xen_initrd<single: xen_initrd; submit commands>`
  xen_initrd = <image-file>

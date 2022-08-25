@@ -150,7 +150,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define SET_BEGINTIME	(SCHED_VERS+95)		// negotiator
 #define SET_LASTTIME	(SCHED_VERS+96)		// negotiator
 #define STORE_POOL_CRED		(SCHED_VERS+97)	// master, store password for daemon-to-daemon shared secret auth (PASSWORD)
-#define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine (*not* "slot") ;)
+//#define VM_REGISTER	(SCHED_VERS+98)		// Virtual Machine (*not* "slot") (Not used)
 #define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd

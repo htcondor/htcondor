@@ -44,10 +44,6 @@ startd_named_classad_list.cpp
 StartdPluginManager.cpp
 Starter.cpp
 util.cpp
-vm_common.cpp
-VMMachine.cpp
-VMManager.cpp
-VMRegister.cpp
 vmuniverse_mgr.cpp
 )
 

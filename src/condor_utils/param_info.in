@@ -1938,16 +1938,6 @@ default=
 type=string
 tags=startd,startd_main
 
-[VMP_HOST_MACHINE]
-default=
-type=string
-tags=startd,startd_main
-
-[VMP_VM_LIST]
-default=
-type=string
-tags=startd,startd_main
-
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
 type=bool
@@ -6346,23 +6336,6 @@ default : @end
 	ENABLE_PERSISTENT_CONFIG=True
 	PERSISTENT_CONFIG_DIR=$(SPOOL)
 	use FEATURE : REMOTE_RUNTIME_CONFIG($(0))
-@end
-
-# note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
-[$FEATURE.VMWARE]
-description=Settings to use VMWARE with VM Universe
-default : @end
-	VM_TYPE=vmware
-	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
-	VM_MAX_NUMBER=$(NUM_CPUS)
-	VM_NETWORKING_TYPE=nat
-	VM_NETWORKING_DEFAULT_TYPE=nat
-	VMWARE_PERL=perl
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
-	VMWARE_NAT_NETWORKING_TYPE=nat
-	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
-	VMWARE_NETWORKING_TYPE=nat
-	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
 [$FEATURE.GPUs]

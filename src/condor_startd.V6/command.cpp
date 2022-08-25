@@ -22,7 +22,6 @@
 #include "condor_classad.h"
 #include "condor_mkstemp.h"
 #include "startd.h"
-#include "vm_common.h"
 #include "ipv6_hostname.h"
 #include "consumption_policy.h"
 #include "credmon_interface.h"
@@ -852,46 +851,6 @@ command_query_ads(int, Stream* stream)
 		return FALSE;
 	}
     dprintf( D_FULLDEBUG, "Sent %d ads in response to query\n", num_ads ); 
-	return TRUE;
-}
-
-int
-command_vm_register(int, Stream* s )
-{
-	char *raddr = NULL;
-
-	s->decode();
-    	s->timeout(5);
-	if( !s->code(raddr) ) {
-		dprintf( D_ALWAYS, "command_vm_register: Can't read register IP\n");
-		free(raddr);
-		return FALSE;
-	}
-
-	dprintf( D_FULLDEBUG, "command_vm_register() is called with IP(%s).\n", raddr );
-
-	if( !s->end_of_message() ){
-		dprintf( D_ALWAYS, "command_vm_register: Can't read end_of_message\n");
-		free(raddr);
-		return FALSE;
-	}
-
-	int permission = 0;
-
-	if( vmapi_register_cmd_handler(raddr, &permission) == TRUE ) {
-		s->encode();
-		if (!s->code(permission)) {
-			dprintf( D_ALWAYS, "command_vm_register: Can't send permisison\n");
-			free(raddr);
-			return(false);
-		}
-		s->end_of_message();
-	}else{
-		free(raddr);
-		return FALSE;
-	}
-
-	free(raddr);
 	return TRUE;
 }
 

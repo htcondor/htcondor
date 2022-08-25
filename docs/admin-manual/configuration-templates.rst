@@ -104,11 +104,6 @@ incorporates.
        ``SETTABLE_ATTRS_CONFIG`` :index:`SETTABLE_ATTRS_CONFIG`
        must also be defined.
 
-    -  ``VMware``
-
-       Enables use of the vm universe with VMware virtual machines. Note
-       that this feature depends on Perl.
-
     -  ``GPUs([discovery_args])``
 
        Sets configuration based on detection with the

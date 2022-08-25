@@ -23,8 +23,6 @@
 #include "startd_hibernator.h"
 #include "startd_named_classad_list.h"
 #include "classad_merge.h"
-#include "vm_common.h"
-#include "VMRegister.h"
 #include "overflow.h"
 #include <math.h>
 #include "credmon_interface.h"
@@ -1289,11 +1287,6 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 			if (parent) parent->compute_shared();
 		} else {
 			walk(&Resource::compute_shared);
-
-			//TODO: Tj can I kill this? I'm pretty sure the vmapi stuff doesn't work anymore if it ever did
-			if (vmapi_is_virtual_machine()) {
-				vmapi_request_host_classAd();
-			}
 		}
 	}
 

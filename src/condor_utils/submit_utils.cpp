@@ -7071,6 +7071,8 @@ int SubmitHash::SetVMParams()
 		}
 
 	} else if (vmtype == CONDOR_VM_UNIVERSE_VMWARE) {
+		push_error(stderr, "A vm_type of 'vmware' is no longer supported\n");
+		ABORT_AND_RETURN(1);
 		bool knob_exists = false;
 		bool vmware_should_transfer_files = submit_param_bool(SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES, NULL, false, &knob_exists);
 		if (knob_exists) {
