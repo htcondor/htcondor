@@ -224,7 +224,9 @@ log                         = log.\$(ClusterID).\$(ProcID)
 # requirements                = OpSysAndVer == \"CentOS8\"
 # Testing: the facility is undergoing upgrades.
 # requirements                = GLIDEIN_Site == \"WISC-PATH\" && OpSysAndVer == \"CentOS8\"
-requirements                = regexp(\"gpu\", Name)
+#requirements                = regexp(\"gpu\", Name)
+
++SingularityImage = \"docker://hub.opensciencegrid.org/htcondor/hpc-annex-pilot:el8\"
 
 
 ${ALLOCATION_LINE}
