@@ -9367,9 +9367,24 @@ macros are described in the :doc:`/admin-manual/security` section.
     When ``True``, this check is skipped, and hosts will not be rejected due
     to a mismatch of certificate and host name.
 
+:macro-def:`COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`
+    A boolean variable that controls whether the *condor_collector*
+    should generate its own CA and host certificate at startup.
+    When ``True``, if the SSL certificate file given by
+    ``AUTH_SSL_SERVER_CERTFILE`` doesn't exist, the *condor_collector*
+    will generate its own CA, then use that CA to generate an SSL host
+    certificate. The certificate and key files are written to the
+    locations given by ``AUTH_SSL_SERVER_CERTFILE`` and
+    ``AUTH_SSL_SERVER_KEYFILE``, respectively.
+    The locations of the CA files are controlled by
+    ``TRUST_DOMAIN_CAFILE`` and ``TRUST_DOMAIN_CAKEY``.
+    The default value is ``False``.
+
 :macro-def:`TRUST_DOMAIN_CAFILE`
-    A path specifying the location of the CA the collector will automatically
-    generate.  This CA will be used to generate a host certificate and key
+    A path specifying the location of the CA the *condor_collector*
+    will automatically generate if needed when
+    ``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` is ``True``.
+    This CA will be used to generate a host certificate and key
     if one isn't provided in ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`.
     On Linux, this defaults to ``/etc/condor/trust_domain_ca.pem``.
 

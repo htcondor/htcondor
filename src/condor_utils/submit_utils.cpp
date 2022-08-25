@@ -9306,7 +9306,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 
 	// Force non-zero ref count for DAG_STATUS and FAILED_COUNT and other
 	// variables may be set by templates but only sometimes used by submit.
-	static const char * const suppress[] = { "DAG_STATUS", "FAILED_COUNT",
+	static const char * const suppress[] = { "DAG_STATUS", "FAILED_COUNT", "JOB", "RETRY",
 		"SubmitWarnEmptyMatches", "SubmitFailEmptyMatches", "SubmitWarnDuplicateMatches", "SubmitFailEmptyFields", "SubmitWarnEmptyFields",
 		// these are covered by the supression of warnings for dotted variables
 		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",

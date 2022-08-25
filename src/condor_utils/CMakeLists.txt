@@ -201,7 +201,6 @@ condor_common.cpp
 condor_config.cpp
 condor_crontab.cpp
 condor_crontab.h
-condor_environ.cpp
 CondorError.cpp
 CondorError.h
 condor_fsync.cpp

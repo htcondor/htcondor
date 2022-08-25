@@ -1057,7 +1057,7 @@ init_condor_ids()
 	RealCondorUid = INT_MAX;
 	RealCondorGid = INT_MAX;
 
-	const char	*envName = EnvGetName( ENV_UG_IDS ); 
+	const char	*envName = ENV_CONDOR_UG_IDS;
 	if( (env_val = getenv(envName)) ) {
 		val = env_val;
 	} else if( (config_val = param(envName)) ) {
@@ -1115,7 +1115,7 @@ init_condor_ids()
 	/* If we're root, set the Condor Uid and Gid to the value
 	   specified in the "CONDOR_IDS" environment variable */
 	if( can_switch_ids() ) {
-		const char	*enviName = EnvGetName( ENV_UG_IDS ); 
+		const char	*enviName = ENV_CONDOR_UG_IDS;
 		if( envCondorUid != INT_MAX ) {	
 			/* CONDOR_IDS are set, use what it said */
 				CondorUid = envCondorUid;

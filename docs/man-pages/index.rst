@@ -55,6 +55,7 @@ Command Reference Manual (man pages)
    condor_sos
    condor_ssh_start
    condor_ssh_to_job
+   condor_ssl_fingerprint
    condor_stats
    condor_status
    condor_store_cred

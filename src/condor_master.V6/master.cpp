@@ -644,7 +644,7 @@ main_init( int argc, char* argv[] )
         // relative time. This means that we don't have to update
         // the time each time we restart the daemon.
 		std::string runfor_env;
-		formatstr(runfor_env,"%s=%ld", EnvGetName(ENV_DAEMON_DEATHTIME),
+		formatstr(runfor_env,"%s=%ld", ENV_DAEMON_DEATHTIME,
 						   time(NULL) + (runfor * 60));
 		SetEnv(runfor_env.c_str());
     }

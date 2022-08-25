@@ -2906,7 +2906,7 @@ Daemons::CleanupBeforeRestart()
 		// is a daemon core process.  but, its parent is gone ( we are doing
 		// an exec, so we disappear), thus we must blank out the 
 		// CONDOR_INHERIT env variable.
-	UnsetEnv(EnvGetName( ENV_INHERIT ));
+	UnsetEnv(ENV_CONDOR_INHERIT);
 }
 
 void
