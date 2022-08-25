@@ -28,10 +28,6 @@
 
 #include "sysapi.h"
 #include "sysapi_externs.h"
-#include "my_popen.h"
-
-/* static function declarations */
-static int reserve_for_afs_cache(void);
 
 /* the code starts here */
 
@@ -62,70 +58,7 @@ sysapi_disk_space_raw(const char *filename)
 
 #include "condor_debug.h"
 
-/* Can't include condor_config.h since it depends on classads which is
-   only C++.  -Derek 6/25/98 */
-extern char* param();
-
-
-#define FS_PROGRAM "/usr/afsws/bin/fs"
-#define FS_COMMAND "getcacheparms"
-#define FS_OUTPUT_FORMAT "\nAFS using %d of the cache's available %d"
-
 #endif
-
-/*
-  How much disk space we need to reserve for the AFS cache.  Answer is
-  in kilobytes.
-*/
-static int
-reserve_for_afs_cache()
-{
-#ifdef WIN32
-	return 0;
-#else
-	int		answer;
-	FILE	*fp;
-	const char	*args[] = {FS_PROGRAM, FS_COMMAND, NULL};
-	int		cache_size, cache_in_use;
-	bool	do_it;
-
-	/* See if we're configured to deal with an AFS cache */
-	do_it = _sysapi_reserve_afs_cache;
-
-		/* If we're not configured to deal with AFS cache, just return 0 */
-	if( !do_it ) {
-		return 0;
-	}
-
-		/* Run an AFS utility program to learn how big the cache is and
-		   how much is in use. */
-	dprintf( D_FULLDEBUG, "Checking AFS cache parameters\n" );
-	fp = my_popenv( args, "r", FALSE );
-	if( !fp ) {
-		return 0;
-	}
-	if (fscanf( fp, FS_OUTPUT_FORMAT, &cache_in_use, &cache_size ) != 2) {
-		dprintf( D_ALWAYS, "Failed to parse AFS cache parameters, assuming no cache\n" );
-		cache_size = 0;
-		cache_in_use = 0;
-	}
-	my_pclose( fp );
-	dprintf( D_FULLDEBUG, "cache_in_use = %d, cache_size = %d\n",
-		cache_in_use,
-		cache_size
-	);
-	answer = cache_size - cache_in_use;
-
-		/* The cache may be temporarily over size, in this case AFS will
-		   clean up itself, so we don't have to allow for that. */
-	if( answer < 0 ) {
-		answer = 0;
-	}
-
-	dprintf( D_FULLDEBUG, "Reserving %d kbytes for AFS cache\n", answer );
-	return answer;
-#endif
-}
 
 /*
   How much disk space we need to reserve for the regular file system.
@@ -189,18 +122,7 @@ long long sysapi_disk_space_raw(const char * filename)
 /*
   Return number of kbytes condor may play with in the named file
   system.  System administrators may reserve space which condor should
-  leave alone.  This could be either a static amount of space, or an
-  amount of space based on the current size of the AFS cache (or
-  both).
-
-  Note: This code assumes that if we have an AFS cache, that cache is
-  on the filesystem we are asking about.  This is not true in general,
-  but it is the case at the developer's home site.  A more correct
-  implementation would check whether the filesystem being asked about
-  is the one containing the cache.  This is messy to do if the
-  filesystem name we are given isn't a full pathname, e.g.
-  sysapi_disk_space("."), which is why it isn't implemented here. -- mike
-
+  leave alone.
 */
 long long
 sysapi_disk_space(const char *filename)
@@ -210,7 +132,6 @@ sysapi_disk_space(const char *filename)
 	sysapi_internal_reconfig();
 
 	answer =  sysapi_disk_space_raw(filename)
-			- reserve_for_afs_cache()
 			- sysapi_reserve_for_fs();
 	return answer < 0 ? 0 : answer;
 

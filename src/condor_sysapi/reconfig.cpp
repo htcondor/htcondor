@@ -44,9 +44,6 @@ StringList *_sysapi_console_devices = NULL;
 time_t _sysapi_last_x_event = 0;
 
 /* needed by free_fs_blocks.c */
-#ifndef WIN32
-bool _sysapi_reserve_afs_cache = false;
-#endif
 long long _sysapi_reserve_disk = 0;
 
 /* needed by idle_time.C */
@@ -127,9 +124,6 @@ sysapi_reconfig(void)
     }
 
 	_sysapi_startd_has_bad_utmp = param_boolean( "STARTD_HAS_BAD_UTMP", false );
-
-	/* configuration setup for free_fs_blocks.c */
-	_sysapi_reserve_afs_cache = param_boolean( "RESERVE_AFS_CACHE", false );
 #endif /* ! WIN32 */
 
 	_sysapi_reserve_disk = param_integer( "RESERVED_DISK", 0, INT_MIN, INT_MAX );

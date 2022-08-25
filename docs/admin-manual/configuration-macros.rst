@@ -2482,12 +2482,6 @@ using a shared file system`.
     Since each machine will have a different ``$(FILESYSTEM_DOMAIN)``,
     they will not be considered to have shared file systems.
 
-:macro-def:`RESERVE_AFS_CACHE`
-    If your machine is running AFS and the AFS cache lives on the same
-    partition as the other HTCondor directories, and you want HTCondor
-    to reserve the space that your AFS cache is configured to use, set
-    this macro to ``True``. It defaults to ``False``.
-
 :macro-def:`USE_NFS`
     This configuration variable changes the semantics of Chirp
     file I/O when running in the vanilla, java or parallel universe. If
