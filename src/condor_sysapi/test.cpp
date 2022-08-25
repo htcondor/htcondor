@@ -108,8 +108,6 @@ sysapi_test_dump_internal_vars(void)
 		"SysAPI: _sysapi_console_devices = %p\n",_sysapi_console_devices);
 	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_last_x_event = %d\n", static_cast<int>(_sysapi_last_x_event));
-	dprintf(D_ALWAYS, "SysAPI: _sysapi_reserve_afs_cache = %s\n",
-		_sysapi_reserve_afs_cache?"TRUE":"FALSE");
 	dprintf(D_ALWAYS,
 		"SysAPI: _sysapi_reserve_disk = %d\n", _sysapi_reserve_disk);
 	dprintf(D_ALWAYS, "SysAPI: _sysapi_startd_has_bad_utmp = %s\n",

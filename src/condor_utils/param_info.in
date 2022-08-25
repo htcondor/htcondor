@@ -964,11 +964,6 @@ tags=shadow,remoteresource
 default=false
 type=bool
 
-[USE_AFS]
-default=
-type=string
-tags=shadow,pseudo_ops
-
 [USE_NFS]
 default=
 type=string
@@ -1067,11 +1062,6 @@ restart=true
 # XXX This should be a bool
 default=0
 type=int
-tags=sysapi,reconfig
-
-[RESERVE_AFS_CACHE]
-default=false
-type=bool
 tags=sysapi,reconfig
 
 [SYSAPI_GET_LOADAVG]

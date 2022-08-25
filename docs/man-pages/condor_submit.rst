@@ -114,8 +114,6 @@ Options
     files defined with
     **output** :index:`output<single: output; submit commands>` or
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
- **-password** *passphrase*
-    Specify a password to the *MyProxy* server.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
@@ -2136,49 +2134,6 @@ COMMANDS FOR THE GRID
 
     For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
-
-    :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
- MyProxyCredentialName = <symbolic name>
-    The symbolic name that identifies a credential to the *MyProxy*
-    server. This symbolic name is set as the credential is initially
-    stored on the server (using *myproxy-init*).
-
-    :index:`MyProxyHost<single: MyProxyHost; submit commands>`
- MyProxyHost = <host>:<port>
-    The Internet address of the host that is the *MyProxy* server. The
-    **host** may be specified by either a host name (as in
-    ``head.example.com``) or an IP address (of the form 123.456.7.8).
-    The **port** number is an integer.
-
-    :index:`MyProxyNewProxyLifetime<single: MyProxyNewProxyLifetime; submit commands>`
- MyProxyNewProxyLifetime = <number-of-minutes>
-    The new lifetime (in minutes) of the proxy after it is refreshed.
-
-    :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
- MyProxyPassword = <password>
-    The password needed to refresh a credential on the *MyProxy* server.
-    This password is set when the user initially stores credentials on
-    the server (using *myproxy-init*). As an alternative to using
-    **MyProxyPassword** :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
-    in the submit description file, the password may be specified as a
-    command line argument to *condor_submit* with the *-password*
-    argument.
-
-    :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
- MyProxyRefreshThreshold = <number-of-seconds>
-    The time (in seconds) before the expiration of a proxy that the
-    proxy should be refreshed. For example, if
-    **MyProxyRefreshThreshold** :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
-    is set to the value 600, the proxy will be refreshed 10 minutes
-    before it expires.
-
-    :index:`MyProxyServerDN<single: MyProxyServerDN; submit commands>`
- MyProxyServerDN = <credential subject>
-    A string that specifies the expected Distinguished Name (credential
-    subject, abbreviated DN) of the *MyProxy* server. It must be
-    specified when the *MyProxy* server DN does not follow the
-    conventional naming scheme of a host credential. This occurs, for
-    example, when the *MyProxy* server DN begins with a user credential.
 
     :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>

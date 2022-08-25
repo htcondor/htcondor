@@ -2694,45 +2694,6 @@ int SubmitHash::SetGSICredentials()
 		free(tmp);
 	}
 
-	//ckireyev: MyProxy-related crap
-	if ((tmp = submit_param (ATTR_MYPROXY_HOST_NAME))) {
-		AssignJobString(ATTR_MYPROXY_HOST_NAME, tmp);
-		free( tmp );
-	}
-
-	if ((tmp = submit_param (ATTR_MYPROXY_SERVER_DN))) {
-		AssignJobString(ATTR_MYPROXY_SERVER_DN, tmp);
-		free( tmp );
-	}
-
-	if ((tmp = submit_param (ATTR_MYPROXY_CRED_NAME))) {
-		AssignJobString(ATTR_MYPROXY_CRED_NAME, tmp);
-		free( tmp );
-	}
-
-	// if the password wasn't passed in when we initialized, check and see if it's in the submit file.
-	if (MyProxyPassword.empty()) {
-		tmp = submit_param (ATTR_MYPROXY_PASSWORD);
-		MyProxyPassword = tmp; // tmp may be null here, that's ok because it's a mystring
-		if (tmp) free(tmp);
-	}
-
-	if ( ! MyProxyPassword.empty()) {
-		// note that the right hand side is NOT QUOTED. this seems wrong but the schedd
-		// depends on this behavior, so we must preserve it.
-		AssignJobExpr(ATTR_MYPROXY_PASSWORD, MyProxyPassword.c_str());
-	}
-
-	if ((tmp = submit_param (ATTR_MYPROXY_REFRESH_THRESHOLD))) {
-		AssignJobExpr(ATTR_MYPROXY_REFRESH_THRESHOLD, tmp);
-		free( tmp );
-	}
-
-	if ((tmp = submit_param (ATTR_MYPROXY_NEW_PROXY_LIFETIME))) { 
-		AssignJobExpr(ATTR_MYPROXY_NEW_PROXY_LIFETIME, tmp);
-		free( tmp );
-	}
-
 	// ScitokenPath
 	if ( ! clusterAd) {
 		// Slightly complicated logic to determine if we want to include a scitoken attribute in the job:
@@ -2779,7 +2740,6 @@ int SubmitHash::SetGSICredentials()
 		}
 	}
 
-	// END MyProxy-related crap
 	return 0;
 }
 
@@ -5333,12 +5293,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_UseScitokensAlt, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_gsicred },
 	{SUBMIT_KEY_ScitokensFile, ATTR_SCITOKENS_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
 	{ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, ATTR_DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_special_gsicred },
-	{ATTR_MYPROXY_HOST_NAME, ATTR_MYPROXY_HOST_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
-	{ATTR_MYPROXY_SERVER_DN, ATTR_MYPROXY_SERVER_DN, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
-	{ATTR_MYPROXY_CRED_NAME, ATTR_MYPROXY_CRED_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_gsicred },
-	{ATTR_MYPROXY_PASSWORD, ATTR_MYPROXY_PASSWORD, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_gsicred }, // not a bug, it really is expr (backward compat)
-	{ATTR_MYPROXY_REFRESH_THRESHOLD, ATTR_MYPROXY_REFRESH_THRESHOLD, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_gsicred },
-	{ATTR_MYPROXY_NEW_PROXY_LIFETIME, ATTR_MYPROXY_NEW_PROXY_LIFETIME, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_gsicred },
 	// invoke SetTDP
 	{SUBMIT_KEY_ToolDaemonCmd, ATTR_TOOL_DAEMON_CMD, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_tdp },
 	{SUBMIT_KEY_ToolDaemonInput, ATTR_TOOL_DAEMON_INPUT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_tdp },

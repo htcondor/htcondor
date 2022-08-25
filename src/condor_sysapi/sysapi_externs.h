@@ -41,7 +41,6 @@ extern StringList *_sysapi_console_devices;
 extern time_t _sysapi_last_x_event;
 
 /* needed by free_fs_blocks.c */
-extern bool _sysapi_reserve_afs_cache;
 extern long long _sysapi_reserve_disk;
 
 /* needed by idle_time.C */

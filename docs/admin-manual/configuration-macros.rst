@@ -2482,12 +2482,6 @@ using a shared file system`.
     Since each machine will have a different ``$(FILESYSTEM_DOMAIN)``,
     they will not be considered to have shared file systems.
 
-:macro-def:`RESERVE_AFS_CACHE`
-    If your machine is running AFS and the AFS cache lives on the same
-    partition as the other HTCondor directories, and you want HTCondor
-    to reserve the space that your AFS cache is configured to use, set
-    this macro to ``True``. It defaults to ``False``.
-
 :macro-def:`USE_NFS`
     This configuration variable changes the semantics of Chirp
     file I/O when running in the vanilla, java or parallel universe. If
@@ -10044,22 +10038,6 @@ These macros affect the high availability operation of HTCondor.
     *condor_transferer* daemon log will be allowed to grow. A value of
     0 specifies that this file may grow without bounds. The default is 1
     MiB.
-
-MyProxy Configuration File Macros
----------------------------------
-
-In some cases, HTCondor can autonomously refresh certificate proxies
-via *MyProxy*, available from
-`http://myproxy.ncsa.uiuc.edu/ <http://myproxy.ncsa.uiuc.edu/>`_.
-
-:macro-def:`MYPROXY_GET_DELEGATION`
-    The full path name to the *myproxy-get-delegation* executable,
-    installed as part of the *MyProxy* software. Often, it is necessary
-    to wrap the actual executable with a script that sets the
-    environment, such as the ``LD_LIBRARY_PATH``, correctly. If this
-    macro is defined, HTCondor-G and *condor_credd* will have the
-    capability to autonomously refresh proxy certificates. By default,
-    this macro is undefined.
 
 Configuration File Entries Relating to condor_ssh_to_job
 -----------------------------------------------------------

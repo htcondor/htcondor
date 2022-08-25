@@ -13679,11 +13679,6 @@ Scheduler::Register()
 								  "handle_q", WRITE,
 								  true /* force authentication */ );
 
-	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
-								  &get_myproxy_password_handler,
-								  "get_myproxy_password", WRITE );
-
-
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,
 								  "get_job_connect_info", this, WRITE,
