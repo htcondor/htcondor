@@ -191,7 +191,7 @@ done
 
 ALLOCATION_LINE="# Trying to use default allocation"
 if [[ -n $ALLOCATION ]]; then
-    ALLOCATION_LINE="account_group = ${ALLOCATION}"
+    ALLOCATION_LINE="accounting_group = ${ALLOCATION}"
 fi
 
 echo "
