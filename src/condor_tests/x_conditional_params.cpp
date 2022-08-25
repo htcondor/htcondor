@@ -157,7 +157,6 @@ static const char * const aDefTrue[] = {
 	"defined release_dir", "defined log",
 	"defined LOG", "defined $(not_a_real_param:true)",
 	"defined use ROLE", "defined use ROLE:", "defined use ROLE:Personal",
-	"defined use feature", "defined use Feature:VMware",
 };
 
 static const char * const aDefFalse[] = {
