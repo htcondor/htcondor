@@ -1637,6 +1637,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Aug 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.0-1
+- Modified GPU attributes to support the new 'require_gpus' submit command
+- Add (PREEMPT|HOLD)_IF_DISK_EXCEEDED configuration templates
+- ADVERTISE authorization levels now also provide READ authorization
+- Periodic release expressions no longer apply to manually held jobs
+- If a #! interpreter doesn't exist, a proper hold and log message appears
+- Can now set the Singularity target directory with 'container_target_dir'
+- If SciToken and X.509 available, uses SciToken for arc job authentication
+
 * Tue Aug 16 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.16-1
 - Singularity now mounts /tmp and /var/tmp under the scratch directory
 - Fix bug where Singularity jobs go on hold at the first checkpoint
