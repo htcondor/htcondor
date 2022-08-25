@@ -33,7 +33,6 @@ common functionality. Currently, the following daemons use DaemonCore:
 -  *condor_shared_port*
 -  *condor_transferd*
 -  *condor_vm-gahp*
--  *condor_vm-gahp-vmware*
 
 Most of DaemonCore's details are not interesting for administrators.
 However, DaemonCore does provide a uniform interface for the daemons to

@@ -483,22 +483,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 			err_msg += "#########################################################\n";
 			dprintf( D_ALWAYS, "%s", err_msg.c_str());
 		}else if( strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-			std::string err_msg;
-			std::string err_msg2;
-			err_msg += "\n#######################################################\n";
-			err_msg += "##### Make sure the followings ";
-			err_msg += "to use VM universe for VMware\n";
-
-			if( can_switch_ids() ) {
-				// Condor runs as root
-				err_msg += "### - The script program like 'condor_vm_vmware'";
-				err_msg += " must be readable for anybody.\n";
-			}
-
-			err_msg += "### - Check the path of vmware-cmd, vmrun, and mkisofs ";
-			err_msg += "in 'condor_vm_vmware\n'";
-			err_msg += "#########################################################\n";
-			dprintf( D_ALWAYS, "%s", err_msg.c_str());
+			dprintf(D_ALWAYS, "A VM_TYPE of vmware is no longer supported\n");
 		}
 		return false;
 	}

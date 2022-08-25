@@ -9589,7 +9589,7 @@ machine within the pool. They specify items related to the
 
 :macro-def:`VM_TYPE`
     Specifies the type of supported virtual machine software. It will be
-    the value kvm, xen or vmware. There is no default value for this
+    the value ``kvm`` or ``xen``. There is no default value for this
     required configuration variable.
 
 :macro-def:`VM_MEMORY`
@@ -9687,41 +9687,6 @@ machine within the pool. They specify items related to the
 :macro-def:`LIBVIRT_XML_SCRIPT_ARGS`
     For Xen and KVM only, the command-line arguments to be given to the
     program specified by ``LIBVIRT_XML_SCRIPT``.
-
-The following configuration variables are specific to the VMware virtual
-machine software.
-
-:macro-def:`VMWARE_PERL`
-    The complete path and file name to *Perl*. There is no default value
-    for this required variable.
-
-:macro-def:`VMWARE_SCRIPT`
-    The complete path and file name of the script that controls VMware.
-    There is no default value for this required variable.
-
-:macro-def:`VMWARE_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. Defined types are ``nat`` or ``bridged``. If a default value
-    is needed, the inserted string will be ``nat``.
-
-:macro-def:`VMWARE_NAT_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. If nat networking is used, this variable's definition takes
-    precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
-
-:macro-def:`VMWARE_BRIDGE_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. If bridge networking is used, this variable's definition takes
-    precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
-
-:macro-def:`VMWARE_LOCAL_SETTINGS_FILE`
-    The complete path and file name to a file, whose contents will be
-    inserted into the VMware description file (i.e., the .vmx file)
-    before HTCondor starts the virtual machine. This parameter is
-    optional.
 
 The following configuration variables are specific to the Xen virtual
 machine software.
