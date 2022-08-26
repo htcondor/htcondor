@@ -800,6 +800,7 @@ main( int argc, const char *argv[] )
 					//   seeing ":<port>" at the end, which is valid for a
 					//   collector name.
 				PoolName = strdup( *ptr );
+			/* CRUFT The transferd is no longer supported
 			} else if (is_dash_arg_prefix(ptr[0], "stm", 1)) {
 				if( !(--argc) || !(*(++ptr)) ) {
 					fprintf( stderr, "%s: -stm requires another argument\n",
@@ -808,6 +809,7 @@ main( int argc, const char *argv[] )
 				}
 				method = *ptr;
 				string_to_stm(method, STMethod);
+			*/
 			} else if (is_dash_arg_prefix(ptr[0], "unused", 1)) {
 				WarnOnUnusedMacros = WarnOnUnusedMacros == 1 ? 0 : 1;
 				// TOGGLE? 
@@ -2636,12 +2638,14 @@ init_params()
 
 
 	// The default is set as the global initializer for STMethod
+	/* CRUFT The transferd is no longer supported
 	tmp = param( "SANDBOX_TRANSFER_METHOD" );
 	if ( tmp != NULL ) {
 		method = tmp;
 		free( tmp );
 		string_to_stm( method, STMethod );
 	}
+	*/
 
 	WarnOnUnusedMacros =
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",

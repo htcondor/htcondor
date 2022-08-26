@@ -1162,13 +1162,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/__init__.pyo
 %endif
 %_libexecdir/condor/curl_plugin
-%_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
-%_libexecdir/condor/panda-plugin.so
-%_libexecdir/condor/pandad
 %_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
@@ -1353,7 +1350,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
 %_sbindir/condor_testwritelog
-%_sbindir/condor_transferd
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager

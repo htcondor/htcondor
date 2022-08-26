@@ -62,10 +62,6 @@ void usage(int iExitCode)
 	fprintf( stderr, "  -name schedd_name   Connect to the given schedd\n" );
 	fprintf( stderr, "  -pool hostname      Use the given central manager to find daemons\n" );
 	fprintf( stderr, "  -addr <ip:port>     Connect directly to the given \"sinful string\"\n" );
-	fprintf( stderr, "  -stm <method>\t\thow to move a sandbox out of Condor\n" );
-	fprintf( stderr, "               \t\tAvailable methods:\n\n" );
-	fprintf( stderr, "               \t\t\tstm_use_schedd_only\n" );
-	fprintf( stderr, "               \t\t\tstm_use_transferd\n\n" );
 	fprintf( stderr, " and where [constraints] is one or more of:\n" );
 	fprintf( stderr, "  cluster.proc        transfer data for the given job\n");
 	fprintf( stderr, "  cluster             transfer data for the given cluster of jobs\n");
@@ -191,12 +187,14 @@ main(int argc, char *argv[])
 	// dig around in the config file looking for what the config file says
 	// about getting files from Condor. This defaults with the global variable
 	// initialization.
+	/* CRUFT The transferd is no longer supported
 	tmp = param( "SANDBOX_TRANSFER_METHOD" );
 	if ( tmp != NULL ) {
 		method = tmp;
 		free( tmp );
 		string_to_stm( method, st_method );
 	}
+	*/
 
 	char **args = (char **)malloc(sizeof(char *) * argc); // args 
 	if ( ! args) exit(2);
@@ -283,6 +281,7 @@ main(int argc, char *argv[])
 				}
 				pool = strdup( *argv );
 				break;
+			/* CRUFT transferd is no longer supported
 			case 's':
 				argv++;
 				if( ! *argv ) {
@@ -293,6 +292,7 @@ main(int argc, char *argv[])
 				method = *argv;
 				string_to_stm(method, st_method);
 				break;
+			*/
 			case 'v':
 				version();
 				break;
