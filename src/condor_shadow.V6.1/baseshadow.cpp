@@ -35,6 +35,8 @@
 #include "dc_startd.h"
 #include "limit_directory_access.h"
 #include "spooled_job_files.h"
+#include "condor_url.h"
+#include "ipv6_hostname.h"
 #include <math.h>
 #include "job_ad_instance_recording.h"
 
@@ -425,17 +427,168 @@ BaseShadow::reconnectFailed( const char* reason )
 	ASSERT(true);
 }
 
+std::string
+BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int &hold_reason_code, int &hold_reason_subcode)
+{
+	/* This method is invokved by the shadow when we are putting a job on hold, and allow us to
+	   change/edit the HoldReason attribute and HoldReason codes before the shadow sends the info
+	   to the schedd.
+	   To change HoldReason string:  just set variable new_hold_reason - if it remains the empty string,
+	       then the orig_hold_reason will be used unmodified.
+	   To change HoldReasonCode or HoldReasonSubCode: just change the value of hold_reason_code and
+	       hold_reason_subcode respectively (not they are passed in by reference).
+	*/
+	std::string new_hold_reason;
+
+	/*
+	Improve hold reason/codes related to file transfer.  Here is a table of what
+	gets set by the file transfer object (from the starter), which is pretty
+	much useless to anyone who is not an expert:
+
+		1. HoldReasonCode = 13 (UploadFileError) if transfer of input files fail w/ error at AP
+		   Sanple HoldReason = "Error from slot1@TODDS480S: SHADOW at 127.0.0.1 failed to send file(s) to <127.0.0.1:50240>: error reading from C:\condor\test\trans1.bat trans2.bat: (errno 2) No such file or directory; STARTER failed to receive file(s) from <127.0.0.1:50211>"
+
+		2. HoldReasonCode = 13 (UploadFileError) if transfer of output files fail w/ error at EP
+		   Sample HoldReason = "Error from slot2@TODDS480S: STARTER at 127.0.0.1 failed to send file(s) to <127.0.0.1:50212>: error reading from C:\condor\execute\dir_13724\trans2.bat: (errno 2) No such file or directory; SHADOW failed to receive file(s) from <127.0.0.1:50258>"
+
+		3. HoldReasonCode = 12 (DownloadFileError) if transfer of input files fail w/ error at EP
+		   Sample HoldReason = "Error from slot3@TODDS480S: FILETRANSFER:1:non-zero exit (1) from C:\condor\bin\curl_plugin.exe. Error: Could not resolve host: neversslxxx.com (http://neversslxxx.com/index.html)|FILETRANSFER:1:Failed to execute C:\condor\bin/onedrive_plugin.py, ignoring|FILETRANSFER:1:Failed to execute C:\condor\bin/gdrive_plugin.py, ignoring|FILETRANSFER:1:Failed to execute C:\condor\bin\box_plugin.py, ignoring"
+
+		4. HoldReasonCode = 12 (DownloadFileError) if transfer of output files fail w/ error at AP
+		   Sample HoldReason = "Error from slot1@TODDS480S: STARTER at 127.0.0.1 failed to send file(s) to <127.0.0.1:50288>; SHADOW at 127.0.0.1 failed to write to file C:\condor\test\not_there\blah: (errno 2) No such file or directory"
+
+	Here we will rewrite the hold reason code to be TransferInputError or TransferOutputError, instead of
+	the alsmost meaningless UploadFileError and DownloadFileError we get from the File Transfer object.
+	And try to improve the hold reason string as well, so people who shower have a chance understanding it.
+	*/
+	if (hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError ||
+		hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError)
+	{
+		bool transfer_input_error = !began_execution;
+		bool transfer_output_error = began_execution;
+		bool err_occurred_at_AP =
+			(transfer_input_error && hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError) ||
+			(transfer_output_error && hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError);
+		bool err_occurred_at_EP =
+			(transfer_input_error && hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError) ||
+			(transfer_output_error && hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError);
+
+		std::string old_reason = orig_hold_reason;
+		size_t pos = std::string::npos;
+
+		// Try to parse out the name of the slot / EP involved
+		std::string slot_name;
+		if (old_reason.find("Error from ") == 0) {
+			size_t len = strlen("Error from ");
+			pos = old_reason.find(':',len);
+			if (pos > len && pos < len + 50) {   // sanity check: slot name less than 50 chars
+				slot_name = old_reason.substr(len, pos-len);
+			}
+		}
+
+		// If transfer failure involved an URL (via transfer plugin), try to parse out the URL
+		std::string url_file;
+		std::string url_file_type;
+		pos = old_reason.find("URL file = ");
+		if (pos != std::string::npos) {
+			pos += strlen("URL file = ");
+			size_t end = old_reason.find_first_of(" |;", pos);
+			if (end == std::string::npos) {
+				end = old_reason.length() - 1;
+			}
+			if (end > pos && end < pos + 150) { // sanity check
+				url_file = old_reason.substr(pos, end);
+				url_file_type = getURLType(url_file.c_str(), true);
+			}
+		}
+
+
+		// Try to parse out the actual error encountered from the old HoldReason string.
+		std::string actual_error;
+		pos = old_reason.find("|Error: ");
+		if (pos != std::string::npos) {
+			pos += strlen("|Error: ");
+			size_t end = old_reason.find_first_of("|;", pos);
+			if (end == std::string::npos) {
+				end = old_reason.length() - 1;
+			}
+			if (end > pos && end < pos + 150) { // sanity check
+				actual_error = old_reason.substr(pos, end);
+				if ((pos = actual_error.find("; SHADOW")) == std::string::npos) {
+					if ((pos = actual_error.find("; STARTER")) == std::string::npos) {
+						pos = actual_error.find("||");
+					}
+				}
+				if (pos != std::string::npos) {
+					actual_error = actual_error.substr(0, pos);
+				}
+			}
+		}
+
+		// Currently, the hold_reason_code is set to either FILETRANSFER_HOLD_CODE::DownloadFileError
+		// or FILETRANSFER_HOLD_CODE::UploadFileError.  These are not very useful to users.
+		// So reset the hold_reason_code to something based on if the failure happened
+		// during transfer of input files or during transfer of output/checkpoint files.
+		if (transfer_input_error) {
+			hold_reason_code = CONDOR_HOLD_CODE::TransferInputError;
+		}
+		else {
+			hold_reason_code = CONDOR_HOLD_CODE::TransferOutputError;
+		}
+
+		// Now create a more human-readable HoldReason string.
+		std::string EP_name = slot_name.empty() ? "the execution point" : ("execution point " + slot_name);
+		formatstr(new_hold_reason, "Transfer %s files failure at ",
+			transfer_input_error ? "input" : "output");
+		if (err_occurred_at_EP) {
+			// Error happened at the EP
+			new_hold_reason += EP_name;
+			if (url_file_type.empty()) {
+				formatstr_cat(new_hold_reason, " while %s files %s access point %s",
+					transfer_input_error ? "receiving" : "sending",
+					transfer_input_error ? "from" : "to",
+					get_local_hostname().c_str());
+			}
+		}
+		else {
+			// Error happened at the AP
+			formatstr_cat(new_hold_reason, "access point %s while %s files %s %s",
+				get_local_hostname().c_str(),
+				transfer_output_error ? "receiving" : "sending",
+				transfer_output_error ? "from" : "to",
+				EP_name.c_str());
+		}
+		if (!url_file_type.empty()) {
+			formatstr_cat(new_hold_reason, " using protocol %s", url_file_type.c_str());
+		}
+		formatstr_cat(new_hold_reason, ". Details: %s",
+			actual_error.empty() ? orig_hold_reason : actual_error.c_str());
+	}
+
+	return new_hold_reason;
+}
 
 void
 BaseShadow::holdJob( const char* reason, int hold_reason_code, int hold_reason_subcode )
 {
-	dprintf( D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n", 
-			 getCluster(), getProc(), hold_reason_code, hold_reason_subcode,reason );
+
 
 	if( ! jobAd ) {
-		dprintf( D_ALWAYS, "In HoldJob() w/ NULL JobAd!\n" );
+		dprintf( D_ALWAYS, "In HoldJob() for job %d.%d w/ NULL JobAd!\n", getCluster(), getProc() );
 		DC_Exit( JOB_SHOULD_HOLD );
 	}
+
+	// Note: improveHoldAttributescan change the hold_reason_code and subcode,
+	// and will pass back a potentially improved hold reason string.
+	std::string improved_hold_reason =
+		improveHoldAttributes(reason, hold_reason_code, hold_reason_subcode);
+	// If we have an improved hold reason string, use it instead.
+	if (!improved_hold_reason.empty()) {
+		reason = improved_hold_reason.c_str();
+	}
+
+	dprintf(D_ALWAYS, "Job %d.%d going into Hold state (code %d,%d): %s\n",
+		getCluster(), getProc(), hold_reason_code, hold_reason_subcode, reason);
 
 		// cleanup this shadow (kill starters, etc)
 	cleanUp( jobWantsGracefulRemoval() );
