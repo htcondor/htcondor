@@ -265,18 +265,6 @@ else()
       endif()
       install ( TARGETS classad_python_user DESTINATION "${C_LIBEXEC}" )
 
-      if ( LINUX )
-        # This is to be used as a collector plugin module which invoke python functions.
-        add_library( collector_python_plugin SHARED collector_plugin.cpp )
-        target_include_directories( collector_python_plugin PUBLIC ${PYTHON_INCLUDE_DIRS} )
-        target_link_libraries( collector_python_plugin condor_utils pyclassad )
-        set_target_properties( collector_python_plugin PROPERTIES SUFFIX "${PYTHON_MODULE_SUFFIX}" )
-        if ( NOT CMAKE_SKIP_RPATH )
-          set_target_properties( collector_python_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
-        endif()
-        install ( TARGETS collector_python_plugin DESTINATION "${C_LIBEXEC}" )
-      endif()
-
       # See note below about deprecating log_reader.cpp.
       set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
       # We should probably deprecate log_reader.cpp (shortly after we deprecate event.cpp).
@@ -359,23 +347,6 @@ else()
           COMMAND ${CMAKE_COMMAND} -E create_symlink "libclassad_python_user${PYTHON3_MODULE_SUFFIX}" "${CMAKE_CURRENT_BINARY_DIR}/libclassad_python3_user.so"
           COMMENT "Creating libclassad_python3_user.so symlink" )
       install ( FILES "${CMAKE_CURRENT_BINARY_DIR}/libclassad_python3_user.so" DESTINATION "${C_LIBEXEC}" )
-
-      if ( LINUX )
-        # This is to be used as a collector plugin module which invoke python functions.
-        add_library( collector_python3_plugin SHARED collector_plugin.cpp )
-        target_include_directories( collector_python3_plugin PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-        target_link_libraries( collector_python3_plugin condor_utils py3classad )
-        set_target_properties( collector_python3_plugin PROPERTIES OUTPUT_NAME collector_python_plugin )
-        set_target_properties( collector_python3_plugin PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
-        if ( NOT CMAKE_SKIP_RPATH )
-          set_target_properties( collector_python3_plugin PROPERTIES INSTALL_RPATH "${CONDOR_RPATH}")
-        endif()
-        install ( TARGETS collector_python3_plugin DESTINATION "${C_LIBEXEC}" )
-        add_custom_command( TARGET collector_python3_plugin POST_BUILD
-          COMMAND ${CMAKE_COMMAND} -E create_symlink "libcollector_python_plugin${PYTHON3_MODULE_SUFFIX}" "${CMAKE_CURRENT_BINARY_DIR}/libcollector_python3_plugin.so"
-          COMMENT "Creating libcollector_python3_plugin.so symlink" )
-        install ( FILES "${CMAKE_CURRENT_BINARY_DIR}/libcollector_python3_plugin.so" DESTINATION "${C_LIBEXEC}" )
-      endif()
 
       # See note below about deprecating log_reader.cpp.
       set_source_files_properties( dc_tool.cpp classad.cpp classad_module.cpp classad_parsers.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp PROPERTIES COMPILE_FLAGS "-Wno-strict-aliasing -Wno-cast-qual -Wno-deprecated -Wno-write-strings")
