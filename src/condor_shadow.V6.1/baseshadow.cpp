@@ -428,7 +428,7 @@ BaseShadow::reconnectFailed( const char* reason )
 }
 
 std::string
-BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int &hold_reason_code, int &hold_reason_subcode)
+BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int & hold_reason_code, int & /*hold_reason_subcode*/ )
 {
 	/* This method is invokved by the shadow when we are putting a job on hold, and allow us to
 	   change/edit the HoldReason attribute and HoldReason codes before the shadow sends the info
@@ -466,9 +466,6 @@ BaseShadow::improveHoldAttributes(const char* const orig_hold_reason, int &hold_
 	{
 		bool transfer_input_error = !began_execution;
 		bool transfer_output_error = began_execution;
-		bool err_occurred_at_AP =
-			(transfer_input_error && hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError) ||
-			(transfer_output_error && hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError);
 		bool err_occurred_at_EP =
 			(transfer_input_error && hold_reason_code == FILETRANSFER_HOLD_CODE::DownloadFileError) ||
 			(transfer_output_error && hold_reason_code == FILETRANSFER_HOLD_CODE::UploadFileError);
