@@ -2131,11 +2131,6 @@ default=
 type=string
 tags=submit
 
-[SANDBOX_TRANSFER_METHOD]
-default=
-type=string
-tags=submit
-
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
 default=true
 type=bool
@@ -3016,11 +3011,6 @@ type=bool
 default=
 type=string
 tags=schedd
-
-[TRANSFERD]
-default=
-type=string
-tags=schedd,tdman
 
 [QUEUE_SUPER_USERS]
 default=root, condor

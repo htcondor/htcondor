@@ -16,7 +16,7 @@ Synopsis
 [**-dump** *filename*] [**-interactive** ] [**-factory** ]
 [**-allow-crlf-script** ] [**-dry-run** ]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
-[**-stm** *method*] [**<submit-variable>=<value>** ] [*submit
+[**<submit-variable>=<value>** ] [*submit
 description file* ] [**-queue** *queue_arguments*]
 
 Description
@@ -201,9 +201,6 @@ Options
     If the jobs specified by the submit description file causes more
     than a single cluster value to be assigned, then no jobs are
     submitted for execution and an error message is generated.
- **-stm** *method*
-    Specify the method use to move a sandbox into HTCondor. *method* is
-    one of **stm_use_schedd_only** or **stm_use_transferd**.
  **<submit-variable>=<value>**
     Defines a submit command or submit variable with a value, and parses
     it as if it was placed at the beginning of the submit description

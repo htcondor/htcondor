@@ -13596,11 +13596,12 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
-	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
-			"REQUEST_SANDBOX_LOCATION",
-			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE,
-			true /*force authentication*/);
+	 // CRUFT This is for the condor_transferd, which is no longer supported
+	 //daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
+	 //		"REQUEST_SANDBOX_LOCATION",
+	 //		(CommandHandlercpp)&Scheduler::requestSandboxLocation,
+	 //		"requestSandboxLocation", this, WRITE,
+	 //		true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
