@@ -5090,35 +5090,6 @@ default=user
 type=string
 description=Permissions on the job's spool directory
 
-[PANDAD]
-default=$(LIBEXEC)/condor_pandad
-win32_default=
-type=path
-description=Path to Panda damon binary
-review=tlmiller
-restart=true
-
-[PANDA_UPDATE_TIMEOUT]
-default=0
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_SIZE]
-default=131072
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_GRACE]
-default=3
-type=int
-reivew=tlmiller
-restart=true
-
-[PANDA_STATISTICS_LOG]
-default=/tmp/pandaStatisticsLog
-type=string
-review=tlmiller
-
 [USE_KEYRING_SESSIONS]
 default=false
 type=bool
