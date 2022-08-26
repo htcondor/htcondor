@@ -1162,7 +1162,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/__init__.pyo
 %endif
 %_libexecdir/condor/curl_plugin
-%_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
