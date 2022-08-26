@@ -1351,7 +1351,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
 %_sbindir/condor_testwritelog
-%_sbindir/condor_transferd
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
