@@ -103,6 +103,18 @@ endif()
 if (LINUX)
 	add_executable(exit_37 "exit_37.c")
 
+# Address Sanitizer can't deal with statically linked exes
+if (WITH_ADDRESS_SANITIZER)
+	set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=address")
+	set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=address")
+endif()
+
+if (WITH_UB_SANITIZER)
+	set_target_properties( exit_37 PROPERTIES COMPILE_FLAGS "-fno-sanitize=undefined")
+	set_target_properties( exit_37 PROPERTIES LINK_FLAGS "-fno-sanitize=undefined")
+endif()
+
+
 	# Our special assembly version of exit_37 needs special flags
 	# but only works on 64 bit linux
 	if ("${SYS_ARCH}" STREQUAL "X86_64")
