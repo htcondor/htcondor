@@ -946,7 +946,6 @@ if [ -z "${release_url}" ]; then
     if [ $minor_ver -ne 0 ]; then
         series="${major_ver}.x"
     fi
-    date=${ver_str[2]//-/}
 
     if [ ! -z "${platform_force}" ] ; then
         platform="${platform_force}"
@@ -960,10 +959,10 @@ if [ -z "${release_url}" ]; then
 
     release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
-        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+        daily_url="${url_base}${series}/${version}/daily/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     fi
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
-        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+        rc_url="${url_base}${series}/${version}/rc/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     fi
 fi
 
