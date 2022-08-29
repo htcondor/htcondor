@@ -317,3 +317,22 @@ jobs that request these network type will only match to machines
 that support it.  Note that HTCondor cannot test the validity
 of these networks, and merely trusts that the administrator has
 correctly configured them.
+
+To deal with a potentially user influencing option, there is an optional knob that
+can be configured to adapt the ``--shm-size`` Docker container create argument
+taking the machine's and job's classAds into account.
+Exemplary, setting the ``/dev/shm`` size to half the requested memory is achieved by:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = Memory * 1024 * 1024 / 2
+
+or, using a user provided value ``DevShmSize`` if available and within the requested
+memory limit:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = ifThenElse(DevShmSize isnt Undefined && isInteger(DevShmSize) && int(DevShmSize) <= (Memory * 1024 * 1024), int(DevShmSize), 2 * 1024 * 1024 * 1024)
+
+    
+Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.

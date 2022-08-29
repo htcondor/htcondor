@@ -4263,6 +4263,14 @@ details.
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
 
+:macro-def:`DOCKER_SHM_SIZE`
+    An optional knob that can be configured to adapt the ``--shm-size`` Docker
+    container create argument. Allowed values are integers in bytes.
+    If not set, ``--shm-size`` will not be specified by HTCondor and Docker's
+    default is used.
+    This is used to configure the size of the container's ``/dev/shm`` size adapting
+    to the job's requested memory.
+
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
