@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 
 import htcondor
+import classad
 
 #
 # We could try to import colorama here -- see condor_watch_q -- but that's
@@ -1061,6 +1062,8 @@ def annex_inner_func(
             schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
 
             transfer_input = job_ad.get("TransferInput", "")
+            if isinstance(transfer_input, classad.Value):  # UNDEFINED or ERROR
+                transfer_input = ""
             input_files = transfer_input.split(",")
             if job_ad["ContainerImage"] in input_files:
                 logger.debug(
