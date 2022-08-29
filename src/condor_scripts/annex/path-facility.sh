@@ -226,7 +226,7 @@ log                         = log.\$(ClusterID).\$(ProcID)
 # requirements                = GLIDEIN_Site == \"WISC-PATH\" && OpSysAndVer == \"CentOS8\"
 #requirements                = regexp(\"gpu\", Name)
 
-+SingularityImage = \"docker://hub.opensciencegrid.org/matyasosg/osgvo-el8:with-singularity\"
++SingularityImage = \"docker://hub.opensciencegrid.org/htcondor/hpc-annex-pilot:el8\"
 
 
 ${ALLOCATION_LINE}
