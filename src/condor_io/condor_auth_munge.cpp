@@ -202,7 +202,8 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 			errstack->pushf("MUNGE", 1005, "Server error: %i: %s", err, (*munge_strerror_ptr)(err));
 			server_result = -1;
 		} else {
-			char *tmpOwner = my_username( uid );
+			char *tmpOwner = nullptr;
+			pcache()->get_user_name(uid, tmpOwner);
 			if (!tmpOwner) {
 				// this could happen if, for instance,
 				// getpwuid() failed.

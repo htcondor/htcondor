@@ -750,7 +750,7 @@ int RefreshProxyThruMyProxy(Proxy * proxy)
 
 
 	// Figure out user name;
-	char * username = my_username(0);	
+	char * username = my_username();
 
 
 	// Figure out myproxy host and port
