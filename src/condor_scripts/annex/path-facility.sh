@@ -218,14 +218,6 @@ output                      = out.\$(ClusterID).\$(ProcID)
 error                       = err.\$(ClusterID).\$(ProcID)
 log                         = log.\$(ClusterID).\$(ProcID)
 
-# Some -- but not all! -- WISC-PATH sites run CentOS7!
-# requirements                = GLIDEIN_Site == \"UNL-PATH\"
-# requirements                = GLIDEIN_Site == \"WISC-PATH\"
-# requirements                = OpSysAndVer == \"CentOS8\"
-# Testing: the facility is undergoing upgrades.
-# requirements                = GLIDEIN_Site == \"WISC-PATH\" && OpSysAndVer == \"CentOS8\"
-#requirements                = regexp(\"gpu\", Name)
-
 +SingularityImage = \"docker://hub.opensciencegrid.org/htcondor/hpc-annex-pilot:el8\"
 
 
