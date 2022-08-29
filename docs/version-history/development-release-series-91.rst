@@ -62,6 +62,11 @@ New Features:
   unix domain sockets required for *condor_ssh_to_job* to work.
   :jira:`1244`
 
+- Docker universe now support an administrator-set knob DOCKER_SHM_SIZE, which
+  allows the administrator of a worker node to set the --shm-size option to
+  docker run
+  :jira:`1282`
+
 - Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
   instead writes ads to JSON files in the working directory.
   :jira:`1264`
