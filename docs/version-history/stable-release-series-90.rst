@@ -20,9 +20,30 @@ Release Notes:
 
 New Features:
 
-- None.
+- Increased the length of the password generated for Windows default
+  slot user accounts from 14 characters to 32 characters, and added
+  some code to insure that complexity measures that look at
+  character set and not length will still be satisfied.
+  :jira:`1232`
+
+- Added ``-debug`` option to *condor_drain* tool.
+  :jira:`1236`
 
 Bugs Fixed:
+
+- Fixed a bug that would cause the *condor_schedd* to leak 
+  file descriptors, eventually run out, and crash, when
+  unable to launch the scheduler universe job for any reason.
+  :jira:`1261`
+
+- When a failure occurs with a grid universe job of type ``batch``,
+  the local job is now always put on hold, instead of the remote job
+  being canceled and automatically resubmitted.
+  :jira:`1226`
+
+- Job attribute ``GridJobId`` is no longer altered for **batch** grid
+  universe jobs when the job enters ``Removed`` status.
+  :jira:`1224`
 
 - Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
   grid universe job would fail.
@@ -32,6 +53,11 @@ Bugs Fixed:
   treat local user accounts with very large UID values (greater than
   2^31) as the ``condor`` user.
   :jira:`1229`
+
+- Fixed a bug with the *condor_credmon_oauth* where scope and audience
+  claims were dropped from OAuth refresh tokens on their first renewal.
+  :jira:`1270`
+
 
 .. _lts-version-history-9016:
 
@@ -55,6 +81,15 @@ New Features:
   :jira:`1199`
 
 Bugs Fixed:
+
+- Fixed a bug where if the submit file set checkpoint_exit_code, and the administrator
+  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  :jira:`837`
+
+- Fixed a bug where the *condor_gridmanager* would delete the job's
+  X.509 proxy file when it meant to delete a temporary copy of the
+  proxy file.
+  :jira:`1223`
 
 - Fixed a bug on Windows that caused a misleading error message about
   the SharedPortEndpoint when a daemon exits.

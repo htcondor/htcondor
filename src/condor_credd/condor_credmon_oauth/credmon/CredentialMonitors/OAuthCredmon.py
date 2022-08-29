@@ -126,10 +126,11 @@ class OAuthCredmon(AbstractCredentialMonitor):
                                                    client_id = token_metadata['client_id'],
                                                    client_secret = token_metadata['client_secret'])
         try:
-            refresh_token = {u'refresh_token': new_token.pop('refresh_token')}
+            new_refresh_token = new_token.pop('refresh_token')
         except KeyError:
             self.log.error("No %s refresh token returned for %s", token_name, username)
             return False
+        refresh_token[u'refresh_token'] = new_refresh_token
 
         # write tokens to tmp files
         (tmp_fd, tmp_refresh_token_path) = tempfile.mkstemp(dir = self.cred_dir)
