@@ -8,8 +8,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 @action
-def jobInputFailureAP(default_condor):
-   job = default_condor.submit(    
+def submitJobInputFailureAP(default_condor):
+   return default_condor.submit(    
         {
            "log": "job_ap_input.log",
            "executable": "/bin/sleep",
@@ -19,12 +19,15 @@ def jobInputFailureAP(default_condor):
            "transfer_input_files": "not_there_in",
         }
     )
-   assert job.wait(condition=ClusterState.all_held,timeout=60)
-   return job.query()[0]
 
 @action
-def jobOutputFailureAP(default_condor):
-   job = default_condor.submit(    
+def jobInputFailureAP(submitJobInputFailureAP):
+   assert submitJobInputFailureAP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobInputFailureAP.query()[0]
+
+@action
+def submitJobOutputFailureAP(default_condor):
+   return default_condor.submit(    
         {
            "log": "job_ap_output.log",
            "executable": "/bin/sleep",
@@ -36,13 +39,16 @@ def jobOutputFailureAP(default_condor):
            "transfer_output_remaps": classad.quote("true=not_there_dir/blah"),
         }
     )
-   assert job.wait(condition=ClusterState.all_held,timeout=60)
-   return job.query()[0]
+
+@action
+def jobOutputFailureAP(submitJobOutputFailureAP):
+   assert submitJobOutputFailureAP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobOutputFailureAP.query()[0]
 
 
 @action
-def jobInputFailureEP(default_condor):
-   job = default_condor.submit(    
+def submitJobInputFailureEP(default_condor):
+   return default_condor.submit(    
         {
            "log": "job_ep_input.log",
            "executable": "/bin/sleep",
@@ -52,13 +58,15 @@ def jobInputFailureEP(default_condor):
            "transfer_input_files": "http://neversslxxx.com/index.html",
         }
     )
-   assert job.wait(condition=ClusterState.all_held,timeout=60)
-   return job.query()[0]
-
 
 @action
-def jobOutputFailureEP(default_condor):
-   job = default_condor.submit(    
+def jobInputFailureEP(submitJobInputFailureEP):
+   assert submitJobInputFailureEP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobInputFailureEP.query()[0]
+
+@action
+def submitJobOutputFailureEP(default_condor):
+   return default_condor.submit(    
         {
            "log": "job_ep_output.log",
            "executable": "/bin/sleep",
@@ -68,10 +76,17 @@ def jobOutputFailureEP(default_condor):
            "transfer_output_files": "not_there_out",
         }
     )
-   assert job.wait(condition=ClusterState.all_held,timeout=60)
-   return job.query()[0]
+
+@action
+def jobOutputFailureEP(submitJobOutputFailureEP):
+   assert submitJobOutputFailureEP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobOutputFailureEP.query()[0]
+
 
 class TestXferHoldCodes:
+   def test_submit_all(submitJobInputFailureAP, submitJobOutputFailureAP, submitJobInputFailureEP, submitJobOutputFailureEP):
+       assert True
+
    def test_jobInputFailureAP(self, jobInputFailureAP):
       assert jobInputFailureAP["HoldReasonCode"] == 13
       assert "Transfer input files failure at access point" in jobInputFailureAP["HoldReason"] 
