@@ -39,7 +39,7 @@
 
 #include "directory.h"
 #include "filename_tools.h"
-#include <scheduler.h>
+#include "condor_holdcodes.h"
 #include "condor_version.h"
 #include <my_async_fread.h>
 #include <submit_utils.h>

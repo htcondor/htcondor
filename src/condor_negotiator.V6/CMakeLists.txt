@@ -30,7 +30,7 @@ if (UNIX)
 endif(UNIX)
 
 condor_daemon( EXE condor_negotiator SOURCES "${negotiatorElements}"
-  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}" )
+  LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}" )
 
 condor_exe_test( test_protocol_matching
   "protocol-test.cpp;matchmaker.cpp;Accountant.cpp;GroupEntry.cpp;matchmaker_negotiate.cpp"

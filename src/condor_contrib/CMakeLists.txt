@@ -19,14 +19,4 @@
 ##########################################################################
 # add the contrib subtree for build & test only
 
-if (WANT_CONTRIB)
-  dprint("building contrib modules")
-  string(REGEX REPLACE "-Werror" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
-  #dprint( "CMAKE_CXX_FLAGS = ${CMAKE_CXX_FLAGS}")
-
-  include_directories("${CMAKE_CURRENT_SOURCE_DIR}/utils")
-  add_subdirectories("${CMAKE_CURRENT_SOURCE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/utils" "")
-else(WANT_CONTRIB)
-  dprint("skipping contrib modules")
-  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/campus_factory")
-endif(WANT_CONTRIB)
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/campus_factory")

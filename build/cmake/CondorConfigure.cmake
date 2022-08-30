@@ -697,7 +697,6 @@ option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
 option(HAVE_BOINC "Compiling support for backfill with BOINC" OFF)
 option(SOFT_IS_HARD "Enable strict checking for WITH_<LIB>" OFF)
-option(WANT_CONTRIB "Enable building of contrib modules" OFF)
 option(WANT_MAN_PAGES "Generate man pages as part of the default build" OFF)
 option(ENABLE_JAVA_TESTS "Enable java tests" ON)
 option(WITH_PYTHON_BINDINGS "Support for HTCondor python bindings" ON)
@@ -913,7 +912,6 @@ if (WINDOWS)
   add_subdirectory(${CONDOR_SOURCE_DIR}/src/classad)
 else ()
 
-  add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/qpid/0.8-RC3)
   if (APPLE)
     add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boost/1.68.0)
   else()
@@ -970,16 +968,6 @@ else (NOT WINDOWS)
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
 endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
-
-######### special case for contrib
-if (WANT_CONTRIB AND WITH_MANAGEMENT)
-    # global scoping external linkage var when options enable.
-    if (WINDOWS)
-        set (CONDOR_QMF condor_qmflib;${QPID_FOUND})
-    endif()
-    add_definitions( -DWANT_CONTRIB )
-    add_definitions( -DWITH_MANAGEMENT )
-endif()
 
 #####################################
 # Do we want to link in the GSI libraries or dlopen() them at runtime?
@@ -1042,9 +1030,6 @@ include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
 include_directories(${CONDOR_SOURCE_DIR}/src/jwt-cpp/include)
-if (WANT_CONTRIB)
-    include_directories(${CONDOR_SOURCE_DIR}/src/condor_contrib)
-endif(WANT_CONTRIB)
 # set these so contrib modules can add to their include path without being reliant on specific directory names.
 set (CONDOR_MASTER_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_master.V6)
 set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
