@@ -94,7 +94,7 @@ AddNode( Dag *dag, const char *name,
 	}
 	node->SetNoop( noop );
 	if( done ) {
-		node->SetStatus( Job::STATUS_DONE );
+		dag->AddPreDoneNode(node);
 	}
 	node->SetType( type );
 

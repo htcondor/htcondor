@@ -827,6 +827,16 @@ class Dag {
 		@return true iff the DAG is in recovery mode
 	*/
 	inline bool Recovery() const { return _recovery; }
+	
+	/**	Add a node marked by DONE in the dag file to data structure
+		@param node: Node to be marked as done later
+	*/
+	void AddPreDoneNode(Job* node) { m_userDefinedDoneNodes.push_back(node); }
+	
+	/** Sets all found nodes in done at submission time data structure
+		to STATUS_DONE
+	*/
+	void SetPreDoneNodes();
 
   private:
 
@@ -843,6 +853,11 @@ class Dag {
 	// even in the face of AddDependency().
 	ExtArray<Job*> _splice_initial_nodes;
 	ExtArray<Job*> _splice_terminal_nodes;
+	
+	// These are nodes in dag file marked as: JOB NAME SUBFILE DONE
+	// This data structure is here to hold nodes at submissions time to mark
+	// as done once DAG is finished being created (Mainly due to edge adjustment)
+	std::deque<Job*> m_userDefinedDoneNodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
