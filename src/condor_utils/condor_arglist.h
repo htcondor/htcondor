@@ -268,6 +268,12 @@ class ArgList {
 		// Each new message begins on a new line.
 	static void AddErrorMessage(char const *msg,MyString *error_buffer);
 
+	static void AddErrorMessage(char const *msg,std::string & error_buffer) {
+		if ( ! error_buffer.empty()) { error_buffer += "\n"; }
+		error_buffer += msg;
+	}
+
+
 	enum ArgV1Syntax {
 		UNKNOWN_ARGV1_SYNTAX,
 		WIN32_ARGV1_SYNTAX,

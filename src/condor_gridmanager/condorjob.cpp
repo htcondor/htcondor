@@ -1614,9 +1614,9 @@ ClassAd *CondorJob::buildSubmitAd()
 
 			char const *attr_name = &(next_name[7]);
 
-			if(strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1) == 0 ||
-			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT1_DELIM) == 0 ||
-			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT2) == 0)
+			if(strcasecmp(attr_name,ATTR_JOB_ENV_V1) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENV_V1_DELIM) == 0 ||
+			   strcasecmp(attr_name,ATTR_JOB_ENVIRONMENT) == 0)
 			{
 				//Any remote environment settings indicate that we
 				//should clear whatever environment was already copied
@@ -1624,9 +1624,9 @@ ClassAd *CondorJob::buildSubmitAd()
 				//settings can never trump the remote settings.
 				if(!cleared_environment) {
 					cleared_environment = true;
-					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1);
-					submit_ad->Delete(ATTR_JOB_ENVIRONMENT1_DELIM);
-					submit_ad->Delete(ATTR_JOB_ENVIRONMENT2);
+					submit_ad->Delete(ATTR_JOB_ENV_V1);
+					submit_ad->Delete(ATTR_JOB_ENV_V1_DELIM);
+					submit_ad->Delete(ATTR_JOB_ENVIRONMENT);
 				}
 			}
 

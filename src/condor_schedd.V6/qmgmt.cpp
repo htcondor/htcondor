@@ -7437,7 +7437,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			}
 		}
 
-
 		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GRID ) {
 			// Produce an environment description that is compatible with
 			// whatever the starter expects.
@@ -7445,82 +7444,40 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			//  after a disconnection (job lease).  In this case we don't
 			//  have a startd_ad!
 
-			Env env_obj;
 
-			char *opsys = NULL;
-			startd_ad->LookupString( ATTR_OPSYS, &opsys);
-			char *startd_version = NULL;
-			startd_ad->LookupString( ATTR_VERSION, &startd_version);
-			CondorVersionInfo ver_info(startd_version);
-
-			MyString env_error_msg;
-			if(!env_obj.MergeFrom(expanded_ad,&env_error_msg) ||
-			   !env_obj.InsertEnvIntoClassAd(expanded_ad,&env_error_msg,opsys,&ver_info))
+			// check for a job that has a V1 environment only, and the target OS uses a different separator
+			// HTCondor 9.x and earlier does not honor EnvDelim in MergeFrom(Ad) so we have to re-write Env
+			// for the Opsys of the STARTD.
+			// TODO: add a version check for STARTD's that honor the ATTR_JOB_ENV_V1_DELIM on ingestion
+			if (expanded_ad->Lookup(ATTR_JOB_ENV_V1) && ! expanded_ad->LookupExpr(ATTR_JOB_ENVIRONMENT))
 			{
-				attribute_not_found = true;
-				std::string hold_reason;
-				formatstr(hold_reason,
-					"Failed to convert environment to target syntax"
-					" for starter (opsys=%s): %s",
-					opsys ? opsys : "NULL",env_error_msg.c_str());
+				Env env_obj;
 
-
-				dprintf( D_ALWAYS, 
-					"Putting job %d.%d on hold - cannot convert environment"
-					" to target syntax for starter (opsys=%s): %s\n",
-					cluster_id, proc_id, opsys ? opsys : "NULL",
-						 env_error_msg.c_str() );
-
-				// SetAttribute does security checks if Q_SOCK is
-				// not NULL.  So, set Q_SOCK to be NULL before
-				// placing the job on hold so that SetAttribute
-				// knows this request is not coming from a client.
-				// Then restore Q_SOCK back to the original value.
-
-				QmgmtPeer* saved_sock = Q_SOCK;
-				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.c_str());
-				Q_SOCK = saved_sock;
+				// compare the delim that is natural to the startd to the delim that the job is currently using
+				// if they differ, and the job is using V1 environment (and STARTD is earlier than X.Y) we
+				// have to re-write the Env attribute and the EnvDelim attributes for target OS
+				std::string opsys;
+				startd_ad->LookupString(ATTR_OPSYS, opsys);
+				char target_delim = env_obj.GetEnvV1Delimiter(opsys.c_str());
+				char my_delim = env_obj.GetEnvV1Delimiter(*expanded_ad);
+				if (my_delim != target_delim) {
+					std::string env_error_msg;
+					// ingest using the current delim as specified in the job
+					bool env_ok = env_obj.MergeFrom(expanded_ad, env_error_msg);
+					if (env_ok) {
+						// write the environment back into the job with the OPSYS correct delimiter
+						env_ok = env_obj.InsertEnvV1IntoClassAd(*expanded_ad, env_error_msg, target_delim);
+						if ( ! env_ok) {
+							dprintf( D_FULLDEBUG, "Setting attr Environment because attr Env cannot be converted to opsys=%s : %s\n",
+								opsys.c_str(), env_error_msg.c_str());
+							// write a V2 Environment attribute into the job,
+							// this will take precedence over Env for STARTD's later than 6.7
+							env_ok = env_obj.InsertEnvIntoClassAd(*expanded_ad);
+						}
+					}
+				}
 			}
-
-
-			// Now convert the arguments to a form understood by the starter.
-			ArgList arglist;
-			std::string arg_error_msg;
-			if(!arglist.AppendArgsFromClassAd(expanded_ad,arg_error_msg) ||
-			   !arglist.InsertArgsIntoClassAd(expanded_ad,&ver_info,arg_error_msg))
-			{
-				attribute_not_found = true;
-				std::string hold_reason;
-				formatstr(hold_reason,
-					"Failed to convert arguments to target syntax"
-					" for starter: %s",
-					arg_error_msg.c_str());
-
-
-				dprintf( D_ALWAYS, 
-					"Putting job %d.%d on hold - cannot convert arguments"
-					" to target syntax for starter: %s\n",
-					cluster_id, proc_id,
-					arg_error_msg.c_str() );
-
-				// SetAttribute does security checks if Q_SOCK is
-				// not NULL.  So, set Q_SOCK to be NULL before
-				// placing the job on hold so that SetAttribute
-				// knows this request is not coming from a client.
-				// Then restore Q_SOCK back to the original value.
-
-				QmgmtPeer* saved_sock = Q_SOCK;
-				Q_SOCK = NULL;
-				holdJob(cluster_id, proc_id, hold_reason.c_str());
-				Q_SOCK = saved_sock;
-			}
-
-
-			if(opsys) free(opsys);
-			if(startd_version) free(startd_version);
 		}
-
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 

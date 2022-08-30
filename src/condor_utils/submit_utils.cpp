@@ -1716,9 +1716,14 @@ int SubmitHash::SetEnvironment()
 	// Most users will specify "environment" or "env" which is v1 or v2 quoted
 	// It is permitted to specify "environment2" which must be v2, and it is also allowed
 	// to specify both (for maximum backward compatibility)
-	auto_free_ptr env1(submit_param(SUBMIT_KEY_Environment1, ATTR_JOB_ENVIRONMENT1));
+	auto_free_ptr env1(submit_param(SUBMIT_KEY_Environment, SUBMIT_KEY_Env));
 	auto_free_ptr env2(submit_param(SUBMIT_KEY_Environment2)); // no alt keyword for env2
 	bool allow_v1 = submit_param_bool( SUBMIT_CMD_AllowEnvironmentV1, NULL, false );
+	auto_free_ptr prefer_v1; // default to false
+	if (env1 && ! env2) {
+		// If they used the Env keyword rather than Environment, that means they prefer v1 format
+		prefer_v1.set(submit_param(SUBMIT_KEY_Env));
+	}
 
 	RETURN_IF_ABORT();
 	if( env1 && env2 && !allow_v1 ) {
@@ -1785,11 +1790,12 @@ int SubmitHash::SetEnvironment()
 	// or in the chained parent ad when doing late materialization.
 	// Check for that now.
 
-	bool ad_contains_env1 = job->LookupExpr(ATTR_JOB_ENVIRONMENT1);
-	bool ad_contains_env2 = job->LookupExpr(ATTR_JOB_ENVIRONMENT2);
+	bool ad_contains_env1 = job->LookupExpr(ATTR_JOB_ENV_V1);
+	bool ad_contains_env2 = job->LookupExpr(ATTR_JOB_ENVIRONMENT);
 
-	bool MyCondorVersionRequiresV1 = envobject.InputWasV1() || envobject.CondorVersionRequiresV1(getScheddVersion());
-	bool insert_env1 = MyCondorVersionRequiresV1;
+	// TJ - in 9.13, before we get to 10.0 we want to prefer v2 environment format over v1 unless the user prefers v1
+	// No AP or EP *requires* the v1 format, this is now just a preference rather than a version requirement
+	bool insert_env1 = prefer_v1;
 	bool insert_env2 = !insert_env1;
 
 	if(!env1 && !env2 && envobject.Count() == 0 && \
@@ -1807,33 +1813,30 @@ int SubmitHash::SetEnvironment()
 	if(insert_env1 && ad_contains_env2) insert_env2 = true;
 	if(insert_env2 && ad_contains_env1) insert_env1 = true;
 
-	env_success = true;
-
-	if(insert_env1 && env_success) {
+	if (insert_env1) {
 		MyString newenv_raw;
+		std::string msg;
+		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		if(!env_success) {
+			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
+			ABORT_AND_RETURN(1);
+		}
 
-		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw,&error_msg);
-		AssignJobString(ATTR_JOB_ENVIRONMENT1, newenv_raw.c_str());
+		AssignJobString(ATTR_JOB_ENV_V1, newenv_raw.c_str());
 
 		// Record in the JobAd the V1 delimiter that is being used.
 		// This way remote submits across platforms have a prayer.
 		char delim[2];
 		delim[0] = envobject.GetEnvV1Delimiter();
 		delim[1] = 0;
-		AssignJobString(ATTR_JOB_ENVIRONMENT1_DELIM, delim);
+		AssignJobString(ATTR_JOB_ENV_V1_DELIM, delim);
 	}
 
-	if(insert_env2 && env_success) {
+	if (insert_env2) {
 		MyString newenv_raw;
 
-		env_success = envobject.getDelimitedStringV2Raw(&newenv_raw,&error_msg);
-		AssignJobString(ATTR_JOB_ENVIRONMENT2, newenv_raw.c_str());
-	}
-
-	if(!env_success) {
-		push_error(stderr, "failed to insert environment into job ad: %s\n",
-				error_msg.c_str());
-		ABORT_AND_RETURN(1);
+		envobject.getDelimitedStringV2Raw(&newenv_raw);
+		AssignJobString(ATTR_JOB_ENVIRONMENT, newenv_raw.c_str());
 	}
 
 	return 0;
@@ -5229,7 +5232,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NodeCount, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
 	{SUBMIT_KEY_NodeCountAlt, ATTR_MACHINE_COUNT, SimpleSubmitKeyword::f_as_int | SimpleSubmitKeyword::f_alt_name | SimpleSubmitKeyword::f_special_parallel},
 	// invoke SetEnvironment
-	{SUBMIT_KEY_Environment1, ATTR_JOB_ENVIRONMENT1, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
+	{SUBMIT_KEY_Environment, SUBMIT_KEY_Env, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_KEY_Environment2, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_CMD_AllowEnvironmentV1, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_env},
 	{SUBMIT_CMD_GetEnvironment, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_env},

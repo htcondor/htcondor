@@ -163,46 +163,33 @@ ScriptProc::StartJob()
 		// Environment 
 		// // // // // // 
 
-	char *env1 = NULL;
-	char *env2 = NULL;
-	std::string env1_attr;
-	std::string env2_attr;
-	env1_attr = name;
-	env1_attr += ATTR_JOB_ENVIRONMENT1;
-	env2_attr = name;
-	env2_attr += ATTR_JOB_ENVIRONMENT2;
-	JobAd->LookupString( env1_attr, &env1 );
-	JobAd->LookupString( env2_attr, &env2 );
-			// TODO do we want to use the regular ATTR_JOB_ENVIRONMENT
-			// if there's nothing specific for this script?
-
-		// Now, instantiate an Env object so we can manipulate the
-		// environment as needed.
+	// Now, instantiate an Env object so we can manipulate the
+	// environment as needed.
 	Env job_env;
-	std::string env_errors;
-	if( env2 && *env2 ) { 
-		if( ! job_env.MergeFromV2Raw(env2, env_errors) ) {
-			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
-					 "Aborting ScriptProc::StartJob.\n",
-					 env2_attr.c_str(),env_errors.c_str() );
-			free( env1 );
-			free( env2 );
-			return 0;
-		}
-	}
-	else if( env1 && *env1 ) { 
-		if( ! job_env.MergeFromV1Raw(env1, env_errors) ) {
-			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
-					 "Aborting ScriptProc::StartJob.\n",
-					 env1_attr.c_str(),env_errors.c_str() );
-			free( env1 );
-			free( env2 );
-			return 0;
-		}
-	}
+	std::string env_attr, env_errors, env;
 
-	free(env1);
-	free(env2);
+	env_attr = name;
+	env_attr += ATTR_JOB_ENVIRONMENT;
+	if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
+		if( ! job_env.MergeFromV2Raw(env.c_str(), env_errors) ) {
+			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
+					 "Aborting ScriptProc::StartJob.\n",
+					 env_attr.c_str(), env_errors.c_str() );
+			return 0;
+		}
+	} else {
+		// if no Environment attribute, look for the old Env attribute
+		env_attr = name;
+		env_attr += ATTR_JOB_ENV_V1;
+		if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
+			if( ! job_env.MergeFromV1Raw(env.c_str(), job_env.GetEnvV1Delimiter(), env_errors) ) {
+				dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
+						 "Aborting ScriptProc::StartJob.\n",
+						 env_attr.c_str(), env_errors.c_str() );
+				return 0;
+			}
+		}
+	}
 
 		// Now, let the starter publish any env vars it wants to add
 	Starter->PublishToEnv( &job_env );
