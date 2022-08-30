@@ -113,22 +113,6 @@ Files: src/condor_filetransfer_plugins/stdint-msvc.h
 Copyright: 2006-2008, Alexander Chemeris
 License: BSD-3-clause
 
-Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/*
-Copyright: 2007, Vincent Oberle, <vincent@oberle.org>
-License: GPL-2+
-
-Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/twitter.py
-Copyright: 2007, Google Inc
-License: Apache-2.0
-
-Files: src/condor_contrib/condor_pigeon/src/condor_pigeon_client/skype_linux_tools/Skype4Py/*
-Copyright: 2007-2008, Arkadiusz Wahlig
-License: BSD-3-clause
-
-Files: src/condor_contrib/rcondor/*
-Copyright: 2010, Jeffrey M. Dost <jdost@ucsd.edu>
-License: BSD-3-clause
-
 Files: src/condor_utils/my_getopt.cpp
 Copyright: 1997, 2000, 2001, 2002, Benjamin Sittler
 License: Expat
@@ -164,10 +148,6 @@ Copyright: 2007-2009 Kitware, Inc
 License: BSD-3-clause
 
 Files: *.cmake
- src/condor_contrib/plumage/*
- src/condor_contrib/triggerd/*
- src/condor_contrib/utils/broker_utils.*
- src/condor_contrib/mgmt/qmf/*
  src/condor_collector.V6/*CollectorPlugin*
  src/condor_master.V6/*MasterPlugin*
  src/condor_startd.V6/*StartdPlugin*
