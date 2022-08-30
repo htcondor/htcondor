@@ -572,7 +572,7 @@ Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
-%if 0%{?rhel} == 7
+if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
 %else
 Requires: python3-cryptography
