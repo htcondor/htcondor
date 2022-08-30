@@ -7027,6 +7027,17 @@ These macros affect the *condor_negotiator*.
     :doc:`/classad-attributes/negotiator-classad-attributes` for a list of
     attributes that are published.
 
+:macro-def:`NEGOTIATOR_NUM_THREADS`
+    An integer that specifies the number of threads the negotiator should
+    use when trying to match a job to slots.  The default is 1.  For
+    sites with large number of slots, where the negotiator is running
+    on a large machine, setting this to a larger value may result in
+    faster negotiation times.  Setting this to more than the number
+    of cores will result in slow downs.  An administrator setting this
+    should also consider what other processes on the machine may need
+    cores, such as the collector, and all of its forked children,
+    the condor_master, and any helper programs or scripts running there.
+
 :macro-def:`PRIORITY_HALFLIFE`
     This macro defines the half-life of the user priorities. See
     :ref:`users-manual/priorities-and-preemption:user priority` on
