@@ -14,9 +14,9 @@ Version 9.0.17
 
 Release Notes:
 
-.. HTCondor version 9.0.16 released on Month Date, 2022.
+.. HTCondor version 9.0.17 released on Month Date, 2022.
 
-- HTCondor version 9.0.16 not yet released.
+- HTCondor version 9.0.17 not yet released.
 
 New Features:
 
@@ -49,9 +49,15 @@ Bugs Fixed:
   grid universe job would fail.
   :jira:`1222`
 
+- Fixed a bug where the FS and MUNGE authentication methods would
+  treat local user accounts with very large UID values (greater than
+  2^31) as the ``condor`` user.
+  :jira:`1229`
+
 - Fixed a bug with the *condor_credmon_oauth* where scope and audience
   claims were dropped from OAuth refresh tokens on their first renewal.
   :jira:`1270`
+
 
 .. _lts-version-history-9016:
 

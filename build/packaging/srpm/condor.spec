@@ -566,6 +566,12 @@ Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+Requires: python36-cryptography
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-cryptography
+%endif
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
