@@ -242,23 +242,23 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 	args.AppendArg( dm.condorSubmitExe );
 
+		//****Always append this variable to avoid overwriting
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string nodeName = std::string(ATTR_DAG_NODE_NAME_ALT) + " = " + DAGNodeName;
+	std::string nodeName = std::string(ATTR_DAG_NODE_NAME_ALT) + "=" + DAGNodeName;
 	args.AppendArg( nodeName.c_str() );
 
 		// append a line adding the parent DAGMan's cluster ID to the job ad
-	if ( dm.DAGManJobId._cluster > 0 ) {
+		//****Always append these variables to avoid overwriting
+	if ( dm.DAGManJobId._cluster > 0 ) { 
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		std::string dagJobId = std::string( "+" ) + ATTR_DAGMAN_JOB_ID + " = " +
+		std::string dagJobId = std::string( "My." ) + ATTR_DAGMAN_JOB_ID + "=" +
 					std::to_string( dm.DAGManJobId._cluster );
 		args.AppendArg( dagJobId.c_str() );
-	}
 
 		// now we append a line setting the same thing as a submit-file macro
 		// (this is necessary so the user can reference it in the priority)
-	if ( dm.DAGManJobId._cluster > 0 ) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		std::string dagJobIdMacro = std::string( "" ) + ATTR_DAGMAN_JOB_ID + " = " +
+		std::string dagJobIdMacro = std::string( "" ) + ATTR_DAGMAN_JOB_ID + "=" +
 					std::to_string( dm.DAGManJobId._cluster );
 		args.AppendArg( dagJobIdMacro.c_str() );
 	}
@@ -274,7 +274,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( batchId.c_str() );
 	}
 
-	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	std::string submitEventNotes = std::string(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
 	args.AppendArg( submitEventNotes.c_str() );
@@ -283,19 +282,21 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// We need to append the DAGman default log file to
 		// the log file list
+		//****Always append this variable to avoid overwriting
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string dlog( "dagman_log = " );
+	std::string dlog( "dagman_log=" );
 	dlog += workflowLogFile;
 	args.AppendArg( dlog.c_str() );
 	debug_printf( DEBUG_VERBOSE, "Adding a DAGMan workflow log %s\n",
 				workflowLogFile );
 
 		// Now append the mask
+		//****Always append this variable to avoid overwriting
 	debug_printf( DEBUG_VERBOSE, "Masking the events recorded in the DAGMAN workflow log\n" );
 	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string dmask("+");
+	std::string dmask("My.");
 	dmask += ATTR_DAGMAN_WORKFLOW_MASK;
-	dmask += " = \"";
+	dmask += "=\"";
 	const char *eventMask = getEventMask();
 	debug_printf( DEBUG_VERBOSE, "Mask for workflow log is %s\n",
 				eventMask );
@@ -305,7 +306,6 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// Append the priority, if we have one.
 	if ( priority != 0 ) {
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		std::string prioStr = "priority=";
 		prioStr += std::to_string( priority );
 		args.AppendArg( prioStr.c_str() );
@@ -313,6 +313,7 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 
 		// Suppress the job's log file if that option is enabled.
+		//****Always append this variable to avoid overwriting
 	if ( dm._suppressJobLogs ) {
 		debug_printf( DEBUG_VERBOSE, "Suppressing node job log file\n" );
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
@@ -322,20 +323,18 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// If this is a hold job, add the attribute to submit on hold
 	if ( node->GetHold() ) {
 		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
-		args.AppendArg( "-a" );
-		args.AppendArg( "hold = true" );
+		args.AppendArg( "hold=true" );
 	}
 
+		//****Always append this variable to avoid job submit failure:
 	ArgList parentNameArgs;
-	parentNameArgs.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string parentNodeNames = std::string("+DAGParentNodeNames = ") + "\"";
+	std::string parentNodeNames = std::string("My.DAGParentNodeNames=") + "\"";
 	if (DAGParentNodeNames) parentNodeNames += DAGParentNodeNames;
 	parentNodeNames += "\"";
 	parentNameArgs.AppendArg( parentNodeNames.c_str() );
 
 	// allow for $(JOB) expansions in the vars - and also in the submit file.
 	std::string jobarg("JOB="); jobarg += DAGNodeName;
-	args.AppendArg("-a");
 	args.AppendArg(jobarg.c_str());
 
 	for (auto & nodeVar : node->varsFromDag) {
@@ -356,28 +355,26 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 
 		// Set the special DAG_STATUS variable (mainly for use by
 		// "final" nodes).
-	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	std::string var = "DAG_STATUS = ";
+	std::string var = "DAG_STATUS=";
 	var += std::to_string( (int)dm.dag->_dagStatus );
 	args.AppendArg( var.c_str() );
 
 		// Set the special FAILED_COUNT variable (mainly for use by
 		// "final" nodes).
-	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-	var = "FAILED_COUNT = ";
+	var = "FAILED_COUNT=";
 	var += std::to_string( dm.dag->NumNodesFailed() );
 	args.AppendArg( var.c_str() );
 
 	if( hold_claim ){
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		std::string holdit = std::string("+") + ATTR_JOB_KEEP_CLAIM_IDLE + " = "
+		std::string holdit = std::string("My.") + ATTR_JOB_KEEP_CLAIM_IDLE + "="
 			+ std::to_string( dm._claim_hold_time );
 		args.AppendArg( holdit.c_str() );
 	}
 	
+		//****Always append this variable to avoid overwriting
 	if (dm._submitDagDeepOpts.suppress_notification) {
 		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
-		std::string notify = std::string("notification = never");
+		std::string notify = std::string("notification=never");
 		args.AppendArg( notify.c_str() );
 	}
 
@@ -385,14 +382,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		// Add accounting group and user if we have them.
 		//
 	if ( dm._submitDagDeepOpts.acctGroup != "" ) {
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		std::string arg = "accounting_group=";
 		arg += dm._submitDagDeepOpts.acctGroup;
 		args.AppendArg( arg );
 	}
 
 	if ( dm._submitDagDeepOpts.acctGroupUser != "" ) {
-		args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 		std::string arg = "accounting_group_user=";
 		arg += dm._submitDagDeepOpts.acctGroupUser;
 		args.AppendArg( arg );
@@ -461,91 +456,100 @@ static void init_dag_vars(SubmitHash * submitHash,
 	int retry = node->GetRetries();
 	bool hold_claim = ( ! node->NoChildren()) && dm._claim_hold_time > 0;
 
-	// NOTE: we specify the job ID of DAGMan using only its cluster ID
-	// so that it may be referenced by jobs in their priority
-	// attribute (which needs an int, not a string).  Doing so allows
-	// users to effectively "batch" jobs by DAG so that when they
-	// submit many DAGs to the same schedd, all the ready jobs from
-	// one DAG complete before any jobs from another begin.
-	submitHash->set_arg_variable(ATTR_DAG_NODE_NAME_ALT, DAGNodeName);
-	if (dm.DAGManJobId._cluster > 0) {
-		submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster).c_str());
+	//These are added variables that should always be added after
+	//digestion of the job submit file. init_dag_vars gets called
+	//twice (before and after said digestion)
+	if ( !before_subFile ) {
+		// NOTE: we specify the job ID of DAGMan using only its cluster ID
+		// so that it may be referenced by jobs in their priority
+		// attribute (which needs an int, not a string).  Doing so allows
+		// users to effectively "batch" jobs by DAG so that when they
+		// submit many DAGs to the same schedd, all the ready jobs from
+		// one DAG complete before any jobs from another begin.
+		submitHash->set_arg_variable(ATTR_DAG_NODE_NAME_ALT, DAGNodeName);
+		if (dm.DAGManJobId._cluster > 0) {
+			submitHash->set_arg_variable(ATTR_DAGMAN_JOB_ID, std::to_string(dm.DAGManJobId._cluster).c_str());
+		}
+		
+		// We need to append the DAGman default log file to the log file list
+		submitHash->set_arg_variable(SUBMIT_KEY_DagmanLogFile, workflowLogFile);
+		
+		// Now add the event mask
+		std::string workflowMask = "\"" + std::string(getEventMask()) + "\"";
+		submitHash->set_arg_variable("MY." ATTR_DAGMAN_WORKFLOW_MASK, workflowMask.c_str());
+		
+		// Suppress the job's log file if that option is enabled.
+		if (dm._suppressJobLogs) {
+			debug_printf(DEBUG_VERBOSE, "Suppressing node job log file\n");
+			submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
+		}
+		
+		if (dm._submitDagDeepOpts.suppress_notification) {
+			submitHash->set_arg_variable(SUBMIT_KEY_Notification, "NEVER");
+		}
+		
+	} else { //All other variables always added to job that don't need to be appended
+	
+		if (batchName && batchName[0]) {
+			submitHash->set_arg_variable(SUBMIT_KEY_BatchName, batchName);
+		}
+		if (batchId && batchId[0]) {
+			submitHash->set_arg_variable(SUBMIT_KEY_BatchId, batchId);
+		}
+
+		std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
+		submitHash->set_arg_variable(SUBMIT_KEY_LogNotesCommand, submitEventNotes.c_str());
+
+		// Append the priority, if we have one.
+		if (priority != 0) {
+			std::string prio = std::to_string(priority);
+			submitHash->set_arg_variable(SUBMIT_KEY_Priority, prio.c_str());
+		}
+
+		// If this is a hold job, add the attribute to submit on hold
+		if ( node->GetHold() ) {
+			debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
+			submitHash->set_arg_variable(SUBMIT_KEY_Hold, "true");
+		}
+
+		// this allows for $(JOB) expansions in the vars (and in the submit file)
+		submitHash->set_arg_variable("JOB", node->GetJobName());
+
+		// set RETRY for $(RETRY) substitution
+		submitHash->set_arg_variable("RETRY", std::to_string(retry).c_str());
+
+		// Set the special DAG_STATUS variable (mainly for use by "final" nodes).
+		submitHash->set_arg_variable("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus).c_str());
+
+		// Set the special FAILED_COUNT variable (mainly for use by "final" nodes).
+		submitHash->set_arg_variable("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()).c_str());
+
+		if (hold_claim) {
+			submitHash->set_arg_variable(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time).c_str());
+		}
+
+		//
+		// Add accounting group and user if we have them.
+		//
+		if (!dm._submitDagDeepOpts.acctGroup.empty()) {
+			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroup, dm._submitDagDeepOpts.acctGroup.c_str());
+		}
+
+		if (!dm._submitDagDeepOpts.acctGroupUser.empty()) {
+			submitHash->set_arg_variable(SUBMIT_KEY_AcctGroupUser, dm._submitDagDeepOpts.acctGroupUser.c_str());
+		}
+
+		//PRAGMA_REMIND("TODO: fix the tests to use $(DAG_PARENT_NAMES), and then remove custom job attribute")
+		submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
+		// TODO: remove this when the tests no longer need it.
+		submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
 	}
 
-	if (batchName && batchName[0]) {
-		submitHash->set_arg_variable(SUBMIT_KEY_BatchName, batchName);
-	}
-	if (batchId && batchId[0]) {
-		submitHash->set_arg_variable(SUBMIT_KEY_BatchId, batchId);
-	}
-
-	std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
-	submitHash->set_arg_variable(SUBMIT_KEY_LogNotesCommand, submitEventNotes.c_str());
-
-	// We need to append the DAGman default log file to the log file list
-	submitHash->set_arg_variable(SUBMIT_KEY_DagmanLogFile, workflowLogFile);
-
-	// Now add the event mask
-	std::string workflowMask = "\"" + std::string(getEventMask()) + "\"";
-	submitHash->set_arg_variable("MY." ATTR_DAGMAN_WORKFLOW_MASK, workflowMask.c_str());
-
-	// Append the priority, if we have one.
-	if (priority != 0) {
-		std::string prio = std::to_string(priority);
-		submitHash->set_arg_variable(SUBMIT_KEY_Priority, prio.c_str());
-	}
-
-	// Suppress the job's log file if that option is enabled.
-	if (dm._suppressJobLogs) {
-		debug_printf(DEBUG_VERBOSE, "Suppressing node job log file\n");
-		submitHash->set_arg_variable(SUBMIT_KEY_UserLogFile, "");
-	}
-
-	// If this is a hold job, add the attribute to submit on hold
-	if ( node->GetHold() ) {
-		debug_printf( DEBUG_VERBOSE, "Submitting node job on hold\n" );
-		submitHash->set_arg_variable(SUBMIT_KEY_Hold, "true");
-	}
-
-	// this allows for $(JOB) expansions in the vars (and in the submit file)
-	submitHash->set_arg_variable("JOB", node->GetJobName());
+	//Init user defined VARS
 	for (auto & it : node->varsFromDag) {
 		if ( it._prepend == before_subFile ) { submitHash->set_arg_variable(it._name, it._value); }
 	}
-
-	// set RETRY for $(RETRY) substitution
-	submitHash->set_arg_variable("RETRY", std::to_string(retry).c_str());
-
-	// Set the special DAG_STATUS variable (mainly for use by "final" nodes).
-	submitHash->set_arg_variable("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus).c_str());
-
-	// Set the special FAILED_COUNT variable (mainly for use by "final" nodes).
-	submitHash->set_arg_variable("FAILED_COUNT", std::to_string(dm.dag->NumNodesFailed()).c_str());
-
-	if (hold_claim) {
-		submitHash->set_arg_variable(SUBMIT_KEY_KeepClaimIdle, std::to_string(dm._claim_hold_time).c_str());
-	}
-
-	if (dm._submitDagDeepOpts.suppress_notification) {
-		submitHash->set_arg_variable(SUBMIT_KEY_Notification, "NEVER");
-	}
-
-	//
-	// Add accounting group and user if we have them.
-	//
-	if (!dm._submitDagDeepOpts.acctGroup.empty()) {
-		submitHash->set_arg_variable(SUBMIT_KEY_AcctGroup, dm._submitDagDeepOpts.acctGroup.c_str());
-	}
-
-	if (!dm._submitDagDeepOpts.acctGroupUser.empty()) {
-		submitHash->set_arg_variable(SUBMIT_KEY_AcctGroupUser, dm._submitDagDeepOpts.acctGroupUser.c_str());
-	}
-
-	//PRAGMA_REMIND("TODO: fix the tests to use $(DAG_PARENT_NAMES), and then remove custom job attribute")
-	submitHash->set_arg_variable("DAG_PARENT_NAMES", parents.c_str());
-	// TODO: remove this when the tests no longer need it.
-	submitHash->set_arg_variable("MY.DAGParentNodeNames", "\"$(DAG_PARENT_NAMES)\"");
-
+	
 }
 
 static bool send_jobset_if_allowed(SubmitHash& submitHash, int cluster)
