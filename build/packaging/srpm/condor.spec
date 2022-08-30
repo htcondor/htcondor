@@ -574,7 +574,8 @@ Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
 if 0%{?rhel} == 7 && ! 0%{?amzn}
 Requires: python36-cryptography
-%else
+%endif
+%if 0%{?rhel} >= 8
 Requires: python3-cryptography
 %endif
 %if 0%{?osg}
