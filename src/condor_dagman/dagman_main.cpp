@@ -1293,6 +1293,9 @@ void main_init (int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
+	
+	// Set nodes marked as DONE in dag file to STATUS_DONE
+	dagman.dag->SetPreDoneNodes();
 
 		//
 		// Actually parse the "new-new" style (partial DAG info only)
