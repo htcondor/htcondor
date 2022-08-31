@@ -36,7 +36,7 @@ set(CollectorLibSrcs
 
 condor_daemon ( EXE condor_collector
   SOURCES "${collectorElements};${CollectorLibSrcs}"
-  LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}"
+  LIBRARIES "${CONDOR_LIBS}"
   INSTALL ${C_SBIN} )
 
 if (LINUX)

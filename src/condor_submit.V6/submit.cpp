@@ -64,7 +64,6 @@
 #include "dc_transferd.h"
 #include "condor_ftp.h"
 #include "condor_crontab.h"
-#include <scheduler.h>
 #include "condor_holdcodes.h"
 #include "condor_url.h"
 #include "condor_version.h"

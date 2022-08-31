@@ -758,7 +758,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-       -DWITH_QPID:BOOL=FALSE \
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
@@ -1034,24 +1033,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_datadir}/condor/{libpyclassad*,htcondor,classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
-
-# Install Campus Factory, option for condor_remote_cluster (nee BOSCO)
-%if 0%{?rhel} >= 8
-mkdir -p %{buildroot}%{python3_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python3_sitelib}
-%else
-mkdir -p %{buildroot}%{python_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
-%endif
-%if 0%{?hcc}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
-%endif
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
 
 # Fix up blahp installation
 %if 0%{?rhel} == 7
@@ -1381,25 +1362,6 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
-# The Campus Factory
-%if 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%endif
-%_libexecdir/condor/campus_factory
-%_sbindir/campus_factory
-%_sbindir/runfactory
-%_sbindir/glidein_creation
-%_datadir/condor/campus_factory
-%if 0%{?rhel} >= 8
-%{python3_sitelib}/GlideinWMS
-%{python3_sitelib}/campus_factory
-%else
-%{python_sitelib}/GlideinWMS
-%{python_sitelib}/campus_factory
-%endif
 
 #################
 %files devel
