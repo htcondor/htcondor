@@ -93,6 +93,7 @@ RUNBENCHMARKS = FALSE
 CCB_ADDRESS = \$(COLLECTOR_HOST)
 
 # Commit suicide after being idle for five minutes.
+# This appears to have broken some time after 9.5.4?
 STARTD_NOCLAIM_SHUTDOWN = 300
 
 # Don't run for any longer than was requested.
@@ -107,6 +108,10 @@ AnnexName = \"${JOB_NAME}\"
 hpc_annex_request_id = \"${REQUEST_ID}\"
 STARTD_ATTRS = \$(STARTD_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
+
+# This pilot runs in a container; the image is expected to have singularity
+# installed and configured correctly.
+SINGULARITY                 = /usr/bin/singularity
 
 " > local/config.d/00-basic-pilot
 
