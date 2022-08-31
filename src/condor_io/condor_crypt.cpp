@@ -28,6 +28,12 @@
 
 #include "condor_crypt_aesgcm.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+
+static OSSL_PROVIDER* legacy_provider = nullptr;
+#endif
+
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     m_keyInfo(key)
 {
@@ -92,6 +98,11 @@ void Condor_Crypto_State::reset() {
 		key_data = free_key_data;
 		break;
 	case CONDOR_BLOWFISH:
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+		if (!legacy_provider) {
+			legacy_provider = OSSL_PROVIDER_load(NULL, "legacy");
+		}
+#endif
 		cipher_type = EVP_bf_cfb64();
 		key_length = m_keyInfo.getKeyLength();
 		key_data = m_keyInfo.getKeyData();
