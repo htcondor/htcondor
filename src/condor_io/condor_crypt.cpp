@@ -28,6 +28,12 @@
 
 #include "condor_crypt_aesgcm.h"
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#include <openssl/provider.h>
+
+static OSSL_PROVIDER* legacy_provider = nullptr;
+#endif
+
 Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     m_keyInfo(key)
 {
@@ -35,6 +41,7 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
     // which includes: protocol, len, data, duration
 
     // zero everything;
+    m_cipherType = nullptr;
     enc_ctx = nullptr;
     dec_ctx = nullptr;
 
@@ -47,11 +54,24 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
         case CONDOR_3DES: {
             // reset() will initialize everything else
             cipher_name = "3DES";
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            m_cipherType = EVP_CIPHER_fetch(NULL, "des-ede3-cfb", NULL);
+#else
+            m_cipherType = EVP_des_ede3_cfb64();
+#endif
             break;
         }
         case CONDOR_BLOWFISH: {
             // reset() will initialize everything else
             cipher_name = "BLOWFISH";
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+            if (!legacy_provider) {
+                legacy_provider = OSSL_PROVIDER_load(NULL, "legacy");
+            }
+            m_cipherType = EVP_CIPHER_fetch(NULL, "bf-cfb", NULL);
+#else
+            m_cipherType = EVP_bf_cfb64();
+#endif
             break;
         }
         case CONDOR_AESGCM: {
@@ -75,24 +95,24 @@ Condor_Crypto_State::Condor_Crypto_State(Protocol proto, KeyInfo &key) :
 }
 
 Condor_Crypto_State::~Condor_Crypto_State() {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+	if(m_cipherType) EVP_CIPHER_free(m_cipherType);
+#endif
 	if(enc_ctx) EVP_CIPHER_CTX_free(enc_ctx);
 	if(dec_ctx) EVP_CIPHER_CTX_free(dec_ctx);
 }
 
 void Condor_Crypto_State::reset() {
-	const EVP_CIPHER *cipher_type = nullptr;
 	int key_length = 0;
 	const unsigned char* key_data = nullptr;
 	unsigned char* free_key_data = nullptr;
 	switch(m_keyInfo.getProtocol()) {
 	case CONDOR_3DES:
-		cipher_type = EVP_des_ede3_cfb64();
 		key_length = 24;
 		free_key_data = m_keyInfo.getPaddedKeyData(key_length);
 		key_data = free_key_data;
 		break;
 	case CONDOR_BLOWFISH:
-		cipher_type = EVP_bf_cfb64();
 		key_length = m_keyInfo.getKeyLength();
 		key_data = m_keyInfo.getKeyData();
 		break;
@@ -101,7 +121,7 @@ void Condor_Crypto_State::reset() {
 		// Do nothing
 		break;
 	}
-	if (cipher_type) {
+	if (m_cipherType) {
 		// Intialize the ivec with all zeros
 		unsigned char ivec[8] = { };
 
@@ -111,11 +131,11 @@ void Condor_Crypto_State::reset() {
 		enc_ctx = EVP_CIPHER_CTX_new();
 		dec_ctx = EVP_CIPHER_CTX_new();
 
-		EVP_EncryptInit_ex(enc_ctx, cipher_type, NULL, NULL, NULL);
+		EVP_EncryptInit_ex(enc_ctx, m_cipherType, NULL, NULL, NULL);
 		EVP_CIPHER_CTX_set_key_length(enc_ctx, key_length);
 		EVP_EncryptInit_ex(enc_ctx, NULL, NULL, key_data, ivec);
 
-		EVP_DecryptInit_ex(dec_ctx, cipher_type, NULL, NULL, NULL);
+		EVP_DecryptInit_ex(dec_ctx, m_cipherType, NULL, NULL, NULL);
 		EVP_CIPHER_CTX_set_key_length(dec_ctx, key_length);
 		EVP_DecryptInit_ex(dec_ctx, NULL, NULL, key_data, ivec);
 
