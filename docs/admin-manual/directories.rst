@@ -85,7 +85,7 @@ Directories use by the Execute Role
     can be removed by simply unmounting and destroying the filesystem, which is much
     faster than having condor remove each scratch file in turn.
 
-    To enable this, first set :macro:`STARTD_ENFORCE_DISK_USAGE` to ``true``.  Then, if LVM is 
+    To enable this, first set :macro:`STARTD_ENFORCE_DISK_LIMITS` to ``true``.  Then, if LVM is 
     installed and configured, set :macro:`THINPOOL_NAME` to the name of a logical volume.
     ``"condor_lv"`` might be a good choice.  Finally, set :macro:`THINPOOL_VOLUME_GROUP` to 
     the name of the volume group the LVM administrator has created for this purpose.
