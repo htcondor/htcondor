@@ -5833,30 +5833,41 @@ default=240
 description=Max time in seconds condor_adstash has to process each Startd history
 type=int
 default=240
-[ADSTASH_ES_HOST]
-description=Hostname[:port] for the Elasticsearch instance condor_adstash should push to
+[ADSTASH_INTERFACE]
+description=Which type of interface should condor_adstash push ads to
+default=elasticsearch
+[ADSTASH_SE_HOST]
+description=Hostname[:port] for a condor_adstash search engine interface
 type=string
 default=$(FULL_HOSTNAME):9200
-[ADSTASH_ES_USE_HTTPS]
-description=Should condor_adstash use SSL to connect with Elasticsearch
+[ADSTASH_SE_USE_HTTPS]
+description=Use SSL when connecting condor_adstash to a search engine
 type=bool
 default=False
-[ADSTASH_ES_USERNAME]
-description=Elasticsearch username
+[ADSTASH_SE_USERNAME]
+description=condor_adstash search engine username
 type=string
 default=
-[ADSTASH_ES_PASSWORD_FILE]
-description=File containing Elasticsearch password on its first line
+[ADSTASH_SE_PASSWORD_FILE]
+description=File containing condor_adstash search engine password on its first line
 type=path
 default=
-[ADSTASH_ES_BUNCH_SIZE]
-description=How many docs should be pushed to Elasticsearch at a time
+[ADSTASH_SE_BUNCH_SIZE]
+description=How many ads should be pushed to a condor_adstash search engine at a time
 type=int
 default=250
-[ADSTASH_ES_INDEX_NAME]
-description=What Elasticsearch index should condor_adstash push ads to
+[ADSTASH_SE_INDEX_NAME]
+description=What search engine index should condor_adstash push ads to
 type=string
 default=htcondor-000001
+[ADSTASH_SE_LOG_MAPPINGS]
+description=Should condor_adstash log mappings used with search engine interfaces
+type=bool
+default=True
+[ADSTASH_JSON_DIR]
+description=Where should condor_adstash place JSON files if using the jsonfile interface
+type=path
+default=$(LOG)
 
 ######
 ## add metaknobs below this banner
