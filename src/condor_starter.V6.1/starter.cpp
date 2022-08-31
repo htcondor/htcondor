@@ -1619,7 +1619,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
 		}
 	}
-	if( !setup_env.InsertEnvIntoClassAd(sshd_ad, error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(*sshd_ad, error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.c_str());

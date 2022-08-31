@@ -121,7 +121,11 @@ ParallelProc::addEnvVars()
 	char *tmp;
 
 	new_path = bin;
+#ifdef WIN32
+	new_path += ";";
+#else
 	new_path += ":";
+#endif
 
 	if(env.GetEnv("PATH",path)) {
         // The user gave us a path in env.  Find & alter:
@@ -158,11 +162,12 @@ ParallelProc::addEnvVars()
 		dprintf ( D_FULLDEBUG, "New env: %s\n", env_str.c_str() );
 	}
 
-        // now put the env back into the JobAd:
-	if(!env.InsertEnvIntoClassAd(JobAd, env_errors)) {
-		dprintf( D_ALWAYS, "Unable to update env! Aborting: %s\n",
-				 env_errors.c_str());
-		return 0;
+	// now put the env back into the JobAd, this won't fail
+	// but it might result in switching the job from attribute Env (v1) to Environment (v2)
+	env_errors.clear();
+	env.InsertEnvIntoClassAd(*JobAd, env_errors);
+	if ( ! env_errors.empty()) {
+		dprintf( D_ALWAYS, "Switched from Env attribute to Environment attribute: %s\n", env_errors.c_str());
 	}
 
 	return 1;
