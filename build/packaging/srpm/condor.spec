@@ -1149,8 +1149,16 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/__init__.pyo
 %_libexecdir/condor/adstash/ad_sources/__init__.pyc
 %_libexecdir/condor/adstash/ad_sources/__init__.pyo
+%_libexecdir/condor/adstash/ad_sources/registry.pyc
+%_libexecdir/condor/adstash/ad_sources/registry.pyo
 %_libexecdir/condor/adstash/interfaces/__init__.pyc
 %_libexecdir/condor/adstash/interfaces/__init__.pyo
+%_libexecdir/condor/adstash/interfaces/generic.pyc
+%_libexecdir/condor/adstash/interfaces/generic.pyo
+%_libexecdir/condor/adstash/interfaces/null.pyc
+%_libexecdir/condor/adstash/interfaces/null.pyo
+%_libexecdir/condor/adstash/interfaces/registry.pyc
+%_libexecdir/condor/adstash/interfaces/registry.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/condor_shared_port
