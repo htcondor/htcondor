@@ -71,10 +71,10 @@ New Features:
   instead writes ads to JSON files in the working directory.
   :jira:`1264`
 
-- Removed support from the startd for querying keyboard and mouse idle time.
-  This only worked on machines with ancient keyboard interrupt hardware,
-  and caused significant performance degradation on machines with many
-  cpus.
+- Removed support from the startd for querying keyboard and mouse idle time,
+  on legacy x86 linux machines that used an 8042 keyboard controller.
+  This caused significant performance degradation in the startd
+  on machines with many cpus.
   :jira:`1297`
 
 Bugs Fixed:
