@@ -5864,6 +5864,10 @@ default=htcondor-000001
 description=Should condor_adstash log mappings used with search engine interfaces
 type=bool
 default=True
+[ADSTASH_SE_TIMEOUT]
+description=How long should condor_adstash wait for search engine queries
+type=int
+default=240
 [ADSTASH_JSON_DIR]
 description=Where should condor_adstash place JSON files if using the jsonfile interface
 type=path
