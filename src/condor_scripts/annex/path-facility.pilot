@@ -108,10 +108,9 @@ hpc_annex_request_id = \"${REQUEST_ID}\"
 STARTD_ATTRS = \$(STARTD_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 MASTER_ATTRS = \$(MASTER_ATTRS) AnnexName IsAnnex hpc_annex_request_id
 
-# BrianL thinks this is way more likely to work than using the
-# host's Singularity, which may not exist nor be configured
-# to run "unprivileged."
-SINGULARITY                 = /cvmfs/oasis.opensciencegrid.org/mis/singularity/current/bin/singularity
+# This pilot runs in a container; the image is expected to have singularity
+# installed and configured correctly.
+SINGULARITY                 = /usr/bin/singularity
 
 " > local/config.d/00-basic-pilot
 

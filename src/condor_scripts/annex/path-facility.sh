@@ -189,7 +189,7 @@ done
 
 ALLOCATION_LINE="# Trying to use default allocation"
 if [[ -n $ALLOCATION ]]; then
-    ALLOCATION_LINE="account_group = ${ALLOCATION}"
+    ALLOCATION_LINE="accounting_group = ${ALLOCATION}"
 fi
 
 echo "
@@ -216,7 +216,12 @@ log                         = log.\$(ClusterID).\$(ProcID)
 # be able to select which tarball to download based on which OS we
 # landed on, but I seem to recall container support having weird
 # limitations on CentOS 7, so let's just not for now.
-requirements                = OpSysAndVer == \"CentOS8\"
+#
+# Since we are, at least temporarily, running in our own container,
+# don't set any explicit requirememts at all.
+# requirements                = OpSysAndVer == \"CentOS8\"
+
++SingularityImage = \"docker://hub.opensciencegrid.org/htcondor/hpc-annex-pilot:el8\"
 
 ${ALLOCATION_LINE}
 
