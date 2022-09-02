@@ -3591,7 +3591,7 @@ htcondor for running backfill jobs` for details.
     This string-valued parameter has no default, and should be set to the
     Linux LVM logical volume to be used for ephemeral execute directories.
     ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is ``True``, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is ``True``, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_VOLUME_GROUP_NAME`
@@ -3599,7 +3599,7 @@ htcondor for running backfill jobs` for details.
     name of the Linux LVM volume group to be used for logical volumes
     for ephemeral execute directories.
     ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_BACKING_FILE`
@@ -4302,7 +4302,7 @@ create a private filesystem for the scratch directory for each job.
     A string that names the Linux LVM logical volume for storage 
     for per-job scratch directories.
 
-:macro-def:`STARTD_ENFORCE_DISK_USAGE`
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
     A boolean that defaults to false that controls whether the
     starter puts a job on hold that fills the per-job filesystem.
 
