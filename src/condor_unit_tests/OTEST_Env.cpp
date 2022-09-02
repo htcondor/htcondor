@@ -39,6 +39,7 @@ static bool test_mf_v1r_or_v2q_ret_null(void);
 static bool test_mf_v1r_or_v2q_detect_v1r(void);
 static bool test_mf_v1r_or_v2q_detect_v2q(void);
 static bool test_mf_v1r_or_v2q_add_null(void);
+static bool test_mf_v1r_or_v2q_add_empty(void);
 static bool test_mf_v2q_ret_null(void);
 static bool test_mf_v2q_ret_valid(void);
 static bool test_mf_v2q_ret_invalid_quotes(void);
@@ -422,6 +423,7 @@ bool OTEST_Env(void) {
 	driver.register_function(test_mf_v1r_or_v2q_detect_v1r);
 	driver.register_function(test_mf_v1r_or_v2q_detect_v2q);
 	driver.register_function(test_mf_v1r_or_v2q_add_null);
+	driver.register_function(test_mf_v1r_or_v2q_add_empty);
 	driver.register_function(test_mf_v2q_ret_null);
 	driver.register_function(test_mf_v2q_ret_valid);
 	driver.register_function(test_mf_v2q_ret_invalid_quotes);
@@ -837,6 +839,28 @@ static bool test_mf_v1r_or_v2q_detect_v2q() {
 	PASS;
 }
 
+static bool test_mf_v1r_or_v2q_add_empty() {
+	emit_test("Test that MergeFromV1RawOrV2Quoted() doesn't add any "
+		"environment variables for an empty string.");
+	Env env;
+	std::string msg;
+	MyString actual;
+	bool success = env.MergeFromV1RawOrV2Quoted("\0trailing garbage", msg);
+	env.getDelimitedStringForDisplay(&actual);
+	emit_input_header();
+	emit_param("STRING", "%s", "\"\"");
+	emit_param("errmsg", "%s", "NULL");
+	emit_output_expected_header();
+	emit_param("Env", "%s", EMPTY);
+	emit_param("errmsg", "%s", EMPTY);
+	emit_output_actual_header();
+	emit_param("Env", "%s", actual.Value());
+	if(actual != EMPTY || ! success || ! msg.empty()) {
+		FAIL;
+	}
+	PASS;
+}
+
 static bool test_mf_v1r_or_v2q_add_null() {
 	emit_test("Test that MergeFromV1RawOrV2Quoted() doesn't add any "
 		"environment variables for a NULL string.");
@@ -861,8 +885,9 @@ static bool test_mf_v2q_ret_null() {
 	emit_test("Test that MergeFromV2Quoted() returns true when passed a NULL "
 		"string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV2Quoted(NULL, NULL);
+	bool actual = env.MergeFromV2Quoted(NULL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -880,8 +905,9 @@ static bool test_mf_v2q_ret_valid() {
 	emit_test("Test that MergeFromV2Quoted() returns true when passed a valid"
 		" V2Quoted string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV2Quoted(V2Q, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q);
 	emit_param("MyString", "%s", "NULL");
@@ -899,8 +925,9 @@ static bool test_mf_v2q_ret_invalid_quotes() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to no quotes.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2R, NULL);
+	bool actual = env.MergeFromV2Quoted(V2R, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R);
 	emit_param("MyString", "%s", "NULL");
@@ -918,8 +945,9 @@ static bool test_mf_v2q_ret_invalid_quotes_end() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due missing quotes at the end.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_END, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_END, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
 	emit_param("MyString", "%s", "NULL");
@@ -937,8 +965,9 @@ static bool test_mf_v2q_ret_invalid_trail() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to trailing characters after the quotes.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_TRAIL, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_TRAIL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
 	emit_param("MyString", "%s", "NULL");
@@ -956,8 +985,9 @@ static bool test_mf_v2q_ret_invalid_name() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to a missing variable name.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_NAME, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_NAME, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -975,8 +1005,9 @@ static bool test_mf_v2q_ret_invalid_delim() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_DELIM, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_DELIM, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -995,14 +1026,14 @@ static bool test_mf_v2q_error_invalid_quotes() {
 		"an invalid V2Quoted string due to no quotes.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V1R, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V1R, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1013,14 +1044,14 @@ static bool test_mf_v2q_error_invalid_quotes_end() {
 		"an invalid V2Quoted string due to missing quotes at the end.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_END, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_END, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1032,14 +1063,14 @@ static bool test_mf_v2q_error_invalid_trail() {
 		"quotes.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_TRAIL, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_TRAIL, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1050,14 +1081,14 @@ static bool test_mf_v2q_error_invalid_name() {
 		"an invalid V2Quoted string due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_NAME, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_NAME, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1068,14 +1099,14 @@ static bool test_mf_v2q_error_invalid_delim() {
 		"an invalid V2Quoted string due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_DELIM, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_DELIM, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1085,8 +1116,9 @@ static bool test_mf_v2q_add_null() {
 	emit_test("Test that MergeFromV2Quoted() doesn't add the environment "
 		"variables for a NULL string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(NULL, NULL);
+	env.MergeFromV2Quoted(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1106,8 +1138,9 @@ static bool test_mf_v2q_add_invalid_delim_var() {
 		"variables for an invalid V2Quoted string with a missing delimiter and "
 		"a missing variable name.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_BOTH, NULL);
+	env.MergeFromV2Quoted(V2Q_MISS_BOTH, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_BOTH);
@@ -1126,8 +1159,9 @@ static bool test_mf_v2q_add_invalid_quotes() {
 	emit_test("Test that MergeFromV2Quoted() doesn't add the environment "
 		"variables for an invalid V2Quoted string due to missing quotes.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2R, NULL);
+	env.MergeFromV2Quoted(V2R, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R);
@@ -1147,8 +1181,9 @@ static bool test_mf_v2q_add_invalid_quotes_end() {
 		"variables for an invalid V2Quoted string due to missing quotes at the "
 		"end.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_END, NULL);
+	env.MergeFromV2Quoted(V2Q_MISS_END, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
@@ -1168,8 +1203,9 @@ static bool test_mf_v2q_add_invalid_trail() {
 		"variables for an invalid V2Quoted string due to trailing characters "
 		"after the quotes at the end.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_TRAIL, NULL);
+	env.MergeFromV2Quoted(V2Q_TRAIL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
@@ -1188,8 +1224,9 @@ static bool test_mf_v2q_add() {
 	emit_test("Test that MergeFromV2Quoted() adds the environment variables "
 		"for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q);
@@ -1208,9 +1245,10 @@ static bool test_mf_v2q_replace() {
 	emit_test("Test that MergeFromV2Quoted() replaces the environment "
 		"variables for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
-	env.MergeFromV2Quoted(V2Q_REP, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
+	env.MergeFromV2Quoted(V2Q_REP, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q);
@@ -1231,9 +1269,10 @@ static bool test_mf_v2q_replace_v1r() {
 		"variables for a valid V2Quoted string on an Env object originally "
 		"constructed from a V1Raw string.");
 	Env env;
+	std::string msg;
 	MyString actual;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_SEMI, NULL);
+	env.MergeFromV2Quoted(V2Q_REP_SEMI, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1253,9 +1292,10 @@ static bool test_mf_v2q_replace_add() {
 	emit_test("Test that MergeFromV2Quoted() replaces some environment "
 		"variables and also adds new ones for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_ADD, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
+	env.MergeFromV2Quoted(V2Q_REP_ADD, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q);
@@ -1276,9 +1316,10 @@ static bool test_mf_v2q_replace_add_v1r() {
 		"variables and also adds new ones for a valid V2Quoted string on an Env"
 		" object originally constructed from a V1Raw string.");
 	Env env;
+	std::string msg;
 	MyString actual;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_ADD_SEMI, NULL);
+	env.MergeFromV2Quoted(V2Q_REP_ADD_SEMI, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1778,8 +1819,9 @@ static bool test_mf_v1r_replace_v2q() {
 		"variables for a valid V1Raw string on an Env object originally "
 		"constructed from a V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_SEMI, NULL);
+	env.MergeFromV2Quoted(V2Q_SEMI, msg);
 	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -1846,8 +1888,9 @@ static bool test_mf_v1r_replace_add_v2q() {
 		"variables and also adds new ones for a valid V1Raw string on an Env "
 		"object originally constructed from a V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_SEMI, NULL);
+	env.MergeFromV2Quoted(V2Q_SEMI, msg);
 	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -1868,8 +1911,9 @@ static bool test_mf_v1or2_r_ret_null() {
 	emit_test("Test that MergeFromV1or2Raw() returns true when passed "
 		"a NULL string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV1or2Raw(NULL, NULL);
+	bool actual = env.MergeFromV1or2Raw(NULL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -1889,8 +1933,9 @@ static bool test_mf_v1or2_r_detect_v1r() {
 	emit_comment("MergeFromV1or2Raw() just calls MergeFromV1Raw(), which was "
 		"tested above.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	env.MergeFromV1or2Raw(V1R, NULL);
+	env.MergeFromV1or2Raw(V1R, msg);
 	bool actual =env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
@@ -1911,8 +1956,9 @@ static bool test_mf_v1or2_r_detect_v2r() {
 	emit_comment("MergeFromV1or2Raw() just calls MergeFromV2Raw(), which was "
 		"tested above.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	bool actual =env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MARK);
@@ -1931,8 +1977,9 @@ static bool test_mf_v1or2_r_add_null() {
 	emit_test("Test that MergeFromV1or2Raw() doesn't add any environment "
 		"variables for a NULL string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1or2Raw(NULL, NULL);
+	env.MergeFromV1or2Raw(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1953,8 +2000,9 @@ static bool test_mf_v1or2_r_add_v2r() {
 	emit_comment("We need to make sure MergeFromV2Raw() correctly handles the"
 		" V2Raw environment marker.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MARK);
@@ -2580,8 +2628,9 @@ static bool test_mf_ad_ret_null() {
 	emit_test("Test that MergeFrom() returns true when passed a NULL "
 		"ClassAd.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFrom(NULL, NULL);
+	bool actual = env.MergeFrom(NULL, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -2600,10 +2649,11 @@ static bool test_mf_ad_ret_v1r_valid() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that uses V1Raw.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1);
 	emit_param("MyString", "%s", "NULL");
@@ -2621,10 +2671,11 @@ static bool test_mf_ad_ret_v2r_valid() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that uses V2Raw.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2);
 	emit_param("MyString", "%s", "NULL");
@@ -2642,10 +2693,11 @@ static bool test_mf_ad_ret_valid_define() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that doesn't define an Environment");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD);
 	emit_param("MyString", "%s", "NULL");
@@ -2663,10 +2715,11 @@ static bool test_mf_ad_ret_v1r_invalid_name() {
 	emit_test("Test that MergeFrom() returns false when passed an invalid "
 		"ClassAd that uses V1Raw due to a missing variable name.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_NAME, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -2684,10 +2737,11 @@ static bool test_mf_ad_ret_v1r_invalid_delim() {
 	emit_test("Test that MergeFrom() returns false when passed an invalid "
 		"ClassAd that uses V1Raw due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_DELIM, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -2705,10 +2759,11 @@ static bool test_mf_ad_ret_v2r_invalid_name() {
 	emit_test("Test that MergeFrom() returns false when passed a invalid "
 		"ClassAd that uses V2Raw due to a missing variable name.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -2726,10 +2781,11 @@ static bool test_mf_ad_ret_v2r_invalid_delim() {
 	emit_test("Test that MergeFrom() returns false when passed a invalid "
 		"ClassAd that uses V2Raw due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_DELIM, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -2748,16 +2804,16 @@ static bool test_mf_ad_error_v1r_invalid_name() {
 		"invalid ClassAd that uses V1Raw due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2768,16 +2824,16 @@ static bool test_mf_ad_error_v1r_invalid_delim() {
 		"invalid ClassAd that uses V1Raw due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_DELIM, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2788,16 +2844,16 @@ static bool test_mf_ad_error_v2r_invalid_name() {
 		"invalid ClassAd that uses V2Raw due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2808,16 +2864,16 @@ static bool test_mf_ad_error_v2r_invalid_delim() {
 		"invalid ClassAd that uses V2Raw due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2827,8 +2883,9 @@ static bool test_mf_ad_add_null() {
 	emit_test("Test that MergeFrom() doesn't add the environment variables "
 		"when passed a NULL ClassAd pointer.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFrom(NULL, NULL);
+	env.MergeFrom(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", "NULL");
@@ -2847,10 +2904,11 @@ static bool test_mf_ad_add_define() {
 	emit_test("Test that MergeFrom() doesn't any environment variables "
 		"when passed a ClassAd that doesn't define an environment variable.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD);
@@ -2871,9 +2929,10 @@ static bool test_mf_ad_add_v1r_one() {
 	Env env;
 	const char* classad_string = "\tEnv = \"one=1\"";
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(classad_string, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string);
@@ -2892,10 +2951,11 @@ static bool test_mf_ad_add_v1r_many() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1);
@@ -2914,11 +2974,12 @@ static bool test_mf_ad_add_v2r_one() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with one variable.");
 	Env env;
+	std::string msg;
 	const char* classad_string = "\tEnvironment = \"one=1\"";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string);
@@ -2937,10 +2998,11 @@ static bool test_mf_ad_add_v2r_many() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2);
@@ -2959,11 +3021,12 @@ static bool test_mf_ad_v1r_replace() {
 	emit_test("Test that MergeFrom() replaces the environment variables when "
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -2983,11 +3046,12 @@ static bool test_mf_ad_v2r_replace() {
 	emit_test("Test that MergeFrom() replaces the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3008,11 +3072,12 @@ static bool test_mf_ad_v1r_replace_add() {
 		"variables and adds new ones when passed a valid ClassAd that uses"
 		" V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3033,11 +3098,12 @@ static bool test_mf_ad_v2r_replace_add() {
 		"variables when and adds new ones when passed a valid ClassAd that uses"
 		" V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -6383,7 +6449,8 @@ static bool test_input_was_v1_false_v2q() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a V2Quoted string with MergeFromV2Quoted().");
 	Env env;
-	env.MergeFromV2Quoted(V2Q, NULL);
+	std::string msg;
+	env.MergeFromV2Quoted(V2Q, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6402,7 +6469,8 @@ static bool test_input_was_v1_false_v2r_or() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a V2Raw string with MergeFromV1or2Raw().");
 	Env env;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	std::string msg;
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6500,7 +6568,8 @@ static bool test_input_was_v1_false_ad() {
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	Env env;
-	env.MergeFrom(&classad, NULL);
+	std::string msg;
+	env.MergeFrom(&classad, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6559,7 +6628,8 @@ static bool test_input_was_v1_true_ad() {
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	Env env;
-	env.MergeFrom(&classad, NULL);
+	std::string msg;
+	env.MergeFrom(&classad, msg);
 	bool expect = true;
 	bool actual = env.InputWasV1();
 	emit_input_header();
