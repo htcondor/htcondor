@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 
 import htcondor
+import classad
 
 #
 # We could try to import colorama here -- see condor_watch_q -- but that's
@@ -42,6 +43,7 @@ SYSTEM_TABLE = {
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
+        "batch_system":     "SLURM",
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -79,6 +81,7 @@ SYSTEM_TABLE = {
         "pretty_name":      "Expanse",
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
+        "batch_system":     "SLURM",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -125,6 +128,7 @@ SYSTEM_TABLE = {
         "pretty_name":      "Anvil",
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
+        "batch_system":     "SLURM",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -162,6 +166,7 @@ SYSTEM_TABLE = {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
+        "batch_system":     "SLURM",
 
         # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
@@ -205,6 +210,38 @@ SYSTEM_TABLE = {
 
                 "max_jobs_in_queue":    50,
             },
+        },
+    },
+
+    "path-facility": {
+        "pretty_name":      "PATh Facilty",
+        "host_name":        "ap1.facility.path-cc.io",
+        "default_queue":    "cpu",
+        "batch_system":     "HTCondor",
+
+        "queues": {
+            "cpu": {
+                # This is actually max-jobs-per-request for this system,
+                # but for now, it's easier to think about each request
+                # being a single job like it is for SLURM.
+                "max_nodes_per_job":    1, # FIXME
+                "max_duration":         60 * 60 * 72, # FIXME
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         244, # GB; what are the others?
+
+                "max_jobs_in_queue":    1000, # FIXME
+            },
+            # When we formally support GPUs, we'll need to add the GPU
+            # queue here, and -- because HTCondor doesn't have multiple
+            # queues -- some special code somewhere to insert request_gpus.
+            # (Seems like we should allow the user to specify how many
+            # GPUs per node for the PATh Facility, too, so check that
+            # against the queue name (warn if cpu queue?) and also default
+            # it to 1 if the queue name is 'gpu'?)
+            #
+            # Also, we may not want to call them "nodes" for the PATh
+            # facility.
         },
     },
 }
@@ -1025,6 +1062,8 @@ def annex_inner_func(
             schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
 
             transfer_input = job_ad.get("TransferInput", "")
+            if isinstance(transfer_input, classad.Value):  # UNDEFINED or ERROR
+                transfer_input = ""
             input_files = transfer_input.split(",")
             if job_ad["ContainerImage"] in input_files:
                 logger.debug(
@@ -1064,7 +1103,7 @@ def annex_inner_func(
         logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
-        error = f"Failed to start annex, SLURM returned code {rc}"
+        error = f"Failed to start annex, {SYSTEM_TABLE[system]['batch_system']} returned code {rc}"
         try:
             schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
         except Exception:

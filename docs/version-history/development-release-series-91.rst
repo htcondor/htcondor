@@ -62,9 +62,20 @@ New Features:
   unix domain sockets required for *condor_ssh_to_job* to work.
   :jira:`1244`
 
+- Docker universe now support an administrator-set knob DOCKER_SHM_SIZE, which
+  allows the administrator of a worker node to set the --shm-size option to
+  docker run
+  :jira:`1282`
+
 - Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
   instead writes ads to JSON files in the working directory.
   :jira:`1264`
+
+- Removed support from the startd for querying keyboard and mouse idle time,
+  on legacy x86 linux machines that used an 8042 keyboard controller.
+  This caused significant performance degradation in the startd
+  on machines with many cpus.
+  :jira:`1297`
 
 Bugs Fixed:
 

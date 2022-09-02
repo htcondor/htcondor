@@ -13,6 +13,7 @@
 #include "docker-api.h"
 #include <algorithm>
 #include <sstream>
+#include <string>
 
 #if !defined(WIN32)
 #include <sys/un.h>
@@ -342,6 +343,14 @@ int DockerAPI::createContainer(
 		return -1;
 	}
 	if (tmp) free(tmp);
+
+	long long shm_size = 0;
+	if(param_longlong("DOCKER_SHM_SIZE", shm_size, false, 0, true,
+		(std::numeric_limits<long long>::min)(),
+		(std::numeric_limits<long long>::max)(), &machineAd, &jobAd)) {
+		runArgs.AppendArg("--shm-size");
+		runArgs.AppendArg(std::to_string(shm_size));
+	}
 
 	// Run the command with its arguments in the image.
 	runArgs.AppendArg( imageID );

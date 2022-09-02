@@ -61,6 +61,11 @@ public:
     KeyInfo       m_keyInfo;
 
 	// holds encryption and decryption cipher contexts for methods (3DES and BLOWFISH)
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+	const
+#endif
+	EVP_CIPHER *m_cipherType;
+
 	EVP_CIPHER_CTX *enc_ctx;
 	EVP_CIPHER_CTX *dec_ctx;
 

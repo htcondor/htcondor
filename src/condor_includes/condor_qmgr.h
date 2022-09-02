@@ -230,12 +230,6 @@ int SetSecureAttributeString(int cluster_id, int proc_id,
 */
 int SetTimerAttribute(int cluster, int proc, const char *attr_name, int dur);
 
-/** Set the password to the MyProxy server for specified cluster/proc. The
-	value should be a null-terminated string.
-	@return -1 on failure; 0 on success
-*/
-int SetMyProxyPassword (int cluster, int proc, const char * pwd);
-
 
 /** populate the scheduler capabilities ad
 	mask - reserved for future use, must be 0

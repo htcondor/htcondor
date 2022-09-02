@@ -14,9 +14,9 @@ Version 9.0.17
 
 Release Notes:
 
-.. HTCondor version 9.0.16 released on Month Date, 2022.
+.. HTCondor version 9.0.17 released on Month Date, 2022.
 
-- HTCondor version 9.0.16 not yet released.
+- HTCondor version 9.0.17 not yet released.
 
 New Features:
 
@@ -48,10 +48,20 @@ Bugs Fixed:
 - Fixed a bug where forwarding a refreshed X.509 proxy for a **batch**
   grid universe job would fail.
   :jira:`1222`
+  
+- Fixed a bug where DAGMan would fail when the keyword **DONE** was added
+  to the **JOB** line in a **DAG input file**.
+  :jira:`1267` 
+
+- Fixed a bug where the FS and MUNGE authentication methods would
+  treat local user accounts with very large UID values (greater than
+  2^31) as the ``condor`` user.
+  :jira:`1229`
 
 - Fixed a bug with the *condor_credmon_oauth* where scope and audience
   claims were dropped from OAuth refresh tokens on their first renewal.
   :jira:`1270`
+
 
 .. _lts-version-history-9016:
 

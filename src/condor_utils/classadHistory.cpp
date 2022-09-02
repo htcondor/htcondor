@@ -132,7 +132,8 @@ AppendHistory(ClassAd* ad)
 
   // Remove Env before serializing, if asked to
   if (!include_env) {
-	excludeAttrs.emplace(ATTR_JOB_ENVIRONMENT2);
+	  excludeAttrs.emplace(ATTR_JOB_ENV_V1);
+	  excludeAttrs.emplace(ATTR_JOB_ENVIRONMENT);
   }
   // First we serialize the ad. If history file rotation is on,
   // we'll need to know how big the ad is before we write it to the 
@@ -275,7 +276,8 @@ WritePerJobHistoryFile(ClassAd* ad, bool useGjid)
 	bool include_env = param_boolean("HISTORY_CONTAINS_JOB_ENVIRONMENT", true);
 	classad::References env;
 	if (!include_env) {
-			env.emplace(ATTR_JOB_ENVIRONMENT2);
+		env.emplace(ATTR_JOB_ENV_V1);
+		env.emplace(ATTR_JOB_ENVIRONMENT);
 	}
 
 	if (!fPrintAd(fp, *ad, true, nullptr, include_env ? nullptr : &env)) {

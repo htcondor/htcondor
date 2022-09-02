@@ -964,11 +964,6 @@ tags=shadow,remoteresource
 default=false
 type=bool
 
-[USE_AFS]
-default=
-type=string
-tags=shadow,pseudo_ops
-
 [USE_NFS]
 default=
 type=string
@@ -1067,11 +1062,6 @@ restart=true
 # XXX This should be a bool
 default=0
 type=int
-tags=sysapi,reconfig
-
-[RESERVE_AFS_CACHE]
-default=false
-type=bool
 tags=sysapi,reconfig
 
 [SYSAPI_GET_LOADAVG]
@@ -1948,16 +1938,6 @@ default=
 type=string
 tags=startd,startd_main
 
-[VMP_HOST_MACHINE]
-default=
-type=string
-tags=startd,startd_main
-
-[VMP_VM_LIST]
-default=
-type=string
-tags=startd,startd_main
-
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
 type=bool
@@ -2151,11 +2131,6 @@ default=
 type=string
 tags=submit
 
-[SANDBOX_TRANSFER_METHOD]
-default=
-type=string
-tags=submit
-
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
 default=true
 type=bool
@@ -2284,11 +2259,6 @@ type=string
 tags=LoadPlugins
 
 [PLUGIN_DIR]
-default=
-type=string
-tags=LoadPlugins
-
-[COLLECTOR_PLUGIN_PYTHON_MODULES]
 default=
 type=string
 tags=LoadPlugins
@@ -3036,11 +3006,6 @@ type=bool
 default=
 type=string
 tags=schedd
-
-[TRANSFERD]
-default=
-type=string
-tags=schedd,tdman
 
 [QUEUE_SUPER_USERS]
 default=root, condor
@@ -5110,35 +5075,6 @@ default=user
 type=string
 description=Permissions on the job's spool directory
 
-[PANDAD]
-default=$(LIBEXEC)/condor_pandad
-win32_default=
-type=path
-description=Path to Panda damon binary
-review=tlmiller
-restart=true
-
-[PANDA_UPDATE_TIMEOUT]
-default=0
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_SIZE]
-default=131072
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_GRACE]
-default=3
-type=int
-reivew=tlmiller
-restart=true
-
-[PANDA_STATISTICS_LOG]
-default=/tmp/pandaStatisticsLog
-type=string
-review=tlmiller
-
 [USE_KEYRING_SESSIONS]
 default=false
 type=bool
@@ -6356,23 +6292,6 @@ default : @end
 	ENABLE_PERSISTENT_CONFIG=True
 	PERSISTENT_CONFIG_DIR=$(SPOOL)
 	use FEATURE : REMOTE_RUNTIME_CONFIG($(0))
-@end
-
-# note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
-[$FEATURE.VMWARE]
-description=Settings to use VMWARE with VM Universe
-default : @end
-	VM_TYPE=vmware
-	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
-	VM_MAX_NUMBER=$(NUM_CPUS)
-	VM_NETWORKING_TYPE=nat
-	VM_NETWORKING_DEFAULT_TYPE=nat
-	VMWARE_PERL=perl
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
-	VMWARE_NAT_NETWORKING_TYPE=nat
-	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
-	VMWARE_NETWORKING_TYPE=nat
-	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
 [$FEATURE.GPUs]

@@ -395,7 +395,8 @@ int Condor_Auth_FS::authenticate_continue(CondorError* errstack, bool non_blocki
 						"Bad attributes on (%s)", m_new_dir.c_str());
 			} else {
 				// need to lookup username from dir and do setOwner()
-				char *tmpOwner = my_username( stat_buf.st_uid );
+				char *tmpOwner = nullptr;
+				pcache()->get_user_name(stat_buf.st_uid, tmpOwner);
 				if (!tmpOwner) {
 					// this could happen if, for instance,
 					// getpwuid() failed.

@@ -36,7 +36,7 @@ envobj.MergeFrom(ad);
 // Add env settings in raw V2 syntax.
 envobj.MergeFromV2Raw("env1=val1 env2=val2 ...");
 // Add env settings in raw V1 syntax.
-envobj.MergeFromV1Raw("env1=val1;env2=val2;...");
+envobj.MergeFromV1Raw("env1=val1;env2=val2;...", ';');
 // Add env settings in input V1or2 syntax (in this example V2 input syntax).
 envobj.MergeFromV1RaworV2Quoted("\"env1=val1 env2=val2 ...\"");
 // Add a single environment value.
@@ -145,8 +145,8 @@ class Env {
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1 format.
-	bool MergeFromV1Raw( const char *delimitedString, MyString *error_msg );
-	bool MergeFromV1Raw( const char *delimitedString, std::string & error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1or2 format,
@@ -203,23 +203,28 @@ class Env {
 		// was previously in the environment.
 	bool DeleteEnv( const std::string & );
 
-		// Update ClassAd with new environment, possibly adjusting the
-		// format depending on the Condor version and opsys of the
-		// receiver.
-	bool InsertEnvIntoClassAd( ClassAd *ad, MyString *error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
-	bool InsertEnvIntoClassAd( ClassAd *ad, std::string & error_msg, char const *opsys=NULL, CondorVersionInfo *condor_version=NULL ) const;
+		// write this class into the V2 environment attribute of the job
+	bool InsertEnvIntoClassAd(ClassAd & ad) const;
+		// Write this class into the V1 enviroment attribute of the job
+		// If not all of the enviroment can be expressed in that format, an error is returned and the job is unchanged
+	bool InsertEnvV1IntoClassAd(ClassAd & ad, std::string & error_msg, char delim=0) const;
+		// write this class into job as either V1 or V2 environment, using V1 if the job already has V1 only
+		// and the contents of this class can be expressed as V1, otherwise use V2
+		// The warn message string will be set when the job formerly had  V1 enviroment but the insert was forced to switch to V2
+		// a non-empty warn message does not indicate failure, it indicates that the V2 attribute was used
+	bool InsertEnvIntoClassAd(ClassAd & ad, std::string & warn_msg) const;
 
-		// Returns true if specified condor version requires V1 env syntax.
+		// Returns true if specified condor version requires V1 env syntax. (6.7.15?)
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
 
 		// Modern style: space delimited (and quoted as necessary).
 		// If mark_v2=true, then result will be identifiable as V2 by
 		// MergeV1or2()
-	bool getDelimitedStringV2Raw(MyString *result,MyString *error_msg,bool mark_v2=false) const;
+	bool getDelimitedStringV2Raw(MyString *result, bool mark_v2=false) const;
 	bool getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
 
 	 // old-style ; or | delimited
-	bool getDelimitedStringV1Raw(MyString *result,MyString *error_msg,char delim='\0') const;
+	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
 
 		// Return V1 string if possible, o.w. marked V2 string.
 		// Sets this object's environment to that of ad, and uses
@@ -270,6 +275,8 @@ class Env {
 
 		// Return the appropriate environment delimiter for this opsys.
 	static char GetEnvV1Delimiter(char const *opsys=NULL);
+		// Return the environment delimiter from this ad or for the current platform if the ad does not specify
+	static char GetEnvV1Delimiter(const ClassAd& ad);
 
 		// Returns true if string is V2Quoted format.  In other words,
 		// this checks that the string begins with a double-quote.
@@ -304,11 +311,15 @@ class Env {
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
 
-	static bool ReadFromDelimitedString( char const *&input, char *output );
+	static bool ReadFromDelimitedString( char const *&input, char *output, char delim );
 
 	static void WriteToDelimitedString(char const *input,MyString &output);
 
 	static void AddErrorMessage(char const *msg,MyString *error_buffer);
+	static void AddErrorMessage(char const *msg,std::string &error_buffer) {
+		if ( ! error_buffer.empty()) { error_buffer += "\n"; }
+		error_buffer += msg;
+	}
 };
 
 #endif	// _ENV_H

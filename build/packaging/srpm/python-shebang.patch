@@ -28,26 +28,6 @@ index ead8870555..2e514393b3 100755
  
  from __future__ import print_function
  
-diff --git a/src/condor_contrib/campus_factory/bin/glidein_creation b/src/condor_contrib/campus_factory/bin/glidein_creation
-index 3f99a5b9a6..8067a71af9 100755
---- a/src/condor_contrib/campus_factory/bin/glidein_creation
-+++ b/src/condor_contrib/campus_factory/bin/glidein_creation
-@@ -1,4 +1,4 @@
--#!/usr/bin/python
-+#!/usr/bin/python3
- 
- import warnings
- warnings.filterwarnings("ignore", category=DeprecationWarning)
-diff --git a/src/condor_contrib/campus_factory/bin/runfactory b/src/condor_contrib/campus_factory/bin/runfactory
-index a2a9c5fb0b..3af42cfbaa 100755
---- a/src/condor_contrib/campus_factory/bin/runfactory
-+++ b/src/condor_contrib/campus_factory/bin/runfactory
-@@ -1,4 +1,4 @@
--#!/usr/bin/python
-+#!/usr/bin/python3
- from optparse import OptionParser
- 
- from campus_factory.Factory import Factory
 diff --git a/src/condor_gridmanager/slurm_status.py b/src/condor_gridmanager/slurm_status.py
 index c13f7eefcf..0d1b6933b6 100755
 --- a/src/condor_gridmanager/slurm_status.py

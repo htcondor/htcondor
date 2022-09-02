@@ -2482,12 +2482,6 @@ using a shared file system`.
     Since each machine will have a different ``$(FILESYSTEM_DOMAIN)``,
     they will not be considered to have shared file systems.
 
-:macro-def:`RESERVE_AFS_CACHE`
-    If your machine is running AFS and the AFS cache lives on the same
-    partition as the other HTCondor directories, and you want HTCondor
-    to reserve the space that your AFS cache is configured to use, set
-    this macro to ``True``. It defaults to ``False``.
-
 :macro-def:`USE_NFS`
     This configuration variable changes the semantics of Chirp
     file I/O when running in the vanilla, java or parallel universe. If
@@ -3597,7 +3591,7 @@ htcondor for running backfill jobs` for details.
     This string-valued parameter has no default, and should be set to the
     Linux LVM logical volume to be used for ephemeral execute directories.
     ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is ``True``, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is ``True``, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_VOLUME_GROUP_NAME`
@@ -3605,7 +3599,7 @@ htcondor for running backfill jobs` for details.
     name of the Linux LVM volume group to be used for logical volumes
     for ephemeral execute directories.
     ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_BACKING_FILE`
@@ -4269,6 +4263,14 @@ details.
     may request with the ``docker_network_type`` submit file command.
     Advertised into the slot attribute DockerNetworks.
 
+:macro-def:`DOCKER_SHM_SIZE`
+    An optional knob that can be configured to adapt the ``--shm-size`` Docker
+    container create argument. Allowed values are integers in bytes.
+    If not set, ``--shm-size`` will not be specified by HTCondor and Docker's
+    default is used.
+    This is used to configure the size of the container's ``/dev/shm`` size adapting
+    to the job's requested memory.
+
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running
@@ -4300,7 +4302,7 @@ create a private filesystem for the scratch directory for each job.
     A string that names the Linux LVM logical volume for storage 
     for per-job scratch directories.
 
-:macro-def:`STARTD_ENFORCE_DISK_USAGE`
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
     A boolean that defaults to false that controls whether the
     starter puts a job on hold that fills the per-job filesystem.
 
@@ -7025,6 +7027,17 @@ These macros affect the *condor_negotiator*.
     :doc:`/classad-attributes/negotiator-classad-attributes` for a list of
     attributes that are published.
 
+:macro-def:`NEGOTIATOR_NUM_THREADS`
+    An integer that specifies the number of threads the negotiator should
+    use when trying to match a job to slots.  The default is 1.  For
+    sites with large number of slots, where the negotiator is running
+    on a large machine, setting this to a larger value may result in
+    faster negotiation times.  Setting this to more than the number
+    of cores will result in slow downs.  An administrator setting this
+    should also consider what other processes on the machine may need
+    cores, such as the collector, and all of its forked children,
+    the condor_master, and any helper programs or scripts running there.
+
 :macro-def:`PRIORITY_HALFLIFE`
     This macro defines the half-life of the user priorities. See
     :ref:`users-manual/priorities-and-preemption:user priority` on
@@ -9589,7 +9602,7 @@ machine within the pool. They specify items related to the
 
 :macro-def:`VM_TYPE`
     Specifies the type of supported virtual machine software. It will be
-    the value kvm, xen or vmware. There is no default value for this
+    the value ``kvm`` or ``xen``. There is no default value for this
     required configuration variable.
 
 :macro-def:`VM_MEMORY`
@@ -9688,61 +9701,12 @@ machine within the pool. They specify items related to the
     For Xen and KVM only, the command-line arguments to be given to the
     program specified by ``LIBVIRT_XML_SCRIPT``.
 
-The following configuration variables are specific to the VMware virtual
-machine software.
-
-:macro-def:`VMWARE_PERL`
-    The complete path and file name to *Perl*. There is no default value
-    for this required variable.
-
-:macro-def:`VMWARE_SCRIPT`
-    The complete path and file name of the script that controls VMware.
-    There is no default value for this required variable.
-
-:macro-def:`VMWARE_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. Defined types are ``nat`` or ``bridged``. If a default value
-    is needed, the inserted string will be ``nat``.
-
-:macro-def:`VMWARE_NAT_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. If nat networking is used, this variable's definition takes
-    precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
-
-:macro-def:`VMWARE_BRIDGE_NETWORKING_TYPE`
-    An optional string used in networking that the *condor_vm-gahp*
-    inserts into the VMware configuration file to define a networking
-    type. If bridge networking is used, this variable's definition takes
-    precedence over one defined by ``VMWARE_NETWORKING_TYPE``.
-
-:macro-def:`VMWARE_LOCAL_SETTINGS_FILE`
-    The complete path and file name to a file, whose contents will be
-    inserted into the VMware description file (i.e., the .vmx file)
-    before HTCondor starts the virtual machine. This parameter is
-    optional.
-
 The following configuration variables are specific to the Xen virtual
 machine software.
 
 :macro-def:`XEN_BOOTLOADER`
     A required full path and executable for the Xen bootloader, if the
     kernel image includes a disk image.
-
-The following two macros affect the configuration of HTCondor where
-HTCondor is running on a host machine, the host machine is running an
-inner virtual machine, and HTCondor is also running on that inner
-virtual machine. These two variables have nothing to do with the **vm**
-universe.
-
-:macro-def:`VMP_HOST_MACHINE`
-    A configuration variable for the inner virtual machine, which
-    specifies the host name.
-
-:macro-def:`VMP_VM_LIST`
-    For the host, a comma separated list of the host names or IP
-    addresses for machines running inner virtual machines on a host.
 
 Configuration File Entries Relating to High Availability
 --------------------------------------------------------
@@ -10044,22 +10008,6 @@ These macros affect the high availability operation of HTCondor.
     *condor_transferer* daemon log will be allowed to grow. A value of
     0 specifies that this file may grow without bounds. The default is 1
     MiB.
-
-MyProxy Configuration File Macros
----------------------------------
-
-In some cases, HTCondor can autonomously refresh certificate proxies
-via *MyProxy*, available from
-`http://myproxy.ncsa.uiuc.edu/ <http://myproxy.ncsa.uiuc.edu/>`_.
-
-:macro-def:`MYPROXY_GET_DELEGATION`
-    The full path name to the *myproxy-get-delegation* executable,
-    installed as part of the *MyProxy* software. Often, it is necessary
-    to wrap the actual executable with a script that sets the
-    environment, such as the ``LD_LIBRARY_PATH``, correctly. If this
-    macro is defined, HTCondor-G and *condor_credd* will have the
-    capability to autonomously refresh proxy certificates. By default,
-    this macro is undefined.
 
 Configuration File Entries Relating to condor_ssh_to_job
 -----------------------------------------------------------

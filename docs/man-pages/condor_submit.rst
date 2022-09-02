@@ -16,7 +16,7 @@ Synopsis
 [**-dump** *filename*] [**-interactive** ] [**-factory** ]
 [**-allow-crlf-script** ] [**-dry-run** ]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
-[**-stm** *method*] [**<submit-variable>=<value>** ] [*submit
+[**<submit-variable>=<value>** ] [*submit
 description file* ] [**-queue** *queue_arguments*]
 
 Description
@@ -114,8 +114,6 @@ Options
     files defined with
     **output** :index:`output<single: output; submit commands>` or
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
- **-password** *passphrase*
-    Specify a password to the *MyProxy* server.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
@@ -203,9 +201,6 @@ Options
     If the jobs specified by the submit description file causes more
     than a single cluster value to be assigned, then no jobs are
     submitted for execution and an error message is generated.
- **-stm** *method*
-    Specify the method use to move a sandbox into HTCondor. *method* is
-    one of **stm_use_schedd_only** or **stm_use_transferd**.
  **<submit-variable>=<value>**
     Defines a submit command or submit variable with a value, and parses
     it as if it was placed at the beginning of the submit description
@@ -2137,49 +2132,6 @@ COMMANDS FOR THE GRID
     For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
 
-    :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
- MyProxyCredentialName = <symbolic name>
-    The symbolic name that identifies a credential to the *MyProxy*
-    server. This symbolic name is set as the credential is initially
-    stored on the server (using *myproxy-init*).
-
-    :index:`MyProxyHost<single: MyProxyHost; submit commands>`
- MyProxyHost = <host>:<port>
-    The Internet address of the host that is the *MyProxy* server. The
-    **host** may be specified by either a host name (as in
-    ``head.example.com``) or an IP address (of the form 123.456.7.8).
-    The **port** number is an integer.
-
-    :index:`MyProxyNewProxyLifetime<single: MyProxyNewProxyLifetime; submit commands>`
- MyProxyNewProxyLifetime = <number-of-minutes>
-    The new lifetime (in minutes) of the proxy after it is refreshed.
-
-    :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
- MyProxyPassword = <password>
-    The password needed to refresh a credential on the *MyProxy* server.
-    This password is set when the user initially stores credentials on
-    the server (using *myproxy-init*). As an alternative to using
-    **MyProxyPassword** :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
-    in the submit description file, the password may be specified as a
-    command line argument to *condor_submit* with the *-password*
-    argument.
-
-    :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
- MyProxyRefreshThreshold = <number-of-seconds>
-    The time (in seconds) before the expiration of a proxy that the
-    proxy should be refreshed. For example, if
-    **MyProxyRefreshThreshold** :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
-    is set to the value 600, the proxy will be refreshed 10 minutes
-    before it expires.
-
-    :index:`MyProxyServerDN<single: MyProxyServerDN; submit commands>`
- MyProxyServerDN = <credential subject>
-    A string that specifies the expected Distinguished Name (credential
-    subject, abbreviated DN) of the *MyProxy* server. It must be
-    specified when the *MyProxy* server DN does not follow the
-    conventional naming scheme of a host credential. This occurs, for
-    example, when the *MyProxy* server DN begins with a user credential.
-
     :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
@@ -2393,34 +2345,9 @@ COMMANDS FOR THE VM UNIVERSE
     specified, the default value is ``False``.
 
     :index:`vm_type<single: vm_type; submit commands>`
- vm_type = <vmware | xen | kvm>
+ vm_type = <xen | kvm>
     Specifies the underlying virtual machine software that this job
     expects.
-
-    :index:`vmware_dir<single: vmware_dir; submit commands>`
- vmware_dir = <pathname>
-    The complete path and name of the directory where VMware-specific
-    files and applications such as the VMDK (Virtual Machine Disk
-    Format) and VMX (Virtual Machine Configuration) reside. This command
-    is optional; when not specified, all relevant VMware image files are
-    to be listed using
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
-
-    :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`
- vmware_should_transfer_files = <True | False>
-    Specifies whether HTCondor will transfer VMware-specific files
-    located as specified by
-    **vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` to the
-    execute machine (``True``) or rely on access through a shared file
-    system (``False``). Omission of this required command (for VMware vm
-    universe jobs) results in an error message from *condor_submit*,
-    and the job will not be submitted.
-
-    :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
- vmware_snapshot_disk = <True | False>
-    When ``True``, causes HTCondor to utilize a VMware snapshot disk for
-    new or modified files. If not specified, the default value is
-    ``True``.
 
     :index:`xen_initrd<single: xen_initrd; submit commands>`
  xen_initrd = <image-file>

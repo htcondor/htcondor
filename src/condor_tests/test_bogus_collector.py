@@ -15,7 +15,7 @@ logger.setLevel(logging.DEBUG)
 # Setup the startd to also report to a bogus collector
 @standup
 def condor(test_dir):
-    with Condor(test_dir / "condor", config={"COLLECTOR_HOST": "$(COLLECTOR_HOST), bogus.example.com"}) as condor:
+    with Condor(test_dir / "condor", config={"NUM_CPUS": "4", "COLLECTOR_HOST": "$(COLLECTOR_HOST), bogus.example.com"}) as condor:
         yield condor
 
 @action

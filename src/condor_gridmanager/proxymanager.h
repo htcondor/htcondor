@@ -39,30 +39,6 @@ struct Callback {
 
 struct ProxySubject;
 
-struct MyProxyEntry {
-	char * myproxy_host;
-	//int myproxy_port;
-	char * myproxy_server_dn;
-	char * myproxy_credential_name;
-	
-	int refresh_threshold; // in minutes
-	int new_proxy_lifetime; // in hours
-
-	char * myproxy_password;
-
-	// For requesting MyProxy password
-	int cluster_id;
-	int proc_id;
-
-	// get-delegation-invocation details
-	time_t last_invoked_time;
-	int get_delegation_pid;
-	int get_delegation_err_fd;
-	char  * get_delegation_err_filename ;
-	int get_delegation_password_pipe[2]; // to send pwd via stdin
-};
-
-
 struct Proxy {
 	char *proxy_filename;
 	int expiration_time;
@@ -71,7 +47,6 @@ struct Proxy {
 	int num_references;
 	SimpleList<Callback> m_callbacks;
 	
-	SimpleList<MyProxyEntry*> myproxy_entries;
 	ProxySubject *subject;
 };
 
@@ -103,14 +78,6 @@ Proxy *AcquireProxy( const ClassAd *job_ad, std::string &error,
 Proxy *AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 void ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr = NULL, Service *data = NULL );
 void DeleteProxy (Proxy *& proxy);
-void DeleteMyProxyEntry (MyProxyEntry *& proxy);
-
-int RefreshProxyThruMyProxy (Proxy * proxy);
-int MyProxyGetDelegationReaper(int exitPid, int exitStatus);
-int GetMyProxyPasswordFromSchedD (int cluster_id, int proc_id, char ** password);
-extern int myproxyGetDelegationReaperId;
-
-//int SetMyProxyHostForProxy ( const char* hostport, const char * server_dn, const char * myproxy_pwd, const Proxy * proxy );
 
 void doCheckProxies();
 

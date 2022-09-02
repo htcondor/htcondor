@@ -610,7 +610,6 @@ direct_condor_submit(const Dagman &dm, Job* node,
 		submitHash->init(JSM_DAGMAN);
 		submitHash->setDisableFileChecks(true);
 		submitHash->setScheddVersion(CondorVersion());
-		// if (myproxy_password) submitHash.setMyProxyPassword(myproxy_password);
 		init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, true);
 
 		// open the submit file

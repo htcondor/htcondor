@@ -432,7 +432,7 @@ read_proc_cpuinfo( CpuInfo	*cpuinfo )
 		buf[sizeof(buf)-1] = '\0';
 
 		if ( strlen(buf) >= 1 ) {
-			tmp = (buf - 1 + strlen(buf));
+			tmp = (buf + strlen(buf) - 1);
 			while( isspace(*tmp) && (tmp != buf) ) {
 				*tmp = '\0';
 				tmp--;

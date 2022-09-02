@@ -28,14 +28,8 @@ an executable file, but instead provides a string that identifies the
 job for tools such as *condor_q*. Other commands specific to the type
 of virtual machine software identify the disk image.
 
-VMware, Xen, and KVM virtual machine software are supported. As these
+Xen and KVM virtual machine software are supported. As these
 differ from each other, the submit description file specifies one of
-
-.. code-block:: condor-submit
-
-    vm_type = vmware
-
-or
 
 .. code-block:: condor-submit
 
@@ -109,12 +103,10 @@ are
 -  **vm_networking_type** :index:`vm_networking_type<single: vm_networking_type; submit commands>`
 -  **vm_disk** :index:`vm_disk<single: vm_disk; submit commands>`
 
-For VMware virtual machines, setting values for these commands causes
-HTCondor to modify the ``.vmx`` file, overwriting existing values. For
-KVM and Xen virtual machines, HTCondor uses these values when it
+HTCondor uses these values when it
 produces the description file.
 
-For Xen and KVM jobs, if any files need to be transferred from the
+If any files need to be transferred from the
 submit machine to the machine where the **vm** universe job will
 execute, HTCondor must be explicitly told to do so with the standard
 file transfer attributes:
@@ -130,78 +122,6 @@ machines where the job may execute must be listed.
 
 Further commands specify information that is specific to the virtual
 machine type targeted.
-
-VMware-Specific Submit Commands
-'''''''''''''''''''''''''''''''
-
-:index:`submit commands specific to VMware<single: submit commands specific to VMware; vm universe>`
-
-Specific to VMware, the submit description file command
-**vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` gives the
-path and directory (on the machine from which the job is submitted) to
-where VMware-specific files and applications reside. One example of a
-VMware-specific application is the VMDK files, which form a virtual hard
-drive (disk image) for the virtual machine. VMX files containing the
-primary configuration for the virtual machine would also be in this
-directory.
-
-HTCondor must be told whether or not the contents of the **vmware_dir**
-directory must be transferred to the machine where the job is to be
-executed. This required information is given with the submit command
-**vmware_should_transfer_files** :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`.
-With a value of ``True``, HTCondor does transfer the contents of the
-directory. With a value of ``False``, HTCondor does not transfer the
-contents of the directory, and instead presumes that access to this
-directory is available through a shared file system.
-
-By default, HTCondor uses a snapshot disk for new and modified files.
-They may also be utilized for checkpoints. The snapshot disk is
-initially quite small, growing only as new files are created or files
-are modified. When **vmware_should_transfer_files** is ``True``, a
-job may specify that a snapshot disk is not to be used with the command
-
-.. code-block:: condor-submit
-
-    vmware_snapshot_disk = False
-
-In this case, HTCondor will utilize original disk files in producing
-checkpoints. Note that *condor_submit* issues an error message and does
-not submit the job if both **vmware_should_transfer_files** and
-**vmware_snapshot_disk** :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
-are ``False``.
-
-Because *VMware Player* does not support snapshots, machines using
-*VMware Player* may only run **vm** jobs that set
-**vmware_snapshot_disk** to ``False``. These jobs will also set
-**vmware_should_transfer_files** to ``True``. A job using *VMware
-Player* will go on hold if it attempts to use a snapshot. The pool
-administrator should have configured the pool such that machines will
-not start jobs they can not run.
-
-Note that if snapshot disks are requested and file transfer is not being
-used, the **vmware_dir** setting given in the submit description file
-should not contain any symbolic link path components, as described on
-the
-`https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes <https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=HowToAdminRecipes>`_
-page under the answer to why VMware jobs with symbolic links fail.
-
-Here is a sample submit description file for a VMware virtual machine:
-
-.. code-block:: condor-submit
-
-    universe                     = vm
-    executable                   = vmware_sample_job
-    log                          = simple.vm.log.txt
-    vm_type                      = vmware
-    vm_memory                    = 64
-    vmware_dir                   = C:\condor-test
-    vmware_should_transfer_files = True
-    queue
-
-This sample uses the **vmware_dir** command to identify the location of
-the disk image to be executed as an HTCondor job. The contents of this
-directory are transferred to the machine assigned to execute the
-HTCondor job.
 
 Xen-Specific Submit Commands
 ''''''''''''''''''''''''''''
@@ -269,14 +189,6 @@ machine or a different one within the HTCondor pool.
 Disk Images
 -----------
 
-VMware on Windows and Linux
-'''''''''''''''''''''''''''
-
-Following the platform-specific guest OS installation instructions found
-at
-`http://partnerweb.vmware.com/GOSIG/home.html <http://partnerweb.vmware.com/GOSIG/home.html>`_,
-creates a VMware disk image.
-
 Xen and KVM
 '''''''''''
 
@@ -340,14 +252,6 @@ VMGAHP_ERR_JOBCLASSAD_NO_VM_MEMORY_PARAM
     VM GAHP.  HTCondor will usually prevent you from submitting a VM universe job
     without JobVMMemory set.  Examine your job and verify that JobVMMemory is set.
     If it is, please contact your administrator.
-
-VMGAHP_ERR_JOBCLASSAD_NO_VMWARE_VMX_PARAM
-    The attribute VMPARAM_VMware_Dir was not set in the job ad sent to the
-    VM GAHP.  HTCondor will usually set this attribute when you submit a valid
-    VMWare job (it is derived from vmware_dir).  If you used condor_submit to
-    submit this job, contact your administrator.  Otherwise, examine your job
-    and verify that VMPARAM_VMware_Dir is set.  If it is, contact your
-    administrator.
 
 VMGAHP_ERR_JOBCLASSAD_KVM_NO_DISK_PARAM
     The attribute VMPARAM_vm_Disk was not set in the job ad sent to the

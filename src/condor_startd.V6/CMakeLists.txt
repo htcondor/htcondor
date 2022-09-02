@@ -44,10 +44,6 @@ startd_named_classad_list.cpp
 StartdPluginManager.cpp
 Starter.cpp
 util.cpp
-vm_common.cpp
-VMMachine.cpp
-VMManager.cpp
-VMRegister.cpp
 vmuniverse_mgr.cpp
 )
 
@@ -70,4 +66,4 @@ if (HAVE_BOINC)
 list(APPEND startdElements boinc_mgr.cpp)
 endif()
 
-condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS};${CONDOR_QMF}" INSTALL "${C_SBIN}")
+condor_daemon( EXE condor_startd SOURCES "${startdElements}" LIBRARIES "${CONDOR_LIBS}" INSTALL "${C_SBIN}")
