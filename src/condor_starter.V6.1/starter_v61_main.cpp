@@ -164,15 +164,22 @@ printClassAd( void )
 
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
-		printf("%s = True\n", ATTR_HAS_SINGULARITY);
-		printf("%s = True\n", ATTR_HAS_CONTAINER);
+		//  enabled means that singularity --version returned sensible output
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
+		bool shouldAdvertiseSingularity = false;
 		if (htcondor::Singularity::canRunSandbox())  {
 			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
+			shouldAdvertiseSingularity = true;
 		}
 		if (htcondor::Singularity::canRunSIF())  {
 			printf("%s = True\n", ATTR_HAS_SIF);
+			shouldAdvertiseSingularity = true;
+		}
+
+		if (shouldAdvertiseSingularity) {
+			printf("%s = True\n", ATTR_HAS_SINGULARITY);
+			printf("%s = True\n", ATTR_HAS_CONTAINER);
 		}
 	}
 

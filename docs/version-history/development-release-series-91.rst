@@ -96,6 +96,10 @@ Bugs Fixed:
   parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
   :jira:`692`
   
+- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+  where it wouldn't work.
+  :jira:`1274`
+
 - Fixed bug where a DAGMan job would write a warning for not using the keywords
   **JOB** and **RETRY** in node submit file to the ``.dagman.out`` file.
   :jira:`1273`
