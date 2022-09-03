@@ -86,13 +86,15 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	//An internal Condor protocol error was encountered when transferring files.
 	InvalidTransferAck = 11,
 
-	//The starter or shadow failed to receive or write job files.
+	//There was a failure transferring the job's output (or checkpoint) files
+	//from the EP back to the the AP.
 	//The subcode will contain the unix errno.
-	DownloadFileError = 12,
+	TransferOutputError = 12,
 
-	//The starter or shadow failed to read or send job files.
+	//There was a failure transferring the job's input files
+	//from the AP to the EP.
 	//The subcode will contain the unix errno.
-	UploadFileError = 13,
+	TransferInputError = 13,
 
 	//The initial working directory of the job cannot be accessed.
 	//The subcode will contain the unix errno.
@@ -176,6 +178,18 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!
 )
 
+BETTER_ENUM(FILETRANSFER_HOLD_CODE, int,
 
+	// These are two enums are only to be used by the FileTransfer object.
+
+	//The starter or shadow failed to receive or write job files.
+	//The subcode will contain the unix errno.
+	DownloadFileError = 12,
+
+	//The starter or shadow failed to read or send job files.
+	//The subcode will contain the unix errno.
+	UploadFileError = 13
+
+)
 
 #endif
