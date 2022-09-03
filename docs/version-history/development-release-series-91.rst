@@ -19,7 +19,7 @@ New Features:
   File Transfer errors.  Previously if there was a problem with File Transfer, the
   job can go on hold with hold reason code ``DownloadFileError`` (12) or ``UploadFileError`` (13).
   Unfortunately, this did not distinguish if the error happened while transferring
-  the job’s input or output sandbox, which is what most people wanted to know.
+  the job's input or output sandbox, which is what most people wanted to know.
   Thus hold reason code 12 and 13 have been re-purposed to be
   ``TransferOutputError`` and ``TransferInputError`` respectively, telling users the error
   occurred either while transferring the job input or output/checkpoint sandbox.
