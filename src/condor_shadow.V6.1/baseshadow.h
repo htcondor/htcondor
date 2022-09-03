@@ -465,6 +465,10 @@ class BaseShadow : public Service
 		*/
 	void checkSwap( void );
 
+		/** Improve HoldReason string and hold codes before sending this info
+			to the job classad in the schedd. */
+	std::string improveHoldAttributes(const char* const orig_hold_reason, int  &hold_reason_code, int &hold_reason_subcode);
+
 	// config file parameters
 	int reconnect_ceiling;
 	double reconnect_e_factor;
