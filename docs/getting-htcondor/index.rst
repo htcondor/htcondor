@@ -101,10 +101,9 @@ HTCondor also supports cloud-native distribution.
   `minicondor image <https://aws.amazon.com/marketplace/pp/B073WHVRPR>`_
   preconfigured for use with :ref:`condor_annex <annex_users_guide>`,
   which allows to easily add cloud resources to your pool.
-* For Google Cloud Platform, we have a technology preview of a
-  :ref:`google_cloud_marketplace` that lets you construct an entire
-  HTCondor pool via your web browser.  If you're new to HTCondor,
-  you can proceed to the :ref:`quick_start_guide` immediately after
+* The :ref:`google_cloud_hpc_toolkit` lets you construct an entire HTCondor
+  pool that scales automatically to run submitted jobs. If you're new to
+  HTCondor, you can proceed to the :ref:`quick_start_guide` immediately after
   following those instructions.
 * We also have documention on creating a
   :doc:`../cloud-computing/condor-in-the-cloud` by hand.
