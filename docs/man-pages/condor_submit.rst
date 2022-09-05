@@ -257,6 +257,7 @@ numerous. They are listed here in alphabetical order by category.
 BASIC COMMANDS
 
     :index:`arguments<single: arguments; submit commands>`
+
  arguments = <argument_list>
     List of arguments to be supplied to the executable as part of the
     command line.
@@ -365,9 +366,10 @@ BASIC COMMANDS
     This is for the convenience of Windows users.
 
     :index:`environment<single: environment; submit commands>`
+    :index:`setting, for a job<single: setting, for a job; environment variables>`\ 
+
  environment = <parameter_list>
-    List of environment
-    :index:`setting, for a job<single: setting, for a job; environment variables>`\ variables.
+    List of environment variables.
 
     There are two different formats for specifying the environment
     variables: the old format and the new format. The old format is
@@ -771,6 +773,7 @@ BASIC COMMANDS
 COMMANDS FOR MATCHMAKING
 
     :index:`rank<single: rank; submit commands>`
+
  rank = <ClassAd Float Expression>
     A ClassAd Floating-Point expression that states how to rank machines
     which have already met the requirements expression. Essentially,
@@ -971,6 +974,7 @@ FILE TRANSFER COMMANDS
 
     :index:`dont_encrypt_input_files<single: dont_encrypt_input_files; submit commands>`
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
+
  dont_encrypt_input_files = < file1,file2,file... >
     A comma and/or space separated list of input files that are not to
     be network encrypted when transferred with the file transfer
@@ -1457,6 +1461,7 @@ FILE TRANSFER COMMANDS
 POLICY COMMANDS
 
     :index:`allowed_execute_duration<single: allowed_execute_duration; submit commands>`
+
  allowed_execute_duration = <integer>
     The longest time for which a job may be executing.  Jobs which exceed
     this duration will go on hold.  This time does not include file-transfer
@@ -1773,6 +1778,7 @@ POLICY COMMANDS
 COMMANDS FOR THE GRID
 
     :index:`arc_application<single: arc_application; submit commands>`
+
  arc_application = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Application>`` section of the ARC ADL job
@@ -2233,6 +2239,7 @@ COMMANDS FOR THE GRID
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
     :index:`hold_kill_sig<single: hold_kill_sig; submit commands>`
+
  hold_kill_sig = <signal-number>
     For the scheduler universe only,
     **signal-number** :index:`signal-number<single: signal-number; submit commands>` is
@@ -2282,6 +2289,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 COMMANDS FOR THE VM UNIVERSE
 
     :index:`vm_disk<single: vm_disk; submit commands>`
+
  vm_disk = file1:device1:permission1, file2:device2:permission2:format2, ...
     A list of comma separated disk files. Each disk file is specified by
     4 colon separated fields. The first field is the path and file name
@@ -2381,6 +2389,7 @@ COMMANDS FOR THE VM UNIVERSE
 COMMANDS FOR THE DOCKER UNIVERSE
 
     :index:`docker_image<single: docker_image; submit commands>`
+
  docker_image = < image-name >
     Defines the name of the Docker image that is the basis for the
     docker container.
@@ -2395,6 +2404,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     is the case, additional values may be valid here.
 
     :index:`container_service_names<single: container_service_names; submit commands>`
+
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
@@ -2407,7 +2417,9 @@ COMMANDS FOR THE DOCKER UNIVERSE
     service.
 
 COMMANDS FOR THE CONTAINER UNIVERSE
+
     :index:`container_image<single: container_image; submit commands>`
+
  container_image = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
@@ -2421,6 +2433,7 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 ADVANCED COMMANDS
 
     :index:`accounting_group<single: accounting_group; submit commands>`
+
  accounting_group = <accounting-group-name>
     Causes jobs to negotiate under the given accounting group. This
     value is advertised in the job ClassAd as ``AcctGroup``. The
