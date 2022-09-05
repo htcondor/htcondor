@@ -3610,11 +3610,11 @@ htcondor for running backfill jobs` for details.
     to hold the blocks these filesystems are created from.
 
 :macro-def:`THINPOOL_HIDE_MOUNT`
-    A boolean value that defaults to false.  When thinpool ephemeral
+    A boolean value that defaults to ``false``.  When thinpool ephemeral
     filesystems are enabled (as described above), if this knob is
-    set to true, the mount will only be visible to the job and the
+    set to ``true``, the mount will only be visible to the job and the
     starter.  Any process in any other process tree will not be able
-    to see the mount.  Setting this to true also breaks docker universe
+    to see the mount.  Setting this to true breaks Docker universe.
 
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
