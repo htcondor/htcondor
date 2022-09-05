@@ -1,7 +1,5 @@
-
-
 *condor_ssl_fingerprint*
-======================
+========================
 
 list the fingerprint of X.509 certificates for use with SSL authentication
 :index:`condor_ssl_fingerprint<single: condor_ssl_fingerprint; HTCondor commands>`\ :index:`condor_ssl_fingerprint command`

@@ -39,7 +39,7 @@ New Features:
 - Added support for ephermal per-job execute directories
   allocated from LVM or from a backing file on disk, when HTCondor is running
   as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
-  enables this, see :ref:`admin-manual/directories` for more details.
+  enables this, see the :doc:`../admin-manual/directories` page for details.
   :jira:`912`
 
 - Added extended submit help which can be defined in the schedd using the new
@@ -109,7 +109,7 @@ New Features:
   File Transfer errors.  Previously if there was a problem with File Transfer, the
   job can go on hold with hold reason code ``DownloadFileError`` (12) or ``UploadFileError`` (13).
   Unfortunately, this did not distinguish if the error happened while transferring
-  the job’s input or output sandbox, which is what most people wanted to know.
+  the job's input or output sandbox, which is what most people wanted to know.
   Thus hold reason code 12 and 13 have been re-purposed to be
   ``TransferOutputError`` and ``TransferInputError`` respectively, telling users the error
   occurred either while transferring the job input or output/checkpoint sandbox.
@@ -229,8 +229,8 @@ Bugs Fixed:
 
 - Fixed the ClassAd shared library extension mechanism.  An earlier
   development series broke the ability for users to add custom
-  ClassAd functions as documented in 
-  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  ClassAd functions as documented in
+  :ref:`extending-classads`.
   :jira:`1196`
 
 Version 9.10.1
