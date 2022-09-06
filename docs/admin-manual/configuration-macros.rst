@@ -3376,7 +3376,7 @@ section.
     disabled by default.
 
     The default value is
-    ``$(DETECTED_CPUS)``\ :index:`DETECTED_CPUS`.
+    ``$(DETECTED_CPUS_LIMIT)``\ :index:`DETECTED_CPUS_LIMIT`.
 
     The *condor_startd* only takes note of the value of this
     configuration variable on start up, therefore it cannot be changed
