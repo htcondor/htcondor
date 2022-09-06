@@ -23,8 +23,8 @@ GenericGahpClient::callGahpFunction(
 	std::string reqline( 1024, '\0' );
 	// if this causes a reallocation I will be very upset.
 	reqline.clear();
-	for( unsigned i = 0; i < arguments.size(); ++i ) {
-		const char * ptr = arguments[i].ptr();
+	for(const auto & argument : arguments) {
+		const char * ptr = argument.ptr();
 		// Arguably, we should EXCEPT() on a NULL ptr.
 		if( ptr == NULL || ptr[0] == '\0' ) {
 			reqline += NULLSTRING;
