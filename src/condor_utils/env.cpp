@@ -37,7 +37,7 @@ static const char env_delimiter = ';';
 static const char env_delimiter = '|';
 #endif
 
-static bool is_permitted_delim(char ch) { return strchr("!#$%&*+,-/:;<>?@^`|~", ch) != nullptr; }
+static bool is_permitted_delim(char ch) { return strchr("!#$%&*+,-/:;<>?@^`|~\x1F", ch) != nullptr; }
 
 Env::Env()
 {
