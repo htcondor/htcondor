@@ -11,6 +11,7 @@ docker://htcondor/nmi-zdev:x86_64_Debian11-09080000
 x86_64_MacOSX15
 docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09080000
 docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09080000
+docker://htcondor/nmi-zdev:x86_64_Ubuntu22-09120000
 x86_64_Windows7
 x86_64_Windows8
 x86_64_Windows10
