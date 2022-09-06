@@ -274,8 +274,10 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 		args.AppendArg( batchId.c_str() );
 	}
 
+		//****Always append this variable to avoid overwriting
 	std::string submitEventNotes = std::string(
 				"submit_event_notes = DAG Node: " ) + DAGNodeName;
+	args.AppendArg( "-a" ); // -a == -append; using -a to save chars
 	args.AppendArg( submitEventNotes.c_str() );
 
 	ASSERT( workflowLogFile );
@@ -488,6 +490,9 @@ static void init_dag_vars(SubmitHash * submitHash,
 			submitHash->set_arg_variable(SUBMIT_KEY_Notification, "NEVER");
 		}
 		
+		std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
+		submitHash->set_arg_variable(SUBMIT_KEY_LogNotesCommand, submitEventNotes.c_str());
+		
 	} else { //All other variables always added to job that don't need to be appended
 	
 		if (batchName && batchName[0]) {
@@ -496,9 +501,6 @@ static void init_dag_vars(SubmitHash * submitHash,
 		if (batchId && batchId[0]) {
 			submitHash->set_arg_variable(SUBMIT_KEY_BatchId, batchId);
 		}
-
-		std::string submitEventNotes = std::string("DAG Node: ") + std::string(DAGNodeName);
-		submitHash->set_arg_variable(SUBMIT_KEY_LogNotesCommand, submitEventNotes.c_str());
 
 		// Append the priority, if we have one.
 		if (priority != 0) {
@@ -577,6 +579,7 @@ direct_condor_submit(const Dagman &dm, Job* node,
 {
 	const char* cmdFile = node->GetCmdFile();
 
+	// TODO: Have inline submits get digested here to allow for prepending of variables
 	// Setup a SubmitHash object
 	// If this was defined inline in the dag file, it's already been parsed, set the pointer
 	// Otherwise we'll initialize and parse it in from the submit file later
@@ -648,6 +651,11 @@ direct_condor_submit(const Dagman &dm, Job* node,
 	else {
 		debug_printf(DEBUG_NORMAL, "Submitting node %s from inline description using direct job submission\n", node->GetJobName());
 		submitHash = node->GetSubmitDesc();
+		/*	If here then it is inline submission and a submit hash has been created already.
+		*	Due to this, we need to call init_dag_vars with before_subfile = true to append
+		*	all the normally prepended vars so they exist in the job ad. -Cole Bollig 2022-09-06
+		*/
+		init_dag_vars(submitHash, dm, node, workflowLogFile, parents, batchName, batchId, true);
 	}
 
 	// set submit keywords defined by dagman and VARS
