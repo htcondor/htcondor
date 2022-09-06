@@ -1,3 +1,9 @@
+condor (9.11.1-1) stable; urgency=medium
+
+  * File transfer errors are identified as occurring during input or output
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 06 Sep 2022 06:38:00 -0500
+
 condor (9.11.0-1) stable; urgency=medium
 
   * Modified GPU attributes to support the new 'require_gpus' submit command
