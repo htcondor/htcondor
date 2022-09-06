@@ -1795,6 +1795,29 @@ char * find_python3_dot(int minor_ver) {
 #endif
 }
 
+void apply_thread_limit(int detected_cpus, MACRO_EVAL_CONTEXT & ctx)
+{
+	char val[32];
+	int thread_limit = detected_cpus;
+	const char * effective_env = nullptr;
+	static const char * const envlimits[] = { "OMP_THREAD_LIMIT", "SLURM_CPUS_ON_NODE" };
+	for (int ii = 0; ii < COUNTOF(envlimits); ++ii) {
+		const char* env = getenv(envlimits[ii]);
+		if (!env) continue;
+
+		int lim = atoi(env);
+		if (lim > 0 && lim < thread_limit) {
+			thread_limit = lim;
+			effective_env = envlimits[ii];
+		}
+	}
+	if (thread_limit < detected_cpus) {
+		snprintf(val,32, "%d", thread_limit);
+		insert_macro("DETECTED_CPUS_LIMIT", val, ConfigMacroSet, DetectedMacro, ctx);
+		dprintf(D_CONFIG, "setting DETECTED_CPUS_LIMIT=%s due to environment %s\n", val, effective_env);
+	}
+}
+
 void
 fill_attributes()
 {
@@ -1946,24 +1969,9 @@ fill_attributes()
 
 	// new for version 10.0. DETECTED_CPUS_LIMIT is the minimum of DETECTED_CPUS and several environment variables
 	// This is meant to limit the default slot count of personal condors and glide-ins
-	int thread_limit = detected_cpus;
-	const char * effective_env = nullptr;
-	static const char * const envlimits[] = { "OMP_THREAD_LIMIT", "SLURM_CPUS_ON_NODE" };
-	for (int ii = 0; ii < COUNTOF(envlimits); ++ii) {
-		const char* env = getenv(envlimits[ii]);
-		if (!env) continue;
-
-		int lim = atoi(env);
-		if (lim > 0 && lim < thread_limit) {
-			thread_limit = lim;
-			effective_env = envlimits[ii];
-		}
-	}
-	if (thread_limit < detected_cpus) {
-		formatstr(val, "%d", thread_limit);
-		insert_macro("DETECTED_CPUS_LIMIT", val.c_str(), ConfigMacroSet, DetectedMacro, ctx);
-		dprintf(D_CONFIG, "setting DETECTED_CPUS_LIMIT=%s due to environment %s\n", val.c_str(), effective_env);
-	}
+	// for this pass (early detection) we set a DETECTED_CPUS_LIMIT only if the environment is less than non-hyper CPUs
+	// in reinsert_specials when we apply the final value of COUNT_HYPERTHREAD_CPUS we will limit again if necessary
+	apply_thread_limit(num_cpus, ctx);
 }
 
 
@@ -3085,6 +3093,10 @@ reinsert_specials( const char* host )
 		// DETECTED_CPUS will be the value that NUM_CPUS will be set to by default.
 		snprintf(buf,40,"%d", count_hyper ? num_hyperthread_cpus : num_cpus);
 		insert_macro("DETECTED_CPUS", buf, ConfigMacroSet, DetectedMacro, ctx);
+		if (count_hyper) {
+			// if hyperthreads are enabled, we have to check again to see if environmental limits apply
+			apply_thread_limit(num_hyperthread_cpus, ctx);
+		}
 	}
 }
 
