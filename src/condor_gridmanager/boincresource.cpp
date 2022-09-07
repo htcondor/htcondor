@@ -320,9 +320,9 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 {
 	if ( !batch_name.empty() ) {
 		BoincBatch *batch = NULL;
-		for (auto & m_batche : m_batches) {
-			if ( m_batche->m_batch_name == batch_name ) {
-				batch = m_batche;
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_batch_name == batch_name ) {
+				batch = next_batch;
 				break;
 			}
 		}
