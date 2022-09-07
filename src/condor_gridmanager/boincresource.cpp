@@ -504,10 +504,10 @@ void BoincResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 {
 	m_statusBatches.clearAll();
-	for (auto & m_batche : m_batches) {
-		if ( m_batche->m_submit_status == BatchSubmitted ||
-			 m_batche->m_submit_status == BatchMaybeSubmitted ) {
-			if ( m_needFullQuery && !m_batche->m_need_full_query ) {
+	for (auto & batch : m_batches) {
+		if ( batch->m_submit_status == BatchSubmitted ||
+			 batch->m_submit_status == BatchMaybeSubmitted ) {
+			if ( m_needFullQuery && !batch->m_need_full_query ) {
 				continue;
 			}
 			m_statusBatches.append( m_batche->m_batch_name.c_str() );
