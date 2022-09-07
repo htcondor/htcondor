@@ -459,7 +459,7 @@ bool BoincResource::BatchReadyToSubmit( BoincBatch *batch, unsigned *delay )
 
 bool BoincResource::JobDone( BoincJob *job )
 {
-	for (auto & m_batche : m_batches) {
+	for (auto & batch : m_batches) {
 
 		if ( m_batche->m_jobs.find( job ) == m_batche->m_jobs.end() ) {
 			continue;
