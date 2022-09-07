@@ -510,7 +510,7 @@ BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 			if ( m_needFullQuery && !batch->m_need_full_query ) {
 				continue;
 			}
-			m_statusBatches.append( m_batche->m_batch_name.c_str() );
+			m_statusBatches.append( batch->m_batch_name.c_str() );
 		}
 	}
 	m_doingFullQuery = m_needFullQuery;
