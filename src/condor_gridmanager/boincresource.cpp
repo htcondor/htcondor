@@ -461,7 +461,7 @@ bool BoincResource::JobDone( BoincJob *job )
 {
 	for (auto & batch : m_batches) {
 
-		if ( m_batche->m_jobs.find( job ) == m_batche->m_jobs.end() ) {
+		if ( batch->m_jobs.find( job ) == batch->m_jobs.end() ) {
 			continue;
 		}
 		m_batche->m_jobs_done.insert( job );
