@@ -826,7 +826,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 				break;
 			}
 			m_activeLeaseBatch = NULL;
-			m_batche->m_last_lease_attempt = time(NULL);
+			batch->m_last_lease_attempt = time(NULL);
 			if ( rc == 0 ) {
 				// success
 				m_batche->m_lease_time = m_activeLeaseTime;
