@@ -829,9 +829,9 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 			batch->m_last_lease_attempt = time(NULL);
 			if ( rc == 0 ) {
 				// success
-				m_batche->m_lease_time = m_activeLeaseTime;
-				for ( set<BoincJob *>::iterator job = m_batche->m_jobs.begin();
-					  job != m_batche->m_jobs.end(); job++ ) {
+				batch->m_lease_time = m_activeLeaseTime;
+				for ( set<BoincJob *>::iterator job = batch->m_jobs.begin();
+					  job != batch->m_jobs.end(); job++ ) {
 
 					(*job)->UpdateJobLeaseSent( m_activeLeaseTime );
 				}
