@@ -29,8 +29,8 @@ pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
 
 void
 pushVectorBack( std::vector< YourString > & arguments, const std::vector< std::string > & v ) {
-	for(const auto & i : v) {
-		arguments.emplace_back(i );
+	for(const auto & item : v) {
+		arguments.emplace_back(item );
 	}
 	arguments.emplace_back(NULLSTRING );
 }
