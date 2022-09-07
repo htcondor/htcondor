@@ -837,7 +837,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 				}
 			} else {
 				dprintf( D_ALWAYS, "Failed to set lease for batch %s: %s\n",
-						 m_batche->m_batch_name.c_str(),
+						 batch->m_batch_name.c_str(),
 						 m_leaseGahp->getErrorString() );
 				// TODO What else do we do?
 			}
