@@ -576,9 +576,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 
 		// If this error looks like it would affect a submit command,
 		// notify all jobs in BatchMaybeSubmitted state.
-		for (auto & m_batche : m_batches) {
-			if ( m_batche->m_submit_status != BatchMaybeSubmitted ||
-				 !m_batche->m_error_message.empty() ) {
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_submit_status != BatchMaybeSubmitted ||
+				 !next_batch->m_error_message.empty() ) {
 				continue;
 			}
 			m_batche->m_error_message = m_statusGahp->getErrorString();
