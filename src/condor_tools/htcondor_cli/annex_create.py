@@ -411,6 +411,7 @@ def populate_remote_temporary_directory(
 
     files = [
         f"-C {local_script_dir} {system}.sh",
+        f"-C {local_script_dir} {system}.fragment",
         f"-C {local_script_dir} {script_base}.pilot",
         f"-C {local_script_dir} {script_base}.multi-pilot",
         f"-C {str(token_file.parent)} {token_file.name}",

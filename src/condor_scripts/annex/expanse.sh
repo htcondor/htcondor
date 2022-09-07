@@ -121,6 +121,19 @@ CLEAN_UP_TIME=300
 
 
 #
+# Pulls in the system-specific variables SCRATCH and CONFIG_FRAGMENT.
+#
+SYSTEM=expanse
+MEMORY_CHUNK_SIZE=3072
+PILOT_BIN_DIR=`dirname "${PILOT_BIN}"`
+. "${PILOT_BIN_DIR}/${SYSTEM}.fragment"
+
+if [[ -z $SCRATCH ]]; then
+    echo "Internal error: SCRATCH not set after loading system-specific fragment."
+    exit 7
+fi
+
+#
 # Create pilot-specific directory on shared storage.  The least-awful way
 # to do this is by having the per-node script NOT exec condor_master, but
 # instead configure the condor_master to exit well before the "run time"
@@ -131,7 +144,6 @@ CLEAN_UP_TIME=300
 #
 
 echo -e "\rStep 1 of 8: Creating temporary directory...."
-SCRATCH=${SCRATCH:-/expanse/lustre/scratch/$USER/temp_project}
 mkdir -p "$SCRATCH"
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
@@ -159,7 +171,6 @@ cd ${PILOT_DIR}
 # PILOT_BIN mainly because this script has too many arguments already.
 SIF_DIR=${PILOT_DIR}/sif
 mkdir ${SIF_DIR}
-PILOT_BIN_DIR=`dirname ${PILOT_BIN}`
 mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
 
 # The pilot scripts need to live in the ${PILOT_DIR} because the front-end
@@ -215,22 +226,7 @@ if [[ $? != 0 ]]; then
     exit 4
 fi
 
-#
-# Create the script we need for Singularity.
-#
-# Unfortunately, the `module` command doesn't work without a bunch of
-# random environmental set-up that's done when we're forking a process;
-# for whatever reason, it's not good enough to run
-# `module load singularitypro` before starting the master.
-# Using a wrapper with bash -l (to load the rc files; without -l, PATH
-# wouldn't be set).  bash -l is quiet on Expanse (unlike Stampede2).
-#
-echo '#!/bin/bash -l
-export USER=`/usr/bin/id -un`
-module load singularitypro
-exec singularity "$@"
-' > ${PILOT_DIR}/singularity.sh
-chmod 755 ${PILOT_DIR}/singularity.sh
+SHELL_FRAGMENT
 
 # It may have take some time to get everything installed, so to make sure
 # we get our full clean-up time, subtract off how long we've been running
@@ -292,6 +288,12 @@ CCB_ADDRESS = \$(COLLECTOR_HOST)
 #
 STARTD_NOCLAIM_SHUTDOWN = 300
 
+# It's a magic constant.  (If the initial update to the collector
+# doesn't work right for some reason, at least try to update it a
+# second time getting bored and commiting suicide.)
+UPDATE_INTERVAL = 137
+
+
 #
 # Don't run for more than two hours, to make sure we have time to clean up.
 #
@@ -320,19 +322,18 @@ endif
 # Subsequent configuration is machine-specific.
 #
 
-# This is made available via 'module load singularitypro', but the
-# starter ignores PATH, so wrap it up.
-SINGULARITY = ${PILOT_DIR}/singularity.sh
-
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
 
-# Create dynamic slots 2 GB at a time.  This number was chosen because it's
-# the amount of RAM handed out per core on Expanse, but we actually bother
-# to set it because we start seeing weird scaling issues with more than 64
-# or so slots.  Since we can't fix that problem right now, avoid it.
+#
+# We have to hand out memory in chunks large enough to avoid the problem(s)
+# HTCondor has with having too many slots.  The appropriate chunk size varies
+# from system to system.
+#
 MUST_MODIFY_REQUEST_EXPRS = TRUE
-MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 2048, quantize(RequestMemory, {128}) })
+MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ ${MEMORY_CHUNK_SIZE}, quantize(RequestMemory, {128}) })
+
+$(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
@@ -404,7 +405,7 @@ if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
-echo '#!/bin/bash' > ${PILOT_DIR}/expanse.slurm
+echo '#!/bin/bash' > ${PILOT_DIR}/hpc.slurm
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
@@ -413,18 +414,16 @@ echo "
 ${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
-# Expanse specific:
-#SBATCH --constraint=\"lustre\"
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/expanse.slurm
+" >> ${PILOT_DIR}/hpc.slurm
 
 #
 # Submit the SLURM job.
 #
 echo -e "\rStep 8 of 8: Submitting SLURM job............"
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/expanse.slurm &> ${SBATCH_LOG}
+sbatch ${PILOT_DIR}/hpc.slurm &> ${SBATCH_LOG}
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."

@@ -121,6 +121,19 @@ CLEAN_UP_TIME=300
 
 
 #
+# Pulls in the system-specific variables SCRATCH and CONFIG_FRAGMENT.
+#
+SYSTEM=anvil
+MEMORY_CHUNK_SIZE=3072
+PILOT_BIN_DIR=`dirname "${PILOT_BIN}"`
+. "${PILOT_BIN_DIR}/${SYSTEM}.fragment"
+
+if [[ -z $SCRATCH ]]; then
+    echo "Internal error: SCRATCH not set after loading system-specific fragment."
+    exit 7
+fi
+
+#
 # Create pilot-specific directory on shared storage.  The least-awful way
 # to do this is by having the per-node script NOT exec condor_master, but
 # instead configure the condor_master to exit well before the "run time"
@@ -131,7 +144,6 @@ CLEAN_UP_TIME=300
 #
 
 echo -e "\rStep 1 of 8: Creating temporary directory...."
-SCRATCH=${SCRATCH:-/anvil/scratch/$USER}
 mkdir -p "$SCRATCH"
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
@@ -159,7 +171,6 @@ cd ${PILOT_DIR}
 # PILOT_BIN mainly because this script has too many arguments already.
 SIF_DIR=${PILOT_DIR}/sif
 mkdir ${SIF_DIR}
-PILOT_BIN_DIR=`dirname ${PILOT_BIN}`
 mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
 
 # The pilot scripts need to live in the ${PILOT_DIR} because the front-end
@@ -215,6 +226,7 @@ if [[ $? != 0 ]]; then
     exit 4
 fi
 
+SHELL_FRAGMENT
 
 # It may have take some time to get everything installed, so to make sure
 # we get our full clean-up time, subtract off how long we've been running
@@ -276,6 +288,12 @@ CCB_ADDRESS = \$(COLLECTOR_HOST)
 #
 STARTD_NOCLAIM_SHUTDOWN = 300
 
+# It's a magic constant.  (If the initial update to the collector
+# doesn't work right for some reason, at least try to update it a
+# second time getting bored and commiting suicide.)
+UPDATE_INTERVAL = 137
+
+
 #
 # Don't run for more than two hours, to make sure we have time to clean up.
 #
@@ -307,14 +325,15 @@ endif
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
 
-# Create dynamic slots 3 GB at a time.  This number was chosen because it's
-# the amount of RAM requested per core on the OS Pool, but we actually bother
-# to set it because we start seeing weird scaling issues with more than 64
-# or so slots.  Since we can't fix that problem right now, avoid it.
+#
+# We have to hand out memory in chunks large enough to avoid the problem(s)
+# HTCondor has with having too many slots.  The appropriate chunk size varies
+# from system to system.
+#
 MUST_MODIFY_REQUEST_EXPRS = TRUE
-MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 3072, quantize(RequestMemory, {128}) })
+MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ ${MEMORY_CHUNK_SIZE}, quantize(RequestMemory, {128}) })
 
-NETWORK_INTERFACE = 172.18.*
+$(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
@@ -386,7 +405,7 @@ if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
-echo '#!/bin/bash' > ${PILOT_DIR}/anvil.slurm
+echo '#!/bin/bash' > ${PILOT_DIR}/hpc.slurm
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
@@ -397,14 +416,14 @@ ${SBATCH_RESOURCES_LINES}
 ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/anvil.slurm
+" >> ${PILOT_DIR}/hpc.slurm
 
 #
 # Submit the SLURM job.
 #
 echo -e "\rStep 8 of 8: Submitting SLURM job............"
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/anvil.slurm &> ${SBATCH_LOG}
+sbatch ${PILOT_DIR}/hpc.slurm &> ${SBATCH_LOG}
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."
