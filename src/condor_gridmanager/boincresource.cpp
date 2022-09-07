@@ -547,9 +547,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 			ptr += 15;
 
 			BoincBatch *batch = NULL;
-			for (auto & m_batche : m_batches) {
-				if ( m_batche->m_batch_name == ptr ) {
-					batch = m_batche;
+			for (auto & next_batch : m_batches) {
+				if ( next_batch->m_batch_name == ptr ) {
+					batch = next_batch;
 					break;
 				}
 			}
