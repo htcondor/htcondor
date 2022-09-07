@@ -464,8 +464,8 @@ bool BoincResource::JobDone( BoincJob *job )
 		if ( batch->m_jobs.find( job ) == batch->m_jobs.end() ) {
 			continue;
 		}
-		m_batche->m_jobs_done.insert( job );
-		if ( m_batche->m_jobs_done == m_batche->m_jobs ) {
+		batch->m_jobs_done.insert( job );
+		if ( batch->m_jobs_done == batch->m_jobs ) {
 			return true;
 		} else {
 			return false;
