@@ -353,7 +353,7 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 	} else {
 
 		BoincBatch *batch = NULL;
-		for (auto & m_batche : m_batches) {
+		for (auto & next_batch : m_batches) {
 			// Assume all jobs with the same application can go into the
 			// same boinc batch.
 			// But we can't add this job to a batch that's already been
