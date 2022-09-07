@@ -358,8 +358,8 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 			// same boinc batch.
 			// But we can't add this job to a batch that's already been
 			// submitted.
-			if ( m_batche->m_app_name == job->GetAppName() && m_batche->m_submit_status == BatchUnsubmitted ) {
-				batch = m_batche;
+			if ( next_batch->m_app_name == job->GetAppName() && next_batch->m_submit_status == BatchUnsubmitted ) {
+				batch = next_batch;
 				break;
 			}
 		}
