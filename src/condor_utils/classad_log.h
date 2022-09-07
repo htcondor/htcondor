@@ -89,7 +89,7 @@ public:
 	bool InitLogFile(const char *filename,int max_historical_logs=0);
 
 	// define an stl type iterator, but one that can filter based on a requirements expression
-	class filter_iterator : std::iterator<std::input_iterator_tag, AD> {
+	class filter_iterator {
 		private:
 			HashTable<K,AD> *m_table;
 			HashIterator<K,AD> m_cur;
@@ -128,6 +128,12 @@ public:
 			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
 			int set_options(int options) { int opts = m_options; m_options = options; return opts; }
 			int get_options() { return m_options; }
+
+			using iterator_category = std::input_iterator_tag;
+			using value_type = AD;
+			using difference_type = std::ptrdiff_t;
+			using pointer =  AD *;
+			using reference = AD &;
 	};
 
 
