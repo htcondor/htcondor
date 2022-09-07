@@ -819,7 +819,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 			}
 		} else {
 			// active lease command, check if it's done
-			int rc = m_leaseGahp->boinc_set_lease( m_batche->m_batch_name.c_str(),
+			int rc = m_leaseGahp->boinc_set_lease( batch->m_batch_name.c_str(),
 												   m_activeLeaseTime );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing, wait for command to complete
