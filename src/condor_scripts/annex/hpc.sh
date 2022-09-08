@@ -4,13 +4,20 @@ CONTROL_PREFIX="=-.-="
 echo "${CONTROL_PREFIX} PID $$"
 
 function usage() {
-    echo "Usage: ${0} \\"
+    echo "Usage: ${0} SYSTEM\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
     echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
     echo "       [CPUS] [MEM_MB]"
     echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
     echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
+
+SYSTEM=$1
+if [[ -z $SYSTEM ]]; then
+    usage
+    exit 1
+fi
+shift
 
 JOB_NAME=$1
 if [[ -z $JOB_NAME ]]; then
@@ -121,9 +128,9 @@ CLEAN_UP_TIME=300
 
 
 #
-# Pulls in the system-specific variables SCRATCH and CONFIG_FRAGMENT.
+# Pulls in the system-specific variables SCRATCH, CONFIG_FRAGMENT,
+# and SHELL_FRAGMENT.
 #
-SYSTEM=stampede2
 MEMORY_CHUNK_SIZE=3072
 PILOT_BIN_DIR=`dirname "${PILOT_BIN}"`
 . "${PILOT_BIN_DIR}/${SYSTEM}.fragment"

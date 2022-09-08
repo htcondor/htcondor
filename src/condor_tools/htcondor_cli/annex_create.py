@@ -410,7 +410,7 @@ def populate_remote_temporary_directory(
     script_base = SYSTEM_TABLE[system]["script_base"]
 
     files = [
-        f"-C {local_script_dir} {system}.sh",
+        f"-C {local_script_dir} {script_base}.sh",
         f"-C {local_script_dir} {system}.fragment",
         f"-C {local_script_dir} {script_base}.pilot",
         f"-C {local_script_dir} {script_base}.multi-pilot",
@@ -536,7 +536,8 @@ def invoke_pilot_script(
         "ssh",
         *ssh_connection_sharing,
         ssh_target,
-        str(remote_script_dir / f"{system}.sh"),
+        str(remote_script_dir / f"{script_base}.sh"),
+        system,
         annex_name,
         queue_name,
         collector,
