@@ -143,6 +143,7 @@ fi
 # we'll leave that for then.
 #
 
+
 echo -e "\rStep 1 of 8: Creating temporary directory...."
 mkdir -p "$SCRATCH"
 PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
@@ -180,6 +181,7 @@ mv ${MULTI_PILOT_BIN} ${PILOT_DIR}
 PILOT_BIN=${PILOT_DIR}/`basename ${PILOT_BIN}`
 MULTI_PILOT_BIN=${PILOT_DIR}/`basename ${MULTI_PILOT_BIN}`
 
+
 echo -e "\rStep 2 of 8: downloading configuration......."
 CONFIGURATION_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION} -o ${CONFIGURATION_FILE} 2>&1`
@@ -188,6 +190,7 @@ if [[ $? != 0 ]]; then
     echo ${CURL_LOGGING}
     exit 2
 fi
+
 
 #
 # Download the binaries.
@@ -201,6 +204,7 @@ if [[ $? != 0 ]]; then
     exit 2
 fi
 
+
 #
 # Unpack the binaries.
 #
@@ -211,6 +215,7 @@ if [[ $? != 0 ]]; then
     echo ${TAR_LOGGING}
     exit 3
 fi
+
 
 #
 # Make the personal condor.
@@ -247,6 +252,7 @@ if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
     CONDOR_MEMORY_LINE="MEMORY = ${MEM_MB}"
     WHOLE_NODE=""
 fi
+
 
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
@@ -301,6 +307,8 @@ MASTER.DAEMON_SHUTDOWN_FAST = (CurrentTime - DaemonStartTime) > ${REMAINING_LIFE
 
 # Only start jobs from the specified owner.
 START = \$(START) && stringListMember( Owner, \"${OWNERS}\" )
+# Only start jobs for this annex.
+START = \$(START) && MY.AnnexName == TARGET.TargetAnnexName
 
 # Advertise the standard annex attributes (master ad for condor_off).
 IsAnnex = TRUE
@@ -341,6 +349,7 @@ mkdir local/passwords.d
 mkdir local/tokens.d
 mv ${TOKEN_FILE} local/tokens.d
 mv ${PASSWORD_FILE} local/passwords.d/POOL
+
 
 #
 # Unpack the configuration on top.
@@ -417,6 +426,7 @@ ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
 " >> ${PILOT_DIR}/hpc.slurm
+
 
 #
 # Submit the SLURM job.
