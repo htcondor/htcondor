@@ -6,8 +6,10 @@ echo "${CONTROL_PREFIX} PID $$"
 function usage() {
     echo "Usage: ${0} \\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
-    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE"
-    echo "where OWNERS is a comma-separated list"
+    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
+    echo "       [CPUS] [MEM_MB]"
+    echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
+    echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
 
 JOB_NAME=$1
@@ -84,6 +86,16 @@ if [[ -z $PASSWORD_FILE ]]; then
     exit 1
 fi
 
+CPUS=${13}
+if [[ $CPUS == "None" ]]; then
+    CPUS=""
+fi
+
+MEM_MB=${14}
+if [[ $MEM_MB == "None" ]]; then
+    MEM_MB=""
+fi
+
 BIRTH=`date +%s`
 # echo "Starting script at `date`..."
 
@@ -107,6 +119,7 @@ WELL_KNOWN_LOCATION_FOR_CONFIGURATION=https://cs.wisc.edu/~tlmiller/hpc-config.t
 # How early should HTCondor exit to make sure we have time to clean up?
 CLEAN_UP_TIME=300
 
+
 #
 # Create pilot-specific directory on shared storage.  The least-awful way
 # to do this is by having the per-node script NOT exec condor_master, but
@@ -118,7 +131,8 @@ CLEAN_UP_TIME=300
 #
 
 echo -e "\rStep 1 of 8: Creating temporary directory...."
-PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} 2>&1`
+mkdir -p "$SCRATCH"
+PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to create temporary directory for pilot, aborting."
     echo ${PILOT_DIR}
@@ -215,6 +229,20 @@ chmod 755 ${PILOT_DIR}/singularity.sh
 YOUTH=$((`date +%s` - ${BIRTH}))
 REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
 
+
+WHOLE_NODE=1
+CONDOR_CPUS_LINE=""
+if [[ -n $CPUS && $CPUS -gt 0 ]]; then
+    CONDOR_CPUS_LINE="NUM_CPUS = ${CPUS}"
+    WHOLE_NODE=""
+fi
+
+CONDOR_MEMORY_LINE=""
+if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
+    CONDOR_MEMORY_LINE="MEMORY = ${MEM_MB}"
+    WHOLE_NODE=""
+fi
+
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
 echo "
@@ -285,6 +313,9 @@ endif
 # Subsequent configuration is machine-specific.
 #
 
+${CONDOR_CPUS_LINE}
+${CONDOR_MEMORY_LINE}
+
 # This is made available via 'module load tacc-singularity', but the
 # starter ignores PATH, so wrap it up.
 SINGULARITY = ${PILOT_DIR}/singularity.sh
@@ -337,11 +368,39 @@ fi
 # the wrong queue length.
 MINUTES=$(((${REMAINING_LIFETIME} + ${CLEAN_UP_TIME})/60))
 
-# Request the appropriate number of nodes. (-N)
-# Request the appropriate number of tasks. (-n)
-#
-# On Stampede 2, TACC allocates only whole nodes, so -N = ${NODES}.  Since
-# this is not an MPI job, we want one task per node, and -n = ${NODES}.
+if [[ $WHOLE_NODE ]]; then
+    # Whole node jobs request the same number of tasks per node as tasks total.
+    # They make no specific requests about CPUs, memory, etc., since the SLURM
+    # partition should already determine that.
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --nodes=${NODES}
+#SBATCH --ntasks=${NODES}
+"
+else
+    # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
+    # Expanse.  Request one job, and specify the resources that should be
+    # allocated to the job.
+
+    # XXX Should I reject NODES > 1?
+    # FIXME: I'm OK with ignoring it, but the FE should check..
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+"
+    if [[ $CPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --cpus-per-task=${CPUS}
+"
+    fi
+    if [[ $MEM_MB ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --mem=${MEM_MB}M
+"
+    fi
+fi
+
 
 if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
@@ -353,8 +412,7 @@ echo "
 #SBATCH -o ${PILOT_DIR}/%j.out
 #SBATCH -e ${PILOT_DIR}/%j.err
 #SBATCH -p ${QUEUE_NAME}
-#SBATCH -N ${NODES}
-#SBATCH -n ${NODES}
+${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
 
