@@ -924,9 +924,8 @@ EnvironmentV1ToV2(const char * name,
 		return true;
 	}
 	Env env;
-	char delim = env.GetEnvV1Delimiter(); // TODO: make this an option argument
 	std::string error_msg;
-	if (!env.MergeFromV1Raw(args.c_str(), delim, error_msg))
+	if (!env.MergeFromV1AutoDelim(args.c_str(), error_msg))
 	{
 		error_msg.insert(0, "Error when parsing argument to environment V1: ");
 		problemExpression(error_msg, arguments[0], result);

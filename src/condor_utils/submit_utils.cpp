@@ -1736,7 +1736,7 @@ int SubmitHash::SetEnvironment()
 
 	SubmitHashEnvFilter envobject(env1, env2);
 
-	MyString error_msg;
+	std::string error_msg;
 	bool env_success = true; // specifying no env is allowed.
 
 	const ClassAd * clusterAd = get_cluster_ad();
@@ -1749,13 +1749,13 @@ int SubmitHash::SetEnvironment()
 		// if there is a cluster ad, initialize from it
 		// this will happen when we are materializing jobs in the Schedd
 		// but not when materializing in condor_submit (at present)
-		env_success = envobject.MergeFrom(clusterAd, &error_msg);
+		env_success = envobject.MergeFrom(clusterAd, error_msg);
 	}
 
 	if (env2) {
-		env_success = envobject.MergeFromV2Quoted(env2,&error_msg);
+		env_success = envobject.MergeFromV2Quoted(env2, error_msg);
 	} else if (env1) {
-		env_success = envobject.MergeFromV1RawOrV2Quoted(env1,&error_msg);
+		env_success = envobject.MergeFromV1RawOrV2Quoted(env1, error_msg);
 	}
 	if ( ! env_success) {
 		push_error(stderr, "%s\nThe environment you specified was: '%s'\n",
