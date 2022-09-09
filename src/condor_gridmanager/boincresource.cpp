@@ -609,9 +609,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		ASSERT( batch_name );
 
 		BoincBatch *batch = NULL;
-		for (auto & m_batche : m_batches) {
-			if ( m_batche->m_batch_name == batch_name ) {
-				batch = m_batche;
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_batch_name == batch_name ) {
+				batch = next_batch;
 				break;
 			}
 		}
