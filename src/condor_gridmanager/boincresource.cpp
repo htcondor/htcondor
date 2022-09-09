@@ -714,8 +714,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 				m_submitGahp->purgePendingRequests();
 				// TODO What else should we do?
 			} else {
-				m_batche->m_submit_status = BatchSubmitting;
-				m_activeSubmitBatch = m_batche;
+				batch->m_submit_status = BatchSubmitting;
+				m_activeSubmitBatch = batch;
 				delay = TIMER_NEVER;
 				break; // or reset timer and return?
 			}
