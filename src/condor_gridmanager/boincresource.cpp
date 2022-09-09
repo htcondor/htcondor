@@ -697,7 +697,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 			if ( batch != m_activeSubmitBatch ) {
 				continue;
 			}
-		} else if ( !BatchReadyToSubmit( m_batche, &this_delay ) ) {
+		} else if ( !BatchReadyToSubmit( batch, &this_delay ) ) {
 			if ( this_delay < delay ) {
 				delay = this_delay;
 			}
