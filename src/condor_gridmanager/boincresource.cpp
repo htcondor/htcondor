@@ -629,8 +629,8 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				// Batch exists on server
 				// Signal the jobs
 				batch->m_submit_status = BatchSubmitted;
-				for (auto m_job : batch->m_jobs) {
-					m_job->SetEvaluateState();
+				for (auto job : batch->m_jobs) {
+					job->SetEvaluateState();
 				}
 				daemonCore->Reset_Timer( m_leaseTid, 0 );
 			}
