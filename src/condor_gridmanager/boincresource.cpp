@@ -778,7 +778,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 		}
 
 		// If we have an active lease update command, skip to that batch
-		if ( m_activeLeaseBatch != NULL && m_batche != m_activeLeaseBatch ) {
+		if ( m_activeLeaseBatch != NULL && batch != m_activeLeaseBatch ) {
 			continue;
 		}
 
