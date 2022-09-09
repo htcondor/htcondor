@@ -232,7 +232,6 @@ sysapi_detect_cpu_cores(int *num_cpus,int *num_hyperthread_cpus)
 
 }
 
-#if 1
 void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
 	if (need_cpu_detection) {
 		sysapi_detect_cpu_cores(&_sysapi_detected_phys_cpus, &_sysapi_detected_hyper_cpus);
@@ -244,42 +243,6 @@ void sysapi_ncpus_raw(int * pncpus, int * pnhyperthread_cpus) {
 void sysapi_ncpus(int * pncpus, int * pnhyperthread_cpus) {
 	sysapi_ncpus_raw(pncpus, pnhyperthread_cpus);
 }
-#else
-int
-sysapi_ncpus_raw(void)
-{
-	int ncpus=0;
-	int nhyperthread_cpus=0;
-	sysapi_internal_reconfig();
-
-	sysapi_ncpus_raw_no_param(&ncpus,&nhyperthread_cpus);
-
-#ifdef LINUX
-	if( _sysapi_count_hyperthread_cpus ) {
-		return nhyperthread_cpus;
-	}
-#endif
-	return ncpus;
-}
-
-/* the cooked version */
-int
-sysapi_ncpus(void)
-{	
-	int detected_cpus;
-	sysapi_internal_reconfig();
-	if( _sysapi_ncpus ) {
-		return _sysapi_ncpus;
-	} else {
-		detected_cpus = sysapi_ncpus_raw();
-		if(_sysapi_max_ncpus && (detected_cpus > _sysapi_max_ncpus)) {
-			return _sysapi_max_ncpus;
-		} else {
-			return detected_cpus;
-		}
-	}
-}
-#endif
 
 /*
  * Linux specific CPU counting logic; uses /proc/cpuinfo.

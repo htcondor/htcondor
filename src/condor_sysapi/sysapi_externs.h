@@ -62,8 +62,4 @@ extern int _sysapi_reserve_memory;
 /* needed by load_avg.c */
 extern bool _sysapi_getload;
 
-#if defined LINUX || defined WIN32
-extern bool _sysapi_count_hyperthread_cpus;
-#endif
-
 #endif /* SYSAPI_EXTERNS_H */
