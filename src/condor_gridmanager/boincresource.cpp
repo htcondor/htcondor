@@ -799,7 +799,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 
 				// lease needs to be updated
 				time_t new_lease_time = time(NULL) + DEFAULT_LEASE_DURATION;
-				int rc = m_leaseGahp->boinc_set_lease( m_batche->m_batch_name.c_str(),
+				int rc = m_leaseGahp->boinc_set_lease( batch->m_batch_name.c_str(),
 													   new_lease_time );
 				if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 					dprintf( D_ALWAYS, "New boinc_set_lease() didn't return PENDING!?: %s\n", m_leaseGahp->getErrorString() );
