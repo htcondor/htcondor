@@ -787,8 +787,8 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 			time_t renew_time = batch->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
 			if ( renew_time <= now ) {
 
-				if ( ( m_batche->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
-					unsigned this_delay = ( m_batche->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) - now;
+				if ( ( batch->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
+					unsigned this_delay = ( batch->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) - now;
 					if ( this_delay < delay ) {
 						delay = this_delay;
 					}
