@@ -694,7 +694,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 		// If we have an active submit command, skip to that batch
 		unsigned this_delay = TIMER_NEVER;
 		if ( m_activeSubmitBatch != NULL ) {
-			if ( m_batche != m_activeSubmitBatch ) {
+			if ( batch != m_activeSubmitBatch ) {
 				continue;
 			}
 		} else if ( !BatchReadyToSubmit( m_batche, &this_delay ) ) {
