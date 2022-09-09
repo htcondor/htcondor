@@ -581,9 +581,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				 !next_batch->m_error_message.empty() ) {
 				continue;
 			}
-			m_batche->m_error_message = m_statusGahp->getErrorString();
-			for ( set<BoincJob *>::iterator job_itr = m_batche->m_jobs.begin();
-				  job_itr != m_batche->m_jobs.end(); job_itr++ ) {
+			next_batch->m_error_message = m_statusGahp->getErrorString();
+			for ( set<BoincJob *>::iterator job_itr = next_batch->m_jobs.begin();
+				  job_itr != next_batch->m_jobs.end(); job_itr++ ) {
 				(*job_itr)->SetEvaluateState();
 			}
 		}
