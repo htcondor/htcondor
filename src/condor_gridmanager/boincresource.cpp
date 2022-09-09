@@ -724,8 +724,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 			// active submit command, check if it's done
 			// TODO avoid overhead of recreating arguments for 
 			//   already-submitted command
-			int rc = m_submitGahp->boinc_submit( m_batche->m_batch_name.c_str(),
-												 m_batche->m_jobs );
+			int rc = m_submitGahp->boinc_submit( batch->m_batch_name.c_str(),
+												 batch->m_jobs );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing, wait for command to complete
 				delay = TIMER_NEVER;
