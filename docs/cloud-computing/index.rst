@@ -10,7 +10,7 @@ We offer two solutions to this problem.  The first, a tool called
 *condor_annex*, helps users or administrators extend an existing HTCondor
 pool with cloud resources.  The second is an easy way to create an
 entire HTCondor pool from scratch on the cloud,
-using our :ref:`google_cloud_marketplace`.
+using our :ref:`google_cloud_hpc_toolkit`.
 
 The rest of this chapter is concerned with using the *condor_annex* tool
 to add nodes to an existing HTCondor pool; it includes instructions on
@@ -28,4 +28,4 @@ manually construct a :ref:`condor_in_the_cloud` using *condor_annex*.
    annex-customization-guide
    annex-configuration
    condor-in-the-cloud
-   google-cloud-marketplace
+   google-cloud-hpc-toolkit
