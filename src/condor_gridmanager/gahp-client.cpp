@@ -1596,9 +1596,8 @@ GenericGahpClient::getGahpStderr()
 
 	output = "";
 
-	for (std::list<std::string>::iterator it = server->m_gahp_error_list.begin();
-			it != server->m_gahp_error_list.end(); it++) {
-		output += *it;
+	for (auto & it : server->m_gahp_error_list) {
+		output += it;
 		output += "\\n";
 	}
 
@@ -2231,9 +2230,9 @@ GahpServer::poll()
 
 		// Now for each stored request line,
 		// lookup the request id in our hash table and stash the result.
-	for (size_t i=0; i < result_lines.size(); i++) {
+	for (auto & result_line : result_lines) {
 		if ( result ) delete result;
-		result = result_lines[i];
+		result = result_line;
 
 		result_reqid = 0;
 		if ( result->argc > 0 ) {
@@ -5911,12 +5910,11 @@ int GahpClient::boinc_fetch_output( const char *job_name,
 		reqline += "SOME ";
 	}
 	formatstr_cat( reqline, "%d", (int)output_files.size() );
-	for ( BoincOutputFiles::const_iterator itr = output_files.begin();
-		  itr != output_files.end(); itr++ ) {
+	for (const auto & output_file : output_files) {
 		reqline += " ";
-		reqline += escapeGahpString( itr->first );
+		reqline += escapeGahpString( output_file.first );
 		reqline += " ";
-		reqline += escapeGahpString( itr->second );
+		reqline += escapeGahpString( output_file.second );
 	}
 	const char *buf = reqline.c_str();
 

@@ -31,12 +31,11 @@ int GahpClient::boinc_submit( const char *batch_name,
 	reqline = escapeGahpString( batch_name );
 	formatstr_cat( reqline, " %s %d", escapeGahpString( (*jobs.begin())->GetAppName() ),
 				   job_cnt );
-	for ( set<BoincJob*>::const_iterator itr = jobs.begin(); itr != jobs.end();
-		  itr++ ) {
-		ArgList *args_list = (*itr)->GetArgs();
+	for (auto job : jobs) {
+		ArgList *args_list = job->GetArgs();
 		char **args = args_list->GetStringArray();
 		int arg_cnt = args_list->Count();
-		formatstr_cat( reqline, " %s %d", (*itr)->remoteJobName, arg_cnt );
+		formatstr_cat( reqline, " %s %d", job->remoteJobName, arg_cnt );
 		for ( int i = 0; i < arg_cnt; i++ ) {
 			reqline += " ";
 			reqline += escapeGahpString( args[i] );
@@ -45,14 +44,13 @@ int GahpClient::boinc_submit( const char *batch_name,
 		delete args_list;
 
 		vector<pair<string, string> > inputs;
-		(*itr)->GetInputFilenames( inputs );
+		job->GetInputFilenames( inputs );
 		formatstr_cat( reqline, " %d", (int)inputs.size() );
-		for ( vector<pair<string, string> >::iterator jtr = inputs.begin();
-				  jtr != inputs.end(); jtr++ ) {
+		for (auto & input : inputs) {
 			reqline += " ";
-			reqline += escapeGahpString( jtr->first );
+			reqline += escapeGahpString( input.first );
 			reqline += " ";
-			reqline += escapeGahpString( jtr->second );
+			reqline += escapeGahpString( input.second );
 		}
 	}
 
