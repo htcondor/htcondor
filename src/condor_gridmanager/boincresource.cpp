@@ -806,7 +806,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 					m_leaseGahp->purgePendingRequests();
 					// TODO What else should we do?
 				} else {
-					m_activeLeaseBatch = m_batche;
+					m_activeLeaseBatch = batch;
 					m_activeLeaseTime = new_lease_time;
 					delay = TIMER_NEVER;
 					break; // or reset timer and return?
