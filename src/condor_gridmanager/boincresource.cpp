@@ -741,8 +741,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 				dprintf( D_ALWAYS, "Failed to submit batch %s: %s\n",
 						 batch->m_batch_name.c_str(),
 						 m_submitGahp->getErrorString() );
-				m_batche->m_submit_status = BatchFailed;
-				m_batche->m_error_message = m_submitGahp->getErrorString();
+				batch->m_submit_status = BatchFailed;
+				batch->m_error_message = m_submitGahp->getErrorString();
 			}
 
 			for ( set<BoincJob *>::iterator job = m_batche->m_jobs.begin();
