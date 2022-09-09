@@ -773,7 +773,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 
 	for (auto & batch : m_batches) {
 
-		if ( m_batche->m_submit_status != BatchSubmitted ) {
+		if ( batch->m_submit_status != BatchSubmitted ) {
 			continue;
 		}
 
