@@ -249,7 +249,7 @@ The default may be another macro invocation:
 
 .. code-block:: condor-config
 
-    MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS))-1
+    MAX_ALLOC_CPUS = $(NUMCPUS:$(DETECTED_CPUS_LIMIT))-1
 
 These default specifications are restricted such that a macro invocation
 with a default can not be nested inside of another default. An
@@ -1067,12 +1067,19 @@ restart of HTCondor in order to use the changed value.
     ``$(DETECTED_CORES)``, when ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
     The integer number of physical (non hyper-threaded) CPUs, as given
     by ``$(DETECTED_PHYSICAL_CPUS)``, when ``COUNT_HYPERTHREAD_CPUS``
-    :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. When
-    ``COUNT_HYPERTHREAD_CPUS`` is ``True``.
+    :index:`COUNT_HYPERTHREAD_CPUS` is ``False``. 
 
 ``$(DETECTED_PHYSICAL_CPUS)`` :index:`DETECTED_PHYSICAL_CPUS`
     The integer number of physical (non hyper-threaded) CPUs. This will
     be equal the number of unique CPU IDs.
+
+``$(DETECTED_CPUS_LIMIT)`` :index:`DETECTED_CPUS_LIMIT`
+    An integer value which is set to the minimum of ``$(DETECTED_CPUS)`` 
+    and values from the environment variables ``OMP_THREAD_LIMIT`` and
+    ``SLURM_CPUS_ON_NODE``.  It intended for use as the value of
+    ``NUM_CPUS`` to insure that the number of CPUS that a *condor_startd* will
+    provision does not exceed the limits indicated by the environment.
+    Defaults to ``$(DETECTED_CPUS)`` when there is no environment variable that sets a lower value.
 
 This second set of macros are entries whose default values are
 determined automatically at run time but which can be overwritten.
