@@ -707,8 +707,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 		if ( m_activeSubmitBatch == NULL ) {
 
 			// Let's start submitting this batch
-			int rc = m_submitGahp->boinc_submit( m_batche->m_batch_name.c_str(),
-												 m_batche->m_jobs );
+			int rc = m_submitGahp->boinc_submit( batch->m_batch_name.c_str(),
+												 batch->m_jobs );
 			if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 				dprintf( D_ALWAYS, "New boinc_submit() didn't return PENDING!?: %s\n", m_submitGahp->getErrorString() );
 				m_submitGahp->purgePendingRequests();
