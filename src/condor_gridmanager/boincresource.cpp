@@ -685,9 +685,9 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 
 	for (auto & batch : m_batches) {
 
-		if ( m_batche->m_submit_status == BatchMaybeSubmitted ||
-			 m_batche->m_submit_status == BatchSubmitted ||
-			 m_batche->m_submit_status == BatchFailed ) {
+		if ( batch->m_submit_status == BatchMaybeSubmitted ||
+			 batch->m_submit_status == BatchSubmitted ||
+			 batch->m_submit_status == BatchFailed ) {
 			continue;
 		}
 
