@@ -745,8 +745,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 				batch->m_error_message = m_submitGahp->getErrorString();
 			}
 
-			for ( set<BoincJob *>::iterator job = m_batche->m_jobs.begin();
-				  job != m_batche->m_jobs.end(); job++ ) {
+			for ( set<BoincJob *>::iterator job = batch->m_jobs.begin();
+				  job != batch->m_jobs.end(); job++ ) {
 
 				(*job)->SetEvaluateState();
 			}
