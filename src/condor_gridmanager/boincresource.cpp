@@ -784,7 +784,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 
 		if ( m_activeLeaseBatch == NULL ) {
 			// Calculate how long until this batch's lease needs to be updated
-			time_t renew_time = m_batche->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
+			time_t renew_time = batch->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
 			if ( renew_time <= now ) {
 
 				if ( ( m_batche->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
