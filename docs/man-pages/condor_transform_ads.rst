@@ -18,10 +18,10 @@ nosort]]  ** *outfile*] [*<key>=<value>* ] [**-long** ] [**-json** ]
 [**-unit-test** ] [**-testing** ] [**-convertoldroutes** ] [*infile1
 ...infileN* ]
 
-Note that one or more transform must be specified in the form of a rules
+Note that one or more transforms must be specified in the form of a rules
 file or a ``JOB_TRANSFORM_`` name and at least one input file must be
 specified. Transforms will be applied in the order they are given on the command
-line.  If a complex TRANSFORM statement is used it must be at the end of the last
+line.  If a rules file has a TRANSFORM statement with arguments it must be the last
 rules file.  If no output file is specified, output will be written to
 ``stdout``.
 
@@ -44,7 +44,7 @@ Options
     Specifies the file containing definitions of the transformation
     rules.
  **-jobtransforms** *name-list*
-    Specifies one or more transform names.  The transform rules will be read
+    A comma-separated list of more transform names.  The transform rules will be read
     from the configuration file ``JOB_TRANSFORM_<name>`` values.
  **-in[:<form>]** *infile*
     Specifies an input file containing ClassAd(s) to be transformed.
