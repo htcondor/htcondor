@@ -660,8 +660,8 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		// If not doing a full query, update all jobs in the batch that
 		// their status is unchanged.
 		if ( batch && !m_doingFullQuery ) {
-			for (auto m_job : batch->m_jobs) {
-				m_job->NewBoincState( m_job->remoteState.c_str() );
+			for (auto job : batch->m_jobs) {
+				job->NewBoincState( job->remoteState.c_str() );
 			}
 		}
 	}
