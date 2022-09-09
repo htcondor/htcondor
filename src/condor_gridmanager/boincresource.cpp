@@ -771,7 +771,7 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 		return;
 	}
 
-	for (auto & m_batche : m_batches) {
+	for (auto & batch : m_batches) {
 
 		if ( m_batche->m_submit_status != BatchSubmitted ) {
 			continue;
