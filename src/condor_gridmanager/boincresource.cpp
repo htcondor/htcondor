@@ -735,7 +735,7 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 
 			if ( rc == 0 ) {
 				// success
-				m_batche->m_submit_status = BatchSubmitted;
+				batch->m_submit_status = BatchSubmitted;
 				daemonCore->Reset_Timer( m_leaseTid, 0 );
 			} else {
 				dprintf( D_ALWAYS, "Failed to submit batch %s: %s\n",
