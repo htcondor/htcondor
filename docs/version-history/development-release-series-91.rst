@@ -9,9 +9,7 @@ Version 9.11.2
 
 Release Notes:
 
-.. HTCondor version 9.11.2 released on Month Date, 2022.
-
-- HTCondor version 9.11.2 not yet released.
+- HTCondor version 9.11.2 released on September 13, 2022.
 
 New Features:
 
@@ -19,7 +17,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where :macro:`STARTD_NOCLAIM_SHUTDOWN` would, in effect,
+  cause the startd to restart rather than HTCondor to shut down.
+  :jira:`1315`
 
 Version 9.11.1
 --------------
