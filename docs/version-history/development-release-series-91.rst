@@ -104,14 +104,29 @@ Bugs Fixed:
   **JOB** and **RETRY** in node submit file to the ``.dagman.out`` file.
   :jira:`1273`
 
+Version 9.11.2
+--------------
+
+Release Notes:
+
+- HTCondor version 9.11.2 released on September 13, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where :macro:`STARTD_NOCLAIM_SHUTDOWN` would, in effect,
+  cause the startd to restart rather than HTCondor to shut down.
+  :jira:`1315`
+
 Version 9.11.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.11.1 released on Month Date, 2022.
-
-- HTCondor version 9.11.1 not yet released.
+- HTCondor version 9.11.1 released on September 6, 2022.
 
 New Features:
 
