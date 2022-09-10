@@ -1600,6 +1600,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 06 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.1-1
+- File transfer errors are identified as occurring during input or output
+
 * Thu Aug 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.0-1
 - Modified GPU attributes to support the new 'require_gpus' submit command
 - Add (PREEMPT|HOLD)_IF_DISK_EXCEEDED configuration templates
