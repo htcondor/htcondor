@@ -512,6 +512,7 @@ def invoke_pilot_script(
     ssh_host_name,
     remote_script_dir,
     system,
+    startd_noclaim_shutdown,
     annex_name,
     queue_name,
     collector,
@@ -538,6 +539,7 @@ def invoke_pilot_script(
         ssh_target,
         str(remote_script_dir / f"{script_base}.sh"),
         system,
+        startd_noclaim_shutdown,
         annex_name,
         queue_name,
         collector,
@@ -702,6 +704,7 @@ def annex_inner_func(
     mem_mb,
     login_name,
     login_host,
+    startd_noclaim_shutdown,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -1094,6 +1097,7 @@ def annex_inner_func(
         ssh_host_name,
         remote_script_dir,
         system,
+        startd_noclaim_shutdown,
         annex_name,
         queue_name,
         collector,

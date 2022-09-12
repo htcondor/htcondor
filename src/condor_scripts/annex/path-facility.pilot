@@ -3,6 +3,9 @@
 #
 # Arguments.
 #
+SYSTEM=$1; shift
+STARTD_NOCLAIM_SHUTDOWN=$1; shift
+
 JOB_NAME=$1
 COLLECTOR_HOST=$2
 LIFETIME=$3
@@ -93,8 +96,12 @@ RUNBENCHMARKS = FALSE
 CCB_ADDRESS = \$(COLLECTOR_HOST)
 
 # Commit suicide after being idle for five minutes.
-# This appears to have broken some time after 9.5.4?
-STARTD_NOCLAIM_SHUTDOWN = 300
+STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
+
+# It's a magic constant.  (If the initial update to the collector
+# doesn't work right for some reason, at least try to update it a
+# second time getting bored and commiting suicide.)
+UPDATE_INTERVAL = 137
 
 # Don't run for any longer than was requested.
 MASTER.DAEMON_SHUTDOWN_FAST = (CurrentTime - DaemonStartTime) > ${REMAINING_LIFETIME}

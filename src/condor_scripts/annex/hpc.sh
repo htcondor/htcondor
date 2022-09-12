@@ -4,7 +4,7 @@ CONTROL_PREFIX="=-.-="
 echo "${CONTROL_PREFIX} PID $$"
 
 function usage() {
-    echo "Usage: ${0} SYSTEM\\"
+    echo "Usage: ${0} SYSTEM STARTD_NOCLAIM_SHUTDOWN\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
     echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
     echo "       [CPUS] [MEM_MB]"
@@ -14,6 +14,13 @@ function usage() {
 
 SYSTEM=$1
 if [[ -z $SYSTEM ]]; then
+    usage
+    exit 1
+fi
+shift
+
+STARTD_NOCLAIM_SHUTDOWN=$1
+if [[ -z $STARTD_NOCLAIM_SHUTDOWN ]]; then
     usage
     exit 1
 fi
@@ -299,7 +306,7 @@ CCB_ADDRESS = \$(COLLECTOR_HOST)
 #
 # Commit suicide after being idle for five minutes.
 #
-STARTD_NOCLAIM_SHUTDOWN = 300
+STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
 # It's a magic constant.  (If the initial update to the collector
 # doesn't work right for some reason, at least try to update it a
