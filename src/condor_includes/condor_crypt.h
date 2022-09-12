@@ -25,6 +25,7 @@
 #include "condor_debug.h"
 
 #include "CryptKey.h"
+#include <openssl/evp.h>
 
 struct StreamCryptoState {
     // The IV is a 16-byte random number.  The first 4 bytes are modified with
@@ -59,18 +60,14 @@ public:
     // duration
     KeyInfo       m_keyInfo;
 
-// these fields are used for 3DES and blowfish:
-//
-    // holds iv data for some methods (3DES and BLOWFISH)
-    int m_ivec_len;
-    unsigned char *m_ivec;
+	// holds encryption and decryption cipher contexts for methods (3DES and BLOWFISH)
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+	const
+#endif
+	EVP_CIPHER *m_cipherType;
 
-    // sequence num
-    int m_num;
-
-    // holds key data specific to some methods (e.g. key schedules for 3DES and BLOWFISH)
-    int m_method_key_data_len;
-    unsigned char *m_method_key_data;
+	EVP_CIPHER_CTX *enc_ctx;
+	EVP_CIPHER_CTX *dec_ctx;
 
 // this data structure is used for AESGCM:
 //

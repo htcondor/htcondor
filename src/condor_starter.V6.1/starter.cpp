@@ -1619,7 +1619,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
 		}
 	}
-	if( !setup_env.InsertEnvIntoClassAd(sshd_ad, error_msg,NULL,&ver_info) ) {
+	if( !setup_env.InsertEnvIntoClassAd(*sshd_ad, error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",
 			error_msg.c_str());
@@ -3166,10 +3166,7 @@ Starter::PublishToEnv( Env* proc_env )
 
 		// now, stuff the starter knows about, instead of individual
 		// procs under its control
-	std::string base;
-	base = "_";
-	base += myDistro->GetUc();
-	base += '_';
+	const char * base = "_CONDOR_";
  
 	std::string env_name;
 

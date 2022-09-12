@@ -8,8 +8,8 @@ The VM Universe
 :index:`for the vm universe<single: for the vm universe; installation>`
 :index:`set up for the vm universe<single: set up for the vm universe; universe>`
 
-**vm** universe jobs may be executed on any execution site with VMware,
-Xen (via *libvirt*), or KVM. To do this, HTCondor must be informed of
+**vm** universe jobs may be executed on any execution site with
+Xen (via *libvirt*) or KVM. To do this, HTCondor must be informed of
 some details of the virtual machine installation, and the execution
 machines must be configured correctly.
 
@@ -22,16 +22,7 @@ to virtual machines` section.
 
 Begin by installing the virtualization package on all execute machines,
 according to the vendor's instructions. We have successfully used
-VMware, Xen, and KVM. If considering running on a Windows system, a
-*Perl* distribution will also need to be installed; we have successfully
-used *ActivePerl*.
-
-For VMware, *VMware Server 1* must be installed and running on the
-execute machine. HTCondor also supports using *VMware Workstation* and
-*VMware Player*, version 5. Earlier versions of these products may also
-work. HTCondor will attempt to automatically discern which VMware
-product is installed. If using *Player*, also install the *VIX API*,
-which is freely available from VMware.
+Xen and KVM.
 
 For Xen, there are three things that must exist on an execute machine to
 fully support **vm** universe jobs.
@@ -54,11 +45,11 @@ Configuration is required to enable the execution of **vm** universe
 jobs. The type of virtual machine that is installed on the execute
 machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE`
 variable. For now, only one type can be utilized per machine. For
-instance, the following tells HTCondor to use VMware:
+instance, the following tells HTCondor to use KVM:
 
 .. code-block:: condor-config
 
-    VM_TYPE = vmware
+    VM_TYPE = kvm
 
 The location of the *condor_vm-gahp* and its log file must also be
 specified on the execute machine. On a Windows installation, these
@@ -68,70 +59,6 @@ options would look like this:
 
     VM_GAHP_SERVER = $(SBIN)/condor_vm-gahp.exe
     VM_GAHP_LOG = $(LOG)/VMGahpLog
-
-VMware-Specific Configuration
-'''''''''''''''''''''''''''''
-
-To use VMware, identify the location of the *Perl* executable on the
-execute machine. In most cases, the default value should suffice:
-
-.. code-block:: condor-config
-
-    VMWARE_PERL = perl
-
-This, of course, assumes the *Perl* executable is in the path of the
-*condor_master* daemon. If this is not the case, then a full path to
-the *Perl* executable will be required.
-
-If using *VMware Player*, which does not support snapshots, configure
-the ``START`` expression to reject jobs which require snapshots. These
-are jobs that do not have
-**vmware_snapshot_disk** :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
-set to ``False``. Here is an example modification to the ``START``
-expression.
-
-.. code-block:: condor-config
-
-    START = ($(START)) && (!(TARGET.VMPARAM_VMware_SnapshotDisk =?= TRUE))
-
-The final required configuration is the location of the VMware control
-script used by the *condor_vm-gahp* on the execute machine to talk to
-the virtual machine hypervisor. It is located in HTCondor's ``sbin``
-directory:
-
-.. code-block:: condor-config
-
-    VMWARE_SCRIPT = $(SBIN)/condor_vm_vmware
-
-Note that an execute machine's ``EXECUTE`` variable should not contain
-any symbolic links in its path, if the machine is configured to run
-VMware **vm** universe jobs. Strange behavior has been noted when
-HTCondor tries to run a **vm** universe VMware job using a path to a VMX
-file that contains a symbolic link. An example of an error message that
-may appear in such a job's event log:
-
-.. code-block:: text
-
-    Error from starter on master_vmuniverse_strtd@nostos.cs.wisc
-    .edu: register(/scratch/gquinn/condor/git/CONDOR_SRC/src/con
-    dor_tests/31426/31426vmuniverse/execute/dir_31534/vmN3hylp_c
-    ondor.vmx) = 1/Error: Command failed: A file was not found/(
-    ERROR) Can't create snapshot for vm(/scratch/gquinn/condor/g
-    it/CONDOR_SRC/src/condor_tests/31426/31426vmuniverse/execute
-    /dir_31534/vmN3hylp_condor.vmx)
-
-To work around this problem:
-
--  If using file transfer (the submit description file contains
-   **vmware_should_transfer_files =
-   true** :index:`vmware_should_transfer_files = true<single: vmware_should_transfer_files = true; submit commands>`),
-   then modify any configuration variable ``EXECUTE``
-   :index:`EXECUTE` values on all execute machines, such that they
-   do not contain symbolic link path components.
--  If using a shared file system, ensure that the submit description
-   file command
-   **vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` does not
-   use symbolic link path name components.
 
 Xen-Specific and KVM-Specific Configuration
 '''''''''''''''''''''''''''''''''''''''''''
@@ -390,3 +317,22 @@ jobs that request these network type will only match to machines
 that support it.  Note that HTCondor cannot test the validity
 of these networks, and merely trusts that the administrator has
 correctly configured them.
+
+To deal with a potentially user influencing option, there is an optional knob that
+can be configured to adapt the ``--shm-size`` Docker container create argument
+taking the machine's and job's classAds into account.
+Exemplary, setting the ``/dev/shm`` size to half the requested memory is achieved by:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = Memory * 1024 * 1024 / 2
+
+or, using a user provided value ``DevShmSize`` if available and within the requested
+memory limit:
+
+.. code-block:: condor-config
+
+    DOCKER_SHM_SIZE = ifThenElse(DevShmSize isnt Undefined && isInteger(DevShmSize) && int(DevShmSize) <= (Memory * 1024 * 1024), int(DevShmSize), 2 * 1024 * 1024 * 1024)
+
+    
+Note: ``Memory`` is in MB, thus it needs to be scaled to bytes.

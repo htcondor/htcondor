@@ -1,3 +1,0 @@
-author: James Kupsch
-organization: University of Wisconsin-Madison
-e-mail: kupsch@cs.wisc.edu

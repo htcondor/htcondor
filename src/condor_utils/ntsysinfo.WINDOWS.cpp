@@ -45,9 +45,10 @@ CSysinfo::FPNtClose CSysinfo::NtClose = NULL;
 CSysinfo::FPCreateToolhelp32Snapshot CSysinfo::CreateToolhelp32Snapshot = NULL;
 CSysinfo::FPThread32First CSysinfo::Thread32First = NULL;
 CSysinfo::FPThread32Next CSysinfo::Thread32Next = NULL;
-bool CSysinfo::IsWin2k = false;
+#ifdef USE_NTQUERY_SYS_INFO
 DWORD* CSysinfo::memptr = NULL;
 DWORD CSysinfo::memptr_size = 0x10000;
+#endif
 
 CSysinfo::CSysinfo()
 {
@@ -80,26 +81,15 @@ CSysinfo::CSysinfo()
 			EXCEPT("cannot get address for NtClose");
 		}
 
+	#ifdef USE_NTQUERY_SYS_INFO
 		memptr = (DWORD*)VirtualAlloc (NULL, 
 						memptr_size, 
 						MEM_COMMIT,
 						PAGE_READWRITE); 
+	#endif
 
-
-		// Figure out if we are running on Win2k or above
-		OSVERSIONINFO info;
-		info.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-		MSC_SUPPRESS_WARNING_FOREVER(4996) // 'GetVersionExA': was declared deprecated
-		if (GetVersionEx(&info) > 0) {
-			if ( info.dwPlatformId ==  VER_PLATFORM_WIN32_NT  &&
-				 info.dwMajorVersion >= 5 ) 
-			{
-				IsWin2k = true;
-			}
-		}
-
-		// If this is Win2k, map in some additional functions
-		if ( IsWin2k ) {
+		// If this is Win2k or later, map in some additional functions
+		{
 			hKernel32Dll = LoadLibrary("kernel32.dll");
 			if ( !hKernel32Dll ) {
 				EXCEPT("cannot load kernel32.dll library");
@@ -131,33 +121,17 @@ CSysinfo::~CSysinfo()
 	reference_count--;
 	if ( reference_count == 0 ) {
 		FreeLibrary(hNtDll);
+	#ifdef USE_NTQUERY_SYS_INFO
 		if ( memptr ) {
 			VirtualFree (memptr, 0, MEM_RELEASE);
 			memptr = NULL;
 		}
+	#endif
 	}
 }
 
 int CSysinfo::GetPIDs (std::vector<pid_t> & dest)
 {
-#if 0
-	// This code is deprecated in favor of using supported functions below
-	pid_t curpid = 0;
-	DWORD *startblock = memptr;
-	dest.clear();
-	Refresh();	
-	while (startblock)
-	{
-		curpid = *(startblock + 17);
-		dest.push_back(curpid);
-		startblock = NextBlock (startblock);
-		if ( startblock == (DWORD*)1 ) {
-			startblock = memptr;
-			dest.clear();
-		}
-	}
-	return (int)dest.size();
-#endif
 	HANDLE hProcessSnap;
 	PROCESSENTRY32 pe32;
 
@@ -194,6 +168,7 @@ int CSysinfo::GetPIDs (std::vector<pid_t> & dest)
   return (int)dest.size(); // return the number of PIDs we got
 }
 
+#ifdef USE_NTQUERY_SYS_INFO
 DWORD CSysinfo::NumThreads (pid_t pid)
 {
 	DWORD *block;
@@ -204,22 +179,10 @@ DWORD CSysinfo::NumThreads (pid_t pid)
 	else
 		return 0;
 }
+#endif
 
 BOOL CSysinfo::GetProcessName (pid_t pid, char *dest, int sz)
 {
-	// this code is deprecated. It was causing ACCESS_VIOLATIONS
-	// on Windows XP.
-#if 0
-	DWORD *block;
-	Refresh();
-	block = FindBlock (pid);
-	if (!block)
-	{
-		dest[0] = '\0';
-		return FALSE;
-	}
-	MakeAnsiString ((WORD*)(*(block+15)), dest);
-#endif
 	HANDLE Hnd;
 
 	if( ! (Hnd = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid))) {
@@ -233,6 +196,7 @@ BOOL CSysinfo::GetProcessName (pid_t pid, char *dest, int sz)
 	return TRUE;
 }
 
+#ifdef USE_NTQUERY_SYS_INFO
 DWORD CSysinfo::GetHandleCount (pid_t pid)
 {
 	DWORD *block;
@@ -242,6 +206,7 @@ DWORD CSysinfo::GetHandleCount (pid_t pid)
 		return 0;
 	return block[19];
 }
+#endif
 
 // substitute HEX values into output messages and print the resulting string via OutputDebugString.  
 // pmsg must be of the form "blah blah 00000000 blah blah 00000000\n" with one section
@@ -250,7 +215,8 @@ DWORD CSysinfo::GetHandleCount (pid_t pid)
 // This is strictly Windows-specific debugging code. and I didn't want to create any
 // external dependancies for it.
 //
-static void Debug_Subst_Hex_ODS(const TCHAR * pmsg, const DWORD * pHex, int cHex)
+template <class T>
+static void Debug_Subst_Hex_ODS(const TCHAR * pmsg, const T * pHex, int cHex)
 {
    TCHAR sz[200];
    UINT  cch = lstrlen(pmsg)+1;
@@ -263,7 +229,7 @@ static void Debug_Subst_Hex_ODS(const TCHAR * pmsg, const DWORD * pHex, int cHex
       {
       while (psz > sz && *psz != '0') 
          --psz; 
-      for (DWORD dw = pHex[ix]; dw && psz >= sz; dw = dw >> 4) 
+      for (auto dw = pHex[ix]; dw && psz >= sz; dw = dw >> 4) 
          { 
          TCHAR ch = (dw & 0xF); 
          *psz = (TCHAR)((ch < 10) ? (ch + '0') : (ch -10 + 'A')); 
@@ -285,19 +251,8 @@ typedef struct _PROCESS_BASIC_INFORMATION {
 	ULONG_PTR InheritedFromUniqueProcessId;
 } PROCESS_BASIC_INFORMATION;
 
-DWORD CSysinfo::GetParentPID (pid_t pid)
+pid_t CSysinfo::GetParentPID (pid_t pid)
 {
-#if 0
-	/* this is broken on some versions of XP, so 
-	   it is deprecated. See new implementation below. 
-	 */
-	DWORD *block;
-	Refresh();
-	block = FindBlock (pid);
-	if (!block)
-		return 0;
-	return block[18];
-#else
     if (pid == 0 || pid == 4) // Can't open pid=0 (Idle) or pid=4 (System) processes
        return 0;
 
@@ -330,7 +285,7 @@ DWORD CSysinfo::GetParentPID (pid_t pid)
         if (NOERROR == status) {
             static bool fLogit = false;
             if (fLogit) {
-               DWORD pids[] = {pbi.InheritedFromUniqueProcessId, pid};
+               pid_t pids[] = {(pid_t)pbi.InheritedFromUniqueProcessId, pid};
                Debug_Subst_Hex_ODS("Parent PID is 00000000 for PID 00000000\n", pids, 2);
             }
             return pbi.InheritedFromUniqueProcessId;
@@ -347,7 +302,6 @@ DWORD CSysinfo::GetParentPID (pid_t pid)
 		}
 		return (0);
 	}
-#endif
 }
 
 int
@@ -393,7 +347,7 @@ CSysinfo::GetProcessEntry(pid_t pid, PROCESSENTRY32 &pe32 ) {
   return result;
 }
 
-#if 0
+#ifdef USE_NTQUERY_SYS_INFO
 void CSysinfo::Explore(pid_t pid)
 {
 	DWORD *block;
@@ -410,30 +364,12 @@ void CSysinfo::Explore(pid_t pid)
 }
 #endif
 
-#if 0
-int CSysinfo::GetTIDs (pid_t pid, std::vector<DWORD> & tids, 
-					   std::vector<DWORD> & tstatus)
-#endif
 int CSysinfo::GetTIDs (pid_t pid, std::vector<DWORD> & tids)
 {
 	DWORD s = 0;
 
 	tids.clear();
 
-	if ( !IsWin2k ) {
-		/*** Window NT 4.0 Specific Code -- this does not work on Win2k! ***/
-		DWORD *block;
-		Refresh();
-		block = FindBlock (pid);
-		if (!block)
-			return 0;
-		for (s=0; s < *(block+1); s++)
-		{
-			tids.push_back( *(block+43+s*16) );
-			// tstatus.push_back( *(block+48+s*16) + (*(block+47+s*16)<<8) );
-		}
-		return (int)s;
-	}
 			
 	/******** Win2k Specific Code -- use spiffy new Toolhelp32 calls ***/
 
@@ -514,7 +450,37 @@ void CSysinfo::CloseThread (HANDLE hthread)
 }
 
 
+#ifdef USE_NTQUERY_SYS_INFO
+
 //////////////////////// Helper Funcs ////////////////////////////
+
+/*
+typedef struct _SYSTEM_PROCESS_INFORMATION {
+	ULONG NextEntryOffset;
+	ULONG NumberOfThreads;
+	BYTE Reserved1[48];
+	UNICODE_STRING ImageName;
+	KPRIORITY BasePriority;
+	HANDLE UniqueProcessId;
+	PVOID Reserved2;
+	ULONG HandleCount;
+	ULONG SessionId;
+	PVOID Reserved3;
+	SIZE_T PeakVirtualSize;
+	SIZE_T VirtualSize;
+	ULONG Reserved4;
+	SIZE_T PeakWorkingSetSize;
+	SIZE_T WorkingSetSize;
+	PVOID Reserved5;
+	SIZE_T QuotaPagedPoolUsage;
+	PVOID Reserved6;
+	SIZE_T QuotaNonPagedPoolUsage;
+	SIZE_T PagefileUsage;
+	SIZE_T PeakPagefileUsage;
+	SIZE_T PrivatePageCount;
+	LARGE_INTEGER Reserved7[6];
+} SYSTEM_PROCESS_INFORMATION, *PSYSTEM_PROCESS_INFORMATION;
+*/
 
 DWORD* CSysinfo::NextBlock (DWORD* oldblock)
 {
@@ -572,7 +538,8 @@ DWORD* CSysinfo::NextBlock (DWORD* oldblock)
 
 __inline void CSysinfo::Refresh (void)
 {
-	NtQuerySystemInformation (5, memptr, memptr_size ,0);	
+	const DWORD SystemProcessInformation = 5;
+	NtQuerySystemInformation (SystemProcessInformation, memptr, memptr_size ,0);	
 }
 
 __inline void CSysinfo::MakeAnsiString (WORD *unistring, char *ansistring)
@@ -597,6 +564,7 @@ __inline DWORD* CSysinfo::FindBlock (DWORD pid)
 	}
 	return NULL;
 }
+#endif
 
 // This function is sortof duplicated in ProcAPI::GetProcInfo(),
 // but if all you want to know is some pid's bday, it's much

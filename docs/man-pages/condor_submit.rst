@@ -16,7 +16,7 @@ Synopsis
 [**-dump** *filename*] [**-interactive** ] [**-factory** ]
 [**-allow-crlf-script** ] [**-dry-run** ]
 [**-maxjobs** *number-of-jobs*] [**-single-cluster** ]
-[**-stm** *method*] [**<submit-variable>=<value>** ] [*submit
+[**<submit-variable>=<value>** ] [*submit
 description file* ] [**-queue** *queue_arguments*]
 
 Description
@@ -114,8 +114,6 @@ Options
     files defined with
     **output** :index:`output<single: output; submit commands>` or
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
- **-password** *passphrase*
-    Specify a password to the *MyProxy* server.
  **-debug**
     Cause debugging information to be sent to ``stderr``, based on the
     value of the configuration variable ``TOOL_DEBUG``.
@@ -203,9 +201,6 @@ Options
     If the jobs specified by the submit description file causes more
     than a single cluster value to be assigned, then no jobs are
     submitted for execution and an error message is generated.
- **-stm** *method*
-    Specify the method use to move a sandbox into HTCondor. *method* is
-    one of **stm_use_schedd_only** or **stm_use_transferd**.
  **<submit-variable>=<value>**
     Defines a submit command or submit variable with a value, and parses
     it as if it was placed at the beginning of the submit description
@@ -262,6 +257,7 @@ numerous. They are listed here in alphabetical order by category.
 BASIC COMMANDS
 
     :index:`arguments<single: arguments; submit commands>`
+
  arguments = <argument_list>
     List of arguments to be supplied to the executable as part of the
     command line.
@@ -370,9 +366,10 @@ BASIC COMMANDS
     This is for the convenience of Windows users.
 
     :index:`environment<single: environment; submit commands>`
+    :index:`setting, for a job<single: setting, for a job; environment variables>`\ 
+
  environment = <parameter_list>
-    List of environment
-    :index:`setting, for a job<single: setting, for a job; environment variables>`\ variables.
+    List of environment variables.
 
     There are two different formats for specifying the environment
     variables: the old format and the new format. The old format is
@@ -776,6 +773,7 @@ BASIC COMMANDS
 COMMANDS FOR MATCHMAKING
 
     :index:`rank<single: rank; submit commands>`
+
  rank = <ClassAd Float Expression>
     A ClassAd Floating-Point expression that states how to rank machines
     which have already met the requirements expression. Essentially,
@@ -976,6 +974,7 @@ FILE TRANSFER COMMANDS
 
     :index:`dont_encrypt_input_files<single: dont_encrypt_input_files; submit commands>`
     :index:`input file(s) encryption<single: input file(s) encryption; file transfer mechanism>`
+
  dont_encrypt_input_files = < file1,file2,file... >
     A comma and/or space separated list of input files that are not to
     be network encrypted when transferred with the file transfer
@@ -1462,6 +1461,7 @@ FILE TRANSFER COMMANDS
 POLICY COMMANDS
 
     :index:`allowed_execute_duration<single: allowed_execute_duration; submit commands>`
+
  allowed_execute_duration = <integer>
     The longest time for which a job may be executing.  Jobs which exceed
     this duration will go on hold.  This time does not include file-transfer
@@ -1778,6 +1778,7 @@ POLICY COMMANDS
 COMMANDS FOR THE GRID
 
     :index:`arc_application<single: arc_application; submit commands>`
+
  arc_application = <XML-string>
     For grid universe jobs of type **arc**, provides additional XML
     attributes under the ``<Application>`` section of the ARC ADL job
@@ -2137,49 +2138,6 @@ COMMANDS FOR THE GRID
     For a **grid-type-string** of **arc**, the single
     parameter is the name of the ARC resource to be used.
 
-    :index:`MyProxyCredentialName<single: MyProxyCredentialName; submit commands>`
- MyProxyCredentialName = <symbolic name>
-    The symbolic name that identifies a credential to the *MyProxy*
-    server. This symbolic name is set as the credential is initially
-    stored on the server (using *myproxy-init*).
-
-    :index:`MyProxyHost<single: MyProxyHost; submit commands>`
- MyProxyHost = <host>:<port>
-    The Internet address of the host that is the *MyProxy* server. The
-    **host** may be specified by either a host name (as in
-    ``head.example.com``) or an IP address (of the form 123.456.7.8).
-    The **port** number is an integer.
-
-    :index:`MyProxyNewProxyLifetime<single: MyProxyNewProxyLifetime; submit commands>`
- MyProxyNewProxyLifetime = <number-of-minutes>
-    The new lifetime (in minutes) of the proxy after it is refreshed.
-
-    :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
- MyProxyPassword = <password>
-    The password needed to refresh a credential on the *MyProxy* server.
-    This password is set when the user initially stores credentials on
-    the server (using *myproxy-init*). As an alternative to using
-    **MyProxyPassword** :index:`MyProxyPassword<single: MyProxyPassword; submit commands>`
-    in the submit description file, the password may be specified as a
-    command line argument to *condor_submit* with the *-password*
-    argument.
-
-    :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
- MyProxyRefreshThreshold = <number-of-seconds>
-    The time (in seconds) before the expiration of a proxy that the
-    proxy should be refreshed. For example, if
-    **MyProxyRefreshThreshold** :index:`MyProxyRefreshThreshold<single: MyProxyRefreshThreshold; submit commands>`
-    is set to the value 600, the proxy will be refreshed 10 minutes
-    before it expires.
-
-    :index:`MyProxyServerDN<single: MyProxyServerDN; submit commands>`
- MyProxyServerDN = <credential subject>
-    A string that specifies the expected Distinguished Name (credential
-    subject, abbreviated DN) of the *MyProxy* server. It must be
-    specified when the *MyProxy* server DN does not follow the
-    conventional naming scheme of a host credential. This occurs, for
-    example, when the *MyProxy* server DN begins with a user credential.
-
     :index:`transfer_error<single: transfer_error; submit commands>`
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
@@ -2281,6 +2239,7 @@ COMMANDS FOR THE GRID
 COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 
     :index:`hold_kill_sig<single: hold_kill_sig; submit commands>`
+
  hold_kill_sig = <signal-number>
     For the scheduler universe only,
     **signal-number** :index:`signal-number<single: signal-number; submit commands>` is
@@ -2330,6 +2289,7 @@ COMMANDS FOR PARALLEL, JAVA, and SCHEDULER UNIVERSES
 COMMANDS FOR THE VM UNIVERSE
 
     :index:`vm_disk<single: vm_disk; submit commands>`
+
  vm_disk = file1:device1:permission1, file2:device2:permission2:format2, ...
     A list of comma separated disk files. Each disk file is specified by
     4 colon separated fields. The first field is the path and file name
@@ -2393,34 +2353,9 @@ COMMANDS FOR THE VM UNIVERSE
     specified, the default value is ``False``.
 
     :index:`vm_type<single: vm_type; submit commands>`
- vm_type = <vmware | xen | kvm>
+ vm_type = <xen | kvm>
     Specifies the underlying virtual machine software that this job
     expects.
-
-    :index:`vmware_dir<single: vmware_dir; submit commands>`
- vmware_dir = <pathname>
-    The complete path and name of the directory where VMware-specific
-    files and applications such as the VMDK (Virtual Machine Disk
-    Format) and VMX (Virtual Machine Configuration) reside. This command
-    is optional; when not specified, all relevant VMware image files are
-    to be listed using
-    **transfer_input_files** :index:`transfer_input_files<single: transfer_input_files; submit commands>`.
-
-    :index:`vmware_should_transfer_files<single: vmware_should_transfer_files; submit commands>`
- vmware_should_transfer_files = <True | False>
-    Specifies whether HTCondor will transfer VMware-specific files
-    located as specified by
-    **vmware_dir** :index:`vmware_dir<single: vmware_dir; submit commands>` to the
-    execute machine (``True``) or rely on access through a shared file
-    system (``False``). Omission of this required command (for VMware vm
-    universe jobs) results in an error message from *condor_submit*,
-    and the job will not be submitted.
-
-    :index:`vmware_snapshot_disk<single: vmware_snapshot_disk; submit commands>`
- vmware_snapshot_disk = <True | False>
-    When ``True``, causes HTCondor to utilize a VMware snapshot disk for
-    new or modified files. If not specified, the default value is
-    ``True``.
 
     :index:`xen_initrd<single: xen_initrd; submit commands>`
  xen_initrd = <image-file>
@@ -2454,6 +2389,7 @@ COMMANDS FOR THE VM UNIVERSE
 COMMANDS FOR THE DOCKER UNIVERSE
 
     :index:`docker_image<single: docker_image; submit commands>`
+
  docker_image = < image-name >
     Defines the name of the Docker image that is the basis for the
     docker container.
@@ -2468,6 +2404,7 @@ COMMANDS FOR THE DOCKER UNIVERSE
     is the case, additional values may be valid here.
 
     :index:`container_service_names<single: container_service_names; submit commands>`
+
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*
@@ -2480,7 +2417,9 @@ COMMANDS FOR THE DOCKER UNIVERSE
     service.
 
 COMMANDS FOR THE CONTAINER UNIVERSE
+
     :index:`container_image<single: container_image; submit commands>`
+
  container_image = < image-name >
     Defines the name of the container image. Can be a singularity .sif file,
     a singularity exploded directory, or a path to an image in a docker style 
@@ -2494,6 +2433,7 @@ COMMANDS FOR THE CONTAINER UNIVERSE
 ADVANCED COMMANDS
 
     :index:`accounting_group<single: accounting_group; submit commands>`
+
  accounting_group = <accounting-group-name>
     Causes jobs to negotiate under the given accounting group. This
     value is advertised in the job ClassAd as ``AcctGroup``. The

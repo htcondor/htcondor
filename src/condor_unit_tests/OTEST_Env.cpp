@@ -39,6 +39,7 @@ static bool test_mf_v1r_or_v2q_ret_null(void);
 static bool test_mf_v1r_or_v2q_detect_v1r(void);
 static bool test_mf_v1r_or_v2q_detect_v2q(void);
 static bool test_mf_v1r_or_v2q_add_null(void);
+static bool test_mf_v1r_or_v2q_add_empty(void);
 static bool test_mf_v2q_ret_null(void);
 static bool test_mf_v2q_ret_valid(void);
 static bool test_mf_v2q_ret_invalid_quotes(void);
@@ -185,14 +186,11 @@ static bool test_insert_env_into_classad_v1_v2_replace(void);
 static bool test_insert_env_into_classad_v2_v1_replace(void);
 static bool test_insert_env_into_classad_v2_v2_replace(void);
 static bool test_insert_env_into_classad_version_v1(void);
-static bool test_insert_env_into_classad_version_v1_os_winnt(void);
 static bool test_insert_env_into_classad_version_v1_os_win32(void);
 static bool test_insert_env_into_classad_version_v1_os_unix(void);
 static bool test_insert_env_into_classad_version_v1_semi(void);
 static bool test_insert_env_into_classad_version_v1_line(void);
 static bool test_insert_env_into_classad_version_v1_current(void);
-static bool test_insert_env_into_classad_version_v1_error_v2(void);
-static bool test_insert_env_into_classad_version_v1_error(void);
 static bool test_insert_env_into_classad_version_v2(void);
 static bool test_condor_version_requires_v1_false(void);
 static bool test_condor_version_requires_v1_true(void);
@@ -310,8 +308,10 @@ static bool test_input_was_v1_true_ad(void);
 
 #ifdef WIN32
 #define V1_ENV_DELIM "|"
+#define V1_ENV_DELIM_CHAR '|'
 #else
 #define V1_ENV_DELIM ";"
+#define V1_ENV_DELIM_CHAR ';'
 #endif
 #define V1_ENV_DELIM_NIX ";"
 #define V1_ENV_DELIM_WIN "|"
@@ -423,6 +423,7 @@ bool OTEST_Env(void) {
 	driver.register_function(test_mf_v1r_or_v2q_detect_v1r);
 	driver.register_function(test_mf_v1r_or_v2q_detect_v2q);
 	driver.register_function(test_mf_v1r_or_v2q_add_null);
+	driver.register_function(test_mf_v1r_or_v2q_add_empty);
 	driver.register_function(test_mf_v2q_ret_null);
 	driver.register_function(test_mf_v2q_ret_valid);
 	driver.register_function(test_mf_v2q_ret_invalid_quotes);
@@ -569,14 +570,11 @@ bool OTEST_Env(void) {
 	driver.register_function(test_insert_env_into_classad_v2_v1_replace);
 	driver.register_function(test_insert_env_into_classad_v2_v2_replace);
 	driver.register_function(test_insert_env_into_classad_version_v1);
-	driver.register_function(test_insert_env_into_classad_version_v1_os_winnt);
 	driver.register_function(test_insert_env_into_classad_version_v1_os_win32);
 	driver.register_function(test_insert_env_into_classad_version_v1_os_unix);
 	driver.register_function(test_insert_env_into_classad_version_v1_semi);
 	driver.register_function(test_insert_env_into_classad_version_v1_line);
 	driver.register_function(test_insert_env_into_classad_version_v1_current);
-	driver.register_function(test_insert_env_into_classad_version_v1_error_v2);
-	driver.register_function(test_insert_env_into_classad_version_v1_error);
 	driver.register_function(test_insert_env_into_classad_version_v2);
 	driver.register_function(test_condor_version_requires_v1_false);
 	driver.register_function(test_condor_version_requires_v1_true);
@@ -841,6 +839,28 @@ static bool test_mf_v1r_or_v2q_detect_v2q() {
 	PASS;
 }
 
+static bool test_mf_v1r_or_v2q_add_empty() {
+	emit_test("Test that MergeFromV1RawOrV2Quoted() doesn't add any "
+		"environment variables for an empty string.");
+	Env env;
+	std::string msg;
+	MyString actual;
+	bool success = env.MergeFromV1RawOrV2Quoted("\0trailing garbage", msg);
+	env.getDelimitedStringForDisplay(&actual);
+	emit_input_header();
+	emit_param("STRING", "%s", "\"\"");
+	emit_param("errmsg", "%s", "NULL");
+	emit_output_expected_header();
+	emit_param("Env", "%s", EMPTY);
+	emit_param("errmsg", "%s", EMPTY);
+	emit_output_actual_header();
+	emit_param("Env", "%s", actual.Value());
+	if(actual != EMPTY || ! success || ! msg.empty()) {
+		FAIL;
+	}
+	PASS;
+}
+
 static bool test_mf_v1r_or_v2q_add_null() {
 	emit_test("Test that MergeFromV1RawOrV2Quoted() doesn't add any "
 		"environment variables for a NULL string.");
@@ -865,8 +885,9 @@ static bool test_mf_v2q_ret_null() {
 	emit_test("Test that MergeFromV2Quoted() returns true when passed a NULL "
 		"string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV2Quoted(NULL, NULL);
+	bool actual = env.MergeFromV2Quoted(NULL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -884,8 +905,9 @@ static bool test_mf_v2q_ret_valid() {
 	emit_test("Test that MergeFromV2Quoted() returns true when passed a valid"
 		" V2Quoted string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV2Quoted(V2Q, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q);
 	emit_param("MyString", "%s", "NULL");
@@ -903,8 +925,9 @@ static bool test_mf_v2q_ret_invalid_quotes() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to no quotes.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2R, NULL);
+	bool actual = env.MergeFromV2Quoted(V2R, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R);
 	emit_param("MyString", "%s", "NULL");
@@ -922,8 +945,9 @@ static bool test_mf_v2q_ret_invalid_quotes_end() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due missing quotes at the end.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_END, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_END, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
 	emit_param("MyString", "%s", "NULL");
@@ -941,8 +965,9 @@ static bool test_mf_v2q_ret_invalid_trail() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to trailing characters after the quotes.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_TRAIL, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_TRAIL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
 	emit_param("MyString", "%s", "NULL");
@@ -960,8 +985,9 @@ static bool test_mf_v2q_ret_invalid_name() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to a missing variable name.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_NAME, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_NAME, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -979,8 +1005,9 @@ static bool test_mf_v2q_ret_invalid_delim() {
 	emit_test("Test that MergeFromV2Quoted() returns false when passed an "
 		"invalid V2Quoted string due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	bool actual = env.MergeFromV2Quoted(V2Q_MISS_DELIM, NULL);
+	bool actual = env.MergeFromV2Quoted(V2Q_MISS_DELIM, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -999,14 +1026,14 @@ static bool test_mf_v2q_error_invalid_quotes() {
 		"an invalid V2Quoted string due to no quotes.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V1R, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V1R, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1017,14 +1044,14 @@ static bool test_mf_v2q_error_invalid_quotes_end() {
 		"an invalid V2Quoted string due to missing quotes at the end.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_END, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_END, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1036,14 +1063,14 @@ static bool test_mf_v2q_error_invalid_trail() {
 		"quotes.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_TRAIL, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_TRAIL, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1054,14 +1081,14 @@ static bool test_mf_v2q_error_invalid_name() {
 		"an invalid V2Quoted string due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_NAME, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_NAME, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1072,14 +1099,14 @@ static bool test_mf_v2q_error_invalid_delim() {
 		"an invalid V2Quoted string due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_DELIM, &actual);
+	std::string error;
+	env.MergeFromV2Quoted(V2Q_MISS_DELIM, error);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", error.c_str());
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1089,8 +1116,9 @@ static bool test_mf_v2q_add_null() {
 	emit_test("Test that MergeFromV2Quoted() doesn't add the environment "
 		"variables for a NULL string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(NULL, NULL);
+	env.MergeFromV2Quoted(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1110,8 +1138,9 @@ static bool test_mf_v2q_add_invalid_delim_var() {
 		"variables for an invalid V2Quoted string with a missing delimiter and "
 		"a missing variable name.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_BOTH, NULL);
+	env.MergeFromV2Quoted(V2Q_MISS_BOTH, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_BOTH);
@@ -1130,8 +1159,9 @@ static bool test_mf_v2q_add_invalid_quotes() {
 	emit_test("Test that MergeFromV2Quoted() doesn't add the environment "
 		"variables for an invalid V2Quoted string due to missing quotes.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2R, NULL);
+	env.MergeFromV2Quoted(V2R, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R);
@@ -1151,8 +1181,9 @@ static bool test_mf_v2q_add_invalid_quotes_end() {
 		"variables for an invalid V2Quoted string due to missing quotes at the "
 		"end.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_MISS_END, NULL);
+	env.MergeFromV2Quoted(V2Q_MISS_END, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_MISS_END);
@@ -1172,8 +1203,9 @@ static bool test_mf_v2q_add_invalid_trail() {
 		"variables for an invalid V2Quoted string due to trailing characters "
 		"after the quotes at the end.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_TRAIL, NULL);
+	env.MergeFromV2Quoted(V2Q_TRAIL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_TRAIL);
@@ -1192,8 +1224,9 @@ static bool test_mf_v2q_add() {
 	emit_test("Test that MergeFromV2Quoted() adds the environment variables "
 		"for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q);
@@ -1212,9 +1245,10 @@ static bool test_mf_v2q_replace() {
 	emit_test("Test that MergeFromV2Quoted() replaces the environment "
 		"variables for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
-	env.MergeFromV2Quoted(V2Q_REP, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
+	env.MergeFromV2Quoted(V2Q_REP, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q);
@@ -1235,9 +1269,10 @@ static bool test_mf_v2q_replace_v1r() {
 		"variables for a valid V2Quoted string on an Env object originally "
 		"constructed from a V1Raw string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_SEMI, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.MergeFromV2Quoted(V2Q_REP_SEMI, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1257,9 +1292,10 @@ static bool test_mf_v2q_replace_add() {
 	emit_test("Test that MergeFromV2Quoted() replaces some environment "
 		"variables and also adds new ones for a valid V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_ADD, NULL);
+	env.MergeFromV2Quoted(V2Q, msg);
+	env.MergeFromV2Quoted(V2Q_REP_ADD, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q);
@@ -1280,9 +1316,10 @@ static bool test_mf_v2q_replace_add_v1r() {
 		"variables and also adds new ones for a valid V2Quoted string on an Env"
 		" object originally constructed from a V1Raw string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.MergeFromV2Quoted(V2Q_REP_ADD_SEMI, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.MergeFromV2Quoted(V2Q_REP_ADD_SEMI, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1498,7 +1535,7 @@ static bool test_mf_v2r_replace_v1r() {
 		"constructed from a V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.MergeFromV2Raw(V2R_REP_SEMI, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -1543,7 +1580,7 @@ static bool test_mf_v2r_replace_add_v1r() {
 		"object originally constructed from a V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.MergeFromV2Raw(V2R_REP_ADD_SEMI, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -1565,7 +1602,7 @@ static bool test_mf_v1r_ret_null() {
 		"string.");
 	Env env;
 	bool expect = true;
-	bool actual = env.MergeFromV1Raw(NULL, NULL);
+	bool actual = env.MergeFromV1Raw(NULL, 0, NULL);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -1584,7 +1621,7 @@ static bool test_mf_v1r_ret_valid() {
 		"V1Raw string.");
 	Env env;
 	bool expect = true;
-	bool actual = env.MergeFromV1Raw(V1R, NULL);
+	bool actual = env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
 	emit_param("MyString", "%s", "NULL");
@@ -1603,7 +1640,7 @@ static bool test_mf_v1r_ret_invalid_name() {
 		"invalid V1Raw string due to a missing variable name.");
 	Env env;
 	bool expect = false;
-	bool actual = env.MergeFromV1Raw(V1R_MISS_NAME, NULL);
+	bool actual = env.MergeFromV1Raw(V1R_MISS_NAME, V1_ENV_DELIM_CHAR, NULL);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -1622,7 +1659,7 @@ static bool test_mf_v1r_ret_invalid_delim() {
 		"invalid V1Raw string due to a missing delimiter.");
 	Env env;
 	bool expect = false;
-	bool actual = env.MergeFromV1Raw(V1R_MISS_DELIM, NULL);
+	bool actual = env.MergeFromV1Raw(V1R_MISS_DELIM, V1_ENV_DELIM_CHAR, NULL);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -1642,7 +1679,7 @@ static bool test_mf_v1r_error_invalid_name() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R_MISS_NAME, &actual);
+	env.MergeFromV1Raw(V1R_MISS_NAME, V1_ENV_DELIM_CHAR, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_NAME);
 	emit_param("MyString", "%s", "");
@@ -1660,7 +1697,7 @@ static bool test_mf_v1r_error_invalid_delim() {
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R_MISS_DELIM, &actual);
+	env.MergeFromV1Raw(V1R_MISS_DELIM, V1_ENV_DELIM_CHAR, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_DELIM);
 	emit_param("MyString", "%s", "");
@@ -1677,7 +1714,7 @@ static bool test_mf_v1r_add_null() {
 		"variable for a NULL string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(NULL, NULL);
+	env.MergeFromV1Raw(NULL, 0, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1697,7 +1734,7 @@ static bool test_mf_v1r_add_invalid() {
 		"variables for an invalid V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R_MISS_BOTH, NULL);
+	env.MergeFromV1Raw(V1R_MISS_BOTH, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_BOTH);
@@ -1717,7 +1754,7 @@ static bool test_mf_v1r_add() {
 		"for a valid V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
@@ -1737,8 +1774,8 @@ static bool test_mf_v1r_replace() {
 		"variables for a valid V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1761,7 +1798,7 @@ static bool test_mf_v1r_replace_v2r() {
 	Env env;
 	MyString actual;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_SEMI);
@@ -1782,9 +1819,10 @@ static bool test_mf_v1r_replace_v2q() {
 		"variables for a valid V1Raw string on an Env object originally "
 		"constructed from a V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_SEMI, NULL);
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV2Quoted(V2Q_SEMI, msg);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q_SEMI);
@@ -1805,8 +1843,8 @@ static bool test_mf_v1r_replace_add() {
 		"variables and also adds new ones for a valid V1Raw string.");
 	Env env;
 	MyString actual;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -1829,7 +1867,7 @@ static bool test_mf_v1r_replace_add_v2r() {
 	Env env;
 	MyString actual;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_SEMI);
@@ -1850,9 +1888,10 @@ static bool test_mf_v1r_replace_add_v2q() {
 		"variables and also adds new ones for a valid V1Raw string on an Env "
 		"object originally constructed from a V2Quoted string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV2Quoted(V2Q_SEMI, NULL);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env.MergeFromV2Quoted(V2Q_SEMI, msg);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2Q_SEMI);
@@ -1872,8 +1911,9 @@ static bool test_mf_v1or2_r_ret_null() {
 	emit_test("Test that MergeFromV1or2Raw() returns true when passed "
 		"a NULL string.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFromV1or2Raw(NULL, NULL);
+	bool actual = env.MergeFromV1or2Raw(NULL, msg);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -1893,8 +1933,9 @@ static bool test_mf_v1or2_r_detect_v1r() {
 	emit_comment("MergeFromV1or2Raw() just calls MergeFromV1Raw(), which was "
 		"tested above.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	env.MergeFromV1or2Raw(V1R, NULL);
+	env.MergeFromV1or2Raw(V1R, msg);
 	bool actual =env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
@@ -1915,8 +1956,9 @@ static bool test_mf_v1or2_r_detect_v2r() {
 	emit_comment("MergeFromV1or2Raw() just calls MergeFromV2Raw(), which was "
 		"tested above.");
 	Env env;
+	std::string msg;
 	bool expect = false;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	bool actual =env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MARK);
@@ -1935,8 +1977,9 @@ static bool test_mf_v1or2_r_add_null() {
 	emit_test("Test that MergeFromV1or2Raw() doesn't add any environment "
 		"variables for a NULL string.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1or2Raw(NULL, NULL);
+	env.MergeFromV1or2Raw(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1957,8 +2000,9 @@ static bool test_mf_v1or2_r_add_v2r() {
 	emit_comment("We need to make sure MergeFromV2Raw() correctly handles the"
 		" V2Raw environment marker.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MARK);
@@ -2447,7 +2491,7 @@ static bool test_mf_env_replace_v1_v2() {
 		"Env constructed from a V2Raw string.");
 	Env env1, env2;
 	MyString actual;
-	env1.MergeFromV1Raw(V1R, NULL);
+	env1.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env2.MergeFromV2Raw(V2R_REP_SEMI, NULL);
 	env1.MergeFrom(env2);
 	env1.getDelimitedStringForDisplay(&actual);
@@ -2471,7 +2515,7 @@ static bool test_mf_env_replace_v2_v1() {
 	Env env1, env2;
 	MyString actual;
 	env1.MergeFromV2Raw(V2R_SEMI, NULL);
-	env2.MergeFromV1Raw(V1R_REP, NULL);
+	env2.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env1.MergeFrom(env2);
 	env1.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -2517,7 +2561,7 @@ static bool test_mf_env_replace_add_v1_v2() {
 		"string.");
 	Env env1, env2;
 	MyString actual;
-	env1.MergeFromV1Raw(V1R, NULL);
+	env1.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env2.MergeFromV2Raw(V2R_REP_ADD_SEMI, NULL);
 	env1.MergeFrom(env2);
 	env1.getDelimitedStringForDisplay(&actual);
@@ -2542,7 +2586,7 @@ static bool test_mf_env_replace_add_v2_v1() {
 	Env env1, env2;
 	MyString actual;
 	env1.MergeFromV2Raw(V2R_SEMI, NULL);
-	env2.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env2.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env1.MergeFrom(env2);
 	env1.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
@@ -2584,12 +2628,13 @@ static bool test_mf_ad_ret_null() {
 	emit_test("Test that MergeFrom() returns true when passed a NULL "
 		"ClassAd.");
 	Env env;
+	std::string msg;
 	bool expect = true;
-	bool actual = env.MergeFrom(NULL, NULL);
+	bool actual = env.MergeFrom(NULL, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
-	emit_param("CONSTANT", "%s", ATTR_JOB_ENVIRONMENT2);
+	emit_param("CONSTANT", "%s", ATTR_JOB_ENVIRONMENT);
 	emit_output_expected_header();
 	emit_retval("%s", tfstr(expect));
 	emit_output_actual_header();
@@ -2604,10 +2649,11 @@ static bool test_mf_ad_ret_v1r_valid() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that uses V1Raw.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1);
 	emit_param("MyString", "%s", "NULL");
@@ -2625,10 +2671,11 @@ static bool test_mf_ad_ret_v2r_valid() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that uses V2Raw.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2);
 	emit_param("MyString", "%s", "NULL");
@@ -2646,10 +2693,11 @@ static bool test_mf_ad_ret_valid_define() {
 	emit_test("Test that MergeFrom() returns true when passed a valid "
 		"ClassAd that doesn't define an Environment");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD, classad);
 	bool expect = true;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD);
 	emit_param("MyString", "%s", "NULL");
@@ -2667,10 +2715,11 @@ static bool test_mf_ad_ret_v1r_invalid_name() {
 	emit_test("Test that MergeFrom() returns false when passed an invalid "
 		"ClassAd that uses V1Raw due to a missing variable name.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_NAME, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -2688,10 +2737,11 @@ static bool test_mf_ad_ret_v1r_invalid_delim() {
 	emit_test("Test that MergeFrom() returns false when passed an invalid "
 		"ClassAd that uses V1Raw due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_DELIM, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -2709,10 +2759,11 @@ static bool test_mf_ad_ret_v2r_invalid_name() {
 	emit_test("Test that MergeFrom() returns false when passed a invalid "
 		"ClassAd that uses V2Raw due to a missing variable name.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "NULL");
@@ -2730,10 +2781,11 @@ static bool test_mf_ad_ret_v2r_invalid_delim() {
 	emit_test("Test that MergeFrom() returns false when passed a invalid "
 		"ClassAd that uses V2Raw due to a missing delimiter.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_DELIM, classad);
 	bool expect = false;
-	bool actual = env.MergeFrom(&classad, NULL);
+	bool actual = env.MergeFrom(&classad, msg);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_DELIM);
 	emit_param("MyString", "%s", "NULL");
@@ -2752,16 +2804,16 @@ static bool test_mf_ad_error_v1r_invalid_name() {
 		"invalid ClassAd that uses V1Raw due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2772,16 +2824,16 @@ static bool test_mf_ad_error_v1r_invalid_delim() {
 		"invalid ClassAd that uses V1Raw due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V1_MISS_DELIM, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2792,16 +2844,16 @@ static bool test_mf_ad_error_v2r_invalid_name() {
 		"invalid ClassAd that uses V2Raw due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2812,16 +2864,16 @@ static bool test_mf_ad_error_v2r_invalid_delim() {
 		"invalid ClassAd that uses V2Raw due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	ClassAd classad;
 	initAdFromString(AD_V2_MISS_NAME, classad);
-	env.MergeFrom(&classad, &actual);
+	env.MergeFrom(&classad, actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -2831,8 +2883,9 @@ static bool test_mf_ad_add_null() {
 	emit_test("Test that MergeFrom() doesn't add the environment variables "
 		"when passed a NULL ClassAd pointer.");
 	Env env;
+	std::string msg;
 	MyString actual;
-	env.MergeFrom(NULL, NULL);
+	env.MergeFrom(NULL, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", "NULL");
@@ -2851,10 +2904,11 @@ static bool test_mf_ad_add_define() {
 	emit_test("Test that MergeFrom() doesn't any environment variables "
 		"when passed a ClassAd that doesn't define an environment variable.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD);
@@ -2875,9 +2929,10 @@ static bool test_mf_ad_add_v1r_one() {
 	Env env;
 	const char* classad_string = "\tEnv = \"one=1\"";
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(classad_string, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string);
@@ -2896,10 +2951,11 @@ static bool test_mf_ad_add_v1r_many() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V1);
@@ -2918,11 +2974,12 @@ static bool test_mf_ad_add_v2r_one() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with one variable.");
 	Env env;
+	std::string msg;
 	const char* classad_string = "\tEnvironment = \"one=1\"";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", classad_string);
@@ -2941,10 +2998,11 @@ static bool test_mf_ad_add_v2r_many() {
 	emit_test("Test that MergeFrom() adds the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	MyString actual;
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("ClassAd", "%s", AD_V2);
@@ -2963,11 +3021,12 @@ static bool test_mf_ad_v1r_replace() {
 	emit_test("Test that MergeFrom() replaces the environment variables when "
 		"passed a valid ClassAd that uses V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -2987,11 +3046,12 @@ static bool test_mf_ad_v2r_replace() {
 	emit_test("Test that MergeFrom() replaces the environment variables when "
 		"passed a valid ClassAd that uses V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_REP, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3012,11 +3072,12 @@ static bool test_mf_ad_v1r_replace_add() {
 		"variables and adds new ones when passed a valid ClassAd that uses"
 		" V1Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V1_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3037,11 +3098,12 @@ static bool test_mf_ad_v2r_replace_add() {
 		"variables when and adds new ones when passed a valid ClassAd that uses"
 		" V2Raw with many variables.");
 	Env env;
+	std::string msg;
 	ClassAd classad;
 	initAdFromString(AD_V2_REP_ADD, classad);
 	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.MergeFrom(&classad, NULL);
+	env.MergeFrom(&classad, msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
@@ -3727,9 +3789,10 @@ static bool test_insert_env_into_classad_v1_empty() {
 	emit_test("Test that InsertEnvIntoClassAd() inserts the environment "
 		"variables from an Env object in V1 format into the empty classad.");
 	Env env;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	std::string msg;
+	env.InsertEnvIntoClassAd(classad, msg);
 	char* actual = NULL;
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
@@ -3754,7 +3817,8 @@ static bool test_insert_env_into_classad_v2_empty() {
 	Env env;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	std::string msg;
+	env.InsertEnvIntoClassAd(classad, msg);
 	char* actual = NULL;
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
@@ -3779,10 +3843,11 @@ static bool test_insert_env_into_classad_v1_v1_replace() {
 		"Environment.");
 	Env env;
 	char* actual = NULL;
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V1, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	env.InsertEnvIntoClassAd(classad, msg);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
@@ -3806,10 +3871,11 @@ static bool test_insert_env_into_classad_v1_v2_replace() {
 		"Environment.");
 	Env env;
 	char* actual = NULL;
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V2, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	env.InsertEnvIntoClassAd(classad, msg);
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
@@ -3835,8 +3901,9 @@ static bool test_insert_env_into_classad_v2_v1_replace() {
 	char* actual = NULL;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V1, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	env.InsertEnvIntoClassAd(classad, msg);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_REP);
@@ -3862,8 +3929,9 @@ static bool test_insert_env_into_classad_v2_v2_replace() {
 	char* actual = NULL;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V2, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL);
+	env.InsertEnvIntoClassAd(classad, msg);
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_REP);
@@ -3885,85 +3953,55 @@ static bool test_insert_env_into_classad_version_v1() {
 		"variables from an Env object in V2 format into the ClassAd when the "
 		"CondorVersionInfo requires V1 format.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
+	std::string msg;
+	env.InsertEnvV1IntoClassAd(classad, msg);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", EMPTY);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
-static bool test_insert_env_into_classad_version_v1_os_winnt() {
-	emit_test("Test that InsertEnvIntoClassAd() adds the environment "
-		"variables from an Env object in V2 format into the ClassAd when the "
-		"CondorVersionInfo requires V1 format and the target OS is WINNT.");
-	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
-	env.MergeFromV2Raw(V2R, NULL);
-	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, "WINNT", &info);
-	classad.LookupString("Env", &actual);
-	emit_input_header();
-	emit_param("Env", "%s", V2R);
-	emit_param("ClassAd", "%s", EMPTY);
-	emit_param("MyString", "%s", "NULL");
-	emit_param("STRING", "%s", "WINNT");
-	emit_param("CondorVersionInfo", "%s", version);
-	emit_output_expected_header();
-	emit_param("ClassAd Env", "%s", V1R_WIN);
-	emit_output_actual_header();
-	emit_param("ClassAd Env", "%s", actual);
-	if(!strings_similar(actual, V1R_WIN, "|")) {
-		free(actual); free(version);
-		FAIL;
-	}
-	free(actual); free(version);
-	PASS;
-}
 
 static bool test_insert_env_into_classad_version_v1_os_win32() {
 	emit_test("Test that InsertEnvIntoClassAd() adds the environment "
 		"variables from an Env object in V2 format into the ClassAd when the "
 		"CondorVersionInfo requires V1 format and the target OS is WIN32.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, "WIN32", &info);
+	std::string msg;
+	env.InsertEnvV1IntoClassAd(classad, msg, '|');
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", EMPTY);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "WIN32");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R_WIN);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R_WIN, "|")) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
@@ -3972,27 +4010,26 @@ static bool test_insert_env_into_classad_version_v1_os_unix() {
 		"variables from an Env object in V2 format into the ClassAd when the "
 		"CondorVersionInfo requires V1 format and the target OS is UNIX.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, "UNIX", &info);
+	std::string msg;
+	env.InsertEnvV1IntoClassAd(classad, msg, ';');
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", EMPTY);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "UNIX");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R_NIX);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R_NIX, V1_ENV_DELIM_NIX)) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
@@ -4002,178 +4039,115 @@ static bool test_insert_env_into_classad_version_v1_semi() {
 		"CondorVersionInfo requires V1 format and the ClassAd previously used "
 		"a semicolon as a delimiter.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V1, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
+	env.InsertEnvV1IntoClassAd(classad, msg, V1_ENV_DELIM[0] );
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", AD_V1);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
 static bool test_insert_env_into_classad_version_v1_line() {
-	emit_test("Test that InsertEnvIntoClassAd() adds the environment "
+	emit_test("Test that InsertEnvV1IntoClassAd() adds the environment "
 		"variables from an Env object in V2 format into the ClassAd when the "
 		"CondorVersionInfo requires V1 format and the ClassAd previously used "
 		"a '|' as a delimiter.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R_REP, NULL);
 	ClassAd classad;
+	std::string msg;
 	initAdFromString(AD_V1_WIN, classad);
-	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
+	env.InsertEnvV1IntoClassAd(classad, msg, '|');
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", AD_V1_WIN);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R_WIN);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R_REP_WIN, "|")) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
 static bool test_insert_env_into_classad_version_v1_current() {
-	emit_test("Test that InsertEnvIntoClassAd() adds the environment "
+	emit_test("Test that InsertEnvV1IntoClassAd() adds the environment "
 		"variables from an Env object in V2 format into the ClassAd when the "
 		"CondorVersionInfo requires V1 format and we use the delimiter for the "
 		"current OS.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
+	char *actual = NULL;
 	env.MergeFromV2Raw(V2R, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
+	std::string msg;
+	env.InsertEnvV1IntoClassAd(classad, msg, V1_ENV_DELIM[0]);
 	classad.LookupString("Env", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("ClassAd", "%s", EMPTY);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Env", "%s", V1R);
 	emit_output_actual_header();
 	emit_param("ClassAd Env", "%s", actual);
 	if(!strings_similar(actual, V1R, V1_ENV_DELIM)) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
-static bool test_insert_env_into_classad_version_v1_error_v2() {
-	emit_test("Test that InsertEnvIntoClassAd() sets the error MyString for "
-		"an Env object in V2 format that cannot be converted into V1 format "
-		"when the CondorVersionInfo requires V1 format, but the ClassAd started"
-		" with V2.");
-	emit_comment("This test just checks if the error message is not empty.");
-	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
-	MyString error;
-	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	ClassAd classad;
-	initAdFromString(AD_V2, classad);
-	env.InsertEnvIntoClassAd(&classad, &error, NULL, &info);
-	classad.LookupString("Env", &actual);
-	emit_input_header();
-	emit_param("Env", "%s", V2R_SEMI);
-	emit_param("ClassAd", "%s", EMPTY);
-	emit_param("MyString", "%s", "");
-	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
-	emit_output_actual_header();
-	emit_param("Error MyString", "%s", error.Value());
-	if(error.IsEmpty()) {
-		free(actual); free(version);
-		FAIL;
-	}
-	free(actual); free(version);
-	PASS;
-}
-
-static bool test_insert_env_into_classad_version_v1_error() {
-	emit_test("Test that InsertEnvIntoClassAd() sets the error MyString for "
-		"an Env object in V2 format that cannot be converted into V1 format "
-		"when the CondorVersionInfo requires V1 format.");
-	emit_comment("This test just checks if the error message is not empty.");
-	Env env;
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
-	MyString error;
-	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, &error, NULL, &info);
-	classad.LookupString("Env", &actual);
-	emit_input_header();
-	emit_param("Env", "%s", V2R_SEMI);
-	emit_param("ClassAd", "%s", EMPTY);
-	emit_param("MyString", "%s", "");
-	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
-	emit_output_actual_header();
-	emit_param("Error MyString", "%s", error.Value());
-	if(error.IsEmpty()) {
-		free(version);	//don't need to free 'actual'
-		FAIL;
-	}
-	free(version);	//don't need to free 'actual'
-	PASS;
-}
 
 static bool test_insert_env_into_classad_version_v2() {
 	emit_test("Test that InsertEnvIntoClassAd() adds the environment "
 		"variables from an Env object in V1 format into the ClassAd when the "
 		"CondorVersionInfo doesn't require V1 format.");
 	Env env;
-	CondorVersionInfo info("$CondorVersion: 7.0.0 " __DATE__ " PRE-RELEASE $");
-	char *actual = NULL, *version = info.get_version_string();
-	env.MergeFromV1Raw(V1R, NULL);
+	char *actual = NULL;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	ClassAd classad;
-	env.InsertEnvIntoClassAd(&classad, NULL, NULL, &info);
+	std::string msg;
+	env.InsertEnvIntoClassAd(classad, msg);
 	classad.LookupString("Environment", &actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("ClassAd", "%s", EMPTY);
 	emit_param("MyString", "%s", "NULL");
 	emit_param("STRING", "%s", "NULL");
-	emit_param("CondorVersionInfo", "%s", version);
 	emit_output_expected_header();
 	emit_param("ClassAd Environment", "%s", V2R);
 	emit_output_actual_header();
 	emit_param("ClassAd Environment", "%s", actual);
 	if(!strings_similar(actual, V2R)) {
-		free(actual); free(version);
+		free(actual);
 		FAIL;
 	}
-	free(actual); free(version);
+	free(actual);
 	PASS;
 }
 
@@ -4244,9 +4218,9 @@ static bool test_get_delim_str_v2_raw_return_empty() {
 	emit_test("Test that getDelimitedStringV2Raw() returns true for an empty "
 		"Env object.");
 	Env env;
-	MyString result, error;
+	MyString result;
 	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result, &error);
+	bool actual = env.getDelimitedStringV2Raw(&result);
 	emit_input_header();
 	emit_param("MyString", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4264,10 +4238,10 @@ static bool test_get_delim_str_v2_raw_return_v1() {
 	emit_test("Test that getDelimitedStringV2Raw() returns true for an Env "
 		"object using V1 format.");
 	Env env;
-	MyString result, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	MyString result;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result, &error);
+	bool actual = env.getDelimitedStringV2Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4286,10 +4260,10 @@ static bool test_get_delim_str_v2_raw_return_v2() {
 	emit_test("Test that getDelimitedStringV2Raw() returns true for an Env "
 		"object using V2 format.");
 	Env env;
-	MyString result, error;
+	MyString result;
 	env.MergeFromV2Raw(V2R, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result, &error);
+	bool actual = env.getDelimitedStringV2Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4308,8 +4282,8 @@ static bool test_get_delim_str_v2_raw_result_empty() {
 	emit_test("Test that getDelimitedStringV2Raw() sets the result MyString "
 		"to the expected value for an empty Env object.");
 	Env env;
-	MyString actual, error; 
-	env.getDelimitedStringV2Raw(&actual, &error);
+	MyString actual; 
+	env.getDelimitedStringV2Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4328,9 +4302,9 @@ static bool test_get_delim_str_v2_raw_result_v1() {
 	emit_test("Test that getDelimitedStringV2Raw() sets the result MyString "
 		"to the expected value for an Env object using V1 format.");
 	Env env;
-	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV2Raw(&actual, &error);
+	MyString actual;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV2Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4349,9 +4323,9 @@ static bool test_get_delim_str_v2_raw_result_v2() {
 	emit_test("Test that getDelimitedStringV2Raw() sets the result MyString "
 		"to the expected value for an Env object using V2 format.");
 	Env env;
-	MyString actual, error;
+	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Raw(&actual, &error);
+	env.getDelimitedStringV2Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4371,11 +4345,11 @@ static bool test_get_delim_str_v2_raw_result_add() {
 		"to the expected value after adding environment variables with "
 		"MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	MyString actual1, actual2;
 	env.MergeFromV2Raw(V2R_REP, NULL);
-	env.getDelimitedStringV2Raw(&actual1, &error);
+	env.getDelimitedStringV2Raw(&actual1);
 	env.MergeFromV2Raw(V2R_ADD, NULL);
-	env.getDelimitedStringV2Raw(&actual2, &error);
+	env.getDelimitedStringV2Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_REP);
 	emit_param("MyString", "%s", "");
@@ -4399,11 +4373,11 @@ static bool test_get_delim_str_v2_raw_result_replace() {
 		"to the expected value after replacing environment variables with"
 		"MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	MyString actual1, actual2;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Raw(&actual1, &error);
+	env.getDelimitedStringV2Raw(&actual1);
 	env.MergeFromV2Raw(V2R_REP, NULL);
-	env.getDelimitedStringV2Raw(&actual2, &error);
+	env.getDelimitedStringV2Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4427,11 +4401,11 @@ static bool test_get_delim_str_v2_raw_result_add_replace() {
 		"to the expected value after adding and replacing environment variables"
 		" with MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	MyString actual1, actual2;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Raw(&actual1, &error);
+	env.getDelimitedStringV2Raw(&actual1);
 	env.MergeFromV2Raw(V2R_REP_ADD, NULL);
-	env.getDelimitedStringV2Raw(&actual2, &error);
+	env.getDelimitedStringV2Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4454,8 +4428,8 @@ static bool test_get_delim_str_v2_raw_mark_empty() {
 	emit_test("Test that getDelimitedStringV2Raw() adds the RAW_ENV_V2_MARKER"
 		" to the result MyString for an empty Env object.");
 	Env env;
-	MyString actual, error;
-	env.getDelimitedStringV2Raw(&actual, &error, true);
+	MyString actual;
+	env.getDelimitedStringV2Raw(&actual, true);
 	emit_input_header();
 	emit_param("MyString", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4474,9 +4448,9 @@ static bool test_get_delim_str_v2_raw_mark_v1() {
 	emit_test("Test that getDelimitedStringV2Raw() adds the RAW_ENV_V2_MARKER"
 		" to the result MyString for an Env object using V1 format.");
 	Env env;
-	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV2Raw(&actual, &error, true);
+	MyString actual;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV2Raw(&actual, true);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4496,9 +4470,9 @@ static bool test_get_delim_str_v2_raw_mark_v2() {
 	emit_test("Test that getDelimitedStringV2Raw() adds the RAW_ENV_V2_MARKER"
 		" to the result MyString for an Env object using V2 format.");
 	Env env;
-	MyString actual, error;
+	MyString actual;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	env.getDelimitedStringV2Raw(&actual, &error, true);
+	env.getDelimitedStringV2Raw(&actual, true);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4520,9 +4494,9 @@ static bool test_get_delim_str_v1_raw_return_empty() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an empty "
 		"Env object.");
 	Env env;
-	MyString result, error;
+	MyString result;
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result, &error);
+	bool actual = env.getDelimitedStringV1Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4541,10 +4515,10 @@ static bool test_get_delim_str_v1_raw_return_v1() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an Env "
 		"object using V1 format.");
 	Env env;
-	MyString result, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	MyString result;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result, &error);
+	bool actual = env.getDelimitedStringV1Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4563,10 +4537,10 @@ static bool test_get_delim_str_v1_raw_return_v2() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an Env "
 		"object using V2 format.");
 	Env env;
-	MyString result, error;
+	MyString result;
 	env.MergeFromV2Raw(V2R, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result, &error);
+	bool actual = env.getDelimitedStringV1Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4585,10 +4559,10 @@ static bool test_get_delim_str_v1_raw_return_delim() {
 	emit_test("Test that getDelimitedStringV1Raw() returns false for an Env "
 		"object using V2 format with a ';'.");
 	Env env;
-	MyString result, error;
+	MyString result;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	bool expect = false;
-	bool actual = env.getDelimitedStringV1Raw(&result, &error);
+	bool actual = env.getDelimitedStringV1Raw(&result);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_SEMI);
 	emit_param("MyString", "%s", "");
@@ -4604,11 +4578,12 @@ static bool test_get_delim_str_v1_raw_return_delim() {
 }
 
 static bool test_get_delim_str_v1_raw_error_delim() {
-	emit_test("Test that getDelimitedStringV1Raw() sets the error MyString "
+	emit_test("Test that getDelimitedStringV1Raw() sets the error string "
 		"for an Env object using V2 format with a ';'.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString result, error;
+	MyString result;
+	std::string error;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	env.getDelimitedStringV1Raw(&result, &error);
 	emit_input_header();
@@ -4618,8 +4593,8 @@ static bool test_get_delim_str_v1_raw_error_delim() {
 	emit_output_expected_header();
 	emit_param("Error MyString is Empty", "%s", "FALSE");
 	emit_output_actual_header();
-	emit_param("Error MyString is Empty", "%s", tfstr(error.IsEmpty()));
-	if(error.IsEmpty()) {
+	emit_param("Error string is Empty", "%s", tfstr(error.empty()));
+	if(error.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -4629,8 +4604,8 @@ static bool test_get_delim_str_v1_raw_result_empty() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an empty Env object.");
 	Env env;
-	MyString actual, error;
-	env.getDelimitedStringV1Raw(&actual, &error);
+	MyString actual;
+	env.getDelimitedStringV1Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4649,9 +4624,9 @@ static bool test_get_delim_str_v1_raw_result_v1() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an Env object in V1 format.");
 	Env env;
-	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV1Raw(&actual, &error);
+	MyString actual;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4670,9 +4645,9 @@ static bool test_get_delim_str_v1_raw_result_v2() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an Env object in V2 format.");
 	Env env;
-	MyString actual, error;
+	MyString actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV1Raw(&actual, &error);
+	env.getDelimitedStringV1Raw(&actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4692,11 +4667,11 @@ static bool test_get_delim_str_v1_raw_result_add() {
 		"to the expected value after adding environment variables with "
 		"MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R_REP, NULL);
-	env.getDelimitedStringV1Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_ADD, NULL);
-	env.getDelimitedStringV1Raw(&actual2, &error);
+	MyString actual1, actual2;
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual1);
+	env.MergeFromV1Raw(V1R_ADD, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
 	emit_param("MyString", "%s", "");
@@ -4720,11 +4695,11 @@ static bool test_get_delim_str_v1_raw_result_replace() {
 		"to the expected value after replacing environment variables with "
 		"MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV1Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP, NULL);
-	env.getDelimitedStringV1Raw(&actual2, &error);
+	MyString actual1, actual2;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual1);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4748,11 +4723,11 @@ static bool test_get_delim_str_v1_raw_result_add_replace() {
 		"to the expected value after adding and replacing environment variables"
 		" with MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV1Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
-	env.getDelimitedStringV1Raw(&actual2, &error);
+	MyString actual1, actual2;
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual1);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -5010,8 +4985,8 @@ static bool test_get_delim_str_v1or2_raw_ad_result_replace() {
 	ClassAd classad;
 	initAdFromString(AD_V1_REP, classad);
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
-	env.getDelimitedStringV1Raw(&actual1, &error);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
+	env.getDelimitedStringV1Raw(&actual1);
 	env.getDelimitedStringV1or2Raw(&classad, &actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5058,7 +5033,7 @@ static bool test_get_delim_str_v1or2_raw_return_v1() {
 		"Env object using V1 format.");
 	Env env;
 	MyString result, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
 	bool actual = env.getDelimitedStringV1or2Raw(&result, &error);
 	emit_input_header();
@@ -5122,7 +5097,7 @@ static bool test_get_delim_str_v1or2_raw_result_v1() {
 		"MyString to the expected value for an Env object using V1 format.");
 	Env env;
 	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5165,9 +5140,9 @@ static bool test_get_delim_str_v1or2_raw_result_add() {
 		" MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_ADD, NULL);
+	env.MergeFromV1Raw(V1R_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
@@ -5193,9 +5168,9 @@ static bool test_get_delim_str_v1or2_raw_result_replace() {
 		"with MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5221,9 +5196,9 @@ static bool test_get_delim_str_v1or2_raw_result_add_replace() {
 		"variables with MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1or2Raw(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5269,7 +5244,7 @@ static bool test_get_delim_str_v2_quoted_return_v1() {
 		"Env object using V1 format.");
 	Env env;
 	MyString result, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
 	bool actual = env.getDelimitedStringV2Quoted(&result, &error);
 	emit_input_header();
@@ -5333,7 +5308,7 @@ static bool test_get_delim_str_v2_quoted_result_v1() {
 		"MyString to the expected value for an Env object using V1 format.");
 	Env env;
 	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV2Quoted(&actual, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5480,7 +5455,7 @@ static bool test_get_delim_str_v1r_or_v2q_return_v1() {
 		" an Env object using V1 format.");
 	Env env;
 	MyString result, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
 	bool actual = env.getDelimitedStringV1RawOrV2Quoted(&result, &error);
 	emit_input_header();
@@ -5544,7 +5519,7 @@ static bool test_get_delim_str_v1r_or_v2q_result_v1() {
 		"MyString to the expected value for an Env object using V1 format.");
 	Env env;
 	MyString actual, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5589,9 +5564,9 @@ static bool test_get_delim_str_v1r_or_v2q_result_add() {
 		" MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual1, &error);
-	env.MergeFromV1Raw(V1R_ADD, NULL);
+	env.MergeFromV1Raw(V1R_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
@@ -5617,9 +5592,9 @@ static bool test_get_delim_str_v1r_or_v2q_result_replace() {
 		"with MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP, NULL);
+	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5645,9 +5620,9 @@ static bool test_get_delim_str_v1r_or_v2q_result_add_replace() {
 		"variables with MergeFromV1Raw().");
 	Env env;
 	MyString actual1, actual2, error;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual1, &error);
-	env.MergeFromV1Raw(V1R_REP_ADD, NULL);
+	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
 	env.getDelimitedStringV1RawOrV2Quoted(&actual2, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
@@ -5691,7 +5666,7 @@ static bool test_get_string_array_v1() {
 	emit_test("Test that getStringArray() returns the expected string array "
 		"for an Env object using V1 format.");
 	Env env;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	char** result = env.getStringArray();
 	MyString* actual = convert_string_array(result, 3);
 	emit_input_header();
@@ -6474,7 +6449,8 @@ static bool test_input_was_v1_false_v2q() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a V2Quoted string with MergeFromV2Quoted().");
 	Env env;
-	env.MergeFromV2Quoted(V2Q, NULL);
+	std::string msg;
+	env.MergeFromV2Quoted(V2Q, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6493,7 +6469,8 @@ static bool test_input_was_v1_false_v2r_or() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a V2Raw string with MergeFromV1or2Raw().");
 	Env env;
-	env.MergeFromV1or2Raw(V2R_MARK, NULL);
+	std::string msg;
+	env.MergeFromV1or2Raw(V2R_MARK, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6591,7 +6568,8 @@ static bool test_input_was_v1_false_ad() {
 	ClassAd classad;
 	initAdFromString(AD_V2, classad);
 	Env env;
-	env.MergeFrom(&classad, NULL);
+	std::string msg;
+	env.MergeFrom(&classad, msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6629,7 +6607,7 @@ static bool test_input_was_v1_true_v1r() {
 	emit_test("Test that InputWasV1() returns true for an Env object "
 		"created from V1Raw string that with MergeFromV1Raw().");
 	Env env;
-	env.MergeFromV1Raw(V1R, NULL);
+	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6650,7 +6628,8 @@ static bool test_input_was_v1_true_ad() {
 	ClassAd classad;
 	initAdFromString(AD_V1, classad);
 	Env env;
-	env.MergeFrom(&classad, NULL);
+	std::string msg;
+	env.MergeFrom(&classad, msg);
 	bool expect = true;
 	bool actual = env.InputWasV1();
 	emit_input_header();

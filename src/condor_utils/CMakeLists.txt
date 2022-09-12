@@ -27,6 +27,14 @@ if(BUILD_DATE)
 	set_source_files_properties(condor_version.cpp PROPERTIES COMPILE_DEFINITIONS BUILD_DATE="${BUILD_DATE}")
 endif()
 
+# publish python3 minor version and module extension in the param table
+if (PYTHON3_VERSION_MINOR)
+	set_source_files_properties(condor_config.cpp param_info.cpp PROPERTIES
+		 COMPILE_DEFINITIONS "PYTHON3_MODULE_SUFFIX=\"${PYTHON3_MODULE_SUFFIX}\";PYTHON3_VERSION_MINOR=${PYTHON3_VERSION_MINOR}"
+	)
+endif()
+
+
 # We need this .o statically linked into every exe for the version object
 # to parse.  Make this an object library to link everywhere.
 add_library(condor_version_obj STATIC condor_version.cpp)
@@ -193,7 +201,6 @@ condor_common.cpp
 condor_config.cpp
 condor_crontab.cpp
 condor_crontab.h
-condor_environ.cpp
 CondorError.cpp
 CondorError.h
 condor_fsync.cpp

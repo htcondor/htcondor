@@ -18,21 +18,6 @@ PASSPHRASE_LOCATION=$HOME/.bosco/.pass
 # Bosco cluster list location
 CLUSTERLIST_LOCATION=$HOME/.bosco/.clusterlist
 
-# Check if invoked by a regular user on a BOSCO Multi User installation
-# if PRIVATE_ON_MU is defined will be unable to use glideins and to set the system rouitng
-# For now, disable the campus factory code.
-# It has problems with the new tarball layout and the collector binding to
-# a dynamic port (now the default for a Personal Condor).
-#condor_id=`condor_config_val condor_ids 2>/dev/null`
-#if [ "x$condor_id" == "x" ]; then
-#    condor_id=`id -u condor 2> /dev/null`
-#else
-#    condor_id=${condor_id%.*}
-#fi 
-#if [ ! "x$condor_id" == "x`id -u`" ]; then
-    PRIVATE_ON_MU=yes
-#fi
-
 # SSH Control Path
 ssh_control_path="/tmp/bosco_ssh_control.%r@%h:%p"
 
@@ -130,33 +115,6 @@ list()
     return $counter
 }
 
-# grid_resource = batch queue name@host
-# SUBMIT_ATTRS = grid_resource
-# no reconfig needed because only condor_submit using it, no daemon
-set_bosco_routing () {
-    # $1 file to write the routing info into
-    #  default to  LOCAL_CONFIG_DIR`/condor_config.bosco_routing
-    if [ -n "$PRIVATE_ON_MU" ]; then
-        return
-    fi
-    if [ "x$1" != "x" ]; then
-        dest_file=$1
-    else
-        dest_file="`condor_config_val LOCAL_CONFIG_DIR`/condor_config.bosco_routing"
-    fi
-    grid_res=$(list grid_resource)
-    if [ $? -ne 1 ]; then
-        # No default cluster 
-        rm $dest_file 2>/dev/null
-    else
-        cat > $dest_file << EOF 
-# Specifying a default grid_resource doesn't work in HTCondor 8.4.7+/8.5.5+
-#grid_resource = $grid_res
-#SUBMIT_ATTRS = grid_resource
-EOF
-    fi
-}
-
 start_ssh () {
     # Copy blahp
     PASSPHRASE=""
@@ -182,39 +140,6 @@ start_ssh () {
     fi
 
 }    
-
-ssh_upload_and_run () {
-    # upload_and_run remote_host command start_dir
-    # 1. remote host
-    # 2. start dir DEFAULT to use a temporary directory removed afterwards
-    # 3. script name
-    # All other arguments are sent on
-    remote_host=$1
-    start_dir=$2
-    local_script=$3
-    shift 3
-    # TODO: suppress banner printout  -o LogLevel=Error  does not work, 
-    # redirect stderr to /dev/null suppresses errors as well
-    if [ "x$start_dir" == "xDEFAULT" ]; then
-        # OS X mktemp requires a template
-        start_dir=`ssh $remote_host "mktemp -d /tmp/tmp_bosco_probe.XXXXXXXX" 2>/dev/null` 
-    else
-        ssh $remote_host "mkdir -p $start_dir" 
-    fi
-    scp $local_script $remote_host:$start_dir/bosco_run
-    cmd_out=`ssh -o ControlMaster=auto -o "ControlPath=$ssh_control_path" $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $@"  2>/dev/null`
-    #cmd_out=`ssh $remote_host "cd $start_dir; chmod +x bosco_run; ./bosco_run $4 $5 $6"`
-    cmd_ec=$?
-    if [ $cmd_ec -eq 0 ]; then
-        # output only if successful
-        echo $cmd_out
-    fi
-    if [ "x$2" == "xDEFAULT" ]; then
-        ssh $remote_host "rm -r $start_dir" 
-    fi        
-    return $cmd_ec
-}
-
 
 display_dots () {
     while [ 1 ]; do
@@ -339,44 +264,6 @@ check_cluster_list2 () {
     fi
 }
 
-check_reverse_connectivity() {
-    # Reverse connectivity is only needed for campus factory pilot
-    # submission.
-    if [ -n "$PRIVATE_ON_MU" ]; then
-        return 1
-    fi
-
-    # check if the remote host can connect back
-    # Return 1 if the test fails (like most unix tools)
-    # $1 = cluster to check for
-    remote_host=$1
-    
-    # Get the COLLECTOR_HOST value, strip out anything after the '?'
-    myhost=`condor_config_val COLLECTOR_HOST`
-    myhost=`echo $myhost | sed 's/\(.*\)[?|$].*/\1/'`
-    
-    # Create tmp file for the python script to test connectivity
-    tmpfile=`mktemp -t tmpreversetest.XXXXXX`
-    cat << EOF > $tmpfile
-#!/usr/bin/python3
-import sys,socket
-(host,port)=sys.argv[1].split(":")
-s = socket.socket()
-s.connect((host,int(port)))
-EOF
-    
-    testout=`ssh_upload_and_run $remote_host DEFAULT $tmpfile $myhost`
-    testexit=$?
-    
-    if [ "$testexit" -eq "0" ]; then
-        return 0
-    else
-        return 1
-    fi
-    
-}
-
-
 add_cluster_to_list () {
     # $1 = cluster to add
     # $2 = max queued setting of cluster
@@ -394,9 +281,6 @@ add_cluster_to_list () {
 
     mkdir -p `dirname $CLUSTERLIST_LOCATION`
     echo "entry=$remote_host max_queued=$max_queued cluster_type=$cluster_type" >> $CLUSTERLIST_LOCATION
-
-    # Always after add/remove
-    set_bosco_routing
 }
 
 get_min_queue () {
@@ -482,9 +366,6 @@ do_remove_cluster () {
     tmpfile=`mktemp -t tmpclusterlist.XXXXXX`
     sed "/$remote_host/d" $CLUSTERLIST_LOCATION > $tmpfile
     mv $tmpfile $CLUSTERLIST_LOCATION
-
-    #  Always after add/remove
-    set_bosco_routing
 }
 
 
@@ -897,14 +778,6 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Test reverse connectivity from remote_host
-check_reverse_connectivity $remote_host
-if [ $? -eq 0 ]; then
-    reverse_conn=1
-else
-    reverse_conn=0
-fi
-
 if [ "$cluster_type" == "pbs" ]; then
     # Get the queue information
     echo -n "Detecting PBS cluster configuration..."
@@ -946,7 +819,6 @@ if [ -z "${release_url}" ]; then
     if [ $minor_ver -ne 0 ]; then
         series="${major_ver}.x"
     fi
-    date=${ver_str[2]//-/}
 
     if [ ! -z "${platform_force}" ] ; then
         platform="${platform_force}"
@@ -960,10 +832,10 @@ if [ -z "${release_url}" ]; then
 
     release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
-        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+        daily_url="${url_base}${series}/${version}/daily/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     fi
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
-        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${date}-x86_64_${platform}-stripped.tar.gz"
+        rc_url="${url_base}${series}/${version}/rc/condor-${version}-x86_64_${platform}-stripped.tar.gz"
     fi
 fi
 
@@ -1059,16 +931,6 @@ rsync -aq  $archive_dir/sbin/rvgahp_server $remote_glite_dir/bin 2>/dev/null
 # link in local submit attributes with correct symlinks
 (cd $remote_glite_dir/libexec; ln -sf ../etc/blahp/*_local_submit_attributes.sh .)
 
-# create the glidein
-if [ -n "$PRIVATE_ON_MU" ]; then
-    echo "You are not running as the factory user. Glideins disabled."
-else
-    export PYTHONPATH=`condor_config_val LIBEXEC`/campus_factory/python-lib
-    export _campusfactory_GLIDEIN_DIRECTORY=`condor_config_val LIBEXEC`/campus_factory/share/glidein_jobs
-    show_progress "Creating Glidein files for the WN's" glidein_creation $remote_host $archive_dir --outputtar=$tmp_dir/glideinExec.tar.gz
-    rsync -aq  $tmp_dir/glideinExec.tar.gz "$local_install_dir/campus_factory/" 2>/dev/null
-fi
-
 cat >$remote_glite_dir/etc/condor_config.ft-gahp 2>/dev/null <<EOF
 BOSCO_SANDBOX_DIR=\$ENV(HOME)/$remote_sandbox_dir
 LOG=\$ENV(HOME)/$remote_base_dir_host/glite/log
@@ -1078,33 +940,6 @@ SEC_PASSWORD_FILE = \$ENV(HOME)/$remote_base_dir_host/glite/etc/passwdfile
 USE_SHARED_PORT = False
 ENABLE_URL_TRANSFERS = False
 EOF
-
-# A regular user cannot write on system files
-# and will not need the password for grid universe jobs
-if [ ! -n "$PRIVATE_ON_MU" ]; then
-    # Generate the password file, if it doesn't already exist 
-    bosco_passwd_file=`condor_config_val SEC_PASSWORD_FILE` 
-    if [ "x$bosco_passwd_file" == "x" ]; then
-        echo "The password file is not defined."
-        echo "Aborting installation to $remote_host."
-        rm -r $tmp_dir
-        exit 1
-    fi
-
-    if [ ! -e $bosco_passwd_file ]; then  
-        random_string=`echo $RANDOM`
-        condor_store_cred -p $random_string -f $bosco_passwd_file 
-    fi
-
-    if [ ! -r  $bosco_passwd_file ]; then  
-        echo "Cannot read the password file, check permissions of $bosco_passwd_file."
-        echo "Aborting installation to $remote_host."
-        rm -r $tmp_dir
-        exit 1
-    fi 
-    rsync -aq $bosco_passwd_file "$local_install_dir/campus_factory/share/glidein_jobs" 2>/dev/null
-    rsync -aq $bosco_passwd_file $remote_glite_dir/etc 2>/dev/null
-fi
 
 # If patch is set, perform the patch
 if [ ! -z "${override_dir}" ]; then
@@ -1138,19 +973,6 @@ echo "Installation complete"
 
 
 
-# Configure condor
-# Not if private user on BOSCO MU
-if [ ! -n "$PRIVATE_ON_MU" ]; then
-    min_queue_size=`get_min_queue`
-    tmpfile=`mktemp -t tmpconfigfile.XXXXX`
-    condor_config_file=`condor_config_val LOCAL_CONFIG_FILE`
-    sed "/GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE.*/d" $condor_config_file > $tmpfile
-    echo "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE=$min_queue_size" >> $tmpfile
-    mv $tmpfile $condor_config_file
-    chmod 644 $condor_config_file
-    condor_reconfig 2>/dev/null 1>&2
-fi
-
 # Submission instructions
 cat << EOM
 The cluster $remote_host has been added for remote submission
@@ -1159,11 +981,3 @@ It is available to run jobs submitted with the following values:
 > grid_resource = batch $cluster_type $remote_host
 EOM
 
-if [ "$reverse_conn" -eq "1" ]; then
-    cat << EOM
-OR to run load balanced job on all available clusters with:
-> universe = vanilla
-EOM
-
-
-fi

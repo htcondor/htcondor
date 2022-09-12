@@ -277,7 +277,6 @@ sub set_config_comments();
 #sub read_config_file_comments();
 #sub is_dynamic( $ );
 sub which( $ );
-sub myproxy();
 sub credd();
 sub log_message( $ );
 sub usage( $ );
@@ -512,9 +511,6 @@ elsif ($opt_type) {
 		}
     }
 }
-
-# Condor-G and CredD can use MyProxy.
-myproxy();
 
 if ($opt_credd)  {
 	credd();
@@ -1786,17 +1782,6 @@ sub which( $ ) {
 	return undef;
 }
 
-# Configure myproxy.  Condor-G and CredD can use this service to
-# auto-refresh GSI credentials.  Look for myproxy in the PATH, and add
-# to configuration, if found.  If the binary is dyanamically linked,
-# also add the LD_LIBRARY_PATH to config.
-sub myproxy() {
-	my $myproxy_get_delegation = which "myproxy-get-delegation";
-	if ($myproxy_get_delegation) {
-		$append_config{MYPROXY_GET_DELEGATION} = $myproxy_get_delegation;
-	}
-}
-
 # Configure CredD credential management daemon.
 sub credd() {
 	$daemon_list{CREDD} = 1;
@@ -1809,13 +1794,6 @@ sub credd() {
 	my $cred_dir_mode = 0700;
 	chmod $cred_dir_mode, $cred_dir or die "chmod $cred_dir: $!";
 	$append_config{CRED_STORE_DIR} = '$(LOCAL_DIR)/cred_dir';
-
-	unless ( $append_config{MYPROXY_GET_DELEGATION} ) {
-		warn<<EOF;
-myproxy-get-delegation not found in PATH.  To enable GSI proxy auto-refresh,
-edit MYPROXY_GET_DELEGATION configuration macro.
-EOF
-	}
 }
 
 sub log_message( $ )

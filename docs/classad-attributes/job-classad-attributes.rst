@@ -687,15 +687,12 @@ all attributes.
     |                                  | encountered when                    |                          |
     |                                  | transferring files.                 |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 12                             | The *condor_starter* or             | The Unix errno number.   |
-    | | [DownloadFileError]            | *condor_shadow* failed              |                          |
-    |                                  | to receive or write job             |                          |
-    |                                  | files.                              |                          |
+    | | 12                             | An error occurred while             | The Unix errno number.   |
+    | | [TransferOutputError]          | transferring job output files       |                          |
+    |                                  | or checkpoint files.                |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 13                             | The *condor_starter* or             | The Unix errno number.   |
-    | | [UploadFileError]              | *condor_shadow* failed              |                          |
-    |                                  | to read or send job                 |                          |
-    |                                  | files.                              |                          |
+    | | 13                             | An error occurred while             | The Unix errno number.   |
+    | | [TransferInputError]           | transferring job input files.       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 14                             | The initial working                 | The Unix errno number.   |
     | | [IwdError]                     | directory of the job                |                          |
@@ -1138,7 +1135,7 @@ all attributes.
     of time will be the minimum of this value and the execute machine's
     configuration variable ``KILLING_TIMEOUT``
 
-:classad-attribute:`LastMatchTime``
+:classad-attribute:`LastMatchTime`
     An integer containing the epoch time when the job was last
     successfully matched with a resource (gatekeeper) Ad.
 
@@ -2112,7 +2109,27 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
+	
+The following job ClassAd attributes appear in the job ClassAd only for
+the *condor_dagman* job submitted under DAGMan. They represent job process
+information about the DAG. These values will reset when a DAG is run via
+rescue and be retained when a DAG is run via recovery mode.
 
+:classad-attribute:`DAG_JobsSubmitted`
+    The total number of job processes submitted by all the nodes in the DAG.
+
+:classad-attribute:`DAG_JobsIdle`
+    The number of job processes currently idle within the DAG. 
+
+:classad-attribute:`DAG_JobsHeld`
+    The number of job processes currently held within the DAG.
+
+:classad-attribute:`DAG_JobsRunning`
+    The number of job processes currently executing within the DAG.
+
+:classad-attribute:`DAG_JobsCompleted`
+    The total number of job processes within the DAG that have successfully
+    completed.
 
 The following job ClassAd attributes do not appear in the job ClassAd as
 kept by the *condor_schedd* daemon. They appear in the job ClassAd

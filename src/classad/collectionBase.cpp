@@ -1813,8 +1813,8 @@ WriteCheckPoint(){
 	  }
 	  string buffer;
 	  unparser.Unparse( buffer, &cla );
-	  buffer=buffer+"\n";
-	  int result = write(fd_check,(void*)(buffer.c_str()),buffer.size());
+	  buffer += "\n";
+	  int result = write(fd_check,(void*)(buffer.c_str()),(unsigned int)buffer.size());
 	  if (result < 0) {
 			char buf[10];
 			sprintf( buf, "%d", errno );

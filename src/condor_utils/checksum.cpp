@@ -46,14 +46,12 @@ compute_sha256_checksum( int fd, std::string & checksum ) {
         return false;
     }
 
-    ssize_t bytesTotal = 0;
     // FIXME: This doesn't handle EAGAIN, but really should.  Look at
     // full_read(), instead.
     ssize_t bytesRead = read( fd, buffer, BUF_SIZ );
     while( bytesRead > 0 ) {
         EVP_DigestUpdate( context, buffer, bytesRead );
         memset( buffer, 0, BUF_SIZ );
-        bytesTotal += bytesRead;
         bytesRead = read( fd, buffer, BUF_SIZ );
     }
     free(buffer); buffer = NULL;

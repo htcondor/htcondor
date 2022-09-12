@@ -126,7 +126,7 @@ VM Universe
 
 :index:`vm<single: vm; universe>` :index:`vm universe`
 
-HTCondor facilitates the execution of VMware and Xen virtual machines
+HTCondor facilitates the execution of KVM and Xen virtual machines
 with the vm universe.
 
 Please see the :doc:`/users-manual/virtual-machine-applications` section for

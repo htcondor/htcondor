@@ -27,5 +27,6 @@ td_utils.cpp
 td_write_files.cpp
 )
 
-	condor_exe( condor_transferd "${transSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
+	# CRUFT The transferd is no longer supported
+	#condor_exe( condor_transferd "${transSrcs}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
 endif(NOT WINDOWS)

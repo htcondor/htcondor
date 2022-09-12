@@ -14,6 +14,7 @@ import subprocess
 from pathlib import Path
 
 import htcondor
+import classad
 
 #
 # We could try to import colorama here -- see condor_watch_q -- but that's
@@ -40,8 +41,9 @@ SYSTEM_TABLE = {
     # shouldn't be hard to change.
     "stampede2": {
         "pretty_name":      "Stampede 2",
-        "gsissh_name":      "stampede2",
+        "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
+        "batch_system":     "SLURM",
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -77,8 +79,9 @@ SYSTEM_TABLE = {
 
     "expanse": {
         "pretty_name":      "Expanse",
-        "gsissh_name":      "expanse",
+        "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
+        "batch_system":     "SLURM",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -123,8 +126,9 @@ SYSTEM_TABLE = {
 
     "anvil": {
         "pretty_name":      "Anvil",
-        "gsissh_name":      "anvil",
+        "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
+        "batch_system":     "SLURM",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -160,8 +164,9 @@ SYSTEM_TABLE = {
 
     "bridges2": {
         "pretty_name":      "Bridges-2",
-        "gsissh_name":      "bridges2",
+        "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
+        "batch_system":     "SLURM",
 
         # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
@@ -207,21 +212,57 @@ SYSTEM_TABLE = {
             },
         },
     },
+
+    "path-facility": {
+        "pretty_name":      "PATh Facilty",
+        "host_name":        "ap1.facility.path-cc.io",
+        "default_queue":    "cpu",
+        "batch_system":     "HTCondor",
+
+        "queues": {
+            "cpu": {
+                # This is actually max-jobs-per-request for this system,
+                # but for now, it's easier to think about each request
+                # being a single job like it is for SLURM.
+                "max_nodes_per_job":    1, # FIXME
+                "max_duration":         60 * 60 * 72, # FIXME
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         244, # GB; what are the others?
+
+                "max_jobs_in_queue":    1000, # FIXME
+            },
+            # When we formally support GPUs, we'll need to add the GPU
+            # queue here, and -- because HTCondor doesn't have multiple
+            # queues -- some special code somewhere to insert request_gpus.
+            # (Seems like we should allow the user to specify how many
+            # GPUs per node for the PATh Facility, too, so check that
+            # against the queue name (warn if cpu queue?) and also default
+            # it to 1 if the queue name is 'gpu'?)
+            #
+            # Also, we may not want to call them "nodes" for the PATh
+            # facility.
+        },
+    },
 }
 
 
 def make_initial_ssh_connection(
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
 ):
+
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     proc = subprocess.Popen(
         [
             "ssh",
             "-f",
             *ssh_connection_sharing,
             ssh_target,
-            *ssh_indirect_command,
             "exit",
             "0",
         ],
@@ -238,8 +279,12 @@ def make_initial_ssh_connection(
 
 
 def remove_remote_temporary_directory(
-    logger, ssh_connection_sharing, ssh_target, ssh_indirect_command, remote_script_dir
+    logger, ssh_connection_sharing, ssh_user_name, ssh_host_name, remote_script_dir
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     if remote_script_dir is not None:
         logger.debug("Cleaning up remote temporary directory...")
         proc = subprocess.Popen(
@@ -247,7 +292,6 @@ def remove_remote_temporary_directory(
                 "ssh",
                 *ssh_connection_sharing,
                 ssh_target,
-                *ssh_indirect_command,
                 "rm",
                 "-fr",
                 remote_script_dir,
@@ -267,9 +311,13 @@ def remove_remote_temporary_directory(
 def make_remote_temporary_directory(
     logger,
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     remote_command = r'mkdir -p \${HOME}/.hpc-annex/scratch && ' \
         r'mktemp --tmpdir=\${HOME}/.hpc-annex/scratch --directory remote_script.XXXXXXXX'
     proc = subprocess.Popen(
@@ -277,10 +325,9 @@ def make_remote_temporary_directory(
             "ssh",
             *ssh_connection_sharing,
             ssh_target,
-            *ssh_indirect_command,
             "sh",
             "-c",
-            f"\"'{remote_command}'\"",
+            f"\"{remote_command}\"",
         ],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -315,8 +362,8 @@ def make_remote_temporary_directory(
 def transfer_sif_files(
     logger,
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
     remote_script_dir,
     sif_files,
 ):
@@ -336,8 +383,8 @@ def transfer_sif_files(
     transfer_files(
         logger,
         ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
+        ssh_user_name,
+        ssh_host_name,
         remote_script_dir,
         files,
         "transfer .sif files",
@@ -347,8 +394,8 @@ def transfer_sif_files(
 def populate_remote_temporary_directory(
     logger,
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
     system,
     local_script_dir,
     remote_script_dir,
@@ -367,8 +414,8 @@ def populate_remote_temporary_directory(
     transfer_files(
         logger,
         ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
+        ssh_user_name,
+        ssh_host_name,
         remote_script_dir,
         files,
         "populate remote temporary directory",
@@ -378,14 +425,18 @@ def populate_remote_temporary_directory(
 def transfer_files(
     logger,
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
     remote_script_dir,
     files,
     task,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     # FIXME: Pass an actual list to Popen
-    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} {" ".join(ssh_indirect_command)} tar -C {remote_script_dir} -x -f-'
+    full_command = f'tar -c -f- {files} | ssh {" ".join(ssh_connection_sharing)} {ssh_target} tar -C {remote_script_dir} -x -f-'
     proc = subprocess.Popen(
         [
             full_command
@@ -449,8 +500,8 @@ def process_line(line, update_function):
 
 def invoke_pilot_script(
     ssh_connection_sharing,
-    ssh_target,
-    ssh_indirect_command,
+    ssh_user_name,
+    ssh_host_name,
     remote_script_dir,
     system,
     annex_name,
@@ -467,11 +518,14 @@ def invoke_pilot_script(
     cpus,
     mem_mb,
 ):
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
+
     args = [
         "ssh",
         *ssh_connection_sharing,
         ssh_target,
-        *ssh_indirect_command,
         str(remote_script_dir / f"{system}.sh"),
         annex_name,
         queue_name,
@@ -632,10 +686,11 @@ def annex_inner_func(
     collector,
     token_file,
     password_file,
-    ssh_target,
     control_path,
     cpus,
     mem_mb,
+    login_name,
+    login_host,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -727,7 +782,16 @@ def annex_inner_func(
         "-o",
         f'ControlPath="{control_path}/master-%C"',
     ]
-    ssh_indirect_command = ["gsissh", SYSTEM_TABLE[system]["gsissh_name"]]
+
+    ssh_user_name = htcondor.param.get(f"HPC_ANNEX_{system}_USER_NAME")
+    if login_name is not None:
+        ssh_user_name = login_name
+
+    ssh_host_name = htcondor.param.get(
+        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system]["host_name"],
+    )
+    if login_host is not None:
+        ssh_host_name = login_host
 
     ##
     ## While we're requiring that jobs are submitted before creating the
@@ -802,17 +866,20 @@ def annex_inner_func(
     ##
     logger.info(
         f"{ANSI_BRIGHT}This command will access the system named "
-        f"'{SYSTEM_TABLE[system]['pretty_name']}' via XSEDE.  To proceed, "
-        f"enter your XSEDE user name and password at the prompt "
+        f"'{SYSTEM_TABLE[system]['pretty_name']}' via SSH.  To proceed, "
+        f"follow the prompts from that system "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
+    ssh_target = ssh_host_name
+    if ssh_user_name is not None:
+        ssh_target = f"{ssh_user_name}@{ssh_host_name}"
     logger.debug(
         f"  (You can run 'ssh {' '.join(ssh_connection_sharing)} {ssh_target}' to use the shared connection.)"
     )
     rc = make_initial_ssh_connection(
         ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
+        ssh_user_name,
+        ssh_host_name,
     )
     if rc != 0:
         raise RuntimeError(
@@ -834,8 +901,8 @@ def annex_inner_func(
         lambda: remove_remote_temporary_directory(
             logger,
             ssh_connection_sharing,
-            ssh_target,
-            ssh_indirect_command,
+            ssh_user_name,
+            ssh_host_name,
             remote_script_dir,
         )
     )
@@ -845,8 +912,8 @@ def annex_inner_func(
         make_remote_temporary_directory(
             logger,
             ssh_connection_sharing,
-            ssh_target,
-            ssh_indirect_command,
+            ssh_user_name,
+            ssh_host_name,
         )
     )
     logger.debug(f"... made remote temporary directory {remote_script_dir} ...")
@@ -860,8 +927,8 @@ def annex_inner_func(
     populate_remote_temporary_directory(
         logger,
         ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
+        ssh_user_name,
+        ssh_host_name,
         system,
         local_script_dir,
         remote_script_dir,
@@ -873,8 +940,8 @@ def annex_inner_func(
         transfer_sif_files(
             logger,
             ssh_connection_sharing,
-            ssh_target,
-            ssh_indirect_command,
+            ssh_user_name,
+            ssh_host_name,
             remote_script_dir,
             sif_files,
         )
@@ -995,6 +1062,8 @@ def annex_inner_func(
             schedd.edit(job_id, "ContainerImage", f'"{remote_sif_file}"')
 
             transfer_input = job_ad.get("TransferInput", "")
+            if isinstance(transfer_input, classad.Value):  # UNDEFINED or ERROR
+                transfer_input = ""
             input_files = transfer_input.split(",")
             if job_ad["ContainerImage"] in input_files:
                 logger.debug(
@@ -1010,8 +1079,8 @@ def annex_inner_func(
     logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
-        ssh_target,
-        ssh_indirect_command,
+        ssh_user_name,
+        ssh_host_name,
         remote_script_dir,
         system,
         annex_name,
@@ -1034,7 +1103,7 @@ def annex_inner_func(
         logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
-        error = f"Failed to start annex, SLURM returned code {rc}"
+        error = f"Failed to start annex, {SYSTEM_TABLE[system]['batch_system']} returned code {rc}"
         try:
             schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
         except Exception:

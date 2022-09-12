@@ -149,7 +149,7 @@ static bool want_startd_history = false;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
-	const char *envName = EnvGetName(ENV_INHERIT);
+	const char *envName = ENV_CONDOR_INHERIT;
 	const char *inherit = GetEnv(envName);
 
 	dprintf(D_FULLDEBUG, "condor_history: getInheritedSocks from %s is '%s'\n", envName, inherit ? inherit : "NULL");
@@ -564,6 +564,7 @@ main(int argc, const char* argv[])
   else {
       readHistoryRemote(constraintExpr, want_startd_history);
   }
+  delete constraintExpr;
 
   if (writetosocket) {
 	ClassAd ad;

@@ -566,6 +566,12 @@ Group: Applications/System
 Requires: %name = %version-%release
 Requires: python3-condor = %{version}-%{release}
 Requires: python3-six
+%if 0%{?rhel} == 7 && ! 0%{?amzn}
+Requires: python36-cryptography
+%endif
+%if 0%{?rhel} >= 8
+Requires: python3-cryptography
+%endif
 %if 0%{?osg}
 # Although htgettoken is only needed on the submit machine and
 #  condor-credmon-vault is needed on both the submit and credd machines,
@@ -752,7 +758,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=FALSE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-       -DWITH_QPID:BOOL=FALSE \
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
 %else
@@ -1029,24 +1034,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_datadir}/condor/python/{py3htcondor,py3classad}.so
 #rm -rf %{buildroot}%{_datadir}/condor/{libpy3classad*,py3htcondor,py3classad}.so
 
-# Install Campus Factory, option for condor_remote_cluster (nee BOSCO)
-%if 0%{?rhel} >= 8
-mkdir -p %{buildroot}%{python3_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python3_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python3_sitelib}
-%else
-mkdir -p %{buildroot}%{python_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/GlideinWMS %{buildroot}%{python_sitelib}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/python-lib/campus_factory %{buildroot}%{python_sitelib}
-%endif
-%if 0%{?hcc}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/share/condor/condor_config.factory %{buildroot}%{_sysconfdir}/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/etc/campus_factory.conf %{buildroot}%{_sysconfdir}/condor/
-%endif
-mv %{buildroot}%{_libexecdir}/condor/campus_factory/share %{buildroot}%{_datadir}/condor/campus_factory
-
 # Fix up blahp installation
 %if 0%{?rhel} == 7
 # Don't rely on Python 3 on EL7 (not installed by default)
@@ -1162,13 +1149,10 @@ rm -rf %{buildroot}
 %_libexecdir/condor/adstash/__init__.pyo
 %endif
 %_libexecdir/condor/curl_plugin
-%_libexecdir/condor/legacy_curl_plugin
 %_libexecdir/condor/condor_shared_port
 %_libexecdir/condor/condor_defrag
 %_libexecdir/condor/interactive.sub
 %_libexecdir/condor/condor_gangliad
-%_libexecdir/condor/panda-plugin.so
-%_libexecdir/condor/pandad
 %_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
 %_libexecdir/condor/adstash/config.py
@@ -1209,6 +1193,7 @@ rm -rf %{buildroot}
 %_mandir/man1/condor_set_shutdown.1.gz
 %_mandir/man1/condor_ssh_start.1.gz
 %_mandir/man1/condor_sos.1.gz
+%_mandir/man1/condor_ssl_fingerprint.1.gz
 %_mandir/man1/condor_stats.1.gz
 %_mandir/man1/condor_status.1.gz
 %_mandir/man1/condor_store_cred.1.gz
@@ -1293,6 +1278,7 @@ rm -rf %{buildroot}
 %_bindir/condor_power
 %_bindir/condor_gather_info
 %_bindir/condor_continue
+%_bindir/condor_ssl_fingerprint
 %_bindir/condor_suspend
 %_bindir/condor_test_match
 %_bindir/condor_token_create
@@ -1351,7 +1337,6 @@ rm -rf %{buildroot}
 %_sbindir/condor_starter
 %_sbindir/condor_store_cred
 %_sbindir/condor_testwritelog
-%_sbindir/condor_transferd
 %_sbindir/condor_updates_stats
 %_sbindir/ec2_gahp
 %_sbindir/condor_gridmanager
@@ -1377,25 +1362,6 @@ rm -rf %{buildroot}
 %dir %_var/lib/condor/oauth_credentials
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
-# The Campus Factory
-%if 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/config.d/60-campus_factory.config
-%endif
-%if 0%{?osg} || 0%{?hcc}
-%config(noreplace) %_sysconfdir/condor/campus_factory.conf
-%endif
-%_libexecdir/condor/campus_factory
-%_sbindir/campus_factory
-%_sbindir/runfactory
-%_sbindir/glidein_creation
-%_datadir/condor/campus_factory
-%if 0%{?rhel} >= 8
-%{python3_sitelib}/GlideinWMS
-%{python3_sitelib}/campus_factory
-%else
-%{python_sitelib}/GlideinWMS
-%{python_sitelib}/campus_factory
-%endif
 
 #################
 %files devel
@@ -1515,7 +1481,6 @@ rm -rf %{buildroot}
 %_bindir/condor_watch_q
 %_libdir/libpyclassad2*.so
 %_libexecdir/condor/libclassad_python_user.so
-%_libexecdir/condor/libcollector_python_plugin.so
 %{python_sitearch}/classad/
 %{python_sitearch}/htcondor/
 %{python_sitearch}/htcondor-*.egg-info/
@@ -1531,8 +1496,6 @@ rm -rf %{buildroot}
 %_libdir/libpyclassad3*.so
 %_libexecdir/condor/libclassad_python_user.cpython-3*.so
 %_libexecdir/condor/libclassad_python3_user.so
-%_libexecdir/condor/libcollector_python_plugin.cpython-3*.so
-%_libexecdir/condor/libcollector_python3_plugin.so
 /usr/lib64/python%{python3_version}/site-packages/classad/
 /usr/lib64/python%{python3_version}/site-packages/htcondor/
 /usr/lib64/python%{python3_version}/site-packages/htcondor-*.egg-info/
@@ -1637,6 +1600,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 06 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.1-1
+- File transfer errors are identified as occurring during input or output
+
+* Thu Aug 25 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.0-1
+- Modified GPU attributes to support the new 'require_gpus' submit command
+- Add (PREEMPT|HOLD)_IF_DISK_EXCEEDED configuration templates
+- ADVERTISE authorization levels now also provide READ authorization
+- Periodic release expressions no longer apply to manually held jobs
+- If a #! interpreter doesn't exist, a proper hold and log message appears
+- Can now set the Singularity target directory with 'container_target_dir'
+- If SciToken and X.509 available, uses SciToken for arc job authentication
+
+* Tue Aug 16 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.16-1
+- Singularity now mounts /tmp and /var/tmp under the scratch directory
+- Fix bug where Singularity jobs go on hold at the first checkpoint
+- Fix bug where gridmanager deletes the X.509 proxy file instead of the copy
+- Fix file descriptor leak when using SciTokens for authentication
+
 * Thu Jul 21 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.15-1
 - Report resources provisioned by the Slurm batch scheduler when available
 

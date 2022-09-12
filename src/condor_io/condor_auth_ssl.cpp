@@ -31,6 +31,7 @@
 #include "condor_sinful.h"
 #include "condor_secman.h"
 #include "condor_scitokens.h"
+#include "ca_utils.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -38,6 +39,8 @@
 #endif
 
 #include "condor_attributes.h"
+#include "secure_file.h"
+#include "subsystem_info.h"
 
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
@@ -45,6 +48,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <iomanip>
 #include <string.h>
 
 namespace {
@@ -116,6 +120,8 @@ bool hostname_match(const char *match_pattern, const char *hostname)
     return !tok1 && !tok2;
 }
 
+int g_last_verify_error_index = -1;
+
 }
 
 // Symbols from libssl
@@ -160,7 +166,17 @@ static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
 static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
 static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
-
+static decltype(&SSL_CTX_get_cert_store) SSL_CTX_get_cert_store_ptr = nullptr;
+static decltype(&PEM_read_X509) PEM_read_X509_ptr = nullptr;
+static decltype(&X509_STORE_add_cert) X509_STORE_add_cert_ptr = nullptr;
+static decltype(&SSL_get_current_cipher) SSL_get_current_cipher_ptr = nullptr;
+static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
+static decltype(&X509_digest) X509_digest_ptr = nullptr;
+static decltype(&X509_free) X509_free_ptr = nullptr;
+static decltype(&X509_STORE_CTX_get_ex_data) X509_STORE_CTX_get_ex_data_ptr = nullptr;
+static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
+static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
+static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -252,6 +268,17 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
+		 !(SSL_CTX_get_cert_store_ptr = reinterpret_cast<decltype(SSL_CTX_get_cert_store_ptr)>(dlsym(dl_hdl, "SSL_CTX_get_cert_store"))) ||
+		 !(PEM_read_X509_ptr = reinterpret_cast<decltype(PEM_read_X509_ptr)>(dlsym(dl_hdl, "PEM_read_X509"))) ||
+		 !(X509_STORE_add_cert_ptr = reinterpret_cast<decltype(X509_STORE_add_cert_ptr)>(dlsym(dl_hdl, "X509_STORE_add_cert"))) ||
+		 !(SSL_get_current_cipher_ptr = reinterpret_cast<decltype(SSL_get_current_cipher_ptr)>(dlsym(dl_hdl, "SSL_get_current_cipher"))) ||
+		 !(SSL_CIPHER_get_name_ptr = reinterpret_cast<decltype(SSL_CIPHER_get_name_ptr)>(dlsym(dl_hdl, "SSL_CIPHER_get_name"))) ||
+		 !(X509_free_ptr = reinterpret_cast<decltype(X509_free_ptr)>(dlsym(dl_hdl, "X509_free"))) ||
+		 !(X509_digest_ptr = reinterpret_cast<decltype(X509_digest_ptr)>(dlsym(dl_hdl, "X509_digest"))) ||
+		 !(X509_STORE_CTX_get_ex_data_ptr = reinterpret_cast<decltype(X509_STORE_CTX_get_ex_data_ptr)>(dlsym(dl_hdl, "X509_STORE_CTX_get_ex_data"))) ||
+		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
+		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
+		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
 		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
@@ -311,6 +338,17 @@ bool Condor_Auth_SSL::Initialize()
 #else
 	SSL_method_ptr = TLS_method;
 #endif
+	SSL_CTX_get_cert_store_ptr = SSL_CTX_get_cert_store;
+	PEM_read_X509_ptr = PEM_read_X509;
+	X509_STORE_add_cert_ptr = X509_STORE_add_cert;
+	SSL_get_current_cipher_ptr = SSL_get_current_cipher;
+	SSL_CIPHER_get_name_ptr = SSL_CIPHER_get_name;
+	X509_free_ptr = X509_free;
+	X509_digest_ptr = X509_digest;
+	X509_STORE_CTX_get_ex_data_ptr = X509_STORE_CTX_get_ex_data;
+	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
+	SSL_get_ex_data_ptr = SSL_get_ex_data;
+	SSL_set_ex_data_ptr = SSL_set_ex_data;
 
 	m_initSuccess = true;
 #endif
@@ -351,6 +389,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
 	}
 
     if( mySock_->isClient() ) {
+		m_host_alias = "";
         if( init_OpenSSL( ) != AUTH_SSL_A_OK ) {
             ouch( "Error initializing OpenSSL for authentication\n" );
             m_auth_state->m_client_status = AUTH_SSL_ERROR;
@@ -359,6 +398,19 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             ouch( "Error initializing client security context\n" );
             m_auth_state->m_client_status = AUTH_SSL_ERROR;
         }
+
+		{
+			char const *connect_addr = mySock_->get_connect_addr();
+			if (connect_addr) {
+				Sinful s(connect_addr);
+				char const *alias = s.getAlias();
+				if (alias) {
+					dprintf(D_SECURITY|D_FULLDEBUG,"SSL client host check: using host alias %s for peer %s\n", alias,
+						mySock_->peer_ip_str());
+					m_host_alias = alias;
+				}
+			}
+		}
 
 		std::string scitoken;
 		if (m_scitokens_mode) {
@@ -404,6 +456,8 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             (*SSL_set_bio_ptr)( m_auth_state->m_ssl, m_auth_state->m_conn_in,
 				m_auth_state->m_conn_out );
         }
+		if (g_last_verify_error_index >= 0)
+			(*SSL_set_ex_data_ptr)( m_auth_state->m_ssl, g_last_verify_error_index, &m_last_verify_error);
         m_auth_state->m_server_status = client_share_status( m_auth_state->m_client_status );
         if( m_auth_state->m_server_status != AUTH_SSL_A_OK ||
 		m_auth_state->m_client_status != AUTH_SSL_A_OK ) {
@@ -492,6 +546,9 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
             }
         }
         dprintf(D_SECURITY,"Client trying post connection check.\n");
+        dprintf(D_SECURITY, "Cipher used: %s.\n",
+            (*SSL_CIPHER_get_name_ptr)((*SSL_get_current_cipher_ptr)(m_auth_state->m_ssl)));
+
         if((m_auth_state->m_err = post_connection_check(
                 m_auth_state->m_ssl, AUTH_SSL_ROLE_CLIENT )) != X509_V_OK ) {
             ouch( "Error on check of peer certificate\n" );
@@ -1302,6 +1359,31 @@ int Condor_Auth_SSL :: init_OpenSSL(void)
     return AUTH_SSL_A_OK;
 }
 
+
+std::string get_x509_encoded(X509 *cert)
+{
+	std::unique_ptr<BIO, decltype(&BIO_free)> b64( BIO_new(BIO_f_base64()), &BIO_free);
+	BIO_set_flags(b64.get(), BIO_FLAGS_BASE64_NO_NL);
+	if (!b64.get()) {return "";}
+
+	decltype(b64) mem(BIO_new(BIO_s_mem()), &BIO_free);
+	if (!mem.get()) {return "";}
+	BIO_push(b64.get(), mem.get());
+
+	if (1 != i2d_X509_bio(b64.get(), cert)) {
+		dprintf(D_SECURITY, "Failed to base64 encode certificate.\n");
+		return "";
+	}
+	// Ensure that the final base64 block is written to underlying memory.
+	BIO_flush(b64.get());
+
+	char* dt;
+	auto len = BIO_get_mem_data(mem.get(), &dt);
+
+	return std::string(dt, len);
+}
+
+
 int verify_callback(int ok, X509_STORE_CTX *store)
 {
     char data[256];
@@ -1315,8 +1397,83 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         X509_NAME_oneline( X509_get_issuer_name( cert ), data, 256 );
         dprintf( D_SECURITY, "  issuer   = %s\n", data );
         X509_NAME_oneline( X509_get_subject_name( cert ), data, 256 );
+	std::string dn(data);
         dprintf( D_SECURITY, "  subject  = %s\n", data );
         dprintf( D_SECURITY, "  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
+
+		const SSL* ssl = (const SSL*)(*X509_STORE_CTX_get_ex_data_ptr)(store, (*SSL_get_ex_data_X509_STORE_CTX_idx_ptr)());
+		Condor_Auth_SSL::LastVerifyError *verify_ptr = (Condor_Auth_SSL::LastVerifyError *)(g_last_verify_error_index >= 0 ? (*SSL_get_ex_data_ptr)(ssl, g_last_verify_error_index) : nullptr);
+		if (verify_ptr) verify_ptr->m_skip_error = 0;
+
+		if (verify_ptr && ((err == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT) ||
+			(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN) ||
+			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) ||
+			(err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT)))
+		{
+			bool is_permitted;
+			std::string method, method_info;
+			auto encoded_cert = get_x509_encoded(cert);
+			bool is_ca_cert = (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY) || (err == X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT) ||
+				(err == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN);
+
+			auto host_alias = *(verify_ptr->m_host_alias);
+			if (!encoded_cert.empty() &&
+				htcondor::get_known_hosts_first_match(host_alias, is_permitted,
+					method, method_info))
+			{
+				if (is_permitted && method == "SSL")
+				{
+					if (method_info == encoded_cert) {
+						dprintf(D_SECURITY, "Skipping validation error as this is a known host.\n");
+						verify_ptr->m_skip_error = err;
+						verify_ptr->m_used_known_host = true;
+						return 1;
+					} else {
+						// We aren't going to accept this - there's an earlier entry for this host;
+						// however, we want to record that we saw it.
+						dprintf(D_SECURITY, "Recording the SSL certificate in the known_hosts file.\n");
+						htcondor::add_known_hosts(host_alias, false, "SSL", encoded_cert);
+					}
+				}
+			} else if (!encoded_cert.empty()) {
+				bool permitted = param_boolean("BOOTSTRAP_SSL_SERVER_TRUST", false);
+				dprintf(D_SECURITY, "Adding remote host as known host with trust set to %s"
+					".\n", permitted ? "on" : "off");
+				// Provide an opportunity for users to manually confirm the SSL fingerprint.
+				if (!permitted && (get_mySubSystem()->isType(SUBSYSTEM_TYPE_TOOL) ||
+					get_mySubSystem()->isType(SUBSYSTEM_TYPE_SUBMIT)) && isatty(0))
+				{
+					unsigned char md[EVP_MAX_MD_SIZE];
+					auto digest = EVP_get_digestbyname("sha256");
+					unsigned int len;
+					if (1 != (*X509_digest_ptr)(cert, digest, md, &len)) {
+						dprintf(D_SECURITY, "Failed to create a digest of the provided X.509 certificate.\n");
+						return ok;
+					}
+					std::stringstream ss;
+					ss << std::hex << std::setw(2) << std::setfill('0');
+					bool first = true;
+					for (unsigned idx = 0; idx < len; idx++) {
+						if (!first) ss << ":";
+						ss << std::setw(2) << static_cast<int>(md[idx]);
+						first = false;
+					}
+					std::string fingerprint = ss.str();
+
+					permitted = htcondor::ask_cert_confirmation(host_alias, fingerprint, dn, is_ca_cert);
+				}
+				htcondor::add_known_hosts(host_alias, permitted, "SSL", encoded_cert);
+				std::string method;
+				if (permitted && htcondor::get_known_hosts_first_match(host_alias,
+					permitted, method, encoded_cert) && method == "SSL")
+				{
+					dprintf(D_ALWAYS, "Skipping validation error as this is a known host.\n");
+					verify_ptr->m_skip_error = err;
+					verify_ptr->m_used_known_host = true;
+					return 1;
+				}
+			}
+		}
     }
  
     return ok;
@@ -1516,8 +1673,8 @@ int Condor_Auth_SSL :: client_exchange_messages( int client_status, char *buf, B
 long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 {
 	X509      *cert;
-	bool success = false;
 	std::string fqdn;
+	bool success = false;
 	ouch("post_connection_check.\n");
 
  
@@ -1556,6 +1713,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	if(role == AUTH_SSL_ROLE_SERVER) {
 		X509_free( cert );
 		ouch("Server role: returning from post connection check.\n");
+
 		return (*SSL_get_verify_result_ptr)( ssl );
 	} // else ROLE_CLIENT: check dns (arg 2) against CN and the SAN
 
@@ -1565,18 +1723,7 @@ long Condor_Auth_SSL :: post_connection_check(SSL *ssl, int role )
 	}
 
 	// Client must know what host it is trying to talk to in order for us to verify the SAN / CN.
-	{
-		char const *connect_addr = mySock_->get_connect_addr();
-		if (connect_addr) {
-			Sinful s(connect_addr);
-			char const *alias = s.getAlias();
-			if (alias) {
-				dprintf(D_SECURITY|D_FULLDEBUG,"SSL host check: using host alias %s for peer %s\n", alias,
-					mySock_->peer_ip_str());
-				fqdn = alias;
-			}
-		}
-	}
+	fqdn = m_host_alias;
 	if (fqdn.empty()) {
 		dprintf(D_SECURITY, "No SSL host name specified.\n");
 		goto err_occured;
@@ -1669,7 +1816,17 @@ success:
 		ouch("Server checks out; returning SSL_get_verify_result.\n");
     
 		X509_free(cert);
-		return (*SSL_get_verify_result_ptr)(ssl);
+
+		auto verify_result = (*SSL_get_verify_result_ptr)( ssl );
+
+		if ((verify_result == X509_V_OK) && mySock_->isClient() && !m_host_alias.empty() &&
+			!m_last_verify_error.m_used_known_host)
+		{
+			htcondor::add_known_hosts(m_host_alias, true, "SSL", "@trusted");
+		}
+
+		if (m_last_verify_error.m_skip_error == verify_result) return X509_V_OK;
+		return verify_result;
 	}
 
 err_occured:
@@ -1687,6 +1844,11 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
     bool i_need_cert   = is_server;
+
+		// Ensure the verification state is reset.
+	m_last_verify_error.m_used_known_host = false;
+	m_last_verify_error.m_skip_error = -1;
+	m_last_verify_error.m_host_alias = &m_host_alias;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1749,8 +1911,10 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
     if( (cafile || cadir) && (*SSL_CTX_load_verify_locations_ptr)( ctx, cafile, cadir ) != 1 ) {
-        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s) \n",
-		 cafile, cadir);
+        auto error_number = ERR_get_error();
+		auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
+        dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s): %s \n",
+			cafile, cadir, error_string);
 	goto setup_server_ctx_err;
     }
     {
@@ -1764,13 +1928,24 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
             goto setup_server_ctx_err;
         }
     }
-		// TODO where's this?
+
+	if (g_last_verify_error_index < 0)
+		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
+
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
     (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
     }
+
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+		// Enable the automatic ephemeral ECDH setup.
+		// This is automatic in OpenSSL 1.1.0+ and this value has been
+		// removed there.
+	(*SSL_CTX_ctrl_ptr)( ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL );
+#endif
+
     if(cafile)          free(cafile);
     if(cadir)           free(cadir);
     if(certfile)        free(certfile);

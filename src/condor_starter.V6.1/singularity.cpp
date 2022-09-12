@@ -50,18 +50,6 @@ std::string
 Singularity::environmentPrefix() {
 	return Singularity::m_apptainer ? "APPTAINERENV_" : "SINGULARITYENV_";
 }
-bool
-Singularity::advertise(ClassAd &ad)
-{
-	if (m_enabled && ad.InsertAttr("HasSingularity", true)) {
-		return false;
-	}
-	if (!m_singularity_version.empty() && ad.InsertAttr("SingularityVersion", m_singularity_version)) {
-		return false;
-	}
-	return true;
-}
-
 
 bool
 Singularity::enabled()
@@ -94,7 +82,7 @@ Singularity::detect(CondorError &err)
 
 	std::string displayString;
 	infoArgs.GetArgsStringForLogging( displayString );
-	dprintf(D_FULLDEBUG, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
+	dprintf(D_ALWAYS, "Attempting to run: '%s %s'.\n", exec.c_str(), displayString.c_str());
 
 	MyPopenTimer pgm;
 	if (pgm.start_program(infoArgs, true, NULL, false) < 0) {
@@ -121,13 +109,11 @@ Singularity::detect(CondorError &err)
 
 	pgm.output().readLine(m_singularity_version, false);
 	chomp(m_singularity_version);
-	dprintf( D_FULLDEBUG, "[singularity version] %s\n", m_singularity_version.c_str() );
-	if (IsFulldebug(D_ALWAYS)) {
-		std::string line;
-		while (pgm.output().readLine(line, false)) {
-			chomp(line);
-			dprintf( D_FULLDEBUG, "[singularity info] %s\n", line.c_str() );
-		}
+	dprintf( D_ALWAYS, "[singularity version] %s\n", m_singularity_version.c_str() );
+	std::string line;
+	while (pgm.output().readLine(line, false)) {
+		chomp(line);
+		dprintf( D_ALWAYS, "[singularity info] %s\n", line.c_str() );
 	}
 
 	if (m_singularity_version.find("apptainer") != std::string::npos) {

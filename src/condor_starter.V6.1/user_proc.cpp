@@ -224,10 +224,7 @@ UserProc::PublishToEnv( Env* proc_env )
 	if (m_proc_exited) {
 			// TODO: what should these really be called?  use
 			// myDistro?  get_mySubSystem()?  hard to say...
-		std::string base;
-		base = "_";
-		base += myDistro->Get();
-		base += '_';
+		std::string base("_condor_");
 		if( name ) {
 			base += name;
 		} else {

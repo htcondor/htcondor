@@ -24,7 +24,7 @@
 #define MY_USERNAME_H
 
 /* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
-char *my_username( int uuid = -1 );
+char *my_username();
 /* Returns malloc()ed memory.  Be sure to free() it.  Return NULL on failure */
 char *my_domainname( void );
 

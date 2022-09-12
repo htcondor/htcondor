@@ -41,7 +41,6 @@ extern StringList *_sysapi_console_devices;
 extern time_t _sysapi_last_x_event;
 
 /* needed by free_fs_blocks.c */
-extern bool _sysapi_reserve_afs_cache;
 extern long long _sysapi_reserve_disk;
 
 /* needed by idle_time.C */
@@ -56,19 +55,11 @@ extern int _sysapi_config;
 extern int _sysapi_detected_phys_cpus;
 extern int _sysapi_detected_hyper_cpus;
 
-/* needed by processor_flags.c */
-extern const char * _sysapi_processor_flags_raw;
-extern const char * _sysapi_processor_flags;
-
 /* needed by phys_mem.c */
 extern int _sysapi_memory;
 extern int _sysapi_reserve_memory;
 
 /* needed by load_avg.c */
 extern bool _sysapi_getload;
-
-#if defined LINUX || defined WIN32
-extern bool _sysapi_count_hyperthread_cpus;
-#endif
 
 #endif /* SYSAPI_EXTERNS_H */

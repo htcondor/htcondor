@@ -679,8 +679,6 @@ bool Reschedule();
 
 bool UniverseUsesVanillaStartExpr(int universe);
 
-int get_myproxy_password_handler(int, Stream *sock);
-
 QmgmtPeer* getQmgmtConnectionInfo();
 
 // JobSet qmgmt support functions

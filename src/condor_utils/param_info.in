@@ -157,6 +157,10 @@ tags=config
 description=Preferred DNS alias for this host
 customization=expert
 
+[USE_COLLECTOR_HOST_CNAME]
+default=true
+type=bool
+
 [HOSTNAME]
 default=
 type=string
@@ -960,11 +964,6 @@ tags=shadow,remoteresource
 default=false
 type=bool
 
-[USE_AFS]
-default=
-type=string
-tags=shadow,pseudo_ops
-
 [USE_NFS]
 default=
 type=string
@@ -1032,8 +1031,15 @@ type=int
 customization=never
 usage=Number of detected cpus. does not include hyperthreads
 
-[NUM_CPUS]
+[DETECTED_CPUS_LIMIT]
 default=$(DETECTED_CPUS)
+type=int
+customization=seldom
+usage=Detected max CPUs to use, The minimum of $(DETECTED_CPUS), $ENV(OMP_THREAD_LIMIT) and $ENV(SLURM_CPUS_ON_NODE)
+tags=
+
+[NUM_CPUS]
+default=$(DETECTED_CPUS_LIMIT)
 type=int
 customization=normal
 usage=Number of CPUs to provision in the startd
@@ -1063,11 +1069,6 @@ restart=true
 # XXX This should be a bool
 default=0
 type=int
-tags=sysapi,reconfig
-
-[RESERVE_AFS_CACHE]
-default=false
-type=bool
 tags=sysapi,reconfig
 
 [SYSAPI_GET_LOADAVG]
@@ -1109,6 +1110,11 @@ tags=had,StateMachine
 [HAD_UPDATE_INTERVAL]
 default=300
 type=string
+tags=had,StateMachine
+
+[HAD_FIPS_MODE]
+default=1
+type=int
 tags=had,StateMachine
 
 [REPLICATION_LIST]
@@ -1170,6 +1176,11 @@ tags=startd
 default=2000
 type=int
 tags=starter
+
+[THINPOOL_HIDE_MOUNT]
+default=false
+type=bool
+tags=startd
 
 [MAX_TIME_SKIP]
 default=1200
@@ -1939,16 +1950,6 @@ default=
 type=string
 tags=startd,startd_main
 
-[VMP_HOST_MACHINE]
-default=
-type=string
-tags=startd,startd_main
-
-[VMP_VM_LIST]
-default=
-type=string
-tags=startd,startd_main
-
 [STARTD_SHOULD_WRITE_CLAIM_ID_FILE]
 default=true
 type=bool
@@ -1993,6 +1994,7 @@ tags=classad,ast
 
 [CLASSAD_USER_PYTHON_LIB]
 default=$(LIBEXEC)/libclassad_python_user.so
+win32_default=$(BIN)\classad_python_user$(PYTHON3_MODULE_SUFFIX:.pyd)
 type=string
 description=ClassAd python library path
 tags=classad
@@ -2141,11 +2143,6 @@ default=
 type=string
 tags=submit
 
-[SANDBOX_TRANSFER_METHOD]
-default=
-type=string
-tags=submit
-
 [WARN_ON_UNUSED_SUBMIT_FILE_MACROS]
 default=true
 type=bool
@@ -2274,11 +2271,6 @@ type=string
 tags=LoadPlugins
 
 [PLUGIN_DIR]
-default=
-type=string
-tags=LoadPlugins
-
-[COLLECTOR_PLUGIN_PYTHON_MODULES]
 default=
 type=string
 tags=LoadPlugins
@@ -2548,6 +2540,34 @@ tags=condor_auth_ssl
 [AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
 default=false
 type=bool
+
+[BOOTSTRAP_SSL_SERVER_TRUST]
+default=false
+description=Automatically trust the remote CA over SSL
+type=bool
+tags=io,condor_auth_ssl
+
+[COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
+default=false
+type=bool
+
+[TRUST_DOMAIN_CAFILE]
+default=/etc/condor/trust_domain_ca.pem
+win32_default=$(RELEASE_DIR)\certs\ca.pem
+type=path
+tags=io,condor_auth_ssl
+
+[TRUST_DOMAIN_CAKEY]
+default=/etc/condor/trust_domain_ca_privkey.pem
+win32_default=$(RELEASE_DIR)\certs\ca_privkey.pem
+type=path
+tags=io,condor_auth_ssl
+
+[SEC_SYSTEM_KNOWN_HOSTS]
+default=/etc/condor/known_hosts
+win32_default=$(RELEASE_DIR)\known_hosts
+type=path
+tags=io
 
 [TRUST_DOMAIN]
 default=$(COLLECTOR_HOST)
@@ -2998,11 +3018,6 @@ type=bool
 default=
 type=string
 tags=schedd
-
-[TRANSFERD]
-default=
-type=string
-tags=schedd,tdman
 
 [QUEUE_SUPER_USERS]
 default=root, condor
@@ -5072,35 +5087,6 @@ default=user
 type=string
 description=Permissions on the job's spool directory
 
-[PANDAD]
-default=$(LIBEXEC)/condor_pandad
-win32_default=
-type=path
-description=Path to Panda damon binary
-review=tlmiller
-restart=true
-
-[PANDA_UPDATE_TIMEOUT]
-default=0
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_SIZE]
-default=131072
-type=int
-review=tlmiller
-
-[PANDA_QUEUE_GRACE]
-default=3
-type=int
-reivew=tlmiller
-restart=true
-
-[PANDA_STATISTICS_LOG]
-default=/tmp/pandaStatisticsLog
-type=string
-review=tlmiller
-
 [USE_KEYRING_SESSIONS]
 default=false
 type=bool
@@ -5664,6 +5650,15 @@ default=true
 type=bool
 customization=const
 
+[IsSubmit]
+default=false
+type=bool
+customization=const
+[SUBMIT.IsSubmit]
+default=true
+type=bool
+customization=const
+
 [CONDOR_VERSION]
 macro=CONDOR_VERSION
 default=8.*
@@ -5674,6 +5669,18 @@ customization=const
 macro=PLATFORM
 default=undefined
 type=string
+customization=const
+
+[PYTHON3_MODULE_SUFFIX]
+macro=PYTHON3_MODULE_SUFFIX
+default=.pyd
+type=string
+customization=const
+
+[PYTHON3_VERSION_MINOR]
+macro=PYTHON3_VERSION_MINOR
+default=0
+type=int
 customization=const
 
 [HAVE_EXT_GLOBUS]
@@ -6297,23 +6304,6 @@ default : @end
 	ENABLE_PERSISTENT_CONFIG=True
 	PERSISTENT_CONFIG_DIR=$(SPOOL)
 	use FEATURE : REMOTE_RUNTIME_CONFIG($(0))
-@end
-
-# note vm_vmware script is perl so it doesn't get a .exe extension on Windows.
-[$FEATURE.VMWARE]
-description=Settings to use VMWARE with VM Universe
-default : @end
-	VM_TYPE=vmware
-	VM_MEMORY=$(DETECTED_MEMORY)/($(NUM_CPUS)+1)
-	VM_MAX_NUMBER=$(NUM_CPUS)
-	VM_NETWORKING_TYPE=nat
-	VM_NETWORKING_DEFAULT_TYPE=nat
-	VMWARE_PERL=perl
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware
-	VMWARE_NAT_NETWORKING_TYPE=nat
-	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
-	VMWARE_NETWORKING_TYPE=nat
-	#VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
 [$FEATURE.GPUs]

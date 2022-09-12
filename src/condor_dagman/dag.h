@@ -354,6 +354,14 @@ class Dag {
     /** @return the number of jobs currently submitted to batch system(s)
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
+	
+	/** @return the total number of jobs submitted to batch system(s)
+	*/
+	inline int TotalJobsSubmitted() const { return _totalJobsSubmitted; }
+		
+	/** @return the total number of jobs in batch system(s) completed
+	*/
+	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
     /** @return the number of nodes ready to submit job to batch system
      */
@@ -603,7 +611,18 @@ class Dag {
 	int NumIdleJobProcs() const { return _numIdleJobProcs; }
 
 	int NumHeldJobProcs();
-
+	
+		/** Count number of Job Procs throughout the entire DAG
+		 	in states held, idle, running, and terminated.
+			@param n_held: pointer to set number of held job processes
+			@param n_idle: pointer to set number of idle job processes
+			@param n_running: pointer to set number of 'running' job processes
+			@param n_terminated: pointer to set number of terminated/aborted job processes
+	
+			Note: running job process = number of processes not idle, held, or terminated
+		*/
+	void NumJobProcStates(int* n_held=NULL, int* n_idle=NULL, int* n_running=NULL, int* n_terminated=NULL);
+	
 		/** Print the number of deferrals during the run (caused
 		    by MaxJobs, MaxIdle, MaxPre, or MaxPost).
 			@param level: debug level for output.
@@ -831,6 +850,16 @@ class Dag {
 		@return true iff the DAG is in recovery mode
 	*/
 	inline bool Recovery() const { return _recovery; }
+	
+	/**	Add a node marked by DONE in the dag file to data structure
+		@param node: Node to be marked as done later
+	*/
+	void AddPreDoneNode(Job* node) { m_userDefinedDoneNodes.push_back(node); }
+	
+	/** Sets all found nodes in done at submission time data structure
+		to STATUS_DONE
+	*/
+	void SetPreDoneNodes();
 
   private:
 
@@ -847,6 +876,11 @@ class Dag {
 	// even in the face of AddDependency().
 	std::vector<Job*> _splice_initial_nodes;
 	std::vector<Job*> _splice_terminal_nodes;
+	
+	// These are nodes in dag file marked as: JOB NAME SUBFILE DONE
+	// This data structure is here to hold nodes at submissions time to mark
+	// as done once DAG is finished being created (Mainly due to edge adjustment)
+	std::deque<Job*> m_userDefinedDoneNodes;
 
   	// A hash table with key of a splice name and value of the dag parse 
 	// associated with the splice.
@@ -1082,9 +1116,15 @@ private:
     
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
-
+	
     // Number of batch system jobs currently submitted
     int _numJobsSubmitted;
+	
+	//Number of batch system jobs submitted 
+	int _totalJobsSubmitted;
+	
+	//Number of batch system jobs completed
+	int _totalJobsCompleted;
 
     /*  Maximum number of jobs to submit at once.  Non-negative.  Zero means
         unlimited

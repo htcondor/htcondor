@@ -98,7 +98,6 @@ void good_file( const char *, const char * );
 int send_email();
 bool is_valid_shared_exe( const char *name );
 bool is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid);
-bool is_myproxy_file( const char *name, JOB_ID_KEY & jid );
 bool is_ccb_file( const char *name );
 bool touched_recently(char const *fname,time_t delta);
 bool linked_recently(char const *fname,time_t delta);
@@ -527,7 +526,7 @@ check_spool_dir()
 		} else {
 			// file was not a directory, we can deal with it right now.
 			JOB_ID_KEY jid;
-			if (is_ckpt_file_or_submit_digest(f, jid) || is_myproxy_file(f, jid)) {
+			if (is_ckpt_file_or_submit_digest(f, jid)) {
 				maybe_stale.add(jid, f);
 			} else {
 				// not a directory, and also clearly not a checkpoint or submit file
@@ -695,22 +694,9 @@ is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid)
 	return false;
 }
 
-bool
-is_myproxy_file(const char *name, JOB_ID_KEY & jid)
-{
-	// TODO This will accept files that look like a valid MyProxy
-	//   password file with extra characters on the end of the name.
-	int rc = sscanf( name, "mpp.%d.%d", &jid.cluster, &jid.proc );
-	if ( rc != 2 ) {
-		return false;
-	}
-	return jid.cluster > 0 && jid.proc >= 0;
-}
-
 
 /*
-  Check whether the given file could be a valid MyProxy password file
-  for a queued job.
+  Check whether the given file is a CCB reconnect file
 */
 bool
 is_ccb_file( const char *name )

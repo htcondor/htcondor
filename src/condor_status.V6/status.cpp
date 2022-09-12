@@ -1056,6 +1056,7 @@ main (int argc, char *argv[])
 
 	// Address (host:port) is taken from requested pool, if given.
 	const char* addr = (NULL != pool) ? pool->addr() : NULL;
+	Daemon *d = nullptr;
 	Daemon* requested_daemon = pool;
 
 	// If we're in "direct" mode, then we attempt to locate the daemon
@@ -1063,7 +1064,6 @@ main (int argc, char *argv[])
 	// In this case the host:port of pool (if given) denotes which
 	// pool is being consulted
 	if( direct ) {
-		Daemon *d = NULL;
 		switch (adType) {
 		case MASTER_AD: d = new Daemon( DT_MASTER, direct, addr ); break;
 		case STARTD_AD: d = new Daemon( DT_STARTD, direct, addr ); break;
@@ -1254,6 +1254,8 @@ main (int argc, char *argv[])
 		exit (1);
 	}
 
+	delete d;
+
 	if(! mergeMode) {
 		doNormalOutput( right_ai, adType );
 	// This conditional stolen from PrettyPrinter::prettyPrintHeadings().
@@ -1316,6 +1318,8 @@ main (int argc, char *argv[])
 			fputs(output.c_str(), stdout);
 		}
 	}
+
+	fflush(stdout);
 
 	delete query;
 	return 0;

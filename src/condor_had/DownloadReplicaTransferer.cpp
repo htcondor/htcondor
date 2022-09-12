@@ -270,7 +270,7 @@ DownloadReplicaTransferer::downloadFile(const std::string& filePath, const std::
     dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile %s.%s\n", 
 			 filePath.c_str( ), extension.c_str( ) );
 
-	int fips_mode = param_integer("HAD_FIPS_MODE", 0);
+	int fips_mode = param_integer("HAD_FIPS_MODE", 1);
 
 	if( ! utilSafeGetFile( *m_socket, filePath + "." + extension, fips_mode) ) {
 		dprintf( D_ALWAYS, "DownloadReplicaTransferer::downloadFile failed, "

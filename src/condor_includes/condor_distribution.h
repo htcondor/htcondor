@@ -20,19 +20,19 @@
 #ifndef _CONDOR_DISTRIBUTION_H_
 #define _CONDOR_DISTRIBUTION_H_
 
-#define MY_DISTRO_NAME     "condor"
-#define MY_DISTRO_NAME_UC  "CONDOR"
-#define MY_DISTRO_NAME_Cap "Condor"
-#define MY_DISTRO_NAME_Len 6
+#define MY_condor_NAME     "condor"
+#define MY_CONDOR_NAME_UC  "CONDOR"
+#define MY_Condor_NAME_Cap "Condor"
+#define MY_CONDOR_NAME_Len 6
 
 class Distribution
 {
   public:
 	// Get my distribution name..
-	const char *Get(void) const { return MY_DISTRO_NAME;     };
-	const char *GetUc()   const { return MY_DISTRO_NAME_UC;  };
-	const char *GetCap()  const { return MY_DISTRO_NAME_Cap; };
-	        int GetLen()  const { return MY_DISTRO_NAME_Len; };
+	const char *Get(void) const { return MY_condor_NAME;     };
+	const char *GetUc()   const { return MY_CONDOR_NAME_UC;  };
+	const char *GetCap()  const { return MY_Condor_NAME_Cap; };
+	        int GetLen()  const { return MY_CONDOR_NAME_Len; };
 };
 
 constexpr const Distribution myDistribution;

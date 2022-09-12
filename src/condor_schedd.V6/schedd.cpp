@@ -375,8 +375,8 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 
 struct job_data_transfer_t {
 	int mode;
-	char *peer_version;
 	ExtArray<PROC_ID> *jobs;
+	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
 match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
@@ -5123,7 +5123,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 			}
 			return FALSE;
 		}
-		if ( peer_version != NULL ) {
+		if ( peer_version[0] != '\0' ) {
 			ftrans.setPeerVersion( peer_version );
 		}
 
@@ -5216,10 +5216,6 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 		}
 	}
 
-	if ( peer_version ) {
-		free( peer_version );
-	}
-
 	dprintf( D_AUDIT, *rsock, (answer==OK) ? "Transfer completed\n" :
 			 "Error received from client\n" );
    return ((answer == OK)?TRUE:FALSE);
@@ -5241,7 +5237,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	static int transfer_reaper_id = -1;
 	PROC_ID a_job;
 	int tid;
-	char *peer_version = NULL;
+	std::string peer_version;
 	std::string job_ids_string;
 
 		// make sure this connection is authenticated, and we know who
@@ -5273,15 +5269,13 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 	switch(mode) {
 		case SPOOL_JOB_FILES_WITH_PERMS: // uploading perm files to schedd
 		case TRANSFER_DATA_WITH_PERMS:	// downloading perm files from schedd
-			peer_version = NULL;
+			peer_version = "";
 			if ( !rsock->code(peer_version) ) {
 				dprintf(D_AUDIT | D_FAILURE, *rsock, 
 					 	"spoolJobFiles(): failed to read peer_version\n" );
 				refuse(s);
 				return FALSE;
 			}
-				// At this point, we are responsible for deallocating
-				// peer_version with free()
 			break;
 
 		default:
@@ -5440,14 +5434,12 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			 job_ids_string.c_str());
 
 		// DaemonCore will free the thread_arg for us when the thread
-		// exits, but we need to free anything pointed to by
-		// job_data_transfer_t ourselves. generalJobFilesWorkerThread()
-		// will free 'peer_version' and our reaper will free 'jobs' (the
-		// reaper needs 'jobs' for some of its work).
-	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) );
+		// exits, 
+	job_data_transfer_t *thread_arg = (job_data_transfer_t *)malloc( sizeof(job_data_transfer_t) + peer_version.length());
 	ASSERT( thread_arg != NULL );
 	thread_arg->mode = mode;
-	thread_arg->peer_version = peer_version;
+	thread_arg->peer_version[0] = '\0';
+	strcpy(thread_arg->peer_version, peer_version.c_str());
 	thread_arg->jobs = jobs;
 
 	switch(mode) {
@@ -5502,9 +5494,6 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 
 	if ( tid == FALSE ) {
 		free(thread_arg);
-		if ( peer_version ) {
-			free( peer_version );
-		}
 		delete jobs;
 		refuse(s);
 		return FALSE;
@@ -9629,6 +9618,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		extra_env.Import(); // copy schedd's environment
 	}
 	else {
+		std::string msg;
 		extra_env.MergeFrom(*env);
 	}
 	env = &extra_env;
@@ -9647,9 +9637,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		std::string usermap;
 		p->getUseridMap(usermap);
 		if( !usermap.empty() ) {
-			std::string envname;
-			formatstr(envname,"_%s_USERID_MAP",myDistro->Get());
-			extra_env.SetEnv(envname.c_str(),usermap.c_str());
+			extra_env.SetEnv("_condor_USERID_MAP",usermap.c_str());
 		}
 	}
 #endif
@@ -9947,9 +9935,7 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	CommitNonDurableTransactionOrDieTrying();
 
 	Env starter_env;
-	std::string execute_env;
-	formatstr( execute_env, "_%s_EXECUTE", myDistro->Get());
-	starter_env.SetEnv(execute_env.c_str(),LocalUnivExecuteDir);
+	starter_env.SetEnv("_condor_EXECUTE",LocalUnivExecuteDir);
 	
 	rval = spawnJobHandlerRaw( srec, starter_path, starter_args,
 							   &starter_env, "starter", true );
@@ -10072,10 +10058,10 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	bool is_executable;
 	shadow_rec *retval = NULL;
 	Env envobject;
-	MyString env_error_msg;
+	std::string env_error_msg;
     int niceness = 0;
 	std::string tmpCwd;
-	int inouterr[3];
+	int inouterr[3] = {-1, -1, -1};
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
@@ -10092,6 +10078,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	fi.max_snapshot_interval = 15;
 
 	is_executable = false;
+
 
 	dprintf( D_FULLDEBUG, "Starting sched universe job %d.%d\n",
 		job_id->cluster, job_id->proc );
@@ -10321,37 +10308,12 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		}
 	}
 	
+	set_priv( priv );  // back to regular privs...
 	if ( cannot_open_files ) {
-	/* I'll close the opened files in the same priv state I opened them
-		in just in case the OS cares about such things. */
-		if (inouterr[0] >= 0) {
-			if (close(inouterr[0]) == -1) {
-				dprintf(D_ALWAYS, 
-					"Failed to close input file fd for '%s' because [%d %s]\n",
-					input.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[1] >= 0) {
-			if (close(inouterr[1]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close output file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		if (inouterr[2] >= 0) {
-			if (close(inouterr[2]) == -1) {
-				dprintf(D_ALWAYS,  
-					"Failed to close error file fd for '%s' because [%d %s]\n",
-					output.c_str(), errno, strerror(errno));
-			}
-		}
-		set_priv( priv );  // back to regular privs...
 		goto wrapup;
 	}
 	
-	set_priv( priv );  // back to regular privs...
-	
-	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
+	if(!envobject.MergeFrom(userJob,env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
 				env_error_msg.c_str());
 		goto wrapup;
@@ -10441,13 +10403,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	                                  core_size_ptr );
 	daemonCore->SetInheritParentSinful( MyShadowSockName );
 
-	// now close those open fds - we don't want them here.
-	for ( i=0 ; i<3 ; i++ ) {
-		if ( close( inouterr[i] ) == -1 ) {
-			dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
-		}
-	}
-
 	if ( pid <= 0 ) {
 		dprintf ( D_FAILURE|D_ALWAYS, "Create_Process problems!\n" );
 		goto wrapup;
@@ -10496,6 +10451,14 @@ wrapup:
 	uninit_user_ids();
 	if(userJob) {
 		FreeJobAd(userJob);
+	}
+	// now close those open fds - we don't want to leak them if there was an error
+	for (i=0 ; i < 3; i++ ) {
+		if (inouterr[i] != -1) {
+				if (close(inouterr[i] ) == -1) {
+					dprintf ( D_ALWAYS, "FD closing problem, errno = %d\n", errno );
+				}
+		}
 	}
 	return retval;
 }
@@ -13634,11 +13597,12 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::updateGSICred,
 			"updateGSICred", this, WRITE,
 			true /*force authentication*/);
-	 daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
-			"REQUEST_SANDBOX_LOCATION",
-			(CommandHandlercpp)&Scheduler::requestSandboxLocation,
-			"requestSandboxLocation", this, WRITE,
-			true /*force authentication*/);
+	 // CRUFT This is for the condor_transferd, which is no longer supported
+	 //daemonCore->Register_CommandWithPayload(REQUEST_SANDBOX_LOCATION,
+	 //		"REQUEST_SANDBOX_LOCATION",
+	 //		(CommandHandlercpp)&Scheduler::requestSandboxLocation,
+	 //		"requestSandboxLocation", this, WRITE,
+	 //		true /*force authentication*/);
 	 daemonCore->Register_CommandWithPayload(RECYCLE_SHADOW,
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
@@ -13657,8 +13621,7 @@ Scheduler::Register()
 			"release_claim", this, READ);
 	daemonCore->Register_CommandWithPayload( ALIVE, "ALIVE", 
 			(CommandHandlercpp)&Scheduler::receive_startd_alive,
-			"receive_startd_alive", this, READ,
-			D_PROTOCOL ); 
+			"receive_startd_alive", this, READ);
 
 	// Command handler for testing file access.  I set this as WRITE as we
 	// don't want people snooping the permissions on our machine.
@@ -13717,11 +13680,6 @@ Scheduler::Register()
 								  &handle_q,
 								  "handle_q", WRITE,
 								  true /* force authentication */ );
-
-	daemonCore->Register_CommandWithPayload( GET_MYPROXY_PASSWORD, "GET_MYPROXY_PASSWORD",
-								  &get_myproxy_password_handler,
-								  "get_myproxy_password", WRITE );
-
 
 	daemonCore->Register_CommandWithPayload( GET_JOB_CONNECT_INFO, "GET_JOB_CONNECT_INFO",
 								  (CommandHandlercpp)&Scheduler::get_job_connect_info_handler,

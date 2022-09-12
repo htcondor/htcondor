@@ -2344,7 +2344,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 			download_success = false;
 			try_again = false;
-			hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+			hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 			hold_subcode = EPERM;
 
 			error_buf.formatstr_cat(
@@ -2375,7 +2375,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				dprintf(D_ALWAYS,"REMAP: DoDownload: %s\n",error_buf.c_str());
 				download_success = false;
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = EPERM;
 
 					// In order for the wire protocol to remain in a well
@@ -2393,7 +2393,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						dprintf(D_ALWAYS, "REMAP: DoDownload: %s\n",error_buf.c_str());
 						download_success = false;
 						try_again = false;
-						hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+						hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 						hold_subcode = EPERM;
 						fullname = NULL_FILE;
 					} else {
@@ -2423,7 +2423,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
 				download_success = false;
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = EPERM;
 
 					// In order for the wire protocol to remain in a well
@@ -2598,7 +2598,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						s->my_ip_str(),fullname.c_str());
 					download_success = false;
 					try_again = false;
-					hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+					hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 					hold_subcode = rt_result;
 
 					dprintf(D_ALWAYS,
@@ -2764,7 +2764,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								if (!htcondor::generate_presigned_url(jobAd, url_value, "PUT", signed_url, err)) {
 								    std::string errorMessage;
 								    formatstr( errorMessage, "DoDownload: Failure when signing URL '%s': %s", url_value.c_str(), err.message() );
-								    result_ad.Assign( ATTR_HOLD_REASON_CODE, CONDOR_HOLD_CODE::DownloadFileError );
+								    result_ad.Assign( ATTR_HOLD_REASON_CODE, FILETRANSFER_HOLD_CODE::DownloadFileError );
 								    result_ad.Assign( ATTR_HOLD_REASON_SUBCODE, err.code() );
 								    result_ad.Assign( ATTR_HOLD_REASON, errorMessage.c_str() );
 								    dprintf( D_ALWAYS, "%s\n", errorMessage.c_str() );
@@ -2826,7 +2826,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// we shouldn't get here, because a job shouldn't match to a machine that won't
 				// support URL transfers if the job needs URL transfers.  but if we do get here,
 				// give a nice error message.
-				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer %s.", UrlSafePrint(URL));
+				errstack.pushf( "FILETRANSFER", 1, "URL transfers are disabled by configuration.  Cannot transfer URL file = %s .", UrlSafePrint(URL));  // URL file in err msg
 				dprintf ( D_FULLDEBUG, "FILETRANSFER: URL transfers are disabled by configuration.  Cannot transfer %s.\n", UrlSafePrint(URL));
 				rc = GET_FILE_PLUGIN_FAILED;
 			}
@@ -2958,7 +2958,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						strerror(the_error),the_error);
 					download_success = false;
 					try_again = false;
-					hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+					hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 					hold_subcode = the_error;
 
 					dprintf(D_ALWAYS,
@@ -2998,7 +2998,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// Report only the first error.
 		if( rc < 0 && all_transfers_succeeded ) {
 			all_transfers_succeeded = false;
-			error_buf.formatstr("%s at %s failed to receive file %s",
+			error_buf.formatstr("%s at %s - |Error: receiving file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
 			download_success = false;
@@ -3011,7 +3011,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				if (rc == GET_FILE_PLUGIN_FAILED) {
 					error_buf.formatstr_cat(": %s", errstack.getFullText().c_str());
 				} else {
-					error_buf.replaceString("receive","write to");
+					error_buf.replaceString("receiving","writing to");
 					error_buf.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 				}
 
@@ -3021,7 +3021,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// be periodically released from hold.
 
 				try_again = false;
-				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = the_error;
 
 				// If plugin_exit_code is greater than 0, that indicates a
@@ -3044,7 +3044,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// well defined in this case, so we can't report a specific
 				// error message.
 				try_again = true;
-				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = the_error;
 
 				if( rc == GET_FILE_MAX_BYTES_EXCEEDED ) {
@@ -3163,7 +3163,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				dprintf( D_ALWAYS, "FILETRANSFER: Multiple file download failed: %s\n",
 					errstack.getFullText().c_str() );
 				download_success = false;
-				hold_code = CONDOR_HOLD_CODE::DownloadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = static_cast<int>(result) << 8;
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
@@ -4268,7 +4268,7 @@ FileTransfer::computeFileList(
 					/* do upload ACK (required to put job on hold) */ true,
 					/* do download ACK */ false,
 					/* try again */ false,
-					CONDOR_HOLD_CODE::UploadFileError,
+					FILETRANSFER_HOLD_CODE::UploadFileError,
 					/* hold subcode */ 3,
 					errorMessage.c_str(), __LINE__ );
 			}
@@ -4411,7 +4411,7 @@ FileTransfer::computeFileList(
 
 		std::string holdReason;
 		if( signed_ad.LookupString( ATTR_HOLD_REASON, holdReason ) ) {
-			int holdCode = CONDOR_HOLD_CODE::DownloadFileError;
+			int holdCode = FILETRANSFER_HOLD_CODE::DownloadFileError;
 			signed_ad.LookupInteger( ATTR_HOLD_REASON_CODE, holdCode );
 
 			int holdSubCode = -1;
@@ -4660,7 +4660,7 @@ FileTransfer::uploadFileList(
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold
-			hold_code = CONDOR_HOLD_CODE::UploadFileError;
+			hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
 			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
@@ -4748,7 +4748,7 @@ FileTransfer::uploadFileList(
 					first_failed_file_transfer_happened = true;
 					first_failed_upload_success = false;
 					first_failed_try_again = false;
-					first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
+					first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 					first_failed_hold_subcode = 1;
 					first_failed_error_desc = error_desc;
 					first_failed_line_number = __LINE__;
@@ -5055,10 +5055,10 @@ FileTransfer::uploadFileList(
 		if( rc < 0 ) {
 			int the_error = errno;
 			upload_success = false;
-			error_desc.formatstr("error sending %s",UrlSafePrint(fullname));
+			error_desc.formatstr("|Error: sending file %s",UrlSafePrint(fullname));
 			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
 				try_again = false; // put job on hold
-				hold_code = CONDOR_HOLD_CODE::UploadFileError;
+				hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 				hold_subcode = the_error;
 
 				// If plugin_exit_code is greater than 0, that indicates a
@@ -5079,10 +5079,10 @@ FileTransfer::uploadFileList(
 					error_desc.replaceString("sending","reading from");
 					error_desc.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
 					if( fail_because_mkdir_not_supported ) {
-						error_desc.formatstr_cat("; Remote condor version is too old to transfer directories.");
+						error_desc.formatstr_cat("- Remote condor version is too old to transfer directories.");
 					}
 					if( fail_because_symlink_not_supported ) {
-						error_desc.formatstr_cat("; Transfer of symlinks to directories is not supported.");
+						error_desc.formatstr_cat("- Transfer of symlinks to directories is not supported.");
 					}
 				} else if ( rc == PUT_FILE_MAX_BYTES_EXCEEDED ) {
 					StatInfo this_file_stat(fullname.c_str());
@@ -5191,7 +5191,7 @@ FileTransfer::uploadFileList(
 				first_failed_file_transfer_happened = true;
 				first_failed_upload_success = false;
 				first_failed_try_again = false;
-				first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
+				first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 				first_failed_hold_subcode = static_cast<int>(result) << 8;
 				first_failed_error_desc = error_desc;
 				first_failed_line_number = __LINE__;
@@ -5208,7 +5208,7 @@ FileTransfer::uploadFileList(
 			first_failed_file_transfer_happened = true;
 			first_failed_upload_success = false;
 			first_failed_try_again = false;
-			first_failed_hold_code = CONDOR_HOLD_CODE::UploadFileError;
+			first_failed_hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			first_failed_hold_subcode = 2;
 			first_failed_error_desc = error_desc;
 			first_failed_line_number = __LINE__;
@@ -6174,7 +6174,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 				" exited unexpectedly without producing an error message ";
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
-		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
+		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
 			exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
 		return TransferPluginResult::Error;
 	}
@@ -6300,7 +6300,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	if ( output_file == NULL ) {
 		dprintf( D_ALWAYS, "FILETRANSFER: Unable to open %s output file "
 			"%s.\n", plugin_path.c_str(), output_filename.c_str() );
-		e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
+		e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
 			"unable to open output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 		return TransferPluginResult::Error;
 	}
@@ -6327,7 +6327,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			if ( !this_file_stats_ad.LookupBool( "TransferSuccess", transfer_success ) ) {
 				error_message = "File transfer plugin " + plugin_path +
 					" exited without producing a TransferSuccess result ";
-				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s (%s)|",
 					exit_status, plugin_path.c_str(), error_message.c_str(), transfer_url.c_str() );
 			}
 			else if ( !transfer_success ) {
@@ -6335,7 +6335,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 					error_message = "File transfer plugin " + plugin_path +
 						" exited unexpectedly without producing an error message ";
 				}
-				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. Error: %s (%s)",
+				e.pushf( "FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",   // URL file in err msg
 					exit_status, plugin_path.c_str(), error_message.c_str(), UrlSafePrint(transfer_url) );
 			}
 
@@ -6347,7 +6347,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 		if ( num_ads == 0 ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
-			e.pushf( "FILETRANSFER", 1, "Error: file transfer plugin %s exited with code %i, "
+			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
 				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
 			return TransferPluginResult::Error;
 		}

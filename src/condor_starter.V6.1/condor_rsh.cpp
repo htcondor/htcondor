@@ -74,7 +74,7 @@ int main ( int argc, char *argv[] ) {
         buf += argv[i];
     }
 
-	const char	*envName = EnvGetName( ENV_PARALLEL_SHADOW_SINFUL );
+	const char	*envName = ENV_PARALLEL_SHADOW_SINFUL;
     char *shadow = getenv( envName );
 
 #ifdef MAKE_DROPPINGS

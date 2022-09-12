@@ -22,8 +22,6 @@
 #include "startd.h"
 #include "condor_environ.h"
 #include "classad_merge.h"
-#include "vm_common.h"
-#include "VMRegister.h"
 #include "condor_holdcodes.h"
 #include "startd_bench_job.h"
 #include "ipv6_hostname.h"
@@ -1610,13 +1608,6 @@ void Resource::publish_single_slot_ad(ClassAd & ad, time_t cur_time, Purpose pur
 		process_update_ad(ad);
 		break;
 	}
-
-	// if this STARTD is acting as proxy for another STARTD in a VM, then this STARTD should never match.
-	// TJ: 2020 I'm pretty sure this vmapi_ stuff doesn't work if it ever did, look into removing it.
-	if( vmapi_is_usable_for_condor() == FALSE ) {
-		ad.Assign( ATTR_START, false );
-	}
-
 }
 
 
@@ -2290,9 +2281,6 @@ Resource::eval_continue( void )
 int
 Resource::eval_is_owner( void )
 {
-	if( vmapi_is_usable_for_condor() == FALSE )
-		return 1;
-
 	// fatal if undefined, don't check vanilla
 	return eval_expr( ATTR_IS_OWNER, true, false );
 }
@@ -2301,9 +2289,6 @@ Resource::eval_is_owner( void )
 int
 Resource::eval_start( void )
 {
-	if( vmapi_is_usable_for_condor() == FALSE )
-		return 0;
-
 	// -1 if undefined, don't check vanilla
 	return eval_expr( "START", false, false );
 }
@@ -2625,12 +2610,6 @@ Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 		dprintf(D_TEST | D_VERBOSE, "Resource::publish_dynamic, %s ad\n", internal_ad ? "internal" : "external");
 	}
 
-	//TODO: tj can I kill this?
-	if (vmapi_is_virtual_machine()) {
-		ClassAd* host_classad = vmapi_get_host_classAd();
-		if (host_classad) { MergeClassAds(cap, host_classad, true, false); }
-	}
-
 	// If we're claimed or preempting, handle anything listed
 	// in STARTD_JOB_ATTRS.
 	// Our current claim object might be gone though, so make
@@ -2918,7 +2897,6 @@ Resource::makeChildClaimIds() {
 void
 Resource::publishDeathTime( ClassAd* cap )
 {
-    const char *death_time_env_name;
     char       *death_time_string;
     bool        have_death_time;
     int         death_time;
@@ -2931,8 +2909,7 @@ Resource::publishDeathTime( ClassAd* cap )
 	//TODO: move setup of death time to global initialization
 
     have_death_time     = false;
-    death_time_env_name = EnvGetName(ENV_DAEMON_DEATHTIME);
-    death_time_string   = getenv(death_time_env_name);
+    death_time_string   = getenv(ENV_DAEMON_DEATHTIME);
 
     // Lookup the death time that we have.
     if ( death_time_string ) {

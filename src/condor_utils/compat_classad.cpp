@@ -925,11 +925,10 @@ EnvironmentV1ToV2(const char * name,
 	}
 	Env env;
 	std::string error_msg;
-	if (!env.MergeFromV1Raw(args.c_str(), error_msg))
+	if (!env.MergeFromV1AutoDelim(args.c_str(), error_msg))
 	{
-		std::stringstream ss;
-		ss << "Error when parsing argument to environment V1: " << error_msg.c_str();
-		problemExpression(ss.str(), arguments[0], result);
+		error_msg.insert(0, "Error when parsing argument to environment V1: ");
+		problemExpression(error_msg, arguments[0], result);
 		return true;
 	}
 	std::string result_mystr;

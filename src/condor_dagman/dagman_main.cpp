@@ -702,7 +702,7 @@ void main_init (int argc, char ** const argv) {
 
 		// get dagman job id from environment, if it's there
 		// (otherwise it will be set to "-1.-1.-1")
-	dagman.DAGManJobId.SetFromString( getenv( EnvGetName( ENV_ID ) ) );
+	dagman.DAGManJobId.SetFromString( getenv( ENV_CONDOR_ID ) );
 
 	dagman._dagmanClassad = new DagmanClassad( dagman.DAGManJobId, dagman._schedd );
 
@@ -1293,6 +1293,9 @@ void main_init (int argc, char ** const argv) {
 	// adjust the parent/child edges removing duplicates and setting up for processing
 	debug_printf(DEBUG_VERBOSE, "Adjusting edges\n");
 	dagman.dag->AdjustEdges();
+	
+	// Set nodes marked as DONE in dag file to STATUS_DONE
+	dagman.dag->SetPreDoneNodes();
 
 		//
 		// Actually parse the "new-new" style (partial DAG info only)
@@ -1637,31 +1640,7 @@ print_status( bool forceScheddUpdate ) {
 void
 jobad_update() {
 
-	int total = dagman.dag->NumNodes( true );
-	int done = dagman.dag->NumNodesDone( true );
-	int pre = dagman.dag->PreRunNodeCount();
-	int submitted = dagman.dag->NumJobsSubmitted();
-	int post = dagman.dag->PostRunNodeCount();
-	int hold = dagman.dag->HoldRunNodeCount();
-	int ready =  dagman.dag->NumNodesReady();
-	int failed = dagman.dag->NumNodesFailed();
-	int unready = dagman.dag->NumNodesUnready( true );
-
-	if ( dagman._dagmanClassad ) {
-		dagman._dagmanClassad->Update( total, done, pre, submitted, post,
-					hold, ready, failed, unready, dagman.dag->_dagStatus,
-					dagman.dag->Recovery(), dagman._dagmanStats,
-					dagman.maxJobs, dagman.maxIdle, dagman.maxPreScripts,
-					dagman.maxPostScripts, dagman.maxHoldScripts );
-
-		// It's possible that certain DAGMan attributes were changed in the job ad.
-		// If this happened, update the internal values in our dagman data structure.
-		dagman.dag->SetMaxIdleJobProcs(dagman.maxIdle);
-		dagman.dag->SetMaxJobsSubmitted(dagman.maxJobs);
-		dagman.dag->SetMaxPreScripts(dagman.maxPreScripts);
-		dagman.dag->SetMaxPostScripts(dagman.maxPostScripts);
-		dagman.dag->SetMaxHoldScripts(dagman.maxHoldScripts);
-	}
+	if ( dagman._dagmanClassad ) { dagman._dagmanClassad->Update( dagman ); }
 
 }
 
@@ -1749,6 +1728,7 @@ void condor_event_timer () {
 		dagman._dagmanStats.LogProcessCycleTime.Add(logProcessCycleEndTime - logProcessCycleStartTime);
 	}
 
+	int currJobsHeld = dagman.dag->NumHeldJobProcs();
 	// print status if anything's changed (or we're in a high debug level)
 	if( prevJobsDone != dagman.dag->NumNodesDone( true )
 		|| prevJobs != dagman.dag->NumNodes( true )
@@ -1756,7 +1736,7 @@ void condor_event_timer () {
 		|| prevJobsSubmitted != dagman.dag->NumJobsSubmitted()
 		|| prevJobsReady != dagman.dag->NumNodesReady()
 		|| prevScriptRunNodes != dagman.dag->ScriptRunNodeCount()
-		|| prevJobsHeld != dagman.dag->NumHeldJobProcs()
+		|| prevJobsHeld != currJobsHeld
 		|| DEBUG_LEVEL( DEBUG_DEBUG_4 ) ) {
 		print_status();
 
@@ -1766,7 +1746,7 @@ void condor_event_timer () {
 		prevJobsSubmitted = dagman.dag->NumJobsSubmitted();
 		prevJobsReady = dagman.dag->NumNodesReady();
 		prevScriptRunNodes = dagman.dag->ScriptRunNodeCount();
-		prevJobsHeld = dagman.dag->NumHeldJobProcs();
+		prevJobsHeld = currJobsHeld;
 		
 		if( dagman.dag->GetDotFileUpdate() ) {
 			dagman.dag->DumpDotFile();

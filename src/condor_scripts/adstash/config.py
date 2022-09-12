@@ -45,6 +45,7 @@ def get_default_config(name="ADSTASH"):
         "es_timeout": 2 * 60,
         "es_bunch_size": 250,
         "es_index_name": "htcondor-000001",
+        "json_local": False,
     }
     return defaults
 
@@ -75,6 +76,7 @@ def get_htcondor_config(name="ADSTASH"):
         "es_timeout": p.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": p.get(f"{name}_ES_INDEX_NAME"),
+        "json_local": p.get(f"{name}_JSON_LOCAL"),
         "ca_certs": p.get(f"{name}_CA_CERTS"),
     }
 
@@ -135,6 +137,7 @@ def get_environment_config(name="ADSTASH"):
         "es_timeout": env.get(f"{name}_ES_TIMEOUT"),
         "es_bunch_size": env.get(f"{name}_ES_BUNCH_SIZE"),
         "es_index_name": env.get(f"{name}_ES_INDEX_NAME"),
+        "json_local": env.get(f"{name}_JSON_LOCAL"),
         "ca_certs": env.get(f"{name}_CA_CERTS"),
     }
 
@@ -201,7 +204,7 @@ def normalize_config_types(conf):
         "es_timeout",
         "es_bunch_size",
     ]
-    bools = ["standalone", "schedd_history", "startd_history", "es_use_https"]
+    bools = ["standalone", "schedd_history", "startd_history", "es_use_https", "json_local"]
 
     # integers
     for key in integers:
@@ -440,6 +443,11 @@ def get_config(argv=None):
             "Elasticsearch index name "
             "[default: %(default)s]"
         ),
+    )
+    parser.add_argument(
+        "--json_local",
+        action="store_true",
+        help=("Store only locally in json format " "[default: %(default)s]"),
     )
     parser.add_argument(
         "--ca_certs",

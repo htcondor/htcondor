@@ -21,6 +21,9 @@
 #include "condor_debug.h"
 #include "view_server.h"
 #include "subsystem_info.h"
+#include "directory.h"
+#include "ca_utils.h"
+#include "condor_auth_ssl.h"
 
 #if defined(UNIX) && !defined(DARWIN)
 #include "CollectorPlugin.h"
@@ -57,6 +60,36 @@ void main_init(int argc, char *argv[])
 
 	CollectorPluginManager::Initialize();
 #endif
+
+	std::string cafile, cakeyfile;
+	if (param_boolean("COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE", false) &&
+		param(cafile, "TRUST_DOMAIN_CAFILE") &&
+		param(cakeyfile, "TRUST_DOMAIN_CAKEY"))
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		if (0 != access(cafile.c_str(), R_OK)) {
+			dprintf(D_ALWAYS, "Will generate a bootstrap file.\n");
+			make_parents_if_needed(cafile.c_str(), 0755, PRIV_ROOT);
+			make_parents_if_needed(cakeyfile.c_str(), 0755, PRIV_ROOT);
+			htcondor::generate_x509_ca(cafile, cakeyfile);
+		}
+
+		std::string certfile, keyfile;
+		if (param(certfile, "AUTH_SSL_SERVER_CERTFILE") &&
+			param(keyfile, "AUTH_SSL_SERVER_KEYFILE") &&
+			(0 != access(certfile.c_str(), R_OK)) &&
+			(0 == access(cafile.c_str(), R_OK)) &&
+			(0 == access(cakeyfile.c_str(), R_OK)))
+		{
+			dprintf(D_ALWAYS, "Will generate a new certificate file.\n");
+			make_parents_if_needed(certfile.c_str(), 0755, PRIV_ROOT);
+			make_parents_if_needed(keyfile.c_str(), 0755, PRIV_ROOT);
+			if (htcondor::generate_x509_cert(certfile, keyfile, cafile, cakeyfile)) {
+				Condor_Auth_SSL::retry_cert_search();
+				dprintf(D_FULLDEBUG|D_SECURITY, "Will use new hostcert for SSL.\n");
+			}
+		}
+	}
 }
 
 //-------------------------------------------------------------

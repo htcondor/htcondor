@@ -39,7 +39,7 @@
 
 #include "directory.h"
 #include "filename_tools.h"
-#include <scheduler.h>
+#include "condor_holdcodes.h"
 #include "condor_version.h"
 #include <my_async_fread.h>
 #include <submit_utils.h>
@@ -1045,6 +1045,8 @@ main( int argc, const char *argv[] )
 	if (free_out && out) {
 		fclose(out); out = NULL;
 	}
+
+	delete factory;
 	return 0;
 }
 

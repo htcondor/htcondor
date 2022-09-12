@@ -17,14 +17,40 @@ Release Notes:
 
 New Features:
 
+- SSL authentication can be automatically configured in the *condor_collector*,
+  providing a mechanism to more easily bootstrap secure authentication within the
+  pool.  Tools will allow users to setup trust with the generated CA similarly to
+  how SSH enables trust on first use of a remote host.
+  :jira:`501`
+
+- HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
+  for replication, so they will be unable to replicate with HTCondor daemons
+  that are older than version 8.8.13. see macro:`HAD_FIPS_MODE` for more information.
+  :jira:`1234`
+
+- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
+  x86_64 microarchitecture, like *x86_64-v3*
+  :jira:`1252`
+
 - Added submit templates.  These are configured using new configuration variables
   macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
+
+- Added support for ephermal per-job execute directories
+  allocated from LVM or from a backing file on disk, when HTCondor is running
+  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
+  enables this, see the :doc:`../admin-manual/directories` page for details.
+  :jira:`912`
 
 - Added extended submit help which can be defined in the schedd using the new
   configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
+
+- Added new DAG job classad attributes ``DAG_JobsSubmitted``, ``DAG_JobsIdle``,
+  ``DAG_JobsHeld``, ``DAG_JobsRunning``, and ``DAG_JobsCompleted`` to better
+  record information about job processes throughout all nodes within the DAG.
+  :jira:`1216` 
 
 - Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
   This allows a command to be sent to the *condor_master* to drain the *condor_startd*
@@ -34,7 +60,22 @@ New Features:
 - When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
   false, and the starter runs a container job, we no longer create the helper
   unix domain sockets required for *condor_ssh_to_job* to work.
-  :jira:1244`
+  :jira:`1244`
+
+- Docker universe now support an administrator-set knob DOCKER_SHM_SIZE, which
+  allows the administrator of a worker node to set the --shm-size option to
+  docker run
+  :jira:`1282`
+
+- Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
+  instead writes ads to JSON files in the working directory.
+  :jira:`1264`
+
+- Removed support from the startd for querying keyboard and mouse idle time,
+  on legacy x86 linux machines that used an 8042 keyboard controller.
+  This caused significant performance degradation in the startd
+  on machines with many cpus.
+  :jira:`1297`
 
 Bugs Fixed:
 
@@ -43,16 +84,74 @@ Bugs Fixed:
   handling ``condor_ssh_to_job``.
   :jira:`1245`
 
+- Fixed a memory leak in the *condor_schedd* triggered by spooling sandboxes
+  to the schedd.
+  :jira:`1233`
+
+- HTCondor’s security library no longer tries to resolve the provided hostname
+  to a fully-qualified canonical name when authenticating with SSL, matching
+  the behavior of ``curl``.  Services using a DNS CNAME no longer need to
+  implement workarounds in the host certificate to support the prior behavior.
+  The old behavior can be restored by setting new configuration
+  parameter ``USE_COLLECTOR_HOST_CNAME`` to ``False``.
+  :jira:`692`
+  
+- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+  where it wouldn't work.
+  :jira:`1274`
+
+- Fixed bug where a DAGMan job would write a warning for not using the keywords
+  **JOB** and **RETRY** in node submit file to the ``.dagman.out`` file.
+  :jira:`1273`
+
+Version 9.11.2
+--------------
+
+Release Notes:
+
+- HTCondor version 9.11.2 released on September 13, 2022.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug where :macro:`STARTD_NOCLAIM_SHUTDOWN` would, in effect,
+  cause the startd to restart rather than HTCondor to shut down.
+  :jira:`1315`
+
+Version 9.11.1
+--------------
+
+Release Notes:
+
+- HTCondor version 9.11.1 released on September 6, 2022.
+
+New Features:
+
+- Improved ``HoldReason`` and ``HoldReasonCode`` job attributes in the event of
+  File Transfer errors.  Previously if there was a problem with File Transfer, the
+  job can go on hold with hold reason code ``DownloadFileError`` (12) or ``UploadFileError`` (13).
+  Unfortunately, this did not distinguish if the error happened while transferring
+  the job's input or output sandbox, which is what most people wanted to know.
+  Thus hold reason code 12 and 13 have been re-purposed to be
+  ``TransferOutputError`` and ``TransferInputError`` respectively, telling users the error
+  occurred either while transferring the job input or output/checkpoint sandbox.
+  :jira:`1134`
+
+Bugs Fixed:
+
+- None.
+
 Version 9.11.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 9.11.0 released on Month Date, 2022.
+- HTCondor version 9.11.0 released on August 25, 2022.
 
-- HTCondor version 9.11.0 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-9015`.
+- This version includes all the updates from :ref:`lts-version-history-9016`.
 
 - Removed support for the WriteUserLog class from libcondorapi.a.  This
   class was difficult to use correctly, and to our knowledge it is not
@@ -62,6 +161,15 @@ Release Notes:
 
 New Features:
 
+- The format of GPU attributes in the Machine ClassAd has been modified
+  to support the new ``require_gpus`` submit command.
+  Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
+  updated man page to document them and to expand the documentation of the
+  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
+  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
+  option is used for discovery.
+  :jira:`711`
+
 - Added configuration templates ``PREEMPT_IF_DISK_EXCEEDED`` and ``HOLD_IF_DISK_EXCEEDED``
   :jira:`1173`
 
@@ -70,21 +178,20 @@ New Features:
   level authorization.
   :jira:`1164`
 
-- Singularity jobs now mount /tmp and /var/tmp under the scratch
-  directory, not in tmpfs
-  :jira:`1180`
-
-- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
-  from 20 minutes to a practically infinite value.  This is to prevent
-  surprises when the schedd starts running vanilla universe jobs even when
-  the admin has intentionally stopped the negotiator.
-  :jira:`1185`
+- Using *condor_hold* to put jobs on hold now overrides other hold
+  conditions. Jobs already held for other reasons will be updated (i.e.
+  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
+  held with the updated hold reason until released with *condor_release*.
+  The periodic release job policy expressions are now ignored for these
+  jobs.
+  :jira:`740`
 
 - If a job that is a Unix script with a ``#!`` interpreter fails to run because
   the interpreter doesn't exist, a clearer error message is written to the
   job log and in the job's ``HoldReason`` attribute.
+  :jira:`1198`
 
-- Added a new submit option ``container_target_dir`` that allows singularity
+- Added a new submit option ``container_target_dir`` that allows Singularity
   jobs to specify the target directory
   :jira:`1171`
 
@@ -93,6 +200,12 @@ New Features:
   server. The proxy is still delegated for use by the job.
   :jira:`1194`
   
+- The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
+  from 20 minutes to a practically infinite value.  This is to prevent
+  surprises when the schedd starts running vanilla universe jobs even when
+  the admin has intentionally stopped the negotiator.
+  :jira:`1185`
+
 - DAGMan ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
   to allow passed variables to be set at the beginning or end of a DAG
   job's submit description. Any ``VARS`` without these options will have behavior
@@ -106,20 +219,9 @@ New Features:
   and other systems that have no negotiator.
   :jira:`1192`
 
-- Added ``-nested`` and ``-not-nested`` options to *condor_gpu_discovery* and
-  updated man page to document them and to expand the documentation of the
-  ``-simulate`` argument.  Nested output is now the default for GPU discovery.
-  Added examples of new *condor_startd* configuration that is possible when the ``-nested``
-  option is used for discovery.
-  :jira:`711`
-
-- Using *condor_hold* to put jobs on hold now overrides other hold
-  conditions. Jobs already held for other reasons will be updated (i.e.
-  ``HoldReason`` and ``HoldReasonCode`` changed). The jobs will remain
-  held with the updated hold reason until released with *condor_release*.
-  The periodic release job policy expressions are now ignored for these
-  jobs.
-  :jira:`740`
+- The *blahp* now reports the number of CPUs allocated to the job when
+  that data is provided by Slurm.
+  :jira:`1207`
 
 - The :doc:`/man-pages/htcondor` CLI tool now outputs natural language
   status messages for the *job* and *jobset* subcommands.
@@ -152,8 +254,8 @@ Bugs Fixed:
 
 - Fixed the ClassAd shared library extension mechanism.  An earlier
   development series broke the ability for users to add custom
-  ClassAd functions as documented in 
-  :doc:`/classads/classad-mechanism.html#extending-classads-with-user-written-functions`.
+  ClassAd functions as documented in
+  :ref:`extending-classads`.
   :jira:`1196`
 
 Version 9.10.1
@@ -196,6 +298,19 @@ Release Notes:
   :jira:`1161`
 
 New Features:
+  
+- Added support for running on Linux systems that ship with openssl version 3
+  :jira:`1148`
+
+- *condor_submit* now has support for submitting jobsets. Jobsets are still
+  a technology preview and still not ready for general use.
+  :jira:`1063`
+
+- DAGman ``VARS`` lines are now able to specify ``PREPEND`` or ``APPEND`` 
+  to allow passed variables to be initalized before or after DAG jobs are
+  submitted. Any ``VARS`` without these options will have behavior derived
+  from ``DAGMAN_DEFAULT_APPEND_VARS`` configuration variable.
+  :jira:`1080`
 
 - The remote administration capability in daemon ads sent to the
   **condor_collector** (configuration parameter
@@ -445,7 +560,7 @@ Bugs Fixed:
 
 - Fixed bug introduced in HTCondor v9.7.0 where job may go on hold without
   setting a ``HoldReason`` and/or ``HoldReasonCode`` and ``HoldReasonSubCode``
-  attributes in the job classad.  In particular, this could happen when file transfer
+  attributes in the job ClassAd.  In particular, this could happen when file transfer
   using a file transfer plugin failed.
   :jira:`1035`
 
@@ -466,7 +581,7 @@ New Features:
   variables to be evaluated for periodic job policy.
   :jira:`905`
 
-- Container universe now supports running singularity jobs where the 
+- Container universe now supports running Singularity jobs where the 
   command executable is hardcoded in to the runfile.  We call this 
   running the container as the job.
   :jira:`966`
@@ -492,7 +607,7 @@ New Features:
   the ADL job description given to the ARC CE REST service.
   :jira:`932`
 
-- Reduce the size of the singularity test executable by not linking in
+- Reduce the size of the Singularity test executable by not linking in
   libraries it doesn't need.
   :jira:`927`
 
@@ -540,7 +655,7 @@ Bugs Fixed:
 - Fixed several bugs in file transfer where unexpected failures by file
   transfer plugins would not get handled correctly, resulting in empty
   Hold Reason messages and meaningless Hold Reason Subcodes reported in the
-  job's classad.
+  job's ClassAd.
   :jira:`842`
 
 Version 9.6.0
@@ -701,7 +816,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed a bug where if the submit file set a checkpoint_exit_code, and the administrator
-  enabled singularity support on the execute node, the job would go on hold at checkpoint time.
+  enabled Singularity support on the execute node, the job would go on hold at checkpoint time.
   :jira:`837`
 
 Version 9.4.1
@@ -992,7 +1107,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug that prevented Singularity jobs from running when the singularity
+- Fixed a bug that prevented Singularity jobs from running when the Singularity
   binary emitted many warning messages to stderr.
   :jira:`698`
 

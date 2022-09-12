@@ -22,10 +22,16 @@ project(CONDOR LANGUAGES C CXX)
 cmake_minimum_required(VERSION 3.8)
 
 # Exactly c++ 11 for all platforms
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(PREFER_CPP11 ON) # Still have some ifdefs on this
+
+# Remove warnings in cmake 3.24+.  This setting 
+# forces cmake to not update the timestamps on downloaded
+# tarballs.  The autoconf-built externals need this old setting
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.24)
+  cmake_policy(SET CMP0135 OLD)
+endif()
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
@@ -37,7 +43,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "9.12.0")
+set(VERSION "10.1.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for

@@ -62,9 +62,9 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The short X.Y version.
-version = '9.12'
+version = '10.1'
 # The full version, including alpha/beta/rc tags.
-release = '9.12.0'
+release = '10.1.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2022
@@ -164,6 +164,7 @@ man_pages = [
     ('man-pages/condor_sos', 'condor_sos', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_ssh_start', 'condor_ssh_start', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_ssh_to_job', 'condor_ssh_to_job', u'HTCondor Manual', [u'HTCondor Team'], 1),
+    ('man-pages/condor_ssl_fingerprint', 'condor_ssl_fingerprint', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_stats', 'condor_stats', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_status', 'condor_status', u'HTCondor Manual', [u'HTCondor Team'], 1),
     ('man-pages/condor_store_cred', 'condor_store_cred', u'HTCondor Manual', [u'HTCondor Team'], 1),
