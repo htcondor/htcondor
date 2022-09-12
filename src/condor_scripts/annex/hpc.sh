@@ -308,9 +308,12 @@ CCB_ADDRESS = \$(COLLECTOR_HOST)
 #
 STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
-# It's a magic constant.  (If the initial update to the collector
-# doesn't work right for some reason, at least try to update it a
-# second time getting bored and commiting suicide.)
+#
+# Send updates a bit more than twice as often as the default, since this
+# is an ephemeral resource.  If STARTD_NOCLAIM_SHUTDOWN is the default,
+# this gives the startd a second chance to match if its initial update
+# to the collector failed.
+#
 UPDATE_INTERVAL = 137
 
 
