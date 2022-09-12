@@ -1637,6 +1637,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.2-1
+- In 9.11.0, STARTD_NOCLAIM_SHUTDOWN restarted instead. Now, it shuts down.
+
 * Tue Sep 06 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.1-1
 - File transfer errors are identified as occurring during input or output
 
