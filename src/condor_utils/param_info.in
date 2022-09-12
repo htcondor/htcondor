@@ -1031,8 +1031,15 @@ type=int
 customization=never
 usage=Number of detected cpus. does not include hyperthreads
 
-[NUM_CPUS]
+[DETECTED_CPUS_LIMIT]
 default=$(DETECTED_CPUS)
+type=int
+customization=seldom
+usage=Detected max CPUs to use, The minimum of $(DETECTED_CPUS), $ENV(OMP_THREAD_LIMIT) and $ENV(SLURM_CPUS_ON_NODE)
+tags=
+
+[NUM_CPUS]
+default=$(DETECTED_CPUS_LIMIT)
 type=int
 customization=normal
 usage=Number of CPUs to provision in the startd
@@ -1169,6 +1176,11 @@ tags=startd
 default=2000
 type=int
 tags=starter
+
+[THINPOOL_HIDE_MOUNT]
+default=false
+type=bool
+tags=startd
 
 [MAX_TIME_SKIP]
 default=1200

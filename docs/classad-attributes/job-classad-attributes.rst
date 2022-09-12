@@ -687,15 +687,12 @@ all attributes.
     |                                  | encountered when                    |                          |
     |                                  | transferring files.                 |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 12                             | The *condor_starter* or             | The Unix errno number.   |
-    | | [DownloadFileError]            | *condor_shadow* failed              |                          |
-    |                                  | to receive or write job             |                          |
-    |                                  | files.                              |                          |
+    | | 12                             | An error occurred while             | The Unix errno number.   |
+    | | [TransferOutputError]          | transferring job output files       |                          |
+    |                                  | or checkpoint files.                |                          |
     +----------------------------------+-------------------------------------+--------------------------+
-    | | 13                             | The *condor_starter* or             | The Unix errno number.   |
-    | | [UploadFileError]              | *condor_shadow* failed              |                          |
-    |                                  | to read or send job                 |                          |
-    |                                  | files.                              |                          |
+    | | 13                             | An error occurred while             | The Unix errno number.   |
+    | | [TransferInputError]           | transferring job input files.       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 14                             | The initial working                 | The Unix errno number.   |
     | | [IwdError]                     | directory of the job                |                          |

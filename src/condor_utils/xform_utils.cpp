@@ -514,6 +514,13 @@ void XFormHash::clear()
 }
 
 
+void XFormHash::set_flavor(Flavor _flavor)
+{
+	flavor = _flavor;
+	clear();
+}
+
+
 /** Given a universe in string form, return the number
 
 Passing a universe in as a null terminated string in univ.  This can be
@@ -1763,83 +1770,6 @@ int TransformClassAd (
 }
 
 
-#if 0
-
-class apply_transform_args {
-public:
-	apply_transform_args(MacroStreamXFormSource& xfm, MACRO_SET_CHECKPOINT_HDR* check, FILE* out)
-		: xforms(xfm), checkpoint(check), outfile(out), input_helper(NULL) {}
-	MacroStreamXFormSource & xforms;
-	MACRO_SET_CHECKPOINT_HDR* checkpoint;
-	FILE* outfile;
-	CondorClassAdFileParseHelper *input_helper;
-	std::string errmsg;
-};
-
-#define TRANSFORM_IN_PLACE 1
-
-// return true from the transform if no longer care about the job ad
-// return false to take ownership of the job ad
-int ApplyTransform (
-	void* pv,
-	ClassAd * input_ad)
-{
-	if ( ! pv) return 1;
-	apply_transform_args & xform_args = *(apply_transform_args*)pv;
-	const ClassAd * job = input_ad;
-
-	MacroStreamXFormSource & xforms = xform_args.xforms;
-	MACRO_SET_CHECKPOINT_HDR* pvParamCheckpoint = xform_args.checkpoint;
-	//FILE* outfile = xform_args.outfile;
-
-	_parse_rules_args args = { NULL, NULL, &xforms, 0 };
-
-	//args.ad = input_ad;
-	//if (xforms.will_iterate()) { args.ad = new ClassAd(*job); }
-	args.ad = new ClassAd(*job);
-
-	LocalContext.ad = args.ad;
-	LocalContext.adname = "MY.";
-
-	// indicate that we are not yet iterating
-	(void)sprintf(IteratingString, "%d", 0);
-
-	// the first parse is a keeper only if there is no TRANSFORM statement.
-	xforms.rewind();
-	int rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, xform_args.errmsg, ParseRulesCallback, &args);
-	if (rval) {
-		fprintf(stderr, "Transform of ad %s failed!\n", "");
-		return rval;
-	}
-
-	// if there is an TRANSFORM, then we want to reparse again with the iterator variables set.
-	bool iterating = xforms.first_iteration(LocalMacroSet);
-	if ( ! iterating) {
-		ReportSuccess(args.ad, xform_args);
-	} else {
-		while (iterating) {
-			delete args.ad;
-			LocalContext.ad = args.ad = new ClassAd(*job);
-
-			xforms.rewind();
-			rval = Parse_macros(xforms, 0, LocalMacroSet, READ_MACROS_SUBMIT_SYNTAX, &LocalContext, xform_args.errmsg, ParseRulesCallback, &args);
-			if (rval < 0)
-				break;
-
-			ReportSuccess(args.ad, xform_args);
-			iterating = xforms.next_iteration(LocalMacroSet);
-		}
-	}
-
-	// if (xforms.will_iterate()) { delete args.ad; }
-	delete args.ad;
-	LocalContext.ad = NULL;
-	rewind_macro_set(LocalMacroSet, pvParamCheckpoint, false);
-
-	return rval ? rval : 1; // we return non-zero to allow the job to be deleted
-}
-
-#endif
 
 // *******************************************************************************
 // Convert old job routes

@@ -19,7 +19,7 @@ Synopsis
 
 | **htcondor** **jobset** *submit* description-file
 | **htcondor** **jobset** *list* [**--allusers**]
-| **htcondor** **jobset** [ *status* | *remove* ] job-set-name [**--owner** *user-name*] [**--nobatch**] [**--skip-history]
+| **htcondor** **jobset** [ *status* | *remove* ] job-set-name [**--owner** *user-name*] [**--nobatch**] [**--skip-history**]
 
 | **htcondor** **dag** *submit* dag-file
 | **htcondor** **dag** *status* dagman-job-id

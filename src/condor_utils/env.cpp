@@ -37,6 +37,8 @@ static const char env_delimiter = ';';
 static const char env_delimiter = '|';
 #endif
 
+static bool is_permitted_delim(char ch) { return strchr("!#$%&*+,-/:;<>?@^`|~\x1F", ch) != nullptr; }
+
 Env::Env()
 {
 	input_was_v1 = false;
@@ -72,15 +74,7 @@ Env::AddErrorMessage(char const *msg,MyString *error_buffer)
 }
 
 bool
-Env::MergeFrom( const ClassAd * ad, std::string & error_msg ) {
-    MyString ms;
-    bool rv = MergeFrom(ad, &ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
-}
-
-bool
-Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
+Env::MergeFrom( const ClassAd *ad, std::string & error_msg )
 {
 	if(!ad) return true;
 
@@ -91,7 +85,12 @@ Env::MergeFrom( const ClassAd *ad, MyString *error_msg )
 		merge_success = MergeFromV2Raw(env.c_str(),error_msg);
 	}
 	else if( ad->LookupString(ATTR_JOB_ENV_V1, env) == 1 ) {
-		merge_success = MergeFromV1Raw(env.c_str(), GetEnvV1Delimiter(*ad), error_msg);
+		char delim = 0;
+		std::string delim_str;
+		if (ad->LookupString(ATTR_JOB_ENV_V1_DELIM,delim_str) && ! delim_str.empty()) {
+			delim = delim_str[0];
+		}
+		merge_success = MergeFromV1AutoDelim(env.c_str(), error_msg, delim);
 		input_was_v1 = true;
 	}
 	else {
@@ -348,38 +347,35 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
-Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
+Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString * error_msg )
 {
-	MyString ms(error_msg);
-	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, & ms );
-	if( ms != error_msg ) { error_msg = ms; }
+	std::string ms;
+	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, ms );
+	if (error_msg && ! ms.empty()) { AddErrorMessage(ms.c_str(), error_msg); }
 	return rv;
 }
 
 
 bool
-Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
 	if(IsV2QuotedString(delimitedString)) {
-		MyString v2;
-		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
-			return false;
-		}
-		return MergeFromV2Raw(v2.c_str(),error_msg);
+		return MergeFromV2Quoted(delimitedString,error_msg);
 	}
 	else {
-		return MergeFromV1Raw(delimitedString,env_delimiter,error_msg);
+		return MergeFromV1AutoDelim(delimitedString,error_msg);
 	}
 }
 
 bool
-Env::MergeFromV2Quoted( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
 	if(IsV2QuotedString(delimitedString)) {
-		MyString v2;
-		if(!V2QuotedToV2Raw(delimitedString,&v2,error_msg)) {
+		MyString v2, msg;
+		if(!V2QuotedToV2Raw(delimitedString,&v2,&msg)) {
+			if ( ! msg.empty()) { AddErrorMessage(msg.c_str(), error_msg); }
 			return false;
 		}
 		return MergeFromV2Raw(v2.c_str(),error_msg);
@@ -463,6 +459,22 @@ Env::MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_ms
 	return retval;
 }
 
+bool Env::MergeFromV1AutoDelim( const char *delimitedString, std::string & error_msg, char delim /*=0*/ )
+{
+	// an empty string or null pointer is trival success
+	if(!delimitedString || ! *delimitedString) return true;
+
+	if ( ! delim) { delim = env_delimiter; }
+	char ch = *delimitedString;
+	if (ch == delim) { ++delimitedString; }
+	else if (ch && is_permitted_delim(ch)) {
+		// if the string starts with a permitted delim character, assume that indicates the delim
+		delim = ch;
+		++delimitedString;
+	}
+	return MergeFromV1Raw(delimitedString,delim,error_msg);
+}
+
 // It is not possible for raw V1 environment strings with a leading space
 // to be specified in submit files, so we can use this to mark
 // V2 strings when we need to pack V1 and V2 through the same
@@ -470,15 +482,13 @@ Env::MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_ms
 const char RAW_V2_ENV_MARKER = ' ';
 
 bool
-Env::MergeFromV1or2Raw( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
 {
 	if(!delimitedString) return true;
 	if(*delimitedString == RAW_V2_ENV_MARKER) {
 		return MergeFromV2Raw(delimitedString,error_msg);
 	}
-	else {
-		return MergeFromV1Raw(delimitedString,env_delimiter,error_msg);
-	}
+	return MergeFromV1AutoDelim(delimitedString,error_msg);
 }
 
 // The following is a modest hack for when we find
@@ -593,7 +603,9 @@ bool
 Env::getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
 {
 	Clear();
-	if(!MergeFrom(ad,error_msg)) {
+	std::string msg;
+	if(!MergeFrom(ad,msg)) {
+		if (error_msg) { AddErrorMessage(msg.c_str(), error_msg); }
 		return false;
 	}
 

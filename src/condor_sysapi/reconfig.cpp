@@ -51,12 +51,6 @@ long long _sysapi_reserve_disk = 0;
 bool _sysapi_startd_has_bad_utmp = false;
 #endif
 
-#ifdef LINUX
-bool _sysapi_count_hyperthread_cpus = true;
-#elif defined WIN32
-bool _sysapi_count_hyperthread_cpus = true; // we can only detect hyperthreads on WinXP SP3 or later
-#endif
-
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
 int _sysapi_config = 0;
 
@@ -129,32 +123,11 @@ sysapi_reconfig(void)
 	_sysapi_reserve_disk = param_integer( "RESERVED_DISK", 0, INT_MIN, INT_MAX );
 	_sysapi_reserve_disk *= 1024;    /* Parameter is in meg */
 
-#if 1
-	// _sysapi_detected_phys_cpus;
-	// _sysapi_detected_hyper_cpus;
-#else
-	_sysapi_ncpus = param_integer( "NUM_CPUS", 0, 0, INT_MAX );
-
-	_sysapi_max_ncpus = param_integer( "MAX_NUM_CPUS", 0, 0, INT_MAX );
-	if(_sysapi_max_ncpus < 0) {
-		_sysapi_max_ncpus = 0;
-	}
-#endif
-
-
 	_sysapi_memory = param_integer( "MEMORY", 0, 0, INT_MAX );
 
 	_sysapi_reserve_memory = param_integer( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
 
 	_sysapi_getload = param_boolean("SYSAPI_GET_LOADAVG",true);
-
-#ifdef LINUX
-	/* Should we count hyper threads? */
-	_sysapi_count_hyperthread_cpus = 
-		param_boolean("COUNT_HYPERTHREAD_CPUS", true);
-#elif defined WIN32
-	_sysapi_count_hyperthread_cpus = param_boolean("COUNT_HYPERTHREAD_CPUS", _sysapi_count_hyperthread_cpus);
-#endif
 
 	/* tell the library I have configured myself */
 	_sysapi_config = TRUE;
