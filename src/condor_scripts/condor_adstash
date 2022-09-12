@@ -30,7 +30,9 @@ import htcondor
 
 # adstash library in libexec
 sys.path.append(htcondor.param.get('libexec', '/usr/libexec/condor'))
-from adstash import history, utils, config
+from adstash.adstash import adstash
+from adstash.utils import set_up_logging
+from adstash.config import get_config
 
 
 _MAIN_PID = os.getpid()
@@ -57,81 +59,19 @@ def signal_handler(signal_queue, signum, frame):
     signal_queue.put({"signal": signum, "signame": signame, "signal_msg": signal_msg}, block=False)
 
 
-def stash_ads(args):
-    """
-    Gather ads and stash them in Elasticsearch
-    """
-    starttime = time.time()
-
-    # Read ads from disk
-    if args.ad_file:
-        logging.info(f"Reading ads from {args.ad_file}")
-        if args.schedd_history:
-            logging.warning(f"Skipping querying schedds since --ads was set.")
-            args.schedd_history = False
-        if args.startd_history:
-            logging.warning(f"Skipping querying startds since --ads was set.")
-            args.startd_history = False
-        history.process_custom_ads(
-            job_ad_file=args.ad_file,
-            start_time=starttime,
-            args=args,
-        )
-
-    # Get all the schedd ads
-    if args.schedd_history:
-        schedd_ads = []
-        schedd_ads = utils.get_schedds(args)
-        logging.info(f"There are {len(schedd_ads)} schedds to query")
-
-    # Get all the startd ads
-    if args.startd_history:
-        startd_ads = []
-        startd_ads = utils.get_startds(args)
-        logging.info(f"There are {len(startd_ads)} startds to query.")
-
-    # Process ads
-    with multiprocessing.Pool(processes=args.threads, maxtasksperchild=1) as pool:
-        metadata = utils.collect_process_metadata()
-
-        if args.schedd_history:
-            history.process_histories(
-                schedd_ads=schedd_ads,
-                starttime=starttime,
-                pool=pool,
-                args=args,
-                metadata=metadata,
-            )
-
-        if args.startd_history:
-            history.process_histories(
-                startd_ads=startd_ads,
-                starttime=starttime,
-                pool=pool,
-                args=args,
-                metadata=metadata,
-            )
-
-    processing_time = int(time.time() - starttime)
-    return processing_time
-
-
 def main():
     """
     Set up condor_adstash and run main loop
     """
 
     # get args
-    args = config.get_config(sys.argv[1:])
-
-    # dry_run implies read_only
-    args.read_only = args.read_only or args.dry_run
+    args = get_config(sys.argv[1:])
 
     # custom ad file implies standalone mode
-    args.standalone = args.standalone or (args.ad_file is not None)
+    args.standalone = args.standalone or (args.read_ad_file is not None)
 
     # set up logging
-    utils.set_up_logging(args)
+    set_up_logging(args)
 
     logging.warning( "******************************************************")
     logging.warning(f"** {sys.argv[0]} (CONDOR_ADSTASH) STARTING UP")
@@ -170,7 +110,7 @@ def main():
     while True:
 
         logging.warning("Starting adstash loop")
-        last_loop_time = stash_ads(args)
+        last_loop_time = adstash(args)
         logging.warning(f"Total processing time for this loop: {last_loop_time/60:.2f} mins")
 
         if args.standalone:
