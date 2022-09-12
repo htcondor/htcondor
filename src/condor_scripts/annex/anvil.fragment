@@ -5,5 +5,5 @@ CONFIG_FRAGMENT() {
     '
 }
 SHELL_FRAGMENT() {
-    FOO=BAR
+    : # This function intentionally left defined but blank.
 }
