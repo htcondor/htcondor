@@ -107,7 +107,7 @@ class Create(Verb):
             "args": ("--idle-time", "--startd-noclaim-shutdown"),
             "metavar": "SECONDS",
             "dest": "startd_noclaim_shutdown",
-            "help": "The number of seconds to remain idle before shutting down.  Default is 300 seconds.",
+            "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
             "default": "300",
         },
 
