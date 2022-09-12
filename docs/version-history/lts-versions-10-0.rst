@@ -24,5 +24,8 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug were certain **Job** variables like ``accounting_group`` and ``accounting_group_user``
+  couldn't be declared specifically for DAGMan Jobs because DAGMan would always write over
+  the variables at **Job** submission time.
+  :jira:`1277`
 
