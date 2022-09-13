@@ -1,0 +1,34 @@
+# Stampede 2 is the only one of the HPC machines that's still CentOS 7.
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_CentOS7-stripped.tar.gz
+
+# Stampede 2 doesn't declare a default value for SCRATCH in their
+# documentation.  SCRATCH has the form '/scratch/*/`whoami`', but
+# the source of the number in the middle is unknown.  It might be
+# possible to derive it from HOME, but for now, if it's not set,
+# we'll fail just as hard as we did before script unificaton.
+CONFIG_FRAGMENT() {
+    echo "
+    # This is made available via 'module load tacc-singularity', but the
+    # starter ignores PATH, so wrap it up.
+    SINGULARITY = ${PILOT_DIR}/singularity.sh
+
+    # Stampede 2 has Knight's Landing queues (4 threads per core) and Skylake
+    # queues (2 threads per core).  The "KNL" nodes have 68 cores and 96 GB
+    # of RAM; the "SKX" nodes have 48 cores and 192 GB of RAM.  It seems like
+    # the KNL cores are different-enough to justify a little judicious
+    # deception; since the SKX cores end up at 4 GB of RAM each, that seems
+    # reasonable (and it would be a pain to have different config for different
+    # queues).
+    COUNT_HYPERTHREAD_CPUS = FALSE
+    "
+}
+SHELL_FRAGMENT() {
+    #
+    # Create the script we need for Singularity.
+    #
+    echo '#!/bin/bash -l
+    module load tacc-singularity
+    exec singularity "$@"
+    ' > "${PILOT_DIR}/singularity.sh"
+    chmod 755 "${PILOT_DIR}/singularity.sh"
+}
