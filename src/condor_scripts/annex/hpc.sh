@@ -450,7 +450,7 @@ ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
 #
 echo -e "\rStep 8 of 8: Submitting SLURM job............"
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/hpc.slurm &> ${SBATCH_LOG}
+sbatch "${PILOT_DIR}/hpc.slurm" &> "${SBATCH_LOG}"
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."
