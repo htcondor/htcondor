@@ -17,10 +17,11 @@ import os
 import pwd
 import sys
 import time
+import json
 import socket
 import random
-import json
 import logging
+import tempfile
 import logging.handlers
 
 import htcondor
@@ -28,7 +29,7 @@ import classad
 
 from pathlib import Path
 
-from . import config
+from adstash.config import debug2fmt
 
 
 def get_schedds(args):
@@ -141,7 +142,7 @@ def set_up_logging(args):
     fmt = "%(asctime)s %(message)s"
     datefmt = "%m/%d/%y %H:%M:%S"
     if "debug_levels" in args:
-        fmts = config.debug2fmt(args.debug_levels)
+        fmts = debug2fmt(args.debug_levels)
         fmt = fmts["fmt"]
         datefmt = fmts["datefmt"]
 
@@ -179,35 +180,40 @@ def collect_process_metadata():
     - hostname
     - username
     - current time
+    - HTCondor version and platform
     """
     result = {}
-    result["es_push_hostname"] = socket.gethostname()
-    result["es_push_username"] = pwd.getpwuid(os.geteuid()).pw_name
-    result["es_push_runtime"] = int(time.time())
+    result["condor_adstash_hostname"] = socket.gethostname()
+    result["condor_adstash_username"] = pwd.getpwuid(os.geteuid()).pw_name
+    result["condor_adstash_runtime"] = int(time.time())
+    result["condor_adstash_version"] = htcondor.version()
+    result["condor_adstash_platform"] = htcondor.platform()
     return result
 
 
-def parse_history_ad_file(adfile):
-    """
-    Generates one ClassAd at a time from adfile.
-    Necessary because classad.parseAds()
-    cannot handle files with "weird" ad separators
-    (e.g. "**** metadataA=foo metadata2=bar")
-    """
+def get_host_port(host="localhost", port=9200):
+    if ":" in host:
+        try:
+            (host, port) = host.split(":")
+        except ValueError:
+            raise ValueError(f"Invalid hostname: {host}")
     try:
-        with open(adfile) as f:
-            ad_string = ""
-            for line in f:
-                if line.startswith("***") or line.strip() == "":
-                    if ad_string == "":
-                        continue
-                    else:
-                        yield classad.parseOne(ad_string)
-                        ad_string = ""
-                ad_string += line
-    except IOError as e:
-        logging.error(f"Could not read {adfile}: {str(e)}")
-        return
-    except Exception:
-        logging.exception(f"Error while reading {adfile} ({str(e)}), displaying traceback.")
-        return
+        port = int(port)
+    except ValueError:
+        raise ValueError(f"Invalid port: {port}")
+    return (host, port)
+
+
+def atomic_write(data, filepath):
+    filepath = str(filepath)
+    tmpfile = tempfile.NamedTemporaryFile(delete=False, dir=os.path.dirname(filepath))
+    with open(tmpfile.name, "w") as f:
+        f.write(data)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmpfile.name, filepath)
+    if os.path.exists(tmpfile.name):
+        try:
+            os.unlink(tmpfile.name)
+        except Exception:
+            pass
