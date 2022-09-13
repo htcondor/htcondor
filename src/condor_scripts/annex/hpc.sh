@@ -442,7 +442,7 @@ ${SBATCH_RESOURCES_LINES}
 ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/hpc.slurm
+" >> "${PILOT_DIR}/hpc.slurm"
 
 
 #
