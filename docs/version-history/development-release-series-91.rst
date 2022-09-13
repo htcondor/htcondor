@@ -78,6 +78,10 @@ New Features:
   instead writes ads to JSON files in the working directory.
   :jira:`1264`
 
+- Added ``--interface opensearch`` option to *condor_adstash*, which will push ads to a
+  properly configured OpenSearch search engine.
+  :jira:`1289`
+
 Bugs Fixed:
 
 - Fixed a bug that might cause a job to restart with a "disconnected starter"
