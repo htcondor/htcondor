@@ -11,28 +11,26 @@ Synopsis
 
 **condor_adstash** [**--help** ]
 
-**condor_adstash** [**--process_name** *NAME*] [**--standalone** ] [**--ad_file** *PATH*]
+**condor_adstash** [**--process_name** *NAME*] [**--standalone** ]
 [**--sample_interval** *SECONDS*] [**--checkpoint_file** *PATH*]
 [**--log_file** *PATH*] [**--log_level** *LEVEL*]
-[**--threads** *THREADS*] [**--collectors** *COLLECTORS*]
-[**--schedds** *SCHEDDS*] [**--startds** *STARTDS*]
-[**--schedd_history** ] [**--startd_history** ]
-[**--schedd_history_max_ads** *NUM_ADS*]
-[**--startd_history_max_ads** *NUM_ADS*]
-[**--schedd_history_timeout** *SECONDS*]
-[**--startd_history_timeout** *SECONDS*]
-[**--json_local**]
-[**--es_host** *HOST[:PORT]*] [**--es_username** *USERNAME*]
-[**--es_use_https** ] [**--es_bunch_size** *NUM_DOCS*]
-[**--es_index_name** *INDEX_NAME*]
+[**--threads** *THREADS*] [**--interface** *{null,elasticsearch,jsonfile}*]
+[**--collectors** *COLLECTORS*] [**--schedds** *SCHEDDS*] [**--startds** *STARTDS*]
+[**--schedd_history** ] [**--startd_history** ] [**--ad_file** *PATH*]
+[**--schedd_history_max_ads** *NUM_ADS*] [**--startd_history_max_ads** *NUM_ADS*]
+[**--schedd_history_timeout** *SECONDS*] [**--startd_history_timeout** *SECONDS*]
+[**--se_host** *HOST[:PORT]*] [**--se_url_prefix** *PREFIX*]
+[**--se_username** *USERNAME*] [**--se_use_https** ] [**--se_timeout** SECONDS]
+[**--se_bunch_size** *NUM_DOCS*] [**--es_index_name** *INDEX_NAME*]
+[**--se_no_log_mappings**] [**--se_ca_certs** *PATH*]
+[**--json_dir** *PATH*]
 
 Description
 -----------
 
 **condor_adstash** is a tool that assists in monitoring usage by gathering job
-history ClassAds from one or more *condor_schedd* and/or one or more
-*condor_startd* and pushing the ClassAds as documents to an Elasticsearch
-instance.
+ClassAds (typically from *condor_schedd* and/or *condor_startd* history queries)
+and pushing the ClassAds as documents to some target (typically Elasticsearch).
 
 Unless run in ``--standalone`` mode, *condor_adstash* expects to be invoked
 as a daemon by a *condor_master*, i.e. *condor_adstash* should be invoked in
@@ -46,7 +44,7 @@ then environment variables, and finally command-line options.
 persistent location so that duplicate job ClassAds are not fetched from the
 daemons' histories in consecutive polls.
 
-The named Elasticsearch index will be created if it doesn't exist, and may be
+A named Elasticsearch index will be created if it doesn't exist, and may be
 modified if new fields (corresponding to ClassAd attribute names) need to be
 added.
 It is up to the administrator of the Elasticsearch instance to install rollover
@@ -63,10 +61,6 @@ Options
  **--standalone**
     Run condor_adstash in standalone mode (runs once, does not attempt to
     contact *condor_master*)
- **--ad_file** *PATH*
-    Load Job ClassAds from a file instead of querying
-    daemons. Implies *--standalone*, ignores
-    *--schedd_history* and *--startd_history*.
  **--sample_interval** *SECONDS*
     Number of seconds between polling the list(s) of daemons (ignored in
     standalone mode)
@@ -80,6 +74,23 @@ Options
  **--threads** *THREADS*
     Number of parallel threads to use when polling for job ClassAds and when
     pushing documents to Elasticsearch
+ **--interface** *{null,elasticsearch,jsonfile}*
+    Push ads via the chosen interface
+
+ClassAd source options
+----------------------
+
+ **--schedd_history**
+    Poll and push *condor_schedd* job histories
+ **--startd_history**
+    Poll and push *condor_startd* job histories
+ **--ad_file** *PATH*
+    Load Job ClassAds from a file instead of querying daemons (Ignores
+    *--schedd_history* and *--startd_history*.)
+
+Options for HTCondor daemon (Schedd, Startd, etc.) history sources
+------------------------------------------------------------------
+
  **--collectors** *COLLECTORS*
     Comma-separated list of *condor_collector* addresses to contact to locate
     *condor_schedd* and *condor_startd* daemons
@@ -87,10 +98,6 @@ Options
     Comma-separated list of *condor_schedd* names to poll job histories from
  **--startds** *STARTDS*
     Comma-separated list of *condor_startd* machines to poll job histories from
- **--schedd_history**
-    Poll and push *condor_schedd* job histories
- **--startd_history**
-    Poll and push *condor_startd* job histories
  **--schedd_history_max_ads** *NUM_ADS*
     Abort after reading NUM_ADS from a *condor_schedd*
  **--startd_history_max_ads** *NUM_ADS*
@@ -99,18 +106,34 @@ Options
     Abort if reading from a *condor_schedd* takes more than this many seconds
  **--startd_history_timeout** *SECONDS*
     Abort if reading from a *condor_startd* takes more than this many seconds
- **--json_local**
-    Skip Elasticsearch and write ads to JSON files in the current directory
- **--es_host** *HOST[:PORT]*
-    Address of the Elasticsearch instance to be used
- **--es_username** *USERNAME*
-    Username to use with Elasticsearch instance
- **--es_use_https**
-    Use HTTPS when communicating with the Elasticsearch instance
- **--es_bunch_size** *NUM_DOCS*
-    Send documents to Elasticsearch in bunches of NUM_DOCS
- **--es_index_name** *INDEX_NAME*
-    Send documents to the INDEX_NAME Elasticsearch index
+
+Search engine (Elasticsearch, OpenSearch, etc.) interface options
+-----------------------------------------------------------------
+
+ **--se_host** *HOST[:PORT]*
+    Search engine host:port
+ **--se_url_prefix** *PREFIX*
+    Search engine URL prefix
+ **--se_username** *USERNAME*
+    Search engine username
+ **--se_use_https**
+    Use HTTPS when connecting to search engine
+ **--se_timeout** *SECONDS*
+    Max time to wait for search engine queries
+ **--se_bunch_size** *NUM_DOCS*
+    Group ads in bunches of this size to send to search engine
+ **--se_index_name** *INDEX_NAME*
+    Push ads to this search engine index or alias
+ **--se_no_log_mappings**
+    Don't write a JSON file with mappings to the log directory
+ **--se_ca_certs** *PATH*
+    Path to root certificate authority file (will use certifi's CA if not set)
+
+JSON file interface options
+---------------------------
+
+ **--json_dir** *PATH*
+    Directory to store JSON files, which are named by timestamp
 
 Examples
 --------
