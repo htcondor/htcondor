@@ -80,6 +80,7 @@ New Features:
 
 - Added ``--interface opensearch`` option to *condor_adstash*, which will push ads to a
   properly configured OpenSearch search engine.
+  :jira:`1289`
 
 Bugs Fixed:
 
