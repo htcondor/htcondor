@@ -304,7 +304,7 @@ RUNBENCHMARKS = FALSE
 CCB_ADDRESS = \$(COLLECTOR_HOST)
 
 #
-# Commit suicide after being idle for five minutes.
+# Commit suicide after being idle for long enough.
 #
 STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
 
