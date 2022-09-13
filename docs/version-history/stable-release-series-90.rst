@@ -62,6 +62,10 @@ Bugs Fixed:
   claims were dropped from OAuth refresh tokens on their first renewal.
   :jira:`1270`
 
+- Added the appropriate Python cryptography package as a dependency to
+  the *condor-credmon-oauth* RPM package.
+  :jira:`1279`
+
 
 .. _lts-version-history-9016:
 
