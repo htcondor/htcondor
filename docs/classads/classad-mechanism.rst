@@ -1610,6 +1610,8 @@ example where they are permitted.
 
     > condor_status -constraint " OpSys == ""WINDOWS"" "
 
+.. _extending-classads:
+
 Extending ClassAds with User-written Functions
 ----------------------------------------------
 

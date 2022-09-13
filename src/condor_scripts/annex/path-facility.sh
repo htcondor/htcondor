@@ -110,10 +110,7 @@ fi
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-# Later versions have a PATH problem with Singularity, for now.
-# WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
-# WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.10.1/release/condor-9.10.1-x86_64_CentOS8-stripped.tar.gz
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.11.1/rc/condor-9.11.1-20220821-x86_64_CentOS8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/9.x/9.11.2/release/condor-9.11.2-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -207,9 +204,7 @@ transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_
 # Transfer nothing back.
 # transfer_output_files       = \"\"
 # Debug: transfer back the log files.
-# transfer_output_files       = condor-9.5.4-1-x86_64_Rocky8-stripped/local/log
-# transfer_output_files       = condor-9.10.1-1-x86_64_AlmaLinux8-stripped/local/log
-transfer_output_files       = condor-9.11.1-0.602142-x86_64_AlmaLinux8-stripped/local/log
+transfer_output_files       = condor-9.11.2-x86_64_AlmaLinux8-stripped/local/log
 transfer_output_remaps      = \"log = logs.\$(ClusterID).\$(ProcID)\"
 # This doesn't allow me to fetch logs by running condor_vacate_job. :(
 when_to_transfer_files      = ON_EXIT_OR_EVICT

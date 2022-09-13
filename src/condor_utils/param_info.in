@@ -1170,6 +1170,11 @@ default=2000
 type=int
 tags=starter
 
+[THINPOOL_HIDE_MOUNT]
+default=false
+type=bool
+tags=startd
+
 [MAX_TIME_SKIP]
 default=1200
 range=0,
