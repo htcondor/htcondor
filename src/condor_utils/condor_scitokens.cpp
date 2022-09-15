@@ -168,6 +168,7 @@ htcondor::init_scitokens()
 	scitoken_get_claim_string_list_ptr = scitoken_get_claim_string_list;
 	scitoken_free_string_list_ptr = scitoken_free_string_list;
 	g_init_tried = true;
+	g_init_success = true;
 #else
 	dprintf(D_SECURITY, "SciTokens support is not compiled in.\n");
 	g_init_success = false;

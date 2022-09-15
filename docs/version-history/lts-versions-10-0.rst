@@ -24,5 +24,7 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where SciTokens authentication wasn't available on macOS
+  and Python wheels distributions.
+  :jira:`1328`
 
