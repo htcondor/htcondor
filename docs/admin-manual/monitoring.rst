@@ -315,8 +315,8 @@ Elasticsearch
 :index:`condor_adstash`
 
 HTCondor supports pushing *condor_schedd* and *condor_startd* job
-history ClassAds to Elasticsearch via the *condor_adstash*
-tool/daemon.
+history ClassAds to Elasticsearch (and other targets) via the
+*condor_adstash* tool/daemon.
 *condor_adstash* collects job history ClassAds as specified by its
 configuration, either querying specified daemons' histories
 or reading job history ClassAds from a specified file,
@@ -349,7 +349,8 @@ See the ``condor_config.local.adstash`` example configuration file in
 the ``examples/`` directory for detailed information on how to modify
 your configuration.
 
-If you prefer to run *condor_adstash* in standalone mode, see the
+If you prefer to run *condor_adstash* in standalone mode, or are
+curious about other ClassAd sources or targets, see the
 :doc:`../man-pages/condor_adstash` man page for more
 details.
 

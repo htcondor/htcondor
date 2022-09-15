@@ -67,9 +67,20 @@ New Features:
   docker run
   :jira:`1282`
 
-- Added ``--json_local`` option to *condor_adstash*, which skips Elasticsearch and
+- Refactored *condor_adstash* to speed up future development of new ClassAd
+  sources and stash targets. Additionally, Elasticsearch 8.x Python library is
+  now supported, mappings JSON file now shows up in $(LOG) by default, and
+  checkpoint files are written atomically. ``--es_argnames`` have been renamed
+  to ``--se_argnames`` in anticipation of supporting additional search engines.
+  :jira:`1288`
+
+- Added ``--interface jsonfile`` option to *condor_adstash*, which skips Elasticsearch and
   instead writes ads to JSON files in the working directory.
   :jira:`1264`
+
+- Added ``--interface opensearch`` option to *condor_adstash*, which will push ads to a
+  properly configured OpenSearch search engine.
+  :jira:`1289`
 
 Bugs Fixed:
 

@@ -13,15 +13,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import os
+import re
+import sys
 import logging
 import argparse
-import re
 
 import htcondor
 
 from pathlib import Path
+
+from adstash.interfaces.registry import ADSTASH_INTERFACES
 
 
 def get_default_config(name="ADSTASH"):
@@ -34,18 +36,21 @@ def get_default_config(name="ADSTASH"):
         "log_level": "WARNING",
         "threads": 1,
         "collectors": htcondor.param.get("CONDOR_HOST"),
-        "schedd_history": False,
-        "startd_history": False,
+        "read_schedd_history": False,
+        "read_startd_history": False,
+        "read_ad_file": None,
         "schedd_history_max_ads": 10000,
         "startd_history_max_ads": 10000,
         "schedd_history_timeout": 2 * 60,
         "startd_history_timeout": 2 * 60,
-        "es_host": "localhost:9200",
-        "es_use_https": False,
-        "es_timeout": 2 * 60,
-        "es_bunch_size": 250,
-        "es_index_name": "htcondor-000001",
-        "json_local": False,
+        "interface": "null",
+        "se_host": "localhost:9200",
+        "se_use_https": False,
+        "se_timeout": 2 * 60,
+        "se_bunch_size": 250,
+        "se_index_name": "htcondor-000001",
+        "se_log_mappings": True,
+        "json_dir": Path.cwd(),
     }
     return defaults
 
@@ -63,21 +68,25 @@ def get_htcondor_config(name="ADSTASH"):
         "collectors": p.get(f"{name}_READ_POOLS"),
         "schedds": p.get(f"{name}_READ_SCHEDDS"),
         "startds": p.get(f"{name}_READ_STARTDS"),
-        "schedd_history": p.get(f"{name}_SCHEDD_HISTORY"),
-        "startd_history": p.get(f"{name}_STARTD_HISTORY"),
+        "read_schedd_history": p.get(f"{name}_SCHEDD_HISTORY"),
+        "read_startd_history": p.get(f"{name}_STARTD_HISTORY"),
+        "read_ad_file": p.get(f"{name}_AD_FILE"),
         "schedd_history_max_ads": p.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": p.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": p.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
         "startd_history_timeout": p.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
-        "es_host": p.get(f"{name}_ES_HOST"),
-        "es_username": p.get(f"{name}_ES_USERNAME"),
-        "es_password_file": p.get(f"{name}_ES_PASSWORD_FILE"),
-        "es_use_https": p.get(f"{name}_ES_USE_HTTPS"),
-        "es_timeout": p.get(f"{name}_ES_TIMEOUT"),
-        "es_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE"),
-        "es_index_name": p.get(f"{name}_ES_INDEX_NAME"),
-        "json_local": p.get(f"{name}_JSON_LOCAL"),
-        "ca_certs": p.get(f"{name}_CA_CERTS"),
+        "interface": p.get(f"{name}_INTERFACE"),
+        "se_host": p.get(f"{name}_ES_HOST", p.get(f"{name}_SE_HOST")),
+        "se_url_prefix": p.get(f"{name}_SE_URL_PREFIX"),
+        "se_username": p.get(f"{name}_ES_USERNAME", p.get(f"{name}_SE_USERNAME")),
+        "se_password_file": p.get(f"{name}_ES_PASSWORD_FILE", p.get(f"{name}_SE_PASSWORD_FILE")),
+        "se_use_https": p.get(f"{name}_ES_USE_HTTPS", p.get(f"{name}_SE_USE_HTTPS")),
+        "se_timeout": p.get(f"{name}_ES_TIMEOUT", p.get(f"{name}_SE_TIMEOUT")),
+        "se_bunch_size": p.get(f"{name}_ES_BUNCH_SIZE", p.get(f"{name}_SE_BUNCH_SIZE")),
+        "se_index_name": p.get(f"{name}_ES_INDEX_NAME", p.get(f"{name}_SE_INDEX_NAME")),
+        "se_ca_certs": p.get(f"{name}_ES_CA_CERTS", p.get(f"{name}_SE_CA_CERTS")),
+        "se_log_mappings": p.get(f"{name}_SE_LOG_MAPPINGS"),
+        "json_dir": p.get(f"{name}_JSON_DIR"),
     }
 
     # Convert debug level
@@ -85,12 +94,12 @@ def get_htcondor_config(name="ADSTASH"):
         conf["log_level"] = debug2level(conf["debug_levels"])
 
     # Grab password from password file
-    if conf.get("es_password_file") is not None and conf.get("es_password_file") != "":
-        passwd = Path(conf["es_password_file"])
+    if conf.get("se_password_file") is not None and conf.get("se_password_file") != "":
+        passwd = Path(conf["se_password_file"])
         try:
             with passwd.open() as f:
-                conf["es_password"] = str(f.read(4096)).split("\n")[0]
-            if conf["es_password"] == "":
+                conf["se_password"] = str(f.read(4096)).split("\n")[0]
+            if conf["se_password"] == "":
                 logging.error(f"Got empty string from password file {passwd}")
         except Exception:
             logging.exception(
@@ -124,21 +133,25 @@ def get_environment_config(name="ADSTASH"):
         "collectors": env.get(f"{name}_READ_POOLS"),
         "schedds": env.get(f"{name}_READ_SCHEDDS"),
         "startds": env.get(f"{name}_READ_STARTDS"),
-        "schedd_history": env.get(f"{name}_SCHEDD_HISTORY"),
-        "startd_history": env.get(f"{name}_STARTD_HISTORY"),
+        "read_schedd_history": env.get(f"{name}_SCHEDD_HISTORY"),
+        "read_startd_history": env.get(f"{name}_STARTD_HISTORY"),
+        "read_ad_file": env.get(f"{name}_AD_FILE"),
         "schedd_history_max_ads": env.get(f"{name}_SCHEDD_HISTORY_MAX_ADS"),
         "startd_history_max_ads": env.get(f"{name}_STARTD_HISTORY_MAX_ADS"),
         "schedd_history_timeout": env.get(f"{name}_SCHEDD_HISTORY_TIMEOUT"),
         "startd_history_timeout": env.get(f"{name}_STARTD_HISTORY_TIMEOUT"),
-        "es_host": env.get(f"{name}_ES_HOST"),
-        "es_username": env.get(f"{name}_ES_USERNAME"),
-        "es_password": env.get(f"{name}_ES_PASSWORD"),
-        "es_use_https": env.get(f"{name}_ES_USE_HTTPS"),
-        "es_timeout": env.get(f"{name}_ES_TIMEOUT"),
-        "es_bunch_size": env.get(f"{name}_ES_BUNCH_SIZE"),
-        "es_index_name": env.get(f"{name}_ES_INDEX_NAME"),
-        "json_local": env.get(f"{name}_JSON_LOCAL"),
-        "ca_certs": env.get(f"{name}_CA_CERTS"),
+        "interface": env.get(f"{name}_INTERFACE"),
+        "se_host": env.get(f"{name}_SE_HOST", env.get(f"{name}_ES_HOST")),
+        "se_url_prefix": env.get(f"{name}_SE_URL_PREFIX"),
+        "se_username": env.get(f"{name}_SE_USERNAME", env.get(f"{name}_ES_USERNAME")),
+        "se_password": env.get(f"{name}_SE_PASSWORD", env.get(f"{name}_ES_PASSWORD")),
+        "se_use_https": env.get(f"{name}_SE_USE_HTTPS", env.get(f"{name}_ES_USE_HTTPS")),
+        "se_timeout": env.get(f"{name}_SE_TIMEOUT", env.get(f"{name}_ES_TIMEOUT")),
+        "se_bunch_size": env.get(f"{name}_SE_BUNCH_SIZE", env.get(f"{name}_ES_BUNCH_SIZE")),
+        "se_index_name": env.get(f"{name}_SE_INDEX_NAME", env.get(f"{name}_ES_INDEX_NAME")),
+        "se_ca_certs": env.get(f"{name}_SE_CA_CERTS", env.get(f"{name}_CA_CERTS")),
+        "se_log_mappings": env.get(f"{name}_SE_LOG_MAPPINGS"),
+        "json_dir": env.get(f"{name}_JSON_DIR"),
     }
 
     # remove None values
@@ -204,7 +217,21 @@ def normalize_config_types(conf):
         "es_timeout",
         "es_bunch_size",
     ]
-    bools = ["standalone", "schedd_history", "startd_history", "es_use_https", "json_local"]
+    bools = [
+        "standalone",
+        "read_schedd_history",
+        "read_startd_history",
+        "to_elasticsearch",
+        "to_json",
+        "se_use_https",
+        "se_log_mappings",
+    ]
+
+    # interfaces
+    if ("interface" in conf) and (conf["interface"].lower() not in ADSTASH_INTERFACES):
+        logging.error(f"Unknown interface selected: {conf['interface']}.")
+        logging.error(f"Choose from: {', '.join(ADSTASH_INTERFACES)}.")
+        sys.exit(1)
 
     # integers
     for key in integers:
@@ -282,15 +309,6 @@ def get_config(argv=None):
         ),
     )
     parser.add_argument(
-        "--ad_file",
-        type=Path,
-        metavar="PATH",
-        help=(
-            "Load Job ClassAds from a file instead of querying daemons. "
-            "Implies --standalone, ignores --schedd_history and --startd_history."
-        ),
-    )
-    parser.add_argument(
         "--sample_interval",
         type=int,
         metavar="SECONDS",
@@ -301,6 +319,7 @@ def get_config(argv=None):
     )
     parser.add_argument(
         "--checkpoint_file",
+        type=Path,
         metavar="PATH",
         help=(
             "Location of checkpoint file (will be created if missing) "
@@ -309,62 +328,93 @@ def get_config(argv=None):
     )
     parser.add_argument(
         "--log_file",
+        type=Path,
         metavar="PATH",
-        help=(
-            "Log file location "
-            "[default: %(default)s]"
-        ),
+        help="Log file location [default: %(default)s]",
     )
     parser.add_argument(
         "--log_level",
         metavar="LEVEL",
-        help=(
-            "Log level (CRITICAL/ERROR/WARNING/INFO/DEBUG) " "[default: %(default)s]"
-        ),
+        help="Log level (CRITICAL/ERROR/WARNING/INFO/DEBUG) [default: %(default)s]",
     )
     parser.add_argument(
         "--threads",
         type=int,
-        help=("Number of parallel threads for querying " "[default: %(default)d]"),
+        help=("Number of parallel threads for querying [default: %(default)d]"),
     )
     parser.add_argument(
+        "--interface",
+        type=str.lower,
+        choices=ADSTASH_INTERFACES,
+        help="Push ads via the chosen interface [default: %(default)s]",
+    )
+    parser.add_argument(
+        "--read_only",
+        action="store_true",
+        help="Deprecated (use --interface null). Only read the info, don't submit it.",
+    )
+    parser.add_argument(
+        "--dry_run",
+        action="store_true",
+        help="Deprecated (use --interface null). Only read the info, don't submit it.",
+    )
+
+    source_group = parser.add_argument_group(
+        title="ClassAd source options",
+        description="Choose a source of HTCondor ClassAd information."
+    )
+    source_group.add_argument(
+        "--schedd_history",
+        action="store_true",
+        dest="read_schedd_history",
+        help=(
+            "Poll Schedd histories "
+            "[default: %(default)s]"
+        ),
+    )
+    source_group.add_argument(
+        "--startd_history",
+        action="store_true",
+        dest="read_startd_history",
+        help=(
+            "Poll Startd histories "
+            "[default: %(default)s]"
+        ),
+    )
+    source_group.add_argument(
+        "--ad_file",
+        type=Path,
+        metavar="PATH",
+        dest="read_ad_file",
+        help=(
+            "Load Job ClassAds from this file instead of querying daemons. "
+            "(Ignores --schedd_history and --startd_history.)"
+        ),
+    )
+
+    history_group = parser.add_argument_group("Options for HTCondor daemon (Schedd, Startd, etc.) history sources")
+    history_group.add_argument(
         "--collectors",
         help=(
             "Comma-separated list of Collector addresses used to locate Schedds/Startds"
             "[default: %(default)s]"
         ),
     )
-    parser.add_argument(
+    history_group.add_argument(
         "--schedds",
         help=(
             "Comma-separated list of Schedd names to process "
             "[default is to process all Schedds located by Collectors]"
         ),
     )
-    parser.add_argument(
+    history_group.add_argument(
         "--startds",
         help=(
             "Comma-separated list of Startd machines to process "
             "[default is to process all Startds located by Collectors]"
         ),
     )
-    parser.add_argument(
-        "--schedd_history",
-        action="store_true",
-        help=(
-            "Poll Schedd histories "
-            "[default: %(default)s]"
-        ),
-    )
-    parser.add_argument(
-        "--startd_history",
-        action="store_true",
-        help=(
-            "Poll Startd histories "
-            "[default: %(default)s]"
-        ),
-    )
-    parser.add_argument(
+    history_group.add_argument(
         "--schedd_history_max_ads",
         type=int,
         metavar="NUM_ADS",
@@ -373,7 +423,7 @@ def get_config(argv=None):
             "[default: %(default)s]"
         ),
     )
-    parser.add_argument(
+    history_group.add_argument(
         "--startd_history_max_ads",
         type=int,
         metavar="NUM_ADS",
@@ -382,7 +432,7 @@ def get_config(argv=None):
             "[default: %(default)s]"
         ),
     )
-    parser.add_argument(
+    history_group.add_argument(
         "--schedd_history_timeout",
         type=int,
         metavar="SECONDS",
@@ -391,7 +441,7 @@ def get_config(argv=None):
             "[default: %(default)s]"
         ),
     )
-    parser.add_argument(
+    history_group.add_argument(
         "--startd_history_timeout",
         type=int,
         metavar="SECONDS",
@@ -400,77 +450,100 @@ def get_config(argv=None):
             "[default: %(default)s]"
         ),
     )
-    parser.add_argument(
-        "--es_host",
+
+    se_group = parser.add_argument_group(
+        title = "Search engine (Elasticsearch, OpenSearch, etc.) interface options",
+        description = "Note that --es_argname options are deprecated, please use --se_argname instead."
+    )
+    se_group.add_argument(
+        "--se_host", "--es_host",
+        dest="se_host",
         metavar="HOST[:PORT]",
-        help=(
-            "Host of the Elasticsearch instance to be used "
-            "[default: %(default)s]"
-        ),
+        help=("Search engine host:port [default: %(default)s]"),
     )
-    parser.add_argument(
-        "--es_username",
+    se_group.add_argument(
+        "--se_url_prefix",
+        metavar="PREFIX",
+        help=("Search engine URL prefix"),
+    )
+    se_group.add_argument(
+        "--se_username", "--es_username",
+        dest="se_username",
         metavar="USERNAME",
-        help=("Username to use with Elasticsearch instance"),
+        help=("Search engine username"),
     )
-    parser.add_argument(
-        "--es_password", help=argparse.SUPPRESS,  # don't encourage use on command-line
+    se_group.add_argument(
+        "--se_password", "--es_password",
+        dest="se_password",
+        help=argparse.SUPPRESS,  # don't encourage use on command-line
     )
-    parser.add_argument(
-        "--es_use_https",
+    se_group.add_argument(
+        "--se_use_https", "--es_use_https",
+        dest="se_use_https",
         action="store_true",
-        help=("Use HTTPS when connecting to Elasticsearch " "[default: %(default)s]"),
+        help=("Use HTTPS when connecting to search engine [default: %(default)s]"),
     )
-    #parser.add_argument(
-    #    "--es_timeout",
-    #    type=int,
-    #    metavar="SECONDS"
-    #    help=(
-    #        "Max seconds to wait to connect to Elasticsearch "
-    #        "[default: %(default)s]"
-    #    ),
-    #)
-    parser.add_argument(
-        "--es_bunch_size",
+    se_group.add_argument(
+        "--se_timeout", "--es_timeout",
+        dest="se_timeout",
+        type=int,
+        metavar="SECONDS",
+        help=("Max time to wait for search engine queries [default: %(default)s]"),
+    )
+    se_group.add_argument(
+        "--se_bunch_size", "--es_bunch_size",
+        dest="se_bunch_size",
         type=int,
         metavar="NUM_DOCS",
-        help=("Send docs to ES in bunches of this number " "[default: %(default)s]"),
+        help=("Group ads in bunches of this size to send to search engine [default: %(default)s]"),
     )
-    parser.add_argument(
-        "--es_index_name",
+    se_group.add_argument(
+        "--se_index_name", "--es_index_name",
+        dest="se_index_name",
         metavar="INDEX_NAME",
-        help=(
-            "Elasticsearch index name "
-            "[default: %(default)s]"
-        ),
+        help=("Push ads to this search engine index or alias [default: %(default)s]"),
     )
-    parser.add_argument(
+    se_group.add_argument(
+        "--se_no_log_mappings",
+        dest="se_log_mappings",
+        action="store_false",
+        help="Don't write a JSON file with mappings to the log directory",
+    )
+    se_group.add_argument(
+        "--se_ca_certs", "--ca_certs",
+        dest="se_ca_certs",
+        type=Path,
+        metavar="PATH",
+        help=("Path to root certificate authority file (will use certifi's CA if not set)"),
+    )
+
+    json_group = parser.add_argument_group("JSON file interface options")
+    json_group.add_argument(
         "--json_local",
         action="store_true",
-        help=("Store only locally in json format " "[default: %(default)s]"),
+        help="Deprecated (use --interface=jsonfile). Store only locally in json format",
     )
-    parser.add_argument(
-        "--ca_certs",
+    json_group.add_argument(
+        "--json_dir",
+        type=Path,
         metavar="PATH",
-        help=(
-            "Path to root certificate authority file "
-            "(will use certifi's CA if not set)"
-        ),
-    )
-    parser.add_argument(
-        "--read_only", action="store_true", help="Only read the info, don't submit it.",
-    )
-    parser.add_argument(
-        "--dry_run",
-        action="store_true",
-        help=(
-            "Don't even read info, just pretend to. "
-            "(Still query Collectors for Schedds and Startds though.)"
-        ),
+        help="Directory to store JSON files, which are named by timestamp [defaults to current directory]",
     )
 
     # Parse args and add process name back to the list
     args = parser.parse_args(remaining_argv)
     args_dict = vars(args)
     args_dict['process_name'] = process_name
+
+    # Check for deprecated args
+    for arg in remaining_argv:
+        if arg.startswith("--es_"):
+            logging.warning(f"Use of --es_argname arguments is deprecated, use --se_argname instead.")
+        if arg in ["--read_only", "--dry_run"]:
+            logging.warning(f"Use of --{arg} is deprecated, use --interface=null instead.")
+            args.interface = "null"
+        if arg == "--json_local":
+            logging.warning(f"Use of --json_local is deprecated, use --interface=jsonfile instead.")
+            args.interface="jsonfile"
+
     return args

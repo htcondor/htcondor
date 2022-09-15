@@ -1147,6 +1147,20 @@ rm -rf %{buildroot}
 %_libexecdir/condor/onedrive_plugin.pyo
 %_libexecdir/condor/adstash/__init__.pyc
 %_libexecdir/condor/adstash/__init__.pyo
+%_libexecdir/condor/adstash/ad_sources/__init__.pyc
+%_libexecdir/condor/adstash/ad_sources/__init__.pyo
+%_libexecdir/condor/adstash/ad_sources/registry.pyc
+%_libexecdir/condor/adstash/ad_sources/registry.pyo
+%_libexecdir/condor/adstash/interfaces/__init__.pyc
+%_libexecdir/condor/adstash/interfaces/__init__.pyo
+%_libexecdir/condor/adstash/interfaces/generic.pyc
+%_libexecdir/condor/adstash/interfaces/generic.pyo
+%_libexecdir/condor/adstash/interfaces/null.pyc
+%_libexecdir/condor/adstash/interfaces/null.pyo
+%_libexecdir/condor/adstash/interfaces/registry.pyc
+%_libexecdir/condor/adstash/interfaces/registry.pyo
+%_libexecdir/condor/adstash/interfaces/opensearch.pyc
+%_libexecdir/condor/adstash/interfaces/opensearch.pyo
 %endif
 %_libexecdir/condor/curl_plugin
 %_libexecdir/condor/condor_shared_port
@@ -1155,11 +1169,23 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_gangliad
 %_libexecdir/condor/ce-audit.so
 %_libexecdir/condor/adstash/__init__.py
+%_libexecdir/condor/adstash/adstash.py
 %_libexecdir/condor/adstash/config.py
 %_libexecdir/condor/adstash/convert.py
-%_libexecdir/condor/adstash/elastic.py
-%_libexecdir/condor/adstash/history.py
 %_libexecdir/condor/adstash/utils.py
+%_libexecdir/condor/adstash/ad_sources/__init__.py
+%_libexecdir/condor/adstash/ad_sources/ad_file.py
+%_libexecdir/condor/adstash/ad_sources/generic.py
+%_libexecdir/condor/adstash/ad_sources/registry.py
+%_libexecdir/condor/adstash/ad_sources/schedd_history.py
+%_libexecdir/condor/adstash/ad_sources/startd_history.py
+%_libexecdir/condor/adstash/interfaces/__init__.py
+%_libexecdir/condor/adstash/interfaces/elasticsearch.py
+%_libexecdir/condor/adstash/interfaces/opensearch.py
+%_libexecdir/condor/adstash/interfaces/generic.py
+%_libexecdir/condor/adstash/interfaces/json_file.py
+%_libexecdir/condor/adstash/interfaces/null.py
+%_libexecdir/condor/adstash/interfaces/registry.py
 %_libexecdir/condor/annex
 %_mandir/man1/condor_advertise.1.gz
 %_mandir/man1/condor_annex.1.gz
@@ -1600,6 +1626,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Sep 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.2-1
+- In 9.11.0, STARTD_NOCLAIM_SHUTDOWN restarted instead. Now, it shuts down.
+
 * Tue Sep 06 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.1-1
 - File transfer errors are identified as occurring during input or output
 
