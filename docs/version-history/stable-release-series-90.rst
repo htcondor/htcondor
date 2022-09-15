@@ -29,6 +29,12 @@ New Features:
 - Added ``-debug`` option to *condor_drain* tool.
   :jira:`1236`
 
+- Removed support from the startd for querying keyboard and mouse idle time,
+  on legacy x86 Linux machines that used an 8042 keyboard controller.
+  This caused significant performance degradation in the startd
+  on machines with many CPUs.
+  :jira:`1297`
+
 Bugs Fixed:
 
 - Fixed a bug that would cause the *condor_schedd* to leak 
@@ -61,6 +67,10 @@ Bugs Fixed:
 - Fixed a bug with the *condor_credmon_oauth* where scope and audience
   claims were dropped from OAuth refresh tokens on their first renewal.
   :jira:`1270`
+
+- Added the appropriate Python cryptography package as a dependency to
+  the *condor-credmon-oauth* RPM package.
+  :jira:`1279`
 
 
 .. _lts-version-history-9016:
