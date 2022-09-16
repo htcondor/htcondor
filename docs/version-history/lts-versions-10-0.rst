@@ -33,3 +33,5 @@ Bugs Fixed:
   and Python wheels distributions.
   :jira:`1328`
 
+- Fixed job submission to newer ARC CE releases.
+  :jira:`1327`
