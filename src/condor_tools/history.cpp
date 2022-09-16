@@ -41,6 +41,7 @@
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
+#include "condor_getcwd.h" // for current directory
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -107,6 +108,7 @@ void Usage(const char* name, int iExitCode)
 
 static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
 static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
 static void printJobAds(ClassAdList & jobs);
@@ -146,6 +148,9 @@ static StringList projection;
 static classad::References whitelist;
 static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
+static bool read_epoch_ads = false;
+static bool delete_epoch_ads = false;
+static const char* epochDirectory = NULL;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -393,6 +398,28 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
+	else if (is_dash_arg_colon_prefix(argv[i], "scrape", &pcolon, 3)) { //TODO: Add flag to usage when ready to share with the world
+		//Designate reading job run instance ads from epoch directory
+		read_epoch_ads = true;
+		//Get epoch directory and validate passed arg is a directory
+		if ( (argc <= i+1)  || (*(argv[i+1]) == '-') ) { epochDirectory = param("JOB_EPOCH_INSTANCE_DIR"); }
+		else { epochDirectory = argv[i+1]; i++; }
+		if ( epochDirectory != NULL ) {
+			StatInfo si(epochDirectory);
+			if (!si.IsDirectory() ) {
+				i--;
+				epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
+			}
+		} else {
+			fprintf( stderr, "Error: No Job Run Instance directory.\n");
+			exit(1);
+		}
+		//Check for :d option
+		while ( pcolon && *pcolon != '\0' ) {
+			pcolon++;
+			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
+		}
+	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		// make sure we have at least one more argument
 		if (argc <= i+1) {
@@ -559,7 +586,12 @@ main(int argc, const char* argv[])
 		for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
 			whitelist.insert(attr);
 		}
+      // Read from normal history files or Job epoch files if specified
+      if ( !read_epoch_ads ) {
       readHistoryFromFiles(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
+      } else {
+      readHistoryFromEpochs(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
+      }
   }
   else {
       readHistoryRemote(constraintExpr, want_startd_history);
@@ -1419,5 +1451,117 @@ static int set_print_mask_from_stream(
 	return err;
 }
 
+//Find and add all epoch files in the given epochDirectory then sort
+//based on cluster.proc & backwards/forwards
+static void findEpochFiles(std::deque<std::string> *epochFiles){
+	std::string jobID; //Make jobId to search for .XXX.YY.
+	bool oneJob = false;
+	if (cluster != -1) {
+		if (proc != -1) { formatstr(jobID,".%d.%d.",cluster,proc); oneJob = true; }
+		else { formatstr(jobID,".%d.",cluster); }
+	}
 
+	//Get all the epoch ads we want
+	Directory dir(epochDirectory);
+	std::string file;
+	do {
+		//Get file name in directory
+		const char *curr = dir.Next();
+		file = curr ? curr : "";
+		//Check if filename matched job.runs.X.Y.ads
+		if (starts_with(file,"job.runs.") && ends_with(file,".ads")) {
+			//If no jobID then add all matching epoch ads
+			if (jobID == "") {
+				epochFiles->push_back(file);
+			} else { //Otherwise filter based on if the jobID .XXX.YY. is found in the filename
+				if (file.find(jobID) != std::string::npos) {
+					epochFiles->push_back(file);
+					if (oneJob) return;
+				}
+			}
+		}
+	} while(file != "");
+
+	//If backwards then reverse the data structure
+	if (backwards) { std::reverse(epochFiles->begin(),epochFiles->end()); }
+}
+
+static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr){
+	printHeader();
+
+	//If we were passed a specific file name then read that.
+	if (JobHistoryFileName) {
+		if (fileisuserlog) {
+			ClassAdList jobs;
+			if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
+				fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
+				exit(1);
+			}
+			printJobAds(jobs);
+			jobs.Clear();
+		} else {
+			// If the user specified the name of the file to read, we read that file only.
+			readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+		}
+	} else {
+		// The user didn't specify the name of the file to read, so we read
+		// Job Epoch (Run Instance) files for job ads
+
+		//Make sure match,limit,and/or scanlimit aren't being used with delete function
+		if (maxAds != -1 && delete_epoch_ads) {
+			fprintf(stderr,"Error: -scrape:d (delete) cannot be used with -scanlimit.\n");
+			exit(1);
+		}
+		else if (specifiedMatch != -1 && delete_epoch_ads) {
+			fprintf(stderr,"Error: -scrape:d (delete) cannot be used with -limit or -match.\n");
+			exit(1);
+		}
+
+		//Make path for files
+		std::string path;
+		if (fullpath(epochDirectory)) {
+			path = epochDirectory;
+		} else {
+			std::string tmp;
+			condor_getcwd(tmp);
+			dircat(tmp.c_str(),epochDirectory,path);
+			epochDirectory = path.c_str(); //Update epochDirectory with path (cwd + passed relative path)
+		}
+		//Make sure epochDirectory is a directory before attempting to read files
+		StatInfo si(epochDirectory);
+		if (!si.IsDirectory() ) {
+			fprintf( stderr, "Error: %s is not a valid directory.\n", epochDirectory);
+			exit(1);
+		}
+
+		std::deque<std::string> epochFiles;
+		findEpochFiles(&epochFiles);
+		//For each file found read job ads
+		for(auto file : epochFiles) {
+			std::string file_path;
+			//Make full path (path+file_name) to read
+			if (delete_epoch_ads) {
+				/*	If deleting the files then rename the file as before reading
+				*	This is to try and prevent a race condition between writing
+				*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
+				*/
+				std::string old_name,new_name,base = "READING.txt";
+				dircat(path.c_str(),file.c_str(),old_name);
+				dircat(path.c_str(),base.c_str(),new_name);
+				rename(old_name.c_str(),new_name.c_str());
+				dircat(path.c_str(),base.c_str(),file_path);
+			} else {
+				dircat(path.c_str(),file.c_str(),file_path);
+			}
+			//Read file
+			readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
+			//If deleting then delete the file that was just read.
+			if (delete_epoch_ads) {
+				remove(file_path.c_str());
+			}
+		}
+	}
+	printFooter();
+	return;
+}
 
