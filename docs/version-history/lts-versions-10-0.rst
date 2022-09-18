@@ -29,3 +29,7 @@ Bugs Fixed:
   DAGMan would always write over the variables at job submission time.
   :jira:`1277`
 
+- Fixed a bug where SciTokens authentication wasn't available on macOS
+  and Python wheels distributions.
+  :jira:`1328`
+
