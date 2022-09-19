@@ -1722,7 +1722,11 @@ int SubmitHash::SetEnvironment()
 	auto_free_ptr prefer_v1; // default to false
 	if (env1 && ! env2) {
 		// If they used the Env keyword rather than Environment, that means they prefer v1 format
+		// unless the value is in v2 format, then it is a preference for v2
 		prefer_v1.set(submit_param(SUBMIT_KEY_Env));
+		if (prefer_v1 && Env::IsV2QuotedString(prefer_v1)) {
+			prefer_v1.clear();
+		}
 	}
 
 	RETURN_IF_ABORT();
