@@ -1199,17 +1199,18 @@ FILE TRANSFER COMMANDS
     example, ``/path/to/input_file`` becomes ``input_file`` in the job's
     scratch directory.
 
-    A directory may be specified by appending the forward slash
-    character (/) as a trailing path separator. This syntax is used for
-    both Windows and Linux submit hosts. A directory example using a
-    trailing path separator is ``input_data/``. When a directory is
-    specified with the trailing path separator, the contents of the
-    directory are transferred, but the directory itself is not
-    transferred. It is as if each of the items within the directory were
-    listed in the transfer list. When there is no trailing path
-    separator, the directory is transferred, its contents are
-    transferred, and these contents are placed inside the transferred
-    directory.
+    When a directory is specified, the behavior depends on whether
+    there is a trailing path separator character.  When a directory is
+    specified with a trailing path separator, it is as if each of the
+    items within the directory were listed in the transfer list.
+    Therefore, the contents are transferred, but the directory itself
+    is not. When there is no trailing path separator, the directory
+    itself is transferred with all of its contents inside it.  On
+    platforms such as Windows where the path separator is not a
+    forward slash (/), a trailing forward slash is treated as
+    equivalent to a trailing path separator.  An example of an input
+    directory specified with a trailing forward slash is
+    ``input_data/``.
 
     For grid universe jobs other than HTCondor-C, the transfer of
     directories is not currently supported.
@@ -1317,16 +1318,18 @@ FILE TRANSFER COMMANDS
     Note that this remap function only works with files but not with
     directories.
 
-    A directory may be specified using a trailing path separator. An
-    example of a trailing path separator is the slash character on Unix
-    platforms; a directory example using a trailing path separator is
-    ``input_data/``. When a directory is specified with a trailing path
-    separator, the contents of the directory are transferred, but the
-    directory itself is not transferred. It is as if each of the items
-    within the directory were listed in the transfer list. When there is
-    no trailing path separator, the directory is transferred, its
-    contents are transferred, and these contents are placed inside the
-    transferred directory.
+    When a directory is specified, the behavior depends on whether
+    there is a trailing path separator character.  When a directory is
+    specified with a trailing path separator, it is as if each of the
+    items within the directory were listed in the transfer list.
+    Therefore, the contents are transferred, but the directory itself
+    is not. When there is no trailing path separator, the directory
+    itself is transferred with all of its contents inside it.  On
+    platforms such as Windows where the path separator is not a
+    forward slash (/), a trailing forward slash is treated as
+    equivalent to a trailing path separator.  An example of an input
+    directory specified with a trailing forward slash is
+    ``input_data/``.
 
     For grid universe jobs other than HTCondor-C, the transfer of
     directories is not currently supported.
