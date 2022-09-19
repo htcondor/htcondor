@@ -619,7 +619,7 @@ Env::getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *err
 }
 
 bool
-Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_delim) const
+Env::getDelimitedStringV1or2Raw(MyString *result,MyString *,char v1_delim) const
 {
 	ASSERT(result);
 	int old_len = result->length();
@@ -639,7 +639,7 @@ Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_del
 }
 
 bool
-Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
+Env::getDelimitedStringV2Quoted(MyString *result,MyString *) const
 {
 	MyString v2_raw;
 	if(!getDelimitedStringV2Raw(&v2_raw)) {
