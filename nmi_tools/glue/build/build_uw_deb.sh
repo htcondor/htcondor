@@ -43,7 +43,7 @@ tar xfpz condor_${condor_version}.orig.tar.gz
 cd condor-${condor_version}
 
 # copy srpm files from condor sources into the SOURCES directory
-cp -pr build/packaging/new-debian debian
+cp -pr build/packaging/debian debian
 
 if $(grep -qi buster /etc/os-release); then
     suffix=''
