@@ -2291,9 +2291,20 @@ Starter::SpawnPreScript( void )
 	if ( this->deferral_tid != -1 ) {
 		this->deferral_tid = -1;
 	}
-	
-		// first, see if we're going to need any pre and post scripts
+
 	ClassAd* jobAd = jic->jobClassAd();
+
+		// Determine any prologue/epilogue we might need.
+	std::string prologue_script_str;
+	if (param(prologue_script_str, "PROLOGUE")) {
+		prologue_script.reset(new ScriptProc(jobAd, "Prologue", prologue_script_str));
+	}
+	std::string epilogue_script_str;
+	if (param(epilogue_script_str, "EPILOGUE")) {
+		epilogue_script.reset(new ScriptProc(jobAd, "Epilogue", epilogue_script_str));
+	}
+
+		// See if we're going to need any job pre and post scripts
 	char* tmp = NULL;
 	std::string attr;
 
@@ -2302,7 +2313,7 @@ Starter::SpawnPreScript( void )
 	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
-		pre_script = new ScriptProc( jobAd, "Pre" );
+		pre_script = new ScriptProc( jobAd, "Pre", "" );
 	}
 
 	attr = "Post";
@@ -2310,10 +2321,21 @@ Starter::SpawnPreScript( void )
 	if( jobAd->LookupString(attr, &tmp) ) {
 		free( tmp );
 		tmp = NULL;
-		post_script = new ScriptProc( jobAd, "Post" );
+		post_script = new ScriptProc( jobAd, "Post", "" );
 	}
 
-	if( pre_script ) {
+	if (prologue_script) {
+		// Make a copy of the job ad in case if it changes while the prologue is running.
+		prologue_script_jobad.reset(static_cast<classad::ClassAd*>(jobAd->Copy()));
+		WriteAdFiles(); // Write out the job ad; if the prologue script edits it, we will
+		                // load up the changes and change our job ad.
+		if (prologue_script->StartJob()) {return;} // DC will handle the async callback.
+		else {
+			dprintf(D_ALWAYS, "Failed to start prologue script; unable to start job.\n");
+			main_shutdown_fast();
+			return;
+		}
+	} else if( pre_script ) {
 			// if there's a pre script, try to run it now
 
 		if( pre_script->StartJob() ) {
@@ -2745,6 +2767,43 @@ void copyProcList( List<UserProc> & from, List<UserProc> & to ) {
 }
 
 
+namespace {
+// Helper function for retrieving a small amount of data from a file as an error message
+// for the prologue and epilogue scripts.
+// If the file doesn't exist or a read error occurs, returns false.
+// If the file exists but is unreadable, then an error message is
+// written to the log.
+
+bool try_read_error_file(const std::string &filename, std::string &output, uint32_t max_bytes) {
+		// Recall, prologue/epilogue ran as root so likely this file is owned by root.
+	TemporaryPrivSentry sentry(PRIV_ROOT);
+	int fd = safe_open_wrapper_follow(filename.c_str(), O_RDONLY);
+	if (fd < 0) {
+		dprintf(D_ALWAYS, "Unable to open \"%s\" for reading: "
+			"%s (errno %d)\n", filename.c_str(),
+			strerror(errno), errno);
+		return false;
+	}
+	std::vector<char> input_buffer;
+	input_buffer.resize(max_bytes);
+
+	ssize_t retval = full_read(fd, &input_buffer[0], max_bytes);
+	close(fd);
+
+	if (retval == -1) {
+		dprintf(D_ALWAYS, "Failed to read from \"%s\": %s (errno %d)\n",
+			filename.c_str(), strerror(errno), errno);
+		return false;
+	}
+
+	output = std::string(&input_buffer[0], retval);
+	trim(output);
+	if (output.size() == max_bytes) {output += "...(message truncated)...";}
+	return true;
+}
+
+}
+
 int
 Starter::Reaper(int pid, int exit_status)
 {
@@ -2758,6 +2817,54 @@ Starter::Reaper(int pid, int exit_status)
 	} else {
 		dprintf( D_ALWAYS, "Process exited, pid=%d, status=%d\n", pid,
 				 WEXITSTATUS(exit_status) );
+	}
+
+	std::string line;
+	std::string error_txt;
+
+	if (prologue_script && prologue_script->JobReaper(pid, exit_status)) {
+		dprintf(D_FULLDEBUG, "Examining the outcome of a prologue script.\n");
+		if (exit_status) { // Prologue script failed; depending on the status, either
+				   // hold or requeue the job.
+
+			auto dir = GetWorkingDir(0);
+
+			dprintf(D_FULLDEBUG, "Prologue script has failed\n");
+
+			bool should_hold = WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) == 1;
+			std::string error_message = std::string("Prologue script failed; job will ") +
+				(should_hold ?  "be held." : "be requeued.");
+
+			auto filename = std::string(dir) + DIR_DELIM_CHAR + JOB_WRAPPER_FAILURE_FILE;
+			if (try_read_error_file(filename, error_txt, 8000)) {
+				error_message += " Error: " + error_txt;
+			}
+
+			jic->holdJob(error_message.c_str(),
+				should_hold ? CONDOR_HOLD_CODE::PrologueScriptFailed : 0, 0);
+			main_shutdown_fast();
+			return false;
+		}
+
+		LoadJobAdChanges();
+		prologue_script_jobad.reset();
+		prologue_script.reset();
+
+		// Prologue script was a success -- potentially execute the pre-job script.
+		if (pre_script) {
+			if (pre_script->StartJob()) {return true;} // DC will handle the async callback.
+			else {
+				dprintf(D_ALWAYS, "Failed to start job pre script after prologue finished; unable to start job.\n");
+				main_shutdown_fast();
+				return false;
+			}
+			// Just start the 'real' job.
+		} else if (!SpawnJob()) {
+			dprintf(D_ALWAYS, "Failed to start main job, exiting\n");
+			main_shutdown_fast();
+			return false;
+		}
+		return true;
 	}
 
 	if( pre_script && pre_script->JobReaper(pid, exit_status) ) {
@@ -2798,6 +2905,37 @@ Starter::Reaper(int pid, int exit_status)
 		return TRUE;
 	}
 
+	if (epilogue_script && epilogue_script->JobReaper(pid, exit_status)) {
+		dprintf(D_FULLDEBUG, "Examining the outcome of an epilogue script.\n");
+		epilogue_script.reset();
+		if (exit_status) { // Epilogue script failed; depending on the status, either
+				   // hold or requeue the job.
+
+			auto dir = GetWorkingDir(0);
+
+			dprintf(D_FULLDEBUG, "Epilogue script has failed\n");
+
+			bool should_hold = WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) == 1;
+			std::string error_message = std::string("Epilogue script failed; job will ") +
+				(should_hold ?  "be held." : "be requeued.");
+
+			auto filename = std::string(dir) + DIR_DELIM_CHAR + JOB_WRAPPER_FAILURE_FILE;
+			if (try_read_error_file(filename, error_txt, 8000)) {
+				error_message += " Error: " + error_txt;
+			}
+
+			jic->holdJob(error_message.c_str(),
+				should_hold ? CONDOR_HOLD_CODE::EpilogueScriptFailed : 0, 0);
+			main_shutdown_fast();
+			return false;
+		}
+
+			// As with the post script, once all our various scripts are done and
+			// we can clean up.
+		allJobsDone();
+		return true;
+	}
+
 	if( post_script && post_script->JobReaper(pid, exit_status) ) {
 		bool exitStatusSpecified = false;
 		int desiredExitStatus = computeDesiredExitStatus( "Post", this->jic->jobClassAd(), & exitStatusSpecified );
@@ -2823,12 +2961,20 @@ Starter::Reaper(int pid, int exit_status)
 			return FALSE;
 		}
 
-			// when the post script exits, we know the m_job_list is
-			// going to be empty, so don't bother with any of the rest
-			// of this.  instead, the starter is now able to call
-			// allJobsdone() to do the final clean up stages.
-		allJobsDone();
-		return TRUE;
+		if (epilogue_script) {
+			if (epilogue_script->StartJob()) {return true;} // DC will handle the async callback.
+			else {
+				dprintf(D_ALWAYS, "Failed to start epilogue script; unable to finish job.\n");
+				main_shutdown_fast();
+				return false;
+			}
+				// when the post script exits, we know the m_job_list is
+				// going to be empty, so don't bother with any of the rest
+				// of this.  instead, the starter is now able to call
+				// allJobsdone() to do the final clean up stages.
+			allJobsDone();
+			return true;
+		}
 	}
 
 	//
@@ -2870,7 +3016,14 @@ Starter::Reaper(int pid, int exit_status)
 				 pid, exit_status );
 	}
 	if( all_jobs - handled_jobs == 0 ) {
-		if( post_script ) {
+		if (epilogue_script) {
+			if (epilogue_script->StartJob()) {return true;}
+			else {
+				dprintf(D_ALWAYS, "Failed to start epilogue script; unable to cleanup job.\n");
+				main_shutdown_fast();
+				return false;
+			}
+		} else if( post_script ) {
 				// if there's a post script, we have to call it now,
 				// and wait for it to exit before we do anything else
 				// of interest.
@@ -3707,6 +3860,69 @@ Starter::removeTempExecuteDir( void )
 		m_workingDirExists = false;
 	}
 	return !has_failed;
+}
+
+
+bool
+Starter::LoadJobAdChanges()
+{
+	auto ad = jic->jobClassAd();
+	auto dir = GetWorkingDir(0);
+	std::string filename;
+
+	if (!prologue_script_jobad) {
+		dprintf(D_ALWAYS, "Requested to parse a prologue job ad but the starter did not save a copy of the old one.\n");
+		return false;
+	}
+
+	classad::ClassAd loaded_ad;
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		formatstr(filename, "%s%c%s", dir, DIR_DELIM_CHAR, JOB_AD_FILENAME);
+		auto fp = safe_fopen_wrapper_follow(filename.c_str(), "r");
+		if (!fp) {
+			dprintf(D_ALWAYS, "Failed to open \"%s\" for reading job ad updates: "
+				"%s (errno %d)\n", filename.c_str(), strerror(errno), errno);
+			return false;
+		}
+		bool is_eof;
+		int error;
+		auto attr_count = InsertFromFile(fp, loaded_ad, is_eof, error);
+		fclose(fp);
+		if (error || !is_eof || !attr_count) {
+			dprintf(D_ALWAYS, "Failed to parse \"%s\" as a valid ClasssAd.\n",
+				filename.c_str());
+			if (!classad::CondorErrMsg.empty()) {
+				dprintf(D_ALWAYS, "Error message: %s.\n", classad::CondorErrMsg.c_str());
+			}
+			return false;
+		}
+	}
+
+	// Calculate the diff between the original and new job ads; note that I purposely do *not*
+	// merge it from the current job ad as the in-memory ad might have changes since the prologue
+	// was started.
+	for (const auto &attr : loaded_ad) {
+		auto iter = prologue_script_jobad->find(attr.first);
+		if (iter != prologue_script_jobad->end()) {
+			if (!attr.second->SameAs(iter->second)) { // Existing attribute was changed, overwrite.
+				dprintf(D_FULLDEBUG, "Overwriting existing attribute: %s\n", attr.first.c_str());
+				ad->Insert(attr.first, attr.second->Copy());
+			}
+		} else if (!ClassAdAttributeIsPrivateAny(attr.first)) { // Attribute was added to the loaded ad.
+			dprintf(D_FULLDEBUG, "Adding new attribute: %s\n", attr.first.c_str());
+			ad->Insert(attr.first, attr.second->Copy());
+		}
+	}
+	for (const auto &attr : *prologue_script_jobad) {
+		auto iter = loaded_ad.find(attr.first);
+		if (iter == loaded_ad.end() && !ClassAdAttributeIsPrivateAny(attr.first)) {
+			// New attribute, not in original; copy it.
+			dprintf(D_FULLDEBUG, "Attribute %s was removed by prologue.\n", attr.first.c_str());
+			ad->Remove(attr.first);
+		}
+	}
+	return true;
 }
 
 bool

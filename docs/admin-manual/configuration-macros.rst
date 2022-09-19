@@ -6027,6 +6027,41 @@ These settings affect the *condor_starter*.
                 # A typical fully-qualified executable path
                 cmd = /bin/sleep
 
+:macro-def:`PROLOGUE`
+
+    Path to an executable that is invoked, as root and by the ``condor_starter``,
+    prior to the job's execution.  This provides the system administrator to customize
+    the job environment prior to the execution.
+
+    If the prologue script exits with status 1, then the job will be put on hold; otherwise,
+    if it exits nonzero then the job will be requeued at the remote schedd.  An appropriate
+    error message will be generated; if the admin would like to customize the error message,
+    then the script can write the error message into the file pointed to by the environment variable
+    ``_CONDOR_WRAPPER_ERROR_FILE``.
+
+    A copy of the job's ad is written into the file pointed to by the environment variable
+    ``_CONDOR_JOB_AD``.  After the prologue is executed, this file is reloaded and any changes
+    are copied into the starter's copy of the job ad.  This provides the system administrator
+    with a mechanism to alter the job ad prior to execution as a side-effect of the prologue.
+
+:macro-def:`EPILOGUE`
+
+    Path to an executable that is invoked, as root and by the ``condor_starter``,
+    after the job's execution.  This provides the system administrator to check the job's
+    environment after execution and, potentially, put the job on hold or cause it to be
+    requeued.  The intended purpose of the epilogue is to allow a job to re-execute in the
+    case where the worker node stopped working during the job's execution.
+
+    If the epilogue script exits with status 1, then the job will be put on hold; otherwise,
+    if it exits nonzero then the job will be requeued at the remote schedd.  An appropriate
+    error message will be generated; if the admin would like to customize the error message,
+    then the script can write the error message into the file pointed to by the environment variable
+    ``_CONDOR_WRAPPER_ERROR_FILE``.
+
+    A copy of the job's ad is written into the file pointed to by the environment variable
+    ``_CONDOR_JOB_AD``.  Unlike the prologue script, this file is not re-parsed for changes
+    after the epilogue script has finished.
+
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
     A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
     The default value is ``none``. If set to ``hard``, when the job tries

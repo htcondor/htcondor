@@ -32,12 +32,15 @@
 #include "basename.h"
 
 
+extern const char* JOB_WRAPPER_FAILURE_FILE;
 extern Starter *Starter;
 
 
 /* ScriptProc class implementation */
 
-ScriptProc::ScriptProc( ClassAd* ad, const char* proc_name )
+ScriptProc::ScriptProc( ClassAd* ad, const char* proc_name, const std::string &starter_job_exec )
+	: m_starter_job(!starter_job_exec.empty()),
+	  m_starter_job_exec(starter_job_exec)
 {
     dprintf ( D_FULLDEBUG, "In ScriptProc::ScriptProc()\n" );
 	if( proc_name ) {
@@ -67,128 +70,144 @@ ScriptProc::StartJob()
 		return 0;
 	}
 
-	std::string attr;
-
-	attr = name;
-	attr += ATTR_JOB_CMD;
-	char* tmp = NULL;
-	if( ! JobAd->LookupString( attr, &tmp ) ) {
-		dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n", 
-				 attr.c_str() );
-		return 0;
-	}
-
-		// // // // // // 
-		// executable
-		// // // // // // 
-
-		// TODO: make it smart in cases we're not the gridshell and/or
-		// didn't transfer files so that we don't prepend the wrong
-		// path to the binary, and don't try to chmod it.
-	std::string exe_path = "";
-	if( tmp != NULL && !fullpath( tmp ) ) {
-		exe_path += Starter->GetWorkingDir(0);
-		exe_path += DIR_DELIM_CHAR;
-	}
-
-	if (tmp) {
-		exe_path += tmp;
-	}
-	free( tmp ); 
-	tmp = NULL;
-
-	if( Starter->isGridshell() ) {
-			// if we're a gridshell, chmod() the binary, since globus
-			// probably transfered it for us and left it with bad
-			// permissions...
-		priv_state old_priv = set_user_priv();
-		int retval = chmod( exe_path.c_str(), 0755 );
-		set_priv( old_priv );
-		if( retval < 0 ) {
-			dprintf( D_ALWAYS, "Failed to chmod %s: %s (errno %d)\n", 
-					 exe_path.c_str(), strerror(errno), errno );
-			return 0;
-		}
-	} 
-
-
-		// // // // // // 
-		// Args
-		// // // // // // 
-
-	char *args1 = NULL;
-	char *args2 = NULL;
-	std::string args1_attr;
-	std::string args2_attr;
-	args1_attr = name;
-	args1_attr += ATTR_JOB_ARGUMENTS1;
-	args2_attr = name;
-	args2_attr += ATTR_JOB_ARGUMENTS2;
-
-	JobAd->LookupString(args1_attr, &args1);
-	JobAd->LookupString(args2_attr, &args2);
-
 	ArgList args;
+	std::string exe_path;
+	Env job_env;
 
-		// Since we are adding to the argument list, we may need to deal
-		// with platform-specific arg syntax in the user's args in order
-		// to successfully merge them with the additional args.
-	args.SetArgV1SyntaxToCurrentPlatform();
-
-		// First, put "condor_<name>script" at the front of Args,
-		// since that will become argv[0] of what we exec(), either
-		// the wrapper or the actual job.
+	// First, put "condor_<name>script" at the front of Args,
+	// since that will become argv[0] of what we exec(), either
+	// the wrapper or the actual job.
 	std::string arg0;
 	arg0 = "condor_";
 	arg0 += name;
 	arg0 += "script";
 	args.AppendArg(arg0);
 
-	std::string args_error;
-	if(args2 && *args2) {
-		args.AppendArgsV2Raw(args2,args_error);
-	}
-	else if(args1 && *args1) {
-		args.AppendArgsV1Raw(args1,args_error);
-	}
-	else {
-		dprintf( D_FULLDEBUG, "neither %s nor %s could be found in JobAd\n",
-				 args1_attr.c_str(), args2_attr.c_str());
-	}
+	if (!m_starter_job) {
+		std::string attr;
 
-	free( args1 );
-	free( args2 );
-
-		// // // // // // 
-		// Environment 
-		// // // // // // 
-
-	// Now, instantiate an Env object so we can manipulate the
-	// environment as needed.
-	Env job_env;
-	std::string env_attr, env_errors, env;
-
-	env_attr = name;
-	env_attr += ATTR_JOB_ENVIRONMENT;
-	if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
-		if( ! job_env.MergeFromV2Raw(env.c_str(), env_errors) ) {
-			dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
-					 "Aborting ScriptProc::StartJob.\n",
-					 env_attr.c_str(), env_errors.c_str() );
+		attr = name;
+		attr += ATTR_JOB_CMD;
+		char* tmp = NULL;
+		if( ! JobAd->LookupString( attr, &tmp ) ) {
+			dprintf( D_ALWAYS, "%s not found in JobAd.  Aborting StartJob.\n",
+					 attr.c_str() );
 			return 0;
 		}
-	} else {
-		// if no Environment attribute, look for the old Env attribute
+
+			// // // // // //
+			// executable
+			// // // // // //
+
+			// TODO: make it smart in cases we're not the gridshell and/or
+			// didn't transfer files so that we don't prepend the wrong
+			// path to the binary, and don't try to chmod it.
+		if( tmp != NULL && !fullpath( tmp ) ) {
+			exe_path += Starter->GetWorkingDir(0);
+			exe_path += DIR_DELIM_CHAR;
+		}
+
+		if (tmp) {
+			exe_path += tmp;
+		}
+		free( tmp );
+		tmp = NULL;
+
+		if( Starter->isGridshell() ) {
+				// if we're a gridshell, chmod() the binary, since globus
+				// probably transfered it for us and left it with bad
+				// permissions...
+			priv_state old_priv = set_user_priv();
+			int retval = chmod( exe_path.c_str(), 0755 );
+			set_priv( old_priv );
+			if( retval < 0 ) {
+				dprintf( D_ALWAYS, "Failed to chmod %s: %s (errno %d)\n",
+						 exe_path.c_str(), strerror(errno), errno );
+				return 0;
+			}
+		}
+
+
+			// // // // // //
+			// Args
+			// // // // // //
+
+		char *args1 = NULL;
+		char *args2 = NULL;
+		std::string args1_attr;
+		std::string args2_attr;
+		args1_attr = name;
+		args1_attr += ATTR_JOB_ARGUMENTS1;
+		args2_attr = name;
+		args2_attr += ATTR_JOB_ARGUMENTS2;
+
+		JobAd->LookupString(args1_attr, &args1);
+		JobAd->LookupString(args2_attr, &args2);
+
+			// Since we are adding to the argument list, we may need to deal
+			// with platform-specific arg syntax in the user's args in order
+			// to successfully merge them with the additional args.
+		args.SetArgV1SyntaxToCurrentPlatform();
+
+			// First, put "condor_<name>script" at the front of Args,
+			// since that will become argv[0] of what we exec(), either
+			// the wrapper or the actual job.
+		std::string arg0;
+		arg0 = "condor_";
+		arg0 += name;
+		arg0 += "script";
+		args.AppendArg(arg0);
+
+		std::string args_error;
+		if(args2 && *args2) {
+			args.AppendArgsV2Raw(args2,args_error);
+		}
+		else if(args1 && *args1) {
+			args.AppendArgsV1Raw(args1,args_error);
+		}
+		else {
+			dprintf( D_FULLDEBUG, "neither %s nor %s could be found in JobAd\n",
+					 args1_attr.c_str(), args2_attr.c_str());
+		}
+
+		free( args1 );
+		free( args2 );
+
+			// // // // // //
+			// Environment
+			// // // // // //
+
+		// Now, instantiate an Env object so we can manipulate the
+		// environment as needed.
+		std::string env_attr, env_errors, env;
+
 		env_attr = name;
-		env_attr += ATTR_JOB_ENV_V1;
+		env_attr += ATTR_JOB_ENVIRONMENT;
 		if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
-			if( ! job_env.MergeFromV1Raw(env.c_str(), job_env.GetEnvV1Delimiter(), env_errors) ) {
+			if( ! job_env.MergeFromV2Raw(env.c_str(), env_errors) ) {
 				dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 						 "Aborting ScriptProc::StartJob.\n",
 						 env_attr.c_str(), env_errors.c_str() );
 				return 0;
 			}
+		} else {
+			// if no Environment attribute, look for the old Env attribute
+			env_attr = name;
+			env_attr += ATTR_JOB_ENV_V1;
+			if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
+				if( ! job_env.MergeFromV1Raw(env.c_str(), job_env.GetEnvV1Delimiter(), env_errors) ) {
+					dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
+							 "Aborting ScriptProc::StartJob.\n",
+							 env_attr.c_str(), env_errors.c_str() );
+					return 0;
+				}
+			}
 		}
+	} else {
+		exe_path = m_starter_job_exec;
+		auto dir = Starter->GetWorkingDir(0);
+		auto filename = std::string(dir) + DIR_DELIM_CHAR + JOB_WRAPPER_FAILURE_FILE;
+		job_env.SetEnv("_CONDOR_WRAPPER_ERROR_FILE", filename);
 	}
 
 		// Now, let the starter publish any env vars it wants to add
@@ -251,7 +270,7 @@ ScriptProc::StartJob()
 
 	JobPid = daemonCore->Create_Process(exe_path.c_str(), 
 	                                    args,
-	                                    PRIV_USER_FINAL,
+	                                    m_starter_job ? PRIV_ROOT : PRIV_USER_FINAL,
 	                                    1,
 	                                    FALSE,
 	                                    FALSE,
@@ -278,7 +297,8 @@ ScriptProc::StartJob()
 		JobPid = -1;
 
 		if( create_process_error ) {
-			std::string err_msg = "Failed to execute '";
+			std::string err_msg = "Failed to execute ";
+			err_msg += std::string(name) + " script '";
 			err_msg += exe_path;
 			err_msg += "'";
 			if(!args_string.empty()) {

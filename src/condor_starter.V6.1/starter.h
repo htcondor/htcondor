@@ -369,6 +369,13 @@ private:
 		 */
 	bool getJobClaimId(std::string &result) const;
 
+		/*
+		 * The prologue script receives a job ad in its environment; this function will load
+		 * the ad after the prologue script runs, compare it to the previous version, and merge
+		 * any differences into the current copy of the job ad.  Returns false if some part of
+		 * this process fails.
+		 */
+	bool LoadJobAdChanges();
 
 	bool WriteAdFiles() const;
 
@@ -431,6 +438,9 @@ private:
 
 	UserProc* pre_script;
 	UserProc* post_script;
+	std::unique_ptr<UserProc> prologue_script;
+	std::unique_ptr<classad::ClassAd> prologue_script_jobad;
+	std::unique_ptr<UserProc> epilogue_script;
 
 		//
 		// Flag to indicate whether Config() has been run

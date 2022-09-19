@@ -26,12 +26,22 @@
 
 /** This class is for job wrapper scripts (pre/post) that the starter
 	might have to spawn.
+
+    There are two types of scripts:
+    - User job scripts: Specified by the job ad, these are user-controlled
+      and utilizes the args and environment of the job itselff.
+    - Starter job scripts: Specified by the administrator of the starter, these
+      are executed by all jobs and provide some opportunity for environment setup
+      or cleanup.
  */
 class ScriptProc : public UserProc
 {
 public:
 		/// Constructor
-	ScriptProc( ClassAd* job_ad, const char* proc_name );
+		//  - `starter_job_exec`: Set to the path name of an executable to indicate
+		//    this is a starter-specified job and shouldn't inherit environment from the
+		//    underlying job.
+	ScriptProc( ClassAd* job_ad, const char* proc_name, const std::string &starter_job_exec );
 
 		/// Destructor
 	virtual ~ScriptProc();
@@ -76,7 +86,8 @@ public:
 
 protected:
 	bool is_suspended;
-
+	bool m_starter_job;
+	std::string m_starter_job_exec;
 };
 
 #endif /* _CONDOR_SCRIPT_PROC_H */

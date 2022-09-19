@@ -879,6 +879,12 @@ all attributes.
     | | 47                             | The job's allowed execution time    |                          |
     | | [JobExecutionTimeExceeded]     | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
+    | | 48                             | The starter's prologue script       |                          |
+    | | [PrologueScriptFailed]         | failed and put the job on hold      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
+    | | 48                             | The starter's epilogue script       |                          |
+    | | [EpilogueScriptFailed]         | failed and put the job on hold      |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
 
 
 :classad-attribute:`HoldReasonSubCode`

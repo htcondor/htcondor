@@ -469,6 +469,18 @@ default=
 type=string
 tags=starter
 
+[PROLOGUE]
+description=A script to run, as root, prior to starting a job.
+default=
+type=path
+tags=starter
+
+[EPILOGUE]
+description=A script to run, as root, after job execution has been finished.
+default=
+type=path
+tags=starter
+
 [SOFT_UID_DOMAIN]
 default=
 type=string
