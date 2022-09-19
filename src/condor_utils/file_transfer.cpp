@@ -2372,11 +2372,72 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						// as something reasonabel.
 						formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 					}
+				//
 				// legit remap was found
+				//
 				} else if(fullpath(remap_filename.c_str())) {
 					fullname = remap_filename;
 				}
 				else {
+					// For simplicity of reasoning about the security implications,
+					// don't try to create absolute directories for absolute paths
+					// named in transfer_output_remaps.
+					//
+					// Because the `output` and `error` submit commands are
+					// implemented with transfer_output_remaps, this code
+					// also creates the directories they name.  This is a
+					// semantic change, and one that changes a job from going
+					// on hold (after running for its duration) to succeeding.
+					char * dirname = condor_dirname(remap_filename.c_str());
+					if( dirname[0] != '.' ) {
+						std::string path;
+						formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
+#if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
+						// So this fails on a dirA/dirB/filename remaps,
+						// which seemed like the easiest way to trigger
+						// the error-handling code on Linux.  (On Windows,
+						// you can jsut specify illegal directory names.)
+						int rv = mkdir( path.c_str(), 0700 );
+						if( rv != 0 ) {
+							dprintf(D_ZKM, "mkdir(%s) = %d, errno %d\n", path.c_str(), rv, errno );
+						}
+						if( rv != 0 && errno != EEXIST ) {
+#else
+						int directory_creation_mode = 0700;
+						if(! mkdir_and_parents_if_needed(
+						  path.c_str(), directory_creation_mode, directory_creation_mode, PRIV_USER
+						)) {
+#endif /* DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING */
+							// Stolen from the TransferCommand::Mkdir code.
+							int the_error = errno;
+							error_buf.formatstr(
+								"%s at %s failed to create directory %s: %s (errno %d)",
+								get_mySubSystem()->getName(),
+								s->my_ip_str(), path.c_str(),
+								strerror(the_error), the_error
+							);
+							download_success = false;
+							try_again = false;
+							hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+							hold_subcode = the_error;
+
+							dprintf(D_ALWAYS,
+								"DoDownload: consuming rest of transfer and failing "
+								"after encountering the following error: %s\n",
+								error_buf.c_str());
+
+							// Without the below, the above error will be
+							// superceded by the failure to transfer the file.
+							//
+							// We don't abort the transfer here because we
+							// never abort the transfer unless we think the
+							// protocol is an unknown state, presumably to
+							// try and bring back as much output as we can.
+							all_transfers_succeeded = false;
+						}
+					}
+					free(dirname);
+
 					formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
 				}
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.c_str(),remap_filename.c_str());
