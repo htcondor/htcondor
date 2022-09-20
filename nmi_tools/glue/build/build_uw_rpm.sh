@@ -4,7 +4,7 @@ if [[ $VERBOSE ]]; then
   set -x
 fi
 
-# makesrpm.sh - generates source and binary rpms with a source tarball
+# makerpm.sh - generates source and binary rpms with a source tarball
 # along with condor.spec and the source files in this directory
 
 usage () {
@@ -65,9 +65,9 @@ cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
 mv ../condor-${condor_version}.tgz SOURCES/condor-${condor_version}.tar.gz
 
-# copy srpm files from condor sources into the SOURCES directory
-tar xvfpz SOURCES/condor-${condor_version}.tar.gz condor-${condor_version}/build/packaging/srpm
-cp -p condor-${condor_version}/build/packaging/srpm/* SOURCES
+# copy rpm files from condor sources into the SOURCES directory
+tar xvfpz SOURCES/condor-${condor_version}.tar.gz condor-${condor_version}/build/packaging/rpm
+cp -p condor-${condor_version}/build/packaging/rpm/* SOURCES
 rm -rf condor-${condor_version}
 
 # inject the version and build id into the spec file
