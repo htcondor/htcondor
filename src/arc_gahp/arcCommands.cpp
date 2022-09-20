@@ -182,6 +182,33 @@ size_t appendToString( const void * ptr, size_t size, size_t nmemb, void * str )
 	return (size * nmemb);
 }
 
+bool GetSingleJobAd(const ClassAd& resp_ad, ClassAd*& job_ad, std::string& err_msg)
+{
+	classad::ExprTree *expr = resp_ad.Lookup("job");
+	if ( expr == NULL) {
+		err_msg = "Invalid response (no job element)";
+		return false;
+	}
+
+	// Old ARC CE servers returned a single record instead of an array
+	// of records when there was data for only one job.
+	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
+		job_ad = (classad::ClassAd*)expr;
+	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
+		std::vector<classad::ExprTree*> expr_list;
+		((classad::ExprList*)expr)->GetComponents(expr_list);
+		if (expr_list.size() == 0) {
+			err_msg = "Invalid response (empty job array)";
+			return false;
+		}
+		job_ad = (classad::ClassAd*)expr_list[0];
+	} else {
+		err_msg = "Invalid response (bad job element type)";
+		return false;
+	}
+	return true;
+}
+
 HttpRequest::HttpRequest()
 {
 	if ( curlVerInfo == NULL ) {
@@ -765,32 +792,14 @@ bool ArcJobNewWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL) {
+	classad::ClassAd *job_ad = nullptr;
+	std::string err_msg;
+	if ( !GetSingleJobAd(resp_ad, job_ad, err_msg) ) {
 		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response (no job element)" );
+								"499", err_msg );
 		return true;
 	}
 
-	// Old ARC CE servers returned a single record instead of an array
-	// of records when there was data for only one job.
-	classad::ClassAd *job_ad;
-	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-		job_ad = (classad::ClassAd*)expr;
-	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
-		std::vector<classad::ExprTree*> expr_list;
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-		if (expr_list.size() == 0) {
-			gahp_request->m_result = create_result_string( request_id,
-							"499", "Invalid response (empty job array)" );
-			return true;
-		}
-		job_ad = (classad::ClassAd*)expr_list[0];
-	} else {
-		gahp_request->m_result = create_result_string( request_id,
-						"499", "Invalid response (bad job element type)" );
-		return true;
-	}
 	std::string val;
 
 	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
@@ -890,32 +899,14 @@ bool ArcJobStatusWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL) {
+	classad::ClassAd *job_ad = nullptr;
+	std::string err_msg;
+	if ( !GetSingleJobAd(resp_ad, job_ad, err_msg) ) {
 		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response (no job element)" );
+								"499", err_msg );
 		return true;
 	}
 
-	// Old ARC CE servers returned a single record instead of an array
-	// of records when there was data for only one job.
-	classad::ClassAd *job_ad;
-	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-		job_ad = (classad::ClassAd*)expr;
-	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
-		std::vector<classad::ExprTree*> expr_list;
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-		if (expr_list.size() == 0) {
-			gahp_request->m_result = create_result_string( request_id,
-							"499", "Invalid response (empty job array)" );
-			return true;
-		}
-		job_ad = (classad::ClassAd*)expr_list[0];
-	} else {
-		gahp_request->m_result = create_result_string( request_id,
-						"499", "Invalid response (bad job element type)" );
-		return true;
-	}
 	std::string val;
 
 	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
@@ -1128,32 +1119,14 @@ bool ArcJobInfoWorkerFunction(GahpRequest *gahp_request)
 	}
 
 	// First, extract the status-code and reason.
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL) {
+	classad::ClassAd *job_ad = nullptr;
+	std::string err_msg;
+	if ( !GetSingleJobAd(resp_ad, job_ad, err_msg) ) {
 		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response (no job element)" );
+								"499", err_msg );
 		return true;
 	}
 
-	// Old ARC CE servers returned a single record instead of an array
-	// of records when there was data for only one job.
-	classad::ClassAd *job_ad;
-	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-		job_ad = (classad::ClassAd*)expr;
-	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
-		std::vector<classad::ExprTree*> expr_list;
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-		if (expr_list.size() == 0) {
-			gahp_request->m_result = create_result_string( request_id,
-							"499", "Invalid response (empty job array)" );
-			return true;
-		}
-		job_ad = (classad::ClassAd*)expr_list[0];
-	} else {
-		gahp_request->m_result = create_result_string( request_id,
-						"499", "Invalid response (bad job element type)" );
-		return true;
-	}
 	std::string val_str;
 
 	if ( ! job_ad->EvaluateAttrString("status-code", val_str) ) {
@@ -1372,32 +1345,14 @@ bool ArcJobKillWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL) {
+	classad::ClassAd *job_ad = nullptr;
+	std::string err_msg;
+	if ( !GetSingleJobAd(resp_ad, job_ad, err_msg) ) {
 		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response (no job element)" );
+								"499", err_msg );
 		return true;
 	}
 
-	// Old ARC CE servers returned a single record instead of an array
-	// of records when there was data for only one job.
-	classad::ClassAd *job_ad;
-	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-		job_ad = (classad::ClassAd*)expr;
-	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
-		std::vector<classad::ExprTree*> expr_list;
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-		if (expr_list.size() == 0) {
-			gahp_request->m_result = create_result_string( request_id,
-							"499", "Invalid response (empty job array)" );
-			return true;
-		}
-		job_ad = (classad::ClassAd*)expr_list[0];
-	} else {
-		gahp_request->m_result = create_result_string( request_id,
-						"499", "Invalid response (bad job element type)" );
-		return true;
-	}
 	std::string val;
 
 	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
@@ -1471,32 +1426,14 @@ bool ArcJobCleanWorkerFunction(GahpRequest *gahp_request)
 		return true;
 	}
 
-	classad::ExprTree *expr = resp_ad.Lookup("job");
-	if ( expr == NULL) {
+	classad::ClassAd *job_ad = nullptr;
+	std::string err_msg;
+	if ( !GetSingleJobAd(resp_ad, job_ad, err_msg) ) {
 		gahp_request->m_result = create_result_string( request_id,
-								"499", "Invalid response (no job element)" );
+								"499", err_msg );
 		return true;
 	}
 
-	// Old ARC CE servers returned a single record instead of an array
-	// of records when there was data for only one job.
-	classad::ClassAd *job_ad;
-	if (expr->GetKind() == classad::ExprTree::CLASSAD_NODE) {
-		job_ad = (classad::ClassAd*)expr;
-	} else if (expr->GetKind() == classad::ExprTree::EXPR_LIST_NODE) {
-		std::vector<classad::ExprTree*> expr_list;
-		((classad::ExprList*)expr)->GetComponents(expr_list);
-		if (expr_list.size() == 0) {
-			gahp_request->m_result = create_result_string( request_id,
-							"499", "Invalid response (empty job array)" );
-			return true;
-		}
-		job_ad = (classad::ClassAd*)expr_list[0];
-	} else {
-		gahp_request->m_result = create_result_string( request_id,
-						"499", "Invalid response (bad job element type)" );
-		return true;
-	}
 	std::string val;
 
 	if ( ! job_ad->EvaluateAttrString("status-code", val) ) {
