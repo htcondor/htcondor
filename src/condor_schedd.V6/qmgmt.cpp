@@ -6995,11 +6995,52 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		// ad, things will still be ok.
 		ChainCollapse(*expanded_ad);
 
-			// Make a stringlist of all attribute names in job ad.
-			// Note: ATTR_JOB_CMD must be first in AttrsToExpand...
+		// before $$ expansion, we may need to convert the Environment from v1 to v2
+		// or switch the v1 delimiter to match the target OS. We do this so that if the 
+		// environment has $$ expansions we are using the target OS's expected delim
+		// or a format that doesn't have a delim conflict issue.
+		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GRID ) {
+			// Produce an environment description that is compatible with
+			// whatever the starter expects.
+			// Note: this code path is skipped when we flock and reconnect
+			//  after a disconnection (job lease).  In this case we don't
+			//  have a startd_ad!
+
+			// check for a job that has a V1 environment only, and the target OS uses a different separator
+			// HTCondor 9.x and earlier does not honor EnvDelim in MergeFrom(Ad) so we have to re-write Env
+			// for the Opsys of the STARTD.
+			// TODO: add a version check for STARTD's that honor the ATTR_JOB_ENV_V1_DELIM on ingestion
+			if (expanded_ad->Lookup(ATTR_JOB_ENV_V1) && ! expanded_ad->LookupExpr(ATTR_JOB_ENVIRONMENT))
+			{
+				Env env_obj;
+
+				// compare the delim that is natural to the startd to the delim that the job is currently using
+				// if they differ, and the job is using V1 environment (and STARTD is earlier than X.Y) we
+				// have to re-write the Env attribute and the EnvDelim attributes for target OS
+				std::string opsys;
+				startd_ad->LookupString(ATTR_OPSYS, opsys);
+				char target_delim = env_obj.GetEnvV1Delimiter(opsys.c_str());
+				char my_delim = env_obj.GetEnvV1Delimiter(*expanded_ad);
+				if (my_delim != target_delim) {
+					std::string env_error_msg;
+					// ingest using the current delim as specified in the job
+					if (env_obj.MergeFrom(expanded_ad, env_error_msg)) {
+						// write the environment back into the job with the OPSYS correct delimiter
+						if ( ! env_obj.InsertEnvV1IntoClassAd(*expanded_ad, env_error_msg, target_delim)) {
+							dprintf( D_FULLDEBUG, "Job expansion using attr Environment because attr Env cannot be converted to opsys=%s : %s\n",
+								opsys.c_str(), env_error_msg.c_str());
+							// write a V2 Environment attribute into the job,
+							// this will take precedence over Env for STARTD's later than 6.7
+							env_obj.InsertEnvIntoClassAd(*expanded_ad);
+						}
+					}
+				}
+			}
+		}
+
+			// Make a stringlist of all attribute names in job ad that are not MATCH_ attributes
 		StringList AttrsToExpand;
 		const char * curr_attr_to_expand;
-		AttrsToExpand.append(ATTR_JOB_CMD);
 		for ( auto itr = expanded_ad->begin(); itr != expanded_ad->end(); itr++ ) {
 			if ( strncasecmp(itr->first.c_str(),"MATCH_",6) == 0 ) {
 					// We do not want to expand MATCH_XXX attributes,
@@ -7007,11 +7048,12 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 					// previous expansions, which could potentially
 					// contain literal $$(...) in the replacement text.
 				continue;
-			}
-			if ( strcasecmp(itr->first.c_str(),ATTR_JOB_CMD) ) {
+			} else {
 				AttrsToExpand.append(itr->first.c_str());
 			}
 		}
+
+		std::string cachedAttrName, unparseBuf;
 
 		index = -1;	
 		AttrsToExpand.rewind();
@@ -7026,7 +7068,7 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				break;
 			}
 
-			std::string cachedAttrName = MATCH_EXP;
+			cachedAttrName = MATCH_EXP;
 			cachedAttrName += curr_attr_to_expand;
 
 			if( !startd_ad ) {
@@ -7052,52 +7094,21 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				attribute_value = NULL;
 			}
 
-			// Get the current value of the attribute.  We want
-			// to use PrintToNewStr() here because we want to work
-			// with anything (strings, ints, etc) and because want
-			// strings unparsed (for instance, quotation marks should
-			// be escaped with backslashes) so that we can re-insert
-			// them later into the expanded ClassAd.
-			// Note: deallocate attribute_value with free(), despite
-			// the mis-leading name PrintTo**NEW**Str.  
-			ExprTree *tree = ad->LookupExpr(curr_attr_to_expand);
-			if ( tree ) {
-				const char *new_value = ExprTreeToString( tree );
-				if ( new_value ) {
-					attribute_value = strdup( new_value );
+			// Get the current value of the attribute in unparsed form if the value is subject to $$ expansion.
+			// Numbers can't be $$ expanded, expressions and strings can.
+			unparseBuf.clear();
+			ExprTree * tree = expanded_ad->LookupExpr(curr_attr_to_expand);
+			if (ExprTreeMayDollarDollarExpand(tree, unparseBuf)) {
+				const char *new_value = unparseBuf.c_str();
+				if (strchr(new_value, '$')) {
+					// make a copy because $$ expansion code need a malloc'ed string
+					attribute_value = strdup(unparseBuf.c_str());
 				}
 			}
-
 			if ( attribute_value == NULL ) {
 				continue;
 			}
-
-				// Some backwards compatibility: if the
-				// user just has $$opsys.$$arch in the
-				// ATTR_JOB_CMD attribute, convert it to the
-				// new format w/ parenthesis: $$(opsys).$$(arch)
-			if ( (index == 0) && (attribute_value != NULL)
-				 && ((tvalue=strstr(attribute_value,"$$")) != NULL) ) 
-			{
-				if ( strcasecmp("$$OPSYS.$$ARCH",tvalue) == MATCH ) 
-				{
-						// convert to the new format
-						// First, we need to re-allocate attribute_value to a bigger
-						// buffer.
-					int old_size = (int)strlen(attribute_value);
-					void * pv = realloc(attribute_value, old_size 
-										+ 10);  // for the extra parenthesis
-					ASSERT(pv);
-					attribute_value = (char *)pv; 
-						// since attribute_value may have moved, we need
-						// to reset the value of tvalue.
-					tvalue = strstr(attribute_value,"$$");	
-					ASSERT(tvalue);
-					strcpy(tvalue,"$$(OPSYS).$$(ARCH)");
-					ad->Assign(curr_attr_to_expand, attribute_value);
-				}
-			}
-
+		
 			bool expanded_something = false;
 			int search_pos = 0;
 			while( !attribute_not_found &&
@@ -7437,47 +7448,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 			}
 		}
 
-		if ( startd_ad && job_universe != CONDOR_UNIVERSE_GRID ) {
-			// Produce an environment description that is compatible with
-			// whatever the starter expects.
-			// Note: this code path is skipped when we flock and reconnect
-			//  after a disconnection (job lease).  In this case we don't
-			//  have a startd_ad!
-
-
-			// check for a job that has a V1 environment only, and the target OS uses a different separator
-			// HTCondor 9.x and earlier does not honor EnvDelim in MergeFrom(Ad) so we have to re-write Env
-			// for the Opsys of the STARTD.
-			// TODO: add a version check for STARTD's that honor the ATTR_JOB_ENV_V1_DELIM on ingestion
-			if (expanded_ad->Lookup(ATTR_JOB_ENV_V1) && ! expanded_ad->LookupExpr(ATTR_JOB_ENVIRONMENT))
-			{
-				Env env_obj;
-
-				// compare the delim that is natural to the startd to the delim that the job is currently using
-				// if they differ, and the job is using V1 environment (and STARTD is earlier than X.Y) we
-				// have to re-write the Env attribute and the EnvDelim attributes for target OS
-				std::string opsys;
-				startd_ad->LookupString(ATTR_OPSYS, opsys);
-				char target_delim = env_obj.GetEnvV1Delimiter(opsys.c_str());
-				char my_delim = env_obj.GetEnvV1Delimiter(*expanded_ad);
-				if (my_delim != target_delim) {
-					std::string env_error_msg;
-					// ingest using the current delim as specified in the job
-					bool env_ok = env_obj.MergeFrom(expanded_ad, env_error_msg);
-					if (env_ok) {
-						// write the environment back into the job with the OPSYS correct delimiter
-						env_ok = env_obj.InsertEnvV1IntoClassAd(*expanded_ad, env_error_msg, target_delim);
-						if ( ! env_ok) {
-							dprintf( D_FULLDEBUG, "Setting attr Environment because attr Env cannot be converted to opsys=%s : %s\n",
-								opsys.c_str(), env_error_msg.c_str());
-							// write a V2 Environment attribute into the job,
-							// this will take precedence over Env for STARTD's later than 6.7
-							env_ok = env_obj.InsertEnvIntoClassAd(*expanded_ad);
-						}
-					}
-				}
-			}
-		}
 		if ( attribute_value ) free(attribute_value);
 		if ( bigbuf2 ) free (bigbuf2);
 

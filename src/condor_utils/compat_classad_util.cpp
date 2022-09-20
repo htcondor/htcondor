@@ -259,6 +259,40 @@ bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_a
 	return false;
 }
 
+// returns true and appends the unparsed value of the given attribute
+// IFF the value might have $$() expansions in it
+// returns false if $$() is impossible (because int, etc).
+bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unparse_buf)
+{
+	tree = SkipExprEnvelope(tree);
+	if ( ! tree) return false;
+
+	if (tree->GetKind() == classad::ExprTree::LITERAL_NODE) {
+		classad::Value::NumberFactor factor;
+		const auto non_string_types = classad::Value::ValueType::ERROR_VALUE
+				| classad::Value::ValueType::UNDEFINED_VALUE
+				| classad::Value::ValueType::BOOLEAN_VALUE
+				| classad::Value::ValueType::INTEGER_VALUE
+				| classad::Value::ValueType::REAL_VALUE
+				| classad::Value::ValueType::RELATIVE_TIME_VALUE
+				| classad::Value::ValueType::ABSOLUTE_TIME_VALUE;
+
+		classad::Literal * lit = ((classad::Literal*)tree);
+		if (lit->getValue(factor).GetType() & non_string_types) {
+			return false; // these types cannot have $$() expansions
+		}
+
+		// simple string literals can be quickly checked for possible $$ expansion
+		const char * cstr;
+		if (lit->GetStringValue(cstr) && ! strchr(cstr, '$')) {
+			return false;
+		}
+	}
+
+	// append unparsed value into the buffer
+	return ExprTreeToString(tree, unparse_buf) != nullptr;
+}
+
 // return true if the expression is a comparision between an Attribute and a literal
 // returns attr name, the comparison operation, and the literal value if it returns true.
 bool ExprTreeIsAttrCmpLiteral(classad::ExprTree * tree, classad::Operation::OpKind & cmp_op, std::string & attr, classad::Value & value)
