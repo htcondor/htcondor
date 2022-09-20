@@ -29,8 +29,8 @@ pushStringListBack( std::vector< YourString > & v, StringList & sl ) {
 
 void
 pushVectorBack( std::vector< YourString > & arguments, const std::vector< std::string > & v ) {
-	for( unsigned i = 0; i < v.size(); ++i ) {
-		arguments.emplace_back(v[i] );
+	for(const auto &item: v) {
+		arguments.emplace_back(item);
 	}
 	arguments.emplace_back(NULLSTRING );
 }
@@ -202,8 +202,8 @@ int EC2GahpClient::ec2_vm_stop(	const std::string & service_url,
 	std::vector< YourString > arguments;
 	PUSH_COMMON_ARGUMENTS;
 	// Assumes we have fewer than 1000 instances.
-	for( size_t i = 0; i < instance_ids.size(); ++i ) {
-		arguments.emplace_back(instance_ids[i] );
+	for(const auto & instance_id : instance_ids) {
+		arguments.emplace_back(instance_id );
 	}
 	int cgf = callGahpFunction( command, arguments, result, medium_prio );
 	if( cgf != 0 ) { return cgf; }
@@ -1504,9 +1504,9 @@ int EC2GahpClient::create_stack(
 	arguments.emplace_back(templateURL );
 	arguments.emplace_back(capability );
 	std::vector< std::string > plist;
-	for( auto i = parameters.begin(); i != parameters.end(); ++i ) {
-		plist.push_back( i->first );
-		plist.push_back( i->second );
+	for(const auto & parameter : parameters) {
+		plist.push_back( parameter.first );
+		plist.push_back( parameter.second );
 	}
 	pushVectorBack( arguments, plist );
 
