@@ -20,7 +20,7 @@ consider error code ``85``.  On Linux systems, this is ``ERESTART``, which
 seems appropriate.)  If the ``executable`` exits
 with ``checkpoint_exit_code``, HTCondor will transfer the checkpoint to
 the submit node, and then immediately restart the ``executable`` in the
-same sandbox on the same machine, with same the ``arguments``.  This
+same sandbox on the same machine, with the same ``arguments``.  This
 immediate transfer makes the checkpoint available for continuing the job
 even if the job is interrupted in a way that doesn't allow for files to
 be transferred (e.g., power failure), or if the file transfer doesn't
