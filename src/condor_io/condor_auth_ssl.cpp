@@ -126,46 +126,42 @@ int g_last_verify_error_index = -1;
 
 // Symbols from libssl
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-static long (*SSL_CTX_ctrl_ptr)(SSL_CTX *, int, long, void *) = NULL;
+static decltype(&SSL_CTX_ctrl) SSL_CTX_ctrl_ptr = nullptr;
 #else
-static unsigned long (*SSL_CTX_set_options_ptr)(SSL_CTX *, unsigned long) = NULL;
+static decltype(&SSL_CTX_set_options) SSL_CTX_set_options_ptr = nullptr;
 #endif
-static int (*SSL_peek_ptr)(SSL *ssl, void *buf, int num) = NULL;
-static void (*SSL_CTX_free_ptr)(SSL_CTX *) = NULL;
-static int (*SSL_CTX_load_verify_locations_ptr)(SSL_CTX *, const char *, const char *) = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
-static SSL_CTX *(*SSL_CTX_new_ptr)(SSL_METHOD *) = NULL;
-#else
-static SSL_CTX *(*SSL_CTX_new_ptr)(const SSL_METHOD *) = NULL;
-#endif
-static int (*SSL_CTX_set_cipher_list_ptr)(SSL_CTX *, const char *) = NULL;
-static void (*SSL_CTX_set_verify_ptr)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)) = NULL;
-static void (*SSL_CTX_set_verify_depth_ptr)(SSL_CTX *, int) = NULL;
-static int (*SSL_CTX_use_PrivateKey_file_ptr)(SSL_CTX *, const char *, int) = NULL;
-static int (*SSL_CTX_use_certificate_chain_file_ptr)(SSL_CTX *, const char *) = NULL;
-static int (*SSL_accept_ptr)(SSL *) = NULL;
-static int (*SSL_connect_ptr)(SSL *) = NULL;
-static void (*SSL_free_ptr)(SSL *) = NULL;
-static int (*SSL_get_error_ptr)(const SSL *, int) = NULL;
-static X509 *(*SSL_get_peer_certificate_ptr)(const SSL *) = NULL;
-static long (*SSL_get_verify_result_ptr)(const SSL *) = NULL;
+static decltype(&SSL_peek) SSL_peek_ptr = nullptr;
+static decltype(&SSL_CTX_free) SSL_CTX_free_ptr = nullptr;
+static decltype(&SSL_CTX_load_verify_locations) SSL_CTX_load_verify_locations_ptr = nullptr;
+static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
+static decltype(&SSL_CTX_set_cipher_list) SSL_CTX_set_cipher_list_ptr = nullptr;
+static decltype(&SSL_CTX_set_verify) SSL_CTX_set_verify_ptr = nullptr;
+static decltype(&SSL_CTX_set_verify_depth) SSL_CTX_set_verify_depth_ptr = nullptr;
+static decltype(&SSL_CTX_use_PrivateKey_file) SSL_CTX_use_PrivateKey_file_ptr = nullptr;
+static decltype(&SSL_CTX_use_certificate_chain_file) SSL_CTX_use_certificate_chain_file_ptr = nullptr;
+static decltype(&SSL_accept) SSL_accept_ptr = nullptr;
+static decltype(&SSL_connect) SSL_connect_ptr = nullptr;
+static decltype(&SSL_free) SSL_free_ptr = nullptr;
+static decltype(&SSL_get_error) SSL_get_error_ptr = nullptr;
+static decltype(&SSL_get_peer_certificate) SSL_get_peer_certificate_ptr = nullptr;
+static decltype(&SSL_get_verify_result) SSL_get_verify_result_ptr = nullptr;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-static int (*SSL_library_init_ptr)() = NULL;
-static void (*SSL_load_error_strings_ptr)() = NULL;
+static decltype(&SSL_library_init) SSL_library_init_ptr = nullptr;
+static decltype(&SSL_load_error_strings) SSL_load_error_strings_ptr = nullptr;
 #else
-static int (*OPENSSL_init_ssl_ptr)(uint64_t, const OPENSSL_INIT_SETTINGS *) = NULL;
+static decltype(&OPENSSL_init_ssl) OPENSSL_init_ssl_ptr = nullptr;
 #endif
-static SSL *(*SSL_new_ptr)(SSL_CTX *) = NULL;
-static int (*SSL_read_ptr)(SSL *, void *, int) = NULL;
-static void (*SSL_set_bio_ptr)(SSL *, BIO *, BIO *) = NULL;
-static int (*SSL_write_ptr)(SSL *, const void *, int) = NULL;
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
-static SSL_METHOD *(*SSL_method_ptr)() = NULL;
+static decltype(&SSL_new) SSL_new_ptr = nullptr;
+static decltype(&SSL_read) SSL_read_ptr = nullptr;
+static decltype(&SSL_set_bio) SSL_set_bio_ptr = nullptr;
+static decltype(&SSL_write) SSL_write_ptr = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+static decltype(&SSLv23_method) SSL_method_ptr = nullptr;
 #else
-static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
+static decltype(&TLS_method) SSL_method_ptr = nullptr;
 #endif
-static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
-static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
+static decltype(&ERR_error_string) ERR_error_string_ptr = nullptr;
+static decltype(&ERR_get_error) ERR_get_error_ptr = nullptr;
 static decltype(&SSL_CTX_get_cert_store) SSL_CTX_get_cert_store_ptr = nullptr;
 static decltype(&PEM_read_X509) PEM_read_X509_ptr = nullptr;
 static decltype(&X509_STORE_add_cert) X509_STORE_add_cert_ptr = nullptr;
@@ -230,44 +226,40 @@ bool Condor_Auth_SSL::Initialize()
 #endif
 		 (dl_hdl = dlopen(LIBSSL_SO, RTLD_LAZY)) == NULL ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-		 !(SSL_CTX_ctrl_ptr = (long (*)(SSL_CTX *, int, long, void *))dlsym(dl_hdl, "SSL_CTX_ctrl")) ||
+		 !(SSL_CTX_ctrl_ptr = reinterpret_cast<decltype(SSL_CTX_ctrl_ptr)>(dlsym(dl_hdl, "SSL_CTX_ctrl"))) ||
 #else
-		 !(SSL_CTX_set_options_ptr = (unsigned long (*)(SSL_CTX *, unsigned long))dlsym(dl_hdl, "SSL_CTX_set_options")) ||
+		 !(SSL_CTX_set_options_ptr = reinterpret_cast<decltype(SSL_CTX_set_options_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_options"))) ||
 #endif
-		 !(SSL_peek_ptr = (int (*)(SSL *ssl, void *buf, int num))dlsym(dl_hdl, "SSL_peek")) ||
-		 !(SSL_CTX_free_ptr = (void (*)(SSL_CTX *))dlsym(dl_hdl, "SSL_CTX_free")) ||
-		 !(SSL_CTX_load_verify_locations_ptr = (int (*)(SSL_CTX *, const char *, const char *))dlsym(dl_hdl, "SSL_CTX_load_verify_locations")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
-		 !(SSL_CTX_new_ptr = (SSL_CTX *(*)(SSL_METHOD *))dlsym(dl_hdl, "SSL_CTX_new")) ||
-#else
-		 !(SSL_CTX_new_ptr = (SSL_CTX *(*)(const SSL_METHOD *))dlsym(dl_hdl, "SSL_CTX_new")) ||
-#endif
-		 !(SSL_CTX_set_cipher_list_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_set_cipher_list")) ||
-		 !(SSL_CTX_set_verify_ptr = (void (*)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)))dlsym(dl_hdl, "SSL_CTX_set_verify")) ||
-		 !(SSL_CTX_set_verify_depth_ptr = (void (*)(SSL_CTX *, int))dlsym(dl_hdl, "SSL_CTX_set_verify_depth")) ||
-		 !(SSL_CTX_use_PrivateKey_file_ptr = (int (*)(SSL_CTX *, const char *, int))dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file")) ||
-		 !(SSL_CTX_use_certificate_chain_file_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file")) ||
-		 !(SSL_accept_ptr = (int (*)(SSL *))dlsym(dl_hdl, "SSL_accept")) ||
-		 !(SSL_connect_ptr = (int (*)(SSL *))dlsym(dl_hdl, "SSL_connect")) ||
-		 !(SSL_free_ptr = (void (*)(SSL *))dlsym(dl_hdl, "SSL_free")) ||
-		 !(SSL_get_error_ptr = (int (*)(const SSL *, int))dlsym(dl_hdl, "SSL_get_error")) ||
+		 !(SSL_peek_ptr = reinterpret_cast<decltype(SSL_peek_ptr)>(dlsym(dl_hdl, "SSL_peek"))) ||
+		 !(SSL_CTX_free_ptr = reinterpret_cast<decltype(SSL_CTX_free_ptr)>(dlsym(dl_hdl, "SSL_CTX_free"))) ||
+		 !(SSL_CTX_load_verify_locations_ptr = reinterpret_cast<decltype(SSL_CTX_load_verify_locations_ptr)>(dlsym(dl_hdl, "SSL_CTX_load_verify_locations"))) ||
+		 !(SSL_CTX_new_ptr = reinterpret_cast<decltype(SSL_CTX_new_ptr)>(dlsym(dl_hdl, "SSL_CTX_new"))) ||
+		 !(SSL_CTX_set_cipher_list_ptr = reinterpret_cast<decltype(SSL_CTX_set_cipher_list_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_cipher_list"))) ||
+		 !(SSL_CTX_set_verify_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify"))) ||
+		 !(SSL_CTX_set_verify_depth_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_depth_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify_depth"))) ||
+		 !(SSL_CTX_use_PrivateKey_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_PrivateKey_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file"))) ||
+		 !(SSL_CTX_use_certificate_chain_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_certificate_chain_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file"))) ||
+		 !(SSL_accept_ptr = reinterpret_cast<decltype(SSL_accept_ptr)>(dlsym(dl_hdl, "SSL_accept"))) ||
+		 !(SSL_connect_ptr = reinterpret_cast<decltype(SSL_connect_ptr)>(dlsym(dl_hdl, "SSL_connect"))) ||
+		 !(SSL_free_ptr = reinterpret_cast<decltype(SSL_free_ptr)>(dlsym(dl_hdl, "SSL_free"))) ||
+		 !(SSL_get_error_ptr = reinterpret_cast<decltype(SSL_get_error_ptr)>(dlsym(dl_hdl, "SSL_get_error"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x30000000L || defined(LIBRESSL_VERSION_NUMBER)
-		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get_peer_certificate")) ||
+		 !(SSL_get_peer_certificate_ptr = reinterpret_cast<decltype(SSL_get_peer_certificate_ptr)>(dlsym(dl_hdl, "SSL_get_peer_certificate"))) ||
 #else
-		 !(SSL_get_peer_certificate_ptr = (X509 *(*)(const SSL *))dlsym(dl_hdl, "SSL_get1_peer_certificate")) ||
+		 !(SSL_get_peer_certificate_ptr = reinterpret_cast<decltype(SSL_get_peer_certificate_ptr)>(dlsym(dl_hdl, "SSL_get1_peer_certificate"))) ||
 #endif
-		 !(SSL_get_verify_result_ptr = (long (*)(const SSL *))dlsym(dl_hdl, "SSL_get_verify_result")) ||
+		 !(SSL_get_verify_result_ptr = reinterpret_cast<decltype(SSL_get_verify_result_ptr)>(dlsym(dl_hdl, "SSL_get_verify_result"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-		 !(SSL_library_init_ptr = (int (*)())dlsym(dl_hdl, "SSL_library_init")) ||
-		 !(SSL_load_error_strings_ptr = (void (*)())dlsym(dl_hdl, "SSL_load_error_strings")) ||
+		 !(SSL_library_init_ptr = reinterpret_cast<decltype(SSL_library_init_ptr)>(dlsym(dl_hdl, "SSL_library_init"))) ||
+		 !(SSL_load_error_strings_ptr = reinterpret_cast<decltype(SSL_load_error_strings_ptr)>(dlsym(dl_hdl, "SSL_load_error_strings"))) ||
 #else
-		 !(OPENSSL_init_ssl_ptr = (int (*)(uint64_t, const OPENSSL_INIT_SETTINGS *))dlsym(dl_hdl, "OPENSSL_init_ssl")) ||
+		 !(OPENSSL_init_ssl_ptr = reinterpret_cast<decltype(OPENSSL_init_ssl_ptr)>(dlsym(dl_hdl, "OPENSSL_init_ssl"))) ||
 #endif
-		 !(SSL_new_ptr = (SSL *(*)(SSL_CTX *))dlsym(dl_hdl, "SSL_new")) ||
-		 !(SSL_read_ptr = (int (*)(SSL *, void *, int))dlsym(dl_hdl, "SSL_read")) ||
-		 !(SSL_set_bio_ptr = (void (*)(SSL *, BIO *, BIO *))dlsym(dl_hdl, "SSL_set_bio")) ||
-		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
-		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
+		 !(SSL_new_ptr = reinterpret_cast<decltype(SSL_new_ptr)>(dlsym(dl_hdl, "SSL_new"))) ||
+		 !(SSL_read_ptr = reinterpret_cast<decltype(SSL_read_ptr)>(dlsym(dl_hdl, "SSL_read"))) ||
+		 !(SSL_set_bio_ptr = reinterpret_cast<decltype(SSL_set_bio_ptr)>(dlsym(dl_hdl, "SSL_set_bio"))) ||
+		 !(SSL_write_ptr = reinterpret_cast<decltype(SSL_write_ptr)>(dlsym(dl_hdl, "SSL_write"))) ||
+		 !(ERR_error_string_ptr = reinterpret_cast<decltype(ERR_error_string_ptr)>(dlsym(dl_hdl, "ERR_error_string"))) ||
 		 !(SSL_CTX_get_cert_store_ptr = reinterpret_cast<decltype(SSL_CTX_get_cert_store_ptr)>(dlsym(dl_hdl, "SSL_CTX_get_cert_store"))) ||
 		 !(PEM_read_X509_ptr = reinterpret_cast<decltype(PEM_read_X509_ptr)>(dlsym(dl_hdl, "PEM_read_X509"))) ||
 		 !(X509_STORE_add_cert_ptr = reinterpret_cast<decltype(X509_STORE_add_cert_ptr)>(dlsym(dl_hdl, "X509_STORE_add_cert"))) ||
@@ -279,11 +271,11 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
-		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
+		 !(ERR_get_error_ptr = reinterpret_cast<decltype(ERR_get_error_ptr)>(dlsym(dl_hdl, "ERR_get_error"))) ||
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "SSLv23_method")))
 #else
-		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "TLS_method"))
+		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "TLS_method")))
 #endif
 		 ) {
 
