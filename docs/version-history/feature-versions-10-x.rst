@@ -15,6 +15,13 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-100x`.
 
+- We changed the semantics of relative paths in the ``output``, ``error``, and
+  ``transfer_output_remaps`` submit file commands.  These commands now create
+  the directories named in relative paths if they do not exist.  This could
+  cause jobs that used to go on hold (because they couldn't write their
+  ``output`` or ``error`` files, or a remapped output file) to instead succeed.
+  :jira:`1325`
+
 New Features:
 
 - None.
