@@ -133,11 +133,7 @@ static decltype(&SSL_CTX_set_options) SSL_CTX_set_options_ptr = nullptr;
 static decltype(&SSL_peek) SSL_peek_ptr = nullptr;
 static decltype(&SSL_CTX_free) SSL_CTX_free_ptr = nullptr;
 static decltype(&SSL_CTX_load_verify_locations) SSL_CTX_load_verify_locations_ptr = nullptr;
-#if OPENSSL_VERSION_NUMBER < 0x10000000L
 static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
-#else
-static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
-#endif
 static decltype(&SSL_CTX_set_cipher_list) SSL_CTX_set_cipher_list_ptr = nullptr;
 static decltype(&SSL_CTX_set_verify) SSL_CTX_set_verify_ptr = nullptr;
 static decltype(&SSL_CTX_set_verify_depth) SSL_CTX_set_verify_depth_ptr = nullptr;
@@ -159,7 +155,7 @@ static decltype(&SSL_new) SSL_new_ptr = nullptr;
 static decltype(&SSL_read) SSL_read_ptr = nullptr;
 static decltype(&SSL_set_bio) SSL_set_bio_ptr = nullptr;
 static decltype(&SSL_write) SSL_write_ptr = nullptr;
-#if OPENSSL_VERSION_NUMBER < 0x10000000L || defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 static decltype(&SSLv23_method) SSL_method_ptr = nullptr;
 #else
 static decltype(&TLS_method) SSL_method_ptr = nullptr;
@@ -276,7 +272,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
 		 !(ERR_get_error_ptr = reinterpret_cast<decltype(ERR_get_error_ptr)>(dlsym(dl_hdl, "ERR_get_error"))) ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "SSLv23_method")))
 #else
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "TLS_method")))
