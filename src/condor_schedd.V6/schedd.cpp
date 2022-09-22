@@ -9618,6 +9618,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 		extra_env.Import(); // copy schedd's environment
 	}
 	else {
+		std::string msg;
 		extra_env.MergeFrom(*env);
 	}
 	env = &extra_env;
@@ -10057,7 +10058,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	bool is_executable;
 	shadow_rec *retval = NULL;
 	Env envobject;
-	MyString env_error_msg;
+	std::string env_error_msg;
     int niceness = 0;
 	std::string tmpCwd;
 	int inouterr[3] = {-1, -1, -1};
@@ -10312,7 +10313,7 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		goto wrapup;
 	}
 	
-	if(!envobject.MergeFrom(userJob,&env_error_msg)) {
+	if(!envobject.MergeFrom(userJob,env_error_msg)) {
 		dprintf(D_ALWAYS,"Failed to read job environment: %s\n",
 				env_error_msg.c_str());
 		goto wrapup;
