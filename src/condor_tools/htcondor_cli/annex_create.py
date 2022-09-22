@@ -34,6 +34,8 @@ TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 # do that for now and just tell the user to size their requests with the
 # units appropriate to the queue.
 #
+# ram_per_node is in GB.
+#
 SYSTEM_TABLE = {
 
     # The key is currently both the value of the command-line option
@@ -57,6 +59,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       68,
+                "ram_per_node":         96,
 
                 "max_jobs_in_queue":    50,
             },
@@ -65,6 +68,7 @@ SYSTEM_TABLE = {
                 "max_duration":         2 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       68,
+                "ram_per_node":         96,
 
                 "max_jobs_in_queue":    1,
             },
@@ -73,6 +77,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       48,
+                "ram_per_node":         192,
 
                 "max_jobs_in_queue":    20,
             },
@@ -238,7 +243,7 @@ SYSTEM_TABLE = {
                 "max_duration":         60 * 60 * 72, # FIXME
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,
-                "ram_per_node":         244, # GB; what are the others?
+                "ram_per_node":         244,
 
                 "max_jobs_in_queue":    1000, # FIXME
             },
@@ -730,12 +735,29 @@ def system_specific_constraints(
             error_string = f"The '{queue_name}' queue is a whole-node queue.  You can't specify CPUs (--cpus) or memory (--mem_mb)."
             raise ValueError(error_string)
 
+        # Don't allow the user to request more than max nodes.
+        mnpj = queue['max_nodes_per_job']
+        if nodes > mnpj:
+            error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job."
+            raise ValueError(error_string)
+
     # (D) If the queue's allocation type is 'cores_or_ram', you must specify
     # CPUs or memory.  (This might not actually be true, technically.)
-    # This check is presently redundant with check (A).
+    # The first check is presently redundant with check (A).
+    #
+    # When you specify CPUs or memory, you must specify less than the max.
     if queue['allocation_type'] == 'cores_or_ram':
         if cpus is None and mem_mb is None:
             error_string = f"The '{queue_name}' queue is a shared-node queue.  You must specify CPUs (--cpus) or memory (--mem-mb)."
+            raise ValueError(error_string)
+
+        rpn = queue['ram_per_node'] * 1024
+        if mem_mb > rpn:
+            error_string = f"The '{queue_name}' queue is limited to {rpn} MB per node."
+            raise ValueError(error_string)
+
+        if cpus > queue['cores_per_node']:
+            error_string = f"The '{queue_name} queue is limited to {queue['cores_per_node']} cores per node."
             raise ValueError(error_string)
 
     # (E) You must not specify a lifetime longer than the queue's duration.
