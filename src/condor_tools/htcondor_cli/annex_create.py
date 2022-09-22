@@ -688,6 +688,31 @@ def create_annex_token(logger, type):
         raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
 
 
+def system_specific_constraints(
+    system,
+    queue_name,
+    nodes,
+    lifetime,
+    allocation,
+    cpus,
+    mem_mb,
+):
+    system = SYSTEM_TABLE[system]
+
+    # Is queue a valid, known, and supported?
+    queue = system['queues'].get(queue_name)
+    if queue is None:
+        pretty_name = system['pretty_name']
+        queue_list = "\n    ".join(system['queues'])
+        default_queue = system['default_queue']
+
+        error_string = f"'{queue_name}' is not a supported queue on the system named '{pretty_name}'."
+        error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
+        raise ValueError(error_string)
+
+    # ...
+
+
 def annex_inner_func(
     logger,
     annex_name,
@@ -713,12 +738,25 @@ def annex_inner_func(
 
         system = queue_at_system.casefold()
         if system not in SYSTEM_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a known system."
+            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a supported system."
+            system_list = "\n    ".join(SYSTEM_TABLE.keys())
+            error_string = f"{error_string}  Supported systems are:\n    {system_list}"
         else:
             default_queue = SYSTEM_TABLE[system]['default_queue']
             queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system]['queues']])
             error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
 
+        raise ValueError(error_string)
+
+    # We use this same method to determine the user name in `htcondor job`,
+    # so even if it's wrong, it will at least consistently so.
+    username = getpass.getuser()
+
+    system = system.casefold()
+    if system not in SYSTEM_TABLE:
+        error_string = f"'{system}' is not the name of a supported system."
+        system_list = "\n    ".join(SYSTEM_TABLE.keys())
+        error_string = f"{error_string}  Supported systems are:\n    {system_list}"
         raise ValueError(error_string)
 
     #
@@ -734,14 +772,7 @@ def annex_inner_func(
     #
     # .. although it should maybe also include the queue name and size.
     #
-
-    # We use this same method to determine the user name in `htcondor job`,
-    # so even if it's wrong, it will at least consistently so.
-    username = getpass.getuser()
-
-    system = system.casefold()
-    if system not in SYSTEM_TABLE:
-        raise ValueError(f"{system} is not a known system.")
+    system_specific_constraints(system, queue_name, nodes, lifetime, allocation, cpus, mem_mb)
 
     # Location of the local universe script files
     local_script_dir = (
