@@ -104,23 +104,12 @@ public:
 	int  count();
 
 	StringList * getExpiredKeys();
-	StringList * getKeysForPeerAddress(char const *addr);
-	StringList * getKeysForProcess(char const *parent_unique_id,int pid);
 
 private:
 	void copy_storage(const KeyCache &kc);
 	void delete_storage();
 
-	typedef HashTable<std::string, SimpleList<KeyCacheEntry *>* > KeyCacheIndex;
-
 	HashTable<std::string, KeyCacheEntry*> *key_table;
-	KeyCacheIndex *m_index;
-
-	void addToIndex(KeyCacheEntry *);
-	void removeFromIndex(KeyCacheEntry *);
-	void addToIndex(KeyCacheIndex *,std::string const &index,KeyCacheEntry *);
-	void removeFromIndex(KeyCacheIndex *,std::string const &index,KeyCacheEntry *);
-	void makeServerUniqueId(std::string const &parent_id,int server_pid,std::string& result);
 };
 
 

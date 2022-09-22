@@ -3172,44 +3172,6 @@ SecManStartCommand::PopulateKeyExchange()
 }
 
 
-// Given a sinful string, clear out any associated sessions (incoming or outgoing)
-void
-SecMan::invalidateHost(const char * sin)
-{
-	StringList *keyids = session_cache->getKeysForPeerAddress(sin);
-	if( !keyids ) {
-		return;
-	}
-
-	keyids->rewind();
-	char const *keyid;
-	while( (keyid=keyids->next()) ) {
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s\n", keyid, sin);
-		}
-		invalidateKey(keyid);
-	}
-	delete keyids;
-}
-
-void
-SecMan::invalidateByParentAndPid(const char * parent, int pid) {
-	StringList *keyids = session_cache->getKeysForProcess(parent,pid);
-	if( !keyids ) {
-		return;
-	}
-
-	keyids->rewind();
-	char const *keyid;
-	while( (keyid=keyids->next()) ) {
-		if (IsDebugVerbose(D_SECURITY)) {
-			dprintf (D_SECURITY, "KEYCACHE: removing session %s for %s pid %d\n", keyid, parent, pid);
-		}
-		invalidateKey(keyid);
-	}
-	delete keyids;
-}
-
 bool SecMan :: invalidateKey(const char * key_id)
 {
     bool removed = true;
