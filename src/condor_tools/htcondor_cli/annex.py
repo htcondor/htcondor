@@ -108,7 +108,8 @@ class Create(Verb):
             "metavar": "SECONDS",
             "dest": "startd_noclaim_shutdown",
             "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
-            "default": "300",
+            "default": 300,
+            "type": int,
         },
 
     }

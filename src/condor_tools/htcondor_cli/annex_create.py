@@ -45,6 +45,7 @@ SYSTEM_TABLE = {
         "default_queue":    "normal",
         "batch_system":     "SLURM",
         "script_base":      "hpc",
+        "allocation_reqd":  False,
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -84,6 +85,7 @@ SYSTEM_TABLE = {
         "default_queue":    "compute",
         "batch_system":     "SLURM",
         "script_base":      "hpc",
+        "allocation_reqd":  False,
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -132,6 +134,7 @@ SYSTEM_TABLE = {
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
         "script_base":      "hpc",
+        "allocation_reqd":  False,
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -171,6 +174,7 @@ SYSTEM_TABLE = {
         "default_queue":    "RM",
         "batch_system":     "SLURM",
         "script_base":      "hpc",
+        "allocation_reqd":  False,
 
         # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
@@ -223,6 +227,7 @@ SYSTEM_TABLE = {
         "default_queue":    "cpu",
         "batch_system":     "HTCondor",
         "script_base":      "path-facility",
+        "allocation_reqd":  False,
 
         "queues": {
             "cpu": {
@@ -539,7 +544,7 @@ def invoke_pilot_script(
         ssh_target,
         str(remote_script_dir / f"{script_base}.sh"),
         system,
-        startd_noclaim_shutdown,
+        str(startd_noclaim_shutdown),
         annex_name,
         queue_name,
         collector,
@@ -692,14 +697,15 @@ def system_specific_constraints(
     system,
     queue_name,
     nodes,
-    lifetime,
+    lifetime_in_seconds,
     allocation,
     cpus,
     mem_mb,
+    idletime_in_seconds,
 ):
     system = SYSTEM_TABLE[system]
 
-    # Is queue a valid, known, and supported?
+    # (A) Is the queue a valid, known, and supported?
     queue = system['queues'].get(queue_name)
     if queue is None:
         pretty_name = system['pretty_name']
@@ -710,7 +716,51 @@ def system_specific_constraints(
         error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
         raise ValueError(error_string)
 
-    # ...
+    # (B) If the user did not specify CPUs or memory, then the queue's
+    # allocation type must be 'node'.  (We supply a default number of nodes.)
+    if cpus is None and mem_mb is None:
+        if queue['allocation_type'] != 'node':
+            error_string = f"The '{queue_name}' queue is not a whole-node queue.  You must specify either CPUs (--cpus) or memory (--mem_mb)."
+            raise ValueError(error_string)
+
+    # (C) If the queue's allocation type is 'node', then specifying CPUs or
+    # memory is pointless.
+    if queue['allocation_type'] == 'node':
+        if cpus is not None or mem_mb is not None:
+            error_string = f"The '{queue_name}' queue is a whole-node queue.  You can't specify CPUs (--cpus) or memory (--mem_mb)."
+            raise ValueError(error_string)
+
+    # (D) If the queue's allocation type is 'cores_or_ram', you must specify
+    # CPUs or memory.  (This might not actually be true, technically.)
+    # This check is presently redundant with check (A).
+    if queue['allocation_type'] == 'cores_or_ram':
+        if cpus is None and mem_mb is None:
+            error_string = f"The '{queue_name}' queue is a shared-node queue.  You must specify CPUs (--cpus) or memory (--mem-mb)."
+            raise ValueError(error_string)
+
+    # (E) You must not specify a lifetime longer than the queue's duration.
+    if queue['max_duration'] < lifetime_in_seconds:
+        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the lifetime ({lifetime_in_seconds} seconds) you specified."
+        raise ValueError(error_string)
+
+    # (F) You must not specify an idletime longer than the queue's duration.
+    if queue['max_duration'] < idletime_in_seconds:
+        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the lifetime ({idletime_in_seconds} seconds) you specified."
+        raise ValueError(error_string)
+
+    # (G) You must not specify an idletime longer than the lifetime.
+    if lifetime_in_seconds < idletime_in_seconds:
+        error_string = f"You may not specify an idle time longer than the lifetime."
+        raise ValueError(error_string)
+
+    # (H) Some systems require an allocation be specified, even if it's
+    # your only one.
+    if allocation is None and system['allocation_reqd']:
+        pretty_name = system['pretty_name']
+        error_string = f"The system named '{pretty_name}' requires you to specify a project (--project), even if you only have one."
+        raise ValueError(error_string)
+
+    # FIXME: GPU queue requirements
 
 
 def annex_inner_func(
@@ -759,20 +809,19 @@ def annex_inner_func(
         error_string = f"{error_string}  Supported systems are:\n    {system_list}"
         raise ValueError(error_string)
 
+
     #
     # We'll need to validate the requested nodes (or CPUs and memory)
     # against the requested queue[-system pair].  We also need to
-    # check the lifetime (and idle time, once we support it).  Once
-    # all of that's been validated, we should print something like:
+    # check the lifetime (and idle time, once we support it).
     #
-    #   Once established by Stampede 2, the annex will be available to
-    #   run your jobs for no more than 48 hours (use --duration to change).
-    #   It will self-destruct after 20 minutes of inactivity (use
-    #   --idle to change).
-    #
-    # .. although it should maybe also include the queue name and size.
-    #
-    system_specific_constraints(system, queue_name, nodes, lifetime, allocation, cpus, mem_mb)
+
+    # As reminders for when we fix lifetime being specified in seconds.
+    lifetime_in_seconds = lifetime
+    idletime_in_seconds = startd_noclaim_shutdown
+
+    system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds)
+
 
     # Location of the local universe script files
     local_script_dir = (
