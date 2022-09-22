@@ -405,7 +405,6 @@ org.htcondor.version="%s"
 
         `:VERSION-DISTRO` is always listed.  The following are added if --one-tag is not specified:
         - `:SERIES-DISTRO` (e.g. `9.x-el7`)
-        - `:MAJOR.MINOR-DISTRO` (e.g. `9.11-el7`)
         - `:latest-DISTRO` or `:lts-DISTRO` if appropriate
         - `:DISTRO` as a synonym for `:latest-DISTRO` if appropriate
         - `:latest` or `:lts` for the default distro defined in `DISTRO_FOR_LATEST_TAGS`
@@ -418,8 +417,6 @@ org.htcondor.version="%s"
 
         latest_version_for_this_series = self.known_versions.version_lists_by_series[self.series][-1]
         if latest_version_for_this_series == real_version:
-            major_minor = ".".join(real_version.split(".")[0:2])
-            tags.add(f"{major_minor}-{distro}")
             tags.add(f"{self.series}-{distro}")
             if self.series == self.known_versions.latest_series:
                 tags.add(f"latest-{distro}")
