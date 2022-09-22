@@ -3021,8 +3021,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
-		gridType == "azure" ||
-		gridType == "boinc") {
+		gridType == "azure") {
 		// We're ok
 		// Values are case-insensitive for gridmanager, so we don't need to change case
 		return true;
@@ -3530,24 +3529,6 @@ int SubmitHash::SetGridParams()
 		SUBMIT_KEY_EC2TagPrefix, ATTR_EC2_TAG_PREFIX, gridType );
 	handleAVPairs( SUBMIT_KEY_CloudLabelNames, ATTR_CLOUD_LABEL_NAMES,
 		SUBMIT_KEY_CloudLabelPrefix, ATTR_CLOUD_LABEL_PREFIX, gridType );
-
-	if ( (tmp = submit_param( SUBMIT_KEY_BoincAuthenticatorFile,
-							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
-		// check authenticator file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				push_error(stderr, "Failed to open authenticator file %s (%s)\n", 
-								 full_path(tmp), strerror(errno));
-				ABORT_AND_RETURN( 1 );
-			}
-			fclose(fp);
-		}
-		AssignJobString(ATTR_BOINC_AUTHENTICATOR_FILE, full_path(tmp));
-		free( tmp );
-	} else if (gridType == "boinc" && ! job->Lookup(ATTR_BOINC_AUTHENTICATOR_FILE)) {
-		push_error(stderr, "BOINC jobs require a \"%s\" parameter\n", SUBMIT_KEY_BoincAuthenticatorFile );
-		ABORT_AND_RETURN( 1 );
-	}
 
 	//
 	// GCE grid-type submit attributes
@@ -4564,14 +4545,13 @@ int SubmitHash::SetExecutable()
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
-	// In vm universe and ec2/boinc grid jobs, 'Executable'
+	// In vm universe and ec2/gce grid jobs, 'Executable'
 	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   ( gridType == "ec2" ||
 			 gridType == "gce"  ||
-			 gridType == "azure"  ||
-			 gridType == "boinc" ) ) ) {
+			 gridType == "azure" ) ) ) {
 		ignore_it = true;
 		role = SFR_PSEUDO_EXECUTABLE;
 	}
@@ -4869,7 +4849,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, azure, or boinc\n",
+				"Must be one of: condor, batch, nordugrid, arc, ec2, gce or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -5192,7 +5172,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2ParamNames, ATTR_EC2_PARAM_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_BoincAuthenticatorFile,ATTR_BOINC_AUTHENTICATOR_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAuthFile, ATTR_GCE_AUTH_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceImage, ATTR_GCE_IMAGE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5692,8 +5671,7 @@ int SubmitHash::SetImageSize()
 				if (JobUniverse != CONDOR_UNIVERSE_GRID ||
 					(gridType != "ec2" &&
 					 gridType != "gce" &&
-					 gridType != "azure" &&
-					 gridType != "boinc"))
+					 gridType != "azure"))
 				{
 					exe_size_kb = calc_image_size_kb(buffer.c_str());
 				}
@@ -9450,7 +9428,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 			pseudo = true;
 		} else if (uni == CONDOR_UNIVERSE_GRID) {
 			YourStringNoCase gridType(sub_type.c_str());
-			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure" || sub_type == "boinc");
+			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure");
 		}
 	}
 
