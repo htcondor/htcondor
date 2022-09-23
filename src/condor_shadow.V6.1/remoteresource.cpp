@@ -2485,6 +2485,10 @@ RemoteResource::getSecSessionInfo(
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
 		return false;
 	}
+	if (!m_claim_session.secSessionId() || !m_filetrans_session.secSessionId()) {
+		dprintf(D_ALWAYS,"Request for security session info from starter, but claim id has no security session, so ignoring.\n");
+		return false;
+	}
 
 		// For the reconnect session, we have to use something stable that
 		// is guaranteed to be the same when the shadow restarts later
