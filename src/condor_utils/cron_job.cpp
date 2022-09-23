@@ -94,8 +94,8 @@ CronJob::~CronJob( )
 	CleanAll( );
 
 	// Delete the buffers
-	delete m_stdOutBuf;
-	delete m_stdErrBuf;
+	delete m_stdOutBuf; m_stdOutBuf = nullptr;
+	delete m_stdErrBuf; m_stdErrBuf = nullptr;
 
 	delete m_params;
 }
@@ -700,6 +700,12 @@ CronJob::StderrHandler ( int   /*pipe*/ )
 {
 	char			buf[STDERR_READBUF_SIZE];
 	int				bytes;
+
+	// In case we are called after we closed the pipe, do nothing or we might abort. HTCONDOR-1343
+	if (m_stdErr < 0) {
+		if (m_stdErrBuf) m_stdErrBuf->Flush();
+		return 0;
+	}
 
 	// Read a block from it
 	bytes = daemonCore->Read_Pipe( m_stdErr, buf, STDERR_READBUF_SIZE );
