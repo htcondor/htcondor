@@ -136,7 +136,7 @@ class Env {
 		// Add (or overwrite) environment entries from an input string.
 		// If the string is not in V2Quoted format, this function
 		// returns false and generates an error message.
-	bool MergeFromV2Quoted( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV2Quoted( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
@@ -147,12 +147,13 @@ class Env {
 		// This should only be called for strings in raw V1 format.
 	bool MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg );
 	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg );
+	bool MergeFromV1AutoDelim( const char *delimitedString, std::string & error_msg, char delim=0 );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1or2 format,
 		// which is designed to allow version detection in a backward
 		// compatible way.
-	bool MergeFromV1or2Raw( const char *delimitedString, MyString *error_msg );
+	bool MergeFromV1or2Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from a NULL-terminated
 		// array of key=value strings.  This function returns false
@@ -171,7 +172,6 @@ class Env {
 	void MergeFrom( Env const &env );
 
 		// Add (or overwrite) environment entries from a ClassAd.
-	bool MergeFrom( const ClassAd *ad, MyString *error_msg );
 	bool MergeFrom( const ClassAd *ad, std::string & error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
@@ -284,7 +284,7 @@ class Env {
 
 		// Convert a V2Quoted string to a V2Raw string.
 		// (IsV2QuotedString() must be true or this will EXCEPT.)
-	static bool V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg);
+	static bool V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *error_msg=nullptr);
 
 	bool InputWasV1() const {return input_was_v1;}
 
