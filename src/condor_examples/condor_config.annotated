@@ -1319,14 +1319,6 @@ benchmarks_kflops_job_load = 1.0
 ##  represent the default).
 #NUM_CPUS = N
 
-##  If you never want Condor to detect more the "N" CPUs, uncomment this
-##  line out. You must restart the startd for this setting to take 
-##  effect. If set to 0 or a negative number, it is ignored. 
-##  By default, it is ignored. Otherwise, it must be a positive  
-##  integer ("N" is not a valid setting, that's just used to
-##  represent the default).
-#MAX_NUM_CPUS = N
-
 ##  Normally, Condor will automatically detect the amount of physical
 ##  memory available on your machine.  Define MEMORY to tell Condor
 ##  how much physical memory (in MB) your machine has, overriding the
