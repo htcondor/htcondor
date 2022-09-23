@@ -33,16 +33,16 @@ class SecMan;
 class KeyCacheEntry {
  public:
     KeyCacheEntry(
-			char const * id,
-			const condor_sockaddr* addr,
+			const std::string& id,
+			const std::string& addr,
 			const KeyInfo * key,
 			const ClassAd * policy,
 			int expiration,
 			int session_lease
 			);
     KeyCacheEntry(
-			char const * id,
-			const condor_sockaddr* addr,
+			const std::string& id,
+			const std::string& addr,
 			std::vector<KeyInfo *> key,
 			const ClassAd * policy,
 			int expiration,
@@ -53,8 +53,8 @@ class KeyCacheEntry {
 
 	const KeyCacheEntry& operator=(const KeyCacheEntry &kc);
 
-    char*                 id();
-	const condor_sockaddr*         addr();
+	const std::string&    id() const { return _id; }
+	const std::string&    addr() const { return _addr; }
     KeyInfo*              key();
     KeyInfo*              key(Protocol protocol);
     ClassAd*              policy();
@@ -73,8 +73,8 @@ class KeyCacheEntry {
 	void delete_storage();
 	void copy_storage(const KeyCacheEntry &);
 
-    char *               _id;
-    condor_sockaddr*              _addr;
+	std::string           _id;
+	std::string           _addr;
 	std::vector<KeyInfo*> _keys;
     ClassAd*             _policy;
     int                  _expiration;

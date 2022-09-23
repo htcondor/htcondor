@@ -24,19 +24,10 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
-	if (id_param) {
-		_id = strdup(id_param);
-	} else {
-		_id = NULL;
-	}
-
-	if (addr_param) {
-		_addr = new condor_sockaddr(*addr_param);
-	} else {
-		_addr = NULL;
-	}
-
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+	: _id(id_param)
+	, _addr(addr_param)
+{
 	if (key_param) {
 		_keys.push_back(new KeyInfo(*key_param));
 		_preferred_protocol = key_param->getProtocol();
@@ -59,19 +50,10 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr
 
 // NOTE: In this constructor, we assume ownership of the KeyInfo objects
 //   in the vector. In the single-KeyInfo constructor, we copy it.
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
-	if (id_param) {
-		_id = strdup(id_param);
-	} else {
-		_id = NULL;
-	}
-
-	if (addr_param) {
-		_addr = new condor_sockaddr(*addr_param);
-	} else {
-		_addr = NULL;
-	}
-
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+	: _id(id_param)
+	, _addr(addr_param)
+{
 	_keys = key_param;
 	if (_keys.empty()) {
 		_preferred_protocol = CONDOR_NO_PROTOCOL;
@@ -107,14 +89,6 @@ const KeyCacheEntry& KeyCacheEntry::operator=(const KeyCacheEntry &copy) {
 		copy_storage(copy);
 	}
 	return *this;
-}
-
-char* KeyCacheEntry::id() {
-	return _id;
-}
-
-const condor_sockaddr*  KeyCacheEntry::addr() {
-	return _addr;
 }
 
 KeyInfo* KeyCacheEntry::key() {
@@ -180,17 +154,8 @@ void KeyCacheEntry::renewLease() {
 }
 
 void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
-	if (copy._id) {
-		_id = strdup(copy._id);
-	} else {
-		_id = NULL;
-	}
-
-	if (copy._addr) {
-    	_addr = new condor_sockaddr(*(copy._addr));
-	} else {
-    	_addr = NULL;
-	}
+	_id = copy._id;
+	_addr = copy._addr;
 
 	for (auto key : copy._keys) {
 		_keys.push_back(new KeyInfo(*key));
@@ -211,12 +176,6 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 
 
 void KeyCacheEntry::delete_storage() {
-	if (_id) {
-        free( _id );
-	}
-	if (_addr) {
-	  delete _addr;
-	}
 	for (auto key : _keys) {
 		delete key;
 	}
@@ -351,10 +310,10 @@ void KeyCache::expire(KeyCacheEntry *e) {
 	time_t key_exp = e->expiration();
 	char const *expiration_type = e->expirationType();
 
-	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", e->id(), expiration_type, ctime(&key_exp) );
+	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", e->id().c_str(), expiration_type, ctime(&key_exp) );
 
 	// remove its reference from the hash table
-	remove(e->id());       // This should do it
+	remove(e->id().c_str());       // This should do it
 }
 
 StringList * KeyCache::getExpiredKeys() {

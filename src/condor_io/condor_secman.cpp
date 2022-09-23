@@ -1539,7 +1539,7 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
-					m_enc_key->id(), m_session_key.c_str());
+					m_enc_key->id().c_str(), m_session_key.c_str());
 			m_sec_man.key_printf(D_SECURITY, m_enc_key->key());
 			dPrintAd( D_SECURITY, m_auth_info );
 		}
@@ -1839,7 +1839,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		if (m_have_session) {
 			// UDP w/ session
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", m_enc_key->id());
+				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", m_enc_key->id().c_str());
 			}
 
 			SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_AUTHENTICATION );
@@ -2648,8 +2648,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 
 				// This makes a copy of the policy ad, so we don't
 				// have to. 
-			condor_sockaddr peer_addr = m_sock->peer_addr();
-			KeyCacheEntry tmp_key( sesid, &peer_addr, keyvec,
+			KeyCacheEntry tmp_key( sesid, m_sock->get_connect_addr(), keyvec,
 								   &m_auth_info, expiration_time,
 								   session_lease ); 
 			dprintf (D_SECURITY, "SECMAN: added session %s to cache for %s seconds (%ds lease).\n", sesid, dur, session_lease);
@@ -3214,9 +3213,7 @@ void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
     if (keyEntry) {
         char * commands = NULL;
         keyEntry->policy()->LookupString(ATTR_SEC_VALID_COMMANDS, &commands);
-		std::string addr;
-		if (keyEntry->addr())
-			addr = keyEntry->addr()->to_sinful();
+		std::string addr = keyEntry->addr();
     
         // Remove all commands from the command map
         if (commands) {
@@ -3874,18 +3871,18 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	ASSERT(sesid);
 
 	std::string new_peer_sinful;
-	condor_sockaddr peer_addr;
 	if (peer_sinful) {
 		// Rewrite the peer's sinful string when it has multiple addresses
 		// just like a future Sock will when connecting.
 		// This ensures the session will be found in command_map when it's
 		// not explicitly requested.
-		if (Sock::chooseAddrFromAddrs(peer_sinful, new_peer_sinful, &peer_addr)) {
+		if (Sock::chooseAddrFromAddrs(peer_sinful, new_peer_sinful)) {
 			peer_sinful = new_peer_sinful.c_str();
 		} else {
-			if (!peer_addr.from_sinful(peer_sinful)) {
+			Sinful sin(peer_sinful);
+			if (!sin.valid()) {
 				dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
-				        "sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
+				        "sinful '%s' is invalid\n",sesid,peer_sinful);
 				return false;
 			}
 		}
@@ -3999,7 +3996,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 		keybuf = NULL;
 	}
 
-	KeyCacheEntry key(sesid,peer_sinful ? &peer_addr : NULL,keys_list,&policy,expiration_time,0);
+	KeyCacheEntry key(sesid,peer_sinful ? peer_sinful : "",keys_list,&policy,expiration_time,0);
 
 	if( !session_cache->insert(key) ) {
 		KeyCacheEntry *existing = NULL;
