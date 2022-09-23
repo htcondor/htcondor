@@ -3211,21 +3211,19 @@ bool SecMan :: invalidateKey(const char * key_id)
 void SecMan :: remove_commands(KeyCacheEntry * keyEntry)
 {
     if (keyEntry) {
-        char * commands = NULL;
-        keyEntry->policy()->LookupString(ATTR_SEC_VALID_COMMANDS, &commands);
-		std::string addr = keyEntry->addr();
+        std::string commands;
+        keyEntry->policy()->LookupString(ATTR_SEC_VALID_COMMANDS, commands);
+        std::string addr = keyEntry->addr();
     
         // Remove all commands from the command map
-        if (commands) {
-            char keybuf[128];
+        if (!commands.empty() && !addr.empty()) {
+            std::string keybuf;
             StringList cmd_list(commands);
-            free(commands);
         
             cmd_list.rewind();
             char * cmd = NULL;
             while ( (cmd = cmd_list.next()) ) {
-                memset(keybuf, 0, 128);
-                sprintf (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
+                formatstr (keybuf, "{%s,<%s>}", addr.c_str(), cmd);
                 command_map.remove(keybuf);
             }
         }
@@ -4041,8 +4039,11 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	// to the same key id (which is in the variable sesid)
 	dprintf(D_SECURITY, "SECMAN: now creating non-negotiated command mappings\n");
 
+	// If we don't have a sinful string, don't do any command mappings
 	std::string valid_coms;
-	policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
+	if (peer_sinful && peer_sinful[0]) {
+		policy.LookupString(ATTR_SEC_VALID_COMMANDS, valid_coms);
+	}
 	StringList coms(valid_coms.c_str());
 	char *p;
 
