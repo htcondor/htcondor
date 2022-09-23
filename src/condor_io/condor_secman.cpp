@@ -3873,11 +3873,22 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 
 	ASSERT(sesid);
 
+	std::string new_peer_sinful;
 	condor_sockaddr peer_addr;
-	if(peer_sinful && !peer_addr.from_sinful(peer_sinful)) {
-		dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
-				"sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
-		return false;
+	if (peer_sinful) {
+		// Rewrite the peer's sinful string when it has multiple addresses
+		// just like a future Sock will when connecting.
+		// This ensures the session will be found in command_map when it's
+		// not explicitly requested.
+		if (Sock::chooseAddrFromAddrs(peer_sinful, new_peer_sinful, &peer_addr)) {
+			peer_sinful = new_peer_sinful.c_str();
+		} else {
+			if (!peer_addr.from_sinful(peer_sinful)) {
+				dprintf(D_ALWAYS,"SECMAN: failed to create non-negotiated security session %s because "
+				        "sock_sockaddr::from_sinful(%s) failed\n",sesid,peer_sinful);
+				return false;
+			}
+		}
 	}
 
 	FillInSecurityPolicyAd( auth_level, &policy, false );
