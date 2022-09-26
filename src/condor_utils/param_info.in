@@ -1052,15 +1052,15 @@ usage='/dev/' portion of the pathname.
 tags=startd
 
 [SLOTS_CONNECTED_TO_CONSOLE]
-default=$(NUM_CPUS)
-type=string
+default=0
+type=int
 description=Slots above this number do not have ConsoleIdle updated
 tags=startd
 restart=true
 
 [SLOTS_CONNECTED_TO_KEYBOARD]
-default=$(NUM_CPUS)
-type=string
+default=0
+type=int
 description=Slots above this number do not have KeyboardIdle updated
 tags=startd
 restart=true
@@ -5922,6 +5922,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	SLOTS_CONNECTED_TO_CONSOLE=$(NUM_CPUS)
 	IS_OWNER=(START =?= False)
 @end
 
