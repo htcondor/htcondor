@@ -254,13 +254,9 @@ point in the negotiations has been reached. The possible states are
     #. another user with higher priority has jobs waiting to run
     #. another request that this resource would rather serve was found
 
-    :index:`Backfill<single: Backfill; machine state>`
-    :index:`backfill state`
  Backfill
-    The machine is running a backfill computation while waiting for
-    either the machine owner to come back or to be matched with an
-    HTCondor job. This state is only entered if the machine is
-    specifically configured to enable backfill jobs.
+    This state no longer exists. It is not reachable.
+
     :index:`Drained<single: Drained; machine state>`
     :index:`drained state`
  Drained
@@ -310,10 +306,8 @@ is described below.
        *condor_startd* receives the match notification from the
        *condor_negotiator*.
     E
-       The transition from Unclaimed to Backfill happens if the machine
-       is configured to run backfill computations (see
-       the :doc:`/admin-manual/setting-up-special-environments` section)
-       and the ``START_BACKFILL`` expression evaluates to TRUE.
+       The transition from Unclaimed to Backfill cannot occur, as the
+       Backfill state no longer exists.
     P
        The transition from Unclaimed to Drained happens if draining of
        the machine is initiated, for example by *condor_drain* or by
@@ -375,23 +369,13 @@ is described below.
 - Transitions out of the Backfill state
 
     K
-       The resource will move from Backfill to Owner for the following
-       reasons:
-
-       -  The ``EVICT_BACKFILL`` expression evaluates to TRUE
-       -  The *condor_startd* receives a *condor_vacate* command
-       -  The *condor_startd* is being shutdown
+       This cannot occur, as Backfill no longer exists.
 
     L
-       The transition from Backfill to Matched occurs whenever a
-       resource running a backfill computation is matched with a
-       *condor_schedd* that wants to run an HTCondor job.
+       This cannot occur, as Backfill no longer exists.
+
     M
-       The transition from Backfill directly to Claimed is similar to
-       the transition from Unclaimed directly to Claimed. It only occurs
-       if the *condor_schedd* completes the claiming protocol before
-       the *condor_startd* receives the match notification from the
-       *condor_negotiator*.
+       This cannot occur, as Backfill no longer exists.
 
 - Transitions out of the Drained state
 
@@ -521,19 +505,9 @@ The following list describes all the possible state/activity pairs.
        Killing means that the machine has requested the running job to
        exit the machine immediately, without checkpointing.
 
-   :index:`Backfill<single: Backfill; machine activity>`
 -  Backfill
 
-    Idle
-       The machine is configured to run backfill jobs and is ready to do
-       so, but it has not yet had a chance to spawn a backfill manager
-       (for example, the BOINC client).
-    Busy
-       The machine is performing a backfill computation.
-    Killing
-       The machine was running a backfill computation, but it is now
-       killing the job to either return resources to the machine owner,
-       or to make room for a regular HTCondor job.
+    This state no longer exists.
 
    :index:`Drained<single: Drained; machine activity>`
 -  Drained
@@ -731,7 +705,7 @@ run them more than once in its lifetime.
     configuration file.
 
 From the Unclaimed state, the machine can go to four other possible
-states: Owner (transition **2**), Backfill/Idle, Matched, or
+states: Owner (transition **2**), Backfill/Idle (transition **7**, no longer possible), Matched, or
 Claimed/Idle.
 
 Once the *condor_negotiator* matches an Unclaimed machine with a
@@ -742,13 +716,6 @@ before the negotiator's message gets to the machine, the Match state is
 skipped, and the machine goes directly to the Claimed/Idle state
 (transition **5**). However, normally the machine will enter the Matched
 state (transition **6**), even if it is only for a brief period of time.
-
-If the machine has been configured to perform backfill jobs (see
-the :doc:`/admin-manual/setting-up-special-environments` section),
-while it is in Unclaimed/Idle it will evaluate the ``START_BACKFILL``
-:index:`START_BACKFILL` expression. Once ``START_BACKFILL``
-evaluates to TRUE, the machine will enter the Backfill/Idle state
-(transition **7**) to begin the process of running backfill jobs.
 
 If draining of the machine is initiated while in the Unclaimed state,
 the slot transitions to Drained/Retiring (transition **37**).
@@ -1023,79 +990,8 @@ etc), the machine will enter the Owner state (transition **25**).
 Backfill State
 """"""""""""""
 
-:index:`Backfill<single: Backfill; machine state>` :index:`backfill state`
-
-The Backfill state is used whenever the machine is performing low
-priority background tasks to keep itself busy. For more information
-about backfill support in HTCondor, see the
-:ref:`admin-manual/setting-up-special-environments:configuring htcondor for
-running backfill jobs` section. This state is only used if the machine has been
-configured to enable backfill computation, if a specific backfill manager has
-been installed and configured, and if the machine is otherwise idle (not being
-used interactively or for regular HTCondor computations). If the machine
-meets all these requirements, and the ``START_BACKFILL`` expression
-evaluates to TRUE, the machine will move from the Unclaimed/Idle state
-to Backfill/Idle (transition **7**).
-
-Once a machine is in Backfill/Idle, it will immediately attempt to spawn
-whatever backfill manager it has been configured to use (currently, only
-the BOINC client is supported as a backfill manager in HTCondor). Once
-the BOINC client is running, the machine will enter Backfill/Busy
-(transition **26**) to indicate that it is now performing a backfill
-computation.
-
-.. note::
-    On multi-core machines, the *condor_startd* will only spawn a
-    single instance of the BOINC client, even if multiple slots are
-    available to run backfill jobs. Therefore, only the first machine to
-    enter Backfill/Idle will cause a copy of the BOINC client to start
-    running. If a given slot on a multi-core enters the Backfill state and a
-    BOINC client is already running under this *condor_startd*, the slot
-    will immediately enter Backfill/Busy without waiting to spawn another
-    copy of the BOINC client.
-
-If the BOINC client ever exits on its own (which normally wouldn't
-happen), the machine will go back to Backfill/Idle (transition **27**)
-where it will immediately attempt to respawn the BOINC client (and
-return to Backfill/Busy via transition **26**).
-
-As the BOINC client is running a backfill computation, a number of
-events can occur that will drive the machine out of the Backfill state.
-The machine can get matched or claimed for an HTCondor job, interactive
-users can start using the machine again, the machine might be evicted
-with *condor_vacate*, or the *condor_startd* might be shutdown. All of
-these events cause the *condor_startd* to kill the BOINC client and all
-its descendants, and enter the Backfill/Killing state (transition
-**28**).
-
-Once the BOINC client and all its children have exited the system, the
-machine will enter the Backfill/Idle state to indicate that the BOINC
-client is now gone (transition **29**). As soon as it enters
-Backfill/Idle after the BOINC client exits, the machine will go into
-another state, depending on what caused the BOINC client to be killed in
-the first place.
-
-If the ``EVICT_BACKFILL`` expression evaluates to TRUE while a machine
-is in Backfill/Busy, after the BOINC client is gone, the machine will go
-back into the Owner/Idle state (transition **30**). The machine will
-also return to the Owner/Idle state after the BOINC client exits if
-*condor_vacate* was used, or if the *condor_startd* is being shutdown.
-
-When a machine running backfill jobs is matched with a requester that
-wants to run an HTCondor job, the machine will either enter the Matched
-state, or go directly into Claimed/Idle. As with the case of a machine
-in Unclaimed/Idle (described above), the *condor_negotiator* informs
-both the *condor_startd* and the *condor_schedd* of the match, and the
-exact state transitions at the machine depend on what order the various
-entities initiate communication with each other. If the *condor_schedd*
-is notified of the match and sends a request to claim the
-*condor_startd* before the *condor_negotiator* has a chance to notify
-the *condor_startd*, once the BOINC client exits, the machine will
-immediately enter Claimed/Idle (transition **31**). Normally, the
-notification from the *condor_negotiator* will reach the
-*condor_startd* before the *condor_schedd* attempts to claim it. In
-this case, once the BOINC client exits, the machine will enter
-Matched/Idle (transition **32**).
+The Backfill state no longer exists. Transitions to or from it are
+not possible.
 
 Drained State
 """""""""""""
@@ -1237,15 +1133,6 @@ It serves as a quick reference.
     may preempt the current request (enters the Preempting/Vacating
     state). When the preemption is complete, the machine enters the
     Claimed/Idle state with the new resource request claiming it.
-
-``START_BACKFILL`` :index:`START_BACKFILL`
-    When TRUE, if the machine is otherwise idle, it will enter the
-    Backfill state and spawn a backfill computation (using BOINC).
-
-``EVICT_BACKFILL`` :index:`EVICT_BACKFILL`
-    When TRUE, if the machine is currently running a backfill
-    computation, it will kill the BOINC client and return to the
-    Owner/Idle state.
 
 :index:`transitions<single: transitions; machine state>`
 :index:`transitions<single: transitions; machine activity>`

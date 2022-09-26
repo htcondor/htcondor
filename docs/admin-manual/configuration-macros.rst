@@ -3572,11 +3572,6 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
-The following macros control if the *condor_startd* daemon should
-perform backfill computations whenever resources would otherwise be
-idle. See :ref:`admin-manual/setting-up-special-environments:configuring
-htcondor for running backfill jobs` for details.
-
 :macro-def:`STARTD_ENFORCE_DISK_LIMITS`
     This boolean value, which is only evaluated on Linux systems, tells
     the *condor_startd* whether to make an ephemeral filesystem for the
@@ -3615,50 +3610,6 @@ htcondor for running backfill jobs` for details.
     set to ``true``, the mount will only be visible to the job and the
     starter.  Any process in any other process tree will not be able
     to see the mount.  Setting this to true breaks Docker universe.
-
-:macro-def:`ENABLE_BACKFILL`
-    A boolean value that, when ``True``, indicates that the machine is
-    willing to perform backfill computations when it would otherwise be
-    idle. This is not a policy expression that is evaluated, it is a
-    simple ``True`` or ``False``. This setting controls if any of the
-    other backfill-related expressions should be evaluated. The default
-    is ``False``.
-
-:macro-def:`BACKFILL_SYSTEM`
-    A string that defines what backfill system to use for spawning and
-    managing backfill computations. Currently, the only supported value
-    for this is ``"BOINC"``, which stands for the Berkeley Open
-    Infrastructure for Network Computing. See
-    `http://boinc.berkeley.edu <http://boinc.berkeley.edu>`_ for more
-    information about BOINC. There is no default value, administrators
-    must define this.
-
-:macro-def:`START_BACKFILL`
-    A boolean expression that is evaluated whenever an HTCondor resource
-    is in the Unclaimed/Idle state and the ``ENABLE_BACKFILL``
-    expression is ``True``. If ``START_BACKFILL`` evaluates to ``True``,
-    the machine will enter the Backfill state and attempt to spawn a
-    backfill computation. This expression is analogous to the ``START``
-    :index:`START` expression that controls when an HTCondor
-    resource is available to run normal HTCondor jobs. The default value
-    is ``False`` (which means do not spawn a backfill job even if the
-    machine is idle and ``ENABLE_BACKFILL`` expression is ``True``). For
-    more information about policy expressions and the Backfill state,
-    see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
-    section.
-
-:macro-def:`EVICT_BACKFILL`
-    A boolean expression that is evaluated whenever an HTCondor resource
-    is in the Backfill state which, when ``True``, indicates the machine
-    should immediately kill the currently running backfill computation
-    and return to the Owner state. This expression is a way for
-    administrators to define a policy where interactive users on a
-    machine will cause backfill jobs to be removed. The default value is
-    ``False``. For more information about policy expressions and the
-    Backfill state, see :doc:`/admin-manual/policy-configuration`, especially the
-    :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`
-    section.
 
 The following macros only apply to the *condor_startd* daemon when it
 is running on a multi-core machine. See the
@@ -7966,10 +7917,6 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the Azure GAHP executable. The
     default value is ``$(SBIN)``/AzureGAHPServer.py on Windows and
     ``$(SBIN)``/AzureGAHPServer on other platforms.
-
-:macro-def:`BOINC_GAHP`
-    The complete path and file name of the BOINC GAHP executable. The
-    default value is ``$(SBIN)``/boinc_gahp.
 
 condor_job_router Configuration File Entries
 ----------------------------------------------
