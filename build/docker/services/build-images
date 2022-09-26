@@ -379,7 +379,7 @@ org.htcondor.version="%s"
             check=True,
         )
 
-    def tags_to_make_daily(self, distro: str, real_version: str) -> Set[str]:
+    def tags_to_make_daily(self, distro: str, real_version: str, real_date: str) -> Set[str]:
         """The tags to make for a daily build.
 
         `:VERSION-DATE-DISTRO` is always listed.  The following are added if --one-tag is not specified:
@@ -387,16 +387,16 @@ org.htcondor.version="%s"
         - `:MAJOR.MINOR-DATE-DISTRO`
 
         VERSION and SERIES will be based on the RPMs installed in the image.
-        DATE is date the image is built, not the date the HTCondor RPMs were built.
+        DATE is the date the HTCondor RPMs were built.
         """
-        # XXX should DATE be the date from condor_version instead?
         tags = set()
         major_minor = ".".join(real_version.split(".")[0:2])
+        real_date_no_dashes = real_date.replace("-", "")
 
-        tags.add(f"{real_version}-{today()}-{distro}")
+        tags.add(f"{real_version}-{real_date_no_dashes}-{distro}")
         if self.one_tag:
             return tags
-        tags.add(f"{major_minor}-{today()}-{distro}")
+        tags.add(f"{major_minor}-{real_date_no_dashes}-{distro}")
         tags.add(f"{major_minor}-daily-{distro}")
         return tags
 
@@ -430,7 +430,7 @@ org.htcondor.version="%s"
         elif self.want_latest_version:
             # XXX how should we _really_ handle this?
             print(f"Not adding extra image tags because the installed version {real_version}"
-                  " does not match the latest Git tagged version for this series {latest_version_for_this_series}")
+                  f" does not match the latest Git tagged version for this series {latest_version_for_this_series}")
 
         return tags
 
@@ -474,6 +474,7 @@ org.htcondor.version="%s"
             # Get the real version and series by running condor_version in the image.
             version_info = self.get_condor_version_info(tmp_image_name)
             real_version = version_info.version
+            real_date = version_info.date
 
             # sanity check: if requesting a specific version, make sure that version got installed
             if not self.want_daily and not self.want_latest_version and real_version != self.version:
@@ -482,7 +483,7 @@ org.htcondor.version="%s"
                 )
 
             if self.want_daily:
-                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_daily(distro, real_version)]
+                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_daily(distro, real_version, real_date)]
             else:
                 real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_release(distro, real_version)]
 
