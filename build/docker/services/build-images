@@ -273,7 +273,7 @@ class Builder:
     """
 
     def __init__(self, executable, series, version, prefix, one_tag: bool, known_versions: KnownVersions,
-                 no_cache: bool):
+                 no_cache: bool, skip_git_tag_check: bool):
         self.executable = executable
         self.series = series
         self.prefix = prefix
@@ -283,6 +283,7 @@ class Builder:
         self.one_tag = one_tag
         self.known_versions = known_versions
         self.no_cache = no_cache
+        self.skip_git_tag_check = skip_git_tag_check
 
     def docker(self, *args, **kwargs):
         """Runs a single docker/podman command with subprocess.run() and returns the result.
@@ -429,8 +430,13 @@ org.htcondor.version="%s"
                     tags.add("lts")
         elif self.want_latest_version:
             # XXX how should we _really_ handle this?
-            print(f"Not adding extra image tags because the installed version {real_version}"
-                  f" does not match the latest Git tagged version for this series {latest_version_for_this_series}")
+            print(f"The installed version {real_version} does not match"
+                  f" the latest Git tagged version for this series"
+                  f" {latest_version_for_this_series}")
+            if self.skip_git_tag_check:
+                print("Not adding extra image tags due to the mismatch.")
+            else:
+                raise RuntimeError("Aborting due to version mismatch")
 
         return tags
 
@@ -615,6 +621,11 @@ def parse_arguments(argv, known_versions):
         action="store_true",
         help="Only create images with the most specific version tags (e.g. '9.11.0-el7' but not '9.x-el7' or '9.x')",
     )
+    parser.add_argument(
+        "--skip-git-tag-check",
+        action="store_true",
+        help="Don't error out if the latest version does not match the latest Git tag",
+    )
     args = parser.parse_args(argv[1:])
 
     # Validate series, get the real series
@@ -702,6 +713,7 @@ def main(argv) -> Union[int,str]:
         one_tag=args.one_tag,
         known_versions=known_versions,
         no_cache=args.no_cache,
+        skip_git_tag_check=args.skip_git_tag_check,
     )
 
     images_to_push = []
