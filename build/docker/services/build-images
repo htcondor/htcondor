@@ -51,6 +51,8 @@ SUPPORTED_DISTROS = [
 SUPPORTED_DAILY_DISTROS = [
     "el7",
     "el8",
+    "ubu18.04",
+    "ubu20.04",
 ]
 DISTRO_IMAGE = {
          "el7": "centos:7",

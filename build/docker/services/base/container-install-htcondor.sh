@@ -24,12 +24,6 @@ if [[ $OS_ID != centos && $OS_ID != ubuntu ]]; then
     exit 1
 fi
 
-# XXX Remove me if we get Ubuntu dailies
-if [[ $OS_ID != centos && $HTCONDOR_VERSION == daily ]]; then
-    echo "HTCondor daily builds aren't available on this platform" >&2
-    exit 1
-fi
-
 
 # Override HTCONDOR_SERIES if HTCONDOR_VERSION is fully specified
 if [[ $HTCONDOR_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
@@ -136,6 +130,13 @@ elif [[ $OS_ID == ubuntu ]]; then
     echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    if [[ $HTCONDOR_VERSION == daily ]]; then
+        set -o pipefail
+        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Daily-Key" | apt-key add -
+        set +o pipefail
+        echo "deb     ${repo_base_ubuntu}/${series_str}-daily ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+        echo "deb-src ${repo_base_ubuntu}/${series_str}-daily ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    fi
 
     apt-get update -q
     $apt_install "${extra_packages_ubuntu[@]}"
