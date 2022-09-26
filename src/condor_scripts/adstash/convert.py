@@ -431,7 +431,6 @@ IGNORE_ATTRS = {
     "AzureAdminKey",
     "AzureAdminUsername",
     "AzureAuthFile",
-    "BoincAuthenticatorFile",
     "ClaimId",
     "CmdHash",
     "EC2AccessKeyId",
