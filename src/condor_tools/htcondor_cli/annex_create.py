@@ -744,7 +744,7 @@ def create_annex_token(logger, type):
         raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
 
 
-def system_specific_constraints(
+def validate_system_specific_constraints(
     system,
     queue_name,
     nodes,
@@ -819,9 +819,11 @@ def system_specific_constraints(
         raise ValueError(error_string)
 
     # (F) You must not specify an idletime longer than the queue's duration.
-    if queue['max_duration'] < idletime_in_seconds:
-        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the requeqested lifetime ({idletime_in_seconds} seconds).  Use --idle-time to set."
-        raise ValueError(error_string)
+    #     There's an argument that doing so is the natural way to disable
+    #     the idleness check entirely, so let's skip this check for now.
+    # if queue['max_duration'] < idletime_in_seconds:
+    #    error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the requeqested lifetime ({idletime_in_seconds} seconds).  Use --idle-time to set."
+    #    raise ValueError(error_string)
 
     # (G) You must not specify an idletime longer than the lifetime.
     if lifetime_in_seconds < idletime_in_seconds:
@@ -910,7 +912,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus)
+    validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus)
 
 
     # Location of the local universe script files
