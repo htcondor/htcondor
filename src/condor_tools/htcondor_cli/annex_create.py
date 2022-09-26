@@ -34,13 +34,17 @@ TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 # do that for now and just tell the user to size their requests with the
 # units appropriate to the queue.
 #
-# ram_per_node is in GB.
+# ram_per_node is in MB.
 #
 SYSTEM_TABLE = {
 
     # The key is currently both the value of the command-line option
     # and part of the name of some files in condor_scripts/annex.  This
     # shouldn't be hard to change.
+    #
+    # * We omit queues (partitions) which this tool doesn't support.
+    # * The 'ram_per_node' attribute is in MB, because that's what the
+    #   rest of the tooling desired.
     "stampede2": {
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
@@ -49,17 +53,13 @@ SYSTEM_TABLE = {
         "script_base":      "hpc",
         "allocation_reqd":  False,
 
-        # This isn't all of the queues on Stampede 2, but we
-        # need to think about what it means, if anything, if
-        # recognize certain queues.  For now, these are the
-        # only three queues I've actually tested.
         "queues": {
             "normal": {
                 "max_nodes_per_job":    256,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       68,
-                "ram_per_node":         96,
+                "ram_per_node":         96 * 1024,
 
                 "max_jobs_in_queue":    50,
             },
@@ -68,7 +68,7 @@ SYSTEM_TABLE = {
                 "max_duration":         2 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       68,
-                "ram_per_node":         96,
+                "ram_per_node":         96 * 1024,
 
                 "max_jobs_in_queue":    1,
             },
@@ -77,7 +77,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       48,
-                "ram_per_node":         192,
+                "ram_per_node":         192 * 1024,
 
                 "max_jobs_in_queue":    20,
             },
@@ -92,14 +92,13 @@ SYSTEM_TABLE = {
         "script_base":      "hpc",
         "allocation_reqd":  False,
 
-        # GPUs are completed untested, see above.
         "queues": {
             "compute": {
                 "max_nodes_per_job":    32,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         256,
+                "ram_per_node":         256 * 1024,
 
                 "max_jobs_in_queue":    64,
             },
@@ -108,7 +107,8 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       40,
-                "ram_per_node":         256,
+                "ram_per_node":         256 * 1024,
+                "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    8,
             },
@@ -117,7 +117,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       128,
-                "ram_per_node":         256,
+                "ram_per_node":         256 * 1024,
 
                 "max_jobs_in_queue":    4096,
             },
@@ -126,7 +126,8 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       40,
-                "ram_per_node":         384,
+                "ram_per_node":         384 * 1024,
+                "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    24,
             },
@@ -141,14 +142,13 @@ SYSTEM_TABLE = {
         "script_base":      "hpc",
         "allocation_reqd":  False,
 
-        # GPUs are completed untested, see above.
         "queues": {
             "wholenode": {
                 "max_nodes_per_job":    16,
                 "max_duration":         96 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
+                "ram_per_node":         25600,
 
                 "max_jobs_in_queue":    128,
             },
@@ -157,7 +157,7 @@ SYSTEM_TABLE = {
                 "max_duration":         12 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
+                "ram_per_node":         25600,
 
                 "max_jobs_in_queue":    10,
             },
@@ -166,9 +166,32 @@ SYSTEM_TABLE = {
                 "max_duration":         96 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
+                "ram_per_node":         25600,
 
                 "max_jobs_in_queue":    999999,  # unlimited
+            },
+            "gpu": {
+                # 999,999 seems like a silly way to represent unlimited?
+                # "max_nodes_per_job":    None,
+                "max_duration":         48 * 60 * 60,
+                # "max_jobs_in_queue":    None,
+
+                "allocation_type":      "node",
+
+                "cores_per_node":       128,
+                "ram_per_node":         512 * 1024,
+                "gpus_per_node":        4,
+            },
+            "gpu-debug": {
+                "max_nodes_per_job":    1,
+                "max_duration":         30 * 60,
+                "max_jobs_in_queue":    1,
+
+                "allocation_type":      "node",
+
+                "cores_per_node":       128,
+                "ram_per_node":         512 * 1024,
+                "gpus_per_node":        2,
             },
         },
     },
@@ -181,16 +204,16 @@ SYSTEM_TABLE = {
         "script_base":      "hpc",
         "allocation_reqd":  False,
 
-        # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
-        # XXX You don't request memory for Bridges2; should we do a "ram_per_core" instead?
+        # FIXME: You don't request memory for Bridges2; should we do a
+        # "ram_per_core" instead?
         "queues": {
             "RM": {
                 "max_nodes_per_job":    50,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         (253000 // 1024),
+                "ram_per_node":         253000,
 
                 "max_jobs_in_queue":    50,
             },
@@ -199,7 +222,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         (515000 // 1024),
+                "ram_per_node":         515000,
 
                 "max_jobs_in_queue":    50,
             },
@@ -209,7 +232,7 @@ SYSTEM_TABLE = {
                 "allocation_type":      "cores_or_ram",
                 # RM-shared lets you request up to half an RM node
                 "cores_per_node":       64,
-                "ram_per_node":         (253000 // 2 // 1024),
+                "ram_per_node":         253000 // 2,
 
                 "max_jobs_in_queue":    50,
             },
@@ -219,9 +242,30 @@ SYSTEM_TABLE = {
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       96,
                 # The EM queue specifies "MaxMemPerCPU"
-                "ram_per_node":         (42955 * 96 // 1024),
+                "ram_per_node":         42955 * 96,
 
                 "max_jobs_in_queue":    50,
+            },
+
+            #
+            # Bridges 2 has two partitions, 'gpu' and 'gpu-shared', but
+            # the partition doesn't specify which kind of GPU you get,
+            # and the 3 different types have different core counts and
+            # RAM availability.  Does it make sense to represent this
+            # as six different queues?
+            #
+            # Temporarily leaving these queues in even though they're
+            # unsupported for testing and development purposes.
+            #
+            "gpu": {
+                "max_nodes_per_job":    1,
+
+                "allocation_type":      "node",
+            },
+            "gpu-shared": {
+                "max_nodes_per_job":    1,
+
+                "allocation_type":      "cores_or_ram",
             },
         },
     },
@@ -243,7 +287,7 @@ SYSTEM_TABLE = {
                 "max_duration":         60 * 60 * 72, # FIXME
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       64,
-                "ram_per_node":         244,
+                "ram_per_node":         244 * 1024,
 
                 "max_jobs_in_queue":    1000, # FIXME
             },
@@ -536,6 +580,7 @@ def invoke_pilot_script(
     password_file,
     cpus,
     mem_mb,
+    gpus,
 ):
     ssh_target = ssh_host_name
     if ssh_user_name is not None:
@@ -564,6 +609,7 @@ def invoke_pilot_script(
         str(remote_script_dir / password_file.name),
         str(cpus),
         str(mem_mb),
+        str(gpus),
     ]
     proc = subprocess.Popen(
         args,
@@ -707,6 +753,7 @@ def system_specific_constraints(
     cpus,
     mem_mb,
     idletime_in_seconds,
+    gpus,
 ):
     system = SYSTEM_TABLE[system]
 
@@ -738,7 +785,7 @@ def system_specific_constraints(
         # Don't allow the user to request more than max nodes.
         mnpj = queue['max_nodes_per_job']
         if nodes > mnpj:
-            error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job."
+            error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job.  Use --nodes to set."
             raise ValueError(error_string)
 
     # (D) If the queue's allocation type is 'cores_or_ram', you must specify
@@ -748,31 +795,37 @@ def system_specific_constraints(
     # When you specify CPUs or memory, you must specify less than the max.
     if queue['allocation_type'] == 'cores_or_ram':
         if cpus is None and mem_mb is None:
-            error_string = f"The '{queue_name}' queue is a shared-node queue.  You must specify CPUs (--cpus) or memory (--mem-mb)."
+            error_string = f"The '{queue_name}' queue is a shared-node queue.  You must specify CPUs (--cpus) or memory (--mem_mb)."
             raise ValueError(error_string)
 
-        rpn = queue['ram_per_node'] * 1024
+        rpn = queue['ram_per_node']
         if mem_mb > rpn:
-            error_string = f"The '{queue_name}' queue is limited to {rpn} MB per node."
+            error_string = f"The '{queue_name}' queue is limited to {rpn} MB per node.  Use --mem_mb to set."
             raise ValueError(error_string)
 
         if cpus > queue['cores_per_node']:
-            error_string = f"The '{queue_name} queue is limited to {queue['cores_per_node']} cores per node."
+            error_string = f"The '{queue_name}' queue is limited to {queue['cores_per_node']} cores per node."
             raise ValueError(error_string)
+
+        # FIXME: if you specified CPUs or memory, but did not specify nodes,
+        # the default should be 1, rather than 2.  Worry about this later.
+        #
+        # Maybe just switch the default node count to 1: 2 made sense for
+        # making testing of multinode jobs faster/easier, but otherwise why?
 
     # (E) You must not specify a lifetime longer than the queue's duration.
     if queue['max_duration'] < lifetime_in_seconds:
-        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the lifetime ({lifetime_in_seconds} seconds) you specified."
+        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the requested lifetime ({lifetime_in_seconds} seconds).  Use --lifetime to set."
         raise ValueError(error_string)
 
     # (F) You must not specify an idletime longer than the queue's duration.
     if queue['max_duration'] < idletime_in_seconds:
-        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the lifetime ({idletime_in_seconds} seconds) you specified."
+        error_string = f"The '{queue_name}' queue has a maximum duration of {queue['max_duration']} seconds, which is less than the requeqested lifetime ({idletime_in_seconds} seconds).  Use --idle-time to set."
         raise ValueError(error_string)
 
     # (G) You must not specify an idletime longer than the lifetime.
     if lifetime_in_seconds < idletime_in_seconds:
-        error_string = f"You may not specify an idle time longer than the lifetime."
+        error_string = f"You may not specify an idle time (--idle-time) longer than the lifetime (--lifetime)."
         raise ValueError(error_string)
 
     # (H) Some systems require an allocation be specified, even if it's
@@ -782,7 +835,21 @@ def system_specific_constraints(
         error_string = f"The system named '{pretty_name}' requires you to specify a project (--project), even if you only have one."
         raise ValueError(error_string)
 
-    # FIXME: GPU queue requirements
+    # (I) You must request an appropriate number of GPUs if the queue
+    # offer GPUs.
+    max_gpus = queue.get('gpus_per_node')
+    if max_gpus is not None:
+        if gpus is None or gpus <= 0:
+            error_string = f"The '{queue_name}' queue is a GPU queue.  You must specify GPUs (--gpus)."
+            raise ValueError(error_string)
+
+        if gpus > max_gpus:
+            error_string = f"The '{queue_name}' queue is limited to {queue['gpus_per_node']} GPUs per node.  Use --gpus to set."
+            raise ValueError(error_string)
+
+        # We know, on some machines, that you can't request more than a
+        # certain number of total GPUs, even if the request would otherwise
+        # fit.  FIXME: Check to make sure the user hasn't exceeded that.
 
 
 def annex_inner_func(
@@ -802,6 +869,7 @@ def annex_inner_func(
     login_name,
     login_host,
     startd_noclaim_shutdown,
+    gpus
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -842,7 +910,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds)
+    system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus)
 
 
     # Location of the local universe script files
@@ -1213,6 +1281,7 @@ def annex_inner_func(
         password_file,
         cpus,
         mem_mb,
+        gpus,
     )
 
     if rc == 0:

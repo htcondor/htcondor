@@ -7,7 +7,7 @@ function usage() {
     echo "Usage: ${0} SYSTEM STARTD_NOCLAIM_SHUTDOWN\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
     echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
-    echo "       [CPUS] [MEM_MB]"
+    echo "       [CPUS] [MEM_MB] [GPUS]"
     echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
     echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
@@ -110,6 +110,11 @@ if [[ $MEM_MB == "None" ]]; then
     MEM_MB=""
 fi
 
+GPUS=${15}
+if [[ $GPUS == "None" ]]; then
+    GPUS=""
+fi
+
 BIRTH=`date +%s`
 # echo "Starting script at `date`..."
 
@@ -170,7 +175,7 @@ echo "${CONTROL_PREFIX} PILOT_DIR ${PILOT_DIR}"
 
 function cleanup() {
     echo "Cleaning up temporary directory..."
-    rm -fr ${PILOT_DIR}
+    # rm -fr ${PILOT_DIR}
 }
 trap cleanup EXIT
 
@@ -401,6 +406,13 @@ if [[ $WHOLE_NODE ]]; then
 #SBATCH --nodes=${NODES}
 #SBATCH --ntasks=${NODES}
 "
+
+    if [[ $GPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --gpus-per-node=${GPUS}
+"
+    fi
 else
     # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
     # Expanse.  Request one job, and specify the resources that should be

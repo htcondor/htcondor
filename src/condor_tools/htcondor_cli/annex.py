@@ -111,7 +111,12 @@ class Create(Verb):
             "default": 300,
             "type": int,
         },
-
+        "gpus": {
+            "args": ("--gpus",),
+            "help": "Number of GPUs to request (GPU queues only).  Unset by default.",
+            "type": int,
+            "default": None,
+        },
     }
 
     def __init__(self, logger, **options):
