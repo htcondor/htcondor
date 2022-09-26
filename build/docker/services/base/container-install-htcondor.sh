@@ -47,10 +47,10 @@ if [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.([0-9]+) ]]; then
     series_major=${BASH_REMATCH[1]}
     series_minor=${BASH_REMATCH[2]}
 
-    if [[ $series_major -gt 8 && $series_minor -gt 0 ]]; then
+    if [[ $series_minor -gt 0 ]]; then
         series_str=${series_major}.x
     else
-        series_str=${series_major}.${series_minor}
+        series_str=${series_major}.0
     fi
 elif [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.x ]]; then
     series_str=$HTCONDOR_SERIES
@@ -127,11 +127,7 @@ elif [[ $OS_ID == ubuntu ]]; then
     $apt_install gnupg2 wget
 
     set -o pipefail
-    if [[ $series_str = 8.9 ]]; then
-        wget -qO - "https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key" | apt-key add -
-    else
-        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Key" | apt-key add -
-    fi
+    wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Key" | apt-key add -
     set +o pipefail
 
     echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
@@ -156,21 +152,9 @@ fi
 # Common ---------------------------------------------------------------------
 
 # Create passwords directories for token or pool password auth.
-#
-# Only root needs to know the pool password but before 8.9.12, the condor user
-# also needed to access the tokens.
 
 install -m 0700 -o root -g root -d /etc/condor/passwords.d
-real_condor_version=$(condor_config_val CONDOR_VERSION)  # easier than parsing `condor_version`
-if python3 -c '
-import sys
-version = [int(x) for x in sys.argv[1].split(".")]
-sys.exit(0 if version >= [8, 9, 12] else 1)
-' "$real_condor_version"; then
-    install -m 0700 -o root -g root -d /etc/condor/tokens.d
-else
-    install -m 0700 -o condor -g condor -d /etc/condor/tokens.d
-fi
+install -m 0700 -o root -g root -d /etc/condor/tokens.d
 
 
 # vim:et:sw=4:sts=4:ts=8
