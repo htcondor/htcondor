@@ -72,6 +72,15 @@ fi
 
 # CentOS ---------------------------------------------------------------------
 
+centos_enable_repo () {
+    if [[ $OS_VERSION_ID -lt 8 ]]; then
+        yum-config-manager --enable "$1"
+    else
+        dnf config-manager --set-enabled "$1"
+    fi
+}
+
+
 if [[ $OS_ID == centos ]]; then
 
     yum="yum -y"
@@ -84,17 +93,13 @@ if [[ $OS_ID == centos ]]; then
         $yum install yum-plugin-priorities
     elif [[ $OS_VERSION_ID == 8 ]]; then
         $yum install dnf-plugins-core
-        # enable CentOS PowerTools repo (whose name changed between CentOS releases)
-        (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools)
+        centos_enable_repo powertools
     fi
     $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
     rpm --import /etc/pki/rpm-gpg/*
+    centos_enable_repo htcondor-update
     if [[ $HTCONDOR_VERSION == daily ]]; then
-        if [[ $OS_VERSION_ID == 7 ]]; then
-            yum-config-manager --enable htcondor-daily
-        elif [[ $OS_VERSION_ID == 8 ]]; then
-            dnf config-manager --set-enabled htcondor-daily
-        fi
+        centos_enable_repo htcondor-daily
     fi
 
     $yum install "${extra_packages_centos[@]}"
@@ -131,6 +136,8 @@ elif [[ $OS_ID == ubuntu ]]; then
 
     echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
 
     apt-get update -q
     $apt_install "${extra_packages_ubuntu[@]}"
