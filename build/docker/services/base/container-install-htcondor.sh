@@ -89,10 +89,12 @@ if [[ $OS_ID == centos ]]; then
         # ^^ ignore errors b/c some packages like "filesystem" might fail to update in a container environment
     fi
     $yum install epel-release
-    if [[ $OS_VERSION_ID == 7 ]]; then
+    if [[ $OS_VERSION_ID -lt 8 ]]; then
         $yum install yum-plugin-priorities
-    elif [[ $OS_VERSION_ID == 8 ]]; then
+    else
         $yum install dnf-plugins-core
+    fi
+    if [[ $OS_VERSION_ID -eq 8 ]]; then
         centos_enable_repo powertools
     fi
     $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
