@@ -3031,7 +3031,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 void
 JICShadow::initMatchSecuritySession()
 {
-	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
 		return;
 	}
 
