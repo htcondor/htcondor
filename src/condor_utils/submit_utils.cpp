@@ -4849,7 +4849,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce or azure\n",
+				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
