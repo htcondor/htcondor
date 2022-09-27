@@ -167,6 +167,7 @@ public:
 
 	void init();
 	void clear(); // clear, but do not deallocate
+	void set_flavor(Flavor _flavor); // clear and set new flavor
 
 	char * local_param(const char* name, const char* alt_name, MACRO_EVAL_CONTEXT & ctx);
 	char * local_param(const char* name, MACRO_EVAL_CONTEXT & ctx) { return local_param(name, NULL, ctx); }
