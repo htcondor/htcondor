@@ -41,7 +41,7 @@
 #include "setenv.h"
 #include "condor_daemon_core.h" // for extractInheritedSocks
 #include "console-utils.h"
-#include "condor_getcwd.h" // for current directory
+#include <algorithm> //for std::reverse
 
 #include "classad_helpers.h" // for initStringListFromAttrs
 #include "history_utils.h"
@@ -1517,20 +1517,15 @@ static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFile
 			exit(1);
 		}
 
-		//Make path for files
-		std::string path;
-		if (fullpath(epochDirectory)) {
-			path = epochDirectory;
-		} else {
-			std::string tmp;
-			condor_getcwd(tmp);
-			dircat(tmp.c_str(),epochDirectory,path);
-			epochDirectory = path.c_str(); //Update epochDirectory with path (cwd + passed relative path)
-		}
 		//Make sure epochDirectory is a directory before attempting to read files
-		StatInfo si(epochDirectory);
-		if (!si.IsDirectory() ) {
-			fprintf( stderr, "Error: %s is not a valid directory.\n", epochDirectory);
+		if (epochDirectory) {
+			StatInfo si(epochDirectory);
+			if (!si.IsDirectory() ) {
+				fprintf( stderr, "Error: %s is not a valid directory.\n", epochDirectory);
+				exit(1);
+			}
+		} else {
+			fprintf(stderr,"Error: No directory was passed. Unable to scan run instance files.\n");
 			exit(1);
 		}
 
@@ -1546,12 +1541,12 @@ static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFile
 				*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
 				*/
 				std::string old_name,new_name,base = "READING.txt";
-				dircat(path.c_str(),file.c_str(),old_name);
-				dircat(path.c_str(),base.c_str(),new_name);
+				dircat(epochDirectory,file.c_str(),old_name);
+				dircat(epochDirectory,base.c_str(),new_name);
 				rename(old_name.c_str(),new_name.c_str());
-				dircat(path.c_str(),base.c_str(),file_path);
+				dircat(epochDirectory,base.c_str(),file_path);
 			} else {
-				dircat(path.c_str(),file.c_str(),file_path);
+				dircat(epochDirectory,file.c_str(),file_path);
 			}
 			//Read file
 			readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);

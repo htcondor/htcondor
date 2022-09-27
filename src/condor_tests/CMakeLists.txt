@@ -243,6 +243,7 @@ endif()
 			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
