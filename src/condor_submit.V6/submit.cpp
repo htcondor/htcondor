@@ -2621,7 +2621,6 @@ DoCleanup(int,int,const char*)
 void
 init_params()
 {
-	char *tmp = NULL;
 	std::string method;
 
 	const char * err = init_submit_default_macros();
@@ -2635,16 +2634,6 @@ init_params()
 		// Will always return something, since config() will put in a
 		// value (full hostname) if it's not in the config file.
 
-
-	// The default is set as the global initializer for STMethod
-	/* CRUFT The transferd is no longer supported
-	tmp = param( "SANDBOX_TRANSFER_METHOD" );
-	if ( tmp != NULL ) {
-		method = tmp;
-		free( tmp );
-		string_to_stm( method, STMethod );
-	}
-	*/
 
 	WarnOnUnusedMacros =
 		param_boolean_crufty("WARN_ON_UNUSED_SUBMIT_FILE_MACROS",
