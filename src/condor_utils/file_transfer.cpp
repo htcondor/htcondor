@@ -50,6 +50,7 @@
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
 #include "condor_sys.h"
+#include "limit_directory_access.h"
 
 #include <fstream>
 #include <algorithm>
@@ -2121,6 +2122,27 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 }
 
 
+void
+remove_relative_path(const std::string & iwd, const std::string & relative_path ) {
+	std::string buffer = relative_path;
+
+	size_t idx = std::string::npos;
+	do {
+		std::string path;
+		formatstr( path, "%s%c%s", iwd.c_str(), DIR_DELIM_CHAR, buffer.c_str() );
+		int rv = rmdir( path.c_str() );
+
+		if( rv == -1 ) {
+			dprintf( D_ALWAYS, "Failed to remove directory (%s) created outside of LIMIT_DIRECTORY_ACCESS (%d: %s), ignoring.\n", path.c_str(), errno, strerror(errno) );
+		}
+
+		idx = buffer.rfind( DIR_DELIM_CHAR );
+		buffer = buffer.substr(0, idx);
+	} while( idx != std::string::npos );
+}
+
+
+
 /*
   Define a macro to restore our priv state (if needed) and return.  We
   do this so we don't leak priv states in functions where we need to
@@ -2379,9 +2401,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					fullname = remap_filename;
 				}
 				else {
-					// For simplicity of reasoning about the security implications,
-					// don't try to create absolute directories for absolute paths
-					// named in transfer_output_remaps.
+					// For simplicity of reasoning about the security
+					// implications, don't try to create absolute directories
+					// for absolute paths named in transfer_output_remaps.
 					//
 					// Because the `output` and `error` submit commands are
 					// implemented with transfer_output_remaps, this code
@@ -2404,36 +2426,64 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						if( rv != 0 && errno != EEXIST ) {
 #else
 						int directory_creation_mode = 0700;
-						if(! mkdir_and_parents_if_needed(
-						  path.c_str(), directory_creation_mode, directory_creation_mode, PRIV_USER
-						)) {
+
+						/* allow_shadow_access() assumes that either the
+						 * path as given or its dirname exists, which will
+						 * not be the case when we're creating directories.
+						 *
+						 * Since realpath() is how we canonicalize paths,
+						 * this limitation can't be eliminated.  Instead,
+						 * since we create the directory as PRIV_USER,
+						 * assume that it's safe to do so, but go ahead
+						 * delete the directory if allow_shadow_access()
+						 * doesn't like it, since the transfer will fail.
+						 */
+						bool success = false;
+						if( mkdir_and_parents_if_needed(
+							path.c_str(), directory_creation_mode, directory_creation_mode, PRIV_USER
+						) ) {
+							// Since we just created a directory, and we're
+							// obsessed with premature optimization and/or
+							// caching, we have to reinitialize
+							// allow_shadow_access().
+							std::string job_ad_whitelist, spoolDir;
+							jobAd.EvaluateAttrString(ATTR_JOB_LIMIT_DIRECTORY_ACCESS,job_ad_whitelist);
+							SpooledJobFiles::getJobSpoolPath(& jobAd, spoolDir);
+							allow_shadow_access(NULL, true, job_ad_whitelist.c_str(),spoolDir.c_str());
+
+							success = allow_shadow_access( path.c_str() );
+							if(! success) {
+								remove_relative_path( Iwd, dirname );
+								errno = EACCES;
+							}
+						}
+
+						if( (! success) ) {
 #endif /* DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING */
-							// Stolen from the TransferCommand::Mkdir code.
+							std::string err_str;
 							int the_error = errno;
-							error_buf.formatstr(
+
+							formatstr( err_str,
 								"%s at %s failed to create directory %s: %s (errno %d)",
 								get_mySubSystem()->getName(),
 								s->my_ip_str(), path.c_str(),
 								strerror(the_error), the_error
 							);
-							download_success = false;
-							try_again = false;
-							hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
-							hold_subcode = the_error;
-
 							dprintf(D_ALWAYS,
 								"DoDownload: consuming rest of transfer and failing "
 								"after encountering the following error: %s\n",
-								error_buf.c_str());
+								err_str.c_str()
+							);
 
-							// Without the below, the above error will be
-							// superceded by the failure to transfer the file.
-							//
-							// We don't abort the transfer here because we
-							// never abort the transfer unless we think the
-							// protocol is an unknown state, presumably to
-							// try and bring back as much output as we can.
-							all_transfers_succeeded = false;
+							if( all_transfers_succeeded ) {
+								download_success = false;
+								try_again = false;
+								hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+								hold_subcode = the_error;
+								error_buf = err_str;
+
+								all_transfers_succeeded = false;
+							}
 						}
 					}
 					free(dirname);
