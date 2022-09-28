@@ -86,7 +86,7 @@ class FileSentry;
 class ClassAdLogReaderV2;
 
 
-class ClassAdLogIterator : std::iterator<std::input_iterator_tag, ClassAdLogIterEntry* >
+class ClassAdLogIterator
 {
 	friend class ClassAdLogReaderV2;
 
@@ -102,6 +102,12 @@ public:
 
         bool operator==(const ClassAdLogIterator &rhs);
         bool operator!=(const ClassAdLogIterator &rhs) {return !(*this == rhs);}
+
+        using iterator_category = std::input_iterator_tag;
+        using value_type = ClassAdLogEntry *;
+        using difference_type = std::ptrdiff_t;
+        using pointer =  ClassAdLogEntry **;
+        using reference = ClassAdLogEntry * &;
 
 private:
         ClassAdLogIterator(const std::string &fname);
