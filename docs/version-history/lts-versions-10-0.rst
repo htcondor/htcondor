@@ -24,5 +24,22 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug where certain **submit file** variables like ``accounting_group`` and
+  ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
+  DAGMan would always write over the variables at job submission time.
+  :jira:`1277`
 
+- Fixed a bug where SciTokens authentication wasn't available on macOS
+  and Python wheels distributions.
+  :jira:`1328`
+
+- Fixed job submission to newer ARC CE releases.
+  :jira:`1327`
+
+- Fixed a bug where a pre-created security session may not be used
+  when connecting to a daemon over IPv6.
+  The peers would do a full round of authentication and authorization,
+  which may fail.
+  This primarily happened with both peers had ``PREFER_IPV4`` set to
+  ``False``.
+  :jira:`1341`

@@ -20,6 +20,8 @@ def null_interface():
 def elasticsearch_interface():
     from adstash.interfaces.elasticsearch import ElasticsearchInterface
     return ElasticsearchInterface
+def opensearch_interface():
+    from adstash.interfaces.opensearch import OpenSearchInterface
 def json_file_interface():
     from adstash.interfaces.json_file import JSONFileInterface
     return JSONFileInterface
@@ -28,6 +30,7 @@ def json_file_interface():
 ADSTASH_INTERFACE_REGISTRY = {
     "null": {"class": null_interface, "type": None},
     "elasticsearch": {"class": elasticsearch_interface, "type": "se"},
+    "opensearch": {"class": opensearch_interface, "type": "se"},
     "jsonfile": {"class": json_file_interface, "type": "jsonfile"},
 }
 ADSTASH_INTERFACES = list(ADSTASH_INTERFACE_REGISTRY.keys())

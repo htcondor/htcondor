@@ -1394,12 +1394,12 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 	std::string chirp_prefix;
 	param(chirp_prefix, "CHIRP_DELAYED_UPDATE_PREFIX");
 	if (chirp_prefix == "Chirp*") {
-		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
-			if ( ! strncasecmp(attr_it->first.c_str(), "Chirp", 5) ) {
-				old_expr = jobAd->Lookup(attr_it->first);
-				new_expr = attr_it->second;
+		for (auto & attr_it : *remote_ad) {
+			if ( ! strncasecmp(attr_it.first.c_str(), "Chirp", 5) ) {
+				old_expr = jobAd->Lookup(attr_it.first);
+				new_expr = attr_it.second;
 				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					jobAd->Insert( attr_it->first, new_expr->Copy() );
+					jobAd->Insert( attr_it.first, new_expr->Copy() );
 				}
 			}
 		}
@@ -1407,12 +1407,12 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		// TODO cache the StringList
 		StringList prefix_list;
 		prefix_list.initializeFromString(chirp_prefix.c_str());
-		for ( auto attr_it = remote_ad->begin(); attr_it != remote_ad->end(); attr_it++ ) {
-			if ( prefix_list.contains_anycase_withwildcard(attr_it->first.c_str()) ) {
-				old_expr = jobAd->Lookup(attr_it->first);
-				new_expr = attr_it->second;
+		for (auto & attr_it : *remote_ad) {
+			if ( prefix_list.contains_anycase_withwildcard(attr_it.first.c_str()) ) {
+				old_expr = jobAd->Lookup(attr_it.first);
+				new_expr = attr_it.second;
 				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {
-					jobAd->Insert( attr_it->first, new_expr->Copy() );
+					jobAd->Insert( attr_it.first, new_expr->Copy() );
 				}
 			}
 		}
@@ -1607,8 +1607,8 @@ ClassAd *CondorJob::buildSubmitAd()
 	}
 
 	const char *next_name;
-	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
-		next_name = itr->first.c_str();
+	for (auto & itr : *jobAd) {
+		next_name = itr.first.c_str();
 		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
 			 strlen( next_name ) > 7 ) {
 
@@ -1644,7 +1644,7 @@ ClassAd *CondorJob::buildSubmitAd()
 				}
 			}
 
-			ExprTree * pTree = itr->second->Copy();
+			ExprTree * pTree = itr.second->Copy();
 			submit_ad->Insert( attr_name, pTree );
 		}
 	}

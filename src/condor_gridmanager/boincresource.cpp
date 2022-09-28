@@ -320,10 +320,9 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 {
 	if ( !batch_name.empty() ) {
 		BoincBatch *batch = NULL;
-		for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
-			  batch_itr != m_batches.end(); batch_itr++ ) {
-			if ( (*batch_itr)->m_batch_name == batch_name ) {
-				batch = *batch_itr;
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_batch_name == batch_name ) {
+				batch = next_batch;
 				break;
 			}
 		}
@@ -354,14 +353,13 @@ bool BoincResource::JoinBatch( BoincJob *job, std::string &batch_name,
 	} else {
 
 		BoincBatch *batch = NULL;
-		for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
-			  batch_itr != m_batches.end(); batch_itr++ ) {
+		for (auto & next_batch : m_batches) {
 			// Assume all jobs with the same application can go into the
 			// same boinc batch.
 			// But we can't add this job to a batch that's already been
 			// submitted.
-			if ( (*batch_itr)->m_app_name == job->GetAppName() && (*batch_itr)->m_submit_status == BatchUnsubmitted ) {
-				batch = *batch_itr;
+			if ( next_batch->m_app_name == job->GetAppName() && next_batch->m_submit_status == BatchUnsubmitted ) {
+				batch = next_batch;
 				break;
 			}
 		}
@@ -403,10 +401,9 @@ BoincSubmitResponse BoincResource::Submit( BoincJob *job,
 	}
 
 	BoincBatch *batch = NULL;
-	for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
-		  batch_itr != m_batches.end(); batch_itr++ ) {
-		if ( (*batch_itr)->m_batch_name == job->remoteBatchName ) {
-			batch = *batch_itr;
+	for (auto & next_batch : m_batches) {
+		if ( next_batch->m_batch_name == job->remoteBatchName ) {
+			batch = next_batch;
 			break;
 		}
 	}
@@ -462,14 +459,13 @@ bool BoincResource::BatchReadyToSubmit( BoincBatch *batch, unsigned *delay )
 
 bool BoincResource::JobDone( BoincJob *job )
 {
-	for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
-		  batch_itr != m_batches.end(); batch_itr++ ) {
+	for (auto & batch : m_batches) {
 
-		if ( (*batch_itr)->m_jobs.find( job ) == (*batch_itr)->m_jobs.end() ) {
+		if ( batch->m_jobs.find( job ) == batch->m_jobs.end() ) {
 			continue;
 		}
-		(*batch_itr)->m_jobs_done.insert( job );
-		if ( (*batch_itr)->m_jobs_done == (*batch_itr)->m_jobs ) {
+		batch->m_jobs_done.insert( job );
+		if ( batch->m_jobs_done == batch->m_jobs ) {
 			return true;
 		} else {
 			return false;
@@ -508,14 +504,13 @@ void BoincResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 BoincResource::BatchStatusResult BoincResource::StartBatchStatus()
 {
 	m_statusBatches.clearAll();
-	for ( std::list<BoincBatch*>::iterator itr = m_batches.begin();
-		  itr != m_batches.end(); itr++ ) {
-		if ( (*itr)->m_submit_status == BatchSubmitted ||
-			 (*itr)->m_submit_status == BatchMaybeSubmitted ) {
-			if ( m_needFullQuery && !(*itr)->m_need_full_query ) {
+	for (auto & batch : m_batches) {
+		if ( batch->m_submit_status == BatchSubmitted ||
+			 batch->m_submit_status == BatchMaybeSubmitted ) {
+			if ( m_needFullQuery && !batch->m_need_full_query ) {
 				continue;
 			}
-			m_statusBatches.append( (*itr)->m_batch_name.c_str() );
+			m_statusBatches.append( batch->m_batch_name.c_str() );
 		}
 	}
 	m_doingFullQuery = m_needFullQuery;
@@ -552,10 +547,9 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 			ptr += 15;
 
 			BoincBatch *batch = NULL;
-			for ( std::list<BoincBatch*>::iterator batch_itr = m_batches.begin();
-				  batch_itr != m_batches.end(); batch_itr++ ) {
-				if ( (*batch_itr)->m_batch_name == ptr ) {
-					batch = *batch_itr;
+			for (auto & next_batch : m_batches) {
+				if ( next_batch->m_batch_name == ptr ) {
+					batch = next_batch;
 					break;
 				}
 			}
@@ -582,15 +576,14 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 
 		// If this error looks like it would affect a submit command,
 		// notify all jobs in BatchMaybeSubmitted state.
-		for ( std::list<BoincBatch*>::iterator batch_itr = m_batches.begin();
-			  batch_itr != m_batches.end(); batch_itr++ ) {
-			if ( (*batch_itr)->m_submit_status != BatchMaybeSubmitted ||
-				 !(*batch_itr)->m_error_message.empty() ) {
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_submit_status != BatchMaybeSubmitted ||
+				 !next_batch->m_error_message.empty() ) {
 				continue;
 			}
-			(*batch_itr)->m_error_message = m_statusGahp->getErrorString();
-			for ( set<BoincJob *>::iterator job_itr = (*batch_itr)->m_jobs.begin();
-				  job_itr != (*batch_itr)->m_jobs.end(); job_itr++ ) {
+			next_batch->m_error_message = m_statusGahp->getErrorString();
+			for ( set<BoincJob *>::iterator job_itr = next_batch->m_jobs.begin();
+				  job_itr != next_batch->m_jobs.end(); job_itr++ ) {
 				(*job_itr)->SetEvaluateState();
 			}
 		}
@@ -611,15 +604,14 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 	const char *batch_name;
 
 	// Iterate over the batches in the response
-	for ( GahpClient::BoincQueryResults::iterator i = results.begin(); i != results.end(); i++ ) {
+	for (auto & result : results) {
 		batch_name = m_statusBatches.next();
 		ASSERT( batch_name );
 
 		BoincBatch *batch = NULL;
-		for ( list<BoincBatch *>::iterator batch_itr = m_batches.begin();
-			  batch_itr != m_batches.end(); batch_itr++ ) {
-			if ( (*batch_itr)->m_batch_name == batch_name ) {
-				batch = *batch_itr;
+		for (auto & next_batch : m_batches) {
+			if ( next_batch->m_batch_name == batch_name ) {
+				batch = next_batch;
 				break;
 			}
 		}
@@ -628,7 +620,7 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		// been submitted.
 		if ( batch && batch->m_submit_status == BatchMaybeSubmitted ) {
 
-			if ( i->empty() ) {
+			if ( result.empty() ) {
 				// Batch doesn't exist on sever
 				// Consider it for submission
 				batch->m_submit_status = BatchUnsubmitted;
@@ -637,9 +629,8 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 				// Batch exists on server
 				// Signal the jobs
 				batch->m_submit_status = BatchSubmitted;
-				for ( set<BoincJob *>::iterator job_itr = batch->m_jobs.begin();
-					  job_itr != batch->m_jobs.end(); job_itr++ ) {
-					(*job_itr)->SetEvaluateState();
+				for (auto job : batch->m_jobs) {
+					job->SetEvaluateState();
 				}
 				daemonCore->Reset_Timer( m_leaseTid, 0 );
 			}
@@ -647,7 +638,7 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		}
 
 		// Iterate over the jobs for this batch
-		for ( GahpClient::BoincBatchResults::iterator j = i->begin(); j != i->end(); j++ ) {
+		for ( GahpClient::BoincBatchResults::iterator j = result.begin(); j != result.end(); j++ ) {
 			const char *job_id = strrchr( j->first.c_str(), '#' );
 			if ( job_id == NULL ) {
 				dprintf( D_ALWAYS, "Failed to find job id in '%s'\n", j->first.c_str() );
@@ -669,8 +660,8 @@ BoincResource::BatchStatusResult BoincResource::FinishBatchStatus()
 		// If not doing a full query, update all jobs in the batch that
 		// their status is unchanged.
 		if ( batch && !m_doingFullQuery ) {
-			for ( std::set<BoincJob*>::iterator job_itr = batch->m_jobs.begin(); job_itr != batch->m_jobs.end(); job_itr++ ) {
-				(*job_itr)->NewBoincState( (*job_itr)->remoteState.c_str() );
+			for (auto job : batch->m_jobs) {
+				job->NewBoincState( job->remoteState.c_str() );
 			}
 		}
 	}
@@ -692,22 +683,21 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 		return;
 	}
 
-	for ( list<BoincBatch*>::iterator batch = m_batches.begin();
-		  batch != m_batches.end(); batch++ ) {
+	for (auto & batch : m_batches) {
 
-		if ( (*batch)->m_submit_status == BatchMaybeSubmitted ||
-			 (*batch)->m_submit_status == BatchSubmitted ||
-			 (*batch)->m_submit_status == BatchFailed ) {
+		if ( batch->m_submit_status == BatchMaybeSubmitted ||
+			 batch->m_submit_status == BatchSubmitted ||
+			 batch->m_submit_status == BatchFailed ) {
 			continue;
 		}
 
 		// If we have an active submit command, skip to that batch
 		unsigned this_delay = TIMER_NEVER;
 		if ( m_activeSubmitBatch != NULL ) {
-			if ( *batch != m_activeSubmitBatch ) {
+			if ( batch != m_activeSubmitBatch ) {
 				continue;
 			}
-		} else if ( !BatchReadyToSubmit( *batch, &this_delay ) ) {
+		} else if ( !BatchReadyToSubmit( batch, &this_delay ) ) {
 			if ( this_delay < delay ) {
 				delay = this_delay;
 			}
@@ -717,15 +707,15 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 		if ( m_activeSubmitBatch == NULL ) {
 
 			// Let's start submitting this batch
-			int rc = m_submitGahp->boinc_submit( (*batch)->m_batch_name.c_str(),
-												 (*batch)->m_jobs );
+			int rc = m_submitGahp->boinc_submit( batch->m_batch_name.c_str(),
+												 batch->m_jobs );
 			if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 				dprintf( D_ALWAYS, "New boinc_submit() didn't return PENDING!?: %s\n", m_submitGahp->getErrorString() );
 				m_submitGahp->purgePendingRequests();
 				// TODO What else should we do?
 			} else {
-				(*batch)->m_submit_status = BatchSubmitting;
-				m_activeSubmitBatch = (*batch);
+				batch->m_submit_status = BatchSubmitting;
+				m_activeSubmitBatch = batch;
 				delay = TIMER_NEVER;
 				break; // or reset timer and return?
 			}
@@ -734,8 +724,8 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 			// active submit command, check if it's done
 			// TODO avoid overhead of recreating arguments for 
 			//   already-submitted command
-			int rc = m_submitGahp->boinc_submit( (*batch)->m_batch_name.c_str(),
-												 (*batch)->m_jobs );
+			int rc = m_submitGahp->boinc_submit( batch->m_batch_name.c_str(),
+												 batch->m_jobs );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing, wait for command to complete
 				delay = TIMER_NEVER;
@@ -745,18 +735,18 @@ dprintf(D_FULLDEBUG,"*** DoBatchSubmits()\n");
 
 			if ( rc == 0 ) {
 				// success
-				(*batch)->m_submit_status = BatchSubmitted;
+				batch->m_submit_status = BatchSubmitted;
 				daemonCore->Reset_Timer( m_leaseTid, 0 );
 			} else {
 				dprintf( D_ALWAYS, "Failed to submit batch %s: %s\n",
-						 (*batch)->m_batch_name.c_str(),
+						 batch->m_batch_name.c_str(),
 						 m_submitGahp->getErrorString() );
-				(*batch)->m_submit_status = BatchFailed;
-				(*batch)->m_error_message = m_submitGahp->getErrorString();
+				batch->m_submit_status = BatchFailed;
+				batch->m_error_message = m_submitGahp->getErrorString();
 			}
 
-			for ( set<BoincJob *>::iterator job = (*batch)->m_jobs.begin();
-				  job != (*batch)->m_jobs.end(); job++ ) {
+			for ( set<BoincJob *>::iterator job = batch->m_jobs.begin();
+				  job != batch->m_jobs.end(); job++ ) {
 
 				(*job)->SetEvaluateState();
 			}
@@ -781,25 +771,24 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 		return;
 	}
 
-	for ( list<BoincBatch*>::iterator batch = m_batches.begin();
-		  batch != m_batches.end(); batch++ ) {
+	for (auto & batch : m_batches) {
 
-		if ( (*batch)->m_submit_status != BatchSubmitted ) {
+		if ( batch->m_submit_status != BatchSubmitted ) {
 			continue;
 		}
 
 		// If we have an active lease update command, skip to that batch
-		if ( m_activeLeaseBatch != NULL && *batch != m_activeLeaseBatch ) {
+		if ( m_activeLeaseBatch != NULL && batch != m_activeLeaseBatch ) {
 			continue;
 		}
 
 		if ( m_activeLeaseBatch == NULL ) {
 			// Calculate how long until this batch's lease needs to be updated
-			time_t renew_time = (*batch)->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
+			time_t renew_time = batch->m_lease_time - ((2 * DEFAULT_LEASE_DURATION) / 3);
 			if ( renew_time <= now ) {
 
-				if ( ( (*batch)->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
-					unsigned this_delay = ( (*batch)->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) - now;
+				if ( ( batch->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) > now ) {
+					unsigned this_delay = ( batch->m_last_lease_attempt + LEASE_RETRY_INTERVAL ) - now;
 					if ( this_delay < delay ) {
 						delay = this_delay;
 					}
@@ -810,14 +799,14 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 
 				// lease needs to be updated
 				time_t new_lease_time = time(NULL) + DEFAULT_LEASE_DURATION;
-				int rc = m_leaseGahp->boinc_set_lease( (*batch)->m_batch_name.c_str(),
+				int rc = m_leaseGahp->boinc_set_lease( batch->m_batch_name.c_str(),
 													   new_lease_time );
 				if ( rc != GAHPCLIENT_COMMAND_PENDING ) {
 					dprintf( D_ALWAYS, "New boinc_set_lease() didn't return PENDING!?: %s\n", m_leaseGahp->getErrorString() );
 					m_leaseGahp->purgePendingRequests();
 					// TODO What else should we do?
 				} else {
-					m_activeLeaseBatch = (*batch);
+					m_activeLeaseBatch = batch;
 					m_activeLeaseTime = new_lease_time;
 					delay = TIMER_NEVER;
 					break; // or reset timer and return?
@@ -830,25 +819,25 @@ dprintf(D_FULLDEBUG,"*** UpdateBoincLeases()\n");
 			}
 		} else {
 			// active lease command, check if it's done
-			int rc = m_leaseGahp->boinc_set_lease( (*batch)->m_batch_name.c_str(),
+			int rc = m_leaseGahp->boinc_set_lease( batch->m_batch_name.c_str(),
 												   m_activeLeaseTime );
 			if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 				// do nothing, wait for command to complete
 				break;
 			}
 			m_activeLeaseBatch = NULL;
-			(*batch)->m_last_lease_attempt = time(NULL);
+			batch->m_last_lease_attempt = time(NULL);
 			if ( rc == 0 ) {
 				// success
-				(*batch)->m_lease_time = m_activeLeaseTime;
-				for ( set<BoincJob *>::iterator job = (*batch)->m_jobs.begin();
-					  job != (*batch)->m_jobs.end(); job++ ) {
+				batch->m_lease_time = m_activeLeaseTime;
+				for ( set<BoincJob *>::iterator job = batch->m_jobs.begin();
+					  job != batch->m_jobs.end(); job++ ) {
 
 					(*job)->UpdateJobLeaseSent( m_activeLeaseTime );
 				}
 			} else {
 				dprintf( D_ALWAYS, "Failed to set lease for batch %s: %s\n",
-						 (*batch)->m_batch_name.c_str(),
+						 batch->m_batch_name.c_str(),
 						 m_leaseGahp->getErrorString() );
 				// TODO What else do we do?
 			}

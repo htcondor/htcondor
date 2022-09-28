@@ -3,7 +3,8 @@
 *condor_adstash*
 ================
 
-Gather schedd and/or startd job history ClassAds and push them to Elasticsearch
+Gather schedd and/or startd job history ClassAds and push them via a
+search engine or file interface.
 :index:`condor_adstash<single: condor_adstash; HTCondor commands>`
 
 Synopsis
@@ -74,7 +75,7 @@ Options
  **--threads** *THREADS*
     Number of parallel threads to use when polling for job ClassAds and when
     pushing documents to Elasticsearch
- **--interface** *{null,elasticsearch,jsonfile}*
+ **--interface** *{null,elasticsearch,opensearch,jsonfile}*
     Push ads via the chosen interface
 
 ClassAd source options

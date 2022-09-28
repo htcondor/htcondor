@@ -72,7 +72,6 @@ push @INC, "$ENV{BASE_DIR}/condor_tests";
 require CondorTest;
 require CondorPersonal;
 require CondorUtils;
-require CheckOutputFormats;
 
 if( ! defined $ENV{_NMI_TASKNAME} ) {
     die "_NMI_TASKNAME not in environment, can't test anything!\n";

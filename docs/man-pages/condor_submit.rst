@@ -36,8 +36,6 @@ a single cluster because:
 
 -  Much less memory is used by the scheduler to hold the same number of
    jobs.
--  Only one copy of the checkpoint file is needed to represent all jobs
-   in a cluster until they begin execution.
 -  There is much less overhead involved for HTCondor to start the next
    job in a cluster than for HTCondor to start a new cluster. This can
    make a big difference when submitting lots of short jobs.
@@ -486,6 +484,16 @@ BASIC COMMANDS
     as the *condor_submit* command is issued.
 
     :index:`getenv<single: getenv; submit commands>`
+
+    :index:`batch_name<single: batch_name; submit commands>`
+ batch_name = <batch_name>
+    Set the batch name for this submit. The batch name is displayed by
+    *condor_q* **-batch**. It is intended for use by users to give
+    meaningful names to their jobs and to influence how *condor_q*
+    groups jobs for display. This value in a submit file can be
+    overridden by specifying the **-batch-name** argument on the
+    *condor_submit* command line.
+
  getenv = <<matchlist> | True | False>
     If **getenv** is set to
     :index:`copying current environment<single: copying current environment; environment variables>`\ ``True``,
@@ -562,16 +570,6 @@ BASIC COMMANDS
     cluster. If a relative path is specified, it is relative to the
     current working directory as the job is submitted or the directory
     specified by submit command **initialdir** on the submit machine.
-
-    :index:`log_xml<single: log_xml; submit commands>`
- log_xml = <True | False>
-    If **log_xml** :index:`log_xml<single: log_xml; submit commands>` is
-    ``True``, then the job event log file will be written in ClassAd
-    XML. If not specified, XML is not used. Note that the file is an XML
-    fragment; it is missing the file header and footer. Do not mix XML
-    and non-XML within a single file. If multiple jobs write to a single
-    job event log file, ensure that all of the jobs specify this option
-    in the same way.
 
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
     :index:`notification<single: notification; submit commands>`
@@ -1208,17 +1206,18 @@ FILE TRANSFER COMMANDS
     example, ``/path/to/input_file`` becomes ``input_file`` in the job's
     scratch directory.
 
-    A directory may be specified by appending the forward slash
-    character (/) as a trailing path separator. This syntax is used for
-    both Windows and Linux submit hosts. A directory example using a
-    trailing path separator is ``input_data/``. When a directory is
-    specified with the trailing path separator, the contents of the
-    directory are transferred, but the directory itself is not
-    transferred. It is as if each of the items within the directory were
-    listed in the transfer list. When there is no trailing path
-    separator, the directory is transferred, its contents are
-    transferred, and these contents are placed inside the transferred
-    directory.
+    When a directory is specified, the behavior depends on whether
+    there is a trailing path separator character.  When a directory is
+    specified with a trailing path separator, it is as if each of the
+    items within the directory were listed in the transfer list.
+    Therefore, the contents are transferred, but the directory itself
+    is not. When there is no trailing path separator, the directory
+    itself is transferred with all of its contents inside it.  On
+    platforms such as Windows where the path separator is not a
+    forward slash (/), a trailing forward slash is treated as
+    equivalent to a trailing path separator.  An example of an input
+    directory specified with a trailing forward slash is
+    ``input_data/``.
 
     For grid universe jobs other than HTCondor-C, the transfer of
     directories is not currently supported.
@@ -1326,16 +1325,18 @@ FILE TRANSFER COMMANDS
     Note that this remap function only works with files but not with
     directories.
 
-    A directory may be specified using a trailing path separator. An
-    example of a trailing path separator is the slash character on Unix
-    platforms; a directory example using a trailing path separator is
-    ``input_data/``. When a directory is specified with a trailing path
-    separator, the contents of the directory are transferred, but the
-    directory itself is not transferred. It is as if each of the items
-    within the directory were listed in the transfer list. When there is
-    no trailing path separator, the directory is transferred, its
-    contents are transferred, and these contents are placed inside the
-    transferred directory.
+    When a directory is specified, the behavior depends on whether
+    there is a trailing path separator character.  When a directory is
+    specified with a trailing path separator, it is as if each of the
+    items within the directory were listed in the transfer list.
+    Therefore, the contents are transferred, but the directory itself
+    is not. When there is no trailing path separator, the directory
+    itself is transferred with all of its contents inside it.  On
+    platforms such as Windows where the path separator is not a
+    forward slash (/), a trailing forward slash is treated as
+    equivalent to a trailing path separator.  An example of an input
+    directory specified with a trailing forward slash is
+    ``input_data/``.
 
     For grid universe jobs other than HTCondor-C, the transfer of
     directories is not currently supported.
@@ -2660,15 +2661,6 @@ ADVANCED COMMANDS
     entries` page), but it applies to the job event log, instead of the system
     event log.
 
-    :index:`batch_name<single: batch_name; submit commands>`
- batch_name = <batch_name>
-    Set the batch name for this submit. The batch name is displayed by
-    *condor_q* **-batch**. It is intended for use by users to give
-    meaningful names to their jobs and to influence how *condor_q*
-    groups jobs for display. This value in a submit file can be
-    overridden by specifying the **-batch-name** argument on the
-    *condor_submit* command line.
-
     :index:`job_lease_duration<single: job_lease_duration; submit commands>`
  job_lease_duration = <number-of-seconds>
     For vanilla, parallel, VM, and java universe jobs only, the duration
@@ -2747,6 +2739,16 @@ ADVANCED COMMANDS
     When ``True``, loads the account profile of the dedicated run
     account for Windows jobs. May not be used with
     **run_as_owner** :index:`run_as_owner<single: run_as_owner; submit commands>`.
+
+    :index:`log_xml<single: log_xml; submit commands>`
+ log_xml = <True | False>
+    If **log_xml** :index:`log_xml<single: log_xml; submit commands>` is
+    ``True``, then the job event log file will be written in ClassAd
+    XML. If not specified, XML is not used. Note that the file is an XML
+    fragment; it is missing the file header and footer. Do not mix XML
+    and non-XML within a single file. If multiple jobs write to a single
+    job event log file, ensure that all of the jobs specify this option
+    in the same way.
 
     :index:`match_list_length<single: match_list_length; submit commands>`
  match_list_length = <integer value>

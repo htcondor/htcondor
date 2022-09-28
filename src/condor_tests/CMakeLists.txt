@@ -49,11 +49,12 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
-			   CheckOutputFormats.pm
                run_test.pl)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
+
+
 	set(CHECK_MODULES CondorLog.pm
 			JobDoesNotRun.pm
 			JobIsEvicted.pm
@@ -68,6 +69,9 @@ if (BUILD_TESTING)
 			COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile} ${TEST_TARGET_DIR}/Check/${scriptFile})
 		add_custom_target(test_copy_${scriptFile} ALL DEPENDS ${TEST_TARGET_DIR}/Check/${scriptFile})
 	endforeach()
+
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CheckOutputFormats.pm ${TEST_TARGET_DIR}/CheckOutputFormats.pm COPYONLY)
+
 	endif()
 
 	# 1st remove generated files.
@@ -76,7 +80,7 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
-	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;CheckOutputFormats.pm;run_test.pl")
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl")
 
 	##########################################################
 	# exe test targets
