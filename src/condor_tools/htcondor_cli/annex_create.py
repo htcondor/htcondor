@@ -170,9 +170,10 @@ SYSTEM_TABLE = {
 
                 "max_jobs_in_queue":    999999,  # unlimited
             },
+            # Max of 12 GPUs per user and 32 per allocation.  Since
+            # every node has 4 GPUs, and you get the whole node....
             "gpu": {
-                # 999,999 seems like a silly way to represent unlimited?
-                # "max_nodes_per_job":    None,
+                "max_nodes_per_job":    3,
                 "max_duration":         48 * 60 * 60,
                 # "max_jobs_in_queue":    None,
 
@@ -849,9 +850,12 @@ def validate_system_specific_constraints(
             error_string = f"The '{queue_name}' queue is limited to {queue['gpus_per_node']} GPUs per node.  Use --gpus to set."
             raise ValueError(error_string)
 
-        # We know, on some machines, that you can't request more than a
-        # certain number of total GPUs, even if the request would otherwise
-        # fit.  FIXME: Check to make sure the user hasn't exceeded that.
+        # If the allocation type is node, you get (and are charged for) all
+        # of the GPUs whether you asked for them or not.
+        if queue['allocation_type'] == 'node':
+            if gpus < max_gpus:
+                error_string = f"The '{queue_name}' queue always assigns {queue['gpus_per_node']} GPUs per node.  Set --gpus to match."
+                raise ValueError(error_string)
 
 
 def annex_inner_func(

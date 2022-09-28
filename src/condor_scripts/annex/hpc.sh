@@ -272,6 +272,10 @@ if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
     WHOLE_NODE=""
 fi
 
+CONDOR_GPUS_LINE=""
+if [[ $GPUS ]]; then
+    CONDOR_GPUS_LINE="use feature:gpus"
+fi
 
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
@@ -354,6 +358,7 @@ endif
 
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
+${CONDOR_GPUS_LINE}
 
 #
 # We have to hand out memory in chunks large enough to avoid the problem(s)
