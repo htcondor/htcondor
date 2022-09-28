@@ -51,7 +51,7 @@ submit description file. If this optional argument is the dash character
 specified for the *submit description file*, **-verbose** is implied;
 this can be overridden by specifying **-terse**.
 
-If no *submit discription file* argument is given, and no *-queue*
+If no *submit description file* argument is given, and no *-queue*
 argument is given, commands are taken automatically from standard input.
 
 Note that submission of jobs from a Windows machine requires a stashed
@@ -82,9 +82,9 @@ Options
     spelling errors of submit description file commands. The warnings
     are sent to stderr.
  **-file** *submit_file*
-    Use *submit_file* as the submit discription file. This is
+    Use *submit_file* as the submit description file. This is
     equivalent to providing *submit_file* as an argument without the
-    preceeding *-file*.
+    preceding *-file*.
  **-name** *schedd_name*
     Submit to the specified *condor_schedd*. Use this option to submit
     to a *condor_schedd* other than the default local one.
@@ -172,7 +172,7 @@ Options
     Sends all of the jobs as a late materialization job factory.  A job factory
     consists of a single cluster classad and a digest containing the submit
     commands necessary to describe the differences between jobs.  If the ``Queue``
-    statment has itemdata, then the itemdata will be sent.  Using this option
+    statement has itemdata, then the itemdata will be sent.  Using this option
     is equivalent to using the **max_materialize**
     :index:`max_materialize<single: max_materialize; submit commands>` submit command.
  **-allow-crlf-script**
@@ -507,7 +507,7 @@ BASIC COMMANDS
     match or reject names.
     Matchlist members are matched case-insensitively to each name
     in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
-    character which matches anything at that postion.  Members can have two ``*`` characters if one of them
+    character which matches anything at that position.  Members can have two ``*`` characters if one of them
     is at the end. Members can be prefixed with ``!``
     to force a matching environment variable to not be imported.  The order of members in the Matchlist
     has no effect on the result.  ``getenv = true`` is equivalent to ``getenv = *``
@@ -863,7 +863,7 @@ COMMANDS FOR MATCHMAKING
     to version 9.8.0. A warning to this will effect will be printed when *condor_submit* detects this condition.
 
     For pools that enable dynamic *condor_startd* provisioning and are at least version 9.8.0,
-    the constraint will be tested against the properties of AvailbleGPUs and only those that match
+    the constraint will be tested against the properties of AvailableGPUs and only those that match
     will be assigned to the dynamic slot.
 
     :index:`request_memory<single: request_memory; submit commands>`
@@ -1418,7 +1418,7 @@ FILE TRANSFER COMMANDS
     subdirectories and their contents will not be transferred.
 
     Setting ``when_to_transfer_output`` to ``ON_SUCCESS`` will cause HTCondor
-    to transfer the job's output files when the job completes succesfully.
+    to transfer the job's output files when the job completes successfully.
     Success is defined by the ``success_exit_code`` command, which must be
     set, even if the successful value is the default ``0``.  If
     ``transfer_output_files`` is not set, HTCondor considers all new files
@@ -1449,7 +1449,7 @@ FILE TRANSFER COMMANDS
 
     :index:`gs_access_key_id_file<single: gs_access_key_id_file; submit commands>`
  gs_access_key_id_file
-    Required if you specify a ``gs://`` URLs, ths command
+    Required if you specify a ``gs://`` URLs, this command
     specifies the file containing the access key ID (and only the access key
     ID) used to pre-sign the URLs.
 
@@ -2920,7 +2920,7 @@ ADVANCED COMMANDS
 
     :index:`use_oauth_services<single: use_oauth_services; submit commands>`
  use_oauth_services = <list of credential service names>
-    A comma-separated list of crendential-providing service names for
+    A comma-separated list of credential-providing service names for
     which the job should be provided credentials for the job execution
     environment. The credential service providers must be configured by
     the pool admin.
@@ -3095,7 +3095,7 @@ and comments.
     On the machine, if the attribute ``input_file_path`` is not defined,
     then the path ``/usr/foo`` is used instead.
 
-    As a special case that only works within the submit file *environement*
+    As a special case that only works within the submit file *environment*
     command, the string $$(CondorScratchDir) is expanded to the value
     of the job's scratch directory.  This does not work for scheduler universe
     or grid universe jobs.
