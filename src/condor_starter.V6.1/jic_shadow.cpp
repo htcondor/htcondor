@@ -3279,28 +3279,12 @@ JICShadow::setJobFailed( void ) {
 #if !defined(WINDOWS)
 void
 JICShadow::recordSandboxContents( const char * filename ) {
-	ASSERT(filename != NULL);
-
-	std::string dirname = "_condor_manifest";
-	int cluster, proc;
-	if( job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster ) && job_ad->LookupInteger( ATTR_PROC_ID, proc ) ) {
-		formatstr( dirname, "%d_%d_manifest", cluster, proc );
-	}
-	job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dirname );
-	int r = mkdir( dirname.c_str(), 0700 );
-	if (r < 0 && errno != 17) {
-		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to make directory %s: (%d) %s\n",
-			filename, dirname.c_str(), errno, strerror(errno));
-		return;
-	}
-	addToOutputFiles( dirname.c_str() );
-	std::string f = dirname + DIR_DELIM_CHAR + filename;
 
 	// Assumes we're in the root of the sandbox.
-	FILE * file = fopen( f.c_str(), "w" );
+	FILE * file = Starter->OpenManifestFile(filename);
 	if( file == NULL ) {
-		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open log '%s': %d (%s)\n",
-			filename, f.c_str(), errno, strerror(errno) );
+		dprintf( D_ALWAYS, "recordSandboxContents(%s): failed to open manifest file : %d (%s)\n",
+			filename, errno, strerror(errno) );
 		return;
 	}
 

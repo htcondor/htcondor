@@ -72,6 +72,11 @@ Bugs Fixed:
   the *condor-credmon-oauth* RPM package.
   :jira:`1279`
 
+- Fixed bugs with creation of a job manifest; see the ``manifest``
+  job submit command in the :ref:`man-pages/condor_submit:*condor_submit*`
+  man page.
+  :jira:`1350`
+
 
 .. _lts-version-history-9016:
 
