@@ -402,13 +402,13 @@ main(int argc, const char* argv[])
 		//Designate reading job run instance ads from epoch directory
 		read_epoch_ads = true;
 		//Get epoch directory and validate passed arg is a directory
-		if ( (argc <= i+1)  || (*(argv[i+1]) == '-') ) { epochDirectory = param("JOB_EPOCH_INSTANCE_DIR"); }
-		else { epochDirectory = argv[i+1]; i++; }
+		if ( (argc <= i+1)  || ((*(argv[i+1]) == '-') && (strlen(argv[i+1]) > 1)) ) { epochDirectory = param("JOB_EPOCH_INSTANCE_DIR"); }
+		else { epochDirectory = argv[i+1]; ++i; }
 		if ( epochDirectory != NULL ) {
 			StatInfo si(epochDirectory);
 			if (!si.IsDirectory() ) {
-				i--;
-				epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
+				fprintf(stderr, "Error: Passed param (%s) for -scrape is not a directory.\n",epochDirectory);
+				exit(1);
 			}
 		} else {
 			fprintf( stderr, "Error: No Job Run Instance directory.\n");
@@ -416,7 +416,7 @@ main(int argc, const char* argv[])
 		}
 		//Check for :d option
 		while ( pcolon && *pcolon != '\0' ) {
-			pcolon++;
+			++pcolon;
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
 	}
@@ -1514,18 +1514,6 @@ static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFile
 		}
 		else if (specifiedMatch != -1 && delete_epoch_ads) {
 			fprintf(stderr,"Error: -scrape:d (delete) cannot be used with -limit or -match.\n");
-			exit(1);
-		}
-
-		//Make sure epochDirectory is a directory before attempting to read files
-		if (epochDirectory) {
-			StatInfo si(epochDirectory);
-			if (!si.IsDirectory() ) {
-				fprintf( stderr, "Error: %s is not a valid directory.\n", epochDirectory);
-				exit(1);
-			}
-		} else {
-			fprintf(stderr,"Error: No directory was passed. Unable to scan run instance files.\n");
 			exit(1);
 		}
 
