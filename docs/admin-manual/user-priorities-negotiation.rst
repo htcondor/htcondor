@@ -258,11 +258,11 @@ file entries` section for definitions of these configuration variables.
 
 :index:`SubmitterAutoregroup<single: SubmitterAutoregroup; ClassAd attribute, ephemeral>`\ ``SubmitterAutoregroup``
     Boolean attribute is ``True`` if candidate job is negotiated via
-    autoregoup.
+    autoregroup.
 
 :index:`RemoteAutoregroup<single: RemoteAutoregroup; ClassAd attribute, ephemeral>`\ ``RemoteAutoregroup``
     Boolean attribute is ``True`` if currently running job negotiated
-    via autoregoup.
+    via autoregroup.
 
 Priority Calculation
 --------------------
@@ -476,7 +476,7 @@ terminology, the accounting principal is called the submitter.
 The name of this submitter is, by default, the name the schedd authenticated
 when the job was first submitted to the schedd.  Usually, this is
 the operating system username.  However, the submitter can override
-the username selected by settting the submit file option
+the username selected by setting the submit file option
 
 .. code-block:: condor-submit
 
