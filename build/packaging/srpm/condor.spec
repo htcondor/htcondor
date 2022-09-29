@@ -1682,6 +1682,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 29 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-1
+- Fix file descriptor leak when schedd fails to launch scheduler jobs
+- Fix failure to forward batch grid universe job's refreshed X.509 proxy
+- Fix DAGMan failure when the DONE keyword appeared in the JOB line
+- Fix HTCondor's handling of extremely large UIDs on Linux
+- Fix bug where OAUTH tokens lose their scope and audience upon refresh
+- Support for Apptainer in addition to Singularity
+
 * Tue Aug 16 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.16-1
 - Singularity now mounts /tmp and /var/tmp under the scratch directory
 - Fix bug where Singularity jobs go on hold at the first checkpoint

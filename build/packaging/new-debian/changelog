@@ -1,3 +1,14 @@
+condor (9.0.17-1) stable; urgency=medium
+
+  * Fix file descriptor leak when schedd fails to launch scheduler jobs
+  * Fix failure to forward batch grid universe job's refreshed X.509 proxy
+  * Fix DAGMan failure when the DONE keyword appeared in the JOB line
+  * Fix HTCondor's handling of extremely large UIDs on Linux
+  * Fix bug where OAUTH tokens lose their scope and audience upon refresh
+  * Support for Apptainer in addition to Singularity
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 29 Sep 2022 16:31:00 -0500
+
 condor (9.0.16-1) stable; urgency=medium
 
   * Singularity now mounts /tmp and /var/tmp under the scratch directory
