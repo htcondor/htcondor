@@ -748,7 +748,7 @@ export CMAKE_PREFIX_PATH=/usr
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
        -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
@@ -787,7 +787,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_HDFS:BOOL=FALSE \
