@@ -398,16 +398,15 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "scrape", &pcolon, 3)) { //TODO: Add flag to usage when ready to share with the world
+	else if (is_dash_arg_colon_prefix(argv[i], "epoch", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
 		//Designate reading job run instance ads from epoch directory
 		read_epoch_ads = true;
 		//Get epoch directory and validate passed arg is a directory
-		if ( (argc <= i+1)  || ((*(argv[i+1]) == '-') && (strlen(argv[i+1]) > 1)) ) { epochDirectory = param("JOB_EPOCH_INSTANCE_DIR"); }
-		else { epochDirectory = argv[i+1]; ++i; }
+		epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
 		if ( epochDirectory != NULL ) {
 			StatInfo si(epochDirectory);
 			if (!si.IsDirectory() ) {
-				fprintf(stderr, "Error: Passed param (%s) for -scrape is not a directory.\n",epochDirectory);
+				fprintf(stderr, "Error: JOB_EPOCH_INSTANCE_DIR is not a directory.\n",epochDirectory);
 				exit(1);
 			}
 		} else {
@@ -1509,11 +1508,11 @@ static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFile
 
 		//Make sure match,limit,and/or scanlimit aren't being used with delete function
 		if (maxAds != -1 && delete_epoch_ads) {
-			fprintf(stderr,"Error: -scrape:d (delete) cannot be used with -scanlimit.\n");
+			fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -scanlimit.\n");
 			exit(1);
 		}
 		else if (specifiedMatch != -1 && delete_epoch_ads) {
-			fprintf(stderr,"Error: -scrape:d (delete) cannot be used with -limit or -match.\n");
+			fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -limit or -match.\n");
 			exit(1);
 		}
 

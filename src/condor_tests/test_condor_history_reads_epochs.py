@@ -8,6 +8,7 @@
 
 from ornithology import *
 import os
+from pathlib import Path
 from time import sleep
 from time import time
 
@@ -16,9 +17,7 @@ epochDir = "epochs"
 setUpSuccess = True
 historyTestNum = -1
 outputFiles = [
-    "rel_path.txt",
-    "abs_path.txt",
-    "no_path.txt",
+    "base_epoch.txt",
     "cluster.txt",
     "cluster_proc.txt",
     "dlt_limit.txt",
@@ -28,14 +27,12 @@ outputFiles = [
 ]
 expectedOutput = {
     #Key=outfileName : Expected in file : count of lines expected
-    "rel_path.txt":{"1.0 1.1 2.0 2.1":8},
-    "abs_path.txt":{"1.0 1.1 2.0 2.1":8},
-    "no_path.txt":{"Error: No Job Run Instance directory.":1},
+    "base_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "cluster.txt":{"1.0 1.1":4},
     "cluster_proc.txt":{"1.0":2},
-    "dlt_limit.txt":{"Error: -scrape:d (delete) cannot be used with -limit or -match.":1},
-    "dlt_match.txt":{"Error: -scrape:d (delete) cannot be used with -limit or -match.":1},
-    "dlt_scanlimit.txt":{"Error: -scrape:d (delete) cannot be used with -scanlimit.":1},
+    "dlt_limit.txt":{"Error: -epoch:d (delete) cannot be used with -limit or -match.":1},
+    "dlt_match.txt":{"Error: -epoch:d (delete) cannot be used with -limit or -match.":1},
+    "dlt_scanlimit.txt":{"Error: -epoch:d (delete) cannot be used with -scanlimit.":1},
     "delete.txt":{"1.0 1.1 2.0 2.1":8}
 }
 #--------------------------------------------------------------------------------------------
@@ -107,21 +104,19 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
     return setUpSuccess
 
 #--------------------------------------------------------------------------------------------
-@action(params={ #Params dictionary for testing condor_history -scrape
+@action(params={ #Params dictionary for testing condor_history -epoch
 #"Test param":"Command for os"
 
 #Cannot test with no path because condor_history is using the parent condor tools and doesn't
 #have JOB_EPOCH_INSTANCE_DIR set and we don't want it because other jobs will write tests 
-#there messing up this test. So, check condor_history -scrape for Error message
-"history w/ relative path":"condor_history -scrape {0}".format(epochDir), #Technically gets tested everytime
-"history w/ absolute path":"echo 'Failed absolute path test'",#This command will be created internally
-"history w/ no path":"condor_history -scrape",#This should fail in this test environment do to it using parent condor_history
-"history w/ cluster":"condor_history -scrape {0} 1".format(epochDir),
-"history w/ cluster.proc":"condor_history -scrape {0} 1.0".format(epochDir),
-"history w/ delete & limit":"condor_history -scrape:d {0} -limit 1".format(epochDir),
-"history w/ delete & match":"condor_history -scrape:d {0} -match 1".format(epochDir),
-"history w/ delete & scanlimit":"condor_history -scrape:d {0} -scanlimit 1".format(epochDir),
-"history w/ delete":"condor_history -scrape:d {0}".format(epochDir),
+#there messing up this test. So, check condor_history -epoch for Error message
+"history":"condor_history -epoch",
+"history w/ cluster":"condor_history -epoch 1",
+"history w/ cluster.proc":"condor_history -epoch 1.0",
+"history w/ delete & limit":"condor_history -epoch:d -limit 1",
+"history w/ delete & match":"condor_history -epoch:d -match 1",
+"history w/ delete & scanlimit":"condor_history -epoch:d -scanlimit 1",
+"history w/ delete":"condor_history -epoch:d",
 })
 def read_epochs(condor,test_dir,path_to_sleep,request):
     global historyTestNum
@@ -134,18 +129,15 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         if historyTestNum == 0:
             print("\nERROR: Set up failed. Cannot test history tools.")
         return False
-    cmd = "echo 'Failed to overwrite command'"
-    if "abs_path" in outputFiles[historyTestNum]:
-        cmd = "condor_history -scrape {0}".format(test_dir / epochDir)
-    else:
-        cmd = request.param
-    pipe = ""
-    if "dlt_" in outputFiles[historyTestNum] or "no_path.txt" == outputFiles[historyTestNum]:
-        pipe = " 2>&1"
-    os.system("{0} > {1}{2}".format(cmd,outputFiles[historyTestNum],pipe))
+    #Split based param command line for specific test into array
+    cmd = request.param.split()
+    cp = condor.run_command(cmd)
+    out_file = Path(test_dir / outputFiles[historyTestNum])
+    with out_file.open("a") as f:
+        f.write(cp.stdout + "\n" + cp.stderr + "\n")
     test_passed = True #naively assume test will pass
     #Verify output in written file
-    if "dlt" in outputFiles[historyTestNum] or "no_path.txt" == outputFiles[historyTestNum]:
+    if "dlt" in outputFiles[historyTestNum]:
         #Is a delete option with another flag that should cause an error or no_path without the knob set
         fd = open(outputFiles[historyTestNum],"r")
         matches = 0
@@ -153,7 +145,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         for line in fd:
             line = line.strip()
             #Skip header line (should be first)
-            if "OWNER" in line:
+            if "OWNER" in line or line == "\n":
                 pass
             #Check that line is in expected output
             elif line in expectedOutput[outputFiles[historyTestNum]]:
@@ -180,7 +172,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         #Digest lines in successfull reading
         for line in fd:
             #Skip header line (should be first)
-            if "OWNER" in line:
+            if "OWNER" in line or line == "\n":
                 pass
             else:
                 #Get Job Id (cluster.proc) and increment dictionary count or add to dictionary
