@@ -47,4 +47,7 @@ Bugs Fixed:
 - The *condor_negotiator* no longer sends the admin capability
   attribute of  machine ads to the *condor_schedd*.
   :jira:`1349`
-  
+
+- Fixed a bug in DAGMan where **Node** jobs that could not write to their **UserLog**
+  would cause the **DAG** to get stuck indefinitely while waiting for pending **Nodes**.
+  :jira:`1305`
