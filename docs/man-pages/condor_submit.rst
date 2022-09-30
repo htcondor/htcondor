@@ -1865,12 +1865,6 @@ COMMANDS FOR THE GRID
     Specifies a limit in seconds on the execution time of the job.
     This limit is enforced by the PBS/LSF/SGE/SLURM scheduler.
 
-    :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
- boinc_authenticator_file = <pathname>
-    For grid type **boinc** jobs, specifies a path and file name of the
-    authorization file that grants permission for HTCondor to use the
-    BOINC service. There is no default value when not specified.
-
     :index:`cloud_label_names<single: cloud_label_names; submit commands>`
  cloud_label_names = <name0,name1,name...>
     For grid type **gce** jobs, specifies the case of tag names that
@@ -2119,7 +2113,7 @@ COMMANDS FOR THE GRID
     For each **grid-type-string** value, there are further type-specific
     values that must specified. This submit description file command
     allows each to be given in a space-separated list. Allowable
-    **grid-type-string** values are **arc**, **azure**, **batch**, **boinc**,
+    **grid-type-string** values are **arc**, **azure**, **batch**,
     **condor**, **ec2**, and **gce**.
     The HTCondor manual chapter on Grid Computing
     details the variety of grid types.

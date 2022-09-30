@@ -24,6 +24,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if a job created a symlink to a file, the contents of
+  that file would be counted in the job's `DiskUsage`.  Previously,
+  symlinks to directories were (correctly) ignored, but not symlinks to
+  files.
+  :jira:`1354`
+
 - Fixed bug where certain **submit file** variables like ``accounting_group`` and
   ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
   DAGMan would always write over the variables at job submission time.
@@ -43,3 +49,8 @@ Bugs Fixed:
   This primarily happened with both peers had ``PREFER_IPV4`` set to
   ``False``.
   :jira:`1341`
+
+- The *condor_negotiator* no longer sends the admin capability
+  attribute of  machine ads to the *condor_schedd*.
+  :jira:`1349`
+  

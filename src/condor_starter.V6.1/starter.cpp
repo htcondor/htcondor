@@ -42,6 +42,7 @@
 #include "perm.h"
 #include "filename_tools.h"
 #include "directory.h"
+#include "tmp_dir.h"
 #include "exit.h"
 #include "condor_auth_x509.h"
 #include "setenv.h"
@@ -3068,6 +3069,73 @@ Starter::publishPostScriptUpdateAd( ClassAd* ad )
 		return true;
 	}
 	return false;
+}
+
+FILE *
+Starter::OpenManifestFile( const char * filename )
+{
+	// We should be passed in a filename that is a relavtive path
+	ASSERT(filename != NULL);
+	ASSERT(!IS_ANY_DIR_DELIM_CHAR(filename[0]));
+
+	// Makes no sense if we don't have a job info communicator or job ad
+	const ClassAd *job_ad = NULL;
+	if (jic) {
+		job_ad = jic->getJobAd();
+	}
+	if (!job_ad) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): invoked without a job classad\n",
+			filename);
+		return NULL;
+	}
+
+	// Confirm we really are in user priv before continuing; perhaps
+	// we are still in condor priv if, for insatnce, thus method is invoked
+	// before initializing the user ids.
+	TemporaryPrivSentry sentry(PRIV_USER);
+	if ( get_priv_state() != PRIV_USER ) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to switch to PRIV_USER\n",
+			filename);
+		return NULL;
+
+	}
+
+	// The rest of this method assumes we are in the job sandbox,
+	// so set cwd to the sandbox (but reset the cwd when we return)
+	std::string errMsg;
+	TmpDir tmpDir;
+	if (!tmpDir.Cd2TmpDir(GetWorkingDir(0),errMsg)) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
+			filename, GetWorkingDir(0));
+		return NULL;
+
+	}
+
+	std::string dirname = "_condor_manifest";
+	int cluster, proc;
+	if( job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster ) && job_ad->LookupInteger( ATTR_PROC_ID, proc ) ) {
+		formatstr( dirname, "%d_%d_manifest", cluster, proc );
+	}
+	job_ad->LookupString( ATTR_JOB_MANIFEST_DIR, dirname );
+	int r = mkdir( dirname.c_str(), 0700 );
+	if (r < 0 && errno != 17) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to make directory %s: (%d) %s\n",
+			filename, dirname.c_str(), errno, strerror(errno));
+		return NULL;
+	}
+	jic->addToOutputFiles( dirname.c_str() );
+	std::string f = dirname + DIR_DELIM_CHAR + filename;
+
+	FILE * file = fopen( f.c_str(), "w" );
+	if( file == NULL ) {
+		dprintf( D_ERROR, "OpenManifestFile(%s): failed to open log '%s': %d (%s)\n",
+			filename, f.c_str(), errno, strerror(errno) );
+		return NULL;
+	}
+
+	dprintf(D_STATUS, "Writing into manifest file '%s'\n", f.c_str() );
+
+	return file;
 }
 
 bool
