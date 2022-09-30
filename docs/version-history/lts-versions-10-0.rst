@@ -36,6 +36,15 @@ Bugs Fixed:
 - Fixed job submission to newer ARC CE releases.
   :jira:`1327`
 
+- Fixed a bug where a pre-created security session may not be used
+  when connecting to a daemon over IPv6.
+  The peers would do a full round of authentication and authorization,
+  which may fail.
+  This primarily happened with both peers had ``PREFER_IPV4`` set to
+  ``False``.
+  :jira:`1341`
+
 - The *condor_negotiator* no longer sends the admin capability
   attribute of  machine ads to the *condor_schedd*.
   :jira:`1349`
+  
