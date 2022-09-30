@@ -3102,7 +3102,7 @@ Starter::OpenManifestFile( const char * filename )
 
 	// The rest of this method assumes we are in the job sandbox,
 	// so set cwd to the sandbox (but reset the cwd when we return)
-	MyString errMsg;
+	std::string errMsg;
 	TmpDir tmpDir;
 	if (!tmpDir.Cd2TmpDir(GetWorkingDir(0),errMsg)) {
 		dprintf( D_ERROR, "OpenManifestFile(%s): failed to cd to job sandbox %s\n",
