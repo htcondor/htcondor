@@ -65,7 +65,6 @@
 #define ATTR_BATCH_PROJECT  "BatchProject"
 #define ATTR_BATCH_QUEUE  "BatchQueue"
 #define ATTR_BATCH_RUNTIME  "BatchRuntime"
-#define ATTR_BOINC_AUTHENTICATOR_FILE "BoincAuthenticatorFile"
 #define ATTR_BUFFER_SIZE  "BufferSize"
 #define ATTR_BUFFER_FILES  "BufferFiles"
 #define ATTR_BUFFER_BLOCK_SIZE  "BufferBlockSize"

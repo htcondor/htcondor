@@ -394,6 +394,9 @@ public:
 	virtual bool wroteChirpConfig() { return false; }
 	virtual const std::string chirpConfigFilename() { return ""; }
 
+		/* Get the job ad */
+	const ClassAd * getJobAd() { return job_ad; }
+
 protected:
 
 		// // // // // // // // // // // //

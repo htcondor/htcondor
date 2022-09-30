@@ -196,14 +196,15 @@ bool
 CronJobParams::InitEnv( const MyString &param_env )
 {
 	Env			env_object;
-	MyString	env_error_msg;
+	std::string env_error_msg;
 	m_env.Clear();
 	if( !env_object.MergeFromV1RawOrV2Quoted( param_env.c_str(),
-										  &env_error_msg ) ) {
+										  env_error_msg ) ) {
 		dprintf( D_ALWAYS,
 				 "CronJobParams: Job '%s': "
 				 "Failed to parse environment: '%s'\n",
 				 GetName(), env_error_msg.c_str());
+		dprintf(D_ERROR, "CronJobParams: Invalid %s_ENV: %s\n", GetName(), param_env.c_str());
 		return false;
 	}
 	return AddEnv( env_object );
