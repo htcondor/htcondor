@@ -264,7 +264,7 @@ static void dump_print_mask(std::string & tmp);
 static 	printmask_headerfooter_t customHeadFoot = STD_HEADFOOT;
 static std::vector<GroupByKeyInfo> group_by_keys;
 static  bool		cputime = false;
-static	bool		current_run = false;
+static	bool		current_run = true;
 static	bool		dash_grid = false;
 static	bool		dash_run = false;
 static	bool		dash_idle = false;
@@ -810,6 +810,8 @@ enum {
 static void 
 processCommandLineArguments (int argc, const char *argv[])
 {
+	//Bool for if a job runtime flag (currentrun or cumulative-time) has been passed
+	bool runTimeTypeSet = false;
 	int i;
 	char *daemonname;
 	const char * hat;
@@ -1444,8 +1446,21 @@ processCommandLineArguments (int argc, const char *argv[])
 			qdo_mode |= QDO_Cputime;
 		}
 		else
-		if (is_dash_arg_prefix(dash_arg, "currentrun", 2)) {
-			current_run = true;
+		if (is_dash_arg_prefix(dash_arg, "currentrun", 3)) {
+			if (runTimeTypeSet) {
+				fprintf(stderr,"Error: -currentrun can't be used with -cumulative-time\n");
+				exit(1);
+			}
+			runTimeTypeSet = true;
+		}
+		else
+		if (is_dash_arg_prefix(dash_arg, "cumulative-time", 3)) {
+			if (runTimeTypeSet) {
+				fprintf(stderr,"Error: -cumulative-time can't be used with -currentrun\n");
+				exit(1);
+			}
+			current_run = false;
+			runTimeTypeSet = true;
 		}
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "grid", &pcolon, 2 )) {
@@ -1771,6 +1786,10 @@ job_time(double cpu_time,ClassAd *ad)
 	double total_wall_time = previous_runs;
 	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
+	} else if ( (job_status == IDLE || job_status == HELD) && current_run) {
+		double last_run = 0;
+		ad->LookupFloat( ATTR_JOB_LAST_REMOTE_WALL_CLOCK, last_run );
+		return last_run;
 	}
 
 	return total_wall_time;
@@ -4326,7 +4345,7 @@ const char * const autoclusterNormal_PrintFormat = "SELECT\n"
 // !!! ENTRIES IN THIS TABLE MUST BE SORTED BY THE FIRST FIELD !!
 static const CustomFormatFnTableItem LocalPrintFormats[] = {
 	{ "BATCH_NAME",      ATTR_JOB_CMD, 0, local_render_batch_name, ATTR_JOB_BATCH_NAME "\0" ATTR_JOB_CMD "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0" },
-	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" },
+	{ "CPU_TIME",        ATTR_JOB_REMOTE_USER_CPU, "%T", local_render_cpu_time, ATTR_JOB_STATUS "\0" ATTR_SERVER_TIME "\0" ATTR_SHADOW_BIRTHDATE "\0" ATTR_JOB_REMOTE_WALL_CLOCK "\0" ATTR_JOB_LAST_REMOTE_WALL_CLOCK "\0"},
 	{ "DAG_OWNER",       ATTR_OWNER, 0, local_render_dag_owner, ATTR_NICE_USER_deprecated "\0" ATTR_DAGMAN_JOB_ID "\0" ATTR_DAG_NODE_NAME "\0"  },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, local_render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },
 	{ "JOB_STATUS",      ATTR_JOB_STATUS, 0, local_render_job_status_char, ATTR_LAST_SUSPENSION_TIME "\0" ATTR_TRANSFERRING_INPUT "\0" ATTR_TRANSFERRING_OUTPUT "\0" ATTR_TRANSFER_QUEUED "\0" },
