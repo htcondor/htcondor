@@ -54,3 +54,6 @@ Bugs Fixed:
   attribute of  machine ads to the *condor_schedd*.
   :jira:`1349`
   
+- Fixed a bug in the hibernation code that caused HTCondor to ignore
+  the active Suspend-To-Disk option.
+  :jira:`1357`
