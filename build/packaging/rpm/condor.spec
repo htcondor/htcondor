@@ -730,7 +730,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
        -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
@@ -756,7 +756,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
 %if %globus
        -DWITH_GLOBUS:BOOL=TRUE \
@@ -1626,6 +1626,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Sep 29 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-1
+- Fix file descriptor leak when schedd fails to launch scheduler jobs
+- Fix failure to forward batch grid universe job's refreshed X.509 proxy
+- Fix DAGMan failure when the DONE keyword appeared in the JOB line
+- Fix HTCondor's handling of extremely large UIDs on Linux
+- Fix bug where OAUTH tokens lose their scope and audience upon refresh
+- Support for Apptainer in addition to Singularity
+
 * Tue Sep 13 2022 Tim Theisen <tim@cs.wisc.edu> - 9.11.2-1
 - In 9.11.0, STARTD_NOCLAIM_SHUTDOWN restarted instead. Now, it shuts down.
 
