@@ -463,8 +463,8 @@ SysIfLinuxHibernator::Detect ( void )
 		token = strtok_r( buf, " ", &save );
 		while( token ) {
 			int len = strlen( token );
-			if ( token[0] == '[' && token[len] == ']' ) {
-				token[len] = '\0';
+			if ( token[0] == '[' && token[len-1] == ']' ) {
+				token[len-1] = '\0';
 				token++;
 			}
 			if ( strcmp( token, "platform" ) == 0 ) {
