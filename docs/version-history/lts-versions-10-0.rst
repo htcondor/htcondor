@@ -24,6 +24,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if a job created a symlink to a file, the contents of
+  that file would be counted in the job's `DiskUsage`.  Previously,
+  symlinks to directories were (correctly) ignored, but not symlinks to
+  files.
+  :jira:`1354`
+
 - Fixed bug where certain **submit file** variables like ``accounting_group`` and
   ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
   DAGMan would always write over the variables at job submission time.
