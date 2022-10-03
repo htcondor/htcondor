@@ -150,14 +150,16 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 				// On everything other than Win32, path names are case sensitive
 				allow = allow_path_prefix_list.prefix_withwildcard(rpath);
 #endif
-				if(! allow) {
-					std::string maybe_directory;
-					formatstr(maybe_directory, "%s/", rpath);
+				if( param_boolean( "CREATE_RELATIVE_DIRECTORIES_IN_REMAPS", false ) ) {
+					if(! allow) {
+						std::string maybe_directory;
+						formatstr(maybe_directory, "%s/", rpath);
 #ifdef WIN32
-					allow = allow_path_prefix_list.prefix_anycase_withwildcard(maybe_directory.c_str());
+						allow = allow_path_prefix_list.prefix_anycase_withwildcard(maybe_directory.c_str());
 #else
-					allow = allow_path_prefix_list.prefix_withwildcard(maybe_directory.c_str());
+						allow = allow_path_prefix_list.prefix_withwildcard(maybe_directory.c_str());
 #endif
+					}
 				}
 			}
 			free(rpath);

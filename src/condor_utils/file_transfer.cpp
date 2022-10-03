@@ -2401,93 +2401,95 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					fullname = remap_filename;
 				}
 				else {
-					// For simplicity of reasoning about the security
-					// implications, don't try to create absolute directories
-					// for absolute paths named in transfer_output_remaps.
-					//
-					// Because the `output` and `error` submit commands are
-					// implemented with transfer_output_remaps, this code
-					// also creates the directories they name.  This is a
-					// semantic change, and one that changes a job from going
-					// on hold (after running for its duration) to succeeding.
-					char * dirname = condor_dirname(remap_filename.c_str());
-					if( dirname[0] != '.' ) {
-						std::string path;
-						formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
+					if( param_boolean( "CREATE_RELATIVE_DIRECTORIES_IN_REMAPS", false ) ) {
+						// For simplicity of reasoning about the security
+						// implications, don't try to create absolute directories
+						// for absolute paths named in transfer_output_remaps.
+						//
+						// Because the `output` and `error` submit commands are
+						// implemented with transfer_output_remaps, this code
+						// also creates the directories they name.  This is a
+						// semantic change, and one that changes a job from going
+						// on hold (after running for its duration) to succeeding.
+						char * dirname = condor_dirname(remap_filename.c_str());
+						if( dirname[0] != '.' ) {
+							std::string path;
+							formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
-						// So this fails on a dirA/dirB/filename remaps,
-						// which seemed like the easiest way to trigger
-						// the error-handling code on Linux.  (On Windows,
-						// you can jsut specify illegal directory names.)
-						int rv = mkdir( path.c_str(), 0700 );
-						if( rv != 0 ) {
-							dprintf(D_ZKM, "mkdir(%s) = %d, errno %d\n", path.c_str(), rv, errno );
-						}
-						if( rv != 0 && errno != EEXIST ) {
+							// So this fails on a dirA/dirB/filename remaps,
+							// which seemed like the easiest way to trigger
+							// the error-handling code on Linux.  (On Windows,
+							// you can jsut specify illegal directory names.)
+							int rv = mkdir( path.c_str(), 0700 );
+							if( rv != 0 ) {
+								dprintf(D_ZKM, "mkdir(%s) = %d, errno %d\n", path.c_str(), rv, errno );
+							}
+							if( rv != 0 && errno != EEXIST ) {
 #else
-						int directory_creation_mode = 0700;
+							int directory_creation_mode = 0700;
 
-						/* allow_shadow_access() assumes that either the
-						 * path as given or its dirname exists, which will
-						 * not be the case when we're creating directories.
-						 *
-						 * Since realpath() is how we canonicalize paths,
-						 * this limitation can't be eliminated.  Instead,
-						 * since we create the directory as PRIV_USER,
-						 * assume that it's safe to do so, but go ahead
-						 * delete the directory if allow_shadow_access()
-						 * doesn't like it, since the transfer will fail.
-						 */
-						bool success = false;
-						if( mkdir_and_parents_if_needed(
-							path.c_str(), directory_creation_mode, directory_creation_mode, PRIV_USER
-						) ) {
-							// Since we just created a directory, and we're
-							// obsessed with premature optimization and/or
-							// caching, we have to reinitialize
-							// allow_shadow_access().
-							std::string job_ad_whitelist, spoolDir;
-							jobAd.EvaluateAttrString(ATTR_JOB_LIMIT_DIRECTORY_ACCESS,job_ad_whitelist);
-							SpooledJobFiles::getJobSpoolPath(& jobAd, spoolDir);
-							allow_shadow_access(NULL, true, job_ad_whitelist.c_str(),spoolDir.c_str());
+							/* allow_shadow_access() assumes that either the
+							 * path as given or its dirname exists, which will
+							 * not be the case when we're creating directories.
+							 *
+							 * Since realpath() is how we canonicalize paths,
+							 * this limitation can't be eliminated.  Instead,
+							 * since we create the directory as PRIV_USER,
+							 * assume that it's safe to do so, but go ahead
+							 * delete the directory if allow_shadow_access()
+							 * doesn't like it, since the transfer will fail.
+							 */
+							bool success = false;
+							if( mkdir_and_parents_if_needed(
+								path.c_str(), directory_creation_mode, directory_creation_mode, PRIV_USER
+							) ) {
+								// Since we just created a directory, and we're
+								// obsessed with premature optimization and/or
+								// caching, we have to reinitialize
+								// allow_shadow_access().
+								std::string job_ad_whitelist, spoolDir;
+								jobAd.EvaluateAttrString(ATTR_JOB_LIMIT_DIRECTORY_ACCESS,job_ad_whitelist);
+								SpooledJobFiles::getJobSpoolPath(& jobAd, spoolDir);
+								allow_shadow_access(NULL, true, job_ad_whitelist.c_str(),spoolDir.c_str());
 
-							success = allow_shadow_access( path.c_str() );
-							if(! success) {
-								remove_relative_path( Iwd, dirname );
-								errno = EACCES;
+								success = allow_shadow_access( path.c_str() );
+								if(! success) {
+									remove_relative_path( Iwd, dirname );
+									errno = EACCES;
+								}
 							}
-						}
 
-						if( (! success) ) {
+							if( (! success) ) {
 #endif /* DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING */
-							std::string err_str;
-							int the_error = errno;
+								std::string err_str;
+								int the_error = errno;
 
-							formatstr( err_str,
-								"%s at %s failed to create directory %s: %s (errno %d)",
-								get_mySubSystem()->getName(),
-								s->my_ip_str(), path.c_str(),
-								strerror(the_error), the_error
-							);
-							dprintf(D_ALWAYS,
-								"DoDownload: consuming rest of transfer and failing "
-								"after encountering the following error: %s\n",
-								err_str.c_str()
-							);
+								formatstr( err_str,
+									"%s at %s failed to create directory %s: %s (errno %d)",
+									get_mySubSystem()->getName(),
+									s->my_ip_str(), path.c_str(),
+									strerror(the_error), the_error
+								);
+								dprintf(D_ALWAYS,
+									"DoDownload: consuming rest of transfer and failing "
+									"after encountering the following error: %s\n",
+									err_str.c_str()
+								);
 
-							if( all_transfers_succeeded ) {
-								download_success = false;
-								try_again = false;
-								hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
-								hold_subcode = the_error;
-								error_buf = err_str;
+								if( all_transfers_succeeded ) {
+									download_success = false;
+									try_again = false;
+									hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+									hold_subcode = the_error;
+									error_buf = err_str;
 
-								all_transfers_succeeded = false;
+									all_transfers_succeeded = false;
+								}
 							}
 						}
-					}
-					free(dirname);
+						free(dirname);
 
+					}
 					formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
 				}
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.c_str(),remap_filename.c_str());
