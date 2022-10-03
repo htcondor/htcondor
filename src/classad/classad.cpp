@@ -112,16 +112,6 @@ void SetOldClassAdSemantics(bool enable)
 }
 
 ClassAd::
-ClassAd ()
-{
-	parentScope = NULL;
-	do_dirty_tracking = false;
-	chained_parent_ad = NULL;
-	alternateScope = NULL;
-}
-
-
-ClassAd::
 ClassAd (const ClassAd &ad)
 {
     CopyFrom(ad);

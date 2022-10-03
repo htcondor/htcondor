@@ -75,7 +75,7 @@ class ClassAd : public ExprTree
 		/**@name Constructors/Destructor */
 		//@{
 		/// Default constructor 
-		ClassAd ();
+		ClassAd () : alternateScope(nullptr), do_dirty_tracking(false), chained_parent_ad(nullptr), parentScope(nullptr) {}
 
 		/** Copy constructor
             @param ad The ClassAd to copy
