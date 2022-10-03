@@ -460,20 +460,15 @@ SysIfLinuxHibernator::Detect ( void )
 		strip(buf);
 		char	*token, *save = NULL;
 
-		token = strtok_r( buf, " ", &save );
+		token = strtok_r( buf, " []", &save );
 		while( token ) {
-			int len = strlen( token );
-			if ( token[0] == '[' && token[len] == ']' ) {
-				token[len] = '\0';
-				token++;
-			}
 			if ( strcmp( token, "platform" ) == 0 ) {
 				m_hibernator->addState( HibernatorBase::S4 );
 			}
 			else if ( strcmp( token, "shutdown" ) == 0 ) {
 				m_hibernator->addState( HibernatorBase::S5 );
 			}
-			token = strtok_r( NULL, " ", &save );
+			token = strtok_r( NULL, " []", &save );
 		}
 	}
 	fclose( fp );
