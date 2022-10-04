@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_q* will now display the current run time for jobs in running, tranfering output,
+  and suspended states while displaying the previous run time for jobs in idle or held
+  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
+  :jira:`1064`
 
 Bugs Fixed:
 

@@ -811,7 +811,7 @@ static void
 processCommandLineArguments (int argc, const char *argv[])
 {
 	//Bool for if a job runtime flag (currentrun or cumulative-time) has been passed
-	bool runTimeTypeSet = false;
+	bool runtimeTypeSet = false;
 	int i;
 	char *daemonname;
 	const char * hat;
@@ -1447,20 +1447,21 @@ processCommandLineArguments (int argc, const char *argv[])
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "currentrun", 3)) {
-			if (runTimeTypeSet) {
+			if (runtimeTypeSet) {
 				fprintf(stderr,"Error: -currentrun can't be used with -cumulative-time\n");
 				exit(1);
 			}
-			runTimeTypeSet = true;
+			current_run = true;
+			runtimeTypeSet = true;
 		}
 		else
 		if (is_dash_arg_prefix(dash_arg, "cumulative-time", 3)) {
-			if (runTimeTypeSet) {
+			if (runtimeTypeSet) {
 				fprintf(stderr,"Error: -cumulative-time can't be used with -currentrun\n");
 				exit(1);
 			}
 			current_run = false;
-			runTimeTypeSet = true;
+			runtimeTypeSet = true;
 		}
 		else
 		if (is_dash_arg_colon_prefix(dash_arg, "grid", &pcolon, 2 )) {
@@ -1787,9 +1788,7 @@ job_time(double cpu_time,ClassAd *ad)
 	if ( ( job_status == RUNNING || job_status == TRANSFERRING_OUTPUT || job_status == SUSPENDED) && shadow_bday ) {
 		total_wall_time += cur_time - shadow_bday;
 	} else if ( (job_status == IDLE || job_status == HELD) && current_run) {
-		double last_run = 0;
-		ad->LookupFloat( ATTR_JOB_LAST_REMOTE_WALL_CLOCK, last_run );
-		return last_run;
+		ad->LookupFloat( ATTR_JOB_LAST_REMOTE_WALL_CLOCK, total_wall_time );
 	}
 
 	return total_wall_time;
