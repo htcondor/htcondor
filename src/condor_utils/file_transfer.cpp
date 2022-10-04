@@ -265,6 +265,8 @@ dPrintFileTransferList( int flags, const FileTransferList & list, const std::str
 			i.srcName().c_str(), i.destDir().c_str(), i.destUrl().c_str()
 		);
 	}
+	// Don't print the trailing comma.
+	message[message.size()] = '\0';
 	dprintf( flags, "%s\n", message.c_str() );
 }
 
