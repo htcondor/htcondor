@@ -261,12 +261,14 @@ void
 dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
 	std::string message = header;
 	for( auto & i: list ) {
-		formatstr_cat( message, " %s -> %s [%s],",
+		formatstr_cat( message, " %s -> '%s' [%s],",
 			i.srcName().c_str(), i.destDir().c_str(), i.destUrl().c_str()
 		);
 	}
 	// Don't print the trailing comma.
-	message[message.size()] = '\0';
+	if( message[message.size() - 1] == ',' ) {
+	    message.erase(message.size() - 1);
+    }
 	dprintf( flags, "%s\n", message.c_str() );
 }
 
