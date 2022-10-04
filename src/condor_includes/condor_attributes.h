@@ -1220,6 +1220,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
 
+#ifdef LINUX
+#define ATTR_LINUX_CAPS "LinuxCapabilities"
+#endif
+
 #if 0
 // Enumerate the ones that can't be constant strings..
 typedef enum

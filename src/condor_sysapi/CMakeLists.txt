@@ -31,6 +31,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}/processor_flags.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/reconfig.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/resource_limits.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/virt_mem.cpp
+${CMAKE_CURRENT_SOURCE_DIR}/process_capabilities.cpp
 )
 
 # clinpack comes from a 3rd party, we don't ever want to touch it, even
