@@ -425,7 +425,7 @@ class FileTransfer final: public Service {
 		filesize_t peer_max_transfer_bytes = {-1};
 		bool I_go_ahead_always = {false};
 		bool peer_goes_ahead_always = {false};
-		bool socket_default_crypto;
+		bool socket_default_crypto = {true};
 	} _ft_protocol_bits;
 
 	// Do the final computation of which files we'll be transferring.  This
