@@ -9,11 +9,9 @@ Version 9.12.0
 
 Release Notes:
 
-.. HTCondor version 9.12.0 released on Month Date, 2022.
+- HTCondor version 9.12.0 released on October 5, 2022.
 
-- HTCondor version 9.12.0 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-9016`.
+- This version includes all the updates from :ref:`lts-version-history-9017`.
 
 New Features:
 
@@ -23,24 +21,9 @@ New Features:
   how SSH enables trust on first use of a remote host.
   :jira:`501`
 
-- HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
-  for replication, so they will be unable to replicate with HTCondor daemons
-  that are older than version 8.8.13. see :macro:`HAD_FIPS_MODE` for more information.
-  :jira:`1234`
-
-- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
-  x86_64 micro-architecture, like *x86_64-v3*
-  :jira:`1252`
-
 - Added submit templates.  These are configured using new configuration variables
   :macro:`SUBMIT_TEMPLATE_NAMES` and :macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
-
-- Added support for ephemeral per-job execute directories
-  allocated from LVM or from a backing file on disk, when HTCondor is running
-  as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
-  enables this, see the :doc:`../admin-manual/directories` page for details.
-  :jira:`912`
 
 - Added extended submit help which can be defined in the *condor_schedd* using the new
   configuration variable :macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
@@ -52,15 +35,14 @@ New Features:
   record information about job processes throughout all nodes within the DAG.
   :jira:`1216` 
 
+- Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
+  x86_64 micro-architecture, like *x86_64-v3*
+  :jira:`1252`
+
 - Added ``-drain`` and other draining options to *condor_off* and *condor_restart*.
   This allows a command to be sent to the *condor_master* to drain the *condor_startd*
   and then shutdown or restart all of the HTCondor daemons.
   :jira:`1151`
-
-- When the knob :macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
-  false, and the starter runs a container job, we no longer create the helper
-  Unix domain sockets required for *condor_ssh_to_job* to work.
-  :jira:`1244`
 
 - Docker universe now supports an administrator-set knob :macro:`DOCKER_SHM_SIZE`, which
   allows the administrator of a worker node to set the --shm-size option to
@@ -81,6 +63,16 @@ New Features:
 - Added ``--interface opensearch`` option to *condor_adstash*, which will push ads to a
   properly configured OpenSearch search engine.
   :jira:`1289`
+
+- HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
+  for replication, so they will be unable to replicate with HTCondor daemons
+  that are older than version 8.8.13. see :macro:`HAD_FIPS_MODE` for more information.
+  :jira:`1234`
+
+- When the knob :macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+  false, and the starter runs a container job, we no longer create the helper
+  Unix domain sockets required for *condor_ssh_to_job* to work.
+  :jira:`1244`
 
 Bugs Fixed:
 
