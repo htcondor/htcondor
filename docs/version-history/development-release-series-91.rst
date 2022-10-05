@@ -25,29 +25,29 @@ New Features:
 
 - HAD daemons now default to using SHA-256 checksums rather than MD5 checksums
   for replication, so they will be unable to replicate with HTCondor daemons
-  that are older than version 8.8.13. see macro:`HAD_FIPS_MODE` for more information.
+  that are older than version 8.8.13. see :macro:`HAD_FIPS_MODE` for more information.
   :jira:`1234`
 
 - Added new slot attribute `Microarch` on x86_64 Linux, which advertises the
-  x86_64 microarchitecture, like *x86_64-v3*
+  x86_64 micro-architecture, like *x86_64-v3*
   :jira:`1252`
 
 - Added submit templates.  These are configured using new configuration variables
-  macro:`SUBMIT_TEMPLATE_NAMES` and macro:`SUBMIT_TEMPLATE_<name>`.
+  :macro:`SUBMIT_TEMPLATE_NAMES` and :macro:`SUBMIT_TEMPLATE_<name>`.
   :jira:`1231`
 
-- Added support for ephermal per-job execute directories
+- Added support for ephemeral per-job execute directories
   allocated from LVM or from a backing file on disk, when HTCondor is running
   as service on Linux platforms.   ``STARTD_ENFORCE_DISK_USAGE``
   enables this, see the :doc:`../admin-manual/directories` page for details.
   :jira:`912`
 
-- Added extended submit help which can be defined in the schedd using the new
-  configuration variable macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
+- Added extended submit help which can be defined in the *condor_schedd* using the new
+  configuration variable :macro:`EXTENDED_SUBMIT_HELPFILE` and displayed by
   *condor_submit* using the new ``-capabilities`` argument.
   :jira:`1238`
 
-- Added new DAG job classad attributes ``DAG_JobsSubmitted``, ``DAG_JobsIdle``,
+- Added new DAG job ClassAd attributes ``DAG_JobsSubmitted``, ``DAG_JobsIdle``,
   ``DAG_JobsHeld``, ``DAG_JobsRunning``, and ``DAG_JobsCompleted`` to better
   record information about job processes throughout all nodes within the DAG.
   :jira:`1216` 
@@ -57,14 +57,14 @@ New Features:
   and then shutdown or restart all of the HTCondor daemons.
   :jira:`1151`
 
-- When the knob macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
+- When the knob :macro:`ENABLE_SSH_TO_JOB` is set to the non-default value of
   false, and the starter runs a container job, we no longer create the helper
-  unix domain sockets required for *condor_ssh_to_job* to work.
+  Unix domain sockets required for *condor_ssh_to_job* to work.
   :jira:`1244`
 
-- Docker universe now support an administrator-set knob DOCKER_SHM_SIZE, which
+- Docker universe now supports an administrator-set knob :macro:`DOCKER_SHM_SIZE`, which
   allows the administrator of a worker node to set the --shm-size option to
-  docker run
+  docker run.
   :jira:`1282`
 
 - Refactored *condor_adstash* to speed up future development of new ClassAd
@@ -90,7 +90,7 @@ Bugs Fixed:
   :jira:`1245`
 
 - Fixed a memory leak in the *condor_schedd* triggered by spooling sandboxes
-  to the schedd.
+  to the *condor_schedd*.
   :jira:`1233`
 
 - HTCondor’s security library no longer tries to resolve the provided hostname
@@ -203,7 +203,7 @@ New Features:
   
 - The default value for ``SCHEDD_ASSUME_NEGOTIATOR_GONE`` has been changed 
   from 20 minutes to a practically infinite value.  This is to prevent
-  surprises when the schedd starts running vanilla universe jobs even when
+  surprises when the *condor_schedd* starts running vanilla universe jobs even when
   the admin has intentionally stopped the negotiator.
   :jira:`1185`
 
@@ -215,7 +215,7 @@ New Features:
   :jira:`1080`
 
 - A new knob, ``SCHEDD_SEND_RESCHEDULE`` has been added.  When set
-  to false, the schedd never tries to send a reschedule command to the
+  to false, the *condor_schedd* never tries to send a reschedule command to the
   negotiator.  The default is true. Set this to false in the HTCondor-CE
   and other systems that have no negotiator.
   :jira:`1192`
@@ -728,7 +728,7 @@ Bugs Fixed:
   :jira:`952`
 
 - Fixed a bug introduced earlier in this series where in very 
-  rare cases, a schedd would not appear in the collector when it
+  rare cases, a *condor_schedd* would not appear in the collector when it
   started up, but would appear an hour later.
   :jira:`931`
 
