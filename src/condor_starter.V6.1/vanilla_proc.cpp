@@ -849,12 +849,12 @@ void VanillaProc::restartCheckpointedJob() {
 	}
 	m_checkpoint_usage += last_usage;
 
-	static int checkpointNumber = 0;
-	if( checkpointNumber == 0 ) {
+	static int checkpointNumber = -1;
+	if( checkpointNumber == -1 ) {
 		JobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
 	}
 
-	if( Starter->jic->uploadCheckpointFiles(checkpointNumber) ) {
+	if( Starter->jic->uploadCheckpointFiles(checkpointNumber + 1) ) {
 			++checkpointNumber;
 			notifySuccessfulPeriodicCheckpoint(checkpointNumber);
 	} else {

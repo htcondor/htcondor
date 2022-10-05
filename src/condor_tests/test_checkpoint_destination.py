@@ -327,7 +327,7 @@ def path_to_the_job_script(default_condor, test_dir):
         epoch_number = int(rv.stdout.strip())
     print(f"Starting epoch number {epoch_number}.")
 
-    my_checkpoint_number = 0
+    my_checkpoint_number = -1
     rv = subprocess.run(
         ["condor_chirp", "get_job_attr", "my_checkpoint_number"],
         stdout=subprocess.PIPE,
@@ -348,7 +348,7 @@ def path_to_the_job_script(default_condor, test_dir):
     # set to two seconds, so sleep for three to make sure it passes before
     # we try again.
     for i in range(1,3):
-        the_checkpoint_number = 0
+        the_checkpoint_number = -1
         rv = subprocess.run(
             ["condor_q", sys.argv[1], "-af", "CheckpointNumber"],
             stdout=subprocess.PIPE,
@@ -363,8 +363,9 @@ def path_to_the_job_script(default_condor, test_dir):
             time.sleep(3)
     print(f"Found the checkpoint number {the_checkpoint_number}")
 
-    # Dump the sandbox contents for later inspection.
-    if the_checkpoint_number == 1:
+    # Dump the sandbox contents (when resuming after the first checkpoint)
+    # for later inspection.
+    if the_checkpoint_number == 0:
         # This is a hack.
         target = Path(posix_test_dir) / sys.argv[1]
         os.system(f'/bin/cp -a . {target.as_posix()}')
@@ -994,8 +995,8 @@ class TestCheckpointDestination:
         # Did the job resume and complete correctly?
         expected_stdout = [
             "Starting epoch number 0.\n",
-            "Starting from my checkpoint number 0\n",
-            "Found the checkpoint number 0\n",
+            "Starting from my checkpoint number -1\n",
+            "Found the checkpoint number -1\n",
             "Starting step 0.\n",
             "Starting step 1.\n",
             "Starting step 2.\n",
@@ -1005,8 +1006,8 @@ class TestCheckpointDestination:
             "Found epoch number in the job ad at startup.\n",
             "Starting epoch number 1.\n",
             "Found my checkpoint number in the job ad at startup.\n",
-            "Starting from my checkpoint number 1\n",
-            "Found the checkpoint number 1\n",
+            "Starting from my checkpoint number 0\n",
+            "Found the checkpoint number 0\n",
             "Starting step 5.\n",
             "Starting step 6.\n",
             "Starting step 7.\n",
@@ -1016,8 +1017,8 @@ class TestCheckpointDestination:
             "Found epoch number in the job ad at startup.\n",
             "Starting epoch number 1.\n",
             "Found my checkpoint number in the job ad at startup.\n",
-            "Starting from my checkpoint number 2\n",
-            "Found the checkpoint number 2\n",
+            "Starting from my checkpoint number 1\n",
+            "Found the checkpoint number 1\n",
             "Starting step 10.\n",
             "Starting step 11.\n",
             "Starting step 12.\n",
