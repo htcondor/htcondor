@@ -1069,9 +1069,8 @@ static bool checkMatchJobIdsFound(ClassAd *ad) {
 	if (!ad->LookupInteger(ATTR_CLUSTER_ID,ad_cluster) ||
 		!ad->LookupInteger(ATTR_PROC_ID,ad_proc) ||
 		!ad->LookupInteger(ATTR_COMPLETION_DATE,ad_completion)) {
-			dprintf(D_FULLDEBUG,"ERROR: Malformed Job Ad. Unable to check Cluster.Proc matches.\n");
 			return false;
-	}
+	} //TODO: Replace these job ad calls with passed banner information
 
 	//For each match item info check record found
 	for (auto& match : jobIdFilterInfo) {
@@ -1082,7 +1081,7 @@ static bool checkMatchJobIdsFound(ClassAd *ad) {
 			jobIdFilterInfo.pop_back();
 		} else { //Else this is a cluster only find
 			//If the cluster submit time is greater than the current completion date remove from data structure
-			if (ad_completion != 0 && match.QDate > ad_completion) {
+			if (ad_completion <= 0 && match.QDate > ad_completion) {
 				std::swap(match,jobIdFilterInfo.back());
 				jobIdFilterInfo.pop_back();
 			} else if (match.clusterId == ad_cluster) { //If cluster matches do checks
@@ -1253,7 +1252,7 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
         }
 
-		if (cluster != -1 && !read_epoch_ads) { //User specified cluster or cluster.proc. Also, conficts with epochs so skip if reading epoch files
+		if (cluster > 0 && !read_epoch_ads) { //User specified cluster or cluster.proc. Also, conficts with epochs so skip if reading epoch files
 			if (checkMatchJobIdsFound(ad)) { //Check if all possible matches have been found
 				if (ad) {
 					delete ad;
@@ -1369,7 +1368,7 @@ static void printJobIfConstraint(std::vector<std::string> & exprs, const char* c
 		printJob(ad);
 		matchCount++; // if control reached here, match has occured
 	}
-	if (cluster != -1 && !read_epoch_ads) { //User specified cluster or cluster.proc. Also, conficts with epochs so skip if reading epoch files
+	if (cluster > 0 && !read_epoch_ads) { //User specified cluster or cluster.proc. Also, conficts with epochs so skip if reading epoch files
 		if (checkMatchJobIdsFound(&ad)) { //Check if all possible ads have been displayed
 			maxAds = adCount;
 			return;
@@ -1541,8 +1540,8 @@ static int set_print_mask_from_stream(
 static void findEpochFiles(std::deque<std::string> *epochFiles){
 	std::string jobID; //Make jobId to search for .XXX.YY.
 	bool oneJob = false;
-	if (cluster != -1) {
-		if (proc != -1) { formatstr(jobID,".%d.%d.",cluster,proc); oneJob = true; }
+	if (cluster > 0) {
+		if (proc >= 0) { formatstr(jobID,".%d.%d.",cluster,proc); oneJob = true; }
 		else { formatstr(jobID,".%d.",cluster); }
 	}
 
