@@ -2225,7 +2225,7 @@ RemoteResource::initFileTransfer()
 	std::string manifestFileName;
 	if( largestManifestNumber != -1 ) {
 		for( int i = largestManifestNumber; i >= 0; --i ) {
-			formatstr( manifestFileName, "%s/MANIFEST.%.4d", spoolPath.c_str(), i );
+			formatstr( manifestFileName, "%s/_condor_checkpoint_MANIFEST.%.4d", spoolPath.c_str(), i );
 			if( manifest::validateManifestFile( manifestFileName ) ) {
 				manifestNumber = i;
 				break;

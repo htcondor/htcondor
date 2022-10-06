@@ -3931,7 +3931,7 @@ createCheckpointManifest(
 	// but writing the file to disk simplifies both this code and means
 	// that the MANIFEST file isn't a special case for the actual transfer.
 	std::string manifestFileName;
-	formatstr( manifestFileName, "MANIFEST.%.4d", checkpointNumber );
+	formatstr( manifestFileName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
 	if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
 		dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
 		return -1;

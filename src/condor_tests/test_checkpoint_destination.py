@@ -813,7 +813,7 @@ def path_to_mutate_script_c(test_dir):
     from pathlib import Path
 
     # Corrupt the MANIFEST hash by swapping its first two bytes.
-    path = Path("MANIFEST.0000")
+    path = Path("_condor_checkpoint_MANIFEST.0000")
     contents = path.read_text().splitlines()
     contents[-1] = contents[-1][1] + contents[-1][0] + contents[-1][2:]
     path.write_text("\\n".join(contents) + "\\n")
@@ -1066,7 +1066,7 @@ class TestCheckpointDestination:
         # elsewhere.)
 
         check_path = test_dir / f"{the_completed_job.clusterid}.0"
-        manifest_file = test_dir / "condor" / "spool" / f"{the_completed_job.clusterid}" / "0" / f"cluster{the_completed_job.clusterid}.proc0.subproc0" / "MANIFEST.0000"
+        manifest_file = test_dir / "condor" / "spool" / f"{the_completed_job.clusterid}" / "0" / f"cluster{the_completed_job.clusterid}.proc0.subproc0" / "_condor_checkpoint_MANIFEST.0000"
         rv = subprocess.run(
             ['condor_manifest', 'validateFilesListedIn', manifest_file],
             cwd=check_path,
