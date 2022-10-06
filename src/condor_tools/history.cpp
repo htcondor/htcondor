@@ -1076,7 +1076,7 @@ static bool checkMatchJobIdsFound(ClassAd *ad) {
 	for (auto& match : jobIdFilterInfo) {
 		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d\n",match.clusterId,match.procId,match.QDate,match.numProcs); //Debug Match items
 		//If has a specified proc and matched proc and cluster then remove from data structure
-		if (match.procId != -1 && match.clusterId == ad_cluster && match.procId == ad_proc) {
+		if (match.procId >= 0 && match.clusterId == ad_cluster && match.procId == ad_proc) {
 			std::swap(match,jobIdFilterInfo.back());
 			jobIdFilterInfo.pop_back();
 		} else { //Else this is a cluster only find
@@ -1086,7 +1086,7 @@ static bool checkMatchJobIdsFound(ClassAd *ad) {
 				jobIdFilterInfo.pop_back();
 			} else if (match.clusterId == ad_cluster) { //If cluster matches do checks
 				//Get QDate from job ad if not set in info
-				if (match.QDate == -1) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
+				if (match.QDate < 0) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
 				//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
 				if (match.numProcs < 0) {
 					int numProcOffest = match.numProcs;
