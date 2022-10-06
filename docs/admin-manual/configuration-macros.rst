@@ -3572,10 +3572,13 @@ section.
     to make /dev/shm on Linux private to each job.  When private, the
     starter removes any files from the private /dev/shm at job exit time.
 
+.. warning::
+   The per job filesystem feature is a work in progress and not currently supported.
+
 The following macros control if the *condor_startd* daemon should
-perform backfill computations whenever resources would otherwise be
-idle. See :ref:`admin-manual/setting-up-special-environments:configuring
-htcondor for running backfill jobs` for details.
+create a custom filesystem for the job's scratch directory.
+This allows HTCondor to prevent the job
+from using more scratch space than provisioned.
 
 :macro-def:`STARTD_ENFORCE_DISK_LIMITS`
     This boolean value, which is only evaluated on Linux systems, tells
@@ -3615,6 +3618,11 @@ htcondor for running backfill jobs` for details.
     set to ``true``, the mount will only be visible to the job and the
     starter.  Any process in any other process tree will not be able
     to see the mount.  Setting this to true breaks Docker universe.
+
+The following macros control if the *condor_startd* daemon should
+perform backfill computations whenever resources would otherwise be
+idle. See :ref:`admin-manual/setting-up-special-environments:configuring
+htcondor for running backfill jobs` for details.
 
 :macro-def:`ENABLE_BACKFILL`
     A boolean value that, when ``True``, indicates that the machine is
