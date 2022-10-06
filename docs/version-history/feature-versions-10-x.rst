@@ -23,6 +23,10 @@ New Features:
   state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
   :jira:`1064`
 
+- *condor_history* will now stop searching history files once all possible job ads are
+  found if passed ClusterIds or ClusterId.ProcId pairs.
+  :jira:`1364`
+
 Bugs Fixed:
 
 - None.
