@@ -1626,6 +1626,17 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Oct 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.12.0-1
+- Provide a mechanism to bootstrap secure authentication within a pool
+- Add the ability to define submit templates
+- Administrators can now extend the help offered by condor_submit
+- Add DAGMan ClassAd attributes to record more information about jobs
+- On Linux, advertise the x86_64 micro-architecture in a slot attribute
+- Added -drain option to condor_off and condor_restart
+- Administrators can now set the shared memory size for Docker jobs
+- Multiple improvements to condor_adstash
+- HAD daemons now use SHA-256 checksums by default
+
 * Thu Sep 29 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-1
 - Fix file descriptor leak when schedd fails to launch scheduler jobs
 - Fix failure to forward batch grid universe job's refreshed X.509 proxy
