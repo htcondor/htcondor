@@ -32,13 +32,7 @@ may cause one or more clusters. A cluster is a set of jobs specified in
 the submit description between
 **queue** :index:`queue<single: queue; submit commands>` commands for which the
 executable is not changed. It is advantageous to submit multiple jobs as
-a single cluster because:
-
--  Much less memory is used by the scheduler to hold the same number of
-   jobs.
--  There is much less overhead involved for HTCondor to start the next
-   job in a cluster than for HTCondor to start a new cluster. This can
-   make a big difference when submitting lots of short jobs.
+a single cluster because the schedd uses much less memory to hold the jobs.
 
 Multiple clusters may be specified within a single submit description.
 Each cluster must specify a single executable.
