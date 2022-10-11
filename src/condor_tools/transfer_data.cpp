@@ -174,7 +174,6 @@ main(int argc, char *argv[])
 	char* scheddAddr = NULL;
 	const char * pcolon;
 	std::string method;
-	char *tmp;
 
 	MyName = condor_basename(argv[0]);
 	set_priv_initialize(); // allow uid switching if root
@@ -183,18 +182,6 @@ main(int argc, char *argv[])
 #if !defined(WIN32)
 	install_sig_handler(SIGPIPE, SIG_IGN );
 #endif
-
-	// dig around in the config file looking for what the config file says
-	// about getting files from Condor. This defaults with the global variable
-	// initialization.
-	/* CRUFT The transferd is no longer supported
-	tmp = param( "SANDBOX_TRANSFER_METHOD" );
-	if ( tmp != NULL ) {
-		method = tmp;
-		free( tmp );
-		string_to_stm( method, st_method );
-	}
-	*/
 
 	char **args = (char **)malloc(sizeof(char *) * argc); // args 
 	if ( ! args) exit(2);
