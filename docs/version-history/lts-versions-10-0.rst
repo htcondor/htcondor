@@ -61,3 +61,8 @@ Bugs Fixed:
 - Fixed a bug in the hibernation code that caused HTCondor to ignore
   the active Suspend-To-Disk option.
   :jira:`1357`
+
+- Fixed a bug where some administrator client tools did not properly
+  use the remote administrator capability (configuration parameter
+  ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
+  :jira:`1371`
