@@ -25,6 +25,15 @@ def replace_queue_statement_in_file(file_name, new):
                 file.write(line)
 
 
+lmkeys = [
+           "max_idle",
+           "max_materialize",
+           "materialize_max_idle",
+           "JobMaterializeLimit",
+           "JobMaterializeMaxIdle",
+         ]
+LATE_MATERIALIZATION_KEYS = [ name.casefold() for name in lmkeys ]
+
 def copy(submit_file_name, dag_submit_file_name):
     with open(submit_file_name) as submit_file:
         lines = submit_file.readlines()
@@ -34,9 +43,7 @@ def copy(submit_file_name, dag_submit_file_name):
             # Disable late materialization.
             if "=" in line:
                 (key, value) = line.split("=")
-                if key.strip().casefold() == "max_idle".casefold():
-                    continue
-                if key.strip().casefold() == "max_materialize".casefold():
+                if key.strip().casefold() in LATE_MATERIALIZATION_KEYS:
                     continue
             dag_submit_file.write(line)
 
