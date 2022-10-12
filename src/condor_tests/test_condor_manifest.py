@@ -17,11 +17,11 @@ class Test_GetNumberFromFileName:
         ( 'failure.z',          -1 ),
         ( 'failure.000',        -1 ),
         ( 'failure.0001',       -1 ),
-        ( 'MANIFEST.z',         -1 ),
-        ( 'MANIFEST.000',        0 ),
-        ( 'MANIFEST.0001',       1 ),
-        ( 'MANIFEST.0101',     101 ),
-        ( 'MANIFEST.-101',      -1 ),
+        ( '_condor_checkpoint_MANIFEST.z',         -1 ),
+        ( '_condor_checkpoint_MANIFEST.000',        0 ),
+        ( '_condor_checkpoint_MANIFEST.0001',       1 ),
+        ( '_condor_checkpoint_MANIFEST.0101',     101 ),
+        ( '_condor_checkpoint_MANIFEST.-101',      -1 ),
     ]
 
     @pytest.fixture(params=TEST_CASES, ids=[case[0] for case in TEST_CASES])
