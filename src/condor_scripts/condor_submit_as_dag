@@ -34,9 +34,9 @@ def copy(submit_file_name, dag_submit_file_name):
             # Disable late materialization.
             if "=" in line:
                 (key, value) = line.split("=")
-                if key.strip() == "max_idle":
+                if key.strip().casefold() == "max_idle".casefold():
                     continue
-                if key.strip() == "max_materialize":
+                if key.strip().casefold() == "max_materialize".casefold():
                     continue
             dag_submit_file.write(line)
 
