@@ -31,6 +31,13 @@ def copy(submit_file_name, dag_submit_file_name):
 
     with open(dag_submit_file_name, "w") as dag_submit_file:
         for line in lines:
+            # Disable late materialization.
+            if "=" in line:
+                (key, value) = line.split("=")
+                if key.strip() == "max_idle":
+                    continue
+                if key.strip() == "max_materialize":
+                    continue
             dag_submit_file.write(line)
 
 
@@ -154,7 +161,7 @@ def simplify_complex_queue_statement(submit_file_name):
 
 def main(argv):
     if len(argv) != 2:
-        print("condor_qtod takes exactly one argument, then name of the submit file", file=sys.stderr)
+        print("condor_submit_as_dag takes exactly one argument, the name of the submit file", file=sys.stderr)
         return -1
 
     submit_file_name = argv[1]
