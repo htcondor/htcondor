@@ -66,3 +66,10 @@ Bugs Fixed:
   use the remote administrator capability (configuration parameter
   ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
   :jira:`1371`
+
+- When a ``JOB_TRANSFORM_*`` transform changes an attribute at submit time in a late
+  materialization factory, it no longer marks that attribute as fixed for all jobs.  This
+  change makes it possible for a transform to modify rather than simply replacing an attribute
+  that that the user wishes to vary per job.
+  :jira:`1369`
+
