@@ -13,7 +13,7 @@ Release Notes:
 
 - HTCondor version 10.1.0 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-100x`.
+- This version includes all the updates from :ref:`lts-version-history-1000`.
 
 New Features:
 
