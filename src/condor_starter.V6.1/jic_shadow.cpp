@@ -47,7 +47,10 @@
 #include "credmon_interface.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include "manifest.h"
+#include "checksum.h"
 
+#include <fstream>
 #include <algorithm>
 
 extern Starter *Starter;
@@ -1073,7 +1076,7 @@ JICShadow::removeFromOutputFiles( const char* filename )
 }
 
 bool
-JICShadow::uploadCheckpointFiles()
+JICShadow::uploadCheckpointFiles(int checkpointNumber)
 {
 	if(! filetrans) {
 		return false;
@@ -1091,15 +1094,17 @@ JICShadow::uploadCheckpointFiles()
 	priv_state saved_priv = set_user_priv();
 
 	// this will block
-	bool rval = filetrans->UploadCheckpointFiles( true );
+	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
 	if( !rval ) {
 		// Failed to transfer.
-		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
+		dprintf( D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed.\n" );
+		holdJob( "Starter failed to upload checkpoint",
+		         CONDOR_HOLD_CODE::FailedToCheckpoint, -1 );
 		return false;
 	}
-	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );
+	dprintf( D_FULLDEBUG, "JICShadow::uploadCheckpointFiles() succeeded.\n" );
 	return true;
 }
 
@@ -2494,6 +2499,58 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT( "Failed to transfer files" );
 		}
+
+		// It's not enought to for the FTO to believe that the transfer
+		// of a checkpoint succeeded if that checkpoint wasn't transferred
+		// by CEDAR (because our file-transfer plugins don't do integrity).
+		std::string checkpointDestination;
+		if( job_ad->LookupString( "CheckpointDestination", checkpointDestination ) ) {
+			// We only generate MANIFEST files if the checkpoint wasn't
+			// stored to the spool, which is exactly the case in which
+			// we want to do this manual integrity check.
+
+			// Due to a shortcoming in the FTO, we can't send files with
+			// one name from the shadow to the starter with another, so
+			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
+			// it is erroneous to have received more than one.
+
+			std::string manifestFileName;
+			const char * currentFile = NULL;
+			// Should this be Starter->getWorkingDir(false)?
+			Directory sandboxDirectory( "." );
+			while( (currentFile = sandboxDirectory.Next()) ) {
+				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+					if(! manifestFileName.empty()) {
+						std::string message = "Found more than one MANIFEST file, aborting.";
+						notifyStarterError( message.c_str(), true, 0, 0 );
+						EXCEPT( "%s\n", message.c_str() );
+					}
+					manifestFileName = currentFile;
+				}
+			}
+
+			if(! manifestFileName.empty()) {
+
+				// This file should have been transferred via CEDAR, so this
+				// check shouldn't be necessary, but it also ensures that we
+				// haven't had a name collision with the job.
+				if(! manifest::validateManifestFile( manifestFileName )) {
+					std::string message = "Invalid MANIFEST file, aborting.";
+					notifyStarterError( message.c_str(), true, 0, 0 );
+					EXCEPT( "%s\n", message.c_str() );
+				}
+
+				std::string error;
+				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					formatstr( error, "%s, aborting.", error.c_str() );
+					notifyStarterError( error.c_str(), true, 0, 0 );
+					EXCEPT( "%s\n", error.c_str() );
+				}
+
+				unlink( manifestFileName.c_str() );
+			}
+		}
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";

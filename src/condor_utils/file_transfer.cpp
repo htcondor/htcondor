@@ -50,6 +50,8 @@
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
 #include "condor_sys.h"
+#include "checksum.h"
+#include "shortfile.h"
 
 #include <fstream>
 #include <algorithm>
@@ -59,7 +61,6 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <string>
-
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -255,6 +256,21 @@ private:
 	condor_mode_t m_file_mode{NULL_FILE_PERMISSIONS};
 	filesize_t m_file_size{0};
 };
+
+void
+dPrintFileTransferList( int flags, const FileTransferList & list, const std::string & header ) {
+	std::string message = header;
+	for( auto & i: list ) {
+		formatstr_cat( message, " %s -> '%s' [%s],",
+			i.srcName().c_str(), i.destDir().c_str(), i.destUrl().c_str()
+		);
+	}
+	// Don't print the trailing comma.
+	if( message[message.size() - 1] == ',' ) {
+	    message.erase(message.size() - 1);
+    }
+	dprintf( flags, "%s\n", message.c_str() );
+}
 
 const int GO_AHEAD_FAILED = -1; // failed to contact transfer queue manager
 const int GO_AHEAD_UNDEFINED = 0;
@@ -1370,10 +1386,12 @@ FileTransfer::FindChangedFiles()
 }
 
 int
-FileTransfer::UploadCheckpointFiles( bool blocking ) {
+FileTransfer::UploadCheckpointFiles( int checkpointNumber, bool blocking ) {
+	this->checkpointNumber = checkpointNumber;
+
 	// This is where we really want to separate "I understand the job ad"
 	// from "I can operate the protocol".  Until then, just set a member
-	// variable so that DetermineWhichFilesToSend() can know what to do.
+	// variable to make the special-case behavior happen.
 	uploadCheckpointFiles = true;
 	int rv = UploadFiles( blocking, false );
 	uploadCheckpointFiles = false;
@@ -1651,33 +1669,38 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			// And before we do that, call CommitFiles() to finish any
 			// previous commit which may have been prematurely aborted.
 			{
-			const char *currFile;
 			transobject->CommitFiles();
-			Directory spool_space( transobject->SpoolSpace,
-								   transobject->getDesiredPrivState() );
-			while ( (currFile=spool_space.Next()) ) {
-				if (transobject->UserLogFile &&
-						!file_strcmp(transobject->UserLogFile,currFile))
-				{
-					// Don't send the userlog from the shadow to starter
-					continue;
-				} else {
-					// We aren't looking at the userlog file... ship it!
-					//
-					// Do NOT try to avoid duplicating files here.  Because
-					// we append the SPOOL entries to the input list, they'll
-					// win even if the de-duplication code in DoUpload()
-					// doesn't detect them.  This avoids a bunch of ugly code
-					// duplication, and also a bug caused by assuming all
-					// entries in SPOOL were files, so that directories at
-					// the root of SPOOL would be removed from the input list,
-					// causing an incomplete transfer if the user hadn't
-					// put the whole directory in TransferCheckpointFiles.
-					const char * filename = spool_space.GetFullPath();
-					// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
-					transobject->InputFiles->append(filename);
+
+			std::string checkpointDestination;
+			if(! transobject->jobAd.LookupString( "CheckpointDestination", checkpointDestination )) {
+                const char *currFile;
+				Directory spool_space( transobject->SpoolSpace,
+									   transobject->getDesiredPrivState() );
+				while ( (currFile=spool_space.Next()) ) {
+					if (transobject->UserLogFile &&
+							!file_strcmp(transobject->UserLogFile,currFile))
+					{
+						// Don't send the userlog from the shadow to starter
+						continue;
+					} else {
+						// We aren't looking at the userlog file... ship it!
+						//
+						// Do NOT try to avoid duplicating files here.  Because
+						// we append the SPOOL entries to the input list, they'll
+						// win even if the de-duplication code in DoUpload()
+						// doesn't detect them.  This avoids a bunch of ugly code
+						// duplication, and also a bug caused by assuming all
+						// entries in SPOOL were files, so that directories at
+						// the root of SPOOL would be removed from the input list,
+						// causing an incomplete transfer if the user hadn't
+						// put the whole directory in TransferCheckpointFiles.
+						const char * filename = spool_space.GetFullPath();
+						// dprintf( D_ZKM, "[FT] Appending SPOOL filename %s to input files.\n", filename );
+						transobject->InputFiles->append(filename);
+					}
 				}
 			}
+
 			// Similarly, we want to look through any data reuse file and treat them as input
 			// files.  We must handle the manifest here in order to ensure the manifest files
 			// are treated in the same manner as anything else that appeared on transfer_input_files
@@ -1693,7 +1716,12 @@ FileTransfer::HandleCommands(int command, Stream *s)
 			transobject->FilesToSend = transobject->InputFiles;
 			transobject->EncryptFiles = transobject->EncryptInputFiles;
 			transobject->DontEncryptFiles = transobject->DontEncryptInputFiles;
+
+			transobject->inHandleCommands = true;
+			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = true; }
 			transobject->Upload(sock,ServerShouldBlock);
+			if(! checkpointDestination.empty()) { transobject->uploadCheckpointFiles = false; }
+			transobject->inHandleCommands = false;
 			}
 			break;
 		case FILETRANS_DOWNLOAD:
@@ -2185,6 +2213,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// When we are signing URLs, we want to make sure that the requested
 		// prefix is valid.
 	std::vector<std::string> output_url_prefixes;
+	std::string checkpointDestination;
+	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", checkpointDestination.c_str());
+		output_url_prefixes.emplace_back(checkpointDestination);
+	}
 	if (OutputDestination)
 	{
 		dprintf(D_FULLDEBUG, "DoDownload: Valid output URL prefix: %s\n", OutputDestination);
@@ -3842,67 +3875,246 @@ FileTransfer::ParseDataManifest()
 
 
 int
-FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
+FileTransfer::DoUpload( filesize_t * total_bytes_ptr, ReliSock * s )
 {
-	int rc = 0;
-	std::string fullname;
-	filesize_t bytes=0;
-	filesize_t peer_max_transfer_bytes = -1; // unlimited
-	bool is_the_executable;
-	bool upload_success = false;
-	bool do_download_ack = false;
-	bool do_upload_ack = false;
-	bool try_again = false;
-	int hold_code = 0;
-	int hold_subcode = 0;
-	int numFiles = 0;
-	MyString error_desc;
-	bool I_go_ahead_always = false;
-	bool peer_goes_ahead_always = false;
-	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
-	int plugin_exit_code = 0;
+	//
+	// It would be better if the checkpoint-specific function's body
+	// were instead in UploadCheckpointFiles(), but that would involve
+	// refactoring UploadFiles() and friends, which I don't want to do
+	// right now.
+	//
 
-		// Declaration to make the return_and_reset_priv macro happy.
-        std::string reservation_id;
+	if( uploadCheckpointFiles ) {
+		if(! inHandleCommands ) {
+			return DoCheckpointUploadFromStarter( total_bytes_ptr, s );
+		} else {
+			return DoCheckpointUploadFromShadow( total_bytes_ptr, s );
+		}
+	} else {
+		return DoNormalUpload( total_bytes_ptr, s );
+	}
+}
 
+int
+createCheckpointManifest(
+	const FileTransferList & filelist,
+	int checkpointNumber,
+	FileTransferItem & manifestFTI
+) {
+	//
+	// If we're transferring a checkpoint, create a MANIFEST file from
+	// the filelist and add it to the files going to the SPOOL.
+	//
+	// Compute the manifest list, then its hash, then write the hash and
+	// the list to the MANIFEST file.
+	//
+	// The shadow side disables the socket time-out entirely before accepting
+	// commands, so we have all the time we need to compute these checksums.
+	//
+	std::string manifestText;
+	for( auto & fileitem : filelist ) {
+		if( fileitem.isDirectory() || fileitem.isDomainSocket() ) { continue; }
+		const std::string & sourceName = fileitem.srcName();
 
-	// use an error stack to keep track of failures when invoke plugins,
-	// perhaps more of this can be instrumented with it later.
-	CondorError errstack;
-
-	// If a bunch of file transfers failed strictly due to
-	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
-	// the first failed one, and continue to attempt to transfer the rest in
-	// the list. At the end of the transfer, the job will go on hold with the
-	// information of the first failed transfer. This is to allow things like
-	// corefiles and whatnot to be brought back to the spool even if the user
-	// job hadn't completed writing all the files as specified in
-	// transfer_output_files. These variables represent the saved state of the
-	// first failed transfer. See gt #487.
-	bool first_failed_file_transfer_happened = false;
-	bool first_failed_upload_success = false;
-	bool first_failed_try_again = false;
-	int first_failed_hold_code = 0;
-	int first_failed_hold_subcode = 0;
-	MyString first_failed_error_desc;
-	int first_failed_line_number = 0;
-
-	bool should_invoke_output_plugins = m_final_transfer_flag;
-	bool tmp;
-	if (jobAd.EvaluateAttrBool("OutputPluginsOnlyOnExit", tmp) && !tmp) {
-			// InitDownloadFilenameRemaps is always called by the server
-			// (the function name is a misnomer) for final transfers.  However,
-			// in this case, we also want output files to be remapped to URLs
-			// when spooling.  Hence, we call it here.
-		if (!m_final_transfer_flag && !InitDownloadFilenameRemaps(&jobAd)) {
+		std::string sourceHash;
+		if(! compute_file_sha256_checksum( sourceName, sourceHash )) {
+			dprintf( D_ALWAYS, "Failed to compute file (%s) checksum when sending checkpoint, aborting.\n", sourceName.c_str() );
 			return -1;
 		}
-		should_invoke_output_plugins = true;
+		// The '*' marks the hash as having been computed in binary mode.
+		formatstr_cat( manifestText, "%s *%s\n",
+			sourceHash.c_str(), sourceName.c_str()
+		);
 	}
+
+	// It would be more efficient to compute the checksum from memory,
+	// but writing the file to disk simplifies both this code and means
+	// that the MANIFEST file isn't a special case for the actual transfer.
+	std::string manifestFileName;
+	formatstr( manifestFileName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
+	if(! htcondor::writeShortFile( manifestFileName, manifestText )) {
+		dprintf( D_ALWAYS, "Failed to write manifest file when sending checkpoint, aborting.\n" );
+		return -1;
+	}
+	std::string manifestHash;
+	if(! compute_file_sha256_checksum( manifestFileName, manifestHash )) {
+		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+		unlink( manifestFileName.c_str() );
+		return -1;
+	}
+
+	// Duplicating the format of the rest of the file makes it (a) easier
+	// to generate with sha256sum and (b) easier for us to parse later.
+	std::string append;
+	formatstr( append, "%s *%s\n",
+		manifestHash.c_str(), manifestFileName.c_str()
+	);
+	if(! htcondor::appendShortFile( manifestFileName,  append )) {
+		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+		unlink( manifestFileName.c_str() );
+		return -1;
+	}
+
+	manifestFTI.setSrcName( manifestFileName );
+	manifestFTI.setFileMode( (condor_mode_t)0600 );
+	manifestFTI.setFileSize( manifestText.length() + append.length() );
+	return 0;
+}
+
+#define    WITH_OUTPUT_DESTINATION true
+#define WITHOUT_OUTPUT_DESTINATION false
+#define    WITH_OUTPUT_DESTINATION_IF_FINAL_TRANSFER (m_final_transfer_flag==1)
+
+//
+// This not a special case in DoUpload() because that function, even split
+// into the two pieces of computeFileList() and updateFileList(), is too
+// long, too complicated, and too hard to use or modify.  Rather than make
+// it worse, I moved the checkpoint-specific parts out here, into one place.
+//
+int
+FileTransfer::DoCheckpointUploadFromStarter( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist = checkpointList;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	std::string checkpointDestination;
+	char * originalOutputDestination = OutputDestination;
+	if( jobAd.LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		OutputDestination = strdup(checkpointDestination.c_str());
+		dprintf( D_FULLDEBUG, "Using %s as checkpoint destination\n", OutputDestination );
+	}
+
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    WITH_OUTPUT_DESTINATION
+	);
+
+	if( OutputDestination != originalOutputDestination ) {
+		free(OutputDestination);
+		OutputDestination = originalOutputDestination;
+	}
+
+	if( rc != 0 ) { return rc; }
+
+
+	std::string manifestFileName;
+	if(! checkpointDestination.empty()) {
+		priv_state saved_priv = PRIV_UNKNOWN;
+		if( want_priv_change ) {
+			saved_priv = set_priv( desired_priv_state );
+		}
+
+		FileTransferItem manifestFTI;
+		rc = createCheckpointManifest(
+			filelist, this->checkpointNumber, manifestFTI
+		);
+		if( rc != 0 ) { return rc; }
+		manifestFileName = manifestFTI.srcName();
+		filelist.emplace_back(manifestFTI);
+
+		// Additonally, the file-transfer protocol asplodes if we have
+		// any directory-creation entries which point to URLs.
+		for( auto i = filelist.begin(); i != filelist.end(); ) {
+			if( i->isDirectory() && (! i->destUrl().empty()) ) {
+				i = filelist.erase(i);
+			} else {
+				++i;
+			}
+		}
+
+		if( saved_priv != PRIV_UNKNOWN ) {
+			set_priv( saved_priv );
+		}
+	}
+
+
+	// FIXME: startCheckpointPlugins();
+
+	// dPrintFileTransferList( D_ALWAYS, filelist, "DoCheckpointUploadFromStarter():" );
+	rc = uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+
+	// FIXME: stopCheckpointPlugins(rc == 0);
+
+	if(! checkpointDestination.empty()) {
+		unlink( manifestFileName.c_str() );
+	}
+	return rc;
+}
+
+int
+FileTransfer::DoCheckpointUploadFromShadow( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist = inputList;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	filelist.insert( filelist.end(), checkpointList.begin(), checkpointList.end() );
+    // dPrintFileTransferList( D_ALWAYS, filelist, "After merging checkpoint list into input list:" );
+
+
+	//
+	// If the user checkpoints their executable, uploadFileList() won't
+	// rename it, which will cause problems when resuming after an
+	// interruption.  For now, we just won't support self-modifying
+	// executables.
+	//
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+		WITHOUT_OUTPUT_DESTINATION
+	);
+	// dPrintFileTransferList( D_ALWAYS, filelist, "After computeFileList():" );
+	if( rc != 0 ) { return rc; }
+
+
+	return uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+}
+
+
+int
+FileTransfer::DoNormalUpload( filesize_t * total_bytes_ptr, ReliSock * s ) {
+	FileTransferList filelist;
+	std::unordered_set<std::string> skip_files;
+	filesize_t sandbox_size = 0;
+	_ft_protocol_bits protocolState;
+	DCTransferQueue xfer_queue(m_xfer_queue_contact_info);
+
+	if( inHandleCommands ) { filelist = this->inputList; }
+
+	int rc = computeFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    WITH_OUTPUT_DESTINATION_IF_FINAL_TRANSFER
+	);
+	if( rc != 0 ) { return rc; }
+
+	return uploadFileList(
+	    s, filelist, skip_files, sandbox_size, xfer_queue, protocolState,
+	    total_bytes_ptr
+	);
+}
+
+int
+FileTransfer::computeFileList(
+    ReliSock * s, FileTransferList & filelist,
+    std::unordered_set<std::string> & skip_files,
+    filesize_t & sandbox_size,
+    DCTransferQueue & xfer_queue,
+    _ft_protocol_bits & protocolState,
+    bool should_invoke_output_plugins
+) {
+		// Declaration to make the return_and_reset_priv macro happy.
+	std::string reservation_id;
 
 	uploadStartTime = condor_gettimestamp_double();
 
-	*total_bytes_ptr = 0;
 	dprintf(D_FULLDEBUG,"entering FileTransfer::DoUpload\n");
 	dprintf(D_FULLDEBUG,"DoUpload: Output URL plugins %s be run\n",
 		should_invoke_output_plugins ? "will" : "will not");
@@ -3912,21 +4124,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	// Aggregate multiple file uploads; we will upload them all at once
-	std::string currentUploadPlugin;
-	std::string currentUploadRequests;
-	int currentUploadDeferred = 0;
-
 	// record the state it was in when we started... the "default" state
-	bool socket_default_crypto = s->get_encryption();
+	protocolState.socket_default_crypto = s->get_encryption();
 
 	bool preserveRelativePaths = false;
 	jobAd.LookupBool( ATTR_PRESERVE_RELATIVE_PATHS, preserveRelativePaths );
 
-	FileTransferList filelist;
-	// dprintf( D_ZKM, ">>> DoUpload(), before ExpandFileTransferList(): InputFiles = %s\n", FilesToSend->to_string().c_str() );
+	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), before ExpandeFileTransferList():" );
 	ExpandFileTransferList( FilesToSend, filelist, preserveRelativePaths );
-	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after ExpandFileTransferList(): %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after ExpandeFileTransferList():" );
 
 	// Remove any files from the catalog that are in the ExceptionList
 	if (ExceptionFiles) {
@@ -3940,7 +4146,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		filelist.erase(enditer, filelist.end());
 	}
 
-	filesize_t sandbox_size = 0;
 		// Calculate the sandbox size as the sum of the known file transfer items
 		// (only those that are transferred via CEDAR).
 	sandbox_size = std::accumulate(filelist.begin(),
@@ -3997,6 +4202,15 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				if(! ends_with(local_output_url, "/")) {
 				    local_output_url += '/';
 				}
+				if( uploadCheckpointFiles ) {
+					std::string globalJobID;
+					jobAd.LookupString(ATTR_GLOBAL_JOB_ID, globalJobID);
+					ASSERT(! globalJobID.empty());
+					formatstr_cat( local_output_url, "%s/%.4d/",
+					    globalJobID.c_str(),
+					    this->checkpointNumber
+					);
+				}
 				//
 				// For whatever reason we don't just write the std{out,err}
 				// logs to the filename the user requested in the sandbox,
@@ -4011,10 +4225,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// `StdoutRemapName` and `StderrRemapName` should be.
 				//
 				std::string outputName = fileitem.srcName();
-				if( outputName == StdoutRemapName ) {
-					jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
-				} else if( outputName == StderrRemapName ) {
-					jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+				if(! uploadCheckpointFiles) {
+					// This doesn't do anything useful if the user specified
+					// an absolute path for their logs.  See HTCONDOR-1221.
+					if( outputName == StdoutRemapName ) {
+						jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
+					} else if( outputName == StderrRemapName ) {
+						jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+					}
 				}
 				local_output_url += outputName;
 			}
@@ -4049,7 +4267,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				filesize_t logTCPStats = 0;
 				return ExitDoUpload( & logTCPStats,
 					/* num files */ 0,
-					s, saved_priv, socket_default_crypto,
+					s, saved_priv, protocolState.socket_default_crypto,
 					/* upload success */ false,
 					/* do upload ACK (required to put job on hold) */ true,
 					/* do download ACK */ false,
@@ -4069,7 +4287,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 
 
-	std::unordered_set<std::string> skip_files;
 	if (!m_reuse_info.empty())
 	{
 		dprintf(D_FULLDEBUG, "DoUpload: Sending remote side hints about potential file reuse.\n");
@@ -4086,12 +4303,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
-		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
 			// Obtain the transfer token from the transfer queue.
-		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 			return_and_resetpriv( -1 );
 		}
@@ -4163,12 +4380,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 			// Here, we must wait for the go-ahead from the transfer peer.
-		if (!ReceiveTransferGoAhead(s, "", false, peer_goes_ahead_always, peer_max_transfer_bytes)) {
+		if (!ReceiveTransferGoAhead(s, "", false, protocolState.peer_goes_ahead_always, protocolState.peer_max_transfer_bytes)) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
 			// Obtain the transfer token from the transfer queue.
-		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", I_go_ahead_always) ) {
+		if (!ObtainAndSendTransferGoAhead(xfer_queue, false, s, sandbox_size, "", protocolState.I_go_ahead_always) ) {
 			dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n", __LINE__);
 			return_and_resetpriv(-1);
 		}
@@ -4209,7 +4426,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			filesize_t logTCPStats = 0;
 			return ExitDoUpload( & logTCPStats,
 				/* num files */ 0,
-				s, saved_priv, socket_default_crypto,
+				s, saved_priv, protocolState.socket_default_crypto,
 				/* upload success */ false,
 				/* do upload ACK (required to avoid hanging the shadow and starter */ true,
 				/* do download ACK */ false,
@@ -4245,8 +4462,9 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 
 
+	// dPrintFileTransferList( D_ALWAYS, filelist, ">>> computeFileList(), before duplicate removal:" );
 	//
-	// Remove file entries which result in duplicates at the destination.
+	// Remove entries which result in duplicates at the destination.
 	// This is no longer necessary for correctness (because I changed
 	// FileTransferItem::operator < to group rather than sort), but it's
 	// still more efficient.  Some of these duplicates will have been
@@ -4260,8 +4478,6 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item before duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
 	for( auto iter = filelist.rbegin(); iter != filelist.rend(); ++iter ) {
 		auto & item = * iter;
-
-		if( item.isSrcUrl() ) { continue; }
 		if( item.isDestUrl() ) { continue; }
 		if( item.isDirectory() ) { continue; }
 
@@ -4282,10 +4498,12 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 		}
 	}
-	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after duplicate removal: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// dPrintFileTransferList( D_ZKM, filelist, ">>> computeFileList(), after duplicate removal:" );
 
+    // dPrintFileTransferList( D_ZKM, filelist, "Before stable sorting:" );
 	std::stable_sort(filelist.begin(), filelist.end());
-	// for( auto & i: filelist ) { dprintf( D_ZKM, ">>> DoUpload(), file-item after sorting: %s -> %s\n", i.srcName().c_str(), i.destDir().c_str() ); }
+	// dPrintFileTransferList( D_ZKM, filelist, "After stable sorting:" );
+
 	for (auto &fileitem : filelist)
 	{
 			// If there's a signed URL to work with, we should use that instead.
@@ -4293,7 +4511,71 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		if (iter != s3_url_map.end()) {
 			fileitem.setDestUrl(iter->second);
 		}
+	}
 
+	return_and_resetpriv(0);
+}
+
+int
+FileTransfer::uploadFileList(
+    ReliSock * s, const FileTransferList & filelist,
+    std::unordered_set<std::string> & skip_files,
+    const filesize_t & sandbox_size,
+    DCTransferQueue & xfer_queue,
+    _ft_protocol_bits & protocolState,
+    filesize_t * total_bytes_ptr
+) {
+	int rc = 0;
+	std::string fullname;
+	filesize_t bytes = 0;
+
+	bool is_the_executable;
+	bool upload_success = false;
+	bool do_download_ack = false;
+	bool do_upload_ack = false;
+	bool try_again = false;
+	int hold_code = 0;
+	int hold_subcode = 0;
+	int numFiles = 0;
+	int plugin_exit_code = 0;
+
+	// If a bunch of file transfers failed strictly due to
+	// PUT_FILE_OPEN_FAILED, then we keep track of the information relating to
+	// the first failed one, and continue to attempt to transfer the rest in
+	// the list. At the end of the transfer, the job will go on hold with the
+	// information of the first failed transfer. This is to allow things like
+	// corefiles and whatnot to be brought back to the spool even if the user
+	// job hadn't completed writing all the files as specified in
+	// transfer_output_files. These variables represent the saved state of the
+	// first failed transfer. See gt #487.
+	bool first_failed_file_transfer_happened = false;
+	bool first_failed_upload_success = false;
+	bool first_failed_try_again = false;
+	int first_failed_hold_code = 0;
+	int first_failed_hold_subcode = 0;
+	MyString first_failed_error_desc;
+	int first_failed_line_number = 0;
+
+	int currentUploadDeferred = 0;
+
+	// Aggregate multiple file uploads; we will upload them all at once
+	std::string currentUploadPlugin;
+	std::string currentUploadRequests;
+
+	// use an error stack to keep track of failures when invoke plugins,
+	// perhaps more of this can be instrumented with it later.
+	CondorError errstack;
+	MyString error_desc;
+
+	std::string reservation_id;
+	priv_state saved_priv = PRIV_UNKNOWN;
+	if( want_priv_change ) {
+		saved_priv = set_priv( desired_priv_state );
+	}
+
+	*total_bytes_ptr = 0;
+	for (auto &fileitem : filelist)
+	{
 		auto &filename = fileitem.srcName();
 		auto &dest_dir = fileitem.destDir();
 
@@ -4384,7 +4666,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			try_again = false; // put job on hold
 			hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
 			hold_subcode = EPERM;
-			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
 								error_desc.Value(),__LINE__);
@@ -4533,7 +4815,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 			s->set_crypto_mode(false);
 		}
 		else {
-			bool cryp_ret = s->set_crypto_mode(socket_default_crypto);
+			bool cryp_ret = s->set_crypto_mode(protocolState.socket_default_crypto);
 			if (!cryp_ret) {
 				dprintf(D_ALWAYS,"DoUpload: failed to set default crypto on outgoing file, exiting at %d\n",__LINE__);
 				return_and_resetpriv( -1 );
@@ -4558,19 +4840,19 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				return_and_resetpriv( -1 );
 			}
 
-			if( !peer_goes_ahead_always ) {
+			if( !protocolState.peer_goes_ahead_always ) {
 					// Now wait for our peer to tell us it is ok for us to
 					// go ahead and send data.
-				if( !ReceiveTransferGoAhead(s,fullname.c_str(),false,peer_goes_ahead_always,peer_max_transfer_bytes) ) {
+				if( !ReceiveTransferGoAhead(s,fullname.c_str(),false,protocolState.peer_goes_ahead_always,protocolState.peer_max_transfer_bytes) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
 			}
 
-			if( !I_go_ahead_always ) {
+			if( !protocolState.I_go_ahead_always ) {
 					// Now tell our peer when it is ok for us to read data
 					// from disk for sending.
-				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.c_str(),I_go_ahead_always) ) {
+				if( !ObtainAndSendTransferGoAhead(xfer_queue,false,s,sandbox_size,fullname.c_str(),protocolState.I_go_ahead_always) ) {
 					dprintf(D_FULLDEBUG, "DoUpload: exiting at %d\n",__LINE__);
 					return_and_resetpriv( -1 );
 				}
@@ -4584,14 +4866,14 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 		//
 		// NOTE: if we ever want to reacquire the token (or acquire an alternate token for non-CEDAR transfers),
 		// then this would provide a natural synchronization point.
-		bool can_defer_uploads = !PeerDoesGoAhead || (peer_goes_ahead_always && I_go_ahead_always);
+		bool can_defer_uploads = !PeerDoesGoAhead || (protocolState.peer_goes_ahead_always && protocolState.I_go_ahead_always);
 
 		UpdateXferStatus(XFER_STATUS_ACTIVE);
 
 		filesize_t this_file_max_bytes = -1;
 		filesize_t effective_max_upload_bytes = MaxUploadBytes;
 		bool using_peer_max_transfer_bytes = false;
-		if( peer_max_transfer_bytes >= 0 && (peer_max_transfer_bytes < effective_max_upload_bytes || effective_max_upload_bytes < 0) ) {
+		if( protocolState.peer_max_transfer_bytes >= 0 && (protocolState.peer_max_transfer_bytes < effective_max_upload_bytes || effective_max_upload_bytes < 0) ) {
 				// For superior error handling, it is best for the
 				// uploading side to know about the downloading side's
 				// max transfer byte limit.  This prevents the
@@ -4600,11 +4882,11 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// close the connection, which would cause the
 				// uploading side to assume there was a communication
 				// error rather than an intentional stop.
-			effective_max_upload_bytes = peer_max_transfer_bytes;
+			effective_max_upload_bytes = protocolState.peer_max_transfer_bytes;
 			using_peer_max_transfer_bytes = true;
 			dprintf(D_FULLDEBUG,"DoUpload: changing maximum upload MB from %ld to %ld at request of peer.\n",
 					(long int)(effective_max_upload_bytes >= 0 ? effective_max_upload_bytes/1024/1024 : effective_max_upload_bytes),
-					(long int)(peer_max_transfer_bytes/1024/1024));
+					(long int)(protocolState.peer_max_transfer_bytes/1024/1024));
 		}
 		if( effective_max_upload_bytes < 0 ) {
 			this_file_max_bytes = -1; // no limit
@@ -4856,7 +5138,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 				// for the more interesting reasons why the transfer failed,
 				// we can try again and see what happens.
 				return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,
-								socket_default_crypto,upload_success,
+								protocolState.socket_default_crypto,upload_success,
 								do_upload_ack,do_download_ack,
 			                    try_again,hold_code,hold_subcode,
 			                    error_desc.c_str(),__LINE__);
@@ -4941,7 +5223,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	do_upload_ack = true;
 
 	if (first_failed_file_transfer_happened == true) {
-		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+		return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			first_failed_upload_success,do_upload_ack,do_download_ack,
 			first_failed_try_again,first_failed_hold_code,
 			first_failed_hold_subcode,first_failed_error_desc.c_str(),
@@ -4951,7 +5233,7 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 	uploadEndTime = condor_gettimestamp_double();
 
 	upload_success = true;
-	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,socket_default_crypto,
+	return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 	                    upload_success,do_upload_ack,do_download_ack,
 	                    try_again,hold_code,hold_subcode,NULL,__LINE__);
 }
@@ -5453,7 +5735,7 @@ FileTransfer::Continue() const
 }
 
 
-bool
+void
 FileTransfer::addOutputFile( const char* filename )
 {
 	if( ! OutputFiles ) {
@@ -5461,10 +5743,9 @@ FileTransfer::addOutputFile( const char* filename )
 		ASSERT(OutputFiles != NULL);
 	}
 	else if( OutputFiles->file_contains(filename) ) {
-		return true;
+		return;
 	}
 	OutputFiles->append( filename );
-	return true;
 }
 
 bool
@@ -6478,10 +6759,8 @@ FileTransfer::ExpandFileTransferList( StringList *input_list, FileTransferList &
 	return rc;
 }
 
-bool
-FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::set<std::string> & pathsAlreadyPreserved ) {
-	// dprintf( D_ZKM, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
-
+std::vector<std::string>
+split_path( const char * src_path ) {
 	// Fill a stack with path components from right to left.
 	std::string dir, file;
 	std::string path( src_path );
@@ -6495,6 +6774,15 @@ FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, 
 	}
 	// dprintf( D_ZKM, ">>> found root path-component %s\n", file.c_str() );
 	splitPath.emplace_back( file );
+
+	return splitPath;
+}
+
+bool
+FileTransfer::ExpandParentDirectories( const char * src_path, const char * iwd, FileTransferList &expanded_list, const char * SpoolSpace, std::set<std::string> & pathsAlreadyPreserved ) {
+	// dprintf( D_ALWAYS, ">>> ExpandParentDirectories( %s, %s, ...)\n", src_path, iwd );
+
+	std::vector< std::string > splitPath = split_path(src_path);
 
 	// Empty the stack to add directories from the root down.  Note
 	// that the "parent" directory is always empty, because src_path
@@ -7000,3 +7288,70 @@ FileTransfer::setMaxDownloadBytes(filesize_t _MaxDownloadBytes)
 {
 	MaxDownloadBytes = _MaxDownloadBytes;
 }
+
+//
+// There are two differences between this and ExpandParentDirectories():
+//   (1) this function doesn't check if the source's parent directories
+//       exist (they won't, because they're coming for URLs); and
+//   (2) the source _must_ be a file (and won't be expanded if it's a
+//       directory, because we can't do that for URLs).  This is the reason
+//       we don't call ExpandFileTransferList() to add the directory entries.
+// We may refactor these two functions together at some point (probably
+// cleanest to do with callbacks), but until then, if you find a bug in one
+// function, it's probably in the other, too.  If you change one function,
+// you probably need to change the other one, too.
+//
+void
+FileTransfer::addSandboxRelativePath(
+	const std::string & source,
+	const std::string & destination,
+	FileTransferList & ftl,
+	std::set< std::string > & pathsAlreadyPreserved
+) {
+	std::vector< std::string > splitPath = split_path( destination.c_str() );
+
+	std::string parent;
+	while( splitPath.size() > 1 ) {
+		std::string partialPath = parent;
+		if( partialPath.length() > 0 ) {
+			partialPath += DIR_DELIM_CHAR;
+		}
+		partialPath += splitPath.back(); splitPath.pop_back();
+
+		if( pathsAlreadyPreserved.find( partialPath ) == pathsAlreadyPreserved.end() ) {
+			FileTransferItem fti;
+			fti.setSrcName( partialPath.c_str() );
+			fti.setDestDir( parent.c_str() );
+			fti.setDirectory( true );
+			// dprintf( D_ALWAYS, "addSandboxRelativePath(%s, %s): %s -> %s\n", source.c_str(), destination.c_str(), partialPath.c_str(), parent.c_str() );
+			ftl.emplace_back( fti );
+
+			pathsAlreadyPreserved.insert( partialPath );
+		}
+
+		parent = partialPath;
+	}
+
+	FileTransferItem fti;
+	fti.setSrcName( source );
+	// At some point, we'd like to be able to store target _name_, too.
+	fti.setDestDir( condor_dirname( destination.c_str() ) );
+	ftl.emplace_back(fti);
+}
+
+void
+FileTransfer::addCheckpointFile(
+  const std::string & source, const std::string & destination,
+  std::set< std::string > & pathsAlreadyPreserved
+) {
+	addSandboxRelativePath( source, destination, this->checkpointList, pathsAlreadyPreserved );
+}
+
+void
+FileTransfer::addInputFile(
+  const std::string & source, const std::string & destination,
+  std::set< std::string > & pathsAlreadyPreserved
+) {
+	addSandboxRelativePath( source, destination, this->inputList, pathsAlreadyPreserved );
+}
+
