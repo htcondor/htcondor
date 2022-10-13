@@ -16,13 +16,25 @@ ifneq (,$(filter parallel=%,$(DEB_BUILD_OPTIONS)))
     MAKEFLAGS += -j$(NUMJOBS)
 endif
 
+# if this package is built in an i386 build environment on an amd64 host,
+# a toolchain file is required so cmake uses the right CMAKE_SYSTEM_PROCESSOR
+CMAKE_SYSTEM_PROCESSOR = $(shell  cmake --system-information | grep CMAKE_SYSTEM_PROCESSOR | cut -d'"' -f2)
+#DEB_TARGET_ARCH = $(shell dpkg-architecture -q DEB_TARGET_ARCH)
+DEB_TARGET_ARCH = $(shell dpkg --print-architecture)
+export CMAKE_TOOLCHAIN := ""
+ifeq ($(DEB_TARGET_ARCH), i386)
+ifeq ($(CMAKE_SYSTEM_PROCESSOR), x86_64)
+    export CMAKE_TOOLCHAIN := "-DCMAKE_TOOLCHAIN_FILE=$(CURDIR)/debian/i386-toolchain.cmake"
+endif
+endif
+
 # one ring to rule them all ...
 %:
-	dh $@ --with autotools_dev --with python2
-
+	dh $@ --with python3
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
+		$(CMAKE_TOOLCHAIN) \
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
 		-DPROPER:BOOL=ON \
 		-D_DEBUG:BOOL=TRUE \
@@ -56,18 +68,12 @@ override_dh_auto_build: doc/build
 	#$(MAKE) -C src/condor_chirp/chirp/java/client/
 	#cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
 
-override_dh_python2:
-	dh_python2 $@ --no-guessing-versions
-
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ --dpkg-shlibdeps-params=--ignore-missing-info
 
 
 doc/build:
 	mkdir -p $@
-	# TODO: Build the manual now that we are using Sphinx
-	# $(MAKE) -C doc ref.html
-	# mv doc/ref.html $@/html
 	$(MAKE) -C docs man
 	mkdir -p $@/man
 	mv docs/_build/man/* $@/man

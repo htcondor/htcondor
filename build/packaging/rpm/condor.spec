@@ -128,24 +128,20 @@ Patch8: osg_sysconfig_in_init_script.patch
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: cmake
-BuildRequires: %_bindir/flex
-BuildRequires: %_bindir/byacc
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
 BuildRequires: libvirt-devel
 BuildRequires: bind-utils
-BuildRequires: m4
-#BuildRequires: autoconf
 BuildRequires: libX11-devel
 BuildRequires: libXScrnSaver-devel
-BuildRequires: /usr/include/curl/curl.h
-BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 %if 0%{?rhel} == 7
 BuildRequires: cmake3
 BuildRequires: python-devel
 BuildRequires: python-setuptools
+%else
+BuildRequires: cmake >= 3.8
 %endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
@@ -155,16 +151,9 @@ BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
 
 BuildRequires: glibc-static
-%if %uw_build
-BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
 BuildRequires: libuuid-devel
-BuildRequires: bison-devel
-BuildRequires: bison
-BuildRequires: byacc
-BuildRequires: flex
 BuildRequires: patch
-BuildRequires: libtool
 BuildRequires: pam-devel
 BuildRequires: nss-devel
 BuildRequires: openssl-devel
@@ -179,7 +168,6 @@ BuildRequires: python3-devel
 BuildRequires: python-devel
 %endif
 BuildRequires: libcurl-devel
-%endif
 
 # Globus GSI build requirements
 %if %globus
