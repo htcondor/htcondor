@@ -100,8 +100,12 @@ executing job that may be useful.
    at least RequestCpus, but HTCondor may match a job to a bigger slot.  Jobs should not 
    spawn more than this number of cpu-bound threads, or their performance will suffer.
    Many third party libraries like OpenMP obey these environment variables.
+-  ``BATCH_SYSTEM`` 
+   :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<single: BATCH_SYSTEM; environment variables>`
+   All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
+   set to the string *HTCondor*.  Inspecting this variable allows a job to
+   determine if it is running under HTCondor.
 -  ``X509_USER_PROXY``
-   :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<single: X509_USER_PROXY; environment variables>`
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` in
