@@ -66,7 +66,7 @@ mv "../condor-${condor_version}.tgz" "SOURCES/condor-${condor_version}.tar.gz"
 
 # copy rpm files from condor sources into the SOURCES directory
 tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm"
-cp -p "condor-${condor_version}/build/packaging/rpm/*" SOURCES
+cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
 rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
@@ -90,6 +90,6 @@ export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
 rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
-
-mv "$(find ./*RPMS -name \*.rpm)" "$dest_dir"
+readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
+mv "${rpm_files[@]}" "$dest_dir"
 ls -lh "$dest_dir"

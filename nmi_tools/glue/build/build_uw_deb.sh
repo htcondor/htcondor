@@ -38,7 +38,7 @@ cd "$tmpd"
 
 # Unpack the official tarball
 mv "../condor-${condor_version}.tgz" "./condor_${condor_version}.orig.tar.gz"
-tar "xfpz condor_${condor_version}.orig.tar.gz"
+tar xfpz "condor_${condor_version}.orig.tar.gz"
 cd "condor-${condor_version}"
 
 # copy debian files into place
