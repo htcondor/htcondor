@@ -55,6 +55,7 @@
 #include "classad_helpers.h"
 #include "iso_dates.h"
 #include "jobsets.h"
+#include "exit.h"
 #include <algorithm>
 #include <param_info.h>
 #include <shortfile.h>
