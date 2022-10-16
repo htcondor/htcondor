@@ -175,7 +175,7 @@ echo "${CONTROL_PREFIX} PILOT_DIR ${PILOT_DIR}"
 
 function cleanup() {
     echo "Cleaning up temporary directory..."
-    rm -fr ${PILOT_DIR}
+    # rm -fr ${PILOT_DIR}
 }
 trap cleanup EXIT
 
@@ -411,13 +411,6 @@ if [[ $WHOLE_NODE ]]; then
 #SBATCH --nodes=${NODES}
 #SBATCH --ntasks=${NODES}
 "
-
-    if [[ $GPUS ]]; then
-        SBATCH_RESOURCES_LINES="\
-${SBATCH_RESOURCES_LINES}
-#SBATCH --gpus-per-node=${GPUS}
-"
-    fi
 else
     # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
     # Expanse.  Request one job, and specify the resources that should be
@@ -443,6 +436,12 @@ ${SBATCH_RESOURCES_LINES}
     fi
 fi
 
+if [[ $GPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH ${SYSTEM_SPECIFIC_GPU_FLAG}=${GPUS}
+"
+fi
 
 if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
