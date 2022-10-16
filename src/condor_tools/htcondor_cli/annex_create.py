@@ -107,7 +107,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       40,
-                "ram_per_node":         256 * 1024,
+                "ram_per_node":         384 * 1024,
                 "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    8,
@@ -800,11 +800,11 @@ def validate_system_specific_constraints(
             raise ValueError(error_string)
 
         rpn = queue['ram_per_node']
-        if mem_mb > rpn:
+        if mem_mb is not None and mem_mb > rpn:
             error_string = f"The '{queue_name}' queue is limited to {rpn} MB per node.  Use --mem_mb to set."
             raise ValueError(error_string)
 
-        if cpus > queue['cores_per_node']:
+        if cpus is not None and cpus > queue['cores_per_node']:
             error_string = f"The '{queue_name}' queue is limited to {queue['cores_per_node']} cores per node."
             raise ValueError(error_string)
 
