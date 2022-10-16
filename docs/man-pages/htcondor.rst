@@ -9,19 +9,24 @@ Manage HTCondor jobs, job sets, and resources
 Synopsis
 --------
 
-**htcondor** [**-h** | **-\-help**] [**-v** | **-\-verbose**] [**-q** | **-\-quiet**]
-| **htcondor** **job** **submit** [[**-\-resource** *resource-type* [**-\-runtime** *time-seconds*] [**-\-email** *email-address*]] | **-\-annex-name** *annex-name*] *submit-file*
-| **htcondor** **job** [**resources** | **status**] *job-id*
-
+| **htcondor** [**-h** | **-\-help**] [**-v** | **-\-verbose**] [**-q** | **-\-quiet**]
+|
+| **htcondor** **job** **submit** [[**-\-resource** *resource-type* [**-\-runtime** *time-seconds*] [**-\-email** *email-address*]] *submit-file*
+| **htcondor** **job** **submit** **-\-annex-name** *annex-name* *submit-file*
+| **htcondor** **job** **resources** *job-id*
+| **htcondor** **job** **status** [**-\-skip-history**] *job-id*
+|
 | **htcondor** **jobset** **submit** *submit-file*
 | **htcondor** **jobset** **list** [**-\-allusers**]
-| **htcondor** **jobset** [**status** [**-\-nobatch**] | **remove**] [**-\-owner** *user-name*] *job-set-name*
-
+| **htcondor** **jobset** **status** [**-\-nobatch**] [**-\-skip-history**] [**-\-owner** *user-name*] *job-set-name*
+| **htcondor** **jobset** **remove** [**-\-owner** *user-name*] *job-set-name*
+|
 | **htcondor** **dag** **submit** *dag-file*
 | **htcondor** **dag** **status** *dagman-job-id*
-
+|
 | **htcondor** **annex** [**create** | **add**] [**-\-nodes** *nodes* | [[**-\-cpus** *cpus*] [**-\-mem_mb** *mem*]] [**-\-lifetime** *lifetime*] [**-\-pool** *collector-host*] [**-\-token_file** *token-file*] [**-\-tmp_dir** *tmp_dir*] [**-\-project** *project*] *annex-name* *queue@machine*
-| **htcondor** **annex** [**status** | **shutdown**] *annex-name*
+| **htcondor** **annex** **status** *annex-name*
+| **htcondor** **annex** **shutdown** *annex-name*
 
 Description
 -----------
@@ -78,15 +83,15 @@ Job Set Options
  **-\-nobatch**
     Passed to the *status* subcommand to display the status of
     individual job clusters within a job set
- **-\-owner** *user-name*
-    Passed to the *status* or *remove* subcommand to act on job sets
-    submitted by the specified user instead of the current
-    user. Using this option to *remove* job sets requires superuser
-    permissions.
  **--skip-history**
     Passed to the *status* subcommand to skip checking history
     if job clusters are not found in the active job queue.
-
+ **-\-owner** *user-name*
+    Passed to the *status* or *remove* subcommand to act on job sets
+    submitted by the specified user instead of the current
+    user.  Using this option to *remove* job sets requires superuser
+    permissions.
+ 
 Annex Options
 -------------
 
@@ -102,7 +107,7 @@ Annex Options
  **-\-cpus** *cpus*
     How many CPUs to request, for queues which allow you to
     request only a fraction of a node.  Mutually exclusive with
- **-\-nodes**.
+    **-\-nodes**.
  **-\-mem_mb** *mem*
     How many (megabytes of) RAM to request, for queues which
     allow you to request only a fraction of a node.  Mutually
