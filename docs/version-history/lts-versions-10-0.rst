@@ -57,7 +57,11 @@ Bugs Fixed:
 - Fixed a bug in DAGMan where **Node** jobs that could not write to their **UserLog**
   would cause the **DAG** to get stuck indefinitely while waiting for pending **Nodes**.
   :jira:`1305`
-  
+
+- Fixed a bug where ``s3://`` URLs host or bucket names shorter than 14
+  characters caused the shadow to dump core.
+  :jira:`1378`
+
 - Fixed a bug in the hibernation code that caused HTCondor to ignore
   the active Suspend-To-Disk option.
   :jira:`1357`
