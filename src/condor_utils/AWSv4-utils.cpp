@@ -268,7 +268,7 @@ generate_presigned_url( const std::string & accessKeyID,
             }
         }
     // URLs of the form s3://<bucket>.s3.<region>.amazonaws.com/<object>
-    } else if (bucket_or_hostname.substr(bucket_or_hostname.size() - 14) == ".amazonaws.com") {
+    } else if( ends_with( bucket_or_hostname, ".amazonaws.com" ) ) {
         auto bucket_and_region = bucket_or_hostname.substr(0, bucket_or_hostname.size() - 14);
         auto last_idx = bucket_and_region.rfind(".s3.");
         if (last_idx == std::string::npos) {
