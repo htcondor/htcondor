@@ -781,9 +781,9 @@ check_log_dir()
 	unsigned int coreFilesPerProgram = param_integer("PREEN_COREFILES_PER_PROCESS", 10);
 	//Max Disk space daemon type core files can take up (schedd:5GB can have files 1GB 1GB 3GB)
 	long long scheddCoresMaxSum, negotiatorCoresMaxSum, collectorCoresMaxSum;
-	param_longlong("PREEN_SCHEDD_COREFILES_MAX_SUM", scheddCoresMaxSum, true, 4 * coreFileMaxSize);
-	param_longlong("PREEN_NEGOTIATOR_COREFILES_MAX_SUM", negotiatorCoresMaxSum, true, 4 * coreFileMaxSize);
-	param_longlong("PREEN_COLLECTOR_COREFILES_MAX_SUM", collectorCoresMaxSum, true, 4 * coreFileMaxSize);
+	param_longlong("PREEN_SCHEDD_COREFILES_TOTAL_DISK", scheddCoresMaxSum, true, 4 * coreFileMaxSize);
+	param_longlong("PREEN_NEGOTIATOR_COREFILES_TOTAL_DISK", negotiatorCoresMaxSum, true, 4 * coreFileMaxSize);
+	param_longlong("PREEN_COLLECTOR_COREFILES_TOTAL_DISK", collectorCoresMaxSum, true, 4 * coreFileMaxSize);
 	StringList invalid;
 	std::map<std::string, std::map<int, std::string>> programCoreFiles;
 	//Corefiles for daemons with large base sizes (schedd, negotiator, collector)
@@ -815,8 +815,8 @@ check_log_dir()
 							if (daemonExe.find("condor_schedd") != std::string::npos ||
 								daemonExe.find("condor_negotiator") != std::string::npos ||
 								daemonExe.find("condor_collector") != std::string::npos) {
-									largeCoreFiles[daemonExe].insert(std::make_pair(statinfo.GetModifyTime(),
-																	 std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
+									largeCoreFiles[condor_basename(daemonExe.c_str())].insert(std::make_pair(statinfo.GetModifyTime(),
+															std::pair<std::string,filesize_t>(std::string(f),statinfo.GetFileSize())));
 							} else {
 								bad_file( Log, f, dir );
 							}
