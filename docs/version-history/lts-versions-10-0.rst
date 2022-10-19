@@ -77,3 +77,7 @@ Bugs Fixed:
   that that the user wishes to vary per job.
   :jira:`1369`
 
+- Fixed bug where **Collector**, **Negotiator**, and **Schedd** core files that are naturally
+  large would be deleted by *condor_preen* because the file sizes exceeded the max file size.
+  :jira:`1377`
+
