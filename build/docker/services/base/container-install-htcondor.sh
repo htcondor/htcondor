@@ -13,13 +13,15 @@ repo_base_centos=https://research.cs.wisc.edu/htcondor/repo
 
 
 eval "$(grep '^\(ID\|VERSION_ID\|UBUNTU_CODENAME\)=' /etc/os-release | sed -e 's/^/OS_/')"
-export OS_ID                   # ubuntu or centos
+# Alma Linux has a version like 8.6 (We use the Ubuntu Codename, not version)
+OS_VERSION_ID=${OS_VERSION_ID%%.*}
+export OS_ID                   # ubuntu or centos or almalinux
 export OS_VERSION_ID           # 7, 8, or 18.04 or 20.04
 export OS_UBUNTU_CODENAME      # bionic or focal (or undefined on centos)
 
 
 # XXX Update me if we get more platform support
-if [[ $OS_ID != centos && $OS_ID != ubuntu ]]; then
+if [[ $OS_ID != centos && $OS_ID != almalinux && $OS_ID != ubuntu ]]; then
     echo "This script does not support this platform" >&2
     exit 1
 fi
@@ -48,6 +50,7 @@ if [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.([0-9]+) ]]; then
     fi
 elif [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.x ]]; then
     series_str=$HTCONDOR_SERIES
+    series_minor=1
 else
     echo "Could not parse \$HTCONDOR_SERIES $HTCONDOR_SERIES" >&2
     exit 2
@@ -75,7 +78,7 @@ centos_enable_repo () {
 }
 
 
-if [[ $OS_ID == centos ]]; then
+if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
 
     yum="yum -y"
     if $update_os; then
@@ -93,7 +96,10 @@ if [[ $OS_ID == centos ]]; then
     fi
     $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
     rpm --import /etc/pki/rpm-gpg/*
-    centos_enable_repo htcondor-update
+    # Update repository is only available for feature versions
+    if [[ $series_minor -gt 0 ]]; then
+        centos_enable_repo htcondor-update
+    fi
     if [[ $HTCONDOR_VERSION == daily ]]; then
         centos_enable_repo htcondor-daily
     fi
@@ -128,8 +134,11 @@ elif [[ $OS_ID == ubuntu ]]; then
 
     echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
     echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    # Update repository is only available for feature versions
+    if [[ $series_minor -gt 0 ]]; then
+        echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+        echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    fi
     if [[ $HTCONDOR_VERSION == daily ]]; then
         set -o pipefail
         wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Daily-Key" | apt-key add -

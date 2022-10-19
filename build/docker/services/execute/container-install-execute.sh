@@ -3,19 +3,21 @@ set -eu
 PS4='+ ${LINENO}: '
 
 eval "$(grep '^\(ID\|VERSION_ID\)=' /etc/os-release | sed -e 's/^/OS_/')"
-export OS_ID                   # ubuntu or centos
+# Alma Linux has a version like 8.6 (We use the Ubuntu Codename, not version)
+OS_VERSION_ID=${OS_VERSION_ID%%.*}
+export OS_ID                   # ubuntu or centos or almalinux
 export OS_VERSION_ID           # 7, 8, or 18.04 or 20.04
 
 
 # XXX Update me if we get more platform support
-if [[ $OS_ID != centos && $OS_ID != ubuntu ]]; then
+if [[ $OS_ID != centos && $OS_ID != almalinux && $OS_ID != ubuntu ]]; then
     echo "This script does not support this platform" >&2
     exit 1
 fi
 
 PACKAGE_LIST_TXT=${1-}
 
-if [[ $OS_ID == centos ]]; then
+if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
     if [[ $OS_VERSION_ID == 7 ]]; then
         yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
     else
