@@ -198,9 +198,23 @@ Machine ClassAd Attributes
     This is useful for Vanilla universe jobs which require remote file
     access.
 
+:classad-attribute:`HasContainer`
+    A boolean value set to ``True`` if the machine is capable of
+    executing container universe jobs.
+
 :classad-attribute:`HasDocker`
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.
+
+:classad-attribute:`HasSandboxImage`
+    A boolean value set to ``True`` if the machine is capable of
+    executing container universe jobs with a singularity "sandbox"
+    image type
+
+:classad-attribute:`HasSIF`
+    A boolean value set to ``True`` if the machine is capable of
+    executing container universe jobs with a singularity "SIF"
+    image type
 
 :classad-attribute:`HasEncryptExecuteDirectory`
     A boolean value set to ``True`` if the machine is capable of

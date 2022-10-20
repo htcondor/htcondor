@@ -103,6 +103,14 @@ class Create(Verb):
             "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
             "default": None,
         },
+        "startd_noclaim_shutdown": {
+            "args": ("--idle-time", "--startd-noclaim-shutdown"),
+            "metavar": "SECONDS",
+            "dest": "startd_noclaim_shutdown",
+            "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
+            "default": "300",
+        },
+
     }
 
     def __init__(self, logger, **options):

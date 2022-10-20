@@ -304,7 +304,7 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
 
         // TODO: Would be friendlier to unmount everything and resize instead of failing
     if (backing_stat.st_size < static_cast<off_t>(size_kb*1.02)*1024) {
-        err.pushf("VolumeManager", 6, "Pre-existing loopback file is too small (is %ld, asking for %ld\n)", backing_stat.st_size, (size_kb * 1.02) / 1024);
+        err.pushf("VolumeManager", 6, "Pre-existing loopback file is too small (is %ld, asking for %g\n)", backing_stat.st_size, (size_kb * 1.02) / 1024);
         return "";
     }
 

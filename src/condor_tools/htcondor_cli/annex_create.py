@@ -44,6 +44,7 @@ SYSTEM_TABLE = {
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
         "batch_system":     "SLURM",
+        "script_base":      "hpc",
 
         # This isn't all of the queues on Stampede 2, but we
         # need to think about what it means, if anything, if
@@ -82,6 +83,7 @@ SYSTEM_TABLE = {
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
         "batch_system":     "SLURM",
+        "script_base":      "hpc",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -129,6 +131,7 @@ SYSTEM_TABLE = {
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
+        "script_base":      "hpc",
 
         # GPUs are completed untested, see above.
         "queues": {
@@ -167,6 +170,7 @@ SYSTEM_TABLE = {
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
         "batch_system":     "SLURM",
+        "script_base":      "hpc",
 
         # Omitted the GPU queues because they are based on a different set of parameters.
         # Queue limits are not documented, possibly nonexistent.
@@ -218,6 +222,7 @@ SYSTEM_TABLE = {
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
         "batch_system":     "HTCondor",
+        "script_base":      "path-facility",
 
         "queues": {
             "cpu": {
@@ -402,10 +407,13 @@ def populate_remote_temporary_directory(
     token_file,
     password_file,
 ):
+    script_base = SYSTEM_TABLE[system]["script_base"]
+
     files = [
-        f"-C {local_script_dir} {system}.sh",
-        f"-C {local_script_dir} {system}.pilot",
-        f"-C {local_script_dir} {system}.multi-pilot",
+        f"-C {local_script_dir} {script_base}.sh",
+        f"-C {local_script_dir} {system}.fragment",
+        f"-C {local_script_dir} {script_base}.pilot",
+        f"-C {local_script_dir} {script_base}.multi-pilot",
         f"-C {str(token_file.parent)} {token_file.name}",
         f"-C {str(password_file.parent)} {password_file.name}",
     ]
@@ -504,6 +512,7 @@ def invoke_pilot_script(
     ssh_host_name,
     remote_script_dir,
     system,
+    startd_noclaim_shutdown,
     annex_name,
     queue_name,
     collector,
@@ -522,20 +531,24 @@ def invoke_pilot_script(
     if ssh_user_name is not None:
         ssh_target = f"{ssh_user_name}@{ssh_host_name}"
 
+    script_base = SYSTEM_TABLE[system]["script_base"]
+
     args = [
         "ssh",
         *ssh_connection_sharing,
         ssh_target,
-        str(remote_script_dir / f"{system}.sh"),
+        str(remote_script_dir / f"{script_base}.sh"),
+        system,
+        startd_noclaim_shutdown,
         annex_name,
         queue_name,
         collector,
         str(remote_script_dir / token_file.name),
         str(lifetime),
-        str(remote_script_dir / f"{system}.pilot"),
+        str(remote_script_dir / f"{script_base}.pilot"),
         owners,
         str(nodes),
-        str(remote_script_dir / f"{system}.multi-pilot"),
+        str(remote_script_dir / f"{script_base}.multi-pilot"),
         str(allocation),
         request_id,
         str(remote_script_dir / password_file.name),
@@ -691,6 +704,7 @@ def annex_inner_func(
     mem_mb,
     login_name,
     login_host,
+    startd_noclaim_shutdown,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -1083,6 +1097,7 @@ def annex_inner_func(
         ssh_host_name,
         remote_script_dir,
         system,
+        startd_noclaim_shutdown,
         annex_name,
         queue_name,
         collector,

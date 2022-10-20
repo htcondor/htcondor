@@ -2546,13 +2546,13 @@ this to work, in addition to the above requirements:
 
     THINPOOL_VOLUME_GROUP_NAME = vgname
     THINPOOL_NAME = htcondor
-    STARTD_ENFORCE_DISK_USAGE = true
+    STARTD_ENFORCE_DISK_LIMITS = true
 
 
 THINPOOL_VOLUME_GROUP_NAME is the name of an existing LVM volume group, with enough 
 disk space to provision all the scratch directories for all running jobs on a worker node.
 THINPOOL_NAME is the name of the logical volume that the scratch directory filesystems will
-be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_USAGE is a boolean.  When
+be created on in the volume group.  Finally, STARTD_ENFORCE_DISK_LIMITS is a boolean.  When
 true, if a job fills up the filesystem created for it, the starter will put the job on hold
 with the out of resources hold code (34).  This is the recommended value.  If false, should
 the job fill the filesystem, writes will fail with ENOSPC, and it is up to the job to handle these errors

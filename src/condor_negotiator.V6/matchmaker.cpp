@@ -872,7 +872,7 @@ reinitialize ()
 void
 Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true)) {
 		return;
 	}
 	dprintf(D_SECURITY, "Will look for match security sessions.\n");

@@ -4,11 +4,27 @@ CONTROL_PREFIX="=-.-="
 echo "${CONTROL_PREFIX} PID $$"
 
 function usage() {
-    echo "Usage: ${0} \\"
+    echo "Usage: ${0} SYSTEM STARTD_NOCLAIM_SHUTDOWN\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
-    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE"
-    echo "where OWNERS is a comma-separated list"
+    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
+    echo "       [CPUS] [MEM_MB]"
+    echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
+    echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
+
+SYSTEM=$1
+if [[ -z $SYSTEM ]]; then
+    usage
+    exit 1
+fi
+shift
+
+STARTD_NOCLAIM_SHUTDOWN=$1
+if [[ -z $STARTD_NOCLAIM_SHUTDOWN ]]; then
+    usage
+    exit 1
+fi
+shift
 
 JOB_NAME=$1
 if [[ -z $JOB_NAME ]]; then
@@ -84,6 +100,16 @@ if [[ -z $PASSWORD_FILE ]]; then
     exit 1
 fi
 
+CPUS=${13}
+if [[ $CPUS == "None" ]]; then
+    CPUS=""
+fi
+
+MEM_MB=${14}
+if [[ $MEM_MB == "None" ]]; then
+    MEM_MB=""
+fi
+
 BIRTH=`date +%s`
 # echo "Starting script at `date`..."
 
@@ -97,7 +123,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_CentOS7-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -106,6 +132,20 @@ WELL_KNOWN_LOCATION_FOR_CONFIGURATION=https://cs.wisc.edu/~tlmiller/hpc-config.t
 
 # How early should HTCondor exit to make sure we have time to clean up?
 CLEAN_UP_TIME=300
+
+
+#
+# Pulls in the system-specific variables SCRATCH, CONFIG_FRAGMENT,
+# and SHELL_FRAGMENT.
+#
+MEMORY_CHUNK_SIZE=3072
+PILOT_BIN_DIR=`dirname "${PILOT_BIN}"`
+. "${PILOT_BIN_DIR}/${SYSTEM}.fragment"
+
+if [[ -z $SCRATCH ]]; then
+    echo "Internal error: SCRATCH not set after loading system-specific fragment."
+    exit 7
+fi
 
 #
 # Create pilot-specific directory on shared storage.  The least-awful way
@@ -117,8 +157,10 @@ CLEAN_UP_TIME=300
 # we'll leave that for then.
 #
 
+
 echo -e "\rStep 1 of 8: Creating temporary directory...."
-PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} 2>&1`
+mkdir -p "$SCRATCH"
+PILOT_DIR=`/usr/bin/mktemp --directory --tmpdir=${SCRATCH} pilot.XXXXXXXX 2>&1`
 if [[ $? != 0 ]]; then
     echo "Failed to create temporary directory for pilot, aborting."
     echo ${PILOT_DIR}
@@ -144,7 +186,6 @@ cd ${PILOT_DIR}
 # PILOT_BIN mainly because this script has too many arguments already.
 SIF_DIR=${PILOT_DIR}/sif
 mkdir ${SIF_DIR}
-PILOT_BIN_DIR=`dirname ${PILOT_BIN}`
 mv ${PILOT_BIN_DIR}/sif ${PILOT_DIR}
 
 # The pilot scripts need to live in the ${PILOT_DIR} because the front-end
@@ -154,6 +195,7 @@ mv ${MULTI_PILOT_BIN} ${PILOT_DIR}
 PILOT_BIN=${PILOT_DIR}/`basename ${PILOT_BIN}`
 MULTI_PILOT_BIN=${PILOT_DIR}/`basename ${MULTI_PILOT_BIN}`
 
+
 echo -e "\rStep 2 of 8: downloading configuration......."
 CONFIGURATION_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION} -o ${CONFIGURATION_FILE} 2>&1`
@@ -162,6 +204,7 @@ if [[ $? != 0 ]]; then
     echo ${CURL_LOGGING}
     exit 2
 fi
+
 
 #
 # Download the binaries.
@@ -175,6 +218,7 @@ if [[ $? != 0 ]]; then
     exit 2
 fi
 
+
 #
 # Unpack the binaries.
 #
@@ -185,6 +229,7 @@ if [[ $? != 0 ]]; then
     echo ${TAR_LOGGING}
     exit 3
 fi
+
 
 #
 # Make the personal condor.
@@ -200,20 +245,28 @@ if [[ $? != 0 ]]; then
     exit 4
 fi
 
-#
-# Create the script we need for Singularity.
-#
-echo '#!/bin/bash -l
-module load tacc-singularity
-exec singularity "$@"
-' > ${PILOT_DIR}/singularity.sh
-chmod 755 ${PILOT_DIR}/singularity.sh
+SHELL_FRAGMENT
 
 # It may have take some time to get everything installed, so to make sure
 # we get our full clean-up time, subtract off how long we've been running
 # already.
 YOUTH=$((`date +%s` - ${BIRTH}))
 REMAINING_LIFETIME=$(((${LIFETIME} - ${YOUTH}) - ${CLEAN_UP_TIME}))
+
+
+WHOLE_NODE=1
+CONDOR_CPUS_LINE=""
+if [[ -n $CPUS && $CPUS -gt 0 ]]; then
+    CONDOR_CPUS_LINE="NUM_CPUS = ${CPUS}"
+    WHOLE_NODE=""
+fi
+
+CONDOR_MEMORY_LINE=""
+if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
+    CONDOR_MEMORY_LINE="MEMORY = ${MEM_MB}"
+    WHOLE_NODE=""
+fi
+
 
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
@@ -251,9 +304,18 @@ RUNBENCHMARKS = FALSE
 CCB_ADDRESS = \$(COLLECTOR_HOST)
 
 #
-# Commit suicide after being idle for five minutes.
+# Commit suicide after being idle for long enough.
 #
-STARTD_NOCLAIM_SHUTDOWN = 300
+STARTD_NOCLAIM_SHUTDOWN = ${STARTD_NOCLAIM_SHUTDOWN}
+
+#
+# Send updates a bit more than twice as often as the default, since this
+# is an ephemeral resource.  If STARTD_NOCLAIM_SHUTDOWN is the default,
+# this gives the startd a second chance to match if its initial update
+# to the collector failed.
+#
+UPDATE_INTERVAL = 137
+
 
 #
 # Don't run for more than two hours, to make sure we have time to clean up.
@@ -285,25 +347,18 @@ endif
 # Subsequent configuration is machine-specific.
 #
 
-# This is made available via 'module load tacc-singularity', but the
-# starter ignores PATH, so wrap it up.
-SINGULARITY = ${PILOT_DIR}/singularity.sh
+${CONDOR_CPUS_LINE}
+${CONDOR_MEMORY_LINE}
 
-# Stampede 2 has Knight's Landing queues (4 threads per core) and Skylake
-# queues (2 threads per core).  The "KNL" nodes have 68 cores and 96 GB
-# of RAM; the "SKX" nodes have 48 cores and 192 GB of RAM.  It seems like
-# the KNL cores are different-enough to justify a little judicious
-# deception; since the SKX cores end up at 4 GB of RAM each, that seems
-# reasonable (and it would be a pain to have different config for different
-# queues).
-COUNT_HYPERTHREAD_CPUS = FALSE
-
-# Create dynamic slots 3 GB at a time.  This number was chosen because it's
-# the amount of RAM requested per core on the OS Pool, but we actually bother
-# to set it because we start seeing weird scaling issues with more than 64
-# or so slots.  Since we can't fix that problem right now, avoid it.
+#
+# We have to hand out memory in chunks large enough to avoid the problem(s)
+# HTCondor has with having too many slots.  The appropriate chunk size varies
+# from system to system.
+#
 MUST_MODIFY_REQUEST_EXPRS = TRUE
-MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ 3072, quantize(RequestMemory, {128}) })
+MODIFY_REQUEST_EXPR_REQUESTMEMORY = max({ ${MEMORY_CHUNK_SIZE}, quantize(RequestMemory, {128}) })
+
+$(CONFIG_FRAGMENT)
 
 " > local/config.d/00-basic-pilot
 
@@ -311,6 +366,7 @@ mkdir local/passwords.d
 mkdir local/tokens.d
 mv ${TOKEN_FILE} local/tokens.d
 mv ${PASSWORD_FILE} local/passwords.d/POOL
+
 
 #
 # Unpack the configuration on top.
@@ -337,36 +393,64 @@ fi
 # the wrong queue length.
 MINUTES=$(((${REMAINING_LIFETIME} + ${CLEAN_UP_TIME})/60))
 
-# Request the appropriate number of nodes. (-N)
-# Request the appropriate number of tasks. (-n)
-#
-# On Stampede 2, TACC allocates only whole nodes, so -N = ${NODES}.  Since
-# this is not an MPI job, we want one task per node, and -n = ${NODES}.
+if [[ $WHOLE_NODE ]]; then
+    # Whole node jobs request the same number of tasks per node as tasks total.
+    # They make no specific requests about CPUs, memory, etc., since the SLURM
+    # partition should already determine that.
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --nodes=${NODES}
+#SBATCH --ntasks=${NODES}
+"
+else
+    # Jobs on shared (non-whole-node) SLURM partitions can't be multi-node on
+    # Expanse.  Request one job, and specify the resources that should be
+    # allocated to the job.
+
+    # XXX Should I reject NODES > 1?
+    # FIXME: I'm OK with ignoring it, but the FE should check..
+    SBATCH_RESOURCES_LINES="\
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+"
+    if [[ $CPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --cpus-per-task=${CPUS}
+"
+    fi
+    if [[ $MEM_MB ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH --mem=${MEM_MB}M
+"
+    fi
+fi
+
 
 if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
-echo '#!/bin/bash' > ${PILOT_DIR}/stampede2.slurm
+echo '#!/bin/bash' > "${PILOT_DIR}/hpc.slurm"
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
 #SBATCH -e ${PILOT_DIR}/%j.err
 #SBATCH -p ${QUEUE_NAME}
-#SBATCH -N ${NODES}
-#SBATCH -n ${NODES}
+${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
-" >> ${PILOT_DIR}/stampede2.slurm
+" >> "${PILOT_DIR}/hpc.slurm"
+
 
 #
 # Submit the SLURM job.
 #
 echo -e "\rStep 8 of 8: Submitting SLURM job............"
 SBATCH_LOG=${PILOT_DIR}/sbatch.log
-sbatch ${PILOT_DIR}/stampede2.slurm &> ${SBATCH_LOG}
+sbatch "${PILOT_DIR}/hpc.slurm" &> "${SBATCH_LOG}"
 SBATCH_ERROR=$?
 if [[ $SBATCH_ERROR != 0 ]]; then
     echo "Failed to submit job to SLURM (${SBATCH_ERROR}), aborting."

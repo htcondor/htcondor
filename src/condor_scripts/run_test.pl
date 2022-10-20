@@ -70,7 +70,6 @@ use POSIX qw/sys_wait_h strftime/;
 use Cwd;
 use CondorTest;
 use CondorUtils;
-use CheckOutputFormats;
 
 #################################################################
 #
@@ -315,6 +314,14 @@ sub CompleteTestOutput
         print XML "</error>\n<output>";
         print XML "</output>\n</test_result>\n";
     }
+}
+
+# function to trim white spaces at the begining and the end of the string
+# Reference: perlmaven.com/trim
+sub trim{
+	my $s = shift;
+	$s =~ s/^\s*|\s*$//g;
+	return $s;
 }
 
 # DoChild($test_program, $test_retirement,groupmemebercount);

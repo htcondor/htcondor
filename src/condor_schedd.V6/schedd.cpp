@@ -416,7 +416,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	bool suppress_sec_session = true;
 
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
 		if( secSessionId() == NULL ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
 		}

@@ -5651,6 +5651,18 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		return 0;
 	}
 
+	// in 9.4.0 we started applying transforms to the cluster ad of late materiaization factories
+	// We did this because transforms must be applied before submit requirements are evaluated (HTCONDOR-756)
+	// This resulted in a problem (HTCONDOR-1369) where a transform of TransferInput would prevent
+	// materialization of per-job values for TransferInput. Beginning with 10.0 we will transform proc ads
+	// in addition to cluster ads for factory jobs. (i.e. The transforms will be applied twice for each late-mat job.)
+	// The knob below is so admins can revert to the behavior of applying transforms to the factory cluster only
+	// even though this has the side effect of overriding materialization of those attributes in the job ads.
+	// An admin might do this if they want to insure that late materialization will not fail submit requirments
+	// In effect, they are making attributes that are set by a submit transform pseudo-immutable. (the root cause of HTCONDOR-1369)
+	// TODO: make it possible to declare only some transforms as cluster-only
+	bool transform_factory_and_job = param_boolean("TRANSFORM_FACTORY_AND_JOB_ADS", true);
+
 	for( std::list<std::string>::const_iterator it = newAdKeys.begin(); it != newAdKeys.end(); ++it ) {
 		bool do_transforms = true;
 		ClassAd tmpAd, tmpAd2;
@@ -5675,7 +5687,12 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 				tmpAd.Assign(ATTR_JOB_STATUS, IDLE);
 				tmpAd.ChainToAd(&tmpAd2);
 			}
-			xform_attrs = &tmpAttrs; // we want to get back the set of transformed attributes
+			// if we are going to transform the factory only, then we want to know
+			// what attrbutes are transformed in the cluster/factory so we can disable
+			// materialization of those attributes in the proc ads
+			if ( ! transform_factory_and_job) {
+				xform_attrs = &tmpAttrs;
+			}
 		} else {
 			JobQueueKeyBuf clusterJid( jid.cluster, -1 );
 			JobQueue->AddAttrsFromTransaction( clusterJid, tmpAd );
@@ -5687,8 +5704,9 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 				// we don't need to unchain - it's a stack object and won't live longer than this function.
 				tmpAd.ChainToAd(clusterAd);
 				if (static_cast<JobQueueCluster*>(clusterAd)->factory) {
-					// late materialize jobs have already been transformed
-					do_transforms = false;
+					// we already transformed the factory cluster ad, disable transforms
+					// for proc ads if ...and_jobs is false
+					do_transforms = transform_factory_and_job;
 				}
 			}
 		}

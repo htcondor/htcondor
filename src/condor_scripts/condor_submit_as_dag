@@ -25,12 +25,26 @@ def replace_queue_statement_in_file(file_name, new):
                 file.write(line)
 
 
+lmkeys = [
+           "max_idle",
+           "max_materialize",
+           "materialize_max_idle",
+           "JobMaterializeLimit",
+           "JobMaterializeMaxIdle",
+         ]
+LATE_MATERIALIZATION_KEYS = [ name.casefold() for name in lmkeys ]
+
 def copy(submit_file_name, dag_submit_file_name):
     with open(submit_file_name) as submit_file:
         lines = submit_file.readlines()
 
     with open(dag_submit_file_name, "w") as dag_submit_file:
         for line in lines:
+            # Disable late materialization.
+            if "=" in line:
+                (key, value) = line.split("=")
+                if key.strip().casefold() in LATE_MATERIALIZATION_KEYS:
+                    continue
             dag_submit_file.write(line)
 
 
@@ -154,7 +168,7 @@ def simplify_complex_queue_statement(submit_file_name):
 
 def main(argv):
     if len(argv) != 2:
-        print("condor_qtod takes exactly one argument, then name of the submit file", file=sys.stderr)
+        print("condor_submit_as_dag takes exactly one argument, the name of the submit file", file=sys.stderr)
         return -1
 
     submit_file_name = argv[1]

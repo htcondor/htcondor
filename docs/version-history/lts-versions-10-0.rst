@@ -57,7 +57,27 @@ Bugs Fixed:
 - Fixed a bug in DAGMan where **Node** jobs that could not write to their **UserLog**
   would cause the **DAG** to get stuck indefinitely while waiting for pending **Nodes**.
   :jira:`1305`
-  
+
+- Fixed a bug where ``s3://`` URLs host or bucket names shorter than 14
+  characters caused the shadow to dump core.
+  :jira:`1378`
+
 - Fixed a bug in the hibernation code that caused HTCondor to ignore
   the active Suspend-To-Disk option.
   :jira:`1357`
+
+- Fixed a bug where some administrator client tools did not properly
+  use the remote administrator capability (configuration parameter
+  ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
+  :jira:`1371`
+
+- When a ``JOB_TRANSFORM_*`` transform changes an attribute at submit time in a late
+  materialization factory, it no longer marks that attribute as fixed for all jobs.  This
+  change makes it possible for a transform to modify rather than simply replacing an attribute
+  that that the user wishes to vary per job.
+  :jira:`1369`
+
+- Fixed bug where **Collector**, **Negotiator**, and **Schedd** core files that are naturally
+  large would be deleted by *condor_preen* because the file sizes exceeded the max file size.
+  :jira:`1377`
+

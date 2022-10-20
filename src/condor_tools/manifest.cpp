@@ -34,7 +34,7 @@ usage( const char * argv0 ) {
     fprintf( stderr, "%s: [function] [argument]\n", argv0 );
     fprintf( stderr, "where [function] is one of:\n" );
     fprintf( stderr, "  getNumberFromFileName\n" );
-    fprintf( stderr, "  validateFile\n" );
+    fprintf( stderr, "  validateManifestFile\n" );
     fprintf( stderr, "  validateFilesListedIn\n" );
     fprintf( stderr, "  FileFromLine\n" );
     fprintf( stderr, "  ChecksumFromLine\n" );

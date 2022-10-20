@@ -34,9 +34,9 @@
 #endif
 
 // Symbols from the munge library
-static munge_err_t (*munge_encode_ptr)(char **, munge_ctx_t, const void *, int) = NULL;
-static munge_err_t (*munge_decode_ptr)(const char *, munge_ctx_t, void **, int *, uid_t *, gid_t *) = NULL;
-static const char * (*munge_strerror_ptr)(munge_err_t) = NULL;
+static decltype(&munge_encode) munge_encode_ptr = nullptr;
+static decltype(&munge_decode) munge_decode_ptr = nullptr;
+static decltype(&munge_strerror) munge_strerror_ptr = nullptr;
 
 bool Condor_Auth_MUNGE::m_initTried = false;
 bool Condor_Auth_MUNGE::m_initSuccess = false;
@@ -62,9 +62,9 @@ bool Condor_Auth_MUNGE::Initialize()
 	void *dl_hdl;
 
 	if ( (dl_hdl = dlopen(LIBMUNGE_SO, RTLD_LAZY)) == NULL ||
-		 !(munge_encode_ptr = (munge_err_t (*)(char **, munge_ctx_t, const void *, int))dlsym(dl_hdl, "munge_encode")) ||
-		 !(munge_decode_ptr = (munge_err_t (*)(const char *, munge_ctx_t, void **, int *, uid_t *, gid_t *))dlsym(dl_hdl, "munge_decode")) ||
-		 !(munge_strerror_ptr = (const char * (*)(munge_err_t))dlsym(dl_hdl, "munge_strerror"))
+		 !(munge_encode_ptr = reinterpret_cast<decltype(munge_encode_ptr)>(dlsym(dl_hdl, "munge_encode"))) ||
+		 !(munge_decode_ptr = reinterpret_cast<decltype(munge_decode_ptr)>(dlsym(dl_hdl, "munge_decode"))) ||
+		 !(munge_strerror_ptr = reinterpret_cast<decltype(munge_strerror_ptr)>(dlsym(dl_hdl, "munge_strerror")))
 		 ) {
 
 		// Error in the dlopen/sym calls, return failure.

@@ -51,8 +51,6 @@ long long _sysapi_reserve_disk = 0;
 bool _sysapi_startd_has_bad_utmp = false;
 #endif
 
-bool _sysapi_count_hyperthread_cpus = true;
-
 /* needed by everyone, if this is false, then call sysapi_reconfig() */
 int _sysapi_config = 0;
 
@@ -130,9 +128,6 @@ sysapi_reconfig(void)
 	_sysapi_reserve_memory = param_integer( "RESERVED_MEMORY", 0, INT_MIN, INT_MAX );
 
 	_sysapi_getload = param_boolean("SYSAPI_GET_LOADAVG",true);
-
-	/* Should we count hyper threads? */
-	_sysapi_count_hyperthread_cpus = param_boolean("COUNT_HYPERTHREAD_CPUS", _sysapi_count_hyperthread_cpus);
 
 	/* tell the library I have configured myself */
 	_sysapi_config = TRUE;
