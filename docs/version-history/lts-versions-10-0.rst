@@ -81,3 +81,7 @@ Bugs Fixed:
   large would be deleted by *condor_preen* because the file sizes exceeded the max file size.
   :jira:`1377`
 
+- Fixed a bug that could cause a daemon or tool to crash when
+  connecting to a daemon using a security session.
+  This particularly affected the *condor_schedd*.
+  :jira:`1372`
