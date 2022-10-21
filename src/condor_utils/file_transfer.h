@@ -421,7 +421,7 @@ class FileTransfer final: public Service {
 	int DoCheckpointUploadFromShadow( filesize_t * total_bytes, ReliSock * s );
 	int DoNormalUpload( filesize_t * total_bytes, ReliSock * s );
 
-	typedef struct {
+	typedef struct _ft_protocol_bits_struct {
 		filesize_t peer_max_transfer_bytes = {-1};
 		bool I_go_ahead_always = {false};
 		bool peer_goes_ahead_always = {false};
