@@ -3040,7 +3040,7 @@ SecMan::FinishKeyExchange(std::unique_ptr<EVP_PKEY, decltype(&EVP_PKEY_free)> my
 	// d2i_PublicKey is broken until OpenSSL 3.0.  Hence, we use the low-level deserialize...
 	
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	peerkey_raw = EVP_EC_gen("prime256v1");
+	peerkey_raw = EVP_EC_gen(const_cast<char *>("prime256v1"));
 	if (!peerkey_raw) {
 		errstack->push("SECMAN", SECMAN_ERR_INTERNAL,
 			"Failed to create pubkey object for deserialization");

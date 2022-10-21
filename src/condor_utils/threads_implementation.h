@@ -68,7 +68,7 @@ public:
 	int start_thread_safe_block();
 	int stop_thread_safe_block();
 	int yield();
-	int pool_init();
+	int pool_init(int num_threads);
 	int pool_add(condor_thread_func_t routine, void* arg, int* tid=NULL,
 				 const char* descrip=NULL);
 	static const WorkerThreadPtr_t get_handle(int tid = 0);

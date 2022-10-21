@@ -123,7 +123,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
 #define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
-#define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad
+//#define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad (Not used)
 #define PERMISSION_AND_AD	(SCHED_VERS+72) // negotiator is sending startad to schedd
 //#define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt, Not used
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
@@ -154,7 +154,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd
-#define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd
+#define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd (Not used)
 #define VM_UNIV_GAHP_ERROR   (SCHED_VERS+103) // report the error of vmgahp to startd
 #define VM_UNIV_VMPID		(SCHED_VERS+104) // PID of process for a VM
 #define VM_UNIV_GUEST_IP	(SCHED_VERS+105) // IP address of VM
@@ -504,17 +504,17 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 /*
 *** Commands used by the transfer daemon
 */
-#define TRANSFERD_BASE 74000
+//#define TRANSFERD_BASE 74000
 /* This is used by the schedd when a transferd registers itself */
-#define TRANSFERD_REGISTER		(TRANSFERD_BASE+0)
+//#define TRANSFERD_REGISTER		(TRANSFERD_BASE+0)	// Not used
 /* a channel under which a transferd may be sent control message such as
 	being informed of a new a new transfer request 
 */
-#define TRANSFERD_CONTROL_CHANNEL	(TRANSFERD_BASE+1)
+//#define TRANSFERD_CONTROL_CHANNEL	(TRANSFERD_BASE+1)	// Not used
 /* Files are being written to the transferd for storage */
-#define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)
+//#define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)	// Not used
 /* files are being read from the transferd's storage */
-#define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
+//#define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)	// Not used
 
 
 /*

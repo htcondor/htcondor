@@ -26,13 +26,11 @@
 #include "condor_version.h"
 #include "condor_ver_info.h"
 #include "dc_schedd.h"
-#include "dc_transferd.h"
 #include "condor_distribution.h"
 #include "basename.h"
 #include "internet.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
-#include "condor_ftp.h"
 
 
 const char	*MyName = NULL;
@@ -40,8 +38,6 @@ std::string global_constraint;
 bool had_error = false;
 DCSchedd* schedd = NULL;
 bool All = false;
-
-SandboxTransferMethod st_method = STM_USE_SCHEDD_ONLY;
 
 void PREFAST_NORETURN usage(int iExitCode=1);
 void procArg(const char*);
@@ -173,7 +169,6 @@ main(int argc, char *argv[])
 	char* scheddName = NULL;
 	char* scheddAddr = NULL;
 	const char * pcolon;
-	std::string method;
 
 	MyName = condor_basename(argv[0]);
 	set_priv_initialize(); // allow uid switching if root
@@ -268,18 +263,6 @@ main(int argc, char *argv[])
 				}
 				pool = strdup( *argv );
 				break;
-			/* CRUFT transferd is no longer supported
-			case 's':
-				argv++;
-				if( ! *argv ) {
-					fprintf( stderr, "%s: -stm requires another argument\n", 
-							 MyName);
-					exit(1);
-				}				
-				method = *argv;
-				string_to_stm(method, st_method);
-				break;
-			*/
 			case 'v':
 				version();
 				break;
@@ -300,15 +283,6 @@ main(int argc, char *argv[])
 			args[nArgs] = arg;
 			nArgs++;
 		}
-	}
-
-	// Check to make sure we have a valid sandbox transfer mechanism.
-	if (st_method == STM_UNKNOWN) {
-		fprintf( stderr,
-			"%s: Unknown sandbox transfer method: %s\n", MyName,
-			method.c_str());
-		usage();
-		exit(1);
 	}
 
 	if( ! (All || nArgs) ) {
@@ -356,78 +330,13 @@ main(int argc, char *argv[])
 
 	fprintf(stdout,"Fetching data files...\n");
 
-	switch(st_method) {
-		case STM_USE_SCHEDD_ONLY:
-			{ // start block
-
-			// Get the sandbox directly from the schedd.
-			// And now, do the work.
-			CondorError errstack;
-			result = schedd->receiveJobSandbox(global_constraint.c_str(),
-				&errstack);
-			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
-				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-				exit(1);
-			}
-		
-			// All done
-			return 0;
-
-			} //end block
-			break;
-
-		case STM_USE_TRANSFERD:
-			{ // start block
-
-			// NEW METHOD where we ask the schedd for a transferd, then get the
-			// files from the transferd
-
-			CondorError errstack;
-			ClassAd respad;
-			int invalid;
-			std::string reason;
-			std::string td_sinful;
-			std::string td_cap;
-
-			result = schedd->requestSandboxLocation(FTPD_DOWNLOAD,
-				global_constraint, FTP_CFTP, &respad, &errstack);
-			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
-				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-				exit(1);
-			}
-
-			respad.LookupInteger(ATTR_TREQ_INVALID_REQUEST, invalid);
-			if (invalid == TRUE) {
-				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-				respad.LookupString(ATTR_TREQ_INVALID_REASON, reason);
-				fprintf( stderr, "%s\n", reason.c_str());
-				exit(EXIT_FAILURE);
-			}
-
-			respad.LookupString(ATTR_TREQ_TD_SINFUL, td_sinful);
-			respad.LookupString(ATTR_TREQ_CAPABILITY, td_cap);
-
-			dprintf(D_ALWAYS, 
-				"td: %s, cap: %s\n", td_sinful.c_str(), td_cap.c_str());
-
-			DCTransferD dctd(td_sinful.c_str());
-
-			result = dctd.download_job_files(&respad, &errstack);
-			if ( !result ) {
-				fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
-				fprintf( stderr, "ERROR: Failed to spool job files.\n" );
-				exit(1);
-			}
-
-			} // end block
-		break;
-
-		default:
-			EXCEPT("PROGRAMMER ERROR: st_method must be known.");
-			break;
-		}
+	CondorError errstack;
+	result = schedd->receiveJobSandbox(global_constraint.c_str(), &errstack);
+	if ( !result ) {
+		fprintf( stderr, "\n%s\n", errstack.getFullText(true).c_str() );
+		fprintf( stderr, "ERROR: Failed to spool job files.\n" );
+		exit(1);
+	}
 
 	// All done
 	return 0;
