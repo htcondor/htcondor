@@ -74,29 +74,29 @@ FunctionCall( )
 
 		// load up the function dispatch table
 			// type predicates
-		functionTable["isundefined"	] = (void*)isType;
-		functionTable["iserror"		] =	(void*)isType;
-		functionTable["isstring"	] =	(void*)isType;
-		functionTable["isinteger"	] =	(void*)isType;
-		functionTable["isreal"		] =	(void*)isType;
-		functionTable["islist"		] =	(void*)isType;
-		functionTable["isclassad"	] =	(void*)isType;
-		functionTable["isboolean"	] =	(void*)isType;
-		functionTable["isabstime"	] =	(void*)isType;
-		functionTable["isreltime"	] =	(void*)isType;
+		functionTable["isundefined"	] = isType;
+		functionTable["iserror"		] =	isType;
+		functionTable["isstring"	] =	isType;
+		functionTable["isinteger"	] =	isType;
+		functionTable["isreal"		] =	isType;
+		functionTable["islist"		] =	isType;
+		functionTable["isclassad"	] =	isType;
+		functionTable["isboolean"	] =	isType;
+		functionTable["isabstime"	] =	isType;
+		functionTable["isreltime"	] =	isType;
 
 			// list membership
-		functionTable["member"		] =	(void*)testMember;
-		functionTable["identicalmember"	] =	(void*)testMember;
+		functionTable["member"		] =	testMember;
+		functionTable["identicalmember"	] =	testMember;
 
 		// Some list functions, useful for lists as sets
-		functionTable["size"        ] = (void*)size;
-		functionTable["sum"         ] = (void*)sumAvg;
-		functionTable["avg"         ] = (void*)sumAvg;
-		functionTable["min"         ] = (void*)minMax;
-		functionTable["max"         ] = (void*)minMax;
-		functionTable["anycompare"  ] = (void*)listCompare;
-		functionTable["allcompare"  ] = (void*)listCompare;
+		functionTable["size"        ] = size;
+		functionTable["sum"         ] = sumAvg;
+		functionTable["avg"         ] = sumAvg;
+		functionTable["min"         ] = minMax;
+		functionTable["max"         ] = minMax;
+		functionTable["anycompare"  ] = listCompare;
+		functionTable["allcompare"  ] = listCompare;
 
 			// basic apply-like functions
 		/*
@@ -107,86 +107,86 @@ FunctionCall( )
 		*/
 
 			// time management
-		functionTable["time"        ] = (void*)epochTime;
-		functionTable["currenttime"	] =	(void*)currentTime;
-		functionTable["timezoneoffset"] =(void*)timeZoneOffset;
-		functionTable["daytime"		] =	(void*)dayTime;
-		//functionTable["makedate"	] =	(void*)makeDate;
-		functionTable["getyear"		] =	(void*)getField;
-		functionTable["getmonth"	] =	(void*)getField;
-		functionTable["getdayofyear"] =	(void*)getField;
-		functionTable["getdayofmonth"] =(void*)getField;
-		functionTable["getdayofweek"] =	(void*)getField;
-		functionTable["getdays"		] =	(void*)getField;
-		functionTable["gethours"	] =	(void*)getField;
-		functionTable["getminutes"	] =	(void*)getField;
-		functionTable["getseconds"	] =	(void*)getField;
-		functionTable["splittime"   ] = (void*)splitTime;
-		functionTable["formattime"  ] = (void*)formatTime;
-		//functionTable["indays"		] =	(void*)inTimeUnits;
-		//functionTable["inhours"		] =	(void*)inTimeUnits;
-		//functionTable["inminutes"	] =	(void*)inTimeUnits;
-		//functionTable["inseconds"	] =	(void*)inTimeUnits;
+		functionTable["time"        ] = epochTime;
+		functionTable["currenttime"	] =	currentTime;
+		functionTable["timezoneoffset"] =timeZoneOffset;
+		functionTable["daytime"		] =	dayTime;
+		//functionTable["makedate"	] =	makeDate;
+		functionTable["getyear"		] =	getField;
+		functionTable["getmonth"	] =	getField;
+		functionTable["getdayofyear"] =	getField;
+		functionTable["getdayofmonth"] =getField;
+		functionTable["getdayofweek"] =	getField;
+		functionTable["getdays"		] =	getField;
+		functionTable["gethours"	] =	getField;
+		functionTable["getminutes"	] =	getField;
+		functionTable["getseconds"	] =	getField;
+		functionTable["splittime"   ] = splitTime;
+		functionTable["formattime"  ] = formatTime;
+		//functionTable["indays"		] =	inTimeUnits;
+		//functionTable["inhours"		] =	inTimeUnits;
+		//functionTable["inminutes"	] =	inTimeUnits;
+		//functionTable["inseconds"	] =	inTimeUnits;
 
 			// string manipulation
-		functionTable["strcat"		] =	(void*)strCat;
-		functionTable["join"		] =	(void*)strCat;
-		functionTable["toupper"		] =	(void*)changeCase;
-		functionTable["tolower"		] =	(void*)changeCase;
-		functionTable["substr"		] =	(void*)subString;
-		functionTable["strcmp"      ] = (void*)compareString;
-		functionTable["stricmp"     ] = (void*)compareString;
+		functionTable["strcat"		] =	strCat;
+		functionTable["join"		] =	strCat;
+		functionTable["toupper"		] =	changeCase;
+		functionTable["tolower"		] =	changeCase;
+		functionTable["substr"		] =	subString;
+		functionTable["strcmp"      ] = compareString;
+		functionTable["stricmp"     ] = compareString;
 
 			// version comparison
-		functionTable["versioncmp"  ] = (void*)compareVersion;
-		functionTable["versionLE"   ] = (void*)compareVersion;
-		functionTable["versionLT"   ] = (void*)compareVersion;
-		functionTable["versionGE"   ] = (void*)compareVersion;
-		functionTable["versionGT"   ] = (void*)compareVersion;
+		functionTable["versioncmp"  ] = compareVersion;
+		functionTable["versionLE"   ] = compareVersion;
+		functionTable["versionLT"   ] = compareVersion;
+		functionTable["versionGE"   ] = compareVersion;
+		functionTable["versionGT"   ] = compareVersion;
 		// Not identical to str1 =?= str2 because it won't eat undefined.
-		functionTable["versionEQ"   ] = (void*)compareVersion;
-		functionTable["version_in_range"] = (void*)versionInRange;
+		functionTable["versionEQ"   ] = compareVersion;
+		functionTable["version_in_range"] = versionInRange;
 
 			// pattern matching (regular expressions)
-		functionTable["regexp"		] =	(void*)matchPattern;
-		functionTable["regexpmember"] =	(void*)matchPatternMember;
-		functionTable["regexps"     ] = (void*)substPattern;
-		functionTable["replace"     ] = (void*)substPattern;
-		functionTable["replaceall"  ] = (void*)substPattern;
+		functionTable["regexp"		] =	matchPattern;
+		functionTable["regexpmember"] =	matchPatternMember;
+		functionTable["regexps"     ] = substPattern;
+		functionTable["replace"     ] = substPattern;
+		functionTable["replaceall"  ] = substPattern;
 
 			// conversion functions
-		functionTable["int"			] =	(void*)convInt;
-		functionTable["real"		] =	(void*)convReal;
-		functionTable["string"		] =	(void*)convString;
-		functionTable["bool"		] =	(void*)convBool;
-		functionTable["absTime"		] =	(void*)convTime;
-		functionTable["relTime"		] = (void*)convTime;
+		functionTable["int"			] =	convInt;
+		functionTable["real"		] =	convReal;
+		functionTable["string"		] =	convString;
+		functionTable["bool"		] =	convBool;
+		functionTable["absTime"		] =	convTime;
+		functionTable["relTime"		] = convTime;
 
 		// turn the contents of an expression into a string
 		// but *do not* evaluate it
-		functionTable["unparse"		] =	(void*)unparse;
-		functionTable["unresolved"	] = (void*)hasRefs;
+		functionTable["unparse"		] =	unparse;
+		functionTable["unresolved"	] = hasRefs;
 
 			// mathematical functions
-		functionTable["floor"		] =	(void*)doRound;
-		functionTable["ceil"		] =	(void*)doRound;
-		functionTable["ceiling"		] =	(void*)doRound;
-		functionTable["round"		] =	(void*)doRound;
-		functionTable["pow" 		] =	(void*)doMath2;
-		//functionTable["log" 		] =	(void*)doMath2;
-		functionTable["quantize"	] =	(void*)doMath2;
-		functionTable["random"      ] = (void*)random;
+		functionTable["floor"		] =	doRound;
+		functionTable["ceil"		] =	doRound;
+		functionTable["ceiling"		] =	doRound;
+		functionTable["round"		] =	doRound;
+		functionTable["pow" 		] =	doMath2;
+		//functionTable["log" 		] =	doMath2;
+		functionTable["quantize"	] =	doMath2;
+		functionTable["random"      ] = random;
 
 			// for compatibility with old classads:
-		functionTable["ifThenElse"  ] = (void*)ifThenElse;
-		functionTable["interval" ] = (void*)interval;
-		functionTable["eval"] = (void*)eval;
+		functionTable["ifThenElse"  ] = ifThenElse;
+		functionTable["interval" ] = interval;
+		functionTable["eval"] = eval;
 
 			// string list functions:
 			// Note that many other string list functions are defined
 			// externally in the Condor classad compatibility layer.
-		functionTable["stringListsIntersect" ] = (void*)stringListsIntersect;
-		functionTable["debug"      ] = (void*)debug;
+		functionTable["stringListsIntersect" ] = stringListsIntersect;
+		functionTable["debug"      ] = debug;
 
 		initialized = true;
 	}
@@ -316,7 +316,7 @@ void FunctionCall::RegisterFunction(
     FuncTable &functionTable = getFunctionTable();
 
 	if (functionTable.find(functionName) == functionTable.end()) {
-		functionTable[functionName] = (void *) function;
+		functionTable[functionName] = function;
 	}
 	return;
 }
@@ -327,7 +327,7 @@ void FunctionCall::RegisterFunctions(
 	if (functions != NULL) {
 		while (functions->function != NULL) {
 			RegisterFunction(functions->functionName, 
-							 (ClassAdFunc) functions->function);
+							 functions->function);
 			functions++;
 		}
 	}
@@ -374,12 +374,12 @@ bool FunctionCall::RegisterSharedLibraryFunctions(
 					success = true;
 					/*
 					while (functions->apparentFunctionName != NULL) {
-						void *function;
+						ClassAdFunc function;
 						string functionName = functions->apparentFunctionName;
 						function = dlsym(dynamic_library_handle, 
 										 functions->actualFunctionName);
 						RegisterFunction(functionName,
-										 (ClassAdFunc) function);
+										 function);
 						success = true;
 						functions++;
 					}
@@ -439,7 +439,7 @@ MakeFunctionCall( const string &str, vector<ExprTree*> &args )
 	FuncTable::iterator	itr = functionTable.find( str );
 
 	if( itr != functionTable.end( ) ) {
-		fc->function = (ClassAdFunc)itr->second;
+		fc->function = itr->second;
 	} else {
 		fc->function = NULL;
 	}
