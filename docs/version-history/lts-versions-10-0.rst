@@ -20,7 +20,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
+  has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
+  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
 
 Bugs Fixed:
 
