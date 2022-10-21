@@ -9334,7 +9334,7 @@ void SubmitHash::dump(FILE* out, int flags)
 	hash_iter_delete(&it);
 }
 
-void SubmitHash::dump_templates(FILE* out, const char * category, int flags)
+void SubmitHash::dump_templates(FILE* out, const char * category, int /*flags*/)
 {
 	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", SubmitMacroSet, 0);
 	if ( ! pdmt || ! pdmt->def)
