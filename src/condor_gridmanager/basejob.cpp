@@ -344,10 +344,9 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
 		jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
-		char *release_reason = nullptr;
-		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
+		std::string release_reason;
+		if ( jobAd->LookupString( ATTR_RELEASE_REASON, release_reason ) != 0 ) {
 			jobAd->Assign( ATTR_LAST_RELEASE_REASON, release_reason );
-			free( release_reason );
 		}
 		jobAd->AssignExpr( ATTR_RELEASE_REASON, "Undefined" );
 

@@ -1231,7 +1231,7 @@ const char * init_submit_default_macros()
 
 		// hook the dynamic table into the static defaults for submit utils
 		// TODO: handle reconfig, freeing the old aTable if it is not the compile time default table
-		for (int ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
+		for (size_t ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
 			if (YourStringNoCase("TEMPLATE") == SubmitTemplateTables[ii].key) {
 				SubmitTemplateTables[ii].aTable = aTable;
 				SubmitTemplateTables[ii].cElms = ix;
@@ -9298,7 +9298,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 		// these are covered by the supression of warnings for dotted variables
 		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",
 	};
-	for (int ii = 0; ii < COUNTOF(suppress); ++ii) {
+	for (size_t ii = 0; ii < COUNTOF(suppress); ++ii) {
 		increment_macro_use_count(suppress[ii], SubmitMacroSet);
 	}
 

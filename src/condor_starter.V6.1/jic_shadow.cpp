@@ -1380,7 +1380,7 @@ JICShadow::initJobInfo( void )
 		// Give our base class a chance.
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
-	char *orig_job_iwd;
+	std::string orig_job_iwd;
 	std::string x509userproxy;
 
 	if( ! job_ad ) {
@@ -1399,7 +1399,7 @@ JICShadow::initJobInfo( void )
 	}
 
 		// stash the iwd name in orig_job_iwd
-	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
+	if( ! job_ad->LookupString(ATTR_JOB_IWD, orig_job_iwd) ) {
 		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
 				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
 		return false;
@@ -1407,7 +1407,6 @@ JICShadow::initJobInfo( void )
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
 		job_ad->Assign(ATTR_ORIG_JOB_IWD, orig_job_iwd);
-		free(orig_job_iwd);
 	}
 
 	if( ! job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) ) {
