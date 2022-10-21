@@ -11407,36 +11407,14 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 		return false;
 	}
 
-		// What should the collector admin be able to do to this daemon?
-		// - 452: DAEMONS_OFF_FLEX
-		// - 453: RESTART
-		// - 454: DAEMONS_OFF
-		// - 455: DAEMONS_ON
-		// - 456: MASTER_OFF
-		// - 461: DAEMONS_OFF_FAST
-		// - 462: MASTER_OFF_FAST
-		// - 467: DAEMON_OFF
-		// - 468: DAEMON_OFF_FAST
-		// - 469: DAEMON_ON
-		// - 483: DAEMON_OFF_PEACEFUL
-		// - 484: DAEMONS_OFF_PEACEFUL
-		// - 485: RESTART_PEACEFUL
-		// - 60013: DC_FETCH_LOG
-		// - 60018: DC_PURGE_LOG
-		// - 60006: DC_OFF_FAST
-		// - 60005: DC_OFF_GRACEFUL
-		// - 60042: DC_OFF_FORCE
-		// - 60015: DC_OFF_PEACEFUL
-		// - 60016: DC_SET_PEACEFUL_SHUTDOWN
-		// - 60041: DC_SET_FORCE_SHUTDOWN
-
-	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"452,453,454,455,456,461,462,467,468,469,483,484,485,60013,60018,60006,60005,60042,60015,60016,60041\"]";
+	std::string session_info;
+	formatstr(session_info, "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"%s\"]", GetCommandsInAuthLevel(ADMINISTRATOR, true).c_str());
 
 	auto retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 		ADMINISTRATOR,
 		id.c_str(),
 		keybuf.get(),
-		session_info,
+		session_info.c_str(),
 		AUTH_METHOD_MATCH,
 		COLLECTOR_SIDE_MATCHSESSION_FQU,
 		nullptr,
@@ -11445,7 +11423,7 @@ DaemonCore::SetupAdministratorSession(unsigned duration, std::string &capability
 		true
 	);
 	if (retval) {
-		ClaimIdParser cidp(id.c_str(), session_info, keybuf.get());
+		ClaimIdParser cidp(id.c_str(), session_info.c_str(), keybuf.get());
 		capability = cidp.claimId();
 		m_remote_admin_last = capability;
 		m_remote_admin_last_time = time(NULL);

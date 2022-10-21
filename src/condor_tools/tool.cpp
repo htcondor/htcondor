@@ -1916,7 +1916,7 @@ doSquawkReconnect( char *addr ) {
 	if( real_dt == DT_GENERIC ) {
 		d.setSubsystem( subsys );
 	}
-	if( ! d.locate(Daemon::LOCATE_FOR_ADMIN) ) {
+	if( ! d.locate(Daemon::LOCATE_FOR_LOOKUP) ) {
 		printf ( "Failed to contact daemon.\n" );
 		free( hostname );
 		return FALSE;
