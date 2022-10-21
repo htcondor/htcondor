@@ -7,3 +7,4 @@ CONFIG_FRAGMENT() {
 SHELL_FRAGMENT() {
     : # This function intentionally left defined but blank.
 }
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus

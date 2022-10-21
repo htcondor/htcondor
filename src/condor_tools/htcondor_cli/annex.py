@@ -34,7 +34,7 @@ class Create(Verb):
             "args": ("--nodes",),
             "help": "Number of HPC nodes to schedule. Defaults to %(default)s",
             "type": int,
-            "default": 2,
+            "default": 1,
         },
         "lifetime": {
             "args": ("--lifetime",),
@@ -114,8 +114,19 @@ class Create(Verb):
         "gpus": {
             "args": ("--gpus",),
             "help": "Number of GPUs to request (GPU queues only).  Unset by default.",
-            "type": int,
+            "type": str,
             "default": None,
+        },
+        "gpu_type": {
+            "args": ("--gpu-type",),
+            "help": "Type of GPU to request (GPU queues only).  Unset by default.",
+            "default": None,
+        },
+        "test": {
+            "args": ("--test",),
+            "help": argparse.SUPPRESS,
+            "default": False,
+            "action": "store_true",
         },
     }
 

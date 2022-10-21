@@ -27,6 +27,128 @@ REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 
+
+#
+# We need a little in the way of formal structure for the system/queue table
+# because Bridges 2 and Perlmutter don't behave anything like the others.
+#
+# Note that `queues` must be a dict for the help messages to work right,
+# but the data structure can otherwise be empty.
+#
+class System:
+    def __init__(self, *,
+        pretty_name: str,
+        host_name: str,
+        default_queue: str,
+        batch_system: str,
+        script_base: str,
+        allocation_reqd: bool = False,
+        queues: dict,
+    ):
+        self.pretty_name = str(pretty_name)
+        self.host_name = str(host_name)
+        self.default_queue = str(default_queue)
+        self.batch_system = str(batch_system)
+        self.script_base = str(script_base)
+        self.allocation_required = allocation_reqd
+        self.queues = queues
+
+
+    def __str__(self):
+        rv = f"{self.__class__.__name__}("
+        rv += f"pretty_name='{self.pretty_name}'"
+        rv += f", host_name='{self.host_name}'"
+        rv += f", default_queue='{self.default_queue}'"
+        rv += f", batch_system='{self.batch_system}'"
+        rv += f", script_base='{self.script_base}'"
+        rv += f", allocation_required={self.allocation_required}"
+        rv += ")"
+        return rv
+
+
+    def get_constraints(self, queue_name, gpus, gpu_type):
+        return self.queues[queue_name]
+
+
+    def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
+        pass
+
+
+class Bridges2System(System):
+    def __init__(self, ** kwargs):
+        super().__init__(** kwargs)
+
+    def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
+        if queue_name == "RM-shared":
+            if mem_mb is not None:
+                error_string = f"The 'RM-shared' queue assigns memory proportional to the number of CPUs.  Do not specify --mem_mb for this queue."
+                raise ValueError(error_string)
+        elif queue_name == "EM":
+            if cpus is None or cpus % 24 != 0:
+                error_string = f"The 'EM-shared' queue only allows requests of 24, 47, 72, or 96 cpus.  Use --cpus to specify."
+                raise ValueError(error_string)
+            if mem_mb is not None:
+                error_string = f"The 'EM-shared' queue assigns memory proportional to the number of CPUs.  Do not specify --mem_mb for this queue."
+                raise ValueError(error_string)
+        elif queue_name == "GPU-shared":
+            if cpus is not None or mem_mb is not None:
+                error_string = f"The 'GPU-shared' queue assigns CPUs and memory proportional to the number of GPUs.  Do not specify --cpus or --mem_mb for this partition."
+                raise ValueError(error_string)
+        else:
+            pass
+
+    def get_constraints(self, queue_name, gpus, gpu_type):
+        queue = self.queues.get(queue_name)
+        if queue is None:
+            return None
+
+        # Don't add valid GPU information to a queue description just
+        # because the user asked for it.
+        if not queue_name.startswith("GPU"):
+            return queue
+
+        # Bridges 2 has three different sets of GPU machines, each of
+        # of which can be specified in either the whole-node ("GPU")
+        # or shared ("GPU-shared") queue.
+        #
+        # If the user didn't asked for a specific GPU type, tell them
+        # which type to ask for.
+
+        if gpus == 16 and gpu_type == "v100-32":
+            queue = { ** queue, ** {
+                "cores_per_node":       48,
+                "ram_per_node":         1536 * 1024,
+                "gpus_per_node":        16,
+                "max_nodes_per_job":    1,
+                },
+            }
+        elif gpu_type == "v100-32":
+            queue = { ** queue, ** {
+                "cores_per_node":       40,
+                "ram_per_node":         512 * 1024,
+                "gpus_per_node":        8,
+                "max_nodes_per_job":    4,
+                },
+            }
+        elif gpu_type == "v100-16":
+            queue = { ** queue, ** {
+                "cores_per_node":       40,
+                "ram_per_node":         192 * 1024,
+                "gpus_per_node":        8,
+                "max_nodes_per_job":    4,
+                },
+            }
+        else:
+            error_string = f"The system {self.pretty_name} has the following types of GPUs: v100-16, v100-32.  Use --gpu-type to select."
+            raise ValueError(error_string)
+
+        # The GPU-shared queue only allows 4 GPUs per node.
+        if queue_name == "GPU-shared":
+            queue["gpus_per_node"] = 4
+
+        return queue
+
+
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
 # are only informative at the moment; we could compute the necessary number
@@ -34,18 +156,13 @@ TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
 # do that for now and just tell the user to size their requests with the
 # units appropriate to the queue.
 #
-# ram_per_node is in MB.
+# * The key is currently both the value of the command-line option.
+# * We omit queues (partitions) which this tool doesn't support.
+# * ram_per_node is in MB.
 #
-SYSTEM_TABLE = {
 
-    # The key is currently both the value of the command-line option
-    # and part of the name of some files in condor_scripts/annex.  This
-    # shouldn't be hard to change.
-    #
-    # * We omit queues (partitions) which this tool doesn't support.
-    # * The 'ram_per_node' attribute is in MB, because that's what the
-    #   rest of the tooling desired.
-    "stampede2": {
+SYSTEM_TABLE = {
+    "stampede2": System( ** {
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
@@ -83,8 +200,9 @@ SYSTEM_TABLE = {
             },
         },
     },
+    ),
 
-    "expanse": {
+    "expanse": System( ** {
         "pretty_name":      "Expanse",
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
@@ -133,8 +251,9 @@ SYSTEM_TABLE = {
             },
         },
     },
+    ),
 
-    "anvil": {
+    "anvil": System( ** {
         "pretty_name":      "Anvil",
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
@@ -148,7 +267,7 @@ SYSTEM_TABLE = {
                 "max_duration":         96 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         25600,
+                "ram_per_node":         256 * 1024,
 
                 "max_jobs_in_queue":    128,
             },
@@ -157,7 +276,7 @@ SYSTEM_TABLE = {
                 "max_duration":         12 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         25600,
+                "ram_per_node":         256 * 1024,
 
                 "max_jobs_in_queue":    10,
             },
@@ -166,21 +285,22 @@ SYSTEM_TABLE = {
                 "max_duration":         96 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       128,
-                "ram_per_node":         25600,
+                "ram_per_node":         256 * 1024,
 
-                "max_jobs_in_queue":    999999,  # unlimited
+                "max_jobs_in_queue":    None,
             },
             # Max of 12 GPUs per user and 32 per allocation.  Since
             # every node has 4 GPUs, and you get the whole node....
             "gpu": {
                 "max_nodes_per_job":    3,
                 "max_duration":         48 * 60 * 60,
-                # "max_jobs_in_queue":    None,
+                "max_jobs_in_queue":    None,
 
                 "allocation_type":      "node",
 
                 "cores_per_node":       128,
                 "ram_per_node":         512 * 1024,
+
                 "gpus_per_node":        4,
             },
             "gpu-debug": {
@@ -192,12 +312,14 @@ SYSTEM_TABLE = {
 
                 "cores_per_node":       128,
                 "ram_per_node":         512 * 1024,
+
                 "gpus_per_node":        2,
             },
         },
     },
+    ),
 
-    "bridges2": {
+    "bridges2": Bridges2System( ** {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
@@ -205,16 +327,13 @@ SYSTEM_TABLE = {
         "script_base":      "hpc",
         "allocation_reqd":  False,
 
-        # Queue limits are not documented, possibly nonexistent.
-        # FIXME: You don't request memory for Bridges2; should we do a
-        # "ram_per_core" instead?
         "queues": {
             "RM": {
                 "max_nodes_per_job":    50,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         253000,
+                "ram_per_node":         256 * 1024,
 
                 "max_jobs_in_queue":    50,
             },
@@ -223,7 +342,7 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "cores_per_node":       128,
-                "ram_per_node":         515000,
+                "ram_per_node":         512 * 1024,
 
                 "max_jobs_in_queue":    50,
             },
@@ -231,47 +350,39 @@ SYSTEM_TABLE = {
                 "max_nodes_per_job":    1,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
-                # RM-shared lets you request up to half an RM node
                 "cores_per_node":       64,
-                "ram_per_node":         253000 // 2,
+                "ram_per_node":         128 * 1024,
 
                 "max_jobs_in_queue":    50,
             },
             "EM": {
-                "max_nodes_per_job":    2,
+                "max_nodes_per_job":    1,
                 "max_duration":         120 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       96,
-                # The EM queue specifies "MaxMemPerCPU"
-                "ram_per_node":         42955 * 96,
+                "ram_per_node":         4 * 1024 * 1024,
 
                 "max_jobs_in_queue":    50,
             },
 
-            #
-            # Bridges 2 has two partitions, 'gpu' and 'gpu-shared', but
-            # the partition doesn't specify which kind of GPU you get,
-            # and the 3 different types have different core counts and
-            # RAM availability.  Does it make sense to represent this
-            # as six different queues?
-            #
-            # Temporarily leaving these queues in even though they're
-            # unsupported for testing and development purposes.
-            #
-            "gpu": {
-                "max_nodes_per_job":    1,
-
+            # Deliberately incomplete.  See get_constraints().
+            "GPU": {
+                "max_nodes_per_job":    4,
+                "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
+                "gpu_types":            [ 'v100-32', 'v100-16' ],
             },
-            "gpu-shared": {
+            "GPU-shared": {
                 "max_nodes_per_job":    1,
-
-                "allocation_type":      "cores_or_ram",
+                "max_duration":         48 * 60 * 60,
+                "allocation_type":      "gpu-shared",
+                "gpu_types":            [ 'v100-32', 'v100-16' ],
             },
         },
     },
+    ),
 
-    "path-facility": {
+    "path-facility": System( ** {
         "pretty_name":      "PATh Facilty",
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
@@ -304,6 +415,7 @@ SYSTEM_TABLE = {
             # facility.
         },
     },
+    ),
 }
 
 
@@ -462,7 +574,7 @@ def populate_remote_temporary_directory(
     token_file,
     password_file,
 ):
-    script_base = SYSTEM_TABLE[system]["script_base"]
+    script_base = SYSTEM_TABLE[system].script_base
 
     files = [
         f"-C {local_script_dir} {script_base}.sh",
@@ -582,13 +694,17 @@ def invoke_pilot_script(
     cpus,
     mem_mb,
     gpus,
+    gpu_type,
 ):
     ssh_target = ssh_host_name
     if ssh_user_name is not None:
         ssh_target = f"{ssh_user_name}@{ssh_host_name}"
 
-    script_base = SYSTEM_TABLE[system]["script_base"]
+    script_base = SYSTEM_TABLE[system].script_base
 
+    gpu_argument = str(gpus)
+    if gpu_type is not None:
+        gpu_argument = f"{gpu_type}:{gpus}"
     args = [
         "ssh",
         *ssh_connection_sharing,
@@ -610,7 +726,7 @@ def invoke_pilot_script(
         str(remote_script_dir / password_file.name),
         str(cpus),
         str(mem_mb),
-        str(gpus),
+        gpu_argument
     ]
     proc = subprocess.Popen(
         args,
@@ -755,15 +871,16 @@ def validate_system_specific_constraints(
     mem_mb,
     idletime_in_seconds,
     gpus,
+    gpu_type,
 ):
     system = SYSTEM_TABLE[system]
 
     # (A) Is the queue a valid, known, and supported?
-    queue = system['queues'].get(queue_name)
+    queue = system.get_constraints(queue_name, gpus, gpu_type)
     if queue is None:
-        pretty_name = system['pretty_name']
-        queue_list = "\n    ".join(system['queues'])
-        default_queue = system['default_queue']
+        pretty_name = system.pretty_name
+        queue_list = "\n    ".join(system.queues)
+        default_queue = system.default_queue
 
         error_string = f"'{queue_name}' is not a supported queue on the system named '{pretty_name}'."
         error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
@@ -772,7 +889,7 @@ def validate_system_specific_constraints(
     # (B) If the user did not specify CPUs or memory, then the queue's
     # allocation type must be 'node'.  (We supply a default number of nodes.)
     if cpus is None and mem_mb is None:
-        if queue['allocation_type'] != 'node':
+        if queue['allocation_type'] == 'cores_or_ram':
             error_string = f"The '{queue_name}' queue is not a whole-node queue.  You must specify either CPUs (--cpus) or memory (--mem_mb)."
             raise ValueError(error_string)
 
@@ -808,11 +925,24 @@ def validate_system_specific_constraints(
             error_string = f"The '{queue_name}' queue is limited to {queue['cores_per_node']} cores per node."
             raise ValueError(error_string)
 
-        # FIXME: if you specified CPUs or memory, but did not specify nodes,
-        # the default should be 1, rather than 2.  Worry about this later.
-        #
-        # Maybe just switch the default node count to 1: 2 made sense for
-        # making testing of multinode jobs faster/easier, but otherwise why?
+        # Don't allow the user to request more than max nodes.
+        mnpj = queue['max_nodes_per_job']
+        if nodes > mnpj:
+            error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job.  Use --nodes to set."
+            raise ValueError(error_string)
+
+    # (J) If the queue's allocation type is 'gpu-shared', then specifying
+    #     CPUs or memory is pointless.
+    if queue['allocation_type'] == 'gpu-shared':
+        if cpus is not None or mem_mb is not None:
+            error_string = f"The '{queue_name}' queue always assigns CPUs and RAM in proportiona to the ratio of requested GPUs to total GPUs.  You can't specify CPUs (--cpus) or memory (--mem_mb)."
+            raise ValueError(error_string)
+
+        # Don't allow the user to request more than max nodes.
+        mnpj = queue['max_nodes_per_job']
+        if nodes > mnpj:
+            error_string = f"The '{queue_name}' queue is limited to {mnpj} nodes per job.  Use --nodes to set."
+            raise ValueError(error_string)
 
     # (E) You must not specify a lifetime longer than the queue's duration.
     if queue['max_duration'] < lifetime_in_seconds:
@@ -832,30 +962,52 @@ def validate_system_specific_constraints(
         raise ValueError(error_string)
 
     # (H) Some systems require an allocation be specified, even if it's
-    # your only one.
-    if allocation is None and system['allocation_reqd']:
-        pretty_name = system['pretty_name']
-        error_string = f"The system named '{pretty_name}' requires you to specify a project (--project), even if you only have one."
+    #     your only one.
+    if allocation is None and system.allocation_required:
+        error_string = f"The system named '{system.pretty_name}' requires you to specify a project (--project), even if you only have one."
         raise ValueError(error_string)
 
     # (I) You must request an appropriate number of GPUs if the queue
-    # offer GPUs.
-    max_gpus = queue.get('gpus_per_node')
-    if max_gpus is not None:
+    #     offer GPUs.
+    gpus_per_node = queue.get('gpus_per_node')
+    if gpus_per_node is not None:
         if gpus is None or gpus <= 0:
-            error_string = f"The '{queue_name}' queue is a GPU queue.  You must specify GPUs (--gpus)."
+            error_string = f"The '{queue_name}' queue is a GPU queue.  You must specify a number of GPUs (--gpus)."
             raise ValueError(error_string)
 
-        if gpus > max_gpus:
-            error_string = f"The '{queue_name}' queue is limited to {queue['gpus_per_node']} GPUs per node.  Use --gpus to set."
+        if gpus > gpus_per_node:
+            error_string = f"The '{queue_name}' queue is limited to {gpus_per_node} GPUs per node.  Use --gpus to set."
             raise ValueError(error_string)
 
         # If the allocation type is node, you get (and are charged for) all
         # of the GPUs whether you asked for them or not.
         if queue['allocation_type'] == 'node':
-            if gpus < max_gpus:
-                error_string = f"The '{queue_name}' queue always assigns {queue['gpus_per_node']} GPUs per node.  Set --gpus to match."
+            if gpus < gpus_per_node:
+                error_string = f"The '{queue_name}' queue always assigns {gpus_per_node} GPUs per node.  Set --gpus to match."
                 raise ValueError(error_string)
+
+    # (L) You must not request GPUs from queues which don't offer them.
+    if gpus_per_node is None:
+        if gpus is None or gpus <= 0:
+            pass
+        else:
+            error_string = f"The '{queue_name}' does not offer GPUs.  Do not set --gpus for this queue."
+            raise ValueError(error_string)
+
+    # (M) You must not specify a GPU type for a queue which doesn't offer them.
+    #     You must specify a valid GPU type for queues which do.
+    if gpu_type is not None:
+        gpu_types = queue.get('gpu_types')
+        if queue.get('gpu_types') is None:
+            error_string = f"The '{queue_name}' queue only has one type of GPU.  Do not set --gpu-type for this queue."
+            raise ValueError(error_string)
+        elif not gpu_type in gpu_types:
+            gpu_type_list = ", ".join(gpu_types)
+            error_string = f"The system {system.pretty_name} has the following types of GPUs: {gpu_type_list}.  Use --gpu-type to select."
+            raise ValueError(error_string)
+
+    # (K) Run the system-specific constraint checker.
+    system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
 
 
 def annex_inner_func(
@@ -875,7 +1027,9 @@ def annex_inner_func(
     login_name,
     login_host,
     startd_noclaim_shutdown,
-    gpus
+    gpus,
+    gpu_type,
+    test,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -888,8 +1042,8 @@ def annex_inner_func(
             system_list = "\n    ".join(SYSTEM_TABLE.keys())
             error_string = f"{error_string}  Supported systems are:\n    {system_list}"
         else:
-            default_queue = SYSTEM_TABLE[system]['default_queue']
-            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system]['queues']])
+            default_queue = SYSTEM_TABLE[system].default_queue
+            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system].queues])
             error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
 
         raise ValueError(error_string)
@@ -907,6 +1061,19 @@ def annex_inner_func(
 
 
     #
+    # Handle special case for Bridges 2.
+    #
+    if gpus is not None:
+        if ":" in gpus:
+            (gpu_type, gpus) = gpus.split(":")
+        try:
+            gpus = int(gpus)
+        except ValueError:
+            error_string = f"The --gpus argument must be either an integer or an integer followed by ':' and a GPU type."
+            raise ValueError(error_string)
+
+
+    #
     # We'll need to validate the requested nodes (or CPUs and memory)
     # against the requested queue[-system pair].  We also need to
     # check the lifetime (and idle time, once we support it).
@@ -916,8 +1083,10 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus)
+    validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus, gpu_type)
 
+    if test:
+        return
 
     # Location of the local universe script files
     local_script_dir = (
@@ -978,7 +1147,7 @@ def annex_inner_func(
         ssh_user_name = login_name
 
     ssh_host_name = htcondor.param.get(
-        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system]["host_name"],
+        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system].host_name,
     )
     if login_host is not None:
         ssh_host_name = login_host
@@ -1039,7 +1208,7 @@ def annex_inner_func(
 
     logger.info(
         f"This will{as_project}request {resources} for an annex named '{annex_name}'"
-        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'."
+        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'."
         f"  To change the project, use --project."
         f"  To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
         f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
@@ -1056,7 +1225,7 @@ def annex_inner_func(
     ##
     logger.info(
         f"{ANSI_BRIGHT}This command will access the system named "
-        f"'{SYSTEM_TABLE[system]['pretty_name']}' via SSH.  To proceed, "
+        f"'{SYSTEM_TABLE[system].pretty_name}' via SSH.  To proceed, "
         f"follow the prompts from that system "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
@@ -1073,7 +1242,7 @@ def annex_inner_func(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system]['pretty_name']}', aborting ({rc})."
+            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system].pretty_name}', aborting ({rc})."
         )
     logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
@@ -1187,8 +1356,6 @@ def annex_inner_func(
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            # FIXME: `nodes` should be undefined if not set on the
-            # command line but either cpus or mem_mb are.
             "+hpc_annex_nodes": f'"{nodes}"'
                 if nodes is not None else "undefined",
             "+hpc_annex_cpus": f'"{cpus}"'
@@ -1266,7 +1433,7 @@ def annex_inner_func(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'...\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_user_name,
@@ -1288,14 +1455,15 @@ def annex_inner_func(
         cpus,
         mem_mb,
         gpus,
+        gpu_type,
     )
 
     if rc == 0:
         logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
+        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system].pretty_name}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
-        error = f"Failed to start annex, {SYSTEM_TABLE[system]['batch_system']} returned code {rc}"
+        error = f"Failed to start annex, {SYSTEM_TABLE[system].batch_system} returned code {rc}"
         try:
             schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
         except Exception:
@@ -1315,12 +1483,14 @@ def annex_name_exists(annex_name):
 
 
 def annex_create(logger, annex_name, **others):
-    if annex_name_exists(annex_name):
-        raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
+    if others.get("test") is not True:
+        if annex_name_exists(annex_name):
+            raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
     return annex_inner_func(logger, annex_name, **others)
 
 
 def annex_add(logger, annex_name, **others):
-    if not annex_name_exists(annex_name):
-        raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
+    if others.get("test") is not True:
+        if not annex_name_exists(annex_name):
+            raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
     return annex_inner_func(logger, annex_name, **others)
