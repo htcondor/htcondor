@@ -1209,15 +1209,6 @@ JICShadow::initUserPriv( void )
 		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_univ_type);
 	}
 
-	if( run_as_owner && (job_universe == CONDOR_UNIVERSE_VM) ) {
-		bool use_vm_nobody_user = param_boolean("ALWAYS_VM_UNIV_USE_NOBODY", false);
-		if( use_vm_nobody_user ) {
-			run_as_owner = false;
-			dprintf( D_ALWAYS, "Using VM_UNIV_NOBODY_USER instead of %s\n", 
-					owner.c_str());
-		}
-	}
-
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
@@ -1231,10 +1222,6 @@ JICShadow::initUserPriv( void )
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
 				setExecuteAccountIsDedicated( owner.c_str() );
 			}
-		}
-		else if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
-			run_as_owner = false;
 		}
 		else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
@@ -1307,24 +1294,10 @@ JICShadow::initUserPriv( void )
 		}
 		upper_case(slotName);
 
-		if( job_universe == CONDOR_UNIVERSE_VM ) {
-			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
-			// we will use it. 
-			snprintf( nobody_param, 20, "VM_UNIV_NOBODY_USER" );
-			nobody_user = param(nobody_param);
-			if( nobody_user == NULL ) {
-				// "VM_UNIV_NOBODY_USER" is NOT defined.
-				// Next, we will try to use SLOTx_VMUSER
-				snprintf( nobody_param, 20, "%s_VMUSER", slotName.c_str() );
-				nobody_user = param(nobody_param);
-			}
-		}
-		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
-			nobody_user = param(nobody_param);
-			if (! nobody_user) {
-				nobody_user = param("NOBODY_SLOT_USER");
-			}
+		snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
+		nobody_user = param(nobody_param);
+		if (! nobody_user) {
+			nobody_user = param("NOBODY_SLOT_USER");
 		}
 
         if ( nobody_user != NULL ) {
@@ -1340,16 +1313,6 @@ JICShadow::initUserPriv( void )
         } else {
             nobody_user = strdup("nobody");
         }
-
-
-		if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
-			// VMware doesn't support that "nobody" creates a VM.
-			// So for VMware vm universe, we will "condor" instead of "nobody".
-			if( strcmp(nobody_user, "nobody") == MATCH ) {
-				free(nobody_user);
-				nobody_user = strdup(get_condor_username());
-			}
-		}
 
 			// passing NULL for the domain is ok here since this is
 			// UNIX code

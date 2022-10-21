@@ -10511,21 +10511,6 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			int num_restarts = 0;
 			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
-
-			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-				// In vmware vm universe, vmware disk may be 
-				// a sparse disk or snapshot disk. So we can't estimate the disk space 
-				// in advanace because the sparse disk or snapshot disk will 
-				// grow up while running a VM.
-				// So we will just add 100MB to disk space.
-				int vm_disk_space = 0;
-				GetAttributeInt(cluster, proc, ATTR_DISK_USAGE, &vm_disk_space);
-				if( vm_disk_space > 0 ) {
-					vm_disk_space += 100*1024;
-				}
-				SetAttributeInt(cluster, proc, ATTR_DISK_USAGE, vm_disk_space);
-			}
 		}
 	}
 }

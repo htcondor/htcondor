@@ -294,22 +294,6 @@ type=string
 default=0
 type=int
 
-[VMWARE_NETWORKING_TYPE]
-default=
-type=string
-tags=vm-gahp,starter
-
-[VMWARE_PERL]
-default=
-type=string
-tags=vm-gahp
-
-[VMWARE_SCRIPT]
-default=$(SBIN)/condor_vm_vmware
-# there is no win32 default for this item, we DON'T want it to have a .exe extension
-type=path
-tags=vm-gahp
-
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
@@ -2612,16 +2596,6 @@ tags=io,condor_auth_x509
 [STARTER_UPLOAD_TIMEOUT]
 default=300
 type=int
-tags=starter
-
-[ALWAYS_VM_UNIV_USE_NOBODY]
-default=false
-type=bool
-tags=starter
-
-[VM_UNIV_NOBODY_USER]
-default=
-type=string
 tags=starter
 
 [VM_GAHP_SEND_ALL_CLASSAD]
@@ -6720,30 +6694,10 @@ win32_default : @end
 	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
 	MAIL_FROM=
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
-@end
-
-[$UPGRADE.DISCARDIF_VMWARE]
-description=Platform specific file knobs that should be ignored on upgrade if they match the given value
-default=
-win32_default : @end
-	VM_MEMORY=128
-	VM_NETWORKING_DEFAULT_TYPE=nat
-	VM_NETWORKING_TYPE=nat
-	VM_MAX_NUMBER=$(NUM_CPUS)
-	VMWARE_PERL=perl
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
-	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
-	VMWARE_NAT_NETWORKING_TYPE=nat
-	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
-	VMWARE_NETWORKING_TYPE=nat
-	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
-	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
 @end
 
 

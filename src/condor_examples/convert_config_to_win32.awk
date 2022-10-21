@@ -33,21 +33,6 @@ BEGIN {
 	FS = "="
 }
 
-# Make it so we can fill in the VM_GAHP_SERVER option if we choose to in the
-# installer. This is done before the .exe append bellow, because that match 
-# seems to block any other matches for that line.
-/^#VM_GAHP_SERVER/ {
-	print "#VM_GAHP_SERVER = $(BIN)\\condor_vm-gahp.exe"
-	print "VM_GAHP_SERVER = "
-	next
-}
-# We DONT want to add a .exe extension to the vmware script, it's a perl script.
-/VMWARE_SCRIPT[ \t]*=/ {
-	gsub(/\//, "\\", $0)
-	printf "%s\n",$0
-	next
-}
-
 # Remove SHADOW_STANDARD (the standard universe shadow)
 # 
 /^SHADOW_STANDARD/ {
@@ -159,7 +144,7 @@ BEGIN {
 
 # There's no reasonable default place to put log files for
 # daemons that run as a user (on Unix we use /tmp). Use NUL.
-/(^C_GAHP_LOG)|(^C_GAHP_LOCK)|(^C_GAHP_WORKER_THREAD_LOG)|(^C_GAHP_WORKER_THREAD_LOCK)|(^VM_GAHP_LOG)/ {
+/(^C_GAHP_LOG)|(^C_GAHP_LOCK)|(^C_GAHP_WORKER_THREAD_LOG)|(^C_GAHP_WORKER_THREAD_LOCK)/ {
 	printf "%s = NUL\n", $1
 	next
 }
@@ -168,58 +153,6 @@ BEGIN {
 # pipe
 /^PROCD_ADDRESS/ {
 	print "PROCD_ADDRESS = \\\\.\\pipe\\condor_procd_pipe"
-	next
-}
-
-# Make it so we can fill in the VM GAHP options if we choose 
-# to in the installer. 
-/^#VM_TYPE/ {
-	print "VM_TYPE ="
-	next
-}
-/^#VM_MAX_NUMBER/ {
-	print "VM_MAX_NUMBER = $(NUM_CPUS)"
-	next
-}
-/^#VM_MEMORY/ {
-	print "VM_MEMORY = 128"
-	next
-}
-/^#VMWARE_LOCAL_SETTINGS_FILE/ {
-	print "#VMWARE_LOCAL_SETTINGS_FILE = $(RELEASE_DIR)/condor_vmware_local_settings"
-	next
-}
-
-# Set it up so we can change the VMWARE_SCRIPT option if we choose to
-# do so in the installer
-#/^VMWARE_SCRIPT/ {
-#	printf "VMWARE_SCRIPT = $(BIN)/condor_vm_vmware\n"
-#	next
-#}
-
-# Change the configuration such that we can modify the VMware 
-# networking types
-/^#VM_NETWORKING_TYPE/ {
-	print "VM_NETWORKING_TYPE = nat"
-	next
-}
-/^#VM_NETWORKING_DEFAULT_TYPE/ {
-	print "VM_NETWORKING_DEFAULT_TYPE = nat"
-	next
-}
-
-# We use the equals sign so that it will not match the names above
-# and trash the resulting configuration file
-/^#VM_NETWORKING =/ {
-	print "VM_NETWORKING = FALSE"
-	next
-}
-/^#VMWARE_NAT_NETWORKING_TYPE/ {
-	printf "VMWARE_NAT_NETWORKING_TYPE = nat\n"
-	next
-}
-/^#VMWARE_BRIDGE_NETWORKING_TYPE/ {
-	printf "VMWARE_BRIDGE_NETWORKING_TYPE = bridged\n"
 	next
 }
 

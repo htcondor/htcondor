@@ -9655,17 +9655,6 @@ machine within the pool. They specify items related to the
     the memory of a vm universe job when the job is suspended. When
     ``True``, the memory is not freed.
 
-:macro-def:`VM_UNIV_NOBODY_USER`
-    Identifies a login name of a user with a home directory that may be
-    used for job owner of a vm universe job. The nobody user normally
-    utilized when the job arrives from a different UID domain will not
-    be allowed to invoke a VMware virtual machine.
-
-:macro-def:`ALWAYS_VM_UNIV_USE_NOBODY`
-    A boolean value that defaults to ``False``. When ``True``, all vm
-    universe jobs (independent of their UID domain) will run as the user
-    defined in ``VM_UNIV_NOBODY_USER``.
-
 :macro-def:`VM_NETWORKING`
     A boolean variable describing if networking is supported. When not
     defined, the default value is ``False``.

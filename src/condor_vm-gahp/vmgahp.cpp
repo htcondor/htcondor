@@ -30,10 +30,7 @@
 #include "vmgahp_common.h"
 #include "vmgahp.h"
 #include "vm_type.h"
-#include "vmware_type.h"
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-#  include "xen_type.linux.h"
-#endif
+#include "xen_type.linux.h"
 #include "vmgahp_error_codes.h"
 
 #define QUIT_FAST_TIME				30		// 30 seconds
@@ -696,7 +693,6 @@ VMGahp::executeStart(VMRequest *req)
 	VMType *new_vm = NULL;
 
 	// TBD: tstclair this totally needs to be re-written
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 		new_vm = new XenType( vmworkingdir.c_str(), m_jobAd );
 		ASSERT(new_vm);
@@ -705,14 +701,7 @@ VMGahp::executeStart(VMRequest *req)
 				vmworkingdir.c_str(), m_jobAd);
 		ASSERT(new_vm);
 	}else
-#endif
-	if(strcasecmp(vmtype, CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		new_vm = new VMwareType(m_gahp_config->m_prog_for_script.c_str(),
-				m_gahp_config->m_vm_script.c_str(),
-				vmworkingdir.c_str(), m_jobAd);
-		ASSERT(new_vm);
-	}else
-	  {
+	{
 		// We should not reach here
 		vmprintf(D_ALWAYS, "vmtype(%s) is not yet implemented\n", vmtype);
 		req->m_has_result = true;
@@ -1079,7 +1068,6 @@ VMGahp::killAllProcess()
 		return;
 	}
 
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if( strcasecmp(m_gahp_config->m_vm_type.c_str(),
 				CONDOR_VM_UNIVERSE_XEN ) == 0 ) {
 		priv_state priv = set_root_priv();
@@ -1100,18 +1088,6 @@ VMGahp::killAllProcess()
 				KVMType::killVMFast(vmname.c_str());
 				vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 			}
-		}
-		set_priv(priv);
-
-	} else
-#endif
-	if( strcasecmp(m_gahp_config->m_vm_type.c_str(),
-				CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-		priv_state priv = set_user_priv();
-		if( VMwareType::checkVMwareParams(m_gahp_config) ) {
-			VMwareType::killVMFast(m_gahp_config->m_prog_for_script.c_str(),
-					m_gahp_config->m_vm_script.c_str(), m_workingdir.c_str());
-			vmprintf( D_FULLDEBUG, "killVMFast is called\n");
 		}
 		set_priv(priv);
 	}

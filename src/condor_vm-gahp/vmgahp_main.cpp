@@ -24,10 +24,7 @@
 #include "condor_uid.h"
 #include "vmgahp_common.h"
 #include "vmgahp.h"
-#include "vmware_type.h"
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
-#  include "xen_type.linux.h"
-#endif
+#include "xen_type.linux.h"
 #include "subsystem_info.h"
 
 const char *vmgahp_version = "$VMGahpVersion " CONDOR_VMGAHP_VERSION " May 1 2007 Condor\\ VMGAHP $";
@@ -384,7 +381,6 @@ void main_init(int argc, char *argv[])
 
 	initialize_uids();
 
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	if( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0) || (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0)) {
 		// Xen requires root priviledge
 		if( !canSwitchUid() ) {
@@ -393,7 +389,6 @@ void main_init(int argc, char *argv[])
 			DC_Exit(1);
 		}
 	}
-#endif
 
 	// create VMGahpConfig and fill it with vmgahp config parameters
 	VMGahpConfig *gahpconfig = new VMGahpConfig;
@@ -406,7 +401,6 @@ void main_init(int argc, char *argv[])
 	set_condor_priv();
 
 	// Check if vm specific paramaters are valid in config file
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 	// The calls to checkXenParams() were moved here because each
 	// call is specific to the subclass type that is calling it.
 	// These methods are static, so dynamic dispatch cannot be
@@ -425,19 +419,10 @@ void main_init(int argc, char *argv[])
 			DC_Exit(1);
 		}
 		set_priv(priv);
-	} else
-#endif
-	if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-		priv_state priv = set_user_priv();
-		if( VMwareType::checkVMwareParams(gahpconfig) == false ) {
-			DC_Exit(1);
-		}
-		set_priv(priv);
 	}
 
 	if( vmgahp_mode == VMGAHP_TEST_MODE ) {
 		// Try to test
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 		if( (strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0)) {
 			priv_state priv = set_root_priv();
 
@@ -457,16 +442,6 @@ void main_init(int argc, char *argv[])
 			}
 			set_priv(priv);
 
-		} else
-#endif
-		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == 0 ) {
-			priv_state priv = set_user_priv();
-			if( VMwareType::testVMware(gahpconfig) == false ) {
-				vmprintf(D_ALWAYS, "\nERROR: the vm_type('%s') cannot "
-						"be used.\n", vmtype.c_str());
-				DC_Exit(0);
-			}
-			set_priv(priv);
 		}
 
 		// print information to stdout
@@ -498,17 +473,11 @@ void main_init(int argc, char *argv[])
 		// we will try to kill the VM that matches with given "matchstring".
 		set_root_priv();
 
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_XEN) == 0 ) {
 			XenType::killVMFast(matchstring.c_str());
 		}else
 		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_KVM) == 0 ) {
 			KVMType::killVMFast(matchstring.c_str());
-		}else
-#endif
-		if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-			VMwareType::killVMFast(gahpconfig->m_prog_for_script.c_str(),
-					gahpconfig->m_vm_script.c_str(), matchstring.c_str(), true);
 		}
 		DC_Exit(0);
 	}

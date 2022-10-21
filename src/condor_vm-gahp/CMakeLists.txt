@@ -16,32 +16,22 @@
  #
  ###############################################################
 
-set(SourceFiles
-pbuffer.cpp
-vmgahp_common.cpp
-vmgahp_config.cpp
-vmgahp.cpp
-vmgahp_main.cpp
-vm_request.cpp
-vm_type.cpp
-vmware_type.cpp
-xen_type.linux.cpp
-)
+if (LINUX AND WITH_LIBVIRT)
+  set(SourceFiles
+    pbuffer.cpp
+    vmgahp_common.cpp
+    vmgahp_config.cpp
+    vmgahp.cpp
+    vmgahp_main.cpp
+    vm_request.cpp
+    vm_type.cpp
+    xen_type.linux.cpp
+  )
 
-condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN}
-  "${CONDOR_LIBS};${LIBVIRT_FOUND}"
-  OFF )
+  condor_exe( condor_vm-gahp "${SourceFiles}" ${C_SBIN}
+    "${CONDOR_LIBS};${LIBVIRT_FOUND}"
+    OFF )
 
-if (LINUX)
-   condor_exe( condor_vm-gahp-vmware "${SourceFiles}" ${C_SBIN} "${CONDOR_LIBS}" OFF )
-   set_property( TARGET condor_vm-gahp-vmware APPEND PROPERTY COMPILE_DEFINITIONS VMWARE_ONLY)
-   install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-endif()
-
-if (WINDOWS)
-   install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-   # use install with rename for condor_vm_vmware.pl since clone_install on windows tacks on ".exe" 
-   install ( FILES condor_vm_vmware DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} RENAME condor_vm_vmware.pl )
-else ()
    install ( FILES libvirt_simple_script.awk DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
-endif(WINDOWS)
+
+endif(LINUX AND WITH_LIBVIRT)

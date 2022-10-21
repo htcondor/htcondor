@@ -63,13 +63,6 @@
 #define VMPARAM_XEN_KERNEL_PARAMS	"VMPARAM_Xen_Kernel_Params"
 #define VMPARAM_XEN_BOOTLOADER		"VMPARAM_Xen_Bootloader"
 
-/* ClassAd Attributes for VMware */
-#define VMPARAM_VMWARE_TRANSFER		"VMPARAM_VMware_Transfer"
-#define VMPARAM_VMWARE_SNAPSHOTDISK "VMPARAM_VMware_SnapshotDisk"
-#define VMPARAM_VMWARE_DIR			"VMPARAM_VMware_Dir"
-#define VMPARAM_VMWARE_VMX_FILE		"VMPARAM_VMware_VMX_File"
-#define VMPARAM_VMWARE_VMDK_FILES	"VMPARAM_VMware_VMDK_Files"
-
 /* Extra ClassAd Attributes for VM */
 #define VMPARAM_NO_OUTPUT_VM			"VMPARAM_No_Output_VM"
 #define VMPARAM_BRIDGE_INTERFACE        "VMPARAM_Bridge_Interface"

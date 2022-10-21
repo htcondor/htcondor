@@ -2466,21 +2466,6 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
 		}
-
-		#ifdef WIN32
-		// on Windows we shove in some defaults for VMWARE, we want to ignore them
-		// for upgrade if the user isn't using vmware
-		char * vm_type = param("VM_TYPE");
-		if (vm_type) { free(vm_type); }
-		else
-		{
-			items = param_meta_value("UPGRADE", "DISCARDIF_VMWARE", nullptr);
-			if (items && items[0]) {
-				obsoleteif.initializeFromString(items);
-				args.obsoleteif = &obsoleteif;
-			}
-		}
-		#endif
 	}
 
 	int iter_opts = HASHITER_SHOW_DUPS;
