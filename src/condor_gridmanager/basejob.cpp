@@ -344,7 +344,7 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
 		jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
-		char *release_reason;
+		char *release_reason = nullptr;
 		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
 			jobAd->Assign( ATTR_LAST_RELEASE_REASON, release_reason );
 			free( release_reason );
