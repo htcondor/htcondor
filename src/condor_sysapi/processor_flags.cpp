@@ -182,6 +182,7 @@ cpuflags_to_microarch_string(std::vector<std::string> &cpuinfoFlags) {
 
 	return "x86_64-v1"; // Must be ancient
 #else
+	(void)cpuinfoFlags; // Shut the compiler up
 	return ""; // only x86_64 defines microarch today
 #endif
 }

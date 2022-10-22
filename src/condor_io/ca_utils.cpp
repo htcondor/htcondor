@@ -47,7 +47,7 @@ std::unique_ptr<ASN1_INTEGER, decltype(&ASN1_INTEGER_free)> certificate_serial()
 	std::unique_ptr<ASN1_INTEGER, decltype(&ASN1_INTEGER_free)> an_int(ASN1_INTEGER_new(), &ASN1_INTEGER_free);
 	std::unique_ptr<BIGNUM, decltype(&BN_free)> bignum(BN_new(), &BN_free);
 
-	bignum && an_int && BN_pseudo_rand(bignum.get(), 64, 0, 0)
+	bignum && an_int && BN_rand(bignum.get(), 64, 0, 0)
 	 && BN_to_ASN1_INTEGER(bignum.get(), an_int.get());
 
 	return an_int;

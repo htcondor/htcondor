@@ -2199,7 +2199,7 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char *buf;
+	char *buf = nullptr;
 	int crit_err = 0;
 
 	if( !ad ) return;
