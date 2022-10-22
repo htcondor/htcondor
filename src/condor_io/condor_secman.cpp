@@ -1538,7 +1538,7 @@ SecManStartCommand::sendAuthInfo_inner()
 
 		if (IsDebugVerbose(D_SECURITY)) {
 			dprintf (D_SECURITY, "SECMAN: found cached session id %s for %s.\n",
-					session_entry->id(), m_session_key.c_str());
+					session_entry->id().c_str(), m_session_key.c_str());
 			m_sec_man.key_printf(D_SECURITY, session_entry->key());
 			dPrintAd( D_SECURITY, m_auth_info );
 		}
@@ -1838,7 +1838,7 @@ SecManStartCommand::sendAuthInfo_inner()
 		if (m_have_session) {
 			// UDP w/ session
 			if (IsDebugVerbose(D_SECURITY)) {
-				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", session_entry->id());
+				dprintf ( D_SECURITY, "SECMAN: UDP has session %s.\n", session_entry->id().c_str());
 			}
 
 			SecMan::sec_feat_act will_authenticate = m_sec_man.sec_lookup_feat_act( m_auth_info, ATTR_SEC_AUTHENTICATION );
