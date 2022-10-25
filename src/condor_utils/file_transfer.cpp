@@ -2411,7 +2411,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// semantic change, and one that changes a job from going
 					// on hold (after running for its duration) to succeeding.
 					char * dirname = condor_dirname(remap_filename.c_str());
-					if( dirname[0] != '.' ) {
+					if( strcmp(dirname, ".") ) {
 						std::string path;
 						formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
