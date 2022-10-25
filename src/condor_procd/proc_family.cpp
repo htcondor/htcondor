@@ -589,6 +589,14 @@ ProcFamily::aggregate_usage_cgroup_io_wait(ProcFamilyUsage* usage) {
 	}
 
 	// kernels with BFQ enabled don't have io_wait_time, don't spam logs if it isn't here
+
+	// Errors like ENOENT are encoded by returning ECGOTHER, and saving the real kernel errno
+	// in cgroup_get_last_errno.  cgroup error start at 50,000, so there's no
+	// worry about collisions with Linux errno
+	if (ret == ECGOTHER) {
+		ret = cgroup_get_last_errno();
+	}
+
 	if ((ret != ECGEOF) && (ret != ENOENT)) {
 		dprintf(D_ALWAYS, "Internal cgroup error when retrieving iowait statistics: %s\n", cgroup_strerror(ret));
 		return 1;

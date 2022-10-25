@@ -30,6 +30,12 @@ Bugs Fixed:
   files.
   :jira:`1354`
 
+- Fixed a bug where on certain Linux kernels, the ProcLog would be filled
+  with thousands of errors of the form  "Internal cgroup error when 
+  retrieving iowait statistics".  This error was harmless, but filled
+  the ProcLog with noise.
+  :jira:`1385`
+
 - Fixed bug where certain **submit file** variables like ``accounting_group`` and
   ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
   DAGMan would always write over the variables at job submission time.

@@ -2847,6 +2847,9 @@ obtainAdsFromCollector (
         publicQuery.addORConstraint("(MyType == \"Machine\")");
     }
 
+	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+
 	// If preemption is disabled, we only need a handful of attrs from claimed ads.
 	// Ask for that projection.
 

@@ -852,12 +852,18 @@ int CollectorDaemon::receive_query_cedar_worker_thread(void *in_query_entry, Str
 
 		// If our peer is at least 8.9.3 and has NEGOTIATOR authz, then we'll
 		// trust it to handle our capabilities.
+		// Starting with 10.0.0, send the private attributes only if the
+		// client requests them.
 	bool filter_private_attrs = true;
 	auto *verinfo = sock->get_peer_version();
 	if (verinfo && verinfo->built_since_version(8, 9, 3) &&
 		(USER_AUTH_SUCCESS == daemonCore->Verify("send private attrs", NEGOTIATOR, *static_cast<ReliSock*>(sock), D_SECURITY|D_FULLDEBUG)))
 	{
-		filter_private_attrs = false;
+		if (verinfo->built_since_version(10, 0, 0)) {
+			filter_private_attrs = !wants_pvt_attrs;
+		} else {
+			filter_private_attrs = false;
+		}
 	}
 
 		// If our peer has ADMINISTRATOR authz and explicitly asks for
