@@ -100,6 +100,8 @@ bool floats_close( float one, float two, float diff = .0001);
 
 bool strings_similar(const MyString* str1, const MyString* str2, 
 	const char* delims = " ");
+bool strings_similar(const std::string& str1, const std::string& str2,
+	const char* delims = " ");
 
 /* Checks if the given strings contain the same strings when split into 
 	tokens by the given delimiters .

@@ -311,7 +311,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	MyString env_str;
 	MyString env_errors;
-	if ( !env.getDelimitedStringV1RawOrV2Quoted( &env_str, &env_errors ) ) {
+	if ( !env.getDelimitedStringV2Quoted( &env_str, &env_errors ) ) {
 		fprintf( stderr,"Failed to insert environment: %s",
 					env_errors.c_str() );
 		fclose(pSubFile);

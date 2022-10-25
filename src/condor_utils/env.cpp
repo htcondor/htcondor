@@ -579,18 +579,6 @@ Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
 }
 
 bool
-Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) const
-{
-	if(getDelimitedStringV1Raw(result,NULL)) {
-		return true;
-	}
-	else {
-		result->truncate(0);
-		return getDelimitedStringV2Quoted(result,error_msg);
-	}
-}
-
-bool
 Env::getDelimitedStringV2Raw(std::string & result, bool mark_v2) const {
     MyString ms;
     bool rv = getDelimitedStringV2Raw( & ms, mark_v2 );
@@ -628,13 +616,6 @@ Env::getDelimitedStringV2Raw(MyString *result, bool mark_v2) const
 void
 Env::getDelimitedStringForDisplay(std::string & result) const
 {
-	getDelimitedStringV2Raw(result);
-}
-
-void
-Env::getDelimitedStringForDisplay(MyString *result) const
-{
-	ASSERT(result);
 	getDelimitedStringV2Raw(result);
 }
 

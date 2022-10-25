@@ -191,6 +191,12 @@ bool strings_similar(const MyString* str1, const MyString* str2,
 	return strings_similar(str1->Value(), str2->Value(), delims);
 }
 
+bool strings_similar(const std::string& str1, const std::string& str2,
+	const char* delims)
+{
+	return strings_similar(str1.c_str(), str2.c_str(), delims);
+}
+
 bool strings_similar(const char* str1, const char* str2, const char* delims) 
 {
 	StringList sl1(str1, delims);

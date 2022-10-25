@@ -226,13 +226,7 @@ class Env {
 		// Returns V2Quoted string (i.e. enclosed in double quotes).
 	bool getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const;
 
-		// Returns V1Raw if possible; o.w. V2Quoted.
-		// In other words, retain backward-compatibility with older versions
-		// of condor_submit if possible.
-	bool getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) const;
-
 		// Get a string describing the environment in this Env object.
-	void getDelimitedStringForDisplay(MyString *result) const;
 	void getDelimitedStringForDisplay(std::string & result) const;
 
 #if defined(WIN32)
