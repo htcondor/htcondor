@@ -309,14 +309,8 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		env.SetEnv("_CONDOR_DAGMAN_CONFIG_FILE", shallowOpts.strConfigFile.c_str());
 	}
 
-	MyString env_str;
-	MyString env_errors;
-	if ( !env.getDelimitedStringV2Quoted( &env_str, &env_errors ) ) {
-		fprintf( stderr,"Failed to insert environment: %s",
-					env_errors.c_str() );
-		fclose(pSubFile);
-		return false;
-	}
+	std::string env_str;
+	env.getDelimitedStringV2Quoted( env_str );
 	fprintf(pSubFile, "environment\t= %s\n",env_str.c_str());
 
 	if ( deepOpts.strNotification != "" ) {    

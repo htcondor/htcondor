@@ -109,10 +109,7 @@ bool
 Env::InsertEnvIntoClassAd(ClassAd & ad) const
 {
 	std::string env;
-	if ( ! getDelimitedStringV2Raw(env)) {
-		// the above function will never return false, so we can't end up here...
-		return false;
-	}
+	getDelimitedStringV2Raw(env);
 	ad.Assign(ATTR_JOB_ENVIRONMENT,env);
 	return true;
 }
@@ -567,32 +564,19 @@ Env::DeleteEnv(const std::string & name)
 	return ret;
 }
 
-bool
-Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
+void
+Env::getDelimitedStringV2Quoted(std::string& result) const
 {
-	MyString v2_raw;
-	if(!getDelimitedStringV2Raw(&v2_raw)) {
-		return false;
-	}
+	std::string v2_raw;
+	getDelimitedStringV2Raw(v2_raw);
 	ArgList::V2RawToV2Quoted(v2_raw,result);
-	return true;
 }
 
-bool
-Env::getDelimitedStringV2Raw(std::string & result, bool mark_v2) const {
-    MyString ms;
-    bool rv = getDelimitedStringV2Raw( & ms, mark_v2 );
-    if(! ms.empty()) { result = ms; }
-    return rv;
-}
-
-bool
-Env::getDelimitedStringV2Raw(MyString *result, bool mark_v2) const
+void
+Env::getDelimitedStringV2Raw(std::string& result, bool mark_v2) const
 {
 	MyString var, val;
 	SimpleList<MyString> env_list;
-
-	ASSERT(result);
 
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
@@ -607,10 +591,9 @@ Env::getDelimitedStringV2Raw(MyString *result, bool mark_v2) const
 	}
 
 	if(mark_v2) {
-		(*result) += RAW_V2_ENV_MARKER;
+		result += RAW_V2_ENV_MARKER;
 	}
 	join_args(env_list,result);
-	return true;
 }
 
 void

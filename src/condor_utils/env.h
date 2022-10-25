@@ -217,14 +217,13 @@ class Env {
 		// Modern style: space delimited (and quoted as necessary).
 		// If mark_v2=true, then result will be identifiable as V2 by
 		// MergeV1or2()
-	bool getDelimitedStringV2Raw(MyString *result, bool mark_v2=false) const;
-	bool getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
+	void getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
 
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
 
 		// Returns V2Quoted string (i.e. enclosed in double quotes).
-	bool getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const;
+	void getDelimitedStringV2Quoted(std::string& result) const;
 
 		// Get a string describing the environment in this Env object.
 	void getDelimitedStringForDisplay(std::string & result) const;

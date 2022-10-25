@@ -100,6 +100,7 @@ void join_args(SimpleList<MyString> const & args_list, std::string & result, int
 // Produce a string from a NULL-terminated string array, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
 void join_args(char const * const *args_array,MyString *result,int start_arg=0);
+void join_args(char const * const *args_array, std::string& result, int start_arg=0);
 
 
 // Delete a NULL-terminated array of strings (and delete the strings too).
@@ -240,6 +241,7 @@ class ArgList {
 		// Convert V2Raw to V2Quoted string.
 		// In other words, enclose in double-quotes (and escape as necessary).
 	static void V2RawToV2Quoted(MyString const &v2_raw,MyString *result);
+	static void V2RawToV2Quoted(std::string const &v2_raw, std::string& result);
 
 		// Convert V1Raw to V1Wacked string.
 		// In other words, escape double-quotes with backwacks.

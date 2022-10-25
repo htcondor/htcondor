@@ -59,12 +59,50 @@ void append_arg(char const *arg,MyString &result) {
 	}
 }
 
+void append_arg(char const *arg, std::string &result) {
+	if(result.length()) {
+		result += " ";
+	}
+	ASSERT(arg);
+	if(!*arg) {
+		result += "''"; //empty arg
+	}
+	while(*arg) {
+		switch(*arg) {
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r':
+		case '\'':
+			if(result.length() && result[result.length()-1] == '\'') {
+				//combine preceeding quoted section with this one,
+				//so we do not introduce a repeated quote.
+				result.erase(result.length()-1);
+			}
+			else {
+				result += '\'';
+			}
+			if(*arg == '\'') {
+				result += '\''; //repeat the quote to escape it
+			}
+			result += *(arg++);
+			result += '\'';
+			break;
+		default:
+			result += *(arg++);
+		}
+	}
+}
+
 void
 join_args( SimpleList<MyString> const & args_list, std::string & result, int start_arg)
 {
-    MyString ms(result.c_str());
-    join_args( args_list, & ms, start_arg );
-    result = ms;
+	SimpleListIterator<MyString> it(args_list);
+	MyString *arg=NULL;
+	for(int i=0;it.Next(arg);i++) {
+		if(i<start_arg) continue;
+		append_arg(arg->c_str(), result);
+	}
 }
 
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
@@ -84,6 +122,14 @@ void join_args(char const * const *args_array,MyString *result,int start_arg) {
 	for(int i=0;args_array[i];i++) {
 		if(i<start_arg) continue;
 		append_arg(args_array[i],*result);
+	}
+}
+
+void join_args(char const * const *args_array,std::string& result,int start_arg) {
+	if(!args_array) return;
+	for(int i=0;args_array[i];i++) {
+		if(i<start_arg) continue;
+		append_arg(args_array[i], result);
 	}
 }
 
@@ -750,6 +796,12 @@ void
 ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 {
 	result->formatstr_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').c_str());
+}
+
+void
+ArgList::V2RawToV2Quoted(std::string const &v2_raw, std::string& result)
+{
+	formatstr_cat(result, "\"%s\"", EscapeChars(v2_raw, "\"", '\"').c_str());
 }
 
 void

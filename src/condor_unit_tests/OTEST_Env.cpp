@@ -195,9 +195,6 @@ static bool test_insert_env_into_classad_version_v2(void);
 static bool test_condor_version_requires_v1_false(void);
 static bool test_condor_version_requires_v1_true(void);
 static bool test_condor_version_requires_v1_this(void);
-static bool test_get_delim_str_v2_raw_return_empty(void);
-static bool test_get_delim_str_v2_raw_return_v1(void);
-static bool test_get_delim_str_v2_raw_return_v2(void);
 static bool test_get_delim_str_v2_raw_result_empty(void);
 static bool test_get_delim_str_v2_raw_result_v1(void);
 static bool test_get_delim_str_v2_raw_result_v2(void);
@@ -218,9 +215,6 @@ static bool test_get_delim_str_v1_raw_result_v2(void);
 static bool test_get_delim_str_v1_raw_result_add(void);
 static bool test_get_delim_str_v1_raw_result_replace(void);
 static bool test_get_delim_str_v1_raw_result_add_replace(void);
-static bool test_get_delim_str_v2_quoted_return_empty(void);
-static bool test_get_delim_str_v2_quoted_return_v1(void);
-static bool test_get_delim_str_v2_quoted_return_v2(void);
 static bool test_get_delim_str_v2_quoted_result_empty(void);
 static bool test_get_delim_str_v2_quoted_result_v1(void);
 static bool test_get_delim_str_v2_quoted_result_v2(void);
@@ -550,9 +544,6 @@ bool OTEST_Env(void) {
 	driver.register_function(test_condor_version_requires_v1_false);
 	driver.register_function(test_condor_version_requires_v1_true);
 	driver.register_function(test_condor_version_requires_v1_this);
-	driver.register_function(test_get_delim_str_v2_raw_return_empty);
-	driver.register_function(test_get_delim_str_v2_raw_return_v1);
-	driver.register_function(test_get_delim_str_v2_raw_return_v2);
 	driver.register_function(test_get_delim_str_v2_raw_result_empty);
 	driver.register_function(test_get_delim_str_v2_raw_result_v1);
 	driver.register_function(test_get_delim_str_v2_raw_result_v2);
@@ -573,9 +564,6 @@ bool OTEST_Env(void) {
 	driver.register_function(test_get_delim_str_v1_raw_result_add);
 	driver.register_function(test_get_delim_str_v1_raw_result_replace);
 	driver.register_function(test_get_delim_str_v1_raw_result_add_replace);
-	driver.register_function(test_get_delim_str_v2_quoted_return_empty);
-	driver.register_function(test_get_delim_str_v2_quoted_return_v1);
-	driver.register_function(test_get_delim_str_v2_quoted_return_v2);
 	driver.register_function(test_get_delim_str_v2_quoted_result_empty);
 	driver.register_function(test_get_delim_str_v2_quoted_result_v1);
 	driver.register_function(test_get_delim_str_v2_quoted_result_v2);
@@ -4159,70 +4147,6 @@ static bool test_condor_version_requires_v1_this() {
 	PASS;
 }
 
-static bool test_get_delim_str_v2_raw_return_empty() {
-	emit_test("Test that getDelimitedStringV2Raw() returns true for an empty "
-		"Env object.");
-	Env env;
-	MyString result;
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result);
-	emit_input_header();
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_delim_str_v2_raw_return_v1() {
-	emit_test("Test that getDelimitedStringV2Raw() returns true for an Env "
-		"object using V1 format.");
-	Env env;
-	MyString result;
-	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result);
-	emit_input_header();
-	emit_param("Env", "%s", V1R);
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_delim_str_v2_raw_return_v2() {
-	emit_test("Test that getDelimitedStringV2Raw() returns true for an Env "
-		"object using V2 format.");
-	Env env;
-	MyString result;
-	env.MergeFromV2Raw(V2R, NULL);
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Raw(&result);
-	emit_input_header();
-	emit_param("Env", "%s", V2R);
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
 static bool test_get_delim_str_v2_raw_result_empty() {
 	emit_test("Test that getDelimitedStringV2Raw() sets the result MyString "
 		"to the expected value for an empty Env object.");
@@ -4691,77 +4615,12 @@ static bool test_get_delim_str_v1_raw_result_add_replace() {
 	PASS;
 }
 
-static bool test_get_delim_str_v2_quoted_return_empty() {
-	emit_test("Test that getDelimitedStringV2Quoted() returns true for an "
-		"empty Env object.");
-	Env env;
-	MyString result, error;
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Quoted(&result, &error);
-	emit_input_header();
-	emit_param("Env", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_delim_str_v2_quoted_return_v1() {
-	emit_test("Test that getDelimitedStringV2Quoted() returns true for an "
-		"Env object using V1 format.");
-	Env env;
-	MyString result, error;
-	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Quoted(&result, &error);
-	emit_input_header();
-	emit_param("Env", "%s", V1R);
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_delim_str_v2_quoted_return_v2() {
-	emit_test("Test that getDelimitedStringV2Quoted() returns true for an "
-		"Env object using V2 format.");
-	Env env;
-	MyString result, error;
-	env.MergeFromV2Raw(V2R, NULL);
-	bool expect = true;
-	bool actual = env.getDelimitedStringV2Quoted(&result, &error);
-	emit_input_header();
-	emit_param("Env", "%s", V2R);
-	emit_param("MyString", "%s", "");
-	emit_param("MyString", "%s", "");
-	emit_output_expected_header();
-	emit_retval("%s", tfstr(expect));
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(actual));
-	if(actual != expect) {
-		FAIL;
-	}
-	PASS;
-}
-
 static bool test_get_delim_str_v2_quoted_result_empty() {
 	emit_test("Test that getDelimitedStringV2Quoted() sets the result "
 		"MyString to the expected value for an empty Env object.");
 	Env env;
-	MyString actual, error;
-	env.getDelimitedStringV2Quoted(&actual, &error);
+	std::string actual;
+	env.getDelimitedStringV2Quoted(actual);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4780,9 +4639,9 @@ static bool test_get_delim_str_v2_quoted_result_v1() {
 	emit_test("Test that getDelimitedStringV2Quoted() sets the result "
 		"MyString to the expected value for an Env object using V1 format.");
 	Env env;
-	MyString actual, error;
+	std::string actual;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV2Quoted(&actual, &error);
+	env.getDelimitedStringV2Quoted(actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4801,9 +4660,9 @@ static bool test_get_delim_str_v2_quoted_result_v2() {
 	emit_test("Test that getDelimitedStringV2Quoted() sets the result "
 		"MyString to the expected value for an Env object using V2 format.");
 	Env env;
-	MyString actual, error;
+	std::string actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Quoted(&actual, &error);
+	env.getDelimitedStringV2Quoted(actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4823,11 +4682,11 @@ static bool test_get_delim_str_v2_quoted_result_add() {
 		"MyString to the expected value after adding environment variables with"
 		" MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	std::string actual1, actual2;
 	env.MergeFromV2Raw(V2R_REP, NULL);
-	env.getDelimitedStringV2Quoted(&actual1, &error);
+	env.getDelimitedStringV2Quoted(actual1);
 	env.MergeFromV2Raw(V2R_ADD, NULL);
-	env.getDelimitedStringV2Quoted(&actual2, &error);
+	env.getDelimitedStringV2Quoted(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_REP);
 	emit_param("MyString", "%s", "");
@@ -4836,10 +4695,10 @@ static bool test_get_delim_str_v2_quoted_result_add() {
 	emit_param("Result MyString Before", "%s", V2Q_REP);
 	emit_param("Result MyString After", "%s", V2Q_REP_ADD);
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V2Q_REP, " \"") ||
-		!strings_similar(actual2.Value(), V2Q_REP_ADD, " \"")) 
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V2Q_REP, " \"") ||
+		!strings_similar(actual2.c_str(), V2Q_REP_ADD, " \"")) 
 	{
 		FAIL;
 	}
@@ -4851,11 +4710,11 @@ static bool test_get_delim_str_v2_quoted_result_replace() {
 		"MyString to the expected value after replacing environment variables "
 		"with MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	std::string actual1, actual2, error;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Quoted(&actual1, &error);
+	env.getDelimitedStringV2Quoted(actual1);
 	env.MergeFromV2Raw(V2R_REP, NULL);
-	env.getDelimitedStringV2Quoted(&actual2, &error);
+	env.getDelimitedStringV2Quoted(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4864,10 +4723,10 @@ static bool test_get_delim_str_v2_quoted_result_replace() {
 	emit_param("Result MyString Before", "%s", V2Q);
 	emit_param("Result MyString After", "%s", V2Q_REP);
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V2Q, " \"") ||
-		!strings_similar(actual2.Value(), V2Q_REP, " \"")) 
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V2Q, " \"") ||
+		!strings_similar(actual2.c_str(), V2Q_REP, " \"")) 
 	{
 		FAIL;
 	}
@@ -4879,11 +4738,11 @@ static bool test_get_delim_str_v2_quoted_result_add_replace() {
 		"MyString to the expected value after adding and replacing environment "
 		"variables with MergeFromV2Raw().");
 	Env env;
-	MyString actual1, actual2, error;
+	std::string actual1, actual2;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV2Quoted(&actual1, &error);
+	env.getDelimitedStringV2Quoted(actual1);
 	env.MergeFromV2Raw(V2R_REP_ADD, NULL);
-	env.getDelimitedStringV2Quoted(&actual2, &error);
+	env.getDelimitedStringV2Quoted(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4892,10 +4751,10 @@ static bool test_get_delim_str_v2_quoted_result_add_replace() {
 	emit_param("Result MyString Before", "%s", V2Q);
 	emit_param("Result MyString After", "%s", V2Q_REP_ADD);
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V2Q, " \"") ||
-		!strings_similar(actual2.Value(), V2Q_REP_ADD, " \"")) 
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V2Q, " \"") ||
+		!strings_similar(actual2.c_str(), V2Q_REP_ADD, " \"")) 
 	{
 		FAIL;
 	}
