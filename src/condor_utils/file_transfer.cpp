@@ -2137,7 +2137,9 @@ remove_relative_path(const std::string & iwd, const std::string & relative_path 
 		}
 
 		idx = buffer.rfind( DIR_DELIM_CHAR );
-		buffer = buffer.substr(0, idx);
+		if (idx != std::string::npos) {
+			buffer.erase(idx);
+		}
 	} while( idx != std::string::npos );
 }
 
