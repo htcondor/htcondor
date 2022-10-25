@@ -600,45 +600,6 @@ Env::DeleteEnv(const std::string & name)
 }
 
 bool
-Env::getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
-{
-	Clear();
-	std::string msg;
-	if(!MergeFrom(ad,msg)) {
-		if (error_msg) { AddErrorMessage(msg.c_str(), error_msg); }
-		return false;
-	}
-
-	std::string delim_str;
-	char delim = env_delimiter;
-	if (ad->LookupString(ATTR_JOB_ENV_V1_DELIM,delim_str) && ! delim_str.empty()) {
-		delim = delim_str[0];
-	}
-
-	return getDelimitedStringV1or2Raw(result,error_msg,delim);
-}
-
-bool
-Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_delim) const
-{
-	ASSERT(result);
-	int old_len = result->length();
-
-	if(getDelimitedStringV1Raw(result,NULL,v1_delim)) {
-		return true;
-	}
-
-	// V1 attempt failed.  Use V2 syntax.
-
-	if(result->length() > old_len) {
-		// Clear any partial output we may have generated above.
-		result->truncate(old_len);
-	}
-
-	return getDelimitedStringV2Raw(result,true);
-}
-
-bool
 Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
 {
 	MyString v2_raw;

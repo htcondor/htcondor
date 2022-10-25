@@ -226,15 +226,6 @@ class Env {
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
 
-		// Return V1 string if possible, o.w. marked V2 string.
-		// Sets this object's environment to that of ad, and uses
-		// V1 delim from ad when constructing V1 result (so
-		// opsys flavor of V1 environment is preserved).
-	bool getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
-
-		// Returns V1 string if possible, o.w. marked V2 string.
-	bool getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char delim='\0') const;
-
 		// Returns V2Quoted string (i.e. enclosed in double quotes).
 	bool getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const;
 
