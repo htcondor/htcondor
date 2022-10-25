@@ -439,22 +439,6 @@ bool Env::MergeFromV1AutoDelim( const char *delimitedString, std::string & error
 	return MergeFromV1Raw(delimitedString,delim,&error_msg);
 }
 
-// It is not possible for raw V1 environment strings with a leading space
-// to be specified in submit files, so we can use this to mark
-// V2 strings when we need to pack V1 and V2 through the same
-// channel (e.g. shadow-starter communication).
-const char RAW_V2_ENV_MARKER = ' ';
-
-bool
-Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
-{
-	if(!delimitedString) return true;
-	if(*delimitedString == RAW_V2_ENV_MARKER) {
-		return MergeFromV2Raw(delimitedString,&error_msg);
-	}
-	return MergeFromV1AutoDelim(delimitedString,error_msg);
-}
-
 // The following is a modest hack for when we find
 // a $$() expression in the environment and we just want to
 // pass it through verbatim, with no appended equal sign.
@@ -573,7 +557,7 @@ Env::getDelimitedStringV2Quoted(std::string& result) const
 }
 
 void
-Env::getDelimitedStringV2Raw(std::string& result, bool mark_v2) const
+Env::getDelimitedStringV2Raw(std::string& result) const
 {
 	MyString var, val;
 	SimpleList<MyString> env_list;
@@ -590,9 +574,6 @@ Env::getDelimitedStringV2Raw(std::string& result, bool mark_v2) const
 		}
 	}
 
-	if(mark_v2) {
-		result += RAW_V2_ENV_MARKER;
-	}
 	join_args(env_list,result);
 }
 

@@ -146,12 +146,6 @@ class Env {
 	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string* error_msg );
 	bool MergeFromV1AutoDelim( const char *delimitedString, std::string & error_msg, char delim=0 );
 
-		// Add (or overwrite) environment entries from an input string.
-		// This should only be called for strings in raw V1or2 format,
-		// which is designed to allow version detection in a backward
-		// compatible way.
-	bool MergeFromV1or2Raw( const char *delimitedString, std::string & error_msg );
-
 		// Add (or overwrite) environment entries from a NULL-terminated
 		// array of key=value strings.  This function returns false
 		// if there are any entries that lack a variable name or
@@ -215,9 +209,7 @@ class Env {
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
 
 		// Modern style: space delimited (and quoted as necessary).
-		// If mark_v2=true, then result will be identifiable as V2 by
-		// MergeV1or2()
-	void getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
+	void getDelimitedStringV2Raw(std::string & result) const;
 
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
