@@ -513,24 +513,6 @@ ArgList::AppendArgsV2Raw(char const *args,MyString *error_msg)
 	return rv;
 }
 
-// It is not possible for raw V1 argument strings with a leading space
-// to be specified in submit files, so we can use this to mark
-// V2 strings when we need to pack V1 and V2 through the same
-// channel (e.g. shadow-starter communication).
-const char RAW_V2_ARGS_MARKER = ' ';
-
-bool
-ArgList::AppendArgsV1or2Raw(char const *args,MyString *error_msg)
-{
-	if(!args) return true;
-	if(*args == RAW_V2_ARGS_MARKER) {
-		return AppendArgsV2Raw(args+1,error_msg);
-	}
-	else {
-		return AppendArgsV1Raw(args,error_msg);
-	}
-}
-
 void
 ArgList::AppendArgsFromArgList(ArgList const &args)
 {
@@ -845,55 +827,6 @@ void ArgList::GetArgsStringForLogging( MyString * result ) const {
 			++arg;
 		}
 	}
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(std::string & result) const
-{
-    MyString ms;
-    bool rv = GetArgsStringV1or2Raw(& ms, NULL);
-    result = ms;
-    return rv;
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
-{
-	ASSERT(result);
-	int old_len = result->length();
-
-	if(GetArgsStringV1Raw(result,NULL)) {
-		return true;
-	}
-
-	// V1 attempt failed.  Use V2 syntax.
-
-	if(result->length() > old_len) {
-		// Clear any partial output we may have generated above.
-		result->truncate(old_len);
-	}
-
-	(*result) += RAW_V2_ARGS_MARKER;
-	return GetArgsStringV2Raw(result,error_msg);
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(ClassAd const * ad, std::string & result, std::string & error_msg)
-{
-	if(! AppendArgsFromClassAd(ad, error_msg)) {
-		return false;
-	}
-	return GetArgsStringV1or2Raw(result);
-}
-
-
-bool
-ArgList::GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
-{
-	if(!AppendArgsFromClassAd(ad,error_msg)) {
-		return false;
-	}
-	return GetArgsStringV1or2Raw(result,error_msg);
 }
 
 void
