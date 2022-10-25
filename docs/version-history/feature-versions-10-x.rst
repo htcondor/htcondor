@@ -27,6 +27,10 @@ New Features:
   found if passed ClusterIds or ClusterId.ProcId pairs.
   :jira:`1364`
 
+- Improved *condor_history* search speeds when searching for matching jobs, matching clusters,
+  and matching owners.
+  :jira:`1382`
+
 Bugs Fixed:
 
 - None.
