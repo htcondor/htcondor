@@ -1099,7 +1099,7 @@ static bool test_split_args_ret_false() {
 		"error message MyString for an invalid arg string due to an unterminated "
 		"quote.");
 	SimpleList<MyString> args;
-	MyString error_msg;
+	std::string error_msg;
 	bool ret_val = split_args("Unterminated 'quote", &args, &error_msg);
 	emit_input_header();
 	emit_param("Args", "Unterminated 'quote");

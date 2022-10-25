@@ -740,8 +740,9 @@ static bool test_mf_v1r_or_v2q_ret_null() {
 	emit_test("Test that MergeFromV1RawOrV2Quoted() returns true when passed "
 		"a NULL string.");
 	Env env;
+	std::string error_msg;
 	bool expect = true;
-	bool actual = env.MergeFromV1RawOrV2Quoted(NULL, NULL);
+	bool actual = env.MergeFromV1RawOrV2Quoted(NULL, error_msg);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
 	emit_param("MyString", "%s", "NULL");
@@ -761,8 +762,9 @@ static bool test_mf_v1r_or_v2q_detect_v1r() {
 	emit_comment("MergeFromV1RaworV2Quoted() just calls MergeFromV1Raw(), "
 		"which is tested below.");
 	Env env;
+	std::string error_msg;
 	bool expect = true;
-	env.MergeFromV1RawOrV2Quoted(V1R, NULL);
+	env.MergeFromV1RawOrV2Quoted(V1R, error_msg);
 	bool actual = env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V1R);
@@ -783,8 +785,9 @@ static bool test_mf_v1r_or_v2q_detect_v2q() {
 	emit_comment("MergeFromV1RaworV2Quoted() just calls MergeFromVqQuoted(), "
 		"which is tested below.");
 	Env env;
+	std::string error_msg;
 	bool expect = false;
-	env.MergeFromV1RawOrV2Quoted(V2Q_SEMI, NULL);
+	env.MergeFromV1RawOrV2Quoted(V2Q_SEMI, error_msg);
 	bool actual = env.InputWasV1();
 	emit_input_header();
 	emit_param("STRING", "%s", V2Q_SEMI);
@@ -814,7 +817,7 @@ static bool test_mf_v1r_or_v2q_add_empty() {
 	emit_param("Env", "%s", EMPTY);
 	emit_param("errmsg", "%s", EMPTY);
 	emit_output_actual_header();
-	emit_param("Env", "%s", actual.Value());
+	emit_param("Env", "%s", actual.c_str());
 	if(actual != EMPTY || ! success || ! msg.empty()) {
 		FAIL;
 	}
@@ -825,8 +828,9 @@ static bool test_mf_v1r_or_v2q_add_null() {
 	emit_test("Test that MergeFromV1RawOrV2Quoted() doesn't add any "
 		"environment variables for a NULL string.");
 	Env env;
+	std::string error_msg;
 	MyString actual;
-	env.MergeFromV1RawOrV2Quoted(NULL, NULL);
+	env.MergeFromV1RawOrV2Quoted(NULL, error_msg);
 	env.getDelimitedStringForDisplay(&actual);
 	emit_input_header();
 	emit_param("STRING", "%s", "NULL");
@@ -1376,14 +1380,14 @@ static bool test_mf_v2r_error_invalid_name() {
 		"an invalid V2Raw string due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV2Raw(V2R_MISS_NAME, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1394,14 +1398,14 @@ static bool test_mf_v2r_error_invalid_delim() {
 		"an invalid V2Raw string due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV2Raw(V2R_MISS_DELIM, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V2R_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1638,14 +1642,14 @@ static bool test_mf_v1r_error_invalid_name() {
 		"an invalid V1Raw string due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV1Raw(V1R_MISS_NAME, V1_ENV_DELIM_CHAR, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -1656,14 +1660,14 @@ static bool test_mf_v1r_error_invalid_delim() {
 		"an invalid V1Raw string due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV1Raw(V1R_MISS_DELIM, V1_ENV_DELIM_CHAR, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", V1R_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
-	if(actual.IsEmpty()) {
+	emit_param("Error Message", "%s", actual.c_str());
+	if(actual.empty()) {
 		FAIL;
 	}
 	PASS;
@@ -3160,16 +3164,16 @@ static bool test_set_env_with_error_message_err_invalid_name() {
 		"for an invalid string due to a missing variable name.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	bool retval;
 	retval = env.SetEnvWithErrorMessage(ONE_MISS_NAME, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", ONE_MISS_NAME);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
+	emit_param("Error Message", "%s", actual.c_str());
 	emit_param("Return Value", "%s", retval ? "true" : "false");
-	if(actual.IsEmpty() || retval) {
+	if(actual.empty() || retval) {
 		FAIL;
 	}
 	PASS;
@@ -3180,16 +3184,16 @@ static bool test_set_env_with_error_message_err_invalid_delim() {
 		"for an invalid string due to a missing delimiter.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	bool retval;
 	retval = env.SetEnvWithErrorMessage(ONE_MISS_DELIM, &actual);
 	emit_input_header();
 	emit_param("STRING", "%s", ONE_MISS_DELIM);
 	emit_param("MyString", "%s", "");
 	emit_output_actual_header();
-	emit_param("Error Message", "%s", actual.Value());
+	emit_param("Error Message", "%s", actual.c_str());
 	emit_param("Return Value", "%s", retval ? "true" : "false");
-	if(actual.IsEmpty() || retval) {
+	if(actual.empty() || retval) {
 		FAIL;
 	}
 	PASS;
@@ -5918,7 +5922,8 @@ static bool test_input_was_v1_false_v2q_or() {
 	emit_test("Test that InputWasV1() returns false for an Env object "
 		"created from a V2Quoted string with MergeFromV1RawOrV2Quoted().");
 	Env env;
-	env.MergeFromV1RawOrV2Quoted(V2Q, NULL);
+	std::string error_msg;
+	env.MergeFromV1RawOrV2Quoted(V2Q, error_msg);
 	bool expect = false;
 	bool actual = env.InputWasV1();
 	emit_input_header();
@@ -6076,7 +6081,8 @@ static bool test_input_was_v1_true_v1r_or() {
 	emit_test("Test that InputWasV1() returns true for an Env object "
 		"created from V1Raw string that with MergeFromV1RawOrV2Quoted().");
 	Env env;
-	env.MergeFromV1RawOrV2Quoted(V1R, NULL);
+	std::string error_msg;
+	env.MergeFromV1RawOrV2Quoted(V1R, error_msg);
 	bool expect = true;
 	bool actual = env.InputWasV1();
 	emit_input_header();

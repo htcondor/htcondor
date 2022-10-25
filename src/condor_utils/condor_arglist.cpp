@@ -90,7 +90,7 @@ void join_args(char const * const *args_array,MyString *result,int start_arg) {
 bool split_args(
   char const *args,
   SimpleList<MyString> *args_list,
-  MyString *error_msg)
+  std::string* error_msg)
 {
 	MyString buf = "";
 	bool parsed_token = false;
@@ -120,7 +120,7 @@ bool split_args(
 			}
 			if(!*args) {
 				if(error_msg) {
-					error_msg->formatstr("Unbalanced quote starting here: %s",quote);
+					formatstr(*error_msg, "Unbalanced quote starting here: %s", quote);
 				}
 				return false;
 			}
@@ -167,7 +167,7 @@ ArgListToArgsArray(SimpleList<MyString> const &args_list)
 	return args_array;
 }
 
-bool split_args(char const *args,char ***args_array,MyString *error_msg) {
+bool split_args(char const *args, char ***args_array, std::string* error_msg) {
 	SimpleList<MyString> args_list;
 	if(!split_args(args,&args_list,error_msg)) {
 		*args_array = NULL;
@@ -501,16 +501,16 @@ ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 bool
 ArgList::AppendArgsV2Raw(char const *args,std::string &error_msg)
 {
-    MyString ms;
-    bool rv = split_args(args,&args_list,& ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
+	return split_args(args,&args_list, &error_msg);
 }
 
 bool
 ArgList::AppendArgsV2Raw(char const *args,MyString *error_msg)
 {
-	return split_args(args,&args_list,error_msg);
+	std::string msg;
+	bool rv = split_args(args,&args_list,&msg);
+	if (error_msg) *error_msg = msg;
+	return rv;
 }
 
 // It is not possible for raw V1 argument strings with a leading space

@@ -67,12 +67,6 @@ Env::Clear()
 #endif
 }
 
-void
-Env::AddErrorMessage(char const *msg,MyString *error_buffer)
-{
-	ArgList::AddErrorMessage(msg,error_buffer);
-}
-
 bool
 Env::MergeFrom( const ClassAd *ad, std::string & error_msg )
 {
@@ -82,7 +76,7 @@ Env::MergeFrom( const ClassAd *ad, std::string & error_msg )
 	bool merge_success = false;
 
 	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, env) == 1 ) {
-		merge_success = MergeFromV2Raw(env.c_str(),error_msg);
+		merge_success = MergeFromV2Raw(env.c_str(),&error_msg);
 	}
 	else if( ad->LookupString(ATTR_JOB_ENV_V1, env) == 1 ) {
 		char delim = 0;
@@ -347,16 +341,6 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
-Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString * error_msg )
-{
-	std::string ms;
-	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, ms );
-	if (error_msg && ! ms.empty()) { AddErrorMessage(ms.c_str(), error_msg); }
-	return rv;
-}
-
-
-bool
 Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
@@ -378,7 +362,7 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 			if ( ! msg.empty()) { AddErrorMessage(msg.c_str(), error_msg); }
 			return false;
 		}
-		return MergeFromV2Raw(v2.c_str(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),&error_msg);
 	}
 	else {
 		AddErrorMessage("Expecting a double-quoted environment string (V2 format).",error_msg);
@@ -387,15 +371,7 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 }
 
 bool
-Env::MergeFromV2Raw( const char *delimitedString, std::string & error_msg ) {
-	MyString ms(error_msg);
-	bool rv = MergeFromV2Raw(delimitedString, & ms);
-	error_msg = ms;
-	return rv;
-}
-
-bool
-Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV2Raw( const char *delimitedString, std::string* error_msg )
 {
 	SimpleList<MyString> env_list;
 
@@ -416,16 +392,7 @@ Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 }
 
 bool
-Env::MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg )
-{
-	MyString ms(error_msg);
-	bool rv = MergeFromV1Raw( delimitedString, delim, &ms );
-	error_msg = ms;
-	return rv;
-}
-
-bool
-Env::MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg )
+Env::MergeFromV1Raw( const char *delimitedString, char delim, std::string* error_msg )
 {
 	char const *input;
 	char *output;
@@ -472,7 +439,7 @@ bool Env::MergeFromV1AutoDelim( const char *delimitedString, std::string & error
 		delim = ch;
 		++delimitedString;
 	}
-	return MergeFromV1Raw(delimitedString,delim,error_msg);
+	return MergeFromV1Raw(delimitedString,delim,&error_msg);
 }
 
 // It is not possible for raw V1 environment strings with a leading space
@@ -486,7 +453,7 @@ Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
 {
 	if(!delimitedString) return true;
 	if(*delimitedString == RAW_V2_ENV_MARKER) {
-		return MergeFromV2Raw(delimitedString,error_msg);
+		return MergeFromV2Raw(delimitedString,&error_msg);
 	}
 	return MergeFromV1AutoDelim(delimitedString,error_msg);
 }
@@ -497,7 +464,7 @@ Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
 char const *NO_ENVIRONMENT_VALUE = "\01\02\03\04\05\06";
 
 bool
-Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
+Env::SetEnvWithErrorMessage( const char *nameValueExpr, std::string* error_msg )
 {
 	char *expr, *delim;
 	int retval;
@@ -524,16 +491,17 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 	// fail if either name or delim is missing
 	if( expr == delim || delim == NULL ) {
 		if(error_msg) {
-			MyString msg;
+			std::string msg;
 			if(delim == NULL) {
-				msg.formatstr(
+				formatstr(
+				  msg,
 				  "ERROR: Missing '=' after environment variable '%s'.",
 				  nameValueExpr);
 			}
 			else {
-				msg.formatstr("ERROR: missing variable in '%s'.",expr);
+				formatstr(msg, "ERROR: missing variable in '%s'.", expr);
 			}
-			AddErrorMessage(msg.c_str(),error_msg);
+			AddErrorMessage(msg.c_str(),*error_msg);
 		}
 		free(expr);
 		return false;

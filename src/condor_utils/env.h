@@ -130,7 +130,6 @@ class Env {
 		// Add (or overwrite) environment entries from an input
 		// string.  If the string begins with a double-quote, it will
 		// be treated as V2Quoted; otherwise it will be read as V1Raw.
-	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg );
 	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
@@ -140,13 +139,11 @@ class Env {
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
-	bool MergeFromV2Raw( const char *delimitedString, MyString *error_msg );
-	bool MergeFromV2Raw( const char *delimitedString, std::string & error_msg );
+	bool MergeFromV2Raw( const char *delimitedString, std::string* error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1 format.
-	bool MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg );
-	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string* error_msg );
 	bool MergeFromV1AutoDelim( const char *delimitedString, std::string & error_msg, char delim=0 );
 
 		// Add (or overwrite) environment entries from an input string.
@@ -175,7 +172,7 @@ class Env {
 	bool MergeFrom( const ClassAd *ad, std::string & error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
-	bool SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg );
+	bool SetEnvWithErrorMessage( const char *nameValueExpr, std::string* error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
 		// Returns false if the input is not a valid var=value.
@@ -306,7 +303,6 @@ class Env {
 
 	static void WriteToDelimitedString(char const *input,MyString &output);
 
-	static void AddErrorMessage(char const *msg,MyString *error_buffer);
 	static void AddErrorMessage(char const *msg,std::string &error_buffer) {
 		if ( ! error_buffer.empty()) { error_buffer += "\n"; }
 		error_buffer += msg;

@@ -85,12 +85,12 @@ bool success = split_args("one 'two and' three",&argv,&errmsg);
 
 // Parse a string into a list of tokens.
 // This expects args in "raw V2" format (no surrounding double-quotes)
-bool split_args(char const *args,SimpleList<MyString> *args_list,MyString *error_msg=NULL);
+bool split_args(char const *args, SimpleList<MyString> *args_list, std::string* error_msg);
 
 // Parse a string into a NULL-terminated string array.
 // This expects args in "raw V2" format (no surrounding double-quotes)
 // Caller should delete the array (e.g. deleteStringArray()).
-bool split_args(char const *args,char ***args_array,MyString *error_msg=NULL);
+bool split_args(char const *args, char ***args_array, std::string* error_msg);
 
 // Produce a string from a list of tokens, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
