@@ -70,7 +70,7 @@ Often, if a job is doing something unexpected, it is more useful to hold the job
 rather than remove it.  If the problem with the job can be fixed, the job can then be
 released and started again.  Much like the **periodic_remove** command, there is a 
 **periodic_hold** command that works in a similar way, but instead of removing the job,
-puts the job on hold.  Unliked **periodice_remove**, there are additional commands
+puts the job on hold.  Unlike **periodic_remove**, there are additional commands
 that help to tell the user why the job was placed on hold.  **periodic_hold_reason**
 is a string which is put into the **HoldReason** attribute to explain why we put the
 job on hold.  **periodic_hold_subcode** is an integer that is put into the

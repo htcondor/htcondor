@@ -24,7 +24,15 @@ Release Notes:
 
 New Features:
 
-- None.
+- *condor_q* default behavior of displaying the cumulative run time has changed
+  to now display the current run time for jobs in running, tranfering output,
+  and suspended states while displaying the previous run time for jobs in idle or held
+  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
+  :jira:`1064`
+
+- *condor_history* will now stop searching history files once all requested job ads are
+  found if passed ClusterIds or ClusterId.ProcId pairs.
+  :jira:`1364`
 
 Bugs Fixed:
 

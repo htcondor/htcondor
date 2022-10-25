@@ -167,3 +167,6 @@ RUN pip3 install pytest pytest-httpserver
 RUN wget -qO - https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-9.1-Daily-Key | apt-key add -
 RUN echo "deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/9.1-daily bullseye main" > /etc/apt/sources.list.d/htcondor-daily.list
 RUN apt update && apt clean
+
+# HACK ALERT
+RUN sed -i s/soft_unicode/soft_str/g /usr/lib/python3/dist-packages/jinja2/filters.py /usr/lib/python3/dist-packages/jinja2/runtime.py

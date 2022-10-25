@@ -27,7 +27,7 @@ expressions.  You can supply a ClassAd on the command-line, or via a
 file, as context for evaluating the expression.  You may also construct
 a ClassAd one argument at a time, with assignments.
 
-By default, **clasad_eval** will print the ClassAd context used to evaluate
+By default, **classad_eval** will print the ClassAd context used to evaluate
 the expression before printing the result of the first expression, and for
 every expression with a new ClassAd thereafter.  You may suppress this
 behavior with the ``-quiet`` flag, which replaces an ad, assignment,

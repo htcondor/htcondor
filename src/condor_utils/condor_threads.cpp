@@ -836,22 +836,15 @@ ThreadImplementation::~ThreadImplementation()
 }
 
 int 
-ThreadImplementation::pool_init()
+ThreadImplementation::pool_init(int num_threads)
 {
 	int i;
 	
-		// For now, only allow the COLLECTOR to have a thread pool.
-	if ( strcmp(get_mySubSystem()->getName(),"COLLECTOR")==0 ) {
-		num_threads_ = param_integer("THREAD_WORKER_POOL_SIZE",0,0);
-	} else {
-		num_threads_ = 0;
-	}
-
-	if ( num_threads_ == 0 ) {
-		// dont waste time w/ locks if user doesn't want threads.
+	num_threads_ = num_threads;
+	if (num_threads_ == 0) {
 		return num_threads_;
 	}
-
+	
 	// We need to grab the big lock _before_ we make
 	// our thread pool.  We only release the lock when
 	// we want to yield to another thread.
@@ -1037,7 +1030,7 @@ void ThreadImplementation::set_switch_callback(condor_thread_switch_callback_t )
 	return;
 }
 
-int ThreadImplementation::pool_init()
+int ThreadImplementation::pool_init(int )
 {
 	return -1;
 }
@@ -1069,9 +1062,23 @@ CondorThreads::pool_init()
 	// no reconfig support (yet)
 	if ( already_been_here ) return -2;
 	already_been_here = true;
+	//
+		// For now, only allow the COLLECTOR to have a thread pool.
+	int num_threads = 0;
+	if ( strcmp(get_mySubSystem()->getName(),"COLLECTOR")==0 ) {
+		num_threads = param_integer("THREAD_WORKER_POOL_SIZE",0,0);
+	} else {
+		num_threads = 0;
+	}
+
+	if ( num_threads == 0 ) {
+		// dont waste time w/ locks, etc if user doesn't want threads.
+		return num_threads;
+	}
+
 
 	TI = new ThreadImplementation;
-	int numThreads = TI->pool_init();
+	int numThreads = TI->pool_init(num_threads);
 	if ( numThreads < 1 ) {
 		delete TI;
 		TI = NULL;

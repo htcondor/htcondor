@@ -241,7 +241,7 @@ public:
 	bool uploadWorkingFiles(void);
 
 		/** Send checkpoint files to shadow */
-	bool uploadCheckpointFiles();
+	bool uploadCheckpointFiles(int checkpointNumber);
 
 		/* Update Job ClassAd with checkpoint info and log it */
 	void updateCkptInfo(void);

@@ -20,7 +20,6 @@ Center for High Throughput Computing, University of Wisconsin–Madison.
    apis/index
    platform-specific/index
    faq/index
-   contrib-source-modules/index
    version-history/index
    man-pages/index
 

@@ -327,8 +327,6 @@
 #define SUBMIT_KEY_EC2IamProfileArn "ec2_iam_profile_arn"
 #define SUBMIT_KEY_EC2IamProfileName "ec2_iam_profile_name"
 
-#define SUBMIT_KEY_BoincAuthenticatorFile "boinc_authenticator_file"
-
 //
 // GCE Parameters
 //

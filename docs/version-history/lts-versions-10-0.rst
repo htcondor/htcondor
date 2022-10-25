@@ -24,6 +24,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if a job created a symlink to a file, the contents of
+  that file would be counted in the job's `DiskUsage`.  Previously,
+  symlinks to directories were (correctly) ignored, but not symlinks to
+  files.
+  :jira:`1354`
+
 - Fixed bug where certain **submit file** variables like ``accounting_group`` and
   ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
   DAGMan would always write over the variables at job submission time.
@@ -43,3 +49,31 @@ Bugs Fixed:
   This primarily happened with both peers had ``PREFER_IPV4`` set to
   ``False``.
   :jira:`1341`
+
+- The *condor_negotiator* no longer sends the admin capability
+  attribute of  machine ads to the *condor_schedd*.
+  :jira:`1349`
+
+- Fixed a bug in DAGMan where **Node** jobs that could not write to their **UserLog**
+  would cause the **DAG** to get stuck indefinitely while waiting for pending **Nodes**.
+  :jira:`1305`
+
+- Fixed a bug where ``s3://`` URLs host or bucket names shorter than 14
+  characters caused the shadow to dump core.
+  :jira:`1378`
+
+- Fixed a bug in the hibernation code that caused HTCondor to ignore
+  the active Suspend-To-Disk option.
+  :jira:`1357`
+
+- Fixed a bug where some administrator client tools did not properly
+  use the remote administrator capability (configuration parameter
+  ``SEC_ENABLE_REMOTE_ADMINISTRATION``).
+  :jira:`1371`
+
+- When a ``JOB_TRANSFORM_*`` transform changes an attribute at submit time in a late
+  materialization factory, it no longer marks that attribute as fixed for all jobs.  This
+  change makes it possible for a transform to modify rather than simply replacing an attribute
+  that that the user wishes to vary per job.
+  :jira:`1369`
+

@@ -33,6 +33,10 @@
 #include "authentication.h"
 #include "globus_utils.h"
 #include "limit_directory_access.h"
+#include "manifest.h"
+
+#include <fstream>
+#include "spooled_job_files.h"
 
 extern const char* public_schedd_addr;	// in shadow_v61_main.C
 
@@ -1239,7 +1243,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     CopyAttribute("Recent" ATTR_BLOCK_READS, *jobAd, *update_ad);
     CopyAttribute("Recent" ATTR_BLOCK_WRITES, *jobAd, *update_ad);
 
-
     CopyAttribute(ATTR_IO_WAIT, *jobAd, *update_ad);
     CopyAttribute(ATTR_JOB_CPU_INSTRUCTIONS, *jobAd, *update_ad);
 
@@ -1261,6 +1264,16 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
 		// Required to actually update the schedd's copy.  (sigh)
 		shadow->watchJobAttr(ATTR_JOB_TOE);
 	}
+
+    // You MUST NOT use CopyAttribute() here, because the starter doesn't
+    // send this on every update: CopyAttribute() deletes the target's
+    // attribute if it doesn't exist in the source, which means the schedd
+    // may never see this update (because update the schedd on a timer
+    // instead of after receiving an update).
+    int checkpointNumber = -1;
+    if( update_ad->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
+        jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
+    }
 
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
@@ -2176,6 +2189,96 @@ RemoteResource::initFileTransfer()
 
 		filetrans.AddDownloadFilenameRemap( StderrRemapName, file.c_str() );
 	}
+
+	//
+	// Check this job's SPOOL directory for MANIFEST files and pick the
+	// highest-numbered valid one.  That MANIFEST file must be transferred
+	// to the starter (so it can validate the checkpoint) and the files
+	// therein converted to URLs and added to the transfer list for the
+	// starter to fetch.
+	//
+
+	std::string checkpointDestination;
+	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+		return;
+	}
+
+	std::string spoolPath;
+	SpooledJobFiles::getJobSpoolPath(jobAd, spoolPath);
+
+	// Find the largest manifest number.
+	int largestManifestNumber = -1;
+	const char * currentFile = NULL;
+	Directory spoolDirectory( spoolPath.c_str() );
+	while( (currentFile = spoolDirectory.Next()) ) {
+		int manifestNumber = manifest::getNumberFromFileName( currentFile );
+		if( manifestNumber > largestManifestNumber ) {
+			largestManifestNumber = manifestNumber;
+		}
+	}
+	if( largestManifestNumber == -1 ) {
+		return;
+	}
+
+	// Validate the candidate manifests in reverse ordinal order.
+	int manifestNumber = -1;
+	std::string manifestFileName;
+	if( largestManifestNumber != -1 ) {
+		for( int i = largestManifestNumber; i >= 0; --i ) {
+			formatstr( manifestFileName, "%s/_condor_checkpoint_MANIFEST.%.4d", spoolPath.c_str(), i );
+			if( manifest::validateManifestFile( manifestFileName ) ) {
+				manifestNumber = i;
+				break;
+			} else {
+				dprintf( D_VERBOSE, "Manifest file '%s' failed validation.\n", manifestFileName.c_str() );
+			}
+		}
+	}
+	if( manifestNumber == -1 ) {
+		// This should alarm the administrator, but is not job-fatal.
+		dprintf( D_ALWAYS, "No manifest file validated.\n" );
+		return;
+	}
+
+	std::set< std::string > pathsAlreadyPreserved;
+
+	// Transfer the MANIFEST file.  We can't use AddDownloadFilenameRemap()
+	// because those are applied on the starter side and aren't transferred
+	// from the shadow (except as part of the job ad, which we've already
+	// sent).
+	filetrans.addInputFile( manifestFileName, ".MANIFEST", pathsAlreadyPreserved );
+
+	//
+	// Transfer every file listed in the MANIFEST file.  It could be quite
+	// large, so process it line-by-line, ignoring the last one (which is
+	// always itself).
+	//
+
+	std::ifstream ifs( manifestFileName.c_str() );
+	if(! ifs.good()) {
+		dprintf( D_ALWAYS, "Failed to open MANIFEST file (%s), aborting.\n", manifestFileName.c_str() );
+		return; // FIMXE
+	}
+
+	std::string globalJobID;
+	jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID );
+	ASSERT(! globalJobID.empty());
+
+	std::string manifestLine;
+	std::string nextManifestLine;
+	std::getline( ifs, manifestLine );
+	std::getline( ifs, nextManifestLine );
+	for( ; ifs.good(); ) {
+		std::string checkpointURL;
+		std::string checkpointFile = manifest::FileFromLine( manifestLine );
+		formatstr( checkpointURL, "%s/%s/%.4d/%s", checkpointDestination.c_str(),
+		  globalJobID.c_str(), manifestNumber, checkpointFile.c_str() );
+		filetrans.addCheckpointFile( checkpointURL, checkpointFile, pathsAlreadyPreserved );
+
+		manifestLine = nextManifestLine;
+		std::getline( ifs, nextManifestLine );
+	}
+
 }
 
 void

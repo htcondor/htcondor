@@ -2884,6 +2884,10 @@ obtainAdsFromCollector (
 		// Insert each ad into the appropriate list.
 		// After we insert it into a list, do not delete the ad...
 
+		// If the collector included the admin capability, delete it.
+		// We don't want it.
+		ad->Delete(ATTR_REMOTE_ADMIN_CAPABILITY);
+
 		// let's see if we've already got it - first lookup the sequence
 		// number from the new ad, then let's look and see if we've already
 		// got something for this one.		
@@ -5093,7 +5097,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 		"      Sending PERMISSION, claim id, startdAd to schedd\n");
 	if (!sock->put(PERMISSION_AND_AD) ||
 		!sock->put_secret(all_claim_ids.c_str()) ||
-		!putClassAd(sock, *offer)	||	// send startd ad to schedd
+		!putClassAd(sock, *offer, PUT_CLASSAD_NO_PRIVATE)	||	// send startd ad to schedd
 		!sock->end_of_message())
 	{
 			send_failed = true;
