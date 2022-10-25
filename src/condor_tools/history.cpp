@@ -127,7 +127,6 @@ struct ClusterMatchInfo {
 //Structure to hold banner information for cluster/proc matching
 struct BannerInfo {
 	time_t completion = -1; //Ad completion time
-	long long offset = -1;  //Ad offset if exists
 	JOB_ID_KEY jid;         //Cluster & Proc info for job
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
@@ -928,6 +927,18 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
 // Check to see if all possible job ads for cluster or cluster.proc have been found
 static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 
+	//If we have a job ad and are missing data attempt to populate banner info
+	if (ad) {
+		if (banner.jid.cluster <= 0)
+			ad->LookupInteger(ATTR_CLUSTER_ID,banner.jid.cluster);
+		if (banner.jid.proc < 0)
+			ad->LookupInteger(ATTR_PROC_ID,banner.jid.proc);
+		if (banner.completion < 0)
+			ad->LookupInteger(ATTR_COMPLETION_DATE,banner.completion);
+		if (read_epoch_ads && banner.runId < 0)
+			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,banner.runId);
+	}
+
 	//For each match item info check record found
 	for (auto& match : jobIdFilterInfo) {
 		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d\n",match.jid.cluster,match.jid.proc,match.QDate,match.numProcs); //Debug Match items
@@ -948,13 +959,18 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 				if (match.QDate < 0) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
 				//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
 				if (match.numProcs < 0) {
-					ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs);
-					if (!read_epoch_ads || (backwards && banner.runId == 0)) {
-						--match.numProcs;
-					}
-					if (match.numProcs <= 0) {
-						std::swap(match,jobIdFilterInfo.back());
-						jobIdFilterInfo.pop_back();
+					int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
+					if (read_epoch_ads && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
+					if (!ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
+						if (!read_epoch_ads || (backwards && banner.runId == 0)) {
+							match.numProcs = --matchFoundOffset;
+						}
+					} else {
+						match.numProcs += matchFoundOffset;
+						if (match.numProcs <= 0) {
+							std::swap(match,jobIdFilterInfo.back());
+							jobIdFilterInfo.pop_back();
+						}
 					}
 				} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
 					if (!read_epoch_ads || (backwards && banner.runId == 0)) {
@@ -1226,11 +1242,11 @@ static bool isvalidattrchar(char ch) { return isalnum(ch) || ch == '_'; }
 *	Function to parse banner information of both history and epoch files (They vary slightly)
 *	and fill info into Banner info struct. After parsing banner line we will then determine
 *	if we are only matching for Cluster, Cluster.Proc, or Owner then check if banner info
-*	matches.
+*	matches to determine if we parse the upcoming job ad.
 */
 static bool parseBanner(BannerInfo& info, std::string banner) {
 	//Parse Banner info
-	int clust = -1, proc = -1;
+	BannerInfo newInfo;
 
 	const char * p = banner.c_str();
 	const char * endp = p + banner.size();
@@ -1242,31 +1258,31 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	while (*p == '*') ++p;
 	while (isspace(*p)) ++p;
 
-	bool parsedFully = true;
 	const char * rhs;
 	std::string attr;
 	while (p < endp && SplitLongFormAttrValue(p, attr, rhs)) {
 		int end = 0;
 		ExprTree * tree = parser.ParseExpression(rhs);
-		if (!tree) { parsedFully = false; break; }
+		if (!tree) { break; }
 		//fprintf(stdout, "%s=%s\n", attr.c_str(), ExprTreeToString(tree));
 		long long valueNum = 0;
-		if (strcasecmp(attr.c_str(),"Offset") == 0) {
-			parsedFully = ExprTreeIsLiteralNumber(tree,info.offset);
-		} else if (strcasecmp(attr.c_str(),"ClusterId") == 0) {
-			if ((parsedFully = ExprTreeIsLiteralNumber(tree,valueNum)) == true)
-				clust = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"ProcId") == 0) {
-			if ((parsedFully = ExprTreeIsLiteralNumber(tree,valueNum)) == true)
-				proc = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"RunInstanceId") == 0) {
-			if ((parsedFully = ExprTreeIsLiteralNumber(tree,valueNum)) == true)
-				info.runId = static_cast<int>(valueNum);
-		} else if (strcasecmp(attr.c_str(),"Owner") == 0) {
-			parsedFully = ExprTreeIsLiteralString(tree,info.owner);
-		} else if (strcasecmp(attr.c_str(),"CurrentTime") == 0 || strcasecmp(attr.c_str(),"CompletionDate") == 0) {
-			if ((parsedFully = ExprTreeIsLiteralNumber(tree,valueNum)) == true)
-				info.completion = valueNum;
+		if (strcasecmp(attr.c_str(),"ClusterId") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum))
+				if (valueNum <= INT_MAX && valueNum > 0)
+					newInfo.jid.cluster = static_cast<int>(valueNum);
+		} else if (strcasecmp(attr.c_str(),"ProcId") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum))
+				if (valueNum <= INT_MAX && valueNum >= 0)
+					newInfo.jid.proc = static_cast<int>(valueNum);
+		} else if (strcasecmp(attr.c_str(),"RunInstanceId") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum))
+				if (valueNum <= INT_MAX && valueNum >= 0)
+					newInfo.runId = static_cast<int>(valueNum);
+		} else if (strcasecmp(attr.c_str(),"Owner") == MATCH) {
+			ExprTreeIsLiteralString(tree,newInfo.owner);
+		} else if (strcasecmp(attr.c_str(),"CurrentTime") == MATCH || strcasecmp(attr.c_str(),"CompletionDate") == MATCH) {
+			if (ExprTreeIsLiteralNumber(tree,valueNum))
+				newInfo.completion = valueNum;
 		}
 		// workaound the fact that the offset we get back from the parser has eaten the next attribute name
 		while (end > 0 && isspace(rhs[end-1])) --end;
@@ -1276,18 +1292,18 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 		p = rhs + dist;
 		while (isspace(*p)) ++p;
 	}
-	info.jid = JOB_ID_KEY(clust, proc);
+	info = newInfo;
 	//For testing output of banner
-	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %lld | Offset: %lld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.offset, info.runId);
+	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %lld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
 
-	//If we failed parsing the banner return true to let later mechanisms to decide if we print ad
-	if(!parsedFully) { return true; }
-	//If no searches were specified then return true to print job ad
-	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; }
+	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
+	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
+	else if (info.owner.empty() && !ownersList.empty()) { return true; }//If failed to parse owner and we are searching for an owner return true
+
 	//Check to see if cluster exists in matching job info
 	for(auto& item : jobIdFilterInfo) { if(info.jid.cluster == item.jid.cluster){ return true; } }
 	//Check to see if owner is being searched for
-	for(auto& name : ownersList) { if(strcasecmp(info.owner.c_str(),name.c_str()) == 0){ return true;} }
+	for(auto& name : ownersList) { if(strcasecmp(info.owner.c_str(),name.c_str()) == MATCH){ return true; } }
 	//If here then no match
 	return false;
 }
@@ -1376,10 +1392,6 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 
 	// when we hit the start of the file, we may still have 1 job record to print out.
 	if (exprs.size() > 0) {
-		// verify that the Offset in the banner is 0 at this point.
-		if (!read_epoch_ads && curr_banner.offset != 0) {
-			dprintf(D_FULLDEBUG,"Error: Final job ad had an offset of %lld instead of expected 0.\n",curr_banner.offset);
-		}
 		if ((specifiedMatch > 0 && matchCount >= specifiedMatch) || (maxAds > 0 && adCount >= maxAds)) {
 			// do nothing
 		} else {
