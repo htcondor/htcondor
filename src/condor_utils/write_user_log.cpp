@@ -222,7 +222,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		// Save parameter info
 	FreeLocalResources( );
 	Configure(false);
-	int failed_init = 0; //Count of logs that failed to initialize
+	size_t failed_init = 0; //Count of logs that failed to initialize
 	if ( m_userlog_enable ) {
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
@@ -286,7 +286,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		}
 	}
 	if (!file.empty() && failed_init == file.size()) {
-		dprintf(D_FULLDEBUG,"WriteUserLog::initialize: failed to initialize all %d log file(s).\n",failed_init);
+		dprintf(D_FULLDEBUG,"WriteUserLog::initialize: failed to initialize all %lu log file(s).\n",failed_init);
 		freeLogs();
 		logs.clear();
 	}
