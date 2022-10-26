@@ -85,10 +85,10 @@ class Matchmaker : public Service
 		void invalidateNegotiatorAd( void );
 
 		Accountant & getAccountant() { return accountant; }
-		static float EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
+		static double EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 		                              ClassAd &request,ClassAd *resource);
 
-		bool getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage);
+		bool getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage);
 
 		void forwardAccountingData(std::set<std::string> &names);
 		void forwardGroupAccounting(GroupEntry *ge);
@@ -177,7 +177,7 @@ class Matchmaker : public Service
 								 double minSlotWeight,
 			ClassAdListDoesNotDeleteAds& startdAds, 
 			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& submitterAds, 
-			float groupQuota=INT_MAX, const char* groupName=NULL);
+			double groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,

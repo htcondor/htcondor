@@ -753,7 +753,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		std::string attr_name;
-		float value = 0.0;
+		double value = 0.0;
 		int terrno;
 
 		neg_on_error( syscall_sock->code(cluster_id) );

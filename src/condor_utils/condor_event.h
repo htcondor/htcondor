@@ -699,7 +699,7 @@ class CheckpointedEvent : public ULogEvent
     /** Remote Usage for the run */  rusage  run_remote_rusage;
 
 	/// bytes sent by the job over network for checkpoint
-	float sent_bytes;
+	double sent_bytes;
 };
 
 
@@ -835,10 +835,10 @@ class JobEvictedEvent : public ULogEvent
     /** Remote Usage for the run */ rusage  run_remote_rusage;
 
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 
     /// Did it terminate and get requeued?
     bool    terminate_and_requeued;
@@ -934,14 +934,14 @@ class TerminatedEvent : public ULogEvent
     /** Total Remote rusage      */    rusage  total_remote_rusage;
 
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 	/// total bytes sent by the job over network for the lifetime of the job
-	float total_sent_bytes;
+	double total_sent_bytes;
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
-	float total_recvd_bytes;
+	double total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
@@ -1326,9 +1326,9 @@ class ShadowExceptionEvent : public ULogEvent
 	/// exception message
 	char	message[BUFSIZ];
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 	bool began_execution;
 };
 
@@ -1843,7 +1843,6 @@ class JobAdInformationEvent : public ULogEvent
 	int LookupString (const char *attributeName, char **value) const;
 	int LookupInteger (const char *attributeName, int &value) const;
 	int LookupInteger (const char *attributeName, long long &value) const;
-	int LookupFloat (const char *attributeName, float &value) const;
 	int LookupFloat (const char *attributeName, double &value) const;
 	int LookupBool  (const char *attributeName, bool &value) const;
 

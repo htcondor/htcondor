@@ -198,7 +198,7 @@ int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttri
 	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success
 */
-int SetAttributeFloat(int cluster, int proc, const char *attr, float value, SetAttributeFlags_t flags = 0);
+int SetAttributeFloat(int cluster, int proc, const char *attr, double value, SetAttributeFlags_t flags = 0);
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd string literal.
 	@return -1 on failure; 0 on success
@@ -274,7 +274,7 @@ void AbortTransactionAndRecomputeClusters();
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */
-int GetAttributeFloat(int cluster, int proc, const char *attr, float *value);
+int GetAttributeFloat(int cluster, int proc, const char *attr, double *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */

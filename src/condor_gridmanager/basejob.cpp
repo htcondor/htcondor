@@ -417,7 +417,7 @@ void BaseJob::UpdateRuntimeStats()
 
 		// The job has stopped an interval of running, add the current
 		// interval to the accumulated total run time
-		float accum_time = 0;
+		double accum_time = 0;
 		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
 		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
@@ -892,7 +892,7 @@ void BaseJob::CheckRemoteStatus()
 void
 BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const
 {
-  float previous_run_time = 0, total_run_time = 0;
+  double previous_run_time = 0, total_run_time = 0;
   int shadow_bday = 0;
   time_t now = time(NULL);
 
