@@ -1837,9 +1837,9 @@ int SubmitHash::SetEnvironment()
 	}
 
 	if (insert_env2) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 
-		envobject.getDelimitedStringV2Raw(&newenv_raw);
+		envobject.getDelimitedStringV2Raw(newenv_raw);
 		AssignJobString(ATTR_JOB_ENVIRONMENT, newenv_raw.c_str());
 	}
 

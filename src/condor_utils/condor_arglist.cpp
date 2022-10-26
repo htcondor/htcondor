@@ -59,12 +59,50 @@ void append_arg(char const *arg,MyString &result) {
 	}
 }
 
+void append_arg(char const *arg, std::string &result) {
+	if(result.length()) {
+		result += " ";
+	}
+	ASSERT(arg);
+	if(!*arg) {
+		result += "''"; //empty arg
+	}
+	while(*arg) {
+		switch(*arg) {
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r':
+		case '\'':
+			if(result.length() && result[result.length()-1] == '\'') {
+				//combine preceeding quoted section with this one,
+				//so we do not introduce a repeated quote.
+				result.erase(result.length()-1);
+			}
+			else {
+				result += '\'';
+			}
+			if(*arg == '\'') {
+				result += '\''; //repeat the quote to escape it
+			}
+			result += *(arg++);
+			result += '\'';
+			break;
+		default:
+			result += *(arg++);
+		}
+	}
+}
+
 void
 join_args( SimpleList<MyString> const & args_list, std::string & result, int start_arg)
 {
-    MyString ms(result.c_str());
-    join_args( args_list, & ms, start_arg );
-    result = ms;
+	SimpleListIterator<MyString> it(args_list);
+	MyString *arg=NULL;
+	for(int i=0;it.Next(arg);i++) {
+		if(i<start_arg) continue;
+		append_arg(arg->c_str(), result);
+	}
 }
 
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
@@ -87,10 +125,18 @@ void join_args(char const * const *args_array,MyString *result,int start_arg) {
 	}
 }
 
+void join_args(char const * const *args_array,std::string& result,int start_arg) {
+	if(!args_array) return;
+	for(int i=0;args_array[i];i++) {
+		if(i<start_arg) continue;
+		append_arg(args_array[i], result);
+	}
+}
+
 bool split_args(
   char const *args,
   SimpleList<MyString> *args_list,
-  MyString *error_msg)
+  std::string* error_msg)
 {
 	MyString buf = "";
 	bool parsed_token = false;
@@ -120,7 +166,7 @@ bool split_args(
 			}
 			if(!*args) {
 				if(error_msg) {
-					error_msg->formatstr("Unbalanced quote starting here: %s",quote);
+					formatstr(*error_msg, "Unbalanced quote starting here: %s", quote);
 				}
 				return false;
 			}
@@ -167,7 +213,7 @@ ArgListToArgsArray(SimpleList<MyString> const &args_list)
 	return args_array;
 }
 
-bool split_args(char const *args,char ***args_array,MyString *error_msg) {
+bool split_args(char const *args, char ***args_array, std::string* error_msg) {
 	SimpleList<MyString> args_list;
 	if(!split_args(args,&args_list,error_msg)) {
 		*args_array = NULL;
@@ -501,34 +547,16 @@ ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 bool
 ArgList::AppendArgsV2Raw(char const *args,std::string &error_msg)
 {
-    MyString ms;
-    bool rv = split_args(args,&args_list,& ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
+	return split_args(args,&args_list, &error_msg);
 }
 
 bool
 ArgList::AppendArgsV2Raw(char const *args,MyString *error_msg)
 {
-	return split_args(args,&args_list,error_msg);
-}
-
-// It is not possible for raw V1 argument strings with a leading space
-// to be specified in submit files, so we can use this to mark
-// V2 strings when we need to pack V1 and V2 through the same
-// channel (e.g. shadow-starter communication).
-const char RAW_V2_ARGS_MARKER = ' ';
-
-bool
-ArgList::AppendArgsV1or2Raw(char const *args,MyString *error_msg)
-{
-	if(!args) return true;
-	if(*args == RAW_V2_ARGS_MARKER) {
-		return AppendArgsV2Raw(args+1,error_msg);
-	}
-	else {
-		return AppendArgsV1Raw(args,error_msg);
-	}
+	std::string msg;
+	bool rv = split_args(args,&args_list,&msg);
+	if (error_msg) *error_msg = msg;
+	return rv;
 }
 
 void
@@ -771,6 +799,12 @@ ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
 }
 
 void
+ArgList::V2RawToV2Quoted(std::string const &v2_raw, std::string& result)
+{
+	formatstr_cat(result, "\"%s\"", EscapeChars(v2_raw, "\"", '\"').c_str());
+}
+
+void
 ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
 {
 	(*result) += v1_raw.EscapeChars("\"",'\\');
@@ -845,55 +879,6 @@ void ArgList::GetArgsStringForLogging( MyString * result ) const {
 			++arg;
 		}
 	}
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(std::string & result) const
-{
-    MyString ms;
-    bool rv = GetArgsStringV1or2Raw(& ms, NULL);
-    result = ms;
-    return rv;
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(MyString *result,MyString *error_msg) const
-{
-	ASSERT(result);
-	int old_len = result->length();
-
-	if(GetArgsStringV1Raw(result,NULL)) {
-		return true;
-	}
-
-	// V1 attempt failed.  Use V2 syntax.
-
-	if(result->length() > old_len) {
-		// Clear any partial output we may have generated above.
-		result->truncate(old_len);
-	}
-
-	(*result) += RAW_V2_ARGS_MARKER;
-	return GetArgsStringV2Raw(result,error_msg);
-}
-
-bool
-ArgList::GetArgsStringV1or2Raw(ClassAd const * ad, std::string & result, std::string & error_msg)
-{
-	if(! AppendArgsFromClassAd(ad, error_msg)) {
-		return false;
-	}
-	return GetArgsStringV1or2Raw(result);
-}
-
-
-bool
-ArgList::GetArgsStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
-{
-	if(!AppendArgsFromClassAd(ad,error_msg)) {
-		return false;
-	}
-	return GetArgsStringV1or2Raw(result,error_msg);
 }
 
 void
