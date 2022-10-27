@@ -128,6 +128,11 @@ GetToken(const std::string & cred_name, std::string & token) {
 		auto iter = line.begin();
 		while (isspace(*iter)) {iter++;}
 		if (*iter == '#') continue;
+                if (*iter != '{' && *iter != '[' ) {
+                    // we have just a plain base64 token, not wrapped in JSON
+                    token = line;
+                    break;
+                }
 		rapidjson::Document doc;
 		if (doc.Parse(line.c_str()).HasParseError()) {
 			// DO NOT include the error message as part of the exception; the error
