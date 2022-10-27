@@ -83,26 +83,26 @@ enum {
 
 struct LineRec {
   std::string Name;
-  float Priority;
+  double Priority;
   int Res;
-  float wtRes;
-  float AccUsage;
-  float Requested;
-  float Factor;
+  double wtRes;
+  double AccUsage;
+  double Requested;
+  double Factor;
   int BeginUsage;
   int LastUsage;
   std::string AcctGroup;
   bool IsAcctGroup;
   int   HasDetail;      // one or more of Detailxxx flags indicating the that data exists.
-  float EffectiveQuota;
-  float ConfigQuota;
-  float SubtreeQuota;
-  float Ceiling;
-  float SortKey;
+  double EffectiveQuota;
+  double ConfigQuota;
+  double SubtreeQuota;
+  double Ceiling;
+  double SortKey;
   int   Surplus;       // 0 is no, 1 = regroup (by prio), 2 = accept_surplus (by quota)
   int   index;
   int   GroupId;
-  float DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
+  double DisplayOrder;  // used to flexibly control sort order in Hier sort mode.
 };
 
 //-----------------------------------------------------------------
@@ -625,7 +625,7 @@ main(int argc, const char* argv[])
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
-    float Priority=atof(argv[SetPrio+2]);
+    double Priority=atof(argv[SetPrio+2]);
 
     // send request
     Sock* sock;
@@ -656,7 +656,7 @@ main(int argc, const char* argv[])
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
-    float Factor=atof(argv[SetFactor+2]);
+    double Factor=atof(argv[SetFactor+2]);
 	if (Factor<1) {
 		fprintf( stderr, "Priority factors must be greater than or equal to "
 				 "1.\n");
@@ -752,7 +752,7 @@ main(int argc, const char* argv[])
 				 "user@uid.domain", "user@full.host.name" );
 		exit(1);
 	}
-    float accumUsage=atof(argv[SetAccum+2]);
+    double accumUsage=atof(argv[SetAccum+2]);
 	if (accumUsage<0.0) {
 		fprintf( stderr, "Usage must be greater than 0 seconds\n");
 		exit(1);
@@ -1212,13 +1212,13 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
   std::string attrIsAcctGroup;
   std::string attrCeiling;
   char  name[128], policy[32];
-  float priority = 0, Factor = 0, AccUsage = -1, ceiling = -1;
+  double priority = 0, Factor = 0, AccUsage = -1, ceiling = -1;
   int   resUsed = 0, BeginUsage = 0;
   int   LastUsage = 0;
-  float wtResUsed, requested = 0;
+  double wtResUsed, requested = 0;
   std::string AcctGroup;
   bool IsAcctGroup;
-  float effective_quota = 0, config_quota = 0, subtree_quota = 0;
+  double effective_quota = 0, config_quota = 0, subtree_quota = 0;
   bool fNeedGroupIdFixup = false;
 
   for( int i=1; i<=numElem; i++) {
@@ -1322,7 +1322,7 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
            }
         }
 
-        float sort_key = LR[i-1].SortKey;
+        double sort_key = LR[i-1].SortKey;
         sprintf( attr, "GroupSortKey%s", strI );
         if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
         LR[i-1].SortKey = sort_key;
@@ -1515,7 +1515,7 @@ static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const ch
    return pszDest;
 }
 
-static char * FormatFloat(char * pszDest, int width, int decimal, float value)
+static char * FormatFloat(char * pszDest, int width, int decimal, double value)
 {
    char sz[60];
    char fmt[16] = "%";
