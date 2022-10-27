@@ -205,6 +205,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	, r_sub_id(0)
 	, r_id_str(NULL)
 	, r_pair_name(NULL)
+	, r_backfill_slot(false)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
 	, m_id_dispenser(nullptr)
@@ -232,6 +233,8 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	r_attr = cap;
 	r_attr->attach( this );
 
+	r_backfill_slot = SlotType::type_param_boolean(cap, "BACKFILL", false);
+
 		// we need this before we instantiate the Reqexp object...
 	if (SlotType::type_param_boolean(cap, "PARTITIONABLE", false)) {
 		set_feature( PARTITIONABLE_SLOT );
@@ -240,7 +243,7 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 
 	// can't bind until after we get a r_sub_id but must happen before creating the Reqexp
 	if (_parent) {
-		if ( ! r_attr->bind_DevIds(r_id, r_sub_id, false)) {
+		if ( ! r_attr->bind_DevIds(r_id, r_sub_id, r_backfill_slot, false)) {
 			r_attr->unbind_DevIds(r_id, r_sub_id); // give back the ids that were bound before the failure
 			_parent->m_id_dispenser->insert(r_sub_id); // give back the slot id.
 
@@ -337,11 +340,17 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 #endif
 
 	if( r_attr->type() ) {
-		dprintf( D_ALWAYS, "New machine resource of type %d allocated\n",
-				 r_attr->type() );
+		dprintf( D_ALWAYS, "New %smachine resource of type %d allocated\n",
+				 r_backfill_slot ? "backfill " : "",  r_attr->type() );
 	} else {
-		dprintf( D_ALWAYS, "New machine resource allocated\n" );
+		dprintf( D_ALWAYS, "New %smachine resource allocated\n", r_backfill_slot ? "backfill " : "");
 	}
+
+#if 0 // TODO: maybe enable this? do we need to be agressive about this update?
+	// when we create a non-backfill d-slot will need to send the collector an update
+	// of the backfill p-slot since it will now have fewer resources to report.
+	if ( ! r_backfill_slot) { resmgr->walk(&Resource::update_walk_for_backfill_refresh_res); }
+#endif
 }
 
 
@@ -382,7 +391,10 @@ Resource::~Resource()
 		*(m_parent->r_attr) += *(r_attr);
 		m_parent->m_id_dispenser->insert( r_sub_id );
 		m_parent->refresh_classad_resources();
-		m_parent->update();
+		m_parent->update_needed(wf_dslotDelete);
+		// when we delete a non-backfill d-slot will need to send the collector an update
+		// of the backfill p-slot since it will now have more resources to report.
+		if ( ! r_backfill_slot) { resmgr->walk(&Resource::update_walk_for_backfill_refresh_res); }
 		m_parent = NULL;
 	}
 
@@ -749,7 +761,7 @@ Resource::shutdownAllClaims( bool graceful, bool reversible )
 	// update the collector.
 	if( safe ) {
 		r_reqexp->unavail( globalDrainingStartExpr );
-		update();
+		update_needed(wf_removeClaim);
 	}
 }
 
@@ -841,7 +853,7 @@ Resource::suspendForCOD( void )
 		break;
 	}
 	if( ! did_update ) {
-		update();
+		update_needed(wf_cod);
 	}
 }
 
@@ -894,7 +906,7 @@ Resource::resumeForCOD( void )
 		break;
 	}
 	if( ! did_update ) {
-		update();
+		update_needed(wf_cod);
 	}
 }
 
@@ -1080,7 +1092,7 @@ Resource::newCODClaim( int lease_duration )
 		return NULL;
 	}
 	dprintf( D_FULLDEBUG, "Created new COD Claim (%s)\n", claim->id() );
-	update();
+	update_needed(wf_cod);
 	return claim;
 }
 
@@ -1334,10 +1346,13 @@ Resource::reconfig( void )
 
 
 void
-Resource::update( void )
+Resource::update_needed( WhyFor why )
 {
 	if (r_no_collector_updates)
 		return;
+
+	dprintf(D_ZKM, "Resource::update_needed(%d) %s\n",
+		why, update_tid < 0 ? "queuing timer" : "timer already queued");
 
 	// If we haven't already queued an update, queue one.
 	int delay = 0;
@@ -2520,6 +2535,7 @@ void Resource::publish_static(ClassAd* cap)
 		if (r_pair_name) {
 			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );
 		}
+		if (r_backfill_slot) cap->Assign(ATTR_SLOT_BACKFILL, true);
 
 		// include any attributes set via local resource inventory
 		cap->Update(r_attr->get_mach_attr()->machres_attrs());
@@ -2636,7 +2652,7 @@ Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 	r_attr->publish_dynamic(cap);
 
 	// Put in machine-wide attributes
-	resmgr->m_attr->publish_dynamic(cap, r_id, r_sub_id);
+	resmgr->m_attr->publish_dynamic(cap, r_id, r_sub_id, r_backfill_slot);
 
 	// Put in ResMgr-specific attributes (A_STATIC, A_UPDATE, and always)
 	resmgr->publish_dynamic(cap);
@@ -3889,7 +3905,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 		rip->change_state( unclaimed_state );
 			// Call update() in case we were never matched, i.e. no state change
 			// Note: update() may create a new claim if pass thru Owner state
-		rip->update();
+		rip->update_needed(Resource::WhyFor::wf_dslotCreate);
 
 		resmgr->addResource( new_rip );
 

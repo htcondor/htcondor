@@ -647,6 +647,7 @@
 #define ATTR_SLOT_ID  "SlotID"
 #define ATTR_SLOT_PAIR_NAME  "SlotPairName"
 #define ATTR_SLOT_PARTITIONABLE  "PartitionableSlot"
+#define ATTR_SLOT_BACKFILL  "BackfillSlot"
 #define ATTR_SLOT_DYNAMIC  "DynamicSlot"
 #define ATTR_SOURCE  "Source"
 #define ATTR_STAGE_IN_START  "StageInStart"
