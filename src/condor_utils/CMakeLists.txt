@@ -205,7 +205,6 @@ CondorError.cpp
 CondorError.h
 condor_fsync.cpp
 condor_fsync.h
-condor_ftp.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -476,7 +475,6 @@ token_utils.cpp
 token_utils.h
 totals.cpp
 totals.h
-transfer_request.cpp
 translation_utils.cpp
 translation_utils.h
 tree.h

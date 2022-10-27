@@ -42,7 +42,7 @@ SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t f
 }
 
 int
-SetAttributeFloat(int cl, int pr, const char *name, float val, SetAttributeFlags_t flags )
+SetAttributeFloat(int cl, int pr, const char *name, double val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval;

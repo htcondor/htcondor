@@ -49,11 +49,12 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
-			   CheckOutputFormats.pm
                run_test.pl)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
+
+
 	set(CHECK_MODULES CondorLog.pm
 			JobDoesNotRun.pm
 			JobIsEvicted.pm
@@ -68,6 +69,9 @@ if (BUILD_TESTING)
 			COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile} ${TEST_TARGET_DIR}/Check/${scriptFile})
 		add_custom_target(test_copy_${scriptFile} ALL DEPENDS ${TEST_TARGET_DIR}/Check/${scriptFile})
 	endforeach()
+
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CheckOutputFormats.pm ${TEST_TARGET_DIR}/CheckOutputFormats.pm COPYONLY)
+
 	endif()
 
 	# 1st remove generated files.
@@ -76,7 +80,7 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
-	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;CheckOutputFormats.pm;run_test.pl")
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl")
 
 	##########################################################
 	# exe test targets
@@ -243,6 +247,7 @@ endif()
 			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -260,6 +265,7 @@ endif()
 				condor_pl_test(test_condor_token_fetch_key "Test `condor_token_fetch -key`" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				# Sadly, Python doesn't implement a way to get disk space on Windows.
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 	endif()
@@ -431,6 +437,7 @@ endif()
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/docker_simulator.pl;src/condor_tests/x_sleep.pl")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_xform_factory "submit -factory with transforms" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_ad_epoch_recording "Test Job Ads recorded per epoch" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	if (LINUX)

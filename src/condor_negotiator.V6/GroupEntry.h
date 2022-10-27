@@ -10,7 +10,7 @@
 #include <map>
 #include <functional>
 
-typedef HashTable<std::string, float> groupQuotasHashType;
+typedef HashTable<std::string, double> groupQuotasHashType;
 
 void parse_group_name(const std::string& gname, std::vector<std::string>& gpath);
 
@@ -133,8 +133,18 @@ struct ord_by_rr_time {
 		bool operator()(unsigned long const& ja, unsigned long const& jb) const {
 				GroupEntry* a = (*data)[ja];
 				GroupEntry* b = (*data)[jb];
-				if (a->subtree_rr_time != b->subtree_rr_time) return a->subtree_rr_time < b->subtree_rr_time;
-				if (a->subtree_quota != b->subtree_quota) return a->subtree_quota > b->subtree_quota;
+				if (a->subtree_rr_time < b->subtree_rr_time) {
+					return true;
+				}
+				if (a->subtree_rr_time > b->subtree_rr_time) {
+					return false;
+				}
+				if (a->subtree_quota > b->subtree_quota) {
+					return true;
+				}
+				if (a->subtree_quota < b->subtree_quota) {
+					return false;
+				}
 				return a->subtree_requested > b->subtree_requested;
 		}
 };

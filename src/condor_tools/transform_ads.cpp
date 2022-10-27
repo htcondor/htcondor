@@ -646,7 +646,7 @@ int DoTransforms(
 
 	classad::ExprTree * constraint = NULL;
 	if (constr) {
-		if (ParseClassAdRvalExpr(constr, constraint, 0)) {
+		if (ParseClassAdRvalExpr(constr, constraint)) {
 			fprintf (stderr, "Error parsing constraint expression: %s", constr);
 			return -1;
 		}

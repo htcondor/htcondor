@@ -69,7 +69,6 @@
 #include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
-#include "tdman.h"
 #include "utc_time.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
@@ -417,7 +416,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	bool suppress_sec_session = true;
 
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
 		if( secSessionId() == NULL ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
 		}
@@ -9065,133 +9064,6 @@ Scheduler::StartJobHandler()
 	}
 }
 
-bool
-Scheduler::jobNeedsTransferd( int cluster, int proc, int /*univ*/ )
-{
-	ClassAd *jobad = GetJobAd(cluster, proc);
-	ASSERT(jobad);
-
-	// XXX remove this when shadow/starter usage is implemented
-	return false;
-
-	/////////////////////////////////////////////////////////////////////////
-	// Selection of a transferd is universe based. It all depends upon
-	// whether or not transfer_input/output_files is available for the
-	// universe in question.
-	/////////////////////////////////////////////////////////////////////////
-
-/* Uncomment this dead code when shadow/starter usage implemented...
-	switch(univ) {
-		case CONDOR_UNIVERSE_VANILLA:
-		case CONDOR_UNIVERSE_JAVA:
-		case CONDOR_UNIVERSE_MPI:
-		case CONDOR_UNIVERSE_PARALLEL:
-		case CONDOR_UNIVERSE_VM:
-			return true;
-			break;
-
-		default:
-			return false;
-			break;
-	}
-
-	return false;
-*/
-}
-
-bool
-Scheduler::availableTransferd( int cluster, int proc )
-{
-	TransferDaemon *td = NULL;
-
-	return availableTransferd(cluster, proc, td);
-}
-
-bool
-Scheduler::availableTransferd( int cluster, int proc, TransferDaemon *&td_ref )
-{
-	std::string fquser;
-	TransferDaemon *td = NULL;
-	ClassAd *jobad = GetJobAd(cluster, proc);
-
-	ASSERT(jobad);
-
-	jobad->LookupString(ATTR_USER, fquser);
-
-	td_ref = NULL;
-
-	td = m_tdman.find_td_by_user(fquser);
-	if (td == NULL) {
-		return false;
-	}
-
-	// only return true if there is a transferd ready and waiting for this
-	// user
-	if (td->get_status() == TD_REGISTERED) {
-		dprintf(D_ALWAYS, "Scheduler::availableTransferd() "
-			"Found a transferd for user %s\n", fquser.c_str());
-		td_ref = td;
-		return true;
-	}
-
-	return false;
-}
-
-bool
-Scheduler::startTransferd( int cluster, int proc )
-{
-	std::string fquser;
-	std::string rand_id;
-	TransferDaemon *td = NULL;
-	ClassAd *jobad = NULL;
-	std::string desc;
-
-	// just do a quick check in case a higher layer had already started one
-	// for this job.
-	if (availableTransferd(cluster, proc)) {
-		return true;
-	}
-
-	jobad = GetJobAd(cluster, proc);
-	ASSERT(jobad);
-
-	jobad->LookupString(ATTR_USER, fquser);
-
-	/////////////////////////////////////////////////////////////////////////
-	// It could be that a td had already been started, but hadn't registered
-	// yet. In that case, consider it started.
-	/////////////////////////////////////////////////////////////////////////
-
-	td = m_tdman.find_td_by_user(fquser);
-	if (td == NULL) {
-		// No td found at all in any state, so start one.
-
-		// XXX fix this rand_id to be dealt with better, like maybe the tdman
-		// object assigns it or something.
-		randomlyGenerateInsecureHex(rand_id, 64);
-		td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
-		ASSERT(td != NULL);
-
-		// set up the default registration callback
-		desc = "Transferd Registration callback";
-		td->set_reg_callback(desc,
-			(TDRegisterCallback)
-			 	&Scheduler::td_register_callback, this);
-
-		// set up the default reaper callback
-		desc = "Transferd Reaper callback";
-		td->set_reaper_callback(desc,
-			(TDReaperCallback)
-				&Scheduler::td_reaper_callback, this);
-	
-		// Have the td manager object start this td up.
-		// XXX deal with failure here a bit better.
-		m_tdman.invoke_a_td(td);
-	}
-
-	return true;
-}
-
 bool VanillaMatchAd::Insert(const std::string &attr, ClassAd*ad)
 {
 	return static_cast<classad::ClassAd*>(this)->Insert(attr, ad);
@@ -11020,10 +10892,10 @@ update_remote_wall_clock(int cluster, int proc)
 	int bday = 0;
 	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
 	if (bday) {
-		float accum_time = 0;
+		double accum_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-		float delta = (float)(time(NULL) - bday);
+		double delta = (double) time(NULL) - bday;
 		SetAttributeFloat(cluster, proc, ATTR_JOB_LAST_REMOTE_WALL_CLOCK, delta);
 		accum_time += delta;
 			// We want to update our wall clock time and delete
@@ -11039,10 +10911,10 @@ update_remote_wall_clock(int cluster, int proc)
 						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
 		slot_time += delta*slot_weight;
@@ -13737,9 +13609,6 @@ Scheduler::Register()
 
 	// Now is a good time to instantiate the GridUniverse
 	_gridlogic = new GridUniverseLogic;
-
-	// Initialize the Transfer Daemon Manager's handlers as well
-	m_tdman.register_handlers();
 
 	m_xfer_queue_mgr.RegisterHandlers();
 

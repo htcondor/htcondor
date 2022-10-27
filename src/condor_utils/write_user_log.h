@@ -97,13 +97,14 @@ class WriteUserLog
     /** The log file                 */  int fd;
     /** Implementation detail        */  mutable bool copied;
     /** Whether to use user priv     */  bool user_priv_flag;
+    /** Whether or not is DAGMan log */  bool is_dag_log;
 
       // set of jobs that are using this log file
       log_file_cache_refset_t refset;
 
       log_file(const char* p) : path(p), lock(NULL), fd(-1),
-        copied(false), user_priv_flag(false) {}
-      log_file() : lock(NULL), fd(-1), copied(false), user_priv_flag(false) {}
+        copied(false), user_priv_flag(false), is_dag_log(false) {}
+      log_file() : lock(NULL), fd(-1), copied(false), user_priv_flag(false), is_dag_log(false) {}
       log_file(const log_file& orig);
       ~log_file(); 
       log_file& operator=(const log_file& rhs);

@@ -3498,7 +3498,7 @@ static const char * evaluate_macro_func (
 
 			// now we try to evaluate as a classad expression
 			classad::ExprTree* tree = NULL;
-			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+			if (0 == ParseClassAdRvalExpr(mval, tree)) {
 				ClassAd rhs;
 				std::string val;
 				std::string attr("CondorString");
@@ -3548,7 +3548,7 @@ static const char * evaluate_macro_func (
 			// if it doesn't evaluate, just use it as a string literal
 			std::string tmp3;
 			classad::ExprTree* tree = NULL;
-			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+			if (0 == ParseClassAdRvalExpr(mval, tree)) {
 				if (ctx.is_context_ex && reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad) {
 					MACRO_EVAL_CONTEXT_EX &ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx);
 					classad::Value val;
@@ -4199,7 +4199,7 @@ static ptrdiff_t evaluate_macro_func (
 
 			// now we try to evaluate as a classad expression
 			classad::ExprTree* tree = NULL;
-			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+			if (0 == ParseClassAdRvalExpr(mval, tree)) {
 				ClassAd rhs;
 				classad::Value val;
 				std::string attr("CondorString");
@@ -4234,7 +4234,7 @@ static ptrdiff_t evaluate_macro_func (
 			// now we try to evaluate as a classad expression
 			// if it doesn't evaluate, just use it as a string literal
 			classad::ExprTree* tree = NULL;
-			if (0 == ParseClassAdRvalExpr(mval, tree, NULL)) {
+			if (0 == ParseClassAdRvalExpr(mval, tree)) {
 				if (ctx.is_context_ex && reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx).ad) {
 					MACRO_EVAL_CONTEXT_EX &ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx);
 					classad::Value val;

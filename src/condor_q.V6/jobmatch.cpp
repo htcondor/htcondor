@@ -320,7 +320,7 @@ int fetchSubmittorPriosFromNegotiator(DCCollector* pool, ExtArray<PrioEntry> & p
 	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
-  	float 	priority;
+  	double 	priority;
 
 	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool ? pool->addr() : NULL );
 

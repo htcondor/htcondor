@@ -113,8 +113,6 @@ protected:
 	bool m_vm_checkpoint;
 	bool m_vm_no_output_vm;
 	bool m_vm_hardware_vt;
-	std::string m_classad_arg;
-	std::string m_arg_file;
 
 	// Usually, when we suspend a VM, the memory being used by the VM 
 	// will be freed and the memory will be saved into a file.

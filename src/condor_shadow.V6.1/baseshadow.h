@@ -425,8 +425,8 @@ class BaseShadow : public Service
 
 	ShadowUserPolicy shadow_user_policy;
 
-	float prev_run_bytes_sent;
-	float prev_run_bytes_recvd;
+	double prev_run_bytes_sent;
+	double prev_run_bytes_recvd;
 
 	bool began_execution;
 
