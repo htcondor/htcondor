@@ -30,6 +30,12 @@ Bugs Fixed:
   files.
   :jira:`1354`
 
+- Suppressed a Singularity or Apptainer warning that would appear
+  in a job's stderr file, warning about the inability to set the
+  HOME environment variable if the job or the system explicitly tried
+  to set it.
+  :jira:`1386`
+
 - Fixed a bug where on certain Linux kernels, the ProcLog would be filled
   with thousands of errors of the form  "Internal cgroup error when 
   retrieving iowait statistics".  This error was harmless, but filled
