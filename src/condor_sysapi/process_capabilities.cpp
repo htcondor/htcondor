@@ -19,6 +19,7 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_uid.h"
 #include "sysapi.h"
 
 #ifdef LINUX
@@ -31,9 +32,10 @@ uint64_t sysapi_get_process_caps_mask(int pid, LinuxCapsMaskType type) {
 	uint64_t cap_mask = 0;
 	struct __user_cap_header_struct hs;
 	struct __user_cap_data_struct ds[2];
+	TemporaryPrivSentry sentry(PRIV_ROOT);
 	//syscall to get the machines linux_capabilty_version
 	if (syscall(SYS_capget,&hs,NULL)) {
-		dprintf(D_FULLDEBUG,"Error: Linux system call for capget failed to initialize linux_capability_version.\n");
+		dprintf(D_ERROR,"Error: Linux system call for capget failed to initialize linux_capability_version.\n");
 		return UINT64_MAX;
 	}
 	//Set the process id
@@ -41,7 +43,7 @@ uint64_t sysapi_get_process_caps_mask(int pid, LinuxCapsMaskType type) {
 	
 	//Get capability masks (Returns Permitted, Inheritable, and Effective in structure)
 	if (syscall(SYS_capget,&hs,ds)) {
-		dprintf(D_FULLDEBUG,"Error: Linux system call for capget failed retrieve capability masks.\n");
+		dprintf(D_ERROR,"Error: Linux system call for capget failed to retrieve capability masks.\n");
 		return UINT64_MAX;
 	}
 	
@@ -61,7 +63,7 @@ uint64_t sysapi_get_process_caps_mask(int pid, LinuxCapsMaskType type) {
 			cap_mask |= static_cast<uint64_t>(ds[1].effective) << 32;
 			break;
 		default:
-			dprintf(D_FULLDEBUG,"Error: Failed to find Linux capabilty mask type.\n");
+			dprintf(D_ERROR,"Error: Failed to find Linux capabilty mask type.\n");
 			return UINT64_MAX;
 	}
 			

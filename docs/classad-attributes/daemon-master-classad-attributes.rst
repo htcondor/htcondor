@@ -17,7 +17,8 @@ DaemonMaster ClassAd Attributes
 
 :classad-attribute:`LinuxCapabilities`
     A hexidecimal formatted string that holds all set effective linux
-    capabilities bit mask. Only exists if running on a Linux OS.
+    capabilities bit mask. This hex string can be decoded using ``capsh``.
+    Only exists if running on a Linux OS.
  
 :classad-attribute:`Machine`
     A string with the machine's fully qualified host name.
