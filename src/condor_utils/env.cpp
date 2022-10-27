@@ -765,37 +765,3 @@ Env::GetEnv(const std::string &var, std::string &val) const
 	}
 	return false;
 }
-
-void
-Env::Import( void )
-{
-	char **my_environ = GetEnviron();
-	for (int i=0; my_environ[i]; i++) {
-		const char	*p = my_environ[i];
-
-		int			j;
-		MyString	varname = "";
-		MyString	value = "";
-		for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
-			varname += p[j];
-		}
-		if ( p[j] == '\0' ) {
-				// ignore entries in the environment that do not
-				// contain an assignment
-			continue;
-		}
-		if ( varname.empty() ) {
-				// ignore entries in the environment that contain
-				// an empty variable name
-			continue;
-		}
-		ASSERT( p[j] == '=' );
-		value = p+j+1;
-
-		// Allow the application to filter the import
-		if ( ImportFilter( varname, value ) ) {
-			bool ret = SetEnv( varname, value );
-			ASSERT( ret ); // should never fail
-		}
-	}
-}
