@@ -293,10 +293,6 @@ class Env final {
 	void Import() {
 		return Import(everything);
 	}
- protected:
-	HashTable<MyString, MyString> *_envTable;
-	bool input_was_v1;
-
 #if defined(WIN32)
 	// on Windows, environment variable names must be treated as case
 	// insensitive. however, we can't just make the Env object's
@@ -315,6 +311,10 @@ class Env final {
 	//
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
+ protected:
+	HashTable<MyString, MyString> *_envTable;
+	bool input_was_v1;
+
 
 	static bool ReadFromDelimitedString( char const *&input, char *output, char delim );
 
