@@ -287,7 +287,6 @@ static const char
 	   *V2R_MISS_BOTH ="=1 two2 three=3",
 	   *ARRAY_SKIP_BAD_STR = "one=1 two2 three=3",
 	   *V2R_SEMI ="one=1 two=2 three=3 semi=" V1_ENV_DELIM,
-	   *V2R_MARK =" one=1 two=2 three=3 semi=" V1_ENV_DELIM ,
 	*V2Q ="\"one=1 two=2 three=3\"",	//V2Quoted format
 	   *V2Q_MISS_NAME = "\"=1 two=2 three=3\"",
 	   *V2Q_MISS_DELIM = "\"one1 two=2 three=3\"",
@@ -315,17 +314,14 @@ static const char
 	   *AD_V1_WIN = "\tEnv = \"one=1|two=2|three=3\"\nEnvDelim = \"|\"", 
 	   *AD_V1_MISS_NAME = "\tEnv = \"=1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",
 	   *AD_V1_MISS_DELIM = "\tEnv = \"one1" V1_ENV_DELIM "two=2" V1_ENV_DELIM "three=3\"",
-	   *AD_V1_MISS_BOTH = "\tEnv = \"=1" V1_ENV_DELIM "two2" V1_ENV_DELIM "three=3\"",
 	   *AD_V1_REP = "\tEnv = \"one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000\"", 
 	   *AD_V1_REP_ADD = "\tEnv = \"one=10" V1_ENV_DELIM "two=200" V1_ENV_DELIM "three=3000" V1_ENV_DELIM "four=4" V1_ENV_DELIM "five=5\"", 
 	*AD_V2 = "\tEnvironment = \"one=1 two=2 three=3\"",	//ClassAd with V2 Env
 	   *AD_V2_MISS_NAME = "\tEnvironment = \"=1 two=2 three=3\"",
 	   *AD_V2_MISS_DELIM = "\tEnvironment = \"one1 two=2 three=3\"",
-	   *AD_V2_MISS_BOTH = "\tEnvironment = \"=1 two2 three=3\"",
 	   *AD_V2_REP = "\tEnvironment = \"one=10 two=200 three=3000\"",
 	   *AD_V2_REP_ADD = "\tEnvironment = \"one=10 two=200 three=3000 four=4 "
 	    	"five=5\"",
-		*AD_V2_SEMI = "\tEnvironment = \"one=1 two=2 three=3 semi=" V1_ENV_DELIM "\"",
 	*ONE = "one=1",	//Single Env Var string
 	   *ONE_MISS_NAME = "=1",
 	   *ONE_MISS_DELIM = "one1",
