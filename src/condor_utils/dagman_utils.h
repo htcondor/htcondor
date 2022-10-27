@@ -57,15 +57,6 @@ enum DagStatus {
     DAG_STATUS_HALTED = 6, // DAG was halted and submitted jobs finished
 };
 
-class EnvFilter : public Env
-{
-public:
-    EnvFilter( void ) { };
-    virtual ~EnvFilter( void ) { };
-    virtual bool ImportFilter( const MyString & /*var*/,
-                               const MyString & /*val*/ ) const;
-};
-
 // this is a simple tokenizer class for parsing keywords out of a line of text
 // token separator defaults to whitespace, "" or '' can be used to have tokens
 // containing whitespace, but there is no way to escape " inside a "" string or

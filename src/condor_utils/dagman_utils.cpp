@@ -41,13 +41,12 @@ AppendError(MyString &errMsg, const MyString &newError)
 	errMsg += newError;
 }
 
-bool
-EnvFilter::ImportFilter( const MyString &var, const MyString &val ) const
-{
+static bool
+ImportFilter( const MyString &var, const MyString &val ) {
 	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
 		return false;
 	}
-	return IsSafeEnvV2Value( val.c_str() );
+	return Env::IsSafeEnvV2Value( val.c_str() );
 }
 
 dag_tokener::dag_tokener(const char * line_in)
@@ -284,10 +283,11 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	// if the environment passed to condor_dagman changes in an
 	// incompatible way!!
 	//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	EnvFilter env;
+	Env env;
 	if ( deepOpts.importEnv ) {
-		env.Import( );
+		env.Import(ImportFilter);
 	}
+
 	env.SetEnv("_CONDOR_DAGMAN_LOG", shallowOpts.strDebugLog.c_str());
 	env.SetEnv("_CONDOR_MAX_DAGMAN_LOG=0");
 	if ( shallowOpts.strScheddDaemonAdFile != "" ) {

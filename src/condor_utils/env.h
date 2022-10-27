@@ -70,6 +70,7 @@ Example V2Quoted syntax yielding same as above:
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
+#include "setenv.h"
 template <class Key, class Value> class HashTable;
 
 #if defined(WIN32)
@@ -99,7 +100,7 @@ struct toupper_string_less {
 };
 #endif
 
-class Env {
+class Env final {
  public:
 	Env( void );
 	virtual ~Env( void );
@@ -109,23 +110,6 @@ class Env {
 
 		// Remove all environment entries.
 	void Clear( void );
-
-		// Import environment from process.
-		// Unlike MergeFrom(environ), it is not considered
-		// an error if there are entries in the environment
-		// that do not contain an assignment; they are
-		// silently ignored.  The only possible failure
-		// in this function is if it runs out of memory.
-		// It will ASSERT() in that case.
-	void Import( void );
-
-		// Filter for the above
-		//  -- return true to import variable, false to not
-	virtual bool ImportFilter( const MyString & /*var*/,
-							   const MyString & /*val*/ ) const {
-		return true;
-	};
-
 
 		// Add (or overwrite) environment entries from an input
 		// string.  If the string begins with a double-quote, it will
@@ -261,10 +245,54 @@ class Env {
 
 	bool InputWasV1() const {return input_was_v1;}
 
- protected:
-	HashTable<MyString, MyString> *_envTable;
-	bool input_was_v1;
+		// Import environment from process.
+		// Unlike MergeFrom(environ), it is not considered
+		// an error if there are entries in the environment
+		// that do not contain an assignment; they are
+		// silently ignored.  The only possible failure
+		// in this function is if it runs out of memory.
+		// It will ASSERT() in that case.
+	
+	template <class Filter>
+	void Import(Filter filter) {
+		char **my_environ = GetEnviron();
+		for (int i=0; my_environ[i]; i++) {
+			const char	*p = my_environ[i];
 
+			int			j;
+			MyString	varname = "";
+			MyString	value = "";
+			for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
+				varname += p[j];
+			}
+			if ( p[j] == '\0' ) {
+				// ignore entries in the environment that do not
+				// contain an assignment
+				continue;
+			}
+			if ( varname.empty() ) {
+				// ignore entries in the environment that contain
+				// an empty variable name
+				continue;
+			}
+			ASSERT( p[j] == '=' );
+			value = p+j+1;
+
+			// Allow the application to filter the import
+			if (filter( varname, value)) {
+				bool ret = SetEnv( varname, value );
+				ASSERT( ret ); // should never fail
+			}
+		}
+	}
+
+	static bool everything(MyString &, MyString &) {
+		return true;
+	}
+
+	void Import() {
+		return Import(everything);
+	}
 #if defined(WIN32)
 	// on Windows, environment variable names must be treated as case
 	// insensitive. however, we can't just make the Env object's
@@ -283,6 +311,10 @@ class Env {
 	//
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
+ protected:
+	HashTable<MyString, MyString> *_envTable;
+	bool input_was_v1;
+
 
 	static bool ReadFromDelimitedString( char const *&input, char *output, char delim );
 
