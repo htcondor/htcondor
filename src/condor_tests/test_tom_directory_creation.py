@@ -44,7 +44,7 @@ TEST_CASES = {
 @action
 def permissive_condor(test_dir, path_to_sleep):
     permissive_config = {
-        "LIMIT_DIRECTORY_ACCESS": f"{str(test_dir)}, {str(path_to_sleep)}",
+        "LIMIT_DIRECTORY_ACCESS": f"{str(test_dir)}, {str(Path(path_to_sleep).parent)}",
     }
     with Condor(test_dir / "condor", permissive_config) as condor:
         yield condor
@@ -126,8 +126,39 @@ def completed_test_job(permissive_condor, a_job_handle):
 
 
 @action
-def held_test_job(permissive_condor, the_job_description):
+def dotdot_test_job(permissive_condor, the_job_description):
     bad_dir = "../$(CLUSTER)"
+
+    more_job_description = {
+        "transfer_output_files":    "inputA, dirB",
+        "transfer_output_remaps":   f'"inputA={bad_dir}/inputA;dirB={bad_dir}/dirB"',
+    }
+
+    complete_job_description = {
+        ** the_job_description,
+        ** more_job_description,
+    }
+
+    job_handle = permissive_condor.submit(
+        description=complete_job_description,
+        count=1,
+    )
+
+    job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_held,
+        fail_condition=ClusterState.any_terminal,
+    )
+
+    yield job_handle
+
+    job_handle.remove()
+
+
+@action
+def symlink_test_job(permissive_condor, the_job_description, test_dir):
+    (test_dir / "dotdot").symlink_to(test_dir.parent, True)
+    bad_dir = "dotdot/$(CLUSTER)"
 
     more_job_description = {
         "transfer_output_files":    "inputA, dirB",
@@ -178,10 +209,28 @@ class TestTransferOutputRemapsDirectoryCreation:
             assert (test_dir / target).exists()
 
 
-    def test_transfer_output_remaps_strict(self, test_dir, held_test_job):
+    def test_transfer_output_remaps_strict(self, test_dir, dotdot_test_job):
         # This probably won't work in general, but with only one proc
         # per cluster and no usage of $(PROC), this is fine.
-        remap_string = held_test_job.clusterad["TransferOutputRemaps"]
+        remap_string = dotdot_test_job.clusterad["TransferOutputRemaps"]
+        remap_list = remap_string.split(";")
+        remap_pairs = [ item.split("=") for item in remap_list ]
+        remaps = { item[0]: item[1] for item in remap_pairs }
+
+        for name, target in remaps.items():
+            assert not (test_dir / target).exists()
+
+        # An old implementation actually created directories outside
+        # of LIMIT_DIRECTORY_ACCESS because allow_shadow_access() can't
+        # answer questions about that directories tha don't exist.  Make
+        # sure that we cleaned up.
+        assert not (test_dir / ".." / str(dotdot_test_job.clusterid)).exists()
+
+
+    def test_transfer_output_remaps_strict(self, test_dir, symlink_test_job):
+        # This probably won't work in general, but with only one proc
+        # per cluster and no usage of $(PROC), this is fine.
+        remap_string = symlink_test_job.clusterad["TransferOutputRemaps"]
         remap_list = remap_string.split(";")
         remap_pairs = [ item.split("=") for item in remap_list ]
         remaps = { item[0]: item[1] for item in remap_pairs }
@@ -193,4 +242,4 @@ class TestTransferOutputRemapsDirectoryCreation:
         # of LIMIT_DIRECTORY_ACCESS because allow_shadow_access() can't
         # answer questions about that directories tha don't exist.  Make
         # sure that we cleaned up.
-        assert not (test_dir / ".." / str(held_test_job.clusterid)).exists()
+        assert not (test_dir.parent / str(symlink_test_job.clusterid)).exists()
