@@ -96,9 +96,11 @@ void make_big_string(int length, char **string, char **quoted_string);
 ClassAd* get_classad_from_file();
 
 /* Originally from condor_c++_util/test_old_classads.cpp*/
-bool floats_close( float one, float two, float diff = .0001);
+bool floats_close( double one, double two, double diff = .0001);
 
 bool strings_similar(const MyString* str1, const MyString* str2, 
+	const char* delims = " ");
+bool strings_similar(const std::string& str1, const std::string& str2,
 	const char* delims = " ");
 
 /* Checks if the given strings contain the same strings when split into 

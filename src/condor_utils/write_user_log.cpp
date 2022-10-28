@@ -286,7 +286,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		}
 	}
 	if (!file.empty() && failed_init == file.size()) {
-		dprintf(D_FULLDEBUG,"WriteUserLog::initialize: failed to initialize all %lu log file(s).\n",failed_init);
+		dprintf(D_FULLDEBUG,"WriteUserLog::initialize: failed to initialize all %zu log file(s).\n",failed_init);
 		freeLogs();
 		logs.clear();
 	}

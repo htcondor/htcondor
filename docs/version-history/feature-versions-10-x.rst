@@ -13,7 +13,7 @@ Release Notes:
 
 - HTCondor version 10.1.0 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-100x`.
+- This version includes all the updates from :ref:`lts-version-history-1000`.
 
 - We changed the semantics of relative paths in the ``output``, ``error``, and
   ``transfer_output_remaps`` submit file commands.  These commands now create
@@ -33,6 +33,10 @@ New Features:
 - *condor_history* will now stop searching history files once all requested job ads are
   found if passed ClusterIds or ClusterId.ProcId pairs.
   :jira:`1364`
+
+- Improved *condor_history* search speeds when searching for matching jobs, matching clusters,
+  and matching owners.
+  :jira:`1382`
 
 Bugs Fixed:
 

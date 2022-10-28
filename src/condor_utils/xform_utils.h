@@ -140,7 +140,7 @@ protected:
 	int   row;
 	int   proc;
 	bool  close_fp_when_done;
-	char  iterate_init_state;
+	int   iterate_init_state;
 	SubmitForeachArgs oa;
 	auto_free_ptr iterate_args; // copy of the arguments from the ITERATE line, set by load()
 	auto_free_ptr curr_item; // so we can destructively edit the current item from the items list

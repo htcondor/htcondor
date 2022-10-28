@@ -245,8 +245,8 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 		return true;
 	}
 
-	float group_quota = 0;
-	float group_usage = 0;
+	double group_quota = 0;
+	double group_usage = 0;
 	std::string group_name;
 	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_name,group_quota,group_usage) ) {
 		result.SetErrorValue();
@@ -1040,7 +1040,7 @@ bool returnPrioFactor(Stream *strm, CondorError &errstack)
 int Matchmaker::
 SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 {
-	float	priority;
+	double	priority;
 	std::string submitter;
 
 	// read the required data off the wire
@@ -1133,7 +1133,7 @@ SET_CEILING_commandHandler (int /*command*/, Stream *stream) {
 int Matchmaker::
 SET_PRIORITY_commandHandler (int, Stream *strm)
 {
-	float	priority;
+	double	priority;
     std::string submitter;
 
 	// read the required data off the wire
@@ -1155,7 +1155,7 @@ SET_PRIORITY_commandHandler (int, Stream *strm)
 int Matchmaker::
 SET_ACCUMUSAGE_commandHandler (int, Stream *strm)
 {
-	float	accumUsage;
+	double	accumUsage;
     std::string submitter;
 
 	// read the required data off the wire
@@ -1531,7 +1531,7 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 
 
 bool Matchmaker::
-getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage)
+getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage)
 {
 	ASSERT(groupQuotasHash);
 
@@ -1957,10 +1957,10 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
     accountingAd.Assign("IsAccountingGroup", isGroup);
     accountingAd.Assign("AccountingGroup", cgname);
 
-    float Priority = accountant.GetPriority(CustomerName);
+    double Priority = accountant.GetPriority(CustomerName);
     accountingAd.Assign("Priority", Priority);
 
-    float PriorityFactor = 0;
+    double PriorityFactor = 0;
     if (CustomerAd->LookupFloat("PriorityFactor",PriorityFactor)==0) {
 		PriorityFactor=0;
 	}
@@ -1985,15 +1985,15 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
     if (CustomerAd->LookupInteger("ResourcesUsed", ResourcesUsed)==0) ResourcesUsed=0;
     accountingAd.Assign("ResourcesUsed", ResourcesUsed);
 
-    float WeightedResourcesUsed = 0;
+    double WeightedResourcesUsed = 0;
     if (CustomerAd->LookupFloat("WeightedResourcesUsed",WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
     accountingAd.Assign("WeightedResourcesUsed", WeightedResourcesUsed);
 
-    float AccumulatedUsage = 0;
+    double AccumulatedUsage = 0;
     if (CustomerAd->LookupFloat("AccumulatedUsage",AccumulatedUsage)==0) AccumulatedUsage=0;
     accountingAd.Assign("AccumulatedUsage", AccumulatedUsage);
 
-    float WeightedAccumulatedUsage = 0;
+    double WeightedAccumulatedUsage = 0;
     if (CustomerAd->LookupFloat("WeightedAccumulatedUsage",WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
     accountingAd.Assign("WeightedAccumulatedUsage", WeightedAccumulatedUsage);
 
@@ -2117,7 +2117,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds,
 					 ClassAdListDoesNotDeleteAds& submitterAds,
-					 float groupQuota, const char* groupName)
+					 double groupQuota, const char* groupName)
 {
 	ClassAd		*submitter_ad;
 	std::string    submitterName;
@@ -2535,11 +2535,11 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
     if (prio1 < prio2) return true;
     if (prio1 > prio2) return false;
 
-    float sr1 = FLT_MAX;
-    float sr2 = FLT_MAX;
+    double sr1 = DBL_MAX;
+    double sr2 = DBL_MAX;
 
-    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = FLT_MAX;
-    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = FLT_MAX;
+    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = DBL_MAX;
+    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = DBL_MAX;
 
 	// secondary sort on job prio, if want_globaljobprio is true (see gt #3218)
 	if ( mm->want_globaljobprio ) {
@@ -2747,7 +2747,7 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
             continue;
         }
 
-		float slotWeight = accountant.GetSlotWeight(ad);
+		double slotWeight = accountant.GetSlotWeight(ad);
 		sum+=slotWeight;
 		if (minSlotWeight && (slotWeight < *minSlotWeight)) {
 			*minSlotWeight = slotWeight;
@@ -2846,6 +2846,9 @@ obtainAdsFromCollector (
     } else {
         publicQuery.addORConstraint("(MyType == \"Machine\")");
     }
+
+	privateQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
+	publicQuery.addExtraAttribute(ATTR_SEND_PRIVATE_ATTRIBUTES, "true");
 
 	// If preemption is disabled, we only need a handful of attrs from claimed ads.
 	// Ask for that projection.
@@ -3926,14 +3929,14 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO
-		request.Assign(ATTR_SUBMITTOR_PRIO , (float)priority );
+		request.Assign(ATTR_SUBMITTOR_PRIO , priority );
 		// next insert new-style ATTR_SUBMITTER_USER_PRIO
-		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );
+		request.Assign(ATTR_SUBMITTER_USER_PRIO , priority );
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
 					   accountant.GetWeightedResourcesUsed ( submitterName ));
 		std::string temp_groupName;
-		float temp_groupQuota, temp_groupUsage;
+		double temp_groupQuota, temp_groupUsage;
 		if (getGroupInfoFromUserId(submitterName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
@@ -4054,8 +4057,8 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				remotePriority = accountant.GetPriority (remoteUser);
 
 
-				float newStartdRank;
-				float oldStartdRank = 0.0;
+				double newStartdRank;
+				double oldStartdRank = 0.0;
 				if(! EvalFloat(ATTR_RANK, offer, &request, newStartdRank)) {
 					newStartdRank = 0.0;
 				}
@@ -4177,12 +4180,12 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	}
 }
 
-float Matchmaker::
+double Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
 	classad::Value result;
-	float rank = -(FLT_MAX);
+	double rank = -(DBL_MAX);
 
 	if(expr && EvalExprTree(expr,resource,&request,result)) {
 		double val;
@@ -5351,10 +5354,10 @@ addRemoteUserPrios( ClassAd	*ad )
 	std::string slot_prefix;
 	std::string expr;
 	std::string expr_buffer;
-	float	prio;
+	double	prio;
 	int     total_slots, i;
-	float     preemptingRank;
-	float temp_groupQuota, temp_groupUsage;
+	double     preemptingRank;
+	double temp_groupQuota, temp_groupUsage;
 	std::string temp_groupName;
 
 		// If there is a preempting user, use that for computing remote user prio.

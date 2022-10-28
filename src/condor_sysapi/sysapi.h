@@ -198,6 +198,20 @@ void sysapi_clear_network_device_info_cache();
 /* determine if a linux version is version X or newer */
 bool sysapi_is_linux_version_atleast(const char *version_to_check);
 
+#ifdef LINUX
+/* enum to represent the type of capability set mask we want to return*/
+enum LinuxCapsMaskType {
+	Linux_permittedMask,
+	Linux_inheritableMask,
+	Linux_effectiveMask,
+};
+/*	Return a 64 bit mask of linux process capabilites for a process passed
+*	via pid. Also, takes optional argument for mask type based on above enum.
+*	If no mask type is specified it will return the Effective capability mask.
+*/
+uint64_t sysapi_get_process_caps_mask(int pid, LinuxCapsMaskType type = Linux_effectiveMask);
+#endif /* ifdef LINUX */
+
 #endif
 
 

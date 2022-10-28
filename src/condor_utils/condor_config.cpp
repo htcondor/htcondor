@@ -1791,6 +1791,7 @@ char * find_python3_dot(int minor_ver) {
 	return get_winreg_string_value(regKey.c_str(), "ExecutablePath");
 #else
 	// TODO: add non-windows implementation
+	(void)minor_ver; // Shut the compiler up
 	return nullptr;
 #endif
 }
@@ -1801,7 +1802,7 @@ void apply_thread_limit(int detected_cpus, MACRO_EVAL_CONTEXT & ctx)
 	int thread_limit = detected_cpus;
 	const char * effective_env = nullptr;
 	static const char * const envlimits[] = { "OMP_THREAD_LIMIT", "SLURM_CPUS_ON_NODE" };
-	for (int ii = 0; ii < COUNTOF(envlimits); ++ii) {
+	for (size_t ii = 0; ii < COUNTOF(envlimits); ++ii) {
 		const char* env = getenv(envlimits[ii]);
 		if (!env) continue;
 

@@ -30,6 +30,18 @@ Bugs Fixed:
   files.
   :jira:`1354`
 
+- Suppressed a Singularity or Apptainer warning that would appear
+  in a job's stderr file, warning about the inability to set the
+  HOME environment variable if the job or the system explicitly tried
+  to set it.
+  :jira:`1386`
+
+- Fixed a bug where on certain Linux kernels, the ProcLog would be filled
+  with thousands of errors of the form  "Internal cgroup error when 
+  retrieving iowait statistics".  This error was harmless, but filled
+  the ProcLog with noise.
+  :jira:`1385`
+
 - Fixed bug where certain **submit file** variables like ``accounting_group`` and
   ``accounting_group_user`` couldn't be declared specifically for DAGMan jobs because
   DAGMan would always write over the variables at job submission time.
@@ -77,3 +89,11 @@ Bugs Fixed:
   that that the user wishes to vary per job.
   :jira:`1369`
 
+- Fixed bug where **Collector**, **Negotiator**, and **Schedd** core files that are naturally
+  large would be deleted by *condor_preen* because the file sizes exceeded the max file size.
+  :jira:`1377`
+
+- Fixed a bug that could cause a daemon or tool to crash when
+  connecting to a daemon using a security session.
+  This particularly affected the *condor_schedd*.
+  :jira:`1372`

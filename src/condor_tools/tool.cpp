@@ -1736,21 +1736,6 @@ handleSquawk( char *line, char *addr ) {
 	case 'q': /* quit */
 		return FALSE;
 		
-	case 'd': { /* dump state */
-		Daemon d( DT_ANY, addr );
-		CondorError errstack;
-        if (!d.startCommand(DUMP_STATE, &sock, 0, &errstack)) {
-			fprintf( stderr, "ERROR\n%s\n", errstack.getFullText(true).c_str() );
-		}
-
-		sock.decode();
-
-		ClassAd ad;
-		getClassAd( &sock, ad );
-		printAdToFile( &ad, NULL );
-		
-		return TRUE;
-	}
 	case 's':  { /* Send a DC signal */
 		token = strtok( NULL, " " );
 		if ( !token ) {
@@ -1916,7 +1901,7 @@ doSquawkReconnect( char *addr ) {
 	if( real_dt == DT_GENERIC ) {
 		d.setSubsystem( subsys );
 	}
-	if( ! d.locate(Daemon::LOCATE_FOR_ADMIN) ) {
+	if( ! d.locate(Daemon::LOCATE_FOR_LOOKUP) ) {
 		printf ( "Failed to contact daemon.\n" );
 		free( hostname );
 		return FALSE;
