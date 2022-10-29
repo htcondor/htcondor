@@ -1,6 +1,7 @@
 from credmon.CredentialMonitors.AbstractCredentialMonitor import AbstractCredentialMonitor
 from credmon.utils import atomic_rename
 import os
+import ssl
 import time
 import json
 import glob
@@ -16,7 +17,15 @@ except ImportError:
 
 class VaultCredmon(AbstractCredentialMonitor):
 
+    cafile = ssl.get_default_verify_paths().cafile
+    capath = '/etc/grid-security/certificates'
+
     def __init__(self, *args, **kw):
+        if htcondor is not None:
+            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param:
+                self.cafile = htcondor.param['AUTH_SSL_CLIENT_CAFILE']
+            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
+                self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
 
     def get_minimum_seconds(self):
@@ -96,11 +105,8 @@ class VaultCredmon(AbstractCredentialMonitor):
         url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
         headers = {'X-Vault-Token' : top_data['vault_token']}
         request = urllib_request.Request(url=url, headers=headers)
-        capath = '/etc/grid-security/certificates'
-        if htcondor is not None and 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
-            capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         try:
-            handle = urllib_request.urlopen(request, capath=capath)
+            handle = urllib_request.urlopen(request, cafile=self.cafile, capath=self.capath)
         except Exception as e:
             self.log.error("read of access token from %s failed: %s", url, str(e))
             return False
