@@ -6836,7 +6836,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 }
 
 // 
-int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrno)
+int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & terrno)
 {
 	// check to see if the schedd is permitting jobsets
 	if ( ! scheduler.jobSets) {
