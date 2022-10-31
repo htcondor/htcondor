@@ -31,6 +31,10 @@ New Features:
   and ``osdf://`` URLs.
   :jira:`1332`
 
+- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
+  previously it was 0.
+  :jira:`1393`
+
 Bugs Fixed:
 
 - Fixed a bug where *condor_rm*'ing with the -forcex option

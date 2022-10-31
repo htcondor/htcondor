@@ -270,7 +270,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_CMD, cmd );
 
 	job_ad->Assign( ATTR_Q_DATE, (int)time(NULL) );
-	job_ad->Assign( ATTR_COMPLETION_DATE, 0 );
 
 	job_ad->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
