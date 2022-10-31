@@ -498,6 +498,25 @@ our %submit_info = (
 	'x86_64_MacOSX13',	=> 'x86_64_MacOSX',
 	'x86_64_MacOSX15',	=> 'x86_64_MacOSX',
 
+	# Our macOS 11 build machine prefers to build with the macOS 12
+	# SDK, which drops support for Python 2. Tell cmake to use
+	# the macOS 11 SDK.
+	'x86_64_macOS11' => {
+		'build' => {
+			'configure_args' => { @default_build_configure_args,
+			    '-DCMAKE_OSX_DEPLOYMENT_TARGET:STRING' => '11',
+			 },
+			'prereqs'	=> [ ],
+			'xtests'	=> undef,
+		},
+
+		'test' => {
+			'configure_args' => { @default_test_configure_args },
+			'prereqs'	=> [ @default_prereqs ],
+			'testclass' => [ @default_testclass ],
+		},
+	},
+
 	#
 	# The SWAMP platforms.
 	#
