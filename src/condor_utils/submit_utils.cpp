@@ -8235,7 +8235,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 
 	// all jobs should end up with the same qdate, so we only query time once.
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
-	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
 	
 	// set all jobs submission method if s_method is defined
 	if ( s_method >= JOB_SUBMIT_METHOD_MIN)

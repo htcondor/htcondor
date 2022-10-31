@@ -212,7 +212,7 @@ all attributes.
     when it exits.
 
 :classad-attribute:`CompletionDate`
-    The time when the job completed, or the value 0 if the job has not
+    The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
     (00:00:00 UTC, Jan 1, 1970).
 
