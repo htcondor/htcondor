@@ -50,11 +50,6 @@ Reqexp::Reqexp( Resource* rip )
 }
 
 
-char * Reqexp::param(const char * name) {
-	if (m_rip) return SlotType::param(m_rip->r_attr, name);
-	return param(name);
-}
-
 void
 Reqexp::config( ) // formerly compute(A_STATIC)
 {

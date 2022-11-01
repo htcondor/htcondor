@@ -6632,24 +6632,6 @@ default: @end
    MASTER_$(1)_CONTROLLER = HAD
 @end
 
-[$EXPERIMENTAL.ASYNC_STAGEOUT]
-description=Knobs to enable the async stage-out hack for CMS
-default: @end
-	ALLOW_SLOT_PAIRING=true
-	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
-	STARTER_LOG_NAME_APPEND=false
-	# create a hidden type2 xfer slot for every type1 slot
-	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
-	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
-	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
-	SLOT_TYPE_2_NAME_PREFIX = xfer
-	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
-	SLOT_TYPE_2_HIDDEN = true
-	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
-	# cross-advertise these slot attributes in all other slots
-	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
-@end
-
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 description=Config file knobs that should be ignored on upgrade

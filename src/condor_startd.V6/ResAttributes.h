@@ -419,8 +419,6 @@ public:
 	}
 	bool set_total_disk(long long total, bool refresh);
 
-	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
-
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
 

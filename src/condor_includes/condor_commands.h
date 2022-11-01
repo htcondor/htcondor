@@ -175,7 +175,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 #define QUERY_SCHEDD_HISTORY (SCHED_VERS+115)
 #define QUERY_JOB_ADS (SCHED_VERS+116)
-#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
+//#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot. (Not used)
 #define SEND_RESOURCE_REQUEST_LIST	(SCHED_VERS+118)     // used in negotiation protocol
 #define QUERY_JOB_ADS_WITH_AUTH (SCHED_VERS+119) // Same as QUERY_JOB_ADS but requires authentication
 #define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
@@ -557,11 +557,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 
 /* Replies specific to the REQUEST_CLAIM command */
 #define REQUEST_CLAIM_LEFTOVERS		3
-#define REQUEST_CLAIM_PAIR			4
+//#define REQUEST_CLAIM_PAIR			4	// Not used
 #define REQUEST_CLAIM_LEFTOVERS_2	5
-#define REQUEST_CLAIM_PAIR_2		6
-
-/* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
-#define SWAP_CLAIM_ALREADY_SWAPPED	4
+//#define REQUEST_CLAIM_PAIR_2		6		// Not used
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

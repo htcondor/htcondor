@@ -1757,26 +1757,6 @@ ResMgr::addResource( Resource *rip )
 	resources = new_resources;
 	nresources++;
 
-	// if this newly added slot is part of a pair, fixup the pair pointers
-	dprintf(D_FULLDEBUG, "Setting up slot pairings\n");
-	if (rip->r_pair_name && rip->r_pair_name[0] == '#') {
-		int slot_type = atoi(rip->r_pair_name+1);
-		dprintf(D_ALWAYS, "\t searching for type %d to pair with %s (%s)\n", slot_type, rip->r_id_str, rip->r_pair_name);
-		for (int ix = 0; ix < nresources-1; ++ix) {
-			Resource * ripT = resources[ix];
-			if (ripT->type() == slot_type) {
-				if ( ! ripT->r_pair_name || ripT->r_pair_name[0] == '#') {
-					// ok pair these two.
-					free(rip->r_pair_name);
-					free(ripT->r_pair_name);
-					rip->r_pair_name = strdup(ripT->r_name);
-					ripT->r_pair_name = strdup(rip->r_name);
-					break;
-				}
-			}
-		}
-	}
-
 	// If this newly added slot is dynamic, add it to
 	// its parent's children
 

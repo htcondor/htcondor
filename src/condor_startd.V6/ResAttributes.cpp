@@ -1983,27 +1983,6 @@ CpuAttributes::dprintf( int flags, const char* fmt, ... ) const
 	va_end( args );
 }
 
-void
-CpuAttributes::swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags)
-{
-	if (flags & 1) {
-		// swap execute directories.
-		std::string str = attra.c_execute_dir;
-		attra.c_execute_dir = attrb.c_execute_dir;
-		attrb.c_execute_dir = str;
-
-		// swap execute partition ids
-		str = attra.c_execute_partition_id;
-		attra.c_execute_partition_id = attrb.c_execute_partition_id;
-		attrb.c_execute_partition_id = str;
-
-		// swap total disk since we swapped partition ids
-		long long ll = attra.c_total_disk;
-		attra.c_total_disk = attrb.c_total_disk;
-		attrb.c_total_disk = ll;
-	}
-}
-
 CpuAttributes&
 CpuAttributes::operator+=( CpuAttributes& rhs )
 {

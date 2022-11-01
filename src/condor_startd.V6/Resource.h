@@ -374,7 +374,6 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
-	char*			r_pair_name; // Name of the resource paired with this one, NULL is no pair (the default), may contain "#type" during the slot building process
 	int             prevLHF;
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;
@@ -409,8 +408,6 @@ public:
 	std::string makeChildClaimIds();
 	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
 	void remove_dynamic_child(Resource *rip) {m_children.erase(rip); }
-
-	static bool swap_claims(Resource* ripa, Resource* ripb);
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 

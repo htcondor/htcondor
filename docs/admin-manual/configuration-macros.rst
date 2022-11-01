@@ -5915,8 +5915,9 @@ These settings affect the *condor_starter*.
     ``true`` gives the default behavior of using the slot name, unless
     there is only a single slot. A value of ``slot`` uses the slot name.
     A value of ``cluster`` uses the job's ``ClusterId`` ClassAd
-    attribute. A value of ``jobid`` uses the job's ``ProcId`` ClassAd
-    attribute. If ``cluster`` or ``jobid`` are specified, the resulting
+    attribute. A value of ``jobid`` uses the job's ``ClusterId`` and
+    ``ProcId`` ClassAd
+    attributes. If ``cluster`` or ``jobid`` are specified, the resulting
     log files will persist until deleted by the user, so these two
     options should only be used to assist in debugging, not as permanent
     options.

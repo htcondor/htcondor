@@ -642,7 +642,6 @@
 #define ATTR_SEND_SERVER_TIME "SendServerTime"
 #define ATTR_SINGULARITY_VERSION "SingularityVersion"
 #define ATTR_SLOT_ID  "SlotID"
-#define ATTR_SLOT_PAIR_NAME  "SlotPairName"
 #define ATTR_SLOT_PARTITIONABLE  "PartitionableSlot"
 #define ATTR_SLOT_DYNAMIC  "DynamicSlot"
 #define ATTR_SOURCE  "Source"
