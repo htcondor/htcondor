@@ -6700,6 +6700,25 @@ win32_default : @end
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
+[$UPGRADE.DISCARD_VMWARE]
+description=Platform specific file knobs that should be ignored on upgrade if they match the given value
+default=
+win32_default : @end
+	VM_MEMORY=128
+	VM_NETWORKING_DEFAULT_TYPE=nat
+	VM_NETWORKING_TYPE=nat
+	VM_MAX_NUMBER=$(NUM_CPUS)
+	VMWARE_PERL=perl
+	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.exe
+	VMWARE_SCRIPT=$(SBIN)/condor_vm_vmware.pl.exe
+	VMWARE_NAT_NETWORKING_TYPE=nat
+	VMWARE_BRIDGE_NETWORKING_TYPE=bridged
+	VMWARE_NETWORKING_TYPE=nat
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)\condor_vmware_local_settings
+	VMWARE_LOCAL_SETTINGS_FILE=$(RELEASE_DIR)/condor_vmware_local_settings
+@end
+
 
 [$FEATURE.KRB]
 description=Enable the daemons and features need to support running jobs with krb tickets and AFS tokens.
