@@ -1384,10 +1384,21 @@ Scheduler::count_jobs()
 	if (FlockCollectors) {
 		FlockCollectors->rewind();
 		Daemon *daemon;
+		StringList effectFlockList;
+		int currLevel = 0;
 		while (FlockCollectors->next(daemon)) {
 			auto col = static_cast<DCCollector*>(daemon);
 			FlockPools.insert(col->name());
+			if (currLevel < FlockLevel)
+				effectFlockList.append(col->addr());
+			++currLevel;
 		}
+
+		if (!effectFlockList.isEmpty()) {
+			char* flockList = effectFlockList.print_to_string();
+			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList);
+			free(flockList);
+		} else { cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST); }
 	}
 
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
@@ -1657,6 +1668,7 @@ Scheduler::count_jobs()
 			 num_updates, NumSubmitters );
 
 	cad->Delete(ATTR_CAPABILITY);
+	cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST);
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
