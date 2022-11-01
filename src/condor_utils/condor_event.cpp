@@ -952,14 +952,14 @@ public:
 		// Insert Request<Tag> = <value2>
 		attrn = "Request";
 		attrn += tag;
-		exprstr.assign(&pszTbl[ixUse+1], ixReq-ixUse-1);
+		exprstr.assign(&pszTbl[ixUse], ixReq-ixUse);
 		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		if (ixAlloc > 0) {
 			//pszTbl[ixAlloc] = 0;
 			// Insert <tag> = <value3>
 			attrn = tag;
-			exprstr.assign(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
+			exprstr.assign(&pszTbl[ixReq], ixAlloc-ixReq);
 			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 		if (ixAssigned > 0) {
