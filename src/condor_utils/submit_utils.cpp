@@ -474,7 +474,6 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 
 
 /* order dependencies
-ComputeRootDir >> ComputeIWD
 ComputeIWD >> FixupTransferInputFiles
 
 SetUniverse >> SetArguments SetCronTab SetExecutable SetGSICredentials SetGridParams SetImageSize SetJobDeferral SetJobLease SetKillSig SetMachineCount SetMaxJobRetirementTime SetRank SetRequirements SetTransferFiles SetVMParams
@@ -863,9 +862,9 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 #else
 
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		TempPathname.formatstr( "%s%s", JobRootdir.c_str(), name );
+		TempPathname.formatstr( "/%s", name );
 	} else {	/* relative to iwd which is relative to the root */
-		TempPathname.formatstr( "%s/%s/%s", JobRootdir.c_str(), p_iwd, name );
+		TempPathname.formatstr( "/%s/%s", p_iwd, name );
 	}
 #endif
 
@@ -2403,45 +2402,6 @@ int SubmitHash::SetNoopJob()
 
 #endif // above code is obsolete, kept temporarily for reference
 
-#if !defined(WIN32)
-
-int SubmitHash::ComputeRootDir()
-{
-	RETURN_IF_ABORT();
-
-	JobRootdir = submit_param_mystring( SUBMIT_KEY_RootDir, ATTR_JOB_ROOT_DIR );
-	if( JobRootdir.empty() )
-	{
-		JobRootdir = "/";
-	}
-
-	return 0;
-}
-
-int SubmitHash::check_root_dir_access()
-{
-	if ( ! JobRootdir.empty() && JobRootdir != "/")
-	{
-		if( access(JobRootdir.c_str(), F_OK|X_OK) < 0 ) {
-			push_error(stderr, "No such directory: %s\n", JobRootdir.c_str());
-			ABORT_AND_RETURN( 1 );
-		}
-	}
-	return 0;
-}
-
-
-int SubmitHash::SetRootDir()
-{
-	RETURN_IF_ABORT();
-	if (ComputeRootDir()) { ABORT_AND_RETURN(1); }
-	AssignJobString (ATTR_JOB_ROOT_DIR, JobRootdir.c_str());
-	return 0;
-}
-
-
-#endif
-
 const char * SubmitHash::getIWD()
 {
 	ASSERT(JobIwdInitialized);
@@ -2467,23 +2427,10 @@ int SubmitHash::ComputeIWD()
 		shortname = submit_param("FACTORY.Iwd");
 	}
 
-#if !defined(WIN32)
-	ComputeRootDir();
-	if( JobRootdir != "/" )	{	/* Rootdir specified */
-		if( shortname ) {
-			iwd = shortname;
-		} 
-		else {
-			iwd = "/";
-		}
-	} 
-	else 
-#endif
-	{  //for WIN32, this is a block to make {}'s match. For unix, else block.
-		if( shortname  ) {
+	if( shortname  ) {
 #if defined(WIN32)
-			// if a drive letter or share is specified, we have a full pathname
-			if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) 
+		// if a drive letter or share is specified, we have a full pathname
+		if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) 
 #else
 			if( shortname[0] == '/' ) 
 #endif
@@ -2498,10 +2445,9 @@ int SubmitHash::ComputeIWD()
 				}
 				iwd.formatstr( "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
 			}
-		} 
-		else {
-			condor_getcwd( iwd );
-		}
+	} 
+	else {
+		condor_getcwd( iwd );
 	}
 
 	compress_path( iwd );
@@ -2518,7 +2464,7 @@ int SubmitHash::ComputeIWD()
 		}
 	#else
 		MyString pathname;
-		pathname.formatstr( "%s/%s", JobRootdir.c_str(), iwd.c_str() );
+		pathname.formatstr( "/%s", iwd.c_str() );
 		compress_path( pathname );
 
 		if( access(pathname.c_str(), F_OK|X_OK) < 0 ) {
@@ -8457,12 +8403,6 @@ ClassAd* SubmitHash::make_job_ad (
 	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
-#if !defined(WIN32)
-	SetRootDir();	// must be called very early
-	if (!clusterAd) { // if no clusterAd, we also want to check for access
-		if (check_root_dir_access()) { return NULL; }
-	}
-#endif
 	SetIWD();		// must be called very early
 
 	SetExecutable(); /* factory:ok */

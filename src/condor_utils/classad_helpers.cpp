@@ -296,8 +296,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_CUMULATIVE_SUSPENSION_TIME, 0 );
 	job_ad->Assign( ATTR_COMMITTED_SUSPENSION_TIME, 0 );
 
-	job_ad->Assign( ATTR_JOB_ROOT_DIR, "/" );
-
 	job_ad->Assign( ATTR_MIN_HOSTS, 1 );
 	job_ad->Assign( ATTR_MAX_HOSTS, 1 );
 	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
