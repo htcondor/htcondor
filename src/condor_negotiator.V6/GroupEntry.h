@@ -10,7 +10,7 @@
 #include <map>
 #include <functional>
 
-typedef HashTable<std::string, float> groupQuotasHashType;
+typedef HashTable<std::string, double> groupQuotasHashType;
 
 void parse_group_name(const std::string& gname, std::vector<std::string>& gpath);
 

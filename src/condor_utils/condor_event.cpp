@@ -2040,8 +2040,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 
 	//output each line of error_str, indented by one tab
 	char *line = error_str;
-	if(line)
-	while(*line) {
+	if (line) while(*line) {
 		char *next_line = strchr(line,'\n');
 		if(next_line) *next_line = '\0';
 
@@ -2546,9 +2545,9 @@ CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;		//backwards compatibility
 	}
-	sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
+	sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
 #else
-    if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job For Checkpoint\n",
+    if( !fscanf(file, "\t%lf  -  Run Bytes Sent By Job For Checkpoint\n",
                 &sent_bytes)) {
         return 1;		//backwards compatibility
     }
@@ -2731,12 +2730,12 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 
 #ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		 ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
+		(1 != sscanf(line.c_str(), "\t%lf  -  Run Bytes Received By Job", &recvd_bytes)))
 #else
-	if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) ||
-		!fscanf(file, "\t%f  -  Run Bytes Received By Job\n",
+	if( !fscanf(file, "\t%lf  -  Run Bytes Sent By Job\n", &sent_bytes) ||
+		!fscanf(file, "\t%lf  -  Run Bytes Received By Job\n",
 				&recvd_bytes) )
 #endif
 	{
@@ -4037,9 +4036,9 @@ ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 
 	// read transfer info
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf (line.c_str(), "\t%lf  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
+		(1 != sscanf (line.c_str(), "\t%lf  -  Run Bytes Received By Job", &recvd_bytes)))
 	{
 		return 1;				// backwards compatibility
 	}
@@ -4054,8 +4053,8 @@ ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 	// remove '\n' from message
 	message[strlen(message)-1] = '\0';
 
-	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
+	if (fscanf (file, "\t%lf  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
+		fscanf (file, "\t%lf  -  Run Bytes Received By Job\n",
 				&recvd_bytes) == 0)
 		return 1;				// backwards compatibility
 #endif
@@ -6370,14 +6369,6 @@ JobAdInformationEvent::LookupInteger (const char *attributeName, long long & val
 	if ( !jobad ) return 0;		// 0 = failure
 
 	return jobad->LookupInteger(attributeName,value);
-}
-
-int
-JobAdInformationEvent::LookupFloat (const char *attributeName, float & value) const
-{
-	if ( !jobad ) return 0;		// 0 = failure
-
-	return jobad->LookupFloat(attributeName,value);
 }
 
 int

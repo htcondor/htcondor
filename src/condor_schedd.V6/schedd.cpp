@@ -10704,10 +10704,10 @@ update_remote_wall_clock(int cluster, int proc)
 	int bday = 0;
 	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
 	if (bday) {
-		float accum_time = 0;
+		double accum_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-		float delta = (float)(time(NULL) - bday);
+		double delta = (double) time(NULL) - bday;
 		SetAttributeFloat(cluster, proc, ATTR_JOB_LAST_REMOTE_WALL_CLOCK, delta);
 		accum_time += delta;
 			// We want to update our wall clock time and delete
@@ -10723,10 +10723,10 @@ update_remote_wall_clock(int cluster, int proc)
 						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
 		slot_time += delta*slot_weight;

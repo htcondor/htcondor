@@ -643,6 +643,7 @@
 #define ATTR_SINGULARITY_VERSION "SingularityVersion"
 #define ATTR_SLOT_ID  "SlotID"
 #define ATTR_SLOT_PARTITIONABLE  "PartitionableSlot"
+#define ATTR_SLOT_BACKFILL  "BackfillSlot"
 #define ATTR_SLOT_DYNAMIC  "DynamicSlot"
 #define ATTR_SOURCE  "Source"
 #define ATTR_STAGE_IN_START  "StageInStart"
@@ -1195,6 +1196,10 @@ extern const char ATTR_SEC_AUTHENTICATED_USER [];
 // Attributes related to dataflow jobs
 #define ATTR_SKIP_IF_DATAFLOW "SkipIfDataflow"
 #define ATTR_DATAFLOW_JOB_SKIPPED "DataflowJobSkipped"
+
+#ifdef LINUX
+#define ATTR_LINUX_CAPS "LinuxCapabilities"
+#endif
 
 #if 0
 // Enumerate the ones that can't be constant strings..

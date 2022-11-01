@@ -971,8 +971,7 @@ MergeEnvironment(const char * /*name*/,
 			problemExpression(ss.str(), *it, result);
 			return true;
 		}
-		std::string error_msg;
-		if (!env.MergeFromV2Raw(env_str.c_str(), error_msg))
+		if (!env.MergeFromV2Raw(env_str.c_str(), nullptr))
 		{
 			std::stringstream ss;
 			ss << "Argument " << idx << " cannot be parsed as environment string.";

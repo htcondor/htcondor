@@ -1643,7 +1643,7 @@ activate_claim( Resource* rip, Stream* stream )
 		vm_starter = NULL;
 
 		// update VM related info
-		resmgr->walk( &Resource::update);
+		resmgr->walk(&Resource::update_walk_for_vm_change);
 	}
 
 		// Finally, update all these things into the resource classad.
@@ -1679,7 +1679,7 @@ match_info( Resource* rip, char* id )
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
 			rip->r_reqexp->unavail();
-			rip->update();
+			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre->start_match_timer();
 			rval = TRUE;
 		} else if( rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
@@ -1688,7 +1688,7 @@ match_info( Resource* rip, char* id )
 				// ourself as unavailable for future claims, update
 				// the CM, and set the timer for this match.
 			rip->r_reqexp->unavail();
-			rip->update();
+			rip->update_needed(Resource::WhyFor::wf_preemptingClaim);
 			rip->r_pre_pre->start_match_timer();
 			rval = TRUE;
 		} else {

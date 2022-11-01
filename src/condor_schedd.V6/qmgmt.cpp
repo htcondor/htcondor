@@ -6550,7 +6550,7 @@ AbortTransactionAndRecomputeClusters()
 
 
 int
-GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)
+GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *val)
 {
 	ClassAd	*ad;
 	JobQueueKeyBuf	key;
@@ -8397,7 +8397,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 			// Schedd must have died before committing this job's wall
 			// clock time.  So, commit the wall clock saved in the
 			// wall clock checkpoint.
-		float wall_clock = 0.0;
+		double wall_clock = 0.0;
 		GetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK,&wall_clock);
 		wall_clock += wall_clock_ckpt;
 		BeginTransaction();
@@ -8408,10 +8408,10 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 			// potentially double-count
 		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
 		slot_time += wall_clock_ckpt*slot_weight;
@@ -8942,11 +8942,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// of the claim with lower RANK, but future versions
 				// very well may.)
 
-			float current_startd_rank;
+			double current_startd_rank;
 			if( my_match_ad &&
 				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
 			{
-				float new_startd_rank = 0;
+				double new_startd_rank = 0;
 				if( EvalFloat(ATTR_RANK, my_match_ad, ad, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {
