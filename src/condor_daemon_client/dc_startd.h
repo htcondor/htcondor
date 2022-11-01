@@ -111,31 +111,6 @@ public:
 	int activateClaim( ClassAd* job_ad, int starter_version, 
 					   ReliSock** claim_sock_ptr );
 
-		/** Swap an active claim in an execute slot with the
-			inactive claim in a transfer slot.
-			The source of the swap is identified by claim id, the
-			destination is identified by slot name. Slots can only
-			swap claims if there is a pre-established relationship
-			between them in the startd as indicated by each slot
-			having the name of the other slot in their SlotPairName
-			attribute.
-			If the claim_id and dest_slot_name both identify the
-			same slot, this is considered trivial success, not a failure.
-
-			@param claim_id Claim id of the source slot of the swap
-			@param src_descrip Description of the source slot for logging
-			@param dest_slot_name Slot name of the destination slot of the swap
-			@param timeout Socket timeout
-			@param cb Callback object
-
-			To see the result of the request, check swap_claims_success()
-			in the DCStartdMsg object, which may be obtained from the callback
-			object at callback time.
-		*/
-	void asyncSwapClaims(const char * claim_id, char const *src_descrip,
-						const char * dest_slot_name,
-						int timeout, classy_counted_ptr<DCMsgCallback> cb);
-
 		/** Before activating a claim, attempt to delegate the user proxy
 			(if there is one). We used do this from the shadow if
 			GLEXEC_STARTER was set, since if the startd requires that
@@ -245,11 +220,6 @@ public:
 	ClassAd * leftover_startd_ad() 
 		{ return m_have_leftovers ? &m_leftover_startd_ad : NULL; }
 
-	bool have_paired_slot() const { return m_have_paired_slot; }
-	char const *paired_claim_id() { return m_paired_claim_id.c_str(); }
-	ClassAd *paired_startd_ad()
-		{ return m_have_paired_slot ? &m_paired_startd_ad : NULL; }
-
 	const ClassAd *getJobAd() { return &m_job_ad;}
 	bool putExtraClaims(Sock *sock);
 private:
@@ -270,40 +240,8 @@ private:
 	std::string m_leftover_claim_id;
 	ClassAd m_leftover_startd_ad;
 
-		// If claiming a paired static slot, the startd will send over
-		// the other slot's ad and claim id.
-	bool m_have_paired_slot;
-	std::string m_paired_claim_id;
-	ClassAd m_paired_startd_ad;
-
 	std::string m_startd_ip_addr;
 	std::string m_startd_fqu;
-};
-
-class SwapClaimsMsg: public DCMsg {
-public:
-	SwapClaimsMsg( char const *claim_id, const char *src_descrip, const char * dest_slot_name);
-
-		// Functions that override DCMsg
-	bool writeMsg( DCMessenger *messenger, Sock *sock );
-	bool readMsg( DCMessenger *messenger, Sock *sock );
-	MessageClosureEnum messageSent(DCMessenger *messenger, Sock *sock );
-	void cancelMessage(char const *reason=NULL);
-
-	char const *description() {return m_description.c_str();}
-	char const *claim_id() {return m_claim_id.c_str();}
-	char const *dest_slot_name() {return m_dest_slot_name.c_str();}
-
-		// Message results:
-	bool swap_claims_success() const { return m_reply == OK || m_reply == SWAP_CLAIM_ALREADY_SWAPPED; }
-private:
-	std::string m_claim_id;
-	std::string m_description;
-	std::string m_dest_slot_name;
-	ClassAd m_opts;
-
-		// the startd's reply:
-	int m_reply;
 };
 
 /*

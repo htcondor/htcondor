@@ -84,7 +84,6 @@
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
 #define ATTR_CONTAINER_TARGET_DIR "ContainerTargetDir"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"
-#define ATTR_PAIRED_CLAIM_ID  "PairedClaimId"
 #define ATTR_CHECKPOINT_SIG  "CheckpointSig"
 #define ATTR_CHILD_CLAIM_IDS "ChildClaimIds"
 #define ATTR_CLAIM_ID  "ClaimId"
@@ -427,8 +426,6 @@
 #define ATTR_JOB_TOE "ToE"  // termination of execution ad
 #define ATTR_JOB_STATUS_ON_RELEASE  "JobStatusOnRelease"
 #define ATTR_JOB_SUBMIT_METHOD "JobSubmitMethod"
-#define ATTR_JOB_TRANSFERRING_OUTPUT  "JobTransferringOutput"
-#define ATTR_JOB_TRANSFERRING_OUTPUT_TIME  "JobTransferringOutputTime"
 #define ATTR_JOB_UNIVERSE  "JobUniverse"
 #define ATTR_JOB_WALL_CLOCK_CKPT  "WallClockCheckpoint"
 #define ATTR_JOB_QUEUE_BIRTHDATE  "JobQueueBirthdate"

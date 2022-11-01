@@ -33,7 +33,6 @@ int pseudo_begin_execution( void );
 int pseudo_get_file_info_new( const char *path, char *&url );
 int pseudo_get_buffer_info( int *bytes_out, int *block_size_out, int *prefetch_bytes_out );
 int pseudo_ulog( ClassAd *ad );
-int pseudo_phase( const std::string &phase );
 int pseudo_get_job_ad( ClassAd* &ad );
 int pseudo_get_job_attr( const char *name, std::string &expr );
 int pseudo_set_job_attr( const char *name, const char *expr, bool log=false);
