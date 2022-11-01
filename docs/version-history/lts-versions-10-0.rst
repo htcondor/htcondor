@@ -97,3 +97,8 @@ Bugs Fixed:
   connecting to a daemon using a security session.
   This particularly affected the *condor_schedd*.
   :jira:`1372`
+
+- Fixed a bug that could cause digits to be truncated reading resource usage information
+  from the job event log via the Python or C++ APIs for reading event logs. Note this only
+  happens for very large values of requested or allocated disk, memory.
+  :jira:`1263`
