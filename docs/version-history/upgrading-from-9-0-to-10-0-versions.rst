@@ -23,7 +23,7 @@ is a list of items that administrators should be aware of.
   :jira:`442`
 
 - Jobs that use a ``Requirements`` expression to try and match to specific a GPU should
-  be changed new ``require_gpus`` submit command or jobs will simply not match. If your machines
+  be changed to use the new ``require_gpus`` submit command or jobs will simply not match. If your machines
   have only a single type of GPU, you may be able to modify the machine configuration
   to allow users to delay having to make this change. This is a consequence of the fact
   that multiple GPUs of different types in a single machine is now supported.
