@@ -62,6 +62,9 @@ private:
 	// internal version of publish that writes into the associated Resource
 	// and knows about the r_config_classad
 	void	publish();
+
+		// override param by slot_type
+	char * param(const char * name);
 };
 
 #endif /* _REQEXP_H */
