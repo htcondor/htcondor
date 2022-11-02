@@ -67,7 +67,7 @@ class System:
 
 
     def get_constraints(self, queue_name, gpus, gpu_type):
-        return self.queues[queue_name]
+        return self.queues.get(queue_name)
 
 
     def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
