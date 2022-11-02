@@ -1317,7 +1317,6 @@ int SubmitHash::SetJavaVMArgs()
 
 	ArgList args;
 	MyString error_msg;
-	MyString strbuffer;
 	MyString value;
 	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
 	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
@@ -2497,8 +2496,6 @@ int SubmitHash::SetGSICredentials()
 {
 	RETURN_IF_ABORT();
 
-	MyString buffer;
-
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
 		// and the job type requires an x509 proxy (nordugrid),
@@ -2743,7 +2740,6 @@ int SubmitHash::SetKillSig()
 
 	char* sig_name;
 	char* timeout;
-	MyString buffer;
 
 	sig_name = fixupKillSigName(submit_param(SUBMIT_KEY_KillSig, ATTR_KILL_SIG));
 	RETURN_IF_ABORT();
@@ -2843,7 +2839,6 @@ int SubmitHash::SetForcedSubmitAttrs()
 int SubmitHash::SetForcedAttributes()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -3639,7 +3634,6 @@ int SubmitHash::SetNotification()
 	RETURN_IF_ABORT();
 	char *how = submit_param( SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION );
 	int notification;
-	MyString buffer;
 	
 	if( how == NULL ) {
 		// if late materializing, just use the value from the cluster ad.
@@ -4076,7 +4070,6 @@ int SubmitHash::SetJobDeferral()
 		// We will only be able to validate the deferral time when the
 		// Starter evaluates it and tries to set the timer for it
 		//
-	MyString buffer;
 	char *temp = submit_param( SUBMIT_KEY_DeferralTime, ATTR_DEFERRAL_TIME );
 	if ( temp != NULL ) {
 		// make certain the input is valid
@@ -4441,7 +4434,6 @@ int SubmitHash::SetJobMachineAttrs()
 	RETURN_IF_ABORT();
 	MyString job_machine_attrs = submit_param_mystring( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
 	MyString history_len_str = submit_param_mystring( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
-	MyString buffer;
 
 	if( job_machine_attrs.Length() ) {
 		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.Value());
@@ -4488,7 +4480,6 @@ int SubmitHash::SetExecutable()
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
 	MyString	full_ename;
-	MyString buffer;
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
@@ -4876,7 +4867,6 @@ int SubmitHash::SetUniverse()
 int SubmitHash::SetParallelParams()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	bool wantParallel = false;
 	job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantParallel);
@@ -5795,7 +5785,6 @@ int SubmitHash::SetFileOptions()
 {
 	RETURN_IF_ABORT();
 	char *tmp;
-	MyString strbuffer;
 
 	tmp = submit_param( SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
@@ -6779,7 +6768,6 @@ int SubmitHash::SetVMParams()
 	bool param_exists = false;
 
 	auto_free_ptr tmp_ptr(NULL);
-	MyString buffer;
 
 	// by the time we get here, we have already verified that vmtype is non-empty
 	tmp_ptr.set(submit_param(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE));
@@ -8158,7 +8146,6 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 
 int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 {
-	MyString buffer;
 	submit_username.clear();
 	if (username) { submit_username = username; }
 
@@ -8246,7 +8233,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	param_and_insert_attrs("SYSTEM_SUBMIT_ATTRS", submit_attrs);
 
 	if ( ! submit_attrs.empty()) {
-		MyString buffer;
 
 		for (classad::References::const_iterator it = submit_attrs.begin(); it != submit_attrs.end(); ++it) {
 			if (starts_with(*it,"+")) {
