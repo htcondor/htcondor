@@ -208,7 +208,7 @@ SYSTEM_TABLE = {
         "default_queue":    "compute",
         "batch_system":     "SLURM",
         "script_base":      "hpc",
-        "allocation_reqd":  False,
+        "allocation_reqd":  True,
 
         "queues": {
             "compute": {
