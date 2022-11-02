@@ -31,6 +31,10 @@ New Features:
   and matching owners.
   :jira:`1382`
 
+- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
+  previously it was 0.
+  :jira:`1393`
+
 Bugs Fixed:
 
 - None.
