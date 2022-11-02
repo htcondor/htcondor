@@ -371,12 +371,14 @@ SYSTEM_TABLE = {
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "node",
                 "gpu_types":            [ 'v100-32', 'v100-16' ],
+                "gpu_flag_type":        "job",
             },
             "GPU-shared": {
                 "max_nodes_per_job":    1,
                 "max_duration":         48 * 60 * 60,
                 "allocation_type":      "gpu-shared",
                 "gpu_types":            [ 'v100-32', 'v100-16' ],
+                "gpu_flag_type":        "job",
             },
         },
     },
@@ -1009,6 +1011,13 @@ def validate_system_specific_constraints(
     # (K) Run the system-specific constraint checker.
     system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
 
+    if gpus_per_node is not None:
+        if queue.get('gpu_flag_type') is 'job':
+            if gpus is not None and gpus > 0:
+                assert nodes is not None and nodes > 1, "Mistake in validation: node count should have been >= 1 by now."
+                gpus = gpus * nodes
+
+    return gpus
 
 def annex_inner_func(
     logger,
@@ -1083,7 +1092,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus, gpu_type)
+    gpus = validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus, gpu_type)
 
     if test:
         return
