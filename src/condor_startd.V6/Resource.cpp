@@ -204,7 +204,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	, r_id(rid)
 	, r_sub_id(0)
 	, r_id_str(NULL)
-	, r_pair_name(NULL)
 	, r_backfill_slot(false)
 	, m_resource_feature(STANDARD_SLOT)
 	, m_parent(nullptr)
@@ -286,33 +285,6 @@ Resource::Resource( CpuAttributes* cap, int rid, Resource* _parent )
 	tmp += "@";
 	if (Name) { tmp += Name; } else { tmp += get_local_fqdn(); }
 	r_name = strdup(tmp.c_str());
-
-	// check for slot pairing configuration
-	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
-		dprintf(D_ALWAYS, "ALLOW_SLOT_PAIRING is enabled, checking for pairs\n");
-		const char * p = SlotType::type_param(cap, "PAIRED_WITH");
-		if (p) {
-			r_pair_name = strdup(p);
-			dprintf(D_ALWAYS, "\tSLOT_TYPE_%d_PAIRED_WITH %s\n", cap->type(), r_pair_name);
-			// if the pair name begins with slot_type then it's not a name it's a sort of command
-			if (starts_with_ignore_case(r_pair_name, "slot_type_")) {
-				int pair_type = atoi(r_pair_name+10);
-				if (pair_type) {
-					// we can't store the actual name of the paired slot yet, so for now we
-					// set the pair name to "#N" where N is the slot type, we will replace
-					// this string with the actual paired slot name in ResMgr::addResource
-					// once the slot we are to be paired with exists.
-					sprintf(r_pair_name, "#%d", pair_type);
-					if (SlotType::type_param_boolean(pair_type, "PARTITIONABLE", false)) {
-						EXCEPT("SLOT_TYPE_%d_PARTITIONABLE is true and is PAIRED_WITH. These cannot be used together!\n", pair_type);
-					}
-				}
-			}
-			if (get_feature() == PARTITIONABLE_SLOT) {
-				EXCEPT("SLOT_TYPE_%d_PARTITIONABLE is true and has PAIRED_WITH. These cannot be used together!\n", cap->type());
-			}
-		}
-	}
 
 	// check if slot should be hidden from the collector
 	r_no_collector_updates = SlotType::type_param_boolean(cap, "HIDDEN", false);
@@ -422,7 +394,6 @@ Resource::~Resource()
 	delete r_load_queue; r_load_queue = NULL;
 	free( r_name ); r_name = NULL;
 	free( r_id_str ); r_id_str = NULL;
-	free( r_pair_name ); r_pair_name = NULL;
 
 }
 
@@ -2532,9 +2503,6 @@ void Resource::publish_static(ClassAd* cap)
 		// defining expressions, and other things.
 		cap->Assign(ATTR_SLOT_ID, r_id);
 
-		if (r_pair_name) {
-			cap->Assign( ATTR_SLOT_PAIR_NAME, r_pair_name );
-		}
 		if (r_backfill_slot) cap->Assign(ATTR_SLOT_BACKFILL, true);
 
 		// include any attributes set via local resource inventory
@@ -3592,44 +3560,6 @@ Resource::compute_rank( ClassAd* req_classad ) {
 
 
 #endif /* HAVE_JOB_HOOKS */
-
-bool
-Resource::swap_claims(Resource* ripa, Resource* ripb)
-{
-	if (ripa == ripb) return false;
-
-	// swap state
-	ResState* r_state = ripa->r_state;
-	ripa->r_state = ripb->r_state;
-	ripb->r_state = r_state;
-	// update resource back pointers in the states
-	time_t now = time(NULL); // reset the activity time as part of the swap.
-	ripa->r_state->setResource(ripa, now);
-	ripb->r_state->setResource(ripb, now);
-
-	// swap claim
-	Claim* r_cur = ripa->r_cur;
-	ripa->r_cur = ripb->r_cur;
-	ripb->r_cur = r_cur;
-	// update resource pointers in the claims
-	ripa->r_cur->setResource(ripa);
-	ripb->r_cur->setResource(ripb);
-
-	// swap execute directory
-	std::string str = ripa->m_execute_dir;
-	ripa->m_execute_dir = ripb->m_execute_dir;
-	ripb->m_execute_dir = str;
-
-	// swap execute partition ids
-	str = ripa->m_execute_partition_id;
-	ripa->m_execute_partition_id = ripb->m_execute_partition_id;
-	ripb->m_execute_partition_id = str;
-
-	// swap execute directory inside machine attributes
-	CpuAttributes::swap_attributes(*(ripa->r_attr), *(ripb->r_attr), 1);
-
-	return true;
-}
 
 //
 // Create dynamic slot from p-slot

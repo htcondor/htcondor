@@ -60,7 +60,7 @@ namespace {
 typedef std::unordered_set<std::string, classad::ClassadAttrNameHash, classad::CaseIgnEqStr> classad_hashmap;
 classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
-		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+		ATTR_CLAIM_IDS, ATTR_TRANSFER_KEY };
 
 }
 

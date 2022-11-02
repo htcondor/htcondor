@@ -172,8 +172,6 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
-	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT );
-	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
 	common_job_queue_attrs->insert( ATTR_IO_WAIT);
 
