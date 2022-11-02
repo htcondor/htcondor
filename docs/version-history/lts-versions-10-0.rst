@@ -102,3 +102,7 @@ Bugs Fixed:
   from the job event log via the Python or C++ APIs for reading event logs. Note this only
   happens for very large values of requested or allocated disk, memory.
   :jira:`1263`
+
+- Fixed a bug where GPUs that were marked as OFFLINE in the **Startd** would still be available
+  for matchmaking in the ``AvailableGPUs`` attribute.
+  :jira:`1397`

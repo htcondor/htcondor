@@ -1459,6 +1459,7 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
 	// for use by the evalInEachContext matchmaking function
 	for (auto f(m_machres_devIds_map.begin()); f != m_machres_devIds_map.end(); ++f) {
 		const slotres_assigned_ids_t & ids(f->second);
+		auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
 
 		std::string attr; attr.reserve(18);
 		std::string avail; avail.reserve(2 + (ids.size() * 18));
@@ -1468,6 +1469,7 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
 		if (o != m_machres_devIdOwners_map.end() && slot_id >= 0 && o->second.size() >= ids.size()) {
 			const slotres_assigned_id_owners_t & owners(o->second);
 			for (size_t ix = 0; ix < ids.size(); ++ix) {
+				if (offline_ids.count(ids[ix])) continue; // offline ids are not Available
 				if (owners[ix].id != slot_id) continue; // does not belong to this slot or any d-slot under it
 				if (owners[ix].dyn_id != slot_subid) continue; // dyn_id is 0 when resource is Available in p-slot
 				attr = f->first; attr += "_";
@@ -1478,6 +1480,7 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
 			}
 		} else {
 			for (auto str : ids) { 
+				if (offline_ids.count(str)) continue; // offline ids are not Available
 				attr = f->first; attr += "_";
 				attr += str;
 				cleanStringForUseAsAttr(attr, '_');
