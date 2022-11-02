@@ -503,7 +503,7 @@ void Accountant::SetCeiling(const std::string& CustomerName, int ceiling)
 
 void Accountant::SetFloor(const std::string& CustomerName, int floor) 
 {
-  dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Ceiling=%d\n",CustomerName.c_str(),floor);
+  dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Floor=%d\n",CustomerName.c_str(),floor);
   SetAttributeInt(CustomerRecord+CustomerName,FloorAttr, floor);
 }
 
