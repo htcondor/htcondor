@@ -58,9 +58,6 @@
 #define SUBMIT_KEY_Stdout "stdout"
 #define SUBMIT_KEY_Error "error"
 #define SUBMIT_KEY_Stderr "stderr"
-#if !defined(WIN32)
-#define SUBMIT_KEY_RootDir "rootdir"
-#endif
 #define SUBMIT_KEY_InitialDir "initialdir"
 #define SUBMIT_KEY_InitialDirAlt "initial_dir"
 #define SUBMIT_KEY_JobIwd "job_iwd"
@@ -746,9 +743,6 @@ protected:
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
-	#if !defined(WIN32)
-	MyString JobRootdir;
-	#endif
 	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
 	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
@@ -770,11 +764,6 @@ protected:
 
 	int SetUniverse();  /* run once */
 
-#if !defined(WIN32)
-	int ComputeRootDir();
-	int SetRootDir();
-	int check_root_dir_access();
-#endif
 	int ComputeIWD();
 	int SetIWD();		  /* factory:ok */
 
