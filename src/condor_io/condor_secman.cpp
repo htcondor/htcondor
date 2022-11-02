@@ -3343,7 +3343,7 @@ SecMan::SecMan() :
 	m_cached_raw_protocol(false),
 	m_cached_use_tmp_sec_session(false),
 	m_cached_force_authentication(false),
-	m_cached_return_value(-1) {
+	m_cached_return_value(false) {
 
 	// the list of ClassAd attributes we need to resume a session
 	if (m_resume_proj.empty()) {
