@@ -1395,9 +1395,8 @@ Scheduler::count_jobs()
 		}
 
 		if (!effectFlockList.isEmpty()) {
-			char* flockList = effectFlockList.print_to_string();
-			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList);
-			free(flockList);
+			auto_free_ptr flockList(effectFlockList.print_to_string());
+			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList.ptr());
 		} else { cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST); }
 	}
 
