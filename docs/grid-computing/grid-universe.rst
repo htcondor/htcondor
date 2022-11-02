@@ -204,7 +204,7 @@ If the remote *condor_collector* is not listening on the standard port
 
 .. code-block:: condor-submit
 
-    grid_resource = condor schedd.example.comd machine1.example.com:12345
+    grid_resource = condor schedd.example.com machine1.example.com:12345
 
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using
@@ -1038,60 +1038,3 @@ command. You can supply the name of a file containing an SSH public key
 that will allow access to the administrator account with the
 **azure_admin_key** :index:`azure_admin_key<single: azure_admin_key; submit commands>`
 command.
-
-The BOINC Grid Type
--------------------
-
-:index:`BOINC` :index:`BOINC grid jobs`
-:index:`submitting jobs to BOINC<single: submitting jobs to BOINC; grid computing>`
-:index:`boinc<single: boinc; grid type>`
-
-HTCondor jobs may be submitted to BOINC (Berkeley Open Infrastructure
-for Network Computing) servers. BOINC is a software system for volunteer
-computing. More information about BOINC is available at
-`http://boinc.berkeley.edu/ <http://boinc.berkeley.edu/>`_.
-
-BOINC Job Submission
-''''''''''''''''''''
-
-HTCondor jobs are submitted to a BOINC service with the **grid**
-universe, setting the
-**grid_resource** :index:`grid_resource<single: grid_resource; submit commands>`
-command to **boinc**, followed by the service's URL.
-
-To use this grid type, you must have an account on the BOINC server that
-is authorized to submit jobs. Provide the authenticator string for that
-account for HTCondor to use. Write the authenticator string in a file
-and specify its location in the submit description file using the
-**boinc_authenticator_file** :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`
-command, as in the example:
-
-.. code-block:: condor-submit
-
-    boinc_authenticator_file = /path/to/auth-file
-
-Before submitting BOINC jobs, register the application with the BOINC
-server. This includes describing the application's resource requirements
-and input and output files, and placing application files on the server.
-This is a manual process that is done on the BOINC server. See the BOINC
-documentation for details.
-
-In the submit description file, the
-**executable** :index:`executable<single: executable; submit commands>` command
-gives the registered name of the application on the BOINC server. Input
-and output files can be described as in the vanilla universe, but the
-file names must match the application description on the BOINC server.
-If
-**transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
-is omitted, then all output files are transferred.
-
-BOINC Configuration Variables
-'''''''''''''''''''''''''''''
-
-The following configuration variable is specific to the **boinc** grid
-type. The value listed here is the default. A different value may be
-specified in the HTCondor configuration files.
-
-.. code-block:: condor-config
-
-    BOINC_GAHP = $(SBIN)/boinc_gahp

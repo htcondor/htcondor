@@ -3172,11 +3172,8 @@ public:
     static boost::shared_ptr<Submit>
     from_dag(std::string dag_filename, boost::python::dict opts)
     {
-        char* sub_data;
         DagmanUtils dagman_utils;
         FILE* sub_fp = NULL;
-        size_t sub_size;
-        std::string sub_args;
         std::string sub_filename = dag_filename + std::string(".condor.sub");
         std::list<std::string> dag_file_attr_lines;
         SubmitDagDeepOptions deep_opts;
@@ -3216,18 +3213,9 @@ public:
             THROW_EX(HTCondorIOError, "Could not read generated DAG submit file" );
         }
 
-        // Determine size of the file and store its contents in a buffer
-        fseek(sub_fp, 0, SEEK_END);
-        sub_size = ftell(sub_fp);
-        sub_data = new char[sub_size];
-        rewind(sub_fp);
-        if(fread(sub_data, sizeof(char), sub_size, sub_fp) != sub_size) {
-            printf("ERROR: DAG submit file %s returned wrong size\n", sub_filename.c_str());
+        std::string sub_args;
+        while (readLine(sub_args, sub_fp, true /*append to string*/)) {
         }
-        fclose(sub_fp);
-
-        sub_args = sub_data;
-        delete[] sub_data;
 
         // Create a Submit object with contents of the .condor.sub file
         boost::shared_ptr<Submit> sub(new Submit(sub_args));

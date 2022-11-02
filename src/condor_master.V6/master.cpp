@@ -1655,6 +1655,15 @@ init_classad()
 
 #if !defined(WIN32)
 	ad->Assign(ATTR_REAL_UID, (int)getuid());
+#ifdef LINUX
+	//caps = capabilities
+	uint64_t caps = sysapi_get_process_caps_mask(getpid());
+	if (caps != UINT64_MAX) { //If max for uint64 then a failure happended
+		std::string caps_hex;
+		formatstr(caps_hex,"0x%llx",(long long)caps);
+		ad->Assign(ATTR_LINUX_CAPS,caps_hex.c_str());
+	} else { dprintf(D_ALWAYS,"Error: Failed to get Linux process capabilites mask.\n"); }
+#endif
 #endif
 }
 

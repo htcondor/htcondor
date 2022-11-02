@@ -161,9 +161,7 @@ public:
     //------------------------------------------
 	void 					invalidateAllCache();
 	bool  					invalidateKey(const char * keyid);
-	void  					invalidateHost(const char * sin);
     void                    invalidateExpiredCache();
-	void					invalidateByParentAndPid(const char * parent, int pid);
 
 	// Setup `tag`ing mechanism - provide a way for a unique set of session caches.
 	// This is useful when CEDAR needs to impersonate several logical users within the

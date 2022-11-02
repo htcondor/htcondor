@@ -29,15 +29,14 @@ namespace classad {
 
 typedef std::vector<ExprTree*> ArgumentList;
 
+typedef bool (*ClassAdFunc)(const char *, const ArgumentList &, EvalState &,
+							Value &);
+
 typedef struct 
 {
 	std::string       functionName;
 
-	// The function should be a ClassAdFunc. Because we use this structure
-	// as part of the interface with a shared library that uses an extern
-	// C interface, we keep it as a void*, unfortunately.
-	// The onus is on you to make sure that it's really a ClassAdFunc!
-	void         *function;
+	ClassAdFunc       function;
 	
 	// We are likely to add some flags here in the future.  These
 	// flags will describe things like how to cache results of the
@@ -55,9 +54,6 @@ typedef	 ClassAdFunctionMapping *(*ClassAdSharedLibraryInit)(void);
 class FunctionCall : public ExprTree
 {
  public:
- 	typedef	bool(*ClassAdFunc)(const char*, const ArgumentList&, EvalState&,
-							   Value&);
-
     /// Copy Constructor
     FunctionCall(FunctionCall &functioncall);
 
@@ -108,7 +104,7 @@ class FunctionCall : public ExprTree
 	/// Constructor
 	FunctionCall ();
 	
-	typedef std::map<std::string, void*, CaseIgnLTStr > FuncTable;
+	typedef std::map<std::string, ClassAdFunc, CaseIgnLTStr> FuncTable;
 	
  private:
 	virtual void _SetParentScope( const ClassAd* );

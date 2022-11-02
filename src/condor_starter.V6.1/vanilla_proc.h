@@ -148,7 +148,7 @@ private:
 	void recordFinalUsage();
 	void killFamilyIfWarranted();
 	void notifySuccessfulEvictionCheckpoint();
-	void notifySuccessfulPeriodicCheckpoint();
+	void notifySuccessfulPeriodicCheckpoint(int checkpointNumber);
 
 	bool isCheckpointing;
 	bool isSoftKilling;

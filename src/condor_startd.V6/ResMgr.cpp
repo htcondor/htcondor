@@ -144,7 +144,7 @@ double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 {
     stats_recent_counter_timer * probe = &WalkOther;
-    if (memberfunc == &Resource::update) 
+    if (memberfunc == &Resource::update_walk_for_timer || memberfunc == &Resource::update_walk_for_vm_change)
        probe = &WalkUpdate;
     else if (memberfunc == &Resource::eval_state)
        probe = &WalkEvalState;
@@ -446,6 +446,7 @@ ResMgr::init_resources( void )
 {
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
+	bool *bkfill_bools = nullptr;
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
@@ -476,11 +477,12 @@ ResMgr::init_resources( void )
 	initTypes( max_types, type_strings, 1 );
 
 		// First, see how many slots of each type are specified.
-	num_res = countTypes( max_types, num_cpus(), &type_nums, true );
+	num_res = countTypes( max_types, num_cpus(), &type_nums, &bkfill_bools, true );
 
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
+		delete [] bkfill_bools;
 		id_disp = new IdDispenser( 1 );
 		return;
 	}
@@ -488,7 +490,7 @@ ResMgr::init_resources( void )
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, true );
+	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, true );
 	if( ! new_cpu_attrs ) {
 		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
@@ -508,6 +510,7 @@ ResMgr::init_resources( void )
 		// Resource objects.  Since it's an array of pointers, this
 		// won't touch the objects at all.
 	delete [] new_cpu_attrs;
+	delete [] bkfill_bools;
 
 #if HAVE_BACKFILL
 	backfillConfig();
@@ -546,6 +549,7 @@ ResMgr::reconfig_resources( void )
 {
 	int t, i, cur, num;
 	CpuAttributes** new_cpu_attrs;
+	bool *bkfill_bools = nullptr;
 	int max_num = num_cpus();
 	int* cur_type_index;
 	Resource*** sorted_resources;	// Array of arrays of pointers.
@@ -579,26 +583,30 @@ ResMgr::reconfig_resources( void )
 	initTypes( max_types, type_strings, 0 );
 
 		// First, see how many slots of each type are specified.
-	num = countTypes( max_types, num_cpus(), &new_type_nums, false );
+	num = countTypes( max_types, num_cpus(), &new_type_nums, &bkfill_bools, false );
 
 	if( typeNumCmp(new_type_nums, type_nums) ) {
 			// We want the same number of each slot type that we've got
 			// now.  We're done!
 		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
 		delete [] new_type_nums;
+		delete [] bkfill_bools;
 		new_type_nums = NULL;
+		bkfill_bools = nullptr;
 		return true;
 	}
 
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, false );
+	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, bkfill_bools, false );
 	if( ! new_cpu_attrs ) {
 			// There was an error, abort.  We still return true to
 			// indicate that we're done doing our thing...
 		dprintf( D_ALWAYS, "Aborting slot type reconfig.\n" );
 		delete [] new_type_nums;
+		delete [] bkfill_bools;
 		new_type_nums = NULL;
+		bkfill_bools = nullptr;
 		return true;
 	}
 
@@ -672,6 +680,7 @@ ResMgr::reconfig_resources( void )
 		// elsewhere, and the rest has already been deleted, so we
 		// should now delete the array itself.
 	delete [] new_cpu_attrs;
+	delete [] bkfill_bools;
 
 		// Cleanup our memory.
 	for( i=0; i<max_types; i++ ) {
@@ -1184,7 +1193,7 @@ ResMgr::update_all( void )
 		// If we didn't update b/c of the eval_state, we need to
 		// actually do the update now. Tj 2020 sez: this is a lie, was it ever true?
 		// What this actually does is insure that the update timers have been registered for all slots
-	walk( &Resource::update );
+	walk( &Resource::update_walk_for_timer );
 
 	report_updates();
 	check_polling();
@@ -2273,7 +2282,7 @@ ResMgr::checkHibernate( void )
         m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
         for ( int i = 0; i < nresources; ++i ) {
             resources[i]->enable();
-            resources[i]->update();
+            resources[i]->update_needed(Resource::WhyFor::wf_hiberChange);
 			m_hibernating = false;
 	    }
 

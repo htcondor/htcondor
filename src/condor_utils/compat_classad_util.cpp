@@ -31,7 +31,7 @@
 
 /* TODO This function needs to be tested.
  */
-int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
+int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree)
 {
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd( true );
@@ -39,21 +39,17 @@ int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos)
 		return 0;
 	} else {
 		tree = NULL;
-		if ( pos ) {
-			*pos = 0;
-		}
 		return 1;
 	}
 }
 
-bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree, int*pos)
+bool ParseLongFormAttrValue(const char * str, std::string & attr, classad::ExprTree*&tree)
 {
 	const char * rhs = NULL;
 	if ( ! SplitLongFormAttrValue(str, attr, rhs)) {
-		if (pos) *pos = 0;
-		return 1;
+		return false;
 	}
-	return ParseClassAdRvalExpr(rhs, tree, pos) == 0;
+	return ParseClassAdRvalExpr(rhs, tree) == 0;
 }
 
 /*

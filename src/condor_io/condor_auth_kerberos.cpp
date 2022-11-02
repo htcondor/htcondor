@@ -56,52 +56,45 @@ HashTable<std::string, std::string> * Condor_Auth_Kerberos::RealmMap = 0;
 //----------------------------------------------------------------------
 
 // Symbols from the kerberos libraries
-static char const *(KRB5_CALLCONV *error_message_ptr)(long) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_auth_con_free_ptr)(krb5_context, krb5_auth_context) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_auth_con_genaddrs_ptr)(krb5_context, krb5_auth_context, int, int) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_auth_con_getaddrs_ptr)(krb5_context, krb5_auth_context, krb5_address **, krb5_address **) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_auth_con_init_ptr)(krb5_context, krb5_auth_context *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_auth_con_setflags_ptr)(krb5_context, krb5_auth_context, krb5_int32) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_c_block_size_ptr)(krb5_context, krb5_enctype, size_t *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_c_decrypt_ptr)(krb5_context, const krb5_keyblock *, krb5_keyusage, const krb5_data *, const krb5_enc_data *, krb5_data *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_c_encrypt_ptr)(krb5_context, const krb5_keyblock *, krb5_keyusage, const krb5_data *, const krb5_data *, krb5_enc_data *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_c_encrypt_length_ptr)(krb5_context, krb5_enctype, size_t, size_t *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_cc_close_ptr)(krb5_context, krb5_ccache) = NULL;
-static const char *(KRB5_CALLCONV *krb5_cc_default_name_ptr)(krb5_context) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_cc_get_principal_ptr)(krb5_context, krb5_ccache, krb5_principal *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_cc_resolve_ptr)(krb5_context, const char *, krb5_ccache *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_copy_keyblock_ptr)(krb5_context, const krb5_keyblock *, krb5_keyblock **) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_copy_principal_ptr)(krb5_context, krb5_const_principal, krb5_principal *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_addresses_ptr)(krb5_context, krb5_address **) = NULL;
-static void (KRB5_CALLCONV *krb5_free_ap_rep_enc_part_ptr)(krb5_context, krb5_ap_rep_enc_part *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_context_ptr)(krb5_context) = NULL;
-static void (KRB5_CALLCONV *krb5_free_cred_contents_ptr)(krb5_context, krb5_creds *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_creds_ptr)(krb5_context, krb5_creds *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_keyblock_ptr)(krb5_context, krb5_keyblock *) = NULL;
-static void (KRB5_CALLCONV *krb5_free_principal_ptr)(krb5_context, krb5_principal) = NULL;
-static void (KRB5_CALLCONV *krb5_free_ticket_ptr)(krb5_context, krb5_ticket *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_get_credentials_ptr)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **) = NULL;
-// The presence of KRB5_RESPONDER_QUESTION_PASSWORD is a hacky substitute
-// for detecting the version of Kerberos where the function signature
-// of krb5_get_init_creds_keytab() changed.
-#if defined(KRB5_RESPONDER_QUESTION_PASSWORD)
-static krb5_error_code (KRB5_CALLCONV *krb5_get_init_creds_keytab_ptr)(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat, const char *, krb5_get_init_creds_opt *) = NULL;
-#else
-static krb5_error_code (KRB5_CALLCONV *krb5_get_init_creds_keytab_ptr)(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat, char *, krb5_get_init_creds_opt *) = NULL;
-#endif
-static krb5_error_code (KRB5_CALLCONV *krb5_init_context_ptr)(krb5_context *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_kt_close_ptr)(krb5_context, krb5_keytab) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_kt_default_ptr)(krb5_context, krb5_keytab *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_kt_default_name_ptr)(krb5_context, char *, int) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_kt_resolve_ptr)(krb5_context, const char *, krb5_keytab *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_mk_rep_ptr)(krb5_context, krb5_auth_context, krb5_data *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_mk_req_extended_ptr)(krb5_context, krb5_auth_context *, krb5_flags, krb5_data *, krb5_creds *, krb5_data *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_os_localaddr_ptr)(krb5_context, krb5_address ***) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_parse_name_ptr)(krb5_context, const char *, krb5_principal *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_rd_rep_ptr)(krb5_context, krb5_auth_context, const krb5_data *, krb5_ap_rep_enc_part **) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_rd_req_ptr)(krb5_context, krb5_auth_context *, const krb5_data *, krb5_const_principal, krb5_keytab, krb5_flags *, krb5_ticket **) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_sname_to_principal_ptr)(krb5_context, const char *, const char *, krb5_int32, krb5_principal *) = NULL;
-static krb5_error_code (KRB5_CALLCONV *krb5_unparse_name_ptr)(krb5_context, krb5_const_principal, char **) = NULL;
+static decltype(&error_message) error_message_ptr = nullptr;
+static decltype(&krb5_auth_con_free) krb5_auth_con_free_ptr = nullptr;
+static decltype(&krb5_auth_con_genaddrs) krb5_auth_con_genaddrs_ptr = nullptr;
+static decltype(&krb5_auth_con_getaddrs) krb5_auth_con_getaddrs_ptr = nullptr;
+static decltype(&krb5_auth_con_init) krb5_auth_con_init_ptr = nullptr;
+static decltype(&krb5_auth_con_setflags) krb5_auth_con_setflags_ptr = nullptr;
+static decltype(&krb5_c_block_size) krb5_c_block_size_ptr = nullptr;
+static decltype(&krb5_c_decrypt) krb5_c_decrypt_ptr = nullptr;
+static decltype(&krb5_c_encrypt) krb5_c_encrypt_ptr = nullptr;
+static decltype(&krb5_c_encrypt_length) krb5_c_encrypt_length_ptr = nullptr;
+static decltype(&krb5_cc_close) krb5_cc_close_ptr = nullptr;
+static decltype(&krb5_cc_default_name) krb5_cc_default_name_ptr = nullptr;
+static decltype(&krb5_cc_get_principal) krb5_cc_get_principal_ptr = nullptr;
+static decltype(&krb5_cc_resolve) krb5_cc_resolve_ptr = nullptr;
+static decltype(&krb5_copy_keyblock) krb5_copy_keyblock_ptr = nullptr;
+static decltype(&krb5_copy_principal) krb5_copy_principal_ptr = nullptr;
+static decltype(&krb5_free_addresses) krb5_free_addresses_ptr = nullptr;
+static decltype(&krb5_free_ap_rep_enc_part) krb5_free_ap_rep_enc_part_ptr = nullptr;
+static decltype(&krb5_free_context) krb5_free_context_ptr = nullptr;
+static decltype(&krb5_free_cred_contents) krb5_free_cred_contents_ptr = nullptr;
+static decltype(&krb5_free_creds) krb5_free_creds_ptr = nullptr;
+static decltype(&krb5_free_keyblock) krb5_free_keyblock_ptr = nullptr;
+static decltype(&krb5_free_principal) krb5_free_principal_ptr = nullptr;
+static decltype(&krb5_free_ticket) krb5_free_ticket_ptr = nullptr;
+static decltype(&krb5_get_credentials) krb5_get_credentials_ptr = nullptr;
+static decltype(&krb5_get_init_creds_keytab) krb5_get_init_creds_keytab_ptr = nullptr;
+static decltype(&krb5_init_context) krb5_init_context_ptr = nullptr;
+static decltype(&krb5_kt_close) krb5_kt_close_ptr = nullptr;
+static decltype(&krb5_kt_default) krb5_kt_default_ptr = nullptr;
+static decltype(&krb5_kt_default_name) krb5_kt_default_name_ptr = nullptr;
+static decltype(&krb5_kt_resolve) krb5_kt_resolve_ptr = nullptr;
+static decltype(&krb5_mk_rep) krb5_mk_rep_ptr = nullptr;
+static decltype(&krb5_mk_req_extended) krb5_mk_req_extended_ptr = nullptr;
+static decltype(&krb5_os_localaddr) krb5_os_localaddr_ptr = nullptr;
+static decltype(&krb5_parse_name) krb5_parse_name_ptr = nullptr;
+static decltype(&krb5_rd_rep) krb5_rd_rep_ptr = nullptr;
+static decltype(&krb5_rd_req) krb5_rd_req_ptr = nullptr;
+static decltype(&krb5_sname_to_principal) krb5_sname_to_principal_ptr = nullptr;
+static decltype(&krb5_unparse_name) krb5_unparse_name_ptr = nullptr;
 
 bool Condor_Auth_Kerberos::m_initTried = false;
 bool Condor_Auth_Kerberos::m_initSuccess = false;
@@ -167,53 +160,53 @@ bool Condor_Auth_Kerberos::Initialize()
 	void *dl_hdl;
 
 	if ( (dl_hdl = dlopen(LIBCOM_ERR_SO, RTLD_LAZY)) == NULL ||
-		 !(error_message_ptr = (char const *(*)(long))dlsym(dl_hdl, "error_message")) ||
+		 !(error_message_ptr = reinterpret_cast<decltype(error_message_ptr)>(dlsym(dl_hdl, "error_message"))) ||
 		 (dl_hdl = dlopen(LIBKRB5SUPPORT_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBK5CRYPTO_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBKRB5_SO, RTLD_LAZY)) == NULL ||
 		 (dl_hdl = dlopen(LIBGSSAPI_KRB5_SO, RTLD_LAZY)) == NULL ||
-		 !(krb5_auth_con_free_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context))dlsym(dl_hdl, "krb5_auth_con_free")) ||
-		 !(krb5_auth_con_genaddrs_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, int, int))dlsym(dl_hdl, "krb5_auth_con_genaddrs")) ||
-		 !(krb5_auth_con_getaddrs_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, krb5_address **, krb5_address **))dlsym(dl_hdl, "krb5_auth_con_getaddrs")) ||
-		 !(krb5_auth_con_init_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context *))dlsym(dl_hdl, "krb5_auth_con_init")) ||
-		 !(krb5_auth_con_setflags_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, krb5_int32))dlsym(dl_hdl, "krb5_auth_con_setflags")) ||
-		 !(krb5_c_block_size_ptr = (krb5_error_code (*)(krb5_context, krb5_enctype, size_t *))dlsym(dl_hdl, "krb5_c_block_size")) ||
-		 !(krb5_c_decrypt_ptr = (krb5_error_code (*)(krb5_context, const krb5_keyblock *, krb5_keyusage, const krb5_data *, const krb5_enc_data *, krb5_data *))dlsym(dl_hdl, "krb5_c_decrypt")) ||
-		 !(krb5_c_encrypt_ptr = (krb5_error_code (*)(krb5_context, const krb5_keyblock *, krb5_keyusage, const krb5_data *, const krb5_data *, krb5_enc_data *))dlsym(dl_hdl, "krb5_c_encrypt")) ||
-		 !(krb5_c_encrypt_length_ptr = (krb5_error_code (*)(krb5_context, krb5_enctype, size_t, size_t *))dlsym(dl_hdl, "krb5_c_encrypt_length")) ||
-		 !(krb5_cc_close_ptr = (krb5_error_code (*)(krb5_context, krb5_ccache))dlsym(dl_hdl, "krb5_cc_close")) ||
-		 !(krb5_cc_default_name_ptr = (const char *(*)(krb5_context))dlsym(dl_hdl, "krb5_cc_default_name")) ||
-		 !(krb5_cc_get_principal_ptr = (krb5_error_code (*)(krb5_context, krb5_ccache, krb5_principal *))dlsym(dl_hdl, "krb5_cc_get_principal")) ||
-		 !(krb5_cc_resolve_ptr = (krb5_error_code (*)(krb5_context, const char *, krb5_ccache *))dlsym(dl_hdl, "krb5_cc_resolve")) ||
-		 !(krb5_copy_keyblock_ptr = (krb5_error_code (*)(krb5_context, const krb5_keyblock *, krb5_keyblock **))dlsym(dl_hdl, "krb5_copy_keyblock")) ||
-		 !(krb5_copy_principal_ptr = (krb5_error_code (*)(krb5_context, krb5_const_principal, krb5_principal *))dlsym(dl_hdl, "krb5_copy_principal")) ||
-		 !(krb5_free_addresses_ptr = (void (*)(krb5_context, krb5_address **))dlsym(dl_hdl, "krb5_free_addresses")) ||
-		 !(krb5_free_ap_rep_enc_part_ptr = (void (*)(krb5_context, krb5_ap_rep_enc_part *))dlsym(dl_hdl, "krb5_free_ap_rep_enc_part")) ||
-		 !(krb5_free_context_ptr = (void (*)(krb5_context))dlsym(dl_hdl, "krb5_free_context")) ||
-		 !(krb5_free_cred_contents_ptr = (void (*)(krb5_context, krb5_creds *))dlsym(dl_hdl, "krb5_free_cred_contents")) ||
-		 !(krb5_free_creds_ptr = (void (*)(krb5_context, krb5_creds *))dlsym(dl_hdl, "krb5_free_creds")) ||
-		 !(krb5_free_keyblock_ptr = (void (*)(krb5_context, krb5_keyblock *))dlsym(dl_hdl, "krb5_free_keyblock")) ||
-		 !(krb5_free_principal_ptr = (void (*)(krb5_context, krb5_principal))dlsym(dl_hdl, "krb5_free_principal")) ||
-		 !(krb5_free_ticket_ptr = (void (*)(krb5_context, krb5_ticket *))dlsym(dl_hdl, "krb5_free_ticket")) ||
-		 !(krb5_get_credentials_ptr = (krb5_error_code (*)(krb5_context, krb5_flags, krb5_ccache, krb5_creds *, krb5_creds **))dlsym(dl_hdl, "krb5_get_credentials")) ||
+		 !(krb5_auth_con_free_ptr = reinterpret_cast<decltype(krb5_auth_con_free_ptr)>(dlsym(dl_hdl, "krb5_auth_con_free"))) ||
+		 !(krb5_auth_con_genaddrs_ptr = reinterpret_cast<decltype(krb5_auth_con_genaddrs_ptr)>(dlsym(dl_hdl, "krb5_auth_con_genaddrs"))) ||
+		 !(krb5_auth_con_getaddrs_ptr = reinterpret_cast<decltype(krb5_auth_con_getaddrs_ptr)>(dlsym(dl_hdl, "krb5_auth_con_getaddrs"))) ||
+		 !(krb5_auth_con_init_ptr = reinterpret_cast<decltype(krb5_auth_con_init_ptr)>(dlsym(dl_hdl, "krb5_auth_con_init"))) ||
+		 !(krb5_auth_con_setflags_ptr = reinterpret_cast<decltype(krb5_auth_con_setflags_ptr)>(dlsym(dl_hdl, "krb5_auth_con_setflags"))) ||
+		 !(krb5_c_block_size_ptr = reinterpret_cast<decltype(krb5_c_block_size_ptr)>(dlsym(dl_hdl, "krb5_c_block_size"))) ||
+		 !(krb5_c_decrypt_ptr = reinterpret_cast<decltype(krb5_c_decrypt_ptr)>(dlsym(dl_hdl, "krb5_c_decrypt"))) ||
+		 !(krb5_c_encrypt_ptr = reinterpret_cast<decltype(krb5_c_encrypt_ptr)>(dlsym(dl_hdl, "krb5_c_encrypt"))) ||
+		 !(krb5_c_encrypt_length_ptr = reinterpret_cast<decltype(krb5_c_encrypt_length_ptr)>(dlsym(dl_hdl, "krb5_c_encrypt_length"))) ||
+		 !(krb5_cc_close_ptr = reinterpret_cast<decltype(krb5_cc_close_ptr)>(dlsym(dl_hdl, "krb5_cc_close"))) ||
+		 !(krb5_cc_default_name_ptr = reinterpret_cast<decltype(krb5_cc_default_name_ptr)>(dlsym(dl_hdl, "krb5_cc_default_name"))) ||
+		 !(krb5_cc_get_principal_ptr = reinterpret_cast<decltype(krb5_cc_get_principal_ptr)>(dlsym(dl_hdl, "krb5_cc_get_principal"))) ||
+		 !(krb5_cc_resolve_ptr = reinterpret_cast<decltype(krb5_cc_resolve_ptr)>(dlsym(dl_hdl, "krb5_cc_resolve"))) ||
+		 !(krb5_copy_keyblock_ptr = reinterpret_cast<decltype(krb5_copy_keyblock_ptr)>(dlsym(dl_hdl, "krb5_copy_keyblock"))) ||
+		 !(krb5_copy_principal_ptr = reinterpret_cast<decltype(krb5_copy_principal_ptr)>(dlsym(dl_hdl, "krb5_copy_principal"))) ||
+		 !(krb5_free_addresses_ptr = reinterpret_cast<decltype(krb5_free_addresses_ptr)>(dlsym(dl_hdl, "krb5_free_addresses"))) ||
+		 !(krb5_free_ap_rep_enc_part_ptr = reinterpret_cast<decltype(krb5_free_ap_rep_enc_part_ptr)>(dlsym(dl_hdl, "krb5_free_ap_rep_enc_part"))) ||
+		 !(krb5_free_context_ptr = reinterpret_cast<decltype(krb5_free_context_ptr)>(dlsym(dl_hdl, "krb5_free_context"))) ||
+		 !(krb5_free_cred_contents_ptr = reinterpret_cast<decltype(krb5_free_cred_contents_ptr)>(dlsym(dl_hdl, "krb5_free_cred_contents"))) ||
+		 !(krb5_free_creds_ptr = reinterpret_cast<decltype(krb5_free_creds_ptr)>(dlsym(dl_hdl, "krb5_free_creds"))) ||
+		 !(krb5_free_keyblock_ptr = reinterpret_cast<decltype(krb5_free_keyblock_ptr)>(dlsym(dl_hdl, "krb5_free_keyblock"))) ||
+		 !(krb5_free_principal_ptr = reinterpret_cast<decltype(krb5_free_principal_ptr)>(dlsym(dl_hdl, "krb5_free_principal"))) ||
+		 !(krb5_free_ticket_ptr = reinterpret_cast<decltype(krb5_free_ticket_ptr)>(dlsym(dl_hdl, "krb5_free_ticket"))) ||
+		 !(krb5_get_credentials_ptr = reinterpret_cast<decltype(krb5_get_credentials_ptr)>(dlsym(dl_hdl, "krb5_get_credentials"))) ||
 #if defined(KRB5_RESPONDER_QUESTION_PASSWORD)
-		 !(krb5_get_init_creds_keytab_ptr = (krb5_error_code (*)(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat, const char *, krb5_get_init_creds_opt *))dlsym(dl_hdl, "krb5_get_init_creds_keytab")) ||
+		 !(krb5_get_init_creds_keytab_ptr = reinterpret_cast<decltype(krb5_get_init_creds_keytab_ptr)>(dlsym(dl_hdl, "krb5_get_init_creds_keytab"))) ||
 #else
-		 !(krb5_get_init_creds_keytab_ptr = (krb5_error_code (*)(krb5_context, krb5_creds *, krb5_principal, krb5_keytab, krb5_deltat, char *, krb5_get_init_creds_opt *))dlsym(dl_hdl, "krb5_get_init_creds_keytab")) ||
+		 !(krb5_get_init_creds_keytab_ptr = reinterpret_cast<decltype(krb5_get_init_creds_keytab_ptr)>(dlsym(dl_hdl, "krb5_get_init_creds_keytab"))) ||
 #endif
-		 !(krb5_init_context_ptr = (krb5_error_code (*)(krb5_context *))dlsym(dl_hdl, "krb5_init_context")) ||
-		 !(krb5_kt_close_ptr = (krb5_error_code (*)(krb5_context, krb5_keytab))dlsym(dl_hdl, "krb5_kt_close")) ||
-		 !(krb5_kt_default_ptr = (krb5_error_code (*)(krb5_context, krb5_keytab *))dlsym(dl_hdl, "krb5_kt_default")) ||
-		 !(krb5_kt_default_name_ptr = (krb5_error_code (*)(krb5_context, char *, int))dlsym(dl_hdl, "krb5_kt_default_name")) ||
-		 !(krb5_kt_resolve_ptr = (krb5_error_code (*)(krb5_context, const char *, krb5_keytab *))dlsym(dl_hdl, "krb5_kt_resolve")) ||
-		 !(krb5_mk_rep_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, krb5_data *))dlsym(dl_hdl, "krb5_mk_rep")) ||
-		 !(krb5_mk_req_extended_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context *, krb5_flags, krb5_data *, krb5_creds *, krb5_data *))dlsym(dl_hdl, "krb5_mk_req_extended")) ||
-		 !(krb5_os_localaddr_ptr = (krb5_error_code (*)(krb5_context, krb5_address ***))dlsym(dl_hdl, "krb5_os_localaddr")) ||
-		 !(krb5_parse_name_ptr = (krb5_error_code (*)(krb5_context, const char *, krb5_principal *))dlsym(dl_hdl, "krb5_parse_name")) ||
-		 !(krb5_rd_rep_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context, const krb5_data *, krb5_ap_rep_enc_part **))dlsym(dl_hdl, "krb5_rd_rep")) ||
-		 !(krb5_rd_req_ptr = (krb5_error_code (*)(krb5_context, krb5_auth_context *, const krb5_data *, krb5_const_principal, krb5_keytab, krb5_flags *, krb5_ticket **))dlsym(dl_hdl, "krb5_rd_req")) ||
-		 !(krb5_sname_to_principal_ptr = (krb5_error_code (*)(krb5_context, const char *, const char *, krb5_int32, krb5_principal *))dlsym(dl_hdl, "krb5_sname_to_principal")) ||
-		 !(krb5_unparse_name_ptr = (krb5_error_code (*)(krb5_context, krb5_const_principal, char **))dlsym(dl_hdl, "krb5_unparse_name"))
+		 !(krb5_init_context_ptr = reinterpret_cast<decltype(krb5_init_context_ptr)>(dlsym(dl_hdl, "krb5_init_context"))) ||
+		 !(krb5_kt_close_ptr = reinterpret_cast<decltype(krb5_kt_close_ptr)>(dlsym(dl_hdl, "krb5_kt_close"))) ||
+		 !(krb5_kt_default_ptr = reinterpret_cast<decltype(krb5_kt_default_ptr)>(dlsym(dl_hdl, "krb5_kt_default"))) ||
+		 !(krb5_kt_default_name_ptr = reinterpret_cast<decltype(krb5_kt_default_name_ptr)>(dlsym(dl_hdl, "krb5_kt_default_name"))) ||
+		 !(krb5_kt_resolve_ptr = reinterpret_cast<decltype(krb5_kt_resolve_ptr)>(dlsym(dl_hdl, "krb5_kt_resolve"))) ||
+		 !(krb5_mk_rep_ptr = reinterpret_cast<decltype(krb5_mk_rep_ptr)>(dlsym(dl_hdl, "krb5_mk_rep"))) ||
+		 !(krb5_mk_req_extended_ptr = reinterpret_cast<decltype(krb5_mk_req_extended_ptr)>(dlsym(dl_hdl, "krb5_mk_req_extended"))) ||
+		 !(krb5_os_localaddr_ptr = reinterpret_cast<decltype(krb5_os_localaddr_ptr)>(dlsym(dl_hdl, "krb5_os_localaddr"))) ||
+		 !(krb5_parse_name_ptr = reinterpret_cast<decltype(krb5_parse_name_ptr)>(dlsym(dl_hdl, "krb5_parse_name"))) ||
+		 !(krb5_rd_rep_ptr = reinterpret_cast<decltype(krb5_rd_rep_ptr)>(dlsym(dl_hdl, "krb5_rd_rep"))) ||
+		 !(krb5_rd_req_ptr = reinterpret_cast<decltype(krb5_rd_req_ptr)>(dlsym(dl_hdl, "krb5_rd_req"))) ||
+		 !(krb5_sname_to_principal_ptr = reinterpret_cast<decltype(krb5_sname_to_principal_ptr)>(dlsym(dl_hdl, "krb5_sname_to_principal"))) ||
+		 !(krb5_unparse_name_ptr = reinterpret_cast<decltype(krb5_unparse_name_ptr)>(dlsym(dl_hdl, "krb5_unparse_name")))
 		 ) {
 
 		// Error in the dlopen/sym calls, return failure.
@@ -414,7 +407,7 @@ int Condor_Auth_Kerberos :: wrap(const char*  input,
 	char* encrypted_data = 0;
 
 	// make a blank initialization vector
-	code = (*krb5_c_block_size_ptr)(krb_context_, sessionKey_->enctype, &blocksize);
+	code = krb5_c_block_size_ptr(krb_context_, sessionKey_->enctype, &blocksize);
 	if (code) {
 		// err
 	}
@@ -424,7 +417,7 @@ int Condor_Auth_Kerberos :: wrap(const char*  input,
     in_data.length = input_len;
 
     // Make the output buffer
-    code = (*krb5_c_encrypt_length_ptr)(krb_context_, sessionKey_->enctype, input_len, &encrypted_length);
+    code = krb5_c_encrypt_length_ptr(krb_context_, sessionKey_->enctype, input_len, &encrypted_length);
 	if(code) {
 		// err
 	}
@@ -437,14 +430,14 @@ int Condor_Auth_Kerberos :: wrap(const char*  input,
     out_data.ciphertext.data = (char*)encrypted_data;
 	out_data.ciphertext.length = encrypted_length;
 
-    if ((code = (*krb5_c_encrypt_ptr)(krb_context_, sessionKey_, 1024, /* key usage */
+    if ((code = krb5_c_encrypt_ptr(krb_context_, sessionKey_, 1024, /* key usage */
 				0, &in_data, &out_data)) != 0) {			/* 0 = no ivec */
         output     = 0;
         output_len = 0;
         if (out_data.ciphertext.data) {    
             free(out_data.ciphertext.data);
         }
-        dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
+        dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message_ptr(code) );
         return false;
     }
     
@@ -508,21 +501,21 @@ int Condor_Auth_Kerberos :: unwrap(const char*  input,
 			enc_data.enctype, sessionKey_->enctype);
 
 	// make a blank initialization vector
-	code = (*krb5_c_block_size_ptr)(krb_context_, sessionKey_->enctype, &blocksize);
+	code = krb5_c_block_size_ptr(krb_context_, sessionKey_->enctype, &blocksize);
 	if (code) {
-		dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", (*error_message_ptr)(code));
+		dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", error_message_ptr(code));
 	}
 
     out_data.length = enc_data.ciphertext.length;
 	out_data.data = (char*)malloc(out_data.length);
 
-	if ((code = (*krb5_c_decrypt_ptr)(krb_context_, sessionKey_, 1024, /* key usage */
+	if ((code = krb5_c_decrypt_ptr(krb_context_, sessionKey_, 1024, /* key usage */
 				0, &enc_data, &out_data))!=0) {			/* 0 = no ivec */
 
-	//if (code = (*krb5_decrypt_data_ptr)(krb_context_, sessionKey_, 0, &enc_data, &out_data)) {
+	//if (code = krb5_decrypt_data_ptr(krb_context_, sessionKey_, 0, &enc_data, &out_data)) {
         output_len = 0;
         output = 0;
-        dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
+        dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message_ptr(code) );
         if (out_data.data) {
             free(out_data.data);
         }
@@ -576,7 +569,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 
 	if (daemonPrincipal) {
 		// it was defined explicitly in the config file
-		if ((code = (*krb5_parse_name_ptr)(krb_context_, daemonPrincipal, &krb_principal_))) {
+		if ((code = krb5_parse_name_ptr(krb_context_, daemonPrincipal, &krb_principal_))) {
 			free(daemonPrincipal);
 			goto error;
 		}
@@ -588,7 +581,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 			daemonPrincipal = strdup(STR_DEFAULT_CONDOR_SERVICE);
 		}
 
-    	if ((code = (*krb5_sname_to_principal_ptr)(krb_context_, 
+    	if ((code = krb5_sname_to_principal_ptr(krb_context_, 
                                         	NULL, 
                                         	daemonPrincipal,
                                         	KRB5_NT_SRV_HST, 
@@ -605,12 +598,12 @@ int Condor_Auth_Kerberos :: init_daemon()
 
     if (keytabName_) {
     	dprintf(D_SECURITY, "init_daemon: Using keytab %s\n", keytabName_);
-        code = (*krb5_kt_resolve_ptr)(krb_context_, keytabName_, &keytab);
+        code = krb5_kt_resolve_ptr(krb_context_, keytabName_, &keytab);
     } else {
 		char defktname[_POSIX_PATH_MAX];
-		(*krb5_kt_default_name_ptr)(krb_context_, defktname, _POSIX_PATH_MAX);
+		krb5_kt_default_name_ptr(krb_context_, defktname, _POSIX_PATH_MAX);
     	dprintf(D_SECURITY, "init_daemon: Using default keytab %s\n", defktname);
-        code = (*krb5_kt_default_ptr)(krb_context_, &keytab);
+        code = krb5_kt_default_ptr(krb_context_, &keytab);
     }
 	if (code) {
 		goto error;
@@ -618,7 +611,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 
 	// get the service name out of the member variable server_
 	tmpsname = 0;
-	code = (*krb5_unparse_name_ptr)(krb_context_, server_, &tmpsname);
+	code = krb5_unparse_name_ptr(krb_context_, server_, &tmpsname);
 	if (code) {
 		goto error;
 	}
@@ -630,7 +623,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 	dprintf(D_SECURITY, "init_daemon: Trying to get tgt credential for service %s\n", sname.c_str());
 
 	priv = set_root_priv();   // Get the old privilige
-	code = (*krb5_get_init_creds_keytab_ptr)(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.c_str()), 0);
+	code = krb5_get_init_creds_keytab_ptr(krb_context_, creds_, krb_principal_, keytab, 0, const_cast<char*>(sname.c_str()), 0);
 	set_priv(priv);
 	if(code) {
 		goto error;
@@ -647,14 +640,14 @@ int Condor_Auth_Kerberos :: init_daemon()
     
  error:
     
-    dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", (*error_message_ptr)(code));
+    dprintf(D_ALWAYS, "AUTH_ERROR: %s\n", error_message_ptr(code));
 
     rc = FALSE;
     
  cleanup:
     
     if (keytab) {
-        (*krb5_kt_close_ptr)(krb_context_, keytab);
+        krb5_kt_close_ptr(krb_context_, keytab);
     }
     
     return rc;
@@ -674,24 +667,24 @@ int Condor_Auth_Kerberos :: init_user()
     //------------------------------------------
     // First, try the default credential cache
     //------------------------------------------
-    ccname_ = strdup((*krb5_cc_default_name_ptr)(krb_context_));
+    ccname_ = strdup(krb5_cc_default_name_ptr(krb_context_));
     
-    if ((code = (*krb5_cc_resolve_ptr)(krb_context_, ccname_, &ccache))) {
+    if ((code = krb5_cc_resolve_ptr(krb_context_, ccname_, &ccache))) {
         goto error;
     }
     
     //------------------------------------------
     // Get principal info
     //------------------------------------------
-    if ((code = (*krb5_cc_get_principal_ptr)(krb_context_, ccache, &krb_principal_))) {
+    if ((code = krb5_cc_get_principal_ptr(krb_context_, ccache, &krb_principal_))) {
         goto error;
     }
 
-    if ((code = (*krb5_copy_principal_ptr)(krb_context_,krb_principal_,&mcreds.client))){
+    if ((code = krb5_copy_principal_ptr(krb_context_,krb_principal_,&mcreds.client))){
         goto error;
     }
     
-    if ((code = (*krb5_copy_principal_ptr)(krb_context_, server_, &mcreds.server))) {
+    if ((code = krb5_copy_principal_ptr(krb_context_, server_, &mcreds.server))) {
         goto error;
     }
     
@@ -704,7 +697,7 @@ int Condor_Auth_Kerberos :: init_user()
 		dprintf ( D_FULLDEBUG, "init_user: pre creds_ is NULL\n");
 	}		
 
-    if ((code = (*krb5_get_credentials_ptr)(krb_context_, 0, ccache, &mcreds, &creds_))) {
+    if ((code = krb5_get_credentials_ptr(krb_context_, 0, ccache, &mcreds, &creds_))) {
         goto error;
     }                                   
 
@@ -723,15 +716,15 @@ int Condor_Auth_Kerberos :: init_user()
     goto cleanup;
     
  error:
-    dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message_ptr(code) );
     rc = FALSE;
 
  cleanup:
 
-    (*krb5_free_cred_contents_ptr)(krb_context_, &mcreds);
+    krb5_free_cred_contents_ptr(krb_context_, &mcreds);
 
     if (ccache) {  // maybe should destroy this
-        (*krb5_cc_close_ptr)(krb_context_, ccache);
+        krb5_cc_close_ptr(krb_context_, ccache);
     }
     return rc;
 }
@@ -756,7 +749,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
 	assert(creds_);
     if (creds_->addresses == NULL) {
 		dprintf ( D_SECURITY, "KERBEROS: creds_->addresses == NULL\n");
-        if ((code = (*krb5_os_localaddr_ptr)(krb_context_, &(creds_->addresses)))) {
+        if ((code = krb5_os_localaddr_ptr(krb_context_, &(creds_->addresses)))) {
             goto error;
         }
     }
@@ -767,7 +760,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     //------------------------------------------
     // Let's create the KRB_AP_REQ message
     //------------------------------------------    
-    if ((code = (*krb5_mk_req_extended_ptr)(krb_context_, 
+    if ((code = krb5_mk_req_extended_ptr(krb_context_, 
                                     &auth_context_, 
                                     flags,
                                     0, 
@@ -816,7 +809,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     //------------------------------------------
     // Store the session key for encryption
     //------------------------------------------
-    if ((code = (*krb5_copy_keyblock_ptr)(krb_context_, &(creds_->keyblock), &sessionKey_))) {
+    if ((code = krb5_copy_keyblock_ptr(krb_context_, &(creds_->keyblock), &sessionKey_))) {
         goto error;			  
     } 
 
@@ -824,7 +817,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     goto cleanup;
     
  error:
-    dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message_ptr(code) );
     // Abort
     mySock_->encode();
     reply = KERBEROS_ABORT;
@@ -836,7 +829,7 @@ int Condor_Auth_Kerberos :: authenticate_client_kerberos()
     
  cleanup:
     
-   (*krb5_free_creds_ptr)(krb_context_, creds_);
+   krb5_free_creds_ptr(krb_context_, creds_);
     
     if (request.data) {
         free(request.data);
@@ -888,15 +881,15 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
     // Getting keytab info
     //------------------------------------------
     if (keytabName_) {
-        code = (*krb5_kt_resolve_ptr)(krb_context_, keytabName_, &keytab);
+        code = krb5_kt_resolve_ptr(krb_context_, keytabName_, &keytab);
     }
     else {
-        code = (*krb5_kt_default_ptr)(krb_context_, &keytab);
+        code = krb5_kt_default_ptr(krb_context_, &keytab);
     }
     
     if (code) {
         dprintf( D_ALWAYS, "1: Kerberos server authentication error:%s\n",
-				 (*error_message_ptr)(code) );
+				 error_message_ptr(code) );
         goto error;
     }
     
@@ -914,7 +907,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
 
  priv = set_root_priv();   // Get the old privilige
     
- if ((code = (*krb5_rd_req_ptr)(krb_context_,
+ if ((code = krb5_rd_req_ptr(krb_context_,
                            &auth_context_,
                            &request,
                            //krb_principal_,
@@ -924,7 +917,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
                            &ticket_))) {
         set_priv(priv);   // Reset
         dprintf( D_ALWAYS, "2: Kerberos server authentication error:%s\n",
-				 (*error_message_ptr)(code) );
+				 error_message_ptr(code) );
         goto error;
     }
     set_priv(priv);   // Reset
@@ -934,9 +927,9 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
     //------------------------------------------
     // Mutual authentication is always required
     //------------------------------------------
-    if ((code = (*krb5_mk_rep_ptr)(krb_context_, auth_context_, &reply))) {
+    if ((code = krb5_mk_rep_ptr(krb_context_, auth_context_, &reply))) {
         dprintf( D_ALWAYS, "3: Kerberos server authentication error:%s\n",
-                           (*error_message_ptr)(code) );
+                           error_message_ptr(code) );
         goto error;
     }
 
@@ -959,7 +952,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
     // state in ticket_ member variable.
 
     if (keytab) {
-        (*krb5_kt_close_ptr)(krb_context_, keytab);
+        krb5_kt_close_ptr(krb_context_, keytab);
     }
 
     if (request.data) {
@@ -986,11 +979,11 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_1()
     // Free up anything we allocated since we are done (failed).
     //------------------------------------------
     if (ticket_) {
-        (*krb5_free_ticket_ptr)(krb_context_, ticket_);
+        krb5_free_ticket_ptr(krb_context_, ticket_);
     }
 
     if (keytab) {
-        (*krb5_kt_close_ptr)(krb_context_, keytab);
+        krb5_kt_close_ptr(krb_context_, keytab);
     }
 
     if (request.data) {
@@ -1040,10 +1033,10 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_2()
     }
 
     // copy the session key
-    if ((code = (*krb5_copy_keyblock_ptr)(krb_context_, 
+    if ((code = krb5_copy_keyblock_ptr(krb_context_, 
                                   ticket_->enc_part2->session,
                                   &sessionKey_))){
-        dprintf(D_SECURITY, "4: Kerberos server authentication error:%s\n", (*error_message_ptr)(code));
+        dprintf(D_SECURITY, "4: Kerberos server authentication error:%s\n", error_message_ptr(code));
         goto error;
     }
     
@@ -1083,7 +1076,7 @@ int Condor_Auth_Kerberos :: authenticate_server_kerberos_2()
     //------------------------------------------
     // Free up some stuff
     //------------------------------------------
-    (*krb5_free_ticket_ptr)(krb_context_, ticket_);
+    krb5_free_ticket_ptr(krb_context_, ticket_);
 
     return rc;
 }
@@ -1105,12 +1098,12 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
         return KERBEROS_DENY;
     }
     
-    if ((code = (*krb5_rd_rep_ptr)(krb_context_, auth_context_, &request, &rep))) {
+    if ((code = krb5_rd_rep_ptr(krb_context_, auth_context_, &request, &rep))) {
         goto error;
     }
     
     if (rep) {
-        (*krb5_free_ap_rep_enc_part_ptr)(krb_context_, rep);
+        krb5_free_ap_rep_enc_part_ptr(krb_context_, rep);
     }
     
     message = KERBEROS_GRANT;
@@ -1130,7 +1123,7 @@ int Condor_Auth_Kerberos :: client_mutual_authenticate()
  error:
     free(request.data);
     
-    dprintf( D_ALWAYS, "KERBEROS: %s\n", (*error_message_ptr)(code) );
+    dprintf( D_ALWAYS, "KERBEROS: %s\n", error_message_ptr(code) );
     return KERBEROS_DENY;
 }
 
@@ -1143,22 +1136,22 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
 
     // kerberos context_
     if (krb_context_ == NULL) {
-        if ((code = (*krb5_init_context_ptr)(&krb_context_))) {
+        if ((code = krb5_init_context_ptr(&krb_context_))) {
             goto error;
         }
     }
 
-    if ((code = (*krb5_auth_con_init_ptr)(krb_context_, &auth_context_))) {
+    if ((code = krb5_auth_con_init_ptr(krb_context_, &auth_context_))) {
         goto error;
     }
 
-    if ((code = (*krb5_auth_con_setflags_ptr)(krb_context_, 
+    if ((code = krb5_auth_con_setflags_ptr(krb_context_, 
                                       auth_context_, 
                                       KRB5_AUTH_CONTEXT_DO_SEQUENCE))) {
         goto error;
     }
         
-    if ((code = (*krb5_auth_con_genaddrs_ptr)(krb_context_, 
+    if ((code = krb5_auth_con_genaddrs_ptr(krb_context_, 
                                       auth_context_, 
                                       mySock_->get_file_desc(),
                                       KRB5_AUTH_CONTEXT_GENERATE_LOCAL_FULL_ADDR|
@@ -1172,7 +1165,7 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
     // allowed. This call should be a noop, but just in case it can fail
     // and that's a useful indicator of problems on other platforms, leave
     // it in place for them.
-    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_,
+    if ((code = krb5_auth_con_getaddrs_ptr(krb_context_,
                                       auth_context_,
                                       nullptr,
                                       nullptr))) {
@@ -1190,7 +1183,7 @@ int Condor_Auth_Kerberos :: init_kerberos_context()
     return TRUE;
  error:
     dprintf( D_ALWAYS, "Unable to initialize kerberos: %s\n",
-			 (*error_message_ptr)(code) );
+			 error_message_ptr(code) );
     return FALSE;
 }
 
@@ -1202,10 +1195,10 @@ int Condor_Auth_Kerberos :: map_kerberos_name(krb5_principal * princ_to_map)
     //------------------------------------------
     // Decode the client name
     //------------------------------------------    
-    if ((code = (*krb5_unparse_name_ptr)(krb_context_, 
+    if ((code = krb5_unparse_name_ptr(krb_context_, 
                                  *princ_to_map, 
                                  &client))){
-		dprintf(D_ALWAYS, "%s\n", (*error_message_ptr)(code));
+		dprintf(D_ALWAYS, "%s\n", error_message_ptr(code));
 		return FALSE;
     } 
     else {
@@ -1435,7 +1428,7 @@ int Condor_Auth_Kerberos :: init_server_info()
         if (!service)
             service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-        err = (*krb5_sname_to_principal_ptr)(krb_context_, remoteName.c_str(), service, KRB5_NT_SRV_HST, &server_);
+        err = krb5_sname_to_principal_ptr(krb_context_, remoteName.c_str(), service, KRB5_NT_SRV_HST, &server_);
         dprintf(D_SECURITY, "KERBEROS: get remote server principal for \"%s/%s\"%s\n",
                 service, remoteName.c_str(), err ? " FAILED" : "");
 
@@ -1449,7 +1442,7 @@ int Condor_Auth_Kerberos :: init_server_info()
         // if server principal is set then this overrides detection
         if (principal) {
 
-            err = (*krb5_parse_name_ptr)(krb_context_, principal, &krb_principal_);
+            err = krb5_parse_name_ptr(krb_context_, principal, &krb_principal_);
             dprintf(D_SECURITY, "KERBEROS: set local server principal from %s = \"%s\"%s\n",
                     STR_KERBEROS_SERVER_PRINCIPAL, principal, err ? " FAILED" : "");
 
@@ -1461,7 +1454,7 @@ int Condor_Auth_Kerberos :: init_server_info()
             if (!service)
                 service = strdup(STR_DEFAULT_CONDOR_SERVICE);
 
-            err = (*krb5_sname_to_principal_ptr)(krb_context_, NULL, service, KRB5_NT_SRV_HST, &krb_principal_);
+            err = krb5_sname_to_principal_ptr(krb_context_, NULL, service, KRB5_NT_SRV_HST, &krb_principal_);
             dprintf(D_SECURITY, "KERBEROS: get local server principal for \"%s\" %s\n",
                     service, err ? " FAILED" : "");
 
@@ -1471,7 +1464,7 @@ int Condor_Auth_Kerberos :: init_server_info()
 
     if (IsDebugLevel(D_SECURITY) && !err) {
         char *tmp;
-        if (!(*krb5_unparse_name_ptr)(krb_context_, mySock_->isClient() ? krb_principal_ : server_, &tmp))
+        if (!krb5_unparse_name_ptr(krb_context_, mySock_->isClient() ? krb_principal_ : server_, &tmp))
 	    dprintf(D_SECURITY, "KERBEROS: the server principal is \"%s\"\n", tmp);
         free(tmp);
     }
@@ -1539,7 +1532,7 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
     krb5_address** remoteAddrs = (krb5_address**)calloc(2, sizeof(krb5_address*));
 
     // Get remote host's address first
-    if ((code = (*krb5_auth_con_getaddrs_ptr)(krb_context_, 
+    if ((code = krb5_auth_con_getaddrs_ptr(krb_context_, 
                                       auth_context_, 
                                       localAddrs,
                                       remoteAddrs))) {
@@ -1552,19 +1545,19 @@ void Condor_Auth_Kerberos :: setRemoteAddress()
         memcpy(&(in.s_addr), (remoteAddrs[0])[0].contents, sizeof(in_addr));
         setRemoteHost(inet_ntoa(in));
     }
-    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
-    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
+    krb5_free_addresses_ptr(krb_context_, localAddrs);
+    krb5_free_addresses_ptr(krb_context_, remoteAddrs);
     
     dprintf(D_SECURITY, "Remote host is %s\n", getRemoteHost());
 
     return;
 
  error:
-    (*krb5_free_addresses_ptr)(krb_context_, localAddrs);
-    (*krb5_free_addresses_ptr)(krb_context_, remoteAddrs);
+    krb5_free_addresses_ptr(krb_context_, localAddrs);
+    krb5_free_addresses_ptr(krb_context_, remoteAddrs);
 
     dprintf( D_ALWAYS, "KERBEROS: Unable to obtain remote address: %s\n",
-			 (*error_message_ptr)(code) );
+			 error_message_ptr(code) );
 }
 
 int Condor_Auth_Kerberos :: endTime() const
@@ -1588,9 +1581,9 @@ void Condor_Auth_Kerberos :: dprintf_krb5_principal ( int deblevel,
 
 	if (p) {
 		char * tmpprincname = 0;
-		if (int code = (*krb5_unparse_name_ptr)(krb_context_, p, &tmpprincname)){
+		if (int code = krb5_unparse_name_ptr(krb_context_, p, &tmpprincname)){
 			dprintf( deblevel, fmt, "ERROR FOLLOWS");
-			dprintf( deblevel, fmt, (*error_message_ptr)(code));
+			dprintf( deblevel, fmt, error_message_ptr(code));
 		} else {
 			dprintf( deblevel, fmt, tmpprincname );
 		}

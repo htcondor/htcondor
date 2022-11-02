@@ -1231,7 +1231,7 @@ const char * init_submit_default_macros()
 
 		// hook the dynamic table into the static defaults for submit utils
 		// TODO: handle reconfig, freeing the old aTable if it is not the compile time default table
-		for (int ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
+		for (size_t ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
 			if (YourStringNoCase("TEMPLATE") == SubmitTemplateTables[ii].key) {
 				SubmitTemplateTables[ii].aTable = aTable;
 				SubmitTemplateTables[ii].cElms = ix;
@@ -1625,17 +1625,15 @@ int SubmitHash::SetStderr()
 }
 
 
-class SubmitHashEnvFilter : public Env
+class SubmitHashEnvFilter 
 {
 public:
-	SubmitHashEnvFilter( bool env1, bool env2 )
-			: m_env1( env1 ),
-			  m_env2( env2 ) {
+	SubmitHashEnvFilter( Env &env, bool env1, bool env2 )
+			: m_env(env), m_env1( env1 ), m_env2( env2 ) {
 		return;
 	};
 	virtual ~SubmitHashEnvFilter( void ) { };
-	virtual bool ImportFilter( const MyString &var,
-							   const MyString &val ) const;
+	bool operator()( const MyString &var, const MyString &val );
 
 	// take a string of the form  x* !y* *z* !bar
 	// and split it into two string lists
@@ -1665,21 +1663,22 @@ public:
 		m_white.clearAll();
 	}
 private:
+	Env &m_env;
 	bool m_env1;
 	bool m_env2;
 	mutable StringList m_black;
 	mutable StringList m_white;
 };
-bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &val ) const
+bool SubmitHashEnvFilter::operator()( const MyString & var, const MyString &val )
 {
-	if( !m_env2 && m_env1 && !IsSafeEnvV1Value(val.c_str())) {
+	if( !m_env2 && m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
 		// We silently filter out anything that is not expressible
 		// in the 'environment1' syntax.  This avoids breaking
 		// our ability to submit jobs to older startds that do
 		// not support 'environment2' syntax.
 		return false;
 	}
-	if( !IsSafeEnvV2Value(val.c_str()) ) {
+	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
 		// Silently filter out environment values containing
 		// unsafe characters.  Example: newlines cause the
 		// schedd to EXCEPT in 6.8.3.
@@ -1688,10 +1687,10 @@ bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &va
 #ifdef WIN32
 	// on Windows, we have to do case-insensitive check for existance, luckily
 	// we have m_sorted_varnames for just this purpose
-	if (m_sorted_varnames.find(var.Value()) != m_sorted_varnames.end())
+	if (m_env.m_sorted_varnames.find(var.Value()) != m_env.m_sorted_varnames.end())
 #else
 	MyString existing_val;
-	if ( GetEnv( var, existing_val ) )
+	if ( m_env.GetEnv( var, existing_val ) )
 #endif
 	{
 		// Don't override submit file environment settings --
@@ -1722,7 +1721,11 @@ int SubmitHash::SetEnvironment()
 	auto_free_ptr prefer_v1; // default to false
 	if (env1 && ! env2) {
 		// If they used the Env keyword rather than Environment, that means they prefer v1 format
+		// unless the value is in v2 format, then it is a preference for v2
 		prefer_v1.set(submit_param(SUBMIT_KEY_Env));
+		if (prefer_v1 && Env::IsV2QuotedString(prefer_v1)) {
+			prefer_v1.clear();
+		}
 	}
 
 	RETURN_IF_ABORT();
@@ -1734,7 +1737,7 @@ int SubmitHash::SetEnvironment()
 		ABORT_AND_RETURN(1);
 	}
 
-	SubmitHashEnvFilter envobject(env1, env2);
+	Env env;
 
 	std::string error_msg;
 	bool env_success = true; // specifying no env is allowed.
@@ -1749,13 +1752,13 @@ int SubmitHash::SetEnvironment()
 		// if there is a cluster ad, initialize from it
 		// this will happen when we are materializing jobs in the Schedd
 		// but not when materializing in condor_submit (at present)
-		env_success = envobject.MergeFrom(clusterAd, error_msg);
+		env_success = env.MergeFrom(clusterAd, error_msg);
 	}
 
 	if (env2) {
-		env_success = envobject.MergeFromV2Quoted(env2, error_msg);
+		env_success = env.MergeFromV2Quoted(env2, error_msg);
 	} else if (env1) {
-		env_success = envobject.MergeFromV1RawOrV2Quoted(env1, error_msg);
+		env_success = env.MergeFromV1RawOrV2Quoted(env1, error_msg);
 	}
 	if ( ! env_success) {
 		push_error(stderr, "%s\nThe environment you specified was: '%s'\n",
@@ -1776,13 +1779,15 @@ int SubmitHash::SetEnvironment()
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
-				envobject.Import();
+				SubmitHashEnvFilter envFilter(env, env1, env2);
+				env.Import(envFilter);
 			}
 		} else {
 			// getenv is not a boolean, it must be a blacklist/whitelist
-			envobject.AddToImportWhiteBlackList(envlist);
-			envobject.Import();
-			envobject.ClearImportWhiteBlackList();
+			SubmitHashEnvFilter envFilter(env, env1, env2);
+			envFilter.AddToImportWhiteBlackList(envlist);
+			env.Import(envFilter);
+			envFilter.ClearImportWhiteBlackList();
 		}
 	}
 
@@ -1798,7 +1803,7 @@ int SubmitHash::SetEnvironment()
 	bool insert_env1 = prefer_v1;
 	bool insert_env2 = !insert_env1;
 
-	if(!env1 && !env2 && envobject.Count() == 0 && \
+	if(!env1 && !env2 && env.Count() == 0 && \
 	   (ad_contains_env1 || ad_contains_env2)) {
 			// User did not specify any environment, but SUBMIT_ATTRS did.
 			// Do not do anything (i.e. avoid overwriting with empty env).
@@ -1816,7 +1821,7 @@ int SubmitHash::SetEnvironment()
 	if (insert_env1) {
 		MyString newenv_raw;
 		std::string msg;
-		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		env_success = env.getDelimitedStringV1Raw(&newenv_raw, &msg);
 		if(!env_success) {
 			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
 			ABORT_AND_RETURN(1);
@@ -1827,15 +1832,15 @@ int SubmitHash::SetEnvironment()
 		// Record in the JobAd the V1 delimiter that is being used.
 		// This way remote submits across platforms have a prayer.
 		char delim[2];
-		delim[0] = envobject.GetEnvV1Delimiter();
+		delim[0] = env.GetEnvV1Delimiter();
 		delim[1] = 0;
 		AssignJobString(ATTR_JOB_ENV_V1_DELIM, delim);
 	}
 
 	if (insert_env2) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 
-		envobject.getDelimitedStringV2Raw(&newenv_raw);
+		env.getDelimitedStringV2Raw(newenv_raw);
 		AssignJobString(ATTR_JOB_ENVIRONMENT, newenv_raw.c_str());
 	}
 
@@ -3017,8 +3022,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
-		gridType == "azure" ||
-		gridType == "boinc") {
+		gridType == "azure") {
 		// We're ok
 		// Values are case-insensitive for gridmanager, so we don't need to change case
 		return true;
@@ -3526,24 +3530,6 @@ int SubmitHash::SetGridParams()
 		SUBMIT_KEY_EC2TagPrefix, ATTR_EC2_TAG_PREFIX, gridType );
 	handleAVPairs( SUBMIT_KEY_CloudLabelNames, ATTR_CLOUD_LABEL_NAMES,
 		SUBMIT_KEY_CloudLabelPrefix, ATTR_CLOUD_LABEL_PREFIX, gridType );
-
-	if ( (tmp = submit_param( SUBMIT_KEY_BoincAuthenticatorFile,
-							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
-		// check authenticator file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				push_error(stderr, "Failed to open authenticator file %s (%s)\n", 
-								 full_path(tmp), strerror(errno));
-				ABORT_AND_RETURN( 1 );
-			}
-			fclose(fp);
-		}
-		AssignJobString(ATTR_BOINC_AUTHENTICATOR_FILE, full_path(tmp));
-		free( tmp );
-	} else if (gridType == "boinc" && ! job->Lookup(ATTR_BOINC_AUTHENTICATOR_FILE)) {
-		push_error(stderr, "BOINC jobs require a \"%s\" parameter\n", SUBMIT_KEY_BoincAuthenticatorFile );
-		ABORT_AND_RETURN( 1 );
-	}
 
 	//
 	// GCE grid-type submit attributes
@@ -4560,14 +4546,13 @@ int SubmitHash::SetExecutable()
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
-	// In vm universe and ec2/boinc grid jobs, 'Executable'
+	// In vm universe and ec2/gce grid jobs, 'Executable'
 	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   ( gridType == "ec2" ||
 			 gridType == "gce"  ||
-			 gridType == "azure"  ||
-			 gridType == "boinc" ) ) ) {
+			 gridType == "azure" ) ) ) {
 		ignore_it = true;
 		role = SFR_PSEUDO_EXECUTABLE;
 	}
@@ -4865,7 +4850,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, azure, or boinc\n",
+				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -5188,7 +5173,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2ParamNames, ATTR_EC2_PARAM_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_BoincAuthenticatorFile,ATTR_BOINC_AUTHENTICATOR_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAuthFile, ATTR_GCE_AUTH_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceImage, ATTR_GCE_IMAGE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5688,8 +5672,7 @@ int SubmitHash::SetImageSize()
 				if (JobUniverse != CONDOR_UNIVERSE_GRID ||
 					(gridType != "ec2" &&
 					 gridType != "gce" &&
-					 gridType != "azure" &&
-					 gridType != "boinc"))
+					 gridType != "azure"))
 				{
 					exe_size_kb = calc_image_size_kb(buffer.c_str());
 				}
@@ -9316,7 +9299,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 		// these are covered by the supression of warnings for dotted variables
 		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",
 	};
-	for (int ii = 0; ii < COUNTOF(suppress); ++ii) {
+	for (size_t ii = 0; ii < COUNTOF(suppress); ++ii) {
 		increment_macro_use_count(suppress[ii], SubmitMacroSet);
 	}
 
@@ -9352,7 +9335,7 @@ void SubmitHash::dump(FILE* out, int flags)
 	hash_iter_delete(&it);
 }
 
-void SubmitHash::dump_templates(FILE* out, const char * category, int flags)
+void SubmitHash::dump_templates(FILE* out, const char * category, int /*flags*/)
 {
 	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", SubmitMacroSet, 0);
 	if ( ! pdmt || ! pdmt->def)
@@ -9446,7 +9429,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 			pseudo = true;
 		} else if (uni == CONDOR_UNIVERSE_GRID) {
 			YourStringNoCase gridType(sub_type.c_str());
-			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure" || sub_type == "boinc");
+			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure");
 		}
 	}
 

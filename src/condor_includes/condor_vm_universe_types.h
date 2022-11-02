@@ -29,8 +29,6 @@
 #define VM_CKPT_FILE_EXTENSION	".cckpt"
 #define VM_AVAIL_UNLIMITED_NUM	10000
 
-#define VM_UNIV_ARGUMENT_FILE	"condor.arg"
-
 /* Running modes for VM GAHP Server */
 #define VMGAHP_TEST_MODE 0
 #define VMGAHP_IO_MODE 1		/* Deprecated */

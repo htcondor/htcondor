@@ -395,11 +395,11 @@ my $evicted = sub {
 		}
 		print( "... MaxJobRetirementTime and MaxMachineVacateTime OK.\n" );
 
-		print( "Cancelling draining state...\n" );
-		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
-
 		print( "Removing evicted job...\n" );
 		runCommandCarefully( undef, 'condor_rm', $ID );
+
+		print( "Cancelling draining state...\n" );
+		runCommandCarefully( undef, "condor_drain -cancel ${hostName}" );
 
 		print( "Calling condor_reschedule...\n" );
 		runCommandCarefully( undef, 'condor_reschedule' );

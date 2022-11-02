@@ -633,7 +633,7 @@ Claim::match_timed_out()
 			// restore our reqexp, and update the CM. 
 		res_ip->removeClaim( c );
 		res_ip->r_reqexp->restore();
-		res_ip->update();
+		res_ip->update_needed(Resource::WhyFor::wf_removeClaim);
 	}		
 	return;
 }
@@ -2061,7 +2061,7 @@ Claim::changeState( ClaimState s )
 		// everytime a COD claim changes state, we want to update the
 		// collector. 
 	if( c_type == CLAIM_COD ) {
-		c_rip->update();
+		c_rip->update_needed(Resource::WhyFor::wf_cod);
 	}
 }
 
@@ -2351,7 +2351,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	}
 
 	if( claim_type == CLAIM_OPPORTUNISTIC
-		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) )
+		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) )
 	{
 		MyString session_id;
 		MyString session_key;

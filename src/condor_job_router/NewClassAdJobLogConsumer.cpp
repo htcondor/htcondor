@@ -127,7 +127,7 @@ NewClassAdJobLogConsumer::SetAttribute(const char *key,
 		return true;
 	}
 	classad::ExprTree *expr;
-	ParseClassAdRvalExpr(value, expr, NULL);
+	ParseClassAdRvalExpr(value, expr);
 	if (!expr) {
 		dprintf(D_ALWAYS,
 				"error reading %s: failed to parse expression: %s\n",

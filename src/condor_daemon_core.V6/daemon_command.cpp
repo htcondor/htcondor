@@ -795,7 +795,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 							session->policy()->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK,&return_addr);
 						}
 						dprintf (D_SECURITY, "DC_AUTHENTICATE: resuming session id %s%s%s:\n",
-								 session->id(),
+								 session->id().c_str(),
 								 return_addr ? " with return address " : "",
 								 return_addr ? return_addr : "");
 						free(return_addr);
@@ -1821,7 +1821,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		// because then this key would get confused for an
 		// outgoing session to a daemon with that IP and
 		// port as its command socket.
-		KeyCacheEntry tmp_key(m_sid, NULL, keyvec, m_policy, expiration_time, session_lease );
+		KeyCacheEntry tmp_key(m_sid, "", keyvec, m_policy, expiration_time, session_lease );
 		m_sec_man->session_cache->insert(tmp_key);
 		dprintf (D_SECURITY, "DC_AUTHENTICATE: added incoming session id %s to cache for %i seconds (lease is %ds, return address is %s).\n", m_sid, durint, session_lease, return_addr ? return_addr : "unknown");
 		if (IsDebugVerbose(D_SECURITY)) {

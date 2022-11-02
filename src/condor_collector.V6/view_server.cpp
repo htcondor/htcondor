@@ -917,7 +917,7 @@ int ViewServer::StartdScanFunc(CollectorRecord* record)
 	ClassAd* cad = record->m_publicAd;
 	std::string Name;
 	std::string StateDesc;
-	float LoadAvg;
+	double LoadAvg;
 	int KbdIdle;
 
 	// Get Data From Class Ad
@@ -1046,8 +1046,8 @@ int ViewServer::CkptScanFunc(CollectorRecord* record)
 	ClassAd* cad = record->m_publicAd;
 	std::string Name;
 	int Bytes;
-	float BytesReceived,BytesSent;
-	float AvgReceiveBandwidth,AvgSendBandwidth;
+	double BytesReceived,BytesSent;
+	double AvgReceiveBandwidth,AvgSendBandwidth;
 
 	// Get Data From Class Ad
 

@@ -821,9 +821,9 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
         job_committed_time += delta;
         jobAd->Assign(ATTR_JOB_COMMITTED_TIME, job_committed_time);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		jobAd->LookupFloat(ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0, slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		jobAd->LookupFloat(ATTR_COMMITTED_SLOT_TIME, slot_time);
 		slot_time += slot_weight * delta;
 		jobAd->Assign(ATTR_COMMITTED_SLOT_TIME, slot_time);

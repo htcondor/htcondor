@@ -255,6 +255,10 @@ public:
 		*/
 	void PublishToEnv( Env* proc_env );
 
+		/** Open a file in the 'manifest' directory.
+		 */
+	FILE * OpenManifestFile(const char * filename);
+
 		/** Set up the complete environment for the job.  This includes
 			STARTER_JOB_ENVIRONMENT, the job ClassAd, and PublishToEnv()
 		*/

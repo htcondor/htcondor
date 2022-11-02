@@ -67,12 +67,6 @@ Env::Clear()
 #endif
 }
 
-void
-Env::AddErrorMessage(char const *msg,MyString *error_buffer)
-{
-	ArgList::AddErrorMessage(msg,error_buffer);
-}
-
 bool
 Env::MergeFrom( const ClassAd *ad, std::string & error_msg )
 {
@@ -82,7 +76,7 @@ Env::MergeFrom( const ClassAd *ad, std::string & error_msg )
 	bool merge_success = false;
 
 	if( ad->LookupString(ATTR_JOB_ENVIRONMENT, env) == 1 ) {
-		merge_success = MergeFromV2Raw(env.c_str(),error_msg);
+		merge_success = MergeFromV2Raw(env.c_str(),&error_msg);
 	}
 	else if( ad->LookupString(ATTR_JOB_ENV_V1, env) == 1 ) {
 		char delim = 0;
@@ -115,10 +109,7 @@ bool
 Env::InsertEnvIntoClassAd(ClassAd & ad) const
 {
 	std::string env;
-	if ( ! getDelimitedStringV2Raw(env)) {
-		// the above function will never return false, so we can't end up here...
-		return false;
-	}
+	getDelimitedStringV2Raw(env);
 	ad.Assign(ATTR_JOB_ENVIRONMENT,env);
 	return true;
 }
@@ -347,16 +338,6 @@ Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
-Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString * error_msg )
-{
-	std::string ms;
-	bool rv = MergeFromV1RawOrV2Quoted( delimitedString, ms );
-	if (error_msg && ! ms.empty()) { AddErrorMessage(ms.c_str(), error_msg); }
-	return rv;
-}
-
-
-bool
 Env::MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
@@ -378,7 +359,7 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 			if ( ! msg.empty()) { AddErrorMessage(msg.c_str(), error_msg); }
 			return false;
 		}
-		return MergeFromV2Raw(v2.c_str(),error_msg);
+		return MergeFromV2Raw(v2.c_str(),&error_msg);
 	}
 	else {
 		AddErrorMessage("Expecting a double-quoted environment string (V2 format).",error_msg);
@@ -387,15 +368,7 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 }
 
 bool
-Env::MergeFromV2Raw( const char *delimitedString, std::string & error_msg ) {
-	MyString ms(error_msg);
-	bool rv = MergeFromV2Raw(delimitedString, & ms);
-	error_msg = ms;
-	return rv;
-}
-
-bool
-Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
+Env::MergeFromV2Raw( const char *delimitedString, std::string* error_msg )
 {
 	SimpleList<MyString> env_list;
 
@@ -416,16 +389,7 @@ Env::MergeFromV2Raw( const char *delimitedString, MyString *error_msg )
 }
 
 bool
-Env::MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg )
-{
-	MyString ms(error_msg);
-	bool rv = MergeFromV1Raw( delimitedString, delim, &ms );
-	error_msg = ms;
-	return rv;
-}
-
-bool
-Env::MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg )
+Env::MergeFromV1Raw( const char *delimitedString, char delim, std::string* error_msg )
 {
 	char const *input;
 	char *output;
@@ -472,23 +436,7 @@ bool Env::MergeFromV1AutoDelim( const char *delimitedString, std::string & error
 		delim = ch;
 		++delimitedString;
 	}
-	return MergeFromV1Raw(delimitedString,delim,error_msg);
-}
-
-// It is not possible for raw V1 environment strings with a leading space
-// to be specified in submit files, so we can use this to mark
-// V2 strings when we need to pack V1 and V2 through the same
-// channel (e.g. shadow-starter communication).
-const char RAW_V2_ENV_MARKER = ' ';
-
-bool
-Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
-{
-	if(!delimitedString) return true;
-	if(*delimitedString == RAW_V2_ENV_MARKER) {
-		return MergeFromV2Raw(delimitedString,error_msg);
-	}
-	return MergeFromV1AutoDelim(delimitedString,error_msg);
+	return MergeFromV1Raw(delimitedString,delim,&error_msg);
 }
 
 // The following is a modest hack for when we find
@@ -497,7 +445,7 @@ Env::MergeFromV1or2Raw( const char *delimitedString, std::string &error_msg )
 char const *NO_ENVIRONMENT_VALUE = "\01\02\03\04\05\06";
 
 bool
-Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
+Env::SetEnvWithErrorMessage( const char *nameValueExpr, std::string* error_msg )
 {
 	char *expr, *delim;
 	int retval;
@@ -524,16 +472,17 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg )
 	// fail if either name or delim is missing
 	if( expr == delim || delim == NULL ) {
 		if(error_msg) {
-			MyString msg;
+			std::string msg;
 			if(delim == NULL) {
-				msg.formatstr(
+				formatstr(
+				  msg,
 				  "ERROR: Missing '=' after environment variable '%s'.",
 				  nameValueExpr);
 			}
 			else {
-				msg.formatstr("ERROR: missing variable in '%s'.",expr);
+				formatstr(msg, "ERROR: missing variable in '%s'.", expr);
 			}
-			AddErrorMessage(msg.c_str(),error_msg);
+			AddErrorMessage(msg.c_str(),*error_msg);
 		}
 		free(expr);
 		return false;
@@ -599,83 +548,19 @@ Env::DeleteEnv(const std::string & name)
 	return ret;
 }
 
-bool
-Env::getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg)
+void
+Env::getDelimitedStringV2Quoted(std::string& result) const
 {
-	Clear();
-	std::string msg;
-	if(!MergeFrom(ad,msg)) {
-		if (error_msg) { AddErrorMessage(msg.c_str(), error_msg); }
-		return false;
-	}
-
-	std::string delim_str;
-	char delim = env_delimiter;
-	if (ad->LookupString(ATTR_JOB_ENV_V1_DELIM,delim_str) && ! delim_str.empty()) {
-		delim = delim_str[0];
-	}
-
-	return getDelimitedStringV1or2Raw(result,error_msg,delim);
-}
-
-bool
-Env::getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char v1_delim) const
-{
-	ASSERT(result);
-	int old_len = result->length();
-
-	if(getDelimitedStringV1Raw(result,NULL,v1_delim)) {
-		return true;
-	}
-
-	// V1 attempt failed.  Use V2 syntax.
-
-	if(result->length() > old_len) {
-		// Clear any partial output we may have generated above.
-		result->truncate(old_len);
-	}
-
-	return getDelimitedStringV2Raw(result,true);
-}
-
-bool
-Env::getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const
-{
-	MyString v2_raw;
-	if(!getDelimitedStringV2Raw(&v2_raw)) {
-		return false;
-	}
+	std::string v2_raw;
+	getDelimitedStringV2Raw(v2_raw);
 	ArgList::V2RawToV2Quoted(v2_raw,result);
-	return true;
 }
 
-bool
-Env::getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) const
-{
-	if(getDelimitedStringV1Raw(result,NULL)) {
-		return true;
-	}
-	else {
-		result->truncate(0);
-		return getDelimitedStringV2Quoted(result,error_msg);
-	}
-}
-
-bool
-Env::getDelimitedStringV2Raw(std::string & result, bool mark_v2) const {
-    MyString ms;
-    bool rv = getDelimitedStringV2Raw( & ms, mark_v2 );
-    if(! ms.empty()) { result = ms; }
-    return rv;
-}
-
-bool
-Env::getDelimitedStringV2Raw(MyString *result, bool mark_v2) const
+void
+Env::getDelimitedStringV2Raw(std::string& result) const
 {
 	MyString var, val;
 	SimpleList<MyString> env_list;
-
-	ASSERT(result);
 
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
@@ -689,23 +574,12 @@ Env::getDelimitedStringV2Raw(MyString *result, bool mark_v2) const
 		}
 	}
 
-	if(mark_v2) {
-		(*result) += RAW_V2_ENV_MARKER;
-	}
 	join_args(env_list,result);
-	return true;
 }
 
 void
 Env::getDelimitedStringForDisplay(std::string & result) const
 {
-	getDelimitedStringV2Raw(result);
-}
-
-void
-Env::getDelimitedStringForDisplay(MyString *result) const
-{
-	ASSERT(result);
 	getDelimitedStringV2Raw(result);
 }
 
@@ -890,38 +764,4 @@ Env::GetEnv(const std::string &var, std::string &val) const
 		return true;
 	}
 	return false;
-}
-
-void
-Env::Import( void )
-{
-	char **my_environ = GetEnviron();
-	for (int i=0; my_environ[i]; i++) {
-		const char	*p = my_environ[i];
-
-		int			j;
-		MyString	varname = "";
-		MyString	value = "";
-		for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
-			varname += p[j];
-		}
-		if ( p[j] == '\0' ) {
-				// ignore entries in the environment that do not
-				// contain an assignment
-			continue;
-		}
-		if ( varname.empty() ) {
-				// ignore entries in the environment that contain
-				// an empty variable name
-			continue;
-		}
-		ASSERT( p[j] == '=' );
-		value = p+j+1;
-
-		// Allow the application to filter the import
-		if ( ImportFilter( varname, value ) ) {
-			bool ret = SetEnv( varname, value );
-			ASSERT( ret ); // should never fail
-		}
-	}
 }

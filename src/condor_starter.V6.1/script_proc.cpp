@@ -184,7 +184,7 @@ ScriptProc::StartJob()
 		env_attr = name;
 		env_attr += ATTR_JOB_ENVIRONMENT;
 		if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
-			if( ! job_env.MergeFromV2Raw(env.c_str(), env_errors) ) {
+			if( ! job_env.MergeFromV2Raw(env.c_str(), &env_errors) ) {
 				dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 						 "Aborting ScriptProc::StartJob.\n",
 						 env_attr.c_str(), env_errors.c_str() );
@@ -195,7 +195,7 @@ ScriptProc::StartJob()
 			env_attr = name;
 			env_attr += ATTR_JOB_ENV_V1;
 			if (JobAd->LookupString(env_attr, env) && ! env.empty()) {
-				if( ! job_env.MergeFromV1Raw(env.c_str(), job_env.GetEnvV1Delimiter(), env_errors) ) {
+				if( ! job_env.MergeFromV1Raw(env.c_str(), job_env.GetEnvV1Delimiter(), &env_errors) ) {
 					dprintf( D_ALWAYS, "Invalid %s found in JobAd (%s).  "
 							 "Aborting ScriptProc::StartJob.\n",
 							 env_attr.c_str(), env_errors.c_str() );

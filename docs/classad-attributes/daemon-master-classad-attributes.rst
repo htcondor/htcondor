@@ -15,6 +15,11 @@ DaemonMaster ClassAd Attributes
     The time that this daemon was configured, represented as the number
     of second elapsed since the Unix epoch (00:00:00 UTC, Jan 1, 1970).
 
+:classad-attribute:`LinuxCapabilities`
+    A hexidecimal formatted string that holds all set effective linux
+    capabilities bit mask. This hex string can be decoded using ``capsh``.
+    Only exists if running on a Linux OS.
+ 
 :classad-attribute:`Machine`
     A string with the machine's fully qualified host name.
 

@@ -38,7 +38,7 @@ chdir( $workingDirectory );
 foreach my $dir qw( SOURCES BUILD BUILDROOT RPMS SPECS SRPMS ) {
 	mkdir( $dir );
 }
-system( "cp -p ${sourceDirectory}/build/packaging/srpm/* SOURCES" );
+system( "cp -p ${sourceDirectory}/build/packaging/rpm/* SOURCES" );
 
 my $condorVersion = qx#awk -F\\" '/^set\\\(VERSION /{print \$2}' ${sourceDirectory}/CMakeLists.txt#;
 chomp( $condorVersion );
