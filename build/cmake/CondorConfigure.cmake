@@ -511,7 +511,6 @@ if( NOT WINDOWS)
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_LIBLTDL "ltdl" )
 	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
 	find_library( SQLITE3_LIB "sqlite3" )
 
@@ -627,8 +626,6 @@ if(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
-
-	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
@@ -923,15 +920,6 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.7.1)
 
-	# globus is an odd *beast* which requires a bit more config.
-	# old globus builds on manylinux1 (centos5 docker image)
-	if (LINUX)
-		if (${SYSTEM_NAME} MATCHES "centos5.11")
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
-		else()
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
-		endif()
-	endif()
 	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
         if (${SYSTEM_NAME} MATCHES "centos5.11")
@@ -959,16 +947,6 @@ else (NOT WINDOWS)
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
 endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
-
-#####################################
-# Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (NOT DEFINED DLOPEN_GSI_LIBS)
-	if (HAVE_EXT_GLOBUS AND LINUX AND NOT WANT_PYTHON_WHEELS)
-		set(DLOPEN_GSI_LIBS TRUE)
-	else()
-		set(DLOPEN_GSI_LIBS FALSE)
-	endif()
-endif()
 
 #####################################
 # Do we want to link in the VOMS libraries or dlopen() them at runtime?
@@ -1036,7 +1014,7 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
+if (DLOPEN_VOMS_LIBS)
 	if (WITH_SCITOKENS)
 	set (SECURITY_LIBS SciTokens-headers;crypto)
 	else()
@@ -1044,9 +1022,9 @@ if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	endif()
 else()
 	if (WITH_SCITOKENS)
-		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
+		set (SECURITY_LIBS "${VOMS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
 	else()
-		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};openssl;crypto;${EXPAT_FOUND}")
+		set (SECURITY_LIBS "${VOMS_FOUND};openssl;crypto;${EXPAT_FOUND}")
 	endif()
 endif()
 

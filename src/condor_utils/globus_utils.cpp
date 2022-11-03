@@ -26,7 +26,7 @@
 #include "DelegationInterface.h"
 #include "subsystem_info.h"
 
-#if defined(DLOPEN_GSI_LIBS) || defined(DLOPEN_VOMS_LIBS)
+#if defined(DLOPEN_VOMS_LIBS)
 #include <dlfcn.h>
 #endif
 

@@ -39,9 +39,6 @@
 
 %define python 1
 
-# Unconditionally turn off globus
-%define globus 0
-
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -181,32 +178,7 @@ BuildRequires: python-devel
 BuildRequires: libcurl-devel
 %endif
 
-# Globus GSI build requirements
-%if %globus
-BuildRequires: globus-gssapi-gsi-devel
-BuildRequires: globus-gass-server-ez-devel
-BuildRequires: globus-gass-transfer-devel
-BuildRequires: globus-gram-client-devel
-BuildRequires: globus-rsl-devel
-BuildRequires: globus-gram-protocol
-BuildRequires: globus-io-devel
-BuildRequires: globus-xio-devel
-BuildRequires: globus-gssapi-error-devel
-BuildRequires: globus-gss-assist-devel
-BuildRequires: globus-gsi-proxy-core-devel
-BuildRequires: globus-gsi-credential-devel
-BuildRequires: globus-gsi-callback-devel
-BuildRequires: globus-gsi-sysconfig-devel
-BuildRequires: globus-gsi-cert-utils-devel
-BuildRequires: globus-openssl-module-devel
-BuildRequires: globus-gsi-openssl-error-devel
-BuildRequires: globus-gsi-proxy-ssl-devel
-BuildRequires: globus-callout-devel
-BuildRequires: globus-common-devel
-BuildRequires: globus-ftp-client-devel
-BuildRequires: globus-ftp-control-devel
-BuildRequires: libtool-ltdl-devel
-%endif
+# Authentication build requirements
 BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
@@ -308,22 +280,6 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
-%if %globus
-Requires: globus-callout
-Requires: globus-common
-Requires: globus-gsi-callback
-Requires: globus-gsi-cert-utils
-Requires: globus-gsi-credential
-Requires: globus-gsi-openssl-error
-Requires: globus-gsi-proxy-core
-Requires: globus-gsi-proxy-ssl
-Requires: globus-gsi-sysconfig
-Requires: globus-gss-assist
-Requires: globus-gssapi-gsi
-Requires: globus-openssl-module
-Requires: globus-xio-gsi-driver
-Requires: libtool-ltdl
-%endif
 Requires: voms
 Requires: krb5-libs
 Requires: libcom_err
@@ -758,11 +714,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-%if %globus
-       -DWITH_GLOBUS:BOOL=TRUE \
-%else
-       -DWITH_GLOBUS:BOOL=FALSE \
-%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
