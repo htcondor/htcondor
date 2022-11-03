@@ -31,7 +31,6 @@ ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_munge.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_passwd.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_ssl.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_sspi.cpp
-${CMAKE_CURRENT_SOURCE_DIR}/condor_auth_x509.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_crypt_3des.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_crypt_blowfish.cpp
 ${CMAKE_CURRENT_SOURCE_DIR}/condor_crypt_aesgcm.cpp

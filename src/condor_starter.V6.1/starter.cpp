@@ -44,7 +44,6 @@
 #include "directory.h"
 #include "tmp_dir.h"
 #include "exit.h"
-#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "condor_claimid_parser.h"
 #include "condor_version.h"

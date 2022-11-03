@@ -1117,9 +1117,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
 %_libexecdir/condor/exit_37.sif
-%if %globus
-%_sbindir/condor_gridshell
-%endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
 %_libexecdir/condor/condor_schedd.init

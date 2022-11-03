@@ -121,9 +121,6 @@
 /* Define to 1 if the system has the MS_REC flag. */
 #cmakedefine HAVE_MS_REC 1
 
-/* Do we have the globus external (USED)*/
-#cmakedefine HAVE_EXT_GLOBUS 1
-
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
 

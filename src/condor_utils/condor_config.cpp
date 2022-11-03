@@ -71,7 +71,6 @@
 #include "directory.h"			// for StatInfo
 #include "condor_distribution.h"
 #include "condor_environ.h"
-#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
 #include "condor_uid.h"
