@@ -751,26 +751,6 @@ GahpServer::Startup()
 
 	newenv.SetEnv( "GAHP_TEMP", GridmanagerScratchDir );
 
-	// forward the port ranges through the environment:
-	//
-	// there are two settings for globus, one for incoming and one for
-	// outgoing connections.  we check for both and put them in the
-	// environment if present.
-	//
-	// THIS WILL NOT WORK IF THE RANGE IS BELOW 1024, SINCE THE GAHP
-	// IS NOT SPAWNED WITH ROOT PRIV.
-	//
-	if ( get_port_range( FALSE, &low_port, &high_port ) == TRUE ) {
-		std::string buff;
-		formatstr( buff, "%d,%d", low_port, high_port );
-		newenv.SetEnv( "GLOBUS_TCP_PORT_RANGE", buff.c_str() );
-	}
-	if ( get_port_range( TRUE, &low_port, &high_port ) == TRUE ) {
-		std::string buff;
-		formatstr( buff, "%d,%d", low_port, high_port );
-		newenv.SetEnv( "GLOBUS_TCP_SOURCE_RANGE", buff.c_str() );
-	}
-
 #if !defined(WIN32)
 	struct passwd *pw = getpwuid( get_user_uid() );
 	if ( pw && pw->pw_dir ) {
