@@ -1119,7 +1119,6 @@ rm -rf %{buildroot}
 %_libexecdir/condor/exit_37.sif
 %if %globus
 %_sbindir/condor_gridshell
-%_sbindir/nordugrid_gahp
 %endif
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster

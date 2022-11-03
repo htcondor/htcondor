@@ -1552,12 +1552,6 @@ win32_default=$(SBIN)\remote_gahp.exe
 type=path
 tags=gridmanager,infnbatchjob
 
-[NORDUGRID_GAHP]
-default=$(SBIN)/nordugrid_gahp
-win32_default=$(SBIN)\nordugrid_gahp.exe
-type=path
-tags=gridmanager,nordugridjob
-
 [GRIDMANAGER_CONTACT_SCHEDD_DELAY]
 default=5
 type=int

@@ -571,12 +571,6 @@ if( NOT WINDOWS)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
-	check_include_files("ldap.h" HAVE_LDAP_H)
-	if (APPLE)
-		find_multiple( "LDAP;lber" LDAP_FOUND )
-	else()
-		find_multiple( "ldap;lber" LDAP_FOUND )
-	endif()
 	check_include_files("net/if.h" HAVE_NET_IF_H)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)

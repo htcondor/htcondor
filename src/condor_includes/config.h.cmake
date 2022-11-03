@@ -166,9 +166,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
 
-/* Define to 1 if you have the <ldap.h> header file. (USED)*/
-#cmakedefine HAVE_LDAP_H 1
-
 /* Define to 1 if you have the <linux/ethtool.h> header file.*/
 #cmakedefine HAVE_LINUX_ETHTOOL_H 1
 
