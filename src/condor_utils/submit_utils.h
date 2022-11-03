@@ -190,9 +190,6 @@
 #define SUBMIT_KEY_NoopExitSignal "noop_job_exit_signal"
 #define SUBMIT_KEY_NoopExitCode "noop_job_exit_code"
 
-#define SUBMIT_KEY_GlobusResubmit "globus_resubmit"
-#define SUBMIT_KEY_GlobusRematch "globus_rematch"
-
 #define SUBMIT_KEY_LastMatchListLength "match_list_length"
 
 #define SUBMIT_KEY_DAGManJobId "dagman_job_id"
@@ -741,7 +738,7 @@ protected:
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
-	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
+	MyString JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.

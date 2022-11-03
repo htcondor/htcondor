@@ -3120,23 +3120,7 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	YourStringNoCase gridType(JobGridType.c_str());
-	if ( gridType == NULL ) {
-
-		if( (tmp = submit_param(SUBMIT_KEY_GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
-			AssignJobExpr(ATTR_GLOBUS_RESUBMIT_CHECK, tmp);
-			free(tmp);
-		} else if ( ! job->Lookup(ATTR_GLOBUS_RESUBMIT_CHECK)) {
-			AssignJobVal(ATTR_GLOBUS_RESUBMIT_CHECK, false);
-		}
-	}
-
 	AssignJobVal(ATTR_WANT_CLAIMING, false);
-
-	if( (tmp = submit_param(SUBMIT_KEY_GlobusRematch,ATTR_REMATCH_CHECK)) ) {
-		AssignJobExpr(ATTR_REMATCH_CHECK, tmp);
-		free(tmp);
-	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
