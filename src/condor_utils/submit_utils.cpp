@@ -2497,19 +2497,13 @@ int SubmitHash::SetGSICredentials()
 	RETURN_IF_ABORT();
 
 		// Find the X509 user proxy
-		// First param for it in the submit file. If it's not there
-		// and the job type requires an x509 proxy (nordugrid),
+		// First param for it in the submit file. If the submit
+		// file says to use a proxy but doesn't give a filename,
 		// then check the usual locations (as defined by GSI) and
 		// bomb out if we can't find it.
 
 	char *proxy_file = submit_param( SUBMIT_KEY_X509UserProxy );
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
-
-	YourStringNoCase gridType(JobGridType.c_str());
-	if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "nordugrid")
-	{
-		use_proxy = true;
-	}
 
 	if ( proxy_file == NULL && use_proxy && ! clusterAd) {
 
@@ -2959,7 +2953,6 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "nqs" ||
 		gridType == "naregi" ||
 		gridType == "condor" ||
-		gridType == "nordugrid" ||
 		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
@@ -3128,8 +3121,7 @@ int SubmitHash::SetGridParams()
 	}
 
 	YourStringNoCase gridType(JobGridType.c_str());
-	if ( gridType == NULL ||
-		 gridType == "nordugrid" ) {
+	if ( gridType == NULL ) {
 
 		if( (tmp = submit_param(SUBMIT_KEY_GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
 			AssignJobExpr(ATTR_GLOBUS_RESUBMIT_CHECK, tmp);
@@ -3144,16 +3136,6 @@ int SubmitHash::SetGridParams()
 	if( (tmp = submit_param(SUBMIT_KEY_GlobusRematch,ATTR_REMATCH_CHECK)) ) {
 		AssignJobExpr(ATTR_REMATCH_CHECK, tmp);
 		free(tmp);
-	}
-
-	if( (tmp = submit_param(SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
-		AssignJobString(ATTR_NORDUGRID_RSL, tmp);
-		free( tmp );
-	}
-
-	if( (tmp = submit_param(SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL)) ) {
-		AssignJobString(ATTR_ARC_RSL, tmp);
-		free( tmp );
 	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
@@ -4356,8 +4338,6 @@ int SubmitHash::SetRemoteAttrs()
 	};
 
 	ExprItem tostringize[] = {
-		{ SUBMIT_KEY_NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
-		{ SUBMIT_KEY_ArcRSL, "arc_rsl", ATTR_ARC_RSL },
 		{ SUBMIT_KEY_GridResource, 0, ATTR_GRID_RESOURCE },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
@@ -4787,7 +4767,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, or azure\n",
+				"Must be one of: condor, batch, arc, ec2, gce, or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -4933,9 +4913,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_RemoteInitialDir, ATTR_JOB_REMOTE_IWD, SimpleSubmitKeyword::f_as_string},
 	// formerly SetRemoteAttrs (2 levels of remoteness hard coded here)
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource,  SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
@@ -5079,8 +5057,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
 	{SUBMIT_KEY_GlobusResubmit, ATTR_GLOBUS_RESUBMIT_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GlobusRematch, ATTR_REMATCH_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },

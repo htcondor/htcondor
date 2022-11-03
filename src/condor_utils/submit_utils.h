@@ -102,8 +102,6 @@
 #define SUBMIT_KEY_UseScitokensAlt "use_scitoken"
 #define SUBMIT_KEY_ScitokensFile "scitokens_file"
 #define SUBMIT_KEY_DelegateJobGSICredentialsLifetime "delegate_job_gsi_credentials_lifetime"
-#define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
-#define SUBMIT_KEY_ArcRSL "arc_rsl"
 #define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
