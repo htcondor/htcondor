@@ -715,6 +715,7 @@ main(int argc, const char* argv[])
 
 
 	int argIndex;
+	long minValue;
 	const char *name;
 	int command;
 
@@ -722,10 +723,12 @@ main(int argc, const char* argv[])
 		argIndex = SetFloor;
 		name = "floor";
 		command = SET_FLOOR;
+		minValue = 0;
 	} else {
 		argIndex = SetCeiling;
 		name = "ceiling";
 		command = SET_CEILING;
+		minValue = -1;
 	}
 	const char* tmp;
 	if( ! (tmp = strchr(argv[argIndex+1], '@')) ) {
@@ -737,7 +740,7 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
     long value = strtol(argv[argIndex+2], nullptr, 10);
-	if (value < 0) {
+	if (value < minValue) {
 		fprintf( stderr, "%s must be greater than or equal to "
 				 "0.\n", name);
 		exit(1);
