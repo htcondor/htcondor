@@ -1014,7 +1014,7 @@ def validate_system_specific_constraints(
     if gpus_per_node is not None:
         if queue.get('gpu_flag_type') is 'job':
             if gpus is not None and gpus > 0:
-                assert nodes is not None and nodes > 1, "Mistake in validation: node count should have been >= 1 by now."
+                assert nodes is not None and nodes >= 1, f"Internal error during validation: node count ({nodes}) should have been >= 1 by now."
                 gpus = gpus * nodes
 
     return gpus
