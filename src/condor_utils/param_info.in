@@ -2663,7 +2663,9 @@ tags=starter
 
 [JOB_INHERITS_STARTER_ENVIRONMENT]
 default=false
-type=bool
+type=string
+description=list of allow and deny patterns that determine what environment variables to inhert from the starter environment
+usage=Set to true or * to inherit all. foo* inherits only vars that start with foo. !foo* inherits all but vars that start with foo
 tags=starter
 
 [MPI_CONDOR_RSH_PATH]

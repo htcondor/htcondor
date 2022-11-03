@@ -35,6 +35,10 @@ New Features:
   previously it was 0.
   :jira:`1393`
 
+- The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
+  of match patterns just like the submit command ``getenv`` does.
+  :jira:`1339`
+
 Bugs Fixed:
 
 - None.
