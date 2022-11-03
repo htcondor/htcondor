@@ -286,15 +286,6 @@ endif()
 	endif(LINUX)
 
 	##########################################################
-	# feature specific tests
-	if (HAVE_VMWARE)
-		condor_pl_test(job_vmu_basic "VM Universe smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_basic.sh")
-		# cdrom xfer bits no longer supported.
-		# condor_pl_test(job_vmu_network "VM Universe networking test" "quick;ctest")
-		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_ckpt.sh")
-	endif(HAVE_VMWARE)
-
-	##########################################################
 	# now all the common tests.
 
 	##### generic lib tests

@@ -2413,6 +2413,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 {
 	FILE * fh = NULL;
 	bool   close_file = false;
+	const char * items = nullptr;
 	if (MATCH == strcmp("-", pathname)) {
 		fh = stdout;
 		close_file = false;
@@ -2437,7 +2438,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsolete("","\n");
 	if (opts.hide_obsolete) {
-		const char * items = param_meta_value("UPGRADE", "DISCARD", nullptr);
+		items = param_meta_value("UPGRADE", "DISCARD", nullptr);
 		if (items && items[0]) {
 			//fprintf(stderr, "$UPGRADE.DISCARD=\n%s\n", items);
 			obsolete.initializeFromString(items);
@@ -2455,7 +2456,7 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 
 	StringList obsoleteif("","\n");
 	if (opts.hide_if_match) {
-		const char * items = param_meta_value("UPGRADE", "DISCARDIF", nullptr);
+		items = param_meta_value("UPGRADE", "DISCARDIF", nullptr);
 		if (items && items[0]) {
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
@@ -2466,22 +2467,17 @@ static int do_write_config(const char* pathname, WRITE_CONFIG_OPTIONS opts)
 			obsoleteif.initializeFromString(items);
 			args.obsoleteif = &obsoleteif;
 		}
-
-		#ifdef WIN32
-		// on Windows we shove in some defaults for VMWARE, we want to ignore them
-		// for upgrade if the user isn't using vmware
-		char * vm_type = param("VM_TYPE");
-		if (vm_type) { free(vm_type); }
-		else
-		{
-			items = param_meta_value("UPGRADE", "DISCARDIF_VMWARE", nullptr);
-			if (items && items[0]) {
-				obsoleteif.initializeFromString(items);
-				args.obsoleteif = &obsoleteif;
-			}
-		}
-		#endif
 	}
+
+	#ifdef WIN32
+	// On Windows, we used to shove in some defaults for VMWARE.
+	// We want to ignore them on upgrade since we've removed VMWare support.
+	items = param_meta_value("UPGRADE", "DISCARD_VMWARE", nullptr);
+	if (items && items[0]) {
+		obsolete.initializeFromString(items);
+		args.obsolete = &obsoleteif;
+	}
+	#endif
 
 	int iter_opts = HASHITER_SHOW_DUPS;
 	foreach_param(iter_opts, write_config_callback, &args);
