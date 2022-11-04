@@ -77,7 +77,7 @@ class LocalCredmon(OAuthCredmon):
                     for groupname in groups:
                         scopes.append(self.authz_group_template.format(groupname=groupname))
                 except IOError:
-                    self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(self.authz_group_mapfile))
+                    self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(mapfile=self.authz_group_mapfile))
         token.update_claims({'scope': " ".join(scopes)})
 
         # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
