@@ -229,6 +229,8 @@ SYSTEM_TABLE = {
                 "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    8,
+
+                "gpu_flag_type":        "job",
             },
             "shared": {
                 "max_nodes_per_job":    1,
@@ -248,6 +250,8 @@ SYSTEM_TABLE = {
                 "gpus_per_node":        4,
 
                 "max_jobs_in_queue":    24,
+
+                "gpu_flag_type":        "job",
             },
         },
     },
