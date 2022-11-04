@@ -742,7 +742,7 @@ main(int argc, const char* argv[])
     long value = strtol(argv[argIndex+2], nullptr, 10);
 	if (value < minValue) {
 		fprintf( stderr, "%s must be greater than or equal to "
-				 "0.\n", name);
+				 "%d.\n", name, minValue);
 		exit(1);
 	}
 
