@@ -13,7 +13,8 @@ if [ ! -d "$tarball" ]; then
     exit 1
 fi
 
-for file in $(file "$(find "$tarball" -type f)"|grep  ' ELF '|grep ' dynamically linked '|sed -e s/:.*//|grep -v '\.o$'); do
+# shellcheck disable=SC2046
+for file in $(file $(find "$tarball" -type f)|grep  ' ELF '|grep ' dynamically linked '|sed -e s/:.*//|grep -v '\.o$'); do
     echo Set RPATH to "$rpath" in "$file"
     # --force-rpath only works when there is no pre-existing RPATH or RUNPATH
     if ! patchelf --remove-rpath "$file"; then
