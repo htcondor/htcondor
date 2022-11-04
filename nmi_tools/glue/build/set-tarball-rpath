@@ -16,7 +16,12 @@ fi
 cd $tarball
 for file in $(file $(find -type f)|grep  ' ELF '| sed -e s/:.*//|grep -v '\.o$'); do
     echo Set RPATH to $rpath in $file
-    if ! $(patchelf --set-rpath $rpath $file); then
+    # --force-rpath only works when there is no pre-existing RPATH or RUNPATH
+    if ! $(patchelf --remove-rpath $file); then
+        echo Can not patch $file, skipping
+    fi
+    # Force patchelf to set the RPATH, not RUNPATH
+    if ! $(patchelf --force-rpath --set-rpath $rpath $file); then
         echo Can not patch $file, skipping
     fi
 done
