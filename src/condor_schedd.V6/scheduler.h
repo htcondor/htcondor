@@ -301,9 +301,6 @@ class match_rec: public ClaimIdParser
 		// punched hole
 	std::string*	auth_hole_id;
 
-	match_rec *m_paired_mrec;
-	bool m_can_start_jobs;
-
 	bool m_startd_sends_alives;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
@@ -693,9 +690,6 @@ class Scheduler : public Service
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
-
-	void swappedClaims( DCMsgCallback *cb );
-	bool CheckForClaimSwap(match_rec *rec);
 
 	//
 	// Verifies that the new clusters created in the current transaction

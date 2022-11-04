@@ -5915,8 +5915,9 @@ These settings affect the *condor_starter*.
     ``true`` gives the default behavior of using the slot name, unless
     there is only a single slot. A value of ``slot`` uses the slot name.
     A value of ``cluster`` uses the job's ``ClusterId`` ClassAd
-    attribute. A value of ``jobid`` uses the job's ``ProcId`` ClassAd
-    attribute. If ``cluster`` or ``jobid`` are specified, the resulting
+    attribute. A value of ``jobid`` uses the job's ``ClusterId`` and
+    ``ProcId`` ClassAd
+    attributes. If ``cluster`` or ``jobid`` are specified, the resulting
     log files will persist until deleted by the user, so these two
     options should only be used to assist in debugging, not as permanent
     options.
@@ -9654,17 +9655,6 @@ machine within the pool. They specify items related to the
     A boolean value that defaults to ``False``, causing HTCondor to free
     the memory of a vm universe job when the job is suspended. When
     ``True``, the memory is not freed.
-
-:macro-def:`VM_UNIV_NOBODY_USER`
-    Identifies a login name of a user with a home directory that may be
-    used for job owner of a vm universe job. The nobody user normally
-    utilized when the job arrives from a different UID domain will not
-    be allowed to invoke a VMware virtual machine.
-
-:macro-def:`ALWAYS_VM_UNIV_USE_NOBODY`
-    A boolean value that defaults to ``False``. When ``True``, all vm
-    universe jobs (independent of their UID domain) will run as the user
-    defined in ``VM_UNIV_NOBODY_USER``.
 
 :macro-def:`VM_NETWORKING`
     A boolean variable describing if networking is supported. When not

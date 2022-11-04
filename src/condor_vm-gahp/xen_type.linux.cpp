@@ -18,7 +18,6 @@
  ***************************************************************/
 
 #include "condor_common.h"
-#if defined (HAVE_EXT_LIBVIRT) && !defined(VMWARE_ONLY)
 
 #include "condor_config.h"
 #include "basename.h"
@@ -1774,5 +1773,3 @@ KVMType::CreateConfigFile()
 	m_configfile = tmp_config_name.c_str();
 	return true;
 }
-
-#endif

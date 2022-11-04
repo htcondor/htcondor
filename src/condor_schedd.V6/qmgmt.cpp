@@ -2402,15 +2402,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					JobQueueDirty = true;
 				}
 			}
-			// AsyncXfer: Delete in-job output transfer attributes
-			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT,transferring_output) ) {
-				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT);
-				JobQueueDirty = true;
-			}
-			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,transferring_output) ) {
-				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
-				JobQueueDirty = true;
-			}
 			if( ad->LookupString(ATTR_CLAIM_ID, buffer) ) {
 				ad->Delete(ATTR_CLAIM_ID);
 				PrivateAttrs[key][ATTR_CLAIM_ID] = buffer;
@@ -2418,10 +2409,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if( ad->LookupString(ATTR_CLAIM_IDS, buffer) ) {
 				ad->Delete(ATTR_CLAIM_IDS);
 				PrivateAttrs[key][ATTR_CLAIM_IDS] = buffer;
-			}
-			if( ad->LookupString(ATTR_PAIRED_CLAIM_ID, buffer) ) {
-				ad->Delete(ATTR_PAIRED_CLAIM_ID);
-				PrivateAttrs[key][ATTR_PAIRED_CLAIM_ID] = buffer;
 			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable

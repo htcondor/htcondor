@@ -733,15 +733,6 @@ class HTChirp:
 
         self._simple_command("ulog {0}\n".format(quote(text)))
 
-    def phase(self, phasestring):
-        """Tell HTCondor that the job is changing phases.
-
-        :param phasestring: New phase
-
-        """
-
-        self._simple_command("phase {0}\n".format(quote(phasestring)))
-
     # Wrappers around methods that use a file descriptor
 
     def read(
@@ -1339,7 +1330,6 @@ def condor_chirp(chirp_args, return_exit_code=False):
         "lchown",
         "link",
         "lstat",
-        "phase",
         "put",
         "read",
         "readlink",
@@ -1401,9 +1391,6 @@ def condor_chirp(chirp_args, return_exit_code=False):
 
     ulog Message
       Appends Message to the job event log.
-
-    phase Phasestring
-      Tell HTCondor that the job is changing phases.
 
     read [-offset offset] [-stride length skip] RemoteFileName Length
       Read Length bytes from RemoteFileName. Optionally, implement a stride by

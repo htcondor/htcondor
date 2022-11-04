@@ -39,6 +39,10 @@ Scheduler ClassAd Attributes
 :classad-attribute:`DetectedMemory`
     The amount of detected machine RAM in MBytes.
 
+:classad-attribute:`EffectiveFlockList`
+    A comma seperated list of *condor_collector* addresses to which
+    *condor_schedd* jobs are actively flocking.
+
 :classad-attribute:`JobQueueBirthdate`
     This attribute contains the Unix epoch time when the job_queue.log file which
     stores the scheduler's database was first created.

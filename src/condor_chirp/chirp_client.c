@@ -550,12 +550,6 @@ chirp_client_ulog( struct chirp_client *c, char const *message )
 }
 
 DLLEXPORT int
-chirp_client_phase( struct chirp_client *c, char const *phase )
-{
-	return simple_command(c,"phase %s\n",phase);
-}
-
-DLLEXPORT int
 chirp_client_pread( struct chirp_client *c, int fd, void *buffer, int length,
 				   int offset )
 {

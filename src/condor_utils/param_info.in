@@ -294,22 +294,6 @@ type=string
 default=0
 type=int
 
-[VMWARE_NETWORKING_TYPE]
-default=
-type=string
-tags=vm-gahp,starter
-
-[VMWARE_PERL]
-default=
-type=string
-tags=vm-gahp
-
-[VMWARE_SCRIPT]
-default=$(SBIN)/condor_vm_vmware
-# there is no win32 default for this item, we DON'T want it to have a .exe extension
-type=path
-tags=vm-gahp
-
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
@@ -2612,16 +2596,6 @@ tags=io,condor_auth_x509
 [STARTER_UPLOAD_TIMEOUT]
 default=300
 type=int
-tags=starter
-
-[ALWAYS_VM_UNIV_USE_NOBODY]
-default=false
-type=bool
-tags=starter
-
-[VM_UNIV_NOBODY_USER]
-default=
-type=string
 tags=starter
 
 [VM_GAHP_SEND_ALL_CLASSAD]
@@ -6632,24 +6606,6 @@ default: @end
    MASTER_$(1)_CONTROLLER = HAD
 @end
 
-[$EXPERIMENTAL.ASYNC_STAGEOUT]
-description=Knobs to enable the async stage-out hack for CMS
-default: @end
-	ALLOW_SLOT_PAIRING=true
-	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
-	STARTER_LOG_NAME_APPEND=false
-	# create a hidden type2 xfer slot for every type1 slot
-	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
-	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
-	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
-	SLOT_TYPE_2_NAME_PREFIX = xfer
-	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
-	SLOT_TYPE_2_HIDDEN = true
-	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
-	# cross-advertise these slot attributes in all other slots
-	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
-@end
-
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 description=Config file knobs that should be ignored on upgrade
@@ -6720,14 +6676,13 @@ win32_default : @end
 	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
 	MAIL_FROM=
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
-[$UPGRADE.DISCARDIF_VMWARE]
+[$UPGRADE.DISCARD_VMWARE]
 description=Platform specific file knobs that should be ignored on upgrade if they match the given value
 default=
 win32_default : @end
