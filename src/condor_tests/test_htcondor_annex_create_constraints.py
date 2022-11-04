@@ -1,5 +1,7 @@
 #!/usr/bin/env pytest
 
+import os
+
 import pytest
 
 import subprocess
@@ -209,9 +211,11 @@ def expected(test_case):
 
 
 def test_hac(args, expected):
+    env = {** os.environ, '_CONDOR_HPC_ANNEX_ENABLED': 'TRUE',}
     rv = subprocess.run(['htcondor', 'annex', 'create', 'example', '--test', * args],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
+        env=env,
         timeout=20)
 
     if expected:
