@@ -2214,6 +2214,7 @@ shadow_safe_mkdir_impl(
 	// Step (2A).
 	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (2A): partial_path = %s, next_path_component_iter = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), next_path_component_iter->c_str() );
 	if(! allow_shadow_access( partial_path.c_str() )) {
+		errno = EACCES;
 		return false;
 	}
 
@@ -2250,6 +2251,7 @@ shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
 	std::filesystem::path path(dir);
 	if(! path.has_root_path()) {
 		dprintf( D_ALWAYS, "Internal logic error: shadow_safe_mkdir() called with relative path.  Refusing to make the directory.\n" );
+		errno = EINVAL;
 		return false;
 	}
 
@@ -2409,6 +2411,48 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		SpooledJobFiles::createJobSpoolDirectory(&jobAd,desired_priv_state);
 	}
 
+	std::string outputDirectory = Iwd;
+	int directory_creation_mode = 0700;
+	bool all_transfers_succeeded = true;
+	if( final_transfer && IsServer() ) {
+		jobAd.LookupString( "OutputDirectory", outputDirectory );
+		if(! outputDirectory.empty()) {
+			std::filesystem::path outputPath( outputDirectory );
+			if(! outputPath.has_root_path()) {
+				outputDirectory = Iwd / outputPath;
+			}
+
+			if(! shadow_safe_mkdir(
+				outputDirectory, directory_creation_mode, PRIV_USER
+			)) {
+				std::string err_str;
+				int the_error = errno;
+
+				formatstr( err_str,
+					"%s at %s failed to create output directory (%s): %s (errno %d)",
+					get_mySubSystem()->getName(),
+					s->my_ip_str(), outputDirectory.c_str(),
+					strerror(the_error), the_error
+				);
+				dprintf(D_ALWAYS,
+					"DoDownload: consuming rest of transfer and failing "
+					"after encountering the following error: %s\n",
+					err_str.c_str()
+				);
+
+				if( all_transfers_succeeded ) {
+					download_success = false;
+					try_again = false;
+					hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+					hold_subcode = the_error;
+					error_buf = err_str;
+
+					all_transfers_succeeded = false;
+				}
+			}
+		}
+	}
+
 	bool sign_s3_urls = param_boolean("SIGN_S3_URLS", true) && PeerDoesS3Urls;
 
 		/*
@@ -2422,7 +2466,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
-	bool all_transfers_succeeded = true;
 	for( int rc = 0; ; ) {
 		TransferCommand xfer_command = TransferCommand::Unknown;
 		{
@@ -2465,7 +2508,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		}
 
 			// This check must come after we have called set_priv()
-		if( !LegalPathInSandbox(filename.c_str(),Iwd) ) {
+		if( !LegalPathInSandbox(filename.c_str(),outputDirectory.c_str()) ) {
 			// Our peer sent us an illegal path!
 
 			download_success = false;
@@ -2525,7 +2568,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					} else {
 						// fullname is used in various error messages; keep it
 						// as something reasonabel.
-						formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
+						formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,filename.c_str());
 					}
 				//
 				// legit remap was found
@@ -2546,7 +2589,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					char * dirname = condor_dirname(remap_filename.c_str());
 					if( strcmp(dirname, ".") ) {
 						std::string path;
-						formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
+						formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname);
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
 						// So this fails on a dirA/dirB/filename remaps,
 						// which seemed like the easiest way to trigger
@@ -2558,7 +2601,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						}
 						if( rv != 0 && errno != EEXIST ) {
 #else
-						int directory_creation_mode = 0700;
 						bool success = shadow_safe_mkdir(
 						  path, directory_creation_mode, PRIV_USER
 						);
@@ -2593,13 +2635,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					}
 					free(dirname);
 
-					formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
+					formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,remap_filename.c_str());
 				}
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.c_str(),remap_filename.c_str());
 			}
 			else {
 				// no remap found
-				formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
+				formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,filename.c_str());
 			}
 #ifdef WIN32
 			// check for write permission on this file, if we are supposed to check
@@ -2849,7 +2891,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								dprintf(D_FULLDEBUG, "List entry is missing Size attr.\n");
 								continue;
 							}
-							std::string dest_fname = std::string(Iwd) + DIR_DELIM_CHAR + fname;
+							std::string dest_fname = outputDirectory + DIR_DELIM_CHAR + fname;
 							CondorError err;
 							if (!m_reuse_dir->RetrieveFile(dest_fname, checksum, checksum_type, tag,
 								err))
