@@ -29,6 +29,23 @@
 extern Starter *Starter;
 
 
+namespace {
+
+void
+logHookErr(int lvl, const std::string &prefix, MyString *err) {
+	if (!err) {return;}
+
+	std::string dest;
+	MyStringCharSource source(const_cast<char *>(err->Value()), false);
+	dprintf(lvl, "Stderr of %s:\n", prefix.c_str());
+	while (readLine(dest, source)) {
+		dprintf(lvl, "(%s): %s", prefix.c_str(), dest.c_str());
+	}
+}
+
+}
+
+
 // // // // // // // // // // // //
 // StarterHookMgr
 // // // // // // // // // // // //
@@ -282,6 +299,7 @@ void
 HookPrepareJobClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+		logHookErr(D_ALWAYS|D_FAILURE, "Prepare Job Failure", getStdErr());
 		std::string status_msg;
 		statusString(exit_status, status_msg);
 		int subcode;
@@ -302,6 +320,7 @@ HookPrepareJobClient::hookExited(int exit_status) {
 		Starter->RemoteShutdownFast(0);
 	}
 	else {
+		logHookErr(D_FULLDEBUG, "Prepare Job", getStdErr());
 			// Make an update ad from the stdout of the hook
 		std::string out(*getStdOut());
 		ClassAd updateAd;
