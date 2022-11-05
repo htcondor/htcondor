@@ -364,7 +364,8 @@ SYSTEM_TABLE = {
                 "max_duration":         120 * 60 * 60,
                 "allocation_type":      "cores_or_ram",
                 "cores_per_node":       96,
-                "ram_per_node":         4 * 1024 * 1024,
+                # The SLURM config for the EM queue specifies "MaxMemPerCPU"
+                "ram_per_node":         42955 * 96,
 
                 "max_jobs_in_queue":    50,
             },
