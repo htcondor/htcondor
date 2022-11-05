@@ -108,3 +108,9 @@ Bugs Fixed:
 - Fixed a bug where GPUs that were marked as OFFLINE in the **Startd** would still be available
   for matchmaking in the ``AvailableGPUs`` attribute.
   :jira:`1397`
+
+- The executables within the tarball distribution now use ``RPATH`` to find
+  shared libraries.  Formerly, ``RUNPATH`` was used and tarballs became
+  susceptible to failures when independently compiled HTCondor libraries were
+  present in the ``LD_LIBRARY_PATH``.
+  :jira:`1405`
