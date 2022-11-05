@@ -941,7 +941,7 @@ def validate_system_specific_constraints(
     #     CPUs or memory is pointless.
     if queue['allocation_type'] == 'gpu-shared':
         if cpus is not None or mem_mb is not None:
-            error_string = f"The '{queue_name}' queue always assigns CPUs and RAM in proportiona to the ratio of requested GPUs to total GPUs.  You can't specify CPUs (--cpus) or memory (--mem_mb)."
+            error_string = f"The '{queue_name}' queue always assigns CPUs and RAM in proportion to the ratio of requested GPUs to total GPUs.  You can't specify CPUs (--cpus) or memory (--mem_mb)."
             raise ValueError(error_string)
 
         # Don't allow the user to request more than max nodes.
