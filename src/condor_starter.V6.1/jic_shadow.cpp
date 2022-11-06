@@ -292,8 +292,36 @@ JICShadow::config( void )
 
 
 void
-JICShadow::setupJobEnvironment( void )
-{ 
+JICShadow::setupJobEnvironment(void)
+{
+#if HAVE_JOB_HOOKS
+	if (m_hook_mgr) {
+		int rval = m_hook_mgr->tryHookPrepareJobPreTransfer();
+		switch (rval) {
+		case -1:   // Error
+			Starter->RemoteShutdownFast(0);
+			return;
+			break;
+
+		case 0:    // Hook not configured
+				// Nothing to do, break out and finish.
+			break;
+
+		case 1:    // Spawned the hook.
+				// We need to bail now, and let the handler call
+				// setupJobEnvironment_part2() when the hook returns.
+			return;
+			break;
+		}
+	}
+#endif /* HAVE_JOB_HOOKS */
+
+	setupJobEnvironment_part2();
+}
+
+void
+JICShadow::setupJobEnvironment_part2(void)
+{
 		// call our helper method to see if we want to do a file
 		// transfer at all, and if so, initiate it.
 	if( beginFileTransfer() ) {
