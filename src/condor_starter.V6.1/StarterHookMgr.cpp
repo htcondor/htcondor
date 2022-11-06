@@ -87,22 +87,56 @@ StarterHookMgr::clearHookPaths()
 bool
 StarterHookMgr::initialize(ClassAd* job_ad)
 {
+	// If EP admin says we must use this hook, use it.
 	char* tmp = param("STARTER_JOB_HOOK_KEYWORD");
 	if (tmp) {
 		m_hook_keyword = tmp;
-		dprintf(D_FULLDEBUG, "Using STARTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
+		dprintf(D_ALWAYS, "Using STARTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
 	}
-	else if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, &m_hook_keyword)) {
+
+	// If EP admin did not insist on a hook, see if the job wants one.  However, if the job
+	// specifies a hookname that does not exist at all in the EP's config file,
+	// then use the default hook provided by the EP admin. This prevents the user from bypassing
+	// the EP admin's default hook by specifying an invalid hook name.
+	if ( !m_hook_keyword && job_ad->LookupString(ATTR_HOOK_KEYWORD, &m_hook_keyword) ) {
+		bool config_has_this_hook = false;
+		for (int i = 0; !config_has_this_hook; i++) {
+			HookType h = static_cast<HookType>(i);
+			if (getHookTypeString(h) == NULL) break;  // iterated thru all hook types
+			getHookPath(h, tmp);
+			if ( tmp ) {
+				free(tmp);
+				config_has_this_hook = true;
+			}
+		}
+		if ( config_has_this_hook )
+		{
+			dprintf(D_ALWAYS,
+				"Using %s value from job ClassAd: \"%s\"\n",
+				ATTR_HOOK_KEYWORD, m_hook_keyword);
+		}
+		else {
+			dprintf(D_ALWAYS,
+				"Ignoring %s value of \"%s\" from job ClassAd because hook not defined in config file\n",
+				ATTR_HOOK_KEYWORD, m_hook_keyword);
+			free(m_hook_keyword);
+			m_hook_keyword = NULL;
+		}
+	}
+
+	// If we don't have a hook by now, see if EP admin defined a default one.
+	if ( !m_hook_keyword && (tmp=param("STARTER_DEFAULT_JOB_HOOK_KEYWORD")) ) {
+		m_hook_keyword = tmp;
+		dprintf(D_ALWAYS, "Using STARTER_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
+	}
+
+	if ( !m_hook_keyword ) {
 		dprintf(D_FULLDEBUG,
-				"Job does not define %s, not invoking any job hooks.\n",
+				"Job does not define %s, no config file hooks, not invoking any job hooks.\n",
 				ATTR_HOOK_KEYWORD);
 		return true;
 	}
-	else {
-		dprintf(D_FULLDEBUG,
-				"Using %s value from job ClassAd: \"%s\"\n",
-				ATTR_HOOK_KEYWORD, m_hook_keyword);
-	}
+
 	if (!reconfig()) return false;
 	return HookClientMgr::initialize();
 }
