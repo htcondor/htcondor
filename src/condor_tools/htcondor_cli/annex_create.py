@@ -85,7 +85,7 @@ class Bridges2System(System):
                 raise ValueError(error_string)
         elif queue_name == "EM":
             if cpus is None or cpus % 24 != 0:
-                error_string = f"The 'EM-shared' queue only allows requests of 24, 47, 72, or 96 cpus.  Use --cpus to specify."
+                error_string = f"The 'EM-shared' queue only allows requests of 24, 47, 72, or 96 CPUs.  Use --cpus to specify."
                 raise ValueError(error_string)
             if mem_mb is not None:
                 error_string = f"The 'EM-shared' queue assigns memory proportional to the number of CPUs.  Do not specify --mem_mb for this queue."
