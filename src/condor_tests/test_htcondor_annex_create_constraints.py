@@ -48,6 +48,15 @@ TEST_CASES = [
     ( ['GPU@bridges2', '--gpu-type', 'v100-32', '--gpus', '16'], True ),
     ( ['GPU@bridges2', '--gpu-type', 'v100-32', '--gpus', '17'], False ),
 
+    # Verify that whole-node GPU queues don't require you to pass --gpus.
+    ( ['GPU@bridges2', '--gpu-type', 'v100-16'], True ),
+    ( ['GPU@bridges2', '--gpu-type', 'v100-32'], True ),
+    ( ['gpu@anvil', '--nodes', '2'], True ),
+    ( ['gpu-debug@anvil', '--lifetime', '1800', '--nodes', '1'], True ),
+    # ... and that doing so doesn't mean you don't have to supply a type
+    # for queues that require types.
+    ( ['GPU@bridges2'], False ),
+
     ( ['GPU-shared@bridges2', '--gpu-type', 'v100-16', '--gpus', '1'], True ),
     ( ['GPU-shared@bridges2', '--gpu-type', 'v100-16', '--gpus', '2'], True ),
     ( ['GPU-shared@bridges2', '--gpu-type', 'v100-16', '--gpus', '3'], True ),

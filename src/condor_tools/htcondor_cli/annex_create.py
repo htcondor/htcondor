@@ -975,10 +975,16 @@ def validate_system_specific_constraints(
         raise ValueError(error_string)
 
     # (I) You must request an appropriate number of GPUs if the queue
-    #     offer GPUs.
+    #     offer GPUs (unless it's a whole-node queue and you don't
+    #     specify GPUs on the command-line at all, in which case we
+    #     supply the default).
     gpus_per_node = queue.get('gpus_per_node')
     if gpus_per_node is not None:
-        if gpus is None or gpus <= 0:
+        if gpus is None:
+            if queue['allocation_type'] == 'node':
+                gpus = gpus_per_node
+
+        if gpus <= 0:
             error_string = f"The '{queue_name}' queue is a GPU queue.  You must specify a number of GPUs (--gpus)."
             raise ValueError(error_string)
 
