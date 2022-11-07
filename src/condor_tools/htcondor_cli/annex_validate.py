@@ -15,12 +15,25 @@ class System:
         allocation_reqd: bool = False,
         queues: dict,
     ):
-        self.pretty_name = str(pretty_name)
-        self.host_name = str(host_name)
-        self.default_queue = str(default_queue)
-        self.batch_system = str(batch_system)
-        self.script_base = str(script_base)
+        assert isinstance(pretty_name, str)
+        self.pretty_name = pretty_name
+
+        assert isinstance(host_name, str)
+        self.host_name = host_name
+
+        assert isinstance(default_queue, str)
+        self.default_queue = default_queue
+
+        assert isinstance(batch_system, str)
+        self.batch_system =  batch_system
+
+        assert isinstance(script_base, str)
+        self.script_base = script_base
+
+        assert isinstance(allocation_reqd, bool)
         self.allocation_required = allocation_reqd
+
+        assert isinstance(queues, dict)
         self.queues = queues
 
 
