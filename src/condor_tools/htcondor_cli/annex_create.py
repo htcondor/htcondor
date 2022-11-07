@@ -389,7 +389,7 @@ SYSTEM_TABLE = {
     },
     ),
 
-    "path-facility": System( ** {
+    "path-facility": System( **{
         "pretty_name":      "PATh Facilty",
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
