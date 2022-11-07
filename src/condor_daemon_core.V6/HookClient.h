@@ -50,6 +50,7 @@ public:
 	virtual void hookExited(int exit_status);
 
 protected:
+	void logHookErr(int lvl, const std::string &prefix, MyString *err);
 	char* m_hook_path;
 	HookType m_hook_type;
 	int m_pid;

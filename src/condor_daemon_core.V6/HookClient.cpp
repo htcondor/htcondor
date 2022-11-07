@@ -64,6 +64,17 @@ HookClient::getStdErr() {
 	return daemonCore->Read_Std_Pipe(m_pid, 2);
 }
 
+void
+HookClient::logHookErr(int lvl, const std::string &prefix, MyString *err) {
+	if (!err) { return; }
+
+	std::string dest;
+	MyStringCharSource source(const_cast<char *>(err->Value()), false);
+	dprintf(lvl, "Stderr of %s:\n", prefix.c_str());
+	while (readLine(dest, source)) {
+		dprintf(lvl, "(%s): %s", prefix.c_str(), dest.c_str());
+	}
+}
 
 void
 HookClient::hookExited(int exit_status) {
@@ -83,4 +94,14 @@ HookClient::hookExited(int exit_status) {
 	if (std_err) {
 		m_std_err = *std_err;
 	}
+
+	// Log stderr from hook script to the StarterLog
+	std::string hook_name(getHookTypeString(type()));
+	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+		logHookErr(D_ALWAYS | D_FAILURE, hook_name + " Failure", getStdErr());
+	}
+	else {
+		logHookErr(D_FULLDEBUG, hook_name, getStdErr());
+	}
+
 }
