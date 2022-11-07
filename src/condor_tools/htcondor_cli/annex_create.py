@@ -323,7 +323,7 @@ SYSTEM_TABLE = {
     },
     ),
 
-    "bridges2": Bridges2System( ** {
+    "bridges2": Bridges2System( **{
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
