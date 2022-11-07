@@ -6148,13 +6148,13 @@ int SubmitHash::SetRequirements()
 			}
 			answer += "TARGET.HasContainer";
 			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
-				answer += "&& TARGET.HasDockerRepo";
+				answer += "&& TARGET.HasDockerURL";
 			} else {
 				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 				ContainerImageType image_type = image_type_from_string(container_image.ptr());
 				switch (image_type) {
 					case ContainerImageType::DockerRepo:
-						answer += "&& TARGET.HasDockerRepo";
+						answer += "&& TARGET.HasDockerURL";
 						break;
 					case ContainerImageType::SIF:
 						answer += "&& TARGET.HasSIF";
