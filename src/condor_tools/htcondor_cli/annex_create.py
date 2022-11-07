@@ -123,7 +123,7 @@ class Bridges2System(System):
                 },
             }
         elif gpu_type == "v100-32":
-            queue = { ** queue, ** {
+            queue = { **queue, **{
                 "cores_per_node":       40,
                 "ram_per_node":         512 * 1024,
                 "gpus_per_node":        8,
