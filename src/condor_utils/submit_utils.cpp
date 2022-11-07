@@ -1628,7 +1628,7 @@ class SubmitHashEnvFilter : public WhiteBlackEnvFilter
 {
 public:
 	bool m_env1=false;
-	SubmitHashEnvFilter(bool env1) : m_env1(env1) { };
+	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
 	bool operator()( const MyString &var, const MyString &val ) {
 		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
