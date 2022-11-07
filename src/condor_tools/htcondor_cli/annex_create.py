@@ -75,8 +75,8 @@ class System:
 
 
 class Bridges2System(System):
-    def __init__(self, ** kwargs):
-        super().__init__(** kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
         if queue_name == "RM-shared":
