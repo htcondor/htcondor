@@ -32,6 +32,11 @@ Bugs Fixed:
   files.
   :jira:`1354`
 
+- Fixed a bug where if SINGULARITY_TARGET_DIR is set, condor_ssh_to
+  job would start the interactive shell in the root directory of
+  the job, not in the cwd of the job.
+  :jira:`1406`
+
 - Suppressed a Singularity or Apptainer warning that would appear
   in a job's stderr file, warning about the inability to set the
   HOME environment variable if the job or the system explicitly tried
@@ -108,3 +113,9 @@ Bugs Fixed:
 - Fixed a bug where GPUs that were marked as OFFLINE in the **Startd** would still be available
   for matchmaking in the ``AvailableGPUs`` attribute.
   :jira:`1397`
+
+- The executables within the tarball distribution now use ``RPATH`` to find
+  shared libraries.  Formerly, ``RUNPATH`` was used and tarballs became
+  susceptible to failures when independently compiled HTCondor libraries were
+  present in the ``LD_LIBRARY_PATH``.
+  :jira:`1405`
