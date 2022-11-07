@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improvements to job hooks, including config knob STARTER_DEFAULT_JOB_HOOK_KEYWORD, the new hook PREPARE_JOB_BEFORE_TRANSFER,
+  and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
+  See the :ref:`admin-manual/Hooks` manual section.
+  :jira:`1400`
 
 Bugs Fixed:
 
