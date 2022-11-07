@@ -257,7 +257,7 @@ SYSTEM_TABLE = {
     },
     ),
 
-    "anvil": System( ** {
+    "anvil": System( **{
         "pretty_name":      "Anvil",
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
