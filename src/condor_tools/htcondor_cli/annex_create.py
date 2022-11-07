@@ -115,7 +115,7 @@ class Bridges2System(System):
         # which type to ask for.
 
         if gpus == 16 and gpu_type == "v100-32":
-            queue = { ** queue, ** {
+            queue = { **queue, **{
                 "cores_per_node":       48,
                 "ram_per_node":         1536 * 1024,
                 "gpus_per_node":        16,
