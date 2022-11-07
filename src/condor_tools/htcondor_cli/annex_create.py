@@ -303,7 +303,7 @@ SYSTEM_TABLE = {
                 "allocation_type":      "node",
 
                 "cores_per_node":       128,
-                "ram_per_node":         512 * 1024,
+                "ram_per_node":         512000,
 
                 "gpus_per_node":        4,
             },
