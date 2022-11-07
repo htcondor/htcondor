@@ -162,7 +162,7 @@ class Bridges2System(System):
 #
 
 SYSTEM_TABLE = {
-    "stampede2": System( ** {
+    "stampede2": System( **{
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
