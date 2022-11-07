@@ -29,7 +29,6 @@
 
 extern Starter *Starter;
 
-
 // // // // // // // // // // // //
 // StarterHookMgr
 // // // // // // // // // // // //
@@ -343,7 +342,11 @@ HookPrepareJobClient::HookPrepareJobClient(const char* hook_path, bool after_fil
 void
 HookPrepareJobClient::hookExited(int exit_status) {
 	HookClient::hookExited(exit_status);
+	std::string hook_name(getHookTypeString(type()));
 	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+			// HOOK RETURNED FAILURE
+
+			// Create an error message and request job to go on hold
 		std::string status_msg;
 		statusString(exit_status, status_msg);
 		int subcode;
@@ -354,30 +357,38 @@ HookPrepareJobClient::hookExited(int exit_status) {
 			subcode = WEXITSTATUS(exit_status);
 		}
 		std::string err_msg;
-		const char* hook_name = getHookTypeString(type());
-		formatstr(err_msg, "%s (%s) failed (%s)", hook_name,
+		formatstr(err_msg, "%s (%s) failed (%s)", hook_name.c_str(),
 						m_hook_path,
 						status_msg.c_str());
 		dprintf(D_ALWAYS|D_FAILURE,
-				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
+				"ERROR in HookPrepareJobClient::hookExited: %s\n",
 				err_msg.c_str());
 		Starter->jic->notifyStarterError(err_msg.c_str(), true,
 							 CONDOR_HOLD_CODE::HookPrepareJobFailure, subcode);
 		Starter->RemoteShutdownFast(0);
 	}
 	else {
+			// HOOK RETURNED SUCCESS
+
 			// Make an update ad from the stdout of the hook
 		std::string out(*getStdOut());
-		ClassAd updateAd;
-		initAdFromString(out.c_str(), updateAd);
-		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
-		dPrintAd(D_FULLDEBUG, updateAd);
+		if (!out.empty()) {
+			ClassAd updateAd;
+			initAdFromString(out.c_str(), updateAd);
+			dprintf(D_FULLDEBUG, "%s output classad\n", hook_name.c_str());
+			dPrintAd(D_FULLDEBUG, updateAd);
 
 			// Insert each expr from the update ad into the job ad
-		ClassAd* job_ad = Starter->jic->jobClassAd();
-		job_ad->Update(updateAd);
-		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
-		dPrintAd(D_FULLDEBUG, *job_ad);
+			ClassAd* job_ad = Starter->jic->jobClassAd();
+			job_ad->Update(updateAd);
+			dprintf(D_FULLDEBUG, "After %s: merged job classad:\n", hook_name.c_str());
+			dPrintAd(D_FULLDEBUG, *job_ad);
+		}
+		else {
+			dprintf(D_FULLDEBUG, "%s output classad was empty (no job ad updates requested)\n", hook_name.c_str());
+		}
+
+			// Now have the starter continue forward preparing for the job
 		if (type() == HOOK_PREPARE_JOB) {
 			Starter->jobEnvironmentReady();
 		}
