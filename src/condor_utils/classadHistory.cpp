@@ -36,17 +36,13 @@ static int HistoryFile_RefCount = 0;
 char* JobHistoryFileName = NULL;
 char* JobHistoryParamName = NULL;
 bool        DoHistoryRotation = true;
-bool        DoDailyHistoryRotation = true;
-bool        DoMonthlyHistoryRotation = true;
-filesize_t  MaxHistoryFileSize = 20 * 1024 * 1024; // 20MB;
-int         NumberBackupHistoryFiles = 2;
 char*       PerJobHistoryDir = NULL;
+static HistoryFileRotationInfo hri;
 
-static void MaybeRotateHistory(int size_to_append);
-static void RemoveExtraHistoryFiles(void);
-static int MaybeDeleteOneHistoryBackup(void);
-static bool IsHistoryFilename(const char *filename, time_t *backup_time);
-static void RotateHistory(void);
+static void RemoveExtraHistoryFiles(int max_backups, const char* filename);
+static int MaybeDeleteOneHistoryBackup(int max_backups, const char* original_filename);
+static bool IsHistoryFilename(const char* original_filename, const char *filename, time_t *backup_time);
+static void RotateHistory(bool isHistory, const char* filename, const char* new_path);
 static int findHistoryOffset(FILE *LogFile);
 static FILE* OpenHistoryFile();
 static void CloseJobHistoryFile();
@@ -72,23 +68,24 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     // If history rotation is off, then the maximum file size and
     // number of backup files is ignored. 
     DoHistoryRotation = param_boolean("ENABLE_HISTORY_ROTATION", true);
-    DoDailyHistoryRotation = param_boolean("ROTATE_HISTORY_DAILY", false);
-    DoMonthlyHistoryRotation = param_boolean("ROTATE_HISTORY_MONTHLY", false);
+    hri.DoDailyHistoryRotation = param_boolean("ROTATE_HISTORY_DAILY", false);
+    hri.DoMonthlyHistoryRotation = param_boolean("ROTATE_HISTORY_MONTHLY", false);
+    hri.IsStandardHistory = true;
 
 	long long default_history = 20 * 1024 * 1024;
 	long long history_filesize = 0;
     param_longlong("MAX_HISTORY_LOG", history_filesize, true, default_history);
-	MaxHistoryFileSize = history_filesize;
-    NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS", 
+    hri.MaxHistoryFileSize = history_filesize;
+    hri.NumberBackupHistoryFiles = param_integer("MAX_HISTORY_ROTATIONS",
                                           2,  // default
                                           1); // minimum
 
     if (DoHistoryRotation) {
         dprintf(D_ALWAYS, "History file rotation is enabled.\n");
-        dprintf(D_ALWAYS, "  Maximum history file size is: %d bytes\n", 
-                (int) MaxHistoryFileSize);
+        dprintf(D_ALWAYS, "  Maximum history file size is: %lld bytes\n",
+                hri.MaxHistoryFileSize);
         dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
-                NumberBackupHistoryFiles);
+                hri.NumberBackupHistoryFiles);
     } else {
         dprintf(D_ALWAYS, "WARNING: History file rotation is disabled and it "
                 "may grow very large.\n");
@@ -144,7 +141,7 @@ AppendHistory(ClassAd* ad)
   sPrintAd(ad_string, *ad, nullptr, include_env ? nullptr : &excludeAttrs);
   ad_size = ad_string.length();
 
-  MaybeRotateHistory(ad_size);
+  if (JobHistoryFileName && DoHistoryRotation) { MaybeRotateHistory(hri, ad_size, JobHistoryFileName); }
 
   FILE *LogFile = OpenHistoryFile();
   if (!LogFile) {
@@ -355,26 +352,11 @@ CloseJobHistoryFile() {
 // Decide if we should rotate the history file, and do the rotation if 
 // necessary.
 // --------------------------------------------------------------------------
-static void
-MaybeRotateHistory(int size_to_append)
+void
+MaybeRotateHistory(const HistoryFileRotationInfo& fri, int size_to_append, const char* filename, const char* new_filepath)
 {
-    if (!JobHistoryFileName) {
-        // We aren't writing to the history file, so we will
-        // not rotate it.
-        return;
-    } else if (!DoHistoryRotation) {
-        // The user, for some reason, decided to turn off history
-        // file rotation. 
-        return;
-    } else {
-		FILE *fp = OpenHistoryFile();
-		if( !fp ) {
-			return;
-		}
-        filesize_t  history_file_size;
-        StatInfo    history_stat_info(fileno(fp));
-		history_file_size = history_stat_info.GetFileSize();
-		RelinquishHistoryFile( fp );
+        StatInfo    history_stat_info(filename);
+        filesize_t file_size = history_stat_info.GetFileSize();
 
         if (history_stat_info.Error() == SINoFile) {
             ; // Do nothing, the history file doesn't exist
@@ -383,12 +365,12 @@ MaybeRotateHistory(int size_to_append)
         } else {
 			bool mustRotate = false;
 
-            if (history_file_size + size_to_append > MaxHistoryFileSize) {
+            if (file_size + size_to_append > fri.MaxHistoryFileSize) {
 				mustRotate = true;
 			}
 
 
-			if (DoDailyHistoryRotation) {
+			if (fri.DoDailyHistoryRotation) {
 				time_t mod_tt = history_stat_info.GetModifyTime();
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_yday = mod_t->tm_yday;
@@ -405,7 +387,7 @@ MaybeRotateHistory(int size_to_append)
 				}
 			}
 
-			if (DoMonthlyHistoryRotation) {
+			if (fri.DoMonthlyHistoryRotation) {
 				time_t mod_tt = history_stat_info.GetModifyTime();
 				struct tm *mod_t = localtime(&mod_tt);
 				int mod_mon = mod_t->tm_mon;
@@ -427,11 +409,10 @@ MaybeRotateHistory(int size_to_append)
                 // big, so we will rotate the history file after removing
                 // extra history files. 
                 dprintf(D_ALWAYS, "Will rotate history file.\n");
-                RemoveExtraHistoryFiles();
-                RotateHistory();
+                if (!new_filepath) { RemoveExtraHistoryFiles(fri.NumberBackupHistoryFiles, filename); }
+                RotateHistory(fri.IsStandardHistory, filename, new_filepath);
             }
         }
-    }
     return;
     
 }
@@ -450,13 +431,13 @@ MaybeRotateHistory(int size_to_append)
 // more complicated. 
 // --------------------------------------------------------------------------
 static void
-RemoveExtraHistoryFiles(void)
+RemoveExtraHistoryFiles(int max_backups, const char* file_name)
 {
     int num_backups;
 
     do {
-        num_backups = MaybeDeleteOneHistoryBackup();
-    } while (num_backups >= NumberBackupHistoryFiles);
+        num_backups = MaybeDeleteOneHistoryBackup(max_backups, file_name);
+    } while (num_backups >= max_backups);
     return;
 }
 
@@ -465,10 +446,10 @@ RemoveExtraHistoryFiles(void)
 // are at the maximum. See RemoveExtraHistoryFiles();
 // --------------------------------------------------------------------------
 static int
-MaybeDeleteOneHistoryBackup(void)
+MaybeDeleteOneHistoryBackup(int max_backups, const char* original_filename)
 {
     int num_backups = 0;
-    char *history_dir = condor_dirname(JobHistoryFileName);
+    char *history_dir = condor_dirname(original_filename);
 
     if (history_dir != NULL) {
         Directory dir(history_dir);
@@ -482,7 +463,7 @@ MaybeDeleteOneHistoryBackup(void)
              current_filename != NULL; 
              current_filename = dir.Next()) {
             
-            if (IsHistoryFilename(current_filename, &current_time)) {
+            if (IsHistoryFilename(original_filename, current_filename, &current_time)) {
                 num_backups++;
                 if (oldest_history_filename == NULL 
                     || current_time < oldest_time) {
@@ -497,7 +478,7 @@ MaybeDeleteOneHistoryBackup(void)
         }
 
         // If we have too many backups, delete the oldest
-        if (oldest_history_filename != NULL && num_backups >= NumberBackupHistoryFiles) {
+        if (oldest_history_filename != NULL && num_backups >= max_backups) {
             dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
                     oldest_history_filename);
             num_backups--;
@@ -524,14 +505,14 @@ MaybeDeleteOneHistoryBackup(void)
 // specified by the ISO time. 
 // --------------------------------------------------------------------------
 static bool
-IsHistoryFilename(const char *filename, time_t *backup_time)
+IsHistoryFilename(const char* original_filename, const char *filename, time_t *backup_time)
 {
     bool       is_history_filename;
     const char *history_base;
     int        history_base_length;
 
     is_history_filename = false;
-    history_base        = condor_basename(JobHistoryFileName);
+    history_base        = condor_basename(original_filename);
     history_base_length = strlen(history_base);
 
     if (   !strncmp(filename, history_base, history_base_length)
@@ -559,7 +540,7 @@ IsHistoryFilename(const char *filename, time_t *backup_time)
 // Rotate the history file. This is called by MaybeRotateHistory()
 // --------------------------------------------------------------------------
 static void
-RotateHistory(void)
+RotateHistory(bool isHistory, const char* filename, const char* new_path)
 {
     // The job history will be named with the current time. 
     // I hate timestamps of seconds, because they aren't readable by 
@@ -576,14 +557,20 @@ RotateHistory(void)
                                ISO8601_DateAndTime, false);
 
     // First, select a name for the rotated history file
-	std::string  rotated_history_name(JobHistoryFileName);
+    std::string rotated_history_name = "";
+    if (new_path) {
+        const char* file_base = condor_basename(filename);
+        dircat(new_path, file_base, rotated_history_name);
+    } else {
+        rotated_history_name += filename;
+    }
     rotated_history_name += '.';
     rotated_history_name += iso_time;
 
-	CloseJobHistoryFile();
+    if (isHistory) { CloseJobHistoryFile(); }
 
     // Now rotate the file
-    if (rotate_file(JobHistoryFileName, rotated_history_name.c_str())) {
+    if (rotate_file(filename, rotated_history_name.c_str())) {
         dprintf(D_ALWAYS, "Failed to rotate history file to %s\n",
                 rotated_history_name.c_str());
         dprintf(D_ALWAYS, "Because rotation failed, the history file may get very large.\n");
