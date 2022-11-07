@@ -868,7 +868,7 @@ def create_annex_token(logger, type):
         raise RuntimeError(f"Failed to create annex token in {TOKEN_FETCH_TIMEOUT} seconds")
 
 
-def validate_system_specific_constraints(
+def validate_system_specific_constraints( *,
     system,
     queue_name,
     nodes,
@@ -1103,7 +1103,18 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    gpus = validate_system_specific_constraints(system, queue_name, nodes, lifetime_in_seconds, allocation, cpus, mem_mb, idletime_in_seconds, gpus, gpu_type)
+    gpus = validate_system_specific_constraints(
+        system=system,
+        queue_name=queue_name,
+        nodes=nodes,
+        lifetime_in_seconds=lifetime_in_seconds,
+        allocation=allocation,
+        cpus=cpus,
+        mem_mb=mem_mb,
+        idletime_in_seconds=idletime_in_seconds,
+        gpus=gpus,
+        gpu_type=gpu_type,
+    )
 
     if test:
         return
