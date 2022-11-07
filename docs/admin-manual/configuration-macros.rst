@@ -7733,10 +7733,6 @@ These macros affect the *condor_credd* and its credmon plugin.
     The path to the credmon daemon process when using the OAuth2
     credentials type.  The default is /usr/sbin/condor_credmon_oauth.
 
-:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
-    The time in seconds for credmon to delay after new OAuth2
-    credentials are stored before deleting them.
-
 :macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
     The minimum time in seconds that OAuth2 tokens should have remaining
     on them when they are generated.  The default is 40 minutes.

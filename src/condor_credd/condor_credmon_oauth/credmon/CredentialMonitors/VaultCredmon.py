@@ -157,28 +157,6 @@ class VaultCredmon(AbstractCredentialMonitor):
 
         return False
 
-    def should_delete(self, username, token_name):
-        top_path = os.path.join(self.cred_dir, username, token_name + '.top')
-
-        if not os.path.exists(top_path):
-            return False
-
-        try:
-            mtime = os.stat(top_path).st_mtime
-        except OSError as e:
-            self.log.error('could not stat %s', top_path)
-            return False
-
-        # if top file is older than 7 days (or CREDMON_OAUTH_TOKEN_LIFETIME if defined), delete it
-        age = int(time.time() - mtime)
-        self.log.debug('top file is %d seconds old', age)
-        if htcondor is not None and 'CREDMON_OAUTH_TOKEN_LIFETIME' in htcondor.param:
-            token_lifetime = int(htcondor.param['CREDMON_OAUTH_TOKEN_LIFETIME'])
-        else:
-            token_lifetime = 7*24*60*60
-        if age > token_lifetime:
-            return True
-
     def refresh_access_token(self, username, token_name):
         # load the vault token plus vault bearer token URL from .top file
         top_path = os.path.join(self.cred_dir, username, token_name + '.top')
@@ -283,15 +261,7 @@ class VaultCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip extension
 
-        if self.should_delete(username, token_name):
-            self.log.info('%s tokens for user %s are marked for deletion', token_name, username)
-            success = self.delete_tokens(username, token_name)
-            if success:
-                self.log.info('Successfully deleted %s token files for user %s', token_name, username)
-            else:
-                self.log.error('Failed to delete all %s token files for user %s', token_name, username)
-
-        elif self.should_renew(username, token_name):
+        if self.should_renew(username, token_name):
             self.log.info('Refreshing %s token for user %s', token_name, username)
             success = self.refresh_access_token(username, token_name)
             if success:
