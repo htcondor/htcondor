@@ -60,7 +60,7 @@ namespace {
 typedef std::unordered_set<std::string, classad::ClassadAttrNameHash, classad::CaseIgnEqStr> classad_hashmap;
 classad_hashmap ClassAdPrivateAttrs = { ATTR_CAPABILITY,
 		ATTR_CHILD_CLAIM_IDS, ATTR_CLAIM_ID, ATTR_CLAIM_ID_LIST,
-		ATTR_CLAIM_IDS, ATTR_PAIRED_CLAIM_ID, ATTR_TRANSFER_KEY };
+		ATTR_CLAIM_IDS, ATTR_TRANSFER_KEY };
 
 }
 
@@ -971,8 +971,7 @@ MergeEnvironment(const char * /*name*/,
 			problemExpression(ss.str(), *it, result);
 			return true;
 		}
-		std::string error_msg;
-		if (!env.MergeFromV2Raw(env_str.c_str(), error_msg))
+		if (!env.MergeFromV2Raw(env_str.c_str(), nullptr))
 		{
 			std::stringstream ss;
 			ss << "Argument " << idx << " cannot be parsed as environment string.";

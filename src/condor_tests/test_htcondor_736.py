@@ -172,7 +172,7 @@ class TestFileTransfer:
     # The observable problem for this bug is that the non-tmp spool directory
     # is never created (because file transfer fails).
     def test_checkpoint_exists(self, logged_job_files_in_spool):
-        assert logged_job_files_in_spool == ['saved-state']
+        assert sorted(logged_job_files_in_spool) == sorted(['saved-state'])
 
     # The bug is here is the presence of [/dev/]null in SPOOL.
     def test_checkpoint_missing_null(self, unlogged_job_files_in_spool):

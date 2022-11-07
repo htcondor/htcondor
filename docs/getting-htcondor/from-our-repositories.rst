@@ -19,8 +19,9 @@ RPM-based Distributions
 -----------------------
 
 We support five RPM-based platforms: RedHat and CentOS 7;
-Redhat and CentOS 8; and Amazon Linux 2.  Binaries are only available
-for x86-64.
+Redhat and CentOS 8; and Amazon Linux 2.  Binaries are available
+for x86-64 for all these platforms.  For RedHat 8 and CentOS 8
+HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
 
 Repository packages are available for each platform:
 

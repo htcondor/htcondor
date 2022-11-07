@@ -52,10 +52,6 @@ static bool test_get_args_string_v2_quoted_append_return(void);
 static bool test_get_args_string_v2_quoted_append_count(void);
 static bool test_get_args_string_v2_quoted_append_args(void);
 static bool test_get_args_string_v2_raw_return(void);
-static bool test_get_args_string_v1or2_raw_return(void);
-static bool test_get_args_string_v1or2_raw_append_return(void);
-static bool test_get_args_string_v1or2_raw_append_count(void);
-static bool test_get_args_string_v1or2_raw_append_args(void);
 static bool test_get_args_string_win32_return(void);
 static bool test_get_args_string_win32_append_return(void);
 static bool test_get_args_string_win32_append_count(void);
@@ -126,10 +122,6 @@ bool OTEST_ArgList(void) {
 	driver.register_function(test_get_args_string_v2_quoted_append_count);
 	driver.register_function(test_get_args_string_v2_quoted_append_args);
 	driver.register_function(test_get_args_string_v2_raw_return);
-	driver.register_function(test_get_args_string_v1or2_raw_return);
-	driver.register_function(test_get_args_string_v1or2_raw_append_return);
-	driver.register_function(test_get_args_string_v1or2_raw_append_count);
-	driver.register_function(test_get_args_string_v1or2_raw_append_args);
 	driver.register_function(test_get_args_string_win32_return);
 	driver.register_function(test_get_args_string_win32_append_return);
 	driver.register_function(test_get_args_string_win32_append_count);
@@ -655,102 +647,6 @@ static bool test_get_args_string_v2_raw_return() {
 	PASS;
 }
 
-static bool test_get_args_string_v1or2_raw_return() {
-	emit_test("Test that GetArgsStringV1or2Raw() returns true on an ArgList "
-		"initialized with AppendArgsV2Raw().");
-	MyString v1or2_args;
-	arglist.AppendArgsV2Raw(test_string, NULL);
-	bool ret_val = arglist.GetArgsStringV1or2Raw(&v1or2_args, NULL);
-	emit_input_header();
-	emit_param("Result", "");
-	emit_param("Error Message", "NULL");
-	emit_output_expected_header();
-	emit_retval("TRUE");
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(ret_val));
-	arglist.Clear();
-	if(!ret_val) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_args_string_v1or2_raw_append_return() {
-	emit_test("Test that AppendArgsV1or2Raw() returns true after getting the "
-		"args with GetArgsStringV1or2Raw() on an ArgList initialized with "
-		"AppendArgsV2Raw().");
-	MyString v1or2_args;
-	arglist.AppendArgsV2Raw(test_string, NULL);
-	arglist.GetArgsStringV1or2Raw(&v1or2_args, NULL);
-	arglist.Clear();
-	bool ret_val = arglist.AppendArgsV1or2Raw(v1or2_args.Value(), NULL);
-	emit_input_header();
-	emit_param("Args", v1or2_args.Value());
-	emit_param("Error Message", "NULL");
-	emit_output_expected_header();
-	emit_retval("TRUE");
-	emit_output_actual_header();
-	emit_retval("%s", tfstr(ret_val));
-	arglist.Clear();
-	if(!ret_val) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_args_string_v1or2_raw_append_count() {
-	emit_test("Test that AppendArgsV1or2Raw() adds the correct number of args "
-		"after getting the args with GetArgsStringV1or2Raw() on an ArgList "
-		"initialized with AppendArgsV2Raw().");
-	MyString v1or2_args;
-	arglist.AppendArgsV2Raw(test_string, NULL);
-	arglist.GetArgsStringV1or2Raw(&v1or2_args, NULL);
-	arglist.Clear();
-	arglist.AppendArgsV1or2Raw(v1or2_args.Value(), NULL);
-	int count = arglist.Count();
-	emit_input_header();
-	emit_param("Args", v1or2_args.Value());
-	emit_param("Error Message", "NULL");
-	emit_output_expected_header();
-	emit_param("Count", "4");
-	emit_output_actual_header();
-	emit_param("Count", "%d", count);
-	arglist.Clear();
-	if(count != 4) {
-		FAIL;
-	}
-	PASS;
-}
-
-static bool test_get_args_string_v1or2_raw_append_args() {
-	emit_test("Test that AppendArgsV1or2Raw() adds the correct args after "
-		"getting the args with GetArgsStringV1or2Raw() on an ArgList "
-		"initialized with AppendArgsV2Raw().");
-	MyString v1or2_args;
-	arglist.AppendArgsV2Raw(test_string, NULL);
-	arglist.GetArgsStringV1or2Raw(&v1or2_args, NULL);
-	arglist.Clear();
-	arglist.AppendArgsV1or2Raw(v1or2_args.Value(), NULL);
-	MyString expect("This,'quoted',arg string,contains 'many' \"\""
-		"surprises\\");
-	MyString actual;
-	for(int i = 0; i < arglist.Count(); i++) {
-		actual.append_to_list(arglist.GetArg(i), ",");
-	}
-	emit_input_header();
-	emit_param("Args", v1or2_args.Value());
-	emit_param("Error Message", "NULL");
-	emit_output_expected_header();
-	emit_param("ArgList", "%s", expect.Value());
-	emit_output_actual_header();
-	emit_param("ArgList", "%s", actual.Value());
-	arglist.Clear();
-	if(expect != actual) {
-		FAIL;
-	}
-	PASS;
-}
-
 static bool test_get_args_string_win32_return() {
 	emit_test("Test that GetArgsStringWin32() returns true on an ArgList "
 		"initialized with AppendArgsV1Raw().");
@@ -1099,7 +995,7 @@ static bool test_split_args_ret_false() {
 		"error message MyString for an invalid arg string due to an unterminated "
 		"quote.");
 	SimpleList<MyString> args;
-	MyString error_msg;
+	std::string error_msg;
 	bool ret_val = split_args("Unterminated 'quote", &args, &error_msg);
 	emit_input_header();
 	emit_param("Args", "Unterminated 'quote");

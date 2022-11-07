@@ -60,7 +60,7 @@ takes on one of three possible values:
 
 #. ``ON_EXIT`` (the default): HTCondor transfers the output sandbox
    back to the submit machine only when the job exits on its own. If the
-   job is preempted or removed, no files are transfered back.
+   job is preempted or removed, no files are transferred back.
 #. ``ON_EXIT_OR_EVICT``: HTCondor behaves the same as described for the
    value ON_EXIT when the job exits on its own. However, each
    time the job is evicted from a machine, the output sandbox is
@@ -77,7 +77,7 @@ takes on one of three possible values:
    resume from where it left off.
 #. ``ON_SUCCESS``: HTCondor transfers files like ``ON_EXIT``, but only if
    the job succeeds, as defined by the ``success_exit_code`` submit command.
-   The ``successs_exit_code`` command must be used, even for the default
+   The ``success_exit_code`` command must be used, even for the default
    exit code of 0.  (See the :doc:`/man-pages/condor_submit` man page.)
 
 The default values for these two submit commands make sense as used

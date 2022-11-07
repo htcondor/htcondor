@@ -817,7 +817,7 @@ do_REMOTE_syscall()
 		result = ( syscall_sock->end_of_message() );
 		ASSERT( result );
 
-		rval = pseudo_phase(phase);
+		rval = 0;
 		dprintf( D_SYSCALLS, "\trval = %d\n", rval );
 
 		//NOTE: caller does not expect a response.

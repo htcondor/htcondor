@@ -6,20 +6,20 @@
 Example usage:
 
 
-    Build the latest version of the default series for the default distro:
+    Build the latest version of the feature series for the default distro:
         %(prog)s
 
     Build the latest daily build for all distros that support daily builds
     and push to the default registry:
         %(prog)s --distro=all --push --version=daily
 
-    Build version 8.9.11 for EL8 and push to the CHTC registry:
-        %(prog)s --distro=el8 --version=8.9.11 --push --registry=chtc
+    Build version 9.11.0 for EL8 and push to the OSG registry:
+        %(prog)s --distro=el8 --version=9.11.0 --push --registry=osg
 
-    Build the latest version of the 9.1 series for Ubuntu 20.04:
-        %(prog)s --distro=ubu20.04 --series=9.1
+    Build the latest version of the 9.x series for Ubuntu 20.04:
+        %(prog)s --distro=ubu20.04 --series=9.x
 
-    Build the latest version of the default series for the default distro,
+    Build the latest version of the current feature series for the default distro,
     and push it to the `myuser` dockerhub user.
 
         %(prog)s --prefix=myuser/ --push --registry=dockerhub
@@ -28,6 +28,7 @@ Example usage:
         %(prog)s --prefix=myuser/htcondor- --push --registry=dockerhub
 
 """
+from collections import defaultdict
 import locale
 import re
 import subprocess
@@ -35,7 +36,7 @@ import sys
 import argparse
 import time
 import random
-from typing import Dict, List
+from typing import Dict, List, Set, Union
 
 # mypy: no-strict-optional
 
@@ -50,10 +51,12 @@ SUPPORTED_DISTROS = [
 SUPPORTED_DAILY_DISTROS = [
     "el7",
     "el8",
+    "ubu18.04",
+    "ubu20.04",
 ]
 DISTRO_IMAGE = {
          "el7": "centos:7",
-         "el8": "rockylinux:8",
+         "el8": "almalinux:8",
     "ubu18.04": "ubuntu:18.04",
     "ubu20.04": "ubuntu:20.04",
 }
@@ -61,7 +64,6 @@ DISTRO_IMAGE = {
 
 
 IMAGES = ["execute", "submit", "cm", "mini"]
-SERIES_FOR_LATEST_TAGS = "9.1"
 DISTRO_FOR_LATEST_TAGS = "el7"
 
 
@@ -123,6 +125,121 @@ def parse_condor_version_str(condor_version_str: str) -> Dict[str, str]:
             raise RuntimeError("Can't parse CondorVersion: %s" % condor_version_str)
 
 
+def series_from_version(version: str) -> str:
+    """Return the series string from the given version string.
+
+    "9.0.*" turns into "9.0";
+    "9.1.*", "9.2.*", "9.3.*" etc turn into "9.x".
+
+    """
+    version_match = re.match(r"([0-9]+)[.]([0-9]+)[.][0-9]+", version)
+    if not version_match:
+        raise ValueError(f"{version} cannot be parsed as an HTCondor version")
+    major, minor = version_match.groups()
+
+    if minor == "0":
+        return f"{major}.{minor}"
+    else:
+        return f"{major}.x"
+
+
+class KnownVersions:
+    """Contains information about known HTCondor versions and series, as extracted from Git tags.
+    
+    Versions older than 9.0.0 are ignored.
+    
+    """
+
+    def __init__(self):
+
+        ret = subprocess.run(
+            ["git", "tag", "--list", "V*_*_*"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            check=True,
+        )
+        version_regex = re.compile(r"^V([0-9]+)_([0-9]+)_([0-9]+)$")
+
+        versions_set = set()
+        feature_series_set = set()
+        lts_series_set = set()
+        versions_by_series = defaultdict(set)
+        
+        for line in ret.stdout.split(b"\n"):
+            match = version_regex.match(line.decode("latin-1"))
+            if match:
+                version = ".".join(match.group(1,2,3))
+                major, minor = [int(x) for x in match.group(1,2)]
+                if major < 9:  # skip pre-9.0 versions, where the stable/devel series were numbered differently
+                    continue
+                versions_set.add(version)
+                if minor == 0:
+                    ser = f"{major}.0"
+                    lts_series_set.add(ser)
+                    versions_by_series[ser].add(version)
+                else:
+                    ser = f"{major}.x"
+                    feature_series_set.add(ser)
+                    versions_by_series[ser].add(version)
+
+        assert versions_set, "We should have found some versions or errored out"
+
+        def version_sorted(iterable):
+            return sorted(iterable, key=self._version_key)
+
+        # fmt:off
+        self.version_lists_by_series = {ser: version_sorted(vers) for ser, vers in versions_by_series.items()}
+        self.version_list            = version_sorted(versions_set)
+        self.feature_series_list     = version_sorted(feature_series_set)
+        self.lts_series_list         = version_sorted(lts_series_set)
+        self.series_list             = version_sorted(feature_series_set.union(lts_series_set))
+        # fmt:on
+
+    @property
+    def latest_version(self) -> str:
+        """Return the latest version of any series.
+        Usually the same as latest_feature_version except at the start of a new LTS series
+        where we may not have a feature release yet.
+        
+        """
+        return self.version_list[-1]
+
+    @property
+    def latest_series(self) -> str:
+        """Return the latest series.  Usually the same as latest_feature_series
+        except at the start of a new LTS series where we may not have a feature release yet.
+        
+        """
+        return self.series_list[-1]
+
+    @property
+    def latest_lts_series(self) -> str:
+        """Return the latest LTS series as a string."""
+        return self.lts_series_list[-1]
+    
+    @property
+    def latest_feature_series(self) -> str:
+        """Return the latest feature series as a string."""
+        return self.feature_series_list[-1]
+
+    @property
+    def latest_lts_version(self) -> str:
+        """Return the latest LTS version as a string."""
+        return self.version_lists_by_series[self.latest_lts_series][-1]
+        
+    @property
+    def latest_feature_version(self) -> str:
+        """Return the latest feature version as a string."""
+        return self.version_lists_by_series[self.latest_lts_series][-1]
+
+    @staticmethod
+    def _version_key(version_str: str) -> List[int]:
+        """Sorting key for a version string e.g. '9.0.0'"""
+        new_version_str = re.sub(r"\b[Xx]\b", "999", version_str)
+        # ^^ hack: have e.g. '9.x' sort at the end of 9.whatever by turning it into '9.999'
+        return [int(v) for v in new_version_str.split(".")]
+
+
 class VersionInfo:
     """Contains the information that can be extracted from the output of condor_version"""
 
@@ -142,10 +259,10 @@ class Builder:
     Fields:
     - executable: `docker` or `podman`
 
-    - series: str, a numeric series like `8.9`
+    - series: str, a series like `9.0` or `9.x`
     - want_latest_series: bool, `latest` was passed to the `series` argument of the constructor
 
-    - version: the desired version -- can be numbers (`8.9.9`, `daily`, or `latest`)
+    - version: the desired version -- can be numbers (`9.11.0`, `daily`, or `latest`)
     - want_latest_version: bool, `latest` was passed to the `version` argument of the constructor
     - want_daily: bool, `daily` was passed to the `version` argument of the constructor
 
@@ -157,25 +274,21 @@ class Builder:
 
     """
 
-    def __init__(self, executable, series, version, prefix):
+    def __init__(self, executable, series, version, prefix, one_tag: bool, known_versions: KnownVersions,
+                 no_cache: bool, skip_git_tag_check: bool):
         self.executable = executable
-        if series == "latest":
-            self.want_latest_series = True
-            self.series = SERIES_FOR_LATEST_TAGS
-        else:
-            self.want_latest_series = False
-            self.series = series
-
+        self.series = series
         self.prefix = prefix
         self.version = version
         self.want_latest_version = version == "latest"
         self.want_daily = version == "daily"
-        if version not in ["latest", "daily"]:  # exact version -- ignore series
-            self.series = ""
-            self.want_latest_series = False
+        self.one_tag = one_tag
+        self.known_versions = known_versions
+        self.no_cache = no_cache
+        self.skip_git_tag_check = skip_git_tag_check
 
     def docker(self, *args, **kwargs):
-        """Runs a single docker/poodman command with subprocess.run() and returns the result.
+        """Runs a single docker/podman command with subprocess.run() and returns the result.
 
         Accepts all keyword arguments that subprocess.run() does.
 
@@ -269,6 +382,66 @@ org.htcondor.version="%s"
             check=True,
         )
 
+    def tags_to_make_daily(self, distro: str, real_version: str, real_date: str) -> Set[str]:
+        """The tags to make for a daily build.
+
+        `:VERSION-DATE-DISTRO` is always listed.  The following are added if --one-tag is not specified:
+        - `:MAJOR.MINOR-daily-DISTRO`
+        - `:MAJOR.MINOR-DATE-DISTRO`
+
+        VERSION and SERIES will be based on the RPMs installed in the image.
+        DATE is the date the HTCondor RPMs were built.
+        """
+        tags = set()
+        major_minor = ".".join(real_version.split(".")[0:2])
+        real_date_no_dashes = real_date.replace("-", "")
+
+        tags.add(f"{real_version}-{real_date_no_dashes}-{distro}")
+        if self.one_tag:
+            return tags
+        tags.add(f"{major_minor}-{real_date_no_dashes}-{distro}")
+        tags.add(f"{major_minor}-daily-{distro}")
+        return tags
+
+    def tags_to_make_release(self, distro: str, real_version: str) -> Set[str]:
+        """The tags to make for a release (non-daily) build.
+
+        `:VERSION-DISTRO` is always listed.  The following are added if --one-tag is not specified:
+        - `:SERIES-DISTRO` (e.g. `9.x-el7`)
+        - `:latest-DISTRO` or `:lts-DISTRO` if appropriate
+        - `:DISTRO` as a synonym for `:latest-DISTRO` if appropriate
+        - `:latest` or `:lts` for the default distro defined in `DISTRO_FOR_LATEST_TAGS`
+        """
+        tags = set()
+
+        tags.add(f"{real_version}-{distro}")
+        if self.one_tag:
+            return tags
+
+        latest_version_for_this_series = self.known_versions.version_lists_by_series[self.series][-1]
+        if latest_version_for_this_series == real_version:
+            tags.add(f"{self.series}-{distro}")
+            if self.series == self.known_versions.latest_series:
+                tags.add(f"latest-{distro}")
+                tags.add(distro)
+                if distro == DISTRO_FOR_LATEST_TAGS:
+                    tags.add("latest")
+            if self.series == self.known_versions.latest_lts_series:
+                tags.add(f"lts-{distro}")
+                if distro == DISTRO_FOR_LATEST_TAGS:
+                    tags.add("lts")
+        elif self.want_latest_version:
+            # XXX how should we _really_ handle this?
+            print(f"The installed version {real_version} does not match"
+                  f" the latest Git tagged version for this series"
+                  f" {latest_version_for_this_series}")
+            if self.skip_git_tag_check:
+                print("Not adding extra image tags due to the mismatch.")
+            else:
+                raise RuntimeError("Aborting due to version mismatch")
+
+        return tags
+
     def build_base(self, distro: str) -> List[str]:
         """Build a base HTCondor image
 
@@ -277,27 +450,11 @@ org.htcondor.version="%s"
         Returns a list of image names.
 
         Images are built from the files in the `base/` subdirectory.  One image
-        is created but will have multiple tags:
-
-        Assuming the default `self.prefix` ("htcondor/"), the following image
-        names will be created:
-
-        Builds for the `daily` version:
-        - `htcondor/base:SERIES-daily-DISTRO`
-        - `htcondor/base:SERIES-DATE-DISTRO`
-        DATE is date the image is being built, not the date the HTCondor itself was built.
-
-        Builds for a specifically version (e.g. `8.9.11`):
-        - `htcondor/base:VERSION-DISTRO`
-
-        Builds for the `latest` version:
-        - `htcondor/base:VERSION-DISTRO`
-        - `htcondor/base:SERIES-DISTRO`
-        If the series is the `latest` series, also add:
-        - `htcondor/base:DISTRO`
-
-        If the series is the `latest` series and the latest distro, also add:
-        - `htcondor/base:latest`
+        is created but will have multiple tags.
+        Assuming the default prefix of `htcondor/`, you will get
+        `htcondor/base:TAG` for each TAG returned by `tags_to_make_daily()` or
+        `tags_to_make_release()` for daily or non-daily builds, respectively.
+        See those methods for the list.
         """
         args = [f"--build-arg=BASE_IMAGE={DISTRO_IMAGE[distro]}"]
         if self.want_latest_version:
@@ -316,39 +473,29 @@ org.htcondor.version="%s"
         # for the hash); we'll change the name once we know what's in there.
         tmp_image_name = f"{self.prefix}base:tmp{random.randint(10000,99999)}"
         args.extend(["-t", tmp_image_name, "-f", f"base/Dockerfile", "base"])
+        if self.no_cache:
+            args.append("--no-cache")
 
         self.docker("build", *args, stdin=subprocess.DEVNULL, check=True)
 
         try:
             # Get the real version and series by running condor_version in the image.
             version_info = self.get_condor_version_info(tmp_image_name)
-            self.add_htcondor_labels(tmp_image_name, version_info)
             real_version = version_info.version
-            real_series = ".".join(real_version.split(".")[0:2])
+            real_date = version_info.date
 
-            # "daily" was requested
+            # sanity check: if requesting a specific version, make sure that version got installed
+            if not self.want_daily and not self.want_latest_version and real_version != self.version:
+                raise RuntimeError(
+                    f"condor_version version {real_version} does not match requested version {self.version}"
+                )
+
             if self.want_daily:
-                real_image_names = [
-                    f"{self.prefix}base:{real_series}-daily-{distro}",
-                    f"{self.prefix}base:{real_series}-{today()}-{distro}",
-                ]
+                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_daily(distro, real_version, real_date)]
             else:
-                real_image_names = [f"{self.prefix}base:{real_version}-{distro}"]
-                # "latest" was requested
-                if self.want_latest_version:
-                    real_image_names.append(f"{self.prefix}base:{real_series}-{distro}")
-                    if self.want_latest_series:
-                        real_image_names.append(f"{self.prefix}base:{distro}")
-                        if distro == DISTRO_FOR_LATEST_TAGS:
-                            real_image_names.append(f"{self.prefix}base:latest")
-                # a specific version was requested -- make sure that's the version that
-                # actually got installed
-                else:
-                    if real_version != self.version:
-                        raise RuntimeError(
-                            f"condor_version version {real_version} does not match requested version {self.version}"
-                        )
+                real_image_names = [f"{self.prefix}base:{tag}" for tag in self.tags_to_make_release(distro, real_version)]
 
+            self.add_htcondor_labels(tmp_image_name, version_info)
             self.docker_tag(tmp_image_name, *real_image_names)
 
             return real_image_names
@@ -381,7 +528,7 @@ org.htcondor.version="%s"
     def push_image(self, image: str, registry: str):
         """Push the named image to the given registry.
 
-        - image: the full image name with tag, e.g. `htcondor/base:8.9.9-el7`
+        - image: the full image name with tag, e.g. `htcondor/base:9.11.0-el7`
         - registry: the host:port (port optional) of the registry, e.g. `docker.io`
 
         Normally done by tagging the image with the registry, pushing the
@@ -402,7 +549,7 @@ org.htcondor.version="%s"
             self.docker("rmi", image_with_registry, check=False)
 
 
-def parse_arguments(argv):
+def parse_arguments(argv, known_versions):
     parser = argparse.ArgumentParser(
         prog=argv[0],
         description=__doc__,
@@ -411,7 +558,7 @@ def parse_arguments(argv):
     parser.add_argument(
         "--version",
         help="Version of HTCondor to install. "
-        "Can be an exact version (e.g. '8.9.9'), 'daily', or 'latest' "
+        "Can be an exact version (e.g. '9.11.0'), 'daily', or 'latest' "
         "(default %(default)s)",
         default="latest",
     )
@@ -424,9 +571,11 @@ def parse_arguments(argv):
     parser.add_argument(
         "--series",
         help="The release series for daily or latest builds (default '%(default)s'). "
-        f"Either numeric (e.g. '8.9') or 'latest' (which is '{SERIES_FOR_LATEST_TAGS}'). "
-        "Only used if version is 'daily' or 'latest'.",
-        default="latest",
+        f"Either an explicit series (e.g. '9.0', '9.x'), 'latest' (which is '{known_versions.latest_series}'), "
+        f"'feature' (which is '{known_versions.latest_feature_series}'), "
+        f"or 'lts' (which is '{known_versions.latest_lts_series}'). "
+        "Ignored if a specific version is provided with --version.",
+        default="feature",
     )
     parser.add_argument(
         "--push", action="store_true", dest="push", help="Push resulting builds"
@@ -454,24 +603,67 @@ def parse_arguments(argv):
         help="Use podman",
     )
     parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Tell docker build/podman build not to use cached layers and always start building from scratch",
+    )
+    parser.add_argument(
         "--base-only", action="store_true", help="Build htcondor/base only"
     )
     parser.add_argument(
         "--prefix",
-        help="Prefix to use for the container names. Must include a '/' and must not "
+        help="Prefix to use for the image names. Must include a '/' and must not "
         "include a ':'.  Default: '%(default)s'; use something like "
         "'myusername/htcondor-' to push images named 'htcondor-base', etc. "
         "to your own docker account.",
         default="htcondor/",
     )
+    parser.add_argument(
+        "--one-tag",
+        action="store_true",
+        help="Only create images with the most specific version tags (e.g. '9.11.0-el7' but not '9.x-el7' or '9.x')",
+    )
+    parser.add_argument(
+        "--skip-git-tag-check",
+        action="store_true",
+        help="Don't error out if the latest version does not match the latest Git tag",
+    )
     args = parser.parse_args(argv[1:])
 
-    if not (
-        args.version in ["daily", "latest"]
-        or re.match(r"[0-9]+[.][0-9]+[.][0-9]+", args.version)
-    ):
+    # Validate series, get the real series
+    if args.series:
+        args.series = str(args.series).lower()
+    series_match = re.match(r"[0-9]+[.][0x]$", args.series)
+    if series_match:
+        if args.series not in known_versions.series_list:
+            parser.error(f"Unknown or unsupported HTCondor series '{args.series}'; supported series are: " +
+                         ", ".join(known_versions.series_list))
+    elif args.series == "lts":
+        args.series = known_versions.latest_lts_series
+    elif args.series == "feature":
+        args.series = known_versions.latest_feature_series
+    elif args.series == "latest":
+        args.series = known_versions.latest_series
+    else:
         parser.error(
-            f"Bad version '{args.version}' -- should be like '8.9.9', 'daily', or 'latest'"
+            f"Bad series '{args.series}' -- should be like '9.x', 'lts', 'feature', or 'latest'"
+        )
+
+    # Validate version and series
+    if args.version:
+        args.version = str(args.version).lower()
+    version_match = re.match(r"([0-9]+)[.]([0-9]+)[.]([0-9]+)$", args.version)
+    if version_match:
+        if int(version_match.group(1)) < 9:
+            parser.error(f"Bad version '{args.version}': versions before 9.0 are unsupported.")
+        elif args.version not in known_versions.version_list:
+            parser.error(f"Unknown or unsupported HTCondor version '{args.version}'; supported versions are: " +
+                         ", ".join(known_versions.version_list))
+            # get the series; overwrites --series if it's specified
+            args.series = series_from_version(args.version)
+    elif args.version not in ["daily", "latest"]:
+        parser.error(
+            f"Bad version '{args.version}' -- should be like '9.11.0', 'daily', or 'latest'"
         )
 
     if not re.fullmatch(r"[0-9a-z][.0-9a-z-]*/[.0-9a-z-]*", args.prefix):
@@ -503,16 +695,27 @@ def parse_arguments(argv):
     return args, distros, images
 
 
-def main(argv) -> int:
+def main(argv) -> Union[int,str]:
     locale.setlocale(locale.LC_ALL, "C")  # no parsing surprises please
 
-    args, distros, images = parse_arguments(argv)
+    # try:
+    #     known_versions = KnownVersions()
+    # except (OSError, subprocess.SubprocessError, ValueError) as err:
+    #     return f"Failed to get HTCondor versions from git tags: {err}"
+
+    known_versions = KnownVersions()
+
+    args, distros, images = parse_arguments(argv, known_versions)
 
     builder = Builder(
         executable=args.executable,
         series=args.series,
         version=args.version,
         prefix=args.prefix,
+        one_tag=args.one_tag,
+        known_versions=known_versions,
+        no_cache=args.no_cache,
+        skip_git_tag_check=args.skip_git_tag_check,
     )
 
     images_to_push = []

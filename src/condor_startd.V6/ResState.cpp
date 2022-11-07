@@ -154,7 +154,7 @@ ResState::change( State new_state, Activity new_act )
 
 	//PRAGMA_REMIND("this triggers an update to the collector, rethink?")
 		// We want to update the CM on every state or activity change
-	rip->update();   
+	rip->update_needed(Resource::WhyFor::wf_stateChange);
 
 #if HAVE_BACKFILL
 		/*
@@ -370,7 +370,7 @@ ResState::eval_policy( void )
 
 		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
-			rip->update();
+			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
 		break;   // case claimed_state:
 
@@ -448,7 +448,7 @@ ResState::eval_policy( void )
 
 		if( rip->r_reqexp->restore() ) {
 				// Our reqexp changed states, send an update
-			rip->update();
+			rip->update_needed(Resource::WhyFor::wf_stateChange);
 		}
 
 		break; // case unclaimed_state

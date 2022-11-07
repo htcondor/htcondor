@@ -266,11 +266,6 @@ main_init( int, char* argv[] )
 	daemonCore->Register_Command( REQ_NEW_PROC, "REQ_NEW_PROC", 
 								  command_handler,
 								  "command_handler", DAEMON );
-	if (param_boolean("ALLOW_SLOT_PAIRING", false)) {
-		daemonCore->Register_Command( SWAP_CLAIM_AND_ACTIVATION, "SWAP_CLAIM_AND_ACTIVATION",
-								  command_with_opts_handler,
-								  "command_handler", DAEMON );
-	}
 
 		// These commands are special and need their own handlers
 		// READ permission commands

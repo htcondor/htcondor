@@ -385,7 +385,7 @@ public:
 		/* Upload files in a job working directory */
 	virtual bool uploadWorkingFiles(void) { return false; }
 
-	virtual bool uploadCheckpointFiles(void) { return false; }
+	virtual bool uploadCheckpointFiles( int /* checkpointNumber */ ) { return false; }
 
 		/* Update Job ClassAd with checkpoint info and log it */
 	virtual void updateCkptInfo(void) {};
@@ -393,6 +393,9 @@ public:
 		/* Methods to get chirp config information */
 	virtual bool wroteChirpConfig() { return false; }
 	virtual const std::string chirpConfigFilename() { return ""; }
+
+		/* Get the job ad */
+	const ClassAd * getJobAd() { return job_ad; }
 
 protected:
 

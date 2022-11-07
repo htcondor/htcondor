@@ -63,8 +63,6 @@
 #include "directory.h"
 #include "filename_tools.h"
 #include "fs_util.h"
-#include "dc_transferd.h"
-#include "condor_ftp.h"
 #include "condor_crontab.h"
 #include "condor_holdcodes.h"
 #include "condor_url.h"

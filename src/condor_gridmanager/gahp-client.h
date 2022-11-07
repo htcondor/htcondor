@@ -45,9 +45,6 @@ struct GahpProxyInfo
 	int num_references;
 };
 
-class BoincJob;
-class BoincResource;
-
 #define GAHP_SUCCESS 0
 
 // Additional error values that GAHP calls can return
@@ -166,9 +163,6 @@ class GahpServer : public Service {
 
 	void poll_real_soon();
 
-	bool useBoincResource( BoincResource *resource );
-	bool command_boinc_select_project( const char *url, const char *auth_file );
-
 	bool cacheProxyFromFile( GahpProxyInfo *new_proxy );
 	bool uncacheProxy( GahpProxyInfo *gahp_proxy );
 	bool useCachedProxy( GahpProxyInfo *new_proxy, bool force = false );
@@ -224,8 +218,6 @@ class GahpServer : public Service {
 	int m_ssh_forward_port;
 
 	std::string m_sec_session_id;
-
-	BoincResource *m_currentBoincResource;
 
 	GahpProxyInfo *master_proxy;
 	int proxy_check_tid;
@@ -323,9 +315,6 @@ class GenericGahpClient : public Service {
 		GahpProxyInfo * pending_proxy;
 		std::string error_string;
 
-		// Used in now_pending(), not worth rewriting to get rid of for now.
-		BoincResource *m_boincResource;
-
 		GahpServer * server;
 };
 
@@ -348,8 +337,6 @@ class GahpClient : public GenericGahpClient {
 		~GahpClient();
 		
 		//@}
-
-		void setBoincResource( BoincResource *server );
 
 		int getSshForwardPort() { return server->m_ssh_forward_port; }
 
@@ -582,36 +569,6 @@ class GahpClient : public GenericGahpClient {
 		                   const std::string &subscription,
 		                   StringList &vm_names,
 		                   StringList &vm_statuses );
-
-		int boinc_ping();
-
-		int boinc_submit( const char *batch_name,
-						  const std::set<BoincJob *> &jobs );
-
-		typedef std::vector< std::pair< std::string, std::string > > BoincBatchResults;
-		typedef std::vector< BoincBatchResults > BoincQueryResults;
-//		typedef std::vector< std::vector< std::pair< std::string, std::string > > > BoincQueryResults;
-		int boinc_query_batches( StringList &batch_names,
-								 const std::string& last_query_time,
-								 std::string &new_query_time,
-								 BoincQueryResults &results );
-
-		typedef std::vector< std::pair< std::string, std::string> > BoincOutputFiles;
-		int boinc_fetch_output( const char *job_name,
-								const char *iwd,
-								const char *std_err,
-								bool transfer_all,
-								const BoincOutputFiles &output_files,
-								int &exit_status,
-								double &cpu_time,
-								double &wallclock_time );
-
-		int boinc_abort_jobs( StringList &job_names );
-
-		int boinc_retire_batch( const char *batch_name );
-
-		int boinc_set_lease( const char *batch_name,
-							 time_t new_lease_time );
 
 	private:
 

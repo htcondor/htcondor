@@ -55,7 +55,6 @@
 #include "schedd_cron_job_mgr.h"
 #include "named_classad_list.h"
 #include "env.h"
-#include "tdman.h"
 #include "condor_crontab.h"
 #include "condor_timeslice.h"
 #include "condor_claimid_parser.h"
@@ -302,9 +301,6 @@ class match_rec: public ClaimIdParser
 		// punched hole
 	std::string*	auth_hole_id;
 
-	match_rec *m_paired_mrec;
-	bool m_can_start_jobs;
-
 	bool m_startd_sends_alives;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
@@ -537,7 +533,6 @@ class Scheduler : public Service
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
 
-	int				requestSandboxLocation(int mode, Stream* s);
 	int			FindGManagerPid(PROC_ID job_id);
 
 	// match managing
@@ -577,11 +572,6 @@ class Scheduler : public Service
 	void			spawnLocalStarter( shadow_rec* );
 	bool			claimLocalStartd();
 	bool			isStillRunnable( int cluster, int proc, int &status ); 
-	bool			jobNeedsTransferd( int cluster, int proc, int univ ); 
-	bool			availableTransferd( int cluster, int proc ); 
-	bool			availableTransferd( int cluster, int proc, 
-						TransferDaemon *&td_ref ); 
-	bool			startTransferd( int cluster, int proc ); 
 	WriteUserLog*	InitializeUserLog( PROC_ID job_id );
 	bool			WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning );
 	bool			WriteAbortToUserLog( PROC_ID job_id );
@@ -678,34 +668,6 @@ class Scheduler : public Service
 	void			add_shadow_rec_pid(shadow_rec*);
 	void			HadException( match_rec* );
 
-	// Callbacks which are notifications from the TDMan object about
-	// registrations and reaping of transfer daemons
-	// These functions DO NOT own the memory passed to them.
-	TdAction td_register_callback(TransferDaemon *td);
-	TdAction td_reaper_callback(long pid, int status, TransferDaemon *td);
-
-	// Callbacks to handle transfer requests for clients uploading files into
-	// Condor's control.
-	// These functions DO NOT own the memory passed to them.
-	TreqAction treq_upload_pre_push_callback(TransferRequest *treq,
-		TransferDaemon *td);
-	TreqAction treq_upload_post_push_callback(TransferRequest *treq, 
-		TransferDaemon *td);
-	TreqAction treq_upload_update_callback(TransferRequest *treq, 
-		TransferDaemon *td, ClassAd *update);
-	TreqAction treq_upload_reaper_callback(TransferRequest *treq);
-
-	// Callbacks to handle transfer requests for clients downloading files
-	// out of Condor's control.
-	// These functions DO NOT own the memory passed to them.
-	TreqAction treq_download_pre_push_callback(TransferRequest *treq, 
-		TransferDaemon *td);
-	TreqAction treq_download_post_push_callback(TransferRequest *treq, 
-		TransferDaemon *td);
-	TreqAction treq_download_update_callback(TransferRequest *treq, 
-		TransferDaemon *td, ClassAd *update);
-	TreqAction treq_download_reaper_callback(TransferRequest *treq);
-
 		// Used to manipulate the "extra ads" (read:Hawkeye)
 	int adlist_register( const char *name );
 	int adlist_replace( const char *name, ClassAd *newAd );
@@ -728,9 +690,6 @@ class Scheduler : public Service
 	HashTable <PROC_ID, ClassAd *> *resourcesByProcID;
 
 	bool usesLocalStartd() const { return m_use_startd_for_local;}
-
-	void swappedClaims( DCMsgCallback *cb );
-	bool CheckForClaimSwap(match_rec *rec);
 
 	//
 	// Verifies that the new clusters created in the current transaction
@@ -907,9 +866,6 @@ private:
 		// (un)parsed expressions from condor_config GRIDMANAGER_SELECTION_EXPR
 	ExprTree* m_parsed_gridman_selection_expr;
 	char* m_unparsed_gridman_selection_expr;
-
-	// The object which manages the various transferds.
-	TDMan m_tdman;
 
 	// The object which manages the transfer queue
 	TransferQueueManager m_xfer_queue_mgr;

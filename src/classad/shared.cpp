@@ -54,10 +54,10 @@ static bool doublenum(const char *name, const ArgumentList &arguments,
  ***************************************************************************/
 static ClassAdFunctionMapping functions[] = 
 {
-    { "todays_date", (void *) todays_date, 0 },
-	{ "double",      (void *) doublenum,   0 },
-	{ "triple",      (void *) doublenum,   0 },
-    { "",            NULL,                 0 }
+    { "todays_date", todays_date, 0 },
+	{ "double",      doublenum,   0 },
+	{ "triple",      doublenum,   0 },
+    { "",            NULL,        0 }
 };
 
 /***************************************************************************

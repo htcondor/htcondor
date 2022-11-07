@@ -203,8 +203,9 @@ The available output data are as follows:
  JOB_IDS
     (Batch mode only) The range of job IDs belonging to the batch.
  RUN_TIME
-    (Non-batch mode only) Wall-clock time accumulated by the job to date
-    in days, hours, minutes, and seconds.
+    (Non-batch mode only) Wall-clock time accumulated by the job currently
+    running in days, hours, minutes, and seconds. When the job is idle or
+    held the jobs previous accumulated time will be displayed.
  ST
     (Non-batch mode only) Current status of the job, which varies
     somewhat according to the job universe and the timing of updates. H
@@ -432,10 +433,17 @@ Options
     accumulated during the current run is not shown. Note that this
     option has no effect unless used in conjunction with **-nobatch**.
  **-currentrun**
-    (output option) Normally, RUN_TIME contains all the time
-    accumulated during the current run plus all previous runs. If this
-    option is specified, RUN_TIME only displays the time accumulated so
-    far on this current run.
+    (output option) If this option is specified, RUN_TIME displays the
+    time accumulated so far on this current run unless the job is in IDLE
+    or HELD state then RUN_TIME will display the previous runs time. Note
+    that this is the base behavior and is not required, and this option
+    cannot be used in conjunction with **-cumulative-time**.
+ **-cumulative-time**
+    (output option) Normally, RUN_TIME contains the current or previous
+    runs accumulated wall-clock time. If this option is specified,
+    RUN_TIME displays the accumulated time for the current run plus all
+    previous runs. Note that this option cannot be used in conjunction
+    with **-currentrun**.
  **-dag**
     (output option) Display DAG node jobs under their DAGMan instance.
     Child nodes are listed using indentation to show the structure of

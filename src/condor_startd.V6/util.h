@@ -42,7 +42,7 @@ void	caDeleteThruParent(ClassAd* target, const char * attr, const char * prefix 
 bool	configInsert( ClassAd* ad, const char* attr, bool is_fatal );
 bool	configInsert( ClassAd* ad, const char* param_name, 
 					  const char* attr, bool is_fatal );
-Resource* stream_to_rip( Stream*, ClassAd * pad=NULL );
+Resource* stream_to_rip( Stream* );
 
 VacateType getVacateType( ClassAd* ad );
 

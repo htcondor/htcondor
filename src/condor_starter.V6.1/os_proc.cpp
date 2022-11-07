@@ -349,21 +349,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	bool want_manifest = false;
 	if( JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir ) ||
 	   (JobAd->LookupBool( ATTR_JOB_MANIFEST_DESIRED, want_manifest ) && want_manifest) ) {
-		int cluster, proc;
-		if( JobAd->LookupInteger( ATTR_CLUSTER_ID, cluster ) && JobAd->LookupInteger( ATTR_PROC_ID, proc ) ) {
-			formatstr( manifest_dir, "%d_%d_manifest", cluster, proc );
-		}
-		JobAd->LookupString( ATTR_JOB_MANIFEST_DIR, manifest_dir );
-		// Assumes we're in the root of the sandbox.
-		int r = mkdir( manifest_dir.c_str(), 0700 );
-		if (r < 0) {
-			dprintf(D_ALWAYS, "Cannot make manifest directory %s: %s\n", manifest_dir.c_str(), strerror(errno));
-		}
-		// jic->addToOutputFiles( manifest_dir.c_str() );
-		std::string f = manifest_dir + DIR_DELIM_CHAR + "environment";
-
-		// Assume we're in the root of the sandbox.
-		FILE * file = fopen( f.c_str(), "w" );
+		const std::string f = "environment";
+		FILE * file = Starter->OpenManifestFile( f.c_str() );
 		if( file != NULL ) {
 			std::string env_string;
 			job_env.getDelimitedStringForDisplay( env_string);

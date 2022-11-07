@@ -58,9 +58,6 @@
 #define SUBMIT_KEY_Stdout "stdout"
 #define SUBMIT_KEY_Error "error"
 #define SUBMIT_KEY_Stderr "stderr"
-#if !defined(WIN32)
-#define SUBMIT_KEY_RootDir "rootdir"
-#endif
 #define SUBMIT_KEY_InitialDir "initialdir"
 #define SUBMIT_KEY_InitialDirAlt "initial_dir"
 #define SUBMIT_KEY_JobIwd "job_iwd"
@@ -286,9 +283,6 @@
 #define SUBMIT_KEY_VM_XEN_INITRD "xen_initrd"
 #define SUBMIT_KEY_VM_XEN_ROOT   "xen_root"
 #define SUBMIT_KEY_VM_XEN_KERNEL_PARAMS "xen_kernel_params"
-#define SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES "vmware_should_transfer_files"
-#define SUBMIT_KEY_VM_VMWARE_SNAPSHOT_DISK "vmware_snapshot_disk"
-#define SUBMIT_KEY_VM_VMWARE_DIR "vmware_dir"
 
 //
 // EC2 Query Parameters
@@ -326,8 +320,6 @@
 #define SUBMIT_KEY_EC2ParamPrefix "ec2_parameter_"
 #define SUBMIT_KEY_EC2IamProfileArn "ec2_iam_profile_arn"
 #define SUBMIT_KEY_EC2IamProfileName "ec2_iam_profile_name"
-
-#define SUBMIT_KEY_BoincAuthenticatorFile "boinc_authenticator_file"
 
 //
 // GCE Parameters
@@ -748,9 +740,6 @@ protected:
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
-	#if !defined(WIN32)
-	MyString JobRootdir;
-	#endif
 	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
 	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
@@ -772,11 +761,6 @@ protected:
 
 	int SetUniverse();  /* run once */
 
-#if !defined(WIN32)
-	int ComputeRootDir();
-	int SetRootDir();
-	int check_root_dir_access();
-#endif
 	int ComputeIWD();
 	int SetIWD();		  /* factory:ok */
 
@@ -877,7 +861,6 @@ private:
 	  const char * sp, const char * jp,
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
-	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(const std::string &image) const;

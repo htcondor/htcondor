@@ -1753,7 +1753,6 @@ _condor_dprintf_exit( int error_code, const char* msg )
 	int wrote_warning = FALSE;
 	struct tm *tm;
 	time_t clock_now;
-	std::vector<DebugFileInfo>::iterator it;
 
 		/* We might land here with DprintfBroken true if our call to
 		   dprintf_unlock() down below hits an error.  Since the

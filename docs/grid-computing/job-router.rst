@@ -219,7 +219,7 @@ multi-line values, as shown in the example below (see the
 :ref:`admin-manual/introduction-to-configuration:multi-line values` section
 for more details).
 
-The list of enabled routes is specfied by ``JOB_ROUTER_ROUTE_NAMES``, routes
+The list of enabled routes is specified by ``JOB_ROUTER_ROUTE_NAMES``, routes
 will be considered in the order given by this configuration variable.
 
 .. code-block:: condor-config
@@ -284,8 +284,8 @@ Routing Table Entry Commands and Macro values
 A route consists of a sequence of Macro values and commands which are applied
 in order to produce the routed job ClassAd.  Certain macro names have special meaning
 when used in a router transform.  These special macro names are listed below
-allong a brief listing of the the transform commands.  For a more detailed description
-of the tranform commands refer to the :ref:`classads/transforms:Transform Commands` section.
+along a brief listing of the the transform commands.  For a more detailed description
+of the transform commands refer to the :ref:`classads/transforms:Transform Commands` section.
 
 The conversion of a job to a routed copy will usually require the job ClassAd to
 be modified. The Routing Table specifies attributes of the different
@@ -293,7 +293,7 @@ possible routes and it may specify specific modifications that should be
 made to the job when it is sent along a specific route. In addition to
 this mechanism for transforming the job, external programs may be
 invoked to transform the job. For more information, see
-the :ref:`admin-manual/hooks:hooks for a job router` section.
+the :ref:`admin-manual/hooks:hooks for the job router` section.
 
 The following attributes and instructions for modifying job attributes
 may appear in a Routing Table entry.
@@ -363,7 +363,7 @@ may appear in a Routing Table entry.
     more of the IDTOKEN names specified by the ``JOB_ROUTER_CREATE_IDTOKEN_NAMES``
     configuration variable.
     if ``SendIDTokens`` is not specified, then the value of the JobRouter
-    configuration varible ``JOB_ROUTER_SEND_ROUTE_IDTOKENS`` will be used.
+    configuration variable ``JOB_ROUTER_SEND_ROUTE_IDTOKENS`` will be used.
 
 :index:`UseSharedX509UserProxy<single: UseSharedX509UserProxy; Job Router Routing Table ClassAd attribute>`
 
@@ -481,7 +481,7 @@ may appear in a Routing Table entry.
 :index:`RENAME <ATTR><single: RENAME <ATTR>; Job Router Routing Table command>`
 
 ``RENAME <ATTR>``
-    Renames the attribute ``<ATTR>`` to a new attribute name. This is the eqivalent of 
+    Renames the attribute ``<ATTR>`` to a new attribute name. This is the equivalent of 
     a COPY statement followed by a DELETE statement. 
 
 ``RENAME /<regex>/``
@@ -579,7 +579,7 @@ Deprecated Routing Table Entry ClassAd Attributes
 In the deprecated *condor_job_router* configuration, each route is the
 result of merging the `JOB_ROUTER_DEFAULTS` ClassAd with one of the
 `JOB_ROUTER_ENTRIES` ClassAds, with attributes specified in `JOB_ROUTER_ENTRIES`
-overriding those specifed in `JOB_ROUTER_DEFAULTS`.
+overriding those specified in `JOB_ROUTER_DEFAULTS`.
 
 :index:`Name<single: Name; Job Router Routing Table ClassAd attribute>`
 

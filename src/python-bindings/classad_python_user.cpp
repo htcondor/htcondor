@@ -37,8 +37,8 @@ python_invoke (const char *                 name,
 
 static classad::ClassAdFunctionMapping functions[] = 
 {
-    { "python_invoke",  (void *) python_invoke, 0 },
-    { "",        NULL,                          0 }
+    { "python_invoke",  python_invoke, 0 },
+    { "",        NULL,                 0 }
 };
 
 

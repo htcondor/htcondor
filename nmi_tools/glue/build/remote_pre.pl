@@ -203,7 +203,7 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 print "Finding build id of Condor\n";
 open( BUILDID, "$buildid_file" ) || die "Can't open $buildid_file: $!\n";
 my @stat = stat(BUILDID);
-$date = strftime( "%b %d %Y", localtime($stat[9]) );
+$date = strftime( "%Y-%b-%d", localtime($stat[9]) );
 while( <BUILDID> ) {
     chomp;
     $buildid = $_;

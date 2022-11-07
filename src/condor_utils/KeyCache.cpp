@@ -24,19 +24,10 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
-	if (id_param) {
-		_id = strdup(id_param);
-	} else {
-		_id = NULL;
-	}
-
-	if (addr_param) {
-		_addr = new condor_sockaddr(*addr_param);
-	} else {
-		_addr = NULL;
-	}
-
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+	: _id(id_param)
+	, _addr(addr_param)
+{
 	if (key_param) {
 		_keys.push_back(new KeyInfo(*key_param));
 		_preferred_protocol = key_param->getProtocol();
@@ -59,19 +50,10 @@ KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr
 
 // NOTE: In this constructor, we assume ownership of the KeyInfo objects
 //   in the vector. In the single-KeyInfo constructor, we copy it.
-KeyCacheEntry::KeyCacheEntry( char const *id_param, const condor_sockaddr * addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval ) {
-	if (id_param) {
-		_id = strdup(id_param);
-	} else {
-		_id = NULL;
-	}
-
-	if (addr_param) {
-		_addr = new condor_sockaddr(*addr_param);
-	} else {
-		_addr = NULL;
-	}
-
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+	: _id(id_param)
+	, _addr(addr_param)
+{
 	_keys = key_param;
 	if (_keys.empty()) {
 		_preferred_protocol = CONDOR_NO_PROTOCOL;
@@ -107,14 +89,6 @@ const KeyCacheEntry& KeyCacheEntry::operator=(const KeyCacheEntry &copy) {
 		copy_storage(copy);
 	}
 	return *this;
-}
-
-char* KeyCacheEntry::id() {
-	return _id;
-}
-
-const condor_sockaddr*  KeyCacheEntry::addr() {
-	return _addr;
 }
 
 KeyInfo* KeyCacheEntry::key() {
@@ -180,17 +154,8 @@ void KeyCacheEntry::renewLease() {
 }
 
 void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
-	if (copy._id) {
-		_id = strdup(copy._id);
-	} else {
-		_id = NULL;
-	}
-
-	if (copy._addr) {
-    	_addr = new condor_sockaddr(*(copy._addr));
-	} else {
-    	_addr = NULL;
-	}
+	_id = copy._id;
+	_addr = copy._addr;
 
 	for (auto key : copy._keys) {
 		_keys.push_back(new KeyInfo(*key));
@@ -211,12 +176,6 @@ void KeyCacheEntry::copy_storage(const KeyCacheEntry &copy) {
 
 
 void KeyCacheEntry::delete_storage() {
-	if (_id) {
-        free( _id );
-	}
-	if (_addr) {
-	  delete _addr;
-	}
 	for (auto key : _keys) {
 		delete key;
 	}
@@ -228,20 +187,17 @@ void KeyCacheEntry::delete_storage() {
 
 KeyCache::KeyCache() {
 	key_table = new HashTable<std::string, KeyCacheEntry*>(hashFunction);
-	m_index = new KeyCacheIndex(hashFunction);
 	dprintf ( D_SECURITY|D_FULLDEBUG, "KEYCACHE: created: %p\n", key_table );
 }
 
 KeyCache::KeyCache(const KeyCache& k) {
 	key_table = new HashTable<std::string, KeyCacheEntry*>(hashFunction);
-	m_index = new KeyCacheIndex(hashFunction);
 	copy_storage(k);
 }
 
 KeyCache::~KeyCache() {
 	delete_storage();
 	delete key_table;
-	delete m_index;
 }
 	    
 const KeyCache& KeyCache::operator=(const KeyCache& k) {
@@ -280,16 +236,6 @@ void KeyCache::delete_storage()
 		key_table->clear();
 		//dprintf( D_SECURITY|D_FULLDEBUG, "KEYCACHE: deleted: %p\n", key_table );
 	}
-	if( m_index ) {
-		std::string index;
-		SimpleList<KeyCacheEntry *> *keylist=NULL;
-
-		m_index->startIterations();
-		while( m_index->iterate(index,keylist) ) {
-			delete keylist;
-		}
-		m_index->clear();
-	}
 }
 
 
@@ -314,22 +260,8 @@ bool KeyCache::insert(KeyCacheEntry &e) {
 		// key was not inserted... delete
 		delete new_ent;
 	}
-	else {
-		addToIndex(new_ent);
-	}
 
 	return retval;
-}
-
-void
-KeyCache::makeServerUniqueId(std::string const &parent_id, int server_pid, std::string& result) {
-	if( parent_id.empty() || server_pid == 0 ) {
-			// If our peer is not a daemon, parent_id will be empty
-			// and there is no point in indexing it, because we
-			// never query by PID alone.
-		return;
-	}
-	formatstr(result, "%s.%d", parent_id.c_str(), server_pid);
 }
 
 bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
@@ -352,89 +284,6 @@ bool KeyCache::lookup(const char *key_id, KeyCacheEntry *&e_ptr) {
 	return res;
 }
 
-void
-KeyCache::addToIndex(KeyCacheEntry *key)
-{
-		// update our index
-	ClassAd *policy = key->policy();
-	std::string parent_id;
-	std::string server_unique_id;
-	int server_pid=0;
-	std::string server_addr, peer_addr;
-
-	policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, server_addr);
-	policy->LookupString(ATTR_SEC_PARENT_UNIQUE_ID, parent_id);
-	policy->LookupInteger(ATTR_SEC_SERVER_PID, server_pid);
-
-	if (key->addr())
-		peer_addr = key->addr()->to_sinful();
-	addToIndex(m_index,peer_addr,key);
-	addToIndex(m_index,server_addr,key);
-
-	makeServerUniqueId(parent_id, server_pid, server_unique_id);
-	addToIndex(m_index,server_unique_id,key);
-}
-
-void
-KeyCache::removeFromIndex(KeyCacheEntry *key)
-{
-		//remove references to this key from the index
-	std::string parent_id;
-	std::string server_unique_id;
-	int server_pid=0;
-	std::string server_addr, peer_addr;
-	ClassAd *policy = key->policy();
-	ASSERT( policy );
-
-	policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, server_addr);
-	policy->LookupString(ATTR_SEC_PARENT_UNIQUE_ID, parent_id);
-	policy->LookupInteger(ATTR_SEC_SERVER_PID, server_pid);
-
-	if (key->addr())
-		peer_addr = key->addr()->to_sinful();
-	removeFromIndex(m_index,peer_addr,key);
-	removeFromIndex(m_index,server_addr,key);
-
-	makeServerUniqueId(parent_id, server_pid, server_unique_id);
-	removeFromIndex(m_index,server_unique_id,key);
-}
-
-void
-KeyCache::addToIndex(KeyCacheIndex *hash,std::string const &index,KeyCacheEntry *key)
-{
-	if( index.empty() ) {
-		return;
-	}
-	ASSERT( key );
-
-	SimpleList<KeyCacheEntry *> *keylist=NULL;
-	if( hash->lookup(index,keylist)!=0 ) {
-		keylist = new SimpleList<KeyCacheEntry *>;
-		ASSERT( keylist );
-		bool inserted = hash->insert(index,keylist)==0;
-		ASSERT(inserted);
-	}
-	bool appended = keylist->Append(key);
-	ASSERT( appended );
-}
-
-void
-KeyCache::removeFromIndex(KeyCacheIndex *hash,std::string const &index,KeyCacheEntry *key)
-{
-	SimpleList<KeyCacheEntry *> *keylist=NULL;
-	if( hash->lookup(index,keylist)!=0 ) {
-		return;
-	}
-	bool deleted = keylist->Delete(key);
-	ASSERT( deleted );
-
-	if( keylist->Length() == 0 ) {
-		delete keylist;
-		bool removed = hash->remove(index)==0;
-		ASSERT( removed );
-	}
-}
-
 bool KeyCache::remove(const char *key_id) {
 	// A NULL key_id is not valid
 	if (!key_id) return false;
@@ -447,8 +296,6 @@ bool KeyCache::remove(const char *key_id) {
 	bool res = (key_table->lookup(key_id, tmp_ptr) == 0);
 
 	if (res) {
-		removeFromIndex( tmp_ptr );
-
 		// ** HEY **
 		// key_id could be pointing to the string tmp_ptr->id.  so, we'd
 		// better finish using key_id *before* we delete tmp_ptr.
@@ -463,10 +310,10 @@ void KeyCache::expire(KeyCacheEntry *e) {
 	time_t key_exp = e->expiration();
 	char const *expiration_type = e->expirationType();
 
-	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", e->id(), expiration_type, ctime(&key_exp) );
+	dprintf (D_SECURITY|D_FULLDEBUG, "KEYCACHE: Session %s %s expired at %s\n", e->id().c_str(), expiration_type, ctime(&key_exp) );
 
 	// remove its reference from the hash table
-	remove(e->id());       // This should do it
+	remove(e->id().c_str());       // This should do it
 }
 
 StringList * KeyCache::getExpiredKeys() {
@@ -487,75 +334,6 @@ StringList * KeyCache::getExpiredKeys() {
 		}
 	}
     return list;
-}
-
-StringList *
-KeyCache::getKeysForPeerAddress(char const *addr)
-{
-	if( !addr || !*addr ) {
-		return NULL;
-	}
-	SimpleList<KeyCacheEntry*> *keylist=NULL;
-	if( m_index->lookup(addr,keylist)!=0 ) {
-		return NULL;
-	}
-	ASSERT( keylist );
-
-	StringList *keyids = new StringList;
-	KeyCacheEntry *key=NULL;
-
-	keylist->Rewind();
-	while( keylist->Next(key) ) {
-		std::string server_addr,peer_addr;
-		ClassAd *policy = key->policy();
-
-		policy->LookupString(ATTR_SEC_SERVER_COMMAND_SOCK, server_addr);
-		if (key->addr())
-			peer_addr = key->addr()->to_sinful();
-			// addr should match either the server command socket
-			// or the peer client address associated with this entry.
-			// If not, then something is horribly wrong with our index.
-		ASSERT( server_addr == addr || peer_addr == addr );
-
-		keyids->append(key->id());
-	}
-	return keyids;
-}
-
-StringList *
-KeyCache::getKeysForProcess(char const *parent_unique_id,int pid)
-{
-	std::string server_unique_id;
-	makeServerUniqueId(parent_unique_id, pid, server_unique_id);
-
-	SimpleList<KeyCacheEntry*> *keylist=NULL;
-	if( m_index->lookup(server_unique_id,keylist)!=0 ) {
-		return NULL;
-	}
-	ASSERT( keylist );
-
-	StringList *keyids = new StringList;
-	KeyCacheEntry *key=NULL;
-
-	keylist->Rewind();
-	while( keylist->Next(key) ) {
-		std::string this_parent_id;
-		std::string this_server_unique_id;
-		int this_server_pid=0;
-		ClassAd *policy = key->policy();
-
-		policy->LookupString(ATTR_SEC_PARENT_UNIQUE_ID, this_parent_id);
-		policy->LookupInteger(ATTR_SEC_SERVER_PID, this_server_pid);
-		makeServerUniqueId(this_parent_id, this_server_pid, this_server_unique_id);
-
-			// If server id of key in index does not match server id
-			// we are looking up, something is horribly wrong with
-			// the index.
-		ASSERT( this_server_unique_id == server_unique_id );
-
-		keyids->append(key->id());
-	}
-	return keyids;
 }
 
 int KeyCache::count() {

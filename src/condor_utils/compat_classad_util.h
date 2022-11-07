@@ -24,9 +24,9 @@
 #include "MyString.h"
 
 // parse str into attr=expression, returning the attr and the expression and true on success
-bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree, int*pos = NULL);
+bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree);
 
-int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree, int*pos = NULL);
+int ParseClassAdRvalExpr(const char*s, classad::ExprTree*&tree);
 
 const char * ExprTreeToString( const classad::ExprTree *expr, std::string & buffer );
 const char * ExprTreeToString( const classad::ExprTree *expr );
@@ -170,7 +170,7 @@ public:
 	classad::ExprTree * Expr(int * error=NULL) const {
 		int rval = 0;
 		if ( ! expr && ! empty()) {
-			if (ParseClassAdRvalExpr(exprstr, expr, NULL)) {
+			if (ParseClassAdRvalExpr(exprstr, expr)) {
 				rval = -1;
 			}
 		}

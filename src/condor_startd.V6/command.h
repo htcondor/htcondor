@@ -32,14 +32,6 @@ class Service;
 int command_handler(int, Stream* );
 
 /*
-  command_handler reads a ClaimId and classad off the socket, tries to find
-  the resource that the ClaimId belongs to, does a switch on the
-  command, and calls the proper action with the pointer to the
-  resource the ClaimId matched.
-*/
-int command_with_opts_handler(int, Stream* );
-
-/*
   ACTIVATE_CLAIM is a special case of the above case, in that more
   stuff is sent over the wire than just the command and the
   ClaimId, and if anything goes wrong, the shadow wants a reply. 
@@ -117,7 +109,7 @@ int match_info( Resource*, char* );
 int request_claim( Resource*, Claim *, char*, Stream* ); 
 
 // Accept claim from schedd agent
-bool accept_request_claim( Resource* , bool secure_claim_id = true, Claim * = NULL, bool and_pair = false );
+bool accept_request_claim( Resource* , bool secure_claim_id = true, Claim * = NULL );
 
 // Activate a claim with a given starter
 int activate_claim( Resource*, Stream* ); 

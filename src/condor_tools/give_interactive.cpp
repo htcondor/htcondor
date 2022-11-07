@@ -272,7 +272,6 @@ make_request_ad(ClassAd & requestAd, const char *rank)
 	}
 
 	requestAd.Assign(ATTR_Q_DATE, (int)time ((time_t *) 0));
-	requestAd.Assign(ATTR_COMPLETION_DATE, 0);
 
 	char *owner = my_username();
 	if( !owner ) {
@@ -320,7 +319,7 @@ fetchSubmittorPrios()
 	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
   	char  	name[128];
-  	float 	sub_priority;
+  	double 	sub_priority;
 	int		i = 1;
 
 		// Minor hack, if we're talking to a remote pool, assume the

@@ -22,5 +22,17 @@ is a list of items that administrators should be aware of.
   instead of either putting the job on hold or treated as false.
   :jira:`442`
 
+- Jobs that use a ``Requirements`` expression to try and match to specific a GPU should
+  be changed to use the new ``require_gpus`` submit command or jobs will simply not match. If your machines
+  have only a single type of GPU, you may be able to modify the machine configuration
+  to allow users to delay having to make this change. This is a consequence of the fact
+  that multiple GPUs of different types in a single machine is now supported.
+  Attributes such as ``CUDACapability`` will no longer be advertised because it is not reasonable
+  to assume that all GPUs will have a single value for this property.  Instead the propertes of
+  each GPU will be advertised individually in a format that allows a job to request it run
+  on a specific GPU or type of GPU.
+  :jira:`953`
+
+
 -  Item 1 :jira:`0000`
 -  Item 2

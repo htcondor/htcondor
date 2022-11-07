@@ -190,12 +190,13 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 		logfiles.push_back(user_log_file.c_str());
 	}
 	if ( getPathToUserLog(&job_ad, dagman_log_file, ATTR_DAGMAN_WORKFLOW_LOG) ) {
-		if ( logfiles.empty() ) {
-			// The rest of this class doesn't like the dagman file to be
-			// the first entry in the vector of log files.
-			logfiles.push_back(UNIX_NULL_FILE);
-		}
 		logfiles.push_back(dagman_log_file.c_str());
+		std::string msk;
+		job_ad.LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
+		Tokenize(msk);
+		while(const char* mask = GetNextToken(",",true)) {
+			AddToMask(ULogEventNumber(atoi(mask)));
+		}
 	}
 	if( !initialize (logfiles, cluster, proc, 0)) {
 		return false;
@@ -204,14 +205,6 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 		int use_classad = 0;
 		job_ad.LookupInteger(ATTR_ULOG_USE_XML, use_classad);
 		setUseCLASSAD(use_classad & ULogEvent::formatOpt::CLASSAD);
-		if(logfiles.size() > 1) {
-			std::string msk;
-			job_ad.LookupString(ATTR_DAGMAN_WORKFLOW_MASK, msk);
-			Tokenize(msk);
-			while(const char* mask = GetNextToken(",",true)) {
-				AddToMask(ULogEventNumber(atoi(mask)));
-			}
-		}
 	}
 	return true;
 }
@@ -229,7 +222,7 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 		// Save parameter info
 	FreeLocalResources( );
 	Configure(false);
-	bool ret = true;
+	size_t failed_init = 0; //Count of logs that failed to initialize
 	if ( m_userlog_enable ) {
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
@@ -246,13 +239,14 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
             }
 
 			log_file* log = new log_file(*it);
-			if(!openFile(log->path.c_str(), true, m_enable_locking, true,
-					log->lock, log->fd) ) {
-				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n",
-					log->path.c_str() );
-				ret = false;
+			//If last log and has dag log then set apply_mask to true
+			if (std::distance(it,file.end()) == 1 && !mask.empty()) { log->is_dag_log = true; }
+
+			if(!openFile(log->path.c_str(), true, m_enable_locking, true, log->lock, log->fd) ) {
+				dprintf(D_ALWAYS, "WriteUserLog::initialize: failed to open file %s\n", log->path.c_str() );
+				failed_init++;
 				delete log;
-				break;
+				continue;
 			} else {
 				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: opened %s successfully\n",
 					log->path.c_str());
@@ -283,17 +277,17 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 					}
 				}
 
-                if (log_file_cache != NULL) {
-                    dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
-                    (*log_file_cache)[*it] = log;
-                    log->refset.insert(std::make_pair(c,p));
-                }
+				if (log_file_cache != NULL) {
+					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: caching log file %s\n", *it);
+					(*log_file_cache)[*it] = log;
+					log->refset.insert(std::make_pair(c,p));
+				}
 			}
 		}
 	}
-	// At least one of our logs failed to be initialized
-	if(!ret) {
-        freeLogs();
+	if (!file.empty() && failed_init == file.size()) {
+		dprintf(D_FULLDEBUG,"WriteUserLog::initialize: failed to initialize all %zu log file(s).\n",failed_init);
+		freeLogs();
 		logs.clear();
 	}
 	return internalInitialize( c, p, s );
@@ -568,7 +562,7 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 	return *this;
 }
 WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path),
-	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag)
+	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag), is_dag_log(orig.is_dag_log)
 {
 	orig.copied = true;
 }
@@ -1461,7 +1455,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			}
 				// Check our mask vector for the event
 				// If we have a mask, the event must be in the mask to write the event.
-			if( p != logs.begin() && !mask.empty()){
+			if( (*p)->is_dag_log && !mask.empty()){
 				std::vector<ULogEventNumber>::iterator pp =
 					std::find(mask.begin(),mask.end(),event->eventNumber);	
 				if(pp == mask.end()) {
@@ -1471,12 +1465,12 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 				}
 			}
 			int fmt_opts = m_format_opts;
-			if (! (p == logs.begin())) { fmt_opts &= ~(ULogEvent::formatOpt::XML); }
+			if ((*p)->is_dag_log) { fmt_opts &= ~(ULogEvent::formatOpt::XML); }
 			if ( ! doWriteEvent(event, **p, false, false, fmt_opts, param_jobad) ) {
 				dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent user doWriteEvent() failed on normal log %s!\n", (*p)->path.c_str() );
 				ret = false;
 			}
-			if( (p == logs.begin()) && param_jobad ) {
+			if( !(*p)->is_dag_log && param_jobad ) {
 					// The following should match ATTR_JOB_AD_INFORMATION_ATTRS
 					// but cannot reference it directly because of what gets
 					// linked in libcondorapi
