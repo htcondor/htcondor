@@ -671,7 +671,7 @@ def annex_inner_func(
             resources = f"{resources}and "
     if mem_mb is not None:
         resources = f"{resources}{mem_mb}MB of RAM "
-    if resources is "":
+    if resources == "":
         resources = f"{nodes} nodes "
     resources = f"{resources}for {lifetime/(60*60):.2f} hours"
 
