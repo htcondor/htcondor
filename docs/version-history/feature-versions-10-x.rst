@@ -22,7 +22,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bugs in the container universe that prevented 
+  apptainer-only systems from running container universe jobs
+  with docker-repo style images
+  :jira:`1412`
 
 Version 10.1.0
 --------------
