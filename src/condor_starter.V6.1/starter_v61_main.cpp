@@ -168,6 +168,9 @@ printClassAd( void )
 		printf("%s = True\n", ATTR_HAS_CONTAINER);
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
+		// We can't test a download, so assume we can...
+		printf( "%s = True\n", ATTR_HAS_DOCKER_URL);
+
 		if (htcondor::Singularity::canRunSandbox())  {
 			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
 		}

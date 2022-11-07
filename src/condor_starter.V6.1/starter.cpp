@@ -2370,6 +2370,8 @@ Starter::SpawnJob( void )
 		// kind of job we're starting up, instantiate the appropriate
 		// userproc class, and actually start the job.
 	ClassAd* jobAd = jic->jobClassAd();
+	ClassAd * mad = jic->machClassAd();
+
 	if ( ! jobAd->LookupInteger( ATTR_JOB_UNIVERSE, jobUniverse ) || jobUniverse < 1 ) {
 		dprintf( D_ALWAYS, 
 				 "Job doesn't specify universe, assuming VANILLA\n" ); 
@@ -2400,8 +2402,12 @@ Starter::SpawnJob( void )
 			std::string docker_image;
 			jobAd->LookupString(ATTR_DOCKER_IMAGE, docker_image);
 
-			// If they give us a docker repo, use docker universe
-			if (wantContainer && wantDockerRepo) {
+			bool hasDocker;
+			mad->LookupBool(ATTR_HAS_DOCKER, hasDocker);
+
+			// If they give us a docker repo and we have a working
+			// docker runtime, use docker universe
+			if (wantContainer && wantDockerRepo && hasDocker) {
 				wantDocker = true;
 			}
 

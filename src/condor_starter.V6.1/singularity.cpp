@@ -143,11 +143,13 @@ Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	bool wantSIF = false;
 	bool wantSandbox  = false;
+	bool wantDockerImage = false;
 
 	jobAd.LookupBool(ATTR_WANT_SIF, wantSIF);
 	jobAd.LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandbox);
+	jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerImage);
 
-	if (wantSIF || wantSandbox) {
+	if (wantSIF || wantSandbox || wantDockerImage) {
 		return true;
 	}
 
@@ -382,8 +384,13 @@ Singularity::setup(ClassAd &machineAd,
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these
-	job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
-	job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	if (Singularity::m_apptainer) {
+		job_env.SetEnv("APPTAINER_CACHEDIR", execute_dir);
+		job_env.SetEnv("APPTAINER_TEMPDIR", execute_dir);
+	} else {
+		job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
+		job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	}
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -575,8 +582,11 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
+	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
+
 	MyPopenTimer pgm;
-	if (pgm.start_program(sandboxArgs, true, NULL, false) < 0) {
+	Env env;
+	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
 			return false;
