@@ -545,7 +545,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    gpus = validate_system_specific_constraints(
+    gpus, real_queue_name = validate_system_specific_constraints(
         system=system,
         queue_name=queue_name,
         nodes=nodes,
@@ -915,7 +915,7 @@ def annex_inner_func(
         system,
         startd_noclaim_shutdown,
         annex_name,
-        queue_name,
+        real_queue_name,
         collector,
         token_file,
         lifetime,
