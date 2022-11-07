@@ -202,7 +202,7 @@ SYSTEM_TABLE = {
     },
     ),
 
-    "expanse": System( ** {
+    "expanse": System( **{
         "pretty_name":      "Expanse",
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
