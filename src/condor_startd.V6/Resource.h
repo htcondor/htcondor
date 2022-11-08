@@ -431,6 +431,9 @@ public:
 
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
 
+	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
+	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
+
 #ifdef LINUX
 	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
 	VolumeManager *getVolumeManager() const {return m_volume_mgr;}
@@ -445,6 +448,8 @@ private:
 
 	// Only partitionable slots have children
 	std::set<Resource *, ResourceLess> m_children;
+	// only non-partitionable backfill slots have resource conflicts
+	std::string m_res_conflict;
 
 	IdDispenser* m_id_dispenser;
 

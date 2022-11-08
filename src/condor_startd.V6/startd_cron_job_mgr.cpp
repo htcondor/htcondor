@@ -178,7 +178,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		daemonCore->publish(& context);
 		resmgr->m_attr->compute_for_policy();
 		resmgr->m_attr->publish_static(& context);
-		resmgr->m_attr->publish_dynamic(& context, -1, -1, false);
+		resmgr->m_attr->publish_common_dynamic(& context);
 		resmgr->publish_static(& context);
 		resmgr->publish_dynamic(& context);
 		if (IsDebugCategory(D_MATCH)) {
