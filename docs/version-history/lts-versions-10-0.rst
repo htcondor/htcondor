@@ -24,6 +24,11 @@ New Features:
   has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
   use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
 
+- The *condor_transform_ads* tool now has a ``-jobtransforms`` argument that reads
+  transforms from the configuration.  This provides a convenient way to test the
+  ``JOB_TRANSFORM_<NAME>`` configuration variables.
+  :jira:`1312`
+
 Bugs Fixed:
 
 - Fixed a bug where if a job created a symlink to a file, the contents of
