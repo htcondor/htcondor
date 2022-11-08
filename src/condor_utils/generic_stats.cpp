@@ -304,11 +304,11 @@ void stats_recent_counter_timer::Delete(stats_recent_counter_timer * probe) {
 void stats_recent_counter_timer::Unpublish(ClassAd & ad, const char * pattr) const
 {
    ad.Delete(pattr);
-   MyString attr;
-   attr.formatstr("Recent%s",pattr);
-   ad.Delete(attr.c_str());
-   attr.formatstr("Recent%sRuntime",pattr);
-   ad.Delete(attr.c_str());
+   std::string attr;
+   formatstr(attr, "Recent%s",pattr);
+   ad.Delete(attr);
+   formatstr(attr, "Recent%sRuntime",pattr);
+   ad.Delete(attr);
    ad.Delete(attr.c_str()+6); // +6 to skip "Recent" prefix
 }
 

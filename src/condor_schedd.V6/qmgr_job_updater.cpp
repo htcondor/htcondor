@@ -172,19 +172,21 @@ QmgrJobUpdater::initJobQueueAttrLists( void )
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_INPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFERRING_OUTPUT );
 	common_job_queue_attrs->insert( ATTR_TRANSFER_QUEUED );
-	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT );
-	common_job_queue_attrs->insert( ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	common_job_queue_attrs->insert( ATTR_NUM_JOB_COMPLETIONS );
 	common_job_queue_attrs->insert( ATTR_IO_WAIT);
 
 	// FIXME: What I'd actually like is a way to queue all attributes
 	// not in any whitelist for delivery with the last update.
+	//
+	// (Why _do_ we filter the last job update?)
 	common_job_queue_attrs->insert( "PreExitCode" );
 	common_job_queue_attrs->insert( "PreExitSignal" );
 	common_job_queue_attrs->insert( "PreExitBySignal" );
 	common_job_queue_attrs->insert( "PostExitCode" );
 	common_job_queue_attrs->insert( "PostExitSignal" );
 	common_job_queue_attrs->insert( "PostExitBySignal" );
+
+	common_job_queue_attrs->insert( ATTR_JOB_CHECKPOINT_NUMBER );
 
 	hold_job_queue_attrs = new StringList();
 	hold_job_queue_attrs->insert( ATTR_HOLD_REASON );
@@ -344,7 +346,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 	const char* name;
 	char *value = NULL;
 	std::list< std::string > undirty_attrs;
-	
+
 	StringList* job_queue_attrs = NULL;
 	switch( type ) {
 	case U_HOLD:
@@ -410,7 +412,7 @@ QmgrJobUpdater::updateJob( update_t type, SetAttributeFlags_t commit_flags )
 			// aren't defined, we're careful here to not dereference a
 			// NULL pointer...
 		if( (common_job_queue_attrs &&
-			 common_job_queue_attrs->contains_anycase(name)) || 
+			 common_job_queue_attrs->contains_anycase(name)) ||
 			(job_queue_attrs &&
 			 job_queue_attrs->contains_anycase(name)) ) {
 

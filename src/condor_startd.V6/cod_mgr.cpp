@@ -120,7 +120,7 @@ CODMgr::removeClaim( Claim* c )
 	}
 	if( found_it ) {
 		delete c;
-		rip->update();
+		rip->update_needed(Resource::WhyFor::wf_cod);
 	} else {
 		dprintf( D_ALWAYS, 
 				 "WARNING: CODMgr::removeClaim() could not find claim %s\n", 

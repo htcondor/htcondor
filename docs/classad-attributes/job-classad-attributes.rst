@@ -160,13 +160,6 @@ all attributes.
 :classad-attribute:`BlockWrites`
     The integer number of blocks written to disk for this job.
 
-:classad-attribute:`BoincAuthenticatorFile`
-    Used for grid type boinc jobs; a string taken from the definition of
-    the submit description file command
-    **boinc_authenticator_file** :index:`boinc_authenticator_file<single: boinc_authenticator_file; submit commands>`.
-    Defines the path and file name of the file containing the
-    authenticator string to use to authenticate to the BOINC service.
-
 :classad-attribute:`CkptArch`
     String describing the architecture of the machine this job executed
     on at the time it last produced a checkpoint. If the job has never
@@ -219,9 +212,12 @@ all attributes.
     when it exits.
 
 :classad-attribute:`CompletionDate`
-    The time when the job completed, or the value 0 if the job has not
+    The time when the job completed, or undefined if the job has not
     yet completed. Measured in the number of seconds since the epoch
-    (00:00:00 UTC, Jan 1, 1970).
+    (00:00:00 UTC, Jan 1, 1970). Note that older versions of HTCondor
+    initialzed ``CompletionDate`` to the integer 0, so job ads from
+    older versions of HTCondor might have a 0 CompletionDate for
+    jobs which haven't completed.
 
 :classad-attribute:`ConcurrencyLimits`
     A string list, delimited by commas and space characters. The items

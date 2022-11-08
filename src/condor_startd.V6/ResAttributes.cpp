@@ -529,83 +529,82 @@ MachAttributes::compute_for_policy()
 //   an expresion is evaluated against the dev property classad
 //
 bool MachAttributes::DevIdMatches(
-	const std::string & tag, // resource typename e.g. GPUs
-	int ixid,               // index into slotres_assigned_ids_t array
-	const char* request)
+	const NonFungibleType & nft,
+	int ixid,
+	ConstraintHolder & require)
 {
-	if ( ! request) return true;
-	ConstraintHolder req(strdup(request));
+	if (require.empty()) return true;
 
-	// special case of request is a bare integer, the integer is the
+	// special case if requirement is a bare integer, the integer is the
 	// index into the assigned_ids vector for the given resource tag
 	long long lval = -1;
-	if (ExprTreeIsLiteralNumber(req.Expr(), lval) && lval == ixid) {
+	if (ExprTreeIsLiteralNumber(require.Expr(), lval) && lval == ixid) {
 		return true;
 	}
 
-	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
-	if (f != m_machres_devIds_map.end()) {
-		// special case if request is a string, then it matches if it matches the resource id
-		const slotres_assigned_ids_t & ids(f->second);
-		const char * cstr = NULL;
-		if (ExprTreeIsLiteralString(req.Expr(), cstr) && YourStringNoCase(cstr) == ids[ixid].c_str()) {
-			return true;
-		}
+	if (ixid < 0 || ixid >= (int)nft.ids.size()) return false;
+	NonFungibleRes nfr = nft.ids[ixid];
 
-		// the general case, evaluate the constraint expression against the properties of the resource
-		slotres_devProps_map_t::iterator iad(m_machres_devProps_map.find(tag));
-		if (iad != m_machres_devProps_map.end()) {
-			slotres_props_t & ads(iad->second);
-			auto it(ads.find(ids[ixid]));
-			if (it != ads.end()) {
-				ClassAd & ad(it->second);
-				if (EvalExprBool(&ad, req.Expr())) {
-					return true;
-				}
-			}
+	// special case if requirement is a string, then it matches if it matches the resource id
+	const char * cstr = NULL;
+	if (ExprTreeIsLiteralString(require.Expr(), cstr) && YourStringNoCase(cstr) == nfr.id) {
+		return true;
+	}
+
+	// the general case, evaluate the constraint expression against the properties of the resource
+	auto it(nft.props.find(nfr.id));
+	if (it != nft.props.end()) {
+		ClassAd & ad = const_cast<ClassAd&>(it->second);
+		if (EvalExprBool(&ad, require.Expr())) {
+			return true;
 		}
 	}
 
 	return false;
 }
 
-
 // Allocate a user-defined resource deviceid to a slot
 // when assign_to_sub > 0, then assign an unused resource from
 // slot assigned_to to it's child dynamic slot assign_to_sub.
 //
-const char * MachAttributes::AllocateDevId(const std::string & tag, const char * request, int assign_to, int assign_to_sub)
+const char * MachAttributes::AllocateDevId(const std::string & tag, const char * request, int assign_to, int assign_to_sub, bool backfill)
 {
 	if ( ! assign_to) return NULL;
 
 	auto & offline_ids(m_machres_runtime_offline_ids_map[tag]);
 
-	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
-	if (f !=  m_machres_devIds_map.end()) {
-		const slotres_assigned_ids_t & ids(f->second);
-		slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[tag];
-		while (owners.size() < ids.size()) { owners.push_back(0); }
+	auto f(m_machres_nft_map.find(tag));
+	if (f != m_machres_nft_map.end()) {
+		ConstraintHolder require;
+		if (request) { require.set(strdup(request)); }
 
 		// when the sub-id is positive, that means we are binding a dynamic slot
 		// in that case we want to use only dev-ids that are already owned by the partitionable slot.
 		// but not yet assigned to any of  it's dynamic children.
 		//
-		if (assign_to_sub > 0) {
-			for (int ii = 0; ii < (int)ids.size(); ++ii) {
-				if (offline_ids.find(ids[ii]) != offline_ids.end())
-					continue;
-				if (owners[ii].id == assign_to && owners[ii].dyn_id == 0 && DevIdMatches(tag, ii, request)) {
-					owners[ii].dyn_id = assign_to_sub;
-					return ids[ii].c_str();
+		int cur_id = (assign_to_sub > 0) ? assign_to : 0;
+		if (backfill) {
+			// bind backfill resources in reverse order to minimize the conflicts with primary slot usage
+			for (int ixid = (int)f->second.ids.size()-1; ixid >= 0; --ixid) {
+				NonFungibleRes & nfr = f->second.ids[ixid];
+				if (offline_ids.count(nfr.id) > 0) continue; // don't bind offline ids
+				// don't bind to a backfill d-slot an id that a primary d-slot is using
+				// TODO: handle the case of a static primary slot that is claimed
+				if (assign_to_sub > 0 && nfr.owner.dyn_id > 0) continue;
+				if (nfr.bkowner.id == cur_id && nfr.bkowner.dyn_id == 0 && DevIdMatches(f->second, ixid, require)) {
+					nfr.bkowner.id = assign_to;
+					nfr.bkowner.dyn_id = assign_to_sub;
+					return nfr.id.c_str();
 				}
 			}
 		} else {
-			for (int ii = 0; ii < (int)ids.size(); ++ii) {
-				if (offline_ids.find(ids[ii]) != offline_ids.end())
-					continue;
-				if ( ! owners[ii].id && DevIdMatches(tag, ii, request)) {
-					owners[ii] = FullSlotId(assign_to, assign_to_sub);
-					return ids[ii].c_str();
+			for (int ixid = 0; ixid < (int)f->second.ids.size(); ++ixid) {
+				NonFungibleRes & nfr = f->second.ids[ixid];
+				if (offline_ids.count(nfr.id) > 0) continue;  // don't bind offline ids
+				if (nfr.owner.id == cur_id && nfr.owner.dyn_id == 0 && DevIdMatches(f->second, ixid, require)) {
+					nfr.owner.id = assign_to;
+					nfr.owner.dyn_id = assign_to_sub;
+					return nfr.id.c_str();
 				}
 			}
 		}
@@ -615,16 +614,17 @@ const char * MachAttributes::AllocateDevId(const std::string & tag, const char *
 
 bool MachAttributes::ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assigned_to, int was_assign_to_sub)
 {
-	slotres_devIds_map_t::const_iterator f(m_machres_devIds_map.find(tag));
-	if (f !=  m_machres_devIds_map.end()) {
-		const slotres_assigned_ids_t & ids(f->second);
-		slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[tag];
-		while (owners.size() < ids.size()) { owners.push_back(0); }
-
-		for (int ii = 0; ii < (int)ids.size(); ++ii) {
-			if (id == ids[ii]) {
-				if (owners[ii].id == was_assigned_to && owners[ii].dyn_id == was_assign_to_sub) {
-					owners[ii].dyn_id = 0;
+	auto f(m_machres_nft_map.find(tag));
+	if (f != m_machres_nft_map.end()) {
+		for (int ixid = 0; ixid < (int)f->second.ids.size(); ++ixid) {
+			NonFungibleRes & nfr = f->second.ids[ixid];
+			if (nfr.id == id) {
+				if (nfr.owner.id == was_assigned_to && nfr.owner.dyn_id == was_assign_to_sub) {
+					nfr.owner.dyn_id = 0;
+					return true;
+				}
+				if (nfr.bkowner.id == was_assigned_to && nfr.bkowner.dyn_id == was_assign_to_sub) {
+					nfr.bkowner.dyn_id = 0;
 					return true;
 				}
 			}
@@ -639,49 +639,26 @@ static int d_log_devids = D_FULLDEBUG;
 
 const char * MachAttributes::DumpDevIds(std::string & buf, const char * tag, const char * sep)
 {
-	slotres_devIds_map_t::const_iterator f;
-	for (f = m_machres_devIds_map.begin(); f != m_machres_devIds_map.end(); ++f) {
+	for (auto f : m_machres_nft_map) {
 		// if a tag was provided, ignore entries that don't match it.
-		if (tag && strcasecmp(tag, f->first.c_str())) continue;
+		if (tag && strcasecmp(tag, f.first.c_str())) continue;
 
-		const slotres_assigned_ids_t & ids(f->second);
-		const slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[f->first];
-		const std::set<std::string> & offline_ids = m_machres_runtime_offline_ids_map[f->first];
-		buf += f->first;
+		const std::set<std::string> & offline_ids = m_machres_runtime_offline_ids_map[f.first];
+		buf += f.first;
 		buf += ":{";
-		for (auto id = ids.begin(); id != ids.end(); ++id) {
-			if (offline_ids.count(*id)) {buf += "!";}
-			buf += *id;
+		for (auto & nfr : f.second.ids) {
+			if (offline_ids.count(nfr.id)) buf += "!";
+			buf += nfr.id;
+			formatstr_cat(buf, "=%d", nfr.owner.id);
+			if (nfr.owner.dyn_id) formatstr_cat(buf, "_%d", nfr.owner.dyn_id);
+			if (nfr.bkowner.id) {
+				formatstr_cat(buf, "+%d", nfr.bkowner.id);
+				if (nfr.bkowner.dyn_id) formatstr_cat(buf, "_%d", nfr.bkowner.dyn_id);
+			}
 			buf += ", ";
 		}
-		buf += "}{";
-		for (auto own = owners.begin(); own != owners.end(); ++own) {
-			if (own->dyn_id) {
-				formatstr_cat(buf, "%d_%d, ", own->id, own->dyn_id);
-			} else {
-				formatstr_cat(buf, "%d, ", own->id);
-			}
-		}
 		buf += "}";
-		auto off = m_machres_offline_devIds_map.find(f->first);
-		if (off != m_machres_offline_devIds_map.end()) {
-			if (off->second.empty()) {
-				buf += " offline";
-				buf += f->first;
-				buf += ":{}";
-			} else {
-				buf += " offline";
-				buf += f->first;
-				buf += "{";
-				for (auto id = off->second.begin(); id != off->second.end(); ++id) {
-					buf += *id;
-					buf += ",";
-				}
-				buf += "}";
-			}
-		}
-		if (tag && sep)
-			buf += sep;
+		if (tag && sep) buf += sep;
 	}
 	return buf.c_str();
 }
@@ -719,56 +696,58 @@ void MachAttributes::ReconfigOfflineDevIds()
 
 	std::string knob;
 	StringList offline_ids;
-	for (auto f = m_machres_devIds_map.begin(); f != m_machres_devIds_map.end(); ++f) {
-		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += f->first;
+	for (auto f : m_machres_nft_map) {
+		const char * tag = f.first.c_str();
+		knob = "OFFLINE_MACHINE_RESOURCE_"; knob += f.first;
 		param_and_insert_unique_items(knob.c_str(), offline_ids);
 
 		// we've got offline resources, check to see if any of them are assigned
-		slotres_assigned_ids_t & ids(f->second);
+		auto & ids(f.second.ids);
 
 		int offline = 0;
 		// look through assigned resource list and see if we have offlined any of them.
 		for (int ii = (int)ids.size()-1; ii >= 0; --ii) {
-			if (offline_ids.contains(ids[ii].c_str())) {
-				dprintf(D_ALWAYS, "%s %s is now marked offline\n", f->first.c_str(), ids[ii].c_str());
-				slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[f->first];
-				if (owners[ii].dyn_id) {
+			const char * id = ids[ii].id.c_str();
+			const FullSlotId & owner = ids[ii].owner;
+			if (offline_ids.contains(id)) {
+				dprintf(D_ALWAYS, "%s %s is now marked offline\n", tag, id);
+				if (owner.dyn_id) {
 					// currently assigned to a dynamic slot
 					dprintf(D_ALWAYS, "%s %s is currently assigned to slot %d_%d\n",
-						f->first.c_str(), ids[ii].c_str(), owners[ii].id, owners[ii].dyn_id);
+						tag, id, owner.id, owner.dyn_id);
 				} else {
 					// currently assigned to a static slot or p-slot
 					dprintf(D_ALWAYS, "%s %s is currently assigned to slot %d\n",
-						f->first.c_str(), ids[ii].c_str(), owners[ii].id);
+						tag, id, owner.id);
 				}
 
 				// we found an Assignd<Tag> devid that should be offline,
 				// so it needs to be in the dynamic_offline_ids collecton so we can check at runtime
-				m_machres_runtime_offline_ids_map[f->first].insert(ids[ii]);
+				m_machres_runtime_offline_ids_map[f.first].emplace(id);
 				++offline;
 			}
 
 			// update quantites to count only assigned, non-offline devids
-			m_machres_map[f->first] = ids.size() - offline;
+			m_machres_map[f.first] = ids.size() - offline;
 		}
 	}
 }
 
 // refresh the assigned ids for this slot, and update the count so that only non-offline ids are counted
 // we do this on reconfig, incase we have changed the offline list
-void MachAttributes::RefreshDevIds(
-	slotres_map_t::iterator & slot_res,
-	slotres_devIds_map_t::iterator & slot_res_devids,
+int MachAttributes::RefreshDevIds(
+	const std::string & tag,
+	slotres_assigned_ids_t & devids,
 	int assign_to,
 	int assign_to_sub)
 {
-	slot_res->second = 0;
-	slot_res_devids->second.clear();
+	devids.clear();
 
-	auto ids = m_machres_devIds_map.find(slot_res->first);
-	if (ids == m_machres_devIds_map.end()) {
-		return;
+	auto ids = machres_devIds().find(tag);
+	if (ids == machres_devIds().end()) {
+		return 0;
 	}
+	auto & offline_ids(m_machres_runtime_offline_ids_map[tag]);
 
 	// for p-slots & static slots, we ignore the sub-id when building the Assigned list (slot_res_devids)
 	// but not when counting the number of resources
@@ -781,19 +760,17 @@ void MachAttributes::RefreshDevIds(
 	//   Gpus = 1
 
 	int num_res = 0;
-	auto & offline_ids(m_machres_runtime_offline_ids_map[slot_res->first]);
-	slotres_assigned_id_owners_t & owners = m_machres_devIdOwners_map[slot_res->first];
-	for (int ii = 0; ii < (int)ids->second.size(); ++ii) {
-		if (owners[ii].id == assign_to && (assign_to_sub == 0 || owners[ii].dyn_id == assign_to_sub)) {
-			slot_res_devids->second.push_back(ids->second[ii]);
-			if (offline_ids.count(ids->second[ii])) {
+	for (const auto & nfr : ids->second.ids) {
+		if (nfr.owner.id == assign_to && (assign_to_sub == 0 || nfr.owner.dyn_id == assign_to_sub)) {
+			devids.emplace_back(nfr.id);
+			if (offline_ids.count(nfr.id)) {
 				// don't count this one even though it is assigned
-			} else if (owners[ii].dyn_id == assign_to_sub) {
+			} else if (nfr.owner.dyn_id == assign_to_sub) {
 				num_res += 1;
 			}
 		}
 	}
-	slot_res->second = num_res;
+	return num_res;
 }
 
 // calculate an aggregate properties classad for the given resource tag from the given resource ids
@@ -809,18 +786,22 @@ bool MachAttributes::ComputeDevProps(
 	if (ids.empty()) {
 		return false;
 	}
-	auto tagPropsIter = m_machres_devProps_map.find(tag);
-	if (tagPropsIter == m_machres_devProps_map.end()) {
+	auto f = m_machres_nft_map.find(tag);
+	if (f == m_machres_nft_map.end()) {
 		return false;
 	}
+	if (f->second.props.empty()) {
+		return false;
+	}
+	auto & nftprops = f->second.props;
 
 	// TODO: move knobs out of this function
 	bool nested_props = param_boolean("USE_NESTED_CUSTOM_RESOURCE_PROPS", true);
 	bool verbose_nested_props = param_boolean("VERBOSE_NESTED_CUSTOM_RESOURCE_PROPS", nested_props);
 
 	// we begin by assuming that the device 0 props are common to all
-	auto ip = tagPropsIter->second.find(ids.front());
-	if (ip != tagPropsIter->second.end()) {
+	auto ip = nftprops.find(ids.front());
+	if (ip != nftprops.end()) {
 		ad.Update(ip->second);
 		if ( ! verbose_nested_props && ids.size() == 1) {
 			return true;
@@ -837,8 +818,8 @@ bool MachAttributes::ComputeDevProps(
 	// this map does not own the exptrees it holds
 	std::map<std::string, std::vector<classad::ExprTree*>, classad::CaseIgnLTStr> props;
 	for (size_t ix = 1; ix < ids.size(); ++ix) {
-		ip = tagPropsIter->second.find(ids[ix]);
-		if (ip == tagPropsIter->second.end()) continue;
+		ip = nftprops.find(ids[ix]);
+		if (ip == nftprops.end()) continue;
 
 		// walk the remaining common props, looking for mis-matches
 		// if we find a mismatch, remove it from the common list
@@ -866,8 +847,8 @@ bool MachAttributes::ComputeDevProps(
 	// the device props ad plus an attribute that is the id itself
 	if (verbose_nested_props) {
 		for (auto id : ids) {
-			auto ip = tagPropsIter->second.find(id);
-			if (ip == tagPropsIter->second.end()) {
+			auto ip = nftprops.find(id);
+			if (ip == nftprops.end()) {
 				continue;
 			}
 			ClassAd * props_ad = (ClassAd*)ip->second.Copy();
@@ -885,8 +866,8 @@ bool MachAttributes::ComputeDevProps(
 	// and stuff them into the output classad
 	if (nested_props) {
 		for (auto id : ids) {
-			ip = tagPropsIter->second.find(id);
-			if (ip == tagPropsIter->second.end()) {
+			ip = nftprops.find(id);
+			if (ip == nftprops.end()) {
 				continue;
 			}
 			if ( ! props.empty()) {
@@ -910,8 +891,8 @@ bool MachAttributes::ComputeDevProps(
 	} else {
 		for (auto & propit : props) {
 			for (auto id : ids) {
-				ip = tagPropsIter->second.find(id);
-				if (ip == tagPropsIter->second.end()) {
+				ip = nftprops.find(id);
+				if (ip == nftprops.end()) {
 					continue;
 				}
 				ClassAd & ad1 = ip->second;
@@ -930,7 +911,6 @@ bool MachAttributes::ComputeDevProps(
 			}
 		}
 	}
-
 	return true;
 }
 
@@ -1014,11 +994,11 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 					while (const char* id = ids.next()) {
 						if (offline_ids.contains(id)) {
 							unique_ids.insert(id);
-							this->m_machres_offline_devIds_map[tag].push_back(id);
+							this->m_machres_offline_devIds_map[tag].emplace_back(id);
 							++offline;
 						} else {
 							unique_ids.insert(id);
-							this->m_machres_devIds_map[tag].push_back(id);
+							this->m_machres_nft_map[tag].ids.emplace_back(id);
 						}
 					}
 				}
@@ -1042,7 +1022,7 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 				auto common_it = nested.find("common");
 				if (common_it != nested.end()) {
 					for (auto id : unique_ids) {
-						m_machres_devProps_map[tag][id].Update(*common_it->second);
+						m_machres_nft_map[tag].props[id].Update(*common_it->second);
 					}
 					ad.Delete(common_it->first);
 					nested.erase(common_it);
@@ -1054,8 +1034,8 @@ double MachAttributes::init_machine_resource_from_script(const char * tag, const
 				for (auto & it : nested) {
 					if ( ! it.second->LookupString("id", resid)) { resid = it.first; }
 					if (unique_ids.count(resid) > 0) {
-						m_machres_devProps_map[tag][resid].Update(*it.second);
-						m_machres_devProps_map[tag][resid].Delete("id");
+						m_machres_nft_map[tag].props[resid].Update(*it.second);
+						m_machres_nft_map[tag].props[resid].Delete("id");
 						ad.Delete(it.first);
 					}
 				}
@@ -1117,10 +1097,10 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 			ids.rewind();
 			while (const char* id = ids.next()) {
 				if (offline_ids.contains(id)) {
-					pme->m_machres_offline_devIds_map[tag].push_back(id);
+					pme->m_machres_offline_devIds_map[tag].emplace_back(id);
 					++offline;
 				} else {
-					pme->m_machres_devIds_map[tag].push_back(id);
+					pme->m_machres_nft_map[tag].ids.emplace_back(id);
 				}
 			}
 		}
@@ -1137,10 +1117,7 @@ bool MachAttributes::init_machine_resource(MachAttributes * pme, HASHITER & it) 
 void MachAttributes::init_machine_resources() {
 	// defines the space of local machine resources, and their quantity
 	m_machres_map.clear();
-	m_machres_devProps_map.clear();
-	// defines which local machine resource device IDs are in use
-	m_machres_devIds_map.clear();
-	m_machres_offline_devIds_map.clear();
+	m_machres_nft_map.clear();
 	m_machres_runtime_offline_ids_map.clear();
 
 	// this may be filled from resource inventory scripts
@@ -1406,7 +1383,7 @@ MachAttributes::publish_static(ClassAd* cp)
 }
 
 void
-MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
+MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool slot_is_bk)
 {
 	// things that need to be refreshed periodially
 
@@ -1457,38 +1434,59 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid)
 
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
-	for (auto f(m_machres_devIds_map.begin()); f != m_machres_devIds_map.end(); ++f) {
-		const slotres_assigned_ids_t & ids(f->second);
-
+	std::string nfr_conflict;
+	for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
+		std::string tmp;
 		std::string attr; attr.reserve(18);
-		std::string avail; avail.reserve(2 + (ids.size() * 18));
+		std::string avail; avail.reserve(2 + (f->second.ids.size() * 18));
 		avail = "{";
 
-		auto o(m_machres_devIdOwners_map.find(f->first));
-		if (o != m_machres_devIdOwners_map.end() && slot_id >= 0 && o->second.size() >= ids.size()) {
-			const slotres_assigned_id_owners_t & owners(o->second);
-			for (size_t ix = 0; ix < ids.size(); ++ix) {
-				if (owners[ix].id != slot_id) continue; // does not belong to this slot or any d-slot under it
-				if (owners[ix].dyn_id != slot_subid) continue; // dyn_id is 0 when resource is Available in p-slot
-				attr = f->first; attr += "_";
-				attr += ids[ix];
-				cleanStringForUseAsAttr(attr, '_');
-				if (avail.size() > 1) { avail += ","; }
-				avail += attr;
+		int num_avail = 0;
+		const int owntype = (slot_is_bk ? 2 : 1);
+		for (const auto & nfr : f->second.ids) {
+			if (slot_id >= 0) {
+				int ot = nfr.is_owned(slot_id, slot_subid);
+				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d.%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
+				if (owntype != ot) {
+					if (slot_subid > 0 && (ot &= ~owntype) == 1) {
+						if (nfr_conflict.size() > 1) { nfr_conflict += ","; }
+						nfr_conflict += nfr.id;
+					}
+					continue;
+				}
 			}
-		} else {
-			for (auto str : ids) { 
-				attr = f->first; attr += "_";
-				attr += str;
-				cleanStringForUseAsAttr(attr, '_');
-				if (avail.size() > 1) { avail += ","; }
-				avail += attr;
-			}
+			attr = f->first; attr += "_";
+			attr += nfr.id;
+			cleanStringForUseAsAttr(attr, '_');
+			if (avail.size() > 1) { avail += ", "; }
+			avail += attr;
+			++num_avail;
 		}
 
 		avail += "}";
 		attr = "Available"; attr += f->first;
+		dprintf(D_ZKM, "publish_dyn %d.%d.%d setting %s=%s%s\n",
+			slot_id, slot_subid, slot_is_bk,
+			attr.c_str(), avail.c_str(), tmp.c_str());
 		cp->AssignExpr(attr, avail.c_str());
+
+		// if the number of AvailableXX is less than the value of XX in the ad, reduce the value in the ad
+		int num_in_ad = num_avail;
+		if (cp->LookupInteger(f->first, num_in_ad)) {
+			dprintf(D_ZKM, "publish_dyn %d.%d.%d %s=%d was %d\n",
+				slot_id, slot_subid, slot_is_bk,
+				f->first.c_str(), num_avail, num_in_ad);
+			cp->Assign(f->first, num_avail);
+		}
+	}
+	// TODO: these maybe do not belong here?
+	if (nfr_conflict.size() > 0) {
+		cp->Assign("ResourceConflict", nfr_conflict);
+		dprintf(D_ZKM, "publish_dyn %d.%d.%d ResourceConflict=%s\n",
+			slot_id, slot_subid, slot_is_bk,
+			nfr_conflict.c_str());
+	} else {
+		cp->Delete("ResourceConflict");
 	}
 
 	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
@@ -1693,17 +1691,23 @@ CpuAttributes::set_total_disk(long long total, bool refresh) {
 }
 
 bool
-CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // bind non-fungable resource ids to a slot
+CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail) // bind non-fungable resource ids to a slot
 {
 	if ( ! map)
 		return true;
 
+	std::string namebuf;
+	const char * name = "slot";
+
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
+		formatstr(namebuf, "%sslot%d.%d", backfill_slot ? "backfill " : "", slot_id, slot_sub_id);
+		name = namebuf.c_str();
+
 		std::string ids_dump;
 		if (rip) { // on startup this is called before this structure has been attached to a RIP
-			dprintf(d_log_devids, "bind DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			dprintf(d_log_devids, "bind DevIds for %s before : %s\n", name, map->DumpDevIds(ids_dump));
 		} else {
-			::dprintf(d_log_devids, "bind DevIds for slot%d.%d before : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			::dprintf(d_log_devids, "bind DevIds for %s before : %s\n", name, map->DumpDevIds(ids_dump));
 		}
 	}
 
@@ -1720,22 +1724,21 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // 
 		slotres_constraint_map_t::const_iterator req(c_slotres_constraint_map.find(j->first));
 		if (req != c_slotres_constraint_map.end()) { request = req->second.c_str(); }
 
-		::dprintf(D_ALWAYS, "bind DevIds tag=%s contraint=%s\n", j->first.c_str(), request ? request : "");
+		::dprintf(D_ALWAYS, "bind %s DevIds tag=%s contraint=%s\n", name, j->first.c_str(), request ? request : "");
 
-		slotres_devIds_map_t::const_iterator k(map->machres_devIds().find(j->first));
-		if (k != map->machres_devIds().end()) {
+		if (map->machres_devIds().count(j->first)) {
 			int cAllocated = 0;
 			for (int ii = 0; ii < cAssigned; ++ii) {
-				const char * id = map->AllocateDevId(j->first, request, slot_id, slot_sub_id);
+				const char * id = map->AllocateDevId(j->first, request, slot_id, slot_sub_id, backfill_slot);
 				if (id) {
 					++cAllocated;
 					c_slotres_ids_map[j->first].push_back(id);
-					::dprintf(d_log_devids, "bind DevIds for slot%d.%d bound %s %d\n",
-						slot_id, slot_sub_id, id, (int)c_slotres_ids_map[j->first].size());
+					::dprintf(d_log_devids, "bind DevIds for %s bound %s %d\n",
+						name, id, (int)c_slotres_ids_map[j->first].size());
 				}
 			}
 			if (cAllocated < cAssigned) {
-				dprintf(D_ALWAYS | D_BACKTRACE, "Failed to bind local resource '%s'\n", j->first.c_str());
+				::dprintf(D_ALWAYS | D_BACKTRACE, "%s Failed to bind local resource '%s'\n", name, j->first.c_str());
 				if (abort_on_fail) {
 					EXCEPT("Failed to bind local resource '%s'", j->first.c_str());
 				}
@@ -1755,9 +1758,9 @@ CpuAttributes::bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail) // 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
 		std::string ids_dump;
 		if (rip) {
-			dprintf(d_log_devids, "bind DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			dprintf(d_log_devids, "bind DevIds for %s after : %s\n", name, map->DumpDevIds(ids_dump));
 		} else {
-			::dprintf(d_log_devids, "bind DevIds for slot%d.%d after : %s\n", slot_id, slot_sub_id, map->DumpDevIds(ids_dump));
+			::dprintf(d_log_devids, "bind DevIds for %s after : %s\n", name, map->DumpDevIds(ids_dump));
 		}
 	}
 
@@ -1807,13 +1810,22 @@ CpuAttributes::reconfig_DevIds(int slot_id, int slot_sub_id) // release non-fung
 
 	// make sure that the assigned devid's matches the global assigment
 	// which may have changed based on reconfig
-
-	for (slotres_map_t::iterator j(c_slotres_map.begin()); j != c_slotres_map.end(); ++j) {
-		slotres_devIds_map_t::iterator ids(c_slotres_ids_map.find(j->first));
+	for (auto j : c_slotres_map) {
+		auto ids = c_slotres_ids_map.find(j.first);
 		if (ids == c_slotres_ids_map.end())
 			continue;
 
-		map->RefreshDevIds(j, ids, slot_id, slot_sub_id);
+		// for p-slots & static slots, we ignore the sub-id when building the Assigned list (slot_res_devids)
+		// but not when counting the number of resources
+		// thus in slot1 we can have
+		//   AssignedGPUs = "CUDA0,CUDA1,CUDA2"  (slot_res_devids)
+		//   OfflineGPUs = "CUDA2"               (offline_ids)
+		//   GPUs = 1                            (slot_res)
+		// while in slot1_1 we have
+		//   AssignedGPUs = "CUDA0"
+		//   Gpus = 1
+
+		j.second = map->RefreshDevIds(j.first, ids->second, slot_id, slot_sub_id);
 	}
 
 	if (IsDebugCatAndVerbosity(d_log_devids)) {
@@ -1881,7 +1893,6 @@ CpuAttributes::publish_static(ClassAd* cp)
 					cp->Insert(attr, kvp.second->Copy());
 				}
 			}
-
 		}
 }
 
@@ -1975,33 +1986,13 @@ void
 CpuAttributes::dprintf( int flags, const char* fmt, ... ) const
 {
     if (NULL == rip) {
+        ::dprintf(D_BACKTRACE, "about to except");
         EXCEPT("CpuAttributes::dprintf() called with NULL resource pointer");
     }
 	va_list args;
 	va_start( args, fmt );
 	rip->dprintf_va( flags, fmt, args );
 	va_end( args );
-}
-
-void
-CpuAttributes::swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags)
-{
-	if (flags & 1) {
-		// swap execute directories.
-		std::string str = attra.c_execute_dir;
-		attra.c_execute_dir = attrb.c_execute_dir;
-		attrb.c_execute_dir = str;
-
-		// swap execute partition ids
-		str = attra.c_execute_partition_id;
-		attra.c_execute_partition_id = attrb.c_execute_partition_id;
-		attrb.c_execute_partition_id = str;
-
-		// swap total disk since we swapped partition ids
-		long long ll = attra.c_total_disk;
-		attra.c_total_disk = attrb.c_total_disk;
-		attrb.c_total_disk = ll;
-	}
 }
 
 CpuAttributes&

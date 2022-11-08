@@ -70,6 +70,7 @@ Example V2Quoted syntax yielding same as above:
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
+#include "setenv.h"
 template <class Key, class Value> class HashTable;
 
 #if defined(WIN32)
@@ -99,7 +100,7 @@ struct toupper_string_less {
 };
 #endif
 
-class Env {
+class Env final {
  public:
 	Env( void );
 	virtual ~Env( void );
@@ -110,27 +111,9 @@ class Env {
 		// Remove all environment entries.
 	void Clear( void );
 
-		// Import environment from process.
-		// Unlike MergeFrom(environ), it is not considered
-		// an error if there are entries in the environment
-		// that do not contain an assignment; they are
-		// silently ignored.  The only possible failure
-		// in this function is if it runs out of memory.
-		// It will ASSERT() in that case.
-	void Import( void );
-
-		// Filter for the above
-		//  -- return true to import variable, false to not
-	virtual bool ImportFilter( const MyString & /*var*/,
-							   const MyString & /*val*/ ) const {
-		return true;
-	};
-
-
 		// Add (or overwrite) environment entries from an input
 		// string.  If the string begins with a double-quote, it will
 		// be treated as V2Quoted; otherwise it will be read as V1Raw.
-	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, MyString *error_msg );
 	bool MergeFromV1RawOrV2Quoted( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
@@ -140,20 +123,12 @@ class Env {
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V2 format.
-	bool MergeFromV2Raw( const char *delimitedString, MyString *error_msg );
-	bool MergeFromV2Raw( const char *delimitedString, std::string & error_msg );
+	bool MergeFromV2Raw( const char *delimitedString, std::string* error_msg );
 
 		// Add (or overwrite) environment entries from an input string.
 		// This should only be called for strings in raw V1 format.
-	bool MergeFromV1Raw( const char *delimitedString, char delim, MyString *error_msg );
-	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string & error_msg );
+	bool MergeFromV1Raw( const char *delimitedString, char delim, std::string* error_msg );
 	bool MergeFromV1AutoDelim( const char *delimitedString, std::string & error_msg, char delim=0 );
-
-		// Add (or overwrite) environment entries from an input string.
-		// This should only be called for strings in raw V1or2 format,
-		// which is designed to allow version detection in a backward
-		// compatible way.
-	bool MergeFromV1or2Raw( const char *delimitedString, std::string & error_msg );
 
 		// Add (or overwrite) environment entries from a NULL-terminated
 		// array of key=value strings.  This function returns false
@@ -175,7 +150,7 @@ class Env {
 	bool MergeFrom( const ClassAd *ad, std::string & error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
-	bool SetEnvWithErrorMessage( const char *nameValueExpr, MyString *error_msg );
+	bool SetEnvWithErrorMessage( const char *nameValueExpr, std::string* error_msg );
 
 		// Add (or overwrite) a key=value environment entry.
 		// Returns false if the input is not a valid var=value.
@@ -218,33 +193,15 @@ class Env {
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
 
 		// Modern style: space delimited (and quoted as necessary).
-		// If mark_v2=true, then result will be identifiable as V2 by
-		// MergeV1or2()
-	bool getDelimitedStringV2Raw(MyString *result, bool mark_v2=false) const;
-	bool getDelimitedStringV2Raw(std::string & result, bool mark_v2=false) const;
+	void getDelimitedStringV2Raw(std::string & result) const;
 
 	 // old-style ; or | delimited
 	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
 
-		// Return V1 string if possible, o.w. marked V2 string.
-		// Sets this object's environment to that of ad, and uses
-		// V1 delim from ad when constructing V1 result (so
-		// opsys flavor of V1 environment is preserved).
-	bool getDelimitedStringV1or2Raw(ClassAd const *ad,MyString *result,MyString *error_msg);
-
-		// Returns V1 string if possible, o.w. marked V2 string.
-	bool getDelimitedStringV1or2Raw(MyString *result,MyString *error_msg,char delim='\0') const;
-
 		// Returns V2Quoted string (i.e. enclosed in double quotes).
-	bool getDelimitedStringV2Quoted(MyString *result,MyString *error_msg) const;
-
-		// Returns V1Raw if possible; o.w. V2Quoted.
-		// In other words, retain backward-compatibility with older versions
-		// of condor_submit if possible.
-	bool getDelimitedStringV1RawOrV2Quoted(MyString *result,MyString *error_msg) const;
+	void getDelimitedStringV2Quoted(std::string& result) const;
 
 		// Get a string describing the environment in this Env object.
-	void getDelimitedStringForDisplay(MyString *result) const;
 	void getDelimitedStringForDisplay(std::string & result) const;
 
 #if defined(WIN32)
@@ -288,10 +245,54 @@ class Env {
 
 	bool InputWasV1() const {return input_was_v1;}
 
- protected:
-	HashTable<MyString, MyString> *_envTable;
-	bool input_was_v1;
+		// Import environment from process.
+		// Unlike MergeFrom(environ), it is not considered
+		// an error if there are entries in the environment
+		// that do not contain an assignment; they are
+		// silently ignored.  The only possible failure
+		// in this function is if it runs out of memory.
+		// It will ASSERT() in that case.
+	
+	template <class Filter>
+	void Import(Filter filter) {
+		char **my_environ = GetEnviron();
+		for (int i=0; my_environ[i]; i++) {
+			const char	*p = my_environ[i];
 
+			int			j;
+			MyString	varname = "";
+			MyString	value = "";
+			for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
+				varname += p[j];
+			}
+			if ( p[j] == '\0' ) {
+				// ignore entries in the environment that do not
+				// contain an assignment
+				continue;
+			}
+			if ( varname.empty() ) {
+				// ignore entries in the environment that contain
+				// an empty variable name
+				continue;
+			}
+			ASSERT( p[j] == '=' );
+			value = p+j+1;
+
+			// Allow the application to filter the import
+			if (filter( varname, value)) {
+				bool ret = SetEnv( varname, value );
+				ASSERT( ret ); // should never fail
+			}
+		}
+	}
+
+	static bool everything(MyString &, MyString &) {
+		return true;
+	}
+
+	void Import() {
+		return Import(everything);
+	}
 #if defined(WIN32)
 	// on Windows, environment variable names must be treated as case
 	// insensitive. however, we can't just make the Env object's
@@ -310,12 +311,15 @@ class Env {
 	//
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
+ protected:
+	HashTable<MyString, MyString> *_envTable;
+	bool input_was_v1;
+
 
 	static bool ReadFromDelimitedString( char const *&input, char *output, char delim );
 
 	static void WriteToDelimitedString(char const *input,MyString &output);
 
-	static void AddErrorMessage(char const *msg,MyString *error_buffer);
 	static void AddErrorMessage(char const *msg,std::string &error_buffer) {
 		if ( ! error_buffer.empty()) { error_buffer += "\n"; }
 		error_buffer += msg;

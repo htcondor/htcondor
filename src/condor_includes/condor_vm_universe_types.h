@@ -29,8 +29,6 @@
 #define VM_CKPT_FILE_EXTENSION	".cckpt"
 #define VM_AVAIL_UNLIMITED_NUM	10000
 
-#define VM_UNIV_ARGUMENT_FILE	"condor.arg"
-
 /* Running modes for VM GAHP Server */
 #define VMGAHP_TEST_MODE 0
 #define VMGAHP_IO_MODE 1		/* Deprecated */
@@ -62,13 +60,6 @@
 #define VMPARAM_XEN_ROOT			"VMPARAM_Xen_Root"
 #define VMPARAM_XEN_KERNEL_PARAMS	"VMPARAM_Xen_Kernel_Params"
 #define VMPARAM_XEN_BOOTLOADER		"VMPARAM_Xen_Bootloader"
-
-/* ClassAd Attributes for VMware */
-#define VMPARAM_VMWARE_TRANSFER		"VMPARAM_VMware_Transfer"
-#define VMPARAM_VMWARE_SNAPSHOTDISK "VMPARAM_VMware_SnapshotDisk"
-#define VMPARAM_VMWARE_DIR			"VMPARAM_VMware_Dir"
-#define VMPARAM_VMWARE_VMX_FILE		"VMPARAM_VMware_VMX_File"
-#define VMPARAM_VMWARE_VMDK_FILES	"VMPARAM_VMware_VMDK_Files"
 
 /* Extra ClassAd Attributes for VM */
 #define VMPARAM_NO_OUTPUT_VM			"VMPARAM_No_Output_VM"

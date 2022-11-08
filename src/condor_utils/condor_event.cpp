@@ -44,9 +44,6 @@
 #include <uuid/uuid.h>
 #endif
 
-// define this to turn off seeking in the event reader methods
-#define DONT_EVER_SEEK 1
-
 #define ESCAPE { errorNumber=(errno==EAGAIN) ? ULOG_NO_EVENT : ULOG_UNK_ERROR;\
 					 return 0; }
 
@@ -889,7 +886,6 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	}
 }
 
-#ifdef DONT_EVER_SEEK
 class UsageLineParser {
 public:
 	UsageLineParser() : ixColon(-1), ixUse(-1), ixReq(-1), ixAlloc(-1), ixAssigned(-1) {}
@@ -952,14 +948,14 @@ public:
 		// Insert Request<Tag> = <value2>
 		attrn = "Request";
 		attrn += tag;
-		exprstr.assign(&pszTbl[ixUse+1], ixReq-ixUse-1);
+		exprstr.assign(&pszTbl[ixUse], ixReq-ixUse);
 		puAd->AssignExpr(attrn, exprstr.c_str());
 
 		if (ixAlloc > 0) {
 			//pszTbl[ixAlloc] = 0;
 			// Insert <tag> = <value3>
 			attrn = tag;
-			exprstr.assign(&pszTbl[ixReq+1], ixAlloc-ixReq-1);
+			exprstr.assign(&pszTbl[ixReq], ixAlloc-ixReq);
 			puAd->AssignExpr(attrn, exprstr.c_str());
 		}
 		if (ixAssigned > 0) {
@@ -979,107 +975,6 @@ protected:
 	int ixAlloc;
 	int ixAssigned;
 };
-#else
-static void readUsageAd(FILE * file, /* in,out */ ClassAd ** ppusageAd)
-{
-	ClassAd * puAd = *ppusageAd;
-	if ( ! puAd) {
-		puAd = new ClassAd();
-		if ( ! puAd)
-			return;
-	}
-	puAd->Clear();
-
-	int ixColon = -1;
-	int ixUse = -1;
-	int ixReq = -1;
-	int ixAlloc = -1;
-	int ixAssigned = -1;
-
-	for (;;) {
-		char sz[250];
-
-		// if we hit end of file or end of record "..." rewind the file pointer.
-		fpos_t filep;
-		fgetpos( file, &filep );
-		if ( ! fgets(sz, sizeof(sz), file) || 
-			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
-			fsetpos( file, &filep );
-			break;
-		}
-
-		// lines for reading the usageAd must be of the form "\tlabel : data\n"
-		// the ':' characters in each line will line up vertically, so we can find
-		// the colon in the first line, and use it as a quick to validate subsequent
-		// lines.
-		if (ixColon < 0) {
-			const char * pszColon = strchr(sz, ':');
-			if ( ! pszColon) 
-				ixColon = 0;
-			else
-				ixColon = (int)(pszColon - sz);
-		}
-		int cchLine = strlen(sz);
-		if (sz[0] != '\t' || ixColon <= 0 || ixColon+1 >= cchLine || 
-			sz[ixColon] != ':' || sz[ixColon-1] != ' ' || sz[ixColon+1] != ' ') {
-			fsetpos( file, &filep );
-			break;
-		}
-
-		sz[ixColon] = 0; // separate sz into 2 strings
-		// parse out label
-		char * pszLbl = sz;
-		while (*pszLbl == '\t' || *pszLbl == ' ') ++pszLbl;
-		char * psz = pszLbl;
-		while (*psz && *psz != ' ') ++psz;
-		*psz = 0;
-
-		char * pszTbl = &sz[ixColon+1]; // pointer to the usage table
-
-		// 
-		if (MATCH == strcmp(pszLbl, "Partitionable")) {
-			psz = pszTbl;
-			while (*psz == ' ') ++psz;         // skip spaces
-			while (*psz && *psz != ' ') ++psz; // skip "Usage"
-			ixUse = (int)(psz - pszTbl)+1;     // save right edge of Usage
-			while (*psz == ' ') ++psz;         // skip spaces
-			while (*psz && *psz != ' ') ++psz; // skip "Request"
-			ixReq = (int)(psz - pszTbl)+1;     // save right edge of Request
-			while (*psz == ' ') ++psz;         // skip spaces
-			if (*psz) {                        // if there is an "Allocated"
-				char *p = strstr(psz, "Allocated");
-				if (p) {
-					ixAlloc = (int)(p - pszTbl)+9; // save right edge of Allocated
-					p = strstr(p, "Assigned");
-					if (p) { // if there is an "Assigned"
-						ixAssigned = (int)(p - pszTbl); // save *left* edge of assigned (it gets the remaineder of the line)
-					}
-				}
-			}
-		} else if (ixUse > 0) {
-			pszTbl[ixUse] = 0;
-			pszTbl[ixReq] = 0;
-			std::string attrn;
-			formatstr(exprstr, "%sUsage", pszLbl);
-			puAd->AssignExpr(attrn, pszTbl);
-			formatstr(attrn, "Request%s", pszLbl);
-			puAd->AssignExpr(attrn, &pszTbl[ixUse+1]);
-			if (ixAlloc > 0) {
-				pszTbl[ixAlloc] = 0;
-				formatstr(attrn, "%s", pszLbl);
-				puAd->AssignExpr(attrn, &pszTbl[ixReq+1]);
-			}
-			if (ixAssigned > 0) {
-				// the remainder of the line is the assigned value
-				formatstr(attrn, "Assigned%s", pszLbl);
-				puAd->AssignExpr(attrn, &pszTbl[ixAssigned]);
-			}
-		}
-	}
-
-	*ppusageAd = puAd;
-}
-#endif
 
 // ----- the FutureEvent class
 bool
@@ -1106,11 +1001,7 @@ FutureEvent::readEvent (FILE * file, bool & got_sync_line)
 	MyString line;
 	while (line.readLine(file)) {
 		if (line[0] == '.' && (line == "...\n" || line == "...\r\n")) {
-#ifdef DONT_EVER_SEEK
 			got_sync_line = true;
-#else
-			fsetpos( file, &filep );
-#endif
 			break;
 		}
 		else if (athead) {
@@ -1263,100 +1154,36 @@ SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] submitEventLogNotes;
 	submitEventLogNotes = NULL;
-#ifdef DONT_EVER_SEEK
 	MyString host;
 	if ( ! read_line_value("Job submitted from host: ", host, file, got_sync_line)) {
 		return 0;
 	}
 	submitHost = host.detach_buffer();
-#else
-	char s[8192];
-	s[0] = '\0';
-	MyString line;
-	if( !line.readLine(file) ) {
-		return 0;
-	}
-	setSubmitHost(line.Value()); // allocate memory
-	if( sscanf( line.Value(), "Job submitted from host: %s\n", submitHost ) != 1 ) {
-		return 0;
-	}
-#endif
 
 	// check if event ended without specifying submit host.
 	// in this case, the submit host would be the event delimiter
 	if ( strncmp(submitHost,"...",3)==0 ) {
 		submitHost[0] = '\0';
-#ifdef DONT_EVER_SEEK
 		got_sync_line = true;
-#else
-		// Backup to leave event delimiter unread go past \n too
-		fseek( file, -4, SEEK_CUR );
-#endif
 		return 1;
 	}
 
 	// see if the next line contains an optional event notes string
-#ifdef DONT_EVER_SEEK
 	submitEventLogNotes = read_optional_line(file, got_sync_line, true, true);
 	if( ! submitEventLogNotes) {
 		return 1;
 	}
-#else
-	// and, if not, rewind, because that means we slurped in the next
-	// event delimiter looking for it...
-	fpos_t filep;
-	fgetpos( file, &filep );
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-
-	// some users of this library (dagman) depend on whitespace
-	// being stripped from the beginning of the log notes field
-	char const *strip_s = s;
-	while( *strip_s && isspace(*strip_s) ) {
-		strip_s++;
-	}
-	submitEventLogNotes = strnewp( strip_s );
-#endif
 
 	// see if the next line contains an optional user event notes string
-#ifdef DONT_EVER_SEEK
 	submitEventUserNotes = read_optional_line(file, got_sync_line, true, true);
 	if( ! submitEventUserNotes) {
 		return 1;
 	}
-#else
-	// and, if not, rewind, because that means we slurped in
-	// the next event delimiter looking for it...
-	fgetpos( file, &filep );
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-	submitEventUserNotes = strnewp( s );
-#endif
 
-
-#ifdef DONT_EVER_SEEK
 	submitEventWarnings = read_optional_line(file, got_sync_line, true, false);
 	if( ! submitEventWarnings) {
 		return 1;
 	}
-#else
-	fgetpos( file, &filep );
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-	submitEventWarnings = strnewp( s );
-#endif
 
 	return 1;
 }
@@ -1487,7 +1314,6 @@ int GlobusSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	jmContact = NULL;
 	int newjm = 0;
 
-#ifdef DONT_EVER_SEEK
 	MyString tmp;
 	if ( ! read_line_value("Job submitted to Globus", tmp, file, got_sync_line)) {
 		return 0;
@@ -1509,33 +1335,7 @@ int GlobusSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	if ( ! YourStringDeserializer(tmp.c_str()).deserialize_int(&newjm)) {
 		return 0;
 	}
-#else
-	char s[8192];
-	int retval = fscanf (file, "Job submitted to Globus\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	rmContact = strnewp(s);
-	retval = fscanf( file, "    JM-Contact: %8191s\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	jmContact = strnewp(s);
 
-	retval = fscanf( file, "    Can-Restart-JM: %d\n", &newjm );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-#endif
 	if ( newjm ) {
 		restartableJM = true;
 	} else {
@@ -1643,7 +1443,6 @@ GlobusSubmitFailedEvent::readEvent (FILE *file, bool & got_sync_line)
 	delete[] reason;
 	reason = NULL;
 
-#ifdef DONT_EVER_SEEK
 	MyString tmp;
 	if ( ! read_line_value("Globus job submission failed!", tmp, file, got_sync_line)) {
 		return 0;
@@ -1652,29 +1451,7 @@ GlobusSubmitFailedEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	reason = tmp.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Globus job submission failed!\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-
-	fpos_t filep;
-	fgetpos( file, &filep );
-
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-	// Copy after the "Reason: "
-	reason = strnewp( &s[8] );
-#endif
 	return 1;
 }
 
@@ -1750,7 +1527,7 @@ GlobusResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] rmContact;
 	rmContact = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString tmp;
 	if ( ! read_line_value("Globus Resource Back Up", tmp, file, got_sync_line)) {
 		return 0;
@@ -1759,22 +1536,7 @@ GlobusResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	rmContact = tmp.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Globus Resource Back Up\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	rmContact = strnewp(s);
-#endif
 	return 1;
 }
 
@@ -1851,7 +1613,7 @@ GlobusResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] rmContact;
 	rmContact = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString tmp;
 	if ( ! read_line_value("Detected Down Globus Resource", tmp, file, got_sync_line)) {
 		return 0;
@@ -1860,22 +1622,7 @@ GlobusResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	rmContact = tmp.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Detected Down Globus Resource\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    RM-Contact: %8191s\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	rmContact = strnewp(s);
-#endif
 	return 1;
 }
 
@@ -1939,20 +1686,13 @@ GenericEvent::formatBody( std::string &out )
 int
 GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= (int)sizeof(info)) {
 		return 0;
 	}
 	strncpy(info, str.c_str(), sizeof(info)-1);
 	info[sizeof(info)-1] = 0;
-#else
-    int retval = fscanf(file, "%[^\n]\n", info);
-    if (retval < 0)
-    {
-	return 0;
-    }
-#endif
+
     return 1;
 }
 
@@ -2040,8 +1780,7 @@ RemoteErrorEvent::formatBody( std::string &out )
 
 	//output each line of error_str, indented by one tab
 	char *line = error_str;
-	if(line)
-	while(*line) {
+	if (line) while(*line) {
 		char *next_line = strchr(line,'\n');
 		if(next_line) *next_line = '\0';
 
@@ -2065,7 +1804,7 @@ int
 RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 {
 	char error_type[128];
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
@@ -2105,14 +1844,6 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
 
 	strncpy(execute_host, line.c_str(), sizeof(execute_host) - 1);
-#else
-    int retval = fscanf(
-	  file,
-	  "%127s from %127s on %127s\n",
-	  error_type,
-	  daemon_name,
-	  execute_host);
-#endif
 
 	if (retval < 0) {
 		return 0;
@@ -2132,26 +1863,12 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		// and, if not, rewind, because that means we slurped in the next
 		// event delimiter looking for it...
 
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(line, file, got_sync_line) || got_sync_line) {
 			break;
 		}
 		line.chomp();
 		const char *l = line.c_str();
-#else
-		char line[8192];
-		fpos_t filep;
-		fgetpos( file, &filep );
 
-		if( !fgets(line, sizeof(line), file) || strcmp(line, "...\n") == 0 ) {
-			fsetpos( file, &filep );
-			break;
-		}
-		char *l = strchr(line,'\n');
-		if(l) *l = '\0';
-
-		l = line;
-#endif
 		if(l[0] == '\t') l++;
 
 		int code,subcode;
@@ -2199,7 +1916,7 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char *buf;
+	char *buf = nullptr;
 	int crit_err = 0;
 
 	if( !ad ) return;
@@ -2324,32 +2041,11 @@ ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	MyString line;
 
-#ifdef DONT_EVER_SEEK
 	if ( ! read_line_value("Job executing on host: ", line, file, got_sync_line)) {
 		return 0;
 	}
 	executeHost = line.detach_buffer();
 	return 1;
-#else
-	if ( ! line.readLine(file) )
-	{
-		return 0; // EOF or error
-	}
-	setExecuteHost(line.Value()); // allocate memory
-	int retval  = sscanf (line.Value(), "Job executing on host: %[^\n]",
-						  executeHost);
-	if (retval == 1)
-	{
-		return 1;
-	}
-
-	if(strcmp(line.Value(), "Job executing on host: \n") == 0) {
-		// Simply lacks a hostname.  Allow.
-		executeHost[0] = 0;
-		return 1;
-	}
-	return 0;
-#endif
 }
 
 ClassAd*
@@ -2421,7 +2117,6 @@ ExecutableErrorEvent::formatBody( std::string &out )
 int
 ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("(", line, file, got_sync_line)) {
 		return 0;
@@ -2432,23 +2127,7 @@ ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	// we ignore the rest of the line.
-#else
-	int  retval;
-	char buffer [128];
 
-	// get the error number
-	retval = fscanf (file, "(%d)", (int*)&errType);
-	if (retval != 1)
-	{
-		return 0;
-	}
-
-	// skip over the rest of the line
-	if (fgets (buffer, 128, file) == 0)
-	{
-		return 0;
-	}
-#endif
 	return 1;
 }
 
@@ -2525,34 +2204,21 @@ CheckpointedEvent::formatBody( std::string &out )
 int
 CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job was checkpointed.", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	int retval = fscanf (file, "Job was checkpointed.\n");
-	if (retval == EOF) {
-		return 0;
-	}
-#endif
 
 	char buffer[128];
 	if (!readRusage(file,run_remote_rusage) || fgets (buffer,128,file) == 0  ||
 		!readRusage(file,run_local_rusage)  || fgets (buffer,128,file) == 0)
 		return 0;
 
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;		//backwards compatibility
 	}
-	sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
-#else
-    if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job For Checkpoint\n",
-                &sent_bytes)) {
-        return 1;		//backwards compatibility
-    }
-#endif
+	sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job For Checkpoint", &sent_bytes);
+
 	return 1;
 }
 
@@ -2689,7 +2355,6 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 	delete [] core_file;
 	core_file = NULL;
 
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line) || 
 		 ! read_optional_line(line, file, got_sync_line)) {
@@ -2699,17 +2364,6 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		return 0;
 	}
 	checkpointed = (bool) ckpt;
-#else
-	if( (fscanf(file, "Job was evicted.") == EOF) ||
-		(fscanf(file, "\n\t(%d) ", &ckpt) != 1) )
-	{
-		return 0;
-	}
-	checkpointed = (bool) ckpt;
-	if( fgets(buffer, 128, file) == 0 ) {
-		return 0;
-	}
-#endif
 
 		/*
 		   since the old parsing code treated the integer we read as a
@@ -2729,16 +2383,10 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		return 0;
 	}
 
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf(line.c_str(), "\t%lf  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		 ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf(line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
-#else
-	if( !fscanf(file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) ||
-		!fscanf(file, "\t%f  -  Run Bytes Received By Job\n",
-				&recvd_bytes) )
-#endif
+		(1 != sscanf(line.c_str(), "\t%lf  -  Run Bytes Received By Job", &recvd_bytes)))
 	{
 		return 1;				// backwards compatibility
 	}
@@ -2752,7 +2400,6 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 
 	int  normal_term;
 
-#ifdef DONT_EVER_SEEK
 	// we expect one of these
 	//  \t(0) Normal termination (return value %d)
 	//  \t(1) Abnormal termination (signal %d)
@@ -2793,66 +2440,6 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		reason = line.detach_buffer();
 	}
 
-#else
-	if( fscanf(file, "\n\t(%d) ", &normal_term) != 1 ) {
-		return 0;
-	}
-	if( normal_term ) {
-		normal = true;
-		if( fscanf(file, "Normal termination (return value %d)\n",
-				   &return_value) !=1 ) {
-			return 0;
-		}
-	} else {
-		normal = false;
-		if( fscanf(file, "Abnormal termination (signal %d)",
-				   &signal_number) !=1 ) {
-			return 0;
-		}
-		int  got_core;
-		if( fscanf(file, "\n\t(%d) ", &got_core) != 1 ) {
-			return 0;
-		}
-		if( got_core ) {
-			if( fscanf(file, "Corefile in: ") == EOF ) {
-				return 0;
-			}
-			if( !fgets(buffer, 128, file) ) {
-				return 0;
-			}
-			chomp( buffer );
-			setCoreFile( buffer );
-		} else {
-			if( !fgets(buffer, 128, file) ) {
-				return 0;
-			}
-		}
-	}
-		// finally, see if there's a reason.  this is optional.
-
-	// if we get a reason, fine. If we don't, we need to
-	// rewind the file position.
-	fpos_t filep;
-	fgetpos( file, &filep );
-
-    char reason_buf[BUFSIZ];
-    if( !fgets( reason_buf, BUFSIZ, file ) ||
-		strcmp( reason_buf, "...\n" ) == 0 ) {
-
-		fsetpos( file, &filep );
-		return 1;  // not considered failure
-	}
-
-	chomp( reason_buf );
-		// This is strange, sometimes we get the \t from fgets(), and
-		// sometimes we don't.  Instead of trying to figure out why,
-		// we just check for it here and do the right thing...
-	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		setReason( &reason_buf[1] );
-	} else {
-		setReason( reason_buf );
-	}
-#endif
 	return 1;
 }
 
@@ -3138,7 +2725,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete [] reason;
 	reason = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Job was aborted", line, file, got_sync_line)) {
 		return 0;
@@ -3168,9 +2755,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 			return 0;
 		}
 	}
-#else
-    #error New JobAbortedEvent::readEvent() not implemented with seeking.
-#endif
+
 	return 1;
 }
 
@@ -3339,7 +2924,6 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		pusageAd->Clear();
 	}
 
-#ifdef DONT_EVER_SEEK
 	// when we get here, all of the header line will have been read
 
 	MyString line;
@@ -3371,39 +2955,6 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 	}
 
 	bool in_usage_ad = false;
-#else
-	int  gotCore;
-	int  retval;
-
-	if( (retval = fscanf (file, "\n\t(%d) ", &normalTerm)) != 1 ) {
-		return 0;
-	}
-
-	if( normalTerm ) {
-		normal = true;
-		if(fscanf(file,"Normal termination (return value %d)",&returnValue)!=1)
-			return 0;
-	} else {
-		normal = false;
-		if((fscanf(file,"Abnormal termination (signal %d)",&signalNumber)!=1)||
-		   (fscanf(file,"\n\t(%d) ", &gotCore) != 1))
-			return 0;
-
-		if( gotCore ) {
-			if( fscanf(file, "Corefile in: ") == EOF ) {
-				return 0;
-			}
-			if( !fgets(buffer, 128, file) ) {
-				return 0;
-			}
-			chomp( buffer );
-			setCoreFile( buffer );
-		} else {
-			if (fgets (buffer, 128, file) == 0)
-				return 0;
-		}
-	}
-#endif
 
 		// read in rusage values
 	if (!readRusage(file,run_remote_rusage) || !fgets(buffer, 128, file) ||
@@ -3412,18 +2963,16 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		!readRusage(file,total_local_rusage) || !fgets(buffer, 128, file))
 		return 0;
 
-#ifdef DONT_EVER_SEEK
 		// read in the transfer info, and then the resource usage info
 		// we expect transfer info is first, as soon as we get a line that
 		// doesn't match that pattern, we switch to resource usage parsing.
 	UsageLineParser ulp;
-#endif
+
 	for (;;) {
 		char srun[sizeof("Total")];
 		char sdir[sizeof("Received")];
 		char sjob[22];
 
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			break;
 		}
@@ -3446,17 +2995,6 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 			ulp.Parse(sz, pusageAd);
 			continue;
 		}
-#else
-		char sz[250];
-		// if we hit end of file or end of record "..." rewind the file pointer.
-		fpos_t filep;
-		fgetpos( file, &filep );
-		if ( ! fgets(sz, sizeof(sz), file) || 
-			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
-			fsetpos( file, &filep );
-			break;
-		}
-#endif
 
 		// expect for strings of the form "\t%f  -  Run Bytes Sent By Job"
 		// where "Run" "Sent" and "Job" can all vary. 
@@ -3479,7 +3017,6 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 				}
 			}
 		}
-#ifdef DONT_EVER_SEEK
 		else {
 			// no match, we have (probably) just read the banner of the useage ad.
 			if (starts_with(sz, "\tPartitionable ")) {
@@ -3493,18 +3030,8 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 				break;
 			}
 		}
-#else
-		if ( ! fOK) {
-			fsetpos(file, &filep);
-			break;
-		}
-#endif
 	}
-#ifdef DONT_EVER_SEEK
-#else
-	// the usage ad is optional
-	readUsageAd(file, &pusageAd);
-#endif
+
 	return 1;
 }
 
@@ -3630,16 +3157,11 @@ JobTerminatedEvent::formatBody( std::string &out )
 int
 JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_line_value("Job terminated.", str, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	if( fscanf(file, "Job terminated.") == EOF ) {
-		return 0;
-	}
-#endif
+
 	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
 	if(! rv) { return rv; }
 
@@ -3886,18 +3408,12 @@ JobImageSizeEvent::formatBody( std::string &out )
 int
 JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_line_value("Image size of job updated: ", str, file, got_sync_line) || 
 		! YourStringDeserializer(str.c_str()).deserialize_int(&image_size_kb))
 	{
 		return 0;
 	}
-#else
-	int retval;
-	if ((retval=fscanf(file,"Image size of job updated: %lld\n", &image_size_kb)) != 1)
-		return 0;
-#endif
 
 	// These fields were added to this event in 2012, so we need to tolerate the
 	// situation when they are not there in the log that we read back.
@@ -3908,20 +3424,9 @@ JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 	for (;;) {
 		char sz[250];
 
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(file, got_sync_line, sz, sizeof(sz))) {
 			break;
 		}
-#else
-		// if we hit end of file or end of record "..." rewind the file pointer.
-		fpos_t filep;
-		fgetpos(file, &filep);
-		if ( ! fgets(sz, sizeof(sz), file) || 
-			(sz[0] == '.' && sz[1] == '.' && sz[2] == '.')) {
-			fsetpos(file, &filep);
-			break;
-		}
-#endif
 
 		// line should be a number, followed by "  -  " followed by an attribute name
 		// parse the number, then find the start of the attribute and null terminate it.
@@ -3943,11 +3448,6 @@ JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 		}
 
 		if ( ! lbl) {
-#ifdef DONT_EVER_SEEK
-#else
-			// rewind the file pointer so we don't consume what we can't parse.
-			fsetpos(file, &filep);
-#endif
 			break;
 		} else {
 			if (MATCH == strcasecmp(lbl,"MemoryUsage")) {
@@ -3957,11 +3457,6 @@ JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 			} else if (MATCH == strcasecmp(lbl, "ProportionalSetSize")) {
 				proportional_set_size_kb = val;
 			} else {
-#ifdef DONT_EVER_SEEK
-#else
-				// rewind the file pointer so we don't consume what we can't parse.
-				fsetpos(file, &filep);
-#endif
 				break;
 			}
 		}
@@ -4025,7 +3520,6 @@ ShadowExceptionEvent::~ShadowExceptionEvent (void)
 int
 ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Shadow exception!", line, file, got_sync_line)) {
 		return 0;
@@ -4037,28 +3531,13 @@ ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 
 	// read transfer info
 	if ( ! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Sent By Job", &sent_bytes)) ||
+		(1 != sscanf (line.c_str(), "\t%lf  -  Run Bytes Sent By Job", &sent_bytes)) ||
 		! read_optional_line(line, file, got_sync_line) ||
-		(1 != sscanf (line.c_str(), "\t%f  -  Run Bytes Received By Job", &recvd_bytes)))
+		(1 != sscanf (line.c_str(), "\t%lf  -  Run Bytes Received By Job", &recvd_bytes)))
 	{
 		return 1;				// backwards compatibility
 	}
-#else
-	if (fscanf (file, "Shadow exception!\n\t") == EOF)
-		return 0;
-	if (fgets(message, BUFSIZ, file) == NULL) {
-		message[0] = '\0';
-		return 1;				// backwards compatibility
-	}
 
-	// remove '\n' from message
-	message[strlen(message)-1] = '\0';
-
-	if (fscanf (file, "\t%f  -  Run Bytes Sent By Job\n", &sent_bytes) == 0 ||
-		fscanf (file, "\t%f  -  Run Bytes Received By Job\n",
-				&recvd_bytes) == 0)
-		return 1;				// backwards compatibility
-#endif
 	return 1;
 }
 
@@ -4128,7 +3607,6 @@ JobSuspendedEvent::~JobSuspendedEvent (void)
 int
 JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job was suspended.", line, file, got_sync_line)) {
 		return 0;
@@ -4138,13 +3616,7 @@ JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 	{
 		return 0;
 	}
-#else
-	if (fscanf (file, "Job was suspended.\n\t") == EOF)
-		return 0;
-	if (fscanf (file, "Number of processes actually suspended: %d\n",
-			&num_pids) == EOF)
-		return 1;				// backwards compatibility
-#endif
+
 	return 1;
 }
 
@@ -4197,15 +3669,11 @@ JobUnsuspendedEvent::~JobUnsuspendedEvent (void)
 int
 JobUnsuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job was unsuspended.", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	if (fscanf (file, "Job was unsuspended.\n") == EOF)
-		return 0;
-#endif
+
 	return 1;
 }
 
@@ -4295,7 +3763,6 @@ JobHeldEvent::getReasonSubCode( void ) const
 int
 JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-#ifdef DONT_EVER_SEEK
 	delete [] reason;
 	reason = NULL;
 	code = subcode = 0;
@@ -4323,49 +3790,6 @@ JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 
 	code = incode;
 	subcode = insubcode;
-#else
-	if( fscanf(file, "Job was held.\n") == EOF ) {
-		return 0;
-	}
-
-	// try to read the reason, but if its not there,
-	// rewind so we don't slurp up the next event delimiter
-	fpos_t filep;
-	fgetpos( file, &filep );
-	char reason_buf[BUFSIZ];
-	if( !fgets( reason_buf, BUFSIZ, file ) ||
-		   	strcmp( reason_buf, "...\n" ) == 0 ) {
-		setReason( NULL );
-		fsetpos( file, &filep );
-		return 1;	// backwards compatibility
-	}
-
-
-	chomp( reason_buf );  // strip the newline
-		// This is strange, sometimes we get the \t from fgets(), and
-		// sometimes we don't.  Instead of trying to figure out why,
-		// we just check for it here and do the right thing...
-	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		reason = strnewp( &reason_buf[1] );
-	} else {
-		reason = strnewp( reason_buf );
-	}
-
-	// read the code and subcodes, but if not there, rewind
-	// for backwards compatibility.
-	fgetpos( file, &filep );
-	int incode = 0;
-	int insubcode = 0;
-	int fsf_ret = fscanf(file, "\tCode %d Subcode %d\n", &incode,&insubcode);
-	if ( fsf_ret != 2 ) {
-		code = 0;
-		subcode = 0;
-		fsetpos( file, &filep );
-		return 1;	// backwards compatibility
-	}
-	code = incode;
-	subcode = insubcode;
-#endif
 
 	return 1;
 }
@@ -4479,7 +3903,6 @@ JobReleasedEvent::getReason( void ) const
 int
 JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job was released.", line, file, got_sync_line)) {
 		return 0;
@@ -4492,32 +3915,7 @@ JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 	if (! line.empty()) {
 		reason = line.detach_buffer();
 	}
-#else
-	if( fscanf(file, "Job was released.\n") == EOF ) {
-		return 0;
-	}
-	// try to read the reason, but if its not there,
-	// rewind so we don't slurp up the next event delimiter
-	fpos_t filep;
-	fgetpos( file, &filep );
-	char reason_buf[BUFSIZ];
-	if( !fgets( reason_buf, BUFSIZ, file ) ||
-		   	strcmp( reason_buf, "...\n" ) == 0 ) {
-		setReason( NULL );
-		fsetpos( file, &filep );
-		return 1;	// backwards compatibility
-	}
 
-	chomp( reason_buf );  // strip the newline
-		// This is strange, sometimes we get the \t from fgets(), and
-		// sometimes we don't.  Instead of trying to figure out why,
-		// we just check for it here and do the right thing...
-	if( reason_buf[0] == '\t' && reason_buf[1] ) {
-		reason = strnewp( &reason_buf[1] );
-	} else {
-		reason = strnewp( reason_buf );
-	}
-#endif
 	return 1;
 }
 
@@ -4800,18 +4198,13 @@ NodeTerminatedEvent::formatBody( std::string &out )
 int
 NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-#ifdef DONT_EVER_SEEK
 	MyString str;
 	if ( ! read_optional_line(str, file, got_sync_line) || 
 		(1 != sscanf(str.c_str(), "Node %d terminated.", &node)))
 	{
 		return 0;
 	}
-#else
-	if( fscanf(file, "Node %d terminated.", &node) == EOF ) {
-		return 0;
-	}
-#endif
+
 	return TerminatedEvent::readEventBody( file, got_sync_line, "Node" );
 }
 
@@ -5013,7 +4406,6 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 	}
     dagNodeName = NULL;
 
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("POST Script terminated.", line, file, got_sync_line)) {
 		return 0;
@@ -5052,51 +4444,6 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 		dagNodeName = strnewp( line.c_str() + label_len );
 	}
 
-#else
-	int tmp;
-	char buf[8192];
-	buf[0] = '\0';
-
-
-	if( fscanf( file, "POST Script terminated.\n\t(%d) ", &tmp ) != 1 ) {
-		return 0;
-	}
-	if( tmp == 1 ) {
-		normal = true;
-	} else {
-		normal = false;
-	}
-    if( normal ) {
-        if( fscanf( file, "Normal termination (return value %d)\n",
-					&returnValue ) != 1 ) {
-            return 0;
-		}
-    } else {
-        if( fscanf( file, "Abnormal termination (signal %d)\n",
-					&signalNumber ) != 1 ) {
-            return 0;
-		}
-    }
-
-	// see if the next line contains an optional DAG node name string,
-	// and, if not, rewind, because that means we slurped in the next
-	// event delimiter looking for it...
-
-	fpos_t filep;
-	fgetpos( file, &filep );
-
-	if( !fgets( buf, 8192, file ) || strcmp( buf, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-
-	// remove trailing newline
-	buf[ strlen( buf ) - 1 ] = '\0';
-
-		// skip "DAG Node: " label to find start of actual node name
-	int label_len = strlen( dagNodeNameLabel );
-	dagNodeName = strnewp( buf + label_len );
-#endif
     return 1;
 }
 
@@ -5914,7 +5261,7 @@ GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] resourceName;
 	resourceName = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Grid Resource Back Up", line, file, got_sync_line)) {
 		return 0;
@@ -5923,22 +5270,7 @@ GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	resourceName = line.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Grid Resource Back Up\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	resourceName = strnewp(s);
-#endif
 	return 1;
 }
 
@@ -6015,7 +5347,7 @@ GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete[] resourceName;
 	resourceName = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Detected Down Grid Resource", line, file, got_sync_line)) {
 		return 0;
@@ -6024,22 +5356,7 @@ GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	resourceName = line.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Detected Down Grid Resource\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	resourceName = strnewp(s);
-#endif
 	return 1;
 }
 
@@ -6127,7 +5444,7 @@ GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	delete[] jobId;
 	resourceName = NULL;
 	jobId = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Job submitted to grid resource", line, file, got_sync_line)) {
 		return 0;
@@ -6141,28 +5458,7 @@ GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 		return 0;
 	}
 	jobId = line.detach_buffer();
-#else
-	char s[8192];
 
-	int retval = fscanf (file, "Job submitted to grid resource\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-	s[0] = '\0';
-	retval = fscanf( file, "    GridResource: %8191[^\n]\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	resourceName = strnewp(s);
-	retval = fscanf( file, "    GridJobId: %8191[^\n]\n", s );
-	if ( retval != 1 )
-	{
-		return 0;
-	}
-	jobId = strnewp(s);
-#endif
 	return 1;
 }
 
@@ -6250,7 +5546,6 @@ JobAdInformationEvent::formatBody( std::string &out, ClassAd *jobad_arg )
 int
 JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job ad information event triggered.", line, file, got_sync_line)) {
 		return 0;
@@ -6267,31 +5562,6 @@ JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 		++num_attrs;
 	}
 	return num_attrs > 0;
-#else
-    int retval = 0;	// 0 == FALSE == failure
-	int EndFlag, ErrorFlag, EmptyFlag;
-
-	EndFlag =  ErrorFlag =  EmptyFlag = 0;
-
-	if( fscanf(file, "Job ad information event triggered.") == EOF ) {
-		return 0;
-	}
-
-	if ( jobad ) delete jobad;
-
-	if( !( jobad=new ClassAd(file,"...", EndFlag, ErrorFlag, EmptyFlag) ) )
-	{
-		// Out of memory?!?!
-		return 0;
-	}
-
-	// Backup to leave event delimiter unread go past \n too
-	fseek( file, -4, SEEK_CUR );
-
-	retval = ! (ErrorFlag || EmptyFlag);
-
-	return retval;
-#endif
 }
 
 ClassAd*
@@ -6373,14 +5643,6 @@ JobAdInformationEvent::LookupInteger (const char *attributeName, long long & val
 }
 
 int
-JobAdInformationEvent::LookupFloat (const char *attributeName, float & value) const
-{
-	if ( !jobad ) return 0;		// 0 = failure
-
-	return jobad->LookupFloat(attributeName,value);
-}
-
-int
 JobAdInformationEvent::LookupFloat (const char *attributeName, double & value) const
 {
 	if ( !jobad ) return 0;		// 0 = failure
@@ -6421,18 +5683,11 @@ JobStatusUnknownEvent::formatBody( std::string &out )
 
 int JobStatusUnknownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("The job's remote status is unknown", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	int retval = fscanf (file, "The job's remote status is unknown\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-#endif
+
 	return 1;
 }
 
@@ -6472,18 +5727,11 @@ JobStatusKnownEvent::formatBody( std::string &out )
 
 int JobStatusKnownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("The job's remote status is known again", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	int retval = fscanf (file, "The job's remote status is known again\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-#endif
+
 	return 1;
 }
 
@@ -6526,18 +5774,11 @@ JobStageInEvent::formatBody( std::string &out )
 int
 JobStageInEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job is performing stage-in of input files", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	int retval = fscanf (file, "Job is performing stage-in of input files\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-#endif
+
 	return 1;
 }
 
@@ -6579,18 +5820,11 @@ JobStageOutEvent::formatBody( std::string &out )
 int
 JobStageOutEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_line_value("Job is performing stage-out of output files", line, file, got_sync_line)) {
 		return 0;
 	}
-#else
-	int retval = fscanf (file, "Job is performing stage-out of output files\n");
-    if (retval != 0)
-    {
-		return 0;
-    }
-#endif
+
 	return 1;
 }
 
@@ -6659,7 +5893,6 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 	if (old_value) { free(old_value); }
 	name = value = old_value = NULL;
 
-#ifdef DONT_EVER_SEEK
 	MyString line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
@@ -6674,19 +5907,7 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 			return 0;
 		}
 	}
-#else
-	int retval;
 
-	retval = fscanf(file, "Changing job attribute %s from %s to %s\n", buf1, buf2, buf3);
-	if (retval < 0)
-	{
-		retval = fscanf(file, "Setting job attribute %s to %s\n", buf1, buf3);
-		if (retval < 0)
-		{
-			return 0;
-		}
-	}
-#endif
 	name = strdup(buf1);
 	value = strdup(buf3);
 	if (buf2[0] != '\0')
@@ -6784,7 +6005,7 @@ int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 	delete[] skipEventLogNotes;
 	skipEventLogNotes = NULL;
 	MyString line;
-#ifdef DONT_EVER_SEEK
+
 	// read the remainder of the event header line
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
@@ -6798,50 +6019,7 @@ int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 		// being stripped from the beginning of the log notes field
 	line.trim();
 	skipEventLogNotes = line.detach_buffer();
-#else
-	if( !line.readLine(file) ) {
-		return 0;
-	}
-	setSkipNote(line.Value()); // allocate memory
 
-	// check if event ended without specifying the DAG node.
-	// in this case, the submit host would be the event delimiter
-	if (skipEventLogNotes && (MATCH == strncmp(skipEventLogNotes,"...",3))) {
-			// This should not happen. The event should have a 
-			// DAGMan node associated with it.
-		skipEventLogNotes[0] = '\0';
-		// Backup to leave event delimiter unread go past \n too
-		fseek( file, -4, SEEK_CUR );
-		return 0;
-	}
-	char s[8192];
-	
-	// This event must have a DAG Node attached to it.
-	fpos_t fpos;
-	fgetpos(file,&fpos);
-	if(!fgets(s,8192,file) || strcmp( s,"...\n" ) == 0 ) {
-		fsetpos(file,&fpos);
-		return 0;
-	}
-	char* newline = strchr(s,'\n');
-	if(newline) {
-		*newline = '\0';
-	}
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
-	char const *strip_s = s;
-	while( *strip_s && isspace(*strip_s) ) {
-		strip_s++;
-	}
-	char *p = s;
-		// Don't use strcpy because the strings "may not overlap"
-		// according to strcpy(3) man page
-	if (p != strip_s) {
-		while((*p++ = *strip_s++)) {}
-	}
-	delete [] skipEventLogNotes;
-	skipEventLogNotes = strnewp(s);
-#endif
 	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 )?0:1;
 }
 
@@ -6967,7 +6145,7 @@ ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	submitHost = NULL;
 	delete[] submitEventLogNotes;
 	submitEventLogNotes = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Cluster submitted from host: ", line, file, got_sync_line)) {
 		return 0;
@@ -6989,67 +6167,7 @@ ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 	line.trim();
 	submitEventUserNotes = line.detach_buffer();
-#else
 
-	char s[8192];
-	s[0] = '\0';
-	MyString line;
-	if( !line.readLine(file) ) {
-		return 0;
-	}
-	setSubmitHost(line.Value()); // allocate memory
-	if( sscanf( line.Value(), "Cluster submitted from host: %s\n", submitHost ) != 1 ) {
-		return 0;
-	}
-
-	// check if event ended without specifying submit host.
-	// in this case, the submit host would be the event delimiter
-	if ( strncmp(submitHost,"...",3)==0 ) {
-		submitHost[0] = '\0';
-		// Backup to leave event delimiter unread go past \n too
-		fseek( file, -4, SEEK_CUR );
-		return 1;
-	}
-
-	// see if the next line contains an optional event notes string,
-	// and, if not, rewind, because that means we slurped in the next
-	// event delimiter looking for it...
-
-	fpos_t filep;
-	fgetpos( file, &filep );
-
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-	
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
-	char const *strip_s = s;
-	while( *strip_s && isspace(*strip_s) ) {
-		strip_s++;
-	}
-
-	submitEventLogNotes = strnewp( strip_s );
-
-	// see if the next line contains an optional user event notes
-	// string, and, if not, rewind, because that means we slurped in
-	// the next event delimiter looking for it...
-
-	fgetpos( file, &filep );
-
-	if( !fgets( s, 8192, file ) || strcmp( s, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return 1;
-	}
-
-	// remove trailing newline
-	s[ strlen( s ) - 1 ] = '\0';
-	submitEventUserNotes = strnewp( s );
-#endif
 	return 1;
 }
 
@@ -7094,23 +6212,6 @@ ClusterRemoveEvent::~ClusterRemoveEvent(void)
 	if (notes) { free(notes); } notes = NULL;
 }
 
-// read until \n into the supplied buffer
-// if got a record terminator or EOF, then rewind the file position and return false
-// otherwise return true.
-#ifdef DONT_EVER_SEEK
-#else
-static bool read_line_or_rewind(FILE *file, char *buf, int bufsiz) {
-	memset(buf, 0, bufsiz);
-	if (feof(file)) return false;
-	fpos_t filep;
-	fgetpos( file, &filep );
-	if( !fgets( buf, bufsiz, file ) || strcmp( buf, "...\n" ) == 0 ) {
-		fsetpos( file, &filep );
-		return false;
-	}
-	return true;
-}
-#endif
 
 #define CLUSTER_REMOVED_BANNER "Cluster removed"
 
@@ -7152,28 +6253,15 @@ ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 	// get the remainder of the first line (if any)
 	// or rewind so we don't slurp up the next event delimiter
 	char buf[BUFSIZ];
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 		return 1; // backwards compatibility
 	}
-#else
-	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
-		return 1; // backwards compatibility
-	}
-#endif
 
 	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
 	if (strstr(buf, "remove") || strstr(buf,"Remove")) {
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 			return 1; // this field is optional
 		}
-#else
-		// got the "Cluster removed" line, now get the next line.
-		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
-			return 1; // this field is optional
-		}
-#endif
 	}
 
 	const char * p = buf;
@@ -7197,15 +6285,9 @@ ClusterRemoveEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 
 	// read the notes field.
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 		return 1; // this field is optional
 	}
-#else
-	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
-		return 1; // notes field is optional
-	}
-#endif
 
 	chomp(buf);  // strip the newline
 	p = buf;
@@ -7278,28 +6360,16 @@ FactoryPausedEvent::readEvent (FILE *file, bool & got_sync_line)
 	reason = NULL;
 
 	char buf[BUFSIZ];
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 		return 1; // backwards compatibility
 	}
-#else
-	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
-		return 1; // backwards compatibility
-	}
-#endif
 
 	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
 	if (strstr(buf, "pause") || strstr(buf,"Pause")) {
 		// got the "Paused" line, now get the next line.
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 			return 1; // this field is optional
 		}
-#else
-		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
-			return 1; // this field is optional
-		}
-#endif
 	}
 
 	// The next line should be the pause reason.
@@ -7310,11 +6380,7 @@ FactoryPausedEvent::readEvent (FILE *file, bool & got_sync_line)
 	if (*p) { reason = strdup(p); }
 
 	// read the pause code and/or hold code, if they exist
-#ifdef DONT_EVER_SEEK
 	while ( read_optional_line(file, got_sync_line, buf, sizeof(buf)) )
-#else
-	while ( read_line_or_rewind(file, buf, sizeof(buf)) )
-#endif
 	{
 		char * endp;
 		p = buf;
@@ -7429,28 +6495,16 @@ FactoryResumedEvent::readEvent (FILE *file, bool & got_sync_line)
 	reason = NULL;
 
 	char buf[BUFSIZ];
-#ifdef DONT_EVER_SEEK
 	if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 		return 1; // backwards compatibility
 	}
-#else
-	if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) {
-		return 1; // backwards compatibility
-	}
-#endif
 
 	// be intentionally forgiving about the text here, so as not to introduce bugs if we change terminology
 	if (strstr(buf, "resume") || strstr(buf,"Resume")) {
 		// got the "Resumed" line, now get the next line.
-#ifdef DONT_EVER_SEEK
 		if ( ! read_optional_line(file, got_sync_line, buf, sizeof(buf))) {
 			return 1; // this field is optional
 		}
-#else
-		if ( ! read_line_or_rewind(file, buf, sizeof(buf)) ) { 
-			return 1; // this field is optional
-		}
-#endif
 	}
 
 	// The next line should be the resume reason.
@@ -8354,7 +7408,7 @@ DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	delete [] reason;
 	reason = NULL;
-#ifdef DONT_EVER_SEEK
+
 	MyString line;
 	if ( ! read_line_value("Dataflow job was skipped.", line, file, got_sync_line)) {
 		return 0;
@@ -8384,9 +7438,7 @@ DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 			return 0;
 		}
 	}
-#else
-    #error New JobAbortedEvent::readEvent() not implemented with seeking.
-#endif
+
 	return 1;
 }
 

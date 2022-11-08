@@ -36,7 +36,7 @@ given a name further used as the *prefix string* in other attribute
 names. Where there is more than one GPU of a particular type, the
 *prefix string* includes an GPU id value identifying the device; these
 can be integer values that monotonically increase from 0 when the ``-by-index``
-option is used or globally unique identfiers when the ``-short-uuid`` or
+option is used or globally unique identifiers when the ``-short-uuid`` or
 ``-uuid`` argument is used.
 
 For example, a discovery of two GPUs with ``-by-index`` may

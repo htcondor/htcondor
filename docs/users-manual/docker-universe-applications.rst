@@ -52,7 +52,7 @@ directory. In docker terms, we docker run with the -v
 non-root-user command line options (along with many others).
 
 The executable file can come from one of two places: either from within
-the container's image, or it can be a script transfered from the submit
+the container's image, or it can be a script transferred from the submit
 machine to the scratch directory of the execute machine. To specify the
 former, use an absolute path (starting with a /) for the executable. For
 the latter, use a relative path.

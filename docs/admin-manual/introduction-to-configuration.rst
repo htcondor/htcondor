@@ -1021,7 +1021,7 @@ restart of HTCondor in order to use the changed value.
 
 ``$(IP_ADDRESS_IS_V6)`` :index:`IP_ADDRESS_IS_V6`
     A boolean which is true if and only if ``IP_ADDRESS``
-    :index:`IP_ADDRESS` is an IPv6 address. Useful for conditonal
+    :index:`IP_ADDRESS` is an IPv6 address. Useful for conditional
     configuration.
 
 ``$(TILDE)`` :index:`TILDE`

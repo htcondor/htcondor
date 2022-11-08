@@ -47,7 +47,7 @@ displayJobShort(ClassAd* ad)
 	// Initialization here not strictly necessary, but some compilers (gcc)
 	// are unable to determine that the member will always be initialized in
 	// LookupFloat below.
-    float utime = 0;
+    double utime = 0;
     char *owner, *cmd, *args;
 
     owner = NULL;

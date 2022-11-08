@@ -1184,7 +1184,7 @@ bool preferOutboundIPv4 = false;
 bool acceptIPv4 = false;
 bool acceptIPv6 = false;
 
-bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
+bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condor_sockaddr* saddr ) {
 	if(! routingParametersInitialized) {
 		ignoreTargetProtocolPreference = param_boolean( "IGNORE_TARGET_PROTOCOL_PREFERENCE", false );
 		preferOutboundIPv4 = param_boolean( "PREFER_OUTBOUND_IPV4", false );
@@ -1289,11 +1289,11 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr ) {
 	// Change the "primary" address.
 	s.setHost( candidate.to_ip_string().c_str() );
 	s.setPort( candidate.get_port() );
-	addr = s.getSinful();
+	addr_str = s.getSinful();
 
-	set_connect_addr( addr.c_str() );
-	_who = candidate;
-	addr_changed();
+	if (saddr) {
+		*saddr = candidate;
+	}
 
 	return true;
 }
@@ -1307,8 +1307,9 @@ int Sock::do_connect(
 	if (!host || port < 0) return FALSE;
 
 	std::string addr;
-	if( chooseAddrFromAddrs( host, addr ) ) {
+	if( chooseAddrFromAddrs( host, addr, &_who ) ) {
 		host = addr.c_str();
+		set_connect_addr(addr.c_str());
 	} else {
 		_who.clear();
 		if (!guess_address_string(host, port, _who)) {
@@ -1323,8 +1324,8 @@ int Sock::do_connect(
 		else { // otherwise, just use ip string.
 			set_connect_addr(_who.to_ip_string().c_str());
 		}
-    	addr_changed();
     }
+	addr_changed();
 
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect

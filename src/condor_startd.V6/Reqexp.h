@@ -65,8 +65,6 @@ private:
 
 		// override param by slot_type
 	char * param(const char * name);
-	const char * param(std::string& out, const char * name);
-	const char * param(std::string& out, const char * name, const char * def);
 };
 
 #endif /* _REQEXP_H */

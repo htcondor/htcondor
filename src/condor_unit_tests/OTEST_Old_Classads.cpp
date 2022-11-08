@@ -3040,7 +3040,7 @@ static bool test_real_invalid() {
     const char* classad_string = "\tB=real(\"this is not a number\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0;
+	double actual = -1.0;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3063,7 +3063,7 @@ static bool test_real_false() {
     const char* classad_string = "\tB=real(false)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 0;
+	double actual = -1.0, expect = 0;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3088,7 +3088,7 @@ static bool test_real_true() {
     const char* classad_string = "\tB=real(true)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 1;
+	double actual = -1.0, expect = 1;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3114,7 +3114,7 @@ static bool test_real_float_negative_quotes() {
     const char* classad_string = "\tB=real(\"-3.4\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0f, expect = -3.4f;
+	double actual = -1.0f, expect = -3.4f;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3139,7 +3139,7 @@ static bool test_real_float_negative() {
     const char* classad_string = "\tB=real(-3.4)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0f, expect = -3.4f;
+	double actual = -1.0f, expect = -3.4f;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3164,7 +3164,7 @@ static bool test_real_float_positive() {
     const char* classad_string = "\tB=real(3.4)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0f, expect = 3.4f;
+	double actual = -1.0f, expect = 3.4f;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3189,7 +3189,7 @@ static bool test_real_int_positive() {
     const char* classad_string = "\tB=real(3)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 3;
+	double actual = -1.0, expect = 3;
 	int retVal = classad.LookupFloat("B", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3799,7 +3799,7 @@ static bool test_string_list_sum_empty() {
 	const char* classad_string = "\tA1=stringlistsum(\"\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 0.0;
+	double actual = -1.0, expect = 0.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -3851,7 +3851,7 @@ static bool test_string_list_sum_both() {
 	const char* classad_string = "\tA1=stringlistsum(\"1,2.0,3\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 6.0;
+	double actual = -1.0, expect = 6.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4008,7 +4008,7 @@ static bool test_string_list_min_both() {
 	const char* classad_string = "\tA1=stringlistmin(\"1,-2.0,3\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = -2.0;
+	double actual = -1.0, expect = -2.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4165,7 +4165,7 @@ static bool test_string_list_max_negatve() {
 	const char* classad_string = "\tA1=stringlistmax(\"1 , 4.5, -5\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 4.5;
+	double actual = -1.0, expect = 4.5;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4213,11 +4213,11 @@ static bool test_string_list_max_positive() {
 static bool test_string_list_max_both() {
 	emit_test("Test that LookupFloat() returns 1 and sets the correct actual "
 		"for an attribute using stringlistmax() on a StringList that contains "
-		"both integers and floats.");
+		"both integers and double.");
 	const char* classad_string = "\tA1=stringlistmax(\"1,-2.0,3.0\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 3.0;
+	double actual = -1.0, expect = 3.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4374,7 +4374,7 @@ static bool test_string_list_avg_default() {
 	const char* classad_string = "\tA1=stringlistavg(\"10, 20, 30, 40\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 25.0;
+	double actual = -1.0, expect = 25.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4399,7 +4399,7 @@ static bool test_string_list_avg_empty() {
 	const char* classad_string = "\tA1=stringlistavg(\"\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 0.0;
+	double actual = -1.0, expect = 0.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4425,7 +4425,7 @@ static bool test_string_list_avg_non_default() {
 	const char* classad_string = "\tA1=stringlistavg(\"1;2;3\",\";\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 2.0;
+	double actual = -1.0, expect = 2.0;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -4451,7 +4451,7 @@ static bool test_string_list_avg_both() {
 	const char* classad_string = "\tA1=stringlistavg(\"1,-2.0,3.0\")";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0f, expect = 0.666667f;
+	double actual = -1.0f, expect = 0.666667f;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5146,7 +5146,7 @@ static bool test_random() {
 	const char* classad_string = "\tA1=random()";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 1;
+	double actual = -1.0, expect = 1;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);
@@ -5171,7 +5171,7 @@ static bool test_random_float() {
 	const char* classad_string = "\tA1=random(3.5)";
 	ClassAd classad;
 	initAdFromString(classad_string, classad);
-	float actual = -1.0, expect = 3.5;
+	double actual = -1.0, expect = 3.5;
 	int retVal = classad.LookupFloat("A1", actual);
 	emit_input_header();
 	emit_param("ClassAd", classad_string);

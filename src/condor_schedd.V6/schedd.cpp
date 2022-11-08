@@ -69,7 +69,6 @@
 #include "condor_netdb.h"
 #include "fs_util.h"
 #include "condor_mkstemp.h"
-#include "tdman.h"
 #include "utc_time.h"
 #include "condor_getcwd.h"
 #include "set_user_priv_from_ad.h"
@@ -417,7 +416,7 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	bool suppress_sec_session = true;
 
-	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
 		if( secSessionId() == NULL ) {
 			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
 		}
@@ -484,9 +483,6 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	keep_while_idle = 0;
 	idle_timer_deadline = 0;
-
-	m_can_start_jobs = true;
-	m_paired_mrec = NULL;
 }
 
 void
@@ -1385,10 +1381,20 @@ Scheduler::count_jobs()
 	if (FlockCollectors) {
 		FlockCollectors->rewind();
 		Daemon *daemon;
+		StringList effectFlockList;
+		int currLevel = 0;
 		while (FlockCollectors->next(daemon)) {
 			auto col = static_cast<DCCollector*>(daemon);
 			FlockPools.insert(col->name());
+			if (currLevel < FlockLevel)
+				effectFlockList.append(col->addr());
+			++currLevel;
 		}
+
+		if (!effectFlockList.isEmpty()) {
+			auto_free_ptr flockList(effectFlockList.print_to_string());
+			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList.ptr());
+		} else { cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST); }
 	}
 
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
@@ -1658,6 +1664,7 @@ Scheduler::count_jobs()
 			 num_updates, NumSubmitters );
 
 	cad->Delete(ATTR_CAPABILITY);
+	cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST);
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -7984,44 +7991,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		delete sn;
 	} 
 
-	// AsyncXfer: If this isn't a dedicated match, handle a paired claim
-	if ( !match->is_dedicated && msg->have_paired_slot() ) {
-		// AsyncXfer: TODO Is this the right job id to use for the paired
-		//   match_rec?
-		PROC_ID paired_job_id;
-		paired_job_id.cluster = match->cluster;
-		paired_job_id.proc = -1;
-		match_rec *paired_mrec = AddMrec( msg->paired_claim_id(), match->peer,
-						  &paired_job_id, msg->paired_startd_ad(),
-						  match->user,
-						  match->getPool().empty() ? nullptr : match->getPool().c_str() );
-
-		if ( paired_mrec == NULL ) {
-			dprintf( D_ALWAYS, "AsyncXfer: Failed to make match_rec for paired slot!\n" );
-		} else {
-			match->m_paired_mrec = paired_mrec;
-			paired_mrec->m_paired_mrec = match;
-			paired_mrec->m_can_start_jobs = false;
-
-			paired_mrec->setStatus( M_CLAIMED );
-
-			if ( match->auth_hole_id != NULL ) {
-				paired_mrec->auth_hole_id = new std::string( *match->auth_hole_id );
-				IpVerify* ipv = daemonCore->getSecMan()->getIpVerify();
-				if (!ipv->PunchHole(READ, *paired_mrec->auth_hole_id)) {
-					dprintf(D_ALWAYS,
-						"WARNING: IpVerify::PunchHole error for paired %s: "
-			            "job %d.%d may fail to execute\n",
-						paired_mrec->auth_hole_id->c_str(),
-						paired_mrec->cluster,
-						paired_mrec->proc);
-					delete paired_mrec->auth_hole_id;
-					paired_mrec->auth_hole_id = NULL;
-				}
-			}
-		}
-	}
-
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.
@@ -8265,20 +8234,6 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		}
 	}
 
-	// AsyncXfer: If this claim has a paired claim that we've already created
-	//   a match_rec for, link the two together.
-	std::string paired_claim_id;
-	match_rec *paired_mrec = NULL;
-	if ( GetPrivateAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
-							 paired_claim_id ) >= 0 &&
-			 matches->lookup( paired_claim_id, paired_mrec ) == 0 ) {
-
-		mrec->m_paired_mrec = paired_mrec;
-		paired_mrec->m_paired_mrec = mrec;
-		mrec->m_can_start_jobs = false;
-		paired_mrec->m_can_start_jobs = false;
-	}
-
 	if( pool ) {
 		free( pool );
 		pool = NULL;
@@ -8459,103 +8414,6 @@ Scheduler::StartJobs()
 }
 
 void
-Scheduler::swappedClaims( DCMsgCallback *cb )
-{
-
-	SwapClaimsMsg *msg = (SwapClaimsMsg *)cb->getMessage();
-
-	match_rec *active_rec = NULL;
-	match_rec *idle_rec = NULL;
-
-	if( msg->deliveryStatus() != DCMsg::DELIVERY_SUCCEEDED ) {
-		dprintf( D_FULLDEBUG, "AsyncXfer: SwapClaims message failed\n" );
-		return;
-	}
-
-	if ( matches->lookup( msg->claim_id(), active_rec ) < 0 ||
-		 (idle_rec = active_rec->m_paired_mrec) == NULL ) {
-		dprintf( D_FULLDEBUG, "AsyncXfer: Failed to find match_rec's for swapped claims\n" );
-		return;
-	}
-
-	if( !msg->swap_claims_success() ) {
-		dprintf( D_FULLDEBUG, "AsyncXfer: SwapClaims attempt failed\n" );
-		// AsyncXfer: TODO Should we do anything about the failure?
-		//   Throw the claims away?
-		//   Retry a limited number of times?
-		return;
-	}
-
-	std::string active_rec_slot_name;
-	std::string idle_rec_slot_name;
-	active_rec->my_match_ad->LookupString( ATTR_NAME, active_rec_slot_name );
-	idle_rec->my_match_ad->LookupString( ATTR_NAME, idle_rec_slot_name );
-
-	if ( !strcmp( active_rec_slot_name.c_str(), msg->dest_slot_name() ) ) {
-		dprintf( D_FULLDEBUG, "AsyncXfer: match_recs already swapped, nothing to do\n" );
-		return;
-	} else if ( !strcmp( idle_rec_slot_name.c_str(), msg->dest_slot_name() ) ) {
-		dprintf( D_FULLDEBUG, "AsyncXfer: Swapping match_recs for swapped claims.\n" );
-
-		std::swap( active_rec->keep_while_idle, idle_rec->keep_while_idle );
-		std::swap( active_rec->idle_timer_deadline, idle_rec->idle_timer_deadline );
-		std::swap( active_rec->m_can_start_jobs, idle_rec->m_can_start_jobs );
-		std::swap( active_rec->my_match_ad, idle_rec->my_match_ad );
-
-		// After the swap, the active claim is now on the slot that was idle.
-		SetAttributeString( active_rec->cluster, active_rec->proc,
-							ATTR_REMOTE_HOST, idle_rec_slot_name.c_str() );
-		int slot_id = 1;
-		if ( active_rec->my_match_ad->LookupInteger( ATTR_SLOT_ID, slot_id ) ) {
-			SetAttributeInt( active_rec->cluster, active_rec->proc,
-							 ATTR_REMOTE_SLOT_ID, slot_id );
-		}
-
-	} else {
-		dprintf( D_FULLDEBUG, "AsyncXfer: slot names don't match!\n" );
-	}
-
-	StartJob( idle_rec );
-}
-
-bool
-Scheduler::CheckForClaimSwap(match_rec *mrec)
-{
-	if ( !mrec->m_paired_mrec ) {
-		return false;
-	}
-	bool job_xfer_output = false;
-	GetAttributeBool( mrec->cluster, mrec->proc,
-					  ATTR_JOB_TRANSFERRING_OUTPUT,
-					  &job_xfer_output );
-
-	if ( job_xfer_output && mrec->m_can_start_jobs &&
-		 mrec->m_paired_mrec->status == M_CLAIMED ) {
-
-		// AsyncXfer: Our job is in output phase and we have a paired slot
-		//   that's idle. Swap them.
-		classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
-					(DCMsgCallback::CppFunction)&Scheduler::swappedClaims,
-					this, NULL);
-
-		std::string paired_slot_name;
-		mrec->m_paired_mrec->my_match_ad->LookupString( ATTR_NAME, paired_slot_name );
-
-		// AsyncXfer: TODO Why is this a classy_counted_ptr instead of a regular
-		//   pointer that we delete before we return? Or an object on the stack?
-		classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId());
-
-		startd->asyncSwapClaims( mrec->claimId(), mrec->description(),
-								 paired_slot_name.c_str(),
-								 STARTD_CONTACT_TIMEOUT, cb );
-
-		return true;
-	} else {
-		return false;
-	}
-}
-
-void
 Scheduler::StartJob(match_rec *rec)
 {
 	PROC_ID id;
@@ -8572,27 +8430,7 @@ Scheduler::StartJob(match_rec *rec)
 	case M_ACTIVE:
 	case M_CLAIMED:
 		if ( rec->shadowRec ) {
-			// AsyncXfer: If we have an idle paired xfer slot and our job is
-			//   in output phase, try to swap the job to to the paired slot.
-			if ( rec->m_paired_mrec ) {
-				if ( CheckForClaimSwap( rec ) ) {
-					dprintf(D_FULLDEBUG, "match (%s) swapping job to paired slot\n",
-							rec->description());
-				} else {
-					dprintf(D_FULLDEBUG, "match (%s) already running a job, can't swap\n",
-							rec->description());
-				}
-			} else {
-				dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
-					rec->description());
-			}
-			return;
-		}
-		// AsyncXfer: When we have a paired claim, m_can_start_jobs==false
-		// means we can't start a job. Either we're the transfer slot or
-		// someone called DelMrec() on one of us.
-		if ( rec->m_paired_mrec && !rec->m_can_start_jobs ) {
-			dprintf(D_FULLDEBUG, "AsyncXfer: match (%s) not eligible for starting a job\n",
+			dprintf(D_FULLDEBUG, "match (%s) already running a job\n",
 					rec->description());
 			return;
 		}
@@ -8685,7 +8523,7 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 	new_job_id.cluster = -1;
 	new_job_id.proc = -1;
 
-	if( mrec->my_match_ad && mrec->m_can_start_jobs && !ExitWhenDone ) {
+	if( mrec->my_match_ad && !ExitWhenDone ) {
 		FindRunnableJob(new_job_id,mrec->my_match_ad,mrec->user);
 	}
 	auto job_ad = GetJobAd(new_job_id);
@@ -8695,15 +8533,6 @@ Scheduler::FindRunnableJobForClaim(match_rec* mrec)
 
 	if( new_job_id.proc == -1 ) {
 			// no more jobs to run
-		// AsyncXfer: If this match has a paired match that can start jobs,
-		//   don't delete this match.
-		if ( !mrec->m_can_start_jobs && mrec->m_paired_mrec &&
-			 mrec->m_paired_mrec->m_can_start_jobs ) {
-			dprintf(D_ALWAYS, "AsyncXfer: match (%s) can't start jobs; waiting for paired match (%s), which can\n",
-					mrec->description(),
-					mrec->m_paired_mrec->description());
-			return false;
-		}
 		if (mrec->idle_timer_deadline < time(0))  {
 			dprintf(D_ALWAYS,
 				"match (%s) out of jobs; relinquishing\n",
@@ -9063,133 +8892,6 @@ Scheduler::StartJobHandler()
 		tryNextJob();
 		return;
 	}
-}
-
-bool
-Scheduler::jobNeedsTransferd( int cluster, int proc, int /*univ*/ )
-{
-	ClassAd *jobad = GetJobAd(cluster, proc);
-	ASSERT(jobad);
-
-	// XXX remove this when shadow/starter usage is implemented
-	return false;
-
-	/////////////////////////////////////////////////////////////////////////
-	// Selection of a transferd is universe based. It all depends upon
-	// whether or not transfer_input/output_files is available for the
-	// universe in question.
-	/////////////////////////////////////////////////////////////////////////
-
-/* Uncomment this dead code when shadow/starter usage implemented...
-	switch(univ) {
-		case CONDOR_UNIVERSE_VANILLA:
-		case CONDOR_UNIVERSE_JAVA:
-		case CONDOR_UNIVERSE_MPI:
-		case CONDOR_UNIVERSE_PARALLEL:
-		case CONDOR_UNIVERSE_VM:
-			return true;
-			break;
-
-		default:
-			return false;
-			break;
-	}
-
-	return false;
-*/
-}
-
-bool
-Scheduler::availableTransferd( int cluster, int proc )
-{
-	TransferDaemon *td = NULL;
-
-	return availableTransferd(cluster, proc, td);
-}
-
-bool
-Scheduler::availableTransferd( int cluster, int proc, TransferDaemon *&td_ref )
-{
-	std::string fquser;
-	TransferDaemon *td = NULL;
-	ClassAd *jobad = GetJobAd(cluster, proc);
-
-	ASSERT(jobad);
-
-	jobad->LookupString(ATTR_USER, fquser);
-
-	td_ref = NULL;
-
-	td = m_tdman.find_td_by_user(fquser);
-	if (td == NULL) {
-		return false;
-	}
-
-	// only return true if there is a transferd ready and waiting for this
-	// user
-	if (td->get_status() == TD_REGISTERED) {
-		dprintf(D_ALWAYS, "Scheduler::availableTransferd() "
-			"Found a transferd for user %s\n", fquser.c_str());
-		td_ref = td;
-		return true;
-	}
-
-	return false;
-}
-
-bool
-Scheduler::startTransferd( int cluster, int proc )
-{
-	std::string fquser;
-	std::string rand_id;
-	TransferDaemon *td = NULL;
-	ClassAd *jobad = NULL;
-	std::string desc;
-
-	// just do a quick check in case a higher layer had already started one
-	// for this job.
-	if (availableTransferd(cluster, proc)) {
-		return true;
-	}
-
-	jobad = GetJobAd(cluster, proc);
-	ASSERT(jobad);
-
-	jobad->LookupString(ATTR_USER, fquser);
-
-	/////////////////////////////////////////////////////////////////////////
-	// It could be that a td had already been started, but hadn't registered
-	// yet. In that case, consider it started.
-	/////////////////////////////////////////////////////////////////////////
-
-	td = m_tdman.find_td_by_user(fquser);
-	if (td == NULL) {
-		// No td found at all in any state, so start one.
-
-		// XXX fix this rand_id to be dealt with better, like maybe the tdman
-		// object assigns it or something.
-		randomlyGenerateInsecureHex(rand_id, 64);
-		td = new TransferDaemon(fquser, rand_id, TD_PRE_INVOKED);
-		ASSERT(td != NULL);
-
-		// set up the default registration callback
-		desc = "Transferd Registration callback";
-		td->set_reg_callback(desc,
-			(TDRegisterCallback)
-			 	&Scheduler::td_register_callback, this);
-
-		// set up the default reaper callback
-		desc = "Transferd Reaper callback";
-		td->set_reaper_callback(desc,
-			(TDReaperCallback)
-				&Scheduler::td_reaper_callback, this);
-	
-		// Have the td manager object start this td up.
-		// XXX deal with failure here a bit better.
-		m_tdman.invoke_a_td(td);
-	}
-
-	return true;
 }
 
 bool VanillaMatchAd::Insert(const std::string &attr, ClassAd*ad)
@@ -9729,9 +9431,6 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	}
 	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_CLAIM_IDS, secret) == 0) {
 		job_ad->Assign(ATTR_CLAIM_IDS, secret);
-	}
-	if (GetPrivateAttributeString(job_id->cluster, job_id->proc, ATTR_PAIRED_CLAIM_ID, secret) == 0) {
-		job_ad->Assign(ATTR_PAIRED_CLAIM_ID, secret);
 	}
 
 	FamilyInfo fi;
@@ -10639,21 +10338,6 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			int num_restarts = 0;
 			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
-
-			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-				// In vmware vm universe, vmware disk may be 
-				// a sparse disk or snapshot disk. So we can't estimate the disk space 
-				// in advanace because the sparse disk or snapshot disk will 
-				// grow up while running a VM.
-				// So we will just add 100MB to disk space.
-				int vm_disk_space = 0;
-				GetAttributeInt(cluster, proc, ATTR_DISK_USAGE, &vm_disk_space);
-				if( vm_disk_space > 0 ) {
-					vm_disk_space += 100*1024;
-				}
-				SetAttributeInt(cluster, proc, ATTR_DISK_USAGE, vm_disk_space);
-			}
 		}
 	}
 }
@@ -10855,10 +10539,6 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
-		if ( mrec->m_paired_mrec ) {
-			SetPrivateAttributeString( cluster, proc, ATTR_PAIRED_CLAIM_ID,
-								mrec->m_paired_mrec->claimId() );
-		}
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -11020,10 +10700,10 @@ update_remote_wall_clock(int cluster, int proc)
 	int bday = 0;
 	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
 	if (bday) {
-		float accum_time = 0;
+		double accum_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_REMOTE_WALL_CLOCK,&accum_time);
-		float delta = (float)(time(NULL) - bday);
+		double delta = (double) time(NULL) - bday;
 		SetAttributeFloat(cluster, proc, ATTR_JOB_LAST_REMOTE_WALL_CLOCK, delta);
 		accum_time += delta;
 			// We want to update our wall clock time and delete
@@ -11039,10 +10719,10 @@ update_remote_wall_clock(int cluster, int proc)
 						  ATTR_JOB_REMOTE_WALL_CLOCK,accum_time);
 		DeleteAttribute(cluster, proc, ATTR_JOB_WALL_CLOCK_CKPT);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
 		slot_time += delta*slot_weight;
@@ -11163,7 +10843,6 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		// when the schedd comes back online.
 		//
 	if ( (!rec->keepClaimAttributes) || job_status == COMPLETED || job_status == REMOVED ) {
-		DeletePrivateAttribute( cluster, proc, ATTR_PAIRED_CLAIM_ID );
 		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_ID );
 		DeleteAttribute( cluster, proc, ATTR_PUBLIC_CLAIM_ID );
 		DeletePrivateAttribute( cluster, proc, ATTR_CLAIM_IDS );
@@ -11176,9 +10855,6 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_INPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFERRING_OUTPUT );
 		DeleteAttribute( cluster, proc, ATTR_TRANSFER_QUEUED );
-		// AsyncXfer: Delete in-job output transfer attributes
-		DeleteAttribute( cluster, proc, ATTR_JOB_TRANSFERRING_OUTPUT );
-		DeleteAttribute( cluster, proc, ATTR_JOB_TRANSFERRING_OUTPUT_TIME );
 	} else {
 		dprintf( D_FULLDEBUG, "Job %d.%d has keepClaimAttributes set to true. "
 					    "Not removing %s and %s attributes.\n",
@@ -11820,8 +11496,6 @@ Scheduler::child_exit(int pid, int status)
 	// if we do not start a new job, should we keep the claim?
 	bool            keep_claim = false; // by default, no
 	bool            srec_keep_claim_attributes;
-	// AsyncXfer: Should this match be held idle waiting for a paired match?
-	bool            paired_match_wait = false;
 
 	srec = FindSrecByPid(pid);
 	ASSERT(srec);
@@ -11829,29 +11503,17 @@ Scheduler::child_exit(int pid, int status)
 	if( srec->match ) {
 		match_rec *mrec = srec->match;
 
-		// AsyncXfer: If this match has a paired match that can start
-		//   new jobs, we should let this match hang around idle
-		//   waiting for swaps.
-		if (srec->match->m_paired_mrec ) {
-			paired_match_wait = srec->match->m_paired_mrec->m_can_start_jobs;
-		}
-		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0) && !paired_match_wait) {
+		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 			DelMrec( srec->match );
 			srec->match = NULL;
 		} else {
 			int exitstatus = WEXITSTATUS(status);
-			if ((srec->match->keep_while_idle > 0 || paired_match_wait) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
+			if ((srec->match->keep_while_idle > 0) && ((exitstatus == JOB_EXITED) || (exitstatus == JOB_SHOULD_REMOVE) || (exitstatus == JOB_KILLED))) {
 				srec->match->setStatus(M_CLAIMED);
 				srec->match->shadowRec = NULL;
 				srec->match->idle_timer_deadline = time(NULL) + srec->match->keep_while_idle;
 				srec->match = NULL;
 			}
-		}
-
-		// AsyncXfer: If we have a match with a paired match that
-		//   can start jobs, see if we want to swap.
-		if ( !ExitWhenDone && paired_match_wait && mrec->m_paired_mrec->status == M_ACTIVE ) {
-			this->CheckForClaimSwap( mrec->m_paired_mrec );
 		}
 	}
 
@@ -11985,12 +11647,7 @@ Scheduler::child_exit(int pid, int status)
 	// If we're not trying to shutdown, now that either an agent
 	// or a shadow (or both) have exited, we should try to
 	// start another job.
-	// AsyncXfer: If we have a match with a paired match that can
-	//   start jobs, we don't want to find another job for this
-	//   match or delete it.
-	if ( !ExitWhenDone && paired_match_wait ) {
-		return;
-	} else if( ! ExitWhenDone && StartJobsFlag ) {
+	if( ! ExitWhenDone && StartJobsFlag ) {
 		if( !claim_id.empty() ) {
 				// Try finding a new job for this claim.
 			match_rec *mrec = scheduler.FindMrecByClaimID( claim_id.c_str() );
@@ -13738,9 +13395,6 @@ Scheduler::Register()
 	// Now is a good time to instantiate the GridUniverse
 	_gridlogic = new GridUniverseLogic;
 
-	// Initialize the Transfer Daemon Manager's handlers as well
-	m_tdman.register_handlers();
-
 	m_xfer_queue_mgr.RegisterHandlers();
 
 }
@@ -14305,23 +13959,6 @@ Scheduler::unlinkMrec(match_rec* match)
 			// This is a convenience for code that is shared with
 			// DedicatedScheduler, such as contactStartd().
 		return dedicated_scheduler.DelMrec( match );
-	}
-
-	if ( match->m_paired_mrec && match->m_paired_mrec->status == M_ACTIVE ) {
-		// AsyncXfer: We want to throw this match away, but we should wait
-		//   until the paired match is done with its current job.
-		dprintf( D_ALWAYS, "AsyncXfer: Match record (%s, %d.%d) delay deletion until paired match finishes\n", match->description(), match->cluster, match->proc );
-		match->m_can_start_jobs = false;
-		match->m_paired_mrec->m_can_start_jobs = false;
-		return 0;
-	}
-	if ( match->m_paired_mrec ) {
-		// AsyncXfer: Release the claim for our paired match as well.
-		//   Disconnect the two and do the tear-down for each.
-		match_rec *paired_match = match->m_paired_mrec;
-		paired_match->m_paired_mrec = NULL;
-		match->m_paired_mrec = NULL;
-		DelMrec( paired_match );
 	}
 
 	// release the claim on the startd
@@ -16856,9 +16493,6 @@ Scheduler::finishRecycleShadow(shadow_rec *srec)
 		}
 		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_CLAIM_IDS, secret) == 0) {
 			new_ad->Assign(ATTR_CLAIM_IDS, secret);
-		}
-		if (GetPrivateAttributeString(new_job_id.cluster, new_job_id.proc, ATTR_PAIRED_CLAIM_ID, secret) == 0) {
-			new_ad->Assign(ATTR_PAIRED_CLAIM_ID, secret);
 		}
 	}
 	if( new_ad ) {

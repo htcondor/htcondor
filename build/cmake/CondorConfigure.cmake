@@ -610,7 +610,6 @@ if( NOT WINDOWS)
 	endif()
 endif()
 
-find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 
@@ -946,9 +945,6 @@ else ()
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)
         endif()
     endif()
-	if (HAVE_BOINC)
-		add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/boinc/7.14.1)
-	endif()
 
         if (LINUX)
           option(WITH_GANGLIA "Compiling with support for GANGLIA" ON)

@@ -474,7 +474,6 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 
 
 /* order dependencies
-ComputeRootDir >> ComputeIWD
 ComputeIWD >> FixupTransferInputFiles
 
 SetUniverse >> SetArguments SetCronTab SetExecutable SetGSICredentials SetGridParams SetImageSize SetJobDeferral SetJobLease SetKillSig SetMachineCount SetMaxJobRetirementTime SetRank SetRequirements SetTransferFiles SetVMParams
@@ -863,9 +862,9 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 #else
 
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		TempPathname.formatstr( "%s%s", JobRootdir.c_str(), name );
+		TempPathname.formatstr( "/%s", name );
 	} else {	/* relative to iwd which is relative to the root */
-		TempPathname.formatstr( "%s/%s/%s", JobRootdir.c_str(), p_iwd, name );
+		TempPathname.formatstr( "/%s/%s", p_iwd, name );
 	}
 #endif
 
@@ -1231,7 +1230,7 @@ const char * init_submit_default_macros()
 
 		// hook the dynamic table into the static defaults for submit utils
 		// TODO: handle reconfig, freeing the old aTable if it is not the compile time default table
-		for (int ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
+		for (size_t ii = 0; ii < COUNTOF(SubmitTemplateTables); ++ii) {
 			if (YourStringNoCase("TEMPLATE") == SubmitTemplateTables[ii].key) {
 				SubmitTemplateTables[ii].aTable = aTable;
 				SubmitTemplateTables[ii].cElms = ix;
@@ -1318,7 +1317,6 @@ int SubmitHash::SetJavaVMArgs()
 
 	ArgList args;
 	MyString error_msg;
-	MyString strbuffer;
 	MyString value;
 	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
 	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
@@ -1625,17 +1623,15 @@ int SubmitHash::SetStderr()
 }
 
 
-class SubmitHashEnvFilter : public Env
+class SubmitHashEnvFilter 
 {
 public:
-	SubmitHashEnvFilter( bool env1, bool env2 )
-			: m_env1( env1 ),
-			  m_env2( env2 ) {
+	SubmitHashEnvFilter( Env &env, bool env1, bool env2 )
+			: m_env(env), m_env1( env1 ), m_env2( env2 ) {
 		return;
 	};
 	virtual ~SubmitHashEnvFilter( void ) { };
-	virtual bool ImportFilter( const MyString &var,
-							   const MyString &val ) const;
+	bool operator()( const MyString &var, const MyString &val );
 
 	// take a string of the form  x* !y* *z* !bar
 	// and split it into two string lists
@@ -1665,21 +1661,22 @@ public:
 		m_white.clearAll();
 	}
 private:
+	Env &m_env;
 	bool m_env1;
 	bool m_env2;
 	mutable StringList m_black;
 	mutable StringList m_white;
 };
-bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &val ) const
+bool SubmitHashEnvFilter::operator()( const MyString & var, const MyString &val )
 {
-	if( !m_env2 && m_env1 && !IsSafeEnvV1Value(val.c_str())) {
+	if( !m_env2 && m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
 		// We silently filter out anything that is not expressible
 		// in the 'environment1' syntax.  This avoids breaking
 		// our ability to submit jobs to older startds that do
 		// not support 'environment2' syntax.
 		return false;
 	}
-	if( !IsSafeEnvV2Value(val.c_str()) ) {
+	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
 		// Silently filter out environment values containing
 		// unsafe characters.  Example: newlines cause the
 		// schedd to EXCEPT in 6.8.3.
@@ -1688,10 +1685,10 @@ bool SubmitHashEnvFilter::ImportFilter( const MyString & var, const MyString &va
 #ifdef WIN32
 	// on Windows, we have to do case-insensitive check for existance, luckily
 	// we have m_sorted_varnames for just this purpose
-	if (m_sorted_varnames.find(var.Value()) != m_sorted_varnames.end())
+	if (m_env.m_sorted_varnames.find(var.Value()) != m_env.m_sorted_varnames.end())
 #else
 	MyString existing_val;
-	if ( GetEnv( var, existing_val ) )
+	if ( m_env.GetEnv( var, existing_val ) )
 #endif
 	{
 		// Don't override submit file environment settings --
@@ -1738,7 +1735,7 @@ int SubmitHash::SetEnvironment()
 		ABORT_AND_RETURN(1);
 	}
 
-	SubmitHashEnvFilter envobject(env1, env2);
+	Env env;
 
 	std::string error_msg;
 	bool env_success = true; // specifying no env is allowed.
@@ -1753,13 +1750,13 @@ int SubmitHash::SetEnvironment()
 		// if there is a cluster ad, initialize from it
 		// this will happen when we are materializing jobs in the Schedd
 		// but not when materializing in condor_submit (at present)
-		env_success = envobject.MergeFrom(clusterAd, error_msg);
+		env_success = env.MergeFrom(clusterAd, error_msg);
 	}
 
 	if (env2) {
-		env_success = envobject.MergeFromV2Quoted(env2, error_msg);
+		env_success = env.MergeFromV2Quoted(env2, error_msg);
 	} else if (env1) {
-		env_success = envobject.MergeFromV1RawOrV2Quoted(env1, error_msg);
+		env_success = env.MergeFromV1RawOrV2Quoted(env1, error_msg);
 	}
 	if ( ! env_success) {
 		push_error(stderr, "%s\nThe environment you specified was: '%s'\n",
@@ -1780,13 +1777,15 @@ int SubmitHash::SetEnvironment()
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
-				envobject.Import();
+				SubmitHashEnvFilter envFilter(env, env1, env2);
+				env.Import(envFilter);
 			}
 		} else {
 			// getenv is not a boolean, it must be a blacklist/whitelist
-			envobject.AddToImportWhiteBlackList(envlist);
-			envobject.Import();
-			envobject.ClearImportWhiteBlackList();
+			SubmitHashEnvFilter envFilter(env, env1, env2);
+			envFilter.AddToImportWhiteBlackList(envlist);
+			env.Import(envFilter);
+			envFilter.ClearImportWhiteBlackList();
 		}
 	}
 
@@ -1802,7 +1801,7 @@ int SubmitHash::SetEnvironment()
 	bool insert_env1 = prefer_v1;
 	bool insert_env2 = !insert_env1;
 
-	if(!env1 && !env2 && envobject.Count() == 0 && \
+	if(!env1 && !env2 && env.Count() == 0 && \
 	   (ad_contains_env1 || ad_contains_env2)) {
 			// User did not specify any environment, but SUBMIT_ATTRS did.
 			// Do not do anything (i.e. avoid overwriting with empty env).
@@ -1820,7 +1819,7 @@ int SubmitHash::SetEnvironment()
 	if (insert_env1) {
 		MyString newenv_raw;
 		std::string msg;
-		env_success = envobject.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		env_success = env.getDelimitedStringV1Raw(&newenv_raw, &msg);
 		if(!env_success) {
 			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
 			ABORT_AND_RETURN(1);
@@ -1831,15 +1830,15 @@ int SubmitHash::SetEnvironment()
 		// Record in the JobAd the V1 delimiter that is being used.
 		// This way remote submits across platforms have a prayer.
 		char delim[2];
-		delim[0] = envobject.GetEnvV1Delimiter();
+		delim[0] = env.GetEnvV1Delimiter();
 		delim[1] = 0;
 		AssignJobString(ATTR_JOB_ENV_V1_DELIM, delim);
 	}
 
 	if (insert_env2) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 
-		envobject.getDelimitedStringV2Raw(&newenv_raw);
+		env.getDelimitedStringV2Raw(newenv_raw);
 		AssignJobString(ATTR_JOB_ENVIRONMENT, newenv_raw.c_str());
 	}
 
@@ -2402,45 +2401,6 @@ int SubmitHash::SetNoopJob()
 
 #endif // above code is obsolete, kept temporarily for reference
 
-#if !defined(WIN32)
-
-int SubmitHash::ComputeRootDir()
-{
-	RETURN_IF_ABORT();
-
-	JobRootdir = submit_param_mystring( SUBMIT_KEY_RootDir, ATTR_JOB_ROOT_DIR );
-	if( JobRootdir.empty() )
-	{
-		JobRootdir = "/";
-	}
-
-	return 0;
-}
-
-int SubmitHash::check_root_dir_access()
-{
-	if ( ! JobRootdir.empty() && JobRootdir != "/")
-	{
-		if( access(JobRootdir.c_str(), F_OK|X_OK) < 0 ) {
-			push_error(stderr, "No such directory: %s\n", JobRootdir.c_str());
-			ABORT_AND_RETURN( 1 );
-		}
-	}
-	return 0;
-}
-
-
-int SubmitHash::SetRootDir()
-{
-	RETURN_IF_ABORT();
-	if (ComputeRootDir()) { ABORT_AND_RETURN(1); }
-	AssignJobString (ATTR_JOB_ROOT_DIR, JobRootdir.c_str());
-	return 0;
-}
-
-
-#endif
-
 const char * SubmitHash::getIWD()
 {
 	ASSERT(JobIwdInitialized);
@@ -2466,23 +2426,10 @@ int SubmitHash::ComputeIWD()
 		shortname = submit_param("FACTORY.Iwd");
 	}
 
-#if !defined(WIN32)
-	ComputeRootDir();
-	if( JobRootdir != "/" )	{	/* Rootdir specified */
-		if( shortname ) {
-			iwd = shortname;
-		} 
-		else {
-			iwd = "/";
-		}
-	} 
-	else 
-#endif
-	{  //for WIN32, this is a block to make {}'s match. For unix, else block.
-		if( shortname  ) {
+	if( shortname  ) {
 #if defined(WIN32)
-			// if a drive letter or share is specified, we have a full pathname
-			if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) 
+		// if a drive letter or share is specified, we have a full pathname
+		if( shortname[1] == ':' || (shortname[0] == '\\' && shortname[1] == '\\')) 
 #else
 			if( shortname[0] == '/' ) 
 #endif
@@ -2497,10 +2444,9 @@ int SubmitHash::ComputeIWD()
 				}
 				iwd.formatstr( "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
 			}
-		} 
-		else {
-			condor_getcwd( iwd );
-		}
+	} 
+	else {
+		condor_getcwd( iwd );
 	}
 
 	compress_path( iwd );
@@ -2517,7 +2463,7 @@ int SubmitHash::ComputeIWD()
 		}
 	#else
 		MyString pathname;
-		pathname.formatstr( "%s/%s", JobRootdir.c_str(), iwd.c_str() );
+		pathname.formatstr( "/%s", iwd.c_str() );
 		compress_path( pathname );
 
 		if( access(pathname.c_str(), F_OK|X_OK) < 0 ) {
@@ -2549,8 +2495,6 @@ int SubmitHash::SetIWD()
 int SubmitHash::SetGSICredentials()
 {
 	RETURN_IF_ABORT();
-
-	MyString buffer;
 
 		// Find the X509 user proxy
 		// First param for it in the submit file. If it's not there
@@ -2796,7 +2740,6 @@ int SubmitHash::SetKillSig()
 
 	char* sig_name;
 	char* timeout;
-	MyString buffer;
 
 	sig_name = fixupKillSigName(submit_param(SUBMIT_KEY_KillSig, ATTR_KILL_SIG));
 	RETURN_IF_ABORT();
@@ -2896,7 +2839,6 @@ int SubmitHash::SetForcedSubmitAttrs()
 int SubmitHash::SetForcedAttributes()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	HASHITER it = hash_iter_begin(SubmitMacroSet);
 	for( ; ! hash_iter_done(it); hash_iter_next(it)) {
@@ -3021,8 +2963,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
-		gridType == "azure" ||
-		gridType == "boinc") {
+		gridType == "azure") {
 		// We're ok
 		// Values are case-insensitive for gridmanager, so we don't need to change case
 		return true;
@@ -3531,24 +3472,6 @@ int SubmitHash::SetGridParams()
 	handleAVPairs( SUBMIT_KEY_CloudLabelNames, ATTR_CLOUD_LABEL_NAMES,
 		SUBMIT_KEY_CloudLabelPrefix, ATTR_CLOUD_LABEL_PREFIX, gridType );
 
-	if ( (tmp = submit_param( SUBMIT_KEY_BoincAuthenticatorFile,
-							  ATTR_BOINC_AUTHENTICATOR_FILE )) ) {
-		// check authenticator file can be opened
-		if ( !DisableFileChecks ) {
-			if( ( fp=safe_fopen_wrapper_follow(full_path(tmp),"r") ) == NULL ) {
-				push_error(stderr, "Failed to open authenticator file %s (%s)\n", 
-								 full_path(tmp), strerror(errno));
-				ABORT_AND_RETURN( 1 );
-			}
-			fclose(fp);
-		}
-		AssignJobString(ATTR_BOINC_AUTHENTICATOR_FILE, full_path(tmp));
-		free( tmp );
-	} else if (gridType == "boinc" && ! job->Lookup(ATTR_BOINC_AUTHENTICATOR_FILE)) {
-		push_error(stderr, "BOINC jobs require a \"%s\" parameter\n", SUBMIT_KEY_BoincAuthenticatorFile );
-		ABORT_AND_RETURN( 1 );
-	}
-
 	//
 	// GCE grid-type submit attributes
 	//
@@ -3711,7 +3634,6 @@ int SubmitHash::SetNotification()
 	RETURN_IF_ABORT();
 	char *how = submit_param( SUBMIT_KEY_Notification, ATTR_JOB_NOTIFICATION );
 	int notification;
-	MyString buffer;
 	
 	if( how == NULL ) {
 		// if late materializing, just use the value from the cluster ad.
@@ -4148,7 +4070,6 @@ int SubmitHash::SetJobDeferral()
 		// We will only be able to validate the deferral time when the
 		// Starter evaluates it and tries to set the timer for it
 		//
-	MyString buffer;
 	char *temp = submit_param( SUBMIT_KEY_DeferralTime, ATTR_DEFERRAL_TIME );
 	if ( temp != NULL ) {
 		// make certain the input is valid
@@ -4513,7 +4434,6 @@ int SubmitHash::SetJobMachineAttrs()
 	RETURN_IF_ABORT();
 	MyString job_machine_attrs = submit_param_mystring( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
 	MyString history_len_str = submit_param_mystring( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
-	MyString buffer;
 
 	if( job_machine_attrs.Length() ) {
 		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.Value());
@@ -4560,18 +4480,16 @@ int SubmitHash::SetExecutable()
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
 	MyString	full_ename;
-	MyString buffer;
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
-	// In vm universe and ec2/boinc grid jobs, 'Executable'
+	// In vm universe and ec2/gce grid jobs, 'Executable'
 	// parameter is not a real file but just the name of job.
 	if ( JobUniverse == CONDOR_UNIVERSE_VM ||
 		 ( JobUniverse == CONDOR_UNIVERSE_GRID &&
 		   ( gridType == "ec2" ||
 			 gridType == "gce"  ||
-			 gridType == "azure"  ||
-			 gridType == "boinc" ) ) ) {
+			 gridType == "azure" ) ) ) {
 		ignore_it = true;
 		role = SFR_PSEUDO_EXECUTABLE;
 	}
@@ -4869,7 +4787,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, azure, or boinc\n",
+				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -4949,7 +4867,6 @@ int SubmitHash::SetUniverse()
 int SubmitHash::SetParallelParams()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	bool wantParallel = false;
 	job->LookupBool(ATTR_WANT_PARALLEL_SCHEDULING, wantParallel);
@@ -5192,7 +5109,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_EC2IamProfileName, ATTR_EC2_IAM_PROFILE_NAME, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2ParamNames, ATTR_EC2_PARAM_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_EC2TagNames, ATTR_EC2_TAG_NAMES, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_BoincAuthenticatorFile,ATTR_BOINC_AUTHENTICATOR_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAuthFile, ATTR_GCE_AUTH_FILE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceAccount, ATTR_GCE_ACCOUNT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_GceImage, ATTR_GCE_IMAGE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -5222,9 +5138,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_VM_XEN_ROOT, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_vm},
 	{SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_vm},
 	{SUBMIT_KEY_VM_DISK, NULL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_vm},
-	{SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_vm},
-	{SUBMIT_KEY_VM_VMWARE_SNAPSHOT_DISK, NULL, SimpleSubmitKeyword::f_as_bool | SimpleSubmitKeyword::f_special_vm},
-	{SUBMIT_KEY_VM_VMWARE_DIR, VMPARAM_VMWARE_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_vm},
 	// invoke SetJavaVMArgs
 	{SUBMIT_KEY_JavaVMArguments1, ATTR_JOB_JAVA_VM_ARGS1, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_java},
 	{SUBMIT_KEY_JavaVMArgs, ATTR_JOB_JAVA_VM_ARGS1, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_alt_err | SimpleSubmitKeyword::f_special_java},
@@ -5692,8 +5605,7 @@ int SubmitHash::SetImageSize()
 				if (JobUniverse != CONDOR_UNIVERSE_GRID ||
 					(gridType != "ec2" &&
 					 gridType != "gce" &&
-					 gridType != "azure" &&
-					 gridType != "boinc"))
+					 gridType != "azure"))
 				{
 					exe_size_kb = calc_image_size_kb(buffer.c_str());
 				}
@@ -5870,7 +5782,6 @@ int SubmitHash::SetFileOptions()
 {
 	RETURN_IF_ABORT();
 	char *tmp;
-	MyString strbuffer;
 
 	tmp = submit_param( SUBMIT_KEY_FileRemaps, ATTR_FILE_REMAPS );
 	if(tmp) {
@@ -6563,28 +6474,6 @@ int SubmitHash::SetRequirements()
 			// close of the file transfer requirements
 			answer += close_op;
 		}
-
-		if (JobUniverse == CONDOR_UNIVERSE_VM) {
-			bool vm_should_transfer = false;
-			if (job->LookupBool(VMPARAM_VMWARE_TRANSFER, vm_should_transfer)) {
-				if ( ! vm_should_transfer) {
-					// if not transfering, we depend on a shared file system, so we
-					// have to check for a matching FileSystemDomain 
-					if ( ! checks_fsdomain) {
-						answer += " && ";
-						answer += domain_check;
-						checks_fsdomain = true;
-					}
-					if ( ! job->Lookup(ATTR_FILE_SYSTEM_DOMAIN)) {
-						auto_free_ptr fs_domain(param("FILESYSTEM_DOMAIN"));
-						if (fs_domain) {
-							AssignJobString(ATTR_FILE_SYSTEM_DOMAIN, fs_domain);
-							RETURN_IF_ABORT();
-						}
-					}
-				}
-			}
-		}
 	}
 
 		//
@@ -6854,7 +6743,6 @@ int SubmitHash::SetVMParams()
 	bool param_exists = false;
 
 	auto_free_ptr tmp_ptr(NULL);
-	MyString buffer;
 
 	// by the time we get here, we have already verified that vmtype is non-empty
 	tmp_ptr.set(submit_param(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE));
@@ -7080,169 +6968,9 @@ int SubmitHash::SetVMParams()
 	} else if (vmtype == CONDOR_VM_UNIVERSE_VMWARE) {
 		push_error(stderr, "A vm_type of 'vmware' is no longer supported\n");
 		ABORT_AND_RETURN(1);
-		bool knob_exists = false;
-		bool vmware_should_transfer_files = submit_param_bool(SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES, NULL, false, &knob_exists);
-		if (knob_exists) {
-			AssignJobVal(VMPARAM_VMWARE_TRANSFER, vmware_should_transfer_files);
-		} else if ( ! job->LookupBool(VMPARAM_VMWARE_TRANSFER, vmware_should_transfer_files)) {
-			MyString err_msg;
-			err_msg = "\nERROR: You must explicitly specify "
-				"\"vmware_should_transfer_files\" "
-				"in your submit description file. "
-				"You need to define either: "
-				"\"vmware_should_transfer_files = YES\" or "
-				" \"vmware_should_transfer_files = NO\". "
-				"If you define \"vmware_should_transfer_files = YES\", " 
-				"vmx and vmdk files in the directory of \"vmware_dir\" "
-				"will be transfered to an execute machine. "
-				"If you define \"vmware_should_transfer_files = NO\", "
-				"all files in the directory of \"vmware_dir\" should be "
-				"accessible with a shared file system\n";
-			print_wrapped_text( err_msg.c_str(), stderr );
-			ABORT_AND_RETURN(1);
-		}
-
-
-		/* In default, vmware vm universe uses snapshot disks.
-		 * However, when a user job is so IO-sensitive that 
-		 * the user doesn't want to use snapshot, 
-		 * the user must use both 
-		 * vmware_should_transfer_files = YES and 
-		 * vmware_snapshot_disk = FALSE
-		 * In vmware_should_transfer_files = NO 
-		 * snapshot disks is always used.
-		 */
-		bool vmware_snapshot_disk = submit_param_bool(SUBMIT_KEY_VM_VMWARE_SNAPSHOT_DISK, NULL, false, &param_exists);
-		if (param_exists) {
-			if ( ! vmware_should_transfer_files && ! vmware_snapshot_disk) {
-				MyString err_msg;
-				err_msg = "\nERROR: You should not use both "
-					"vmware_should_transfer_files = FALSE and "
-					"vmware_snapshot_disk = FALSE. "
-					"Not using snapshot disk in a shared file system may cause "
-					"problems when multiple jobs share the same disk\n";
-				print_wrapped_text(err_msg.c_str(), stderr);
-				ABORT_AND_RETURN(1);
-			}
-			AssignJobVal(VMPARAM_VMWARE_SNAPSHOTDISK, vmware_snapshot_disk);
-		}
-
-		// vmware_dir is a directory that includes vmx file and vmdk files.
-		// Starting with 8.9, VMPARAM_VMWARE_DIR is not permitted to vary for procs in a cluster
-		// because we don't want to enum a directory at materialization time. so we set
-		// FACTORY.vm_input_files in the submit digest and use that instead of doing the directory walk
-		//
-		if (exists_macro_exact_no_default("FACTORY.vm_input_files", SubmitMacroSet)) {
-			// PRAGMA_REMIND("TODO: check for a VMWARE_DIR that varies by ProcId")
-		} else {
-			auto_free_ptr vmware_dir(submit_param(SUBMIT_KEY_VM_VMWARE_DIR, VMPARAM_VMWARE_DIR));
-			if (vmware_dir) {
-				MyString f_dirname = full_path(vmware_dir, false);
-				check_and_universalize_path(f_dirname);
-
-				AssignJobString(VMPARAM_VMWARE_DIR, f_dirname.c_str());
-
-				StringList vm_input_files(NULL, ",");
-				Directory dir(f_dirname.c_str());
-				dir.Rewind();
-				while (dir.Next()) {
-					if (vmware_should_transfer_files || has_suffix(dir.GetFullPath(), ".vmx")) {
-						// The .vmx file is always transfered.
-						vm_input_files.append(dir.GetFullPath());
-					}
-				}
-
-				if ( ! vm_input_files.isEmpty()) {
-					tmp_ptr.set(vm_input_files.print_to_string());
-					set_submit_param("FACTORY.vm_input_files", tmp_ptr);
-				}
-			}
-		}
 	}
 
 	return 0;
-}
-
-// merge vm input files into the input files list, returning the count of files added.
-int SubmitHash::process_vm_input_files(StringList & input_files, long long * accumulate_size_kb)
-{
-	// we don't expect to be called for non-vm-universe.  but this double check is cheap.
-	if (JobUniverse != CONDOR_UNIVERSE_VM)
-		return 0;
-
-	int count = 0;
-	MyString tmp;
-
-	// first merge files from "FACTORY.vm_input_files" into input_files list
-	// NOTE: we assume that the files in the FACTORY.vm_input_files have 
-	auto_free_ptr vmware_dir_files(submit_param("FACTORY.vm_input_files"));
-	if (vmware_dir_files) {
-		StringList list(vmware_dir_files, ",");
-		for (char * file = list.first(); file != NULL; file = list.next()) {
-			file = trim_and_strip_quotes_in_place(file);
-
-			// Files that are not already in the input files list need to be processed.
-			if ( ! filelist_contains_file(file, &input_files, true)) {
-				tmp = file;
-				check_and_universalize_path(tmp);
-				input_files.append(tmp.c_str());
-				++count;
-
-				// check file access if the access checks have been enabled, and also
-				// invoke the fnCheckFiles callback if one exists.
-				//
-				check_open(SFR_VM_INPUT, tmp.c_str(), O_RDONLY);
-
-				// get file size, but only if the caller requests it.
-				// in practice, we will check the sizes of files here in submit
-				// but not when doing late materialization
-				if (accumulate_size_kb) {
-					*accumulate_size_kb += calc_image_size_kb(tmp.c_str());
-				}
-
-			}
-		}
-	}
-
-	// if this is not VMWARE, we are done, just return the number of files added to the list
-	if (YourStringNoCase(VMType.c_str()) != CONDOR_VM_UNIVERSE_VMWARE) {
-		return count;
-	}
-
-	// for VMWARE we want to scan the input files list and set two job attributes
-	// based on .vmx and .vmdk files we find in that list.
-	//
-	MyString vmx_file;
-	StringList vmdk_files;
-
-	for (const char * file = input_files.first(); file != NULL; file = input_files.next()) {
-		if (has_suffix(file, ".vmx")) {
-			if (vmx_file.empty()) {
-				vmx_file = condor_basename(file);
-			} else {
-				push_error(stderr, "multiple vmx files exist. Only one vmx file should be present.\n");
-				abort_code = 1;
-				return count;
-			}
-		} else if (has_suffix(file, ".vmdk")) {
-			vmdk_files.append(condor_basename(file));
-		}
-	}
-
-	if (vmx_file.empty()) {
-		push_error(stderr, "no vmx file for vmware can be found.\n");
-		abort_code = 1;
-		return count;
-	} else {
-		AssignJobString(VMPARAM_VMWARE_VMX_FILE, vmx_file.c_str());
-	}
-
-	auto_free_ptr tmp_ptr(vmdk_files.print_to_string());
-	if (tmp_ptr) {
-		AssignJobString(VMPARAM_VMWARE_VMDK_FILES, tmp_ptr);
-	}
-
-	return count;
 }
 
 int SubmitHash::process_container_input_files(StringList & input_files, long long * accumulate_size_kb) {
@@ -7415,12 +7143,6 @@ int SubmitHash::SetTransferFiles()
 		in_files_specified = true;
 	}
 	RETURN_IF_ABORT();
-
-	if (JobUniverse == CONDOR_UNIVERSE_VM) {
-		if (process_vm_input_files(input_file_list, pInputFilesSizeKb) > 0) {
-			in_files_specified = true;
-		}
-	}
 
 	if (IsContainerJob) {
 		if (process_container_input_files(input_file_list, pInputFilesSizeKb) > 0) {
@@ -8233,7 +7955,6 @@ int SubmitHash::set_cluster_ad(ClassAd * ad)
 
 int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 {
-	MyString buffer;
 	submit_username.clear();
 	if (username) { submit_username = username; }
 
@@ -8256,7 +7977,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 
 	// all jobs should end up with the same qdate, so we only query time once.
 	baseJob.Assign(ATTR_Q_DATE, submit_time);
-	baseJob.Assign(ATTR_COMPLETION_DATE, 0);
 	
 	// set all jobs submission method if s_method is defined
 	if ( s_method >= JOB_SUBMIT_METHOD_MIN)
@@ -8322,7 +8042,6 @@ int SubmitHash::init_base_ad(time_t submit_time_in, const char * username)
 	param_and_insert_attrs("SYSTEM_SUBMIT_ATTRS", submit_attrs);
 
 	if ( ! submit_attrs.empty()) {
-		MyString buffer;
 
 		for (classad::References::const_iterator it = submit_attrs.begin(); it != submit_attrs.end(); ++it) {
 			if (starts_with(*it,"+")) {
@@ -8478,12 +8197,6 @@ ClassAd* SubmitHash::make_job_ad (
 	JobDisableFileChecks = submit_param_bool(SUBMIT_CMD_skip_filechecks, NULL, false);
 	//PRAGMA_REMIND("TODO: several bits of grid code are ignoring JobDisableFileChecks and bypassing FnCheckFile, check to see if that is kosher.")
 
-#if !defined(WIN32)
-	SetRootDir();	// must be called very early
-	if (!clusterAd) { // if no clusterAd, we also want to check for access
-		if (check_root_dir_access()) { return NULL; }
-	}
-#endif
 	SetIWD();		// must be called very early
 
 	SetExecutable(); /* factory:ok */
@@ -9320,7 +9033,7 @@ void SubmitHash::warn_unused(FILE* out, const char *app)
 		// these are covered by the supression of warnings for dotted variables
 		// "FACTORY.Iwd", "FACTORY.Requirements", "FACTORY.AppendReq", "FACTORY.AppendRank", "FACTORY.CREDD_HOST",
 	};
-	for (int ii = 0; ii < COUNTOF(suppress); ++ii) {
+	for (size_t ii = 0; ii < COUNTOF(suppress); ++ii) {
 		increment_macro_use_count(suppress[ii], SubmitMacroSet);
 	}
 
@@ -9356,7 +9069,7 @@ void SubmitHash::dump(FILE* out, int flags)
 	hash_iter_delete(&it);
 }
 
-void SubmitHash::dump_templates(FILE* out, const char * category, int flags)
+void SubmitHash::dump_templates(FILE* out, const char * category, int /*flags*/)
 {
 	const MACRO_DEF_ITEM * pdmt = find_macro_def_item("$", SubmitMacroSet, 0);
 	if ( ! pdmt || ! pdmt->def)
@@ -9450,7 +9163,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 			pseudo = true;
 		} else if (uni == CONDOR_UNIVERSE_GRID) {
 			YourStringNoCase gridType(sub_type.c_str());
-			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure" || sub_type == "boinc");
+			pseudo = (sub_type == "ec2" || sub_type == "gce" || sub_type == "azure");
 		}
 	}
 

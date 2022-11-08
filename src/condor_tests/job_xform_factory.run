@@ -1,0 +1,97 @@
+#! /usr/bin/env perl
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use CheckOutputFormats; # for emit_dag_files
+use strict;
+use warnings;
+
+#testreq: personal
+my $config = <<'CONDOR_TESTREQ_CONFIG';
+  # we don't need to run jobs, so just start a schedd
+  #DAEMON_LIST = MASTER SCHEDD
+  JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) Singularity
+  JOB_TRANSFORM_Singularity @=end
+    REQUIREMENTS SingularityImage isnt undefined
+    SET  TransferInput = "$(My.TransferInput),$(My.SingularityImage)"
+    SET  Requirements = $(MY.Requirments) && Target.HasSingularity
+  @end
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $testname = "job_xform_factory";
+
+###########  create submit file ##################
+my $pid = $$;
+my $submit_content = 
+"executable = x_sleep.pl
+arguments = 600
+my.singularityimage = \"si\"
+requirements = TARGET.NoMatch
+queue transfer_input_files in (aaa, bbb)
+";
+my $submitfile = "$testname$pid.sub";
+emit_dag_files($testname, $submit_content, $pid);
+
+print "========== submit two jobs with different transfer_input lists ==========\n";
+
+my @content = `condor_submit $submitfile -factory`;
+my $res = count_jobs(\@content);
+if ($res eq 2) {
+	RegisterResult(1, check_name=>"submit-test", test_name=>$testname);
+} else {
+	print "ERROR: there should be 2 jobs in the queue\n";
+	print @content;
+	RegisterResult(0, check_name=>"submit-test", test_name=>$testname);
+}
+
+@content = `condor_q -af ProcId TransferInput`;
+$res = 0;
+if ($content[0] =~ /^0 aaa,si/) { $res += 1; }
+if ($content[1] =~ /^1 bbb,si/) { $res += 1; }
+if ($res eq 2) {
+	RegisterResult(1, check_name=>"transform-ok", test_name=>$testname);
+} else {
+	print "ERROR: unexpected value for TransferInput of the jobs\n";
+	print @content;
+	print "EXPECTED : \n\t0 aaa,si\n\t1 bbb,si\n";
+	RegisterResult(0, check_name=>"transform-ok", test_name=>$testname);
+}
+
+# all done, cleanup and exit
+`condor_rm -all`;
+CondorTest::EndTest();
+exit(0);
+
+sub count_jobs {
+	my @content = @{$_[0]};
+	my $res = -1;
+	for my $i (0..(scalar @content)-1) {
+		# extract count of jobs N from the line that says "submitted N jobs"
+		if ($content[$i] =~ /([0-9]+)\s*job\(?s\)?/) {
+			$res = $1;
+			last;
+		}
+	}
+	return $res;
+}
+

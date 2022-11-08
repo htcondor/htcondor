@@ -75,7 +75,7 @@ class ClassAd : public ExprTree
 		/**@name Constructors/Destructor */
 		//@{
 		/// Default constructor 
-		ClassAd ();
+		ClassAd () : alternateScope(nullptr), do_dirty_tracking(false), chained_parent_ad(nullptr), parentScope(nullptr) {}
 
 		/** Copy constructor
             @param ad The ClassAd to copy
@@ -463,13 +463,9 @@ class ClassAd : public ExprTree
 			@return true if attrName evaluated to a number, false otherwise.
 		*/
 		bool EvaluateAttrNumber(const std::string &attr,double& realValue) const;
-		bool LookupFloat(const std::string &name, float &value) const
-		{
-			double dval;
-			bool rc = EvaluateAttrNumber(name, dval);
-			if ( rc ) value = dval;
-			return rc;
-		}
+
+		// Should really be called LookupDouble, but I'm afraid
+		// to rename this everyone right now
 		bool LookupFloat(const std::string &name, double &value) const
 		{ return EvaluateAttrNumber(name, value); }
 
