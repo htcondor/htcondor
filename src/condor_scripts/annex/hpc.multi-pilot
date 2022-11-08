@@ -19,7 +19,7 @@ fi
 
 # Start the pilot on each node in this job.
 for host in `cat "${PILOT_DIR}/nodelist"`; do
-    ssh ${host} "${PILOT_BIN}" "${PILOT_DIR}" &
+    ssh ${host} "${PILOT_BIN}" "${PILOT_DIR}" "${CUDA_VISIBLE_DEVICES}" &
 done
 
 # Wait for every node's pilot to finish.
