@@ -1622,89 +1622,26 @@ int SubmitHash::SetStderr()
 	return 0;
 }
 
-
-class SubmitHashEnvFilter 
+// filter for use with Env::Import that can filter based on StringList patterns
+// and on values that cannot be expressed in the given env format
+class SubmitHashEnvFilter : public WhiteBlackEnvFilter
 {
 public:
-	SubmitHashEnvFilter( Env &env, bool env1, bool env2 )
-			: m_env(env), m_env1( env1 ), m_env2( env2 ) {
-		return;
-	};
+	bool m_env1=false;
+	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
-	bool operator()( const MyString &var, const MyString &val );
-
-	// take a string of the form  x* !y* *z* !bar
-	// and split it into two string lists
-	// items that start with ! go into the blacklist (without the leading !)
-	// all other items go into the whitelist.  leading and trailing whitespace is trimmed
-	// comma, semicolon and whitespace are item steparators
-	void AddToImportWhiteBlackList(const char * list) {
-		StringTokenIterator it(list,40,",; \t\r\n");
-		MyString name;
-		for (const char * str = it.first(); str != NULL; str = it.next()) {
-			if (*str == '!') {
-				name = str+1; name.trim();
-				if (!name.empty()) {
-					m_black.append(name.c_str());
-				}
-			} else {
-				name = str; name.trim();
-				if (!name.empty()) {
-					m_white.append(name.c_str());
-				}
-			}
+	bool operator()( const MyString &var, const MyString &val ) {
+		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
+			// We silently filter out anything that is not expressible
+			// in the 'environment1' syntax.  This avoids breaking
+			// our ability to submit jobs to older startds that do
+			// not support 'environment2' syntax.
+			return false;
 		}
+		return WhiteBlackEnvFilter::operator()(var, val);
 	}
-	// clear the white and black lists for Import()
-	void ClearImportWhiteBlackList() {
-		m_black.clearAll();
-		m_white.clearAll();
-	}
-private:
-	Env &m_env;
-	bool m_env1;
-	bool m_env2;
-	mutable StringList m_black;
-	mutable StringList m_white;
 };
-bool SubmitHashEnvFilter::operator()( const MyString & var, const MyString &val )
-{
-	if( !m_env2 && m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
-		// We silently filter out anything that is not expressible
-		// in the 'environment1' syntax.  This avoids breaking
-		// our ability to submit jobs to older startds that do
-		// not support 'environment2' syntax.
-		return false;
-	}
-	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
-		// Silently filter out environment values containing
-		// unsafe characters.  Example: newlines cause the
-		// schedd to EXCEPT in 6.8.3.
-		return false;
-	}
-#ifdef WIN32
-	// on Windows, we have to do case-insensitive check for existance, luckily
-	// we have m_sorted_varnames for just this purpose
-	if (m_env.m_sorted_varnames.find(var.Value()) != m_env.m_sorted_varnames.end())
-#else
-	MyString existing_val;
-	if ( m_env.GetEnv( var, existing_val ) )
-#endif
-	{
-		// Don't override submit file environment settings --
-		// check if environment variable is already set.
-		return false;
-	}
-	// if there is a blacklist, and this nmake matches, filter it
-	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.c_str())) {
-		return false;
-	}
-	// if there is a whitelist and this name does not match, filter it
-	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.c_str())) {
-		return false;
-	}
-	return true;
-}
+
 
 int SubmitHash::SetEnvironment()
 {
@@ -1777,15 +1714,14 @@ int SubmitHash::SetEnvironment()
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
-				SubmitHashEnvFilter envFilter(env, env1, env2);
+				SubmitHashEnvFilter envFilter(env1 && !env2);
 				env.Import(envFilter);
 			}
 		} else {
 			// getenv is not a boolean, it must be a blacklist/whitelist
-			SubmitHashEnvFilter envFilter(env, env1, env2);
-			envFilter.AddToImportWhiteBlackList(envlist);
+			SubmitHashEnvFilter envFilter(env1 && ! env2);
+			envFilter.AddToWhiteBlackList(envlist);
 			env.Import(envFilter);
-			envFilter.ClearImportWhiteBlackList();
 		}
 	}
 

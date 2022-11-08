@@ -1398,10 +1398,17 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		setup_env.SetEnv("_CONDOR_SLOT_NAME",slot_name.c_str());
 	}
 
-    int setup_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
-    if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
-        setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
-    }
+	int setup_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	bool inherit_starter_env = false;
+	auto_free_ptr envlist(param("JOB_INHERITS_STARTER_ENVIRONMENT"));
+	if (envlist && ! string_is_boolean_param(envlist, inherit_starter_env)) {
+		WhiteBlackEnvFilter filter(envlist);
+		setup_env.Import(filter);
+		inherit_starter_env = false; // make sure that CreateProcess doesn't inherit again
+	}
+	if ( ! inherit_starter_env) {
+		setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
+	}
 
 	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
