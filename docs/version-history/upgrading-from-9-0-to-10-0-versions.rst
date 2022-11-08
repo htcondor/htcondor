@@ -33,6 +33,11 @@ is a list of items that administrators should be aware of.
   on a specific GPU or type of GPU.
   :jira:`953`
 
-
--  Item 1 :jira:`0000`
--  Item 2
+- We have updated to using the PCRE2 regular expression library. This library
+  is more strict with interpreting regular expression. If the regular
+  expressions are properly constructed, the will be no difference in
+  interpretation. However, some administators have reported that expressions
+  in their condor mapfile were rejected because they wanted to match the ``-``
+  character in a character class and the ``-`` was not the last character
+  specified in the character class.
+  :jira:`1087`
