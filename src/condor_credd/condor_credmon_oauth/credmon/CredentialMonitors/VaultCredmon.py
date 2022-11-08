@@ -57,7 +57,7 @@ class vaulthost:
         if self.pool != None:
             self.pool.close()
         self.pool = urllib3.HTTPSConnectionPool(self.ips[0],
-                            timeout=urllib3.util.Timeout(connect=2),
+                            timeout=urllib3.util.Timeout(connect=2, read=10),
                             assert_hostname=self.host, port=self.port,
                             ca_cert_dir=self.capath, ca_certs=self.cafile)
 
