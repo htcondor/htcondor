@@ -15,7 +15,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
+  OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
+  :jira:`1410`
 
 Bugs Fixed:
 

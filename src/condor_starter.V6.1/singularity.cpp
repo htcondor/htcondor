@@ -16,6 +16,7 @@
 #include "stat_wrapper.h"
 #include "stat_info.h"
 #include "condor_attributes.h"
+#include "directory.h"
 
 using namespace htcondor;
 
@@ -242,6 +243,7 @@ Singularity::setup(ClassAd &machineAd,
 	// Singularity and Apptainer prohibit setting HOME.  Just delete it
 	job_env.DeleteEnv("HOME");
 
+	// Bind-mount the execute directory.
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
@@ -261,13 +263,33 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--pwd");
 		sing_args.AppendArg(job_iwd.c_str());
 	}
-
 	sing_args.AppendArg("-B");
 	sing_args.AppendArg(bind_spec.c_str());
 
+	// if the startd has assigned us a gpu, add --nv to the sing exec
+	// arguments to mount the nvidia devices
+	// ... and if the host has OpenCL drivers, bind-mount the drivers
+	// so that OpenCL programs can also run in the container.
+	StringList additional_bind_mounts;
+	std::string assignedGpus;
+	machineAd.LookupString("AssignedGPUs", assignedGpus);
+	if (assignedGpus.length() > 0) {
+		sing_args.AppendArg("--nv");
+		static const char* open_cl_path = "/etc/OpenCL/vendors";
+		if (IsDirectory(open_cl_path)) {
+			additional_bind_mounts.append(open_cl_path);
+		}
+	}
+
+	// Now handle requested bind-mounts.  We will mount everything specified with
+	// SINGULARITY_BIND_EXPR, plus any mounts in additional_bind_mounts list.
 	if (param_eval_string(bind_spec, "SINGULARITY_BIND_EXPR", "SingularityBind", &machineAd, &jobAd)) {
 		dprintf(D_FULLDEBUG, "Parsing bind mount specification for singularity: %s\n", bind_spec.c_str());
 		StringList binds(bind_spec.c_str());
+		// Use create_union to add additional mounts, since create_union prevents
+		// duplicates - Singularity outputs warnings about duplicate mounts to stderr, so
+		// let's try to avoid that.
+		binds.create_union(additional_bind_mounts, false);  // 'false' for anycase means case-sensitive strings
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
@@ -345,14 +367,6 @@ Singularity::setup(ClassAd &machineAd,
 		dprintf(D_ALWAYS,"singularity: failed to parse extra arguments: %s\n",
 		args_error.c_str());
 		return Singularity::FAILURE;
-	}
-
-	// if the startd has assigned us a gpu, add --nv to the sing exec
-	// arguments to mount the nvidia devices
-	std::string assignedGpus;
-	machineAd.LookupString("AssignedGPUs", assignedGpus);
-	if  (assignedGpus.length() > 0) {
-		sing_args.AppendArg("--nv");
 	}
 
 	sing_args.AppendArg(image.c_str());
