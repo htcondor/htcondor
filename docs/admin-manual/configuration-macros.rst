@@ -429,7 +429,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     amount of free space on your execute partition, minus ``RESERVED_DISK``.
 
 :macro-def:`RESERVED_DISK`
-    Determines how much disk space (in kB) you want to reserve for your own
+    Determines how much disk space (in mB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
