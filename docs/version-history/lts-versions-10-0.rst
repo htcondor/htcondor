@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug that prevented the starter from properly mounting
+  thinpool provisioned ephemeral scratch directories.
+  :jira:`1419`
 
 .. _lts-version-history-1000:
 
