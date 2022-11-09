@@ -31,6 +31,10 @@ New Features:
   and ``osdf://`` URLs.
   :jira:`1332`
 
+- OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
+  OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
+  :jira:`1410`
+
 - The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
   previously it was 0.
   :jira:`1393`
