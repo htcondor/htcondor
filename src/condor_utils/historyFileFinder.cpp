@@ -36,10 +36,10 @@
 
 #include "historyFileFinder.h"
 
-static bool isHistoryBackup(const char *fullFilename, time_t *backup_time);
+static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base);
 static int compareHistoryFilenames(const void *item1, const void *item2);
 
-static  char *BaseJobHistoryFileName = NULL;
+static const char* qsort_file_base = NULL;
 
 extern void freeHistoryFilesList(const char ** files)
 {
@@ -56,7 +56,7 @@ extern void freeHistoryFilesList(const char ** files)
 // if the history configuration is invalid, then NULL is returned.
 // if the history configuration is valid, but there are no history files
 // then an allocated pointer is still returned, but *pnumHistoryFiles will be 0
-const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
+const char **findHistoryFiles(const char *passedFileName, int *pnumHistoryFiles)
 {
     char **historyFiles = NULL;
     bool foundCurrent = false; // true if 'current' history file (i.e. without extension) exists
@@ -64,18 +64,16 @@ const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
     int  numFiles = 0;
     StringList tmpList; // temporarily hold the filenames so we don't have to iterate the directory twice.
 
-    if (BaseJobHistoryFileName) { free(BaseJobHistoryFileName); }
-    BaseJobHistoryFileName = param(paramName);
-	if ( BaseJobHistoryFileName == NULL ) {
+	if ( passedFileName == NULL ) {
 		return NULL;
 	}
-    char *historyDir = condor_dirname(BaseJobHistoryFileName);
-    const char * historyBase = condor_basename(BaseJobHistoryFileName);
+    char *historyDir = condor_dirname(passedFileName);
+    const char * historyBase = condor_basename(passedFileName);
 
     if (historyDir != NULL) {
         Directory dir(historyDir);
         int cchBaseName = strlen(historyBase);
-        int cchBaseFileName = strlen(BaseJobHistoryFileName);
+        int cchBaseFileName = strlen(passedFileName);
 
         // We walk through once and count the number of history file backups
         // and keep track of all of the file extensions for backup files.
@@ -91,7 +89,7 @@ const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
            #endif
                 numFiles++;
                 foundCurrent = true;
-            } else if (isHistoryBackup(current_filename, NULL)) {
+            } else if (isHistoryBackup(current_filename, NULL, historyBase)) {
                 numFiles++;
                 const char * pextra = current_filename + cchBaseName;
                 tmpList.append(pextra);
@@ -111,20 +109,21 @@ const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
         char * p = (char*)historyFiles + sizeof(const char*) * (numFiles+1); // start at first byte after the char* array
         for (const char * ext = tmpList.first(); ext != NULL; ext = tmpList.next()) {
             historyFiles[fileIndex++] = p;
-            strcpy(p, BaseJobHistoryFileName);
+            strcpy(p, passedFileName);
             strcpy(p + cchBaseFileName, ext);
             p += cchBaseFileName + strlen(ext) + 1;
         }
         // if the base history file was found in the directory, add it to the list also
         if (foundCurrent) {
             historyFiles[fileIndex++] = p;
-            strcpy(p, BaseJobHistoryFileName);
+            strcpy(p, passedFileName);
         }
         historyFiles[fileIndex] = NULL; // put a NULL at the end of the array.
 
         if (numFiles > 2) {
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
+            qsort_file_base = historyBase;
             qsort(historyFiles, numFiles-1, sizeof(char*), compareHistoryFilenames);
         }
         
@@ -137,11 +136,10 @@ const char **findHistoryFiles(const char *paramName, int *pnumHistoryFiles)
 // Returns true if the filename is a history file, false otherwise.
 // If backup_time is not NULL, returns the time from the timestamp in
 // the file.
-static bool isHistoryBackup(const char *fullFilename, time_t *backup_time)
+static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base)
 {
     bool       is_history_filename;
     const char *filename;
-    const char *history_base;
     int        history_base_length;
 
     if (backup_time != NULL) {
@@ -149,7 +147,6 @@ static bool isHistoryBackup(const char *fullFilename, time_t *backup_time)
     }
     
     is_history_filename = false;
-    history_base        = condor_basename(BaseJobHistoryFileName);
     history_base_length = strlen(history_base);
     filename            = condor_basename(fullFilename);
 
@@ -181,8 +178,8 @@ static int compareHistoryFilenames(const void *item1, const void *item2)
 {
     time_t time1, time2;
 
-    isHistoryBackup(*(const char * const *) item1, &time1);
-    isHistoryBackup(*(const char * const *) item2, &time2);
+    isHistoryBackup(*(const char * const *) item1, &time1, qsort_file_base);
+    isHistoryBackup(*(const char * const *) item2, &time2, qsort_file_base);
     return time1 - time2;
 }
 

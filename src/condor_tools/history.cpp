@@ -897,8 +897,9 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
         int numHistoryFiles;
         const char **historyFiles;
 
-		const char * knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
-        historyFiles = findHistoryFiles(knob, &numHistoryFiles);
+		const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
+		auto_free_ptr history_file(param(knob));
+        historyFiles = findHistoryFiles(history_file.ptr(), &numHistoryFiles);
 		if (!historyFiles) {
 			fprintf( stderr, "Error: No history file is defined\n");
 			fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "

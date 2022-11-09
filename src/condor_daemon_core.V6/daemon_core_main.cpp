@@ -1754,7 +1754,8 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 	int numHistoryFiles = 0;
 	const char **historyFiles = 0;
 
-	historyFiles = findHistoryFiles(history_file_param, &numHistoryFiles);
+	auto_free_ptr history_file(param(history_file_param));
+	historyFiles = findHistoryFiles(history_file.ptr(), &numHistoryFiles);
 
 	if (!historyFiles) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
