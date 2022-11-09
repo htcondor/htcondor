@@ -182,7 +182,7 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
     }
 
     if (-1 == chown(mountpoint.c_str(), get_user_uid(), get_user_gid())) {
-        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to condor user: %s (errno=%d)",
+        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user: %s (errno=%d)",
             strerror(errno), errno);
         return false;
     }
