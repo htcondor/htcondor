@@ -635,7 +635,7 @@ def annex_inner_func(
 
     enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
     if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
-        if len(annex_jobs) == 0:
+        if not annex_jobs:
             raise RuntimeError(
                 f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
             )
@@ -643,7 +643,7 @@ def annex_inner_func(
             f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
         )
 
-    if test is not None and test == 2:
+    if test == 2:
         return
 
     # Extract the .sif file from each job.
