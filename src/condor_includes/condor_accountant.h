@@ -59,8 +59,10 @@ public:
   double GetWeightedResourcesUsed(const std::string& CustomerName);
   double GetPriority(const std::string& CustomerName); // get priority for a customer
   int   GetCeiling(const std::string& CustomerName); // get Ceiling for a customer
+  int   GetFloor(const std::string& CustomerName);  // get Floor for a customer
   void  SetPriority(const std::string& CustomerName, double Priority); // set priority for a customer
   void  SetCeiling(const std::string& CustomerName, int Ceiling); // set Ceiling for a customer
+  void  SetFloor(const std::string& CustomerName, int Floor); // set Floor for a customer
 
   void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
