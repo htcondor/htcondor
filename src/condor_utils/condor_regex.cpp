@@ -95,7 +95,7 @@ Regex::compile(const std::string & pattern,
 
 // Make sure this is an exact copy of match() before the final purge.
 bool
-Regex::match_str(const std::string & string, ExtArray<std::string> * groups) {
+Regex::match_str(const std::string & string, std::vector<std::string> * groups) {
 	if ( ! this->isInitialized() ) {
 		return false;
 	}
@@ -107,9 +107,11 @@ Regex::match_str(const std::string & string, ExtArray<std::string> * groups) {
 
 	PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 	if (NULL != groups) {
+		groups->clear();
 		for (int i = 0; i < rc; i++) {
-			(*groups)[i] = string.substr(static_cast<int>(ovector[i * 2]),
-			                             static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2]));
+			groups->emplace_back(
+					string.substr(static_cast<int>(ovector[i * 2]), 
+						static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2])));
 		}
 	}
 
@@ -118,8 +120,7 @@ Regex::match_str(const std::string & string, ExtArray<std::string> * groups) {
 }
 
 bool
-Regex::match(const MyString & string,
-			 ExtArray<MyString> * groups)
+Regex::match(const MyString & string, ExtArray<MyString> *groups)
 {
 	if ( ! this->isInitialized() ) {
 		return false;
