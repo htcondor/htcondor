@@ -49,6 +49,7 @@ def the_condor(test_dir, test_config):
 @action
 def test_results(the_condor):
     (Path( os.environ['HOME'] ) / '.hpc-annex').mkdir(parents=True, exist_ok=True)
+    (Path( os.environ['HOME'] ) / '.condor').mkdir(parents=True, exist_ok=True)
 
     # This test depends on test_htcondor_annex_create_constraints.py passing.
     args = ['htcondor', 'annex', 'create', 'example', '--token_file', '/dev/null', '--test', '2', 'wholenode@anvil', '--nodes', '2']
