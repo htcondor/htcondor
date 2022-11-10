@@ -6077,12 +6077,20 @@ These settings affect the *condor_starter*.
     the submit file, the user's setting takes precedence.
 
 :macro-def:`JOB_INHERITS_STARTER_ENVIRONMENT`
-    A boolean value that defaults to ``False``. When ``True``, it causes
-    jobs to inherit all environment variables from the
-    *condor_starter*. When the user job and/or
-    ``STARTER_JOB_ENVIRONMENT`` define an environment variable that is
-    in the *condor_starter* 's environment, the setting from the
-    *condor_starter* 's environment is overridden.
+    A matchlist or boolean value that defaults to ``False``. When set to 
+    a matchlist it causes jobs to inherit all environment variables from the
+    *condor_starter* that are selected by the match list and not already defined
+    in the job ClassAd or by the ``STARTER_JOB_ENVIRONMENT`` configuration variable.
+
+    A matchlist is a comma, semicolon or space separated list of environment variable names
+    and name patterns that match or reject names.
+    Matchlist members are matched case-insensitively to each name
+    in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
+    character which matches anything at that position.  Members can have two ``*`` characters if one of them
+    is at the end. Members can be prefixed with ``!``
+    to force a matching environment variable to not be imported.  The order of members in the Matchlist
+    has no effect on the result.  For backward compatiblity a single value of ``True`` behaves as if the value
+    was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
 :macro-def:`NAMED_CHROOT`
     A comma and/or space separated list of full paths to one or more
@@ -9655,17 +9663,6 @@ machine within the pool. They specify items related to the
     A boolean value that defaults to ``False``, causing HTCondor to free
     the memory of a vm universe job when the job is suspended. When
     ``True``, the memory is not freed.
-
-:macro-def:`VM_UNIV_NOBODY_USER`
-    Identifies a login name of a user with a home directory that may be
-    used for job owner of a vm universe job. The nobody user normally
-    utilized when the job arrives from a different UID domain will not
-    be allowed to invoke a VMware virtual machine.
-
-:macro-def:`ALWAYS_VM_UNIV_USE_NOBODY`
-    A boolean value that defaults to ``False``. When ``True``, all vm
-    universe jobs (independent of their UID domain) will run as the user
-    defined in ``VM_UNIV_NOBODY_USER``.
 
 :macro-def:`VM_NETWORKING`
     A boolean variable describing if networking is supported. When not

@@ -1381,10 +1381,20 @@ Scheduler::count_jobs()
 	if (FlockCollectors) {
 		FlockCollectors->rewind();
 		Daemon *daemon;
+		StringList effectFlockList;
+		int currLevel = 0;
 		while (FlockCollectors->next(daemon)) {
 			auto col = static_cast<DCCollector*>(daemon);
 			FlockPools.insert(col->name());
+			if (currLevel < FlockLevel)
+				effectFlockList.append(col->addr());
+			++currLevel;
 		}
+
+		if (!effectFlockList.isEmpty()) {
+			auto_free_ptr flockList(effectFlockList.print_to_string());
+			cad->Assign(ATTR_EFFECTIVE_FLOCK_LIST, flockList.ptr());
+		} else { cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST); }
 	}
 
 	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
@@ -1654,6 +1664,7 @@ Scheduler::count_jobs()
 			 num_updates, NumSubmitters );
 
 	cad->Delete(ATTR_CAPABILITY);
+	cad->Delete(ATTR_EFFECTIVE_FLOCK_LIST);
 
 	// send the schedd ad to our flock collectors too, so we will
 	// appear in condor_q -global and condor_status -schedd
@@ -10327,21 +10338,6 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 			int num_restarts = 0;
 			GetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, &num_restarts);
 			SetAttributeInt(cluster, proc, ATTR_NUM_RESTARTS, ++num_restarts);
-
-			GetAttributeString(cluster, proc, ATTR_JOB_VM_TYPE, vmtype);
-			if( strcasecmp(vmtype.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == 0 ) {
-				// In vmware vm universe, vmware disk may be 
-				// a sparse disk or snapshot disk. So we can't estimate the disk space 
-				// in advanace because the sparse disk or snapshot disk will 
-				// grow up while running a VM.
-				// So we will just add 100MB to disk space.
-				int vm_disk_space = 0;
-				GetAttributeInt(cluster, proc, ATTR_DISK_USAGE, &vm_disk_space);
-				if( vm_disk_space > 0 ) {
-					vm_disk_space += 100*1024;
-				}
-				SetAttributeInt(cluster, proc, ATTR_DISK_USAGE, vm_disk_space);
-			}
 		}
 	}
 }
@@ -11505,8 +11501,6 @@ Scheduler::child_exit(int pid, int status)
 	ASSERT(srec);
 
 	if( srec->match ) {
-		match_rec *mrec = srec->match;
-
 		if (srec->exit_already_handled && (srec->match->keep_while_idle == 0)) {
 			DelMrec( srec->match );
 			srec->match = NULL;

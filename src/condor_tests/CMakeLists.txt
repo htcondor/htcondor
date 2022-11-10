@@ -198,6 +198,7 @@ endif ()
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
@@ -281,15 +282,6 @@ endif()
 			condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 		endif()
 	endif(LINUX)
-
-	##########################################################
-	# feature specific tests
-	if (HAVE_VMWARE)
-		condor_pl_test(job_vmu_basic "VM Universe smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_basic.sh")
-		# cdrom xfer bits no longer supported.
-		# condor_pl_test(job_vmu_network "VM Universe networking test" "quick;ctest")
-		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_ckpt.sh")
-	endif(HAVE_VMWARE)
 
 	##########################################################
 	# now all the common tests.

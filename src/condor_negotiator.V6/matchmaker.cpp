@@ -535,8 +535,11 @@ initialize (const char *neg_name)
             (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler,
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_CEILING, "SetCeiling",
-            (CommandHandlercpp) &Matchmaker::SET_CEILING_commandHandler,
+            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
 			"SET_CEILING_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (SET_FLOOR, "SetFloor",
+            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
+			"SET_FLOOR_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
             (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler,
 			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
@@ -1109,23 +1112,30 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 }
 
 int Matchmaker::
-SET_CEILING_commandHandler (int /*command*/, Stream *stream) {
-	int	ceiling;
+SET_CEILING_or_FLOOR_commandHandler (int command, Stream *stream) {
+	int	value;
     std::string submitter;
 
 	// read the required data off the wire
 	if (!stream->get(submitter) 	||
-		!stream->get(ceiling) 	||
+		!stream->get(value) 	||
 		!stream->end_of_message())
 	{
-		dprintf (D_ALWAYS, "Could not read submitter name and ceilng\n");
+		dprintf (D_ALWAYS, "SET_CEILING_or_FLOOR: Could not read submitter name and ceiling/floor\n");
 		return FALSE;
 	}
 
 	// set the ceiling
-	dprintf(D_ALWAYS,"Setting the celing of %s to %d\n", submitter.c_str(), ceiling);
-	accountant.SetCeiling(submitter, ceiling);
+	if (command == SET_CEILING) {
+		dprintf(D_ALWAYS,"Setting the ceiling of %s to %d\n", submitter.c_str(), value);
+		accountant.SetCeiling(submitter, value);
+	}
 	
+	// set the floor
+	if (command == SET_FLOOR) {
+		dprintf(D_ALWAYS,"Setting the floor of %s to %d\n", submitter.c_str(), value);
+		accountant.SetFloor(submitter, value);
+	}
 	return TRUE;
 }
 
@@ -1766,7 +1776,18 @@ negotiationTime ()
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case.
-        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
+
+		// If there are any submitters who have a floor defined, and their current usage is below
+		// their floor, negotiator for just those, and only up to their floor.
+		ClassAdListDoesNotDeleteAds submittersBelowFloor = findBelowFloorSubmitters(submitterAds);
+		if (submittersBelowFloor.Length() > 0) {
+			dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
+					submittersBelowFloor.Length());
+			negotiateWithGroup(true /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submittersBelowFloor);
+			dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
+		}
+
+        negotiateWithGroup(false /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
@@ -1785,7 +1806,23 @@ negotiationTime ()
 				if (autoregroup && (g == hgq_root_group)) {
 					name = nullptr;
 				}
-				negotiateWithGroup(cPoolsize,
+
+				ClassAdListDoesNotDeleteAds submittersBelowFloor = findBelowFloorSubmitters(*(g->submitterAds));
+				if (submittersBelowFloor.Length() > 0) {
+					dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
+							submittersBelowFloor.Length());
+					negotiateWithGroup(true /*isFloorRound*/, cPoolsize, 
+							weightedPoolsize, 
+							minSlotWeight, 
+							startdAds, 
+							claimIds, 
+							submittersBelowFloor,
+							slots,
+							name);
+
+				}
+				dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
+				negotiateWithGroup(false, cPoolsize,
 								weightedPoolsize,
 								minSlotWeight,
 								startdAds,
@@ -1888,6 +1925,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(name));
 				updateAd.Assign("Ceiling", accountant.GetCeiling(name));
+				updateAd.Assign("Floor", accountant.GetFloor(name));
 
 				bool isGroup;
 
@@ -2111,7 +2149,8 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 }
 
 int Matchmaker::
-negotiateWithGroup ( int untrimmed_num_startds,
+negotiateWithGroup ( bool isFloorRound,
+					 int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
 					 double minSlotWeight,
 					 ClassAdListDoesNotDeleteAds& startdAds,
@@ -2310,6 +2349,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				normalFactor,
 				normalAbsFactor,
 				slotWeightTotal,
+				isFloorRound,
 					/* result parameters: */
 				submitterLimit,
                 submitterLimitUnclaimed,
@@ -2504,7 +2544,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 	} while ( ( pieLeft < pieLeftOrig || submitterAds.MyLength() < submitterAdsCountOrig )
 			  && (submitterAds.MyLength() > 0)
-			  && (startdAds.MyLength() > 0) );
+			  && (startdAds.MyLength() > 0)
+		   	  && !isFloorRound);
 
 	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %d \n",submitterAds.MyLength());
 
@@ -5186,6 +5227,7 @@ Matchmaker::calculateSubmitterLimit(
 	double normalFactor,
 	double normalAbsFactor,
 	double slotWeightTotal,
+	bool isFloorRound,
 		/* result parameters: */
 	double &submitterLimit,
     double& submitterLimitUnclaimed,
@@ -5225,6 +5267,17 @@ Matchmaker::calculateSubmitterLimit(
 	submitterPrioFactor = accountant.GetPriorityFactor ( submitterName );
 	submitterAbsShare =
 		maxAbsPrioValue/(submitterPrioFactor*normalAbsFactor);
+
+		// if we are in the "floor round", only give up to
+		// the floor number of resources configured for this
+		// submitter.  Might get more in subseqent rounds
+		// but the floor round is to try to get everyone up
+		// to their floor.
+	if (isFloorRound) {
+		double floor = accountant.GetFloor(submitterName);
+		submitterLimit = std::min(floor, submitterLimit);
+		dprintf(D_FULLDEBUG, "   Floor Round: %g\n", floor);
+	}
 }
 
 void
@@ -5270,6 +5323,7 @@ Matchmaker::calculatePieLeft(
 			normalFactor,
 			normalAbsFactor,
 			slotWeightTotal,
+			false, /* is floor round */
 				/* result parameters: */
 			submitterLimit,
             submitterLimitUnclaimed,
@@ -5434,6 +5488,28 @@ addRemoteUserPrios( ClassAd	*ad )
 		}	
 	}
 	free( resource_prefix );
+}
+
+ClassAdListDoesNotDeleteAds 
+Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds) {
+	ClassAd *submitterAd; 
+	ClassAdListDoesNotDeleteAds submittersBelowFloor;
+
+	submitterAds.Open ();
+	while ((submitterAd = submitterAds.Next())) {
+		std::string submitterName;
+		submitterAd->LookupString(ATTR_NAME, submitterName);
+		double floor = accountant.GetFloor(submitterName);
+		double usage = accountant.GetWeightedResourcesUsed(submitterName);
+
+		// If any floor is defined, and we're below it, we get into the
+		// special floor-only round
+		if ((floor > 0.0) && (usage < floor)) {
+			submittersBelowFloor.Insert(submitterAd);
+		}
+	}
+
+	return submittersBelowFloor;
 }
 
 void Matchmaker::

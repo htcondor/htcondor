@@ -278,9 +278,6 @@
 #define SUBMIT_KEY_VM_XEN_INITRD "xen_initrd"
 #define SUBMIT_KEY_VM_XEN_ROOT   "xen_root"
 #define SUBMIT_KEY_VM_XEN_KERNEL_PARAMS "xen_kernel_params"
-#define SUBMIT_KEY_VM_VMWARE_SHOULD_TRANSFER_FILES "vmware_should_transfer_files"
-#define SUBMIT_KEY_VM_VMWARE_SNAPSHOT_DISK "vmware_snapshot_disk"
-#define SUBMIT_KEY_VM_VMWARE_DIR "vmware_dir"
 
 //
 // EC2 Query Parameters
@@ -859,7 +856,6 @@ private:
 	  const char * sp, const char * jp,
 	  const YourStringNoCase & gt );      /* used by SetGridParams */
 
-	int process_vm_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
 	ContainerImageType image_type_from_string(const std::string &image) const;

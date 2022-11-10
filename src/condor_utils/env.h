@@ -67,6 +67,7 @@ Example V2Quoted syntax yielding same as above:
 
 
 #include "MyString.h"
+#include "string_list.h"
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
@@ -132,14 +133,11 @@ class Env final {
 
 		// Add (or overwrite) environment entries from a NULL-terminated
 		// array of key=value strings.  This function returns false
-		// if there are any entries that lack a variable name or
-		// an assignment, but it skips over them and imports all
-		// the valid entries anyway.  If you want that behavior
-		// and do not consider it a failure, use Import() instead.
+		// if any entry failed to merge, but keeps going and imports all the valid entries.
 	bool MergeFrom( char const * const *stringArray );
 
 		// Add (or overwrite) environment entries from a NULL-delimited
-		// character string
+		// character string. This function returns false only when the input string is null
 	bool MergeFrom( char const * );
 
 		// Add (or overwrite) environment entries from another
@@ -219,6 +217,7 @@ class Env final {
 
     void Walk(bool (*walk_func)(void* pv, const std::string & var, const std::string & val), void* pv) const;
 
+	bool HasEnv(MyString const &var) const;
 	bool GetEnv(MyString const &var,MyString &val) const;
 	bool GetEnv(const std::string &var, std::string &val) const;
 
@@ -246,42 +245,42 @@ class Env final {
 	bool InputWasV1() const {return input_was_v1;}
 
 		// Import environment from process.
-		// Unlike MergeFrom(environ), it is not considered
-		// an error if there are entries in the environment
-		// that do not contain an assignment; they are
+		// Unlike MergeFrom(environ), it will not overwrite, and 
+		// it is not considered an error if there are entries in the environment
+		// that do not contain a variable name or an assignment; they are
 		// silently ignored.  The only possible failure
 		// in this function is if it runs out of memory.
 		// It will ASSERT() in that case.
 	
 	template <class Filter>
 	void Import(Filter filter) {
+		// Note: prior to 10.1 overwrite=true was the hard-coded behavior but none of the callers wanted that...
+		const bool overwrite = false;
 		char **my_environ = GetEnviron();
+		MyString varname, value;
 		for (int i=0; my_environ[i]; i++) {
 			const char	*p = my_environ[i];
 
-			int			j;
-			MyString	varname = "";
-			MyString	value = "";
+			int j;
 			for (j=0;  ( p[j] != '\0' ) && ( p[j] != '=' );  j++) {
-				varname += p[j];
+				// nuttin
 			}
-			if ( p[j] == '\0' ) {
+			if ( j==0 || p[j] == '\0' ) {
 				// ignore entries in the environment that do not
-				// contain an assignment
+				// contain a variable name or do not contain an assignment
 				continue;
 			}
-			if ( varname.empty() ) {
-				// ignore entries in the environment that contain
-				// an empty variable name
+			varname.set(p, j);
+			if ( ! overwrite && HasEnv(varname)) {
+				// unless we are overwriting, don't import if we already have a value
 				continue;
 			}
-			ASSERT( p[j] == '=' );
+
 			value = p+j+1;
 
 			// Allow the application to filter the import
 			if (filter( varname, value)) {
-				bool ret = SetEnv( varname, value );
-				ASSERT( ret ); // should never fail
+				SetEnv( varname, value );
 			}
 		}
 	}
@@ -325,5 +324,30 @@ class Env final {
 		error_buffer += msg;
 	}
 };
+
+// filter for use with Env::Import that can filter based on StringList patterns
+class WhiteBlackEnvFilter
+{
+public:
+	WhiteBlackEnvFilter(const char * list=nullptr) {
+		if (list) AddToWhiteBlackList(list);
+	};
+	virtual ~WhiteBlackEnvFilter( void ) { };
+
+	bool operator()( const MyString & var, const MyString &val );
+
+	// take a string of the form  x* !y* *z* !bar
+	// and split it into two string lists
+	// items that start with ! go into the blacklist (without the leading !)
+	// all other items go into the whitelist.  leading and trailing whitespace is trimmed
+	// comma, semicolon and whitespace are item steparators
+	void AddToWhiteBlackList(const char * list);
+	// clear the white and black filter lists
+	void ClearWhiteBlackList();
+protected:
+	StringList m_black;
+	StringList m_white;
+};
+
 
 #endif	// _ENV_H

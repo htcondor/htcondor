@@ -25,3 +25,4 @@ SHELL_FRAGMENT() {
     ' > "${PILOT_DIR}/singularity.sh"
     chmod 755 "${PILOT_DIR}/singularity.sh"
 }
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus

@@ -923,7 +923,6 @@ mv %{buildroot}/usr/share/doc/condor-%{version}/examples %_builddir/%name-%tarba
 #rm -rf %{buildroot}%{_sbindir}/condor_local_start
 #rm -rf %{buildroot}%{_sbindir}/condor_local_stop
 #rm -rf %{buildroot}%{_sbindir}/condor_startd_factory
-#rm -rf %{buildroot}%{_sbindir}/condor_vm_vmware.pl
 #rm -rf %{buildroot}%{_sbindir}/filelock_midwife
 #rm -rf %{buildroot}%{_sbindir}/filelock_undertaker
 #rm -rf %{buildroot}%{_sbindir}/install_release
@@ -1322,8 +1321,6 @@ rm -rf %{buildroot}
 %_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
-%_sbindir/condor_vm-gahp-vmware
-%_sbindir/condor_vm_vmware
 %_sbindir/exit_37
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)

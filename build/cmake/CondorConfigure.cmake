@@ -603,7 +603,6 @@ if( NOT WINDOWS)
 	endif()
 endif()
 
-find_program(HAVE_VMWARE vmware)
 find_program(LN ln)
 find_program(SPHINXBUILD NAMES sphinx-build sphinx-1.0-build)
 

@@ -274,22 +274,6 @@ description=Directory for condor credentials
 default=60
 type=int
 
-[VMWARE_NETWORKING_TYPE]
-default=
-type=string
-tags=vm-gahp,starter
-
-[VMWARE_PERL]
-default=
-type=string
-tags=vm-gahp
-
-[VMWARE_SCRIPT]
-default=$(SBIN)/condor_vm_vmware
-# there is no win32 default for this item, we DON'T want it to have a .exe extension
-type=path
-tags=vm-gahp
-
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
@@ -2583,16 +2567,6 @@ default=300
 type=int
 tags=starter
 
-[ALWAYS_VM_UNIV_USE_NOBODY]
-default=false
-type=bool
-tags=starter
-
-[VM_UNIV_NOBODY_USER]
-default=
-type=string
-tags=starter
-
 [VM_GAHP_SEND_ALL_CLASSAD]
 default=true
 type=bool
@@ -2632,7 +2606,9 @@ tags=starter
 
 [JOB_INHERITS_STARTER_ENVIRONMENT]
 default=false
-type=bool
+type=string
+description=list of allow and deny patterns that determine what environment variables to inhert from the starter environment
+usage=Set to true or * to inherit all. foo* inherits only vars that start with foo. !foo* inherits all but vars that start with foo
 tags=starter
 
 [MPI_CONDOR_RSH_PATH]
@@ -6642,14 +6618,13 @@ win32_default : @end
 	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
 	MAIL_FROM=
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
-[$UPGRADE.DISCARDIF_VMWARE]
+[$UPGRADE.DISCARD_VMWARE]
 description=Platform specific file knobs that should be ignored on upgrade if they match the given value
 default=
 win32_default : @end
