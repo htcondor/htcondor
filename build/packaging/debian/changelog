@@ -1,3 +1,10 @@
+condor (10.1.1-1) stable; urgency=medium
+
+  * Improvements to job hooks and the ability to save stderr from a job hook
+  * Fix bug where Apptainer only systems couldn't run with Docker style images
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 10 Nov 2022 15:53:00 -0600
+
 condor (10.1.0-1) stable; urgency=medium
 
   * Release HTCondor 10.0.0 bug fixes into 10.1.0
