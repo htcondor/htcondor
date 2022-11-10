@@ -44,6 +44,10 @@ New Features:
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
 
+- Docker universe and container universe job that use the docker runtime now detect
+  when the unix uid or gid has the high bit set, which docker does not support.
+  :jira:`1421`
+
 Bugs Fixed:
 
 - None.
