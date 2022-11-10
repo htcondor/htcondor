@@ -59,6 +59,7 @@ def test_results(the_condor):
     handle = the_condor.submit(
         description={
             "executable":           "/bin/sleep",
+            "hold":                 "true",
             "MY.TargetAnnexName":   '"example"',
         },
         count=1,
