@@ -125,8 +125,8 @@ class Create(Verb):
         "test": {
             "args": ("--test",),
             "help": argparse.SUPPRESS,
-            "default": False,
-            "action": "store_true",
+            "type": int,
+            "default": None,
         },
     }
 
