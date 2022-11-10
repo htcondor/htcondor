@@ -14,32 +14,36 @@ Version 10.0.0
 
 Release Notes:
 
-.. HTCondor version 10.0.0 released on Month Date, 2022.
-
-- HTCondor version 10.0.0 not yet released.
+- HTCondor version 10.0.0 released on November 10, 2022.
 
 New Features:
 
 - The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
   has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
   use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+  :jira:`1381`
 
 - The *condor_transform_ads* tool now has a ``-jobtransforms`` argument that reads
   transforms from the configuration.  This provides a convenient way to test the
   ``JOB_TRANSFORM_<NAME>`` configuration variables.
   :jira:`1312`
 
+- Added new automatic configuration variable ``DETECTED_CPUS_LIMIT`` which gets set
+  to the minimum of ``DETECTED_CPUS`` from the configuration and ``OMP_NUM_THREADS``
+  and ``SLURM_CPU_ON_NODES`` from the environment.
+  :jira:`1307`
+
 Bugs Fixed:
 
-- Fixed a bug where if a job created a symlink to a file, the contents of
+- Fixed a bug where if a job created a symbolic link to a file, the contents of
   that file would be counted in the job's `DiskUsage`.  Previously,
-  symlinks to directories were (correctly) ignored, but not symlinks to
+  symbolic links to directories were (correctly) ignored, but not symbolic links to
   files.
   :jira:`1354`
 
 - Fixed a bug where if SINGULARITY_TARGET_DIR is set, condor_ssh_to
   job would start the interactive shell in the root directory of
-  the job, not in the cwd of the job.
+  the job, not in the current working directory of the job.
   :jira:`1406`
 
 - Suppressed a Singularity or Apptainer warning that would appear
