@@ -522,7 +522,6 @@ public:
 
 	ResBag& operator+=(const CpuAttributes& rhs);
 	ResBag& operator-=(const CpuAttributes& rhs);
-	bool operator<(const ResBag& rhs) const;
 
 	bool underrun(std::string * names);
 	const char * dump(std::string & buf) const;

@@ -2097,20 +2097,6 @@ ResBag::operator-=(const CpuAttributes& rhs)
 	return *this;
 }
 
-bool ResBag::operator<(const ResBag& rhs) const
-{
-	if (cpus >= cpus || disk >= disk || mem >= mem)
-		return false;
-	for (auto res : resmap) {
-		if (res.second <= 0) continue;
-		auto f(resmap.find(res.first));
-		if (f == resmap.end() || f->second >= res.second)
-			return false;
-	}
-	return true;
-}
-
-
 bool ResBag::underrun(std::string * names)
 {
 	if (names) {
