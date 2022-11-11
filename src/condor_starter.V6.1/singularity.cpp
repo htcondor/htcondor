@@ -16,6 +16,7 @@
 #include "stat_wrapper.h"
 #include "stat_info.h"
 #include "condor_attributes.h"
+#include "directory.h"
 
 using namespace htcondor;
 
@@ -129,11 +130,13 @@ Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	bool wantSIF = false;
 	bool wantSandbox  = false;
+	bool wantDockerImage = false;
 
 	jobAd.LookupBool(ATTR_WANT_SIF, wantSIF);
 	jobAd.LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandbox);
+	jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerImage);
 
-	if (wantSIF || wantSandbox) {
+	if (wantSIF || wantSandbox || wantDockerImage) {
 		return true;
 	}
 
@@ -226,6 +229,7 @@ Singularity::setup(ClassAd &machineAd,
 	// Singularity and Apptainer prohibit setting HOME.  Just delete it
 	job_env.DeleteEnv("HOME");
 
+	// Bind-mount the execute directory.
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
 	// to be used instead.
@@ -245,13 +249,33 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--pwd");
 		sing_args.AppendArg(job_iwd.c_str());
 	}
-
 	sing_args.AppendArg("-B");
 	sing_args.AppendArg(bind_spec.c_str());
 
+	// if the startd has assigned us a gpu, add --nv to the sing exec
+	// arguments to mount the nvidia devices
+	// ... and if the host has OpenCL drivers, bind-mount the drivers
+	// so that OpenCL programs can also run in the container.
+	StringList additional_bind_mounts;
+	std::string assignedGpus;
+	machineAd.LookupString("AssignedGPUs", assignedGpus);
+	if (assignedGpus.length() > 0) {
+		sing_args.AppendArg("--nv");
+		static const char* open_cl_path = "/etc/OpenCL/vendors";
+		if (IsDirectory(open_cl_path)) {
+			additional_bind_mounts.append(open_cl_path);
+		}
+	}
+
+	// Now handle requested bind-mounts.  We will mount everything specified with
+	// SINGULARITY_BIND_EXPR, plus any mounts in additional_bind_mounts list.
 	if (param_eval_string(bind_spec, "SINGULARITY_BIND_EXPR", "SingularityBind", &machineAd, &jobAd)) {
 		dprintf(D_FULLDEBUG, "Parsing bind mount specification for singularity: %s\n", bind_spec.c_str());
 		StringList binds(bind_spec.c_str());
+		// Use create_union to add additional mounts, since create_union prevents
+		// duplicates - Singularity outputs warnings about duplicate mounts to stderr, so
+		// let's try to avoid that.
+		binds.create_union(additional_bind_mounts, false);  // 'false' for anycase means case-sensitive strings
 		binds.rewind();
 		char *next_bind;
 		while ( (next_bind=binds.next()) ) {
@@ -331,14 +355,6 @@ Singularity::setup(ClassAd &machineAd,
 		return Singularity::FAILURE;
 	}
 
-	// if the startd has assigned us a gpu, add --nv to the sing exec
-	// arguments to mount the nvidia devices
-	std::string assignedGpus;
-	machineAd.LookupString("AssignedGPUs", assignedGpus);
-	if  (assignedGpus.length() > 0) {
-		sing_args.AppendArg("--nv");
-	}
-
 	sing_args.AppendArg(image.c_str());
 
 	if (orig_exec_val.length() > 0) {
@@ -368,8 +384,13 @@ Singularity::setup(ClassAd &machineAd,
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these
-	job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
-	job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	if (Singularity::m_apptainer) {
+		job_env.SetEnv("APPTAINER_CACHEDIR", execute_dir);
+		job_env.SetEnv("APPTAINER_TEMPDIR", execute_dir);
+	} else {
+		job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
+		job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	}
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -561,8 +582,11 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
+	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
+
 	MyPopenTimer pgm;
-	if (pgm.start_program(sandboxArgs, true, NULL, false) < 0) {
+	Env env;
+	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
 			return false;

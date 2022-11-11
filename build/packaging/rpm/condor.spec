@@ -1623,6 +1623,13 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
+- Improvements to job hooks and the ability to save stderr from a job hook
+- Fix bug where Apptainer only systems couldn't run with Docker style images
+
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.0-1
+- Release HTCondor 10.0.0 bug fixes into 10.1.0
+
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.0.0-1
 - Users can prevent runaway jobs by specifying an allowed duration
 - Able to extend submit commands and create job submit templates
