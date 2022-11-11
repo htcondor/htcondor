@@ -162,40 +162,6 @@ Starter::Init( JobInfoCommunicator* my_jic, const char* original_cwd,
 				 (long)daemonCore->getpid() );
 	}
 
-#ifdef LINUX
-	const char *thinpool = getenv("_CONDOR_THINPOOL");
-	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
-	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
-	if (thinpool && thinpool_vg && thinpool_size) {
-		try {
-			m_lvm_max_size_kb = std::stol(thinpool_size);
-		} catch (...) {
-			m_lvm_max_size_kb = -1;
-		}
-		if (m_lvm_max_size_kb > 0) {
-			CondorError err;
-                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
-                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
-                        if (do_encrypt) {
-                            slot_name += "-enc";
-                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
-                        }
-			m_volume_mgr.reset(new VolumeManager::Handle(Execute, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
-			if (!err.empty()) {
-				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
-				m_volume_mgr.reset();
-			}
-			m_lvm_thin_volume = slot_name;
-			m_lvm_thin_pool = thinpool_str;
-			m_lvm_volume_group = thinpool_vg;
-			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
-				(TimerHandlercpp)&Starter::CheckDiskUsage,
-				"check disk usage", this);
-		}
-	}
-#endif // LINUX
-
-
 		//
 		// We have switched all of these to call the "Remote"
 		// version of the appropriate method. The difference between the 
@@ -1990,6 +1956,40 @@ Starter::createTempExecuteDir( void )
 	WriteAdFiles();
 
 #endif /* WIN32 */
+
+#ifdef LINUX
+	const char *thinpool = getenv("_CONDOR_THINPOOL");
+	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
+	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
+	if (thinpool && thinpool_vg && thinpool_size) {
+		try {
+			m_lvm_max_size_kb = std::stol(thinpool_size);
+		} catch (...) {
+			m_lvm_max_size_kb = -1;
+		}
+		if (m_lvm_max_size_kb > 0) {
+			CondorError err;
+                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
+                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+                        if (do_encrypt) {
+                            slot_name += "-enc";
+                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+                        }
+			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
+			if (!err.empty()) {
+				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
+				m_volume_mgr.reset();
+			}
+			m_lvm_thin_volume = slot_name;
+			m_lvm_thin_pool = thinpool_str;
+			m_lvm_volume_group = thinpool_vg;
+			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
+				(TimerHandlercpp)&Starter::CheckDiskUsage,
+				"check disk usage", this);
+		}
+	}
+#endif // LINUX
+
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
