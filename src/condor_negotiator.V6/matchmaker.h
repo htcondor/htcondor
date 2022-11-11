@@ -264,7 +264,7 @@ class Matchmaker : public Service
 		                            /* result parameters: */
 		                       double &pieLeft);
 
-		ClassAdListDoesNotDeleteAds findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds);
+		void findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &belowFloorSubmitters);
 			// rewrite the requirements expression to make matchmaking faster
 		void OptimizeMachineAdForMatchmaking(ClassAd *ad);
 

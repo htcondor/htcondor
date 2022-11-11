@@ -1779,7 +1779,8 @@ negotiationTime ()
 
 		// If there are any submitters who have a floor defined, and their current usage is below
 		// their floor, negotiator for just those, and only up to their floor.
-		ClassAdListDoesNotDeleteAds submittersBelowFloor = findBelowFloorSubmitters(submitterAds);
+		ClassAdListDoesNotDeleteAds submittersBelowFloor;
+		findBelowFloorSubmitters(submitterAds,submittersBelowFloor);
 		if (submittersBelowFloor.Length() > 0) {
 			dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
 					submittersBelowFloor.Length());
@@ -1807,7 +1808,8 @@ negotiationTime ()
 					name = nullptr;
 				}
 
-				ClassAdListDoesNotDeleteAds submittersBelowFloor = findBelowFloorSubmitters(*(g->submitterAds));
+				ClassAdListDoesNotDeleteAds submittersBelowFloor;
+				findBelowFloorSubmitters(*(g->submitterAds), submittersBelowFloor);
 				if (submittersBelowFloor.Length() > 0) {
 					dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
 							submittersBelowFloor.Length());
@@ -5490,10 +5492,9 @@ addRemoteUserPrios( ClassAd	*ad )
 	free( resource_prefix );
 }
 
-ClassAdListDoesNotDeleteAds 
-Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds) {
+void
+Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &submittersBelowFloor) {
 	ClassAd *submitterAd; 
-	ClassAdListDoesNotDeleteAds submittersBelowFloor;
 
 	submitterAds.Open ();
 	while ((submitterAd = submitterAds.Next())) {
@@ -5509,7 +5510,7 @@ Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds) 
 		}
 	}
 
-	return submittersBelowFloor;
+	return;
 }
 
 void Matchmaker::
