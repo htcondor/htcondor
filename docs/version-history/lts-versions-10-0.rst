@@ -24,7 +24,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bug in where the multifile curl plugin would fail to timeout
+  due lack of upload or download progress if a large amount of bytes
+  where transfered at some point.
+  :jira:`1403`
 
 .. _lts-version-history-1000:
 
