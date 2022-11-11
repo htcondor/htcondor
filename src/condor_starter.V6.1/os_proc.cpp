@@ -1253,6 +1253,10 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 
 	if (has_target) {
 		htcondor::Singularity::retargetEnvs(env, target_dir, "");
+		// nsenter itself uses _CONDOR_SCRATCH_DIR to decide where the
+		// home directory is, so leave this one behind, set to the
+		// old non-prefixed value
+		env.SetEnv("_CONDOR_SCRATCH_DIR", target_dir);
 	}
 
 	std::string bin_dir;
