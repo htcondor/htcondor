@@ -24,6 +24,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug in where the multifile curl plugin would fail to timeout
+  due lack of upload or download progress if a large amount of bytes
+  where transfered at some point.
+  :jira:`1403`
+  
 - Fixed a bug that prevented the starter from properly mounting
   thinpool provisioned ephemeral scratch directories.
   :jira:`1419`
