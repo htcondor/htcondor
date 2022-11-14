@@ -723,8 +723,6 @@ GahpServer::Startup()
 	int stdin_pipefds[2] = { -1, -1 };
 	int stdout_pipefds[2] = { -1, -1 };
 	int stderr_pipefds[2] = { -1, -1 };
-	int low_port;
-	int high_port;
 	Env newenv;
 	char *tmp_char;
 
