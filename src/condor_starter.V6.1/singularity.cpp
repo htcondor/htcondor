@@ -332,7 +332,7 @@ Singularity::setup(ClassAd &machineAd,
 	// everything, which includes file systems, PID, IPC, and environment and whatever
 	// they dream up next.
 	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
-	if (!param_boolean("SINGULARITY_DISABLE_PID_NAMESPACES", false, true, &machineAd, &jobAd)) {
+	if (param_boolean("SINGULARITY_USE_PID_NAMESPACES", true)) {
 		// containerize everything with -C, ie use pid namespaces
 		sing_args.AppendArg("-C");
 	}
