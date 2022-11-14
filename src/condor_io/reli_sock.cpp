@@ -1641,8 +1641,8 @@ int ReliSock::authenticate_continue(CondorError* errstack, bool non_blocking, ch
 			*method_used = strdup(m_authob->getMethodUsed());
 		}
 	}
-	if ( m_authob->getFQAuthenticatedName() ) {
-		setAuthenticatedName( m_authob->getFQAuthenticatedName() );
+	if ( m_authob->getAuthenticatedName() ) {
+		setAuthenticatedName( m_authob->getAuthenticatedName() );
 	}
 	delete m_authob;
 	m_authob = NULL;

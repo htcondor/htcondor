@@ -27,7 +27,6 @@
 #include "condor_auth_fs.h"
 #include "condor_auth_munge.h"
 #include "condor_auth_sspi.h"
-#include "condor_auth_x509.h"
 #include "condor_auth_ssl.h"
 #include "condor_auth_kerberos.h"
 #include "condor_auth_passwd.h"
@@ -215,13 +214,6 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 		m_method_id = firm;
 		m_method_name = "";
 		switch ( firm ) {
-#if defined(HAVE_EXT_GLOBUS)
-			case CAUTH_GSI:
-				m_auth = new Condor_Auth_X509(mySock);
-				m_method_name = "GSI";
-				break;
-#endif /* HAVE_EXT_GLOBUS */
-
 			case CAUTH_SSL:
 				m_auth = new Condor_Auth_SSL(mySock, 0, false);
 				m_method_name = "SSL";
@@ -486,20 +478,6 @@ int Authentication::authenticate_finish(CondorError *errstack)
 		} else {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
-#if defined(HAVE_EXT_GLOBUS)
-	} else if (authenticator_ && (auth_status == CAUTH_GSI)) {
-		// Fall back to using the globus mapping mechanism.  GSI is a bit unique in that
-		// it may be horribly expensive - or cause a SEGFAULT - to do an authorization callout.
-		// Hence, we delay it until after we apply a mapfile or, here, have no map file.
-		// nameGssToLocal calls setRemoteFoo directly.
-		const char * name_to_map = authenticator_->getAuthenticatedName();
-		if (name_to_map) {
-			int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(name_to_map);
-			dprintf(D_SECURITY|D_VERBOSE, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
-		} else {
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not calling GSI authorization.\n");
-		}
-#endif
 	}
 	// for now, let's be a bit more verbose and print this to D_SECURITY.
 	// yeah, probably all of the log lines that start with ZKM: should be
@@ -582,33 +560,12 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	// this will hold what we pass to the mapping function
 	std::string auth_name_to_map = authentication_name;
 
-	bool included_voms = false;
-
-#if defined(HAVE_EXT_GLOBUS)
-	// if GSI, try first with the FQAN (dn plus voms attrs)
-	if (authentication_type == CAUTH_GSI) {
-		const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();
-		if (fqan && fqan[0]) {
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: GSI was used, and FQAN is present.\n");
-			auth_name_to_map = fqan;
-			included_voms = true;
-		}
-	}
-#endif
-
 	if (global_map_file) {
 		std::string canonical_user;
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
-		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
-
-		// if it did not find a user, and we included voms attrs, try again without voms
-		if (mapret && included_voms) {
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now attempting to map '%s'\n", authentication_name);
-			mapret = global_map_file->GetCanonicalization(method_string, authentication_name, canonical_user);
-			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: now 2: mapret: %i included_voms: %i canonical_user: %s\n", mapret, included_voms, canonical_user.c_str());
-		}
+		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 2: mapret: %i canonical_user: %s\n", mapret, canonical_user.c_str());
 
 		// if the method is SCITOKENS and mapping failed, try again
 		// with a trailing '/'.  this is to assist admins who have
@@ -638,58 +595,20 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 			// returns true on failure?
 			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.c_str());
 
-			// there is a switch for GSI to use the default globus function for this, in
-			// case there is some custom globus mapping add-on, or the admin just wants
-			// to use the grid-mapfile in use by other globus software.
-			//
-			// if they don't opt for globus to map, just fall through to the condor
-			// mapfile.
-			//
-			if ((authentication_type == CAUTH_GSI) && (canonical_user == "GSS_ASSIST_GRIDMAP")) {
-#if defined(HAVE_EXT_GLOBUS)
+			std::string user;
+			std::string domain;
 
-				// nameGssToLocal calls setRemoteFoo directly.
-				int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal( authentication_name );
+			// this sets user and domain
+			split_canonical_name( canonical_user, user, domain);
 
-				if (retval) {
-					dprintf (D_SECURITY, "Globus-based mapping was successful.\n");
-				} else {
-					dprintf (D_SECURITY, "Globus-based mapping failed; will use gsi@unmapped.\n");
-				}
-#else
-				dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, but was used?!!\n");
-#endif
-				return;
-			} else {
+			authenticator_->setRemoteUser( user.c_str() );
+			authenticator_->setRemoteDomain( domain.c_str() );
 
-				dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: found user %s, splitting.\n", canonical_user.c_str());
-
-				std::string user;
-				std::string domain;
-
-				// this sets user and domain
-				split_canonical_name( canonical_user, user, domain);
-
-				authenticator_->setRemoteUser( user.c_str() );
-				authenticator_->setRemoteDomain( domain.c_str() );
-
-				// we're done.
-				return;
-			}
+			// we're done.
+			return;
 		} else {
 			dprintf (D_FULLDEBUG, "AUTHENTICATION: did not find user %s.\n", authentication_name);
 		}
-	} else if (authentication_type == CAUTH_GSI) {
-        // See notes above around the nameGssToLocal call about why we invoke GSI authorization here.
-        // Theoretically, it should be impossible to hit this case - the invoking function thought
-		// we had a mapfile, but we couldnt create one.  This just covers weird corner cases.
-
-#if defined(HAVE_EXT_GLOBUS)
-		int retval = ((Condor_Auth_X509*)authenticator_)->nameGssToLocal(authentication_name);
-		dprintf(D_SECURITY, "nameGssToLocal returned %s\n", retval ? "success" : "failure");
-#else
-		dprintf(D_ALWAYS, "AUTHENTICATION: GSI not compiled, so can't call nameGssToLocal!!\n");
-#endif
 	} else {
 		dprintf (D_FULLDEBUG, "AUTHENTICATION: global_map_file not present!\n");
 	}
@@ -760,23 +679,6 @@ char* Authentication::getMethodUsed() {
 const char* Authentication::getAuthenticatedName()
 {
 	if ( authenticator_ ) {
-		return authenticator_->getAuthenticatedName();
-	} else {
-		return NULL;
-	}
-}
-
-const char* Authentication::getFQAuthenticatedName()
-{
-	if ( authenticator_ ) {
-#if defined(HAVE_EXT_GLOBUS)
-		if(strcasecmp("GSI", method_used) == 0) {
-	        const char *fqan = ((Condor_Auth_X509*)authenticator_)->getFQAN();	
-			if(fqan) {
-				return fqan;
-			}
-		}
-#endif // defined(HAVE_EXT_GLOBUS)
 		return authenticator_->getAuthenticatedName();
 	} else {
 		return NULL;
@@ -1031,10 +933,6 @@ int Authentication::handshake(const std::string& my_methods, bool non_blocking) 
 			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 			method_bitmask &= ~CAUTH_SSL;
 		}
-		if ( (method_bitmask & CAUTH_GSI) && activate_globus_gsi() != 0 ) {
-			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
-			method_bitmask &= ~CAUTH_GSI;
-		}
 #ifdef HAVE_EXT_SCITOKENS
 		if ( (method_bitmask & CAUTH_SCITOKENS) && (Condor_Auth_SSL::Initialize() == false || htcondor::init_scitokens() == false) )
 #else
@@ -1105,11 +1003,6 @@ Authentication::handshake_continue(const std::string& my_methods, bool non_block
 		{
 			dprintf (D_SECURITY, "HANDSHAKE: excluding SSL: %s\n", "Initialization failed");
 			client_methods &= ~CAUTH_SSL;
-			continue;
-		}
-		if ( shouldUseMethod == CAUTH_GSI && activate_globus_gsi() != 0 ) {
-			dprintf (D_SECURITY, "HANDSHAKE: excluding GSI: %s\n", x509_error_string());
-			client_methods &= ~CAUTH_GSI;
 			continue;
 		}
 #ifdef HAVE_EXT_SCITOKENS

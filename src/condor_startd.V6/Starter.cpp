@@ -28,7 +28,6 @@
 #include "condor_common.h"
 #include "startd.h"
 #include "classad_merge.h"
-#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "my_popen.h"
 #include "basename.h"

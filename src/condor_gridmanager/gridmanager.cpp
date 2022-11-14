@@ -34,7 +34,6 @@
 #include "gahp-client.h"
 
 #include "arcjob.h"
-#include "nordugridjob.h"
 #include "condorjob.h"
 #include "infnbatchjob.h"
 #include "condor_version.h"
@@ -242,14 +241,6 @@ Init()
 
 	JobType *new_type;
 
-	new_type = new JobType;
-	new_type->Name = strdup( "Nordugrid" );
-	new_type->InitFunc = NordugridJobInit;
-	new_type->ReconfigFunc = NordugridJobReconfig;
-	new_type->AdMatchFunc = NordugridJobAdMatch;
-	new_type->CreateFunc = NordugridJobCreate;
-	jobTypes.Append( new_type );
-	
 	new_type = new JobType;
 	new_type->Name = strdup( "ARC" );
 	new_type->InitFunc = ArcJobInit;
