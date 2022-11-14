@@ -33,6 +33,15 @@ Bugs Fixed:
   thinpool provisioned ephemeral scratch directories.
   :jira:`1419`
 
+- Fixed bugs in the container universe that prevented
+  apptainer-only systems from running container universe jobs
+  with docker-repo style images.
+  :jira:`1412`
+
+- Docker universe and container universe job that use the docker runtime now detect
+  when the unix uid or gid has the high bit set, which docker does not support.
+  :jira:`1421`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
