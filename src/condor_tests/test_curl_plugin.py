@@ -52,9 +52,7 @@ def good_url(server):
 
 @action
 def good_file_url(test_dir):
-    file_url = open(test_dir / "file_url_tester", "w")
-    file_url.write("curl supports file urls")
-    file_url.close()
+    ( test_dir / "file_url_tester" ).write_text("curl supports file urls")
     return "file://" + str(test_dir) + "/file_url_tester"
 
 @action
