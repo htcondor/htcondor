@@ -9,7 +9,6 @@ docker://htcondor/nmi-zdev:x86_64_CentOS7-09080000
 docker://htcondor/nmi-zdev:x86_64_Debian11-09110201
 x86_64_MacOSX15
 x86_64_macOS11
-docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09080000
 docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09080000
 x86_64_Windows7
 x86_64_Windows10
@@ -18,4 +17,3 @@ x86_64_Windows10
 x86_64_CentOS7
 
 # We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-zdev:x86_64_Fedora32-09080000

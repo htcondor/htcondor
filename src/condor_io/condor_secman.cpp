@@ -456,7 +456,6 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 	// that we didn't have one).
 	std::string issuer;
 	if (param(issuer, "TRUST_DOMAIN")) {
-		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
 	}
 

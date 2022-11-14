@@ -521,7 +521,6 @@ Condor_Auth_Passwd::fetchLogin()
 			// Check to see if we have access to the master key and generate a token accordingly.
 			std::string issuer;
 			param(issuer, "TRUST_DOMAIN");
-			issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 			if (m_server_issuer == issuer && !m_server_keys.empty()) {
 				CondorError err;
 				std::string match_key;
@@ -1599,7 +1598,10 @@ Condor_Auth_Passwd::generate_token(const std::string & id,
 		if (err) err->push("PASSWD", 1, "Issuer namespace is not set");
 		return false;
 	}
-	issuer = issuer.substr(0, issuer.find_first_of(", \t"));
+	if (issuer.find_first_of(", \t") != std::string::npos) {
+		if (err) err->push("PASSWD", 1, "Issuer namespace may not contain spaces or commas");
+		return false;
+	}
 
 	std::string jwt_key_str(reinterpret_cast<const char *>(jwt_key.data()), key_strength_bytes_v2());
 	auto jwt_builder = jwt::create()

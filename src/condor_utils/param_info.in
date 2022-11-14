@@ -2570,7 +2570,7 @@ type=path
 tags=io
 
 [TRUST_DOMAIN]
-default=$(COLLECTOR_HOST)
+default=$(UID_DOMAIN)
 type=string
 tags=condor_auth_passwd
 
