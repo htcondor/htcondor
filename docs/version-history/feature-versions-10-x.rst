@@ -72,8 +72,6 @@ Release Notes:
 
 - HTCondor version 10.1.1 released on November 10, 2022.
 
-- HTCondor version 10.1.1 not yet released.
-
 New Features:
 
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
