@@ -2095,8 +2095,8 @@ GetDistance( classad::Value &pt, classad::Value &min, classad::Value &max,
 
 
 bool ValueRange::
-BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
-				 int numContexts, List< ExtArray< HyperRect * > > &hrLists )
+BuildHyperRects( std::vector<ValueRange *> &vrs, int dimensions,
+				 int numContexts, List<std::vector< HyperRect * > > &hrLists )
 {
 	Interval *ival = NULL;
 	ValueRange *currVR = NULL;
@@ -2208,12 +2208,12 @@ BuildHyperRects( ExtArray< ValueRange * > &vrs, int dimensions,
 	}
 	delete tempHRs;
 
-	ExtArray< HyperRect * > *hrs;
-	hrs = new ExtArray< HyperRect * >( oldHRs->Number( ) );
+	std::vector< HyperRect * > *hrs;
+	hrs = new std::vector<HyperRect *>(oldHRs->Number());
 
 	oldHRs->Rewind( );
-	for( int i = 0; i < hrs->getsize( ); i++ ) {
-		( *hrs )[i] = oldHRs->Next( );
+	for( size_t i = 0; i < hrs->size(); i++ ) {
+		(*hrs )[i] = oldHRs->Next();
 	}
 	hrLists.Append( hrs );
 	delete oldHRs;
