@@ -4,16 +4,16 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 10.1.0
+Version 10.2.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.1.0 released on Month Date, 2022.
+.. HTCondor version 10.2.0 released on Month Date, 2022.
 
-- HTCondor version 10.1.0 not yet released.
+- HTCondor version 10.2.0 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-1000`.
+- This version includes all the updates from :ref:`lts-version-history-1001`.
 
 - We changed the semantics of relative paths in the ``output``, ``error``, and
   ``transfer_output_remaps`` submit file commands.  These commands now create
@@ -30,6 +30,11 @@ New Features:
   state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
   :jira:`1064`
 
+- The *condor_negotiator* now support setting a minimum floor number of cores that any
+  given submitter should get, regardless of their fair share.  This can be set or queried
+  via the *condor_userprio* tool, in the same way that the ceiling can be set or get
+  :jira:`557`
+
 - *condor_history* will now stop searching history files once all requested job ads are
   found if passed ClusterIds or ClusterId.ProcId pairs.
   :jira:`1364`
@@ -41,6 +46,66 @@ New Features:
 - The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
   previously it was 0.
   :jira:`1393`
+
+- The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
+  of match patterns just like the submit command ``getenv`` does.
+  :jira:`1339`
+
+- Docker universe and container universe job that use the docker runtime now detect
+  when the unix uid or gid has the high bit set, which docker does not support.
+  :jira:`1421`
+
+Version 10.1.2
+--------------
+
+.. HTCondor version 10.1.2 released on Month Date, 2022.
+
+- HTCondor version 10.1.2 not yet released.
+
+New Features:
+
+- OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
+  OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
+  :jira:`1410`
+
+Bugs Fixed:
+
+- None.
+
+Version 10.1.1
+--------------
+
+Release Notes:
+
+- HTCondor version 10.1.1 released on November 10, 2022.
+
+New Features:
+
+- Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
+  the new hook PREPARE_JOB_BEFORE_TRANSFER,
+  and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
+  See the :ref:`admin-manual/Hooks` manual section.
+  :jira:`1400`
+
+Bugs Fixed:
+
+- Fixed bugs in the container universe that prevented 
+  apptainer-only systems from running container universe jobs
+  with docker-repo style images
+  :jira:`1412`
+
+Version 10.1.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.1.0 released on November 10, 2022.
+
+- This version includes all the updates from :ref:`lts-version-history-1000`.
+
+New Features:
+
+- None.
 
 Bugs Fixed:
 

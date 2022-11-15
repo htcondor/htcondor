@@ -1,6 +1,15 @@
 #!/bin/bash
 
 PILOT_DIR=$1
+# If this works for multi-node GPU jobs, it's only because SLURM allocates
+# multi-node jobs a whole node at a time and this is either unset (meaning
+# all) or it's set to the correct value (because all of the GPU nodes have
+# the same number of devices and it lists all of them by index rather than
+# by ID).
+#
+# On Anvil, the lattermost appears to be the case.
+export CUDA_VISIBLE_DEVICES=$2
+echo "Set CUDA_VISIBLE_DEVICES to ${CUDA_VISIBLE_DEVICES}."
 
 cd "${PILOT_DIR}"
 cd condor-*

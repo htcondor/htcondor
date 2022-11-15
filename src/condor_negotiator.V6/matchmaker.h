@@ -20,6 +20,7 @@
 #ifndef __MATCHMAKER_H__
 #define __MATCHMAKER_H__
 
+#include "compat_classad_list.h"
 #include "condor_daemon_core.h"
 #include "condor_accountant.h"
 #include "condor_io.h"
@@ -66,7 +67,8 @@ class Matchmaker : public Service
 		int DELETE_USER_commandHandler(int, Stream*);
 		int SET_PRIORITYFACTOR_commandHandler(int, Stream*);
 		int SET_PRIORITY_commandHandler(int, Stream*);
-		int SET_CEILING_commandHandler(int, Stream*);
+		int SET_CEILING_or_FLOOR_commandHandler(int, Stream*);
+		int SET_FLOOR_commandHandler(int, Stream*);
 		int SET_ACCUMUSAGE_commandHandler(int, Stream*);
 		int SET_BEGINTIME_commandHandler(int, Stream*);
 		int SET_LASTTIME_commandHandler(int, Stream*);
@@ -172,7 +174,8 @@ class Matchmaker : public Service
 		   bool ignore_schedd_limit, time_t deadline,
            int& numMatched, double &pieLeft);
 
-		int negotiateWithGroup ( int untrimmed_num_startds,
+		int negotiateWithGroup ( bool isFloorRound,
+								 int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
 			ClassAdListDoesNotDeleteAds& startdAds, 
@@ -228,6 +231,7 @@ class Matchmaker : public Service
 		                          double normalFactor,
 		                          double normalAbsFactor,
 								  double slotWeightTotal,
+								  bool isFloorRound,
 		                            /* result parameters: */
 								  double &submitterLimit,
                                   double& submitterLimitUnclaimed,
@@ -260,6 +264,7 @@ class Matchmaker : public Service
 		                            /* result parameters: */
 		                       double &pieLeft);
 
+		void findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &belowFloorSubmitters);
 			// rewrite the requirements expression to make matchmaking faster
 		void OptimizeMachineAdForMatchmaking(ClassAd *ad);
 

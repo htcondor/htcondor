@@ -4,6 +4,7 @@ import sys
 from docutils import nodes, utils
 from docutils.parsers.rst import Directive
 from sphinx import addnodes
+from sphinx import __version__
 from sphinx.errors import SphinxError
 from sphinx.util.nodes import split_explicit_title, process_index_entry, \
     set_role_source_info
@@ -41,5 +42,9 @@ def index_role(typ, rawtext, text, lineno, inliner, options={}, content=[]):
     return [indexnode, targetnode, textnode], []
 
 def setup(app):
-    app.add_role("index", index_role, override=True)
+    #Override variable is only available in V1.8 and greater
+    if tuple(map(int, __version__.split('.'))) >= (1,8,0):
+        app.add_role("index", index_role, override=True)
+    else:
+        app.add_role("index", index_role)
 

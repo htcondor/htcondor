@@ -7,7 +7,7 @@ function usage() {
     echo "Usage: ${0} SYSTEM STARTD_NOCLAIM_SHUTDOWN\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
     echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
-    echo "       [CPUS] [MEM_MB]"
+    echo "       [CPUS] [MEM_MB] [GPUS]"
     echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
     echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
 }
@@ -110,6 +110,11 @@ if [[ $MEM_MB == "None" ]]; then
     MEM_MB=""
 fi
 
+GPUS=${15}
+if [[ $GPUS == "None" ]]; then
+    GPUS=""
+fi
+
 BIRTH=`date +%s`
 # echo "Starting script at `date`..."
 
@@ -123,7 +128,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/9.5/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -267,6 +272,10 @@ if [[ -n $MEM_MB && $MEM_MB -gt 0 ]]; then
     WHOLE_NODE=""
 fi
 
+CONDOR_GPUS_LINE=""
+if [[ $GPUS ]]; then
+    CONDOR_GPUS_LINE="use feature:gpus"
+fi
 
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
@@ -349,6 +358,7 @@ endif
 
 ${CONDOR_CPUS_LINE}
 ${CONDOR_MEMORY_LINE}
+${CONDOR_GPUS_LINE}
 
 #
 # We have to hand out memory in chunks large enough to avoid the problem(s)
@@ -426,6 +436,12 @@ ${SBATCH_RESOURCES_LINES}
     fi
 fi
 
+if [[ $GPUS ]]; then
+        SBATCH_RESOURCES_LINES="\
+${SBATCH_RESOURCES_LINES}
+#SBATCH ${SYSTEM_SPECIFIC_GPU_FLAG}=${GPUS}
+"
+fi
 
 if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"

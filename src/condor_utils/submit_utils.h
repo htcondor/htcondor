@@ -102,8 +102,6 @@
 #define SUBMIT_KEY_UseScitokensAlt "use_scitoken"
 #define SUBMIT_KEY_ScitokensFile "scitokens_file"
 #define SUBMIT_KEY_DelegateJobGSICredentialsLifetime "delegate_job_gsi_credentials_lifetime"
-#define SUBMIT_KEY_NordugridRSL "nordugrid_rsl"
-#define SUBMIT_KEY_ArcRSL "arc_rsl"
 #define SUBMIT_KEY_ArcRte "arc_rte"
 #define SUBMIT_KEY_ArcApplication "arc_application"
 #define SUBMIT_KEY_ArcResources "arc_resources"
@@ -191,9 +189,6 @@
 #define SUBMIT_KEY_Noop "noop_job"
 #define SUBMIT_KEY_NoopExitSignal "noop_job_exit_signal"
 #define SUBMIT_KEY_NoopExitCode "noop_job_exit_code"
-
-#define SUBMIT_KEY_GlobusResubmit "globus_resubmit"
-#define SUBMIT_KEY_GlobusRematch "globus_rematch"
 
 #define SUBMIT_KEY_LastMatchListLength "match_list_length"
 
@@ -740,7 +735,7 @@ protected:
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
-	MyString JobGridType;  // set from "GridResource" for globus or grid universe jobs.
+	MyString JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
 	MyString TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.

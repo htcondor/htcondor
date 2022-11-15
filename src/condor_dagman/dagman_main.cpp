@@ -1874,7 +1874,6 @@ void condor_event_timer () {
 void
 main_pre_dc_init ( int, char*[] )
 {
-	DC_Skip_Auth_Init();
 	DC_Skip_Core_Init();
 #ifdef WIN32
 	_setmaxstdio(2048);

@@ -70,10 +70,6 @@ endif(UNIX)
 
 condor_daemon( EXE condor_starter SOURCES "${starterElements}" LIBRARIES "${CONDOR_LIBS};${LIBCGROUP_FOUND}" INSTALL "${C_SBIN}")
 
-if (HAVE_EXT_GLOBUS)
-	clone_install( condor_starter "${C_SBIN}" "condor_gridshell" "${C_SBIN}" )
-endif()
-
 # need to add all the other install targets for libexec.
 install ( FILES CondorJavaWrapper.class CondorJavaInfo.class DESTINATION ${C_LIB} )
 

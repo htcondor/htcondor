@@ -1,8 +1,0 @@
-universe = vanilla
-type = jobs
-
-ports = dynamic
-condor = nightlies
-localpostsrc = x_secgsi_configpostsrc
-daemon_list = master,schedd,collector,startd,negotiator
-vms	= 1

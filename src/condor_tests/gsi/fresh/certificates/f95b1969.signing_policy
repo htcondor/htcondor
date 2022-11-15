@@ -1,9 +1,0 @@
-#CL entry #1|
-
-	access_id_CA      X509         '/C=US/ST=Wisconsin/L=Madison/O=CHTC/'
-
-  	pos_rights        globus        CA:sign
-
-   	cond_subjects     globus    	'"/C=US/ST=Wisconsin/L=Madison/O=CHTC/*"'
-
-# end of EACL

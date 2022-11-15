@@ -2580,6 +2580,7 @@ void Resource::publish_static(ClassAd* cap)
     }
 }
 
+
 void
 Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 {
@@ -2616,11 +2617,13 @@ Resource::publish_dynamic(ClassAd* cap, bool /*for_update*/)
 	// daemonCore->publish sets this, but it will be stale
 	cap->Assign(ATTR_MY_CURRENT_TIME, time(NULL));
 
-	// Put in cpu-specific attributes
+	// Put in cpu-specific attributes (TotalDisk, LoadAverage)
 	r_attr->publish_dynamic(cap);
 
-	// Put in machine-wide attributes
-	resmgr->m_attr->publish_dynamic(cap, r_id, r_sub_id, r_backfill_slot);
+	// Put in machine-wide dynamic attributes (Mips, OfflineGPUs)
+	resmgr->m_attr->publish_common_dynamic(cap);
+	// Put in per-slot dynamic (AvailableGpus, ResourceConflict)
+	resmgr->m_attr->publish_slot_dynamic(cap, r_id, r_sub_id, r_backfill_slot, m_res_conflict);
 
 	// Put in ResMgr-specific attributes (A_STATIC, A_UPDATE, and always)
 	resmgr->publish_dynamic(cap);
