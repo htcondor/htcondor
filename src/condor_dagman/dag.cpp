@@ -3933,9 +3933,9 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 
 	if( event->eventNumber == ULOG_CLUSTER_SUBMIT ) {
 		const ClusterSubmitEvent* cluster_submit_event = (const ClusterSubmitEvent*)event;
-		if ( cluster_submit_event->submitEventLogNotes ) {
+		if ( !cluster_submit_event->submitEventLogNotes.empty() ) {
 			char nodeName[1024] = "";
-			if ( sscanf( cluster_submit_event->submitEventLogNotes,
+			if ( sscanf( cluster_submit_event->submitEventLogNotes.c_str(),
 						 "DAG Node: %1023s", nodeName ) == 1 ) {
 				node = FindNodeByName( nodeName );
 				if( node ) {
@@ -3967,7 +3967,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 			} else {
 				debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 							"in cluster submit event notes: <%s>\n",
-							cluster_submit_event->submitEventLogNotes );
+							cluster_submit_event->submitEventLogNotes.c_str() );
 			}
 		}
 		return node;

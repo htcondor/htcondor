@@ -523,8 +523,8 @@ int writeClusterSubmitEvent(WriteUserLog &logFile)
 {
 	ClusterSubmitEvent evt;
 	evt.setSubmitHost("<128.105.165.12:32779>");
-	evt.submitEventLogNotes = strdup("DAGMan info");
-	evt.submitEventUserNotes = strdup("User info");
+	evt.submitEventLogNotes = "DAGMan info";
+	evt.submitEventUserNotes = "User info";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad Cluster Submit Event write\n");
 		exit(1);

@@ -6053,56 +6053,31 @@ void PreSkipEvent::setSkipNote(const char* s)
 // ----- the ClusterSubmitEvent class
 ClusterSubmitEvent::ClusterSubmitEvent(void)
 {
-	submitEventLogNotes = NULL;
-	submitEventUserNotes = NULL;
-	submitHost = NULL;
 	eventNumber = ULOG_CLUSTER_SUBMIT;
-}
-
-ClusterSubmitEvent::~ClusterSubmitEvent(void)
-{
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( submitEventLogNotes ) {
-		delete[] submitEventLogNotes;
-	}
-	if( submitEventUserNotes ) {
-		delete[] submitEventUserNotes;
-	}
 }
 
 void
 ClusterSubmitEvent::setSubmitHost(char const *addr)
 {
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( addr ) {
-		submitHost = strnewp(addr);
-		ASSERT( submitHost );
-	}
-	else {
-		submitHost = NULL;
-	}
+	submitHost = addr ? addr : "";
 }
 
 bool
 ClusterSubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost.c_str());
 	if (retval < 0)
 	{
 		return false;
 	}
-	if( submitEventLogNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+	if( !submitEventLogNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventUserNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+	if( !submitEventUserNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
@@ -6113,32 +6088,19 @@ ClusterSubmitEvent::formatBody( std::string &out )
 int
 ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] submitHost;
-	submitHost = NULL;
-	delete[] submitEventLogNotes;
-	submitEventLogNotes = NULL;
-
-	MyString line;
-	if ( ! read_line_value("Cluster submitted from host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Cluster submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
 	}
-	submitHost = line.detach_buffer();
 
 	// see if the next line contains an optional event notes string,
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true)) {
 		return 1;
 	}
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
-	line.trim();
-	submitEventLogNotes = line.detach_buffer();
 
 	// see if the next line contains an optional user event notes
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true)) {
 		return 1;
 	}
-	line.trim();
-	submitEventUserNotes = line.detach_buffer();
 
 	return 1;
 }
@@ -6149,7 +6111,7 @@ ClusterSubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( submitHost && submitHost[0] ) {
+	if( !submitHost.empty() ) {
 		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
@@ -6163,13 +6125,7 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SubmitHost", &mallocstr);
-	if( mallocstr ) {
-		setSubmitHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("SubmitHost", submitHost);
 }
 
 // ----- the ClusterRemoveEvent class
