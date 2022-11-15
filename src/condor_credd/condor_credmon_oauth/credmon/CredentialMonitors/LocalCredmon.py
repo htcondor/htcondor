@@ -179,7 +179,9 @@ def get_user_groups(username, mapfile):
     groups = []
     with open(mapfile) as f:
         for line in f:
-            tokens = line.rstrip().split()
+            tokens = line.split()
+            if len(tokens) < 3:
+                continue
             if tokens[0] != "*":
                 continue
             if tokens[1] == username:
