@@ -571,8 +571,6 @@ class ExecuteEvent : public ULogEvent
   public:
     ///
     ExecuteEvent(void);
-    ///
-    ~ExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -599,12 +597,8 @@ class ExecuteEvent : public ULogEvent
 		/** @return execute host or empty string (never NULL) */
 	char const *getExecuteHost();
 
-	char const *getRemoteName() { return remoteName; }
-
 	void setExecuteHost(char const *addr);
-	void setRemoteName(char const *name);
 
- private:
 	/** Identifier for the machine the job executed on.
 		For Vanilla, Standard, and other non-Grid Universes, a
 		host string in the form: "<128.105.165.12:32779>".
@@ -612,8 +606,7 @@ class ExecuteEvent : public ULogEvent
 		This may be an empty string for some JobUniverses
 		or GridTyps.
 	*/
-    char *executeHost;
-	char *remoteName;
+	std::string executeHost;
 };
 
 //----------------------------------------------------------------------------

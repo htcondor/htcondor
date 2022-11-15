@@ -1939,59 +1939,19 @@ RemoteErrorEvent::setExecuteHost(char const *str)
 // ----- the ExecuteEvent class
 ExecuteEvent::ExecuteEvent(void)
 {
-	executeHost = NULL;
-	remoteName = NULL;
 	eventNumber = ULOG_EXECUTE;
-}
-
-ExecuteEvent::~ExecuteEvent(void)
-{
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( remoteName ) {
-		delete[] remoteName;
-	}
 }
 
 void
 ExecuteEvent::setExecuteHost(char const *addr)
 {
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( addr ) {
-		executeHost = strnewp(addr);
-		ASSERT( executeHost );
-	}
-	else {
-		executeHost = NULL;
-	}
-}
-
-void ExecuteEvent::setRemoteName(char const *name)
-{
-	if( remoteName ) {
-		delete[] remoteName;
-	}
-	if( name ) {
-		remoteName = strnewp(name);
-		ASSERT( remoteName );
-	}
-	else {
-		remoteName = NULL;
-	}
+	executeHost = addr ? addr : "";
 }
 
 char const *
 ExecuteEvent::getExecuteHost()
 {
-	if( !executeHost ) {
-			// There are a few callers that do not expect NULL execute host,
-			// so set it to empty string.
-		setExecuteHost("");
-	}
-	return executeHost;
+	return executeHost.c_str();
 }
 
 bool
@@ -1999,7 +1959,7 @@ ExecuteEvent::formatBody( std::string &out )
 {
 	int retval;
 
-	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost );
+	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost.c_str() );
 
 	if (retval < 0) {
 		return false;
@@ -2011,12 +1971,9 @@ ExecuteEvent::formatBody( std::string &out )
 int
 ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
-
-	if ( ! read_line_value("Job executing on host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Job executing on host: ", executeHost, file, got_sync_line)) {
 		return 0;
 	}
-	executeHost = line.detach_buffer();
 	return 1;
 }
 
@@ -2026,7 +1983,7 @@ ExecuteEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( executeHost && executeHost[0] ) {
+	if( !executeHost.empty() ) {
 		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
 	}
 
@@ -2040,13 +1997,7 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char *mallocstr = NULL;
-	ad->LookupString("ExecuteHost", &mallocstr);
-	if( mallocstr ) {
-		setExecuteHost( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString("ExecuteHost", executeHost);
 }
 
 
