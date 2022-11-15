@@ -335,7 +335,23 @@ Singularity::setup(ClassAd &machineAd,
 		sing_args.AppendArg("--no-home");
 	}
 
-	sing_args.AppendArg("-C");
+	// Setup Singularity containerization options.
+	// By default, we will ideally pass "-C" which tells Singularity to contain
+	// everything, which includes file systems, PID, IPC, and environment and whatever
+	// they dream up next.
+	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
+	if (param_boolean("SINGULARITY_USE_PID_NAMESPACES", true)) {
+		// containerize everything with -C, ie use pid namespaces
+		sing_args.AppendArg("-C");
+	}
+	else {
+		// We cannot use pid namespaces, so we cannot use -C to contain everything.
+		// Unfortunately, Singulariry does not have a way to just disable pid namespaces.
+		// So instead we pass as many other contain flags as we can.
+		sing_args.AppendArg("--contain");	//  minimal dev and other dirs
+		sing_args.AppendArg("--ipc");		// contain ipc namespace
+		sing_args.AppendArg("--cleanenv");
+	}
 
 	std::string args_error;
 	std::string sing_extra_args;
@@ -519,6 +535,10 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	}
 
 	errorMessage = buf;
+
+	// TODO: strip out ansi escape sequences from errorMesssage.
+	// Singularity puts various ansi escape sequences into its output to do things
+	// like change text color to red if an error.
 
 	// my_pclose will return an error if there is more than a pipe full
 	// of output at close time.  Drain the input pipe to prevent this.
