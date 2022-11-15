@@ -50,6 +50,10 @@ def good_url(server):
     server.expect_request("/goodurl").respond_with_data("Great success!")
     return "http://localhost:{}/goodurl".format(server.port)
 
+@action
+def good_file_url(test_dir):
+    ( test_dir / "file_url_tester" ).write_text("curl supports file urls")
+    return "file://" + str(test_dir) + "/file_url_tester"
 
 @action
 def multiple_good_urls(server):
@@ -74,7 +78,7 @@ def job_with_good_url(default_condor, good_url, test_dir, path_to_sleep):
     job = default_condor.submit(
         {
             "executable": path_to_sleep,
-            "arguments": "1",
+            "arguments": "0",
             "log": (test_dir / "good_url.log").as_posix(),
             "transfer_input_files": good_url,
             "transfer_output_files": "goodurl",
@@ -85,13 +89,28 @@ def job_with_good_url(default_condor, good_url, test_dir, path_to_sleep):
     assert job.wait(condition=ClusterState.all_terminal)
     return job
 
+@action
+def job_with_good_file_url(default_condor, good_file_url, test_dir, path_to_sleep):
+    job = default_condor.submit(
+        {
+            "executable": path_to_sleep,
+            "arguments": "0",
+            "log": (test_dir / "good_file_url.log").as_posix(),
+            "transfer_input_files": good_file_url,
+            "transfer_output_files": "file_url_tester",
+            "should_transfer_files": "YES",
+            "requirements": "(SlotID == 1)"
+        }
+    )
+    assert job.wait(condition=ClusterState.all_terminal)
+    return job
 
 @action
 def job_with_bad_url(default_condor, bad_url, test_dir, path_to_sleep):
     job = default_condor.submit(
         {
             "executable": path_to_sleep,
-            "arguments": "1",
+            "arguments": "0",
             "log": (test_dir / "bad_url.log").as_posix(),
             "transfer_input_files": bad_url,
             "should_transfer_files": "YES",
@@ -107,7 +126,7 @@ def job_with_multiple_good_urls(default_condor, multiple_good_urls, test_dir, pa
     job = default_condor.submit(
         {
             "executable": path_to_sleep,
-            "arguments": "1",
+            "arguments": "0",
             "log": (test_dir / "multiple_good_urls.log").as_posix(),
             "transfer_input_files": multiple_good_urls,
             "transfer_output_files": "goodurl1, goodurl2, goodurl3",
@@ -126,7 +145,7 @@ def job_with_multiple_bad_urls(default_condor, multiple_bad_urls, test_dir, path
     job = default_condor.submit(
         {
             "executable": path_to_sleep,
-            "arguments": "1",
+            "arguments": "0",
             "log": (test_dir / "multiple_bad_urls.log").as_posix(),
             "transfer_input_files": multiple_bad_urls,
             "transfer_output_files": "badurl1, badurl2, badurl3",
@@ -146,6 +165,14 @@ class TestCurlPlugin:
         self, job_with_good_url, test_dir
     ):
         assert Path("goodurl").read_text() == "Great success!"
+
+    def test_job_with_good_file_url_succeeds(self, job_with_good_file_url):
+        assert job_with_good_file_url.state[0] == JobStatus.COMPLETED
+
+    def test_job_with_good_file_url_file_contents_are_correct(
+        self, job_with_good_file_url, test_dir
+    ):
+        assert Path("file_url_tester").read_text() == "curl supports file urls"
 
     def test_job_with_bad_url_holds(self, job_with_bad_url):
         assert job_with_bad_url.state[0] == JobStatus.HELD
