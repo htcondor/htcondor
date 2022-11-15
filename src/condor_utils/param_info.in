@@ -274,26 +274,6 @@ description=Directory for condor credentials
 default=60
 type=int
 
-[GSI_DAEMON_DIRECTORY]
-default=
-type=path
-
-[GSI_DAEMON_PROXY]
-default=
-type=string
-
-[GSI_DAEMON_CERT]
-default=
-type=string
-
-[GSI_DAEMON_KEY]
-default=
-type=string
-
-[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
-default=0
-type=int
-
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
@@ -1536,12 +1516,6 @@ win32_default=$(SBIN)\remote_gahp.exe
 type=path
 tags=gridmanager,infnbatchjob
 
-[NORDUGRID_GAHP]
-default=$(SBIN)/nordugrid_gahp
-win32_default=$(SBIN)\nordugrid_gahp.exe
-type=path
-tags=gridmanager,nordugridjob
-
 [GRIDMANAGER_CONTACT_SCHEDD_DELAY]
 default=5
 type=int
@@ -2554,7 +2528,7 @@ type=path
 tags=io
 
 [TRUST_DOMAIN]
-default=$(COLLECTOR_HOST)
+default=$(UID_DOMAIN)
 type=string
 tags=condor_auth_passwd
 
@@ -2587,11 +2561,6 @@ tags=io,cedar_no_ckpt
 default=
 type=string
 tags=io,credential
-
-[GSI_DAEMON_NAME]
-default=
-type=string
-tags=io,condor_auth_x509
 
 [STARTER_UPLOAD_TIMEOUT]
 default=300
@@ -2637,7 +2606,9 @@ tags=starter
 
 [JOB_INHERITS_STARTER_ENVIRONMENT]
 default=false
-type=bool
+type=string
+description=list of allow and deny patterns that determine what environment variables to inhert from the starter environment
+usage=Set to true or * to inherit all. foo* inherits only vars that start with foo. !foo* inherits all but vars that start with foo
 tags=starter
 
 [MPI_CONDOR_RSH_PATH]
@@ -3910,29 +3881,6 @@ tags=ccb
 default=
 type=string
 tags=ccb
-
-[GRIDMAP]
-default=
-type=string
-description=Gridmap file
-tags=ccb
-
-[GSI_DAEMON_TRUSTED_CA_DIR]
-default=
-type=string
-description=GSI Daemon Trusted Certificate Authority Directory
-usage=Set the directory that contains the public keys and signing policies of trusted certificate authorities
-tags=security
-
-[GSI_SKIP_HOST_CHECK_CERT_REGEX]
-default=
-type=string
-tags=security
-
-[GSI_SKIP_HOST_CHECK]
-default=false
-type=bool
-tags=security
 
 [TRUNC_MASTER_LOG_ON_OPEN]
 default=false
@@ -5653,12 +5601,6 @@ customization=const
 
 [PYTHON3_VERSION_MINOR]
 macro=PYTHON3_VERSION_MINOR
-default=0
-type=int
-customization=const
-
-[HAVE_EXT_GLOBUS]
-macro=HAVE_EXT_GLOBUS
 default=0
 type=int
 customization=const

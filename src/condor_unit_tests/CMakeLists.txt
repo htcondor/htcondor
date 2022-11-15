@@ -40,6 +40,7 @@ OTEST_Directory.cpp
 OTEST_Env.cpp
 OTEST_FileLock.cpp
 OTEST_HashTable.cpp
+OTEST_Regex.cpp
 OTEST_Iso_Dates.cpp
 OTEST_MyString.cpp
 OTEST_Old_Classads.cpp

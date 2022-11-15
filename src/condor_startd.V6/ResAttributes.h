@@ -205,7 +205,7 @@ public:
 	int is_owned(int slot_id, int sub_id) const {
 		if (owner.id == slot_id && owner.dyn_id == sub_id) return 1;
 		if (bkowner.id == slot_id && bkowner.dyn_id == sub_id) {
-			// TODO: handle the case where the primary owner is a static slot?
+			// TODO: handle the case where the primary owner is a claimed static slot?
 			if (owner.dyn_id > 0) return 3;
 			return 2;
 		}
@@ -251,7 +251,8 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill);    // things that can change at runtime
+	void publish_common_dynamic(ClassAd*); // things that can change at runtime
+	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
@@ -261,6 +262,8 @@ public:
 			m_condor_load = m_load;
 		}
 	}
+
+	bool has_nft_conflicts(int slotid, int slotsubid);
 
 		// Initiate benchmark computations benchmarks on the given resource
 	void start_benchmarks( Resource*, int &count );	
@@ -380,6 +383,7 @@ private:
 
 };	
 
+class ResBag;
 
 // CPU-specific attributes.  
 class CpuAttributes
@@ -393,6 +397,7 @@ public:
 	typedef MachAttributes::slotres_constraint_map_t slotres_constraint_map_t;
 
 	friend class AvailAttributes;
+	friend class ResBag;
 
 	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
@@ -501,6 +506,34 @@ private:
 	VolumeManager *m_volume_mgr{nullptr};
 #endif // LINUX
 };	
+
+// a loose bag of resource quantities, for doing resource math
+class ResBag {
+public:
+
+	ResBag() = default;
+	ResBag(const class CpuAttributes & c_attr) 
+		: cpus(c_attr.c_num_slot_cpus)
+		, disk(c_attr.c_slot_disk)
+		, mem(c_attr.c_slot_mem)
+		, slots(1)
+		, resmap(c_attr.c_slottot_map)
+	{}
+
+	ResBag& operator+=(const CpuAttributes& rhs);
+	ResBag& operator-=(const CpuAttributes& rhs);
+
+	bool underrun(std::string * names);
+	const char * dump(std::string & buf) const;
+
+protected:
+	double     cpus = 0;
+	long long  disk = 0;
+	int        mem = 0;
+	int        slots = 0;
+	MachAttributes::slotres_map_t resmap;
+
+};
 
 class AvailDiskPartition
 {

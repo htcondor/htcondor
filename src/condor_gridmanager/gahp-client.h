@@ -423,45 +423,6 @@ class GahpClient : public GenericGahpClient {
 		blah_get_sandbox_path(const char *sandbox_id, std::string &sandbox_path);
 
 		int
-		nordugrid_submit(const char *hostname, const char *rsl, char *&job_id);
-
-		int
-		nordugrid_status(const char *hostname, const char *job_id,
-						 char *&status);
-
-		int
-		nordugrid_ldap_query(const char *hostname, const char *ldap_base,
-							 const char *ldap_filter, const char *ldap_attrs,
-							 StringList &results);
-
-		int
-		nordugrid_cancel(const char *hostname, const char *job_id);
-
-		int
-		nordugrid_stage_in(const char *hostname, const char *job_id,
-						   StringList &files);
-
-		int
-		nordugrid_stage_out(const char *hostname, const char *job_id,
-							StringList &files);
-
-		int
-		nordugrid_stage_out2(const char *hostname, const char *job_id,
-							 StringList &src_files, StringList &dest_files);
-
-		int
-		nordugrid_exit_info(const char *hostname, const char *job_id,
-							bool &normal_exit, int &exit_code,
-							float &wallclock, float &sys_cpu,
-							float &user_cpu );
-
-		int
-		nordugrid_ping(const char *hostname);
-
-		int
-		gridftp_transfer(const char *src_url, const char *dst_url);
-
-		int
 		arc_ping(const std::string &service_url);
 
 		int

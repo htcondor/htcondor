@@ -121,9 +121,6 @@
 /* Define to 1 if the system has the MS_REC flag. */
 #cmakedefine HAVE_MS_REC 1
 
-/* Do we have the globus external (USED)*/
-#cmakedefine HAVE_EXT_GLOBUS 1
-
 /* Do we have the krb5 external (USED)*/
 #cmakedefine HAVE_EXT_KRB5 1
 
@@ -165,9 +162,6 @@
 
 /* Define to 1 if you have the <inttypes.h> header file. (USED)*/
 #cmakedefine HAVE_INTTYPES_H 1
-
-/* Define to 1 if you have the <ldap.h> header file. (USED)*/
-#cmakedefine HAVE_LDAP_H 1
 
 /* Define to 1 if you have the <linux/ethtool.h> header file.*/
 #cmakedefine HAVE_LINUX_ETHTOOL_H 1
@@ -310,9 +304,6 @@
 /* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
 #cmakedefine HAVE_TCP_USER_TIMEOUT
 
-/* Define to 1 if the GSI libraries need to dlopen()d */
-#cmakedefine DLOPEN_GSI_LIBS
-
 /* Define to 1 if the VOMS libraries need to dlopen()d */
 #cmakedefine DLOPEN_VOMS_LIBS
 
@@ -333,20 +324,6 @@
 #cmakedefine LIBGSSAPI_KRB5_SO "${LIBGSSAPI_KRB5_SO}"
 #cmakedefine LIBSSL_SO "${LIBSSL_SO}"
 #cmakedefine LIBMUNGE_SO "${LIBMUNGE_SO}"
-#cmakedefine LIBLTDL_SO "${LIBLTDL_SO}"
-#cmakedefine LIBGLOBUS_COMMON_SO "${LIBGLOBUS_COMMON_SO}"
-#cmakedefine LIBGLOBUS_CALLOUT_SO "${LIBGLOBUS_CALLOUT_SO}"
-#cmakedefine LIBGLOBUS_PROXY_SSL_SO "${LIBGLOBUS_PROXY_SSL_SO}"
-#cmakedefine LIBGLOBUS_OPENSSL_ERROR_SO "${LIBGLOBUS_OPENSSL_ERROR_SO}"
-#cmakedefine LIBGLOBUS_OPENSSL_SO "${LIBGLOBUS_OPENSSL_SO}"
-#cmakedefine LIBGLOBUS_GSI_CERT_UTILS_SO "${LIBGLOBUS_GSI_CERT_UTILS_SO}"
-#cmakedefine LIBGLOBUS_OLDGAA_SO "${LIBGLOBUS_OLDGAA_SO}"
-#cmakedefine LIBGLOBUS_GSI_SYSCONFIG_SO "${LIBGLOBUS_GSI_SYSCONFIG_SO}"
-#cmakedefine LIBGLOBUS_GSI_CALLBACK_SO "${LIBGLOBUS_GSI_CALLBACK_SO}"
-#cmakedefine LIBGLOBUS_GSI_CREDENTIAL_SO "${LIBGLOBUS_GSI_CREDENTIAL_SO}"
-#cmakedefine LIBGLOBUS_GSI_PROXY_CORE_SO "${LIBGLOBUS_GSI_PROXY_CORE_SO}"
-#cmakedefine LIBGLOBUS_GSSAPI_GSI_SO "${LIBGLOBUS_GSSAPI_GSI_SO}"
-#cmakedefine LIBGLOBUS_GSS_ASSIST_SO "${LIBGLOBUS_GSS_ASSIST_SO}"
 #cmakedefine LIBVOMSAPI_SO "${LIBVOMSAPI_SO}"
 #cmakedefine LIBSYSTEMD_DAEMON_SO "${LIBSYSTEMD_DAEMON_SO}"
 

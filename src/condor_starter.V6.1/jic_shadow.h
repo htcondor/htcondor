@@ -54,6 +54,7 @@ public:
 
 		/// If needed, transfer files.
 	void setupJobEnvironment( void );
+	void setupJobEnvironment_part2(void);
 
 	bool streamInput();
 	bool streamOutput();

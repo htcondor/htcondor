@@ -884,7 +884,7 @@ const CustomFormatFnTableItem GlobalPrintFormats[] = {
 	{ "ELAPSED_TIME",    ATTR_LAST_HEARD_FROM, "%T", render_elapsed_time, ATTR_LAST_HEARD_FROM "\0" },
 	{ "GRID_JOB_ID",     ATTR_GRID_JOB_ID, 0, render_grid_job_id, ATTR_GRID_RESOURCE "\0" },
 	{ "GRID_RESOURCE",   ATTR_GRID_RESOURCE, 0, render_grid_resource, ATTR_EC2_REMOTE_VM_NAME "\0" },
-	{ "GRID_STATUS",     ATTR_GRID_JOB_STATUS, 0, render_grid_status, ATTR_GLOBUS_STATUS "\0" },
+	{ "GRID_STATUS",     ATTR_GRID_JOB_STATUS, 0, render_grid_status, nullptr },
 	{ "JOB_COMMAND",     ATTR_JOB_CMD, 0, render_job_cmd_and_args, ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_DESCRIPTION", ATTR_JOB_CMD, 0, render_job_description, ATTR_JOB_ARGUMENTS1 "\0" ATTR_JOB_ARGUMENTS2 "\0" ATTR_JOB_DESCRIPTION "\0MATCH_EXP_" ATTR_JOB_DESCRIPTION "\0" },
 	{ "JOB_FACTORY_MODE",ATTR_JOB_MATERIALIZE_PAUSED, 0, format_job_factory_mode, NULL },

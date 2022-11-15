@@ -16,6 +16,8 @@ from pathlib import Path
 import htcondor
 import classad
 
+from htcondor_cli.annex_validate import SYSTEM_TABLE, validate_system_specific_constraints
+
 #
 # We could try to import colorama here -- see condor_watch_q -- but that's
 # only necessary for Windows.
@@ -26,230 +28,6 @@ REMOTE_CLEANUP_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_CLEANUP_TIMEOUT", 
 REMOTE_MKDIR_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_MKDIR_TIMEOUT", 30))
 REMOTE_POPULATE_TIMEOUT = int(htcondor.param.get("ANNEX_REMOTE_POPULATE_TIMEOUT", 60))
 TOKEN_FETCH_TIMEOUT = int(htcondor.param.get("ANNEX_TOKEN_FETCH_TIMEOUT", 20))
-
-#
-# For queues with the whole-node allocation policy, cores and RAM -per-node
-# are only informative at the moment; we could compute the necessary number
-# of nodes for the user (as long as we echo it back to them), but let's not
-# do that for now and just tell the user to size their requests with the
-# units appropriate to the queue.
-#
-SYSTEM_TABLE = {
-
-    # The key is currently both the value of the command-line option
-    # and part of the name of some files in condor_scripts/annex.  This
-    # shouldn't be hard to change.
-    "stampede2": {
-        "pretty_name":      "Stampede 2",
-        "host_name":        "stampede2.tacc.utexas.edu",
-        "default_queue":    "normal",
-        "batch_system":     "SLURM",
-        "script_base":      "hpc",
-
-        # This isn't all of the queues on Stampede 2, but we
-        # need to think about what it means, if anything, if
-        # recognize certain queues.  For now, these are the
-        # only three queues I've actually tested.
-        "queues": {
-            "normal": {
-                "max_nodes_per_job":    256,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-
-                "max_jobs_in_queue":    50,
-            },
-            "development": {
-                "max_nodes_per_job":    16,
-                "max_duration":         2 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       68,
-
-                "max_jobs_in_queue":    1,
-            },
-            "skx-normal": {
-                "max_nodes_per_job":    128,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       48,
-
-                "max_jobs_in_queue":    20,
-            },
-        },
-    },
-
-    "expanse": {
-        "pretty_name":      "Expanse",
-        "host_name":        "login.expanse.sdsc.edu",
-        "default_queue":    "compute",
-        "batch_system":     "SLURM",
-        "script_base":      "hpc",
-
-        # GPUs are completed untested, see above.
-        "queues": {
-            "compute": {
-                "max_nodes_per_job":    32,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       128,
-                "ram_per_node":         256,
-
-                "max_jobs_in_queue":    64,
-            },
-            "gpu": {
-                "max_nodes_per_job":    4,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       40,
-                "ram_per_node":         256,
-
-                "max_jobs_in_queue":    8,
-            },
-            "shared": {
-                "max_nodes_per_job":    1,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       128,
-                "ram_per_node":         256,
-
-                "max_jobs_in_queue":    4096,
-            },
-            "gpu-shared": {
-                "max_nodes_per_job":    1,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       40,
-                "ram_per_node":         384,
-
-                "max_jobs_in_queue":    24,
-            },
-        },
-    },
-
-    "anvil": {
-        "pretty_name":      "Anvil",
-        "host_name":        "anvil.rcac.purdue.edu",
-        "default_queue":    "wholenode",
-        "batch_system":     "SLURM",
-        "script_base":      "hpc",
-
-        # GPUs are completed untested, see above.
-        "queues": {
-            "wholenode": {
-                "max_nodes_per_job":    16,
-                "max_duration":         96 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
-
-                "max_jobs_in_queue":    128,
-            },
-            "wide": {
-                "max_nodes_per_job":    56,
-                "max_duration":         12 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
-
-                "max_jobs_in_queue":    10,
-            },
-            "shared": {
-                "max_nodes_per_job":    1,
-                "max_duration":         96 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       128,
-                "ram_per_node":         (25600 // 1024),
-
-                "max_jobs_in_queue":    999999,  # unlimited
-            },
-        },
-    },
-
-    "bridges2": {
-        "pretty_name":      "Bridges-2",
-        "host_name":        "bridges2.psc.edu",
-        "default_queue":    "RM",
-        "batch_system":     "SLURM",
-        "script_base":      "hpc",
-
-        # Omitted the GPU queues because they are based on a different set of parameters.
-        # Queue limits are not documented, possibly nonexistent.
-        # XXX You don't request memory for Bridges2; should we do a "ram_per_core" instead?
-        "queues": {
-            "RM": {
-                "max_nodes_per_job":    50,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       128,
-                "ram_per_node":         (253000 // 1024),
-
-                "max_jobs_in_queue":    50,
-            },
-            "RM-512": {
-                "max_nodes_per_job":    2,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "node",
-                "cores_per_node":       128,
-                "ram_per_node":         (515000 // 1024),
-
-                "max_jobs_in_queue":    50,
-            },
-            "RM-shared": {
-                "max_nodes_per_job":    1,
-                "max_duration":         48 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                # RM-shared lets you request up to half an RM node
-                "cores_per_node":       64,
-                "ram_per_node":         (253000 // 2 // 1024),
-
-                "max_jobs_in_queue":    50,
-            },
-            "EM": {
-                "max_nodes_per_job":    2,
-                "max_duration":         120 * 60 * 60,
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       96,
-                # The EM queue specifies "MaxMemPerCPU"
-                "ram_per_node":         (42955 * 96 // 1024),
-
-                "max_jobs_in_queue":    50,
-            },
-        },
-    },
-
-    "path-facility": {
-        "pretty_name":      "PATh Facilty",
-        "host_name":        "ap1.facility.path-cc.io",
-        "default_queue":    "cpu",
-        "batch_system":     "HTCondor",
-        "script_base":      "path-facility",
-
-        "queues": {
-            "cpu": {
-                # This is actually max-jobs-per-request for this system,
-                # but for now, it's easier to think about each request
-                # being a single job like it is for SLURM.
-                "max_nodes_per_job":    1, # FIXME
-                "max_duration":         60 * 60 * 72, # FIXME
-                "allocation_type":      "cores_or_ram",
-                "cores_per_node":       64,
-                "ram_per_node":         244, # GB; what are the others?
-
-                "max_jobs_in_queue":    1000, # FIXME
-            },
-            # When we formally support GPUs, we'll need to add the GPU
-            # queue here, and -- because HTCondor doesn't have multiple
-            # queues -- some special code somewhere to insert request_gpus.
-            # (Seems like we should allow the user to specify how many
-            # GPUs per node for the PATh Facility, too, so check that
-            # against the queue name (warn if cpu queue?) and also default
-            # it to 1 if the queue name is 'gpu'?)
-            #
-            # Also, we may not want to call them "nodes" for the PATh
-            # facility.
-        },
-    },
-}
 
 
 def make_initial_ssh_connection(
@@ -407,7 +185,7 @@ def populate_remote_temporary_directory(
     token_file,
     password_file,
 ):
-    script_base = SYSTEM_TABLE[system]["script_base"]
+    script_base = SYSTEM_TABLE[system].script_base
 
     files = [
         f"-C {local_script_dir} {script_base}.sh",
@@ -526,20 +304,25 @@ def invoke_pilot_script(
     password_file,
     cpus,
     mem_mb,
+    gpus,
+    gpu_type,
 ):
     ssh_target = ssh_host_name
     if ssh_user_name is not None:
         ssh_target = f"{ssh_user_name}@{ssh_host_name}"
 
-    script_base = SYSTEM_TABLE[system]["script_base"]
+    script_base = SYSTEM_TABLE[system].script_base
 
+    gpu_argument = str(gpus)
+    if gpu_type is not None:
+        gpu_argument = f"{gpu_type}:{gpus}"
     args = [
         "ssh",
         *ssh_connection_sharing,
         ssh_target,
         str(remote_script_dir / f"{script_base}.sh"),
         system,
-        startd_noclaim_shutdown,
+        str(startd_noclaim_shutdown),
         annex_name,
         queue_name,
         collector,
@@ -554,6 +337,7 @@ def invoke_pilot_script(
         str(remote_script_dir / password_file.name),
         str(cpus),
         str(mem_mb),
+        gpu_argument
     ]
     proc = subprocess.Popen(
         args,
@@ -705,6 +489,9 @@ def annex_inner_func(
     login_name,
     login_host,
     startd_noclaim_shutdown,
+    gpus,
+    gpu_type,
+    test,
 ):
     if '@' in queue_at_system:
         (queue_name, system) = queue_at_system.split('@', 1)
@@ -713,27 +500,15 @@ def annex_inner_func(
 
         system = queue_at_system.casefold()
         if system not in SYSTEM_TABLE:
-            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a known system."
+            error_string = f"{error_string}  Also, '{queue_at_system}' is not the name of a supported system."
+            system_list = "\n    ".join(SYSTEM_TABLE.keys())
+            error_string = f"{error_string}  Supported systems are:\n    {system_list}"
         else:
-            default_queue = SYSTEM_TABLE[system]['default_queue']
-            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system]['queues']])
+            default_queue = SYSTEM_TABLE[system].default_queue
+            queue_list = "\n    ".join([q for q in SYSTEM_TABLE[system].queues])
             error_string = f"{error_string}  Supported queues are:\n    {queue_list}\nUse '{default_queue}' if you're not sure."
 
         raise ValueError(error_string)
-
-    #
-    # We'll need to validate the requested nodes (or CPUs and memory)
-    # against the requested queue[-system pair].  We also need to
-    # check the lifetime (and idle time, once we support it).  Once
-    # all of that's been validated, we should print something like:
-    #
-    #   Once established by Stampede 2, the annex will be available to
-    #   run your jobs for no more than 48 hours (use --duration to change).
-    #   It will self-destruct after 20 minutes of inactivity (use
-    #   --idle to change).
-    #
-    # .. although it should maybe also include the queue name and size.
-    #
 
     # We use this same method to determine the user name in `htcondor job`,
     # so even if it's wrong, it will at least consistently so.
@@ -741,7 +516,50 @@ def annex_inner_func(
 
     system = system.casefold()
     if system not in SYSTEM_TABLE:
-        raise ValueError(f"{system} is not a known system.")
+        error_string = f"'{system}' is not the name of a supported system."
+        system_list = "\n    ".join(SYSTEM_TABLE.keys())
+        error_string = f"{error_string}  Supported systems are:\n    {system_list}"
+        raise ValueError(error_string)
+
+
+    #
+    # Handle special case for Bridges 2.
+    #
+    if gpus is not None:
+        if ":" in gpus:
+            (gpu_type, gpus) = gpus.split(":")
+        try:
+            gpus = int(gpus)
+        except ValueError:
+            error_string = f"The --gpus argument must be either an integer or an integer followed by ':' and a GPU type."
+            raise ValueError(error_string)
+
+
+    #
+    # We'll need to validate the requested nodes (or CPUs and memory)
+    # against the requested queue[-system pair].  We also need to
+    # check the lifetime (and idle time, once we support it).
+    #
+
+    # As reminders for when we fix lifetime being specified in seconds.
+    lifetime_in_seconds = lifetime
+    idletime_in_seconds = startd_noclaim_shutdown
+
+    gpus = validate_system_specific_constraints(
+        system=system,
+        queue_name=queue_name,
+        nodes=nodes,
+        lifetime_in_seconds=lifetime_in_seconds,
+        allocation=allocation,
+        cpus=cpus,
+        mem_mb=mem_mb,
+        idletime_in_seconds=idletime_in_seconds,
+        gpus=gpus,
+        gpu_type=gpu_type,
+    )
+
+    if test is not None and test == 1:
+        return
 
     # Location of the local universe script files
     local_script_dir = (
@@ -802,7 +620,7 @@ def annex_inner_func(
         ssh_user_name = login_name
 
     ssh_host_name = htcondor.param.get(
-        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system]["host_name"],
+        f"HPC_ANNEX_{system}_HOST_NAME", SYSTEM_TABLE[system].host_name,
     )
     if login_host is not None:
         ssh_host_name = login_host
@@ -814,13 +632,19 @@ def annex_inner_func(
     ##
     schedd = htcondor.Schedd()
     annex_jobs = schedd.query(f'TargetAnnexName == "{annex_name}"')
-    if len(annex_jobs) == 0:
-        raise RuntimeError(
-            f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
+
+    enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
+    if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
+        if not annex_jobs:
+            raise RuntimeError(
+                f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
+            )
+        logger.debug(
+            f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
         )
-    logger.debug(
-        f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
-    )
+
+    if test == 2:
+        return
 
     # Extract the .sif file from each job.
     sif_files = set()
@@ -853,7 +677,7 @@ def annex_inner_func(
             resources = f"{resources}and "
     if mem_mb is not None:
         resources = f"{resources}{mem_mb}MB of RAM "
-    if resources is "":
+    if resources == "":
         resources = f"{nodes} nodes "
     resources = f"{resources}for {lifetime/(60*60):.2f} hours"
 
@@ -863,7 +687,7 @@ def annex_inner_func(
 
     logger.info(
         f"This will{as_project}request {resources} for an annex named '{annex_name}'"
-        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'."
+        f" from the queue named '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'."
         f"  To change the project, use --project."
         f"  To change the resources requested, use either --nodes or one or more of --cpus and --mem_mb."
         f"  To change how long the resources are reqested for, use --lifetime (in seconds)."
@@ -880,7 +704,7 @@ def annex_inner_func(
     ##
     logger.info(
         f"{ANSI_BRIGHT}This command will access the system named "
-        f"'{SYSTEM_TABLE[system]['pretty_name']}' via SSH.  To proceed, "
+        f"'{SYSTEM_TABLE[system].pretty_name}' via SSH.  To proceed, "
         f"follow the prompts from that system "
         f"below; to cancel, hit CTRL-C.{ANSI_RESET_ALL}"
     )
@@ -897,7 +721,7 @@ def annex_inner_func(
     )
     if rc != 0:
         raise RuntimeError(
-            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system]['pretty_name']}', aborting ({rc})."
+            f"Failed to make initial connection to the system named '{SYSTEM_TABLE[system].pretty_name}', aborting ({rc})."
         )
     logger.info(f"{ANSI_BRIGHT}Thank you.{ANSI_RESET_ALL}\n")
 
@@ -1011,8 +835,6 @@ def annex_inner_func(
             "+hpc_annex_collector": f'"{collector}"',
             "+hpc_annex_lifetime": f'"{lifetime}"',
             "+hpc_annex_owners": f'"{owners}"',
-            # FIXME: `nodes` should be undefined if not set on the
-            # command line but either cpus or mem_mb are.
             "+hpc_annex_nodes": f'"{nodes}"'
                 if nodes is not None else "undefined",
             "+hpc_annex_cpus": f'"{cpus}"'
@@ -1090,7 +912,7 @@ def annex_inner_func(
                     schedd.edit(job_id, "TransferInput", "undefined")
 
     remotes = {}
-    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system]['pretty_name']}'...\n")
+    logger.info(f"Requesting annex named '{annex_name}' from queue '{queue_name}' on the system named '{SYSTEM_TABLE[system].pretty_name}'...\n")
     rc = invoke_pilot_script(
         ssh_connection_sharing,
         ssh_user_name,
@@ -1111,14 +933,16 @@ def annex_inner_func(
         password_file,
         cpus,
         mem_mb,
+        gpus,
+        gpu_type,
     )
 
     if rc == 0:
         logger.info(f"... requested.")
-        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system]['pretty_name']}' to establish the requested annex.")
+        logger.info(f"\nIt may take some time for the system named '{SYSTEM_TABLE[system].pretty_name}' to establish the requested annex.")
         logger.info(f"To check on the status of the annex, run 'htcondor annex status {annex_name}'.")
     else:
-        error = f"Failed to start annex, {SYSTEM_TABLE[system]['batch_system']} returned code {rc}"
+        error = f"Failed to start annex, {SYSTEM_TABLE[system].batch_system} returned code {rc}"
         try:
             schedd.act(htcondor.JobAction.Remove, f'ClusterID == {cluster_id}', error)
         except Exception:
@@ -1138,12 +962,14 @@ def annex_name_exists(annex_name):
 
 
 def annex_create(logger, annex_name, **others):
-    if annex_name_exists(annex_name):
-        raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
+    if others.get("test") is None:
+        if annex_name_exists(annex_name):
+            raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
     return annex_inner_func(logger, annex_name, **others)
 
 
 def annex_add(logger, annex_name, **others):
-    if not annex_name_exists(annex_name):
-        raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
+    if others.get("test") is None:
+        if not annex_name_exists(annex_name):
+            raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
     return annex_inner_func(logger, annex_name, **others)

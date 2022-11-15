@@ -118,7 +118,6 @@ typedef struct {
 } UniverseInfo;
 
 // Do some mappings
-#define CONDOR_UNIVERSE_GLOBUS CONDOR_UNIVERSE_GRID
 #define CONDOR_TOPPING_DOCKER 1
 
 // Lookup table for universe name to Id.
@@ -127,7 +126,6 @@ typedef struct {
 #define TOP(t, u) { #t, CONDOR_UNIVERSE_##u, CONDOR_TOPPING_##t }
 static const UniverseInfo UniverseItems[] = {
 	TOP(DOCKER, VANILLA),
-	UNI(GLOBUS),
 	UNI(GRID),
 	UNI(JAVA),
 	UNI(LINDA),

@@ -46,6 +46,7 @@ std::string Accountant::ResourceRecord="Resource.";
 
 static char const *PriorityAttr="Priority";
 static char const *CeilingAttr="Ceiling";
+static char const *FloorAttr="Floor";
 static char const *ResourcesUsedAttr="ResourcesUsed";
 static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
 static char const *HierWeightedResourcesUsedAttr="HierWeightedResourcesUsed";
@@ -348,9 +349,19 @@ int Accountant::GetCeiling(const std::string& CustomerName)
   int ceiling = -1; // Bogus value
   GetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
   if (ceiling < 0) {
-    ceiling = -1 ; // Meaning unlimited
+    ceiling = -1; // Meaning unlimited
   }
   return ceiling;
+}
+
+int Accountant::GetFloor(const std::string& CustomerName) 
+{
+  int floor = 0; // unlimited value
+  GetAttributeInt(CustomerRecord+CustomerName,FloorAttr,floor);
+  if (floor < 0) {
+    floor = 0; // Meaning no floor at all
+  }
+  return floor;
 }
 
 //------------------------------------------------------------------
@@ -483,6 +494,17 @@ void Accountant::SetCeiling(const std::string& CustomerName, int ceiling)
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetCeiling - CustomerName=%s, Ceiling=%d\n",CustomerName.c_str(),ceiling);
   SetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
+}
+
+//
+//------------------------------------------------------------------
+// Set the Floor of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetFloor(const std::string& CustomerName, int floor) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Floor=%d\n",CustomerName.c_str(),floor);
+  SetAttributeInt(CustomerRecord+CustomerName,FloorAttr, floor);
 }
 
 
@@ -1186,6 +1208,10 @@ ClassAd* Accountant::ReportState(bool rollup) {
         formatstr(tmp, "Ceiling%d", snum);
         ad->Assign(tmp, Ceiling);
 
+        int Floor = GetFloor(CustomerName);
+        formatstr(tmp, "Floor%d", snum);
+        ad->Assign(tmp, Floor);
+
         double PriorityFactor = 0;
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
         formatstr(tmp, "PriorityFactor%d", snum);
@@ -1433,6 +1459,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 		double effectivePriority = GetPriority(CustomerName);
 		if (isGroup && rollup) { effectivePriority = 0; }
 		int ceiling = GetCeiling(CustomerName);
+		int floor   = GetFloor(CustomerName);
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
@@ -1440,6 +1467,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 		SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
 		ad->Assign(CeilingAttr, ceiling);
+		ad->Assign(FloorAttr, floor);
 		ad->Assign("IsAccountingGroup", isGroup);
 		if (cgrp) {
 			ad->Assign("AccountingGroup", cgrp->name);

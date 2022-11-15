@@ -456,7 +456,6 @@ SecMan::UpdateAuthenticationMetadata(ClassAd &ad)
 	// that we didn't have one).
 	std::string issuer;
 	if (param(issuer, "TRUST_DOMAIN")) {
-		issuer = issuer.substr(0, issuer.find_first_of(", \t"));
 		ad.InsertAttr(ATTR_SEC_TRUST_DOMAIN, issuer);
 	}
 
@@ -3236,8 +3235,6 @@ SecMan::sec_char_to_auth_method( const char* method ) {
 		return 0;
     } else if (!strcasecmp( method, "SSL" )  ) {
         return CAUTH_SSL;
-    } else if (!strcasecmp( method, "GSI" )  ) {
-		return CAUTH_GSI;
 	} else if ( !strcasecmp( method, "NTSSPI" ) ) {
 		return CAUTH_NTSSPI;
 	} else if ( !strcasecmp( method, "PASSWORD" ) ) {
@@ -3595,13 +3592,11 @@ std::string SecMan::filterAuthenticationMethods(DCpermission perm, const std::st
 				continue;
 			}
 #endif
-#ifndef HAVE_EXT_GLOBUS
 			case CAUTH_GSI: {
-				dprintf(D_SECURITY, "Ignoring GSI method because it is not"
-					" available to this build of HTCondor.\n");
+				dprintf(D_SECURITY, "Ignoring GSI method because it is no"
+					" longer supported.\n");
 				continue;
 			}
-#endif
 #ifndef HAVE_EXT_KRB5
 			case CAUTH_KERBEROS: {
 				dprintf(D_SECURITY, "Ignoring KERBEROS method because it is not"

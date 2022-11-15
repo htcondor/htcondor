@@ -134,8 +134,8 @@ static const struct _simulated_cuda_device TitanRTX = { "TITAN RTX",  0x75, 1770
 static const struct _simulated_cuda_device A100 = { "A100-SXM4-40GB", 0x80, 1410*1000, 42, 1, (size_t)40536*1024*1204 };
 static const struct _simulated_cuda_device A100Mig1g = { "NVIDIA A100-SXM4-40GB MIG 1g.5gb", 0x80, 1410*1000, 42, 1, (size_t)4864*1024*1204 };
 static const struct _simulated_cuda_device A100Mig3g = { "NVIDIA A100-SXM4-40GB MIG 3g.20gb", 0x80, 1410*1000, 42, 1, (size_t)20096*1024*1204 };
-static const struct _simulated_mig_devices Mig3g20 = { 2, 3, {20086, 20082, 0, 0, 0, 0, 0} };
-static const struct _simulated_mig_devices Mig1g5 = { 7, 1, {4861, 4861, 4861, 4861, 4861, 4861, 4861} };
+static const struct _simulated_mig_devices Mig3g20 = { 2, 3, {{20086}, {20082}, {0}, {0}, {0}, {0}, {0}} };
+static const struct _simulated_mig_devices Mig1g5 = { 7, 1, {{4861}, {4861}, {4861}, {4861}, {4861}, {4861}, {4861}} };
 static const struct _simulated_cuda_config aSimConfig[] = {
 	{6000, 1, &GeForceGT330, NULL },   // 0
 	{4020, 2, &GeForceGTX480, NULL },  // 1

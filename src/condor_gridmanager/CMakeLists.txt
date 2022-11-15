@@ -36,8 +36,6 @@ gridmanager.cpp
 gridmanager_main.cpp
 infnbatchjob.cpp
 infnbatchresource.cpp
-nordugridjob.cpp
-nordugridresource.cpp
 proxymanager.cpp
 )
 
