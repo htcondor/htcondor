@@ -47,6 +47,10 @@ New Features:
   previously it was 0.
   :jira:`1393`
 
+- The local issuer credmon can optionally add group authorizations to users' tokens by setting
+  ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
+  :jira:`1402`
+
 - The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
