@@ -5198,12 +5198,6 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 GridResourceUpEvent::GridResourceUpEvent(void)
 {
 	eventNumber = ULOG_GRID_RESOURCE_UP;
-	resourceName = NULL;
-}
-
-GridResourceUpEvent::~GridResourceUpEvent(void)
-{
-	delete[] resourceName;
 }
 
 bool
@@ -5218,7 +5212,7 @@ GridResourceUpEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5231,17 +5225,13 @@ GridResourceUpEvent::formatBody( std::string &out )
 int
 GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	resourceName = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Grid Resource Back Up", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
 	return 1;
 }
@@ -5252,7 +5242,7 @@ GridResourceUpEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
@@ -5269,14 +5259,7 @@ GridResourceUpEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 }
 
 
@@ -5284,12 +5267,6 @@ GridResourceUpEvent::initFromClassAd(ClassAd* ad)
 GridResourceDownEvent::GridResourceDownEvent(void)
 {
 	eventNumber = ULOG_GRID_RESOURCE_DOWN;
-	resourceName = NULL;
-}
-
-GridResourceDownEvent::~GridResourceDownEvent(void)
-{
-	delete[] resourceName;
 }
 
 bool
@@ -5304,7 +5281,7 @@ GridResourceDownEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5317,17 +5294,13 @@ GridResourceDownEvent::formatBody( std::string &out )
 int
 GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	resourceName = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Detected Down Grid Resource", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
 	return 1;
 }
@@ -5338,7 +5311,7 @@ GridResourceDownEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
@@ -5355,14 +5328,7 @@ GridResourceDownEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 }
 
 
@@ -5370,14 +5336,6 @@ GridResourceDownEvent::initFromClassAd(ClassAd* ad)
 GridSubmitEvent::GridSubmitEvent(void)
 {
 	eventNumber = ULOG_GRID_SUBMIT;
-	resourceName = NULL;
-	jobId = NULL;
-}
-
-GridSubmitEvent::~GridSubmitEvent(void)
-{
-	delete[] resourceName;
-	delete[] jobId;
 }
 
 bool
@@ -5393,8 +5351,8 @@ GridSubmitEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
-	if ( jobId ) job = jobId;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
+	if ( !jobId.empty() ) job = jobId.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5412,24 +5370,17 @@ GridSubmitEvent::formatBody( std::string &out )
 int
 GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	delete[] jobId;
-	resourceName = NULL;
-	jobId = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job submitted to grid resource", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
-	if ( ! read_line_value("    GridJobId: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridJobId: ", jobId, file, got_sync_line)) {
 		return 0;
 	}
-	jobId = line.detach_buffer();
 
 	return 1;
 }
@@ -5440,13 +5391,13 @@ GridSubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
 		}
 	}
-	if( jobId && jobId[0] ) {
+	if( !jobId.empty() ) {
 		if( !myad->InsertAttr("GridJobId", jobId) ) {
 			delete myad;
 			return NULL;
@@ -5463,23 +5414,9 @@ GridSubmitEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	mallocstr = NULL;
-	ad->LookupString("GridJobId", &mallocstr);
-	if( mallocstr ) {
-		jobId = new char[strlen(mallocstr) + 1];
-		strcpy(jobId, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridJobId", jobId);
 }
 
 // ----- the JobAdInformationEvent class

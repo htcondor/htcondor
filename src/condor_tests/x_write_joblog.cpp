@@ -409,7 +409,7 @@ int writeJobReconnectFailedEvent(WriteUserLog &logFile)
 int writeGridResourceUpEvent(WriteUserLog &logFile)
 {
 	GridResourceUpEvent evt;
-	evt.resourceName = strdup("Resource Name");
+	evt.resourceName = "Resource Name";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridResourceUpEvent write\n");
 		exit(1);
@@ -420,7 +420,7 @@ int writeGridResourceUpEvent(WriteUserLog &logFile)
 int writeGridResourceDownEvent(WriteUserLog &logFile)
 {
 	GridResourceDownEvent evt;
-	evt.resourceName = strdup("Resource Name");
+	evt.resourceName = "Resource Name";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridResourceDownEvent write\n");
 		exit(1);
@@ -431,8 +431,8 @@ int writeGridResourceDownEvent(WriteUserLog &logFile)
 int writeGridSubmitEvent(WriteUserLog &logFile)
 {
 	GridSubmitEvent evt;
-	evt.resourceName = strdup("Resource Name");
-	evt.jobId = strdup("100.1");
+	evt.resourceName = "Resource Name";
+	evt.jobId = "100.1";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridSubmitEvent write\n");
 		exit(1);

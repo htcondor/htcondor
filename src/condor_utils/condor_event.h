@@ -1688,8 +1688,6 @@ class GridResourceUpEvent : public ULogEvent
   public:
     ///
     GridResourceUpEvent(void);
-    ///
-    ~GridResourceUpEvent(void);
 
     /** Read the body of the next GridResoruceUp event.
         @param file the non-NULL readable log file
@@ -1713,9 +1711,8 @@ class GridResourceUpEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
-
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 };
 
 class GridResourceDownEvent : public ULogEvent
@@ -1723,8 +1720,6 @@ class GridResourceDownEvent : public ULogEvent
   public:
     ///
     GridResourceDownEvent(void);
-    ///
-    ~GridResourceDownEvent(void);
 
     /** Read the body of the next GridResourceDown event.
         @param file the non-NULL readable log file
@@ -1748,9 +1743,8 @@ class GridResourceDownEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
-
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 };
 
 //----------------------------------------------------------------------------
@@ -1763,8 +1757,6 @@ class GridSubmitEvent : public ULogEvent
   public:
     ///
     GridSubmitEvent(void);
-    ///
-    ~GridSubmitEvent(void);
 
     /** Read the body of the next GridSubmit event.
         @param file the non-NULL readable log file
@@ -1788,11 +1780,11 @@ class GridSubmitEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 
 	/// Job ID on the remote resource (GridJobId attribute)
-    char* jobId;
+	std::string jobId;
 };
 
 //----------------------------------------------------------------------------
