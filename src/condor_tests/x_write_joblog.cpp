@@ -48,8 +48,8 @@ int writeSubmitEvent(WriteUserLog &logFile)
 {
 	SubmitEvent submit;
 	submit.setSubmitHost("<128.105.165.12:32779>");
-	submit.submitEventLogNotes = strdup("DAGMan info");
-	submit.submitEventUserNotes = strdup("User info");
+	submit.submitEventLogNotes = "DAGMan info";
+	submit.submitEventUserNotes = "User info";
 	if ( !logFile.writeEvent(&submit) ) {
 		printf("Complain about bad submit write\n");
 		exit(1);

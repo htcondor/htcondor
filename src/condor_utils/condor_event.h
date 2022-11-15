@@ -316,6 +316,7 @@ class ULogEvent {
 
 	// read a line into a MyString 
 	bool read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp=true);
+	bool read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
 
 	// returns a new'ed pointer to a buffer containing the next line if there is a next line
 	// and it is not a sync line. got_sync_line will be set to true if it was a sync line
@@ -326,6 +327,7 @@ class ULogEvent {
 	// read a value after a prefix into a MyString
 	// for 
 	bool read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp=true);
+	bool read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp=true);
 
   private:
     /// The time this event occurred as a UNIX timestamp
@@ -404,8 +406,6 @@ class SubmitEvent : public ULogEvent
   public:
     ///
     SubmitEvent(void);
-    ///
-    ~SubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -431,18 +431,16 @@ class SubmitEvent : public ULogEvent
 
 	void setSubmitHost(char const *addr);
 
-	char const *getSubmitHost() { return submitHost; }
+	char const *getSubmitHost() { return submitHost.c_str(); }
 
-    // dagman-supplied text to include in the log event
-    char* submitEventLogNotes;
-    // user-supplied text to include in the log event
-    char* submitEventUserNotes;
-    // schedd-supplied warning about unmet future requirements
-    char* submitEventWarnings;
-
- private:
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char *submitHost;
+	/// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+	std::string submitHost;
+	// dagman-supplied text to include in the log event
+	std::string submitEventLogNotes;
+	// user-supplied text to include in the log event
+	std::string submitEventUserNotes;
+	// schedd-supplied warning about unmet future requirements
+	std::string submitEventWarnings;
 };
 
 //----------------------------------------------------------------------------

@@ -504,6 +504,20 @@ bool ULogEvent::read_optional_line(MyString & str, FILE* file, bool & got_sync_l
 	return true;
 }
 
+bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
+{
+	if ( ! readLine(str, file, false)) {
+		return false;
+	}
+	if (is_sync_line(str.c_str())) {
+		got_sync_line = true;
+		return false;
+	}
+	if (want_chomp) { chomp(str); }
+	if (want_trim) { trim(str); }
+	return true;
+}
+
 bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
 {
 	val.clear();
@@ -523,6 +537,25 @@ bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file,
 	return false;
 }
 
+bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/)
+{
+	val.clear();
+	std::string str;
+	if ( ! readLine(str, file, false)) {
+		return false;
+	}
+	if (is_sync_line(str.c_str())) {
+		got_sync_line = true;
+		return false;
+	}
+	if (want_chomp) { chomp(str); }
+	size_t prefix_len = strlen(prefix);
+	if (strncmp(str.c_str(), prefix, prefix_len) == 0) {
+		val = str.substr(prefix_len);
+		return true;
+	}
+	return false;
+}
 
 
 // returns a new'ed pointer to a buffer containing the next line if there is a next line
@@ -1078,69 +1111,37 @@ void FutureEvent::setPayload(const char * payload_text)
 // ----- the SubmitEvent class
 SubmitEvent::SubmitEvent(void)
 {
-	submitHost = NULL;
-	submitEventLogNotes = NULL;
-	submitEventUserNotes = NULL;
-	submitEventWarnings = NULL;
 	eventNumber = ULOG_SUBMIT;
-}
-
-SubmitEvent::~SubmitEvent(void)
-{
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-    if( submitEventLogNotes ) {
-        delete[] submitEventLogNotes;
-    }
-    if( submitEventUserNotes ) {
-        delete[] submitEventUserNotes;
-    }
-    if( submitEventWarnings ) {
-        delete[] submitEventWarnings;
-    }
 }
 
 void
 SubmitEvent::setSubmitHost(char const *addr)
 {
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( addr ) {
-		submitHost = strnewp(addr);
-		ASSERT( submitHost );
-	}
-	else {
-		submitHost = NULL;
-	}
+	submitHost = addr ? addr : "";
 }
 
 bool
 SubmitEvent::formatBody( std::string &out )
 {
-	if( !submitHost ) {
-		setSubmitHost("");
-	}
-	int retval = formatstr_cat (out, "Job submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Job submitted from host: %s\n", submitHost.c_str());
 	if (retval < 0)
 	{
 		return false;
 	}
-	if( submitEventLogNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+	if( !submitEventLogNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventUserNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+	if( !submitEventUserNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventWarnings ) {
-		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings );
+	if( !submitEventWarnings.empty() ) {
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
@@ -1152,36 +1153,32 @@ SubmitEvent::formatBody( std::string &out )
 int
 SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] submitEventLogNotes;
-	submitEventLogNotes = NULL;
-	MyString host;
-	if ( ! read_line_value("Job submitted from host: ", host, file, got_sync_line)) {
+	if ( ! read_line_value("Job submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
 	}
-	submitHost = host.detach_buffer();
 
 	// check if event ended without specifying submit host.
 	// in this case, the submit host would be the event delimiter
-	if ( strncmp(submitHost,"...",3)==0 ) {
-		submitHost[0] = '\0';
+	if ( strncmp(submitHost.c_str(),"...",3)==0 ) {
+		submitHost.clear();
 		got_sync_line = true;
 		return 1;
 	}
 
 	// see if the next line contains an optional event notes string
-	submitEventLogNotes = read_optional_line(file, got_sync_line, true, true);
-	if( ! submitEventLogNotes) {
+	read_optional_line(submitEventLogNotes, file, got_sync_line, true, true);
+	if( submitEventLogNotes.empty()) {
 		return 1;
 	}
 
 	// see if the next line contains an optional user event notes string
-	submitEventUserNotes = read_optional_line(file, got_sync_line, true, true);
-	if( ! submitEventUserNotes) {
+	read_optional_line(submitEventUserNotes, file, got_sync_line, true, true);
+	if( submitEventUserNotes.empty()) {
 		return 1;
 	}
 
-	submitEventWarnings = read_optional_line(file, got_sync_line, true, false);
-	if( ! submitEventWarnings) {
+	read_optional_line(submitEventWarnings, file, got_sync_line, true, false);
+	if( submitEventWarnings.empty()) {
 		return 1;
 	}
 
@@ -1194,17 +1191,17 @@ SubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( submitHost && submitHost[0] ) {
+	if( !submitHost.empty() ) {
 		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
-	if( submitEventLogNotes && submitEventLogNotes[0] ) {
+	if( !submitEventLogNotes.empty() ) {
 		if( !myad->InsertAttr("LogNotes",submitEventLogNotes) ) return NULL;
 	}
-	if( submitEventUserNotes && submitEventUserNotes[0] ) {
+	if( !submitEventUserNotes.empty() ) {
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
 	}
-	if( submitEventWarnings && submitEventWarnings[0] ) {
+	if( !submitEventWarnings.empty() ) {
 		if( !myad->InsertAttr("Warnings",submitEventWarnings) ) return NULL;
 	}
 
@@ -1217,39 +1214,14 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SubmitHost", &mallocstr);
-	if( mallocstr ) {
-		setSubmitHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	ad->LookupString("LogNotes", &mallocstr);
-	if( mallocstr ) {
-		submitEventLogNotes = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventLogNotes, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("SubmitHost", submitHost);
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	ad->LookupString("UserNotes", &mallocstr);
-	if( mallocstr ) {
-		submitEventUserNotes = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventUserNotes, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("LogNotes", submitEventLogNotes);
 
-	ad->LookupString("Warnings", &mallocstr);
-	if( mallocstr ) {
-		submitEventWarnings = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventWarnings, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("UserNotes", submitEventUserNotes);
+
+	ad->LookupString("Warnings", submitEventWarnings);
 }
 
 // ----- the GlobusSubmitEvent class

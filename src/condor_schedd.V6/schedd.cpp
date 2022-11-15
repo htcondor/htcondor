@@ -4399,8 +4399,6 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
 {
-	std::string submitUserNotes, submitEventNotes;
-
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
 	bool wantPS = 0;
@@ -4420,14 +4418,10 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 	SubmitEvent event;
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
-	if ( job->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
-		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
-	}
-	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
-		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
-	}
+	job->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
+	job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 	if ( warning != NULL && warning[0] ) {
-		event.submitEventWarnings = strnewp( warning );
+		event.submitEventWarnings = warning;
 	}
 
 	ULog->setEnableFsync(do_fsync);
