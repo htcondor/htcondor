@@ -2216,31 +2216,19 @@ shadow_safe_mkdir_impl(
 
 bool
 shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
-	bool rv;
-	priv_state saved_priv;
-
 	std::filesystem::path path(dir);
 	if(! path.has_root_path()) {
 		dprintf( D_ALWAYS, "Internal logic error: shadow_safe_mkdir() called with relative path.  Refusing to make the directory.\n" );
 		return false;
 	}
 
+	TemporaryPrivSentry sentry;
+	if( priv != PRIV_UNKNOWN ) { set_priv( priv ); }
+
 	// If the path already exists, we have nothing to do.
 	if( std::filesystem::exists( path ) ) { return true; }
 
-
-	if( priv != PRIV_UNKNOWN ) {
-		saved_priv = set_priv( priv );
-	}
-
-	rv = shadow_safe_mkdir_impl( path.root_path(), path.relative_path(), mode );
-
-	if( priv != PRIV_UNKNOWN ) {
-		set_priv( saved_priv );
-	}
-
-
-	return rv;
+	return shadow_safe_mkdir_impl( path.root_path(), path.relative_path(), mode );
 }
 
 /*
