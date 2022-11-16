@@ -204,6 +204,12 @@ Singularity::setup(ClassAd &machineAd,
 	}
 	sing_args.AppendArg(sing_exec_str.c_str());
 
+	std::string sing_verbosity;
+	param(sing_verbosity, "SINGULARITY_VERBOSITY", "-s");
+	if (sing_verbosity.length() > 0) {
+		sing_args.AppendArg(sing_verbosity);
+	}
+
 	// If no "Executable" is specified, we get a zero-length exec string
 	// use "singularity run" to run in this case, and assume
 	// that there is an appropriate runscript inside the image
