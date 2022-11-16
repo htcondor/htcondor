@@ -890,6 +890,9 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     fprintf(stderr, "[MultiFileCurlPlugin::HeaderCallback] called\n");
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
+    // Work around a bug in libcurl; see HTCONDOR-1426.
+    buffer = strdup(buffer);
+
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
@@ -917,6 +920,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
         }
         token = strtok( NULL, delimiters );
     }
+    free(buffer);
     return numBytes;
 }
 

@@ -95,12 +95,7 @@ if(NOT WINDOWS)
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
 
-        if(APPLE)
-            # macOS 12.X (Monterey) and above don't support python2
-            if(NOT ${OS_VER} MATCHES "2[1-9]")
-                find_program(PYTHON_EXECUTABLE python)
-            endif()
-        else()
+        if(NOT APPLE)
             find_program(PYTHON_EXECUTABLE python2)
         endif()
 
