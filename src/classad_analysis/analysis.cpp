@@ -494,7 +494,9 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			// create map from original Condition order to sorted order
 		int numConds = 0;
 		profile->GetNumberOfConditions( numConds );
-		ExtArray<int> condMap ( numConds );
+		std::vector<int> condMap;
+		condMap.resize(numConds);
+
 		int i = 0;
 		while( mapList.Next( index ) ) {
 			condMap[index] = i;
@@ -560,7 +562,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			buffer += "\n";
 			while( profile->explain.conflicts->Next( rawIS ) ) {
 				sortedIS.Init( numConds );
-				IndexSet::Translate( *rawIS, condMap.getarray (), 
+				IndexSet::Translate( *rawIS, condMap.data(), 
 									numConds, numConds, sortedIS );
 				buffer += "  conditions: ";
 				bool firstNum = true;
@@ -1162,18 +1164,17 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 		// Get info from BoolTable for ConditionExplains
 		// set up array of operators and get list of attrs;
-	ExtArray< string > attrs;
-	ExtArray< ValueRange * > vrs;
+	std::vector<string> attrs;
+	std::vector<ValueRange *> vrs;
 	string attr = "";
-	ExtArray<int> vr4Cond ( numConds );
+	std::vector<int> vr4Cond(numConds);
 	int attrNum = 0;
 	int condNum = 0;
 	int vrNum = 0;
-	ExtArray<classad::Operation::OpKind> ops ( numConds );
-	ExtArray<Condition*> conds ( numConds );
-//	ExtArray<bool> tooComplex ( numConds ); 
-	std::vector<bool> tooComplex( numConds, false);
-//	classad::Operation::OpKind op1, op2;
+	std::vector<classad::Operation::OpKind> ops(numConds);
+	std::vector<Condition*> conds ( numConds );
+	std::vector<bool> tooComplex(numConds);
+	std::fill(tooComplex.begin(), tooComplex.end(), false);
 	classad::Value val;
 	p->Rewind( );
 	while( p->NextCondition( condition ) ) {
@@ -1186,7 +1187,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 			string currAttr;
 			bool seenAttr = false;
 			vrNum = 0;
-			for( int i = 0; i < attrs.getsize( ); i++ ) {
+			for( size_t i = 0; i < attrs.size(); i++ ) {
 				currAttr = attrs[i];
 				if( EqualsIgnoreCase( attr, currAttr ) ) {
 					seenAttr = true;
@@ -1236,7 +1237,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 			match = true;
 		}
 		if( !( condition->explain.Init( match, numberOfMatches ) ) ) {
-			for( int i = 0; i < vrs.getsize( ); i++ ){
+			for( size_t i = 0; i < vrs.size( ); i++ ){
 				delete vrs[i];
 			}
             return false;
@@ -1244,11 +1245,9 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 		condNum++;
 	}
 
-	int numVRs = attrs.getsize( );
-	ExtArray<classad::Value*> nearestValues ( numVRs );
-    for( int i = 0; i < numVRs; i++ ) {
-		nearestValues[i] = NULL;
-	}
+	int numVRs = attrs.size();
+	std::vector<classad::Value*> nearestValues ( numVRs );
+	std::fill(nearestValues.begin(), nearestValues.end(), nullptr);
 
 	List<classad::ClassAd> contexts;
 	rg.GetClassAds( contexts );
@@ -1304,10 +1303,9 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	classad::Value currPt, currUpper, currLower;
 	BoolValue currBVal, tempBVal;
 	val.SetUndefinedValue( );
-	ExtArray<classad::Value*> tempVals ( numVRs );
-	for( int i = 0; i < numVRs; i++ ) {
-		tempVals[i] = NULL;
-	}
+	std::vector<classad::Value*> tempVals ( numVRs );
+	std::fill(tempVals.begin(), tempVals.end(), nullptr);
+
 	int closestCtx = -1;
 	double currDist = 0, sumDist = 0, minSumDist = (double)numVRs + 1; 
 	for( int col = 0; col < numContexts; col++ ) {
@@ -1597,7 +1595,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 	int numReqs = reqList.Number( );
 
-	ExtArray<int> firstContext ( numReqs );
+	std::vector<int> firstContext ( numReqs );
     List< string > jobAttrs, undefAttrs, refdAttrs;
 	classad::ClassAd::iterator itr;
 
@@ -1610,11 +1608,11 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 	int arrayCount = 0;
 	int reqNo = 0;
-	List< ExtArray< BoolValue > > boolValueArrayList;
-	List< ExtArray< ValueRange * > > intervalArrayList;
-	ExtArray< BoolValue > literalValues;
-	ExtArray< BoolValue > *tempBools = NULL;
-	ExtArray< ValueRange * > *tempIntervals = NULL;
+	List< std::vector< BoolValue > > boolValueArrayList;
+	List< std::vector< ValueRange * > > intervalArrayList;
+	std::vector< BoolValue > literalValues;
+	std::vector< BoolValue > *tempBools = NULL;
+	std::vector< ValueRange * > *tempIntervals = NULL;
 	Profile *currProfile;
 	Condition *currCondition;
 
@@ -1634,8 +1632,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				tempIntervals = NULL;
 			}
 			else {
-				tempBools = new ExtArray< BoolValue>( numRefdAttrs );
-				tempIntervals = new ExtArray< ValueRange * >(numRefdAttrs);
+				tempBools = new std::vector< BoolValue>( numRefdAttrs );
+				tempIntervals = new std::vector< ValueRange * >(numRefdAttrs);
 				for( int i = 0; i < numRefdAttrs; i++ ) {
 					( *tempBools )[i] = bVal;
 					( *tempIntervals )[i] = NULL;
@@ -1658,8 +1656,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				tempIntervals = NULL;
 			}
 			else {
-				tempBools = new ExtArray< BoolValue>( numRefdAttrs );
-				tempIntervals = new ExtArray< ValueRange * >(numRefdAttrs);
+				tempBools = new std::vector< BoolValue>( numRefdAttrs );
+				tempIntervals = new std::vector< ValueRange * >(numRefdAttrs);
 				for( int i = 0; i < numRefdAttrs; i++ ) {
 					( *tempBools )[i] = TRUE_VALUE;
 					( *tempIntervals )[i] = NULL;
@@ -1730,8 +1728,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					refdAttrs.Append( new string( currAttr ) );
 					numRefdAttrs++;				   
 					if( tempBools == NULL ) {
-						tempBools = new ExtArray< BoolValue>( numRefdAttrs );
-						tempIntervals = new ExtArray< ValueRange * >( numRefdAttrs );
+						tempBools = new std::vector< BoolValue>( numRefdAttrs );
+						tempIntervals = new std::vector< ValueRange * >( numRefdAttrs );
 						for( int i = 0; i < numRefdAttrs; i++ ) {
 							( *tempBools )[i] = TRUE_VALUE;
 							( *tempIntervals )[i] = NULL;
@@ -1788,7 +1786,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		// Convert machine map
 	int numContexts = boolValueArrayList.Number();
-	ExtArray<int> machineForContext ( numContexts );
+	std::vector<int> machineForContext ( numContexts );
     int m = 0;
   	for( int i = 0; i < numContexts; i++ ) {
   	    if( ( m+1 ) < numReqs) {
@@ -1802,8 +1800,8 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		// Create BoolTable and ValueRangeTable
 	bt.Init( numContexts, numRefdAttrs );
 	vrt.Init( numContexts, numRefdAttrs );
-	ExtArray< BoolValue > *currBVArray;
-	ExtArray< ValueRange * > *currVRLArray;
+	std::vector< BoolValue > *currBVArray;
+	std::vector< ValueRange * > *currVRLArray;
 	boolValueArrayList.Rewind( );
 	intervalArrayList.Rewind( );
 	for( int ctxtNum = 0; ctxtNum < numContexts; ctxtNum++ ) {
@@ -1811,7 +1809,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		intervalArrayList.Next( currVRLArray );
 		int arraySize = 0;
 		if( currBVArray != NULL ) {
-			arraySize = currBVArray->getsize( );
+			arraySize = currBVArray->size();
 		}
 		for( int attrNum = 0; attrNum < numRefdAttrs; attrNum++ ) {
 			if( attrNum >= arraySize ) {
@@ -1843,7 +1841,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		intervalArrayList.Rewind( );
 		while( intervalArrayList.Next( tempIntervals ) ) {
 			if( tempIntervals ) {
-				for( int i = 0; i < tempIntervals->getsize( ); i++ ) {
+				for( size_t i = 0; i < tempIntervals->size( ); i++ ) {
 					if( ( *tempIntervals )[i] ) {
 						delete ( *tempIntervals )[i];
 					}
@@ -1869,14 +1867,12 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	// find values corresponding to each ABV
 
 	AnnotatedBoolVector *currentABV = NULL;
-	List< ExtArray< HyperRect * > > allHyperRectangles;
+	List<std::vector<HyperRect *>> allHyperRectangles;
 	abvList.Rewind( );
 	while( abvList.Next( currentABV ) ) {
-	    ExtArray< ValueRange * > vrForAttr;
+		std::vector<ValueRange *> vrForAttr;
 		vrForAttr.resize( numRefdAttrs );
-		for( int i = 0; i < numRefdAttrs; i++ ) {
-			vrForAttr[i] = NULL;
-		}
+		std::fill(vrForAttr.begin(), vrForAttr.end(), nullptr);
 
 	    // go through each attribute/boolean value (only look at non-true)
 	    for( int i = 0; i < numRefdAttrs; i++ ) {
@@ -1923,7 +1919,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		ValueRange::BuildHyperRects( vrForAttr, numRefdAttrs,
 									numContexts, allHyperRectangles );
-		for( int i = 0; i < vrForAttr.getsize( ); i++ ) {
+		for( size_t i = 0; i < vrForAttr.size( ); i++ ) {
 			if( vrForAttr[i] ) {
 				delete vrForAttr[i];
 			}
@@ -1931,7 +1927,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 	}
 	
-  	ExtArray< HyperRect * > *hrs = NULL;
+	std::vector<HyperRect *> *hrs = nullptr;
   	HyperRect *currHR = NULL;
 
 	// find HyperRect with most contexts (machines)
@@ -1949,10 +1945,10 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	allHyperRectangles.Rewind( );
 	while( allHyperRectangles.Next( hrs ) ) {
 		(void) abvList.Next( currentABV );
-		for( int i = 0; i < hrs->getsize( ); i++ ) {
+		for( size_t i = 0; i < hrs->size( ); i++ ) {
 			currHR = ( *hrs )[i];
 			currHR->GetIndexSet( hasContext );
-			IndexSet::Translate( hasContext, machineForContext.getarray (), 
+			IndexSet::Translate( hasContext, machineForContext.data(), 
 								numContexts, numReqs, hasMachine );
 			hasMachine.GetCardinality( currNumContexts );
 			if( currNumContexts > maxNumContexts ) {
