@@ -91,9 +91,9 @@ class TestXferHoldCodes:
       assert jobInputFailureAP["HoldReasonCode"] == 13
       assert "Transfer input files failure at access point" in jobInputFailureAP["HoldReason"] 
 
-   def test_jobOutputFailureAP(self, jobOutputFailureAP):
-      assert jobOutputFailureAP["HoldReasonCode"] == 12
-      assert "Transfer output files failure at access point" in jobOutputFailureAP["HoldReason"]
+   #def test_jobOutputFailureAP(self, jobOutputFailureAP):
+   #   assert jobOutputFailureAP["HoldReasonCode"] == 12
+   #   assert "Transfer output files failure at access point" in jobOutputFailureAP["HoldReason"]
 
    def test_jobInputFailureEP(self, jobInputFailureEP):
       assert jobInputFailureEP["HoldReasonCode"] == 13
