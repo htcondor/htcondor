@@ -2213,7 +2213,7 @@ shadow_safe_mkdir_impl(
 
 	// Step (2A).
 	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (2A): partial_path = %s, next_path_component_iter = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), next_path_component_iter->c_str() );
-	if(! allow_shadow_access( partial_path.c_str() )) {
+	if(! allow_shadow_access( partial_path.string().c_str() )) {
 		return false;
 	}
 
@@ -2222,7 +2222,7 @@ shadow_safe_mkdir_impl(
 	// going to worry if we get ENOENT; if some other process is deleting
 	// directories where you want to write your output data, I think it's
 	// entirely appropriate for us to fail to write there.
-	int rv = mkdir( partial_path.c_str(), mode );
+	int rv = mkdir( partial_path.string().c_str(), mode );
 	if( rv != 0 && errno != EEXIST ) {
 		return false;
 	}
