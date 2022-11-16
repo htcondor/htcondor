@@ -53,24 +53,36 @@ def dry_run_job(default_condor,test_dir,path_to_sleep,request):
 
 #=========================================================================
 class TestContainerImgDeclaresUniverse:
-    def test_image_init(self,dry_run_job):
+    def test_image_init(self,dry_run_job,test_dir):
+        expected_output = [
+            #Failed submission outputs
+            "Only one can be declared in a submit file.",
+            "universe for job does not allow use of",
+            #Successful submission job ad attributes
+            "WantDocker=true",
+            "WantContainer=true",
+        ]
         #If first test (Fail because of both docker and container image)
-        if subtest_num == 0:
+        if subtest_num < 2:
             #Make sure error message exists
             if dry_run_job.stderr == "":
                 assert False
             else:
                 #Verify error message
-                assert "Only one can be declared in a submit file." in dry_run_job.stderr
-        #If second test (Fail because Vanilla Uni and docker image)
-        elif subtest_num == 1:
-            #Make sure error message exists
-            if dry_run_job.stderr == "":
-                assert False
-            else:
-                #Verify error message
-                assert "universe for job does not allow use of" in dry_run_job.stderr
+                assert expected_output[subtest_num] in dry_run_job.stderr
         else: #Else is pass test
-            assert dry_run_job.stderr == "" #Make sure no error occured
-            #Possibly check job ad for correct attribute initialization
+            if dry_run_job.stderr != "": #Make sure no error occured
+                assert False
+            else:
+                #Search output job ad file for set attribute
+                foundAttr = False
+                file_path = test_dir / f"{io_names[subtest_num]}.ad"
+                f = open(file_path,"r")
+                for line in f:
+                    line = line.strip()
+                    if line == expected_output[subtest_num]:
+                        foundAttr = True
+                        break
+                assert foundAttr is True
+
 
