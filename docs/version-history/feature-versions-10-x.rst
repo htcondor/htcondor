@@ -15,7 +15,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The local issuer credmon can optionally add group authorizations to users' tokens by setting
+  ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
+  :jira:`1402`
 
 Bugs Fixed:
 
@@ -76,10 +78,6 @@ Release Notes:
 New Features:
 
 - None.
-
-- The local issuer credmon can optionally add group authorizations to users' tokens by setting
-  ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
-  :jira:`1402`
 
 Bugs Fixed:
 
