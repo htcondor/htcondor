@@ -36,7 +36,7 @@ def submitJobOutputFailureAP(default_condor):
            "should_transfer_files": "yes",
            "transfer_input_files": "/bin/true",
            "transfer_output_files": "true",
-           "transfer_output_remaps": classad.quote("true=not_there_dir/blah"),
+           "transfer_output_remaps": classad.quote("true=/not_there_dir/blah"),
         }
     )
 
@@ -91,9 +91,9 @@ class TestXferHoldCodes:
       assert jobInputFailureAP["HoldReasonCode"] == 13
       assert "Transfer input files failure at access point" in jobInputFailureAP["HoldReason"] 
 
-   #def test_jobOutputFailureAP(self, jobOutputFailureAP):
-   #   assert jobOutputFailureAP["HoldReasonCode"] == 12
-   #   assert "Transfer output files failure at access point" in jobOutputFailureAP["HoldReason"]
+   def test_jobOutputFailureAP(self, jobOutputFailureAP):
+      assert jobOutputFailureAP["HoldReasonCode"] == 12
+      assert "Transfer output files failure at access point" in jobOutputFailureAP["HoldReason"]
 
    def test_jobInputFailureEP(self, jobInputFailureEP):
       assert jobInputFailureEP["HoldReasonCode"] == 13
