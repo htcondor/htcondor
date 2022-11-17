@@ -2407,11 +2407,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		if(! outputDirectory.empty()) {
 			std::filesystem::path outputPath( outputDirectory );
 			if(! outputPath.has_root_path()) {
-				outputDirectory = Iwd / outputPath;
+				outputDirectory = (Iwd / outputPath).string();
 			}
 
 			if(! shadow_safe_mkdir(
-				outputDirectory, directory_creation_mode, PRIV_USER
+				outputDirectory, directory_creation_mode, desired_priv_state
 			)) {
 				std::string err_str;
 				int the_error = errno;
@@ -2590,7 +2590,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						if( rv != 0 && errno != EEXIST ) {
 #else
 						bool success = shadow_safe_mkdir(
-						  path, directory_creation_mode, PRIV_USER
+						  path, directory_creation_mode, desired_priv_state
 						);
 
 						if( (! success) ) {
