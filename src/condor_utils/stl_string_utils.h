@@ -70,6 +70,10 @@ const char * empty_if_null(const char * c_str);
 // be "Al_ain".
 std::string EscapeChars(const std::string& src, const std::string& Q, char escape);
 
+// Return a string based on string src, but remove all ANSI terminal escape
+// sequences.  Useful when taking stderr output to remove ANSI color codes.
+std::string RemoveANSIcodes(const std::string& src);
+
 // returns true if pre is non-empty and str is the same as pre up to pre.size()
 bool starts_with(const std::string& str, const std::string& pre);
 bool starts_with_ignore_case(const std::string& str, const std::string& pre);
