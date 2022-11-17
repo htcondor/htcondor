@@ -21,10 +21,18 @@
 project(CONDOR LANGUAGES C CXX)
 cmake_minimum_required(VERSION 3.8)
 
-# Exactly c++ 11 for all platforms
+# Exactly c++ 17 for all platforms
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+            link_libraries(stdc++fs)
+        endif()
+    endif()
+endif()
 
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded

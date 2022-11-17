@@ -50,6 +50,7 @@
 #include "AWSv4-impl.h"
 #include "condor_random_num.h"
 #include "condor_sys.h"
+#include "limit_directory_access.h"
 #include "checksum.h"
 #include "shortfile.h"
 
@@ -61,6 +62,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <string>
+#include <filesystem>
 
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
@@ -2149,6 +2151,114 @@ FileTransfer::AddDownloadFilenameRemaps(char const *remaps) {
 }
 
 
+bool
+shadow_safe_mkdir_impl(
+	const std::filesystem::path & prefix,
+	const std::filesystem::path & suffix,
+	mode_t mode
+) {
+	// We additionally interpret LIMIT_DIRECTORY_ACCESS as controlling where
+	// the shadow may make directories.  Specifically, we allow the shadow
+	// to make a directory if it would be allowed to write to that path if
+	// it were a file.
+	//
+	// We do NOT allow the shadow to make any directory named in
+	// LIMIT_DIRECTORY_ACCESS; I implemented this an earlier version of the
+	// code for testing purposes, but it grossly violated Mat's principle of
+	// least astonishment.  (It seems either grossly unhelpful -- since the
+	// directory will likely be created with the wrong permissions -- or more
+	// likely to be a typo than anything the admin actually wanted to happen.)
+	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s)\n", prefix.c_str(), suffix.c_str() );
+
+	//
+	// Algorithm.
+	//
+	// We are given a prefix, of which at most the last component does not
+	// exist.  We are given a suffix, any component of which may not exist.
+	//
+	// (1)  We check `prefix` and (if necessary) each component of `suffix` to
+	//      find the first path component that doesn't exist, updating a
+	//      partial path as go along.  If every component exists, then the
+	//      whole path exists and we're done.
+	// (2)  Otherwise, we try to re-establish the invariant:
+	//      A) Call allow_shadow_access() on the partial path to see if we're
+	//         allowed to create it.  If not, return false.
+	//      B) Call mkdir() to create it.  If we fail, return false.
+	//      C) If there's not another path component, we're done; return true.
+	//      D) Otherwise, the partial path now meets the invariant for
+	//         the prefix.  Construct the corresponding suffix and recurse.
+	//         (We could unlink() the directory we just created if the
+	//         recursion fails, but it's not at all clear if that's the right
+	//         thing to do, given the possible failure conditions.)
+	//
+
+	// Step (1).
+	std::filesystem::path partial_path( prefix );
+	auto next_path_component_iter = suffix.begin();
+	while( std::filesystem::exists( partial_path ) ) {
+		// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (1): partial_path = %s, next_path_component_iter = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), next_path_component_iter->c_str() );
+		if( next_path_component_iter == suffix.end() ) {
+			// Then the directory we're trying to create exists.  Great!
+			// (This should only happen if somebody else has created it
+			// between when we checked in shadow_safe_mkdir() and here.)
+			// We don't check allow_shadow_access() here because we're not
+			// writing anything now, and it'll be called for each individual
+			// file write anyway.
+			return true;
+		}
+
+		partial_path = partial_path / (* next_path_component_iter);
+		++next_path_component_iter;
+	}
+
+	// Step (2A).
+	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (2A): partial_path = %s, next_path_component_iter = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), next_path_component_iter->c_str() );
+	if(! allow_shadow_access( partial_path.string().c_str() )) {
+		return false;
+	}
+
+	// Step (2B).  We can see EEXIST if, for instance, some other shadow
+	// is going through this logic at the same time.  In general, I'm not
+	// going to worry if we get ENOENT; if some other process is deleting
+	// directories where you want to write your output data, I think it's
+	// entirely appropriate for us to fail to write there.
+	int rv = mkdir( partial_path.string().c_str(), mode );
+	if( rv != 0 && errno != EEXIST ) {
+		return false;
+	}
+
+	// Step (2C).
+	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (2C): partial_path = %s, next_path_component_iter = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), next_path_component_iter->c_str() );
+	if( next_path_component_iter == suffix.end() ) { return true; }
+
+	// Step (2D).
+	std::filesystem::path remainder;
+	for( ; next_path_component_iter != suffix.end(); ++next_path_component_iter ) {
+		remainder /= (* next_path_component_iter);
+	}
+
+	// dprintf( D_ZKM, "shadow_safe_mkdir_impl(%s, %s), (2D): partial_path = %s, remainder = %s\n", prefix.c_str(), suffix.c_str(), partial_path.c_str(), remainder.c_str() );
+	return shadow_safe_mkdir_impl( partial_path, remainder, mode );
+}
+
+
+bool
+shadow_safe_mkdir( const std::string & dir, mode_t mode, priv_state priv ) {
+	std::filesystem::path path(dir);
+	if(! path.has_root_path()) {
+		dprintf( D_ALWAYS, "Internal logic error: shadow_safe_mkdir() called with relative path.  Refusing to make the directory.\n" );
+		return false;
+	}
+
+	TemporaryPrivSentry sentry;
+	if( priv != PRIV_UNKNOWN ) { set_priv( priv ); }
+
+	// If the path already exists, we have nothing to do.
+	if( std::filesystem::exists( path ) ) { return true; }
+
+	return shadow_safe_mkdir_impl( path.root_path(), path.relative_path(), mode );
+}
+
 /*
   Define a macro to restore our priv state (if needed) and return.  We
   do this so we don't leak priv states in functions where we need to
@@ -2405,11 +2515,72 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 						// as something reasonabel.
 						formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,filename.c_str());
 					}
+				//
 				// legit remap was found
+				//
 				} else if(fullpath(remap_filename.c_str())) {
 					fullname = remap_filename;
 				}
 				else {
+					// For simplicity of reasoning about the security
+					// implications, don't try to create absolute directories
+					// for absolute paths named in transfer_output_remaps.
+					//
+					// Because the `output` and `error` submit commands are
+					// implemented with transfer_output_remaps, this code
+					// also creates the directories they name.  This is a
+					// semantic change, and one that changes a job from going
+					// on hold (after running for its duration) to succeeding.
+					char * dirname = condor_dirname(remap_filename.c_str());
+					if( strcmp(dirname, ".") ) {
+						std::string path;
+						formatstr(path, "%s%c%s", Iwd, DIR_DELIM_CHAR, dirname);
+#if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
+						// So this fails on a dirA/dirB/filename remaps,
+						// which seemed like the easiest way to trigger
+						// the error-handling code on Linux.  (On Windows,
+						// you can jsut specify illegal directory names.)
+						int rv = mkdir( path.c_str(), 0700 );
+						if( rv != 0 ) {
+							dprintf(D_ZKM, "mkdir(%s) = %d, errno %d\n", path.c_str(), rv, errno );
+						}
+						if( rv != 0 && errno != EEXIST ) {
+#else
+						int directory_creation_mode = 0700;
+						bool success = shadow_safe_mkdir(
+						  path, directory_creation_mode, PRIV_USER
+						);
+
+						if( (! success) ) {
+#endif /* DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING */
+							std::string err_str;
+							int the_error = errno;
+
+							formatstr( err_str,
+								"%s at %s failed to create directory %s: %s (errno %d)",
+								get_mySubSystem()->getName(),
+								s->my_ip_str(), path.c_str(),
+								strerror(the_error), the_error
+							);
+							dprintf(D_ALWAYS,
+								"DoDownload: consuming rest of transfer and failing "
+								"after encountering the following error: %s\n",
+								err_str.c_str()
+							);
+
+							if( all_transfers_succeeded ) {
+								download_success = false;
+								try_again = false;
+								hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
+								hold_subcode = the_error;
+								error_buf = err_str;
+
+								all_transfers_succeeded = false;
+							}
+						}
+					}
+					free(dirname);
+
 					formatstr(fullname,"%s%c%s",Iwd,DIR_DELIM_CHAR,remap_filename.c_str());
 				}
 				dprintf(D_FULLDEBUG,"Remapped downloaded file from %s to %s\n",filename.c_str(),remap_filename.c_str());
@@ -6148,9 +6319,12 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// Close the plugin
 	int rc = my_pclose(plugin_pipe);
 	int exit_status = WEXITSTATUS(rc);
+	bool exit_by_signal = WIFSIGNALED(rc);
+
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
 	plugin_stats->InsertAttr("PluginExitCode", exit_status);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.c_str(), exit_status);
+	plugin_stats->InsertAttr("PluginExitBySignal", exit_by_signal);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin.c_str(), exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -6170,7 +6344,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// If the plugin did not return successfully, report the error and return
-	if (result != TransferPluginResult::Success) {
+	if (exit_by_signal || (result != TransferPluginResult::Success)) {
 		std::string errorMessage;
 		std::string transferUrl;
 		if (!plugin_stats->LookupString("TransferError", errorMessage)) {
@@ -6178,8 +6352,13 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 				" exited unexpectedly without producing an error message ";
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
-		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
-			exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		if (exit_by_signal) {
+			e.pushf("FILETRANSFER", 1, "exit by signal %d from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
+					WTERMSIG(rc), plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		} else {
+			e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
+					exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		}
 		return TransferPluginResult::Error;
 	}
 
@@ -6278,9 +6457,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Close the plugin
 	int rc = my_pclose( plugin_pipe );
-	int exit_status = WEXITSTATUS(rc);
+	int exit_status     = WEXITSTATUS(rc);
+	bool exit_by_signal = WIFSIGNALED(rc);
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin_name.c_str(), exit_status);
+	if (exit_by_signal) {
+		result =  TransferPluginResult::Error;
+	}
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -6358,7 +6541,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if (result != TransferPluginResult::Success && e.getFullText().empty()) {
+	if (exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty())) {
 		e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
 			"did not report a TransferError message.", plugin_path.c_str(), exit_status);
 	}

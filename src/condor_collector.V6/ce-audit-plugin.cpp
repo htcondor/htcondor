@@ -46,8 +46,8 @@ CEAuditPlugin::stopJob(const ClassAd& ad) {
     } else {
         // names of form "slotN@" stop that name and all "slotN_M@" names
         Regex re; re.compile( "^(slot[0-9]*)@.*'", NULL, NULL );
-        ExtArray<MyString> groups; // HTCONDOR-322
-        if( re.match( name.c_str(), & groups ) ) {
+		std::vector<std::string> groups; // HTCONDOR-322
+        if( re.match_str( name,  &groups ) ) {
             formatstr( matchRE, "^%s[@_]", groups[1].c_str() );
         }
     }

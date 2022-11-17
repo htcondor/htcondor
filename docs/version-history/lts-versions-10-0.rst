@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug in the curl plugin where it would crash on EL8
+  systems when using a file:// url type
+  :jira:`1426`
+
 - Fixed bug in where the multifile curl plugin would fail to timeout
   due lack of upload or download progress if a large amount of bytes
   where transfered at some point.

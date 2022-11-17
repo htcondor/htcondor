@@ -15,6 +15,13 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1001`.
 
+- We changed the semantics of relative paths in the ``output``, ``error``, and
+  ``transfer_output_remaps`` submit file commands.  These commands now create
+  the directories named in relative paths if they do not exist.  This could
+  cause jobs that used to go on hold (because they couldn't write their
+  ``output`` or ``error`` files, or a remapped output file) to instead succeed.
+  :jira:`1325`
+
 New Features:
 
 - *condor_q* default behavior of displaying the cumulative run time has changed
@@ -40,6 +47,10 @@ New Features:
   previously it was 0.
   :jira:`1393`
 
+- The local issuer credmon can optionally add group authorizations to users' tokens by setting
+  ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
+  :jira:`1402`
+
 - The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
@@ -52,6 +63,25 @@ New Features:
   in a submit file will now automatically setup job for respective ``universe`` based on
   image type.
   :jira:`1401`
+  
+Version 10.1.3
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.1.3 released on Month Date, 2022.
+
+- HTCondor version 10.1.3 not yet released.
+
+New Features:
+
+- The local issuer credmon can optionally add group authorizations to users' tokens by setting
+  ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
+  :jira:`1402`
+
+Bugs Fixed:
+
+- None.
 
 Version 10.1.2
 --------------
