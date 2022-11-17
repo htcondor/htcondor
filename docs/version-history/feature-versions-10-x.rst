@@ -59,6 +59,11 @@ New Features:
   when the unix uid or gid has the high bit set, which docker does not support.
   :jira:`1421`
 
+- Declaring either ``container_image`` or ``docker_image`` without a defined ``universe``
+  in a submit file will now automatically setup job for respective ``universe`` based on
+  image type.
+  :jira:`1401`
+  
 Version 10.1.3
 --------------
 

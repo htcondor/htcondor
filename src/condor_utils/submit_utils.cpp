@@ -4566,6 +4566,16 @@ int SubmitHash::SetUniverse()
 	JobGridType.clear();
 	VMType.clear();
 
+	bool CanHaveImages = false;
+	//Check to see if a docker/container image was declared in submit file
+	auto_free_ptr dockerImg(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+	auto_free_ptr containerImg(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+	if (dockerImg && containerImg) { //If both container and docker image declared then abort
+		push_error(stderr, "Both '%s' and '%s' were declared. Only one can be declared in a submit file.\n",
+							SUBMIT_KEY_DockerImage, SUBMIT_KEY_ContainerImage);
+		ABORT_AND_RETURN(1);
+	}
+
 	if (univ) {
 		JobUniverse = CondorUniverseNumberEx(univ.ptr());
 		if ( ! JobUniverse) {
@@ -4573,18 +4583,29 @@ int SubmitHash::SetUniverse()
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsDockerJob = true;
+				CanHaveImages = true;
 			}
 			// maybe it is the "container" topping?
 
 			if (MATCH == strcasecmp(univ.ptr(), "container")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsContainerJob = true;
+				CanHaveImages = true;
 			}
 		}
 	} else {
 		// if nothing else, it must be a vanilla universe
 		//  *changed from "standard" for 7.2.0*
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
+		CanHaveImages = true;
+		if (dockerImg) IsDockerJob = true;
+		if (containerImg) IsContainerJob = true;
+	}
+
+	if (!CanHaveImages && (dockerImg || containerImg)) { //If docker or container image is in declared universe
+		push_error(stderr, "%s universe for job does not allow use of %s_image.\n",
+							CondorUniverseName(JobUniverse), dockerImg ? "docker" : "container");
+		ABORT_AND_RETURN(1);
 	}
 
 	// set the universe into the job

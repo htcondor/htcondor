@@ -22,6 +22,11 @@ specifying a Docker image with the submit command
 image must be pre-staged on a docker hub that the execute machine can
 access.
 
+The submit file command **universe** can either be optionally set to ``docker``
+or not declared at all. If **universe** is declared and set to anything but
+``docker`` then the job submission will fail. Regardless, the submit file
+command **docker_image** must be declared and set to a docker image.
+
 After submission, the job is treated much the same way as a vanilla
 universe job. Details of file transfer are the same as applied to the
 vanilla universe. One of the benefits of Docker containers is the file
@@ -78,6 +83,7 @@ job:
 
 .. code-block:: condor-submit
 
+      #universe = docker is optional
       universe                = docker
       docker_image            = debian
       executable              = /bin/cat
@@ -135,6 +141,7 @@ to go, but doesn't turn it on by default.
 
 .. code-block:: condor-submit
 
+      #universe = docker is optional
       universe                = docker
       docker_image            = centos7_with_htcondor
       executable              = /usr/sbin/condor_master
