@@ -164,19 +164,37 @@ printClassAd( void )
 
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
-		printf("%s = True\n", ATTR_HAS_SINGULARITY);
-		printf("%s = True\n", ATTR_HAS_CONTAINER);
-		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
-		// We can't test a download, so assume we can...
-		printf( "%s = True\n", ATTR_HAS_DOCKER_URL);
-
+		bool can_run_sandbox = false;
 		if (htcondor::Singularity::canRunSandbox())  {
-			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
+			can_run_sandbox = true;
 		}
+		bool can_run_sif = false;
 		if (htcondor::Singularity::canRunSIF())  {
-			printf("%s = True\n", ATTR_HAS_SIF);
+			can_run_sif = true;
 		}
+
+		// To consider Singularity operational, we needed it to pass
+		// running something... either sandbox or sif...
+		if (can_run_sandbox || can_run_sif) {
+			printf("%s = True\n", ATTR_HAS_SINGULARITY);
+			printf("%s = True\n", ATTR_HAS_CONTAINER);
+			// We can't test a download, so assume we can...
+			printf("%s = True\n", ATTR_HAS_DOCKER_URL);
+			if (can_run_sandbox) {
+				printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
+			}
+			if (can_run_sif) {
+				printf("%s = True\n", ATTR_HAS_SIF);
+			}
+		}
+		else {
+			// If we made it here, we cannot run either sif or sandbox images.
+			// In this case, return HasSingularity=False, which means it is
+			// present on the EP but broken.
+			printf("%s = False\n", ATTR_HAS_SINGULARITY);
+		}
+		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
 	// Detect ability to encrypt execute directory

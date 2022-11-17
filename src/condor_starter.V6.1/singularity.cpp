@@ -8,6 +8,7 @@
 #endif
 
 #include <vector>
+#include <regex>
 
 #include "condor_config.h"
 #include "my_popen.h"
@@ -22,6 +23,7 @@ using namespace htcondor;
 
 
 bool Singularity::m_enabled = false;
+bool Singularity::m_use_pid_namespaces = true;
 bool Singularity::m_probed = false;
 bool Singularity::m_apptainer = false;
 int  Singularity::m_default_timeout = 120;
@@ -356,22 +358,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	// Setup Singularity containerization options.
-	// By default, we will ideally pass "-C" which tells Singularity to contain
-	// everything, which includes file systems, PID, IPC, and environment and whatever
-	// they dream up next.
-	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
-	if (param_boolean("SINGULARITY_USE_PID_NAMESPACES", true)) {
-		// containerize everything with -C, ie use pid namespaces
-		sing_args.AppendArg("-C");
-	}
-	else {
-		// We cannot use pid namespaces, so we cannot use -C to contain everything.
-		// Unfortunately, Singulariry does not have a way to just disable pid namespaces.
-		// So instead we pass as many other contain flags as we can.
-		sing_args.AppendArg("--contain");	//  minimal dev and other dirs
-		sing_args.AppendArg("--ipc");		// contain ipc namespace
-		sing_args.AppendArg("--cleanenv");
-	}
+	add_containment_args(sing_args);
 
 	std::string args_error;
 	std::string sing_extra_args;
@@ -556,9 +543,9 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	errorMessage = buf;
 
-	// TODO: strip out ansi escape sequences from errorMesssage.
 	// Singularity puts various ansi escape sequences into its output to do things
-	// like change text color to red if an error.
+	// like change text color to red if an error.  Remove those sequences.
+	errorMessage = RemoveANSIcodes(errorMessage);
 
 	// my_pclose will return an error if there is more than a pipe full
 	// of output at close time.  Drain the input pipe to prevent this.
@@ -603,9 +590,53 @@ Singularity::canRunSandbox() {
 	return Singularity::canRun(sbin_dir);
 }
 
+void
+Singularity::add_containment_args(ArgList & sing_args)
+{
+	// By default, we will ideally pass "-C" which tells Singularity to contain
+	// everything, which includes file systems, PID, IPC, and environment and whatever
+	// they dream up next.
+	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
+	if (m_use_pid_namespaces) {
+		// containerize everything with -C, ie use pid namespaces
+		sing_args.AppendArg("-C");
+	}
+	else {
+		// We cannot use pid namespaces, so we cannot use -C to contain everything.
+		// Unfortunately, Singulariry does not have a way to just disable pid namespaces.
+		// So instead we pass as many other contain flags as we can.
+		sing_args.AppendArg("--contain");	//  minimal dev and other dirs
+		sing_args.AppendArg("--ipc");		// contain ipc namespace
+		sing_args.AppendArg("--cleanenv");
+	}
+}
+
+
 bool 
 Singularity::canRun(const std::string &image) {
 #ifdef LINUX
+	bool success = true;
+	bool retry_on_fail_without_namespaces = false;
+
+	static bool first_run_attempt = true;
+
+	if (first_run_attempt) {
+		first_run_attempt = false;
+		std::string knob;
+		param(knob, "SINGULARITY_USE_PID_NAMESPACES", "auto");
+		if (string_is_boolean_param(knob.c_str(), m_use_pid_namespaces)) {
+			// SINGULARITY_USE_PID_NAMESPACES is explicitly set to True or False
+			retry_on_fail_without_namespaces = false;
+		}
+		else {
+			// SINGULARITY_USE_PID_NAMESPACES is auto, so attempt to use
+			// pid namespaces the first time, and try again without on failure
+			m_use_pid_namespaces = true;
+			retry_on_fail_without_namespaces = true;
+		}
+	}
+
+
 	ArgList sandboxArgs;
 	std::string exec;
 	if (!find_singularity(exec)) {
@@ -615,6 +646,7 @@ Singularity::canRun(const std::string &image) {
 
 	sandboxArgs.AppendArg(exec);
 	sandboxArgs.AppendArg("exec");
+	add_containment_args(sandboxArgs);
 	sandboxArgs.AppendArg(image);
 	sandboxArgs.AppendArg(exit_37);
 
@@ -622,28 +654,49 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
-	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
+	TemporaryPrivSentry sentry(PRIV_CONDOR);
 
 	MyPopenTimer pgm;
 	Env env;
 	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
-			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
-			return false;
+			dprintf(D_ALWAYS, "Singularity exec failed, this singularity can run some programs, but not these\n");
+			success =  false;
+		}
+	}
+	else {
+		int exitCode = -1;
+		pgm.wait_for_exit(m_default_timeout, &exitCode);
+		if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
+			pgm.close_program(1);
+			std::string line,last_line;
+			while (pgm.output().readLine(line, false)) {
+				line = RemoveANSIcodes(line);
+				chomp(line);
+				trim(line);
+				if (line.empty()) break;
+				last_line = line;
+			}
+			dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); last line was '%s'.\n",
+					displayString.c_str(), exitCode, last_line.c_str());
+			success =  false;
 		}
 	}
 
-	int exitCode = -1;
-	pgm.wait_for_exit(m_default_timeout, &exitCode);
-	if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
-		pgm.close_program(1);
-		std::string line;
-		pgm.output().readLine(line, false);
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+	if (success) {
+		dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
+		return true;
+	}
+
+	// If we made it here, we failed to launch Singularity... perhaps retry?
+	if (retry_on_fail_without_namespaces && m_use_pid_namespaces) {
+		m_use_pid_namespaces = false;
+		dprintf(D_ALWAYS, "Singularity exec failed, trying again without pid namespaces\n");
+		return canRun(image);	// Ooooh... recursion!  fancy!
+	}
+	else {
 		return false;
 	}
-	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
-	return true;
 #else
 	(void)image;	// shut the compiler up
 	return false;
