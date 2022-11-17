@@ -15,7 +15,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Jobs run in Singularity or Apptainer container runtmes now use the
+  SINGULARITY_VERBOSITY flag, which controlls the verbosity of the runtime logging
+  to the job's stderr.  The default value is "-s" for silent, meaning only
+  fatal errors are logged.  
+  :jira:`1436`
 
 Bugs Fixed:
 
@@ -35,12 +39,6 @@ New Features:
 - OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
   OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
   :jira:`1410`
-
-- Jobs run in Singularity or Apptainer container runtmes now use the
-  SINGULARITY_VERBOSITY flag, which controlls the verbosity of the runtime logging
-  to the job's stderr.  The default value is "-s" for silent, meaning only
-  fatal errors are logged.  
-  :jira:`1436`
 
 Bugs Fixed:
 
