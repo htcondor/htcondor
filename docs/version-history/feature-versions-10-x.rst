@@ -75,6 +75,12 @@ Release Notes:
 
 New Features:
 
+- Jobs run in Singularity or Apptainer container runtmes now use the
+  SINGULARITY_VERBOSITY flag, which controlls the verbosity of the runtime logging
+  to the job's stderr.  The default value is "-s" for silent, meaning only
+  fatal errors are logged.  
+  :jira:`1436`
+
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`

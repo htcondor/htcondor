@@ -2408,7 +2408,7 @@ Starter::SpawnJob( void )
 			std::string docker_image;
 			jobAd->LookupString(ATTR_DOCKER_IMAGE, docker_image);
 
-			bool hasDocker;
+			bool hasDocker = false;
 			mad->LookupBool(ATTR_HAS_DOCKER, hasDocker);
 
 			// If they give us a docker repo and we have a working
