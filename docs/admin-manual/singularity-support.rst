@@ -4,7 +4,11 @@ Singularity Support
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
 Singularity (https://sylabs.io/singularity/) is a container runtime system
-popular in scientific and HPC communities.  HTCondor can run jobs
+popular in scientific and HPC communities.  Apptainer is an open
+source fork of Singularity that is API and CLI compatible with
+singularity.  Everything in this document that pertains to
+singularity also is true for the apptainer container runtime.
+HTCondor can run jobs
 inside Singularity containers either in a transparent way, where the
 job does not know that it is being contained, or, the HTCondor
 administrator can configure the HTCondor startd so that a job can
@@ -240,7 +244,7 @@ to the StarterLog might look like the following:
 
 .. code-block:: text
 
-    About to exec /usr/bin/singularity exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
 
 In this example, no GPUs have been requested, so there is no ``-nv`` option.
 ``MOUNT_UNDER_SCRATCH`` is set to the default of ``/tmp,/var/tmp``, so condor
@@ -251,3 +255,12 @@ directory with the same name on the inside of the container, and the
 and the executable, which in this case has been transfered by HTCondor
 into the scratch directory, and the job's argument (3).  Not visible
 in the log are any environment variables that HTCondor is setting for the job.
+
+All of the singularity container runtime's logging, warning and error messages
+are written to the job's stderr.  This is an unfortunate aspect of the runtime
+we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
+the singularity runtime, so that the only messages it writes to the job's
+stderr are fatal error messages.  If a worker node administrator needs more
+debugging information, they can change the value of the worker node config
+parameter ``SINGULARITY_VERBOSITY`` and set it to -d or -v to increase
+the debugging level.

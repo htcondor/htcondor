@@ -1794,6 +1794,14 @@ friendly_name=Enable Singularity for a job
 review=?
 tags=startd
 
+[SINGULARITY_VERBOSITY]
+default=-s
+type=string
+reconfig=true
+customization=seldom
+friendly_name=singularity verbosity level
+tags=starter
+
 [SINGULARITY_IMAGE_EXPR]
 default=SingularityImage
 type=string
