@@ -207,6 +207,7 @@ our %submit_info = (
 	},
 	
 	'x86_64_Windows8'   => 'x86_64_Windows7',
+	'x86_64_Windows9'   => 'x86_64_Windows7',
 	'x86_64_Windows10'  => 'x86_64_Windows7',
 	'x86_WindowsXP'		=> 'x86_64_Windows7',
 	'x86_64_winnt_6.1'	=> 'x86_64_Windows7',

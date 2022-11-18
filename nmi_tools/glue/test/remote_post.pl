@@ -60,13 +60,11 @@ if( ! -f "tasklist.nmi" || -z "tasklist.nmi" ) {
 # if that isn't found, we just have to pray that there is already one in the path.
 my $tarbin = "tar";
 if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
-	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 		my $bsdtar = "$BaseDir/msconfig/tar.exe";
 		if ( -f "$bsdtar" ) {
 			$tarbin = $bsdtar;
 			$tarbin =~ s/\//\\/g;
 		}
-	}
 }
 
 
