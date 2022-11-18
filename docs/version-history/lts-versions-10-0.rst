@@ -46,6 +46,10 @@ Bugs Fixed:
   when the unix uid or gid has the high bit set, which docker does not support.
   :jira:`1421`
 
+- Fixed bug where the multifile curl plugin would fail to recieve scitoken
+  if it was in raw format rather than json.
+  :jira:`1447`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
