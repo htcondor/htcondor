@@ -49,6 +49,10 @@ Bugs Fixed:
 - Fixed bug where the multifile curl plugin would fail to recieve scitoken
   if it was in raw format rather than json.
   :jira:`1447`
+  
+- Fixed a bug where SSL authentication with the *condor_collector* could
+  fail when the provided hostname is not a DNS CNAME.
+  :jira:`1443`
 
 .. _lts-version-history-1000:
 
