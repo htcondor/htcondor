@@ -259,14 +259,12 @@ char *findOldest(char *dirName, int *count) {
 		return nullptr;
 	}
 
-	bool firstTime = true;
 	std::string oldest;
 	while ((entry=readdir(d)) != nullptr) {
 		if (file_select(entry)) {
-			if (firstTime) {
+			(*count)++;
+			if (oldest.empty()) {
 				oldest = entry->d_name;
-				*count = 1;
-				firstTime = false;
 			} else {
 				if (strcmp(oldest.c_str(), entry->d_name) > 0) {
 					oldest = entry->d_name;
