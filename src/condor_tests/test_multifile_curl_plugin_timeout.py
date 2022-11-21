@@ -108,20 +108,15 @@ class SlowIterator:
 def req_handler(request, response):
     return Response(SlowIterator(response))
 
-TEST_NUM = -1
 #Server handling of an http request
 def server_data_xfer(srv,response,key):
-    global TEST_NUM
-    TEST_NUM += 1
-    srv.expect_request(f"/testserver/{TEST_NUM}/{key}").respond_with_handler(lambda r: req_handler(r,response))
-    return "http://localhost:{0}/testserver/{1}/{2}".format(srv.port,TEST_NUM,key)
+    srv.expect_request(f"/testserver/{key}").respond_with_handler(lambda r: req_handler(r,response))
+    return "http://localhost:{0}/testserver/{1}".format(srv.port,key)
 
 #--------------------------------------------------------------------------
 #Submit all the test cases as job
-SERVERS = {} #List of servers (one per test)
 @action
 def submit_jobs(default_condor,test_dir,path_to_sleep):
-    global SERVERS
     job_handles = {}
     #For each test submit the job
     for key in TEST_CASES.keys():
@@ -130,9 +125,6 @@ def submit_jobs(default_condor,test_dir,path_to_sleep):
         #Start server
         if not server.is_running():
             server.start()
-        #Add server to list of servers
-        port = f"{server.port}"
-        SERVERS[port] = server
         #Submit job
         job = default_condor.submit(
             {
@@ -144,7 +136,7 @@ def submit_jobs(default_condor,test_dir,path_to_sleep):
             }
         )
         #Add job to job_handle dictionaries
-        job_handles[key] = (port,job)
+        job_handles[key] = (server,job)
     yield job_handles
 
 #--------------------------------------------------------------------------
@@ -161,26 +153,23 @@ def job_handle(job_info):
     return job_info[1]
 #Get server port that job is running on
 @action
-def job_server_port(job_info):
+def job_server(job_info):
     return job_info[2]
 #Wait for the job to finish
 @action
-def job_wait(job_handle,job_server_port):
+def job_wait(job_handle,job_server):
     job_handle.wait(condition=ClusterState.all_terminal,timeout=80)
     #Stop server if running
-    if SERVERS[job_server_port].is_running:
-        SERVERS[job_server_port].stop()
+    if job_server.is_running:
+        job_server.stop()
     return job_handle
 
 #==========================================================================
-FAIL_COUNT = 0
 class TestMultifileCurlTimeout:
     def test_xfer_timeout(self,job_name,job_wait):
         if job_name[:4] == "pass":
             job_wait.state[0] == JobStatus.COMPLETED
         elif job_name[:4] == "fail":
-            global FAIL_COUNT
-            FAIL_COUNT += 1
             assert job_wait.state[0] == JobStatus.HELD
         else:
             print(f"\nERROR: Invalid test name '{job_name}'. Please change to either 'pass_{job_name}' or 'fail_{job_name}'.")
@@ -201,7 +190,8 @@ class TestMultifileCurlTimeout:
                     print(f"\nERROR: Unexpected TransferError ({err}) found in transfer_history.")
                     assert False
         #Verify that the number of transfer timeout tests are equal to the number of timeout errors found
-        assert timeout_errors == FAIL_COUNT
+        fail_count = len({k for k in TEST_CASES.keys() if k[:4] == "fail"})
+        assert fail_count == timeout_errors
 
 
 
