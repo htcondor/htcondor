@@ -1905,6 +1905,8 @@ RemoteErrorEvent::toClassAd(bool event_time_utc)
 		myad->Assign("CriticalError",(int)critical_error);
 	}
 	if(hold_reason_code) {
+		// NOTE: It is important to leave these attributes undefined
+		// if the HOLD_REASON_CODE is 0.
 		myad->Assign(ATTR_HOLD_REASON_CODE, hold_reason_code);
 		myad->Assign(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 	}

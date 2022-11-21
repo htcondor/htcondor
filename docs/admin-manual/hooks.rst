@@ -362,6 +362,14 @@ what output is expected, and, when relevant, the exit status expected.
        A set of attributes to insert or update into the job ad. For
        example, changing the ``Cmd`` attribute to a quoted string
        changes the executable to be run.
+       Two special attributes can also 
+       be specified: ``HookStatusCode`` and ``HookStatusMessage``.
+       ``HookStatusCode``, if specified and is not a negative number, will be used instead of the
+       exit status of the hook unless the hook process exited due to a signal.  A status code of
+       0 is success, and a positive integer indicates failure.  A status code between 1 and 299 (inclusive)
+       will result in the job going on hold; 300 or greater will result in the job going back to the Idle state.
+       The ``HookStatusMessage`` will be echoed into the job's event log file, and also be used as the
+       Hold Reason string if the job is placed on hold.
     User id that the hook runs as
        The ``<Keyword>_HOOK_PREPARE_JOB``
        :index:`<Keyword>_HOOK_PREPARE_JOB` hook runs with the same
@@ -393,6 +401,14 @@ what output is expected, and, when relevant, the exit status expected.
        A set of attributes to insert or update into the job ad. For
        example, changing the ``Cmd`` attribute to a quoted string
        changes the executable to be run.
+       Two special attributes can also 
+       be specified: ``HookStatusCode`` and ``HookStatusMessage``.
+       ``HookStatusCode``, if specified and is not a negative number, will be used instead of the
+       exit status of the hook unless the hook process exited due to a signal.  A status code of
+       0 is success, and a positive integer indicates failure.  A status code between 1 and 299 (inclusive)
+       will result in the job going on hold; 300 or greater will result in the job going back to the Idle state.
+       The ``HookStatusMessage`` will be echoed into the job's event log file, and also be used as the
+       Hold Reason string if the job is placed on hold.
     User id that the hook runs as
        The ``<Keyword>_HOOK_PREPARE_JOB``
        :index:`<Keyword>_HOOK_PREPARE_JOB` hook runs with the same

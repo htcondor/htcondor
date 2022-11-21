@@ -81,6 +81,11 @@ New Features:
   fatal errors are logged.  
   :jira:`1436`
 
+- The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
+  a ``HookStatusMessage`` to give better feedback to the user.
+  See the :ref:`admin-manual/Hooks` manual section.
+  :jira:`1416`
+
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`

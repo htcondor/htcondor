@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -26,6 +26,7 @@
 #include "status_string.h"
 #include "classad_merge.h"
 #include "jic_shadow.h"
+#include "basename.h"
 
 extern Starter *Starter;
 
@@ -341,52 +342,83 @@ HookPrepareJobClient::HookPrepareJobClient(const char* hook_path, bool after_fil
 
 void
 HookPrepareJobClient::hookExited(int exit_status) {
-	HookClient::hookExited(exit_status);
 	std::string hook_name(getHookTypeString(type()));
-	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
+	HookClient::hookExited(exit_status);
+
+	// Make an update ad from the stdout of the hook
+	ClassAd updateAd;
+	std::string out(*getStdOut());
+	if (!out.empty()) {
+		initAdFromString(out.c_str(), updateAd);
+		dprintf(D_FULLDEBUG, "%s output classad\n", hook_name.c_str());
+		dPrintAd(D_FULLDEBUG, updateAd);
+	}
+	else {
+		dprintf(D_FULLDEBUG, "%s output classad was empty (no job ad updates requested)\n", hook_name.c_str());
+	}
+
+	// If present, HookStatusCode attr in the stdout overrides exit status
+	// unless killed by a signal.
+	std::string exit_status_msg;
+	statusString(exit_status, exit_status_msg);
+	if (WIFSIGNALED(exit_status)) {
+		exit_status = -1 * WTERMSIG(exit_status);
+	}
+	else {
+		exit_status = WEXITSTATUS(exit_status); 
+		int exit_from_stdout = -1;
+		updateAd.LookupInteger("HookStatusCode", exit_from_stdout);
+		if (exit_from_stdout >= 0) {
+			exit_status = exit_from_stdout;
+			formatstr(exit_status_msg, "reported status %03d", exit_status);
+		}
+	}
+
+	// Create a log message
+	std::string msg_from_stdout;
+	updateAd.LookupString("HookStatusMessage", msg_from_stdout);
+	std::string log_msg;
+	formatstr(log_msg, "%s (%s) %s (%s): %s", hook_name.c_str(),
+		condor_basename(m_hook_path),
+		exit_status ? "failed" : "succeeded",
+		exit_status_msg.c_str(),
+		msg_from_stdout.empty() ? "<no message>" : msg_from_stdout.c_str());
+
+	/* Notify the AP what happened if there is a message or a failure.
+		From HTCONDOR-1411:
+		HookStatusCode between 1 and 299 (inclusive) will result in the job
+		going to Hold state, while a HookStatusCode > 299 will result in a shadow
+		exception and the job going back to Idle state.  In either case, an event
+		will be written into the job event log that includes the HookStatusMessage.
+		If the HookStatusCode is 0 (success) and yet a HookStatusMessage is returned,
+		the message will be written into the job event log as a warning, but the
+		job will remain in Running state and job launch will continue.
+	*/
+	if (!msg_from_stdout.empty() || exit_status != 0) {
+		Starter->jic->notifyStarterError(
+			log_msg.c_str(),
+			exit_status != 0 ? true : false, // shadow except or not (if hold code below is zero)
+			exit_status > 0 && exit_status < 300 ? CONDOR_HOLD_CODE::HookPrepareJobFailure : 0, // hold job or not
+			exit_status   // subcode 
+		);
+	}
+
+	if (exit_status != 0) {
 			// HOOK RETURNED FAILURE
 
-			// Create an error message and request job to go on hold
-		std::string status_msg;
-		statusString(exit_status, status_msg);
-		int subcode;
-		if (WIFSIGNALED(exit_status)) {
-			subcode = -1 * WTERMSIG(exit_status);
-		}
-		else {
-			subcode = WEXITSTATUS(exit_status);
-		}
-		std::string err_msg;
-		formatstr(err_msg, "%s (%s) failed (%s)", hook_name.c_str(),
-						m_hook_path,
-						status_msg.c_str());
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in HookPrepareJobClient::hookExited: %s\n",
-				err_msg.c_str());
-		Starter->jic->notifyStarterError(err_msg.c_str(), true,
-							 CONDOR_HOLD_CODE::HookPrepareJobFailure, subcode);
+				log_msg.c_str());
 		Starter->RemoteShutdownFast(0);
 	}
 	else {
 			// HOOK RETURNED SUCCESS
 
-			// Make an update ad from the stdout of the hook
-		std::string out(*getStdOut());
-		if (!out.empty()) {
-			ClassAd updateAd;
-			initAdFromString(out.c_str(), updateAd);
-			dprintf(D_FULLDEBUG, "%s output classad\n", hook_name.c_str());
-			dPrintAd(D_FULLDEBUG, updateAd);
-
-			// Insert each expr from the update ad into the job ad
-			ClassAd* job_ad = Starter->jic->jobClassAd();
-			job_ad->Update(updateAd);
-			dprintf(D_FULLDEBUG, "After %s: merged job classad:\n", hook_name.c_str());
-			dPrintAd(D_FULLDEBUG, *job_ad);
-		}
-		else {
-			dprintf(D_FULLDEBUG, "%s output classad was empty (no job ad updates requested)\n", hook_name.c_str());
-		}
+			// Insert each expr from the update ad from hook into the job ad
+		ClassAd* job_ad = Starter->jic->jobClassAd();
+		job_ad->Update(updateAd);
+		dprintf(D_FULLDEBUG, "After %s: merged job classad:\n", hook_name.c_str());
+		dPrintAd(D_FULLDEBUG, *job_ad);
 
 			// Now have the starter continue forward preparing for the job
 		if (type() == HOOK_PREPARE_JOB) {
