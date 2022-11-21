@@ -36,38 +36,26 @@ static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultot
     struct xferProgress *progress = (struct xferProgress *)p;
     CURL *curl = progress->curl;
     double curTime = 0;
-    static double prevTime = 0; //Previous total time
-    static double dlprev   = 0; //Previous dlnow
-    static double ulprev   = 0; //Previous ulnow
-    /*Get download and upload differences from previous numbers to determine
-    if we should timeout since dlnow and ulnow are totals. This is to prevent
-    a stall out in file tranfser after a large change.*/
-    static double diffTime = 0;
-    static double diff_dl  = 0;
-    static double diff_ul  = 0;
-    diff_dl += dlnow - dlprev;
-    diff_ul += ulnow - ulprev;
-
-    dlprev = dlnow;
-    ulprev = ulnow;
+    static double prevTime = 0; //Previous checks total time
+    static double dlprev   = 0; //Previous checks dlnow
+    static double ulprev   = 0; //Previous checks ulnow
 
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curTime);
-    diffTime += curTime - prevTime;
-    prevTime = curTime;
 
     // After 30 seconds, check if we're making forward progress (> 1 byte/s)
     if (curTime > 30) {
+        double diffTime = curTime - prevTime;
         if (diffTime > 30) {
             // If this is a download and not making progress, abort
-            if (dlnow > 0 && diffTime > diff_dl) return 1;
+            if (dlnow > 0 && diffTime > dlnow - dlprev) return 1;
 
             // If this is an upload and not making progress, abort
-            if (ulnow > 0 && diffTime > diff_ul) return 1;
+            if (ulnow > 0 && diffTime > ulnow - ulprev) return 1;
 
-            //Reset diffs for next check
-            diffTime = 0;
-            diff_dl  = 0;
-            diff_ul  = 0;
+            //Set previous checks values to current checks
+            prevTime = curTime;
+            dlprev = dlnow;
+            ulprev = ulnow;
         }
         // If not a single byte has been transferred either direction after 30 seconds, abort
         if (dlnow <= 0 && ulnow <= 0) return 1;
