@@ -660,7 +660,7 @@ Singularity::canRun(const std::string &image) {
 	Env env;
 	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
-			dprintf(D_ALWAYS, "Singularity exec failed, this singularity can run some programs, but not these\n");
+			dprintf(D_ALWAYS, "Test launch singularity exec failed, this singularity can run some programs, but not these\n");
 			success =  false;
 		}
 	}
@@ -669,16 +669,17 @@ Singularity::canRun(const std::string &image) {
 		pgm.wait_for_exit(m_default_timeout, &exitCode);
 		if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
 			pgm.close_program(1);
-			std::string line,last_line;
+			dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); stderr is :\n",
+				displayString.c_str(), exitCode);
+			std::string line;
 			while (pgm.output().readLine(line, false)) {
 				line = RemoveANSIcodes(line);
 				chomp(line);
 				trim(line);
-				if (line.empty()) break;
-				last_line = line;
+				if (!line.empty()) {
+					dprintf(D_ALWAYS, "(singularity stderr): %s\n", line.c_str());
+				}
 			}
-			dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); last line was '%s'.\n",
-					displayString.c_str(), exitCode, last_line.c_str());
 			success =  false;
 		}
 	}
