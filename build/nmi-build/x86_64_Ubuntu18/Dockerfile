@@ -68,7 +68,10 @@ RUN apt update && DEBIAN_FRONTEND=noninteractive apt install -y \
 RUN apt update && apt install -y \
     build-essential \
     devscripts \
+    gcc-8 g++-8 \
     && apt clean
+
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
 
 # Useful tools for debugging
 RUN apt update && apt install -y \
