@@ -585,9 +585,9 @@ Singularity::canRunSIF() {
 
 bool
 Singularity::canRunSandbox() {
-	std::string sbin_dir;
-	param(sbin_dir, "SBIN");
-	return Singularity::canRun(sbin_dir);
+	std::string sandbox_dir;
+	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
+	return Singularity::canRun(sandbox_dir);
 }
 
 void
