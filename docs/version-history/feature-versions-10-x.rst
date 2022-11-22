@@ -63,7 +63,11 @@ New Features:
   in a submit file will now automatically setup job for respective ``universe`` based on
   image type.
   :jira:`1401`
-  
+
+- Added new Scheduler ClassAd attribute ``EffectiveFlockList`` that represents the
+  *condor_collector* addresses that a *condor_schedd* is actively sending flocked jobs.
+  :jira:`1389`
+
 Version 10.1.3
 --------------
 
