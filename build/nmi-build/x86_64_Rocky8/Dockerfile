@@ -89,6 +89,7 @@ RUN echo '%wheel ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/wheel
 # HTCondor build dependencies
 # libarchive included because of missing dependcy from cmake
 RUN dnf install -y \
+	'apptainer' \
     'bind-utils' \
     'bison' \
     'bison-devel' \
