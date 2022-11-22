@@ -501,8 +501,7 @@ pseudo_ulog( ClassAd *ad )
 	std::string CriticalErrorBuf;
 	bool event_already_logged = false;
 	bool put_job_on_hold = false;
-	char const *hold_reason = NULL;
-	char *hold_reason_buf = NULL;
+	std::string hold_reason;
 	int hold_reason_code = 0;
 	int hold_reason_sub_code = 0;
 
@@ -521,10 +520,7 @@ pseudo_ulog( ClassAd *ad )
 	{
 		put_job_on_hold = true;
 		ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_reason_sub_code);
-		ad->LookupString(ATTR_HOLD_REASON,&hold_reason_buf);
-		if(hold_reason_buf) {
-			hold_reason = hold_reason_buf;
-		}
+		ad->LookupString(ATTR_HOLD_REASON,hold_reason);
 	}
 
 	if( event->eventNumber == ULOG_REMOTE_ERROR ) {
@@ -546,7 +542,7 @@ pseudo_ulog( ClassAd *ad )
 			  err->getErrorText());
 
 			critical_error = CriticalErrorBuf.c_str();
-			if(!hold_reason) {
+			if(hold_reason.empty()) {
 				hold_reason = critical_error;
 			}
 
@@ -570,14 +566,14 @@ pseudo_ulog( ClassAd *ad )
 	}
 
 	if(put_job_on_hold) {
-		hold_reason = critical_error;
-		if(!hold_reason) {
+		if (critical_error) hold_reason = critical_error;
+		if(hold_reason.empty()) {
 			hold_reason = "Job put on hold by remote host.";
 		}
 		// Let the RemoteResource know that the starter is shutting
 		// down and failing to kill it it expected.
 		thisRemoteResource->resourceExit( JOB_SHOULD_HOLD, -1 );
-		Shadow->holdJobAndExit(hold_reason,hold_reason_code,hold_reason_sub_code);
+		Shadow->holdJobAndExit(hold_reason.c_str(),hold_reason_code,hold_reason_sub_code);
 		//should never get here, because holdJobAndExit() exits.
 	}
 
