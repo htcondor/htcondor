@@ -54,6 +54,13 @@ Bugs Fixed:
   fail when the provided hostname is not a DNS CNAME.
   :jira:`1443`
 
+- Fixed a Vault credmon bug where tokens were being refreshed too often.
+  :jira:`1017`
+
+- Fixed a Vault credmon bug where the CA certificates used were not based on the
+  HTCondor configuration.
+  :jira:`1179`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
