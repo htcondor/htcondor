@@ -1,23 +1,128 @@
 from credmon.CredentialMonitors.AbstractCredentialMonitor import AbstractCredentialMonitor
 from credmon.utils import atomic_rename
 import os
+import ssl
 import time
 import json
 import glob
 import tempfile
 import re
-from urllib import request as urllib_request
-from urllib import parse as urllib_parse
+import urllib3
+import socket
 
 try:
     import htcondor
 except ImportError:
     htcondor = None
 
+# This class supports one vault host, possibly round-robin, using a
+# HTTPSConnectionPool to continue to use the same IP address of the
+# host for up to 5 minutes.  If there is a connection timeout the IP
+# address that caused it is removed from consideration until 5 minutes
+# have passed.
+class vaulthost:
+    updatetime = 0
+    ips = []
+    pool = None
+    host = ""
+    port = 0
+    log = None
+    capath = ""
+    cafile = ""
+
+    def __init__(self, parsedurl, log, capath, cafile):
+        self.host = parsedurl.host
+        self.port = parsedurl.port
+        self.log = log
+        self.capath = capath
+        self.cafile = cafile
+
+    def getips(self):
+        info = socket.getaddrinfo(self.host, 0, 0, socket.IPPROTO_TCP)
+
+        self.ips = []
+        # Use only IPv4 addresses if there are any
+        for tuple in info:
+            if tuple[0] == socket.AF_INET:
+                self.ips.append(tuple[4][0])
+        if len(self.ips) == 0:
+            # Otherwise use the IPv6 addresses
+            for tuple in info:
+                if tuple[0] == socket.AF_INET6:
+                    self.ips.append(tuple[4][0])
+        if len(self.ips) == 0:
+            raise RuntimeError('no ip address found for', self.host)
+
+    def newpool(self):
+        if self.pool != None:
+            self.pool.close()
+        self.pool = urllib3.HTTPSConnectionPool(self.ips[0],
+                            timeout=urllib3.util.Timeout(connect=2, read=10),
+                            assert_hostname=self.host, port=self.port,
+                            ca_cert_dir=self.capath, ca_certs=self.cafile)
+
+    def request(self, path, headers, fields):
+        now = time.time()
+        if (now - self.updatetime) > (5 * 60):
+            self.updatetime = now
+            self.getips()
+            self.newpool()
+        while len(self.ips) > 0:
+            try:
+                resp = self.pool.request('GET', path, headers=headers, fields=fields, retries=0)
+            except urllib3.exceptions.MaxRetryError as e:
+                if type(e.reason) != urllib3.exceptions.ConnectTimeoutError:
+                    raise e
+                if len(self.ips) == 1:
+                    raise e
+                self.log.info('Connection timeout on %s ip %s, trying %s', self.host, self.ips[0], self.ips[1])
+                del self.ips[0]
+                self.newpool()
+            else:
+                if resp.status != 200:
+                    jsondata = json.loads(resp.data.decode())
+                    errormsg = http.client.responses[resp.status] + ":"
+                    if 'errors' in jsondata:
+                        for error in jsondata['errors']:
+                            errormsg += ' ' + error.encode('ascii','ignore').decode('ascii')
+                    raise urllib3.exceptions.HTTPError(errormsg)
+
+                return resp
+
+
 class VaultCredmon(AbstractCredentialMonitor):
 
+    cafile = ssl.get_default_verify_paths().cafile
+    capath = '/etc/grid-security/certificates'
+    vaulthosts = {}
+
     def __init__(self, *args, **kw):
+        if htcondor is not None:
+            if 'AUTH_SSL_CLIENT_CAFILE' in htcondor.param:
+                self.cafile = htcondor.param['AUTH_SSL_CLIENT_CAFILE']
+            if 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
+                self.capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
         super(VaultCredmon, self).__init__(*args, **kw)
+
+    def request_url(self, url, headers, params):
+        parsedurl = urllib3.util.parse_url(url)
+
+        # These checks are to avoid someone abusing the free-form of the URL
+        # stored with condor_store_cred
+        if parsedurl.scheme != 'https':
+            raise RuntimeError('bad url: %s; only https is allowed' % url)
+        if parsedurl.port != 8200:
+            raise RuntimeError('bad url: %s; only port 8200 is allowed' % url)
+        if parsedurl.path[0:3] != '/v1':
+            raise RuntimeError('bad url: %s; only paths starting /v1 are allowed' % url)
+
+        if parsedurl.host in self.vaulthosts:
+            vault = self.vaulthosts[parsedurl.host]
+        else:
+            vault = vaulthost(parsedurl, self.log, self.capath, self.cafile)
+            self.vaulthosts[parsedurl.host] = vault
+
+        return vault.request(parsedurl.path, headers, params)
 
     def get_minimum_seconds(self):
         if htcondor is not None and 'CREDMON_OAUTH_TOKEN_MINIMUM' in htcondor.param:
@@ -33,9 +138,12 @@ class VaultCredmon(AbstractCredentialMonitor):
             return True
 
         # compute token refresh time
-        lifetime_fraction = 0.5
+        if htcondor is not None and 'CREDMON_OAUTH_TOKEN_REFRESH' in htcondor.param:
+            refresh_seconds = int(htcondor.param['CREDMON_OAUTH_TOKEN_REFRESH'])
+        else:
+            refresh_seconds = self.get_minimum_seconds() * 0.5
         create_time = os.path.getctime(access_token_path)
-        refresh_time = create_time + (self.get_minimum_seconds() * lifetime_fraction)
+        refresh_time = create_time + refresh_seconds
 
         # check if token is past its refresh time
         if time.time() > refresh_time:
@@ -48,28 +156,6 @@ class VaultCredmon(AbstractCredentialMonitor):
                 return True
 
         return False
-
-    def should_delete(self, username, token_name):
-        top_path = os.path.join(self.cred_dir, username, token_name + '.top')
-
-        if not os.path.exists(top_path):
-            return False
-
-        try:
-            mtime = os.stat(top_path).st_mtime
-        except OSError as e:
-            self.log.error('could not stat %s', top_path)
-            return False
-
-        # if top file is older than 7 days (or CREDMON_OAUTH_TOKEN_LIFETIME if defined), delete tokens
-        age = int(time.time() - mtime)
-        self.log.debug('top file is %d seconds old', age)
-        if htcondor is not None and 'CREDMON_OAUTH_TOKEN_LIFETIME' in htcondor.param:
-            token_lifetime = int(htcondor.param['CREDMON_OAUTH_TOKEN_LIFETIME'])
-        else:
-            token_lifetime = 7*24*60*60
-        if age > token_lifetime:
-            return True
 
     def refresh_access_token(self, username, token_name):
         # load the vault token plus vault bearer token URL from .top file
@@ -92,26 +178,19 @@ class VaultCredmon(AbstractCredentialMonitor):
             self.log.error("vault_url missing from %s", top_path)
             return False
 
-        params = {'minimum_seconds' : self.get_minimum_seconds()}
-        url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
+        url = top_data['vault_url']
         headers = {'X-Vault-Token' : top_data['vault_token']}
-        request = urllib_request.Request(url=url, headers=headers)
-        capath = '/etc/grid-security/certificates'
-        if htcondor is not None and 'AUTH_SSL_CLIENT_CADIR' in htcondor.param:
-            capath = htcondor.param['AUTH_SSL_CLIENT_CADIR']
+        params = {'minimum_seconds' : self.get_minimum_seconds()}
         try:
-            handle = urllib_request.urlopen(request, capath=capath)
+            response = self.request_url(url, headers, params)
         except Exception as e:
             self.log.error("read of access token from %s failed: %s", url, str(e))
             return False
         try:
-            response = json.load(handle)
+            response = json.loads(response.data.decode())
         except Exception as e:
             self.log.error("could not parse json response from %s: %s", url, str(e))
             return False
-
-        finally:
-            handle.close()
 
         if 'data' not in response or 'access_token' not in response['data']:
             self.log.error("access_token missing in read from %s", url)
@@ -129,22 +208,16 @@ class VaultCredmon(AbstractCredentialMonitor):
             if 'audience' in top_data:
                 params['audience'] = top_data['audience']
 
-            url = top_data['vault_url'] + '?' + urllib_parse.urlencode(params)
-            request = urllib_request.Request(url=url, headers=headers)
-
             try:
-                handle = urllib_request.urlopen(request, capath=capath)
+                response = self.request_url(url, headers, params)
             except Exception as e:
                 self.log.error("read of exchanged access token from %s failed: %s", url, str(e))
                 return False
             try:
-                response = json.load(handle)
+                response = json.loads(response.data.decode())
             except Exception as e:
                 self.log.error("could not parse json response from %s: %s", url, str(e))
                 return False
-
-            finally:
-                handle.close()
 
             if 'data' not in response or 'access_token' not in response['data']:
                 self.log.error("exchanged access_token missing in read from %s", url)
@@ -188,15 +261,7 @@ class VaultCredmon(AbstractCredentialMonitor):
         (cred_dir, username) = os.path.split(basename)
         token_name = os.path.splitext(token_filename)[0] # strip extension
 
-        if self.should_delete(username, token_name):
-            self.log.info('%s tokens for user %s are marked for deletion', token_name, username)
-            success = self.delete_tokens(username, token_name)
-            if success:
-                self.log.info('Successfully deleted %s token files for user %s', token_name, username)
-            else:
-                self.log.error('Failed to delete all %s token files for user %s', token_name, username)
-
-        elif self.should_renew(username, token_name):
+        if self.should_renew(username, token_name):
             self.log.info('Refreshing %s token for user %s', token_name, username)
             success = self.refresh_access_token(username, token_name)
             if success:
