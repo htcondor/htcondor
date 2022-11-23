@@ -1082,6 +1082,14 @@ else(MSVC)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 	endif(c_Wall)
 
+	# This generates a million warnings, some of which represent
+	# serious bugs.  At your leisure, uncomment and fix some 
+	# of them.
+	#check_c_compiler_flag(-Wconversion c_Wconversion)
+	#if (c_Wconversion)
+	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
+	#endif(c_Wconversion)
+
 	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
     # and took more than 3 times longer to compile.  Try again later.
 
