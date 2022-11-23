@@ -4399,8 +4399,6 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 bool
 Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * warning )
 {
-	std::string submitUserNotes, submitEventNotes;
-
 		// Skip writing submit events for procid != 0 for parallel jobs
 	int universe = job->Universe();
 	bool wantPS = 0;
@@ -4420,14 +4418,10 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 	SubmitEvent event;
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
-	if ( job->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
-		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
-	}
-	if ( job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
-		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
-	}
+	job->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
+	job->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 	if ( warning != NULL && warning[0] ) {
-		event.submitEventWarnings = strnewp( warning );
+		event.submitEventWarnings = warning;
 	}
 
 	ULog->setEnableFsync(do_fsync);
@@ -4745,8 +4739,6 @@ Scheduler::WriteAttrChangeToUserLog( const char* job_id_str, const char* attr,
 bool
 Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync )
 {
-	std::string submitUserNotes, submitEventNotes;
-
 	WriteUserLog* ULog = this->InitializeUserLog( cluster->jid );
 	if( ! ULog ) {
 			// User didn't want log
@@ -4755,12 +4747,8 @@ Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	ClusterSubmitEvent event;
 
 	event.setSubmitHost( daemonCore->privateNetworkIpAddr() );
-	if ( cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, submitEventNotes) ) {
-		event.submitEventLogNotes = strnewp(submitEventNotes.c_str());
-	}
-	if ( cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, submitUserNotes) ) {
-		event.submitEventUserNotes = strnewp(submitUserNotes.c_str());
-	}
+	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
+	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 
 	ULog->setEnableFsync(do_fsync);
 	bool status = ULog->writeEvent(&event, cluster);

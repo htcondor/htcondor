@@ -1456,8 +1456,8 @@ EventInfo::GenEventSubmit( void )
 		// Note: the line below is designed specifically to work with
 		// Kent's dummy stork_submit script for testing DAGs with
 		// DATA nodes.
-	e->submitEventLogNotes  = strnewp(m_options.m_submitNote);
-	e->submitEventUserNotes = strnewp("User info");
+	e->submitEventLogNotes  = m_options.m_submitNote;
+	e->submitEventUserNotes = "User info";
 
 	return SetEvent( e );
 }

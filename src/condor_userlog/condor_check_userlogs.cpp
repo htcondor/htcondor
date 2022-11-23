@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
 			if( e->eventNumber == ULOG_SUBMIT ) {
 				SubmitEvent* ee = (SubmitEvent*) e;
-				printf( " (\"%s\")", ee->submitEventLogNotes );
+				printf( " (\"%s\")", ee->submitEventLogNotes.c_str() );
 				++totalSubmitted;
 				++netSubmitted;
 				printf( "\n Total submitted: %d; net submitted: %d\n",

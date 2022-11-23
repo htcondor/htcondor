@@ -58,7 +58,7 @@ int main()
 
 			if( e->eventNumber == ULOG_SUBMIT ) {
 				SubmitEvent* ee = (SubmitEvent*) e;
-				printf( " (\"%s\")", ee->submitEventLogNotes );
+				printf( " (\"%s\")", ee->submitEventLogNotes.c_str() );
 			}
 			
 			if( e->eventNumber == ULOG_JOB_HELD ) {

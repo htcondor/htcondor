@@ -208,12 +208,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	jobClassAd->InsertAttr("StartdIpAddr",start_event->getExecuteHost());
-	if (start_event->getRemoteName()!=NULL) {
-	  jobClassAd->InsertAttr("RemoteHost",start_event->getRemoteName());
-	} else {
-	  // the execute host is the 2nd best we have
-	  jobClassAd->InsertAttr("RemoteHost",start_event->getExecuteHost());
-	}
+	// the execute host is the best we have
+	jobClassAd->InsertAttr("RemoteHost",start_event->getExecuteHost());
       }
       break;
 

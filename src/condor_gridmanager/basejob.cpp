@@ -1231,7 +1231,6 @@ bool
 WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1249,13 +1248,12 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 
 	GridResourceUpEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
+	if ( event.resourceName.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog.writeEvent( &event, job_ad );
 
@@ -1273,7 +1271,6 @@ bool
 WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1291,13 +1288,12 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 
 	GridResourceDownEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
+	if ( event.resourceName.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog.writeEvent(&event,job_ad);
 
@@ -1315,7 +1311,6 @@ bool
 WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1333,11 +1328,9 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 
 	GridSubmitEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	event.resourceName = strnewp( contact.c_str() );
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
 
-	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	event.jobId = strnewp( contact.c_str() );
+	job_ad->LookupString( ATTR_GRID_JOB_ID, event.jobId );
 
 	int rc = ulog.writeEvent( &event,job_ad );
 
