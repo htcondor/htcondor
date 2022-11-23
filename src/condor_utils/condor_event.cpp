@@ -510,6 +510,7 @@ bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_syn
 		return false;
 	}
 	if (is_sync_line(str.c_str())) {
+		str.clear();
 		got_sync_line = true;
 		return false;
 	}
@@ -1166,19 +1167,16 @@ SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 
 	// see if the next line contains an optional event notes string
-	read_optional_line(submitEventLogNotes, file, got_sync_line, true, true);
-	if( submitEventLogNotes.empty()) {
+	if( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true) ) {
 		return 1;
 	}
 
 	// see if the next line contains an optional user event notes string
-	read_optional_line(submitEventUserNotes, file, got_sync_line, true, true);
-	if( submitEventUserNotes.empty()) {
+	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true) ) {
 		return 1;
 	}
 
-	read_optional_line(submitEventWarnings, file, got_sync_line, true, false);
-	if( submitEventWarnings.empty()) {
+	if ( ! read_optional_line(submitEventWarnings, file, got_sync_line, true, false) ) {
 		return 1;
 	}
 
