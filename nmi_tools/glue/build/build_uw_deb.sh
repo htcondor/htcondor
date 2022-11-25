@@ -70,9 +70,12 @@ if grep -qi bullseye /etc/os-release; then
     true
 elif grep -qi bookworm /etc/os-release; then
     dch --distribution $dist --nmu 'place holder entry'
-elif grep -qi focal /etc/os-release; then
+elif grep -qi bionic /etc/os-release; then
     true
+elif grep -qi focal /etc/os-release; then
+    dch --distribution $dist --nmu 'place holder entry'
 elif grep -qi jammy /etc/os-release; then
+    dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
 else
     echo ERROR: Unknown codename

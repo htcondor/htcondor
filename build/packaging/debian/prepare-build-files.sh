@@ -3,6 +3,8 @@ if grep -qi bullseye /etc/os-release; then
     codename='BULLSEYE'
 elif grep -qi bookworm /etc/os-release; then
     codename='BOOKWORM'
+elif grep -qi bionic /etc/os-release; then
+    codename='BIONIC'
 elif grep -qi focal /etc/os-release; then
     codename='FOCAL'
 elif grep -qi jammy /etc/os-release; then
