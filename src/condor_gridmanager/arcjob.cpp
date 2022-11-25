@@ -674,7 +674,7 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if ( info_ad.Lookup("EndTime") == NULL ) {
+			if ( info_ad.Lookup("EndTime") == nullptr && info_ad.Lookup("ComputingManagerEndTime") == nullptr ) {
 				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
 				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;

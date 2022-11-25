@@ -61,6 +61,12 @@ Bugs Fixed:
   HTCondor configuration.
   :jira:`1179`
 
+- Fixed the *condor_gridmanager* to recognize when it has the final 
+  data for an ARC job in the FAILED status with newer versions of ARC CE. 
+  Before, the *condor_gridmanager* would leave the job marked as 
+  RUNNING and retry querying the ARC CE server endlessly. 
+  :jira:`1448`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
