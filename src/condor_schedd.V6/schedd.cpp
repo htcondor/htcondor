@@ -12768,31 +12768,31 @@ Scheduler::Init()
 		
 		OtherPoolStats.DisableAll();
 
-		ExtArray<const char *> names;
+		std::vector<std::string> names;
 		if (param_names_matching(re, names)) {
 
-			for (int ii = 0; ii < names.length(); ++ii) {
+			for (size_t ii = 0; ii < names.size(); ++ii) {
 
 				//dprintf(D_FULLDEBUG, "Found %s\n", names[ii]);
 				const MyString name = names[ii];
-				char * filter = param(names[ii]);
+				char * filter = param(names[ii].c_str());
 				if ( ! filter) {
-					dprintf(D_ALWAYS, "Ignoring param '%s' : value is empty\n", names[ii]);
+					dprintf(D_ALWAYS, "Ignoring param '%s' : value is empty\n", names[ii].c_str());
 					continue;
 				}
 
 				// the pool prefix will be the first submatch of the regex of the param name.
 				// unfortunately it's been lowercased by the time we get here, so we can't
 				// let the user choose the case, just capitalize it and use it as the prefix
-				ExtArray<MyString> groups(3);
-				if (re.match(name, &groups)) {
-					MyString byorfor = groups[1]; // this will by "by" or "for"
-					MyString other = groups[2]; // this will be lowercase
+				std::vector<std::string> groups;
+				if (re.match_str(name, &groups)) {
+					std::string byorfor = groups[1]; // this will by "by" or "for"
+					std::string other = groups[2]; // this will be lowercase
 					if (isdigit(other[0])) {
 						// can't start atributes with a digit, start with _ instead
-						other.formatstr("_%s", groups[2].c_str());
+						formatstr(other,"_%s", groups[2].c_str());
 					} else {
-						other.setAt(0, toupper(other[0])); // capitalize it.
+						other.at(0) = toupper(other[0]); // capitalize it.
 					}
 
 					// for 'by' type stats, we also allow an expiration.
@@ -12812,7 +12812,6 @@ Scheduler::Init()
 				free(filter);
 			}
 		}
-		names.truncate(0);
 
 		// TJ: 8.3.6 automatically create a collection of stats by owner if there is not one already.
 		// but only publish the aggregate counters in the schedd ad.

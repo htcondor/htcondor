@@ -305,12 +305,12 @@ init_params()
 		Execute = NULL;
 	}
 		// In addition to EXECUTE, there may be SLOT1_EXECUTE, ...
-	ExtArray<const char *> params;
+	std::vector<std::string> params;
 	Regex re; int errcode = 0; int erroffset;
 	ASSERT(re.compile("slot([0-9]*)_execute", &errcode, &erroffset, PCRE2_CASELESS));
 	if (param_names_matching(re, params)) {
-		for (int ii = 0; ii < params.length(); ++ii) {
-			Execute = param(params[ii]);
+		for (size_t ii = 0; ii < params.size(); ++ii) {
+			Execute = param(params[ii].c_str());
 			if (Execute) {
 				if ( ! ExecuteDirs.contains(Execute)) {
 					ExecuteDirs.append(Execute);
@@ -319,7 +319,6 @@ init_params()
 			}
 		}
 	}
-	params.truncate(0);
 
 	//UserValidSpoolFiles = param("VALID_SPOOL_FILES");
 	ValidSpoolFiles = param("SYSTEM_VALID_SPOOL_FILES");
