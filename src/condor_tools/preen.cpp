@@ -688,6 +688,10 @@ is_ckpt_file_or_submit_digest(const char *name, JOB_ID_KEY & jid)
 		jid.cluster = grab_val(name, "job");
 		jid.proc = grab_val(name, ".ckpt.");
 		return jid.cluster > 0;
+	} else if (name[0] == '_') { // might start with '_condor_creds'
+		jid.cluster = grab_val(name, "_condor_creds.cluster");
+		jid.proc = grab_val(name, ".proc");
+		return jid.cluster > 0;
 	}
 	return false;
 }

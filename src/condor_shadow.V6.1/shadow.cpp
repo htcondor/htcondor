@@ -25,6 +25,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
 #include "metric_units.h"
+#include "ShadowHookMgr.h"
 #include "store_cred.h"
 
 extern "C" char* d_format_time(double);
@@ -138,14 +139,66 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  &cred_get_cred_handler,
 						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
+
+		// Register our job hooks
+	m_hook_mgr = std::unique_ptr<ShadowHookMgr>(new ShadowHookMgr(job_ad));
 }
 
+
 void
-UniShadow::spawn( void )
+UniShadow::spawnFinish()
 {
+	hookTimerCancel();
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
+	}
+}
+
+
+void
+UniShadow::spawn()
+{
+	if (!m_hook_mgr) {
+		dprintf(D_ALWAYS, "No hook manager available; will activate claim immediately.\n");
+		spawnFinish();
+	} else {
+		auto rval = m_hook_mgr->tryHookPrepareJob();
+		if (rval == -1) {
+			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
+			BaseShadow::log_except("Submit-side job hook execution failed");
+			shutDown(JOB_NOT_STARTED);
+		} else if (rval == 0) {
+			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
+			spawnFinish();
+		} else if (rval == 1) {
+			dprintf(D_FULLDEBUG, "Hook successfully spawned.\n");
+			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getHookTimeout(HOOK_SHADOW_PREPARE_JOB, 120),
+				(TimerHandlercpp)&UniShadow::hookTimeout,
+				"hookTimeout",
+				this);
+		} else {
+			EXCEPT("Hook manager returned an invalid code\n");
+		}
+	}
+}
+
+
+void
+UniShadow::hookTimeout()
+{
+	dprintf(D_ALWAYS|D_FAILURE, "Timed out waiting for a hook to exit\n");
+	BaseShadow::log_except("Submit-side job hook execution timed out");
+	shutDown(JOB_NOT_STARTED);
+}
+
+
+void
+UniShadow::hookTimerCancel()
+{
+	if (m_exit_hook_timer_tid != -1) {
+		daemonCore->Cancel_Timer(m_exit_hook_timer_tid);
+		m_exit_hook_timer_tid = -1;
 	}
 }
 

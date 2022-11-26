@@ -27,6 +27,7 @@ parallelshadow.cpp
 pseudo_ops.cpp
 remoteresource.cpp
 shadow.cpp
+ShadowHookMgr.cpp
 shadow_user_policy.cpp
 shadow_v61_main.cpp
 uuid_stubs.cpp
