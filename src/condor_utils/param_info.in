@@ -2490,16 +2490,30 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_SERVER_CERTFILE]
-default=/etc/pki/tls/certs/localhost.crt
+default=/etc/pki/tls/certs/localhost.crt,$(AUTH_SSL_AUTOGENERATE_CERTFILE)
 win32_default=
 description=Location of the host X509 certificate
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_SERVER_KEYFILE]
-default=/etc/pki/tls/private/localhost.key
+default=/etc/pki/tls/private/localhost.key,$(AUTH_SSL_AUTOGENERATE_KEYFILE)
 win32_default=
 description=Location of the host private key
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_AUTOGENERATE_CERTFILE]
+default=/etc/condor/hostcert.pem
+win32_default=
+description=Location of the auto-generated host X509 certificate
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_AUTOGENERATE_KEYFILE]
+default=/etc/condor/hostkey.pem
+win32_default=
+description=Location of the auto-generated host private key
 type=path
 tags=condor_auth_ssl
 
@@ -2514,7 +2528,7 @@ type=bool
 tags=io,condor_auth_ssl
 
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
-default=false
+default=true
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
