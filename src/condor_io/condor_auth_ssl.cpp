@@ -1836,6 +1836,8 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
     bool i_need_cert   = is_server;
+    const char *cafile_preferred = nullptr;
+    std::string cafile_preferred_str;
 
 		// Ensure the verification state is reset.
 	m_last_verify_error.m_used_known_host = false;
@@ -1902,25 +1904,61 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
-    if( (cafile || cadir) && SSL_CTX_load_verify_locations_ptr( ctx, cafile, cadir ) != 1 ) {
+
+    if (cafile) {
+        StringList cafile_list(cafile);
+        cafile_list.rewind();
+        char *ca;
+        while ((ca = cafile_list.next())) {
+            int fd = open(ca, O_RDONLY);
+            if (fd < 0) {
+                continue;
+            }
+            close(fd);
+            cafile_preferred_str = std::string(ca);
+            cafile_preferred = cafile_preferred_str.c_str();
+        }
+    }
+    if( (cafile_preferred || cadir) && SSL_CTX_load_verify_locations_ptr( ctx, cafile_preferred, cadir ) != 1 ) {
         auto error_number = ERR_get_error();
 		auto error_string = error_number ? ERR_error_string(error_number, nullptr) : "Unknown error";
         dprintf(D_SECURITY, "SSL Auth: Error loading CA file (%s) and/or directory (%s): %s \n",
-			cafile, cadir, error_string);
+			cafile_preferred, cadir, error_string);
 	goto setup_server_ctx_err;
     }
     {
-        TemporaryPrivSentry sentry(PRIV_ROOT);
-        if( certfile && SSL_CTX_use_certificate_chain_file_ptr( ctx, certfile ) != 1 ) {
-            ouch( "Error loading certificate from file\n" );
-            goto setup_server_ctx_err;
-        }
-        if( keyfile && SSL_CTX_use_PrivateKey_file_ptr( ctx, keyfile, SSL_FILETYPE_PEM) != 1 ) {
-            ouch( "Error loading private key from file\n" );
-            goto setup_server_ctx_err;
+        StringList certfile_list(certfile ? certfile : "");
+        certfile_list.rewind();
+        StringList keyfile_list(keyfile ? keyfile : "");
+        keyfile_list.rewind();
+        char *cert, *key;
+        while ((cert = certfile_list.next()))
+        {
+            if ((key = keyfile_list.next()) == nullptr) {
+                break;
+            }
+            TemporaryPrivSentry sentry(PRIV_ROOT);
+            int fd = open(cert, O_RDONLY);
+            if (fd < 0) {
+                continue;
+            }
+            close(fd);
+            fd = open(key, O_RDONLY);
+            if (fd < 0) {
+                continue;
+            }
+            close(fd);
+
+            if( SSL_CTX_use_certificate_chain_file_ptr( ctx, cert ) != 1 ) {
+                ouch( "Error loading certificate from file\n" );
+                goto setup_server_ctx_err;
+            }
+            if( SSL_CTX_use_PrivateKey_file_ptr( ctx, key, SSL_FILETYPE_PEM) != 1 ) {
+                ouch( "Error loading private key from file\n" );
+                goto setup_server_ctx_err;
+            }
         }
     }
-
 	if (g_last_verify_error_index < 0)
 		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
 
@@ -1976,23 +2014,36 @@ Condor_Auth_SSL::should_try_auth()
 		return false;
 	}
 
-	{
+	StringList certfile_list(certfile);
+	certfile_list.rewind();
+	StringList keyfile_list(keyfile);
+	keyfile_list.rewind();
+	char *cert, *key;
+	std::string last_error;
+	while ((cert = certfile_list.next())) {
+		key = keyfile_list.next();
+		if (key == nullptr) {
+			last_error = formatstr(last_error, "No key to match the certificate %s", cert);
+			break;
+		}
 		TemporaryPrivSentry sentry(PRIV_ROOT);
-		int fd = open(certfile.c_str(), O_RDONLY);
+		int fd = open(cert, O_RDONLY);
 		if (fd < 0) {
-			dprintf(D_SECURITY, "Not trying SSL auth because server certificate"
-				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
-			return false;
+			formatstr(last_error, "Not trying SSL auth because server certificate"
+				" (%s) is not readable by HTCondor: %s.\n", cert, strerror(errno));
+			continue;
 		}
 		close(fd);
-		fd = open(keyfile.c_str(), O_RDONLY);
+		fd = open(key, O_RDONLY);
 		if (fd < 0) {
-			dprintf(D_SECURITY, "Not trying SSL auth because server key"
-				" (%s) is not readable by HTCondor: %s.\n", certfile.c_str(), strerror(errno));
-			return false;
+			formatstr(last_error, "Not trying SSL auth because server key"
+				" (%s) is not readable by HTCondor: %s.\n", key, strerror(errno));
+			continue;
 		}
 		close(fd);
+		m_cert_avail = true;
+		return true;
 	}
-	m_cert_avail = true;
-	return true;
+	dprintf(D_SECURITY, "%s", last_error.c_str());
+	return false;
 }
