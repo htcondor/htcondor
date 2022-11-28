@@ -357,14 +357,6 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 
 	 /* here, all job_prios are both equal */
 
-	 /* check for job submit times */
-	 if( a.qdate < b.qdate ) {
-		  return true;
-	 }
-	 if( a.qdate > b.qdate ) {
-		  return false;
-	 }
-
 	 /* go in order of cluster id */
 	if ( a.id.cluster < b.id.cluster )
 		return true;
@@ -1981,7 +1973,7 @@ InitClusterAd (
 		if ( ! jobset) {
 			name2 = JobSets::makeAlias(name1, cad->ownerinfo->name);
 			unsigned int & setId = needed_sets[name2];
-			if (!setId || (setId > cad->jid.cluster)) { setId = cad->jid.cluster; }
+			if (!setId || (setId > (unsigned) cad->jid.cluster)) { setId = cad->jid.cluster; }
 
 			// set set_id header field to 0 to mean 'figure out the id later'
 			// and if it was already set to non-zero,  that means the ad has a bogus attribute value
@@ -8152,7 +8144,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
             post_job_prio1, 
             post_job_prio2;
     int     job_status;
-    int     q_date;
     char    owner[100];
     int     cur_hosts;
     int     max_hosts;
@@ -8231,7 +8222,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     }
 
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
-    job->LookupInteger(ATTR_Q_DATE, q_date);
 
 	char * powner = owner;
 	int cremain = sizeof(owner);
@@ -8277,7 +8267,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
     PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
     PrioRec[N_PrioRecs].status         = job_status;
-    PrioRec[N_PrioRecs].qdate          = q_date;
     PrioRec[N_PrioRecs].not_runnable   = false;
     PrioRec[N_PrioRecs].matched        = false;
 	if ( auto_id == -1 ) {
