@@ -178,7 +178,7 @@ class PerlmutterSystem(System):
                     "gpus_per_node":        4,
                 }
             elif queue_name == "shared":
-                error_string = f"'{queue_name}' is not a GPU queue on the system named '{pretty_name}'."
+                error_string = f"'{queue_name}' is not a GPU queue on the system named '{self.pretty_name}'."
                 raise ValueError(error_string)
             else:
                 return None
@@ -202,8 +202,8 @@ SYSTEM_TABLE = {
         "host_name":        "perlmutter-p1.nersc.gov",
         "default_queue":    "regular",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",  # FIXME
-        "allocation_reqd":  False,  # FIXME
+        "script_base":      "hpc",
+        "allocation_reqd":  True,  # Only for GPUs, oddly.
 
         # Actually "QoS" limits.  See get_constraints().
         "queues": {
