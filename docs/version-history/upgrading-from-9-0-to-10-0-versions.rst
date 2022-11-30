@@ -52,10 +52,10 @@ introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
-- The semantics of undefined user job policy expressions has changed.  A
-  policy whose expression evaluates to undefined is now uniformly ignored,
-  instead of either putting the job on hold or treated as false.
-  :jira:`442`
+- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
+  has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
+  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+  :jira:`1381`
 
 - Jobs that use a ``Requirements`` expression to try and match to specific a GPU should
   be changed to use the new ``require_gpus`` submit command or jobs will simply not match. If your machines
@@ -76,3 +76,8 @@ is a list of items that administrators should be aware of.
   character in a character class and the ``-`` was not the last character
   specified in the character class.
   :jira:`1087`
+
+- The semantics of undefined user job policy expressions has changed.  A
+  policy whose expression evaluates to undefined is now uniformly ignored,
+  instead of either putting the job on hold or treated as false.
+  :jira:`442`
