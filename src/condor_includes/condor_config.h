@@ -174,7 +174,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		char * p;
 	};
 
-	int param_names_matching(Regex & re, ExtArray<const char *>& names);
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
 	bool param_defined(const char* name);

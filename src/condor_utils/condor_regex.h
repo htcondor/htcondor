@@ -81,7 +81,7 @@ public:
 		 * substring matches. The nsubstrings argument specifies the
 		 * number of slots in the substrings array.
 		 */
-	bool match(const MyString & string, ExtArray<MyString> * groups = NULL);
+	bool match(const MyString & string);
 	bool match_str(const std::string & string,
 			   std::vector<std::string> * groups = NULL);
 
