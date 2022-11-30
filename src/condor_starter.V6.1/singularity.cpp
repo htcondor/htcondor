@@ -241,6 +241,10 @@ Singularity::setup(ClassAd &machineAd,
 
 	// Singularity and Apptainer prohibit setting HOME.  Just delete it
 	job_env.DeleteEnv("HOME");
+	job_env.DeleteEnv("APPTAINER_BIND");
+	job_env.DeleteEnv("APPTAINER_BINDDIR");
+	job_env.DeleteEnv("SINGULARITY_BIND");
+	job_env.DeleteEnv("SINGULARITY_BINDDIR");
 
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
@@ -480,10 +484,17 @@ Singularity::hasTargetDir(const ClassAd &jobAd, /* not const */ std::string &tar
 }
 
 bool 
-Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage) {
+Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, Env &env, std::string &errorMessage) {
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
+	// Cleanse environment
+	env.DeleteEnv("HOME");
+	env.DeleteEnv("APPTAINER_BIND");
+	env.DeleteEnv("APPTAINER_BINDDIR");
+	env.DeleteEnv("SINGULARITY_BIND");
+	env.DeleteEnv("SINGULARITY_BINDDIR");
+	//
 	// First replace "exec" with "test"
 	ArgList testArgs;
 
