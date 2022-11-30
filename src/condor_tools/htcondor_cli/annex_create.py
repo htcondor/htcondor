@@ -185,15 +185,14 @@ def populate_remote_temporary_directory(
     token_file,
     password_file,
 ):
-    script_base = SYSTEM_TABLE[system].script_base
-
     files = [
-        f"-C {local_script_dir} {script_base}.sh",
+        f"-C {local_script_dir} {SYSTEM_TABLE[system].executable}",
         f"-C {local_script_dir} {system}.fragment",
-        f"-C {local_script_dir} {script_base}.pilot",
-        f"-C {local_script_dir} {script_base}.multi-pilot",
         f"-C {str(token_file.parent)} {token_file.name}",
         f"-C {str(password_file.parent)} {password_file.name}",
+        * [
+            f"-C {local_script_dir} {other_script}" for other_script in SYSTEM_TABLE[system].other_scripts
+        ]
     ]
     files = " ".join(files)
 
@@ -311,8 +310,6 @@ def invoke_pilot_script(
     if ssh_user_name is not None:
         ssh_target = f"{ssh_user_name}@{ssh_host_name}"
 
-    script_base = SYSTEM_TABLE[system].script_base
-
     gpu_argument = str(gpus)
     if gpu_type is not None:
         gpu_argument = f"{gpu_type}:{gpus}"
@@ -320,7 +317,7 @@ def invoke_pilot_script(
         "ssh",
         *ssh_connection_sharing,
         ssh_target,
-        str(remote_script_dir / f"{script_base}.sh"),
+        str(remote_script_dir / SYSTEM_TABLE[system].executable),
         system,
         str(startd_noclaim_shutdown),
         annex_name,
@@ -328,10 +325,10 @@ def invoke_pilot_script(
         collector,
         str(remote_script_dir / token_file.name),
         str(lifetime),
-        str(remote_script_dir / f"{script_base}.pilot"),
+        str(remote_script_dir / SYSTEM_TABLE[system].other_scripts[0]),
         owners,
         str(nodes),
-        str(remote_script_dir / f"{script_base}.multi-pilot"),
+        str(remote_script_dir / SYSTEM_TABLE[system].other_scripts[1]),
         str(allocation),
         request_id,
         str(remote_script_dir / password_file.name),

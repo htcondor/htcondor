@@ -11,7 +11,8 @@ class System:
         host_name: str,
         default_queue: str,
         batch_system: str,
-        script_base: str,
+        executable: str,
+        other_scripts: list,
         allocation_reqd: bool = False,
         queues: dict,
     ):
@@ -27,8 +28,11 @@ class System:
         assert isinstance(batch_system, str)
         self.batch_system =  batch_system
 
-        assert isinstance(script_base, str)
-        self.script_base = script_base
+        assert isinstance(executable, str)
+        self.executable = executable
+
+        assert isinstance(other_scripts, list)
+        self.other_scripts = other_scripts
 
         assert isinstance(allocation_reqd, bool)
         self.allocation_required = allocation_reqd
@@ -43,7 +47,9 @@ class System:
         rv += f", host_name='{self.host_name}'"
         rv += f", default_queue='{self.default_queue}'"
         rv += f", batch_system='{self.batch_system}'"
-        rv += f", script_base='{self.script_base}'"
+        rv += f", executable='{self.executable}'"
+        other_scripts_list = ", ".join(other_scripts)
+        rv += f", other_scripts='{other_scripts_list}'"
         rv += f", allocation_required={self.allocation_required}"
         rv += ")"
         return rv
@@ -202,7 +208,8 @@ SYSTEM_TABLE = {
         "host_name":        "perlmutter-p1.nersc.gov",
         "default_queue":    "regular",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "perlmutter.multi-pilot"],
         "allocation_reqd":  True,  # Only for GPUs, oddly.
 
         # Actually "QoS" limits.  See get_constraints().
@@ -238,7 +245,8 @@ SYSTEM_TABLE = {
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -278,7 +286,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -333,7 +342,8 @@ SYSTEM_TABLE = {
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -398,8 +408,9 @@ SYSTEM_TABLE = {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
         "allocation_reqd":  False,
 
         "queues": {
@@ -465,7 +476,8 @@ SYSTEM_TABLE = {
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
         "batch_system":     "HTCondor",
-        "script_base":      "path-facility",
+        "executable":       "path-facility.sh",
+        "other_scripts":    ["path-facility.pilot", "path-facility.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
