@@ -26,7 +26,7 @@
 #include "DelegationInterface.h"
 #include "subsystem_info.h"
 
-#if defined(DLOPEN_GSI_LIBS) || defined(DLOPEN_VOMS_LIBS)
+#if defined(DLOPEN_VOMS_LIBS)
 #include <dlfcn.h>
 #endif
 
@@ -35,67 +35,6 @@
 #include <openssl/x509v3.h>
 
 static std::string _globus_error_message;
-
-#if defined(HAVE_EXT_GLOBUS)
-
-// This symbol is in libglobus_gssapi_gsi, but it's not exposed in any
-// public header file.
-extern gss_OID_desc *gss_nt_host_ip;
-
-// Symbols from libglobus_common
-int (*globus_module_activate_ptr)(
-	globus_module_descriptor_t *) = NULL;
-int (*globus_thread_set_model_ptr)(
-	const char *) = NULL;
-// Symbols from libglobus_gsi_credential
-globus_result_t (*globus_gsi_cred_get_cert_ptr)(
-	globus_gsi_cred_handle_t, X509 **) = NULL;
-globus_result_t (*globus_gsi_cred_get_cert_chain_ptr)(
-	globus_gsi_cred_handle_t, STACK_OF(X509) **) = NULL;
-// Symbols from libglobus_gssapi_gsi
-OM_uint32 (*gss_accept_sec_context_ptr)(
-	OM_uint32 *, gss_ctx_id_t *, const gss_cred_id_t, const gss_buffer_t,
-	const gss_channel_bindings_t, gss_name_t *, gss_OID *, gss_buffer_t,
-	OM_uint32 *, OM_uint32 *, gss_cred_id_t *) = NULL;
-OM_uint32 (*gss_compare_name_ptr)(
-	OM_uint32 *, const gss_name_t, const gss_name_t, int *) = NULL;
-OM_uint32 (*gss_context_time_ptr)(
-	OM_uint32 *, const gss_ctx_id_t, OM_uint32 *) = NULL;
-OM_uint32 (*gss_delete_sec_context_ptr)(
-	OM_uint32 *, gss_ctx_id_t *, gss_buffer_t) = NULL;
-OM_uint32 (*gss_display_name_ptr)(
-	OM_uint32 *, const gss_name_t, gss_buffer_t, gss_OID *) = NULL;
-OM_uint32 (*gss_import_name_ptr)(
-	OM_uint32 *, const gss_buffer_t, const gss_OID, gss_name_t *) = NULL;
-OM_uint32 (*gss_inquire_context_ptr)(
-	OM_uint32 *, const gss_ctx_id_t, gss_name_t *, gss_name_t *,
-	OM_uint32 *, gss_OID *, OM_uint32 *, int *, int *) = NULL;
-OM_uint32 (*gss_release_buffer_ptr)(
-	OM_uint32 *, gss_buffer_t) = NULL;
-OM_uint32 (*gss_release_cred_ptr)(
-	OM_uint32 *, gss_cred_id_t *) = NULL;
-OM_uint32 (*gss_release_name_ptr)(
-	OM_uint32 *, gss_name_t *) = NULL;
-OM_uint32 (*gss_unwrap_ptr)(
-	OM_uint32 *, const gss_ctx_id_t, const gss_buffer_t, gss_buffer_t, int *,
-	gss_qop_t *) = NULL;
-OM_uint32 (*gss_wrap_ptr)(
-	OM_uint32 *, const gss_ctx_id_t, int, gss_qop_t, const gss_buffer_t,
-	int *, gss_buffer_t) = NULL;
-gss_OID_desc **gss_nt_host_ip_ptr = NULL;
-// Symbols from libglobus_gss_assist
-OM_uint32 (*globus_gss_assist_display_status_str_ptr)(
-	char **, char *, OM_uint32, OM_uint32, int) = NULL;
-globus_result_t (*globus_gss_assist_map_and_authorize_ptr)(
-	gss_ctx_id_t, char *, char *, char *, unsigned int) = NULL;
-OM_uint32 (*globus_gss_assist_acquire_cred_ptr)(
-	OM_uint32 *, gss_cred_usage_t, gss_cred_id_t *) = NULL;
-OM_uint32 (*globus_gss_assist_init_sec_context_ptr)(
-	OM_uint32 *, const gss_cred_id_t, gss_ctx_id_t *, char *, OM_uint32,
-	OM_uint32 *, int *, int (*)(void *, void **, size_t *), void *,
-	int (*)(void *, void *, size_t), void *) = NULL;
-globus_module_descriptor_t *globus_i_gsi_gss_assist_module_ptr = NULL;
-#endif /* defined(HAVE_EXT_GLOBUS) */
 
 // Symbols from libvomsapi
 #if defined(HAVE_EXT_VOMS)
@@ -110,31 +49,6 @@ int (*VOMS_Retrieve_ptr)(
 int (*VOMS_SetVerificationType_ptr)(
 	int, struct vomsdata *, int *) = NULL;
 #endif /* defined(HAVE_EXT_VOMS) */
-
-#define NOT_SUPPORTED_MSG "This version of Condor doesn't support GSI security"
-
-void
-warn_on_gsi_usage()
-{
-	static time_t last_warn = 0;
-	time_t now = time(NULL);
-	if ( now < last_warn + (12*60*60) ) {
-		return;
-	}
-	last_warn = now;
-	if ( ! param_boolean("WARN_ON_GSI_USAGE", true) ) {
-		return;
-	}
-	SubsystemInfo* my_subsys = get_mySubSystem();
-	SubsystemType subsys_type = my_subsys ? my_subsys->getType() : SUBSYSTEM_TYPE_MIN;
-	if ( subsys_type == SUBSYSTEM_TYPE_TOOL || subsys_type == SUBSYSTEM_TYPE_SUBMIT ) {
-		fprintf(stderr, "WARNING: GSI authentication is being attempted! GSI will not work in future releases.\n");
-		fprintf(stderr, "For details, see https://htcondor.org/news/plan-to-replace-gst-in-htcss/\n");
-	} else {
-		dprintf(D_ALWAYS, "WARNING: GSI authentication is being attempted! GSI will not work in future releases. (Will warn again after 12 hours)\n");
-		dprintf(D_ALWAYS, "For details, see https://htcondor.org/news/plan-to-replace-gst-in-htcss/\n");
-	}
-}
 
 void
 warn_on_gsi_config()
@@ -172,121 +86,6 @@ set_error_string( const char *message )
 	_globus_error_message = message;
 }
 
-/* Activate the globus gsi modules for use by functions in this file.
- * Returns zero if the modules were successfully activated. Returns -1 if
- * something went wrong.
- */
-
-int
-activate_globus_gsi( void )
-{
-#if !defined(HAVE_EXT_GLOBUS)
-	set_error_string( NOT_SUPPORTED_MSG );
-	return -1;
-#else
-	static bool globus_gsi_activated = false;
-	static bool activation_failed = false;
-
-	if ( globus_gsi_activated ) {
-		return 0;
-	}
-	if ( activation_failed ) {
-		return -1;
-	}
-
-	if ( Condor_Auth_SSL::Initialize() == false ) {
-		// Error in the dlopen/sym calls for libssl, return failure.
-		_globus_error_message = "Failed to open SSL library";
-		activation_failed = true;
-		return -1;
-	}
-
-#if defined(DLOPEN_GSI_LIBS)
-	void *dl_hdl;
-
-	if ( (dl_hdl = dlopen(LIBLTDL_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_COMMON_SO, RTLD_LAZY)) == NULL ||
-		 !(globus_module_activate_ptr = (int (*)(globus_module_descriptor_t*))dlsym(dl_hdl, "globus_module_activate")) ||
-		 !(globus_thread_set_model_ptr = (int (*)(const char*))dlsym(dl_hdl, "globus_thread_set_model")) ||
-		 (dl_hdl = dlopen(LIBGLOBUS_CALLOUT_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_PROXY_SSL_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_OPENSSL_ERROR_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_OPENSSL_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CERT_UTILS_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSI_SYSCONFIG_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_OLDGAA_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CALLBACK_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSI_CREDENTIAL_SO, RTLD_LAZY))== NULL ||
-		 !(globus_gsi_cred_get_cert_ptr = (globus_result_t (*)(globus_l_gsi_cred_handle_s*, X509**))dlsym(dl_hdl, "globus_gsi_cred_get_cert")) ||
-		 !(globus_gsi_cred_get_cert_chain_ptr = (globus_result_t (*)(globus_gsi_cred_handle_t, STACK_OF(X509)**))dlsym(dl_hdl, "globus_gsi_cred_get_cert_chain")) ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSI_PROXY_CORE_SO, RTLD_LAZY)) == NULL ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSSAPI_GSI_SO, RTLD_LAZY)) == NULL ||
-		 !(gss_accept_sec_context_ptr = (OM_uint32 (*)(OM_uint32 *, gss_ctx_id_t *, const gss_cred_id_t, const gss_buffer_t, const gss_channel_bindings_t, gss_name_t *, gss_OID *, gss_buffer_t, OM_uint32 *, OM_uint32 *, gss_cred_id_t *))dlsym(dl_hdl, "gss_accept_sec_context")) ||
-		 !(gss_compare_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_name_t, const gss_name_t, int*))dlsym(dl_hdl, "gss_compare_name")) ||
-		 !(gss_context_time_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, OM_uint32*))dlsym(dl_hdl, "gss_context_time")) ||
-		 !(gss_delete_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, gss_ctx_id_t*, gss_buffer_t))dlsym(dl_hdl, "gss_delete_sec_context")) ||
-		 !(gss_display_name_ptr = (OM_uint32 (*)( OM_uint32*, const gss_name_t, gss_buffer_t, gss_OID*))dlsym(dl_hdl, "gss_display_name")) ||
-		 !(gss_import_name_ptr = (OM_uint32 (*)(OM_uint32*, const gss_buffer_t, const gss_OID, gss_name_t*))dlsym(dl_hdl, "gss_import_name")) ||
-		 !(gss_inquire_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, gss_name_t*, gss_name_t*, OM_uint32*, gss_OID*, OM_uint32*, int*, int*))dlsym(dl_hdl, "gss_inquire_context")) ||
-		 !(gss_release_buffer_ptr = (OM_uint32 (*)(OM_uint32*, gss_buffer_t))dlsym(dl_hdl, "gss_release_buffer")) ||
-		 !(gss_release_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_id_desc_struct**))dlsym(dl_hdl, "gss_release_cred")) ||
-		 !(gss_release_name_ptr = (OM_uint32 (*)(OM_uint32*, gss_name_t*))dlsym(dl_hdl, "gss_release_name")) ||
-		 !(gss_unwrap_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, const gss_buffer_t, gss_buffer_t, int*, gss_qop_t*))dlsym(dl_hdl, "gss_unwrap")) ||
-		 !(gss_wrap_ptr = (OM_uint32 (*)(OM_uint32*, const gss_ctx_id_t, int, gss_qop_t, const gss_buffer_t, int*, gss_buffer_t))dlsym(dl_hdl, "gss_wrap")) ||
-		 !(gss_nt_host_ip_ptr = (gss_OID_desc **)dlsym(dl_hdl, "gss_nt_host_ip")) ||
-		 (dl_hdl = dlopen(LIBGLOBUS_GSS_ASSIST_SO, RTLD_LAZY)) == NULL ||
-		 !(globus_gss_assist_display_status_str_ptr = (OM_uint32 (*)(char**, char*, OM_uint32, OM_uint32, int))dlsym(dl_hdl, "globus_gss_assist_display_status_str")) ||
-		 !(globus_gss_assist_map_and_authorize_ptr = (globus_result_t (*)(gss_ctx_id_t, char*, char*, char*, unsigned int))dlsym(dl_hdl, "globus_gss_assist_map_and_authorize")) ||
-		 !(globus_gss_assist_acquire_cred_ptr = (OM_uint32 (*)(OM_uint32*, gss_cred_usage_t, gss_cred_id_t*))dlsym(dl_hdl, "globus_gss_assist_acquire_cred")) ||
-		 !(globus_gss_assist_init_sec_context_ptr = (OM_uint32 (*)(OM_uint32*, const gss_cred_id_t, gss_ctx_id_t*, char*, OM_uint32, OM_uint32*, int*, int (*)(void*, void**, size_t*), void*, int (*)(void*, void*, size_t), void*))dlsym(dl_hdl, "globus_gss_assist_init_sec_context")) ||
-		 !(globus_i_gsi_gss_assist_module_ptr = (globus_module_descriptor_t*)dlsym(dl_hdl, "globus_i_gsi_gss_assist_module"))
-		 ) {
-			 // Error in the dlopen/sym calls, return failure.
-		const char *err = dlerror();
-		formatstr( _globus_error_message, "Failed to open GSI libraries: %s", err ? err : "Unknown error" );
-		activation_failed = true;
-		return -1;
-	}
-#else
-	globus_module_activate_ptr = globus_module_activate;
-	globus_thread_set_model_ptr = globus_thread_set_model;
-	globus_gsi_cred_get_cert_ptr = globus_gsi_cred_get_cert;
-	globus_gsi_cred_get_cert_chain_ptr = globus_gsi_cred_get_cert_chain;
-	gss_accept_sec_context_ptr = gss_accept_sec_context;
-	gss_compare_name_ptr = gss_compare_name;
-	gss_context_time_ptr = gss_context_time;
-	gss_delete_sec_context_ptr = gss_delete_sec_context;
-	gss_display_name_ptr = gss_display_name;
-	gss_import_name_ptr = gss_import_name;
-	gss_inquire_context_ptr = gss_inquire_context;
-	gss_release_buffer_ptr = gss_release_buffer;
-	gss_release_cred_ptr = gss_release_cred;
-	gss_release_name_ptr = gss_release_name;
-	gss_unwrap_ptr = gss_unwrap;
-	gss_wrap_ptr = gss_wrap;
-	gss_nt_host_ip_ptr = &gss_nt_host_ip;
-	globus_gss_assist_display_status_str_ptr = globus_gss_assist_display_status_str;
-	globus_gss_assist_map_and_authorize_ptr = globus_gss_assist_map_and_authorize;
-	globus_gss_assist_acquire_cred_ptr = globus_gss_assist_acquire_cred;
-	globus_gss_assist_init_sec_context_ptr = globus_gss_assist_init_sec_context;
-	globus_i_gsi_gss_assist_module_ptr = &globus_i_gsi_gss_assist_module;
-#endif
-
-	// If this fails, it means something already configured a threaded
-	// model. That won't harm us, so ignore it.
-	(*globus_thread_set_model_ptr)( GLOBUS_THREAD_MODEL_NONE );
-
-	if ( (*globus_module_activate_ptr)(globus_i_gsi_gss_assist_module_ptr) ) {
-		set_error_string( "couldn't activate globus gsi gss assist module" );
-		activation_failed = true;
-		return -1;
-	}
-
-	globus_gsi_activated = true;
-	return 0;
-#endif
-}
-
 /* Return the path to the X509 proxy file as determined by GSI/SSL.
  * Returns NULL if the filename can't be determined. Otherwise, the
  * string returned must be freed with free().
@@ -314,7 +113,7 @@ int
 initialize_voms()
 {
 #if !defined(HAVE_EXT_VOMS)
-	set_error_string( NOT_SUPPORTED_MSG );
+	set_error_string( "This version of Condor doesn't support VOMS" );
 	return -1;
 #else
 	static bool voms_initialized = false;

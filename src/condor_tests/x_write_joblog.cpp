@@ -48,8 +48,8 @@ int writeSubmitEvent(WriteUserLog &logFile)
 {
 	SubmitEvent submit;
 	submit.setSubmitHost("<128.105.165.12:32779>");
-	submit.submitEventLogNotes = strdup("DAGMan info");
-	submit.submitEventUserNotes = strdup("User info");
+	submit.submitEventLogNotes = "DAGMan info";
+	submit.submitEventUserNotes = "User info";
 	if ( !logFile.writeEvent(&submit) ) {
 		printf("Complain about bad submit write\n");
 		exit(1);
@@ -409,7 +409,7 @@ int writeJobReconnectFailedEvent(WriteUserLog &logFile)
 int writeGridResourceUpEvent(WriteUserLog &logFile)
 {
 	GridResourceUpEvent evt;
-	evt.resourceName = strdup("Resource Name");
+	evt.resourceName = "Resource Name";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridResourceUpEvent write\n");
 		exit(1);
@@ -420,7 +420,7 @@ int writeGridResourceUpEvent(WriteUserLog &logFile)
 int writeGridResourceDownEvent(WriteUserLog &logFile)
 {
 	GridResourceDownEvent evt;
-	evt.resourceName = strdup("Resource Name");
+	evt.resourceName = "Resource Name";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridResourceDownEvent write\n");
 		exit(1);
@@ -431,8 +431,8 @@ int writeGridResourceDownEvent(WriteUserLog &logFile)
 int writeGridSubmitEvent(WriteUserLog &logFile)
 {
 	GridSubmitEvent evt;
-	evt.resourceName = strdup("Resource Name");
-	evt.jobId = strdup("100.1");
+	evt.resourceName = "Resource Name";
+	evt.jobId = "100.1";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad GridSubmitEvent write\n");
 		exit(1);
@@ -523,8 +523,8 @@ int writeClusterSubmitEvent(WriteUserLog &logFile)
 {
 	ClusterSubmitEvent evt;
 	evt.setSubmitHost("<128.105.165.12:32779>");
-	evt.submitEventLogNotes = strdup("DAGMan info");
-	evt.submitEventUserNotes = strdup("User info");
+	evt.submitEventLogNotes = "DAGMan info";
+	evt.submitEventUserNotes = "User info";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad Cluster Submit Event write\n");
 		exit(1);

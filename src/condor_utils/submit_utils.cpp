@@ -1622,89 +1622,26 @@ int SubmitHash::SetStderr()
 	return 0;
 }
 
-
-class SubmitHashEnvFilter 
+// filter for use with Env::Import that can filter based on StringList patterns
+// and on values that cannot be expressed in the given env format
+class SubmitHashEnvFilter : public WhiteBlackEnvFilter
 {
 public:
-	SubmitHashEnvFilter( Env &env, bool env1, bool env2 )
-			: m_env(env), m_env1( env1 ), m_env2( env2 ) {
-		return;
-	};
+	bool m_env1=false;
+	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
-	bool operator()( const MyString &var, const MyString &val );
-
-	// take a string of the form  x* !y* *z* !bar
-	// and split it into two string lists
-	// items that start with ! go into the blacklist (without the leading !)
-	// all other items go into the whitelist.  leading and trailing whitespace is trimmed
-	// comma, semicolon and whitespace are item steparators
-	void AddToImportWhiteBlackList(const char * list) {
-		StringTokenIterator it(list,40,",; \t\r\n");
-		MyString name;
-		for (const char * str = it.first(); str != NULL; str = it.next()) {
-			if (*str == '!') {
-				name = str+1; name.trim();
-				if (!name.empty()) {
-					m_black.append(name.c_str());
-				}
-			} else {
-				name = str; name.trim();
-				if (!name.empty()) {
-					m_white.append(name.c_str());
-				}
-			}
+	bool operator()( const MyString &var, const MyString &val ) {
+		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
+			// We silently filter out anything that is not expressible
+			// in the 'environment1' syntax.  This avoids breaking
+			// our ability to submit jobs to older startds that do
+			// not support 'environment2' syntax.
+			return false;
 		}
+		return WhiteBlackEnvFilter::operator()(var, val);
 	}
-	// clear the white and black lists for Import()
-	void ClearImportWhiteBlackList() {
-		m_black.clearAll();
-		m_white.clearAll();
-	}
-private:
-	Env &m_env;
-	bool m_env1;
-	bool m_env2;
-	mutable StringList m_black;
-	mutable StringList m_white;
 };
-bool SubmitHashEnvFilter::operator()( const MyString & var, const MyString &val )
-{
-	if( !m_env2 && m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
-		// We silently filter out anything that is not expressible
-		// in the 'environment1' syntax.  This avoids breaking
-		// our ability to submit jobs to older startds that do
-		// not support 'environment2' syntax.
-		return false;
-	}
-	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
-		// Silently filter out environment values containing
-		// unsafe characters.  Example: newlines cause the
-		// schedd to EXCEPT in 6.8.3.
-		return false;
-	}
-#ifdef WIN32
-	// on Windows, we have to do case-insensitive check for existance, luckily
-	// we have m_sorted_varnames for just this purpose
-	if (m_env.m_sorted_varnames.find(var.Value()) != m_env.m_sorted_varnames.end())
-#else
-	MyString existing_val;
-	if ( m_env.GetEnv( var, existing_val ) )
-#endif
-	{
-		// Don't override submit file environment settings --
-		// check if environment variable is already set.
-		return false;
-	}
-	// if there is a blacklist, and this nmake matches, filter it
-	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.c_str())) {
-		return false;
-	}
-	// if there is a whitelist and this name does not match, filter it
-	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.c_str())) {
-		return false;
-	}
-	return true;
-}
+
 
 int SubmitHash::SetEnvironment()
 {
@@ -1777,15 +1714,14 @@ int SubmitHash::SetEnvironment()
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
-				SubmitHashEnvFilter envFilter(env, env1, env2);
+				SubmitHashEnvFilter envFilter(env1 && !env2);
 				env.Import(envFilter);
 			}
 		} else {
 			// getenv is not a boolean, it must be a blacklist/whitelist
-			SubmitHashEnvFilter envFilter(env, env1, env2);
-			envFilter.AddToImportWhiteBlackList(envlist);
+			SubmitHashEnvFilter envFilter(env1 && ! env2);
+			envFilter.AddToWhiteBlackList(envlist);
 			env.Import(envFilter);
-			envFilter.ClearImportWhiteBlackList();
 		}
 	}
 
@@ -2497,19 +2433,13 @@ int SubmitHash::SetGSICredentials()
 	RETURN_IF_ABORT();
 
 		// Find the X509 user proxy
-		// First param for it in the submit file. If it's not there
-		// and the job type requires an x509 proxy (nordugrid),
+		// First param for it in the submit file. If the submit
+		// file says to use a proxy but doesn't give a filename,
 		// then check the usual locations (as defined by GSI) and
 		// bomb out if we can't find it.
 
 	char *proxy_file = submit_param( SUBMIT_KEY_X509UserProxy );
 	bool use_proxy = submit_param_bool( SUBMIT_KEY_UseX509UserProxy, NULL, false );
-
-	YourStringNoCase gridType(JobGridType.c_str());
-	if (JobUniverse == CONDOR_UNIVERSE_GRID && gridType == "nordugrid")
-	{
-		use_proxy = true;
-	}
 
 	if ( proxy_file == NULL && use_proxy && ! clusterAd) {
 
@@ -2959,7 +2889,6 @@ static bool validate_gridtype(MyString & JobGridType) {
 		gridType == "nqs" ||
 		gridType == "naregi" ||
 		gridType == "condor" ||
-		gridType == "nordugrid" ||
 		gridType == "arc" ||
 		gridType == "ec2" ||
 		gridType == "gce" ||
@@ -3127,34 +3056,9 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	YourStringNoCase gridType(JobGridType.c_str());
-	if ( gridType == NULL ||
-		 gridType == "nordugrid" ) {
-
-		if( (tmp = submit_param(SUBMIT_KEY_GlobusResubmit,ATTR_GLOBUS_RESUBMIT_CHECK)) ) {
-			AssignJobExpr(ATTR_GLOBUS_RESUBMIT_CHECK, tmp);
-			free(tmp);
-		} else if ( ! job->Lookup(ATTR_GLOBUS_RESUBMIT_CHECK)) {
-			AssignJobVal(ATTR_GLOBUS_RESUBMIT_CHECK, false);
-		}
-	}
+	YourStringNoCase gridType(JobGridType.Value());
 
 	AssignJobVal(ATTR_WANT_CLAIMING, false);
-
-	if( (tmp = submit_param(SUBMIT_KEY_GlobusRematch,ATTR_REMATCH_CHECK)) ) {
-		AssignJobExpr(ATTR_REMATCH_CHECK, tmp);
-		free(tmp);
-	}
-
-	if( (tmp = submit_param(SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL)) ) {
-		AssignJobString(ATTR_NORDUGRID_RSL, tmp);
-		free( tmp );
-	}
-
-	if( (tmp = submit_param(SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL)) ) {
-		AssignJobString(ATTR_ARC_RSL, tmp);
-		free( tmp );
-	}
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
@@ -4356,8 +4260,6 @@ int SubmitHash::SetRemoteAttrs()
 	};
 
 	ExprItem tostringize[] = {
-		{ SUBMIT_KEY_NordugridRSL, "nordugrid_rsl", ATTR_NORDUGRID_RSL },
-		{ SUBMIT_KEY_ArcRSL, "arc_rsl", ATTR_ARC_RSL },
 		{ SUBMIT_KEY_GridResource, 0, ATTR_GRID_RESOURCE },
 	};
 	const int tostringizesz = sizeof(tostringize) / sizeof(tostringize[0]);
@@ -4664,6 +4566,16 @@ int SubmitHash::SetUniverse()
 	JobGridType.clear();
 	VMType.clear();
 
+	bool CanHaveImages = false;
+	//Check to see if a docker/container image was declared in submit file
+	auto_free_ptr dockerImg(submit_param(SUBMIT_KEY_DockerImage, ATTR_DOCKER_IMAGE));
+	auto_free_ptr containerImg(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+	if (dockerImg && containerImg) { //If both container and docker image declared then abort
+		push_error(stderr, "Both '%s' and '%s' were declared. Only one can be declared in a submit file.\n",
+							SUBMIT_KEY_DockerImage, SUBMIT_KEY_ContainerImage);
+		ABORT_AND_RETURN(1);
+	}
+
 	if (univ) {
 		JobUniverse = CondorUniverseNumberEx(univ.ptr());
 		if ( ! JobUniverse) {
@@ -4671,18 +4583,29 @@ int SubmitHash::SetUniverse()
 			if (MATCH == strcasecmp(univ.ptr(), "docker")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsDockerJob = true;
+				CanHaveImages = true;
 			}
 			// maybe it is the "container" topping?
 
 			if (MATCH == strcasecmp(univ.ptr(), "container")) {
 				JobUniverse = CONDOR_UNIVERSE_VANILLA;
 				IsContainerJob = true;
+				CanHaveImages = true;
 			}
 		}
 	} else {
 		// if nothing else, it must be a vanilla universe
 		//  *changed from "standard" for 7.2.0*
 		JobUniverse = CONDOR_UNIVERSE_VANILLA;
+		CanHaveImages = true;
+		if (dockerImg) IsDockerJob = true;
+		if (containerImg) IsContainerJob = true;
+	}
+
+	if (!CanHaveImages && (dockerImg || containerImg)) { //If docker or container image is in declared universe
+		push_error(stderr, "%s universe for job does not allow use of %s_image.\n",
+							CondorUniverseName(JobUniverse), dockerImg ? "docker" : "container");
+		ABORT_AND_RETURN(1);
 	}
 
 	// set the universe into the job
@@ -4787,7 +4710,7 @@ int SubmitHash::SetUniverse()
 
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
-				"Must be one of: condor, batch, nordugrid, arc, ec2, gce, or azure\n",
+				"Must be one of: condor, batch, arc, ec2, gce, or azure\n",
 				JobGridType.Value());
 			ABORT_AND_RETURN(1);
 		}
@@ -4933,9 +4856,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_RemoteInitialDir, ATTR_JOB_REMOTE_IWD, SimpleSubmitKeyword::f_as_string},
 	// formerly SetRemoteAttrs (2 levels of remoteness hard coded here)
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource,  SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_GridResource, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string},
-	{SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_NordugridRSL, SUBMIT_KEY_REMOTE_PREFIX SUBMIT_KEY_REMOTE_PREFIX ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string},
 
 	// formerly SetOutputDestination
 	{SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION, SimpleSubmitKeyword::f_as_string},
@@ -5077,10 +4998,6 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_RequestGpus, ATTR_REQUEST_GPUS, SimpleSubmitKeyword::f_as_expr},
 	// invoke SetGridParams
 	{SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid},
-	{SUBMIT_KEY_GlobusResubmit, ATTR_GLOBUS_RESUBMIT_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_GlobusRematch, ATTR_REMATCH_CHECK, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_NordugridRSL, ATTR_NORDUGRID_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
-	{SUBMIT_KEY_ArcRSL, ATTR_ARC_RSL, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_ArcRte, ATTR_ARC_RTE, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchExtraSubmitArgs, ATTR_BATCH_EXTRA_SUBMIT_ARGS, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
 	{SUBMIT_KEY_BatchProject, ATTR_BATCH_PROJECT, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_special_grid },
@@ -6081,13 +5998,13 @@ int SubmitHash::SetRequirements()
 			}
 			answer += "TARGET.HasContainer";
 			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
-				answer += "&& TARGET.HasDockerRepo";
+				answer += "&& TARGET.HasDockerURL";
 			} else {
 				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 				ContainerImageType image_type = image_type_from_string(container_image.ptr());
 				switch (image_type) {
 					case ContainerImageType::DockerRepo:
-						answer += "&& TARGET.HasDockerRepo";
+						answer += "&& TARGET.HasDockerURL";
 						break;
 					case ContainerImageType::SIF:
 						answer += "&& TARGET.HasSIF";

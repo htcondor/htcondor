@@ -314,12 +314,14 @@ bool parseURL(	const std::string & url,
     Regex r; int errCode = 0; int errOffset = 0;
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
     ASSERT( patternOK );
-    ExtArray<std::string> groups(5);
-    if(! r.match_str( url.c_str(), & groups )) { return false; }
+	std::vector<std::string> groups;
+    if(! r.match_str( url, & groups )) { 
+		return false;
+	}
 
     protocol = groups[1];
-    host = groups[3];
-    path = groups[4];
+    host     = groups[3];
+    if (groups.size() > 4) path     = groups[4];
     return true;
 }
 
@@ -4129,7 +4131,7 @@ bool AmazonCreateStack::SendRequest() {
 		Regex r; int errCode = 0; int errOffset;
 		bool patternOK = r.compile( "<StackId>(.*)</StackId>", &errCode, &errOffset);
 		ASSERT( patternOK );
-		ExtArray<std::string> groups(2);
+		std::vector<std::string> groups;
 		if( r.match_str( resultString, & groups ) ) {
 			this->stackID = groups[1];
 		}
@@ -4209,7 +4211,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		Regex r;
 		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", &errCode, &errOffset);
 		ASSERT( patternOK );
-		ExtArray<std::string> statusGroups( 2 );
+		std::vector<std::string> statusGroups;
 		if( r.match_str( resultString, & statusGroups ) ) {
 			this->stackStatus = statusGroups[1];
 		}
@@ -4217,7 +4219,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		Regex s;
 		patternOK = s.compile( "<Outputs>(.*)</Outputs>", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
-		ExtArray<std::string> outputGroups( 2 );
+		std::vector<std::string> outputGroups;
 		if( s.match_str( resultString, & outputGroups ) ) {
 			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
 			std::string membersRemaining = outputGroups[1];
@@ -4226,9 +4228,9 @@ bool AmazonDescribeStacks::SendRequest() {
 			patternOK = t.compile( "\\s*<member>\\s*(.*?)\\s*</member>\\s*", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 			ASSERT( patternOK );
 
-			ExtArray<std::string> memberGroups( 2 );
+			std::vector<std::string> memberGroups;
 			while( t.match_str( membersRemaining, & memberGroups ) ) {
-				std::string member = memberGroups[1].c_str();
+				std::string member = memberGroups[1];
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
 				Regex u;
@@ -4236,7 +4238,7 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputKey;
-				ExtArray<std::string> keyGroups( 2 );
+				std::vector<std::string> keyGroups;
 				if( u.match_str( member, & keyGroups ) ) {
 					outputKey = keyGroups[1];
 				}
@@ -4246,7 +4248,7 @@ bool AmazonDescribeStacks::SendRequest() {
 				ASSERT( patternOK );
 
 				std::string outputValue;
-				ExtArray<std::string> valueGroups( 2 );
+				std::vector<std::string> valueGroups;
 				if( v.match_str( member, & valueGroups ) ) {
 					outputValue = valueGroups[1];
 				}
@@ -4256,7 +4258,7 @@ bool AmazonDescribeStacks::SendRequest() {
 					outputs.push_back( outputValue );
 				}
 
-				replace_str( membersRemaining, memberGroups[0].c_str(), "" );
+				replace_str( membersRemaining, memberGroups[0], "" );
 			}
 		}
 	}

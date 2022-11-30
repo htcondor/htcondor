@@ -452,7 +452,11 @@ BASIC COMMANDS
     (by the job) in the remote scratch directory of the machine where
     the job is executed. When the job exits, the resulting file is
     transferred back to the machine where the job was submitted, and the
-    path is utilized for file placement. If not specified, the default
+    path is utilized for file placement.
+    If you specify a relative path, the final path will be relative to the
+    job's initial working directory, and HTCondor will create directories
+    as necessary to transfer the file.
+    If not specified, the default
     value of ``/dev/null`` is used for submission to a Unix machine. If
     not specified, error messages are ignored for submission to a
     Windows machine. More than one job should not use the same error
@@ -605,6 +609,9 @@ BASIC COMMANDS
     directory of the machine where the job is executed. When the job
     exits, the resulting file is transferred back to the machine where
     the job was submitted, and the path is utilized for file placement.
+    If you specify a relative path, the final path will be relative to the
+    job's initial working directory, and HTCondor will create directories
+    as necessary to transfer the file.
     If not specified, the default value of ``/dev/null`` is used for
     submission to a Unix machine. If not specified, output is ignored
     for submission to a Windows machine. Multiple jobs should not use
@@ -1367,7 +1374,8 @@ FILE TRANSFER COMMANDS
     same name they had in the execution directory. This gives you the
     option to save them with a different path or name. If you specify a
     relative path, the final path will be relative to the job's initial
-    working directory.
+    working directory, and HTCondor will create directories as necessary
+    to transfer the file.
 
     *name* describes an output file name produced by your job, and
     *newname* describes the file name it should be downloaded to.

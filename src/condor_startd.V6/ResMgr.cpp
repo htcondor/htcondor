@@ -1271,6 +1271,8 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 		return;
 	}
 
+	// rip will be NULL when we are called because of the main update and/or policy eval timer
+	// rip will be NON-NULL when we are called by claim activation or d-slot creation
 	Resource * parent = NULL;
 	if (rip) {
 		parent = rip->get_parent();
@@ -1286,6 +1288,7 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 	cur_time = time( 0 );
 
 	compute_draining_attrs();
+	compute_resource_conflicts();
 
 	// for updates, we recompute some machine attributes (like virtual mem)
 	// and that may require a recompute of the resources that reference them
@@ -2550,6 +2553,73 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
+
+bool
+ResMgr::compute_resource_conflicts()
+{
+	dprintf(D_ZKM | D_VERBOSE, "ResMgr::compute_resource_conflicts\n");
+
+	ResBag totbag;
+	std::string dumptmp;
+	std::deque<Resource*> active;
+	int num_nft_conflict = 0; // number of active backfill slots that already have non-fungible resource conflicts
+
+	// Build up a bag of unclaimed resources
+	// and a list of active backfill slots
+	// TODO: fix for claimed p-slots when that changes
+	for(int ii = 0; ii < nresources; ++ii) {
+		Resource *rip = resources[ii];
+		State state = rip->state();
+		if (state == claimed_state || state == preempting_state || rip->r_sub_id > 0) {
+			if (rip->r_backfill_slot) {
+				if (rip->has_nft_conflicts(resmgr->m_attr)) {
+					++num_nft_conflict;
+					active.push_front(rip);
+				} else {
+					active.push_back(rip);
+				}
+			}
+			// subtract active backfill slots from the resource bag
+			totbag -= *rip->r_attr;
+			dprintf(D_ZKM, "conflicts SUB %s %s\n", rip->r_name, totbag.dump(dumptmp));
+		} else if ( ! rip->r_backfill_slot && rip->r_sub_id == 0) {
+			// add primary p-slots to the resource bag
+			totbag += *rip->r_attr;
+			dprintf(D_ZKM, "conflicts ADD %s %s\n", rip->r_name, totbag.dump(dumptmp));
+		}
+	}
+
+	// if we get to here with a negative value in the bag of unclaimed resources
+	// we need to start kicking off backfill slots.  For now, we do that by
+	// assigning the resource conflicts to specific backfill slots and trusting PREEMPT to kick off the jobs
+
+	// If there were fungible resource conflicts, totbag will be in and underflow state
+	std::string conflicts;
+	bool has_conflicts = totbag.underrun(&conflicts);
+	dprintf(D_ZKM, "resource_conflicts(%d NFT of %d active) : %s\n",  num_nft_conflict, (int)active.size(), conflicts.c_str());
+
+	// go back through the active backfill slots and assign the conflicts
+	// the active backfill slot collection will have slots that have non-fungible resource conflicts first
+	if (has_conflicts) {
+		// assign fungible res conflicts to the slots that have non-fungible conflicts first
+		for (auto rip : active) {
+			int d_verb = (conflicts.empty() ? D_VERBOSE : 0);
+			bool nft_conflict = num_nft_conflict-- > 0;
+			dprintf(D_ZKM | d_verb, "assigning conflicts %s to %s%s\n",
+				conflicts.c_str(), rip->r_name,
+				nft_conflict ? "  which already has NFT conflicts" : "");
+
+			rip->set_res_conflict(conflicts);
+			totbag += *rip->r_attr;
+			dprintf(D_ZKM | d_verb, "conflicts ADD %s %s\n", rip->r_name, totbag.dump(dumptmp));
+			conflicts.clear();
+			totbag.underrun(&conflicts);
+		}
+	}
+
+	return false;
+}
+
 
 ExprTree * globalDrainingStartExpr = NULL;
 

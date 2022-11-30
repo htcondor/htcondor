@@ -40,7 +40,6 @@ public:
     int         post_job_prio2;
     int         job_prio;
     int         status;
-    int         qdate;
 	int			auto_cluster_id;
 	std::string submitter;
 	bool		not_runnable;
@@ -51,7 +50,6 @@ public:
 		id.proc = 0;
 		job_prio = 0;
 		status = 0;
-		qdate = 0;
 		submitter[0] = 0;
 		auto_cluster_id = 0;
 		pre_job_prio1 = 0;

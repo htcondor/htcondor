@@ -429,7 +429,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     amount of free space on your execute partition, minus ``RESERVED_DISK``.
 
 :macro-def:`RESERVED_DISK`
-    Determines how much disk space (in kB) you want to reserve for your own
+    Determines how much disk space (in MB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
@@ -6077,12 +6077,20 @@ These settings affect the *condor_starter*.
     the submit file, the user's setting takes precedence.
 
 :macro-def:`JOB_INHERITS_STARTER_ENVIRONMENT`
-    A boolean value that defaults to ``False``. When ``True``, it causes
-    jobs to inherit all environment variables from the
-    *condor_starter*. When the user job and/or
-    ``STARTER_JOB_ENVIRONMENT`` define an environment variable that is
-    in the *condor_starter* 's environment, the setting from the
-    *condor_starter* 's environment is overridden.
+    A matchlist or boolean value that defaults to ``False``. When set to 
+    a matchlist it causes jobs to inherit all environment variables from the
+    *condor_starter* that are selected by the match list and not already defined
+    in the job ClassAd or by the ``STARTER_JOB_ENVIRONMENT`` configuration variable.
+
+    A matchlist is a comma, semicolon or space separated list of environment variable names
+    and name patterns that match or reject names.
+    Matchlist members are matched case-insensitively to each name
+    in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
+    character which matches anything at that position.  Members can have two ``*`` characters if one of them
+    is at the end. Members can be prefixed with ``!``
+    to force a matching environment variable to not be imported.  The order of members in the Matchlist
+    has no effect on the result.  For backward compatiblity a single value of ``True`` behaves as if the value
+    was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
 :macro-def:`NAMED_CHROOT`
     A comma and/or space separated list of full paths to one or more
@@ -7734,15 +7742,16 @@ These macros affect the *condor_credd* and its credmon plugin.
     The path to the credmon daemon process when using the OAuth2
     credentials type.  The default is /usr/sbin/condor_credmon_oauth.
 
-:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
-    The time in seconds for credmon to delay after new OAuth2
-    credentials are stored before deleting them.
-
 :macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
     The minimum time in seconds that OAuth2 tokens should have remaining
-    on them when they are generated.  After half that amount of time 
-    elapses, they are renewed.  This is currently implemented only
-    in the vault credmon, not the default oauth credmon.
+    on them when they are generated.  The default is 40 minutes.
+    This is currently implemented only in the vault credmon, not the
+    default oauth credmon.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_REFRESH`
+    The time in seconds between renewing OAuth2 tokens.  The default is
+    half of ``CREDMON_OAUTH_TOKEN_MINIMUM``.  This is currently implemented
+    only in the vault credmon, not the default oauth credmon.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------

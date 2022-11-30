@@ -135,10 +135,6 @@ bool	DynamicDirs = false;
 // so that it can decide if it should run at a particular machine or not. 
 int runfor = 0; //allow cmd line option to exit after *runfor* minutes
 
-// This flag tells daemoncore whether to do the authorization initialization.
-// It can be set to false by calling the DC_Skip_Auth_Init() function.
-static bool doAuthInit = true;
-
 // This flag tells daemoncore whether to do the core limit initialization.
 // It can be set to false by calling the DC_Skip_Core_Init() function.
 static bool doCoreInit = true;
@@ -897,12 +893,6 @@ DC_Exit( int status, const char *shutdown_program )
 	exit( exit_status );
 }
 
-
-void
-DC_Skip_Auth_Init()
-{
-	doAuthInit = false;
-}
 
 void
 DC_Skip_Core_Init()
@@ -3720,12 +3710,6 @@ int dc_main( int argc, char** argv )
 	if (wantsQuiet) { config_options |= CONFIG_OPT_WANT_QUIET; }
 	config_ex(config_options);
 
-
-    // call dc_config_GSI to set GSI related parameters so that all
-    // the daemons will know what to do.
-	if ( doAuthInit ) {
-		condor_auth_config( true );
-	}
 
 		// See if we're supposed to be allowing core files or not
 	if ( doCoreInit ) {

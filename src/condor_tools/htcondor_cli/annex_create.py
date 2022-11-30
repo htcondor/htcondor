@@ -555,7 +555,7 @@ def annex_inner_func(
         gpu_type=gpu_type,
     )
 
-    if test:
+    if test is not None and test == 1:
         return
 
     # Location of the local universe script files
@@ -629,13 +629,19 @@ def annex_inner_func(
     ##
     schedd = htcondor.Schedd()
     annex_jobs = schedd.query(f'TargetAnnexName == "{annex_name}"')
-    if len(annex_jobs) == 0:
-        raise RuntimeError(
-            f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
+
+    enable_job_check = htcondor.param.get('HPC_ANNEX_REQUIRE_JOB')
+    if enable_job_check is None or enable_job_check.casefold() != 'FALSE'.casefold():
+        if not annex_jobs:
+            raise RuntimeError(
+                f"No jobs for '{annex_name}' are in the queue. Use 'htcondor job submit --annex-name' to add them first."
+            )
+        logger.debug(
+            f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
         )
-    logger.debug(
-        f"""Found {len(annex_jobs)} annex jobs matching 'TargetAnnexName == "{annex_name}"."""
-    )
+
+    if test == 2:
+        return
 
     # Extract the .sif file from each job.
     sif_files = set()
@@ -668,7 +674,7 @@ def annex_inner_func(
             resources = f"{resources}and "
     if mem_mb is not None:
         resources = f"{resources}{mem_mb}MB of RAM "
-    if resources is "":
+    if resources == "":
         resources = f"{nodes} nodes "
     resources = f"{resources}for {lifetime/(60*60):.2f} hours"
 
@@ -953,14 +959,14 @@ def annex_name_exists(annex_name):
 
 
 def annex_create(logger, annex_name, **others):
-    if others.get("test") is not True:
+    if others.get("test") is None:
         if annex_name_exists(annex_name):
             raise ValueError(f"You've already created an annex named '{annex_name}'.  To request more resources, use 'htcondor annex add'.")
     return annex_inner_func(logger, annex_name, **others)
 
 
 def annex_add(logger, annex_name, **others):
-    if others.get("test") is not True:
+    if others.get("test") is None:
         if not annex_name_exists(annex_name):
             raise ValueError(f"You need to create an an annex named '{annex_name}' first.  To do so, use 'htcondor annex create'.")
     return annex_inner_func(logger, annex_name, **others)

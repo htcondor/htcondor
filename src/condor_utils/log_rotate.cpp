@@ -83,58 +83,6 @@ long long quantizeTimestamp(time_t tt, long long secs)
 	return tt - (tt % secs);
 }
 
-
-#ifndef WIN32
-static
-int scandirectory(const char *dir, struct dirent ***namelist,
-            int (*select)(const struct dirent *),
-        int (*compar)(const void*, const void*) ) {
-	DIR *d;
-	struct dirent *entry;
-	int i = 0;
-	size_t entrysize;
-
-	if ((d=opendir(dir)) == NULL)
-		return(-1);
-
-	*namelist=NULL;
-	while ((entry=readdir(d)) != NULL) {
-		if (select == NULL || (select != NULL && (*select)(entry))) {
-			*namelist=(struct dirent **)realloc((void *)(*namelist), (size_t)((i+1)*sizeof(struct dirent *)));
-			if (*namelist == NULL) {
-				closedir(d);
-				return -1;
-			}
-			entrysize=sizeof(struct dirent)-sizeof(entry->d_name)+strlen(entry->d_name)+1;
-			(*namelist)[i]=(struct dirent *)malloc(entrysize);
-			if ((*namelist)[i] == NULL) {
-				closedir(d);
-				return(-1);
-			}
-			memcpy((*namelist)[i], entry, entrysize);
-    	    i++;
-		}
-	}
-	if (closedir(d)) 
-  		return -1;
-	if (i == 0) 
-		return -1;
-	if (compar != NULL)
-    	qsort((void *)(*namelist), (size_t)i, sizeof(struct dirent *), compar);
-
-	return i;
-}
-
-static
-int doalphasort(const void *a, const void *b) {
-        const struct dirent **d1 = (const struct dirent**)const_cast<void*>(a);
-        const struct dirent **d2 = (const struct dirent**)const_cast<void*>(b);
-        return(strcmp(const_cast<char*>((*d1)->d_name),
-		const_cast<char*>((*d2)->d_name)));
-}
-
-#endif
-
 void setBaseName(const char *baseName) {
 	// Since one log file can have different ones per debug level, 
 	// we need to check whether we want to deal with a different base name
@@ -302,27 +250,34 @@ int file_select(const struct dirent *entry) {
 	return isLogFilename(entry->d_name);
 }
 
-
 char *findOldest(char *dirName, int *count) {
-	struct dirent **files = NULL;
-	int  len;
-	*count = scandirectory(dirName, &files, file_select, doalphasort);
-	// no matching files in the directory
-	if (*count <= 0) {
-		if (files) {
-			free(files);
+	DIR *d;
+	struct dirent *entry;
+
+	*count = 0;
+	if ((d=opendir(dirName)) == nullptr) {
+		return nullptr;
+	}
+
+	std::string oldest;
+	while ((entry=readdir(d)) != nullptr) {
+		if (file_select(entry)) {
+			(*count)++;
+			if (oldest.empty()) {
+				oldest = entry->d_name;
+			} else {
+				if (strcmp(oldest.c_str(), entry->d_name) > 0) {
+					oldest = entry->d_name;
+				}
+			}
 		}
-		return NULL;
 	}
-	char *oldFile = (char*)files[0]->d_name;
-	len = strlen(oldFile);
-	char *result = (char*)malloc(len+1 + strlen(dirName) + 1);
-	(void)sprintf(result, "%s%c%s", dirName, DIR_DELIM_CHAR, oldFile);
-	for(int i = 0; i < *count; i++) {
-		free(files[i]);
+	closedir(d);
+	if (*count > 0) {
+		return strdup((std::string(baseDirName) + '/' + oldest).c_str());
+	} else {
+		return nullptr;
 	}
-	free(files);
-	return result;
 }
 #else
 
@@ -368,5 +323,4 @@ char *findOldest(char *dirName, int *count) {
 }
 
 #endif
-
 

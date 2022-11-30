@@ -219,7 +219,7 @@ Env::MergeFrom( Env const &env )
 
 	env._envTable->startIterations();
 	while(env._envTable->iterate(var,val)) {
-		ASSERT(SetEnv(var,val));
+		SetEnv(var,val);
 	}
 }
 
@@ -748,6 +748,18 @@ Env::Walk(bool (*walk_func)(void* pv, const std::string &var, const std::string 
 }
 
 bool
+Env::HasEnv(MyString const &var) const
+{
+#ifdef WIN32
+	// on Windows, we have to do case-insensitive check for existance, luckily
+	// we have m_sorted_varnames for just this purpose
+	return m_sorted_varnames.find(var.c_str()) != m_sorted_varnames.end();
+#else
+	return _envTable->exists(var) == 0;
+#endif
+}
+
+bool
 Env::GetEnv(MyString const &var,MyString &val) const
 {
 	// lookup returns 0 on success
@@ -765,3 +777,52 @@ Env::GetEnv(const std::string &var, std::string &val) const
 	}
 	return false;
 }
+
+bool WhiteBlackEnvFilter::operator()( const MyString & var, const MyString &val )
+{
+	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
+		// Silently filter out environment values containing
+		// unsafe characters.  Example: newlines cause the
+		// schedd to EXCEPT in 6.8.3.
+		return false;
+	}
+
+	// if there is a blacklist, and this nmake matches, filter it
+	if (!m_black.isEmpty() && m_black.contains_anycase_withwildcard(var.c_str())) {
+		return false;
+	}
+	// if there is a whitelist and this name does not match, filter it
+	if (!m_white.isEmpty() && !m_white.contains_anycase_withwildcard(var.c_str())) {
+		return false;
+	}
+	return true;
+}
+
+// take a string of the form  x* !y* *z* !bar
+// and split it into two string lists
+// items that start with ! go into the blacklist (without the leading !)
+// all other items go into the whitelist.  leading and trailing whitespace is trimmed
+// comma, semicolon and whitespace are item steparators
+void WhiteBlackEnvFilter::AddToWhiteBlackList(const char * list) {
+	StringTokenIterator it(list,40,",; \t\r\n");
+	MyString name;
+	for (const char * str = it.first(); str != NULL; str = it.next()) {
+		if (*str == '!') {
+			name = str+1; name.trim();
+			if (!name.empty()) {
+				m_black.append(name.c_str());
+			}
+		} else {
+			name = str; name.trim();
+			if (!name.empty()) {
+				m_white.append(name.c_str());
+			}
+		}
+	}
+}
+// clear the white and black lists for Import()
+void WhiteBlackEnvFilter::ClearWhiteBlackList() {
+	m_black.clearAll();
+	m_white.clearAll();
+}
+

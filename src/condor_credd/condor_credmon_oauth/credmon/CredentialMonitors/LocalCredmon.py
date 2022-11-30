@@ -24,6 +24,8 @@ class LocalCredmon(OAuthCredmon):
         self.provider = "scitokens"
         self.token_issuer = None
         self.authz_template = "read:/user/{username} write:/user/{username}"
+        self.authz_group_template = None
+        self.authz_group_mapfile = None
         self.token_lifetime = 60*20
         self.token_use_json = True
         self.token_aud = ""
@@ -39,6 +41,8 @@ class LocalCredmon(OAuthCredmon):
             self.provider = htcondor.param.get("LOCAL_CREDMON_PROVIDER_NAME", "scitokens")
             self.token_issuer = htcondor.param.get("LOCAL_CREDMON_ISSUER", self.token_issuer)
             self.authz_template = htcondor.param.get("LOCAL_CREDMON_AUTHZ_TEMPLATE", self.authz_template)
+            self.authz_group_template = htcondor.param.get("LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE", self.authz_group_template)
+            self.authz_group_mapfile = htcondor.param.get("LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE", self.authz_group_mapfile)
             self.token_lifetime = htcondor.param.get("LOCAL_CREDMON_TOKEN_LIFETIME", self.token_lifetime)
             self.token_use_json = htcondor.param.get("LOCAL_CREDMON_TOKEN_USE_JSON", self.token_use_json)
             self.token_aud = htcondor.param.get("LOCAL_CREDMON_TOKEN_AUDIENCE", self.token_aud)
@@ -60,8 +64,21 @@ class LocalCredmon(OAuthCredmon):
 
         token = scitokens.SciToken(algorithm="ES256", key=self._private_key, key_id=self._private_key_id)
         token.update_claims({'sub': username})
-        user_authz = self.authz_template.format(username=username)
-        token.update_claims({'scope': user_authz})
+
+        # Create scopes from user and group templates
+        scopes = [self.authz_template.format(username=username)]
+        if self.authz_group_template:
+            if self.authz_group_mapfile is None:
+                self.log.warning("LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE is undefined, cannot add group authorizations")
+            else:
+                try:
+                    groups = get_user_groups(username, self.authz_group_mapfile)
+                    self.log.info("Found {n} groups for user {username}".format(n=len(groups), username=username))
+                    for groupname in groups:
+                        scopes.append(self.authz_group_template.format(groupname=groupname))
+                except IOError:
+                    self.log.exception("Could not open {mapfile}, cannot add group authorizations".format(mapfile=self.authz_group_mapfile))
+        token.update_claims({'scope': " ".join(scopes)})
 
         # Only set the version if we have one.  No version is valid, and implies scitokens:1.0
         if self.token_ver:
@@ -145,3 +162,29 @@ class LocalCredmon(OAuthCredmon):
             self.process_cred_file(file_name)
 
         super(LocalCredmon, self).scan_tokens
+
+
+def get_user_groups(username, mapfile):
+    """Scan mapfile to find groups for username,
+    returns a list of groups.
+
+    Note that every call will read the current file,
+    regardless of if HTCondor or the credmon have
+    been reconfigured.
+    
+    Mapfiles have the format:
+    * <userA> <group1>,<group2>,...,<groupN>
+    * <userB> <group1>,<group2>,...,<groupN>
+    """
+    groups = []
+    with open(mapfile) as f:
+        for line in f:
+            tokens = line.split()
+            if len(tokens) < 3:
+                continue
+            if tokens[0] != "*":
+                continue
+            if tokens[1] == username:
+                groups = tokens[2].split(",")
+                break
+    return groups

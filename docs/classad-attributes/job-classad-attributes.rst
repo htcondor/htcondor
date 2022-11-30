@@ -316,6 +316,19 @@ all attributes.
     ``DAGManNodesMask`` does not affect events recorded in the job event
     log file referred to by ``UserLog``.
 
+:classad-attribute:`DeferralPrepTime`
+    An integer representing the number of seconds before the jobs ``DeferralTime``
+    to which the job may be matched with a machine.
+
+:classad-attribute:`DeferralTime`
+    A Unix Epoch timestamp that represents the exact time HTCondor should
+    attempt to begin executing the job.
+
+:classad-attribute:`DeferralWindow`
+    An integer representing the number of seconds after the jobs ``DeferralTime``
+    to allow the job to arrive at the execute machine before automatically being
+    evicted due to missing its ``DeferralTime``.
+
 :index:`DELEGATE_JOB_GSI_CREDENTIALS_LIFETIME`
 
 :classad-attribute:`DelegateJobGSICredentialsLifetime`
@@ -2042,6 +2055,34 @@ all attributes.
     **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>`,
     this is the name of the VOMS virtual organization (VO) that the
     user's credential is part of.
+
+
+The following job ClassAd attributes appear in the job ClassAd only for
+declared cron jobs. These represent various allotted job start times that
+will be used to calculate the jobs ``DeferralTime``. These attributes can
+be represented as an integer, a list of integers, a range of integers, a
+step (intervals of a range), or an ``*`` for all allowed values. For more
+information visit :ref:`users-manual/time-scheduling-for-job-execution:cronTab scheduling`.
+
+:classad-attribute:`CronMinute`
+    The minutes in an hour when the cron job is allowed to start running.
+    Represented by the numerical values 0 to 59.
+
+:classad-attribute:`CronHour`
+    The hours in the day when the cron job is allowed to start running.
+    Represented by the numerical values 0 to 23.
+
+:classad-attribute:`CronDayOfMonth`
+    The days of the month when the cron job is allowed to start running.
+    Represented by the numerical values 1 to 31.
+
+:classad-attribute:`CronMonth`
+    The months of the year when the cron job is allowed to start running.
+    Represented by numerical values 1 to 12.
+
+:classad-attribute:`CronDayOfWeek`
+    The days of the week when the cron job is allowed to start running.
+    Represented by numerical values 0 to 7. Both 0 and 7 represent Sunday.
 
 
 The following job ClassAd attributes are relevant only for **vm**

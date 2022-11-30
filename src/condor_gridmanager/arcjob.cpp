@@ -32,7 +32,6 @@
 #include "gridmanager.h"
 #include "arcjob.h"
 #include "condor_config.h"
-#include "nordugridjob.h" // for rsl_stringify()
 
 
 // GridManager job states
@@ -494,7 +493,6 @@ void ArcJob::doEvaluateState()
 				}
 
 				if ( RSL.empty() ) {
-//					if ( ! buildSubmitRSL() ) {
 					if ( ! buildJobADL() ) {
 						gmState = GM_HOLD;
 						break;
@@ -676,7 +674,7 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if ( info_ad.Lookup("EndTime") == NULL ) {
+			if ( info_ad.Lookup("EndTime") == nullptr && info_ad.Lookup("ComputingManagerEndTime") == nullptr ) {
 				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
 				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;
@@ -1251,185 +1249,6 @@ bool ArcJob::buildJobADL()
 	RSL += "</ActivityDescription>";
 
 dprintf(D_FULLDEBUG,"*** ADL='%s'\n",RSL.c_str());
-	return true;
-}
-
-bool ArcJob::buildSubmitRSL()
-{
-	bool transfer_exec = true;
-	StringList *stage_list = NULL;
-	StringList *stage_local_list = NULL;
-	char *attr_value = NULL;
-	std::string rsl_suffix;
-	std::string iwd;
-	std::string executable;
-
-	RSL.clear();
-
-	if ( jobAd->LookupString( ATTR_ARC_RSL, rsl_suffix ) &&
-						   rsl_suffix[0] == '&' ) {
-		RSL = rsl_suffix;
-		return true;
-	}
-
-	if ( jobAd->LookupString( ATTR_JOB_IWD, iwd ) != 1 ) {
-		errorString = "ATTR_JOB_IWD not defined";
-		RSL.clear();
-		return false;
-	}
-
-	//Start off the RSL
-	attr_value = param( "FULL_HOSTNAME" );
-//	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)(DelegationID=%s)", attr_value, delegationId.c_str() );
-	formatstr( RSL, "&(savestate=yes)(action=request)(hostname=%s)", attr_value );
-	free( attr_value );
-	attr_value = NULL;
-
-	//We're assuming all job clasads have a command attribute
-	GetJobExecutable( jobAd, executable );
-	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer_exec );
-
-	RSL += "(executable=";
-	// If we're transferring the executable, strip off the path for the
-	// remote machine, since it refers to the submit machine.
-	if ( transfer_exec ) {
-		RSL += condor_basename( executable.c_str() );
-	} else {
-		RSL += executable;
-	}
-
-	{
-		ArgList args;
-		MyString arg_errors;
-		MyString rsl_args;
-		if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
-			dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-					procID.cluster, procID.proc, arg_errors.Value());
-			formatstr(errorString,"Failed to read job arguments: %s\n",
-					arg_errors.Value());
-			RSL.clear();
-			return false;
-		}
-		if(args.Count() != 0) {
-			if(args.InputWasV1()) {
-					// In V1 syntax, the user's input _is_ RSL
-				if(!args.GetArgsStringV1Raw(&rsl_args,&arg_errors)) {
-					dprintf(D_ALWAYS,
-							"(%d.%d) Failed to get job arguments: %s\n",
-							procID.cluster,procID.proc,arg_errors.Value());
-					formatstr(errorString,"Failed to get job arguments: %s\n",
-							arg_errors.Value());
-					RSL.clear();
-					return false;
-				}
-			}
-			else {
-					// In V2 syntax, we convert the ArgList to RSL
-				for(int i=0;i<args.Count();i++) {
-					if(i) {
-						rsl_args += ' ';
-					}
-					rsl_args += rsl_stringify(args.GetArg(i));
-				}
-			}
-			RSL += ")(arguments=";
-			RSL += rsl_args;
-		}
-	}
-
-	// If we're transferring the executable, tell ARC to set the
-	// execute bit on the transferred executable.
-	if ( transfer_exec ) {
-		RSL += ")(executables=";
-		RSL += condor_basename( executable.c_str() );
-	}
-
-	if ( jobAd->LookupString( ATTR_JOB_INPUT, &attr_value ) == 1) {
-		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(attr_value) ) {
-			RSL += ")(stdin=";
-			RSL += condor_basename(attr_value);
-		}
-		free( attr_value );
-		attr_value = NULL;
-	}
-
-	stage_list = buildStageInList();
-
-	if ( stage_list->isEmpty() == false ) {
-		char *file;
-		stage_list->rewind();
-
-		RSL += ")(inputfiles=";
-
-		while ( (file = stage_list->next()) != NULL ) {
-			RSL += "(";
-			RSL += condor_basename(file);
-			if ( IsUrl( file ) ) {
-				formatstr_cat( RSL, " \"%s\")", file );
-			} else {
-				RSL += " \"\")";
-			}
-		}
-	}
-
-	delete stage_list;
-	stage_list = NULL;
-
-	if ( jobAd->LookupString( ATTR_JOB_OUTPUT, &attr_value ) == 1) {
-		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(attr_value) ) {
-			RSL += ")(stdout=";
-			RSL += REMOTE_STDOUT_NAME;
-		}
-		free( attr_value );
-		attr_value = NULL;
-	}
-
-	if ( jobAd->LookupString( ATTR_JOB_ERROR, &attr_value ) == 1) {
-		// only add to list if not NULL_FILE (i.e. /dev/null)
-		if ( ! nullFile(attr_value) ) {
-			RSL += ")(stderr=";
-			RSL += REMOTE_STDERR_NAME;
-		}
-		free( attr_value );
-	}
-
-	stage_list = buildStageOutList();
-	stage_local_list = buildStageOutLocalList( stage_list );
-
-	if ( stage_list->isEmpty() == false ) {
-		char *file;
-		char *local_file;
-		stage_list->rewind();
-		stage_local_list->rewind();
-
-		RSL += ")(outputfiles=";
-
-		while ( (file = stage_list->next()) != NULL ) {
-			local_file = stage_local_list->next();
-			RSL += "(";
-			RSL += condor_basename(file);
-			if ( IsUrl( local_file ) ) {
-				formatstr_cat( RSL, " \"%s\")", local_file );
-			} else {
-				RSL += " \"\")";
-			}
-		}
-	}
-
-	delete stage_list;
-	stage_list = NULL;
-	delete stage_local_list;
-	stage_local_list = NULL;
-
-	RSL += ')';
-
-	if ( !rsl_suffix.empty() ) {
-		RSL += rsl_suffix;
-	}
-
-dprintf(D_FULLDEBUG,"*** RSL='%s'\n",RSL.c_str());
 	return true;
 }
 

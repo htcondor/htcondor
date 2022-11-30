@@ -32,11 +32,12 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 {
 	bool allow = true;
 
-	// Always allow access to /dev/null 
+	// Always allow access to /dev/null
 	if (path && nullFile(path)) {
 		return true;
 	}
 
+	MyString full_pathname;  // this needs to have the same lifetime as path
 	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW)) {
 		static StringList allow_path_prefix_list;
 		static bool path_prefix_initialized = false;
@@ -61,7 +62,7 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			if (whitelist) {
 				wlist.initializeFromString(whitelist, ',');
 				free(whitelist);
-			} 			
+			}
 			if (wlist.isEmpty() && job_ad_whitelist && job_ad_whitelist[0]) {
 				wlist.initializeFromString(job_ad_whitelist, ',');
 			}
@@ -107,9 +108,6 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 
 		// If we are restricting pathnames the shadow can access, check now
 		if (path && !allow_path_prefix_list.isEmpty()) {
-			char *rpath = NULL;
-			MyString full_pathname;
-
 			// Make path fully qualified if it is relative to the cwd
 			if (!fullpath(path)) {
 				if (condor_getcwd(full_pathname)) {
@@ -119,13 +117,14 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 				}
 				else {
 					allow = false;
-					dprintf(D_ALWAYS, 
+					dprintf(D_ALWAYS,
 						"Access DENIED to file %s due to getcwd failure processing LIMIT_DIRECTORY_ACCESS\n", path);
 				}
 			}
 
-			// Make our fully qualified path canonical via realpath(), to get rid of
-			// dot-dots (e.g. /foo/../bar/xxx) and symlinks.
+			char *rpath = NULL;
+			// Make our fully qualified path canonical via realpath(), to get
+			// rid of dot-dots (e.g. /foo/../bar/xxx) and symlinks.
 			if (allow) {
 				rpath = realpath(path, nullptr);
 				if (!rpath) {
@@ -136,6 +135,15 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 						allow = false;
 						dprintf(D_ALWAYS,
 							"Access DENIED to file %s due to realpath failure processing LIMIT_DIRECTORY_ACCESS\n", path);
+					} else {
+						// The textual comparison below requires a trailing
+						// slash on the end of directories.
+						std::string buffer(rpath);
+						if(! IS_ANY_DIR_DELIM_CHAR(buffer.back())) {
+							buffer += DIR_DELIM_CHAR;
+						}
+						free(rpath);
+						rpath = strdup(buffer.c_str());
 					}
 				}
 			}
@@ -151,9 +159,9 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 				allow = allow_path_prefix_list.prefix_withwildcard(rpath);
 #endif
 			}
+
 			free(rpath);
 		}
-
 	} // end of subsystem is SHADOW
 
 	if (allow == false && path) {

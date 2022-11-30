@@ -136,8 +136,8 @@ WriteEventLog( const char *event_log, int &num_events )
 
 	SubmitEvent submit;
 	submit.setSubmitHost("<127.0.0.1:1234>");
-	submit.submitEventLogNotes = dupstr("Log info");
-	submit.submitEventUserNotes = dupstr("User info");
+	submit.submitEventLogNotes = "Log info";
+	submit.submitEventUserNotes = "User info";
 	if ( !writer.writeEvent(&submit) ) {
 		fprintf( stderr, "Failed to write submit event\n");
 		errors++;

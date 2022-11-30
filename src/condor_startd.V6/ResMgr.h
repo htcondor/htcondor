@@ -348,6 +348,8 @@ public:
 		stats.Drain.Add( last_drain_stop_time - last_drain_start_time );
 	}
 
+	bool compute_resource_conflicts();
+
 #ifdef LINUX
 	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
 #endif //LINUX

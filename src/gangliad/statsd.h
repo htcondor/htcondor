@@ -37,7 +37,7 @@ public:
 	// Given a metric definition ad and an ad to monitor,
 	// evaluate the monitored value and other properties such as
 	// name, description, and so on.
-	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD *statsd,ExtArray<std::string> *regex_groups=NULL,char const *regex_attr=NULL);
+	virtual bool evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,int max_verbosity,class StatsD *statsd,std::vector<std::string> *regex_groups=NULL,char const *regex_attr=NULL);
 
 	// Sets result to a string representation of the value to publish.
 	// Returns false on failure.
@@ -108,8 +108,8 @@ private:
 	// evaluate an expression in the daemon ad.
 	// If this is a regex metric, performs substitutions of regex groups
 	// into strings that reference them.
-	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,ExtArray<std::string> *regex_groups,char const *regex_attr=NULL) const;
-	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,ExtArray<std::string> *regex_groups);
+	bool evaluate(char const *attr_name,classad::Value &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,MetricTypeEnum type,std::vector<std::string> *regex_groups,char const *regex_attr=NULL) const;
+	bool evaluateOptionalString(char const *attr_name,std::string &result,classad::ClassAd &metric_ad,classad::ClassAd const &daemon_ad,std::vector<std::string> *regex_groups);
 };
 
 /* StatsD: base class for gathering and publishing condor statistics

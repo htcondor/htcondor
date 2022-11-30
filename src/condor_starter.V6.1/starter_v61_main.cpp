@@ -167,6 +167,9 @@ printClassAd( void )
 		//  enabled means that singularity --version returned sensible output
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
+		// We can't test a download, so assume we can...
+		printf( "%s = True\n", ATTR_HAS_DOCKER_URL);
+
 		bool shouldAdvertiseSingularity = false;
 		if (htcondor::Singularity::canRunSandbox())  {
 			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
