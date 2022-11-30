@@ -128,7 +128,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/9.5/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -219,7 +219,7 @@ echo -e "\rStep 3 of 8: downloading required software..."
 BINARIES_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_BINARIES}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_BINARIES} -o ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
-    echo "Failed to download configuration from '${WELL_KNOWN_LOCATION_FOR_BINARIES}', aborting."
+    echo "Failed to download binaries from '${WELL_KNOWN_LOCATION_FOR_BINARIES}', aborting."
     echo ${CURL_LOGGING}
     exit 2
 fi
