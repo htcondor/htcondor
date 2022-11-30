@@ -67,6 +67,9 @@ Bugs Fixed:
   RUNNING and retry querying the ARC CE server endlessly. 
   :jira:`1448`
 
+- Fixed AES encryption failures on macOS Ventura.
+  :jira:`1458`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
