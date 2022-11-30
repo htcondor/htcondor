@@ -465,15 +465,21 @@ elsif ($opt_make_personal_condor ||
 
     # we will use the personal role, so we don't want to set DAEMON_LIST
     %daemon_list = ();
-# these are the defaults as of 8.1.5
-#    $append_config{START}="TRUE";
-#    $append_config{PREEMPT}="FALSE";
-#    $append_config{SUSPEND}="FALSE";
-#    $append_config{KILL}="FALSE";
 
     push (@metaknobs,"use ROLE : Personal");
     $comment_hash{"use ROLE : Personal"}="\n##  Configure a personal HTCondor pool.";
     $append_config{COLLECTOR_NAME}='Personal Condor at $(CONDOR_HOST)';
+
+    # as of 9.0 the config *must* set the ALLOW_* knobs or all communication with daemons will fail
+    push (@metaknobs,"use SECURITY : USER_BASED");
+    $comment_hash{"use SECURITY : USER_BASED"}="\n##  Configure a user-based security for a personal condor.";
+    $append_config{ALLOW_ADMINISTRATOR}='$(ALLOW_ADMINISTRATOR) $(USERNAME)@$(UID_DOMAIN)';
+
+    # disable attempts to use the global IDTOKEN directories
+    $append_config{SEC_PASSWORD_DIRECTORY}='$(LOCAL_DIR)/signing_keys';
+    $append_config{SEC_TOKEN_DIRECTORY}='$(LOCAL_DIR)/tokens';
+
+	#
 
     if ($opt_make_personal_condor || $fullhost =~ /^localhost/) {
 	# dont want to configure CONDOR_HOST=localhost because the personal role
@@ -1435,10 +1441,10 @@ sub condor_init( $ ) {
     # Make required local directories
     safe_mkdir( "$local_dir",               0755);
     safe_mkdir( "$local_dir/log",           0755);
-    #safe_mkdir( "$local_dir/log/GridLogs,   01777); #world writeable local dir!
     safe_mkdir( "$local_dir/spool",         0755);
     safe_mkdir( "$local_dir/execute",       01777); #world writeable local dir!
-    #safe_mkdir( "$local_dir/ViewHist",      0755);
+    safe_mkdir( "$local_dir/signing_keys",  0700);
+    safe_mkdir( "$local_dir/tokens",        0700);
 
     system ("chown -R $owner $local_dir");  # wish Perl could do this natively
     return $local_dir;
