@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -192,7 +192,16 @@ printClassAd( void )
 			// If we made it here, we cannot run either sif or sandbox images.
 			// In this case, return HasSingularity=False, which means it is
 			// present on the EP but broken.
+			// In this case, add in SingularityOfflineReason attr to help explain why,
+			// just like we do for Docker.
 			printf("%s = False\n", ATTR_HAS_SINGULARITY);
+			std::string offline_reason = "Both SIF and Sandbox tests on startup failed";
+			if (!htcondor::Singularity::m_lastSingularityErrorLine.empty()) {
+				offline_reason += " : " + htcondor::Singularity::m_lastSingularityErrorLine;
+			}
+			printf("SingularityOfflineReason = \"%s\"\n",
+				EscapeChars(offline_reason.c_str(), "\"", '\\').c_str() // escape quotes in classad str
+			);
 		}
 		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}

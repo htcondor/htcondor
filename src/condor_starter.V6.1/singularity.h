@@ -53,7 +53,7 @@ public:
   static bool canRunSandbox();
   static bool canRunSIF();
   static bool canRun(const std::string &image);
-
+  static std::string m_lastSingularityErrorLine;
 
 private:
   static bool detect(CondorError &err);
