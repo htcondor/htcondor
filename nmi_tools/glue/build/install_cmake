@@ -94,7 +94,7 @@ sub install_cmake
 
 	$wget = find_wget();
 
-	system("$wget -r http://parrot.cs.wisc.edu/externals/$ename.tar.gz -O $ename.tar.gz");
+	system("$wget -r https://parrot.cs.wisc.edu/externals/$ename.tar.gz -O $ename.tar.gz");
 	if ($? != 0) {
 		die "FAILURE: Couldn't download cmake-2.8.3: $!\n";
 	}

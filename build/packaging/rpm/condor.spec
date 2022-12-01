@@ -66,7 +66,7 @@ Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
-URL: http://www.cs.wisc.edu/condor/
+URL: https://www.cs.wisc.edu/htcondor/
 
 # This allows developers to test the RPM with a non-release, git tarball
 %if %git_build
@@ -82,7 +82,7 @@ Source0: condor.tar.gz
 # be shipped as well as extraneous copies of packages the source
 # depends on. Additionally, the upstream HTCondor source requires a
 # click-through license. Once you have downloaded the source from:
-#   http://parrot.cs.wisc.edu/v7.0.license.html
+#   https://parrot.cs.wisc.edu/v7.0.license.html
 # you should process it with generate-tarball.sh:
 #   ./generate-tarball.sh 7.0.4
 # MD5Sum of upstream source:
