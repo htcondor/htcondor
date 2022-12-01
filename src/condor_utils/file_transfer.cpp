@@ -6359,7 +6359,8 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// Close the plugin
-	int rc = my_pclose(plugin_pipe);
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	int rc = my_pclose(plugin_pipe, (unsigned int)timeout, false);
 	int exit_status = WEXITSTATUS(rc);
 	bool exit_by_signal = WIFSIGNALED(rc);
 
@@ -6498,7 +6499,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 
 	// Close the plugin
-	int rc = my_pclose( plugin_pipe );
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	int rc = my_pclose(plugin_pipe, (unsigned int)timeout, true);
 	int exit_status     = WEXITSTATUS(rc);
 	bool exit_by_signal = WIFSIGNALED(rc);
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);

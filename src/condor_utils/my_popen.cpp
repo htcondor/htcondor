@@ -317,6 +317,15 @@ int my_pclose( FILE *fp )
 }
 
 int
+my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout ) {
+	int rv = my_pclose_ex(fp, timeout, kill_after_timeout );
+	if (rv == MYPCLOSE_EX_NO_SUCH_FP || rv == MYPCLOSE_EX_I_KILLED_IT || rv == MYPCLOSE_EX_STATUS_UNKNOWN) {
+		rv = -1; // set a backward compatible exit status.
+	}
+	return rv;
+}
+
+int
 my_system(const char *cmd)
 {
 	FILE* fp = my_popen(cmd, "w", FALSE);
@@ -705,6 +714,14 @@ static bool waitpid_with_timeout(pid_t pid, int *pstatus, time_t timeout)
 	return false;
 }
 
+int
+my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout ) {
+	int rv = my_pclose_ex(fp, timeout, kill_after_timeout );
+	if (rv == MYPCLOSE_EX_NO_SUCH_FP || rv == MYPCLOSE_EX_I_KILLED_IT || rv == MYPCLOSE_EX_STATUS_UNKNOWN) {
+		rv = -1; // set a backward compatible exit status.
+	}
+	return rv;
+}
 
 int
 my_pclose_ex(FILE *fp, unsigned int timeout, bool kill_after_timeout)
