@@ -49,11 +49,12 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
-			   CheckOutputFormats.pm
                run_test.pl)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
+
+
 	set(CHECK_MODULES CondorLog.pm
 			JobDoesNotRun.pm
 			JobIsEvicted.pm
@@ -68,6 +69,9 @@ if (BUILD_TESTING)
 			COMMAND ${CMAKE_COMMAND} ARGS -E copy_if_different ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile} ${TEST_TARGET_DIR}/Check/${scriptFile})
 		add_custom_target(test_copy_${scriptFile} ALL DEPENDS ${TEST_TARGET_DIR}/Check/${scriptFile})
 	endforeach()
+
+	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/CheckOutputFormats.pm ${TEST_TARGET_DIR}/CheckOutputFormats.pm COPYONLY)
+
 	endif()
 
 	# 1st remove generated files.
@@ -76,7 +80,7 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
-	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;CheckOutputFormats.pm;run_test.pl")
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl")
 
 	##########################################################
 	# exe test targets
@@ -148,9 +152,6 @@ if (BUILD_TESTING)
 	condor_pl_test(fetch_work_pslot "work fetch pslot smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
 	condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-ssl.cmd;src/condor_tests/x_sleep.pl")
 	#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "quick;ctest")
-	if (HAVE_EXT_GLOBUS)
-		condor_pl_test(lib_auth_protocol-gsi "GSI authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-gsi.cmd;src/condor_tests/x_sleep.pl;src/condor_tests/x_lib_auth-gsi_keys.tgz;src/condor_tests/x_param.protocol-gsi.template;src/condor_tests/x_secgsi_configpostsrc.template;src/condor_tests/x_lib_auth_protocol.pl")
-	endif()
 	#condor_pl_test(job_dagman_node_status_rm "Check status file shows condor_rm" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_status_rm.dag;src/condor_tests/job_dagman_node_status_rm_node.pl;src/condor_tests/job_dagman_node_status_rm_node.cmd;src/condor_tests/job_dagman_node_status_rm_node.template")
 	condor_pl_test(job_dagman_large_dag "Test large DAG w/ recovery mode" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_large_dag-node.pl;src/condor_tests/create_large_dag.pl")
 
@@ -197,12 +198,14 @@ endif ()
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
 			condor_pl_test(test_classad_eval "Test classad_eval" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_htcondor_annex_create_constraints "Test annex create constraings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
 		if(LINUX)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_hook_status_msg "Test Starter Job Hook Status Msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_xfer_hold_codes "Test proper hold codes after xfer failure" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_job_env "Test Job Environment" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -243,6 +246,9 @@ endif()
 			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
+			condor_pl_test(test_container_img_declares_universe "Test declaring container image sets up universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_multifile_curl_plugin_timeout "Test multifile curl plugin correctly does timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -260,6 +266,9 @@ endif()
 				condor_pl_test(test_condor_token_fetch_key "Test `condor_token_fetch -key`" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				# Sadly, Python doesn't implement a way to get disk space on Windows.
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
 		endif()
 	endif()
@@ -278,15 +287,6 @@ endif()
 			condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
 		endif()
 	endif(LINUX)
-
-	##########################################################
-	# feature specific tests
-	if (HAVE_VMWARE)
-		condor_pl_test(job_vmu_basic "VM Universe smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_basic.sh")
-		# cdrom xfer bits no longer supported.
-		# condor_pl_test(job_vmu_network "VM Universe networking test" "quick;ctest")
-		condor_pl_test(job_vmu_ckpt "VM Universe checkpoint test" "quick;ctest" CTEST DEPENDS "src/condor_tests/job_vmu_ckpt.sh")
-	endif(HAVE_VMWARE)
 
 	##########################################################
 	# now all the common tests.

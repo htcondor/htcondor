@@ -191,6 +191,35 @@ public:
 	FullSlotId(int i, int j=0) : id(i), dyn_id(j) {};
 };
 
+class NonFungibleRes
+{
+public:
+	NonFungibleRes(const std::string & _id) : id(_id), owner(0), bkowner(0) {}
+	std::string id;
+	FullSlotId  owner;
+	FullSlotId  bkowner;
+
+	// report if resource is "owned" by the given slot
+	// if the given slot matches the primary owner, then return 1
+	// if the given slot matches the backfill owner and the primary owner is not set return 2
+	int is_owned(int slot_id, int sub_id) const {
+		if (owner.id == slot_id && owner.dyn_id == sub_id) return 1;
+		if (bkowner.id == slot_id && bkowner.dyn_id == sub_id) {
+			// TODO: handle the case where the primary owner is a claimed static slot?
+			if (owner.dyn_id > 0) return 3;
+			return 2;
+		}
+		return 0;
+	}
+};
+
+class NonFungibleType
+{
+public:
+	std::vector<NonFungibleRes> ids;
+	std::map<std::string, ClassAd> props;
+};
+
 // Machine-wide attributes.  
 class MachAttributes
 {
@@ -207,16 +236,11 @@ public:
 	// by having an optional property classad for each unique non-fungible id, and a optional constraint
 	// for each type of nonfungible id for each slot
 	typedef std::map<std::string, std::string, classad::CaseIgnLTStr> slotres_constraint_map_t;
-	typedef std::map<std::string, ClassAd> slotres_props_t;
-	typedef std::map<std::string, slotres_props_t, classad::CaseIgnLTStr> slotres_devProps_map_t;
 
-	// these are used for non-fungible ids to track which resources are bound to which slots
-	// for each resource tag, which resource IDs are assigned
+	typedef std::map<std::string, NonFungibleType, classad::CaseIgnLTStr> slotres_nft_map_t;
+	// these are used as lists of non-fungible ids for various purposes
 	typedef std::vector<std::string> slotres_assigned_ids_t;
 	typedef std::map<string, slotres_assigned_ids_t, classad::CaseIgnLTStr> slotres_devIds_map_t;
-	// for each resource tag, which slot is bound to which resource ID
-	typedef std::vector<FullSlotId> slotres_assigned_id_owners_t;
-	typedef std::map<string, slotres_assigned_id_owners_t, classad::CaseIgnLTStr> slotres_devIdOwners_map_t;
 
 	MachAttributes();
 	~MachAttributes();
@@ -227,7 +251,8 @@ public:
     void init_machine_resources();
 
 	void publish_static(ClassAd*);     // things that can only change on reconfig
-	void publish_dynamic(ClassAd*, int slotid, int slotsubid);    // things that can change at runtime
+	void publish_common_dynamic(ClassAd*); // things that can change at runtime
+	void publish_slot_dynamic(ClassAd*, int slotid, int slotsubid, bool backfill, const std::string & res_conflict); // things that can change at runtime
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
@@ -237,6 +262,8 @@ public:
 			m_condor_load = m_load;
 		}
 	}
+
+	bool has_nft_conflicts(int slotid, int slotsubid);
 
 		// Initiate benchmark computations benchmarks on the given resource
 	void start_benchmarks( Resource*, int &count );	
@@ -265,14 +292,14 @@ public:
 	time_t		keyboard_idle() const { return m_idle; };
 	time_t		console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
-	const slotres_devIds_map_t& machres_devIds() const { return m_machres_devIds_map; }
+	const slotres_nft_map_t& machres_devIds() const { return m_machres_nft_map; }
 	const ClassAd& machres_attrs() const { return m_machres_attr; }
-	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub);
+	const char * AllocateDevId(const std::string & tag, const char* request, int assign_to, int assign_to_sub, bool backfill);
 	bool         ReleaseDynamicDevId(const std::string & tag, const char * id, int was_assign_to, int was_assign_to_sub);
-	bool         DevIdMatches(const std::string & tag, int ix, const char* request);
+	bool         DevIdMatches(const NonFungibleType & nft, int ixid, ConstraintHolder & require);
 	const char * DumpDevIds(std::string & buf, const char * tag = NULL, const char * sep = "\n");
 	void         ReconfigOfflineDevIds();
-	void         RefreshDevIds(slotres_map_t::iterator & slot_res_count, slotres_devIds_map_t::iterator & slot_res_devids, int assign_to, int assign_to_sub);
+	int          RefreshDevIds(const std::string & tag, slotres_assigned_ids_t & slot_res_devids, int assign_to, int assign_to_sub);
 	bool         ComputeDevProps(ClassAd & ad, std::string tag, const slotres_assigned_ids_t & ids);
 	//bool ReAssignDevId(const std::string & tag, const char * id, void * was_assigned_to, void * assign_to);
 
@@ -304,11 +331,15 @@ private:
 	bool			m_always_recompute_disk; // set from STARTD_RECOMPUTE_DISK_FREE knob and DISK knob
 	long long		m_total_disk; // the value of total_disk if m_recompute_disk is false
 	slotres_map_t   m_machres_map;
-	slotres_devIds_map_t m_machres_devIds_map;
-	slotres_devProps_map_t m_machres_devProps_map;
+	slotres_nft_map_t m_machres_nft_map;
 	slotres_devIds_map_t m_machres_offline_devIds_map; // startup list of offline ids
 	slotres_offline_ids_map_t m_machres_runtime_offline_ids_map; // dynamic list of offline ids (unique set of ids, startup + runtime)
-	slotres_devIdOwners_map_t m_machres_devIdOwners_map;
+	// the various maps above look like this
+	// m_machres_map["GPUs"]                     = 2.0
+	// m_machres_offline_devIds_map["GPUs"]      = ["GPU-AAA", ...]
+	// m_machres_runtime_offline_ids_map["GPUs"] = std::set("GPU-AAA", ...)
+	// m_machres_nft_map["GPUs"] ={[("GPU-AAA", 1_1), ("GPU-BBB", 1_2), ...], [ "GPU-AAA" -> props; "GPU-BBB" -> props] }
+
 	static bool init_machine_resource(MachAttributes * pme, HASHITER & it);
 	double init_machine_resource_from_script(const char * tag, const char * script_cmd);
 	ClassAd         m_machres_attr;
@@ -352,6 +383,7 @@ private:
 
 };	
 
+class ResBag;
 
 // CPU-specific attributes.  
 class CpuAttributes
@@ -359,12 +391,13 @@ class CpuAttributes
 public:
     typedef MachAttributes::slotres_map_t slotres_map_t;
 	typedef MachAttributes::slotres_devIds_map_t slotres_devIds_map_t;
-	typedef MachAttributes::slotres_props_t slotres_props_t;
+	typedef std::map<std::string, ClassAd> slotres_props_t;
 	typedef MachAttributes::slotres_offline_ids_map_t slotres_offline_ids_map_t;
 	typedef MachAttributes::slotres_assigned_ids_t slotres_assigned_ids_t;
 	typedef MachAttributes::slotres_constraint_map_t slotres_constraint_map_t;
 
 	friend class AvailAttributes;
+	friend class ResBag;
 
 	CpuAttributes( MachAttributes*, int slot_type, double num_cpus,
 				   int num_phys_mem, double virt_mem_fraction,
@@ -374,7 +407,7 @@ public:
 				   const std::string &execute_dir, const std::string &execute_partition_id );
 
 	void attach( Resource* );	// Attach to the given Resource
-	bool bind_DevIds(int slot_id, int slot_sub_id, bool abort_on_fail);   // bind non-fungable resource ids to a slot
+	bool bind_DevIds(int slot_id, int slot_sub_id, bool backfill_slot, bool abort_on_fail);   // bind non-fungable resource ids to a slot
 	void unbind_DevIds(int slot_id, int slot_sub_id); // release non-fungable resource ids
 	void reconfig_DevIds(int slot_id, int slot_sub_id); // check for offline changes for non-fungible resource ids
 
@@ -418,8 +451,6 @@ public:
 		}
 	}
 	bool set_total_disk(long long total, bool refresh);
-
-	static void swap_attributes(CpuAttributes & attra, CpuAttributes & attrb, int flags);
 
 	CpuAttributes& operator+=( CpuAttributes& rhs);
 	CpuAttributes& operator-=( CpuAttributes& rhs);
@@ -475,6 +506,34 @@ private:
 	VolumeManager *m_volume_mgr{nullptr};
 #endif // LINUX
 };	
+
+// a loose bag of resource quantities, for doing resource math
+class ResBag {
+public:
+
+	ResBag() = default;
+	ResBag(const class CpuAttributes & c_attr) 
+		: cpus(c_attr.c_num_slot_cpus)
+		, disk(c_attr.c_slot_disk)
+		, mem(c_attr.c_slot_mem)
+		, slots(1)
+		, resmap(c_attr.c_slottot_map)
+	{}
+
+	ResBag& operator+=(const CpuAttributes& rhs);
+	ResBag& operator-=(const CpuAttributes& rhs);
+
+	bool underrun(std::string * names);
+	const char * dump(std::string & buf) const;
+
+protected:
+	double     cpus = 0;
+	long long  disk = 0;
+	int        mem = 0;
+	int        slots = 0;
+	MachAttributes::slotres_map_t resmap;
+
+};
 
 class AvailDiskPartition
 {

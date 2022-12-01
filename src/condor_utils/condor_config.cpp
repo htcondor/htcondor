@@ -71,7 +71,6 @@
 #include "directory.h"			// for StatInfo
 #include "condor_distribution.h"
 #include "condor_environ.h"
-#include "condor_auth_x509.h"
 #include "setenv.h"
 #include "HashTable.h"
 #include "condor_uid.h"
@@ -709,22 +708,6 @@ void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASH
 }
 
 // return a list of param names that match the given regex, this list is in hashtable order (i.e. no order)	
-int param_names_matching(Regex & re, ExtArray<const char *>& names)
-{	
-	int cAdded = 0;
-	HASHITER it = hash_iter_begin(ConfigMacroSet);
-	while( ! hash_iter_done(it)) {
-		const char *name = hash_iter_key(it);
-		if (re.match(name)) {
-			names.add(name);
-			++cAdded;
-		}
-		hash_iter_next(it);
-	}
-	hash_iter_delete(&it);
-
-	return cAdded;
-}
 
 int param_names_matching(Regex& re, std::vector<std::string>& names) {
     const int s0 = (int)names.size();
@@ -763,127 +746,6 @@ config_host(const char* host, int config_options, const char * root_config)
 {
 	bool wantsQuiet = config_options & CONFIG_OPT_WANT_QUIET;
 	return real_config(host, wantsQuiet, config_options, root_config);
-}
-
-/* This function initialize GSI (maybe other) authentication related
-   stuff Daemons that should use the condor daemon credentials should
-   set the argument is_daemon=true.  This function is automatically
-   called at config init time with is_daemon=false, so that all
-   processes get the basic auth config.  The order of calls to this
-   function do not matter, as the results are only additive.
-   Therefore, calling with is_daemon=false and then with
-   is_daemon=true or vice versa are equivalent.
-*/
-void
-condor_auth_config(int is_daemon)
-{
-#if defined(HAVE_EXT_GLOBUS)
-
-		// First, if there is X509_USER_PROXY, we clear it
-		// (if we're a daemon).
-	if ( is_daemon ) {
-		UnsetEnv( "X509_USER_PROXY" );
-	}
-
-		// Next, we param the configuration file for GSI related stuff and
-		// set the corresponding environment variables for it
-
-	char *pbuf = 0;
-	char *proxy_buf = 0;
-	char *cert_buf = 0;
-	char *key_buf = 0;
-	char *trustedca_buf = 0;
-	char *mapfile_buf = 0;
-
-	MyString buffer;
-
-
-		// Here's how it works. If you define any of
-		// GSI_DAEMON_CERT, GSI_DAEMON_KEY, GSI_DAEMON_PROXY, or
-		// GSI_DAEMON_TRUSTED_CA_DIR, those will get stuffed into the
-		// environment.
-		//
-		// Everything else depends on GSI_DAEMON_DIRECTORY. If
-		// GSI_DAEMON_DIRECTORY is not defined, then only settings that are
-		// defined above will be placed in the environment, so if you
-		// want the cert and host in a non-standard location, but want to use
-		// /etc/grid-security/certifcates as the trusted ca dir, only
-		// define GSI_DAEMON_CERT and GSI_DAEMON_KEY, and not
-		// GSI_DAEMON_DIRECTORY and GSI_DAEMON_TRUSTED_CA_DIR
-		//
-		// If GSI_DAEMON_DIRECTORY is defined, condor builds a "reasonable"
-		// default out of what's already been defined and what it can
-		// construct from GSI_DAEMON_DIRECTORY  - ie  the trusted CA dir ends
-		// up as in $(GSI_DAEMON_DIRECTORY)/certificates, and so on
-		// The proxy is not included in the "reasonable defaults" section
-
-		// First, let's get everything we might want
-	pbuf = param( STR_GSI_DAEMON_DIRECTORY );
-	trustedca_buf = param( STR_GSI_DAEMON_TRUSTED_CA_DIR );
-	mapfile_buf = param( STR_GSI_MAPFILE );
-	if( is_daemon ) {
-		proxy_buf = param( STR_GSI_DAEMON_PROXY );
-		cert_buf = param( STR_GSI_DAEMON_CERT );
-		key_buf = param( STR_GSI_DAEMON_KEY );
-	}
-
-	if (pbuf) {
-
-		if( !trustedca_buf) {
-			buffer.formatstr( "%s%ccertificates", pbuf, DIR_DELIM_CHAR);
-			SetEnv( STR_GSI_CERT_DIR, buffer.Value() );
-		}
-
-		if (!mapfile_buf ) {
-			buffer.formatstr( "%s%cgrid-mapfile", pbuf, DIR_DELIM_CHAR);
-			SetEnv( STR_GSI_MAPFILE, buffer.Value() );
-		}
-
-		if( is_daemon ) {
-			if( !cert_buf ) {
-				buffer.formatstr( "%s%chostcert.pem", pbuf, DIR_DELIM_CHAR);
-				SetEnv( STR_GSI_USER_CERT, buffer.Value() );
-			}
-	
-			if (!key_buf ) {
-				buffer.formatstr( "%s%chostkey.pem", pbuf, DIR_DELIM_CHAR);
-				SetEnv( STR_GSI_USER_KEY, buffer.Value() );
-			}
-		}
-
-		free( pbuf );
-	}
-
-	if(trustedca_buf) {
-		SetEnv( STR_GSI_CERT_DIR, trustedca_buf );
-		free(trustedca_buf);
-	}
-
-	if (mapfile_buf) {
-		SetEnv( STR_GSI_MAPFILE, mapfile_buf );
-		free(mapfile_buf);
-	}
-
-	if( is_daemon ) {
-		if(proxy_buf) {
-			SetEnv( STR_GSI_USER_PROXY, proxy_buf );
-			free(proxy_buf);
-		}
-
-		if(cert_buf) {
-			SetEnv( STR_GSI_USER_CERT, cert_buf );
-			free(cert_buf);
-		}
-
-		if(key_buf) {
-			SetEnv( STR_GSI_USER_KEY, key_buf );
-			free(key_buf);
-		}
-	}
-
-#else
-	(void) is_daemon;	// Quiet 'unused parameter' warnings
-#endif
 }
 
 bool
@@ -1153,12 +1015,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	}
 
 	condor_except_should_dump_core( param_boolean("ABORT_ON_EXCEPTION", false) );
-
-		// Daemons should additionally call condor_auth_config()
-		// explicitly with the argument is_daemon=true.  Here, we just
-		// call with is_daemon=false, since that is fine for both daemons
-		// and non-daemons to do.
-	condor_auth_config( false );
 
 	//Configure condor_fsync
 	condor_fsync_on = param_boolean("CONDOR_FSYNC", true);
@@ -1791,6 +1647,7 @@ char * find_python3_dot(int minor_ver) {
 	return get_winreg_string_value(regKey.c_str(), "ExecutablePath");
 #else
 	// TODO: add non-windows implementation
+	(void)minor_ver; // Shut the compiler up
 	return nullptr;
 #endif
 }
@@ -1801,7 +1658,7 @@ void apply_thread_limit(int detected_cpus, MACRO_EVAL_CONTEXT & ctx)
 	int thread_limit = detected_cpus;
 	const char * effective_env = nullptr;
 	static const char * const envlimits[] = { "OMP_THREAD_LIMIT", "SLURM_CPUS_ON_NODE" };
-	for (int ii = 0; ii < COUNTOF(envlimits); ++ii) {
+	for (size_t ii = 0; ii < COUNTOF(envlimits); ++ii) {
 		const char* env = getenv(envlimits[ii]);
 		if (!env) continue;
 

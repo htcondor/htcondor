@@ -365,7 +365,14 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 	// Check to see if we need to start this process paused, and if
 	// so, pass the right flag to DC::Create_Process().
 	int job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
-	if (!param_boolean("JOB_INHERITS_STARTER_ENVIRONMENT",false)) {
+	bool inherit_starter_env = false;
+	auto_free_ptr envlist(param("JOB_INHERITS_STARTER_ENVIRONMENT"));
+	if (envlist && ! string_is_boolean_param(envlist, inherit_starter_env)) {
+		WhiteBlackEnvFilter filter(envlist);
+		job_env.Import(filter);
+		inherit_starter_env = false; // make sure that CreateProcess doesn't inherit again
+	}
+	if ( ! inherit_starter_env) {
 		job_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
 	}
 	bool suspend_job_at_exec = false;

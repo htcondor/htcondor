@@ -628,8 +628,8 @@ getStrQueryResult(QueryResult q)
 void
 CondorQuery::setDesiredAttrs(char const * const *attrs)
 {
-	MyString val;
-	::join_args(attrs,&val);
+	std::string val;
+	::join_args(attrs,val);
 	setDesiredAttrs(val.c_str());
 }
 

@@ -33,7 +33,7 @@
 
 // this is the required minimum separation between two priorities for them
 // to be considered distinct values
-static const float PriorityDelta = 0.5;
+static const double PriorityDelta = 0.5;
 
 // local working attribute to stash match-cost on resource ads that have a 
 // request matched against them
@@ -56,18 +56,20 @@ public:
   void Initialize(GroupEntry* group);  // Configuration
 
   int   GetResourcesUsed(const std::string& CustomerName); // get # of used resources (unweighted by SlotWeight)
-  float GetWeightedResourcesUsed(const std::string& CustomerName);
-  float GetPriority(const std::string& CustomerName); // get priority for a customer
+  double GetWeightedResourcesUsed(const std::string& CustomerName);
+  double GetPriority(const std::string& CustomerName); // get priority for a customer
   int   GetCeiling(const std::string& CustomerName); // get Ceiling for a customer
-  void  SetPriority(const std::string& CustomerName, float Priority); // set priority for a customer
+  int   GetFloor(const std::string& CustomerName);  // get Floor for a customer
+  void  SetPriority(const std::string& CustomerName, double Priority); // set priority for a customer
   void  SetCeiling(const std::string& CustomerName, int Ceiling); // set Ceiling for a customer
+  void  SetFloor(const std::string& CustomerName, int Floor); // set Floor for a customer
 
-  void SetAccumUsage(const std::string& CustomerName, float AccumUsage); // set accumulated usage for a customer
+  void SetAccumUsage(const std::string& CustomerName, double AccumUsage); // set accumulated usage for a customer
   void SetBeginTime(const std::string& CustomerName, int BeginTime); // set begin usage time for a customer
   void SetLastTime(const std::string& CustomerName, int LastTime); // set Last usage time for a customer
-  float GetPriorityFactor(const std::string& CustomerName); // get priority factor for a customer
+  double GetPriorityFactor(const std::string& CustomerName); // get priority factor for a customer
 
-  void SetPriorityFactor(const std::string& CustomerName, float PriorityFactor);
+  void SetPriorityFactor(const std::string& CustomerName, double PriorityFactor);
   void ResetAccumulatedUsage(const std::string& CustomerName);
   void DeleteRecord(const std::string& CustomerName);
   void ResetAllUsage();
@@ -75,9 +77,9 @@ public:
   void AddMatch(const std::string& CustomerName, ClassAd* ResourceAd); // Add new match
   void RemoveMatch(const std::string& ResourceName); // remove a match
 
-  float GetSlotWeight(ClassAd *candidate) const;
+  double GetSlotWeight(ClassAd *candidate) const;
   void UpdatePriorities(); // update all the priorities
-  void UpdateOnePriority(int T, int TimePassed, float AgingFactor, const char *key, ClassAd *ad); // Help function for above
+  void UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad); // Help function for above
 
   void CheckMatches(ClassAdListDoesNotDeleteAds& ResourceList);  // Remove matches that are not claimed
 
@@ -91,7 +93,7 @@ public:
   ClassAd* ReportState(const std::string& CustomerName);
   bool ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup = false);
 
-  void CheckResources(const std::string& CustomerName, int& NumResources, float& NumResourcesRW);
+  void CheckResources(const std::string& CustomerName, int& NumResources, double& NumResourcesRW);
 
   void DisplayLog();
   void DisplayMatches();
@@ -130,18 +132,18 @@ private:
   void DecrementLimits(const std::string& limits);
 
   // Get group priority helper function.
-  float getGroupPriorityFactor(const std::string& CustomerName);
+  double getGroupPriorityFactor(const std::string& CustomerName);
 
   //--------------------------------------------------------
   // Configuration variables
   //--------------------------------------------------------
 
-  float MinPriority;        // Minimum priority (if no resources used)
-  float NiceUserPriorityFactor;
-  float RemoteUserPriorityFactor;
-  float DefaultPriorityFactor;
+  double MinPriority;        // Minimum priority (if no resources used)
+  double NiceUserPriorityFactor;
+  double RemoteUserPriorityFactor;
+  double DefaultPriorityFactor;
   std::string AccountantLocalDomain;
-  float HalfLifePeriod;     // The time in sec in which the priority is halved by aging
+  double HalfLifePeriod;     // The time in sec in which the priority is halved by aging
   std::string LogFileName;      // Name of Log file
   int	MaxAcctLogSize;		// Max size of log file
   bool  DiscountSuspendedResources;
@@ -181,11 +183,11 @@ private:
   bool DeleteClassAd(const std::string& Key);
 
   void SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue);
-  void SetAttributeFloat(const std::string& Key, const std::string& AttrName, float AttrValue);
+  void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
   void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
 
   bool GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue);
-  bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, float& AttrValue);
+  bool GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue);
   bool GetAttributeString(const std::string& Key, const std::string& AttrName, std::string& AttrValue);
 
   void ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::map<std::string, int>& gnmap);

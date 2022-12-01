@@ -38,9 +38,9 @@ namespace manifest {
 int
 getNumberFromFileName( const std::string & fn ) {
 	const char * fileName = fn.c_str();
-	if( fileName == strstr( fileName, "MANIFEST." ) ) {
+	if( fileName == strstr( fileName, "_condor_checkpoint_MANIFEST." ) ) {
 		char * endptr;
-		const char * suffix = fileName + 9;
+		const char * suffix = fileName + strlen("_condor_checkpoint_MANIFEST.");
 		if( *suffix != '\0' && isdigit(*suffix) ) {
 			int manifestNumber = strtol( suffix, & endptr, 10 );
 			if( *endptr == '\0' ) {

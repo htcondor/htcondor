@@ -123,7 +123,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DAEMON_OFF_FAST		(SCHED_VERS+68)		// specific daemon, subsys follows 
 #define DAEMON_ON			(SCHED_VERS+69)		// specific daemon, subsys follows 
 #define GIVE_TOTALS_CLASSAD	(SCHED_VERS+70)
-#define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad
+//#define DUMP_STATE          (SCHED_VERS+71)	// drop internal vars into classad (Not used)
 #define PERMISSION_AND_AD	(SCHED_VERS+72) // negotiator is sending startad to schedd
 //#define REQUEST_NETWORK		(SCHED_VERS+73)	// negotiator network mgmt, Not used
 #define VACATE_ALL_FAST		(SCHED_VERS+74)		// fast vacate for whole machine
@@ -154,7 +154,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define DELEGATE_GSI_CRED_SCHEDD	(SCHED_VERS+99) // delegate refreshed gsi proxy to schedd
 #define DELEGATE_GSI_CRED_STARTER (SCHED_VERS+100) // delegate refreshed gsi proxy to starter
 #define DELEGATE_GSI_CRED_STARTD (SCHED_VERS+101) // delegate gsi proxy to startd
-#define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd
+#define REQUEST_SANDBOX_LOCATION (SCHED_VERS+102) // get the sinful of a transferd (Not used)
 #define VM_UNIV_GAHP_ERROR   (SCHED_VERS+103) // report the error of vmgahp to startd
 #define VM_UNIV_VMPID		(SCHED_VERS+104) // PID of process for a VM
 #define VM_UNIV_GUEST_IP	(SCHED_VERS+105) // IP address of VM
@@ -175,7 +175,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define GET_PRIORITY_ROLLUP (SCHED_VERS+114) // negotiator
 #define QUERY_SCHEDD_HISTORY (SCHED_VERS+115)
 #define QUERY_JOB_ADS (SCHED_VERS+116)
-#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot.
+//#define SWAP_CLAIM_AND_ACTIVATION (SCHED_VERS+117) // swap claim & activation between two STARTD resources, for moving a job into a 'transfer' slot. (Not used)
 #define SEND_RESOURCE_REQUEST_LIST	(SCHED_VERS+118)     // used in negotiation protocol
 #define QUERY_JOB_ADS_WITH_AUTH (SCHED_VERS+119) // Same as QUERY_JOB_ADS but requires authentication
 #define FETCH_PROXY_DELEGATION (SCHED_VERS+120)
@@ -192,6 +192,9 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define EXPORT_JOBS (SCHED_VERS+126) // Schedd: export selected jobs to a new job_queue.log put jobs into externally managed state
 #define IMPORT_EXPORTED_JOB_RESULTS (SCHED_VERS+127) // Schedd: import changes to previously exported jobs and take them out of managed state
 #define UNEXPORT_JOBS (SCHED_VERS+128) // Schedd: undo previous export of selected jobs, taking them out of managed state
+// Get the Submitter Floor
+#define GET_FLOOR (SCHED_VERS+129)
+#define SET_FLOOR (SCHED_VERS+130)
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0  // retirement time and vacate time are honored
@@ -504,17 +507,17 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 /*
 *** Commands used by the transfer daemon
 */
-#define TRANSFERD_BASE 74000
+//#define TRANSFERD_BASE 74000
 /* This is used by the schedd when a transferd registers itself */
-#define TRANSFERD_REGISTER		(TRANSFERD_BASE+0)
+//#define TRANSFERD_REGISTER		(TRANSFERD_BASE+0)	// Not used
 /* a channel under which a transferd may be sent control message such as
 	being informed of a new a new transfer request 
 */
-#define TRANSFERD_CONTROL_CHANNEL	(TRANSFERD_BASE+1)
+//#define TRANSFERD_CONTROL_CHANNEL	(TRANSFERD_BASE+1)	// Not used
 /* Files are being written to the transferd for storage */
-#define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)
+//#define TRANSFERD_WRITE_FILES	(TRANSFERD_BASE+2)	// Not used
 /* files are being read from the transferd's storage */
-#define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)
+//#define TRANSFERD_READ_FILES	(TRANSFERD_BASE+3)	// Not used
 
 
 /*
@@ -557,11 +560,8 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 
 /* Replies specific to the REQUEST_CLAIM command */
 #define REQUEST_CLAIM_LEFTOVERS		3
-#define REQUEST_CLAIM_PAIR			4
+//#define REQUEST_CLAIM_PAIR			4	// Not used
 #define REQUEST_CLAIM_LEFTOVERS_2	5
-#define REQUEST_CLAIM_PAIR_2		6
-
-/* Replies specific to the SWAP_CLAIM_AND_ACTIVATION command */
-#define SWAP_CLAIM_ALREADY_SWAPPED	4
+//#define REQUEST_CLAIM_PAIR_2		6		// Not used
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */

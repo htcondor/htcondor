@@ -47,7 +47,10 @@
 #include "credmon_interface.h"
 #include "condor_base64.h"
 #include "zkm_base64.h"
+#include "manifest.h"
+#include "checksum.h"
 
+#include <fstream>
 #include <algorithm>
 
 extern Starter *Starter;
@@ -1101,7 +1104,7 @@ JICShadow::removeFromOutputFiles( const char* filename )
 }
 
 bool
-JICShadow::uploadCheckpointFiles()
+JICShadow::uploadCheckpointFiles(int checkpointNumber)
 {
 	if(! filetrans) {
 		return false;
@@ -1119,15 +1122,17 @@ JICShadow::uploadCheckpointFiles()
 	priv_state saved_priv = set_user_priv();
 
 	// this will block
-	bool rval = filetrans->UploadCheckpointFiles( true );
+	bool rval = filetrans->UploadCheckpointFiles( checkpointNumber, true );
 	set_priv( saved_priv );
 
 	if( !rval ) {
 		// Failed to transfer.
-		dprintf( D_ALWAYS,"JICShadow::uploadCheckpointFiles() failed.\n" );
+		dprintf( D_ALWAYS, "JICShadow::uploadCheckpointFiles() failed.\n" );
+		holdJob( "Starter failed to upload checkpoint",
+		         CONDOR_HOLD_CODE::FailedToCheckpoint, -1 );
 		return false;
 	}
-	dprintf( D_FULLDEBUG,"JICShadow::uploadCheckpointFiles() succeeded.\n" );
+	dprintf( D_FULLDEBUG, "JICShadow::uploadCheckpointFiles() succeeded.\n" );
 	return true;
 }
 
@@ -1232,15 +1237,6 @@ JICShadow::initUserPriv( void )
 		job_ad->LookupString(ATTR_JOB_VM_TYPE, vm_univ_type);
 	}
 
-	if( run_as_owner && (job_universe == CONDOR_UNIVERSE_VM) ) {
-		bool use_vm_nobody_user = param_boolean("ALWAYS_VM_UNIV_USE_NOBODY", false);
-		if( use_vm_nobody_user ) {
-			run_as_owner = false;
-			dprintf( D_ALWAYS, "Using VM_UNIV_NOBODY_USER instead of %s\n", 
-					owner.c_str());
-		}
-	}
-
 	if( run_as_owner ) {
 			// Cool, we can try to use ATTR_OWNER directly.
 			// NOTE: we want to use the "quiet" version of
@@ -1254,10 +1250,6 @@ JICShadow::initUserPriv( void )
 			if( checkDedicatedExecuteAccounts( owner.c_str() ) ) {
 				setExecuteAccountIsDedicated( owner.c_str() );
 			}
-		}
-		else if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE) == MATCH ) {
-			// For VMware vm universe, we can't use SOFT_UID_DOMAIN
-			run_as_owner = false;
 		}
 		else {
 				// There's a problem, maybe SOFT_UID_DOMAIN can help.
@@ -1330,24 +1322,10 @@ JICShadow::initUserPriv( void )
 		}
 		upper_case(slotName);
 
-		if( job_universe == CONDOR_UNIVERSE_VM ) {
-			// If "VM_UNIV_NOBODY_USER" is defined in Condor configuration file, 
-			// we will use it. 
-			snprintf( nobody_param, 20, "VM_UNIV_NOBODY_USER" );
-			nobody_user = param(nobody_param);
-			if( nobody_user == NULL ) {
-				// "VM_UNIV_NOBODY_USER" is NOT defined.
-				// Next, we will try to use SLOTx_VMUSER
-				snprintf( nobody_param, 20, "%s_VMUSER", slotName.c_str() );
-				nobody_user = param(nobody_param);
-			}
-		}
-		if( nobody_user == NULL ) {
-			snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
-			nobody_user = param(nobody_param);
-			if (! nobody_user) {
-				nobody_user = param("NOBODY_SLOT_USER");
-			}
+		snprintf( nobody_param, 20, "%s_USER", slotName.c_str() );
+		nobody_user = param(nobody_param);
+		if (! nobody_user) {
+			nobody_user = param("NOBODY_SLOT_USER");
 		}
 
         if ( nobody_user != NULL ) {
@@ -1363,16 +1341,6 @@ JICShadow::initUserPriv( void )
         } else {
             nobody_user = strdup("nobody");
         }
-
-
-		if( strcasecmp(vm_univ_type.c_str(), CONDOR_VM_UNIVERSE_VMWARE ) == MATCH ) {
-			// VMware doesn't support that "nobody" creates a VM.
-			// So for VMware vm universe, we will "condor" instead of "nobody".
-			if( strcmp(nobody_user, "nobody") == MATCH ) {
-				free(nobody_user);
-				nobody_user = strdup(get_condor_username());
-			}
-		}
 
 			// passing NULL for the domain is ok here since this is
 			// UNIX code
@@ -1403,7 +1371,7 @@ JICShadow::initJobInfo( void )
 		// Give our base class a chance.
 	if (!JobInfoCommunicator::initJobInfo()) return false;
 
-	char *orig_job_iwd;
+	std::string orig_job_iwd;
 	std::string x509userproxy;
 
 	if( ! job_ad ) {
@@ -1422,7 +1390,7 @@ JICShadow::initJobInfo( void )
 	}
 
 		// stash the iwd name in orig_job_iwd
-	if( ! job_ad->LookupString(ATTR_JOB_IWD, &orig_job_iwd) ) {
+	if( ! job_ad->LookupString(ATTR_JOB_IWD, orig_job_iwd) ) {
 		dprintf( D_ALWAYS, "Error in JICShadow::initJobInfo(): "
 				 "Can't find %s in job ad\n", ATTR_JOB_IWD );
 		return false;
@@ -1430,7 +1398,6 @@ JICShadow::initJobInfo( void )
 			// put the orig job iwd in class ad
 		dprintf(D_ALWAYS, "setting the orig job iwd in starter\n");
 		job_ad->Assign(ATTR_ORIG_JOB_IWD, orig_job_iwd);
-		free(orig_job_iwd);
 	}
 
 	if( ! job_ad->LookupInteger(ATTR_JOB_UNIVERSE, job_universe) ) {
@@ -2522,6 +2489,58 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			EXCEPT( "Failed to transfer files" );
 		}
+
+		// It's not enought to for the FTO to believe that the transfer
+		// of a checkpoint succeeded if that checkpoint wasn't transferred
+		// by CEDAR (because our file-transfer plugins don't do integrity).
+		std::string checkpointDestination;
+		if( job_ad->LookupString( "CheckpointDestination", checkpointDestination ) ) {
+			// We only generate MANIFEST files if the checkpoint wasn't
+			// stored to the spool, which is exactly the case in which
+			// we want to do this manual integrity check.
+
+			// Due to a shortcoming in the FTO, we can't send files with
+			// one name from the shadow to the starter with another, so
+			// we have to look for any file of the form `MANIFEST\.\d\d\d\d`;
+			// it is erroneous to have received more than one.
+
+			std::string manifestFileName;
+			const char * currentFile = NULL;
+			// Should this be Starter->getWorkingDir(false)?
+			Directory sandboxDirectory( "." );
+			while( (currentFile = sandboxDirectory.Next()) ) {
+				if( -1 != manifest::getNumberFromFileName( currentFile ) ) {
+					if(! manifestFileName.empty()) {
+						std::string message = "Found more than one MANIFEST file, aborting.";
+						notifyStarterError( message.c_str(), true, 0, 0 );
+						EXCEPT( "%s\n", message.c_str() );
+					}
+					manifestFileName = currentFile;
+				}
+			}
+
+			if(! manifestFileName.empty()) {
+
+				// This file should have been transferred via CEDAR, so this
+				// check shouldn't be necessary, but it also ensures that we
+				// haven't had a name collision with the job.
+				if(! manifest::validateManifestFile( manifestFileName )) {
+					std::string message = "Invalid MANIFEST file, aborting.";
+					notifyStarterError( message.c_str(), true, 0, 0 );
+					EXCEPT( "%s\n", message.c_str() );
+				}
+
+				std::string error;
+				if(! manifest::validateFilesListedIn( manifestFileName, error )) {
+					formatstr( error, "%s, aborting.", error.c_str() );
+					notifyStarterError( error.c_str(), true, 0, 0 );
+					EXCEPT( "%s\n", error.c_str() );
+				}
+
+				unlink( manifestFileName.c_str() );
+			}
+		}
+
 		const char *stats = m_ft_info.tcp_stats.c_str();
 		if (strlen(stats) != 0) {
 			std::string full_stats = "(peer stats from starter): ";
@@ -3059,7 +3078,7 @@ JICShadow::refreshSandboxCredentialsOAuth()
 void
 JICShadow::initMatchSecuritySession()
 {
-	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION",false) ) {
+	if( !param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
 		return;
 	}
 

@@ -55,6 +55,7 @@
 #include "classad_helpers.h"
 #include "iso_dates.h"
 #include "jobsets.h"
+#include "exit.h"
 #include <algorithm>
 #include <param_info.h>
 #include <shortfile.h>
@@ -355,14 +356,6 @@ bool operator()(const prio_rec& a, const prio_rec& b) const
 	}
 
 	 /* here, all job_prios are both equal */
-
-	 /* check for job submit times */
-	 if( a.qdate < b.qdate ) {
-		  return true;
-	 }
-	 if( a.qdate > b.qdate ) {
-		  return false;
-	 }
 
 	 /* go in order of cluster id */
 	if ( a.id.cluster < b.id.cluster )
@@ -1980,7 +1973,7 @@ InitClusterAd (
 		if ( ! jobset) {
 			name2 = JobSets::makeAlias(name1, cad->ownerinfo->name);
 			unsigned int & setId = needed_sets[name2];
-			if (!setId || (setId > cad->jid.cluster)) { setId = cad->jid.cluster; }
+			if (!setId || (setId > (unsigned) cad->jid.cluster)) { setId = cad->jid.cluster; }
 
 			// set set_id header field to 0 to mean 'figure out the id later'
 			// and if it was already set to non-zero,  that means the ad has a bogus attribute value
@@ -2401,15 +2394,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 					JobQueueDirty = true;
 				}
 			}
-			// AsyncXfer: Delete in-job output transfer attributes
-			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT,transferring_output) ) {
-				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT);
-				JobQueueDirty = true;
-			}
-			if( ad->LookupInteger(ATTR_JOB_TRANSFERRING_OUTPUT_TIME,transferring_output) ) {
-				ad->Delete(ATTR_JOB_TRANSFERRING_OUTPUT_TIME);
-				JobQueueDirty = true;
-			}
 			if( ad->LookupString(ATTR_CLAIM_ID, buffer) ) {
 				ad->Delete(ATTR_CLAIM_ID);
 				PrivateAttrs[key][ATTR_CLAIM_ID] = buffer;
@@ -2417,10 +2401,6 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if( ad->LookupString(ATTR_CLAIM_IDS, buffer) ) {
 				ad->Delete(ATTR_CLAIM_IDS);
 				PrivateAttrs[key][ATTR_CLAIM_IDS] = buffer;
-			}
-			if( ad->LookupString(ATTR_PAIRED_CLAIM_ID, buffer) ) {
-				ad->Delete(ATTR_PAIRED_CLAIM_ID);
-				PrivateAttrs[key][ATTR_PAIRED_CLAIM_ID] = buffer;
 			}
 
 			// count up number of procs in cluster, update ClusterSizeHashTable
@@ -6562,7 +6542,7 @@ AbortTransactionAndRecomputeClusters()
 
 
 int
-GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, float *val)
+GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *val)
 {
 	ClassAd	*ad;
 	JobQueueKeyBuf	key;
@@ -6835,7 +6815,7 @@ DeleteAttribute(int cluster_id, int proc_id, const char *attr_name)
 }
 
 // 
-int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int flags, int & terrno)
+int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & terrno)
 {
 	// check to see if the schedd is permitting jobsets
 	if ( ! scheduler.jobSets) {
@@ -8164,7 +8144,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
             post_job_prio1, 
             post_job_prio2;
     int     job_status;
-    int     q_date;
     char    owner[100];
     int     cur_hosts;
     int     max_hosts;
@@ -8243,7 +8222,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     }
 
     job->LookupInteger(ATTR_JOB_PRIO, job_prio);
-    job->LookupInteger(ATTR_Q_DATE, q_date);
 
 	char * powner = owner;
 	int cremain = sizeof(owner);
@@ -8289,7 +8267,6 @@ int get_job_prio(JobQueueJob *job, const JOB_ID_KEY & jid, void *)
     PrioRec[N_PrioRecs].post_job_prio1 = post_job_prio1;
     PrioRec[N_PrioRecs].post_job_prio2 = post_job_prio2;
     PrioRec[N_PrioRecs].status         = job_status;
-    PrioRec[N_PrioRecs].qdate          = q_date;
     PrioRec[N_PrioRecs].not_runnable   = false;
     PrioRec[N_PrioRecs].matched        = false;
 	if ( auto_id == -1 ) {
@@ -8409,7 +8386,7 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 			// Schedd must have died before committing this job's wall
 			// clock time.  So, commit the wall clock saved in the
 			// wall clock checkpoint.
-		float wall_clock = 0.0;
+		double wall_clock = 0.0;
 		GetAttributeFloat(cluster,proc,ATTR_JOB_REMOTE_WALL_CLOCK,&wall_clock);
 		wall_clock += wall_clock_ckpt;
 		BeginTransaction();
@@ -8420,10 +8397,10 @@ int mark_idle(JobQueueJob *job, const JobQueueKey& /*key*/, void* /*pvArg*/)
 			// potentially double-count
 		DeleteAttribute(cluster,proc,ATTR_SHADOW_BIRTHDATE);
 
-		float slot_weight = 1;
+		double slot_weight = 1;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_JOB_MACHINE_ATTR_SLOT_WEIGHT0,&slot_weight);
-		float slot_time = 0;
+		double slot_time = 0;
 		GetAttributeFloat(cluster, proc,
 						  ATTR_CUMULATIVE_SLOT_TIME,&slot_time);
 		slot_time += wall_clock_ckpt*slot_weight;
@@ -8954,11 +8931,11 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 				// of the claim with lower RANK, but future versions
 				// very well may.)
 
-			float current_startd_rank;
+			double current_startd_rank;
 			if( my_match_ad &&
 				my_match_ad->LookupFloat(ATTR_CURRENT_RANK, current_startd_rank) )
 			{
-				float new_startd_rank = 0;
+				double new_startd_rank = 0;
 				if( EvalFloat(ATTR_RANK, my_match_ad, ad, new_startd_rank) )
 				{
 					if( new_startd_rank < current_startd_rank ) {

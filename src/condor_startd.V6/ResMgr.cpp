@@ -144,7 +144,7 @@ double ResMgr::Stats::BeginWalk(VoidResourceMember  /*memberfunc*/)
 double ResMgr::Stats::EndWalk(VoidResourceMember memberfunc, double before)
 {
     stats_recent_counter_timer * probe = &WalkOther;
-    if (memberfunc == &Resource::update) 
+    if (memberfunc == &Resource::update_walk_for_timer || memberfunc == &Resource::update_walk_for_vm_change)
        probe = &WalkUpdate;
     else if (memberfunc == &Resource::eval_state)
        probe = &WalkEvalState;
@@ -446,6 +446,7 @@ ResMgr::init_resources( void )
 {
 	int i, num_res;
 	CpuAttributes** new_cpu_attrs;
+	bool *bkfill_bools = nullptr;
 
 	m_execution_xfm.config("JOB_EXECUTION");
 
@@ -476,11 +477,12 @@ ResMgr::init_resources( void )
 	initTypes( max_types, type_strings, 1 );
 
 		// First, see how many slots of each type are specified.
-	num_res = countTypes( max_types, num_cpus(), &type_nums, true );
+	num_res = countTypes( max_types, num_cpus(), &type_nums, &bkfill_bools, true );
 
 	if( ! num_res ) {
 			// We're not configured to advertise any nodes.
 		resources = NULL;
+		delete [] bkfill_bools;
 		id_disp = new IdDispenser( 1 );
 		return;
 	}
@@ -488,7 +490,7 @@ ResMgr::init_resources( void )
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.  Since this is the startup-code
 		// we'll let it EXCEPT() if there is an error.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, true );
+	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num_res, type_nums, bkfill_bools, true );
 	if( ! new_cpu_attrs ) {
 		EXCEPT( "buildCpuAttrs() failed and should have already EXCEPT'ed" );
 	}
@@ -508,6 +510,7 @@ ResMgr::init_resources( void )
 		// Resource objects.  Since it's an array of pointers, this
 		// won't touch the objects at all.
 	delete [] new_cpu_attrs;
+	delete [] bkfill_bools;
 
 #if HAVE_BACKFILL
 	backfillConfig();
@@ -546,6 +549,7 @@ ResMgr::reconfig_resources( void )
 {
 	int t, i, cur, num;
 	CpuAttributes** new_cpu_attrs;
+	bool *bkfill_bools = nullptr;
 	int max_num = num_cpus();
 	int* cur_type_index;
 	Resource*** sorted_resources;	// Array of arrays of pointers.
@@ -579,26 +583,30 @@ ResMgr::reconfig_resources( void )
 	initTypes( max_types, type_strings, 0 );
 
 		// First, see how many slots of each type are specified.
-	num = countTypes( max_types, num_cpus(), &new_type_nums, false );
+	num = countTypes( max_types, num_cpus(), &new_type_nums, &bkfill_bools, false );
 
 	if( typeNumCmp(new_type_nums, type_nums) ) {
 			// We want the same number of each slot type that we've got
 			// now.  We're done!
 		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
 		delete [] new_type_nums;
+		delete [] bkfill_bools;
 		new_type_nums = NULL;
+		bkfill_bools = nullptr;
 		return true;
 	}
 
 		// See if the config file allows for a valid set of
 		// CpuAttributes objects.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, false );
+	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, bkfill_bools, false );
 	if( ! new_cpu_attrs ) {
 			// There was an error, abort.  We still return true to
 			// indicate that we're done doing our thing...
 		dprintf( D_ALWAYS, "Aborting slot type reconfig.\n" );
 		delete [] new_type_nums;
+		delete [] bkfill_bools;
 		new_type_nums = NULL;
+		bkfill_bools = nullptr;
 		return true;
 	}
 
@@ -672,6 +680,7 @@ ResMgr::reconfig_resources( void )
 		// elsewhere, and the rest has already been deleted, so we
 		// should now delete the array itself.
 	delete [] new_cpu_attrs;
+	delete [] bkfill_bools;
 
 		// Cleanup our memory.
 	for( i=0; i<max_types; i++ ) {
@@ -1184,7 +1193,7 @@ ResMgr::update_all( void )
 		// If we didn't update b/c of the eval_state, we need to
 		// actually do the update now. Tj 2020 sez: this is a lie, was it ever true?
 		// What this actually does is insure that the update timers have been registered for all slots
-	walk( &Resource::update );
+	walk( &Resource::update_walk_for_timer );
 
 	report_updates();
 	check_polling();
@@ -1262,6 +1271,8 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 		return;
 	}
 
+	// rip will be NULL when we are called because of the main update and/or policy eval timer
+	// rip will be NON-NULL when we are called by claim activation or d-slot creation
 	Resource * parent = NULL;
 	if (rip) {
 		parent = rip->get_parent();
@@ -1277,6 +1288,7 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 	cur_time = time( 0 );
 
 	compute_draining_attrs();
+	compute_resource_conflicts();
 
 	// for updates, we recompute some machine attributes (like virtual mem)
 	// and that may require a recompute of the resources that reference them
@@ -1756,26 +1768,6 @@ ResMgr::addResource( Resource *rip )
 
 	resources = new_resources;
 	nresources++;
-
-	// if this newly added slot is part of a pair, fixup the pair pointers
-	dprintf(D_FULLDEBUG, "Setting up slot pairings\n");
-	if (rip->r_pair_name && rip->r_pair_name[0] == '#') {
-		int slot_type = atoi(rip->r_pair_name+1);
-		dprintf(D_ALWAYS, "\t searching for type %d to pair with %s (%s)\n", slot_type, rip->r_id_str, rip->r_pair_name);
-		for (int ix = 0; ix < nresources-1; ++ix) {
-			Resource * ripT = resources[ix];
-			if (ripT->type() == slot_type) {
-				if ( ! ripT->r_pair_name || ripT->r_pair_name[0] == '#') {
-					// ok pair these two.
-					free(rip->r_pair_name);
-					free(ripT->r_pair_name);
-					rip->r_pair_name = strdup(ripT->r_name);
-					ripT->r_pair_name = strdup(rip->r_name);
-					break;
-				}
-			}
-		}
-	}
 
 	// If this newly added slot is dynamic, add it to
 	// its parent's children
@@ -2273,7 +2265,7 @@ ResMgr::checkHibernate( void )
         m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
         for ( int i = 0; i < nresources; ++i ) {
             resources[i]->enable();
-            resources[i]->update();
+            resources[i]->update_needed(Resource::WhyFor::wf_hiberChange);
 			m_hibernating = false;
 	    }
 
@@ -2561,6 +2553,73 @@ ResMgr::FillExecuteDirsList( class StringList *list )
 		}
 	}
 }
+
+bool
+ResMgr::compute_resource_conflicts()
+{
+	dprintf(D_ZKM | D_VERBOSE, "ResMgr::compute_resource_conflicts\n");
+
+	ResBag totbag;
+	std::string dumptmp;
+	std::deque<Resource*> active;
+	int num_nft_conflict = 0; // number of active backfill slots that already have non-fungible resource conflicts
+
+	// Build up a bag of unclaimed resources
+	// and a list of active backfill slots
+	// TODO: fix for claimed p-slots when that changes
+	for(int ii = 0; ii < nresources; ++ii) {
+		Resource *rip = resources[ii];
+		State state = rip->state();
+		if (state == claimed_state || state == preempting_state || rip->r_sub_id > 0) {
+			if (rip->r_backfill_slot) {
+				if (rip->has_nft_conflicts(resmgr->m_attr)) {
+					++num_nft_conflict;
+					active.push_front(rip);
+				} else {
+					active.push_back(rip);
+				}
+			}
+			// subtract active backfill slots from the resource bag
+			totbag -= *rip->r_attr;
+			dprintf(D_ZKM, "conflicts SUB %s %s\n", rip->r_name, totbag.dump(dumptmp));
+		} else if ( ! rip->r_backfill_slot && rip->r_sub_id == 0) {
+			// add primary p-slots to the resource bag
+			totbag += *rip->r_attr;
+			dprintf(D_ZKM, "conflicts ADD %s %s\n", rip->r_name, totbag.dump(dumptmp));
+		}
+	}
+
+	// if we get to here with a negative value in the bag of unclaimed resources
+	// we need to start kicking off backfill slots.  For now, we do that by
+	// assigning the resource conflicts to specific backfill slots and trusting PREEMPT to kick off the jobs
+
+	// If there were fungible resource conflicts, totbag will be in and underflow state
+	std::string conflicts;
+	bool has_conflicts = totbag.underrun(&conflicts);
+	dprintf(D_ZKM, "resource_conflicts(%d NFT of %d active) : %s\n",  num_nft_conflict, (int)active.size(), conflicts.c_str());
+
+	// go back through the active backfill slots and assign the conflicts
+	// the active backfill slot collection will have slots that have non-fungible resource conflicts first
+	if (has_conflicts) {
+		// assign fungible res conflicts to the slots that have non-fungible conflicts first
+		for (auto rip : active) {
+			int d_verb = (conflicts.empty() ? D_VERBOSE : 0);
+			bool nft_conflict = num_nft_conflict-- > 0;
+			dprintf(D_ZKM | d_verb, "assigning conflicts %s to %s%s\n",
+				conflicts.c_str(), rip->r_name,
+				nft_conflict ? "  which already has NFT conflicts" : "");
+
+			rip->set_res_conflict(conflicts);
+			totbag += *rip->r_attr;
+			dprintf(D_ZKM | d_verb, "conflicts ADD %s %s\n", rip->r_name, totbag.dump(dumptmp));
+			conflicts.clear();
+			totbag.underrun(&conflicts);
+		}
+	}
+
+	return false;
+}
+
 
 ExprTree * globalDrainingStartExpr = NULL;
 

@@ -86,7 +86,14 @@ void GetConfigExecuteDir( int slot_id, std::string &execute_dir, std::string &pa
 	free(partition_value);
 }
 
-CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList **type_strings, int total, int* type_num_array, bool except )
+CpuAttributes** buildCpuAttrs(
+	MachAttributes *m_attr,
+	int max_types,
+	StringList **type_strings,
+	int total,
+	int* type_num_array,
+	bool *backfill_types,
+	bool except )
 {
 	int num;
 	CpuAttributes* cap;
@@ -95,6 +102,7 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 
 		// Available system resources.
 	AvailAttributes avail( m_attr );
+	AvailAttributes bkavail( m_attr );
 
 	cap_array = new CpuAttributes* [total];
 	if( ! cap_array ) {
@@ -106,7 +114,13 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 		if( type_num_array[i] ) {
 			for (int j=0; j<type_num_array[i]; j++) {
 				cap = buildSlot( m_attr, num+1, type_strings[i], i, except );
-				if( avail.decrement(cap) && num < total ) {
+				bool fits = false;
+				if (backfill_types[i]) {
+					fits = bkavail.decrement(cap);
+				} else {
+					fits = avail.decrement(cap);
+				}
+				if( fits && num < total ) {
 					cap_array[num] = cap;
 					num++;
 				} else {
@@ -137,8 +151,9 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 		// gather remaining resources and counts of slots desiring auto shares
 		// of user-defined resources into remain_cap, and remain_cnt.  these
 		// will be use to distribute auto shares in the loop below.
-	AvailAttributes::slotres_map_t remain_cap, remain_cnt;
+	AvailAttributes::slotres_map_t remain_cap, remain_cnt, bkremain_cap, bkremain_cnt;
 	avail.computeRemainder(remain_cap, remain_cnt);
+	bkavail.computeRemainder(bkremain_cap, bkremain_cnt);
 
 	// to make the output easier to read, only report the unallocated cap for each slot type once.
 	const int d_level = D_ALWAYS;
@@ -156,13 +171,24 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 			}
 			report_auto &= ~bit;
 		}
-		if( !avail.computeAutoShares(cap, remain_cap, remain_cnt) ) {
+		bool backfill = backfill_types[cap->type()];
+		bool fits;
+		if (backfill) {
+			fits = bkavail.computeAutoShares(cap, bkremain_cap, bkremain_cnt);
+		} else {
+			fits = avail.computeAutoShares(cap, remain_cap, remain_cnt);
+		}
+		if( !fits ) {
 
 			// We ran out of system resources.
 			logbuf =    "\tRequesting: ";
 			cap->cat_totals(logbuf);
 			logbuf += "\n\tAvailable:  ";
-			avail.cat_totals(logbuf, cap->executePartitionID());
+			if (backfill) {
+				bkavail.cat_totals(logbuf, cap->executePartitionID());
+			} else {
+				avail.cat_totals(logbuf, cap->executePartitionID());
+			}
 
 			dprintf(D_ALWAYS | D_FAILURE,
 					"ERROR: Can't allocate slot id %d (slot type %d) during auto allocation of resources\n%s\n",
@@ -189,7 +215,8 @@ CpuAttributes** buildCpuAttrs( MachAttributes *m_attr, int max_types, StringList
 	}
 
 	for (int i=0; i<num; i++) {
-		cap_array[i]->bind_DevIds(i+1, 0, true);
+		bool backfill = backfill_types[cap_array[i]->type()];
+		cap_array[i]->bind_DevIds(i+1, 0, backfill, true);
 	}
 	return cap_array;
 }
@@ -234,11 +261,12 @@ void initTypes( int max_types, StringList **type_strings, int except )
 }
 
 
-int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
+int countTypes( int max_types, int num_cpus, int** array_ptr, bool** bkfill_ptr, bool except )
 {
 	int i, num=0, num_set=0;
 	std::string param_name;
 	int* my_type_nums = new int[max_types];
+	bool* my_bkfill_bools = new bool[max_types];
 
 	if( ! array_ptr ) {
 		EXCEPT( "ResMgr:countTypes() called with NULL array_ptr!" );
@@ -246,8 +274,6 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 
 		// Type 0 is special, user's shouldn't define it.
 	_checkInvalidParam("NUM_SLOTS_TYPE_0", except);
-		// CRUFT
-	_checkInvalidParam("NUM_VIRTUAL_MACHINES_TYPE_0", except);
 
 	for( i=1; i<max_types; i++ ) {
 		formatstr(param_name, "NUM_SLOTS_TYPE_%d", i);
@@ -256,11 +282,14 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 			num_set = 1;
 			num += my_type_nums[i];
 		}
+		formatstr(param_name, "SLOT_TYPE_%d_BACKFILL", i);
+		my_bkfill_bools[i] = param_boolean(param_name.c_str(), false);
 	}
 
 	if( num_set ) {
-			// We found type-specific stuff, use that.
+			// We found type-specific stuff, use that and set the number of type 0 slots to 0
 		my_type_nums[0] = 0;
+		my_bkfill_bools[0] = false;
 	} else {
 			// We haven't found any special types yet.  Therefore,
 			// we're evenly dividing things, so we only have to figure
@@ -269,8 +298,10 @@ int countTypes( int max_types, int num_cpus, int** array_ptr, bool except )
 		bool pslot = param_boolean("SLOT_TYPE_0_PARTITIONABLE", false);
 		my_type_nums[0] = param_integer("NUM_SLOTS", pslot ? 1 : num_cpus);
 		num = my_type_nums[0];
+		my_bkfill_bools[0] = param_boolean("SLOT_TYPE_0_BACKFILL", false);
 	}
 	*array_ptr = my_type_nums;
+	*bkfill_ptr = my_bkfill_bools;
 	return num;
 }
 

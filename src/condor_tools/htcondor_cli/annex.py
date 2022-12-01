@@ -34,7 +34,7 @@ class Create(Verb):
             "args": ("--nodes",),
             "help": "Number of HPC nodes to schedule. Defaults to %(default)s",
             "type": int,
-            "default": 2,
+            "default": 1,
         },
         "lifetime": {
             "args": ("--lifetime",),
@@ -101,6 +101,31 @@ class Create(Verb):
         "login_host": {
             "args": ("--login-host","--host",),
             "help": "The (SSH) login host to use for this capacity request.  The default is system-specific.",
+            "default": None,
+        },
+        "startd_noclaim_shutdown": {
+            "args": ("--idle-time", "--startd-noclaim-shutdown"),
+            "metavar": "SECONDS",
+            "dest": "startd_noclaim_shutdown",
+            "help": "The number of seconds to remain idle before shutting down.  Default and suggested minimum is 300 seconds.",
+            "default": 300,
+            "type": int,
+        },
+        "gpus": {
+            "args": ("--gpus",),
+            "help": "Number of GPUs to request (GPU queues only).  Unset by default.",
+            "type": str,
+            "default": None,
+        },
+        "gpu_type": {
+            "args": ("--gpu-type",),
+            "help": "Type of GPU to request (GPU queues only).  Unset by default.",
+            "default": None,
+        },
+        "test": {
+            "args": ("--test",),
+            "help": argparse.SUPPRESS,
+            "type": int,
             "default": None,
         },
     }

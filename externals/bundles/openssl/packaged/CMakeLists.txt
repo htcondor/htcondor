@@ -19,54 +19,43 @@ target_link_libraries(openssl INTERFACE crypto)
 if (APPLE)
 	include(FetchContent)
 
-	exec_program (sw_vers ARGS -productVersion OUTPUT_VARIABLE MACOS_PRODUCT_VER)
+	# Fetch the whole source tarball, then delete the
+	# CMakeLists.txt so we don't try to build it
+	# Then download a copy of the dynamic libraries to
+	# link against.
+	FetchContent_declare(
+		libressl_headers_darwin
+		URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
+		PATCH_COMMAND /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt" && ln -s ../libressl_libs_darwin-src/lib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib"
+	)
 
-	# On older macOS verions, copy the libressl header files that
-	# we took from a previous macos and use it to build,
-	# symlinking the on-the-host shared libraries into our source directory
-	if (${MACOS_PRODUCT_VER} VERSION_LESS "10.20")
-		FetchContent_declare(
-			libressl_headers_darwin
-			URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
-			PATCH_COMMAND mkdir -p "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib" && ln -s /usr/lib/libcrypto.44.dylib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib/libcrypto.dylib" && ln -s /usr/lib/libssl.46.dylib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib/libssl.dylib" && /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt"
-		)
-		FetchContent_MakeAvailable(libressl_headers_darwin)
+	# then fetch prebuilt libressl libraries
+	string(TOLOWER "${SYS_ARCH}" LIBRESSL_ARCH)
+	FetchContent_declare(
+		libressl_libs_darwin
+		URL ${EXTERNALS_SOURCE_URL}/libressl_libs_${LIBRESSL_ARCH}-2.8.3.tar.gz
+	)
+	FetchContent_MakeAvailable(libressl_headers_darwin libressl_libs_darwin)
 
-		set_target_properties(openssl PROPERTIES IMPORTED_LOCATION "${libressl_headers_darwin_SOURCE_DIR}/lib/libssl.dylib")
-		set_target_properties(crypto  PROPERTIES IMPORTED_LOCATION "${libressl_headers_darwin_SOURCE_DIR}/lib/libcrypto.dylib")
-		target_include_directories(openssl-headers INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
+	# On macOS 13 (Ventura), we can't use the OS LibreSSL
+	# libraries at runtime.
+	# Instead, ship the libraries we download and link against.
+	execute_process(COMMAND install_name_tool -id @loader_path/libcrypto.44.dylib libcrypto.44.dylib
+		WORKING_DIRECTORY ${libressl_libs_darwin_SOURCE_DIR}/lib
+	)
+	execute_process(COMMAND install_name_tool -change /usr/lib/libcrypto.44.dylib @loader_path/libcrypto.44.dylib -id @loader_path/libssl.46.dylib libssl.46.dylib
+		WORKING_DIRECTORY ${libressl_libs_darwin_SOURCE_DIR}/lib
+	)
 
-		target_include_directories(openssl INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
-	else()
-		# Fetch the whole source tarball, then delete the
-		# CMakeLists.txt so we don't try to build it
-		# Then download a copy of the dynamic libraries to
-		# link against.
-		FetchContent_declare(
-			libressl_headers_darwin
-			URL ${EXTERNALS_SOURCE_URL}/libressl-2.8.3.tar.gz
-			PATCH_COMMAND /bin/rm -f "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/CMakeLists.txt" && ln -s ../libressl_libs_darwin-src/lib "${CMAKE_BINARY_DIR}/_deps/libressl_headers_darwin-src/lib"
-		)
+	file(GLOB LIBRESSL_FILES_TO_INSTALL ${libressl_libs_darwin_SOURCE_DIR}/lib/lib*.*.dylib)
+	install ( FILES
+		${LIBRESSL_FILES_TO_INSTALL}
+		DESTINATION ${C_LIB}/condor )
 
-		# then fetch the libressl libraries from an earlier macos
-		if (${SYS_ARCH} STREQUAL "ARM64")
-			FetchContent_declare(
-				libressl_libs_darwin
-				URL ${EXTERNALS_SOURCE_URL}/libressl_libs_arm64-2.8.3.tar.gz
-			)
-		else()
-			FetchContent_declare(
-				libressl_libs_darwin
-				URL ${EXTERNALS_SOURCE_URL}/libressl_libs-2.8.3.tar.gz
-			)
-		endif()
-		FetchContent_MakeAvailable(libressl_headers_darwin libressl_libs_darwin)
-
-		set_target_properties(openssl PROPERTIES IMPORTED_LOCATION "${libressl_libs_darwin_SOURCE_DIR}/lib/libssl.dylib")
-		set_target_properties(crypto  PROPERTIES IMPORTED_LOCATION "${libressl_libs_darwin_SOURCE_DIR}/lib/libcrypto.dylib")
-		target_include_directories(openssl-headers INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
-		target_include_directories(crypto INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
-	endif()
+	set_target_properties(openssl PROPERTIES IMPORTED_LOCATION "${libressl_libs_darwin_SOURCE_DIR}/lib/libssl.dylib")
+	set_target_properties(crypto  PROPERTIES IMPORTED_LOCATION "${libressl_libs_darwin_SOURCE_DIR}/lib/libcrypto.dylib")
+	target_include_directories(openssl-headers INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
+	target_include_directories(crypto INTERFACE "${libressl_headers_darwin_SOURCE_DIR}/include")
 
 else()
 	# The not-mac and not-windows case

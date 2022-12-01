@@ -178,11 +178,14 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		daemonCore->publish(& context);
 		resmgr->m_attr->compute_for_policy();
 		resmgr->m_attr->publish_static(& context);
-		resmgr->m_attr->publish_dynamic(& context, -1, -1);
+		resmgr->m_attr->publish_common_dynamic(& context);
 		resmgr->publish_static(& context);
 		resmgr->publish_dynamic(& context);
-		dprintf( D_FULLDEBUG, "StartdCronJobMgr::ShouldStartJob(%s): evaluating condition in the following context:\n", job.GetName() );
-		dPrintAd( D_FULLDEBUG, context );
+		if (IsDebugCategory(D_MATCH)) {
+			std::string buf;
+			dprintf( D_MATCH, "StartdCronJobMgr::ShouldStartJob(%s): evaluating in context:\n%s\n",
+				job.GetName(), formatAd(buf,context,"\t") );
+		}
 
 		classad::Value v;
 		if( context.EvaluateExpr( condition.Expr(), v ) ) {

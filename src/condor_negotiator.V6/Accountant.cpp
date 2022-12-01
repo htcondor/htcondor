@@ -46,6 +46,7 @@ std::string Accountant::ResourceRecord="Resource.";
 
 static char const *PriorityAttr="Priority";
 static char const *CeilingAttr="Ceiling";
+static char const *FloorAttr="Floor";
 static char const *ResourcesUsedAttr="ResourcesUsed";
 static char const *WeightedResourcesUsedAttr="WeightedResourcesUsed";
 static char const *HierWeightedResourcesUsedAttr="HierWeightedResourcesUsed";
@@ -123,7 +124,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   tmp = param("NICE_USER_PRIO_FACTOR");
   if(tmp) {
-	  NiceUserPriorityFactor=(float)atof(tmp);
+	  NiceUserPriorityFactor=atof(tmp);
 	  free(tmp);
   }
 
@@ -131,7 +132,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   tmp = param("REMOTE_PRIO_FACTOR");
   if(tmp) {
-	  RemoteUserPriorityFactor=(float)atof(tmp);
+	  RemoteUserPriorityFactor=atof(tmp);
 	  free(tmp);
   }
 
@@ -139,7 +140,7 @@ void Accountant::Initialize(GroupEntry* root_group)
 
   tmp = param("DEFAULT_PRIO_FACTOR");
   if(tmp) {
-	  DefaultPriorityFactor=(float)atof(tmp);
+	  DefaultPriorityFactor=atof(tmp);
 	  free(tmp);
   }
 
@@ -204,8 +205,8 @@ void Accountant::Initialize(GroupEntry* root_group)
 	  int resources_used, resources_used_really;
 	  int total_overestimated_resources = 0;
 	  int total_overestimated_users = 0;
-	  float resourcesRW_used, resourcesRW_used_really;
-	  float total_overestimated_resourcesRW = 0;
+	  double resourcesRW_used, resourcesRW_used_really;
+	  double total_overestimated_resourcesRW = 0;
 	  int total_overestimated_usersRW = 0;
 
       first_time = false;
@@ -317,9 +318,9 @@ int Accountant::GetResourcesUsed(const std::string& CustomerName)
 // Return the number of resources used (floating point version)
 //------------------------------------------------------------------
 
-float Accountant::GetWeightedResourcesUsed(const std::string& CustomerName)
+double Accountant::GetWeightedResourcesUsed(const std::string& CustomerName)
 {
-  float WeightedResourcesUsed=0.0;
+  double WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   return WeightedResourcesUsed;
 }
@@ -328,12 +329,12 @@ float Accountant::GetWeightedResourcesUsed(const std::string& CustomerName)
 // Return the priority of a customer
 //------------------------------------------------------------------
 
-float Accountant::GetPriority(const std::string& CustomerName) 
+double Accountant::GetPriority(const std::string& CustomerName) 
 {
     // Warning!  This function has a side effect of a writing the
     // PriorityFactor.
-  float PriorityFactor=GetPriorityFactor(CustomerName);
-  float Priority=MinPriority;
+  double PriorityFactor=GetPriorityFactor(CustomerName);
+  double Priority=MinPriority;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
   if (Priority<MinPriority) {
     Priority=MinPriority;
@@ -348,9 +349,19 @@ int Accountant::GetCeiling(const std::string& CustomerName)
   int ceiling = -1; // Bogus value
   GetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
   if (ceiling < 0) {
-    ceiling = -1 ; // Meaning unlimited
+    ceiling = -1; // Meaning unlimited
   }
   return ceiling;
+}
+
+int Accountant::GetFloor(const std::string& CustomerName) 
+{
+  int floor = 0; // unlimited value
+  GetAttributeInt(CustomerRecord+CustomerName,FloorAttr,floor);
+  if (floor < 0) {
+    floor = 0; // Meaning no floor at all
+  }
+  return floor;
 }
 
 //------------------------------------------------------------------
@@ -358,7 +369,7 @@ int Accountant::GetCeiling(const std::string& CustomerName)
 //------------------------------------------------------------------
 
 // Get group priority local helper function.
-float Accountant::getGroupPriorityFactor(const std::string& CustomerName) 
+double Accountant::getGroupPriorityFactor(const std::string& CustomerName) 
 {
 	std::string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
 
@@ -370,13 +381,13 @@ float Accountant::getGroupPriorityFactor(const std::string& CustomerName)
 }
 
 
-float Accountant::GetPriorityFactor(const std::string& CustomerName) 
+double Accountant::GetPriorityFactor(const std::string& CustomerName) 
 {
-  float PriorityFactor=0;
+  double PriorityFactor=0;
   GetAttributeFloat(CustomerRecord+CustomerName,PriorityFactorAttr,PriorityFactor);
   if (PriorityFactor < MIN_PRIORITY_FACTOR) {
     PriorityFactor=DefaultPriorityFactor;
-	float groupPriorityFactor = 0.0;
+	double groupPriorityFactor = 0.0;
 
 	if (strncmp(CustomerName.c_str(),NiceUserName,strlen(NiceUserName))==0) {
 		// Nice user
@@ -454,7 +465,7 @@ void Accountant::DeleteRecord(const std::string& CustomerName)
 // Set the priority of a customer
 //------------------------------------------------------------------
 
-void Accountant::SetPriorityFactor(const std::string& CustomerName, float PriorityFactor) 
+void Accountant::SetPriorityFactor(const std::string& CustomerName, double PriorityFactor) 
 {
   if ( PriorityFactor < MIN_PRIORITY_FACTOR) {
       dprintf(D_ALWAYS, "Error: invalid priority factor: %f, using %f\n",
@@ -469,7 +480,7 @@ void Accountant::SetPriorityFactor(const std::string& CustomerName, float Priori
 // Set the priority of a customer
 //------------------------------------------------------------------
 
-void Accountant::SetPriority(const std::string& CustomerName, float Priority) 
+void Accountant::SetPriority(const std::string& CustomerName, double Priority) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetPriority - CustomerName=%s, Priority=%8.3f\n",CustomerName.c_str(),Priority);
   SetAttributeFloat(CustomerRecord+CustomerName,PriorityAttr,Priority);
@@ -485,12 +496,23 @@ void Accountant::SetCeiling(const std::string& CustomerName, int ceiling)
   SetAttributeInt(CustomerRecord+CustomerName,CeilingAttr,ceiling);
 }
 
+//
+//------------------------------------------------------------------
+// Set the Floor of a customer
+//------------------------------------------------------------------
+
+void Accountant::SetFloor(const std::string& CustomerName, int floor) 
+{
+  dprintf(D_ACCOUNTANT,"Accountant::SetFloor - CustomerName=%s, Floor=%d\n",CustomerName.c_str(),floor);
+  SetAttributeInt(CustomerRecord+CustomerName,FloorAttr, floor);
+}
+
 
 //------------------------------------------------------------------
 // Set the accumulated usage of a customer
 //------------------------------------------------------------------
 
-void Accountant::SetAccumUsage(const std::string& CustomerName, float AccumulatedUsage) 
+void Accountant::SetAccumUsage(const std::string& CustomerName, double AccumulatedUsage) 
 {
   dprintf(D_ACCOUNTANT,"Accountant::SetAccumUsage - CustomerName=%s, Usage=%8.3f\n",CustomerName.c_str(),AccumulatedUsage);
   SetAttributeFloat(CustomerRecord+CustomerName,WeightedAccumulatedUsageAttr,AccumulatedUsage);
@@ -530,7 +552,7 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
   dprintf(D_ACCOUNTANT,"Accountant::AddMatch - CustomerName=%s, ResourceName=%s\n",CustomerName.c_str(),ResourceName.c_str());
 
-  float SlotWeight = 0;
+  double SlotWeight = 0;
   double match_cost = 0;
   if (ResourceAd->LookupFloat(CP_MATCH_COST, match_cost)) {
       // If CP_MATCH_COST attribute is present, we are dealing with a p-slot resource
@@ -566,11 +588,11 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-  float WeightedResourcesUsed=0.0;
+  double WeightedResourcesUsed=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  float WeightedUnchargedTime=0.0;
+  double WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
 
 
@@ -593,9 +615,9 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
 
 
   int GroupResourcesUsed=0;
-  float GroupWeightedResourcesUsed = 0.0;
+  double GroupWeightedResourcesUsed = 0.0;
   int GroupUnchargedTime=0;
-  float WeightedGroupUnchargedTime=0.0;
+  double WeightedGroupUnchargedTime=0.0;
 
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
 
@@ -620,7 +642,7 @@ void Accountant::AddMatch(const std::string& CustomerName, ClassAd* ResourceAd)
   // If this is a nested group (group_a.b.c), update usage up the tree
   std::string GroupNamePart = GroupName;
   while (GroupNamePart.length() > 0) {
-	float GroupHierWeightedResourcesUsed = 0.0;
+	double GroupHierWeightedResourcesUsed = 0.0;
   	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed += SlotWeight;
   	SetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
@@ -687,22 +709,22 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
-  float WeightedResourcesUsed=0;
+  double WeightedResourcesUsed=0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedResourcesUsedAttr,WeightedResourcesUsed);
   
   int UnchargedTime=0;
   GetAttributeInt(CustomerRecord+CustomerName,UnchargedTimeAttr,UnchargedTime);
-  float WeightedUnchargedTime=0.0;
+  double WeightedUnchargedTime=0.0;
   GetAttributeFloat(CustomerRecord+CustomerName,WeightedUnchargedTimeAttr,WeightedUnchargedTime);
   
-  float SlotWeight=1.0;
+  double SlotWeight=1.0;
   GetAttributeFloat(ResourceRecord+ResourceName,SlotWeightAttr,SlotWeight);
   
   int GroupResourcesUsed=0;
-  float GroupWeightedResourcesUsed=0.0;
+  double GroupWeightedResourcesUsed=0.0;
   int GroupUnchargedTime=0;
-  float WeightedGroupUnchargedTime=0.0;
-  float HierWeightedResourcesUsed = 0.0;
+  double WeightedGroupUnchargedTime=0.0;
+  double HierWeightedResourcesUsed = 0.0;
   
   std::string GroupName = GroupEntry::GetAssignedGroup(hgq_root_group, CustomerName)->name;
   dprintf(D_ACCOUNTANT, "Customername %s GroupName is: %s\n",CustomerName.c_str(), GroupName.c_str());
@@ -742,7 +764,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
   // If this is a nested group (group_a.b.c), update usage up the tree
   std::string GroupNamePart = GroupName;
   while (GroupNamePart.length() > 0) {
-	float GroupHierWeightedResourcesUsed = 0.0;
+	double GroupHierWeightedResourcesUsed = 0.0;
   	GetAttributeFloat(CustomerRecord+GroupNamePart,HierWeightedResourcesUsedAttr,GroupHierWeightedResourcesUsed);
 	GroupHierWeightedResourcesUsed -= SlotWeight;
 	if (GroupHierWeightedResourcesUsed < 0) GroupHierWeightedResourcesUsed = 0;
@@ -827,7 +849,7 @@ void Accountant::UpdatePriorities()
 	LastUpdateTime=T;
 	return;
   }
-  float AgingFactor=(float) ::pow((float)0.5,float(TimePassed)/HalfLifePeriod);
+  double AgingFactor=::pow(0.5,double(TimePassed)/HalfLifePeriod);
   LastUpdateTime=T;
   SetAttributeInt(AcctRecord,LastUpdateTimeAttr,LastUpdateTime);
 
@@ -877,17 +899,17 @@ void Accountant::UpdatePriorities()
 }
 
 void
-Accountant::UpdateOnePriority(int T, int TimePassed, float AgingFactor, const char *key, ClassAd *ad) {
+Accountant::UpdateOnePriority(int T, int TimePassed, double AgingFactor, const char *key, ClassAd *ad) {
 
-	float Priority, OldPrio, PriorityFactor;
+	double Priority, OldPrio, PriorityFactor;
 	int UnchargedTime;
-	float WeightedUnchargedTime;
-	float AccumulatedUsage, OldAccumulatedUsage;
-	float WeightedAccumulatedUsage, OldWeightedAccumulatedUsage;
-	float RecentUsage;
-	float WeightedRecentUsage;
+	double WeightedUnchargedTime;
+	double AccumulatedUsage, OldAccumulatedUsage;
+	double WeightedAccumulatedUsage, OldWeightedAccumulatedUsage;
+	double RecentUsage;
+	double WeightedRecentUsage;
 	int ResourcesUsed;
-	float WeightedResourcesUsed;
+	double WeightedResourcesUsed;
 	int BeginUsageTime;
     // lookup values in the ad
 	
@@ -911,12 +933,12 @@ Accountant::UpdateOnePriority(int T, int TimePassed, float AgingFactor, const ch
     if (ad->LookupInteger(ResourcesUsedAttr,ResourcesUsed)==0) ResourcesUsed=0;
 	if (ad->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0.0;
 
-    RecentUsage=float(ResourcesUsed)+float(UnchargedTime)/TimePassed;
-    WeightedRecentUsage=float(WeightedResourcesUsed)+float(WeightedUnchargedTime)/TimePassed;
+    RecentUsage=double(ResourcesUsed)+double(UnchargedTime)/TimePassed;
+    WeightedRecentUsage=double(WeightedResourcesUsed)+double(WeightedUnchargedTime)/TimePassed;
 
 	// For groups that may have a hierarchy, use the sum of the usage in the hierarchy,
 	// not the usage at this one node in the group.
-	float HierWeightedResourcesUsed = 0.0;
+	double HierWeightedResourcesUsed = 0.0;
 	if (ad->LookupFloat(HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed)==0) HierWeightedResourcesUsed=0.0;
 	if (HierWeightedResourcesUsed > 0.0) {
 				WeightedRecentUsage = HierWeightedResourcesUsed;
@@ -962,7 +984,7 @@ Accountant::UpdateOnePriority(int T, int TimePassed, float AgingFactor, const ch
     	SetAttributeInt(key,UnchargedTimeAttr,0);
 	}
 
-	float oldWeightedUnchargedTime = -1.0;
+	double oldWeightedUnchargedTime = -1.0;
 	GetAttributeFloat(key,WeightedUnchargedTimeAttr, oldWeightedUnchargedTime);
 	if (oldWeightedUnchargedTime != 0.0) {
     	SetAttributeFloat(key,WeightedUnchargedTimeAttr,0.0);
@@ -1090,7 +1112,7 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
     return ad;
 }
 
-void Accountant::CheckResources(const std::string& CustomerName, int& NumResources, float& NumResourcesRW) {
+void Accountant::CheckResources(const std::string& CustomerName, int& NumResources, double& NumResourcesRW) {
     dprintf(D_ACCOUNTANT, "Checking Resources for customer %s\n", CustomerName.c_str());
 
     NumResources = 0;
@@ -1117,7 +1139,7 @@ void Accountant::CheckResources(const std::string& CustomerName, int& NumResourc
         }
 
         NumResources += 1;
-        float SlotWeight = 1.0;
+        double SlotWeight = 1.0;
         ResourceAd->LookupFloat(SlotWeightAttr, SlotWeight);
         NumResourcesRW += SlotWeight;
     }
@@ -1178,7 +1200,7 @@ ClassAd* Accountant::ReportState(bool rollup) {
         formatstr(tmp, "AccountingGroup%d", snum);
         ad->Assign(tmp, cgname);
 
-        float Priority = GetPriority(CustomerName);
+        double Priority = GetPriority(CustomerName);
         formatstr(tmp, "Priority%d", snum);
         ad->Assign(tmp, Priority);
 
@@ -1186,7 +1208,11 @@ ClassAd* Accountant::ReportState(bool rollup) {
         formatstr(tmp, "Ceiling%d", snum);
         ad->Assign(tmp, Ceiling);
 
-        float PriorityFactor = 0;
+        int Floor = GetFloor(CustomerName);
+        formatstr(tmp, "Floor%d", snum);
+        ad->Assign(tmp, Floor);
+
+        double PriorityFactor = 0;
         if (CustomerAd->LookupFloat(PriorityFactorAttr,PriorityFactor)==0) PriorityFactor=0;
         formatstr(tmp, "PriorityFactor%d", snum);
         ad->Assign(tmp, PriorityFactor);
@@ -1196,27 +1222,27 @@ ClassAd* Accountant::ReportState(bool rollup) {
         formatstr(tmp, "ResourcesUsed%d", snum);
         ad->Assign(tmp, ResourcesUsed);
         
-        float WeightedResourcesUsed = 0;
+        double WeightedResourcesUsed = 0;
         if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
         formatstr(tmp, "WeightedResourcesUsed%d", snum);
         ad->Assign(tmp, WeightedResourcesUsed);
         
-        float AccumulatedUsage = 0;
+        double AccumulatedUsage = 0;
         if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
         formatstr(tmp, "AccumulatedUsage%d", snum);
         ad->Assign(tmp, AccumulatedUsage);
         
-        float WeightedAccumulatedUsage = 0;
+        double WeightedAccumulatedUsage = 0;
         if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
         formatstr(tmp, "WeightedAccumulatedUsage%d", snum);
         ad->Assign(tmp, WeightedAccumulatedUsage);
         
-        float SubmitterShare = 0;
+        double SubmitterShare = 0;
         if (CustomerAd->LookupFloat("SubmitterShare",SubmitterShare)==0) SubmitterShare=0;
         formatstr(tmp, "SubmitterShare%d", snum);
         ad->Assign(tmp, SubmitterShare);
 
-        float SubmitterLimit = 0;
+        double SubmitterLimit = 0;
         if (CustomerAd->LookupFloat("SubmitterLimit",SubmitterLimit)==0) SubmitterLimit=0;
         formatstr(tmp, "SubmitterLimit%d", snum);
         ad->Assign(tmp, SubmitterLimit);
@@ -1276,11 +1302,11 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     formatstr(tmp, "AccountingGroup%d", gnum);
     ad->Assign(tmp, cgname);
     
-    float Priority = (!rollup) ? GetPriority(CustomerName) : 0;
+    double Priority = (!rollup) ? GetPriority(CustomerName) : 0;
     formatstr(tmp, "Priority%d", gnum);
     ad->Assign(tmp, Priority);
     
-    float PriorityFactor = 0;
+    double PriorityFactor = 0;
 	if (!rollup && cgrp) {
 		PriorityFactor = getGroupPriorityFactor( cgrp->name );
 	}
@@ -1314,23 +1340,23 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     formatstr(tmp, "ResourcesUsed%d", gnum);
     ad->Assign(tmp, ResourcesUsed);
     
-    float WeightedResourcesUsed = 0;
+    double WeightedResourcesUsed = 0;
     if (CustomerAd->LookupFloat(WeightedResourcesUsedAttr,WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
     formatstr(tmp, "WeightedResourcesUsed%d", gnum);
     ad->Assign(tmp, WeightedResourcesUsed);
     
-    float AccumulatedUsage = 0;
+    double AccumulatedUsage = 0;
     if (CustomerAd->LookupFloat(AccumulatedUsageAttr,AccumulatedUsage)==0) AccumulatedUsage=0;
     formatstr(tmp, "AccumulatedUsage%d", gnum);
     ad->Assign(tmp, AccumulatedUsage);
 
-    float HierWeightedResourcesUsed = 0;
+    double HierWeightedResourcesUsed = 0;
     if (CustomerAd->LookupFloat(HierWeightedResourcesUsedAttr,HierWeightedResourcesUsed)==0) HierWeightedResourcesUsed=0;
     formatstr(tmp, "HierWeightedResourcesUsed%d", gnum);
     ad->Assign(tmp, HierWeightedResourcesUsed);
     
     
-    float WeightedAccumulatedUsage = 0;
+    double WeightedAccumulatedUsage = 0;
     if (CustomerAd->LookupFloat(WeightedAccumulatedUsageAttr,WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
     formatstr(tmp, "WeightedAccumulatedUsage%d", gnum);
     ad->Assign(tmp, WeightedAccumulatedUsage);
@@ -1358,7 +1384,7 @@ void Accountant::ReportGroups(GroupEntry* group, ClassAd* ad, bool rollup, std::
     int pnum = gnmap[group->parent->name];
 
     int ival = 0;
-    float fval = 0;
+    double fval = 0;
 
     // roll up values to parent
     formatstr(tmp, "ResourcesUsed%d", gnum);
@@ -1433,6 +1459,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 		double effectivePriority = GetPriority(CustomerName);
 		if (isGroup && rollup) { effectivePriority = 0; }
 		int ceiling = GetCeiling(CustomerName);
+		int floor   = GetFloor(CustomerName);
 
 		ClassAd * ad = new ClassAd(*CustomerAd);
 		ad->Assign(ATTR_NAME, CustomerName);
@@ -1440,6 +1467,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 		SetTargetTypeName(*ad, "none");
 		ad->Assign(PriorityAttr, effectivePriority);
 		ad->Assign(CeilingAttr, ceiling);
+		ad->Assign(FloorAttr, floor);
 		ad->Assign("IsAccountingGroup", isGroup);
 		if (cgrp) {
 			ad->Assign("AccountingGroup", cgrp->name);
@@ -1464,7 +1492,7 @@ bool Accountant::ReportState(ClassAd& queryAd, ClassAdList & ads, bool rollup /*
 			ad->Delete(ATTR_TARGET_TYPE);
 			ad->Delete("UnchargedTime");
 			ad->Delete("WeightedUnchargedTime");
-			float truncated_prio = (float)effectivePriority;
+			double truncated_prio = (double)effectivePriority;
 			ad->Assign(PriorityAttr, truncated_prio);
 		}
 
@@ -1670,7 +1698,7 @@ void Accountant::SetAttributeInt(const std::string& Key, const std::string& Attr
 // Set a Float attribute
 //------------------------------------------------------------------
 
-void Accountant::SetAttributeFloat(const std::string& Key, const std::string& AttrName, float AttrValue)
+void Accountant::SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
@@ -1716,7 +1744,7 @@ bool Accountant::GetAttributeInt(const std::string& Key, const std::string& Attr
 // Retrieve a Float attribute
 //------------------------------------------------------------------
 
-bool Accountant::GetAttributeFloat(const std::string& Key, const std::string& AttrName, float& AttrValue)
+bool Accountant::GetAttributeFloat(const std::string& Key, const std::string& AttrName, double& AttrValue)
 {
   ClassAd* ad;
   if (AcctLog->table.lookup(Key,ad)==-1) return false;
@@ -1937,9 +1965,9 @@ void Accountant::DecrementLimits(const std::string& limits)
 	}
 }
 
-float Accountant::GetSlotWeight(ClassAd *candidate) const 
+double Accountant::GetSlotWeight(ClassAd *candidate) const 
 {
-	float SlotWeight = 1.0;
+	double SlotWeight = 1.0;
 	if(!UseSlotWeights) {
 		return SlotWeight;
 	}

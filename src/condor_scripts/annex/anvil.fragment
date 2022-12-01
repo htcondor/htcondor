@@ -1,0 +1,10 @@
+SCRATCH=${SCRATCH:-/anvil/scratch/$USER}
+CONFIG_FRAGMENT() {
+    echo '
+    NETWORK_INTERFACE = 172.18.*
+    '
+}
+SHELL_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus-per-node

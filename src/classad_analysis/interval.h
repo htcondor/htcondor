@@ -24,7 +24,6 @@
 #include <iostream>
 #include "classad/classad_distribution.h"
 #include "list.h"
-#include "extArray.h"
 
 
 struct Interval
@@ -118,9 +117,9 @@ class ValueRange
 					  classad::Value &max, double &result,
 					  classad::Value &nearestVal );
 
-	static bool BuildHyperRects( ExtArray< ValueRange * > &, int dimensions,
+	static bool BuildHyperRects( std::vector<ValueRange * > &, int dimensions,
 								 int numContexts, 
-								 List< ExtArray< HyperRect * > > & );
+								 List< std::vector<HyperRect *>> & );
    
 	bool ToString( std::string & );
 	bool IsInitialized( ) const;

@@ -1038,40 +1038,6 @@ REMOTE_CONDOR_ulog( ClassAd *ad )
 }
 
 int
-REMOTE_CONDOR_phase( char *phase )
-{
-	int result = 0;
-
-	dprintf ( D_SYSCALLS, "Doing CONDOR_phase\n" );
-
-	CurrentSysCall = CONDOR_phase;
-
-	if( ! phase ) {
-		EXCEPT( "CONDOR_phase called with NULL phase!" );
-		return -1;
-	}
-
-	if( ! syscall_sock->is_connected() ) {
-		dprintf(D_ALWAYS, "RPC error: disconnected from shadow\n");
-		errno = ETIMEDOUT;
-		return -1;
-	}
-
-	syscall_sock->encode();
-	result = syscall_sock->code(CurrentSysCall);
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->code(phase);
-	ON_ERROR_RETURN( result );
-	result = syscall_sock->end_of_message();
-	ON_ERROR_RETURN( result );
-	syscall_last_rpc_time = time(nullptr);
-
-	//NOTE: we expect no response.
-
-	return 0;
-}
-
-int
 REMOTE_CONDOR_get_job_attr(char *  attrname , char *& expr)
 {
 	int	rval;

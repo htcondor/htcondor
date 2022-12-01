@@ -21,10 +21,18 @@
 project(CONDOR LANGUAGES C CXX)
 cmake_minimum_required(VERSION 3.8)
 
-# Exactly c++ 11 for all platforms
-set(CMAKE_CXX_STANDARD 11)
+# Exactly c++ 17 for all platforms
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+            link_libraries(stdc++fs)
+        endif()
+    endif()
+endif()
 
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
@@ -43,7 +51,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "10.1.3")
+set(VERSION "10.2.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -52,8 +60,8 @@ set(VERSION "10.1.3")
 #   perhaps because you are working on a feature branch and need to
 #   ship test binaries to a user, change this to identify your work.
 #   Avoid whitespace.
-#set(PRE_RELEASE "PRE-RELEASE-UWCS")
-set(PRE_RELEASE "RC")
+set(PRE_RELEASE "PRE-RELEASE-UWCS")
+#set(PRE_RELEASE "RC")
 #set(PRE_RELEASE OFF)
 
 # If set via the cmake command line, FORCE_PRE_RELEASE allows for

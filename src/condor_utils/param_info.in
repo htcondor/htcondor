@@ -274,42 +274,6 @@ description=Directory for condor credentials
 default=60
 type=int
 
-[GSI_DAEMON_DIRECTORY]
-default=
-type=path
-
-[GSI_DAEMON_PROXY]
-default=
-type=string
-
-[GSI_DAEMON_CERT]
-default=
-type=string
-
-[GSI_DAEMON_KEY]
-default=
-type=string
-
-[GSS_ASSIST_GRIDMAP_CACHE_EXPIRATION]
-default=0
-type=int
-
-[VMWARE_NETWORKING_TYPE]
-default=
-type=string
-tags=vm-gahp,starter
-
-[VMWARE_PERL]
-default=
-type=string
-tags=vm-gahp
-
-[VMWARE_SCRIPT]
-default=$(SBIN)/condor_vm_vmware
-# there is no win32 default for this item, we DON'T want it to have a .exe extension
-type=path
-tags=vm-gahp
-
 [LIBVIRT_XML_SCRIPT]
 default=$(LIBEXEC)/libvirt_simple_script.awk
 
@@ -1052,15 +1016,15 @@ usage='/dev/' portion of the pathname.
 tags=startd
 
 [SLOTS_CONNECTED_TO_CONSOLE]
-default=$(NUM_CPUS)
-type=string
+default=0
+type=int
 description=Slots above this number do not have ConsoleIdle updated
 tags=startd
 restart=true
 
 [SLOTS_CONNECTED_TO_KEYBOARD]
-default=$(NUM_CPUS)
-type=string
+default=0
+type=int
 description=Slots above this number do not have KeyboardIdle updated
 tags=startd
 restart=true
@@ -1551,12 +1515,6 @@ default=$(SBIN)/remote_gahp
 win32_default=$(SBIN)\remote_gahp.exe
 type=path
 tags=gridmanager,infnbatchjob
-
-[NORDUGRID_GAHP]
-default=$(SBIN)/nordugrid_gahp
-win32_default=$(SBIN)\nordugrid_gahp.exe
-type=path
-tags=gridmanager,nordugridjob
 
 [GRIDMANAGER_CONTACT_SCHEDD_DELAY]
 default=5
@@ -2619,24 +2577,9 @@ default=
 type=string
 tags=io,credential
 
-[GSI_DAEMON_NAME]
-default=
-type=string
-tags=io,condor_auth_x509
-
 [STARTER_UPLOAD_TIMEOUT]
 default=300
 type=int
-tags=starter
-
-[ALWAYS_VM_UNIV_USE_NOBODY]
-default=false
-type=bool
-tags=starter
-
-[VM_UNIV_NOBODY_USER]
-default=
-type=string
 tags=starter
 
 [VM_GAHP_SEND_ALL_CLASSAD]
@@ -2678,7 +2621,9 @@ tags=starter
 
 [JOB_INHERITS_STARTER_ENVIRONMENT]
 default=false
-type=bool
+type=string
+description=list of allow and deny patterns that determine what environment variables to inhert from the starter environment
+usage=Set to true or * to inherit all. foo* inherits only vars that start with foo. !foo* inherits all but vars that start with foo
 tags=starter
 
 [MPI_CONDOR_RSH_PATH]
@@ -3951,29 +3896,6 @@ tags=ccb
 default=
 type=string
 tags=ccb
-
-[GRIDMAP]
-default=
-type=string
-description=Gridmap file
-tags=ccb
-
-[GSI_DAEMON_TRUSTED_CA_DIR]
-default=
-type=string
-description=GSI Daemon Trusted Certificate Authority Directory
-usage=Set the directory that contains the public keys and signing policies of trusted certificate authorities
-tags=security
-
-[GSI_SKIP_HOST_CHECK_CERT_REGEX]
-default=
-type=string
-tags=security
-
-[GSI_SKIP_HOST_CHECK]
-default=false
-type=bool
-tags=security
 
 [TRUNC_MASTER_LOG_ON_OPEN]
 default=false
@@ -5698,12 +5620,6 @@ default=0
 type=int
 customization=const
 
-[HAVE_EXT_GLOBUS]
-macro=HAVE_EXT_GLOBUS
-default=0
-type=int
-customization=const
-
 [HAVE_EXT_KRB5]
 macro=HAVE_EXT_KRB5
 default=0
@@ -5937,6 +5853,7 @@ default : @end
 	MaxJobRetirementTime=0
 	CLAIM_WORKLIFE=
 	SLOTS_CONNECTED_TO_KEYBOARD=$(NUM_CPUS)
+	SLOTS_CONNECTED_TO_CONSOLE=$(NUM_CPUS)
 	IS_OWNER=(START =?= False)
 @end
 
@@ -6646,24 +6563,6 @@ default: @end
    MASTER_$(1)_CONTROLLER = HAD
 @end
 
-[$EXPERIMENTAL.ASYNC_STAGEOUT]
-description=Knobs to enable the async stage-out hack for CMS
-default: @end
-	ALLOW_SLOT_PAIRING=true
-	# don't append slot name to StarterLog, may be: Cluster, JobId, false or true. true gives 8.0 compatible behavior.
-	STARTER_LOG_NAME_APPEND=false
-	# create a hidden type2 xfer slot for every type1 slot
-	NUM_SLOTS_TYPE_1 = $(NUM_CPUS)
-	NUM_SLOTS_TYPE_2 = $(NUM_SLOTS_TYPE_1)
-	SLOT_TYPE_2 = minimal cpus=0.1 memory=100 disk=auto
-	SLOT_TYPE_2_NAME_PREFIX = xfer
-	SLOT_TYPE_2_PAIRED_WITH = SLOT_TYPE_1
-	SLOT_TYPE_2_HIDDEN = true
-	SLOT_TYPE_2_START = TARGET.JobTransferringOutput  && splitslotname(TARGET.RemoteHost)[1] == splitslotname(MY.Name)[1]
-	# cross-advertise these slot attributes in all other slots
-	STARTD_SLOT_ATTRS = $(STARTD_SLOT_ATTRS) State Activity EnteredCurrentActivity JobId GlobalJobId
-@end
-
 # obsolete config file knobs to discard on upgrade
 [$UPGRADE.DISCARD]
 description=Config file knobs that should be ignored on upgrade
@@ -6734,14 +6633,13 @@ win32_default : @end
 	QUEUE_SUPER_USERS=condor, SYSTEM
 	EC2_GAHP_LOG=/tmp/EC2GahpLog.$(USERNAME)
 	MAIL_FROM=
-	VMWARE_SCRIPT=$(SBIN)\condor_vm_vmware.exe
 	JAVA_CLASSPATH_SEPARATOR=:
 	FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin, $(LIBEXEC)/data_plugin
 	INVALID_LOG_FILES=core
 	GLIDEIN_SERVER_URLS=http://www.cs.wisc.edu/condor/glidein/binaries
 @end
 
-[$UPGRADE.DISCARDIF_VMWARE]
+[$UPGRADE.DISCARD_VMWARE]
 description=Platform specific file knobs that should be ignored on upgrade if they match the given value
 default=
 win32_default : @end

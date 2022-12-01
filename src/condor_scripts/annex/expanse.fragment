@@ -1,0 +1,28 @@
+MEMORY_CHUNK_SIZE=2048
+SCRATCH=${SCRATCH:-/expanse/lustre/scratch/$USER/temp_project}
+CONFIG_FRAGMENT() {
+    echo "
+    # This is made available via `module load singularitypro`, but the
+    # starter ignores PATH, so wrap it up.
+    SINGULARITY = ${PILOT_DIR}/singularity.sh
+    "
+}
+SHELL_FRAGMENT() {
+    #
+    # Create the script we need for Singularity.
+    #
+    # Unfortunately, the `module` command doesn't work without a bunch of
+    # random environmental set-up that's done when we're forking a process;
+    # for whatever reason, it's not good enough to run
+    # `module load singularitypro` before starting the master.
+    # Using a wrapper with bash -l (to load the rc files; without -l, PATH
+    # wouldn't be set).  bash -l is quiet on Expanse (unlike Stampede2).
+    #
+    echo '#!/bin/bash -l
+    export USER=`/usr/bin/id -un`
+    module load singularitypro
+    exec singularity "$@"
+    ' > "${PILOT_DIR}/singularity.sh"
+    chmod 755 "${PILOT_DIR}/singularity.sh"
+}
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus

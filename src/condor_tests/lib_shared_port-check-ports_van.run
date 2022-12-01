@@ -46,23 +46,20 @@ my $collector_path = `condor_config_val collector`; fullchomp($collector_path);
 if ($collector_path =~ /(condor_[a-z\.]+)$/) { $collector_exe = $1; }
 print "collector_exe=$collector_exe\n";
 
-system("condor_config_val -dump enable_ipv4 -v");
-system("condor_config_val -dump enable_ipv6 -v");
-
-my $ipv4 = `condor_config_val ENABLE_IPV4`;
+my $ipv4 = `condor_config_val IPV4_ADDRESS`;
 fullchomp($ipv4);
-print "IPV4=$ipv4\n";
-my $ipv6 = `condor_config_val ENABLE_IPV6`;
+print "IPV4_ADDRESS=$ipv4\n";
+my $ipv6 = `condor_config_val IPV6_ADDRESS`;
 fullchomp($ipv6);
 print "IPV6=$ipv6\n";
 
-if($ipv4 =~ /true/i) {
-	print "adding 1 to $mixedmode since ipv4 is enabled.\n";
+if (length($ipv4) > 1) {
+	print "adding 1 to $mixedmode since ipv4 address is $ipv4.\n";
 	$mixedmode += 1;
 }
 
-if($ipv6 =~ /true/i) {
-	print "adding 1 to $mixedmode since ipv6 is enabled.\n";
+if (length($ipv6) > 1) {
+	print "adding 1 to $mixedmode since ipv6 address is $ipv6.\n";
 	$mixedmode += 1;
 }
 

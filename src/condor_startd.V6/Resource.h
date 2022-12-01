@@ -285,7 +285,26 @@ public:
 	void	reconfig( void );
 	void	publish_slot_config_overrides(ClassAd * cad);
 
-	void	update( void );		// Schedule to update the central manager.
+	typedef enum _whyfor {
+		wf_timer,          //0
+		wf_stateChange,    //1
+		wf_vmChange,       //2
+		wf_hiberChange,    //3
+		wf_removeClaim,    //4
+		wf_cod,            //5
+		wf_preemptingClaim,//6
+		wf_dslotCreate,    //7
+		wf_dslotDelete,    //8
+		wf_refreshRes,     //9
+	} WhyFor;
+	void	update_needed( WhyFor why );// Schedule to update the central manager.
+	void	update_walk_for_timer() { update_needed(wf_timer); } // for use with Walk where arguments are not permitted
+	void	update_walk_for_vm_change() { update_needed(wf_vmChange); } // for use with Walk where arguments are not permitted
+	void	update_walk_for_backfill_refresh_res() {
+		if (r_backfill_slot && can_create_dslot()) {
+			update_needed(wf_refreshRes);
+		}
+	}
 	void	do_update( void );			// Actually update the CM
 	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK
@@ -374,8 +393,8 @@ public:
 	int				r_id;		// CPU id of this resource (int form)
 	int				r_sub_id;	// Sub id of this resource (int form)
 	char*			r_id_str;	// CPU id of this resource (string form)
-	char*			r_pair_name; // Name of the resource paired with this one, NULL is no pair (the default), may contain "#type" during the slot building process
 	int             prevLHF;
+	bool			r_backfill_slot;
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;
 
@@ -410,9 +429,10 @@ public:
 	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
 	void remove_dynamic_child(Resource *rip) {m_children.erase(rip); }
 
-	static bool swap_claims(Resource* ripa, Resource* ripb);
-
 	std::list<int> *get_affinity_set() { return &m_affinity_mask;}
+
+	void set_res_conflict(const std::string & conflict) { m_res_conflict = conflict; }
+	bool has_nft_conflicts(MachAttributes* ma) { return ma->has_nft_conflicts(r_id, r_sub_id); }
 
 #ifdef LINUX
 	void setVolumeManager(VolumeManager *volume_mgr) {m_volume_mgr = volume_mgr;}
@@ -428,6 +448,8 @@ private:
 
 	// Only partitionable slots have children
 	std::set<Resource *, ResourceLess> m_children;
+	// only non-partitionable backfill slots have resource conflicts
+	std::string m_res_conflict;
 
 	IdDispenser* m_id_dispenser;
 

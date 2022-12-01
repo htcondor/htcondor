@@ -256,11 +256,6 @@ DLLEXPORT int chirp_client_ulog( struct chirp_client *c, char const *message );
   logs a generic string to the user log
 */
 
-DLLEXPORT int chirp_client_phase( struct chirp_client *c, char const *phase );
-/*chirp_client_phase()
-  tells condor the job is changing phases
-*/
-
 DLLEXPORT int chirp_client_pread( struct chirp_client *c, int fd, void *buffer,
 	int length, int offset);
 /*chirp_client_pread

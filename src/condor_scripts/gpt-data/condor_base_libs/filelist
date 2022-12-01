@@ -1,7 +1,0 @@
-lib/Condor.pm
-lib/libcondorapi.a
-include/condor_constants.h
-include/condor_event.h
-include/file_lock.h
-include/user_log.c++.h
-include/user_log.README

@@ -13,20 +13,16 @@ repo_base_centos=https://research.cs.wisc.edu/htcondor/repo
 
 
 eval "$(grep '^\(ID\|VERSION_ID\|UBUNTU_CODENAME\)=' /etc/os-release | sed -e 's/^/OS_/')"
-export OS_ID                   # ubuntu or centos
+# Alma Linux has a version like 8.6 (We use the Ubuntu Codename, not version)
+OS_VERSION_ID=${OS_VERSION_ID%%.*}
+export OS_ID                   # ubuntu or centos or almalinux
 export OS_VERSION_ID           # 7, 8, or 18.04 or 20.04
 export OS_UBUNTU_CODENAME      # bionic or focal (or undefined on centos)
 
 
 # XXX Update me if we get more platform support
-if [[ $OS_ID != centos && $OS_ID != ubuntu ]]; then
+if [[ $OS_ID != centos && $OS_ID != almalinux && $OS_ID != ubuntu ]]; then
     echo "This script does not support this platform" >&2
-    exit 1
-fi
-
-# XXX Remove me if we get Ubuntu dailies
-if [[ $OS_ID != centos && $HTCONDOR_VERSION == daily ]]; then
-    echo "HTCondor daily builds aren't available on this platform" >&2
     exit 1
 fi
 
@@ -42,6 +38,26 @@ if [[ $HTCONDOR_VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
 fi
 
 
+if [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.([0-9]+) ]]; then
+    # turn a post-9.0 feature series like 9.5 into 9.x
+    series_major=${BASH_REMATCH[1]}
+    series_minor=${BASH_REMATCH[2]}
+
+    if [[ $series_minor -gt 0 ]]; then
+        series_str=${series_major}.x
+    else
+        series_str=${series_major}.0
+    fi
+elif [[ $HTCONDOR_SERIES =~ ^([0-9]+)\.x ]]; then
+    series_str=$HTCONDOR_SERIES
+    series_minor=1
+else
+    echo "Could not parse \$HTCONDOR_SERIES $HTCONDOR_SERIES" >&2
+    exit 2
+fi
+
+
+
 if ! getent passwd condor; then
     if ! getent group condor; then
         groupadd -g 64 -r condor
@@ -53,7 +69,16 @@ fi
 
 # CentOS ---------------------------------------------------------------------
 
-if [[ $OS_ID == centos ]]; then
+centos_enable_repo () {
+    if [[ $OS_VERSION_ID -lt 8 ]]; then
+        yum-config-manager --enable "$1"
+    else
+        dnf config-manager --set-enabled "$1"
+    fi
+}
+
+
+if [[ $OS_ID == centos || $OS_ID == almalinux ]]; then
 
     yum="yum -y"
     if $update_os; then
@@ -61,21 +86,22 @@ if [[ $OS_ID == centos ]]; then
         # ^^ ignore errors b/c some packages like "filesystem" might fail to update in a container environment
     fi
     $yum install epel-release
-    if [[ $OS_VERSION_ID == 7 ]]; then
+    if [[ $OS_VERSION_ID -lt 8 ]]; then
         $yum install yum-plugin-priorities
-    elif [[ $OS_VERSION_ID == 8 ]]; then
+    else
         $yum install dnf-plugins-core
-        # enable CentOS PowerTools repo (whose name changed between CentOS releases)
-        (dnf config-manager --set-enabled powertools || dnf config-manager --set-enabled PowerTools)
     fi
-    $yum install "${repo_base_centos}/${HTCONDOR_SERIES}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
+    if [[ $OS_VERSION_ID -eq 8 ]]; then
+        centos_enable_repo powertools
+    fi
+    $yum install "${repo_base_centos}/${series_str}/htcondor-release-current.el${OS_VERSION_ID}.noarch.rpm"
     rpm --import /etc/pki/rpm-gpg/*
+    # Update repository is only available for feature versions
+    if [[ $series_minor -gt 0 ]]; then
+        centos_enable_repo htcondor-update
+    fi
     if [[ $HTCONDOR_VERSION == daily ]]; then
-        if [[ $OS_VERSION_ID == 7 ]]; then
-            yum-config-manager --enable htcondor-daily
-        elif [[ $OS_VERSION_ID == 8 ]]; then
-            dnf config-manager --set-enabled htcondor-daily
-        fi
+        centos_enable_repo htcondor-daily
     fi
 
     $yum install "${extra_packages_centos[@]}"
@@ -103,15 +129,23 @@ elif [[ $OS_ID == ubuntu ]]; then
     $apt_install gnupg2 wget
 
     set -o pipefail
-    if [[ $HTCONDOR_SERIES = 8.9 ]]; then
-        wget -qO - "https://research.cs.wisc.edu/htcondor/ubuntu/HTCondor-Release.gpg.key" | apt-key add -
-    else
-        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${HTCONDOR_SERIES}-Key" | apt-key add -
-    fi
+    wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Key" | apt-key add -
     set +o pipefail
 
-    echo "deb     ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
-    echo "deb-src ${repo_base_ubuntu}/${HTCONDOR_SERIES} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb     ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    echo "deb-src ${repo_base_ubuntu}/${series_str} ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    # Update repository is only available for feature versions
+    if [[ $series_minor -gt 0 ]]; then
+        echo "deb     ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+        echo "deb-src ${repo_base_ubuntu}/${series_str}-update ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    fi
+    if [[ $HTCONDOR_VERSION == daily ]]; then
+        set -o pipefail
+        wget -qO - "https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-${series_str}-Daily-Key" | apt-key add -
+        set +o pipefail
+        echo "deb     ${repo_base_ubuntu}/${series_str}-daily ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+        echo "deb-src ${repo_base_ubuntu}/${series_str}-daily ${OS_UBUNTU_CODENAME} main" >> /etc/apt/sources.list
+    fi
 
     apt-get update -q
     $apt_install "${extra_packages_ubuntu[@]}"
@@ -130,21 +164,9 @@ fi
 # Common ---------------------------------------------------------------------
 
 # Create passwords directories for token or pool password auth.
-#
-# Only root needs to know the pool password but before 8.9.12, the condor user
-# also needed to access the tokens.
 
 install -m 0700 -o root -g root -d /etc/condor/passwords.d
-real_condor_version=$(condor_config_val CONDOR_VERSION)  # easier than parsing `condor_version`
-if python3 -c '
-import sys
-version = [int(x) for x in sys.argv[1].split(".")]
-sys.exit(0 if version >= [8, 9, 12] else 1)
-' "$real_condor_version"; then
-    install -m 0700 -o root -g root -d /etc/condor/tokens.d
-else
-    install -m 0700 -o condor -g condor -d /etc/condor/tokens.d
-fi
+install -m 0700 -o root -g root -d /etc/condor/tokens.d
 
 
 # vim:et:sw=4:sts=4:ts=8

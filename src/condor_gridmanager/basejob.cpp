@@ -344,10 +344,9 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);
 		jobAd->Assign(ATTR_HOLD_REASON_SUBCODE, hold_sub_code);
 
-		char *release_reason;
-		if ( jobAd->LookupString( ATTR_RELEASE_REASON, &release_reason ) != 0 ) {
+		std::string release_reason;
+		if ( jobAd->LookupString( ATTR_RELEASE_REASON, release_reason ) != 0 ) {
 			jobAd->Assign( ATTR_LAST_RELEASE_REASON, release_reason );
-			free( release_reason );
 		}
 		jobAd->AssignExpr( ATTR_RELEASE_REASON, "Undefined" );
 
@@ -418,7 +417,7 @@ void BaseJob::UpdateRuntimeStats()
 
 		// The job has stopped an interval of running, add the current
 		// interval to the accumulated total run time
-		float accum_time = 0;
+		double accum_time = 0;
 		jobAd->LookupFloat( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
 		accum_time += (float)( time(NULL) - shadowBirthdate );
 		jobAd->Assign( ATTR_JOB_REMOTE_WALL_CLOCK, accum_time );
@@ -893,7 +892,7 @@ void BaseJob::CheckRemoteStatus()
 void
 BaseJob::UpdateJobTime( float *old_run_time, bool *old_run_time_dirty ) const
 {
-  float previous_run_time = 0, total_run_time = 0;
+  double previous_run_time = 0, total_run_time = 0;
   int shadow_bday = 0;
   time_t now = time(NULL);
 
@@ -944,8 +943,6 @@ void BaseJob::NotifyResourceDown()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
-			// The GlobusResourceDown event is now deprecated
-		WriteGlobusResourceDownEventToUserLog( jobAd );
 		WriteGridResourceDownEventToUserLog( jobAd );
 		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
 		requestScheddUpdate( this, false );
@@ -962,8 +959,6 @@ void BaseJob::NotifyResourceUp()
 {
 	resourceStateKnown = true;
 	if ( resourceDown == true ) {
-			// The GlobusResourceUp event is now deprecated
-		WriteGlobusResourceUpEventToUserLog( jobAd );
 		WriteGridResourceUpEventToUserLog( jobAd );
 		jobAd->AssignExpr( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, "Undefined" );
 		requestScheddUpdate( this, false );
@@ -1232,191 +1227,10 @@ WriteHoldEventToUserLog( ClassAd *job_ad )
 	return true;
 }
 
-// The GlobusResourceUpEvent is now deprecated and should be removed at
-// some point in the future (6.9?).
-bool
-WriteGlobusResourceUpEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	std::string contact;
-	WriteUserLog ulog;
-	// TODO Check return value of initialize()
-	ulog.initialize( *job_ad );
-	if ( ! ulog.willWrite() ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus up record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceUpEvent event;
-
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
-			// Not a Globus job, don't log the event
-		return true;
-	}
-	Tokenize( contact );
-	GetNextToken( " ", false );
-	event.rmContact =  strnewp(GetNextToken( " ", false ));
-
-	int rc = ulog.writeEvent(&event,job_ad);
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_UP event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-// The GlobusResourceDownEvent is now deprecated and should be removed at
-// some point in the future (6.9?).
-bool
-WriteGlobusResourceDownEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	std::string contact;
-	WriteUserLog ulog;
-	// TODO Check return value of initialize()
-	ulog.initialize( *job_ad );
-	if ( ! ulog.willWrite() ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus down record to user logfile\n",
-			 cluster, proc );
-
-	GlobusResourceDownEvent event;
-
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
-			// Not a Globus job, don't log the event
-		return true;
-	}
-	Tokenize( contact );
-	GetNextToken( " ", false );
-	event.rmContact =  strnewp(GetNextToken( " ", false ));
-
-	int rc = ulog.writeEvent(&event,job_ad);
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_RESOURCE_DOWN event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-// The GlobusSubmitEvent is now deprecated and should be removed at
-// some point in the future (6.9?).
-bool
-WriteGlobusSubmitEventToUserLog( ClassAd *job_ad )
-{
-	int cluster, proc;
-	std::string contact;
-	WriteUserLog ulog;
-	// TODO Check return value of initialize()
-	ulog.initialize( *job_ad );
-	if ( ! ulog.willWrite() ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing globus submit record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitEvent event;
-
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	Tokenize( contact );
-	GetNextToken( " ", false );
-	event.rmContact = strnewp(GetNextToken( " ", false ));
-
-	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	Tokenize( contact );
-	if ( strcasecmp( GetNextToken( " ", false ), "gt2" ) == 0 ) {
-		GetNextToken( " ", false );
-	}
-	event.jmContact = strnewp(GetNextToken( " ", false ));
-
-	event.restartableJM = true;
-
-	int rc = ulog.writeEvent(&event,job_ad);
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT event\n",
-				 cluster, proc );
-		return false;
-	}
-
-	return true;
-}
-
-bool
-WriteGlobusSubmitFailedEventToUserLog( ClassAd *job_ad, int failure_code,
-									   const char *failure_mesg )
-{
-	int cluster, proc;
-	char buf[1024];
-
-	WriteUserLog ulog;
-	// TODO Check return value of initialize()
-	ulog.initialize( *job_ad );
-	if ( ! ulog.willWrite() ) {
-		// User doesn't want a log
-		return true;
-	}
-
-	job_ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
-	job_ad->LookupInteger( ATTR_PROC_ID, proc );
-
-	dprintf( D_FULLDEBUG, 
-			 "(%d.%d) Writing submit-failed record to user logfile\n",
-			 cluster, proc );
-
-	GlobusSubmitFailedEvent event;
-
-	snprintf( buf, 1024, "%d %s", failure_code,
-			  failure_mesg ? failure_mesg : "");
-	event.reason =  strnewp(buf);
-
-	int rc = ulog.writeEvent(&event,job_ad);
-
-	if (!rc) {
-		dprintf( D_ALWAYS,
-				 "(%d.%d) Unable to log ULOG_GLOBUS_SUBMIT_FAILED event\n",
-				 cluster, proc);
-		return false;
-	}
-
-	return true;
-}
-
 bool
 WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1434,13 +1248,12 @@ WriteGridResourceUpEventToUserLog( ClassAd *job_ad )
 
 	GridResourceUpEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
+	if ( event.resourceName.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog.writeEvent( &event, job_ad );
 
@@ -1458,7 +1271,6 @@ bool
 WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1476,13 +1288,12 @@ WriteGridResourceDownEventToUserLog( ClassAd *job_ad )
 
 	GridResourceDownEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	if ( contact.empty() ) {
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
+	if ( event.resourceName.empty() ) {
 		dprintf( D_ALWAYS,
 				 "(%d.%d) %s attribute missing in job ad\n",
 				 cluster, proc, ATTR_GRID_RESOURCE );
 	}
-	event.resourceName =  strnewp( contact.c_str() );
 
 	int rc = ulog.writeEvent(&event,job_ad);
 
@@ -1500,7 +1311,6 @@ bool
 WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	std::string contact;
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1518,11 +1328,9 @@ WriteGridSubmitEventToUserLog( ClassAd *job_ad )
 
 	GridSubmitEvent event;
 
-	job_ad->LookupString( ATTR_GRID_RESOURCE, contact );
-	event.resourceName = strnewp( contact.c_str() );
+	job_ad->LookupString( ATTR_GRID_RESOURCE, event.resourceName );
 
-	job_ad->LookupString( ATTR_GRID_JOB_ID, contact );
-	event.jobId = strnewp( contact.c_str() );
+	job_ad->LookupString( ATTR_GRID_JOB_ID, event.jobId );
 
 	int rc = ulog.writeEvent( &event,job_ad );
 

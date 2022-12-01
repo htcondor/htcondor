@@ -353,11 +353,12 @@ int StartdRunTotal::
 update (ClassAd *ad, int options)
 {
 	int attrMips, attrKflops;
-	float attrLoadAvg;
+	double attrLoadAvg;
 	bool badAd = false;
 
 	bool partitionable_slot = false;
 	bool dynamic_slot = false;
+
 	if (options) {
 		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, partitionable_slot);
 		if ( ! partitionable_slot) { ad->LookupBool(ATTR_SLOT_DYNAMIC, dynamic_slot); }

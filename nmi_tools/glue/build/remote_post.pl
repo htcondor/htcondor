@@ -68,14 +68,8 @@ else {
 }
 
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-    # We have to set the path differently in batlab 2011, for now we identify
-    # the 2011 batlab by looking for machine names that begin with EXEC-
-    if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
-        # leave the path alone in new-batlab.  lets see how that works out.
-        print "In new batlab, leaving path alone\n";
-    } else {
-        $ENV{PATH} ="C:\\Program Files\\Microsoft Visual Studio 9.0\\Common7\\IDE;C:\\prereq\\ActivePerl-5.10.1\\site\\bin;C:\\prereq\\ActivePerl-5.10.1\\bin;C:\\Perl\\site\\bin;C:\\Perl\\bin;C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\Program Files\\CMake 2.8\\bin;C:\\Program Files\\7-Zip;$ENV{PATH}";
-    }
+    # leave the path alone in new-batlab.  lets see how that works out.
+    print "In new batlab, leaving path alone\n";
 } elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
 	# CRUFT Once 9.0 is EOL, remove the python.org version of python3
 	#   from the mac build machines and remove this setting of PATH.
@@ -100,13 +94,7 @@ if( ! -d $pub_dir ) {
 
 # copy in the package targets
 if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
-	# munge cleanup is needed only if cygwin is messing with ACLs.
-	# in new batlab, instead of cleaning up, just don't allow it.
-	# ticket #4188 for enhanced windows testing environment
-	# get msconfig into condor_tests
-	if ($ENV{COMPUTERNAME} =~ /^EXEC\-/) {
 		my $bsdtar = "$BaseDir/msconfig/tar.exe";
-		print "COMPUTERNAME=$ENV{COMPUTERNAME} In new batlab\n";
 		if ( -f "$bsdtar" ) {
 			my $zips = ""; if ( <$BaseDir/*.zip> ) { $zips = '*.zip'; }
 			my $tars = ""; if ( <$BaseDir/*.gz> ) { $tars = '*.gz'; }
@@ -171,17 +159,9 @@ if( $ENV{NMI_PLATFORM} =~ /_win/i ) {
 			print "Done bsd-tarring results\n";
 			exit 0;
 		} else {
-			system("nmi_tools\\glue\\build\\munge.bat $pub_dir move");
-			$ENV{PATH} ="$ENV{PATH};c:/cygwin/bin;$pub_dir/msconfig";
+			print "ERROR: $BaseDir/msconfig/tar.exe does not exist!\n";
+			exit 1;
 		}
-	} else {
-		print "COMPUTERNAME=$ENV{COMPUTERNAME} In old batlab\n";
-		system("nmi_tools\\glue\\build\\munge.bat $pub_dir cleanup move");
-		#system("mv *.zip $pub_dir");
-		#system("mv *.msi $pub_dir");
-		#system("mv release_dir $pub_dir");
-		#system("mv msconfig $pub_dir");
-	}
 }
 else {
     system("mv *.tar.gz *.rpm *.deb $pub_dir");

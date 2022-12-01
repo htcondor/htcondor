@@ -1290,11 +1290,9 @@ void
 DedicatedScheduler::addDedicatedCluster( int cluster )
 {
 	if( ! idle_clusters ) {
-		idle_clusters = new ExtArray<int>;
-		idle_clusters->fill(0);
+		idle_clusters = new std::vector<int>;
 	}
-	int next = idle_clusters->getlast() + 1;
-	(*idle_clusters)[next] = cluster;
+	idle_clusters->push_back(cluster);
 	dprintf( D_FULLDEBUG, "Found idle MPI cluster %d\n", cluster );
 }
 
@@ -1305,13 +1303,70 @@ DedicatedScheduler::hasDedicatedClusters( void )
 	if( ! idle_clusters ) {
 		return false;
 	}
-	if( idle_clusters->getlast() < 0 ) {
+	if( idle_clusters->size() == 0 ) {
 		return false;
 	}
 	return true;
 }
 
+// Higher job prios are better, lower cluster ids are better
+static bool
+clusterPrioDateLessThan(const int cluster1, const int cluster2) {
+	int c1_prio=0, c1_preprio1=0, c1_preprio2=0, c1_postprio1=0, c1_postprio2=0;
+	int c2_prio=0, c2_preprio1=0, c2_preprio2=0, c2_postprio1=0, c2_postprio2=0;
 
+	if ((GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &c1_prio) < 0) ||
+			(GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &c2_prio) < 0)) {
+		
+		return false;
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1);
+	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1);
+	if (c1_preprio1 > c2_preprio1) {
+		return true;
+	}
+	if (c1_preprio1 < c2_preprio1) {
+		return false;
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2);
+	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2);
+	if (c1_preprio2 > c2_preprio2) {
+		return true;
+	}
+	if (c1_preprio2 < c2_preprio2) {
+		return false;
+	}
+	
+	if (c1_prio > c2_prio) {
+		return true;
+	}
+
+	if (c1_prio < c2_prio) {
+		return false;
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1);
+	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1);
+	if (c1_postprio1 > c2_postprio1) {
+		return true;
+	}
+	if (c1_postprio1 < c2_postprio1) {
+		return false;
+	}
+
+	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2);
+	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2);
+	if (c1_postprio2 > c2_postprio2) {
+		return true;
+	}
+	if (c1_postprio2 < c2_postprio2) {
+		return false;
+	}
+	
+	return cluster1 < cluster2;
+}
 // Go through our list of idle clusters we're supposed to deal with,
 // get pointers to all the classads, put it in a big array, and sort
 // that array based on QDate.
@@ -1320,7 +1375,7 @@ DedicatedScheduler::sortJobs( void )
 {
 	ClassAd *job;
 	int i, last_cluster, next_cluster, cluster, status;
-	ExtArray<int>* verified_clusters;
+	std::vector<int>* verified_clusters;
 	
 	if( ! idle_clusters ) {
 			// No dedicated jobs found, we're done.
@@ -1333,15 +1388,15 @@ DedicatedScheduler::sortJobs( void )
 		// valid jobs, that are still, in fact idle.  If we find any
 		// that are no longer jobs or no longer idle, remove them from
 		// the array.
-	last_cluster = idle_clusters->getlast() + 1;
+	last_cluster = idle_clusters->size();
 	if( ! last_cluster ) {
 			// No dedicated jobs found, we're done.
 		dprintf( D_FULLDEBUG, 
 				 "DedicatedScheduler::sortJobs: no jobs found\n" );
 		return false;
 	}		
-	verified_clusters= new ExtArray<int>( last_cluster );
-	verified_clusters->fill(0);
+	verified_clusters= new std::vector<int>( last_cluster );
+	std::fill(verified_clusters->begin(), verified_clusters->end(), 0);
 	next_cluster = 0;
 
 
@@ -1439,8 +1494,8 @@ DedicatedScheduler::sortJobs( void )
 			 next_cluster );
 
 		// Now, sort them by prio and qdate
-	qsort( &(*idle_clusters)[0], next_cluster, sizeof(int), 
-		   clusterSortByPrioAndDate ); 
+	std::sort(idle_clusters->begin(), idle_clusters->end(),
+			clusterPrioDateLessThan);
 
 		// Show the world what we've got
 	listDedicatedJobs( D_FULLDEBUG );
@@ -1525,7 +1580,6 @@ DedicatedScheduler::handleDedicatedJobs( void )
 void
 DedicatedScheduler::listDedicatedJobs( int debug_level )
 {
-	int cluster, proc;
 	std::string owner_str;
 
 	if( ! idle_clusters ) {
@@ -1534,10 +1588,8 @@ DedicatedScheduler::listDedicatedJobs( int debug_level )
 	}
 	dprintf( debug_level, "DedicatedScheduler: Listing all dedicated "
 			 "jobs - \n" );
-	int i, last = idle_clusters->getlast();
-	for( i=0; i<=last; i++ ) {
-		cluster = (*idle_clusters)[i];
-		proc = 0;
+	for( int cluster : *idle_clusters) {
+		int proc = 0;
 		owner_str = "";
 		GetAttributeString( cluster, proc, ATTR_OWNER, owner_str ); 
 		dprintf( debug_level, "Dedicated job: %d.%d %s\n", cluster,
@@ -2178,8 +2230,8 @@ DedicatedScheduler::computeSchedule( void )
 
 		// For each job, try to satisfy it as soon as possible.
 	CAList *jobs = NULL;
-	l = idle_clusters->getlast();
-	for( i=0; i<=l; i++ ) {
+	l = idle_clusters->size();
+	for( i=0; i< l; i++ ) {
 
 			// This is the main data structure for handling multiple
 			// procs It just contains one non-unique job ClassAd for
@@ -3881,7 +3933,7 @@ DedicatedScheduler::holdAllDedicatedJobs( void )
 		return;
 	}
 
-	last_cluster = idle_clusters->getlast() + 1;
+	last_cluster = idle_clusters->size();
 	if( ! last_cluster ) {
 			// No dedicated jobs found, we're done.
 		dprintf( D_FULLDEBUG,
@@ -4376,72 +4428,6 @@ findAvailTime( match_rec* mrec )
 		break;
 	}
 	return now;
-}
-
-
-// Comparison function for sorting jobs (given cluster id) by QDate 
-int
-clusterSortByPrioAndDate( const void *ptr1, const void* ptr2 )
-{
-	int cluster1 = *((const int*)ptr1);
-	int cluster2 = *((const int*)ptr2);
-	int c1_qdate, c2_qdate;	
-	int c1_prio=0, c1_preprio1=0, c1_preprio2=0, c1_postprio1=0, c1_postprio2=0;
-	int c2_prio=0, c2_preprio1=0, c2_preprio2=0, c2_postprio1=0, c2_postprio2=0;
-
-	if ((GetAttributeInt(cluster1, 0, ATTR_Q_DATE, &c1_qdate) < 0) || 
-	        (GetAttributeInt(cluster2, 0, ATTR_Q_DATE, &c2_qdate) < 0) ||
-	        (GetAttributeInt(cluster1, 0, ATTR_JOB_PRIO, &c1_prio) < 0) ||
-	        (GetAttributeInt(cluster2, 0, ATTR_JOB_PRIO, &c2_prio) < 0)) {
-		
-		return -1;
-	}
-
-	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO1, &c1_preprio1);
-	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO1, &c2_preprio1);
-	if (c1_preprio1 < c2_preprio1) {
-		return 1;
-	}
-	if (c1_preprio1 > c2_preprio1) {
-		return -1;
-	}
-
-	GetAttributeInt(cluster1, 0, ATTR_PRE_JOB_PRIO2, &c1_preprio2);
-	GetAttributeInt(cluster2, 0, ATTR_PRE_JOB_PRIO2, &c2_preprio2);
-	if (c1_preprio2 < c2_preprio2) {
-		return 1;
-	}
-	if (c1_preprio2 > c2_preprio2) {
-		return -1;
-	}
-	
-	if (c1_prio < c2_prio) {
-		return 1;
-	}
-
-	if (c1_prio > c2_prio) {
-		return -1;
-	}
-
-	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO1, &c1_postprio1);
-	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO1, &c2_postprio1);
-	if (c1_postprio1 < c2_postprio1) {
-		return 1;
-	}
-	if (c1_postprio1 > c2_postprio1) {
-		return -1;
-	}
-
-	GetAttributeInt(cluster1, 0, ATTR_POST_JOB_PRIO2, &c1_postprio2);
-	GetAttributeInt(cluster2, 0, ATTR_POST_JOB_PRIO2, &c2_postprio2);
-	if (c1_postprio2 < c2_postprio2) {
-		return 1;
-	}
-	if (c1_postprio2 > c2_postprio2) {
-		return -1;
-	}
-	
-	return (c1_qdate - c2_qdate);
 }
 
 

@@ -429,7 +429,7 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     amount of free space on your execute partition, minus ``RESERVED_DISK``.
 
 :macro-def:`RESERVED_DISK`
-    Determines how much disk space (in kB) you want to reserve for your own
+    Determines how much disk space (in MB) you want to reserve for your own
     machine. When HTCondor is reporting the amount of free disk space in
     a given partition on your machine, it will always subtract this
     amount. An example is the *condor_startd*, which advertises the
@@ -3594,7 +3594,7 @@ from using more scratch space than provisioned.
     This string-valued parameter has no default, and should be set to the
     Linux LVM logical volume to be used for ephemeral execute directories.
     ``"htcondor_lv"`` might be a good choice.  This setting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is ``True``, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is ``True``, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_VOLUME_GROUP_NAME`
@@ -3602,7 +3602,7 @@ from using more scratch space than provisioned.
     name of the Linux LVM volume group to be used for logical volumes
     for ephemeral execute directories.
     ``"htcondor_vg"`` might be a good choice.  This seeting only matters when 
-    :macro:`STARTD_ENFORCE_DISK_USAGE` is True, and HTCondor has root
+    :macro:`STARTD_ENFORCE_DISK_LIMITS` is True, and HTCondor has root
     privilege.
 
 :macro-def:`THINPOOL_BACKING_FILE`
@@ -4317,7 +4317,7 @@ create a private filesystem for the scratch directory for each job.
     A string that names the Linux LVM logical volume for storage 
     for per-job scratch directories.
 
-:macro-def:`STARTD_ENFORCE_DISK_USAGE`
+:macro-def:`STARTD_ENFORCE_DISK_LIMITS`
     A boolean that defaults to false that controls whether the
     starter puts a job on hold that fills the per-job filesystem.
 
@@ -5915,8 +5915,9 @@ These settings affect the *condor_starter*.
     ``true`` gives the default behavior of using the slot name, unless
     there is only a single slot. A value of ``slot`` uses the slot name.
     A value of ``cluster`` uses the job's ``ClusterId`` ClassAd
-    attribute. A value of ``jobid`` uses the job's ``ProcId`` ClassAd
-    attribute. If ``cluster`` or ``jobid`` are specified, the resulting
+    attribute. A value of ``jobid`` uses the job's ``ClusterId`` and
+    ``ProcId`` ClassAd
+    attributes. If ``cluster`` or ``jobid`` are specified, the resulting
     log files will persist until deleted by the user, so these two
     options should only be used to assist in debugging, not as permanent
     options.
@@ -6076,12 +6077,20 @@ These settings affect the *condor_starter*.
     the submit file, the user's setting takes precedence.
 
 :macro-def:`JOB_INHERITS_STARTER_ENVIRONMENT`
-    A boolean value that defaults to ``False``. When ``True``, it causes
-    jobs to inherit all environment variables from the
-    *condor_starter*. When the user job and/or
-    ``STARTER_JOB_ENVIRONMENT`` define an environment variable that is
-    in the *condor_starter* 's environment, the setting from the
-    *condor_starter* 's environment is overridden.
+    A matchlist or boolean value that defaults to ``False``. When set to 
+    a matchlist it causes jobs to inherit all environment variables from the
+    *condor_starter* that are selected by the match list and not already defined
+    in the job ClassAd or by the ``STARTER_JOB_ENVIRONMENT`` configuration variable.
+
+    A matchlist is a comma, semicolon or space separated list of environment variable names
+    and name patterns that match or reject names.
+    Matchlist members are matched case-insensitively to each name
+    in the environment and those that match are imported. Matchlist members can contain ``*`` as wildcard
+    character which matches anything at that position.  Members can have two ``*`` characters if one of them
+    is at the end. Members can be prefixed with ``!``
+    to force a matching environment variable to not be imported.  The order of members in the Matchlist
+    has no effect on the result.  For backward compatiblity a single value of ``True`` behaves as if the value
+    was set to ``*``.  Prior to HTCondor version 10.1.0 all values other than ``True`` are treated as ``False``.
 
 :macro-def:`NAMED_CHROOT`
     A comma and/or space separated list of full paths to one or more
@@ -7733,15 +7742,16 @@ These macros affect the *condor_credd* and its credmon plugin.
     The path to the credmon daemon process when using the OAuth2
     credentials type.  The default is /usr/sbin/condor_credmon_oauth.
 
-:macro-def:`CREDMON_OAUTH_TOKEN_LIFETIME`
-    The time in seconds for credmon to delay after new OAuth2
-    credentials are stored before deleting them.
-
 :macro-def:`CREDMON_OAUTH_TOKEN_MINIMUM`
     The minimum time in seconds that OAuth2 tokens should have remaining
-    on them when they are generated.  After half that amount of time 
-    elapses, they are renewed.  This is currently implemented only
-    in the vault credmon, not the default oauth credmon.
+    on them when they are generated.  The default is 40 minutes.
+    This is currently implemented only in the vault credmon, not the
+    default oauth credmon.
+
+:macro-def:`CREDMON_OAUTH_TOKEN_REFRESH`
+    The time in seconds between renewing OAuth2 tokens.  The default is
+    half of ``CREDMON_OAUTH_TOKEN_MINIMUM``.  This is currently implemented
+    only in the vault credmon, not the default oauth credmon.
 
 condor_gridmanager Configuration File Entries
 ----------------------------------------------
@@ -9655,17 +9665,6 @@ machine within the pool. They specify items related to the
     the memory of a vm universe job when the job is suspended. When
     ``True``, the memory is not freed.
 
-:macro-def:`VM_UNIV_NOBODY_USER`
-    Identifies a login name of a user with a home directory that may be
-    used for job owner of a vm universe job. The nobody user normally
-    utilized when the job arrives from a different UID domain will not
-    be allowed to invoke a VMware virtual machine.
-
-:macro-def:`ALWAYS_VM_UNIV_USE_NOBODY`
-    A boolean value that defaults to ``False``. When ``True``, all vm
-    universe jobs (independent of their UID domain) will run as the user
-    defined in ``VM_UNIV_NOBODY_USER``.
-
 :macro-def:`VM_NETWORKING`
     A boolean variable describing if networking is supported. When not
     defined, the default value is ``False``.
@@ -10455,27 +10454,25 @@ details. The other set replace functionality of the
     Router finishes managing the job. ``<Keyword>`` is the hook keyword
     defined by ``JOB_ROUTER_HOOK_KEYWORD`` to identify the hooks.
 
-Configuration File Entries Relating to Daemon ClassAd Hooks
------------------------------------------------------------
+Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron
+----------------------------------------------------------------------------------------
 
 :index:`daemon ClassAd hook configuration variables<single: daemon ClassAd hook configuration variables; configuration>`
 
-The following macros describe the daemon ClassAd hook capabilities of
-HTCondor.  The daemon ClassAd hook mechanism is used to run executables
+The following macros describe the daemon ClassAd hooks which run
+startd cron and schedd cron.  These run executables or scripts
 directly from the *condor_startd* and *condor_schedd*
-daemons.  The output from the jobs is incorporated into the machine
+daemons.  The output is merged into the 
 ClassAd generated by the respective daemon.  The mechanism is described
-in :ref:`admin-manual/hooks:daemon classad hooks`.
+in :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
 
-These macros are listed in alphabetical order for ease of reference, except
-that the the job-specific macros follow the general ones.  These macros
-all include ``CRON`` because the default mode for a daemon ClassAd hook is
-to run periodically.  Likewise, a specific daemon ClassAd hook is referred
-to as a ``JOB``.
+These macros all include ``CRON`` because the default mode for a daemon 
+ClassAd hook is to run periodically.  A specific daemon ClassAd 
+hook is called a ``JOB``.
 
 To define a job:
 
-* Start by adding a ``JobName`` to :macro:`STARTD_CRON_JOBLIST`.  (If
+* Add a ``JobName`` to :macro:`STARTD_CRON_JOBLIST`.  (If
   you want to define a benchmark, or a daemon ClassAd hook in the schedd,
   use ``BENCHMARK`` or ``SCHEDD`` in the macro name instead.)  A
   ``JobName`` identifies a specific job and must be unique.  In the rest of
@@ -10642,7 +10639,7 @@ are probably the most common.
     resource monitor (CMRM), and its output is handled differently than
     a normal job's. A CMRM should output one ad per custom machine
     resource instance and use ``SlotMergeConstraint``\ s (see
-    :ref:`admin-manual/hooks:daemon classad hooks`) to specify the instance to
+    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`) to specify the instance to
     which it applies.
 
     The ad corresponding to each custom machine resource instance should
@@ -10788,7 +10785,7 @@ are probably the most common.
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot
     actually incorporates the output depends on the output; see
-    :ref:`admin-manual/hooks:daemon classad hooks`.
+    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST`` or

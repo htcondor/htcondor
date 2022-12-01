@@ -73,15 +73,6 @@ class Authentication {
 	//          if not currently authenticated, see next.
     //------------------------------------------
 
-    const char* getFQAuthenticatedName();
-    //------------------------------------------
-    // PURPOSE: Return the full unmapped name from the authencation
-    // REQUIRE: That authentication has already happened
-    // RETURNS: pointer to a string you should NOT free
-    //          which is the unmapped peer name, or NULL
-    //          if not currently authenticated, see next.
-    //------------------------------------------
-
     const char* getAuthenticatedName();
     //------------------------------------------
     // PURPOSE: Return the unmapped name from the authencation

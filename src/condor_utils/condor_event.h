@@ -316,6 +316,7 @@ class ULogEvent {
 
 	// read a line into a MyString 
 	bool read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp=true);
+	bool read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
 
 	// returns a new'ed pointer to a buffer containing the next line if there is a next line
 	// and it is not a sync line. got_sync_line will be set to true if it was a sync line
@@ -326,6 +327,7 @@ class ULogEvent {
 	// read a value after a prefix into a MyString
 	// for 
 	bool read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp=true);
+	bool read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp=true);
 
   private:
     /// The time this event occurred as a UNIX timestamp
@@ -404,8 +406,6 @@ class SubmitEvent : public ULogEvent
   public:
     ///
     SubmitEvent(void);
-    ///
-    ~SubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -431,18 +431,16 @@ class SubmitEvent : public ULogEvent
 
 	void setSubmitHost(char const *addr);
 
-	char const *getSubmitHost() { return submitHost; }
+	char const *getSubmitHost() { return submitHost.c_str(); }
 
-    // dagman-supplied text to include in the log event
-    char* submitEventLogNotes;
-    // user-supplied text to include in the log event
-    char* submitEventUserNotes;
-    // schedd-supplied warning about unmet future requirements
-    char* submitEventWarnings;
-
- private:
-    /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char *submitHost;
+	/// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
+	std::string submitHost;
+	// dagman-supplied text to include in the log event
+	std::string submitEventLogNotes;
+	// user-supplied text to include in the log event
+	std::string submitEventUserNotes;
+	// schedd-supplied warning about unmet future requirements
+	std::string submitEventWarnings;
 };
 
 //----------------------------------------------------------------------------
@@ -573,8 +571,6 @@ class ExecuteEvent : public ULogEvent
   public:
     ///
     ExecuteEvent(void);
-    ///
-    ~ExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -601,12 +597,8 @@ class ExecuteEvent : public ULogEvent
 		/** @return execute host or empty string (never NULL) */
 	char const *getExecuteHost();
 
-	char const *getRemoteName() { return remoteName; }
-
 	void setExecuteHost(char const *addr);
-	void setRemoteName(char const *name);
 
- private:
 	/** Identifier for the machine the job executed on.
 		For Vanilla, Standard, and other non-Grid Universes, a
 		host string in the form: "<128.105.165.12:32779>".
@@ -614,8 +606,7 @@ class ExecuteEvent : public ULogEvent
 		This may be an empty string for some JobUniverses
 		or GridTyps.
 	*/
-    char *executeHost;
-	char *remoteName;
+	std::string executeHost;
 };
 
 //----------------------------------------------------------------------------
@@ -699,7 +690,7 @@ class CheckpointedEvent : public ULogEvent
     /** Remote Usage for the run */  rusage  run_remote_rusage;
 
 	/// bytes sent by the job over network for checkpoint
-	float sent_bytes;
+	double sent_bytes;
 };
 
 
@@ -835,10 +826,10 @@ class JobEvictedEvent : public ULogEvent
     /** Remote Usage for the run */ rusage  run_remote_rusage;
 
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 
     /// Did it terminate and get requeued?
     bool    terminate_and_requeued;
@@ -934,14 +925,14 @@ class TerminatedEvent : public ULogEvent
     /** Total Remote rusage      */    rusage  total_remote_rusage;
 
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 	/// total bytes sent by the job over network for the lifetime of the job
-	float total_sent_bytes;
+	double total_sent_bytes;
 	/// total bytes received by the job over the network for the lifetime
 	/// of the job
-	float total_recvd_bytes;
+	double total_recvd_bytes;
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
@@ -1326,9 +1317,9 @@ class ShadowExceptionEvent : public ULogEvent
 	/// exception message
 	char	message[BUFSIZ];
 	/// bytes sent by the job over network for the run
-	float sent_bytes;
+	double sent_bytes;
 	/// bytes received by the job over the network for the run
-	float recvd_bytes;
+	double recvd_bytes;
 	bool began_execution;
 };
 
@@ -1690,8 +1681,6 @@ class GridResourceUpEvent : public ULogEvent
   public:
     ///
     GridResourceUpEvent(void);
-    ///
-    ~GridResourceUpEvent(void);
 
     /** Read the body of the next GridResoruceUp event.
         @param file the non-NULL readable log file
@@ -1715,9 +1704,8 @@ class GridResourceUpEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
-
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 };
 
 class GridResourceDownEvent : public ULogEvent
@@ -1725,8 +1713,6 @@ class GridResourceDownEvent : public ULogEvent
   public:
     ///
     GridResourceDownEvent(void);
-    ///
-    ~GridResourceDownEvent(void);
 
     /** Read the body of the next GridResourceDown event.
         @param file the non-NULL readable log file
@@ -1750,9 +1736,8 @@ class GridResourceDownEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
-
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 };
 
 //----------------------------------------------------------------------------
@@ -1765,8 +1750,6 @@ class GridSubmitEvent : public ULogEvent
   public:
     ///
     GridSubmitEvent(void);
-    ///
-    ~GridSubmitEvent(void);
 
     /** Read the body of the next GridSubmit event.
         @param file the non-NULL readable log file
@@ -1790,11 +1773,11 @@ class GridSubmitEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-    /// Name of the remote resource (GridResource attribute)
-    char* resourceName;
+	/// Name of the remote resource (GridResource attribute)
+	std::string resourceName;
 
 	/// Job ID on the remote resource (GridJobId attribute)
-    char* jobId;
+	std::string jobId;
 };
 
 //----------------------------------------------------------------------------
@@ -1843,7 +1826,6 @@ class JobAdInformationEvent : public ULogEvent
 	int LookupString (const char *attributeName, char **value) const;
 	int LookupInteger (const char *attributeName, int &value) const;
 	int LookupInteger (const char *attributeName, long long &value) const;
-	int LookupFloat (const char *attributeName, float &value) const;
 	int LookupFloat (const char *attributeName, double &value) const;
 	int LookupBool  (const char *attributeName, bool &value) const;
 
@@ -2098,8 +2080,6 @@ class ClusterSubmitEvent : public ULogEvent
   public:
     ///
     ClusterSubmitEvent(void);
-    ///
-    ~ClusterSubmitEvent(void);
 
     /** Read the body of the next Submit event.
         @param file the non-NULL readable log file
@@ -2125,14 +2105,12 @@ class ClusterSubmitEvent : public ULogEvent
 
     void setSubmitHost(char const *addr);
 
-    // dagman-supplied text to include in the log event
-    char* submitEventLogNotes;
-    // user-supplied text to include in the log event
-    char* submitEventUserNotes;
-
- private:
-    /// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
-    char *submitHost;
+	/// For Condor v8, a host string in the form: "<128.105.165.12:32779>".
+	std::string submitHost;
+	// dagman-supplied text to include in the log event
+	std::string submitEventLogNotes;
+	// user-supplied text to include in the log event
+	std::string submitEventUserNotes;
 };
 
 //----------------------------------------------------------------------------

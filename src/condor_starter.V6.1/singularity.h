@@ -19,8 +19,6 @@ public:
   static bool enabled();
   static const char *version();
 
-  static bool advertise(classad::ClassAd &daemonAd);
-
   enum result {
     SUCCESS,   // Singularity job has been setup.
     DISABLE,   // Singularity job was not requested.

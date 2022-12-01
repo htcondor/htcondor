@@ -408,7 +408,7 @@ class DedicatedScheduler : public Service {
 	int		sanity_tid;		// DC timer id for sanityCheck()
 
 		// data structures for managing dedicated jobs and resources. 
-	ExtArray<int>*		idle_clusters;	// Idle cluster ids
+	std::vector<int>*		idle_clusters;	// Idle cluster ids
 
 	ClassAdList*		resources;		// All dedicated resources 
 	int					total_cores;    // sum of all cores above

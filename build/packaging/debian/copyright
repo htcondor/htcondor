@@ -101,10 +101,6 @@ Files: src/safefile/*
 Copyright: 2007-2008, 2011 James A. Kupsch
 License: Apache-2.0
 
-Files: src/condor_includes/condor_gssapi_openssl.h
-Copyright: 1999-2006, University of Chicago
-License: Apache-2.0
-
 Files: src/condor_filetransfer_plugins/hdfs*
 Copyright: 2006, Apache Software Foundation
 License: Apache-2.0

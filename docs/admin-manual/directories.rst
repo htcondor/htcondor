@@ -17,7 +17,7 @@ Directories used by More than One Role
     although you should never need to do so.  You can also control the sizes
     of the log files or how often they rotate; see
     :ref:`admin-manual/configuration-macros:Daemon Logging Configuration File Entries`
-    for details.  If you want to write your logs to a shared filesytem,
+    for details.  If you want to write your logs to a shared filesystem,
     we recommend including ``$(HOSTNAME)`` in the value of ``LOG`` rather
     than changing the names of each individual log to not collide.  If you
     set ``LOG`` to a shared filesystem, you should set ``LOCK`` to a local
@@ -53,7 +53,7 @@ Directories use by the Submit Role
     :macro:`JOB_QUEUE_LOG` to separate the job queue log (system data)
     from the (user) job data.  This can also be used to increase performance
     (or reliability) by moving the job queue log to specialized hardware (an
-    SSD or a a high-redudancy RAID, for example).
+    SSD or a a high-redundancy RAID, for example).
 
 Directories use by the Execute Role
 ===================================
@@ -68,7 +68,7 @@ Directories use by the Execute Role
     provide a plenty of space.  ``EXECUTE`` should not be placed under /tmp
     or /var/tmp if possible, as HTCondor loses the ability to make /tmp and
     /var/tmp private to the job.  While not a requirement, ideally ``EXECUTE``
-    should be on a distinct filesytem, so that it is impossible for a rogue job
+    should be on a distinct filesystem, so that it is impossible for a rogue job
     to fill up non-HTCondor related partitions.
 
     Usually, the per-job scratch execute directory is created by the startd
@@ -78,14 +78,14 @@ Directories use by the Execute Role
 
     There are several advantages to this approach.  The first is that disk space is
     more accurately measured and enforced.  HTCondor can get the disk usage by a single
-    system call, instead of traversing what might be a very deep directory hierachy. There
+    system call, instead of traversing what might be a very deep directory hierarchy. There
     may also be performance benefits, as this filesystem never needs to survive a reboot,
     and is thus mounted with mount options that provide the least amount of disk consistence
-    in the face of a reboot.  Also, when the job exits, all the files in the fileystem
+    in the face of a reboot.  Also, when the job exits, all the files in the filesystem
     can be removed by simply unmounting and destroying the filesystem, which is much
     faster than having condor remove each scratch file in turn.
 
-    To enable this, first set :macro:`STARTD_ENFORCE_DISK_USAGE` to ``true``.  Then, if LVM is 
+    To enable this, first set :macro:`STARTD_ENFORCE_DISK_LIMITS` to ``true``.  Then, if LVM is 
     installed and configured, set :macro:`THINPOOL_NAME` to the name of a logical volume.
     ``"condor_lv"`` might be a good choice.  Finally, set :macro:`THINPOOL_VOLUME_GROUP` to 
     the name of the volume group the LVM administrator has created for this purpose.

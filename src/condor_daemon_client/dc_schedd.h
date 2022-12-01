@@ -351,24 +351,6 @@ public:
 	bool receiveJobSandbox(const char* constraint, CondorError * errstack, int * numdone = 0);
 
 
-	bool register_transferd(const std::string &sinful, const std::string &id, int timeout, 
-		ReliSock **regsock_ptr, CondorError *errstack);
-
-
-	// Request a sandbox location for a set of ads described by a
-	// constraint as applied to the job queue
-	bool requestSandboxLocation(int direction, std::string & constraint,
-		int protocol, ClassAd *respad, CondorError * errstack);
-
-	// Request a sandbox location for a set of specific job ids.
-	bool requestSandboxLocation(int direction, int JobAdsArrayLen,
-		ClassAd* JobAdsArray[], int protocol, ClassAd *respad,
-		CondorError * errstack);
-
-	// Request a sandbox location using a raw request classad.
-	bool requestSandboxLocation(ClassAd *reqad, ClassAd *respad,
-		CondorError * errstack);
-
 	bool updateGSIcredential(const int cluster, const int proc,
 		const char* path_to_proxy_file, CondorError * errstack);
 

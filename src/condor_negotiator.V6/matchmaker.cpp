@@ -245,8 +245,8 @@ bool ResourcesInUseByUsersGroup_classad_func( const char * /*name*/,
 		return true;
 	}
 
-	float group_quota = 0;
-	float group_usage = 0;
+	double group_quota = 0;
+	double group_usage = 0;
 	std::string group_name;
 	if( !matchmaker_for_classad_func->getGroupInfoFromUserId(user.c_str(),group_name,group_quota,group_usage) ) {
 		result.SetErrorValue();
@@ -535,8 +535,11 @@ initialize (const char *neg_name)
             (CommandHandlercpp) &Matchmaker::SET_PRIORITY_commandHandler,
 			"SET_PRIORITY_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_CEILING, "SetCeiling",
-            (CommandHandlercpp) &Matchmaker::SET_CEILING_commandHandler,
+            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
 			"SET_CEILING_commandHandler", this, ADMINISTRATOR);
+    daemonCore->Register_Command (SET_FLOOR, "SetFloor",
+            (CommandHandlercpp) &Matchmaker::SET_CEILING_or_FLOOR_commandHandler,
+			"SET_FLOOR_commandHandler", this, ADMINISTRATOR);
     daemonCore->Register_Command (SET_ACCUMUSAGE, "SetAccumUsage",
             (CommandHandlercpp) &Matchmaker::SET_ACCUMUSAGE_commandHandler,
 			"SET_ACCUMUSAGE_commandHandler", this, ADMINISTRATOR);
@@ -872,7 +875,7 @@ reinitialize ()
 void
 Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 {
-	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", false)) {
+	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true)) {
 		return;
 	}
 	dprintf(D_SECURITY, "Will look for match security sessions.\n");
@@ -1040,7 +1043,7 @@ bool returnPrioFactor(Stream *strm, CondorError &errstack)
 int Matchmaker::
 SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 {
-	float	priority;
+	double	priority;
 	std::string submitter;
 
 	// read the required data off the wire
@@ -1109,23 +1112,30 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 }
 
 int Matchmaker::
-SET_CEILING_commandHandler (int /*command*/, Stream *stream) {
-	int	ceiling;
+SET_CEILING_or_FLOOR_commandHandler (int command, Stream *stream) {
+	int	value;
     std::string submitter;
 
 	// read the required data off the wire
 	if (!stream->get(submitter) 	||
-		!stream->get(ceiling) 	||
+		!stream->get(value) 	||
 		!stream->end_of_message())
 	{
-		dprintf (D_ALWAYS, "Could not read submitter name and ceilng\n");
+		dprintf (D_ALWAYS, "SET_CEILING_or_FLOOR: Could not read submitter name and ceiling/floor\n");
 		return FALSE;
 	}
 
 	// set the ceiling
-	dprintf(D_ALWAYS,"Setting the celing of %s to %d\n", submitter.c_str(), ceiling);
-	accountant.SetCeiling(submitter, ceiling);
+	if (command == SET_CEILING) {
+		dprintf(D_ALWAYS,"Setting the ceiling of %s to %d\n", submitter.c_str(), value);
+		accountant.SetCeiling(submitter, value);
+	}
 	
+	// set the floor
+	if (command == SET_FLOOR) {
+		dprintf(D_ALWAYS,"Setting the floor of %s to %d\n", submitter.c_str(), value);
+		accountant.SetFloor(submitter, value);
+	}
 	return TRUE;
 }
 
@@ -1133,7 +1143,7 @@ SET_CEILING_commandHandler (int /*command*/, Stream *stream) {
 int Matchmaker::
 SET_PRIORITY_commandHandler (int, Stream *strm)
 {
-	float	priority;
+	double	priority;
     std::string submitter;
 
 	// read the required data off the wire
@@ -1155,7 +1165,7 @@ SET_PRIORITY_commandHandler (int, Stream *strm)
 int Matchmaker::
 SET_ACCUMUSAGE_commandHandler (int, Stream *strm)
 {
-	float	accumUsage;
+	double	accumUsage;
     std::string submitter;
 
 	// read the required data off the wire
@@ -1531,7 +1541,7 @@ compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds)
 
 
 bool Matchmaker::
-getGroupInfoFromUserId(const char* user, std::string& groupName, float& groupQuota, float& groupUsage)
+getGroupInfoFromUserId(const char* user, std::string& groupName, double& groupQuota, double& groupUsage)
 {
 	ASSERT(groupQuotasHash);
 
@@ -1766,7 +1776,19 @@ negotiationTime ()
         // If there is only one group (the root group) we are in traditional non-HGQ mode.
         // It seems cleanest to take the traditional case separately for maximum backward-compatible behavior.
         // A possible future change would be to unify this into the HGQ code-path, as a "root-group-only" case.
-        negotiateWithGroup(cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
+
+		// If there are any submitters who have a floor defined, and their current usage is below
+		// their floor, negotiator for just those, and only up to their floor.
+		ClassAdListDoesNotDeleteAds submittersBelowFloor;
+		findBelowFloorSubmitters(submitterAds,submittersBelowFloor);
+		if (submittersBelowFloor.Length() > 0) {
+			dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
+					submittersBelowFloor.Length());
+			negotiateWithGroup(true /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submittersBelowFloor);
+			dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
+		}
+
+        negotiateWithGroup(false /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submitterAds);
     } else {
         // Otherwise we are in HGQ mode, so begin HGQ computations
 
@@ -1785,7 +1807,24 @@ negotiationTime ()
 				if (autoregroup && (g == hgq_root_group)) {
 					name = nullptr;
 				}
-				negotiateWithGroup(cPoolsize,
+
+				ClassAdListDoesNotDeleteAds submittersBelowFloor;
+				findBelowFloorSubmitters(*(g->submitterAds), submittersBelowFloor);
+				if (submittersBelowFloor.Length() > 0) {
+					dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
+							submittersBelowFloor.Length());
+					negotiateWithGroup(true /*isFloorRound*/, cPoolsize, 
+							weightedPoolsize, 
+							minSlotWeight, 
+							startdAds, 
+							claimIds, 
+							submittersBelowFloor,
+							slots,
+							name);
+
+				}
+				dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
+				negotiateWithGroup(false, cPoolsize,
 								weightedPoolsize,
 								minSlotWeight,
 								startdAds,
@@ -1888,6 +1927,7 @@ Matchmaker::forwardAccountingData(std::set<std::string> &names) {
 				updateAd.Assign(ATTR_NEGOTIATOR_NAME, NegotiatorName);
 				updateAd.Assign("Priority", accountant.GetPriority(name));
 				updateAd.Assign("Ceiling", accountant.GetCeiling(name));
+				updateAd.Assign("Floor", accountant.GetFloor(name));
 
 				bool isGroup;
 
@@ -1957,10 +1997,10 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
     accountingAd.Assign("IsAccountingGroup", isGroup);
     accountingAd.Assign("AccountingGroup", cgname);
 
-    float Priority = accountant.GetPriority(CustomerName);
+    double Priority = accountant.GetPriority(CustomerName);
     accountingAd.Assign("Priority", Priority);
 
-    float PriorityFactor = 0;
+    double PriorityFactor = 0;
     if (CustomerAd->LookupFloat("PriorityFactor",PriorityFactor)==0) {
 		PriorityFactor=0;
 	}
@@ -1985,15 +2025,15 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
     if (CustomerAd->LookupInteger("ResourcesUsed", ResourcesUsed)==0) ResourcesUsed=0;
     accountingAd.Assign("ResourcesUsed", ResourcesUsed);
 
-    float WeightedResourcesUsed = 0;
+    double WeightedResourcesUsed = 0;
     if (CustomerAd->LookupFloat("WeightedResourcesUsed",WeightedResourcesUsed)==0) WeightedResourcesUsed=0;
     accountingAd.Assign("WeightedResourcesUsed", WeightedResourcesUsed);
 
-    float AccumulatedUsage = 0;
+    double AccumulatedUsage = 0;
     if (CustomerAd->LookupFloat("AccumulatedUsage",AccumulatedUsage)==0) AccumulatedUsage=0;
     accountingAd.Assign("AccumulatedUsage", AccumulatedUsage);
 
-    float WeightedAccumulatedUsage = 0;
+    double WeightedAccumulatedUsage = 0;
     if (CustomerAd->LookupFloat("WeightedAccumulatedUsage",WeightedAccumulatedUsage)==0) WeightedAccumulatedUsage=0;
     accountingAd.Assign("WeightedAccumulatedUsage", WeightedAccumulatedUsage);
 
@@ -2111,13 +2151,14 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 }
 
 int Matchmaker::
-negotiateWithGroup ( int untrimmed_num_startds,
+negotiateWithGroup ( bool isFloorRound,
+					 int untrimmed_num_startds,
 					 double untrimmedSlotWeightTotal,
 					 double minSlotWeight,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds,
 					 ClassAdListDoesNotDeleteAds& submitterAds,
-					 float groupQuota, const char* groupName)
+					 double groupQuota, const char* groupName)
 {
 	ClassAd		*submitter_ad;
 	std::string    submitterName;
@@ -2310,6 +2351,7 @@ negotiateWithGroup ( int untrimmed_num_startds,
 				normalFactor,
 				normalAbsFactor,
 				slotWeightTotal,
+				isFloorRound,
 					/* result parameters: */
 				submitterLimit,
                 submitterLimitUnclaimed,
@@ -2504,7 +2546,8 @@ negotiateWithGroup ( int untrimmed_num_startds,
 
 	} while ( ( pieLeft < pieLeftOrig || submitterAds.MyLength() < submitterAdsCountOrig )
 			  && (submitterAds.MyLength() > 0)
-			  && (startdAds.MyLength() > 0) );
+			  && (startdAds.MyLength() > 0)
+		   	  && !isFloorRound);
 
 	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %d \n",submitterAds.MyLength());
 
@@ -2535,11 +2578,11 @@ comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
     if (prio1 < prio2) return true;
     if (prio1 > prio2) return false;
 
-    float sr1 = FLT_MAX;
-    float sr2 = FLT_MAX;
+    double sr1 = DBL_MAX;
+    double sr2 = DBL_MAX;
 
-    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = FLT_MAX;
-    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = FLT_MAX;
+    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = DBL_MAX;
+    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = DBL_MAX;
 
 	// secondary sort on job prio, if want_globaljobprio is true (see gt #3218)
 	if ( mm->want_globaljobprio ) {
@@ -2747,7 +2790,7 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
             continue;
         }
 
-		float slotWeight = accountant.GetSlotWeight(ad);
+		double slotWeight = accountant.GetSlotWeight(ad);
 		sum+=slotWeight;
 		if (minSlotWeight && (slotWeight < *minSlotWeight)) {
 			*minSlotWeight = slotWeight;
@@ -3929,14 +3972,14 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 
 		// insert the submitter user priority attributes into the request ad
 		// first insert old-style ATTR_SUBMITTOR_PRIO
-		request.Assign(ATTR_SUBMITTOR_PRIO , (float)priority );
+		request.Assign(ATTR_SUBMITTOR_PRIO , priority );
 		// next insert new-style ATTR_SUBMITTER_USER_PRIO
-		request.Assign(ATTR_SUBMITTER_USER_PRIO , (float)priority );
+		request.Assign(ATTR_SUBMITTER_USER_PRIO , priority );
 		// next insert the submitter user usage attributes into the request
 		request.Assign(ATTR_SUBMITTER_USER_RESOURCES_IN_USE,
 					   accountant.GetWeightedResourcesUsed ( submitterName ));
 		std::string temp_groupName;
-		float temp_groupQuota, temp_groupUsage;
+		double temp_groupQuota, temp_groupUsage;
 		if (getGroupInfoFromUserId(submitterName, temp_groupName, temp_groupQuota, temp_groupUsage)) {
 			// this is a group, so enter group usage info
             request.Assign(ATTR_SUBMITTER_GROUP,temp_groupName);
@@ -4057,8 +4100,8 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 				remotePriority = accountant.GetPriority (remoteUser);
 
 
-				float newStartdRank;
-				float oldStartdRank = 0.0;
+				double newStartdRank;
+				double oldStartdRank = 0.0;
 				if(! EvalFloat(ATTR_RANK, offer, &request, newStartdRank)) {
 					newStartdRank = 0.0;
 				}
@@ -4180,12 +4223,12 @@ updateNegCycleEndTime(time_t startTime, ClassAd *submitter) {
 	}
 }
 
-float Matchmaker::
+double Matchmaker::
 EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
                         ClassAd &request,ClassAd *resource)
 {
 	classad::Value result;
-	float rank = -(FLT_MAX);
+	double rank = -(DBL_MAX);
 
 	if(expr && EvalExprTree(expr,resource,&request,result)) {
 		double val;
@@ -5186,6 +5229,7 @@ Matchmaker::calculateSubmitterLimit(
 	double normalFactor,
 	double normalAbsFactor,
 	double slotWeightTotal,
+	bool isFloorRound,
 		/* result parameters: */
 	double &submitterLimit,
     double& submitterLimitUnclaimed,
@@ -5225,6 +5269,17 @@ Matchmaker::calculateSubmitterLimit(
 	submitterPrioFactor = accountant.GetPriorityFactor ( submitterName );
 	submitterAbsShare =
 		maxAbsPrioValue/(submitterPrioFactor*normalAbsFactor);
+
+		// if we are in the "floor round", only give up to
+		// the floor number of resources configured for this
+		// submitter.  Might get more in subseqent rounds
+		// but the floor round is to try to get everyone up
+		// to their floor.
+	if (isFloorRound) {
+		double floor = accountant.GetFloor(submitterName);
+		submitterLimit = std::min(floor, submitterLimit);
+		dprintf(D_FULLDEBUG, "   Floor Round: %g\n", floor);
+	}
 }
 
 void
@@ -5270,6 +5325,7 @@ Matchmaker::calculatePieLeft(
 			normalFactor,
 			normalAbsFactor,
 			slotWeightTotal,
+			false, /* is floor round */
 				/* result parameters: */
 			submitterLimit,
             submitterLimitUnclaimed,
@@ -5354,10 +5410,10 @@ addRemoteUserPrios( ClassAd	*ad )
 	std::string slot_prefix;
 	std::string expr;
 	std::string expr_buffer;
-	float	prio;
+	double	prio;
 	int     total_slots, i;
-	float     preemptingRank;
-	float temp_groupQuota, temp_groupUsage;
+	double     preemptingRank;
+	double temp_groupQuota, temp_groupUsage;
 	std::string temp_groupName;
 
 		// If there is a preempting user, use that for computing remote user prio.
@@ -5434,6 +5490,27 @@ addRemoteUserPrios( ClassAd	*ad )
 		}	
 	}
 	free( resource_prefix );
+}
+
+void
+Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &submittersBelowFloor) {
+	ClassAd *submitterAd; 
+
+	submitterAds.Open ();
+	while ((submitterAd = submitterAds.Next())) {
+		std::string submitterName;
+		submitterAd->LookupString(ATTR_NAME, submitterName);
+		double floor = accountant.GetFloor(submitterName);
+		double usage = accountant.GetWeightedResourcesUsed(submitterName);
+
+		// If any floor is defined, and we're below it, we get into the
+		// special floor-only round
+		if ((floor > 0.0) && (usage < floor)) {
+			submittersBelowFloor.Insert(submitterAd);
+		}
+	}
+
+	return;
 }
 
 void Matchmaker::

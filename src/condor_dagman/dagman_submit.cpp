@@ -852,10 +852,8 @@ fake_condor_submit( CondorID& condorID, Job* job, const char* DAGNodeName,
 		// correctly.
 	subEvent.setSubmitHost( "<dummy-submit-for-noop-job>" );
 
-	std::string subEventNotes("DAG Node: " );
-	subEventNotes += DAGNodeName;
-		// submitEventLogNotes get deleted in SubmitEvent destructor.
-	subEvent.submitEventLogNotes = strnewp( subEventNotes.c_str() );
+	subEvent.submitEventLogNotes = "DAG Node: ";
+	subEvent.submitEventLogNotes += DAGNodeName;
 
 	if ( !ulog.writeEvent( &subEvent ) ) {
 		EXCEPT( "Error: writing dummy submit event for NOOP node failed!" );

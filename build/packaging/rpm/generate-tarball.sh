@@ -25,19 +25,6 @@ echo "...recording BUILD-ID: $build"
 
 for f in \
     src/condor_mail \
-    src/condor_tests/job_vmu_basic.sh \
-    src/condor_tests/job_vmu_cdrom.run \
-    src/condor_tests/job_vmu_cdrom.sh \
-    src/condor_tests/job_vmu_ckpt.run \
-    src/condor_tests/job_vmu_ckpt.sh \
-    src/condor_tests/job_vmu_network.key \
-    src/condor_tests/job_vmu_network.run \
-    src/condor_tests/job_vmu_network.sh \
-    src/condor_tests/job_vmu_basic.run \
-    src/condor_tests/x_vm_utils.pm \
-    src/condor_tests/x_param.vmware \
-    src/condor_tests/x_vmware_test_vm.cmd \
-    src/condor_tests/x_vmware_configpostsrc \
     src/condor_tests/job_ligo_x86-64-chkpttst.cmd \
     src/condor_tests/job_ligo_x86-64-chkpttst.run \
     condor_src-7.6.0-all-all.tar.gz;

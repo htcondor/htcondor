@@ -332,14 +332,9 @@ void CollectorDaemon::Init()
 	daemonCore->Register_CommandWithPayload(QUERY_SUBMITTOR_ADS,"QUERY_SUBMITTOR_ADS",
 		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_LICENSE_ADS,"QUERY_LICENSE_ADS",
+	receive_query_cedar,"receive_query_cedar",READ);
+	daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
 		receive_query_cedar,"receive_query_cedar",READ);
-	if(param_boolean("PROTECT_COLLECTOR_ADS", false)) {
-		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			receive_query_cedar,"receive_query_cedar",ADMINISTRATOR);
-	} else {
-		daemonCore->Register_CommandWithPayload(QUERY_COLLECTOR_ADS,"QUERY_COLLECTOR_ADS",
-			receive_query_cedar,"receive_query_cedar",READ);
-	}
 	daemonCore->Register_CommandWithPayload(QUERY_STORAGE_ADS,"QUERY_STORAGE_ADS",
 		receive_query_cedar,"receive_query_cedar",READ);
 	daemonCore->Register_CommandWithPayload(QUERY_ACCOUNTING_ADS,"QUERY_ACCOUNTING_ADS",
@@ -1555,26 +1550,6 @@ void CollectorDaemon::process_query_public (AdTypes whichAds,
 	__resultLimit__ = INT_MAX; // no limit
 	if ( ! query->LookupInteger(ATTR_LIMIT_RESULTS, __resultLimit__) || __resultLimit__ <= 0) {
 		__resultLimit__ = INT_MAX; // no limit
-	}
-
-	// See if we should exclude Collector Ads from generic queries.  Still
-	// give them out for specific collector queries, which is registered as
-	// ADMINISTRATOR when PROTECT_COLLECTOR_ADS is true.  This setting is
-	// designed only for use at the UW, and as such this knob is not present
-	// in the param table.
-	if ((whichAds != COLLECTOR_AD) && param_boolean("PROTECT_COLLECTOR_ADS", false)) {
-		dprintf(D_FULLDEBUG, "Received query with generic type; filtering collector ads\n");
-		std::string modified_filter;
-		formatstr(modified_filter, "(%s) && (MyType =!= \"Collector\")",
-			ExprTreeToString(__filter__));
-		query->AssignExpr(ATTR_REQUIREMENTS,modified_filter.c_str());
-		__filter__ = query->LookupExpr(ATTR_REQUIREMENTS);
-		if ( __filter__ == NULL ) {
-			dprintf (D_ALWAYS, "Failed to parse modified filter: %s\n",
-				modified_filter.c_str());
-			return;
-		}
-		dprintf(D_FULLDEBUG,"Query after modification: *%s*\n",modified_filter.c_str());
 	}
 
 	// If ABSENT_REQUIREMENTS is defined, rewrite filter to filter-out absent ads 

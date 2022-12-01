@@ -205,7 +205,6 @@ CondorError.cpp
 CondorError.h
 condor_fsync.cpp
 condor_fsync.h
-condor_ftp.cpp
 condor_getcwd.cpp
 condor_getcwd.h
 condor_holdcodes.h
@@ -476,7 +475,6 @@ token_utils.cpp
 token_utils.h
 totals.cpp
 totals.h
-transfer_request.cpp
 translation_utils.cpp
 translation_utils.h
 tree.h
@@ -690,10 +688,10 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
+if (DLOPEN_VOMS_LIBS)
 	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} crypto )
 else()
-	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} ${GLOBUS_FOUND} openssl crypto ${KRB5_FOUND} ${MUNGE_FOUND} )
+	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} openssl crypto ${KRB5_FOUND} ${MUNGE_FOUND} )
 	if (WITH_SCITOKENS)
 		target_link_libraries(condor_utils PUBLIC SciTokens)
 	endif()

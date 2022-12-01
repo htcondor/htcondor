@@ -55,8 +55,8 @@ std::string fillURL(const char *url)
 	Regex r; int errCode = 0, errOffset = 0;
 	bool patternOK = r.compile( "([^:]+://)?([^:/]+)(:[0-9]*)?(.*)", &errCode, &errOffset);
 	ASSERT( patternOK );
-	ExtArray<MyString> groups(5);
-	if(! r.match( url, & groups )) {
+	std::vector<std::string> groups;
+	if(! r.match_str(url, &groups )) {
 		return url;
 	}
 	if( groups[1].empty() ) {

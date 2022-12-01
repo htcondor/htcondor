@@ -5218,9 +5218,6 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
 
-    // Clear sessions associated with the child
-    clearSession(pid);
-
 #if defined(WIN32)
 	// even on a shutdown_fast, first try to send a WM_CLOSE because
 	// when we call TerminateProcess, any DLL's do not get a chance to
@@ -5289,9 +5286,6 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 
 	if ( pid == ppid )
 		return FALSE;		// cannot shut down our parent
-
-    // Clear sessions associated with the child
-    clearSession(pid);
 
 #if defined(WIN32)
 
@@ -9893,9 +9887,6 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 		pidentry->std_pipes[0] = DC_STD_FD_NOPIPE;
 	}
 	
-    //Now the child is gone, clear all sessions asssociated with the child
-    clearSession(pid);
-
 	// If process is Unix, we are passed the exit status.
 	// If process is NT and is remote, we are passed the exit status.
 	// If process is NT and is local, we need to fetch the exit status here.
@@ -10748,25 +10739,6 @@ DaemonCore::getKeyCache() {
 SecMan* DaemonCore :: getSecMan()
 {
     return sec_man;
-}
-
-void DaemonCore :: clearSession(pid_t pid)
-{
-	// this will clear any incoming sessions associated with the PID, even
-	// if it isn't a daemoncore child (like the stupid old shadow) and
-	// therefor has no command sock.
-	if(sec_man) {
-		sec_man->invalidateByParentAndPid(sec_man->my_unique_id(), pid);
-	}
-
-	// we also need to clear any outgoing sessions associated w/ this pid.
-    PidEntry * pidentry = NULL;
-
-    if ( pidTable->lookup(pid,pidentry) != -1 ) {
-        if (sec_man && pidentry) {
-            sec_man->invalidateHost(pidentry->sinful_string.c_str());
-        }
-    }
 }
 
 void DaemonCore :: invalidateSessionCache()
