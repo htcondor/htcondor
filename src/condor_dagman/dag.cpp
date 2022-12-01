@@ -89,8 +89,8 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		  const char *defaultNodeLog, bool generateSubdagSubmits,
 		  SubmitDagDeepOptions *submitDagDeepOpts, bool isSplice,
 		  DCSchedd *schedd, const std::string &spliceScope ) :
-    _maxPreScripts        (maxPreScripts),
-    _maxPostScripts       (maxPostScripts),
+	_maxPreScripts        (maxPreScripts),
+	_maxPostScripts       (maxPostScripts),
 	_maxHoldScripts       (maxHoldScripts),
 	MAX_SIGNAL			  (64),
 	_splices              ({}),
@@ -101,12 +101,13 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 	_nodeIDHash			  ({}),
 	_condorIDHash		  ({}),
 	_noopIDHash			  ({}),
-    _numNodesDone         (0),
-    _numNodesFailed       (0),
-    _numJobsSubmitted     (0),
+	_numNodesDone         (0),
+	_numNodesFailed       (0),
+	_numNodesFutile       (0),
+	_numJobsSubmitted     (0),
 	_totalJobsSubmitted   (0),
 	_totalJobsCompleted   (0),
-    _maxJobsSubmitted     (maxJobsSubmitted),
+	_maxJobsSubmitted     (maxJobsSubmitted),
 	_numIdleJobProcs		  (0),
 	_maxIdleJobProcs		  (maxIdleJobProcs),
 	m_retrySubmitFirst	  (retrySubmitFirst),
@@ -412,6 +413,7 @@ void Dag::SetPreDoneNodes() {
 		if ( node != NULL ) {
 			//Set given node to STATUS_DONE and remove node pointer from vector
 			node->SetStatus( Job::STATUS_DONE );
+			node->SetPreDone();
 		}
 		else {
 			//Print warning that somehow a NULL was set for a Node
@@ -750,6 +752,9 @@ Dag::ProcessAbortEvent(const ULogEvent *event, Job *job,
 			}
 		}
 
+		//If no post script then set descendants to Futile
+		if (!job->_scriptPost) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
+
 		ProcessJobProcEnd( job, recovery, true );
 	}
 }
@@ -817,6 +822,9 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 					RemoveBatchJob( job );
 				}
 			}
+
+			//If no post script and not retrying the node then set descendants to Futile
+			if (!job->_scriptPost && !job->DoRetry()) { _numNodesFutile += job->SetDescendantsToFutile(*this); }
 
 		} else {
 			// job succeeded
@@ -1034,6 +1042,7 @@ Dag::ProcessPostTermEvent(const ULogEvent *event, Job *job,
 				RestartNode( job, recovery );
 			} else {
 					// no more retries -- node failed
+				_numNodesFutile += job->SetDescendantsToFutile(*this);
 				_numNodesFailed++;
 				_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 				if ( _dagStatus == DAG_STATUS_OK ) {
@@ -1936,6 +1945,7 @@ Dag::PreScriptReaper( Job *job, int status )
 			// None of the above apply -- the node has failed.
 		else {
 			job->TerminateFailure();
+			_numNodesFutile += job->SetDescendantsToFutile(*this);
 			_numNodesFailed++;
 			_metrics->NodeFinished( job->GetDagFile() != NULL, false );
 			if ( _dagStatus == DAG_STATUS_OK ) {
@@ -3157,6 +3167,7 @@ Dag::DumpNodeStatus( bool held, bool removed )
 	fprintf( outfile, "  NodesPost = %d;\n", nodesPost );
 	fprintf( outfile, "  NodesReady = %d;\n", NumNodesReady() );
 	fprintf( outfile, "  NodesUnready = %d;\n",NumNodesUnready( true ) );
+	fprintf( outfile, "  NodesFutile = %d;\n", NumNodesFutile() );
 	fprintf( outfile, "  NodesFailed = %d;\n", nodesFailed );
 	fprintf( outfile, "  JobProcsHeld = %d;\n", nodesHeld );
 	fprintf( outfile, "  JobProcsIdle = %d; /* includes held */\n", nodesIdle );
@@ -3211,6 +3222,10 @@ Dag::DumpNodeStatus( bool held, bool removed )
 				status = Job::STATUS_ERROR;
 				nodeNote = "Was STATUS_POSTRUN";
 			}
+		} else if ( status == Job::STATUS_FUTILE ) {
+			nodeNote = "Had an ancestor node fail";
+		} else if ( status == Job::STATUS_DONE && _job->IsPreDone() ) {
+			nodeNote = "User defined as DONE";
 		}
 
 		fprintf( outfile, "  Node = %s;\n",
@@ -4315,9 +4330,10 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 		debug_printf( DEBUG_NORMAL, "Shortcutting node %s retries because "
 				"of submit failure(s)\n", node->GetJobName() );
 		node->retries = node->GetRetryMax();
+		bool ranPostScript = false;
 		if( node->_scriptPost ) {
 			node->_scriptPost->_retValJob = DAG_ERROR_CONDOR_SUBMIT_FAILED;
-			(void)RunPostScript( node, _alwaysRunPost, 0 );
+			ranPostScript = RunPostScript( node, _alwaysRunPost, 0 );
 		} else {
 			node->TerminateFailure();
 				// We consider service nodes to be best-effort
@@ -4330,6 +4346,8 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				_dagStatus = DAG_STATUS_NODE_FAILED;
 			}
 		}
+		//If no post script ran then set all descendants to Futile
+		if (!ranPostScript) { _numNodesFutile += node->SetDescendantsToFutile(*this); }
 	} else {
 		// We have more submit attempts left, put this node back into the
 		// ready queue.

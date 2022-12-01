@@ -2136,6 +2136,12 @@ information for the DAG.
     The number of DAG nodes that are not ready to run. This is a node in
     which one or more of the parent nodes has not yet finished.
 
+:classad-attribute:`DAG_NodesFutile`
+    The number of DAG nodes that will never run due to the failure of an
+    ancestor node. Where an ancestor is a node that a another node
+    depends on either directly or indirectly through a chain of PARENT/CHILD
+    relationships.
+
 :classad-attribute:`DAG_Status`
     The overall status of the DAG, with the same values as the macro
     ``$DAG_STATUS`` used in DAGMan FINAL nodes.

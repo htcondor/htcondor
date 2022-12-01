@@ -153,6 +153,7 @@
 #define ATTR_DAG_NODES_READY "DAG_NodesReady"
 #define ATTR_DAG_NODES_TOTAL "DAG_NodesTotal"
 #define ATTR_DAG_NODES_UNREADY "DAG_NodesUnready"
+#define ATTR_DAG_NODES_FUTILE "DAG_NodesFutile"
 #define ATTR_DAG_JOBS_SUBMITTED "DAG_JobsSubmitted"
 #define ATTR_DAG_JOBS_IDLE "DAG_JobsIdle"
 #define ATTR_DAG_JOBS_RUNNING "DAG_JobsRunning"
