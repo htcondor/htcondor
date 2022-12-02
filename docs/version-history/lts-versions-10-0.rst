@@ -70,6 +70,10 @@ Bugs Fixed:
 - Fixed AES encryption failures on macOS Ventura.
   :jira:`1458`
 
+- Fixed a bug that would cause tools that have the ``-printformat`` argument to segfault
+  when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
+  :jira:`1464`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
