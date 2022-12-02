@@ -42,7 +42,7 @@ New Features:
   log file.
   :jira:`1431`
 
-- Added configuration knob macro:`SINGULARITY_USE_PID_NAMESPACES`.
+- Added configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1431`
 
 - *condor_history* will now stop searching history files once all requested job ads are
