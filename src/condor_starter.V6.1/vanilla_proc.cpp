@@ -157,6 +157,82 @@ VanillaProc::~VanillaProc()
 	cleanupOOM();
 }
 
+static bool cgroup_v1_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
+
+#ifdef LINUX
+	if (relative_cgroup.length() == 0) {
+		return false;
+	}
+
+	// Assume cgroup mounted on /sys/fs/cgroup
+	std::string cgroup_mount_point = "/sys/fs/cgroup";
+
+	// In Cgroup v1, need to test each controller separately
+	std::string test_path = cgroup_mount_point + '/' + controller + '/' + relative_cgroup;
+
+	// The relative path given might not completly exist.  We can write
+	// to it if we can write to the fully given path (the usual case)
+	// OR, if we have write power to the parent of the top-most non-existing
+	// directory.
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
+
+		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			return true;
+		}
+	}
+
+	// The directory doesn't exist.  See if we can write to the parent.
+	if ((errno == ENOENT) && (relative_cgroup.length() > 1))  {
+		size_t trailing_slash = relative_cgroup.find_last_of('/');
+		if (trailing_slash == std::string::npos) {
+			relative_cgroup = '/'; // last try from the root of the mount point
+		} else {
+			relative_cgroup.resize(trailing_slash); // Retry one directory up
+		}
+		return cgroup_v1_controller_is_writeable(controller, relative_cgroup);
+
+	}
+	
+	dprintf(D_ALWAYS, "    Cgroup %s/%s is not writeable, cannot use cgroups\n", controller.c_str(), relative_cgroup.c_str());
+#endif
+	return false;
+}
+
+static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
+	return 
+		// These should be synchronized to the required_controllers in the procd
+		cgroup_v1_controller_is_writeable("memory", relative_cgroup)     &&
+		cgroup_v1_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
+		cgroup_v1_controller_is_writeable("freezer", relative_cgroup)    &&
+		cgroup_v1_controller_is_writeable("blkio", relative_cgroup);
+}
+
+static bool cgroup_v2_is_writeable(const std::string &/*relative_cgroup*/) {
+	return false;  // Soon...
+}
+
+static bool cgroup_is_writeable(const std::string &relative_cgroup) {
+#ifdef LINUX
+	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
+
+	struct stat statbuf;
+
+	// Should be readable by everyone
+	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+		// This means we're on cgroups v2
+		return cgroup_v2_is_writeable(relative_cgroup);
+	} else {
+		// V1.
+		return cgroup_v1_is_writeable(relative_cgroup);
+	}
+#else
+	return false;
+#endif
+}
+
 int
 VanillaProc::StartJob()
 {
@@ -349,7 +425,7 @@ VanillaProc::StartJob()
 		 *  local universe and cgroups can be properly worked
 		 *  out. -matt 7 nov '12
 		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids() && has_sysadmin_cap()) {
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");

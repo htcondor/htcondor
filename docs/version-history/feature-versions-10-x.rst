@@ -21,6 +21,12 @@ Release Notes:
   cause jobs that used to go on hold (because they couldn't write their
   ``output`` or ``error`` files, or a remapped output file) to instead succeed.
   :jira:`1325`
+  
+- HTCondor can now put a job in a Linux control (cgroup), not only if it has
+  root privilege, but also if the administrator or some external entity
+  has made the cgroup HTCondor is configured to use writeable by the
+  non-rootly user a personal condor or glidein is running as.
+  :jira:`1465`
 
 New Features:
 
