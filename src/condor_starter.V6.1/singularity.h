@@ -51,17 +51,19 @@ public:
   static bool canRunSandbox();
   static bool canRunSIF();
   static bool canRun(const std::string &image);
-
+  static std::string m_lastSingularityErrorLine;
 
 private:
   static bool detect(CondorError &err);
   static std::string environmentPrefix();
+  static void add_containment_args(ArgList & sing_args);
 
   static bool m_enabled;
   static bool m_probed;
   static bool m_apptainer;
   static int m_default_timeout;
   static std::string m_singularity_version;
+  static bool m_use_pid_namespaces;
 };
 
 }

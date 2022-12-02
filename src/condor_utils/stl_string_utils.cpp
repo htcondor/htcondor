@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2010, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include <limits>
+#include <regex>
 
 #include "stl_string_utils.h"
 
@@ -233,6 +234,14 @@ void title_case( std::string &str )
 		}
 		upper = isspace(str[i]);
 	}
+}
+
+std::string RemoveANSIcodes(const std::string& src)
+{
+	// Get rid of all ANSI escape codes, like test color changes,
+	// by using a regexp.
+	static std::regex regexp("(\\x9B|\\x1B\\[)[0-?]*[ -\\/]*[@-~]");  // static so compiled just once
+	return std::regex_replace(src, regexp, "");
 }
 
 std::string EscapeChars(const std::string& src, const std::string& Q, char escape)

@@ -1777,6 +1777,13 @@ customization=seldom
 friendly_name=Allow singluarity to bind moont home
 tags=startd
 
+[SINGULARITY_TEST_SANDBOX]
+default=$(LIBEXEC)/singularity_test_sandbox
+type=string
+customization=seldom
+friendly_name=Sandbox location used to test Singularity
+tags=starter
+
 [UPDATE_INTERVAL]
 default=300
 type=int

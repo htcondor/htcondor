@@ -35,6 +35,16 @@ New Features:
   via the *condor_userprio* tool, in the same way that the ceiling can be set or get
   :jira:`557`
 
+- Improved the validity testing of the Singularity / Apptainer container runtime software
+  at *condor_startd* startup.  If this testing fails, slot attribute ``HasSingularity`` will be
+  set to ``false``, and attribute ``SingularityOfflineReason`` will contain error information.
+  Also in the event of Singularity errors, more information is recorded into the *condor_starter*
+  log file.
+  :jira:`1431`
+
+- Added configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
+  :jira:`1431`
+
 - *condor_history* will now stop searching history files once all requested job ads are
   found if passed ClusterIds or ClusterId.ProcId pairs.
   :jira:`1364`

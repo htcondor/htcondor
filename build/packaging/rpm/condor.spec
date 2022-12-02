@@ -1067,6 +1067,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
 %_libexecdir/condor/exit_37.sif
+%dir %_libexecdir/condor/singularity_test_sandbox/
+%dir %_libexecdir/condor/singularity_test_sandbox/dev/
+%_libexecdir/condor/singularity_test_sandbox/exit_37
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
 %_libexecdir/condor/condor_schedd.init
@@ -1321,7 +1324,6 @@ rm -rf %{buildroot}
 %_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
-%_sbindir/exit_37
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/

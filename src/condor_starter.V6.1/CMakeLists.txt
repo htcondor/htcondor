@@ -94,7 +94,7 @@ endif()
 # docker build -t htcondor_docker_test .
 # docker save htcondor_docker_test > htcondor_docker_test
 
-# At startup we run singularity with a sandbox dir of SBIN
+# At startup we run singularity with a sandbox dir of $(LIBEXEC)/singularity_test_sandbox
 # and run this small program to verify that it exits with code 37
 if (LINUX)
 	add_executable(exit_37 "exit_37.c")
@@ -124,11 +124,13 @@ endif()
 # we can't assume that singularity is either, so we check in a small .sif file
 # built with 
 # mkdir chroot
-# cp $(SBIN)/exit_37 chroot
+# cp $(LIBEXEC)/singularity_test_sandbox/bin/exit_37 chroot
 # singularity build exit_37.sif chroot
 
 if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/htcondor_docker_test DESTINATION ${C_LIBEXEC} )
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
-	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_SBIN} PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox )
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev )
+	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()

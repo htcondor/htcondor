@@ -1,3 +1,21 @@
+/***************************************************************
+ *
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
+ * University of Wisconsin-Madison, WI.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License.  You may
+ * obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *
+ ***************************************************************/
 
 #include "condor_common.h"
 
@@ -8,6 +26,7 @@
 #endif
 
 #include <vector>
+#include <regex>
 
 #include "condor_config.h"
 #include "my_popen.h"
@@ -22,10 +41,12 @@ using namespace htcondor;
 
 
 bool Singularity::m_enabled = false;
+bool Singularity::m_use_pid_namespaces = true;
 bool Singularity::m_probed = false;
 bool Singularity::m_apptainer = false;
 int  Singularity::m_default_timeout = 120;
 std::string Singularity::m_singularity_version;
+std::string Singularity::m_lastSingularityErrorLine;
 
 static bool find_singularity(std::string &exec)
 {
@@ -346,22 +367,7 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	// Setup Singularity containerization options.
-	// By default, we will ideally pass "-C" which tells Singularity to contain
-	// everything, which includes file systems, PID, IPC, and environment and whatever
-	// they dream up next.
-	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
-	if (param_boolean("SINGULARITY_USE_PID_NAMESPACES", true)) {
-		// containerize everything with -C, ie use pid namespaces
-		sing_args.AppendArg("-C");
-	}
-	else {
-		// We cannot use pid namespaces, so we cannot use -C to contain everything.
-		// Unfortunately, Singulariry does not have a way to just disable pid namespaces.
-		// So instead we pass as many other contain flags as we can.
-		sing_args.AppendArg("--contain");	//  minimal dev and other dirs
-		sing_args.AppendArg("--ipc");		// contain ipc namespace
-		sing_args.AppendArg("--cleanenv");
-	}
+	add_containment_args(sing_args);
 
 	std::string args_error;
 	std::string sing_extra_args;
@@ -553,9 +559,9 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 
 	errorMessage = buf;
 
-	// TODO: strip out ansi escape sequences from errorMesssage.
 	// Singularity puts various ansi escape sequences into its output to do things
-	// like change text color to red if an error.
+	// like change text color to red if an error.  Remove those sequences.
+	errorMessage = RemoveANSIcodes(errorMessage);
 
 	// my_pclose will return an error if there is more than a pipe full
 	// of output at close time.  Drain the input pipe to prevent this.
@@ -595,14 +601,58 @@ Singularity::canRunSIF() {
 
 bool
 Singularity::canRunSandbox() {
-	std::string sbin_dir;
-	param(sbin_dir, "SBIN");
-	return Singularity::canRun(sbin_dir);
+	std::string sandbox_dir;
+	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
+	return Singularity::canRun(sandbox_dir);
 }
+
+void
+Singularity::add_containment_args(ArgList & sing_args)
+{
+	// By default, we will ideally pass "-C" which tells Singularity to contain
+	// everything, which includes file systems, PID, IPC, and environment and whatever
+	// they dream up next.
+	// However, if we are told to not use PID namespaces, then we cannot pass "-C".
+	if (m_use_pid_namespaces) {
+		// containerize everything with -C, ie use pid namespaces
+		sing_args.AppendArg("-C");
+	}
+	else {
+		// We cannot use pid namespaces, so we cannot use -C to contain everything.
+		// Unfortunately, Singulariry does not have a way to just disable pid namespaces.
+		// So instead we pass as many other contain flags as we can.
+		sing_args.AppendArg("--contain");	//  minimal dev and other dirs
+		sing_args.AppendArg("--ipc");		// contain ipc namespace
+		sing_args.AppendArg("--cleanenv");
+	}
+}
+
 
 bool 
 Singularity::canRun(const std::string &image) {
 #ifdef LINUX
+	bool success = true;
+	bool retry_on_fail_without_namespaces = false;
+
+	static bool first_run_attempt = true;
+
+	if (first_run_attempt) {
+		first_run_attempt = false;
+		std::string knob;
+		param(knob, "SINGULARITY_USE_PID_NAMESPACES", "auto");
+		if (string_is_boolean_param(knob.c_str(), m_use_pid_namespaces)) {
+			// SINGULARITY_USE_PID_NAMESPACES is explicitly set to True or False
+			retry_on_fail_without_namespaces = false;
+		}
+		else {
+			// SINGULARITY_USE_PID_NAMESPACES is auto, so attempt to use
+			// pid namespaces the first time, and try again without on failure
+			m_use_pid_namespaces = true;
+			retry_on_fail_without_namespaces = true;
+		}
+	}
+
+
 	ArgList sandboxArgs;
 	std::string exec;
 	if (!find_singularity(exec)) {
@@ -612,6 +662,7 @@ Singularity::canRun(const std::string &image) {
 
 	sandboxArgs.AppendArg(exec);
 	sandboxArgs.AppendArg("exec");
+	add_containment_args(sandboxArgs);
 	sandboxArgs.AppendArg(image);
 	sandboxArgs.AppendArg(exit_37);
 
@@ -619,28 +670,59 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
+	// Note! We need to use PRIV_CONDOR_FINAL here, because Singularity
+	// needs to know if it was started with setuid root or not, and it does this
+	// not by looking at the filesystem, but by comparing the euid to the ruid.
+	// If the euid and ruid are different, it *assumes* setuid root, even if it is not.
+	// So we do the tests here as PRIV_CONDOR_FINAL so that the euid and ruid are kept
+	// the same so Singularity can correctly deduce if it is setuid or not.
+	// If we used PRIV_CONDOR instead of PRIV_CONDOR_FINAL here, Singularity would fail
+	// if HTCondor is running as root and Singularity is configured to use user-namespaces.
 	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
 
 	MyPopenTimer pgm;
 	Env env;
 	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
-			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
-			return false;
+			dprintf(D_ALWAYS, "Test launch singularity exec failed, this singularity can run some programs, but not these\n");
+			success =  false;
+		}
+	}
+	else {
+		int exitCode = -1;
+		pgm.wait_for_exit(m_default_timeout, &exitCode);
+		if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
+			pgm.close_program(1);
+			dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); stderr is :\n",
+				displayString.c_str(), exitCode);
+			std::string line;
+			while (pgm.output().readLine(line, false)) {
+				line = RemoveANSIcodes(line);
+				chomp(line);
+				trim(line);
+				if (!line.empty()) {
+					dprintf(D_ALWAYS, "[singularity stderr]: %s\n", line.c_str());
+					m_lastSingularityErrorLine = line;
+				}
+			}
+			success =  false;
 		}
 	}
 
-	int exitCode = -1;
-	pgm.wait_for_exit(m_default_timeout, &exitCode);
-	if (WEXITSTATUS(exitCode) != 37) {  // hard coded return from exit_37
-		pgm.close_program(1);
-		std::string line;
-		pgm.output().readLine(line, false);
-		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
+	if (success) {
+		dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
+		return true;
+	}
+
+	// If we made it here, we failed to launch Singularity... perhaps retry?
+	if (retry_on_fail_without_namespaces && m_use_pid_namespaces) {
+		m_use_pid_namespaces = false;
+		dprintf(D_ALWAYS, "Singularity exec failed, trying again without pid namespaces\n");
+		return canRun(image);	// Ooooh... recursion!  fancy!
+	}
+	else {
 		return false;
 	}
-	dprintf(D_ALWAYS, "Successfully ran: '%s'.\n", displayString.c_str());
-	return true;
 #else
 	(void)image;	// shut the compiler up
 	return false;
