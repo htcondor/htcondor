@@ -659,7 +659,15 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
-	TemporaryPrivSentry sentry(PRIV_CONDOR);
+	// Note! We need to use PRIV_CONDOR_FINAL here, because Singularity
+	// needs to know if it was started with setuid root or not, and it does this
+	// not by looking at the filesystem, but by comparing the euid to the ruid.
+	// If the euid and ruid are different, it *assumes* setuid root, even if it is not.
+	// So we do the tests here as PRIV_CONDOR_FINAL so that the euid and ruid are kept
+	// the same so Singularity can correctly deduce if it is setuid or not.
+	// If we used PRIV_CONDOR instead of PRIV_CONDOR_FINAL here, Singularity would fail
+	// if HTCondor is running as root and Singularity is configured to use user-namespaces.
+	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
 
 	MyPopenTimer pgm;
 	Env env;
