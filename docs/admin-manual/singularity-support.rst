@@ -31,6 +31,10 @@ advertise two attributes in the slot ad:
        HasSingularity = true
        SingularityVersion = "singularity version 3.7.0-1.el7"
 
+If the detected Singularity installation fails to run test containers
+at startd startup, ``HasSingularity`` will be set to ``false``, and
+the slot ad attribute ``SingularityOfflineReason`` will contain an error string.
+
 HTCondor will run a job under Singularity when the startd configuration knob
 ``SINGULARITY_JOB`` evaluates to true.  This is evaluated in the context of the
 slot ad and the job ad.  If it evaluates to false or undefined, the job will
@@ -196,8 +200,13 @@ on hold.  This is controlled by the condor knob
 ``SINGULARITY_RUN_TEST_BEFORE_JOB``, which defaults to true.
 
 If an administrator wants to pass additional arguments to the
-singularity exec command that HTCondor does not currently support, the
-parameter ``SINGULARITY_EXTRA_ARGUMENTS`` allows arbitraty additional
+singularity exec command, several HTCondor parameters exist to do this - see
+the *condor_starter* configuration parameters that begin with the prefix
+SINGULARITY in defined in section :ref:`admin-manual/configuration-macros:condor_starter configuration file entries`.
+There you will find parameters to customize things such as the use of PID namespaces,
+cache directory, and several other options.  However, should an administrator
+need to customize Singularity behavior that HTCondor does not currently support, the
+parameter ``SINGULARITY_EXTRA_ARGUMENTS`` allows arbitrary additional
 parameters to be passed to the singularity exec command. Note that this
 can be a classad expression, evaluated in the context of the job ad
 and the machine, so the admin could set different options for different

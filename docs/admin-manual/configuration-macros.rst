@@ -6324,6 +6324,14 @@ These settings affect the *condor_starter*.
     image is a directory, and the target of a bind mount doesn't exist in
     the target, then skip this bind mount.
 
+:macro-def:`SINGULARITY_USE_PID_NAMESPACES`
+    Controls if jobs using Singularity should run in a private PID namespace, with a default value of ``Auto``.
+    If set to ``Auto``, then PID namespaces will be used if it is possible to do so, else not used.
+    If set to ``True``, then a PID namespaces must be used; if the installed Singularity cannot
+    activate PID namespaces (perhaps due to insufficient permissions), then the slot
+    attribute ``HasSingularity`` will be set to False so that jobs needing Singularity will match.
+    If set to ``False``, then PID namespaces must not be used.
+
 :macro-def:`SINGULARITY_EXTRA_ARGUMENTS`
     A string value or classad expression containing a list of extra arguments to be appended
     to the Singularity command line. This can be an expression evaluted in the context of the
