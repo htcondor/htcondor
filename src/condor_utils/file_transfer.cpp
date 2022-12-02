@@ -6360,11 +6360,42 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// Close the plugin
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	int rc = my_pclose(plugin_pipe, (unsigned int)timeout, false);
-	int exit_status = WEXITSTATUS(rc);
-	bool exit_by_signal = WIFSIGNALED(rc);
+	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, false);
 
-	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
+	int exit_status;
+	bool exit_by_signal;
+	TransferPluginResult result;
+
+	bool timed_out = false;
+	ASSERT(rc != MYPCLOSE_EX_NO_SUCH_FP);
+	if( rc == MYPCLOSE_EX_I_KILLED_IT ) {
+		timed_out = true;
+
+		exit_status = ETIME;
+		exit_by_signal = SIGKILL;
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin.c_str(), timeout );
+	} else if( rc == MYPCLOSE_EX_STATUS_UNKNOWN ) {
+		// The backwards-compatible my_pclose() returned -1 in this case.
+		exit_status    = WEXITSTATUS(-1);
+		exit_by_signal = WIFSIGNALED(-1);
+
+		result = TransferPluginResult::Error;
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin.c_str() );
+	} else {
+		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+
+		result = static_cast<TransferPluginResult>(exit_status);
+		if (exit_by_signal) {
+			result = TransferPluginResult::Error;
+		}
+
+		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
+	}
+
 	plugin_stats->InsertAttr("PluginExitCode", exit_status);
 	plugin_stats->InsertAttr("PluginExitBySignal", exit_by_signal);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin.c_str(), exit_status, exit_by_signal);
@@ -6388,6 +6419,15 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// If the plugin did not return successfully, report the error and return
 	if (exit_by_signal || (result != TransferPluginResult::Success)) {
+		if( timed_out ) {
+			e.pushf( "FILETRANSFER", 1,
+				"File transfer plugin %s timed out after %d seconds.",
+				plugin.c_str(), timeout
+			);
+
+			return TransferPluginResult::Error;
+		}
+
 		std::string errorMessage;
 		std::string transferUrl;
 		if (!plugin_stats->LookupString("TransferError", errorMessage)) {
@@ -6509,7 +6549,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	bool timed_out = false;
 	ASSERT(rc != MYPCLOSE_EX_NO_SUCH_FP);
 	if( rc == MYPCLOSE_EX_I_KILLED_IT ) {
-	    timed_out = true;
+		timed_out = true;
 
 		exit_status    = ETIME;
 		exit_by_signal = SIGKILL;
@@ -6524,7 +6564,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 		result = TransferPluginResult::Error;
 
-		dprintf( D_ALWAYS, "FILETRANSFER: plugin exit status unknown, assuming -1.\n" );
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
 	} else {
 		exit_status    = WEXITSTATUS(rc);
 		exit_by_signal = WIFSIGNALED(rc);
