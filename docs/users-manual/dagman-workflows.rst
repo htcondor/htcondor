@@ -3569,6 +3569,23 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 -  4 (STATUS_POSTRUN): The node's POST script is running.
 -  5 (STATUS_DONE): The node has completed successfully.
 -  6 (STATUS_ERROR): The node has failed.
+-  7 (STATUS_FUTILE): The node will never run because ancestor node failed.
+
+An *ancestor* is a node that a another node depends on either directly or indirectly
+through a chain of **PARENT/CHILD** relationships. For example, the **DAG** shown below
+would result in node **G**'s *ancestors* to be nodes **A**, **B**, **D**, and **F**
+because the **PARENT** to **CHILD** realtionships appear as ``A & B -> D -> F -> G``
+
+.. code-block:: text
+
+    Example DAG Visualized
+          A     B
+          └──┬──┘
+          C──┴──D
+              E─┴─F
+                  │
+                  G
+
 
 A *NODE_STATUS_FILE* command inside any splice is ignored. If multiple
 DAG files are specified on the *condor_submit_dag* command line, and
@@ -3745,6 +3762,7 @@ into its own job ClassAd. The attributes are fully described in
 -  ``DAG_NodesReady``
 -  ``DAG_NodesFailed``
 -  ``DAG_NodesUnready``
+-  ``DAG_NodesFutile``
 -  ``DAG_Status``
 -  ``DAG_InRecovery``
 -  ``DAG_JobsSubmitted``

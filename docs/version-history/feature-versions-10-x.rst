@@ -68,6 +68,12 @@ New Features:
   *condor_collector* addresses that a *condor_schedd* is actively sending flocked jobs.
   :jira:`1389`
 
+- Added new DAGMan node status called *Futile* that represents a node that will never run
+  due to the failure of a node that the *Futile* node depends on either directly or
+  indirectly through a chain of **PARENT/CHILD** relationships. Also, added a new ClassAd
+  attribute ``DAG_NodesFutile`` to count the number of *Futile* nodes in a **DAG**.
+  :jira:`1456`
+
 Version 10.1.3
 --------------
 

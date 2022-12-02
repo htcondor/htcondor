@@ -249,6 +249,7 @@ endif()
 			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
 			condor_pl_test(test_container_img_declares_universe "Test declaring container image sets up universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_multifile_curl_plugin_timeout "Test multifile curl plugin correctly does timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_futile_nodes "Test DAGMan accurately sets futile nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)

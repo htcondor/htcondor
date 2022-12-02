@@ -98,7 +98,7 @@ class Job {
 	bool NoParents() const {
 		// Once we are done with AdjustEdges this should agree
 		// but some code checks for parents during parse time (see the splice code)
-		// so we check _numparehttps://politics.theonion.com/wisconsin-primary-voters-receive-i-voted-gravestones-1842729790nts (set at parse time) and also _parent (set by AdjustEdges)
+		// so we check _numparents (set at parse time) and also _parent (set by AdjustEdges)
 		return _parent == NO_ID && _numparents == 0;
 	}
 
@@ -125,6 +125,7 @@ class Job {
         /** Job waiting for POST script */ STATUS_POSTRUN = 4,
         /** Job is done */                 STATUS_DONE = 5,
         /** Job exited abnormally */       STATUS_ERROR = 6,
+        /** Job Ancestor Failure cant run*/ STATUS_FUTILE = 7,
     };
 
     /** The string names for the status_t enumeration.  Use this the same
@@ -192,6 +193,10 @@ class Job {
 	Script * _scriptHold;
 
 
+	//Mark that the node is set to preDone meaning user defined done node
+	inline void SetPreDone() { _preDone = true; }
+	//Return if the node was set to Done by User
+	inline bool IsPreDone() const { return _preDone; }
 	// returns true if the job is waiting for other jobs to finish
   	bool IsWaiting() const { return (_parent != NO_ID) && ! _parents_done; };
  	// remove this parent from the waiting collection, and ! IsWaiting
@@ -210,6 +215,10 @@ class Job {
 	// notify children of parent completion, and call the optional callback for each
 	// child that is no longer waiting
 	int NotifyChildren(Dag& dag, bool(*fn)(Dag& dag, Job* child));
+
+	// Recursively set all descendant nodes to status FUTILE
+	// @return the number of nodes set to status
+	int SetDescendantsToFutile(Dag& dag);
 
 	/** Returns true if this job is ready for submission.
 		@return true if job is submittable, false if not
@@ -546,6 +555,7 @@ private:
 	bool _multiple_children; // true when _child is an EdgeID rather than a JobID
 	bool _parents_done;      // set to true when all of the parents of this node are done
 	bool _spare;
+	bool _preDone;           // true when user defines node as done in *.dag file
 
     /*	The ID of this job.  This serves as a primary key for Jobs, where each
 		Job's ID is unique from all the rest 
