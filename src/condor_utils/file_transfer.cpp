@@ -6500,14 +6500,42 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Close the plugin
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	int rc = my_pclose(plugin_pipe, (unsigned int)timeout, true);
-	int exit_status     = WEXITSTATUS(rc);
-	bool exit_by_signal = WIFSIGNALED(rc);
-	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
-	if (exit_by_signal) {
-		result =  TransferPluginResult::Error;
+	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
+
+	int exit_status;
+	bool exit_by_signal;
+	TransferPluginResult result;
+
+	bool timed_out = false;
+	ASSERT(rc != MYPCLOSE_EX_NO_SUCH_FP);
+	if( rc == MYPCLOSE_EX_I_KILLED_IT ) {
+	    timed_out = true;
+
+		exit_status    = ETIME;
+		exit_by_signal = SIGKILL;
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
+	} else if( rc == MYPCLOSE_EX_STATUS_UNKNOWN ) {
+		// The backwards-compatible my_pclose() returned -1 in this case.
+		exit_status    = WEXITSTATUS(-1);
+		exit_by_signal = WIFSIGNALED(-1);
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin exit status unknown, assuming -1.\n" );
+	} else {
+		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+
+		result = static_cast<TransferPluginResult>(exit_status);
+		if (exit_by_signal) {
+			result = TransferPluginResult::Error;
+		}
+
+		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 	}
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -6576,7 +6604,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			}
 		}
 
-		if ( num_ads == 0 ) {
+		if ( num_ads == 0 && !timed_out ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
 			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
 				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
@@ -6585,9 +6613,16 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if (exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty())) {
-		e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
-			"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+	if( exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty()) ) {
+		if( timed_out ) {
+			e.pushf( "FILETRANSFER", 1,
+				"File transfer plugin %s timed out after %d seconds.",
+				plugin_path.c_str(), timeout
+			);
+		} else {
+			e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
+				"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+		}
 	}
 
 	return result;
