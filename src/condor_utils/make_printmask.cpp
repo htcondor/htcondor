@@ -164,6 +164,10 @@ int SetAttrListPrintMaskFromStream (
 		if (toke.matches("#")) continue;
 
 		if (toke.matches("SELECT"))	{
+			sect = SELECT;
+			mask = &prmask;
+			attrs = &pmms.attrs;
+			scopes = &pmms.scopes;
 			while (toke.next()) {
 				if (toke.matches("FROM")) {
 					if (toke.next()) {
@@ -205,10 +209,6 @@ int SetAttrListPrintMaskFromStream (
 				}
 			}
 			prmask.SetAutoSep(prowpre, pcolpre, pcolsux, prowsux);
-			sect = SELECT;
-			mask = &prmask;
-			attrs = &pmms.attrs;
-			scopes = &pmms.scopes;
 			continue;
 		} else if (toke.matches("JOIN")) {
 			sect = JOIN;
@@ -223,6 +223,10 @@ int SetAttrListPrintMaskFromStream (
 			sect = GROUP;
 			if ( ! toke.next() || (toke.matches("BY") && ! toke.next())) continue;
 		} else if (toke.matches("SUMMARY")) {
+			sect = SUMMARY;
+			mask = summask;
+			attrs = &pmms.sumattrs;
+			scopes = &pmms.sumattrs;
 			usingHeadFoot = (printmask_headerfooter_t)((usingHeadFoot | HF_CUSTOM) & ~HF_NOSUMMARY);
 			while (toke.next()) {
 				if (toke.matches("STANDARD")) {
@@ -235,10 +239,6 @@ int SetAttrListPrintMaskFromStream (
 					//PRAGMA_REMIND("parse LABEL & SEPARATOR keywords for summary line here.")
 				}
 			}
-			sect = SUMMARY;
-			mask = summask;
-			attrs = &pmms.sumattrs;
-			scopes = &pmms.sumattrs;
 			continue;
 		}
 
