@@ -2529,6 +2529,7 @@ tags=io,condor_auth_ssl
 
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
 default=true
+win32_default=false
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
