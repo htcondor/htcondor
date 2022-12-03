@@ -20,6 +20,16 @@ CgroupLimits::CgroupLimits(std::string &cgroup) : m_cgroup_string(cgroup)
 int 
 CgroupLimits::set_memsw_limit_bytes(long long mem_bytes)
 {
+	// On systems with swap accounting disabled, libcgroup will log an error when writing to
+	// memory.memsw.limit_in_bytes, and then mark the in-memory copy of the cgroup invalid,
+	// and all subsequent writes, even to valid properties will fail.  Check to see if we
+	// have memsw, and quietly pass if we don't.
+	
+	if (access("/sys/fs/cgroup/memory/memory.memsw.limit_in_bytes", 0600) != 0) {
+		// We don't have it, just quietly give up
+		return 0;
+	}
+
 	if (!m_cgroup.isValid() || !CgroupManager::getInstance().isMounted(CgroupManager::MEMORY_CONTROLLER)) {
 		dprintf(D_ALWAYS, "Unable to set memsw limit because cgroup is invalid.\n");
 		return 1;
