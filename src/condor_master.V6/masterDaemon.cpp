@@ -2565,6 +2565,7 @@ Daemons::StopAllDaemons()
 {
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
+	int running = 0;
 
 	int any_running = 0;
 	int startds_running = 0;
@@ -2597,6 +2598,7 @@ Daemons::StopAllDaemons()
 				!iter->second->OnlyStopWhenMasterStops() )
 			{
 				iter->second->Stop();
+				running++;
 			}
 		}
 	}
