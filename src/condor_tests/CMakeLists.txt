@@ -61,7 +61,7 @@ if (BUILD_TESTING)
 			ProcInfo.pm
 			SimpleJob.pm)
 
-	if (NOT ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+	if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 	foreach(scriptFile ${CHECK_MODULES})
 		add_custom_command ( OUTPUT ${TEST_TARGET_DIR}/Check/${scriptFile}
 			DEPENDS ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile}

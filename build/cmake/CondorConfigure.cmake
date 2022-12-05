@@ -17,7 +17,7 @@
  ###############################################################
 
 # OS pre mods
-if(${OS_NAME} MATCHES "^WIN")
+if("${OS_NAME}" MATCHES "^WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -458,7 +458,7 @@ if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
     add_definitions(-DPLATFORM="${PLATFORM}")
-elseif(LINUX_NAME AND NOT ${LINUX_NAME} STREQUAL "Unknown")
+elseif(LINUX_NAME AND NOT "${LINUX_NAME}" STREQUAL "Unknown")
     add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
     add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
@@ -519,7 +519,7 @@ if( NOT WINDOWS)
 	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
 	check_symbol_exists(TCP_KEEPCNT "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPCNT)
 	check_symbol_exists(TCP_KEEPINTVL, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPINTVL)
-	if(${OS_NAME} STREQUAL "LINUX")
+	if("${OS_NAME}" STREQUAL "LINUX")
 		check_include_files("linux/tcp.h" HAVE_LINUX_TCP_H)
 	endif()
 	if( HAVE_LINUX_TCP_H )
@@ -562,7 +562,7 @@ if( NOT WINDOWS)
 
 	# The backtrace library call exists, but seems to crash
 	# when running under qemu ppc64le.  Let's skip that case
-	if (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le"))
+	if (NOT ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le"))
 		check_function_exists("backtrace" HAVE_BACKTRACE)
 	endif()
 
@@ -628,7 +628,7 @@ endif()
 ##################################################
 ##################################################
 # Now checking *nix OS based options
-if(${OS_NAME} STREQUAL "LINUX")
+if("${OS_NAME}" STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
@@ -750,7 +750,7 @@ endif()
 # KBDD option
 if (NOT WINDOWS)
     if (HAVE_X11)
-        if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
+        if (NOT ("${HAVE_X11}" STREQUAL "HAVE_X11-NOTFOUND"))
             option(HAVE_KBDD "Support for condor_kbdd" ON)
         endif()
     endif()
@@ -825,7 +825,7 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER
-    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
+    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -866,7 +866,7 @@ endif()
 ################################################################################
 # Various externals rely on make, even if we're not using
 # Make.  Ensure we have a usable, reasonable default for them.
-if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+if("${CMAKE_GENERATOR}" STREQUAL "Unix Makefiles")
 	set( MAKE $(MAKE) )
 else ()
 	include (ProcessorCount)
