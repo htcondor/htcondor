@@ -258,7 +258,7 @@ KillFamily::takesnapshot()
 	int info_status;
 	int ignore_status;
 
-	ExtArray<pid_t> pidfamily;
+	std::vector<pid_t> pidfamily;
 
 	new_pids = new ExtArray<a_pid>;
 	newpidindex = 0;
@@ -286,7 +286,8 @@ KillFamily::takesnapshot()
 				 "KillFamily::takesnapshot: getPidFamily(%d) failed. "
 				 "Could not find the pid or any family members.\n",
 				 daddy_pid );
-		pidfamily[0] = 0;
+		pidfamily.clear();
+		pidfamily.push_back(0);
 	}
 
 	// Don't need to insert daddypid, it's already in there,
@@ -339,18 +340,16 @@ KillFamily::takesnapshot()
 							// birthdays match up; add currpid
 							// to our list and also get currpid's decendants
 							pidfamily[j] = currpid;
-							j++;
 
 							// if we got the pid family via login name,
 							// we alrady have the decendants.
 							if ( !searchLogin ) {
-								ExtArray<pid_t> detached_family;
+								std::vector<pid_t> detached_family;
 								detached_family[0] = 0;
 								if (ProcAPI::getPidFamily(currpid,&m_penvid,detached_family,ignore_status) != PROCAPI_FAILURE) {
 									for (int k = 0; detached_family[k] != 0; k++) {
 										if (detached_family[k] != currpid) {
-											pidfamily[j] = detached_family[k];
-											j++;
+											pidfamily.push_back(detached_family[k]);
 										}
 									}
 										// If we found the family, this pid
@@ -366,7 +365,7 @@ KillFamily::takesnapshot()
 							    // so set our flag accordingly.
 								currpid_exited = false;
 							}
-							pidfamily[j] = 0;
+							pidfamily.push_back(0);
 						}
 					}
 

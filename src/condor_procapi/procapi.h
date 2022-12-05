@@ -448,10 +448,10 @@ class ProcAPI {
   //
   static int getPidFamily( pid_t pid,
                            PidEnvID *penvid,
-                           ExtArray<pid_t>& pidFamily,
+                           std::vector<pid_t>& pidFamily,
                            int &status );
   static int getPidFamilyByLogin( const char *searchLogin,
-                                  ExtArray<pid_t>& pidFamily );
+                                  std::vector<pid_t>& pidFamily );
   static int getProcSetInfo ( pid_t *pids,
                               int numpids,
                               piPTR& pi,
