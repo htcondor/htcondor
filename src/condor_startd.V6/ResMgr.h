@@ -455,13 +455,6 @@ private:
 	std::unique_ptr<htcondor::DataReuseDirectory> m_reuse_dir;
 };
 
-
-// Comparison function for sorting resources:
-
-// Sort on State, with Claimed state resources coming first.  Break
-// ties with the value of the Rank expression for Claimed resources.
-int claimedRankCmp( const void*, const void* );
-
 bool OtherSlotEval(const char * /*name*/,
 	const classad::ArgumentList &arg_list,
 	classad::EvalState &state,

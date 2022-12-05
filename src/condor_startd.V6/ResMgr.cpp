@@ -651,11 +651,31 @@ ResMgr::reconfig_resources( void )
 		cur_type_index[t]++;
 	}
 
+	auto claimedRankLessThan = [](const Resource *r1, const Resource *r2) {
+		if (r1->state() > r2->state()) {
+			return true;
+		}
+		if (r1->state() < r2->state()) {
+			return false;
+		}
+
+		State s = r1->state();
+		if ((s == claimed_state) || (s == preempting_state)) {
+			if (r1->r_cur->rank() < r2->r_cur->rank()) {
+				return true;
+			}
+			if (r1->r_cur->rank() > r2->r_cur->rank()) {
+				return false;
+			}
+		}
+		// Otherwise, by pointer, just to avoid loops
+		return r1 < r2;
+	};
+	
 		// Now, for each type, sort our resources by state.
 	for( t=0; t<max_types; t++ ) {
 		ASSERT( cur_type_index[t] == type_nums[t] );
-		qsort( sorted_resources[t], type_nums[t],
-			   sizeof(Resource*), &claimedRankCmp );
+		std::sort(sorted_resources[t], sorted_resources[t] + type_nums[t], claimedRankLessThan);
 	}
 
 		////////////////////////////////////////////////////
@@ -2466,37 +2486,6 @@ ResMgr::check_use( void )
 		dprintf( D_ALWAYS, "Shutting down Condor on this machine.\n" );
 		daemonCore->Send_Signal( daemonCore->getppid(), SIGTERM );
 	}
-}
-
-// This is basically the same as above, except we want it in exactly
-// the opposite order, so reverse the signs.
-int
-claimedRankCmp( const void* a, const void* b )
-{
-	const Resource *rip1, *rip2;
-	int val1, val2, diff;
-	float fval1, fval2;
-	State s;
-	rip1 = *((Resource* const *)a);
-	rip2 = *((Resource* const *)b);
-
-	s = rip1->state();
-	val1 = (int)s;
-	val2 = (int)rip2->state();
-	diff = val2 - val1;
-	if( diff ) {
-		return diff;
-	}
-		// We're still here, means we've got the same state.  If that
-		// state is "Claimed" or "Preempting", we want to break ties
-		// w/ the Rank expression, else, don't worry about ties.
-	if( s == claimed_state || s == preempting_state ) {
-		fval1 = rip1->r_cur->rank();
-		fval2 = rip2->r_cur->rank();
-		diff = (int)(fval2 - fval1);
-		return diff;
-	}
-	return 0;
 }
 
 void
