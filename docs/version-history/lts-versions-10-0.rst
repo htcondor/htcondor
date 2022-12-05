@@ -24,6 +24,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where Debian, Ubuntu and other Linux platforms with
+  swap accounting disabled in the kernel would never put
+  a job on hold if it exceeded RequestMemory and
+  MEMORY_LIMIT_POLICY was set to hard or soft.
+  :jira:`1466`
+
 - Fixed bug in the curl plugin where it would crash on EL8
   systems when using a file:// url type
   :jira:`1426`
