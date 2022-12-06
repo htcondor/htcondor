@@ -6350,6 +6350,10 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		return TransferPluginResult::Error;
 	}
 
+	// Close the plugin
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
+
 	// Capture stdout from the plugin and dump it to the stats file
 	char single_stat[1024];
 	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
@@ -6357,10 +6361,6 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
 		}
 	}
-
-	// Close the plugin
-	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
-	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, false);
 
 	int exit_status;
 	bool exit_by_signal;
