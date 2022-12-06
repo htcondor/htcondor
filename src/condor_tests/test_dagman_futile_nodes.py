@@ -19,7 +19,7 @@ from pathlib import Path
 #Standup a personal condor for always run post scripts in DAGMan
 @standup
 def post_condor(test_dir):
-    with Condor(local_dir=test_dir / "arp_condor",config={"DAGMAN_ALWAYS_RUN_POST":"True"}) as condor:
+    with Condor(local_dir=test_dir / "arp_condor",config={"DAGMAN_ALWAYS_RUN_POST":"True","DAGMAN_USER_LOG_SCAN_INTERVAL":1,"DAGMAN_MAX_SUBMIT_ATTEMPTS":1,"DAGMAN_VERBOSITY":7}) as condor:
         yield condor
 
 #------------------------------------------------------------------
@@ -46,8 +46,10 @@ exit(0)
 def abort_job_desc(path_to_sleep):
     description = f"""
 executable = {path_to_sleep}
-arguments  = 1
+arguments  = 0
 log        = test.log
+#This test needs to be in vanilla universe to have a shadow
+universe   = vanilla
 periodic_remove = NumShadowStarts >= 1
 queue
 """
@@ -59,6 +61,7 @@ def failed_job_desc(path_to_sleep):
     description = f"""
 executable = {path_to_sleep}
 arguments  = bad_input
+universe   = local
 log        = test.log
 queue
 """
@@ -69,7 +72,8 @@ queue
 def good_job_desc(path_to_sleep):
     description = f"""
 executable = {path_to_sleep}
-arguments  = 1
+arguments  = 0
+universe   = local
 log        = test.log
 queue
 """
@@ -96,8 +100,7 @@ JOB C job.sub
 SCRIPT POST A post.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Job aborted for some reason
     "Job_Aborted":{
@@ -109,8 +112,7 @@ JOB B good.sub
 JOB C good.sub
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Job aborted but will always run post script
     "ARP_Job_Aborted":{
@@ -124,8 +126,7 @@ JOB C good.sub
 SCRIPT POST A post.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Job failed
     "Job_Failed":{
@@ -137,8 +138,7 @@ JOB B good.sub
 JOB C good.sub
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Job failed but will always run post script
     "ARP_Job_Failed":{
@@ -152,8 +152,7 @@ JOB C good.sub
 SCRIPT POST A post.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Failed job submission due to non-existant submit file
     "Failed_Submission":{
@@ -164,8 +163,7 @@ JOB B job.sub
 JOB C job.sub
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Failed job submission but will always run post script
     "ARP_Failed_Submit":{
@@ -178,8 +176,7 @@ JOB C job.sub
 SCRIPT POST A post.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Pre script failure
     "Pre_Script_Failed":{
@@ -192,8 +189,7 @@ JOB C job.sub
 SCRIPT PRE A pre.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Pre script failure but with PRE_SKIP enabled
     #Cheaty marking of 'ARP' to designate successful DAG
@@ -208,8 +204,7 @@ SCRIPT PRE A pre.py
 PRE_SKIP A 1
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Pre script failure but will always run post script
     "ARP_Pre_Script_Failed":{
@@ -224,8 +219,7 @@ SCRIPT PRE A pre.py
 SCRIPT POST A post.py
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Complex DAG structure where one node fails to check all
     #descendants are set to futile
@@ -254,8 +248,7 @@ PARENT F CHILD I
 PARENT H CHILD K
 PARENT I CHILD J
 PARENT J CHILD K
-NODE_STATUS_FILE status.out
-        """,
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
     #Make sure user defined DONE nodes aren't overwritten to FUTILE
     "Pre_Done_Node":{
@@ -268,8 +261,7 @@ JOB C good.sub DONE
 
 PARENT A CHILD B
 PARENT B CHILD C
-NODE_STATUS_FILE status.out
-        """
+NODE_STATUS_FILE status.out 5 ALWAYS-UPDATE""",
     },
 }
 
