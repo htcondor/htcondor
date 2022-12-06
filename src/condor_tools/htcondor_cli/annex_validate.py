@@ -55,7 +55,7 @@ class System:
         return rv
 
 
-    def get_constraints(self, queue_name: str, gpus: Optional[str], gpu_type: Optional[str]) -> Optional[dict]:
+    def get_constraints(self, queue_name: str, gpus: Optional[int], gpu_type: Optional[str]) -> Optional[dict]:
         return self.queues.get(queue_name)
 
 
