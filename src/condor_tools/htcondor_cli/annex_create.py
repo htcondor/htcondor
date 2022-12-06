@@ -16,7 +16,7 @@ from pathlib import Path
 import htcondor
 import classad
 
-from htcondor_cli.annex_validate import SYSTEM_TABLE, validate_system_specific_constraints
+from htcondor_cli.annex_validate import SYSTEM_TABLE, validate_constraints
 
 #
 # We could try to import colorama here -- see condor_watch_q -- but that's
@@ -542,7 +542,7 @@ def annex_inner_func(
     lifetime_in_seconds = lifetime
     idletime_in_seconds = startd_noclaim_shutdown
 
-    gpus, real_queue_name = validate_system_specific_constraints(
+    gpus, real_queue_name = validate_constraints(
         system=system,
         queue_name=queue_name,
         nodes=nodes,

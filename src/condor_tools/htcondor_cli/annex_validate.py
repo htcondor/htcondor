@@ -1,3 +1,9 @@
+from typing import (
+	Optional,
+	List,
+	Dict,
+)
+
 #
 # We need a little in the way of formal structure for the system/queue table
 # because Bridges 2 and Perlmutter don't behave anything like the others.
@@ -667,7 +673,7 @@ def validate_constraints( *,
             raise ValueError(error_string)
 
     # (K) Run the system-specific constraint checker.
-    queue_name = system.validate_constraints(queue_name, cpus, mem_mb)
+    queue_name = system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
 
     if gpus_per_node is not None:
         if queue.get('gpu_flag_type') == 'job':
