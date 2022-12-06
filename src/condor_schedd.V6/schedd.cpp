@@ -4362,6 +4362,10 @@ Scheduler::InitializeUserLog( PROC_ID job_id )
 {
 	ClassAd *ad = GetJobAd(job_id.cluster,job_id.proc);
 
+	if (!ad) {
+		dprintf(D_ALWAYS, "Scheduler::InitializeUserLog got null job ad, probably job already removed?\n");
+		return nullptr;
+	}
 	WriteUserLog* ULog=new WriteUserLog();
 	ULog->setCreatorName( Name );
 
@@ -4601,6 +4605,14 @@ Scheduler::WriteEvictToUserLog( PROC_ID job_id, bool checkpointed )
 	}
 	JobEvictedEvent event;
 	event.checkpointed = checkpointed;
+
+	ClassAd *jobAd = GetJobAd(job_id.cluster, job_id.proc);
+	if (!jobAd) {
+		dprintf(D_ALWAYS, "Unable to write evict event to job log for job (%d.%d) -- perhaps it was already removed\n",
+				job_id.cluster, job_id.proc);
+		return false;
+	}
+
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
