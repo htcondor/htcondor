@@ -22,6 +22,12 @@ Release Notes:
   ``output`` or ``error`` files, or a remapped output file) to instead succeed.
   :jira:`1325`
 
+- File-transfer plug-ins may no longer take as long as they like to finish.
+  After :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME` seconds, the starter will
+  terminate the transfer and report a time-out failure (with ``ETIME``, 62,
+  as the hold reason subcode).
+  :jira:`1404`
+
 New Features:
 
 - *condor_q* default behavior of displaying the cumulative run time has changed
