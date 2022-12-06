@@ -57,7 +57,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		return true;
 	}
 
-	unsigned interfaceCount = 0;
 	StringList pattern(interface_pattern);
 
 	std::string matches_str;
@@ -113,7 +112,6 @@ network_interface_to_ip(char const *interface_param_name,char const *interface_p
 		matches_str += dev->name();
 		matches_str += " ";
 		matches_str += dev->IP();
-		++interfaceCount;
 
 		int desireability = this_addr.desirability();
 		if(dev->is_up()) { desireability *= 10; }

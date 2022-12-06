@@ -32,12 +32,10 @@ ResourceGroup( )
 ResourceGroup::
 ~ResourceGroup( )
 {
-    int i = 0;
     classad::ClassAd *curr;
     classads.Rewind( );
 	while( classads.Next( curr ) ) {
         delete curr;
-        i++;
 	}
     return;
 }

@@ -2633,12 +2633,10 @@ DedicatedScheduler::computeSchedule( void )
 					// cluster_id;
 				std::sort( preempt_candidate_array, preempt_candidate_array + num_candidates, RankSorter );
 
-				int num_preemptions = 0;
 				for( int cand = 0; cand < num_candidates; cand++) {
                     if (satisfies(job, preempt_candidate_array[cand].machine_ad)) {
                         // And we found a victim to preempt
 						preempt_candidates->Append(preempt_candidate_array[cand].machine_ad);
-						num_preemptions++;
 						jobs->DeleteCurrent();
 						job = jobs->Next();
 						nodes--;
