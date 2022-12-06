@@ -24,7 +24,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
-extern "C" {
 	int REMOTE_CONDOR_register_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_mpi_master_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_starter_info( ClassAd *ad );
@@ -98,7 +97,6 @@ extern "C" {
 
 	// Why are these all C-linkage?
 	int REMOTE_CONDOR_event_notification(ClassAd * event);
-}
 
 #endif
 

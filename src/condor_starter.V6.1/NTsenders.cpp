@@ -41,7 +41,6 @@ extern JICShadow* syscall_jic_shadow;
 // into reconnect mode.
 #define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
-extern "C" {
 int
 REMOTE_CONDOR_register_starter_info( ClassAd* ad )
 {
@@ -2774,5 +2773,3 @@ REMOTE_CONDOR_event_notification( ClassAd * event ) {
 
 	return rval;
 }
-
-} // extern "C"
