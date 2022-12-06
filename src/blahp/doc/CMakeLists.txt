@@ -27,7 +27,7 @@ if(WITH_FULL_BLAHP)
 
 	# If we don't have xsltproc on the system, don't bother making manpages
 
-	if (NOT (${XSLTPROC_EXECUTABLE} STREQUAL "XSLTPROC_EXECUTABLE-NOTFOUND"))
+	if (NOT ("${XSLTPROC_EXECUTABLE}" STREQUAL "XSLTPROC_EXECUTABLE-NOTFOUND"))
 
 		find_file(XSLTPROC_MANPAGE_STYLESHEET
 			NAMES docbook.xsl

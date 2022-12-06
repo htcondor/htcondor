@@ -163,7 +163,7 @@ set ( CPACK_GENERATOR "TGZ" )
 # include both paths, as we build the externals once for both types. The
 # settings for EXTERNALS_RPATH must be kept in synch with the C_LIB
 # settings made below for package builds.
-if ( ${OS_NAME} STREQUAL "LINUX" )
+if ( "${OS_NAME}" STREQUAL "LINUX" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
@@ -197,7 +197,7 @@ if ( CONDOR_RPMBUILD )
 	endif ()
 endif()
 
-if ( ${OS_NAME} STREQUAL "FREEBSD" )
+if ( "${OS_NAME}" STREQUAL "FREEBSD" )
 
 	# Condor installs nothing useful to FreeBSD in C_INIT, so
 	# just tuck it out of the way.  FreeBSD RC scripts come from
@@ -366,7 +366,7 @@ elseif ( ${OS_NAME} MATCHES "^WIN" )
 	#file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
 	# below are options an overrides to enable packge generation for rpm & deb
-elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
+elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
 	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)
