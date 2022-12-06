@@ -55,10 +55,16 @@ class System:
         return rv
 
 
-    def get_constraints(self, queue_name, gpus, gpu_type):
+    def get_constraints(self, queue_name: str, gpus: Optional[str], gpu_type: Optional[str]) -> Optional[dict]:
         return self.queues.get(queue_name)
 
 
+    # Return the queue name.  This only needs to return the queue name because
+    # Perlmutter requires -q instead of -p (like all other SLURM systems)
+    # and the least-awful way to add that was by prefixing `queue_name` to
+    # indicate that it was a queue instead of a partition.
+    #
+    # What do we suck at?  Naming things.
     def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
         return queue_name
 
@@ -509,7 +515,7 @@ SYSTEM_TABLE = {
 }
 
 
-def validate_system_specific_constraints( *,
+def validate_constraints( *,
     system,
     queue_name,
     nodes,
@@ -661,7 +667,7 @@ def validate_system_specific_constraints( *,
             raise ValueError(error_string)
 
     # (K) Run the system-specific constraint checker.
-    queue_name = system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
+    queue_name = system.validate_constraints(queue_name, cpus, mem_mb)
 
     if gpus_per_node is not None:
         if queue.get('gpu_flag_type') == 'job':

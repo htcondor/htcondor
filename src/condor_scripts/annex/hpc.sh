@@ -451,6 +451,9 @@ fi
 # A hack to avoid adding Yet Another Command-line Argument.  It
 # seemed better than either making a Perlmutter-specific pilot
 # script or having the pilot script be explicitly system-aware.
+#
+# The regexes here are a little dodgy, and should be tweaked if
+# this hack is expanded; see the PR.
 if [[ $QUEUE_NAME =~ "q," ]]; then
     QUEUE_NAME=${QUEUE_NAME/*q,/}
     SBATCH_QUEUE_LINE="#SBATCH -q ${QUEUE_NAME}"
