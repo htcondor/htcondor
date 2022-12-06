@@ -6560,8 +6560,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
 	} else if( rc == MYPCLOSE_EX_STATUS_UNKNOWN ) {
 		// The backwards-compatible my_pclose() returned -1 in this case.
-		exit_status    = WEXITSTATUS(-1);
-		exit_by_signal = WIFSIGNALED(-1);
+		int macos_dummy = -1;
+		exit_status    = WEXITSTATUS(macos_dummy);
+		exit_by_signal = WIFSIGNALED(macos_dummy);
 
 		result = TransferPluginResult::Error;
 
