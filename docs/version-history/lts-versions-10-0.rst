@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where *condor_rm*'ing with the -forcex option
+  on a scheduler universe job could cause a schedd crash.
+  :jira:`1472`
+
 - Fixed a bug where Debian, Ubuntu and other Linux platforms with
   swap accounting disabled in the kernel would never put
   a job on hold if it exceeded RequestMemory and
