@@ -5,6 +5,8 @@ import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+import os
+
 from ornithology import (
     action,
     jobs,
@@ -17,21 +19,28 @@ from ornithology import (
 
 TEST_CASES = {
     "short": (
-        {"MAX_FILE_TRANSFER_PLUGIN_LIFETIME": "5"},
+        {
+            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": "5",
+            "FILETRANSFER_PLUGINS": "$(FILETRANSFER_PLUGINS), {single_shell_file}",
+        },
         jobs.JobStatus.HELD,
     ),
     "long": (
-        {"MAX_FILE_TRANSFER_PLUGIN_LIFETIME": 15},
+        {
+            "MAX_FILE_TRANSFER_PLUGIN_LIFETIME": "15",
+            "FILETRANSFER_PLUGINS": "$(FILETRANSFER_PLUGINS), {single_shell_file}",
+        },
         jobs.JobStatus.COMPLETED,
     ),
 }
 
 
 @action
-def the_condors(test_dir):
+def the_condors(test_dir, single_shell_file):
     condors = {}
     for test_name, test_case in TEST_CASES.items():
         test_config = test_case[0]
+        test_config = {key: value.format(single_shell_file=single_shell_file) for key, value in test_config.items()}
         condors[test_name] = Condor(
             local_dir=test_dir / test_name,
             config={** test_config}
@@ -62,6 +71,29 @@ def the_condor(the_test_case):
 @action
 def the_expected_result(the_test_case):
     return the_test_case[2]
+
+
+@action
+def another_job_handle(test_dir, the_test_name, the_condor, path_to_sleep, single_shell_file):
+    another_job_handle = the_condor.submit(
+        description={
+            "LeaveJobInQueue":              "true",
+            "executable":                   path_to_sleep,
+            "arguments":                    "1",
+
+            "transfer_executable":          "false",
+            "transfer_input_files":         f"single://{path_to_sleep}",
+            "should_transfer_files":        "true",
+            "when_to_transfer_output":      "ON_EXIT",
+
+            "log":                          test_dir / f"{the_test_name}_$(CLUSTER).log",
+            "output":                       test_dir / f"{the_test_name}_$(CLUSTER).out",
+            "error":                        test_dir / f"{the_test_name}_$(CLUSTER).err",
+        },
+        count=1,
+    )
+
+    return another_job_handle
 
 
 @action
@@ -99,9 +131,21 @@ def the_completed_job(the_job_handle):
     return the_job_handle
 
 
+@action
+def another_completed_job(another_job_handle):
+    another_job_handle.wait(
+        timeout=60,
+        condition=ClusterState.all_complete,
+        fail_condition=ClusterState.any_held
+    )
+
+    return another_job_handle
+
+
 class TestPluginTimeOut:
-    def test_got_expected_result(self, the_completed_job, the_expected_result):
+    def test_got_expected_result(self, the_completed_job, another_completed_job, the_expected_result):
         assert the_completed_job.state.all_status(the_expected_result)
+        assert another_completed_job.state.all_status(the_expected_result)
 
 
 #
@@ -357,3 +401,71 @@ def plugin_python_file(test_dir):
 #
 # End thievery.
 #
+
+
+@action
+def single_log_file(test_dir):
+    return test_dir / "single.log"
+
+
+@action
+def single_shell_file(test_dir, single_python_file, single_log_file):
+    pythonpath = os.environ["PYTHONPATH"]
+    single_shell_file = test_dir / "single.sh"
+    contents = format_script(
+    f"""
+        #!/bin/bash
+        PYTHONPATH={pythonpath}
+        exec {single_python_file} "$@"
+    """
+    )
+    write_file(single_shell_file, contents)
+    return single_shell_file
+
+
+@action
+def single_python_file(test_dir):
+    single_python_file = test_dir / "single.py"
+    contents = format_script(
+    """
+        #!/usr/bin/env python3
+
+        import sys
+        import time
+        import shutil
+
+        import classad
+
+
+        def print_capabilities():
+            capabilities = {
+                'MultipleFileSupport':  False,
+                'PluginType':           'FileTransfer',
+                'SupportedMethods':     'single',
+                'Version':              '0.1',
+            }
+
+            sys.stdout.write(classad.ClassAd(capabilities).printOld())
+
+
+        if __name__ == '__main__':
+            if len(sys.argv) == 2 and sys.argv[1] == '-classad':
+                print_capabilities()
+                sys.exit(0)
+
+            source = sys.argv[1]
+            destination = sys.argv[2]
+
+            if source.startswith("single://"):
+                source = source[9:]
+
+            if destination.startswith("single://"):
+                destination = destination[9:]
+
+            time.sleep(10)
+            shutil.copy(source, destination)
+            sys.exit(0)
+    """
+    )
+    write_file(single_python_file, contents)
+    return single_python_file
