@@ -2,6 +2,7 @@
 <xsl:stylesheet version="1.0"
    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
    xmlns:wix="http://schemas.microsoft.com/wix/2006/wi"
+   xmlns:util="http://schemas.microsoft.com/wix/UtilExtension"
    xmlns:fire="http://schemas.microsoft.com/wix/FirewallExtension">
   <xsl:output indent="yes" method="xml"/>
 
@@ -60,7 +61,8 @@
               <File Id="condor_config" Name="condor_config" Source="$(var.Source)\etc\condor_config.base" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
                 <Permission User="[LogonUser]" GenericAll="yes"/>
-                <Permission User="Users" Read="yes" ReadPermission="yes"/>
+                <!-- WIX_ACCOUNT_USERS is set to the localized name of the "Users" group by UtilExtension -->
+                <util:PermissionEx User="[WIX_ACCOUNT_USERS]" Read="yes" ReadPermission="yes"/>
               </File>
               <Condition>Not UPGRADEFOUND Or HOSTBASEDFOUND</Condition>
             </Component>
@@ -68,7 +70,8 @@
               <File Id="condor_config.local" Name="condor_config.local" Source="$(var.Source)\etc\condor_config.local.blank" Checksum="no" >
                 <Permission User="Administrators" GenericAll="yes" />
                 <Permission User="[LogonUser]" GenericAll="yes"/>
-                <Permission User="Users" Read="yes" ReadPermission="yes"/>
+                <!-- WIX_ACCOUNT_USERS is set to the localized name of the "Users" group by UtilExtension -->
+                <util:PermissionEx User="[WIX_ACCOUNT_USERS]" Read="yes" ReadPermission="yes"/>
               </File>
               <Condition>Not UPGRADEFOUND</Condition>
             </Component>
@@ -121,6 +124,7 @@
           <![CDATA[(VersionNT >= 501)]]>
         </Condition>
 
+        <PropertyRef Id="WIX_ACCOUNT_USERS" />
         <Property Id="UPGRADEFOUND" Secure="yes" />
         <Property Id="NEWPRODUCTFOUND" Secure="yes" />
         <Upgrade Id="EA1CEE00-C44F-4BC4-8035-440AA32C1F33">
