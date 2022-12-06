@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_fix_assert.h"
 #include "condor_io.h"
 #include "condor_classad.h"
 #include "condor_sys.h"
@@ -31,13 +30,16 @@
 #include "zkm_base64.h"
 
 #include "NTsenders.h"
-
-#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d\n", x, errno);errno=ETIMEDOUT;return -1;}
+#include "jic_shadow.h"
 
 static int CurrentSysCall;
 extern ReliSock *syscall_sock;
 extern time_t syscall_last_rpc_time;
-extern Starter *Starter;
+extern JICShadow* syscall_jic_shadow;
+
+// If we have a communication error on the syscall socket, close it and go
+// into reconnect mode.
+#define ON_ERROR_RETURN(x) if (x <= 0) {dprintf(D_ALWAYS, "i/o error result is %d, errno is %d (%s)\n", x, errno, strerror(errno));syscall_jic_shadow->disconnect();errno=ETIMEDOUT;return -1;}
 
 extern "C" {
 int
