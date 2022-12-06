@@ -95,10 +95,7 @@ if (defined($opt_daily)) {
 mkdir("/tmp/$runid/condor-$condor_version") ||
     die "Can't mkdir(/tmp/$runid/condor-$condor_version): $!\n";
 
-system("cp -p .??* /tmp/$runid/condor-$condor_version");
-system("cp -pr * /tmp/$runid/condor-$condor_version");
-unlink("/tmp/$runid/condor-$condor_version/$buildid_file") ||
-    die "Can't remove /tmp/$runid/condor-$condor_version/$buildid_file: $!\n";
+system("rsync -a . /tmp/$runid/condor-$condor_version --exclude .git --exclude $buildid_file");
 chdir("/tmp/$runid") || die "Can't chdir(/tmp/$runid): $!\n";
 
 open ( TAR, "tar cvfz $CommonDir/condor-$condor_version.tgz condor-$condor_version 2>&1|" ) ||

@@ -35,15 +35,63 @@
 #include "subsystem_info.h"
 
 #include "historyFileFinder.h"
-
-static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base);
-static int compareHistoryFilenames(const void *item1, const void *item2);
+#include <algorithm>
 
 static const char* qsort_file_base = NULL;
 
+// Returns true if the filename is a history file, false otherwise.
+// If backup_time is not NULL, returns the time from the timestamp in
+// the file.
+static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base)
+{
+    bool       is_history_filename;
+    const char *filename;
+    int        history_base_length;
+
+    if (backup_time != NULL) {
+        *backup_time = -1;
+    }
+    
+    is_history_filename = false;
+    history_base_length = strlen(history_base);
+    filename            = condor_basename(fullFilename);
+
+    if (   !strncmp(filename, history_base, history_base_length)
+        && filename[history_base_length] == '.') {
+        // The filename begins correctly, now see if it ends in an 
+        // ISO time
+        struct tm file_time;
+        bool is_utc;
+
+        iso8601_to_time(filename + history_base_length + 1, &file_time, NULL, &is_utc);
+        if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
+            && file_time.tm_mday != -1 && file_time.tm_hour != -1
+            && file_time.tm_min != -1  && file_time.tm_sec != -1
+            && !is_utc) {
+            // This appears to be a proper history file backup.
+            is_history_filename = true;
+            if (backup_time != NULL) {
+                *backup_time = mktime(&file_time);
+            }
+        }
+    }
+
+    return is_history_filename;
+}
+
+// Used by sort in findHistoryFiles() to sort history files. 
+static bool compareHistoryFilenames(const char * lhs, const char *rhs)
+{
+    time_t time1, time2;
+
+    isHistoryBackup(lhs, &time1, qsort_file_base);
+    isHistoryBackup(rhs, &time2, qsort_file_base);
+    return time1 < time2;
+}
+
 extern void freeHistoryFilesList(const char ** files)
 {
-	if (files) free(const_cast<char**>(files));
+    if (files) free(const_cast<char**>(files));
 }
 
 // Find all of the history files that the schedd created, and put them
@@ -124,62 +172,14 @@ const char **findHistoryFiles(const char *passedFileName, int *pnumHistoryFiles)
             // Sort the backup files so that they are in the proper 
             // order. The current history file is already in the right place.
             qsort_file_base = historyBase;
-            qsort(historyFiles, numFiles-1, sizeof(char*), compareHistoryFilenames);
+            std::sort(historyFiles, &historyFiles[numFiles - 1], compareHistoryFilenames);
         }
-        
+
         free(historyDir);
     }
     *pnumHistoryFiles = numFiles;
     return const_cast<const char**>(historyFiles);
 }
 
-// Returns true if the filename is a history file, false otherwise.
-// If backup_time is not NULL, returns the time from the timestamp in
-// the file.
-static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const char *history_base)
-{
-    bool       is_history_filename;
-    const char *filename;
-    int        history_base_length;
 
-    if (backup_time != NULL) {
-        *backup_time = -1;
-    }
-    
-    is_history_filename = false;
-    history_base_length = strlen(history_base);
-    filename            = condor_basename(fullFilename);
-
-    if (   !strncmp(filename, history_base, history_base_length)
-        && filename[history_base_length] == '.') {
-        // The filename begins correctly, now see if it ends in an 
-        // ISO time
-        struct tm file_time;
-        bool is_utc;
-
-        iso8601_to_time(filename + history_base_length + 1, &file_time, NULL, &is_utc);
-        if (   file_time.tm_year != -1 && file_time.tm_mon != -1 
-            && file_time.tm_mday != -1 && file_time.tm_hour != -1
-            && file_time.tm_min != -1  && file_time.tm_sec != -1
-            && !is_utc) {
-            // This appears to be a proper history file backup.
-            is_history_filename = true;
-            if (backup_time != NULL) {
-                *backup_time = mktime(&file_time);
-            }
-        }
-    }
-
-    return is_history_filename;
-}
-
-// Used by qsort in findHistoryFiles() to sort history files. 
-static int compareHistoryFilenames(const void *item1, const void *item2)
-{
-    time_t time1, time2;
-
-    isHistoryBackup(*(const char * const *) item1, &time1, qsort_file_base);
-    isHistoryBackup(*(const char * const *) item2, &time2, qsort_file_base);
-    return time1 - time2;
-}
 

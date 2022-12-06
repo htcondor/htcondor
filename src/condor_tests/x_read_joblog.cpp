@@ -135,8 +135,6 @@ int main(int argc, char* argv[])
 	char done = 0;
 	char read_error = 0;
 	char found = 0;
-	char evicted = 0;
-	char aborted = 0;
     const char* hostmachine = NULL;
 	const char* extractptr = NULL;
 	char* placeptr = NULL;
@@ -496,7 +494,6 @@ int main(int argc, char* argv[])
 					returnval = ((JobEvictedEvent*)e)->return_value;
 					//printf("Job Evicted.........\n");
 					// allow a later run to return a good value bt 12/13/03
-					evicted++;
 					found++;
 					break;
 				  case ULOG_JOB_ABORTED:
@@ -504,7 +501,6 @@ int main(int argc, char* argv[])
 					returnval = -99;
 					//printf("Job ABORTED by user.........\n");
 					// allow a later run to return a good value bt 12/13/03
-					aborted++;
 					found++;
 					done++;
 					break;

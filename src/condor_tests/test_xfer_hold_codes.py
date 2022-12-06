@@ -36,7 +36,7 @@ def submitJobOutputFailureAP(default_condor):
            "should_transfer_files": "yes",
            "transfer_input_files": "/bin/true",
            "transfer_output_files": "true",
-           "transfer_output_remaps": classad.quote("true=not_there_dir/blah"),
+           "transfer_output_remaps": classad.quote("true=/not_there_dir/blah"),
         }
     )
 

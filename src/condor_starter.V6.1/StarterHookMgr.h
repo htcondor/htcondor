@@ -26,6 +26,7 @@
 #include "enum_utils.h"
 
 class HookPrepareJobClient;
+class HookPrepareJobPreTransferClient;
 class HookJobExitClient;
 
 
@@ -41,13 +42,21 @@ public:
 	bool initialize(ClassAd* job_ad);
 	bool reconfig();
 
+
+
 		/**
 		   See if we're configured to use HOOK_PREPARE_JOB and spawn it.
-
 		   @return 1 if we spawned the hook, 0 if we're not configured
 		   to use this hook for the job's hook keyword, or -1 on error.
 		*/
 	int tryHookPrepareJob();
+
+		/**
+		   See if we're configured to use HOOK_PREPARE_JOB_BEFORE_TRANSFER and spawn it.
+		   @return 1 if we spawned the hook, 0 if we're not configured
+			to use this hook for the job's hook keyword, or -1 on error.
+		*/
+	int tryHookPrepareJobPreTransfer();
 
 		/**
 		   Invoke HOOK_UPDATE_JOB_INFO to provide a periodic update
@@ -86,6 +95,8 @@ private:
 
 		/// The path to HOOK_PREPARE_JOB, if defined.
 	char* m_hook_prepare_job;
+		/// The path to HOOK_PREPARE_JOB_BEFORE_TRANSFER, if defined.
+	char* m_hook_prepare_job_before_transfer;
 		/// The path to HOOK_UPDATE_JOB_INFO, if defined.
 	char* m_hook_update_job_info;
 		/// The path to HOOK_JOB_EXIT, if defined.
@@ -106,6 +117,8 @@ private:
 	void clearHookPaths( void );
 
 	int getHookTimeout(HookType hook_type, int def_value = 0);
+
+	int tryHookPrepareJob_implementation(const char *hook_path, bool after_transfer);
 };
 
 
@@ -117,7 +130,7 @@ class HookPrepareJobClient : public HookClient
 public:
 	friend class StarterHookMgr;
 
-	HookPrepareJobClient(const char* hook_path);
+	HookPrepareJobClient(const char* hook_path, bool after_filetransfer);
 
 		/**
 		   HOOK_PREPARE_JOB has exited.  If the hook exited with a

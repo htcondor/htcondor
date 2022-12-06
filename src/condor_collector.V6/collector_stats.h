@@ -20,7 +20,6 @@
 #ifndef __COLLECTOR_STATS_H__
 #define __COLLECTOR_STATS_H__
 
-#include "extArray.h"
 #include "generic_stats.h"
 
 #define TRACK_QUERIES_BY_SUBSYS 1 // for testing, we may want to turn this code off...
@@ -99,7 +98,6 @@ class CollectorClassStatsList
 	int setHistorySize( int size );
 
   private:
-	ExtArray<CollectorClassStats *> classStats;
 	int		historySize;
 };
 

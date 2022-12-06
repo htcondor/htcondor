@@ -89,18 +89,17 @@ if(NOT WINDOWS)
         include (FindPythonLibs)
         message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
         if (PYTHON_EXECUTABLE)
-            execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			if (${PYTHON_VERSION_MAJOR} VERSION_GREATER_EQUAL 3) 
+				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('EXT_SUFFIX'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			else()
+				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			endif()
         endif()
     else(WANT_PYTHON_WHEELS)
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
 
-        if(APPLE)
-            # macOS 12.X (Monterey) and above don't support python2
-            if(NOT ${OS_VER} MATCHES "2[1-9]")
-                find_program(PYTHON_EXECUTABLE python)
-            endif()
-        else()
+        if(NOT APPLE)
             find_program(PYTHON_EXECUTABLE python2)
         endif()
 
@@ -183,7 +182,7 @@ if(NOT WINDOWS)
             set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
             set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
             set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-            set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+			set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('EXT_SUFFIX'));")
             set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
 
             set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
@@ -511,7 +510,6 @@ if( NOT WINDOWS)
 		message(FATAL_ERROR "Could not find libuuid")
 	endif()
 	find_path(HAVE_UUID_UUID_H "uuid/uuid.h")
-	find_library( HAVE_LIBLTDL "ltdl" )
 	check_include_files("sqlite3.h" HAVE_SQLITE3_H)
 	find_library( SQLITE3_LIB "sqlite3" )
 
@@ -571,12 +569,6 @@ if( NOT WINDOWS)
 
 	# we can likely put many of the checks below in here.
 	check_include_files("inttypes.h" HAVE_INTTYPES_H)
-	check_include_files("ldap.h" HAVE_LDAP_H)
-	if (APPLE)
-		find_multiple( "LDAP;lber" LDAP_FOUND )
-	else()
-		find_multiple( "ldap;lber" LDAP_FOUND )
-	endif()
 	check_include_files("net/if.h" HAVE_NET_IF_H)
 	check_include_files("os_types.h" HAVE_OS_TYPES_H)
 	check_include_files("resolv.h" HAVE_RESOLV_H)
@@ -632,8 +624,6 @@ if(${OS_NAME} STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
-
-	find_so_name(LIBLTDL_SO ${HAVE_LIBLTDL})
 
 	check_symbol_exists(SIOCETHTOOL "linux/sockios.h" HAVE_DECL_SIOCETHTOOL)
 	check_symbol_exists(SIOCGIFCONF "linux/sockios.h" HAVE_DECL_SIOCGIFCONF)
@@ -799,7 +789,7 @@ endif()
 # directory that externals are downloaded from. may be a local directory
 # http or https url.
 if (NOT EXTERNALS_SOURCE_URL)
-   set (EXTERNALS_SOURCE_URL "http://parrot.cs.wisc.edu/externals")
+   set (EXTERNALS_SOURCE_URL "https://parrot.cs.wisc.edu/externals")
 endif()
 
 option(CACHED_EXTERNALS "enable/disable cached externals" OFF)
@@ -928,15 +918,6 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/0.7.1)
 
-	# globus is an odd *beast* which requires a bit more config.
-	# old globus builds on manylinux1 (centos5 docker image)
-	if (LINUX)
-		if (${SYSTEM_NAME} MATCHES "centos5.11")
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/5.2.5)
-		else()
-			add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/globus/6.0)
-		endif()
-	endif()
 	# old voms builds on manylinux1 (centos5 docker image)
     if (LINUX)
         if (${SYSTEM_NAME} MATCHES "centos5.11")
@@ -964,16 +945,6 @@ else (NOT WINDOWS)
 	add_dependencies( ALL_EXTERN ${CONDOR_EXTERNALS} )
 endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
-
-#####################################
-# Do we want to link in the GSI libraries or dlopen() them at runtime?
-if (NOT DEFINED DLOPEN_GSI_LIBS)
-	if (HAVE_EXT_GLOBUS AND LINUX AND NOT WANT_PYTHON_WHEELS)
-		set(DLOPEN_GSI_LIBS TRUE)
-	else()
-		set(DLOPEN_GSI_LIBS FALSE)
-	endif()
-endif()
 
 #####################################
 # Do we want to link in the VOMS libraries or dlopen() them at runtime?
@@ -1041,7 +1012,7 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
+if (DLOPEN_VOMS_LIBS)
 	if (WITH_SCITOKENS)
 	set (SECURITY_LIBS SciTokens-headers;crypto)
 	else()
@@ -1049,9 +1020,9 @@ if (DLOPEN_GSI_LIBS OR DLOPEN_VOMS_LIBS)
 	endif()
 else()
 	if (WITH_SCITOKENS)
-		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
+		set (SECURITY_LIBS "${VOMS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
 	else()
-		set (SECURITY_LIBS "${VOMS_FOUND};${GLOBUS_FOUND};openssl;crypto;${EXPAT_FOUND}")
+		set (SECURITY_LIBS "${VOMS_FOUND};openssl;crypto;${EXPAT_FOUND}")
 	endif()
 endif()
 
@@ -1110,6 +1081,14 @@ else(MSVC)
 	if (c_Wall)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 	endif(c_Wall)
+
+	# This generates a million warnings, some of which represent
+	# serious bugs.  At your leisure, uncomment and fix some 
+	# of them.
+	#check_c_compiler_flag(-Wconversion c_Wconversion)
+	#if (c_Wconversion)
+	#	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
+	#endif(c_Wconversion)
 
 	# GGT tested compiling  condor_history with -flto, it ran less than one tenth of one percent faster
     # and took more than 3 times longer to compile.  Try again later.

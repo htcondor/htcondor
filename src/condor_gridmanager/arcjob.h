@@ -95,7 +95,6 @@ class ArcJob : public BaseJob
 	StringList *stageLocalList;
 
 	bool buildJobADL();
-	bool buildSubmitRSL();
 	StringList *buildStageInList();
 	StringList *buildStageOutList();
 	StringList *buildStageOutLocalList( StringList *stage_list );

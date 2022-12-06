@@ -1610,16 +1610,17 @@ print_status( bool forceScheddUpdate ) {
 	int post = dagman.dag->PostRunNodeCount();
 	int ready =  dagman.dag->NumNodesReady();
 	int failed = dagman.dag->NumNodesFailed();
+	int futile = dagman.dag->NumNodesFutile();
 	int unready = dagman.dag->NumNodesUnready( true );
 
 	debug_printf( DEBUG_VERBOSE, "Of %d nodes total:\n", total );
 
-	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed\n" );
+	debug_printf( DEBUG_VERBOSE, " Done     Pre   Queued    Post   Ready   Un-Ready   Failed   Futile\n" );
 
-	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===\n" );
+	debug_printf( DEBUG_VERBOSE, "  ===     ===      ===     ===     ===        ===      ===      ===\n" );
 
-	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d\n",
-				  done, pre, submitted, post, ready, unready, failed );
+	debug_printf( DEBUG_VERBOSE, "%5d   %5d    %5d   %5d   %5d      %5d    %5d    %5d\n",
+				  done, pre, submitted, post, ready, unready, failed, futile);
 	debug_printf( DEBUG_VERBOSE, "%d job proc(s) currently held\n",
 				dagman.dag->NumHeldJobProcs() );
 	dagman.dag->PrintDeferrals( DEBUG_VERBOSE, false );
@@ -1874,7 +1875,6 @@ void condor_event_timer () {
 void
 main_pre_dc_init ( int, char*[] )
 {
-	DC_Skip_Auth_Init();
 	DC_Skip_Core_Init();
 #ifdef WIN32
 	_setmaxstdio(2048);

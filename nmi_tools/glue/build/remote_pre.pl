@@ -49,7 +49,7 @@ my %defines = (
     listvars => "-LA",
     #noregen => "-DCMAKE_SUPPRESS_REGENERATION:BOOL=TRUE",
     prefix => "-DCMAKE_INSTALL_PREFIX:PATH=$BaseDir/release_dir",
-    mirror => "-DEXTERNALS_SOURCE_URL:URL=http://parrot.cs.wisc.edu/externals",
+    mirror => "-DEXTERNALS_SOURCE_URL:URL=https://parrot.cs.wisc.edu/externals",
     #mirror => "-DEXTERNALS_SOURCE_URL:URL=http://mirror.batlab.org/pub/export/externals",
     );
 
@@ -124,7 +124,6 @@ if ($ENV{NMI_PLATFORM} =~ /_win/i) {
 	if ( ! $enable_x64) {
 		print "Win64 not enabled and platform=$platform, fixing platform string...\n";
 		$platform =~ s/_64_/_/;
-		print "platform = $platform\n";
 	}
 } elsif ($ENV{NMI_PLATFORM} =~ /macos/i) {
 	# CRUFT Once 9.0 is EOL, remove the python.org version of python3
@@ -218,6 +217,8 @@ $defines{date} = "-DBUILD_DATE:STRING=\"$date\"";
 
 print "platform is: $platform\n";
 $defines{platform} = "-DPLATFORM:STRING=$platform";
+# all of the binaries we build on Windows should have Windows10 as the CondorPlatform
+$platform =~ s/Windows[789]$/Windows10/;
 $defines{condor_platform} = "-DCONDOR_PLATFORM:STRING=$platform";
 
 ######################################################################

@@ -39,9 +39,6 @@
 
 %define python 1
 
-# Unconditionally turn off globus
-%define globus 0
-
 # Temporarily turn parallel_setup off
 %define parallel_setup 0
 
@@ -69,7 +66,7 @@ Release: %{condor_release}%{?dist}
 
 License: ASL 2.0
 Group: Applications/System
-URL: http://www.cs.wisc.edu/condor/
+URL: https://www.cs.wisc.edu/htcondor/
 
 # This allows developers to test the RPM with a non-release, git tarball
 %if %git_build
@@ -85,7 +82,7 @@ Source0: condor.tar.gz
 # be shipped as well as extraneous copies of packages the source
 # depends on. Additionally, the upstream HTCondor source requires a
 # click-through license. Once you have downloaded the source from:
-#   http://parrot.cs.wisc.edu/v7.0.license.html
+#   https://parrot.cs.wisc.edu/v7.0.license.html
 # you should process it with generate-tarball.sh:
 #   ./generate-tarball.sh 7.0.4
 # MD5Sum of upstream source:
@@ -181,32 +178,7 @@ BuildRequires: python-devel
 BuildRequires: libcurl-devel
 %endif
 
-# Globus GSI build requirements
-%if %globus
-BuildRequires: globus-gssapi-gsi-devel
-BuildRequires: globus-gass-server-ez-devel
-BuildRequires: globus-gass-transfer-devel
-BuildRequires: globus-gram-client-devel
-BuildRequires: globus-rsl-devel
-BuildRequires: globus-gram-protocol
-BuildRequires: globus-io-devel
-BuildRequires: globus-xio-devel
-BuildRequires: globus-gssapi-error-devel
-BuildRequires: globus-gss-assist-devel
-BuildRequires: globus-gsi-proxy-core-devel
-BuildRequires: globus-gsi-credential-devel
-BuildRequires: globus-gsi-callback-devel
-BuildRequires: globus-gsi-sysconfig-devel
-BuildRequires: globus-gsi-cert-utils-devel
-BuildRequires: globus-openssl-module-devel
-BuildRequires: globus-gsi-openssl-error-devel
-BuildRequires: globus-gsi-proxy-ssl-devel
-BuildRequires: globus-callout-devel
-BuildRequires: globus-common-devel
-BuildRequires: globus-ftp-client-devel
-BuildRequires: globus-ftp-control-devel
-BuildRequires: libtool-ltdl-devel
-%endif
+# Authentication build requirements
 BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
@@ -308,22 +280,6 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
-%if %globus
-Requires: globus-callout
-Requires: globus-common
-Requires: globus-gsi-callback
-Requires: globus-gsi-cert-utils
-Requires: globus-gsi-credential
-Requires: globus-gsi-openssl-error
-Requires: globus-gsi-proxy-core
-Requires: globus-gsi-proxy-ssl
-Requires: globus-gsi-sysconfig
-Requires: globus-gss-assist
-Requires: globus-gssapi-gsi
-Requires: globus-openssl-module
-Requires: globus-xio-gsi-driver
-Requires: libtool-ltdl
-%endif
 Requires: voms
 Requires: krb5-libs
 Requires: libcom_err
@@ -758,11 +714,6 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-%if %globus
-       -DWITH_GLOBUS:BOOL=TRUE \
-%else
-       -DWITH_GLOBUS:BOOL=FALSE \
-%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -1116,10 +1067,9 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_urlfetch
 %_libexecdir/condor/htcondor_docker_test
 %_libexecdir/condor/exit_37.sif
-%if %globus
-%_sbindir/condor_gridshell
-%_sbindir/nordugrid_gahp
-%endif
+%dir %_libexecdir/condor/singularity_test_sandbox/
+%dir %_libexecdir/condor/singularity_test_sandbox/dev/
+%_libexecdir/condor/singularity_test_sandbox/exit_37
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
 %_libexecdir/condor/condor_schedd.init
@@ -1374,7 +1324,6 @@ rm -rf %{buildroot}
 %_sbindir/arc_gahp
 %_libexecdir/condor/condor_gpu_discovery
 %_libexecdir/condor/condor_gpu_utilization
-%_sbindir/exit_37
 %config(noreplace) %_sysconfdir/condor/ganglia.d/00_default_metrics
 %defattr(-,condor,condor,-)
 %dir %_var/lib/condor/
@@ -1623,6 +1572,28 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
+- Improvements to job hooks and the ability to save stderr from a job hook
+- Fix bug where Apptainer only systems couldn't run with Docker style images
+
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.0-1
+- Release HTCondor 10.0.0 bug fixes into 10.1.0
+
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.0.0-1
+- Users can prevent runaway jobs by specifying an allowed duration
+- Able to extend submit commands and create job submit templates
+- Initial implementation of htcondor <noun> <verb> command line interface
+- Initial implementation of Job Sets in the htcondor CLI tool
+- Add Container Universe
+- Support for heterogeneous GPUs
+- Improved File transfer error reporting
+- GSI Authentication method has been removed
+- HTCondor now utilizes ARC-CE's REST interface
+- Support for ARM and PowerPC for Enterprise Linux 8
+- For IDTOKENS, signing key not required on every execution point
+- Trust on first use ability for SSL connections
+- Improvements against replay attacks
+
 * Wed Oct 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.12.0-1
 - Provide a mechanism to bootstrap secure authentication within a pool
 - Add the ability to define submit templates

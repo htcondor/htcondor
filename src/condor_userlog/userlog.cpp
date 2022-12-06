@@ -26,6 +26,7 @@
 #include "condor_distribution.h"
 #include "condor_sockaddr.h"
 #include "ipv6_hostname.h"
+#include <algorithm>
 
 /* 
 ** Job Record format: cluster.proc evict_time wall_time good_time cpu_usage
@@ -172,19 +173,18 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-int
-statsort(const void *vi, const void *vj)
-{
-	const JobStatistics* const *i;
-	const JobStatistics* const *j;
-	i = (const JobStatistics* const *)vi;
-	j = (const JobStatistics* const *)vj;
-	int clustercomp;
-	clustercomp = (*i)->cluster - (*j)->cluster;
-	if (clustercomp == 0) {
-		return (*i)->proc - (*j)->proc;
+bool clusterProcLessThan(const JobStatistics *lhs, const JobStatistics *rhs) {
+	if (lhs->cluster < rhs->cluster) {
+		return true;
 	}
-	return clustercomp;
+	if (lhs->cluster > rhs->cluster) {
+		return false;
+	}
+
+	if (lhs->proc < rhs->proc) {
+		return true;
+	}
+	return false;
 }
 
 void
@@ -228,7 +228,7 @@ display_stats()
 		statarray[i] = js;
 	}
 
-	qsort(statarray, numJobStats, sizeof(JobStatistics *), statsort);
+	std::sort(statarray, &statarray[i], clusterProcLessThan);
 
 	int allocations=0, kills=0;
 	int wall_time=0, good_time=0, cpu_usage=0;

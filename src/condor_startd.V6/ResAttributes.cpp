@@ -1382,8 +1382,23 @@ MachAttributes::publish_static(ClassAd* cp)
 	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
 }
 
+// return true if the given slot has resources that are assigned to both normal and backfill
+// and the given slot is a backfill slot. NOTE: this code does not check to see if the slot is active
+bool
+MachAttributes::has_nft_conflicts(int slot_id, int slot_subid)
+{
+	for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
+		for (const auto & nfr : f->second.ids) {
+			if (nfr.is_owned(slot_id, slot_subid) == 3) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 void
-MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool slot_is_bk)
+MachAttributes::publish_common_dynamic(ClassAd* cp)
 {
 	// things that need to be refreshed periodially
 
@@ -1432,10 +1447,32 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool s
 		}
 	}
 
+	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
+	cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
+	cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
+	cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
+	cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
+	cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
+
+	m_lst_dynamic.Rewind();
+	while (AttribValue *pav = m_lst_dynamic.Next() ) {
+		if (pav) pav->AssignToClassAd(cp);
+	}
+}
+
+void
+MachAttributes::publish_slot_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool slot_is_bk, const std::string & res_conflict)
+{
+	// the global resource conflicts are determined elsewhere and passed in here
+	// we we add the NFR conflicts and the publish
+	std::string conflict = res_conflict;
+
 	// publish "Available" custom resources and resource properties
 	// for use by the evalInEachContext matchmaking function
-	std::string nfr_conflict;
+	// this loop also detects primary/backfill resource conflcits for non-fungible resources
 	for (auto f(m_machres_nft_map.begin()); f != m_machres_nft_map.end(); ++f) {
+		auto & offline_ids(m_machres_runtime_offline_ids_map[f->first]);
+
 		std::string tmp;
 		std::string attr; attr.reserve(18);
 		std::string avail; avail.reserve(2 + (f->second.ids.size() * 18));
@@ -1449,12 +1486,13 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool s
 				if (IsDebugCategory(D_ZKM)) { formatstr_cat(tmp, "%d(%d.%d)", ot,nfr.owner.id,nfr.owner.dyn_id); }
 				if (owntype != ot) {
 					if (slot_subid > 0 && (ot &= ~owntype) == 1) {
-						if (nfr_conflict.size() > 1) { nfr_conflict += ","; }
-						nfr_conflict += nfr.id;
+						if (conflict.size() > 1) { conflict += ","; }
+						conflict += nfr.id;
 					}
 					continue;
 				}
 			}
+			if (offline_ids.count(nfr.id)) continue; // offline ids are not Available
 			attr = f->first; attr += "_";
 			attr += nfr.id;
 			cleanStringForUseAsAttr(attr, '_');
@@ -1465,7 +1503,7 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool s
 
 		avail += "}";
 		attr = "Available"; attr += f->first;
-		dprintf(D_ZKM, "publish_dyn %d.%d.%d setting %s=%s%s\n",
+		dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d setting %s=%s%s\n",
 			slot_id, slot_subid, slot_is_bk,
 			attr.c_str(), avail.c_str(), tmp.c_str());
 		cp->AssignExpr(attr, avail.c_str());
@@ -1473,33 +1511,26 @@ MachAttributes::publish_dynamic(ClassAd* cp, int slot_id, int slot_subid, bool s
 		// if the number of AvailableXX is less than the value of XX in the ad, reduce the value in the ad
 		int num_in_ad = num_avail;
 		if (cp->LookupInteger(f->first, num_in_ad)) {
-			dprintf(D_ZKM, "publish_dyn %d.%d.%d %s=%d was %d\n",
+			dprintf(D_ZKM | D_VERBOSE, "publish_dyn %d.%d.%d %s=%d was %d\n",
 				slot_id, slot_subid, slot_is_bk,
 				f->first.c_str(), num_avail, num_in_ad);
 			cp->Assign(f->first, num_avail);
 		}
 	}
-	// TODO: these maybe do not belong here?
-	if (nfr_conflict.size() > 0) {
-		cp->Assign("ResourceConflict", nfr_conflict);
-		dprintf(D_ZKM, "publish_dyn %d.%d.%d ResourceConflict=%s\n",
-			slot_id, slot_subid, slot_is_bk,
-			nfr_conflict.c_str());
-	} else {
-		cp->Delete("ResourceConflict");
+
+	// if this is a backfill slot, publish the ResourceConflict attribute`
+	if (slot_is_bk) {
+		if (conflict.size() > 0) {
+			cp->Assign("ResourceConflict", conflict);
+			dprintf(D_ZKM, "publish_dyn %d.%d.%d ResourceConflict=%s\n",
+				slot_id, slot_subid, slot_is_bk,
+				conflict.c_str());
+		} else {
+			cp->Delete("ResourceConflict");
+		}
 	}
 
-	cp->Assign( ATTR_TOTAL_VIRTUAL_MEMORY, m_virt_mem );
-	cp->Assign( ATTR_LAST_BENCHMARK, m_last_benchmark );
-	cp->Assign( ATTR_TOTAL_LOAD_AVG, rint(m_load * 100) / 100.0);
-	cp->Assign( ATTR_TOTAL_CONDOR_LOAD_AVG, rint(m_condor_load * 100) / 100.0);
-	cp->Assign( ATTR_CLOCK_MIN, m_clock_min );
-	cp->Assign( ATTR_CLOCK_DAY, m_clock_day );
 
-	m_lst_dynamic.Rewind();
-	while (AttribValue *pav = m_lst_dynamic.Next() ) {
-		if (pav) pav->AssignToClassAd(cp);
-	}
 }
 
 void
@@ -2043,6 +2074,62 @@ CpuAttributes::operator-=( CpuAttributes& rhs )
 
 	return *this;
 }
+
+ResBag&
+ResBag::operator+=(const CpuAttributes& rhs)
+{
+	cpus += rhs.c_num_slot_cpus;
+	disk += rhs.c_slot_disk;
+	mem += rhs.c_slot_mem;
+	slots += 1;
+	for (auto res : rhs.c_slottot_map) { resmap[res.first] += res.second; }
+	return *this;
+}
+
+ResBag&
+ResBag::operator-=(const CpuAttributes& rhs)
+{
+	cpus -= rhs.c_num_slot_cpus;
+	disk -= rhs.c_slot_disk;
+	mem -= rhs.c_slot_mem;
+	slots -= 1;
+	for (auto res : rhs.c_slottot_map) { resmap[res.first] -= res.second; }
+	return *this;
+}
+
+bool ResBag::underrun(std::string * names)
+{
+	if (names) {
+		if (cpus < 0) *names += "Cpus,";
+		if (mem < 0) *names +=  "Memory,";
+		if (disk < 0) *names += "Disk,";
+		for (auto res : resmap) {
+			if (res.second < 0) *names += res.first + ",";
+		}
+		size_t cch = names->size();
+		if (cch > 0) {
+			names->resize(cch-1);  // delete the extra comma.
+			return true;
+		}
+	} else if (cpus < 0 || disk < 0 || mem < 0) {
+		return true;
+	}
+	for (auto res : resmap) {
+		if (res.second < 0) return true;
+	}
+	return false;
+}
+
+const char * ResBag::dump(std::string & buf) const
+{
+	buf.clear();
+	formatstr(buf, "Cpus=%f, Memory=%d, Disk=%lld", cpus, mem, disk);
+	for (auto res : resmap) {
+		formatstr_cat(buf, " ,%s=%f", res.first.c_str(), res.second);
+	}
+	return buf.c_str();
+}
+
 
 AvailAttributes::AvailAttributes( MachAttributes* map ):
 	m_execute_partitions(hashFunction)

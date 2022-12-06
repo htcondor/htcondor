@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2008, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -25,9 +25,10 @@
 #include "hook_utils.h"
 #include "status_string.h"
 #include "classad_merge.h"
+#include "jic_shadow.h"
+#include "basename.h"
 
 extern Starter *Starter;
-
 
 // // // // // // // // // // // //
 // StarterHookMgr
@@ -38,6 +39,7 @@ StarterHookMgr::StarterHookMgr()
 {
 	m_hook_keyword = NULL;
 	m_hook_prepare_job = NULL;
+	m_hook_prepare_job_before_transfer = NULL;
 	m_hook_update_job_info = NULL;
 	m_hook_job_exit = NULL;
 
@@ -67,6 +69,10 @@ StarterHookMgr::clearHookPaths()
 		free(m_hook_prepare_job);
         m_hook_prepare_job = NULL;
 	}
+	if (m_hook_prepare_job_before_transfer) {
+		free(m_hook_prepare_job_before_transfer);
+		m_hook_prepare_job_before_transfer = NULL;
+	}
 	if (m_hook_update_job_info) {
 		free(m_hook_update_job_info);
         m_hook_update_job_info = NULL;
@@ -81,22 +87,56 @@ StarterHookMgr::clearHookPaths()
 bool
 StarterHookMgr::initialize(ClassAd* job_ad)
 {
+	// If EP admin says we must use this hook, use it.
 	char* tmp = param("STARTER_JOB_HOOK_KEYWORD");
 	if (tmp) {
 		m_hook_keyword = tmp;
-		dprintf(D_FULLDEBUG, "Using STARTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
+		dprintf(D_ALWAYS, "Using STARTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
 	}
-	else if (!job_ad->LookupString(ATTR_HOOK_KEYWORD, &m_hook_keyword)) {
+
+	// If EP admin did not insist on a hook, see if the job wants one.  However, if the job
+	// specifies a hookname that does not exist at all in the EP's config file,
+	// then use the default hook provided by the EP admin. This prevents the user from bypassing
+	// the EP admin's default hook by specifying an invalid hook name.
+	if ( !m_hook_keyword && job_ad->LookupString(ATTR_HOOK_KEYWORD, &m_hook_keyword) ) {
+		bool config_has_this_hook = false;
+		for (int i = 0; !config_has_this_hook; i++) {
+			HookType h = static_cast<HookType>(i);
+			if (getHookTypeString(h) == NULL) break;  // iterated thru all hook types
+			getHookPath(h, tmp);
+			if ( tmp ) {
+				free(tmp);
+				config_has_this_hook = true;
+			}
+		}
+		if ( config_has_this_hook )
+		{
+			dprintf(D_ALWAYS,
+				"Using %s value from job ClassAd: \"%s\"\n",
+				ATTR_HOOK_KEYWORD, m_hook_keyword);
+		}
+		else {
+			dprintf(D_ALWAYS,
+				"Ignoring %s value of \"%s\" from job ClassAd because hook not defined in config file\n",
+				ATTR_HOOK_KEYWORD, m_hook_keyword);
+			free(m_hook_keyword);
+			m_hook_keyword = NULL;
+		}
+	}
+
+	// If we don't have a hook by now, see if EP admin defined a default one.
+	if ( !m_hook_keyword && (tmp=param("STARTER_DEFAULT_JOB_HOOK_KEYWORD")) ) {
+		m_hook_keyword = tmp;
+		dprintf(D_ALWAYS, "Using STARTER_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
+	}
+
+	if ( !m_hook_keyword ) {
 		dprintf(D_FULLDEBUG,
-				"Job does not define %s, not invoking any job hooks.\n",
+				"Job does not define %s, no config file hooks, not invoking any job hooks.\n",
 				ATTR_HOOK_KEYWORD);
 		return true;
 	}
-	else {
-		dprintf(D_FULLDEBUG,
-				"Using %s value from job ClassAd: \"%s\"\n",
-				ATTR_HOOK_KEYWORD, m_hook_keyword);
-	}
+
 	if (!reconfig()) return false;
 	return HookClientMgr::initialize();
 }
@@ -109,6 +149,7 @@ StarterHookMgr::reconfig()
 	clearHookPaths();
 
     if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
+	if (!getHookPath(HOOK_PREPARE_JOB_BEFORE_TRANSFER, m_hook_prepare_job_before_transfer)) return false;
     if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
     if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
 
@@ -123,7 +164,9 @@ bool StarterHookMgr::getHookPath(HookType hook_type, char*& hpath)
     hpath = NULL;
 	if (!m_hook_keyword) return true;
 	std::string _param;
-	formatstr(_param, "%s_HOOK_%s", m_hook_keyword, getHookTypeString(hook_type));
+	const char* hook_string = getHookTypeString(hook_type);
+	if (!hook_string) return false;  // undefined hook_type
+	formatstr(_param, "%s_HOOK_%s", m_hook_keyword, hook_string);
 	return validateHookPath(_param.c_str(), hpath);
 }
 
@@ -136,30 +179,49 @@ int StarterHookMgr::getHookTimeout(HookType hook_type, int def_value)
 	return param_integer(_param.c_str(), def_value);
 }
 
-
 int
 StarterHookMgr::tryHookPrepareJob()
 {
 	if (!m_hook_prepare_job) {
-		dprintf(D_FULLDEBUG, "HOOK_PREPARE_JOB not configured.\n");
 		return 0;
 	}
+
+	return tryHookPrepareJob_implementation(m_hook_prepare_job, true);
+}
+
+int
+StarterHookMgr::tryHookPrepareJobPreTransfer()
+{
+	if (!m_hook_prepare_job_before_transfer) {
+		return 0;
+	}
+
+	return tryHookPrepareJob_implementation(m_hook_prepare_job_before_transfer, false);
+}
+
+
+int
+StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job, bool after_filetransfer)
+{
+	ASSERT(m_hook_prepare_job);
 
 	std::string hook_stdin;
 	ClassAd* job_ad = Starter->jic->jobClassAd();
 	sPrintAd(hook_stdin, *job_ad);
 
-	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job);
+	HookClient* hook_client = new HookPrepareJobClient(m_hook_prepare_job, after_filetransfer);
+
+	const char* hook_name = getHookTypeString(hook_client->type());
 
 	Env env;
 	Starter->PublishToEnv(&env);
 
 	if (!spawn(hook_client, NULL, hook_stdin, PRIV_USER_FINAL, &env)) {
 		std::string err_msg;
-		formatstr(err_msg, "failed to execute HOOK_PREPARE_JOB (%s)",
-						m_hook_prepare_job);
+		formatstr(err_msg, "failed to execute %s (%s)",
+						hook_name, m_hook_prepare_job);
 		dprintf(D_ALWAYS|D_FAILURE,
-				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
+				"ERROR in StarterHookMgr::tryHookPrepareJob_implementation: %s\n",
 				err_msg.c_str());
 		Starter->jic->notifyStarterError(err_msg.c_str(), true,
 						 CONDOR_HOLD_CODE::HookPrepareJobFailure, 0);
@@ -167,8 +229,8 @@ StarterHookMgr::tryHookPrepareJob()
 		return -1;
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_PREPARE_JOB (%s) invoked.\n",
-			m_hook_prepare_job);
+	dprintf(D_ALWAYS, "%s (%s) invoked.\n",
+			hook_name, m_hook_prepare_job);
 	return 1;
 }
 
@@ -203,7 +265,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 		return false;
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
+	dprintf(D_ALWAYS, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
 			m_hook_update_job_info);
 	return true;
 }
@@ -260,7 +322,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 		return -1;
 	}
 
-	dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT (%s) invoked with reason: \"%s\"\n",
+	dprintf(D_ALWAYS, "HOOK_JOB_EXIT (%s) invoked with reason: \"%s\"\n",
 			m_hook_job_exit, exit_reason);
 	return 1;
 }
@@ -271,50 +333,101 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 // HookPrepareJobClient class
 // // // // // // // // // // // //
 
-HookPrepareJobClient::HookPrepareJobClient(const char* hook_path)
-	: HookClient(HOOK_PREPARE_JOB, hook_path, true)
+HookPrepareJobClient::HookPrepareJobClient(const char* hook_path, bool after_filetransfer)
+	: HookClient(after_filetransfer ? HOOK_PREPARE_JOB : HOOK_PREPARE_JOB_BEFORE_TRANSFER, hook_path, true)
 {
-		// Nothing special needed in the child class.
+	// Nothing special needed in ctor
 }
 
 
 void
 HookPrepareJobClient::hookExited(int exit_status) {
+	std::string hook_name(getHookTypeString(type()));
 	HookClient::hookExited(exit_status);
-	if (WIFSIGNALED(exit_status) || WEXITSTATUS(exit_status) != 0) {
-		std::string status_msg;
-		statusString(exit_status, status_msg);
-		int subcode;
-		if (WIFSIGNALED(exit_status)) {
-			subcode = -1 * WTERMSIG(exit_status);
+
+	// Make an update ad from the stdout of the hook
+	ClassAd updateAd;
+	std::string out(*getStdOut());
+	if (!out.empty()) {
+		initAdFromString(out.c_str(), updateAd);
+		dprintf(D_FULLDEBUG, "%s output classad\n", hook_name.c_str());
+		dPrintAd(D_FULLDEBUG, updateAd);
+	}
+	else {
+		dprintf(D_FULLDEBUG, "%s output classad was empty (no job ad updates requested)\n", hook_name.c_str());
+	}
+
+	// If present, HookStatusCode attr in the stdout overrides exit status
+	// unless killed by a signal.
+	std::string exit_status_msg;
+	statusString(exit_status, exit_status_msg);
+	if (WIFSIGNALED(exit_status)) {
+		exit_status = -1 * WTERMSIG(exit_status);
+	}
+	else {
+		exit_status = WEXITSTATUS(exit_status); 
+		int exit_from_stdout = -1;
+		updateAd.LookupInteger("HookStatusCode", exit_from_stdout);
+		if (exit_from_stdout >= 0) {
+			exit_status = exit_from_stdout;
+			formatstr(exit_status_msg, "reported status %03d", exit_status);
 		}
-		else {
-			subcode = WEXITSTATUS(exit_status);
-		}
-		std::string err_msg;
-		formatstr(err_msg, "HOOK_PREPARE_JOB (%s) failed (%s)", m_hook_path,
-						status_msg.c_str());
+	}
+
+	// Create a log message
+	std::string msg_from_stdout;
+	updateAd.LookupString("HookStatusMessage", msg_from_stdout);
+	std::string log_msg;
+	formatstr(log_msg, "%s (%s) %s (%s): %s", hook_name.c_str(),
+		condor_basename(m_hook_path),
+		exit_status ? "failed" : "succeeded",
+		exit_status_msg.c_str(),
+		msg_from_stdout.empty() ? "<no message>" : msg_from_stdout.c_str());
+
+	/* Notify the AP what happened if there is a message or a failure.
+		From HTCONDOR-1411:
+		HookStatusCode between 1 and 299 (inclusive) will result in the job
+		going to Hold state, while a HookStatusCode > 299 will result in a shadow
+		exception and the job going back to Idle state.  In either case, an event
+		will be written into the job event log that includes the HookStatusMessage.
+		If the HookStatusCode is 0 (success) and yet a HookStatusMessage is returned,
+		the message will be written into the job event log as a warning, but the
+		job will remain in Running state and job launch will continue.
+	*/
+	if (!msg_from_stdout.empty() || exit_status != 0) {
+		Starter->jic->notifyStarterError(
+			log_msg.c_str(),
+			exit_status != 0 ? true : false, // shadow except or not (if hold code below is zero)
+			exit_status > 0 && exit_status < 300 ? CONDOR_HOLD_CODE::HookPrepareJobFailure : 0, // hold job or not
+			exit_status   // subcode 
+		);
+	}
+
+	if (exit_status != 0) {
+			// HOOK RETURNED FAILURE
+
 		dprintf(D_ALWAYS|D_FAILURE,
-				"ERROR in StarterHookMgr::tryHookPrepareJob: %s\n",
-				err_msg.c_str());
-		Starter->jic->notifyStarterError(err_msg.c_str(), true,
-							 CONDOR_HOLD_CODE::HookPrepareJobFailure, subcode);
+				"ERROR in HookPrepareJobClient::hookExited: %s\n",
+				log_msg.c_str());
 		Starter->RemoteShutdownFast(0);
 	}
 	else {
-			// Make an update ad from the stdout of the hook
-		std::string out(*getStdOut());
-		ClassAd updateAd;
-		initAdFromString(out.c_str(), updateAd);
-		dprintf(D_FULLDEBUG, "Prepare hook output classad\n");
-		dPrintAd(D_FULLDEBUG, updateAd);
+			// HOOK RETURNED SUCCESS
 
-			// Insert each expr from the update ad into the job ad
+			// Insert each expr from the update ad from hook into the job ad
 		ClassAd* job_ad = Starter->jic->jobClassAd();
 		job_ad->Update(updateAd);
-		dprintf(D_FULLDEBUG, "After Prepare hook: merged job classad:\n");
+		dprintf(D_FULLDEBUG, "After %s: merged job classad:\n", hook_name.c_str());
 		dPrintAd(D_FULLDEBUG, *job_ad);
-		Starter->jobEnvironmentReady();
+
+			// Now have the starter continue forward preparing for the job
+		if (type() == HOOK_PREPARE_JOB) {
+			Starter->jobEnvironmentReady();
+		}
+		if (type() == HOOK_PREPARE_JOB_BEFORE_TRANSFER) {
+			JICShadow *p = dynamic_cast<JICShadow*>(Starter->jic);
+			if (p) p->setupJobEnvironment_part2();
+		}
 	}
 }
 

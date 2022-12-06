@@ -174,7 +174,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 		char * p;
 	};
 
-	int param_names_matching(Regex & re, ExtArray<const char *>& names);
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
 
 	bool param_defined(const char* name);
@@ -724,18 +723,6 @@ int write_config_file(const char* pathname, int options);
 	
 	// Process an additional chunk of file
 	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
-
-
-/* This function initialize GSI (maybe other) authentication related
-   stuff Daemons that should use the condor daemon credentials should
-   set the argument is_daemon=true.  This function is automatically
-   called at config init time with is_daemon=false, so that all
-   processes get the basic auth config.  The order of calls to this
-   function do not matter, as the results are only additive.
-   Therefore, calling with is_daemon=false and then with
-   is_daemon=true or vice versa are equivalent.
-*/
-void condor_auth_config(int is_daemon);
 
 #endif /* _CONDOR_CONFIG_H */
 

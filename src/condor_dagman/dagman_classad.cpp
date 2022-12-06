@@ -197,7 +197,7 @@ DagmanClassad::Update( const Dagman &dagman )
 	//Get counts for DAG job process states: idle, held, running
 	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
 	dagman.dag->NumJobProcStates(&jobProcsHeld,&jobProcsIdle,&jobProcsRunning);
-	
+
 	SetAttribute( ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes( true ) );
 	SetAttribute( ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone( true ) );
 	SetAttribute( ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount() );
@@ -207,6 +207,7 @@ DagmanClassad::Update( const Dagman &dagman )
 	SetAttribute( ATTR_DAG_NODES_READY, dagman.dag->NumNodesReady() );
 	SetAttribute( ATTR_DAG_NODES_FAILED, dagman.dag->NumNodesFailed() );
 	SetAttribute( ATTR_DAG_NODES_UNREADY, dagman.dag->NumNodesUnready( true ) );
+	SetAttribute( ATTR_DAG_NODES_FUTILE, dagman.dag->NumNodesFutile() );
 	SetAttribute( ATTR_DAG_STATUS, (int)dagman.dag->_dagStatus );
 	SetAttribute( ATTR_DAG_IN_RECOVERY, dagman.dag->Recovery() );
 	SetAttribute( ATTR_DAG_JOBS_SUBMITTED, dagman.dag->TotalJobsSubmitted() );

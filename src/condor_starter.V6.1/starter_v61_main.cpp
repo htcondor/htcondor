@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -164,23 +164,46 @@ printClassAd( void )
 
 	// Singularity support
 	if (htcondor::Singularity::enabled()) {
-		//  enabled means that singularity --version returned sensible output
-		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 
-		bool shouldAdvertiseSingularity = false;
+		bool can_run_sandbox = false;
 		if (htcondor::Singularity::canRunSandbox())  {
-			printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
-			shouldAdvertiseSingularity = true;
+			can_run_sandbox = true;
 		}
+		bool can_run_sif = false;
 		if (htcondor::Singularity::canRunSIF())  {
-			printf("%s = True\n", ATTR_HAS_SIF);
-			shouldAdvertiseSingularity = true;
+			can_run_sif = true;
 		}
 
-		if (shouldAdvertiseSingularity) {
+		// To consider Singularity operational, we needed it to pass
+		// running something... either sandbox or sif...
+		if (can_run_sandbox || can_run_sif) {
 			printf("%s = True\n", ATTR_HAS_SINGULARITY);
 			printf("%s = True\n", ATTR_HAS_CONTAINER);
+			// We can't test a download, so assume we can...
+			printf("%s = True\n", ATTR_HAS_DOCKER_URL);
+			if (can_run_sandbox) {
+				printf("%s = True\n", ATTR_HAS_SANDBOX_IMAGE);
+			}
+			if (can_run_sif) {
+				printf("%s = True\n", ATTR_HAS_SIF);
+			}
 		}
+		else {
+			// If we made it here, we cannot run either sif or sandbox images.
+			// In this case, return HasSingularity=False, which means it is
+			// present on the EP but broken.
+			// In this case, add in SingularityOfflineReason attr to help explain why,
+			// just like we do for Docker.
+			printf("%s = False\n", ATTR_HAS_SINGULARITY);
+			std::string offline_reason = "Both SIF and Sandbox tests on startup failed";
+			if (!htcondor::Singularity::m_lastSingularityErrorLine.empty()) {
+				offline_reason += " : " + htcondor::Singularity::m_lastSingularityErrorLine;
+			}
+			printf("SingularityOfflineReason = \"%s\"\n",
+				EscapeChars(offline_reason.c_str(), "\"", '\\').c_str() // escape quotes in classad str
+			);
+		}
+		printf("%s = \"%s\"\n", ATTR_SINGULARITY_VERSION, htcondor::Singularity::version());
 	}
 
 	// Detect ability to encrypt execute directory

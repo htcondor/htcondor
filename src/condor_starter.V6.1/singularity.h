@@ -46,22 +46,24 @@ public:
 	// if SINGULARITY_TARGET_DIR is set, reset environment variables
 	// for the scratch directory path as mounted inside the container
   static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
-  static bool runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage);
+  static bool runTest(const std::string &JobName, const ArgList &args, int orig_args_len, Env &env, std::string &errorMessage);
 
   static bool canRunSandbox();
   static bool canRunSIF();
   static bool canRun(const std::string &image);
-
+  static std::string m_lastSingularityErrorLine;
 
 private:
   static bool detect(CondorError &err);
   static std::string environmentPrefix();
+  static void add_containment_args(ArgList & sing_args);
 
   static bool m_enabled;
   static bool m_probed;
   static bool m_apptainer;
   static int m_default_timeout;
   static std::string m_singularity_version;
+  static bool m_use_pid_namespaces;
 };
 
 }

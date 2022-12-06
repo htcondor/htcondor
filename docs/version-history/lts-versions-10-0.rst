@@ -7,16 +7,16 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-1000:
+.. _lts-version-history-1001:
 
-Version 10.0.0
+Version 10.0.1
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.0.0 released on Month Date, 2022.
+.. HTCondor version 10.0.1 released on Month Date, 2022.
 
-- HTCondor version 10.0.0 not yet released.
+- HTCondor version 10.0.1 not yet released.
 
 New Features:
 
@@ -24,11 +24,94 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where if a job created a symlink to a file, the contents of
+- Fixed bug in the curl plugin where it would crash on EL8
+  systems when using a file:// url type
+  :jira:`1426`
+
+- Fixed bug in where the multifile curl plugin would fail to timeout
+  due lack of upload or download progress if a large amount of bytes
+  where transfered at some point.
+  :jira:`1403`
+  
+- Fixed a bug that prevented the starter from properly mounting
+  thinpool provisioned ephemeral scratch directories.
+  :jira:`1419`
+
+- Fixed bugs in the container universe that prevented
+  apptainer-only systems from running container universe jobs
+  with docker-repo style images.
+  :jira:`1412`
+
+- Docker universe and container universe job that use the docker runtime now detect
+  when the unix uid or gid has the high bit set, which docker does not support.
+  :jira:`1421`
+
+- Fixed bug where the multifile curl plugin would fail to recieve scitoken
+  if it was in raw format rather than json.
+  :jira:`1447`
+  
+- Fixed a bug where SSL authentication with the *condor_collector* could
+  fail when the provided hostname is not a DNS CNAME.
+  :jira:`1443`
+
+- Fixed a Vault credmon bug where tokens were being refreshed too often.
+  :jira:`1017`
+
+- Fixed a Vault credmon bug where the CA certificates used were not based on the
+  HTCondor configuration.
+  :jira:`1179`
+
+- Fixed the *condor_gridmanager* to recognize when it has the final 
+  data for an ARC job in the FAILED status with newer versions of ARC CE. 
+  Before, the *condor_gridmanager* would leave the job marked as 
+  RUNNING and retry querying the ARC CE server endlessly. 
+  :jira:`1448`
+
+- Fixed AES encryption failures on macOS Ventura.
+  :jira:`1458`
+
+- Fixed a bug that would cause tools that have the ``-printformat`` argument to segfault
+  when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
+  :jira:`1464`
+
+.. _lts-version-history-1000:
+
+Version 10.0.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.0.0 released on November 10, 2022.
+
+New Features:
+
+- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
+  has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
+  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+  :jira:`1381`
+
+- The *condor_transform_ads* tool now has a ``-jobtransforms`` argument that reads
+  transforms from the configuration.  This provides a convenient way to test the
+  ``JOB_TRANSFORM_<NAME>`` configuration variables.
+  :jira:`1312`
+
+- Added new automatic configuration variable ``DETECTED_CPUS_LIMIT`` which gets set
+  to the minimum of ``DETECTED_CPUS`` from the configuration and ``OMP_NUM_THREADS``
+  and ``SLURM_CPU_ON_NODES`` from the environment.
+  :jira:`1307`
+
+Bugs Fixed:
+
+- Fixed a bug where if a job created a symbolic link to a file, the contents of
   that file would be counted in the job's `DiskUsage`.  Previously,
-  symlinks to directories were (correctly) ignored, but not symlinks to
+  symbolic links to directories were (correctly) ignored, but not symbolic links to
   files.
   :jira:`1354`
+
+- Fixed a bug where if SINGULARITY_TARGET_DIR is set, condor_ssh_to
+  job would start the interactive shell in the root directory of
+  the job, not in the current working directory of the job.
+  :jira:`1406`
 
 - Suppressed a Singularity or Apptainer warning that would appear
   in a job's stderr file, warning about the inability to set the
@@ -106,3 +189,9 @@ Bugs Fixed:
 - Fixed a bug where GPUs that were marked as OFFLINE in the **Startd** would still be available
   for matchmaking in the ``AvailableGPUs`` attribute.
   :jira:`1397`
+
+- The executables within the tarball distribution now use ``RPATH`` to find
+  shared libraries.  Formerly, ``RUNPATH`` was used and tarballs became
+  susceptible to failures when independently compiled HTCondor libraries were
+  present in the ``LD_LIBRARY_PATH``.
+  :jira:`1405`

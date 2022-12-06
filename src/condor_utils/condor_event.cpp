@@ -504,6 +504,21 @@ bool ULogEvent::read_optional_line(MyString & str, FILE* file, bool & got_sync_l
 	return true;
 }
 
+bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
+{
+	if ( ! readLine(str, file, false)) {
+		return false;
+	}
+	if (is_sync_line(str.c_str())) {
+		str.clear();
+		got_sync_line = true;
+		return false;
+	}
+	if (want_chomp) { chomp(str); }
+	if (want_trim) { trim(str); }
+	return true;
+}
+
 bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
 {
 	val.clear();
@@ -523,6 +538,25 @@ bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file,
 	return false;
 }
 
+bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/)
+{
+	val.clear();
+	std::string str;
+	if ( ! readLine(str, file, false)) {
+		return false;
+	}
+	if (is_sync_line(str.c_str())) {
+		got_sync_line = true;
+		return false;
+	}
+	if (want_chomp) { chomp(str); }
+	size_t prefix_len = strlen(prefix);
+	if (strncmp(str.c_str(), prefix, prefix_len) == 0) {
+		val = str.substr(prefix_len);
+		return true;
+	}
+	return false;
+}
 
 
 // returns a new'ed pointer to a buffer containing the next line if there is a next line
@@ -1078,69 +1112,37 @@ void FutureEvent::setPayload(const char * payload_text)
 // ----- the SubmitEvent class
 SubmitEvent::SubmitEvent(void)
 {
-	submitHost = NULL;
-	submitEventLogNotes = NULL;
-	submitEventUserNotes = NULL;
-	submitEventWarnings = NULL;
 	eventNumber = ULOG_SUBMIT;
-}
-
-SubmitEvent::~SubmitEvent(void)
-{
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-    if( submitEventLogNotes ) {
-        delete[] submitEventLogNotes;
-    }
-    if( submitEventUserNotes ) {
-        delete[] submitEventUserNotes;
-    }
-    if( submitEventWarnings ) {
-        delete[] submitEventWarnings;
-    }
 }
 
 void
 SubmitEvent::setSubmitHost(char const *addr)
 {
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( addr ) {
-		submitHost = strnewp(addr);
-		ASSERT( submitHost );
-	}
-	else {
-		submitHost = NULL;
-	}
+	submitHost = addr ? addr : "";
 }
 
 bool
 SubmitEvent::formatBody( std::string &out )
 {
-	if( !submitHost ) {
-		setSubmitHost("");
-	}
-	int retval = formatstr_cat (out, "Job submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Job submitted from host: %s\n", submitHost.c_str());
 	if (retval < 0)
 	{
 		return false;
 	}
-	if( submitEventLogNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+	if( !submitEventLogNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventUserNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+	if( !submitEventUserNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventWarnings ) {
-		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings );
+	if( !submitEventWarnings.empty() ) {
+		retval = formatstr_cat( out, "    WARNING: Committed job submission into the queue with the following warning(s): %.8110s\n", submitEventWarnings.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
@@ -1152,36 +1154,29 @@ SubmitEvent::formatBody( std::string &out )
 int
 SubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] submitEventLogNotes;
-	submitEventLogNotes = NULL;
-	MyString host;
-	if ( ! read_line_value("Job submitted from host: ", host, file, got_sync_line)) {
+	if ( ! read_line_value("Job submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
 	}
-	submitHost = host.detach_buffer();
 
 	// check if event ended without specifying submit host.
 	// in this case, the submit host would be the event delimiter
-	if ( strncmp(submitHost,"...",3)==0 ) {
-		submitHost[0] = '\0';
+	if ( strncmp(submitHost.c_str(),"...",3)==0 ) {
+		submitHost.clear();
 		got_sync_line = true;
 		return 1;
 	}
 
 	// see if the next line contains an optional event notes string
-	submitEventLogNotes = read_optional_line(file, got_sync_line, true, true);
-	if( ! submitEventLogNotes) {
+	if( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true) ) {
 		return 1;
 	}
 
 	// see if the next line contains an optional user event notes string
-	submitEventUserNotes = read_optional_line(file, got_sync_line, true, true);
-	if( ! submitEventUserNotes) {
+	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true) ) {
 		return 1;
 	}
 
-	submitEventWarnings = read_optional_line(file, got_sync_line, true, false);
-	if( ! submitEventWarnings) {
+	if ( ! read_optional_line(submitEventWarnings, file, got_sync_line, true, false) ) {
 		return 1;
 	}
 
@@ -1194,17 +1189,17 @@ SubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( submitHost && submitHost[0] ) {
+	if( !submitHost.empty() ) {
 		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
-	if( submitEventLogNotes && submitEventLogNotes[0] ) {
+	if( !submitEventLogNotes.empty() ) {
 		if( !myad->InsertAttr("LogNotes",submitEventLogNotes) ) return NULL;
 	}
-	if( submitEventUserNotes && submitEventUserNotes[0] ) {
+	if( !submitEventUserNotes.empty() ) {
 		if( !myad->InsertAttr("UserNotes",submitEventUserNotes) ) return NULL;
 	}
-	if( submitEventWarnings && submitEventWarnings[0] ) {
+	if( !submitEventWarnings.empty() ) {
 		if( !myad->InsertAttr("Warnings",submitEventWarnings) ) return NULL;
 	}
 
@@ -1217,39 +1212,14 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SubmitHost", &mallocstr);
-	if( mallocstr ) {
-		setSubmitHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	ad->LookupString("LogNotes", &mallocstr);
-	if( mallocstr ) {
-		submitEventLogNotes = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventLogNotes, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("SubmitHost", submitHost);
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	ad->LookupString("UserNotes", &mallocstr);
-	if( mallocstr ) {
-		submitEventUserNotes = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventUserNotes, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("LogNotes", submitEventLogNotes);
 
-	ad->LookupString("Warnings", &mallocstr);
-	if( mallocstr ) {
-		submitEventWarnings = new char[strlen(mallocstr) + 1];
-		strcpy(submitEventWarnings, mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("UserNotes", submitEventUserNotes);
+
+	ad->LookupString("Warnings", submitEventWarnings);
 }
 
 // ----- the GlobusSubmitEvent class
@@ -1905,6 +1875,8 @@ RemoteErrorEvent::toClassAd(bool event_time_utc)
 		myad->Assign("CriticalError",(int)critical_error);
 	}
 	if(hold_reason_code) {
+		// NOTE: It is important to leave these attributes undefined
+		// if the HOLD_REASON_CODE is 0.
 		myad->Assign(ATTR_HOLD_REASON_CODE, hold_reason_code);
 		myad->Assign(ATTR_HOLD_REASON_SUBCODE, hold_reason_subcode);
 	}
@@ -1967,59 +1939,19 @@ RemoteErrorEvent::setExecuteHost(char const *str)
 // ----- the ExecuteEvent class
 ExecuteEvent::ExecuteEvent(void)
 {
-	executeHost = NULL;
-	remoteName = NULL;
 	eventNumber = ULOG_EXECUTE;
-}
-
-ExecuteEvent::~ExecuteEvent(void)
-{
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( remoteName ) {
-		delete[] remoteName;
-	}
 }
 
 void
 ExecuteEvent::setExecuteHost(char const *addr)
 {
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( addr ) {
-		executeHost = strnewp(addr);
-		ASSERT( executeHost );
-	}
-	else {
-		executeHost = NULL;
-	}
-}
-
-void ExecuteEvent::setRemoteName(char const *name)
-{
-	if( remoteName ) {
-		delete[] remoteName;
-	}
-	if( name ) {
-		remoteName = strnewp(name);
-		ASSERT( remoteName );
-	}
-	else {
-		remoteName = NULL;
-	}
+	executeHost = addr ? addr : "";
 }
 
 char const *
 ExecuteEvent::getExecuteHost()
 {
-	if( !executeHost ) {
-			// There are a few callers that do not expect NULL execute host,
-			// so set it to empty string.
-		setExecuteHost("");
-	}
-	return executeHost;
+	return executeHost.c_str();
 }
 
 bool
@@ -2027,7 +1959,7 @@ ExecuteEvent::formatBody( std::string &out )
 {
 	int retval;
 
-	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost );
+	retval = formatstr_cat( out, "Job executing on host: %s\n", executeHost.c_str() );
 
 	if (retval < 0) {
 		return false;
@@ -2039,12 +1971,9 @@ ExecuteEvent::formatBody( std::string &out )
 int
 ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
-
-	if ( ! read_line_value("Job executing on host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Job executing on host: ", executeHost, file, got_sync_line)) {
 		return 0;
 	}
-	executeHost = line.detach_buffer();
 	return 1;
 }
 
@@ -2054,7 +1983,7 @@ ExecuteEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( executeHost && executeHost[0] ) {
+	if( !executeHost.empty() ) {
 		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
 	}
 
@@ -2068,13 +1997,7 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char *mallocstr = NULL;
-	ad->LookupString("ExecuteHost", &mallocstr);
-	if( mallocstr ) {
-		setExecuteHost( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString("ExecuteHost", executeHost);
 }
 
 
@@ -5226,12 +5149,6 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 GridResourceUpEvent::GridResourceUpEvent(void)
 {
 	eventNumber = ULOG_GRID_RESOURCE_UP;
-	resourceName = NULL;
-}
-
-GridResourceUpEvent::~GridResourceUpEvent(void)
-{
-	delete[] resourceName;
 }
 
 bool
@@ -5246,7 +5163,7 @@ GridResourceUpEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5259,17 +5176,13 @@ GridResourceUpEvent::formatBody( std::string &out )
 int
 GridResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	resourceName = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Grid Resource Back Up", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
 	return 1;
 }
@@ -5280,7 +5193,7 @@ GridResourceUpEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
@@ -5297,14 +5210,7 @@ GridResourceUpEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 }
 
 
@@ -5312,12 +5218,6 @@ GridResourceUpEvent::initFromClassAd(ClassAd* ad)
 GridResourceDownEvent::GridResourceDownEvent(void)
 {
 	eventNumber = ULOG_GRID_RESOURCE_DOWN;
-	resourceName = NULL;
-}
-
-GridResourceDownEvent::~GridResourceDownEvent(void)
-{
-	delete[] resourceName;
 }
 
 bool
@@ -5332,7 +5232,7 @@ GridResourceDownEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5345,17 +5245,13 @@ GridResourceDownEvent::formatBody( std::string &out )
 int
 GridResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	resourceName = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Detected Down Grid Resource", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
 	return 1;
 }
@@ -5366,7 +5262,7 @@ GridResourceDownEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
@@ -5383,14 +5279,7 @@ GridResourceDownEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 }
 
 
@@ -5398,14 +5287,6 @@ GridResourceDownEvent::initFromClassAd(ClassAd* ad)
 GridSubmitEvent::GridSubmitEvent(void)
 {
 	eventNumber = ULOG_GRID_SUBMIT;
-	resourceName = NULL;
-	jobId = NULL;
-}
-
-GridSubmitEvent::~GridSubmitEvent(void)
-{
-	delete[] resourceName;
-	delete[] jobId;
 }
 
 bool
@@ -5421,8 +5302,8 @@ GridSubmitEvent::formatBody( std::string &out )
 		return false;
 	}
 
-	if ( resourceName ) resource = resourceName;
-	if ( jobId ) job = jobId;
+	if ( !resourceName.empty() ) resource = resourceName.c_str();
+	if ( !jobId.empty() ) job = jobId.c_str();
 
 	retval = formatstr_cat( out, "    GridResource: %.8191s\n", resource );
 	if( retval < 0 ) {
@@ -5440,24 +5321,17 @@ GridSubmitEvent::formatBody( std::string &out )
 int
 GridSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] resourceName;
-	delete[] jobId;
-	resourceName = NULL;
-	jobId = NULL;
-
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job submitted to grid resource", line, file, got_sync_line)) {
 		return 0;
 	}
-	if ( ! read_line_value("    GridResource: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridResource: ", resourceName, file, got_sync_line)) {
 		return 0;
 	}
-	resourceName = line.detach_buffer();
 
-	if ( ! read_line_value("    GridJobId: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("    GridJobId: ", jobId, file, got_sync_line)) {
 		return 0;
 	}
-	jobId = line.detach_buffer();
 
 	return 1;
 }
@@ -5468,13 +5342,13 @@ GridSubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( resourceName && resourceName[0] ) {
+	if( !resourceName.empty() ) {
 		if( !myad->InsertAttr("GridResource", resourceName) ) {
 			delete myad;
 			return NULL;
 		}
 	}
-	if( jobId && jobId[0] ) {
+	if( !jobId.empty() ) {
 		if( !myad->InsertAttr("GridJobId", jobId) ) {
 			delete myad;
 			return NULL;
@@ -5491,23 +5365,9 @@ GridSubmitEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("GridResource", &mallocstr);
-	if( mallocstr ) {
-		resourceName = new char[strlen(mallocstr) + 1];
-		strcpy(resourceName, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridResource", resourceName);
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	mallocstr = NULL;
-	ad->LookupString("GridJobId", &mallocstr);
-	if( mallocstr ) {
-		jobId = new char[strlen(mallocstr) + 1];
-		strcpy(jobId, mallocstr);
-		free(mallocstr);
-	}
+	ad->LookupString("GridJobId", jobId);
 }
 
 // ----- the JobAdInformationEvent class
@@ -6081,56 +5941,31 @@ void PreSkipEvent::setSkipNote(const char* s)
 // ----- the ClusterSubmitEvent class
 ClusterSubmitEvent::ClusterSubmitEvent(void)
 {
-	submitEventLogNotes = NULL;
-	submitEventUserNotes = NULL;
-	submitHost = NULL;
 	eventNumber = ULOG_CLUSTER_SUBMIT;
-}
-
-ClusterSubmitEvent::~ClusterSubmitEvent(void)
-{
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( submitEventLogNotes ) {
-		delete[] submitEventLogNotes;
-	}
-	if( submitEventUserNotes ) {
-		delete[] submitEventUserNotes;
-	}
 }
 
 void
 ClusterSubmitEvent::setSubmitHost(char const *addr)
 {
-	if( submitHost ) {
-		delete[] submitHost;
-	}
-	if( addr ) {
-		submitHost = strnewp(addr);
-		ASSERT( submitHost );
-	}
-	else {
-		submitHost = NULL;
-	}
+	submitHost = addr ? addr : "";
 }
 
 bool
 ClusterSubmitEvent::formatBody( std::string &out )
 {
-	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost);
+	int retval = formatstr_cat (out, "Cluster submitted from host: %s\n", submitHost.c_str());
 	if (retval < 0)
 	{
 		return false;
 	}
-	if( submitEventLogNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes );
+	if( !submitEventLogNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventLogNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
 	}
-	if( submitEventUserNotes ) {
-		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes );
+	if( !submitEventUserNotes.empty() ) {
+		retval = formatstr_cat( out, "    %.8191s\n", submitEventUserNotes.c_str() );
 		if( retval < 0 ) {
 			return false;
 		}
@@ -6141,32 +5976,19 @@ ClusterSubmitEvent::formatBody( std::string &out )
 int
 ClusterSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] submitHost;
-	submitHost = NULL;
-	delete[] submitEventLogNotes;
-	submitEventLogNotes = NULL;
-
-	MyString line;
-	if ( ! read_line_value("Cluster submitted from host: ", line, file, got_sync_line)) {
+	if ( ! read_line_value("Cluster submitted from host: ", submitHost, file, got_sync_line)) {
 		return 0;
 	}
-	submitHost = line.detach_buffer();
 
 	// see if the next line contains an optional event notes string,
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(submitEventLogNotes, file, got_sync_line, true, true)) {
 		return 1;
 	}
-		// some users of this library (dagman) depend on whitespace
-		// being stripped from the beginning of the log notes field
-	line.trim();
-	submitEventLogNotes = line.detach_buffer();
 
 	// see if the next line contains an optional user event notes
-	if ( ! read_optional_line(line, file, got_sync_line)) {
+	if ( ! read_optional_line(submitEventUserNotes, file, got_sync_line, true, true)) {
 		return 1;
 	}
-	line.trim();
-	submitEventUserNotes = line.detach_buffer();
 
 	return 1;
 }
@@ -6177,7 +5999,7 @@ ClusterSubmitEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( submitHost && submitHost[0] ) {
+	if( !submitHost.empty() ) {
 		if( !myad->InsertAttr("SubmitHost",submitHost) ) return NULL;
 	}
 
@@ -6191,13 +6013,7 @@ ClusterSubmitEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SubmitHost", &mallocstr);
-	if( mallocstr ) {
-		setSubmitHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("SubmitHost", submitHost);
 }
 
 // ----- the ClusterRemoveEvent class

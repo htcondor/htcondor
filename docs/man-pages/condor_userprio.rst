@@ -112,6 +112,9 @@ Options
  **-setprio** *username value*
     (Edit option) Set the real priority of the user specified by
     *username* to the specified *value*.
+ **-setfloor** *username value*
+    (Edit option) Set the floor for the user specified by
+    *username* to the specified *value*.
  **-setceil** *username value*
     (Edit option) Set the ceiling for the user specified by
     *username* to the specified *value*.

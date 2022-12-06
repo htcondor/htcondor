@@ -4,7 +4,11 @@ Singularity Support
 :index:`Singularity<single: Singularity; installation>` :index:`Singularity`
 
 Singularity (https://sylabs.io/singularity/) is a container runtime system
-popular in scientific and HPC communities.  HTCondor can run jobs
+popular in scientific and HPC communities.  Apptainer is an open
+source fork of Singularity that is API and CLI compatible with
+singularity.  Everything in this document that pertains to
+Singularity also is true for the Apptainer container runtime.
+HTCondor can run jobs
 inside Singularity containers either in a transparent way, where the
 job does not know that it is being contained, or, the HTCondor
 administrator can configure the HTCondor startd so that a job can
@@ -27,14 +31,18 @@ advertise two attributes in the slot ad:
        HasSingularity = true
        SingularityVersion = "singularity version 3.7.0-1.el7"
 
+If the detected Singularity installation fails to run test containers
+at startd startup, ``HasSingularity`` will be set to ``false``, and
+the slot ad attribute ``SingularityOfflineReason`` will contain an error string.
+
 HTCondor will run a job under Singularity when the startd configuration knob
-``SINGULARITY_JOB`` evaluates to true.  This is evaluated in the context of the
+:macro:`SINGULARITY_JOB` evaluates to true.  This is evaluated in the context of the
 slot ad and the job ad.  If it evaluates to false or undefined, the job will
 run as normal, without singularity.
 
-When ``SINGULARITY_JOB`` evaluates to true, a second HTCondor knob is required
-to name the singularity image that must be run, ``SINGULARITY_IMAGE_EXPR``.
-This also is evluated in the context of the machine and the job ad, and must
+When :macro:`SINGULARITY_JOB` evaluates to true, a second HTCondor knob is required
+to name the singularity image that must be run, :macro:`SINGULARITY_IMAGE_EXPR`.
+This also is evaluated in the context of the machine and the job ad, and must
 evaluate to a string.  This image name is passed to the singularity exec
 command, and can be any valid value for a singularity image name.  So, it
 may be a path to file on a local file system that contains an singularity
@@ -46,11 +54,11 @@ the image into the job's scratch directory, convert it to a .sif file and
 run it from there.  Note this may require the job to request more disk space
 that it otherwise would need. It can be a relative path, in which
 case it refers to a file in the scratch directory, so that the image
-can be transfered by HTCondor's file transfer mechanism.
+can be transferred by HTCondor's file transfer mechanism.
 
 Here's the simplest possible configuration file.  It will force all
 jobs on this machine to run under Singularity, and to use an image
-that it located in the filesystem in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
+that it located in the file system in the path ``/cvfms/cernvm-prod.cern.ch/cvm3``:
 
 .. code-block:: condor-config
 
@@ -82,7 +90,7 @@ or maybe
       +SingularityImage = "docker://ubuntu:20"
 
 By default, singularity will bind mount the scratch directory that
-contains transfered input files, working files, and other per-job
+contains transferred input files, working files, and other per-job
 information into the container, and make this the initial working
 directory of the job.  Thus, file transfer for singularity jobs works
 just like with vanilla universe jobs.  Any new files the job
@@ -147,9 +155,9 @@ directory, the submit file would look like:
 The administrator can optionally
 specify additional directories to be bind mounted into the container.
 For example, if there is some common shared input data located on a
-machine, or on a shared filesystem, this directory can be bind-mounted
+machine, or on a shared file system, this directory can be bind-mounted
 and be visible inside the container. This is controlled by the
-configuration parameter ``SINGULARITY_BIND_EXPR``. This is an expression,
+configuration parameter :macro:`SINGULARITY_BIND_EXPR`. This is an expression,
 which is evaluated in the context of the machine and job ads, and which
 should evaluated to a string which contains a space separated list of
 directories to mount.
@@ -171,7 +179,7 @@ expression could be
 If the source directory for the bind mount is missing on the host machine,
 HTCondor will skip that mount and run the job without it.  If the image is
 an exploded file directory, and the target directory is missing inside
-the image, and the configuration parameter ``SINGULRITY_IGNORE_MISSING_BIND_TARGET``
+the image, and the configuration parameter :macro:`SINGULRITY_IGNORE_MISSING_BIND_TARGET`
 is set to true (the default is false), then this mount attempt will also
 be skipped.  Otherwise, the job will return an error when run.
 
@@ -184,16 +192,21 @@ the appropriate nvidia devices visible inside the container.
 If the submit file requests environment variables to be set for the job,
 HTCondor passes those through Singularity into the job.
 
-Before the `condor_starter` runs a job with singularity, it first
+Before the *condor_starter* runs a job with singularity, it first
 runs singularity test on that image.  If no test is defined inside
 the image, it runs ``/bin/sh /bin/true``.  If the test returns non-zero,
 for example if the image is missing, or malformed, the job is put
 on hold.  This is controlled by the condor knob
-``SINGULARITY_RUN_TEST_BEFORE_JOB``, which defaults to true.
+:macro:`SINGULARITY_RUN_TEST_BEFORE_JOB`, which defaults to true.
 
 If an administrator wants to pass additional arguments to the
-singularity exec command that HTCondor does not currently support, the
-parameter ``SINGULARITY_EXTRA_ARGUMENTS`` allows arbitraty additional
+singularity exec command instead of the defaults used ht HTCondor, several parameters exist to do this - see
+the *condor_starter* configuration parameters that begin with the prefix
+SINGULARITY in defined in section :ref:`admin-manual/configuration-macros:condor_starter configuration file entries`.
+There you will find parameters to customize things such as the use of PID namespaces,
+cache directory, and several other options.  However, should an administrator
+need to customize Singularity behavior that HTCondor does not currently support, the
+parameter :macro:`SINGULARITY_EXTRA_ARGUMENTS` allows arbitrary additional
 parameters to be passed to the singularity exec command. Note that this
 can be a classad expression, evaluated in the context of the job ad
 and the machine, so the admin could set different options for different
@@ -216,7 +229,7 @@ parameter:
 
 By default, the initial working directory of the job will be the
 scratch directory, just like a vanilla universe job.  This directory
-probably doesn't exist in the image's filesystem.  Usually,
+probably doesn't exist in the image's file system.  Usually,
 Singularity will be able to create this directory in the image, but
 unprivileged versions of singularity with certain image types may
 not be able to do so.  If this is the case, the current directory
@@ -228,7 +241,7 @@ still map to the scratch directory outside the container.
       # Maps $_CONDOR_SCRATCH_DIR on the host to /srv inside the image.
       SINGULARITY_TARGET_DIR = /srv
 
-If ``SINGULARITY_TARGET_DIR`` is not specified by the admin,
+If :macro:`SINGULARITY_TARGET_DIR` is not specified by the admin,
 it may be specified in the job submit file via the submit command
 ``container_target_dir``.  If both are set, the config knob
 version takes precedence.
@@ -240,14 +253,23 @@ to the StarterLog might look like the following:
 
 .. code-block:: text
 
-    About to exec /usr/bin/singularity exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
 
 In this example, no GPUs have been requested, so there is no ``-nv`` option.
-``MOUNT_UNDER_SCRATCH`` is set to the default of ``/tmp,/var/tmp``, so condor
+:macro:`MOUNT_UNDER_SCRATCH` is set to the default of ``/tmp,/var/tmp``, so condor
 translates those into ``-S`` (scratch directory) requests in the command line.
 The ``--pwd`` is set to the scratch directory, ``-B`` bind mounts the scratch
 directory with the same name on the inside of the container, and the
 ``-C`` option is set to contain all namespaces.  Then the image is named,
-and the executable, which in this case has been transfered by HTCondor
+and the executable, which in this case has been transferred by HTCondor
 into the scratch directory, and the job's argument (3).  Not visible
 in the log are any environment variables that HTCondor is setting for the job.
+
+All of the singularity container runtime's logging, warning and error messages
+are written to the job's stderr.  This is an unfortunate aspect of the runtime
+we hope to fix in the future.  By default, HTCondor passes "-s" (silent) to
+the singularity runtime, so that the only messages it writes to the job's
+stderr are fatal error messages.  If a worker node administrator needs more
+debugging information, they can change the value of the worker node config
+parameter :macro:`SINGULARITY_VERBOSITY` and set it to -d or -v to increase
+the debugging level.

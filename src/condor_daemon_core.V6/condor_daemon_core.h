@@ -2451,13 +2451,6 @@ public:
 extern PREFAST_NORETURN void DC_Exit( int status, const char *shutdown_program = NULL ) GCC_NORETURN;
 
 /** Call this function (inside your main_pre_dc_init() function) to
-    bypass the authorization initialization in daemoncore.  This is for
-    programs, such as condor_dagman, that are Condor daemons but should
-    run with the user's credentials.
-*/
-extern void DC_Skip_Auth_Init();
-
-/** Call this function (inside your main_pre_dc_init() function) to
     bypass the core limit initialization in daemoncore.  This is for
     programs, such as condor_dagman, that are Condor daemons but should
     run with the user's limits.

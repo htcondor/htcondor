@@ -233,16 +233,34 @@ int DockerAPI::createContainer(
 #ifdef WIN32
 	// TODO: what do we do on Windows to set the --user argument?
 #else
-	uid_t uid = get_user_uid();
-	if ((signed) uid < 0) uid = getuid();
-	uid_t gid = get_user_gid();
-	if ((signed) gid < 0) gid = getgid();
+	uid_t uid;
+	uid_t gid;
+	if (can_switch_ids()) {
+		// We've got root, and InitUidIds has been called
+		uid = get_user_uid();
+		gid = get_user_gid();
+	} else {
+		// We're a personal condor, we'll run the job
+		// as the same uid/gid as we are
+		uid = getuid();
+		gid = getgid();
+	}
 
+	// This just shouldn't happen
 	if ((uid == 0) || (gid == 0)) {
 		dprintf(D_ALWAYS, "Failed to get userid to run docker job\n");
 		return -9;
 	}
 
+	// docker breaks horribly with uid or gids bigger than 31 bits
+	if ((uid > INT_MAX) || (gid > INT_MAX)) {
+		dprintf(D_ALWAYS, "Trying to run docker job with > 31 bit uid(%uld) or gid(%uld), which docker does not support\n", uid, gid);
+		return -9;
+	}
+
+
+	// Swamp project really wanted this knob, but everyone should
+	// compile with this off.
 #ifdef DOCKER_ALLOW_RUN_AS_ROOT
 	if (param_boolean("DOCKER_RUN_AS_ROOT", false)) {
 		TemporaryPrivSentry sentry(PRIV_ROOT);

@@ -351,6 +351,10 @@ class Dag {
      */
     inline int NumNodesFailed() const { return _numNodesFailed; }
 
+    /** @return number of nodes unable to run due to an ancestor failure
+    */
+    inline int NumNodesFutile() const { return _numNodesFutile; }
+
     /** @return the number of jobs currently submitted to batch system(s)
      */
     inline int NumJobsSubmitted() const { return _numJobsSubmitted; }
@@ -374,7 +378,7 @@ class Dag {
 				return ( NumNodes( includeFinal )  -
 				( NumNodesDone( includeFinal ) + PreRunNodeCount() +
 				NumJobsSubmitted() + PostRunNodeCount() +
-				NumNodesReady() + NumNodesFailed() ) ); }
+				NumNodesReady() + NumNodesFailed() + NumNodesFutile() ) ); }
 
     /** @return the number of PRE scripts currently running
      */
@@ -1116,7 +1120,10 @@ private:
     
     // Number of nodes that failed (job or PRE or POST script failed)
     int _numNodesFailed;
-	
+
+    // Number of nodes that can't run due to an ancestor failing
+    int _numNodesFutile;
+
     // Number of batch system jobs currently submitted
     int _numJobsSubmitted;
 	

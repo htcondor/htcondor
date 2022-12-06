@@ -14,8 +14,6 @@ from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
 from htcondor_cli import TMP_DIR
 
-schedd = htcondor.Schedd()
-
 JSM_HTC_DAG_SUBMIT = 4
 
 class Submit(Verb):
@@ -43,7 +41,7 @@ class Submit(Verb):
 
         # Submit the DAG to the local schedd
         submit_description = htcondor.Submit.from_dag(dag_filename)
-	#Set s_method to HTC_DAG_SUBMIT
+        # Set s_method to HTC_DAG_SUBMIT
         submit_description.setSubmitMethod(JSM_HTC_DAG_SUBMIT,True)
 
         with schedd.transaction() as txn:
@@ -161,6 +159,9 @@ class DAGMan:
         """
 
         dag, iwd, log, out = None, None, None, None
+
+        # Get schedd
+        schedd = htcondor.Schedd()
 
         env = schedd.query(
             constraint=f"ClusterId == {dagman_id}",
