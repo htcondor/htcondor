@@ -2780,6 +2780,11 @@ default=
 type=string
 tags=negotiator,matchmaker
 
+[NEGOTIATOR_NUM_THREADS]
+default=1
+type=int
+tags=negotiator
+
 [PREEMPTION_RANK]
 default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)
 type=string
