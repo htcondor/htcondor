@@ -155,6 +155,10 @@ static const char * shadow_syscall_name(int condor_sysnum)
 	return "unknown";
 }
 
+// If we fail to send a reply to the starter, assume the socket is borked.
+// Close it and go into reconnect mode.
+#define ON_ERROR_RETURN(x) if ((x) == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+
 int
 do_REMOTE_syscall()
 {
@@ -219,7 +223,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -244,7 +248,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -272,7 +276,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		if ( delete_ad ) {
 			delete ad;
 		}
@@ -303,7 +307,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -336,7 +340,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return -1;
 	}
 
@@ -361,7 +365,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -383,7 +387,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -434,7 +438,7 @@ do_REMOTE_syscall()
 
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -459,7 +463,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_read:
@@ -496,7 +500,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -532,7 +536,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -568,7 +572,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -601,7 +605,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -642,7 +646,7 @@ do_REMOTE_syscall()
 		free( (char *)to );
 		free( (char *)from );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -667,7 +671,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -702,7 +706,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -734,7 +738,7 @@ do_REMOTE_syscall()
 		}
 		free( path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -759,7 +763,7 @@ do_REMOTE_syscall()
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 
@@ -788,7 +792,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)actual_url );
 		free( (char *)logical_name );
-		ASSERT( syscall_sock->end_of_message() );;
+		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -852,7 +856,7 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->put(expr) );
 		}
 		free( (char *)attrname );
-		ASSERT( syscall_sock->end_of_message() );;
+		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -882,7 +886,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)expr );
 		free( (char *)attrname );
-		ASSERT( syscall_sock->end_of_message() );;
+		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return 0;
 	}
 
@@ -909,7 +913,7 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(terrno) );
 		}
 		free( (char *)expr );
-		ASSERT( syscall_sock->end_of_message() );;
+		ON_ERROR_RETURN( syscall_sock->end_of_message() );;
 		return 0;
 	}
 	case CONDOR_get_sec_session_info:
@@ -959,7 +963,7 @@ do_REMOTE_syscall()
 			ASSERT( syscall_sock->code(filetrans_session_key) );
 		}
 
-		ASSERT( syscall_sock->end_of_message() );
+		ON_ERROR_RETURN( syscall_sock->end_of_message() );
 
 		if( !socket_default_crypto ) {
 			syscall_sock->set_crypto_mode( false );  // restore default
@@ -1004,7 +1008,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_pwrite:
@@ -1041,7 +1045,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_sread:
@@ -1107,7 +1111,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_swrite:
@@ -1172,7 +1176,7 @@ do_REMOTE_syscall()
 		}
 		free( buf );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_rmall:
@@ -1211,7 +1215,7 @@ do_REMOTE_syscall()
 		}
 		free( (char *)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 #endif // ! WIN32
@@ -1269,7 +1273,7 @@ case CONDOR_getfile:
 		free( buf );
 		close(fd);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 case CONDOR_putfile:
@@ -1306,7 +1310,7 @@ case CONDOR_putfile:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		free((char*)path);
 
         if (length <= 0) {
@@ -1340,7 +1344,7 @@ case CONDOR_putfile:
 		}
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 case CONDOR_getlongdir:
@@ -1400,7 +1404,7 @@ case CONDOR_getlongdir:
 		}
 		free((char*)path);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 case CONDOR_getdir:
@@ -1445,7 +1449,7 @@ case CONDOR_getdir:
 		}
 		free((char*)path);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 // Return something more useful?
@@ -1484,7 +1488,7 @@ case CONDOR_getdir:
 		}
 		free((char*)buffer);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 // Return something more useful?
@@ -1529,7 +1533,7 @@ case CONDOR_getdir:
 		free((char*)buffer);
 		free((char*)host);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 #ifdef WIN32
@@ -1568,7 +1572,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;	
 	}
 	case CONDOR_fchown:
@@ -1598,7 +1602,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_fchmod:
@@ -1625,7 +1629,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_ftruncate:
@@ -1652,7 +1656,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	
@@ -1689,7 +1693,7 @@ case CONDOR_getdir:
 		free((char*)path);
 		free((char*)newpath);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_symlink:
@@ -1720,7 +1724,7 @@ case CONDOR_getdir:
 		free((char*)path);
 		free((char*)newpath);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_readlink:
@@ -1753,7 +1757,7 @@ case CONDOR_getdir:
 		free(lbuffer);
 		free(path);
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_lstat:
@@ -1791,7 +1795,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_statfs:
@@ -1829,7 +1833,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_chown:
@@ -1860,7 +1864,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_lchown:
@@ -1891,7 +1895,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_truncate:
@@ -1927,7 +1931,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 #endif // ! WIN32
@@ -1966,7 +1970,7 @@ case CONDOR_getdir:
 			ASSERT( result );
 		}
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;	
 	}
 	case CONDOR_stat:
@@ -2004,7 +2008,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_access:
@@ -2034,7 +2038,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_chmod:
@@ -2062,7 +2066,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_utime:
@@ -2099,7 +2103,7 @@ case CONDOR_getdir:
 		}
 		free( (char*)path );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_dprintf_stats:
@@ -2122,7 +2126,7 @@ case CONDOR_getdir:
 
 
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return 0;
 	}
 	case CONDOR_getcreds:
@@ -2219,7 +2223,7 @@ case CONDOR_getdir:
 		result = ( syscall_sock->code(last_command) );
 		ASSERT( result );
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 
 		// return our success or failure
 		return last_command;
@@ -2267,7 +2271,7 @@ case CONDOR_getdir:
 
 		// End of message, cleanup and return
 		result = ( syscall_sock->end_of_message() );
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 		return put_x509_rc;
 	}
 
@@ -2290,7 +2294,7 @@ case CONDOR_getdir:
 		result = syscall_sock->code(rval);
 		ASSERT( result );
 		result = syscall_sock->end_of_message();
-		ASSERT( result );
+		ON_ERROR_RETURN( result );
 
 		return 0;
 	}
