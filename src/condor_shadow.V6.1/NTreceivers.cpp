@@ -157,7 +157,7 @@ static const char * shadow_syscall_name(int condor_sysnum)
 
 // If we fail to send a reply to the starter, assume the socket is borked.
 // Close it and go into reconnect mode.
-#define ON_ERROR_RETURN(x) if (x == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
+#define ON_ERROR_RETURN(x) if ((x) == 0) {thisRemoteResource->disconnectClaimSock("Can no longer talk to condor_starter");return 0;}
 
 int
 do_REMOTE_syscall()
