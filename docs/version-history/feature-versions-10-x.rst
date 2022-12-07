@@ -84,6 +84,10 @@ New Features:
   attribute ``DAG_NodesFutile`` to count the number of *Futile* nodes in a **DAG**.
   :jira:`1456`
 
+- Improved error handling in the *condor_shadow* and *condor_starter*
+  when they have trouble talking to each other.
+  :jira:`1360`
+
 Version 10.1.3
 --------------
 
