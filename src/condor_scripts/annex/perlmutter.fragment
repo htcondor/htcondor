@@ -1,0 +1,16 @@
+SCRATCH=${PSCRATCH}
+CONFIG_FRAGMENT() {
+    echo "
+    SINGULARITY = /cvmfs/oasis.opensciencegrid.org/mis/apptainer/bin/apptainer
+    "
+}
+SHELL_FRAGMENT() {
+    : # This function intentionally left defined but blank.
+}
+SYSTEM_SPECIFIC_GPU_FLAG=--gpus-per-task
+
+if [[ $GPUS ]]; then
+    SBATCH_CONSTRAINT_LINE="#SBATCH -C gpu"
+else
+    SBATCH_CONSTRAINT_LINE="#SBATCH -C cpu"
+fi
