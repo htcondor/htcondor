@@ -20,7 +20,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- The Windows installer now uses the localized name of the Users group
+  so that it can be installed on non-english Windows platforms
+  :jira:`1474`
 
 Bugs Fixed:
 
