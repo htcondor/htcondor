@@ -1,3 +1,9 @@
+from typing import (
+	Optional,
+	List,
+	Dict,
+)
+
 #
 # We need a little in the way of formal structure for the system/queue table
 # because Bridges 2 and Perlmutter don't behave anything like the others.
@@ -11,7 +17,8 @@ class System:
         host_name: str,
         default_queue: str,
         batch_system: str,
-        script_base: str,
+        executable: str,
+        other_scripts: list,
         allocation_reqd: bool = False,
         queues: dict,
     ):
@@ -27,8 +34,11 @@ class System:
         assert isinstance(batch_system, str)
         self.batch_system =  batch_system
 
-        assert isinstance(script_base, str)
-        self.script_base = script_base
+        assert isinstance(executable, str)
+        self.executable = executable
+
+        assert isinstance(other_scripts, list)
+        self.other_scripts = other_scripts
 
         assert isinstance(allocation_reqd, bool)
         self.allocation_required = allocation_reqd
@@ -43,18 +53,26 @@ class System:
         rv += f", host_name='{self.host_name}'"
         rv += f", default_queue='{self.default_queue}'"
         rv += f", batch_system='{self.batch_system}'"
-        rv += f", script_base='{self.script_base}'"
+        rv += f", executable='{self.executable}'"
+        other_scripts_list = ", ".join(other_scripts)
+        rv += f", other_scripts='{other_scripts_list}'"
         rv += f", allocation_required={self.allocation_required}"
         rv += ")"
         return rv
 
 
-    def get_constraints(self, queue_name, gpus, gpu_type):
+    def get_constraints(self, queue_name: str, gpus: Optional[int], gpu_type: Optional[str]) -> Optional[dict]:
         return self.queues.get(queue_name)
 
 
+    # Return the queue name.  This only needs to return the queue name because
+    # Perlmutter requires -q instead of -p (like all other SLURM systems)
+    # and the least-awful way to add that was by prefixing `queue_name` to
+    # indicate that it was a queue instead of a partition.
+    #
+    # What do we suck at?  Naming things.
     def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
-        pass
+        return queue_name
 
 
 class Bridges2System(System):
@@ -79,6 +97,7 @@ class Bridges2System(System):
                 raise ValueError(error_string)
         else:
             pass
+        return queue_name
 
     def get_constraints(self, queue_name, gpus, gpu_type):
         queue = self.queues.get(queue_name)
@@ -132,6 +151,57 @@ class Bridges2System(System):
         return queue
 
 
+class PerlmutterSystem(System):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def validate_system_specific_constraints(self, queue_name, cpus, mem_mb):
+        return f"q,{queue_name}"
+
+    def get_constraints(self, queue_name, gpus, gpu_type):
+        queue = self.queues.get(queue_name)
+        if queue is None:
+            return None
+
+        if gpus is None or gpus <= 0:
+            if queue_name == "regular":
+                return { **queue,
+                    "max_nodes_per_job":    3072,
+                    "cores_per_node":       128,
+                    "ram_per_node":         512 * 1023,
+                }
+            elif queue_name == "debug":
+                return { **queue,
+                    "cores_per_node":       128,
+                    "ram_per_node":         512 * 1024,
+                }
+            elif queue_name == "shared":
+                return queue
+            else:
+                return None
+        else:
+            if queue_name == "regular":
+                return { **queue,
+                    "max_nodes_per_job":    1536,
+                    "cores_per_node":       64,
+                    "ram_per_node":         256 * 1024,
+
+                    "gpus_per_node":        4,
+                }
+            elif queue_name == "debug":
+                return { **queue,
+                    "cores_per_node":       64,
+                    "ram_per_node":         256 * 1024,
+
+                    "gpus_per_node":        4,
+                }
+            elif queue_name == "shared":
+                error_string = f"'{queue_name}' is not a GPU queue on the system named '{self.pretty_name}'."
+                raise ValueError(error_string)
+            else:
+                return None
+
+
 #
 # For queues with the whole-node allocation policy, cores and RAM -per-node
 # are only informative at the moment; we could compute the necessary number
@@ -145,12 +215,50 @@ class Bridges2System(System):
 #
 
 SYSTEM_TABLE = {
+    "perlmutter": PerlmutterSystem( **{
+        "pretty_name":      "Perlmutter",
+        "host_name":        "perlmutter-p1.nersc.gov",
+        "default_queue":    "regular",
+        "batch_system":     "SLURM",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "perlmutter.multi-pilot"],
+        "allocation_reqd":  True,  # Only for GPUs, oddly.
+
+        # Actually "QoS" limits.  See get_constraints().
+        "queues": {
+            "regular": {
+                "max_duration":         12 * 60 * 60,
+                "allocation_type":      "node",
+
+                "max_jobs_in_queue":    5000,
+            },
+            "debug": {
+                "max_nodes_per_job":    8,
+                "max_duration":         30 * 60,
+                "allocation_type":      "node",
+
+                "max_jobs_in_queue":    5,
+            },
+            "shared": {
+                "max_nodes_per_job":    1,
+                "max_duration":         6 * 60 * 60,
+                "allocation_type":      "cores_or_ram",
+                "cores_per_node":       64,
+                "ram_per_node":         256 * 1024,
+
+                "max_jobs_in_queue":    5000,
+            },
+        },
+    }
+    ),
+
     "stampede2": System( **{
         "pretty_name":      "Stampede 2",
         "host_name":        "stampede2.tacc.utexas.edu",
         "default_queue":    "normal",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -190,7 +298,8 @@ SYSTEM_TABLE = {
         "host_name":        "login.expanse.sdsc.edu",
         "default_queue":    "compute",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  True,
 
         "queues": {
@@ -245,7 +354,8 @@ SYSTEM_TABLE = {
         "host_name":        "anvil.rcac.purdue.edu",
         "default_queue":    "wholenode",
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -310,8 +420,9 @@ SYSTEM_TABLE = {
         "pretty_name":      "Bridges-2",
         "host_name":        "bridges2.psc.edu",
         "default_queue":    "RM",
+        "executable":       "hpc.sh",
+        "other_scripts":    ["hpc.pilot", "hpc.multi-pilot"],
         "batch_system":     "SLURM",
-        "script_base":      "hpc",
         "allocation_reqd":  False,
 
         "queues": {
@@ -377,7 +488,8 @@ SYSTEM_TABLE = {
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
         "batch_system":     "HTCondor",
-        "script_base":      "path-facility",
+        "executable":       "path-facility.sh",
+        "other_scripts":    ["path-facility.pilot", "path-facility.multi-pilot"],
         "allocation_reqd":  False,
 
         "queues": {
@@ -409,7 +521,7 @@ SYSTEM_TABLE = {
 }
 
 
-def validate_system_specific_constraints( *,
+def validate_constraints( *,
     system,
     queue_name,
     nodes,
@@ -545,7 +657,7 @@ def validate_system_specific_constraints( *,
         if gpus is None or gpus <= 0:
             pass
         else:
-            error_string = f"The '{queue_name}' does not offer GPUs.  Do not set --gpus for this queue."
+            error_string = f"The '{queue_name}' queue does not offer GPUs.  Do not set --gpus for this queue."
             raise ValueError(error_string)
 
     # (M) You must not specify a GPU type for a queue which doesn't offer them.
@@ -561,7 +673,7 @@ def validate_system_specific_constraints( *,
             raise ValueError(error_string)
 
     # (K) Run the system-specific constraint checker.
-    system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
+    queue_name = system.validate_system_specific_constraints(queue_name, cpus, mem_mb)
 
     if gpus_per_node is not None:
         if queue.get('gpu_flag_type') == 'job':
@@ -569,4 +681,4 @@ def validate_system_specific_constraints( *,
                 assert nodes is not None and nodes >= 1, f"Internal error during validation: node count ({nodes}) should have been >= 1 by now."
                 gpus = gpus * nodes
 
-    return gpus
+    return gpus, queue_name

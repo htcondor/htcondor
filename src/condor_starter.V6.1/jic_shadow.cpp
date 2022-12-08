@@ -56,6 +56,7 @@
 extern Starter *Starter;
 ReliSock *syscall_sock = NULL;
 time_t syscall_last_rpc_time = 0;
+JICShadow* syscall_jic_shadow = nullptr;
 extern const char* JOB_AD_FILENAME;
 extern const char* JOB_EXECUTION_OVERLAY_AD_FILENAME;
 extern const char* MACHINE_AD_FILENAME;
@@ -120,6 +121,7 @@ JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	}
 	syscall_sock = (ReliSock *)socks[0];
 	syscall_last_rpc_time = time(nullptr);
+	syscall_jic_shadow = this;
 	socks++;
 
 	m_proxy_expiration_tid = -1;

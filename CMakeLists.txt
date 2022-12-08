@@ -141,7 +141,7 @@ add_subdirectory (bindings/python)
 # logic here to support old nmi builds
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 
-	if (NOT WANT_MAN_PAGES OR ${SPHINXBUILD} STREQUAL "SPHINXBUILD-NOTFOUND")
+	if (NOT WANT_MAN_PAGES OR "${SPHINXBUILD}" STREQUAL "SPHINXBUILD-NOTFOUND")
 		message(STATUS "NOTE: Skipping man-pages")
 	else()
 

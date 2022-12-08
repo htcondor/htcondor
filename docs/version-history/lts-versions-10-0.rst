@@ -20,9 +20,21 @@ Release Notes:
 
 New Features:
 
-- None.
+- The Windows installer now uses the localized name of the Users group
+  so that it can be installed on non-english Windows platforms
+  :jira:`1474`
 
 Bugs Fixed:
+
+- Fixed a bug where *condor_rm*'ing with the -forcex option
+  on a scheduler universe job could cause a schedd crash.
+  :jira:`1472`
+
+- Fixed a bug where Debian, Ubuntu and other Linux platforms with
+  swap accounting disabled in the kernel would never put
+  a job on hold if it exceeded RequestMemory and
+  MEMORY_LIMIT_POLICY was set to hard or soft.
+  :jira:`1466`
 
 - Fixed bug in the curl plugin where it would crash on EL8
   systems when using a file:// url type

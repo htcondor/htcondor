@@ -145,6 +145,7 @@ CLEAN_UP_TIME=300
 #
 MEMORY_CHUNK_SIZE=3072
 PILOT_BIN_DIR=`dirname "${PILOT_BIN}"`
+SBATCH_CONSTRAINT_LINE=""
 . "${PILOT_BIN_DIR}/${SYSTEM}.fragment"
 
 if [[ -z $SCRATCH ]]; then
@@ -218,7 +219,7 @@ echo -e "\rStep 3 of 8: downloading required software..."
 BINARIES_FILE=`basename ${WELL_KNOWN_LOCATION_FOR_BINARIES}`
 CURL_LOGGING=`curl -fsSL ${WELL_KNOWN_LOCATION_FOR_BINARIES} -o ${BINARIES_FILE} 2>&1`
 if [[ $? != 0 ]]; then
-    echo "Failed to download configuration from '${WELL_KNOWN_LOCATION_FOR_BINARIES}', aborting."
+    echo "Failed to download binaries from '${WELL_KNOWN_LOCATION_FOR_BINARIES}', aborting."
     echo ${CURL_LOGGING}
     exit 2
 fi
@@ -447,15 +448,29 @@ if [[ -n $ALLOCATION ]]; then
     SBATCH_ALLOCATION_LINE="#SBATCH -A ${ALLOCATION}"
 fi
 
+# A hack to avoid adding Yet Another Command-line Argument.  It
+# seemed better than either making a Perlmutter-specific pilot
+# script or having the pilot script be explicitly system-aware.
+#
+# The regexes here are a little dodgy, and should be tweaked if
+# this hack is expanded; see the PR.
+if [[ $QUEUE_NAME =~ "q," ]]; then
+    QUEUE_NAME=${QUEUE_NAME/*q,/}
+    SBATCH_QUEUE_LINE="#SBATCH -q ${QUEUE_NAME}"
+else
+    SBATCH_QUEUE_LINE="#SBATCH -p ${QUEUE_NAME}"
+fi
+
 echo '#!/bin/bash' > "${PILOT_DIR}/hpc.slurm"
 echo "
 #SBATCH -J ${JOB_NAME}
 #SBATCH -o ${PILOT_DIR}/%j.out
 #SBATCH -e ${PILOT_DIR}/%j.err
-#SBATCH -p ${QUEUE_NAME}
+${SBATCH_QUEUE_LINE}
 ${SBATCH_RESOURCES_LINES}
 #SBATCH -t ${MINUTES}
 ${SBATCH_ALLOCATION_LINE}
+${SBATCH_CONSTRAINT_LINE}
 
 ${MULTI_PILOT_BIN} ${PILOT_BIN} ${PILOT_DIR}
 " >> "${PILOT_DIR}/hpc.slurm"
