@@ -368,11 +368,6 @@ else(NOT WINDOWS)
 
 endif(NOT WINDOWS)
 
-if (PYTHON3_MINOR_VERSION)
-  set(PYTHON3_MINOR_VERSION "${PYTHON_MINOR_VERSION}" PARENT_SCOPE)
-  set(PYTHON3_MODULE_SUFFIX "${PYTHON_MODULE_SUFFIX}" PARENT_SCOPE)
-endif()
-
 include (FindThreads)
 if (WINDOWS)
 	message(STATUS "OpenMP support will be disabled on Windows until we have a chance to fix the installer to support it")
@@ -1253,23 +1248,11 @@ dprint ( "UNIX: ${UNIX}" )
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "Linux: ${LINUX_NAME}" )
 
-# Print FreeBSD info
-dprint ( "FreeBSD: ${FREEBSD_MAJOR}.${FREEBSD_MINOR}" )
-
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )
 
 # is TRUE on Apple OS X
 dprint ( "APPLE: ${APPLE}" )
-
-# is TRUE when using the MinGW compiler in Windows
-dprint ( "MINGW: ${MINGW}" )
-
-# is TRUE on Windows when using the CygWin version of cmake
-dprint ( "CYGWIN: ${CYGWIN}" )
-
-# is TRUE on Windows when using a Borland compiler
-dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
