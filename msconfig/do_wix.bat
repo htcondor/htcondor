@@ -29,9 +29,9 @@ set _WIXOBJ_FILES=%_WXS_FILES:xml\=%
 
 heat dir %_condor_path% -ke -g1 -srd -sreg -gg -var var.Source -t xml\condor.xsl -out "%~n2.wxs"
 
-candle -ext WixFirewallExtension %_ARCH_ARG% -dSource=%_condor_path% "%~n2.wxs" %_WXS_FILES%
+candle -ext WixUtilExtension -ext WixFirewallExtension %_ARCH_ARG% -dSource=%_condor_path% "%~n2.wxs" %_WXS_FILES%
 
-light %RUNEVAL% -ext WixUIExtension -ext WixFirewallExtension -dWixUILicenseRtf=.\license.rtf -out "%2" "%~n2.wixobj" %_WIXOBJ_FILES:.wxs=.wixobj%
+light %RUNEVAL% -ext WixUIExtension -ext WixUtilExtension -ext WixFirewallExtension -dWixUILicenseRtf=.\license.rtf -out "%2" "%~n2.wixobj" %_WIXOBJ_FILES:.wxs=.wixobj%
 popd
 goto finis
 
