@@ -17,6 +17,6 @@ fi
 echo "Preparing build files for ${codename}"
 
 gpp -D${codename} control.in > control
-# Nolonger needed: gpp -D${codename} htcondor.install.in > htcondor.install
-# Nolonger needed: gpp -D${codename} rules.in > rules
-# Nolonger needed: chmod 755 rules
+gpp -D${codename} htcondor.install.in > htcondor.install
+gpp -D${codename} rules.in > rules
+chmod 755 rules

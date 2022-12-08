@@ -30,7 +30,11 @@ endif
 
 # one ring to rule them all ...
 %:
+#if defined(BIONIC)
+	dh $@ --with python2
+#else
 	dh $@ --with python3
+#endif
 
 override_dh_auto_configure:
 	dh_auto_configure -- \
@@ -67,6 +71,13 @@ override_dh_auto_build: doc/build
 	#cp src/condor_chirp/*.java src/condor_chirp/chirp/java/client/
 	#$(MAKE) -C src/condor_chirp/chirp/java/client/
 	#cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
+
+
+#if defined(BIONIC)
+override_dh_python2:
+	dh_python2 $@ --no-guessing-versions
+#endif
+
 
 override_dh_shlibdeps:
 	dh_shlibdeps -l$(CURDIR)/debian/tmp/usr/lib/ --dpkg-shlibdeps-params=--ignore-missing-info
