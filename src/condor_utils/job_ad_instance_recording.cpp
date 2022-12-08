@@ -213,6 +213,7 @@ writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, 
 	if (write(fd,info.buffer.c_str(),info.buffer.length()) < 0){
 		dprintf(D_ALWAYS,"ERROR (%d): Failed to write job ad for job %d.%d run instance %d to file (%s): %s\n",
 						  errno, info.jid.cluster, info.jid.proc, info.runId, condor_basename(info.file_path.c_str()), strerror(errno));
+		dprintf(D_FULLDEBUG,"Printing Failed Job Ad:\n%s", info.buffer.c_str());
 	}
 	close(fd);
 }

@@ -164,6 +164,7 @@ static bool want_startd_history = false;
 static bool read_epoch_ads = false;
 static bool delete_epoch_ads = false;
 static const char* epochDirectory = NULL;
+static const char* epochHistoryFile = NULL; //Temporary Global variable until adding -file (matching) and -dir options
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
 
@@ -416,19 +417,25 @@ main(int argc, const char* argv[])
 	else if (is_dash_arg_colon_prefix(argv[i], "epoch", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
 		//Designate reading job run instance ads from epoch directory
 		read_epoch_ads = true;
-		//Get epoch directory and validate passed arg is a directory
-		epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
-		if ( epochDirectory != NULL ) {
-			StatInfo si(epochDirectory);
-			if (!si.IsDirectory() ) {
-				fprintf(stderr, "Error: JOB_EPOCH_INSTANCE_DIR is not a directory.\n");
-				exit(1);
+		//Get aggregate epoch history file
+		epochHistoryFile = param("EPOCH_HISTORY");
+		//If epoch file is NULL then check for an epoch directory
+		if (epochHistoryFile == NULL) {
+			//Get epoch directory and validate passed arg is a directory
+			epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
+			if ( epochDirectory != NULL ) {
+				StatInfo si(epochDirectory);
+				if (!si.IsDirectory() ) {
+					fprintf(stderr, "Error: %s is not a valid directory.\n", epochDirectory);
+					exit(1);
+				}
 			}
-		} else {
-			fprintf( stderr, "Error: No Job Run Instance directory.\n");
+		}
+		if (!epochHistoryFile && !epochDirectory) {
+			fprintf( stderr, "Error: No Job Run Instance recordings to read.\n");
 			exit(1);
 		}
-		//Check for :d option
+		//Check for :d option (Only applies for epoch dir files)
 		while ( pcolon && *pcolon != '\0' ) {
 			++pcolon;
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
@@ -1465,12 +1472,16 @@ static int set_print_mask_from_stream(
 
 //Find and add all epoch files in the given epochDirectory then sort
 //based on cluster.proc & backwards/forwards
-static void findEpochFiles(std::deque<std::string> *epochFiles){
-	std::string jobID; //Make jobId to search for .XXX.YY.
-	bool oneJob = false;
-	if (cluster > 0) {
-		if (proc >= 0) { formatstr(jobID,".%d.%d.",cluster,proc); oneJob = true; }
-		else { formatstr(jobID,".%d.",cluster); }
+static void findEpochDirFiles(std::deque<std::string> *epochFiles){
+	std::deque<std::string> searchIds;
+	bool oneJob = true;
+	int count = 0;
+	for(auto& match : jobIdFilterInfo) {
+		std::string jobID; //Make jobId to search for .XXX.YY.
+		if (match.jid.proc >= 0) { formatstr(jobID,"runs.%d.%d.",match.jid.cluster,match.jid.proc);}
+		else { formatstr(jobID,"runs.%d.",match.jid.cluster); oneJob = false; }
+		if (++count > 1) { oneJob = false; }
+		searchIds.push_back(jobID);
 	}
 
 	//Get all the epoch ads we want
@@ -1483,13 +1494,15 @@ static void findEpochFiles(std::deque<std::string> *epochFiles){
 		//Check if filename matched job.runs.X.Y.ads
 		if (starts_with(file,"job.runs.") && ends_with(file,".ads")) {
 			//If no jobID then add all matching epoch ads
-			if (jobID == "") {
-				epochFiles->push_back(file);
-			} else { //Otherwise filter based on if the jobID .XXX.YY. is found in the filename
-				if (file.find(jobID) != std::string::npos) {
-					epochFiles->push_back(file);
-					if (oneJob) return;
+			if (cluster > 0) {
+				for (auto jobID : searchIds) {
+					if (file.find(jobID) != std::string::npos) {
+						epochFiles->push_back(file);
+						if (oneJob) return;
+					}
 				}
+			} else {
+				epochFiles->push_back(file);
 			}
 		}
 	} while(file != "");
@@ -1529,30 +1542,53 @@ static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFile
 			exit(1);
 		}
 
-		std::deque<std::string> epochFiles;
-		findEpochFiles(&epochFiles);
-		//For each file found read job ads
-		for(auto file : epochFiles) {
-			std::string file_path;
-			//Make full path (path+file_name) to read
-			if (delete_epoch_ads) {
-				/*	If deleting the files then rename the file as before reading
-				*	This is to try and prevent a race condition between writing
-				*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
-				*/
-				std::string old_name,new_name,base = "READING.txt";
-				dircat(epochDirectory,file.c_str(),old_name);
-				dircat(epochDirectory,base.c_str(),new_name);
-				rename(old_name.c_str(),new_name.c_str());
-				dircat(epochDirectory,base.c_str(),file_path);
-			} else {
-				dircat(epochDirectory,file.c_str(),file_path);
+		if (epochHistoryFile) {
+			int numEpochFiles;
+			const char **epochFiles = findHistoryFiles(epochHistoryFile, &numEpochFiles);
+			if (!epochFiles) {
+				fprintf( stderr, "Error: Failed to find any epoch history files matching %s\n", epochHistoryFile);
+				exit(1);
 			}
-			//Read file
-			readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
-			//If deleting then delete the file that was just read.
-			if (delete_epoch_ads) {
-				remove(file_path.c_str());
+			if (epochFiles && numEpochFiles > 0) {
+				int fileIndex;
+				if (backwards) {
+					for(fileIndex = numEpochFiles - 1; fileIndex >= 0; fileIndex--) {
+						readHistoryFromFileEx(epochFiles[fileIndex], constraint, constraintExpr, backwards);
+					}
+				} else {
+					for (fileIndex = 0; fileIndex < numEpochFiles; fileIndex++) {
+						readHistoryFromFileEx(epochFiles[fileIndex], constraint, constraintExpr, backwards);
+					}
+				}
+				freeHistoryFilesList(epochFiles);
+			}
+		} else if (epochDirectory) {
+			std::deque<std::string> epochFiles;
+			findEpochDirFiles(&epochFiles);
+			//For each file found read job ads
+			for(auto file : epochFiles) {
+				std::string file_path;
+				//Make full path (path+file_name) to read
+				if (delete_epoch_ads) {
+					/*	If deleting the files then rename the file as before reading
+					*	This is to try and prevent a race condition between writing
+					*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
+					*/
+					std::string old_name,new_name,base = "READING.txt";
+					dircat(epochDirectory,file.c_str(),old_name);
+					dircat(epochDirectory,base.c_str(),new_name);
+					rename(old_name.c_str(),new_name.c_str());
+					dircat(epochDirectory,base.c_str(),file_path);
+				} else {
+					dircat(epochDirectory,file.c_str(),file_path);
+				}
+				//Read file
+				//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
+				readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
+				//If deleting then delete the file that was just read.
+				if (delete_epoch_ads) {
+					remove(file_path.c_str());
+				}
 			}
 		}
 	}
