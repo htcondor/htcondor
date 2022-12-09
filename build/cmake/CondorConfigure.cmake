@@ -66,16 +66,17 @@ message(STATUS "********* BEGINNING CONFIGURATION *********")
 ##################################################
 ##################################################
 
-# To find python in Windows we will use alternate technique
 option(WANT_PYTHON_WHEELS "Build python bindings for python wheel packaging" OFF)
 option(WANT_PYTHON2_BINDINGS "Build python bindings for python2" ON)
 option(WANT_PYTHON3_BINDINGS "Build python bindings for python3" ON)
+
 if (WINDOWS)
 	# Python 3.6 on windows will look in the PATH for dependent dll's (like boost-python)
 	# Python 3.8 or later will not, so 3.6 might be preferable for some users
 	option(WANT_PYTHON36 "Prefer python 3.6 to other versions of python3" OFF)
 endif (WINDOWS)
 
+# To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
     if(WANT_PYTHON_WHEELS)
         include (FindPythonInterp)
@@ -95,141 +96,72 @@ if(NOT WINDOWS)
 				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
 			endif()
         endif()
-    else(WANT_PYTHON_WHEELS)
-        # We need to do this the hard way for both python2 and python3 support in the same build
-        # This will be easier in cmake 3
+	else(WANT_PYTHON_WHEELS)
 
-        if(NOT APPLE)
-            find_program(PYTHON_EXECUTABLE python2)
-        endif()
+		# Not Windows nor Wheels
 
-        message(STATUS "PYTHON_EXECUTABLE = ${PYTHON_EXECUTABLE}")
-        if (WANT_PYTHON2_BINDINGS AND PYTHON_EXECUTABLE)
-            set(PYTHONINTERP_FOUND TRUE)
-            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
-            set(PYTHON_QUERY_PART_02 "import sys;")
-            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info[0]) + '.' + str(sys.version_info[1]) + '.' + str(sys.version_info[2]));")
-            set(PYTHON_QUERY_PART_04 "print(sys.version_info[0]);")
-            set(PYTHON_QUERY_PART_05 "print(sys.version_info[1]);")
-            set(PYTHON_QUERY_PART_06 "print(sys.version_info[2]);")
-            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
-            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
-            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
-            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
-            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-            set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
-            set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
+		# We don't support python2 on mac (anymore)
+		if (APPLE)
+			set(WANT_PYTHON2_BINDINGS OFF)
+		endif()
 
-            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
-            execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
-                            RESULT_VARIABLE _PYTHON_SUCCESS
-                            OUTPUT_VARIABLE _PYTHON_VALUES
-                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+		if (WANT_PYTHON2_BINDINGS)
 
-            # Convert the process output into a list
-            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
-            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
-            list(GET _PYTHON_VALUES 0 PYTHON_VERSION_STRING)
-            list(GET _PYTHON_VALUES 1 PYTHON_VERSION_MAJOR)
-            list(GET _PYTHON_VALUES 2 PYTHON_VERSION_MINOR)
-            list(GET _PYTHON_VALUES 3 PYTHON_VERSION_PATCH)
-            list(GET _PYTHON_VALUES 4 PYTHON_INCLUDE_DIRS)
-            list(GET _PYTHON_VALUES 5 PYTHON_LIBDIR)
-            list(GET _PYTHON_VALUES 6 PYTHON_MULTIARCH)
-            list(GET _PYTHON_VALUES 7 PYTHON_LIB)
-            #list(GET _PYTHON_VALUES 8 C_PYTHONARCHLIB)
-            list(GET _PYTHON_VALUES 9 PYTHON_MODULE_EXTENSION)
-            list(GET _PYTHON_VALUES 10 PYTHON_PREFIX)
-            #set(C_PYTHONARCHLIB ${C_PYTHONARCHLIB})
+			find_package (Python2 COMPONENTS Interpreter Development)
 
-			if(APPLE)
-				set(PYTHON_LIBDIR "${PYTHON_PREFIX}/lib")
-				set(PYTHON_LIB "libpython${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.dylib")
+			set(PYTHON_VERSION_STRING    ${Python2_VERSION})
+			set(PYTHON_VERSION_MAJOR     ${Python2_VERSION_MAJOR})
+			set(PYTHON_VERSION_MINOR     ${Python2_VERSION_MINOR})
+			set(PYTHON_VERSION_PATCH     ${Python2_VERSION_PATCH})
+			set(PYTHON_INCLUDE_DIRS      ${Python2_INCLUDE_DIRS})
+			set(PYTHON_LIB               ${Python2_LIBRARIES})
+			set(PYTHON_MODULE_EXTENSION  "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+			set(PYTHON_EXECUTABLE        ${Python2_EXECUTABLE})
+
+			set(PYTHON_LIBRARIES "${PYTHON_LIB}")
+
+			set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
+			set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
+			set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+
+			if (Python2_FOUND)
+				set(PYTHONLIBS_FOUND TRUE)
+				message(STATUS "Python2 library found at ${PYTHON_LIB}")
 			endif()
 
-            message(STATUS "PYTHON_LIBDIR = ${PYTHON_LIBDIR}")
-            message(STATUS "PYTHON_LIB = ${PYTHON_LIB}")
+		endif(WANT_PYTHON2_BINDINGS)
 
-            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_LIB}")
-                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_LIB}")
-                set(PYTHONLIBS_FOUND TRUE)
-            endif()
-            if(EXISTS "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
-                set(PYTHON_LIBRARIES "${PYTHON_LIBDIR}/${PYTHON_MULTIARCH}/${PYTHON_LIB}")
-                set(PYTHONLIBS_FOUND TRUE)
-            endif()
-            set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
-            set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
-            set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+		if (WANT_PYTHON3_BINDINGS)
+			find_package (Python3 COMPONENTS Interpreter Development)
 
-            message(STATUS "PYTHON_LIBRARIES = ${PYTHON_LIBRARIES}")
-            message(STATUS "PYTHON_INCLUDE_PATH = ${PYTHON_INCLUDE_PATH}")
-            message(STATUS "PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
-        endif(WANT_PYTHON2_BINDINGS AND PYTHON_EXECUTABLE)
+			# All these variables are used later, and were defined in cmake 2.6
+			# days.  At some point, we should not copy the find_package python
+			# variables into these, and use the native cmake variables and targets.
+			set(PYTHON3_VERSION_STRING    ${Python3_VERSION})
+			set(PYTHON3_VERSION_MAJOR     ${Python3_VERSION_MAJOR})
+			set(PYTHON3_VERSION_MINOR     ${Python3_VERSION_MINOR})
+			set(PYTHON3_VERSION_PATCH     ${Python3_VERSION_PATCH})
+			set(PYTHON3_INCLUDE_DIRS      ${Python3_INCLUDE_DIRS})
+			set(PYTHON3_LIB               ${Python3_LIBRARIES})
+			#Always so, even on apple
+			set(PYTHON3_MODULE_EXTENSION  ".${Python3_SOABI}.so")
 
-        find_program(PYTHON3_EXECUTABLE python3)
-        if (WANT_PYTHON3_BINDINGS AND PYTHON3_EXECUTABLE)
-            set(PYTHON3INTERP_FOUND TRUE)
-            set(PYTHON_QUERY_PART_01 "from distutils import sysconfig;")
-            set(PYTHON_QUERY_PART_02 "import sys;")
-            set(PYTHON_QUERY_PART_03 "print(str(sys.version_info.major) + '.' + str(sys.version_info.minor) + '.' + str(sys.version_info.micro));")
-            set(PYTHON_QUERY_PART_04 "print(sys.version_info.major);")
-            set(PYTHON_QUERY_PART_05 "print(sys.version_info.minor);")
-            set(PYTHON_QUERY_PART_06 "print(sys.version_info.micro);")
-            set(PYTHON_QUERY_PART_07 "print(sysconfig.get_python_inc(plat_specific=True));")
-            set(PYTHON_QUERY_PART_08 "print(sysconfig.get_config_var('LIBDIR'));")
-            set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
-            set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
-            set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-			set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('EXT_SUFFIX'));")
-            set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
+			set(PYTHON3_EXECUTABLE        ${Python3_EXECUTABLE})
 
-            set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
-            execute_process(COMMAND "${PYTHON3_EXECUTABLE}" "-c" "${PYTHON_QUERY_COMMAND}"
-                            RESULT_VARIABLE _PYTHON_SUCCESS
-                            OUTPUT_VARIABLE _PYTHON_VALUES
-                            ERROR_VARIABLE _PYTHON_ERROR_VALUE
-                            OUTPUT_STRIP_TRAILING_WHITESPACE)
+			set(PYTHON3_LIBRARIES "${PYTHON3_LIB}")
 
-            # Convert the process output into a list
-            string(REGEX REPLACE ";" "\\\\;" _PYTHON_VALUES ${_PYTHON_VALUES})
-            string(REGEX REPLACE "\n" ";" _PYTHON_VALUES ${_PYTHON_VALUES})
-            list(GET _PYTHON_VALUES 0 PYTHON3_VERSION_STRING)
-            list(GET _PYTHON_VALUES 1 PYTHON3_VERSION_MAJOR)
-            list(GET _PYTHON_VALUES 2 PYTHON3_VERSION_MINOR)
-            list(GET _PYTHON_VALUES 3 PYTHON3_VERSION_PATCH)
-            list(GET _PYTHON_VALUES 4 PYTHON3_INCLUDE_DIRS)
-            list(GET _PYTHON_VALUES 5 PYTHON3_LIBDIR)
-            list(GET _PYTHON_VALUES 6 PYTHON3_MULTIARCH)
-            list(GET _PYTHON_VALUES 7 PYTHON3_LIB)
-            #list(GET _PYTHON_VALUES 8 C_PYTHON3ARCHLIB)
-            list(GET _PYTHON_VALUES 9 PYTHON3_MODULE_EXTENSION)
-            list(GET _PYTHON_VALUES 10 PYTHON3_PREFIX)
-            #set(C_PYTHON3ARCHLIB ${C_PYTHON3ARCHLIB})
+			set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
+			set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
+			set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
 
-			if(APPLE)
-				set(PYTHON3_LIBDIR "${PYTHON3_PREFIX}/lib")
-				set(PYTHON3_LIB "libpython${PYTHON3_VERSION_MAJOR}.${PYTHON3_VERSION_MINOR}.dylib")
+			if (Python3_FOUND)
+				set(PYTHON3LIBS_FOUND TRUE)
+				message(STATUS "Python3 library found at ${PYTHON3_LIB}")
 			endif()
 
-            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
-                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_LIB}")
-                set(PYTHON3LIBS_FOUND TRUE)
-            endif()
-            if(EXISTS "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
-                set(PYTHON3_LIBRARIES "${PYTHON3_LIBDIR}/${PYTHON3_MULTIARCH}/${PYTHON3_LIB}")
-                set(PYTHON3LIBS_FOUND TRUE)
-            endif()
-            set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
-            set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
-            set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
-
-            message(STATUS "PYTHON3_LIBRARIES = ${PYTHON3_LIBRARIES}")
-            message(STATUS "PYTHON3_INCLUDE_PATH = ${PYTHON3_INCLUDE_PATH}")
-            message(STATUS "PYTHON3_VERSION_STRING = ${PYTHON3_VERSION_STRING}")
-        endif(WANT_PYTHON3_BINDINGS AND PYTHON3_EXECUTABLE)
-    endif(WANT_PYTHON_WHEELS)
+		endif(WANT_PYTHON3_BINDINGS)
+	endif(WANT_PYTHON_WHEELS)
 
 else(NOT WINDOWS)
     #if(WINDOWS)
@@ -435,11 +367,6 @@ else(NOT WINDOWS)
     message(STATUS "=======================================================")
 
 endif(NOT WINDOWS)
-
-if (PYTHON3_MINOR_VERSION)
-  set(PYTHON3_MINOR_VERSION "${PYTHON_MINOR_VERSION}" PARENT_SCOPE)
-  set(PYTHON3_MODULE_SUFFIX "${PYTHON_MODULE_SUFFIX}" PARENT_SCOPE)
-endif()
 
 include (FindThreads)
 if (WINDOWS)
@@ -1321,23 +1248,11 @@ dprint ( "UNIX: ${UNIX}" )
 # is TRUE on all UNIX-like OS's, including Apple OS X and CygWin
 dprint ( "Linux: ${LINUX_NAME}" )
 
-# Print FreeBSD info
-dprint ( "FreeBSD: ${FREEBSD_MAJOR}.${FREEBSD_MINOR}" )
-
 # is TRUE on Windows, including CygWin
 dprint ( "WIN32: ${WIN32}" )
 
 # is TRUE on Apple OS X
 dprint ( "APPLE: ${APPLE}" )
-
-# is TRUE when using the MinGW compiler in Windows
-dprint ( "MINGW: ${MINGW}" )
-
-# is TRUE on Windows when using the CygWin version of cmake
-dprint ( "CYGWIN: ${CYGWIN}" )
-
-# is TRUE on Windows when using a Borland compiler
-dprint ( "BORLAND: ${BORLAND}" )
 
 if (WINDOWS)
 	dprint ( "MSVC: ${MSVC}" )
