@@ -2400,8 +2400,18 @@ COMMANDS FOR THE DOCKER UNIVERSE
     site specific docker networks on a given worker node.  When this
     is the case, additional values may be valid here.
 
-    :index:`container_service_names<single: container_service_names; submit commands>`
+    :index:`docker_pull_policy<single: docker_pull_policy; submit commands>`
+ docker_pull_policy = < always >
+    if docker_pull_policy is set to *always*, when a docker universe job
+    starts on a worker node, the option "--pull always" will be passed to
+    the docker run command.  This only impacts worker nodes which already
+    have a locally cached version of the image.  With this option, docker will
+    always check with the repo to see if the cached version is out of date.
+    This requires more network connectivity, and may cause docker hub to 
+    throttle future pull requests.  It is generally recommened to never 
+    mutate docker image tag name, and avoid needing this option.
 
+    :index:`container_service_names<single: container_service_names; submit commands>`
  container_service_names = <service-name>[, <service-name>]*
     A string- or comma- separated list of *service name*\s.
     Each *service-name*

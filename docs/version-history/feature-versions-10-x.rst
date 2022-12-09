@@ -30,6 +30,12 @@ New Features:
   state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
   :jira:`1064`
 
+- Docker Universe submit files now support *docker_pull_policy = always*, so
+  that docker will check to see if the cached image is out of date.  This increases
+  the network activity, may cause increased throttling when pulling from docker hub,
+  and is recommended to be used with care.
+  :jira:`1482`
+
 - The *condor_negotiator* now support setting a minimum floor number of cores that any
   given submitter should get, regardless of their fair share.  This can be set or queried
   via the *condor_userprio* tool, in the same way that the ceiling can be set or get
