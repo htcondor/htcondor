@@ -5656,7 +5656,7 @@ DaemonCore::Register_Family(pid_t       child_pid,
                             PidEnvID*   penvid,
                             const char* login,
                             gid_t*      group,
-			    const char* cgroup)
+                            const FamilyInfo* fi)
 {
 	double begintime = _condor_debug_get_time_double();
 	double runtime = begintime;
@@ -5713,14 +5713,14 @@ DaemonCore::Register_Family(pid_t       child_pid,
 		           "group-based tracking unsupported on this platform");
 #endif
 	}
-	if (cgroup != NULL) {
-#if defined(HAVE_EXT_LIBCGROUP)
-		if (!m_proc_family->track_family_via_cgroup(child_pid, cgroup))
+	if (fi->cgroup != NULL) {
+#if defined(LINUX)
+		if (!m_proc_family->track_family_via_cgroup(child_pid, fi))
 		{
 			dprintf(D_ALWAYS,
 				"Create_Process: error tracking family "
 				    "with root %u via cgroup %s\n",
-				child_pid, cgroup);
+				child_pid, fi->cgroup);
 			goto REGISTER_FAMILY_DONE;
 		}
 #else
@@ -6453,7 +6453,7 @@ void CreateProcessForkit::exec() {
 				                            penvid_ptr,
 				                            m_family_info->login,
 				                            tracking_gid_ptr,
-							    m_family_info->cgroup);
+				                            m_family_info);
 			if (!ok) {
 				errno = DaemonCore::ERRNO_REGISTRATION_FAILED;
 				writeExecError(errno);
@@ -7030,8 +7030,8 @@ int DaemonCore::Create_Process(
 	// Note we must do this BEFORE we go further and start setting up sockets
 	// to inherit, else we risk the condor_procd inheriting sockets that we
 	// never intended (and thus keeping these sockets open forever).
-	if ((family_info != NULL) && (m_proc_family == NULL)) {
-		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
+	if ((family_info != nullptr) && (m_proc_family == nullptr)) {
+		m_proc_family = ProcFamilyInterface::create(family_info, get_mySubSystem()->getName());
 		ASSERT(m_proc_family);
 	}
 
@@ -7851,7 +7851,7 @@ int DaemonCore::Create_Process(
 		                          NULL,
 		                          family_info->login,
 		                          NULL,
-		                          family_info->cgroup);
+		                          family_info);
 		if (!okrf) {
 			EXCEPT("error registering process family with procd");
 		}
@@ -8395,7 +8395,7 @@ int DaemonCore::Create_Process(
 		                &pidtmp->penvid,
 		                family_info->login,
 		                NULL,
-				family_info->cgroup);
+		               family_info);
 	}
 #endif
 
@@ -8796,15 +8796,6 @@ DaemonCore::Signal_Process(pid_t pid, int sig)
 	ASSERT(m_proc_family != NULL);
 	dprintf(D_ALWAYS, "sending signal %d to process with pid %u\n",sig,pid);
 	return m_proc_family->signal_process(pid,sig);
-}
-
-void
-DaemonCore::Proc_Family_Init()
-{
-	if (m_proc_family == NULL) {
-		m_proc_family = ProcFamilyInterface::create(get_mySubSystem()->getName());
-		ASSERT(m_proc_family);
-	}
 }
 
 void
@@ -9822,6 +9813,14 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		"DaemonCore: %s %lu exited with status %d, invoking reaper "
 		"%d <%s>\n",
 		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip);
+
+	if (this->m_proc_family) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
+		if (was_oom_killed) {
+			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
+			exit_status |= DC_STATUS_OOM_KILLED;
+		} 
+	}
 
 	if ( reaper->handler ) {
 		// a C handler

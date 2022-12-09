@@ -38,6 +38,7 @@
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
+#include "proc_family_direct_cgroup_v2.h"
 
 #include <sstream>
 
@@ -327,7 +328,8 @@ VanillaProc::StartJob()
 	setupOOMScore(4,800);
 #endif
 
-#if defined(HAVE_EXT_LIBCGROUP)
+#ifdef LINUX
+	// This works for both v1 and v2 cgroups
 	// Determine the cgroup
 	std::string cgroup_base;
 	param(cgroup_base, "BASE_CGROUP", "");
@@ -371,7 +373,22 @@ VanillaProc::StartJob()
 		cgroup = cgroup_str.c_str();
 		ASSERT (cgroup != NULL);
 		fi.cgroup = cgroup;
-		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job.\n", cgroup);
+
+		int numCores = 1;
+		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
+			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd; assuming 1 for cgroup limit purposes.\n");
+		}
+		fi.cgroup_cpu_shares = 100 * numCores;
+
+		int memory = 0;
+		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
+			ASSERT(false);
+		}
+		fi.cgroup_memory_limit = ((unsigned) memory) * 1024 * 1024;
+		m_memory_limit = memory;
+
+		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %d).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
 	}
 
 #endif
@@ -656,13 +673,15 @@ VanillaProc::StartJob()
 		delete fs_remap;
 	}
 
-#if defined(HAVE_EXT_LIBCGROUP)
-
+#ifdef LINUX
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
-#ifdef LINUX
-		setCgroupMemoryLimits(cgroup);
+#if defined(HAVE_EXT_LIBCGROUP)
+		// memory limits here only for v1
+		if (!ProcFamilyDirectCgroupV2::can_create_cgroup_v2()) {
+			setCgroupMemoryLimits(cgroup);
+		}
 #endif
 		setupOOMEvent(cgroup);
 	}
@@ -877,6 +896,13 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
+	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
+	if (status & DC_STATUS_OOM_KILLED) {
+		outOfMemoryEvent(-1);
+		status &= DC_STATUS_OOM_KILLED;
+	} 
+	
+	//
 	//
 	// Run all the reapers first, since some of them change the exit status.
 	//
@@ -1144,16 +1170,18 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 		// will be killed, and when it does, this job will get unfrozen
 		// and continue running.
 
-		if (usage < (0.9 * m_memory_limit)) {
-			long long oomData = 0xdeadbeef;
-			int efd = -1;
-			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
+		if (m_oom_efd != -1) {
+			if (usage < (0.9 * m_memory_limit)) {
+				long long oomData = 0xdeadbeef;
+				int efd = -1;
+				ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
 				// need to drain notification fd, or it will still
 				// be hot, and we'll come right back here again
-			int r = read(efd, &oomData, 8);
+				int r = read(efd, &oomData, 8);
 
-			dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
-			return 0;
+				dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
+				return 0;
+			}
 		}
 	}
 #endif

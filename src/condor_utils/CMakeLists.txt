@@ -530,6 +530,7 @@ if(LINUX)
 		hibernator.linux.h
 		network_adapter.linux.cpp
 		network_adapter.linux.h
+		proc_family_direct_cgroup_v2.cpp
 	)
 endif(LINUX)
 
