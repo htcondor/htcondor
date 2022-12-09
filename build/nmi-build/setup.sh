@@ -68,7 +68,6 @@ echo 'use SECURITY : HOST_BASED' > /usr/local/condor/etc/examples/condor_config.
 if [ $ID = debian ] || [ $ID = 'ubuntu' ]; then
     apt update
     export DEBIAN_FRONTEND='noninteractive'
-    #INSTALL='apt install --no-install-recommends --yes'
     INSTALL='apt install --yes'
 elif [ $ID = 'amzn' ] || [ $ID = 'centos' ]; then
     INSTALL='yum install --assumeyes'
@@ -147,7 +146,7 @@ if [ $VERSION_CODENAME = 'bionic' ]; then
 fi
 
 # Add useful debugging tools
-$INSTALL gdb git less nano python3-pip strace sudo vim
+$INSTALL gdb git less nano patchelf python3-pip strace sudo vim
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     $INSTALL iputils rpmlint
 fi
@@ -193,3 +192,12 @@ fi
 
 # Install pytest for BaTLab testing
 pip3 install pytest pytest-httpserver
+
+if [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
+    # Pip installs a updated version of markupsafe that is incompatiable
+    # with sphinx on this platform. Downgrade markupsafe and hope for the best
+    pip3 install markupsafe==2.0.1
+fi
+
+rm -rf /tmp/*
+exit 0
