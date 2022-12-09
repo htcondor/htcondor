@@ -38,7 +38,9 @@ endif
 
 override_dh_auto_configure:
 	dh_auto_configure -- \\
+#if !defined(BIONIC)
 		$(CMAKE_TOOLCHAIN) \\
+#endif
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \\
 		-DPROPER:BOOL=ON \\
 		-D_DEBUG:BOOL=TRUE \\
