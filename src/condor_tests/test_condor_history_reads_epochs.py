@@ -67,7 +67,7 @@ def error(msg,test_passing):
 def condor(test_dir):
     with Condor(local_dir=test_dir / "condor",config={"SCHEDD_INTERVAL":1,
                                                       "JOB_EPOCH_INSTANCE_DIR":"{0}".format(test_dir / epochDir),
-                                                      "EPOCH_HISTORY":"{0}".format(test_dir / epochDir / "epoch_history")}) as condor:
+                                                      "JOB_EPOCH_HISTORY":"{0}".format(test_dir / epochDir / "epoch_history")}) as condor:
         yield condor
 
 #--------------------------------------------------------------------------------------------
@@ -84,7 +84,7 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
             break
         job = condor.submit(
             description={"executable": path_to_sleep,
-                "arguments": 0,
+                "arguments": "0",
                 "universe": "vanilla",
                 "on_exit_remove": "false",
                 "periodic_remove": "NumShadowStarts >= 2",
@@ -135,7 +135,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
     if outputFiles[historyTestNum][:4] != "hist" and outputFiles[historyTestNum] == "base_epoch.txt":
         config = Path(test_dir / "condor" / "condor_config")
         rf = open(config,"a")
-        rf.write("\nEPOCH_HISTORY=\n")
+        rf.write("\nJOB_EPOCH_HISTORY=\n")
         rf.close()
         rp = condor.run_command(["condor_reconfig"])
     #Split based param command line for specific test into array

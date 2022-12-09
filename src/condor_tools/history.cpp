@@ -418,7 +418,7 @@ main(int argc, const char* argv[])
 		//Designate reading job run instance ads from epoch directory
 		read_epoch_ads = true;
 		//Get aggregate epoch history file
-		epochHistoryFile = param("EPOCH_HISTORY");
+		epochHistoryFile = param("JOB_EPOCH_HISTORY");
 		//If epoch file is NULL then check for an epoch directory
 		if (epochHistoryFile == NULL) {
 			//Get epoch directory and validate passed arg is a directory

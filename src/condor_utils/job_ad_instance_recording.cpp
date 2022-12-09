@@ -64,7 +64,7 @@ initJobEpochHistoryFiles(){
 	isInitialized = true;
 	efi.can_writeAd = false;
 	//Initialize epoch aggregate file
-	efi.EpochHistoryFilename.set(param("EPOCH_HISTORY"));
+	efi.EpochHistoryFilename.set(param("JOB_EPOCH_HISTORY"));
 	if (efi.EpochHistoryFilename.ptr()) {
 
 		//Initialize file rotation info
