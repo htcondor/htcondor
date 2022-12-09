@@ -37,26 +37,26 @@ endif
 #endif
 
 override_dh_auto_configure:
-	dh_auto_configure -- \
-		$(CMAKE_TOOLCHAIN) \
-		-DCONDOR_PACKAGE_BUILD:BOOL=ON \
-		-DPROPER:BOOL=ON \
-		-D_DEBUG:BOOL=TRUE \
-		-DBUILDID:STRING="$(buildid)"\
-		-DPACKAGEID:STRING="$(debver)"\
-		-DCMAKE_INSTALL_PREFIX:PATH=/ \
-		-DCMAKE_SKIP_RPATH:BOOL=ON \
-		-DHAVE_EXT_CURL:BOOL=ON \
-		-DHAVE_EXT_OPENSSL:BOOL=ON \
-		-DHAVE_EXT_BOOST:BOOL=ON \
-		-DHAVE_EXT_GLOBUS:BOOL=OFF \
-		-DHAVE_EXT_KRB5:BOOL=ON \
-		-DHAVE_EXT_LIBVIRT:BOOL=ON \
-		-DHAVE_EXT_LIBXML2:BOOL=ON \
-		-DWITH_LIBCGROUP:BOOL=ON \
-		-DWITH_PYTHON_BINDINGS:BOOL=ON \
-		-DWITH_SCITOKENS:BOOL=ON \
-		-DBUILD_TESTING:BOOL=ON \
+	dh_auto_configure -- \\
+		$(CMAKE_TOOLCHAIN) \\
+		-DCONDOR_PACKAGE_BUILD:BOOL=ON \\
+		-DPROPER:BOOL=ON \\
+		-D_DEBUG:BOOL=TRUE \\
+		-DBUILDID:STRING="$(buildid)"\\
+		-DPACKAGEID:STRING="$(debver)"\\
+		-DCMAKE_INSTALL_PREFIX:PATH=/ \\
+		-DCMAKE_SKIP_RPATH:BOOL=ON \\
+		-DHAVE_EXT_CURL:BOOL=ON \\
+		-DHAVE_EXT_OPENSSL:BOOL=ON \\
+		-DHAVE_EXT_BOOST:BOOL=ON \\
+		-DHAVE_EXT_GLOBUS:BOOL=OFF \\
+		-DHAVE_EXT_KRB5:BOOL=ON \\
+		-DHAVE_EXT_LIBVIRT:BOOL=ON \\
+		-DHAVE_EXT_LIBXML2:BOOL=ON \\
+		-DWITH_LIBCGROUP:BOOL=ON \\
+		-DWITH_PYTHON_BINDINGS:BOOL=ON \\
+		-DWITH_SCITOKENS:BOOL=ON \\
+		-DBUILD_TESTING:BOOL=ON \\
 		-DWITH_CAMPUSFACTORY:BOOL=OFF
 
 
@@ -94,10 +94,10 @@ override_dh_auto_install:
 	dh_auto_install
 	rm -rf debian/tmp/etc/rc.d
 	mkdir --mode 0755 debian/tmp/etc/blahp
-	for batch_system in condor kubernetes lsf nqs pbs sge slurm; do \
-		mv debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh debian/tmp/etc/blahp/; \
-		ln -s /etc/blahp/$${batch_system}_local_submit_attributes.sh \
-			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \
+	for batch_system in condor kubernetes lsf nqs pbs sge slurm; do \\
+		mv debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh debian/tmp/etc/blahp/; \\
+		ln -s /etc/blahp/$${batch_system}_local_submit_attributes.sh \\
+			debian/tmp/usr/libexec/blahp/$${batch_system}_local_submit_attributes.sh; \\
 	done
 	# tar up the tests
 	(cd obj-*; make tests-tar-pkg)
@@ -126,10 +126,10 @@ override_dh_auto_clean:
 	#-rm src/condor_chirp/chirp/java/client/*.java
 	# clean leftovers of upstream clean run
 	-rm src/condor_tests/list*
-	-rm src/condor_examples/condor.boot.debian \
+	-rm src/condor_examples/condor.boot.debian \\
 		src/condor_examples/condor_config.patched
-	-rm src/condor_tests/Condor.pm src/condor_tests/CondorPersonal.pm \
-		src/condor_tests/CondorTest.pm src/condor_tests/CondorUtils.pm \
+	-rm src/condor_tests/Condor.pm src/condor_tests/CondorPersonal.pm \\
+		src/condor_tests/CondorTest.pm src/condor_tests/CondorUtils.pm \\
 		src/condor_tests/batch_test.pl
 	-rm src/condor_utils/param_info.c
 	# docs
@@ -178,24 +178,24 @@ dfsg-source-tree:
 	find . -name '*.tgz' -delete
 # remove all java binaries
 # and other stuff that will be deleted during clean runs anyway
-	find $(CURDIR) -regextype posix-egrep -regex '.*(\.(jar|class|pdf)|TAGS)' -print0 \
+	find $(CURDIR) -regextype posix-egrep -regex '.*(\.(jar|class|pdf)|TAGS)' -print0 \\
 		| xargs -0 -i git rm -f --ignore-unmatch -- {} || true
 # commit any cleanup results
-	@if ! git diff --quiet HEAD; then \
-		git commit -e -a -m "Remove unwanted (e.g. non-DFSG-compliant) content"; \
+	@if ! git diff --quiet HEAD; then \\
+		git commit -e -a -m "Remove unwanted (e.g. non-DFSG-compliant) content"; \\
 	fi
 
 
 # make orig tarball from repository content
 get-orig-source: dfsg-source-tree
 	# orig tarball, turn directory into something nicer
-	git archive --format=tar --prefix=$(srcpkg)-$(gitver)/ HEAD | \
+	git archive --format=tar --prefix=$(srcpkg)-$(gitver)/ HEAD | \\
 		gzip -9 > $(srcpkg)_$(gitver).orig.tar.gz
 
 # check that DSC patches still apply
 maint-check-dsc-patches:
-	@for p in debian/patches/*-dsc-patch; \
-		do echo "check $$p"; \
-		patch -p1 --dry-run < $$p || exit 1 ; \
+	@for p in debian/patches/*-dsc-patch; \\
+		do echo "check $$p"; \\
+		patch -p1 --dry-run < $$p || exit 1 ; \\
 	done
 
