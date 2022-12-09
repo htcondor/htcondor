@@ -80,13 +80,18 @@ arguments = 1
 queue";
 
 # Cron Append Job
+# Used to use cron minute to test a full legit cron job
+# However, due to testing speeds we are running the guts
+# of the cron job (on_exit_rm & periodic_rm) without
+# specific cron times so we aren't waiting for the jobs
+# scheduled start times
 $submitfileCron = "universe = vanilla
 executable = ../x_sleep.pl
 log = cron.log
 arguments = 1
 on_exit_remove = false
 periodic_remove = NumShadowStarts >= 3
-cron_minute = *
+#cron_minute = *
 queue";
 
 push(@jobSubmitFiles, ($submitfileSimple, $submitfileCron));

@@ -17,6 +17,9 @@ epochDir = "epochs"
 setUpSuccess = True
 historyTestNum = -1
 outputFiles = [
+    "hist_file_epoch.txt",
+    "hist_file_cluster.txt",
+    "hist_file_cluster_proc.txt",
     "base_epoch.txt",
     "cluster.txt",
     "cluster_proc.txt",
@@ -27,6 +30,11 @@ outputFiles = [
 ]
 expectedOutput = {
     #Key=outfileName : Expected in file : count of lines expected
+    #First check looks for epoch like history file
+    "hist_file_epoch.txt":{"1.0 1.1 2.0 2.1":8},
+    "hist_file_cluster.txt":{"1.0 1.1":4},
+    "hist_file_cluster_proc.txt":{"1.0":2},
+    #All others check based on directory
     "base_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "cluster.txt":{"1.0 1.1":4},
     "cluster_proc.txt":{"1.0":2},
@@ -57,7 +65,9 @@ def error(msg,test_passing):
 #Start a personal condor with JOB_EPOCH_INSTANCE_DIR set
 @standup
 def condor(test_dir):
-    with Condor(local_dir=test_dir / "condor",config={"JOB_EPOCH_INSTANCE_DIR":"{0}".format(test_dir / epochDir)}) as condor:
+    with Condor(local_dir=test_dir / "condor",config={"SCHEDD_INTERVAL":1,
+                                                      "JOB_EPOCH_INSTANCE_DIR":"{0}".format(test_dir / epochDir),
+                                                      "JOB_EPOCH_HISTORY":"{0}".format(test_dir / epochDir / "epoch_history")}) as condor:
         yield condor
 
 #--------------------------------------------------------------------------------------------
@@ -74,31 +84,20 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
             break
         job = condor.submit(
             description={"executable": path_to_sleep,
-                "arguments": "1",
+                "arguments": "0",
                 "universe": "vanilla",
-                "periodic_remove": "NumShadowStarts >= 2",
                 "on_exit_remove": "false",
-                "log": "cron.log",
-                "cron_minute": "*",
+                "periodic_remove": "NumShadowStarts >= 2",
+                "log": "job.log",
             },count=2,)
-        #Wait 90 seconds for jobs to start running
-        job.wait(condition=ClusterState.all_running,timeout=90)
-        #Wait 10 seconds for 1 second sleep jobs to evict back to idle
-        job.wait(condition=ClusterState.all_idle,timeout=30)
-        #=======================================
-        #Kick the schedd to reschedule due to issue
-        #where evicted jobs may take a while (~6 mins)
-        #to actually reschedule and we don't want to wait that long
-        condor.run_command(["condor_reschedule"])
-        #=======================================
-        jobsRan = job.wait(condition=ClusterState.all_terminal,timeout=90)
+        jobsRan = job.wait(condition=ClusterState.all_terminal,timeout=30)
     if not jobsRan:
         print("\nERROR: Cron jobs timed out.")
         setUpSuccess = False
     else:
         #Verify that 4 epoch files were made 1.0 1.1 2.0 2.1
         epoch_files = os.listdir(test_dir / epochDir)
-        if len(epoch_files) != 4:
+        if len(epoch_files) != 5:
             print("\nERROR: Failed to write all epoch files.")
             setUpSuccess = False
     return setUpSuccess
@@ -110,13 +109,16 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
 #Cannot test with no path because condor_history is using the parent condor tools and doesn't
 #have JOB_EPOCH_INSTANCE_DIR set and we don't want it because other jobs will write tests 
 #there messing up this test. So, check condor_history -epoch for Error message
-"history":"condor_history -epoch",
-"history w/ cluster":"condor_history -epoch 1",
-"history w/ cluster.proc":"condor_history -epoch 1.0",
-"history w/ delete & limit":"condor_history -epoch:d -limit 1",
-"history w/ delete & match":"condor_history -epoch:d -match 1",
-"history w/ delete & scanlimit":"condor_history -epoch:d -scanlimit 1",
-"history w/ delete":"condor_history -epoch:d",
+"(file) history":"condor_history -epoch",
+"(file) history w/ cluster":"condor_history -epoch 1",
+"(file) history w/ cluster.proc":"condor_history -epoch 1.0",
+"(dir) history":"condor_history -epoch",
+"(dir) history w/ cluster":"condor_history -epoch 1",
+"(dir) history w/ cluster.proc":"condor_history -epoch 1.0",
+"(dir) history w/ delete & limit":"condor_history -epoch:d -limit 1",
+"(dir) history w/ delete & match":"condor_history -epoch:d -match 1",
+"(dir) history w/ delete & scanlimit":"condor_history -epoch:d -scanlimit 1",
+"(dir) history w/ delete":"condor_history -epoch:d",
 })
 def read_epochs(condor,test_dir,path_to_sleep,request):
     global historyTestNum
@@ -129,6 +131,13 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         if historyTestNum == 0:
             print("\nERROR: Set up failed. Cannot test history tools.")
         return False
+    #If non-history like epoch file then reconfig to not have it
+    if outputFiles[historyTestNum][:4] != "hist" and outputFiles[historyTestNum] == "base_epoch.txt":
+        config = Path(test_dir / "condor" / "condor_config")
+        rf = open(config,"a")
+        rf.write("\nJOB_EPOCH_HISTORY=\n")
+        rf.close()
+        rp = condor.run_command(["condor_reconfig"])
     #Split based param command line for specific test into array
     cmd = request.param.split()
     cp = condor.run_command(cmd)
@@ -214,7 +223,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
     #If delete.txt then verify that the epoch dir is empty regardless of if we have failed already
     if "delete.txt" == outputFiles[historyTestNum]:
         epoch_files = os.listdir(test_dir / epochDir)
-        if len(epoch_files) != 0:
+        if len(epoch_files) != 1 and epoch_file[0] != "epoch_history":
             error("ERROR: Delete option failed to remove all epoch files.",test_passed)
             test_passed = False
     #Return if the test has passed or not

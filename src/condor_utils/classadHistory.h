@@ -23,15 +23,21 @@
 #include "condor_classad.h"
 
 extern bool        DoHistoryRotation;
-extern bool        DoDailyHistoryRotation;
-extern bool        DoMonthlyHistoryRotation;
-extern filesize_t  MaxHistoryFileSize;
-extern int         NumberBackupHistoryFiles;
 extern char*       PerJobHistoryDir;
 extern char* JobHistoryFileName;
+
+//Struct to hold information needed for classad record file rotation/deletion
+struct HistoryFileRotationInfo {
+	filesize_t MaxHistoryFileSize = 1024 * 1024 * 20; //20MB
+	int NumberBackupHistoryFiles  = 2;
+	bool IsStandardHistory        = true; //Bool for if this is standard schedd history or startd history file
+	bool DoDailyHistoryRotation   = false;
+	bool DoMonthlyHistoryRotation = false;
+};
 
 void WritePerJobHistoryFile(ClassAd*, bool);
 void AppendHistory(ClassAd*);
 void InitJobHistoryFile(const char *, const char *);
+void MaybeRotateHistory(const HistoryFileRotationInfo&, int, const char*, const char* new_filepath = NULL);
 
 #endif

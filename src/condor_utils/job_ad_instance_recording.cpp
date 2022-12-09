@@ -20,105 +20,154 @@
 #include "condor_common.h"
 #include "condor_config.h"
 #include "condor_debug.h"
+#include "basename.h"
+#include "classadHistory.h"
 #include "directory.h" // for StatInfo
 #include "directory_util.h"
 #include "job_ad_instance_recording.h"
+#include "proc.h"
 
 //--------------------------------------------------------------
 //                       Data members
 //--------------------------------------------------------------
-//TODO: Make a structor to hold all this data
-static bool file_per_epoch = false;
-static bool	isInitialized = false;
-static char *JobEpochInstDir = NULL;
+
+static bool isInitialized = false;
+static HistoryFileRotationInfo hri; //File rotation info for aggregate history like file
+static HistoryFileRotationInfo dri; //File rotation info for epoch directory files
+// Struct to hold information of where to write epoch ads
+struct EpochWriteFilesInfo {
+	auto_free_ptr JobEpochInstDir;      //Path to valid directory for epoch files
+	auto_free_ptr EpochHistoryFilename; //Path/filename for aggregate file
+	//TODO: Add debug file option (written at start of shadow)
+	//TODO: Add option for per cluster maybe per run inst
+	bool can_writeAd = false;           //Bool for if we have a place to write Ad
+} static efi;
+
+struct EpochAdInfo {
+	JOB_ID_KEY jid;             //Job Id for cluster & proc
+	int runId = -1;             //Job run instance
+	std::string buffer = "";    //Buffer that is the whole job ad with banner
+	std::string file_path = ""; //Path and filename to write buffer to
+};
 
 //--------------------------------------------------------------
 //                     Helper Functions
 //--------------------------------------------------------------
 
 /*
-*	Function to set the job epoch directory from configuration variable
-*	JOB_EPOCH_INSTANCE_DIR if it is set and a valid directory.
+*	Function to set initialize structs with information from various
+*	param calls to determine where/how we write the Ad and any needed
+*	file rotation information.
 */
 static void
-setEpochDir(){
-	if (JobEpochInstDir != NULL) free(JobEpochInstDir);
-	// Attempt to grab job epoch instance directory
-	if ((JobEpochInstDir = param("JOB_EPOCH_INSTANCE_DIR")) != NULL) {
-		// If param was found and not null check if it is a valid directory
-		StatInfo si(JobEpochInstDir);
-        if (!si.IsDirectory()) {
-			// Not a valid directory. Log message and set data member to NULL
-            dprintf(D_ALWAYS | D_ERROR,
-                    "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
-                    "valid directory; disabling per-job run instance recording.\n",
-                    JobEpochInstDir);
-            free(JobEpochInstDir);
-            JobEpochInstDir = NULL;
-        } else {
-            dprintf(D_ALWAYS,
-                    "Writing per-job run instance recording files to: %s\n",
-                    JobEpochInstDir);
-        }
-	}
+initJobEpochHistoryFiles(){
 	isInitialized = true;
+	efi.can_writeAd = false;
+	//Initialize epoch aggregate file
+	efi.EpochHistoryFilename.set(param("JOB_EPOCH_HISTORY"));
+	if (efi.EpochHistoryFilename.ptr()) {
+
+		//Initialize file rotation info
+		//TODO: Maybe add possibility for daily and monthly rotation for aggregate file
+		hri.IsStandardHistory = false;
+		long long maxSize = 0;
+		param_longlong("MAX_EPOCH_HISTORY_LOG", maxSize, true, 1024 * 1024 * 20);
+		hri.MaxHistoryFileSize = maxSize;
+		hri.NumberBackupHistoryFiles = param_integer("MAX_EPOCH_HISTORY_ROTATIONS",2,1);
+
+		dprintf(D_FULLDEBUG, "Writing job run instance Ads to: %s\n",
+				efi.EpochHistoryFilename.ptr());
+		dprintf(D_FULLDEBUG, "Maximum epoch history size: %lld\n", (long long)hri.MaxHistoryFileSize);
+		dprintf(D_FULLDEBUG, "Number of epoch history files: %d\n", hri.NumberBackupHistoryFiles);
+		efi.can_writeAd = true;
+	}
+
+	//Initialize an epoch Directory
+	efi.JobEpochInstDir.set(param("JOB_EPOCH_INSTANCE_DIR"));
+	if (efi.JobEpochInstDir.ptr()) {
+		// If param was found and not null check if it is a valid directory
+		StatInfo si(efi.JobEpochInstDir.ptr());
+		if (!si.IsDirectory()) {
+			// Not a valid directory. Log message and set data member to NULL
+			dprintf(D_ERROR, "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
+					"valid directory; disabling per-job run instance recording.\n",
+						efi.JobEpochInstDir.ptr());
+			efi.JobEpochInstDir.clear();
+		} else {
+			dprintf(D_FULLDEBUG, "Writing per-job run instance recording files to: %s\n",
+					efi.JobEpochInstDir.ptr());
+			//TODO: Check for per cluster files in epoch dir
+			//TODO: Add filesize limit for directory epoch files
+			//Note: Max backups is obsolete here because we will rotate to a different directory
+			dri.IsStandardHistory = false;
+			dri.MaxHistoryFileSize = 1024 * 1024 * 100; //Base 100MB until adding user defined limit (maybe be clever by asking number of adds and doing math)
+			efi.can_writeAd = true;
+		}
+	}
 }
 
-//--------------------------------------------------------------
-//                      Write Functions
-//--------------------------------------------------------------
 /*
-*	Write/Append job ad to one file per job with banner seperation
-*
-*	TODO:Do we want file size limits and file rotation for appending?
+*	Function to attempt to grab needed information from the passed job ad,
+*	and print ad to a buffer to write to various files
 */
-static void
-appendJobEpochFile(const classad::ClassAd *job_ad){
-	// If not initialized then set up job epoch directory
-	if (!isInitialized) { setEpochDir(); }
-	// Verify that a directory is set if not return
-	if (!JobEpochInstDir) { return; }
-	
+static bool
+extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 	//Get various information needed for writing epoch file and banner
-	int clusterId, procId, numShadow;
 	std::string owner, missingAttrs;
-	
-	if (!job_ad->LookupInteger("ClusterId", clusterId)) {
-		clusterId = -1;
+
+	if (!job_ad->LookupInteger("ClusterId", info.jid.cluster)) {
+		info.jid.cluster = -1;
 		missingAttrs += "ClusterId";
 	}
-	if (!job_ad->LookupInteger("ProcId", procId)) {
-		procId = -1;
+	if (!job_ad->LookupInteger("ProcId", info.jid.proc)) {
+		info.jid.cluster = -1;
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
 		missingAttrs += "ProcId";
 	}
-	if (!job_ad->LookupInteger("NumShadowStarts", numShadow)) {
+	if (!job_ad->LookupInteger("NumShadowStarts", info.runId)) {
 		//TODO: Replace Using NumShadowStarts with a better counter for epoch
-		numShadow = -1;
 		if (!missingAttrs.empty()) { missingAttrs += ',';}
 		missingAttrs += "NumShadowStarts";
 	}
 	if (!job_ad->LookupString("Owner", owner)) {
 		owner = "?";
 	}
-	
+
 	//TODO:Until better Job Attribute is added, decrement numShadow to start RunInstanceId at 0
-	numShadow--;
-	
-	//Write job ad to a buffer
-	std::string buffer;
-	sPrintAd(buffer,*job_ad,nullptr,nullptr);
+	info.runId--;
+
+	sPrintAd(info.buffer,*job_ad,nullptr,nullptr);
 	//If any attributes are set to -1 write to shadow log and return
-	if (clusterId < 0 || procId < 0 || numShadow < 0){
-		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),buffer.c_str());
-		return;
+	if (info.jid.cluster < 0 || info.jid.proc < 0 || info.runId < 0){
+		dprintf(D_FULLDEBUG,"Missing attribute(s) [%s]: Not writing to job run instance file. Printing current Job Ad:\n%s",missingAttrs.c_str(),info.buffer.c_str());
+		return false;
 	}
 	
-	//Construct file_name and file_path for writing job ad to
-	std::string file_name,file_path;
-	formatstr(file_name,"job.runs.%d.%d.ads",clusterId,procId);
-	dircat(JobEpochInstDir,file_name.c_str(),file_path);
+	//Buffer contains just the job ad at this point
+	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
+	std::string banner;
+	time_t currentTime = time(NULL); //Get current time to print in banner
+	formatstr(banner,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+					 info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
+	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
+	info.buffer += banner;
+	if (info.buffer.empty())
+		return false;
+	else
+		return true;
+}
 
+//--------------------------------------------------------------
+//                      Write Functions
+//--------------------------------------------------------------
+/*
+*	Write the given epoch ad to the given file after checking if
+*	file rotation needs to occur.
+*/
+static void
+writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, const char* new_path = NULL) {
+	//Check if we want to rotate the file
+	MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
 	//Open file and append Job Ad to it
 	int fd = -1;
 	const char * errmsg = nullptr;
@@ -128,7 +177,7 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	const DWORD attrib =  FILE_ATTRIBUTE_NORMAL;
 	const DWORD create_mode = (open_flags & O_CREAT) ? OPEN_ALWAYS : OPEN_EXISTING;
 	const DWORD share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE;
-	HANDLE hf = CreateFile(file_path.c_str(), FILE_APPEND_DATA, share_mode, NULL, create_mode, attrib, NULL);
+	HANDLE hf = CreateFile(info.file_path.c_str(), FILE_APPEND_DATA, share_mode, NULL, create_mode, attrib, NULL);
 	if (hf == INVALID_HANDLE_VALUE) {
 		err = GetLastError();
 	} else {
@@ -148,70 +197,64 @@ appendJobEpochFile(const classad::ClassAd *job_ad){
 	if (fd < 0) errmsg = GetLastErrorString(err);
 #else
 	int err = 0;
-	fd = safe_open_wrapper_follow(file_path.c_str(), open_flags, 0644);
+	fd = safe_open_wrapper_follow(info.file_path.c_str(), open_flags, 0644);
 	if (fd < 0) {
 		err = errno;
 		errmsg = strerror(errno);
 	}
 #endif
 	if (fd < 0) {
-		dprintf(D_ALWAYS | D_ERROR,"ERROR (%d): Opening job run instance file (%s): %s",
-									err, file_name.c_str(), errmsg);
+		dprintf(D_ALWAYS | D_ERROR,"ERROR (%d): Opening job run instance file (%s): %s\n",
+									err, condor_basename(info.file_path.c_str()), errmsg);
 		return;
 	}
 
-	//Buffer contains just the job ad at this point
-	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
-	std::string banner;
-	time_t currentTime = time(NULL); //Get current time to print in banner
-	formatstr(banner,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
-					 clusterId, procId, numShadow, owner.c_str(), (long long)currentTime);
-	if (buffer.back() != '\n') { buffer += '\n'; }
-	buffer += banner;
 	//Write buffer with job ad and banner to epoch file
-	if (write(fd,buffer.c_str(),buffer.length()) < 0){
+	if (write(fd,info.buffer.c_str(),info.buffer.length()) < 0){
 		dprintf(D_ALWAYS,"ERROR (%d): Failed to write job ad for job %d.%d run instance %d to file (%s): %s\n",
-						  errno, clusterId, procId, numShadow, file_name.c_str(), strerror(errno));
+						  errno, info.jid.cluster, info.jid.proc, info.runId, condor_basename(info.file_path.c_str()), strerror(errno));
+		dprintf(D_FULLDEBUG,"Printing Failed Job Ad:\n%s", info.buffer.c_str());
 	}
 	close(fd);
 }
 
 /*
-*	Write a single/current job ad to a new and unique file
-*	labeled <filler>.cluster-id.proc-id.epoch-number (num_shadow_starts)
-*/
-//static void
-//writeJobEpochInstance(const classad::ClassAd *job_ad){
-	//TODO: -Make per instance writing
-	//	-Handle massive amounts of files with sub dirs (see spooling
-	//	-Max file limits?
-//}
-
-/*
 *	Function for shadow to call that will write the current job ad
-*	to a job epoch file. This functionality will either write 1 file
-*	per job and append each epoch instance of the job ad to said file.
-*	Or will write 1 job ad to 1 file per job epoch instance
+*	to a job epoch file. Depending on configuration the ad can be 
+*	written to various types of epoch files:
+*		1. Full Aggregate (Like history file)
+*		2. File per cluster.proc in a specified directory
 */
 void
 writeJobEpochFile(const classad::ClassAd *job_ad) {
-
+	//If not initialized then call init function
+	if (!isInitialized) { initJobEpochHistoryFiles(); }
+	// If not specified to write epoch files then return
+	if (!efi.can_writeAd) { return; }
 	//If no Job Ad then log error and return
 	if (!job_ad) {
 		dprintf(D_ALWAYS | D_ERROR,
-			"ERROR: No Job Ad. Not able to write to Job Run Instance File");
+			"ERROR: No Job Ad. Not able to write to Job Run Instance File\n");
 		return;
 	}
 
-	if (file_per_epoch) { // Check If user wants 1 file per job epoch/instance
-		;//writeJobEpochInstance(job_ad);
-	} else { // Otherwise write to single file per job
-		appendJobEpochFile(job_ad);
+	EpochAdInfo info;
+	if (extractEpochInfo(job_ad, info)) {
+		//For every ad recording location check/try to write.
+		if (efi.EpochHistoryFilename.ptr()) {
+			info.file_path = efi.EpochHistoryFilename.ptr();
+			writeEpochAdToFile(hri, info);
+		}
+		if (efi.JobEpochInstDir.ptr()) {
+			//TODO: Add per cluster option
+			//TODO: "Spooling"
+			//Construct file_name and file_path for writing job ad to
+			std::string file_name;
+			formatstr(file_name,EPOCH_PER_JOB_FILE,info.jid.cluster,info.jid.proc);
+			dircat(efi.JobEpochInstDir.ptr(),file_name.c_str(),info.file_path);
+			writeEpochAdToFile(dri, info);
+		}
 	}
 }
-
-//--------------------------------------------------------------
-//                   Read/Scrape Functions
-//--------------------------------------------------------------
 
 

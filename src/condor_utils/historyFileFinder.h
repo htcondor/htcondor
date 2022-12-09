@@ -32,7 +32,7 @@
 //    then the return value will be a pointer to a 1 element array where [0] = NULL
 // The caller can hold onto the returnd pointer as long as it wants, it should release it
 // by passing it to freeHistoryFilesList
-extern const char **findHistoryFiles(const char *paramName, int *numHistoryFiles);
+extern const char **findHistoryFiles(const char *passedFileName, int *numHistoryFiles);
 // Free the array of history files returned by the above function.
 extern void freeHistoryFilesList(const char **);
 

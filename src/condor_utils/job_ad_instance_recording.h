@@ -22,6 +22,10 @@
 
 #include "condor_classad.h"
 
+//Macros for Epoch dir filename formats
+#define EPOCH_PER_JOB_FILE "job.runs.%d.%d.ads"
+//TODO: Add filename format for per cluster option if implemented
+
 // Function for Shadow to call to write Job Ad per Epoch
 void writeJobEpochFile(classad::ClassAd const *job_ad);
 
