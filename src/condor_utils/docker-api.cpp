@@ -352,6 +352,24 @@ int DockerAPI::createContainer(
 		}
 	}
 
+	std::string pullPolicy;
+	jobAd.LookupString(ATTR_DOCKER_PULL_POLICY, pullPolicy);
+	
+	// docker create supports --pull (always|missing|never) today.
+	// missing is the default, never seems useless for condor
+	// If they mis-type this, ignore but warn
+
+	lower_case(pullPolicy);
+	if (pullPolicy == "always") {
+		runArgs.AppendArg("--pull");
+		runArgs.AppendArg(pullPolicy);
+	} else {
+		if (!pullPolicy.empty()) {
+			dprintf(D_ALWAYS, "Ignoring unknown docker pull policy: %s\n", pullPolicy.c_str());
+		}
+	}
+
+
 	MyString args_error;
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
 	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {

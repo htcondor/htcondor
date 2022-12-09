@@ -177,6 +177,7 @@
 #define ATTR_DOCKER_IMAGE "DockerImage"
 #define ATTR_DOCKER_NETWORKS "DockerNetworks"
 #define ATTR_DOCKER_NETWORK_TYPE "DockerNetworkType"
+#define ATTR_DOCKER_PULL_POLICY "DockerPullPolicy"
 #define ATTR_DOCKER_VOLUMES "DockerVolumes"
 #define ATTR_DOCKER_VERSION  "DockerVersion"
 #define ATTR_EMAIL_ATTRIBUTES  "EmailAttributes"
