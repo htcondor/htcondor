@@ -5867,9 +5867,12 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// Close the plugin
 	int rc = my_pclose(plugin_pipe);
 	int exit_status = WEXITSTATUS(rc);
+	bool exit_by_signal = WIFSIGNALED(rc);
+
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
 	plugin_stats->InsertAttr("PluginExitCode", exit_status);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin.c_str(), exit_status);
+	plugin_stats->InsertAttr("PluginExitBySignal", exit_by_signal);
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin.c_str(), exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -5889,7 +5892,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	}
 
 	// If the plugin did not return successfully, report the error and return
-	if (result != TransferPluginResult::Success) {
+	if (exit_by_signal || (result != TransferPluginResult::Success)) {
 		std::string errorMessage;
 		std::string transferUrl;
 		if (!plugin_stats->LookupString("TransferError", errorMessage)) {
@@ -5897,8 +5900,13 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 				" exited unexpectedly without producing an error message ";
 		}
 		plugin_stats->LookupString("TransferUrl", transferUrl);
-		e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
-			exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		if (exit_by_signal) {
+			e.pushf("FILETRANSFER", 1, "exit by signal %d from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
+					WTERMSIG(rc), plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		} else {
+			e.pushf("FILETRANSFER", 1, "non-zero exit (%i) from %s. |Error: %s ( URL file = %s )|",  // URL file in err msg
+					exit_status, plugin.c_str(), errorMessage.c_str(), UrlSafePrint(transferUrl));
+		}
 		return TransferPluginResult::Error;
 	}
 
@@ -5997,9 +6005,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Close the plugin
 	int rc = my_pclose( plugin_pipe );
-	int exit_status = WEXITSTATUS(rc);
+	int exit_status     = WEXITSTATUS(rc);
+	bool exit_by_signal = WIFSIGNALED(rc);
 	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i\n", plugin_name.c_str(), exit_status);
+	if (exit_by_signal) {
+		result =  TransferPluginResult::Error;
+	}
+	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -6077,7 +6089,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if (result != TransferPluginResult::Success && e.getFullText().empty()) {
+	if (exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty())) {
 		e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
 			"did not report a TransferError message.", plugin_path.c_str(), exit_status);
 	}

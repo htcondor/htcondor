@@ -2570,7 +2570,7 @@ type=path
 tags=io
 
 [TRUST_DOMAIN]
-default=$(COLLECTOR_HOST)
+default=$(UID_DOMAIN)
 type=string
 tags=condor_auth_passwd
 
@@ -2779,6 +2779,11 @@ type=int
 default=
 type=string
 tags=negotiator,matchmaker
+
+[NEGOTIATOR_NUM_THREADS]
+default=1
+type=int
+tags=negotiator
 
 [PREEMPTION_RANK]
 default=(RemoteUserPrio * 1000000) - ifThenElse(isUndefined(TotalJobRuntime), 0, TotalJobRuntime)

@@ -181,8 +181,8 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
         return false;
     }
 
-    if (-1 == chown(mountpoint.c_str(), get_real_condor_uid(), get_real_condor_gid())) {
-        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to condor user: %s (errno=%d)",
+    if (-1 == chown(mountpoint.c_str(), get_user_uid(), get_user_gid())) {
+        err.pushf("VolumeManager", 14, "Failed to chown the new execute mount to user: %s (errno=%d)",
             strerror(errno), errno);
         return false;
     }
@@ -304,7 +304,7 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
 
         // TODO: Would be friendlier to unmount everything and resize instead of failing
     if (backing_stat.st_size < static_cast<off_t>(size_kb*1.02)*1024) {
-        err.pushf("VolumeManager", 6, "Pre-existing loopback file is too small (is %ld, asking for %ld\n)", backing_stat.st_size, (size_kb * 1.02) / 1024);
+        err.pushf("VolumeManager", 6, "Pre-existing loopback file is too small (is %g, asking for %g\n)", (double) backing_stat.st_size, (size_kb * 1.02) * 1024);
         return "";
     }
 
@@ -519,7 +519,7 @@ VolumeManager::UnmountFilesystem(const std::string &mountpoint, CondorError &err
             strerror(errno), errno);
     }
     int exit_status = 0;
-    if (-1 == umount(mountpoint.c_str())) {
+    if (-1 == umount2(mountpoint.c_str(), MNT_DETACH)) {
         exit_status = errno;
         err.pushf("VolumeManager", 17, "Failed to unmount %s: %s (errno=%d)",
             mountpoint.c_str(), strerror(errno), errno);

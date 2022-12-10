@@ -76,12 +76,12 @@ for /D %%I in ("%VS150COMNTOOLS%..") do set VS150ROOT=%%~sdpI
 
 :: pick up compiler path from VS170COMNTOOLS environment variable
 ::
-for /D %%I in ("%VS170COMNTOOLS%..") do if exist %%~sdpIVC\bin\cl.exe set VC170_BIN=%%~sdpIVC\bin
-for /D %%I in ("%VS170COMNTOOLS%..") do if exist %%~sdpICommon7\IDE\devenv.exe set VC150_IDE=%%~sdpICommon7\IDE
+::for /D %%I in ("%VS170COMNTOOLS%..\..") do if exist %%~sdpIVC\bin\cl.exe set VC170_BIN=%%~sdpIVC\bin
+for /D %%I in ("%VS170COMNTOOLS%..\Common7") do if exist %%~sdpIIDE\devenv.exe set VC170_IDE=%%~sdpIIDE
 for /D %%I in ("%VS170COMNTOOLS%..") do set VS170ROOT=%%~sdpI
 
-if NOT DEFINED VS150R00T set VS150ROOT=%VS170ROOT%
-if NOT DEFINED VS160R00T set VS160ROOT=%VS170ROOT%
+if NOT DEFINED VS150ROOT set VS150ROOT=%VS170ROOT%
+if NOT DEFINED VS160ROOT set VS160ROOT=%VS170ROOT%
 
 set VS_DIR=%VS90ROOT:~0,-1%
 set VS_GEN="Visual Studio 9 2008"
@@ -138,6 +138,7 @@ if exist "%VS_DIR%\Common7\IDE\devenv.exe" set DEVENV_DIR=%VS_DIR%\Common7\IDE
 
 :: Visual Studio 17 2022 comes with a new msbuild
 if exist "%VS_DIR%\MSBuild\Current\bin\msbuild.exe" set MSBUILD_PATH=%VS_DIR%\MSBuild\Current\bin
+if exist "%VS_DIR%\..\MSBuild\Current\bin\msbuild.exe" set MSBUILD_PATH=%VS_DIR%\..\MSBuild\Current\bin
 echo MSBUILD_PATH is now [%MSBUILD_PATH%]
 
 set DOTNET_PATH=%SystemRoot%\Microsoft.NET\Framework\v3.5;%SystemRoot%\Microsoft.NET\Framework\v2.0.50727

@@ -53,7 +53,7 @@ my $testdir = "condor_tests";
 # Handle testoverride file if one exists. this is not the normal case.
 ######################################################################
 my $TestOverride = File::Spec->catfile($BaseDir, $testdir, "testoverride");
-system("ls -R . ");
+if ($iswindows) { system("dir /b /s"); } else { system("ls -R . "); }
 print "Checking for test override file $TestOverride\n";
 if (-f "$TestOverride") {
 	print "****************************************************\n";

@@ -1614,6 +1614,21 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.0.0-1
+- Users can prevent runaway jobs by specifying an allowed duration
+- Able to extend submit commands and create job submit templates
+- Initial implementation of htcondor <noun> <verb> command line interface
+- Initial implementation of Job Sets in the htcondor CLI tool
+- Add Container Universe
+- Support for heterogeneous GPUs
+- Improved File transfer error reporting
+- GSI Authentication method has been removed
+- HTCondor now utilizes ARC-CE's REST interface
+- Support for ARM and PowerPC for Enterprise Linux 8
+- For IDTOKENS, signing key not required on every execution point
+- Trust on first use ability for SSL connections
+- Improvements against replay attacks
+
 * Wed Oct 05 2022 Tim Theisen <tim@cs.wisc.edu> - 9.12.0-1
 - Provide a mechanism to bootstrap secure authentication within a pool
 - Add the ability to define submit templates

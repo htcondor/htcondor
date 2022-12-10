@@ -43,7 +43,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "10.0.0")
+set(VERSION "10.0.1")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for
@@ -133,7 +133,7 @@ add_subdirectory (bindings/python)
 # logic here to support old nmi builds
 if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/docs/_build/man")
 
-	if (NOT WANT_MAN_PAGES OR ${SPHINXBUILD} STREQUAL "SPHINXBUILD-NOTFOUND")
+	if (NOT WANT_MAN_PAGES OR "${SPHINXBUILD}" STREQUAL "SPHINXBUILD-NOTFOUND")
 		message(STATUS "NOTE: Skipping man-pages")
 	else()
 

@@ -36,18 +36,39 @@ static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultot
     struct xferProgress *progress = (struct xferProgress *)p;
     CURL *curl = progress->curl;
     double curTime = 0;
-    
+    static double prevTime = 0; //Previous total time
+    static double dlprev   = 0; //Previous dlnow
+    static double ulprev   = 0; //Previous ulnow
+    /*Get download and upload differences from previous numbers to determine
+    if we should timeout since dlnow and ulnow are totals. This is to prevent
+    a stall out in file tranfser after a large change.*/
+    static double diffTime = 0;
+    static double diff_dl  = 0;
+    static double diff_ul  = 0;
+    diff_dl += dlnow - dlprev;
+    diff_ul += ulnow - ulprev;
+
+    dlprev = dlnow;
+    ulprev = ulnow;
+
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curTime);
+    diffTime += curTime - prevTime;
+    prevTime = curTime;
 
     // After 30 seconds, check if we're making forward progress (> 1 byte/s)
     if (curTime > 30) {
+        if (diffTime > 30) {
+            // If this is a download and not making progress, abort
+            if (dlnow > 0 && diffTime > diff_dl) return 1;
 
-        // If this is a download and not making progress, abort
-        if (dlnow > 0 && curTime > dlnow) return 1;
+            // If this is an upload and not making progress, abort
+            if (ulnow > 0 && diffTime > diff_ul) return 1;
 
-        // If this is an upload and not making progress, abort
-        if (ulnow > 0 && curTime > ulnow) return 1;
-
+            //Reset diffs for next check
+            diffTime = 0;
+            diff_dl  = 0;
+            diff_ul  = 0;
+        }
         // If not a single byte has been transferred either direction after 30 seconds, abort
         if (dlnow <= 0 && ulnow <= 0) return 1;
     }
@@ -128,6 +149,11 @@ GetToken(const std::string & cred_name, std::string & token) {
 		auto iter = line.begin();
 		while (isspace(*iter)) {iter++;}
 		if (*iter == '#') continue;
+		if (*iter != '{' && *iter != '[' ) {
+			// we have just a plain base64 token, not wrapped in JSON
+			token = line;
+			break;
+		}
 		rapidjson::Document doc;
 		if (doc.Parse(line.c_str()).HasParseError()) {
 			// DO NOT include the error message as part of the exception; the error
@@ -869,6 +895,9 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     fprintf(stderr, "[MultiFileCurlPlugin::HeaderCallback] called\n");
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
+    // Work around a bug in libcurl; see HTCONDOR-1426.
+    buffer = strdup(buffer);
+
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
@@ -896,6 +925,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
         }
         token = strtok( NULL, delimiters );
     }
+    free(buffer);
     return numBytes;
 }
 

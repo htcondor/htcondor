@@ -61,7 +61,7 @@ if (BUILD_TESTING)
 			ProcInfo.pm
 			SimpleJob.pm)
 
-	if (NOT ${CMAKE_SOURCE_DIR} STREQUAL ${CMAKE_BINARY_DIR})
+	if (NOT "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
 	foreach(scriptFile ${CHECK_MODULES})
 		add_custom_command ( OUTPUT ${TEST_TARGET_DIR}/Check/${scriptFile}
 			DEPENDS ${CONDOR_SOURCE_DIR}/src/condor_tests/Check/${scriptFile}
@@ -431,6 +431,7 @@ endif()
 	condor_pl_test(docker_simulator_test "docker_simulator_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/docker_simulator.pl;src/condor_tests/x_sleep.pl")
 	condor_pl_test(map_user_to_groups_metaknob_test "map_user_to_groups_metaknob_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_submit-factory "condor_submit -factory" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(job_xform_factory "submit -factory with transforms" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_ad_epoch_recording "Test Job Ads recorded per epoch" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 
 	if (LINUX)

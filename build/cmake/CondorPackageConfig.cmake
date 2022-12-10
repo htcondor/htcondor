@@ -163,7 +163,7 @@ set ( CPACK_GENERATOR "TGZ" )
 # include both paths, as we build the externals once for both types. The
 # settings for EXTERNALS_RPATH must be kept in synch with the C_LIB
 # settings made below for package builds.
-if ( ${OS_NAME} STREQUAL "LINUX" )
+if ( "${OS_NAME}" STREQUAL "LINUX" )
 	set( EXTERNALS_LIB "${C_LIB}/condor" )
 	if (${BIT_MODE} MATCHES "32" OR ${SYS_ARCH} MATCHES "IA64" )
 		set( CONDOR_RPATH "$ORIGIN/../lib:/lib:/usr/lib:$ORIGIN/../lib/condor:/usr/lib/condor" )
@@ -197,7 +197,7 @@ if ( CONDOR_RPMBUILD )
 	endif ()
 endif()
 
-if ( ${OS_NAME} STREQUAL "FREEBSD" )
+if ( "${OS_NAME}" STREQUAL "FREEBSD" )
 
 	# Condor installs nothing useful to FreeBSD in C_INIT, so
 	# just tuck it out of the way.  FreeBSD RC scripts come from
@@ -328,24 +328,24 @@ elseif ( ${OS_NAME} MATCHES "^WIN" )
 			"$ENV{VS170COMNTOOLS}../../VC/Redist/MSVC/v143/MergeModules"
 			"$ENV{SV170COMNTOOLS}../../VC/Redist/MSVC/14.16.27012/MergeModules"
 		)
-		## Win8 batlab hack! if we can't find the merge module we want, look again for the VC140 merge module...
-		## we need this because we can't install a new VC toolset on Win8, and the VC140 merge module is close enough...
+		## Starting with Visual C++ 2019, merge modules are deprecated and MS makes them hard to get a hold of
+		## Instead, they want you to redistribute a separate installer for the vc runtime
+		## so if we don't find the merge modules, just build the Condor installer without them
 		if (CPACK_VC_MERGE_MODULE MATCHES "-NOTFOUND")
-			if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-				set (VC_CRT_MSM Microsoft_VC140_CRT_x64.msm)
-			else()
-				set (VC_CRT_MSM Microsoft_VC140_CRT_x86.msm)
-			endif()
-			find_file( CPACK_VC_MERGE_MODULE
-				${VC_CRT_MSM}
-				"C:/Program Files/Common Files/Merge Modules" "C:/Program Files (x86)/Common Files/Merge Modules" )
+			set (VC_CRT_MSM off)
 		endif ()
 	endif ()
 
-	message(STATUS "CPACK_VC_MERGE_MODULE = ${CPACK_VC_MERGE_MODULE}")
+	if (VC_CRT_MSM)
+		message(STATUS "CPACK_VC_MERGE_MODULE = ${CPACK_VC_MERGE_MODULE}")
 
-	set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
-	set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
+		set (WIX_MERGE_MODLES "<Merge Id=\"VCCRT\" Language=\"1033\" DiskId=\"1\" SourceFile=\"${CPACK_VC_MERGE_MODULE}\"/>\n${WIX_MERGE_MODLES}")
+		set (WIX_MERGE_REFS "<MergeRef Id=\"VCCRT\"/>\n${WIX_MERGE_REFS}")
+	else(VC_CRT_MSM)
+		message(STATUS "CRT MergeModules not found, building installer without them.")
+		set (WIX_MERGE_MODLES "")
+		set (WIX_MERGE_REFS "")
+	endif ()
     		   
 	configure_file(${CONDOR_WIX_LOC}/xml/win.xsl.in ${CONDOR_BINARY_DIR}/msconfig/WiX/xml/condor.xsl @ONLY)
 	    
@@ -366,7 +366,7 @@ elseif ( ${OS_NAME} MATCHES "^WIN" )
 	#file( APPEND ${WINVER} "#define CONDOR_BLAH \"${YOUR_VAR}\"\n")
 
 	# below are options an overrides to enable packge generation for rpm & deb
-elseif( ${OS_NAME} STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
+elseif( "${OS_NAME}" STREQUAL "LINUX" AND CONDOR_PACKAGE_BUILD )
 
 	execute_process( COMMAND python2 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHONARCHLIB)
 	execute_process( COMMAND python3 -c "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_python_lib(1)[1:])" OUTPUT_VARIABLE C_PYTHON3ARCHLIB)

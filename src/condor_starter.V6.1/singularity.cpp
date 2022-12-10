@@ -143,11 +143,13 @@ Singularity::job_enabled(ClassAd &machineAd, ClassAd &jobAd)
 {
 	bool wantSIF = false;
 	bool wantSandbox  = false;
+	bool wantDockerImage = false;
 
 	jobAd.LookupBool(ATTR_WANT_SIF, wantSIF);
 	jobAd.LookupBool(ATTR_WANT_SANDBOX_IMAGE, wantSandbox);
+	jobAd.LookupBool(ATTR_WANT_DOCKER_IMAGE, wantDockerImage);
 
-	if (wantSIF || wantSandbox) {
+	if (wantSIF || wantSandbox || wantDockerImage) {
 		return true;
 	}
 
@@ -236,6 +238,13 @@ Singularity::setup(ClassAd &machineAd,
 
 	sing_args.AppendArg("-W");
 	sing_args.AppendArg(execute_dir.c_str());
+
+	// Singularity and Apptainer prohibit setting HOME.  Just delete it
+	job_env.DeleteEnv("HOME");
+	job_env.DeleteEnv("APPTAINER_BIND");
+	job_env.DeleteEnv("APPTAINER_BINDDIR");
+	job_env.DeleteEnv("SINGULARITY_BIND");
+	job_env.DeleteEnv("SINGULARITY_BINDDIR");
 
 	// When overlayfs is unavailable, singularity cannot bind-mount a directory that
 	// does not exist in the container.  Hence, we allow a specific fixed target directory
@@ -379,8 +388,13 @@ Singularity::setup(ClassAd &machineAd,
 
 	// If reading an image from a docker hub, store it in the scratch dir
 	// when we get AP sandboxes, that would be a better place to store these
-	job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
-	job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	if (Singularity::m_apptainer) {
+		job_env.SetEnv("APPTAINER_CACHEDIR", execute_dir);
+		job_env.SetEnv("APPTAINER_TEMPDIR", execute_dir);
+	} else {
+		job_env.SetEnv("SINGULARITY_CACHEDIR", execute_dir);
+		job_env.SetEnv("SINGULARITY_TEMPDIR", execute_dir);
+	}
 
 	Singularity::convertEnv(&job_env);
 	return Singularity::SUCCESS;
@@ -470,10 +484,17 @@ Singularity::hasTargetDir(const ClassAd &jobAd, /* not const */ std::string &tar
 }
 
 bool 
-Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, const Env &env, std::string &errorMessage) {
+Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_args_len, Env &env, std::string &errorMessage) {
 
 	TemporaryPrivSentry sentry(PRIV_USER);
 
+	// Cleanse environment
+	env.DeleteEnv("HOME");
+	env.DeleteEnv("APPTAINER_BIND");
+	env.DeleteEnv("APPTAINER_BINDDIR");
+	env.DeleteEnv("SINGULARITY_BIND");
+	env.DeleteEnv("SINGULARITY_BINDDIR");
+	//
 	// First replace "exec" with "test"
 	ArgList testArgs;
 
@@ -572,8 +593,11 @@ Singularity::canRun(const std::string &image) {
 	sandboxArgs.GetArgsStringForLogging( displayString );
 	dprintf(D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str());
 
+	TemporaryPrivSentry sentry(PRIV_CONDOR_FINAL);
+
 	MyPopenTimer pgm;
-	if (pgm.start_program(sandboxArgs, true, NULL, false) < 0) {
+	Env env;
+	if (pgm.start_program(sandboxArgs, true, &env, false) < 0) {
 		if (pgm.error_code() != 0) {
 			dprintf(D_ALWAYS, "Singularity exec of failed, this singularity can run some programs, but not these\n");
 			return false;

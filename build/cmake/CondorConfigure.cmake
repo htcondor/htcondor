@@ -17,7 +17,7 @@
  ###############################################################
 
 # OS pre mods
-if(${OS_NAME} MATCHES "^WIN")
+if("${OS_NAME}" MATCHES "^WIN")
 	set(WINDOWS ON)
 
 	# The following is necessary for sdk/ddk version to compile against.
@@ -89,18 +89,17 @@ if(NOT WINDOWS)
         include (FindPythonLibs)
         message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
         if (PYTHON_EXECUTABLE)
-            execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			if (${PYTHON_VERSION_MAJOR} VERSION_GREATER_EQUAL 3) 
+				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('EXT_SUFFIX'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			else()
+				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
+			endif()
         endif()
     else(WANT_PYTHON_WHEELS)
         # We need to do this the hard way for both python2 and python3 support in the same build
         # This will be easier in cmake 3
 
-        if(APPLE)
-            # macOS 12.X (Monterey) and above don't support python2
-            if(NOT ${OS_VER} MATCHES "2[1-9]")
-                find_program(PYTHON_EXECUTABLE python)
-            endif()
-        else()
+        if(NOT APPLE)
             find_program(PYTHON_EXECUTABLE python2)
         endif()
 
@@ -183,7 +182,7 @@ if(NOT WINDOWS)
             set(PYTHON_QUERY_PART_09 "print(sysconfig.get_config_var('MULTIARCH'));")
             set(PYTHON_QUERY_PART_10 "print(sysconfig.get_config_var('LDLIBRARY'));")
             set(PYTHON_QUERY_PART_11 "print(sysconfig.get_python_lib(plat_specific=True, prefix=''));")
-            set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('SO'));")
+			set(PYTHON_QUERY_PART_12 "print(sysconfig.get_config_var('EXT_SUFFIX'));")
             set(PYTHON_QUERY_PART_13 "print(sys.prefix)")
 
             set(PYTHON_QUERY_COMMAND "${PYTHON_QUERY_PART_01}${PYTHON_QUERY_PART_02}${PYTHON_QUERY_PART_03}${PYTHON_QUERY_PART_04}${PYTHON_QUERY_PART_05}${PYTHON_QUERY_PART_06}${PYTHON_QUERY_PART_07}${PYTHON_QUERY_PART_08}${PYTHON_QUERY_PART_09}${PYTHON_QUERY_PART_10}${PYTHON_QUERY_PART_11}${PYTHON_QUERY_PART_12}${PYTHON_QUERY_PART_13}")
@@ -459,7 +458,7 @@ if (CONDOR_PLATFORM)
     add_definitions(-DPLATFORM="${CONDOR_PLATFORM}")
 elseif(PLATFORM)
     add_definitions(-DPLATFORM="${PLATFORM}")
-elseif(LINUX_NAME AND NOT ${LINUX_NAME} STREQUAL "Unknown")
+elseif(LINUX_NAME AND NOT "${LINUX_NAME}" STREQUAL "Unknown")
     add_definitions(-DPLATFORM="${SYS_ARCH}-${LINUX_NAME}_${LINUX_VER}")
 else()
     add_definitions(-DPLATFORM="${SYS_ARCH}-${OS_NAME}_${OS_VER}")
@@ -520,7 +519,7 @@ if( NOT WINDOWS)
 	check_symbol_exists(TCP_KEEPALIVE "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPALIVE)
 	check_symbol_exists(TCP_KEEPCNT "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPCNT)
 	check_symbol_exists(TCP_KEEPINTVL, "sys/types.h;sys/socket.h;netinet/tcp.h" HAVE_TCP_KEEPINTVL)
-	if(${OS_NAME} STREQUAL "LINUX")
+	if("${OS_NAME}" STREQUAL "LINUX")
 		check_include_files("linux/tcp.h" HAVE_LINUX_TCP_H)
 	endif()
 	if( HAVE_LINUX_TCP_H )
@@ -563,7 +562,7 @@ if( NOT WINDOWS)
 
 	# The backtrace library call exists, but seems to crash
 	# when running under qemu ppc64le.  Let's skip that case
-	if (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le"))
+	if (NOT ("${CMAKE_SYSTEM_PROCESSOR}" STREQUAL "ppc64le"))
 		check_function_exists("backtrace" HAVE_BACKTRACE)
 	endif()
 
@@ -629,7 +628,7 @@ endif()
 ##################################################
 ##################################################
 # Now checking *nix OS based options
-if(${OS_NAME} STREQUAL "LINUX")
+if("${OS_NAME}" STREQUAL "LINUX")
 
 	set(LINUX ON)
 	set( CONDOR_BUILD_SHARED_LIBS TRUE )
@@ -751,7 +750,7 @@ endif()
 # KBDD option
 if (NOT WINDOWS)
     if (HAVE_X11)
-        if (NOT (${HAVE_X11} STREQUAL "HAVE_X11-NOTFOUND"))
+        if (NOT ("${HAVE_X11}" STREQUAL "HAVE_X11-NOTFOUND"))
             option(HAVE_KBDD "Support for condor_kbdd" ON)
         endif()
     endif()
@@ -826,7 +825,7 @@ endif()
 # above the addition of the .../src/classads subdir:
 if (LINUX
     AND PROPER
-    AND (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU"))
+    AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU"))
 
     # I wrote a nice macro for testing linker flags, but it is useless
     # because at least some older versions of linker ignore all '-z'
@@ -867,7 +866,7 @@ endif()
 ################################################################################
 # Various externals rely on make, even if we're not using
 # Make.  Ensure we have a usable, reasonable default for them.
-if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
+if("${CMAKE_GENERATOR}" STREQUAL "Unix Makefiles")
 	set( MAKE $(MAKE) )
 else ()
 	include (ProcessorCount)
