@@ -6,6 +6,7 @@ set -e
 HTCONDOR_VERSION=$1
 echo "HTCondor version is $HTCONDOR_VERSION"
 
+# shellcheck disable=SC2206 # don't have to worry abour word splitting
 AVERSION=(${HTCONDOR_VERSION//./ })
 MAJOR_VER=${AVERSION[0]}
 MINOR_VER=${AVERSION[1]}
@@ -169,12 +170,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         $INSTALL apptainer
     fi
-    if [ $ID = 'almalinux' ]; then
-        $INSTALL 'perl(Net::Domain)' 'perl(Time::HiRes)' which
-    fi
-    if [ $ID = 'amzn' ]; then
-        $INSTALL openssl 'perl(Digest::SHA)' 'perl(Env)' which
-    fi
+    $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(Env)' 'perl(Net::Domain)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
 if [ $ID = 'amzn' ] || [ $ID = 'centos' ]; then
@@ -197,6 +193,12 @@ if [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
     # with sphinx on this platform. Downgrade markupsafe and hope for the best
     pip3 install markupsafe==2.0.1
+fi
+
+if [ $VERSION_CODENAME = 'jammy' ];then
+    # TODO: figure out why this happens
+    ls -ld /var/lib/condor
+    chmod 0755 /var/lib/condor
 fi
 
 rm -rf /tmp/*

@@ -37,6 +37,7 @@ EOF
 }
 
 CONDOR_VERSION=$(grep 'set(VERSION' ../../CMakeLists.txt | sed -e 's/.*"\(.*\)".*/\1/')
+# shellcheck disable=SC2206 # don't have to worry about word splitting
 AVERSION=(${CONDOR_VERSION//./ })
 MAJOR_VER=${AVERSION[0]}
 MINOR_VER=${AVERSION[1]}
