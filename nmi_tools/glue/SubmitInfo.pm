@@ -666,6 +666,7 @@ our %submit_info = (
 
 	'nmi-zdev:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
 	'nmi-zdev:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
+	'nmi-zdev:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',

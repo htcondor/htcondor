@@ -46,6 +46,8 @@ elif $(grep -qi bionic /etc/os-release); then
     arch_dist="${arch}_Ubuntu18"
 elif $(grep -qi focal /etc/os-release); then
     arch_dist="${arch}_Ubuntu20"
+elif $(grep -qi jammy /etc/os-release); then
+    arch_dist="${arch}_Ubuntu22"
 else
     echo 'Platform not defined'
     exit 1
@@ -91,6 +93,8 @@ elif [[ $arch_dist =~ Ubuntu18 ]]; then
     externals="$common_externals libboost-python1.65.1"
 elif [[ $arch_dist =~ Ubuntu20 ]]; then
     externals="$common_externals libboost-python1.71.0"
+elif [[ $arch_dist =~ Ubuntu22 ]]; then
+    externals="$common_externals libboost-python1.74.0"
 fi
 
 mkdir external-packages
