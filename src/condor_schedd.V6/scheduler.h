@@ -628,7 +628,7 @@ class Scheduler : public Service
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
 	void			checkReconnectQueue( void );
-	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
+	void			makeReconnectRecords( const PROC_ID* job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
 	bool 	enqueueFinishedJob( int cluster, int proc );
@@ -842,7 +842,7 @@ private:
 		// If we we need to reconnect to disconnected starters, we
 		// stash the proc IDs in here while we read through the job
 		// queue.  Then, we can spawn all the shadows after the fact. 
-	SimpleList<PROC_ID> jobsToReconnect;
+	std::vector<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
 		// queue for sending hold/remove signals to shadows

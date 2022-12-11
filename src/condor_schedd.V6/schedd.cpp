@@ -8069,11 +8069,7 @@ Scheduler::checkContactQueue()
 bool
 Scheduler::enqueueReconnectJob( PROC_ID job )
 {
-	 if( ! jobsToReconnect.Append(job) ) {
-		 dprintf( D_ALWAYS, "Failed to enqueue job id (%d.%d)\n",
-				  job.cluster, job.proc );
-		 return false;
-	 }
+	 jobsToReconnect.push_back(job);
 	 dprintf( D_FULLDEBUG,
 			  "Enqueued job %d.%d to spawn shadow for reconnect\n",
 			  job.cluster, job.proc );
@@ -8100,21 +8096,18 @@ Scheduler::enqueueReconnectJob( PROC_ID job )
 void
 Scheduler::checkReconnectQueue( void ) 
 {
-	PROC_ID job;
-
 		// clear out the timer tid, since we made it here.
 	checkReconnectQueue_tid = -1;
 
-	jobsToReconnect.Rewind();
-	while( jobsToReconnect.Next(job) ) {
-		makeReconnectRecords(&job, NULL);
-		jobsToReconnect.DeleteCurrent();
+	for ( PROC_ID job: jobsToReconnect) {
+		makeReconnectRecords(&job, nullptr);
 	}
+	jobsToReconnect.clear();
 }
 
 
 void
-Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad ) 
+Scheduler::makeReconnectRecords( const PROC_ID* job, const ClassAd* match_ad ) 
 {
 	int cluster = job->cluster;
 	int proc = job->proc;
