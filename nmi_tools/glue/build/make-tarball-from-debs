@@ -18,6 +18,8 @@ cmd_dir=$(dirname $0)
 
 mkdir tarball
 
+. /etc/os-release
+
 for file in $debdir/*.deb; do
     if [[ $file == *-dbg_* ]]; then
         # Skip debug information
@@ -26,27 +28,23 @@ for file in $debdir/*.deb; do
         eval $(perl -e "(\$package, \$version, \$release, \$arch) = '$file' =~ m:^.*/(.*)_([0-9][0-9.]*)-([0-9][0-9.]*)_([^.]+)\.deb$:; print \"package=\$package version=\$version release=\$release arch=\$arch\";")
         echo ======= ${package}_$version-${release}_$arch.deb =======
         echo ${package}_$version-${release}_$arch.deb >> tarball/Manifest.txt
-        ar p $debdir/${package}_$version-${release}_$arch.deb data.tar.xz | (cd tarball; tar xfpJ -)
+        if [ $VERSION_CODENAME = 'jammy' ]; then
+            ar p $debdir/${package}_$version-${release}_$arch.deb data.tar.zst | (cd tarball; tar -x --file - -p --zstd)
+        else
+            ar p $debdir/${package}_$version-${release}_$arch.deb data.tar.xz | (cd tarball; tar xfpJ -)
+        fi
     fi
 done
 
 arch=$(uname -m)
 
-if $(grep -qi stretch /etc/os-release); then
-    arch_dist="${arch}_Debian9"
-elif $(grep -qi buster /etc/os-release); then
-    arch_dist="${arch}_Debian10"
-elif $(grep -qi bullseye /etc/os-release); then
+if [ $VERSION_CODENAME = 'bullseye' ]; then
     arch_dist="${arch}_Debian11"
-elif $(grep -qi bookworm /etc/os-release); then
-    arch_dist="${arch}_Debian12"
-elif $(grep -qi xenial /etc/os-release); then
-    arch_dist="${arch}_Ubuntu16"
-elif $(grep -qi bionic /etc/os-release); then
+elif [ $VERSION_CODENAME = 'bionic' ]; then
     arch_dist="${arch}_Ubuntu18"
-elif $(grep -qi focal /etc/os-release); then
+elif [ $VERSION_CODENAME = 'focal' ]; then
     arch_dist="${arch}_Ubuntu20"
-elif $(grep -qi jammy /etc/os-release); then
+elif [ $VERSION_CODENAME = 'jammy' ]; then
     arch_dist="${arch}_Ubuntu22"
 else
     echo 'Platform not defined'

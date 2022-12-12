@@ -1,17 +1,17 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-10020000
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10020000
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-10020000
-docker://htcondor/nmi-build:x86_64_AmazonLinux2-10020000
-docker://htcondor/nmi-build:x86_64_CentOS7-10020000
-docker://htcondor/nmi-build:x86_64_Debian11-10020000
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-10000006
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10000006
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-10000006
+docker://htcondor/nmi-build:x86_64_AmazonLinux2-10000006
+docker://htcondor/nmi-build:x86_64_CentOS7-10000006
+docker://htcondor/nmi-build:x86_64_Debian11-10000006
 x86_64_MacOSX15
 x86_64_macOS11
-docker://htcondor/nmi-build:x86_64_Ubuntu18-10020000
-docker://htcondor/nmi-build:x86_64_Ubuntu20-10020000
-docker://htcondor/nmi-build:x86_64_Ubuntu22-10020000
+docker://htcondor/nmi-build:x86_64_Ubuntu18-10000006
+docker://htcondor/nmi-build:x86_64_Ubuntu20-10000006
+docker://htcondor/nmi-build:x86_64_Ubuntu22-10000006
 x86_64_Windows7
 x86_64_Windows9
 x86_64_Windows10
