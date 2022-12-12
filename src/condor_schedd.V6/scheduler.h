@@ -842,7 +842,7 @@ private:
 		// If we we need to reconnect to disconnected starters, we
 		// stash the proc IDs in here while we read through the job
 		// queue.  Then, we can spawn all the shadows after the fact. 
-	SimpleList<PROC_ID> jobsToReconnect;
+	std::vector<PROC_ID> jobsToReconnect;
 	int				checkReconnectQueue_tid;
 
 		// queue for sending hold/remove signals to shadows
