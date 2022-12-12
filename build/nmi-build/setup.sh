@@ -170,7 +170,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $ID != 'amzn' ]; then
         $INSTALL apptainer
     fi
-    $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(Env)' 'perl(Net::Domain)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
+    $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(Env)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
 if [ $ID = 'amzn' ] || [ $ID = 'centos' ]; then
