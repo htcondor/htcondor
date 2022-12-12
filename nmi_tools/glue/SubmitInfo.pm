@@ -268,7 +268,7 @@ our %submit_info = (
 	},
 
 	'x86_64_Debian8'	        => 'x86_64_Debian7',
-	'nmi-zdev:x86_64_Debian8'	=> 'x86_64_Debian7',
+	'nmi-build:x86_64_Debian8'	=> 'x86_64_Debian7',
 
 	##########################################################################
 	# Platform DEB 9 on x86_64
@@ -286,10 +286,10 @@ our %submit_info = (
 			'testclass' => [ @default_testclass ],
 		},
 	},
-	'nmi-zdev:x86_64_Debian9'  => 'x86_64_Debian9',
-	'nmi-zdev:x86_64_Debian10' => 'x86_64_Debian9',
-	'nmi-zdev:x86_64_Debian11' => 'x86_64_Debian9',
-	'nmi-zdev:x86_64_Debian12' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian9'  => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian10' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian11' => 'x86_64_Debian9',
+	'nmi-build:x86_64_Debian12' => 'x86_64_Debian9',
 
 	##########################################################################
 	# Platform CentOS 8 on x86_64
@@ -308,12 +308,12 @@ our %submit_info = (
 		},
 	},
 
-	'nmi-zdev:x86_64_CentOS8' => 'x86_64_CentOS8',
-	'nmi-zdev:x86_64_Rocky8' => 'x86_64_CentOS8',
-	'nmi-zdev:aarch64_AlmaLinux8' => 'x86_64_CentOS8',
-	'nmi-zdev:ppc64le_AlmaLinux8' => 'x86_64_CentOS8',
-	'nmi-zdev:x86_64_AlmaLinux8' => 'x86_64_CentOS8',
-	'nmi-zdev:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
+	'nmi-build:x86_64_CentOS8' => 'x86_64_CentOS8',
+	'nmi-build:x86_64_Rocky8' => 'x86_64_CentOS8',
+	'nmi-build:aarch64_AlmaLinux8' => 'x86_64_CentOS8',
+	'nmi-build:ppc64le_AlmaLinux8' => 'x86_64_CentOS8',
+	'nmi-build:x86_64_AlmaLinux8' => 'x86_64_CentOS8',
+	'nmi-build:x86_64_AmazonLinux2' => 'x86_64_Ubuntu18',
 
 	##########################################################################
 	# Platform RHEL 7 on x86_64
@@ -334,7 +334,7 @@ our %submit_info = (
 
 	'x86_64_CentOS7'	=> 'x86_64_RedHat7',
 	'x86_64_SL7'		=> 'x86_64_RedHat7',
-	'nmi-zdev:x86_64_CentOS7' => 'x86_64_RedHat7',
+	'nmi-build:x86_64_CentOS7' => 'x86_64_RedHat7',
 
 	# 32 bit CentOS 7
 	'x86_CentOS7'		=> {
@@ -353,7 +353,7 @@ our %submit_info = (
 		},
 	},
 
-	'nmi-zdev:x86_CentOS7' => 'x86_CentOS7',
+	'nmi-build:x86_CentOS7' => 'x86_CentOS7',
 
 	##########################################################################
 	# Platform RedHat and SL
@@ -379,7 +379,7 @@ our %submit_info = (
 	'x86_64_rhap_6.7'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.8'	=> 'x86_64_RedHat6',
 	'x86_64_rhap_6.9'	=> 'x86_64_RedHat6',
-	'nmi-zdev:x86_64_CentOS6'	=> 'x86_64_RedHat6',
+	'nmi-build:x86_64_CentOS6'	=> 'x86_64_RedHat6',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:rhel-6.4-64'	=> 'x86_64_RedHat6',
@@ -432,7 +432,7 @@ our %submit_info = (
 	'x86_rhap_6.7'		=> 'x86_RedHat6',
 	'x86_rhap_6.8'		=> 'x86_RedHat6',
 	'x86_rhap_6.9'		=> 'x86_RedHat6',
-	'nmi-zdev:x86_CentOS6' => 'x86_RedHat6',
+	'nmi-build:x86_CentOS6' => 'x86_RedHat6',
 
 	# 32 bit RedHat 5
 	'x86_RedHat5'		=> {
@@ -550,12 +550,12 @@ our %submit_info = (
 	'x86_64_Fedora24'				=> 'x86_64_Fedora',
 	'x86_64_Fedora25'				=> 'x86_64_Fedora',
 	'x86_64_Fedora27'				=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora27'		=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora28'		=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora29'		=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora30'		=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora31'		=> 'x86_64_Fedora',
-	'nmi-zdev:x86_64_Fedora32'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora27'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora28'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora29'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -649,7 +649,7 @@ our %submit_info = (
 		},
 	},
 
-	'nmi-zdev:x86_64_Ubuntu16'	=> 'x86_64_Ubuntu16',
+	'nmi-build:x86_64_Ubuntu16'	=> 'x86_64_Ubuntu16',
 
 	'x86_64_Ubuntu18'	=> {
 		'build' => {
@@ -664,9 +664,9 @@ our %submit_info = (
 		},
 	},
 
-	'nmi-zdev:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
-	'nmi-zdev:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
-	'nmi-zdev:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
+	'nmi-build:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
+	'nmi-build:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
+	'nmi-build:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',
