@@ -121,7 +121,7 @@ if [ $VERSION_CODENAME = 'bionic' ] || [ $VERSION_CODENAME = 'jammy' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'fedora' ]; then
+if [ $ID = 'almalinux' ] && [ $VERSION_ID -eq 9 ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo

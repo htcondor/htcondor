@@ -48,6 +48,8 @@ elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
     arch_dist="${arch}_AlmaLinux8"
+elif [[ $dist == el9 ]]; then
+    arch_dist="${arch}_AlmaLinux9"
 elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
@@ -71,16 +73,16 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-common_externals="boost169-python3 \
-    libcgroup \
-    libgomp \
+common_externals="libgomp \
     munge-libs \
     pcre2 \
     scitokens-cpp \
     voms"
 
 if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
-    el7_externals="python36-chardet \
+    el7_externals="boost169-python3 \
+        libcgroup \
+        python36-chardet \
         python36-idna \
         python36-pysocks \
         python36-requests \
@@ -88,7 +90,9 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-urllib3"
     externals="$common_externals $el7_externals"
 elif [[ $arch_dist =~ AlmaLinux8 ]]; then
-    externals="$common_externals"
+    externals="$common_externals boost169-python3 libcgroup"
+elif [[ $arch_dist =~ AlmaLinux9 ]]; then
+    externals="$common_externals boost-python3"
 elif [[ $arch_dist =~ Fedora32 ]]; then
     externals="$common_externals"
 fi

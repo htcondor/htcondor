@@ -171,8 +171,10 @@ BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 
+%if ! 0%{?rhel} == 9
 BuildRequires: libcgroup-devel
 Requires: libcgroup
+%endif
 
 %if 0%{?rhel} == 7 && 0%{?devtoolset}
 BuildRequires: which
@@ -672,6 +674,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
+%if 0%{?rhel} == 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
@@ -702,6 +709,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
+%if 0%{?rhel} == 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -712,12 +724,18 @@ export CMAKE_PREFIX_PATH=/usr
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
 %endif
 
 %install
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
 function populate {
@@ -733,7 +751,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
+%if 0%{?rhel} == 9
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 %endif
 
 # Drop in a symbolic link for backward compatibility
