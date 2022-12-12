@@ -11,7 +11,7 @@ x86_64_MacOSX15
 x86_64_macOS11
 docker://htcondor/nmi-build:x86_64_Ubuntu18-10000006
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10000006
-docker://htcondor/nmi-build:x86_64_Ubuntu20-10000006
+docker://htcondor/nmi-build:x86_64_Ubuntu22-10000006
 x86_64_Windows7
 x86_64_Windows9
 x86_64_Windows10
