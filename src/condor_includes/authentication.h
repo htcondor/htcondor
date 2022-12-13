@@ -188,7 +188,7 @@ class Authentication {
     
     int selectAuthenticationType( const std::string& my_methods, int remote_methods );
 
-	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name);
+	void map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name, std::string& canonical_user);
 
     int authenticate_inner( char *hostAddr, const char* auth_methods, CondorError* errstack, int timeout, bool non_blocking);
     
