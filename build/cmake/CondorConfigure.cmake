@@ -60,7 +60,7 @@ endif()
 
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
-message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX}")
+message(STATUS "install prefix:${CMAKE_INSTALL_PREFIX} cmake version: ${CMAKE_VERSION}" )
 message(STATUS "********* BEGINNING CONFIGURATION *********")
 
 ##################################################
