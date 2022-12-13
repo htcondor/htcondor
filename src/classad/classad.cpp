@@ -870,21 +870,23 @@ Remove( const string &name )
 		tree->SetParentScope( NULL );
 	}
 
-	// If the attribute is in the chained parent, we delete define it
-	// here as undefined, whether or not it was defined here.  This is
-	// behavior copied from old ClassAds. It's also one reason you
-	// probably don't want to use this feature in the future.
-	if (chained_parent_ad != NULL &&
-		chained_parent_ad->Lookup(name) != NULL) {
-
-		if (tree == NULL) {
-			tree = chained_parent_ad->Lookup(name);
+	// If there is a chained parent ad, we have to check to see if removing
+	// the attribute from the child caused the parent attribute to become visible.
+	// If it did, then we have to set the child attribute to the UNDEFINED value explicitly
+	// so that the parent attribute will not show through.
+	if (chained_parent_ad) {
+		ExprTree * parent_expr = chained_parent_ad->Lookup(name);
+		if (parent_expr) {
+			// If there was no attribute in the child ad
+			// we want to return a copy of the parent's expr-tree
+			// as if we had removed it from the child.
+			if ( ! tree) {
+				tree = parent_expr->Copy();
+				tree->SetParentScope( NULL );
+			}
+			ExprTree* plit  = Literal::MakeUndefined();
+			Insert(name, plit);
 		}
-		
-		Value undefined_value;
-		undefined_value.SetUndefinedValue();
-		ExprTree* plit  = Literal::MakeLiteral( undefined_value );
-		Insert(name, plit);
 	}
 	return tree;
 }
