@@ -86,6 +86,10 @@ Bugs Fixed:
   when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
   :jira:`1464`
 
+- Fixed a bug in the ``RENAME`` command of the transform language that could result in a
+  crash of the *condor_schedd* or *condor_job_router*.
+  :jira:`1486`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
