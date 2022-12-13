@@ -45,6 +45,7 @@ TEST_CASES = {
 def permissive_condor(test_dir, path_to_sleep):
     permissive_config = {
         "LIMIT_DIRECTORY_ACCESS": f"{str(test_dir)}, {str(Path(path_to_sleep).parent)}",
+        "ALLOW_TRANSFER_REMAP_TO_MKDIR":"True",
     }
     with Condor(test_dir / "condor", permissive_config) as condor:
         yield condor
