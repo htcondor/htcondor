@@ -190,7 +190,7 @@ Condor_Auth_SSL::AuthState::~AuthState() {
 }
 
 Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */, bool scitokens_mode)
-    : Condor_Auth_Base    ( sock, CAUTH_SSL ),
+    : Condor_Auth_Base    ( sock, scitokens_mode ? CAUTH_SCITOKENS : CAUTH_SSL ),
 	m_scitokens_mode(scitokens_mode)
 {
 	m_crypto = NULL;
