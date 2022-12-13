@@ -72,6 +72,7 @@ rm -r condor_tests-$version-$release-$arch_dist
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
 common_externals="boost169-python3 \
+    condor-stash-plugin \
     libcgroup \
     libgomp \
     munge-libs \
