@@ -2159,7 +2159,7 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 		m_pluginState->m_pid = -1;
 		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s stdout:%s\n", plugin_name, m_pluginState->m_stdout.c_str());
 		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s stderr:%s\n", plugin_name, m_pluginState->m_stderr.c_str());
-		if (m_pluginState->m_exitStatus == 0) {
+		if (WIFEXITED(m_pluginState->m_exitStatus) && WEXITSTATUS(m_pluginState->m_exitStatus) == 0) {
 			dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s matched, extracting result\n", plugin_name);
 			formatstr(param_name, "SEC_SCITOKENS_PLUGIN_%s_MAPPING", plugin_name);
 			if (param(m_pluginResult, param_name.c_str())) {
