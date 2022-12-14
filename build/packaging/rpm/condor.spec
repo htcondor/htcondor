@@ -145,7 +145,9 @@ BuildRequires: cmake >= 3.8
 %endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
+%if 0%{?rhel} >= 8
 BuildRequires: boost-devel
+%endif
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
@@ -220,17 +222,9 @@ BuildRequires: boost-static
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: boost-python3-devel
 %else
-%if 0%{?fedora} >= 30
-BuildRequires: boost-python2-devel
-%else
-%if ! 0%{?amzn}
-BuildRequires: boost-python
-%else
 BuildRequires: python3-devel
 BuildRequires: boost169-python2-devel
 BuildRequires: boost169-python3-devel
-%endif
-%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
