@@ -24,6 +24,10 @@ New Features:
   so that it can be installed on non-english Windows platforms
   :jira:`1474`
 
+- HTCondor now includes a file transfer plugin that support ``stash://``
+  and ``osdf://`` URLs.
+  :jira:`1332`
+
 Bugs Fixed:
 
 - Fixed a bug where *condor_rm*'ing with the -forcex option
