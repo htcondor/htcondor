@@ -387,7 +387,7 @@ class ClassAd : public ExprTree
 			@param attrName The name of the attribute in the ClassAd.
 			@param result The result of the evaluation.
 		*/
-		bool EvaluateAttr( const std::string& attrName, Value &result ) const;
+		bool EvaluateAttr( const std::string& attrName, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
 
 		/** Evaluates an expression.
 			@param buf Buffer containing the external representation of the
@@ -404,7 +404,7 @@ class ClassAd : public ExprTree
 			@param expr The expression to be evaluated.
 			@param result The result of the evaluation.
 		*/
-		bool EvaluateExpr( const ExprTree* expr, Value &result ) const;	// eval'n
+		bool EvaluateExpr( const ExprTree* expr, Value &result, Value::ValueType mask=Value::ValueType::SAFE_VALUES ) const;
 
 		/** Evaluates an expression, and returns the significant subexpressions
 				encountered during the evaluation.  If the expression doesn't 

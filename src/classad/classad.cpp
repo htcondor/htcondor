@@ -1100,48 +1100,35 @@ _GetDeepScope( ExprTree *tree ) const
 
 
 bool ClassAd::
-EvaluateAttr( const string &attr , Value &val ) const
+EvaluateAttr( const string &attr , Value &val, Value::ValueType mask ) const
 {
+	bool successfully_evaluated = false;
 	EvalState	state;
 	ExprTree	*tree;
 
 	state.SetScopes( this );
-	switch( LookupInScope( attr, tree, state ) ) {	
-		case EVAL_FAIL:
-			return false;
-
+	switch( LookupInScope( attr, tree, state ) ) {
 		case EVAL_OK:
-			return( tree->Evaluate( state, val ) );
+			successfully_evaluated = tree->Evaluate( state, val );
+			if ( ! val.SafetyCheck(state, mask)) {
+				successfully_evaluated = false;
+			}
+			break;
 
 		case EVAL_UNDEF:
+			successfully_evaluated = true;
 			val.SetUndefinedValue( );
-			return( true );
+			break;
 
 		case EVAL_ERROR:
+			successfully_evaluated = true;
 			val.SetErrorValue( );
-			return( true );
+			break;
 
+		case EVAL_FAIL:
 		default:
-			return false;
-	}
-}
-
-bool ClassAd::
-EvaluateExpr( const string& buf, Value &result ) const
-{
-	bool           successfully_evaluated;
-	ExprTree       *tree;
-	ClassAdParser  parser;
-
-	tree = NULL;
-	if (parser.ParseExpression(buf, tree)) {
-		successfully_evaluated = EvaluateExpr(tree, result);
-	} else {
-		successfully_evaluated = false;
-	}
-
-	if (NULL != tree) {
-		delete tree;
+			successfully_evaluated = false;
+			break;
 	}
 
 	return successfully_evaluated;
@@ -1149,13 +1136,47 @@ EvaluateExpr( const string& buf, Value &result ) const
 
 
 bool ClassAd::
-EvaluateExpr( const ExprTree *tree , Value &val ) const
+EvaluateExpr( const string& buf, Value &result ) const
+{
+	bool           successfully_evaluated = false;
+	ExprTree       *tree = nullptr;
+	ClassAdParser  parser;
+	EvalState      state;
+
+	if (parser.ParseExpression(buf, tree)) {
+		state.AddToDeletionCache(tree);
+		state.SetScopes( this );
+		successfully_evaluated = tree->Evaluate( state , result );
+		if (successfully_evaluated && ! result.SafetyCheck(state, Value::ValueType::SAFE_VALUES)) {
+			successfully_evaluated = false;
+		}
+	}
+
+	return successfully_evaluated;
+}
+
+
+// mask is a hint about what types are wanted back, but a mismatch between tye mask
+// and the evaluated type will not result in the function returning false.
+// this is for backward compatibility
+//
+bool ClassAd::
+EvaluateExpr( const ExprTree *tree , Value &val, Value::ValueType mask ) const
 {
 	EvalState	state;
 
 	state.SetScopes( this );
-	return( tree->Evaluate( state , val ) );
+	bool res = tree->Evaluate( state , val );
+	if ( ! res) {
+		return res;
+	}
+	if ( ! val.SafetyCheck(state, mask)) {
+		res = false;
+	}
+
+	return res;
 }
+
 
 bool ClassAd::
 EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
@@ -1163,91 +1184,95 @@ EvaluateExpr( const ExprTree *tree , Value &val , ExprTree *&sig ) const
 	EvalState	state;
 
 	state.SetScopes( this );
-	return( tree->Evaluate( state , val , sig ) );
+	bool res = tree->Evaluate( state , val , sig );
+	if (res && ! val.SafetyCheck(state, Value::ValueType::SAFE_VALUES)) {
+		res = false;
+	}
+	return res;
 }
 
 bool ClassAd::
 EvaluateAttrInt( const string &attr, int &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrInt( const string &attr, long &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrInt( const string &attr, long long &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsIntegerValue( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsIntegerValue( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrReal( const string &attr, double &r )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsRealValue( r ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsRealValue( r ) );
 }
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, int &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, long &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, long long &i )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsNumber( i ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( i ) );
 }
 
 bool ClassAd::
 EvaluateAttrNumber( const string &attr, double &r )  const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsNumber( r ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsNumber( r ) );
 }
 
 bool ClassAd::
 EvaluateAttrString( const string &attr, char *buf, int len ) const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsStringValue( buf, len ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf, len ) );
 }
 
 bool ClassAd::
 EvaluateAttrString( const string &attr, string &buf ) const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsStringValue( buf ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::STRING_VALUE ) && val.IsStringValue( buf ) );
 }
 
 bool ClassAd::
 EvaluateAttrBool( const string &attr, bool &b ) const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsBooleanValue( b ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValue( b ) );
 }
 
 bool ClassAd::
 EvaluateAttrBoolEquiv( const string &attr, bool &b ) const
 {
 	Value val;
-	return( EvaluateAttr( attr, val ) && val.IsBooleanValueEquiv( b ) );
+	return( EvaluateAttr( attr, val, Value::ValueType::NUMBER_VALUES ) && val.IsBooleanValueEquiv( b ) );
 }
 
 #if 0

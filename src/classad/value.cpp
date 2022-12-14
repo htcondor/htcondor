@@ -318,6 +318,72 @@ SetClassAdValue( classad_shared_ptr<ClassAd> ad )
     sclassadValue = new classad_shared_ptr<ClassAd>(ad);
 }
 
+void Value::MakeSelfContained()
+{
+	if (valueType == LIST_VALUE) {
+		if (listValue) {
+			ExprList * l = (ExprList*)listValue->Copy();
+			slistValue = new classad_shared_ptr<ExprList>(l);
+			valueType = SLIST_VALUE;
+		}
+	} else if (valueType == CLASSAD_VALUE) {
+		if (classadValue) {
+			ClassAd * ad = (ClassAd*)classadValue->Copy();
+			// Deep copies do NOT reset the parent pointer or the
+			// chained ad pointer; do so now, to prevent bad
+			// dereferences in the future.
+			ad->ChainToAd(NULL);
+			ad->SetParentScope(NULL);
+			sclassadValue = new classad_shared_ptr<ClassAd>(ad);
+			valueType = SCLASSAD_VALUE;
+		}
+	}
+}
+
+/** Converts LIST_VALUE to SLIST_VALUE and CLASSAD_VALUE to SCLASSAD_VALUE by deep-copy
+    or by stealing a pointer from the EvalState, other types are not modified
+*/
+void Value::MakeSelfContained(EvalState & state)
+{
+	if ( ! state.GivePtrToValue(*this)) {
+		MakeSelfContained();
+	}
+}
+
+/* Conditionally converts LIST_VALUE to SLIST_VALUE or CLASSAD_VALUE to SCLASSAD_VALUE
+stealing pointers from EvalState if necessary and clearing undesired unsafe values
+returns false if the value was cleared because it was unsafe.
+NOTE: if the mask has LIST_VALUE or CLASSAD_VALUE then those are treated
+as safe types and not converted to counted pointers *unless* the pointer is stolen
+from the EvalState.  This is done for max backward compatibility, in case there is
+code that expects the Value to be a pointer into the classad.  The case where the
+pointer is taken from the EvalState would have just crashed before :<
+Call this with SAFE_VALUES to always convert lists and classads to counted pointers
+but remember this will make a deep copy in most cases.
+*/
+bool Value::SafetyCheck(EvalState & state, ValueType mask)
+{
+	// treat a mask of 0 as meaning all self-contained types
+	unsigned int testmask = mask ? mask : Value::ValueType::SAFE_VALUES;
+
+	if (valueType & testmask) {
+		// if the type is wanted, make sure that we grab any pointer about to be deleted
+		// but do not otherwise deep copy complex types
+		state.GivePtrToValue(*this);
+	} else if ( ! IsSelfContained()) {
+		// if the value is an unsafe complex type, and only self-contained types are wanted
+		// promote to a self contained type.
+		// If the type is not wanted, just clear the value and pretend evaluation failed.
+		if (((testmask & SLIST_VALUE) && valueType == LIST_VALUE) ||
+			((testmask & SCLASSAD_VALUE) && valueType == CLASSAD_VALUE)) {
+			MakeSelfContained(state);
+		} else {
+			Clear();
+			return false;
+		}
+	}
+	return true;
+}
 
 void Value::
 SetClassAdValue( ClassAd *ad )

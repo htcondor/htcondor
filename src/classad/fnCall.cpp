@@ -2678,6 +2678,9 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	// add the new tree to the evaluation cache for later deletion
+	state.AddToDeletionCache(expr);
+
 	state.depth_remaining--;
 
 	expr->SetParentScope( state.curAd );
@@ -2685,8 +2688,6 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	bool eval_ok = expr->Evaluate( state, result );
 
 	state.depth_remaining++;
-
-	delete expr;
 
 	if( !eval_ok ) {
 		result.SetErrorValue();
