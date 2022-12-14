@@ -51,6 +51,14 @@
 #include <iomanip>
 #include <string.h>
 
+#include "condor_daemon_core.h"
+
+GCC_DIAG_OFF(float-equal)
+GCC_DIAG_OFF(cast-qual)
+#include "jwt-cpp/jwt.h"
+GCC_DIAG_ON(float-equal)
+GCC_DIAG_ON(cast-qual)
+
 namespace {
 
 bool hostname_match(const char *match_pattern, const char *hostname)
@@ -179,6 +187,9 @@ bool Condor_Auth_SSL::m_initSuccess = false;
 bool Condor_Auth_SSL::m_should_search_for_cert = true;
 bool Condor_Auth_SSL::m_cert_avail = false;
 
+int Condor_Auth_SSL::m_pluginReaperId = -1;
+std::map<int, Condor_Auth_SSL*> Condor_Auth_SSL::m_pluginPidTable;
+
 Condor_Auth_SSL::AuthState::~AuthState() {
 	if (m_ctx) {(*SSL_CTX_free_ptr)(m_ctx); m_ctx = nullptr;}
 	if (m_ssl) {
@@ -191,7 +202,8 @@ Condor_Auth_SSL::AuthState::~AuthState() {
 
 Condor_Auth_SSL :: Condor_Auth_SSL(ReliSock * sock, int /* remote */, bool scitokens_mode)
     : Condor_Auth_Base    ( sock, scitokens_mode ? CAUTH_SCITOKENS : CAUTH_SSL ),
-	m_scitokens_mode(scitokens_mode)
+	m_scitokens_mode(scitokens_mode),
+	m_pluginRC(0)
 {
 	m_crypto = NULL;
 	m_crypto_state = NULL;
@@ -207,6 +219,9 @@ Condor_Auth_SSL :: ~Condor_Auth_SSL()
 #endif
 	if(m_crypto) delete(m_crypto);
 	if(m_crypto_state) delete(m_crypto_state);
+	if (m_pluginState && m_pluginState->m_pid > 0) {
+		m_pluginPidTable[m_pluginState->m_pid] = nullptr;
+	}
 }
 
 bool Condor_Auth_SSL::Initialize()
@@ -1044,19 +1059,24 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			//
 			// We can't delay this info authentication_finish() because we
 			// need to be able to tell the client that the authN failed.
-			std::string canonical_user;
-			Authentication::load_map_file();
-			auto global_map_file = Authentication::getGlobalMapFile();
-			bool mapFailed = true;
-			if( global_map_file != NULL ) {
-				mapFailed = global_map_file->GetCanonicalization( "SCITOKENS", m_scitokens_auth_name, canonical_user );
-			}
-			if( mapFailed ) {
-				dprintf(D_ERROR, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
+			if (m_auth_state->m_server_status == AUTH_SSL_HOLDING) {
+				std::string canonical_user;
+				Authentication::load_map_file();
+				auto global_map_file = Authentication::getGlobalMapFile();
+				bool mapFailed = true;
+				bool pluginsDefined = param_defined("SEC_SCITOKENS_PLUGIN_NAMES");
+				if( global_map_file != NULL ) {
+					mapFailed = global_map_file->GetCanonicalization( "SCITOKENS", m_scitokens_auth_name, canonical_user );
+				}
+				if (!global_map_file && pluginsDefined) {
+					dprintf(D_SECURITY|D_VERBOSE, "No map file, but SCITOKENS plugins defined, assuming authorization will succeed\n");
+				} else if( mapFailed ) {
+					dprintf(D_ERROR, "Failed to map SCITOKENS authenticated identity '%s', failing authentication to give another authentication method a go.\n", m_scitokens_auth_name.c_str() );
 
-				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
-			} else {
-				dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
+					m_auth_state->m_server_status = AUTH_SSL_QUITTING;
+				} else {
+					dprintf(D_SECURITY|D_VERBOSE, "Mapped SCITOKENS authenticated identity '%s' to %s, assuming authorization will succeed.\n", m_scitokens_auth_name.c_str(), canonical_user.c_str() );
+				}
 			}
 		}
 		if(m_auth_state->m_round_ctr % 2 == 1) {
@@ -1995,4 +2015,298 @@ Condor_Auth_SSL::should_try_auth()
 	}
 	m_cert_avail = true;
 	return true;
+}
+
+int
+Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& result, CondorError* errstack)
+{
+	// TODO JEF should some of these be treated as errors?
+	if (!m_scitokens_mode || m_client_scitoken.empty() || getRemoteUser() == nullptr) {
+		m_pluginResult.clear();
+		m_pluginRC = 1;
+		return 1;
+	}
+
+	ASSERT(daemonCore);
+
+	if (m_pluginReaperId == -1) {
+		m_pluginReaperId = daemonCore->Register_Reaper(
+				"Condor_Auth_SSL::PluginReaper()",
+				&Condor_Auth_SSL::PluginReaper,
+				"Condor_Auth_SSL::PluginReaper()");
+	}
+
+		// TODO Maybe be less harsh here?
+	ASSERT(!m_pluginState);
+	ASSERT(m_pluginRC != 2);
+
+	m_pluginResult.clear();
+	m_pluginState.reset(new PluginState);
+
+	if (input == "*") {
+		// Use all plugins named in SEC_SCITOKENS_PLUGIN_NAMES
+		std::string names;
+		if (!param(names, "SEC_SCITOKENS_PLUGIN_NAMES") || names.empty()) {
+			dprintf(D_ALWAYS, "SEC_SCITOKENS_PLUGIN_NAMES isn't defined\n");
+			m_pluginState.reset();
+			m_pluginRC = 1;
+			return 1;
+		}
+		StringTokenIterator toker(names);
+		const std::string* next;
+		while ((next = toker.next_string())) {
+			m_pluginState->m_names.push_back(*next);
+		}
+	} else {
+		// TODO compare names to SEC_SCITOKENS_PLUGIN_NAMES?
+		StringTokenIterator toker(input, 5, ",");
+		const std::string* next;
+		while ((next = toker.next_string())) {
+			m_pluginState->m_names.push_back(*next);
+		}
+	}
+
+	auto jwt = jwt::decode(m_client_scitoken);
+	m_pluginState->m_stdin = jwt.get_payload();
+
+		// Merge current environment?
+		// iterate over jwt
+		// set BEARER_TOKEN_* variables in environment
+	std::string token_value;
+	std::string env_name;
+	token_value = jwt.get_issuer();
+	m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_ISSUER", token_value);
+	if (jwt.has_subject()) {
+		token_value = jwt.get_subject();
+		m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_SUBJECT", token_value);
+	}
+	auto claims = jwt.get_payload_claims();
+	for (const auto &pair : claims) {
+		switch (pair.second.get_type()) {
+		case jwt::json::type::string:
+			if (pair.first == "iss") {
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_ISSUER", pair.second.as_string());
+			} else if (pair.first == "sub") {
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_SUBJECT", pair.second.as_string());
+			} else if (pair.first == "aud") {
+				m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_AUDIENCE", pair.second.as_string());
+			} else if (pair.first == "scope") {
+				// StringTokenIterator doesn't copy its input, so we need
+				// to ensure the value is valid throughout the iteration
+				// process.
+				std::string value = pair.second.as_string();
+				StringTokenIterator toker(value, 2, " ");
+				int idx = 0;
+				const std::string* next;
+				while ((next = toker.next_string())) {
+					formatstr(env_name, "BEARER_TOKEN_0_SCOPE_%d", idx);
+					m_pluginState->m_env.SetEnv(env_name, *next);
+					idx++;
+				}
+			}
+			m_pluginState->m_env.SetEnv(env_name, pair.second.as_string());
+			break;
+		case jwt::json::type::array: {
+			int idx = 0;
+			bool is_groups = (pair.first == "wlcg.groups");
+			const picojson::array& values = pair.second.as_array();
+			for (const auto& next : values) {
+				//if (next.get_type() != jwt::json::type::string) {
+				//	continue;
+				//}
+				const std::string& next_str = next.get<std::string>();
+				if (idx == 0 && pair.first == "aud") {
+					m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_AUDIENCE", next_str.c_str());
+				}
+				if (is_groups) {
+					formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_%d", pair.first.c_str(), idx);
+					m_pluginState->m_env.SetEnv(env_name, next_str);
+				}
+				formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_%d", pair.first.c_str(), idx);
+				m_pluginState->m_env.SetEnv(env_name, next_str);
+				idx++;
+			}
+			break;
+		}
+		default:
+			// skip
+			break;
+		}
+	}
+
+	m_pluginRC = 2;
+
+	return ContinueScitokensPlugins(result, errstack);
+}
+
+int
+Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errstack)
+{
+	if (m_pluginRC != 2) {
+		result = m_pluginResult;
+		return m_pluginRC;
+	}
+
+	std::string param_name;
+
+	if (m_pluginState->m_pid > 0 && m_pluginState->m_exitStatus >= 0) {
+		const char* plugin_name = m_pluginState->m_names[m_pluginState->m_idx].c_str();
+		m_pluginState->m_pid = -1;
+		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s stdout:%s\n", plugin_name, m_pluginState->m_stdout.c_str());
+		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s stderr:%s\n", plugin_name, m_pluginState->m_stderr.c_str());
+		if (m_pluginState->m_exitStatus == 0) {
+			dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Plugin %s matched, extracting result\n", plugin_name);
+			formatstr(param_name, "SEC_SCITOKENS_PLUGIN_%s_MAPPING", plugin_name);
+			if (param(m_pluginResult, param_name.c_str())) {
+				dprintf(D_SECURITY, "AUTHENTICATE: Mapped identity in config file for plugin %s: %s\n", plugin_name, m_pluginResult.c_str());
+			} else {
+				// look at plugin's output for identity
+				// TODO recognize richer output format?
+				StringTokenIterator toker(m_pluginState->m_stdout);
+				const std::string* first = toker.next_string();
+				if (first != nullptr) {
+					m_pluginResult = *first;
+					dprintf(D_SECURITY, "AUTHENTICATE: Mapped identity from plugin %s: %s\n", plugin_name, m_pluginResult.c_str());
+				} else {
+					dprintf(D_SECURITY, "AUTHENTICATE: Plugin %s didn't print mapped identity\n", plugin_name);
+					errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin '%s' didn't print mapped identity", plugin_name);
+					// TODO Consider calling addl plugins
+					m_pluginRC = 0;
+					goto cleanup;
+				}
+			}
+
+			// TODO Consider restricted authz for exotic token types?
+
+			result = m_pluginResult;
+			m_pluginRC = 1;
+		} else if (WIFEXITED(m_pluginState->m_exitStatus) && WEXITSTATUS(m_pluginState->m_exitStatus) == 1) {
+			dprintf(D_SECURITY, "AUTHENTICATE: Plugin %s did not match\n", plugin_name);
+			// TODO any other cleanup?
+			m_pluginState->m_stdout.clear();
+			m_pluginState->m_stderr.clear();
+			m_pluginState->m_exitStatus = -1;
+			m_pluginState->m_idx++;
+		} else {
+			dprintf(D_SECURITY, "AUTHENTICATE: Plugin %s exited with unexpected status %d\n", plugin_name, m_pluginState->m_exitStatus);
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (bad exit status)", plugin_name);
+			// TODO consider addl plugins?
+			m_pluginRC = 0;
+		}
+	}
+
+	if (m_pluginRC == 2 && m_pluginState->m_pid < 0) {
+		if (m_pluginState->m_idx >= m_pluginState->m_names.size()) {
+			dprintf(D_SECURITY, "No plugins matched, returning empty mapping\n");
+			m_pluginRC = 1;
+		}
+	}
+
+		// TODO add timeout for plugin
+	if (m_pluginRC == 2 && m_pluginState->m_pid < 0) {
+		const char* plugin_name = m_pluginState->m_names[m_pluginState->m_idx].c_str();
+		dprintf(D_SECURITY|D_VERBOSE, "AUTHENTICATE: Trying plugin %s\n", plugin_name);
+		std::string cmdline;
+		formatstr(param_name, "SEC_SCITOKENS_PLUGIN_%s_COMMAND", plugin_name);
+		if (!param(cmdline, param_name.c_str())) {
+			dprintf(D_ALWAYS, "AUTHENTICATE: Plugin %s has no command configured\n", plugin_name);
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (no command param)", plugin_name);
+			m_pluginRC = 0;
+			goto cleanup;
+		}
+		ArgList args;
+		std::string errmsg;
+		if (!args.AppendArgsV2Raw(cmdline.c_str(), errmsg)) {
+			dprintf(D_ALWAYS, "AUTHENTICATE: Failed to parse command for plugin %s: %s\n", plugin_name, errmsg.c_str());
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (invalid command param)", plugin_name);
+			m_pluginRC = 0;
+			goto cleanup;
+		}
+
+		int std_fds[3] = {DC_STD_FD_PIPE, DC_STD_FD_PIPE, DC_STD_FD_PIPE};
+
+		// Tell DaemonCore to register the process family so we can
+		// safely kill everything from the reaper.
+		FamilyInfo fi;
+		fi.max_snapshot_interval = param_integer("PID_SNAPSHOT_INTERVAL", 15);
+
+		int pid = daemonCore->Create_Process(args.GetArg(0), args,
+					PRIV_CONDOR_FINAL, m_pluginReaperId, FALSE,
+					FALSE, &m_pluginState->m_env, nullptr, &fi, nullptr,
+					std_fds);
+		if (pid == 0) {
+			dprintf(D_ALWAYS, "AUTHENTICATE: Failed to spawn plugin %s.\n", plugin_name);
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Plugin %s failed (failed to spawn)", plugin_name);
+			m_pluginRC = 0;
+			goto cleanup;
+		}
+		m_pluginState->m_pid = pid;
+		daemonCore->Write_Stdin_Pipe(pid, m_pluginState->m_stdin.c_str(),
+		                             m_pluginState->m_stdin.length());
+
+		dprintf(D_SECURITY, "AUTHENTICATE: Spawned plugin %s, pid=%d\n", plugin_name, pid);
+		m_pluginPidTable[pid] = this;
+	}
+
+ cleanup:
+	if (m_pluginRC != 2) {
+		m_pluginState.reset();
+	}
+	return m_pluginRC;
+}
+
+void
+Condor_Auth_SSL::CancelScitokensPlugins()
+{
+	if (!m_pluginState || m_pluginState->m_pid == -1) {
+		return;
+	}
+
+	daemonCore->Kill_Family(m_pluginState->m_pid);
+
+	m_pluginPidTable[m_pluginState->m_pid] = nullptr;
+	m_pluginState.reset();
+	m_pluginRC = 0;
+}
+
+int
+Condor_Auth_SSL::PluginReaper(int exit_pid, int exit_status)
+{
+	dprintf(D_SECURITY, "SciTokens plugin pid %d exited with status %d\n",
+	        exit_pid, exit_status);
+
+	// First, make sure the plugin didn't leak any processes.
+	daemonCore->Kill_Family(exit_pid);
+
+	auto it = m_pluginPidTable.find(exit_pid);
+	if (it == m_pluginPidTable.end()) {
+			// no such pid
+		dprintf(D_ALWAYS, "SciTokens plugin pid %d not found in table!\n", exit_pid);
+		return TRUE;
+	}
+
+	if (it->second == nullptr) {
+		dprintf(D_SECURITY, "SciTokens auth object was previously deleted, ignoring plugin\n");
+	} else if (!it->second->m_pluginState) {
+		dprintf(D_SECURITY, "SciTokens auth object has no plugin state, ignoring plugin\n");
+	} else {
+		MyString *output;
+		std::string result;
+		output = daemonCore->Read_Std_Pipe(exit_pid, 1);
+		if (output) {
+			it->second->m_pluginState->m_stdout = *output;
+		}
+		output = daemonCore->Read_Std_Pipe(exit_pid, 2);
+		if (output) {
+			it->second->m_pluginState->m_stderr = *output;
+		}
+		it->second->m_pluginState->m_exitStatus = exit_status;
+		if (it->second->ContinueScitokensPlugins(result, nullptr) != 2) {
+			dprintf(D_SECURITY, "SciTokens plugins done, triggering socket callback\n");
+			daemonCore->CallSocketHandler(it->second->mySock_);
+		}
+	}
+
+	m_pluginPidTable.erase(it);
+	return TRUE;
 }

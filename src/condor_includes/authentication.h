@@ -208,6 +208,7 @@ class Authentication {
 	time_t		m_auth_timeout_time;
 	bool		m_continue_handshake;
 	bool		m_continue_auth;
+	bool		m_continue_plugin;
 	bool		m_should_try_token_request{false};
 
 	static MapFile* global_map_file;
