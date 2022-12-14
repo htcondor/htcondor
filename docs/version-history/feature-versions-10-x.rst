@@ -94,6 +94,11 @@ New Features:
   when they have trouble talking to each other.
   :jira:`1360`
 
+- Added support for plugins that can perform the mapping of a
+  validated SciToken to an HTCondor canonical user name during
+  security authentication.
+  :jira:`1463`
+
 Version 10.1.3
 --------------
 
