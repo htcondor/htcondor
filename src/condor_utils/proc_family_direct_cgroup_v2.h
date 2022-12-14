@@ -112,7 +112,6 @@ public:
 	// Returns true if cgroup v2 is mounted and we can write to it
 	static bool can_create_cgroup_v2();
 private:
-private:
 
 	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
 

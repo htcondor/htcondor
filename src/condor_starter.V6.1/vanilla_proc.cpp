@@ -899,7 +899,7 @@ VanillaProc::JobReaper(int pid, int status)
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 	if (status & DC_STATUS_OOM_KILLED) {
 		outOfMemoryEvent(-1);
-		status &= DC_STATUS_OOM_KILLED;
+		status &= ~DC_STATUS_OOM_KILLED;
 	} 
 	
 	//
