@@ -24,6 +24,10 @@ Release Notes:
 
 New Features:
 
+- Add support to the *condor_starter* for tracking processes via cgroup v2
+  on linux distributions that support cgroup v2.
+  :jira:`1457`
+
 - *condor_q* default behavior of displaying the cumulative run time has changed
   to now display the current run time for jobs in running, tranfering output,
   and suspended states while displaying the previous run time for jobs in idle or held

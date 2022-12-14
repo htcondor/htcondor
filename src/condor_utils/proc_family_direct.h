@@ -56,10 +56,8 @@ public:
 	bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) { return false; }
 #endif
 
-#if defined(HAVE_EXT_LIBCGROUP)
-	// This class doesn't support cgroups
-	bool track_family_via_cgroup(pid_t, const char*) { return false; }
-#endif
+	// This class doesn't support cgroups (on any platform..)
+	bool track_family_via_cgroup(pid_t, const FamilyInfo *) { return false; }
 
 	bool get_usage(pid_t, ProcFamilyUsage&, bool);
 
