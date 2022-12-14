@@ -65,7 +65,7 @@ Licensed under the Apache License, Version 2.0.'
 # The short X.Y version.
 version = '10.1'
 # The full version, including alpha/beta/rc tags.
-release = '10.2.0'
+release = '10.3.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2022
