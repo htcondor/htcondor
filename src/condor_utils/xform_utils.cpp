@@ -96,9 +96,11 @@ static MACRO_DEF_ITEM XFormMacroDefaults[] = {
 static MACRO_DEFAULTS XFormDefaults = { COUNTOF(XFormMacroDefaults), XFormMacroDefaults, NULL };
 
 static MACRO_DEF_ITEM XFormBasicMacroDefaults[] = {
+	{ "IsClusterAd", &UnliveStepMacroDef },      // used by Schedd indicate ClusterAd is being transformed
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "Iterating", &UnliveIteratingMacroDef },
+	{ "LateMaterialization", &UnliveProcessMacroDef }, // used by schedd transforms to identify Late materialization job
 };
 static MACRO_DEFAULTS XFormBasicDefaults = { COUNTOF(XFormBasicMacroDefaults), XFormBasicMacroDefaults, NULL };
 
@@ -433,6 +435,11 @@ void XFormHash::clear_live_variables() const
 	}
 }
 
+void XFormHash::set_factory_vars(int isCluster, bool latMat)
+{
+	if (LiveProcessString) sprintf(LiveProcessString, "%d", latMat?1:0);
+	if (LiveStepString) sprintf(LiveStepString, "%d", isCluster);
+}
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
