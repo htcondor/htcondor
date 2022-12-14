@@ -2041,6 +2041,7 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 	ASSERT(m_pluginRC != 2);
 
 	m_pluginResult.clear();
+	m_pluginErrstack.clear();
 	m_pluginState.reset(new PluginState);
 
 	if (input == "*") {
@@ -2144,6 +2145,10 @@ Condor_Auth_SSL::ContinueScitokensPlugins(std::string& result, CondorError* errs
 {
 	if (m_pluginRC != 2) {
 		result = m_pluginResult;
+		if (!m_pluginErrstack.empty()) {
+			// This assumes we only put one entry in our local CondorError
+			errstack->push(m_pluginErrstack.subsys(), m_pluginErrstack.code(), m_pluginErrstack.message());
+		}
 		return m_pluginRC;
 	}
 
@@ -2301,7 +2306,7 @@ Condor_Auth_SSL::PluginReaper(int exit_pid, int exit_status)
 			it->second->m_pluginState->m_stderr = *output;
 		}
 		it->second->m_pluginState->m_exitStatus = exit_status;
-		if (it->second->ContinueScitokensPlugins(result, nullptr) != 2) {
+		if (it->second->ContinueScitokensPlugins(result, &it->second->m_pluginErrstack) != 2) {
 			dprintf(D_SECURITY, "SciTokens plugins done, triggering socket callback\n");
 			daemonCore->CallSocketHandler(it->second->mySock_);
 		}

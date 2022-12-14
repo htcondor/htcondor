@@ -101,6 +101,15 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
     virtual int unwrap(const char* input, int input_len, char*& output,
 		int& output_len) override;
 
+	// Run plugins for identity mapping for SciTokens
+	// input: comma-separated list of plugin names or "*"
+	// result: on completion, the mapped identity if any
+	// return 0: failed to launch a plugin
+	// return 1: plugins successfully run
+	// return 2: plugins in progress, call ContinueScitokensPlugins() later
+	// Assumes the socket associated with this object is registered with
+	// DaemonCore. Once operations are complete (i.e. ContinueScitokensPlugins()
+	// will return 0 or 1, the socket's callback handler is triggered.
 	int StartScitokensPlugins(const std::string& input, std::string& result, CondorError* errstack);
 	int ContinueScitokensPlugins(std::string& result, CondorError* errstack);
 	void CancelScitokensPlugins();
@@ -254,6 +263,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 
 	int m_pluginRC;
 	std::string m_pluginResult;
+	CondorError m_pluginErrstack;
 
 	struct PluginState {
 		int m_pid{-1};
