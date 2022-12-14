@@ -71,7 +71,9 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
+
 common_externals="libcgroup \
+    condor-stash-plugin \
     libgomp \
     munge-libs \
     pcre2 \

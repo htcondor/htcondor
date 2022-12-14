@@ -55,8 +55,8 @@ export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 # testing -> rc repo
 # stable -> release repo
 
-dist='unstable'
-#dist='testing'
+#dist='unstable'
+dist='testing'
 #dist='stable'
 echo "Distribution is $dist"
 

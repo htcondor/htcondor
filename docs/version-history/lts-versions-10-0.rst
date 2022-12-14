@@ -24,6 +24,10 @@ New Features:
   so that it can be installed on non-english Windows platforms
   :jira:`1474`
 
+- HTCondor now includes a file transfer plugin that support ``stash://``
+  and ``osdf://`` URLs.
+  :jira:`1332`
+
 Bugs Fixed:
 
 - Fixed a bug where *condor_rm*'ing with the -forcex option
@@ -85,6 +89,10 @@ Bugs Fixed:
 - Fixed a bug that would cause tools that have the ``-printformat`` argument to segfault
   when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
   :jira:`1464`
+
+- Fixed a bug in the ``RENAME`` command of the transform language that could result in a
+  crash of the *condor_schedd* or *condor_job_router*.
+  :jira:`1486`
 
 .. _lts-version-history-1000:
 
