@@ -4,7 +4,7 @@
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-10000006
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10000006
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-10000006
-docker://htcondor/nmi-build:x86_64_CentOS7-10000008
+docker://htcondor/nmi-build:x86_64_CentOS7-10000108
 docker://htcondor/nmi-build:x86_64_Debian11-10000006
 x86_64_MacOSX15
 x86_64_macOS11
