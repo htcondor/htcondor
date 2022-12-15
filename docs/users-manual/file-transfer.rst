@@ -718,7 +718,7 @@ and ``$_CONDOR_CREDS/mytokens_group.use``.
 **Transferring files using file transfer plugins**
 
 HTCondor comes with file transfer plugins
-that can communicate with Box.com, Google Drive, and Microsoft OneDrive.
+that can communicate with Box.com, Google Drive, Stash Cache, OSDF, and Microsoft OneDrive.
 Using one of these plugins requires that the HTCondor pool administrator
 has set up the mechanism for HTCondor to gather credentials
 for the desired service,
@@ -730,6 +730,8 @@ from the desired service (see :ref:`jobs_that_require_credentials`).
 To use a file transfer plugin,
 substitute ``https`` in a transfer URL with the service name
 (``box`` for Box.com,
+``stash`` for Stash Cache,
+``osdf`` for OSDF,
 ``gdrive`` for Google Drive, and
 ``onedrive`` for Microsoft OneDrive)
 and reference a file path starting at the root directory of the service.
