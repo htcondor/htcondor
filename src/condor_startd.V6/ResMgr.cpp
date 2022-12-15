@@ -1300,6 +1300,7 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 		} else {
 			walk(&Resource::compute_shared);
 		}
+		m_attr->compute_docker_cache();
 	}
 
 	// update machine load and idle values, also dynamic WinReg attributes

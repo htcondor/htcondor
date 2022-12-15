@@ -15,6 +15,8 @@
 #include <sstream>
 #include <string>
 
+#include <charconv>
+
 #if !defined(WIN32)
 #include <sys/un.h>
 #endif
@@ -1464,6 +1466,149 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	}
 
 	return hostname;
+}
+
+// Return number of bytes used by the image cache, by running
+// docker images --format '{{.Repository}} {{.Tag]} {{.Size}}'
+int64_t 
+DockerAPI::imageCacheUsed() {
+	ArgList imageArgs;
+	if ( ! add_docker_arg(imageArgs))
+		return -1;
+
+	imageArgs.AppendArg( "images" );
+	imageArgs.AppendArg( "--format" );
+	imageArgs.AppendArg( "{{.Repository}}\n{{.Tag}}\n{{.Size}}" );
+
+	std::string displayString;
+	imageArgs.GetArgsStringForDisplay(displayString);
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+  
+	MyPopenTimer pgm;
+	if (pgm.start_program( imageArgs, true, NULL, false ) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	if ( ! pgm.wait_and_close(20) || pgm.output_size() <= 0) {
+		int error = pgm.error_code();
+		if( error ) {
+			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
+			if (pgm.was_timeout()) {
+				dprintf( D_ALWAYS, "Declaring a hung docker\n");
+				return DockerAPI::docker_hung;
+			}
+		} else {
+			dprintf( D_ALWAYS, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		return -3;
+	}
+
+	std::vector<std::pair<std::string, int64_t>> image_sizes;
+	//
+	// On a success, Docker writes the containerID back out.
+	std::string image_name;
+	while (readLine(image_name, pgm.output())) {
+		std::string tag_name;
+		std::string size_str;
+
+		readLine(tag_name, pgm.output());
+		readLine(size_str, pgm.output());
+
+		// All these strings have newlines at the end.  Remove them
+		chomp(image_name);
+		chomp(tag_name);
+		chomp(size_str);
+
+		if (tag_name == "<none>") {
+			tag_name = "";
+		}
+
+		if (image_name == "<none>") {
+			// How does this happen?  Don't know, but it does
+			continue;
+		}
+
+		if (! tag_name.empty()) {
+			image_name += ':' + tag_name;
+		}
+
+		// Now pull off the suffix, probably either "KB", "MB" or "GB"
+		uint64_t factor = 1;
+		std::string suffix = size_str.substr(size_str.length() - 2, 2);
+		switch (suffix[0]) {
+			case 'K':
+				factor = 1024;
+				break;
+			case 'M':
+				factor = 1024 * 1024;
+				break;
+			case 'G':
+				factor = 1024 * 1024 * 1024;
+				break;
+			default:
+				dprintf(D_ALWAYS, "Unknown size suffix %s in docker images, size calculation may be wrong\n", suffix.c_str());
+		}
+
+		double size = 0.0;
+		sscanf(size_str.c_str(), "%lg", &size);
+		size *= factor;
+		image_sizes.emplace_back(image_name, (int64_t) size);
+	}
+
+	// sort the array by image name
+	std::sort(image_sizes.begin(), image_sizes.end());
+	
+	std::string imageFilename;
+
+	if( ! param( imageFilename, "LOG" ) ) {
+		dprintf(D_ALWAYS, "LOG not defined in param table, giving up\n");
+		return 0;
+	}
+
+	imageFilename += "/.startd_docker_images";
+
+	std::vector<std::pair<std::string, int64_t>> images_on_disk;
+
+	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
+
+	if (f) {
+		char existingImage[1024];
+		while ( fgets(existingImage, 1024, f)) {
+
+			if (strlen(existingImage) > 1) {
+				existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
+			} else {
+				continue; // zero length image name, skip
+			}
+			images_on_disk.emplace_back(existingImage, 0);
+		}
+		fclose(f);
+	}
+
+	std::sort(images_on_disk.begin(), images_on_disk.end());
+
+	std::vector<std::pair<std::string, int64_t>> our_images;
+
+	auto pairFirstLessThan = [](const std::pair<std::string, int64_t> &a,
+								const std::pair<std::string, int64_t> &b) {
+		return a.first < b.first;
+	};
+
+	// put into our_images the pair of image name and size for those
+	// images in our cache
+	std::set_intersection(
+			image_sizes.begin(), image_sizes.end(),
+			images_on_disk.begin(), images_on_disk.end(),
+			std::back_inserter(our_images),
+			pairFirstLessThan);
+
+	int64_t our_total_size = 0;
+	for (auto &it: our_images) {
+		our_total_size += it.second;
+	}
+
+	return our_total_size;
 }
 
 int

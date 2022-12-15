@@ -180,6 +180,11 @@ class DockerAPI {
 		 * @return				0 on success, negative otherwise.
 		 */
 		static int inspect( const std::string & container, ClassAd * inspectionAd, CondorError & err );
+
+		/* Return the number of bytes that images put into the cache by this HTCondor
+		 * are currently using
+		 */
+		static int64_t imageCacheUsed();
 };
 
 #endif /* _CONDOR_DOCKER_API_H */

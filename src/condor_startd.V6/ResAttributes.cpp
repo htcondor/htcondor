@@ -33,6 +33,10 @@
 #include "winreg.windows.h"
 #endif
 
+#ifdef LINUX
+#include "docker-api.h"
+#endif
+
 MachAttributes::MachAttributes()
    : m_user_specified(NULL, ";"), m_user_settings_init(false), m_named_chroot()
 {
@@ -63,6 +67,7 @@ MachAttributes::MachAttributes()
 	m_load = -1.0;
 	m_owner_load = -1.0;
 	m_virt_mem = 0;
+	m_docker_cached_image_size = -1;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -450,6 +455,7 @@ MachAttributes::compute_config()
 			m_named_chroot = result_str;
 		}
 
+		compute_docker_cache();
 	}
 }
 
@@ -519,6 +525,20 @@ MachAttributes::compute_for_policy()
            }
         }
 	}
+}
+
+void 
+MachAttributes::compute_docker_cache() {
+#ifdef LINUX
+	static time_t lastRun = 0;
+	time_t now = time(nullptr);
+	if ((now - lastRun) > 1200) {
+		lastRun = now;
+		m_docker_cached_image_size = DockerAPI::imageCacheUsed();
+	}
+#else
+	m_docker_cached_image_size = -1;
+#endif
 }
 
 // Check to see if the device at index ixid for resource tag matches
@@ -1407,6 +1427,9 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 	if (m_kflops > 0) { cp->Assign( ATTR_KFLOPS, m_kflops ); }
 	if (m_mips > 0) { cp->Assign( ATTR_MIPS, m_mips ); }
 
+	if (m_docker_cached_image_size > 0) {
+		cp->Assign(ATTR_DOCKER_CACHED_IMAGE_SIZE, m_docker_cached_image_size / (1024 * 1024));
+	}
 	// publish offline ids for any of the resources
 	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
 		string ids;
