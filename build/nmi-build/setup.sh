@@ -134,6 +134,13 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     yum-builddep -y /tmp/rpm/condor.spec
 fi
 
+# Need newer cmake on bionic
+if [ $VERSION_CODENAME = 'bionic' ]; then
+    curl -dsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
+    echo 'deb https://apt.kitware.com/ubuntu/ bionic main' > /etc/apt/sources.list.d/cmake.list
+    apt update
+fi
+
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     $INSTALL build-essential devscripts equivs gpp
     (cd /tmp/debian; ./prepare-build-files.sh)
