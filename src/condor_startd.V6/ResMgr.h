@@ -458,27 +458,9 @@ private:
 
 // Comparison function for sorting resources:
 
-// natural order is slotid / slot_sub_id
-int naturalSlotOrderCmp(const void*, const void*);
-
-// Sort on State, with Owner state resources coming first, etc.
-int ownerStateCmp( const void*, const void* );
-
 // Sort on State, with Claimed state resources coming first.  Break
 // ties with the value of the Rank expression for Claimed resources.
 int claimedRankCmp( const void*, const void* );
-
-/*
-  Sort resource so their in the right order to give out a new COD
-  Claim.  We give out COD claims in the following order:  
-  1) the Resource with the least # of existing COD claims (to ensure
-     round-robin across resources
-  2) in case of a tie, the Resource in the best state (owner or
-     unclaimed, not claimed)
-  3) in case of a tie, the Claimed resource with the lowest value of
-     machine Rank for its claim
-*/
-int newCODClaimCmp( const void*, const void* );
 
 bool OtherSlotEval(const char * /*name*/,
 	const classad::ArgumentList &arg_list,
