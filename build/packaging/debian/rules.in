@@ -31,7 +31,7 @@ endif
 # one ring to rule them all ...
 %:
 #if defined(BIONIC)
-	dh $@ --with python2
+	dh $@ --with python2,python3
 #else
 	dh $@ --with python3
 #endif
