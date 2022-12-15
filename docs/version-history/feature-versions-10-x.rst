@@ -43,6 +43,10 @@ Release Notes:
 
 New Features:
 
+- Add support to the *condor_starter* for tracking processes via cgroup v2
+  on linux distributions that support cgroup v2.
+  :jira:`1457`
+
 - *condor_q* default behavior of displaying the cumulative run time has changed
   to now display the current run time for jobs in running, tranfering output,
   and suspended states while displaying the previous run time for jobs in idle or held
@@ -112,6 +116,11 @@ New Features:
 - Improved error handling in the *condor_shadow* and *condor_starter*
   when they have trouble talking to each other.
   :jira:`1360`
+
+- Added support for plugins that can perform the mapping of a
+  validated SciToken to an HTCondor canonical user name during
+  security authentication.
+  :jira:`1463`
 
 Version 10.1.3
 --------------

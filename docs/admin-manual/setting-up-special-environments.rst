@@ -267,6 +267,8 @@ By default, HTCondor includes plugins for standard file protocols ``http://...``
 ``https://...`` and ``ftp://...``. Additionally, URL plugins exist 
 for transferring files to/from Box.com accounts (``box://...``),
 Google Drive accounts (``gdrive://...``),
+OSDF accounts (``osdf://...``),
+Stash accounts (``stash://...``),
 and Microsoft OneDrive accounts (``onedrive://...``).
 These plugins require users to have obtained OAuth2 credentials
 for the relevant service(s) before they can be used.

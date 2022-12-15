@@ -72,7 +72,8 @@ Authentication::Authentication( ReliSock *sock )
 	  m_key(NULL),
 	  m_auth_timeout_time(0),
 	  m_continue_handshake(false),
-	  m_continue_auth(false)
+	  m_continue_auth(false),
+	  m_continue_plugin(false)
 {
 	mySock              = sock;
 	auth_status         = CAUTH_NONE;
@@ -157,6 +158,11 @@ int Authentication::authenticate_inner( char *hostAddr, const char* auth_methods
 
 int Authentication::authenticate_continue( CondorError* errstack, bool non_blocking )
 {
+	bool use_mapfile = false;
+	const char *connect_addr = nullptr;
+	int retval = 0;
+	std::string mapped_id;
+
 	// Check for continuations;
 	int firm = -1;
 	bool do_handshake = true;
@@ -172,6 +178,8 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 
 	int auth_rc = 0;
 	bool do_authenticate = true;
+	int plugin_rc = 0;
+	bool do_plugin = false;
 	if (m_continue_auth) {
 		auth_rc = m_auth->authenticate_continue(errstack, non_blocking);
 		if (auth_rc == 2 ) {
@@ -183,7 +191,31 @@ int Authentication::authenticate_continue( CondorError* errstack, bool non_block
 		do_authenticate = false;
 		goto authenticate;
 	}
- 
+
+	if (m_continue_plugin) {
+		if (mySock->readReady()) {
+			// Assume the client has closed the socket
+			dprintf(D_SECURITY, "AUTHENTICATE: client closed socket during plugin\n");
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED, "Client closed socket during plugin");
+			((Condor_Auth_SSL*)authenticator_)->CancelScitokensPlugins();
+			plugin_rc = 0;
+		} else if (m_auth_timeout_time > 0 && m_auth_timeout_time <= time(nullptr)) {
+			dprintf(D_SECURITY, "AUTHENTICATE: plugin exceeded deadline %ld\n", m_auth_timeout_time);
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_TIMEOUT, "Plugin exceeded %ld deadline", m_auth_timeout_time );
+			((Condor_Auth_SSL*)authenticator_)->CancelScitokensPlugins();
+			plugin_rc = 0;
+		} else {
+			plugin_rc = ((Condor_Auth_SSL*)authenticator_)->ContinueScitokensPlugins(mapped_id, errstack);
+		}
+		if (plugin_rc == 2) {
+			dprintf(D_SECURITY, "AUTHENTICATE: scitokens plugin would still block\n");
+			return 2;
+		}
+		m_continue_plugin = false;
+		do_plugin = true;
+		goto plugin_done;
+	}
+
 	m_auth = NULL;
 	while (auth_status == CAUTH_NONE ) {
 		if (m_auth_timeout_time>0 && m_auth_timeout_time <= time(0)) {
@@ -426,13 +458,9 @@ authenticate:
 			}
 		}
 	}
-	return authenticate_finish(errstack);
-}
 
-int Authentication::authenticate_finish(CondorError *errstack)
-{
 	//if none of the methods succeeded, we fall thru to default "none" from above
-	int retval = ( auth_status != CAUTH_NONE );
+	retval = ( auth_status != CAUTH_NONE );
 	if (IsDebugVerbose(D_SECURITY)) {
 		dprintf(D_SECURITY, "AUTHENTICATE: auth_status == %i (%s)\n", auth_status,
 				(method_used?method_used:"?!?") );
@@ -441,7 +469,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 
 	// If authentication was a success, then we record it in the known_hosts file.
 	// Note SSL has its own special handling for this file.
-	const char *connect_addr = mySock->get_connect_addr();
+	connect_addr = mySock->get_connect_addr();
 	if (connect_addr && retval == 1 && mySock->isClient() && !m_method_name.empty() && m_method_name != "SSL") {
 		Sinful s(connect_addr);
 		const char *alias = s.getAlias();
@@ -459,7 +487,7 @@ int Authentication::authenticate_finish(CondorError *errstack)
 	// check to see if CERTIFICATE_MAPFILE was defined.  if so, use it.  if
 	// not, do nothing.  the user and domain have been filled in by the
 	// authentication method itself, so just leave that alone.
-	bool use_mapfile = param_defined("CERTIFICATE_MAPFILE");
+	use_mapfile = param_defined("CERTIFICATE_MAPFILE");
 
 	// if successful so far, invoke the security MapFile.  the output of that
 	// is the "canonical user".  if that has an '@' sign, split it up on the
@@ -474,11 +502,63 @@ int Authentication::authenticate_finish(CondorError *errstack)
 					authenticator_->getRemoteUser()?authenticator_->getRemoteUser():"(null)");
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: pre-map: current domain is '%s'\n",
 					authenticator_->getRemoteDomain()?authenticator_->getRemoteDomain():"(null)");
-			map_authentication_name_to_canonical_name(auth_status, method_used ? method_used : "(null)", name_to_map);
+			map_authentication_name_to_canonical_name(auth_status, method_used ? method_used : "(null)", name_to_map, mapped_id);
 		} else {
 			dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: name to map is null, not mapping.\n");
 		}
 	}
+
+	if (retval && authenticator_ && auth_status == CAUTH_SCITOKENS && !mySock->isClient()) {
+		std::string plugin_input;
+		if (!use_mapfile) {
+			plugin_input = "*";
+		} else if (strncmp(mapped_id.c_str(), "PLUGIN:", 7) == 0) {
+			plugin_input = mapped_id.c_str() + 7;
+		}
+		if (!plugin_input.empty()) {
+			do_plugin = true;
+			plugin_rc = ((Condor_Auth_SSL*)authenticator_)->StartScitokensPlugins(plugin_input, mapped_id, errstack);
+			if (plugin_rc == 2) {
+				m_continue_plugin = true;
+				dprintf(D_SECURITY, "AUTHENTICATE: plugin in progress\n");
+				return 2;
+			}
+		}
+	}
+
+ plugin_done:
+
+	if (do_plugin) {
+		if (plugin_rc == 0) {
+			dprintf(D_ALWAYS,"AUTHENTICATE: plugins failed to execute, failing.\n");
+			errstack->pushf("AUTHENTICATE", AUTHENTICATE_ERR_PLUGIN_FAILED,
+			                "Plugin failed");
+			return 0;
+		} else if (mapped_id.empty()) {
+			dprintf(D_SECURITY, "AUTHENTICATE: plugins didn't producing a mapping\n");
+		} else {
+			dprintf(D_SECURITY, "AUTHENTICATE: Plugins procuded mapping '%s'\n", mapped_id.c_str());
+		}
+	}
+
+	if (!mapped_id.empty()) {
+		std::string user;
+		std::string domain;
+
+		// this sets user and domain
+		split_canonical_name( mapped_id, user, domain);
+
+		authenticator_->setRemoteUser( user.c_str() );
+		authenticator_->setRemoteDomain( domain.c_str() );
+	}
+
+	return authenticate_finish(errstack);
+}
+
+int Authentication::authenticate_finish(CondorError *errstack)
+{
+	int retval = ( auth_status != CAUTH_NONE );
+
 	// for now, let's be a bit more verbose and print this to D_SECURITY.
 	// yeah, probably all of the log lines that start with ZKM: should be
 	// updated.  oh, i wish there were a D_ZKM, but alas, we're out of bits.
@@ -552,7 +632,7 @@ void Authentication::load_map_file() {
 	}
 }
 
-void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name) {
+void Authentication::map_authentication_name_to_canonical_name(int authentication_type, const char* method_string, const char* authentication_name, std::string& canonical_user) {
     load_map_file();
 
 	dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: attempting to map '%s'\n", authentication_name);
@@ -561,7 +641,6 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 	std::string auth_name_to_map = authentication_name;
 
 	if (global_map_file) {
-		std::string canonical_user;
 
 		dprintf (D_SECURITY|D_VERBOSE, "AUTHENTICATION: 1: attempting to map '%s'\n", auth_name_to_map.c_str());
 		bool mapret = global_map_file->GetCanonicalization(method_string, auth_name_to_map.c_str(), canonical_user);
@@ -594,15 +673,6 @@ void Authentication::map_authentication_name_to_canonical_name(int authenticatio
 		if (!mapret) {
 			// returns true on failure?
 			dprintf (D_FULLDEBUG|D_VERBOSE, "AUTHENTICATION: successful mapping to %s\n", canonical_user.c_str());
-
-			std::string user;
-			std::string domain;
-
-			// this sets user and domain
-			split_canonical_name( canonical_user, user, domain);
-
-			authenticator_->setRemoteUser( user.c_str() );
-			authenticator_->setRemoteDomain( domain.c_str() );
 
 			// we're done.
 			return;

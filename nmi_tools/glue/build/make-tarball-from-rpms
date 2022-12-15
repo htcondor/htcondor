@@ -38,7 +38,7 @@ for file in $rpmdir/*.rpm; do
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
         echo ======= $package-$version-$release.$dist.$arch.rpm =======
         echo $package-$version-$release.$dist.$arch.rpm >> tarball/Manifest.txt
-        rpm2cpio $rpmdir/$package-$version-$release.$dist.$arch.rpm | (cd tarball; cpio -imd)
+        rpm2cpio $rpmdir/$package-$version-$release.$dist.$arch.rpm | (cd tarball; cpio -imd --no-absolute-filenames)
     fi
 done
 
@@ -71,9 +71,9 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-common_externals="boost169-python3 \
+
+common_externals="libcgroup \
     condor-stash-plugin \
-    libcgroup \
     libgomp \
     munge-libs \
     pcre2 \
@@ -81,7 +81,8 @@ common_externals="boost169-python3 \
     voms"
 
 if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
-    el7_externals="python36-chardet \
+    el7_externals="boost169-python3 \
+        python36-chardet \
         python36-idna \
         python36-pysocks \
         python36-requests \
@@ -89,9 +90,9 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-urllib3"
     externals="$common_externals $el7_externals"
 elif [[ $arch_dist =~ AlmaLinux8 ]]; then
-    externals="$common_externals"
+    externals="$common_externals boost-python3"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals"
+    externals="$common_externals boost-python3"
 fi
 
 mkdir external-packages
@@ -105,7 +106,7 @@ for file in external-packages/*.rpm; do
     else
         echo ======= $file =======
         echo $file >> tarball/Manifest.txt
-        rpm2cpio $file | (cd tarball; cpio -imd)
+        rpm2cpio $file | (cd tarball; cpio -imd --no-absolute-filenames)
     fi
 done
 
