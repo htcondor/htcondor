@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
 
 Bugs Fixed:
 
