@@ -71,8 +71,8 @@ else (WINDOWS)
                     message (STATUS "Using system boost169 for 64-bit EL7" )
                     set(BOOST_INCLUDEDIR "/usr/include/boost169")
                     set(BOOST_LIBRARYDIR "/usr/lib64/boost169")
-                    set(Boost_INCLUDE_DIR "/usr/include/boost169")
-                    set(Boost_LIBRARY_DIR "/usr/lib64/boost169")
+                    set(Boost_INCLUDE_DIRS "/usr/include/boost169")
+                    set(Boost_LIBRARY_DIRS "/usr/lib64/boost169")
                 endif()
                 set(USE_SYSTEM_BOOST True)
             endif()
@@ -89,23 +89,6 @@ else (WINDOWS)
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)
-
-		if (NOT PREFER_CPP11)
-			check_cxx_source_compiles("
-				#include <boost/unordered_map.hpp>
-				int main() {
-				boost::unordered_map<int,int> foo;
-				return 0;
-				}
-				" HAVE_BOOST_UNORDER_MAP )
-
-			# we don't have any unordered map?
-			if (NOT HAVE_BOOST_UNORDER_MAP)
-				message (STATUS "WARNING did not detect unordered_map")
-				set ( SYSTEM_NOT_UP_TO_SNUFF TRUE )
-			endif()
-
-		endif()
 
 		# set vars b/c we are good to go.
 		if (NOT SYSTEM_NOT_UP_TO_SNUFF)

@@ -71,9 +71,9 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-common_externals="boost169-python3 \
+
+common_externals="libcgroup \
     condor-stash-plugin \
-    libcgroup \
     libgomp \
     munge-libs \
     pcre2 \
@@ -81,7 +81,8 @@ common_externals="boost169-python3 \
     voms"
 
 if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
-    el7_externals="python36-chardet \
+    el7_externals="boost169-python3 \
+        python36-chardet \
         python36-idna \
         python36-pysocks \
         python36-requests \
@@ -89,9 +90,9 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-urllib3"
     externals="$common_externals $el7_externals"
 elif [[ $arch_dist =~ AlmaLinux8 ]]; then
-    externals="$common_externals"
+    externals="$common_externals boost-python3"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals"
+    externals="$common_externals boost-python3"
 fi
 
 mkdir external-packages
