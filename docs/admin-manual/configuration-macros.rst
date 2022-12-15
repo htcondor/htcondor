@@ -5847,6 +5847,13 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as ``MAX_DEFAULT_LOG``.
 
+:macro-def:`ALLOW_TRANSFER_REMAP_TO_MKDIR`
+    A boolean value that when ``True`` allows the *condor_shadow* to
+    create directories in a transfer output remap path when the directory
+    does not exist already. The *condor_shadow* can not create directories
+    if the remap is an absolute path or if the remap tries to write to
+    a directory specified within ``LIMIT_DIRECTORY_ACCESS``.
+
 
 condor_starter Configuration File Entries
 ------------------------------------------
