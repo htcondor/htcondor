@@ -246,9 +246,9 @@ KillFamily::spree(int sig,KILLFAMILY_DIRECTION direction)
 void
 KillFamily::takesnapshot()
 {
-	ExtArray<a_pid> *new_pids;
+	std::vector<a_pid> *new_pids;
 	struct procInfo *pinfo = NULL;
-	int i,j,newpidindex;
+	int i,j;
 	pid_t currpid;
 	priv_state priv;
 	bool currpid_exited;
@@ -260,8 +260,7 @@ KillFamily::takesnapshot()
 
 	std::vector<pid_t> pidfamily;
 
-	new_pids = new ExtArray<a_pid>;
-	newpidindex = 0;
+	new_pids = new std::vector<a_pid>;
 
 	// On some systems, we can only see process we own, so we must be either
 	// the user or root. However, being the user in this function causes many,
@@ -427,11 +426,8 @@ KillFamily::takesnapshot()
 		if ( ProcAPI::getProcInfo(pidfamily[j],pinfo,ignore_status)
 				== PROCAPI_SUCCESS )
 		{
-			(*new_pids)[newpidindex].pid = pinfo->pid;
-			(*new_pids)[newpidindex].ppid = pinfo->ppid;
-			(*new_pids)[newpidindex].birthday = pinfo->birthday;
-			(*new_pids)[newpidindex].cpu_sys_time = pinfo->sys_time;
-			(*new_pids)[newpidindex].cpu_user_time = pinfo->user_time;
+			new_pids->emplace_back(
+				pinfo->pid, pinfo->ppid, pinfo->birthday, pinfo->user_time, pinfo->sys_time);
 			alive_cpu_sys_time += pinfo->sys_time;
 			alive_cpu_user_time += pinfo->user_time;
 #ifdef WIN32
@@ -445,7 +441,6 @@ KillFamily::takesnapshot()
 #else
 			curr_image_size += pinfo->imgsize;
 #endif
-			newpidindex++;
 		}
 	}
 	if ( curr_image_size > max_image_size ) {
@@ -459,9 +454,8 @@ KillFamily::takesnapshot()
 	}
 	old_pids = new_pids;
 
-		// Record the new size of our pid family, (which is
-		// conveniently stored in newpidindex already).
-	family_size = newpidindex;
+		// Record the new size of our pid family,
+	family_size = old_pids->size();
 
 	// getProcInfo() allocates memory; free it
 	if ( pinfo ) {

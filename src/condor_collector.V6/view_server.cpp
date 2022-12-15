@@ -44,8 +44,8 @@ std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 bool ViewServer::KeepHistory;
 HashTable< std::string, int >* ViewServer::FileHash;
-ExtArray< ExtIntArray* >* ViewServer::TimesArray;
-ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
+std::vector<ExtIntArray *> *ViewServer::TimesArray;
+std::vector<ExtOffArray *> *ViewServer::OffsetsArray;
 
 //-----------------------
 // Constructor
@@ -123,8 +123,8 @@ void ViewServer::Init()
 	}
 	GroupHash = new AccHash(hashFunction);
 	FileHash = new HashTable< std::string, int >(hashFunction);
-	OffsetsArray = new ExtArray< ExtOffArray* >(30);
-	TimesArray = new ExtArray< ExtIntArray* >(30);
+	OffsetsArray = new std::vector< ExtOffArray*>;
+	TimesArray = new std::vector<ExtIntArray*>;
 
 	// File data format
 
@@ -355,7 +355,7 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 	ExtOffArray* offsets = NULL;
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
-		// first find out which ExtArray to use, by checking the hash
+		// first find out which vector to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 
 			// FileName was not found in the FileHash
@@ -363,15 +363,15 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
-		file_array_index = OffsetsArray->length();
+		file_array_index = OffsetsArray->size();
 		FileHash->insert( FileName, file_array_index );
-		TimesArray->add( times_array );
-		OffsetsArray->add( offsets );
+		TimesArray->push_back(times_array);
+		OffsetsArray->push_back(offsets);
 	} else {
 
 			// otherwise just get the appropriate array
-		times_array = (TimesArray->getElementAt( file_array_index ));
-		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		times_array = (TimesArray->at( file_array_index ));
+		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", offsets->length());
 	}
 
@@ -446,7 +446,7 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 	ExtOffArray* offsets = NULL;
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
-		// first find out which ExtArray to use, by checking the hash
+		// first find out which vector to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 
 			// FileName was not found in the FileHash
@@ -454,15 +454,15 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
-		file_array_index = OffsetsArray->length();
+		file_array_index = OffsetsArray->size();
 		FileHash->insert( FileName, file_array_index );
-		TimesArray->add( times_array );
-		OffsetsArray->add( offsets );
+		TimesArray->push_back( times_array );
+		OffsetsArray->push_back( offsets );
 	} else {
 
 			// otherwise just get the appropriate array
-		times_array = (TimesArray->getElementAt( file_array_index ));
-		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		times_array = (TimesArray->at( file_array_index ));
+		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", times_array->length());
 	}
 
