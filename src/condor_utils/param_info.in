@@ -4576,6 +4576,12 @@ type=string
 description=
 tags=schedd
 
+[ALLOW_TRANSFER_REMAP_TO_MKDIR]
+default=false
+type=bool
+description=Allow transfer output remap to make directories if they don't exist
+tags=shadow
+
 [MAX_TRANSFER_INPUT_MB]
 default=-1
 version=7.9.2
