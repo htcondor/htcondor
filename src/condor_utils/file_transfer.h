@@ -78,7 +78,8 @@ enum FileTransferStatus {
 enum class TransferPluginResult {
 	Success = 0,
 	Error = 1,
-	InvalidCredentials = 2
+	InvalidCredentials = 2,
+	TimedOut = 3,
 };
 
 namespace htcondor {
