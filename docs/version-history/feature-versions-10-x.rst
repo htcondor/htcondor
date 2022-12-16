@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- When HTCondor has root, and is running with cgroups, the cgroup the job is
+  in is writeable by the job, so that it can create sub-cgroups to manage
+  memory, cpu etc.  Note that it can't change the cgroup allocation it
+  has been given.
+  :jira:`1496`
 
 Bugs Fixed:
 
