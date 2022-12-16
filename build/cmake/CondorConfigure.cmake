@@ -83,7 +83,7 @@ if(NOT WINDOWS)
 		set(WANT_PYTHON2_BINDINGS OFF)
 	endif()
 
-	if (WANT_PYTHON2_BINDINGS)
+	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 		find_package (Python2 COMPONENTS Interpreter Development)
 
@@ -108,9 +108,9 @@ if(NOT WINDOWS)
 			message(STATUS "Python2 library found at ${PYTHON_LIB}")
 		endif()
 
-	endif(WANT_PYTHON2_BINDINGS)
+	endif(WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
-	if (WANT_PYTHON3_BINDINGS)
+	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter Development)
 
 		# All these variables are used later, and were defined in cmake 2.6
@@ -138,7 +138,7 @@ if(NOT WINDOWS)
 			message(STATUS "Python3 library found at ${PYTHON3_LIB}")
 		endif()
 
-	endif(WANT_PYTHON3_BINDINGS)
+	endif(WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 else(NOT WINDOWS)
     #if(WINDOWS)
