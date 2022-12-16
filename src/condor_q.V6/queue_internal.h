@@ -14,7 +14,7 @@ typedef std::map< long long, UniqueClassAdPtr > IdToClassaAdMap;
 typedef std::map< std::string, UniqueClassAdPtr > KeyToClassaAdMap;
 
 struct 	PrioEntry { std::string name; float prio; };
-int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios);
+int read_userprio_file(const char *filename, std::vector<PrioEntry> & prios);
 
 /* Warn about schedd-wide limits that may confuse analysis code */
 bool warnScheddGlobalLimits(DaemonAllowLocateFull *schedd,std::string &result_buf);
@@ -86,8 +86,8 @@ enum {
 	anaModeUnmatchable, // -unmatchable
 };
 
-int			findSubmittor(const char *);
-int			fetchSubmittorPriosFromNegotiator(DCCollector* pool, ExtArray<PrioEntry> & prios);
+int			findSubmittor(const std::string &);
+int			fetchSubmittorPriosFromNegotiator(DCCollector* pool, std::vector<PrioEntry> & prios);
 void		printJobRunAnalysis(ClassAd*, DaemonAllowLocateFull*, int details, bool withUserprio, int PslotMode=2);
 enum {
 	anaMatchModeNo=0,
@@ -124,7 +124,6 @@ extern bool widescreen;
 extern bool verbose;
 extern bool dash_profile;
 extern KeyToClassaAdMap startdAds;
-extern ExtArray<PrioEntry> prioTable;
 extern int longest_slot_machine_name;
 extern int longest_slot_name;
 extern bool single_machine;
