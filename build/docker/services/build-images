@@ -45,26 +45,23 @@ from typing import Dict, List, Set, Union
 SUPPORTED_DISTROS = [
          "el7",
          "el8",
-    "ubu18.04",
     "ubu20.04",
 ]
 SUPPORTED_DAILY_DISTROS = [
     "el7",
     "el8",
-    "ubu18.04",
     "ubu20.04",
 ]
 DISTRO_IMAGE = {
          "el7": "centos:7",
          "el8": "almalinux:8",
-    "ubu18.04": "ubuntu:18.04",
     "ubu20.04": "ubuntu:20.04",
 }
 # fmt:on
 
 
 IMAGES = ["execute", "submit", "cm", "mini"]
-DISTRO_FOR_LATEST_TAGS = "el7"
+DISTRO_FOR_LATEST_TAGS = "el8"
 
 
 DEFAULT_REGISTRY = "docker.io"

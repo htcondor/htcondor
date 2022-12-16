@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1002:
+
+Version 10.0.2
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.2 released on Month Date, 2023.
+
+- HTCondor version 10.0.2 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-1001:
 
 Version 10.0.1
@@ -23,6 +42,11 @@ New Features:
 - The Windows installer now uses the localized name of the Users group
   so that it can be installed on non-english Windows platforms
   :jira:`1474`
+
+- Added configuration option called ``ALLOW_TRANSFER_REMAP_TO_MKDIR`` to allow
+  a transfer output remap to create directories in allowed places if they
+  do not exist at tranfser output time.
+  :jira:`1480`
 
 - HTCondor now includes a file transfer plugin that support ``stash://``
   and ``osdf://`` URLs.
