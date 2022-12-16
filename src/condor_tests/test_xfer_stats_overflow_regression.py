@@ -11,7 +11,6 @@
 
 
 from ornithology import *
-import os
 
 #-----------------------------------------------------------------------------------------
 @action
@@ -129,25 +128,23 @@ class XferStatsPlugin:
     def Xfile_path(self):
         # Get test dir path and remove the script name from the end
         path = os.path.realpath(__file__)
-        path = path[1:]
-        path_parts = path.split("/")
-        new_path = ""
-        for i in range(len(path_parts)-1):
-            new_path += f"/{path_parts[i]}"
-        # Find the test file and return it
-        file_name = find(os.path.join(new_path,"*-xferIn.txt"))
-        # There should only be 1 file per
-        xfer_file = file_name[0][1:].split("/")
-        return (new_path + f"/{xfer_file[(len(xfer_file) - 1)]}")
+        # Split path and end filename
+        parts = path.rsplit("/",1)
+        # Return path / xferIn.txt
+        return (parts[0] + "/xferIn.txt")
 
     def download_file(self, url, local_file_path):
 
         start_time = time.time()
 
-        path = self.Xfile_path()
-        file_size = os.stat(path).st_size
-        print(f'\\nPath-: {path}')
-        print(f'Bytes: {file_size}')
+        file_size = 0
+        test = "-"
+        f = open(self.Xfile_path(), "r")
+        test = f.readline().strip()
+        file_size = int(test[:-1]) * 1024 * 1024 * 1024
+        f.close()
+        print(f'\\nTest-: {test} file')
+        print(f'Size-: {file_size} bytes')
 
         end_time = time.time()
 
@@ -171,10 +168,14 @@ class XferStatsPlugin:
 
         start_time = time.time()
 
-        path = self.Xfile_path()
-        file_size = os.stat(path).st_size
-        print(f'\\nPath-: {path}')
-        print(f'Bytes: {file_size}')
+        file_size = 0
+        test = "-"
+        f = open(self.Xfile_path(), "r")
+        test = f.readline().strip()
+        file_size = int(test[:-1]) * 1024 * 1024 * 1024
+        f.close()
+        print(f'\\nTest-: {test} file')
+        print(f'Size-: {file_size} bytes')
 
         end_time = time.time()
 
@@ -264,26 +265,28 @@ def job_shell_file(test_dir, job_python_file):
 "2gb File":"2G",
 "4gb File":"4G",
 "8gb File":"8G",
+"16gb File":"16G",
 })
-def run_file_xfer_job(default_condor,test_dir,request, job_shell_file):
-     #Make File to be transferred based on size passed
-     xfer_file = "{0}-xferIn.txt".format(request.param)
-     os.system("truncate -s {0} {1}/{2}".format(request.param,test_dir,xfer_file))
+def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_sleep):
+     #Write Test File size to input file
+     xfer_file = "xferIn.txt"
+     _file = open(xfer_file,"w")
+     _file.write(request.param)
+     _file.close()
      #Submit a list command job with output so we can varify file sizes
      job_handle = default_condor.submit(
           {
-               "executable":"/bin/ls",
-               "arguments":f"\"-l {test_dir}\"",
+               "executable":path_to_sleep,
+               "arguments":"0",
                "should_transfer_files":"Yes",
                "transfer_input_files":f"xferstats://{test_dir}/{xfer_file}",
-               "transfer_plugins":"xferstats=xferstats.sh",
-               "output":(test_dir / "{0}-file_sizes.txt".format(request.param)).as_posix(),
+               "transfer_plugins":f"xferstats={job_shell_file}",
                "log":(test_dir / "{0}-test.log".format(request.param)).as_posix(),
           },
           count=1
      )
      #Wait for job to complete. Gave a hefty amount of time due to large files being transfered
-     job_handle.wait(timeout=360)
+     job_handle.wait(condition=ClusterState.all_complete,timeout=30)
      schedd = default_condor.get_local_schedd()
      #once job is done get job ad attributes needed for test verification
      job_ad = schedd.history(
@@ -291,10 +294,8 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file):
           projection=["TransferInput","TransferInputStats","TransferOutputStats"],
           match=1,
      )
-     #Remove transfer file so we don't have 8gb files lying around
-     os.remove(xfer_file)
      #Return job ad for checking attributes
-     return job_ad
+     return (request.param,job_ad)
 
 #=========================================================================================
 #JobSubmitMethod Tests
@@ -305,12 +306,8 @@ class TestTransferStatsOverflowRegression:
           passed = True
           is_0K = False
           #For every classad returned (should only be 1) check statistics
-          for ad in run_file_xfer_job:
-               #Get TransferInput line to use file size in outputs and checks
-               _file = ad["TransferInput"]
-               local = (_file.find("-xferIn.txt") - 2)
-               print(f"\nFile: {_file[local:local+13]} is {_file[local:local+2]}b in size.")
-               if "0K-xferIn.txt" in _file:
+          for ad in run_file_xfer_job[1]:
+               if "0K" in run_file_xfer_job[0]:
                     is_0K = True
                #For every statistic in TransferInputStats
                for stat in ad["TransferInputStats"]:
@@ -342,4 +339,5 @@ class TestTransferStatsOverflowRegression:
                               print(f"Error: {stat} value is {value} for a file larger than 0 bytes. The value should not be 0.")
           #Assert Pass or Fail here
           assert passed
+
 
