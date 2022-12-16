@@ -1386,8 +1386,10 @@ Scheduler::count_jobs()
 		while (FlockCollectors->next(daemon)) {
 			auto col = static_cast<DCCollector*>(daemon);
 			FlockPools.insert(col->name());
+			const char* col_addr = col->addr();
+			if (!col_addr) { continue; }
 			if (currLevel < FlockLevel)
-				effectFlockList.append(col->addr());
+				effectFlockList.append();
 			++currLevel;
 		}
 
