@@ -431,7 +431,7 @@ int read_userprio_file(const char *filename, std::vector<PrioEntry> & prios)
 				cPrios = MAX(cPrios, id);
 			} else if (attr == "Name") {
 				if (id >= (int) prios.size()) {
-					prios.resize(1 + id + 2);
+					prios.resize(1 + id * 2);
 				}
 				prios[id].name = value;
 				cPrios = MAX(cPrios, id);
