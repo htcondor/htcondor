@@ -1389,7 +1389,7 @@ Scheduler::count_jobs()
 			const char* col_addr = col->addr();
 			if (!col_addr) { continue; }
 			if (currLevel < FlockLevel)
-				effectFlockList.append();
+				effectFlockList.append(col_addr);
 			++currLevel;
 		}
 
