@@ -20,7 +20,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
+  a transfer output remap to create directories in allowed places if they
+  do not exist at tranfser output time.
+  :jira:`1480`
 
 Bugs Fixed:
 
@@ -42,11 +45,6 @@ New Features:
 - The Windows installer now uses the localized name of the Users group
   so that it can be installed on non-english Windows platforms
   :jira:`1474`
-
-- Added configuration option called ``ALLOW_TRANSFER_REMAP_TO_MKDIR`` to allow
-  a transfer output remap to create directories in allowed places if they
-  do not exist at tranfser output time.
-  :jira:`1480`
 
 - HTCondor now includes a file transfer plugin that support ``stash://``
   and ``osdf://`` URLs.
