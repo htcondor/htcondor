@@ -436,11 +436,6 @@ int read_userprio_file(const char *filename, std::vector<PrioEntry> & prios)
 				prios[id].name = value;
 				cPrios = MAX(cPrios, id);
 			}
-			/*
-			for (auto pe: prios) {
-				printf("GGT prios[next] = (%s, %g)\n", pe.name.c_str(), pe.prio);
-			}
-			*/
 		}
 		fclose(file);
 	}
