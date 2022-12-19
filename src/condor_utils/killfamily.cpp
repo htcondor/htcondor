@@ -443,6 +443,7 @@ KillFamily::takesnapshot()
 #endif
 		}
 	}
+
 	if ( curr_image_size > max_image_size ) {
 		max_image_size = curr_image_size;
 	}
@@ -452,6 +453,10 @@ KillFamily::takesnapshot()
 	if ( old_pids ) {
 		delete old_pids;
 	}
+
+	a_pid zero_pid;
+	new_pids->emplace_back(zero_pid);
+
 	old_pids = new_pids;
 
 		// Record the new size of our pid family,
