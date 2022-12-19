@@ -107,8 +107,8 @@ void Usage(const char* name, int iExitCode)
 }
 
 static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
-static void readHistoryFromFiles(auto_free_ptr& matchFileName, const char* constraint, ExprTree *constraintExpr);
-static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
@@ -436,7 +436,7 @@ main(int argc, const char* argv[])
 				}
 			}
 		}
-		if (matchFileName.empty() && searchDirectory.empty()) {
+		if (!matchFileName && !searchDirectory) {
 			fprintf( stderr, "Error: No Job Run Instance recordings to read.\n");
 			exit(1);
 		}
@@ -889,17 +889,18 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(auto_free_ptr& matchFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	printHeader();
 	// Default to search for standard job ad history if no files specified
 	const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
-	if (matchFileName.empty()) {
-		matchFileName.set(param(knob));
+	auto_free_ptr origHistory(param(knob));
+	if (!matchFileName) {
+		matchFileName = origHistory;
 	}
 
 	// This is the last check for history records. If files is empty then nothing to read exit
-	if (matchFileName.empty()) {
+	if (!matchFileName) {
 		fprintf(stderr, "Error: No passed search file and base history configuration key %s is unset.\n", knob);
 		fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "
 						"keep a history of past jobs, you must define %s in your config file\n", knob, knob );
@@ -912,9 +913,9 @@ static void readHistoryFromFiles(auto_free_ptr& matchFileName, const char* const
         const char **historyFiles;
 
 
-		historyFiles = findHistoryFiles(matchFileName.ptr(), &numHistoryFiles);
+		historyFiles = findHistoryFiles(matchFileName, &numHistoryFiles);
 		if (!historyFiles) {
-			fprintf(stderr, "Error: No matching history files for %s\n",matchFileName.ptr());
+			fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
 			exit(1);
 		}
         if (historyFiles && numHistoryFiles > 0) {
@@ -1514,7 +1515,7 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* e
 	if (backwards) { std::reverse(epochFiles->begin(),epochFiles->end()); }
 }
 
-static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char* constraint, ExprTree *constraintExpr){
+static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr){
 	printHeader();
 	//Make sure match,limit,and/or scanlimit aren't being used with delete function
 	if (maxAds != -1 && delete_epoch_ads) {
@@ -1526,13 +1527,13 @@ static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char*
 		exit(1);
 	}
 
-	if (searchDirectory.empty()) {
+	if (!searchDirectory) {
 		fprintf(stderr,"Error: No search directory passed for locating history files.\n");
 		exit(1);
 	}
 
 	std::deque<std::string> recordFiles;
-	if (read_epoch_ads) { findEpochDirFiles(&recordFiles,searchDirectory.ptr()); }
+	if (read_epoch_ads) { findEpochDirFiles(&recordFiles,searchDirectory); }
 
 	//For each file found read job ads
 	for(auto file : recordFiles) {
@@ -1544,12 +1545,12 @@ static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char*
 			*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
 			*/
 			std::string old_name,new_name,base = "READING.txt";
-			dircat(searchDirectory.ptr(),file.c_str(),old_name);
-			dircat(searchDirectory.ptr(),base.c_str(),new_name);
+			dircat(searchDirectory,file.c_str(),old_name);
+			dircat(searchDirectory,base.c_str(),new_name);
 			rename(old_name.c_str(),new_name.c_str());
-			dircat(searchDirectory.ptr(),base.c_str(),file_path);
+			dircat(searchDirectory,base.c_str(),file_path);
 		} else {
-			dircat(searchDirectory.ptr(),file.c_str(),file_path);
+			dircat(searchDirectory,file.c_str(),file_path);
 		}
 		//Read file
 		//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
