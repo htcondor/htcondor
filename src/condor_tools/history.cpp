@@ -1515,6 +1515,7 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* e
 }
 
 static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char* constraint, ExprTree *constraintExpr){
+	printHeader();
 	//Make sure match,limit,and/or scanlimit aren't being used with delete function
 	if (maxAds != -1 && delete_epoch_ads) {
 		fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -scanlimit.\n");
@@ -1525,7 +1526,6 @@ static void readHistoryFromDirectory(auto_free_ptr& searchDirectory, const char*
 		exit(1);
 	}
 
-	printHeader();
 	if (searchDirectory.empty()) {
 		fprintf(stderr,"Error: No search directory passed for locating history files.\n");
 		exit(1);
