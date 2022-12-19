@@ -103,6 +103,12 @@ New Features:
   security authentication.
   :jira:`1463`
 
+- EGI CheckIn tokens can now be used to authenticate via the SCITOKENS
+  authenication method.
+  New configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
+  must be set to ``True`` to enable this usage.
+  :jira:`1498`
+
 Version 10.1.3
 --------------
 
