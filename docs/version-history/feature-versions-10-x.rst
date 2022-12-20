@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- When HTCondor has root, and is running with cgroups, the cgroup the job is
+  in is writeable by the job. This allows the job (perhaps a glidein)
+  to sub-divide the resource limits it has been given, and allocate
+  subsets of those to its child processes.
+  :jira:`1496`
 
 Bugs Fixed:
 

@@ -757,6 +757,27 @@ VanillaProc::StartJob()
 		// memory limits here only for v1
 		if (!ProcFamilyDirectCgroupV2::can_create_cgroup_v2()) {
 			setCgroupMemoryLimits(cgroup);
+
+			// This is a bit of a hack. In cgroup v1, ideally, the procd should
+			// set the ownership of the cgroups, but it doesn't know who the user
+			// is.  chown the leaf v1 cgroups to the owner, so that the job can
+			// create sub-cgroups
+
+			std::array controllers = {"blkio/", "cpu,cpuset/", "freezer/", "memory/"};
+			uid_t user  = get_user_uid();
+			gid_t group = get_user_gid();
+
+			if ((user > 0) && (group > 0)) {
+				for (const char *c : controllers) {
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					std::string leaf_cgroup = std::string("/sys/fs/cgroup/") + c + cgroup;
+					int r = chown(leaf_cgroup.c_str(), user, group);
+					if (r < 0) {
+						dprintf(D_ALWAYS, "Warning: cannot chown %s to %d.%d: %s\n", leaf_cgroup.c_str(), user, group, strerror(errno));
+					}
+
+				}
+			}
 		}
 #endif
 		setupOOMEvent(cgroup);
