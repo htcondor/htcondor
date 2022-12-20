@@ -8798,6 +8798,14 @@ DaemonCore::Signal_Process(pid_t pid, int sig)
 	return m_proc_family->signal_process(pid,sig);
 }
 
+
+void 
+DaemonCore::Unregister_subfamily(pid_t pid) {
+	if (m_proc_family) {
+		m_proc_family->unregister_family(pid);
+	}
+}
+
 void
 DaemonCore::Proc_Family_Cleanup()
 {

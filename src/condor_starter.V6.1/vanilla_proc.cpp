@@ -1009,6 +1009,10 @@ VanillaProc::JobReaper(int pid, int status)
 		// get this information again.
 		recordFinalUsage();
 
+		// We're going to exit, so daemon core won't get a chance to unregister our subfamily
+		// force that no
+		daemonCore->Unregister_subfamily(pid);
+
 		return jobExited;
 	}
 }
