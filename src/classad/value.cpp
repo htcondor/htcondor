@@ -323,17 +323,17 @@ void Value::MakeSelfContained()
 	if (valueType == LIST_VALUE) {
 		if (listValue) {
 			ExprList * l = (ExprList*)listValue->Copy();
+			l->SetParentScope(nullptr);
 			slistValue = new classad_shared_ptr<ExprList>(l);
 			valueType = SLIST_VALUE;
 		}
 	} else if (valueType == CLASSAD_VALUE) {
 		if (classadValue) {
 			ClassAd * ad = (ClassAd*)classadValue->Copy();
-			// Deep copies do NOT reset the parent pointer or the
-			// chained ad pointer; do so now, to prevent bad
-			// dereferences in the future.
-			ad->ChainToAd(NULL);
-			ad->SetParentScope(NULL);
+			// Note: We are not copying from chained parent or unchaining.
+			// the caller will need to do that if a totally self-contained classad is desired.
+			// in most cases where chaining exists, we would want to preserve the chaining here.
+			ad->SetParentScope(nullptr);
 			sclassadValue = new classad_shared_ptr<ClassAd>(ad);
 			valueType = SCLASSAD_VALUE;
 		}

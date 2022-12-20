@@ -78,8 +78,6 @@ class EvalState {
 		// check to see if the pointer is in the cache, if so remove it and return true.
 		// otherwise return false
 		bool TakeFromDeletionCache(ExprTree * tree);
-		bool TakeFromDeletionCache(ExprList* list) { return TakeFromDeletionCache((ExprTree*)list); }
-		bool TakeFromDeletionCache(ClassAd* ad) { return TakeFromDeletionCache((ExprTree*)ad); }
 
 		bool GivePtrToValue(Value & val);
 };
