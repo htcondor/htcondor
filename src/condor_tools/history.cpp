@@ -107,8 +107,9 @@ void Usage(const char* name, int iExitCode)
 }
 
 static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
-static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
-static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
+static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr, bool read_backwards);
 static void printJobAds(ClassAdList & jobs);
@@ -131,6 +132,7 @@ struct BannerInfo {
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
 };
+
 //------------------------------------------------------------------------
 
 static  bool longformat=false;
@@ -163,8 +165,6 @@ static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
 static bool read_epoch_ads = false;
 static bool delete_epoch_ads = false;
-static const char* epochDirectory = NULL;
-static const char* epochHistoryFile = NULL; //Temporary Global variable until adding -file (matching) and -dir options
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
 
@@ -197,6 +197,8 @@ main(int argc, const char* argv[])
 
   const char* JobHistoryFileName=NULL;
   const char * pcolon=NULL;
+  auto_free_ptr matchFileName;
+  auto_free_ptr searchDirectory;
 
   bool hasSince = false;
   bool hasForwards = false;
@@ -415,23 +417,26 @@ main(int argc, const char* argv[])
 		}
 	}
 	else if (is_dash_arg_colon_prefix(argv[i], "epoch", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
+		//Reset to NULL if previously set else where
+		searchDirectory.clear();
+		matchFileName.clear();
 		//Designate reading job run instance ads from epoch directory
 		read_epoch_ads = true;
 		//Get aggregate epoch history file
-		epochHistoryFile = param("JOB_EPOCH_HISTORY");
+		matchFileName.set(param("JOB_EPOCH_HISTORY"));
 		//If epoch file is NULL then check for an epoch directory
-		if (epochHistoryFile == NULL) {
+		if (!matchFileName) {
 			//Get epoch directory and validate passed arg is a directory
-			epochDirectory = param("JOB_EPOCH_INSTANCE_DIR");
-			if ( epochDirectory != NULL ) {
-				StatInfo si(epochDirectory);
-				if (!si.IsDirectory() ) {
-					fprintf(stderr, "Error: %s is not a valid directory.\n", epochDirectory);
+			searchDirectory.set(param("JOB_EPOCH_INSTANCE_DIR"));
+			if (searchDirectory) {
+				StatInfo si(searchDirectory.ptr());
+				if (!si.IsDirectory()) {
+					fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory.ptr());
 					exit(1);
 				}
 			}
 		}
-		if (!epochHistoryFile && !epochDirectory) {
+		if (!matchFileName && !searchDirectory) {
 			fprintf( stderr, "Error: No Job Run Instance recordings to read.\n");
 			exit(1);
 		}
@@ -608,16 +613,19 @@ main(int argc, const char* argv[])
 		exit(1);
 	}
   }
+
   if(readfromfile == true) {
 		// some output methods use a whitelist rather than a stringlist projection.
 		for (const char * attr = projection.first(); attr != NULL; attr = projection.next()) {
 			whitelist.insert(attr);
 		}
-      // Read from normal history files or Job epoch files if specified
-      if ( !read_epoch_ads ) {
-      readHistoryFromFiles(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
-      } else {
-      readHistoryFromEpochs(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
+      // Read from single file, matching files, or a directory (if valid option)
+      if (JobHistoryFileName) { //Single file to be read passed
+      readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
+      } else if (searchDirectory) { //Searching for files in a directory
+      readHistoryFromDirectory(searchDirectory, my_constraint.c_str(), constraintExpr);
+      } else { //Normal search with files
+      readHistoryFromFiles(matchFileName, my_constraint.c_str(), constraintExpr);
       }
   }
   else {
@@ -881,36 +889,34 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 
 // Read the history from the specified history file, or from all the history files.
 // There are multiple history files because we do rotation. 
-static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
+static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
 	printHeader();
+	// Default to search for standard job ad history if no files specified
+	const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
+	auto_free_ptr origHistory;
+	if (!matchFileName) {
+		origHistory.set(param(knob));
+		matchFileName = origHistory;
+	}
 
-    if (JobHistoryFileName) {
-        if (fileisuserlog) {
-            ClassAdList jobs;
-            if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
-                fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
-                exit(1);
-            }
-            printJobAds(jobs);
-            jobs.Clear();
-        } else {
-            // If the user specified the name of the file to read, we read that file only.
-            readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
-        }
-    } else {
+	// This is the last check for history records. If files is empty then nothing to read exit
+	if (!matchFileName) {
+		fprintf(stderr, "Error: No passed search file and base history configuration key %s is unset.\n", knob);
+		fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "
+						"keep a history of past jobs, you must define %s in your config file\n", knob, knob );
+		exit(1);
+	}
+
         // The user didn't specify the name of the file to read, so we read
         // the history file, and any backups (rotated versions). 
         int numHistoryFiles;
         const char **historyFiles;
 
-		const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
-		auto_free_ptr history_file(param(knob));
-        historyFiles = findHistoryFiles(history_file.ptr(), &numHistoryFiles);
+
+		historyFiles = findHistoryFiles(matchFileName, &numHistoryFiles);
 		if (!historyFiles) {
-			fprintf( stderr, "Error: No history file is defined\n");
-			fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "
-						   "keep a history of past jobs, you must define %s in your config file\n", knob, knob );
+			fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
 			exit(1);
 		}
         if (historyFiles && numHistoryFiles > 0) {
@@ -927,7 +933,6 @@ static void readHistoryFromFiles(bool fileisuserlog, const char *JobHistoryFileN
             }
             freeHistoryFilesList(historyFiles);
         }
-    }
     printFooter();
     return;
 }
@@ -1472,7 +1477,7 @@ static int set_print_mask_from_stream(
 
 //Find and add all epoch files in the given epochDirectory then sort
 //based on cluster.proc & backwards/forwards
-static void findEpochDirFiles(std::deque<std::string> *epochFiles){
+static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* epochDirectory){
 	std::deque<std::string> searchIds;
 	bool oneJob = true;
 	int count = 0;
@@ -1511,88 +1516,73 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles){
 	if (backwards) { std::reverse(epochFiles->begin(),epochFiles->end()); }
 }
 
-static void readHistoryFromEpochs(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr){
+static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr){
 	printHeader();
+	//Make sure match,limit,and/or scanlimit aren't being used with delete function
+	if (maxAds != -1 && delete_epoch_ads) {
+		fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -scanlimit.\n");
+		exit(1);
+	}
+	else if (specifiedMatch != -1 && delete_epoch_ads) {
+		fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -limit or -match.\n");
+		exit(1);
+	}
 
-	//If we were passed a specific file name then read that.
-	if (JobHistoryFileName) {
-		if (fileisuserlog) {
-			ClassAdList jobs;
-			if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
-				fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
-				exit(1);
-			}
-			printJobAds(jobs);
-			jobs.Clear();
+	if (!searchDirectory) {
+		fprintf(stderr,"Error: No search directory passed for locating history files.\n");
+		exit(1);
+	}
+
+	std::deque<std::string> recordFiles;
+	if (read_epoch_ads) { findEpochDirFiles(&recordFiles,searchDirectory); }
+
+	//For each file found read job ads
+	for(auto file : recordFiles) {
+		std::string file_path;
+		//Make full path (path+file_name) to read
+		if (delete_epoch_ads) {
+			/*	If deleting the files then rename the file as before reading
+			*	This is to try and prevent a race condition between writing
+			*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
+			*/
+			std::string old_name,new_name,base = "READING.txt";
+			dircat(searchDirectory,file.c_str(),old_name);
+			dircat(searchDirectory,base.c_str(),new_name);
+			rename(old_name.c_str(),new_name.c_str());
+			dircat(searchDirectory,base.c_str(),file_path);
 		} else {
-			// If the user specified the name of the file to read, we read that file only.
-			readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+			dircat(searchDirectory,file.c_str(),file_path);
 		}
-	} else {
-		// The user didn't specify the name of the file to read, so we read
-		// Job Epoch (Run Instance) files for job ads
-
-		//Make sure match,limit,and/or scanlimit aren't being used with delete function
-		if (maxAds != -1 && delete_epoch_ads) {
-			fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -scanlimit.\n");
-			exit(1);
-		}
-		else if (specifiedMatch != -1 && delete_epoch_ads) {
-			fprintf(stderr,"Error: -epoch:d (delete) cannot be used with -limit or -match.\n");
-			exit(1);
-		}
-
-		if (epochHistoryFile) {
-			int numEpochFiles;
-			const char **epochFiles = findHistoryFiles(epochHistoryFile, &numEpochFiles);
-			if (!epochFiles) {
-				fprintf( stderr, "Error: Failed to find any epoch history files matching %s\n", epochHistoryFile);
-				exit(1);
-			}
-			if (epochFiles && numEpochFiles > 0) {
-				int fileIndex;
-				if (backwards) {
-					for(fileIndex = numEpochFiles - 1; fileIndex >= 0; fileIndex--) {
-						readHistoryFromFileEx(epochFiles[fileIndex], constraint, constraintExpr, backwards);
-					}
-				} else {
-					for (fileIndex = 0; fileIndex < numEpochFiles; fileIndex++) {
-						readHistoryFromFileEx(epochFiles[fileIndex], constraint, constraintExpr, backwards);
-					}
-				}
-				freeHistoryFilesList(epochFiles);
-			}
-		} else if (epochDirectory) {
-			std::deque<std::string> epochFiles;
-			findEpochDirFiles(&epochFiles);
-			//For each file found read job ads
-			for(auto file : epochFiles) {
-				std::string file_path;
-				//Make full path (path+file_name) to read
-				if (delete_epoch_ads) {
-					/*	If deleting the files then rename the file as before reading
-					*	This is to try and prevent a race condition between writing
-					*	to the epoch file and reading/deleting it - Cole Bollig 2022-09-13
-					*/
-					std::string old_name,new_name,base = "READING.txt";
-					dircat(epochDirectory,file.c_str(),old_name);
-					dircat(epochDirectory,base.c_str(),new_name);
-					rename(old_name.c_str(),new_name.c_str());
-					dircat(epochDirectory,base.c_str(),file_path);
-				} else {
-					dircat(epochDirectory,file.c_str(),file_path);
-				}
-				//Read file
-				//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
-				readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
-				//If deleting then delete the file that was just read.
-				if (delete_epoch_ads) {
-					remove(file_path.c_str());
-				}
-			}
+		//Read file
+		//fprintf(stdout, "Reading file: %s\n", file.c_str()); //For debugging
+		readHistoryFromFileEx(file_path.c_str(), constraint, constraintExpr, backwards);
+		//If deleting then delete the file that was just read.
+		if (delete_epoch_ads) {
+			remove(file_path.c_str());
 		}
 	}
+
 	printFooter();
 	return;
 }
 
+static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr) {
+	printHeader();
+
+	//If we were passed a specific file name then read that.
+	if (fileisuserlog) {
+		ClassAdList jobs;
+		if ( ! userlog_to_classads(JobHistoryFileName, AddToClassAdList, &jobs, NULL, 0, constraintExpr)) {
+			fprintf(stderr, "Error: Can't open userlog %s\n", JobHistoryFileName);
+			exit(1);
+		}
+		printJobAds(jobs);
+		jobs.Clear();
+	} else {
+		// If the user specified the name of the file to read, we read that file only.
+		readHistoryFromFileEx(JobHistoryFileName, constraint, constraintExpr, backwards);
+	}
+
+	printFooter();
+	return;
+}
