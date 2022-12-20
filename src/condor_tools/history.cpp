@@ -894,8 +894,9 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	printHeader();
 	// Default to search for standard job ad history if no files specified
 	const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
-	auto_free_ptr origHistory(param(knob));
+	auto_free_ptr origHistory;
 	if (!matchFileName) {
+		origHistory.set(param(knob));
 		matchFileName = origHistory;
 	}
 
