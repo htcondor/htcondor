@@ -1425,6 +1425,16 @@ class DaemonCore : public Service
     int Kill_Family(pid_t);
     int Signal_Process(pid_t,int);
     
+	// This method should go away in the long term.
+	// Daemon Core should be responsible for unregistering any subfamily
+	// that it creates when asked to monitor subfamilies as a side-effect
+	// of Create_Process.  It does this after calling the Reaper, but in
+	// the starter, the starter exit's in the reaper before it returns
+	// to daemon core, so subfamilies never get unregistered, and thus
+	// cgroups are never deleted.  This should only be called from
+	// the starter, or any other daemon where the reaper calls exit
+	void Unregister_subfamily(pid_t pid);
+
 	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
 	    case the DaemonCore destructor won't be called.
