@@ -2105,6 +2105,7 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 					idx++;
 				}
 			}
+			formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_0", pair.first.c_str());
 			m_pluginState->m_env.SetEnv(env_name, pair.second.as_string());
 			break;
 		case jwt::json::type::array: {
