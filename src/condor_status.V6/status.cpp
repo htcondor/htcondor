@@ -447,11 +447,11 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				classad::Value lval, val;
 				const classad::ExprList* plst = NULL;
 				// roll up child states into a consensus child state
-				if (ad->EvaluateAttr("Child" ATTR_STATE, lval) && lval.IsListValue(plst)) {
-					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
-						const classad::ExprTree * pexpr = *it;
-						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp)-1)) {
-							State st = string_to_state(tmp);
+				if (ad->EvaluateAttr("Child" ATTR_STATE, lval, classad::Value::ALL_VALUES) && lval.IsListValue(plst)) {
+					for (auto it : *plst) {
+						const char * cstr = nullptr;
+						if (ExprTreeIsLiteralString(it, cstr) && cstr) {
+							State st = string_to_state(cstr);
 							if (st >= no_state && st < _state_threshold_) {
 								if (consensus_state != st) {
 									if (consensus_state == no_state) consensus_state = st;
@@ -469,11 +469,11 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 				}
 
 				// roll up child activity into a consensus child state
-				if (ad->EvaluateAttr("Child" ATTR_ACTIVITY, lval) && lval.IsListValue(plst)) {
-					for (classad::ExprList::const_iterator it = plst->begin(); it != plst->end(); ++it) {
-						const classad::ExprTree * pexpr = *it;
-						if (pexpr->Evaluate(val) && val.IsStringValue(tmp,sizeof(tmp)-1)) {
-							Activity ac = string_to_activity(tmp);
+				if (ad->EvaluateAttr("Child" ATTR_ACTIVITY, lval, classad::Value::ALL_VALUES) && lval.IsListValue(plst)) {
+					for (auto it : *plst) {
+						const char * cstr = nullptr;
+						if (ExprTreeIsLiteralString(it, cstr) && cstr) {
+							Activity ac = string_to_activity(cstr);
 							if (ac >= no_act && ac < _act_threshold_) {
 								if (consensus_activity != ac) {
 									if (consensus_activity == no_act) consensus_activity = ac;

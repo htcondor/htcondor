@@ -1616,7 +1616,7 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 		}
 
 		classad::Value value;
-		int evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		int evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
 		if ((!evalRet) || (!value.IsNumber(hard_limit))) {
 			dprintf(D_ALWAYS, "Can't evaluate CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
 			delete expr;
@@ -1632,7 +1632,7 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 			return;
 		}
 
-		evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
 		if ((!evalRet) || (!value.IsNumber(soft_limit))) {
 			dprintf(D_ALWAYS, "Can't evaluate CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
 			delete expr;

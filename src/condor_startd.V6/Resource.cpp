@@ -3609,7 +3609,7 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 				long long val = 0;
 				ParseClassAdRvalExpr(tmp, tree);
 				if ( tree &&
-					 EvalExprTree(tree,req_classad,mach_classad,result) &&
+					 EvalExprToNumber(tree,req_classad,mach_classad,result) &&
 					 result.IsIntegerValue(val) )
 				{
 					req_classad->Assign(resources[i],val);

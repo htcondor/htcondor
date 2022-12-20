@@ -652,51 +652,6 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-bool EvalExprBool(ClassAd *ad, const char *constraint)
-{
-	static classad::ExprTree *tree = NULL;
-	static char * saved_constraint = NULL;
-	classad::Value result;
-	bool constraint_changed = true;
-	bool boolVal;
-
-	if ( saved_constraint ) {
-		if ( strcmp(saved_constraint,constraint) == 0 ) {
-			constraint_changed = false;
-		}
-	}
-
-	if ( constraint_changed ) {
-		// constraint has changed, or saved_constraint is NULL
-		if ( saved_constraint ) {
-			free(saved_constraint);
-			saved_constraint = NULL;
-		}
-		if ( tree ) {
-			delete tree;
-			tree = NULL;
-		}
-		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
-			dprintf( D_ALWAYS,
-				"can't parse constraint: %s\n", constraint );
-			return false;
-		}
-		saved_constraint = strdup( constraint );
-	}
-
-	// Evaluate constraint with ad in the target scope so that constraints
-	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, result ) ) {
-		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
-		return false;
-	}
-	if( result.IsBooleanValueEquiv( boolVal ) ) {
-		return boolVal;
-	}
-	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n",
-		constraint );
-	return false;
-}
 
 bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 {
@@ -705,7 +660,7 @@ bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, result ) ) {        
+	if ( !EvalExprToBool( tree, ad, NULL, result ) ) {
 		return false;
 	}
 
@@ -764,6 +719,7 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bo
 
 int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
+				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
@@ -779,7 +735,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 	if ( target && target != source ) {
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
-	if ( !source->EvaluateExpr( expr, result ) ) {
+	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
 		rc = FALSE;
 	}
 

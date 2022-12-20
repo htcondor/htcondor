@@ -1050,7 +1050,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			const int copy_ok = classad::Value::ERROR_VALUE | classad::Value::BOOLEAN_VALUE | classad::Value::INTEGER_VALUE | classad::Value::REAL_VALUE;
 			classad::Value value;
 			attr = res + "Provisioned";	 // provisioned value
-			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(resname, plit); // usage ad has attribs like they appear in Machine ad
@@ -1058,7 +1058,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 			// /*for debugging*/ else { puAd->Assign(resname, 42); }
 			attr = "Request"; attr += res;   	// requested value
-			if (jobAd->EvaluateAttr(attr, value)&& (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr, plit);
@@ -1067,7 +1067,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			// /*for debugging*/ else { puAd->Assign(attr, 99); }
 
 			attr = res + "Usage"; // (implicitly) peak usage value
-			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr, plit);
@@ -1075,7 +1075,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 
 			attr = res + "AverageUsage"; // average usage
-			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr, plit);
@@ -1083,7 +1083,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 
 			attr = res + "MemoryUsage"; // special case for GPUs.
-			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr, plit);
@@ -1091,7 +1091,7 @@ static void set_usageAd (ClassAd* jobAd, ClassAd ** ppusageAd)
 			}
 
 			attr = res + "MemoryAverageUsage"; // just in case.
-			if (jobAd->EvaluateAttr(attr, value) && (value.GetType() & copy_ok) != 0) {
+			if (jobAd->EvaluateAttr(attr, value, classad::Value::SCALAR_EX_VALUES) && (value.GetType() & copy_ok) != 0) {
 				classad::ExprTree * plit = classad::Literal::MakeLiteral(value);
 				if (plit) {
 					puAd->Insert(attr, plit);

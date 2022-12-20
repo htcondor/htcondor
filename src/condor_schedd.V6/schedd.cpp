@@ -366,7 +366,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 	classad::Value val;
 	const char *str = NULL;
 	if ( ad && tree && 
-		 EvalExprTree(tree,ad,NULL,val) && val.IsStringValue(str) )
+		 EvalExprToString(tree,ad,NULL,val) && val.IsStringValue(str) )
 	{
 		m_auxid = str;
 	}
@@ -2822,7 +2822,7 @@ Scheduler::calcSlotWeight(match_rec *mrec) const {
 			if (job) {
 				if (scheduler.slotWeightOfJob) {
 					classad::Value result;
-					int rval = EvalExprTree( scheduler.slotWeightOfJob, job, NULL, result );
+					int rval = EvalExprToNumber( scheduler.slotWeightOfJob, job, NULL, result );
 
 					if( !rval || !result.IsNumber(job_weight)) {
 						job_weight = 1; // Fall back if it doesn't eval
@@ -3223,7 +3223,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			double job_weight = request_cpus;
 			if (scheduler.slotWeightOfJob) {
 				classad::Value value;
-				int rval = EvalExprTree(scheduler.slotWeightOfJob, job, NULL, value);
+				int rval = EvalExprToNumber(scheduler.slotWeightOfJob, job, NULL, value);
 				if ( ! rval || ! value.IsNumber(job_weight)) {
 					job_weight = request_cpus; // fall back if slot weight doesn't evaluate
 				}
@@ -16762,7 +16762,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 	SubmitRequirements::iterator it = m_submitRequirements.begin();
 	for( ; it != m_submitRequirements.end(); ++it ) {
 		classad::Value result;
-		rval = EvalExprTree( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
+		rval = EvalExprToBool( it->requirement, m_adSchedd, procAd, result, "SCHEDD", "JOB" );
 
 		if( rval ) {
 			bool bVal;
@@ -16779,7 +16779,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 				formatstr( reasonString, "Submit requirement %s not met.\n", it->name );
 
 				if( it->reason != NULL ) {
-					int sval = EvalExprTree( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
+					int sval = EvalExprToString( it->reason, m_adSchedd, procAd, reason, "SCHEDD", "JOB" );
 					if( ! sval ) {
 						dprintf( D_ALWAYS, "Submit requirement reason %s failed to evaluate.\n", it->name );
 					} else {

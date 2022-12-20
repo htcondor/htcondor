@@ -86,16 +86,54 @@ classad::ExprTree * JoinExprTreeCopiesWithOp(classad::Operation::OpKind, classad
 // note: do NOT pass an envelope node to this function!! it's fine to pass the output of ParseClassAdRvalExpr
 classad::ExprTree * WrapExprTreeInParensForOp(classad::ExprTree * expr, classad::Operation::OpKind op);
 
-bool EvalExprBool(ClassAd *ad, const char *constraint);
-
 bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree);
 
 bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
+// returns TRUE if the expression evaluates successfully and the result was a pod type
+// or one of the complex types in the type mask.  If a mask of 0 matches all types.
+// returns FALSE if the expression could not be evaluated or if the value was unsafe and not in the type mask
+// note that ERROR can be a valid result of evaluation if the type_mask allows for it. a failure to
+// evaluate is more fundamental than evaluation to error.
+// NOTE: this function will NOT return false for successful evaluation to a type not in the mask
+// it only returns false for successful evalatation when the type was unsafe and was therefore destroyed
+// This is done so that callers can print useful diagnostics.
 int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
+				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias = "",
 				  const std::string & targetAlias = "" );
+
+// useful for evaluating to a number or to a bool
+inline int EvalExprToNumber( classad::ExprTree *expr, ClassAd *source,
+	ClassAd *target, classad::Value &result,
+	const std::string & sourceAlias = "",
+	const std::string & targetAlias = "") {
+	return EvalExprTree(expr, source, target, result, classad::Value::ValueType::NUMBER_VALUES, sourceAlias, targetAlias);
+}
+
+inline int EvalExprToBool( classad::ExprTree *expr, ClassAd *source,
+	ClassAd *target, classad::Value &result,
+	const std::string & sourceAlias = "",
+	const std::string & targetAlias = "") {
+	return EvalExprTree(expr, source, target, result, classad::Value::ValueType::NUMBER_VALUES, sourceAlias, targetAlias);
+}
+
+// use this when only a string value is useful
+inline int EvalExprToString( classad::ExprTree *expr, ClassAd *source,
+	ClassAd *target, classad::Value &result,
+	const std::string & sourceAlias = "",
+	const std::string & targetAlias = "") {
+	return EvalExprTree(expr, source, target, result, classad::Value::ValueType::STRING_VALUE, sourceAlias, targetAlias);
+}
+
+// returns any single-valued literal including undefined and error, but not a classad or a list
+inline int EvalExprToScalar( classad::ExprTree *expr, ClassAd *source,
+	ClassAd *target, classad::Value &result,
+	const std::string & sourceAlias = "",
+	const std::string & targetAlias = "") {
+	return EvalExprTree(expr, source, target, result, classad::Value::ValueType::SCALAR_EX_VALUES, sourceAlias, targetAlias);
+}
 
 //ad2 treated as candidate to match against ad1, so we want to find a match for ad1
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );

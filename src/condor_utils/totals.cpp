@@ -204,13 +204,11 @@ update (ClassAd *ad, int options)
 	if ((options & TOTALS_OPTION_ROLLUP_PARTITIONABLE) && partitionable_slot) {
 		classad::Value lval;
 		const classad::ExprList* plist = NULL;
-		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval) || ! lval.IsListValue(plist)) return 1; // ChildState can be validly empty
-		classad::ExprList::const_iterator it;
-		for (it = plist->begin(); it != plist->end(); ++it) {
-			const classad::ExprTree * pexpr = *it;
-			classad::Value val;
-			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state)-1)) {
-				update(state);
+		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval, classad::Value::ALL_VALUES) || ! lval.IsListValue(plist)) return 1; // ChildState can be validly empty
+		for (auto it : *plist) {
+			const char * cstr = nullptr;
+			if (ExprTreeIsLiteralString(it, cstr) && cstr) {
+				update(cstr);
 			}
 		}
 		return 1;
@@ -429,13 +427,11 @@ update (ClassAd *ad, int options)
 	if ((options & TOTALS_OPTION_ROLLUP_PARTITIONABLE) && partitionable_slot) {
 		classad::Value lval;
 		const classad::ExprList* plist = NULL;
-		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval) || ! lval.IsListValue(plist)) return 1;
-		classad::ExprList::const_iterator it;
-		for (it = plist->begin(); it != plist->end(); ++it) {
-			const classad::ExprTree * pexpr = *it;
-			classad::Value val;
-			if (pexpr->Evaluate(val) && val.IsStringValue(state,sizeof(state)-1)) {
-				update(state);
+		if ( ! ad->EvaluateAttr("Child" ATTR_STATE, lval, classad::Value::ValueType::ALL_VALUES) || ! lval.IsListValue(plist)) return 1;
+		for (auto it : *plist) {
+			const char * cstr = nullptr;
+			if (ExprTreeIsLiteralString(it, cstr) && cstr) {
+				update(cstr);
 			}
 		}
 		return 1;

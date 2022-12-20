@@ -429,29 +429,38 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 					tstate.SetScopes(state.curAd);
 					rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
 						: attrRef->Evaluate( tstate, val );
-					delete attrRef;
 					if( !rval ) {
+						delete attrRef;
 						return( EVAL_FAIL );
 					}
-				
-					ClassAd *evaledAd = NULL;
-					const ExprList *evaledList = NULL;
+
+					ExprTree * item = nullptr;
+					ClassAd *evaledAd = nullptr;
+					ExprList *evaledList = nullptr;
 					if( val.IsClassAdValue( evaledAd ) ) {
-						eVector.push_back( evaledAd );
-						continue;
+						item = evaledAd;
+						if ( ! tstate.TakeFromDeletionCache(evaledAd)) { item = evaledAd->Copy(); }
 					}
 					else if( val.IsListValue( evaledList ) ) {
-						eVector.push_back( evaledList->Copy( ) );
-						continue;
+						item = evaledList;
+						if (!tstate.TakeFromDeletionCache(evaledList)) { item = evaledList->Copy(); }
+					} else {
+						item = Literal::MakeLiteral(val);
 					}
-					else {
-						eVector.push_back( Literal::MakeLiteral( val ) );
-					}
+					eVector.push_back(item);
+					delete attrRef;
 				}
 			}
 			tree = ExprList::MakeExprList( eVector );
+			state.AddToDeletionCache(tree);
+		#if 1
+			// TODO: tj make a magic value for empty classad root scope?
+			tree->SetParentScope(nullptr);
+		#else
 			ClassAd *newRoot = new ClassAd( );
 			((ExprList*)tree)->SetParentScope( newRoot );
+			state.AddToDeletionCache(newRoot);
+		#endif
 			return EVAL_OK;
 		}
 	}

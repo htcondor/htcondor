@@ -804,7 +804,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     classad::Value tmpVal;
 
     //should succeed
-    passedShortHand = EvalExprTree(itr->second, c1, tmpVal);
+    passedShortHand = EvalExprTree(itr->second, c1, tmpVal, classad::Value::ValueType::SAFE_VALUES);
 
     if(passedShortHand)
     {
@@ -825,7 +825,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     
     //should succeed
 
-    passedNullTarget = EvalExprTree(itr->second, c1,NULL, tmpVal);
+    passedNullTarget = EvalExprTree(itr->second, c1,NULL, tmpVal, classad::Value::ValueType::SAFE_VALUES);
 
     if(passedNullTarget)
     {
@@ -845,7 +845,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     tmpVal.Clear();
 
     //should fail.
-    if(!EvalExprTree(itr->second, NULL,NULL, tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,NULL, tmpVal, classad::Value::ValueType::SAFE_VALUES) )
     {
         passedNullMine = true;
     }
@@ -858,7 +858,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     tmpVal.Clear();
 
     //this should also fail
-    if(!EvalExprTree(itr->second, NULL,c2, tmpVal) )
+    if(!EvalExprTree(itr->second, NULL,c2, tmpVal, classad::Value::ValueType::SAFE_VALUES) )
     {
         passedNullMineRealTarget = true;
     }
@@ -873,7 +873,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     itr = c2->begin();
     itr++;
     //should pass
-    passedReal = EvalExprTree(itr->second, c1, c2, tmpVal);
+    passedReal = EvalExprTree(itr->second, c1, c2, tmpVal, classad::Value::ValueType::SAFE_VALUES);
 
     if(passedReal)
     {

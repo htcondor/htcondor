@@ -7833,6 +7833,41 @@ ClassAd * GetJobAd_as_ClassAd(int cluster_id, int proc_id, bool expStartdAd, boo
 	return ad;
 }
 
+// DO NOT MOVE to condor_utils!! 
+// this function has a static expression cache
+// because we can't easily change the iterating queue
+// code that uses string form constraints..
+static bool EvalConstraint(ClassAd *ad, const char *constraint)
+{
+	// NOTE: static constraint holder so we cache the last-used constraint and save parsing...
+	static ConstraintHolder constr;
+
+	if ( ! constraint || ! constraint[0]) return true;
+
+	if (constr.empty() || MATCH != strcmp(constr.c_str(),constraint)) {
+		constr.set(strdup(constraint));
+		int err = 0;
+		if ( ! constr.Expr(&err) && err) {
+			dprintf( D_ALWAYS, "can't parse constraint: %s\n", constraint );
+			return false;
+		}
+	}
+
+	classad::Value result;
+	if ( !EvalExprToBool( constr.Expr(), ad, NULL, result ) ) {
+		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
+		return false;
+	}
+
+	bool boolVal;
+	if( result.IsBooleanValueEquiv( boolVal ) ) {
+		return boolVal;
+	}
+
+	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n", constraint );
+	return false;
+}
+
 
 JobQueueJob *
 GetJobByConstraint(const char *constraint)
@@ -7842,7 +7877,7 @@ GetJobByConstraint(const char *constraint)
 
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->Iterate(key,ad)) {
-		if (ad->IsJob() && EvalExprBool(ad, constraint)) {
+		if (ad->IsJob() && EvalConstraint(ad, constraint)) {
 			return static_cast<JobQueueJob*>(ad);
 		}
 	}
@@ -7870,11 +7905,9 @@ GetNextJobByConstraint(const char *constraint, int initScan)
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
-	if (constraint && !constraint[0]) constraint = nullptr;
 
 	while(JobQueue->Iterate(key,ad)) {
-		if ( ad->IsJob() &&
-			(!constraint || EvalExprBool(ad, constraint))) {
+		if ( ad->IsJob() &&	EvalConstraint(ad, constraint)) {
 			return static_cast<JobQueueJob*>(ad);
 		}
 	}
@@ -7890,11 +7923,9 @@ GetNextJobOrClusterByConstraint(const char *constraint, int initScan)
 	if (initScan) {
 		JobQueue->StartIterateAllClassAds();
 	}
-	if (constraint && !constraint[0]) constraint = nullptr;
 
 	while(JobQueue->Iterate(key,ad)) {
-		if ((ad->IsCluster() || ad->IsJob()) &&
-			(!constraint || EvalExprBool(ad, constraint))) {
+		if ((ad->IsCluster() || ad->IsJob()) && EvalConstraint(ad, constraint)) {
 			return static_cast<JobQueueJob*>(ad);
 		}
 	}
@@ -7923,7 +7954,7 @@ GetNextDirtyJobByConstraint(const char *constraint, int initScan)
 			continue;
 		}
 
-		if ( !constraint || !constraint[0] || EvalExprBool(ad, constraint)) {
+		if (EvalConstraint(ad, constraint)) {
 			return ad;
 		}
 	}

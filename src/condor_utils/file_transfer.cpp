@@ -5490,7 +5490,7 @@ FileTransfer::GetTransferQueueUser()
 			if( ParseClassAdRvalExpr( user_expr.c_str(), user_tree ) == 0 && user_tree ) {
 				classad::Value val;
 				const char *str = NULL;
-				if ( EvalExprTree(user_tree,job,NULL,val) && val.IsStringValue(str) )
+				if ( EvalExprToString(user_tree,job,NULL,val) && val.IsStringValue(str) )
 				{
 					user = str;
 				}

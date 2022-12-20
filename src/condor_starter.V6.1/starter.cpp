@@ -951,17 +951,14 @@ Starter::peek(int /*cmd*/, Stream *sock)
 
 	classad::Value transfer_list_value;
 	std::vector<std::string> transfer_list;
-	classad_shared_ptr<classad::ExprList> transfer_list_ptr;
-	if (input.EvaluateAttr("TransferFiles", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	const classad::ExprList * plst;
+	if (input.EvaluateAttr("TransferFiles", transfer_list_value) && transfer_list_value.IsListValue(plst))
 	{
-		transfer_list.reserve(transfer_list_ptr->size());
-		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
-			it != transfer_list_ptr->end();
-			it++)
+		transfer_list.reserve(plst->size());
+		for (auto it : *plst)
 		{
 			std::string transfer_entry;
-			classad::Value transfer_value;
-			if (!(*it)->Evaluate(transfer_value) || !transfer_value.IsStringValue(transfer_entry))
+			if (!ExprTreeIsLiteralString(it, transfer_entry))
 			{
 				return PeekFailed(s, "Could not evaluate transfer list.");
 			}
@@ -972,16 +969,13 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	std::vector<off_t> transfer_offsets; transfer_offsets.reserve(transfer_list.size());
 	for (size_t idx = 0; idx < transfer_list.size(); idx++) transfer_offsets.push_back(-1);
 
-	if (input.EvaluateAttr("TransferOffsets", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	if (input.EvaluateAttr("TransferOffsets", transfer_list_value) && transfer_list_value.IsListValue(plst))
 	{
 		size_t idx = 0;
-		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
-			it != transfer_list_ptr->end() && idx < transfer_list.size();
-			it++, idx++)
+		for (auto it : *plst) 
 		{
-			classad::Value transfer_value;
-			off_t transfer_entry;
-			if ((*it)->Evaluate(transfer_value) && transfer_value.IsIntegerValue(transfer_entry))
+			long long transfer_entry;
+			if (ExprTreeIsLiteralNumber(it, transfer_entry))
 			{
 				transfer_offsets[idx] = transfer_entry;
 			}

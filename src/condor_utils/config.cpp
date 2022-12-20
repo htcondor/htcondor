@@ -3553,7 +3553,7 @@ static const char * evaluate_macro_func (
 					MACRO_EVAL_CONTEXT_EX &ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx);
 					classad::Value val;
 					ClassAd * ad = const_cast<ClassAd *>(ctxx.ad);
-					if (EvalExprTree(tree, ad, NULL, val)) {
+					if (EvalExprTree(tree, ad, NULL, val, classad::Value::ValueType::SAFE_VALUES)) {
 						if ( ! val.IsStringValue(tmp3)) {
 							classad::ClassAdUnParser unp;
 							tmp3.clear(); // because Unparse appends.
@@ -3564,7 +3564,7 @@ static const char * evaluate_macro_func (
 				} else {
 					ClassAd rhs;
 					classad::Value val;
-					if (EvalExprTree(tree, &rhs, NULL, val)) {
+					if (EvalExprTree(tree, &rhs, NULL, val, classad::Value::ValueType::SAFE_VALUES)) {
 						if ( ! val.IsStringValue(tmp3)) {
 							classad::ClassAdUnParser unp;
 							tmp3.clear(); // because Unparse appends.
@@ -4205,7 +4205,7 @@ static ptrdiff_t evaluate_macro_func (
 				std::string attr("CondorString");
 				if ( ! rhs.Insert(attr, tree)) {
 					delete tree; tree = NULL;
-				} else if(rhs.EvaluateAttr(attr, val) && val.IsStringValue()) {
+				} else if(rhs.EvaluateAttr(attr, val, classad::Value::STRING_VALUE) && val.IsStringValue()) {
 					// value is valid. use it instead of mval
 					val.IsStringValue(mval);
 				}
@@ -4239,7 +4239,7 @@ static ptrdiff_t evaluate_macro_func (
 					MACRO_EVAL_CONTEXT_EX &ctxx = reinterpret_cast<MACRO_EVAL_CONTEXT_EX&>(ctx);
 					classad::Value val;
 					ClassAd * ad = const_cast<ClassAd *>(ctxx.ad);
-					if (EvalExprTree(tree, ad, NULL, val)) {
+					if (EvalExprTree(tree, ad, NULL, val, classad::Value::ValueType::SAFE_VALUES)) {
 						if ( ! val.IsStringValue(argbuf)) {
 							classad::ClassAdUnParser unp;
 							argbuf.clear(); // because Unparse appends.
@@ -4249,7 +4249,7 @@ static ptrdiff_t evaluate_macro_func (
 				} else {
 					ClassAd rhs;
 					classad::Value val;
-					if (EvalExprTree(tree, &rhs, NULL, val)) {
+					if (EvalExprTree(tree, &rhs, NULL, val, classad::Value::ValueType::SAFE_VALUES)) {
 						if ( ! val.IsStringValue(argbuf)) {
 							classad::ClassAdUnParser unp;
 							argbuf.clear(); // because Unparse appends.

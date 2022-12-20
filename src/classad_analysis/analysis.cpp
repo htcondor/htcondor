@@ -124,10 +124,10 @@ BasicAnalyze( ClassAd *request, ClassAd *offer ) {
   classad::Value eval_result;
   bool val;
 
-  bool satisfied_std_rank = EvalExprTree(std_rank_condition, offer, request, eval_result) && eval_result.IsBooleanValue(val) && val;
-  bool satisfied_preempt_prio = EvalExprTree( preempt_prio_condition, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
-  bool satisfied_preempt_rank = EvalExprTree( preempt_rank_condition, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
-  bool satisfied_preempt_req = EvalExprTree( preemption_req, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
+  bool satisfied_std_rank = EvalExprToBool(std_rank_condition, offer, request, eval_result) && eval_result.IsBooleanValue(val) && val;
+  bool satisfied_preempt_prio = EvalExprToBool( preempt_prio_condition, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
+  bool satisfied_preempt_rank = EvalExprToBool( preempt_rank_condition, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
+  bool satisfied_preempt_req = EvalExprToBool( preemption_req, offer, request, eval_result ) && eval_result.IsBooleanValue(val) && val;
 
   if (!IsAHalfMatch(request, offer)) {
     result_add_explanation(classad_analysis::MACHINES_REJECTED_BY_JOB_REQS, offer);
