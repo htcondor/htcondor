@@ -21,7 +21,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- The HTCondor starter now removes any cgroup that it has created for
+  a job when it exits.
+  :jira:`1500`
 
 Version 10.2.0
 --------------
