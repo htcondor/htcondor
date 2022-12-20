@@ -30,6 +30,7 @@ namespace classad {
 class Literal;
 class ExprList;
 class ClassAd;
+class EvalState;
 
 /// Represents the result of an evaluation.
 class Value 
@@ -50,7 +51,23 @@ class Value
 		/** A list value (not owned here)*/				LIST_VALUE 	= 1<<9,
 		/** A list value (owned via shared_ptr)*/		SLIST_VALUE	= 1<<10,
 		/** A classad value (owner via shared_ptr) */	SCLASSAD_VALUE =  1<<11,
+
+		// below this are composite values useful or testing to see if a value is a member of a group of value types
 		/** Mask of types that need _Clear*/ VALUE_OWNS_POINTER = ABSOLUTE_TIME_VALUE | STRING_VALUE | SLIST_VALUE | SCLASSAD_VALUE,
+		/** Mask of types that are IsNumber */    NUMBER_VALUES = BOOLEAN_VALUE | INTEGER_VALUE | REAL_VALUE,
+		/** Mask of types that are Num or undef */    NUMBER_OR_UNDEF_VALUES =  UNDEFINED_VALUE | NUMBER_VALUES,
+		/** Mask of types that are Num, undef or err */    NUMBER_EX_VALUES = ERROR_VALUE | NUMBER_OR_UNDEF_VALUES,
+		/** Mask of types that are Num, undef or err */    STRING_OR_UNDEF_VALUES = UNDEFINED_VALUE | STRING_VALUE,
+		/** Mask of types that are Num, undef or err */    STRING_EX_VALUES = ERROR_VALUE | STRING_OR_UNDEF_VALUES,
+		/** Mask of types that are common use */  COMMON_VALUES = NUMBER_VALUES | STRING_VALUE,
+		/** Mask of types that are common use */  COMMON_OR_UNDEF_VALUES = UNDEFINED_VALUE | COMMON_VALUES,
+		/** Mask of types that are common use */  COMMON_EX_VALUES = COMMON_VALUES | UNDEFINED_VALUE,
+		/** Mask of types that are defined and single */  SCALAR_VALUES = NUMBER_VALUES | STRING_VALUE | RELATIVE_TIME_VALUE | ABSOLUTE_TIME_VALUE,
+		/** Mask of types that are defined and single */  SCALAR_EX_VALUES = ERROR_VALUE | UNDEFINED_VALUE | SCALAR_VALUES,
+		/** Mask of types that are defined and complex */ COMPLEX_VALUES = CLASSAD_VALUE | LIST_VALUE | SLIST_VALUE | SCLASSAD_VALUE,
+		/** Mask of types that are self-contained */      SAFE_VALUES = SCALAR_EX_VALUES | SLIST_VALUE | SCLASSAD_VALUE,
+		/** Mask of types that are not self-contained */  UNSAFE_VALUES = LIST_VALUE | CLASSAD_VALUE,
+		/** Mask of all value types */                    ALL_VALUES = SAFE_VALUES | UNSAFE_VALUES,
 		};
 
 			/// Number factors
@@ -321,6 +338,38 @@ class Value
 			@return true iff the value is either undefined or error.
 		*/
 		inline bool IsExceptional() const;
+
+		/** Checks if the value can be used after the evaluation context is deleted
+		@return true iff the the value is a POD type or a pointer type that is owned or ref-counted
+		*/
+		inline bool IsSelfContained() const {
+			if (valueType == LIST_VALUE || valueType == CLASSAD_VALUE) {
+				return ! classadValue;
+			}
+			return true; // all other types are self-contained
+		}
+		/** Converts LIST_VALUE to SLIST_VALUE or CLASSAD_VALUE to SCLASSAD_VALUE by deep-copy
+		    other types are not modified
+		*/
+		void MakeSelfContained();
+		/** Converts LIST_VALUE to SLIST_VALUE or CLASSAD_VALUE to SCLASSAD_VALUE by deep-copy
+		    or by stealing a pointer from the EvalState, other types are not modified
+		*/
+		void MakeSelfContained(EvalState & state);
+
+		/* Conditionally converts LIST_VALUE to SLIST_VALUE or CLASSAD_VALUE to SCLASSAD_VALUE
+		   stealing pointers from EvalState if necessary and clearing undesired unsafe values
+		   returns false if the value was cleared because it was unsafe.
+		   NOTE: if the mask has LIST_VALUE or CLASSAD_VALUE then those are treated
+		   as safe types and not converted to counted pointers *unless* the pointer is stolen
+		   from the EvalState.  This is done for max backward compatibility, in case there is
+		   code that expects the Value to be a pointer into the classad.  The case where the
+		   pointer is taken from the EvalState would have just crashed before :<
+		   Call this with SAFE_VALUES to always convert lists and classads to counted pointers
+		   but remember this will make a deep copy in most cases.
+		*/
+		bool SafetyCheck(EvalState & state, ValueType mask);
+
 		/** Checks if the value is numerical.
 			This includes booleans, which can be used in arithmetic.
 			@return true iff the value is a number
@@ -406,6 +455,7 @@ class Value
 		friend class Literal;
 		friend class ClassAd;
 		friend class ExprTree;
+		friend class EvalState;
 
 		union {
 			bool			booleanValue;
