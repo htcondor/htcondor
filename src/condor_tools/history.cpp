@@ -124,6 +124,7 @@ struct ClusterMatchInfo {
 	time_t QDate = -1; //QDate of cluster (same for all procs) to be compared against CompletionDate
 	JOB_ID_KEY jid;    //Cluster & Proc info for job
 	int numProcs = -1; //TotalSubmitProcs of cluster (same for all procs) to be counted for found cluster procs
+	bool isDoneMatching = false;
 };
 //Structure to hold banner information for cluster/proc matching
 struct BannerInfo {
@@ -952,21 +953,26 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,banner.runId);
 	}
 
+	//Keep count of number of found matches
+	//Note: This is an unsigned long to prevent
+	//      warning with deque.size() comparison
+	unsigned long numMatchesDone = 0;
 	//For each match item info check record found
 	for (auto& match : jobIdFilterInfo) {
+		if (match.isDoneMatching) { numMatchesDone++; continue; }
 		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d\n",match.jid.cluster,match.jid.proc,match.QDate,match.numProcs); //Debug Match items
 		//If has a specified proc and matched proc and cluster then remove from data structure
 		if (match.jid.proc >= 0 && match.jid == banner.jid) {
 			//If not an epoch file then found else if epoch file reading backwards and run_instance is 0 then all epoch ads found
 			if (!read_epoch_ads || (backwards && banner.runId == 0)) {
-				std::swap(match,jobIdFilterInfo.back());
-				jobIdFilterInfo.pop_back();
+				match.isDoneMatching = true;
+				numMatchesDone++;
 			}
 		} else { //Else this is a cluster only find
 			//If the cluster submit time is greater than the current completion date remove from data structure
 			if (banner.completion > 0 && match.QDate > banner.completion) {
-				std::swap(match,jobIdFilterInfo.back());
-				jobIdFilterInfo.pop_back();
+				match.isDoneMatching = true;
+				numMatchesDone++;
 			} else if (match.jid.cluster == banner.jid.cluster) { //If cluster matches do checks
 				//Get QDate from job ad if not set in info
 				if (match.QDate < 0) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
@@ -981,24 +987,25 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 					} else {
 						match.numProcs += matchFoundOffset;
 						if (match.numProcs <= 0) {
-							std::swap(match,jobIdFilterInfo.back());
-							jobIdFilterInfo.pop_back();
+							match.isDoneMatching = true;
+							numMatchesDone++;
 						}
 					}
 				} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
 					if (!read_epoch_ads || (backwards && banner.runId == 0)) {
 						--match.numProcs;
 						if (match.numProcs == 0) {
-							std::swap(match,jobIdFilterInfo.back());
-							jobIdFilterInfo.pop_back();
+							match.isDoneMatching = true;
+							numMatchesDone++;
 						}
 					}
 				}
 			}
 		}
 	}
-	//If data structer is empty we have found everything return true else return false
-	if (jobIdFilterInfo.empty())
+
+	//If all filter matches have been found return true else return false
+	if (numMatchesDone == jobIdFilterInfo.size())
 		return true;
 	else
 		return false;
