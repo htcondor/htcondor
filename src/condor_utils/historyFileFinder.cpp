@@ -80,7 +80,7 @@ static bool isHistoryBackup(const char *fullFilename, time_t *backup_time, const
 }
 
 // Used by sort in findHistoryFiles() to sort history files. 
-static bool compareHistoryFilenames(std::string lhs, std::string rhs)
+static bool compareHistoryFilenames(const std::string& lhs, const std::string& rhs)
 {
     time_t time1, time2;
 
