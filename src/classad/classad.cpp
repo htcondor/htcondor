@@ -1440,7 +1440,13 @@ _GetExternalReferences( const ExprTree *expr, const ClassAd *ad,
 
             ((const FunctionCall*)expr)->GetComponents( fnName, args );
             for( itr = args.begin( ); itr != args.end( ); itr++ ) {
-                if( !_GetExternalReferences( *itr, ad, state, refs, fullNames ) ) {
+				if( state.depth_remaining <= 0 ) {
+					return false;
+				}
+				state.depth_remaining--;
+				bool rval=_GetExternalReferences(*itr, ad, state, refs, fullNames);
+				state.depth_remaining++;
+				if( ! rval) {
 					return( false );
 				}
             }
