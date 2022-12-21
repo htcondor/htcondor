@@ -49,8 +49,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 
 	# Should use find_package here for either case
-	find_library("pcre2-8" PCRE2_FOUND)
-	add_library(pcre2-8 IMPORTED)
+	find_library(PCRE2_FOUND "pcre2-8")
+	add_library(pcre2-8 SHARED IMPORTED)
 	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION ${PCRE2_FOUND})
 
 	set(C_BIN bin)
