@@ -4856,14 +4856,16 @@ FileTransfer::DoUpload(filesize_t *total_bytes_ptr, ReliSock *s)
 					file_info.Assign("Filename", source_filename);
 					file_info.Assign("OutputDestination", local_output_url);
 
-					// will either be 0 (success) or -4 (GET_FILE_PLUGIN_FAILED)
-					file_info.Assign("Result", rc);
-
 					// If failed, put the ErrStack into the classad
 					if (result != TransferPluginResult::Success) {
 						file_info.Assign("ErrorString", errstack.getFullText());
 						plugin_exit_code = static_cast<int>(result);
+						rc = GET_FILE_PLUGIN_FAILED;
+					} else {
+						plugin_exit_code = 0;
+						rc = 0;
 					}
+					file_info.Assign( "Result", rc );
 
 					// it's all assembled, so send the ad using stream s.
 					// don't end the message, it's done below.
