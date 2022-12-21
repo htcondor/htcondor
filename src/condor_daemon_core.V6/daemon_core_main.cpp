@@ -1741,13 +1741,10 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 
 	free(name);
 
-	int numHistoryFiles = 0;
-	const char **historyFiles = 0;
-
 	auto_free_ptr history_file(param(history_file_param));
-	historyFiles = findHistoryFiles(history_file.ptr(), &numHistoryFiles);
+	std::vector<std::string> historyFiles = findHistoryFiles(history_file);
 
-	if (!historyFiles) {
+	if (historyFiles.empty()) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1761,11 +1758,10 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		dprintf(D_ALWAYS, "DaemonCore: handle_fetch_log_history: client hung up before we could send result back\n");
 	}
 
-	for (int f = 0; f < numHistoryFiles; f++) {
+	for (auto histFile : historyFiles) {
 		filesize_t size;
-		stream->put_file(&size, historyFiles[f]);
+		stream->put_file(&size, histFile.c_str());
 	}
-	freeHistoryFilesList(historyFiles);
 
 	stream->end_of_message();
 
