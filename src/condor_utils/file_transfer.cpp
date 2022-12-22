@@ -4465,18 +4465,23 @@ FileTransfer::computeFileList(
 					// an absolute path for their logs.  See HTCONDOR-1221.
 					if( outputName == StdoutRemapName ) {
 						jobAd.LookupString( ATTR_JOB_ORIGINAL_OUTPUT, outputName );
+						local_output_url = outputName;
 					} else if( outputName == StderrRemapName ) {
 						jobAd.LookupString( ATTR_JOB_ORIGINAL_ERROR, outputName );
+						local_output_url = outputName;
+					} else {
+						local_output_url += outputName;
 					}
+				} else {
+					local_output_url += outputName;
 				}
-				local_output_url += outputName;
-			}
-			else {
+			} else {
 				MyString remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
 					local_output_url = remap_filename.c_str();
 				}
 			}
+
 			if (sign_s3_urls &&
 			  (starts_with_ignore_case(local_output_url, "s3://") || starts_with_ignore_case(local_output_url, "gs://"))) {
 				s3_urls_to_sign.push_back(local_output_url);
