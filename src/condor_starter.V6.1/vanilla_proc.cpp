@@ -39,6 +39,7 @@
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
 #include "proc_family_direct_cgroup_v2.h"
+#include <array>
 
 #include <sstream>
 
