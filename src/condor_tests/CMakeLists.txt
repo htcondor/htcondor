@@ -261,7 +261,13 @@ endif()
 				condor_pl_test(test_htcondor_736 "Test bugs fixed in HTCONDOR-736" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_htcondor_809 "Additional file-transfer tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_activation_metrics "Test activation metrics" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_htcondor_955 "Test output_destination with standard stream names" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				# HTCONDOR-1365 changed the behavior of output_destination so
+				# that it no longer sends standard output and error to the
+				# destination.  HTCONDOR-955 made output_destination respect
+				# the `output` and `error` submit file commands' remaps, so
+				# it's no longer relevant.  Leaving the test in source for
+				# now, pending a resolution of backwards-compability issues.
+				# condor_pl_test(test_htcondor_955 "Test output_destination with standard stream names" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_xfer_stats_overflow_regression "Test TransferInputStats nested attributes don't overflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_token_fetch_key "Test `condor_token_fetch -key`" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
