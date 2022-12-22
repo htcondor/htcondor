@@ -6190,6 +6190,12 @@ These settings affect the *condor_starter*.
     permissions. The default value is recommended unless privileged
     operations are required.
 
+:macro-def:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`:
+    An integer number of seconds (defaulting to twenty hours) after which
+    the starter will kill a file transfer plug-in for taking too long.
+    Currently, this causes the job to go on hold with ``ETIME`` (62) as
+    the hold reason subcode.
+
 :macro-def:`ENABLE_CHIRP`
     A boolean value that defaults to ``True``. An administrator would
     set the value to ``False`` to disable Chirp remote file access from

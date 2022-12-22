@@ -2452,6 +2452,11 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		saved_priv = set_priv( desired_priv_state );
 	}
 
+	// Not sure if we can safely add another value to `rc`, since
+	// it's defined -- of all places -- in `ReliSock.h`, and we
+	// really don't want the value leaking out of this function.
+	bool file_transfer_plugin_timed_out = false;
+
 	// Start the main download loop. Read reply codes + filenames off a
 	// socket wire, s, then handle downloads according to the reply code.
 	for( int rc = 0; ; ) {
@@ -3088,9 +3093,17 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				dprintf( D_FULLDEBUG, "DoDownload: doing a URL transfer: (%s) to (%s)\n", UrlSafePrint(URL), UrlSafePrint(fullname));
 				TransferPluginResult result = InvokeFileTransferPlugin(errstack, URL.c_str(), fullname.c_str(), &pluginStatsAd, LocalProxyName.c_str());
 				// If transfer failed, set rc to error code that ReliSock recognizes
-				if (result != TransferPluginResult::Success) {
-					rc = GET_FILE_PLUGIN_FAILED;
-					plugin_exit_code = static_cast<int>(result);
+				switch( result ) {
+					case TransferPluginResult::TimedOut:
+						file_transfer_plugin_timed_out = true;
+						[[fallthrough]];
+					case TransferPluginResult::InvalidCredentials:
+					case TransferPluginResult::Error:
+						rc = GET_FILE_PLUGIN_FAILED;
+						plugin_exit_code = static_cast<int>(result);
+						[[fallthrough]];
+					case TransferPluginResult::Success:
+						break;
 				}
 				CondorError err;
 				if (result == TransferPluginResult::Success && should_reuse && !m_reuse_dir->CacheFile(fullname.c_str(), iter->checksum(),
@@ -3252,6 +3265,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					hold_subcode = plugin_exit_code << 8;
 				}
 
+				if( file_transfer_plugin_timed_out ) {
+					hold_subcode = ETIME;
+				}
+
 				dprintf(D_ALWAYS,
 						"DoDownload: consuming rest of transfer and failing "
 						"after encountering the following error: %s\n",
@@ -3384,6 +3401,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				download_success = false;
 				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 				hold_subcode = static_cast<int>(result) << 8;
+				if( result == TransferPluginResult::TimedOut ) {
+					hold_subcode = ETIME;
+				}
 				try_again = false;
 				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
 			}
@@ -6344,28 +6364,73 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	// if so, drop_privs should be false.  the default is to drop privs.
 	bool drop_privs = !param_boolean("RUN_FILETRANSFER_PLUGINS_WITH_ROOT", false);
 
-	// Invoke the plugin
-	FILE* plugin_pipe = my_popen(plugin_args, "r", FALSE, &plugin_env, drop_privs);
+	//
+	// Invoke the plug-in.
+	//
+	MyPopenTimer p_timer;
+	p_timer.start_program(
+		plugin_args,
+		false,
+		& plugin_env,
+		drop_privs
+	);
 
-	if (!plugin_pipe) {
-		dprintf (D_ALWAYS, "FILETRANSFER: error execing file transfer plugin %s\n", plugin.c_str());
-		return TransferPluginResult::Error;
+	int rc;
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	p_timer.wait_for_exit( timeout, & rc );
+
+	if( p_timer.is_closed() ) {
+		p_timer.close_program( 1 );
+		rc = p_timer.exit_status();
+	}
+
+	int exit_status;
+	bool exit_by_signal;
+	TransferPluginResult result;
+
+	if( p_timer.was_timeout() ) {
+		exit_status = ETIME;
+		exit_by_signal = TRUE;
+
+		result = TransferPluginResult::TimedOut;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin.c_str(), timeout );
+	} else if( p_timer.exit_status() == MYPCLOSE_EX_STATUS_UNKNOWN ) {
+		// The backwards-compatible my_pclose() returned -1 in this case.
+		int macos_dummy = -1;
+		exit_status    = WEXITSTATUS(macos_dummy);
+		exit_by_signal = WIFSIGNALED(macos_dummy);
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin.c_str() );
+	} else {
+		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+
+		result = static_cast<TransferPluginResult>(exit_status);
+		if (exit_by_signal) {
+			result = TransferPluginResult::Error;
+		}
+
+		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 	}
 
 	// Capture stdout from the plugin and dump it to the stats file
-	char single_stat[1024];
-	while( fgets( single_stat, sizeof( single_stat ), plugin_pipe ) ) {
-		if( !plugin_stats->Insert( single_stat ) ) {
-			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", single_stat);
+	char * output = p_timer.output().Detach();
+
+	char * token = strtok( output, "\r\n" );
+	while( token != NULL ) {
+		// Does this need a newline?  It used to get one.
+		if( !plugin_stats->Insert( token ) ) {
+			dprintf (D_ALWAYS, "FILETRANSFER: error importing statistic %s\n", token);
 		}
+
+		token = strtok(NULL, "\r\n" );
 	}
 
-	// Close the plugin
-	int rc = my_pclose(plugin_pipe);
-	int exit_status = WEXITSTATUS(rc);
-	bool exit_by_signal = WIFSIGNALED(rc);
+	free(output);
 
-	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
 	plugin_stats->InsertAttr("PluginExitCode", exit_status);
 	plugin_stats->InsertAttr("PluginExitBySignal", exit_by_signal);
 	dprintf (D_ALWAYS, "FILETRANSFER: plugin %s returned %i exit_by_signal: %d\n", plugin.c_str(), exit_status, exit_by_signal);
@@ -6389,6 +6454,15 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 
 	// If the plugin did not return successfully, report the error and return
 	if (exit_by_signal || (result != TransferPluginResult::Success)) {
+		if( p_timer.was_timeout() ) {
+			e.pushf( "FILETRANSFER", 1,
+				"File transfer plugin %s timed out after %d seconds.",
+				plugin.c_str(), timeout
+			);
+
+			return TransferPluginResult::TimedOut;
+		}
+
 		std::string errorMessage;
 		std::string transferUrl;
 		if (!plugin_stats->LookupString("TransferError", errorMessage)) {
@@ -6500,14 +6574,44 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 
 	// Close the plugin
-	int rc = my_pclose( plugin_pipe );
-	int exit_status     = WEXITSTATUS(rc);
-	bool exit_by_signal = WIFSIGNALED(rc);
-	TransferPluginResult result = static_cast<TransferPluginResult>(exit_status);
-	if (exit_by_signal) {
-		result =  TransferPluginResult::Error;
+	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
+
+	int exit_status;
+	bool exit_by_signal;
+	TransferPluginResult result;
+
+	bool timed_out = false;
+	ASSERT(rc != MYPCLOSE_EX_NO_SUCH_FP);
+	if( rc == MYPCLOSE_EX_I_KILLED_IT ) {
+		timed_out = true;
+
+		exit_status    = ETIME;
+		exit_by_signal = TRUE;
+
+		result = TransferPluginResult::TimedOut;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s was killed after running for %d seconds.\n", plugin_path.c_str(), timeout );
+	} else if( rc == MYPCLOSE_EX_STATUS_UNKNOWN ) {
+		// The backwards-compatible my_pclose() returned -1 in this case.
+		int macos_dummy = -1;
+		exit_status    = WEXITSTATUS(macos_dummy);
+		exit_by_signal = WIFSIGNALED(macos_dummy);
+
+		result = TransferPluginResult::Error;
+
+		dprintf( D_ALWAYS, "FILETRANSFER: plugin %s exit status unknown, assuming -1.\n", plugin_path.c_str() );
+	} else {
+		exit_status    = WEXITSTATUS(rc);
+		exit_by_signal = WIFSIGNALED(rc);
+
+		result = static_cast<TransferPluginResult>(exit_status);
+		if (exit_by_signal) {
+			result = TransferPluginResult::Error;
+		}
+
+		dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 	}
-	dprintf (D_ALWAYS, "FILETRANSFER: plugin returned %i exit_by_signal: %d\n", exit_status, exit_by_signal);
 
 	// there is a unique issue when invoking plugins as root where shared
 	// libraries defined as relative to $ORIGIN in the RUNPATH will not
@@ -6576,7 +6680,7 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			}
 		}
 
-		if ( num_ads == 0 ) {
+		if ( num_ads == 0 && !timed_out ) {
 			dprintf( D_ALWAYS, "FILETRANSFER: No valid classads in file transfer output.\n" );
 			e.pushf( "FILETRANSFER", 1, "|Error: file transfer plugin %s exited with code %i, "
 				"no valid classads in output file %s", plugin_path.c_str(), exit_status, output_filename.c_str() );
@@ -6585,9 +6689,16 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 	fclose(output_file);
 
-	if (exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty())) {
-		e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
-			"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+	if( exit_by_signal || (result != TransferPluginResult::Success && e.getFullText().empty()) ) {
+		if( timed_out ) {
+			e.pushf( "FILETRANSFER", 1,
+				"File transfer plugin %s timed out after %d seconds.",
+				plugin_path.c_str(), timeout
+			);
+		} else {
+			e.pushf("FILETRANSFER", 1, "File transfer plugin %s failed unexpectedly with exit code %i, "
+				"did not report a TransferError message.", plugin_path.c_str(), exit_status);
+		}
 	}
 
 	return result;

@@ -53,6 +53,12 @@ Release Notes:
   non-rootly user a personal condor or glidein is running as.
   :jira:`1465`
 
+- File-transfer plug-ins may no longer take as long as they like to finish.
+  After :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME` seconds, the starter will
+  terminate the transfer and report a time-out failure (with ``ETIME``, 62,
+  as the hold reason subcode).
+  :jira:`1404`
+
 New Features:
 
 - Add support to the *condor_starter* for tracking processes via cgroup v2

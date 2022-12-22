@@ -4603,6 +4603,13 @@ type=int
 description=Maximum number of filetransfer remaps to apply before aborting
 tags=file_transfer
 
+[MAX_FILE_TRANSFER_PLUGIN_LIFETIME]
+default=72000
+version=10.2.0
+type=int
+description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
+tags=file_transfer
+
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
 version=7.9.4
