@@ -83,6 +83,19 @@ if(NOT WINDOWS)
 		set(WANT_PYTHON2_BINDINGS OFF)
 	endif()
 
+	# Wheels are build in an environment that intentionlly doesn't have the
+	# python .so's or .a's installed, but does have the header files.
+	# cmake find_package throws an error when you ask for development
+	# artifacts, and the libraries are missing.  So, we ask for just
+	# the interpreter, which find the root directory where the interpreter
+	# is installed, and exports the python major/minor/patch version 
+	# cmake variables.  To build the wheels, we rely on an outside script
+	# to set the PYTHON_INCLUDE_DIR 
+
+	if (WANT_PYTHON_WHEELS)
+		find_package (Python3 COMPONENTS Interpreter)
+	endif()
+
 	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 		find_package (Python2 COMPONENTS Interpreter Development)
