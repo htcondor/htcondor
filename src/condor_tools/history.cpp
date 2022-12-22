@@ -909,33 +909,22 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 		exit(1);
 	}
 
-        // The user didn't specify the name of the file to read, so we read
-        // the history file, and any backups (rotated versions). 
-        int numHistoryFiles;
-        const char **historyFiles;
+	// Find all time rotated files matching the filename in its given directory
+	std::vector<std::string> historyFiles = findHistoryFiles(matchFileName);
+	if (historyFiles.empty()) {
+		fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
+		exit(1);
+	}
 
+	if (backwards) { std::reverse(historyFiles.begin(), historyFiles.end()); }// Reverse reading of history files vector
 
-		historyFiles = findHistoryFiles(matchFileName, &numHistoryFiles);
-		if (!historyFiles) {
-			fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
-			exit(1);
-		}
-        if (historyFiles && numHistoryFiles > 0) {
-            int fileIndex;
-            if (backwards) { // Reverse reading of history files array
-                for(fileIndex = numHistoryFiles - 1; fileIndex >= 0; fileIndex--) {
-                    readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
-                }
-            }
-            else {
-                for (fileIndex = 0; fileIndex < numHistoryFiles; fileIndex++) {
-                    readHistoryFromFileEx(historyFiles[fileIndex], constraint, constraintExpr, backwards);
-                }
-            }
-            freeHistoryFilesList(historyFiles);
-        }
-    printFooter();
-    return;
+	// Read files for Ads in order
+	for(auto file : historyFiles) {
+		readHistoryFromFileEx(file.c_str(), constraint, constraintExpr, backwards);
+	}
+
+	printFooter();
+	return;
 }
 
 // Check to see if all possible job ads for cluster or cluster.proc have been found
