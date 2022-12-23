@@ -6510,6 +6510,29 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				// check output remaps
+				file_list.set(submit_param(SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS));
+				if (file_list) {
+					std::string remap_list(file_list.ptr());
+					if(remap_list[0] == '"') { remap_list = remap_list.substr(1); }
+					if(remap_list[remap_list.size()] == '"' ) { remap_list = remap_list.substr(0, remap_list.size() - 1); }
+
+					StringList files(remap_list.c_str(), ";");
+					for (const char * file = files.first(); file; file = files.next()) {
+						std::string remap(file);
+						auto eq = remap.find("=");
+						if( eq != std::string::npos ) {
+							std::string url = remap.substr(eq + 1);
+							trim(url);
+
+							if( IsUrl(url.c_str()) ) {
+								MyString tag = getURLType(url.c_str(), true);
+								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
+							}
+						}
+					}
+				}
+
 				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
 					answer += " && stringListIMember(\"";
