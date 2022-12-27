@@ -202,11 +202,5 @@ if [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
     pip3 install markupsafe==2.0.1
 fi
 
-if [ $VERSION_CODENAME = 'jammy' ];then
-    # TODO: figure out why this happens
-    ls -ld /var/lib/condor
-    chmod 0755 /var/lib/condor
-fi
-
 rm -rf /tmp/*
 exit 0
