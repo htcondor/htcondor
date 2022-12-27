@@ -20,8 +20,11 @@ Release Notes:
 
 New Features:
 
+- Add support for Ubuntu 22.04 LTS (Jammy Jellyfish).
+  :jira:`1304`
+
 - The Windows installer now uses the localized name of the Users group
-  so that it can be installed on non-english Windows platforms
+  so that it can be installed on non-english Windows platforms.
   :jira:`1474`
 
 - HTCondor now includes a file transfer plugin that support ``stash://``
