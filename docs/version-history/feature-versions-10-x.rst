@@ -29,6 +29,10 @@ Bugs Fixed:
   a job when it exits.
   :jira:`1500`
 
+- Fixed bug where ``condor_history`` would occasionally fail to display
+  all matching user requested job ids.
+  :jira:`1506`
+
 Version 10.2.0
 --------------
 

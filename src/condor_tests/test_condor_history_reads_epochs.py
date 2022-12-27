@@ -20,6 +20,7 @@ outputFiles = [
     "hist_file_epoch.txt",
     "hist_file_cluster.txt",
     "hist_file_cluster_proc.txt",
+    "hist_file_jid_match_regression.txt",
     "base_epoch.txt",
     "cluster.txt",
     "cluster_proc.txt",
@@ -34,6 +35,11 @@ expectedOutput = {
     "hist_file_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "hist_file_cluster.txt":{"1.0 1.1":4},
     "hist_file_cluster_proc.txt":{"1.0":2},
+    #There was a bug in the condor history exit once all possible jobs
+    #are found where if the last passed job is to be found after the
+    #other passed jobs it would be skipped. The below test makes sure that
+    #regression doesnt occur
+    "hist_file_jid_match_regression.txt":{"1.0 2.1":4},
     #All others check based on directory
     "base_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "cluster.txt":{"1.0 1.1":4},
@@ -112,6 +118,7 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
 "(file) history":"condor_history -epoch",
 "(file) history w/ cluster":"condor_history -epoch 1",
 "(file) history w/ cluster.proc":"condor_history -epoch 1.0",
+"(file) history job id mathing regression":"condor_history -epoch 2.1 1.0",
 "(dir) history":"condor_history -epoch",
 "(dir) history w/ cluster":"condor_history -epoch 1",
 "(dir) history w/ cluster.proc":"condor_history -epoch 1.0",
