@@ -28,6 +28,11 @@ SENDMAIL=/bin/true
 LOCAL_CONFIG_FILE={pwd}/condor_config.local
 DOCKER_PERFORM_TEST=false
 
+# By default, there are also the python-base box and gdrive
+# plugins which are very expensive to the hundreds of
+# personal condors to start up and test with -classad
+FILETRANSFER_PLUGINS=$(LIBEXEC)/curl_plugin
+
 # ctest allows tests to run for up to 1500 seconds; after that, we are
 # potentially a runaway personal condor instance.
 DAEMON_SHUTDOWN=time() - DaemonStartTime > 1500

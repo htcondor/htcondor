@@ -55,6 +55,7 @@ DEFAULT_PARAMS = {
     "RUNBENCHMARKS": "0",
     "MAX_JOB_QUEUE_LOG_ROTATIONS": "10",
     "STARTER_LIST": "STARTER",  # no standard universe starter
+    "FILETRANSFER_PLUGINS": "$(LIBEXEC)/curl_plugin",
 }
 
 
