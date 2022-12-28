@@ -62,7 +62,7 @@
 #include "VolumeManager.h"
 #endif
 
-typedef float (Resource::*ResourceFloatMember)();
+typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*ResourceMaskMember)(amask_t);
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
@@ -193,7 +193,7 @@ public:
 	// This function walks through the array of rip pointers, calls
 	// the specified function on each one, sums the resulting return
 	// values, and returns the total.
-	float	sum( ResourceFloatMember );
+	double	sum( ResourceFloatMember );
 
 	// Sort our Resource pointer array with the given comparison
 	// function.  
