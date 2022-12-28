@@ -60,7 +60,7 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         const char * https_proxy = getenv("https_proxy");
         if( http_proxy || https_proxy ) {
             formatstr_cat ( augmented_error_msg,
-                " (with environment: http_proxy='%s', https_proxy='%s'",
+                " (with environment: http_proxy='%s', https_proxy='%s')",
                 http_proxy ? http_proxy : "",
                 https_proxy ? https_proxy : ""
             );
