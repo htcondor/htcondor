@@ -23,6 +23,12 @@ New Features:
   subsets of those to its child processes.
   :jira:`1496`
 
+- When a file-transfer plug-in aborts due to lack of progress, the message
+  now includes the ``https_proxy`` environment variable, and the phrasing
+  has been changed to avoid suggesting that the plug-in respected it (or
+  ``http_proxy``).
+  :jira:`1471`
+
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for
