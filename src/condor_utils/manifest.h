@@ -46,6 +46,23 @@ namespace manifest {
     // Return the line up to its first space, or the whole line if it
     // contains no space.
     std::string ChecksumFromLine( const std::string & manifestLine );
+
+    // Creates a MANIFEST file at `manifestFileName` for the directory
+    // tree rooted at `path`.
+    bool createManifestFor(
+        const std::string & path,
+        const std::string & manifestFileName,
+        std::string & error );
+
+    // Assuming a valid MANIFEST file at `manifestFileName`, invokes
+    // the script specified by `pluginFileName` to delete the files
+    // listed there (aside from `manifestFileName`) from the
+    // `checkpointDestination`.
+    bool deleteFilesStoredAt(
+      const std::string & checkpointDestination,
+      const std::string & manifestFileName,
+      const std::string & pluginFileName,
+      std::string & error );
 }
 
 #endif /* _CHECKPOINT_MANIFEST_H */

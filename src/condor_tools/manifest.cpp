@@ -44,12 +44,21 @@ usage( const char * argv0 ) {
 
 int
 main( int argc, char ** argv ) {
-    if( argc != 3 ) {
+    if( argc < 3 ) {
         return usage( argv[0] );
     }
 
     std::string function = argv[1];
     std::string argument = argv[2];
+
+    std::string destination, plugin;
+    if( function == "deleteFilesStoredAt" ) {
+        if( argc < 5 ) { return usage( argv[0] ); }
+        destination = argv[3];
+        plugin = argv[4];
+    } else if( argc != 3 ) {
+        return usage( argv[0] );
+    }
 
     if( function == "getNumberFromFileName" ) {
         int no = manifest::getNumberFromFileName( argument );
@@ -82,6 +91,20 @@ main( int argc, char ** argv ) {
             fprintf( stdout, "%s *%s\n", checksum.c_str(), argument.c_str() );
         }
         return ok ? 0 : 1;
+    } else if( function == "createManifestFor" ) {
+        std::string error;
+        bool created = manifest::createManifestFor( argument, "MANIFEST", error );
+        if(! created) {
+            fprintf( stdout, "%s\n", error.c_str() );
+        }
+        return created ? 0 : 1;
+    } else if( function == "deleteFilesStoredAt" ) {
+        std::string error;
+        bool deleted = manifest::deleteFilesStoredAt( destination, argument, plugin, error );
+        if(! deleted) {
+            fprintf( stdout, "%s\n", error.c_str() );
+        }
+        return deleted ? 0 : 1;
     } else {
         return usage( argv[0] );
     }

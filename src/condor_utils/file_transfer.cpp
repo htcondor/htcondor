@@ -4173,7 +4173,7 @@ createCheckpointManifest(
 	}
 	std::string manifestHash;
 	if(! compute_file_sha256_checksum( manifestFileName, manifestHash )) {
-		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", ".MANIFEST" );
+		dprintf( D_ALWAYS, "Failed to compute manifest (%s) checksum when sending checkpoint, aborting.\n", manifestFileName.c_str() );
 		unlink( manifestFileName.c_str() );
 		return -1;
 	}
@@ -4185,7 +4185,7 @@ createCheckpointManifest(
 		manifestHash.c_str(), manifestFileName.c_str()
 	);
 	if(! htcondor::appendShortFile( manifestFileName,  append )) {
-		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", ".MANIFEST" );
+		dprintf( D_ALWAYS, "Failed to write manifest checksum to manifest (%s) when sending checkpoint, aborting.\n", manifestFileName.c_str() );
 		unlink( manifestFileName.c_str() );
 		return -1;
 	}
