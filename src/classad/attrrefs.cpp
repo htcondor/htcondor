@@ -426,6 +426,11 @@ FindExpr(EvalState &state, ExprTree *&tree, ExprTree *&sig, bool wantSig) const
 						// attrRef is only temporary, so we do not want to
 						// cache the evaluated result in the outer state object.
 					EvalState tstate;
+
+					// In case we recurse back here, let's propagate our
+					// recursion depth counter to prevent infinite regress.
+					tstate.depth_remaining = state.depth_remaining;
+
 					tstate.SetScopes(state.curAd);
 					rval = wantSig ? attrRef->Evaluate( tstate, val, sig )
 						: attrRef->Evaluate( tstate, val );

@@ -37,7 +37,7 @@ class MatchClassAd;
 
 class EvalState {
 	public:
-		const int MAX_CLASSAD_RECURSION = 1000;
+		const int MAX_CLASSAD_RECURSION = 400;
 
 		EvalState ()
 			: depth_remaining(MAX_CLASSAD_RECURSION)
