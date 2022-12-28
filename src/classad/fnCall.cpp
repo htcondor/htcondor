@@ -1425,7 +1425,7 @@ splitTime(const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	Value 	arg;
-    ClassAd *split;
+	ClassAd *split = nullptr;
 
 	if( argList.size( ) != 1 ) {
 		result.SetErrorValue( );
@@ -1437,12 +1437,15 @@ splitTime(const char*, const ArgumentList &argList, EvalState &state,
 		return false;	
 	}
 
-    if (!arg.IsClassAdValue() && doSplitTime(arg, split)) {
-        result.SetClassAdValue(split);
-    } else {
-        result.SetErrorValue();
-    }
-    return true;
+	if (arg.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+	} else if (!arg.IsClassAdValue() && doSplitTime(arg, split)) {
+		state.AddToDeletionCache(split);
+		result.SetClassAdValue(split);
+	} else {
+		result.SetErrorValue();
+	}
+	return true;
 }
 
 bool FunctionCall::

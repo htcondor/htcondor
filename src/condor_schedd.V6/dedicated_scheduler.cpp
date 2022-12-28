@@ -2592,7 +2592,7 @@ DedicatedScheduler::computeSchedule( void )
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
-					requirement = EvalExprTree( preemption_req, machine, job,
+					requirement = EvalExprToBool( preemption_req, machine, job,
 												result );
 					if (requirement) {
 						bool val;
@@ -2608,7 +2608,7 @@ DedicatedScheduler::computeSchedule( void )
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
-						rval = EvalExprTree( preemption_rank, machine, job,
+						rval = EvalExprToNumber( preemption_rank, machine, job,
 											 result );
 						if( !rval || !result.IsNumber(rank) ) {
 								// The result better be a number

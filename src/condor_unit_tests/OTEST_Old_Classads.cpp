@@ -900,7 +900,7 @@ static bool test_lookup_expr_error_or_false() {
 	const char* attribute_name = "E";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	classad::Value val;
-	int actual1 = EvalExprTree(tree, &classad, NULL, val);
+	int actual1 = EvalExprToScalar(tree, &classad, NULL, val);
 	int actual2 = (val.GetType() == classad::Value::ERROR_VALUE);
 	int expect = 1;
 	emit_input_header();
@@ -927,7 +927,7 @@ static bool test_lookup_expr_error_and() {
 	const char* attribute_name = "L";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	classad::Value val;
-	int actual1 = EvalExprTree(tree, &classad, NULL, val);
+	int actual1 = EvalExprToScalar(tree, &classad, NULL, val);
 	int actual2 = (val.GetType() == classad::Value::ERROR_VALUE);
 	int expect = 1;
 	emit_input_header();
@@ -954,7 +954,7 @@ static bool test_lookup_expr_error_and_true() {
 	const char* attribute_name = "M";
 	ExprTree * tree = classad.LookupExpr(attribute_name);
 	classad::Value val;
-	int actual1 = EvalExprTree(tree, &classad, NULL, val);
+	int actual1 = EvalExprToScalar(tree, &classad, NULL, val);
 	int actual2 = (val.GetType() == classad::Value::ERROR_VALUE);
 	int expect = 1;
 	emit_input_header();
@@ -7939,7 +7939,7 @@ static bool test_nested_ads()
 	}
 	
 	classad::Value val;
-	EvalExprTree(tree, &ad, NULL, val);
+	EvalExprToScalar(tree, &ad, NULL, val);
 	if (val.GetType() != classad::Value::UNDEFINED_VALUE) {
 		FAIL;
 	}

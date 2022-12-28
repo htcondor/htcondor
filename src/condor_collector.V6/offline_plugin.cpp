@@ -481,7 +481,7 @@ OfflineCollectorPlugin::expire (
 
 	/* Test is ad against the absent requirements expression, and
 	   mark the ad absent if true */
-	if (EvalExprTree(AbsentReq,&ad,NULL,result) &&
+	if (EvalExprToBool(AbsentReq,&ad,NULL,result) &&
 		result.IsBooleanValue(val) && val) 
 	{
 		int lifetime, timestamp;

@@ -130,10 +130,6 @@ IsNumber (double &r) const
 bool Value::
 IsBooleanValueEquiv(bool &b) const
 {
-	if ( !_useOldClassAdSemantics ) {
-		return IsBooleanValue( b );
-	}
-
 	switch (valueType) {
 		case BOOLEAN_VALUE:
 			b = booleanValue;
