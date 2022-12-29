@@ -23,6 +23,14 @@ New Features:
   subsets of those to its child processes.
   :jira:`1496`
 
+- When HTCondor has root, and is configured to use cgroups, if the system
+  as a whole is out of memory, and the kernel kills a job with the out
+  of memory killer, HTCondor now checks to see if the job is below
+  the provisioned memory.  If so, HTCondor now evicts the job, and
+  marks it as idle, not held, so that it might start again on a 
+  machine with sufficient resources.
+  :jira:`1512`
+
 - When a file-transfer plug-in aborts due to lack of progress, the message
   now includes the ``https_proxy`` environment variable, and the phrasing
   has been changed to avoid suggesting that the plug-in respected it (or
