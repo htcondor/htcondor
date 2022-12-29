@@ -15,6 +15,12 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1002`.
 
+- This versions changes the semantics of the ``output_destination`` submit
+  command.  It no longer sends the files named by the ``output`` or
+  ``error`` submit commands to the output destination.  Submitters may
+  instead specify those locations with URLs directly.
+  :jira:`1365`
+
 New Features:
 
 - When HTCondor has root, and is running with cgroups, the cgroup the job is
