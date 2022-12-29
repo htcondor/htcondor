@@ -212,10 +212,8 @@ public:
 	void	compute_cpu_busy( void );
 	time_t	cpu_busy_time( void );
 
-	void	display_load(amask_t how_much) {
-		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
-		r_attr->display(IS_UPDATE(how_much) ? 0 : D_VERBOSE);
-	}
+	void	display_load() { r_attr->display(0); }
+	void	display_load_as_D_VERBOSE() { r_attr->display(D_VERBOSE); }
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
