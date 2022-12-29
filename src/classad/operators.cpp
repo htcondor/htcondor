@@ -1160,7 +1160,7 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 				case MODULUS_OP:
 					// Don't throw SIGFPE for LONG_MIN % -1
 					if ((i1 == LONG_MIN) && (i2 == -1)) { 
-							result.SetIntegerValue(1);
+							result.SetIntegerValue(0);
 					} else {
 						if (i2 != 0) {
 							result.SetIntegerValue(i1%i2);
