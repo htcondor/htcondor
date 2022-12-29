@@ -159,7 +159,7 @@ VanillaProc::~VanillaProc()
 	cleanupOOM();
 }
 
-static bool cgroup_v1_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
+static bool cgroup_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
 
 #ifdef LINUX
 	if (relative_cgroup.length() == 0) {
@@ -167,10 +167,19 @@ static bool cgroup_v1_controller_is_writeable(const std::string &controller, std
 	}
 
 	// Assume cgroup mounted on /sys/fs/cgroup
-	std::string cgroup_mount_point = "/sys/fs/cgroup";
+	std::string cgroup_mount_point = "/sys/fs/cgroup/";
 
 	// In Cgroup v1, need to test each controller separately
-	std::string test_path = cgroup_mount_point + '/' + controller + '/' + relative_cgroup;
+	// For cgroup v2, controller will be empty string, but that's OK.
+	std::string test_path = cgroup_mount_point;
+
+	if (!controller.empty()) {
+		// cgroup v1 with controller at root
+		test_path += controller + '/';
+	} 
+
+	// Regardless of v1 or v2, the relative cgroup at the end
+	test_path += relative_cgroup;
 
 	// The relative path given might not completly exist.  We can write
 	// to it if we can write to the fully given path (the usual case)
@@ -194,7 +203,7 @@ static bool cgroup_v1_controller_is_writeable(const std::string &controller, std
 		} else {
 			relative_cgroup.resize(trailing_slash); // Retry one directory up
 		}
-		return cgroup_v1_controller_is_writeable(controller, relative_cgroup);
+		return cgroup_controller_is_writeable(controller, relative_cgroup);
 
 	}
 	
@@ -206,14 +215,14 @@ static bool cgroup_v1_controller_is_writeable(const std::string &controller, std
 static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 	return 
 		// These should be synchronized to the required_controllers in the procd
-		cgroup_v1_controller_is_writeable("memory", relative_cgroup)     &&
-		cgroup_v1_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
-		cgroup_v1_controller_is_writeable("freezer", relative_cgroup)    &&
-		cgroup_v1_controller_is_writeable("blkio", relative_cgroup);
+		cgroup_controller_is_writeable("memory", relative_cgroup)     &&
+		cgroup_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
+		cgroup_controller_is_writeable("freezer", relative_cgroup)    &&
+		cgroup_controller_is_writeable("blkio", relative_cgroup);
 }
 
-static bool cgroup_v2_is_writeable(const std::string &/*relative_cgroup*/) {
-	return false;  // Soon...
+static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
+	return cgroup_controller_is_writeable("", relative_cgroup);
 }
 
 static bool cgroup_is_writeable(const std::string &relative_cgroup) {
