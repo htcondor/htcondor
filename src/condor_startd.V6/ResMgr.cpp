@@ -710,7 +710,7 @@ ResMgr::walk( VoidResourceMember memberfunc )
 		return;
 	}
 
-    double currenttime = stats.BeginWalk(memberfunc);
+	double currenttime = stats.BeginWalk(memberfunc);
 
 		// Because the memberfunc might be an eval function, it can
 		// result in resources being deleted. This means a straight
@@ -727,22 +727,8 @@ ResMgr::walk( VoidResourceMember memberfunc )
 
 	delete [] cache;
 
-    stats.EndWalk(memberfunc, currenttime);
+	stats.EndWalk(memberfunc, currenttime);
 }
-
-
-void
-ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))(mask);
-	}
-}
-
 
 double
 ResMgr::sum( ResourceFloatMember memberfunc )
@@ -1361,7 +1347,12 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 	}
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
-		walk(&Resource::display_load, for_update ? A_UPDATE : 0);
+		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
+		if (for_update) {
+			walk(&Resource::display_load);
+		} else if (IsDebugVerbose(D_LOAD) || IsDebugVerbose(D_KEYBOARD)) {
+			walk(&Resource::display_load_as_D_VERBOSE);
+		}
 	}
 
 	// put the resources back into a "natural" order
@@ -2961,6 +2952,28 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+void
+ResMgr::printSlotAds(const char * slot_types) const
+{
+	// potentially filter by types if the types are defined.  otherwise print all.
+	std::set<Resource::ResourceFeature> filter;
+	if (slot_types) {
+		// check the filter to see if we will print
+		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
+		StringList sl(slot_types);
+		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+	}
+
+	for( int i = 0; i < nresources; i++ ) {
+		Resource *rip = resources[i];
+		if (filter.empty() || filter.count(rip->get_feature())) {
+			rip->dropAdInLogFile();
+		}
+	}
 }
 
 
