@@ -791,14 +791,14 @@ ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
 }
 
 
-float
+double
 ResMgr::sum( ResourceFloatMember memberfunc )
 {
 	if( ! resources ) {
 		return 0;
 	}
 	int i;
-	float tot = 0;
+	double tot = 0;
 	for( i = 0; i < nresources; i++ ) {
 		tot += (resources[i]->*(memberfunc))();
 	}
@@ -1601,7 +1601,7 @@ ResMgr::assign_load( void )
 	}
 
 	int i;
-	float total_owner_load = m_attr->load() - m_attr->condor_load();
+	double total_owner_load = m_attr->load() - m_attr->condor_load();
 	if( total_owner_load < 0 ) {
 		total_owner_load = 0;
 	}
@@ -2495,7 +2495,7 @@ claimedRankCmp( const void* a, const void* b )
 {
 	const Resource *rip1, *rip2;
 	int val1, val2, diff;
-	float fval1, fval2;
+	double fval1, fval2;
 	State s;
 	rip1 = *((Resource* const *)a);
 	rip2 = *((Resource* const *)b);

@@ -889,8 +889,8 @@ Resource::hackLoadForCOD( void )
 		return;
 	}
 
-	float load = rint((r_pre_cod_total_load) * 100) / 100.0;
-	float c_load = rint((r_pre_cod_condor_load) * 100) / 100.0;
+	double load = rint((r_pre_cod_total_load) * 100) / 100.0;
+	double c_load = rint((r_pre_cod_condor_load) * 100) / 100.0;
 
 	if( IsDebugVerbose( D_LOAD ) ) {
 		if( r_cod_mgr->isRunning() ) {
@@ -2996,10 +2996,10 @@ Resource::dprintf( int flags, const char* fmt, ... ) const
 
 // Update the Cpus and Memory usage values of the starter on the active claim
 // and compute the condor load average from those numbers.
-float
+double
 Resource::compute_condor_usage( void )
 {
-	float cpu_usage, avg, max, load;
+	double cpu_usage, avg, max, load;
 	int numcpus = resmgr->num_real_cpus();
 
 	time_t now = resmgr->now();
@@ -3024,7 +3024,7 @@ Resource::compute_condor_usage( void )
 		// we only consider the opportunistic Condor claim for
 		// CondorLoadAvg, not any of the COD claims...
 		if (r_cur->isActive()) {
-			cpu_usage = (float)pctCpu;
+			cpu_usage = pctCpu;
 		}
 	}
 
@@ -3304,7 +3304,7 @@ Resource::willingToRun(ClassAd* request_ad)
 #if HAVE_JOB_HOOKS
 
 void
-Resource::createOrUpdateFetchClaim(ClassAd* job_ad, float rank)
+Resource::createOrUpdateFetchClaim(ClassAd* job_ad, double rank)
 {
 	if (state() == claimed_state && activity() == idle_act
 		&& r_cur && r_cur->type() == CLAIM_FETCH)
@@ -3325,7 +3325,7 @@ Resource::createOrUpdateFetchClaim(ClassAd* job_ad, float rank)
 }
 
 void
-Resource::createFetchClaim(ClassAd* job_ad, float rank)
+Resource::createFetchClaim(ClassAd* job_ad, double rank)
 {
 	Claim* new_claim = new Claim(this, CLAIM_FETCH);
 	new_claim->setjobad(job_ad);
@@ -3547,10 +3547,10 @@ void Resource::disable()
 }
 
 
-float
+double
 Resource::compute_rank( ClassAd* req_classad ) {
 
-	float rank;
+	double rank;
 
 	if( EvalFloat( ATTR_RANK, r_classad, req_classad, rank ) == 0 ) {
 		ExprTree *rank_expr = r_classad->LookupExpr("RANK");

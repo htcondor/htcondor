@@ -949,8 +949,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
-	float rank = 0;
-	float oldrank = 0;
+	double rank = 0;
+	double oldrank = 0;
 	std::string client_addr;
 	int interval;
 	ClaimIdParser idp(id);
@@ -1613,7 +1613,7 @@ activate_claim( Resource* rip, Stream* stream )
 	}
 
 		// update the current rank on this claim
-	float rank = rip->compute_rank( req_classad );
+	double rank = rip->compute_rank( req_classad );
 	rip->r_cur->setrank( rank );
 
 		// Actually spawn the starter.
