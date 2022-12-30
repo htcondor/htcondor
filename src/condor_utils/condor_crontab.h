@@ -131,34 +131,9 @@ public:
 		 * @param ad - the ClassAd to pull the CronTab attributes from.
 		 **/
 	CronTab( ClassAd* );
+
 		/**
-		 * Constuctor
-		 * Provided to add backwards capabilities for cronos.c
-		 * Using integers really limits what can be done for scheduling
-		 * The STAR constant has been replaced with CRONTAB_CRONOS_STAR
-		 * Note that we are also not providing scheduling down to the second
-		 * 
-		 * @param minutes - the minutes attribute (0 - 59)
-		 * @param hours - the hours attribute (0 - 23)
-		 * @param days_of_month - a day in a month (1 - 31, depending on the month)
-		 * @param months - the months attribute (1 - 12)
-		 * @param days_of_week - a day in the week (0 - 7, Sunday is 0 or 7)
-		 **/
-	CronTab( int, int, int, int, int );
-		/**
-		 * Constructor
-		 * Instead of being given a ClassAd, we can be given string values
-		 * following the same format to create a cron schedule
-		 * 
-		 * @param minutes
-		 * @param hours
-		 * @param days_of_month
-		 * @param months
-		 * @param days_of_week
-		 **/
-	CronTab( const char*, const char*, const char*, const char*, const char* );
-		/**
-		 * Deconstructor
+		 * Destructor
 		 * Remove our array lists and parameters that we have
 		 * dynamically allocated
 		 **/
@@ -193,7 +168,9 @@ public:
 		 * 
 		 * @return the error message for this object
 		 **/
-	MyString getError();
+	std::string getError() const {
+		return ( this->errorLog );
+	}
 		/**
 		 * Returns the next execution time for our cron schedule from
 		 * the current time.
@@ -309,7 +286,7 @@ protected:
 		//
 		// Instantiated Error Log
 		//
-	MyString errorLog;
+	std::string errorLog;
 		//
 		// We need to know whether our fields are valid
 		// and we can proceed with looking for a runtime
