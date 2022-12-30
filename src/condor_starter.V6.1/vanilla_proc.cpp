@@ -1273,28 +1273,41 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 		//
 #ifdef LINUX
-	if (param_boolean("IGNORE_LEAF_OOM", true)) {
-		// if memory.use_hierarchy is 1, then hitting the limit at
-		// the parent notifies all children, even if those children
-		// are below their usage.  If we are below our usage, ignore
-		// the OOM, and continue running.  Hopefully, some process
-		// will be killed, and when it does, this job will get unfrozen
-		// and continue running.
+	//  Cgroup memory limits are limits, not reservations.
+	//  For many reasons, a job could be below the memory limit,
+	//  but still get an OOM notification.  Commonly, this happens
+	//  when other processes on the system are using large amounts
+	//  of memory.  
+	//
+	//  Check to see if this is the case, and if so, it 
+	//  isn't our job's fault, but we need to 
+	//  evict the job, so it might run more successfully somewhere
+	//  else.  The situation is pretty dire, so we likely can't
+	//  checkpoint or otherwise exit gracefully, but at least let's
+	//  try to get a message a back to the shadow.
 
-		if (m_oom_efd != -1) {
-			if (usage < (0.9 * m_memory_limit)) {
-				long long oomData = 0xdeadbeef;
-				int efd = -1;
-				ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
-				// need to drain notification fd, or it will still
-				// be hot, and we'll come right back here again
-				int r = read(efd, &oomData, 8);
-
-				dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
-				return 0;
-			}
-		}
+	// First drain the pipe, if there is one, so it doesn't fire
+	// again.
+	if (m_oom_efd != -1) {
+		long long oomData = 0xdeadbeef;
+		int efd = -1;
+		ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
+		int r = read(efd, &oomData, 8);
+		// Should be zero, but need to quiet compiler warnings in this rare case
+		dprintf(D_FULLDEBUG, "Draining OOM pipe result is %d\n", r);
+		cleanupOOM();
 	}
+
+	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
+	// lower than the limit when the OOM killer fired.
+	// So have some slop, just in case.
+	if (usage < (0.9 * m_memory_limit)) {
+		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %d Mb\n", usage);
+		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+		Starter->jic->allJobsGone(); // and exit to clean up more memory
+		return 0;
+	}
+
 #endif
 
 	std::stringstream ss;

@@ -997,15 +997,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
         *   Alice security,math
         alt Alice math,hacking
 
-:macro-def:`IGNORE_LEAF_OOM`
-    A boolean value that, when ``True``, tells HTCondor not to kill and
-    hold a job that is within its memory allocation, even if other
-    processes within the same cgroup have exceeded theirs. The default
-    value is ``True``. (Note that this represents a change in behavior
-    compared to versions of HTCondor older than 8.6.0; this
-    configuration macro first appeared in version 8.4.11. To restore the
-    previous behavior, set this value to ``False``.)
-
 :macro-def:`SIGN_S3_URLS`
     A boolean value that, when ``True``, tells HTCondor to convert ``s3://``
     URLs into pre-signed ``https://`` URLs.  This allows execute nodes to
