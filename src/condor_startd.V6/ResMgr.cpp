@@ -909,7 +909,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if ( ! numSlots()) {
 		return NULL;
 	}
-	bool requirements;
+	Resource * foundRip = nullptr;
 
 		/*
           We always ensure that the request's Requirements, if any,
@@ -929,19 +929,18 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 
 		// find the first one that matches our requirements
 	for(int i = 0; i < nresources; i++ ) {
-		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
-						  requirements ) == 0 ) {
-			requirements = false;
-		}
-		if( requirements ) {
-			return resources[i];
+		Resource * rip = resources[i];
+		bool value = false;
+		if (EvalBool(ATTR_REQUIREMENTS, ad, rip->r_classad, value) && value) {
+			foundRip = rip;
+			break;
 		}
 	}
 
 	// put the resources back into a "natural" order
 	resource_sort(naturalSlotOrderCmp);
 
-	return NULL;
+	return foundRip;
 }
 
 
