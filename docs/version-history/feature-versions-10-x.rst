@@ -63,10 +63,6 @@ New Features:
   and matching owners.
   :jira:`1382`
 
-- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
-  previously it was 0.
-  :jira:`1393`
-
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`
@@ -74,10 +70,6 @@ New Features:
 - The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
-
-- Docker universe and container universe job that use the docker runtime now detect
-  when the Unix uid or gid has the high bit set, which docker does not support.
-  :jira:`1421`
 
 - Declaring either ``container_image`` or ``docker_image`` without a defined ``universe``
   in a submit file will now automatically setup job for respective ``universe`` based on
