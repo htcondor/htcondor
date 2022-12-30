@@ -167,7 +167,7 @@ public:
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) const { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
-	int		numSlots( void ) const { return nresources; }
+	int		numSlots( void ) const { return resources ? nresources : 0; }
 
 	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
