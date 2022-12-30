@@ -2340,7 +2340,7 @@ ResMgr::checkHibernate( void )
 		for ( int i = 0; i < nresources; ++i ) {
 			Resource * rip = resources[i];
 			rip->enable();
-			rip->update();
+			rip->update_needed(Resource::WhyFor::wf_hiberChange);
 			m_hibernating = false;
 		}
 
