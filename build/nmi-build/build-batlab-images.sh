@@ -45,8 +45,10 @@ PATCH_VER=${AVERSION[2]}
 CONTAINER_VERSION=$(printf "%02d%02d%02d%02d" "$MAJOR_VER" "$MINOR_VER" "$PATCH_VER" "$SERIAL")
 
 buildimage aarch64_AlmaLinux8 arm64v8/almalinux:8
+buildimage aarch64_AlmaLinux9 arm64v8/almalinux:9
 buildimage ppc64le_AlmaLinux8 ppc64le/almalinux:8
 buildimage x86_64_AlmaLinux8 almalinux:8
+buildimage x86_64_AlmaLinux9 almalinux:9
 buildimage x86_64_CentOS7 centos:7
 buildimage x86_64_Debian11 debian:bullseye
 buildimage x86_64_Ubuntu18 ubuntu:bionic

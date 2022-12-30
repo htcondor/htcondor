@@ -121,7 +121,7 @@ if [ $VERSION_CODENAME = 'bionic' ] || [ $VERSION_CODENAME = 'jammy' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'amzn' ]; then
+if [ $ID = 'almalinux' ] && [ $VERSION_ID -eq 9 ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -173,11 +173,11 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
-    $INSTALL condor java openssh-clients openssh-server
+    $INSTALL condor java procps-ng openssh-clients openssh-server
     if [ $ID != 'amzn' ]; then
         $INSTALL apptainer
     fi
-    $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(Env)' 'perl(Net::Domain)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
+    $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
 if [ $ID = 'amzn' ] || [ $ID = 'centos' ]; then
