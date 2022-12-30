@@ -2,10 +2,10 @@
 
 # Officially supported platforms
 docker://htcondor/nmi-build:aarch64_AlmaLinux8-10000006
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-10020000
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-10030001
 docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10000006
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-10000006
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-10020000
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-10030017
 docker://htcondor/nmi-build:x86_64_CentOS7-10000108
 docker://htcondor/nmi-build:x86_64_Debian11-10000111
 x86_64_MacOSX15
