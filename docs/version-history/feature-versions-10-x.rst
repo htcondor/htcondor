@@ -25,11 +25,11 @@ Release Notes:
 New Features:
 
 - Add support to the *condor_starter* for tracking processes via cgroup v2
-  on linux distributions that support cgroup v2.
+  on Linux distributions that support cgroup v2.
   :jira:`1457`
 
 - *condor_q* default behavior of displaying the cumulative run time has changed
-  to now display the current run time for jobs in running, tranfering output,
+  to now display the current run time for jobs in running, transferring output,
   and suspended states while displaying the previous run time for jobs in idle or held
   state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
   :jira:`1064`
@@ -76,7 +76,7 @@ New Features:
   :jira:`1339`
 
 - Docker universe and container universe job that use the docker runtime now detect
-  when the unix uid or gid has the high bit set, which docker does not support.
+  when the Unix uid or gid has the high bit set, which docker does not support.
   :jira:`1421`
 
 - Declaring either ``container_image`` or ``docker_image`` without a defined ``universe``
@@ -104,10 +104,14 @@ New Features:
   :jira:`1463`
 
 - EGI CheckIn tokens can now be used to authenticate via the SCITOKENS
-  authenication method.
+  authentication method.
   New configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
   must be set to ``True`` to enable this usage.
   :jira:`1498`
+
+- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+  where it wouldn't work.
+  :jira:`1274`
 
 Version 10.1.3
 --------------
@@ -120,8 +124,8 @@ Release Notes:
 
 New Features:
 
-- Jobs run in Singularity or Apptainer container runtmes now use the
-  SINGULARITY_VERBOSITY flag, which controlls the verbosity of the runtime logging
+- Jobs run in Singularity or Apptainer container runtimes now use the
+  SINGULARITY_VERBOSITY flag, which controls the verbosity of the runtime logging
   to the job's stderr.  The default value is "-s" for silent, meaning only
   fatal errors are logged.  
   :jira:`1436`
@@ -175,7 +179,7 @@ Bugs Fixed:
 
 - Fixed bugs in the container universe that prevented 
   apptainer-only systems from running container universe jobs
-  with docker-repo style images
+  with Docker repository style images
   :jira:`1412`
 
 Version 10.1.0
