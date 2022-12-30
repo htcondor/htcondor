@@ -753,11 +753,11 @@ ResMgr::reconfig_resources( void )
 void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
-    double currenttime = stats.BeginWalk(memberfunc);
+	double currenttime = stats.BeginWalk(memberfunc);
 
 		// Because the memberfunc might be an eval function, it can
 		// result in resources being deleted. This means a straight
@@ -774,22 +774,8 @@ ResMgr::walk( VoidResourceMember memberfunc )
 
 	delete [] cache;
 
-    stats.EndWalk(memberfunc, currenttime);
+	stats.EndWalk(memberfunc, currenttime);
 }
-
-
-void
-ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))(mask);
-	}
-}
-
 
 double
 ResMgr::sum( ResourceFloatMember memberfunc )
@@ -934,13 +920,14 @@ ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 									const char *claimId)
 {
 	Claim* foo = NULL;
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( (foo = resources[i]->findClaimByGlobalJobId(job_id)) ) {
-			if( foo == resources[i]->findClaimById(claimId) ) {
+		Resource * rip = resources[i];
+		if( (foo = rip->findClaimByGlobalJobId(job_id)) ) {
+			if( foo == rip->findClaimById(claimId) ) {
 				return foo;
 			}
 		}
@@ -953,11 +940,10 @@ ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 Resource*
 ResMgr::findRipForNewCOD( ClassAd* ad )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	bool requirements;
-	int i;
 
 		/*
           We always ensure that the request's Requirements, if any,
@@ -1010,7 +996,7 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	std::sort(resources, &resources[nresources], CODLessThan);
 
 		// find the first one that matches our requirements
-	for( i = 0; i < nresources; i++ ) {
+	for(int i = 0; i < nresources; i++ ) {
 		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
 						  requirements ) == 0 ) {
 			requirements = false;
@@ -1031,13 +1017,13 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 Resource*
 ResMgr::get_by_cur_id(const char* id )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if( rip->r_cur->idMatches(id) ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -1047,32 +1033,30 @@ ResMgr::get_by_cur_id(const char* id )
 Resource*
 ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if (rip->r_cur->idMatches(id)) {
+			return rip;
 		}
-		if( resources[i]->r_pre &&
-			resources[i]->r_pre->idMatches(id) ) {
-			return resources[i];
+		if (rip->r_pre && rip->r_pre->idMatches(id)) {
+			return rip;
 		}
-		if( resources[i]->r_pre_pre &&
-			resources[i]->r_pre_pre->idMatches(id) ) {
-			return resources[i];
+		if (rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+			return rip;
 		}
-		if (resources[i]->r_has_cp) {
-			for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+		if (rip->r_has_cp) {
+			for (Resource::claims_t::iterator j(rip->r_claims.begin());  j != rip->r_claims.end();  ++j) {
 				if ((*j)->idMatches(id)) {
 					if ( move_cp_claim ) {
-						delete resources[i]->r_cur;
-						resources[i]->r_cur = *j;
-						resources[i]->r_claims.erase(*j);
-						resources[i]->r_claims.insert(new Claim(resources[i]));
+						delete rip->r_cur;
+						rip->r_cur = *j;
+						rip->r_claims.erase(*j);
+						rip->r_claims.insert(new Claim(rip));
 					}
-					return resources[i];
+					return rip;
 				}
 			}
 		}
@@ -1084,13 +1068,14 @@ ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 Resource*
 ResMgr::get_by_name(const char* name )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( !strcmp(resources[i]->r_name, name) ) {
-			return resources[i];
+		Resource * rip = resources[i];
+		if( !strcmp(rip->r_name, name) ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -1099,23 +1084,25 @@ ResMgr::get_by_name(const char* name )
 Resource*
 ResMgr::get_by_name_prefix(const char* name )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int len = (int)strlen(name);
 	for (int i = 0; i < nresources; i++ ) {
-		const char * pat = strchr(resources[i]->r_name, '@');
-		if (pat && (int)(pat - resources[i]->r_name) == len && strncasecmp(name, resources[i]->r_name, len) == MATCH) {
-			return resources[i];
+		Resource * rip = resources[i];
+		const char * pat = strchr(rip->r_name, '@');
+		if (pat && (int)(pat - rip->r_name) == len && strncasecmp(name, rip->r_name, len) == MATCH) {
+			return rip;
 		}
 	}
 
 	// not found, print possible names
 	StringList names;
 	for(int i = 0; i < nresources; i++ ) {
-		names.append(resources[i]->r_name);
-		if( !strcmp(resources[i]->r_name, name) ) {
-			return resources[i];
+		Resource * rip = resources[i];
+		names.append(rip->r_name);
+		if( !strcmp(rip->r_name, name) ) {
+			return rip;
 		}
 	}
 	auto_free_ptr namelist(names.print_to_string());
@@ -1128,13 +1115,13 @@ ResMgr::get_by_name_prefix(const char* name )
 Resource*
 ResMgr::get_by_slot_id( int id )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_id == id ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if( rip->r_id == id ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -1144,7 +1131,7 @@ ResMgr::get_by_slot_id( int id )
 State
 ResMgr::state( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return owner_state;
 	}
 	State s = no_state;
@@ -1182,7 +1169,7 @@ ResMgr::state( void )
 void
 ResMgr::final_update( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 	walk( &Resource::final_update );
@@ -1326,7 +1313,7 @@ void ResMgr::compute_static()
 void
 ResMgr::compute_dynamic(bool for_update, Resource * rip)
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1455,7 +1442,12 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 	}
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
-		walk(&Resource::display_load, for_update ? A_UPDATE : 0);
+		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
+		if (for_update) {
+			walk(&Resource::display_load);
+		} else if (IsDebugVerbose(D_LOAD) || IsDebugVerbose(D_KEYBOARD)) {
+			walk(&Resource::display_load_as_D_VERBOSE);
+		}
 	}
 
 	std::sort(resources, &resources[nresources], slotOrderSorter{});
@@ -1580,15 +1572,15 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 void
 ResMgr::publishSlotAttrs( ClassAd* cap )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 	// experimental flags new for 8.9.7, evaluate STARTD_SLOT_ATTRS and insert valid literals only
 	bool as_literal = param_boolean("STARTD_EVAL_SLOT_ATTRS", false);
 	bool valid_only = ! param_boolean("STARTD_EVAL_SLOT_ATTRS_DEBUG", false);
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		resources[i]->publishSlotAttrs( cap, as_literal, valid_only );
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		rip->publishSlotAttrs( cap, as_literal, valid_only );
 	}
 }
 
@@ -1596,7 +1588,7 @@ ResMgr::publishSlotAttrs( ClassAd* cap )
 void
 ResMgr::assign_load( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1641,7 +1633,7 @@ ResMgr::assign_load( void )
 void
 ResMgr::assign_keyboard( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1678,7 +1670,7 @@ ResMgr::assign_keyboard( void )
 void
 ResMgr::check_polling( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -2085,39 +2077,40 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		// some timing stuff won't work.
 	int num_ads = 0;
 	for (int ii=0; ii<nresources; ++ii) {
+		Resource * rip = resources[ii];
 		if (limit_results >= 0 && num_ads >= limit_results) {
 			dprintf(D_ALWAYS, "result limit of %d reached, completing direct query\n", num_ads);
 			break;
 		}
 
 		ClassAd * res_ad = NULL;
-		if (snapshot && resources[ii]->r_classad) {
-			resources[ii]->r_classad->Unchain();
-			res_ad = new ClassAd(*resources[ii]->r_classad);
-			resources[ii]->r_classad->ChainToAd(resources[ii]->r_config_classad);
+		if (snapshot && rip->r_classad) {
+			rip->r_classad->Unchain();
+			res_ad = new ClassAd(*rip->r_classad);
+			rip->r_classad->ChainToAd(rip->r_config_classad);
 			SetMyTypeName(*res_ad, "Slot.State");
-			res_ad->Assign(ATTR_NAME, resources[ii]->r_name); // stuff a name because the name attribute is in the base ad
+			res_ad->Assign(ATTR_NAME, rip->r_name); // stuff a name because the name attribute is in the base ad
 		}
 		ClassAd * cfg_ad = NULL;
-		if (snapshot && resources[ii]->r_config_classad) {
-			cfg_ad = new ClassAd(*resources[ii]->r_config_classad);
+		if (snapshot && rip->r_config_classad) {
+			cfg_ad = new ClassAd(*rip->r_config_classad);
 			SetMyTypeName(*cfg_ad, "Slot.Config");
 		}
 		ClassAd * claim_ad = NULL;
-		if (snapshot && resources[ii]->r_cur && resources[ii]->r_cur->ad()) {
-			claim_ad = new ClassAd(*resources[ii]->r_cur->ad());
+		if (snapshot && rip->r_cur && rip->r_cur->ad()) {
+			claim_ad = new ClassAd(*rip->r_cur->ad());
 			clean_private_attrs(*claim_ad);
 			SetMyTypeName(*claim_ad, "Slot.Claim");
 		}
 
 		ClassAd * ad = new ClassAd;
-		resources[ii]->publish_single_slot_ad(*ad, cur_time, purp);
+		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
 		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
-			ads[resources[ii]->r_name] = ad;
-			if (res_ad) { res_ads[resources[ii]->r_name] = res_ad; }
-			if (cfg_ad) { cfg_ads[resources[ii]->r_name] = cfg_ad; }
-			if (claim_ad) { claim_ads[resources[ii]->r_name] = claim_ad; }
+			ads[rip->r_name] = ad;
+			if (res_ad) { res_ads[rip->r_name] = res_ad; }
+			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
+			if (claim_ad) { claim_ads[rip->r_name] = claim_ad; }
 			++num_ads;
 		} else {
 			delete ad;
@@ -2239,7 +2232,7 @@ ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
-	if (   !resources  ||  !m_hibernation_manager->wantsHibernate()  ) {
+	if ( ! numSlots()  ||  !m_hibernation_manager->wantsHibernate()  ) {
 		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
@@ -2254,9 +2247,9 @@ ResMgr::allHibernating( std::string &target ) const
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
-
+		Resource * rip = resources[i];
 		str = "";
-		if ( !resources[i]->evaluateHibernate ( str ) ) {
+		if ( !rip->evaluateHibernate ( str ) ) {
 			return 0;
 		}
 
@@ -2341,16 +2334,17 @@ ResMgr::checkHibernate( void )
 		if ( disableResources( target ) ) {
 			m_hibernation_manager->switchToTargetState( );
 		}
-#     if !defined( WIN32 )
+	#if !defined( WIN32 )
 		sleep(10);
-        m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
-        for ( int i = 0; i < nresources; ++i ) {
-            resources[i]->enable();
-            resources[i]->update_needed(Resource::WhyFor::wf_hiberChange);
+		m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
+		for ( int i = 0; i < nresources; ++i ) {
+			Resource * rip = resources[i];
+			rip->enable();
+			rip->update_needed(Resource::WhyFor::wf_hiberChange);
 			m_hibernating = false;
-	    }
+		}
 
-#     endif
+	#endif
     }
 }
 
@@ -2522,10 +2516,14 @@ claimedRankCmp( const void* a, const void* b )
 void
 ResMgr::FillExecuteDirsList( class StringList *list )
 {
+	if ( ! numSlots())
+		return;
+
 	ASSERT( list );
 	for( int i=0; i<nresources; i++ ) {
-		if( resources[i] ) {
-			char const *execute_dir = resources[i]->executeDir();
+		Resource * rip = resources[i];
+		if (rip) {
+			char const *execute_dir = rip->executeDir();
 			if( !list->contains( execute_dir ) ) {
 				list->append(execute_dir);
 			}
@@ -2625,22 +2623,23 @@ ResMgr::startDraining(
 
 	if( check_expr ) {
 		for( int i = 0; i < nresources; i++ ) {
+			Resource * rip = resources[i];
 			classad::Value v;
 			bool check_ok = false;
 			classad::EvalState eval_state;
-			eval_state.SetScopes( resources[i]->r_classad );
+			eval_state.SetScopes( rip->r_classad );
 			if( !check_expr->Evaluate( eval_state, v ) ) {
-				formatstr(error_msg,"Failed to evaluate draining check expression against %s.", resources[i]->r_name );
+				formatstr(error_msg,"Failed to evaluate draining check expression against %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !v.IsBooleanValue(check_ok) ) {
-				formatstr(error_msg,"Draining check expression does not evaluate to a bool on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression does not evaluate to a bool on %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !check_ok ) {
-				formatstr(error_msg,"Draining check expression is false on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression is false on %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
@@ -2658,7 +2657,8 @@ ResMgr::startDraining(
 	// Insert draining attributes into the resource ads, in case the
 	// retirement expression uses them.
 	for( int i = 0; i < nresources; i++ ) {
-		ClassAd &ad = *(resources[i]->r_classad);
+		Resource * rip = resources[i];
+		ClassAd &ad = *(rip->r_classad);
 		// put these into the resources ClassAd now, they are also set by this->publish
 		ad.InsertAttr( ATTR_DRAIN_REASON, reason );
 		ad.InsertAttr( ATTR_DRAINING, true );
@@ -2779,6 +2779,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 
 	int longest_retirement_remaining = 0;
 	for( int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
 		// The max job retirement time of jobs accepted while draining is
 		// implicitly zero.  Otherwise, we'd need to record the result of
 		// this computation at the instant we entered draining state and
@@ -2786,8 +2787,8 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 		// probably be more efficient, but would be a small semantic change,
 		// because jobs would no longer be able to voluntarily reduce their
 		// max job retirement time after retirement began.
-		if(! resources[i]->wasAcceptedWhileDraining()) {
-			int retirement_remaining = resources[i]->evalRetirementRemaining();
+		if(! rip->wasAcceptedWhileDraining()) {
+			int retirement_remaining = rip->evalRetirementRemaining();
 			if( retirement_remaining > longest_retirement_remaining ) {
 				longest_retirement_remaining = retirement_remaining;
 			}
@@ -2804,7 +2805,8 @@ ResMgr::drainingIsComplete(Resource * /*rip*/)
 	}
 
 	for( int i = 0; i < nresources; i++ ) {
-		if( resources[i]->state() != drained_state ) {
+		Resource * rip = resources[i];
+		if( rip->state() != drained_state ) {
 			return false;
 		}
 	}
@@ -2819,8 +2821,9 @@ ResMgr::considerResumingAfterDraining()
 	}
 
 	for( int i = 0; i < nresources; i++ ) {
-		if( resources[i]->state() != drained_state ||
-			resources[i]->activity() != idle_act )
+		Resource * rip = resources[i];
+		if( rip->state() != drained_state ||
+			rip->activity() != idle_act )
 		{
 			return false;
 		}
@@ -2972,15 +2975,16 @@ ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
 
 void
 ResMgr::checkForDrainCompletion() {
-	if( ! resources ) { return; }
+	if ( ! numSlots()) { return; }
 
 	bool allAcceptedWhileDraining = true;
 	for( int i = 0; i < nresources; ++i ) {
-		if(! resources[i]->wasAcceptedWhileDraining()) {
+		Resource * rip = resources[i];
+		if(! rip->wasAcceptedWhileDraining()) {
 			// Not sure how COD and draining are supposed to interact, but
 			// the partitionable slot is never accepted-while-draining,
 			// nor claimed, nor should it block drain from completing.
-			if(! resources[i]->hasAnyClaim()) { continue; }
+			if(! rip->hasAnyClaim()) { continue; }
 			allAcceptedWhileDraining = false;
 		}
 	}
@@ -2999,6 +3003,28 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+void
+ResMgr::printSlotAds(const char * slot_types) const
+{
+	// potentially filter by types if the types are defined.  otherwise print all.
+	std::set<Resource::ResourceFeature> filter;
+	if (slot_types) {
+		// check the filter to see if we will print
+		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
+		StringList sl(slot_types);
+		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+	}
+
+	for( int i = 0; i < nresources; i++ ) {
+		Resource *rip = resources[i];
+		if (filter.empty() || filter.count(rip->get_feature())) {
+			rip->dropAdInLogFile();
+		}
+	}
 }
 
 

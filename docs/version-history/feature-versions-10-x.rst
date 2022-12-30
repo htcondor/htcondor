@@ -25,6 +25,12 @@ Release Notes:
   it would pick a different process.
   :jira:`1512`
 
+- This versions changes the semantics of the ``output_destination`` submit
+  command.  It no longer sends the files named by the ``output`` or
+  ``error`` submit commands to the output destination.  Submitters may
+  instead specify those locations with URLs directly.
+  :jira:`1365`
+
 New Features:
 
 - When a file-transfer plug-in aborts due to lack of progress, the message
