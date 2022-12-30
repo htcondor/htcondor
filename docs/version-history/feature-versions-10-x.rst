@@ -15,21 +15,17 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1002`.
 
-New Features:
-
-- When HTCondor has root, and is running with cgroups, the cgroup the job is
-  in is writeable by the job. This allows the job (perhaps a glidein)
-  to sub-divide the resource limits it has been given, and allocate
-  subsets of those to its child processes.
-  :jira:`1496`
-
-- When HTCondor has root, and is configured to use cgroups, if the system
+- When HTCondor is configured to use cgroups, if the system
   as a whole is out of memory, and the kernel kills a job with the out
   of memory killer, HTCondor now checks to see if the job is below
   the provisioned memory.  If so, HTCondor now evicts the job, and
   marks it as idle, not held, so that it might start again on a 
-  machine with sufficient resources.
+  machine with sufficient resources. Previous, HTCondor would let
+  this job attempt to run, hoping the next time the OOM killer fired
+  it would pick a different process.
   :jira:`1512`
+
+New Features:
 
 - When a file-transfer plug-in aborts due to lack of progress, the message
   now includes the ``https_proxy`` environment variable, and the phrasing
