@@ -323,6 +323,8 @@ if( -f $testConfigAppendFile ) {
 
 	# force stuff?
 	# print NEW "\nALL_DEBUG = D_SUB_SECOND D_CAT\n";
+	print "Prefixing to main config:\n\tENABLE_URL_TRANSFERS = false\n";
+	print NEW "\nENABLE_URL_TRANSFERS = false\n";
 
 	while (<APP>) {
 		print NEW "$_";
@@ -342,9 +344,10 @@ if( -f $testConfigAppendFile ) {
 	}
 	close( MAIN );
 } else {
-	print "No config append requested, forcing ALL_DEBUG = D_SUB_SECOND D_CAT\n";
+	print "No config append requested, forcing:\n\tENABLE_URL_TRANSFERS = false\n\tALL_DEBUG = D_SUB_SECOND D_CAT\n";
 	my $mainConfigFile = $ENV{ CONDOR_CONFIG };
 	open( MAIN,  ">> $mainConfigFile" ) or die "Failed to append to: $mainConfigFile :$!\n";
+	print NEW "\nENABLE_URL_TRANSFERS = false\n";
 	print MAIN "\nALL_DEBUG = D_SUB_SECOND D_CAT\n";
 	close ( MAIN );
 }
