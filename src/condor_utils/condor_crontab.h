@@ -186,12 +186,13 @@ public:
 		 * timestamp that we calculate here will be stored and can be accessed
 		 * again with lastRun().
 		 * The times are the number of seconds elapsed since 
-		 * 00:00:00 on January 1, 1970, Coordinated Universal Time (UTC)
+		 * 00:00:00 on January 1, 1970, in the local time zone, 
+		 * unless use_localtime is false, in which case, UTC.
 		 * 
 		 * @param timestamp - the starting time to get the next run time for
 		 * @return the next run time for the object's schedule
 		 **/
-	long nextRunTime( long );
+	long nextRunTime( long timestamp, bool use_localtime = true);
 		/**
 		 * If we were able to parse the parameters correctly
 		 * then we will let them query us for runtimes

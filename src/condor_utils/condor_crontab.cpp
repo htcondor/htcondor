@@ -323,7 +323,7 @@ CronTab::nextRunTime( ) {
  * @return the next run time for the object's schedule
  **/
 long
-CronTab::nextRunTime( long timestamp ) {
+CronTab::nextRunTime( long timestamp, bool use_localtime /* = true */) {
 	long runtime = CRONTAB_INVALID;
 	struct tm *tm;
 
@@ -356,7 +356,12 @@ CronTab::nextRunTime( long timestamp ) {
 		// match. This assumes that the ranges are sorted, which they 
 		// should be
 		//
-	tm = localtime( &_timestamp );
+	if (use_localtime) {
+		tm = localtime( &_timestamp );
+	} else {
+		tm = gmtime( &_timestamp );
+	} 
+
 	int fields[CRONTAB_FIELDS];
 	fields[CRONTAB_MINUTES_IDX]	= tm->tm_min;
 	fields[CRONTAB_HOURS_IDX]	= tm->tm_hour;
@@ -389,7 +394,12 @@ CronTab::nextRunTime( long timestamp ) {
 		matchTime.tm_mon	= match[CRONTAB_MONTHS_IDX] - 1;
 		matchTime.tm_year	= match[CRONTAB_YEARS_IDX] - 1900;
 		matchTime.tm_isdst  = -1; // auto-calculate whether daylight savings time applies
-		runtime = (long)mktime( &matchTime );
+
+		if (use_localtime) {
+			runtime = (long)mktime( &matchTime );
+		} else {
+			runtime = (long)timegm( &matchTime );
+		}
 		
 			//
 			// Make sure that our next runtime is in the future
