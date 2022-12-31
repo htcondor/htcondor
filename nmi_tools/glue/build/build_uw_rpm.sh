@@ -93,8 +93,8 @@ if [ $(arch) = 'aarch64' ]; then
     . /etc/os-release
     VERSION_ID=${VERSION_ID%%.*}
     if [ $VERSION_ID -eq 9 ]; then
-        if [ $RPM_BUILD_NCPUS -gt 5 ]; then
-            export RPM_BUILD_NCPUS=5
+        if [ $RPM_BUILD_NCPUS -gt 4 ]; then
+            export RPM_BUILD_NCPUS=4
         fi
     fi
 fi
