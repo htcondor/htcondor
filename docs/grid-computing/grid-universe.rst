@@ -204,7 +204,7 @@ If the remote *condor_collector* is not listening on the standard port
 
 .. code-block:: condor-submit
 
-    grid_resource = condor schedd.example.comd machine1.example.com:12345
+    grid_resource = condor schedd.example.com machine1.example.com:12345
 
 File transfer of a job's executable, ``stdin``, ``stdout``, and
 ``stderr`` are automatic. When other files need to be transferred using

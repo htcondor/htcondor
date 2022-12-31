@@ -23,9 +23,6 @@ Quick Links:
    If you are upgrading an existing pool from 8.9.X to 9.0.X, please visit
    https://htcondor-wiki.cs.wisc.edu/index.cgi/wiki?p=UpgradingFromEightNineToNineZero
 
-   If you are upgrading an existing pool from 8.8.X to 9.0.X, please visit
-   :doc:`/version-history/upgrading-from-88-to-90-series`.
-
    If you are installing a new HTCondor pool from scratch, please read
    about :doc:`/getting-htcondor/index`
 

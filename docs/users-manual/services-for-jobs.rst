@@ -100,8 +100,12 @@ executing job that may be useful.
    at least RequestCpus, but HTCondor may match a job to a bigger slot.  Jobs should not 
    spawn more than this number of cpu-bound threads, or their performance will suffer.
    Many third party libraries like OpenMP obey these environment variables.
+-  ``BATCH_SYSTEM`` 
+   :index:`BATCH_SYSTEM environment variable`\ :index:`BATCH_SYSTEM<single: BATCH_SYSTEM; environment variables>`
+   All job running under a HTCondor starter have the environment variable BATCH_SYSTEM 
+   set to the string *HTCondor*.  Inspecting this variable allows a job to
+   determine if it is running under HTCondor.
 -  ``X509_USER_PROXY``
-   :index:`X509_USER_PROXY environment variable`\ :index:`X509_USER_PROXY<single: X509_USER_PROXY; environment variables>`
    gives the full path to the X.509 user proxy file if one is associated
    with the job. Typically, a user will specify
    **x509userproxy** :index:`x509userproxy<single: x509userproxy; submit commands>` in
@@ -144,6 +148,22 @@ HTCondor ships a command-line tool, called *condor_chirp* that can do these
 actions, and provides python bindings so that they can be done natively in 
 Python.
 
+When changes to a job made by chirp take effect
+-----------------------------------------------
+
+When *condor_chirp* successfully updates a job ad attribute, that change
+will be reflected in the copy of the job ad in the *condor_schedd* on 
+the submit machine.  However, most job ad attributes are read by the *condor_starter*
+or *condor_startd* at job start up time, and should chirp change these
+attributes at run time, it will not impact the running job.  In particular,
+the attributes relating to resource requests, such as RequestCpus, RequestMemory,
+RequestDisk and RequestGPUS, will not cause any changes to the provisioned
+resources for a running job.  If the job is evicted, and restarts, these
+new requests will then take effect in the new execution of the job.  The same
+is true for the Requirements expression of a job.
+
+
+
 Resource Limitations on a Running Job
 -------------------------------------
 
@@ -164,3 +184,6 @@ Jobs may see
 
 - A limit on the amount of CPU cores the may use, above which the 
   job may be blocked, and will run very slowly.
+
+- A limit on the amount of scratch disk space the job may use, above
+  which the job may be placed on hold or evicted by the system.
