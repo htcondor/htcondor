@@ -3,6 +3,7 @@
 import os
 import time
 import subprocess
+from pathlib import Path
 
 from ornithology import (
     action,
@@ -160,7 +161,7 @@ def plugin_python_file(test_dir):
                 start_time = time.time()
 
                 remote_file_path = self.parse_url(url)
-                print(f"DEBUG: {start_time} download {remote_file_path} -> {local_file_path}")
+                # print(f"DEBUG: {start_time} download {remote_file_path} -> {local_file_path}")
                 file_size = Path(remote_file_path).stat().st_size
                 Path(local_file_path).parent.mkdir(parents=True,exist_ok=True)
                 shutil.copy(remote_file_path, local_file_path)
@@ -188,7 +189,7 @@ def plugin_python_file(test_dir):
                 start_time = time.time()
 
                 remote_file_path = self.parse_url(url)
-                print(f"DEBUG: {start_time} upload {remote_file_path} <- {local_file_path}")
+                # print(f"DEBUG: {start_time} upload {remote_file_path} <- {local_file_path}")
                 file_size = Path(local_file_path).stat().st_size
                 Path(remote_file_path).parent.mkdir(parents=True,exist_ok=True)
                 shutil.copy(local_file_path, remote_file_path)
@@ -480,6 +481,11 @@ TEST_CASES = {
     "local": {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
+    },
+    "local_no_keep": {
+        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "transfer_plugins":             'local={plugin_shell_file}',
+        "LeaveJobInQueue":              "false",
     },
     # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
     # checking the results.  For now, we're just going to ignore the
@@ -1040,7 +1046,10 @@ class TestCheckpointDestination:
     # *: in that the current check has false positive if the test case
     # submitted with a checkpoint destination somehow doesn't have one
     # by the time it finishes.
-    def test_checkpoint_location(self, test_dir, default_condor, the_completed_job):
+    def test_checkpoint_location(self, test_dir, default_condor, the_completed_job, the_job_name):
+        if the_job_name == "local_no_keep":
+            return
+
         schedd = default_condor.get_local_schedd()
         constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
         result = schedd.query(
@@ -1052,10 +1061,53 @@ class TestCheckpointDestination:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
 
 
+    # This is kind of awful, but the schedd just moves LeaveJobInQueue
+    # jobs from C to X instead of actually removing them.
+    def test_checkpoint_removed(self,
+      default_condor,
+      the_job_name, the_completed_job):
+        if the_job_name != "local_no_keep":
+            return
+
+        schedd = default_condor.get_local_schedd()
+        constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
+
+        # Make sure the job has left the queue.
+        result = schedd.query(
+            constraint=constraint,
+            projection=["CheckpointDestination", "GlobalJobID"],
+        )
+        assert(len(result) == 0)
+
+        # Get the CheckpointDestination and GlobalJobID from the history file.
+        result = schedd.history(
+            constraint=constraint,
+            projection=["CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
+            match=1,
+        )
+        results = [r for r in result]
+        assert(len(results) == 1)
+
+        jobAd = results[0]
+
+        prefix = jobAd["CheckpointDestination"]
+        prefix = prefix[prefix.find("://") + 3:]
+        prefix = prefix + "/" + jobAd["GlobalJobID"]
+        prefix = Path(prefix)
+
+        checkpointNumber = int(jobAd["CheckpointNumber"])
+        for i in range(0, checkpointNumber):
+            path = prefix / f"{i:04}"
+            assert(not path.exists())
+
+
     def test_checkpoint_structure(self,
       test_dir, default_condor,
       the_job_name, the_completed_job,
     ):
+        if the_job_name == "local_no_keep":
+            return
+
         # FIXME: Much of this code should be moved into fixtures, because
         # it's a set-up error if it fails.
 
