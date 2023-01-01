@@ -208,7 +208,7 @@ deleteFilesStoredAt(
 
 		std::string argStr;
 		args.GetArgsStringForLogging( argStr );
-		// fprintf( stderr, "About to run '%s'...\n", argStr.c_str() );
+		dprintf( D_FULLDEBUG, "About to run '%s'...\n", argStr.c_str() );
 
 		MyPopenTimer subprocess;
 		int rc = subprocess.start_program( args, subprocess.WITH_STDERR,
@@ -224,20 +224,32 @@ deleteFilesStoredAt(
 		int exit_status;
 		time_t timeout = 20;
 		if(! subprocess.wait_for_exit( timeout, & exit_status )) {
-			// FIXME: report partial output
+			const char * output = subprocess.output().data();
 			subprocess.close_program(1);
+
 			formatstr( error, "Timed out after %lu seconds waiting for '%s', aborting.\n", timeout, argStr.c_str() );
+			if( output != NULL ) {
+				formatstr_cat( error, "(Partial output: '%s')\n", output );
+			}
+
 			return false;
 		}
 
 		if( exit_status != 0 ) {
-			// FIXME: report partial output
+			const char * output = subprocess.output().data();
+
 			formatstr( error, "Failure running '%s': exit code was %d, aborting.\n", argStr.c_str(), exit_status );
+			if( output != NULL ) {
+				formatstr_cat( error, "(Output: '%s')\n", output );
+			}
+
 			return false;
 		}
 
 		const char * output = subprocess.output().data();
-		fprintf( stderr, "%s", output );
+		if( output != NULL ) {
+			dprintf( D_FULLDEBUG, "Ran '%s', output on next line:\n%s\n", argStr.c_str(), output );
+		}
 	}
 
 	fclose(fp);
