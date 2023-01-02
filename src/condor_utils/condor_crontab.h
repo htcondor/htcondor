@@ -27,7 +27,6 @@
 #include "condor_debug.h"
 #include "condor_attributes.h"
 #include "MyString.h"
-#include "extArray.h"
 #include "condor_regex.h"
 
 //
@@ -270,13 +269,13 @@ protected:
 		 * @param elt - the value to search for in the array
 		 * @return true if the element exists in the list
 		 **/
-	bool contains( ExtArray<int>&, const int&  );
+	bool contains( std::vector<int>&, const int&  );
 		/**
 		 * Ascending Insertion Sort
 		 * 
 		 * @param list - the array to sort
 		 **/
-	void sort( ExtArray<int>& );
+	void sort( std::vector<int>& );
 
 protected:
 		//
@@ -307,7 +306,7 @@ protected:
 		// After we parse the cron schedule we will have ranges
 		// for the different properties.
 		//
-	ExtArray<int> *ranges[CRONTAB_FIELDS];
+	std::vector<int> *ranges[CRONTAB_FIELDS];
 		//
 		// The regular expresion object we will use to make sure 
 		// our parameters are in the proper format.

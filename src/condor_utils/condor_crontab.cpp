@@ -23,8 +23,8 @@
 #include "condor_classad.h"
 #include "condor_debug.h"
 #include "MyString.h"
-#include "extArray.h"
 #include "date_util.h"
+#include <algorithm>
 
 //
 // The list of attributes that can be defined for a cron schedule
@@ -239,7 +239,7 @@ CronTab::init() {
 	bool failed = false;
 	int ctr;
 	for ( ctr = 0; ctr < CRONTAB_FIELDS; ctr++ ) {
-		this->ranges[ctr] = new ExtArray<int>();			
+		this->ranges[ctr] = new std::vector<int>;			
 			//
 			// Call to expand the parameter
 			// The function will modify the queue for us
@@ -458,7 +458,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		// to insert all the days of the month for the matching days of the
 		// week in the range.
 		//
-	ExtArray<int> *curRange = NULL;
+	std::vector<int> *curRange = NULL;
 	if ( attribute_idx == CRONTAB_DOM_IDX ) {
 			//
 			// We have to take the current month & year
@@ -468,36 +468,36 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 			
 			//Issue here is that range for dom will be 1-31
 			//for * and if one doesn't specify day_of_month in a job file
-		if (this->ranges[attribute_idx]->length()==CRONTAB_DAY_OF_MONTH_MAX){	
-			if ((this->ranges[CRONTAB_DOW_IDX]->length()==CRONTAB_DAY_OF_WEEK_MAX)||
-			   (this->ranges[CRONTAB_DOW_IDX]->length()==0)){ 
+		if (this->ranges[attribute_idx]->size() == CRONTAB_DAY_OF_MONTH_MAX){	
+			if ((this->ranges[CRONTAB_DOW_IDX]->size() == CRONTAB_DAY_OF_WEEK_MAX)||
+			   (this->ranges[CRONTAB_DOW_IDX]->size() == 0)){ 
 				//if both wildcards, use month range
 				//if DOW range empty use DOM range
-				curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+				curRange = new std::vector<int>( *this->ranges[attribute_idx] );
 			} else {
 				//only wildcard in month, so use day of week range
 				//this isn't quite right
-				curRange = new ExtArray<int>( CRONTAB_DAY_OF_MONTH_MAX );
+				curRange = new std::vector<int>(CRONTAB_DAY_OF_MONTH_MAX);
 			}
 		}else{
 		      // get to here means DOM was specified
-		      curRange = new ExtArray<int>( *this->ranges[attribute_idx] );
+		      curRange = new std::vector<int>( *this->ranges[attribute_idx] );
 		}
 		
 		int firstDay = dayOfWeek( match[CRONTAB_MONTHS_IDX],
 								  1,
 								  match[CRONTAB_YEARS_IDX] );
-		int ctr, cnt;
-		for ( ctr = 0, cnt = this->ranges[CRONTAB_DOW_IDX]->getlast();
-			  ctr <= cnt;
+		size_t ctr, cnt;
+		for ( ctr = 0, cnt = this->ranges[CRONTAB_DOW_IDX]->size();
+			  ctr < cnt;
 			  ctr++ ) {
 				//
 				// Now figure out all the days for this specific day of the week
 				//
-			int day = (this->ranges[CRONTAB_DOW_IDX]->getElementAt(ctr) - firstDay) + 1;
+			int day = (this->ranges[CRONTAB_DOW_IDX]->at(ctr) - firstDay) + 1;
 			while ( day <= CRONTAB_DAY_OF_MONTH_MAX ) {
 				if (curRange && day > 0 && !this->contains( *curRange, day ) ) {
-					curRange->add( day );
+					curRange->push_back(day);
 				}
 				day += 7;
 			} // WHILE
@@ -519,9 +519,10 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 		// If our value isn't in the list, then we'll take the next one
 		//
 	bool ret = false;
-	int range_idx, cnt;
-	for ( range_idx = 0, cnt = curRange->getlast();
-		  range_idx <= cnt;
+	size_t range_idx;
+	size_t cnt;
+	for ( range_idx = 0, cnt = curRange->size();
+		  range_idx < cnt;
 		  range_idx++ ) {
 			//
 			// Two ways to make a match:
@@ -536,7 +537,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 			//	   level, when they call us again they'll ask
 			//	   us to just use the first value that we can
 			//
-		int value = curRange->getElementAt( range_idx );
+		int value = curRange->at( range_idx );
 		if ( useFirst || value >= curTime[attribute_idx] ) {
 				//
 				// If this value is greater than the current time value,
@@ -617,7 +618,7 @@ bool
 CronTab::expandParameter( int attribute_idx, int min, int max )
 {
 	MyString *param = this->parameters[attribute_idx];
-	ExtArray<int> *list	= this->ranges[attribute_idx];
+	std::vector<int> *list	= this->ranges[attribute_idx];
 	
 		//
 		// Make sure the parameter is valid
@@ -783,7 +784,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		 		// that it falls in our step listing for the range
 		 		//
 			if (((temp % cur_step) == 0) && !this->contains(*list, temp)) {
-				list->add( temp );
+				list->push_back(temp);
 		 	}
 		} // FOR
 	} // WHILE
@@ -802,15 +803,14 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
  * @return true if the element exists in the list
  **/
 bool
-CronTab::contains( ExtArray<int> &list, const int &elt ) 
+CronTab::contains( std::vector<int> &list, const int &elt ) 
 {
 		//
 		// Just run through our array and look for the 
 		// the element
 		//
 	bool ret = false;
-	int ctr;
-	for ( ctr = 0; ctr <= list.getlast(); ctr++ ) {
+	for ( size_t ctr = 0; ctr < list.size(); ctr++ ) {
 			//
 			// All we can really do is do a simple comparison
 			//
@@ -824,22 +824,13 @@ CronTab::contains( ExtArray<int> &list, const int &elt )
 
 /**
  * Ascending Insertion Sort
- * This is here so I can sort ExtArray<int>'s
+ * This is here so I can sort std::vector<int>'s
  * 
  * @param list - the array to sort
  **/
 void
-CronTab::sort( ExtArray<int> &list )
+CronTab::sort( std::vector<int> &list )
 {
-	int ctr, ctr2, value;
-	for ( ctr = 1; ctr <= list.getlast(); ctr++ ) {
-		value = list[ctr];
-    	ctr2 = ctr;
-		while ( ( ctr2 > 0 ) && ( list[ctr2 - 1] > value ) ) {
-			list[ctr2] = list[ctr2 - 1];
-			ctr2--;
-		} // WHILE
-		list[ctr2] = value;
-	} // FOR
+	std::sort(list.begin(), list.end()); // ascending sort is the default
 	return;
 }
