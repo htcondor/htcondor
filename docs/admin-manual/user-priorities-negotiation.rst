@@ -39,11 +39,11 @@ has used over some recent period of time. Every user begins with a RUP of
 one half (0.5), which is the lowest possible value. At steady state, the RUP
 of a user equilibrates to the number of cores currently used.
 So, if a specific user continuously uses exactly ten cores
-for a long period of time, the RUP of that user asymtompically 
+for a long period of time, the RUP of that user asymptotically 
 approaches ten.
 
 However, if the user decreases the number of cores used, the RUP
-asymtompically lowers to the new value. The rate at which the priority 
+asymptotically lowers to the new value. The rate at which the priority 
 value decays can be set by the macro ``PRIORITY_HALFLIFE`` 
 :index:`PRIORITY_HALFLIFE`, a time period defined in seconds. Intuitively,
 if the ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE` in a pool is set 
@@ -106,7 +106,7 @@ should be about 75.0 at the 48 hour mark, and User B will still be the minimum o
 .5.  At that instance, User B deserves 150 times User A.  However, this ratio will
 decay quickly.  User A's share of the pool will drop from all 100 cores to less than
 one core immediately, but will quickly rebound to a handful of cores, and will 
-asymtompically approach half of the pool as User B gets the inverse. A graph
+asymptotically approach half of the pool as User B gets the inverse. A graph
 of these two users might look like this:
 
 .. figure:: /_images/fair-share.png
@@ -433,25 +433,22 @@ The Layperson's Description of the Pie Spin and Pie Slice
 
 HTCondor schedules in a variety of ways. First, it takes all users who
 have submitted jobs and calculates their priority. Then, it totals the
-number of resources available at the moment, and using the ratios of the
-user priorities, it calculates the number of machines each user could
-get. This is their pie slice.
+SlotWeight (by default, cores) of all currently available slots, and 
+using the ratios of the user priorities, it calculates the number of 
+cores each user could get. This is their pie slice.
+(See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
 
-The HTCondor matchmaker goes in user priority order, contacts each user,
-and asks for job information. The *condor_schedd* daemon (on behalf of
+The HTCondor matchmaker goes in user priority order, contacts each 
+schedd where that user's job lives, and asks for job 
+information. The *condor_schedd* daemon (on behalf of
 a user) tells the matchmaker about a job, and the matchmaker looks at
-available resources to create a list of resources that match the
-requirements expression. With the list of resources that match, it sorts
-them according to the rank expressions within ClassAds. If a machine
-prefers a job, the job is assigned to that machine, potentially
-preempting a job that might already be running on that machine.
-Otherwise, give the machine to the job that the job ranks highest. If
-the machine ranked highest is already running a job, we may preempt
-running job for the new job. When preemption is enabled, a reasonable
-policy states that the user must have a 20% better priority in order for
-preemption to succeed. If the job has no preferences as to what sort of
-machine it gets, matchmaking gives it the first idle resource to meet
-its requirements.
+available slots to create a list that match the requirements expression. 
+It then sorts the matching slots by the rank expressions within ClassAds. 
+If a slot prefers a job via the slot RANK expression, the job 
+is assigned to that slot, potentially preempting an already running job.
+Otherwise, give the slot to the job that the job ranks highest. If
+the highest ranked slot is already running a job, the negotiator may preempt
+the running job for the new job. 
 
 This matchmaking cycle continues until the user has received all of the
 machines in their pie slice. If there is a per-user ceiling defined
@@ -479,7 +476,7 @@ terminology, the accounting principal is called the submitter.
 The name of this submitter is, by default, the name the schedd authenticated
 when the job was first submitted to the schedd.  Usually, this is
 the operating system username.  However, the submitter can override
-the username selected by settting the submit file option
+the username selected by setting the submit file option
 
 .. code-block:: condor-submit
 
