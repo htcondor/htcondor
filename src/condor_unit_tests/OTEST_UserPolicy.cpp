@@ -3053,8 +3053,8 @@ static bool test_cron_minute(void) {
 		FAIL;
 	}
 	if (!ct.isValid()) {
-		FAIL;
 		reason = "CronTab::isValid actually returned false, should be true";
+		FAIL;
 	}
 
 	std::vector<int> expected = {
