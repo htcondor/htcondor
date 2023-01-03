@@ -454,7 +454,10 @@ machine it gets, matchmaking gives it the first idle resource to meet
 its requirements.
 
 This matchmaking cycle continues until the user has received all of the
-machines in their pie slice. The matchmaker then contacts the next
+machines in their pie slice. If there is a per-user ceiling defined
+with the *condor_userprio* -setceil command, and this ceiling is smaller
+than the pie slice, the user gets only up to their ceiling number of
+cores.  The matchmaker then contacts the next
 highest priority user and offers that user their pie slice worth of
 machines. After contacting all users, the cycle is repeated with any
 still available resources and recomputed pie slices. The matchmaker
