@@ -993,7 +993,7 @@ configuration variable ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``
 that defaults to ``False``.
 If the value is ``False``, then the client may present a certificate
 to be verified by the server.
-if the client doesn't have a certificate, then its identity is set to
+If the client doesn't have a certificate, then its identity is set to
 ``unauthenticated`` by the server.
 If the value is ``True`` and the client doesn't have a certificate, then
 the SSL authentication fails (other authentication methods may then be
@@ -1013,7 +1013,7 @@ respectively. Similarly, the configuration variables
 ``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE` and
 ``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
 specify the locations for keys.  If no client certificate is used,
-the client with authenticate as user ``anonymous@ssl``.
+the client will authenticate as user ``anonymous@ssl``.
 
 The configuration variables ``AUTH_SSL_SERVER_CAFILE``
 :index:`AUTH_SSL_SERVER_CAFILE` and ``AUTH_SSL_CLIENT_CAFILE``
@@ -1531,6 +1531,15 @@ NTSSPI is best-used in a way similar to file system authentication in
 Unix, and probably should not be used for authentication between two
 computers.
 
+SciTokens Authentication
+''''''''''''''''''''''''
+
+A SciToken is a form of JSON Web Token that the client can present
+that the server can verify. Authentication of the server by the client
+is done via an SSL host certificate (the same as with SSL authentication).
+More information about SciTokens can be found at
+`https://scitokens.org <https://scitokens.org>`_.
+
 Ask MUNGE for Authentication
 ''''''''''''''''''''''''''''
 
@@ -1636,6 +1645,10 @@ the following mappings, with some additional logic noted below:
     MUNGE (.*) \1
     CLAIMTOBE (.*) \1
     PASSWORD (.*) \1
+    SCITOKENS .* PLUGIN:*
+
+For SciTokens, the authenticated name is the ``iss`` and ``sub``
+claims of the token, separated by a comma.
 
 For Kerberos, if ``KERBEROS_MAP_FILE`` :index:`KERBEROS_MAP_FILE`
 is specified, the domain portion of the name is obtained by mapping the
@@ -1647,18 +1660,76 @@ See the :ref:`admin-manual/security:authentication` section for details.
 If authentication did not happen or failed and was not required, then
 the user is given the name unauthenticated@unmapped.
 
-With the integration of VOMS for authentication, the interpretation
-of the regular expression representing the authenticated name may
-change. First, the full serialized DN and FQAN are used in attempting a
-match.
-See the description of job attribute ``X509UserProxyFQAN`` in
-:ref:`classad-attributes/job-classad-attributes:job classad attributes`
-for details on how the DN and FQAN are serialized.
-If no match is found using the full DN and FQAN, then the DN is
-then used on its own without the FQAN. Using this, roles or user names
-from the VOMS attributes may be extracted to be used as the target for
-mapping. And, in this case the FQAN are verified, permitting reliance on
-their authenticity.
+SciTokens Mapping Plugins
+'''''''''''''''''''''''''
+
+For SciTokens, the ``iss`` and ``sub`` claims of the token may not be
+sufficient to map the token to the appropriate canonical HTCondor user
+name.
+For these situations, a series of plugins can be employed to perform
+the mapping based on the full token payload.
+Each plugin can accept the token and provide a mapped identity or
+decline the token.
+If the plugin declines, then additional plugins are consulted.
+If all plugins decline the token, then the mapped identity
+``scitokens@unmapped`` is used.
+
+Each plugin is given a name consisting of alphanumeric characters.
+To use a set of plugins to perform a mapping, the third field of the
+matching line in the map file (the canonical name) should be the text
+``PLUGIN:`` followed by a comma-separated list of plugin names. Note
+that no spaces should be used within the list.
+
+For each plugin, the configuration paramater
+``SEC_SCITOKENS_PLUGIN_<name>_COMMAND`` gives the executable and
+optional command line arguments needed to invoke the plugin.
+The optional configuration parameter
+``SEC_SCITOKENS_PLUGIN_<name>_MAPPING`` specifies the mapped identity
+if the plugin accepts the token. If this paramater isn't set, then the
+plugin must write the mapped identity to its stdout.
+If the special value ``PLUGIN:*`` is given in the map file, then the
+configuration parameter ``SEC_SCITOKENS_PLUGIN_NAMES`` is consulted to
+determine the names of the plugins to run.
+
+When a plugin is invoked, the given binary is run. The payload of the
+token is provided via stdin and a series of environment variables
+(compatible with those set by ARC CE for its token plugins).
+If the plugin exits with status 0, then it accepts the token.
+If the plugin exits with status 1, then it declines the token and
+other plugins may be consulted.
+If the plugin exits with any other status, the entire mapping
+procedure fails and the client is rejected.
+
+Here's an example where one plugin is used for tokens from a specific
+issuer, and two other plugins are used for tokens from all other
+issuers. The first plugin has a fixed mapping given via configuration,
+while the other plugins will write the mapping to their stdout.
+The last plugin uses a command-line argument.
+
+First, this would appear in the map file:
+
+.. code-block:: condor-config
+
+    # Mapfile snippet:
+    # Plugin for specific token issuer
+    SCITOKENS ^https://phys.uz.edu, PLUGIN:A
+
+    # Plugins for all other token issuers
+    SCITOKENS .* PLUGIN:B,C
+
+Then, this would appear in the configuration files:
+
+.. code-block:: condor-config
+
+    # Configuration file snippet:
+    # Plugin A for specific issuer with fixed mapping result
+    SEC_SCITOKENS_PLUGIN_A_COMMAND = $(LIBEXEC)/A.plugin
+    SEC_SCITOKENS_PLUGIN_A_MAPPING = physgrp
+
+    # Plugins B,C for all other tokens
+    SEC_SCITOKENS_PLUGIN_B_COMMAND = $(LIBEXEC)/B.plugin 
+    SEC_SCITOKENS_PLUGIN_C_COMMAND = $(LIBEXEC)/C.plugin -A
+
 
 Encryption
 ----------
