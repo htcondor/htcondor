@@ -44,8 +44,8 @@ instructions corresponding to your operating system:
 
 * :doc:`Windows <install-windows-as-administrator>`.
 * :doc:`Linux <install-linux-as-root>`.  HTCondor supports Enterprise Linux 7
-  including RedHat and CentOS; Enterprise Linux 8 including RedHat and Rocky Linux;
-  Amazon Linux 2; Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
+  including Red Hat, CentOS, and Scientific Linux 7; Enterprise Linux 8 including Red Hat, Alma Linux, and Rocky Linux;
+  Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
@@ -59,8 +59,8 @@ works for the user who installed it, at least you know who to blame for
 misbehaving jobs.
 
 * :doc:`Linux <install-linux-as-user>`.  HTCondor supports Enterprise Linux 7
-  including RedHat and CentOS; Enterprise Linux 8 including RedHat and Rocky Linux;
-  Amazon Linux 2; Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
+  including Red Hat, CentOS, and Scientific Linux 7; Enterprise Linux 8 including Red Hat, Alma Linux, and Rocky Linux;
+  Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
 
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
 
