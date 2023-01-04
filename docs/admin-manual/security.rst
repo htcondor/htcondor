@@ -1534,11 +1534,20 @@ computers.
 SciTokens Authentication
 ''''''''''''''''''''''''
 
-A SciToken is a form of JSON Web Token that the client can present
+A SciToken is a form of JSON Web Token (JWT) that the client can present
 that the server can verify. Authentication of the server by the client
 is done via an SSL host certificate (the same as with SSL authentication).
 More information about SciTokens can be found at
 `https://scitokens.org <https://scitokens.org>`_.
+
+Some other JWT token types can be used with the SciTokens
+authentication method. WLCG tokens are accepted automatically.
+Other token types, such as EGI CheckIn tokens, require some relaxation
+of the SciTokens validation checks.
+For these token types to work, you must set configuration parameter
+``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES`` to ``True``.
+This parameter should be used with caution, as it disables some
+security checks.
 
 Ask MUNGE for Authentication
 ''''''''''''''''''''''''''''
