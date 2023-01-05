@@ -639,7 +639,6 @@ def create_annex_token(logger, type):
     args = [
         'condor_token_fetch',
         '-lifetime', str(token_lifetime),
-        '-token', token_name,
         '-key', annex_token_key_name,
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
@@ -659,10 +658,10 @@ def create_annex_token(logger, type):
         out, err = proc.communicate(timeout=TOKEN_FETCH_TIMEOUT)
 
         if proc.returncode == 0:
-            sec_token_directory = htcondor.param.get("SEC_TOKEN_DIRECTORY")
-            if sec_token_directory == "":
-                sec_token_directory = "~/.condor/tokens.d"
-            return os.path.expanduser(f"{sec_token_directory}/{token_name}")
+            token_file = os.path.expanduser(f"~/.hpc-annex/{token_name}")
+            with open(token_file, "w") as tf:
+                print(out, file=tf)
+            return token_file
         else:
             logger.error(f"Failed to create annex token, aborting.")
             logger.warning(f"{out.strip()}")
@@ -839,7 +838,7 @@ def annex_inner_func(
             resources = f"{resources}and "
     if mem_mb is not None:
         resources = f"{resources}{mem_mb}MB of RAM "
-    if resources is "":
+    if resources == "":
         resources = f"{nodes} nodes "
     resources = f"{resources}for {lifetime/(60*60):.2f} hours"
 
