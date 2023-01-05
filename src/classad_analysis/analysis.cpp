@@ -431,7 +431,6 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 	char info[64];
 	char suggest[128];
 	char value[64];
-	char tempBuff[64];
 	int p = 1;
 	jobReq->Rewind( );
 	while( jobReq->NextProfile( profile ) ) {
@@ -441,12 +440,10 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		jobReq->GetNumberOfProfiles( numProfs );
 		if( numProfs > 1 ) {
 			buffer += "Profile ";
-			sprintf( tempBuff, "%i", p );
-			buffer += tempBuff;
+			buffer += to_string(p);
 			if( profile->explain.match ) {
 				buffer += " matched ";
-				sprintf( tempBuff, "%i", profile->explain.numberOfMatches );
-				buffer += tempBuff;
+				buffer += to_string(profile->explain.numberOfMatches);
 			} else {
 				buffer += " rejected all";
 			}
@@ -504,10 +501,10 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		}
 
 			// print header for condition list
-		sprintf( formatted, "    %-34s%-20s%s\n", "Condition",
+		snprintf( formatted, sizeof(formatted), "    %-34s%-20s%s\n", "Condition",
 				 "Machines Matched", "Suggestion" );
 		buffer += formatted;
-		sprintf( formatted, "    %-34s%-20s%s\n", "---------",
+		snprintf( formatted, sizeof(formatted), "    %-34s%-20s%s\n", "---------",
 				 "----------------", "----------" );
 		buffer += formatted;
 		i = 1;
@@ -520,11 +517,11 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 			strncpy( cond, cond_s.c_str( ), 1023 );
 			cond[1023] = 0;
 
-			sprintf( info, "%i", condition->explain.numberOfMatches );
+			snprintf( info, sizeof(info), "%i", condition->explain.numberOfMatches );
 
 			switch( condition->explain.suggestion ) {
 			case ConditionExplain::REMOVE: {
-				sprintf( suggest, "REMOVE" );
+				snprintf( suggest, sizeof(suggest), "REMOVE" );
 				result_add_suggestion(suggestion(suggestion::REMOVE_CONDITION, cond_s));
 				break;
 			}
@@ -532,19 +529,19 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 				pp.Unparse( value_s, condition->explain.newValue );
 				result_add_suggestion(suggestion(suggestion::MODIFY_CONDITION, cond_s, value_s));
 				strncpy( value, value_s.c_str( ), 63 );
-				sprintf( suggest, "MODIFY TO %s", value );
+				snprintf( suggest, sizeof(suggest), "MODIFY TO %s", value );
 				break;
 			}
 			default: {
-				sprintf( suggest, " " );
+				snprintf( suggest, sizeof(suggest), " " );
 			}
 			}
 
 			if( strlen( cond ) < 46 ) {
-				sprintf( formatted, "%-4i%-34s%-20s%s\n", i, cond, info,
+				snprintf( formatted, sizeof(formatted), "%-4i%-34s%-20s%s\n", i, cond, info,
 						 suggest );
 			} else {
-				sprintf( formatted, "%-4i%s\n%38s%-20s%s\n", i, cond, "", info,
+				snprintf( formatted, sizeof(formatted), "%-4i%s\n%38s%-20s%s\n", i, cond, "", info,
 						 suggest );
 			}
 
@@ -574,8 +571,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 						else {
 							firstNum = false;
 						}
-						sprintf( tempBuff, "%i", i+1 );
-						buffer += tempBuff;
+						buffer += to_string(i+1);
 					}
 				}
 				buffer += "\n";
@@ -639,9 +635,9 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 		tempBuff += "\n";
 
 			// print header for attribute list
-		sprintf( formatted, "%-24s%s\n", "Attribute", "Suggestion" );
+		snprintf( formatted, sizeof(formatted), "%-24s%s\n", "Attribute", "Suggestion" );
 		tempBuff += formatted;
-		sprintf( formatted, "%-24s%s\n", "---------", "----------" );
+		snprintf( formatted, sizeof(formatted), "%-24s%s\n", "---------", "----------" );
 		tempBuff += formatted;
 
 			// print each attribute and suggestion
@@ -691,7 +687,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 					value_s = "";
 				}
 				strncpy( suggest, suggest_s.c_str( ), 63 ); 
-				sprintf( formatted, "%-24s%s\n", attr, suggest );
+				snprintf( formatted, sizeof(formatted), "%-24s%s\n", attr, suggest );
 				result_add_suggestion(suggestion(suggestion::MODIFY_ATTRIBUTE, attr, suggest_s));
 				tempBuff += formatted;
 			}
@@ -720,7 +716,6 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 	classad::ExprTree *expr = NULL;
 	classad::ExprTree *flatExpr = NULL;
 	classad::ExprTree *prunedExpr = NULL;
-	char tempBuff[64];
 	char formatted[2048];
 	string cond_s = "";
 	char cond[1024];
@@ -795,8 +790,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 		mp->GetNumberOfProfiles( numProfiles );
 		if( numProfiles > 1 ) {
 			buffer += "  Profile ";
-			sprintf( tempBuff, "%i", p );
-			buffer += tempBuff;
+			buffer += to_string(p);
 			if( profile->explain.match ) {
 				buffer += " is true\n";
 			} else {
@@ -817,7 +811,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 			strncpy( value, value_s.c_str( ), 63 );
 			value_s = "";
 
-			sprintf( formatted, "    %-25s%s\n", cond, value );
+			snprintf( formatted, sizeof(formatted), "    %-25s%s\n", cond, value );
 			buffer += formatted;
 		}
 		p++;

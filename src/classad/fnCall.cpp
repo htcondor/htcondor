@@ -2750,13 +2750,13 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 
 	char strval[25];
 	if ( days != 0 ) {
-		sprintf(strval,"%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
+		snprintf(strval, sizeof(strval), "%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
 	} else if ( hours != 0 ) {
-		sprintf(strval,"%d:%02d:%02d", hours, abs(min), abs(secs) );
+		snprintf(strval, sizeof(strval), "%d:%02d:%02d", hours, abs(min), abs(secs) );
 	} else if ( min != 0 ) {
-		sprintf(strval,"%d:%02d", min, abs(secs) );
+		snprintf(strval, sizeof(strval), "%d:%02d", min, abs(secs) );
 	} else {
-		sprintf(strval,"%d", secs );
+		snprintf(strval, sizeof(strval), "%d", secs );
 	}
 	result.SetStringValue(strval);
 
