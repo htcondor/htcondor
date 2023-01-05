@@ -63,11 +63,6 @@ BackfillSlot::enterActivity( Activity act )
 BackfillMgr::BackfillMgr()
 {
 	dprintf( D_FULLDEBUG, "Instantiating a BackfillMgr\n" );
-
-	m_num_slots = 0;
-		// make sure our array is initialized with NULLs
-	m_slots.fill( NULL );
-	m_slots.setFiller( NULL );
 }
 
 
