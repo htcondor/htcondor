@@ -656,7 +656,7 @@ SecMan::FillInSecurityPolicyAd( DCpermission auth_level, ClassAd* ad,
 	}
 
 	char fmt[128];
-	sprintf(fmt, "SEC_%s_%%s_SESSION_DURATION", get_mySubSystem()->getName() );
+	snprintf(fmt, sizeof(fmt), "SEC_%s_%%s_SESSION_DURATION", get_mySubSystem()->getName() );
 	if( !SecMan::getIntSecSetting(session_duration, fmt, auth_level) ) {
 		SecMan::getIntSecSetting(session_duration, "SEC_%s_SESSION_DURATION", auth_level);
 	}
