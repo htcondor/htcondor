@@ -374,7 +374,7 @@ UserIdentity::UserIdentity(const char *user, const char *domainname,
 
 struct job_data_transfer_t {
 	int mode;
-	ExtArray<PROC_ID> *jobs;
+	std::vector<PROC_ID> *jobs;
 	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
@@ -805,7 +805,7 @@ Scheduler::~Scheduler()
 	}
 	if (spoolJobFileWorkers) {
 		spoolJobFileWorkers->startIterations();
-		ExtArray<PROC_ID> * rec;
+		std::vector<PROC_ID> * rec;
 		int pid;
 		while (spoolJobFileWorkers->iterate(pid, rec) == 1) {
 			delete rec;
@@ -4882,7 +4882,7 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 int
 Scheduler::transferJobFilesReaper(int tid,int exit_status)
 {
-	ExtArray<PROC_ID> *jobs = NULL;
+	std::vector<PROC_ID> *jobs = NULL;
 	int i;
 
 	dprintf(D_FULLDEBUG,"transferJobFilesReaper tid=%d status=%d\n",
@@ -4906,7 +4906,7 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 
 		// For each job, modify its ClassAd
 	time_t now = time(NULL);
-	int len = (*jobs).getlast() + 1;
+	int len = (*jobs).size();
 	for (i=0; i < len; i++) {
 			// TODO --- maybe put this in a transaction?
 		SetAttributeInt((*jobs)[i].cluster,(*jobs)[i].proc,ATTR_STAGE_OUT_FINISH,now);
@@ -4921,7 +4921,7 @@ Scheduler::transferJobFilesReaper(int tid,int exit_status)
 int
 Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 {
-	ExtArray<PROC_ID> *jobs = NULL;
+	std::vector<PROC_ID> *jobs = NULL;
 
 	dprintf(D_FULLDEBUG,"spoolJobFilesReaper tid=%d status=%d\n",
 			tid,exit_status);
@@ -4939,8 +4939,8 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	if (WIFSIGNALED(exit_status) || (WIFEXITED(exit_status) && WEXITSTATUS(exit_status) != TRUE)) {
 		dprintf(D_ALWAYS,"ERROR - Staging of job files failed!\n");
 		spoolJobFileWorkers->remove(tid);
-		int len = (*jobs).getlast() + 1;
-		for(int jobIndex = 0; jobIndex < len; ++jobIndex) {
+		size_t len = (*jobs).size();
+		for(size_t jobIndex = 0; jobIndex < len; ++jobIndex) {
 			int cluster = (*jobs)[jobIndex].cluster;
 			int proc = (*jobs)[jobIndex].proc;
 			abortJob( cluster, proc, "Staging of job files failed", true);
@@ -4950,8 +4950,9 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 	}
 
 
-	int jobIndex,cluster,proc;
-	int len = (*jobs).getlast() + 1;
+	size_t jobIndex;
+	int cluster,proc;
+	size_t len = (*jobs).size();
 	std::string proxy_file;
 
 		// For each job, modify its ClassAd
@@ -5033,7 +5034,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
 	int i;
-	ExtArray<PROC_ID> *jobs = ((job_data_transfer_t *)arg)->jobs;
+	std::vector<PROC_ID> *jobs = ((job_data_transfer_t *)arg)->jobs;
 	char *peer_version = ((job_data_transfer_t *)arg)->peer_version;
 	int mode = ((job_data_transfer_t *)arg)->mode;
 	int result;
@@ -5052,8 +5053,7 @@ Scheduler::generalJobFilesWorkerThread(void *arg, Stream* s)
 	}
 #endif
 
-	JobAdsArrayLen = jobs->getlast() + 1;
-//	dprintf(D_FULLDEBUG,"TODD spoolJobFilesWorkerThread: JobAdsArrayLen=%d\n",JobAdsArrayLen);
+	JobAdsArrayLen = jobs->size();
 	if ( mode == TRANSFER_DATA || mode == TRANSFER_DATA_WITH_PERMS ) {
 		// if sending sandboxes, first tell the client how many
 		// we are about to send.
@@ -5239,7 +5239,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	int JobAdsArrayLen = 0;
-	ExtArray<PROC_ID> *jobs = NULL;
+	std::vector<PROC_ID> *jobs = NULL;
 	char *constraint_string = NULL;
 	int i;
 	static int spool_reaper_id = -1;
@@ -5339,7 +5339,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			break;
 	}
 
-	jobs = new ExtArray<PROC_ID>;
+	jobs = new std::vector<PROC_ID>;
 	ASSERT(jobs);
 
 	time_t now = time(NULL);
@@ -5359,7 +5359,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 				std::string job_user;
 				GetAttributeString(a_job.cluster, a_job.proc, attr_JobUser.c_str(), job_user);
 				if (UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str())) {
-					(*jobs)[i] = a_job;
+					jobs->emplace_back(a_job.cluster, a_job.proc);
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
 						// Must not allow stagein to happen more than
@@ -5411,7 +5411,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
 					UserCheck2(tmp_ad, EffectiveUser(rsock)) )
 				{
-					(*jobs)[JobAdsArrayLen++] = a_job;
+					jobs->emplace_back(a_job.cluster, a_job.proc);
+					JobAdsArrayLen++;
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 				}
 				tmp_ad = GetNextJobByConstraint(constraint_string,0);
@@ -5834,9 +5835,10 @@ Scheduler::actOnJobs(int, Stream* s)
 	ClassAd command_ad;
 	int action_num = -1;
 	JobAction action = JA_ERROR;
-	int reply, i;
-	int num_matches = 0;
-	int num_cluster_matches = 0;
+	int reply;
+	size_t i;
+	size_t num_matches = 0;
+	size_t num_cluster_matches = 0;
 	int new_status = -1;
 	char buf[256];
 	std::string reason;
@@ -5847,13 +5849,9 @@ Scheduler::actOnJobs(int, Stream* s)
 	int hold_reason_subcode = 0;
 
 		// Setup array to hold ids of the jobs we're acting on.
-	ExtArray<PROC_ID> jobs;
-	ExtArray<PROC_ID> clusters; // holds cluster ids we are acting upon (for late materialization)
+	std::vector<PROC_ID> jobs;
+	std::vector<PROC_ID> clusters; // holds cluster ids we are acting upon (for late materialization)
 	PROC_ID tmp_id;
-	tmp_id.cluster = -1;
-	tmp_id.proc = -1;
-	jobs.setFiller( tmp_id );
-	clusters.setFiller( tmp_id );
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -6126,9 +6124,11 @@ Scheduler::actOnJobs(int, Stream* s)
 		     job_ad = (*GetNextJobFunc)( constraint, 0 ))
 		{
 			if (job_ad->jid.proc < 0) {
-				clusters[num_cluster_matches++] = job_ad->jid;
+				clusters.emplace_back(job_ad->jid.cluster, job_ad->jid.proc);
+				num_cluster_matches++;
 			} else {
-				jobs[num_matches++] = job_ad->jid;
+				jobs.emplace_back(job_ad->jid.cluster, job_ad->jid.proc);
+				num_matches++;
 			}
 		}
 		free( constraint );
@@ -6148,9 +6148,11 @@ Scheduler::actOnJobs(int, Stream* s)
 				continue;
 			}
 			if (tmp_id.proc < 0) {
-				clusters[num_cluster_matches++] = tmp_id;
+				clusters.emplace_back(tmp_id.cluster, tmp_id.proc);
+				num_cluster_matches++;
 			} else {
-				jobs[num_matches++] = tmp_id;
+				jobs.emplace_back(tmp_id.cluster, tmp_id.proc);
+				num_matches++;
 			}
 		}
 	}
@@ -12730,7 +12732,7 @@ Scheduler::Init()
 
 	if ( spoolJobFileWorkers == NULL ) {
 		spoolJobFileWorkers = 
-			new HashTable <int, ExtArray<PROC_ID> *>(pidHash);
+			new HashTable <int, std::vector<PROC_ID> *>(pidHash);
 	}
 
 	char *flock_collector_hosts, *flock_negotiator_hosts;
@@ -15143,7 +15145,7 @@ abortJobsByConstraint( const char *constraint,
 {
 	bool result = true;
 
-	ExtArray<PROC_ID> jobs;
+	std::vector<PROC_ID> jobs;
 	int job_count;
 
 	dprintf(D_FULLDEBUG, "abortJobsByConstraint: '%s'\n", constraint);
@@ -15155,16 +15157,17 @@ abortJobsByConstraint( const char *constraint,
 	job_count = 0;
 	ClassAd *ad = GetNextJobByConstraint(constraint, 1);
 	while ( ad ) {
-		if (!ad->LookupInteger(ATTR_CLUSTER_ID, jobs[job_count].cluster) ||
-			!ad->LookupInteger(ATTR_PROC_ID, jobs[job_count].proc)) {
+		int cluster, proc;
+		if (!ad->LookupInteger(ATTR_CLUSTER_ID, cluster) ||
+			!ad->LookupInteger(ATTR_PROC_ID, proc)) {
 
 			result = false;
 			job_count = 0;
 			break;
 		}
+		jobs.emplace_back(cluster, proc);
 
-		dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d\n",
-				jobs[job_count].cluster, jobs[job_count].proc);
+		dprintf(D_FULLDEBUG, "remove by constraint matched: %d.%d\n", cluster, proc);
 
 		job_count++;
 
@@ -15172,8 +15175,7 @@ abortJobsByConstraint( const char *constraint,
 	}
 
 	job_count--;
-	ExtArray<PROC_ID> removedJobs;
-	int removedJobCount = 0;
+	std::vector<PROC_ID> removedJobs;
 	while ( job_count >= 0 ) {
 		dprintf(D_FULLDEBUG, "removing: %d.%d\n",
 				jobs[job_count].cluster, jobs[job_count].proc);
@@ -15182,9 +15184,7 @@ abortJobsByConstraint( const char *constraint,
 									   jobs[job_count].proc,
 									   reason);
 		if ( tmpResult ) {
-			removedJobs[removedJobCount].cluster = jobs[job_count].cluster;
-			removedJobs[removedJobCount].proc =  jobs[job_count].proc;
-			removedJobCount++;
+			removedJobs.emplace_back(jobs[job_count].cluster, jobs[job_count].proc);
 		}
 		result = result && tmpResult;
 		job_count--;
@@ -15204,14 +15204,10 @@ abortJobsByConstraint( const char *constraint,
 		// that have just been removed.  Note that this must be done
 		// *after* the transaction is committed.
 		//
-	removedJobCount--;
-	while ( removedJobCount >= 0 ) {
+	for (auto it = removedJobs.rbegin(); it != removedJobs.rend(); ++it) {
 		// Ignoring return value because we're not sure what to do
 		// with it.
-		(void)removeOtherJobs(
-					removedJobs[removedJobCount].cluster,
-					removedJobs[removedJobCount].proc );
-		removedJobCount--;
+		(void)removeOtherJobs( it->cluster, it->proc);
 	}
 
 	return result;
