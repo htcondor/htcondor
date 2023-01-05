@@ -24,6 +24,9 @@ Release Notes:
 
 New Features:
 
+- Add support for Enterprise Linux 9 on x86_64 and aarch64 architectures.
+  :jira:`1285`
+
 - Add support to the *condor_starter* for tracking processes via cgroup v2
   on Linux distributions that support cgroup v2.
   :jira:`1457`

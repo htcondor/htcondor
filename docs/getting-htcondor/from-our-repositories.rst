@@ -18,18 +18,18 @@ recent releases than the distributions.
 RPM-based Distributions
 -----------------------
 
-We support five RPM-based platforms: RedHat and CentOS 7;
-Redhat and CentOS 8; and Amazon Linux 2.  Binaries are available
-for x86-64 for all these platforms.  For RedHat 8 and CentOS 8
+We support several RPM-based platforms: Enterprise Linux 7, including Red Hat, CentOS, and Scientific Linux;
+Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux; Enterprise Linux 9,
+including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux.  Binaries are available
+for x86-64 for all these platforms.  For Enterprise Linux 8,
 HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
+For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
-* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
-* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
-* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
-* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm>`_
+* `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el7.noarch.rpm>`_
+* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el9.noarch.rpm>`_
 
 The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -40,6 +40,7 @@ Additionally, the following repositories are required for specific platforms:
   ``rhel-ha-for-rhel-*-server-rpms``.
 * On RedHat 8, ``codeready-builder-for-rhel-8-${ARCH}-rpms``.
 * On CentOS 8, ``powertools`` (or ``PowerTools``).
+* On RedHat 9, ``crb``.
 
 deb-based Distributions
 -----------------------
