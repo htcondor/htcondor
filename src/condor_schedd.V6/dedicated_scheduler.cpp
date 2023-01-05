@@ -1136,7 +1136,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	int cluster = -1;
 	char *id = NULL, *sinful = NULL;
 	MRecArray* matches;
-	int i, p;
+	int p;
 	size_t last;
 
 	dprintf( D_FULLDEBUG, "Entering DedicatedScheduler::giveMatches()\n" );
@@ -1230,7 +1230,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 		dprintf( D_FULLDEBUG, "In proc %d, num_matches: %zu\n", p, last );
 		if( ! stream->code(last) ) {
 			dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
-					 "number of matches (%d) for proc %d\n", last, p );
+					 "number of matches (%zu) for proc %d\n", last, p );
 			return FALSE;
 		}			
 
@@ -1239,13 +1239,13 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 			sinful = (*matches)[i]->peer;
 			if( ! stream->code(sinful) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
-						 "address (%s) for match %d of proc %d\n", 
+						 "address (%s) for match %zu of proc %d\n", 
 						 sinful, i, p );
 				return FALSE;
 			}				
 			if( ! stream->put( (*matches)[i]->claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
-						 "ClaimId for match %d of proc %d\n", i, p );
+						 "ClaimId for match %zu of proc %d\n", i, p );
 				return FALSE;
 			}				
 			job_ad = dollarDollarExpand(cluster,p, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
@@ -3398,7 +3398,7 @@ DedicatedScheduler::DelMrec( char const* id )
 			// pointer in there.
 
 		bool found_it = false;
-		for( size_t proc_index = 0; proc_index < alloc->num_procs; proc_index++) {
+		for( size_t proc_index = 0; proc_index < (size_t) alloc->num_procs; proc_index++) {
 			MRecArray* rec_array = (*alloc->matches)[proc_index];
 			size_t i;
 			size_t last = rec_array->size();
