@@ -431,15 +431,24 @@ The Layperson's Description of the Pie Spin and Pie Slice
 :index:`pie slice<single: pie slice; scheduling>`
 :index:`pie spin<single: pie spin; scheduling>`
 
-HTCondor schedules in a variety of ways. First, it takes all users who
+The negotiator first finds all users who
 have submitted jobs and calculates their priority. Then, it totals the
 SlotWeight (by default, cores) of all currently available slots, and 
 using the ratios of the user priorities, it calculates the number of 
 cores each user could get. This is their pie slice.
 (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
 
-The HTCondor matchmaker goes in user priority order, contacts each 
-schedd where that user's job lives, and asks for job 
+If any users have a floor defined via *condor_userprio* -set-floor
+, and their current allocation of cores is below the floor, a 
+special round of the below-floor users goes first, attempting to 
+allocate up to the defined number of cores for their floor level.  
+These users are negotiated for in user priority order.  This allows
+an admin to give users some "guaranteed" minimum number of cores, no
+matter what their previous usage or priority is.
+
+After the below-floor users are negotiated for, all users
+are negotiated for, in user priority order. 
+The *condor_negotiator* contacts each schedd where the user's job lives, and asks for job 
 information. The *condor_schedd* daemon (on behalf of
 a user) tells the matchmaker about a job, and the matchmaker looks at
 available slots to create a list that match the requirements expression. 
