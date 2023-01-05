@@ -1577,6 +1577,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.0-1
+- Preliminary support for Enterprise Linux 9
+- Preliminary support for cgroups v2
+- Can now set minimum floor for number of CPUs that a submitter gets
+- Improved validity testing of Singularity/Apptainer runtinme
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
 * Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
 - Add Ubuntu 22.04 (Jammy Jellyfish) support
 - Add file transfer plugin that supports stash:// and osdf:// URLs
