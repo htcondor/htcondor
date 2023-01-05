@@ -1,3 +1,15 @@
+condor (10.0.1-1) stable; urgency=medium
+
+  * Add Ubuntu 22.04 (Jammy Jellyfish) support
+  * Add file transfer plugin that supports stash:// and osdf:// URLs
+  * Fix bug where cgroup memory limits were not enforced on Debian and Ubuntu
+  * Fix bug where forcibly removing DAG jobs could crash the condor_schedd
+  * Fix bug where Docker repository images cannot be run under Singularity
+  * Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
+  * Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 05 Jan 2023 06:36:00 -0600
+
 condor (10.1.1-1) stable; urgency=medium
 
   * Improvements to job hooks and the ability to save stderr from a job hook

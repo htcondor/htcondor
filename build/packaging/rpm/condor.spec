@@ -1577,6 +1577,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
+- Add Ubuntu 22.04 (Jammy Jellyfish) support
+- Add file transfer plugin that supports stash:// and osdf:// URLs
+- Fix bug where cgroup memory limits were not enforced on Debian and Ubuntu
+- Fix bug where forcibly removing DAG jobs could crash the condor_schedd
+- Fix bug where Docker repository images cannot be run under Singularity
+- Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
+- Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook
 - Fix bug where Apptainer only systems couldn't run with Docker style images
