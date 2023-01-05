@@ -438,7 +438,7 @@ using the ratios of the user priorities, it calculates the number of
 cores each user could get. This is their pie slice.
 (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
 
-If any users have a floor defined via the *condor_userprio* -set-floor
+If any users have a floor defined via *condor_userprio* -set-floor
 , and their current allocation of cores is below the floor, a 
 special round of the below-floor users goes first, attempting to 
 allocate up to the defined number of cores for their floor level.  
