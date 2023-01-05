@@ -105,6 +105,10 @@ Bugs Fixed:
   crash of the *condor_schedd* or *condor_job_router*.
   :jira:`1486`
 
+- Grid universe **batch** works again on Debian and Ubuntu.
+  Since 9.5.0, some required files had been missing.
+  :jira:`1475`
+
 .. _lts-version-history-1000:
 
 Version 10.0.0
