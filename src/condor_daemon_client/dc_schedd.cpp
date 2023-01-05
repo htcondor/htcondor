@@ -1406,7 +1406,7 @@ JobActionResults::~JobActionResults()
 void
 JobActionResults::record( PROC_ID job_id, action_result_t result ) 
 {
-	char buf[64];
+	std::string buf;
 
 	if( ! result_ad ) {
 		result_ad = new ClassAd();
@@ -1415,9 +1415,9 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 	if( result_type == AR_LONG ) {
 		// Put it directly in our ad
 		if (job_id.proc < 0) {
-			sprintf( buf, "cluster_%d", job_id.cluster );
+			formatstr( buf, "cluster_%d", job_id.cluster );
 		} else {
-			sprintf( buf, "job_%d_%d", job_id.cluster, job_id.proc );
+			formatstr( buf, "job_%d_%d", job_id.cluster, job_id.proc );
 		}
 		result_ad->Assign( buf, (int)result );
 		return;
@@ -1451,7 +1451,7 @@ JobActionResults::record( PROC_ID job_id, action_result_t result )
 void
 JobActionResults::readResults( ClassAd* ad ) 
 {
-	char attr_name[64];
+	std::string attr_name;
 
 	if( ! ad ) {
 		return;
@@ -1489,22 +1489,22 @@ JobActionResults::readResults( ClassAd* ad )
 		}
 	}
 
-	sprintf( attr_name, "result_total_%d", AR_ERROR );
+	formatstr( attr_name, "result_total_%d", AR_ERROR );
 	ad->LookupInteger( attr_name, ar_error );
 
-	sprintf( attr_name, "result_total_%d", AR_SUCCESS );
+	formatstr( attr_name, "result_total_%d", AR_SUCCESS );
 	ad->LookupInteger( attr_name, ar_success );
 
-	sprintf( attr_name, "result_total_%d", AR_NOT_FOUND );
+	formatstr( attr_name, "result_total_%d", AR_NOT_FOUND );
 	ad->LookupInteger( attr_name, ar_not_found );
 
-	sprintf( attr_name, "result_total_%d", AR_BAD_STATUS );
+	formatstr( attr_name, "result_total_%d", AR_BAD_STATUS );
 	ad->LookupInteger( attr_name, ar_bad_status );
 
-	sprintf( attr_name, "result_total_%d", AR_ALREADY_DONE );
+	formatstr( attr_name, "result_total_%d", AR_ALREADY_DONE );
 	ad->LookupInteger( attr_name, ar_already_done );
 
-	sprintf( attr_name, "result_total_%d", AR_PERMISSION_DENIED );
+	formatstr( attr_name, "result_total_%d", AR_PERMISSION_DENIED );
 	ad->LookupInteger( attr_name, ar_permission_denied );
 
 }
@@ -1513,7 +1513,7 @@ JobActionResults::readResults( ClassAd* ad )
 ClassAd*
 JobActionResults::publishResults( void ) 
 {
-	char buf[128];
+	std::string buf;
 
 		// no matter what they want, give them a few things of
 		// interest, like what kind of results we're giving them. 
@@ -1530,22 +1530,22 @@ JobActionResults::publishResults( void )
 	}
 
 		// They want totals for each possible result
-	sprintf( buf, "result_total_%d", AR_ERROR );
+	formatstr( buf, "result_total_%d", AR_ERROR );
 	result_ad->Assign( buf, ar_error );
 
-	sprintf( buf, "result_total_%d", AR_SUCCESS );
+	formatstr( buf, "result_total_%d", AR_SUCCESS );
 	result_ad->Assign( buf, ar_success );
 		
-	sprintf( buf, "result_total_%d", AR_NOT_FOUND );
+	formatstr( buf, "result_total_%d", AR_NOT_FOUND );
 	result_ad->Assign( buf, ar_not_found );
 
-	sprintf( buf, "result_total_%d", AR_BAD_STATUS );
+	formatstr( buf, "result_total_%d", AR_BAD_STATUS );
 	result_ad->Assign( buf, ar_bad_status );
 
-	sprintf( buf, "result_total_%d", AR_ALREADY_DONE );
+	formatstr( buf, "result_total_%d", AR_ALREADY_DONE );
 	result_ad->Assign( buf, ar_already_done );
 
-	sprintf( buf, "result_total_%d", AR_PERMISSION_DENIED );
+	formatstr( buf, "result_total_%d", AR_PERMISSION_DENIED );
 	result_ad->Assign( buf, ar_permission_denied );
 
 	return result_ad;
@@ -1555,13 +1555,13 @@ JobActionResults::publishResults( void )
 action_result_t
 JobActionResults::getResult( PROC_ID job_id )
 {
-	char buf[64];
+	std::string buf;
 	int result;
 
 	if( ! result_ad ) { 
 		return AR_ERROR;
 	}
-	sprintf( buf, "job_%d_%d", job_id.cluster, job_id.proc );
+	formatstr( buf, "job_%d_%d", job_id.cluster, job_id.proc );
 	if( ! result_ad->LookupInteger(buf, result) ) {
 		return AR_ERROR;
 	}
@@ -1572,14 +1572,13 @@ JobActionResults::getResult( PROC_ID job_id )
 bool
 JobActionResults::getResultString( PROC_ID job_id, char** str )
 {
-	char buf[1024];
+	std::string buf;
 	action_result_t result;
 	bool rval = false;
 
 	if( ! str ) {
 		return false;
 	}
-	buf[0] = 0; // in case result is bogus..
 
 	result = getResult( job_id );
 
@@ -1589,7 +1588,7 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 	switch( result ) {
 
 	case AR_SUCCESS:
-		sprintf( buf, "Job %d.%d %s", job_id.cluster, job_id.proc,
+		formatstr( buf, "Job %d.%d %s", job_id.cluster, job_id.proc,
 				 (action==JA_REMOVE_JOBS)?"marked for removal":
 				 (action==JA_REMOVE_X_JOBS)?
 				 "removed locally (remote state unknown)":
@@ -1603,17 +1602,17 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 		break;
 
 	case AR_ERROR:
-		sprintf( buf, "No result found for job %d.%d", job_id.cluster,
+		formatstr( buf, "No result found for job %d.%d", job_id.cluster,
 				 job_id.proc );
 		break;
 
 	case AR_NOT_FOUND:
-		sprintf( buf, "Job %d.%d not found", job_id.cluster,
+		formatstr( buf, "Job %d.%d not found", job_id.cluster,
 				 job_id.proc ); 
 		break;
 
 	case AR_PERMISSION_DENIED: 
-		sprintf( buf, "Permission denied to %s job %d.%d", 
+		formatstr( buf, "Permission denied to %s job %d.%d",
 				 (action==JA_REMOVE_JOBS)?"remove":
 				 (action==JA_REMOVE_X_JOBS)?"force removal of":
 				 (action==JA_HOLD_JOBS)?"hold":
@@ -1627,59 +1626,59 @@ JobActionResults::getResultString( PROC_ID job_id, char** str )
 
 	case AR_BAD_STATUS:
 		if( action == JA_RELEASE_JOBS ) { 
-			sprintf( buf, "Job %d.%d not held to be released", 
+			formatstr( buf, "Job %d.%d not held to be released",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_X_JOBS ) {
-			sprintf( buf, "Job %d.%d not in `X' state to be forcibly removed", 
+			formatstr( buf, "Job %d.%d not in `X' state to be forcibly removed",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_VACATE_JOBS ) {
-			sprintf( buf, "Job %d.%d not running to be vacated", 
+			formatstr( buf, "Job %d.%d not running to be vacated",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_VACATE_FAST_JOBS ) {
-			sprintf( buf, "Job %d.%d not running to be fast-vacated", 
+			formatstr( buf, "Job %d.%d not running to be fast-vacated",
 					 job_id.cluster, job_id.proc );
 		}else if( action == JA_SUSPEND_JOBS ) {
-			sprintf( buf, "Job %d.%d not running to be suspended", 
+			formatstr( buf, "Job %d.%d not running to be suspended",
 					 job_id.cluster, job_id.proc );
 		}else if( action == JA_CONTINUE_JOBS ) {
-			sprintf( buf, "Job %d.%d not running to be continued", 
+			formatstr( buf, "Job %d.%d not running to be continued",
 					 job_id.cluster, job_id.proc );
 		} else {
 				// Nothing else should use this.
-			sprintf( buf, "Invalid result for job %d.%d", 
+			formatstr( buf, "Invalid result for job %d.%d",
 					 job_id.cluster, job_id.proc );
 		}
 		break;
 
 	case AR_ALREADY_DONE:
 		if( action == JA_HOLD_JOBS ) {
-			sprintf( buf, "Job %d.%d already held", 
+			formatstr( buf, "Job %d.%d already held",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_JOBS ) { 
-			sprintf( buf, "Job %d.%d already marked for removal",
+			formatstr( buf, "Job %d.%d already marked for removal",
 					 job_id.cluster, job_id.proc );
 		}else if( action == JA_SUSPEND_JOBS ) { 
-			sprintf( buf, "Job %d.%d already suspended",
+			formatstr( buf, "Job %d.%d already suspended",
 					 job_id.cluster, job_id.proc );
 		}else if( action == JA_CONTINUE_JOBS ) { 
-			sprintf( buf, "Job %d.%d already running",
+			formatstr( buf, "Job %d.%d already running",
 					 job_id.cluster, job_id.proc );
 		} else if( action == JA_REMOVE_X_JOBS ) { 
 				// pfc: due to the immediate nature of a forced
 				// remove, i'm not sure this should ever happen, but
 				// just in case...
-			sprintf( buf, "Job %d.%d already marked for forced removal",
+			formatstr( buf, "Job %d.%d already marked for forced removal",
 					 job_id.cluster, job_id.proc );
 		} else {
 				// we should have gotten AR_BAD_STATUS if we tried to
 				// act on a job that had already had the action done
-			sprintf( buf, "Invalid result for job %d.%d", 
+			formatstr( buf, "Invalid result for job %d.%d",
 					 job_id.cluster, job_id.proc );
 		}
 		break;
 
 	}
-	*str = strdup( buf );
+	*str = strdup( buf.c_str() );
 	return rval;
 }
 

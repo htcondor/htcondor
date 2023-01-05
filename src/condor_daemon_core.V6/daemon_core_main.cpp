@@ -931,7 +931,7 @@ drop_addr_file()
 	prefix += get_mySubSystem()->getName();
 
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.c_str() );
+	snprintf( addr_file, sizeof(addr_file), "%s_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -944,7 +944,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
+	snprintf( addr_file, sizeof(addr_file), "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -1004,7 +1004,6 @@ do_kill()
 	FILE	*PID_FILE;
 	pid_t 	pid = 0;
 	unsigned long tmp_ul_int = 0;
-	char	*log, *tmp;
 
 	if( !pidFile ) {
 		fprintf( stderr, 
@@ -1012,13 +1011,12 @@ do_kill()
 		exit( 1 );
 	}
 	if( pidFile[0] != '/' ) {
-			// There's no absolute path, append the LOG directory
-		if( (log = param("LOG")) ) {
-			tmp = (char*)malloc( (strlen(log) + strlen(pidFile) + 2) * 
-								 sizeof(char) );
-			sprintf( tmp, "%s/%s", log, pidFile );
-			free( log );
-			pidFile = tmp;
+			// There's no absolute path, prepend the LOG directory
+		std::string log;
+		if (param(log, "LOG")) {
+			log += '/';
+			log += pidFile;
+			pidFile = strdup(log.c_str());
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
@@ -1107,20 +1105,15 @@ handle_log_append( char* append_str )
 	if( ! append_str ) {
 		return;
 	}
-	char *tmp1, *tmp2;
+	std::string fname;
 	char buf[100];
-	sprintf( buf, "%s_LOG", get_mySubSystem()->getName() );
-	if( !(tmp1 = param(buf)) ) { 
+	snprintf( buf, sizeof(buf), "%s_LOG", get_mySubSystem()->getName() );
+	if( !param(fname, buf) ) {
 		EXCEPT( "%s not defined!", buf );
 	}
-	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(append_str) + 2)
-						  * sizeof(char) );
-	if( !tmp2 ) {	
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( tmp2, "%s.%s", tmp1, append_str );
-	config_insert( buf, tmp2 );
-	free( tmp1 );
+	fname += '.';
+	fname += append_str;
+	config_insert( buf, fname.c_str() );
 
 	if (get_mySubSystem()->getLocalName()) {
 		std::string fullParamName;
@@ -1129,9 +1122,8 @@ handle_log_append( char* append_str )
 		fullParamName.append(get_mySubSystem()->getName());
 		fullParamName.append("_LOG");
 
-		config_insert( fullParamName.c_str(), tmp2 );
+		config_insert( fullParamName.c_str(), fname.c_str() );
 	}
-	free( tmp2 );
 }
 
 
@@ -1229,7 +1221,7 @@ handle_dynamic_dirs()
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
-	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
+	snprintf( buf, sizeof(buf), "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
 
 	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
@@ -1240,9 +1232,9 @@ handle_dynamic_dirs()
 		// variable, so that the startd will have a unique name. 
 	std::string cur_startd_name;
 	if(param(cur_startd_name, "STARTD_NAME")) {
-		sprintf( buf, "_condor_STARTD_NAME=%d@%s", mypid, cur_startd_name.c_str());
+		snprintf( buf, sizeof(buf), "_condor_STARTD_NAME=%d@%s", mypid, cur_startd_name.c_str());
 	} else {
-		sprintf( buf, "_condor_STARTD_NAME=%d", mypid );
+		snprintf( buf, sizeof(buf), "_condor_STARTD_NAME=%d", mypid );
 	}
 
 		// insert modified startd name
@@ -3514,12 +3506,7 @@ int dc_main( int argc, char** argv )
 				ptmp = *ptr;
 				dcargs += 2;
 
-				ptmp1 = (char *)malloc( strlen(ptmp) + 16 );
-				if ( ptmp1 ) {
-					sprintf(ptmp1,"CONDOR_CONFIG=%s", ptmp);
-					SetEnv(ptmp1);
-					free(ptmp1);
-				}
+				SetEnv("CONDOR_CONFIG", ptmp);
 			} else {
 				fprintf( stderr, 
 						 "DaemonCore: ERROR: -config needs another argument.\n" );
