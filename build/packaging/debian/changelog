@@ -1,3 +1,14 @@
+condor (10.2.0-1) stable; urgency=medium
+
+  * Preliminary support for Enterprise Linux 9
+  * Preliminary support for cgroups v2
+  * Can now set minimum floor for number of CPUs that a submitter gets
+  * Improved validity testing of Singularity/Apptainer runtinme
+  * Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+  * OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 05 Jan 2023 09:36:00 -0600
+
 condor (10.0.1-1) stable; urgency=medium
 
   * Add Ubuntu 22.04 (Jammy Jellyfish) support

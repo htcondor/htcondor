@@ -9,9 +9,7 @@ Version 10.2.0
 
 Release Notes:
 
-.. HTCondor version 10.2.0 released on Month Date, 2022.
-
-- HTCondor version 10.2.0 not yet released.
+- HTCondor version 10.2.0 released on January 5, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1001`.
 
@@ -31,18 +29,6 @@ New Features:
   on Linux distributions that support cgroup v2.
   :jira:`1457`
 
-- *condor_q* default behavior of displaying the cumulative run time has changed
-  to now display the current run time for jobs in running, transferring output,
-  and suspended states while displaying the previous run time for jobs in idle or held
-  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
-  :jira:`1064`
-
-- Docker Universe submit files now support *docker_pull_policy = always*, so
-  that docker will check to see if the cached image is out of date.  This increases
-  the network activity, may cause increased throttling when pulling from docker hub,
-  and is recommended to be used with care.
-  :jira:`1482`
-
 - The *condor_negotiator* now support setting a minimum floor number of cores that any
   given submitter should get, regardless of their fair share.  This can be set or queried
   via the *condor_userprio* tool, in the same way that the ceiling can be set or get
@@ -54,6 +40,18 @@ New Features:
   Also in the event of Singularity errors, more information is recorded into the *condor_starter*
   log file.
   :jira:`1431`
+
+- *condor_q* default behavior of displaying the cumulative run time has changed
+  to now display the current run time for jobs in running, transferring output,
+  and suspended states while displaying the previous run time for jobs in idle or held
+  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
+  :jira:`1064`
+
+- Docker Universe submit files now support *docker_pull_policy = always*, so
+  that docker will check to see if the cached image is out of date.  This increases
+  the network activity, may cause increased throttling when pulling from docker hub,
+  and is recommended to be used with care.
+  :jira:`1482`
 
 - Added configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1431`
@@ -113,9 +111,7 @@ Version 10.1.3
 
 Release Notes:
 
-.. HTCondor version 10.1.3 released on Month Date, 2022.
-
-- HTCondor version 10.1.3 not yet released.
+- HTCondor version 10.1.3 limited release on November 22, 2022.
 
 New Features:
 
@@ -141,9 +137,7 @@ Bugs Fixed:
 Version 10.1.2
 --------------
 
-.. HTCondor version 10.1.2 released on Month Date, 2022.
-
-- HTCondor version 10.1.2 not yet released.
+- HTCondor version 10.1.2 limited release on November 15, 2022.
 
 New Features:
 
