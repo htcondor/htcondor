@@ -27,7 +27,11 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Attempting to use a file-transfer plug-in that doesn't exist is no longer
+  silently ignored.  This could happen due to different bug, where plug-ins
+  specified only in ``transfer_output_remaps`` were not automatically added
+  to a job's requirements.
+  :jira:`1501`
 
 .. _lts-version-history-1001:
 
@@ -42,18 +46,29 @@ Release Notes:
 
 New Features:
 
+- Add support for Ubuntu 22.04 LTS (Jammy Jellyfish).
+  :jira:`1304`
+
 - The Windows installer now uses the localized name of the Users group
-  so that it can be installed on non-english Windows platforms
+  so that it can be installed on non-English Windows platforms.
   :jira:`1474`
 
 - HTCondor now includes a file transfer plugin that support ``stash://``
   and ``osdf://`` URLs.
   :jira:`1332`
 
+- OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
+  OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
+  :jira:`1410`
+
+- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
+  previously it was 0.
+  :jira:`1393`
+
 Bugs Fixed:
 
-- Fixed a bug where *condor_rm*'ing with the -forcex option
-  on a scheduler universe job could cause a schedd crash.
+- Fixed a bug where using the ``-forcex`` option with *condor_rm*
+  on a scheduler universe job could cause a *condor_schedd* crash.
   :jira:`1472`
 
 - Fixed a bug where Debian, Ubuntu and other Linux platforms with
@@ -66,9 +81,9 @@ Bugs Fixed:
   systems when using a file:// url type
   :jira:`1426`
 
-- Fixed bug in where the multifile curl plugin would fail to timeout
+- Fixed bug in where the multi-file curl plugin would fail to timeout
   due lack of upload or download progress if a large amount of bytes
-  where transfered at some point.
+  where transferred at some point.
   :jira:`1403`
   
 - Fixed a bug that prevented the starter from properly mounting
@@ -77,14 +92,14 @@ Bugs Fixed:
 
 - Fixed bugs in the container universe that prevented
   apptainer-only systems from running container universe jobs
-  with docker-repo style images.
+  with Docker repository style images.
   :jira:`1412`
 
 - Docker universe and container universe job that use the docker runtime now detect
-  when the unix uid or gid has the high bit set, which docker does not support.
+  when the Unix uid or gid has the high bit set, which docker does not support.
   :jira:`1421`
 
-- Fixed bug where the multifile curl plugin would fail to recieve scitoken
+- Fixed bug where the multi-file curl plugin would fail to receive SciToken
   if it was in raw format rather than json.
   :jira:`1447`
   

@@ -44,6 +44,7 @@ my $firstappend_condor_config = '
 my $secondappend_condor_config = '
 	SHARED_PORT_PORT = 0
 	DAEMON_LIST = MASTER,SCHEDD,STARTD
+	SCHEDD_SEND_RESCHEDULE = false
 	MAX_SCHEDD_LOG = 5000000000
 	WANT_SUSPEND = False
 	KILL = FALSE

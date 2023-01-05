@@ -4603,6 +4603,13 @@ type=int
 description=Maximum number of filetransfer remaps to apply before aborting
 tags=file_transfer
 
+[MAX_FILE_TRANSFER_PLUGIN_LIFETIME]
+default=72000
+version=10.2.0
+type=int
+description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
+tags=file_transfer
+
 [TRANSFER_IO_REPORT_INTERVAL]
 default=10
 version=7.9.4
@@ -4638,13 +4645,6 @@ default=none
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
-tags=starter
-
-[IGNORE_LEAF_OOM]
-default=true
-version=8.4.11
-type=bool
-description=Determines whether a job ignores an OOM event if it's using less than its limit
 tags=starter
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]

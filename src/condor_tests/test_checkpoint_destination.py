@@ -1,5 +1,12 @@
 #!/usr/bin/env pytest
 
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+	# make sure that file transfer plugins are enabled (might be disabled by default)
+	ENABLE_URL_TRANSFERS = true
+"""
+#endtestreq
+
 import os
 import time
 import subprocess
@@ -659,8 +666,6 @@ def the_completed_job(default_condor, the_job_handle):
 def the_completed_job_stdout(test_dir, the_job_name, the_completed_job):
     cluster = the_completed_job.clusterid
     output_log_path = test_dir / f"test_job_{cluster}.out"
-    if the_job_name == "with_output_destination":
-        output_log_path = test_dir / "od" / f"test_job_{cluster}.out"
 
     with open(test_dir / output_log_path) as output:
         return output.readlines()

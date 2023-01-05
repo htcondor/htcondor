@@ -158,7 +158,7 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 {
 	ClassAd* job_ad = NULL;
 	Resource* rip = fetch_client->m_rip;
-	float rank = 0;
+	double rank = 0;
 		// Are we currently in Claimed/Idle with a fetched claim?
 	bool idle_fetch_claim = (rip->r_cur->type() == CLAIM_FETCH
 							 && rip->state() == claimed_state

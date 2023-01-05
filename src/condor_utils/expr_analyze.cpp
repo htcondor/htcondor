@@ -103,7 +103,7 @@ public:
 			hard_value = 0;
 			bool bool_val = false;
 			classad::Value eval_result;
-			if (EvalExprTree(tree, &ad, NULL, eval_result)
+			if (EvalExprToBool(tree, &ad, NULL, eval_result)
 				&& eval_result.IsBooleanValue(bool_val)
 				&& bool_val) {
 				hard_value = 1;
@@ -930,7 +930,7 @@ void AnalyzeRequirementsForEachTarget(
 
 			classad::Value eval_result;
 			bool bool_val;
-			if (EvalExprTree(subs[ix].tree, request, target, eval_result) && 
+			if (EvalExprToBool(subs[ix].tree, request, target, eval_result) && 
 				eval_result.IsBooleanValue(bool_val) && 
 				bool_val) {
 				subs[ix].matches += 1;
@@ -1240,7 +1240,7 @@ int EvalThisSubExpr(int & index, classad::ExprTree* expr, ClassAd *request, Clas
 		classad::Value eval_result;
 		bool           bool_val;
 		bool matches = false;
-		if (EvalExprTree(expr, request, offer, eval_result) && eval_result.IsBooleanValue(bool_val) && bool_val) {
+		if (EvalExprToBool(expr, request, offer, eval_result) && eval_result.IsBooleanValue(bool_val) && bool_val) {
 			matches = true;
 		}
 

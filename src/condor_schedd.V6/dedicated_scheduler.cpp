@@ -83,10 +83,8 @@ AllocationNode::AllocationNode( int cluster_id, int n_procs )
 	status = A_NEW;
 	num_resources = 0;
 
-	jobs = new ExtArray< ClassAd* >(num_procs);
-	matches = new ExtArray< MRecArray* >(num_procs);
-	jobs->fill(NULL);
-	matches->fill(NULL);
+	jobs = new std::vector<ClassAd*>;
+	matches = new std::vector<MRecArray*>;
 	is_reconnect = false;
 }
 
@@ -131,8 +129,8 @@ AllocationNode::display( void ) const
 		if( ! ma ) {
 			return;
 		}
-		num_nodes = ma->getlast();
-		for( n=0; n<=num_nodes; n++ ) {
+		num_nodes = ma->size();
+		for( n=0; n < num_nodes; n++ ) {
 			mrec = (*ma)[n];
 			if( mrec ) {
 				snprintf( buf, 256, "%d.%d.%d: ", cluster, p, n );
@@ -1138,7 +1136,8 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 	int cluster = -1;
 	char *id = NULL, *sinful = NULL;
 	MRecArray* matches;
-	int i, p, last;
+	int i, p;
+	size_t last;
 
 	dprintf( D_FULLDEBUG, "Entering DedicatedScheduler::giveMatches()\n" );
 
@@ -1227,15 +1226,15 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 
 	for( p=0; p<alloc->num_procs; p++ ) {
 		matches = (*alloc->matches)[p];
-		last = matches->getlast() + 1; 
-		dprintf( D_FULLDEBUG, "In proc %d, num_matches: %d\n", p, last );
+		last = matches->size();
+		dprintf( D_FULLDEBUG, "In proc %d, num_matches: %zu\n", p, last );
 		if( ! stream->code(last) ) {
 			dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 					 "number of matches (%d) for proc %d\n", last, p );
 			return FALSE;
 		}			
 
-		for( i=0; i<last; i++ ) {
+		for( size_t i=0; i<last; i++ ) {
 			ClassAd *job_ad;
 			sinful = (*matches)[i]->peer;
 			if( ! stream->code(sinful) ) {
@@ -1249,7 +1248,6 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 "ClaimId for match %d of proc %d\n", i, p );
 				return FALSE;
 			}				
-			//job_ad = new ClassAd( *((*alloc->jobs)[p]) );
 			job_ad = dollarDollarExpand(cluster,p, (*alloc->jobs)[p], (*matches)[i]->my_match_ad, true);
 			if( ! job_ad) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: "
@@ -1996,7 +1994,7 @@ DedicatedScheduler::spawnJobs( void )
 		int total_nodes = 0;
 		int procIndex = 0;
 		for( procIndex = 0; procIndex < allocation->num_procs; procIndex++) {
-			total_nodes += ((*allocation->matches)[procIndex])->getlast() + 1;
+			total_nodes += ((*allocation->matches)[procIndex])->size();
 		}
 
 			// In each proc's classad, set CurrentHosts to be the
@@ -2037,8 +2035,8 @@ DedicatedScheduler::spawnJobs( void )
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
-			n = ((*allocation->matches)[p])->getlast();
-			for( i=0; i<=n; i++ ) {
+			n = ((*allocation->matches)[p])->size();
+			for( i=0; i< n; i++ ) {
 				(*(*allocation->matches)[p])[i]->shadowRec = srec;
 				(*(*allocation->matches)[p])[i]->setStatus( M_ACTIVE );
 			}
@@ -2060,10 +2058,10 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 			StringList public_claims;
 			StringList remoteHosts;
 
-			int n = ((*allocation->matches)[p])->getlast();
+			int n = ((*allocation->matches)[p])->size();
 
 				// Foreach node within this proc...
-			for( int i=0; i<=n; i++ ) {
+			for( int i=0; i < n; i++ ) {
 					// Grab the claim from the mrec
 				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
 				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
@@ -2592,7 +2590,7 @@ DedicatedScheduler::computeSchedule( void )
 
 						// See if this machine has a true
 						// SCHEDD_PREEMPTION_REQUIREMENT
-					requirement = EvalExprTree( preemption_req, machine, job,
+					requirement = EvalExprToBool( preemption_req, machine, job,
 												result );
 					if (requirement) {
 						bool val;
@@ -2608,7 +2606,7 @@ DedicatedScheduler::computeSchedule( void )
 							// Evaluate its SCHEDD_PREEMPTION_RANK in
 							// the context of this job
 						int rval;
-						rval = EvalExprTree( preemption_rank, machine, job,
+						rval = EvalExprToNumber( preemption_rank, machine, job,
 											 result );
 						if( !rval || !result.IsNumber(rank) ) {
 								// The result better be a number
@@ -2920,16 +2918,14 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 				// create a new MRecArray
 			matches = new MRecArray();
-			ASSERT(matches != NULL);
-			matches->fill(NULL);
 			
 				// And stick it into the AllocationNode
-			(*alloc->matches)[proc] = matches;
-			(*alloc->jobs)[proc] = job;
+			alloc->matches->push_back(matches);
+			alloc->jobs->push_back(job);
 		}
 
 			// And put the mrec into the matches for this node in the proc
-		(*matches)[node] = mrec;
+		matches->push_back(mrec);
 		node++;
 	}
 	
@@ -2968,8 +2964,8 @@ DedicatedScheduler::removeAllocation( shadow_rec* srec )
 		// our MPI job.
 	for( i=0; i<alloc->num_procs; i++ ) {
 		matches = (*alloc->matches)[i];
-		n = matches->getlast();
-		for( m=0 ; m <= n ; m++ ) {
+		n = matches->size();
+		for( m=0 ; m < n ; m++ ) {
 			deallocMatchRec( (*matches)[m] );
 		}
 	}
@@ -3195,11 +3191,11 @@ DedicatedScheduler::shutdownMpiJob( shadow_rec* srec , bool kill /* = false */)
 	alloc->status = A_DYING;
 	for (int i=0; i<alloc->num_procs; i++ ) {
         MRecArray* matches = (*alloc->matches)[i];
-        int n = matches->getlast();
+        int n = matches->size();
         std::vector<match_rec*> delmr;
         // Save match_rec pointers into a vector, because deactivation of claims 
         // alters the MRecArray object (*matches) destructively:
-        for (int j = 0;  j <= n;  ++j) delmr.push_back((*matches)[j]);
+        for (int j = 0;  j <  n;  ++j) delmr.push_back((*matches)[j]);
         for (std::vector<match_rec*>::iterator mr(delmr.begin());  mr != delmr.end();  ++mr) {
             if (kill) {
                 dprintf( D_ALWAYS, "Dedicated job abnormally ended, releasing claim\n");
@@ -3402,11 +3398,12 @@ DedicatedScheduler::DelMrec( char const* id )
 			// pointer in there.
 
 		bool found_it = false;
-		for( int proc_index = 0; proc_index < alloc->num_procs; proc_index++) {
+		for( size_t proc_index = 0; proc_index < alloc->num_procs; proc_index++) {
 			MRecArray* rec_array = (*alloc->matches)[proc_index];
-			int i, last = rec_array->getlast();
+			size_t i;
+			size_t last = rec_array->size();
 
-			for( i=0; i<= last; i++ ) {
+			for( i=0; i < last; i++ ) {
 					// In case you were wondering, this works just fine if
 					// the mrec we care about is in the last position.
 					// The first assignment will be a no-op, but no harm
@@ -3416,7 +3413,7 @@ DedicatedScheduler::DelMrec( char const* id )
 				if( (*rec_array)[i] == rec ) {
 					found_it = true;
 					(*rec_array)[i] = (*rec_array)[last];
-					(*rec_array)[last] = NULL;
+					(*rec_array)[last - 1] = nullptr;
 						// We want to decrement last so we break out of
 						// this for loop before checking the element we
 						// NULL'ed out.  Otherwise, the truncate below
@@ -3425,7 +3422,7 @@ DedicatedScheduler::DelMrec( char const* id )
 					last--;
 						// Truncate our array so we realize the match is
 						// gone, and don't consider it in the future.
-					rec_array->truncate(last);
+					rec_array->resize(last);
 				}
 			}
 		}

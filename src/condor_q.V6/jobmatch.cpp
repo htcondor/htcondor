@@ -528,7 +528,7 @@ static bool is_exhausted_partionable_slot(ClassAd* slotAd, ClassAd* jobAd)
 	if (slotAd->LookupBool("PartitionableSlot", is_pslot) && is_pslot) {
 		ExprTree * expr = slotAd->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
 		classad::Value val;
-		if (expr && EvalExprTree(expr, slotAd, jobAd, val) && val.IsBooleanValueEquiv(within)) {
+		if (expr && EvalExprToBool(expr, slotAd, jobAd, val) && val.IsBooleanValueEquiv(within)) {
 			return ! within;
 		}
 		return false;
@@ -583,7 +583,7 @@ static bool checkPremption (
 		string remoteUser;
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
 			// no remote user
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val) {
 				// both sides satisfied and no remote user
 				//if( verbose ) strcat(return_buff, "Available\n");
@@ -620,11 +620,11 @@ static bool checkPremption (
 			ac.machinesRunningUsersJobs++;
 
 		// 4. Satisfies preemption priority condition?
-		} else if (EvalExprTree(preemptPrioCondition, offer, request, eval_result) &&
+		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
 			eval_result.IsBooleanValue(val) && val) {
 
 			// 5. Satisfies standard rank condition?
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val )  
 			{
 				//if( verbose ) strcat( return_buff, "Available\n");
@@ -632,11 +632,11 @@ static bool checkPremption (
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if (EvalExprTree(preemptRankCondition, offer, request, eval_result) &&
+				if (EvalExprToBool(preemptRankCondition, offer, request, eval_result) &&
 					eval_result.IsBooleanValue(val) && val)
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if (EvalExprTree( preemptionReq, offer, request, eval_result) &&
+					if (EvalExprToBool( preemptionReq, offer, request, eval_result) &&
 						eval_result.IsBooleanValue(val) && !val) 
 					{
 						ac.fPreemptReqTest++;
@@ -862,7 +862,7 @@ bool doJobRunAnalysis (
 			ExprTree * expr = offer->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
 			classad::Value val;
 			bool within = false;
-			if (expr && EvalExprTree(expr, offer, request, val) && val.IsBooleanValueEquiv(within) && ! within) {
+			if (expr && EvalExprToBool(expr, offer, request, val) && val.IsBooleanValueEquiv(within) && ! within) {
 				// if the slot doesn't fit within the pslot, try applying an overlay ad that restores the pslot to full health
 				ClassAd * pov = make_pslot_overlay_ad(offer);
 				if (pov) {
@@ -935,7 +935,7 @@ bool doJobRunAnalysis (
 			continue;
 #else  // i think this is bogus
 			// no remote user
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val) {
 				// both sides satisfied and no remote user
 				//if( verbose ) strcat(return_buff, "Available\n");
@@ -973,14 +973,14 @@ bool doJobRunAnalysis (
 			ac.machinesRunningUsersJobs++;
 
 		// 4. Satisfies preemption priority condition?
-		} else if (EvalExprTree(preemptPrioCondition, offer, request, eval_result) &&
+		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
 			eval_result.IsBooleanValue(val) && val) {
 
 #if 1
 			{
 #else		// this test is bogus
 			// 5. Satisfies standard rank condition?
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val )  
 			{
 				//if( verbose ) strcat( return_buff, "Available\n");
@@ -989,11 +989,11 @@ bool doJobRunAnalysis (
 			} else {
 #endif
 				// 6.  Satisfies preemption rank condition?
-				if (EvalExprTree(preemptRankCondition, offer, request, eval_result) &&
+				if (EvalExprToBool(preemptRankCondition, offer, request, eval_result) &&
 					eval_result.IsBooleanValue(val) && val)
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if (EvalExprTree( preemptionReq, offer, request, eval_result) &&
+					if (EvalExprToBool( preemptionReq, offer, request, eval_result) &&
 						eval_result.IsBooleanValue(val) && !val) 
 					{
 						ac.fPreemptReqTest++;

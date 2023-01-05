@@ -997,15 +997,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
         *   Alice security,math
         alt Alice math,hacking
 
-:macro-def:`IGNORE_LEAF_OOM`
-    A boolean value that, when ``True``, tells HTCondor not to kill and
-    hold a job that is within its memory allocation, even if other
-    processes within the same cgroup have exceeded theirs. The default
-    value is ``True``. (Note that this represents a change in behavior
-    compared to versions of HTCondor older than 8.6.0; this
-    configuration macro first appeared in version 8.4.11. To restore the
-    previous behavior, set this value to ``False``.)
-
 :macro-def:`SIGN_S3_URLS`
     A boolean value that, when ``True``, tells HTCondor to convert ``s3://``
     URLs into pre-signed ``https://`` URLs.  This allows execute nodes to
@@ -6189,6 +6180,12 @@ These settings affect the *condor_starter*.
     operations, such as access a credential protected by file system
     permissions. The default value is recommended unless privileged
     operations are required.
+
+:macro-def:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`:
+    An integer number of seconds (defaulting to twenty hours) after which
+    the starter will kill a file transfer plug-in for taking too long.
+    Currently, this causes the job to go on hold with ``ETIME`` (62) as
+    the hold reason subcode.
 
 :macro-def:`ENABLE_CHIRP`
     A boolean value that defaults to ``True``. An administrator would
