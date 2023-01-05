@@ -1609,7 +1609,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Thu Jan 04 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
 - Add Ubuntu 22.04 (Jammy Jellyfish) support
 - Add file transfer plugin that supports stash:// and osdf:// URLs
 - Fix bug where cgroup memory limits were not enforced on Debian and Ubuntu

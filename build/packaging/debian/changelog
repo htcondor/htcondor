@@ -8,7 +8,7 @@ condor (10.0.1-1) stable; urgency=medium
   * Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
   * Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
 
- -- Tim Theisen <tim@cs.wisc.edu>  Thu, 04 Jan 2023 06:36:00 -0600
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 05 Jan 2023 06:36:00 -0600
 
 condor (10.0.0-1) stable; urgency=medium
 
