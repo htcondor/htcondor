@@ -14,36 +14,30 @@ Version 10.0.1
 
 Release Notes:
 
-.. HTCondor version 10.0.1 released on Month Date, 2022.
-
-- HTCondor version 10.0.1 not yet released.
+- HTCondor version 10.0.1 released on January 4, 2023.
 
 New Features:
 
 - Add support for Ubuntu 22.04 LTS (Jammy Jellyfish).
   :jira:`1304`
 
-- The Windows installer now uses the localized name of the Users group
-  so that it can be installed on non-English Windows platforms.
-  :jira:`1474`
-
 - HTCondor now includes a file transfer plugin that support ``stash://``
   and ``osdf://`` URLs.
   :jira:`1332`
+
+- The Windows installer now uses the localized name of the Users group
+  so that it can be installed on non-English Windows platforms.
+  :jira:`1474`
 
 - OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
   OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
   :jira:`1410`
 
-- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
+- The ``CompletionDate`` attribute of jobs is now undefined until such time as the job completes
   previously it was 0.
   :jira:`1393`
 
 Bugs Fixed:
-
-- Fixed a bug where using the ``-forcex`` option with *condor_rm*
-  on a scheduler universe job could cause a *condor_schedd* crash.
-  :jira:`1472`
 
 - Fixed a bug where Debian, Ubuntu and other Linux platforms with
   swap accounting disabled in the kernel would never put
@@ -51,18 +45,9 @@ Bugs Fixed:
   MEMORY_LIMIT_POLICY was set to hard or soft.
   :jira:`1466`
 
-- Fixed bug in the curl plugin where it would crash on EL8
-  systems when using a file:// url type
-  :jira:`1426`
-
-- Fixed bug in where the multi-file curl plugin would fail to timeout
-  due lack of upload or download progress if a large amount of bytes
-  where transferred at some point.
-  :jira:`1403`
-  
-- Fixed a bug that prevented the starter from properly mounting
-  thinpool provisioned ephemeral scratch directories.
-  :jira:`1419`
+- Fixed a bug where using the ``-forcex`` option with *condor_rm*
+  on a scheduler universe job could cause a *condor_schedd* crash.
+  :jira:`1472`
 
 - Fixed bugs in the container universe that prevented
   apptainer-only systems from running container universe jobs
@@ -73,10 +58,27 @@ Bugs Fixed:
   when the Unix uid or gid has the high bit set, which docker does not support.
   :jira:`1421`
 
-- Fixed bug where the multi-file curl plugin would fail to receive SciToken
+- Grid universe **batch** works again on Debian and Ubuntu.
+  Since 9.5.0, some required files had been missing.
+  :jira:`1475`
+
+- Fixed bug in the curl plugin where it would crash on Enterprise Linux 8
+  systems when using a file:// url type.
+  :jira:`1426`
+
+- Fixed bug in where the multi-file curl plugin would fail to timeout
+  due lack of upload or download progress if a large amount of bytes
+  where transferred at some point.
+  :jira:`1403`
+  
+- Fixed bug where the multi-file curl plugin would fail to receive a SciToken
   if it was in raw format rather than json.
   :jira:`1447`
   
+- Fixed a bug that prevented the starter from properly mounting
+  thinpool provisioned ephemeral scratch directories.
+  :jira:`1419`
+
 - Fixed a bug where SSL authentication with the *condor_collector* could
   fail when the provided hostname is not a DNS CNAME.
   :jira:`1443`
@@ -98,16 +100,16 @@ Bugs Fixed:
   :jira:`1458`
 
 - Fixed a bug that would cause tools that have the ``-printformat`` argument to segfault
-  when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
+  when the format file contained a ``FIELDPREFIX``, ``FIELDSUFFIX``, ``RECORDPREFIX`` or ``RECORDSUFFIX``.
   :jira:`1464`
 
 - Fixed a bug in the ``RENAME`` command of the transform language that could result in a
   crash of the *condor_schedd* or *condor_job_router*.
   :jira:`1486`
 
-- Grid universe **batch** works again on Debian and Ubuntu.
-  Since 9.5.0, some required files had been missing.
-  :jira:`1475`
+- For tarball installations, the *condor_configure* script now configures
+  HTCondor to use user based security.
+  :jira:`1461`
 
 .. _lts-version-history-1000:
 
