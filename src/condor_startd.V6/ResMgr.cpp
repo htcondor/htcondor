@@ -562,17 +562,9 @@ ResMgr::typeNumCmp( const int* a, const int* b ) const
 	return true;
 }
 
-bool
+void
 ResMgr::reconfig_resources( void )
 {
-	int t, i, cur, num;
-	CpuAttributes** new_cpu_attrs;
-	bool *bkfill_bools = nullptr;
-	int max_num = num_cpus();
-	int* cur_type_index;
-	Resource*** sorted_resources;	// Array of arrays of pointers.
-	Resource* rip;
-
 	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
 
 #if HAVE_BACKFILL
@@ -598,142 +590,6 @@ ResMgr::reconfig_resources( void )
 		// any errors, just dprintf().
 	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
-	initTypes( max_types, type_strings, 0 );
-
-		// First, see how many slots of each type are specified.
-	num = countTypes( max_types, num_cpus(), &new_type_nums, &bkfill_bools, false );
-
-	if( typeNumCmp(new_type_nums, type_nums) ) {
-			// We want the same number of each slot type that we've got
-			// now.  We're done!
-		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
-		delete [] new_type_nums;
-		delete [] bkfill_bools;
-		new_type_nums = NULL;
-		bkfill_bools = nullptr;
-		return true;
-	}
-
-		// See if the config file allows for a valid set of
-		// CpuAttributes objects.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, bkfill_bools, false );
-	if( ! new_cpu_attrs ) {
-			// There was an error, abort.  We still return true to
-			// indicate that we're done doing our thing...
-		dprintf( D_ALWAYS, "Aborting slot type reconfig.\n" );
-		delete [] new_type_nums;
-		delete [] bkfill_bools;
-		new_type_nums = NULL;
-		bkfill_bools = nullptr;
-		return true;
-	}
-
-		////////////////////////////////////////////////////
-		// Sort all our resources by type and state.
-		////////////////////////////////////////////////////
-
-		// Allocate and initialize our arrays.
-	sorted_resources = new Resource** [max_types];
-	ASSERT( sorted_resources != NULL );
-	for( i=0; i<max_types; i++ ) {
-		sorted_resources[i] = new Resource* [max_num];
-		ASSERT(sorted_resources[i] != NULL);
-		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
-	}
-
-	cur_type_index = new int [max_types];
-	memset( cur_type_index, 0, (max_types*sizeof(int)) );
-
-		// Populate our sorted_resources array by type.
-	for( i=0; i<nresources; i++ ) {
-		t = resources[i]->type();
-		(sorted_resources[t])[cur_type_index[t]] = resources[i];
-		cur_type_index[t]++;
-	}
-
-	auto claimedRankLessThan = [](const Resource *r1, const Resource *r2) {
-		if (r1->state() > r2->state()) {
-			return true;
-		}
-		if (r1->state() < r2->state()) {
-			return false;
-		}
-
-		State s = r1->state();
-		if ((s == claimed_state) || (s == preempting_state)) {
-			if (r1->r_cur->rank() > r2->r_cur->rank()) {
-				return true;
-			}
-			if (r1->r_cur->rank() < r2->r_cur->rank()) {
-				return false;
-			}
-		}
-		// Otherwise, by pointer, just to avoid loops
-		return r1 < r2;
-	};
-	
-		// Now, for each type, sort our resources by state.
-	for( t=0; t<max_types; t++ ) {
-		ASSERT( cur_type_index[t] == type_nums[t] );
-		std::sort(sorted_resources[t], sorted_resources[t] + type_nums[t], claimedRankLessThan);
-	}
-
-		////////////////////////////////////////////////////
-		// Decide what we need to do.
-		////////////////////////////////////////////////////
-	cur = -1;
-	for( t=0; t<max_types; t++ ) {
-		for( i=0; i<new_type_nums[t]; i++ ) {
-			cur++;
-			if( ! (sorted_resources[t])[i] ) {
-					// If there are no more existing resources of this
-					// type, we'll need to allocate one.
-				alloc_list.Append( new_cpu_attrs[cur] );
-				continue;
-			}
-			if( (sorted_resources[t])[i]->type() ==
-				new_cpu_attrs[cur]->type() ) {
-					// We've already got a Resource for this slot, so we
-					// can delete it.
-				delete new_cpu_attrs[cur];
-				continue;
-			}
-		}
-			// We're done with the new slots of this type.  See if there
-			// are any Resources left over that need to be destroyed.
-		for( ; i<max_num; i++ ) {
-			if( (sorted_resources[t])[i] ) {
-				destroy_list.Append( (sorted_resources[t])[i] );
-			} else {
-				break;
-			}
-		}
-	}
-
-		////////////////////////////////////////////////////
-		// Finally, act on our decisions.
-		////////////////////////////////////////////////////
-
-		// Everything we care about in new_cpu_attrs is saved
-		// elsewhere, and the rest has already been deleted, so we
-		// should now delete the array itself.
-	delete [] new_cpu_attrs;
-	delete [] bkfill_bools;
-
-		// Cleanup our memory.
-	for( i=0; i<max_types; i++ ) {
-		delete [] sorted_resources[i];
-	}
-	delete [] sorted_resources;
-	delete [] cur_type_index;
-
-		// See if there's anything to destroy, and if so, do it.
-	destroy_list.Rewind();
-	while( destroy_list.Next(rip) ) {
-		rip->dprintf( D_ALWAYS,
-					  "State change: resource no longer needed by configuration\n" );
-		rip->set_destination_state( delete_state );
-	}
 
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
@@ -744,10 +600,6 @@ ResMgr::reconfig_resources( void )
 		m_reuse_dir.reset();
 	}
 
-
-		// Finally, call our helper, so that if all the slots we need to
-		// get rid of are gone by now, we'll allocate the new ones.
-	return processAllocList();
 }
 
 void
@@ -1886,14 +1738,6 @@ ResMgr::removeResource( Resource* rip )
 		}
 	}
 
-		// Remove this rip from our destroy_list.
-	destroy_list.Rewind();
-	while( destroy_list.Next(rip2) ) {
-		if( rip2 == rip ) {
-			destroy_list.DeleteCurrent();
-			break;
-		}
-	}
 
 		// Now, delete the old array and start using the new one, if
 		// it's there at all.  If not, it'll be NULL and this will all
@@ -1981,15 +1825,9 @@ ResMgr::deleteResource( Resource* rip )
 			// Didn't find it.  This is where we'll hit if resources
 			// is NULL.  We should never get here, anyway (we'll never
 			// call deleteResource() if we don't have any resources.
-		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
+		dprintf(D_ERROR, "ResMgr::deleteResource() failed: couldn't find resource\n" );
 	}
 
-		// Now that a Resource is gone, see if we're done deleting
-		// Resources and see if we should allocate any.
-	if( processAllocList() ) {
-			// We're done allocating, so we can finish our reconfig.
-		finish_main_config();
-	}
 }
 
 // return the count of claims on this machine associated with this user
@@ -2173,35 +2011,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 
 }
 
-
-bool
-ResMgr::processAllocList( void )
-{
-	if( ! destroy_list.IsEmpty() ) {
-			// Can't start allocating until everything has been
-			// destroyed.
-		return false;
-	}
-	if( alloc_list.IsEmpty() ) {
-		return true;  // Since there's nothing to allocate...
-	}
-
-		// We're done destroying, and there's something to allocate.
-
-		// Create the new Resource objects.
-	CpuAttributes* cap;
-	alloc_list.Rewind();
-	while( alloc_list.Next(cap) ) {
-		addResource( new Resource( cap, nextId() ) );
-		alloc_list.DeleteCurrent();
-	}
-
-	delete [] type_nums;
-	type_nums = new_type_nums;
-	new_type_nums = NULL;
-
-	return true; 	// Since we're done allocating.
-}
 
 
 #if HAVE_HIBERNATION

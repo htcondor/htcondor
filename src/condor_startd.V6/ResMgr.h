@@ -148,7 +148,7 @@ public:
 
 	void	init_socks( void );
 	void	init_resources( void );
-	bool	reconfig_resources( void );
+	void	reconfig_resources( void );
 
 private:
 	void	compute_dead( amask_t );
@@ -374,18 +374,9 @@ private:
 	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.
 
-		// Data members we need to handle dynamic reconfig:
-	SimpleList<CpuAttributes*>		alloc_list;		
-	SimpleList<Resource*>			destroy_list;
-
 	// List of Supplemental ClassAds to publish
 	StartdNamedClassAdList			extra_ads;
 
-		/* 
-		  See if the destroy_list is empty.  If so, allocate whatever
-		  we need to allocate.
-		*/
-	bool processAllocList( void );
 
 	int last_in_use;	// Timestamp of the last time we were in use.
 

@@ -3740,11 +3740,10 @@ needs.
 
 .. note::
 
-    You can only change the number of each type of slot the
-    *condor_startd* is reporting with a simple reconfig (such as sending a
-    SIGHUP signal, or using the *condor_reconfig* command). You cannot
-    change the definition of the different slot types with a reconfig. If
-    you change them, you must restart the *condor_startd* for the change to
+    You cannot
+    change the number or definition of the different slot types with a reconfig. If
+    you change anything related to slot provisioning,
+    you must restart the *condor_startd* for the change to
     take effect (for example, using ``condor_restart -startd``).
 
 .. note::

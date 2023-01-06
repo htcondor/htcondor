@@ -88,17 +88,6 @@ export VERBOSE
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
 export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
-# Hack to reduce memory usage for ARM EL9 builds
-if [ $(arch) = 'aarch64' ]; then
-    . /etc/os-release
-    VERSION_ID=${VERSION_ID%%.*}
-    if [ $VERSION_ID -eq 9 ]; then
-        if [ $RPM_BUILD_NCPUS -gt 4 ]; then
-            export RPM_BUILD_NCPUS=4
-        fi
-    fi
-fi
-
 rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
