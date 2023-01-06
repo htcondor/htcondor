@@ -49,7 +49,7 @@ typedef struct PROC_ID {
 	// further defines all of cluster 0 (and all negative process numbers)
 	// as non-jobs, we'll use job 0.1 to mark the invalid job to preserve
 	// the negative numbers for future expansion.
-	PROC_ID() : cluster( 0 ), proc( 11 ) {}
+	PROC_ID() : cluster( 0 ), proc( 1 ) {}
 	PROC_ID( int c, int p ) : cluster(c), proc(p) {}
 	bool isValid() const { return !(cluster == 0 && proc == 1); }
 	void invalidate() { cluster = 0; proc = 1; }
