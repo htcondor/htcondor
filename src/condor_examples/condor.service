@@ -17,7 +17,6 @@ Restart=on-failure
 RestartSec=1minute
 WatchdogSec=20minutes
 TimeoutStopSec=150seconds
-StandardOutput=syslog
 NotifyAccess=main
 KillSignal=SIGQUIT
 # Matches values in Linux Kernel Tuning script
