@@ -436,11 +436,10 @@ main_config()
 
 		// Reread config file for global settings.
 	init_params(0);
+
 		// Process any changes in the slot type specifications
-	done_allocating = resmgr->reconfig_resources();
-	if( done_allocating ) {
-		finish_main_config();
-	}
+	resmgr->reconfig_resources();
+	finish_main_config();
 }
 
 
