@@ -7,29 +7,6 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-1003:
-
-Version 10.0.3
---------------
-
-Release Notes:
-
-.. HTCondor version 10.0.3 released on Month Date, 2023.
-
-- HTCondor version 10.0.3 not yet released.
-
-New Features:
-
-- None.
-
-Bugs Fixed:
-
-- Fixed a bug where **condor_now** could not use the resources freed by
-  evicting a job if its procID was 1.
-  :jira:`1519`
-
-.. _lts-version-history-1002:
-
 Version 10.0.2
 --------------
 
@@ -45,6 +22,10 @@ New Features:
   a transfer output remap to create directories in allowed places if they
   do not exist at tranfser output time.
   :jira:`1480`
+
+- Fixed a bug where **condor_now** could not use the resources freed by
+  evicting a job if its procID was 1.
+  :jira:`1519`
 
 Bugs Fixed:
 
