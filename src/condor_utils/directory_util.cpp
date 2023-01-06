@@ -133,52 +133,6 @@ const char* dirscat(const char *dirpath, const char *subdir, std::string &result
 
 
 /*
-  Concatenates a given directory path and subdirectory path into a single
-  string, stored in space allocated with new[].  This function makes
-  sure that if the given directory path doesn't end with the
-  appropriate directory delimiter for this platform, that the new
-  string includes that -- it will contain the trailing delimiter too.  
-  Delete return string with delete[].
-*/
-char*
-dirscat( const char *dirpath, const char *subdir )
-{
-	ASSERT(dirpath);
-	ASSERT(subdir);
-	dprintf(D_FULLDEBUG,"dirscat: dirpath = %s\n",dirpath);
-	dprintf(D_FULLDEBUG,"dirscat: subdir = %s\n",subdir);
-	bool needs_delim1 = true, needs_delim2 = true;
-	while(subdir && *subdir == DIR_DELIM_CHAR) {
-		++subdir;
-	}
-	int extra = 3, dirlen = strlen(dirpath), subdirlen = strlen(subdir);
-	char* rval;
-	if( dirpath[dirlen - 1] == DIR_DELIM_CHAR ) {
-		needs_delim1 = false;
-		--extra;
-	}
-	if (subdir[subdirlen - 1] == DIR_DELIM_CHAR ) {
-		--extra;
-		needs_delim2 = false;
-	}
-	rval = new char[ extra + dirlen + subdirlen];
-	if( needs_delim1 ) {
-		if ( needs_delim2 ) {
-			sprintf( rval, "%s%c%s%c", dirpath, DIR_DELIM_CHAR, subdir, DIR_DELIM_CHAR );
-		} else {
-			sprintf( rval, "%s%c%s", dirpath, DIR_DELIM_CHAR, subdir );
-		}
-	} else {
-		if ( needs_delim2 ) {
-			sprintf( rval, "%s%s%c", dirpath, subdir, DIR_DELIM_CHAR );
-		} else {
-			sprintf( rval, "%s%s", dirpath, subdir );
-		}
-	}
-	return rval;
-}
-
-/*
 char*
 dirscat( std::string &dirpath, std::string &subdir ) {
 	return dirscat(dirpath.c_str(), subdir.c_str());
