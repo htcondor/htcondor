@@ -25,6 +25,10 @@ New Features:
   do not exist at tranfser output time.
   :jira:`1480`
 
+- Fixed a bug where **condor_now** could not use the resources freed by
+  evicting a job if its procID was 1.
+  :jira:`1519`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
