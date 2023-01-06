@@ -984,7 +984,8 @@ sub createSubmitFilesNew
 
 	my $job_prio = time;
 	if (defined($importance)) { $job_prio = $job_prio + ($importance * 3600); }
-	print CMDFILE "+priority = $job_prio\n";
+	# Lower priority of emulated jobs
+	print CMDFILE "++jobprio = $job_prio - (regexp(\"x86_64\", (nmi_target_platform ?: \"x86_64\")) ? 0 : 86400)\n";
 
 	# Glorious hack.
 	# It is best if the 'build' and 'test' jobs request the same amount of memory
