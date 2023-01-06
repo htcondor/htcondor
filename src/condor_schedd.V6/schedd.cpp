@@ -2083,7 +2083,7 @@ int Scheduler::handleMachineAdsQuery( Stream * stream, ClassAd & ) {
 			return FALSE;
 		}
 
-		if( match->m_now_job.isValid() ) {
+		if( match->m_now_job.isJobKey() ) {
 			dprintf( D_TEST, "Match record '%s' has now job %d.%d\n",
 				(*i).first.c_str(), match->m_now_job.cluster, match->m_now_job.proc );
 		}
@@ -11871,7 +11871,7 @@ Scheduler::child_exit(int pid, int status)
 	// on the code in Scheduler::RecycleShadow(), put this code after
 	// the check to see if the exit has already been handled, but I think
 	// this makes it less likely that changes there will cause problems.
-	if( srec->match && srec->match->m_now_job.isValid() ) {
+	if( srec->match && srec->match->m_now_job.isJobKey() ) {
 		PROC_ID bid = srec->match->m_now_job;
 		pcccGot( bid, srec->match );
 		StartJobsFlag = FALSE;
@@ -12155,7 +12155,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		case JOB_NOT_STARTED:
 			if( srec != NULL && !srec->removed && srec->match ) {
 				// Don't delete matches we're trying to use for a now job.
-				if(! srec->match->m_now_job.isValid()) {
+				if(! srec->match->m_now_job.isJobKey()) {
 					DelMrec(srec->match);
 				}
 			}
@@ -16750,7 +16750,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 		// If this match is earmarked for high-priority job, don't reuse
 		// the shadow.  It's possible that we could, but for now, keep
 		// things simple and only spawn the high-priority job in child_exit().
-	if( mrec->m_now_job.isValid() ) {
+	if( mrec->m_now_job.isJobKey() ) {
 		stream->encode();
 		stream->put((int)0);
 		stream->end_of_message();
