@@ -196,12 +196,13 @@ BOINC_BackfillMgr::addSlot( BOINC_BackfillSlot* /*boinc_slot*/ )
 bool
 BOINC_BackfillMgr::rmSlot( int slot_id )
 {
-	size_t old_sz = m_slots.size();
 	auto slot_matches = [=](BackfillSlot* bs){bool match = slot_id == bs->getSlotID(); if (match) delete bs; return match;};
-	std::remove_if(begin(m_slots), end(m_slots), slot_matches);
-	if (m_slots.size() == old_sz) {
+	auto it = std::remove_if(begin(m_slots), end(m_slots), slot_matches);
+	if (it == end(m_slots)) {
 		// No slot found/removed
 		return false;
+	} else {
+		m_slots.erase(it, end(m_slots));
 	}
 
 		// let the corresponding Resource know we're no longer running
@@ -436,17 +437,3 @@ BOINC_BackfillMgr::hardkill( int slot_id )
 	return killClient();
 }
 
-
-bool
-BOINC_BackfillMgr::walk( BoincSlotMember member_func )
-{
-	bool rval = true;
-	for( size_t i = 0; i < m_slots.size(); i++ ) {
-		if( m_slots[i] ) { 
-			if( ! (((BOINC_BackfillSlot*)m_slots[i])->*(member_func))() ) {
-				rval = false;
-			}
-		}
-	}
-	return rval;
-}
