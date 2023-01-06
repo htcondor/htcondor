@@ -43,8 +43,12 @@
 
 double priority = 0.00001;
 const char *pool = NULL;
-struct 	PrioEntry { std::string name; float prio; };
-static  ExtArray<PrioEntry> prioTable;
+struct 	PrioEntry { 
+	PrioEntry(const std::string &name, float prio) : name(name), prio(prio) {}
+	std::string name; 
+	float prio;
+};
+static  std::vector<PrioEntry> prioTable;
 #ifndef WIN32
 #endif
 ExprTree *rankCondStd;// no preemption or machine rank-preemption 
@@ -357,9 +361,7 @@ fetchSubmittorPrios()
 			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
-		prioTable[i-1].name = name;
-		prioTable[i-1].prio = sub_priority;
-		// printf("DEBUG: Prio   %s %f\n",name,sub_priority);
+		prioTable.emplace_back(name, sub_priority);
 		i++;
 	}
 
@@ -372,15 +374,14 @@ static int
 findSubmittor( char *name ) 
 {
 	std::string sub(name);
-	int			last = prioTable.getlast();
+	int			last = prioTable.size();
 	int			i;
 	
-	for( i = 0 ; i <= last ; i++ ) {
+	for( i = 0 ; i < last ; i++ ) {
 		if( prioTable[i].name == sub ) return i;
 	}
 
-	prioTable[i].name = sub;
-	prioTable[i].prio = 0.5;
+	prioTable.emplace_back(sub, 0.5);
 
 	return i;
 }
