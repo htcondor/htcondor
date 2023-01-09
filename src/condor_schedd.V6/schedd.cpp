@@ -5396,6 +5396,13 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					}
 					SetAttributeInt(a_job.cluster,a_job.proc,
 									ATTR_STAGE_IN_START,now);
+				} else {
+					// UserCheck2 failed.
+					dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
+							" user %s to spool files for job %d.%d\n",
+							EffectiveUser(rsock), a_job.cluster, a_job.proc);
+					delete jobs;
+					return FALSE;
 				}
 			}
 			break;
