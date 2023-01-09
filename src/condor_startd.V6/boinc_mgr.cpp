@@ -25,6 +25,7 @@
 
 #include "startd.h"
 #include "boinc_mgr.h"
+#include <algorithm>
 
 
 BOINC_BackfillSlot::BOINC_BackfillSlot( int slot_id )
