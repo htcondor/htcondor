@@ -62,8 +62,7 @@
 #include "VolumeManager.h"
 #endif
 
-typedef float (Resource::*ResourceFloatMember)();
-typedef void (Resource::*ResourceMaskMember)(amask_t);
+typedef double (Resource::*ResourceFloatMember)();
 typedef void (Resource::*VoidResourceMember)();
 typedef int (*ComparisonFunc)(const void *, const void *);
 
@@ -149,7 +148,7 @@ public:
 
 	void	init_socks( void );
 	void	init_resources( void );
-	bool	reconfig_resources( void );
+	void	reconfig_resources( void );
 
 private:
 	void	compute_dead( amask_t );
@@ -168,7 +167,7 @@ public:
 	bool	is_smp( void ) { return( num_cpus() > 1 ); }
 	int		num_cpus( void ) const { return m_attr->num_cpus(); }
 	int		num_real_cpus( void ) const { return m_attr->num_real_cpus(); }
-	int		numSlots( void ) const { return nresources; }
+	int		numSlots( void ) const { return resources ? nresources : 0; }
 
 	int		send_update( int, ClassAd*, ClassAd*, bool nonblocking );
 	void	final_update( void );
@@ -181,19 +180,17 @@ public:
 
 		// The first one is special, since we already computed
 		// everything and we don't need to recompute anything.
-	void	update_all( void );	
-	// These two functions walk through the array of rip pointers and
-	// call the specified function on each resource.  The first takes
-	// functions that take a rip as an arg.  The second takes Resource
-	// member functions that take no args.  The third takes a Resource
-	// member function that takes an amask_t as its only arg.
+	void	update_all( void );
+
+	// This function walks through the array of rip pointers and
+	// calls the specified Resource:: member function on each resource.
+	// It can call Resource::member functions that take no args
 	void	walk( VoidResourceMember );
-	void	walk( ResourceMaskMember, amask_t );
 
 	// This function walks through the array of rip pointers, calls
 	// the specified function on each one, sums the resulting return
 	// values, and returns the total.
-	float	sum( ResourceFloatMember );
+	double	sum( ResourceFloatMember );
 
 	// Sort our Resource pointer array with the given comparison
 	// function.  
@@ -349,6 +346,7 @@ public:
 	}
 
 	bool compute_resource_conflicts();
+	void printSlotAds(const char * slot_types) const;
 
 #ifdef LINUX
 	VolumeManager *getVolumeManager() const {return m_volume_mgr.get();}
@@ -376,18 +374,9 @@ private:
 	int*		new_type_nums;	// New numbers of each type.
 	int			max_types;		// Maximum # of types.
 
-		// Data members we need to handle dynamic reconfig:
-	SimpleList<CpuAttributes*>		alloc_list;		
-	SimpleList<Resource*>			destroy_list;
-
 	// List of Supplemental ClassAds to publish
 	StartdNamedClassAdList			extra_ads;
 
-		/* 
-		  See if the destroy_list is empty.  If so, allocate whatever
-		  we need to allocate.
-		*/
-	bool processAllocList( void );
 
 	int last_in_use;	// Timestamp of the last time we were in use.
 

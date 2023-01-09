@@ -256,7 +256,7 @@ public:
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
-	void update_condor_load(float load) {
+	void update_condor_load(double load) {
 		m_condor_load = load;
 		if( m_condor_load > m_load ) {
 			m_condor_load = m_load;
@@ -287,8 +287,8 @@ public:
 	long long		virt_mem()	const { return m_virt_mem; };
 	long long		total_disk() const { return m_total_disk; }
 	bool			always_recompute_disk() const { return m_always_recompute_disk; }
-	float		load()			const { return m_load; };
-	float		condor_load()	const { return m_condor_load; };
+	double		load()			const { return m_load; };
+	double		condor_load()	const { return m_condor_load; };
 	time_t		keyboard_idle() const { return m_idle; };
 	time_t		console_idle()	const { return m_console_idle; };
 	const slotres_map_t& machres() const { return m_machres_map; }
@@ -306,9 +306,9 @@ public:
 private:
 
 		// Dynamic info
-	float			m_load;
-	float			m_condor_load;
-	float			m_owner_load;
+	double			m_load;
+	double			m_condor_load;
+	double			m_owner_load;
 	long long		m_virt_mem;
 	time_t			m_idle;
 	time_t			m_console_idle;
@@ -415,13 +415,13 @@ public:
 	void publish_dynamic(ClassAd*) const;  // Publish desired info to given CA
 	void compute_virt_mem();
 	void compute_disk();
-	void set_condor_load(float load) { c_condor_load = load; }
+	void set_condor_load(double load) { c_condor_load = load; }
 
 		// Load average methods
-	float condor_load() const { return c_condor_load; };
-	float owner_load() const { return c_owner_load; };
-	float total_load() const { return c_owner_load + c_condor_load; };
-	void set_owner_load( float v ) { c_owner_load = v; };
+	double condor_load() const { return c_condor_load; };
+	double owner_load() const { return c_owner_load; };
+	double total_load() const { return c_owner_load + c_condor_load; };
+	void set_owner_load( double v ) { c_owner_load = v; };
 
 		// Keyboad activity methods
 	void set_keyboard( time_t k ) { c_idle = k; };
@@ -464,8 +464,8 @@ private:
 	MachAttributes*	map;
 
 		// Dynamic info
-	float			c_condor_load;
-	float			c_owner_load;
+	double			c_condor_load;
+	double			c_owner_load;
 	time_t			c_idle;
 	time_t			c_console_idle;
 	long long c_virt_mem;
@@ -542,7 +542,7 @@ class AvailDiskPartition
 		m_disk_fraction = 1.0;
 		m_auto_count = 0;
 	}
-	float m_disk_fraction; // share of this partition that is not taken yet
+	double m_disk_fraction; // share of this partition that is not taken yet
 	int m_auto_count; // number of slots using "auto" share of this partition
 };
 

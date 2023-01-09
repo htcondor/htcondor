@@ -192,8 +192,8 @@ public:
 	void scheddClosedClaim();
 
 		// Functions that return data
-	float		rank() const			{return c_rank;};
-	float		oldrank() const		{return c_oldrank;};
+	double		rank() const			{return c_rank;};
+	double		oldrank() const		{return c_oldrank;};
 	ClaimType	type()			{return c_type;};
 	char*		codId()			{return c_id->codId();};
     char*       id();
@@ -224,8 +224,8 @@ public:
 	int         getPledgedMachineMaxVacateTime() const {return c_pledged_machine_max_vacate_time;}
 
 		// Functions that set the values of data
-	void setrank(float therank)	{c_rank=therank;};
-	void setoldrank(float therank) {c_oldrank=therank;};
+	void setrank(double therank)	{c_rank=therank;};
+	void setoldrank(double therank) {c_oldrank=therank;};
 	// take ownership of the given job ad pointer.
 	void setjobad(ClassAd * ad);
 	void setRequestStream(Stream* stream);	
@@ -313,8 +313,8 @@ private:
 	ClassAd*	c_jobad;
 	ClassAd		c_job_execution_overlay_ad;
 	pid_t		c_starter_pid;
-	float		c_rank;
-	float		c_oldrank;
+	double		c_rank;
+	double		c_oldrank;
 	int			c_universe;
 	int			c_cluster;
 	int			c_proc;

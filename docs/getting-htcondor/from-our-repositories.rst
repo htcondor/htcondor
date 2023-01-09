@@ -18,18 +18,18 @@ recent releases than the distributions.
 RPM-based Distributions
 -----------------------
 
-We support five RPM-based platforms: RedHat and CentOS 7;
-Redhat and CentOS 8; and Amazon Linux 2.  Binaries are available
-for x86-64 for all these platforms.  For RedHat 8 and CentOS 8
+We support several RPM-based platforms: Enterprise Linux 7, including Red Hat, CentOS, and Scientific Linux;
+Enterprise Linux 8, including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux; Enterprise Linux 9,
+including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux.  Binaries are available
+for x86-64 for all these platforms.  For Enterprise Linux 8,
 HTCondor also supports ARM ("aarch64") and Power ("ppc64le").
+For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `RedHat 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
-* `RedHat 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
-* `CentOS 7 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el7.noarch.rpm>`_
-* `CentOS 8 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.el8.noarch.rpm>`_
-* `Amazon Linux 2 <https://research.cs.wisc.edu/htcondor/repo/current/htcondor-release-current.amzn2.noarch.rpm>`_
+* `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el7.noarch.rpm>`_
+* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el9.noarch.rpm>`_
 
 The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -40,28 +40,30 @@ Additionally, the following repositories are required for specific platforms:
   ``rhel-ha-for-rhel-*-server-rpms``.
 * On RedHat 8, ``codeready-builder-for-rhel-8-${ARCH}-rpms``.
 * On CentOS 8, ``powertools`` (or ``PowerTools``).
+* On RedHat 9, ``crb``.
 
 deb-based Distributions
 -----------------------
 
-We support four deb-based platforms: Debian 9 and 10; and Ubuntu 18.04
-and 20.04.  Binaries are only available for x86-64.  These repositories
-also include the source packages.
+We support four deb-based platforms: Debian 11 (Bullseye); and
+Ubuntu 18.04 (Bionic Beaver), 20.04 (Focal Fossa), and 22.04 (Jammy Jellyfish).
+Binaries are only available for x86-64.
+These repositories also include the source packages.
 
-Debian 9 and 10
-###############
+Debian 11
+#########
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
+Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 9: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current stretch main``
-* Debian 10: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/current buster main``
+* Debian 11: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/10.0 bullseye main``
 
-Ubuntu 18.04 and 20.04
-######################
+Ubuntu 18.04, 20.04, and 22.04
+##############################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-current-Key>`_
+Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.0-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/current bionic main``
-* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/current focal main``
+* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 bionic main``
+* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 focal main``
+* Ubuntu 22.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 jammy main``

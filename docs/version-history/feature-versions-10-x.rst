@@ -15,13 +15,29 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1002`.
 
+- When HTCondor is configured to use cgroups, if the system
+  as a whole is out of memory, and the kernel kills a job with the out
+  of memory killer, HTCondor now checks to see if the job is below
+  the provisioned memory.  If so, HTCondor now evicts the job, and
+  marks it as idle, not held, so that it might start again on a 
+  machine with sufficient resources. Previous, HTCondor would let
+  this job attempt to run, hoping the next time the OOM killer fired
+  it would pick a different process.
+  :jira:`1512`
+
+- This versions changes the semantics of the ``output_destination`` submit
+  command.  It no longer sends the files named by the ``output`` or
+  ``error`` submit commands to the output destination.  Submitters may
+  instead specify those locations with URLs directly.
+  :jira:`1365`
+
 New Features:
 
-- When HTCondor has root, and is running with cgroups, the cgroup the job is
-  in is writeable by the job. This allows the job (perhaps a glidein)
-  to sub-divide the resource limits it has been given, and allocate
-  subsets of those to its child processes.
-  :jira:`1496`
+- When a file-transfer plug-in aborts due to lack of progress, the message
+  now includes the ``https_proxy`` environment variable, and the phrasing
+  has been changed to avoid suggesting that the plug-in respected it (or
+  ``http_proxy``).
+  :jira:`1471`
 
 Bugs Fixed:
 
@@ -29,14 +45,16 @@ Bugs Fixed:
   a job when it exits.
   :jira:`1500`
 
+- Fixed bug where ``condor_history`` would occasionally fail to display
+  all matching user requested job ids.
+  :jira:`1506`
+
 Version 10.2.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.2.0 released on Month Date, 2022.
-
-- HTCondor version 10.2.0 not yet released.
+- HTCondor version 10.2.0 released on January 5, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1001`.
 
@@ -53,23 +71,20 @@ Release Notes:
   non-rootly user a personal condor or glidein is running as.
   :jira:`1465`
 
+- File-transfer plug-ins may no longer take as long as they like to finish.
+  After :macro:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME` seconds, the starter will
+  terminate the transfer and report a time-out failure (with ``ETIME``, 62,
+  as the hold reason subcode).
+  :jira:`1404`
+
 New Features:
 
+- Add support for Enterprise Linux 9 on x86_64 and aarch64 architectures.
+  :jira:`1285`
+
 - Add support to the *condor_starter* for tracking processes via cgroup v2
-  on linux distributions that support cgroup v2.
+  on Linux distributions that support cgroup v2.
   :jira:`1457`
-
-- *condor_q* default behavior of displaying the cumulative run time has changed
-  to now display the current run time for jobs in running, tranfering output,
-  and suspended states while displaying the previous run time for jobs in idle or held
-  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
-  :jira:`1064`
-
-- Docker Universe submit files now support *docker_pull_policy = always*, so
-  that docker will check to see if the cached image is out of date.  This increases
-  the network activity, may cause increased throttling when pulling from docker hub,
-  and is recommended to be used with care.
-  :jira:`1482`
 
 - The *condor_negotiator* now support setting a minimum floor number of cores that any
   given submitter should get, regardless of their fair share.  This can be set or queried
@@ -83,6 +98,18 @@ New Features:
   log file.
   :jira:`1431`
 
+- *condor_q* default behavior of displaying the cumulative run time has changed
+  to now display the current run time for jobs in running, transferring output,
+  and suspended states while displaying the previous run time for jobs in idle or held
+  state unless passed ``-cumulative-time`` to show the jobs cumulative run time for all runs.
+  :jira:`1064`
+
+- Docker Universe submit files now support *docker_pull_policy = always*, so
+  that docker will check to see if the cached image is out of date.  This increases
+  the network activity, may cause increased throttling when pulling from docker hub,
+  and is recommended to be used with care.
+  :jira:`1482`
+
 - Added configuration knob :macro:`SINGULARITY_USE_PID_NAMESPACES`.
   :jira:`1431`
 
@@ -94,10 +121,6 @@ New Features:
   and matching owners.
   :jira:`1382`
 
-- The *CompletionDate* attribute of jobs is now undefined until such time as the job completes
-  previously it was 0.
-  :jira:`1393`
-
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
   ``LOCAL_CREDMON_AUTHZ_GROUP_TEMPLATE`` and ``LOCAL_CREDMON_AUTHZ_GROUP_MAPFILE``.
   :jira:`1402`
@@ -105,10 +128,6 @@ New Features:
 - The ``JOB_INHERITS_STARTER_ENVIRONMENT`` configuration variable now accepts a list
   of match patterns just like the submit command ``getenv`` does.
   :jira:`1339`
-
-- Docker universe and container universe job that use the docker runtime now detect
-  when the unix uid or gid has the high bit set, which docker does not support.
-  :jira:`1421`
 
 - Declaring either ``container_image`` or ``docker_image`` without a defined ``universe``
   in a submit file will now automatically setup job for respective ``universe`` based on
@@ -135,24 +154,26 @@ New Features:
   :jira:`1463`
 
 - EGI CheckIn tokens can now be used to authenticate via the SCITOKENS
-  authenication method.
+  authentication method.
   New configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
   must be set to ``True`` to enable this usage.
   :jira:`1498`
+
+- Fixed bug where ``HasSingularity`` would be advertised as true in cases
+  where it wouldn't work.
+  :jira:`1274`
 
 Version 10.1.3
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.1.3 released on Month Date, 2022.
-
-- HTCondor version 10.1.3 not yet released.
+- HTCondor version 10.1.3 limited release on November 22, 2022.
 
 New Features:
 
-- Jobs run in Singularity or Apptainer container runtmes now use the
-  SINGULARITY_VERBOSITY flag, which controlls the verbosity of the runtime logging
+- Jobs run in Singularity or Apptainer container runtimes now use the
+  SINGULARITY_VERBOSITY flag, which controls the verbosity of the runtime logging
   to the job's stderr.  The default value is "-s" for silent, meaning only
   fatal errors are logged.  
   :jira:`1436`
@@ -173,9 +194,7 @@ Bugs Fixed:
 Version 10.1.2
 --------------
 
-.. HTCondor version 10.1.2 released on Month Date, 2022.
-
-- HTCondor version 10.1.2 not yet released.
+- HTCondor version 10.1.2 limited release on November 15, 2022.
 
 New Features:
 
@@ -206,7 +225,7 @@ Bugs Fixed:
 
 - Fixed bugs in the container universe that prevented 
   apptainer-only systems from running container universe jobs
-  with docker-repo style images
+  with Docker repository style images
   :jira:`1412`
 
 Version 10.1.0

@@ -115,9 +115,17 @@ Options
  **-setfloor** *username value*
     (Edit option) Set the floor for the user specified by
     *username* to the specified *value*.
+    This value is the sum of the SlotWeight 
+    (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
+    of all running jobs.  By default, the slot weight of a running job is the number of 
+    cores allocated to that job.
  **-setceil** *username value*
     (Edit option) Set the ceiling for the user specified by
-    *username* to the specified *value*.
+    *username* to the specified *value*.  
+    This value is the sum of the SlotWeight 
+    (See: SLOT_WEIGHT in :ref:`admin-manual/configuration-macros:condor_startd configuration file macros`)
+    of all running jobs.  By default, the slot weight of a running job is the number of 
+    cores allocated to that job.
  **-activefrom** *month day year*
     (Display option) Display information for users who have some
     recorded accumulated usage since the specified date.

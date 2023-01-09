@@ -69,8 +69,6 @@ public:
 
 	int reaper( int pid, int status );
 
-	bool walk( BoincSlotMember );
-
 protected:
 	bool spawnClient( class Resource * );
 	bool killClient( void );

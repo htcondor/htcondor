@@ -48,6 +48,8 @@ elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
     arch_dist="${arch}_AlmaLinux8"
+elif [[ $dist == el9 ]]; then
+    arch_dist="${arch}_AlmaLinux9"
 elif [[ $dist == fc32 ]]; then
     arch_dist="${arch}_Fedora32"
 fi
@@ -72,8 +74,7 @@ rm -r condor_tests-$version-$release-$arch_dist
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
 
-common_externals="libcgroup \
-    condor-stash-plugin \
+common_externals="condor-stash-plugin \
     libgomp \
     munge-libs \
     pcre2 \
@@ -88,11 +89,13 @@ if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
         python36-requests \
         python36-six \
         python36-urllib3"
-    externals="$common_externals $el7_externals"
+    externals="libcgroup $common_externals $el7_externals"
 elif [[ $arch_dist =~ AlmaLinux8 ]]; then
+    externals="libcgroup $common_externals boost-python3"
+elif [[ $arch_dist =~ AlmaLinux9 ]]; then
     externals="$common_externals boost-python3"
 elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="$common_externals boost-python3"
+    externals="libcgroup $common_externals boost-python3"
 fi
 
 mkdir external-packages

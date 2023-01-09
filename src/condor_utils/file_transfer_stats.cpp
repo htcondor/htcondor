@@ -55,11 +55,17 @@ void FileTransferStats::Publish(classad::ClassAd &ad) const {
         ad.InsertAttr("HttpCacheHost", HttpCacheHost);
     if (!TransferError.empty()) {
         std::string augmented_error_msg = TransferError;
-        const char *proxy = getenv("http_proxy");
-        if (proxy) {
-            augmented_error_msg += " using http_proxy=";
-            augmented_error_msg += proxy;
+
+        const char * http_proxy = getenv("http_proxy");
+        const char * https_proxy = getenv("https_proxy");
+        if( http_proxy || https_proxy ) {
+            formatstr_cat ( augmented_error_msg,
+                " (with environment: http_proxy='%s', https_proxy='%s')",
+                http_proxy ? http_proxy : "",
+                https_proxy ? https_proxy : ""
+            );
         }
+
         ad.InsertAttr("TransferError", augmented_error_msg);
     }
     if (!TransferFileName.empty())

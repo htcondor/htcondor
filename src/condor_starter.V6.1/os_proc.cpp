@@ -411,7 +411,7 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 			classad::Value val;
 			long long result = 0L;
 
-			if (EvalExprTree(tree, Starter->jic->machClassAd(), JobAd, val) && 
+			if (EvalExprToNumber(tree, Starter->jic->machClassAd(), JobAd, val) &&
 				val.IsIntegerValue(result)) {
 					result *= 1024 * 1024; // convert to megabytes
 					rlimit_as_hard_limit = (long)result; // truncate for Create_Process

@@ -132,7 +132,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 			candidate->LookupString (ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser))) 
 		{
 				// check if we are preempting for rank or priority
-			if( EvalExprTree( rankCondStd, candidate, &request, result ) &&
+			if( EvalExprToBool( rankCondStd, candidate, &request, result ) &&
 				result.IsBooleanValue( val ) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -145,14 +145,14 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					!(EvalExprToBool(PreemptionReq,candidate,&request,result) &&
 					  result.IsBooleanValue(val) && val) ) {
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+				if(!(EvalExprToBool(rankCondPrioPreempt,candidate,&request,result)&&
 					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					continue;
@@ -187,7 +187,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 			// calculate the preemption rank
 			double rval;
 			if( PreemptionRank &&
-				EvalExprTree(PreemptionRank,candidate,&request,result) &&
+				EvalExprToNumber(PreemptionRank,candidate,&request,result) &&
 				result.IsNumber(rval)) {
 
 				candidatePreemptRankValue = rval;
