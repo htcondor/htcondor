@@ -146,7 +146,7 @@ void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
 bool INFNBatchResource::GahpCanRefreshProxy()
 {
 	if ( !m_gahpRefreshProxyChecked && m_xfer_gahp->isStarted() ) {
-		m_gahpCanRefreshProxy = m_xfer_gahp->getCommands()->contains_anycase( "DOWNLOAD_PROXY" );
+		m_gahpCanRefreshProxy = contains(m_xfer_gahp->getCommands(), "DOWNLOAD_PROXY", true);
 		m_gahpRefreshProxyChecked = true;
 	}
 	return m_gahpCanRefreshProxy;
