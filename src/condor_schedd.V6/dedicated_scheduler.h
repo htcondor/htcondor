@@ -53,7 +53,7 @@ private:
 	List<ClassAd> l;
 };
 
-class MRecArray : public ExtArray<match_rec*> {};
+using MRecArray = std::vector<match_rec*>;
 
 class AllocationNode {
  public:
@@ -70,8 +70,8 @@ class AllocationNode {
 	char* claim_id;	// The ClaimId for the first match in the cluster 
 	int cluster;		// cluster id of the job(s) for this allocation
 	int num_procs;			// How many procs are in the cluster
-	ExtArray< ClassAd* >* jobs;		// Both arrays are indexed by proc
-	ExtArray< MRecArray* >* matches;
+	std::vector< ClassAd* >* jobs;		// Both arrays are indexed by proc
+	std::vector< MRecArray* >* matches;
 	int num_resources;		// How many total resources have been allocated
 
 	bool is_reconnect;

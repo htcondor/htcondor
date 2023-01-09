@@ -173,8 +173,10 @@ BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 
+%if 0%{?rhel} <= 8
 BuildRequires: libcgroup-devel
 Requires: libcgroup
+%endif
 
 %if 0%{?rhel} == 7 && 0%{?devtoolset}
 BuildRequires: which
@@ -669,6 +671,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
+%if 0%{?rhel} >= 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
@@ -697,6 +704,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
+%if 0%{?rhel} >= 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -707,12 +719,18 @@ export CMAKE_PREFIX_PATH=/usr
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
 %endif
 
 %install
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
 function populate {
@@ -728,7 +746,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
+%if 0%{?rhel} == 9
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 %endif
 
 # Drop in a symbolic link for backward compatibility
@@ -1555,6 +1577,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.0-1
+- Preliminary support for Enterprise Linux 9
+- Preliminary support for cgroups v2
+- Can now set minimum floor for number of CPUs that a submitter gets
+- Improved validity testing of Singularity/Apptainer runtinme
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
+- Add Ubuntu 22.04 (Jammy Jellyfish) support
+- Add file transfer plugin that supports stash:// and osdf:// URLs
+- Fix bug where cgroup memory limits were not enforced on Debian and Ubuntu
+- Fix bug where forcibly removing DAG jobs could crash the condor_schedd
+- Fix bug where Docker repository images cannot be run under Singularity
+- Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
+- Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook
 - Fix bug where Apptainer only systems couldn't run with Docker style images

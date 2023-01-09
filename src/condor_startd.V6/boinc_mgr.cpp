@@ -25,6 +25,7 @@
 
 #include "startd.h"
 #include "boinc_mgr.h"
+#include <algorithm>
 
 
 BOINC_BackfillSlot::BOINC_BackfillSlot( int slot_id )
@@ -196,12 +197,14 @@ BOINC_BackfillMgr::addSlot( BOINC_BackfillSlot* /*boinc_slot*/ )
 bool
 BOINC_BackfillMgr::rmSlot( int slot_id )
 {
-	if( ! m_slots[slot_id] ) {
+	auto slot_matches = [=](BackfillSlot* bs){bool match = slot_id == bs->getSlotID(); if (match) delete bs; return match;};
+	auto it = std::remove_if(begin(m_slots), end(m_slots), slot_matches);
+	if (it == end(m_slots)) {
+		// No slot found/removed
 		return false;
+	} else {
+		m_slots.erase(it, end(m_slots));
 	}
-	delete m_slots[slot_id];
-	m_slots[slot_id] = NULL;
-	m_num_slots--;
 
 		// let the corresponding Resource know we're no longer running
 		// a backfill client for it
@@ -237,7 +240,9 @@ BOINC_BackfillMgr::start( int slot_id )
 		return false;
 	}
 
-	if( m_slots[slot_id] ) {
+	auto slot_matches = [=](BackfillSlot* bs){return slot_id == bs->getSlotID();};
+	auto rs = std::find_if(begin(m_slots), end(m_slots), slot_matches);
+	if( rs != std::end(m_slots) ) {
 		dprintf( D_ALWAYS, "BackfillSlot object for slot %d already exists\n",
 				 slot_id );
 		return true;
@@ -281,8 +286,7 @@ BOINC_BackfillMgr::start( int slot_id )
 	}
 
 		// PHASE 2: split up slots, remove monolithic BOINC client
-	m_slots[slot_id] = new BOINC_BackfillSlot( slot_id );
-	m_num_slots++;
+	m_slots.push_back(new BOINC_BackfillSlot(slot_id));
 
 		// now that we have a BOINC client and a BOINC_BackfillSlot
 		// object for this slot, change to Backfill/BOINC
@@ -371,9 +375,8 @@ BOINC_BackfillMgr::reaper( int pid, int status )
 	m_boinc_starter = NULL;
 
 		// once the client is gone, delete all our compute slots
-	int i, max = m_slots.getsize();
-	for( i=0; i < max; i++ ) {
-		rmSlot( i );
+	while (m_slots.size()) {
+		rmSlot(m_slots[0]->getSlotID());
 	}
 
 	if( resmgr->isShuttingDown() ) {
@@ -421,16 +424,11 @@ BOINC_BackfillMgr::hardkill( int slot_id )
 	}
 
 		// PHASE 2: handle different slot_ids differently...
-	if( slot_id != 0 && m_num_slots > 1 ) {
+	if( slot_id != 0 && m_slots.size() > 1 ) {
 			// we're just trying to remove a single slot object, but
 			// there are other active BOINC slots so we'll leave the
 			// client running (on an SMP).  in this case, we'll just
 			// remove the one object and be done immediately.
-		if( ! m_slots[slot_id] ) {
-			dprintf( D_ALWAYS, "ERROR in BOINC_BackfillMgr::hardkill(%d) "
-					 "no BackfillSlot object with that id\n", slot_id );
-			return false;
-		}
 		return rmSlot( slot_id );
 	}
 
@@ -440,19 +438,3 @@ BOINC_BackfillMgr::hardkill( int slot_id )
 	return killClient();
 }
 
-
-bool
-BOINC_BackfillMgr::walk( BoincSlotMember member_func )
-{
-	bool rval = true;
-	int i, num = 0, max = m_slots.getsize();
-	for( i = 0; num < m_num_slots && i < max; i++ ) {
-		if( m_slots[i] ) { 
-			num++;
-			if( ! (((BOINC_BackfillSlot*)m_slots[i])->*(member_func))() ) {
-				rval = false;
-			}
-		}
-	}
-	return rval;
-}

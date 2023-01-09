@@ -4647,13 +4647,6 @@ type=string
 description=Determines whether cgroup base memory enforcement should happen
 tags=starter
 
-[IGNORE_LEAF_OOM]
-default=true
-version=8.4.11
-type=bool
-description=Determines whether a job ignores an OOM event if it's using less than its limit
-tags=starter
-
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
 default=5
 version=7.9.5
