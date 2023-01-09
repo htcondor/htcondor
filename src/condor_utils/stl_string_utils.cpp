@@ -472,6 +472,63 @@ void join(const std::vector< std::string > &v, char const *delim, std::string &r
 	}
 }
 
+std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
+{
+	int start, len;
+	std::vector<std::string> list;
+	StringTokenIterator sti(str, 40, delim);
+	while ((start = sti.next_token(len)) >= 0) {
+		if (trim) {
+			while (len > 0 && isspace(str[start])) {
+				start++;
+				len--;
+			}
+			while (len > 0 && isspace(str[start+len-1])) {
+				len--;
+			}
+		}
+		list.emplace_back(&str[start], len);
+	}
+	return std::move(list);
+}
+
+std::string join(const std::vector<std::string> &list, const char* delim)
+{
+	std::string str;
+	for (const auto& item : list) {
+		if (str.size()) {
+			str += delim;
+		}
+		str += item;
+	}
+	return std::move(str);
+}
+
+bool contains(const std::vector<std::string> &list, const char* str, bool anycase)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		int rc;
+		if (anycase) {
+			rc = strcasecmp(item.c_str(), str);
+		} else {
+			rc = strcmp(item.c_str(), str);
+		}
+		if ( rc == MATCH ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains(const std::vector<std::string> &list, const std::string& str, bool anycase)
+{
+	return contains(list, str.c_str(), anycase);
+}
+
 // scan an input string for path separators, returning a pointer into the input string that is
 // the first charactter after the last input separator. (i.e. the filename part). if the input
 // string contains no path separater, the return is the same as the input, if the input string
