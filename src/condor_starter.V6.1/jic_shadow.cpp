@@ -2496,7 +2496,7 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 		// of a checkpoint succeeded if that checkpoint wasn't transferred
 		// by CEDAR (because our file-transfer plugins don't do integrity).
 		std::string checkpointDestination;
-		if( job_ad->LookupString( "CheckpointDestination", checkpointDestination ) ) {
+		if( job_ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
 			// We only generate MANIFEST files if the checkpoint wasn't
 			// stored to the spool, which is exactly the case in which
 			// we want to do this manual integrity check.

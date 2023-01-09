@@ -2199,7 +2199,7 @@ RemoteResource::initFileTransfer()
 	//
 
 	std::string checkpointDestination;
-	if(! jobAd->LookupString( "CheckpointDestination", checkpointDestination )) {
+	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination )) {
 		return;
 	}
 

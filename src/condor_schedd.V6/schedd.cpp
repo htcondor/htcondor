@@ -12364,6 +12364,11 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 
 	ClassAd * ad = GetJobAd(cluster, proc);
 	if(ad) {
+		std::string checkpointDestination;
+		if( ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination) ) {
+			dprintf( D_ZKM, "Not removing job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
+			return;
+		}
 		SpooledJobFiles::removeJobSpoolDirectory(ad);
 		FreeJobAd(ad);
 	}
@@ -15644,8 +15649,8 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	int cluster = job_id->_cluster;
 	int proc = job_id->_proc;
 	delete job_id;
-	job_id = NULL; 
-	
+	job_id = NULL;
+
 		//
 		// Remove the record from our cronTab lists
 		// We do it here before we fire off any threads
@@ -15661,7 +15666,9 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 			this->cronTabs->remove(id);
 		}
 	}
-	
+
+    doCheckpointCleanUp( cluster, proc );
+
 	if( jobCleanupNeedsThread(cluster, proc) ) {
 		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will block, "
 				 "calling jobIsFinished() in a thread\n", cluster, proc );
@@ -15670,7 +15677,7 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 	} else {
 			// don't need a thread, just call the blocking version
 			// (which will return right away), and the reaper (which
-			// will call DestroyProc()) 
+			// will call DestroyProc())
 		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will not block, "
 				 "calling jobIsFinished() directly\n", cluster, proc );
 

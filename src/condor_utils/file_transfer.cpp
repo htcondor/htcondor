@@ -6577,6 +6577,9 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 
 	// Close the plugin
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
+	// FIXME: this closes the pipe and _then_ waits for the child to exit,
+	// whereas it would be way better to do the reverse, even given that we
+	// completely ignore the pipe (which we shouldn't do anyway).
 	int rc = my_pclose_ex(plugin_pipe, (unsigned int)timeout, true);
 
 	int exit_status;
@@ -6630,6 +6633,13 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 			"$ORIGIN, and then dynamic library loader refuses to load those for security "
 			"reasons.  Run 'ldd' on your plugin and move needed libraries to a system "
 			"location controlled by root. Good luck!\n");
+	}
+
+	// Is there a good reason we weren't doing this before?
+	// FIXME: should be conditional on being D_FULLDEBUG.
+	std::string contents;
+	if( htcondor::readShortFile( output_filename, contents )) {
+	    dprintf( D_FULLDEBUG, "Plugin output: '%s'\n", contents.c_str() );
 	}
 
 	// Output stats regardless of success or failure
