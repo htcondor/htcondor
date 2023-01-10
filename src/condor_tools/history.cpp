@@ -135,17 +135,14 @@ struct BannerInfo {
 };
 // What kind of source file we are reading ads from
 enum HistoryRecordSource {
-	RECORD_SRC_AUTO = -1,          //Base value if not overwritten will default to schedd or startd history
-	RECORD_SRC_STD_HIST,           //Standard job history from Schedd
-	RECORD_SRC_STARTD_HIST,        //Standard job history from a startd
-	RECORD_SRC_JOB_EPOCH,          //Job Epoch (run instance) history
+	HRS_AUTO = -1,          //Base value if not overwritten will default to schedd or startd history
+	HRS_SCHEDD_JOB_HIST,    //Standard job history from Schedd
+	HRS_STARTD_HIST,        //Standard job history from a startd
+	HRS_JOB_EPOCH,          //Job Epoch (run instance) history
 };
 
-//Source information: Holds Source {Knob,Flag} in above enum order
-static std::pair<std::string, std::string> source_info[] = {{"HISTORY","-schedd"},
-															{"STARTD_HISTORY","-startd"},
-															{"JOB_EPOCH_HISTORY","-epochs"}
-														   };
+//Source information: Holds Source knob in above enum order
+static const char* source_knobs[] = {"HISTORY","STARTD_HISTORY","JOB_EPOCH_HISTORY"};
 //------------------------------------------------------------------------
 static  bool longformat=false;
 static  bool diagnostic = false;
@@ -178,7 +175,7 @@ static bool want_startd_history = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
-static HistoryRecordSource recordSrc = RECORD_SRC_AUTO;
+static HistoryRecordSource recordSrc = HRS_AUTO;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -201,46 +198,26 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 
 //Check history record source is original basic job history file (schedd or startd)
 static bool isOriginalHistory() {
-	return recordSrc == RECORD_SRC_STD_HIST || recordSrc == RECORD_SRC_STARTD_HIST;
+	return recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST;
 }
 
-//Check if the Record Source can be set with source and return whether successful or not
-static bool SetRecordSource(HistoryRecordSource src) {
-	//Already set return true
-	if (recordSrc == src) { return true; }
-	//Still unset so set source and return true
-	else if (recordSrc == RECORD_SRC_AUTO) {
+//Use passed info to determine if we can set a record source: do so then return or error out
+static void SetRecordSource(HistoryRecordSource src, const char* curr_flag, const char* new_flag) {
+	ASSERT(src != HRS_AUTO); //Dont set source to AUTO
+	//Check if we have already set a source with a flag
+	if (curr_flag && recordSrc != src) {
+		fprintf(stderr, "Error: %s can not be used in association with %s.\n", curr_flag, new_flag);
+		exit(1);
+	} else if (recordSrc == src) { return; }
+	//check to make sure recordSrc isn't pre set
+	if (recordSrc == HRS_AUTO) {
 		recordSrc = src;
-		return true;
+		return;
 	}
-	//Wasn't set return false
-	return false;
-}
-
-//Get the passed record sources knob from source_info
-static const char* GetSourceKnob(HistoryRecordSource src = RECORD_SRC_AUTO) {
-	//No passed source enum or explicit AUTO so check global recordSrc
-	if (src == RECORD_SRC_AUTO) {
-		//Make sure recordSrc isn't AUTO (-1)->return knob else return NULL
-		if (recordSrc != RECORD_SRC_AUTO)
-			return source_info[recordSrc].first.c_str();
-		else { return NULL; }
-	} else { //Return passed source enums knob
-		return source_info[src].first.c_str();
-	}
-}
-
-//Get the passed record sources flag from source_info
-static const char* GetSourceFlag(HistoryRecordSource src = RECORD_SRC_AUTO) {
-	//No passed source enum or explicit AUTO so check global recordSrc
-	if (src == RECORD_SRC_AUTO) {
-		//Make sure recordSrc isn't AUTO (-1)->return flag else return NULL
-		if (recordSrc != RECORD_SRC_AUTO)
-			return source_info[recordSrc].second.c_str();
-		else { return NULL; }
-	} else { //Return passed source enums flag
-		return source_info[src].second.c_str();
-	}
+	//Something is wrong at this point no previous user setting of source
+	//but source enum is set to a value already (future proofing)
+	fprintf(stderr,"Error: Failed to set history record source with %s flag.\n", new_flag);
+	exit(0);
 }
 
 int
@@ -254,6 +231,7 @@ main(int argc, const char* argv[])
 
   const char* JobHistoryFileName=NULL;
   const char* passedMatchFileName=NULL;
+  const char* setRecordSrcFlag=NULL;
   const char * pcolon=NULL;
   auto_free_ptr matchFileName;
   auto_free_ptr searchDirectory;
@@ -365,18 +343,14 @@ main(int argc, const char* argv[])
 	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
 		// causes "STARTD_HISTORY" to be queried, rather than "HISTORY"
 		want_startd_history = true;
-		if (!SetRecordSource(RECORD_SRC_STARTD_HIST)) {
-			fprintf(stderr, "Error: %s can not be used in association with -startd.\n", GetSourceFlag());
-			exit(1);
-		}
+		SetRecordSource(HRS_STARTD_HIST, setRecordSrcFlag, "-startd");
+		setRecordSrcFlag = argv[i];
 	}
 	else if (is_dash_arg_prefix(argv[i],"schedd",3)) {
 		// causes "HISTORY" to be queried, this is the default
 		want_startd_history = false;
-		if (!SetRecordSource(RECORD_SRC_STD_HIST)) {
-			fprintf(stderr, "Error: %s can not be used in association with -schedd.\n", GetSourceFlag());
-			exit(1);
-		}
+		SetRecordSource(HRS_SCHEDD_JOB_HIST, setRecordSrcFlag, "-schedd");
+		setRecordSrcFlag = argv[i];
 	}
 	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
 		streamresults = true;
@@ -483,10 +457,8 @@ main(int argc, const char* argv[])
 		}
 	}
 	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
-		if (!SetRecordSource(RECORD_SRC_JOB_EPOCH)) {
-			fprintf(stderr, "Error: %s can not be used in association with -epochs.\n", GetSourceFlag());
-			exit(1);
-		}
+		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
+		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
 		matchFileName.clear();
 		//Get aggregate epoch history file
@@ -593,7 +565,7 @@ main(int argc, const char* argv[])
 		jobIdMatch.jid = JOB_ID_KEY(cluster,-1);
 		jobIdFilterInfo.push_back(jobIdMatch);
     }
-    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,2)) {
+    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,3)) {
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
@@ -646,8 +618,8 @@ main(int argc, const char* argv[])
   if (i<argc) Usage(argv[0]);
 
   //If record source is still AUTO then set to original history based on want_startd_history
-  if (recordSrc == RECORD_SRC_AUTO) {
-    recordSrc = want_startd_history ? RECORD_SRC_STARTD_HIST : RECORD_SRC_STD_HIST;
+  if (recordSrc == HRS_AUTO) {
+    recordSrc = want_startd_history ? HRS_STARTD_HIST : HRS_SCHEDD_JOB_HIST;
   }
 
   // for remote queries, default to requesting streamed results
@@ -963,10 +935,10 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 // There are multiple history files because we do rotation. 
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
-	ASSERT(recordSrc != RECORD_SRC_AUTO);
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader();
 	// Default to search for standard job ad history if no files specified
-	const char* knob = GetSourceKnob();
+	const char* knob = source_knobs[recordSrc];
 	auto_free_ptr origHistory;
 	if (!matchFileName && isOriginalHistory()) {
 		origHistory.set(param(knob));
@@ -1012,7 +984,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 			ad->LookupInteger(ATTR_PROC_ID,banner.jid.proc);
 		if (banner.completion < 0)
 			ad->LookupInteger(ATTR_COMPLETION_DATE,banner.completion);
-		if (recordSrc == RECORD_SRC_JOB_EPOCH && banner.runId < 0)
+		if (recordSrc == HRS_JOB_EPOCH && banner.runId < 0)
 			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,banner.runId);
 	}
 
@@ -1042,7 +1014,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 				//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
 				if (match.numProcs < 0) {
 					int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
-					if (recordSrc == RECORD_SRC_JOB_EPOCH && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
+					if (recordSrc == HRS_JOB_EPOCH && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
 					if (!ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
 						if (isOriginalHistory() || (backwards && banner.runId == 0)) {
 							match.numProcs = --matchFoundOffset;
@@ -1610,7 +1582,7 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 	}
 
 	std::deque<std::string> recordFiles;
-	if (recordSrc == RECORD_SRC_JOB_EPOCH) { findEpochDirFiles(&recordFiles,searchDirectory); }
+	if (recordSrc == HRS_JOB_EPOCH) { findEpochDirFiles(&recordFiles,searchDirectory); }
 
 	//For each file found read job ads
 	for(auto file : recordFiles) {
