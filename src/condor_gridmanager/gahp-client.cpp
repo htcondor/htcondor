@@ -912,9 +912,9 @@ GahpServer::Startup()
 	}
 		
 		// See if this gahp server can cache multiple proxies
-	if ( contains(m_commands_supported, "CACHE_PROXY_FROM_FILE", true) &&
-		 contains(m_commands_supported, "UNCACHE_PROXY", true) &&
-		 contains(m_commands_supported, "USE_CACHED_PROXY", true) ) {
+	if ( contains_anycase(m_commands_supported, "CACHE_PROXY_FROM_FILE") &&
+		 contains_anycase(m_commands_supported, "UNCACHE_PROXY") &&
+		 contains_anycase(m_commands_supported, "USE_CACHED_PROXY") ) {
 		can_cache_proxies = true;
 	}
 
@@ -983,7 +983,7 @@ GahpServer::Initialize( Proxy *proxy )
 
 		// It's possible for a gahp to support the proxy caching commands
 		// but not INITIALIZE_FROM_FILE
-	if ( contains(m_commands_supported, "INITIALIZE_FROM_FILE", true) ) {
+	if ( contains_anycase(m_commands_supported, "INITIALIZE_FROM_FILE") ) {
 		if ( command_initialize_from_file( master_proxy->proxy->proxy_filename ) == false ) {
 			dprintf( D_ALWAYS, "GAHP: Failed to initialize from file\n" );
 			return false;
@@ -1045,7 +1045,7 @@ GahpServer::CreateSecuritySession()
 	}
 
 		// Check if this command is supported
-	if  (contains(m_commands_supported, command, true)==false) {
+	if  (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1131,7 +1131,7 @@ GahpServer::command_cache_proxy_from_file( GahpProxyInfo *new_proxy )
 	ASSERT(new_proxy);		// Gotta have it...
 
 		// Check if this command is supported
-	if  (contains(m_commands_supported, command, true)==false) {
+	if  (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1163,7 +1163,7 @@ GahpServer::uncacheProxy( GahpProxyInfo *gahp_proxy )
 	static const char *command = "UNCACHE_PROXY";
 
 		// Check if this command is supported
-	if  (contains(m_commands_supported, command, true)==false) {
+	if  (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1234,7 +1234,7 @@ GahpServer::command_use_cached_proxy( GahpProxyInfo *new_proxy )
 	static const char *command = "USE_CACHED_PROXY";
 
 		// Check if this command is supported
-	if (contains(m_commands_supported, command, true)==false) {
+	if (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1307,7 +1307,7 @@ GahpServer::doProxyCheck()
 			// It's possible for a gahp to support the proxy caching
 			// commands but not REFRESH_PROXY_FROM_FILE
 		static const char *command = "REFRESH_PROXY_FROM_FILE";
-		if ( contains(m_commands_supported, command, true) ) {
+		if ( contains_anycase(m_commands_supported, command) ) {
 			if ( command_initialize_from_file(
 										master_proxy->proxy->proxy_filename,
 										command) == false ) {
@@ -1717,7 +1717,7 @@ GahpServer::command_response_prefix(const char *prefix)
 {
 	static const char* command = "RESPONSE_PREFIX";
 
-	if  (contains(m_commands_supported, command, true)==false) {
+	if  (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1741,7 +1741,7 @@ GahpServer::command_async_mode_on()
 {
 	static const char* command = "ASYNC_MODE_ON";
 
-	if (contains(m_commands_supported, command, true)==false) {
+	if (contains_anycase(m_commands_supported, command)==false) {
 		return false;
 	}
 
@@ -1819,7 +1819,7 @@ GahpServer::command_condor_version()
 	static const char *command = "CONDOR_VERSION";
 
 		// Check if this command is supported
-	if ( contains(m_commands_supported, command, true) == false ) {
+	if ( contains_anycase(m_commands_supported, command) == false ) {
 		return false;
 	}
 
@@ -2220,7 +2220,7 @@ GahpClient::condor_job_submit(const char *schedd_name, ClassAd *job_ad,
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2298,7 +2298,7 @@ GahpClient::condor_job_update_constrained(const char *schedd_name,
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2374,7 +2374,7 @@ GahpClient::condor_job_status_constrained(const char *schedd_name,
 	static const char* command = "CONDOR_JOB_STATUS_CONSTRAINED";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2465,7 +2465,7 @@ GahpClient::condor_job_remove(const char *schedd_name, PROC_ID job_id,
 	static const char* command = "CONDOR_JOB_REMOVE";
 
 		// Check if this command is supported
-	if  (contains(server->m_commands_supported, command, true)==false) {
+	if  (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2535,7 +2535,7 @@ GahpClient::condor_job_update(const char *schedd_name, PROC_ID job_id,
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2608,7 +2608,7 @@ GahpClient::condor_job_hold(const char *schedd_name, PROC_ID job_id,
 	static const char* command = "CONDOR_JOB_HOLD";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2676,7 +2676,7 @@ GahpClient::condor_job_release(const char *schedd_name, PROC_ID job_id,
 	static const char* command = "CONDOR_JOB_RELEASE";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2745,7 +2745,7 @@ GahpClient::condor_job_stage_in(const char *schedd_name, ClassAd *job_ad)
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2816,7 +2816,7 @@ GahpClient::condor_job_stage_out(const char *schedd_name, PROC_ID job_id)
 	static const char* command = "CONDOR_JOB_STAGE_OUT";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2880,7 +2880,7 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 	static const char* command = "CONDOR_JOB_REFRESH_PROXY";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -2950,7 +2950,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 	static const char* command = "CONDOR_JOB_UPDATE_LEASE";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3045,7 +3045,7 @@ GahpClient::blah_job_submit(ClassAd *job_ad, char **job_id)
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3111,7 +3111,7 @@ GahpClient::blah_job_status(const char *job_id, ClassAd **status_ad)
 	static const char* command = "BLAH_JOB_STATUS";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3180,7 +3180,7 @@ GahpClient::blah_job_cancel(const char *job_id)
 	static const char* command = "BLAH_JOB_CANCEL";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3238,7 +3238,7 @@ GahpClient::blah_job_refresh_proxy(const char *job_id, const char *proxy_file)
 	static const char* command = "BLAH_JOB_REFRESH_PROXY";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3303,7 +3303,7 @@ GahpClient::blah_download_sandbox(const char *sandbox_id, const ClassAd *job_ad,
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true) == false) {
+	if (contains_anycase(server->m_commands_supported, command) == false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3375,7 +3375,7 @@ GahpClient::blah_upload_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true) == false ) {
+	if (contains_anycase(server->m_commands_supported, command) == false ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3442,7 +3442,7 @@ GahpClient::blah_download_proxy(const char *sandbox_id, const ClassAd *job_ad)
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true) == false ) {
+	if (contains_anycase(server->m_commands_supported, command) == false ) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3509,7 +3509,7 @@ GahpClient::blah_destroy_sandbox(const char *sandbox_id, const ClassAd *job_ad)
 	std::string ad_string;
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true) == false) {
+	if (contains_anycase(server->m_commands_supported, command) == false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3575,7 +3575,7 @@ GahpClient::blah_get_sandbox_path( const char *sandbox_id,
 	static const char *command = "GET_SANDBOX_PATH";
 
 		// Check if this command is supported
-	if  (contains(server->m_commands_supported, command, true) == false ) {
+	if  (contains_anycase(server->m_commands_supported, command) == false ) {
 		return false;
 	}
 
@@ -3615,7 +3615,7 @@ GahpClient::arc_ping(const std::string &service_url)
 	static const char* command = "ARC_PING";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3676,7 +3676,7 @@ GahpClient::arc_job_new(const std::string &service_url,
 	static const char* command = "ARC_JOB_NEW";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3752,7 +3752,7 @@ GahpClient::arc_job_status(const std::string &service_url,
 	static const char* command = "ARC_JOB_STATUS";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3823,7 +3823,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 	static const char* command = "ARC_JOB_STATUS_ALL";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3897,7 +3897,7 @@ GahpClient::arc_job_info(const std::string &service_url,
 	static const char* command = "ARC_JOB_INFO";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -3967,7 +3967,7 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 	static const char* command = "ARC_JOB_STAGE_IN";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -4040,7 +4040,7 @@ GahpClient::arc_job_stage_out(const std::string &service_url,
 	static const char* command = "ARC_JOB_STAGE_OUT";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -4119,7 +4119,7 @@ GahpClient::arc_job_kill(const std::string &service_url,
 	static const char* command = "ARC_JOB_KILL";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -4182,7 +4182,7 @@ GahpClient::arc_job_clean(const std::string &service_url,
 	static const char* command = "ARC_JOB_CLEAN";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -4246,7 +4246,7 @@ GahpClient::arc_delegation_new(const std::string &service_url,
 	static const char* command = "ARC_DELEGATION_NEW";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
@@ -4316,7 +4316,7 @@ GahpClient::arc_delegation_renew(const std::string &service_url,
 	static const char* command = "ARC_DELEGATION_RENEW";
 
 		// Check if this command is supported
-	if (contains(server->m_commands_supported, command, true)==false) {
+	if (contains_anycase(server->m_commands_supported, command)==false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 

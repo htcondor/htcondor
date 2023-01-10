@@ -12,7 +12,7 @@ GenericGahpClient::callGahpFunction(
 	PrioLevel priority
 ) {
 	// check if this command is supported
-	if( contains(server->m_commands_supported, command, true) == false) {
+	if( contains_anycase(server->m_commands_supported, command) == false) {
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 

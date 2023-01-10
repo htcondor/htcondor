@@ -88,8 +88,10 @@ void join(const std::vector< std::string > &v, char const *delim, std::string &r
 
 std::vector<std::string> split(const std::string& str, const char* delim=", \t\r\n", bool trim=true);
 std::string join(const std::vector<std::string> &list, const char* delim);
-bool contains(const std::vector<std::string> &list, const std::string& str, bool anycase=false);
-bool contains(const std::vector<std::string> &list, const char* str, bool anycase=false);
+bool contains(const std::vector<std::string> &list, const std::string& str);
+bool contains(const std::vector<std::string> &list, const char* str);
+bool contains_anycase(const std::vector<std::string> &list, const std::string& str);
+bool contains_anycase(const std::vector<std::string> &list, const char* str);
 
 // scan an input string for path separators, returning a pointer into the input string that is
 // the first charactter after the last input separator. (i.e. the filename part). if the input

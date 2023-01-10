@@ -489,7 +489,7 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 		}
 		list.emplace_back(&str[start], len);
 	}
-	return std::move(list);
+	return list;
 }
 
 std::string join(const std::vector<std::string> &list, const char* delim)
@@ -501,32 +501,45 @@ std::string join(const std::vector<std::string> &list, const char* delim)
 		}
 		str += item;
 	}
-	return std::move(str);
+	return str;
 }
 
-bool contains(const std::vector<std::string> &list, const char* str, bool anycase)
+bool contains(const std::vector<std::string> &list, const char* str)
 {
 	if (!str) {
 		return false;
 	}
 
 	for (auto& item : list) {
-		int rc;
-		if (anycase) {
-			rc = strcasecmp(item.c_str(), str);
-		} else {
-			rc = strcmp(item.c_str(), str);
-		}
-		if ( rc == MATCH ) {
+		if (strcmp(item.c_str(), str) == MATCH) {
 			return true;
 		}
 	}
 	return false;
 }
 
-bool contains(const std::vector<std::string> &list, const std::string& str, bool anycase)
+bool contains(const std::vector<std::string> &list, const std::string& str)
 {
-	return contains(list, str.c_str(), anycase);
+	return contains(list, str.c_str());
+}
+
+bool contains_anycase(const std::vector<std::string> &list, const char* str)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strcasecmp(item.c_str(), str) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_anycase(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_anycase(list, str.c_str());
 }
 
 // scan an input string for path separators, returning a pointer into the input string that is
