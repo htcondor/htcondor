@@ -982,7 +982,7 @@ private:
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
-	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
+	HashTable <int, std::vector<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;
