@@ -147,7 +147,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
 	time_t currentTime = time(NULL); //Get current time to print in banner
-	formatstr(banner,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+	formatstr(banner,"*** EPOCH ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
 	info.buffer += banner;

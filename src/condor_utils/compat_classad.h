@@ -225,9 +225,10 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	};
 
 	CondorClassAdFileParseHelper(std::string delim, ParseType typ=Parse_long) 
-		: ad_delimitor(delim), parse_type(typ), new_parser(NULL), inside_list(false)
-		, blank_line_is_ad_delimitor(delim=="\n") {};
+		: ad_delimitor(delim), delim_line({}), parse_type(typ), new_parser(NULL),
+		inside_list(false), blank_line_is_ad_delimitor(delim=="\n") {};
 	ParseType getParseType() { return parse_type; }
+	std::string getDelimitorLine() { return delim_line; }
 	bool configure(const char * delim, ParseType typ) {
 		if (new_parser) return false;
 		if (delim) { ad_delimitor = delim; }
@@ -242,6 +243,7 @@ class CondorClassAdFileParseHelper : public ClassAdFileParseHelper
 	bool line_is_ad_delimitor(const std::string & line);
 
 	std::string ad_delimitor;
+	std::string delim_line;    // most like the banner line for historical records
 	ParseType parse_type;
 	void*     new_parser; // a class whose type depends on the value of parse_type.
 	bool      inside_list;

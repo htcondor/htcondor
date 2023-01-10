@@ -132,6 +132,7 @@ struct BannerInfo {
 	JOB_ID_KEY jid;         //Cluster & Proc info for job
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
+	std::string ad_type;    //Ad Type (Not equivalent to MyType)
 };
 
 //------------------------------------------------------------------------
@@ -927,6 +928,54 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	return;
 }
 
+/*	Function to take a history record sources delimiting banner line and extract
+*	the 'Ad Type' (this is different from MyType ad attribute). A banner should
+*	always be: '*** Adtype Key=Value Key=Value...' where AdType is optional but
+*	If no ad type is found (i.e. older history files) then assume type is standard job ad.
+*	@return char* to "begining" of key=value pairs
+*
+*	'*** AdType Key=Value Key=Value' -> 'AdType' return ' Key=value Key=Value'
+*	'*** Key=Value Key=Value' -> 'JOB' return 'Key=Value Key=Value'
+*/
+static const char* getAdTypeFromBanner(std::string& banner, std::string& ad_type) {
+	//Get position of equal sign for first key=value pair
+	size_t pos_firstEql = banner.find("=");
+	if (pos_firstEql == std::string::npos) { return NULL; }
+	const char * p = banner.c_str();
+	const char * endp = p + pos_firstEql;
+
+	//Clear start & end pointers of whitespace and '='/'*'
+	while (*p == '*') ++p;
+	while (isspace(*p)) ++p;
+	if (*endp == '=') --endp;
+	while (p < endp && isspace(*endp)) --endp;
+
+	//Check for a whitespace between pointers
+	size_t len = endp - p;
+	std::string temp(p, len);
+	//fprintf(stdout, "Reduced banner:%s\n",temp.c_str());
+	//If no whitespace (space/tab) then no specified Type assume standard Job
+	if (temp.find_first_of(" \t") == std::string::npos) { ad_type = "JOB"; return p; }
+
+	//Make current pointer = start pointer and increment pointer until
+	//it is equal to end pointer or whitespace is found
+	const char * curp = p;
+	while (curp != endp) {
+		++curp;
+		if (isspace(*curp)) {
+			endp = curp; //Set true end pointer to current pointer
+		}
+	}
+
+	//Get type string len and copy data to ad_type
+	len = endp - p;
+	ad_type.clear();
+	ad_type.insert(0, p, len);
+	return endp;
+}
+
+static bool parseBanner(BannerInfo& info, std::string banner);
+
 // Check to see if all possible job ads for cluster or cluster.proc have been found
 static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 
@@ -1003,9 +1052,8 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
-    int EndFlag   = 0;
+    bool EndFlag  = false;
     int ErrorFlag = 0;
-    int EmptyFlag = 0;
     ClassAd *ad = NULL;
     std::string buf;
 
@@ -1046,7 +1094,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
         }
-        InsertFromFile(LogFile,*ad,"***", EndFlag, ErrorFlag, EmptyFlag);
+        CondorClassAdFileParseHelper helper("***");
+        int c_attrs = InsertFromFile(LogFile,*ad, EndFlag, ErrorFlag, &helper);
+        std::string banner(helper.getDelimitorLine());
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
@@ -1056,8 +1106,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         } 
-        if( EmptyFlag ) {
-            EmptyFlag=0;
+        //If no attribute were read during insertion reset ad and continue
+        if( c_attrs <= 0 ) {
             if(ad) {
                 delete ad;
                 ad = NULL;
@@ -1105,12 +1155,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         }
 
 		if (cluster > 0) { //User specified cluster or cluster.proc.
-			int cluster = -1, proc = -1;
 			BannerInfo ad_info;
-			ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
-			ad->LookupInteger(ATTR_PROC_ID,proc);
-			ad_info.jid = JOB_ID_KEY(cluster,proc);
-			ad->LookupInteger(ATTR_COMPLETION_DATE,ad_info.completion);
+			parseBanner(ad_info, banner);
 			if (checkMatchJobIdsFound(ad_info, ad)) { //Check if all possible matches have been found
 				if (ad) {
 					delete ad;
@@ -1257,15 +1303,14 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//Parse Banner info
 	BannerInfo newInfo;
 
-	const char * p = banner.c_str();
+	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+	//fprintf(stdout, "parseBanner(%s)\n", p);
+	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
+	if (!p) { info = newInfo; return true; }
 	const char * endp = p + banner.size();
 
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd(true);
-
-	//fprintf(stdout, "parseBanner(%s)\n", p);
-	while (*p == '*') ++p;
-	while (isspace(*p)) ++p;
 
 	const char * rhs;
 	std::string attr;
@@ -1303,7 +1348,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	}
 	info = newInfo;
 	//For testing output of banner
-	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %lld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
+	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
+	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
 
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
