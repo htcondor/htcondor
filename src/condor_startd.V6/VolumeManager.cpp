@@ -565,6 +565,32 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
 
+	// If a crash or restart left the volume mounted, unmount it now
+	// Format of /proc/mounts is
+	// device-name mount-point fstype other_stuff
+	// Find the matching device-name field, so we can umount the mount-point
+	FILE *f = fopen("/proc/self/mounts", "r");	
+	if (f == nullptr) {
+		dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/maps: %s\n", strerror(errno));
+	} else {
+		char dev[PATH_MAX];
+		char mnt[PATH_MAX];
+		char dummy[PATH_MAX];
+
+		std::string per_slot_device = std::string("/dev/mapper/") + vg_name + '-' + lv_name_input;
+		while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
+			if (strcmp(dev, per_slot_device.c_str()) == 0) {
+				dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n", 
+						dev, mnt);
+				int r = umount(mnt);
+				if (r != 0) {
+					dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
+				}
+			}
+		}
+		fclose(f);
+	}
+
     std::string lv_name = lv_name_input;
         // We know we are removing an encrypted logical volume; first invoke
         // 'cryptsetup close'

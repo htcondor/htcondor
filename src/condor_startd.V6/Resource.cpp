@@ -2735,7 +2735,7 @@ void Resource::refresh_sandbox_ad(ClassAd*cap)
 		}
 #else
 		StatInfo si( updateAdDir.c_str() );
-		if(! si.Error()) {
+		if((!si.Error()) && (si.GetOwner() > 0) && (si.GetGroup() > 0)) {
 			set_user_ids( si.GetOwner(), si.GetGroup() );
 			TemporaryPrivSentry p( PRIV_USER, true );
 			updateAdFile = safe_fopen_wrapper_follow( updateAdTmpPath.c_str(), "w" );
