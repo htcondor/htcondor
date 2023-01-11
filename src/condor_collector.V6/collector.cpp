@@ -124,15 +124,6 @@ AdTransforms CollectorDaemon::m_forward_ad_xfm;
 //---------------------------------------------------------
 
 
-
-// prototypes of library functions
-typedef void (*SIGNAL_HANDLER)();
-extern "C"
-{
-	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
-}
-
-
 struct TokenRequestContinuation {
 	std::unique_ptr<DCSchedd> m_schedd;
 	std::string m_peer_location;
