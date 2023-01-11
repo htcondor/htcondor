@@ -37,6 +37,10 @@ Bugs Fixed:
   to a job's requirements.
   :jira:`1501`
 
+- Fixed a bug that caused the *condor_startd* to exit when thinpool
+  provisioned filesystems were enabled
+  :jira:`1524`
+
 .. _lts-version-history-1001:
 
 Version 10.0.1
