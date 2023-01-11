@@ -249,7 +249,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		is_cred_super_user = true;
 	}
 
-	ClassAdListDoesNotDeleteAds missing;
+	std::vector<ClassAd *> missing;
 	for(int i=0; i<numads; i++) {
 		std::string service;
 		std::string handle;
@@ -323,7 +323,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		// if the file is not found, add this request to the collection of missing requests
 		if (rc==-1) {
 			dprintf(D_ALWAYS, "check_creds: did not find %s\n", tmpfname.c_str());
-			missing.Insert(&requests[i]);
+			missing.push_back(&requests[i]);
 		} else {
 			// check to see if new scopes and audience match previous cred
 			if (cred_matches(tmpfname, &requests[i]) == FAILURE_CRED_MISMATCH) {
@@ -340,7 +340,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		}
 	}
 
-	if (missing.Length() > 0) {
+	if (!missing.empty()) {
 		// create unique request file with classad metadata
 		auto_free_ptr key(Condor_Crypt_Base::randomHexKey(32));
 
@@ -353,9 +353,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 
 		std::string contents; // what we will write to the credential directory for this URL
 
-		missing.Rewind();
-		ClassAd * req;
-		while ((req = missing.Next())) {
+		for (ClassAd *req: missing) {
 			// fill in everything we need to pass
 			ClassAd ad;
 			std::string tmpname;
@@ -458,7 +456,7 @@ CredDaemon::check_creds_handler( int, Stream* s)
 		std::string path;
 		dircat(cred_dir, key, path);
 
-		dprintf(D_ALWAYS, "check_creds: storing %zu bytes for %d services to %s\n", contents.length(), missing.Length(), path.c_str());
+		dprintf(D_ALWAYS, "check_creds: storing %zu bytes for %zu services to %s\n", contents.length(), missing.size(), path.c_str());
 		const bool as_root = false; // write as current user
 		const bool group_readable = true;
 		int rc = write_secure_file(path.c_str(), contents.c_str(), contents.length(), as_root, group_readable);

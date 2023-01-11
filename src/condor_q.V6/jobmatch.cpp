@@ -1547,7 +1547,6 @@ void buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap
 
 		int acid = -1;
 		if (job->LookupInteger(attr, acid)) {
-			//std::map<int, ClassAdListDoesNotDeleteAds>::iterator it;
 			autoclusters[acid].push_back(job);
 		} else {
 			// stick auto-clusterless jobs into the -1 slot.
