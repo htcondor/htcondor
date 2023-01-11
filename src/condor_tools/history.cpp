@@ -106,7 +106,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false, bool read_dir=false);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -674,7 +674,7 @@ main(int argc, const char* argv[])
       }
   }
   else {
-      readHistoryRemote(constraintExpr, want_startd_history);
+      readHistoryRemote(constraintExpr, want_startd_history, readFromDir);
   }
   delete constraintExpr;
 
@@ -807,12 +807,13 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd, bool read_dir)
 {
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
 
 	ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
+	if (constraintExpr) { ad.Insert(ATTR_REQUIREMENTS, constraintExpr->Copy()); }
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
@@ -837,7 +838,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 
 	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
 	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
-		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
+		fprintf(stderr, "Unable to locate remote %s (name=%s, pool=%s).\n", daemon_type, g_name.c_str(), g_pool.c_str());
 		exit(1);
 	}
 
@@ -853,9 +854,32 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		} else if (dt == DT_STARTD) {
 			// remote history to the startd was added in 8.9.7
 			if (!v.built_since_version(8, 9, 7)) {
-				fprintf(stderr, "The version of the startd does not support remote history");
+				fprintf(stderr, "The version of the startd does not support remote history.\n");
 				exit(1);
 			}
+		}
+		//Do Record source version checks here and assign needed Ad information
+		std::string err_msg;
+		switch (recordSrc) {
+			//Nothing special needed for HISTORY or STARTD_HISTORY at the moment
+			case HRS_SCHEDD_JOB_HIST:
+			case HRS_STARTD_HIST:
+				break;
+			case HRS_JOB_EPOCH:
+				if (v.built_since_version(10, 3, 0)) {
+					ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
+				} else {
+					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());
+				}
+				break;
+			default:
+				err_msg = "No history record source declared. Unsure what ad history to remotely query.";
+				break;
+		}
+		if (!err_msg.empty()) {
+			fprintf(stderr,"Error: %s\n",err_msg.c_str());
+			exit(1);
 		}
 	}
 
@@ -1605,6 +1629,7 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* e
 }
 
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr){
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader();
 	//Make sure match,limit,and/or scanlimit aren't being used with delete function
 	if (maxAds != -1 && delete_epoch_ads) {
