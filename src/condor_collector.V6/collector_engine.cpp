@@ -19,8 +19,6 @@
 
 #include "condor_common.h"
 
-extern "C" void event_mgr (void);
-
 //-------------------------------------------------------------
 
 #include "condor_classad.h"
@@ -1250,9 +1248,6 @@ housekeeper()
 	while (GenericAds.iterate(cht)) {
 		cleanHashTable (*cht, now, makeGenericAdHashKey);
 	}
-
-	// cron manager
-	event_mgr();
 
 	dprintf (D_ALWAYS, "Housekeeper:  Done cleaning\n");
 }

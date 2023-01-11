@@ -254,7 +254,6 @@ cron_job_list.cpp
 cron_job_mgr.cpp
 cron_job_mode.cpp
 cron_job_params.cpp
-cronos.cpp
 cron_param.cpp
 dagman_utils.cpp
 dagman_utils.h
