@@ -277,10 +277,18 @@ do_token_security() {
 	# and adjust accordingly, which might make microversion upgrades easier.
 	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
+	# Ensure that the password directory exists, since the condor_master has
+	# not yet been run.
+	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_PASSWORD_DIRECTORY)"
+
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
 	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
 	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+
+	# Ensure that the tokens directory exists, since the condor_master has
+	# not yet been run.
+	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
