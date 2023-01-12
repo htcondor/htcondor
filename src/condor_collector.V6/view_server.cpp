@@ -598,7 +598,7 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 			// greater than FromDate
 		// dprintf(D_ALWAYS, "Binary searching the cache table, request should be quick\n");
 		int low = 0;
-		int high = times_array->back();
+		int high = times_array->size()-1;
 		int mid;
 		while( high - low > 1 ) {
 			mid = (high - low) / 2 + low;
