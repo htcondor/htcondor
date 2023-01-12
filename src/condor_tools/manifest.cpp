@@ -51,11 +51,8 @@ main( int argc, char ** argv ) {
     std::string function = argv[1];
     std::string argument = argv[2];
 
-    std::string destination, plugin;
     if( function == "deleteFilesStoredAt" ) {
         if( argc < 5 ) { return usage( argv[0] ); }
-        destination = argv[3];
-        plugin = argv[4];
     } else if( argc != 3 ) {
         return usage( argv[0] );
     }
@@ -99,12 +96,28 @@ main( int argc, char ** argv ) {
         }
         return created ? 0 : 1;
     } else if( function == "deleteFilesStoredAt" ) {
+        // Formerly `deleteFilesStoredAt <argument> <destination> <plugin>`,
+        // where `argument` is the manifest file, now
+        // `deleteFilesStoredAt <plugin> (<destination> <file>)+
+        // so that we can delete all of a job's checkpoints in one invocation.
+
+        std::string plugin = argv[2];
+
+        bool deleted;
+        std::string file;
         std::string error;
-        bool deleted = manifest::deleteFilesStoredAt( destination, argument, plugin, error );
-        if(! deleted) {
-            fprintf( stdout, "%s\n", error.c_str() );
+        std::string destination;
+        for( int i = 3; i < argc - 1; i += 2 ) {
+            destination = argv[i];
+            file = argv[i+1];
+
+            bool deleted = manifest::deleteFilesStoredAt( destination, file, plugin, error );
+            if(! deleted) {
+                fprintf( stdout, "%s\n", error.c_str() );
+                return 1;
+            }
         }
-        return deleted ? 0 : 1;
+        return 0;
     } else {
         return usage( argv[0] );
     }
