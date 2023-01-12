@@ -401,63 +401,6 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-#if 1
-#else
-static char *tokenBuf = NULL;
-static char *nextToken = NULL;
-
-void Tokenize(const MyString &str)
-{
-	Tokenize( str.Value() );
-}
-
-void Tokenize(const std::string &str)
-{
-	Tokenize( str.c_str() );
-}
-
-void Tokenize(const char *str)
-{
-	free( tokenBuf );
-	tokenBuf = NULL;
-	nextToken = NULL;
-	if ( str ) {
-		tokenBuf = strdup( str );
-		if ( strlen( tokenBuf ) > 0 ) {
-			nextToken = tokenBuf;
-		}
-	}
-}
-
-const char *GetNextToken(const char *delim, bool skipBlankTokens)
-{
-	const char *result = nextToken;
-
-	if ( !delim || strlen(delim) == 0 ) {
-		result = NULL;
-	}
-
-	if ( result != NULL ) {
-		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
-			nextToken++;
-		}
-
-		if ( *nextToken != '\0' ) {
-			*nextToken = '\0';
-			nextToken++;
-		} else {
-			nextToken = NULL;
-		}
-	}
-
-	if ( skipBlankTokens && result && strlen(result) == 0 ) {
-		result = GetNextToken(delim, skipBlankTokens);
-	}
-
-	return result;
-}
-#endif
-
 void join(const std::vector< std::string > &v, char const *delim, std::string &result)
 {
 	std::vector<std::string>::const_iterator it;
@@ -782,25 +725,6 @@ randomlyGenerateInsecure(std::string &str, const char *set, int len)
 	}
 }
 
-#if 0
-void
-randomlyGeneratePRNG(std::string &str, const char *set, int len)
-{
-	if (!set || len <= 0) {
-		str.clear();
-		return;
-	}
-
-	str.assign(len, '0');
-
-	auto set_len = strlen(set);
-	for (int idx = 0; idx < len; idx++) {
-		auto rand_val = get_random_int_insecure() % set_len;
-		str[idx] = set[rand_val];
-	}
-}
-#endif
-
 void
 randomlyGenerateInsecureHex(std::string &str, int len)
 {
@@ -853,28 +777,10 @@ int StringTokenIterator::next_token(int & length)
 //
 const std::string * StringTokenIterator::next_string()
 {
-#if 1
 	int len;
 	int start = next_token(len);
 	if (start < 0) return NULL;
 	current.assign(str, start, len);
-#else
-	if ( ! str) return NULL;
-
-	int ix = ixNext;
-
-	// skip leading separators and whitespace
-	while (str[ix] && strchr(delims, str[ix])) ++ix;
-	ixNext = ix;
-
-	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) ++ix;
-	if (ix <= ixNext)
-		return NULL;
-
-	current.assign(str, ixNext, ix-ixNext);
-	ixNext = ix;
-#endif
 	return &current;
 }
 
