@@ -52,7 +52,9 @@ main( int argc, char ** argv ) {
     std::string argument = argv[2];
 
     if( function == "deleteFilesStoredAt" ) {
-        if( argc < 5 ) { return usage( argv[0] ); }
+        if( argc != 7 ) {
+            return usage( argv[0] );
+        }
     } else if( argc != 3 ) {
         return usage( argv[0] );
     }
@@ -96,28 +98,41 @@ main( int argc, char ** argv ) {
         }
         return created ? 0 : 1;
     } else if( function == "deleteFilesStoredAt" ) {
-        // Formerly `deleteFilesStoredAt <argument> <destination> <plugin>`,
-        // where `argument` is the manifest file, now
-        // `deleteFilesStoredAt <plugin> (<destination> <file>)+
-        // so that we can delete all of a job's checkpoints in one invocation.
+        // `deleteFilesStoredAt cleanUpScript location-stem file-stem
+        //                      lowCheckpointNo highCheckpointNo`
 
         std::string plugin = argv[2];
+        std::string locationStem = argv[3];
+        std::string fileStem = argv[4];
 
-        bool deleted;
+        char * endptr = NULL;
+        long lowCheckpointNo = strtol( argv[5], & endptr, 10 );
+        if( endptr == argv[5] || *endptr != '\0' ) {
+            fprintf( stderr, "'%s' is not a number, aborting.\n", argv[5] );
+            return 1;
+        }
+        long highCheckpointNo = strtol( argv[6], & endptr, 10 );
+        if( endptr == argv[6] || *endptr != '\0' ) {
+            fprintf( stderr, "'%s' is not a number, aborting.\n", argv[6] );
+            return 1;
+        }
+
         std::string file;
         std::string error;
+        bool deleted = true;
         std::string destination;
-        for( int i = 3; i < argc - 1; i += 2 ) {
-            destination = argv[i];
-            file = argv[i+1];
+        for( long i = lowCheckpointNo; i <= highCheckpointNo; ++i ) {
+            formatstr( destination, "%s/%.4ld", locationStem.c_str(), i );
+            formatstr( file, "%s.%.4ld", fileStem.c_str(), i );
 
-            bool deleted = manifest::deleteFilesStoredAt( destination, file, plugin, error );
-            if(! deleted) {
+            fprintf( stderr, "%s %s\n", destination.c_str(), file.c_str() );
+            if(! manifest::deleteFilesStoredAt( destination, file, plugin, error )) {
                 fprintf( stdout, "%s\n", error.c_str() );
-                return 1;
+                deleted = false;
             }
         }
-        return 0;
+
+        return deleted ? 0 : 1;
     } else {
         return usage( argv[0] );
     }

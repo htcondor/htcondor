@@ -197,6 +197,11 @@ deleteFilesStoredAt(
 	for( bool rv = false; (rv = readLine( manifestLine, fp )); ) {
 		trim( manifestLine );
 		std::string file = manifest::FileFromLine( manifestLine );
+
+		// FIXME: This isn't working as intended because the name
+		// in the MANIFEST file is relative and this name is absolute.
+		// FIXME: I guess we really don't care if the clean-up fails,
+		// but still, it's weird not to log anything?
 		if( file == manifestFileName ) { continue; }
 
 		ArgList args;

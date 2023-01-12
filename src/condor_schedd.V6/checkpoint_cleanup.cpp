@@ -45,11 +45,15 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 	//
 	// The call will be
 	//
-	// `full/path/to/condor_manifest deleteFilesStoredAt \
-	//      full/path/to/protocol-specific-clean-up-plug-in \
-	//      checkpoint-specific-location corresponding-manifest-file`
+	// `/full/path/to/condor_manifest deleteFilesStoredAt
+	//      /full/path/to/protocol-specific-clean-up-plug-in
+	//      checkpointDestination/globalJobID
+	//      /full/path/to/manifest-file-trailing-checkpoint-number
+	//      lowCheckpointNo highCheckpointNo`
 	//
-	// where the last two items will be repeated for each checkpoint.
+	// Moving the iteration over checkpoint numbers into condor_manifest
+	// means that we don't have to worry about spawning more than one
+	// process here (because of ARG_MAX limitations).
 	//
 
 	static int cleanup_reaper_id = -1;
@@ -104,7 +108,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 	std::string globalJobID;
 	if(! jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
 		error = "Failed to find global job ID in job ad, aborting";
-		dprintf( D_ZKM, "%s\n", error.c_str() );
+		dprintf( D_ALWAYS, "%s\n", error.c_str() );
 		return false;
 	}
 
@@ -115,62 +119,57 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 	std::filesystem::path spool( spoolPath );
 
 
-	//
-	// Invoke `condor_manifest` only as often as we must to avoid going
-	// over the maximum size of the command-line arguments.
-	//
-
-	std::string specificCheckpointDestination = checkpointDestination;
-
 	int checkpointNumber = -1;
 	if(! jobAd->LookupInteger( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber )) {
 		error = "Failed to find checkpoint number in job ad, aborting";
-		dprintf( D_ZKM, "%s\n", error.c_str() );
+		dprintf( D_ALWAYS, "%s\n", error.c_str() );
 		return false;
 	}
 
-	for( int i = 0; i <= checkpointNumber; ++i ) {
-		std::vector< std::string > cleanup_process_args;
-		cleanup_process_args.push_back( condor_manifest.string() );
-		cleanup_process_args.push_back( "deleteFilesStoredAt" );
-		cleanup_process_args.push_back( destinationSpecificBinary );
-
-		// Construct the checkpoint-specific location.
-		formatstr_cat(
-			specificCheckpointDestination,
-			"/%s/%.4d",
-			globalJobID.c_str(), i
-		);
-
-		// Construct the manifest file name.
-		std::string manifestFileName;
-		formatstr( manifestFileName, "_condor_checkpoint_MANIFEST.%.4d", checkpointNumber );
-		std::filesystem::path manifestFilePath = spool / manifestFileName;
-		if(! std::filesystem::exists(manifestFilePath)) {
-			formatstr( error,
-				"MANIFEST file %s doesn't exist, aborting",
-				manifestFilePath.string().c_str()
-			);
-			dprintf( D_ZKM, "%s\n", error.c_str() );
-			return false;
-		}
-
-		cleanup_process_args.push_back( specificCheckpointDestination );
-		cleanup_process_args.push_back( manifestFilePath.string() );
-
-		// Only do the following if we've hit ARG_MAX...
-
-		OptionalCreateProcessArgs cleanup_process_opts;
-		auto pid = daemonCore->CreateProcessNew(
-			condor_manifest.string(),
-			cleanup_process_args,
-			cleanup_process_opts.reaperID(cleanup_reaper_id)
-		);
-
-		// FIXME: Update condor_preen to invoke condor_manifest
-		// appropriately as well.  May involve refactorign this
-		// function a little bit. ;)
+	std::string separator = "/";
+	if( ends_with( checkpointDestination, "/" ) ) {
+		separator = "";
 	}
 
+
+	std::string specificCheckpointDestination;
+
+	std::vector< std::string > cleanup_process_args;
+	cleanup_process_args.push_back( condor_manifest.string() );
+	cleanup_process_args.push_back( "deleteFilesStoredAt" );
+	cleanup_process_args.push_back( destinationSpecificBinary );
+
+	// Construct the checkpoint-specific location prefix.
+	formatstr(
+		specificCheckpointDestination,
+		"%s%s%s",
+		checkpointDestination.c_str(), separator.c_str(), globalJobID.c_str()
+	);
+
+	// Construct the manifest file prefix.
+	std::string manifestFileName = "_condor_checkpoint_MANIFEST";
+	std::filesystem::path manifestFilePath = spool / manifestFileName;
+
+	cleanup_process_args.push_back( specificCheckpointDestination );
+	cleanup_process_args.push_back( manifestFilePath.string() );
+	cleanup_process_args.push_back( "0" );
+
+	std::string buffer;
+	formatstr(buffer, "%d", checkpointNumber );
+	cleanup_process_args.push_back( buffer );
+
+
+	OptionalCreateProcessArgs cleanup_process_opts;
+	auto pid = daemonCore->CreateProcessNew(
+		condor_manifest.string(),
+		cleanup_process_args,
+		cleanup_process_opts.reaperID(cleanup_reaper_id)
+	);
+
+	// FIXME: Update condor_preen to invoke condor_manifest
+	// appropriately as well.  May involve refactorign this
+	// function a little bit. ;)
+
+	dprintf( D_ZKM, "... checkpoint clean-up for job %d.%d invoked.\n", cluster, proc );
 	return true;
 }

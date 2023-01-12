@@ -723,6 +723,9 @@ class Scheduler : public Service
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
 
+	// Returns false if the checkpoint clean-up failed to launch.
+	bool doCheckpointCleanUp( int cluster, int proc );
+
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -854,8 +857,6 @@ private:
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
 
-	// Returns false if the checkpoint clean-up failed to launch.
-	bool doCheckpointCleanUp( int cluster, int proc );
 	int checkpointCleanUpReaper(int, int);
 
 		// variables to implement SCHEDD_VANILLA_START expression

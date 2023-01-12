@@ -12367,6 +12367,7 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		std::string checkpointDestination;
 		if( ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination) ) {
 			dprintf( D_ZKM, "Not removing job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
+			scheduler.doCheckpointCleanUp( cluster, proc );
 			return;
 		}
 		SpooledJobFiles::removeJobSpoolDirectory(ad);
@@ -15667,7 +15668,8 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 		}
 	}
 
-    doCheckpointCleanUp( cluster, proc );
+    // This gets called on jobs with LeaveJobInQueue set, which we don't want.
+    // doCheckpointCleanUp( cluster, proc );
 
 	if( jobCleanupNeedsThread(cluster, proc) ) {
 		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will block, "
