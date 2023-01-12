@@ -233,27 +233,6 @@ StringList::create_union(StringList & subset, bool anycase)
 
 
 bool
-StringList::contains_list(StringList & subset, bool anycase)
-{
-	char *x;
-	bool ret_val;
-
-	subset.rewind ();
-	while ((x = subset.next ())) {
-		if ( anycase ) {
-			ret_val = contains_anycase(x);
-		} else {
-			ret_val = contains(x);
-		}
-if (ret_val == false) {
-	return false;
-}
-	}
-	return true;
-}
-
-
-bool
 StringList::contains(const char *st)
 {
 	char	*x;
