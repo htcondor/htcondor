@@ -495,11 +495,12 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 std::string join(const std::vector<std::string> &list, const char* delim)
 {
 	std::string str;
-	for (const auto& item : list) {
-		if (str.size()) {
+	if (!list.empty()) {
+		str = list.front();
+		for (auto it = (list.begin() + 1); it != list.end(); it++) {
 			str += delim;
+			str += *it;
 		}
-		str += item;
 	}
 	return str;
 }
