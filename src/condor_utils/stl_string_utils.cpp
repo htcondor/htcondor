@@ -542,6 +542,193 @@ bool contains_anycase(const std::vector<std::string> &list, const std::string& s
 	return contains_anycase(list, str.c_str());
 }
 
+bool contains_prefix(const std::vector<std::string> &list, const char* str)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strncmp(item.c_str(), str, item.size()) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_prefix(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_prefix(list, str.c_str());
+}
+
+bool contains_prefix_anycase(const std::vector<std::string> &list, const char* str)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strncasecmp(item.c_str(), str, item.size()) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_prefix_anycase(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_prefix_anycase(list, str.c_str());
+}
+
+bool
+contains_withwildcard_impl(const std::vector<std::string>& list, const char* str, bool anycase, bool prefix)
+{
+	const char *x;
+	std::string matchstart;
+	std::string matchend;
+	const char *asterisk = NULL;
+	const char *ending_asterisk = NULL;
+	bool result;
+	int temp;
+	const char *pos;
+
+	if ( !str ) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		x = item.c_str();
+
+		if ( (asterisk = strchr(x,'*')) == NULL ) {
+			// There is no wildcard in this entry; just compare
+			if (anycase) {
+				temp = strcasecmp(x, str);
+			} else {
+				temp = strcmp(x, str);
+			}
+			if ( temp == MATCH ) {
+				return true;
+			}
+			continue;
+		}
+
+		// If we made it here, we know there is an asterisk in the pattern, and
+		// 'asterisk' points to ths first asterisk encountered. Now set astrisk2
+		// iff there is a second astrisk at the end of the string.
+		ending_asterisk = strrchr(x, '*');
+		if (asterisk == ending_asterisk || &asterisk[1] == ending_asterisk || ending_asterisk[1] != '\0' ) {
+			ending_asterisk = NULL;
+		}
+
+		if ( asterisk == x ) {
+			// if there is an asterisk at the start (and maybe also at the end)
+			matchstart.clear();
+			matchend = &(x[1]);
+		} else {  // if there is NOT an astrisk at the start...
+			if ( asterisk[1] == '\0' ) {
+				// asterisk solely at the end behavior.
+				matchstart = x;
+				matchstart.erase(matchstart.size()-1);
+				matchend.clear();
+				prefix = true;
+			} else {
+				// asterisk in the middle somewhere (and maybe also at the end)
+				matchstart = x;
+				matchstart.assign(x, asterisk-x);
+				matchend = &(asterisk[1]);
+			}
+		}
+		if (matchend.size() && matchend[matchend.size()-1] == '*') {
+			// asterisk at end of matchend
+			matchend.erase(matchend.size()-1);
+			prefix = true;
+		}
+
+		// at this point, we _know_ that there is an  asterisk either at the start
+		// or in the middle somewhere, and both matchstart and matchend are set
+		// appropiately with what we want.  there may optionally also still
+		// be an asterisk at the end, indicated by prefix.
+
+		result = true;
+		size_t stringchars_consumed = 0;
+		if ( matchstart.size() ) {
+			size_t matchstart_len = matchstart.size();
+			if ( anycase ) {
+				temp = strncasecmp(matchstart.c_str(), str, matchstart_len);
+			} else {
+				temp = strncmp(matchstart.c_str(), str, matchstart_len);
+			}
+			if (temp != MATCH) {
+				result = false;
+			} else {
+				// TODO can strlen(str) ever be smaller then matchstart_len?
+				stringchars_consumed = MIN(matchstart_len, strlen(str));
+			}
+		}
+		if ( matchend.size() && result == true) {
+			if (anycase) {
+				pos = strcasestr(&str[stringchars_consumed], matchend.c_str());
+			}
+			else {
+				pos = strstr(&str[stringchars_consumed], matchend.c_str());
+			}
+			if (!pos) {
+				result = false;
+			} else {
+				if (!prefix && pos[strlen(pos)] != '\0') {
+					result = false;
+				}
+			}
+		}
+		if ( result == true ) {
+			return true;
+		}
+
+	}	// end of while loop
+
+	return false;
+}
+
+bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, false, false);
+}
+
+bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), false, false);
+}
+
+bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, true, false);
+}
+
+bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), true, false);
+}
+
+bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, false, true);
+}
+
+bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), false, true);
+}
+
+bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, true, true);
+}
+
+bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), true, true);
+}
+
 // scan an input string for path separators, returning a pointer into the input string that is
 // the first charactter after the last input separator. (i.e. the filename part). if the input
 // string contains no path separater, the return is the same as the input, if the input string
