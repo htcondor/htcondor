@@ -863,7 +863,9 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		switch (recordSrc) {
 			//Nothing special needed for HISTORY or STARTD_HISTORY at the moment
 			case HRS_SCHEDD_JOB_HIST:
+				break;
 			case HRS_STARTD_HIST:
+				ad.InsertAttr("HistoryRecordSource","STARTD");
 				break;
 			case HRS_JOB_EPOCH:
 				if (v.built_since_version(10, 3, 0)) {
