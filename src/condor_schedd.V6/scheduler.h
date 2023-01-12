@@ -854,9 +854,9 @@ private:
 	SelfDrainingQueue job_is_finished_queue;
 	int jobIsFinishedHandler( ServiceData* job_id );
 
-    // Returns false if the checkpoint clean-up failed to launch.
-    bool doCheckpointCleanUp( int cluster, int proc );
-    int checkpointCleanUpReaper(int, int);
+	// Returns false if the checkpoint clean-up failed to launch.
+	bool doCheckpointCleanUp( int cluster, int proc );
+	int checkpointCleanUpReaper(int, int);
 
 		// variables to implement SCHEDD_VANILLA_START expression
 	ConstraintHolder vanilla_start_expr;

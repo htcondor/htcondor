@@ -6641,10 +6641,11 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	}
 
 	// Is there a good reason we weren't doing this before?
-	// FIXME: should be conditional on being D_FULLDEBUG.
 	std::string contents;
-	if( htcondor::readShortFile( output_filename, contents )) {
-	    dprintf( D_FULLDEBUG, "Plugin output: '%s'\n", contents.c_str() );
+	if( IsFulldebug(D_FULLDEBUG) ) {
+		if( htcondor::readShortFile( output_filename, contents )) {
+			dprintf( D_FULLDEBUG, "Plugin output: '%s'\n", contents.c_str() );
+		}
 	}
 
 	// Output stats regardless of success or failure
