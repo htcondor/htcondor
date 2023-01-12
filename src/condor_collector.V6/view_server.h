@@ -61,8 +61,8 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<std::string, GeneralRecord*> AccHash;
-typedef ExtArray< int > ExtIntArray;
-typedef ExtArray< fpos_t* > ExtOffArray;
+typedef std::vector< int > ExtIntArray;
+typedef std::vector< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
