@@ -1434,7 +1434,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 		} else if (k != m_machres_offline_devIds_map.end()) {
 			// we just have the static offline ids list (set at startup)
 			if ( ! k->second.empty()) {
-				join(k->second, ",", ids);
+				ids = join(k->second, ",");
 			}
 		}
 		string attr(ATTR_OFFLINE_PREFIX); attr += j->first;
@@ -1907,10 +1907,9 @@ CpuAttributes::publish_static(ClassAd* cp)
 			cp->Assign(attr, int(c_slottot_map[j->first]));          // example: set TotalSlotGPUs = 2
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
-				ids.clear();
 				attr = "Assigned";
 				attr += j->first;
-				join(k->second, ",", ids);  // k->second is type slotres_assigned_ids_t which is vector<string>
+				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
 				continue;

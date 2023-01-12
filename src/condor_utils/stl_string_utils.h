@@ -84,8 +84,6 @@ bool ends_with(const std::string& str, const std::string& post);
 bool sort_ascending_ignore_case(std::string const & a, std::string const & b);
 bool sort_decending_ignore_case(std::string const & a, std::string const & b);
 
-void join(const std::vector< std::string > &v, char const *delim, std::string &result);
-
 std::vector<std::string> split(const std::string& str, const char* delim=", \t\r\n", bool trim=true);
 std::string join(const std::vector<std::string> &list, const char* delim);
 

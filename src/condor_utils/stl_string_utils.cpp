@@ -401,20 +401,6 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-void join(const std::vector< std::string > &v, char const *delim, std::string &result)
-{
-	std::vector<std::string>::const_iterator it;
-	for(it = v.begin();
-		it != v.end();
-		it++)
-	{
-		if( result.size() ) {
-			result += delim;
-		}
-		result += (*it);
-	}
-}
-
 std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
 {
 	int start, len;
