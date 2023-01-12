@@ -19,6 +19,7 @@
 
 #include "condor_common.h" 
 #include "condor_snutils.h"
+#include "strcasestr.h"
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include <limits>
