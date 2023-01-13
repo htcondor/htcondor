@@ -27,9 +27,9 @@ For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
-* `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el7.noarch.rpm>`_
-* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el8.noarch.rpm>`_
-* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/10.0/htcondor-release-current.el9.noarch.rpm>`_
+* `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el7.noarch.rpm>`_
+* `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el8.noarch.rpm>`_
+* `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el9.noarch.rpm>`_
 
 The HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
@@ -53,17 +53,17 @@ These repositories also include the source packages.
 Debian 11
 #########
 
-Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.0-Key>`_
+Add our `Debian signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Debian 11: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/10.0 bullseye main``
+* Debian 11: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/debian/10.x bullseye main``
 
 Ubuntu 18.04, 20.04, and 22.04
 ##############################
 
-Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.0-Key>`_
+Add our `Ubuntu signing key <https://research.cs.wisc.edu/htcondor/repo/keys/HTCondor-10.x-Key>`_
 with ``apt-key add`` before adding the repositories below.
 
-* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 bionic main``
-* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 focal main``
-* Ubuntu 22.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.0 jammy main``
+* Ubuntu 18.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.x bionic main``
+* Ubuntu 20.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.x focal main``
+* Ubuntu 22.04: ``deb [arch=amd64] http://research.cs.wisc.edu/htcondor/repo/ubuntu/10.x jammy main``
