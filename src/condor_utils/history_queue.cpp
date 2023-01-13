@@ -108,18 +108,28 @@ int HistoryHelperQueue::command_handler(int cmd, Stream* stream)
 		streamresults = false;
 	}
 
+	std::string record_src;
+	queryAd.EvaluateAttrString("HistoryRecordSource", record_src);
+
+	bool searchDir = false;
+	if (!queryAd.EvaluateAttrBool("HistoryFromDir", searchDir)) {
+		searchDir = false;
+	}
+
 	if (m_requests >= m_max_requests) {
 		if (m_queue.size() > 1000) {
 			return sendHistoryErrorAd(stream, 9, "Cowardly refusing to queue more than 1000 requests.");
 		}
 		classad_shared_ptr<Stream> stream_shared(stream);
-		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit);
+		HistoryHelperState state(stream_shared, requirements_str, since_str, proj_str, match_limit, record_src);
 		state.m_streamresults = streamresults;
+		state.m_searchdir = searchDir;
 		m_queue.push_back(state);
 		return KEEP_STREAM;
 	} else {
-		HistoryHelperState state(*stream, requirements_str, since_str, proj_str, match_limit);
+		HistoryHelperState state(*stream, requirements_str, since_str, proj_str, match_limit, record_src);
 		state.m_streamresults = streamresults;
+		state.m_searchdir = searchDir;
 		return launcher(state);
 	}
 }
@@ -174,7 +184,7 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg(state.MatchCount());
 		}
 		args.AppendArg("-scanlimit");
-		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 50000));
 		if ( ! state.Since().empty()) {
 			args.AppendArg("-since");
 			args.AppendArg(state.Since());
@@ -187,6 +197,10 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg("-attributes");
 			args.AppendArg(state.Projection());
 		}
+		if (state.m_searchdir) { args.AppendArg("-dir"); }
+		if ( ! state.RecordSrc().empty()) {
+			if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) { args.AppendArg("-epochs"); }
+		}
 		MyString myargs;
 		args.GetArgsStringForLogging(&myargs);
 		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
@@ -194,7 +208,6 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 
 	Stream *inherit_list[] = {state.GetStream(), NULL};
 
-	FamilyInfo fi;
 	pid_t pid = daemonCore->Create_Process(history_helper.ptr(), args, PRIV_ROOT, m_rid,
 		false, false, NULL, NULL, NULL, inherit_list);
 	if (!pid) {
