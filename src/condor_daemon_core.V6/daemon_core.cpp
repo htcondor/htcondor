@@ -36,7 +36,6 @@
 #include <resolv.h>
 #endif
 
-static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
@@ -271,7 +270,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_never_use_kill_for_dc_signals(false),
 #endif
 	m_create_family_session(true),
-	comTable(32),
 	sigTable(10),
 	reapTable(4),
 	t(TimerManager::GetTimerManager()),
@@ -316,19 +314,12 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	//
 	m_proc_family = NULL;
 
-	maxCommand = ComSize;
 	maxSig = SigSize;
 	maxSocket = SocSize;
 	maxReap = ReapSize;
 	maxPipe = PipeSize;
 
-	if(maxCommand == 0)
-		maxCommand = DEFAULT_MAXCOMMANDS;
-
 	nCommand = 0;
-	CommandEnt blankCommandEnt;
-	blankCommandEnt.is_cpp = false;
-	comTable.fill(blankCommandEnt);
 	m_unregisteredCommand.num = 0;
 
 	if(maxSig == 0)
@@ -526,7 +517,7 @@ DaemonCore::~DaemonCore()
 	close(async_pipe[0]);
 #endif
 
-	for (i=0;i<nCommand;i++) {
+	for (size_t i=0;i<nCommand;i++) {
 		free( comTable[i].command_descrip );
 		free( comTable[i].handler_descrip );
 		delete comTable[i].alternate_perm;
@@ -1051,20 +1042,15 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 				int is_cpp, bool force_authentication,
 				int wait_for_payload, std::vector<DCpermission> *alternate_perm)
 {
-	int i = -1;
-
     if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL command handler\n");
 		return -1;
     }
 
-    if(nCommand >= maxCommand) {
-		EXCEPT("# of command handlers exceeded specified maximum");
-    }
-
 	// Search our array for an empty spot and ensure there isn't an entry
 	// for this command already.
-	for ( int j = 0; j < nCommand; j++ ) {
+	size_t i = nCommand;
+	for ( size_t j = 0; j < nCommand; j++ ) {
 		if ( comTable[j].handler == NULL && comTable[j].handlercpp == NULL ) {
 			i = j;
 		}
@@ -1074,10 +1060,11 @@ int DaemonCore::Register_Command(int command, const char* command_descrip,
 			EXCEPT("%s",msg.c_str());
 		}
 	}
-	if ( i == -1 ) {
+	if ( i == nCommand ) {
 		// We need to add a new entry at the end of our array
 		i = nCommand;
 		nCommand++;
+		comTable.emplace_back();
 	}
 
 	dc_stats.NewProbe("Command", getCommandStringSafe(command), AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
@@ -1121,7 +1108,7 @@ int DaemonCore::Cancel_Command( int command )
 		return TRUE;
 	}
 
-	int i;
+	size_t i;
 	for(i = 0; i<nCommand; i++) {
 		if( comTable[i].num == command &&
 			( comTable[i].handler || comTable[i].handlercpp ) )
@@ -2756,7 +2743,6 @@ void DaemonCore::Dump(int flag, const char* indent)
 
 void DaemonCore::DumpCommandTable(int flag, const char* indent)
 {
-	int			i;
 	const char *descrip1;
 	const char *descrip2;
 
@@ -2774,7 +2760,7 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 	dprintf(flag,"\n");
 	dprintf(flag, "%sCommands Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < nCommand; i++) {
+	for (size_t i = 0; i < nCommand; i++) {
 		if( comTable[i].handler || comTable[i].handlercpp )
 		{
 			descrip1 = "NULL";
@@ -2792,13 +2778,12 @@ void DaemonCore::DumpCommandTable(int flag, const char* indent)
 
 std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authenticated) {
 	std::string res;
-	int		i;
 	DCpermissionHierarchy hierarchy( perm );
 	DCpermission const *perms = hierarchy.getImpliedPerms();
 
 		// iterate through a list of this perm and all perms implied by it
 	for (perm = *(perms++); perm != LAST_PERM; perm = *(perms++)) {
-		for (i = 0; i < nCommand; i++) {
+		for (size_t i = 0; i < nCommand; i++) {
 			bool alternate_perm_match = false;
 			if (comTable[i].alternate_perm) {
 				for (auto alt_perm : *(comTable[i].alternate_perm)) {
@@ -4341,7 +4326,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 bool
 DaemonCore::CommandNumToTableIndex(int cmd,int *cmd_index)
 {
-	for ( int i = 0; i < nCommand; i++ ) {
+	for ( size_t i = 0; i < nCommand; i++ ) {
 		if ( comTable[i].num == cmd &&
 			 ( comTable[i].handler || comTable[i].handlercpp ) ) {
 
