@@ -222,8 +222,8 @@ void CondorResource::CondorRegisterJob( CondorJob *job, const char *submitter_id
 {
 	BaseResource::RegisterJob( job );
 
-	if ( submitter_ids.contains( submitter_id ) == false ) {
-		submitter_ids.append( submitter_id );
+	if (contains(submitter_ids, submitter_id) == false) {
+		submitter_ids.emplace_back(submitter_id);
 		if ( submitter_constraint.empty() ) {
 			formatstr( submitter_constraint, "(%s=?=\"%s\")",
 										  ATTR_SUBMITTER_ID,

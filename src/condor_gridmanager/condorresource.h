@@ -61,7 +61,7 @@ class CondorResource : public BaseResource
 
 	static bool GahpErrorResourceDown( const char *errmsg );
 
-	StringList submitter_ids;
+	std::vector<std::string> submitter_ids;
 	std::string submitter_constraint;
 	int scheddPollTid;
 	char *scheddName;
