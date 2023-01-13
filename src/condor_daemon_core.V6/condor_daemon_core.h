@@ -2094,10 +2094,9 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpReapTable(int, const char* = NULL);
-    int                 maxReap;        // max number of reaper handlers
-    int                 nReap;          // number of reaper handlers used
+    size_t              nReap;          // number of reaper handlers used
     int                 nextReapId;     // next reaper id to use
-    ExtArray<ReapEnt>  reapTable;      // reaper table
+	std::vector<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service

@@ -40,7 +40,6 @@ static const int DEFAULT_MAXCOMMANDS = 255;
 static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
-static const int DEFAULT_MAXREAPS = 100;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
@@ -273,7 +272,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_create_family_session(true),
 	comTable(32),
 	sigTable(10),
-	reapTable(4),
 	t(TimerManager::GetTimerManager()),
 	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
@@ -319,7 +317,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	maxCommand = ComSize;
 	maxSig = SigSize;
 	maxSocket = SocSize;
-	maxReap = ReapSize;
 	maxPipe = PipeSize;
 
 	if(maxCommand == 0)
@@ -383,14 +380,8 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	maxPipeHandleIndex = -1;
 	maxPipeBuffer = 10240;
 
-	if(maxReap == 0)
-		maxReap = DEFAULT_MAXREAPS;
-
 	nReap = 0;
 	nextReapId = 1;
-	ReapEnt blankReapEnt;
-	memset(&blankReapEnt, '\0', sizeof(ReapEnt));
-	reapTable.fill(blankReapEnt);
 	defaultReaper=-1;
 
 	curr_dataptr = NULL;
@@ -569,7 +560,7 @@ DaemonCore::~DaemonCore()
 	delete super_dc_ssock;
 	m_super_dc_port = -1;
 
-	for (i=0;i<nReap;i++) {
+	for (size_t i=0;i<nReap;i++) {
 		free( reapTable[i].reap_descrip );
 		free( reapTable[i].handler_descrip );
 	}
@@ -2620,7 +2611,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				ReaperHandler handler, ReaperHandlercpp handlercpp,
 				const char *handler_descrip, Service* s, int is_cpp)
 {
-    int     i;
+    size_t     i;
 
     // In reapTable, unlike the others handler tables, we allow for a
 	// NULL handler and a NULL handlercpp - this means just reap
@@ -2637,14 +2628,8 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	// is  valid entry.
 	if ( rid == -1 ) {
 		// a brand new entry in the table
-		if(nReap >= maxReap) {
-			dprintf(D_ALWAYS, 
-				"Unable to register reaper with description: %s\n",
-				reap_descrip==NULL?"[Not specified]":reap_descrip);
-			EXCEPT("# of reaper handlers exceeded specified maximum");
-		}
 		// scan through the table to find an empty slot
-		for(i = 0; i <= nReap; i++)
+		for(i = 0; i < nReap; i++)
 		{
 			if ( reapTable[i].num == 0 ) {
 				break;
@@ -2652,8 +2637,9 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 		}
 		if ( i == nReap ) {
 			// Our new entry is at the end of our array,
-			// so increment our counter
+			// so increment our counter and add an entry to the
 			nReap++;
+			reapTable.push_back({});
 		}
 		rid = nextReapId++;
 	} else {
@@ -2665,7 +2651,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 				break;
 			}
 		}
-		if ( reapTable[i].num != rid ) {
+		if ( i == nReap ) {
 			return FALSE;	// trying to re-register a non-existant entry
 		}
 	}
@@ -2676,7 +2662,7 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 	reapTable[i].handlercpp = handlercpp;
 	reapTable[i].is_cpp = (bool)is_cpp;
 	reapTable[i].service = s;
-	reapTable[i].data_ptr = NULL;
+	reapTable[i].data_ptr = nullptr;
 	free(reapTable[i].reap_descrip);
 	if ( reap_descrip )
 		reapTable[i].reap_descrip = strdup(reap_descrip);
@@ -2714,7 +2700,7 @@ int DaemonCore::Cancel_Reaper( int rid )
 		return TRUE;
 	}
 
-	int idx;
+	size_t idx;
 
 	for ( idx = 0; idx < nReap; idx++ ) {
 		if ( reapTable[idx].num == rid ) {
@@ -2823,7 +2809,6 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
-	int			i;
 	const char *descrip1;
 	const char *descrip2;
 
@@ -2841,7 +2826,7 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 	dprintf(flag,"\n");
 	dprintf(flag, "%sReapers Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < nReap; i++) {
+	for (size_t i = 0; i < nReap; i++) {
 		if( reapTable[i].handler || reapTable[i].handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
@@ -7002,7 +6987,7 @@ int DaemonCore::Create_Process(
 
 	// check reaper_id validity.  note: reaper id of 0 means no reaper wanted.
 	if ( reaper_id > 0 && reaper_id < nextReapId ) {
-		int i;
+		size_t i;
 		for ( i = 0; i < nReap; i++ ) {
 			if ( reapTable[i].num == reaper_id ) {
 				break;
@@ -8515,7 +8500,7 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 {
 	// check reaper_id validity
 	if ( reaper_id > 0 && reaper_id < nextReapId ) {
-		int i;
+		size_t i;
 		for ( i = 0; i < nReap; i++ ) {
 			if ( reapTable[i].num == reaper_id ) {
 				break;
@@ -8552,9 +8537,8 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 
 		priv_state new_priv = get_priv();
 		if( saved_priv != new_priv ) {
-			int i;
 			const char *reaper = NULL;
-			for ( i = 0; i < nReap; i++ ) {
+			for ( size_t i = 0; i < nReap; i++ ) {
 				if ( reapTable[i].num == reaper_id ) {
 					reaper = reapTable[i].handler_descrip;
 					break;
@@ -9794,7 +9778,7 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 	ReapEnt *reaper = NULL;
 
 	if( reaper_id > 0 ) {
-		for ( int i = 0; i < nReap; i++ ) {
+		for ( size_t i = 0; i < nReap; i++ ) {
 			if ( reapTable[i].num == reaper_id ) {
 				reaper = &(reapTable[i]);
 				break;
