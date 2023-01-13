@@ -635,7 +635,7 @@ do_download() {
 			OS_NAME="AlmaLinux"
 			;;
 		rocky)
-			OS_NAME="Rocky"
+			OS_NAME="AlmaLinux"
 			;;
 		amzn)
 			OS_NAME="AmazonLinux"
