@@ -100,11 +100,11 @@ class MapFile
 	bool
 	FindMapping(CanonicalMapList* list,       // in: the mapping data set
 				const MyString & input,         // in: the input to be matched and mapped.
-				ExtArray<MyString> * groups,  // out: match groups from the input
+				std::vector<MyString> * groups,  // out: match groups from the input
 				const char ** pcanon);        // out: canonicalization pattern
 
 	void
-	PerformSubstitution(ExtArray<MyString> & groups, // in: match gropus (usually from FindMapping)
+	PerformSubstitution(std::vector<MyString> & groups, // in: match gropus (usually from FindMapping)
 						const char * pattern,        // in: canonicalization pattern
 						MyString & output);          // out: the input pattern with groups substituted is appended to this
 
