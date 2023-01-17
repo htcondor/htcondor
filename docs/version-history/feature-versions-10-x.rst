@@ -53,6 +53,9 @@ Bugs Fixed:
   all matching user requested job ids.
   :jira:`1506`
 
+- Added missing environment variables for the SciTokens plugin.
+  :jira:`1516`
+
 Version 10.2.0
 --------------
 

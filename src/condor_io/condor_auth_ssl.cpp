@@ -2121,7 +2121,7 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 					m_pluginState->m_env.SetEnv("BEARER_TOKEN_0_AUDIENCE", next_str.c_str());
 				}
 				if (is_groups) {
-					formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_%d", pair.first.c_str(), idx);
+					formatstr(env_name, "BEARER_TOKEN_0_GROUP_%d", idx);
 					m_pluginState->m_env.SetEnv(env_name, next_str);
 				}
 				formatstr(env_name, "BEARER_TOKEN_0_CLAIM_%s_%d", pair.first.c_str(), idx);
