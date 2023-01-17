@@ -17,7 +17,7 @@
 # config files etc.  
 
 # The first test is to just cat /singularity, which is a file which 
-# will only exist inside the container. If that exits non-zero,
+# will only exist inside the container. If that exits zero,
 # assume success.
 
 import logging
