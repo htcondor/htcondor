@@ -39,6 +39,12 @@ New Features:
   ``http_proxy``).
   :jira:`1471`
 
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  no longer tries to mount the various cgroup filesystems.  We assume that
+  any reasonable Linux system will have done this in a manner that it 
+  deems appropriate.
+  :jira:`1528`
+
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for
