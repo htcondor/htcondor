@@ -41,7 +41,7 @@ New Features:
 
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   no longer tries to mount the various cgroup filesystems.  We assume that
-  any reaonable Linux system will have done this in a matter that it 
+  any reasonable Linux system will have done this in a manner that it 
   deems appropriate.
   :jira:`1528`
 
