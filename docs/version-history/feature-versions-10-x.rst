@@ -45,6 +45,10 @@ Bugs Fixed:
   a job when it exits.
   :jira:`1500`
 
+- Added support for older cgroup v2 systems with missing memory.peak
+  files in the memory controller.
+  :jira:`1529`
+
 - Fixed bug where ``condor_history`` would occasionally fail to display
   all matching user requested job ids.
   :jira:`1506`
