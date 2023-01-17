@@ -6,7 +6,7 @@
 # is installed and works
 
 # Test plan is
-# If we can run singularity build on an empty direction and get
+# If we can run singularity build on an empty directory and get
 # a sif file without an error, assume that we can run singularity
 # jobs.  If not, skip the test.
 
@@ -14,7 +14,7 @@
 # the /bin, /usr/bin and /lib directories from the host, so that
 # we can run any binary from the host inside the container without
 # worrying about also copying in shared libraries, helper files,
-# config files etc.  
+# config files etc.
 
 # The first test is to just cat /singularity, which is a file which 
 # will only exist inside the container. If that exits zero,
