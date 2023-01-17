@@ -49,6 +49,15 @@ Bugs Fixed:
   all matching user requested job ids.
   :jira:`1506`
 
+- Fixed bugs in how the *condor_collector* generated its own CA and host
+  certificate files.
+  Configuration parameter ``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` now
+  defaults to ``True`` on unix platorms.
+  Configuration parameters ``AUTH_SSL_SERVER_CERTFILE`` and 
+  ``AUTH_SSL_SERVER_KEYFILE`` can now be a list of files. The first pair of
+  files with valid credentials is used.
+  :jira:`1455`
+
 Version 10.2.0
 --------------
 
