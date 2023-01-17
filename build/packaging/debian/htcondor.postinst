@@ -14,18 +14,6 @@ condor_gecos="HTCondor Daemons"
 condor_home=/var/lib/condor
 
 
-condor_make_homedir() {
-    for dlabel in LOCAL_UNIV_EXECUTE EXECUTE LOCK LOG SPOOL; do
-        if dname=$(condor_config_val $dlabel 2>/dev/null); then
-            mkdir -p $dname
-            chown -R $condor_user: $dname
-        else
-            echo "HTCondor's configuration doesn't define $dlabel. This might be an indication of a problem."
-        fi
-    done
-}
-
-
 case "$1" in
     configure)
         # according to http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=621833#119
@@ -51,18 +39,15 @@ case "$1" in
                 exit 1
             fi
         fi
-        # make sure the config and home dir are complete
-        condor_make_homedir
-        # create needed directories
+        # /var/lib/condor needs to be world readable for proper operation
+        chmod 0755 $condor_home
+        # condor_master needs a log directory to start up
+        dirname=$(condor_config_val LOG 2>/dev/null)
+        mkdir -p $dirname
+        chown $condor_user $dirname
+
+        # create a configuration directory for packagers
         mkdir -p /usr/share/condor/config.d
-        mkdir -p /etc/condor/passwords.d
-        chmod 0700 /etc/condor/passwords.d
-        mkdir -p /etc/condor/tokens.d
-        chmod 0700 /etc/condor/tokens.d
-        mkdir -p /var/lib/condor/krb_credentials
-        mkdir -p /var/lib/condor/oauth_credentials
-        chmod 2770 /var/lib/condor/oauth_credentials
-        chgrp condor /var/lib/condor/oauth_credentials
         # tell systemd to create tmpfiles, but do no harm if not available
         systemd-tmpfiles --create --exclude-prefix=/dev || true
     ;;

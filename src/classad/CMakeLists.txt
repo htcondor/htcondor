@@ -49,8 +49,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
 
 	# Should use find_package here for either case
-	find_library("pcre2-8" PCRE2_FOUND)
-	add_library(pcre2-8 IMPORTED)
+	find_library(PCRE2_FOUND "pcre2-8")
+	add_library(pcre2-8 SHARED IMPORTED)
 	set_target_properties(pcre2-8 PROPERTIES IMPORTED_LOCATION ${PCRE2_FOUND})
 
 	set(C_BIN bin)
@@ -181,7 +181,7 @@ set_target_properties( classads PROPERTIES OUTPUT_NAME classad )
 if (UNIX)  
   add_library( classad SHARED $<TARGET_OBJECTS:classads_objects>)   # for distribution at this point may swap to depend at a future date.
   target_link_libraries(classad pcre2-8)
-  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 15 )
+  set_target_properties( classad PROPERTIES VERSION ${PACKAGE_VERSION} SOVERSION 16 )
   target_link_libraries( classad ${CMAKE_DL_LIBS})
   install( TARGETS classad DESTINATION ${C_LIB_PUBLIC} )
 endif()

@@ -431,11 +431,10 @@ main_config()
 
 		// Reread config file for global settings.
 	init_params(0);
+
 		// Process any changes in the slot type specifications
-	done_allocating = resmgr->reconfig_resources();
-	if( done_allocating ) {
-		finish_main_config();
-	}
+	resmgr->reconfig_resources();
+	finish_main_config();
 }
 
 
@@ -698,8 +697,9 @@ startd_exit()
 {
 	// print resources into log.  we need to do this before we free them
 	if(param_boolean("STARTD_PRINT_ADS_ON_SHUTDOWN", false)) {
+		auto_free_ptr slot_types(param("STARTD_PRINT_ADS_FILTER"));
 		dprintf(D_ALWAYS, "*** BEGIN AD DUMP ***\n");
-		resmgr->walk(&Resource::dropAdInLogFile);
+		resmgr->printSlotAds(slot_types);
 		dprintf(D_ALWAYS, "*** END AD DUMP ***\n");
 	}
 

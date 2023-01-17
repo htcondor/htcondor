@@ -29,6 +29,9 @@ FILE *my_popenv( const char *const argv [],
 #define MY_POPEN_OPT_FAIL_QUIETLY 0x0002 // failure is an option, don't dprintf or write to stderr for common errors
 
 int my_pclose( FILE *fp );
+// This calls my_pclose_ex() with its own arguments but has a
+// backwards-compatible return code (like my_pclose()).
+int my_pclose( FILE *fp, unsigned int timeout, bool kill_after_timeout );
 int my_pclose_ex( FILE *fp, unsigned int timeout, bool kill_after_timeout );
 // special return values from my_pclose_ex that are not exit statuses
 #define MYPCLOSE_EX_NO_SUCH_FP     ((int)0xB4B4B4B4) // fp is not in my_popen tables mapping fp -> pid

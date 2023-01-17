@@ -34,7 +34,8 @@ class JobTransforms {
 		ClassAd *ad,
 		const PROC_ID & jid,
 		classad::References * xform_attrs,
-		CondorError *errorStack);
+		CondorError *errorStack,
+		bool is_late_mat = false);
 
 	bool shouldTransform() { return !transforms_list.IsEmpty(); }
 

@@ -3014,8 +3014,7 @@ obtainAdsFromCollector (
 						// Expression is valid, now evaluate it
 						// old ad is "my", new one is "target"
 					classad::Value er;
-					int evalRet = EvalExprTree(expr, oldAd, ad, er);
-
+					int evalRet = EvalExprToBool(expr, oldAd, ad, er);
 					if( !evalRet || !er.IsBooleanValueEquiv(replace) ) {
 							// Something went wrong
 						dprintf(D_ALWAYS, "Can't evaluate STARTD_AD_REEVAL_EXPR %s as a bool, treating as TRUE\n", exprStr);
@@ -4230,7 +4229,7 @@ EvalNegotiatorMatchRank(char const *expr_name,ExprTree *expr,
 	classad::Value result;
 	double rank = -(DBL_MAX);
 
-	if(expr && EvalExprTree(expr,resource,&request,result)) {
+	if(expr && EvalExprToNumber(expr,resource,&request,result)) {
 		double val;
 		if( result.IsNumber(val) ) {
 			rank = (float)val;
@@ -4678,7 +4677,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 						machine_name.c_str(), cluster_id, proc_id);
 				continue;
 			}
-			if ( !(EvalExprTree(rankCondStd, candidate, &request, result) &&
+			if ( !(EvalExprToBool(rankCondStd, candidate, &request, result) &&
 				   result.IsBooleanValue(val) && val) ) {
 					// offer does not strictly prefer this request.
 					// try the next offer since only_for_statdrank flag is set
@@ -4703,7 +4702,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			 (candidatePreemptState == NO_PREEMPTION) // have we not already considered preemption?
 		   )
 		{
-			if( EvalExprTree(rankCondStd, candidate, &request, result) &&
+			if( EvalExprToBool(rankCondStd, candidate, &request, result) &&
 				result.IsBooleanValue(val) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -4717,7 +4716,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq &&
-					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					!(EvalExprToBool(PreemptionReq,candidate,&request,result) &&
 					  result.IsBooleanValue(val) && val) ) {
 					rejPreemptForPolicy++;
 					dprintf(D_MACHINE,
@@ -4728,7 +4727,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+				if(!(EvalExprToBool(rankCondPrioPreempt,candidate,&request,result)&&
 					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					rejPreemptForRank++;
@@ -5681,7 +5680,7 @@ cache_still_valid(ClassAd &request, ExprTree *preemption_req, ExprTree *preempti
 			classad::Value result;
 			bool val;
 			if (preemption_req &&
-				!(EvalExprTree(preemption_req,next_entry->ad,&request,result) &&
+				!(EvalExprToBool(preemption_req,next_entry->ad,&request,result) &&
 				  result.IsBooleanValue(val) && val) )
 			{
 				dprintf(D_FULLDEBUG,
@@ -6360,7 +6359,7 @@ Matchmaker::pslotMultiMatch(ClassAd *job, ClassAd *machine, const char *submitte
 			result.SetBooleanValue(false);
 
 				// Evalute preemption req into result
-			EvalExprTree(PreemptionReq,dslotCandidateAd,job,result);
+			EvalExprToBool(PreemptionReq,dslotCandidateAd,job,result);
 
 			bool shouldPreempt = false;
 			if (!result.IsBooleanValue(shouldPreempt) || (shouldPreempt == false)) {

@@ -153,11 +153,14 @@ get_distribution() {
 		# platforms follow.
 		#
 		#     debian bullseye 11
+		#     ubuntu bionic
 		#     ubuntu focal
+		#     ubuntu jammy
 		#     centos 7
 		#     rocky 8
+		#     rocky 9
 		#     almalinux 8
-		#     amzn 2
+		#     almalinux 9
 		#
 
 		read lsb_dist dist_version dist_version_number <<< $DISTRIBUTION
@@ -274,10 +277,18 @@ do_token_security() {
 	# and adjust accordingly, which might make microversion upgrades easier.
 	$sh_c "rm -f /etc/condor/config.d/00-htcondor-9.0.config"
 
+	# Ensure that the password directory exists, since the condor_master has
+	# not yet been run.
+	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_PASSWORD_DIRECTORY)"
+
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
 	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
 	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+
+	# Ensure that the tokens directory exists, since the condor_master has
+	# not yet been run.
+	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
@@ -415,7 +426,7 @@ do_install() {
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
 				case $lsb_dist.$dist_version in
-				    ubuntu.focal|ubuntu.bionic)
+				    ubuntu.bionic|ubuntu.focal|ubuntu.jammy)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
 	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
                     ;;
@@ -465,12 +476,18 @@ do_install() {
 				almalinux.8|rocky.8 ) $sh_c "dnf -y install dnf-plugins-core"
 				                 $sh_c "dnf config-manager --set-enabled PowerTools || dnf config-manager --set-enabled powertools"
 				                 ;;
+				almalinux.9|rocky.9 ) $sh_c "dnf -y install dnf-plugins-core"
+				                 $sh_c "dnf config-manager --set-enabled crb"
+				                 ;;
 				# subscription-manager only works if you've already
 				# "register"ed and "attach"ed the system.
 				rhel.7 ) $sh_c "subscription-manager repos --enable \"rhel-*-optional-rpms\" --enable \"rhel-*-extras-rpms\" --enable \"rhel-ha-for-rhel-*-server-rpms\""
 				         ;;
 				rhel.8 ) ARCH=$(/bin/arch)
 				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-8-${ARCH}-rpms\""
+				         ;;
+				rhel.9 ) ARCH=$(/bin/arch)
+				         $sh_c "subscription-manager repos --enable \"codeready-builder-for-rhel-9-${ARCH}-rpms\""
 				         ;;
 			esac
 
@@ -618,7 +635,7 @@ do_download() {
 			OS_NAME="AlmaLinux"
 			;;
 		rocky)
-			OS_NAME="Rocky"
+			OS_NAME="AlmaLinux"
 			;;
 		amzn)
 			OS_NAME="AmazonLinux"

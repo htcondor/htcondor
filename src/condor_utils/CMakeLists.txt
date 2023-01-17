@@ -254,7 +254,6 @@ cron_job_list.cpp
 cron_job_mgr.cpp
 cron_job_mode.cpp
 cron_job_params.cpp
-cronos.cpp
 cron_param.cpp
 dagman_utils.cpp
 dagman_utils.h
@@ -530,6 +529,7 @@ if(LINUX)
 		hibernator.linux.h
 		network_adapter.linux.cpp
 		network_adapter.linux.h
+		proc_family_direct_cgroup_v2.cpp
 	)
 endif(LINUX)
 

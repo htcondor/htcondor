@@ -448,17 +448,17 @@ class ProcAPI {
   //
   static int getPidFamily( pid_t pid,
                            PidEnvID *penvid,
-                           ExtArray<pid_t>& pidFamily,
+                           std::vector<pid_t>& pidFamily,
                            int &status );
   static int getPidFamilyByLogin( const char *searchLogin,
-                                  ExtArray<pid_t>& pidFamily );
+                                  std::vector<pid_t>& pidFamily );
   static int getProcSetInfo ( pid_t *pids,
                               int numpids,
                               piPTR& pi,
                               int &status );
   static int isinfamily ( pid_t *, int, PidEnvID*, piPTR ); 
 #if defined(WIN32)
-  static ExtArray<HANDLE> familyHandles;
+  static std::vector<HANDLE> familyHandles;
   static void makeFamily( pid_t dadpid,
                           PidEnvID *penvid,
                           pid_t *allpids,

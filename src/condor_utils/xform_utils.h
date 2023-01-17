@@ -195,6 +195,7 @@ public:
 	void set_live_variable(const char* name, const char* live_value, MACRO_EVAL_CONTEXT & ctx);
 	void set_iterate_step(int step, int proc);
 	void set_iterate_row(int row, bool iterating);
+	void set_factory_vars(int isCluster, bool lateMat);
 	void clear_live_variables() const;
 
 	const char * get_RulesFilename();

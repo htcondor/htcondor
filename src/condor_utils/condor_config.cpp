@@ -3013,16 +3013,19 @@ static StringList PersistAdminList;
 
 class RuntimeConfigItem {
 public:
-	RuntimeConfigItem() : admin(NULL), config(NULL) { }
+	RuntimeConfigItem() : admin(nullptr), config(nullptr) { }
+	RuntimeConfigItem(char *admin, char *config): admin(admin), config(config) {}
+	RuntimeConfigItem(const RuntimeConfigItem &rhs): admin(strdup(rhs.admin)), config(strdup(rhs.config))  {}
+
 	~RuntimeConfigItem() { if (admin) free(admin); if (config) free(config); }
-	void initialize() { admin = config = NULL; }
+	void initialize() { admin = config = nullptr; }
 	char *admin;
 	char *config;
 };
 
 #include "extArray.h"
 
-static ExtArray<RuntimeConfigItem> rArray;
+static std::vector<RuntimeConfigItem> rArray;
 
 static MyString toplevel_persistent_config;
 
@@ -3282,7 +3285,7 @@ set_persistent_config(char *admin, char *config)
 int
 set_runtime_config(char *admin, char *config)
 {
-	int i;
+	size_t i;
 
 	if (!admin || !admin[0] || !enable_runtime) {
 		if (admin)  { free(admin);  }
@@ -3291,7 +3294,7 @@ set_runtime_config(char *admin, char *config)
 	}
 
 	if (config && config[0]) {
-		for (i=0; i <= rArray.getlast(); i++) {
+		for (i=0; i < rArray.size(); i++) {
 			if (strcmp(rArray[i].admin, admin) == MATCH) {
 				free(admin);
 				free(rArray[i].config);
@@ -3299,23 +3302,20 @@ set_runtime_config(char *admin, char *config)
 				return 0;
 			}
 		}
-		rArray[i].admin = admin;
-		rArray[i].config = config;
-	} else {
-		for (i=0; i <= rArray.getlast(); i++) {
-			if (strcmp(rArray[i].admin, admin) == MATCH) {
-				free(admin);
-				if (config) free(config);
-				free(rArray[i].admin);
-				free(rArray[i].config);
-				rArray[i] = rArray[rArray.getlast()];
-				rArray[rArray.getlast()].initialize();
-				rArray.truncate(rArray.getlast()-1);
-				return 0;
-			}
-		}
-	}
 
+		rArray.emplace_back(admin,config );
+	} else {
+		// config is nullptr or zero-length, meaning "remove"
+		auto it = std::remove_if(rArray.begin(), rArray.end(),
+				[&admin](const RuntimeConfigItem &rci) { 
+					return strcmp(rci.admin,admin) == MATCH;
+				}
+		);
+		rArray.erase(it, rArray.end());
+		free(admin);
+		if (config) free(config);
+		return 0;
+	}
 	return 0;
 }
 
@@ -3426,7 +3426,7 @@ process_persistent_configs()
 static int
 process_runtime_configs()
 {
-	int i, rval;
+	int rval;
 	bool processed = false;
 
 	MACRO_SOURCE source;
@@ -3435,12 +3435,12 @@ process_runtime_configs()
 	MACRO_EVAL_CONTEXT ctx;
 	init_macro_eval_context(ctx);
 
-	for (i=0; i <= rArray.getlast(); i++) {
+	for (size_t i=0; i < rArray.size(); i++) {
 		processed = true;
-		source.line = i;
+		source.line = (int)i;
 		rval = Parse_config_string(source, 0, rArray[i].config, ConfigMacroSet, ctx);
 		if (rval < 0) {
-			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%d] name '%s', at line %d in config: %s\n",
+			dprintf( D_ALWAYS | D_ERROR, "Configuration Error parsing runtime[%zu] name '%s', at line %d in config: %s\n",
 					 i, rArray[i].admin, source.meta_off+1, rArray[i].config);
 			exit(1);
 		}

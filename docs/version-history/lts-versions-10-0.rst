@@ -7,6 +7,40 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1002:
+
+Version 10.0.2
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.2 released on Month Date, 2023.
+
+- HTCondor version 10.0.2 not yet released.
+
+New Features:
+
+- Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
+  a transfer output remap to create directories in allowed places if they
+  do not exist at tranfser output time.
+  :jira:`1480`
+
+- Fixed a bug where **condor_now** could not use the resources freed by
+  evicting a job if its procID was 1.
+  :jira:`1519`
+
+Bugs Fixed:
+
+- Attempting to use a file-transfer plug-in that doesn't exist is no longer
+  silently ignored.  This could happen due to different bug, where plug-ins
+  specified only in ``transfer_output_remaps`` were not automatically added
+  to a job's requirements.
+  :jira:`1501`
+
+- Fixed a bug that caused the *condor_startd* to exit when thinpool
+  provisioned filesystems were enabled
+  :jira:`1524`
+
 .. _lts-version-history-1001:
 
 Version 10.0.1
@@ -14,21 +48,30 @@ Version 10.0.1
 
 Release Notes:
 
-.. HTCondor version 10.0.1 released on Month Date, 2022.
-
-- HTCondor version 10.0.1 not yet released.
+- HTCondor version 10.0.1 released on January 5, 2023.
 
 New Features:
 
+- Add support for Ubuntu 22.04 LTS (Jammy Jellyfish).
+  :jira:`1304`
+
+- HTCondor now includes a file transfer plugin that support ``stash://``
+  and ``osdf://`` URLs.
+  :jira:`1332`
+
 - The Windows installer now uses the localized name of the Users group
-  so that it can be installed on non-english Windows platforms
+  so that it can be installed on non-English Windows platforms.
   :jira:`1474`
 
-Bugs Fixed:
+- OpenCL jobs can now run inside a Singularity container launched by HTCondor if the
+  OpenCL drivers are present on the host in directory ``/etc/OpenCL/vendors``.
+  :jira:`1410`
 
-- Fixed a bug where *condor_rm*'ing with the -forcex option
-  on a scheduler universe job could cause a schedd crash.
-  :jira:`1472`
+- The ``CompletionDate`` attribute of jobs is now undefined until such time as the job completes
+  previously it was 0.
+  :jira:`1393`
+
+Bugs Fixed:
 
 - Fixed a bug where Debian, Ubuntu and other Linux platforms with
   swap accounting disabled in the kernel would never put
@@ -36,32 +79,40 @@ Bugs Fixed:
   MEMORY_LIMIT_POLICY was set to hard or soft.
   :jira:`1466`
 
-- Fixed bug in the curl plugin where it would crash on EL8
-  systems when using a file:// url type
+- Fixed a bug where using the ``-forcex`` option with *condor_rm*
+  on a scheduler universe job could cause a *condor_schedd* crash.
+  :jira:`1472`
+
+- Fixed bugs in the container universe that prevented
+  apptainer-only systems from running container universe jobs
+  with Docker repository style images.
+  :jira:`1412`
+
+- Docker universe and container universe job that use the docker runtime now detect
+  when the Unix uid or gid has the high bit set, which docker does not support.
+  :jira:`1421`
+
+- Grid universe **batch** works again on Debian and Ubuntu.
+  Since 9.5.0, some required files had been missing.
+  :jira:`1475`
+
+- Fixed bug in the curl plugin where it would crash on Enterprise Linux 8
+  systems when using a file:// url type.
   :jira:`1426`
 
-- Fixed bug in where the multifile curl plugin would fail to timeout
+- Fixed bug in where the multi-file curl plugin would fail to timeout
   due lack of upload or download progress if a large amount of bytes
-  where transfered at some point.
+  where transferred at some point.
   :jira:`1403`
+  
+- Fixed bug where the multi-file curl plugin would fail to receive a SciToken
+  if it was in raw format rather than json.
+  :jira:`1447`
   
 - Fixed a bug that prevented the starter from properly mounting
   thinpool provisioned ephemeral scratch directories.
   :jira:`1419`
 
-- Fixed bugs in the container universe that prevented
-  apptainer-only systems from running container universe jobs
-  with docker-repo style images.
-  :jira:`1412`
-
-- Docker universe and container universe job that use the docker runtime now detect
-  when the unix uid or gid has the high bit set, which docker does not support.
-  :jira:`1421`
-
-- Fixed bug where the multifile curl plugin would fail to recieve scitoken
-  if it was in raw format rather than json.
-  :jira:`1447`
-  
 - Fixed a bug where SSL authentication with the *condor_collector* could
   fail when the provided hostname is not a DNS CNAME.
   :jira:`1443`
@@ -83,12 +134,16 @@ Bugs Fixed:
   :jira:`1458`
 
 - Fixed a bug that would cause tools that have the ``-printformat`` argument to segfault
-  when the format file contained a ``FIELDPREFIX``,``FIELDSUFFIX``,``RECORDPREFIX`` or ``RECORDSUFFIX``.
+  when the format file contained a ``FIELDPREFIX``, ``FIELDSUFFIX``, ``RECORDPREFIX`` or ``RECORDSUFFIX``.
   :jira:`1464`
 
 - Fixed a bug in the ``RENAME`` command of the transform language that could result in a
   crash of the *condor_schedd* or *condor_job_router*.
   :jira:`1486`
+
+- For tarball installations, the *condor_configure* script now configures
+  HTCondor to use user based security.
+  :jira:`1461`
 
 .. _lts-version-history-1000:
 

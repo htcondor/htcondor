@@ -19,6 +19,7 @@
 
 
 #include "condor_common.h"
+#include "condor_state.h"
 #include "startd.h"
 #include "startd_hibernator.h"
 #include "startd_named_classad_list.h"
@@ -30,10 +31,27 @@
 #include "condor_netdb.h"
 #include "token_utils.h"
 #include "data_reuse.h"
+#include <algorithm>
 
 #include "slot_builder.h"
 
 #include "strcasestr.h"
+
+struct slotOrderSorter {
+   bool operator()(const Resource *r1, const Resource *r2) {
+		if (r1->r_id < r2->r_id) {
+			return true;
+		}
+		if (r1->r_id > r2->r_id) {
+			return false;
+		}
+		if (r1->r_sub_id < r2->r_sub_id) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+};
 
 
 ResMgr::ResMgr() :
@@ -544,17 +562,9 @@ ResMgr::typeNumCmp( const int* a, const int* b ) const
 	return true;
 }
 
-bool
+void
 ResMgr::reconfig_resources( void )
 {
-	int t, i, cur, num;
-	CpuAttributes** new_cpu_attrs;
-	bool *bkfill_bools = nullptr;
-	int max_num = num_cpus();
-	int* cur_type_index;
-	Resource*** sorted_resources;	// Array of arrays of pointers.
-	Resource* rip;
-
 	dprintf(D_ALWAYS, "beginning reconfig_resources\n");
 
 #if HAVE_BACKFILL
@@ -580,122 +590,6 @@ ResMgr::reconfig_resources( void )
 		// any errors, just dprintf().
 	ASSERT(max_types > 0);
 	SlotType::init_types(max_types, false);
-	initTypes( max_types, type_strings, 0 );
-
-		// First, see how many slots of each type are specified.
-	num = countTypes( max_types, num_cpus(), &new_type_nums, &bkfill_bools, false );
-
-	if( typeNumCmp(new_type_nums, type_nums) ) {
-			// We want the same number of each slot type that we've got
-			// now.  We're done!
-		dprintf(D_ALWAYS, "no change to slot type config, exiting reconfig_resources\n");
-		delete [] new_type_nums;
-		delete [] bkfill_bools;
-		new_type_nums = NULL;
-		bkfill_bools = nullptr;
-		return true;
-	}
-
-		// See if the config file allows for a valid set of
-		// CpuAttributes objects.
-	new_cpu_attrs = buildCpuAttrs( m_attr, max_types, type_strings, num, new_type_nums, bkfill_bools, false );
-	if( ! new_cpu_attrs ) {
-			// There was an error, abort.  We still return true to
-			// indicate that we're done doing our thing...
-		dprintf( D_ALWAYS, "Aborting slot type reconfig.\n" );
-		delete [] new_type_nums;
-		delete [] bkfill_bools;
-		new_type_nums = NULL;
-		bkfill_bools = nullptr;
-		return true;
-	}
-
-		////////////////////////////////////////////////////
-		// Sort all our resources by type and state.
-		////////////////////////////////////////////////////
-
-		// Allocate and initialize our arrays.
-	sorted_resources = new Resource** [max_types];
-	ASSERT( sorted_resources != NULL );
-	for( i=0; i<max_types; i++ ) {
-		sorted_resources[i] = new Resource* [max_num];
-		ASSERT(sorted_resources[i] != NULL);
-		memset( sorted_resources[i], 0, (max_num*sizeof(Resource*)) );
-	}
-
-	cur_type_index = new int [max_types];
-	memset( cur_type_index, 0, (max_types*sizeof(int)) );
-
-		// Populate our sorted_resources array by type.
-	for( i=0; i<nresources; i++ ) {
-		t = resources[i]->type();
-		(sorted_resources[t])[cur_type_index[t]] = resources[i];
-		cur_type_index[t]++;
-	}
-
-		// Now, for each type, sort our resources by state.
-	for( t=0; t<max_types; t++ ) {
-		ASSERT( cur_type_index[t] == type_nums[t] );
-		qsort( sorted_resources[t], type_nums[t],
-			   sizeof(Resource*), &claimedRankCmp );
-	}
-
-		////////////////////////////////////////////////////
-		// Decide what we need to do.
-		////////////////////////////////////////////////////
-	cur = -1;
-	for( t=0; t<max_types; t++ ) {
-		for( i=0; i<new_type_nums[t]; i++ ) {
-			cur++;
-			if( ! (sorted_resources[t])[i] ) {
-					// If there are no more existing resources of this
-					// type, we'll need to allocate one.
-				alloc_list.Append( new_cpu_attrs[cur] );
-				continue;
-			}
-			if( (sorted_resources[t])[i]->type() ==
-				new_cpu_attrs[cur]->type() ) {
-					// We've already got a Resource for this slot, so we
-					// can delete it.
-				delete new_cpu_attrs[cur];
-				continue;
-			}
-		}
-			// We're done with the new slots of this type.  See if there
-			// are any Resources left over that need to be destroyed.
-		for( ; i<max_num; i++ ) {
-			if( (sorted_resources[t])[i] ) {
-				destroy_list.Append( (sorted_resources[t])[i] );
-			} else {
-				break;
-			}
-		}
-	}
-
-		////////////////////////////////////////////////////
-		// Finally, act on our decisions.
-		////////////////////////////////////////////////////
-
-		// Everything we care about in new_cpu_attrs is saved
-		// elsewhere, and the rest has already been deleted, so we
-		// should now delete the array itself.
-	delete [] new_cpu_attrs;
-	delete [] bkfill_bools;
-
-		// Cleanup our memory.
-	for( i=0; i<max_types; i++ ) {
-		delete [] sorted_resources[i];
-	}
-	delete [] sorted_resources;
-	delete [] cur_type_index;
-
-		// See if there's anything to destroy, and if so, do it.
-	destroy_list.Rewind();
-	while( destroy_list.Next(rip) ) {
-		rip->dprintf( D_ALWAYS,
-					  "State change: resource no longer needed by configuration\n" );
-		rip->set_destination_state( delete_state );
-	}
 
 	std::string reuse_dir;
 	if (param(reuse_dir, "DATA_REUSE_DIRECTORY")) {
@@ -706,20 +600,16 @@ ResMgr::reconfig_resources( void )
 		m_reuse_dir.reset();
 	}
 
-
-		// Finally, call our helper, so that if all the slots we need to
-		// get rid of are gone by now, we'll allocate the new ones.
-	return processAllocList();
 }
 
 void
 ResMgr::walk( VoidResourceMember memberfunc )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
-    double currenttime = stats.BeginWalk(memberfunc);
+	double currenttime = stats.BeginWalk(memberfunc);
 
 		// Because the memberfunc might be an eval function, it can
 		// result in resources being deleted. This means a straight
@@ -736,49 +626,22 @@ ResMgr::walk( VoidResourceMember memberfunc )
 
 	delete [] cache;
 
-    stats.EndWalk(memberfunc, currenttime);
+	stats.EndWalk(memberfunc, currenttime);
 }
 
-
-void
-ResMgr::walk( ResourceMaskMember memberfunc, amask_t mask )
-{
-	if( ! resources ) {
-		return;
-	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		(resources[i]->*(memberfunc))(mask);
-	}
-}
-
-
-float
+double
 ResMgr::sum( ResourceFloatMember memberfunc )
 {
 	if( ! resources ) {
 		return 0;
 	}
 	int i;
-	float tot = 0;
+	double tot = 0;
 	for( i = 0; i < nresources; i++ ) {
 		tot += (resources[i]->*(memberfunc))();
 	}
 	return tot;
 }
-
-
-void
-ResMgr::resource_sort( ComparisonFunc compar )
-{
-	if( ! resources ) {
-		return;
-	}
-	if( nresources > 1 ) {
-		qsort( resources, nresources, sizeof(Resource*), compar );
-	}
-}
-
 
 // Methods to manipulate the supplemental ClassAd list
 int
@@ -909,13 +772,14 @@ ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 									const char *claimId)
 {
 	Claim* foo = NULL;
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( (foo = resources[i]->findClaimByGlobalJobId(job_id)) ) {
-			if( foo == resources[i]->findClaimById(claimId) ) {
+		Resource * rip = resources[i];
+		if( (foo = rip->findClaimByGlobalJobId(job_id)) ) {
+			if( foo == rip->findClaimById(claimId) ) {
 				return foo;
 			}
 		}
@@ -928,11 +792,10 @@ ResMgr::getClaimByGlobalJobIdAndId( const char *job_id,
 Resource*
 ResMgr::findRipForNewCOD( ClassAd* ad )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	bool requirements;
-	int i;
+	Resource * foundRip = nullptr;
 
 		/*
           We always ensure that the request's Requirements, if any,
@@ -947,24 +810,57 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
   		     value of machine Rank for its claim
 		*/
 
+	auto CODLessThan = [](const Resource *r1, const Resource *r2) {
+		int numCOD1 = r1->r_cod_mgr->numClaims();
+		int numCOD2 = r2->r_cod_mgr->numClaims();
+
+		if (numCOD1 < numCOD2) {
+			return true;
+		}
+
+		if (numCOD1 > numCOD2) {
+			return false;
+		}
+
+		if (r1->state() < r2->state()) {
+			return true;
+		}
+		if (r1->state() > r2->state()) {
+			return false;
+		}
+
+		State s = r1->state();
+		if ((s == claimed_state) || (s == preempting_state)) {
+			if (r1->r_cur->rank() < r2->r_cur->rank()) {
+				return true;
+			}
+			if (r1->r_cur->rank() > r2->r_cur->rank()) {
+				return false;
+			}
+		}
+		// Otherwise, by pointer, just to avoid loops
+		return r1 < r2;
+
+
+	};
+
 		// sort resources based on the above order
-	resource_sort( newCODClaimCmp );
+	std::sort(resources, &resources[nresources], CODLessThan);
 
 		// find the first one that matches our requirements
-	for( i = 0; i < nresources; i++ ) {
-		if( EvalBool( ATTR_REQUIREMENTS, ad, resources[i]->r_classad,
-						  requirements ) == 0 ) {
-			requirements = false;
-		}
-		if( requirements ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		bool value = false;
+		if (EvalBool(ATTR_REQUIREMENTS, ad, rip->r_classad, value) && value) {
+			foundRip = rip;
+			break;
 		}
 	}
 
 	// put the resources back into a "natural" order
-	resource_sort(naturalSlotOrderCmp);
+	std::sort(resources, &resources[nresources], slotOrderSorter{});
 
-	return NULL;
+	return foundRip;
 }
 
 
@@ -972,13 +868,13 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 Resource*
 ResMgr::get_by_cur_id(const char* id )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if( rip->r_cur->idMatches(id) ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -988,32 +884,30 @@ ResMgr::get_by_cur_id(const char* id )
 Resource*
 ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_cur->idMatches(id) ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if (rip->r_cur->idMatches(id)) {
+			return rip;
 		}
-		if( resources[i]->r_pre &&
-			resources[i]->r_pre->idMatches(id) ) {
-			return resources[i];
+		if (rip->r_pre && rip->r_pre->idMatches(id)) {
+			return rip;
 		}
-		if( resources[i]->r_pre_pre &&
-			resources[i]->r_pre_pre->idMatches(id) ) {
-			return resources[i];
+		if (rip->r_pre_pre && rip->r_pre_pre->idMatches(id) ) {
+			return rip;
 		}
-		if (resources[i]->r_has_cp) {
-			for (Resource::claims_t::iterator j(resources[i]->r_claims.begin());  j != resources[i]->r_claims.end();  ++j) {
+		if (rip->r_has_cp) {
+			for (Resource::claims_t::iterator j(rip->r_claims.begin());  j != rip->r_claims.end();  ++j) {
 				if ((*j)->idMatches(id)) {
 					if ( move_cp_claim ) {
-						delete resources[i]->r_cur;
-						resources[i]->r_cur = *j;
-						resources[i]->r_claims.erase(*j);
-						resources[i]->r_claims.insert(new Claim(resources[i]));
+						delete rip->r_cur;
+						rip->r_cur = *j;
+						rip->r_claims.erase(*j);
+						rip->r_claims.insert(new Claim(rip));
 					}
-					return resources[i];
+					return rip;
 				}
 			}
 		}
@@ -1025,13 +919,14 @@ ResMgr::get_by_any_id(const char* id, bool move_cp_claim )
 Resource*
 ResMgr::get_by_name(const char* name )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int i;
 	for( i = 0; i < nresources; i++ ) {
-		if( !strcmp(resources[i]->r_name, name) ) {
-			return resources[i];
+		Resource * rip = resources[i];
+		if( !strcmp(rip->r_name, name) ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -1040,23 +935,25 @@ ResMgr::get_by_name(const char* name )
 Resource*
 ResMgr::get_by_name_prefix(const char* name )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
 	int len = (int)strlen(name);
 	for (int i = 0; i < nresources; i++ ) {
-		const char * pat = strchr(resources[i]->r_name, '@');
-		if (pat && (int)(pat - resources[i]->r_name) == len && strncasecmp(name, resources[i]->r_name, len) == MATCH) {
-			return resources[i];
+		Resource * rip = resources[i];
+		const char * pat = strchr(rip->r_name, '@');
+		if (pat && (int)(pat - rip->r_name) == len && strncasecmp(name, rip->r_name, len) == MATCH) {
+			return rip;
 		}
 	}
 
 	// not found, print possible names
 	StringList names;
 	for(int i = 0; i < nresources; i++ ) {
-		names.append(resources[i]->r_name);
-		if( !strcmp(resources[i]->r_name, name) ) {
-			return resources[i];
+		Resource * rip = resources[i];
+		names.append(rip->r_name);
+		if( !strcmp(rip->r_name, name) ) {
+			return rip;
 		}
 	}
 	auto_free_ptr namelist(names.print_to_string());
@@ -1069,13 +966,13 @@ ResMgr::get_by_name_prefix(const char* name )
 Resource*
 ResMgr::get_by_slot_id( int id )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return NULL;
 	}
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		if( resources[i]->r_id == id ) {
-			return resources[i];
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		if( rip->r_id == id ) {
+			return rip;
 		}
 	}
 	return NULL;
@@ -1085,7 +982,7 @@ ResMgr::get_by_slot_id( int id )
 State
 ResMgr::state( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return owner_state;
 	}
 	State s = no_state;
@@ -1123,7 +1020,7 @@ ResMgr::state( void )
 void
 ResMgr::final_update( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 	walk( &Resource::final_update );
@@ -1267,7 +1164,7 @@ void ResMgr::compute_static()
 void
 ResMgr::compute_dynamic(bool for_update, Resource * rip)
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1340,7 +1237,30 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 		// average and keyboard activity, we get to them in the
 		// following state order: Owner, Unclaimed, Matched, Claimed
 		// Preempting
-	resource_sort( ownerStateCmp );
+
+	// sort first by state, in enum order, then rank, if claimed
+	auto ownerStateLessThan = [](const Resource *r1, const Resource *r2) {
+		if (r1->state() < r2->state()) {
+			return true;
+		}
+		if (r1->state() > r2->state()) {
+			return false;
+		}
+
+		State s = r1->state();
+		if ((s == claimed_state) || (s == preempting_state)) {
+			if (r1->r_cur->rank() < r2->r_cur->rank()) {
+				return true;
+			}
+			if (r1->r_cur->rank() > r2->r_cur->rank()) {
+				return false;
+			}
+		}
+		// Otherwise, by pointer, just to avoid loops
+		return r1 < r2;
+	};
+
+	std::sort(resources, &resources[nresources], ownerStateLessThan);
 
 	assign_load();
 	assign_keyboard();
@@ -1373,11 +1293,15 @@ ResMgr::compute_dynamic(bool for_update, Resource * rip)
 	}
 	if (IsDebugLevel(D_LOAD) || IsDebugLevel(D_KEYBOARD)) {
 		// Now that we're done, we can display all the values.
-		walk(&Resource::display_load, for_update ? A_UPDATE : 0);
+		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
+		if (for_update) {
+			walk(&Resource::display_load);
+		} else if (IsDebugVerbose(D_LOAD) || IsDebugVerbose(D_KEYBOARD)) {
+			walk(&Resource::display_load_as_D_VERBOSE);
+		}
 	}
 
-	// put the resources back into a "natural" order
-	resource_sort(naturalSlotOrderCmp);
+	std::sort(resources, &resources[nresources], slotOrderSorter{});
 
     stats.EndRuntime(stats.Compute, runtime);
 }
@@ -1499,15 +1423,15 @@ ResMgr::updateExtrasClassAd( ClassAd * cap ) {
 void
 ResMgr::publishSlotAttrs( ClassAd* cap )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 	// experimental flags new for 8.9.7, evaluate STARTD_SLOT_ATTRS and insert valid literals only
 	bool as_literal = param_boolean("STARTD_EVAL_SLOT_ATTRS", false);
 	bool valid_only = ! param_boolean("STARTD_EVAL_SLOT_ATTRS_DEBUG", false);
-	int i;
-	for( i = 0; i < nresources; i++ ) {
-		resources[i]->publishSlotAttrs( cap, as_literal, valid_only );
+	for(int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
+		rip->publishSlotAttrs( cap, as_literal, valid_only );
 	}
 }
 
@@ -1515,12 +1439,12 @@ ResMgr::publishSlotAttrs( ClassAd* cap )
 void
 ResMgr::assign_load( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
 	int i;
-	float total_owner_load = m_attr->load() - m_attr->condor_load();
+	double total_owner_load = m_attr->load() - m_attr->condor_load();
 	if( total_owner_load < 0 ) {
 		total_owner_load = 0;
 	}
@@ -1560,7 +1484,7 @@ ResMgr::assign_load( void )
 void
 ResMgr::assign_keyboard( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1597,7 +1521,7 @@ ResMgr::assign_keyboard( void )
 void
 ResMgr::check_polling( void )
 {
-	if( ! resources ) {
+	if ( ! numSlots()) {
 		return;
 	}
 
@@ -1814,14 +1738,6 @@ ResMgr::removeResource( Resource* rip )
 		}
 	}
 
-		// Remove this rip from our destroy_list.
-	destroy_list.Rewind();
-	while( destroy_list.Next(rip2) ) {
-		if( rip2 == rip ) {
-			destroy_list.DeleteCurrent();
-			break;
-		}
-	}
 
 		// Now, delete the old array and start using the new one, if
 		// it's there at all.  If not, it'll be NULL and this will all
@@ -1909,15 +1825,9 @@ ResMgr::deleteResource( Resource* rip )
 			// Didn't find it.  This is where we'll hit if resources
 			// is NULL.  We should never get here, anyway (we'll never
 			// call deleteResource() if we don't have any resources.
-		EXCEPT( "ResMgr::deleteResource() failed: couldn't find resource" );
+		dprintf(D_ERROR, "ResMgr::deleteResource() failed: couldn't find resource\n" );
 	}
 
-		// Now that a Resource is gone, see if we're done deleting
-		// Resources and see if we should allocate any.
-	if( processAllocList() ) {
-			// We're done allocating, so we can finish our reconfig.
-		finish_main_config();
-	}
 }
 
 // return the count of claims on this machine associated with this user
@@ -2004,39 +1914,40 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 		// some timing stuff won't work.
 	int num_ads = 0;
 	for (int ii=0; ii<nresources; ++ii) {
+		Resource * rip = resources[ii];
 		if (limit_results >= 0 && num_ads >= limit_results) {
 			dprintf(D_ALWAYS, "result limit of %d reached, completing direct query\n", num_ads);
 			break;
 		}
 
 		ClassAd * res_ad = NULL;
-		if (snapshot && resources[ii]->r_classad) {
-			resources[ii]->r_classad->Unchain();
-			res_ad = new ClassAd(*resources[ii]->r_classad);
-			resources[ii]->r_classad->ChainToAd(resources[ii]->r_config_classad);
+		if (snapshot && rip->r_classad) {
+			rip->r_classad->Unchain();
+			res_ad = new ClassAd(*rip->r_classad);
+			rip->r_classad->ChainToAd(rip->r_config_classad);
 			SetMyTypeName(*res_ad, "Slot.State");
-			res_ad->Assign(ATTR_NAME, resources[ii]->r_name); // stuff a name because the name attribute is in the base ad
+			res_ad->Assign(ATTR_NAME, rip->r_name); // stuff a name because the name attribute is in the base ad
 		}
 		ClassAd * cfg_ad = NULL;
-		if (snapshot && resources[ii]->r_config_classad) {
-			cfg_ad = new ClassAd(*resources[ii]->r_config_classad);
+		if (snapshot && rip->r_config_classad) {
+			cfg_ad = new ClassAd(*rip->r_config_classad);
 			SetMyTypeName(*cfg_ad, "Slot.Config");
 		}
 		ClassAd * claim_ad = NULL;
-		if (snapshot && resources[ii]->r_cur && resources[ii]->r_cur->ad()) {
-			claim_ad = new ClassAd(*resources[ii]->r_cur->ad());
+		if (snapshot && rip->r_cur && rip->r_cur->ad()) {
+			claim_ad = new ClassAd(*rip->r_cur->ad());
 			clean_private_attrs(*claim_ad);
 			SetMyTypeName(*claim_ad, "Slot.Claim");
 		}
 
 		ClassAd * ad = new ClassAd;
-		resources[ii]->publish_single_slot_ad(*ad, cur_time, purp);
+		rip->publish_single_slot_ad(*ad, cur_time, purp);
 
 		if (IsAHalfMatch(&queryAd, ad) /* || (claim_ad && IsAHalfMatch(&queryAd, claim_ad))*/) {
-			ads[resources[ii]->r_name] = ad;
-			if (res_ad) { res_ads[resources[ii]->r_name] = res_ad; }
-			if (cfg_ad) { cfg_ads[resources[ii]->r_name] = cfg_ad; }
-			if (claim_ad) { claim_ads[resources[ii]->r_name] = claim_ad; }
+			ads[rip->r_name] = ad;
+			if (res_ad) { res_ads[rip->r_name] = res_ad; }
+			if (cfg_ad) { cfg_ads[rip->r_name] = cfg_ad; }
+			if (claim_ad) { claim_ads[rip->r_name] = claim_ad; }
 			++num_ads;
 		} else {
 			delete ad;
@@ -2101,35 +2012,6 @@ ResMgr::makeAdList( ClassAdList & list, ClassAd & queryAd )
 }
 
 
-bool
-ResMgr::processAllocList( void )
-{
-	if( ! destroy_list.IsEmpty() ) {
-			// Can't start allocating until everything has been
-			// destroyed.
-		return false;
-	}
-	if( alloc_list.IsEmpty() ) {
-		return true;  // Since there's nothing to allocate...
-	}
-
-		// We're done destroying, and there's something to allocate.
-
-		// Create the new Resource objects.
-	CpuAttributes* cap;
-	alloc_list.Rewind();
-	while( alloc_list.Next(cap) ) {
-		addResource( new Resource( cap, nextId() ) );
-		alloc_list.DeleteCurrent();
-	}
-
-	delete [] type_nums;
-	type_nums = new_type_nums;
-	new_type_nums = NULL;
-
-	return true; 	// Since we're done allocating.
-}
-
 
 #if HAVE_HIBERNATION
 
@@ -2158,7 +2040,7 @@ ResMgr::allHibernating( std::string &target ) const
 {
     	// fail if there is no resource or if we are
 		// configured not to hibernate
-	if (   !resources  ||  !m_hibernation_manager->wantsHibernate()  ) {
+	if ( ! numSlots()  ||  !m_hibernation_manager->wantsHibernate()  ) {
 		dprintf( D_FULLDEBUG, "allHibernating: doesn't want hibernate\n" );
 		return 0;
 	}
@@ -2173,9 +2055,9 @@ ResMgr::allHibernating( std::string &target ) const
 	int level = 0;
 	bool activity = false;
 	for( int i = 0; i < nresources; i++ ) {
-
+		Resource * rip = resources[i];
 		str = "";
-		if ( !resources[i]->evaluateHibernate ( str ) ) {
+		if ( !rip->evaluateHibernate ( str ) ) {
 			return 0;
 		}
 
@@ -2260,16 +2142,17 @@ ResMgr::checkHibernate( void )
 		if ( disableResources( target ) ) {
 			m_hibernation_manager->switchToTargetState( );
 		}
-#     if !defined( WIN32 )
+	#if !defined( WIN32 )
 		sleep(10);
-        m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
-        for ( int i = 0; i < nresources; ++i ) {
-            resources[i]->enable();
-            resources[i]->update_needed(Resource::WhyFor::wf_hiberChange);
+		m_hibernation_manager->setTargetState ( HibernatorBase::NONE );
+		for ( int i = 0; i < nresources; ++i ) {
+			Resource * rip = resources[i];
+			rip->enable();
+			rip->update_needed(Resource::WhyFor::wf_hiberChange);
 			m_hibernating = false;
-	    }
+		}
 
-#     endif
+	#endif
     }
 }
 
@@ -2407,50 +2290,6 @@ ResMgr::check_use( void )
 	}
 }
 
-int
-naturalSlotOrderCmp( const void* a, const void* b )
-{
-	const Resource *rip1 = *((Resource* const *)a);
-	const Resource *rip2 = *((Resource* const *)b);
-
-	int diff = rip1->r_id - rip2->r_id;
-	if (diff) { return diff; }
-	return rip1->r_sub_id - rip2->r_sub_id;
-}
-
-
-int
-ownerStateCmp( const void* a, const void* b )
-{
-	const Resource *rip1, *rip2;
-	int val1, val2, diff;
-	float fval1, fval2;
-	State s;
-	rip1 = *((Resource* const *)a);
-	rip2 = *((Resource* const *)b);
-		// Since the State enum is already in the "right" order for
-		// this kind of sort, we don't need to do anything fancy, we
-		// just cast the state enum to an int and we're done.
-	s = rip1->state();
-	val1 = (int)s;
-	val2 = (int)rip2->state();
-	diff = val1 - val2;
-	if( diff ) {
-		return diff;
-	}
-		// We're still here, means we've got the same state.  If that
-		// state is "Claimed" or "Preempting", we want to break ties
-		// w/ the Rank expression, else, don't worry about ties.
-	if( s == claimed_state || s == preempting_state ) {
-		fval1 = rip1->r_cur->rank();
-		fval2 = rip2->r_cur->rank();
-		diff = (int)(fval1 - fval2);
-		return diff;
-	}
-	return 0;
-}
-
-
 // This is basically the same as above, except we want it in exactly
 // the opposite order, so reverse the signs.
 int
@@ -2458,7 +2297,7 @@ claimedRankCmp( const void* a, const void* b )
 {
 	const Resource *rip1, *rip2;
 	int val1, val2, diff;
-	float fval1, fval2;
+	double fval1, fval2;
 	State s;
 	rip1 = *((Resource* const *)a);
 	rip2 = *((Resource* const *)b);
@@ -2482,71 +2321,17 @@ claimedRankCmp( const void* a, const void* b )
 	return 0;
 }
 
-
-/*
-  Sort resource so their in the right order to give out a new COD
-  Claim.  We give out COD claims in the following order:
-  1) the Resource with the least # of existing COD claims (to ensure
-     round-robin across resources
-  2) in case of a tie, the Resource in the best state (owner or
-     unclaimed, not claimed)
-  3) in case of a tie, the Claimed resource with the lowest value of
-     machine Rank for its claim
-*/
-int
-newCODClaimCmp( const void* a, const void* b )
-{
-	const Resource *rip1, *rip2;
-	int val1, val2, diff;
-	int numCOD1, numCOD2;
-	float fval1, fval2;
-	State s;
-	rip1 = *((Resource* const *)a);
-	rip2 = *((Resource* const *)b);
-
-	numCOD1 = rip1->r_cod_mgr->numClaims();
-	numCOD2 = rip2->r_cod_mgr->numClaims();
-
-		// In the first case, sort based on # of COD claims
-	diff = numCOD1 - numCOD2;
-	if( diff ) {
-		return diff;
-	}
-
-		// If we're still here, we've got same # of COD claims, so
-		// sort based on State.  Since the state enum is already in
-		// the "right" order for this kind of sort, we don't need to
-		// do anything fancy, we just cast the state enum to an int
-		// and we're done.
-	s = rip1->state();
-	val1 = (int)s;
-	val2 = (int)rip2->state();
-	diff = val1 - val2;
-	if( diff ) {
-		return diff;
-	}
-
-		// We're still here, means we've got the same number of COD
-		// claims and the same state.  If that state is "Claimed" or
-		// "Preempting", we want to break ties w/ the Rank expression,
-		// else, don't worry about ties.
-	if( s == claimed_state || s == preempting_state ) {
-		fval1 = rip1->r_cur->rank();
-		fval2 = rip2->r_cur->rank();
-		diff = (int)(fval1 - fval2);
-		return diff;
-	}
-	return 0;
-}
-
-
 void
 ResMgr::FillExecuteDirsList( class StringList *list )
 {
+	if ( ! numSlots())
+		return;
+
 	ASSERT( list );
 	for( int i=0; i<nresources; i++ ) {
-		if( resources[i] ) {
-			char const *execute_dir = resources[i]->executeDir();
+		Resource * rip = resources[i];
+		if (rip) {
+			char const *execute_dir = rip->executeDir();
 			if( !list->contains( execute_dir ) ) {
 				list->append(execute_dir);
 			}
@@ -2646,22 +2431,23 @@ ResMgr::startDraining(
 
 	if( check_expr ) {
 		for( int i = 0; i < nresources; i++ ) {
+			Resource * rip = resources[i];
 			classad::Value v;
 			bool check_ok = false;
 			classad::EvalState eval_state;
-			eval_state.SetScopes( resources[i]->r_classad );
+			eval_state.SetScopes( rip->r_classad );
 			if( !check_expr->Evaluate( eval_state, v ) ) {
-				formatstr(error_msg,"Failed to evaluate draining check expression against %s.", resources[i]->r_name );
+				formatstr(error_msg,"Failed to evaluate draining check expression against %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !v.IsBooleanValue(check_ok) ) {
-				formatstr(error_msg,"Draining check expression does not evaluate to a bool on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression does not evaluate to a bool on %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
 			if( !check_ok ) {
-				formatstr(error_msg,"Draining check expression is false on %s.", resources[i]->r_name );
+				formatstr(error_msg,"Draining check expression is false on %s.", rip->r_name );
 				error_code = DRAINING_CHECK_EXPR_FAILED;
 				return false;
 			}
@@ -2679,7 +2465,8 @@ ResMgr::startDraining(
 	// Insert draining attributes into the resource ads, in case the
 	// retirement expression uses them.
 	for( int i = 0; i < nresources; i++ ) {
-		ClassAd &ad = *(resources[i]->r_classad);
+		Resource * rip = resources[i];
+		ClassAd &ad = *(rip->r_classad);
 		// put these into the resources ClassAd now, they are also set by this->publish
 		ad.InsertAttr( ATTR_DRAIN_REASON, reason );
 		ad.InsertAttr( ATTR_DRAINING, true );
@@ -2800,6 +2587,7 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 
 	int longest_retirement_remaining = 0;
 	for( int i = 0; i < nresources; i++ ) {
+		Resource * rip = resources[i];
 		// The max job retirement time of jobs accepted while draining is
 		// implicitly zero.  Otherwise, we'd need to record the result of
 		// this computation at the instant we entered draining state and
@@ -2807,8 +2595,8 @@ ResMgr::gracefulDrainingTimeRemaining(Resource * /*rip*/)
 		// probably be more efficient, but would be a small semantic change,
 		// because jobs would no longer be able to voluntarily reduce their
 		// max job retirement time after retirement began.
-		if(! resources[i]->wasAcceptedWhileDraining()) {
-			int retirement_remaining = resources[i]->evalRetirementRemaining();
+		if(! rip->wasAcceptedWhileDraining()) {
+			int retirement_remaining = rip->evalRetirementRemaining();
 			if( retirement_remaining > longest_retirement_remaining ) {
 				longest_retirement_remaining = retirement_remaining;
 			}
@@ -2825,7 +2613,8 @@ ResMgr::drainingIsComplete(Resource * /*rip*/)
 	}
 
 	for( int i = 0; i < nresources; i++ ) {
-		if( resources[i]->state() != drained_state ) {
+		Resource * rip = resources[i];
+		if( rip->state() != drained_state ) {
 			return false;
 		}
 	}
@@ -2840,8 +2629,9 @@ ResMgr::considerResumingAfterDraining()
 	}
 
 	for( int i = 0; i < nresources; i++ ) {
-		if( resources[i]->state() != drained_state ||
-			resources[i]->activity() != idle_act )
+		Resource * rip = resources[i];
+		if( rip->state() != drained_state ||
+			rip->activity() != idle_act )
 		{
 			return false;
 		}
@@ -2993,15 +2783,16 @@ ResMgr::adlist_unset_monitors( unsigned r_id, ClassAd * forWhom ) {
 
 void
 ResMgr::checkForDrainCompletion() {
-	if( ! resources ) { return; }
+	if ( ! numSlots()) { return; }
 
 	bool allAcceptedWhileDraining = true;
 	for( int i = 0; i < nresources; ++i ) {
-		if(! resources[i]->wasAcceptedWhileDraining()) {
+		Resource * rip = resources[i];
+		if(! rip->wasAcceptedWhileDraining()) {
 			// Not sure how COD and draining are supposed to interact, but
 			// the partitionable slot is never accepted-while-draining,
 			// nor claimed, nor should it block drain from completing.
-			if(! resources[i]->hasAnyClaim()) { continue; }
+			if(! rip->hasAnyClaim()) { continue; }
 			allAcceptedWhileDraining = false;
 		}
 	}
@@ -3020,6 +2811,28 @@ ResMgr::checkForDrainCompletion() {
 	walk( & Resource::refresh_draining_attrs );
 	// Initiate final draining.
 	walk( & Resource::releaseAllClaimsReversibly );
+}
+
+void
+ResMgr::printSlotAds(const char * slot_types) const
+{
+	// potentially filter by types if the types are defined.  otherwise print all.
+	std::set<Resource::ResourceFeature> filter;
+	if (slot_types) {
+		// check the filter to see if we will print
+		dprintf(D_FULLDEBUG, "Filtering ads to %s\n", slot_types);
+		StringList sl(slot_types);
+		if(sl.contains_anycase("static")) { filter.insert(Resource::STANDARD_SLOT); }
+		if(sl.contains_anycase("partitionable")) { filter.insert(Resource::PARTITIONABLE_SLOT); }
+		if(sl.contains_anycase("dynamic")) { filter.insert(Resource::DYNAMIC_SLOT); }
+	}
+
+	for( int i = 0; i < nresources; i++ ) {
+		Resource *rip = resources[i];
+		if (filter.empty() || filter.count(rip->get_feature())) {
+			rip->dropAdInLogFile();
+		}
+	}
 }
 
 

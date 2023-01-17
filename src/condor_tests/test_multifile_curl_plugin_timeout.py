@@ -1,5 +1,14 @@
 #!/usr/bin/env pytest
 
+#testreq: personal
+"""<<CONDOR_TESTREQ_CONFIG
+	# make sure that file transfer plugins are enabled (might be disabled by default)
+	ENABLE_URL_TRANSFERS = true
+	FILETRANSFER_PLUGINS = $(LIBEXEC)/curl_plugin $(LIBEXEC)/data_plugin
+"""
+#endtestreq
+
+
 #   test_multifile_curl_plugin_timeout.py
 #
 #   Test that the mutlifile curl plugin upload
@@ -54,37 +63,39 @@ ONE_KB_STR     = 'n' * 1024
 #    or do | lambda: 'char' * num_bytes
 
 #!!!!!!!Note that the plugin checks for >1byte/sec ~every 30 seconds!!!!!!!
+#       Due to plugin check rate and systems being overloaded at times
+#       all test data delays are intervals of 30 with a 2 second leeway
 TEST_CASES = {
     #Successful xfer test cases
     "pass_trailing_data": (
-        #Massive xfer, delay, small xfer, done (1024:30,1:fin)
+        #Massive xfer, delay, small xfer, done (1024:28,1:fin)
         lambda: ONE_KB_STR,
-        lambda: "Delay=30",
+        lambda: "Delay=28",
         lambda: ONE_BYTE_STR,
     ),
     "pass_normal_end": (
-        #Massive xfer, delay, enough xfer, delay, done (1024:30,35:30)
+        #Massive xfer, delay, enough xfer, delay, done (1024:28,35:28)
         lambda: ONE_KB_STR,
-        lambda: "Delay=30",
+        lambda: "Delay=28",
         lambda: 'n' * 35,
-        lambda: "Delay=30",
+        lambda: "Delay=28",
     ),
     #Failure xfer test cases
     "fail_slow_middle": (
-        #Massive xfer, very long delay, timeout (1024:30,0:30)
+        #Massive xfer, very long delay, timeout (1024:30,0:32)
         lambda: ONE_KB_STR,
-        lambda: "Delay=60",
+        lambda: "Delay=62",
         lambda: ONE_BYTE_STR,
     ),
     "fail_delayed_start": (
-        #timeout (0:30)
-        lambda: "Delay=30",
+        #timeout (0:32)
+        lambda: "Delay=32",
         lambda: TEN_BYTE_STR,
     ),
     "fail_slow_start": (
-        #Not enough xfer, timeout (20:30)
+        #Not enough xfer, timeout (20:32)
         lambda: 'n' * 20,
-        lambda: "Delay=30",
+        lambda: "Delay=32",
         lambda: ONE_BYTE_STR,
     ),
 }

@@ -21,6 +21,7 @@
 #include "classad/common.h"
 #include "classad/exprTree.h"
 #include "classad/sink.h"
+#include <algorithm> // for std::remove
 
 #ifndef WIN32
 #include <sys/time.h>
@@ -31,8 +32,6 @@ using namespace std;
 namespace classad {
 
 extern int exprHash( const ExprTree* const&, int );
-
-static const int MAX_CLASSAD_RECURSION = 1000;
 
 void (*ExprTree::user_debug_function)(const char *) = 0;
 
@@ -292,34 +291,13 @@ exprHash( const ExprTree* const& expr, int numBkts )
 	return( result % numBkts );
 }
 
-
-
-EvalState::
-EvalState( )
-{
-	rootAd = NULL;
-	curAd  = NULL;
-
-	depth_remaining = MAX_CLASSAD_RECURSION;
-	flattenAndInline = false;	// NAC
-	debug = false;
-	inAttrRefScope = false;
-}
-
 EvalState::
 ~EvalState( )
 {
-	/*
-	classad_hash_map< const ExprTree*, Value, ExprHash >::iterator i;
-
-	for (i = cache_to_delete.begin(); i != cache_to_delete.end(); i++) {
-		const ExprTree *tree = i->first;
-		fprintf(stderr, "**** Deleting tree: %x\n", tree);
-		delete tree;
+	for (ExprTree* & tree : cache_to_delete) {
+		delete tree; tree = nullptr;
 	}
-
-	*/	
-	return;
+	cache_to_delete.clear();
 }
 
 void EvalState::
@@ -352,6 +330,49 @@ SetRootScope( )
     }
     return;
 }
+
+// add an ExprTree to the cache of things to delete after evaluation is complete
+void EvalState::AddToDeletionCache(ExprTree * tree)
+{
+	// protect against double-free by only adding things that are not already in the collection
+	auto found = std::find(cache_to_delete.begin(), cache_to_delete.end(), tree);
+	if (found == cache_to_delete.end()) {
+		cache_to_delete.push_back(tree);
+	}
+}
+
+// look for the given ExprTree pointer in the cache, and if it is found
+// remove it from the cache and return true.
+bool EvalState::TakeFromDeletionCache(ExprTree * tree) {
+	auto last = std::remove(cache_to_delete.begin(), cache_to_delete.end(), tree);
+	if (last != cache_to_delete.end()) {
+		cache_to_delete.erase(last, cache_to_delete.end());
+		return true;
+	}
+	return false;
+}
+
+// if a Value currently has a pointer that is also in the evaluation cache
+// transfer ownership of the pointer to the Value (removing it from the cache)
+// and convert the Value to a counted-pointer type, thus making the value self-contained.
+// This is an optimization for the case where evaluation creates a temporary ExprTree
+// that is the result of evaluation.  We can avoid deep-copying the tree and then
+// turning around and deleting the original.
+bool EvalState::GivePtrToValue(Value & val)
+{
+	if (val.valueType == Value::LIST_VALUE && TakeFromDeletionCache(val.listValue)) {
+		val.slistValue = new classad_shared_ptr<ExprList>(val.listValue);
+		val.valueType = Value::SLIST_VALUE;
+		return true;
+	} else if (val.valueType == Value::CLASSAD_VALUE && TakeFromDeletionCache(val.classadValue)) {
+		// TODO: investigate whether unchaining and/or clearing the ParentScope is desirable here.
+		val.sclassadValue = new classad_shared_ptr<ClassAd>(val.classadValue);
+		val.valueType = Value::SCLASSAD_VALUE;
+		return true;
+	}
+	return false;
+}
+
 
 bool operator==(const ExprTree &tree1, const ExprTree &tree2)
 {

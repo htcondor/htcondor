@@ -648,9 +648,7 @@ CondorQuery::setDesiredAttrs(const classad::References &attrs)
 void
 CondorQuery::setDesiredAttrs(const std::vector<std::string> &attrs)
 {
-	std::string str;
-	str.reserve(attrs.size()*30); // make a guess at total string space needed.
-	::join(attrs, " ", str);
+	std::string str = join(attrs, " ");
 	setDesiredAttrs(str.c_str());
 }
 

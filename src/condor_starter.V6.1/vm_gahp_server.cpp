@@ -1018,7 +1018,7 @@ VMGahpServer::poll()
 	int num_results = 0;
 	int i, result_reqid;
 	VMGahpRequest* entry;
-	ExtArray<Gahp_Args*> result_lines;
+	std::vector<Gahp_Args*> result_lines;
 
 	if( m_is_initialized == false ) {
 		return 0;
@@ -1066,7 +1066,7 @@ VMGahpServer::poll()
 			delete result;
 			return -1;
 		}
-		result_lines[i] = result;
+		result_lines.push_back(result);
 		result = NULL;
 	}
 

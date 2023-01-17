@@ -25,6 +25,7 @@
 
 #include "condor_auth.h"        // Condor_Auth_Base class is defined here
 #include "condor_crypt_3des.h"
+#include "env.h"
 
 #define AUTH_SSL_BUF_SIZE         1048576
 #define AUTH_SSL_ERROR            -1
@@ -99,6 +100,23 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 		int& output_len) override;
     virtual int unwrap(const char* input, int input_len, char*& output,
 		int& output_len) override;
+
+	// Run plugins for identity mapping for SciTokens
+	// input: comma-separated list of plugin names or "*"
+	// result: on completion, the mapped identity if any
+	// return 0: failed to launch a plugin
+	// return 1: plugins successfully run
+	// return 2: plugins in progress, call ContinueScitokensPlugins() later
+	// Assumes the socket associated with this object is registered with
+	// DaemonCore. Once operations are complete (i.e. ContinueScitokensPlugins()
+	// will return 0 or 1, the socket's callback handler is triggered.
+	int StartScitokensPlugins(const std::string& input, std::string& result, CondorError* errstack);
+	int ContinueScitokensPlugins(std::string& result, CondorError* errstack);
+	void CancelScitokensPlugins();
+
+	static int m_pluginReaperId;
+	static int PluginReaper(int exit_pid, int exit_status);
+	static std::map<int, Condor_Auth_SSL*> m_pluginPidTable;
 
 	// Determines if appropriate auth'n credentials are available
 	static bool should_try_auth();
@@ -242,6 +260,22 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
 	std::string m_scitokens_file;
 	std::string m_scitokens_auth_name;
 	std::string m_client_scitoken;
+
+	int m_pluginRC;
+	std::string m_pluginResult;
+	CondorError m_pluginErrstack;
+
+	struct PluginState {
+		int m_pid{-1};
+		int m_exitStatus{-1};
+		std::vector<std::string> m_names;
+		size_t m_idx{0};
+		std::string m_stdin;
+		std::string m_stdout;
+		std::string m_stderr;
+		Env m_env;
+	};
+	std::unique_ptr<PluginState> m_pluginState;
 
 	LastVerifyError m_last_verify_error;
 	std::string m_host_alias;

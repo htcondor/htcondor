@@ -85,6 +85,13 @@ private:
 			a_pid() : pid(0),ppid(0),birthday(0L),
 				cpu_user_time(0L),cpu_sys_time(0L) {};
 			
+			a_pid(pid_t pid, pid_t ppid, birthday_t birthday, long cpu_user_time, long cpu_sys_time) :
+				pid(pid), 
+				ppid(ppid), 
+				birthday(birthday), 
+				cpu_user_time(cpu_user_time), 
+				cpu_sys_time(cpu_sys_time) {};
+			
 			// the pid
 			pid_t pid;
 			// the parent's pid
@@ -97,7 +104,7 @@ private:
 			long cpu_sys_time;
 	};
 
-	ExtArray<a_pid> *old_pids;
+	std::vector<a_pid> *old_pids;
 
 	int family_size;
 

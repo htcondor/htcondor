@@ -152,7 +152,8 @@ JobTransforms::transformJob(
 	ClassAd *ad,
 	const PROC_ID & jid, // the ad transforms will be written to. (may differ from the ad being transformed)
 	classad::References * xform_attrs,
-	CondorError * /* errorStack */ )
+	CondorError * /* errorStack */,
+	bool is_late_mat /*= false*/)
 {
 	int transforms_applied = 0;
 	int transforms_considered = 0;
@@ -168,7 +169,7 @@ JobTransforms::transformJob(
 
 	// Revert variables hashtable so it doesn't grow idefinitely
 	mset.rewind_to_state(mset_ckpt, false);
-	mset.set_iterate_step(jid.proc, jid.cluster); // make ids visible to transform as temp variables
+	mset.set_factory_vars(jid.proc < 0, is_late_mat); // make ids visible to transform as temp variables
 
 	// Enable dirty tracking of ad attributes and mark them as clean,
 	// since after the transform we need to discover which attributes changed.

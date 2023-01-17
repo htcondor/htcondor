@@ -4576,6 +4576,12 @@ type=string
 description=
 tags=schedd
 
+[ALLOW_TRANSFER_REMAP_TO_MKDIR]
+default=false
+type=bool
+description=Allow transfer output remap to make directories if they don't exist
+tags=shadow
+
 [MAX_TRANSFER_INPUT_MB]
 default=-1
 version=7.9.2
@@ -4595,6 +4601,13 @@ default=128
 version=8.8.9
 type=int
 description=Maximum number of filetransfer remaps to apply before aborting
+tags=file_transfer
+
+[MAX_FILE_TRANSFER_PLUGIN_LIFETIME]
+default=72000
+version=10.2.0
+type=int
+description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
 tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
@@ -4632,13 +4645,6 @@ default=none
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
-tags=starter
-
-[IGNORE_LEAF_OOM]
-default=true
-version=8.4.11
-type=bool
-description=Determines whether a job ignores an OOM event if it's using less than its limit
 tags=starter
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
@@ -4930,7 +4936,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=10000
+default=50000
 range=0,
 type=int
 description=History Helper max number of history ads

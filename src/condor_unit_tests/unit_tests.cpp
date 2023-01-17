@@ -47,6 +47,7 @@ bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
+bool FTEST_string_vector();
 bool FTEST_your_string(void);
 bool FTEST_tokener(void);
 bool OTEST_HashTable(void);
@@ -83,6 +84,7 @@ const static struct {
 	map(FTEST_fullpath),
 	map(FTEST_flatten_and_inline),
 	map(FTEST_stl_string_utils),
+	map(FTEST_string_vector),
 	map(FTEST_your_string),
 	map(FTEST_tokener),
 	{"start of objects", NULL},	//placeholder to separate functions and objects

@@ -4,96 +4,6 @@ Setting Up for Special Environments
 The following sections describe how to set up HTCondor for use in
 special environments or configurations.
 
-Using HTCondor with AFS
------------------------
-
-:index:`AFS<single: AFS; file system>`
-
-Configuration variables that allow machines to interact with and use a
-shared file system are given at the 
-:ref:`admin-manual/configuration-macros:shared file system configuration file
-macros` section.
-
-Limitations with AFS occur because HTCondor does not currently have a
-way to authenticate itself to AFS. This is true of the HTCondor daemons
-that would like to authenticate as the AFS user condor, and of the
-*condor_shadow* which would like to authenticate as the user who
-submitted the job it is serving. Since neither of these things can
-happen yet, there are special things to do when interacting with AFS.
-Some of this must be done by the administrator(s) installing HTCondor.
-Other things must be done by HTCondor users who submit jobs.
-
-AFS and HTCondor for Administrators
-'''''''''''''''''''''''''''''''''''
-
-The largest result from the lack of authentication with AFS is that the
-directory defined by the configuration variable ``LOCAL_DIR`` and its
-subdirectories ``log`` and ``spool`` on each machine must be either
-writable to unauthenticated users, or must not be on AFS. Making these
-directories writable a very bad security hole, so it is not a viable
-solution. Placing ``LOCAL_DIR`` onto NFS is acceptable. To avoid AFS,
-place the directory defined for ``LOCAL_DIR`` on a local partition on
-each machine in the pool. This implies running *condor_configure* to
-install the release directory and configure the pool, setting the
-``LOCAL_DIR`` variable to a local partition. When that is complete, log
-into each machine in the pool, and run *condor_init* to set up the
-local HTCondor directory.
-
-The directory defined by ``RELEASE_DIR``, which holds all the HTCondor
-binaries, libraries, and scripts, can be on AFS. None of the HTCondor
-daemons need to write to these files. They only need to read them. So,
-the directory defined by ``RELEASE_DIR`` only needs to be world readable
-in order to let HTCondor function. This makes it easier to upgrade the
-binaries to a newer version at a later date, and means that users can
-find the HTCondor tools in a consistent location on all the machines in
-the pool. Also, the HTCondor configuration files may be placed in a
-centralized location. This is what we do for the UW-Madison's CS
-department HTCondor pool, and it works quite well.
-
-Finally, consider setting up some targeted AFS groups to help users deal
-with HTCondor and AFS better. This is discussed in the following manual
-subsection. In short, create an AFS group that contains all users,
-authenticated or not, but which is restricted to a given host or subnet.
-These should be made as host-based ACLs with AFS, but here at
-UW-Madison, we have had some trouble getting that working. Instead, we
-have a special group for all machines in our department. The users here
-are required to make their output directories on AFS writable to any
-process running on any of our machines, instead of any process on any
-machine with AFS on the Internet.
-
-AFS and HTCondor for Users
-''''''''''''''''''''''''''
-
-The *condor_shadow* daemon runs on the machine where jobs are
-submitted. It performs all file system access on behalf of the jobs.
-Because the *condor_shadow* daemon is not authenticated to AFS as the
-user who submitted the job, the *condor_shadow* daemon will not
-normally be able to write any output. Therefore the directories in which
-the job will be creating output files will need to be world writable;
-they need to be writable by non-authenticated AFS users. In addition,
-the program's ``stdout``, ``stderr``, log file, and any file the program
-explicitly opens will need to be in a directory that is world-writable.
-
-An administrator may be able to set up special AFS groups that can make
-unauthenticated access to the program's files less scary. For example,
-there is supposed to be a way for AFS to grant access to any
-unauthenticated process on a given host. If set up, write access need
-only be granted to unauthenticated processes on the submit machine, as
-opposed to any unauthenticated process on the Internet. Similarly,
-unauthenticated read access could be granted only to processes running
-on the submit machine.
-
-A solution to this problem is to not use AFS for output files. If disk
-space on the submit machine is available in a partition not on AFS,
-submit the jobs from there. While the *condor_shadow* daemon is not
-authenticated to AFS, it does run with the effective UID of the user who
-submitted the jobs. So, on a local (or NFS) file system, the
-*condor_shadow* daemon will be able to access the files, and no special
-permissions need be granted to anyone other than the job submitter. If
-the HTCondor daemons are not invoked as root however, the
-*condor_shadow* daemon will not be able to run with the submitter's
-effective UID, leading to a similar problem as with files on AFS.
-
 Enabling the Transfer of Files Specified by a URL
 -------------------------------------------------
 
@@ -267,6 +177,8 @@ By default, HTCondor includes plugins for standard file protocols ``http://...``
 ``https://...`` and ``ftp://...``. Additionally, URL plugins exist 
 for transferring files to/from Box.com accounts (``box://...``),
 Google Drive accounts (``gdrive://...``),
+OSDF accounts (``osdf://...``),
+Stash accounts (``stash://...``),
 and Microsoft OneDrive accounts (``onedrive://...``).
 These plugins require users to have obtained OAuth2 credentials
 for the relevant service(s) before they can be used.
@@ -1637,34 +1549,18 @@ about Linux kernel support for cgroups can be found in the Documentation
 directory in the kernel source code distribution. Another good reference
 is
 `http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html <http://docs.redhat.com/docs/en-US/Red_Hat_Enterprise_Linux/6/html/Resource_Management_Guide/index.html>`_
-Even if cgroup support is built into the kernel, many distributions do
-not install the cgroup tools by default.
 
 The interface between the kernel cgroup functionality is via a (virtual)
-file system. When the condor_master starts on a Linux system with
-cgroup support in the kernel, it checks to see if cgroups are mounted,
-and if not, it will try to mount the cgroup virtual filesystem onto the
-directory /cgroup.
+file system, usually mounted at ``/sys/fs/cgroup``.
 
 If your Linux distribution uses *systemd*, it will mount the cgroup file
 system, and the only remaining item is to set configuration variable
 ``BASE_CGROUP`` :index:`BASE_CGROUP`, as described below.
 
-On Debian based systems, the memory cgroup controller is often not on by
-default, and needs to be enabled with a boot time option.
-
-This setting needs to be inherited down to the per-job cgroup with the
-following commands in ``rc.local``:
-
-.. code-block:: text
-
-    /usr/sbin/cgconfigparser -l /etc/cgconfig.conf
-    /bin/echo 1 > /sys/fs/cgroup/htcondor/cgroup.clone_children
-
 When cgroups are correctly configured and running, the virtual file
-system mounted on ``/cgroup`` should have several subdirectories under
+system mounted on ``/sys/fs/cgroup`` should have several subdirectories under
 it, and there should an ``htcondor`` subdirectory under the directory
-``/cgroup/cpu``.
+``/sys/fs/cgroup/cpu``, ``/sys/fs/cgroup/memory`` and some others.
 
 The *condor_starter* daemon uses cgroups by default on Linux systems to
 accurately track all the processes started by a job, even when
@@ -1678,7 +1574,7 @@ name of this cgroup is the name of the execute directory for that
 *condor_starter*, with slashes replaced by underscores, followed by the
 name and number of the slot. So, for the memory controller, a job
 running on slot1 would have its cgroup located at
-``/cgroup/memory/htcondor/condor_var_lib_condor_execute_slot1/``. The
+``/sys/fs/cgroup/memory/htcondor/condor_var_lib_condor_execute_slot1/``. The
 ``tasks`` file in this directory will contain a list of all the
 processes in this cgroup, and many other files in this directory have
 useful information about resource usage of this cgroup. See the kernel
@@ -1690,6 +1586,16 @@ configuration variable ``PROCD_LOG``, will mention that it is using this
 method, but no user visible changes should occur, other than the
 impossibility of a quickly-forking process escaping from the control of
 the *condor_starter*, and the more accurate reporting of memory usage.
+
+A cgroup-enabled HTCondor will install and handle a per-job (not per-process)
+Linux Out of Memory killer (OOM-Killer).  When a job exceeds the memory
+provisioned by the *condor_startd*, the Linux kernel will send an OOM
+message to the *condor_starter*, and HTCondor will evict the job, and
+put it on hold.  Sometimes, even when the job's memory usage is below
+the provisioned amount, if other, non-HTCondor processes, on the system
+are using too much memory, the linux kernel may choose to OOM-kill the
+job.  In this case, HTCondor will log a message and evict the job, mark
+it as idle, so it can start again somewhere else.
 
 Limiting Resource Usage with a User Job Wrapper
 -----------------------------------------------
@@ -2046,4 +1952,93 @@ daemon to the *condor_collector* daemon, it is possible for the limit
 to be exceeded. If the limits are exceeded, HTCondor will not kill any
 job to reduce the number of running jobs to meet the limit.
 
+Using HTCondor with AFS
+-----------------------
+
+:index:`AFS<single: AFS; file system>`
+
+Configuration variables that allow machines to interact with and use a
+shared file system are given at the 
+:ref:`admin-manual/configuration-macros:shared file system configuration file
+macros` section.
+
+Limitations with AFS occur because HTCondor does not currently have a
+way to authenticate itself to AFS. This is true of the HTCondor daemons
+that would like to authenticate as the AFS user condor, and of the
+*condor_shadow* which would like to authenticate as the user who
+submitted the job it is serving. Since neither of these things can
+happen yet, there are special things to do when interacting with AFS.
+Some of this must be done by the administrator(s) installing HTCondor.
+Other things must be done by HTCondor users who submit jobs.
+
+AFS and HTCondor for Users
+''''''''''''''''''''''''''
+
+The *condor_shadow* daemon runs on the machine where jobs are
+submitted. It performs all file system access on behalf of the jobs.
+Because the *condor_shadow* daemon is not authenticated to AFS as the
+user who submitted the job, the *condor_shadow* daemon will not
+normally be able to write any output. Therefore the directories in which
+the job will be creating output files will need to be world writable;
+they need to be writable by non-authenticated AFS users. In addition,
+the program's ``stdout``, ``stderr``, log file, and any file the program
+explicitly opens will need to be in a directory that is world-writable.
+
+An administrator may be able to set up special AFS groups that can make
+unauthenticated access to the program's files less scary. For example,
+there is supposed to be a way for AFS to grant access to any
+unauthenticated process on a given host. If set up, write access need
+only be granted to unauthenticated processes on the submit machine, as
+opposed to any unauthenticated process on the Internet. Similarly,
+unauthenticated read access could be granted only to processes running
+on the submit machine.
+
+A solution to this problem is to not use AFS for output files. If disk
+space on the submit machine is available in a partition not on AFS,
+submit the jobs from there. While the *condor_shadow* daemon is not
+authenticated to AFS, it does run with the effective UID of the user who
+submitted the jobs. So, on a local (or NFS) file system, the
+*condor_shadow* daemon will be able to access the files, and no special
+permissions need be granted to anyone other than the job submitter. If
+the HTCondor daemons are not invoked as root however, the
+*condor_shadow* daemon will not be able to run with the submitter's
+effective UID, leading to a similar problem as with files on AFS.
+
+AFS and HTCondor for Administrators
+'''''''''''''''''''''''''''''''''''
+
+The largest result from the lack of authentication with AFS is that the
+directory defined by the configuration variable ``LOCAL_DIR`` and its
+subdirectories ``log`` and ``spool`` on each machine must be either
+writable to unauthenticated users, or must not be on AFS. Making these
+directories writable a very bad security hole, so it is not a viable
+solution. Placing ``LOCAL_DIR`` onto NFS is acceptable. To avoid AFS,
+place the directory defined for ``LOCAL_DIR`` on a local partition on
+each machine in the pool. This implies running *condor_configure* to
+install the release directory and configure the pool, setting the
+``LOCAL_DIR`` variable to a local partition. When that is complete, log
+into each machine in the pool, and run *condor_init* to set up the
+local HTCondor directory.
+
+The directory defined by ``RELEASE_DIR``, which holds all the HTCondor
+binaries, libraries, and scripts, can be on AFS. None of the HTCondor
+daemons need to write to these files. They only need to read them. So,
+the directory defined by ``RELEASE_DIR`` only needs to be world readable
+in order to let HTCondor function. This makes it easier to upgrade the
+binaries to a newer version at a later date, and means that users can
+find the HTCondor tools in a consistent location on all the machines in
+the pool. Also, the HTCondor configuration files may be placed in a
+centralized location. This is what we do for the UW-Madison's CS
+department HTCondor pool, and it works quite well.
+
+Finally, consider setting up some targeted AFS groups to help users deal
+with HTCondor and AFS better. This is discussed in the following manual
+subsection. In short, create an AFS group that contains all users,
+authenticated or not, but which is restricted to a given host or subnet.
+These should be made as host-based ACLs with AFS, but here at
+UW-Madison, we have had some trouble getting that working. Instead, we
+have a special group for all machines in our department. The users here
+are required to make their output directories on AFS writable to any
+process running on any of our machines, instead of any process on any
+machine with AFS on the Internet.
 

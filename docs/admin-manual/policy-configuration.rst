@@ -1957,9 +1957,7 @@ Define slot types.
     ``Request<name>``. For this example, the two attributes will be
     ``RequestCogs`` and ``RequestActuator``.
 
-    The number of each type being reported can be changed at run time,
-    by issuing a reconfiguration command to the *condor_startd* daemon
-    (sending a SIGHUP or using *condor_reconfig*). However, the
+    The number of each type and the
     definitions for the types themselves cannot be changed with
     reconfiguration. To change any slot type definitions, use
     *condor_restart*

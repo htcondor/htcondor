@@ -71,6 +71,8 @@ static	ExprTree	*preemptRankCondition;
 static	ExprTree	*preemptPrioCondition;
 static	ExprTree	*preemptionReq;
 
+std::vector<PrioEntry> prioTable;
+
 #ifdef INCLUDE_ANALYSIS_SUGGESTIONS
 const int SHORT_BUFFER_SIZE = 8192;
 #endif
@@ -307,7 +309,7 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 		ClassAd *ad = it->second.get();
 		if (ad->LookupString( ATTR_REMOTE_USER , remoteUser)) {
 			int index;
-			if ((index = findSubmittor(remoteUser.c_str())) != -1) {
+			if ((index = findSubmittor(remoteUser)) != -1) {
 				ad->Assign(ATTR_REMOTE_USER_PRIO, prioTable[index].prio);
 			}
 		}
@@ -315,11 +317,10 @@ void setupUserpriosForAnalysis(DCCollector* pool, const char *userprios_file)
 }
 
 
-int fetchSubmittorPriosFromNegotiator(DCCollector* pool, ExtArray<PrioEntry> & prios)
+int fetchSubmittorPriosFromNegotiator(DCCollector* pool, std::vector<PrioEntry> & prios)
 {
 	ClassAd	al;
 	char  	attrName[32], attrPrio[32];
-  	char  	name[128];
   	double 	priority;
 
 	Daemon	negotiator( DT_NEGOTIATOR, NULL, pool ? pool->addr() : NULL );
@@ -346,16 +347,16 @@ int fetchSubmittorPriosFromNegotiator(DCCollector* pool, ExtArray<PrioEntry> & p
 
 
 	int cPrios = 0;
+	std::string name;
 	while( true ) {
 		sprintf( attrName , "Name%d", cPrios+1 );
 		sprintf( attrPrio , "Priority%d", cPrios+1 );
 
-		if( !al.LookupString( attrName, name, sizeof(name) ) || 
-			!al.LookupFloat( attrPrio, priority ) )
+		if( !al.LookupString( attrName, name) || 
+			!al.LookupFloat( attrPrio, priority))
 			break;
 
-		prios[cPrios].name = name;
-		prios[cPrios].prio = priority;
+		prios.emplace_back(PrioEntry{name,static_cast<float>(priority)});
 		++cPrios;
 	}
 
@@ -402,7 +403,7 @@ static int parse_userprio_line(const char * line, std::string & attr, std::strin
 	return id;
 }
 
-int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
+int read_userprio_file(const char *filename, std::vector<PrioEntry> & prios)
 {
 	int cPrios = 0;
 
@@ -423,9 +424,15 @@ int read_userprio_file(const char *filename, ExtArray<PrioEntry> & prios)
 
 			if (attr == "Priority") {
 				float priority = atof(value.c_str());
+				if (id >= (int) prios.size()) {
+					prios.resize(1 + id * 2);
+				}
 				prios[id].prio = priority;
 				cPrios = MAX(cPrios, id);
 			} else if (attr == "Name") {
+				if (id >= (int) prios.size()) {
+					prios.resize(1 + id * 2);
+				}
 				prios[id].name = value;
 				cPrios = MAX(cPrios, id);
 			}
@@ -521,7 +528,7 @@ static bool is_exhausted_partionable_slot(ClassAd* slotAd, ClassAd* jobAd)
 	if (slotAd->LookupBool("PartitionableSlot", is_pslot) && is_pslot) {
 		ExprTree * expr = slotAd->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
 		classad::Value val;
-		if (expr && EvalExprTree(expr, slotAd, jobAd, val) && val.IsBooleanValueEquiv(within)) {
+		if (expr && EvalExprToBool(expr, slotAd, jobAd, val) && val.IsBooleanValueEquiv(within)) {
 			return ! within;
 		}
 		return false;
@@ -576,7 +583,7 @@ static bool checkPremption (
 		string remoteUser;
 		if ( ! offer->LookupString(ATTR_REMOTE_USER, remoteUser)) {
 			// no remote user
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val) {
 				// both sides satisfied and no remote user
 				//if( verbose ) strcat(return_buff, "Available\n");
@@ -613,11 +620,11 @@ static bool checkPremption (
 			ac.machinesRunningUsersJobs++;
 
 		// 4. Satisfies preemption priority condition?
-		} else if (EvalExprTree(preemptPrioCondition, offer, request, eval_result) &&
+		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
 			eval_result.IsBooleanValue(val) && val) {
 
 			// 5. Satisfies standard rank condition?
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val )  
 			{
 				//if( verbose ) strcat( return_buff, "Available\n");
@@ -625,11 +632,11 @@ static bool checkPremption (
 				continue;
 			} else {
 				// 6.  Satisfies preemption rank condition?
-				if (EvalExprTree(preemptRankCondition, offer, request, eval_result) &&
+				if (EvalExprToBool(preemptRankCondition, offer, request, eval_result) &&
 					eval_result.IsBooleanValue(val) && val)
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if (EvalExprTree( preemptionReq, offer, request, eval_result) &&
+					if (EvalExprToBool( preemptionReq, offer, request, eval_result) &&
 						eval_result.IsBooleanValue(val) && !val) 
 					{
 						ac.fPreemptReqTest++;
@@ -855,7 +862,7 @@ bool doJobRunAnalysis (
 			ExprTree * expr = offer->Lookup(ATTR_WITHIN_RESOURCE_LIMITS);
 			classad::Value val;
 			bool within = false;
-			if (expr && EvalExprTree(expr, offer, request, val) && val.IsBooleanValueEquiv(within) && ! within) {
+			if (expr && EvalExprToBool(expr, offer, request, val) && val.IsBooleanValueEquiv(within) && ! within) {
 				// if the slot doesn't fit within the pslot, try applying an overlay ad that restores the pslot to full health
 				ClassAd * pov = make_pslot_overlay_ad(offer);
 				if (pov) {
@@ -928,7 +935,7 @@ bool doJobRunAnalysis (
 			continue;
 #else  // i think this is bogus
 			// no remote user
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val) {
 				// both sides satisfied and no remote user
 				//if( verbose ) strcat(return_buff, "Available\n");
@@ -966,14 +973,14 @@ bool doJobRunAnalysis (
 			ac.machinesRunningUsersJobs++;
 
 		// 4. Satisfies preemption priority condition?
-		} else if (EvalExprTree(preemptPrioCondition, offer, request, eval_result) &&
+		} else if (EvalExprToBool(preemptPrioCondition, offer, request, eval_result) &&
 			eval_result.IsBooleanValue(val) && val) {
 
 #if 1
 			{
 #else		// this test is bogus
 			// 5. Satisfies standard rank condition?
-			if (EvalExprTree(stdRankCondition, offer, request, eval_result) &&
+			if (EvalExprToBool(stdRankCondition, offer, request, eval_result) &&
 				eval_result.IsBooleanValue(val) && val )  
 			{
 				//if( verbose ) strcat( return_buff, "Available\n");
@@ -982,11 +989,11 @@ bool doJobRunAnalysis (
 			} else {
 #endif
 				// 6.  Satisfies preemption rank condition?
-				if (EvalExprTree(preemptRankCondition, offer, request, eval_result) &&
+				if (EvalExprToBool(preemptRankCondition, offer, request, eval_result) &&
 					eval_result.IsBooleanValue(val) && val)
 				{
 					// 7.  Tripped on PREEMPTION_REQUIREMENTS?
-					if (EvalExprTree( preemptionReq, offer, request, eval_result) &&
+					if (EvalExprToBool( preemptionReq, offer, request, eval_result) &&
 						eval_result.IsBooleanValue(val) && !val) 
 					{
 						ac.fPreemptReqTest++;
@@ -1551,18 +1558,13 @@ void buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap
 }
 
 
-int findSubmittor( const char *name ) 
+int findSubmittor( const std::string &name ) 
 {
-	std::string sub(name);
-	int			last = prioTable.getlast();
+	size_t			last = prioTable.size();
 	
-	for(int i = 0 ; i <= last ; i++ ) {
-		if( prioTable[i].name == sub ) return i;
+	for(size_t i = 0 ; i < last ; i++ ) {
+		if( prioTable[i].name == name ) return i;
 	}
-
-	//prioTable[last+1].name = sub;
-	//prioTable[last+1].prio = 0.5;
-	//return last+1;
 
 	return -1;
 }

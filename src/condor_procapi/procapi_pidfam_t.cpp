@@ -47,7 +47,7 @@ int getPidFamily_test(bool verbose) {
 
   PID_ENTRY* pids = fork_tree(PID_FAMILY_DEPTH, PID_FAMILY_BREADTH, 0, verbose);
      
-  ExtArray<pid_t> pidf;
+  std::vector<pid_t> pidf;
   ProcAPI::getPidFamily( pids[0].pid, &penvid, pidf, status );
   
   if(verbose){
