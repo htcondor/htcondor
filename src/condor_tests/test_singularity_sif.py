@@ -88,7 +88,7 @@ def completed_test_job(condor, test_job_hash):
 # For the test to work, we need a singularity/apptainer which can work with
 # SIF files, which is any version of apptainer, or singularity >= 3
 def SingularityIsWorthy():
-    result = subprocess.run("ssssingularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    result = subprocess.run("singularity --version", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     output = result.stdout.decode('utf-8')
 
     logger.debug(output)
