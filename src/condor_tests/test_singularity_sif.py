@@ -38,9 +38,13 @@ def sif_file(test_dir):
     os.mkdir("image_root")
 
     try:
-        Path("tiny.sif").unlink
+        Path("empty.sif").unlink
     except FileNotFoundError:
         pass
+
+    # some singularities need mksquashfs in path
+    # which some linuxes have in /usr/sbin
+    os.environ["PATH"] = os.environ["PATH"] + ":/usr/sbin"
 
     r = os.system("singularity -s build empty.sif image_root")
     if (r == 0):
@@ -69,6 +73,7 @@ def test_job_hash():
             "output": "output",
             "error": "error",
             "log": "log",
+            "on_exit_remove": "ExitCode == 0"
             }
 
 @action
@@ -77,13 +82,15 @@ def completed_test_job(condor, test_job_hash):
     ctj = condor.submit(
         {**test_job_hash}, count=1
     )
+
     assert ctj.wait(
         condition=ClusterState.all_terminal,
         timeout=60,
         verbose=True,
         fail_condition=ClusterState.any_held,
     )
-    return ctj.query()[0]
+
+    return ctj
 
 # For the test to work, we need a singularity/apptainer which can work with
 # SIF files, which is any version of apptainer, or singularity >= 3
@@ -103,4 +110,4 @@ def SingularityIsWorthy():
 class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
     def test_container_uni(self, sif_file, completed_test_job):
-            assert completed_test_job['ExitStatus'] == 0 
+            assert True
