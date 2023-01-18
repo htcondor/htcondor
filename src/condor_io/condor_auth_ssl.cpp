@@ -45,7 +45,9 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
+#ifdef WIN32
 #include <openssl/applink.c>
+#endif
 
 #include <algorithm>
 #include <sstream>
