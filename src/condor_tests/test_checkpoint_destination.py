@@ -1,12 +1,5 @@
 #!/usr/bin/env pytest
 
-#testreq: personal
-"""<<CONDOR_TESTREQ_CONFIG
-	# make sure that file transfer plugins are enabled (might be disabled by default)
-	ENABLE_URL_TRANSFERS = true
-"""
-#endtestreq
-
 import os
 import time
 import subprocess
@@ -17,6 +10,7 @@ from ornithology import (
     write_file,
     format_script,
     ClusterState,
+    Condor,
 )
 
 import htcondor
@@ -28,6 +22,18 @@ from htcondor import (
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+
+@action
+def the_condor(test_dir):
+    # FIXME: add local-cleanup to config.
+    with Condor(
+        local_dir=test_dir / "condor",
+        config={
+            'ENABLE_URL_TRANSFERS': 'TRUE',
+        }
+    ) as the_condor:
+        yield the_condor
 
 
 @action
@@ -299,8 +305,8 @@ def path_to_symlink_script(test_dir):
 
 
 @action
-def path_to_the_job_script(default_condor, test_dir):
-    with default_condor.use_config():
+def path_to_the_job_script(the_condor, test_dir):
+    with the_condor.use_config():
         condor_libexec = htcondor.param["LIBEXEC"]
         condor_bin = htcondor.param["BIN"]
 
@@ -316,7 +322,7 @@ def path_to_the_job_script(default_condor, test_dir):
 
     from pathlib import Path
 
-    os.environ['CONDOR_CONFIG'] = '{default_condor.config_file}'
+    os.environ['CONDOR_CONFIG'] = '{the_condor.config_file}'
     posix_test_dir = '{test_dir.as_posix()}'
     condor_libexec = '{condor_libexec}'
     condor_bin = '{condor_bin}'
@@ -559,7 +565,7 @@ TEST_CASES = {
 }
 
 @action
-def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_file):
+def the_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file):
     job_handles = {}
     for name, test_case in TEST_CASES.items():
         test_case = {key: value.format(
@@ -608,7 +614,7 @@ def the_job_handles(test_dir, default_condor, the_job_description, plugin_shell_
             ** the_job_description,
             ** test_case,
         }
-        job_handle = default_condor.submit(
+        job_handle = the_condor.submit(
             description=complete_job_description,
             count=1,
         )
@@ -642,7 +648,7 @@ def the_job_handle(the_job_pair):
 
 
 @action
-def the_completed_job(default_condor, the_job_handle):
+def the_completed_job(the_condor, the_job_handle):
     # The job will evict itself part of the way through.  To avoid a long
     # delay waiting for the schedd to reschedule it, call condor_reschedule.
     the_job_handle.wait(
@@ -657,7 +663,7 @@ def the_completed_job(default_condor, the_job_handle):
         fail_condition=ClusterState.any_held,
     )
 
-    default_condor.run_command(['condor_reschedule'])
+    the_condor.run_command(['condor_reschedule'])
 
     the_job_handle.wait(
         timeout=60,
@@ -701,7 +707,7 @@ HOLD_CASES = {
 
 
 @action
-def hold_job_handles(test_dir, default_condor, the_job_description, plugin_shell_file, path_to_symlink_script):
+def hold_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file, path_to_symlink_script):
     job_handles = {}
     for name, hold_case in HOLD_CASES.items():
         hold_case = {key: value.format(
@@ -720,7 +726,7 @@ def hold_job_handles(test_dir, default_condor, the_job_description, plugin_shell
             ** hold_case,
         }
 
-        job_handle = default_condor.submit(
+        job_handle = the_condor.submit(
             description=complete_job_description,
             count=1,
         )
@@ -837,7 +843,7 @@ def path_to_mutate_script_c(test_dir):
 
 
 @action
-def fail_job_handles(test_dir, default_condor, the_job_description,
+def fail_job_handles(test_dir, the_condor, the_job_description,
     plugin_shell_file,
     path_to_mutate_script_a,
     path_to_mutate_script_b,
@@ -858,7 +864,7 @@ def fail_job_handles(test_dir, default_condor, the_job_description,
             ** fail_case,
         }
 
-        job_handle = default_condor.submit(
+        job_handle = the_condor.submit(
             description=complete_job_description,
             count=1,
         )
@@ -887,7 +893,7 @@ def fail_job_handle(fail_job_pair):
 
 
 @action
-def fail_job(default_condor, fail_job_handle):
+def fail_job(the_condor, fail_job_handle):
     # The job will evict itself part of the way through.  To avoid a long
     # delay waiting for the schedd to reschedule it, call condor_reschedule.
     fail_job_handle.wait(
@@ -902,7 +908,7 @@ def fail_job(default_condor, fail_job_handle):
         fail_condition=ClusterState.any_held,
     )
 
-    default_condor.run_command(['condor_reschedule'])
+    the_condor.run_command(['condor_reschedule'])
 
     # Presently, from the point of view of ornithology, a job which
     # is idle stays that way even if input transfer has started, which
@@ -1051,11 +1057,11 @@ class TestCheckpointDestination:
     # *: in that the current check has false positive if the test case
     # submitted with a checkpoint destination somehow doesn't have one
     # by the time it finishes.
-    def test_checkpoint_location(self, test_dir, default_condor, the_completed_job, the_job_name):
+    def test_checkpoint_location(self, test_dir, the_condor, the_completed_job, the_job_name):
         if the_job_name == "local_no_keep":
             return
 
-        schedd = default_condor.get_local_schedd()
+        schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
         result = schedd.query(
             constraint=constraint,
@@ -1069,12 +1075,12 @@ class TestCheckpointDestination:
     # This is kind of awful, but the schedd just moves LeaveJobInQueue
     # jobs from C to X instead of actually removing them.
     def test_checkpoint_removed(self,
-      default_condor,
+      the_condor,
       the_job_name, the_completed_job):
         if the_job_name != "local_no_keep":
             return
 
-        schedd = default_condor.get_local_schedd()
+        schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
 
         # Make sure the job has left the queue.
@@ -1107,7 +1113,7 @@ class TestCheckpointDestination:
 
 
     def test_checkpoint_structure(self,
-      test_dir, default_condor,
+      test_dir, the_condor,
       the_job_name, the_completed_job,
     ):
         if the_job_name == "local_no_keep":
@@ -1190,10 +1196,10 @@ class TestCheckpointDestination:
         # the changes, as well.
 
 
-    def test_checkpoint_upload_failure_causes_job_hold(self, default_condor, hold_job):
+    def test_checkpoint_upload_failure_causes_job_hold(self, the_condor, hold_job):
         assert hold_job.state.all_held()
 
-        schedd = default_condor.get_local_schedd()
+        schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {hold_job.clusterid} && ProcID == 0'
         result = schedd.query(
             constraint=constraint,
@@ -1206,7 +1212,7 @@ class TestCheckpointDestination:
         assert "Starter failed to upload checkpoint" in jobAd["HoldReason"]
 
 
-    def test_checkpoint_download_integrity(self, default_condor, fail_job, fail_job_name):
+    def test_checkpoint_download_integrity(self, the_condor, fail_job, fail_job_name):
         # For now, all that we're looking for is a shadow exception
         # in the job event log that indicates that the starter noticed
         # the problem.  We have some design decisions to make before we

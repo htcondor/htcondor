@@ -16,6 +16,8 @@ Scheduler::checkpointCleanUpReaper( int pid, int status ) {
 	// the plug-in finishes.  I'm tempted to say that the plug-in deletes
 	// MANIFEST files after it finishes deleting their contents, and that
 	// preen will take care of deleting the empty directories.)
+
+	dprintf( D_ZKM, "checkpoint clean-up proc %d returned %d\n", pid, status );
 	return 0;
 }
 
@@ -170,6 +172,6 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 	// appropriately as well.  May involve refactorign this
 	// function a little bit. ;)
 
-	dprintf( D_ZKM, "... checkpoint clean-up for job %d.%d invoked.\n", cluster, proc );
+	dprintf( D_ZKM, "... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
 }
