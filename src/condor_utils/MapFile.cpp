@@ -26,8 +26,6 @@
 #include "directory.h"
 #include "basename.h"
 
-#ifdef USE_MAPFILE_V2
-
 #include <unordered_map>
 
 // THEORY OF OPERATION
@@ -174,9 +172,6 @@ CanonicalMapEntry::~CanonicalMapEntry() {
 	}
 }
 
-#endif // USE_MAPFILE_V2
-
-
 MapFile::MapFile()
 {
 }
@@ -184,13 +179,10 @@ MapFile::MapFile()
 
 MapFile::~MapFile()
 {
-#ifdef USE_MAPFILE_V2
 	clear();
-#endif
 }
 
 static size_t min_re_size=0, max_re_size=0, num_re=0, num_zero_re=0;
-#ifdef USE_MAPFILE_V2
 static size_t re_size(pcre2_code * re) {
 	if ( !re) return 0;
 	size_t cb = 0;
@@ -202,21 +194,10 @@ static size_t re_size(pcre2_code * re) {
 	else { ++num_zero_re; }
 	return cb;
 }
-#else
-static size_t re_size(Regex & regex) {
-	if ( ! regex.isInitialized()) return 0;
-	size_t cb = regex.mem_used();
-	++num_re;
-	if (cb) { if (!min_re_size || (cb && (cb < min_re_size))) min_re_size = cb; max_re_size = MAX(cb, max_re_size); }
-	else { ++num_zero_re; }
-	return cb;
-}
-#endif
 
 void get_mapfile_re_info(size_t *info) { info[0] = num_re; info[1] = num_zero_re; info[2] = min_re_size; info[3] = max_re_size; }
 void clear_mapfile_re_info() { min_re_size = max_re_size =  num_re = num_zero_re = 0; }
 
-#ifdef USE_MAPFILE_V2
 int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
 {
 	size_t cRegex = 0, cHash = 0, cEntries = 0, cAllocs=0, cbStructs=0;
@@ -288,56 +269,6 @@ void MapFile::clear() // clear all items and free the allocation pool
 	reset();
 	apool.clear();
 }
-#else
-int MapFile::size(MapFileUsage * pusage) // returns number of items in the map
-{
-	int cItems = canonical_entries.length() + user_entries.length();
-	if (pusage) {
-		memset(pusage, 0, sizeof(*pusage));
-		pusage->cRegex = cItems;
-
-		int cAllocs=0, cbStructs=0, cbStrings=0;
-
-		if (canonical_entries.getlast() > 0) {
-			std::map<std::string, int> methods;
-			++cAllocs; cbStructs += canonical_entries.getlast()*sizeof(CanonicalMapEntry);
-			for (int ix = 0; ix <= canonical_entries.getlast(); ++ix) {
-
-				methods[canonical_entries[ix].method.c_str()] = 1;
-				++cAllocs; cbStrings += canonical_entries[ix].method.size();
-				++cAllocs; cbStrings += canonical_entries[ix].principal.size();
-				++cAllocs; cbStrings += canonical_entries[ix].canonicalization.size();
-				if (canonical_entries[ix].regex.isInitialized()) { ++cAllocs; cbStructs += re_size(canonical_entries[ix].regex); }
-			}
-			pusage->cMethods = methods.size();
-		}
-
-		if (user_entries.getlast() > 0) {
-			++cAllocs; cbStructs += user_entries.getlast()*sizeof(UserMapEntry);
-			for (int ix = 0; ix <= user_entries.getlast(); ++ix) {
-				++cAllocs; cbStrings += user_entries[ix].canonicalization.size();
-				++cAllocs; cbStrings += user_entries[ix].user.size();
-				if (user_entries[ix].regex.isInitialized()) { ++cAllocs; cbStructs += re_size(user_entries[ix].regex); }
-			}
-		}
-
-		pusage->cEntries = cItems;
-		pusage->cbStrings = cbStrings;
-		pusage->cbStructs = cbStructs;
-		pusage->cAllocations = cAllocs;
-	}
-	return cItems;
-}
-void MapFile::reset() // remove all items, but do not free the allocation pool
-{
-	canonical_entries.truncate(-1);
-	user_entries.truncate(-1);
-}
-void MapFile::clear() // clear all items and free the allocation pool
-{
-	reset();
-}
-#endif
 
 size_t
 MapFile::ParseField(const std::string & line, size_t offset, std::string & field, uint32_t * popts /*=NULL*/)
@@ -458,11 +389,6 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 {
 	int line = 0;
 
-#ifdef USE_MAPFILE_V2
-#else
-	assume_hash = false; // unless using mapfile v2, we can't handle the hash type
-#endif
-
 	while ( ! src.isEof()) {
 		std::string input_line;
 		size_t offset;
@@ -518,14 +444,9 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			continue;
 		}
 
-#ifdef USE_MAPFILE_V2
 		if (method.length() == 0 || method[0] == '#') continue; // ignore blank and comment lines
 		uint32_t regex_opts = assume_hash ? 0 : PCRE2_NOTEMPTY;
 		offset = ParseField(input_line, offset, principal, assume_hash ? &regex_opts : NULL);
-#else
-		lower_case(method);
-		offset = ParseField(input_line, offset, principal);
-#endif
 		offset = ParseField(input_line, offset, canonicalization);
 
 		if (method.empty() ||
@@ -549,37 +470,11 @@ MapFile::ParseCanonicalization(MyStringSource & src, const char * srcname, bool 
 			dprintf(D_ALWAYS, "ERROR: Failed to allocate Regex!\n");
 		}
 */
-#ifdef USE_MAPFILE_V2
 		CanonicalMapList* list = GetMapList(method.c_str());
 		ASSERT(list);
 		AddEntry(list, regex_opts, principal.c_str(), canonicalization.c_str());
-#else
-		int last = canonical_entries.getlast() + 1;
-		canonical_entries[last].method = method;
-		canonical_entries[last].principal = principal;
-		canonical_entries[last].canonicalization = canonicalization;
-#endif
 	}
 
-#ifdef USE_MAPFILE_V2
-	//apool.compact(16);
-#else
-	// Compile the entries and print error messages for the ones that don't compile.
-	// We don't do this in the loop above because canonical_entries[] allocates 
-	// a whole new array when it needs to grow and we don't want to be copying 
-	// compiled regex's when that happens. see #2409
-	for (int ix = 0; ix <= canonical_entries.getlast(); ++ix) {
-		int errcode;
-		int erroffset;
-		if (!canonical_entries[ix].regex.compile(canonical_entries[ix].principal,
-												 &errcode,
-												 &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- error code %d.  this entry will be ignored.\n",
-					canonical_entries[ix].principal.Value(),
-					errcode);
-		}
-	}
-#endif
 	return 0;
 }
 
@@ -605,11 +500,6 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 {
 	int line = 0;
 
-#ifdef USE_MAPFILE_V2
-#else
-	assume_hash = false; // unless using mapfile v2, we can't handle the hash type
-#endif
-
     while ( ! src.isEof()) {
 		std::string input_line;
 		size_t offset;
@@ -625,13 +515,9 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 		}
 
 		offset = 0;
-#ifdef USE_MAPFILE_V2
 		uint32_t regex_opts = assume_hash ? 0 : PCRE2_NOTEMPTY;
 		offset = ParseField(input_line, offset, canonicalization, assume_hash ? &regex_opts : NULL);
 		if (canonicalization.length() == 0 || canonicalization[0] == '#') continue; // ignore blank and comment lines
-#else
-		offset = ParseField(input_line, offset, canonicalization);
-#endif
 		offset = ParseField(input_line, offset, user);
 
 		dprintf(D_FULLDEBUG,
@@ -646,38 +532,15 @@ MapFile::ParseUsermap(MyStringSource & src, const char * srcname, bool assume_ha
 				return line;
 		}
 	
-#ifdef USE_MAPFILE_V2
 		CanonicalMapList* list = GetMapList(NULL); // NULL is the 'method' key for the usermap list
 		ASSERT(list);
 		AddEntry(list, regex_opts, canonicalization.c_str(), user.c_str());
-#else
-		int last = user_entries.getlast() + 1;
-		user_entries[last].canonicalization = canonicalization;
-		user_entries[last].user = user;
-
-		int errcode;
-		int erroffset;
-		if (!user_entries[last].regex.compile(canonicalization,
-											  &errcode,
-											  &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- error code %s\n",
-					canonicalization.c_str(),
-					errptr);
-
-			return line;
-		}
-#endif
 	}
-
-#ifdef USE_MAPFILE_V2
-	//apool.compact(16);
-#endif
 
 	return 0;
 }
 
 
-#ifdef USE_MAPFILE_V2
 void MapFile::dump(FILE* fp)
 {
 	for (auto it = methods.begin(); it != methods.end(); ++it) {
@@ -691,8 +554,6 @@ void MapFile::dump(FILE* fp)
 	}
 }
 
-#endif
-
 int
 MapFile::GetCanonicalization(const MyString& method,
 							 const MyString& principal,
@@ -700,53 +561,18 @@ MapFile::GetCanonicalization(const MyString& method,
 {
 	bool match_found = false;
 
-#ifdef USE_MAPFILE_V2
 	const char * pcanon;
 	ExtArray<MyString> groups;
 
 	METHOD_MAP::iterator found = methods.find(method.c_str());
 	if (found != methods.end() && found->second) {
-#if 1
 		match_found = FindMapping(found->second, principal, &groups, &pcanon);
 		if (match_found) {
 			PerformSubstitution(groups, pcanon, canonicalization);
 		}
-#else
-		for (CanonicalMapEntry * entry = found->second->first; entry; entry = entry->next) {
-			if (entry->matches(principal.c_str(), principal.Length(), &groups, &pcanon)) {
-				match_found = true;
-				PerformSubstitution(groups, pcanon, canonicalization);
-				break;
-			}
-		}
-#endif
 	}
-#else
-	for (int entry = 0;
-		 !match_found && entry < canonical_entries.getlast() + 1;
-		 entry++) {
-
-//		printf("comparing: %s == %s => %d\n",
-//			   method.Value(),
-//			   canonical_entries[entry].method.Value(),
-//			   method == canonical_entries[entry].method);
-		MyString lowerMethod = method;
-		lowerMethod.lower_case();
-		if (lowerMethod == canonical_entries[entry].method) {
-			match_found = PerformMapping(canonical_entries[entry].regex,
-										 principal,
-										 canonical_entries[entry].canonicalization,
-										 canonicalization);
-
-			if (match_found) break;
-		}
-	}
-#endif
-
 	return match_found ? 0 : -1;
 }
-
-#ifdef USE_MAPFILE_V2
 
 // find or create a CanonicalMapList for the given method.
 // use NULL as the method value for for the usermap file
@@ -868,16 +694,12 @@ bool CanonicalMapHashEntry::add(const char * name, const char * canon)
 	return false;
 }
 
-
-#endif
-
 int
 MapFile::GetUser(const MyString canonicalization,
 				 MyString & user)
 {
 	bool match_found = false;
 
-#ifdef USE_MAPFILE_V2
 	const char * pcanon;
 	ExtArray<MyString> groups;
 
@@ -888,22 +710,10 @@ MapFile::GetUser(const MyString canonicalization,
 			PerformSubstitution(groups, pcanon, user);
 		}
 	}
-#else
-	for (int entry = 0;
-		 !match_found && entry < user_entries.getlast() + 1;
-		 entry++) {
-		match_found = PerformMapping(user_entries[entry].regex,
-									 canonicalization,
-									 user_entries[entry].user,
-									 user);
-	}
-#endif
-
 	return match_found ? 0 : -1;
 }
 
 
-#ifdef USE_MAPFILE_V2
 bool
 MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 					const MyString & input,         // in: the input to be matched and mapped.
@@ -917,49 +727,17 @@ MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 	}
 	return false;
 }
-#else
-bool
-MapFile::PerformMapping(Regex & regex,
-						const MyString input,
-						const MyString pattern,
-						MyString & output)
-{
-	ExtArray<MyString> groups;
 
-	if (!regex.match(input, &groups)) {
-		return false;
-	}
-
-	PerformSubstitution(groups, pattern, output);
-
-	return true;
-}
-#endif
-
-#ifdef USE_MAPFILE_V2
 void
 MapFile::PerformSubstitution(ExtArray<MyString> & groups,
 							 const char * pattern,
 							 MyString & output)
 {
 	for (int index = 0; pattern[index]; index++) {
-#else
-void
-MapFile::PerformSubstitution(ExtArray<MyString> & groups,
-							 const MyString pattern,
-							 MyString & output)
-{
-	for (int index = 0; index < pattern.Length(); index++) {
-#endif
 		if ('\\' == pattern[index]) {
 			index++;
-#ifdef USE_MAPFILE_V2
 			if (pattern[index]) {
 				if ('0' <= pattern[index] &&
-#else
-			if (index < pattern.Length()) {
-				if ('1' <= pattern[index] &&
-#endif
 					'9' >= pattern[index]) {
 					int match = pattern[index] - '0';
 					if (groups.getlast() >= match) {

@@ -106,15 +106,6 @@ public:
 	*/
 	bool create_union(StringList & subset, bool anycase);
 
-	/** Checks to see if the given list is a subset, i.e. if every member
-		in the given list is a member of the current list.
-		@param subset
-		@param anycase false for case sensitive comparison, true for case
-				in-sensitive.
-		@retval true if subset is indeed a subset, else false
-	*/
-	bool contains_list(StringList & subset, bool anycase);
-
 	/** Checks to see if the given list is identical to the current list
 		@param other
 		@param anycase false for case sensitive comparison, true for case

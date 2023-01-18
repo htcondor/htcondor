@@ -264,23 +264,35 @@ ProcFamilyDirectCgroupV2::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	}
 	fclose(f);
 
+	uint64_t memory_peak_value = 0;
+
 	f = fopen(memory_peak.c_str(), "r");
 	if (!f) {
+		// Some cgroup v2 versions don't have this file
 		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot open %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
-		return false;
-	}
-
-	uint64_t memory_peak_value = 0;
-	if (fscanf(f, "%ld", &memory_peak_value) != 1) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+	} else {
+		if (fscanf(f, "%ld", &memory_peak_value) != 1) {
+	
+			// But this error should never happen
+			dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV2::get_usage cannot read %s: %d %s\n", memory_peak.c_str(), errno, strerror(errno));
+			fclose(f);
+			return false;
+		}
 		fclose(f);
-		return false;
 	}
-	fclose(f);
 
-	// usage is in kbytes
+	// usage is in kbytes.  cgroups reports in bytes
 	usage.total_image_size = usage.total_resident_set_size = (memory_current_value / 1024);
-	usage.max_image_size = (memory_peak_value / 1024);
+
+	// Sanity check if system is missing memory.peak file
+	if (memory_current_value > memory_peak_value) {
+		memory_peak_value = memory_current_value;
+	}
+
+	// More sanity checking to latch memory high water mark
+	if ((memory_peak_value / 1024) > usage.max_image_size) {
+		usage.max_image_size = memory_peak_value / 1024;
+	}
 
 	return true;
 }

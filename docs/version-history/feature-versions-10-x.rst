@@ -39,11 +39,21 @@ New Features:
   ``http_proxy``).
   :jira:`1471`
 
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  no longer tries to mount the various cgroup filesystems.  We assume that
+  any reasonable Linux system will have done this in a manner that it 
+  deems appropriate.
+  :jira:`1528`
+
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for
   a job when it exits.
   :jira:`1500`
+
+- Added support for older cgroup v2 systems with missing memory.peak
+  files in the memory controller.
+  :jira:`1529`
 
 - Fixed bug where ``condor_history`` would occasionally fail to display
   all matching user requested job ids.
@@ -57,6 +67,9 @@ Bugs Fixed:
   ``AUTH_SSL_SERVER_KEYFILE`` can now be a list of files. The first pair of
   files with valid credentials is used.
   :jira:`1455`
+
+- Added missing environment variables for the SciTokens plugin.
+  :jira:`1516`
 
 Version 10.2.0
 --------------

@@ -201,9 +201,21 @@ bool strings_similar(const char* str1, const char* str2, const char* delims)
 {
 	StringList sl1(str1, delims);
 	StringList sl2(str2, delims);
-	return sl1.number() == sl2.number() && 
-		sl1.contains_list(sl2, false) && 
-		sl2.contains_list(sl1, false);
+	if (sl1.number() != sl2.number()) {
+		return false;
+	}
+	sl1.qsort();
+	sl2.qsort();
+	sl1.rewind();
+	sl2.rewind();
+	const char* el1;
+	const char* el2;
+	while ( (el1 = sl1.next()) && (el2 = sl2.next())) {
+		if (strcmp(el1, el2) != MATCH) {
+			return false;
+		}
+	}
+	return true;
 }
 
 MyString* convert_string_array(char** str, int size, const char* delim){

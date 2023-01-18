@@ -1926,15 +1926,6 @@ static void unparse_special (
 }
 
 
-/*
-static bool same_refs(StringList & refs, const char * check_str)
-{
-	if (refs.isEmpty()) return false;
-	StringList check(check_str);
-	return check.contains_list(refs, true);
-}
-*/
-
 typedef std::map<std::string, std::string, classad::CaseIgnLTStr> STRING_MAP;
 
 
