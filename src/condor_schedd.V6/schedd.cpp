@@ -7686,6 +7686,69 @@ Scheduler::negotiate(int command, Stream* s)
 }
 
 
+int
+Scheduler::CmdGiveSlots(int, Stream* stream)
+{
+	ReliSock *rsock = (ReliSock*)stream;
+	ClassAd cmd_ad;
+	int num_ads = 0;
+	std::string claim_id;
+	ClassAd slot_ad;
+	std::string slot_submitter;
+	PROC_ID jobid;
+	jobid.cluster = jobid.proc = -1;
+
+	dprintf(D_ALWAYS, "Got GIVE_SLOTS from %s\n", rsock->peer_description());
+
+	if (!getClassAd(rsock, cmd_ad)) {
+		dprintf(D_ALWAYS, "CmdGiveSlots() failed to read command ad\n");
+		return 0;
+	}
+
+	dprintf(D_ALWAYS, "JEF CmdGiveSlots() provider is '%s'\n",rsock->getFullyQualifiedUser());
+
+	if (!cmd_ad.LookupString("Submitter", slot_submitter)) {
+		slot_submitter = rsock->getFullyQualifiedUser();
+	}
+
+		// TODO handle alternate submitter names
+	MainScheddNegotiate sn(0, nullptr, rsock->getFullyQualifiedUser(), nullptr);
+
+	cmd_ad.LookupInteger("NumAds", num_ads);
+	dprintf(D_ALWAYS, "CmdGiveSlots() reading %d slot ads\n", num_ads);
+
+	for (int i = 0; i < num_ads; i++) {
+		std::string slot_name;
+		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
+			dprintf(D_ALWAYS, "CmdGiveSlots() failed to read slot ad %d\n", i);
+			return 0;
+		}
+
+		slot_ad.LookupString(ATTR_NAME, slot_name);
+
+			// TODO handle pre-claimed slots
+			// TODO handle slots already in use
+		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str());
+	}
+
+	if (!rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdGiveSlots() failed to read eom\n");
+		return 0;
+	}
+
+	ClassAd reply_ad;
+	reply_ad.Assign(ATTR_ACTION_RESULT, OK);
+
+	rsock->encode();
+	if (!putClassAd(rsock, reply_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdGiveSlots() failed to send reply\n");
+		return 0;
+	}
+
+	return 0;
+}
+
+
 void
 Scheduler::release_claim(int, Stream *sock)
 {
@@ -13265,6 +13328,11 @@ Scheduler::Register()
 			"RECYCLE_SHADOW",
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
 			"RecycleShadow", this, DAEMON,
+			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(GIVE_SLOTS,
+			"GIVE_SLOTS",
+			(CommandHandlercpp)&Scheduler::CmdGiveSlots,
+			"GiveSlots", this, WRITE,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ

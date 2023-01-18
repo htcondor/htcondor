@@ -1135,15 +1135,15 @@ void
 ResMgr::offerToSchedd()
 {
 	std::string schedd_name;
-	std::string submitter_name;
-	int req_cluster = 0;
-	int req_proc = 0;
+	std::string schedd_pool;
+	std::string offer_submitter;
 	int interval = 0;
 
 	param(schedd_name, "OFFER_SCHEDD");
-	param(submitter_name, "OFFER_SUBMITTER");
+	param(schedd_pool, "OFFER_POOL");
+	param(offer_submitter, "OFFER_SUBMITTER");
 
-	if ( schedd_name.empty() || submitter_name.empty() ) {
+	if ( schedd_name.empty() ) {
 		dprintf(D_FULLDEBUG, "No offer schedd\n");
 		return;
 	}
@@ -1153,9 +1153,6 @@ ResMgr::offerToSchedd()
 		dprintf(D_FULLDEBUG," Delaying offer to schedd\n");
 		return;
 	}
-
-	req_cluster = param_integer("OFFER_CLUSTER", 1);
-	req_proc = param_integer("OFFER_PROC", 0);
 
 	std::vector<Resource*> offer_resources;
 
@@ -1177,27 +1174,28 @@ ResMgr::offerToSchedd()
 
 	m_lastOfferToSchedd = time(NULL);
 
-	int timeout = param_integer("NEGOTIATOR_TIMEOUT",30);
-	DCSchedd schedd(schedd_name.c_str());
+	int timeout = 30;
+	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
 	ReliSock *sock = schedd.reliSock(timeout);
 	if ( ! sock ) {
 		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
 		return;
 	}
-	if (!schedd.startCommand(NEGOTIATE, sock, timeout)) {
-		dprintf(D_FULLDEBUG, "Failed to send NEGOTIATE command to %s\n",
+	if (!schedd.startCommand(GIVE_SLOTS, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send GIVE_SLOTS command to %s\n",
 		        schedd_name.c_str());
 		delete sock;
 		return;
 	}
 
 	sock->encode();
-	ClassAd neg_ad;
-	neg_ad.InsertAttr(ATTR_OWNER, submitter_name);
-	neg_ad.InsertAttr(ATTR_SUBMITTER_TAG, "");
-	neg_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, "");
-	if ( !putClassAd(sock, neg_ad) || !sock->end_of_message() ) {
-		dprintf(D_FULLDEBUG, "Failed to send NEGOTIATE ad to %s\n",
+	ClassAd cmd_ad;
+	cmd_ad.InsertAttr("NumAds", (long)offer_resources.size());
+	if (!offer_submitter.empty()) {
+		cmd_ad.InsertAttr("Submitter", offer_submitter);
+	}
+	if ( !putClassAd(sock, cmd_ad) ) {
+		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",
 		        schedd_name.c_str());
 		delete sock;
 		return;
@@ -1206,17 +1204,12 @@ ResMgr::offerToSchedd()
 	for ( auto slot: offer_resources ) {
 		ClassAd offer_ad;
 		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
-		offer_ad.InsertAttr(ATTR_REMOTE_NEGOTIATING_GROUP, "<None>");
-		offer_ad.InsertAttr(ATTR_RESOURCE_REQUEST_CLUSTER, req_cluster);
-		offer_ad.InsertAttr(ATTR_RESOURCE_REQUEST_PROC, req_proc);
-			// TODO This assumes the resource has not preempting claimids,
+			// TODO This assumes the resource has no preempting claimids,
 			//   because we're only looking at unclaimed slots.
 		std::string claimid = slot->r_cur->id();
 
-		if ( !sock->put(PERMISSION_AND_AD) ||
-		     !sock->put_secret(claimid) ||
-		     !putClassAd(sock, offer_ad) ||
-		     !sock->end_of_message() )
+		if ( !sock->put_secret(claimid) ||
+		     !putClassAd(sock, offer_ad) )
 		{
 			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
 			        schedd_name.c_str());
@@ -1225,10 +1218,25 @@ ResMgr::offerToSchedd()
 		}
 	}
 
-	if ( !sock->put(END_NEGOTIATE) || !sock->end_of_message() ) {
-		dprintf(D_FULLDEBUG, "Failed to send END_NEGOTIATE to %s\n",
+	if ( !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n",
 		        schedd_name.c_str());
 	}
+
+	sock->decode();
+	ClassAd reply_ad;
+	if (!getClassAd(sock, reply_ad) || !sock->end_of_message()) {
+		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	int reply_code = NOT_OK;
+	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	if (reply_code != OK) {
+		dprintf(D_FULLDEBUG, "Schedd returned error\n");
+	}
+
 	delete sock;
 }
 
