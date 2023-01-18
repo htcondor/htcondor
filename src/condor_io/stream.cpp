@@ -1311,6 +1311,25 @@ Stream::get_string_ptr( char const *&s ) {
 }
 
 int
+Stream::get_secret( std::string& s )
+{
+	const char* str = nullptr;
+	int len = 0;
+	int retval;
+
+	prepare_crypto_for_secret();
+
+	retval = get_string_ptr(str, len);
+	if (retval) {
+		s.assign(str ? str : "", len);
+	}
+
+	restore_crypto_after_secret();
+
+	return retval;
+}
+
+int
 Stream::get_secret( const char *&s, int &len )
 {
 	int retval;
