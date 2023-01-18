@@ -53,6 +53,14 @@ mkdir "${spooldir}/N3",0755 || die "Could not create spool directory for our neg
 mkdir "${spooldir}/N4",0755 || die "Could not create spool directory for our negotiator\n";
 mkdir "${spooldir}/N5",0755 || die "Could not create spool directory for our negotiator\n";
 
+my $executedir = `condor_config_val EXECUTE`;
+chomp $executedir;
+mkdir "${executedir}/S1",0755 || die "Could not create execute directory for our startd 1\n";
+mkdir "${executedir}/S2",0755 || die "Could not create execute directory for our startd 2\n";
+mkdir "${executedir}/S3",0755 || die "Could not create execute directory for our startd 3\n";
+mkdir "${executedir}/S4",0755 || die "Could not create execute directory for our startd 4\n";
+mkdir "${executedir}/S5",0755 || die "Could not create execute directory for our startd 5\n";
+
 my $append_condor_config = '
 C1=$(COLLECTOR)
 C2=$(COLLECTOR)
@@ -123,6 +131,11 @@ START2.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start2
 START3.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start3
 START4.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start4
 START5.STARTD_ADDRESS_FILE=$(LOG)/.startd_address.start5
+START1.EXECUTE=$(EXECUTE)/S1
+START2.EXECUTE=$(EXECUTE)/S2
+START3.EXECUTE=$(EXECUTE)/S3
+START4.EXECUTE=$(EXECUTE)/S4
+START5.EXECUTE=$(EXECUTE)/S5
 DAEMON_LIST = $(DAEMON_LIST), START1, START2, START3, START4, START5, N1, N2, N3, N4, N5, C1, C2, C3, C4, C5
 #DC_DAEMON_LIST = + C1, C2, C3, C4, C5, START1, START2, START3, START4, START5, N1, N2, N3, N4, N5
 START1.STARTD_LOG=$(LOG)/StartdLog.Start1
