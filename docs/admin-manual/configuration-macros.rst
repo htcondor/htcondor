@@ -9386,9 +9386,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     trusted CA's certificate within the directory.
 
 :macro-def:`AUTH_SSL_SERVER_CERTFILE`
-    The path and file name of the file containing the public certificate
-    for the server side of a communication authenticating with SSL.  On
-    Linux, this defaults to ``/etc/pki/tls/certs/localhost.crt``.
+    A comma-separated list of filenames to search for a public certificate
+    to be used for the server side of SSL authentication.
+    The first file that contains a valid credential (in combination with
+    ``AUTH_SSL_SERVER_KEYFILE``)  will be used.
 
 :macro-def:`AUTH_SSL_CLIENT_CERTFILE`
     The path and file name of the file containing the public certificate
@@ -9397,9 +9398,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     as the user ``anonymous@ssl``.
 
 :macro-def:`AUTH_SSL_SERVER_KEYFILE`
-    The path and file name of the file containing the private key for
-    the server side of a communication authenticating with SSL. On
-    Linux, this defaults to ``/etc/pki/tls/private/localhost.key``.
+    A comma-separated list of filenames to search for a private key
+    to be used for the server side of SSL authentication.
+    The first file that contains a valid credential (in combination with
+    ``AUTH_SSL_SERVER_CERTFILE``) will be used.
 
 :macro-def:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
@@ -9433,7 +9435,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``AUTH_SSL_SERVER_KEYFILE``, respectively.
     The locations of the CA files are controlled by
     ``TRUST_DOMAIN_CAFILE`` and ``TRUST_DOMAIN_CAKEY``.
-    The default value is ``False``.
+    The default value is ``True`` on unix platforms and ``False`` on Windows.
 
 :macro-def:`TRUST_DOMAIN_CAFILE`
     A path specifying the location of the CA the *condor_collector*
