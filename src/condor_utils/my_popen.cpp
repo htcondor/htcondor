@@ -27,18 +27,11 @@
 #include "env.h"
 #include "setenv.h"
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOSERVICE
-#define NOMCX
-#define NOIME
-#include <Windows.h>
-#else
+#ifndef WIN32
 #include <poll.h>
 #include <fcntl.h>
+#include <unistd.h>
 #endif
-
-#include "../gpu/pi_sleep.h"
 
 #ifdef WIN32
 typedef HANDLE child_handle_t;
