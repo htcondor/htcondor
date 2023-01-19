@@ -923,7 +923,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
-include_directories(${CONDOR_SOURCE_DIR}/src/jwt-cpp/include)
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/jwt-cpp/include)
 # set these so contrib modules can add to their include path without being reliant on specific directory names.
 set (CONDOR_MASTER_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_master.V6)
 set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)
