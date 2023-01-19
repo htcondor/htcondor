@@ -54,3 +54,9 @@ struct passwd *getpwnam(const char *name) {
 	fakeEntry.pw_shell = shell ? shell : const_cast<char *>("/bin/bash");
 	return &fakeEntry;
 }
+
+// Some versions of ssh-keygen unconditionally call getpwuid.  Let's
+// dummy that up, as well
+struct passwd *getpwuid(uid_t /*unused*/) {
+	return getpwnam("condor-user");
+}
