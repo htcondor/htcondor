@@ -45,6 +45,11 @@ New Features:
   deems appropriate.
   :jira:`1528`
 
+- *condor_ssh_to_job* should now work in glidein and other environments
+  where the job or HTCondor is running as a Unix user id that doesn't
+  have an entry in the /etc/passwd database.
+  :jira:`1543`
+
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for
