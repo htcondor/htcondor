@@ -25,15 +25,78 @@ logger.setLevel(logging.DEBUG)
 
 
 @action
-def the_condor(test_dir):
-    # FIXME: add local-cleanup to config.
+def the_condor(test_dir, cleanup_file):
     with Condor(
         local_dir=test_dir / "condor",
         config={
             'ENABLE_URL_TRANSFERS': 'TRUE',
+            'LOCAL_CLEANUP_PLUGIN': cleanup_file.as_posix(),
         }
     ) as the_condor:
         yield the_condor
+
+
+@action
+def cleanup_file(test_dir):
+    cleanup_file = test_dir / "local-cleanup.sh"
+    contents = format_script(
+    """
+        #!/bin/bash
+
+        echo "$@" > /tmp/local-delete.sh
+
+        function usage() {
+            echo "usage: $0 -from local://... -delete PATH"
+            exit 1
+        }
+
+        if [[ $# -lt 4 ]]; then
+            usage
+        fi
+
+        if [[ $1 != "-from" ]]; then
+            usage
+        fi
+        FROM=$2
+
+        if [[ $3 != "-delete" ]]; then
+            usage
+        fi
+        DELETE=$4
+
+        FROM_REGEX='^local://(.*)'
+        if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
+            DIR=${BASH_REMATCH[1]}
+
+            DIR_REGEX='[^/]$'
+            if [[ ${DIR} =~ $DIR_REGEX ]]; then
+                DIR=${DIR}/
+            fi
+
+            DELETE_REGEX='^/(.*)'
+            if [[ ${DELETE} =~ $DELETE_REGEX ]]; then
+                DELETE=${BASH_REMATCH[1]}
+            fi
+
+            # Delete the file.
+            rm -f ${DIR}${DELETE}
+
+            # We created directories in ${DIR} as necessary to write the checkpoint,
+            # so delete them if we just removed the last file in them.  This won't
+            # delete directories which didn't have files in them, though.
+            SUBDIR=`dirname ${DIR}${DELETE}`
+            if [[ -d ${SUBDIR} ]]; then
+                rmdir --parents --ignore-fail-on-non-empty ${SUBDIR}
+            fi
+
+            exit 0
+        else
+            usage
+        fi
+    """
+    )
+    write_file(cleanup_file, contents)
+    return cleanup_file
 
 
 @action
