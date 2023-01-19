@@ -41,7 +41,7 @@ case "$1" in
         # needs to be world readable for proper operation
         if [ -d $local_dir ]; then
             # Open up the permission, if the directory exists
-            chmod o+rx
+            chmod o+rx $local_dir
         fi
         # condor_master needs a log directory to start up
         dirname=$(condor_config_val LOG 2>/dev/null)
