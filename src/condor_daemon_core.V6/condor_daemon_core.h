@@ -2012,7 +2012,7 @@ class DaemonCore : public Service
     void                DumpSigTable(int, const char* = NULL);
     int                 maxSig;      // max number of signal handlers
     int                 nSig;        // high-water mark of entries used
-    ExtArray<SignalEnt> sigTable;    // signal table
+	std::vector<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt

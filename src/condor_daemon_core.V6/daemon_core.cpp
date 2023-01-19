@@ -271,7 +271,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 #endif
 	m_create_family_session(true),
 	comTable(32),
-	sigTable(10),
 	t(TimerManager::GetTimerManager()),
 	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
@@ -332,9 +331,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 		maxSig = DEFAULT_MAXSIGNALS;
 
 	nSig = 0;
-	SignalEnt blankSignalEnt;
-	memset(&blankSignalEnt, '\0', sizeof(SignalEnt));
-	sigTable.fill(blankSignalEnt);
 
 	if(maxSocket == 0)
 		maxSocket = DEFAULT_MAXSOCKETS;
@@ -527,9 +523,9 @@ DaemonCore::~DaemonCore()
 		free( m_unregisteredCommand.handler_descrip );
 	}
 
-	for (i=0;i<nSig;i++) {
-		free( sigTable[i].sig_descrip );
-		free( sigTable[i].handler_descrip );
+	for (auto &s : sigTable) {
+		free( s.sig_descrip );
+		free( s.handler_descrip );
 	}
 
 	if (sockTable != NULL)
@@ -1598,6 +1594,9 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		// We need to add a new entry at the end of our array
 		i = nSig;
 		nSig++;
+		sigTable.push_back({});
+		sigTable[i].sig_descrip = nullptr;
+		sigTable[i].handler_descrip = nullptr;
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
