@@ -427,8 +427,6 @@ main_init( int, char* argv[] )
 void
 main_config()
 {
-	bool done_allocating;
-
 		// Reread config file for global settings.
 	init_params(0);
 

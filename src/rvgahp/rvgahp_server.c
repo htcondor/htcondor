@@ -32,6 +32,12 @@
 
 #include "common.h"
 
+// Some compilers will warn that the `gahp` and `gahp_command` arrays
+// in `loop()` are the same size, but that the former is written into
+// the latter along with a prefix and some constant characters.  After
+// discussion with JaimeF, use SMALL_BUFFER for `gahp` instead.
+#define SMALL_BUFFER 1024
+
 char *argv0 = NULL;
 char *base_dir = NULL;
 
@@ -105,8 +111,8 @@ int loop() {
 
     /* Get name of GAHP to launch */
     log(stdout, "Waiting for request\n");
-    char gahp[BUFSIZ];
-    ssize_t b = read(gahp_sock, gahp, BUFSIZ);
+    char gahp[SMALL_BUFFER];
+    ssize_t b = read(gahp_sock, gahp, SMALL_BUFFER);
     if (b < 0) {
         log(stderr, "ERROR read from SSH failed: %s\n", strerror(errno));
         /* This probably happened because the SSH process died */

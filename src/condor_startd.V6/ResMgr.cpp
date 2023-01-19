@@ -1716,7 +1716,6 @@ ResMgr::removeResource( Resource* rip )
 {
 	int i, j;
 	Resource** new_resources = NULL;
-	Resource* rip2;
 
 	if( nresources > 1 ) {
 			// There are still more resources after this one is
