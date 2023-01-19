@@ -74,7 +74,7 @@ public:
 	CanonicalMapEntry * next;
 	CanonicalMapEntry(char typ) : next(NULL), entry_type(typ) { memset(spare, 0, sizeof(spare)); }
 	~CanonicalMapEntry();
-	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
+	bool matches(const char * principal, int cch, std::vector<MyString> *groups, const char ** pcanon);
 	bool is_hash_type() const { return entry_type == 2; }
 protected:
 	friend class MapFile;
@@ -89,7 +89,7 @@ public:
 	~CanonicalMapRegexEntry() { clear(); }
 	void clear() { if (re) pcre2_code_free(re); re = NULL; canonicalization = NULL; }
 	bool add(const char* pattern, uint32_t options, const char * canon, int * errcode, PCRE2_SIZE * erroffset);
-	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
+	bool matches(const char * principal, int cch, std::vector<MyString> *groups, const char ** pcanon);
 	void dump(FILE * fp) {
 		fprintf(fp, "   REGEX { /<compiled_regex>/%x %s }\n", re_options, canonicalization);
 	}
@@ -106,7 +106,7 @@ public:
 	~CanonicalMapHashEntry() { clear(); }
 	void clear() { if (hm) { hm->clear(); delete hm; } hm = NULL; }
 	bool add(const char * name, const char * canon);
-	bool matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon);
+	bool matches(const char * principal, int cch, std::vector<MyString> *groups, const char ** pcanon);
 	static CanonicalMapHashEntry * is_type(CanonicalMapEntry * that) {
 		if (that && that->is_hash_type()) { return reinterpret_cast<CanonicalMapHashEntry*>(that); }
 		return NULL;
@@ -145,7 +145,7 @@ protected:
 	}
 };
 
-bool CanonicalMapEntry::matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon)
+bool CanonicalMapEntry::matches(const char * principal, int cch, std::vector<MyString> *groups, const char ** pcanon)
 {
 	if (entry_type == 1) {
 		return reinterpret_cast<CanonicalMapRegexEntry*>(this)->matches(principal, cch, groups, pcanon);
@@ -562,7 +562,7 @@ MapFile::GetCanonicalization(const MyString& method,
 	bool match_found = false;
 
 	const char * pcanon;
-	ExtArray<MyString> groups;
+	std::vector<MyString> groups;
 
 	METHOD_MAP::iterator found = methods.find(method.c_str());
 	if (found != methods.end() && found->second) {
@@ -627,21 +627,21 @@ void MapFile::AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char *
 }
 
 
-bool CanonicalMapHashEntry::matches(const char * principal, int /*cch*/, ExtArray<MyString> *groups, const char ** pcanon)
+bool CanonicalMapHashEntry::matches(const char * principal, int /*cch*/, std::vector<MyString> *groups, const char ** pcanon)
 {
 	LITERAL_HASH::iterator found = hm->find(principal);
 	if (found != hm->end()) {
 		if (pcanon) *pcanon = found->second;
 		if (groups) {
-			(*groups)[0] = found->first.ptr();
-			groups->truncate(0);
+			groups->clear();
+			groups->push_back(found->first.ptr());
 		}
 		return true;
 	}
 	return false;
 }
 
-bool CanonicalMapRegexEntry::matches(const char * principal, int cch, ExtArray<MyString> *groups, const char ** pcanon)
+bool CanonicalMapRegexEntry::matches(const char * principal, int cch, std::vector<MyString> *groups, const char ** pcanon)
 {
 	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
 	PCRE2_SPTR principal_pcre2str = reinterpret_cast<const unsigned char *>(principal);
@@ -658,10 +658,12 @@ bool CanonicalMapRegexEntry::matches(const char * principal, int cch, ExtArray<M
 
 	if (pcanon) *pcanon = this->canonicalization;
 	if (groups) {
+		groups->clear();
 		PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 		for (int i = 0; i < rc; i++) {
 			int ix1 = static_cast<int>(ovector[i * 2]);
 			int ix2 = static_cast<int>(ovector[i * 2 + 1]);
+			groups->push_back({});
 			(*groups)[i].set(&principal[ix1], ix2 - ix1);
 		}
 	}
@@ -701,7 +703,7 @@ MapFile::GetUser(const MyString canonicalization,
 	bool match_found = false;
 
 	const char * pcanon;
-	ExtArray<MyString> groups;
+	std::vector<MyString> groups;
 
 	METHOD_MAP::iterator found = methods.find(NULL);
 	if (found != methods.end() && found->second) {
@@ -717,7 +719,7 @@ MapFile::GetUser(const MyString canonicalization,
 bool
 MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 					const MyString & input,         // in: the input to be matched and mapped.
-					ExtArray<MyString> * groups,  // out: match groups from the input
+					std::vector<MyString> * groups,  // out: match groups from the input
 					const char ** pcanon)         // out: canonicalization pattern
 {
 	for (CanonicalMapEntry * entry = list->first; entry; entry = entry->next) {
@@ -729,7 +731,7 @@ MapFile::FindMapping(CanonicalMapList* list,       // in: the mapping data set
 }
 
 void
-MapFile::PerformSubstitution(ExtArray<MyString> & groups,
+MapFile::PerformSubstitution(std::vector<MyString> & groups,
 							 const char * pattern,
 							 MyString & output)
 {
@@ -740,7 +742,7 @@ MapFile::PerformSubstitution(ExtArray<MyString> & groups,
 				if ('0' <= pattern[index] &&
 					'9' >= pattern[index]) {
 					int match = pattern[index] - '0';
-					if (groups.getlast() >= match) {
+					if (groups.size() > match) {
 						output += groups[match];
 						continue;
 					}
