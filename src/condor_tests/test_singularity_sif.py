@@ -73,7 +73,7 @@ def test_job_hash():
             "output": "output",
             "error": "error",
             "log": "log",
-            "on_exit_remove": "ExitCode == 0"
+            "leave_in_queue": "True"
             }
 
 @action
@@ -90,7 +90,7 @@ def completed_test_job(condor, test_job_hash):
         fail_condition=ClusterState.any_held,
     )
 
-    return ctj
+    return ctj.query()[0]
 
 # For the test to work, we need a singularity/apptainer which can work with
 # SIF files, which is any version of apptainer, or singularity >= 3
@@ -110,4 +110,4 @@ def SingularityIsWorthy():
 class TestContainerUni:
     @pytest.mark.skipif(not SingularityIsWorthy(), reason="No worthy Singularity/Apptainer found")
     def test_container_uni(self, sif_file, completed_test_job):
-            assert True
+            assert completed_test_job['ExitCode'] == 0
