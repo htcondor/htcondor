@@ -2,6 +2,7 @@
 
 import os
 import time
+import pytest
 import subprocess
 from pathlib import Path
 
@@ -558,11 +559,6 @@ TEST_CASES = {
         "+CheckpointDestination":       '"local://{test_dir}/"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
-    "local_no_keep": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
-        "transfer_plugins":             'local={plugin_shell_file}',
-        "LeaveJobInQueue":              "false",
-    },
     # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
     # checking the results.  For now, we're just going to ignore the
     # output_destination -related problems and only check to make sure
@@ -686,14 +682,6 @@ def the_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file
 
     yield job_handles
 
-    # In the future, when we actually delete checkpoints when the job
-    # leaves the queue -- and check when we do -- we'll have to be
-    # cleverer about which jobs get removed here, because some of them
-    # we definitely want to stay in the queue long enough to check
-    # their checkpoint directories.
-    for job_handle in job_handles:
-        job_handles[job_handle].remove()
-
 
 @action(params={name: name for name in TEST_CASES})
 def the_job_pair(request, the_job_handles):
@@ -735,6 +723,15 @@ def the_completed_job(the_condor, the_job_handle):
     )
 
     return the_job_handle
+
+
+@action
+def the_removed_job(the_condor, the_completed_job):
+    the_condor.run_command(['condor_qedit', the_completed_job.clusterid, 'LeaveJobInQueue', 'False'])
+    # time.sleep(1)
+    the_completed_job.remove()
+    # time.sleep(1)
+    return the_completed_job
 
 
 @action
@@ -1121,9 +1118,6 @@ class TestCheckpointDestination:
     # submitted with a checkpoint destination somehow doesn't have one
     # by the time it finishes.
     def test_checkpoint_location(self, test_dir, the_condor, the_completed_job, the_job_name):
-        if the_job_name == "local_no_keep":
-            return
-
         schedd = the_condor.get_local_schedd()
         constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
         result = schedd.query(
@@ -1135,16 +1129,11 @@ class TestCheckpointDestination:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
 
 
-    # This is kind of awful, but the schedd just moves LeaveJobInQueue
-    # jobs from C to X instead of actually removing them.
     def test_checkpoint_removed(self,
       the_condor,
-      the_job_name, the_completed_job):
-        if the_job_name != "local_no_keep":
-            return
-
+      the_job_name, the_removed_job):
         schedd = the_condor.get_local_schedd()
-        constraint = f'ClusterID == {the_completed_job.clusterid} && ProcID == 0'
+        constraint = f'ClusterID == {the_removed_job.clusterid} && ProcID == 0'
 
         # Make sure the job has left the queue.
         result = schedd.query(
@@ -1164,24 +1153,27 @@ class TestCheckpointDestination:
 
         jobAd = results[0]
 
-        prefix = jobAd["CheckpointDestination"]
-        prefix = prefix[prefix.find("://") + 3:]
-        prefix = prefix + "/" + jobAd["GlobalJobID"]
-        prefix = Path(prefix)
+        prefix = jobAd.get("CheckpointDestination")
+        if prefix is None:
+            with the_condor.use_config():
+                SPOOL = htcondor.param["SPOOL"]
+            spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
+            assert(not spoolDirectory.exists())
+        else:
+            prefix = prefix[prefix.find("://") + 3:]
+            prefix = prefix + "/" + jobAd["GlobalJobID"]
+            prefix = Path(prefix)
 
-        checkpointNumber = int(jobAd["CheckpointNumber"])
-        for i in range(0, checkpointNumber):
-            path = prefix / f"{i:04}"
-            assert(not path.exists())
+            checkpointNumber = int(jobAd["CheckpointNumber"])
+            for i in range(0, checkpointNumber):
+                path = prefix / f"{i:04}"
+                assert(not path.exists())
 
 
     def test_checkpoint_structure(self,
       test_dir, the_condor,
       the_job_name, the_completed_job,
     ):
-        if the_job_name == "local_no_keep":
-            return
-
         # FIXME: Much of this code should be moved into fixtures, because
         # it's a set-up error if it fails.
 
