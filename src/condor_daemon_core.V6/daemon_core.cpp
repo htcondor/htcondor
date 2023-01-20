@@ -7902,13 +7902,13 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 
 		if ( executable[0] != '/' ) {   // relative path
-			MyString currwd;
+			std::string currwd;
 			if ( !condor_getcwd( currwd ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.formatstr("%s/%s", currwd.c_str(), executable);
+			formatstr(executable_fullpath_buf, "%s/%s", currwd.c_str(), executable);
 			executable_fullpath = executable_fullpath_buf.c_str();
 
 				// Finally, log it

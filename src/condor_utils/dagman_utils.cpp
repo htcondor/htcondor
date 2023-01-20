@@ -513,7 +513,7 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 	shallowOpts.strSchedLog = shallowOpts.primaryDagFile + ".dagman.log";
 	shallowOpts.strSubFile = shallowOpts.primaryDagFile + DAG_SUBMIT_FILE_SUFFIX;
 
-	MyString	rescueDagBase;
+	std::string rescueDagBase;
 
 		// If we're running each DAG in its own directory, write any rescue
 		// DAG to the current directory, to avoid confusion (since the
