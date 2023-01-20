@@ -41,6 +41,10 @@ Bugs Fixed:
   provisioned filesystems were enabled
   :jira:`1524`
 
+- In the python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
 .. _lts-version-history-1001:
 
 Version 10.0.1
