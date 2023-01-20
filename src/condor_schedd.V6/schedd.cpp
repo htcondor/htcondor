@@ -926,7 +926,7 @@ Scheduler::SetupNegotiatorSession(unsigned duration, const std::string &pool, st
 	}
 
 	const char *session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"416\"]";
-	MyString exported_session_info;
+	std::string exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr(ATTR_REMOTE_POOL, pool);
 
@@ -973,7 +973,7 @@ Scheduler::SetupCollectorSession(unsigned duration, std::string &capability)
 	}
 
 	auto session_info = "[Encryption=\"YES\";Integrity=\"YES\";ValidCommands=\"523\"]";
-	MyString exported_session_info;
+	std::string exported_session_info;
 	classad::ClassAd policy_ad;
 	policy_ad.InsertAttr("ScheddSession", true);
 	bool retval = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(

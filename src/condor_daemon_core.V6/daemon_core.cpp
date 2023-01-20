@@ -7209,7 +7209,7 @@ int DaemonCore::Create_Process(
 
 		privateinheritbuf += " SessionKey:";
 
-		MyString session_info;
+		std::string session_info;
 		rc = getSecMan()->ExportSecSessionInfo(session_id_c_str, session_info);
 		if(!rc)
 		{
@@ -7222,7 +7222,7 @@ int DaemonCore::Create_Process(
 	if((want_command_port != FALSE || HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(job_opt_mask)) 
 		&& !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
 	{
-		MyString family_session_info;
+		std::string family_session_info;
 		bool rc = getSecMan()->ExportSecSessionInfo(m_family_session_id.c_str(), family_session_info);
 		if(!rc)
 		{
