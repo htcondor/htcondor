@@ -728,9 +728,7 @@ def the_completed_job(the_condor, the_job_handle):
 @action
 def the_removed_job(the_condor, the_completed_job):
     the_condor.run_command(['condor_qedit', the_completed_job.clusterid, 'LeaveJobInQueue', 'False'])
-    # time.sleep(1)
     the_completed_job.remove()
-    # time.sleep(1)
     return the_completed_job
 
 
@@ -1167,6 +1165,9 @@ class TestCheckpointDestination:
             checkpointNumber = int(jobAd["CheckpointNumber"])
             for i in range(0, checkpointNumber):
                 path = prefix / f"{i:04}"
+                # Crass empiricism.
+                if not path.exists():
+                    time.sleep(3)
                 assert(not path.exists())
 
 
