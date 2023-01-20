@@ -1167,7 +1167,7 @@ class TestCheckpointDestination:
                 path = prefix / f"{i:04}"
                 # Crass empiricism.
                 if not path.exists():
-                    time.sleep(3)
+                    time.sleep(10)
                 assert(not path.exists())
 
 
