@@ -66,15 +66,16 @@ dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nigh
 # Final release changelog
 #dch --release --distribution $dist ignored
 
-if grep -qi bullseye /etc/os-release; then
+. /etc/os-release
+if [ $VERSION_CODENAME = 'bullseye' ]; then
     true
-elif grep -qi bookworm /etc/os-release; then
+elif [ $VERSION_CODENAME = 'bookworm' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif grep -qi bionic /etc/os-release; then
+elif [ $VERSION_CODENAME = 'bionic' ]; then
     true
-elif grep -qi focal /etc/os-release; then
+elif [ $VERSION_CODENAME = 'focal' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif grep -qi jammy /etc/os-release; then
+elif [ $VERSION_CODENAME = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
 else
