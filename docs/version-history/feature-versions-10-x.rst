@@ -17,7 +17,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- In the python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
 
 Version 10.2.0
 --------------
