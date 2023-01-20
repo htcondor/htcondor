@@ -6924,7 +6924,7 @@ int DaemonCore::Create_Process(
 	int max_pid_retry = 0;
 	static int num_pid_collisions = 0;
 	int errorpipe[2];
-	MyString executable_fullpath_buf;
+	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
 #endif
 

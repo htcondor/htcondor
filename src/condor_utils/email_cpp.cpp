@@ -40,7 +40,7 @@ static FILE* email_user_open_id( ClassAd *jobAd, int cluster, int proc,
 								 const char *subject );
 
 static void
-construct_custom_attributes( MyString &attributes, ClassAd* job_ad );
+construct_custom_attributes(std::string &attributes, ClassAd* job_ad);
 
 FILE *
 email_user_open_id( ClassAd *jobAd, int, int, const char *subject )
@@ -78,7 +78,7 @@ email_custom_attributes( FILE* mailer, ClassAd* job_ad )
 	if( !mailer || !job_ad ) {
 		return;
 	}
-    MyString attributes;
+	std::string attributes;
 
     construct_custom_attributes( attributes, job_ad );
     fprintf( mailer, "%s", attributes.c_str( ) );
@@ -86,9 +86,9 @@ email_custom_attributes( FILE* mailer, ClassAd* job_ad )
 }
 
 static void
-construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
+construct_custom_attributes( std::string &attributes, ClassAd* job_ad )
 {
-    attributes = "";
+    attributes.clear();
 
 	bool first_time = true;
 	char *tmp = NULL;
@@ -112,10 +112,10 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 			continue;
 		}
 		if( first_time ) {
-			attributes.formatstr_cat( "\n\n" );
+			formatstr_cat(attributes, "\n\n");
 			first_time = false;
 		}
-		attributes.formatstr_cat( "%s = %s\n", tmp, ExprTreeToString(expr_tree) );
+		formatstr_cat(attributes, "%s = %s\n", tmp, ExprTreeToString(expr_tree));
 	}
     return;
 }
@@ -124,9 +124,9 @@ construct_custom_attributes( MyString &attributes, ClassAd* job_ad )
 char*
 email_check_domain( const char* addr, ClassAd* job_ad )
 {
-	MyString full_addr = addr;
+	std::string full_addr = addr;
 
-	if( full_addr.FindChar('@') >= 0 ) {
+	if( full_addr.find('@') != std::string::npos ) {
 			// Already has a domain, we're done
 		return strdup( addr );
 	}
@@ -272,8 +272,8 @@ Email::open_stream( ClassAd* ad, int exit_reason, const char* subject )
 	ad->LookupInteger( ATTR_CLUSTER_ID, cluster );
 	ad->LookupInteger( ATTR_PROC_ID, proc );
 
-	MyString full_subject;
-	full_subject.formatstr( "Condor Job %d.%d", cluster, proc );
+	std::string full_subject;
+	formatstr(full_subject, "Condor Job %d.%d", cluster, proc);
 	if( subject ) {
 		full_subject += " ";
 		full_subject += subject;
@@ -304,8 +304,8 @@ Email::writeJobId( ClassAd* ad )
 	std::string iwd;
 	ad->LookupString(ATTR_JOB_IWD, iwd);
 
-	MyString args;
-	ArgList::GetArgsStringForDisplay(ad,&args);
+	std::string args;
+	ArgList::GetArgsStringForDisplay(ad, args);
 
 	fprintf( fp, "Condor job %d.%d\n", cluster, proc);
 
@@ -460,7 +460,7 @@ Email::writeCustom( ClassAd *ad )
 		return;
 	}
 
-    MyString attributes;
+	std::string attributes;
 
     construct_custom_attributes( attributes, ad );
     fprintf( fp, "%s", attributes.c_str() );
