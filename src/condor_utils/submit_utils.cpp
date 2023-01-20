@@ -671,7 +671,7 @@ static char * trim_and_strip_quotes_in_place(char * str)
 	return p;
 }
 
-static void compress_path( MyString &path )
+static void compress_path( std::string &path )
 {
 	char	*src, *dst;
 	char *str = strdup(path.c_str());
@@ -697,14 +697,13 @@ static void compress_path( MyString &path )
 	free( str );
 }
 
-
 /* check_path_length() has been deprecated in favor of 
  * check_and_universalize_path(), which not only checks
  * the length of the path string but also, on windows, it
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( MyString &path )
+int SubmitHash::check_and_universalize_path( std::string &path )
 {
 	(void) path;
 
@@ -759,21 +758,21 @@ int SubmitHash::check_and_universalize_path( MyString &path )
 				"\tuser '%s', but you're '%s', so Condor can\n"
 			    "\tnot access it. Currently Condor only supports network\n"
 			    "\tdrives that are associated with the submitting user.\n", 
-					path.Value(), net_name, my_name);
+					path.c_str(), net_name, my_name);
 				return -1;
 			}
 		} else {
 			push_error(stderr, "Unable to get name of user associated with \n"
 				"the following network path (err=%d):"
-				"\n\t%s\n", result, path.Value());
+				"\n\t%s\n", result, path.c_str());
 			return -1;
 		}
 
-		result = WNetGetUniversalName(path.Value(), UNIVERSAL_NAME_INFO_LEVEL, 
+		result = WNetGetUniversalName(path.c_str(), UNIVERSAL_NAME_INFO_LEVEL, 
 			name_info_buf, &name_info_buf_size);
 		if ( result != NO_ERROR ) {
 			push_error(stderr, "Unable to get universal name for path (err=%d):"
-				"\n\t%s\n", result, path.Value());
+				"\n\t%s\n", result, path.c_str());
 			return -1;
 		} else {
 			uni = (UNIVERSAL_NAME_INFO*)&name_info_buf;
@@ -838,7 +837,7 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 {
 	char const *p_iwd;
-	MyString realcwd;
+	std::string realcwd;
 
 	if ( use_iwd ) {
 		ASSERT(JobIwd.length());
@@ -857,14 +856,14 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	if ( name[0] == '\\' || name[0] == '/' || (name[0] && name[1] == ':') ) {
 		TempPathname = name;
 	} else {
-		TempPathname.formatstr( "%s\\%s", p_iwd, name );
+		formatstr( TempPathname, "%s\\%s", p_iwd, name );
 	}
 #else
 
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		TempPathname.formatstr( "/%s", name );
+		formatstr( TempPathname, "/%s", name );
 	} else {	/* relative to iwd which is relative to the root */
-		TempPathname.formatstr( "/%s/%s", p_iwd, name );
+		formatstr( TempPathname, "/%s/%s", p_iwd, name );
 	}
 #endif
 
@@ -1484,11 +1483,11 @@ int SubmitHash::CheckStdFile(
 	_submit_file_role role,
 	const char * value, // in: filename to use, may be NULL
 	int access,         // in: desired access if checking for file accessiblity
-	MyString & file,    // out: filename, possibly fixed up.
+	std::string & file, // out: filename, possibly fixed up.
 	bool & transfer_it, // in,out: whether we expect to transfer it or not
 	bool & stream_it)   // in,out: whether we expect to stream it or not
 {
-	file = value;
+	file = value ? value : "";
 	if (file.empty())
 	{
 		transfer_it = false;
@@ -1535,7 +1534,7 @@ int SubmitHash::SetStdin()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Input, SUBMIT_KEY_Stdin));
 	if (value || ! job->Lookup(ATTR_JOB_INPUT)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_INPUT, value, O_RDONLY, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1570,7 +1569,7 @@ int SubmitHash::SetStdout()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Output, SUBMIT_KEY_Stdout));
 	if (value || ! job->Lookup(ATTR_JOB_OUTPUT)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_STDOUT, value, O_WRONLY|O_CREAT|O_TRUNC, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1605,7 +1604,7 @@ int SubmitHash::SetStderr()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Error, SUBMIT_KEY_Stderr));
 	if (value || ! job->Lookup(ATTR_JOB_ERROR)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_STDERR, value, O_WRONLY|O_CREAT|O_TRUNC, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1813,8 +1812,7 @@ int SubmitHash::SetTDP()
 										  ATTR_SUSPEND_JOB_AT_EXEC, false, &suspend_at_exec_exists );
 	RETURN_IF_ABORT();
 
-	MyString buf;
-	MyString path;
+	std::string path;
 
 	if( tdp_cmd ) {
 		path = tdp_cmd.ptr();
@@ -1987,16 +1985,16 @@ int SubmitHash::SetUserLog()
 
 				// Note:  I don't think the return value here can ever
 				// be NULL.  wenger 2016-10-07
-			MyString mulog(full_path(ulog_entry));
+			std::string mulog(full_path(ulog_entry));
 			if ( ! mulog.empty()) {
 				if (FnCheckFile) {
-					int rval = FnCheckFile(CheckFileArg, this, SFR_LOG, mulog.Value(), O_APPEND);
+					int rval = FnCheckFile(CheckFileArg, this, SFR_LOG, mulog.c_str(), O_APPEND);
 					if (rval) { ABORT_AND_RETURN( rval ); }
 				}
 
 				check_and_universalize_path(mulog);
 			}
-			AssignJobString(si->attr, mulog.Value());
+			AssignJobString(si->attr, mulog.c_str());
 			free(ulog_entry);
 		}
 	}
@@ -2346,8 +2344,8 @@ const char * SubmitHash::getIWD()
 int SubmitHash::ComputeIWD()
 {
 	char	*shortname;
-	MyString	iwd;
-	MyString	cwd;
+	std::string	iwd;
+	std::string	cwd;
 
 	shortname = submit_param( SUBMIT_KEY_InitialDir, ATTR_JOB_IWD );
 	if( ! shortname ) {
@@ -2378,7 +2376,7 @@ int SubmitHash::ComputeIWD()
 				} else {
 					condor_getcwd( cwd );
 				}
-				iwd.formatstr( "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
+				formatstr( iwd, "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
 			}
 	} 
 	else {
@@ -2393,13 +2391,13 @@ int SubmitHash::ComputeIWD()
 	if ( ! JobIwdInitialized || ( ! clusterAd && iwd != JobIwd)) {
 
 	#if defined(WIN32)
-		if (access(iwd.Value(), F_OK|X_OK) < 0) {
-			push_error(stderr, "No such directory: %s\n", iwd.Value());
+		if (access(iwd.c_str(), F_OK|X_OK) < 0) {
+			push_error(stderr, "No such directory: %s\n", iwd.c_str());
 			ABORT_AND_RETURN(1);
 		}
 	#else
-		MyString pathname;
-		pathname.formatstr( "/%s", iwd.c_str() );
+		std::string pathname;
+		formatstr( pathname, "/%s", iwd.c_str() );
 		compress_path( pathname );
 
 		if( access(pathname.c_str(), F_OK|X_OK) < 0 ) {
@@ -4381,7 +4379,7 @@ int SubmitHash::SetExecutable()
 	char	*ename = NULL;
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
-	MyString	full_ename;
+	std::string	full_ename;
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
@@ -4491,7 +4489,7 @@ int SubmitHash::SetExecutable()
 	if ( transfer_it ) {
 		full_ename = full_path( ename, false );
 	} else {
-		full_ename = ename;
+		full_ename = ename ? ename : "";
 	}
 	if ( !ignore_it ) {
 		check_and_universalize_path(full_ename);
@@ -5232,7 +5230,7 @@ int SubmitHash::do_simple_commands(const SimpleSubmitKeyword * cmdtable)
 		last_one_existed = expr;
 		if ( ! expr) continue;
 
-		MyString buffer;
+		std::string buffer;
 		if (i->opts & SimpleSubmitKeyword::f_as_string) {
 			const char * str = expr;
 			if (i->opts & SimpleSubmitKeyword::f_strip_quotes) {
@@ -6961,7 +6959,7 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 int SubmitHash::process_input_file_list(StringList * input_list, long long * accumulate_size_kb)
 {
 	int count;
-	MyString tmp;
+	std::string tmp;
 	char* tmp_ptr;
 
 	if( ! input_list->isEmpty() ) {
@@ -7117,7 +7115,7 @@ int SubmitHash::SetTransferFiles()
 			output_file_list.initializeFromString(macro_value);
 			for (const char * file = output_file_list.first(); file != NULL; file = output_file_list.next()) {
 				out_files_specified = true;
-				MyString buf = file;
+				std::string buf = file;
 				if (check_and_universalize_path(buf) != 0)
 				{
 					// we universalized the path, so update the string list
@@ -7374,7 +7372,7 @@ int SubmitHash::SetTransferFiles()
 		}
 
 		if (job->LookupString(ATTR_JAR_FILES, tmp)) {
-			MyString filepath;
+			std::string filepath;
 			StringList files(tmp.c_str(), ",");
 			for (const char * file = files.first(); file != NULL; file = files.next()) {
 				filepath = file;
@@ -9194,7 +9192,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	// make sure that the ctx has the current working directory in it, in case we need
 	// to do a partial expand of $Ff(SUBMIT_FILE)
-	MyString Cwd;
+	std::string Cwd;
 	const char * old_cwd = mctx.cwd;  // so we can put the current value back.
 	if ( ! mctx.cwd) {
 		condor_getcwd(Cwd);

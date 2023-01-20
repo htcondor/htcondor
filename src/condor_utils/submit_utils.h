@@ -669,7 +669,7 @@ public:
 	const char * getScheddVersion() { return ScheddVersion.c_str(); }
 	const char * getIWD();
 	const char * full_path(const char *name, bool use_iwd=true);
-	int check_and_universalize_path(MyString &path);
+	int check_and_universalize_path(std::string &path);
 
 	enum class ContainerImageType {
 		DockerRepo,
@@ -738,7 +738,7 @@ protected:
 	std::string JobIwd;
 	MyString JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
-	MyString TempPathname; // temporary path used by full_path
+	std::string TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
 	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
@@ -826,7 +826,7 @@ protected:
 		_submit_file_role role,
 		const char * value, // in: filename to use, may be NULL
 		int access,         // in: desired access if checking for file accessiblity
-		MyString & file,    // out: filename, possibly fixed up.
+		std::string & file, // out: filename, possibly fixed up.
 		bool & transfer_it, // in,out: whether we expect to transfer it or not
 		bool & stream_it);  // in,out: whether we expect to stream it or not
 
