@@ -1438,7 +1438,10 @@ struct Schedd {
 
         CondorQ q;
 
-        q.requestServerTime(false);
+		// Existing uses of the bindings is relying on the presence of
+		// ServerTime in all of the job ads returned by the schedd.
+		// To avoid breaking this code, keep requesting it from the schedd.
+        q.requestServerTime(true);
 
         if (constraint.size())
             q.addAND(constraint.c_str());
