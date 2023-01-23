@@ -18,6 +18,10 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
+- Improved scalability of *condor_schedd* when running more than 1,000 jobs
+  from the same user.
+  :jira:`1549`
+
 Bugs Fixed:
 
 - None.
