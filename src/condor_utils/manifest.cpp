@@ -193,16 +193,18 @@ deleteFilesStoredAt(
 		return false;
 	}
 
+	std::filesystem::path pathToManifestFile(manifestFileName);
+	std::filesystem::path fileName = pathToManifestFile.filename();
+
 	std::string manifestLine;
 	for( bool rv = false; (rv = readLine( manifestLine, fp )); ) {
 		trim( manifestLine );
 		std::string file = manifest::FileFromLine( manifestLine );
 
-		// FIXME: This isn't working as intended because the name
-		// in the MANIFEST file is relative and this name is absolute.
-		// FIXME: I guess we really don't care if the clean-up fails,
-		// but still, it's weird not to log anything?
-		if( file == manifestFileName ) { continue; }
+		// Don't delete the MANIFEST file until we're sure we're done with it.
+		if( fileName.string() == file ) {
+			continue;
+		}
 
 		ArgList args;
 		args.AppendArg(pluginFileName);
@@ -258,6 +260,8 @@ deleteFilesStoredAt(
 	}
 
 	fclose(fp);
+	std::filesystem::remove(pathToManifestFile);
+
 	return true;
 }
 

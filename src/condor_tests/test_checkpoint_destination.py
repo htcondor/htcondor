@@ -44,8 +44,6 @@ def cleanup_file(test_dir):
     """
         #!/bin/bash
 
-        echo "$@" > /tmp/local-delete.sh
-
         function usage() {
             echo "usage: $0 -from local://... -delete PATH"
             exit 1
@@ -1127,50 +1125,6 @@ class TestCheckpointDestination:
             assert (test_dir / jobAd["globalJobID"]).is_dir()
 
 
-    def test_checkpoint_removed(self,
-      the_condor,
-      the_job_name, the_removed_job):
-        schedd = the_condor.get_local_schedd()
-        constraint = f'ClusterID == {the_removed_job.clusterid} && ProcID == 0'
-
-        # Make sure the job has left the queue.
-        result = schedd.query(
-            constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID"],
-        )
-        assert(len(result) == 0)
-
-        # Get the CheckpointDestination and GlobalJobID from the history file.
-        result = schedd.history(
-            constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
-            match=1,
-        )
-        results = [r for r in result]
-        assert(len(results) == 1)
-
-        jobAd = results[0]
-
-        prefix = jobAd.get("CheckpointDestination")
-        if prefix is None:
-            with the_condor.use_config():
-                SPOOL = htcondor.param["SPOOL"]
-            spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
-            assert(not spoolDirectory.exists())
-        else:
-            prefix = prefix[prefix.find("://") + 3:]
-            prefix = prefix + "/" + jobAd["GlobalJobID"]
-            prefix = Path(prefix)
-
-            checkpointNumber = int(jobAd["CheckpointNumber"])
-            for i in range(0, checkpointNumber):
-                path = prefix / f"{i:04}"
-                # Crass empiricism.
-                if path.exists():
-                    time.sleep(10)
-                assert(not path.exists())
-
-
     def test_checkpoint_structure(self,
       test_dir, the_condor,
       the_job_name, the_completed_job,
@@ -1250,6 +1204,56 @@ class TestCheckpointDestination:
         #
         # If that test becomes necessary, the job can just 'cp -a' after
         # the changes, as well.
+
+
+    # This test, and any test requiring `the_removed_job`, MUST be listed
+    # after `test_checkpoint_structure`, because the latter requires a file
+    # which should be deleted by removing the corresponding job.
+    def test_checkpoint_removed(self,
+      test_dir, the_condor,
+      the_job_name, the_removed_job):
+        schedd = the_condor.get_local_schedd()
+        constraint = f'ClusterID == {the_removed_job.clusterid} && ProcID == 0'
+
+        # Make sure the job has left the queue.
+        result = schedd.query(
+            constraint=constraint,
+            projection=["CheckpointDestination", "GlobalJobID"],
+        )
+        assert(len(result) == 0)
+
+        # Get the CheckpointDestination and GlobalJobID from the history file.
+        result = schedd.history(
+            constraint=constraint,
+            projection=["CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
+            match=1,
+        )
+        results = [r for r in result]
+        assert(len(results) == 1)
+
+        jobAd = results[0]
+
+        prefix = jobAd.get("CheckpointDestination")
+        if prefix is None:
+            with the_condor.use_config():
+                SPOOL = htcondor.param["SPOOL"]
+            spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
+            assert(not spoolDirectory.exists())
+        else:
+            prefix = prefix[prefix.find("://") + 3:]
+            prefix = prefix + "/" + jobAd["GlobalJobID"]
+            prefix = Path(prefix)
+
+            checkpointNumber = int(jobAd["CheckpointNumber"])
+            for i in range(0, checkpointNumber):
+                path = prefix / f"{i:04}"
+                # Crass empiricism.
+                if path.exists():
+                    time.sleep(10)
+                assert(not path.exists())
+
+                manifest_file = test_dir / "condor" / "spool" / f"{the_removed_job.clusterid}" / "0" / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
+                assert(not manifest_file.exists())
 
 
     def test_checkpoint_upload_failure_causes_job_hold(self, the_condor, hold_job):
