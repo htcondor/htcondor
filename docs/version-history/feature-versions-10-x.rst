@@ -28,6 +28,9 @@ Bugs Fixed:
   in job ads returned by ``Schedd.query()``.
   :jira:`1531`
 
+- Fixed issue when HTCondor could not be installed on Ubuntu 18.04
+  (Bionic Beaver).
+  :jira:`1548`
 
 Version 10.2.0
 --------------
