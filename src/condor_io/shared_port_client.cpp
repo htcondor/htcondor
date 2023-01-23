@@ -182,7 +182,7 @@ SharedPortClient::myName()
 	// It is who we say we are when talking to the shared port server.
 	std::string name;
 	name = get_mySubSystem()->getName();
-	if( daemonCore ) {
+	if( daemonCore && daemonCore->publicNetworkIpAddr() ) {
 		name += " ";
 		name += daemonCore->publicNetworkIpAddr();
 	}
