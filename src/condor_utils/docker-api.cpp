@@ -1562,8 +1562,8 @@ DockerAPI::imageCacheUsed() {
 	std::string imageFilename;
 
 	if( ! param( imageFilename, "LOG" ) ) {
-		dprintf(D_ALWAYS, "LOG not defined in param table, giving up\n");
-		return 0;
+		dprintf(D_ALWAYS, "docker_image_cache_used: LOG not defined in param table, not advertising docker image usage\n");
+		return -1;
 	}
 
 	imageFilename += "/.startd_docker_images";
