@@ -241,6 +241,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 		}
 	}
 
+	bool success = false;
 	SciToken token = nullptr;
 	char *err_msg = nullptr;
 	char *iss = nullptr;
@@ -250,6 +251,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 	std::vector<std::string> audiences;
 	std::vector<const char *> audience_ptr;
 	std::string audience_string;
+	bool foreign_token = false;
 	if (param(audience_string, "SCITOKENS_SERVER_AUDIENCE")) {
 		StringList audience_list(audience_string.c_str());
 		audience_list.rewind();
@@ -272,6 +274,7 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 		free(err_msg);
 		(*scitoken_destroy_ptr)(token);
 		token = nullptr;
+		return false;
 	} else if ((*scitoken_get_claim_string_ptr)(token, "iss", &iss, &err_msg)) {
 		err.pushf("SCITOKENS", 2, "Unable to retrieve token issuer: %s",
 			err_msg ? err_msg : "(unknown failure)");
@@ -296,15 +299,25 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 		free(sub);
 		return false;
 	} else if ((*enforcer_generate_acls_ptr)(enf, token, &acls, &err_msg)) {
-		err.pushf("SCITOKENS", 2, "Failed to verify token and generate ACLs: %s",
-			err_msg ? err_msg : "(unknown failure)");
-		free(err_msg);
-		(*scitoken_destroy_ptr)(token);
-		free(iss);
-		free(sub);
-		(*enforcer_destroy_ptr)(enf);
-		return false;
+		if (param_boolean("SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES", false)) {
+			dprintf(D_SECURITY, "Token ACL generation failed, treating as foreign token type: %s\n", err_msg ? err_msg : "(unknown failure)");
+			foreign_token = true;
+			success = true;
+		} else {
+			err.pushf("SCITOKENS", 2, "Failed to verify token and generate ACLs: %s",
+				err_msg ? err_msg : "(unknown failure)");
+			free(err_msg);
+			(*scitoken_destroy_ptr)(token);
+			free(iss);
+			free(sub);
+			(*enforcer_destroy_ptr)(enf);
+			return false;
+		}
 	} else {
+		success = true;
+	}
+
+	if (success) {
 			// Success block - everything checks out!
 		std::vector<std::string> authz;
 		// add a "dummy" entry so the list is not empty.  empty could
@@ -328,12 +341,34 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 
 		char *scopes_char = nullptr;
 		if (!(*scitoken_get_claim_string_ptr)(token, "scope", &scopes_char, nullptr)) {
+			bool compute_create = false;
+			bool compute_modify = false;
+			bool compute_cancel = false;
 			StringList scopes_list(scopes_char);
 			scopes_list.rewind();
 			free(scopes_char);
 			char *scope;
 			while ( (scope = scopes_list.next()) ) {
 				scopes.emplace_back(scope);
+				if (foreign_token) {
+					// With a foreign token, the ACLs above will be empty,
+					// so we need to search the scopes here for HTCondor
+					// authorization levels.
+					if (strncmp(scope, "condor:/", 8) == 0) {
+						authz.emplace_back(&scope[8]);
+					} else if (strcmp(scope, "compute.read") == 0) {
+						authz.emplace_back("READ");
+					} else if (strcmp(scope, "compute.create") == 0) {
+						compute_create = true;
+					} else if (strcmp(scope, "compute.modify") == 0) {
+						compute_modify = true;
+					} else if (strcmp(scope, "compute.cancel") == 0) {
+						compute_cancel = true;
+					}
+				}
+			}
+			if (compute_create && compute_modify && compute_cancel) {
+				authz.emplace_back("WRITE");
 			}
 		}
 

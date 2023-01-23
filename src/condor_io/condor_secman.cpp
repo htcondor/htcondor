@@ -3017,6 +3017,11 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 		return pkey;
 	}
 	pkey.reset(pkey_raw);
+
+	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(EVP_PKEY_get1_EC_KEY(pkey.get()), &EC_KEY_free);
+	if (key) {
+		EC_KEY_set_asn1_flag(key.get(), OPENSSL_EC_NAMED_CURVE);
+	}
 	return pkey;
 }
 

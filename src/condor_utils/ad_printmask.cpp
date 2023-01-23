@@ -169,13 +169,13 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 				bool eval_ok = false;
 
 				if(tree = al->LookupExpr (attr)) {
-					eval_ok = EvalExprTree(tree, al, target, result);
+					eval_ok = EvalExprTree(tree, al, target, result, classad::Value::ValueType::SAFE_VALUES);
 				} else {
 						// drat, we couldn't find it. Maybe it's an
 						// expression?
 					tree = NULL;
 					if( 0 == ParseClassAdRvalExpr(attr, tree) != 0 ) {
-						eval_ok = EvalExprTree(tree, al, target, result);
+						eval_ok = EvalExprTree(tree, al, target, result, classad::Value::ValueType::SAFE_VALUES);
 						delete tree;
 						tree = NULL;
 					}
@@ -752,26 +752,15 @@ render (MyRowOfValues & rov, ClassAd *al, ClassAd *target /* = NULL */)
 				}
 				col_is_valid = true;
 			} else {
-				col_is_valid = EvalExprTree(tree, al, target, *pval);
+				col_is_valid = EvalExprTree(tree, al, target, *pval, classad::Value::ValueType::SAFE_VALUES);
 				if (col_is_valid) {
-					// since we want to hold on to these Values after we throw away the input
-					// Classad al. We have to deep copy any Values of type list here.
-					// note that this problem will also occurr with values of type classad
-					// but we don't currently have a shared_ptr flavor of nested classads
-					// so we can't actually fix that here right now.
-					classad::ExprList * plist = NULL;
+					// since we want to hold on to these Values after we throw away the input ClassAd.
+					// We have to unchain any chained ads after flatting out the chain.
 					classad::ClassAd * pclassad = NULL;
-					if (pval->IsListValue(plist) && plist) {
-						classad_shared_ptr<classad::ExprList> lst( (classad::ExprList*)plist->Copy() );
-						pval->SetListValue(lst);
-					} else if( pval->IsClassAdValue( pclassad ) && pclassad ) {
-						classad::ClassAd * copy = (classad::ClassAd*)pclassad->Copy();
-						// Deep copies do NOT reset the parent pointer or the
-						// chained ad pointer; do so now, to prevent bad
-						// dereferences in the future.  There's a good chance
-						// that this is stupid and should fixed.
-						copy->ChainToAd(NULL);
-						copy->SetParentScope(NULL);
+					if( pval->IsClassAdValue( pclassad ) && pclassad && pclassad->GetChainedParentAd() ) {
+						classad::ClassAd * copy = new ClassAd();
+						copy->CopyFromChain(*pclassad);
+						copy->SetParentScope(nullptr);
 						classad_shared_ptr<classad::ClassAd> ca( copy );
 						pval->SetClassAdValue(ca);
 					}

@@ -44,8 +44,8 @@ std::string ViewServer::DataFormat[DataSetCount];
 AccHash* ViewServer::GroupHash;
 bool ViewServer::KeepHistory;
 HashTable< std::string, int >* ViewServer::FileHash;
-ExtArray< ExtIntArray* >* ViewServer::TimesArray;
-ExtArray< ExtOffArray* >* ViewServer::OffsetsArray;
+std::vector<ExtIntArray *> *ViewServer::TimesArray;
+std::vector<ExtOffArray *> *ViewServer::OffsetsArray;
 
 //-----------------------
 // Constructor
@@ -123,8 +123,8 @@ void ViewServer::Init()
 	}
 	GroupHash = new AccHash(hashFunction);
 	FileHash = new HashTable< std::string, int >(hashFunction);
-	OffsetsArray = new ExtArray< ExtOffArray* >(30);
-	TimesArray = new ExtArray< ExtIntArray* >(30);
+	OffsetsArray = new std::vector< ExtOffArray*>;
+	TimesArray = new std::vector<ExtIntArray*>;
 
 	// File data format
 
@@ -355,7 +355,7 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 	ExtOffArray* offsets = NULL;
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
-		// first find out which ExtArray to use, by checking the hash
+		// first find out which vector to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 
 			// FileName was not found in the FileHash
@@ -363,15 +363,15 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
-		file_array_index = OffsetsArray->length();
+		file_array_index = OffsetsArray->size();
 		FileHash->insert( FileName, file_array_index );
-		TimesArray->add( times_array );
-		OffsetsArray->add( offsets );
+		TimesArray->push_back(times_array);
+		OffsetsArray->push_back(offsets);
 	} else {
 
 			// otherwise just get the appropriate array
-		times_array = (TimesArray->getElementAt( file_array_index ));
-		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		times_array = (TimesArray->at( file_array_index ));
+		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", offsets->length());
 	}
 
@@ -396,10 +396,10 @@ int ViewServer::SendListReply(Stream* sock,const std::string& FileName, int From
 	while(readLine(line,fp)) {
 
 		T = ReadTimeAndName(line, Arg);
-		if( times_array->length() < offsets->length() ) {
+		if( times_array->size() < offsets->size() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
-			times_array->add( T );
+			times_array->push_back( T );
 		}
 
 		if (T > ToDate) break;
@@ -446,7 +446,7 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 	ExtOffArray* offsets = NULL;
 	// dprintf(D_ALWAYS, "Caches found=%d, looking for correct one...\n", TimesArray->length());
 
-		// first find out which ExtArray to use, by checking the hash
+		// first find out which vector to use, by checking the hash
 	if( FileHash->lookup( FileName, file_array_index ) == -1 ){
 
 			// FileName was not found in the FileHash
@@ -454,15 +454,15 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 		// dprintf(D_ALWAYS, "No cache found for this file, generating new one...\n");
 		times_array = new ExtIntArray(100);
 		offsets = new ExtOffArray(100);
-		file_array_index = OffsetsArray->length();
+		file_array_index = OffsetsArray->size();
 		FileHash->insert( FileName, file_array_index );
-		TimesArray->add( times_array );
-		OffsetsArray->add( offsets );
+		TimesArray->push_back( times_array );
+		OffsetsArray->push_back( offsets );
 	} else {
 
 			// otherwise just get the appropriate array
-		times_array = (TimesArray->getElementAt( file_array_index ));
-		offsets = (OffsetsArray->getElementAt( file_array_index ));
+		times_array = (TimesArray->at( file_array_index ));
+		offsets = (OffsetsArray->at( file_array_index ));
 		// dprintf(D_ALWAYS, "Cache found for this file, %d indices\n", times_array->length());
 	}
 
@@ -486,11 +486,11 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 
 		// dprintf(D_ALWAYS,"Line read: %s\n",InpLine);
 		T=ReadTimeChkName(InpLine,Arg);
-		if( times_array->length() < offsets->length() ) {
+		if( times_array->size() < offsets->size() ) {
 				// a file offset was recorded before this line was read; now
 				// store the time that was on the marked line
 			// dprintf(D_ALWAYS, "Adding time=%d to the cache", T);
-			times_array->add( T );
+			times_array->push_back( T );
 		}
 		// dprintf(D_ALWAYS,"T=%d\n",T);
 
@@ -545,13 +545,13 @@ void
 ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray* times_array, ExtOffArray* offsets) {
 	if( ++offset_ctr == 50) {
 		offset_ctr = 0;
-		if(times_array->length() == 0 || read_time > times_array->getElementAt( times_array->getlast() )) {
+		if(times_array->size() == 0 || read_time > times_array->back()) {
 				// mark the position in the file now, but wait to mark the time
 				// until after the line is read
 			// dprintf(D_ALWAYS, "Adding new offset to the cache\n");
 			fpos_t *tmp_offset_ptr = new fpos_t;
 			fgetpos(fp, tmp_offset_ptr);
-			offsets->add(tmp_offset_ptr);
+			offsets->push_back(tmp_offset_ptr);
 		} else {
 			// dprintf(D_ALWAYS, "I would mark an offset, but it would most likely be a duplicate.\n");
 		}
@@ -566,16 +566,16 @@ ViewServer::addNewOffset(FILE* &fp, int &offset_ctr, int read_time, ExtIntArray*
 fpos_t*
 ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* times_array, ExtOffArray* offsets) {
 	fpos_t* search_offset_ptr = NULL;
-	if( times_array->length() == 0 ) {
+	if( times_array->size() == 0 ) {
 
 			// linear progression, return null to inform the rest of the code
 			// to start at the beginning
 		// dprintf(D_ALWAYS, "No cache, starting at the beginning of the file...\n");
 		return NULL;
 
-	} else if( times_array->getElementAt( 0 ) > FromDate ) {
+	} else if( times_array->at( 0 ) > FromDate ) {
 
-		if( times_array->getElementAt( 0 ) > ToDate ) {
+		if( times_array->front() > ToDate ) {
 				// if this is the case then the record won't be found, so end
 			// dprintf(D_ALWAYS, "Impossible request\n");
 			return NULL;
@@ -586,11 +586,11 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 			return NULL;
 		}
 
-	} else if( times_array->getElementAt( times_array->getlast() ) < FromDate ) {
+	} else if( times_array->back() < FromDate ) {
 
 			// linear progression, but start with the latest known offset
 		// dprintf(D_ALWAYS, "Requesting time at the end of where the current cache knows\n");
-		search_offset_ptr = offsets->getElementAt( offsets->getlast() );
+		search_offset_ptr = offsets->back();
 
 	} else {
 
@@ -598,11 +598,11 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 			// greater than FromDate
 		// dprintf(D_ALWAYS, "Binary searching the cache table, request should be quick\n");
 		int low = 0;
-		int high = times_array->getlast();
+		int high = times_array->size()-1;
 		int mid;
 		while( high - low > 1 ) {
 			mid = (high - low) / 2 + low;
-			if( times_array->getElementAt( mid ) < FromDate ) {
+			if( times_array->at( mid ) < FromDate ) {
 				low = mid;
 			} else {
 				high = mid;
@@ -610,10 +610,10 @@ ViewServer::findOffset(FILE* & /*fp*/, int FromDate, int ToDate, ExtIntArray* ti
 		}
 			// now we've found the approximate spot in the array; time to find
 			// the exact location and set the appropriate offset
-		if( times_array->getElementAt( low + 1 ) < FromDate ) {
-			search_offset_ptr = offsets->getElementAt( low + 1 );
-		} else if( times_array->getElementAt( low ) < FromDate ) {
-			search_offset_ptr = offsets->getElementAt( low );
+		if( times_array->at( low + 1 ) < FromDate ) {
+			search_offset_ptr = offsets->at( low + 1 );
+		} else if( times_array->at( low ) < FromDate ) {
+			search_offset_ptr = offsets->at( low );
 		} else {
 			return NULL;
 		}
@@ -799,9 +799,8 @@ void ViewServer::WriteHistory()
 														oldFileIndex) != -1) {
 						// get rid of the old arrays and make new ones
 					delete (*TimesArray)[oldFileIndex];
-					int iter;
-					for(iter = 0; iter < (*(*OffsetsArray)[oldFileIndex]).length(); iter++) {
-						delete (*(*OffsetsArray)[oldFileIndex])[iter];
+					for (auto p: *(*OffsetsArray)[oldFileIndex]) {
+						delete p;
 					}
 					delete (*OffsetsArray)[oldFileIndex];
 					(*TimesArray)[oldFileIndex] = new ExtIntArray;

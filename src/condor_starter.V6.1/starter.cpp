@@ -951,17 +951,14 @@ Starter::peek(int /*cmd*/, Stream *sock)
 
 	classad::Value transfer_list_value;
 	std::vector<std::string> transfer_list;
-	classad_shared_ptr<classad::ExprList> transfer_list_ptr;
-	if (input.EvaluateAttr("TransferFiles", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	const classad::ExprList * plst;
+	if (input.EvaluateAttr("TransferFiles", transfer_list_value) && transfer_list_value.IsListValue(plst))
 	{
-		transfer_list.reserve(transfer_list_ptr->size());
-		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
-			it != transfer_list_ptr->end();
-			it++)
+		transfer_list.reserve(plst->size());
+		for (auto it : *plst)
 		{
 			std::string transfer_entry;
-			classad::Value transfer_value;
-			if (!(*it)->Evaluate(transfer_value) || !transfer_value.IsStringValue(transfer_entry))
+			if (!ExprTreeIsLiteralString(it, transfer_entry))
 			{
 				return PeekFailed(s, "Could not evaluate transfer list.");
 			}
@@ -972,16 +969,13 @@ Starter::peek(int /*cmd*/, Stream *sock)
 	std::vector<off_t> transfer_offsets; transfer_offsets.reserve(transfer_list.size());
 	for (size_t idx = 0; idx < transfer_list.size(); idx++) transfer_offsets.push_back(-1);
 
-	if (input.EvaluateAttr("TransferOffsets", transfer_list_value) && transfer_list_value.IsSListValue(transfer_list_ptr))
+	if (input.EvaluateAttr("TransferOffsets", transfer_list_value) && transfer_list_value.IsListValue(plst))
 	{
 		size_t idx = 0;
-		for (classad::ExprList::const_iterator it = transfer_list_ptr->begin();
-			it != transfer_list_ptr->end() && idx < transfer_list.size();
-			it++, idx++)
+		for (auto it : *plst) 
 		{
-			classad::Value transfer_value;
-			off_t transfer_entry;
-			if ((*it)->Evaluate(transfer_value) && transfer_value.IsIntegerValue(transfer_entry))
+			long long transfer_entry;
+			if (ExprTreeIsLiteralNumber(it, transfer_entry))
 			{
 				transfer_offsets[idx] = transfer_entry;
 			}
@@ -1374,6 +1368,21 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 	if ( ! inherit_starter_env) {
 		setup_opt_mask |= DCJOBOPT_NO_ENV_INHERIT;
 	}
+		// Use LD_PRELOAD to force an implementation of getpwnam
+		// into the setup process 
+#ifdef LINUX
+	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
+		std::string lib;
+		param(lib, "LIB");
+		std::string getpwnampath = lib + "/libgetpwnam.so";
+		if (access(getpwnampath.c_str(), F_OK) == 0) {
+			dprintf(D_ALWAYS, "Setting LD_PRELOAD=%s for sshd\n", getpwnampath.c_str());
+			setup_env.SetEnv("LD_PRELOAD", getpwnampath.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
+		}
+	}
+#endif
 
 	if( !preferred_shells.empty() ) {
 		dprintf(D_FULLDEBUG,
@@ -1578,20 +1587,7 @@ Starter::startSSHD( int /*cmd*/, Stream* s )
 		// to restore the environment that was saved by sshd_setup.
 		// However, we may as well pass the desired environment.
 
-		// Use LD_PRELOAD to force an implementation of getpwnam
-		// into the process that returns a valid shell
 #ifdef LINUX
-	if(param_boolean("CONDOR_SSH_TO_JOB_FAKE_PASSWD_ENTRY", true)) {
-		std::string lib;
-		param(lib, "LIB");
-		std::string getpwnampath = lib + "/libgetpwnam.so";
-		if (access(getpwnampath.c_str(), F_OK) == 0) {
-			dprintf(D_ALWAYS, "Setting LD_PRELOAD=%s for sshd\n", getpwnampath.c_str());
-			setup_env.SetEnv("LD_PRELOAD", getpwnampath.c_str());
-		} else {
-			dprintf(D_ALWAYS, "Not setting LD_PRELOAD=%s for sshd, as file does not exist\n", getpwnampath.c_str());
-		}
-	}
 	if( !setup_env.InsertEnvIntoClassAd(*sshd_ad, error_msg) ) {
 		return SSHDFailed(s,
 			"Failed to insert environment into sshd job description: %s",

@@ -2497,16 +2497,30 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_SERVER_CERTFILE]
-default=/etc/pki/tls/certs/localhost.crt
+default=/etc/pki/tls/certs/localhost.crt,$(AUTH_SSL_AUTOGENERATE_CERTFILE)
 win32_default=
 description=Location of the host X509 certificate
 type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_SERVER_KEYFILE]
-default=/etc/pki/tls/private/localhost.key
+default=/etc/pki/tls/private/localhost.key,$(AUTH_SSL_AUTOGENERATE_KEYFILE)
 win32_default=
 description=Location of the host private key
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_AUTOGENERATE_CERTFILE]
+default=/etc/condor/hostcert.pem
+win32_default=
+description=Location of the auto-generated host X509 certificate
+type=path
+tags=condor_auth_ssl
+
+[AUTH_SSL_AUTOGENERATE_KEYFILE]
+default=/etc/condor/hostkey.pem
+win32_default=
+description=Location of the auto-generated host private key
 type=path
 tags=condor_auth_ssl
 
@@ -2521,7 +2535,8 @@ type=bool
 tags=io,condor_auth_ssl
 
 [COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE]
-default=false
+default=true
+win32_default=false
 type=bool
 
 [TRUST_DOMAIN_CAFILE]
@@ -4576,6 +4591,12 @@ type=string
 description=
 tags=schedd
 
+[ALLOW_TRANSFER_REMAP_TO_MKDIR]
+default=false
+type=bool
+description=Allow transfer output remap to make directories if they don't exist
+tags=shadow
+
 [MAX_TRANSFER_INPUT_MB]
 default=-1
 version=7.9.2
@@ -4595,6 +4616,13 @@ default=128
 version=8.8.9
 type=int
 description=Maximum number of filetransfer remaps to apply before aborting
+tags=file_transfer
+
+[MAX_FILE_TRANSFER_PLUGIN_LIFETIME]
+default=72000
+version=10.2.0
+type=int
+description=Maximum number of seconds to wait for a file-transfer plug-in to finish.
 tags=file_transfer
 
 [TRANSFER_IO_REPORT_INTERVAL]
@@ -4632,13 +4660,6 @@ default=none
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
-tags=starter
-
-[IGNORE_LEAF_OOM]
-default=true
-version=8.4.11
-type=bool
-description=Determines whether a job ignores an OOM event if it's using less than its limit
 tags=starter
 
 [BATCH_GAHP_CHECK_STATUS_ATTEMPTS]
@@ -4930,7 +4951,7 @@ description=Path to condor helper executable used by remote condor_history
 tags=schedd
 
 [HISTORY_HELPER_MAX_HISTORY]
-default=10000
+default=50000
 range=0,
 type=int
 description=History Helper max number of history ads

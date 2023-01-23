@@ -38,6 +38,8 @@
 #include "singularity.h"
 #include "has_sysadmin_cap.h"
 #include "starter_util.h"
+#include "proc_family_direct_cgroup_v2.h"
+#include <array>
 
 #include <sstream>
 
@@ -155,6 +157,91 @@ VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 VanillaProc::~VanillaProc()
 {
 	cleanupOOM();
+}
+
+static bool cgroup_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
+
+#ifdef LINUX
+	if (relative_cgroup.length() == 0) {
+		return false;
+	}
+
+	// Assume cgroup mounted on /sys/fs/cgroup
+	std::string cgroup_mount_point = "/sys/fs/cgroup/";
+
+	// In Cgroup v1, need to test each controller separately
+	// For cgroup v2, controller will be empty string, but that's OK.
+	std::string test_path = cgroup_mount_point;
+
+	if (!controller.empty()) {
+		// cgroup v1 with controller at root
+		test_path += controller + '/';
+	} 
+
+	// Regardless of v1 or v2, the relative cgroup at the end
+	test_path += relative_cgroup;
+
+	// The relative path given might not completly exist.  We can write
+	// to it if we can write to the fully given path (the usual case)
+	// OR, if we have write power to the parent of the top-most non-existing
+	// directory.
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
+
+		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			return true;
+		}
+	}
+
+	// The directory doesn't exist.  See if we can write to the parent.
+	if ((errno == ENOENT) && (relative_cgroup.length() > 1))  {
+		size_t trailing_slash = relative_cgroup.find_last_of('/');
+		if (trailing_slash == std::string::npos) {
+			relative_cgroup = '/'; // last try from the root of the mount point
+		} else {
+			relative_cgroup.resize(trailing_slash); // Retry one directory up
+		}
+		return cgroup_controller_is_writeable(controller, relative_cgroup);
+
+	}
+	
+	dprintf(D_ALWAYS, "    Cgroup %s/%s is not writeable, cannot use cgroups\n", controller.c_str(), relative_cgroup.c_str());
+#endif
+	return false;
+}
+
+static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
+	return 
+		// These should be synchronized to the required_controllers in the procd
+		cgroup_controller_is_writeable("memory", relative_cgroup)     &&
+		cgroup_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
+		cgroup_controller_is_writeable("freezer", relative_cgroup)    &&
+		cgroup_controller_is_writeable("blkio", relative_cgroup);
+}
+
+static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
+	return cgroup_controller_is_writeable("", relative_cgroup);
+}
+
+static bool cgroup_is_writeable(const std::string &relative_cgroup) {
+#ifdef LINUX
+	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
+
+	struct stat statbuf;
+
+	// Should be readable by everyone
+	if (stat("/sys/fs/cgroup/cgroup.procs", &statbuf) == 0) {
+		// This means we're on cgroups v2
+		return cgroup_v2_is_writeable(relative_cgroup);
+	} else {
+		// V1.
+		return cgroup_v1_is_writeable(relative_cgroup);
+	}
+#else
+	return false;
+#endif
 }
 
 int
@@ -327,7 +414,8 @@ VanillaProc::StartJob()
 	setupOOMScore(4,800);
 #endif
 
-#if defined(HAVE_EXT_LIBCGROUP)
+#ifdef LINUX
+	// This works for both v1 and v2 cgroups
 	// Determine the cgroup
 	std::string cgroup_base;
 	param(cgroup_base, "BASE_CGROUP", "");
@@ -349,7 +437,7 @@ VanillaProc::StartJob()
 		 *  local universe and cgroups can be properly worked
 		 *  out. -matt 7 nov '12
 		 */
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_base.length() && can_switch_ids() && has_sysadmin_cap()) {
+	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup_is_writeable(cgroup_base)) {
 		std::string cgroup_uniq;
 		std::string starter_name, execute_str;
 		param(execute_str, "EXECUTE", "EXECUTE_UNKNOWN");
@@ -371,7 +459,22 @@ VanillaProc::StartJob()
 		cgroup = cgroup_str.c_str();
 		ASSERT (cgroup != NULL);
 		fi.cgroup = cgroup;
-		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job.\n", cgroup);
+
+		int numCores = 1;
+		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_CPUS, numCores)) {
+			dprintf(D_ALWAYS, "Invalid value of Cpus in machine ClassAd; assuming 1 for cgroup limit purposes.\n");
+		}
+		fi.cgroup_cpu_shares = 100 * numCores;
+
+		int memory = 0;
+		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
+			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
+			ASSERT(false);
+		}
+		fi.cgroup_memory_limit = ((unsigned) memory) * 1024 * 1024;
+		m_memory_limit = memory;
+
+		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %d).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
 	}
 
 #endif
@@ -656,13 +759,36 @@ VanillaProc::StartJob()
 		delete fs_remap;
 	}
 
-#if defined(HAVE_EXT_LIBCGROUP)
-
+#ifdef LINUX
 	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
 	// See Note near setup of param(BASE_CGROUP)
 	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
-#ifdef LINUX
-		setCgroupMemoryLimits(cgroup);
+#if defined(HAVE_EXT_LIBCGROUP)
+		// memory limits here only for v1
+		if (!ProcFamilyDirectCgroupV2::can_create_cgroup_v2()) {
+			setCgroupMemoryLimits(cgroup);
+
+			// This is a bit of a hack. In cgroup v1, ideally, the procd should
+			// set the ownership of the cgroups, but it doesn't know who the user
+			// is.  chown the leaf v1 cgroups to the owner, so that the job can
+			// create sub-cgroups
+
+			std::array controllers = {"blkio/", "cpu,cpuset/", "freezer/", "memory/"};
+			uid_t user  = get_user_uid();
+			gid_t group = get_user_gid();
+
+			if ((user > 0) && (group > 0)) {
+				for (const char *c : controllers) {
+					TemporaryPrivSentry sentry(PRIV_ROOT);
+					std::string leaf_cgroup = std::string("/sys/fs/cgroup/") + c + cgroup;
+					int r = chown(leaf_cgroup.c_str(), user, group);
+					if (r < 0) {
+						dprintf(D_ALWAYS, "Warning: cannot chown %s to %d.%d: %s\n", leaf_cgroup.c_str(), user, group, strerror(errno));
+					}
+
+				}
+			}
+		}
 #endif
 		setupOOMEvent(cgroup);
 	}
@@ -877,6 +1003,13 @@ VanillaProc::JobReaper(int pid, int status)
 {
 	dprintf(D_FULLDEBUG,"Inside VanillaProc::JobReaper()\n");
 
+	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
+	if (status & DC_STATUS_OOM_KILLED) {
+		outOfMemoryEvent(-1);
+		status &= ~DC_STATUS_OOM_KILLED;
+	} 
+	
+	//
 	//
 	// Run all the reapers first, since some of them change the exit status.
 	//
@@ -982,6 +1115,10 @@ VanillaProc::JobReaper(int pid, int status)
 		// registered with DaemonCore and we'll never be able to
 		// get this information again.
 		recordFinalUsage();
+
+		// We're going to exit, so daemon core won't get a chance to unregister our subfamily
+		// force that no
+		daemonCore->Unregister_subfamily(pid);
 
 		return jobExited;
 	}
@@ -1136,26 +1273,41 @@ VanillaProc::outOfMemoryEvent(int /* fd */)
 
 		//
 #ifdef LINUX
-	if (param_boolean("IGNORE_LEAF_OOM", true)) {
-		// if memory.use_hierarchy is 1, then hitting the limit at
-		// the parent notifies all children, even if those children
-		// are below their usage.  If we are below our usage, ignore
-		// the OOM, and continue running.  Hopefully, some process
-		// will be killed, and when it does, this job will get unfrozen
-		// and continue running.
+	//  Cgroup memory limits are limits, not reservations.
+	//  For many reasons, a job could be below the memory limit,
+	//  but still get an OOM notification.  Commonly, this happens
+	//  when other processes on the system are using large amounts
+	//  of memory.  
+	//
+	//  Check to see if this is the case, and if so, it 
+	//  isn't our job's fault, but we need to 
+	//  evict the job, so it might run more successfully somewhere
+	//  else.  The situation is pretty dire, so we likely can't
+	//  checkpoint or otherwise exit gracefully, but at least let's
+	//  try to get a message a back to the shadow.
 
-		if (usage < (0.9 * m_memory_limit)) {
-			long long oomData = 0xdeadbeef;
-			int efd = -1;
-			ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
-				// need to drain notification fd, or it will still
-				// be hot, and we'll come right back here again
-			int r = read(efd, &oomData, 8);
-
-			dprintf(D_ALWAYS, "Spurious OOM event, usage is %d, slot size is %d megabytes, ignoring OOM (read %d bytes)\n", usage, m_memory_limit, r);
-			return 0;
-		}
+	// First drain the pipe, if there is one, so it doesn't fire
+	// again.
+	if (m_oom_efd != -1) {
+		long long oomData = 0xdeadbeef;
+		int efd = -1;
+		ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
+		int r = read(efd, &oomData, 8);
+		// Should be zero, but need to quiet compiler warnings in this rare case
+		dprintf(D_FULLDEBUG, "Draining OOM pipe result is %d\n", r);
+		cleanupOOM();
 	}
+
+	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
+	// lower than the limit when the OOM killer fired.
+	// So have some slop, just in case.
+	if (usage < (0.9 * m_memory_limit)) {
+		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %d Mb\n", usage);
+		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+		Starter->jic->allJobsGone(); // and exit to clean up more memory
+		return 0;
+	}
+
 #endif
 
 	std::stringstream ss;
@@ -1508,7 +1660,7 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 		}
 
 		classad::Value value;
-		int evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		int evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
 		if ((!evalRet) || (!value.IsNumber(hard_limit))) {
 			dprintf(D_ALWAYS, "Can't evaluate CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
 			delete expr;
@@ -1524,7 +1676,7 @@ VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
 			return;
 		}
 
-		evalRet = EvalExprTree(expr, MachineAd, JobAd, value);
+		evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
 		if ((!evalRet) || (!value.IsNumber(soft_limit))) {
 			dprintf(D_ALWAYS, "Can't evaluate CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
 			delete expr;

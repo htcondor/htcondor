@@ -1324,17 +1324,14 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		// use the defaults
 		attrs_to_copy = const_cast<char **>(default_attrs_to_copy);
 	} else {
-		StringList sl(NULL, ", ");
+		std::vector<std::string> sl = split(config_attrs_to_copy);
 		freeAttrs = true;
-		sl.initializeFromString(config_attrs_to_copy);
-		sl.rewind();
-		attrs_to_copy = new char *[sl.number() + 1];
-		for (int i = 0; i < sl.number(); i++) {
-			std::string attribute(sl.next());
-			attrs_to_copy[i] = new char[ attribute.length() + 1 ];
-			strcpy(attrs_to_copy[i], attribute.c_str());
+		attrs_to_copy = new char *[sl.size() + 1];
+		for (size_t i = 0; i < sl.size(); i++) {
+			attrs_to_copy[i] = new char[ sl[i].length() + 1 ];
+			strcpy(attrs_to_copy[i], sl[i].c_str());
 		}
-		attrs_to_copy[sl.number()] = NULL;
+		attrs_to_copy[sl.size()] = NULL;
 		free(config_attrs_to_copy);
 	}
 
@@ -1404,11 +1401,10 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 			}
 		}
 	} else if (!chirp_prefix.empty()) {
-		// TODO cache the StringList
-		StringList prefix_list;
-		prefix_list.initializeFromString(chirp_prefix.c_str());
+		// TODO cache the list
+		std::vector<std::string> prefix_list = split(chirp_prefix);
 		for (auto & attr_it : *remote_ad) {
-			if ( prefix_list.contains_anycase_withwildcard(attr_it.first.c_str()) ) {
+			if ( contains_anycase_withwildcard(prefix_list, attr_it.first) ) {
 				old_expr = jobAd->Lookup(attr_it.first);
 				new_expr = attr_it.second;
 				if ( old_expr == NULL || !(*old_expr == *new_expr) ) {

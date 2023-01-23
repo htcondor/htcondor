@@ -96,12 +96,6 @@ main_init(int argc, char* argv[])
 		}
 	}
 
-		// Initialize DaemonCore's use of ProcFamily. We do this so that we
-		// launch a ProcD if necessary so that any Starters that we launch
-		// for Local Universe jobs can share a single ProcD, instead of
-		// each creating their own
-	daemonCore->Proc_Family_Init();
-
 #ifdef UNIX
 	ClassAdLogPluginManager::Load();
 	ScheddPluginManager::Load();

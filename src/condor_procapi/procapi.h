@@ -74,18 +74,6 @@ typedef DWORD pid_t;
 #define INITIAL_SIZE    40960L    // init. size for getting pDataBlock
 #define EXTEND_SIZE	     4096L    // incremental addition to pDataBlock
 
-//LPTSTR is a point to a null-terminated windows or Unicode string.
-//TEXT() basically puts a string into unicode.
-// Here are some Windows specific strings.
-const LPTSTR NamesKey = 
-      TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Perflib");
-const LPTSTR DefaultLangId = TEXT("009");  //english!
-const LPTSTR Counters = TEXT("Counters");
-const LPTSTR Help = TEXT("Help");
-const LPTSTR LastHelp = TEXT("Last Help");
-const LPTSTR LastCounter = TEXT("Last Counter");
-const LPTSTR Slash = TEXT("\\");
-
 struct Offset {       // There will be one instance of this structure in
 	DWORD imgsize;      // the ProcAPI class - it will hold the offsets of
 	DWORD rssize;       // the data that reside in the pDataBlock
@@ -448,17 +436,17 @@ class ProcAPI {
   //
   static int getPidFamily( pid_t pid,
                            PidEnvID *penvid,
-                           ExtArray<pid_t>& pidFamily,
+                           std::vector<pid_t>& pidFamily,
                            int &status );
   static int getPidFamilyByLogin( const char *searchLogin,
-                                  ExtArray<pid_t>& pidFamily );
+                                  std::vector<pid_t>& pidFamily );
   static int getProcSetInfo ( pid_t *pids,
                               int numpids,
                               piPTR& pi,
                               int &status );
   static int isinfamily ( pid_t *, int, PidEnvID*, piPTR ); 
 #if defined(WIN32)
-  static ExtArray<HANDLE> familyHandles;
+  static std::vector<HANDLE> familyHandles;
   static void makeFamily( pid_t dadpid,
                           PidEnvID *penvid,
                           pid_t *allpids,

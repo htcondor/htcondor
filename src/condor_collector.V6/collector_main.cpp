@@ -62,7 +62,7 @@ void main_init(int argc, char *argv[])
 #endif
 
 	std::string cafile, cakeyfile;
-	if (param_boolean("COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE", false) &&
+	if (param_boolean("COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE", true) &&
 		param(cafile, "TRUST_DOMAIN_CAFILE") &&
 		param(cakeyfile, "TRUST_DOMAIN_CAKEY"))
 	{
@@ -75,8 +75,8 @@ void main_init(int argc, char *argv[])
 		}
 
 		std::string certfile, keyfile;
-		if (param(certfile, "AUTH_SSL_SERVER_CERTFILE") &&
-			param(keyfile, "AUTH_SSL_SERVER_KEYFILE") &&
+		if (param(certfile, "AUTH_SSL_AUTOGENERATE_CERTFILE") &&
+			param(keyfile, "AUTH_SSL_AUTOGENERATE_KEYFILE") &&
 			(0 != access(certfile.c_str(), R_OK)) &&
 			(0 == access(cafile.c_str(), R_OK)) &&
 			(0 == access(cakeyfile.c_str(), R_OK)))

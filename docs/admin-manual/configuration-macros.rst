@@ -997,15 +997,6 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
         *   Alice security,math
         alt Alice math,hacking
 
-:macro-def:`IGNORE_LEAF_OOM`
-    A boolean value that, when ``True``, tells HTCondor not to kill and
-    hold a job that is within its memory allocation, even if other
-    processes within the same cgroup have exceeded theirs. The default
-    value is ``True``. (Note that this represents a change in behavior
-    compared to versions of HTCondor older than 8.6.0; this
-    configuration macro first appeared in version 8.4.11. To restore the
-    previous behavior, set this value to ``False``.)
-
 :macro-def:`SIGN_S3_URLS`
     A boolean value that, when ``True``, tells HTCondor to convert ``s3://``
     URLs into pre-signed ``https://`` URLs.  This allows execute nodes to
@@ -3749,11 +3740,10 @@ needs.
 
 .. note::
 
-    You can only change the number of each type of slot the
-    *condor_startd* is reporting with a simple reconfig (such as sending a
-    SIGHUP signal, or using the *condor_reconfig* command). You cannot
-    change the definition of the different slot types with a reconfig. If
-    you change them, you must restart the *condor_startd* for the change to
+    You cannot
+    change the number or definition of the different slot types with a reconfig. If
+    you change anything related to slot provisioning,
+    you must restart the *condor_startd* for the change to
     take effect (for example, using ``condor_restart -startd``).
 
 .. note::
@@ -5847,6 +5837,13 @@ These settings affect the *condor_shadow*.
     currently defaults to 10 MiB in size. Values are specified with the
     same syntax as ``MAX_DEFAULT_LOG``.
 
+:macro-def:`ALLOW_TRANSFER_REMAP_TO_MKDIR`
+    A boolean value that when ``True`` allows the *condor_shadow* to
+    create directories in a transfer output remap path when the directory
+    does not exist already. The *condor_shadow* can not create directories
+    if the remap is an absolute path or if the remap tries to write to
+    a directory specified within ``LIMIT_DIRECTORY_ACCESS``.
+
 
 condor_starter Configuration File Entries
 ------------------------------------------
@@ -6182,6 +6179,12 @@ These settings affect the *condor_starter*.
     operations, such as access a credential protected by file system
     permissions. The default value is recommended unless privileged
     operations are required.
+
+:macro-def:`MAX_FILE_TRANSFER_PLUGIN_LIFETIME`:
+    An integer number of seconds (defaulting to twenty hours) after which
+    the starter will kill a file transfer plug-in for taking too long.
+    Currently, this causes the job to go on hold with ``ETIME`` (62) as
+    the hold reason subcode.
 
 :macro-def:`ENABLE_CHIRP`
     A boolean value that defaults to ``True``. An administrator would
@@ -9383,9 +9386,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     trusted CA's certificate within the directory.
 
 :macro-def:`AUTH_SSL_SERVER_CERTFILE`
-    The path and file name of the file containing the public certificate
-    for the server side of a communication authenticating with SSL.  On
-    Linux, this defaults to ``/etc/pki/tls/certs/localhost.crt``.
+    A comma-separated list of filenames to search for a public certificate
+    to be used for the server side of SSL authentication.
+    The first file that contains a valid credential (in combination with
+    ``AUTH_SSL_SERVER_KEYFILE``)  will be used.
 
 :macro-def:`AUTH_SSL_CLIENT_CERTFILE`
     The path and file name of the file containing the public certificate
@@ -9394,9 +9398,10 @@ macros are described in the :doc:`/admin-manual/security` section.
     as the user ``anonymous@ssl``.
 
 :macro-def:`AUTH_SSL_SERVER_KEYFILE`
-    The path and file name of the file containing the private key for
-    the server side of a communication authenticating with SSL. On
-    Linux, this defaults to ``/etc/pki/tls/private/localhost.key``.
+    A comma-separated list of filenames to search for a private key
+    to be used for the server side of SSL authentication.
+    The first file that contains a valid credential (in combination with
+    ``AUTH_SSL_SERVER_CERTFILE``) will be used.
 
 :macro-def:`AUTH_SSL_CLIENT_KEYFILE`
     The path and file name of the file containing the private key for
@@ -9430,7 +9435,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``AUTH_SSL_SERVER_KEYFILE``, respectively.
     The locations of the CA files are controlled by
     ``TRUST_DOMAIN_CAFILE`` and ``TRUST_DOMAIN_CAKEY``.
-    The default value is ``False``.
+    The default value is ``True`` on unix platforms and ``False`` on Windows.
 
 :macro-def:`TRUST_DOMAIN_CAFILE`
     A path specifying the location of the CA the *condor_collector*

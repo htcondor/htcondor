@@ -57,7 +57,7 @@ vm_proc.cpp
 )
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
 		cgroup.linux.cpp  
 		../condor_startd.V6/VolumeManager.cpp

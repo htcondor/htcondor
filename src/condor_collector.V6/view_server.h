@@ -61,8 +61,8 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<std::string, GeneralRecord*> AccHash;
-typedef ExtArray< int > ExtIntArray;
-typedef ExtArray< fpos_t* > ExtOffArray;
+typedef std::vector< int > ExtIntArray;
+typedef std::vector< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
@@ -126,8 +126,8 @@ private:
 	// Variables used for quick searches by condor_stats
 
 	static HashTable< std::string, int >* FileHash;
-	static ExtArray< ExtIntArray* >* TimesArray;
-	static ExtArray< ExtOffArray* >* OffsetsArray;
+	static std::vector< ExtIntArray* >* TimesArray;
+	static std::vector< ExtOffArray* >* OffsetsArray;
 
 	// misc variables
 

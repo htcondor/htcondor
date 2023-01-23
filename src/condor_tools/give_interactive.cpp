@@ -43,8 +43,12 @@
 
 double priority = 0.00001;
 const char *pool = NULL;
-struct 	PrioEntry { std::string name; float prio; };
-static  ExtArray<PrioEntry> prioTable;
+struct 	PrioEntry { 
+	PrioEntry(const std::string &name, float prio) : name(name), prio(prio) {}
+	std::string name; 
+	float prio;
+};
+static  std::vector<PrioEntry> prioTable;
 #ifndef WIN32
 #endif
 ExprTree *rankCondStd;// no preemption or machine rank-preemption 
@@ -132,7 +136,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 			candidate->LookupString (ATTR_REMOTE_USER, remoteUser, sizeof(remoteUser))) 
 		{
 				// check if we are preempting for rank or priority
-			if( EvalExprTree( rankCondStd, candidate, &request, result ) &&
+			if( EvalExprToBool( rankCondStd, candidate, &request, result ) &&
 				result.IsBooleanValue( val ) && val ) {
 					// offer strictly prefers this request to the one
 					// currently being serviced; preempt for rank
@@ -145,14 +149,14 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 					// (1) we need to make sure that PreemptionReq's hold (i.e.,
 					// if the PreemptionReq expression isn't true, dont preempt)
 				if (PreemptionReq && 
-					!(EvalExprTree(PreemptionReq,candidate,&request,result) &&
+					!(EvalExprToBool(PreemptionReq,candidate,&request,result) &&
 					  result.IsBooleanValue(val) && val) ) {
 					continue;
 				}
 					// (2) we need to make sure that the machine ranks the job
 					// at least as well as the one it is currently running 
 					// (i.e., rankCondPrioPreempt holds)
-				if(!(EvalExprTree(rankCondPrioPreempt,candidate,&request,result)&&
+				if(!(EvalExprToBool(rankCondPrioPreempt,candidate,&request,result)&&
 					 result.IsBooleanValue(val) && val ) ) {
 						// machine doesn't like this job as much -- find another
 					continue;
@@ -187,7 +191,7 @@ giveBestMachine(ClassAd &request,ClassAdList &startdAds,
 			// calculate the preemption rank
 			double rval;
 			if( PreemptionRank &&
-				EvalExprTree(PreemptionRank,candidate,&request,result) &&
+				EvalExprToNumber(PreemptionRank,candidate,&request,result) &&
 				result.IsNumber(rval)) {
 
 				candidatePreemptRankValue = rval;
@@ -357,9 +361,7 @@ fetchSubmittorPrios()
 			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
-		prioTable[i-1].name = name;
-		prioTable[i-1].prio = sub_priority;
-		// printf("DEBUG: Prio   %s %f\n",name,sub_priority);
+		prioTable.emplace_back(name, sub_priority);
 		i++;
 	}
 
@@ -372,15 +374,14 @@ static int
 findSubmittor( char *name ) 
 {
 	std::string sub(name);
-	int			last = prioTable.getlast();
+	int			last = prioTable.size();
 	int			i;
 	
-	for( i = 0 ; i <= last ; i++ ) {
+	for( i = 0 ; i < last ; i++ ) {
 		if( prioTable[i].name == sub ) return i;
 	}
 
-	prioTable[i].name = sub;
-	prioTable[i].prio = 0.5;
+	prioTable.emplace_back(sub, 0.5);
 
 	return i;
 }

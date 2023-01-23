@@ -57,9 +57,7 @@ public:
 #if defined(LINUX)
 	bool track_family_via_allocated_supplementary_group(pid_t, gid_t&);
 #endif
-#if defined(HAVE_EXT_LIBCGROUP)
-	bool track_family_via_cgroup(pid_t, const char*);
-#endif
+	bool track_family_via_cgroup(pid_t, const FamilyInfo *fi);
 
 	// ask the procd for usage information about a process
 	// family

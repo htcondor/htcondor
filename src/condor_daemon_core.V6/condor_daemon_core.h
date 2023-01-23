@@ -196,6 +196,8 @@ const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHER
 const int DCJOBOPT_USE_SYSTEMD_INET_SOCKET = (1<<6);	     // Pass the reli sock from systemd as the command socket.
 const int DCJOBOPT_INHERIT_FAMILY_SESSION = (1<<7);
 
+const int DC_STATUS_OOM_KILLED = (1 << 24);
+
 #define HAS_DCJOBOPT_SUSPEND_ON_EXEC(mask)  ((mask)&DCJOBOPT_SUSPEND_ON_EXEC)
 #define HAS_DCJOBOPT_NO_ENV_INHERIT(mask)  ((mask)&DCJOBOPT_NO_ENV_INHERIT)
 #define HAS_DCJOBOPT_ENV_INHERIT(mask)  (!(HAS_DCJOBOPT_NO_ENV_INHERIT(mask)))
@@ -209,23 +211,17 @@ const int DCJOBOPT_INHERIT_FAMILY_SESSION = (1<<7);
 // families
 struct FamilyInfo {
 
-	int max_snapshot_interval;
-	const char* login;
+	int max_snapshot_interval{-1};
+	const char* login{nullptr};
 #if defined(LINUX)
-	gid_t* group_ptr;
+	gid_t* group_ptr{nullptr};
 #endif
-	bool want_pid_namespace;
-	const char* cgroup;
+	bool want_pid_namespace{false};
+	const char* cgroup{nullptr};
+	uint64_t cgroup_memory_limit{0};
+	int cgroup_cpu_shares{0};
 
-	FamilyInfo() {
-		max_snapshot_interval = -1;
-		login = NULL;
-#if defined(LINUX)
-		group_ptr = NULL;
-#endif
-		want_pid_namespace = false;
-		cgroup = NULL;
-	}
+	FamilyInfo() = default;
 };
 
 // Create_Process takes a sigset_t* as an argument for the signal mask to be
@@ -1429,12 +1425,15 @@ class DaemonCore : public Service
     int Kill_Family(pid_t);
     int Signal_Process(pid_t,int);
     
-	/** Used to explicitly initialize our ProcFamilyInterface object.
-	    Calling this is not required - if not called, the object
-	    will be initialized on-demand: the first time Create_Process
-		is called with a non-NULL FamilyInfo argument
-	*/
-	void Proc_Family_Init();
+	// This method should go away in the long term.
+	// Daemon Core should be responsible for unregistering any subfamily
+	// that it creates when asked to monitor subfamilies as a side-effect
+	// of Create_Process.  It does this after calling the Reaper, but in
+	// the starter, the starter exit's in the reaper before it returns
+	// to daemon core, so subfamilies never get unregistered, and thus
+	// cgroups are never deleted.  This should only be called from
+	// the starter, or any other daemon where the reaper calls exit
+	void Unregister_subfamily(pid_t pid);
 
 	/** Used to explicitly cleanup our ProcFamilyInterface object
 	    (used by the Master before it restarts, since in that
@@ -1947,7 +1946,7 @@ class DaemonCore : public Service
 	                     PidEnvID* penvid,
 	                     const char* login,
 	                     gid_t* group,
-			     const char* cgroup);
+	                     const FamilyInfo* fi);
 
 	void CheckForTimeSkip(time_t time_before, time_t okay_delta);
 
@@ -2095,10 +2094,9 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpReapTable(int, const char* = NULL);
-    int                 maxReap;        // max number of reaper handlers
-    int                 nReap;          // number of reaper handlers used
+    size_t              nReap;          // number of reaper handlers used
     int                 nextReapId;     // next reaper id to use
-    ExtArray<ReapEnt>  reapTable;      // reaper table
+	std::vector<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service

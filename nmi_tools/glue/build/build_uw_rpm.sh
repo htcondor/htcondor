@@ -18,7 +18,7 @@ usage () {
   echo "Environment:"
   echo "  VERBOSE=1                         Show all commands run by script"
   echo
-  exit $1
+  exit 1
 }
 
 fail () { echo "$@" >&2; exit 1; }
@@ -43,7 +43,6 @@ if [[ $buildmethod = -bs ]]; then
   buildmethod+=" --nodeps"
 fi
 
-top_dir=$PWD
 [[ $dest_dir ]] || dest_dir=$PWD
 
 check_version_string () {
@@ -63,12 +62,12 @@ trap 'rm -rf "$tmpd"' EXIT
 
 cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
-mv ../condor-${condor_version}.tgz SOURCES/condor-${condor_version}.tar.gz
+mv "../condor-${condor_version}.tgz" "SOURCES/condor-${condor_version}.tar.gz"
 
 # copy rpm files from condor sources into the SOURCES directory
-tar xvfpz SOURCES/condor-${condor_version}.tar.gz condor-${condor_version}/build/packaging/rpm
-cp -p condor-${condor_version}/build/packaging/rpm/* SOURCES
-rm -rf condor-${condor_version}
+tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm"
+cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
+rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
 update_spec_define () {
@@ -89,8 +88,8 @@ export VERBOSE
 # Use as many CPUs as are in the condor slot we are in, 1 if undefined
 export RPM_BUILD_NCPUS=${OMP_NUM_THREADS-1}
 
-rpmbuild -v $buildmethod "$@" --define="_topdir $tmpd" SOURCES/condor.spec
+rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
-
-mv $(find *RPMS -name \*.rpm) "$dest_dir"
+readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
+mv "${rpm_files[@]}" "$dest_dir"
 ls -lh "$dest_dir"

@@ -22,8 +22,8 @@
 %endif
 %endif
 
+%define devtoolset 11
 %if %uw_build
-%define devtoolset 10
 %define debug 1
 %endif
 
@@ -125,43 +125,34 @@ Patch8: osg_sysconfig_in_init_script.patch
 BuildRoot: %(mktemp -ud %{_tmppath}/%{name}-%{version}-%{release}-XXXXXX)
 
 BuildRequires: cmake
-BuildRequires: %_bindir/flex
-BuildRequires: %_bindir/byacc
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
 BuildRequires: libvirt-devel
 BuildRequires: bind-utils
-BuildRequires: m4
-#BuildRequires: autoconf
 BuildRequires: libX11-devel
 BuildRequires: libXScrnSaver-devel
-BuildRequires: /usr/include/curl/curl.h
-BuildRequires: /usr/include/expat.h
 BuildRequires: openldap-devel
 %if 0%{?rhel} == 7
 BuildRequires: cmake3
 BuildRequires: python-devel
 BuildRequires: python-setuptools
+%else
+BuildRequires: cmake >= 3.8
 %endif
 BuildRequires: python3-devel
 BuildRequires: python3-setuptools
+%if 0%{?rhel} >= 8
 BuildRequires: boost-devel
+%endif
 BuildRequires: redhat-rpm-config
 BuildRequires: sqlite-devel
 BuildRequires: perl(Data::Dumper)
 
 BuildRequires: glibc-static
-%if %uw_build
-BuildRequires: cmake >= 2.8
 BuildRequires: gcc-c++
 BuildRequires: libuuid-devel
-BuildRequires: bison-devel
-BuildRequires: bison
-BuildRequires: byacc
-BuildRequires: flex
 BuildRequires: patch
-BuildRequires: libtool
 BuildRequires: pam-devel
 BuildRequires: nss-devel
 BuildRequires: openssl-devel
@@ -176,17 +167,18 @@ BuildRequires: python3-devel
 BuildRequires: python-devel
 %endif
 BuildRequires: libcurl-devel
-%endif
 
 # Authentication build requirements
 BuildRequires: voms-devel
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 
+%if 0%{?rhel} <= 8
 BuildRequires: libcgroup-devel
 Requires: libcgroup
+%endif
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
+%if 0%{?rhel} == 7 && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
 %endif
@@ -204,17 +196,9 @@ BuildRequires: boost-static
 %if 0%{?rhel} >= 8 || 0%{?fedora}
 BuildRequires: boost-python3-devel
 %else
-%if 0%{?fedora} >= 30
-BuildRequires: boost-python2-devel
-%else
-%if ! 0%{?amzn}
-BuildRequires: boost-python
-%else
 BuildRequires: python3-devel
 BuildRequires: boost169-python2-devel
 BuildRequires: boost169-python3-devel
-%endif
-%endif
 %endif
 BuildRequires: libuuid-devel
 Requires: libuuid
@@ -666,7 +650,7 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
-%if 0%{?rhel} == 7 && ! 0%{?amzn} && 0%{?devtoolset}
+%if 0%{?rhel} == 7 && 0%{?devtoolset}
 . /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
 export CXX=$(which c++)
@@ -687,11 +671,14 @@ export CMAKE_PREFIX_PATH=/usr
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
+%if 0%{?rhel} >= 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=TRUE \
        -DPLATFORM:STRING=${NMI_PLATFORM:-unknown} \
-       -DCMAKE_VERBOSE_MAKEFILE=ON \
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -717,6 +704,11 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
+%if 0%{?rhel} >= 9
+       -DWITH_LIBCGROUP:BOOL=FALSE \
+%else
+       -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -727,12 +719,18 @@ export CMAKE_PREFIX_PATH=/usr
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 make %{?_smp_mflags}
 %if %uw_build
 make %{?_smp_mflags} tests
 %endif
 
 %install
+%if 0%{?rhel} == 9
+cd redhat-linux-build
+%endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
 function populate {
@@ -748,7 +746,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
+%if 0%{?rhel} == 9
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 %endif
 
 # Drop in a symbolic link for backward compatibility
@@ -1575,6 +1577,23 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.0-1
+- Preliminary support for Enterprise Linux 9
+- Preliminary support for cgroups v2
+- Can now set minimum floor for number of CPUs that a submitter gets
+- Improved validity testing of Singularity/Apptainer runtinme
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
+* Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.1-1
+- Add Ubuntu 22.04 (Jammy Jellyfish) support
+- Add file transfer plugin that supports stash:// and osdf:// URLs
+- Fix bug where cgroup memory limits were not enforced on Debian and Ubuntu
+- Fix bug where forcibly removing DAG jobs could crash the condor_schedd
+- Fix bug where Docker repository images cannot be run under Singularity
+- Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
+- Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook
 - Fix bug where Apptainer only systems couldn't run with Docker style images

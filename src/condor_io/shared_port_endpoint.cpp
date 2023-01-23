@@ -283,6 +283,7 @@ SharedPortEndpoint::CreateListener()
 	}
 
 	formatstr(m_full_name, "%s%c%s", m_socket_dir.c_str(), DIR_DELIM_CHAR, m_local_id.c_str());
+	dprintf(D_FULLDEBUG, "SharedPointEndpoint::CreateListener id=%s full_name=%s\n", m_local_id.c_str(), m_full_name.c_str());
 
 	pipe_end = CreateNamedPipe(
 		m_full_name.c_str(),
@@ -297,7 +298,7 @@ SharedPortEndpoint::CreateListener()
 	if(pipe_end == INVALID_HANDLE_VALUE)
 	{
 		DWORD error = GetLastError();
-		EXCEPT("SharedPortEndpoint: Failed to create named pipe: %d", error);
+		EXCEPT("SharedPortEndpoint: Error %d creating named pipe \"%s\"", error, m_full_name.c_str());
 	}
 
 #elif HAVE_SCM_RIGHTS_PASSFD

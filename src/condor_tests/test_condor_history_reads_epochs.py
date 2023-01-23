@@ -20,6 +20,7 @@ outputFiles = [
     "hist_file_epoch.txt",
     "hist_file_cluster.txt",
     "hist_file_cluster_proc.txt",
+    "hist_file_jid_match_regression.txt",
     "base_epoch.txt",
     "cluster.txt",
     "cluster_proc.txt",
@@ -34,6 +35,11 @@ expectedOutput = {
     "hist_file_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "hist_file_cluster.txt":{"1.0 1.1":4},
     "hist_file_cluster_proc.txt":{"1.0":2},
+    #There was a bug in the condor history exit once all possible jobs
+    #are found where if the last passed job is to be found after the
+    #other passed jobs it would be skipped. The below test makes sure that
+    #regression doesnt occur
+    "hist_file_jid_match_regression.txt":{"1.0 2.1":4},
     #All others check based on directory
     "base_epoch.txt":{"1.0 1.1 2.0 2.1":8},
     "cluster.txt":{"1.0 1.1":4},
@@ -112,13 +118,14 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
 "(file) history":"condor_history -epoch",
 "(file) history w/ cluster":"condor_history -epoch 1",
 "(file) history w/ cluster.proc":"condor_history -epoch 1.0",
-"(dir) history":"condor_history -epoch",
-"(dir) history w/ cluster":"condor_history -epoch 1",
-"(dir) history w/ cluster.proc":"condor_history -epoch 1.0",
-"(dir) history w/ delete & limit":"condor_history -epoch:d -limit 1",
-"(dir) history w/ delete & match":"condor_history -epoch:d -match 1",
-"(dir) history w/ delete & scanlimit":"condor_history -epoch:d -scanlimit 1",
-"(dir) history w/ delete":"condor_history -epoch:d",
+"(file) history job id mathing regression":"condor_history -epoch 2.1 1.0",
+"(dir) history":"condor_history -dir -epoch",
+"(dir) history w/ cluster":"condor_history -dir -epoch 1",
+"(dir) history w/ cluster.proc":"condor_history -dir -epoch 1.0",
+"(dir) history w/ delete & limit":"condor_history -dir -epoch:d -limit 1",
+"(dir) history w/ delete & match":"condor_history -dir -epoch:d -match 1",
+"(dir) history w/ delete & scanlimit":"condor_history -dir -epoch:d -scanlimit 1",
+"(dir) history w/ delete":"condor_history -dir -epoch:d",
 })
 def read_epochs(condor,test_dir,path_to_sleep,request):
     global historyTestNum
@@ -131,13 +138,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         if historyTestNum == 0:
             print("\nERROR: Set up failed. Cannot test history tools.")
         return False
-    #If non-history like epoch file then reconfig to not have it
-    if outputFiles[historyTestNum][:4] != "hist" and outputFiles[historyTestNum] == "base_epoch.txt":
-        config = Path(test_dir / "condor" / "condor_config")
-        rf = open(config,"a")
-        rf.write("\nJOB_EPOCH_HISTORY=\n")
-        rf.close()
-        rp = condor.run_command(["condor_reconfig"])
+
     #Split based param command line for specific test into array
     cmd = request.param.split()
     cp = condor.run_command(cmd)

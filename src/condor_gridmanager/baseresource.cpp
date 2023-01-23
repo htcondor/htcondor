@@ -115,15 +115,13 @@ void BaseResource::Reconfig()
 		param_value = param( "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE" );
 	}
 	if ( param_value != NULL ) {
-		char *tmp1;
-		char *tmp2;
-		StringList limits( param_value );
-		limits.rewind();
-		if ( limits.number() > 0 ) {
-			jobLimit = atoi( limits.next() );
-			while ( (tmp1 = limits.next()) && (tmp2 = limits.next()) ) {
-				if ( strstr( resourceName, tmp1 ) != 0 ) {
-					jobLimit = atoi( tmp2 );
+		const char* tmp;
+		StringTokenIterator limits(param_value);
+		if ( (tmp = limits.next()) ) {
+			jobLimit = atoi(tmp);
+			while ( (tmp = limits.next()) ) {
+				if (strstr(resourceName, tmp) != 0 && (tmp = limits.next())) {
+					jobLimit = atoi(tmp);
 				}
 			}
 		}

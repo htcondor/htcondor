@@ -21,6 +21,7 @@
 #include "classad/operators.h"
 #include "classad/sink.h"
 #include "classad/util.h"
+#include <limits>
 
 using namespace std;
 
@@ -1144,18 +1145,29 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 					return( SIG_CHLD1 | SIG_CHLD2 );
 
 				case DIVISION_OP:		
-					if (i2 != 0) {
-						result.SetIntegerValue(i1/i2);
+					// Don't throw SIGFPE for LONG_MIN / -1
+					if ((i1 == std::numeric_limits<int64_t>::min()) && (i2 == -1)) { 
+							// Off by one, but what else could you do?
+							result.SetIntegerValue(std::numeric_limits<int64_t>::max());
 					} else {
-						result.SetErrorValue ();
+						if (i2 != 0) {
+							result.SetIntegerValue(i1/i2);
+						} else {
+							result.SetErrorValue ();
+						}
 					}
 					return( SIG_CHLD1 | SIG_CHLD2 );
 					
 				case MODULUS_OP:
-					if (i2 != 0) {
-						result.SetIntegerValue(i1%i2);
+					// Don't throw SIGFPE for LONG_MIN % -1
+					if ((i1 == std::numeric_limits<int64_t>::min()) && (i2 == -1)) { 
+							result.SetIntegerValue(0);
 					} else {
-						result.SetErrorValue ();
+						if (i2 != 0) {
+							result.SetIntegerValue(i1%i2);
+						} else {
+							result.SetErrorValue ();
+						}
 					}
 					return( SIG_CHLD1 | SIG_CHLD2 );
 							

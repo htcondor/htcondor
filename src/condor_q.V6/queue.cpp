@@ -295,7 +295,6 @@ static  int			cOwnersOnCmdline = 0;
 static	int			analyze_detail_level = 0; // one or more of detail_xxx enum values above.
 
 // these are used in analysis
-ExtArray<PrioEntry> prioTable;
 KeyToClassaAdMap startdAds;
 int longest_slot_machine_name = 0;
 int longest_slot_name = 0;

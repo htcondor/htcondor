@@ -21,6 +21,7 @@
 #ifndef __CLASSAD_EXPR_TREE_H__
 #define __CLASSAD_EXPR_TREE_H__
 
+#include <vector>
 #include "classad/classad_containers.h"
 #include "classad/common.h"
 #include "classad/value.h"
@@ -33,9 +34,20 @@ class ExprTree;
 class ClassAd;
 class MatchClassAd;
 
+
 class EvalState {
 	public:
-		EvalState( );
+		const int MAX_CLASSAD_RECURSION = 400;
+
+		EvalState ()
+			: depth_remaining(MAX_CLASSAD_RECURSION)
+			, rootAd(nullptr)
+			, curAd(nullptr)
+			, flattenAndInline(false)
+			, debug(false)
+			, inAttrRefScope(false)
+		{}
+
 		~EvalState( );
 
 		void SetRootScope( );
@@ -57,13 +69,17 @@ class EvalState {
 		bool		inAttrRefScope;
 
 		// Cache_to_free are the things in the cache that must be
-		// freed when this gets deleted. The problem is that we put
-		// two kinds of things into the cache: some that must be
-		// freed, and some that must not be freed. We keep track of
-		// the ones that must be freed separately.  Memory managment
-		// is a pain! We should all use languages that do memory
-		// management for you.
-		//EvalCache   cache_to_delete; 
+		// freed when this gets deleted.
+		std::vector<ExprTree*> cache_to_delete;
+
+		// add an exprtree to the evaluation cache so that it is deleted after evaluation is complete
+		void AddToDeletionCache(ExprTree * tree);
+
+		// check to see if the pointer is in the cache, if so remove it and return true.
+		// otherwise return false
+		bool TakeFromDeletionCache(ExprTree * tree);
+
+		bool GivePtrToValue(Value & val);
 };
 
 /** A node of the expression tree, which may be a literal, attribute reference,

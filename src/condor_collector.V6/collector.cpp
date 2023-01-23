@@ -124,15 +124,6 @@ AdTransforms CollectorDaemon::m_forward_ad_xfm;
 //---------------------------------------------------------
 
 
-
-// prototypes of library functions
-typedef void (*SIGNAL_HANDLER)();
-extern "C"
-{
-	void schedule_event ( int month, int day, int hour, int minute, int second, SIGNAL_HANDLER );
-}
-
-
 struct TokenRequestContinuation {
 	std::unique_ptr<DCSchedd> m_schedd;
 	std::string m_peer_location;
@@ -1505,7 +1496,7 @@ int CollectorDaemon::query_scanFunc (CollectorRecord *record)
 	int rc = 1;
 	classad::Value result;
 	bool val;
-	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
+	if ( EvalExprToBool( __filter__, cad, NULL, result ) &&
 		 result.IsBooleanValueEquiv(val) && val ) {
 		// Found a match 
         __numAds__++;
@@ -1612,7 +1603,7 @@ int CollectorDaemon::setAttrLastHeardFrom (ClassAd* cad, unsigned long time)
 
 	classad::Value result;
 	bool val;
-	if ( EvalExprTree( __filter__, cad, NULL, result ) &&
+	if ( EvalExprToBool( __filter__, cad, NULL, result ) &&
 		 result.IsBooleanValueEquiv(val) && val ) {
 
 		cad->Assign( ATTR_LAST_HEARD_FROM, time );
@@ -2301,7 +2292,7 @@ CollectorDaemon::forward_classad_to_view_collector(int cmd,
             if (proj_expr) {
                 classad::Value val;
                 const char * proj_str = NULL;
-                if (EvalExprTree(proj_expr, theAd, NULL, val) && val.IsStringValue(proj_str)) {
+                if (EvalExprToString(proj_expr, theAd, NULL, val) && val.IsStringValue(proj_str)) {
                     add_attrs_from_string_tokens(proj, proj_str);
                 }
                 if ( ! proj.empty()) { whitelist = &proj; }

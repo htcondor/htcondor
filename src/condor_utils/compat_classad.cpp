@@ -1445,7 +1445,10 @@ bool CondorClassAdFileParseHelper::line_is_ad_delimitor(const std::string & line
 		while (*p && isspace(*p)) ++p;
 		return ( ! *p || *p == '\n');
 	}
-	return starts_with(line, ad_delimitor);
+	bool is_delim = starts_with(line, ad_delimitor);
+	if (is_delim) { delim_line = line; }
+	else { delim_line.clear(); }
+	return is_delim;
 }
 
 // this method is called before each line is parsed.

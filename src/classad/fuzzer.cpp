@@ -10,7 +10,7 @@
  * Note this is intentionally not in the cmake file, it should not be built
  * by default.
  *
- * To use, compile all of classads with clang -fsanitize=fuzzer-nolink,address
+ * To use, compile all of classads with clang -fsanitize=fuzzer-no-link,address
  * then recompile this one file with clang -fsanitize=fuzzer
  * This adds a magic main function here.
  * Then, just run ./a.out and let it run for a long time.

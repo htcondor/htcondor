@@ -255,6 +255,40 @@ bool ExprTreeIsAttrRef(classad::ExprTree * expr, std::string & attr, bool * is_a
 	return false;
 }
 
+// returns true and appends the unparsed value of the given attribute
+// IFF the value might have $$() expansions in it
+// returns false if $$() is impossible (because int, etc).
+bool ExprTreeMayDollarDollarExpand(classad::ExprTree * tree,  std::string & unparse_buf)
+{
+	tree = SkipExprEnvelope(tree);
+	if ( ! tree) return false;
+
+	if (tree->GetKind() == classad::ExprTree::LITERAL_NODE) {
+		classad::Value::NumberFactor factor;
+		const auto non_string_types = classad::Value::ValueType::ERROR_VALUE
+				| classad::Value::ValueType::UNDEFINED_VALUE
+				| classad::Value::ValueType::BOOLEAN_VALUE
+				| classad::Value::ValueType::INTEGER_VALUE
+				| classad::Value::ValueType::REAL_VALUE
+				| classad::Value::ValueType::RELATIVE_TIME_VALUE
+				| classad::Value::ValueType::ABSOLUTE_TIME_VALUE;
+
+		classad::Literal * lit = ((classad::Literal*)tree);
+		if (lit->getValue(factor).GetType() & non_string_types) {
+			return false; // these types cannot have $$() expansions
+		}
+
+		// simple string literals can be quickly checked for possible $$ expansion
+		const char * cstr;
+		if (lit->GetStringValue(cstr) && ! strchr(cstr, '$')) {
+			return false;
+		}
+	}
+
+	// append unparsed value into the buffer
+	return ExprTreeToString(tree, unparse_buf) != nullptr;
+}
+
 // return true if the expression is a comparision between an Attribute and a literal
 // returns attr name, the comparison operation, and the literal value if it returns true.
 bool ExprTreeIsAttrCmpLiteral(classad::ExprTree * tree, classad::Operation::OpKind & cmp_op, std::string & attr, classad::Value & value)
@@ -652,51 +686,6 @@ int RewriteAttrRefs(classad::ExprTree * tree, const NOCASE_STRING_MAP & mapping)
 }
 
 
-bool EvalExprBool(ClassAd *ad, const char *constraint)
-{
-	static classad::ExprTree *tree = NULL;
-	static char * saved_constraint = NULL;
-	classad::Value result;
-	bool constraint_changed = true;
-	bool boolVal;
-
-	if ( saved_constraint ) {
-		if ( strcmp(saved_constraint,constraint) == 0 ) {
-			constraint_changed = false;
-		}
-	}
-
-	if ( constraint_changed ) {
-		// constraint has changed, or saved_constraint is NULL
-		if ( saved_constraint ) {
-			free(saved_constraint);
-			saved_constraint = NULL;
-		}
-		if ( tree ) {
-			delete tree;
-			tree = NULL;
-		}
-		if ( ParseClassAdRvalExpr( constraint, tree ) != 0 ) {
-			dprintf( D_ALWAYS,
-				"can't parse constraint: %s\n", constraint );
-			return false;
-		}
-		saved_constraint = strdup( constraint );
-	}
-
-	// Evaluate constraint with ad in the target scope so that constraints
-	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, result ) ) {
-		dprintf( D_ALWAYS, "can't evaluate constraint: %s\n", constraint );
-		return false;
-	}
-	if( result.IsBooleanValueEquiv( boolVal ) ) {
-		return boolVal;
-	}
-	dprintf( D_FULLDEBUG, "constraint (%s) does not evaluate to bool\n",
-		constraint );
-	return false;
-}
 
 bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 {
@@ -705,7 +694,7 @@ bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree)
 
 	// Evaluate constraint with ad in the target scope so that constraints
 	// have the same semantics as the collector queries.  --RR
-	if ( !EvalExprTree( tree, ad, NULL, result ) ) {        
+	if ( !EvalExprToBool( tree, ad, NULL, result ) ) {
 		return false;
 	}
 
@@ -764,6 +753,7 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bo
 
 int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
+				  classad::Value::ValueType type_mask,
 				  const std::string & sourceAlias,
 				  const std::string & targetAlias )
 {
@@ -779,7 +769,7 @@ int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 	if ( target && target != source ) {
 		mad = getTheMatchAd( source, target, sourceAlias, targetAlias );
 	}
-	if ( !source->EvaluateExpr( expr, result ) ) {
+	if ( !source->EvaluateExpr( expr, result, type_mask ) ) {
 		rc = FALSE;
 	}
 

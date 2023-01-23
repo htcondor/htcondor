@@ -117,8 +117,7 @@ public:
 
 protected:
 
-	ExtArray<BackfillSlot*> m_slots;
-	int m_num_slots;
+	std::vector<BackfillSlot*> m_slots;
 
 };
 

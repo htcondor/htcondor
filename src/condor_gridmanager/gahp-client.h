@@ -202,7 +202,7 @@ class GahpServer : public Service {
 	bool m_gahp_startup_failed;
 	char m_gahp_version[150];
 	std::string m_gahp_condor_version;
-	StringList * m_commands_supported;
+	std::vector<std::string> m_commands_supported;
 	bool use_prefix;
 	unsigned int m_pollInterval;
 	int poll_tid;
@@ -267,7 +267,7 @@ class GenericGahpClient : public Service {
 		bool isStarted() { return server->m_gahp_pid != -1 && !server->m_gahp_startup_failed; }
 		bool isInitialized() { return server->is_initialized; }
 
-		StringList *getCommands() { return server->m_commands_supported; }
+		std::vector<std::string>& getCommands() { return server->m_commands_supported; }
 
 	    void setErrorString( const std::string & newErrorString );
 		const char * getErrorString();

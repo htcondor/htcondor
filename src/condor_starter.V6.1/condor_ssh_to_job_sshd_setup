@@ -24,12 +24,6 @@ while [ 1 ]; do
   die "Failed to create ${sshd_dir}"
 done
 
-# save environment so that ssh_to_job_shell_setup can restore it
-# do not preserve the job's DISPLAY environment variable, because
-# that will conflict with X forwarding in the ssh session
-unset DISPLAY
-export -p > "${sshd_dir}/env.sh"
-
 if [ -x /bin/sed ]; then
   SED=/bin/sed
 elif [ -x /usr/bin/sed ]; then
@@ -51,6 +45,18 @@ if [ $? != 0 ]; then
   die "Failed to create ssh key ${sshkey} with command ${ssh_keygen}"
 fi
 
+# whoami will also use the fake getpwnam
+sshd_user=`/usr/bin/whoami` || die "Failed to run /usr/bin/whoami"
+
+# save environment so that ssh_to_job_shell_setup can restore it
+# do not preserve the job's DISPLAY environment variable, because
+# that will conflict with X forwarding in the ssh session
+# Also unset LD_PRELOAD to remove the getpwnam shared library
+# forced into us, to get ssh-keygen and whoam to work 
+unset DISPLAY
+unset LD_PRELOAD
+export -p > "${sshd_dir}/env.sh"
+
 # inject our shell setup command into authorized keys options
 force_command="${ssh_to_job_shell_setup} ${sshd_dir}/env.sh"
 /bin/echo -n "command=\"${force_command}\" " > "${sshd_dir}/authorized_keys" \
@@ -68,8 +74,6 @@ sshd_config="${sshd_dir}/sshd_config"
       s|_INSERT_AUTHORIZED_KEYS_FILE_|${sshd_dir}/authorized_keys|g;
       s|_INSERT_FORCE_COMMAND_|${force_command}|g"\
  || die "Failed to create ${sshd_config}"
-
-sshd_user=`/usr/bin/whoami` || die "Failed to run /usr/bin/whoami"
 
 # now transmit stuff back to our caller on stdout
 # the caller expects specific markers before and after each item

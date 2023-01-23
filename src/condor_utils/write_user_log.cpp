@@ -1508,7 +1508,7 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogE
 		if ( (tree=param_jobad->LookupExpr(curr)) ) {
 				// found the attribute.  now evaluate it before
 				// we put it into the eventAd.
-			if ( EvalExprTree(tree,param_jobad,NULL,result) ) {
+			if ( EvalExprToScalar(tree,param_jobad,NULL,result) ) {
 					// now inserted evaluated expr
 				bool bval = false;
 				int ival;

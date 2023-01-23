@@ -34,14 +34,15 @@
 static CSysinfo ntSysInfo;
 
 int
-ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
+ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, std::vector<pid_t>& pidFamily, 
 	int &status ) 
 {
 
 	status = PROCAPI_FAMILY_ALL;
 
+	pidFamily.clear();
 	if ( daddypid == 0 ) {
-		pidFamily[0] = 0;
+		pidFamily.push_back(0);
 		return PROCAPI_SUCCESS;
 	}
 
@@ -83,10 +84,10 @@ ProcAPI::getPidFamily( pid_t daddypid, PidEnvID *penvid, ExtArray<pid_t>& pidFam
 	makeFamily( daddypid, penvid, allpids, numpids, familypids, familysize );
 	
 	for ( int q=0 ; q<familysize ; q++ ) {
-		pidFamily[q] = familypids[q];
+		pidFamily.push_back(familypids[q]);
 	}
 
-	pidFamily[familysize] = 0;
+	pidFamily.push_back(0);
 
 	delete [] allpids;
 	delete [] familypids;
@@ -172,7 +173,7 @@ ProcAPI::getAllPids( pid_t* &pids, int &numpids ) {
      with a 0 for a pid at its end.  A -1 is returned on failure, 0 otherwise.
 */
 int
-ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily, 
+ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, std::vector<pid_t>& pidFamily, 
 	int &status )
 {
 	int fam_status;
@@ -221,14 +222,13 @@ ProcAPI::getPidFamily( pid_t pid, PidEnvID *penvid, ExtArray<pid_t>& pidFamily,
 	}
 
 	piPTR current = procFamily;  // get descendents and elder pid.
-	int i=0;
+	pidFamily.clear();
 	while( (current != NULL) ) {
-		pidFamily[i] = current->pid;
-		i++;
+		pidFamily.push_back(current->pid);
 		current = current->next;
 	}
   
-	pidFamily[i] = 0;
+	pidFamily.push_back(0);
 
 		// deallocate all the lists of stuff...don't leave stale info
 		// lying around. 
@@ -450,7 +450,7 @@ ProcAPI::isinfamily( pid_t *fam, int size, PidEnvID *penvid, piPTR child )
 }
 
 int
-ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamily )
+ProcAPI::getPidFamilyByLogin( const char *searchLogin, std::vector<pid_t>& pidFamily )
 {
 #ifndef WIN32
 
@@ -466,24 +466,23 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	// now iterate through allProcInfos to find processes
 	// owned by the given uid
 	piPTR cur = allProcInfos;
-	int fam_index = 0;
 
 	buildProcInfoList();
 
 	// buildProcInfoList() just changed allProcInfos pointer, so update cur.
 	cur = allProcInfos;
 
+	pidFamily.clear();
 	while ( cur != NULL ) {
 		if ( cur->owner == searchUid ) {
 			dprintf(D_PROCFAMILY,
 				  "ProcAPI: found pid %d owned by %s (uid=%d)\n",
 				  cur->pid, searchLogin, searchUid);
-			pidFamily[fam_index] = cur->pid;
-			fam_index++;
+			pidFamily.push_back(cur->pid);
 		}
 		cur = cur->next;
 	}
-	pidFamily[fam_index] = (pid_t)0;
+	pidFamily.push_back(0);
 	
 	return PROCAPI_SUCCESS;
 #else
@@ -491,7 +490,6 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	std::vector<pid_t> pids;
 	int num_pids;
 	int index_pidFamily = 0;
-	int index_familyHandles = 0;
 	BOOL ret;
 	HANDLE procToken;
 	HANDLE procHandle;
@@ -511,6 +509,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	// get a list of all pids on the system
 	num_pids = ntSysInfo.GetPIDs(pids);
 
+	ProcAPI::familyHandles.clear();
 	// loop through pids comparing process owner
 	for (size_t s=0; s<pids.size(); s++) {
 
@@ -597,11 +596,12 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 		  // see if it is the login prefix we are looking for
 		  if ( strncasecmp(searchLogin,str,strlen(searchLogin))==0 ) {
 			  // a match!  add to our list.   
-			  pidFamily[index_pidFamily++] = pids[s];
+			  pidFamily.push_back(pids[s]);
+			  index_pidFamily++;
 			  // and add the procHandle to a list as well; we keep the
 			  // handle open so the pid is not reused by NT between now and
 			  // when the caller actually does something with this pid.
-			  familyHandles[index_familyHandles++] = procHandle;
+			  familyHandles.push_back(procHandle);
 			  dprintf(D_PROCFAMILY,
 				  "getPidFamilyByLogin: found pid %d owned by %s\n",
 				  pids[s],str);
@@ -613,7 +613,7 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 	}	// end of for loop looping through all pids
 
 	// denote end of list with a zero entry
-	pidFamily[index_pidFamily] = 0;
+	pidFamily.push_back(0);
 
 	if ( index_pidFamily > 0 ) {
 		// return success
@@ -628,18 +628,17 @@ ProcAPI::getPidFamilyByLogin( const char *searchLogin, ExtArray<pid_t>& pidFamil
 
 #if defined(WIN32)
 
-ExtArray<HANDLE> ProcAPI::familyHandles;
+std::vector<HANDLE> ProcAPI::familyHandles;
 
 void
 ProcAPI::closeFamilyHandles()
 {
 	// This function is a no-op on Unix...
 #ifdef WIN32
-	int i;
-	for ( i=0; i < (familyHandles.getlast() + 1); i++ ) {
-		CloseHandle( familyHandles[i] );
+	for ( HANDLE h : familyHandles) {
+		CloseHandle(h);
 	}
-	familyHandles.truncate(-1);
+	familyHandles.clear();
 #endif // of Win32
 	return;
 }

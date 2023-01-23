@@ -55,7 +55,7 @@ if (WINDOWS)
 endif(WINDOWS)
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND startdElements
 		VolumeManager.cpp
 	)

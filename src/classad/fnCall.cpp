@@ -1425,7 +1425,7 @@ splitTime(const char*, const ArgumentList &argList, EvalState &state,
 	Value &result )
 {
 	Value 	arg;
-    ClassAd *split;
+	ClassAd *split = nullptr;
 
 	if( argList.size( ) != 1 ) {
 		result.SetErrorValue( );
@@ -1437,12 +1437,15 @@ splitTime(const char*, const ArgumentList &argList, EvalState &state,
 		return false;	
 	}
 
-    if (!arg.IsClassAdValue() && doSplitTime(arg, split)) {
-        result.SetClassAdValue(split);
-    } else {
-        result.SetErrorValue();
-    }
-    return true;
+	if (arg.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+	} else if (!arg.IsClassAdValue() && doSplitTime(arg, split)) {
+		state.AddToDeletionCache(split);
+		result.SetClassAdValue(split);
+	} else {
+		result.SetErrorValue();
+	}
+	return true;
 }
 
 bool FunctionCall::
@@ -1608,7 +1611,14 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 	// join has a special case for 1 or 2 args when the last argument is a list.
 	// for 1 arg, join the list items, for 2 args, join arg1 with arg0 as the separator
 	if (is_join && num_args > 0 && num_args <= 2) {
+		if( state.depth_remaining <= 0 ) {
+			result.SetErrorValue();
+			return false;
+		}
+		state.depth_remaining--;
+
 		rval = argListIn[num_args-1]->Evaluate(state, listVal);
+		state.depth_remaining++;
 		if (rval) {
 			ExprList *listToJoin;
 			if (listVal.IsListValue(listToJoin)) {
@@ -1634,9 +1644,17 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 		Value  stringVal;
 
 		s = "";
+
+		if( state.depth_remaining <= 0 ) {
+			result.SetErrorValue();
+			return false;
+		}
+		state.depth_remaining--;
+
 		if( !( rval = (*args)[i]->Evaluate( state, val ) ) ) {
 			break;
 		}
+		state.depth_remaining++;
 
 		if (!val.IsStringValue(s)) {
 			convertValueToStringValue(val, stringVal);
@@ -2678,6 +2696,9 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 		return true;
 	}
 
+	// add the new tree to the evaluation cache for later deletion
+	state.AddToDeletionCache(expr);
+
 	state.depth_remaining--;
 
 	expr->SetParentScope( state.curAd );
@@ -2685,8 +2706,6 @@ eval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 	bool eval_ok = expr->Evaluate( state, result );
 
 	state.depth_remaining++;
-
-	delete expr;
 
 	if( !eval_ok ) {
 		result.SetErrorValue();

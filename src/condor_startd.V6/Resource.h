@@ -205,17 +205,15 @@ public:
 	}
 
 		// Load Average related methods
-	float	condor_load( void ) {return r_attr->condor_load();};
-	float	compute_condor_usage( void );
-	float	owner_load( void ) {return r_attr->owner_load();};
-	void	set_owner_load( float val ) {r_attr->set_owner_load(val);};
+	double	condor_load( void ) {return r_attr->condor_load();};
+	double	compute_condor_usage( void );
+	double	owner_load( void ) {return r_attr->owner_load();};
+	void	set_owner_load( double val ) {r_attr->set_owner_load(val);};
 	void	compute_cpu_busy( void );
 	time_t	cpu_busy_time( void );
 
-	void	display_load(amask_t how_much) {
-		// for updates, we want to log this on normal, all other times, we log at VERBOSE 
-		r_attr->display(IS_UPDATE(how_much) ? 0 : D_VERBOSE);
-	}
+	void	display_load() { r_attr->display(0); }
+	void	display_load_as_D_VERBOSE() { r_attr->display(D_VERBOSE); }
 
 		// dprintf() functions add the CPU id to the header of each
 		// message for SMP startds (single CPU machines get no special
@@ -328,7 +326,7 @@ public:
 	int		eval_start( void );			// returns -1 on undefined
 	int		eval_cpu_busy( void );		// returns FALSE on undefined
 	bool	willingToRun( ClassAd* request_ad );
-	float	compute_rank( ClassAd* req_classad );
+	double	compute_rank( ClassAd* req_classad );
 
 #if HAVE_BACKFILL
 	int		eval_start_backfill( void ); 
@@ -341,7 +339,7 @@ public:
 #if HAVE_JOB_HOOKS
 	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
 	void	tryFetchWork( void );
-	void	createOrUpdateFetchClaim( ClassAd* job_ad, float rank = 0 );
+	void	createOrUpdateFetchClaim( ClassAd* job_ad, double rank = 0 );
 	bool	spawnFetchedWork( void );
 	void	terminateFetchedWork( void );
 	void	startedFetch( void );
@@ -462,8 +460,8 @@ private:
 	bool	r_hack_load_for_cod;
 	int		r_cod_load_hack_tid;
 	void	beginCODLoadHack( void );
-	float	r_pre_cod_total_load;
-	float	r_pre_cod_condor_load;
+	double	r_pre_cod_total_load;
+	double	r_pre_cod_condor_load;
 	void 	startTimerToEndCODLoadHack( void );
 	void	endCODLoadHack( void );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
@@ -478,7 +476,7 @@ private:
 	int		m_next_fetch_work_delay;
 	int		m_next_fetch_work_tid;
 	int		evalNextFetchWorkDelay( void );
-	void	createFetchClaim( ClassAd* job_ad, float rank = 0 );
+	void	createFetchClaim( ClassAd* job_ad, double rank = 0 );
 	void	resetFetchWorkTimer( int next_fetch = 0 );
 	char*	m_hook_keyword;
 	bool	m_hook_keyword_initialized;

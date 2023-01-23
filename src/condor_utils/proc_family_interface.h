@@ -25,12 +25,13 @@
 #include "../condor_procd/proc_family_io.h"
 
 class ProcFamilyClient;
+struct FamilyInfo;
 
 class ProcFamilyInterface {
 
 public:
 
-	static ProcFamilyInterface* create(const char* subsys);
+	static ProcFamilyInterface* create(FamilyInfo *fi, const char* subsys);
 
 	virtual ~ProcFamilyInterface() { }
 
@@ -52,10 +53,8 @@ public:
 
 #if defined(LINUX)
 	virtual bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) = 0;
-#endif
 
-#if defined(HAVE_EXT_LIBCGROUP)
-	virtual bool track_family_via_cgroup(pid_t, const char *) = 0;
+	virtual bool track_family_via_cgroup(pid_t, const FamilyInfo *) = 0;
 #endif
 
 	virtual bool get_usage(pid_t, ProcFamilyUsage&, bool) = 0;
@@ -68,8 +67,13 @@ public:
 
 	virtual bool kill_family(pid_t) = 0;
 	
+	// Really should be named unregister_subfamily...
 	virtual bool unregister_family(pid_t) = 0;
 
+	// Have we seen an oom kill event, only implemented
+	// for cgroups
+	virtual bool has_been_oom_killed(pid_t) { return false;} // meaning "don't know for sure"
+																 //
 	// call prior to destroying the ProcFamily class to insure that cleanup happens before we exit.
 	virtual bool quit(void(*notify)(void*me, int pid, int status),void*me) = 0;
 };
