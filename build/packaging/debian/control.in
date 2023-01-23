@@ -53,7 +53,7 @@ Standards-Version: 3.9.8
 Vcs-Browser: https://anonscm.debian.org/cgit/pkg-exppsy/condor.git
 Vcs-Git: git://anonscm.debian.org/pkg-exppsy/condor.git
 Homepage: https://htcondor.org
-X-Python3-Version: >= 3.7
+X-Python3-Version: >= 3.6
 
 
 Package: htcondor
