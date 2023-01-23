@@ -49,11 +49,6 @@ New Features:
   deems appropriate.
   :jira:`1528`
 
-- *condor_ssh_to_job* should now work in glidein and other environments
-  where the job or HTCondor is running as a Unix user id that doesn't
-  have an entry in the /etc/passwd database.
-  :jira:`1543`
-
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for
@@ -79,6 +74,32 @@ Bugs Fixed:
 
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
+
+Version 10.2.1
+--------------
+
+- HTCondor version 10.2.1 released on January 24, 2022.
+
+New Features:
+
+- *condor_ssh_to_job* should now work in glidein and other environments
+  where the job or HTCondor is running as a Unix user id that doesn't
+  have an entry in the /etc/passwd database.
+  :jira:`1543`
+
+- Improved scalability of *condor_schedd* when running more than 1,000 jobs
+  from the same user.
+  :jira:`1549`
+
+Bugs Fixed:
+
+- In the python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
+- Fixed issue when HTCondor could not be installed on Ubuntu 18.04
+  (Bionic Beaver).
+  :jira:`1548`
 
 Version 10.2.0
 --------------
