@@ -5103,6 +5103,10 @@ type=string
 default=htcondor_docker_test
 type=string
 
+[DOCKER_CACHE_ADVERTISE_INTERVAL]
+default=1200
+type=int
+
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
 type=string

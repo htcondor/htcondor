@@ -33,6 +33,10 @@ Release Notes:
 
 New Features:
 
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
+
 - When a file-transfer plug-in aborts due to lack of progress, the message
   now includes the ``https_proxy`` environment variable, and the phrasing
   has been changed to avoid suggesting that the plug-in respected it (or
