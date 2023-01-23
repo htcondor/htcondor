@@ -52,10 +52,17 @@ introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
-- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
-  has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
-  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication,
+  has been changed to ``$(UID_DOMAIN)``.
   :jira:`1381`
+
+  If you have already created IDTOKENs for use in your pool:
+
+  #. Log in as root on a machine with an IDTOKEN.
+  #. Run ``condor_token_list`` and retrieve the value of the ``iss`` field.
+  #. Set the HTCondor configuration ``TRUST_DOMAIN`` to that value on each
+     machine which should accept IDTOKENs;
+  #. Restart HTCondor on those machines.
 
 - Jobs that use a ``Requirements`` expression to try and match to specific a GPU should
   be changed to use the new ``require_gpus`` submit command or jobs will simply not match. If your machines
