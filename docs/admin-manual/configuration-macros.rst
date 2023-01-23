@@ -4276,6 +4276,13 @@ details.
     This is used to configure the size of the container's ``/dev/shm`` size adapting
     to the job's requested memory.
 
+:macro-def:`DOCKER_CACHE_ADVERTISE_INTERVAL`
+    The *condor_startd* periodically advertises how much disk
+    space the docker daemon is using to store images into the
+    slot attribute DockerCachedImageSize.  This knob, which 
+    defaults to 1200 (seconds), controls how often the start
+    polls the docker daemon for this information.
+
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
     Referenced by ``examples/openmpiscript``, which is used for running

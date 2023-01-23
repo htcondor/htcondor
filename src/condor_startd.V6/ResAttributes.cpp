@@ -532,7 +532,7 @@ MachAttributes::compute_docker_cache() {
 #ifdef LINUX
 	static time_t lastRun = 0;
 	time_t now = time(nullptr);
-	if ((now - lastRun) > 1200) {
+	if ((now - lastRun) > param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200)) {
 		lastRun = now;
 		m_docker_cached_image_size = DockerAPI::imageCacheUsed();
 	}
