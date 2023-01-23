@@ -49,7 +49,7 @@ friend class SharedPortState;
 		{return m_wouldBlockPassSocketCalls;}
 
  private:
-	MyString myName();
+	std::string myName();
 	bool static SharedPortIdIsValid(char const *name);
 
 	// Some operational metrics filled in by the SharedPortState
