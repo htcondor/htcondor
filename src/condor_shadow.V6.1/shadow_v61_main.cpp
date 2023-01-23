@@ -203,6 +203,7 @@ readJobAd( void )
 
 	if (sendUpdatesToSchedd) {
 		fclose(fp);
+		fp = nullptr;
 	}
 
 	if( ! read_something ) {
