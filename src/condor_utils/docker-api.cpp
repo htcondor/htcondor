@@ -1570,6 +1570,16 @@ DockerAPI::imageCacheUsed() {
 
 	std::vector<std::pair<std::string, int64_t>> images_on_disk;
 
+	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+
+	if (lockfd < 0) {
+		dprintf(D_ALWAYS, "docker_iamge_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
+		return -1;
+	}
+
+	FileLock lock(lockfd, NULL, imageFilename.c_str());
+	lock.obtain(READ_LOCK); // blocking
+
 	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
 
 	if (f) {
@@ -1585,6 +1595,8 @@ DockerAPI::imageCacheUsed() {
 		}
 		fclose(f);
 	}
+	lock.release();
+	close(lockfd);
 
 	std::sort(images_on_disk.begin(), images_on_disk.end());
 
