@@ -7299,7 +7299,7 @@ Scheduler::negotiate(int command, Stream* s)
 	int		job_index;
 	int		jobs;						// # of jobs that CAN be negotiated
 	int		which_negotiator = 0; 		// >0 implies flocking
-	MyString remote_pool_buf;
+	std::string remote_pool_buf;
 	char const *remote_pool = NULL;
 	Daemon*	neg_host = NULL;	
 	Sock*	sock = (Sock*)s;
@@ -7525,7 +7525,7 @@ Scheduler::negotiate(int command, Stream* s)
 					if (addr.compare_address(endpoint_addr)) {
 						match = true;
 						which_negotiator = n;
-						remote_pool_buf = neg_host->pool();
+						remote_pool_buf = neg_host->pool() ? neg_host->pool() : "";
 						remote_pool = remote_pool_buf.c_str();
 						break;
 					}
@@ -10349,8 +10349,8 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 static void
 RotateAttributeList( int cluster, int proc, char const *attrname, int start_index, int history_len )
 {
-	MyString attr_start_index;
-	attr_start_index.formatstr("%s%d", attrname, start_index);
+	std::string attr_start_index;
+	formatstr(attr_start_index, "%s%d", attrname, start_index);
 
 	if (history_len < 2) {
 		// nothing to rotate if list has just 0 or 1 entries....
@@ -10358,7 +10358,7 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 	} else {
 		// Only rotate if there is something new in MachineAttrX0 (the start_index element)
 		char *value = NULL;
-		if (GetAttributeExprNew(cluster, proc, attr_start_index.Value(), &value) == 0) {
+		if (GetAttributeExprNew(cluster, proc, attr_start_index.c_str(), &value) == 0) {
 			free(value);
 		} else {
 			// MachineAttrX0 is empty, should not rotate
@@ -10386,7 +10386,7 @@ RotateAttributeList( int cluster, int proc, char const *attrname, int start_inde
 		// While it would make sense to now delete the start_index element (it now lives in index start_index+1),
 		// historically MachineAttr0 was always present in jobs that were held or went back to Idle, so we will
 		// keep it around for legacy happiness as it does no harm.
-	// DeleteAttribute(cluster, proc, attr_start_index.Value());
+	// DeleteAttribute(cluster, proc, attr_start_index.c_str());
 }
 
 void
@@ -12790,7 +12790,7 @@ Scheduler::Init()
 			for (size_t ii = 0; ii < names.size(); ++ii) {
 
 				//dprintf(D_FULLDEBUG, "Found %s\n", names[ii]);
-				const MyString name = names[ii];
+				const std::string name = names[ii];
 				char * filter = param(names[ii].c_str());
 				if ( ! filter) {
 					dprintf(D_ALWAYS, "Ignoring param '%s' : value is empty\n", names[ii].c_str());
@@ -14837,7 +14837,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 
 	if( mrec ) { // locate starter by calling startd
 		std::string global_job_id;
-		MyString startd_addr = mrec->peer;
+		std::string startd_addr = mrec->peer;
 
 		DCStartd startd(startd_name.c_str(),NULL,startd_addr.c_str(),mrec->secSessionId() );
 

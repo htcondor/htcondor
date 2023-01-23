@@ -139,7 +139,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_SetEffectiveOwner:
 	{
-		MyString owner;
+		std::string owner;
 		int terrno;
 
 		neg_on_error( syscall_sock->get(owner) );

@@ -4740,7 +4740,7 @@ int SubmitHash::SetUniverse()
 					when_output = getFileTransferOutputNum(vm_tmp.ptr());
 				}
 				if( when_output != FTO_ON_EXIT_OR_EVICT ) {
-					MyString err_msg;
+					std::string err_msg;
 					err_msg = "\nERROR: You explicitly requested "
 						"both VM checkpoint and VM networking. "
 						"However, VM networking is currently conflict "
@@ -5795,10 +5795,10 @@ int SubmitHash::SetRequirements()
 {
 	RETURN_IF_ABORT();
 
-	MyString answer;
+	std::string answer;
 	auto_free_ptr orig(submit_param(SUBMIT_KEY_Requirements));
 	if (orig) {
-		answer.formatstr( "(%s)", orig.ptr() );
+		formatstr( answer, "(%s)", orig.ptr() );
 	} else {
 		// if the factory has a FACTORY.Requirements statement, then we use it and don't do ANY other processing
 		auto_free_ptr effective_req(submit_param("FACTORY.Requirements"));
@@ -6344,7 +6344,7 @@ int SubmitHash::SetRequirements()
 					StringList files(file_list.ptr(), ",");
 					for (const char * file = files.first(); file; file = files.next()) {
 						if (IsUrl(file)){
-							MyString tag = getURLType(file, true);
+							std::string tag = getURLType(file, true);
 							if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 						}
 					}
@@ -6354,7 +6354,7 @@ int SubmitHash::SetRequirements()
 				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION));
 				if (file_list) {
 					if (IsUrl(file_list)) {
-						MyString tag = getURLType(file_list, true);
+						std::string tag = getURLType(file_list, true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
@@ -6375,7 +6375,7 @@ int SubmitHash::SetRequirements()
 							trim(url);
 
 							if( IsUrl(url.c_str()) ) {
-								MyString tag = getURLType(url.c_str(), true);
+								std::string tag = getURLType(url.c_str(), true);
 								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 							}
 						}
@@ -6472,14 +6472,14 @@ int SubmitHash::SetRequirements()
 	bool as_owner = false;
 	if (job->LookupBool(ATTR_JOB_RUNAS_OWNER, as_owner) && as_owner) {
 
-		MyString tmp_rao = " && (TARGET." ATTR_HAS_WIN_RUN_AS_OWNER;
+		std::string tmp_rao = " && (TARGET." ATTR_HAS_WIN_RUN_AS_OWNER;
 		if (RunAsOwnerCredD && !checks_credd) {
 			tmp_rao += " && (TARGET." ATTR_LOCAL_CREDD " =?= \"";
 			tmp_rao += RunAsOwnerCredD.ptr();
 			tmp_rao += "\")";
 		}
 		tmp_rao += ")";
-		answer += tmp_rao.Value();
+		answer += tmp_rao.c_str();
 	}
 #endif
 
@@ -6530,8 +6530,8 @@ int SubmitHash::SetRequirements()
 int SubmitHash::SetConcurrencyLimits()
 {
 	RETURN_IF_ABORT();
-	MyString tmp = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimits, NULL);
-	MyString tmp2 = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
+	std::string tmp = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimits, NULL);
+	std::string tmp2 = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
 
 	if (!tmp.empty()) {
 		if (!tmp2.empty()) {
@@ -6540,7 +6540,7 @@ int SubmitHash::SetConcurrencyLimits()
 		}
 		char *str;
 
-		tmp.lower_case();
+		lower_case(tmp);
 
 		StringList list(tmp.c_str());
 
@@ -6643,8 +6643,8 @@ int SubmitHash::SetAccountingGroup()
 		AssignJobString(ATTR_ACCT_GROUP, group);
 
 		// store the AccountingGroup attribute as <group>.<user>
-		MyString submitter;
-		submitter.formatstr("%s.%s", group.ptr(), group_user);
+		std::string submitter;
+		formatstr(submitter, "%s.%s", group.ptr(), group_user);
 		AssignJobString(ATTR_ACCOUNTING_GROUP, submitter.c_str());
 	} else {
 		// If no group, this is accounting group is really a user alias, just set AccountingGroup to be the user name
@@ -6872,9 +6872,9 @@ int SubmitHash::SetVMParams()
 		}
 
 		// xen_kernel_params is a optional parameter
-		MyString xen_kernel_params = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
+		std::string xen_kernel_params = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
 		if (! xen_kernel_params.empty()) {
-			xen_kernel_params.trim_quotes("\"'");
+			trim_quotes(xen_kernel_params, "\"'");
 			AssignJobString(VMPARAM_XEN_KERNEL_PARAMS, xen_kernel_params.c_str());
 		}
 
@@ -7026,7 +7026,7 @@ int SubmitHash::SetTransferFiles()
 	StringList input_file_list(NULL, ",");
 	StringList output_file_list(NULL, ",");
 	ShouldTransferFiles_t should_transfer = STF_IF_NEEDED;
-	MyString output_remaps;
+	std::string output_remaps;
 
 	// check files to determine the size of the input sandbox only when we are not doing late materialization
 	long long tmpInputFilesSizeKb = 0;
@@ -7446,7 +7446,7 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.empty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
+			formatstr_cat(output_remaps, "%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
 		}
 
 		if(error.length() && error != condor_basename(error.c_str()) &&
@@ -7467,7 +7467,7 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.empty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
+			formatstr_cat(output_remaps, "%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
 		}
 	}
 

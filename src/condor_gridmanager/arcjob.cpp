@@ -1070,12 +1070,12 @@ bool ArcJob::buildJobADL()
 	RSL += "</Path>";
 
 	ArgList args;
-	MyString arg_errors;
-	if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+	std::string arg_errors;
+	if(!args.AppendArgsFromClassAd(jobAd,arg_errors)) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-				procID.cluster, procID.proc, arg_errors.Value());
+				procID.cluster, procID.proc, arg_errors.c_str());
 		formatstr(errorString,"Failed to read job arguments: %s\n",
-				arg_errors.Value());
+				arg_errors.c_str());
 		RSL.clear();
 		return false;
 	}
@@ -1343,7 +1343,7 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
-	MyString local_name;
+	std::string local_name;
 	char *remote_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
@@ -1368,9 +1368,9 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
 		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
-			local_name = stdout_name.c_str();
+			local_name = stdout_name;
 		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
-			local_name = stderr_name.c_str();
+			local_name = stderr_name;
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
 				// file is remapped
@@ -1378,11 +1378,11 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 			local_name = condor_basename( remote_name );
 		}
 
-		if ( (local_name.Length() && local_name[0] == '/')
-			 || IsUrl( local_name.Value() ) ) {
+		if ( (local_name.length() && local_name[0] == '/')
+			 || IsUrl( local_name.c_str() ) ) {
 			buff = local_name;
 		} else {
-			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}
