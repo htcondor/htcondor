@@ -33,6 +33,10 @@ Release Notes:
 
 New Features:
 
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
+
 - When a file-transfer plug-in aborts due to lack of progress, the message
   now includes the ``https_proxy`` environment variable, and the phrasing
   has been changed to avoid suggesting that the plug-in respected it (or
@@ -70,6 +74,32 @@ Bugs Fixed:
 
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
+
+Version 10.2.1
+--------------
+
+- HTCondor version 10.2.1 released on January 24, 2023.
+
+New Features:
+
+- Improved scalability of *condor_schedd* when running more than 1,000 jobs
+  from the same user.
+  :jira:`1549`
+
+- *condor_ssh_to_job* should now work in glidein and other environments
+  where the job or HTCondor is running as a Unix user id that doesn't
+  have an entry in the /etc/passwd database.
+  :jira:`1543`
+
+Bugs Fixed:
+
+- In the Python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
+- Fixed issue when HTCondor could not be installed on Ubuntu 18.04
+  (Bionic Beaver).
+  :jira:`1548`
 
 Version 10.2.0
 --------------

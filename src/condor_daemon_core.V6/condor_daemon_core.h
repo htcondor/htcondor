@@ -1989,9 +1989,7 @@ class DaemonCore : public Service
     };
 
     void                DumpCommandTable(int, const char* = NULL);
-    int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of command handlers used
-    ExtArray<CommandEnt>         comTable;       // command table
+	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 

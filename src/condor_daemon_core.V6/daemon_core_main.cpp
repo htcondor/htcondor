@@ -4025,6 +4025,28 @@ int dc_main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
 	}
+#ifdef LINUX
+	// By default, Linux now allocates 16 4kbyte pages for each pipe,
+	// until the sum of all pages used for pipe buffers for a user hits
+	// /proc/sys/fs/pipe-user-pages-soft , which defaults to 16k.
+	// We create one of these pipes to forward signals
+	// for each daemon core process, which means that once 1,000 shadows
+	// are running for a user, Linux will switch to using one 4k page
+	// per pipe.  This particular pipe we just created to forward signals
+	// from a signal handler to the select loop doesn't need to be that
+	// big, especially as we just turned on non-blocking i/o above.
+	// Reduce the size of this pipe to one page, to save pages for
+	// other pipes which really need bigger buffers.
+
+	int defaultPipeSize = 0;
+	int smallPipeSize = 256; // probably will get rounded up to 4096
+
+	defaultPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
+	fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	smallPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
+	dprintf(D_FULLDEBUG, "Internal pipe for signals resized to %d from %d\n", smallPipeSize, defaultPipeSize);
+#endif
+
 #else
 	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
 	{

@@ -54,7 +54,6 @@ arguments) and returns the value from the relevant :class:`HTChirp` method.
   .. automethod:: get_job_attr_delayed
   .. automethod:: set_job_attr_delayed
   .. automethod:: ulog
-  .. automethod:: phase
   .. automethod:: read
   .. automethod:: write
   .. automethod:: rename

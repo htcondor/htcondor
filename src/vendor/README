@@ -1,0 +1,11 @@
+Most third party code in HTCondor is managed via "externals"
+These are either wget'd/untarred/build into the bld_externals
+directory before HTCondor proper is built, or, assumed to
+be installed by the native OS package manager.
+
+However, some third party code, notably, header-only C++
+code, is checked in directory into the HTCondor source
+tree. This method, known as "vendoring" may be used
+for packages which don't have native packages, or are
+small, or whose version we want to more directly control.
+

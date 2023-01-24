@@ -17,10 +17,12 @@
  *
  ***************************************************************/
 
-#include <string>
 
 #ifndef _CONDOR_DAEMON_COMMAND_H_
 #define _CONDOR_DAEMON_COMMAND_H_
+
+#include <string>
+#include <vector>
 
 class DaemonCommandProtocol: Service, public ClassyCountedPtr {
 
@@ -76,7 +78,7 @@ private:
 	struct timeval m_async_waiting_start_time;
 	float m_async_waiting_time;
 	SecMan *m_sec_man;
-	ExtArray<DaemonCore::CommandEnt> &m_comTable;
+	std::vector<DaemonCore::CommandEnt> &m_comTable;
 	const static std::string WaitForSocketDataString;
 	int m_real_cmd;       // for DC_AUTHENTICATE, the final command to execute
 	int m_auth_cmd;       // for DC_AUTHENTICATE, the command the security session will be used for
