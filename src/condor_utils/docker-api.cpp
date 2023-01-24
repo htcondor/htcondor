@@ -1520,6 +1520,10 @@ DockerAPI::imageCacheUsed() {
 		chomp(tag_name);
 		chomp(size_str);
 
+		if (size_str.length() < 3) {
+			continue;
+		}
+
 		if (tag_name == "<none>") {
 			tag_name = "";
 		}
