@@ -89,7 +89,7 @@ class Submit(Verb):
                     if annex_name is None:
                         logger.info(f"Job {cluster_id} was submitted.")
                     else:
-                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex '{annex_name}'.")
+                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex named '{annex_name}'.")
                 except Exception as e:
                     raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
@@ -243,7 +243,7 @@ class Status(Verb):
             annex_info = ""
             target_annex_name = job_ad.get('TargetAnnexName')
             if target_annex_name is not None:
-                annex_info = " on the annex named '{target_annex_name}'"
+                annex_info = f" on the annex named '{target_annex_name}'"
 
             # Get some common numbers
             job_queue_time = datetime.now() - datetime.fromtimestamp(job_ad["QDate"])
