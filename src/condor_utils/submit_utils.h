@@ -623,7 +623,7 @@ public:
 	}
 
 	int AssignJobExpr (const char *attr, const char * expr, const char * source_label=NULL);
-	bool AssignJobString(const char * name, const char * val);
+	bool AssignJobString(const char * name, const std::string& val);
 	bool AssignJobVal(const char * attr, bool val);
 	bool AssignJobVal(const char * attr, double val);
 	bool AssignJobVal(const char * attr, long long val);
