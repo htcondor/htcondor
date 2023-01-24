@@ -1577,6 +1577,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
+- Improved condor_schedd scalability when a user runs more than 1,000 jobs
+- condor_ssh_to_job should always work in glidein environments
+- The Python Schedd.query() always returns the ServerTime attribute
+- Fixed issue that prevented HTCondor installation on Ubuntu 18.04
+
 * Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.0-1
 - Preliminary support for Enterprise Linux 9
 - Preliminary support for cgroups v2

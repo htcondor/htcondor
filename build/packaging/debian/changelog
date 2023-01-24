@@ -1,3 +1,12 @@
+condor (10.2.1-1) stable; urgency=medium
+
+  * Improved condor_schedd scalability when a user runs more than 1,000 jobs
+  * condor_ssh_to_job should always work in glidein environments
+  * The Python Schedd.query() always returns the ServerTime attribute
+  * Fixed issue that prevented HTCondor installation on Ubuntu 18.04
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Jan 2023 07:12:00 -0600
+
 condor (10.2.0-1) stable; urgency=medium
 
   * Preliminary support for Enterprise Linux 9
