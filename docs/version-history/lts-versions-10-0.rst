@@ -29,6 +29,10 @@ New Features:
   evicting a job if its procID was 1.
   :jira:`1519`
 
+- Improved scalability of *condor_schedd* when running more than 1,000 jobs
+  from the same user.
+  :jira:`1549`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
@@ -43,6 +47,14 @@ Bugs Fixed:
 
 - Fixed a bug causing a Python warning when installing on Ubuntu 22.04.
   :jira:`1534`
+
+- In the python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
+- Fixed issue when HTCondor could not be installed on Ubuntu 18.04
+  (Bionic Beaver).
+  :jira:`1548`
 
 .. _lts-version-history-1001:
 
