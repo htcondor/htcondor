@@ -83,6 +83,21 @@ DIRTY_BYTES=100000000
 ROOT_MAXKEYS=1000000
 ROOT_MAXKEYS_BYTES=25000000
 
+# Linux kernels allocate 16 pages (4kbytes each) for each pipe created
+# until a user has used /proc/sys/fs/pipe-user-pages-soft worth of
+# pages, then just one page.  The linux schedd uses a pipe to send the
+# job classad from the schedd to a newly-forked shadow, and the job ad
+# is usually more than one page large.  If the kernel is in the one-page
+# per-pipe mode, this means the single-threaded schedd blocks until the
+# shadow can pull the job ad out of the pipe, which limits scalability.
+# Condor keeps one pipe open for the duration of the shadow (and every
+# daemon, for that matter).  This means with the default values, after
+# spawning about 16k jobs, the schedd will slow down.  Let's up this
+# value to 128k, which should be more than the number of concurrently 
+# running jobs per use we claim to support.
+
+PIPE_USER_PAGES_SOFT=131072
+
 ##
 ## Implementation.  You shouldn't need to change anything below here.
 ##
@@ -157,6 +172,7 @@ done
 increaseKernelParameter "TCP_LISTEN_QUEUE" "/proc/sys/net/core/somaxconn" ${TCP_LISTEN_QUEUE}
 increaseKernelParameter "ROOT_MAXKEYS" "/proc/sys/kernel/keys/root_maxkeys" ${ROOT_MAXKEYS}
 increaseKernelParameter "ROOT_MAXKEYS_BYTES" "/proc/sys/kernel/keys/root_maxbytes" ${ROOT_MAXKEYS_BYTES}
+increaseKernelParameter "PIPE_USER_PAGES_SOFT" "/proc/sys/fs/pipe-user-pages-soft" ${PIPE_USER_PAGES_SOFT}
 
 if condor_config_val BASE_CGROUP > /dev/null 2>&1
 then
