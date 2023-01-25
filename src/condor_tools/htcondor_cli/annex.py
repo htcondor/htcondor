@@ -142,7 +142,7 @@ class Add(Create):
         annex_add(logger, **options)
 
 
-class List(Verb):
+class Systems(Verb):
     """
     Display the known systems and queues.
     """
@@ -463,11 +463,11 @@ class Annex(Noun):
         pass
 
 
-    class list(List):
+    class systems(Systems):
         pass
 
 
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown, cls.list]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems]
 

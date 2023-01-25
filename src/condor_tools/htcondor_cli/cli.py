@@ -20,7 +20,7 @@ class ArgumentParserNoExit(argparse.ArgumentParser):
             if 'the following arguments are required' in message:
                 if 'queue@system' in message:
                     noun = NOUNS['annex']
-                    verb = getattr(noun, 'list')
+                    verb = getattr(noun, 'systems')
                     verb(logger=None)
             super().error(message)
 
