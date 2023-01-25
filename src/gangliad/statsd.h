@@ -66,6 +66,7 @@ public:
 	std::string cluster;
 	bool derivative;
 	int verbosity;
+	unsigned int lifetime;
     double scale;
 
 	enum MetricTypeEnum {

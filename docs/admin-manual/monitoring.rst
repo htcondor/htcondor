@@ -212,6 +212,13 @@ Recognized metric attribute names and their use:
     an "@" sign, the default IP value will be set to the same value as
     ``Machine`` in order to make the IP value unique to each instance of
     HTCondor running on the same host.
+ Lifetime
+    A postive integer value representing the max number of seconds
+    without updating a metric will be kept before deletion. This is
+    represented in ganglia as DMAX. If no Lifetime is defined for a
+    metric then the default value will be set to a calculated value
+    based on the ganglia publish interval with a minimum value set by
+    :macro:`GANGLIAD_MIN_METRIC_LIFETIME`.
 
 Absent ClassAds
 ---------------
