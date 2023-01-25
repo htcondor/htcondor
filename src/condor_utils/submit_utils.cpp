@@ -845,7 +845,7 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	} else if (clusterAd) {
 		// if there is a cluster ad, we NEVER want to use the current working directory
 		// instead we want to treat the saved working directory of submit as the cwd.
-		realcwd = submit_param_mystring("FACTORY.Iwd", NULL);
+		realcwd = submit_param_string("FACTORY.Iwd", NULL);
 		p_iwd = realcwd.c_str();
 	} else {
 		condor_getcwd(realcwd);
@@ -998,11 +998,14 @@ void SubmitHash::set_submit_param( const char *name, const char *value )
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 
-MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_name ) const
+std::string SubmitHash::submit_param_string( const char * name, const char * alt_name ) const
 {
+	std::string ret;
 	char * result = submit_param(name, alt_name);
-	MyString ret = result;
-	free(result);
+	if (result) {
+		ret = result;
+		free(result);
+	}
 	return ret;
 }
 
@@ -2265,7 +2268,7 @@ int SubmitHash::SetLeaveInQueue()
 	RETURN_IF_ABORT();
 
 	char *erc = submit_param(SUBMIT_KEY_LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
-	MyString buffer;
+	std::string buffer;
 
 	if (erc == NULL)
 	{
@@ -2277,7 +2280,8 @@ int SubmitHash::SetLeaveInQueue()
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
-				buffer.formatstr(
+				formatstr(
+					buffer,
 					"%s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 					ATTR_JOB_STATUS,
 					COMPLETED,
@@ -2370,7 +2374,7 @@ int SubmitHash::ComputeIWD()
 			}
 			else {
 				if (clusterAd) {
-					cwd = submit_param_mystring("FACTORY.Iwd",NULL);
+					cwd = submit_param_string("FACTORY.Iwd",NULL);
 				} else {
 					condor_getcwd( cwd );
 				}
@@ -2861,7 +2865,7 @@ int SubmitHash::ProcessJobsetAttributes()
 
 // check to see if the grid type is one of the allowed ones,
 // and also canonicalize it if needed
-static bool validate_gridtype(MyString & JobGridType) {
+static bool validate_gridtype(const std::string & JobGridType) {
 	if (JobGridType.empty()) {
 		return true;
 	}
@@ -2898,7 +2902,7 @@ static bool validate_gridtype(MyString & JobGridType) {
 }
 
 // the grid type is the first token of the grid resource.
-static bool extract_gridtype(const char * grid_resource, MyString & gtype) {
+static bool extract_gridtype(const char * grid_resource, std::string & gtype) {
 	if (starts_with(grid_resource, "$$(")) {
 		gtype.clear();
 		return true; // cannot be known at this time, assumed valid
@@ -2906,7 +2910,7 @@ static bool extract_gridtype(const char * grid_resource, MyString & gtype) {
 	// truncate at the first space
 	const char * pend = strchr(grid_resource, ' ');
 	if (pend) {
-		gtype.set(grid_resource, (int)(pend - grid_resource));
+		gtype.assign(grid_resource, (pend - grid_resource));
 	} else {
 		gtype = grid_resource;
 	}
@@ -3052,7 +3056,7 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	YourStringNoCase gridType(JobGridType.Value());
+	YourStringNoCase gridType(JobGridType.c_str());
 
 	AssignJobVal(ATTR_WANT_CLAIMING, false);
 
@@ -4275,23 +4279,23 @@ int SubmitHash::SetRemoteAttrs()
 			continue;
 		}
 
-		MyString preremote = "";
+		std::string preremote = "";
 		for(int i = 0; i < remote_depth; ++i) {
 			preremote += SUBMIT_KEY_REMOTE_PREFIX;
 		}
 
 		if(strcasecmp(key, SUBMIT_KEY_Universe) == 0 || strcasecmp(key, ATTR_JOB_UNIVERSE) == 0) {
-			MyString Univ1 = preremote + SUBMIT_KEY_Universe;
-			MyString Univ2 = preremote + ATTR_JOB_UNIVERSE;
-			MyString val = submit_param_mystring(Univ1.Value(), Univ2.Value());
-			int univ = CondorUniverseNumberEx(val.Value());
+			std::string Univ1 = preremote + SUBMIT_KEY_Universe;
+			std::string Univ2 = preremote + ATTR_JOB_UNIVERSE;
+			std::string val = submit_param_string(Univ1.c_str(), Univ2.c_str());
+			int univ = CondorUniverseNumberEx(val.c_str());
 			if(univ == 0) {
-				push_error(stderr, "Unknown universe of '%s' specified\n", val.Value());
+				push_error(stderr, "Unknown universe of '%s' specified\n", val.c_str());
 				ABORT_AND_RETURN( 1 );
 			}
-			MyString attr = preremote + ATTR_JOB_UNIVERSE;
-			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.Value(), univ);
-			AssignJobVal(attr.Value(), univ);
+			std::string attr = preremote + ATTR_JOB_UNIVERSE;
+			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.c_str(), univ);
+			AssignJobVal(attr.c_str(), univ);
 
 		} else {
 
@@ -4330,17 +4334,17 @@ int SubmitHash::SetRemoteAttrs()
 int SubmitHash::SetJobMachineAttrs()
 {
 	RETURN_IF_ABORT();
-	MyString job_machine_attrs = submit_param_mystring( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
-	MyString history_len_str = submit_param_mystring( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
+	std::string job_machine_attrs = submit_param_string( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
+	std::string history_len_str = submit_param_string( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
 
-	if( job_machine_attrs.Length() ) {
+	if( job_machine_attrs.length() ) {
 		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs);
 	}
-	if( history_len_str.Length() ) {
+	if( history_len_str.length() ) {
 		char *endptr=NULL;
-		long history_len = strtol(history_len_str.Value(),&endptr,10);
+		long history_len = strtol(history_len_str.c_str(),&endptr,10);
 		if( history_len > INT_MAX || history_len < 0 || *endptr) {
-			push_error(stderr, SUBMIT_KEY_JobMachineAttrsHistoryLength "=%s is out of bounds 0 to %d\n",history_len_str.Value(),INT_MAX);
+			push_error(stderr, SUBMIT_KEY_JobMachineAttrsHistoryLength "=%s is out of bounds 0 to %d\n",history_len_str.c_str(),INT_MAX);
 			ABORT_AND_RETURN( 1 );
 		}
 		AssignJobVal(ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH, history_len);
@@ -4707,7 +4711,7 @@ int SubmitHash::SetUniverse()
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
 				"Must be one of: condor, batch, arc, ec2, gce, or azure\n",
-				JobGridType.Value());
+				JobGridType.c_str());
 			ABORT_AND_RETURN(1);
 		}
 
@@ -6528,8 +6532,8 @@ int SubmitHash::SetRequirements()
 int SubmitHash::SetConcurrencyLimits()
 {
 	RETURN_IF_ABORT();
-	std::string tmp = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimits, NULL);
-	std::string tmp2 = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
+	std::string tmp = submit_param_string(SUBMIT_KEY_ConcurrencyLimits, NULL);
+	std::string tmp2 = submit_param_string(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
 
 	if (!tmp.empty()) {
 		if (!tmp2.empty()) {
@@ -6811,7 +6815,7 @@ int SubmitHash::SetVMParams()
 	if (vmtype == CONDOR_VM_UNIVERSE_XEN) {
 
 		// xen_kernel is a required parameter
-		std::string xen_kernel = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
+		std::string xen_kernel = submit_param_string(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
 		if ( ! xen_kernel.empty()) {
 			AssignJobString(VMPARAM_XEN_KERNEL, xen_kernel);
 		} else if ( ! job->LookupString(VMPARAM_XEN_KERNEL, xen_kernel)) {
@@ -6870,7 +6874,7 @@ int SubmitHash::SetVMParams()
 		}
 
 		// xen_kernel_params is a optional parameter
-		std::string xen_kernel_params = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
+		std::string xen_kernel_params = submit_param_string(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
 		if (! xen_kernel_params.empty()) {
 			trim_quotes(xen_kernel_params, "\"'");
 			AssignJobString(VMPARAM_XEN_KERNEL_PARAMS, xen_kernel_params);
@@ -7733,69 +7737,69 @@ int SubmitHash::build_oauth_service_ads (
 	ClassAdList & requests,
 	std::string & error) const
 {
-	MyString param_name;
-	MyString config_param_name;
-	MyString param_val;
+	std::string param_name;
+	std::string config_param_name;
+	std::string param_val;
 
 	error.clear();
 
 	for (auto it = unique_names.begin(); it != unique_names.end(); ++it) {
 		const char * token = it->c_str();
 		ClassAd *request_ad = new ClassAd();
-		MyString token_MyS = token;
+		std::string token_MyS = token;
 
-		MyString service_name;
-		MyString handle;
-		int starpos = token_MyS.FindChar('*');
-		if(starpos == -1) {
+		std::string service_name;
+		std::string handle;
+		size_t starpos = token_MyS.find('*');
+		if(starpos == std::string::npos) {
 			// no handle, just service
 			service_name = token_MyS;
 		} else {
 			// no split into two
-			service_name = token_MyS.substr(0,starpos);
-			handle = token_MyS.substr(starpos+1,token_MyS.length());
+			service_name.assign(token_MyS, 0, starpos);
+			handle.assign(token_MyS, starpos+1);
 		}
 		request_ad->Assign("Service", service_name);
 		if ( ! handle.empty()) { request_ad->Assign("Handle", handle); }
 
 
 		// get permissions (scopes) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
+		formatstr(param_name, "%s_OAUTH_PERMISSIONS", service_name.c_str());
 		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
-		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		param_val = submit_param_string(param_name.c_str(), NULL);
 		if(param_val.length() == 0) {
 			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_USER_DEFINE_SCOPES", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
 				return -1;
 			}
-			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
-			param_val = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_DEFAULT_SCOPES", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 		}
 		if (!param_val.empty()) { request_ad->Assign("Scopes", param_val); }
 
 		// get resource (audience) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
+		formatstr(param_name, "%s_OAUTH_RESOURCE", service_name.c_str());
 		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
-		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		param_val = submit_param_string(param_name.c_str(), NULL);
 		if (param_val.length() == 0) {
 			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_USER_DEFINE_AUDIENCE", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
 				return -1;
 			}
-			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
-			param_val = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_DEFAULT_AUDIENCE", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 		}
 		if ( ! param_val.empty()) { request_ad->Assign("Audience", param_val); }
 
@@ -9094,7 +9098,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	// TODO: capture pseudo-ness explicitly in SetExecutable? so we don't have to keep this in sync...
 	bool pseudo = false;
 	if (found->id == idKeyExecutable) {
-		MyString sub_type;
+		std::string sub_type;
 		int uni = query_universe(sub_type);
 		if (uni == CONDOR_UNIVERSE_VM) {
 			pseudo = true;
@@ -9117,7 +9121,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 
 // returns the universe and grid type, either by looking at the cached values
 // or by querying the hashtable if the cached values haven't been set yet.
-int SubmitHash::query_universe(MyString & sub_type)
+int SubmitHash::query_universe(std::string & sub_type)
 {
 	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
 		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
@@ -9150,17 +9154,17 @@ int SubmitHash::query_universe(MyString & sub_type)
 	}
 
 	if (uni == CONDOR_UNIVERSE_GRID) {
-		sub_type = submit_param_mystring(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
+		sub_type = submit_param_string(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
 		if (starts_with(sub_type.c_str(), "$$(")) {
 			sub_type.clear();
 		} else {
 			// truncate at the first space
-			int ix = sub_type.FindChar(' ', 0);
-			if (ix >= 0) { sub_type.truncate(ix); }
+			size_t ix = sub_type.find(' ');
+			if (ix != std::string::npos) { sub_type.erase(ix); }
 		}
 	} else if (uni == CONDOR_UNIVERSE_VM) {
-		sub_type = submit_param_mystring(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
-		sub_type.lower_case();
+		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
+		lower_case(sub_type);
 	}
 
 	return uni;

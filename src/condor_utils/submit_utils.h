@@ -494,7 +494,7 @@ public:
 	bool submit_param_long_exists(const char* name, const char * alt_name, long long & value, bool int_range=false) const;
 	int submit_param_int(const char* name, const char * alt_name, int def_value) const;
 	int submit_param_bool(const char* name, const char * alt_name, bool def_value, bool * pexists=NULL) const;
-	MyString submit_param_mystring( const char * name, const char * alt_name ) const;
+	std::string submit_param_string( const char * name, const char * alt_name ) const;
 	char * expand_macro(const char* value) const { return ::expand_macro(value, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
 	const char * lookup(const char* name) const { return lookup_macro(name, const_cast<MACRO_SET&>(SubmitMacroSet), const_cast<MACRO_EVAL_CONTEXT&>(mctx)); }
 
@@ -736,7 +736,7 @@ protected:
 	bool UseDefaultResourceParams;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
-	MyString JobGridType;  // set from "GridResource" for grid universe jobs.
+	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
 	std::string TempPathname; // temporary path used by full_path
 	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
@@ -834,7 +834,7 @@ protected:
 	int do_simple_commands(const struct SimpleSubmitKeyword * cmdtable);
 	int build_oauth_service_ads(classad::References & services, ClassAdList & ads, std::string & error) const;
 	void fixup_rhs_for_digest(const char * key, std::string & rhs);
-	int query_universe(MyString & sub_type); // figure out universe, but DON'T modify the cached members
+	int query_universe(std::string & sub_type); // figure out universe, but DON'T modify the cached members
 	bool key_is_prunable(const char * key); // return true if key can be pruned from submit digest
 	void push_error(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
 	void push_warning(FILE * fh, const char* format, ... ) const CHECK_PRINTF_FORMAT(3,4);
