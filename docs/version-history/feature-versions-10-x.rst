@@ -211,6 +211,8 @@ New Features:
   must be set to ``True`` to enable this usage.
   :jira:`1498`
 
+Bugs Fixed:
+
 - Fixed bug where ``HasSingularity`` would be advertised as true in cases
   where it wouldn't work.
   :jira:`1274`

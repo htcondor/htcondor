@@ -33,6 +33,11 @@ New Features:
   from the same user.
   :jira:`1549`
 
+- *condor_ssh_to_job* should now work in glidein and other environments
+  where the job or HTCondor is running as a Unix user id that doesn't
+  have an entry in the /etc/passwd database.
+  :jira:`1543`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
