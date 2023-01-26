@@ -38,6 +38,11 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
+- VM universe jobs are now configured to pass through the host CPU model
+  to the VM. This change enables VMs with newer kernels (such as Enterprise
+  Linux 9) to operate in VM Universe.
+  :jira:`1559`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer

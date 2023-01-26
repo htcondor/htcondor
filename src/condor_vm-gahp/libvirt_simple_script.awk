@@ -79,6 +79,8 @@ END {
 	    print "<vcpu>" attrs["RequestCpus"] "</vcpu>" ;
     }
 
+    print "<cpu mode='host-passthrough'/>" ;
+
     print "<os><type>" os_type "</type>" ;
     if(kernel != "")
     {
