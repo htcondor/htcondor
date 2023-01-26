@@ -167,7 +167,7 @@ int cleanUpOldLogFiles(int maxNum) {
 		int initial_count = count;
 		int delete_attempts = 0;
 		while (count > maxNum) {
-			(void)sprintf( empty, "%s.old", logBaseName );
+			(void)snprintf( empty, sizeof(empty), "%s.old", logBaseName );
 			// catch the exception that the file name pattern is disturbed by external influence
 			if (strcmp(oldFile, empty) == 0)
 				break;

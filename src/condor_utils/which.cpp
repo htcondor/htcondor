@@ -38,7 +38,7 @@ which(const std::string &strFilename, const std::string &strAdditionalSearchDirs
 	dprintf( D_FULLDEBUG, "Path: %s\n", strPath);
 
 	char path_delim[3];
-	sprintf( path_delim, "%c", PATH_DELIM_CHAR );
+	snprintf( path_delim, sizeof(path_delim), "%c", PATH_DELIM_CHAR );
 	StringList listDirectoriesInPath( strPath, path_delim );
 
 #ifdef WIN32

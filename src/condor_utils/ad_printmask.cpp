@@ -402,9 +402,9 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	if ( ! printfFmt && fmt.width) {
 		int width = (fmt.options & FormatOptionLeftAlign) ? -fmt.width : fmt.width;
 		if (fmt.options & FormatOptionNoTruncate) {
-			sprintf(tmp_fmt, "%%%ds", width);
+			snprintf(tmp_fmt, sizeof(tmp_fmt), "%%%ds", width);
 		} else {
-			sprintf(tmp_fmt, "%%%d.%ds", width, fmt.width);
+			snprintf(tmp_fmt, sizeof(tmp_fmt), "%%%d.%ds", width, fmt.width);
 		}
 		printfFmt = tmp_fmt;
 		fmt.fmt_type = (char)PFT_STRING;
@@ -577,9 +577,9 @@ static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_t
 				str = val;
 			} else {
 				if (fmt.options & FormatOptionNoTruncate) {
-					sprintf(tfmt, "%%%ds", width);
+					snprintf(tfmt, sizeof(tfmt), "%%%ds", width);
 				} else {
-					sprintf(tfmt, "%%%d.%ds", width, fmt.width);
+					snprintf(tfmt, sizeof(tfmt), "%%%d.%ds", width, fmt.width);
 				}
 				str.formatstr(tfmt, val);
 			}

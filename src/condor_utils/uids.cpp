@@ -552,14 +552,14 @@ init_user_ids(const char username[], const char domain[])
 
 		// these should probably be snprintfs
 		swprintf_s(w_fullname, COUNTOF(w_fullname), L"%S@%S", username, domain);
-		sprintf(user, "%s", username);
-		sprintf(dom, "%s", domain);
+		snprintf(user, sizeof(user), "%s", username);
+		snprintf(dom, sizeof(dom), "%s", domain);
 		
 		// make sure we're SYSTEM when we do this
 		w_pw = lsaMan.query(w_fullname);
 		if ( w_pw ) {
 			// copy password into a char buffer
-			sprintf(pw, "%S", w_pw);			
+			snprintf(pw, sizeof(pw), "%S", w_pw);
 			// we don't need the wide char pw anymore, so clean it up
 			SecureZeroMemory(w_pw, wcslen(w_pw)*sizeof(wchar_t));
 			delete[](w_pw);
@@ -889,7 +889,7 @@ const char* get_condor_username()
 	if (CondorUserName == NULL) {
 		EXCEPT("Out of memory. Aborting.");
 	}
-	sprintf(CondorUserName, "%s/%s",szDomainName,szAccountName);
+	snprintf(CondorUserName, length, "%s/%s",szDomainName,szAccountName);
 
 	if ( hProcess )
 		CloseHandle(hProcess);
@@ -2173,7 +2173,7 @@ get_real_username( void )
 		uid_t my_uid = getuid();
 		if ( !(pcache()->get_user_name( my_uid, RealUserName)) ) {
 			char buf[64];
-			sprintf( buf, "uid %d", (int)my_uid );
+			snprintf( buf, sizeof(buf), "uid %d", (int)my_uid );
 			RealUserName = strdup( buf );
 		}
 	}
