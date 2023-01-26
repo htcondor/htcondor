@@ -38,6 +38,15 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
+- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+  tarballs for Enterprise Linux 8 and 9.
+  :jira:`1562`
+
+- VM universe jobs are now configured to pass through the host CPU model
+  to the VM. This change enables VMs with newer kernels (such as Enterprise
+  Linux 9) to operate in VM Universe.
+  :jira:`1559`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
