@@ -90,11 +90,17 @@ ROOT_MAXKEYS_BYTES=25000000
 # is usually more than one page large.  If the kernel is in the one-page
 # per-pipe mode, this means the single-threaded schedd blocks until the
 # shadow can pull the job ad out of the pipe, which limits scalability.
-# Condor keeps one pipe open for the duration of the shadow (and every
-# daemon, for that matter).  This means with the default values, after
-# spawning about 16k jobs, the schedd will slow down.  Let's up this
-# value to 128k, which should be more than the number of concurrently 
-# running jobs per use we claim to support.
+
+# This pipe itself is short-lived, so we are happy for it to consume 16
+# pages, but there's another pipe, which HTCondor keeps open for 
+# the duration of the shadow (and every daemon, for that matter).
+# This other pipe, the async_signal pipe is used by HTCondor to turn
+# a signal into a select(2)-able event. 
+
+# This means with the default values, after spawning about 16k jobs,
+# the schedd will slow down.  Let's raise this value to 128k, 
+# which should be more than the number of concurrently 
+# running jobs per user we claim to support.
 
 PIPE_USER_PAGES_SOFT=131072
 
