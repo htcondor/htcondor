@@ -255,10 +255,10 @@ is_valid_sinful( const char *sinful )
 		}
 		acc = tmp + 1;
 	} else {
-		MyString ipaddr = acc;
-		int colon_pos = ipaddr.FindChar(':');
-		if(colon_pos == -1) { return false; }
-		ipaddr.truncate(colon_pos);
+		std::string ipaddr = acc;
+		size_t colon_pos = ipaddr.find(':');
+		if(colon_pos == std::string::npos) { return false; }
+		ipaddr.erase(colon_pos);
 		if( ! is_ipv4_addr_implementation(ipaddr.c_str(),NULL,NULL,false) ) {
 			return FALSE;
 		}

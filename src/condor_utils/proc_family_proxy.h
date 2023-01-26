@@ -22,7 +22,6 @@
 #define _PROC_FAMILY_PROXY_H
 
 #include "proc_family_interface.h"
-#include "MyString.h"
 
 class ProcFamilyClient;
 
@@ -117,11 +116,11 @@ private:
 
 	// the address that our ProcD is using
 	//
-	MyString m_procd_addr;
+	std::string m_procd_addr;
 
 	// the log file that our ProcD will use
 	//
-	MyString m_procd_log;
+	std::string m_procd_log;
 
 	// the ProcD's pid, if we started one and haven't told it to exit yet;
 	// otherwise, -1

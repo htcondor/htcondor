@@ -103,7 +103,7 @@ SharedPortServer::RemoveDeadAddressFile()
 		// This function is called by condor_master on startup to make
 		// sure no address file is still sitting around from an
 		// ungraceful shutdown.
-	MyString shared_port_server_ad_file;
+	std::string shared_port_server_ad_file;
 	if( !param(shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
 		dprintf( D_FULLDEBUG, "SHARED_PORT_DAEMON_AD_FILE not defined, not removing shared port daemon ad file.\n" );
 		return;
@@ -215,18 +215,18 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 	}
 
 	if( client_name[0] ) {
-		MyString client_buf(client_name);
+		std::string client_buf(client_name);
 			// client name is purely for debugging purposes
-		client_buf.formatstr_cat(" on %s",sock->peer_description());
+		formatstr_cat(client_buf, " on %s",sock->peer_description());
 		sock->set_peer_description(client_buf.c_str());
 	}
 
-	MyString deadline_desc;
+	std::string deadline_desc;
 	if( deadline >= 0 ) {
 		sock->set_deadline_timeout( deadline );
 
 		if( IsDebugLevel( D_NETWORK ) ) {
-			deadline_desc.formatstr(" (deadline %ds)", deadline);
+			formatstr(deadline_desc, " (deadline %ds)", deadline);
 		}
 	}
 

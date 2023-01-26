@@ -328,7 +328,7 @@ SecMan::sec_req_param( const char* fmt, DCpermission auth_level, sec_req def ) {
 		sec_req res = sec_alpha_to_sec_req(buf);
 
 		if (res == SEC_REQ_UNDEFINED || res == SEC_REQ_INVALID) {
-			MyString param_name;
+			std::string param_name;
 			char *value = getSecSetting( fmt, auth_level, &param_name );
 			if( res == SEC_REQ_INVALID ) {
 				EXCEPT( "SECMAN: %s=%s is invalid!",
@@ -381,13 +381,13 @@ SecMan::getAuthenticationMethods(DCpermission perm) {
 }
 
 bool
-SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+SecMan::getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
 	return getSecSetting_implementation(&result,NULL,fmt,auth_level,param_name,check_subsystem);
 }
 
 char* 
-SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
+SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name /* = NULL */, char const *check_subsystem /* = NULL */ )
 {
 	char *result = NULL;
 	getSecSetting_implementation(NULL,&result,fmt,auth_level,param_name,check_subsystem);
@@ -395,7 +395,7 @@ SecMan::getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level,
 }
 
 bool
-SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name, char const *check_subsystem )
+SecMan::getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem )
 {
 	DCpermission const *perms = auth_level.getConfigPerms();
 	bool found;
@@ -405,12 +405,12 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 		// if nothing else is found first.
 
 	for( ; *perms != LAST_PERM; perms++ ) {
-		MyString buf;
+		std::string buf;
 		if( check_subsystem ) {
 				// First see if there is a specific config entry for the
 				// specified condor subsystem.
-			buf.formatstr( fmt, PermString(*perms) );
-			buf.formatstr_cat("_%s",check_subsystem);
+			formatstr( buf, fmt, PermString(*perms) );
+			formatstr_cat(buf, "_%s",check_subsystem);
 			if( int_result ) {
 				found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
 			}
@@ -421,13 +421,13 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 			if( found ) {
 				if( param_name ) {
 						// Caller wants to know the param name.
-					param_name->append_to_list(buf);
+					*param_name = buf;
 				}
 				return true;
 			}
 		}
 
-		buf.formatstr( fmt, PermString(*perms) );
+		formatstr( buf, fmt, PermString(*perms) );
 		if( int_result ) {
 			found = param_integer( buf.c_str(), *int_result, false, 0, false, 0, 0 );
 		}
@@ -438,7 +438,7 @@ SecMan::getSecSetting_implementation( int *int_result,char **str_result, const c
 		if( found ) {
 			if( param_name ) {
 					// Caller wants to know the param name.
-				param_name->append_to_list(buf);
+				*param_name = buf;
 			}
 			return true;
 		}

@@ -6902,7 +6902,7 @@ int DaemonCore::Create_Process(
 	int max_pid_retry = 0;
 	static int num_pid_collisions = 0;
 	int errorpipe[2];
-	MyString executable_fullpath_buf;
+	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
 #endif
 
@@ -7187,7 +7187,7 @@ int DaemonCore::Create_Process(
 
 		privateinheritbuf += " SessionKey:";
 
-		MyString session_info;
+		std::string session_info;
 		rc = getSecMan()->ExportSecSessionInfo(session_id_c_str, session_info);
 		if(!rc)
 		{
@@ -7200,7 +7200,7 @@ int DaemonCore::Create_Process(
 	if((want_command_port != FALSE || HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(job_opt_mask)) 
 		&& !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
 	{
-		MyString family_session_info;
+		std::string family_session_info;
 		bool rc = getSecMan()->ExportSecSessionInfo(m_family_session_id.c_str(), family_session_info);
 		if(!rc)
 		{
@@ -7880,13 +7880,13 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 
 		if ( executable[0] != '/' ) {   // relative path
-			MyString currwd;
+			std::string currwd;
 			if ( !condor_getcwd( currwd ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.formatstr("%s/%s", currwd.c_str(), executable);
+			formatstr(executable_fullpath_buf, "%s/%s", currwd.c_str(), executable);
 			executable_fullpath = executable_fullpath_buf.c_str();
 
 				// Finally, log it
