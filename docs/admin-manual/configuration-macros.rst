@@ -5851,6 +5851,51 @@ These settings affect the *condor_shadow*.
     if the remap is an absolute path or if the remap tries to write to
     a directory specified within ``LIMIT_DIRECTORY_ACCESS``.
 
+:macro-def:`JOB_EPOCH_HISTORY`
+    A full path and filename of a file where the *condor_shadow* will
+    write to a per run job history file in an analogous way to that of
+    the history file defined by the configuration variable ``HISTORY``.
+    It will be rotated in the same way, and has similar parameters that
+    apply to the ``HISTORY`` file rotation apply to the *condor_shadow*
+    daemon epoch history as well. This can be read with the *condor_history*
+    command using the -epochs option. By default this option is not
+    set.
+
+    .. code-block:: console
+
+        $ condor_history -epochs
+
+:macro-def:`MAX_EPOCH_HISTORY_LOG`
+    Defines the maximum size for the epoch history file, in bytes. It
+    defaults to 20MB.
+
+:macro-def:`MAX_EPOCH_HISTORY_ROTATIONS`
+    Controls the maximum number of backup epoch history files to be kept.
+    It defaults to 2, which means that there may be up to three epoch history
+    files (two backups, plus the epoch history file that is being currently
+    written to). When the epoch history file is rotated, and this rotation
+    would cause the number of backups to be too large, the oldest file is removed.
+
+:macro-def:`JOB_EPOCH_HISTORY_DIR`
+    A full path to an existing directory that the *condor_shadow* will write
+    the jobs current job ad to a per job run history file with the name
+    ``job.runs.X.Y.ads``. Where ``X`` is the jobs cluster id and ``Y`` is
+    the jobs process id. For example, job 35.2 would write a job ad for each run
+    to the file ``job.runs.35.2.ads``. These files can be read through *condor_history*
+    when ran with the -epochs and -directory options.
+
+    .. code-block:: console
+
+        $ condor_history -epochs -directory
+
+    HTCondor does not automatically  delete these files, so unchecked the
+    directory can grow very large. Either an external entity needs to clean
+    up or *condor_history* can use the -epochs options optional ``:d``
+    extention to read and delete the files.
+
+    .. code-block:: console
+
+        $ condor_history -epochs:d -directory
 
 condor_starter Configuration File Entries
 ------------------------------------------
