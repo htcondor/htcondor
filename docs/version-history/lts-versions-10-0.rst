@@ -38,6 +38,10 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
+- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+  tarballs for Enterprise Linux 8 and 9.
+  :jira:`1562`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
