@@ -116,12 +116,12 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ $VERSION_CODENAME = 'bionic' ] || [ $VERSION_CODENAME = 'jammy' ]; then
+if [ $VERSION_CODENAME = 'bionic' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'amzn' ]; then
+if [ $ID = 'future' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -180,6 +180,43 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(Env)' 'perl(Net::Domain)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
+# Include packages for tarball in the image.
+mkdir -p ~condorauto/"externals/$REPO_VERSION"
+if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+    (cd ~condorauto/"externals/$REPO_VERSION";
+        apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
+    if [ $VERSION_CODENAME = 'bullseye' ]; then
+        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+    elif [ $VERSION_CODENAME = 'bookworm' ]; then
+        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+    elif [ $VERSION_CODENAME = 'bionic' ]; then
+        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.65.1)
+    elif [ $VERSION_CODENAME = 'focal' ]; then
+        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.71.0)
+    elif [ $VERSION_CODENAME = 'jammy' ]; then
+        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+    else
+        echo "Unknown codename: $VERSION_CODENAME"
+        exit 1
+    fi
+fi
+if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
+    yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" \
+        condor-stash-plugin libgomp munge-libs pcre2 scitokens-cpp voms
+    if [ $ID = 'centos' ] && [ $VERSION_ID -eq 7 ]; then
+        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" \
+            boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
+    else
+        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" boost-python3
+    fi
+    if [ $VERSION_ID -lt 9 ]; then
+        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" libcgroup
+    fi
+    # Remove 32-bit x84 packages if any
+    rm -f ~condorauto/"externals/$REPO_VERSION/*.i686.rpm"
+fi
+
+# Clean up package caches
 if [ $ID = 'amzn' ] || [ $ID = 'centos' ]; then
     yum clean all
     rm -rf /var/cache/yum/*
