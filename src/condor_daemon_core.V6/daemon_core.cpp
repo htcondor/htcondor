@@ -1569,6 +1569,7 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		sigIt = sigTable.end() - 1;
 		sigIt->sig_descrip = nullptr;
 		sigIt->handler_descrip = nullptr;
+		sigIt->data_ptr = nullptr;
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
