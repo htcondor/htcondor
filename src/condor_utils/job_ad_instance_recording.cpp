@@ -83,13 +83,13 @@ initJobEpochHistoryFiles(){
 	}
 
 	//Initialize an epoch Directory
-	efi.JobEpochInstDir.set(param("JOB_EPOCH_INSTANCE_DIR"));
+	efi.JobEpochInstDir.set(param("JOB_EPOCH_HISTORY_DIR"));
 	if (efi.JobEpochInstDir.ptr()) {
 		// If param was found and not null check if it is a valid directory
 		StatInfo si(efi.JobEpochInstDir.ptr());
 		if (!si.IsDirectory()) {
 			// Not a valid directory. Log message and set data member to NULL
-			dprintf(D_ERROR, "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
+			dprintf(D_ERROR, "Invalid JOB_EPOCH_HISTORY_DIR (%s): must point to a "
 					"valid directory; disabling per-job run instance recording.\n",
 						efi.JobEpochInstDir.ptr());
 			efi.JobEpochInstDir.clear();

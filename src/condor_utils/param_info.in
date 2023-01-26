@@ -2925,6 +2925,11 @@ tags=tools,preen
 default=$(LOG)/startd_history
 type=string
 
+[JOB_EPOCH_HISTORY]
+default=
+type=string
+tags=tools,shadow
+
 [HISTORY_CONTAINS_JOB_ENVIRONMENT]
 default = true
 
@@ -3191,11 +3196,6 @@ type=bool
 tags=schedd
 
 [PER_JOB_HISTORY_DIR]
-default=
-type=string
-tags=schedd
-
-[JOB_EPOCH_INSTANCE_DIR]
 default=
 type=string
 tags=schedd
