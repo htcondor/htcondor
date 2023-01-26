@@ -49,6 +49,12 @@ New Features:
   deems appropriate.
   :jira:`1528`
 
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
+  to 128k, if it was below this.  This improves the scalability of the
+  schedd when running more than 16k jobs from any one user.
+  :jira:`1556`
+
 - Added ability to set a gangliad metrics lifetime (DMAX value) within the
   metric definition language with the new ``Lifetime`` keyword.
   :jira:`1547`
