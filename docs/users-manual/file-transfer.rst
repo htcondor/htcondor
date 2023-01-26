@@ -819,12 +819,12 @@ Google Cloud Storage implements an `XML API which is interoperable with S3
 <https://cloud.google.com/storage/docs/interoperability>`_. This requires an
 extra step of `generating HMAC credentials
 <https://console.cloud.google.com/storage/settings;tab=interoperability>`_
-to access Cloud Storage through the XML API. Google Cloud best practices are
-to create a Service Account with read/write permission to the bucket and
-`generate HMAC credentials for the service account
-<https://cloud.google.com/storage/docs/migrating#keys>`_.
+to access Cloud Storage. Google Cloud best practices are to create a Service
+Account with read/write permission to the bucket. Read `HMAC keys for Cloud
+Storage <https://cloud.google.com/storage/docs/authentication/hmackeys>`_ for
+more details.
 
-After generating HMAC credentials, they can be used within an HTCondor job:
+After generating HMAC credentials, they can be used within a job:
 
 .. code-block:: condor-submit
 
@@ -835,7 +835,7 @@ After generating HMAC credentials, they can be used within an HTCondor job:
 
 If `Cloud Storage is configured with Private Service Connect
 <https://cloud.google.com/vpc/docs/private-service-connect>`_, then use the S3 URL
-approach defined above. e.g.
+approach with the private Cloud Storage endpoint. e.g.,
 
 .. code-block:: condor-submit
 
