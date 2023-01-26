@@ -181,39 +181,40 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Include packages for tarball in the image.
-mkdir -p ~condorauto/"externals/$REPO_VERSION"
+externals_dir=~condorauto/"externals/$REPO_VERSION"
+mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    (cd ~condorauto/"externals/$REPO_VERSION";
+    (cd "$externals_dir";
         apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+        (cd "$externals_dir"; apt download libboost-python1.74.0)
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+        (cd "$externals_dir"; apt download libboost-python1.74.0)
     elif [ $VERSION_CODENAME = 'bionic' ]; then
-        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.65.1)
+        (cd "$externals_dir"; apt download libboost-python1.65.1)
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.71.0)
+        (cd "$externals_dir"; apt download libboost-python1.71.0)
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        (cd ~condorauto/"externals/$REPO_VERSION"; apt download libboost-python1.74.0)
+        (cd "$externals_dir"; apt download libboost-python1.74.0)
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
     fi
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
-    yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" \
+    yumdownloader --downloadonly --destdir="$externals_dir" \
         condor-stash-plugin libgomp munge-libs pcre2 scitokens-cpp voms
     if [ $ID = 'centos' ] && [ $VERSION_ID -eq 7 ]; then
-        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" \
+        yumdownloader --downloadonly --destdir="$externals_dir" \
             boost169-python3 python36-chardet python36-idna python36-pysocks python36-requests python36-six python36-urllib3
     else
-        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" boost-python3
+        yumdownloader --downloadonly --destdir="$externals_dir" boost-python3
     fi
     if [ $VERSION_ID -lt 9 ]; then
-        yumdownloader --downloadonly --destdir=~condorauto/"externals/$REPO_VERSION" libcgroup
+        yumdownloader --downloadonly --destdir="$externals_dir" libcgroup
     fi
     # Remove 32-bit x84 packages if any
-    rm -f ~condorauto/"externals/$REPO_VERSION/*.i686.rpm"
+    rm -f "$externals_dir/*.i686.rpm"
 fi
 
 # Clean up package caches
