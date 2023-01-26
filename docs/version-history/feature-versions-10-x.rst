@@ -55,6 +55,15 @@ New Features:
   schedd when running more than 16k jobs from any one user.
   :jira:`1556`
 
+- Added ability to set a gangliad metrics lifetime (DMAX value) within the
+  metric definition language with the new ``Lifetime`` keyword.
+  :jira:`1547`
+
+- Added configuration knob :macro:`GANGLIAD_MIN_METRIC_LIFETIME` to set
+  the minimum value for gangliads calculated metric lifetime (DMAX value)
+  for all metrics without a specified ``Lifetime``.
+  :jira:`1547`
+
 Bugs Fixed:
 
 - The HTCondor starter now removes any cgroup that it has created for

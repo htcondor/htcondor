@@ -36,7 +36,6 @@
 #include <resolv.h>
 #endif
 
-static const int DEFAULT_MAXSIGNALS = 99;
 static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
@@ -269,7 +268,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_never_use_kill_for_dc_signals(false),
 #endif
 	m_create_family_session(true),
-	sigTable(10),
 	t(TimerManager::GetTimerManager()),
 	m_command_port_arg(-1),
 	m_dirty_command_sock_sinfuls(true),
@@ -312,19 +310,10 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	//
 	m_proc_family = NULL;
 
-	maxSig = SigSize;
 	maxSocket = SocSize;
 	maxPipe = PipeSize;
 
 	m_unregisteredCommand.num = 0;
-
-	if(maxSig == 0)
-		maxSig = DEFAULT_MAXSIGNALS;
-
-	nSig = 0;
-	SignalEnt blankSignalEnt;
-	memset(&blankSignalEnt, '\0', sizeof(SignalEnt));
-	sigTable.fill(blankSignalEnt);
 
 	if(maxSocket == 0)
 		maxSocket = DEFAULT_MAXSOCKETS;
@@ -517,9 +506,9 @@ DaemonCore::~DaemonCore()
 		free( m_unregisteredCommand.handler_descrip );
 	}
 
-	for (i=0;i<nSig;i++) {
-		free( sigTable[i].sig_descrip );
-		free( sigTable[i].handler_descrip );
+	for (auto &s : sigTable) {
+		free( s.sig_descrip );
+		free( s.handler_descrip );
 	}
 
 	if (sockTable != NULL)
@@ -1534,9 +1523,6 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 				const char* handler_descrip, Service* s, 
 				int is_cpp)
 {
-    int i = -1;
-
-
     if( handler == 0 && handlercpp == 0 ) {
 		dprintf(D_DAEMONCORE, "Can't register NULL signal handler\n");
 		return -1;
@@ -1560,47 +1546,53 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 			break;
 	}
 
-    if(nSig >= maxSig) {
-		EXCEPT("# of signal handlers exceeded specified maximum");
-    }
-
-	// Search our array for an empty spot and ensure there isn't an entry
-	// for this signal already.
-	for ( int j = 0; j < nSig; j++ ) {
-		if ( sigTable[j].num == 0 ) {
-			i = j;
-		}
-		if ( sigTable[j].num == sig ) {
+	// ensure there isn't an entry for this signal already
+	for (auto &sigEnt: sigTable) {
+		if ( sigEnt.num == sig ) {
 			EXCEPT("DaemonCore: Same signal registered twice");
 		}
 	}
-	if ( i == -1 ) {
+
+	// Search our array for an empty spot
+	auto sigIt = sigTable.begin();
+	while (sigIt != sigTable.end()) {
+		if ( sigIt->num == 0 ) {
+			break;
+		}
+		sigIt++;
+	}
+
+
+	if ( sigIt == sigTable.end()) {
 		// We need to add a new entry at the end of our array
-		i = nSig;
-		nSig++;
+		sigTable.push_back({});
+		sigIt = sigTable.end() - 1;
+		sigIt->sig_descrip = nullptr;
+		sigIt->handler_descrip = nullptr;
+		sigIt->data_ptr = nullptr;
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
-	sigTable[i].num = sig;
-	sigTable[i].handler = handler;
-	sigTable[i].handlercpp = handlercpp;
-	sigTable[i].is_cpp = (bool)is_cpp;
-	sigTable[i].service = s;
-	sigTable[i].is_blocked = false;
-	sigTable[i].is_pending = false;
-	free(sigTable[i].sig_descrip);
+	sigIt->num = sig;
+	sigIt->handler = handler;
+	sigIt->handlercpp = handlercpp;
+	sigIt->is_cpp = (bool)is_cpp;
+	sigIt->service = s;
+	sigIt->is_blocked = false;
+	sigIt->is_pending = false;
+	free(sigIt->sig_descrip);
 	if ( sig_descrip )
-		sigTable[i].sig_descrip = strdup(sig_descrip);
+		sigIt->sig_descrip = strdup(sig_descrip);
 	else
-		sigTable[i].sig_descrip = strdup(EMPTY_DESCRIP);
-	free(sigTable[i].handler_descrip);
+		sigIt->sig_descrip = strdup(EMPTY_DESCRIP);
+	free(sigIt->handler_descrip);
 	if ( handler_descrip )
-		sigTable[i].handler_descrip = strdup(handler_descrip);
+		sigIt->handler_descrip = strdup(handler_descrip);
 	else
-		sigTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
+		sigIt->handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Update curr_regdataptr for SetDataPtr()
-	curr_regdataptr = &(sigTable[i].data_ptr);
+	curr_regdataptr = &(sigIt->data_ptr);
 
 	// Conditionally dump what our table looks like
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
@@ -1610,50 +1602,44 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 
 int DaemonCore::Cancel_Signal( int sig )
 {
-	int found = -1;
-
 	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
 
 	// find this signal in our table
-	for ( int i = 0; i < nSig; i++ ) {
-		if ( sigTable[i].num == sig ) {
-			found = i;
+	auto signalEntry = sigTable.begin();
+	while (signalEntry != sigTable.end()) {
+		if ( signalEntry->num == sig ) {
 			break;
 		}
+		signalEntry++;
 	}
 
 	// Check if found
-	if ( found == -1 ) {
+	if (signalEntry == sigTable.end()) {
 		dprintf(D_DAEMONCORE,"Cancel_Signal: signal %d not found\n",sig);
 		return FALSE;
 	}
 
 	// Clear entry
-	sigTable[found].num = 0;
-	sigTable[found].handler = NULL;
-	sigTable[found].handlercpp = (SignalHandlercpp)NULL;
-	free( sigTable[found].handler_descrip );
-	sigTable[found].handler_descrip = NULL;
+	signalEntry->num = 0;
+	signalEntry->handler = NULL;
+	signalEntry->handlercpp = (SignalHandlercpp)NULL;
+	free( signalEntry->handler_descrip );
+	signalEntry->handler_descrip = NULL;
 
 	// Clear any data_ptr which go to this entry we just removed
-	if ( curr_regdataptr == &(sigTable[found].data_ptr) )
+	if ( curr_regdataptr == &(signalEntry->data_ptr) )
 		curr_regdataptr = NULL;
-	if ( curr_dataptr == &(sigTable[found].data_ptr) )
+	if ( curr_dataptr == &(signalEntry->data_ptr) )
 		curr_dataptr = NULL;
 
 	// Log a message and conditionally dump what our table now looks like
 	dprintf(D_DAEMONCORE,
 					"Cancel_Signal: cancelled signal %d <%s>\n",
-					sig,sigTable[found].sig_descrip);
-	free( sigTable[found].sig_descrip );
-	sigTable[found].sig_descrip = NULL;
-
-	// Shrink our table size if we have empty entries at the end
-	while ( nSig > 0 && sigTable[nSig-1].num == 0 ) {
-		nSig--;
-	}
+					sig,signalEntry->sig_descrip);
+	free( signalEntry->sig_descrip );
+	signalEntry->sig_descrip = NULL;
 
 	DumpSigTable(D_FULLDEBUG | D_DAEMONCORE);
 
@@ -2821,7 +2807,6 @@ void DaemonCore::DumpReapTable(int flag, const char* indent)
 
 void DaemonCore::DumpSigTable(int flag, const char* indent)
 {
-	int			i;
 	const char *descrip1;
 	const char *descrip2;
 
@@ -2839,17 +2824,17 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 	dprintf(flag, "\n");
 	dprintf(flag, "%sSignals Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < nSig; i++) {
-		if( sigTable[i].handler || sigTable[i].handlercpp ) {
+	for (auto &sigEntry : sigTable) {
+		if( sigEntry.handler || sigEntry.handlercpp ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
-			if ( sigTable[i].sig_descrip )
-				descrip1 = sigTable[i].sig_descrip;
-			if ( sigTable[i].handler_descrip )
-				descrip2 = sigTable[i].handler_descrip;
+			if ( sigEntry.sig_descrip )
+				descrip1 = sigEntry.sig_descrip;
+			if ( sigEntry.handler_descrip )
+				descrip2 = sigEntry.handler_descrip;
 			dprintf(flag, "%s%d: %s %s, Blocked:%d Pending:%d\n", indent,
-							sigTable[i].num, descrip1, descrip2,
-							(int)sigTable[i].is_blocked, (int)sigTable[i].is_pending);
+							sigEntry.num, descrip1, descrip2,
+							(int)sigEntry.is_blocked, (int)sigEntry.is_pending);
 		}
 	}
 	dprintf(flag, "\n");
@@ -3463,37 +3448,37 @@ void DaemonCore::Driver()
 		// call signal handlers for any pending signals
 		// call signal handlers for any pending signals
 		sent_signal = FALSE;	// set to True inside Send_Signal()
-			for (i=0;i<nSig;i++) {
-				if ( sigTable[i].handler || sigTable[i].handlercpp ) {
-					// found a valid entry; test if we should call handler
-					if ( sigTable[i].is_pending && !sigTable[i].is_blocked ) {
-						// call handler, but first clear pending flag
-						sigTable[i].is_pending = false;
-						// Update curr_dataptr for GetDataPtr()
-						curr_dataptr = &(sigTable[i].data_ptr);
-                        // update statistics
-                        dc_stats.Signals += 1;
+		for (auto &sigEntry : sigTable) {
+			if ( sigEntry.handler || sigEntry.handlercpp ) {
+				// found a valid entry; test if we should call handler
+				if ( sigEntry.is_pending && !sigEntry.is_blocked ) {
+					// call handler, but first clear pending flag
+					sigEntry.is_pending = false;
+					// Update curr_dataptr for GetDataPtr()
+					curr_dataptr = &(sigEntry.data_ptr);
+					// update statistics
+					dc_stats.Signals += 1;
 
-						// log a message
-						dprintf(D_DAEMONCORE,
-										"Calling Handler <%s> for Signal %d <%s>\n",
-										sigTable[i].handler_descrip,sigTable[i].num,
-										sigTable[i].sig_descrip);
-						// call the handler
-						if ( sigTable[i].is_cpp )
-							(sigTable[i].service->*(sigTable[i].handlercpp))(sigTable[i].num);
-						else
-							(*sigTable[i].handler)(sigTable[i].num);
-						// Clear curr_dataptr
-						curr_dataptr = NULL;
-						// Make sure we didn't leak our priv state
-						CheckPrivState();
+					// log a message
+					dprintf(D_DAEMONCORE,
+							"Calling Handler <%s> for Signal %d <%s>\n",
+							sigEntry.handler_descrip,sigEntry.num,
+							sigEntry.sig_descrip);
+					// call the handler
+					if ( sigEntry.is_cpp )
+						(sigEntry.service->*(sigEntry.handlercpp))(sigEntry.num);
+					else
+						(*sigEntry.handler)(sigEntry.num);
+					// Clear curr_dataptr
+					curr_dataptr = NULL;
+					// Make sure we didn't leak our priv state
+					CheckPrivState();
 
-                        // update per-timer runtime and count statistics
-                        runtime = dc_stats.AddRuntime(sigTable[i].handler_descrip, runtime);
-					}
+					// update per-timer runtime and count statistics
+					runtime = dc_stats.AddRuntime(sigEntry.handler_descrip, runtime);
 				}
 			}
+		}
 
 #ifndef WIN32
 		// clear the async_pipe_signal flag before we empty to the pipe
@@ -4740,18 +4725,19 @@ int DaemonCore::HandleSigCommand(int command, Stream* stream) {
 
 int DaemonCore::HandleSig(int command,int sig)
 {
-	int index;
-	int sigFound = FALSE;
+	bool sigFound = false;
 
 	// find the signal entry in our table
-	for ( index = 0; index < nSig; index++ ) {
-		if ( sigTable[index].num == sig ) {
-			sigFound = TRUE;
+	auto sigIt = sigTable.begin();
+	while (sigIt != sigTable.end()) {
+		if ( sigIt->num == sig ) {
+			sigFound = true;
 			break;
 		}
+		sigIt++;
 	}
 
-	if ( sigFound == FALSE ) {
+	if ( sigFound == false ) {
 		dprintf(D_ALWAYS,
 			"DaemonCore: received request for unregistered Signal %d !\n",sig);
 		return FALSE;
@@ -4761,22 +4747,22 @@ int DaemonCore::HandleSig(int command,int sig)
 		case _DC_RAISESIGNAL:
 			dprintf(D_DAEMONCORE,
 				"DaemonCore: received Signal %d (%s), raising event %s\n", sig,
-				sigTable[index].sig_descrip, sigTable[index].handler_descrip);
+				sigIt->sig_descrip, sigIt->handler_descrip);
 			// set this signal entry to is_pending.
 			// the code to actually call the handler is
 			// in the Driver() method.
-			sigTable[index].is_pending = true;
+			sigIt->is_pending = true;
 			break;
 		case _DC_BLOCKSIGNAL:
-			sigTable[index].is_blocked = true;
+			sigIt->is_blocked = true;
 			break;
 		case _DC_UNBLOCKSIGNAL:
-			sigTable[index].is_blocked = false;
+			sigIt->is_blocked = false;
 			// now check to see if this signal we are unblocking is pending.
 			// if so, set sent_signal to TRUE.  sent_signal is used by the
 			// Driver() to ensure that a signal raised from inside a
 			// signal handler is indeed delivered.
-			if ( sigTable[index].is_pending == true )
+			if ( sigIt->is_pending == true )
 				sent_signal = TRUE;
 			break;
 		default:
@@ -6902,7 +6888,7 @@ int DaemonCore::Create_Process(
 	int max_pid_retry = 0;
 	static int num_pid_collisions = 0;
 	int errorpipe[2];
-	MyString executable_fullpath_buf;
+	std::string executable_fullpath_buf;
 	char const *executable_fullpath = executable;
 #endif
 
@@ -7187,7 +7173,7 @@ int DaemonCore::Create_Process(
 
 		privateinheritbuf += " SessionKey:";
 
-		MyString session_info;
+		std::string session_info;
 		rc = getSecMan()->ExportSecSessionInfo(session_id_c_str, session_info);
 		if(!rc)
 		{
@@ -7200,7 +7186,7 @@ int DaemonCore::Create_Process(
 	if((want_command_port != FALSE || HAS_DCJOBOPT_INHERIT_FAMILY_SESSION(job_opt_mask)) 
 		&& !m_family_session_id.empty() && priv != PRIV_USER_FINAL && priv != PRIV_CONDOR_FINAL)
 	{
-		MyString family_session_info;
+		std::string family_session_info;
 		bool rc = getSecMan()->ExportSecSessionInfo(m_family_session_id.c_str(), family_session_info);
 		if(!rc)
 		{
@@ -7880,13 +7866,13 @@ int DaemonCore::Create_Process(
 	if( cwd && (cwd[0] != '\0') ) {
 
 		if ( executable[0] != '/' ) {   // relative path
-			MyString currwd;
+			std::string currwd;
 			if ( !condor_getcwd( currwd ) ) {
 				dprintf ( D_ALWAYS, "Create_Process: getcwd failed\n" );
 				goto wrapup;
 			}
 
-			executable_fullpath_buf.formatstr("%s/%s", currwd.c_str(), executable);
+			formatstr(executable_fullpath_buf, "%s/%s", currwd.c_str(), executable);
 			executable_fullpath = executable_fullpath_buf.c_str();
 
 				// Finally, log it
