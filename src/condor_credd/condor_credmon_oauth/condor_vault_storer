@@ -72,7 +72,7 @@ if [ "" != "$VERBOSE" ]; then
     STOREOUT=/dev/stdout
 fi
 
-CONDOROPTS="$(condor_config_val SEC_CREDENTIAL_GETTOKEN_OPTS 2>/dev/null)"
+CONDOROPTS="`condor_config_val SEC_CREDENTIAL_GETTOKEN_OPTS 2>/dev/null`"
 if [ -z "$CONDOROPTS" ] && [ -z "$HTGETTOKENOPTS" ]; then
     fatal 'Neither SEC_CREDENTIAL_GETTOKEN_OPTS condor value nor $HTGETTOKENOPTS environment set'
 fi
@@ -115,17 +115,26 @@ for REQUEST; do
             STOREOPTS+=($OPT)
         done
     fi
+    HANDLE=""
+    HANDLESERVICE=""
+    HANDLESTOREOPTS=("${STOREOPTS[@]}")
+    HANDLEOPTS=("${OPTS[@]}")
     for PART in "${PARTS[@]:1}"; do
         VAL="${PART#*=}"
         case "$PART" in
             handle=*)
-                SERVICE+="_$VAL";;
+                HANDLE="$VAL"
+                HANDLESERVICE="${SERVICE}_$HANDLE"
+                HANDLESTOREOPTS=("-s" "$HANDLESERVICE" "${HANDLESTOREOPTS[@]}")
+                ;;
             scopes=*)
-                STOREOPTS+=("-S" "$VAL")
-                OPTS+=("--scopes=$VAL");;
+                HANDLESTOREOPTS+=("-S" "$VAL")
+                HANDLEOPTS+=("--scopes=$VAL")
+                ;;
             audience=*)
-                STOREOPTS+=("-A" "$VAL")
-                OPTS+=("--audience=$VAL");;
+                HANDLESTOREOPTS+=("-A" "$VAL")
+                HANDLEOPTS+=("--audience=$VAL")
+                ;;
         esac
     done
     STOREOPTS=("-s" "$SERVICE" "${STOREOPTS[@]}")
@@ -174,41 +183,94 @@ but make sure no other job is using them."
         mv $TMPFILE $BTOKEN
     fi
 
-    CREDLINES="$(echo "$CRED"|wc -l)"
+    STOREVAULTTOKEN=true
+    VAULTURL=""
+    CREDLINES="`echo "$CRED"|wc -l`"
     case $CREDLINES in
         1)  # No new vault token was generated
-            continue;;
-        2)  # First line is new vault token, second line is bearer URL
+            # There is only a vault url, which we will not need
+            if [ -n "$HANDLE" ]; then
+                # However, there is a handle, so we need to use the main vault
+                # token to calculate an associated vault url.
+                CRED="`< $VTOKEN-$SERVICE`"
+                STOREVAULTTOKEN=false
+            else
+                # Nothing to store
+                continue
+            fi;;
+        2)  # First line is new vault token, second line is vault url
+            VAULTURL="`echo "$CRED"|(read X; read L; echo "$L")`"
+            CRED="`echo "$CRED"|(read L; echo "$L")`"
             ;;
         *)  fatal "Unexpected number of stdout lines from htgettoken: $CREDLINES";;
     esac
 
-    # A new long-duration vault token was received, followed by bearer URL
-    # Exchange vault token for a shorter duration vault token on disk
-    # Normally do this quietly
-    echo ${CRED%$NL*}|htgettoken $CONDOROPTS --nobearertoken --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" ${VERBOSE:--q} >&2
-    if [ $? != 0 ]; then
+    # $CRED now contains a vault token.  It is either a new, long duration
+    # vault token which needs to be exchanged for a shorter duration one, or 
+    # it was copied from a base token, without a handle.  In the latter case
+    # we need to invoke htgettoken anyway in order to calculate the vault URL
+    # that credmon will need to use with the handle; the above invocation does
+    # not include reduced scopes and audiences associated with the handle, so
+    # we couldn't have htgettoken calculate that URL there.
+    # Normally do this quietly.
+    TOKENOUT=
+    if [ -n "$HANDLE" ]; then
+        # We don't necessarily need to save this token, since really the
+        # weakened token is only need in the job, but since we're generating
+        # it anyway we might as well save it.  Consider stopping to generate
+        # it when --nobearertoken works with --showbearerurl.
+        TOKENOUT="$BTOKEN-$HANDLESERVICE"
+    else
+        # TODO: When there is no handle and after htgettoken 2.0 or greater
+        # is installed everywhere, use --nobearertoken instead of using a
+        # temporary token name.  In older versions --nobearertoken didn't work
+        # properly in combination with --showbearerurl.
+        TOKENOUT="$BTOKEN-${SERVICE}_$$"
+    fi
+    HANDLEURL="`echo "$CRED"|htgettoken "${HANDLEOPTS[@]}" -o $TOKENOUT --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" --showbearerurl ${VERBOSE:--q}`"
+    RET="$?"
+    if [ -z "$HANDLE" ]; then
+        rm -f $TOKENOUT
+    fi
+    if [ $RET != 0 ]; then
         fatal "Failed to exchange vault token"
     fi
 
-    verbose "Copying vault token to $VTOKEN"
+    verbose "Copying $VTOKEN-$SERVICE to $VTOKEN"
     TMPFILE="`mktemp $VTOKEN.XXXXXXXXXX`"
     cat $VTOKEN-$SERVICE >$TMPFILE
     mv $TMPFILE $VTOKEN
 
-    if $SHOWSTORING; then
-        echo "Storing condor credentials for $SERVICE" >&2
-    fi
-    echo "$CRED"|(
-        # convert the two lines to json
-        read TOK
-        read URL
+    if $STOREVAULTTOKEN; then
+        if $SHOWSTORING; then
+            echo "Storing condor credentials for $SERVICE" >&2
+        fi
+        (
         echo "{"
-        echo "  \"vault_token\": \"$TOK\","
-        echo "  \"vault_url\": \"$URL\""
+        echo "  \"vault_token\": \"$CRED\","
+        echo "  \"vault_url\": \"$VAULTURL\""
         echo "}"
         )|condor_store_cred add-oauth "${STOREOPTS[@]}" -i - >$STOREOUT
-    if [ $? != 0 ]; then
-        fatal "Failed to store condor credentials for $SERVICE"
+        if [ $? != 0 ]; then
+            fatal "Failed to store condor credentials for $SERVICE"
+        fi
+    fi
+
+    if [ -n "$HANDLE" ]; then
+        if $SHOWSTORING; then
+            echo "Storing condor credentials for $HANDLESERVICE" >&2
+        fi
+        (
+        echo "{"
+        if $STOREVAULTTOKEN; then
+            echo "  \"vault_token\": \"$CRED\","
+        # else credmon will read the vault_token from the $SERVICE
+        fi
+        echo "  \"vault_url\": \"$HANDLEURL\""
+        echo "}"
+        )|condor_store_cred add-oauth "${HANDLESTOREOPTS[@]}" -i - >$STOREOUT
+        if [ $? != 0 ]; then
+            fatal "Failed to store condor credentials for $HANDLESERVICE"
+        fi
     fi
 done
