@@ -2791,6 +2791,17 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
         }
 
 		double slotWeight = accountant.GetSlotWeight(ad);
+
+		// The negotiator will always stop matching if it thinks it's
+		// filled up the pool, so for offline ads representing a type
+		// of resource, we need to multiply its weight accordingly.
+		//
+		// The offline ad MUST specify WantAdRevaluate if you want to
+		// see information about more than one matching autocluster.
+		int multiplier = 1;
+		ad->LookupInteger( "GhostMultiplier", multiplier );
+		slotWeight *= multiplier;
+
 		sum+=slotWeight;
 		if (minSlotWeight && (slotWeight < *minSlotWeight)) {
 			*minSlotWeight = slotWeight;
@@ -3071,6 +3082,11 @@ obtainAdsFromCollector (
                 // advertise a consumption policy
                 cp_resources = true;
             }
+
+			// Reset the per-negotiation-cycle match count, in case the
+			// negotiation cycle is faster than the startd update interval.
+			ad->Assign("MachineMatchCount", 0);
+			ad->Delete("OfflineMatches");
 
 			// If startd didn't set a slot weight expression, add in our own
 			double slot_weight;
@@ -5004,7 +5020,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
 		want_claiming = false;
-		RegisterAttemptedOfflineMatch( &request, offer );
+		RegisterAttemptedOfflineMatch( &request, offer, scheddAddr );
 	}
 	else {
 			// see if offer supports claiming or not
@@ -5960,7 +5976,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 	daemonCore->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &cmd_ad, NULL, false );
 }
 
-void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
+void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad, const char *schedd_addr )
 {
 	if( IsFulldebug(D_FULLDEBUG) ) {
 		std::string name;
@@ -5980,6 +5996,61 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 	time_t now = time(NULL);
 	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
+
+
+	// How many times did we match this machine this negotiation cycle?
+	int matchCount = 0;
+	startd_ad->LookupInteger("MachineMatchCount", matchCount);
+
+	// 1 is an undercount, and ATTR_RESOURCE_REQUEST_COUNT is an overcount
+	// unless no other machine matches, but it's probably the right number
+	// assuming the pool is full (which is the case we care about).
+	int requestCount = 1;
+	job_ad->LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, requestCount);
+	matchCount += requestCount;
+
+	startd_ad->Assign(       "MachineMatchCount", matchCount);
+	update_ad.Assign(        "MachineMatchCount", matchCount);
+
+
+	// For each matching resource request, record its originating schedd and
+	// autocluster ID (so that the external scaler can look it up) and the
+	// requestCount (so that the external scaler knows how much to care).
+
+	ClassAd * record = new ClassAd();
+	record->Assign( "Scheduler", schedd_addr );
+
+	int autoclusterID = -1;
+	job_ad->LookupInteger( ATTR_AUTO_CLUSTER_ID, autoclusterID );
+	record->Assign( "AutoclusterID", autoclusterID );
+
+	record->Assign( "RequestCount", requestCount );
+
+	// This is clumsy because of the ClassAd memory-managment model; see
+	// classad/classad/classad.h's commented-out EvalauteAttrList().
+
+	//
+	// `record` is heap-allocated and _not_ freed because the ExprList
+	// will gain ownership of it (and thus try to free it when it goes
+	// out of scope).  The ExprList is heap-allocated so that the
+	// shared ptr can deallocate it.  We make a copy for each ad because
+	// we can't pass a shared pointer in and ClassAds assume they own
+	// everything.
+	//
+
+	classad::Value result;
+	classad_shared_ptr<classad::ExprList> list( new classad::ExprList() );
+	if( startd_ad->EvaluateAttr( "OfflineMatches", result ) ) {
+		result.IsSListValue(list);
+	}
+	list->push_back(record);
+
+	classad::ExprList * copyA = (classad::ExprList *)list->Copy();
+	startd_ad->Insert( "OfflineMatches", copyA );
+
+	classad::ExprList * copyB = (classad::ExprList *)list->Copy();
+	update_ad.Insert( "OfflineMatches", copyB );
+
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
 	classy_counted_ptr<DCCollector> collector = new DCCollector();

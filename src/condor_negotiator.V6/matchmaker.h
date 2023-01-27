@@ -310,7 +310,7 @@ class Matchmaker : public Service
 		bool returnPslotToMatchList(ClassAd &request, ClassAd *offer);
 
 
-		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad );
+		void RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad, const char *schedd_addr );
 
 		// configuration information
 		char *AccountantHost;		// who (if at all) is the accountant?
