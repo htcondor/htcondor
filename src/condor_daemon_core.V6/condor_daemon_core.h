@@ -2049,11 +2049,10 @@ class DaemonCore : public Service
 #else
 	typedef int PipeHandle;
 #endif
-	ExtArray<PipeHandle>* pipeHandleTable;
-	int maxPipeHandleIndex;
-	int pipeHandleTableInsert(PipeHandle);
-	void pipeHandleTableRemove(int);
-	int pipeHandleTableLookup(int, PipeHandle* = NULL);
+	std::vector<PipeHandle> pipeHandleTable;
+	size_t pipeHandleTableInsert(PipeHandle);
+	void pipeHandleTableRemove(size_t);
+	int pipeHandleTableLookup(size_t, PipeHandle* = NULL);
 	int maxPipeBuffer;
 
 	// this table is for dispatching registered pipes
