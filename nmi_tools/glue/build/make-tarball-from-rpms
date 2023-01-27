@@ -94,7 +94,7 @@ for path in ~condorauto/externals/$REPO_VERSION/*.rpm; do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt
-    extract_rpm $path cd tarball
+    extract_rpm $path tarball
 done
 
 $cmd_dir/make-tarball-links tarball

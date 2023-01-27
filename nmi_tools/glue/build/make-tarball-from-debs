@@ -20,13 +20,13 @@ fi
 extract_deb() {
     what=$1
     where=$2
-    ar x $what data.tar.*
+    ar x $what
     if [ -f data.tar.xz ]; then
         (cd $where; tar xfpJ ../data.tar.xz)
-        rm data.tar.xz
-    elif [ -f data.tar.zstd ]; then
-        (cd $where; tar -x --file ../data.tar.zstd -p --zstd)
-        rm data.tar.zstd
+        rm data.tar.xz control.tar.xz
+    elif [ -f data.tar.zst ]; then
+        (cd $where; tar -x --file ../data.tar.zst -p --zstd)
+        rm data.tar.zst control.tar.zst
     else
         echo Unknown compression: $file
         exit 1
