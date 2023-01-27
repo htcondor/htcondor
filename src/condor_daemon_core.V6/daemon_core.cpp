@@ -1949,7 +1949,7 @@ void DaemonCore::pipeHandleTableRemove(size_t index)
 
 int DaemonCore::pipeHandleTableLookup(size_t index, PipeHandle* ph)
 {
-	if (index > pipeHandleTable.size()) {
+	if (index >= pipeHandleTable.size()) {
 		return FALSE;
 	}
 
