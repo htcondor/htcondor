@@ -1394,12 +1394,13 @@ static bool test_expr_tree_to_string_big() {
 		"classad.");
 	emit_comment("The attribute name and string are not printed here due to "
 		"the large size of the strings.");
-	char* expect = (char *) malloc(25000 + 2 + 1);
+	size_t expect_sz = 25000 + 2 +1;
+	char* expect = (char *) malloc(expect_sz);
 	if ( ! expect) { FAIL; }
 	char* attribute_name, *expectString;
 	make_big_string(15000, &attribute_name, NULL);
 	make_big_string(25000, &expectString, NULL);
-	sprintf(expect, "\"%s\"", expectString);
+	snprintf(expect, expect_sz, "\"%s\"", expectString);
 	ClassAd classad;
 	classad.Assign(attribute_name, expectString);
 	ExprTree* expr = classad.LookupExpr(attribute_name);

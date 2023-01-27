@@ -57,7 +57,7 @@ static bool test_normal_case() {
 	free(inputstring);
 	emit_output_expected_header();
 	char expected[30];
-	sprintf(expected, "192.168.0.2");
+	snprintf(expected, sizeof(expected), "192.168.0.2");
 	emit_retval(expected);
 	emit_output_actual_header();
 	emit_retval(sinstring);
@@ -78,7 +78,7 @@ static bool test_hostname() {
 	free(inputstring);
 	emit_output_expected_header();
 	char expected[30];
-	sprintf(expected, "balthazar.cs.wisc.edu");
+	snprintf(expected, sizeof(expected), "balthazar.cs.wisc.edu");
 	emit_retval(expected);
 	emit_output_actual_header();
 	emit_retval(sinstring);

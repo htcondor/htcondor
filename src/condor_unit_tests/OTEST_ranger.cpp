@@ -446,7 +446,7 @@ static bool test_ranger_misc_load_persist_slice(int N)
     std::string s;
     s.reserve(256);
 
-    sprintf(slicebuf, "%d-%d", t.start, t.back);
+    snprintf(slicebuf, sizeof(slicebuf), "%d-%d", t.start, t.back);
 
     emit_test("Test misc ranger load/persist slice");
     emit_input_header();
@@ -487,7 +487,7 @@ static bool test_ranger_misc_contains(int N)
     char elementbuf[64];
     const testcase3 &t = test_table3[N];
 
-    sprintf(elementbuf, "%d", t.element);
+    snprintf(elementbuf, sizeof(elementbuf), "%d", t.element);
 
     emit_test("Test misc ranger contains element");
     emit_input_header();
@@ -550,7 +550,7 @@ static bool test_ranger_misc_element(int N)
     char elementbuf[64];
     const testcase4 &t = test_table4[N];
 
-    sprintf(elementbuf, "%d", t.element);
+    snprintf(elementbuf, sizeof(elementbuf), "%d", t.element);
 
     std::string s;
 
@@ -729,7 +729,7 @@ static bool test_ranger_misc_contains_jobid(int N)
     char elementbuf[64];
     const testcase6 &t = test_table6[N];
 
-    sprintf(elementbuf, "%d.%d", t.element.cluster, t.element.proc);
+    snprintf(elementbuf, sizeof(elementbuf), "%d.%d", t.element.cluster, t.element.proc);
 
     emit_test("Test misc ranger contains jobid element");
     emit_input_header();
