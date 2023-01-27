@@ -32,11 +32,13 @@ ln -s usr/lib lib
 if [ -d usr/lib64 ]; then
     ln -s usr/lib64 lib64
 fi
-if [ -d usr/libexec/condor ]; then
-    ln -s usr/libexec/condor libexec
-fi
+# Check for Debian Location first (osg-plugin populates both libexec locations)
 if [ -d usr/lib/condor/libexec ]; then
+    # Debian/Ubuntu location
     ln -s usr/lib/condor/libexec libexec
+elif [ -d usr/libexec/condor ]; then
+    # RPM location
+    ln -s usr/libexec/condor libexec
 fi
 ln -s usr/share/man man
 ln -s usr/include include
