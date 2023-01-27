@@ -129,7 +129,7 @@ sysapi_get_windows_info(void)
 	if (GetVersionEx((LPOSVERSIONINFO)&info) > 0 ) {
 		switch(info.dwPlatformId) {
 		case VER_PLATFORM_WIN32s:
-			snprintf(tmp_info, sizeof(tmpinfo), "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
+			snprintf(tmp_info, sizeof(tmp_info), "WIN32s%d%d", info.dwMajorVersion, info.dwMinorVersion);
 			break;
 		case VER_PLATFORM_WIN32_WINDOWS:
 			snprintf(tmp_info, sizeof(tmp_info), "WIN32%d%d", info.dwMajorVersion, info.dwMinorVersion);

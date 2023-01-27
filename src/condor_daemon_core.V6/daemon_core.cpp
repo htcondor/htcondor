@@ -9986,7 +9986,7 @@ const char* DaemonCore::GetExceptionString(int sig)
 
 #ifdef WIN32
 	char  buf[sizeof(exception_string) - 25];
-	sprintf(exception_string, sizeof(exception_string), "exception %d %s", sig, ExceptionHandler::GetExceptionString(sig, buf, sizeof(buf)));
+	snprintf(exception_string, sizeof(exception_string), "exception %d %s", sig, ExceptionHandler::GetExceptionString(sig, buf, sizeof(buf)));
 #else
 	if ( sig > 64 ) {
 		sig = WTERMSIG(sig);
