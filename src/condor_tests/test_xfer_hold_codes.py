@@ -34,9 +34,9 @@ def submitJobOutputFailureAP(default_condor):
            "arguments": "0",
            "transfer_executable": "false",
            "should_transfer_files": "yes",
-           "transfer_input_files": "/bin/true",
-           "transfer_output_files": "true",
-           "transfer_output_remaps": classad.quote("true=/not_there_dir/blah"),
+           "transfer_input_files": "/bin/date",
+           "transfer_output_files": "date",
+           "transfer_output_remaps": classad.quote("date=/not_there_dir/blah"),
         }
     )
 
