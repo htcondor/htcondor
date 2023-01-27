@@ -495,9 +495,10 @@ getUnknownCommandString(int num)
 	}
 
 	static const char fmt[] = "command %u";
-	char * pstr = (char*)malloc(sizeof(fmt)+8); // max int string is 10 bytes (-2 for %d)
+	size_t pstr_sz = sizeof(fmt)+8;
+	char * pstr = (char*)malloc(pstr_sz); // max int string is 10 bytes (-2 for %d)
 	if ( ! pstr) return "malloc-fail!";
-	sprintf(pstr, fmt, num);
+	snprintf(pstr, pstr_sz, fmt, num);
 	(*pcmds)[num] = pstr;
 	return pstr;
 }
