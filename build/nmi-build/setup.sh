@@ -185,7 +185,7 @@ externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     (cd "$externals_dir";
-        apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
+        apt download libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
     if [ $VERSION_CODENAME = 'bullseye' ]; then
         (cd "$externals_dir"; apt download libboost-python1.74.0)
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
