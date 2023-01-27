@@ -310,7 +310,7 @@ GahpServer::write_line(const char *command, int req, const char *args) const
 	}
 
 	char buf[20];
-	sprintf(buf," %d%s",req,args?" ":"");
+	snprintf(buf,sizeof(buf)," %d%s",req,args?" ":"");
 	daemonCore->Write_Pipe(m_gahp_writefd,command,strlen(command));
 	daemonCore->Write_Pipe(m_gahp_writefd,buf,strlen(buf));
 	if ( args ) {

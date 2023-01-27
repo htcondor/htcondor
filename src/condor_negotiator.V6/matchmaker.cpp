@@ -375,10 +375,10 @@ Matchmaker ()
 	NegotiatorPostJobRank = NULL;
 	sockCache = NULL;
 
-	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buf, sizeof(buf), "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buf, rankCondStd);
 
-	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buf, sizeof(buf), "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buf, rankCondPrioPreempt);
 
 	negotiation_timerID = -1;

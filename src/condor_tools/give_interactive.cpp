@@ -350,8 +350,8 @@ fetchSubmittorPrios()
 
 	i = 1;
 	while( i ) {
-    	sprintf( attrName , "Name%d", i );
-    	sprintf( attrPrio , "Priority%d", i );
+		snprintf( attrName, sizeof(attrName), "Name%d", i );
+		snprintf( attrPrio, sizeof(attrPrio), "Priority%d", i );
 
     	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, sub_priority ) )
@@ -477,9 +477,9 @@ main(int argc, char *argv[])
 	}
 
 	// initialize some global expressions
-	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buffer, sizeof(buffer), "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buffer, rankCondStd);
-	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buffer, sizeof(buffer), "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file

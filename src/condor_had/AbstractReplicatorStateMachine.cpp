@@ -95,7 +95,7 @@ AbstractReplicatorStateMachine::initializeReplicationList( char* buffer )
         if( sinfulAddress == NULL ) {
             char bufArray[BUFSIZ];
 
-			sprintf( bufArray, 
+			snprintf( bufArray, sizeof(bufArray),
 					"AbstractReplicatorStateMachine::initializeReplicationList"
                     " invalid address %s\n", replicationAddress );
             utilCrucialError( bufArray );

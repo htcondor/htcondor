@@ -637,7 +637,7 @@ int main (int argc, const char **argv)
 	// if a global queue is required, query the schedds instead of submittors
 	if (global) {
 		querySchedds = true;
-		sprintf( constraint, "%s > 0 || %s > 0 || %s > 0 || %s > 0 || %s > 0", 
+		snprintf( constraint, sizeof(constraint), "%s > 0 || %s > 0 || %s > 0 || %s > 0 || %s > 0", 
 			ATTR_TOTAL_RUNNING_JOBS, ATTR_TOTAL_IDLE_JOBS,
 			ATTR_TOTAL_HELD_JOBS, ATTR_TOTAL_REMOVED_JOBS,
 			ATTR_TOTAL_JOB_ADS );
@@ -1005,7 +1005,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				}
 				exit(1);
 			}
-			sprintf (constraint, "%s == \"%s\"", ATTR_NAME, daemonname);
+			snprintf (constraint, sizeof(constraint), "%s == \"%s\"", ATTR_NAME, daemonname);
 			scheddQuery.addORConstraint (constraint);
 			scheddQuery.setLocationLookup(daemonname);
 			Q.addSchedd(daemonname);
@@ -1055,7 +1055,7 @@ processCommandLineArguments (int argc, const char *argv[])
 			i++;
 			if ((hat = strchr(argv[i],'@'))) {
 				// is the name already qualified with a UID_DOMAIN?
-				sprintf (constraint, "%s == \"%s\"", ATTR_NAME, argv[i]);
+				snprintf (constraint, sizeof(constraint), "%s == \"%s\"", ATTR_NAME, argv[i]);
 				//*hat = '\0';
 			} else {
 				// no ... add UID_DOMAIN
@@ -1064,7 +1064,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				{
 					EXCEPT ("No 'UID_DOMAIN' found in config file");
 				}
-				sprintf (constraint, "%s == \"%s@%s\"", ATTR_NAME, argv[i], uid_domain);
+				snprintf (constraint, sizeof(constraint), "%s == \"%s@%s\"", ATTR_NAME, argv[i], uid_domain);
 				free (uid_domain);
 			}
 			// dont default to 'my jobs'
@@ -1164,7 +1164,7 @@ processCommandLineArguments (int argc, const char *argv[])
 				exit(1);
 			}
 			//PRAGMA_REMIND("TJ: fix to use address to contact the schedd directly.")
-			sprintf(constraint, "%s == \"%s\"", ATTR_MY_ADDRESS, argv[i+1]);
+			snprintf(constraint, sizeof(constraint), "%s == \"%s\"", ATTR_MY_ADDRESS, argv[i+1]);
 			scheddQuery.addORConstraint(constraint);
 			i++;
 			querySchedds = true;
@@ -1723,19 +1723,19 @@ processCommandLineArguments (int argc, const char *argv[])
 
 			// add a constraint to match the jobid.
 			if (it->_proc >= 0) {
-				sprintf(constraint, ATTR_CLUSTER_ID " == %d && " ATTR_PROC_ID " == %d", it->_cluster, it->_proc);
+				snprintf(constraint, sizeof(constraint), ATTR_CLUSTER_ID " == %d && " ATTR_PROC_ID " == %d", it->_cluster, it->_proc);
 				querying_partial_clusters = true;
 			} else {
-				sprintf(constraint, ATTR_CLUSTER_ID " == %d", it->_cluster);
+				snprintf(constraint, sizeof(constraint), ATTR_CLUSTER_ID " == %d", it->_cluster);
 			}
 			Q.addOR(constraint);
 
 			// if we are doing -dag output, then also request any jobs that are inside this dag.
 			// we know that a jobid for a dagman job will always never have a proc > 0
 			if ((dash_dag || dash_batch) && it->_proc < 1) {
-				sprintf(constraint, ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
+				snprintf(constraint, sizeof(constraint), ATTR_DAGMAN_JOB_ID " == %d", it->_cluster);
 				Q.addOR(constraint);
-				sprintf(constraint, "int(split(" ATTR_JOB_BATCH_ID ", \".\")[0]) == %d", it->_cluster);
+				snprintf(constraint, sizeof(constraint), "int(split(" ATTR_JOB_BATCH_ID ", \".\")[0]) == %d", it->_cluster);
 				Q.addOR(constraint);
 			}
 		}
@@ -2983,7 +2983,7 @@ static int fnFixupWidthCallback(void* pv, int index, Formatter * fmt, const char
 		p->name_width = fmt->width; // return the actual width
 	} else if (fmt->fr == local_render_memory_usage) {
 		char buf[30];
-		int wid = sprintf(buf, fmt->printfFmt ? fmt->printfFmt : "%.1f", p->max_mem_usage);
+		int wid = snprintf(buf, sizeof(buf), fmt->printfFmt ? fmt->printfFmt : "%.1f", p->max_mem_usage);
 		fmt->width = MAX(fmt->width, wid);
 	} else {
 		// return -1; // stop iterating
@@ -3005,9 +3005,9 @@ static void fixup_std_column_widths(int max_cluster, int max_proc, int longest_n
 
 	if (first_col_is_job_id) {
 		char buf[20];
-		sprintf(buf, "%d", max_cluster);
+		snprintf(buf, sizeof(buf), "%d", max_cluster);
 		vals.cluster_width = (int)strlen(buf);
-		sprintf(buf, "%d", max_proc);
+		snprintf(buf, sizeof(buf), "%d", max_proc);
 		vals.proc_width = (int)strlen(buf);
 	}
 
@@ -3623,7 +3623,7 @@ bool print_jobs_analysis (
 				int cluster_id = 0, proc_id = 0;
 				job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
 				job->LookupInteger(ATTR_PROC_ID, proc_id);
-				sprintf(achJobId, "%d.%d", cluster_id, proc_id);
+				snprintf(achJobId, sizeof(achJobId), "%d.%d", cluster_id, proc_id);
 
 				std::string owner;
 				if (summarize_with_owner) job->LookupString(ATTR_OWNER, owner);
@@ -3643,9 +3643,9 @@ bool print_jobs_analysis (
 
 				if (it->first >= 0) {
 					if (verbose) {
-						sprintf(achAutocluster, "%d:%d/%d", it->first, cJobsToInc, cIdle);
+						snprintf(achAutocluster, sizeof(achAutocluster), "%d:%d/%d", it->first, cJobsToInc, cIdle);
 					} else {
-						sprintf(achAutocluster, "%d/%d", cJobsToInc, cIdle);
+						snprintf(achAutocluster, sizeof(achAutocluster), "%d/%d", cJobsToInc, cIdle);
 					}
 				} else {
 					achAutocluster[0] = 0;
@@ -3658,7 +3658,7 @@ bool print_jobs_analysis (
 				const char * fmt = "%-13s %-12s %12d %11d %11s %10d %9d %s\n";
 
 				achRunning[0] = 0;
-				if (cRunning) { sprintf(achRunning, "%d/", cRunning); }
+				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
 				sprintf(achRunning+strlen(achRunning), "%d", ac.machinesRunningUsersJobs);
 
 				printf(fmt, achJobId, achAutocluster,

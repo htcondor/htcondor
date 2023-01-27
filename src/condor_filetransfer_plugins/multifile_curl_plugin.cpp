@@ -492,7 +492,7 @@ MultiFileCurlPlugin::DownloadFile( const std::string &url, const std::string &lo
 
     // If we are attempting to resume a download, set additional flags
     if( partial_bytes ) {
-        sprintf( partial_range, "%lu-", partial_bytes );
+        snprintf( partial_range, sizeof(partial_range), "%lu-", partial_bytes );
         r = curl_easy_setopt( _handle, CURLOPT_RANGE, partial_range );
 		if (r != CURLE_OK) {
 			fprintf(stderr, "Can't setopt CURLOPT_RANGE\n");

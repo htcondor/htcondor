@@ -1689,7 +1689,7 @@ void Accountant::SetAttributeInt(const std::string& Key, const std::string& Attr
     AcctLog->AppendLog(log);
   }
   char value[50];
-  sprintf(value,"%d",AttrValue);
+  snprintf(value,sizeof(value),"%d",AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }
@@ -1706,7 +1706,7 @@ void Accountant::SetAttributeFloat(const std::string& Key, const std::string& At
   }
   
   char value[255];
-  sprintf(value,"%f",AttrValue);
+  snprintf(value,sizeof(value),"%f",AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }

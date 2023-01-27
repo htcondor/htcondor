@@ -243,7 +243,7 @@ void ProcArg(const char* arg)
 		{
 			ClassAd	*ad;
 			char constraint[100];
-			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
+			snprintf(constraint, sizeof(constraint), "%s == %d", ATTR_CLUSTER_ID, cluster);
 			int firstTime = 1;
 			while((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 				ad->LookupInteger(ATTR_PROC_ID, proc);
@@ -291,7 +291,7 @@ void ProcArg(const char* arg)
 		ClassAd	*ad;
 		int firstTime = 1;
 		
-		sprintf(constraint, "%s == \"%s\"", ATTR_OWNER, arg);
+		snprintf(constraint, sizeof(constraint), "%s == \"%s\"", ATTR_OWNER, arg);
 
 		while ((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);

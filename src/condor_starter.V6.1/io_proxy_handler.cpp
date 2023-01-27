@@ -116,9 +116,9 @@ void IOProxyHandler::handle_cookie_request( ReliSock *r, char *line )
 	}
 
 	if(got_cookie) {
-		sprintf(line,"0");
+		snprintf(line,CHIRP_LINE_MAX,"0");
 	} else {
-		sprintf(line,"%d",CHIRP_ERROR_NOT_AUTHENTICATED);
+		snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NOT_AUTHENTICATED);
 	}
 
 	r->put_line_raw(line);
@@ -274,7 +274,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(strchr(flags_string,'a')) flags |= O_APPEND;
 
 		result = REMOTE_CONDOR_open(path,(open_flags_t)flags,mode);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 		// Stat stuff
@@ -293,7 +293,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 	} else if(m_enable_files && sscanf_chirp(line,"close %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_close(fd);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"lseek %d %d %d",&fd,&offset,&whence)) {
@@ -322,37 +322,37 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			result = CHIRP_ERROR_INVALID_REQUEST;
 		}
 
-		sprintf(line,"%d",result);
+		snprintf(line,CHIRP_LINE_MAX,"%d",result);
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"unlink %s",path)==1) {
 
 		result = REMOTE_CONDOR_unlink(path);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"rename %s %s",path,newpath)==2) {
 
 		result = REMOTE_CONDOR_rename(path,newpath);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"mkdir %s %d",path,&mode)==2) {
 
 		result = REMOTE_CONDOR_mkdir(path,mode);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"rmdir %s",path)==1) {
 
 		result = REMOTE_CONDOR_rmdir(path);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"fsync %d",&fd)==1) {
 
 		result = REMOTE_CONDOR_fsync(fd);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"lookup %s",path)==1) {
@@ -360,11 +360,11 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		result = REMOTE_CONDOR_get_file_info_new(path,url);
 		if(result==0) {
 			dprintf(D_SYSCALLS,"Filename %s maps to url %s\n",path,url);
-			sprintf(line,"%u",(unsigned int)strlen(url));
+			snprintf(line,CHIRP_LINE_MAX,"%u",(unsigned int)strlen(url));
 			r->put_line_raw(line);
 			r->put_bytes_raw(url,strlen(url));
 		} else {
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 		}
 
@@ -392,23 +392,23 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 				dprintf(D_ALWAYS, "Failed to parse line to a ClassAd expression: %s\n", expr);
 			}
 		}
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 	} else if(m_enable_updates && sscanf_chirp(line,"set_job_attr %s %s",name,expr)==2) {
 
 		result = REMOTE_CONDOR_set_job_attr(name,expr);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 	} else if((m_enable_updates) && sscanf_chirp(line,"get_job_attr %s",name)==1) {
 
 		char *recv_expr = NULL;
 		result = REMOTE_CONDOR_get_job_attr(name,recv_expr);
 		if(result==0) {
-			sprintf(line,"%u",(unsigned int)strlen(recv_expr));
+			snprintf(line,CHIRP_LINE_MAX,"%u",(unsigned int)strlen(recv_expr));
 			r->put_line_raw(line);
 			r->put_bytes_raw(recv_expr,strlen(recv_expr));
 		} else {
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 		}	
 		free( recv_expr );
@@ -418,17 +418,17 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		std::unique_ptr<classad::ExprTree> expr = m_shadow->getDelayedUpdate(name);
 		if (expr.get()) {
 			unparser.Unparse(value, expr.get());
-			sprintf(line,"%u",(unsigned int)value.size());
+			snprintf(line,CHIRP_LINE_MAX,"%u",(unsigned int)value.size());
 			r->put_line_raw(line);
 			r->put_bytes_raw(value.c_str(),value.size());
 		} else {
-			sprintf(line,"%d",convert(-1,ENOENT));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(-1,ENOENT));
 			r->put_line_raw(line);
 		}
 	} else if(m_enable_updates && sscanf_chirp(line,"constrain %s",expr)==1) {
 
 		result = REMOTE_CONDOR_constrain(expr);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"read %d %d",&fd,&length)==2) {
@@ -436,14 +436,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
 			result = REMOTE_CONDOR_read(fd,buffer,length);
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 			if(result>0) {
 				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
 	
 	} else if(m_enable_files && sscanf_chirp(line,"write %d %d",&fd,&length)==2) {
@@ -453,13 +453,13 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			result = r->get_bytes_raw(buffer,length);
 			if(result==length) {
 				result = REMOTE_CONDOR_write(fd,buffer,length);
-				sprintf(line,"%d",convert(result,errno));
+				snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			} else {
-				sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
+				snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_INVALID_REQUEST);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
 		r->put_line_raw(line);
 		
@@ -475,7 +475,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		ASSERT(ad);
 
 		result = REMOTE_CONDOR_ulog( ad );
-		sprintf(line, "%d", convert(result,errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result,errno));
 		r->put_line_raw(line);
 		delete ad;
 
@@ -484,14 +484,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(length);
 		if(buffer) {
 			result = REMOTE_CONDOR_pread(fd,buffer,length,offset);
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 			if(result > 0) {
 				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
@@ -502,13 +502,13 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			result = r->get_bytes_raw(buffer,length);
 			if(result == length) {
 				result = REMOTE_CONDOR_pwrite(fd,buffer,length,offset);
-				sprintf(line,"%d",convert(result,errno));
+				snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			} else {
-				sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
+				snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_INVALID_REQUEST);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
 		r->put_line_raw(line);
 		
@@ -519,14 +519,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		if(buffer) {
 			result = REMOTE_CONDOR_sread(fd,buffer,length,offset,
 										 stride_length,stride_skip);
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 			if(result > 0) {
 				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
@@ -539,20 +539,20 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 			if(result==length) {
 				result = REMOTE_CONDOR_swrite(fd,buffer,length,offset,
 											  stride_length,stride_skip);
-				sprintf(line,"%d",convert(result,errno));
+				snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			} else {
-				sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
+				snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_INVALID_REQUEST);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 		}
 		r->put_line_raw(line);
 		
 	} else if(m_enable_files && sscanf_chirp(line,"rmall %s", &path) == 1) {
 
 		result = REMOTE_CONDOR_rmall(path);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"fstat %d", &fd) == 1) {
@@ -560,14 +560,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_fstat(fd, buffer);
-			sprintf(line,"%d",convert(result,errno));
+			snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 			r->put_line_raw(line);
 			if(result>=0) {
 				r->put_bytes_raw(buffer,strlen(buffer));
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
@@ -576,40 +576,40 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_fstatfs(fd, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result>=0) {
 				r->put_bytes_raw(buffer,strlen(buffer));
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
 	} else if(m_enable_files && sscanf_chirp(line,"fchown %d %d %d", &fd, &uid, &gid) == 3) {
 
 		result = REMOTE_CONDOR_fchown(fd, uid, gid);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"fchmod %d %d", &fd, &mode) == 2) {
 
 		result = REMOTE_CONDOR_fchmod(fd, mode);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"ftruncate %d %d", &fd, &length) == 2) {
 
 		result = REMOTE_CONDOR_ftruncate(fd, length);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"getfile %s", &path) == 1) {
 		
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getfile(path, &buffer);
-		sprintf(line,"%d",convert(result,errno));
+		snprintf(line,CHIRP_LINE_MAX,"%d",convert(result,errno));
 		r->put_line_raw(line);
 		if(result > 0) {
 			r->put_bytes_raw(buffer,result);
@@ -621,7 +621,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		// First check if putfile is possible
 		result = REMOTE_CONDOR_putfile(path, mode, length);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 		if ((length > 0) && (result >= 0)) {
@@ -631,11 +631,11 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 				// Now actually putfile
 				result = REMOTE_CONDOR_putfile_buffer(buffer, length);
-				sprintf(line, "%d", convert(result, errno));
+				snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 				r->put_line_raw(line);
 				free(buffer);
 			} else {
-				sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+				snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 				r->put_line_raw(line);
 			}
 		}
@@ -644,7 +644,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getlongdir(path, buffer);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 		if(result>0) {
 			r->put_bytes_raw(buffer,strlen(buffer));
@@ -654,7 +654,7 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_getdir(path, buffer);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 		if(result>0) {
 			r->put_bytes_raw(buffer,strlen(buffer));
@@ -666,14 +666,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*)malloc(length);
 		if(buffer) {
 			result = REMOTE_CONDOR_whoami(length, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result>0) {
 				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 	} else if(m_enable_files && sscanf_chirp(line,"whoareyou %s %d", &path, &length) == 2) {
@@ -681,34 +681,34 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*)malloc(length);
 		if(buffer) {
 			result = REMOTE_CONDOR_whoareyou(path, length, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result>0) {
 				r->put_bytes_raw(buffer,result);
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
 	} else if(m_enable_files && sscanf_chirp(line,"link %s %s", &path, &newpath) == 2) {
 
 		result = REMOTE_CONDOR_link(path, newpath);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"symlink %s %s", &path, &newpath) == 2) {
 
 		result = REMOTE_CONDOR_symlink(path, newpath);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"readlink %s %d", &path, &length) == 2) {
 
 		char *buffer = NULL;
 		result = REMOTE_CONDOR_readlink(path, length, &buffer);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 		if(result>0) {
 			r->put_bytes_raw(buffer,result);
@@ -720,14 +720,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_statfs(path, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result>=0) {
 				r->put_bytes_raw(buffer,strlen(buffer));
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
@@ -736,14 +736,14 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_stat(path, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result==0) {
 				r->put_bytes_raw(buffer,strlen(buffer));
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
@@ -752,59 +752,59 @@ void IOProxyHandler::handle_standard_request( ReliSock *r, char *line )
 		char *buffer = (char*) malloc(1024);
 		if(buffer) {
 			result = REMOTE_CONDOR_lstat(path, buffer);
-			sprintf(line, "%d", convert(result, errno));
+			snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 			r->put_line_raw(line);
 			if(result>=0) {
 				r->put_bytes_raw(buffer,strlen(buffer));
 			}
 			free(buffer);
 		} else {
-			sprintf(line,"%d",CHIRP_ERROR_NO_MEMORY);
+			snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_NO_MEMORY);
 			r->put_line_raw(line);
 		}
 
 	} else if(m_enable_files && sscanf_chirp(line,"access %s %d", &path, &mode) == 2) {
 		
 		result = REMOTE_CONDOR_access(path, mode);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"chmod %s %d", &path, &mode) == 2) {
 
 		result = REMOTE_CONDOR_chmod(path, mode);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"chown %s %d %d", &path, &uid, &gid) == 3) {
 
 		result = REMOTE_CONDOR_chown(path, uid, gid);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"lchown %s %d %d", &path, &uid, &gid) == 3) {
 
 		result = REMOTE_CONDOR_lchown(path, uid, gid);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"truncate %s %d", &path, &length) == 2) {
 
 		result = REMOTE_CONDOR_truncate(path, length);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_files && sscanf_chirp(line,"utime %s %d %d", &path, &actime, &modtime) == 3){
 		
 		result = REMOTE_CONDOR_utime(path, actime, modtime);
-		sprintf(line, "%d", convert(result, errno));
+		snprintf(line, CHIRP_LINE_MAX, "%d", convert(result, errno));
 		r->put_line_raw(line);
 
 	} else if(m_enable_updates && strncmp(line,"version",7)==0) {
-	    sprintf(line,"%d",CHIRP_VERSION);
+	    snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_VERSION);
 	    r->put_line_raw(line);
 	}
 	else {
-		sprintf(line,"%d",CHIRP_ERROR_INVALID_REQUEST);
+		snprintf(line,CHIRP_LINE_MAX,"%d",CHIRP_ERROR_INVALID_REQUEST);
 		r->put_line_raw(line);
 	}
 
