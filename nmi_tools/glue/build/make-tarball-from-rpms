@@ -90,7 +90,7 @@ else
 fi
 
 # Extract external RPMs
-for path in ~condorauto/externals/$REPO_VERSION/*.rpm; do
+for path in /usr/local/condor/externals/$REPO_VERSION/*.rpm; do
     file=${path##*/}
     echo ======= $file =======
     echo $file >> tarball/Manifest.txt

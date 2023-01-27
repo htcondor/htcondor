@@ -100,7 +100,7 @@ else
 fi
 
 # Extract external debs
-for path in ~condorauto/externals/$REPO_VERSION/*.deb; do
+for path in /usr/local/condor/externals/$REPO_VERSION/*.deb; do
     file=${path##*/}
     echo ======= $file =======
     extract_deb $path tarball

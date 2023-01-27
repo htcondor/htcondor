@@ -181,8 +181,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Include packages for tarball in the image.
-chmod 0755 ~condorauto
-externals_dir=~condorauto/"externals/$REPO_VERSION"
+externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     (cd "$externals_dir";
