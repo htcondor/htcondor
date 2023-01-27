@@ -504,9 +504,9 @@ if( NOT WINDOWS)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
-	check_type_exists("struct inotify_event" "sys/inotify.h" HAVE_INOTIFY)
-	check_type_exists("struct ifconf" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
-	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
+	check_struct_has_member("struct inotify_event" "len" "sys/inotify.h" HAVE_INOTIFY)
+	check_struct_has_member("struct ifconf" "ifc_len" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
+	check_struct_has_member("struct ifreq" "ifr_name" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
 	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
