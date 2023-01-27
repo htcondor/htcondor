@@ -21,7 +21,10 @@ extract_deb() {
     what=$1
     where=$2
     ar x $what
-    if [ -f data.tar.xz ]; then
+    if [ -f data.tar.gz ]; then
+        (cd $where; tar xfpz ../data.tar.gz)
+        rm data.tar.gz control.tar.gz
+    elif [ -f data.tar.xz ]; then
         (cd $where; tar xfpJ ../data.tar.xz)
         rm data.tar.xz control.tar.xz
     elif [ -f data.tar.zst ]; then
@@ -97,7 +100,7 @@ else
 fi
 
 # Extract external debs
-for path in ~condorauto/"externals/$REPO_VERSION/*.deb"; do
+for path in ~condorauto/externals/$REPO_VERSION/*.deb; do
     file=${path##*/}
     echo ======= $file =======
     extract_deb $path tarball
