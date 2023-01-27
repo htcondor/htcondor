@@ -91,6 +91,48 @@ fi
 NL="
 "
 
+# These two functions depend on some variables that are set in the loop below,
+# but they do not need to be defined multiple times so they are outside of the
+# loop.
+querycred() {
+    STORENAME="$1"
+    verbose "Checking if $@ credentials exist"
+    STOREMSG="`condor_store_cred query-oauth -s "$@" >$STOREOUT 2>&1`"
+    case $? in
+        0) ;;
+        1)  if [ -n "$STOREMSG" ]; then
+                verbose "$STOREMSG"
+            fi
+            return 1
+            ;;
+        2) fatal "Credentials exist that do not match the request.
+They can be removed by
+  condor_store_cred delete-oauth -s $STORENAME
+but make sure no other job is using them."
+            ;;
+        *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
+    esac
+}
+
+storecred() {
+    STORENAME="$1"
+
+    if $SHOWSTORING; then
+        echo "Storing condor credentials for $STORENAME" >&2
+    fi
+    (
+    echo "{"
+    if $STOREVAULTTOKEN; then
+        echo "  \"vault_token\": \"$CRED\","
+    fi
+    echo "  \"vault_url\": \"$VAULTURL\""
+    echo "}"
+    )|condor_store_cred add-oauth -s "$@" -i - >$STOREOUT
+    if [ $? != 0 ]; then
+        fatal "Failed to store condor credentials for $STORENAME"
+    fi
+}
+
 for REQUEST; do 
     SHOWSTORING=false
     if [ -n "$VERBOSE" ]; then
@@ -125,7 +167,6 @@ for REQUEST; do
             handle=*)
                 HANDLE="$VAL"
                 HANDLESERVICE="${SERVICE}_$HANDLE"
-                HANDLESTOREOPTS=("-s" "$HANDLESERVICE" "${HANDLESTOREOPTS[@]}")
                 ;;
             scopes=*)
                 HANDLESTOREOPTS+=("-S" "$VAL")
@@ -137,73 +178,86 @@ for REQUEST; do
                 ;;
         esac
     done
-    STOREOPTS=("-s" "$SERVICE" "${STOREOPTS[@]}")
-    verbose "Checking if ${STOREOPTS[@]} credentials exist"
-    STOREMSG="`condor_store_cred query-oauth "${STOREOPTS[@]}" >$STOREOUT 2>&1`"
-    case $? in
-        0) ;;
-        1)  if [ -n "$STOREMSG" ]; then
-                verbose "$STOREMSG"
-            fi
-            if [ -f "$VTOKEN-$SERVICE" ]; then
-                verbose "Removing $VTOKEN-$SERVICE because there are no $SERVICE credentials stored"
-                rm -f "$VTOKEN-$SERVICE"
-            fi;;
-        2) fatal "Credentials exist that do not match the request.
-They can be removed by
-  condor_store_cred delete-oauth -s $SERVICE
-but make sure no other job is using them."
-            ;;
-        *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
-    esac
+
+
     if [ -n "$BTOKEN" ]; then
         OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
     fi
     OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN-$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
-    verbose "Attempting to get tokens for $SERVICE"
-    # First attempt to get tokens quietly without oidc
-    CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
-    if [ $? != 0 ]; then
-        # OIDC authentication probably needed, so remove -q to tell the user
-        #  what is happening
-        SHOWSTORING=true
-        newlineifneeded
-        echo "Authentication needed for $SERVICE" >&2
-        CRED="`htgettoken "${OPTS[@]}" $VERBOSE`"
+
+    # This next section may need to be done twice if it turns out that
+    # there is a valid $VTOKEN-$SERVICE vault token but there is no 
+    # corresponding credential stored in credd.  The query of credd 
+    # may require an access token, however, so the query can't be done until
+    # after the first time htgettoken runs.
+    TRIEDAGAIN=false
+    while true; do 
+        verbose "Attempting to get tokens for $SERVICE"
+        # First attempt to get tokens quietly without oidc.
+        # If a valid vaulttokeninfile exists, it will not generate a new vault
+        # token; the 28 day vault token will only be created (in stdout) if the
+        # vaulttokeninfile is not there or expired.
+        CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
         if [ $? != 0 ]; then
-            fatal "htgettoken failed"
+            # OIDC authentication probably needed, so remove -q to tell the user
+            #  what is happening
+            SHOWSTORING=true
+            newlineifneeded
+            echo "Authentication needed for $SERVICE" >&2
+            CRED="`htgettoken "${OPTS[@]}" $VERBOSE`"
+            if [ $? != 0 ]; then
+                fatal "htgettoken failed"
+            fi
         fi
-    fi
 
-    if [ -n "$BTOKEN" ] && [ -f $BTOKEN-$SERVICE ]; then
-        verbose "Copying bearer token to $BTOKEN"
-        # Copy bearer token to $BTOKEN atomically
-        TMPFILE="`mktemp $BTOKEN.XXXXXXXXXX`"
-        cat $BTOKEN-$SERVICE >$TMPFILE
-        mv $TMPFILE $BTOKEN
-    fi
+        if [ -n "$BTOKEN" ] && [ -f $BTOKEN-$SERVICE ]; then
+            verbose "Copying bearer token to $BTOKEN"
+            # Copy bearer token to $BTOKEN atomically
+            TMPFILE="`mktemp $BTOKEN.XXXXXXXXXX`"
+            cat $BTOKEN-$SERVICE >$TMPFILE
+            mv $TMPFILE $BTOKEN
+        fi
 
-    STOREVAULTTOKEN=true
-    VAULTURL=""
-    CREDLINES="`echo "$CRED"|wc -l`"
-    case $CREDLINES in
-        1)  # No new vault token was generated
-            # There is only a vault url, which we will not need
-            if [ -n "$HANDLE" ]; then
-                # However, there is a handle, so we need to use the main vault
-                # token to calculate an associated vault url.
-                CRED="`< $VTOKEN-$SERVICE`"
-                STOREVAULTTOKEN=false
-            else
-                # Nothing to store
-                continue
-            fi;;
-        2)  # First line is new vault token, second line is vault url
-            VAULTURL="`echo "$CRED"|(read X; read L; echo "$L")`"
-            CRED="`echo "$CRED"|(read L; echo "$L")`"
-            ;;
-        *)  fatal "Unexpected number of stdout lines from htgettoken: $CREDLINES";;
-    esac
+        STOREVAULTTOKEN=false
+        VAULTURL=""
+        CREDLINES="`echo "$CRED"|wc -l`"
+        case $CREDLINES in
+            1)  # No new vault token was generated
+                # There is only a vault url, which we will not need
+
+                if $TRIEDAGAIN; then
+                    fatal "No new vault token after second try; logic error"
+                fi
+                if ! querycred $SERVICE "${STOREOPTS[@]}"; then
+                    verbose "Removing $VTOKEN-$SERVICE because there are no $SERVICE credentials stored"
+                    rm -f "$VTOKEN-$SERVICE"
+                    TRIEDAGAIN=true
+                    continue
+                fi
+
+                if [ -n "$HANDLE" ]; then
+                    # However, there is a handle, so we need to use the main
+                    # vault token to calculate the vault url associated with
+                    # the reduced scopes and audience of the handle.
+                    CRED="`< $VTOKEN-$SERVICE`"
+                else
+                    # Nothing to store
+                    CRED=""
+                fi
+                ;;
+            2)  # First line is new long-lived vault token, second line is vault url
+                VAULTURL="`echo "$CRED"|(read X; read L; echo "$L")`"
+                CRED="`echo "$CRED"|(read L; echo "$L")`"
+                STOREVAULTTOKEN=true
+                ;;
+            *)  fatal "Unexpected number of stdout lines from htgettoken: $CREDLINES";;
+        esac
+        break
+    done
+
+    if [ -z "$CRED" ]; then
+        continue
+    fi
 
     # $CRED now contains a vault token.  It is either a new, long duration
     # vault token which needs to be exchanged for a shorter duration one, or 
@@ -227,6 +281,7 @@ but make sure no other job is using them."
         # properly in combination with --showbearerurl.
         TOKENOUT="$BTOKEN-${SERVICE}_$$"
     fi
+    verbose "Weakening tokens for ${HANDLESERVICE:-SERVICE}"
     HANDLEURL="`echo "$CRED"|htgettoken "${HANDLEOPTS[@]}" -o $TOKENOUT --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" --showbearerurl ${VERBOSE:--q}`"
     RET="$?"
     if [ -z "$HANDLE" ]; then
@@ -242,35 +297,12 @@ but make sure no other job is using them."
     mv $TMPFILE $VTOKEN
 
     if $STOREVAULTTOKEN; then
-        if $SHOWSTORING; then
-            echo "Storing condor credentials for $SERVICE" >&2
-        fi
-        (
-        echo "{"
-        echo "  \"vault_token\": \"$CRED\","
-        echo "  \"vault_url\": \"$VAULTURL\""
-        echo "}"
-        )|condor_store_cred add-oauth "${STOREOPTS[@]}" -i - >$STOREOUT
-        if [ $? != 0 ]; then
-            fatal "Failed to store condor credentials for $SERVICE"
-        fi
+        storecred $SERVICE "${STOREOPTS[@]}"
     fi
 
     if [ -n "$HANDLE" ]; then
-        if $SHOWSTORING; then
-            echo "Storing condor credentials for $HANDLESERVICE" >&2
-        fi
-        (
-        echo "{"
-        if $STOREVAULTTOKEN; then
-            echo "  \"vault_token\": \"$CRED\","
-        # else credmon will read the vault_token from the $SERVICE
-        fi
-        echo "  \"vault_url\": \"$HANDLEURL\""
-        echo "}"
-        )|condor_store_cred add-oauth "${HANDLESTOREOPTS[@]}" -i - >$STOREOUT
-        if [ $? != 0 ]; then
-            fatal "Failed to store condor credentials for $HANDLESERVICE"
-        fi
+        querycred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
+        VAULTURL="$HANDLEURL"
+        storecred $HANDLESERVICE "${HANDLESTOREOPTS[@]}"
     fi
 done
