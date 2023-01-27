@@ -700,7 +700,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 	printHeader(); // this has the side effect of setting the projection for the default output
 
 	ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
+	if (constraintExpr) { ad.Insert(ATTR_REQUIREMENTS, constraintExpr->Copy()); }
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing

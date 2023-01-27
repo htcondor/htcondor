@@ -70,6 +70,11 @@ Bugs Fixed:
   (Bionic Beaver).
   :jira:`1548`
 
+- Fixed a bug where the *condor_history* tool would segmentation fault
+  when doing a remote query with a constraint expression or specified
+  job id's.
+  :jira:`1564`
+
 .. _lts-version-history-1001:
 
 Version 10.0.1
