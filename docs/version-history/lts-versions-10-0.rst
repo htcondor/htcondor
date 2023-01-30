@@ -22,7 +22,7 @@ New Features:
 
 - Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
   a transfer output remap to create directories in allowed places if they
-  do not exist at tranfser output time.
+  do not exist at transfer output time.
   :jira:`1480`
 
 - Fixed a bug where **condor_now** could not use the resources freed by
