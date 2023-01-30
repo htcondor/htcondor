@@ -63,9 +63,9 @@ Licensed under the Apache License, Version 2.0.'
 # built documents.
 #
 # The short X.Y version.
-version = '10.3'
+version = '10.4'
 # The full version, including alpha/beta/rc tags.
-release = '10.3.0'
+release = '10.4.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2023
