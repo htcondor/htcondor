@@ -33,6 +33,12 @@ Release Notes:
 
 New Features:
 
+- When HTCondor has root, and is running with cgroups, the cgroup the job is
+  in is writeable by the job. This allows the job (perhaps a glidein)
+  to sub-divide the resource limits it has been given, and allocate
+  subsets of those to its child processes.
+  :jira:`1496`
+
 - Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
   megabytes that are used in the docker image cache.
   :jira:`1494`
@@ -41,7 +47,7 @@ New Features:
   now includes the ``https_proxy`` environment variable, and the phrasing
   has been changed to avoid suggesting that the plug-in respected it (or
   ``http_proxy``).
-  :jira:`1471`
+  :jira:`1473`
 
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   no longer tries to mount the various cgroup filesystems.  We assume that
@@ -81,7 +87,7 @@ Bugs Fixed:
 - Fixed bugs in how the *condor_collector* generated its own CA and host
   certificate files.
   Configuration parameter ``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` now
-  defaults to ``True`` on unix platorms.
+  defaults to ``True`` on Unix platforms.
   Configuration parameters ``AUTH_SSL_SERVER_CERTFILE`` and 
   ``AUTH_SSL_SERVER_KEYFILE`` can now be a list of files. The first pair of
   files with valid credentials is used.
