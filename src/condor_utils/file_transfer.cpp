@@ -4441,6 +4441,8 @@ FileTransfer::computeFileList(
 					std::string globalJobID;
 					jobAd.LookupString(ATTR_GLOBAL_JOB_ID, globalJobID);
 					ASSERT(! globalJobID.empty());
+					std::replace( globalJobID.begin(), globalJobID.end(),
+					    '#', '_' );
 					formatstr_cat( local_output_url, "%s/%.4d/",
 					    globalJobID.c_str(),
 					    this->checkpointNumber

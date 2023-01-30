@@ -1121,8 +1121,9 @@ class TestCheckpointDestination:
             projection=["CheckpointDestination", "GlobalJobID"],
         )
         jobAd = result[0]
+        globalJobID = jobAd["globalJobID"].replace('#', '_')
         if jobAd.get("CheckpointDestination") is not None:
-            assert (test_dir / jobAd["globalJobID"]).is_dir()
+            assert (test_dir / globalJobID).is_dir()
 
 
     def test_checkpoint_structure(self,
@@ -1241,7 +1242,8 @@ class TestCheckpointDestination:
             assert(not spoolDirectory.exists())
         else:
             prefix = prefix[prefix.find("://") + 3:]
-            prefix = prefix + "/" + jobAd["GlobalJobID"]
+            globalJobID = jobAd["GlobalJobID"].replace('#', '_')
+            prefix = prefix + "/" + globalJobID
             prefix = Path(prefix)
 
             checkpointNumber = int(jobAd["CheckpointNumber"])

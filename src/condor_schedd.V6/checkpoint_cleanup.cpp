@@ -3,6 +3,7 @@
 #include "condor_config.h"
 
 #include <filesystem>
+#include <algorithm>
 
 #include "spooled_job_files.h"
 #include "scheduler.h"
@@ -113,7 +114,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 		dprintf( D_ALWAYS, "%s\n", error.c_str() );
 		return false;
 	}
-
+	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
 
 	// We need this to construct the MANIFEST file's path.
 	std::string spoolPath;
