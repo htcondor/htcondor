@@ -57,6 +57,7 @@ static bool tokenize_multiple_calls(void);
 static bool tokenize_end(void);
 static bool tokenize_empty(void);
 static bool tokenize_empty_delimiter(void);
+static bool range_base_string_token_iterator();
 static bool escape_chars_length_1();
 static bool escape_chars_empty();
 static bool escape_chars_multiple();
@@ -94,6 +95,7 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(tokenize_end);
 	driver.register_function(tokenize_empty);
 	driver.register_function(tokenize_empty_delimiter);
+	driver.register_function(range_base_string_token_iterator);
 	driver.register_function(escape_chars_length_1);
 	driver.register_function(escape_chars_empty);
 	driver.register_function(escape_chars_multiple);
@@ -765,6 +767,21 @@ static bool tokenize_empty_delimiter() {
 		FAIL;
 	}
 	PASS;
+}
+
+static bool range_base_string_token_iterator() {
+	emit_test("Test range-based StringTokenIterator.");
+	const char *in = "aa bb c dd    ee ff ,,, gg";
+	std::array<std::string,7>  expected {"aa", "bb", "c", "dd", "ee", "ff", "gg"};
+
+	bool passed = std::equal(expected.begin(), expected.end(),
+			StringTokenIterator(in).begin(),
+			StringTokenIterator(in).end());
+	if (passed) {
+		PASS;
+	} else {
+		FAIL;
+	}
 }
 
 static bool escape_chars_length_1() {

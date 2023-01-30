@@ -750,8 +750,10 @@ int StringTokenIterator::next_token(int & length)
 
 	// scan for next delimiter or \0
 	while (str[ix] && !strchr(delims, str[ix])) ++ix;
-	if (ix <= ixNext)
+	if (ix <= ixNext) {
+		pastEnd = true;
 		return -1;
+	}
 
 	length = ix-ixNext;
 	int ixStart = ixNext;
