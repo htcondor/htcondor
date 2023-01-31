@@ -30,6 +30,7 @@
 #include "unit_test_utils.h"
 
 #include "stl_string_utils.h"
+#include <array>
 
 static bool test_sprintf_string(void);
 static bool test_sprintf_MyString(void);
