@@ -782,7 +782,7 @@ void MapFile::AddEntry(CanonicalMapList* list, uint32_t regex_opts, const char *
 		CanonicalMapRegexEntry * rxme = new CanonicalMapRegexEntry;
 		int errcode; PCRE2_SIZE erroffset;
 		if ( ! rxme->add(principal, regex_opts, canon, &errcode, &erroffset)) {
-			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' -- PCRE2 error code %d.  this entry will be ignored.\n", principal, errcode);
+			dprintf(D_ALWAYS, "ERROR: Error compiling expression '%s' at offset %zu -- PCRE2 error code %d.  this entry will be ignored.\n", principal, erroffset, errcode);
 			delete rxme;
 		} else {
 			list->append(rxme);
