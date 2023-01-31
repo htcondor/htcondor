@@ -55,6 +55,25 @@ New Features:
   deems appropriate.
   :jira:`1528`
 
+- Added capabilities for per job run instance history recording. Where during
+  the *condor_shadow* daemon's shutdown it will write the current job ad
+  to a file designated by :macro:`JOB_EPOCH_HISTORY` and/or a directory
+  specified by :macro:`JOB_EPOCH_HISTORY_DIR`. These per run instance
+  job ad records can be read via *condor_history* using the new ``-epochs``
+  option. This behavior is not turned on by default. Setting either of the
+  job epoch location config knobs above will turn on this behavior.
+  :jira:`1104`
+
+- Added new *condor_history* ``-search`` option that takes a filename
+  to find all matching condor time rotated files ``filename.YYYYMMDDTHHMMSS``
+  to read from instead of using any default files.
+  :jira:`1514`
+
+- Added new *condor_history* ``-directory`` option to use a history sources
+  alternative configured directory knob such as :macro:`JOB_EPOCH_HISTORY_DIR`
+  to search for history.
+  :jira:`1514`
+
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
   to 128k, if it was below this.  This improves the scalability of the
