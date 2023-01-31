@@ -38,6 +38,15 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
+- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+  tarballs for Enterprise Linux 8 and 9.
+  :jira:`1562`
+
+- VM universe jobs are now configured to pass through the host CPU model
+  to the VM. This change enables VMs with newer kernels (such as Enterprise
+  Linux 9) to operate in VM Universe.
+  :jira:`1559`
+
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
@@ -60,6 +69,11 @@ Bugs Fixed:
 - Fixed issue when HTCondor could not be installed on Ubuntu 18.04
   (Bionic Beaver).
   :jira:`1548`
+
+- Fixed a bug where the *condor_history* tool would segmentation fault
+  when doing a remote query with a constraint expression or specified
+  job id's.
+  :jira:`1564`
 
 .. _lts-version-history-1001:
 

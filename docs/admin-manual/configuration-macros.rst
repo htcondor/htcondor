@@ -11059,6 +11059,13 @@ has.
     value. Negative values inhibit sending data to Ganglia. The default
     value is 60.
 
+:macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
+    An integer value representing the minimum DMAX value for all metrics.
+    Where DMAX is the number number of seconds without updating that
+    a metric will be kept before deletion. This value defaults to ``86400``
+    which is equivalent to 1 day. This value will be overridden by a
+    specific metric defined ``Lifetime`` value.
+
 :macro-def:`GANGLIAD_VERBOSITY`
     An integer that specifies the maximum verbosity level of metrics to
     be published to Ganglia. Basic metrics have a verbosity level of 0,

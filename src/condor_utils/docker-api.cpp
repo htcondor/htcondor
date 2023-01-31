@@ -47,8 +47,8 @@ int DockerAPI::pruneContainers() {
 	args.AppendArg( "-f");
 	args.AppendArg( "--filter=label=org.htcondorproject=True"); // must match label in create
 
-	MyString displayString;
-	args.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Running: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -401,8 +401,8 @@ int DockerAPI::createContainer(
 
 	runArgs.AppendArgsFromArgList( args );
 
-	MyString displayString;
-	runArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	runArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Attempting to run: %s\n", displayString.c_str() );
 
 	//
@@ -466,8 +466,8 @@ int DockerAPI::startContainer(
 	startArgs.AppendArg("-a"); // start in Attached mode
 	startArgs.AppendArg(containerName);
 
-	MyString displayString;
-	startArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	startArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
@@ -513,8 +513,8 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArgsFromArgList(arguments);
 
 
-	MyString displayString;
-	execArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	execArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "execing: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
@@ -558,8 +558,8 @@ int DockerAPI::copyToContainer(const std::string & srcPath, // path on local fil
 	dest += containerPath;
 	args.AppendArg(dest);
 
-	MyString displayString;
-	args.GetArgsStringForLogging(&displayString);
+	std::string displayString;
+	args.GetArgsStringForLogging(displayString);
 	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
 
 	MyPopenTimer pgm;
@@ -605,8 +605,8 @@ int DockerAPI::copyFromContainer(const std::string &container, // container to c
 
 	args.AppendArg(destPath);
 
-	MyString displayString;
-	args.GetArgsStringForLogging(&displayString);
+	std::string displayString;
+	args.GetArgsStringForLogging(displayString);
 	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
 
 
@@ -669,8 +669,8 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 		}
 
 		infoArgs.AppendArg( "info" );
-		MyString displayString;
-		infoArgs.GetArgsStringForLogging( & displayString );
+		std::string displayString;
+		infoArgs.GetArgsStringForLogging( displayString );
 
 		MyPopenTimer pgm2;
 		if (pgm2.start_program(infoArgs, true, NULL, false) < 0) {
@@ -707,8 +707,8 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	rmArgs.AppendArg( "-v" );  // also remove the volume
 	rmArgs.AppendArg( containerID.c_str() );
 
-	MyString displayString;
-	rmArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	rmArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	// Read from Docker's combined output and error streams.
@@ -762,8 +762,8 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	args.AppendArg( "-q" );
 	args.AppendArg( image );
 
-	MyString displayString;
-	args.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -941,8 +941,8 @@ int DockerAPI::detect( CondorError & err ) {
 		return -1;
 	infoArgs.AppendArg( "info" );
 
-	MyString displayString;
-	infoArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	infoArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1064,8 +1064,8 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		return -1;
 	versionArgs.AppendArg( "-v" );
 
-	MyString displayString;
-	versionArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	versionArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1149,8 +1149,8 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	free( formatArg );
 	inspectArgs.AppendArg( containerID );
 
-	MyString displayString;
-	inspectArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	inspectArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1293,8 +1293,8 @@ run_docker_command(const ArgList & a, const std::string &container, int timeout,
   args.AppendArgsFromArgList( a );
   args.AppendArg( container.c_str() );
 
-  MyString displayString;
-  args.GetArgsStringForLogging( & displayString );
+  std::string displayString;
+  args.GetArgsStringForLogging( displayString );
   dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;

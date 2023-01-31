@@ -796,7 +796,7 @@ SharedPortEndpoint::InitRemoteAddress()
 		// to.  That's not necessarily the public address that we want
 		// to advertise for others to connect to.
 
-	MyString shared_port_server_ad_file;
+	std::string shared_port_server_ad_file;
 	if( !param(shared_port_server_ad_file,"SHARED_PORT_DAEMON_AD_FILE") ) {
 		EXCEPT("SHARED_PORT_DAEMON_AD_FILE must be defined");
 	}

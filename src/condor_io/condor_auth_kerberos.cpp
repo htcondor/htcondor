@@ -550,7 +550,7 @@ int Condor_Auth_Kerberos :: init_daemon()
 
 	// needed for extracting service name
 	char * tmpsname = 0;
-	MyString sname;
+	std::string sname;
 
     memset(creds_, 0, sizeof(krb5_creds));
 

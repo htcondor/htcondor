@@ -235,11 +235,11 @@ public:
 		// is specified, look first for param specific to specified
 		// subsystem.
 		// Caller should free the returned string.
-	static char*            getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name=NULL, char const *check_subsystem=NULL );
+	static char*            getSecSetting( const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name=NULL, char const *check_subsystem=NULL );
 
-	static bool getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name = NULL, char const *check_subsystem = NULL );
+	static bool getIntSecSetting( int &result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name = NULL, char const *check_subsystem = NULL );
 
-	static bool getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, MyString *param_name, char const *check_subsystem );
+	static bool getSecSetting_implementation( int *int_result,char **str_result, const char* fmt, DCpermissionHierarchy const &auth_level, std::string *param_name, char const *check_subsystem );
 
 		// for each auth level in the hierarchy, look up config value,
 		// and parse it as REQUIRED, OPTIONAL, etc.

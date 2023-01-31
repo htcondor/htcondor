@@ -741,7 +741,7 @@ MapFile::PerformSubstitution(std::vector<MyString> & groups,
 			if (pattern[index]) {
 				if ('0' <= pattern[index] &&
 					'9' >= pattern[index]) {
-					int match = pattern[index] - '0';
+					size_t match = (size_t) pattern[index] - '0';
 					if (groups.size() > match) {
 						output += groups[match];
 						continue;
