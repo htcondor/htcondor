@@ -12362,16 +12362,14 @@ cleanup_ckpt_files(int cluster, int proc, const char *owner)
 		}
 	}
 
-	ClassAd * ad = GetJobAd(cluster, proc);
-	if(ad) {
+	ClassAd * jobAd = GetJobAd(cluster, proc);
+	if( jobAd ) {
 		std::string checkpointDestination;
-		if( ad->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination) ) {
-			dprintf( D_ZKM, "Not removing job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
-			scheduler.doCheckpointCleanUp( cluster, proc );
-			return;
+		if( jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination) ) {
+			scheduler.doCheckpointCleanUp( cluster, proc, jobAd );
 		}
-		SpooledJobFiles::removeJobSpoolDirectory(ad);
-		FreeJobAd(ad);
+		SpooledJobFiles::removeJobSpoolDirectory(jobAd);
+		FreeJobAd(jobAd);
 	}
 }
 

@@ -23,16 +23,9 @@ Scheduler::checkpointCleanUpReaper( int pid, int status ) {
 }
 
 bool
-Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
+Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	// In case we ever want it.
 	std::string error;
-
-	ClassAd * jobAd = GetJobAd( cluster, proc );
-	if( jobAd == NULL ) {
-		error = "GetJobAd( %d, %d ) failed, aborting";
-		dprintf( D_ZKM, "%s\n", error.c_str() );
-		return false;
-	}
 
 	std::string checkpointDestination;
 	if(! jobAd->LookupString( ATTR_JOB_CHECKPOINT_DESTINATION, checkpointDestination ) ) {
@@ -107,6 +100,46 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 	}
 
 
+	//
+	// The schedd stores spooled files in a directory tree whose first branch
+	// is the job's cluster ID modulo 1000.  This means that only the schedd
+	// can safely remove that directory; any other process might remove it
+	// between when the schedd checks for its existence and when it tries to
+	// create the next subdirectory.  So we rename the job-specific directory
+	// out of the way.
+	//
+	dprintf( D_ZKM, "Renaming job (%d.%d) spool directory to permit cleanup.\n", cluster, proc );
+
+	std::string spoolPath;
+	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
+	std::filesystem::path spool( spoolPath );
+
+	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
+	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
+	std::filesystem::path target_dir = checkpointCleanup / spool.filename();
+
+	std::error_code errCode;
+	if( std::filesystem::exists( checkpointCleanup ) ) {
+		if(! std::filesystem::is_directory( checkpointCleanup )) {
+			dprintf( D_ALWAYS, "'%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", checkpointCleanup.string().c_str() );
+			return false;
+		}
+	} else {
+		std::filesystem::create_directory( checkpointCleanup, SPOOL, errCode );
+		if( errCode ) {
+			dprintf( D_ALWAYS, "Failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", checkpointCleanup.string().c_str(), errCode.value(), errCode.message().c_str() );
+			return false;
+		}
+	}
+
+	dprintf( D_ZKM, "Renaming job (%d.%d) spool directory from '%s' to '%s'.\n", cluster, proc, spool.string().c_str(), target_dir.string().c_str() );
+	std::filesystem::rename( spool, target_dir, errCode );
+	if( errCode ) {
+		dprintf( D_ALWAYS, "Failed to rename job (%d.%d) spool directory (%d: %s), will not clean up.\n", cluster, proc, errCode.value(), errCode.message().c_str() );
+		return false;
+	}
+
+
 	// We need this to construct the checkpoint-specific location.
 	std::string globalJobID;
 	if(! jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
@@ -115,11 +148,6 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 		return false;
 	}
 	std::replace( globalJobID.begin(), globalJobID.end(), '#', '_' );
-
-	// We need this to construct the MANIFEST file's path.
-	std::string spoolPath;
-	SpooledJobFiles::getJobSpoolPath( jobAd, spoolPath );
-	std::filesystem::path spool( spoolPath );
 
 
 	int checkpointNumber = -1;
@@ -151,7 +179,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc ) {
 
 	// Construct the manifest file prefix.
 	std::string manifestFileName = "_condor_checkpoint_MANIFEST";
-	std::filesystem::path manifestFilePath = spool / manifestFileName;
+	std::filesystem::path manifestFilePath = target_dir / manifestFileName;
 
 	cleanup_process_args.push_back( specificCheckpointDestination );
 	cleanup_process_args.push_back( manifestFilePath.string() );

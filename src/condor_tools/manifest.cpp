@@ -23,6 +23,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include <filesystem>
+
 #include "stl_string_utils.h"
 
 #include "manifest.h"
@@ -130,6 +132,13 @@ main( int argc, char ** argv ) {
                 fprintf( stdout, "%s\n", error.c_str() );
                 deleted = false;
             }
+        }
+
+        if( deleted ) {
+            std::filesystem::path fileStemPath(fileStem);
+            std::filesystem::path parentPath = fileStemPath.parent_path();
+            fprintf( stderr, "Removing %s after successful clean-up.\n", parentPath.string().c_str() );
+            std::filesystem::remove( parentPath );
         }
 
         return deleted ? 0 : 1;

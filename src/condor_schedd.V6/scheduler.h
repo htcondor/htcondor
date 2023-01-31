@@ -724,7 +724,7 @@ class Scheduler : public Service
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
 
 	// Returns false if the checkpoint clean-up failed to launch.
-	bool doCheckpointCleanUp( int cluster, int proc );
+	bool doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
 
 private:
 
