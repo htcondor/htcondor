@@ -205,6 +205,10 @@ class VaultCredmon(AbstractCredentialMonitor):
             return False
 
         url = top_data['vault_url']
+        if not url.startswith('https://'):
+            self.log.error("vault_url does not begin with https://")
+            return False
+
         headers = {'X-Vault-Token' : vault_token}
         params = {'minimum_seconds' : self.get_minimum_seconds()}
         try:
