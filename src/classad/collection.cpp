@@ -436,7 +436,7 @@ TruncateLog( )
         CondorErrno = ERR_LOG_OPEN_FAILED;
         CondorErrMsg = "when truncating log, failed to open " + tmpLogFileName
             + " errno=";
-        CondorErrMsg += std::sto_string( errno );
+        CondorErrMsg += std::to_string( errno );
         return( false );
     }
     if( ( newLog_fp = fdopen( newLog_fd, "r+" ) ) == NULL ) {
