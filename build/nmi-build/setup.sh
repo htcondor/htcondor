@@ -214,7 +214,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
         yumdownloader --downloadonly --destdir="$externals_dir" libcgroup
     fi
     # Remove 32-bit x84 packages if any
-    rm -f "$externals_dir/*.i686.rpm"
+    rm -f "$externals_dir"/*.i686.rpm
 fi
 
 # Clean up package caches
