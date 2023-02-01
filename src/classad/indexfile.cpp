@@ -94,7 +94,7 @@ TruncateStorageFile()
 		CondorErrMsg = "failed to truncate storagefile: rename(" 
 			+ string(filename) + " , " 
 			+ string(logfilename) +", errno=" 
-			+ to_string(errno);
+			+ std::to_string(errno);
 		return( false );
 	}
 	return true;

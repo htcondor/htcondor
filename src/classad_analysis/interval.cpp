@@ -761,7 +761,7 @@ ToString( string &buffer )
 				else {
 					firstItem = false;
 				}
-				buffer += to_string(i);
+				buffer += std::to_string(i);
 			}
 		}
 		buffer += '}';
@@ -2361,11 +2361,11 @@ ToString( string &buffer )
 	}
 	
 	buffer += "numCols = ";
-	buffer += to_string(numCols);
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
 	buffer += "numRows = ";
-	buffer += to_string(numRows);
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	ValueRange *vr = NULL;
@@ -2577,11 +2577,11 @@ ToString( string &buffer )
 	classad::PrettyPrint pp;
 	
 	buffer += "numCols = ";
-	buffer += to_string(numCols);
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
 	buffer += "numRows = ";
-	buffer += to_string(numRows);
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	classad::Value *val = NULL;

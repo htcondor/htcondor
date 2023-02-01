@@ -180,7 +180,7 @@ Unparse(
 			long long i;
 			val.IsIntegerValue(i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_Start);
-			buffer += to_string(i);
+			buffer += std::to_string(i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_End);
 			break;
 		}

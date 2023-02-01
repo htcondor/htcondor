@@ -440,10 +440,10 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		jobReq->GetNumberOfProfiles( numProfs );
 		if( numProfs > 1 ) {
 			buffer += "Profile ";
-			buffer += to_string(p);
+			buffer += std::to_string(p);
 			if( profile->explain.match ) {
 				buffer += " matched ";
-				buffer += to_string(profile->explain.numberOfMatches);
+				buffer += std::to_string(profile->explain.numberOfMatches);
 			} else {
 				buffer += " rejected all";
 			}
@@ -571,7 +571,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 						else {
 							firstNum = false;
 						}
-						buffer += to_string(i+1);
+						buffer += std::to_string(i+1);
 					}
 				}
 				buffer += "\n";
@@ -790,7 +790,7 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 		mp->GetNumberOfProfiles( numProfiles );
 		if( numProfiles > 1 ) {
 			buffer += "  Profile ";
-			buffer += to_string(p);
+			buffer += std::to_string(p);
 			if( profile->explain.match ) {
 				buffer += " is true\n";
 			} else {

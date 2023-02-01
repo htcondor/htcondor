@@ -195,7 +195,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		CondorErrno = ERR_FILE_WRITE_FAILED;
 		CondorErrMsg = "FATAL ERROR: failed fprintf() on log, errno=";
-		CondorErrMsg += to_string(errno);
+		CondorErrMsg += std::to_string(errno);
 		return( false );
 	}
 
@@ -206,7 +206,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 		if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 			CondorErrno = ERR_FILE_WRITE_FAILED;
 			CondorErrMsg = "FATAL ERROR: failed fprintf() on log, errno=";
-			CondorErrMsg += to_string(errno);
+			CondorErrMsg += std::to_string(errno);
 			return( false );
 		}
     }
@@ -222,7 +222,7 @@ Log( FILE *fp, ClassAdUnParser *unp )
 	if( fprintf( fp, "%s\n", buf.c_str( ) ) < 0 ) {
 		CondorErrno = ERR_FILE_WRITE_FAILED;
 		CondorErrMsg = "FATAL ERROR: failed fprintf() on log, errno=";
-		CondorErrMsg += to_string(errno);
+		CondorErrMsg += std::to_string(errno);
 		return( false );
 	}
 

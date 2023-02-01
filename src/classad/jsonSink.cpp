@@ -69,7 +69,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::INTEGER_VALUE: {
 			long long	i;
 			val.IsIntegerValue( i );
-			buffer += to_string(i);
+			buffer += std::to_string(i);
 			return;
 		}
 		case Value::REAL_VALUE: {

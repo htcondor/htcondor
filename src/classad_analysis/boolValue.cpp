@@ -334,7 +334,7 @@ ToString( string &buffer )
 	}
 	buffer += ']';
 	buffer += ':';
-	buffer += to_string(frequency);
+	buffer += std::to_string(frequency);
 	buffer += ':';
 	buffer += '{';
 	bool firstItem = true;
@@ -345,7 +345,7 @@ ToString( string &buffer )
 			} else {
 				buffer += ',';
 			}
-			buffer += to_string(i);
+			buffer += std::to_string(i);
 		}
 	}
 	buffer += '}';
@@ -793,11 +793,11 @@ ToString( string &buffer )
 	char item;
 	
 	buffer += "numCols = ";
-	buffer += to_string(numCols);
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
 	buffer += "numRows = ";
-	buffer += to_string(numRows);
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	for( int row = 0; row < numRows; row++ ) {
@@ -806,11 +806,11 @@ ToString( string &buffer )
 			buffer += item;
 		}
 		buffer += " ";
-		buffer += to_string(rowTotalTrue[row]);
+		buffer += std::to_string(rowTotalTrue[row]);
 		buffer += "\n";
 	}
 	for( int col = 0; col < numCols; col++ ) {
-		buffer += to_string(colTotalTrue[col]);
+		buffer += std::to_string(colTotalTrue[col]);
 	}
 	buffer += "\n";
 	return true;

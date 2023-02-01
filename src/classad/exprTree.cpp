@@ -91,7 +91,7 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 				break;
 			case Value::INTEGER_VALUE:
 				if(value.IsIntegerValue(intValue)) {
-					result += to_string(intValue);
+					result += std::to_string(intValue);
 					result += "\n";
 				}
 				break;

@@ -86,7 +86,7 @@ ToString( string &buffer )
 	buffer += "\n";
 
 	buffer += "numberOfMatches = ";
-	buffer += to_string(numberOfMatches);
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -96,7 +96,7 @@ ToString( string &buffer )
 	buffer += "\n";
 
 	buffer += "numberOfClassAds = ";
-	buffer += to_string(numberOfClassAds);
+	buffer += std::to_string(numberOfClassAds);
 	buffer += ";";
 	buffer += "\n";
 
@@ -158,7 +158,7 @@ ToString( string &buffer )
 	buffer += "\n";
 
 	buffer += "numberOfMatches = ";
-	buffer += to_string(numberOfMatches);
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -232,7 +232,7 @@ ToString( string &buffer )
 	buffer += "\n";
 
 	buffer += "numberOfMatches = ";
-	buffer += to_string(numberOfMatches);
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
