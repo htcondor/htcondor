@@ -465,7 +465,7 @@ main(int argc, const char* argv[])
 		//Get aggregate epoch history file
 		matchFileName.set(param("JOB_EPOCH_HISTORY"));
 		//Get epoch directory
-		searchDirectory.set(param("JOB_EPOCH_INSTANCE_DIR"));
+		searchDirectory.set(param("JOB_EPOCH_HISTORY_DIR"));
 		if (!matchFileName && !searchDirectory) {
 			fprintf( stderr, "Error: No Job Run Instance recordings to read.\n");
 			exit(1);
