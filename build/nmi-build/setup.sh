@@ -213,7 +213,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     if [ $VERSION_ID -lt 9 ]; then
         yumdownloader --downloadonly --destdir="$externals_dir" libcgroup
     fi
-    # Remove 32-bit x84 packages if any
+    # Remove 32-bit x86 packages if any
     rm -f "$externals_dir"/*.i686.rpm
 fi
 
