@@ -282,27 +282,12 @@ class ClassAd : public ExprTree
 		//@{
 		/** Finds the expression bound to an attribute name.  The lookup only
 				involves this ClassAd; scoping information is ignored.
-			@param attrName The name of the attribute.  
+			@param attrName The name of the attribute. char *, or std::string   
 			@return The expression bound to the name in the ClassAd, or NULL
 				otherwise.
 		*/
-		ExprTree * Lookup( const std::string &name ) const {
-			ExprTree *tree;
-			AttrList::const_iterator itr;
-
-			itr = attrList.find( name );
-			if (itr != attrList.end()) {
-				tree = itr->second;
-			} else if (chained_parent_ad != NULL) {
-				tree = chained_parent_ad->Lookup(name);
-			} else {
-				tree = NULL;
-			}
-			return tree;
-		}
-
-		// The char * overload of the above
-		ExprTree * Lookup( const char *name ) const {
+		template<typename StringLikeThing>
+		ExprTree * Lookup( const StringLikeThing &name ) const {
 			ExprTree *tree;
 			AttrList::const_iterator itr;
 
