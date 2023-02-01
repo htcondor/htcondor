@@ -151,6 +151,14 @@ struct CaseIgnLTStr {
 	bool operator()(const char *s1, const char *s2 ) const {
 		return( strcasecmp(s1,s2) < 0 );
 	}
+
+	bool operator()(const char *s1, const std::string &s2 ) const {
+		return( strcasecmp(s1,s2.c_str()) < 0 );
+	}
+
+	bool operator()(const std::string &s1, const char *s2 ) const {
+		return( strcasecmp(s1.c_str(),s2) < 0 );
+	}
 };
 
 struct CaseIgnSizeLTStr {
@@ -171,6 +179,26 @@ struct CaseIgnSizeLTStr {
 		size_t s2len = strlen(s2);
 		if (s1len == s2len) {
 			return( strcasecmp( s1, s2) < 0 );
+		} else {
+			return s1len < s2len;
+		}
+	}
+
+	bool operator()(const char *s1, const std::string &s2) const {
+		size_t s1len = strlen(s1);
+		size_t s2len = s2.length();
+		if (s1len == s2len) {
+			return( strcasecmp( s1, s2.c_str()) < 0 );
+		} else {
+			return s1len < s2len;
+		}
+	}
+
+	bool operator()(const std::string &s1, const char *s2) const {
+		size_t s1len = s1.length();
+		size_t s2len = strlen(s2);
+		if (s1len == s2len) {
+			return( strcasecmp( s1.c_str(), s2) < 0 );
 		} else {
 			return s1len < s2len;
 		}
