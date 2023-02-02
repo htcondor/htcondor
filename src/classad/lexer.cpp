@@ -24,7 +24,10 @@
 #include "classad/util.h"
 #include "classad/classad.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 #define EMPTY -2
 

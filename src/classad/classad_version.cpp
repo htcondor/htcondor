@@ -26,7 +26,12 @@
 
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::cout;
+using std::endl;
+
 using namespace classad;
 
 int main(int, char **)

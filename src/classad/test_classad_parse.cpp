@@ -24,7 +24,10 @@
 #include "classad/classad.h"
 #include "classad/classadCache.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 using namespace classad;
 
 #define NUMELMS(aa) (int)(sizeof(aa)/sizeof((aa)[0]))

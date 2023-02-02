@@ -22,7 +22,10 @@
 #include "classad/source.h"
 #include "classad/matchClassad.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 static char const *ATTR_UNOPTIMIZED_REQUIREMENTS = "UnoptimizedRequirements";
 

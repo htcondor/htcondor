@@ -21,7 +21,10 @@
 #include "classad/classad_distribution.h"
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 using namespace classad;
 
 string job_classad_text = 

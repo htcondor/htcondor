@@ -25,7 +25,9 @@
 #include <limits.h>
 #include <math.h>
 
-using namespace std;
+using std::string;
+using std::pair;
+
 
 namespace classad {
 

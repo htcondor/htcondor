@@ -40,7 +40,12 @@
 #include <ctype.h>
 #include <assert.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::cout;
+using std::endl;
+
 using namespace classad;
 
 #define TEST(name, test) {if (test) \

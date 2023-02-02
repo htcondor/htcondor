@@ -21,7 +21,11 @@
 #include "classad/indexfile.h"
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::pair;
+using std::cout;
+using std::endl;
+
 
 namespace classad {
 

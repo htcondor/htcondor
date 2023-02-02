@@ -22,7 +22,10 @@
 #include "classad/collection.h"
 #include <fcntl.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
