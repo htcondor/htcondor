@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1003:
+
+Version 10.0.3
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.3 released on Month Date, 2023.
+
+- HTCondor version 10.0.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
@@ -18,11 +37,18 @@ Release Notes:
 
 - HTCondor version 10.0.2 not yet released.
 
+- We changed the semantics of relative paths in the ``output``, ``error``, and
+  ``transfer_output_remaps`` submit file commands.  These commands now create
+  the directories named in relative paths if they do not exist.  This could
+  cause jobs that used to go on hold (because they couldn't write their
+  ``output`` or ``error`` files, or a remapped output file) to instead succeed.
+  :jira:`1325`
+  
 New Features:
 
 - Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
   a transfer output remap to create directories in allowed places if they
-  do not exist at tranfser output time.
+  do not exist at transfer output time.
   :jira:`1480`
 
 - Fixed a bug where **condor_now** could not use the resources freed by

@@ -132,11 +132,6 @@ License: Expat
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  DEALINGS IN THE SOFTWARE.
 
-Files: build/cmake/modules/CPackDeb.cmake
-Copyright: 2007-2009 Kitware, Inc
-           2007-2009 Mathieu Malaterre <mathieu.malaterre@gmail.com>
-License: BSD-3-clause
-
 Files: *.cmake
  src/condor_collector.V6/*CollectorPlugin*
  src/condor_master.V6/*MasterPlugin*
