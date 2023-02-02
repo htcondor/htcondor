@@ -191,8 +191,8 @@ public:
 protected:
 	const char * str;   // The string we are tokenizing. it's not a copy, caller must make sure it continues to exist.
 	const char * delims;
-	int ixNext;
 	std::string current;
+	int ixNext;
 	bool pastEnd;
 };
 
