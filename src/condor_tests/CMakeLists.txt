@@ -192,7 +192,7 @@ endif ()
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-		if (LINUX)
+		if (LINUX OR APPLE)
 			# test_classad_eval doesn't actually depend on ornithology at all,
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
@@ -200,12 +200,11 @@ endif ()
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
-		if(LINUX)
+		if(LINUX OR APPLE)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_xfer_hold_codes "Test proper hold codes after xfer failure" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_job_env "Test Job Environment" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_bogus_collector "Test Bogus Collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -218,7 +217,6 @@ endif ()
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -226,14 +224,7 @@ endif ()
 			condor_pl_test(test_python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
 			add_dependencies_suffix_hack(test_python_bindings_jobeventlog x_write_joblog.exe)
 
-			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_auth_protocol_token "Test TOKEN authentication" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
-# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under
-# qemu, which is where we run our ppc and arm tests.
-if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")))
-			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-endif()
 
 			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -256,7 +247,6 @@ endif()
 				condor_pl_test(test_activation_metrics "Test activation metrics" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_htcondor_955 "Test output_destination with standard stream names" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_xfer_stats_overflow_regression "Test TransferInputStats nested attributes don't overflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_token_fetch_key "Test `condor_token_fetch -key`" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				# Sadly, Python doesn't implement a way to get disk space on Windows.
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -264,6 +254,32 @@ endif()
 
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
+		endif()
+
+		# These Ornithology tests only work on linux.
+		# That's expected for some. Others need investigation
+		# to see if we can get them working on other platforms.
+		if(LINUX)
+			# We don't see the "invalid interpreter" error
+			# message on macos.
+			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			# Container universe is only available on linux.
+			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			# The manifest code should work on macos, but
+			# the tests are failing.
+			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			# These tests require Python 3.6 or later.
+			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
+				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			endif()
+
+			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 
+			# qemu, which is where we run our ppc and arm tests. 
+			# And strace is only available on linux.
+			if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			endif()
+
 		endif()
 	endif()
 

@@ -3,6 +3,7 @@
 
 universe = vanilla
 executable = /bin/sh
+transfer_executable = false
 remote_initialdir = /tmp
 log = job_core_remote-initialdir_van.log
 output = job_core_remote-initialdir_van.out
