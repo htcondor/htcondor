@@ -29,7 +29,13 @@
 #include <sys/timeb.h>
 #endif
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::map;
+using std::cout;
+using std::endl;
+
 
 namespace classad {
 
@@ -1779,7 +1785,7 @@ WriteCheckPoint(){
 
       LatestCheckpoint.tv_sec=ctime.tv_sec;
 	  LatestCheckpoint.tv_usec=ctime.tv_usec;
-	  string arr_s = to_string(ctime.tv_sec) + '.' + std::to_string(ctime.tv_usec);
+	  string arr_s = std::to_string(ctime.tv_sec) + '.' + std::to_string(ctime.tv_usec);
 	  ClassAd cla;
 	  //Dump all the dirty ClassAd into storagefile
 	  map<string,int>::iterator itr=DirtyClassad.begin();

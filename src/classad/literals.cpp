@@ -22,7 +22,10 @@
 #include "classad/exprTree.h"
 #include "classad/util.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 

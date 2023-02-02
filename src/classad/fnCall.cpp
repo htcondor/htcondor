@@ -44,7 +44,11 @@
 #include <dlfcn.h>
 #endif
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::set;
+
 
 namespace classad {
 

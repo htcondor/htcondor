@@ -23,7 +23,10 @@
 #include "classad/collection.h"
 #include "classad/collectionBase.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 // ----------- <implementation of ViewMember class> -----------------
 

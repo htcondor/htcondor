@@ -38,7 +38,10 @@
 #include <ctype.h>
 #include <assert.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 using namespace classad;
 
 /*--------------------------------------------------------------------

@@ -24,7 +24,10 @@
 #include "classad/sink.h"
 #include "classad/classadCache.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 

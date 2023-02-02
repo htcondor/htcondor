@@ -25,7 +25,10 @@
 #include <list>
 
 using namespace classad;
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 /**
  * ClassAdCache - is meant to be the storage container which is used to cache classads,

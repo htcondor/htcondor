@@ -23,7 +23,11 @@
 #include "classad/value.h"
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::ostream;
+
 
 namespace classad {
 
