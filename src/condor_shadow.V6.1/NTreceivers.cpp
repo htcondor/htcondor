@@ -1470,7 +1470,7 @@ case CONDOR_getdir:
 			terrno = (condor_errno_t) ENOSPC;
 		}
 		else {
-			rval = sprintf(buffer, "CONDOR");
+			rval = snprintf(buffer, length, "CONDOR");
 			terrno = (condor_errno_t) errno;
 		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
@@ -1514,7 +1514,7 @@ case CONDOR_getdir:
 			terrno = (condor_errno_t) ENOSPC;
 		}
 		else {
-			rval = sprintf(buffer, "UNKNOWN");
+			rval = snprintf(buffer, length, "UNKNOWN");
 			terrno = (condor_errno_t) errno;
 		}
 		dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );

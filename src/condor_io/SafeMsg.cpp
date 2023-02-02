@@ -1326,15 +1326,15 @@ void _condorInMsg :: resetMD()
 
 void _condorInMsg::dumpMsg() const
 {
-    char str[10000];
+    std::string str;
     struct in_addr in;
 
     in.s_addr = msgID.ip_addr;
-    sprintf(str, "ID: %s, %d, %lu, %d\n",
+    formatstr(str, "ID: %s, %d, %lu, %d\n",
             inet_ntoa(in), msgID.pid, msgID.time, msgID.msgNo);
-    sprintf(&str[strlen(str)], "len:%lu, lastNo:%d, rcved:%d, lastTime:%lu\n",
+    formatstr_cat(str, "len:%lu, lastNo:%d, rcved:%d, lastTime:%lu\n",
             msgLen, lastNo, received, (long)lastTime);
-    dprintf(D_NETWORK, "========================\n%s\n===================\n", str);
+    dprintf(D_NETWORK, "========================\n%s\n===================\n", str.c_str());
 
     /*
 	_condorDirPage *tempDir;

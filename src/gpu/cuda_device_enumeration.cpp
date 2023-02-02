@@ -32,7 +32,7 @@ void hex_dump(FILE* out, const unsigned char * buf, size_t cb, int offset)
 	for (size_t lx = 0; lx < cb && lx < 0xFFFF; lx += 16) {
 		memset(line, ' ', sizeof(line));
 		line[sizeof(line) - 1] = 0;
-		sprintf(line, "%04X:", (int)lx);
+		snprintf(line, sizeof(line), "%04X:", (int)lx);
 		char * pb = line + 5;
 		*pb++ = ' ';
 		char * pa = pb + 16 * 3 + 2;

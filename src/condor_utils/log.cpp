@@ -185,7 +185,7 @@ int
 LogRecord::WriteHeader(FILE *fp) const
 {
 	char op[20];
-	int  len = sprintf(op, "%d ", op_type);
+	int  len = snprintf(op, sizeof(op), "%d ", op_type);
 	return( fprintf(fp, "%s", op) < len ? -1 : len );
 }
 

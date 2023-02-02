@@ -142,7 +142,7 @@ build_valid_daemon_name( const char* name )
 		} else {
 			size = strlen(name) + get_local_fqdn().length() + 2; 
 			daemon_name = (char *)malloc(size);
-			sprintf( daemon_name, "%s@%s", name, get_local_fqdn().c_str() ); 
+			snprintf( daemon_name, size, "%s@%s", name, get_local_fqdn().c_str() ); 
 		}
 	}
 	return daemon_name;
@@ -180,7 +180,7 @@ default_daemon_name( void )
 		free( name );
 		return NULL;
 	}
-	sprintf( ans, "%s@%s", name, get_local_fqdn().c_str() );
+	snprintf( ans, size, "%s@%s", name, get_local_fqdn().c_str() );
 	free(name);
 	return ans;
 }

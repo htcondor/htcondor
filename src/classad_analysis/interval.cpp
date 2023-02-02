@@ -751,7 +751,6 @@ ToString( string &buffer )
 		return false;
 	}
 	else {
-		char tempBuff[32];
 		bool firstItem = true;
 		buffer += '{';
 		for( int i = 0; i < size; i++ ) {
@@ -762,8 +761,7 @@ ToString( string &buffer )
 				else {
 					firstItem = false;
 				}
-				sprintf( tempBuff, "%d", i );
-				buffer += tempBuff;
+				buffer += std::to_string(i);
 			}
 		}
 		buffer += '}';
@@ -2361,16 +2359,13 @@ ToString( string &buffer )
 	if( !initialized ) {
 		return false;
 	}
-	char tempBuf[512];
 	
-	sprintf( tempBuf, "%d", numCols );
 	buffer += "numCols = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
-	sprintf( tempBuf, "%d", numRows );
 	buffer += "numRows = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	ValueRange *vr = NULL;
@@ -2579,17 +2574,14 @@ ToString( string &buffer )
 	if( !initialized ) {
 		return false;
 	}
-	char tempBuf[512];
 	classad::PrettyPrint pp;
 	
-	sprintf( tempBuf, "%d", numCols );
 	buffer += "numCols = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
-	sprintf( tempBuf, "%d", numRows );
 	buffer += "numRows = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	classad::Value *val = NULL;

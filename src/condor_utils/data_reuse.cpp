@@ -108,7 +108,7 @@ DataReuseDirectory::CreatePaths()
 	name = dircat(m_dirpath.c_str(), "sha256", subdir);
 	char subdir_name[4];
 	for (int idx = 0; idx < 256; idx++) {
-		sprintf(subdir_name, "%02x", idx);
+		snprintf(subdir_name, sizeof(subdir_name), "%02x", idx);
 		subdir_name[2] = '\0';
 		auto name2 = dircat(name, subdir_name, subdir2);
 		if (!mkdir_and_parents_if_needed(name2, 0700, 0700, PRIV_CONDOR)) {

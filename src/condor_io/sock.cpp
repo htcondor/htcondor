@@ -2094,7 +2094,7 @@ char * Sock::serializeCryptoInfo() const
 	}
         outbuf = new char[buflen];
 
-        sprintf(outbuf,"%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+        snprintf(outbuf, buflen, "%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
                 (int)get_encryption());
 
 	// if protocol is 3 (AES) then we need to send the StreamCryptoState
@@ -2126,7 +2126,7 @@ char * Sock::serializeCryptoInfo() const
     else {
         outbuf = new char[2];
         memset(outbuf, 0, 2);
-        sprintf(outbuf,"%d",0);
+        snprintf(outbuf, 2, "%d", 0);
     }
     return( outbuf );
 }
@@ -2146,7 +2146,7 @@ char * Sock::serializeMdInfo() const
     if (len > 0) {
         int buflen = len*2+32;
         outbuf = new char[buflen];
-        sprintf(outbuf,"%d*", len*2);
+        snprintf(outbuf, buflen, "%d*", len*2);
 
         // Hex encode the binary key
         char * ptr = outbuf + strlen(outbuf);

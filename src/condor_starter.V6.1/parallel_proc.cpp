@@ -92,7 +92,7 @@ ParallelProc::addEnvVars()
 
 		// Add this node's number to CONDOR_PROCNO
 	char buf[128];
-	sprintf(buf, "%d", Node);
+	snprintf(buf, sizeof(buf), "%d", Node);
 	env.SetEnv("_CONDOR_PROCNO", buf);
 
 
@@ -104,7 +104,7 @@ ParallelProc::addEnvVars()
 		return 0;
 	}
 
-	sprintf(buf, "%d", machine_count);
+	snprintf(buf, sizeof(buf), "%d", machine_count);
 	env.SetEnv("_CONDOR_NPROCS", buf);
 
 		// Now stick the condor bin directory in front of the path,

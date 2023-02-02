@@ -738,14 +738,14 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
 				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
 					return 0;
-			sprintf(buf, "%s/%s", p1, p2);
+			snprintf(buf, sizeof(buf), "%s/%s", p1, p2);
 			key = buf;
 			return 1;
 
 		case PP_STARTD_STATE:
 			if( !ad->LookupString( ATTR_ACTIVITY , p1, sizeof(p1) ) )
 				return 0;
-			sprintf( buf, "%s", p1 );
+			snprintf( buf, sizeof(buf), "%s", p1 );
 			key = buf;
 			return 1;
 
@@ -771,7 +771,7 @@ getCODInt( ClassAd* ad, const char* id, const char* attr, int alt_val )
 {
 	int rval;
 	char buf[128];
-	sprintf( buf, "%s_%s", id, attr );
+	snprintf( buf, sizeof(buf), "%s_%s", id, attr );
 	if( ad->LookupInteger(buf, rval) ) {
 		return rval;
 	}
@@ -785,7 +785,7 @@ getCODStr( ClassAd* ad, const char* id, const char* attr,
 {
 	char* tmp = NULL;
 	char buf[128];
-	sprintf( buf, "%s_%s", id, attr );
+	snprintf( buf, sizeof(buf), "%s_%s", id, attr );
 	ad->LookupString( buf, &tmp );
 	if( tmp ) {
 		return tmp;

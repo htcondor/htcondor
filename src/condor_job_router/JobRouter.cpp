@@ -2221,7 +2221,7 @@ JobRouter::FinishSubmitJob(RoutedJob *job) {
 		return;
 	}
 	char buf[50];
-	sprintf(buf,"%d.%d",dest_cluster_id,dest_proc_id);
+	snprintf(buf,sizeof(buf),"%d.%d",dest_cluster_id,dest_proc_id);
 	job->dest_key = buf;
 	job->dest_proc_id = getProcByString(job->dest_key.c_str());
 	dprintf(D_FULLDEBUG,"JobRouter (%s): submitted job\n",job->JobDesc().c_str());

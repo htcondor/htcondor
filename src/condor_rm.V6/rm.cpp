@@ -124,7 +124,7 @@ void
 usage(int iExitCode)
 {
 	char word[32];
-	sprintf( word, "%s", getJobActionString(mode) );
+	snprintf( word, sizeof(word), "%s", getJobActionString(mode) );
 	fprintf( stderr, "Usage: %s [options] [constraints]\n", MyName );
 	fprintf( stderr, " where [options] is zero or more of:\n" );
 	fprintf( stderr, "  -help               Display this message and exit\n" );

@@ -55,7 +55,7 @@ format_time( float fp_secs )
 	min = tot_secs / MINUTE;
 	secs = tot_secs % MINUTE;
 
-	(void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+	(void)snprintf( answer, sizeof(answer), "%3d+%02d:%02d:%02d", days, hours, min, secs );
 	return answer;
 }
 

@@ -428,7 +428,7 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 
 #ifndef WIN32
 	char max_fds_name[50];
-	sprintf(max_fds_name,"%s_MAX_FILE_DESCRIPTORS",get_mySubSystem()->getName());
+	snprintf(max_fds_name,sizeof(max_fds_name),"%s_MAX_FILE_DESCRIPTORS",get_mySubSystem()->getName());
 	int max_fds = param_integer(max_fds_name,0);
 	if( max_fds <= 0 ) {
 		max_fds = param_integer("MAX_FILE_DESCRIPTORS",0);
@@ -9934,15 +9934,15 @@ const char* DaemonCore::GetExceptionString(int sig)
 
 #ifdef WIN32
 	char  buf[sizeof(exception_string) - 25];
-	sprintf(exception_string,"exception %d %s", sig, ExceptionHandler::GetExceptionString(sig, buf, sizeof(buf)));
+	snprintf(exception_string, sizeof(exception_string), "exception %d %s", sig, ExceptionHandler::GetExceptionString(sig, buf, sizeof(buf)));
 #else
 	if ( sig > 64 ) {
 		sig = WTERMSIG(sig);
 	}
 #ifdef HAVE_STRSIGNAL
-	sprintf(exception_string,"signal %d (%s)",sig,strsignal(sig));
+	snprintf(exception_string, sizeof(exception_string), "signal %d (%s)",sig,strsignal(sig));
 #else
-	sprintf(exception_string,"signal %d",sig);
+	snprintf(exception_string, sizeof(exception_string), "signal %d",sig);
 #endif
 #endif
 
@@ -10877,7 +10877,7 @@ DaemonCore::UpdateLocalAd(ClassAd *daemonAd,char const *fname)
 
 	if( !fname ) {
 		char    localAd_path[100];
-		sprintf( localAd_path, "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
+		snprintf( localAd_path, sizeof(localAd_path), "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 
 			// localAdFile is saved here so that daemon_core_main can clean
 			// it up on exit.

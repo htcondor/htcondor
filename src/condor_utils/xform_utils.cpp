@@ -330,7 +330,7 @@ void XFormHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_PR
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
 
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch+1, format, ap );
 	
 	va_end(ap);
 
@@ -349,7 +349,7 @@ void XFormHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK_
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
 	if (message) {
-		vsprintf ( message, format, ap );
+		vsnprintf ( message, cch+1, format, ap );
 	}
 	va_end(ap);
 

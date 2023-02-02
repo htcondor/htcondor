@@ -44,7 +44,7 @@ d_format_time( double dsecs )
         minutes = secs / MINUTES;
         secs %= MINUTES;
 
-        (void)sprintf(answer, "%d %02d:%02d:%02d", days, hours, minutes, secs);
+        (void)snprintf(answer, sizeof(answer), "%d %02d:%02d:%02d", days, hours, minutes, secs);
 
         return( answer );
 }

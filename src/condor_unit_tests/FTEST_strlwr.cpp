@@ -50,7 +50,7 @@ static bool test_normal_case() {
 	char *up = NULL;
 	emit_test("Does a uppercase string get converted to lower in place?");
 	char input[1024];
-	sprintf(input, "%s", "UPPER");
+	snprintf(input, sizeof(input), "%s", "UPPER");
 	emit_input_header();
 	emit_param("STRING", input);
 	up = strlwr(input);
@@ -68,7 +68,7 @@ static bool test_return_value() {
 	char *up = NULL;
 	emit_test("Does the function return correct pointer to input parameter?");
 	char input[1024];
-	sprintf(input, "%s", "UPPER");
+	snprintf(input, sizeof(input), "%s", "UPPER");
 	emit_input_header();
 	emit_param("STRING", input);
 	up = strupr(input);

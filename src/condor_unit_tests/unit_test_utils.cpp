@@ -147,7 +147,7 @@ void make_big_string(
 	if (quoted_string != NULL) {
 		*quoted_string = (char *) malloc(length + 3);
 		ASSERT( quoted_string );
-		sprintf(*quoted_string,	"\"%s\"", *string);
+		snprintf(*quoted_string, length+3, "\"%s\"", *string);
 		}
 	return;
 }

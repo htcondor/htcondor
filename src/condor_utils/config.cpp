@@ -2981,10 +2981,11 @@ char * expand_meta_args(const char *value, std::string & argstr)
 				tvalue = *tvalue ? "1" : "0";
 			}
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}
@@ -3733,10 +3734,11 @@ expand_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, special_id, name, tbuf, macro_set, ctx);
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}
@@ -3745,10 +3747,10 @@ expand_macro(const char *value,
 	// Now, deal with the special $(DOLLAR) macro.
 	DollarOnlyBody dollar_only; // matches only $(DOLLAR)
 	while( next_config_macro(is_config_macro, dollar_only, tmp, 0, &left, &name, &right, &func) ) {
-		rval = (char *)malloc( (unsigned)(strlen(left) + 1 +
-										  strlen(right) + 1));
+		size_t rval_sz = strlen(left) + 1 + strlen(right) + 1;
+		rval = (char *)malloc(rval_sz);
 		ASSERT( rval != NULL );
-		(void)sprintf( rval, "%s$%s", left, right );
+		(void)snprintf( rval, rval_sz, "%s$%s", left, right );
 		free( tmp );
 		tmp = rval;
 	}
@@ -4896,10 +4898,11 @@ expand_self_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, func_id, body, tbuf, macro_set, ctx);
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}

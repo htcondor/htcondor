@@ -57,7 +57,7 @@ template <> void AdKeySet<ClassAd *>::print(std::string & ids, int cmax)
 		if (ids.size() > start) ids += " ";
 		if (--cmax < 0) { ids += "..."; break; }
 		ClassAd * item = *it;
-		char id[32]; sprintf(id, "%p", item);
+		char id[32]; snprintf(id, sizeof(id), "%p", item);
 		ids += id;
 	}
 }

@@ -3969,7 +3969,7 @@ ULogEvent::rusageToStr (const rusage &usage)
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
-	sprintf(result, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+	snprintf(result, 128, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
 			usr_days, usr_hours, usr_minutes, usr_secs,
 			sys_days, sys_hours, sys_minutes, sys_secs);
 

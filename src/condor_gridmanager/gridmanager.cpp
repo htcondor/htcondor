@@ -554,7 +554,7 @@ doContactSchedd()
 			// (if it died unexpectedly). With the new term, the
 			// "&& Managed =!= TRUE" from the new jobs expression becomes
 			// superfluous (by boolean logic), so we drop it.
-			sprintf( expr_buf,
+			snprintf( expr_buf, sizeof(expr_buf),
 					 "%s && %s && ((%s && %s) || %s)",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
@@ -564,7 +564,7 @@ doContactSchedd()
 					 );
 		} else {
 			// Grab new jobs for us to manage
-			sprintf( expr_buf,
+			snprintf( expr_buf, sizeof(expr_buf),
 					 "%s && %s && %s && %s && %s",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
@@ -695,7 +695,7 @@ contact_schedd_next_add_job:
 		// Grab jobs marked as REMOVED/COMPLETED or marked as HELD that we
 		// haven't previously indicated that we're done with (by setting
 		// JobManaged to "Schedd".
-		sprintf( expr_buf, "(%s) && (%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
+		snprintf( expr_buf, sizeof(expr_buf), "(%s) && (%s) && (%s == %d || %s == %d || (%s == %d && %s =?= \"%s\"))",
 				 ScheddJobConstraint, expr_not_completely_done.c_str(),
 				 ATTR_JOB_STATUS, REMOVED,
 				 ATTR_JOB_STATUS, COMPLETED, ATTR_JOB_STATUS, HELD,
@@ -767,7 +767,7 @@ contact_schedd_next_add_job:
 	if ( updateJobsSignaled ) {
 		dprintf( D_FULLDEBUG, "querying for jobs with attribute updates\n" );
 
-		sprintf( expr_buf, "%s && %s && %s && %s",
+		snprintf( expr_buf, sizeof(expr_buf), "%s && %s && %s && %s",
 				 expr_schedd_job_constraint.c_str(), 
 				 expr_not_completely_done.c_str(),
 				 expr_not_held.c_str(),

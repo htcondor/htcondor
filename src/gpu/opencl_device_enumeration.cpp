@@ -101,11 +101,11 @@ clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, std::string & val)
 	return clr;
 }
 
-const char * ocl_value(int val) { static char ach[11]; sprintf(ach, "%d", val); return ach; }
-const char * ocl_value(unsigned int val) { static char ach[11]; sprintf(ach, "%u", val); return ach; }
-const char * ocl_value(long long val) { static char ach[22]; sprintf(ach, "%lld", val); return ach; }
-const char * ocl_value(unsigned long long val) { static char ach[22]; sprintf(ach, "%llu", val); return ach; }
-const char * ocl_value(double val) { static char ach[22]; sprintf(ach, "%g", val); return ach; }
+const char * ocl_value(int val) { static char ach[11]; snprintf(ach, sizeof(ach), "%d", val); return ach; }
+const char * ocl_value(unsigned int val) { static char ach[11]; snprintf(ach, sizeof(ach), "%u", val); return ach; }
+const char * ocl_value(long long val) { static char ach[22]; snprintf(ach, sizeof(ach), "%lld", val); return ach; }
+const char * ocl_value(unsigned long long val) { static char ach[22]; snprintf(ach, sizeof(ach), "%llu", val); return ach; }
+const char * ocl_value(double val) { static char ach[22]; snprintf(ach, sizeof(ach), "%g", val); return ach; }
 
 template <class t>
 clReturn oclGetInfo(cl_device_id did, cl_e_device_info eInfo, t & val) {

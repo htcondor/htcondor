@@ -72,8 +72,6 @@ ToString( string &buffer )
 		return false;
 	}
 
-	char tempBuff[512];
-
 	buffer += "[";
 	buffer += "\n";
 
@@ -87,9 +85,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -98,9 +95,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfClassAds );
 	buffer += "numberOfClassAds = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfClassAds);
 	buffer += ";";
 	buffer += "\n";
 
@@ -153,8 +149,6 @@ ToString( string &buffer )
 		return false;
 	}
 
-	char tempBuff[512];
-
 	buffer += "[";
 	buffer += "\n";
 
@@ -163,9 +157,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -228,8 +221,6 @@ ToString( string &buffer )
 		return false;
 	}
 
-	char tempBuff[512];
-
 	classad::ClassAdUnParser unp;
 
 	buffer += "[";
@@ -240,9 +231,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
