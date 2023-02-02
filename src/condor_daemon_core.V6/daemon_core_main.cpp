@@ -1733,10 +1733,8 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 
 	free(name);
 
-	auto_free_ptr history_file(param(history_file_param));
-	std::vector<std::string> historyFiles = findHistoryFiles(history_file);
-
-	if (historyFiles.empty()) {
+	std::string history_file;
+	if (!param(history_file, history_file_param)) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1744,6 +1742,8 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		stream->end_of_message();
 		return FALSE;
 	}
+
+	std::vector<std::string> historyFiles = findHistoryFiles(history_file.c_str());
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	if (!stream->code(result)) {
