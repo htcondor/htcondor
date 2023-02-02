@@ -982,10 +982,6 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 
 	// Find all time rotated files matching the filename in its given directory
 	std::vector<std::string> historyFiles = findHistoryFiles(matchFileName);
-	if (historyFiles.empty()) {
-		fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
-		exit(1);
-	}
 
 	if (backwards) { std::reverse(historyFiles.begin(), historyFiles.end()); }// Reverse reading of history files vector
 	//Debugging code: Display found files in vector order
