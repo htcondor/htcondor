@@ -81,6 +81,13 @@ fi
 #  sure that credmon has a long-duration one, but copy it to $VTOKEN if a
 #  new one is generated.
 ID="`id -u`"
+
+CREDKEY=""
+IS_POMS_ANALYSIS=false
+if [ -n "$POMS_CREDKEY" ]; then
+    CREDKEY="--credkey=$POMS_CREDKEY"
+fi
+
 VTOKEN="/tmp/vt_u$ID"
 BTOKEN=""
 if [ -z "$BEARER_TOKEN_FILE" ]; then
@@ -109,6 +116,19 @@ for REQUEST; do
             fatal "Only one underscore allowed in use_oauth_services name"
         fi
     fi
+
+    if [ "$ROLE" == "default" ] && [ -n "$POMS_VTOKEN" ] && [ -n "$UPLOADS" ]; then
+        IS_POMS_ANALYSIS=true
+        VTOKEN="$UPLOADS/$POMS_VTOKEN"
+    fi
+    
+    if $IS_POMS_ANALYSIS; then
+        BTOKEN="$BEARER_TOKEN_FILE"
+        if [ -z "$BEARER_TOKEN_FILE" ]; then
+            cp $BTOKEN $BTOKEN-$SERVICE
+        fi
+    fi
+
     STOREOPTS=()
     if [ -n "$SEC_CREDENTIAL_STORECRED_OPTS" ]; then
         for OPT in $SEC_CREDENTIAL_STORECRED_OPTS; do
@@ -150,10 +170,21 @@ but make sure no other job is using them."
     if [ -n "$BTOKEN" ]; then
         OPTS=("-o" "$BTOKEN-$SERVICE" "${OPTS[@]}")
     fi
-    OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN-$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
+
+    if $IS_POMS_ANALYSIS; then
+        OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=/dev/stdin" "--vaulttokenfile=/dev/stdout" "--nokerberos"  "--showbearerurl" "$CREDKEY")
+    else
+        OPTS=("--vaulttokenttl=28d" "${OPTS[@]}" "--vaulttokeninfile=$VTOKEN-$SERVICE" "--vaulttokenfile=/dev/stdout" "--showbearerurl")
+    fi
+
     verbose "Attempting to get tokens for $SERVICE"
     # First attempt to get tokens quietly without oidc
-    CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
+    if $IS_POMS_ANALYSIS; then
+        CRED="`cat $VTOKEN | htgettoken "${OPTS[@]}"  ${VERBOSE:--q}`"
+    else
+        CRED="`htgettoken "${OPTS[@]}" --nooidc ${VERBOSE:--q}`"
+    fi
+
     if [ $? != 0 ]; then
         # OIDC authentication probably needed, so remove -q to tell the user
         #  what is happening
@@ -173,7 +204,7 @@ but make sure no other job is using them."
         cat $BTOKEN-$SERVICE >$TMPFILE
         mv $TMPFILE $BTOKEN
     fi
-
+    
     CREDLINES="$(echo "$CRED"|wc -l)"
     case $CREDLINES in
         1)  # No new vault token was generated
@@ -210,5 +241,15 @@ but make sure no other job is using them."
         )|condor_store_cred add-oauth "${STOREOPTS[@]}" -i - >$STOREOUT
     if [ $? != 0 ]; then
         fatal "Failed to store condor credentials for $SERVICE"
+    fi
+    if $IS_POMS_ANALYSIS; then
+        # poms does not need these
+        rm -f $VTOKEN-$SERVICE
+        rm -f $BTOKEN-$SERVICE
+        if [ -n "$EXPERIMENT" ] && [ -n "$USER" ]; then
+            # copy new vault token to user uploads directory
+            chmod g+rw $VTOKEN
+            cp $VTOKEN /home/poms/uploads/$EXPERIMENT/$USER/$POMS_VTOKEN
+        fi
     fi
 done
