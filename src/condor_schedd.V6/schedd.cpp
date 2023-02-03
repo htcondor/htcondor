@@ -7694,6 +7694,7 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 	int num_ads = 0;
 	std::string claim_id;
 	ClassAd slot_ad;
+	std::string slot_user;
 	std::string slot_submitter;
 	PROC_ID jobid;
 	jobid.cluster = jobid.proc = -1;
@@ -7705,16 +7706,16 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 		return 0;
 	}
 
-	dprintf(D_ALWAYS, "JEF CmdGiveSlots() provider is '%s'\n",rsock->getFullyQualifiedUser());
+	slot_user = rsock->getFullyQualifiedUser();
 
-	if (!cmd_ad.LookupString("Submitter", slot_submitter)) {
-		slot_submitter = rsock->getFullyQualifiedUser();
+	if (!cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter)) {
+		slot_submitter = slot_user;
 	}
 
 		// TODO handle alternate submitter names
-	MainScheddNegotiate sn(0, nullptr, rsock->getFullyQualifiedUser(), nullptr);
+	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
 
-	cmd_ad.LookupInteger("NumAds", num_ads);
+	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
 	dprintf(D_ALWAYS, "CmdGiveSlots() reading %d slot ads\n", num_ads);
 
 	for (int i = 0; i < num_ads; i++) {
@@ -7723,6 +7724,11 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 			dprintf(D_ALWAYS, "CmdGiveSlots() failed to read slot ad %d\n", i);
 			return 0;
 		}
+
+			// TODO allow trusted users to match all jobs
+			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
+		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
+		slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
 
 		slot_ad.LookupString(ATTR_NAME, slot_name);
 
@@ -8049,6 +8055,11 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 				         slot_name, itr->first.c_str(), new_value);
 			}
 		}
+
+		// These attributes are added by the schedd to slot ads that
+		// arrive via GIVE_SLOTS. Copy them into the lefteovers ad.
+		CopyAttribute(ATTR_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
+		CopyAttribute(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
 
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)

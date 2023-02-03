@@ -1190,9 +1190,9 @@ ResMgr::offerToSchedd()
 
 	sock->encode();
 	ClassAd cmd_ad;
-	cmd_ad.InsertAttr("NumAds", (long)offer_resources.size());
+	cmd_ad.InsertAttr(ATTR_NUM_ADS, (long)offer_resources.size());
 	if (!offer_submitter.empty()) {
-		cmd_ad.InsertAttr("Submitter", offer_submitter);
+		cmd_ad.InsertAttr(ATTR_SUBMITTER, offer_submitter);
 	}
 	if ( !putClassAd(sock, cmd_ad) ) {
 		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",

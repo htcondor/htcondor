@@ -8796,6 +8796,13 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	my_match_ad->LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
 	if (scheddsAreSubmitters) match_any_user = true;
 
+	bool restrict_to_user = false;
+	std::string match_user;
+	my_match_ad->LookupBool(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, restrict_to_user);
+	if (restrict_to_user) {
+		my_match_ad->LookupString(ATTR_AUTHENTICATED_IDENTITY, match_user);
+	}
+
 		// indicate failure by setting proc to -1.  do this now
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	
@@ -8892,6 +8899,16 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 					// Move along to the next job in the prio rec array
 				continue;
+			}
+
+			if (!match_user.empty()) {
+				// TODO Get the owner from the JobQueueJob object.
+				//   Need to be careful about whether UID_DOMAIN is included.
+				std::string job_user;
+				ad->LookupString(ATTR_USER, job_user);
+				if (match_user != job_user) {
+					continue;
+				}
 			}
 
 				// Now check if the job and the claimed resource match.
