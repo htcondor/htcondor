@@ -355,8 +355,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	blankPipeEnt.index = -1;
 	pipeTable->fill(blankPipeEnt);
 
-	pipeHandleTable = new ExtArray<PipeHandle>(maxPipe);
-	maxPipeHandleIndex = -1;
 	maxPipeBuffer = 10240;
 
 	nReap = 0;
@@ -576,10 +574,6 @@ DaemonCore::~DaemonCore()
 			free( (*pipeTable)[i].handler_descrip );
 		}
 		delete( pipeTable );
-	}
-
-	if (pipeHandleTable) {
-		delete pipeHandleTable;
 	}
 
 	t.CancelAllTimers();
@@ -1924,44 +1918,46 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 // cannot do I/O directly on these handles, they *can* pass them unaltered
 // to Create_Process (via the std[] parameter) and we'll do the right thing.
 //    - Greg Quinn, 04/12/2006
-static const int PIPE_INDEX_OFFSET = 0x10000;
+static const size_t PIPE_INDEX_OFFSET = 0x10000;
 
-int DaemonCore::pipeHandleTableInsert(PipeHandle entry)
+size_t DaemonCore::pipeHandleTableInsert(PipeHandle entry)
 {
 	// try to find a free slot
-	for (int i = 0; i <= maxPipeHandleIndex; i++) {
-		if ((*pipeHandleTable)[i] == (PipeHandle)-1) {
-			(*pipeHandleTable)[i] = entry;
+	size_t i;
+	for (i = 0; i < pipeHandleTable.size() ; i++) {
+		if (pipeHandleTable[i] == (PipeHandle)-1) {
+			pipeHandleTable[i] = entry;
 			return i;
 		}
 	}
 
 	// no vacant slots found, increment maxPipeHandleIndex and use it
-	(*pipeHandleTable)[++maxPipeHandleIndex] = entry;
-	return maxPipeHandleIndex;
+	pipeHandleTable.push_back(entry);
+	return i;
 }
 
-void DaemonCore::pipeHandleTableRemove(int index)
+void DaemonCore::pipeHandleTableRemove(size_t index)
 {
 	// invalidate this index
-	(*pipeHandleTable)[index] = (PipeHandle)-1;
+	pipeHandleTable[index] = (PipeHandle)-1;
 
-	// shrink down maxPipeHandleIndex, if necessary
-	if (index == maxPipeHandleIndex) {
-		maxPipeHandleIndex--;
+	// shrink down pipeHandleTable, if possible
+	if (index == pipeHandleTable.size() - 1) {
+		pipeHandleTable.pop_back();
 	}
 }
 
-int DaemonCore::pipeHandleTableLookup(int index, PipeHandle* ph)
+int DaemonCore::pipeHandleTableLookup(size_t index, PipeHandle* ph)
 {
-	if ((index < 0) || (index > maxPipeHandleIndex)) {
+	if (index >= pipeHandleTable.size()) {
 		return FALSE;
 	}
-	PipeHandle tmp_ph = (*pipeHandleTable)[index];
+
+	PipeHandle tmp_ph = pipeHandleTable[index];
 	if (tmp_ph == (PipeHandle)-1) {
 		return FALSE;
 	}
-	if (ph != NULL) {
+	if (ph != nullptr) {
 		*ph = tmp_ph;
 	}
 	return TRUE;
@@ -2152,7 +2148,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
     int     i;
     int     j;
 
-	int index = pipe_end - PIPE_INDEX_OFFSET;
+	size_t index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
 		return -1;
@@ -2168,7 +2164,7 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	// Verify that this piepfd has not already been registered
 	for ( j=0; j < nPipe; j++ )
 	{
-		if ( (*pipeTable)[j].index == index ) {
+		if ( (*pipeTable)[j].index == (int)index ) {
 			EXCEPT("DaemonCore: Same pipe registered twice");
         }
 	}
@@ -2217,14 +2213,14 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	// NOTE: WatchPid() must be called at the very end of this function.
 
 	// tell our PipeEnd object that we're registered
-	(*pipeHandleTable)[index]->set_registered();
+	pipeHandleTable[index]->set_registered();
 
 	(*pipeTable)[i].pentry = new PidEntry;
 	(*pipeTable)[i].pentry->hProcess = 0;
 	(*pipeTable)[i].pentry->hThread = 0;
 	(*pipeTable)[i].pentry->pipeReady = 0;
 	(*pipeTable)[i].pentry->deallocate = 0;
-	(*pipeTable)[i].pentry->pipeEnd = (*pipeHandleTable)[index];
+	(*pipeTable)[i].pentry->pipeEnd = pipeHandleTable[index];
 
 	WatchPid((*pipeTable)[i].pentry);
 #endif
@@ -2382,7 +2378,7 @@ int DaemonCore::Close_Pipe( int pipe_end )
 	// Now, close the pipe.
 	int retval = TRUE;
 #if defined(WIN32)
-	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>((*pipeHandleTable)[index]);
+	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>(pipeHandleTable[index]);
 	if (wpe && wpe->needs_delayed_close()) {
 		// We can't close this pipe yet, because it has an incomplete
 		// overalapped write and we need to let it finish. Start a
@@ -2394,10 +2390,10 @@ int DaemonCore::Close_Pipe( int pipe_end )
 	else {
 		// no outstanding I/O - just delete the object (which
 		// will close the pipe)
-		delete (*pipeHandleTable)[index];
+		delete pipeHandleTable[index];
 	}
 #else
-	int pipefd = (*pipeHandleTable)[index];
+	int pipefd = pipeHandleTable[index];
 	if ( close(pipefd) < 0 ) {
 		dprintf(D_ALWAYS,
 			"Close_Pipe(pipefd=%d) failed, errno=%d\n",pipefd,errno);
@@ -2456,11 +2452,11 @@ DaemonCore::Read_Pipe(int pipe_end, void* buffer, int len)
 	}
 
 #if defined(WIN32)
-	ReadPipeEnd* rpe = dynamic_cast<ReadPipeEnd*>((*pipeHandleTable)[index]);
+	ReadPipeEnd* rpe = dynamic_cast<ReadPipeEnd*>(pipeHandleTable[index]);
 	ASSERT(rpe != NULL);
 	return rpe->read(buffer, len);
 #else
-	return read((*pipeHandleTable)[index], buffer, len);
+	return read(pipeHandleTable[index], buffer, len);
 #endif
 }
 
@@ -2479,11 +2475,11 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 	}
 
 #if defined(WIN32)
-	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>((*pipeHandleTable)[index]);
+	WritePipeEnd* wpe = dynamic_cast<WritePipeEnd*>(pipeHandleTable[index]);
 	ASSERT(wpe != NULL);
 	return wpe->write(buffer, len);
 #else
-	return write((*pipeHandleTable)[index], buffer, len);
+	return write(pipeHandleTable[index], buffer, len);
 #endif
 }
 
@@ -2491,7 +2487,7 @@ DaemonCore::Write_Pipe(int pipe_end, const void* buffer, int len)
 int
 DaemonCore::Get_Pipe_FD(int pipe_end, int* fd)
 {
-	int index = pipe_end - PIPE_INDEX_OFFSET;
+	size_t index = pipe_end - PIPE_INDEX_OFFSET;
 	return pipeHandleTableLookup(index, fd);
 }
 #endif
@@ -2503,7 +2499,7 @@ DaemonCore::Close_FD(int fd)
 		return 0;
 	}
 	int retval = -1;  
-	if ( fd >= PIPE_INDEX_OFFSET ) {  
+	if ( fd >= (int) PIPE_INDEX_OFFSET ) {  
 		retval = ( daemonCore->Close_Pipe ( fd ) ? 0 : -1 );
 	} else {
 		retval = close ( fd );
@@ -3603,7 +3599,7 @@ void DaemonCore::Driver()
 		// select on.
 		for (i = 0; i < nPipe; i++) {
 			if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry....
-				int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
+				int pipefd = pipeHandleTable[(*pipeTable)[i].index];
 				switch( (*pipeTable)[i].handler_type ) {
 				case HANDLE_READ:
 					selector.add_fd( pipefd, Selector::IO_READ );
@@ -3855,7 +3851,7 @@ void DaemonCore::Driver()
 					}
 #else
 					// For Unix, check if select set the bit
-					int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
+					int pipefd = pipeHandleTable[(*pipeTable)[i].index];
 					if ( selector.fd_ready( pipefd, Selector::IO_READ ) )
 					{
 						(*pipeTable)[i].call_handler = true;
@@ -3906,7 +3902,7 @@ void DaemonCore::Driver()
 
 #else
 							// UNIX
-							int pipefd = (*pipeHandleTable)[(*pipeTable)[i].index];
+							int pipefd = pipeHandleTable[(*pipeTable)[i].index];
 							selector.reset();
 							selector.set_timeout( 0 );
 							selector.add_fd( pipefd, Selector::IO_READ );
@@ -6431,12 +6427,12 @@ void CreateProcessForkit::exec() {
 		for (int i = 0; i < 3; i++) {
 			if ( m_std[i] > -1 ) {
 				int fd = m_std[i];
-				if (fd >= PIPE_INDEX_OFFSET) {
+				if (fd >= (int) PIPE_INDEX_OFFSET) {
 						// this is a DaemonCore pipe we'd like to pass down.
 						// replace the std array entry, which is an index into
 						// the pipeHandleTable, with the actual file descriptor
-					int index = fd - PIPE_INDEX_OFFSET;
-					fd = (*daemonCore->pipeHandleTable)[index];
+					size_t index = ((size_t) fd) - PIPE_INDEX_OFFSET;
+					fd = daemonCore->pipeHandleTable[index];
 				}
 				if ( ( dup2 ( fd, i ) ) == -1 ) {
 					dprintf( D_ALWAYS,
@@ -7289,7 +7285,7 @@ int DaemonCore::Create_Process(
 				if (std[ii] >= PIPE_INDEX_OFFSET) {
 					// we are handing down a DaemonCore pipe
 					int index = std[ii] - PIPE_INDEX_OFFSET;
-					*std_handles[ii] = (*pipeHandleTable)[index]->get_handle();
+					*std_handles[ii] = pipeHandleTable[index]->get_handle();
 					SetHandleInformation(*std_handles[ii], HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT);
 					valid = TRUE;
 				}
