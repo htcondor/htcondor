@@ -80,12 +80,26 @@ def cleanup_file(test_dir):
             # Delete the file.
             rm -f ${DIR}${DELETE}
 
-            # We created directories in ${DIR} as necessary to write the checkpoint,
-            # so delete them if we just removed the last file in them.  This won't
-            # delete directories which didn't have files in them, though.
-            SUBDIR=`dirname ${DIR}${DELETE}`
-            if [[ -d ${SUBDIR} ]]; then
-                rmdir --parents --ignore-fail-on-non-empty ${SUBDIR}
+            # We created directories in ${DIR} as necessary to write the
+            # checkpoint, so delete them if we just removed the last file
+            # in them.  This won't delete directories which didn't have
+            # files in them, though.
+            #
+            # Using --parents with a relative path means we delete all
+            # subdirectories of ${DIR}.  We then delete ${DIR}/.. and
+            # ${DIR}/../.. because we know we've been given a ${DIR} with
+            # a trailing global job ID and then checkpoint number.
+            #
+            # We could call `rmdir --parents` on the absolute path, but
+            # that will (surprisingly) remove the directory chosen to
+            # store checkpoints if we remove the last checkpoint.
+            SUBDIR=`dirname ${DELETE}`
+            if [[ -d ${DIR}${SUBDIR} ]]; then
+                cd ${DIR}; rmdir --parents --ignore-fail-on-non-empty ${SUBDIR}
+                CHECKPOINT_NUMBER=`basename ${DIR}`
+                cd ..; rmdir --ignore-fail-on-non-empty ${CHECKPOINT_NUMBER}
+                GLOBAL_JOB_ID=$(basename $(dirname ${DIR}))
+                cd ..; rmdir --ignore-fail-on-non-empty ${GLOBAL_JOB_ID}
             fi
 
             exit 0
@@ -1233,14 +1247,15 @@ class TestCheckpointDestination:
         assert(len(results) == 1)
 
         jobAd = results[0]
-
         prefix = jobAd.get("CheckpointDestination")
-        if prefix is None:
-            with the_condor.use_config():
-                SPOOL = htcondor.param["SPOOL"]
-            spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
-            assert(not spoolDirectory.exists())
-        else:
+
+        # Did we clean up the SPOOL directory?
+        with the_condor.use_config():
+            SPOOL = htcondor.param["SPOOL"]
+        spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
+        assert(not spoolDirectory.exists())
+
+        if not prefix is None:
             prefix = prefix[prefix.find("://") + 3:]
             globalJobID = jobAd["GlobalJobID"].replace('#', '_')
             prefix = prefix + "/" + globalJobID
@@ -1249,13 +1264,24 @@ class TestCheckpointDestination:
             checkpointNumber = int(jobAd["CheckpointNumber"])
             for i in range(0, checkpointNumber):
                 path = prefix / f"{i:04}"
-                # Crass empiricism.
+
+                # Did we remove the checkpoint destination?
                 if path.exists():
+                    # Crass empiricism.
                     time.sleep(10)
                 assert(not path.exists())
 
-                manifest_file = test_dir / "condor" / "spool" / f"{the_removed_job.clusterid}" / "0" / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
+                # Did we remove the manifest file?
+                manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
                 assert(not manifest_file.exists())
+
+            # Once we've removed all of the manifest files, we should also
+            # remove the directory we used to store them.
+            checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
+            if checkpoint_cleanup_subdir.exists():
+                # Crass empiricism.
+                time.sleep(10)
+            assert(not checkpoint_cleanup_subdir.exists())
 
 
     def test_checkpoint_upload_failure_causes_job_hold(self, the_condor, hold_job):
