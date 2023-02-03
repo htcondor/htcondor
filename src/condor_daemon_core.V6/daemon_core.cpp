@@ -1706,8 +1706,8 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		}
 
 		// check if slot empty or available
-		if ((sockTable[j].iosock != nullptr) &&  // slot is empty
-			 !((sockTable[j].remove_asap &&	   // slot available
+		if ((sockTable[j].iosock != nullptr) &&  // is slot empty?
+			 !((sockTable[j].remove_asap &&	   // is slot available?
 			           sockTable[j].servicing_tid==0))) 
 		{
 			nRegisteredSocks++;		// increment count of active sockets
