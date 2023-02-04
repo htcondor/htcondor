@@ -889,6 +889,8 @@ private:
 	bool			m_use_slot_weights;
 
 	// utility functions
+	void		sumAllSubmitterData(SubmitterData &all);
+	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);

@@ -3094,14 +3094,6 @@ obtainAdsFromCollector (
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 
-			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-				std::string scheddName;
-				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
-					dprintf(D_ALWAYS, "WARNING: slot ad %s is missing a schedd name, skipping\n",remoteHost);
-					continue;
-				}
-				ad->Assign(ATTR_REMOTE_USER, scheddName);
-			}
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
@@ -3118,16 +3110,6 @@ obtainAdsFromCollector (
 			if ( !IsValidSubmitterName( subname.c_str() ) ) {
 				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
 				continue;
-			}
-
-			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-				std::string scheddName;
-				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
-					dprintf(D_ALWAYS, "WARNING: Submitter Ad %s is missing a schedd name, skipping\n",subname.c_str());
-					continue;
-				}
-				ad->Assign(ATTR_NAME, scheddName);
-				subname = scheddName;
 			}
 
 			if (!TransformSubmitterAd(*ad)) {
@@ -3804,10 +3786,6 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
-
-		if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-			negotiate_ad.InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
-		}
 
 		if (!putClassAd(sock, negotiate_ad))
 		{
@@ -5126,10 +5104,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// used by schedd_negotiate.cpp when resource request lists are being used
 	offer->Assign(ATTR_RESOURCE_REQUEST_CLUSTER,cluster);
 	offer->Assign(ATTR_RESOURCE_REQUEST_PROC,proc);
-
-	if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-		offer->InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
-	}
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
