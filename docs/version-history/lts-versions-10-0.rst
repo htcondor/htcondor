@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a rare bug in the late materialization code that could
+  cause a schedd crash.
+  :jira:`1581`
 
 .. _lts-version-history-1002:
 
