@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed bugs with config knob ``SINGULARITY_USE_PID_NAMESPACES``.
+  :jira:`1574`
+
 
 Version 10.2.1
 --------------
