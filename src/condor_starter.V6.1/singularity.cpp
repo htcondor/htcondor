@@ -367,6 +367,15 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	// Setup Singularity containerization options.
+	std::string knob;
+	param(knob, "SINGULARITY_USE_PID_NAMESPACES", "auto");
+	if (!string_is_boolean_param(knob.c_str(), m_use_pid_namespaces)) {
+		// SINGULARITY_USE_PID_NAMESPACES is not explicitly set to True or False, so we set it automatically.
+		// At this point, we should have a slot attribute that says if pid namespaces supported - this
+		// slot attribute was set when the starter was run with the '-classad' option.
+		m_use_pid_namespaces = false;  // if our slotad does not have the result of our testing, go w/ false
+		machineAd.LookupBool(ATTR_HAS_SINGULARITY_PIDNAMESPACES, m_use_pid_namespaces);
+	}
 	add_containment_args(sing_args);
 
 	std::string args_error;
