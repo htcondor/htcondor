@@ -8644,7 +8644,7 @@ void load_job_factories()
 				if (paused == mmInvalid && JobFactoryIsRunning(clusterad)) {
 					// if the former pause mode was mmInvalid, but the factory loaded OK on this time
 					// remove the pause since mmInvalid basically means 'factory failed to load'
-					setJobFactoryPauseAndLog(clusterad, mmRunning, 0, NULL);
+					setJobFactoryPauseAndLog(clusterad, mmRunning, 0, "");
 				} else {
 					PauseJobFactory(clusterad->factory, (MaterializeMode)paused);
 					++num_paused;
