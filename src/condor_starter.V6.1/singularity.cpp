@@ -600,10 +600,12 @@ Singularity::canRunSIF() {
 }
 
 bool
-Singularity::canRunSandbox() {
+Singularity::canRunSandbox(bool &can_use_pidnamespaces) {
 	std::string sandbox_dir;
 	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
-	return Singularity::canRun(sandbox_dir);
+	bool result = Singularity::canRun(sandbox_dir);  // canRun() will also set m_use_pid_namespaces
+	can_use_pidnamespaces = m_use_pid_namespaces;
+	return result;
 }
 
 void
