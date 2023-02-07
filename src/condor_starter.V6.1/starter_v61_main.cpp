@@ -166,7 +166,8 @@ printClassAd( void )
 	if (htcondor::Singularity::enabled()) {
 
 		bool can_run_sandbox = false;
-		if (htcondor::Singularity::canRunSandbox())  {
+		bool can_use_pidnamespaces = true;
+		if (htcondor::Singularity::canRunSandbox(can_use_pidnamespaces))  {
 			can_run_sandbox = true;
 		}
 		bool can_run_sif = false;
@@ -187,6 +188,11 @@ printClassAd( void )
 			if (can_run_sif) {
 				printf("%s = True\n", ATTR_HAS_SIF);
 			}
+			// So canRunSandbox() determined if this Singularity install can use pid namespaces.
+			// Use the result to set ATTR_HAS_SINGULARITY_PIDNAMESPACES explicitly to True or False for
+			// insertion into the slot ad, as subsequent invocations of the condor_starter
+			// will lookup this slot attribute to determine if pid namesapces are available.
+			printf("%s = %s\n", ATTR_HAS_SINGULARITY_PIDNAMESPACES, can_use_pidnamespaces ? "True" : "False");
 		}
 		else {
 			// If we made it here, we cannot run either sif or sandbox images.

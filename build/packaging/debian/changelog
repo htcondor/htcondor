@@ -1,3 +1,9 @@
+condor (10.2.2-1) stable; urgency=medium
+
+  * Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Feb 2023 21:52:00 -0600
+
 condor (10.2.1-1) stable; urgency=medium
 
   * Improved condor_schedd scalability when a user runs more than 1,000 jobs
