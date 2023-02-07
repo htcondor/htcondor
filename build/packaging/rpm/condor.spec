@@ -1578,6 +1578,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
+- Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
+
 * Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
 - Improved condor_schedd scalability when a user runs more than 1,000 jobs
 - condor_ssh_to_job should always work in glidein environments

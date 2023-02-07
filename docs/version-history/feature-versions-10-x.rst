@@ -9,9 +9,7 @@ Version 10.2.2
 
 Release Notes:
 
-.. HTCondor version 10.2.2 released on Month Date, 2023.
-
-- HTCondor version 10.2.2 not yet released.
+- HTCondor version 10.2.2 released on February 7, 2023.
 
 New Features:
 
@@ -19,7 +17,7 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bugs with config knob ``SINGULARITY_USE_PID_NAMESPACES``.
+- Fixed bugs with configuration knob ``SINGULARITY_USE_PID_NAMESPACES``.
   :jira:`1574`
 
 
