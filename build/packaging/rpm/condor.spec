@@ -1074,6 +1074,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/exit_37.sif
 %dir %_libexecdir/condor/singularity_test_sandbox/
 %dir %_libexecdir/condor/singularity_test_sandbox/dev/
+%dir %_libexecdir/condor/singularity_test_sandbox/proc/
 %_libexecdir/condor/singularity_test_sandbox/exit_37
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
