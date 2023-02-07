@@ -64,6 +64,26 @@ TEST_CASES = {
         "test_map": r'''CLAIMTOBE /^[\/](.*)$/ \1@mapped
 ''',
     },
+    "escape_s": {
+        "config":  {
+            "ALLOW_WRITE": "allowed@mapped",
+        },
+        "allowed_id": "x allowed",
+        "denied_id": "x denied",
+        "unmapped_id": "allowed",
+        "test_map": r'''CLAIMTOBE /^x[\s](.*)$/ \1@mapped
+''',
+    },
+    "double_escape_s": {
+        "config":  {
+            "ALLOW_WRITE": "allowed@mapped",
+        },
+        "allowed_id": "x allowed",
+        "denied_id": "x denied",
+        "unmapped_id": "allowed",
+        "test_map": r'''CLAIMTOBE /^x[\\s](.*)$/ \1@mapped
+''',
+    },
 }
 
 
