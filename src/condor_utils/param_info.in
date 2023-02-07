@@ -1784,6 +1784,13 @@ customization=seldom
 friendly_name=Sandbox location used to test Singularity
 tags=starter
 
+[SINGULARITY_USE_PID_NAMESPACES]
+default=auto
+type=string
+customization=seldom
+friendly_name=Ask Singularity to contain pid namespace
+tags=starter
+
 [UPDATE_INTERVAL]
 default=300
 type=int
