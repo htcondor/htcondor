@@ -403,8 +403,8 @@ MapFile::ParseField(const std::string & line, size_t offset, std::string & field
 			} else if ('\\' == line[offset] && ++offset < line.length()) {
 				if (chEnd == (line[offset])) {
 					field += line[offset];
-			    } else if('\\' == (line[offset])) {
-			        field += '\\';
+				} else if('\\' == (line[offset])) {
+					field += '\\';
 				} else {
 					field += '\\';
 					field += line[offset];
