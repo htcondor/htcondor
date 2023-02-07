@@ -65,19 +65,19 @@ mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
 mv "../condor-${condor_version}.tgz" "SOURCES/condor-${condor_version}.tar.gz"
 
 # copy rpm files from condor sources into the SOURCES directory
-tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm"
+tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm" "condor-${condor_version}/CMakeLists.txt"
 cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
+
+# Extract prerelease value from top level CMake file
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' condor-${condor_version}/CMakeLists.txt)
+PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
+PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
 rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
 update_spec_define () {
   sed -i "s|^ *%define * $1 .*|%define $1 $2|" SOURCES/condor.spec
 }
-
-# Extract prerelease value from top level CMake file
-PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)
-PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
-PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
 
 update_spec_define git_build 0
 update_spec_define tarball_version "$condor_version"
