@@ -115,6 +115,22 @@ Bugs Fixed:
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
 
+Version 10.2.2
+--------------
+
+Release Notes:
+
+- HTCondor version 10.2.2 released on February 7, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed bugs with configuration knob ``SINGULARITY_USE_PID_NAMESPACES``.
+  :jira:`1574`
+
 Version 10.2.1
 --------------
 
