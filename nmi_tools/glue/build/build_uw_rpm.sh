@@ -74,13 +74,22 @@ update_spec_define () {
   sed -i "s|^ *%define * $1 .*|%define $1 $2|" SOURCES/condor.spec
 }
 
+# Extract prerelease value from top level CMake file
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)
+PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
+PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
+
 update_spec_define git_build 0
 update_spec_define tarball_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
-# Set HTCondor base release for pre-release build
-update_spec_define condor_base_release "0.$condor_build_id"
-# Set HTCondor base release to 1 for final release.
-#update_spec_define condor_base_release "1"
+
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    # Set HTCondor base release to 1 for final release.
+    update_spec_define condor_base_release "1"
+else
+    # Set HTCondor base release for pre-release build
+    update_spec_define condor_base_release "0.$condor_build_id"
+fi
 
 VERBOSE=1
 export VERBOSE

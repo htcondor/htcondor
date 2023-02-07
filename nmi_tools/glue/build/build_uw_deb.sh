@@ -50,32 +50,43 @@ export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
 # if running in a condor slot, set parallelism to slot size
 export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 
+# Extract prerelease value from top level CMake file
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)
+PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
+PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
+
 # Distribution should be one of experimental, unstable, testing, stable, oldstable, oldoldstable
 # unstable -> daily repo
 # testing -> rc repo
 # stable -> release repo
 
-#dist='unstable'
-dist='testing'
-#dist='stable'
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    dist='stable'
+elif [ "$PRE_RELEASE" = 'RC' ]; then
+    dist='testing'
+else
+    dist='unstable'
+fi
 echo "Distribution is $dist"
 
-# Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
-
-# Final release changelog
-#dch --release --distribution $dist ignored
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    # Changelog entry is present for final release build
+    dch --release --distribution $dist ignored
+else
+    # Generate a changelog entry
+    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Automated build"
+fi
 
 . /etc/os-release
-if [ $VERSION_CODENAME = 'bullseye' ]; then
+if [ "$VERSION_CODENAME" = 'bullseye' ]; then
     true
-elif [ $VERSION_CODENAME = 'bookworm' ]; then
+elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif [ $VERSION_CODENAME = 'bionic' ]; then
+elif [ "$VERSION_CODENAME" = 'bionic' ]; then
     true
-elif [ $VERSION_CODENAME = 'focal' ]; then
+elif [ "$VERSION_CODENAME" = 'focal' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif [ $VERSION_CODENAME = 'jammy' ]; then
+elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
 else
