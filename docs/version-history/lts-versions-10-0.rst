@@ -18,6 +18,15 @@ Release Notes:
 
 - HTCondor version 10.0.3 not yet released.
 
+- If you set :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` and use ``/`` to
+  mark the beginning and end of a regular expression, the character sequence
+  ``\\`` in the mapfile now passes a single ``\`` to the regular expression
+  engine.  This allows you to pass the sequence ``\/`` to the regular
+  expression engine (put ``\\\/`` in the map file), which was not previously
+  possible.  If the macro above is set and you have a ``\\`` in your map file,
+  you will need to replace it with ``\\\\``.
+  :jira:`1573`
+
 New Features:
 
 - None.
