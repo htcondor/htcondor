@@ -162,8 +162,9 @@ def get_map_result(the_condor, the_id, expected_returncode):
         cp = subprocess.run(
             ['condor_ping', '-table', '-debug', 'WRITE'],
             env=env,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
         )
 
     print(cp.stdout)
