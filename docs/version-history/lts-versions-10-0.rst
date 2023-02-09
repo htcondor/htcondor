@@ -37,6 +37,9 @@ Bugs Fixed:
   cause a schedd crash.
   :jira:`1581`
 
+- Fixed bug where the *condor_shadow* would crash during job removal.
+  :jira:`1585`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
