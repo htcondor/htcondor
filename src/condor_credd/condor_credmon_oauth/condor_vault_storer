@@ -229,6 +229,9 @@ for REQUEST; do
                     fatal "No new vault token after second try; logic error"
                 fi
                 if ! querycred $SERVICE "${STOREOPTS[@]}"; then
+                    if [ -f $VTOKEN-$SERVICE ] && [ ! -w $VTOKEN-$SERVICE ]; then
+                        fatal "No $SERVICE credentials stored and $VTOKEN-$SERVICE is readonly"
+                    fi
                     verbose "Removing $VTOKEN-$SERVICE because there are no $SERVICE credentials stored"
                     rm -f "$VTOKEN-$SERVICE"
                     TRIEDAGAIN=true
