@@ -81,7 +81,10 @@ is a list of items that administrators should be aware of.
   interpretation. However, some administrators have reported that expressions
   in their condor mapfile were rejected because they wanted to match the ``-``
   character in a character class and the ``-`` was not the last character
-  specified in the character class.
+  specified in the character class. In addition, on Enterprise Linux 7,
+  having a hyphen (``-``) in the last position after a POSIX character set
+  (such as ``[:space:]``) in a character class was flagged as an invalid range,
+  even though it should have been accepted.
   :jira:`1087`
 
 - The semantics of undefined user job policy expressions has changed.  A
