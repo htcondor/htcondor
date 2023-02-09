@@ -615,6 +615,8 @@ RemoteResource::disconnectClaimSock(const char *err_msg)
 	          (err_msg ? err_msg : "Disconnecting from starter"),
 	          claim_sock->get_sinful_peer());
 
+	if (!thisRemoteResource) return;
+
 	thisRemoteResource->closeClaimSock();
 
 	if( Shadow->supportsReconnect() ) {
