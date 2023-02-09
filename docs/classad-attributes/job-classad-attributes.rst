@@ -887,7 +887,7 @@ all attributes.
     | | [JobDurationExceeded]          | exceeded.                           |                          |
     +----------------------------------+-------------------------------------+--------------------------+
     | | 47                             | The job's allowed execution time    |                          |
-    | | [JobExecutionTimeExceeded]     | was exceeded.                       |                          |
+    | | [JobExecuteExceeded]           | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
 
     Note for hold codes 12 [TransferOutputError] and 13 [TransferInputError]:
