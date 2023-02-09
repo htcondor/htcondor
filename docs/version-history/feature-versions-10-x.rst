@@ -21,6 +21,9 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug where the *condor_shadow* would crash during job removal
+  :jira:`1585`
+
 - Fixed a bug where *condor_history* would fail if the job history
   file doesn't exist.
   :jira:`1578`
