@@ -33,6 +33,8 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	}
 
 
+	// This dprintf(), and all subsequent ones in this function, should
+	// probably preface themselves with 'doCheckpointCleanup(): '.
 	dprintf( D_ZKM, "Cleaning up checkpoint of job %d.%d...\n", cluster, proc );
 
 	//
@@ -140,6 +142,18 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	}
 
 
+	// Drop a copy of the job ad into the directory in case this attempt
+	// to clean up fails and we need to try it again later.
+	std::filesystem::path jobAdPath = target_dir / ".job.ad";
+	FILE * jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
+	if( jobAdFile == NULL ) {
+		dprintf( D_ALWAYS, "Failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
+		return false;
+	}
+	fPrintAd( jobAdFile, * jobAd );
+	fclose( jobAdFile );
+
+
 	// We need this to construct the checkpoint-specific location.
 	std::string globalJobID;
 	if(! jobAd->LookupString( ATTR_GLOBAL_JOB_ID, globalJobID )) {
@@ -197,9 +211,6 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		cleanup_process_opts.reaperID(cleanup_reaper_id)
 	);
 
-	// FIXME: Update condor_preen to invoke condor_manifest
-	// appropriately as well.  May involve refactorign this
-	// function a little bit. ;)
 
 	dprintf( D_ZKM, "... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;

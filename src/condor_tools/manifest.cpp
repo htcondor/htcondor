@@ -137,6 +137,11 @@ main( int argc, char ** argv ) {
         if( deleted ) {
             std::filesystem::path fileStemPath(fileStem);
             std::filesystem::path parentPath = fileStemPath.parent_path();
+            std::filesystem::path jobAdPath = parentPath / ".job.ad";
+
+            fprintf( stderr, "Removing %s after successful clean-up.\n", jobAdPath.string().c_str() );
+            std::filesystem::remove( jobAdPath );
+
             fprintf( stderr, "Removing %s after successful clean-up.\n", parentPath.string().c_str() );
             std::filesystem::remove( parentPath );
         }
