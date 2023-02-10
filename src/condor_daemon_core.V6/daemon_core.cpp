@@ -36,7 +36,6 @@
 #include <resolv.h>
 #endif
 
-static const int DEFAULT_MAXSOCKETS = 8;
 static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
@@ -310,27 +309,14 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	//
 	m_proc_family = NULL;
 
-	maxSocket = SocSize;
 	maxPipe = PipeSize;
 
 	m_unregisteredCommand.num = 0;
 
-	if(maxSocket == 0)
-		maxSocket = DEFAULT_MAXSOCKETS;
-
 	sec_man = new SecMan();
 	audit_log_callback_fn = 0;
 
-	sockTable = new ExtArray<SockEnt>(maxSocket);
-	if(sockTable == NULL)
-	{
-		EXCEPT("Out of memory!");
-	}
-	nSock = 0;
 	nPendingSockets = 0;
-	SockEnt blankSockEnt;
-	memset(&blankSockEnt,'\0',sizeof(SockEnt));
-	sockTable->fill(blankSockEnt);
 
 	// See the comment in the header.  This can't be a reconfigure setting
 	// because everybody's sinfuls are derived from the shared port's sinful
@@ -509,26 +495,21 @@ DaemonCore::~DaemonCore()
 		free( s.handler_descrip );
 	}
 
-	if (sockTable != NULL)
-	{
+	// There may be CEDAR objects stored in the table, but we
+	// don't want to delete them here.  People who register
+	// sockets in our table have to be responsible for
+	// cleaning up after themselves.  "He who creates should
+	// delete", otherwise the socket(s) may get deleted
+	// multiple times.  The only things we created are the UDP
+	// and TCP command sockets, but we'll delete those down
+	// below, so we just need to delete the table entries
+	// themselves, not the CEDAR objects.  Origional wisdom by
+	// Todd, cleanup of DC command sockets by Derek on 2/26/01
 
-			// There may be CEDAR objects stored in the table, but we
-			// don't want to delete them here.  People who register
-			// sockets in our table have to be responsible for
-			// cleaning up after themselves.  "He who creates should
-			// delete", otherwise the socket(s) may get deleted
-			// multiple times.  The only things we created are the UDP
-			// and TCP command sockets, but we'll delete those down
-			// below, so we just need to delete the table entries
-			// themselves, not the CEDAR objects.  Origional wisdom by
-			// Todd, cleanup of DC command sockets by Derek on 2/26/01
-
-		for (i=0;i<nSock;i++) {
-			free( (*sockTable)[i].iosock_descrip );
-			free( (*sockTable)[i].handler_descrip );
+	for (auto &sockEnt: sockTable) {
+		free( sockEnt.iosock_descrip );
+		free( sockEnt.handler_descrip );
 		}
-		delete sockTable;
-	}
 
 	delete sec_man;
 
@@ -1108,7 +1089,7 @@ int DaemonCore::InfoCommandPort()
 	}
 
 	// this will return a -1 on error
-	return( ((Sock*)((*sockTable)[initial_command_sock()].iosock))->get_port() );
+	return( ((Sock*)(sockTable[(size_t)initial_command_sock()].iosock))->get_port() );
 }
 
 // NOTE: InfoCommandSinfulString always returns a pointer to a _static_ buffer!
@@ -1208,7 +1189,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 			EXCEPT( "Unable to find initial command socket!" );
 		}
 
-		Sock * sock = (Sock *)(*sockTable)[initialCommandSock].iosock;
+		Sock * sock = (Sock *)sockTable[(size_t)initialCommandSock].iosock;
 		condor_sockaddr sa = sock->my_addr();
 
 		// FIXME: get_sinful_public() will return the TCP_FORWARDING_HOST.
@@ -1225,11 +1206,11 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		// and probably don't have good IPv6 support.
 		char const * addr = sock->get_sinful_public();
 		if(! sa.is_ipv4()) {
-			for( int i = initialCommandSock; i < nSock; ++i ) {
-				if( (*sockTable)[i].iosock == NULL ) { continue; }
-				if(! (*sockTable)[i].is_command_sock) { continue; }
+			for( size_t i = initialCommandSock; i < sockTable.size(); ++i ) {
+				if( sockTable[i].iosock == NULL ) { continue; }
+				if(! sockTable[i].is_command_sock) { continue; }
 
-				sock = (Sock *)(*sockTable)[i].iosock;
+				sock = (Sock *)sockTable[i].iosock;
 				sa = sock->my_addr();
 				if(! sa.is_ipv4()) { continue; }
 
@@ -1252,7 +1233,7 @@ DaemonCore::InfoCommandSinfulStringMyself(bool usePrivateAddress)
 		std::string private_sinful_string;
 		char* tmp;
 		if ((tmp = param("PRIVATE_NETWORK_INTERFACE"))) {
-			int port = ((Sock*)(*sockTable)[initial_command_sock()].iosock)->get_port();
+			int port = ((Sock*)sockTable[initial_command_sock()].iosock)->get_port();
 			std::string ipv4, ipv6;
 			std::string private_ip;
 			bool ok = network_interface_to_ip("PRIVATE_NETWORK_INTERFACE",
@@ -1646,8 +1627,6 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 				HandlerType handler_type,
 				int is_cpp, void **prev_entry)
 {
-    int     i;
-    int     j;
 
     // In sockTable, unlike the others handler tables, we allow for a NULL
 	// handler and a NULL handlercpp - this means a command socket, so use
@@ -1666,19 +1645,28 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
     }
 
 	// Find empty slot, set to be i.
-	for (i=0;i <= nSock; i++) {
-		if ( (*sockTable)[i].iosock == NULL ) {
+    size_t     i;
+	for (i=0;i < sockTable.size(); i++) {
+		if ( (sockTable)[i].iosock == NULL ) {
 			break;
 		}
-		if ( (*sockTable)[i].remove_asap && (*sockTable)[i].servicing_tid==0 ) {
-			(*sockTable)[i].iosock = NULL;
+		if ( sockTable[i].remove_asap && sockTable[i].servicing_tid==0 ) {
+			sockTable[i].iosock = NULL;
 			break;
 		}
 	}
+	if (i == sockTable.size()) {
+		sockTable.push_back({});
+		sockTable[i].iosock = nullptr;
+		sockTable[i].iosock_descrip = nullptr;
+		sockTable[i].handler_descrip = nullptr;
+		sockTable[i].data_ptr = nullptr;
+
+	}
 
 	// Make certain that entry i is empty.
-	if ( (*sockTable)[i].iosock ) {
-        dprintf ( D_ALWAYS, "Socket table fubar.  nSock = %d\n", nSock );
+	if ( sockTable[i].iosock ) {
+        dprintf ( D_ALWAYS, "Socket table fubar.  nSock = %zu\n", sockTable.size());
         DumpSocketTable( D_ALWAYS );
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
@@ -1689,24 +1677,22 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 
 
 	// Verify that this socket has not already been registered
-	// Since we are scanning the entire table to do this (change this someday to a hash!),
-	// at the same time update our nRegisteredSocks count by initializing it
-	// to the number of slots (nSock) and then subtracting out the number of slots
-	// not in use.
-	nRegisteredSocks = nSock;
+	// Since we are scanning the entire table to do this 
+	// at the same time update our nRegisteredSocks count
+	nRegisteredSocks = 0;
 	int fd_to_register = ((Sock *)iosock)->get_file_desc();
 	bool duplicate_found = false;
-	for ( j=0; j < nSock; j++ )
+	for ( size_t j=0; j < sockTable.size(); j++ )
 	{		
-		if ( (*sockTable)[j].iosock == iosock ) {
+		if ( sockTable[j].iosock == iosock ) {
 			i = j;
 			duplicate_found = true;
         }
 
 		// fd may be -1 if doing a "fake" registration: reverse_connect_pending
 		// so do not require uniqueness of fd in that case
-		if ( (*sockTable)[j].iosock && fd_to_register != -1 ) {
-			if ( ((Sock *)(*sockTable)[j].iosock)->get_file_desc() ==
+		if ( sockTable[j].iosock && fd_to_register != -1 ) {
+			if ( ((Sock *)sockTable[j].iosock)->get_file_desc() ==
 								fd_to_register ) {
 				i = j;
 				duplicate_found = true;
@@ -1714,19 +1700,19 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		}
 
 		// check if slot empty or available
-		if ( ((*sockTable)[j].iosock == NULL) ||  // slot is empty
-			 ((*sockTable)[j].remove_asap &&	   // slot available
-			           (*sockTable)[j].servicing_tid==0 ) ) 
+		if ((sockTable[j].iosock != nullptr) &&  // is slot empty?
+			 !((sockTable[j].remove_asap &&	   // is slot available?
+			           sockTable[j].servicing_tid==0))) 
 		{
-			nRegisteredSocks--;		// decrement count of active sockets
+			nRegisteredSocks++;		// increment count of active sockets
 		}
 	}
 	if (duplicate_found) {
 		if ( prev_entry ) {
 			*prev_entry = malloc(sizeof(SockEnt));
-			*(SockEnt*)*prev_entry = (*sockTable)[i];
-			(*sockTable)[i].iosock_descrip = NULL;
-			(*sockTable)[i].handler_descrip = NULL;
+			*(SockEnt*)*prev_entry = sockTable[i];
+			sockTable[i].iosock_descrip = NULL;
+			sockTable[i].handler_descrip = NULL;
 		} else {
 			dprintf(D_ALWAYS, "DaemonCore: Attempt to register socket twice\n");
 			return -2;
@@ -1760,65 +1746,59 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	}
 
 	// Found a blank entry at index i. Now add in the new data.
-	(*sockTable)[i].servicing_tid = 0;
-	(*sockTable)[i].remove_asap = false;
-	(*sockTable)[i].call_handler = false;
-	(*sockTable)[i].iosock = (Sock *)iosock;
+	sockTable[i].servicing_tid = 0;
+	sockTable[i].remove_asap = false;
+	sockTable[i].call_handler = false;
+	sockTable[i].iosock = (Sock *)iosock;
 	switch ( iosock->type() ) {
 		case Stream::reli_sock :
 			// the rest of daemon-core 
-			(*sockTable)[i].is_connect_pending =
+			sockTable[i].is_connect_pending =
 				((ReliSock *)iosock)->is_connect_pending() &&
 				!((ReliSock *)iosock)->is_reverse_connect_pending();
-			(*sockTable)[i].is_reverse_connect_pending =
+			sockTable[i].is_reverse_connect_pending =
 				((ReliSock *)iosock)->is_reverse_connect_pending();
 			break;
 		case Stream::safe_sock :
 				// SafeSock connect never blocks....
-			(*sockTable)[i].is_connect_pending = false;
-			(*sockTable)[i].is_reverse_connect_pending = false;
+			sockTable[i].is_connect_pending = false;
+			sockTable[i].is_reverse_connect_pending = false;
 			break;
 		default:
 			EXCEPT("Adding CEDAR socket of unknown type");
 			break;
 	}
-	(*sockTable)[i].handler = handler;
-	(*sockTable)[i].handlercpp = handlercpp;
-	(*sockTable)[i].is_cpp = (bool)is_cpp;
-	(*sockTable)[i].handler_type = handler_type;
-	(*sockTable)[i].service = s;
-	(*sockTable)[i].data_ptr = NULL;
-	(*sockTable)[i].waiting_for_data = false;
-	free((*sockTable)[i].iosock_descrip);
+	sockTable[i].handler = handler;
+	sockTable[i].handlercpp = handlercpp;
+	sockTable[i].is_cpp = (bool)is_cpp;
+	sockTable[i].handler_type = handler_type;
+	sockTable[i].service = s;
+	sockTable[i].data_ptr = NULL;
+	sockTable[i].waiting_for_data = false;
+	free(sockTable[i].iosock_descrip);
 	if ( iosock_descrip )
-		(*sockTable)[i].iosock_descrip = strdup(iosock_descrip);
+		sockTable[i].iosock_descrip = strdup(iosock_descrip);
 	else
-		(*sockTable)[i].iosock_descrip = strdup(EMPTY_DESCRIP);
-	free((*sockTable)[i].handler_descrip);
+		sockTable[i].iosock_descrip = strdup(EMPTY_DESCRIP);
+	free(sockTable[i].handler_descrip);
 	if ( handler_descrip ) {
-		(*sockTable)[i].handler_descrip = strdup(handler_descrip);
+		sockTable[i].handler_descrip = strdup(handler_descrip);
 		if ( strcmp(handler_descrip,DaemonCommandProtocol::WaitForSocketDataString.c_str()) == 0 ) {
-			(*sockTable)[i].waiting_for_data = true;
+			sockTable[i].waiting_for_data = true;
 		}
 	}
 	else
-		(*sockTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
-
-	// Increment the counter of total number of entries if we
-	// just filled our last slot.
-	if ( i == nSock  ) {
-		nSock++;
-	}
+		sockTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Mark command socks (identified by lack of handlers, endpoint)
 	if ( handler == 0 && handlercpp == 0 && m_shared_port_endpoint == NULL ) {
-		(*sockTable)[i].is_command_sock = true;
+		sockTable[i].is_command_sock = true;
 	} else {
-		(*sockTable)[i].is_command_sock = false;
+		sockTable[i].is_command_sock = false;
 	}
 
 	// Update curr_regdataptr for SetDataPtr()
-	curr_regdataptr = &((*sockTable)[i].data_ptr);
+	curr_regdataptr = &(sockTable[i].data_ptr);
 
 	// Conditionally dump what our table looks like
 	DumpSocketTable(D_FULLDEBUG | D_DAEMONCORE);
@@ -1827,13 +1807,11 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 	// so the main thread re-computes the fd_sets.
 	Wake_up_select();
 
-	return i;
+	return (int) i;
 }
 
 int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 {
-	int i,j;
-
 	if ( daemonCore == NULL ) {
 		return TRUE;
 	}
@@ -1842,15 +1820,16 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 		return FALSE;
 	}
 
-	i = -1;
-	for (j=0;j<nSock;j++) {
-		if ( (*sockTable)[j].iosock == insock ) {
-			i = j;
+	bool found = false;
+	size_t i;
+	for (i=0;i<sockTable.size();i++) {
+		if (sockTable[i].iosock == insock ) {
+			found = true;
 			break;
 		}
 	}
 
-	if ( i == -1 ) {
+	if (!found) {
 		dprintf( D_ALWAYS,"Cancel_Socket: called on non-registered socket!\n");
         if( insock ) {
             dprintf( D_ALWAYS,"Offending socket number %d to %s\n",
@@ -1862,38 +1841,34 @@ int DaemonCore::Cancel_Socket( Stream* insock, void *prev_entry)
 	}
 
 	// Clear any data_ptr which go to this entry we just removed
-	if ( curr_regdataptr == &( (*sockTable)[i].data_ptr) )
+	if ( curr_regdataptr == &( sockTable[i].data_ptr) )
 		curr_regdataptr = NULL;
-	if ( curr_dataptr == &( (*sockTable)[i].data_ptr) )
+	if ( curr_dataptr == &( sockTable[i].data_ptr) )
 		curr_dataptr = NULL;
 
-	if ((*sockTable)[i].servicing_tid == 0 ||
-		(*sockTable)[i].servicing_tid == CondorThreads::get_handle()->get_tid() || prev_entry)
+	if (sockTable[i].servicing_tid == 0 ||
+		sockTable[i].servicing_tid == CondorThreads::get_handle()->get_tid() || prev_entry)
 	{
 		// Log a message
-		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %d <%s> %p\n",
-				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
+		dprintf(D_DAEMONCORE,"Cancel_Socket: cancelled socket %zu <%s> %p\n",
+				i,sockTable[i].iosock_descrip, sockTable[i].iosock );
 		// Remove entry; mark it is available for next add via iosock=NULL
-		(*sockTable)[i].iosock = NULL;
-		free( (*sockTable)[i].iosock_descrip );
-		(*sockTable)[i].iosock_descrip = NULL;
-		free( (*sockTable)[i].handler_descrip );
-		(*sockTable)[i].handler_descrip = NULL;
-		// If we just removed the last entry in the table, we can decrement nSock
+		sockTable[i].iosock = NULL;
+		free( sockTable[i].iosock_descrip );
+		sockTable[i].iosock_descrip = NULL;
+		free( sockTable[i].handler_descrip );
+		sockTable[i].handler_descrip = NULL;
+
 		if ( prev_entry ) {
-			((SockEnt*)prev_entry)->servicing_tid = (*sockTable)[i].servicing_tid;
-			(*sockTable)[i] = *(SockEnt*)prev_entry;
+			((SockEnt*)prev_entry)->servicing_tid = sockTable[i].servicing_tid;
+			sockTable[i] = *(SockEnt*)prev_entry;
 			free( prev_entry );
-		} else {
-			if ( i == nSock - 1 ) {
-				nSock--;
-			}
 		}
 	} else {
 		// Log a message
-		dprintf(D_DAEMONCORE,"Cancel_Socket: deferred cancel socket %d <%s> %p\n",
-				i,(*sockTable)[i].iosock_descrip, (*sockTable)[i].iosock );
-		(*sockTable)[i].remove_asap = true;
+		dprintf(D_DAEMONCORE,"Cancel_Socket: deferred cancel socket %zu <%s> %p\n",
+				i,sockTable[i].iosock_descrip, sockTable[i].iosock );
+		sockTable[i].remove_asap = true;
 	}
 
 	if ( !prev_entry ) {
@@ -2648,9 +2623,9 @@ int DaemonCore::Register_Reaper(int rid, const char* reap_descrip,
 
 int DaemonCore::Lookup_Socket( Stream *insock )
 {
-	for (int i=0; i < nSock; i++) {
-		if ((*sockTable)[i].iosock == insock) {
-			return i;
+	for (size_t i=0; i < sockTable.size(); i++) {
+		if (sockTable[i].iosock == insock) {
+			return (int)i;
 		}
 	}
 	return -1;
@@ -2838,7 +2813,6 @@ void DaemonCore::DumpSigTable(int flag, const char* indent)
 
 void DaemonCore::DumpSocketTable(int flag, const char* indent)
 {
-	int			i;
 	const char *descrip1;
 	const char *descrip2;
 
@@ -2856,16 +2830,16 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 	dprintf(flag,"\n");
 	dprintf(flag, "%sSockets Registered\n", indent);
 	dprintf(flag, "%s~~~~~~~~~~~~~~~~~~~\n", indent);
-	for (i = 0; i < nSock; i++) {
-		if ( (*sockTable)[i].iosock ) {
+	for (size_t i = 0; i < sockTable.size(); i++) {
+		if ( sockTable[i].iosock ) {
 			descrip1 = "NULL";
 			descrip2 = descrip1;
-			if ( (*sockTable)[i].iosock_descrip )
-				descrip1 = (*sockTable)[i].iosock_descrip;
-			if ( (*sockTable)[i].handler_descrip )
-				descrip2 = (*sockTable)[i].handler_descrip;
-			dprintf(flag, "%s%d: %d %s %s\n",
-					indent, i, ((Sock *) (*sockTable)[i].iosock)->get_file_desc(), descrip1, descrip2 );
+			if ( sockTable[i].iosock_descrip )
+				descrip1 = sockTable[i].iosock_descrip;
+			if ( sockTable[i].handler_descrip )
+				descrip2 = sockTable[i].handler_descrip;
+			dprintf(flag, "%s%zu: %d %s %s\n",
+					indent, i, ((Sock *) sockTable[i].iosock)->get_file_desc(), descrip1, descrip2 );
 		}
 	}
 	dprintf(flag, "\n");
@@ -3533,16 +3507,16 @@ void DaemonCore::Driver()
 		// sockets, and 2) it ain't that expensive....
 		selector.reset();
 		min_deadline = 0;
-		for (i = 0; i < nSock; i++) {
+		for (auto & sockEnt : sockTable) {
 				// NOTE: keep the following logic for building the
 				// fdset in sync with DaemonCore::ServiceCommandSocket()
 
 				// if a valid entry not already being serviced, add to select
-			if ( (*sockTable)[i].iosock && 
-				 (*sockTable)[i].servicing_tid==0 &&
-				 (*sockTable)[i].remove_asap == false ) {	
+			if ( sockEnt.iosock && 
+				 sockEnt.servicing_tid==0 &&
+				 sockEnt.remove_asap == false ) {	
 					// Setup our fdsets
-				if ( (*sockTable)[i].is_reverse_connect_pending ) {
+				if ( sockEnt.is_reverse_connect_pending ) {
 					// nothing to do; we are just allowing this socket
 					// to be registered so that it behaves like a socket
 					// that is doing a non-blocking connect
@@ -3552,16 +3526,16 @@ void DaemonCore::Driver()
 					// because that is all taken care of by CCBClient.
 					continue;
 				}
-				else if ( (*sockTable)[i].is_connect_pending ) {
+				else if ( sockEnt.is_connect_pending ) {
 						// we want to be woken when a non-blocking
 						// connect is ready to write.  when connect
 						// is ready, select will set the writefd set
 						// on success, or the exceptfd set on failure.
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE );
-					selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_EXCEPT );
+					selector.add_fd( sockEnt.iosock->get_file_desc(), Selector::IO_WRITE );
+					selector.add_fd( sockEnt.iosock->get_file_desc(), Selector::IO_EXCEPT );
 				} else {
-					int sockfd = (*sockTable)[i].iosock->get_file_desc();
-					switch( (*sockTable)[i].handler_type ) {
+					int sockfd = sockEnt.iosock->get_file_desc();
+					switch( sockEnt.handler_type ) {
 					case HANDLE_READ:
 						selector.add_fd( sockfd, Selector::IO_READ );
 						break;
@@ -3577,7 +3551,7 @@ void DaemonCore::Driver()
 
 					// If this socket times out sooner than
 					// our select timeout, adjust the select timeout.
-				time_t deadline = (*sockTable)[i].iosock->get_deadline();
+				time_t deadline = sockEnt.iosock->get_deadline();
 				if(deadline) { // If non-zero, there is a timeout.
 					if(min_deadline == 0 || min_deadline > deadline) {
 						min_deadline = deadline;
@@ -3774,34 +3748,34 @@ void DaemonCore::Driver()
 			}
 
 			// scan through the socket table to find which ones select() set
-			for(i = 0; i < nSock; i++) {
-				if ( (*sockTable)[i].iosock && 
-					 (*sockTable)[i].servicing_tid==0 &&
-					 (*sockTable)[i].remove_asap == false ) 
+			for(auto & sockEnt : sockTable) {
+				if ( sockEnt.iosock && 
+					 sockEnt.servicing_tid==0 &&
+					 sockEnt.remove_asap == false ) 
 				{	// if a valid entry...
 					// figure out if we should call a handler.  to do this,
 					// if the socket was doing a connect(), we check the
 					// writefds and excepfds.  otherwise, check readfds.
-					(*sockTable)[i].call_handler = false;
-					time_t deadline = (*sockTable)[i].iosock->get_deadline();
+					sockEnt.call_handler = false;
+					time_t deadline = sockEnt.iosock->get_deadline();
 					bool sock_timed_out = ( deadline && deadline < now );
 
 					if ( superuser_command_arrived &&
-						 ((*sockTable)[i].iosock != super_dc_rsock &&
-						  (*sockTable)[i].iosock != super_dc_ssock) )
+						 (sockEnt.iosock != super_dc_rsock &&
+						  sockEnt.iosock != super_dc_ssock) )
 					{
 						// do nothing for now, because we know there is a request pending
 						// on the suerperuser command socket, and this is not the
 						// superuser command socket.
 					}
-					else if ( (*sockTable)[i].is_reverse_connect_pending ) {
+					else if ( sockEnt.is_reverse_connect_pending ) {
 						// nothing to do
 					}
-					else if ( (*sockTable)[i].is_connect_pending ) {
+					else if ( sockEnt.is_connect_pending ) {
 
-						if ( selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
+						if ( selector.fd_ready( sockEnt.iosock->get_file_desc(),
 												Selector::IO_WRITE ) ||
-							 selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(),
+							 selector.fd_ready( sockEnt.iosock->get_file_desc(),
 												Selector::IO_EXCEPT ) ||
 							 sock_timed_out )
 						{
@@ -3810,23 +3784,23 @@ void DaemonCore::Driver()
 							// Only call handler if CEDAR confirms the
 							// connect algorithm has completed.
 
-							if ( ((Sock *)(*sockTable)[i].iosock)->
+							if ( ((Sock *)sockEnt.iosock)->
 							      do_connect_finish() != CEDAR_EWOULDBLOCK)
 							{
-								(*sockTable)[i].call_handler = true;
+								sockEnt.call_handler = true;
 							}
 						}
-					} else if ((*sockTable)[i].handler_type == HANDLE_READ || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ ) ) ||
+					} else if (sockEnt.handler_type == HANDLE_READ || sockEnt.handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready( sockEnt.iosock->get_file_desc(), Selector::IO_READ ) ) ||
 							 sock_timed_out )
 						{
-							(*sockTable)[i].call_handler = true;
+							sockEnt.call_handler = true;
 						}
-					} else if ((*sockTable)[i].handler_type == HANDLE_WRITE || (*sockTable)[i].handler_type == HANDLE_READ_WRITE) {
-						if ( (selector.fd_ready( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
+					} else if (sockEnt.handler_type == HANDLE_WRITE || sockEnt.handler_type == HANDLE_READ_WRITE) {
+						if ( (selector.fd_ready(sockEnt.iosock->get_file_desc(), Selector::IO_WRITE ) ) ||
 							 sock_timed_out )
 						{
-							(*sockTable)[i].call_handler = true;
+							sockEnt.call_handler = true;
 						}
 					}
 				}	// end of if valid sock entry
@@ -3981,17 +3955,17 @@ void DaemonCore::Driver()
 			group_runtime = runtime;
 
 			// Now loop through all sock entries, calling handlers if required.
-			for(i = 0; i < nSock; i++) {
-				if ( (*sockTable)[i].iosock ) {	// if a valid entry...
+			for(size_t i = 0; i < sockTable.size(); i++) {
+				if ( sockTable[i].iosock ) {	// if a valid entry...
 
-					if ( (*sockTable)[i].call_handler ) {
+					if ( sockTable[i].call_handler ) {
 
-						(*sockTable)[i].call_handler = false;
+						sockTable[i].call_handler = false;
 
                         dc_stats.SockMessages += 1;
 
-						if ( recheck_status && ((*sockTable)[i].handler_type == HANDLE_READ) &&
-							 ((*sockTable)[i].is_connect_pending == false) )
+						if ( recheck_status && (sockTable[i].handler_type == HANDLE_READ) &&
+							 (sockTable[i].is_connect_pending == false) )
 						{
 							// we have already called at least one callback handler.  what
 							// if this handler drained this registed pipe, so that another
@@ -4000,7 +3974,7 @@ void DaemonCore::Driver()
 							// for reading.
 							selector.reset();
 							selector.set_timeout( 0 );// set timeout for a poll
-							selector.add_fd( (*sockTable)[i].iosock->get_file_desc(),
+							selector.add_fd( sockTable[i].iosock->get_file_desc(),
 											 Selector::IO_READ );
 
 							selector.execute();
@@ -4016,7 +3990,7 @@ void DaemonCore::Driver()
 						CallSocketHandler( i, true );
 
 						// update per-handler runtime statistics
-						runtime = dc_stats.AddRuntime((*sockTable)[i].handler_descrip, runtime);
+						runtime = dc_stats.AddRuntime(sockTable[i].handler_descrip, runtime);
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable
@@ -4045,11 +4019,10 @@ DaemonCore::SocketIsRegistered( Stream *sock )
 int
 DaemonCore::GetRegisteredSocketIndex( Stream *sock )
 {
-	int i;
 
-	for (i=0;i<nSock;i++) {
-		if ( (*sockTable)[i].iosock == sock ) {
-			return i;
+	for (size_t i=0;i < sockTable.size();i++) {
+		if ( sockTable[i].iosock == sock ) {
+			return (int)i;
 		}
 	}
 	return -1;
@@ -4077,21 +4050,21 @@ struct CallSocketHandler_args {
 };
 
 void
-DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
+DaemonCore::CallSocketHandler( const size_t i, bool default_to_HandleCommand )
 {
     unsigned int iAcceptCnt = ( m_iMaxAcceptsPerCycle > 0 ) ? m_iMaxAcceptsPerCycle: -1;
 
 	// Dispatch UDP commands directly
-	if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+	if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
 			default_to_HandleCommand &&
-			(*sockTable)[i].iosock->type() == Stream::safe_sock ) {
+			sockTable[i].iosock->type() == Stream::safe_sock ) {
 
 		unsigned msg_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? m_iMaxUdpMsgsPerCycle : -1;
 		unsigned frag_cnt = ( m_iMaxUdpMsgsPerCycle > 0 ) ? ( m_iMaxUdpMsgsPerCycle * 20 ) : -1;
 
 		Selector selector;
 		selector.set_timeout( 0, 0 );
-		selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+		selector.add_fd( sockTable[i].iosock->get_file_desc(), Selector::IO_READ );
 
 		while ( msg_cnt && frag_cnt ) {
 			selector.execute();
@@ -4101,7 +4074,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 				break;
 			}
 
-			if ( !(*sockTable)[i].iosock->handle_incoming_packet() )
+			if ( !sockTable[i].iosock->handle_incoming_packet() )
 			{
 				// Looks like we got a fragment, try reading some more
 				frag_cnt--;
@@ -4131,9 +4104,9 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 	    // so that we don't go back to the select loop with the listen
 	    // socket still set.
 	    args->accepted_sock = NULL;
-	    Stream *insock = (*sockTable)[i].iosock;
+	    Stream *insock = sockTable[i].iosock;
 	    ASSERT(insock);
-	    if ( (*sockTable)[i].handler==NULL && (*sockTable)[i].handlercpp==NULL &&
+	    if ( sockTable[i].handler==NULL && sockTable[i].handlercpp==NULL &&
 		    default_to_HandleCommand &&
 		    insock->type() == Stream::reli_sock &&
 		    ((ReliSock *)insock)->_state == Sock::sock_special &&
@@ -4143,7 +4116,7 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
             // b/c we are now in a tight loop accepting, use select to check for more data and bail if none is there.
             Selector selector;
             selector.set_timeout( 0, 0 );
-            selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+            selector.add_fd( sockTable[i].iosock->get_file_desc(), Selector::IO_READ );
             selector.execute();
 
             if ( !selector.has_ready() ) {
@@ -4173,10 +4146,10 @@ DaemonCore::CallSocketHandler( int &i, bool default_to_HandleCommand )
 	    if ( set_service_tid ) {
 		    // setup pointer (pTid) to pass to pool_add - thus servicing_tid will be
 		    // set to the tid value BEFORE pool_add() yields.
-		    pTid = &((*sockTable)[i].servicing_tid);
+		    pTid = &(sockTable[i].servicing_tid);
 	    }
 	    CondorThreads::pool_add(DaemonCore::CallSocketHandler_worker_demarshall,args,
-								    pTid,(*sockTable)[i].handler_descrip);
+								    pTid,sockTable[i].handler_descrip);
 
     }
 }
@@ -4207,29 +4180,29 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// handler.
 
 		// Update curr_dataptr for GetDataPtr()
-	curr_dataptr = &( (*sockTable)[i].data_ptr);
+	curr_dataptr = &( sockTable[i].data_ptr);
 
 		// log a message
-	if ( (*sockTable)[i].handler || (*sockTable)[i].handlercpp )
+	if ( sockTable[i].handler || sockTable[i].handlercpp )
 	{
 		if (IsDebugLevel(D_DAEMONCORE)) {
 			dprintf(D_DAEMONCORE,
 					"Calling Handler <%s> for Socket <%s>\n",
-					(*sockTable)[i].handler_descrip,
-					(*sockTable)[i].iosock_descrip);
+					sockTable[i].handler_descrip,
+					sockTable[i].iosock_descrip);
 		}
 		if (IsDebugLevel(D_COMMAND)) {
-			handlerName = strdup((*sockTable)[i].handler_descrip);
+			handlerName = strdup(sockTable[i].handler_descrip);
 			dprintf(D_COMMAND, "Calling Handler <%s> (%d)\n", handlerName,i);
 			handler_start_time = _condor_debug_get_time_double();
 		}
 
-	if ( (*sockTable)[i].handler ) {
+	if ( sockTable[i].handler ) {
 			// a C handler
-		result = (*( (*sockTable)[i].handler))((*sockTable)[i].iosock);
-	} else if ( (*sockTable)[i].handlercpp ) {
+		result = (*( sockTable[i].handler))(sockTable[i].iosock);
+	} else if ( sockTable[i].handlercpp ) {
 			// a C++ handler
-		result = ((*sockTable)[i].service->*( (*sockTable)[i].handlercpp))((*sockTable)[i].iosock);
+		result = (sockTable[i].service->*( sockTable[i].handlercpp))(sockTable[i].iosock);
 		}
 
 		if (IsDebugLevel(D_COMMAND)) {
@@ -4261,7 +4234,7 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// not KEEP_STREAM, then
 		// delete the socket and the socket handler.
 	if ( result != KEEP_STREAM ) {
-		Stream *iosock = (*sockTable)[i].iosock;
+		Stream *iosock = sockTable[i].iosock;
 			// cancel the socket handler
 		Cancel_Socket( iosock );
 			// delete the cedar socket
@@ -4271,11 +4244,11 @@ DaemonCore::CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stre
 		// so if this tid has it marked as being serviced,
 		// reset the servicing_tid to 0 to signify we done operating
 		// with the socket for the moment.
-		if ( (*sockTable)[i].servicing_tid &&
-			 (*sockTable)[i].servicing_tid == 
+		if ( sockTable[i].servicing_tid &&
+			 sockTable[i].servicing_tid == 
 				CondorThreads::get_handle()->get_tid() ) 
 		{
-				(*sockTable)[i].servicing_tid = 0;
+				sockTable[i].servicing_tid = 0;
 				// need to potentially add this sock to select
 				daemonCore->Wake_up_select();	
 		}
@@ -4540,7 +4513,7 @@ int DaemonCore::ServiceCommandSocket()
 	// Just return if there is no command socket
 	if ( initial_command_sock() == -1 )
 		return 0;
-	if ( !( (*sockTable)[initial_command_sock()].iosock) )
+	if ( !( sockTable[initial_command_sock()].iosock) )
 		return 0;
 
 		// CallSocketHandler called inside the loop can change nSock 
@@ -4553,7 +4526,7 @@ int DaemonCore::ServiceCommandSocket()
 		local_nSock = ServiceCommandSocketMaxSocketIndex;
 	}
 	else {
-		local_nSock = nSock;
+		local_nSock = sockTable.size();
 	}
 	
 	inServiceCommandSocket_flag = TRUE;
@@ -4568,20 +4541,20 @@ int DaemonCore::ServiceCommandSocket()
 
 			// We start with i = -1 so that we always start with the initial command socket.
 		if( i == -1 ) {
-			selector.add_fd( (*sockTable)[initial_command_sock()].iosock->get_file_desc(), Selector::IO_READ );
+			selector.add_fd( sockTable[initial_command_sock()].iosock->get_file_desc(), Selector::IO_READ );
 		}
-			// If (*sockTable)[i].iosock is a valid socket
+			// If sockTable[i].iosock is a valid socket
 			// and that we don't use the initial command socket (could substitute i != initial_command_socket())
 			// and that the handler description is DaemonCommandProtocol::WaitForSocketData
 			// and that the socket is not waiting for an outgoing connection.
-		else if( ((*sockTable)[i].iosock) && 
+		else if( (sockTable[i].iosock) && 
 				 (i != initial_command_sock()) && 
-				 ((*sockTable)[i].waiting_for_data) &&
-				 ((*sockTable)[i].servicing_tid==0) &&
-				 ((*sockTable)[i].remove_asap == false) &&
-				 ((*sockTable)[i].is_reverse_connect_pending == false) &&
-				 ((*sockTable)[i].is_connect_pending == false)) {
-			selector.add_fd( (*sockTable)[i].iosock->get_file_desc(), Selector::IO_READ );
+				 (sockTable[i].waiting_for_data) &&
+				 (sockTable[i].servicing_tid==0) &&
+				 (sockTable[i].remove_asap == false) &&
+				 (sockTable[i].is_reverse_connect_pending == false) &&
+				 (sockTable[i].is_connect_pending == false)) {
+			selector.add_fd( sockTable[i].iosock->get_file_desc(), Selector::IO_READ );
 		}
 		else {
 			use_loop = false;
@@ -4614,9 +4587,9 @@ int DaemonCore::ServiceCommandSocket()
 					CallSocketHandler(i, true);
 					commands_served++;
 						// If the slot in sockTable just got removed, make sure we exit the loop
-					if ( ((*sockTable)[i].iosock == NULL) ||  // slot is empty
-						 ((*sockTable)[i].remove_asap &&           // slot available
-						  (*sockTable)[i].servicing_tid==0 ) ) {
+					if ( (sockTable[i].iosock == NULL) ||  // slot is empty
+						 (sockTable[i].remove_asap &&           // slot available
+						  sockTable[i].servicing_tid==0 ) ) {
 						break;
 					}
 				} 
@@ -4640,11 +4613,11 @@ DaemonCore::HandleReqAsync(Stream *stream)
 	}
 }
 
-int DaemonCore::HandleReq(int socki, Stream* asock)
+int DaemonCore::HandleReq(size_t socki, Stream* asock)
 {
 	Stream *insock;
 	
-	insock = (*sockTable)[socki].iosock;
+	insock = sockTable[socki].iosock;
 
 	return HandleReq(insock, asock);
 }
@@ -5121,10 +5094,10 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 }
 
 int DaemonCore::initial_command_sock() const {
-	for(int j = 0; j < nSock; j++) {
-		if ( (*sockTable)[j].iosock != NULL &&
-			(*sockTable)[j].is_command_sock) {
-			return j;
+	for(size_t j = 0; j < sockTable.size(); j++) {
+		if ( sockTable[j].iosock != nullptr &&
+			sockTable[j].is_command_sock) {
+			return (int)j;
 		}
 	}
 	return -1;
@@ -5142,8 +5115,8 @@ const std::vector<Sinful> & DaemonCore::InfoCommandSinfulStringsMyself()
 	else if (m_dirty_command_sock_sinfuls)
 	{
 		m_command_sock_sinfuls.clear();
-		for (int j=0; j<nSock; j++) {
-			const SockEnt &myEnt = (*sockTable)[j];
+		for (size_t j=0; j<sockTable.size(); j++) {
+			const SockEnt &myEnt = sockTable[j];
 			if ((myEnt.iosock != NULL) && myEnt.is_command_sock) {
 				m_command_sock_sinfuls.push_back(myEnt.iosock->get_sinful_public());
 			}

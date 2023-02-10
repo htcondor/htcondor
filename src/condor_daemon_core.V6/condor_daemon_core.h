@@ -1877,7 +1877,7 @@ class DaemonCore : public Service
 	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki, Stream* accepted_sock=NULL);
+    int HandleReq(size_t socki, Stream* accepted_sock=NULL);
 	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
@@ -2031,11 +2031,9 @@ class DaemonCore : public Service
 		bool            is_command_sock;
     };
     void              DumpSocketTable(int, const char* = NULL);
-    int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handler slots in use use
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
-    ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
+	std::vector<SockEnt> sockTable; // socket table; grows dynamically if needed
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -2245,9 +2243,7 @@ class DaemonCore : public Service
 		// i - index of registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
 		//                          if there is no other callback function
-		// On return, i may be modified so that when incremented,
-		// it will index the next registered socket.
-	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+	void CallSocketHandler( const size_t i, bool default_to_HandleCommand );
 	static void CallSocketHandler_worker_demarshall(void *args);
 	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
 	
