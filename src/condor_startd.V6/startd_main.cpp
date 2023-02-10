@@ -84,6 +84,9 @@ int		startd_noclaim_shutdown = 0;
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
 
+int		docker_cached_image_size_interval = 0; // how often we ask docker for the size of the cache, 0 means don't
+
+
 char* Name = NULL;
 
 #define DEFAULT_PID_SNAPSHOT_INTERVAL 15
@@ -171,6 +174,12 @@ main_init( int, char* argv[] )
 		// keyboard idle time on SMP machines, etc.
 	startd_startup = time( 0 );
 
+#ifdef WIN32
+	// get the Windows sysapi load average thread going early
+	dprintf(D_FULLDEBUG, "starting Windows load averaging thread\n");
+	sysapi_load_avg();
+#endif
+
 		// Instantiate the Resource Manager object.
 	resmgr = new ResMgr;
 
@@ -228,7 +237,8 @@ main_init( int, char* argv[] )
 	bench_job_mgr->Initialize( "benchmarks" );
 
 		// this does a bit of work that isn't valid yet 
-	resmgr->walk( &Resource::init_classad );
+	resmgr->update_cur_time();
+	resmgr->initResourceAds();
 
 	// Now that we have our classads, we can compute things that
 		// need to be evaluated
@@ -445,7 +455,7 @@ finish_main_config( void )
 		// Recompute machine-wide attributes object.
 	resmgr->compute_static();
 		// Rebuild ads for each resource.  
-	resmgr->walk( &Resource::init_classad );  
+	resmgr->initResourceAds();
 		// Reset various settings in the ResMgr.
 	resmgr->reset_timers();
 
@@ -554,6 +564,9 @@ init_params( int first_time)
 	disconnected_keyboard_boost = param_integer( "DISCONNECTED_KEYBOARD_IDLE_BOOST", 1200 );
 
 	startd_noclaim_shutdown = param_integer( "STARTD_NOCLAIM_SHUTDOWN", 0 );
+
+	// how often we query docker for the size of the image cache, 0 is never
+	docker_cached_image_size_interval = param_integer("DOCKER_CACHE_ADVERTISE_INTERVAL", 1200);
 
 	// a 0 or negative value for the timer interval will disable cleanup reminders entirely
 	cleanup_reminder_timer_interval = param_integer( "STARTD_CLEANUP_REMINDER_TIMER_INTERVAL", 62 );
@@ -784,7 +797,7 @@ main_shutdown_fast()
 								 "shutdown_reaper" );
 
 		// Quickly kill all the starters that are running
-	resmgr->walk( &Resource::killAllClaims );
+	resmgr->killAllClaims();
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -819,7 +832,7 @@ main_shutdown_graceful()
 								 "shutdown_reaper" );
 
 		// Release all claims, active or not
-	resmgr->walk( &Resource::releaseAllClaims );
+	resmgr->releaseAllClaims();
 
 	daemonCore->Register_Timer( 0, 5, 
 								startd_check_free,
@@ -878,7 +891,8 @@ do_cleanup(int,int,const char*)
 			// If the machine is already free, we can exit right away.
 		startd_check_free();		
 			// Otherwise, quickly kill all the active starters.
-		resmgr->walk( &Resource::void_kill_claim );
+		const bool fast = true;
+		resmgr->vacate_all(fast);
 		dprintf( D_FAILURE|D_ALWAYS, "startd exiting because of fatal exception.\n" );
 	}
 

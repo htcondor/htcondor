@@ -315,23 +315,33 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 
 		// finally, spawn the starter and COD job itself
 
-	int rval = claim->spawnStarter(tmp_starter, new_req_ad);
-	if( !rval ) {
+	pid_t starter_pid = claim->spawnStarter(tmp_starter, new_req_ad);
+	if( !starter_pid ) {
 			// Failed to spawn, make sure everything goes back to
 			// normal with the opportunistic claim
 		interactionLogicCODStopped();
+		delete tmp_starter;
+	} else {
+		// We delete the starter object here even though we created it successfully
+		// because this will have the side effect of removing the starter object
+		// from the list of unreaped starters.  The reaper has been written to
+		// tolerate reaping a starter for which there is no Starter object as long
+		// as there is still a claim that knows about the pid.
+		// This is not a good design, but it's been like that forever, and does not seem
+		// worth the effort to fix it.
+		delete tmp_starter;
 	}
+	tmp_starter = nullptr;
 
 	ClassAd reply;
 	reply.Assign( ATTR_RESULT,
-				  rval ? getCAResultString(CA_SUCCESS)
+			starter_pid ? getCAResultString(CA_SUCCESS)
 				       : getCAResultString(CA_FAILURE) );
 
 		// TODO any other info for the reply?
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
-	delete tmp_starter;
-	return rval;
+	return starter_pid;
 }
 
 

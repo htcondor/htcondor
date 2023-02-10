@@ -1707,7 +1707,7 @@ that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
-    the configuration file in its ClassAd. Give the comma-separated list
+    the configuration file in its ClassAd. Give the list
     of entries from the configuration file you want in the given
     daemon's ClassAd. Frequently used to add attributes to machines so
     that the machines can discriminate between other machines in a job's
@@ -3311,6 +3311,42 @@ section.
         unusual with strings. By default, the job ClassAd attributes
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
         into the machine ClassAd.
+
+:macro-def:`STARTD_LATCH_EXPRS`
+    Each time a slot is created, activated, or when periodicy STARTD policy
+    is evaluated HTCondor will evaluate expressions whose names are listed
+    in this configuration variable.  If the evaluated value can be converted
+    to an integer, and the value of the integer changes, the time of the change
+    will be published.
+
+    This macro should be a list of the names of configuration variables that contain
+    an expression to be evaluated, the name of the configuration variable will be
+    treated as the base name of attributes published for the macro. Thus expressions listed
+    behave like :macro:`STARTD_ATTRS` with the additional behavior the most recent evaluated
+    value will be advertised as ``<name>Value`` and the time the value changed will be
+    advertised as ``<name>Time``.  Entries in this list can also be the names of standard
+    slot attributes like ``NumDynamicSlots``, in which case the change time will be advertised
+    but the evaluated value will not be advertised, since that would be redundant.
+
+    It is not an error when the result of evaluation is undefined, in that case the STARTD
+    will remember the time that the value became undefined but not advertise the time. If
+    the evaluated value becomes defined again, the time that it changed from undefined to
+    the new value will again be advertised.
+
+    Example:
+
+    .. code-block:: condor-config
+
+          STARTD_LATCH_EXPRS = HalfFull NumDynamicSlots
+          HalfFull = Cpus < (TotalSlotCPUs/2) || Memory < (TotalSlotMemory/2)
+
+    For the configuration fragment above, the STARTD will advertise ``HalfFull`` as an expression,
+    along with the last evaluated value of that expression as ``HalfFullValue``, and the time
+    it changed to that value as ``HalfFullTime``.  It will also advertise the time that the number
+    of dynamic slots changed to its current value as ``NumDynamicSlotsTime``. It will not advertise
+    a ``NumDynamicSlotsValue`` because the ``<name>Value`` attribute is only advertised if ``<name>``
+    is an expression in the configuration that is not simple literal value.
+
 
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.

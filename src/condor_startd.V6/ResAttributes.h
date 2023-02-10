@@ -257,7 +257,6 @@ public:
 	void compute_config();      // what compute(A_STATIC | A_SHARED) used to do
 	void compute_for_update();  // formerly compute(A_UPDATE | A_SHARED) -  before we send ads to the collector
 	void compute_for_policy();  // formerly compute(A_TIMEOUT | A_SHARED) - before we evaluate policy like PREEMPT
-	void compute_docker_cache();
 
 	void update_condor_load(double load) {
 		m_condor_load = load;
@@ -324,6 +323,7 @@ private:
 	int				m_clock_min;
 	List<AttribValue> m_lst_dynamic;    // list of user specified dynamic Attributes
 	int64_t			m_docker_cached_image_size;  // Size in bytes of our cached docker images -1 means unknown
+	time_t			m_docker_cached_image_size_time;
 #if defined(WIN32)
 	char*			m_local_credd;
 	time_t			m_last_credd_test;

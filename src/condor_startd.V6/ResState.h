@@ -26,16 +26,22 @@ class ResState
 {
 public:
 	ResState(Resource* rip);
-	State	state( void ) { return r_state; };
-	Activity activity( void ) { return r_act; };
+	State	state( void ) const { return r_state; };
+	Activity activity( void ) const { return r_act; };
 	void	publish( ClassAd* );
-	void	change( Activity );
-	void	change( State );
+
+	void	change(State new_state) {
+		Activity new_act = idle_act;
+		if (new_state == preempting_state) { new_act = _preempting_activity(); }
+		change(new_state, new_act);
+	}
+	void	change(Activity new_act) { change( r_state, new_act ); }
 	void	change( State, Activity );
+
 	int 	eval_policy( void ); // evaluate policy expressions like PREEMPT, etc
 	void	set_destination( State );
 	int		starterExited( void );
-	State	destination( void ) { return r_destination; };
+	State	destination( void ) const { return r_destination; };
 	int     activityTimeElapsed() const;
 	int     timeDrainingUnclaimed();
 
@@ -51,6 +57,8 @@ private:
 	int		leave_action( State cur_s, Activity cur_a, 
 						  State new_s, Activity new_a, 
 						  bool statechange );
+
+	Activity	_preempting_activity();
 
 	time_t	m_stime;	// time we entered the current state
 	time_t	m_atime;	// time we entered the current activitiy

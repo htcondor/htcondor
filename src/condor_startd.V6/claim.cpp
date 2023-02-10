@@ -1385,7 +1385,7 @@ Claim::getCODMgr( void )
 // on successful spawn, the claim will take ownership of the job classad.
 // job can be NULL in the case where we are doing a delayed spawn because of preemption
 // or when doing fetchwork.  when job is NULL, the c_ad member of this class must not be.
-int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
+pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 {
 	if( ! starter ) {
 			// Big error!

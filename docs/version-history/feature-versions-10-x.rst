@@ -15,9 +15,23 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1003`.
 
+- The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
+  unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
+  is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
+  a duration value. The policy expressions in those templates have been modified
+  to account for this fact. If you have written policy expressions of your own that reference
+  *CpuBusyTime* you will need to modify them to use ``$(CpuBusyTimer)`` from one of those templates
+  or make the equivalent change.
+
 New Features:
 
-- None.
+- The *condor_startd* can now be configured to evaluate a set of expressions
+  defined by :macro:`STARTD_LATCH_EXPRS`.  For each expression, the last
+  evaluated value will be advertised as well as the time that the evaluation
+  changed to that value.  This new generic mechanism was used to add a new
+  slot attribute *NumDynamicSlotsTime* that is the last time a dynamic slot
+  was created or destroyed.
+  :jira:`1502`
 
 Bugs Fixed:
 

@@ -1612,12 +1612,22 @@ tags=gridmanager
 default=
 description=Names of attibutes from config file to insert into STARTD ads
 
+[STARTD_LATCH_EXPRS]
+default=
+description=STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
+
+
 # support the "$$(COLLECTOR_HOST)" syntax in the submit file
 [COLLECTOR_HOST_STRING]
 default="$(COLLECTOR_HOST)"
 [SYSTEM_STARTD_ATTRS]
 default=COLLECTOR_HOST_STRING DedicatedScheduler
 description=Configuration attibutes that HTCondor needs to insert into STARTD ads
+customization=devel
+
+[SYSTEM_STARTD_LATCH_EXPRS]
+default=NumDynamicSlots
+description=SYSTEM_STARTD_ATTRS that HTCondor will periodically evaluate and timestamp changes
 customization=devel
 
 [NO_DNS]
@@ -5112,7 +5122,9 @@ type=string
 
 [DOCKER_CACHE_ADVERTISE_INTERVAL]
 default=1200
+win32_default=0
 type=int
+description=How often to query docker for the size of the image cache.  0 disables the query entirely
 
 [OPENMPI_INSTALL_PATH]
 default=/usr/lib64/openmpi
@@ -5719,41 +5731,13 @@ default=5 * $(MINUTE)
 default=10 * $(MINUTE)
 [MaxVacateTime]
 default=10 * $(MINUTE)
-[KeyboardBusy]
-default=(KeyboardIdle < $(MINUTE))
-[ConsoleBusy]
-default=(ConsoleIdle  < $(MINUTE))
 
-# policy expression constants useful in creating the desktop preemption policy
+# policy expression fragments useful in creating STARTD policy, for PREEMPT etc.
 [StateTimer]
 default=(time() - EnteredCurrentState)
 customization=const
 [ActivityTimer]
 default=(time() - EnteredCurrentActivity)
-customization=const
-[ActivationTimer]
-default=ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
-customization=const
-[LastCkpt]
-default=(time() - LastPeriodicCheckpoint)
-customization=const
-[NonCondorLoadAvg]
-default=(LoadAvg - CondorLoadAvg)
-customization=const
-[CPUIdle]
-default=($(NonCondorLoadAvg) <= $(BackgroundLoad))
-customization=const
-[CPUBusy]
-default=($(NonCondorLoadAvg) >= $(HighLoad))
-customization=const
-[KeyboardNotBusy]
-default=($(KeyboardBusy) == False)
-customization=const
-[JustCPU]
-default=($(CPUBusy) && ($(KeyboardBusy) == False))
-customization=const
-[MachineBusy]
-default=($(CPUBusy) || $(KeyboardBusy))
 customization=const
 
 # Defaults for condor_adstash
@@ -5876,13 +5860,34 @@ default=$(LOG)
 ## When a metaknob is not passed any arguments, all '$(N)' macros expand to '', all '$(0#)' and '$(N?)' macros expand to '0'
 ######
 
+[$FEATURE.POLICY_EXPR_FRAGMENTS]
+description=expression fragments used in desktop policy expressions
+default : @end
+	PolicyExprFragments=1
+	KeyboardBusy=(KeyboardIdle < $(MINUTE))
+	ConsoleBusy=(ConsoleIdle  < $(MINUTE))
+	KeyboardNotBusy=($(KeyboardBusy) == False)
+	JustCPU=($(CPUBusy) && ($(KeyboardBusy) == False))
+	MachineBusy=($(CPUBusy) || $(KeyboardBusy))
+	NonCondorLoadAvg=(LoadAvg - CondorLoadAvg)
+	CpuIdle=($(NonCondorLoadAvg) <= $(BackgroundLoad))
+	CpuBusy=($(NonCondorLoadAvg) >= $(HighLoad))
+	ActivationTimer=ifThenElse(JobStart =!= UNDEFINED, (time() - JobStart), 0)
+	LastCkpt=(time() - LastPeriodicCheckpoint)
+@end
+
 [$POLICY.DESKTOP]
 # Use a preemption policy that does cycle scavenging for Desktop computers
 description=Use a preemption policy that does cycle scavenging for Desktop computers
 default : @end
+	if ! defined PolicyExprFragments
+		use FEATURE : POLICY_EXPR_FRAGMENTS
+	endif
+	STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+	CpuBusyTimer=IfThenElse(CpuBusyValue is 1, time() - CpuBusyTime, 0)
 	WANT_SUSPEND=($(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND))
 	WANT_VACATE=$(ActivationTimer) > 600 || $(IsVanilla)
-	SUSPEND=($(KeyboardBusy) || ( (CpuBusyTime > 120) && $(ActivationTimer) > 90))
+	SUSPEND=($(KeyboardBusy) || ( ($(CpuBusyTimer) > 120) && $(ActivationTimer) > 90))
 	CONTINUE=($(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)))
 	PREEMPT=(((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)))
 	START=((KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
@@ -5930,10 +5935,15 @@ default : @end
 [$FEATURE.UWCS_DESKTOP_POLICY_VALUES]
 description=Configuration values used UWCS_DESKTOP policy from HTCondor 7.x
 default : @end
+	if ! defined PolicyExprFragments
+		use FEATURE : POLICY_EXPR_FRAGMENTS
+	endif
+	STARTD_LATCH_EXPRS = $(STARTD_LATCH_EXPRS) CpuBusy
+	CpuBusyTimer=IfThenElse(CpuBusyValue is 1, time() - CpuBusyTime, 0)
 	UWCS_WANT_SUSPEND=( $(SmallJob) || $(KeyboardNotBusy) || $(IsVanilla) ) && ( $(SUSPEND) )
 	UWCS_WANT_VACATE=( $(ActivationTimer) > 10 * $(MINUTE) || $(IsVanilla) )
 	UWCS_START=( (KeyboardIdle > $(StartIdleTime)) && ( $(CPUIdle) || (State != "Unclaimed" && State != "Owner")) )
-	UWCS_SUSPEND=( $(KeyboardBusy) || ( (CpuBusyTime > 2 * $(MINUTE)) && $(ActivationTimer) > 90 ) )
+	UWCS_SUSPEND=( $(KeyboardBusy) || ( ($(CpuBusyTimer) > 2 * $(MINUTE)) && $(ActivationTimer) > 90 ) )
 	UWCS_CONTINUE=( $(CPUIdle) && ($(ActivityTimer) > 10) && (KeyboardIdle > $(ContinueIdleTime)) )
 	UWCS_PREEMPT=( ((Activity == "Suspended") && ($(ActivityTimer) > $(MaxSuspendTime))) || (SUSPEND && (WANT_SUSPEND == False)) )
 	UWCS_MaxJobRetirementTime=0
