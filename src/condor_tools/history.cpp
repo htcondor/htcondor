@@ -222,12 +222,6 @@ static void condenseJobFilterList(bool sort = false) {
 								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
 	//Erase/Remove all elements from first marked for removal to the end of data structure
 	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
-	if (sort && backwards) { std::reverse(jobIdFilterInfo.begin(), jobIdFilterInfo.end()); }
-}
-
-//Check history record source is original basic job history file (schedd or startd)
-static bool isOriginalHistory() {
-	return recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST;
 }
 
 //Use passed info to determine if we can set a record source: do so then return or error out
@@ -246,7 +240,7 @@ static void SetRecordSource(HistoryRecordSource src, const char* curr_flag, cons
 	//Something is wrong at this point no previous user setting of source
 	//but source enum is set to a value already (future proofing)
 	fprintf(stderr,"Error: Failed to set history record source with %s flag.\n", new_flag);
-	exit(0);
+	exit(1);
 }
 
 int
@@ -971,7 +965,7 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	// Default to search for standard job ad history if no files specified
 	const char* knob = source_knobs[recordSrc];
 	auto_free_ptr origHistory;
-	if (!matchFileName && isOriginalHistory()) {
+	if (!matchFileName && (recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST)) {
 		origHistory.set(param(knob));
 		matchFileName = origHistory;
 	}
@@ -1052,6 +1046,11 @@ static const char* getAdTypeFromBanner(std::string& banner, std::string& ad_type
 
 static bool parseBanner(BannerInfo& info, std::string banner);
 
+//History source files that we expect to only contain 1 instance of a Job Ad
+static bool hasOneJobInstInFile() {
+	return recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST;
+}
+
 // Check to see if all possible job ads for cluster or cluster.proc have been found
 static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool onlyCheckTime = false) {
 
@@ -1073,11 +1072,11 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 		if (match.jid.cluster == banner.jid.cluster) { //If cluster matches do checks
 			//Get QDate from job ad if not set in info
 			if (match.QDate < 0 && ad) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
-			if ( !onlyCheckTime ) {
+			if (!onlyCheckTime) {
 				if (match.jid.proc >= 0) {
 					//If has a specified proc and matched proc and cluster then remove from data structure
 					//If not an epoch file then found else if epoch file reading backwards and run_instance is 0 then all epoch ads found
-					if (match.jid == banner.jid && (isOriginalHistory() || (backwards && banner.runId == 0))) {
+					if (match.jid == banner.jid && (hasOneJobInstInFile() || (backwards && banner.runId == 0))) {
 						match.isDoneMatching = true;
 						onlyCheckTime = true;
 						continue;
@@ -1088,7 +1087,7 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 						int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
 						if (recordSrc == HRS_JOB_EPOCH && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
 						if (!ad || !ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
-							if (isOriginalHistory() || (backwards && banner.runId == 0)) {
+							if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
 								match.numProcs = --matchFoundOffset;
 							}
 						} else {
@@ -1098,9 +1097,8 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool o
 							}
 						}
 					} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
-						if (isOriginalHistory() || (backwards && banner.runId == 0)) {
-							--match.numProcs;
-							if (match.numProcs == 0) {
+						if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
+							if (--match.numProcs == 0) {
 								match.isDoneMatching = true;
 							}
 						}
