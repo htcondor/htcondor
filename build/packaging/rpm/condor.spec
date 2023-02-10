@@ -5,6 +5,9 @@
 %define _python_bytecompile_errors_terminate_build 0
 %endif
 
+# Don't use changelog date in CondorVersion
+%global source_date_epoch_from_changelog 0
+
 # optionally define any of these, here or externally
 # % define fedora   16
 # % define osg      0
@@ -1578,7 +1581,7 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Feb 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
+* Tue Feb 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
 - Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
 
 * Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
