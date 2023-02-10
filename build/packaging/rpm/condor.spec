@@ -5,6 +5,9 @@
 %define _python_bytecompile_errors_terminate_build 0
 %endif
 
+# Don't use changelog date in CondorVersion
+%global source_date_epoch_from_changelog 0
+
 # optionally define any of these, here or externally
 # % define fedora   16
 # % define osg      0
