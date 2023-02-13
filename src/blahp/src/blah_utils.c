@@ -72,21 +72,32 @@ escape_spaces(const char *str)
 	   replace tabs with spaces, CR and LF with '-'.
 	*/
 	char *result = NULL;
-	char cur;
 	size_t i, j;
+	size_t len = strlen(str);
 
-	result = (char *) malloc (strlen(str) * 2 + 1);
+	result = (char *) malloc (len * 2 + 1);
 	if (result)
 	{
-		for (i = 0, j = 0; i <= strlen(str); i++, j++)
+		for (i = 0, j = 0; i <= len; i++)
 		{
-			cur = str[i];
-			if (cur == '\r') cur = '-';
-			else if (cur == '\n') cur = '-';
-			else if (cur == '\t') cur = ' ';
-
-			if (cur == ' ') result[j++] = '\\';
-			result[j] = cur;
+			switch (str[i])
+			{
+			case '\r':
+				break;
+			case '\n':
+				if (str[i+1] == '\0') {
+					break;
+				}
+				result[j++] = '-';
+				break;
+			case '\t':
+			case ' ':
+				result[j++] = '\\';
+				result[j++] = ' ';
+				break;
+			default:
+				result[j++] = str[i];
+			}
 		}
 	}
 	return(result);
