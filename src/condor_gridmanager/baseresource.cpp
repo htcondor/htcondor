@@ -306,6 +306,10 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	if ( resourceDown ) {
 		resource_ad->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
 							 (int)lastStatusChange );
+		if (!m_pingErrMsg.empty()) {
+			resource_ad->Assign(ATTR_GRID_RESOURCE_UNAVAILABLE_REASON,
+			                    m_pingErrMsg);
+		}
 	}
 
 	int num_idle = 0;
@@ -495,11 +499,14 @@ void BaseResource::Ping()
 
 	pingActive = false;
 	lastPing = time(NULL);
+	if (ping_succeeded) {
+		m_pingErrMsg.clear();
+	}
 
 	if ( ping_succeeded != resourceDown && firstPingDone == true ) {
 		// State of resource hasn't changed. Notify ping requesters only.
 		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
-				ping_succeeded?"up":"down");
+				ping_succeeded?"up":"down");/
 
 		pingRequesters.Rewind();
 		while ( pingRequesters.Next( job ) ) {
@@ -533,6 +540,8 @@ void BaseResource::Ping()
 		while ( pingRequesters.Next( job ) ) {
 			pingRequesters.DeleteCurrent();
 		}
+		// TODO trigger ad update here
+		//   UpdateCollector() doesn't allow more frequent updates currently
 	}
 
 	if ( resourceDown ) {

@@ -164,22 +164,25 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 	
 	ping_delay = 0;
 	
-		// TODO Is there a meaning ping command we can perform?
-/* comment out to calm coverity
-	int rc = 0;
+	int rc = gahp->blah_ping(m_batchType);
 
-	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+	if (rc == GAHPCLIENT_COMMAND_NOT_SUPPORTED) {
+		// We have an older blahp that doesn't support ping.
+		// Act like the ping succeeded.
+		ping_complete = true;
+		ping_succeeded = true;
+	} else if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
 	} 
 	else if ( rc != 0 ) {
 		ping_complete = true;
 		ping_succeeded = false;
+		m_pingErrMsg = gahp->getErrorString();
 	} 
 	else {
-*/
 		ping_complete = true;
 		ping_succeeded = true;
-//	}
+	}
 
 	return;
 }

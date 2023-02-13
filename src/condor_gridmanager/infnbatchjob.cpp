@@ -227,7 +227,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
 
-	strupr( batchType );
+	strlwr( batchType );
 
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
@@ -363,7 +363,12 @@ void INFNBatchJob::doEvaluateState()
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
 	if ( gahp ) {
-		gahp->setMode( GahpClient::normal );
+		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+			dprintf(D_FULLDEBUG,"(%d.%d) Gahp in results-only mode resourceStateKnown=%d resourcePingPending=%d resourcedown=%d\n",procID.cluster, procID.proc,(int)resourceStateKnown, (int)resourcePingPending,(int)resourceDown);
+			gahp->setMode( GahpClient::results_only );
+		} else {
+			gahp->setMode( GahpClient::normal );
+		}
 	}
 
 	do {
@@ -428,6 +433,10 @@ void INFNBatchJob::doEvaluateState()
 				}
 
 				gahp->setDelegProxy( jobProxy );
+			}
+
+			if (!myResource->didFirstPing()) {
+				break;
 			}
 
 			gmState = GM_START;
@@ -608,13 +617,13 @@ void INFNBatchJob::doEvaluateState()
 			}
 
 			rc = gahp->blah_job_submit( gahpAd, &job_id_string );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
 			lastSubmitAttempt = time(NULL);
 			if ( !myResource->GahpIsRemote() ) {
 				numSubmitAttempts++;
+			}
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
 			}
 			if ( rc == GAHP_SUCCESS ) {
 				SetRemoteJobId( job_id_string );
@@ -627,6 +636,10 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_SUBMIT_SAVE;
 			} else {
 				// unhandled error
+				// TODO Only request ping if failure doesn't look job-specific
+				// TODO Wait and retry command if resource is down and
+				//   eventually comes back up
+				myResource->RequestPing(nullptr);
 				dprintf( D_ALWAYS,
 						 "(%d.%d) blah_job_submit() failed: %s\n",
 						 procID.cluster, procID.proc,
@@ -705,6 +718,10 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_SUBMITTED;
 					break;
 				} else {
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							"(%d.%d) blah_job_status() failed: %s\n",
 							procID.cluster, procID.proc, gahp->getErrorString() );
@@ -816,6 +833,10 @@ void INFNBatchJob::doEvaluateState()
 				}
 				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
@@ -952,6 +973,10 @@ void INFNBatchJob::doEvaluateState()
 				}
 				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_cancel() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
@@ -1222,6 +1247,7 @@ void INFNBatchJob::doEvaluateState()
 				FetchProxyList.erase( m_xferId );
 				m_xferId.clear();
 			}
+			resourcePingComplete = false;
 		}
 
 	} while ( reevaluate_state );

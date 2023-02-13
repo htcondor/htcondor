@@ -395,6 +395,9 @@ class GahpClient : public GenericGahpClient {
 								SimpleList<PROC_ID> &updated );
 
 		int
+		blah_ping(const std::string& lrms);
+
+		int
 		blah_job_submit(ClassAd *job_ad, char **job_id);
 
 		int
