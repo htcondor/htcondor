@@ -52,8 +52,11 @@ BOOST_PYTHON_MODULE(htcondor)
 
     def("enable_classad_extensions", enable_classad_extensions, "Register the HTCondor-specific extensions to the ClassAd library.");
 
+    auto scope = boost::python::scope();
+
     PyExc_HTCondorException = CreateExceptionInModule(
         "htcondor.HTCondorException", "HTCondorException",
+        scope,
         PyExc_Exception,
         "Never raised.  The parent class of all exceptions raised by this module."
     );
@@ -63,6 +66,7 @@ BOOST_PYTHON_MODULE(htcondor)
     // an exception we don't catch).
     PyExc_HTCondorEnumError = CreateExceptionInModule(
         "htcondor.HTCondorEnumError", "HTCondorEnumError",
+        scope,
         PyExc_HTCondorException,
         PyExc_ValueError,
         PyExc_NotImplementedError,
@@ -71,36 +75,42 @@ BOOST_PYTHON_MODULE(htcondor)
 
     PyExc_HTCondorInternalError = CreateExceptionInModule(
         "htcondor.HTCondorInternalError", "HTCondorInternalError",
+        scope,
         PyExc_HTCondorException, PyExc_RuntimeError, PyExc_TypeError, PyExc_ValueError,
         "Raised when HTCondor encounters an internal error."
         );
 
     PyExc_HTCondorIOError = CreateExceptionInModule(
         "htcondor.HTCondorIOError", "HTCondorIOError",
+        scope,
         PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError, PyExc_ValueError,
         "Raised instead of :class:`IOError` for backwards compatibility."
     );
 
     PyExc_HTCondorLocateError = CreateExceptionInModule(
         "htcondor.HTCondorLocateError", "HTCondorLocateError",
+        scope,
         PyExc_HTCondorException, PyExc_IOError, PyExc_RuntimeError, PyExc_ValueError,
         "Raised when HTCondor cannot locate a daemon."
     );
 
     PyExc_HTCondorReplyError = CreateExceptionInModule(
         "htcondor.HTCondorReplyError", "HTCondorReplyError",
+        scope,
         PyExc_HTCondorException, PyExc_RuntimeError, PyExc_ValueError,
         "Raised when HTCondor received an invalid reply from a daemon, or the daemon's reply indicated that it encountered an error."
     );
 
     PyExc_HTCondorValueError = CreateExceptionInModule(
         "htcondor.HTCondorValueError", "HTCondorValueError",
+        scope,
         PyExc_HTCondorException, PyExc_ValueError, PyExc_RuntimeError,
         "Raised instead of :class:`ValueError` for backwards compatibility."
     );
 
     PyExc_HTCondorTypeError = CreateExceptionInModule(
         "htcondor.HTCondorTypeError", "HTCondorTypeError",
+        scope,
         PyExc_HTCondorException, PyExc_TypeError, PyExc_RuntimeError, PyExc_ValueError,
         "Raised instead of :class:`TypeError` for backwards compatibility."
     );

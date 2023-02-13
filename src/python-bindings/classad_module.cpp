@@ -9,7 +9,7 @@ BOOST_PYTHON_MODULE(classad)
 {
 	export_classad();
 
-    auto scope = boost::python::scope();
+	auto scope = boost::python::scope();
 
 	PyExc_ClassAdException = CreateExceptionInModule(
 		"classad.ClassAdException", "ClassAdException",
