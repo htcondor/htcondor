@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Add new field ```ContainerDuration``` to TransferInput attribute of 
+  jobs that measure the number of seconds to transfer the 
+  Apptainer/Singularity image.
+  :jira:`1588`
 
 Bugs Fixed:
 

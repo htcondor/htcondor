@@ -3356,6 +3356,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
 
+		std::string container_image;
+		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
+
+		if (container_image == filename) {
+			Info.stats.Assign(ATTR_CONTAINER_DURATION, (time_t) thisFileStats.ConnectionTimeSeconds);
+		}
+
 		// Gather a few more statistics
 		thisFileStats.TransferSuccess = download_success;
 
@@ -5401,6 +5408,10 @@ FileTransfer::uploadFileList(
 			num_cedar_files++;
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
+
+		std::string container_image;
+		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
+
 
 			// The spooled files list is used to generate
 			// SpooledOutputFiles, which replaces TransferOutputFiles
