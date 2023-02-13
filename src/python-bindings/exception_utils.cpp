@@ -5,6 +5,7 @@
 
 PyObject *
 CreateExceptionInModule( const char * qualifiedName, const char * name,
+  boost::python::scope & s,
   PyObject * base,
   const char * docstring ) {
 	// Create the new exception type.
@@ -18,7 +19,7 @@ CreateExceptionInModule( const char * qualifiedName, const char * name,
 	}
 
     // Adds the exception to the module, which appears to the convention:
-    boost::python::scope().attr( name ) =
+    s.attr( name ) =
         boost::python::handle<>( boost::python::borrowed( exception ) );
 
 	return exception;
@@ -26,30 +27,33 @@ CreateExceptionInModule( const char * qualifiedName, const char * name,
 
 PyObject *
 CreateExceptionInModule( const char * qualifiedName, const char * name,
+  boost::python::scope & s,
   PyObject * base1, PyObject * base2,
   const char * docstring ) {
     PyObject * tuple = PyTuple_Pack( 2, base1, base2 );
-    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple, docstring );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, s, tuple, docstring );
     Py_XDECREF(tuple);
     return e;
 }
 
 PyObject *
 CreateExceptionInModule( const char * qualifiedName, const char * name,
+  boost::python::scope & s,
   PyObject * base1, PyObject * base2, PyObject * base3,
   const char * docstring ) {
     PyObject * tuple = PyTuple_Pack( 3, base1, base2, base3 );
-    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple, docstring );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, s, tuple, docstring );
     Py_XDECREF(tuple);
     return e;
 }
 
 PyObject *
 CreateExceptionInModule( const char * qualifiedName, const char * name,
+  boost::python::scope & s,
   PyObject * base1, PyObject * base2, PyObject * base3, PyObject * base4,
   const char * docstring ) {
     PyObject * tuple = PyTuple_Pack( 4, base1, base2, base3, base4 );
-    PyObject * e = CreateExceptionInModule( qualifiedName, name, tuple, docstring );
+    PyObject * e = CreateExceptionInModule( qualifiedName, name, s, tuple, docstring );
     Py_XDECREF(tuple);
     return e;
 }
