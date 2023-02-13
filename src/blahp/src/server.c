@@ -85,6 +85,7 @@
 #include <signal.h>
 #include <sys/time.h>
 #include <assert.h>
+#include <ctype.h>
 
 #if defined(HAVE_GLOBUS)
 #include "globus_gsi_credential.h"
@@ -1504,6 +1505,80 @@ cleanup_argv:
 	{
 		fprintf(stderr, "blahpd: out of memory! Exiting...\n");
 		exit(MALLOC_ERROR);
+	}
+	sem_post(&sem_total_commands);
+	return NULL;
+}
+
+#define CMD_PING_ARGS 2
+void *
+cmd_ping(void* args)
+{
+	int retcod;
+	long script_code;
+	char *err_msg;
+	char *escpd_cmd_out, *escpd_cmd_err;
+	char *resultLine = NULL;
+	char **argv = (char **)args;
+	char *reqId = argv[1];
+	char *lrms = argv[2];
+	exec_cmd_t ping_command = EXEC_CMD_DEFAULT;
+
+	/* Prepare the ping command */
+	ping_command.command = make_message("%s/%s_ping.sh", blah_script_location, lrms);
+	if (ping_command.command == NULL)
+	{
+		/* PUSH A FAILURE */
+		resultLine = make_message("%s 1 Cannot\\ allocate\\ memory\\ for\\ the\\ command\\ string", reqId);
+		goto cleanup_argv;
+	}
+	if (argv[CMD_PING_ARGS + 1] != NULL)
+	{
+		ping_command.delegation_type = atoi(argv[CMD_PING_ARGS + 1 + MEXEC_PARAM_DELEGTYPE]);
+		ping_command.delegation_cred = argv[CMD_PING_ARGS + 1 + MEXEC_PARAM_DELEGCRED];
+	}
+
+	/* Execute the command */
+	retcod = execute_cmd(&ping_command);
+
+	if (retcod != 0)
+	{
+		escpd_cmd_err = escape_spaces(strerror(errno));
+		resultLine = make_message("%s 3 Error\\ executing\\ the\\ ping\\ command:\\ %s", reqId, escpd_cmd_err);
+		if (escpd_cmd_err) free(escpd_cmd_err);
+		goto cleanup_command;
+	}
+
+	if (ping_command.exit_code != 0)
+	{
+		/* PUSH A FAILURE */
+		escpd_cmd_out = escape_spaces(ping_command.output);
+		escpd_cmd_err = escape_spaces(ping_command.error);
+		resultLine = make_message("%s %d Ping\\ command\\ failed\\ (stdout:%s)\\ (stderr:%s)",
+		                           reqId, ping_command.exit_code, escpd_cmd_out, escpd_cmd_err);
+		if (BLAH_DYN_ALLOCATED(escpd_cmd_out)) free(escpd_cmd_out);
+		if (BLAH_DYN_ALLOCATED(escpd_cmd_err)) free(escpd_cmd_err);
+		goto cleanup_command;
+	}
+
+	script_code = strtol(ping_command.output, &err_msg, 10);
+	while (*err_msg && isspace(*err_msg)) err_msg++;
+	err_msg = escape_spaces(err_msg);
+	resultLine = make_message("%s %ld %s", reqId, script_code, err_msg);
+	if (BLAH_DYN_ALLOCATED(err_msg)) free(err_msg);
+	/* resultLine = make_message("%s 0 No\\ Error", reqId); */
+
+	/* Free up all arguments and exit (exit point in case of error is the label
+	   pointing to last successfully allocated variable) */
+cleanup_command:
+	cleanup_cmd(&ping_command);
+	free(ping_command.command);
+cleanup_argv:
+	free_args(argv);
+	if(resultLine)
+	{
+		enqueue_result(resultLine);
+		free (resultLine);
 	}
 	sem_post(&sem_total_commands);
 	return NULL;
