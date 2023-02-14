@@ -362,13 +362,15 @@ void INFNBatchJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, remoteState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
-	if ( gahp ) {
-		if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
-			dprintf(D_FULLDEBUG,"(%d.%d) Gahp in results-only mode resourceStateKnown=%d resourcePingPending=%d resourcedown=%d\n",procID.cluster, procID.proc,(int)resourceStateKnown, (int)resourcePingPending,(int)resourceDown);
-			gahp->setMode( GahpClient::results_only );
-		} else {
-			gahp->setMode( GahpClient::normal );
-		}
+	GahpClient::mode gahp_mode = GahpClient::normal;
+	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+		gahp_mode = GahpClient::results_only;
+	}
+	if (gahp) {
+		gahp->setMode(gahp_mode);
+	}
+	if (m_xfer_gahp) {
+		m_xfer_gahp->setMode(gahp_mode);
 	}
 
 	do {
@@ -384,44 +386,10 @@ void INFNBatchJob::doEvaluateState()
 			// is first created. Here, we do things that we didn't want to
 			// do in the constructor because they could block (the
 			// constructor is called while we're connected to the schedd).
-			if ( gahp->Startup() == false ) {
-				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
-						 procID.cluster, procID.proc );
-				std::string error_string = "Failed to start GAHP: ";
-				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, error_string );
-				gmState = GM_HOLD;
-				break;
-			}
-			if ( myResource->GahpIsRemote() ) {
-				// This job requires a transfer gahp
-				ASSERT( m_xfer_gahp );
-				bool already_started = m_xfer_gahp->isStarted();
-				if ( m_xfer_gahp->Startup() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
-							 procID.cluster, procID.proc );
-
-					std::string error_string = "Failed to start transfer GAHP: ";
-					error_string += gahp->getGahpStderr();
-
-					jobAd->Assign( ATTR_HOLD_REASON, error_string );
-					gmState = GM_HOLD;
-					break;
-				}
-				// Try creating the security session only when we first
-				// start up the FT GAHP.
-				// For now, failure to create the security session is
-				// not fatal. FT GAHPs older than 8.1.1 didn't have a
-				// CEDAR security session command and BOSCO had another
-				// way to authenticate FileTransfer connections.
-				if ( !already_started &&
-					 m_xfer_gahp->CreateSecuritySession() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error creating security session with transfer GAHP\n",
-							 procID.cluster, procID.proc );
-				}
-			}
-
+			// We let the Resource object do the spawning of the gahp
+			// servers in the ping code. This allows us to treat an ssh
+			// failure for a remote gahp as a failed ping of the resource.
 			if (!myResource->didFirstPing()) {
 				break;
 			}
@@ -434,12 +402,16 @@ void INFNBatchJob::doEvaluateState()
 			errorString = "";
 			if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
+			} else if (remoteJobId == nullptr && remoteSandboxId == nullptr) {
+				gmState = GM_CLEAR_REQUEST;
+			} else if (!gahp->isStarted() || (m_xfer_gahp && !m_xfer_gahp->isStarted())) {
+				// Wait to see if remote gahps can be started on retry
+				// We do not want to try issuing any gahp commands if the
+				// gahp(s) aren't running.
 			} else if ( remoteJobId != NULL ) {
 				gmState = GM_SUBMITTED;
 			} else if ( remoteSandboxId != NULL ) {
 				gmState = GM_TRANSFER_INPUT;
-			} else {
-				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
 		case GM_UNSUBMITTED: {
@@ -452,7 +424,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DELETE;
-			} else {
+			} else if (!resourceDown) {
 				gmState = GM_SAVE_SANDBOX_ID;
 			}
 			} break;
