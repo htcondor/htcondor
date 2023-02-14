@@ -421,19 +421,6 @@ void INFNBatchJob::doEvaluateState()
 							 procID.cluster, procID.proc );
 				}
 			}
-			if ( jobProxy ) {
-				if ( gahp->Initialize( jobProxy ) == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
-							 procID.cluster, procID.proc );
-
-					jobAd->Assign( ATTR_HOLD_REASON,
-								   "Failed to initialize GAHP" );
-					gmState = GM_HOLD;
-					break;
-				}
-
-				gahp->setDelegProxy( jobProxy );
-			}
 
 			if (!myResource->didFirstPing()) {
 				break;
