@@ -71,7 +71,7 @@ class GahpServer : public Service {
 	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
 
-	bool Startup();
+	bool Startup(bool force=false);
 	bool Initialize(Proxy * proxy);
 	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
@@ -235,7 +235,7 @@ class GenericGahpClient : public Service {
 							const ArgList * args = NULL );
 		virtual ~GenericGahpClient();
 
-		bool Startup();
+		bool Startup(bool force=false);
 		bool Initialize( Proxy * proxy );
 		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();

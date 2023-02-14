@@ -708,15 +708,14 @@ GahpServer::RemoveGahpClient()
 }
 
 bool
-GenericGahpClient::Startup()
+GenericGahpClient::Startup(bool force)
 {
-	return server->Startup();
+	return server->Startup(force);
 }
 
 bool
-GahpServer::Startup()
+GahpServer::Startup(bool force)
 {
-	char *gahp_path = NULL;
 	ArgList gahp_args;
 	int stdin_pipefds[2] = { -1, -1 };
 	int stdout_pipefds[2] = { -1, -1 };
@@ -724,7 +723,11 @@ GahpServer::Startup()
 	Env newenv;
 	char *tmp_char;
 
-		// Check if we already have spawned a GAHP server.  
+		// Check if we already have spawned a GAHP server.
+	if (m_gahp_startup_failed && force) {
+		m_gahp_startup_failed = false;
+		m_gahp_pid = -1;
+	}
 	if ( m_gahp_startup_failed ) {
 			// Previous attempt to start GAHP failed. Don't retry...
 		return false;
@@ -739,11 +742,10 @@ GahpServer::Startup()
 		dprintf(D_ALWAYS, "No path to start gahp id '%s'\n", my_id);
 		return false;
 	}
-	gahp_path = binary_path;
 	gahp_args.AppendArgsFromArgList(binary_args);
 
 	// Insert binary_path as argv[0] for Create_Process().
-	gahp_args.InsertArg( gahp_path, 0);
+	gahp_args.InsertArg( binary_path, 0);
 
 	newenv.SetEnv( "GAHP_TEMP", GridmanagerScratchDir );
 
@@ -823,7 +825,7 @@ GahpServer::Startup()
 	io_redirect[2] = stderr_pipefds[1]; // stderr get write side of err pipe
 
 	m_gahp_pid = daemonCore->Create_Process(
-			gahp_path,		// Name of executable
+			binary_path,	// Name of executable
 			gahp_args,		// Args
 			PRIV_USER_FINAL,// Priv State ---- drop root if we have it
 			m_reaperid,		// id for our registered reaper
@@ -838,7 +840,7 @@ GahpServer::Startup()
 
 	if ( m_gahp_pid == FALSE ) {
 		dprintf(D_ALWAYS,"Failed to start GAHP server (%s)\n",
-				gahp_path);
+				binary_path);
 		m_gahp_pid = -1;
 		goto error_exit;
 	} else {
@@ -923,7 +925,6 @@ GahpServer::Startup()
  error_exit:
 	m_gahp_startup_failed = true;
 
-	free( gahp_path );
 	if ( stdin_pipefds[0] != -1 ) {
 		daemonCore->Close_Pipe( stdin_pipefds[0] );
 	}

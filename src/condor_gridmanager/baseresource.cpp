@@ -506,7 +506,7 @@ void BaseResource::Ping()
 	if ( ping_succeeded != resourceDown && firstPingDone == true ) {
 		// State of resource hasn't changed. Notify ping requesters only.
 		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
-				ping_succeeded?"up":"down");/
+				ping_succeeded?"up":"down");
 
 		pingRequesters.Rewind();
 		while ( pingRequesters.Next( job ) ) {
