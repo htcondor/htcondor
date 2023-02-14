@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
 
 Bugs Fixed:
 

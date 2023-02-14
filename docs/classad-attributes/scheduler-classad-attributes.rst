@@ -269,6 +269,10 @@ Scheduler ClassAd Attributes
     A Statistics attribute defining the number of jobs submitted in the
     time interval defined by attribute ``StatsLifetime``.
 
+:classad-attribute:`JobsUnmaterialized`.
+    A Statistics attribute defining the number of jobs submitted as
+    late materialization jobs that have not yet materialized.
+
 :classad-attribute:`Machine`
     A string with the machine's fully qualified host name.
 
