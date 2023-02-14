@@ -1368,6 +1368,7 @@ Scheduler::count_jobs()
 	stats.JobsRunning = 0;
 	stats.JobsRunningRuntimes = 0;
 	stats.JobsRunningSizes = 0;
+	stats.JobsUnmaterialized = 0;
 	scheduler.OtherPoolStats.ResetJobsRunning();
 
 	time_t current_time = time(0);
@@ -2947,8 +2948,21 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 		bool allow_materialize = scheduler.getAllowLateMaterialize();
 		if (allow_materialize) {
 			JobQueueCluster * clusterad = static_cast<JobQueueCluster*>(job);
-			if ( ! clusterad->HasAttachedJobs() && JobFactoryIsRunning(clusterad)) {
-				ScheduleClusterForJobMaterializeNow(clusterad->jid.cluster);
+			if (clusterad->factory) {
+				if ( ! clusterad->HasAttachedJobs() && JobFactoryIsRunning(clusterad)) {
+					ScheduleClusterForJobMaterializeNow(clusterad->jid.cluster);
+				}
+				int unmat = UnMaterializedJobCount(clusterad);
+				if (unmat > 0) {
+					scheduler.stats.JobsUnmaterialized += unmat;
+					if (scheduler.OtherPoolStats.AnyEnabled()) {
+						time_t now = time(nullptr);
+						ScheddOtherStats * other_stats = scheduler.OtherPoolStats.Matches(*job, now);
+						for (ScheddOtherStats * po = other_stats; po; po = po->next) {
+							po->stats.JobsUnmaterialized += unmat;
+						}
+					}
+				}
 			}
 		}
 		return 0;
