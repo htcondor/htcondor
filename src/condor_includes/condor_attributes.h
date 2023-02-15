@@ -81,6 +81,7 @@
 #define ATTR_COMMAND  "Command"
 #define ATTR_COMPRESS_FILES  "CompressFiles"
 #define ATTR_CONTAINER_SERVICE_NAMES "ContainerServiceNames"
+#define ATTR_CONTAINER_DURATION "ContainerDuration"
 #define ATTR_CONTAINER_PORT_SUFFIX "_ContainerPort"
 #define ATTR_CONTAINER_TARGET_DIR "ContainerTargetDir"
 #define ATTR_REQUESTED_CAPACITY  "RequestedCapacity"

@@ -17,6 +17,11 @@ Release Notes:
 
 New Features:
 
+- Add new field ```ContainerDuration``` to TransferInput attribute of 
+  jobs that measure the number of seconds to transfer the 
+  Apptainer/Singularity image.
+  :jira:`1588`
+
 - For grid universe jobs of type **batch**, add detection of when the
   target batch system is unreachable or not functioning. When this is
   the case, HTCondor marks the resource as unavailable instead of
