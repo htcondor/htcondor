@@ -22,6 +22,13 @@ New Features:
   Apptainer/Singularity image.
   :jira:`1588`
 
+- For grid universe jobs of type **batch**, add detection of when the
+  target batch system is unreachable or not functioning. When this is
+  the case, HTCondor marks the resource as unavailable instead of
+  putting the affected jobs on hold. This matches the behavior for
+  other grid universe job types.
+  :jira:`1582`
+
 Bugs Fixed:
 
 - Fixed bug where the *condor_shadow* would crash during job removal
