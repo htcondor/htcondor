@@ -1551,7 +1551,16 @@ Resource::do_update( void )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
-		// Send class ads to collector(s)
+	std::string priorState;
+
+	// If we are sending to a temporary "working" collector
+	// lie to our primary collector that we are claimed
+	// But keep the activity the same
+	if (!workingCM.empty()) {
+		public_ad.LookupString(ATTR_STATE, priorState);
+		public_ad.Assign(ATTR_STATE, "Claimed");
+	}
+		// Send class ads to owning collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
 	if( rval ) {
@@ -1559,6 +1568,15 @@ Resource::do_update( void )
 	} else {
 		dprintf( D_ALWAYS, "Error sending update to collector(s)\n" );
 	}
+
+	// If we have a temporary CM, send update there, too
+	if (!workingCM.empty()) {
+		// And resource ATTR_STATE back to the correct value for our working collector
+		public_ad.Assign(ATTR_STATE, priorState);
+
+		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
+		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
+	} 
 
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.

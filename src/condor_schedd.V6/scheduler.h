@@ -723,6 +723,7 @@ class Scheduler : public Service
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
 
+	bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 private:
 
 	bool JobCanFlock(classad::ClassAd &job_ad, const std::string &pool);
@@ -963,6 +964,7 @@ private:
 		 */
 	void	contactStartd( ContactStartdArgs* args );
 	void claimedStartd( DCMsgCallback *cb );
+	void claimStartdForUs(DCMsgCallback *cb);
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 

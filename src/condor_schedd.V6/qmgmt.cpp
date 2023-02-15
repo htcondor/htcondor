@@ -8794,16 +8794,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 
 	ASSERT(my_match_ad);
 
-	bool scheddsAreSubmitters = false;
-	my_match_ad->LookupBool(ATTR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
-
-	// to support unmodified negotiators
-	if (strcmp(user, "AllSubmittersAt") == 0) {
-		scheddsAreSubmitters = true;
-	}
-
-	if (scheddsAreSubmitters) match_any_user = true;
-
 		// indicate failure by setting proc to -1.  do this now
 		// so if we bail out early anywhere, we say we failed.
 	jobid.proc = -1;	

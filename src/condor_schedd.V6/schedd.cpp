@@ -178,7 +178,6 @@ int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
-bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -1782,7 +1781,7 @@ Scheduler::count_jobs()
 
 	time_t time_now = time(nullptr);
 
-	if (param_boolean("SCHEDDS_ARE_SUBMITTERS_FOR_FLOCKERS", false) == false) {
+	if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
 		// The usual case -- send one submitter ad per submitter
 		for (auto it = Submitters.begin(); it != Submitters.end(); ++it) {
 			updateSubmitterAd(it->second, pAd, nullptr, -1, time_now);
@@ -1824,7 +1823,7 @@ Scheduler::count_jobs()
 			SetupNegotiatorSession(duration, flock_col->name(), capability);
 
 			// update submitter ad in this pool for each owner
-			if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
+			if (param_boolean("SCHEDDS_ARE_SUBMITTERS_FOR_FLOCKERS", false) == false) {
 				for (auto it = Submitters.begin(); it != Submitters.end(); ++it) {
 					SubmitterData & SubDat = it->second;
 
@@ -7076,12 +7075,14 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
 	bool scheddsAreSubmitters = false;;
-	match_ad.LookupBool(ATTR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+	if (strncmp("AllSubmittersAt", getMatchUser(), 15) == 0) {
+		scheddsAreSubmitters = true;
+	}
 
 	if (scheddsAreSubmitters) {
 		// Not a real match we can directly use.  Send it to our sidecar cm, and let
 		// it figure out the fair-share, etc.
-		return forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
+		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
 	const char* because = "";
@@ -7179,8 +7180,9 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 // Negotiator has send the schedd a match to use for any user.  Forward the slot to our cm-on-the-side
 // for subsequent matching
-bool forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
-	dprintf(D_FULLDEBUG, "Forwarding match %s to local cm\n", slot_name);
+bool 
+Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
+	dprintf(D_FULLDEBUG, "Forwarding match %s for use only for this schedd\n", slot_name);
 	auto_free_ptr local_cm(param("SCHEDD_LOCAL_CM"));
 
 	if (!local_cm) {
@@ -7188,29 +7190,36 @@ bool forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, Cla
 		return false;
 	}
 
-	std::string startdAddr;
-	match_ad.LookupString(ATTR_STARTD_IP_ADDR, startdAddr);
-	// Put the start into Matched state, so the global cm won't try to match it while the
-	// local one is trying to as well
-	NotifyStartdOfMatchHandler *h =
-		new NotifyStartdOfMatchHandler(
-				slot_name,startdAddr.c_str(), 60,
-				claim_id, true);
+	std::string peer_addr;
+	match_ad.LookupString(ATTR_MY_ADDRESS, peer_addr);
 
-	h->startCommand(); // if the match_info fails, it fails
-
-	DCCollector localCollector(local_cm);
-	match_ad.Delete(ATTR_SCHEDDS_ARE_SUBMITTERS);
-
-	ClassAd privateAd;
-	privateAd.Assign(ATTR_NAME, slot_name);
-	privateAd.Assign(ATTR_CLAIM_ID, claim_id);
-	if (extra_claims) {
-		privateAd.Assign("PreemptDslotClaims", extra_claims);
+	classy_counted_ptr<DCStartd> startd = new DCStartd(slot_name, nullptr, peer_addr.c_str(),claim_id, extra_claims);
+	if( !startd->addr() ) {
+		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+		dPrintAd(D_ALWAYS, match_ad);
+		return false;
 	}
 
-	DCCollectorAdSequences adseq; // need a bogus one of these for the interface
-	return localCollector.sendUpdate(UPDATE_STARTD_AD, &match_ad, adseq, &privateAd, false);
+	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+		(DCMsgCallback::CppFunction)&Scheduler::claimStartdForUs,
+		this,
+		nullptr);
+
+	ClassAd not_a_real_job;
+	// Tell the startd which CM to report to for real work
+	not_a_real_job.Assign("WorkingCM", local_cm.ptr());
+
+	startd->asyncRequestOpportunisticClaim(
+		&not_a_real_job,
+		slot_name,
+		daemonCore->publicNetworkIpAddr(),
+		scheduler.aliveInterval(),
+		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
+		20,       // overall timeout on completing claim request
+		cb);
+
+	
+	return true;
 }
 
 void
@@ -7491,7 +7500,6 @@ Scheduler::negotiate(int command, Stream* s)
 		if (strncmp(owner, "AllSubmittersAt", 15) == 0) {
 			scheddsAreSubmitters = true;
 		}
-		dprintf(D_ALWAYS, "GGT GGT GGT scheddsAreSubmitters is %d owner is %s\n", scheddsAreSubmitters, owner);
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -7934,6 +7942,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	delete jobAd;
 
 		// Now wait for callback...
+}
+
+void 
+Scheduler::claimStartdForUs(DCMsgCallback *cb) {
+	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
+	// Should we do something special here?
+	dprintf(D_FULLDEBUG, "Completed claiming startd for sidecar CM\n");
 }
 
 void
