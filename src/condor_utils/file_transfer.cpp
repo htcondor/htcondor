@@ -5409,10 +5409,6 @@ FileTransfer::uploadFileList(
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
 
-		std::string container_image;
-		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
-
-
 			// The spooled files list is used to generate
 			// SpooledOutputFiles, which replaces TransferOutputFiles
 			// when pulling output from the spool directory.  We don't
