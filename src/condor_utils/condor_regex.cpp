@@ -108,8 +108,12 @@ Regex::match_str(const std::string & string, ExtArray<std::string> * groups) {
 	PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(matchdata);
 	if (NULL != groups) {
 		for (int i = 0; i < rc; i++) {
-			(*groups)[i] = string.substr(static_cast<int>(ovector[i * 2]),
+			if (ovector[i * 2] == PCRE2_UNSET) {
+				(*groups)[i] = "";
+			} else {
+				(*groups)[i] = string.substr(static_cast<int>(ovector[i * 2]),
 			                             static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2]));
+			}
 		}
 	}
 
