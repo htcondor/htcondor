@@ -106,7 +106,6 @@ CondorLockFile::CondorLockFile( const char	*l_url,
 // Destructor
 CondorLockFile::~CondorLockFile( void )
 {
-	(void) FreeLock( );
 }
 
 // Shared initialization code
