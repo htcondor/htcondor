@@ -40,6 +40,10 @@ Bugs Fixed:
 - Fixed bug where the *condor_shadow* would crash during job removal.
   :jira:`1585`
 
+- Fixed a bug where two *condor_schedd*s in a High Availability
+  configuration could be active at the same time.
+  :jira:`1590`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
