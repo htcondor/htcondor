@@ -1325,7 +1325,7 @@ Resource::reconfig( void )
 
 
 void
-Resource::update_needed( WhyFor why )
+Resource::update_needed( WhyFor /*why*/ )
 {
 	if (r_no_collector_updates)
 		return;

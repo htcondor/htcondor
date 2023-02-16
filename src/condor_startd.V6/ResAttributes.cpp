@@ -469,9 +469,9 @@ MachAttributes::compute_for_update()
 		time_t interval = (now - m_docker_cached_image_size_time);
 		if (docker_cached_image_size_interval && (interval >= docker_cached_image_size_interval)) {
 			m_docker_cached_image_size_time = now;
-			size_t size_in_bytes = DockerAPI::imageCacheUsed();
+			int64_t size_in_bytes = DockerAPI::imageCacheUsed();
 			if (size_in_bytes >= 0) {
-				const size_t ONEMB =  1024 * 1024;
+				const int64_t ONEMB =  1024 * 1024;
 				m_docker_cached_image_size = (DockerAPI::imageCacheUsed() + ONEMB/2) / ONEMB;
 			} else {
 				// negative values returned above indicate failure to fetch the imageSize
@@ -1290,8 +1290,6 @@ MachAttributes::publish_static(ClassAd* cp)
 		if (pav) pav->AssignToClassAd(cp);
 	}
 
-	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
-
 #else
 	// temporary attributes for raw utsname info
 	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
@@ -1420,6 +1418,11 @@ void
 MachAttributes::publish_common_dynamic(ClassAd* cp)
 {
 	// things that need to be refreshed periodially
+
+#ifdef WIN32
+	// we periodically probe to see if there is a valid local credd.
+	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
+#endif
 
 	// KFLOPS and MIPS are only conditionally computed; thus, only
 	// advertise them if we computed them.
