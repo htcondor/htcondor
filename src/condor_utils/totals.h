@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "HashTable.h"
 #include "status_types.h"
 
 // object keeps track of totals within a single class (same key)
@@ -66,7 +65,7 @@ class TrackTotals
 	private:
 		ppOption ppo;
 		int malformed;
-		HashTable<std::string,ClassTotal*> allTotals;
+		std::map<std::string,ClassTotal*> allTotals;
 		ClassTotal*	topLevelTotal;
 };
 

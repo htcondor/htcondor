@@ -22,7 +22,6 @@
 #include "enum_utils.h"
 #include "condor_attributes.h"
 #include "stdio.h"
-#include "HashTable.h"
 #include "totals.h"
 #include "string_list.h"
 
@@ -31,7 +30,7 @@
 
 
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(hashFunction)
+TrackTotals (ppOption m)
 {
 	ppo = m;
 	malformed = 0;
@@ -41,11 +40,9 @@ TrackTotals (ppOption m) : allTotals(hashFunction)
 TrackTotals::
 ~TrackTotals ()
 {
-	ClassTotal *ct;
-
-	allTotals.startIterations();
-	while (allTotals.iterate(ct))
+	for (auto& [key, ct] : allTotals) {
 		delete ct;
+	}
 	delete topLevelTotal;
 }
 
@@ -62,15 +59,14 @@ update (ClassAd *ad, int options, const char * _key /*=""*/)
 		return 0;
 	}
 
-	if (allTotals.lookup (key, ct) < 0)
+	auto itr = allTotals.find(key);
+	if (itr == allTotals.end())
 	{
 		ct = ClassTotal::makeTotalObject (ppo);
 		if (!ct) return 0;
-		if (allTotals.insert (key, ct) < 0)
-		{
-			delete ct;
-			return 0;
-		}
+		allTotals[key] = ct;
+	} else {
+		ct = itr->second;
 	}
 
 	rval = ct->update(ad, options);
@@ -106,37 +102,16 @@ bool TrackTotals::haveTotals()
 void TrackTotals::
 displayTotals (FILE *file, int keyLength)
 {
-	ClassTotal *ct=0;
-	std::string key;
-	int k;
 	bool auto_key_length = keyLength < 0;
 	if (auto_key_length) { keyLength = 5; } // must be at least 5 for "Total"
 
 	// display totals only for meaningful modes
 	if ( ! haveTotals()) return;
 
-		
-	// sort the keys (insertion sort) so we display totals in sorted order
-	char **keys = new char* [allTotals.getNumElements()];
-	ASSERT(keys);
-	allTotals.startIterations();
-	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
-	{
-		allTotals.iterate(key, ct);
-		// find the position where we want to insert the key
-		int pos;
-		for (pos = 0; pos < k && strcmp(keys[pos], key.c_str()) < 0; pos++) { }
-		if (pos < k) {
-			// if we are not inserting at the end of the array, then
-			// we must shift the elements to the right to make room;
-			// we use memmove() because it handles overlapping buffers
-			// correctly (and efficiently)
-			memmove(keys+pos+1, keys+pos, (k-pos)*sizeof(char *));
-		}
-		// insert the key in the right position in the list
-		keys[pos] = strdup(key.c_str());
-		if (auto_key_length) {
-			keyLength = MAX(keyLength, key.length());
+	// Find the longest key length
+	if (auto_key_length) {
+		for (auto& [key, ct] : allTotals) {
+			keyLength = MAX(keyLength, (int)key.length());
 		}
 	}
 
@@ -145,17 +120,14 @@ displayTotals (FILE *file, int keyLength)
 	topLevelTotal->displayHeader(file);
 	fprintf (file, "\n");
 
-	// now that our keys are sorted, display the totals in sort order
+	// display the totals
+	// The map's comparison function gives us the entries sorted by key
 	bool had_tot_keys = false;
-	for (k = 0; k < allTotals.getNumElements(); k++)
-	{
-		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
-		allTotals.lookup(std::string(keys[k]), ct);
-		free(keys[k]);
+	for (auto& [key, ct] : allTotals) {
+		fprintf (file, "%*.*s", keyLength, keyLength, key.c_str());
 		ct->displayInfo(file);
 		had_tot_keys = true;
 	}
-	delete [] keys;
 	if (had_tot_keys) fprintf(file, "\n");
 	fprintf (file, "%*.*s", keyLength, keyLength, "Total");
 	topLevelTotal->displayInfo(file,1);
