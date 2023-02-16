@@ -109,9 +109,13 @@ Regex::match_str(const std::string & string, std::vector<std::string> * groups) 
 	if (NULL != groups) {
 		groups->clear();
 		for (int i = 0; i < rc; i++) {
-			groups->emplace_back(
-					string.substr(static_cast<int>(ovector[i * 2]), 
+			if (ovector[i * 2] == PCRE2_UNSET) {
+				groups->emplace_back("");
+			} else {
+				groups->emplace_back(
+						string.substr(static_cast<int>(ovector[i * 2]), 
 						static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2])));
+			}
 		}
 	}
 

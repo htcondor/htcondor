@@ -114,11 +114,11 @@ class Matchmaker : public Service
 		void updateCollector();
 		
 		// auxillary functions
-		bool obtainAdsFromCollector (ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, ClassAdListDoesNotDeleteAds &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
+		bool obtainAdsFromCollector(ClassAdList &allAds, ClassAdListDoesNotDeleteAds &startdAds, std::vector<ClassAd *> &submitterAds, std::set<std::string> &submitterNames, ClaimIdHash &claimIds );	
 		char * compute_significant_attrs(ClassAdListDoesNotDeleteAds & startdAds);
-		bool consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds & submitterAds) const;
+		bool consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) const;
 
-		void SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds);
+		void SetupMatchSecurity(std::vector<ClassAd *> &submitterAds);
 
 		/**
 		 * Start the network communication necessary for a negotiation cycle.
@@ -135,7 +135,7 @@ class Matchmaker : public Service
 		/**
 		 * Try starting negotiations with all schedds in parallel.
 		 */
-		void prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds);
+		void prefetchResourceRequestLists(std::vector<ClassAd *> &submitterAds);
 		typedef std::map<std::string, classad_shared_ptr<ResourceRequestList> > RRLHash;
 		RRLHash m_cachedRRLs;
 
@@ -178,9 +178,10 @@ class Matchmaker : public Service
 								 int untrimmed_num_startds,
 								 double untrimmedSlotWeightTotal,
 								 double minSlotWeight,
-			ClassAdListDoesNotDeleteAds& startdAds, 
-			ClaimIdHash& claimIds, ClassAdListDoesNotDeleteAds& submitterAds, 
-			double groupQuota=INT_MAX, const char* groupName=NULL);
+								 ClassAdListDoesNotDeleteAds& startdAds, 
+								 ClaimIdHash& claimIds,
+								 std::vector<ClassAd *>& submitterAds, 
+								 double groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
 		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
@@ -191,7 +192,7 @@ class Matchmaker : public Service
 		int matchmakingProtocol(ClassAd &request, ClassAd *offer, 
 						ClaimIdHash &claimIds, Sock *sock,
 						const char* submitterName, const char* scheddAddr);
-		void calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds, double &max, double &normalFactor,
+		void calculateNormalizationFactor (std::vector<ClassAd *> &submitterAds, double &max, double &normalFactor,
 										   double &maxAbs, double &normalAbsFactor);
 
 			// Take a submitter ad from the collector and apply any changes necessary.
@@ -252,7 +253,7 @@ class Matchmaker : public Service
 			@param normalAbsFactor Normalization for prio factors
 			@param pieLeft Sum of submitterLimits
 		**/
-		void calculatePieLeft( ClassAdListDoesNotDeleteAds &submitterAds,
+		void calculatePieLeft( std::vector<ClassAd *> &submitterAds,
 		                       char const *groupAccountingName,
 		                       float groupQuota,
 				       float groupusage,
@@ -264,7 +265,7 @@ class Matchmaker : public Service
 		                            /* result parameters: */
 		                       double &pieLeft);
 
-		void findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &belowFloorSubmitters);
+		void findBelowFloorSubmitters(std::vector<ClassAd *> &submitterAds, std::vector<ClassAd*> &belowFloorSubmitters);
 			// rewrite the requirements expression to make matchmaking faster
 		void OptimizeMachineAdForMatchmaking(ClassAd *ad);
 
@@ -280,6 +281,8 @@ class Matchmaker : public Service
 		void updateNegCycleEndTime(time_t startTime, ClassAd *submitter);
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
+
+		friend class submitterLessThan;
 
 		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
 		std::map<std::string, ClassAd *> m_slotNameToAdMap;

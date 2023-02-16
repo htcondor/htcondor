@@ -105,6 +105,7 @@ class BaseResource : public Service
 	int pingTimerId;
 	time_t lastPing;
 	time_t lastStatusChange;
+	std::string m_pingErrMsg;
 
 	static int probeInterval;
 	static int probeDelay;

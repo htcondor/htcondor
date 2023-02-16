@@ -58,6 +58,7 @@ command_t commands_array[] = {
 	{ "BLAH_JOB_STATUS_ALL",          1, 1, cmd_unknown },
 	{ "BLAH_JOB_STATUS_SELECT",       2, 1, cmd_unknown },
 	{ "BLAH_JOB_SUBMIT",              2, 2, cmd_submit_job },
+	{ "BLAH_PING",                    2, 1, cmd_ping },
 	{ "BLAH_SET_GLEXEC_DN",           3, 0, cmd_set_glexec_dn },
 	{ "BLAH_SET_GLEXEC_OFF",          0, 0, cmd_unset_glexec_dn },	
 	{ "BLAH_SET_SUDO_ID",             1, 0, cmd_set_sudo_id },
