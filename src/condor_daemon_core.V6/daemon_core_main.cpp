@@ -3359,7 +3359,7 @@ int dc_main( int argc, char** argv )
 	int		command_port = -1;
 	char const *daemon_sock_name = NULL;
 	int		dcargs = 0;		// number of daemon core command-line args found
-	char	*ptmp, *ptmp1;
+	char	*ptmp;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	bool	done;

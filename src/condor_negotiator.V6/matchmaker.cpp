@@ -2231,7 +2231,7 @@ negotiateWithGroup ( bool isFloorRound,
 	double		submitterAbsShare = 0.0;
 	double		pieLeft;
 	double 		pieLeftOrig;
-	int         submitterAdsCountOrig;
+	size_t		submitterAdsCountOrig;
 	int			totalTime;
 	int			totalTimeSchedd;
 	int			num_idle_jobs;
