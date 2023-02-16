@@ -701,7 +701,6 @@ ResMgr::findRipForNewCOD( ClassAd* ad )
 	if ( ! numSlots()) {
 		return NULL;
 	}
-	Resource * foundRip = nullptr;
 
 		/*
           We always ensure that the request's Requirements, if any,
