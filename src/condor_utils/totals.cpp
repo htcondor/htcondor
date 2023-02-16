@@ -21,7 +21,6 @@
 #include "condor_state.h"
 #include "enum_utils.h"
 #include "condor_attributes.h"
-#include "MyString.h"
 #include "stdio.h"
 #include "HashTable.h"
 #include "totals.h"
@@ -51,10 +50,10 @@ TrackTotals::
 }
 
 int TrackTotals::
-update (ClassAd *ad, int options, const char * _key /*=NULL*/)
+update (ClassAd *ad, int options, const char * _key /*=""*/)
 {
 	ClassTotal *ct;
-	MyString	key(_key);
+	std::string key(_key ? _key : "");
 	int		   	rval;
 
 	if ( key.empty() && ! ClassTotal::makeKey(key, ad, ppo))
@@ -108,7 +107,7 @@ void TrackTotals::
 displayTotals (FILE *file, int keyLength)
 {
 	ClassTotal *ct=0;
-	MyString	key;
+	std::string key;
 	int k;
 	bool auto_key_length = keyLength < 0;
 	if (auto_key_length) { keyLength = 5; } // must be at least 5 for "Total"
@@ -151,7 +150,7 @@ displayTotals (FILE *file, int keyLength)
 	for (k = 0; k < allTotals.getNumElements(); k++)
 	{
 		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
-		allTotals.lookup(MyString(keys[k]), ct);
+		allTotals.lookup(std::string(keys[k]), ct);
 		free(keys[k]);
 		ct->displayInfo(file);
 		had_tot_keys = true;
@@ -725,7 +724,7 @@ makeTotalObject (ppOption ppo)
 
 
 int ClassTotal::
-makeKey (MyString &key, ClassAd *ad, ppOption ppo)
+makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 {
 	char p1[256], p2[256], buf[512];
 
