@@ -612,14 +612,14 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			return false;
 		}
 
-		MyString logicalLine;
+		std::string logicalLine;
 		while ( reader.NextLogicalLine( logicalLine ) ) {
 			if ( logicalLine != "" ) {
 
 				// Initialize list of tokens from logicalLine
 				std::list<std::string> tokens;
 				MyStringTokener tok;
-				logicalLine.trim();
+				trim(logicalLine);
 				tok.Tokenize(logicalLine.c_str());
 				while( const char* token = tok.GetNextToken(" \t", true) ) {
 					tokens.emplace_back(token);
@@ -658,15 +658,15 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 				} else if ( !strcasecmp( firstToken, "SET_JOB_ATTR" ) ) {
 						// Strip of DAGMan-specific command name; the
 						// rest we pass to the submit file.
-					logicalLine.replaceString( "SET_JOB_ATTR", "" );
-					logicalLine.trim();
+					replace_str(logicalLine, "SET_JOB_ATTR", "");
+					trim(logicalLine);
 					if ( logicalLine == "" ) {
 						AppendError( errMsg, "Improperly-formatted "
 									"file: value missing after keyword "
 									"SET_JOB_ATTR" );
 						result = false;
 					} else {
-						attrLines.emplace_back(logicalLine.c_str() );
+						attrLines.emplace_back(logicalLine);
 					}
 				}
 			}
