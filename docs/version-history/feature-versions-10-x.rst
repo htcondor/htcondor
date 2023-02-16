@@ -149,6 +149,21 @@ Bugs Fixed:
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
 
+Version 10.2.3
+--------------
+
+.. HTCondor version 10.2.3 released on Month Date, 2023.
+
+- HTCondor version 10.2.3 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.2.2
 --------------
 
