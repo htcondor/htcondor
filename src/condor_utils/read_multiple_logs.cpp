@@ -630,7 +630,7 @@ GetFileID( const std::string &filename, std::string &fileID,
 	if ( !tmpRealPath ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error (%d, %s) getting real path for specified path %s",
-					errno, strerror( errno ), filename.Value() );
+					errno, strerror( errno ), filename.c_str() );
 		return false;
 	}
 
