@@ -33,6 +33,11 @@ New Features:
   was created or destroyed.
   :jira:`1502`
 
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
+
 - Add new field ```ContainerDuration``` to TransferInput attribute of 
   jobs that measure the number of seconds to transfer the 
   Apptainer/Singularity image.
@@ -175,7 +180,10 @@ Version 10.2.3
 
 New Features:
 
-- None.
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
 
 Bugs Fixed:
 
