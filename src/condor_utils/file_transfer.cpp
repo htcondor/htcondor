@@ -2527,7 +2527,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			fullname = filename;
 		}
 		else if( final_transfer || IsClient() ) {
-			MyString remap_filename;
+			std::string remap_filename;
 			int res = filename_remap_find(download_filename_remaps.c_str(),filename.c_str(),remap_filename,0);
 			dprintf(D_FULLDEBUG, "REMAP: res is %i -> %s !\n", res, remap_filename.c_str());
 			if (res == -1) {
@@ -4483,7 +4483,7 @@ FileTransfer::computeFileList(
 					local_output_url += outputName;
 				}
 			} else {
-				MyString remap_filename;
+				std::string remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
 					local_output_url = remap_filename.c_str();
 				}

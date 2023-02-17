@@ -22,8 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_classad.h"
-#include "HashTable.h"
-#include "MyString.h"
 #include "status_types.h"
 
 // object keeps track of totals within a single class (same key)
@@ -35,7 +33,7 @@ class ClassTotal
 		virtual ~ClassTotal ();
 
 		static ClassTotal *makeTotalObject(ppOption);
-		static int makeKey( MyString &, ClassAd *, ppOption);
+		static int makeKey( std::string &, ClassAd *, ppOption);
 
 		virtual int update(ClassAd*, int options) 	= 0;
 		virtual void displayHeader(FILE*)= 0;
@@ -60,14 +58,14 @@ class TrackTotals
 		TrackTotals (ppOption);
 		~TrackTotals();
 
-		int  update(ClassAd *, int options = 0, const char * key=NULL);
+		int  update(ClassAd *, int options = 0, const char * key="");
 		void displayTotals(FILE *, int keyLength);
 		bool haveTotals();
 
 	private:
 		ppOption ppo;
 		int malformed;
-		HashTable<MyString,ClassTotal*> allTotals;
+		std::map<std::string,ClassTotal*> allTotals;
 		ClassTotal*	topLevelTotal;
 };
 

@@ -1356,7 +1356,7 @@ int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preser
 
 	if (preserve_linenumbers && (FileSource.line != 0)) {
 		// if we aren't starting at line zero, inject a comment indicating the starting line number
-		MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+		std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
 		lines.append(buf.c_str());
 	}
 	while (true) {
@@ -1367,7 +1367,7 @@ int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preser
 		lines.append(line);
 		if (preserve_linenumbers && (FileSource.line != lineno+1)) {
 			// if we read more than a single line, inject a comment indicating the new line number
-			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
 			lines.append(buf.c_str());
 		}
 	}
@@ -1404,8 +1404,8 @@ Parse_macros(
 	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
 	StringList    hereList; // used to accumulate @= multiline values
-	MyString      hereName;
-	MyString      hereTag;
+	std::string      hereName;
+	std::string      hereTag;
 	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
 	if ( ! pctx) pctx = &defctx;
 
@@ -1924,8 +1924,8 @@ FILE* Open_macro_source (
 	if (is_pipe_cmd) {
 		if ( is_valid_command(source) ) {
 			ArgList argList;
-			MyString args_errors;
-			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+			std::string args_errors;
+			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, args_errors)) {
 				formatstr(config_errmsg, "Can't append args, %s", args_errors.c_str());
 				return NULL;
 			}
@@ -1984,8 +1984,8 @@ FILE* Copy_macro_source_into (
 	source = fixup_pipe_source(source, source_is_command, cmd, cmdbuf);
 	if (source_is_command) {
 		ArgList argList;
-		MyString args_errors;
-		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+		std::string args_errors;
+		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, args_errors)) {
 			formatstr(errmsg, "Can't append args, %s", args_errors.c_str());
 			return NULL;
 		}

@@ -168,8 +168,8 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
 		args.AppendArg(state.Requirements());
 		args.AppendArg(state.Projection());
-		MyString myargs;
-		args.GetArgsStringForLogging(&myargs);
+		std::string myargs;
+		args.GetArgsStringForLogging(myargs);
 		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
 	} else {
 		// pass arguments in the format that condor_history wants
@@ -201,8 +201,8 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		if ( ! state.RecordSrc().empty()) {
 			if (strcasecmp(state.RecordSrc().c_str(),"JOB_EPOCH") == MATCH) { args.AppendArg("-epochs"); }
 		}
-		MyString myargs;
-		args.GetArgsStringForLogging(&myargs);
+		std::string myargs;
+		args.GetArgsStringForLogging(myargs);
 		dprintf(D_FULLDEBUG, "invoking %s %s\n", history_helper.ptr(), myargs.c_str());
 	}
 

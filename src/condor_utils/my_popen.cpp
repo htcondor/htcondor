@@ -541,7 +541,7 @@ my_popenv_impl( const char *const args[],
 		sigfillset(&sigs);
 		sigprocmask(SIG_UNBLOCK, &sigs, NULL);
 
-		MyString cmd = args[0];
+		std::string cmd = args[0];
 
 			/* set environment if defined */
 		if (env_ptr) {

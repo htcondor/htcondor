@@ -54,7 +54,6 @@ bool printExitString( ClassAd* ad, int exit_reason, std::string &str );
 // NOTE: This function does not ensure that the first character isn't
 //   a digit. For current callers, this is not a problem.
 int cleanStringForUseAsAttr(std::string &str, char chReplace=0, bool compact=true);
-int cleanStringForUseAsAttr(MyString &str, char chReplace=0, bool compact=true);
 
 // Create an empty job ad, with sensible defaults for all of the attributes
 // that the schedd expects to be set, like condor_submit would set them.
