@@ -44,6 +44,10 @@ Bugs Fixed:
   configuration could be active at the same time.
   :jira:`1590`
 
+- Improved the HTCondor's systemd configuration to not start HTCondor until the
+  system attempts (and mostly likely succeeds) to mount remote filesystems.
+  :jira:`1594`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
