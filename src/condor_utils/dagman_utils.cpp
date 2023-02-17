@@ -35,7 +35,7 @@
 
 
 static void
-AppendError(MyString &errMsg, const MyString &newError)
+AppendError(std::string &errMsg, const std::string &newError)
 {
 	if ( errMsg != "" ) errMsg += "; ";
 	errMsg += newError;
@@ -120,12 +120,8 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		// exits abnormally or is killed (e.g., during a reboot)
 	const char *defaultRemoveExpr = "( ExitSignal =?= 11 || "
 				"(ExitCode =!= UNDEFINED && ExitCode >=0 && ExitCode <= 2))";
-	MyString removeExpr(defaultRemoveExpr);
-	char *tmpRemoveExpr = param( "DAGMAN_ON_EXIT_REMOVE" );
-	if ( tmpRemoveExpr ) {
-		removeExpr = tmpRemoveExpr;
-		free(tmpRemoveExpr);
-	}
+	std::string removeExpr;
+	param(removeExpr, "DAGMAN_ON_EXIT_REMOVE", defaultRemoveExpr);
 	fprintf(pSubFile, "# Note: default on_exit_remove expression:\n");
 	fprintf(pSubFile, "# %s\n", defaultRemoveExpr);
 	fprintf(pSubFile, "# attempts to ensure that DAGMan is automatically\n");
@@ -466,8 +462,8 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	args.AppendArg( dagFile );
 
-	MyString cmdLine;
-	args.GetArgsStringForDisplay( &cmdLine );
+	std::string cmdLine;
+	args.GetArgsStringForDisplay(cmdLine);
 	dprintf( D_ALWAYS, "Recursive submit command: <%s>\n",
 				cmdLine.c_str() );
 
@@ -550,7 +546,7 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 				 dagman_exe );
 		return 1;
 	}
-	MyString	msg;
+	std::string msg;
 	if ( !GetConfigAndAttrs( shallowOpts.dagFiles, deepOpts.useDagDir,
 				shallowOpts.strConfigFile,
 				dagFileAttrLines, msg) ) {
@@ -573,12 +569,12 @@ DagmanUtils::setUpOptions( SubmitDagDeepOptions &deepOpts,
 			value of configFile will be changed if it's not already
 			set and the DAG file(s) specify a configuration file
 	@param attrLines: a std::list<std::string> to receive the submit attributes
-	@param errMsg: a MyString to receive any error message
+	@param errMsg: a string to receive any error message
 	@return true if the operation succeeded; otherwise false
 */
 bool
 DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-			std::string &configFile, std::list<std::string> &attrLines, MyString &errMsg )
+			std::string &configFile, std::list<std::string> &attrLines, std::string &errMsg )
 {
 	bool		result = true;
 		// Note: destructor will change back to original directory.
@@ -595,7 +591,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 			std::string	tmpErrMsg;
 			if ( !dagDir.Cd2TmpDirFile( dagFile.c_str(), tmpErrMsg ) ) {
 				AppendError( errMsg,
-						MyString("Unable to change to DAG directory ") +
+						std::string("Unable to change to DAG directory ") +
 						tmpErrMsg );
 				return false;
 			}
@@ -685,7 +681,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 				if ( configFile == "" ) {
 					configFile = cfgFileMS;
 				} else if ( configFile != cfgFileMS ) {
-					AppendError( errMsg, MyString("Conflicting DAGMan ") +
+					AppendError( errMsg, std::string("Conflicting DAGMan ") +
 								"config files specified: " + configFile +
 								" and " + cfgFileMS );
 					result = false;
@@ -702,7 +698,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 		std::string tmpErrMsg;
 		if ( !dagDir.Cd2MainDir( tmpErrMsg ) ) {
 			AppendError( errMsg,
-					MyString("Unable to change to original directory ") +
+					std::string("Unable to change to original directory ") +
 					tmpErrMsg );
 			result = false;
 		}
@@ -750,7 +746,7 @@ DagmanUtils::FindLastRescueDagNum( const char *primaryDagFile, bool multiDags,
 	int lastRescue = 0;
 
 	for ( int test = 1; test <= maxRescueDagNum; test++ ) {
-		MyString testName = RescueDagName( primaryDagFile, multiDags,
+		std::string testName = RescueDagName( primaryDagFile, multiDags,
 					test );
 		if ( access( testName.c_str(), F_OK ) == 0 ) {
 			if ( test > lastRescue + 1 ) {
@@ -789,12 +785,12 @@ DagmanUtils::RescueDagName(const char *primaryDagFile, bool multiDags,
 {
 	ASSERT( rescueDagNum >= 1 );
 
-	MyString fileName(primaryDagFile);
+	std::string fileName(primaryDagFile);
 	if ( multiDags ) {
 		fileName += "_multi";
 	}
 	fileName += ".rescue";
-	fileName.formatstr_cat( "%.3d", rescueDagNum );
+	formatstr_cat(fileName, "%.3d", rescueDagNum);
 
 	return fileName;
 }
@@ -824,10 +820,10 @@ DagmanUtils::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 
 	for ( int rescueNum = firstToDelete; rescueNum <= lastToDelete;
 				rescueNum++ ) {
-		MyString rescueDagName = RescueDagName( primaryDagFile, multiDags,
+		std::string rescueDagName = RescueDagName( primaryDagFile, multiDags,
 					rescueNum );
 		dprintf( D_ALWAYS, "Renaming %s\n", rescueDagName.c_str() );
-		MyString newName = rescueDagName + ".old";
+		std::string newName = rescueDagName + ".old";
 			// Unlink here to be safe on Windows.
 		tolerant_unlink( newName.c_str() );
 		if ( rename( rescueDagName.c_str(), newName.c_str() ) != 0 ) {
@@ -841,10 +837,10 @@ DagmanUtils::RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags,
 /** Generates the halt file name based on the primary DAG name.
 	@return The halt file name.
 */
-MyString
-DagmanUtils::HaltFileName( const MyString &primaryDagFile )
+std::string
+DagmanUtils::HaltFileName( const std::string &primaryDagFile )
 {
-	MyString haltFile = primaryDagFile + ".halt";
+	std::string haltFile = primaryDagFile + ".halt";
 
 	return haltFile;
 }
@@ -873,7 +869,7 @@ DagmanUtils::tolerant_unlink( const char *pathname )
 
 //---------------------------------------------------------------------------
 bool 
-DagmanUtils::fileExists(const MyString &strFile)
+DagmanUtils::fileExists(const std::string &strFile)
 {
 	int fd = safe_open_wrapper_follow(strFile.c_str(), O_RDONLY);
 	if (fd == -1)
@@ -892,7 +888,7 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 
 	if (deepOpts.doRescueFrom > 0)
 	{
-		MyString rescueDagName = RescueDagName(shallowOpts.primaryDagFile.c_str(),
+		std::string rescueDagName = RescueDagName(shallowOpts.primaryDagFile.c_str(),
 				shallowOpts.dagFiles.size() > 1, deepOpts.doRescueFrom);
 		if (!fileExists(rescueDagName))
 		{
@@ -999,8 +995,8 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 //-----------------------------------------------------------------------------
 int 
 DagmanUtils::popen (ArgList &args) {
-	MyString cmd; // for debug output
-	args.GetArgsStringForDisplay( &cmd );
+	std::string cmd; // for debug output
+	args.GetArgsStringForDisplay(cmd);
     dprintf( D_ALWAYS, "Running: %s\n", cmd.c_str() );
 
 	FILE *fp = my_popen( args, "r", MY_POPEN_OPT_WANT_STDERR );
