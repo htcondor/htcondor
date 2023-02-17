@@ -448,7 +448,7 @@ Starter::executeDir()
 // on success this object is owned by the global living_starters data structure and may be located by calling findStarterByPid()
 // on failure the caller is responsible for deleting this object.
 //
-int Starter::spawn(Claim * claim, time_t now, Stream* s)
+pid_t Starter::spawn(Claim * claim, time_t now, Stream* s)
 {
 		// if execute dir has not been set, choose one now
 	finalizeExecuteDir(claim);

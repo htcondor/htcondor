@@ -29,6 +29,7 @@ use warnings;
 my $config = <<CONDOR_TESTREQ_CONFIG;
 NEGOTIATOR_INTERVAL = 5
 NUM_CPUS = 32
+STARTD_DEBUG = D_ALWAYS:2 D_COMMAND:1
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 
@@ -149,7 +150,7 @@ while ($counter ne 0){
 		print "Took too long!\n";
 		exit(1);
 	} else {
-		`condor_status -long > $orig_ads`;
+		`condor_status -limit 2 -af Name SlotId > $orig_ads`;
 		%Attr_old = read_attr($orig_ads);
 		if (scalar keys %Attr_old == 0){
 			sleep(1);
@@ -589,9 +590,7 @@ close(FH);
 
 my $status_ads_xml_orig = "$testname"."_xml_orig.ads";
 my $status_ads_xml_new = "$testname"."_xml_new.ads";
-`condor_status -xml > $status_ads_xml_orig`;
-#`condor_status -long > $orig_ads`;
-#`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
+`condor_status -ads:long $orig_ads -xml > $status_ads_xml_orig`;
 `condor_transform_ads -rules $rules_file -out:xml $status_ads_xml_new $status_ads_xml_orig`;
 my $convert = "temp.txt";
 open(FH,">$convert") || print "FAILED opening file $convert\n";
@@ -676,9 +675,7 @@ close(FH);
 
 my $status_ads_json_orig = "$testname"."_json_orig.ads";
 my $status_ads_json_new = "$testname"."_json_new.ads";
-#`condor_status -long > $orig_ads`;
-`condor_status -json > $status_ads_json_orig`;
-#`condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
+`condor_status -ads:long $orig_ads -json > $status_ads_json_orig`;
 `condor_transform_ads -rules $rules_file -out:json $status_ads_json_new $status_ads_json_orig`;
 `condor_transform_ads -rules $convert -out:long $new_ads -in $status_ads_json_new`;
 

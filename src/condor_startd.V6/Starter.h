@@ -50,7 +50,7 @@ public:
 	bool	signal(int);
 	bool	killfamily();
 	void	exited(Claim *, int status);
-	int 	spawn(Claim *, time_t now, Stream* s );
+	pid_t 	spawn(Claim *, time_t now, Stream* s );
 	pid_t	pid() const {return s_pid;};
 	bool	active() const;
 	const ProcFamilyUsage & updateUsage(void);
