@@ -44,7 +44,6 @@ char *alternate_exec_pathname( const char *path );
 #include <string>
 class MyString;
 
-int filename_split( const char *path, MyString &dir, MyString &file );
 int filename_split( const char *path, std::string &dir, std::string &file );
 
 int is_relative_to_cwd( std::string &path );

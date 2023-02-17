@@ -28,6 +28,7 @@
 #include "condor_debug.h"
 #include "tmp_dir.h"
 #include "condor_getcwd.h"
+#include "stl_string_utils.h"
 
 int TmpDir::nextObjectNum = 0;
 

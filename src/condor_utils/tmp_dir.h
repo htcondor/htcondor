@@ -28,8 +28,6 @@
 #ifndef TMP_DIR_H
 #define TMP_DIR_H
 
-#include "MyString.h"
-
 class TmpDir {
 public:
 	/** Constructor.
@@ -43,7 +41,7 @@ public:
 	/** Change to the given directory (note: if directory is "" or NULL
 		, we don't try to change to it and just return true as in '.').
 		@param The directory to cd to.
-		@param A MyString to hold any error message.
+		@param A string to hold any error message.
 		@return true if successful, false otherwise
 	*/
 	bool Cd2TmpDir(const char *directory, std::string &errMsg);
@@ -52,7 +50,7 @@ public:
 		directory is "" or NULL, we don't try to change to it and 
 		just return true)
 		@param The path to a file.
-		@param A MyString to hold any error message.
+		@param A string to hold any error message.
 		@return true if successful, false otherwise
 	*/
 	bool Cd2TmpDirFile(const char *filePath, std::string &errMsg);

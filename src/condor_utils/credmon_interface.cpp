@@ -59,10 +59,10 @@ int get_credmon_pid() {
 	   time(NULL) > _credmon_pid_timestamp + CREDMON_PID_FILE_READ_INTERVAL) {
 
 		// get pid of credmon
-		MyString cred_dir;
+		std::string cred_dir;
 		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
-		MyString pid_path;
-		pid_path.formatstr("%s%cpid", cred_dir.c_str(), DIR_DELIM_CHAR);
+		std::string pid_path;
+		formatstr(pid_path, "%s%cpid", cred_dir.c_str(), DIR_DELIM_CHAR);
 		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
 		if(!credmon_pidfile) {
 			dprintf(D_FULLDEBUG, "CREDMON: unable to open %s (%i)\n", pid_path.c_str(), errno);
@@ -499,7 +499,7 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 	}
 
 	// delete the user's dir
-	MyString username = markfile;
+	std::string username = markfile;
 	username = username.substr(0, username.length()-5);
 	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.c_str());
 	if ( cred_dir.Find_Named_Entry( username.c_str() ) ) {
@@ -598,7 +598,7 @@ void credmon_sweep_creds() {
 #ifdef WIN32
 	// TODO: implement this.
 #else
-	MyString fullpathname;
+	std::string fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir.ptr());
 	struct dirent **namelist;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
@@ -607,7 +607,7 @@ void credmon_sweep_creds() {
 			if(param_boolean("CREDD_OAUTH_MODE", false)) {
 				process_cred_mark_dir(namelist[n]->d_name);
 			} else {
-				fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
+				formatstr(fullpathname, "%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
 				priv_state priv = set_root_priv();
 				process_cred_mark_file(fullpathname.c_str());
 				set_priv(priv);
