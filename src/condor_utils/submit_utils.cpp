@@ -7578,7 +7578,7 @@ int SubmitHash::SetTransferFiles()
 			continue;
 		}
 		// Apply filename remaps if there are any.
-		MyString remap_fname;
+		std::string remap_fname;
 		if(filename_remap_find(output_remaps.c_str(),output_file,remap_fname)) {
 			output_file = remap_fname.c_str();
 		}
