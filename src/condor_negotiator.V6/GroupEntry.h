@@ -38,7 +38,7 @@ struct GroupEntry {
 				GroupEntry *hgq_root_group,
 				std::vector<GroupEntry *> &hgq_groups,
 				Accountant &accountant,
-				ClassAdListDoesNotDeleteAds &submitterAds);
+				std::vector<ClassAd *> &submitterAds);
 
 		static void hgq_negotiate_with_all_groups(
 						GroupEntry *hgq_root_group, 
@@ -73,7 +73,7 @@ struct GroupEntry {
 
 		// current usage information coming into this negotiation cycle
 		double usage;
-		ClassAdListDoesNotDeleteAds* submitterAds;
+		std::vector<ClassAd *> *submitterAds;
 
 		// slot quota as computed by HGQ
 		double quota;

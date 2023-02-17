@@ -1913,6 +1913,23 @@ all attributes.
     submitted via other submission methods, such as SOAP, may not define
     this attribute. 
 
+:classad-attribute:`TransferInputStats`
+    The value of this classad attribute is a nested classad, whose values
+    contain several attributes about HTCondor-managed file transfer.
+    These refer to the transfer of the sandbox from the AP submit point
+    to the worker node, or the EP.
+
+    Each attribute name has a prefix, either "Cedar", for the HTCondor
+    built-in file transfer method, or the prefix of the file transfer
+    plugin method (such as HTTP).  For each of these types of file transfer
+    there is an attribute with that prefix whose body is "FilesCount", 
+    the number of files transfered by that method during the last
+    transfer, and "FilesCountTotal", the sum of FilesCount over all
+    execution attempts.  In addition, for container universe jobs, there
+    is a sub-attribute ```ContainerDuration```, the number of seconds
+    it took to transfer the container image (if transfered), and
+    ```ContainerDurationTotal```, the sum over all execution attempts.
+
 :classad-attribute:`TransferOut`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the output from the job is
@@ -1935,6 +1952,11 @@ all attributes.
     If the job's most recent transfer of its output sandbox was
     queued, this attribute says when, measured in seconds from the epoch
     (00:00:00 UTC Jan 1, 1970).
+
+:classad-attribute:`TransferOutputStats`
+    The value of this classad attribute is a nested classad, whose values
+    mirror those for ```TransferInputStats```, but for the transfer
+    from the EP worker node back to the AP submit point.
 
 :classad-attribute:`TransferOutStarted`
     When the job actually started to transfer files, the most recent

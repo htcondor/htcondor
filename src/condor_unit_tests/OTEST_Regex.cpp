@@ -102,7 +102,9 @@ static bool test_captures() {
 	int erroffset = 0;
 	uint32_t options = 0;
 	// pattern is three space separated words, each captured, and a capture around the whole
-	bool compile_result = r.compile("(([a-z]+) ([a-z]+) ([a-z]+))", &errcode, &erroffset, options);
+	// At the start of the first word is a capture of an optional subpattern
+	// that won't match anything.
+	bool compile_result = r.compile("((0)?([a-z]+) ([a-z]+) ([a-z]+))", &errcode, &erroffset, options);
 	bool regex_match = false;
 	std::vector<std::string> groups(8);
 	if (compile_result) {
@@ -119,9 +121,12 @@ static bool test_captures() {
 	emit_param("regex.match[2]   RETURN", "%s", groups[2].c_str());
 	emit_param("regex.match[3]   RETURN", "%s", groups[3].c_str());
 	emit_param("regex.match[4]   RETURN", "%s", groups[4].c_str());
-	if(!compile_result || !regex_match || (groups[0] != "yabba dabba doo") || 
-			(groups[1] != "yabba dabba doo") || (groups[2] != "yabba") || 
-			(groups[3] != "dabba") || (groups[4] != "doo")) {
+	emit_param("regex.match[5]   RETURN", "%s", groups[5].c_str());
+	if(!compile_result || !regex_match || (groups.size() != 6) ||
+			(groups[0] != "yabba dabba doo") ||
+			(groups[1] != "yabba dabba doo") || (groups[2] != "") ||
+			(groups[3] != "yabba") || (groups[4] != "dabba") ||
+			(groups[5] != "doo")) {
 		FAIL;
 	}
 	PASS;

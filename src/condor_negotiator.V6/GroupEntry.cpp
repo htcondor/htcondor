@@ -55,12 +55,7 @@ GroupEntry::~GroupEntry() {
 	}
 
 	if (NULL != submitterAds) {
-		submitterAds->Open();
-		while (ClassAd* ad = submitterAds->Next()) {
-			submitterAds->Remove(ad);
-		}
-		submitterAds->Close();
-
+		submitterAds->clear();
 		delete submitterAds;
 	}
 
@@ -254,7 +249,7 @@ GroupEntry::hgq_construct_tree(
 }
 
 /*static*/ void
-GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, Accountant &accountant, ClassAdListDoesNotDeleteAds &submitterAds) {
+GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_root_group, std::vector<GroupEntry *> &hgq_groups, Accountant &accountant, std::vector<ClassAd*> &submitterAds) {
 	// Fill in latest usage/prio info for the groups.
 	// While we're at it, reset fields prior to reloading from submitter ads.
 
@@ -265,20 +260,15 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 		group->allocated = 0;
 		group->subtree_quota = 0;
 		group->subtree_requested = 0;
-		if (NULL == group->submitterAds) group->submitterAds = new ClassAdListDoesNotDeleteAds;
-		group->submitterAds->Open();
-		while (ClassAd* ad = group->submitterAds->Next()) {
-			group->submitterAds->Remove(ad);
-		}
-		group->submitterAds->Close();
+		if (NULL == group->submitterAds) group->submitterAds = new std::vector<ClassAd*>;
+		group->submitterAds->clear();
 
 		group->usage = accountant.GetWeightedResourcesUsed(group->name);
 	}
 
 	// cycle through the submitter ads, and load them into the appropriate group node in the tree
-	dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.MyLength()));
-	submitterAds.Open();
-	while (ClassAd* ad = submitterAds.Next()) {
+	dprintf(D_ALWAYS, "group quotas: assigning %d submitters to accounting groups\n", int(submitterAds.size()));
+	for (ClassAd *ad: submitterAds) {
 		std::string tname;
 		if (!ad->LookupString(ATTR_NAME, tname)) {
 			dprintf(D_ALWAYS, "group quotas: WARNING: ignoring submitter ad with no name\n");
@@ -297,7 +287,7 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 		GroupEntry* group = GetAssignedGroup(hgq_root_group, subname);
 
 		// attach the submitter ad to the assigned group
-		group->submitterAds->Insert(ad);
+		group->submitterAds->push_back(ad);
 
 		// Accumulate the submitter jobs submitted against this group
 		// To do: investigate getting these values directly from schedds.  The
@@ -339,12 +329,10 @@ GroupEntry::hgq_prepare_for_matchmaking(double hgq_total_quota, GroupEntry *hgq_
 			GroupEntry* group = *j;
 			if (group == hgq_root_group) continue;
 			if (!group->autoregroup) continue;
-			group->submitterAds->Open();
-			while (ClassAd* ad = group->submitterAds->Next()) {
-				hgq_root_group->submitterAds->Insert(ad);
+			for(ClassAd *ad: *group->submitterAds) {
+				hgq_root_group->submitterAds->push_back(ad);
 				++n;
 			}
-			group->submitterAds->Close();
 		}
 		dprintf(D_ALWAYS, "group quotas: autoregroup mode: appended %lu submitters to group %s negotiation\n", n, hgq_root_group->name.c_str());
 	}
@@ -494,7 +482,7 @@ GroupEntry::hgq_negotiate_with_all_groups(GroupEntry *hgq_root_group, std::vecto
 					continue;
 				}
 
-				if (group->submitterAds->MyLength() <= 0) {
+				if (group->submitterAds->empty()) {
 					dprintf(D_ALWAYS, "Group %s - skipping, no submitters (usage=%g)\n", group->name.c_str(), group->usage);
 					continue;
 				}
@@ -1148,7 +1136,7 @@ GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine 
 		}
 		dprintf(dprintfLevel | D_NOHEADER, "\n");
 	}
-	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8c %8g %8g %8d",
+	dprintf(dprintfLevel, "%-20s %8g %8g %8c %8c %8c %8g %8g %8lu",
 			this->name.c_str(),
 			this->quota,
 			this->config_quota,
@@ -1157,7 +1145,7 @@ GroupEntry::displayGroups(int dprintfLevel, bool onlyConfigInfo, bool firstLine 
 			this->autoregroup ? 'Y' : 'N',
 			this->usage,
 			this->requested,
-			this->submitterAds ? this->submitterAds->Length() : -1);
+			this->submitterAds ? this->submitterAds->size() : -1);
 
 	if (!onlyConfigInfo) {
 		dprintf(dprintfLevel | D_NOHEADER, "%8g",
