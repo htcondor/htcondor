@@ -321,8 +321,6 @@ hibernation_manager.cpp
 hibernation_manager.h
 hibernator.cpp
 hibernator.h
-hibernator.tools.cpp
-hibernator.tools.h
 historyFileFinder.cpp
 historyFileFinder.h
 history_queue.cpp
