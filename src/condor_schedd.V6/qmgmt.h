@@ -394,6 +394,8 @@ bool CanMaterializeJobs(JobQueueCluster * cluster); // reutrns true if cluster h
 bool JobFactoryIsComplete(JobQueueCluster * cluster);
 bool JobFactoryIsRunning(JobQueueCluster * cluster);
 bool JobFactoryAllowsClusterRemoval(JobQueueCluster * cluster);
+int UnMaterializedJobCount(JobQueueCluster * cluster, bool include_paused=false);
+
 // if pause_code < 0, pause is permanent, if >= 3, cluster was removed
 typedef enum {
 	mmInvalid = -1, // some fatal error occurred, such as failing to load the submit digest.
