@@ -511,13 +511,16 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	}
 
 	failobj.SetQmgr(0);
-	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.fail("Failed to commit job submission\n");
+	CondorError errstack;
+	if( ! DisconnectQ(qmgr, true /* commit */, &errstack)) {
+		failobj.fail("Failed to commit job submission : %s\n", errstack.getFullText(true).c_str());
 		return false;
+	} else if ( ! errstack.empty()) {
+		dprintf(D_ALWAYS, "job submmission warning : %s\n", errstack.getFullText(true).c_str());
+		errstack.clear();
 	}
 
 	if( is_sandboxed ) {
-		CondorError errstack;
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
