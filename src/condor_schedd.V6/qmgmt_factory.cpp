@@ -382,6 +382,22 @@ bool JobFactoryIsRunning(JobQueueCluster * cad)
 	return cad->factory->PauseMode() == mmRunning;
 }
 
+int UnMaterializedJobCount(JobQueueCluster * cad, bool include_paused /*=false*/)
+{
+	if ( ! cad || ! cad->factory) return 0;
+	if (cad->factory->IsComplete()) return 0;
+	if ( ! include_paused && cad->factory->IsPaused()) return 0;
+	int next_proc_id = 0;
+	int total_procs = 0;
+	if (cad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS, total_procs) &&
+		cad->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id) &&
+		next_proc_id > 0 && total_procs > next_proc_id) {
+		return total_procs - next_proc_id;
+	}
+	return 0;
+}
+
+
 bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
 {
 	pause_code = 0;
