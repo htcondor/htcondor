@@ -60,6 +60,10 @@ Bugs Fixed:
   file doesn't exist.
   :jira:`1578`
 
+- Fixed a bug in the view server where it would assert and exit if
+  the view server stats file are deleted at just the wrong time.
+  :jira:`1599`
+
 Version 10.3.0
 --------------
 
