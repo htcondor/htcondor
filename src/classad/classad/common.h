@@ -22,16 +22,13 @@
 #ifndef __CLASSAD_COMMON_H__
 #define __CLASSAD_COMMON_H__
 
+#include <numeric>
 #ifndef WIN32
 #include <strings.h>
 #endif
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE /* to get definition for strptime on Linux */
-#endif
-
-#ifndef __EXTENSIONS__
-#define __EXTENSIONS__ /* to get gmtime_r and localtime_r on Solaris */
 #endif
 
 #ifdef WIN32
@@ -144,28 +141,85 @@ extern const char * const ATTR_XACTION_NAME;
 #define ATTR_REQUIREMENTS  "Requirements"
 #define ATTR_RANK  "Rank"
 
-#if defined(__cplusplus)
 struct CaseIgnLTStr {
-   inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
-       return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
- }
+	typedef void is_transparent; // magic to enable transparent comparators
+
+	bool operator()(const std::string &s1, const std::string &s2 ) const {
+		return( strcasecmp(s1.c_str(), s2.c_str()) < 0 );
+	}
+
+	bool operator()(const char *s1, const char *s2 ) const {
+		return( strcasecmp(s1,s2) < 0 );
+	}
+
+	bool operator()(const char *s1, const std::string &s2 ) const {
+		return( strcasecmp(s1,s2.c_str()) < 0 );
+	}
+
+	bool operator()(const std::string &s1, const char *s2 ) const {
+		return( strcasecmp(s1.c_str(),s2) < 0 );
+	}
 };
 
 struct CaseIgnSizeLTStr {
-   inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
+	typedef void is_transparent; // magic to enable transparent comparators
+
+	bool operator( )( const std::string &s1, const std::string &s2 ) const {
 		size_t s1len = s1.length();
 		size_t s2len = s2.length();
 		if (s1len == s2len) {
-       		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
+			return( strcasecmp( s1.c_str( ), s2.c_str( ) ) < 0 );
 		} else {
 			return s1len < s2len;
 		}
- }
+	}
+
+	bool operator()(const char *s1, const char *s2) const {
+		size_t s1len = strlen(s1);
+		size_t s2len = strlen(s2);
+		if (s1len == s2len) {
+			return( strcasecmp( s1, s2) < 0 );
+		} else {
+			return s1len < s2len;
+		}
+	}
+
+	bool operator()(const char *s1, const std::string &s2) const {
+		size_t s1len = strlen(s1);
+		size_t s2len = s2.length();
+		if (s1len == s2len) {
+			return( strcasecmp( s1, s2.c_str()) < 0 );
+		} else {
+			return s1len < s2len;
+		}
+	}
+
+	bool operator()(const std::string &s1, const char *s2) const {
+		size_t s1len = s1.length();
+		size_t s2len = strlen(s2);
+		if (s1len == s2len) {
+			return( strcasecmp( s1.c_str(), s2) < 0 );
+		} else {
+			return s1len < s2len;
+		}
+	}
 };
 
 struct CaseIgnEqStr {
-	inline bool operator( )( const std::string &s1, const std::string &s2 ) const {
-		return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
+	typedef void is_transparent; // magic to enable transparent comparators
+
+	bool operator()(const std::string &s1, const std::string &s2 ) const {
+		return( strcasecmp(s1.c_str(), s2.c_str()) == 0 );
+	}
+
+	bool operator()(const char *s1, const char *s2) const {
+		return( strcasecmp(s1, s2) == 0 );
+	}
+	bool operator()(const char *s1, const std::string &s2) const {
+		return( strcasecmp(s1, s2.c_str()) == 0 );
+	}
+	bool operator()(const std::string &s1, const char *s2) const {
+		return( strcasecmp(s1.c_str(), s2) == 0 );
 	}
 };
 
@@ -178,9 +232,20 @@ struct ExprHash {
 
 struct ClassadAttrNameHash
 {
-	inline size_t operator()( const std::string &s ) const {
-		size_t h = 0;
+	typedef void is_transparent; // magic to enable transparent comparators
+
+	size_t operator()( const std::string &s ) const {
 		unsigned char const *ch = (unsigned const char*)s.c_str();
+		size_t h = 0;
+		for( ; *ch; ch++ ) {
+			h = 5*h + (*ch | 0x20);
+		}
+		return h;
+	}
+
+	constexpr size_t operator()(const char *s) const {
+		size_t h = 0;
+		unsigned char const *ch = (unsigned const char *)s;
 		for( ; *ch; ch++ ) {
 			h = 5*h + (*ch | 0x20);
 		}
@@ -189,7 +254,6 @@ struct ClassadAttrNameHash
 
 };
 extern std::string       CondorErrMsg;
-#endif
 
 extern int 		CondorErrno;
 
