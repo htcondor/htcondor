@@ -6181,6 +6181,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			// that is never aborted in the event our caller never checks...
 			// Current thinking is do not call AbortTransaction here, let the caller do it so 
 			// that the logic in AbortTranscationAndRecomputeClusters() works correctly...
+			dprintf(D_FULLDEBUG, "CheckTransaction error %d : %s\n", rval, errorStack ? errorStack->message() : "");
 			return rval;
 		}
 	}
