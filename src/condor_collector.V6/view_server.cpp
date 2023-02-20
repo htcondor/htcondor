@@ -783,8 +783,8 @@ void ViewServer::WriteHistory()
 			// Check for size limitation and take necessary action
 
 			if (stat(DataSet[i][j].NewFileName.c_str(),&statbuf)) {
-				dprintf(D_ALWAYS,"Could not check data file %s size!!! errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
-				EXCEPT("Could not check data file size!!!");
+				dprintf(D_ALWAYS,"Could not check data file %s size, that we just wrote to. Errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
+				continue;
 			}
 			if (statbuf.st_size>MaxFileSize) {
 				int r = rotate_file(DataSet[i][j].NewFileName.c_str(), DataSet[i][j].OldFileName.c_str());
