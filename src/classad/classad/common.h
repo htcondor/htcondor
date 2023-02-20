@@ -215,6 +215,12 @@ struct CaseIgnEqStr {
 	bool operator()(const char *s1, const char *s2) const {
 		return( strcasecmp(s1, s2) == 0 );
 	}
+	bool operator()(const char *s1, const std::string &s2) const {
+		return( strcasecmp(s1, s2.c_str()) == 0 );
+	}
+	bool operator()(const std::string &s1, const char *s2) const {
+		return( strcasecmp(s1.c_str(), s2) == 0 );
+	}
 };
 
 class ExprTree;
