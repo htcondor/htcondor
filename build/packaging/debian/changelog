@@ -1,3 +1,9 @@
+condor (10.2.3-1) stable; urgency=medium
+
+  * Add a count of unmaterialized jobs to condor_schedd statistics
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 21 Feb 2023 07:10:00 -0600
+
 condor (10.2.2-1) stable; urgency=medium
 
   * Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
