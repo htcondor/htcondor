@@ -52,8 +52,8 @@ export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 
 # Extract prerelease value from top level CMake file
 PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)
-PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
-PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
+PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
+PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 
 # Distribution should be one of experimental, unstable, testing, stable, oldstable, oldoldstable
 # unstable -> daily repo
@@ -62,7 +62,7 @@ PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
 
 if [ "$PRE_RELEASE" = 'OFF' ]; then
     dist='stable'
-elif [ "$PRE_RELEASE" = 'RC' ]; then
+elif [ "$PRE_RELEASE" = '"RC"' ]; then
     dist='testing'
 else
     dist='unstable'
