@@ -1074,6 +1074,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/exit_37.sif
 %dir %_libexecdir/condor/singularity_test_sandbox/
 %dir %_libexecdir/condor/singularity_test_sandbox/dev/
+%dir %_libexecdir/condor/singularity_test_sandbox/proc/
 %_libexecdir/condor/singularity_test_sandbox/exit_37
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1577,6 +1578,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 21 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.3-1
+- Add a count of unmaterialized jobs to condor_schedd statistics
+
+* Tue Feb 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
+- Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
+
 * Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
 - Improved condor_schedd scalability when a user runs more than 1,000 jobs
 - condor_ssh_to_job should always work in glidein environments

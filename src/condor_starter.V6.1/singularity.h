@@ -48,7 +48,7 @@ public:
   static bool retargetEnvs(Env &job_env, const std::string &targetdir, const std::string &execute_dir);
   static bool runTest(const std::string &JobName, const ArgList &args, int orig_args_len, Env &env, std::string &errorMessage);
 
-  static bool canRunSandbox();
+  static bool canRunSandbox(bool &can_use_pidnamespaces);
   static bool canRunSIF();
   static bool canRun(const std::string &image);
   static std::string m_lastSingularityErrorLine;
