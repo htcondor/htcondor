@@ -70,8 +70,8 @@ cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
 
 # Extract prerelease value from top level CMake file
 PRE_RELEASE=$(grep '^set(PRE_RELEASE' condor-${condor_version}/CMakeLists.txt)
-PRE_RELEASE=${PRE_RELEASE#*\"} # Trim up to and including leading "
-PRE_RELEASE=${PRE_RELEASE%\"*} # Trim trailing " to end of line
+PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
+PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
