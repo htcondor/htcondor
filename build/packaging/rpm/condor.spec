@@ -1578,7 +1578,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue Feb 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
+* Tue Feb 21 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.3-1
+- Add a count of unmaterialized jobs to condor_schedd statistics
+
+* Tue Feb 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
 - Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
 
 * Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
