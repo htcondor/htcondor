@@ -292,7 +292,7 @@ HRESULT PtrList_AppendItem(HaryList<T> * hlst, T pItem, LONG * pix = NULL) {
 
 template <class T>
 HRESULT PtrList_InsertItem(HaryList<T> * hlst, LONG ixInsert, T pItem) {
-   return HaryList_InsertList((HARYLIST)hlst, ixInsert, &pItem, 1, pix);
+   return HaryList_InsertList((HARYLIST)hlst, ixInsert, &pItem, 1);
 }
 
 template <class T>
@@ -555,6 +555,7 @@ HRESULT FNEXPORT HaryList_InsertList (
     // move all items after the insertion point down by the
     // to make room for the iterms we want to insert.
     //
+    {
     LONG cItemsToMove = cItems - ixInsert;
     if (cItemsToMove > 0)
     {
@@ -567,6 +568,7 @@ HRESULT FNEXPORT HaryList_InsertList (
     //
     LPVOID pvDst = HaryList_RawItemAddr(hlst, ixInsert);
     RtlCopyMemory(pvDst, pvItems, cItemsToInsert * plst->cbItem);
+    }
 
     // grow the count by the number of items we inserted.
     //
