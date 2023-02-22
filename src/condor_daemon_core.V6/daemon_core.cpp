@@ -7586,13 +7586,14 @@ int DaemonCore::Create_Process(
 
 	// if working in an encrypted execute directory, we won't be able to check the exe type
 	// unless we first switch to user priv
+	BOOL cp_result, gbt_result;
+	DWORD binType;
+	{
 	priv_state gbt_prv = PRIV_UNKNOWN;
 	if (priv == PRIV_USER_FINAL) {
 		gbt_prv = set_user_priv();
 	}
 
-	BOOL cp_result, gbt_result;
-	DWORD binType;
 	gbt_result = GetBinaryType(executable, &binType);
 
 	// if GetBinaryType() failed,
@@ -7614,6 +7615,7 @@ int DaemonCore::Create_Process(
 	if (priv == PRIV_USER_FINAL) {
 		set_priv(gbt_prv);
 	}
+	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
 	// thinks its a DOS 16-bit app, but in reality the actual binary
@@ -7627,6 +7629,7 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	} else {
 		dprintf(D_FULLDEBUG, "Create_Process(): BinaryType is %d : arguments '%s'\n", binType, strArgs.Value());
+	}
 	}
 
 	// if we want to create a process family for this new process, we

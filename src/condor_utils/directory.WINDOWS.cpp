@@ -1129,7 +1129,7 @@ CondorCopyDirectory (
     DWORD       last_error    = ERROR_SUCCESS,
                 i;
     HANDLE      have_access   = NULL;
-    PSTR        privelages[]  = { SE_BACKUP_NAME, SE_RESTORE_NAME };
+    LPCTSTR     privelages[]  = { SE_BACKUP_NAME, SE_RESTORE_NAME };
     BOOL        opened        = TRUE,
                 added         = FALSE,
                 copied        = FALSE,
