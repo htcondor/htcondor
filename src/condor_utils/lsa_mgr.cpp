@@ -447,7 +447,7 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 
 
 void
-lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString, const LPWSTR String ) {
+lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString, const wchar_t *String ) {
 	DWORD StringLength;
 	if(String == NULL) {
 		LsaString->Buffer = NULL;
