@@ -76,14 +76,14 @@ CronTab::CronTab( ClassAd *ad )
 		if ( ad->LookupString( this->attributes[ctr], buffer ) ) {
 			dprintf( D_FULLDEBUG, "CronTab: Pulled out '%s' for %s\n",
 						buffer.c_str(), this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( buffer.c_str() );
+			this->parameters[ctr] = new std::string( buffer );
 			//
 			// The parameter is empty, we'll use the wildcard
 			//
 		} else {
 			dprintf( D_FULLDEBUG, "CronTab: No attribute for %s, using wildcard\n",
 							this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( CRONTAB_WILDCARD );
+			this->parameters[ctr] = new std::string( CRONTAB_WILDCARD );
 		}
 	} // FOR
 	this->init();
@@ -142,7 +142,7 @@ CronTab::needsCronTab( ClassAd *ad ) {
  * @return true if ad had valid CronTab paramter syntax
  **/
 bool
-CronTab::validate( ClassAd *ad, MyString &error ) {
+CronTab::validate( ClassAd *ad, std::string &error ) {
 	bool ret = true;
 		//
 		// Loop through all the fields in the ClassAd
@@ -158,7 +158,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			// their parameters at once
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
-			MyString curError;
+			std::string curError;
 			if ( !CronTab::validateParameter( buffer.c_str(), CronTab::attributes[ctr], curError ) ) {
 				ret = false;
 				error += curError;
@@ -184,15 +184,15 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
  * 		 just the characters
  **/
 bool
-CronTab::validateParameter(const char* parameter, const char * attr, MyString& error)
+CronTab::validateParameter(const char* parameter, const char * attr, std::string& error)
 {
 	bool ret = true;
 		//
 		// Make sure there are only valid characters 
 		// in the parameter string
 		//
-	MyString temp(parameter);
-	if ( CronTab::regex.match( temp ) ) {
+	std::string temp(parameter);
+	if ( CronTab::regex.match_str( temp ) ) {
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
@@ -276,13 +276,13 @@ CronTab::initRegexObject() {
 		//
 	if ( ! CronTab::regex.isInitialized() ) {
 		int errcode, erroffset;
-		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
+		std::string pattern( CRONTAB_PARAMETER_PATTERN ) ;
 			//
 			// It's a big problem if we can't compile the pattern, so
 			// we'll want to dump out right now
 			//
 		if ( ! CronTab::regex.compile( pattern, &errcode, &erroffset )) {
-			MyString error = "CronTab: Failed to compile Regex - ";
+			std::string error = "CronTab: Failed to compile Regex - ";
 			error += pattern;
 			EXCEPT( "%s", error.c_str() );
 		}
@@ -628,7 +628,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 bool
 CronTab::expandParameter( int attribute_idx, int min, int max )
 {
-	MyString *param = this->parameters[attribute_idx];
+	std::string *param = this->parameters[attribute_idx];
 	std::vector<int> *list	= this->ranges[attribute_idx];
 	
 		//
@@ -636,7 +636,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// The validation method will have already printed out
 		// the error message to the log
 		//
-	MyString error;
+	std::string error;
 	if ( ! CronTab::validateParameter(	param->c_str(),
 										CronTab::attributes[attribute_idx],
 										error ) ) {
@@ -651,7 +651,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		//
 		// Remove any spaces
 		//
-	param->replaceString(" ", "");
+	replace_str(*param, " ", "");
 	
 		//
 		// Now here's the tricky part! We need to expand their parameter
@@ -683,8 +683,8 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				//
 			const char *_numerator = token.GetNextToken( CRONTAB_STEP, true );
 			if ( ( _temp = token.GetNextToken( CRONTAB_STEP, true ) ) != NULL ) {
-				MyString stepStr( _temp );
-				stepStr.trim();
+				std::string stepStr( _temp );
+				trim(stepStr);
 				cur_step = atoi( stepStr.c_str() );
 				if (cur_step == 0) {
 					return false;

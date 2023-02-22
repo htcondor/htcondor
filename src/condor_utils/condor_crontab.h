@@ -26,7 +26,6 @@
 #include "dc_service.h"
 #include "condor_debug.h"
 #include "condor_attributes.h"
-#include "MyString.h"
 #include "condor_regex.h"
 
 //
@@ -159,7 +158,7 @@ public:
 		 * @param error - where the error message will be stored if there's a problem
 		 * @return true if ad had valid CronTab paramter syntax
 		 **/
-	static bool validate( ClassAd*, MyString& );
+	static bool validate( ClassAd*, std::string& );
 		/**
 		 * This method will return the error message for the calling object
 		 * This is what you'll want to use if you are trying to figure
@@ -221,7 +220,7 @@ public:
 		 * @param error - where the error message will be stored if there's a problem
 		 * @return true if the parameter was a valid CronTab attribute
 		 **/
-	static bool validateParameter(const char* param, const char * attr, MyString& error);
+	static bool validateParameter(const char* param, const char * attr, std::string& error);
 		//
 		// Attribute names
 		// A nice list that we can iterate through easily
@@ -280,10 +279,6 @@ protected:
 
 protected:
 		//
-		// Static Error Log
-		//
-	static MyString staticErrorLog;
-		//
 		// Instantiated Error Log
 		//
 	std::string errorLog;
@@ -302,7 +297,7 @@ protected:
 		// The various scheduling properties of the cron definition
 		// These will be in pulled by the various Constructors
 		//
-	MyString *parameters[CRONTAB_FIELDS];
+	std::string *parameters[CRONTAB_FIELDS];
 		//
 		// After we parse the cron schedule we will have ranges
 		// for the different properties.

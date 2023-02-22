@@ -3846,9 +3846,9 @@ int SubmitHash::SetCronTab()
 				//
 				// We'll try to be nice and validate it first
 				//
-			MyString error;
+			std::string error;
 			if ( ! CronTab::validateParameter( param, fields[ctr].attr, error ) ) {
-				push_error( stderr, "%s\n", error.Value() );
+				push_error( stderr, "%s\n", error.c_str() );
 				ABORT_AND_RETURN( 1 );
 			}
 				//
