@@ -911,7 +911,7 @@ bool dynuser::deleteuser(char const * username ) {
 
 // this function will remove all accounts starting with user_prefix
 
-bool dynuser::cleanup_condor_users(char* user_prefix) {
+bool dynuser::cleanup_condor_users(const char* user_prefix) {
 
 	LPUSER_INFO_10 pBuf = NULL;
 	LPUSER_INFO_10 pTmpBuf;

@@ -44,7 +44,7 @@ static bool message_posted = false;
 static FILE* debug_fp = NULL;
 
 static void
-debug(wchar_t* format, ...)
+debug(const wchar_t* format, ...)
 {
 	if (debug_fp != NULL) {
 		va_list ap;

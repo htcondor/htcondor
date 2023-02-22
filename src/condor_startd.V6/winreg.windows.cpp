@@ -573,7 +573,7 @@ DWORDHash( const DWORD & n )
 #if 1 // def TIMER_TYPE_NAME_TABLE
 static const struct {
 	DWORD type;
-	char * psz;
+	const char * psz;
 } aPerfTimerTypeNames[] = {
 
 #define _TABLE_ITEM(a) a, #a 

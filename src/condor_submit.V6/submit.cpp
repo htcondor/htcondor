@@ -940,7 +940,7 @@ main( int argc, const char *argv[] )
 		std::string userdom;
 		auto_free_ptr the_username(my_username());
 		auto_free_ptr the_domainname(my_domainname());
-		userdom = the_username;
+		userdom = the_username.ptr();
 		userdom += "@";
 		if (the_domainname) { userdom += the_domainname.ptr(); }
 
