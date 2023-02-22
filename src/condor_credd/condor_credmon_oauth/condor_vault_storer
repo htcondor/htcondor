@@ -286,15 +286,16 @@ for REQUEST; do
     fi
 
     HANDLEURL=
+    EXCHANGEOPTS="--nooidc --nokerberos --nossh -o $TOKENOUT --vaulttokenfile=$VTOKEN-$SERVICE --showbearerurl ${VERBOSE:--q}"
     if [ -n "$CRED" ]; then
-        HANDLEURL="`echo "$CRED"|htgettoken "${HANDLEOPTS[@]}" -o $TOKENOUT --vaulttokeninfile=/dev/stdin "--vaulttokenfile=$VTOKEN-$SERVICE" --showbearerurl ${VERBOSE:--q}`"
+        HANDLEURL="`echo "$CRED"|htgettoken "${HANDLEOPTS[@]}" --vaulttokeninfile=/dev/stdin $EXCHANGEOPTS`"
         if [ $? != 0 ]; then
             fatal "Failed to exchange vault token"
         fi
     else
         # Note that this case only happens when $HANDLE is set, although
         # it's possible for $HANDLE to be set with the above case as well.
-        HANDLEURL="`htgettoken "${HANDLEOPTS[@]}" -o $TOKENOUT "--vaulttokenfile=$VTOKEN-$SERVICE" --showbearerurl ${VERBOSE:--q}`"
+        HANDLEURL="`htgettoken "${HANDLEOPTS[@]}" $EXCHANGEOPTS`"
         if [ $? != 0 ]; then
             fatal "Failed to obtain weakened token"
         fi
