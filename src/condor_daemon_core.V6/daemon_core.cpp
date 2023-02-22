@@ -7588,8 +7588,8 @@ int DaemonCore::Create_Process(
 	// unless we first switch to user priv
 	BOOL cp_result, gbt_result;
 	DWORD binType;
-	priv_state gbt_prv = PRIV_UNKNOWN;
 	{
+	priv_state gbt_prv = PRIV_UNKNOWN;
 	if (priv == PRIV_USER_FINAL) {
 		gbt_prv = set_user_priv();
 	}
@@ -7615,6 +7615,7 @@ int DaemonCore::Create_Process(
 	if (priv == PRIV_USER_FINAL) {
 		set_priv(gbt_prv);
 	}
+	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
 	// thinks its a DOS 16-bit app, but in reality the actual binary
@@ -7628,7 +7629,6 @@ int DaemonCore::Create_Process(
 		goto wrapup;
 	} else {
 		dprintf(D_FULLDEBUG, "Create_Process(): BinaryType is %d : arguments '%s'\n", binType, strArgs.Value());
-	}
 	}
 
 	// if we want to create a process family for this new process, we

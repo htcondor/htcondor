@@ -74,6 +74,7 @@
 // Make sure to define this *before* we include winsock2.h
 #define FD_SETSIZE 1024
 
+struct IUnknown; // Hack to fix older C runtimes with C++20
 // the ordering of the two following header files 
 // is important! Starting with the new SDK, we want 
 // winsock2.h not winsock.h, so we include it first. 

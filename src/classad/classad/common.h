@@ -72,6 +72,7 @@
 
 // must be defined before windows.h
 #define NOMINMAX
+struct IUnknown;
 
 #include <windows.h>
 #include <float.h>
