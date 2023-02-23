@@ -2,13 +2,13 @@
  *
  * Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License"); you
  * may not use this file except in compliance with the License.  You may
  * obtain a copy of the License at
- * 
+ *
  *    http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -18,7 +18,7 @@
  ***************************************************************/
 
 
- 
+
 
 /*********************************************************************
 * Find files which may have been left lying around on somebody's workstation
@@ -28,8 +28,12 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
-#include "condor_io.h"
 #include "condor_config.h"
+
+#include "condor_daemon_core.h"
+#include "subsystem_info.h"
+
+#include "condor_io.h"
 #include "condor_uid.h"
 #include "string_list.h"
 #include "directory.h"
@@ -41,8 +45,7 @@
 #include "condor_email.h"
 #include "daemon.h"
 #include "condor_distribution.h"
-#include "basename.h" // for condor_basename 
-#include "extArray.h"
+#include "basename.h" // for condor_basename
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
@@ -50,12 +53,16 @@
 #include "ipv6_hostname.h"
 #include "subsystem_info.h"
 #include "my_popen.h"
+#include "stl_string_utils.h"
+#include "checkpoint_cleanup_utils.h"
 
 #include <array>
 #include <memory>
 
 #include <map>
 #include <sstream>
+
+#include <filesystem>
 
 #define PREEN_EXIT_STATUS_SUCCESS       0
 #define PREEN_EXIT_STATUS_FAILURE       1
@@ -87,6 +94,7 @@ StringList	*BadFiles;			// list of files which don't belong
 // prototypes of local interest
 void usage();
 void init_params();
+void check_cleanup_dir();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
@@ -113,13 +121,42 @@ void
 usage()
 {
 	fprintf( stderr, "Usage: %s [-mail] [-remove] [-verbose] [-debug] [-log <filename>]\n", MyName );
-	exit( PREEN_EXIT_STATUS_FAILURE );
+	DC_Exit( PREEN_EXIT_STATUS_FAILURE );
 }
 
 
+void
+main_shutdown_fast() {
+	DC_Exit( 0 );
+}
+
+
+void
+main_shutdown_graceful() {
+	DC_Exit( 0 );
+}
+
+void
+main_pre_dc_init( int /* argc */, char ** /* argv */ ) { }
+
+
+void
+main_pre_command_sock_init() { }
+
+
+void
+main_config() { }
+
+
+int _argc;
+char ** _argv;
+
+
 int
-main( int /*argc*/, char *argv[] )
-{
+preen_main( int, char ** ) {
+	// argc = _argc;
+	char ** argv = _argv;
+
 #ifndef WIN32
 		// Ignore SIGPIPE so if we cannot connect to a daemon we do
 		// not blowup with a sig 13.
@@ -128,8 +165,8 @@ main( int /*argc*/, char *argv[] )
 
 	// initialize the config settings
 	config_ex(CONFIG_OPT_NO_EXIT);
-	
-		// Initialize things
+
+	// Initialize things
 	MyName = argv[0];
 	set_priv_initialize(); // allow uid switching if root
 	config();
@@ -138,11 +175,11 @@ main( int /*argc*/, char *argv[] )
 	MailFlag = false;
 	RmFlag = false;
 
-		// Parse command line arguments
+	// Parse command line arguments
 	for( argv++; *argv; argv++ ) {
 		if( (*argv)[0] == '-' ) {
 			switch( (*argv)[1] ) {
-			
+
 			  case 'd':
                 dprintf_set_tool_debug("TOOL", 0);
 				break;
@@ -176,7 +213,7 @@ main( int /*argc*/, char *argv[] )
 			usage();
 		}
 	}
-	
+
 	init_params();
 	BadFiles = new StringList;
 
@@ -192,13 +229,13 @@ main( int /*argc*/, char *argv[] )
 			free( pval );
 		}
 		_condor_set_debug_flags( szVerbose.c_str(), D_FULLDEBUG );
-		
 	}
+
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "STARTING: condor_preen PID: %d\n", getpid());
 	dprintf( D_ALWAYS, "********************************\n");
-	
-		// Do the file checking
+
+	// Do the file checking
 	check_spool_dir();
 	check_execute_dir();
 	check_log_dir();
@@ -208,7 +245,17 @@ main( int /*argc*/, char *argv[] )
 	check_public_files_webroot_dir();
 #endif
 
-		// Produce output, either on stdout or by mail
+	// Check to see if we need to clean up checkpoint destinations.
+	check_cleanup_dir();
+
+	// Don't exit until check_cleanup_dir() has finished.
+	return 0;
+}
+
+
+int
+preen_report() {
+	// Produce output, either on stdout or by mail
 	int exit_status = PREEN_EXIT_STATUS_SUCCESS;
 	if( !BadFiles->isEmpty() ) {
 		// write the files we deleted to the daemon log
@@ -223,15 +270,62 @@ main( int /*argc*/, char *argv[] )
 		dprintf(D_ALWAYS, "Results: No files preened\n");
 	}
 
-		// Clean up
+	// Clean up
 	delete BadFiles;
 
 	dprintf( D_ALWAYS, "********************************\n");
 	dprintf( D_ALWAYS, "ENDING: condor_preen PID: %d STATUS: %d\n", getpid(), exit_status);
 	dprintf( D_ALWAYS, "********************************\n");
-	
+
 	return exit_status;
 }
+
+
+void
+main_init( int argc, char ** argv ) {
+	main_config();
+
+	int rv = preen_main( argc, argv );
+	if( rv != 0 ) { DC_Exit( rv ); }
+}
+
+
+int
+main( int argc, char * argv[] ) {
+	set_mySubSystem( "TOOL", false, SUBSYSTEM_TYPE_TOOL );
+
+	// This is dumb, but easier than fighting daemon core about parsing.
+	_argc = argc;
+	_argv = (char **)malloc( argc * sizeof( char * ) );
+	for( int i = 0; i < argc; ++i ) {
+		_argv[i] = strdup( argv[i] );
+	}
+
+	// This is also dumb, but less dangerous than (a) reaching into daemon
+	// core to set a flag and (b) hoping that my command-line arguments and
+	// its command-line arguments don't conflict.
+	char ** dcArgv = (char **)malloc( 5 * sizeof( char * ) );
+	dcArgv[0] = argv[0];
+	// Force daemon core to run in the foreground.
+	dcArgv[1] = strdup( "-f" );
+	// Disable the daemon core command socket.
+	dcArgv[2] = strdup( "-p" );
+	dcArgv[3] = strdup(  "0" );
+	dcArgv[4] = NULL;
+
+	argc = 4;
+	argv = dcArgv;
+
+	dc_main_init = & main_init;
+	dc_main_config = & main_config;
+	dc_main_shutdown_fast = & main_shutdown_fast;
+	dc_main_shutdown_graceful = & main_shutdown_graceful;
+	dc_main_pre_dc_init = & main_pre_dc_init;
+	dc_main_pre_command_sock_init = & main_pre_command_sock_init;
+
+	return dc_main( argc, argv );
+}
+
 
 /*
   As the program runs, we create a list of messages regarding the status
@@ -245,8 +339,8 @@ send_email()
 	char	*str;
 	FILE	*mailer;
 	std::string subject,szTmp;
-	formatstr(subject, "condor_preen results %s: %d old file%s found", 
-		get_local_fqdn().c_str(), BadFiles->number(), 
+	formatstr(subject, "condor_preen results %s: %d old file%s found",
+		get_local_fqdn().c_str(), BadFiles->number(),
 		(BadFiles->number() > 1)?"s":"");
 
 	if( MailFlag ) {
@@ -264,8 +358,8 @@ send_email()
 	}
 
 	formatstr(szTmp, "The condor_preen process has found the following stale condor files on <%s>:\n\n",  get_local_hostname().c_str());
-	dprintf(D_ALWAYS, "%s", szTmp.c_str()); 
-		
+	dprintf(D_ALWAYS, "%s", szTmp.c_str());
+
 	if( MailFlag ) {
 		fprintf( mailer, "\n" );
 		fprintf( mailer, "%s", szTmp.c_str());
@@ -405,7 +499,7 @@ check_spool_dir()
 	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
 		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
 	}
-	
+
 		// Step 1: Check each file in the directory. Look for files that
 		// obviously should be here (job queue logs, shared exes, etc.) and
 		// flag them as good files. Put everything else into stale_spool_files,
@@ -428,8 +522,8 @@ check_spool_dir()
 			good_file( Spool, f );
 			continue;
 		}
-            // see if it's a rotated history file. 
-        if (   strlen(f) >= history_length 
+            // see if it's a rotated history file.
+        if (   strlen(f) >= history_length
             && strncmp(f, history, history_length) == 0) {
             good_file( Spool, f );
             continue;
@@ -586,7 +680,7 @@ check_spool_dir()
 						}
 
 						// construct a job id key, and clear 'maybe stale' files that match the key
-						// this also removes the key from the maybe_stale collection. 
+						// this also removes the key from the maybe_stale collection.
 						JOB_ID_KEY jid;
 						if (ad.EvaluateAttrInt(ATTR_CLUSTER_ID, jid.cluster)) {
 							jid.proc = -1;
@@ -710,7 +804,7 @@ is_ccb_file( const char *name )
 
 /*
   Scan the execute directory looking for bogus files.
-*/ 
+*/
 void
 check_execute_dir()
 {
@@ -725,9 +819,9 @@ check_execute_dir()
 		// can't find the state, just leave the execute directory
 		// alone.  -Derek Wright 4/2/99
 	switch( s ) {
-	case owner_state:	
+	case owner_state:
 	case unclaimed_state:
-	case matched_state:	
+	case matched_state:
 		busy = false;
 		break;
 	case claimed_state:
@@ -735,7 +829,7 @@ check_execute_dir()
 		busy = true;
 		break;
 	default:
-		dprintf( D_ALWAYS, 
+		dprintf( D_ALWAYS,
 				 "Error getting startd state, not cleaning execute directory.\n" );
 		return;
 	}
@@ -925,8 +1019,8 @@ check_daemon_sock_dir()
   minus the .access extension)
 */
 #ifdef HAVE_HTTP_PUBLIC_FILES
-void 
-check_public_files_webroot_dir() 
+void
+check_public_files_webroot_dir()
 {
 	// Make sure that PublicFilesWebrootDir is actually set before proceeding!
 	// If not set, just ignore it and bail out here.
@@ -949,7 +1043,7 @@ check_public_files_webroot_dir()
 			accessFilePath = PublicFilesWebrootDir;
 			accessFilePath += DIR_DELIM_CHAR;
 			accessFilePath += filename;
-			
+
 			// Try to obtain a lock for the access file. If this fails for any
 			// reason, just bail out and move on.
 			accessFileLock = new FileLock( accessFilePath.c_str(), true, false );
@@ -965,7 +1059,7 @@ check_public_files_webroot_dir()
 			// If the access file is stale, unlink both that and the hard link.
 			if( !linked_recently( accessFilePath.c_str(), stale_age ) ) {
 				// Something is weird here. I'm sending only the filename
-				// of the access file, but the full path of the hard link, and 
+				// of the access file, but the full path of the hard link, and
 				// it works correctly??
 				bad_file( PublicFilesWebrootDir, filename, dir );
 				bad_file( PublicFilesWebrootDir, hardLinkPath.c_str(), dir );
@@ -1013,16 +1107,16 @@ void rec_lock_cleanup(const char *path, int depth, bool remove_self) {
 		}
 	}
 	// make sure, orphaned directories will be deleted as well.
-	if (remove_self) {		
+	if (remove_self) {
 		int res = rmdir(path);
 		if (res != 0) {
 			dprintf(D_FULLDEBUG, "Directory %s could not be removed.\n", path);
 		}
 	}
-	
+
 	delete dir;
 #endif
-}	
+}
 
 void check_tmp_dir(){
 #if !defined(WIN32)
@@ -1035,8 +1129,8 @@ void check_tmp_dir(){
 		FileLock::getTempPath(tmpDir);
 		rec_lock_cleanup(tmpDir.c_str(), 3);
 	}
-  
-#endif	
+
+#endif
 }
 
 
@@ -1165,10 +1259,10 @@ get_machine_state()
 		dprintf( D_ALWAYS, "Can't find local startd address.\n" );
 		return _error_state_;
 	}
-   
+
 	if( !(sock = (ReliSock*)
 		  my_startd.startCommand(GIVE_STATE, Stream::reli_sock, 0)) ) {
-		dprintf( D_ALWAYS, "Can't connect to startd at %s\n", 
+		dprintf( D_ALWAYS, "Can't connect to startd at %s\n",
 				 my_startd.addr() );
 		return _error_state_;
 	}
@@ -1212,7 +1306,7 @@ touched_recently(char const *fname,time_t delta)
 bool
 linked_recently(char const *fname, time_t delta)
 {
-	struct stat fileStat;            
+	struct stat fileStat;
 	if( lstat( fname, &fileStat ) != 0) {
 		dprintf(D_ALWAYS, "preen.cpp: Failed to open link %s (errno %d)\n", fname, errno);
 		return false;
@@ -1277,4 +1371,247 @@ get_corefile_program( const char* corefile, const char* dir ) {
 	#endif
 
 	return program;
+}
+
+
+size_t MAX_CHECKPOINT_CLEANUP_PROCS = 100;
+std::map< std::filesystem::path, std::string > badPathMap;
+
+
+class CheckpointCleanUpReaper : public Service {
+	enum SpawnState {
+		PRESPAWN,
+		SPAWNING,
+		POSTSPAWN
+	};
+
+	public:
+		CheckpointCleanUpReaper() { state = PRESPAWN; }
+
+		int handler( int pid, int status );
+
+		bool contains( int pid ) const {
+			// In C++20: return pidToPathMap.contains(pid);
+			return pidToPathMap.find(pid) != pidToPathMap.end();
+		}
+
+		void insert_or_assign( int pid, const std::filesystem::path & path ) {
+			state = SPAWNING;
+			(void) pidToPathMap.insert_or_assign( pid, path );
+		}
+
+		size_t size() const { return pidToPathMap.size(); }
+
+		std::filesystem::path & operator[] ( int pid ) {
+			return pidToPathMap[pid];
+		}
+
+		void doneSpawning() { state = POSTSPAWN; }
+
+	private:
+		SpawnState state;
+		std::map<int, std::filesystem::path> pidToPathMap;
+};
+
+
+int
+CheckpointCleanUpReaper::handler( int pid, int status ) {
+	ASSERT(this->contains(pid));
+
+	std::string message;
+	formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
+	dprintf( D_ZKM, "%s\n", message.c_str() );
+
+	if( status != 0 ) {
+		// Only record failures, and only if we haven't recorded one already.
+		const auto & path = pidToPathMap[pid];
+		// In C++20: if(! badPathMap.contains(path)) {
+		if( badPathMap.find(path) == badPathMap.end() ) {
+			badPathMap[path] = message;
+		}
+	}
+
+	pidToPathMap.erase(pid);
+
+	//
+	// If we've reaped the last process (and we're not going spawn more),
+	// print the report and exit.  Unlike the rest of preen, this report
+	// doesn't include successful removals; the record we use to clean up
+	// a checkpoint destination isn't "bad" (unexpected) the way the rest
+	// of preen means and was intended to address.
+	//
+	if( pidToPathMap.size() == 0 && state == POSTSPAWN ) {
+		std::string buffer;
+		for( const auto & [path, message] : badPathMap ) {
+			formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
+			BadFiles->append( buffer.c_str() );
+		}
+		DC_Exit( preen_report() );
+	}
+
+	//
+	// Otherwise, if we're not done spawning and enough space left
+	// under the cap, spawn some more.
+	//
+	if( state == SPAWNING && pidToPathMap.size() < (MAX_CHECKPOINT_CLEANUP_PROCS / 2) ) {
+		dprintf( D_ZKM, "Resuming spawning after hitting MAX_CHECKPOINT_CLEANUP_PROCS.\n" );
+		check_cleanup_dir();
+	}
+
+	return 0;
+}
+
+
+class CheckpointCleanUpTimer : public Service {
+	public:
+		CheckpointCleanUpTimer( int p, CheckpointCleanUpReaper & r ) :
+			pid(p), reaper(r) { }
+
+		void handler();
+
+	private:
+		int pid;
+		CheckpointCleanUpReaper reaper;
+};
+
+
+void
+CheckpointCleanUpTimer::handler() {
+	if( reaper.contains(pid) ) {
+		badPathMap[reaper[pid]] = "Timed out.";
+
+		daemonCore->Kill_Family(pid);
+	}
+
+	delete this;
+}
+
+
+// This would obviously be much easier to read as a coroutine that yielded
+// into the daemon core event loop and was resumed by the reaper, but alas,
+// such is life without C++20.
+void
+check_cleanup_dir() {
+	static CheckpointCleanUpReaper reaper;
+	MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );
+
+	static int cleanup_reaper_id = -1;
+	if( cleanup_reaper_id == -1 ) {
+		cleanup_reaper_id = daemonCore->Register_Reaper(
+			"externally-stored checkpoint reaper",
+			(ReaperHandlercpp) & CheckpointCleanUpReaper::handler,
+			"externally-stored checkpoint reaper",
+			& reaper
+		);
+	}
+
+
+	std::string message;
+	std::filesystem::path SPOOL(Spool);
+	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
+
+	//
+	// We can store the iterator in a static; just be sure to increment
+	// where we exit the loop, because otherwise we'll do it again the
+	// next time we're called.
+	//
+	static std::filesystem::directory_iterator i;
+	static auto end = std::filesystem::end(i);
+
+	// This construction means that:
+	// (a) we don't have to make sure sure to increment the iterator
+	//     at every loop exit
+	// (b) makes sure that if we hit the spawn limit on the last directory,
+	//     we don't start over from the beginning.
+	if( i == end ) {
+		i = std::filesystem::directory_iterator(checkpointCleanup);
+	} else {
+		++i;
+	}
+
+	for( ; i != end; ++i ) {
+		const auto & entry = * i;
+		if(! entry.is_directory()) { continue; }
+
+
+		ClassAd jobAd;
+		auto pathToJobAd = entry.path() / ".job.ad";
+		FILE * fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
+		if(! fp) {
+			formatstr( message, "No .job.ad file found in %s, ignoring.", entry.path().string().c_str() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+			badPathMap[entry.path()] = message;
+			continue;
+		}
+
+		int err;
+		bool is_eof;
+		int attributesRead = InsertFromFile( fp, jobAd, is_eof, err );
+		if( attributesRead <= 0 ) {
+			formatstr( message,	"No ClassAd attributes found in file %s, ignoring.", pathToJobAd.string().c_str() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+			badPathMap[entry.path()] = message;
+			continue;
+		}
+
+
+		int cluster = -1;
+		if(! jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+			formatstr( message,	"Failed to find cluster ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+			badPathMap[entry.path()] = message;
+			continue;
+		}
+
+		int proc = -1;
+		if(! jobAd.LookupInteger(ATTR_PROC_ID, proc)) {
+			formatstr( message, "Failed to find proc ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+			badPathMap[entry.path()] = message;
+			continue;
+		}
+
+
+		std::string error;
+		int spawned_pid = -1;
+		bool rv = spawnCheckpointCleanupProcess(
+			cluster, proc, & jobAd, cleanup_reaper_id,
+			spawned_pid, error
+		);
+
+		if(! rv) {
+			formatstr( message, "Failed to spawn cleanup process for %d.%d, ignoring.", cluster, proc );
+			dprintf( D_ALWAYS, "%s\n", message.c_str() );
+			badPathMap[entry.path()] = message;
+			continue;
+		}
+
+		// We implicitly assume no duplicate PIDs here.
+		reaper.insert_or_assign( spawned_pid, entry.path() );
+
+
+		// Start a timer to kill spawned_pid if takes too long.
+		int cleanupTimeout = 300;
+		param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+		auto * timer = new CheckpointCleanUpTimer( spawned_pid, reaper );
+		// There's no way to hand off ownership of the state object to
+		// daemon core, so it will have to delete itself.  Therefore,
+		// do NOT ever unregister this timer.  This will all change when
+		// we can register a std::function, which will be a lambda with
+		// the state in the closure, and where the closure will be owned
+		// by daemon core and deleted on timer deregistration / extinction.
+		daemonCore->Register_Timer( cleanupTimeout, TIMER_NEVER,
+			(TimerHandlercpp) & CheckpointCleanUpTimer::handler,
+			"checkpoint clean-up timer",
+			timer
+		);
+
+		// Check if we've spawned enough already and stop if we have.
+		if( reaper.size() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
+			dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
+			return;
+		}
+	}
+
+	reaper.doneSpawning();
 }
