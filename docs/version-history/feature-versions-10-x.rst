@@ -4,6 +4,24 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.2.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.2.4 released on February 24, 2023.
+
+- HTCondor version 10.2.4 not yet released.
+
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.2.3
 --------------
 
