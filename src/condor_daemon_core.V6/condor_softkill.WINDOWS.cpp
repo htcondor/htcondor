@@ -214,7 +214,7 @@ wWinMain(__in HINSTANCE, __in_opt HINSTANCE, __in wchar_t*, __in int)
 	// see if a debug output file was given
 	//
 	if (__argc > 2) {
-		wchar_t * opt = L"a";
+		const wchar_t * opt = L"a";
 		wchar_t * pszFile = __wargv[2];
 		debug_fp = _wfopen(pszFile, opt);
 		if (debug_fp == NULL) {
