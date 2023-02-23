@@ -7615,6 +7615,7 @@ int DaemonCore::Create_Process(
 	if (priv == PRIV_USER_FINAL) {
 		set_priv(gbt_prv);
 	}
+	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
 	// thinks its a DOS 16-bit app, but in reality the actual binary
