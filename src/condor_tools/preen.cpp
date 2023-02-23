@@ -94,7 +94,7 @@ StringList	*BadFiles;			// list of files which don't belong
 // prototypes of local interest
 void usage();
 void init_params();
-void check_cleanup_dir();
+bool check_cleanup_dir();
 void check_spool_dir();
 void check_execute_dir();
 void check_log_dir();
@@ -151,6 +151,8 @@ main_config() { }
 int _argc;
 char ** _argv;
 
+
+int preen_report();
 
 int
 preen_main( int, char ** ) {
@@ -246,7 +248,9 @@ preen_main( int, char ** ) {
 #endif
 
 	// Check to see if we need to clean up checkpoint destinations.
-	check_cleanup_dir();
+	if(! check_cleanup_dir()) {
+		DC_Exit(preen_report());
+	}
 
 	// Don't exit until check_cleanup_dir() has finished.
 	return 0;
@@ -1455,7 +1459,7 @@ CheckpointCleanUpReaper::handler( int pid, int status ) {
 	//
 	if( state == SPAWNING && pidToPathMap.size() < (MAX_CHECKPOINT_CLEANUP_PROCS / 2) ) {
 		dprintf( D_ZKM, "Resuming spawning after hitting MAX_CHECKPOINT_CLEANUP_PROCS.\n" );
-		check_cleanup_dir();
+		(void) check_cleanup_dir();
 	}
 
 	return 0;
@@ -1490,7 +1494,7 @@ CheckpointCleanUpTimer::handler() {
 // This would obviously be much easier to read as a coroutine that yielded
 // into the daemon core event loop and was resumed by the reaper, but alas,
 // such is life without C++20.
-void
+bool
 check_cleanup_dir() {
 	static CheckpointCleanUpReaper reaper;
 	MAX_CHECKPOINT_CLEANUP_PROCS = param_integer( "MAX_CHECKPOINT_CLEANUP_PROCS", 100 );
@@ -1529,6 +1533,7 @@ check_cleanup_dir() {
 		++i;
 	}
 
+	bool spawned = false;
 	for( ; i != end; ++i ) {
 		const auto & entry = * i;
 		if(! entry.is_directory()) { continue; }
@@ -1588,6 +1593,7 @@ check_cleanup_dir() {
 
 		// We implicitly assume no duplicate PIDs here.
 		reaper.insert_or_assign( spawned_pid, entry.path() );
+		spawned = true;
 
 
 		// Start a timer to kill spawned_pid if takes too long.
@@ -1609,9 +1615,10 @@ check_cleanup_dir() {
 		// Check if we've spawned enough already and stop if we have.
 		if( reaper.size() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
 			dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
-			return;
+			return spawned;
 		}
 	}
 
 	reaper.doneSpawning();
+	return spawned;
 }
