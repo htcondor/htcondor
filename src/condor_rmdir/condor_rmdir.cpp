@@ -18,6 +18,7 @@
  ***************************************************************/
 
 #define UNICODE
+struct IUnknown;
 #include <windows.h>
 #include <shlwapi.h>
 #include "common.h"

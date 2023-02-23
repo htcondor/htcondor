@@ -56,11 +56,11 @@ Condor_Auth_SSPI :: sspi_client_auth( CredHandle&    cred,
     
     dprintf( D_FULLDEBUG,"sspi_client_auth() entered\n" );
     
-    rc = (pf->QuerySecurityPackageInfo)( "NTLM", &secPackInfo );
+    rc = (pf->QuerySecurityPackageInfo)( (SEC_CHAR *)"NTLM", &secPackInfo );
     
     TimeStamp useBefore;
     
-    rc = (pf->AcquireCredentialsHandle)( NULL, "NTLM", SECPKG_CRED_OUTBOUND,
+    rc = (pf->AcquireCredentialsHandle)( NULL, (SEC_CHAR *)"NTLM", SECPKG_CRED_OUTBOUND,
                                          NULL, NULL, NULL, NULL, &cred, &useBefore );
     
     // input and output buffers
@@ -201,11 +201,11 @@ Condor_Auth_SSPI::sspi_server_auth(CredHandle& cred,CtxtHandle& srvCtx)
     
     dprintf(D_FULLDEBUG, "sspi_server_auth() entered\n" );
     
-    rc = (pf->QuerySecurityPackageInfo)( "NTLM", &secPackInfo );
+    rc = (pf->QuerySecurityPackageInfo)( (SEC_CHAR *)"NTLM", &secPackInfo );
     
     TimeStamp useBefore;
     
-    rc = (pf->AcquireCredentialsHandle)( NULL, "NTLM", SECPKG_CRED_INBOUND,
+    rc = (pf->AcquireCredentialsHandle)( NULL, (SEC_CHAR *)"NTLM", SECPKG_CRED_INBOUND,
                                          NULL, NULL, NULL, NULL, &cred, &useBefore );
     
     // input and output buffers

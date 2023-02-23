@@ -1639,7 +1639,7 @@ ProcAPI::GetProcessPerfData()
 
         // '2' is the 'system' , '230' is 'process'  
         // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
+    dwStatus = GetSystemPerfData (const_cast<char *>(TEXT("230")));
 
     if( dwStatus != ERROR_SUCCESS ) {
         dprintf( D_ALWAYS,
