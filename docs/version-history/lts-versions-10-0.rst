@@ -57,7 +57,7 @@ New Features:
 Bugs Fixed:
 
 - Attempting to use a file-transfer plug-in that doesn't exist is no longer
-  silently ignored.  This could happen due to different bug, where plug-ins
+  silently ignored.  This could happen due to different bug, also fixed, where plug-ins
   specified only in ``transfer_output_remaps`` were not automatically added
   to a job's requirements.
   :jira:`1501`
