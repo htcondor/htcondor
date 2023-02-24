@@ -922,6 +922,23 @@ void main_init (int argc, char ** const argv) {
 		} else if( !strcasecmp( "-import_env", argv[i] ) ) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
+		} else if( !strcasecmp( "-include_env", argv[i] ) ) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
+				Usage();
+			}
+			if (!dagman._submitDagDeepOpts.getFromEnv.empty()) {
+				dagman._submitDagDeepOpts.getFromEnv += ",";
+			}
+			dagman._submitDagDeepOpts.getFromEnv += argv[i];
+
+		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No key=value pairs passed for -insert_env\n");
+				Usage();
+			}
+			dagman._submitDagDeepOpts.addToEnv.push_back(argv[i]);
+
 		} else if( !strcasecmp( "-priority", argv[i] ) ) {
 			++i;
 			if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
