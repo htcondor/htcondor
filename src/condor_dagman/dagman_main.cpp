@@ -1524,7 +1524,7 @@ Dagman::ResolveDefaultLog()
 
 	replace_str( _defaultNodeLog, "@(DAG_DIR)", dagDir );
 	replace_str( _defaultNodeLog, "@(DAG_FILE)", dagFile );
-	string cluster( std::to_string( DAGManJobId._cluster ) );
+	std::string cluster( std::to_string( DAGManJobId._cluster ) );
 	replace_str( _defaultNodeLog, "@(CLUSTER)", cluster.c_str() );
 	free( dagDir );
 	replace_str( _defaultNodeLog, "@(OWNER)", owner.c_str() );
