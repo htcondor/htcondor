@@ -50,6 +50,14 @@ New Features:
   other grid universe job types.
   :jira:`1582`
 
+- DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the
+  ability to better control the environment passed to the DAGMan proper job.
+  ``getenv`` will default to ``CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ``
+  in the ``.condor.sub`` file which can be appended to via the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new *condor_submit_dag* flag
+  ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
+  directly set key=value pairs of information into the ``.condor.sub`` environment.
+  :jira:`1580`
 
 Bugs Fixed:
 

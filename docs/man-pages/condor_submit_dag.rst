@@ -22,8 +22,8 @@ Synopsis
 [**-batch-name** *batch_name*] [**-autorescue** *0|1*]
 [**-dorescuefrom** *number*] [**-allowversionmismatch** ]
 [**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
-[**-import_env** ] [**-DumpRescue** ] [**-valgrind** ]
-[**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
+[**-import_env** ] [**-include_env** *Variables*] [**-insert_env** *Key=Value*]
+[**-DumpRescue** ] [**-valgrind** ] [**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
 [**-priority** *number*] [**-dont_use_default_node_log** ]
 [**-schedd-daemon-ad-file** *FileName*]
 [**-schedd-address-file** *FileName*] [**-suppress_notification** ]
@@ -261,6 +261,18 @@ Options
     This optional argument causes *condor_submit_dag* to import the
     current environment into the **environment** command of the
     ``.condor.sub`` file it generates.
+ **-include_env** *Variables*
+     This optional argument takes a comma separated list of enviroment
+     variables to add to ``.condor.sub`` ``getenv`` environment filter
+     which causes found matching environment variables to be added to
+     the DAGMan manager jobs **environment**.
+ **-insert_env** *Key=Value*
+     This optional argument takes a delimited string of *Key=Value* pairs
+     to explicitly set into the ``.condor.sub`` files ``environment`` macro.
+     The base delimiter is a semicolon that can be overriden by setting
+     the first character in the string to a valid delimiting character.
+     If multiple **-insert_env** flags contain the same *Key* then the last
+     occurances *Value* will be set in the DAGMan jobs **environment**.
  **-DumpRescue**
     This optional argument tells *condor_dagman* to immediately dump a
     rescue DAG and then exit, as opposed to actually running the DAG.
