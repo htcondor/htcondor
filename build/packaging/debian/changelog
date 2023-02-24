@@ -1,3 +1,9 @@
+condor (10.2.4-1) stable; urgency=medium
+
+  * Improved counting of unmaterialized jobs in the condor_schedd
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Feb 2023 20:46:00 -0600
+
 condor (10.2.3-1) stable; urgency=medium
 
   * Add a count of unmaterialized jobs to condor_schedd statistics
