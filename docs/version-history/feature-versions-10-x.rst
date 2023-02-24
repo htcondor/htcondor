@@ -9,10 +9,7 @@ Version 10.2.4
 
 Release Notes:
 
-.. HTCondor version 10.2.4 released on February 24, 2023.
-
-- HTCondor version 10.2.4 not yet released.
-
+- HTCondor version 10.2.4 released on February 24, 2023.
 
 New Features:
 
@@ -20,7 +17,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed an issue where after a *condor_schedd* restart, the
+  ``JobsUnmaterialized`` attribute in the *condor_schedd* ad may be an
+  undercount of the number of unmaterialized jobs for previous submissions.
+  :jira:`1591`
 
 Version 10.2.3
 --------------
@@ -33,7 +33,7 @@ New Features:
 
 - Added an attribute to the *condor_schedd* ClassAd that advertises the number of
   late materialization jobs that have been submitted, but have not yet materialized.
-  The new attribute is called ``JobsUnmaterialized``
+  The new attribute is called ``JobsUnmaterialized``.
   :jira:`1591`
 
 Bugs Fixed:
