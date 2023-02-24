@@ -115,6 +115,26 @@ public:
 		return cached_total_procs;
 	}
 
+	// return the current best guess as to the total number of procs that will materialize
+	// returns true for a good guess, and false if no guess can be made
+	bool KnownTotalProcs(int & num) {
+		int step_size = fea.queue_num ? fea.queue_num : 1;
+		if (fea.foreach_mode == foreach_not) {
+			num = step_size;
+			return true;
+		}
+	#if 0
+		// TJ: TODO: fix this so it can be relied upon!
+		if (cached_total_procs > 0) {
+			num = cached_total_procs;
+			return true;
+		}
+	#else
+		num = fea.slice.length_for(fea.items.number()) * step_size;
+	#endif
+		return fea.foreach_mode != foreach_from_async;
+	}
+
 protected:
 	const char * name;
 #ifdef HOLDS_DIGEST_FILE_OPEN
@@ -389,7 +409,15 @@ int UnMaterializedJobCount(JobQueueCluster * cad, bool include_paused /*=false*/
 	if ( ! include_paused && cad->factory->IsPaused()) return 0;
 	int next_proc_id = 0;
 	int total_procs = 0;
-	if (cad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS, total_procs) &&
+	if ( ! cad->factory->KnownTotalProcs(total_procs)) {
+		// this won't be right for jobs that use a python slice, but it's better than nothing?
+		// TODO: remove this when KnownTotalProcs is always accurate
+		int step_size = cad->factory->StepSize();
+		int row_count = JobFactoryRowCount(cad->factory);
+		total_procs = row_count;
+		if (step_size > 0) total_procs *= step_size;
+	}
+	if (total_procs &&
 		cad->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id) &&
 		next_proc_id > 0 && total_procs > next_proc_id) {
 		return total_procs - next_proc_id;
