@@ -48,6 +48,10 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
+- If a job's requested credentials are not available when the job is
+  about to start, the job is now placed on hold.
+  :jira:`1600`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
