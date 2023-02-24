@@ -1581,6 +1581,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Feb 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.4-1
+- Improved counting of unmaterialized jobs in the condor_schedd
+
 * Tue Feb 21 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.3-1
 - Add a count of unmaterialized jobs to condor_schedd statistics
 
