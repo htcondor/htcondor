@@ -32,6 +32,7 @@
 #include "stl_string_utils.h"
 #include <array>
 
+static bool test_case_string_view(void);
 static bool test_sprintf_string(void);
 static bool test_sprintf_MyString(void);
 static bool test_formatstr_cat_string(void);
@@ -72,6 +73,7 @@ bool FTEST_stl_string_utils(void) {
 	FunctionDriver driver;
 	driver.register_function(test_comparison_ops_lhs_string);
 	driver.register_function(test_comparison_ops_lhs_MyString);
+	driver.register_function(test_case_string_view);
 	driver.register_function(test_sprintf_string);
 	driver.register_function(test_sprintf_MyString);
 	driver.register_function(test_formatstr_cat_string);
@@ -106,6 +108,20 @@ bool FTEST_stl_string_utils(void) {
 	return driver.do_all_functions();
 }
 
+
+static bool test_case_string_view() {
+    emit_test("Test case insensitive string_view specialization");
+
+	// test that we are constexpr-correct
+	static_assert(case_sv("HELLO") == case_sv("hello"));
+
+	bool passed = case_sv("foo") != case_sv("bar");
+	if (passed) {
+		PASS;
+	} else {
+		FAIL;
+	}	
+}
 
 static bool test_sprintf_string() {
     emit_test("Test sprintf overloading for std::string");
