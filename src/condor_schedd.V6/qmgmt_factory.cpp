@@ -96,23 +96,28 @@ public:
 	}
 
 	// calculate the number of rows selected by the slice
-	int TotalProcs(bool & changed_value) {
-		changed_value = false;
+	// also returns a boolean to indicate that we set the cached_total_procs value
+	// this happens when all of the itemdata is present, which it is at submit time
+	// but it can take a bit of time to reload after a schedd restart.
+	int TotalProcs(bool & updated_cache) {
+		int total_procs = cached_total_procs;
+		updated_cache = false;
 		if (cached_total_procs == -42) {
-			int selected_rows = 1;
+			total_procs = 1;
 			if (fea.foreach_mode != foreach_not) {
 				int num_rows = fea.items.number();
-				selected_rows = 0;
-				for (int row = 0; row < num_rows; ++row) {
-					if (fea.slice.selected(row, num_rows)) {
-						++selected_rows;
-					}
-				}
+				int selected_rows = fea.slice.length_for(num_rows);
+				if (selected_rows > 1) total_procs = selected_rows;
 			}
-			changed_value = true;
-			cached_total_procs = StepSize() * selected_rows;
+			if (fea.queue_num > 1) {
+				total_procs *= fea.queue_num;
+			}
+			if (fea.foreach_mode != foreach_from_async) {
+				updated_cache = true;
+				cached_total_procs = total_procs;
+			}
 		}
-		return cached_total_procs;
+		return total_procs;
 	}
 
 protected:
