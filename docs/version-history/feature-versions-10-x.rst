@@ -17,12 +17,12 @@ New Features:
 
 - None.
 
+-Bugs Fixed:
+
 - Fixed an issue where after a *condor_schedd* restart, the
   ``JobsUnmaterialized`` attribute in the *condor_schedd* ad may be an
   overcount of the number of unmaterialized jobs in rare cases.
   :jira:`1606`
-
-- None.
 
 Version 10.2.4
 --------------
