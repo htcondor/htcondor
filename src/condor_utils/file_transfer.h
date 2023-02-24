@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "HashTable.h"
 #ifdef WIN32
 #include "perm.h"
@@ -60,9 +59,9 @@ struct CatalogEntry {
 };
 
 
-typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
+typedef HashTable <std::string, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
-typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
+typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
@@ -229,11 +228,11 @@ class FileTransfer final: public Service {
 		int hold_code;
 		int hold_subcode;
 		ClassAd stats;
-		MyString error_desc;
+		std::string error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
-		MyString spooled_files;
-		MyString tcp_stats;
+		std::string spooled_files;
+		std::string tcp_stats;
 	};
 
 	FileTransferInfo GetInfo() {
@@ -360,7 +359,7 @@ class FileTransfer final: public Service {
 		// Returns false on failure and sets error_msg.
 	static bool ExpandInputFileList( ClassAd *job, std::string &error_msg );
 		// use this function when you don't want to party on the job ad like the above function does 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg );
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, std::string &expanded_list, std::string &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.
@@ -548,10 +547,10 @@ class FileTransfer final: public Service {
 	bool simple_init{true};
 	ReliSock *simple_sock{nullptr};
 	ReliSock *m_syscall_socket{nullptr};
-	MyString download_filename_remaps;
+	std::string download_filename_remaps;
 	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;
-	MyString m_jobid; // what job we are working on, for informational purposes
+	std::string m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id{nullptr};
 	std::string m_cred_dir;
 	std::string m_job_ad;
@@ -560,7 +559,7 @@ class FileTransfer final: public Service {
 	filesize_t MaxDownloadBytes{-1};
 
 	// stores the path to the proxy after one is received
-	MyString LocalProxyName;
+	std::string LocalProxyName;
 
 	// Object to manage reuse of any data locally.
 	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
@@ -578,7 +577,7 @@ class FileTransfer final: public Service {
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive acknowledgment of success/failure after downloading files.
-	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc);
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().
@@ -589,7 +588,7 @@ class FileTransfer final: public Service {
 	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes);
 
 	// Receive message indicating that the peer is ready to receive the file.
-	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc, int alive_interval);
+	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc, int alive_interval);
 
 	// Obtain permission to receive a file download and then tell our
 	// peer to go ahead and send it.

@@ -7609,7 +7609,7 @@ int SubmitHash::FixupTransferInputFiles()
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
 
 	std::string error_msg;
-	MyString expanded_list;
+	std::string expanded_list;
 	bool success = FileTransfer::ExpandInputFileList(input_files.c_str(),JobIwd.c_str(),expanded_list,error_msg);
 	if (success) {
 		if (expanded_list != input_files) {
