@@ -15,6 +15,13 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1003`.
 
+- We changed the semantics of relative paths in the ``output``, ``error``, and
+  ``transfer_output_remaps`` submit file commands.  These commands now create
+  the directories named in relative paths if they do not exist.  This could
+  cause jobs that used to go on hold (because they couldn't write their
+  ``output`` or ``error`` files, or a remapped output file) to instead succeed.
+  :jira:`1325`
+
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
   unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
   is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
