@@ -82,9 +82,26 @@ def jobOutputFailureEP(submitJobOutputFailureEP):
    assert submitJobOutputFailureEP.wait(condition=ClusterState.all_held,timeout=60)
    return submitJobOutputFailureEP.query()[0]
 
+@action
+def submitJobCredFailureAP(default_condor):
+   return default_condor.submit(
+        {
+           "log": "job_ap_cred.log",
+           "executable": "/bin/sleep",
+           "arguments": "0",
+           "transfer_executable": "false",
+           "MY.OAuthServicesNeeded": classad.quote("broken_token"),
+        }
+    )
+
+@action
+def jobCredFailureAP(submitJobCredFailureAP):
+   assert submitJobCredFailureAP.wait(condition=ClusterState.all_held,timeout=60)
+   return submitJobCredFailureAP.query()[0]
+
 
 class TestXferHoldCodes:
-   def test_submit_all(submitJobInputFailureAP, submitJobOutputFailureAP, submitJobInputFailureEP, submitJobOutputFailureEP):
+   def test_submit_all(submitJobInputFailureAP, submitJobOutputFailureAP, submitJobInputFailureEP, submitJobOutputFailureEP, submitJobCredFailureAP):
        assert True
 
    def test_jobInputFailureAP(self, jobInputFailureAP):
@@ -103,3 +120,6 @@ class TestXferHoldCodes:
       assert jobOutputFailureEP["HoldReasonCode"] == 12
       assert "Transfer output files failure at execution point" in jobOutputFailureEP["HoldReason"]
 
+   def test_jobCredFailureAP(self, jobCredFailureAP):
+      assert jobCredFailureAP["HoldReasonCode"] == 4
+      assert "Job credentials are not available" in jobCredFailureAP["HoldReason"]
