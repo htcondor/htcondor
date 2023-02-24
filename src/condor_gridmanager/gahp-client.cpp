@@ -727,6 +727,7 @@ GahpServer::Startup()
 	int high_port;
 	Env newenv;
 	char *tmp_char;
+	int job_opt_mask = 0;
 
 		// Check if we already have spawned a GAHP server.  
 	if ( m_gahp_startup_failed ) {
@@ -846,6 +847,10 @@ GahpServer::Startup()
 	io_redirect[1] = stdout_pipefds[1]; // stdout get write side of out pipe
 	io_redirect[2] = stderr_pipefds[1]; // stderr get write side of err pipe
 
+
+	// Don't set CONDOR_INHERIT in the GAHP's environment
+	job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+
 	m_gahp_pid = daemonCore->Create_Process(
 			gahp_path,		// Name of executable
 			gahp_args,		// Args
@@ -857,7 +862,11 @@ GahpServer::Startup()
 			NULL,			// cwd
 			NULL,			// process family info
 			NULL,			// network sockets to inherit
-			io_redirect 	// redirect stdin/out/err
+			io_redirect, 	// redirect stdin/out/err
+			nullptr,		// fd inherit list
+			0,				// nice increment
+			nullptr,		// signal mask
+			job_opt_mask	// job option flags
 			);
 
 	if ( m_gahp_pid == FALSE ) {

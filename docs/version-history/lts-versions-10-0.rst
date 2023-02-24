@@ -48,6 +48,11 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
+- Fixed a bug where the *condor_master* of a glidein submitted to
+  SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
+  of the HTCondor-CE.
+  :jira:`1604`
+
 - Fixed a bug in the *condor_schedd* that could result in the ``TotalSubmitProcs``
   attribute of a late materialization job being set to a value smaller than the
   correct value shortly after the *condor_schedd* was restarted.
