@@ -48,6 +48,11 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
+- Fixed a bug where the *condor_master* of a glidein submitted to
+  SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
+  of the HTCondor-CE.
+  :jira:`1604`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
