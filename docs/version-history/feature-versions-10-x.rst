@@ -115,6 +115,24 @@ Bugs Fixed:
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
 
+Version 10.2.5
+--------------
+
+.. HTCondor version 10.2.5 released on February 28, 2023.
+
+- HTCondor version 10.2.5 not yet released.
+
+New Features:
+
+- None.
+
+-Bugs Fixed:
+
+- Fixed an issue where after a *condor_schedd* restart, the
+  ``JobsUnmaterialized`` attribute in the *condor_schedd* ad may be an
+  overcount of the number of unmaterialized jobs in rare cases.
+  :jira:`1606`
+
 Version 10.2.4
 --------------
 
