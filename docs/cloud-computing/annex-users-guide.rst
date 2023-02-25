@@ -516,7 +516,7 @@ The options labeled "developers only" control implementation details and
 may change without warning; they are probably best left unused unless
 you're a developer.
 
-.. rubric: Footnotes
+.. rubric:: Footnotes
 
 .. [1] Strictly speaking, to each "launch specification"; see the explanation below, in the section AWS Instance User Data.
 .. [2] https://ip-ranges.amazonaws.com/ip-ranges.json
