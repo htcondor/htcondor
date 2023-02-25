@@ -284,7 +284,7 @@ URL and delete the 'HTCondorAnnex-KeyPair' key:
 
 `https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName <https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#KeyPairs:sort=keyName>`_
 
-.. rubric: Footnotes
+.. rubric:: Footnotes
 
 .. [1] You may assign an intance profile to an EC2 instance when you launch it,
    or at any subsequent time, through the AWS web console (or other interfaces
