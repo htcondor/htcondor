@@ -73,23 +73,12 @@ Release Notes:
 
 - HTCondor version 10.0.2 not yet released.
 
-- We changed the semantics of relative paths in the ``output``, ``error``, and
-  ``transfer_output_remaps`` submit file commands.  These commands now create
-  the directories named in relative paths if they do not exist.  This could
-  cause jobs that used to go on hold (because they couldn't write their
-  ``output`` or ``error`` files, or a remapped output file) to instead succeed.
-  :jira:`1325`
-  
 New Features:
 
 - Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
   a transfer output remap to create directories in allowed places if they
   do not exist at transfer output time.
   :jira:`1480`
-
-- Fixed a bug where **condor_now** could not use the resources freed by
-  evicting a job if its procID was 1.
-  :jira:`1519`
 
 - Improved scalability of *condor_schedd* when running more than 1,000 jobs
   from the same user.
@@ -100,29 +89,16 @@ New Features:
   have an entry in the /etc/passwd database.
   :jira:`1543`
 
-- The *condor_remote_cluster* command was updated to fetch the Alma Linux
-  tarballs for Enterprise Linux 8 and 9.
-  :jira:`1562`
-
 - VM universe jobs are now configured to pass through the host CPU model
   to the VM. This change enables VMs with newer kernels (such as Enterprise
   Linux 9) to operate in VM Universe.
   :jira:`1559`
 
+- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+  tarballs for Enterprise Linux 8 and 9.
+  :jira:`1562`
+
 Bugs Fixed:
-
-- Attempting to use a file-transfer plug-in that doesn't exist is no longer
-  silently ignored.  This could happen due to different bug, where plug-ins
-  specified only in ``transfer_output_remaps`` were not automatically added
-  to a job's requirements.
-  :jira:`1501`
-
-- Fixed a bug that caused the *condor_startd* to exit when thinpool
-  provisioned filesystems were enabled
-  :jira:`1524`
-
-- Fixed a bug causing a Python warning when installing on Ubuntu 22.04.
-  :jira:`1534`
 
 - In the python bindings, the attribute ``ServerTime`` is now included
   in job ads returned by ``Schedd.query()``.
@@ -132,9 +108,26 @@ Bugs Fixed:
   (Bionic Beaver).
   :jira:`1548`
 
-- Fixed a bug where the *condor_history* tool would segmentation fault
+- Attempting to use a file-transfer plug-in that doesn't exist is no longer
+  silently ignored.  This could happen due to different bug, also fixed, where plug-ins
+  specified only in ``transfer_output_remaps`` were not automatically added
+  to a job's requirements.
+  :jira:`1501`
+
+- Fixed a bug where **condor_now** could not use the resources freed by
+  evicting a job if its procID was 1.
+  :jira:`1519`
+
+- Fixed a bug that caused the *condor_startd* to exit when thinpool
+  provisioned filesystems were enabled.
+  :jira:`1524`
+
+- Fixed a bug causing a Python warning when installing on Ubuntu 22.04.
+  :jira:`1534`
+
+- Fixed a bug where the *condor_history* tool would crash
   when doing a remote query with a constraint expression or specified
-  job id's.
+  job IDs.
   :jira:`1564`
 
 .. _lts-version-history-1001:
