@@ -2910,6 +2910,12 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             deep_opts.updateSubmit = (value == "true") ? true : false;
         else if (key_lc == "import_env")
             deep_opts.importEnv = (value == "true") ? true : false;
+        else if (key_lc == "include_env")
+            deep_opts.getFromEnv += value;
+        else if (key_lc == "insert_env") {
+            trim(value);
+            deep_opts.addToEnv.push_back(value);
+            }
         else if (key_lc == "dumprescue")
             shallow_opts.dumpRescueDag = (value == "true") ? true : false;
         else if (key_lc == "valgrind")

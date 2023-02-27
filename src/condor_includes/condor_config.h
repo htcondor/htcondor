@@ -721,6 +721,7 @@ int write_config_file(const char* pathname, int options);
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	
+	bool is_piped_command(const char* filename);
 	// Process an additional chunk of file
 	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
 

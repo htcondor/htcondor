@@ -316,7 +316,8 @@ def submit_jobs(post_condor, test_dir,
         #Make sure a 'test.dag' file was written
         assert dag_file != ""
         #Submit DAG job and add to job_handles dictionary
-        dag = htcondor.Submit.from_dag(str(dag_file))
+        with post_condor.use_config():
+            dag = htcondor.Submit.from_dag(str(dag_file))
         dagman_job = post_condor.submit(dag)
         job_handles[key] = dagman_job
     print("")

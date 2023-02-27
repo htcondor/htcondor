@@ -150,6 +150,8 @@ struct SubmitDagDeepOptions
     bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
     bool updateSubmit; // allow updating submit file w/o -force
     bool importEnv; // explicitly import environment into .condor.sub file
+    std::string getFromEnv; // explicitly import specified environment vars into .condor.sub file
+    std::vector<std::string> addToEnv; // explicitly add var=value envrionment info into .condor.sub file
 
     bool suppress_notification;
     std::string acctGroup;
@@ -166,6 +168,8 @@ struct SubmitDagDeepOptions
         recurse = false;
         updateSubmit = false;
         importEnv = false;
+        getFromEnv = "";
+        addToEnv = {};
         suppress_notification = true;
         acctGroup = "";
         acctGroupUser = "";

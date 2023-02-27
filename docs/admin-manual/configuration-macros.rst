@@ -8583,6 +8583,17 @@ General
     submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
     When ``False``, the parsed variables will be prepended unless specified.
 
+:macro-def:`DAGMAN_MANAGER_JOB_APPEND_GETENV`
+    A comma separated list of variable names to add to the DAGMan ``.condor.sub``
+    file's ``getenv`` option. This will in turn add any found matching environment
+    variables to the DAGMan proper jobs **environment**. Setting this value to
+    ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
+    ``getenv`` are:
+
+    .. code-block:: dagman-base-getenv
+
+        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ
+
 Throttling
 ''''''''''
 
