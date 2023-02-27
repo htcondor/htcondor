@@ -676,10 +676,55 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if ( info_ad.Lookup("EndTime") == nullptr && info_ad.Lookup("ComputingManagerEndTime") == nullptr ) {
+			// Element State is a list of strings, one of which is of
+			// the form "arcrest:XXX", where XXX is the job's status
+			// as reported in the rest of the REST interface.
+			// If that status isn't one of the terminal states, then
+			// we received stale data, and we should re-query after a
+			// short delay.
+			classad::ExprTree *expr = info_ad.Lookup("State");
+			if (expr == nullptr || expr->GetKind() != classad::ExprTree::EXPR_LIST_NODE) {
+				errorString = "Job exit information is missing State element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing State element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			std::string info_status;
+			std::vector<classad::ExprTree*> state_list;
+			((classad::ExprList*)expr)->GetComponents(state_list);
+			for (auto item : state_list) {
+				std::string str;
+				classad::Value value;
+				classad::Value::NumberFactor f;
+				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
+					continue;
+				}
+				((classad::Literal*)item)->getValue(f).IsStringValue(str);
+				if (str.compare(0, 8, "arcrest:") == 0) {
+					info_status = str.substr(8);
+					break;
+				}
+			}
+			if (info_status.empty()) {
+				errorString = "Job exit information is missing arcrest element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing arcrest element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			if (info_status != REMOTE_STATE_FINISHED &&
+			    info_status != REMOTE_STATE_FAILED &&
+			    info_status != REMOTE_STATE_KILLED &&
+			    info_status != REMOTE_STATE_WIPED)
+			{
 				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
 				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;
+			}
+			if (info_status != remoteJobState) {
+				remoteJobState = info_status;
+				SetRemoteJobStatus(info_status.c_str());
 			}
 
 			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
