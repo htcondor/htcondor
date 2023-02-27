@@ -32,8 +32,6 @@
 #include "dc_collector.h"
 #include "my_hostname.h"
 
-using namespace std;
-
 void
 usage( char *cmd )
 {
