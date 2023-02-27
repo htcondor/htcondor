@@ -6803,4 +6803,36 @@ default : @fin
 	endif
 @fin
 
+[$FEATURE.Glidein]
+description=A set of recommended configurations for when an EP is launched by a glidein.
+default : @fin
+
+	# Every hour, re-run the startup testing.  This helps detect Singularity or file
+	# transfer environments that can break mid-glidein
+	STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) STARTER_TEST
+	STARTD_CRON_STARTER_TEST_MODE = WaitForExit
+	STARTD_CRON_STARTER_TEST_EXECUTABLE = $(STARTER)
+	STARTD_CRON_STARTER_TEST_PERIOD = 1h
+	STARTD_CRON_STARTER_TEST_JOB_LOAD = 0.02
+	STARTD_CRON_STARTER_TEST_ARGS = -hawkeye
+
+	# The default for CCB heartbeats is 5 minutes.  Experience has shown some site
+	# NAT boxes will kill an idle TCP connection before that.  Accordingly, bump this
+	# down to 2.
+	CCB_HEARTBEAT_INTERVAL = 120
+@fin
+
+[$FEATURE.OSPool]
+description=A set of configurations for EPs running in the OSPool
+default : @fin
+
+	use FEATURE : Glidein
+
+	# Handy test URLs
+	HTTPS_TEST_URL=https://osg-htc.org/
+	HTTP_TEST_URL=http://cm-1.ospool.osg-htc.org/overview/
+	OSDF_TEST_URL=osdf:///osgconnect/public/dweitzel/stashcp/test.file
+
+@fin
+
 # ^^^^ TJ SEZ: do NOT insert new param knobs here. insert meta knobs just above this banner, and regular knobs near to related knobs way up there ^^^^
