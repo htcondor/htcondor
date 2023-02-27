@@ -196,7 +196,7 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 #define GET_FLOOR (SCHED_VERS+129)
 #define SET_FLOOR (SCHED_VERS+130)
 
-#define GIVE_SLOTS (SCHED_VERS+131) // Provide slot ads to the schedd (not from the negotiator)
+#define DIRECT_ATTACH (SCHED_VERS+131) // Provide slot ads to the schedd (not from the negotiator)
 
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0  // retirement time and vacate time are honored

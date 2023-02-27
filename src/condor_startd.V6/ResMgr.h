@@ -261,8 +261,8 @@ public:
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
 
-	void offerToSchedd();
-	time_t m_lastOfferToSchedd;
+	void directAttachToSchedd();
+	time_t m_lastDirectAttachToSchedd;
 
 	VMUniverseMgr m_vmuniverse_mgr;
 

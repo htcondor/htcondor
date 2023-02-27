@@ -57,7 +57,7 @@ struct slotOrderSorter {
 
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
-	m_lastOfferToSchedd(0),
+	m_lastDirectAttachToSchedd(0),
 	max_job_retirement_time_override(-1),
 	m_token_requester(&ResMgr::token_request_callback, this)
 {
@@ -1094,7 +1094,7 @@ ResMgr::update_all( void )
 		// What this actually does is insure that the update timers have been registered for all slots
 	walk( &Resource::update_walk_for_timer );
 
-	offerToSchedd();
+	directAttachToSchedd();
 	report_updates();
 	check_polling();
 	check_use();
@@ -1132,25 +1132,25 @@ ResMgr::eval_all( void )
 }
 
 void
-ResMgr::offerToSchedd()
+ResMgr::directAttachToSchedd()
 {
 	std::string schedd_name;
 	std::string schedd_pool;
 	std::string offer_submitter;
 	int interval = 0;
 
-	param(schedd_name, "OFFER_SCHEDD");
-	param(schedd_pool, "OFFER_POOL");
-	param(offer_submitter, "OFFER_SUBMITTER");
+	param(schedd_name, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+	param(schedd_pool, "STARTD_DIRECT_ATTACH_SCHEDD_POOL");
+	param(offer_submitter, "STARTD_DIRECT_ATTACH_SUBMITTER_NAME");
 
 	if ( schedd_name.empty() ) {
-		dprintf(D_FULLDEBUG, "No offer schedd\n");
+		dprintf(D_FULLDEBUG, "No direct attach schedd configured\n");
 		return;
 	}
 
-	interval = param_integer("OFFER_INTERVAL", 300);
-	if ( m_lastOfferToSchedd + interval > time(NULL) ) {
-		dprintf(D_FULLDEBUG," Delaying offer to schedd\n");
+	interval = param_integer("STARTD_DIRECT_ATTACH_INTERVAL", 300);
+	if ( m_lastDirectAttachToSchedd + interval > time(NULL) ) {
+		dprintf(D_FULLDEBUG," Delaying direct attach to schedd\n");
 		return;
 	}
 
@@ -1172,7 +1172,7 @@ ResMgr::offerToSchedd()
 	// Do we need this if we only trigger when updating the collector?
 	compute_dynamic(true);
 
-	m_lastOfferToSchedd = time(NULL);
+	m_lastDirectAttachToSchedd = time(NULL);
 
 	int timeout = 30;
 	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
@@ -1181,8 +1181,8 @@ ResMgr::offerToSchedd()
 		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
 		return;
 	}
-	if (!schedd.startCommand(GIVE_SLOTS, sock, timeout)) {
-		dprintf(D_FULLDEBUG, "Failed to send GIVE_SLOTS command to %s\n",
+	if (!schedd.startCommand(DIRECT_ATTACH, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n",
 		        schedd_name.c_str());
 		delete sock;
 		return;

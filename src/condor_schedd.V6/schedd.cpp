@@ -7687,7 +7687,7 @@ Scheduler::negotiate(int command, Stream* s)
 
 
 int
-Scheduler::CmdGiveSlots(int, Stream* stream)
+Scheduler::CmdDirectAttach(int, Stream* stream)
 {
 	ReliSock *rsock = (ReliSock*)stream;
 	ClassAd cmd_ad;
@@ -7699,10 +7699,10 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 	PROC_ID jobid;
 	jobid.cluster = jobid.proc = -1;
 
-	dprintf(D_ALWAYS, "Got GIVE_SLOTS from %s\n", rsock->peer_description());
+	dprintf(D_ALWAYS, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
 
 	if (!getClassAd(rsock, cmd_ad)) {
-		dprintf(D_ALWAYS, "CmdGiveSlots() failed to read command ad\n");
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read command ad\n");
 		return 0;
 	}
 
@@ -7716,12 +7716,12 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
 
 	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
-	dprintf(D_ALWAYS, "CmdGiveSlots() reading %d slot ads\n", num_ads);
+	dprintf(D_ALWAYS, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
 		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
-			dprintf(D_ALWAYS, "CmdGiveSlots() failed to read slot ad %d\n", i);
+			dprintf(D_ALWAYS, "CmdDirectAttach() failed to read slot ad %d\n", i);
 			return 0;
 		}
 
@@ -7738,7 +7738,7 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 	}
 
 	if (!rsock->end_of_message()) {
-		dprintf(D_ALWAYS, "CmdGiveSlots() failed to read eom\n");
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read eom\n");
 		return 0;
 	}
 
@@ -7747,7 +7747,7 @@ Scheduler::CmdGiveSlots(int, Stream* stream)
 
 	rsock->encode();
 	if (!putClassAd(rsock, reply_ad) || !rsock->end_of_message()) {
-		dprintf(D_ALWAYS, "CmdGiveSlots() failed to send reply\n");
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to send reply\n");
 		return 0;
 	}
 
@@ -8057,7 +8057,7 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		}
 
 		// These attributes are added by the schedd to slot ads that
-		// arrive via GIVE_SLOTS. Copy them into the lefteovers ad.
+		// arrive via DIRECT_ATTACH. Copy them into the lefteovers ad.
 		CopyAttribute(ATTR_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
 		CopyAttribute(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
 
@@ -13340,10 +13340,10 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
 			"RecycleShadow", this, DAEMON,
 			true /*force authentication*/);
-	 daemonCore->Register_CommandWithPayload(GIVE_SLOTS,
-			"GIVE_SLOTS",
-			(CommandHandlercpp)&Scheduler::CmdGiveSlots,
-			"GiveSlots", this, WRITE,
+	 daemonCore->Register_CommandWithPayload(DIRECT_ATTACH,
+			"DIRECT_ATTACH",
+			(CommandHandlercpp)&Scheduler::CmdDirectAttach,
+			"DirectAttach", this, WRITE,
 			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
