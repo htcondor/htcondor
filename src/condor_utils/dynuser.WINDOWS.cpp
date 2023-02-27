@@ -521,10 +521,10 @@ void InitString( UNICODE_STRING &us, wchar_t *psz ) {
 void dynuser::createaccount() {
 	USER_INFO_1 userInfo = { accountname_t, password_t, 0,				// Name / Password
 							 USER_PRIV_USER,							// Priv Level 
-							 L"",										// Home Dir
-							 L"Dynamically created Condor account.",	// Comment
+							 (wchar_t *)L"",										// Home Dir
+							 (wchar_t *)L"Dynamically created Condor account.",	// Comment
 							 UF_SCRIPT,									// flags (req'd)
-							 L"" };										// script path
+							 (wchar_t *)L"" };										// script path
 	DWORD nParam = 0;
 
 	// this is a bad idea! We shouldn't be deleting accounts
@@ -911,7 +911,7 @@ bool dynuser::deleteuser(char const * username ) {
 
 // this function will remove all accounts starting with user_prefix
 
-bool dynuser::cleanup_condor_users(char* user_prefix) {
+bool dynuser::cleanup_condor_users(const char* user_prefix) {
 
 	LPUSER_INFO_10 pBuf = NULL;
 	LPUSER_INFO_10 pTmpBuf;

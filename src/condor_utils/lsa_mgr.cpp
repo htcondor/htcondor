@@ -447,7 +447,7 @@ lsa_mgr::storeDataToRegistry( const PLSA_UNICODE_STRING lsaString ) {
 
 
 void
-lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString, const LPWSTR String ) {
+lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString,  PCWSTR String ) {
 	DWORD StringLength;
 	if(String == NULL) {
 		LsaString->Buffer = NULL;
@@ -457,7 +457,7 @@ lsa_mgr::InitLsaString( PLSA_UNICODE_STRING LsaString, const LPWSTR String ) {
 	}
 	//StringLength = lstrlenW(String);
 	StringLength = wcslen(String);
-	LsaString->Buffer = String;
+	LsaString->Buffer = (PWSTR) String;
 	LsaString->Length = (USHORT) StringLength * sizeof(WCHAR);
 	LsaString->MaximumLength = (USHORT) (StringLength + 1) * sizeof(WCHAR);
 }

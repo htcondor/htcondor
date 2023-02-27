@@ -32,6 +32,8 @@ the new copy into place.
 #define _CRT_NONSTDC_NO_DEPRECATE
 #define _CRT_NONSTDC_NO_WARNINGS
 
+struct IUnknown; // hackey fix for broken headers
+
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>

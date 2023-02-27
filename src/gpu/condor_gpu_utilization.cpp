@@ -16,6 +16,7 @@
 #define NOSERVICE
 #define NOMCX
 #define NOIME
+struct IUnknown;
 #include <Windows.h>
 #endif /* defined(WIN32) */
 #include <algorithm>

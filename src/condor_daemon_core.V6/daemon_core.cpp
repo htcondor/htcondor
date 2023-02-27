@@ -7586,13 +7586,14 @@ int DaemonCore::Create_Process(
 
 	// if working in an encrypted execute directory, we won't be able to check the exe type
 	// unless we first switch to user priv
+	BOOL cp_result, gbt_result;
+	DWORD binType;
 	priv_state gbt_prv = PRIV_UNKNOWN;
+	{
 	if (priv == PRIV_USER_FINAL) {
 		gbt_prv = set_user_priv();
 	}
 
-	BOOL cp_result, gbt_result;
-	DWORD binType;
 	gbt_result = GetBinaryType(executable, &binType);
 
 	// if GetBinaryType() failed,
@@ -7613,6 +7614,7 @@ int DaemonCore::Create_Process(
 
 	if (priv == PRIV_USER_FINAL) {
 		set_priv(gbt_prv);
+	}
 	}
 
 	// test if the executable is either unexecutable, or if GetBinaryType()
@@ -7673,7 +7675,7 @@ int DaemonCore::Create_Process(
 			// making this a NULL string tells NT to dynamically
 			// create a new Window Station for the process we are about
 			// to create....
-		si.lpDesktop = "";
+		si.lpDesktop = (LPSTR)"";
 
 			// Check USE_VISIBLE_DESKTOP in condor_config.  If set to TRUE,
 			// then run the job on the visible desktop, otherwise create
@@ -7684,7 +7686,7 @@ int DaemonCore::Create_Process(
 			if ( GrantDesktopAccess(user_token) == 0 ) {
 					// Success!!  The user now has permission to use
 					// the visible desktop, so change si.lpDesktop
-				si.lpDesktop = "winsta0\\default";
+				si.lpDesktop = (LPSTR)"winsta0\\default";
 			} else {
 					// The system refuses to grant access to the visible
 					// desktop.  Log a message & we'll fall back on using

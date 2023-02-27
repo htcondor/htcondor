@@ -1129,7 +1129,7 @@ CondorCopyDirectory (
     DWORD       last_error    = ERROR_SUCCESS,
                 i;
     HANDLE      have_access   = NULL;
-    PSTR        privelages[]  = { SE_BACKUP_NAME, SE_RESTORE_NAME };
+    LPCTSTR     privelages[]  = { SE_BACKUP_NAME, SE_RESTORE_NAME };
     BOOL        opened        = TRUE,
                 added         = FALSE,
                 copied        = FALSE,
@@ -1313,7 +1313,7 @@ CondorCopyDirectory (
 static BOOL
 CondorRemoveDirectoryAs ( 
      priv_state  who,
-     PCHAR       name,
+     const char *name,
      PCWSTR      w_path ) {
 
      priv_state  priv       = PRIV_UNKNOWN;
@@ -1374,7 +1374,7 @@ CondorRemoveDirectoryAs (
 static BOOL
 CondorRemoveFileAs ( 
      priv_state  who,
-     PCHAR       name,
+     const char *name,
      PCWSTR      w_path ) {
 
      priv_state  priv       = PRIV_UNKNOWN;
@@ -1786,7 +1786,7 @@ CondorRemoveDirectory ( PCSTR directory ) {
     PWSTR       w_directory  = NULL;
     DWORD       last_error   = ERROR_SUCCESS,
                 i;
-    PSTR        privelages[] = { SE_BACKUP_NAME, SE_RESTORE_NAME };
+    LPCTSTR     privelages[] = { SE_BACKUP_NAME, SE_RESTORE_NAME };
     BOOL        opened       = FALSE,
                 added        = FALSE,
                 removed      = FALSE,

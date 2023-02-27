@@ -75,7 +75,7 @@ void SystemInfoUtils::LPCWSTR2MyString( LPCWSTR strW, MyString& str )
 
 	TCHAR* actChar = (TCHAR*)strW;
 
-	if ( actChar == '\0' )
+	if ( actChar == nullptr)
 		return;
 
 	size_t len = wcslen(strW) + 1;
