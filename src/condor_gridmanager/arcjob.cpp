@@ -727,13 +727,14 @@ void ArcJob::doEvaluateState()
 				SetRemoteJobStatus(info_status.c_str());
 			}
 
-			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
-				int exit_code = 0;
+			// With some LRMS, the job is FAILED if it has a non-zero exit
+			// code. So use the presence of an ExitCode attribute to
+			// determine whether the job ran to completion.
+			if (info_ad.LookupString("ExitCode", val)) {
+				int exit_code = atoi(val.c_str());
 				int wallclock = 0;
 				int cpu = 0;
-				if ( info_ad.LookupString("ExitCode", val ) ) {
-					exit_code = atoi(val.c_str());
-				}
+
 				if ( info_ad.LookupString("UsedTotalWallTime", val ) ) {
 					wallclock = atoi(val.c_str());
 				}
@@ -755,7 +756,7 @@ void ArcJob::doEvaluateState()
 				} else {
 					errorString = "ARC job failed for unknown reason";
 				}
-				gmState = GM_STAGE_OUT;
+				gmState = GM_CANCEL_CLEAN;
 			}
 			} break;
 		case GM_STAGE_OUT: {
@@ -794,8 +795,6 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) File stage-out failed: %s\n",
 				         procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_HOLD;
-			} else if ( remoteJobState != REMOTE_STATE_FINISHED ) {
-				gmState = GM_CANCEL_CLEAN;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
