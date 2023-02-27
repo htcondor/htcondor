@@ -714,7 +714,11 @@ is_ccb_file( const char *name )
 void
 check_execute_dir()
 {
-	time_t now = time(NULL);
+		// The plugin tests create a temporary directory to hold the
+		// test file outputs.  Since there's no easily predictable pattern,
+		// as to whether it's in use, we assume that anything less than 30
+		// minutes is in use.
+	time_t now = time(NULL) - 30 * 60;
 	const char	*f;
 	bool	busy;
 	State	s = get_machine_state();
