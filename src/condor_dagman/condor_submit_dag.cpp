@@ -33,10 +33,6 @@
 #include "setenv.h"
 #include "condor_attributes.h"
 
-// From condor_utils/condor_config.C
-// Note: This function is declared 'extern "C"'
-bool is_piped_command(const char* filename);
-
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, int argc,

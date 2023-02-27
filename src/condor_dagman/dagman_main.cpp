@@ -38,14 +38,6 @@
 
 void ExitSuccess();
 
-	// From condor_utils/condor_config.C
-	// Note: these functions are declared 'extern "C"' where they're
-	// implemented; if we don't do that here we get a link failure
-	// (I think because of the name mangling).  wenger 2007-02-09.
-//extern "C" void process_config_source( char* file, const char* name,
-//			char* host, int required );
-bool is_piped_command(const char* filename);
-
 static std::string lockFileName;
 
 static Dagman dagman;
@@ -62,7 +54,7 @@ static void Usage() {
 			"\t\t-CsdVersion <version string>\n"
 			"\t\t[-Help]\n"
 			"\t\t[-Version]\n"
-		"\t\t[-Debug <level>]\n"
+			"\t\t[-Debug <level>]\n"
 			"\t\t[-MaxIdle <int N>]\n"
 			"\t\t[-MaxJobs <int N>]\n"
 			"\t\t[-MaxPre <int N>]\n"
@@ -87,6 +79,8 @@ static void Usage() {
 			"\t\t[-Outfile_dir <directory>]\n"
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
+			"\t\t[-Include_env <Variables>]\n"
+			"\t\t[-Insert_env <Key=Value>]\n"
 			"\t\t[-Priority <int N>]\n"
 			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
