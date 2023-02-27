@@ -27,6 +27,11 @@
 // This is the shortest time between two runs of UpdateLeases()
 #define UPDATE_LEASE_DELAY 30
 
+// Defined values for m_pingErrCode (used to set
+// ATTR_GRID_RESOURCE_UNAVAILABLE_REASON_CODE in the grid resource ad):
+// 1  - PING command from GAHP failed (default)
+// 2  - Failed to start GAHP server (for remote blahp configuration)
+
 class BaseJob;
 class GahpClient;
 
@@ -106,6 +111,7 @@ class BaseResource : public Service
 	time_t lastPing;
 	time_t lastStatusChange;
 	std::string m_pingErrMsg;
+	int m_pingErrCode;
 
 	static int probeInterval;
 	static int probeDelay;

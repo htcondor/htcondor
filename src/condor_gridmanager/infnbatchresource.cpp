@@ -166,6 +166,7 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 		ping_succeeded = false;
 		m_pingErrMsg = "Failed to start GAHP: ";
 		m_pingErrMsg += gahp->getGahpStderr();
+		m_pingErrCode = 2;
 		return;
 	}
 	if (m_gahpIsRemote) {
@@ -177,6 +178,7 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 			ping_succeeded = false;
 			m_pingErrMsg = "Failed to start GAHP: ";
 			m_pingErrMsg += m_xfer_gahp->getGahpStderr();
+			m_pingErrCode = 2;
 			return;
 		}
 		// Try creating the security session only when we first
@@ -206,6 +208,7 @@ void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool&
 		ping_complete = true;
 		ping_succeeded = false;
 		m_pingErrMsg = gahp->getErrorString();
+		m_pingErrCode = 1;
 	} 
 	else {
 		ping_complete = true;
