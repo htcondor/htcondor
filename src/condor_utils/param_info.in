@@ -4592,7 +4592,7 @@ description=
 tags=schedd
 
 [ALLOW_TRANSFER_REMAP_TO_MKDIR]
-default=false
+default=true
 type=bool
 description=Allow transfer output remap to make directories if they don't exist
 tags=shadow
