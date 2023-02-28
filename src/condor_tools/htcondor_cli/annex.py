@@ -141,6 +141,9 @@ class Status(Verb):
         query = f'hpc_annex_name =!= undefined'
         if the_annex_name is not None:
             query = f'hpc_annex_name == "{the_annex_name}"'
+        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+        authenticated_identity = f"{getpass.getuser()}@{annex_token_domain}"
+        query = f'({query}) && (AuthenticatedIdentity == "{authenticated_identity}")'
         annex_jobs = schedd.query(query, opts=htcondor.QueryOpts.DefaultMyJobsOnly)
 
         ## This all very ugly and can't possibly be the best way to do this.
