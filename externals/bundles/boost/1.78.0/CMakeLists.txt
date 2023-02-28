@@ -37,7 +37,7 @@ if (WINDOWS)
 
 	set(BOOST_CONFIGURE echo "Nothing to configure")
 	set(BOOST_MAKE echo "No make necessary")
-	set(BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && cp boost_python* ${BOOST_INSTALL_LOC}/lib && touch ${BOOST_INSTALL_LOC}/done)
+	set(BOOST_INSTALL tar -czpf boost.tar.gz boost && tar -xzvf boost.tar.gz -C "${BOOST_INSTALL_LOC}/boost/" && ${CMAKE_COMMAND} -E copy_directory . ${BOOST_INSTALL_LOC}/lib && ${CMAKE_COMMAND} -E touch ${BOOST_INSTALL_LOC}/done)
 
 	ExternalProject_Add(boost
 		#-- Download Step ----------

@@ -39,10 +39,9 @@ if (WITH_KRB5)
 		set (KRB5_CONFIGURE echo "No configuration necessary")
 		set (KRB5_MAKE echo "No make necessary")
 
-		# Something is wrong with the default install (make install suck-o)
-		set (KRB5_INSTALL cp -r *.lib ${KRB5_INSTALL_LOC}/lib \r\n
-			cp -r *.dll ${KRB5_INSTALL_LOC}/lib \r\n
-			cp -r include/* ${KRB5_INSTALL_LOC}/include \r\n)
+		# Something is wrong with the default install
+		set (KRB5_INSTALL ${CMAKE_COMMAND} -E copy_directory . ${KRB5_INSTALL_LOC}/lib \r\n
+				${CMAKE_COMMAND} -E copy_directory include ${KRB5_INSTALL_LOC}/include \r\n)
 
 			ExternalProject_Add(krb5
 				#-- Download Step ----------
