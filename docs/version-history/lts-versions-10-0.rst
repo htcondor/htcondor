@@ -18,6 +18,12 @@ Release Notes:
 
 - HTCondor version 10.0.2 not yet released.
 
+- HTCondor Python wheel is now available for Python 3.11 on PyPI.
+  :jira:`1586`
+
+- macOS tarball is now being built on macOS 11.
+  :jira:`1610`
+
 New Features:
 
 - Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
@@ -46,7 +52,7 @@ New Features:
 Bugs Fixed:
 
 - In the python bindings, the attribute ``ServerTime`` is now included
-  in job ads returned by ``Schedd.query()``.
+  in job ads returned by ``Schedd.query()`` to support Fifemon.
   :jira:`1531`
 
 - Fixed issue when HTCondor could not be installed on Ubuntu 18.04
