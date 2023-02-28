@@ -48,6 +48,12 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
+- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilites would instantly
+  restart that node everytime it saw a job proc failure. This would result in nodes
+  with multi-proc jobs to resubmit the entire node multiple times causing internal
+  issues for DAGMan.
+  :jira:`1607`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
