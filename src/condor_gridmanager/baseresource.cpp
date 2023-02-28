@@ -46,7 +46,7 @@ BaseResource::BaseResource( const char *resource_name )
 								"BaseResource::Ping", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
-	m_pingErrCode = 1;
+	m_pingErrCode = GRU_PING_FAILED;
 
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 

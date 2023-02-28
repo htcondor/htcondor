@@ -29,8 +29,8 @@
 
 // Defined values for m_pingErrCode (used to set
 // ATTR_GRID_RESOURCE_UNAVAILABLE_REASON_CODE in the grid resource ad):
-// 1  - PING command from GAHP failed (default)
-// 2  - Failed to start GAHP server (for remote blahp configuration)
+#define GRU_PING_FAILED 1
+#define GRU_FAILED_TO_START_GAHP 2
 
 class BaseJob;
 class GahpClient;
