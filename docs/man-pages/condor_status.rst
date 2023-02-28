@@ -76,6 +76,8 @@ Options
     ClassAds to display. By default, returns the *condor_startd*
     ClassAd. If **-schedd** is also given, return the *condor_schedd*
     ClassAd on that host.
+ **-grid**
+    (Query option) Query grid resource ClassAds.
  **-java**
     (Query option) Display only Java-capable resources.
  **-license**
