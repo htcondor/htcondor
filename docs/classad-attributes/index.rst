@@ -14,6 +14,7 @@ ClassAd Attributes
    negotiator-classad-attributes
    submitter-classad-attributes
    defrag-classad-attributes
+   grid-classad-attributes
    collector-classad-attributes
    classad-attributes-added-by-collector
    daemon-core-statistics-attributes
