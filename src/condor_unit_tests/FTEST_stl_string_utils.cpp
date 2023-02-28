@@ -113,9 +113,9 @@ static bool test_case_string_view() {
     emit_test("Test case insensitive string_view specialization");
 
 	// test that we are constexpr-correct
-	static_assert(case_sv("HELLO") == case_sv("hello"));
+	static_assert(istring_view("HELLO") == istring_view("hello"));
 
-	bool passed = case_sv("foo") != case_sv("bar");
+	bool passed = istring_view("foo") != istring_view("bar");
 	if (passed) {
 		PASS;
 	} else {

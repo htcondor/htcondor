@@ -200,10 +200,13 @@ protected:
 // Mostly cribbed from cppreference.com/w/cpp/string/char_traits
 struct case_char_traits : public std::char_traits<char>
 {
-	// Only works for ASCII, but that's all we care about
     static constexpr char to_upper(char ch)
     {
-        return (ch | 0x20);
+		if ((ch >= 'a') && (ch <= 'z')) {
+			return ch - 'a' + 'A';
+		} else {
+			return ch;
+		}
     }
  
     static constexpr bool eq(char c1, char c2)
@@ -243,6 +246,6 @@ struct case_char_traits : public std::char_traits<char>
     }
 };
 
-using case_sv = std::basic_string_view<char, case_char_traits>;
+using istring_view = std::basic_string_view<char, case_char_traits>;
 
 #endif // _stl_string_utils_h_
