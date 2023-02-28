@@ -7588,8 +7588,8 @@ int DaemonCore::Create_Process(
 	// unless we first switch to user priv
 	BOOL cp_result, gbt_result;
 	DWORD binType;
-	priv_state gbt_prv = PRIV_UNKNOWN;
 	{
+	priv_state gbt_prv = PRIV_UNKNOWN;
 	if (priv == PRIV_USER_FINAL) {
 		gbt_prv = set_user_priv();
 	}

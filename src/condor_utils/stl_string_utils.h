@@ -193,7 +193,7 @@ protected:
 	const char * str;   // The string we are tokenizing. it's not a copy, caller must make sure it continues to exist.
 	const char * delims;
 	std::string current;
-	int ixNext;
+	size_t ixNext;
 	bool pastEnd;
 };
 

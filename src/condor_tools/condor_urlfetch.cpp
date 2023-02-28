@@ -42,8 +42,6 @@
  * 5 - could not fetch url and no cache file was available
  */
 
-using namespace std;
-
 size_t write_data(void *ptr, size_t size, size_t nmemb, void *userp); 
 int write_prevfile(const char *prev);
 //bool isEmpty(FILE *file);
@@ -138,10 +136,10 @@ int main(int argc, const char *argv[])
             }
             else
             {
-                ofstream out(argv[lastLoc]);
+				std::ofstream out(argv[lastLoc]);
 
-                out.write(readBuffer.c_str(), readBuffer.length());
-                out.close();
+				out.write(readBuffer.c_str(), readBuffer.length());
+				out.close();
             }
         }
     }
@@ -200,7 +198,7 @@ int write_prevfile(const char *prev)
 
     std::ifstream  toPrint(prev, std::ios::binary);
 
-    cout << toPrint.rdbuf();
+	std::cout << toPrint.rdbuf();
     fclose(ptrFile);
 
     return 0;
