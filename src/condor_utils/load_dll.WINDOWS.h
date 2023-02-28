@@ -41,9 +41,9 @@ class LoadDLL {
 
 public:
 	
-	LoadDLL () throw ();
-    LoadDLL (LPCSTR name ) throw ();
-	virtual ~LoadDLL () throw (); 
+	LoadDLL () noexcept;
+    LoadDLL (LPCSTR name ) noexcept;
+	virtual ~LoadDLL () noexcept; 
 	
 	bool load ( LPCSTR name );
 	void unload ();
