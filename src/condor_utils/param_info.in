@@ -6831,7 +6831,7 @@ default : @fin
 	# Handy test URLs
 	HTTPS_TEST_URL=https://osg-htc.org/
 	HTTP_TEST_URL=http://cm-1.ospool.osg-htc.org/overview/
-	OSDF_TEST_URL=osdf:///osgconnect/public/dweitzel/stashcp/test.file
+	OSDF_TEST_URL=osdf:///osgconnect/public/osg/testfile.txt
 
 @fin
 
