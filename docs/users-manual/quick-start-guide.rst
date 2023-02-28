@@ -35,7 +35,7 @@ For HTCondor to run a job, it must be given details such as the names
 and location of the executable and all needed input files. These details
 are specified in a submit description file.
 
-.. rubric: The executable
+.. rubric:: The executable
 
 Before presenting the details of the submit description file, consider this
 first HTCondor job.  It is a sleep job that waits for 6 seconds and then
@@ -81,7 +81,7 @@ executable by running the following command:
 
     chmod u+x sleep.sh
 
-.. rubric: The contents of the submit description file
+.. rubric:: The contents of the submit description file
 
 The submit description file describes the job.  To submit this sample
 job, again use an editor to create the file ``sleep.sub``.  The submit

@@ -30,6 +30,7 @@
 #include "secure_file.h"
 #include "zkm_base64.h"
 #include "directory_util.h"
+#include "condor_holdcodes.h"
 
 
 extern ReliSock *syscall_sock;
@@ -2152,6 +2153,11 @@ case CONDOR_getdir:
 		auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_OAUTH"));
 		if (!cred_dir) {
 			dprintf(D_ALWAYS, "ERROR: CONDOR_getcreds doesn't have SEC_CREDENTIAL_DIRECTORY_OAUTH defined.\n");
+			result = ( syscall_sock->put(-1) );
+			ASSERT( result );
+			result = ( syscall_sock->end_of_message() );
+			ASSERT( result );
+			Shadow->holdJob("Job credentials are not available", CONDOR_HOLD_CODE::CorruptedCredential, 0);
 			return -1;
 		}
 		std::string cred_dir_name;
@@ -2210,6 +2216,7 @@ case CONDOR_getdir:
 
 		int last_command = 0;
 		if (had_error) {
+			Shadow->holdJob("Job credentials are not available", CONDOR_HOLD_CODE::CorruptedCredential, 0);
 			last_command = -1;
 		}
 
