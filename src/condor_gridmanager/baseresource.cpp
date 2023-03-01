@@ -26,6 +26,8 @@
 #include "gridmanager.h"
 #include "gahp-client.h"
 
+#include <algorithm>
+
 #define DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE		1000
 #define DEFAULT_JOB_POLL_RATE 5
 #define DEFAULT_JOB_POLL_INTERVAL 60
@@ -363,7 +365,11 @@ void BaseResource::UnregisterJob( BaseJob *job )
 
 	pingRequesters.Delete( job );
 	registeredJobs.Delete( job );
-	std::erase(leaseUpdates, job);
+
+	// Some of our platforms don't support std::erase()
+	//std::erase(leaseUpdates, job);
+	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
+	leaseUpdates.erase(it, leaseUpdates.end());
 
 	if ( IsEmpty() ) {
 		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
@@ -449,7 +455,10 @@ void BaseResource::CancelSubmit( BaseJob *job )
 		submitsWanted.Delete( job );
 	}
 
-	std::erase(leaseUpdates, job);
+	// Some of our platforms don't support std::erase()
+	//std::erase(leaseUpdates, job);
+	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
+	leaseUpdates.erase(it, leaseUpdates.end());
 
 	SetJobPollInterval();
 
