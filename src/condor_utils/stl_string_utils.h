@@ -197,4 +197,56 @@ protected:
 	bool pastEnd;
 };
 
+// Case insensitive string_view
+// Mostly cribbed from cppreference.com/w/cpp/string/char_traits
+struct case_char_traits : public std::char_traits<char>
+{
+    static constexpr char to_upper(char ch)
+    {
+		if ((ch >= 'a') && (ch <= 'z')) {
+			return ch - 'a' + 'A';
+		} else {
+			return ch;
+		}
+    }
+ 
+    static constexpr bool eq(char c1, char c2)
+    {
+        return to_upper(c1) == to_upper(c2);
+    }
+ 
+    static constexpr bool lt(char c1, char c2)
+    {
+         return to_upper(c1) < to_upper(c2);
+    }
+ 
+    static constexpr int compare(const char* s1, const char* s2, std::size_t n)
+    {
+        while (n-- != 0)
+        {
+            if (to_upper(*s1) < to_upper(*s2))
+                return -1;
+            if (to_upper(*s1) > to_upper(*s2))
+                return 1;
+            ++s1;
+            ++s2;
+        }
+        return 0;
+    }
+ 
+    static constexpr const char* find(const char* s, std::size_t n, char a)
+    {
+        auto const ua (to_upper(a));
+        while (n-- != 0) 
+        {
+            if (to_upper(*s) == ua)
+                return s;
+            s++;
+        }
+        return nullptr;
+    }
+};
+
+using istring_view = std::basic_string_view<char, case_char_traits>;
+
 #endif // _stl_string_utils_h_
