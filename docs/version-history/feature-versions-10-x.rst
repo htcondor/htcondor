@@ -48,6 +48,10 @@ New Features:
   the case, HTCondor marks the resource as unavailable instead of
   putting the affected jobs on hold. This matches the behavior for
   other grid universe job types.
+  Grid ads in the collector now contain attributes
+  ``GridResourceUnavailableTimeReason`` and
+  ``GridResourceUnavailableTimeReasonCode``, which give details about
+  why the remote scheduing system is considered unavailable.
   :jira:`1582`
 
 - DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the

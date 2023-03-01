@@ -34,6 +34,22 @@ Grid ClassAd Attributes
     Measured in the number of seconds since the epoch (00:00:00 UTC,
     Jan 1, 1970).
 
+:classad-attribute:`GridResourceUnavailableTimeReason`
+    A string giving details as to why the grid service is currently
+    considered unavailable.
+
+:classad-attribute:`GridResourceUnavailableTimeReasonCode`
+    An integer classifying the type of error that caused the grid
+    service to be considered unavailable.
+
+    +-------+-----------------------------+
+    | Value | Failure Type                |
+    +=======+=============================+
+    | 1     | GAHP PING command failed    |
+    +-------+-----------------------------+
+    | 2     | Failed to start GAHP server |
+    +-------+-----------------------------+
+
 :classad-attribute:`IdleJobs`
     The number of idle jobs currently submitted to the grid service by
     this *condor_gridmanager*.
