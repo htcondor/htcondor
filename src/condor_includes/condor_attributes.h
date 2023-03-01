@@ -247,6 +247,7 @@
 #define ATTR_DELEGATED_PROXY_EXPIRATION  "DelegatedProxyExpiration"
 #define ATTR_GRID_RESOURCE  "GridResource"
 #define ATTR_GRID_RESOURCE_UNAVAILABLE_REASON  "GridResourceUnavailableReason"
+#define ATTR_GRID_RESOURCE_UNAVAILABLE_REASON_CODE  "GridResourceUnavailableReasonCode"
 #define ATTR_GRID_RESOURCE_UNAVAILABLE_TIME  "GridResourceUnavailableTime"
 #define ATTR_GRID_JOB_ID  "GridJobId"
 #define ATTR_GRID_JOB_STATUS  "GridJobStatus"

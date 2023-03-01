@@ -46,6 +46,7 @@ BaseResource::BaseResource( const char *resource_name )
 								"BaseResource::Ping", (Service*)this );
 	lastPing = 0;
 	lastStatusChange = 0;
+	m_pingErrCode = GRU_PING_FAILED;
 
 	jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
 
@@ -310,6 +311,8 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 			resource_ad->Assign(ATTR_GRID_RESOURCE_UNAVAILABLE_REASON,
 			                    m_pingErrMsg);
 		}
+		resource_ad->Assign(ATTR_GRID_RESOURCE_UNAVAILABLE_REASON_CODE,
+		                    m_pingErrCode);
 	}
 
 	int num_idle = 0;
