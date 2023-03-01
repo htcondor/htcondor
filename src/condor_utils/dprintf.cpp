@@ -577,7 +577,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 					MEMORY_BASIC_INFORMATION mbi;
 					SIZE_T cb = VirtualQuery (pfn, &mbi, sizeof(mbi));
 					int off = (int)((const char*)pfn - (const char*)mbi.AllocationBase);
-					if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+					if (cb == sizeof(mbi) && mbi.AllocationBase != nullptr) {
 						if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
 							// print only the part after the last path separator.
 							char * pname = filename_from_path(szModule);
@@ -2368,7 +2368,7 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 	#endif // _DGBHELP_
 		MEMORY_BASIC_INFORMATION mbi;
 		SIZE_T cb = VirtualQuery (trace[ix], &mbi, sizeof(mbi));
-		if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+		if (cb == sizeof(mbi) && mbi.AllocationBase != nullptr) {
 			if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
 				args[1] = (ULONG_PTR)szModule;
 				// print only the part after the last path separator.

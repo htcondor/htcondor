@@ -33,7 +33,6 @@
 #include "setenv.h"
 #include "condor_attributes.h"
 
-
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts, int argc,
@@ -113,6 +112,17 @@ int main(int argc, char *argv[])
 		// Further work to get the shallowOpts structure set up properly.
 	tmpResult = dagmanUtils.setUpOptions( deepOpts, shallowOpts, dagFileAttrLines );
 	if ( tmpResult != 0 ) return tmpResult;
+
+		// Post setUpOptions() will determine custom dagman configuration file
+		// If we have a config file then process it for further DAGMan setup options
+	if (!shallowOpts.strConfigFile.empty()) {
+		if (access(shallowOpts.strConfigFile.c_str(), R_OK) != 0 &&
+			!is_piped_command(shallowOpts.strConfigFile.c_str())) {
+				fprintf(stderr, "ERROR: Can't read DAGMan config file: %s\n", shallowOpts.strConfigFile.c_str());
+				exit(1);
+		}
+		process_config_source(shallowOpts.strConfigFile.c_str(), 0, "DAGMan config", NULL, true);
+	}
 
 		// Check whether the output files already exist; if so, we may
 		// abort depending on the -f flag and whether we're running
@@ -587,7 +597,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				deepOpts.batchName = argv[++iArg];
 				trim_quotes(deepOpts.batchName, "\""); // trim "" if any
 			}
-			else if (strArg.find("-insert") != std::string::npos) // -insert_sub_file
+			else if (strArg.find("-insert") != std::string::npos && strArg.find("_env") == std::string::npos) // -insert_sub_file
 			{
 				if (iArg + 1 >= argc) {
 					fprintf(stderr, "-insert_sub_file argument needs a value\n");
@@ -636,7 +646,26 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 			else if (strArg.find("-import_env") != std::string::npos) // -import_env
 			{
 				deepOpts.importEnv = true;
-			}			     
+			}
+			else if (strArg.find("-include_env") != std::string::npos)
+			{
+				if(iArg + 1 >= argc) {
+					fprintf(stderr, "-include_env argument needs a comma separated list of variables i.e \"Var1,Var2...\"\n");
+					printUsage();
+				}
+				if (!deepOpts.getFromEnv.empty()) { deepOpts.getFromEnv += ","; }
+				deepOpts.getFromEnv += argv[++iArg];
+			}
+			else if (strArg.find("-insert_env") != std::string::npos)
+			{
+				if(iArg + 1 >= argc) {
+					fprintf(stderr, "-insert_env argument needs a key=value pair i.e. \"EXAMPLE_VAR=True\"\n");
+					printUsage();
+				}
+				std::string kv_pairs(argv[++iArg]);
+				trim(kv_pairs);
+				deepOpts.addToEnv.push_back(kv_pairs);
+			}
 			else if (strArg.find("-dumpr") != std::string::npos) // -DumpRescue
 			{
 				shallowOpts.dumpRescueDag = true;
@@ -826,6 +855,8 @@ int printUsage(int iExitCode)
 	printf("    -do_recurse         (do recurse in nested DAGs)\n");
 	printf("    -update_submit      (update submit file if it exists)\n");
 	printf("    -import_env         (explicitly import env into submit file)\n");
+	printf("    -include_env <Variables> (Comma seperated list of variables to add to .condor.sub files getenv filter)\n");
+	printf("    -insert_env  <Key=Value> (Delimited Key=Value pairs to explicitly set in the .condor.sub files environment)\n");
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
 	printf("    -priority <priority> (jobs will run with this priority by default)\n");

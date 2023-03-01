@@ -181,18 +181,19 @@ public:
 		return *this;
 	}
 
-	bool operator!=(const StringTokenIterator &rhs) {
-		return (this->ixNext != rhs.ixNext) || (this->pastEnd != rhs.pastEnd);
-	}
-	bool operator==(const StringTokenIterator &rhs) {
-		return this->ixNext == rhs.ixNext && this->pastEnd == rhs.pastEnd;
-	}
+friend bool operator==(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {
+	return lhs.ixNext == rhs.ixNext && lhs.pastEnd == rhs.pastEnd;
+}
+
+friend bool operator!=(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {
+	return (lhs.ixNext != rhs.ixNext) || (lhs.pastEnd != rhs.pastEnd);
+}
 
 protected:
 	const char * str;   // The string we are tokenizing. it's not a copy, caller must make sure it continues to exist.
 	const char * delims;
 	std::string current;
-	int ixNext;
+	size_t ixNext;
 	bool pastEnd;
 };
 

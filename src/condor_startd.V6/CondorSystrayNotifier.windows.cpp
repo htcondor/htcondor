@@ -128,7 +128,7 @@ void CondorSystrayNotifier::writeToRegistryForCpu(int iCpuId, int iStatus)
 {
 	HKEY hNotifyHandle;
 	DWORD dwCreatedOrOpened, result;
-	result = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, "REG_DWORD", 
+	result = RegCreateKeyEx(HKEY_LOCAL_MACHINE, "SOFTWARE\\condor", 0, (LPSTR)"REG_DWORD", 
 		REG_OPTION_VOLATILE, KEY_ALL_ACCESS, NULL, &hNotifyHandle, &dwCreatedOrOpened);
 
 	if ( result != ERROR_SUCCESS ) {

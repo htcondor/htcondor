@@ -46,8 +46,6 @@
 #include "enum_utils.h"
 #include <iostream>
 
-using namespace std;
-
 const CondorID Dag::_defaultCondorId;
 
 const int Dag::DAG_ERROR_CONDOR_SUBMIT_FAILED = -1001;
@@ -4307,7 +4305,7 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 	_nextSubmitDelay *= 2;
 
 	if ( _dagStatus == DagStatus::DAG_STATUS_RM && node->GetType() != NodeType::FINAL ) {
-		max_submit_attempts = min( max_submit_attempts, 2 );
+		max_submit_attempts = std::min( max_submit_attempts, 2 );
 	}
 
 	if ( node->_submitTries >= max_submit_attempts ) {

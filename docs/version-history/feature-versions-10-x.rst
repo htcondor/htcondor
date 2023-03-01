@@ -50,6 +50,14 @@ New Features:
   other grid universe job types.
   :jira:`1582`
 
+- DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the
+  ability to better control the environment passed to the DAGMan proper job.
+  ``getenv`` will default to ``CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ``
+  in the ``.condor.sub`` file which can be appended to via the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new *condor_submit_dag* flag
+  ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
+  directly set key=value pairs of information into the ``.condor.sub`` environment.
+  :jira:`1580`
 
 Bugs Fixed:
 
@@ -175,6 +183,42 @@ Bugs Fixed:
 - Added missing environment variables for the SciTokens plugin.
   :jira:`1516`
 
+Version 10.2.5
+--------------
+
+.. HTCondor version 10.2.5 released on February 28, 2023.
+
+- HTCondor version 10.2.5 not yet released.
+
+New Features:
+
+- None.
+
+-Bugs Fixed:
+
+- Fixed an issue where after a *condor_schedd* restart, the
+  ``JobsUnmaterialized`` attribute in the *condor_schedd* ad may be an
+  overcount of the number of unmaterialized jobs in rare cases.
+  :jira:`1606`
+
+Version 10.2.4
+--------------
+
+Release Notes:
+
+- HTCondor version 10.2.4 released on February 24, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed an issue where after a *condor_schedd* restart, the
+  ``JobsUnmaterialized`` attribute in the *condor_schedd* ad may be an
+  undercount of the number of unmaterialized jobs for previous submissions.
+  :jira:`1591`
+
 Version 10.2.3
 --------------
 
@@ -184,7 +228,7 @@ New Features:
 
 - Added an attribute to the *condor_schedd* ClassAd that advertises the number of
   late materialization jobs that have been submitted, but have not yet materialized.
-  The new attribute is called ``JobsUnmaterialized``
+  The new attribute is called ``JobsUnmaterialized``.
   :jira:`1591`
 
 Bugs Fixed:

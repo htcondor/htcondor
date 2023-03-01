@@ -318,7 +318,7 @@ file.
     or, if you wanted to put the name of the machine the job ran on
     into the output file name, you could add
 
-    .. code-block: condor-submit
+    .. code-block:: condor-submit
 
       output = output_file.$$(Name)
 
@@ -328,7 +328,7 @@ file.
     For example, if want to pass 90% of the allocated memory as an
     argument to your job, the submit file can have
 
-    .. code-block: condor-submit
+    .. code-block:: condor-submit
 
         arguments = --mem $$([ Memory * 0.9 ])
 

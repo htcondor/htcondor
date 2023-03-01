@@ -97,7 +97,7 @@
 bool real_config(const char* host, int wantsQuiet, int config_options, const char * root_config);
 //int Read_config(const char*, int depth, MACRO_SET& macro_set, int, bool, const char * subsys, std::string & errmsg);
 bool Test_config_if_expression(const char * expr, bool & result, std::string & err_reason, MACRO_SET& macro_set, MACRO_EVAL_CONTEXT & ctx);
-bool is_piped_command(const char* filename);
+//bool is_piped_command(const char* filename);
 bool is_valid_command(const char* cmdToExecute);
 void init_tilde();
 void fill_attributes();

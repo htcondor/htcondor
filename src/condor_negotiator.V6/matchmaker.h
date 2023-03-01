@@ -282,7 +282,7 @@ class Matchmaker : public Service
 		friend int comparisonFunction (ClassAd *, ClassAd *,
 										void *);
 
-		friend class submitterLessThan;
+		friend struct submitterLessThan;
 
 		std::vector<std::pair<ClassAd*,ClassAd*> > unmutatedSlotAds;
 		std::map<std::string, ClassAd *> m_slotNameToAdMap;
