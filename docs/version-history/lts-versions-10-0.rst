@@ -62,6 +62,14 @@ Bugs Fixed:
   about to start, the job is now placed on hold.
   :jira:`1600`
 
+- Fixed how the *condor_gridmanager* handles failed ARC CE jobs.
+  Before, it would endlessly re-query the status of jobs that failed
+  during submission to the LRMS behind ARC CE.
+  If ARC CE reports a job as FAILED because the job exited with a
+  non-zero exit code, the *condor_gridmanager* now treats it as a
+  successful execution.
+  :jira:`1583`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2

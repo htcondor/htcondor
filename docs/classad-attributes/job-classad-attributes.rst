@@ -635,6 +635,11 @@ all attributes.
     It specifies the target grid type, plus additional parameters
     specific to the grid type.
 
+:classad-attribute:`GridResourceUnavailableTime`
+    Time at which the remote job management system became unavailable.
+    Measured in the number of seconds since the epoch (00:00:00 UTC,
+    Jan 1, 1970).
+
 :classad-attribute:`HoldKillSig`
     Currently only for scheduler and local universe jobs, a string
     containing a name of a signal to be sent to the job if the job is
