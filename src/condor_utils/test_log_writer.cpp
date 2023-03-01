@@ -1578,9 +1578,9 @@ EventInfo::GenEventJobHeld( void )
 {
 	SetName( "Job held" );
 	JobHeldEvent *e = new JobHeldEvent;
-	e->setReason("HELD");
-	e->setReasonCode(404);
-	e->setReasonSubCode(0xff);
+	e->reason = "HELD";
+	e->code = 404;
+	e->subcode = 0xff;
 
 	return SetEvent( e );
 }

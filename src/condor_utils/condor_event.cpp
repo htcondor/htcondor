@@ -3627,48 +3627,15 @@ JobUnsuspendedEvent::initFromClassAd(ClassAd* ad)
 JobHeldEvent::JobHeldEvent (void)
 {
 	eventNumber = ULOG_JOB_HELD;
-	reason = NULL;
 	code = 0;
 	subcode = 0;
-}
-
-
-JobHeldEvent::~JobHeldEvent (void)
-{
-	delete[] reason;
-}
-
-
-void
-JobHeldEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
-void
-JobHeldEvent::setReasonCode(const int val)
-{
-	code = val;
-}
-
-void
-JobHeldEvent::setReasonSubCode(const int val)
-{
-	subcode = val;
 }
 
 
 const char*
 JobHeldEvent::getReason( void ) const
 {
-	return reason;
+	return reason.c_str();
 }
 
 int
@@ -3686,11 +3653,10 @@ JobHeldEvent::getReasonSubCode( void ) const
 int
 JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	delete [] reason;
-	reason = NULL;
+	reason.clear();
 	code = subcode = 0;
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was held.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3698,9 +3664,9 @@ JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	line.trim();
+	trim(line);
 	if (line != "Reason unspecified") {
-		reason = line.detach_buffer();
+		reason = line;
 	}
 
 	int incode = 0;
@@ -3724,8 +3690,8 @@ JobHeldEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job was held.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		}
 	} else {
@@ -3748,9 +3714,8 @@ JobHeldEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	const char* hold_reason = getReason();
-	if ( hold_reason ) {
-		if( !myad->InsertAttr(ATTR_HOLD_REASON, hold_reason) ) {
+	if ( !reason.empty() ) {
+		if( !myad->InsertAttr(ATTR_HOLD_REASON, reason) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3774,19 +3739,13 @@ JobHeldEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	int incode = 0;
-	int insubcode = 0;
-	ad->LookupString(ATTR_HOLD_REASON, &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
-	ad->LookupInteger(ATTR_HOLD_REASON_CODE, incode);
-	setReasonCode(incode);
-	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, insubcode);
-	setReasonSubCode(insubcode);
+	reason.clear();
+	code = 0;
+	subcode = 0;
+
+	ad->LookupString(ATTR_HOLD_REASON, reason);
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, code);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, subcode);
 }
 
 JobReleasedEvent::JobReleasedEvent(void)

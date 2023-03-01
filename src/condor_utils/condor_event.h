@@ -1411,8 +1411,6 @@ class JobHeldEvent : public ULogEvent
   public:
     ///
     JobHeldEvent (void);
-    ///
-    ~JobHeldEvent (void);
 
     /** Read the body of the next JobHeld event.
         @param file the non-NULL readable log file
@@ -1442,16 +1440,8 @@ class JobHeldEvent : public ULogEvent
 	int getReasonCode(void) const;
 	int getReasonSubCode(void) const;
 
-		/// makes a copy of the string in our "reason" member
-	void setReason( const char* );
-
-	void setReasonCode( const int );
-	void setReasonSubCode( const int );
-
- private:
-
 		/// why the job was held 
-	char* reason;
+	std::string reason;
 	int code;
 	int subcode;
 };

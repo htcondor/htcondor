@@ -4566,30 +4566,18 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	}
 	JobHeldEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_HOLD_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	} else {
+	if( GetAttributeString(job_id.cluster, job_id.proc,
+	                       ATTR_HOLD_REASON, event.reason) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
 
-	int hold_reason_code;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_CODE, &hold_reason_code) >= 0 )
-	{
-		event.setReasonCode(hold_reason_code);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_CODE, &event.code);
 
-	int hold_reason_subcode;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_SUBCODE, &hold_reason_subcode)	>= 0 )
-	{
-		event.setReasonSubCode(hold_reason_subcode);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_SUBCODE, &event.subcode);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));

@@ -333,9 +333,9 @@ int writeJobUnsuspendedEvent(WriteUserLog &logFile)
 int writeJobHeldEvent(WriteUserLog &logFile)
 {
 	JobHeldEvent jobheldevent;
-	jobheldevent.setReason("CauseWeCan");
-	jobheldevent.setReasonCode(404);
-	jobheldevent.setReasonSubCode(0xff);
+	jobheldevent.reason = "CauseWeCan";
+	jobheldevent.code = 404;
+	jobheldevent.subcode = 0xff;
 	if ( !logFile.writeEvent(&jobheldevent) ) {
 		printf("Complain about bad jobheldevent write\n");
 		exit(1);

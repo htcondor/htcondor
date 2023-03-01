@@ -441,7 +441,7 @@ bool userlog_to_classads(const char *filename,
 
 	// Update the time attributes
 	{
-	  const char * reason=hold_event->getReason();
+	  const char * reason=hold_event->reason.c_str();
 
 	  {
 	    condor_time_t eventTime = getEventTime(event);
@@ -458,9 +458,9 @@ bool userlog_to_classads(const char *filename,
 	    jobClassAd->InsertAttr("HoldReason",reason);
 	  }
 	}
-	jobClassAd->InsertAttr("HoldReasonCode",hold_event->getReasonCode());
-      	jobClassAd->InsertAttr("HoldReasonSubCode",hold_event->getReasonSubCode());
-	if (hold_event->getReasonCode()!=1) {
+	jobClassAd->InsertAttr("HoldReasonCode",hold_event->code);
+	jobClassAd->InsertAttr("HoldReasonSubCode",hold_event->subcode);
+	if (hold_event->code!=1) {
 	  classad::Value v;
 	  int i = 0;
 	  if (jobClassAd->EvaluateExpr("NumSystemHolds+1",v) && v.IsIntegerValue(i)) {
