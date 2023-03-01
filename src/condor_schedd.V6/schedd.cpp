@@ -178,7 +178,6 @@ int  count_a_job( JobQueueBase *job, const JOB_ID_KEY& jid, void* user);
 void mark_jobs_idle();
 void load_job_factories();
 static void WriteCompletionVisa(ClassAd* ad);
-bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 
 schedd_runtime_probe WalkJobQ_check_for_spool_zombies_runtime;
 schedd_runtime_probe WalkJobQ_count_a_job_runtime;
@@ -1339,6 +1338,73 @@ void Scheduler::userlog_file_cache_erase(const int& cluster, const int& proc) {
 }
 
 
+void
+Scheduler::sumAllSubmitterData(SubmitterData &all) {
+	// hack to allow this to work with unmodified negotiator
+	all.name = "AllSubmittersAt"; 
+	all.isOwnerName = false;
+	all.FlockLevel = -1;
+	all.num.clear_job_counters();
+
+	// Cons up a fake submitter ad representing all demand
+	for (auto it = Submitters.begin(); it != Submitters.end(); ++it) {
+		SubmitterData &sd = it->second;
+		all.num.JobsRunning 			+= sd.num.JobsRunning;
+		all.num.JobsIdle				+= sd.num.JobsIdle;
+		all.num.WeightedJobsRunning		+= sd.num.WeightedJobsRunning;
+		all.num.WeightedJobsIdle		+= sd.num.WeightedJobsIdle;
+		all.num.JobsHeld				+= sd.num.JobsHeld;
+		all.num.JobsFlocked				+= sd.num.JobsFlocked;
+		all.num.SchedulerJobsRunning	+= sd.num.SchedulerJobsRunning;
+		all.num.SchedulerJobsIdle		+= sd.num.SchedulerJobsIdle;
+		all.num.LocalJobsRunning		+= sd.num.LocalJobsRunning;
+		all.num.LocalJobsIdle			+= sd.num.LocalJobsIdle;;
+		all.num.Hits					+= sd.num.Hits;
+	}
+}
+
+void
+Scheduler::updateSubmitterAd(SubmitterData &SubDat, ClassAd &pAd, DCCollector *col, int flock_level, time_t time_now) {
+		const char * owner_name = SubDat.Name();
+		// only flocked collectors get names
+		const char * col_name = col ? col->name() : "";
+
+		if (SubDat.num.Hits == 0 && SubDat.absentUpdateSent) {
+			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
+				owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+			return;
+		}
+		if (!fill_submitter_ad(pAd, SubDat, col_name, flock_level)) return;
+
+#ifdef UNIX
+		if (col == nullptr) {
+			// only fire plugin for main collector updates
+			ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
+		}
+#endif
+
+		if (user_is_the_new_owner) {
+			SubmitterMap.AddSubmitter(col_name, SubDat.name, time_now);
+		} else {
+			// Note the submitter; the negotiator uses user@uid_domain when
+			// referring the submitter when it requests to negotiate.
+			SubmitterMap.AddSubmitter(col_name, SubDat.name + "@" + AccountingDomain, time_now);
+		}
+		// Update non-flock collectors
+		int num_updates = 0;
+		if (col) {
+			DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
+			num_updates = col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
+		} else {
+			num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
+			SubDat.lastUpdateTime = time_now;
+			SubDat.absentUpdateSent = (SubDat.num.Hits == 0);
+		}
+		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
+			num_updates, owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+}
+
+
 /*
 ** Examine the job queue to determine how many CONDOR jobs we currently have
 ** running, and how many individual users own them.
@@ -1713,39 +1779,26 @@ Scheduler::count_jobs()
 		pAd.InsertAttr(ATTR_CAPABILITY, capability);
 	}
 
-	time_t time_now = time(NULL);
+	time_t time_now = time(nullptr);
 
-	for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
-		SubmitterData & SubDat = it->second;
-		const char * owner_name = SubDat.Name();
-		if (SubDat.num.Hits == 0 && SubDat.absentUpdateSent) {
-			dprintf( D_FULLDEBUG, "Skipping send ad to collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
-				owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
-			continue;
+	if (param_boolean("SCHEDDS_ARE_SUBMITTERS", false) == false) {
+		// The usual case -- send one submitter ad per submitter
+		for (auto it = Submitters.begin(); it != Submitters.end(); ++it) {
+			updateSubmitterAd(it->second, pAd, nullptr, -1, time_now);
 		}
-		if ( !fill_submitter_ad(pAd, SubDat, "", -1) ) continue;
+	} else {
+		// The case where we send one ad for the sum of all demand
+		SubmitterData all;
+	
+		sumAllSubmitterData(all);	
 
-#ifdef UNIX
-	  ScheddPluginManager::Update(UPDATE_SUBMITTOR_AD, &pAd);
-#endif
-
-		if (user_is_the_new_owner) {
-			SubmitterMap.AddSubmitter("", SubDat.name, time_now);
-		} else {
-			// Note the submitter; the negotiator uses user@uid_domain when
-			// referring the submitter when it requests to negotiate.
-			SubmitterMap.AddSubmitter("", SubDat.name + "@" + AccountingDomain, time_now);
-		}
-		// Update non-flock collectors
-		num_updates = daemonCore->sendUpdates(UPDATE_SUBMITTOR_AD, &pAd, NULL, true);
-		SubDat.lastUpdateTime = update_time;
-		SubDat.absentUpdateSent = (SubDat.num.Hits == 0);
-		dprintf( D_FULLDEBUG, "Sent ad to %d collectors for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
-			num_updates, owner_name, SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+		// and send it to our collectors
+		pAd.Assign(ATTR_SCHEDDS_ARE_SUBMITTERS, true);
+		updateSubmitterAd(all, pAd, nullptr, -1, time_now);
 	}
 
-	// update collector of the pools with which we are flocking, if
-	// any
+
+	// update collector of any pools we flock to 
 	DCCollectorAdSequences & adSeq = daemonCore->getUpdateAdSeq();
 	Daemon* d;
 	Daemon* flock_neg;
@@ -1770,36 +1823,39 @@ Scheduler::count_jobs()
 			SetupNegotiatorSession(duration, flock_col->name(), capability);
 
 			// update submitter ad in this pool for each owner
-			for (SubmitterDataMap::iterator it = Submitters.begin(); it != Submitters.end(); ++it) {
-				SubmitterData & SubDat = it->second;
-				if ( !fill_submitter_ad(pAd,SubDat,flock_col->name(),flock_level) ) {
-					// if we're no longer flocking with this pool and
-					// we're not running jobs in the pool, then don't send
-					// an update
-					continue;
-				}
+			if (param_boolean("SCHEDDS_ARE_SUBMITTERS_FOR_FLOCKERS", false) == false) {
+				for (auto it = Submitters.begin(); it != Submitters.end(); ++it) {
+					SubmitterData & SubDat = it->second;
 
 					// we will use this "tag" later to identify which
 					// CM we are negotiating with when we negotiate
+					pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
+
+					if (!capability.empty()) {
+						pAd.InsertAttr(ATTR_CAPABILITY, capability);
+					}
+
+					updateSubmitterAd(SubDat, pAd, flock_col, flock_level, time_now);
+				}
+			} else {
+				// The case where we send one ad for the sum of all demand
+				SubmitterData all;
+
 				pAd.Assign(ATTR_SUBMITTER_TAG,flock_col->name());
 
 				if (!capability.empty()) {
 					pAd.InsertAttr(ATTR_CAPABILITY, capability);
 				}
 
-				if (user_is_the_new_owner) {
-					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name, time_now);
-				} else {
-					SubmitterMap.AddSubmitter(flock_col->name(), SubDat.name + "@" + AccountingDomain, time_now);
-				}
+				sumAllSubmitterData(all);	
 
-				flock_col->sendUpdate( UPDATE_SUBMITTOR_AD, &pAd, adSeq, NULL, true );
-
-				dprintf( D_FULLDEBUG, "Sent ad to flocked collector %s for %s Hit=%d Tot=%d Idle=%d Run=%d\n",
-					flock_col->name(), SubDat.name.c_str(), SubDat.num.Hits, SubDat.num.JobsCounted, SubDat.num.JobsIdle, SubDat.num.JobsRunning );
+				// and send it to our collectors
+				pAd.Assign(ATTR_SCHEDDS_ARE_SUBMITTERS, true);
+				updateSubmitterAd(all, pAd, flock_col, flock_level, time_now);
 			}
 		}
 	}
+
 	for (const auto &map_entry : Submitters) {
 		const SubmitterData &SubDat = map_entry.second;
 			// If two owners are reusing the same submitter, then we can't safely
@@ -7019,12 +7075,14 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
 	bool scheddsAreSubmitters = false;;
-	match_ad.LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+	if (strncmp("AllSubmittersAt", getMatchUser(), 15) == 0) {
+		scheddsAreSubmitters = true;
+	}
 
 	if (scheddsAreSubmitters) {
 		// Not a real match we can directly use.  Send it to our sidecar cm, and let
 		// it figure out the fair-share, etc.
-		return forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
+		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
 	const char* because = "";
@@ -7122,8 +7180,9 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 
 // Negotiator has send the schedd a match to use for any user.  Forward the slot to our cm-on-the-side
 // for subsequent matching
-bool forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
-	dprintf(D_FULLDEBUG, "Forwarding match %s to local cm\n", slot_name);
+bool 
+Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
+	dprintf(D_FULLDEBUG, "Forwarding match %s for use only for this schedd\n", slot_name);
 	auto_free_ptr local_cm(param("SCHEDD_LOCAL_CM"));
 
 	if (!local_cm) {
@@ -7131,29 +7190,36 @@ bool forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, Cla
 		return false;
 	}
 
-	std::string startdAddr;
-	match_ad.LookupString(ATTR_STARTD_IP_ADDR, startdAddr);
-	// Put the start into Matched state, so the global cm won't try to match it while the
-	// local one is trying to as well
-	NotifyStartdOfMatchHandler *h =
-		new NotifyStartdOfMatchHandler(
-				slot_name,startdAddr.c_str(), 60,
-				claim_id, true);
+	std::string peer_addr;
+	match_ad.LookupString(ATTR_MY_ADDRESS, peer_addr);
 
-	h->startCommand(); // if the match_info fails, it fails
-
-	DCCollector localCollector(local_cm);
-	match_ad.Delete(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS);
-
-	ClassAd privateAd;
-	privateAd.Assign(ATTR_NAME, slot_name);
-	privateAd.Assign(ATTR_CLAIM_ID, claim_id);
-	if (extra_claims) {
-		privateAd.Assign("PreemptDslotClaims", extra_claims);
+	classy_counted_ptr<DCStartd> startd = new DCStartd(slot_name, nullptr, peer_addr.c_str(),claim_id, extra_claims);
+	if( !startd->addr() ) {
+		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
+		dPrintAd(D_ALWAYS, match_ad);
+		return false;
 	}
 
-	DCCollectorAdSequences adseq; // need a bogus one of these for the interface
-	return localCollector.sendUpdate(UPDATE_STARTD_AD, &match_ad, adseq, &privateAd, false);
+	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
+		(DCMsgCallback::CppFunction)&Scheduler::claimStartdForUs,
+		this,
+		nullptr);
+
+	ClassAd not_a_real_job;
+	// Tell the startd which CM to report to for real work
+	not_a_real_job.Assign("WorkingCM", local_cm.ptr());
+
+	startd->asyncRequestOpportunisticClaim(
+		&not_a_real_job,
+		slot_name,
+		daemonCore->publicNetworkIpAddr(),
+		scheduler.aliveInterval(),
+		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
+		20,       // overall timeout on completing claim request
+		cb);
+
+	
+	return true;
 }
 
 void
@@ -7430,7 +7496,10 @@ Scheduler::negotiate(int command, Stream* s)
 		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
 		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 		neg_constraint = negotiate_ad.Lookup(ATTR_NEGOTIATOR_JOB_CONSTRAINT);
-		negotiate_ad.LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+		negotiate_ad.LookupBool(ATTR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
+		if (strncmp(owner, "AllSubmittersAt", 15) == 0) {
+			scheddsAreSubmitters = true;
+		}
 	}
 	else {
 			// old NEGOTIATE_WITH_SIGATTRS protocol
@@ -7873,6 +7942,13 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	delete jobAd;
 
 		// Now wait for callback...
+}
+
+void 
+Scheduler::claimStartdForUs(DCMsgCallback *cb) {
+	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
+	// Should we do something special here?
+	dprintf(D_FULLDEBUG, "Completed claiming startd for sidecar CM\n");
 }
 
 void
