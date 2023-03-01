@@ -492,9 +492,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason = rel_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("ReleaseReason",reason);
+	  if (!rel_event->reason.empty()) {
+	    jobClassAd->InsertAttr("ReleaseReason",rel_event->reason);
 	  }
 	}
       }

@@ -1590,7 +1590,7 @@ EventInfo::GenEventJobReleased( void )
 {
 	SetName( "Job released" );
 	JobReleasedEvent *e = new JobReleasedEvent;
-	e->setReason("RELEASED");
+	e->reason = "RELEASED";
 
 	return SetEvent( e );
 }

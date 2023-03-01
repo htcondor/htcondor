@@ -346,7 +346,7 @@ int writeJobHeldEvent(WriteUserLog &logFile)
 int writeJobReleasedEvent(WriteUserLog &logFile)
 {
 	JobReleasedEvent jobreleasedevent;
-	jobreleasedevent.setReason("MessinWithYou");
+	jobreleasedevent.reason = "MessinWithYou";
 	if ( !logFile.writeEvent(&jobreleasedevent) ) {
 		printf("Complain about bad jobreleasedevent write\n");
 		exit(1);

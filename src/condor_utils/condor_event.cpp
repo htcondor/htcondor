@@ -3751,41 +3751,19 @@ JobHeldEvent::initFromClassAd(ClassAd* ad)
 JobReleasedEvent::JobReleasedEvent(void)
 {
 	eventNumber = ULOG_JOB_RELEASED;
-	reason = NULL;
 }
-
-
-JobReleasedEvent::~JobReleasedEvent(void)
-{
-	delete[] reason;
-}
-
-
-void
-JobReleasedEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
 
 const char*
 JobReleasedEvent::getReason( void ) const
 {
-	return reason;
+	return reason.c_str();
 }
 
 
 int
 JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was released.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3793,9 +3771,9 @@ JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	line.trim();
+	trim(line);
 	if (! line.empty()) {
-		reason = line.detach_buffer();
+		reason = line;
 	}
 
 	return 1;
@@ -3808,8 +3786,8 @@ JobReleasedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job was released.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		} else {
 			return true;
@@ -3826,9 +3804,8 @@ JobReleasedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	const char* release_reason = getReason();
-	if( release_reason ) {
-		if( !myad->InsertAttr("Reason", release_reason) ) {
+	if( !reason.empty() ) {
+		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3844,13 +3821,8 @@ JobReleasedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
+	reason.clear();
+	ad->LookupString("Reason", reason);
 }
 
 static const int seconds = 1;

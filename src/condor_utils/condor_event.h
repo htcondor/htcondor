@@ -1455,8 +1455,6 @@ class JobReleasedEvent : public ULogEvent
   public:
     ///
     JobReleasedEvent (void);
-    ///
-    ~JobReleasedEvent (void);
 
     /** Read the body of the next JobReleased event.
         @param file the non-NULL readable log file
@@ -1483,13 +1481,8 @@ class JobReleasedEvent : public ULogEvent
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getReason(void) const;
 
-		/// makes a copy of the string in our "reason" member
-	void setReason( const char* );
-
- private:
-
 		/// why the job was released
-	char* reason;
+	std::string reason;
 };
 
 /* MPI (or parallel) events */
