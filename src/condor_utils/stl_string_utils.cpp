@@ -742,7 +742,7 @@ int StringTokenIterator::next_token(int & length)
 	length = 0;
 	if ( ! str) return -1;
 
-	int ix = ixNext;
+	size_t ix = ixNext;
 
 	// skip leading separators and whitespace
 	while (str[ix] && strchr(delims, str[ix])) ++ix;

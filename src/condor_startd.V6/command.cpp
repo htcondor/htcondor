@@ -945,8 +945,6 @@ return return_code;
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
-		// Formerly known as "reqservice"
-
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
 	double rank = 0;
@@ -1094,7 +1092,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	bool has_cp = false;
 	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
-	if (rip->can_create_dslot()) {
+
+	// If we are being claimed to go to work for another CM
+	// check here.
+	std::string workingCM;
+	req_classad->LookupString("WorkingCM", workingCM);
+
+	if (workingCM.empty() && rip->can_create_dslot()) {
 		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
 		if ( ! new_rip) {
 			refuse(stream);
@@ -1112,9 +1116,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip = new_rip;
 	}
 
-
 		// Make sure we're willing to run this job at all.
-	if (!rip->willingToRun(req_classad)) {
+	if (workingCM.empty() && !rip->willingToRun(req_classad)) {
 	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
 		refuse(stream);
 		ABORT;
@@ -1253,6 +1256,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
+	// Claimed for a temporary CM
+	if (workingCM.empty()) {
+		rip->workingCMStartTime = 0; // meaning "never"
+		rip->workingCM = "";
+	} else {
+		rip->workingCMStartTime = time(nullptr);
+		rip->workingCM = workingCM;
+	}
 #if HAVE_BACKFILL
 	if( rip->state() == backfill_state ) {
 			// we're currently in Backfill, so we can't just accept
@@ -1265,7 +1276,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 #endif /* HAVE_BACKFILL */
 
-		// If we're still here, we're ready to accpet the claim now.
+		// If we're still here, we're ready to accept the claim now.
 		// Call this other function to actually reply to the schedd
 		// and perform the last half of the protocol.  We use the same
 		// function after the preemption has completed when the startd
@@ -1460,7 +1471,11 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	rip->r_cur->setRequestStream( NULL );
 
 	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
-	rip->change_state( claimed_state );
+
+	// If we're a real claim, set us into claimed state
+	if (rip->workingCM.empty()) {
+		rip->change_state( claimed_state );
+	}
 	return true;
 }
 
