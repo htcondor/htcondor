@@ -358,7 +358,7 @@ int writeNodeExecuteEvent(WriteUserLog &logFile)
 {
 	NodeExecuteEvent nodeexecuteevent;
 	nodeexecuteevent.node = 49;
-	nodeexecuteevent.setExecuteHost("<128.105.165.12:32779>");
+	nodeexecuteevent.executeHost = "<128.105.165.12:32779>";
 	if ( !logFile.writeEvent(&nodeexecuteevent) ) {
 		printf("Complain about bad nodeexecuteevent write\n");
 		exit(1);

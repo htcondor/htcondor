@@ -1491,8 +1491,6 @@ class NodeExecuteEvent : public ULogEvent
   public:
     ///
     NodeExecuteEvent(void);
-    ///
-    ~NodeExecuteEvent(void);
 
     /** Read the body of the next NodeExecute event.
         @param file the non-NULL readable log file
@@ -1516,16 +1514,13 @@ class NodeExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	void setExecuteHost(char const *addr);
-
-	char const *getExecuteHost() { return executeHost; }
+	char const *getExecuteHost() { return executeHost.c_str(); }
 
 		/// Node identifier
 	int node;
 
- private:
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char *executeHost;
+	std::string executeHost;
 };
 
 

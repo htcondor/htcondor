@@ -3937,56 +3937,30 @@ ULogEvent::strToRusage (const char* rusageStr, rusage & usage)
 // ----- the NodeExecuteEvent class
 NodeExecuteEvent::NodeExecuteEvent(void)
 {
-	executeHost = NULL;
 	eventNumber = ULOG_NODE_EXECUTE;
 	node = -1;
-}
-
-
-NodeExecuteEvent::~NodeExecuteEvent(void)
-{
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-}
-
-void
-NodeExecuteEvent::setExecuteHost(char const *addr)
-{
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( addr ) {
-		executeHost = strnewp(addr);
-		ASSERT( executeHost );
-	}
-	else {
-		executeHost = NULL;
-	}
 }
 
 bool
 NodeExecuteEvent::formatBody( std::string &out )
 {
-	if( !executeHost ) {
-		setExecuteHost("");
-	}
 	return( formatstr_cat( out, "Node %d executing on host: %s\n",
-						   node, executeHost ) >= 0 );
+						   node, executeHost.c_str() ) >= 0 );
 }
 
 
 int
 NodeExecuteEvent::readEvent (FILE *file, bool & /*got_sync_line*/)
 {
-	MyString line;
-	if( !line.readLine(file) ) {
+	char buffer[128];
+	std::string line;
+	if( !readLine(line, file) ) {
 		return 0; // EOF or error
 	}
-	line.chomp();
-	setExecuteHost(line.c_str()); // allocate memory
-	int retval = sscanf(line.c_str(), "Node %d executing on host: %s",
-						&node, executeHost);
+	chomp(line);
+	int retval = sscanf(line.c_str(), "Node %d executing on host: %127s",
+						&node, buffer);
+	executeHost = buffer;
 	return retval == 2;
 }
 
@@ -3996,7 +3970,7 @@ NodeExecuteEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( executeHost ) {
+	if( !executeHost.empty() ) {
 		if( !myad->InsertAttr("ExecuteHost",executeHost) ) return NULL;
 	}
 	if( !myad->InsertAttr("Node", node) ) {
@@ -4014,13 +3988,7 @@ NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char *mallocstr = NULL;
-	ad->LookupString("ExecuteHost", &mallocstr);
-	if( mallocstr ) {
-		setExecuteHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("ExecuteHost", executeHost);
 
 	ad->LookupInteger("Node", node);
 }

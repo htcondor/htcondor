@@ -138,7 +138,7 @@ MpiResource::beginExecution( void )
 	}
 
 	NodeExecuteEvent event;
-	event.setExecuteHost( startd_addr );
+	event.executeHost = startd_addr;
 	event.node = node_num;
 	if( ! writeULogEvent(&event) ) {
 		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event.\n" );
