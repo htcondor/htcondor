@@ -363,7 +363,7 @@ void BaseResource::UnregisterJob( BaseJob *job )
 
 	pingRequesters.Delete( job );
 	registeredJobs.Delete( job );
-	leaseUpdates.Delete( job );
+	std::erase(leaseUpdates, job);
 
 	if ( IsEmpty() ) {
 		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
@@ -449,7 +449,7 @@ void BaseResource::CancelSubmit( BaseJob *job )
 		submitsWanted.Delete( job );
 	}
 
-	leaseUpdates.Delete( job );
+	std::erase(leaseUpdates, job);
 
 	SetJobPollInterval();
 
@@ -646,7 +646,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
 						 curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, tmp )
 					) {
-						leaseUpdates.Append( curr_job );
+						leaseUpdates.emplace_back(curr_job);
 					}
 				}
 			}
@@ -658,7 +658,7 @@ dprintf(D_FULLDEBUG,"    new shared lease expiration at %ld, performing renewal.
 
 	unsigned update_delay = 0;
 	bool update_complete;
-	SimpleList<PROC_ID> update_succeeded;
+	std::vector<PROC_ID> update_succeeded;
 	bool update_success;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calling DoUpdateLeases\n");
 	if ( m_hasSharedLeases ) {
@@ -701,9 +701,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 		}
 	} else {
 std::string msg = "    update_succeeded:";
-		PROC_ID curr_id;
-		update_succeeded.Rewind();
-		while ( update_succeeded.Next( curr_id ) ) {
+		for (auto& curr_id: update_succeeded) {
 formatstr_cat(msg, " %d.%d", curr_id.cluster, curr_id.proc);
 			auto itr = BaseJob::JobsByProcId.find(curr_id);
 			if (itr != BaseJob::JobsByProcId.end()) {
@@ -711,7 +709,7 @@ formatstr_cat(msg, " %d.%d", curr_id.cluster, curr_id.proc);
 			}
 		}
 dprintf(D_FULLDEBUG,"%s\n",msg.c_str());
-		leaseUpdates.Clear();
+		leaseUpdates.clear();
 	}
 
 	updateLeasesActive = false;
@@ -721,8 +719,8 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: lease update complete, resetting timer fo
 }
 
 void BaseResource::DoUpdateLeases( unsigned& update_delay,
-								   bool& update_complete,
-								   SimpleList<PROC_ID>& /* update_succeeded */ )
+                                   bool& update_complete,
+                                   std::vector<PROC_ID>& /* update_succeeded */ )
 {
 dprintf(D_FULLDEBUG,"*** BaseResource::DoUpdateLeases called\n");
 	update_delay = 0;
