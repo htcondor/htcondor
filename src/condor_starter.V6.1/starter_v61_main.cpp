@@ -237,6 +237,25 @@ printClassAd( void )
 		// Advertise our ability to run jobs as the submitting user
 	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);
 #endif
+
+#ifndef WIN32
+	// Many site intentionally remove /usr/sbin/ssh, which will
+	// break condor_ssh_to_job.  Let's advertise if it exists
+	// as if it doesn't, there's no hope of running condor_ssh_to_job
+
+	std::string sshd;
+	bool hasSshd = false;
+
+	param(sshd,"SSH_TO_JOB_SSHD", "/usr/sbin/sshd");
+	if (!sshd.empty()) {
+		int rc = access(sshd.c_str(), X_OK);
+		if (rc == 0) {
+			hasSshd = true;
+		}
+
+	}
+	printf("HasSshd = %s\n", hasSshd ? "true" : "false");
+#endif
 }
 
 
