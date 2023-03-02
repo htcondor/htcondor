@@ -7782,7 +7782,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	PROC_ID jobid;
 	jobid.cluster = jobid.proc = -1;
 
-	dprintf(D_ALWAYS, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
+	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
 
 	if (!getClassAd(rsock, cmd_ad)) {
 		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read command ad\n");
@@ -7799,7 +7799,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
 
 	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
-	dprintf(D_ALWAYS, "CmdDirectAttach() reading %d slot ads\n", num_ads);
+	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
 
 	for (int i = 0; i < num_ads; i++) {
 		std::string slot_name;
