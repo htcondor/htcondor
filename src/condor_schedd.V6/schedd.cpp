@@ -7948,7 +7948,7 @@ void
 Scheduler::claimStartdForUs(DCMsgCallback *cb) {
 	ClaimStartdMsg *msg = (ClaimStartdMsg *)cb->getMessage();
 	// Should we do something special here?
-	dprintf(D_FULLDEBUG, "Completed claiming startd for sidecar CM\n");
+	dprintf(D_FULLDEBUG, "Completed claiming startd for sidecar CM for %s\n", msg->description());
 }
 
 void

@@ -1293,11 +1293,9 @@ bool evalInEachContext_func( const char * name,
 		classad_shared_ptr<classad::ExprList> lst(new classad::ExprList());
 		ASSERT(lst);
 
-		size_t index = 0;
 		for (auto i = nested_ad_list->begin(); i != nested_ad_list->end(); ++i) {
 			auto nested_ad = *i;
 
-			//dprintf( D_FULLDEBUG, "evalEachInContext(): evaluating index %lu\n", index );
 			classad::Value cav = evaluateInContext(expr, state, nested_ad);
 			if (cav.IsListValue()) {
 				classad::ExprList * elv = nullptr;
@@ -1310,7 +1308,6 @@ bool evalInEachContext_func( const char * name,
 			} else {
 				lst->push_back(classad::Literal::MakeLiteral(cav));
 			}
-			index++;
 		}
 
 		result.SetListValue(lst);
