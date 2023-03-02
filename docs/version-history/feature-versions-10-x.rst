@@ -190,9 +190,7 @@ Bugs Fixed:
 Version 10.2.5
 --------------
 
-.. HTCondor version 10.2.5 released on February 28, 2023.
-
-- HTCondor version 10.2.5 not yet released.
+- HTCondor version 10.2.5 released on February 28, 2023.
 
 New Features:
 
