@@ -14,9 +14,7 @@ Version 10.0.2
 
 Release Notes:
 
-.. HTCondor version 10.0.2 released on Month Date, 2023.
-
-- HTCondor version 10.0.2 not yet released.
+- HTCondor version 10.0.2 released on March 2, 2023.
 
 - We changed the semantics of relative paths in the ``output``, ``error``, and
   ``transfer_output_remaps`` submit file commands.  These commands now create
