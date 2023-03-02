@@ -183,7 +183,6 @@ classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
 classy_counted_ptr.h
-command_name_tables.h
 command_strings.cpp
 command_strings.h
 compat_classad_list.cpp
@@ -547,18 +546,12 @@ if(WINDOWS)
 endif(WINDOWS)
 
 
-##################################################
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		COMMAND perl
-		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl)
-
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h -p ${PLATFORM}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl)
 
-add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
@@ -567,10 +560,6 @@ endif(UNIX)
 ############ end generate params
 # These sources depend on the generated param_info_tables.  Everything else can build in parallel
 set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_info_help.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
-
-# Only command_strings.cpp depends on the generator above.  Everything else can build in parallel
-set_source_files_properties(command_strings.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
-
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.

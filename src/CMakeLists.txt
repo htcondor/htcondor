@@ -150,7 +150,6 @@ if (BUILD_TESTING)
 	FOREACH (tag IN LISTS CONDOR_TEST_LIST_TAGS)
 		FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${TEST_TARGET_DIR}/list_${tag}\"\n")
 	ENDFOREACH(tag)
-	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_utils/command_name_tables.h\"\n")
 	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} "  \"${CMAKE_CURRENT_BINARY_DIR}/condor_utils/param_info_tables.h\"\n")
 	FILE(APPEND ${COPY_TESTS_CMAKE_FILE} ")\n")
 
