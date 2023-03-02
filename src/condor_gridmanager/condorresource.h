@@ -91,7 +91,7 @@ class CondorResource : public BaseResource
 				 bool& ping_succeeded );
 
 	void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
-						 SimpleList<PROC_ID>& update_succeeded );
+	                     std::vector<PROC_ID>& update_succeeded );
 
 	GahpClient *gahp;
 	GahpClient *ping_gahp;

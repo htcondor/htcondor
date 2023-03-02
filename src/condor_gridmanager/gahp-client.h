@@ -390,9 +390,9 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		condor_job_update_lease(const char *schedd_name,
-								const SimpleList<PROC_ID> &jobs,
-								const SimpleList<int> &expirations,
-								SimpleList<PROC_ID> &updated );
+		                        const std::vector<PROC_ID> &jobs,
+		                        const std::vector<int> &expirations,
+		                        std::vector<PROC_ID> &updated);
 
 		int
 		blah_ping(const std::string& lrms);

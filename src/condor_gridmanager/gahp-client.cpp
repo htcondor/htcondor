@@ -2953,9 +2953,9 @@ GahpClient::condor_job_refresh_proxy(const char *schedd_name, PROC_ID job_id,
 
 int
 GahpClient::condor_job_update_lease(const char *schedd_name,
-									const SimpleList<PROC_ID> &jobs,
-									const SimpleList<int> &expirations,
-									SimpleList<PROC_ID> &updated )
+                                    const std::vector<PROC_ID> &jobs,
+                                    const std::vector<int> &expirations,
+                                    std::vector<PROC_ID> &updated )
 {
 	static const char* command = "CONDOR_JOB_UPDATE_LEASE";
 
@@ -2964,24 +2964,23 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 		return GAHPCLIENT_COMMAND_NOT_SUPPORTED;
 	}
 
-	ASSERT( jobs.Length() == expirations.Length() );
+	ASSERT( jobs.size() == expirations.size() );
 
 		// Generate request line
 	if (!schedd_name) schedd_name=NULLSTRING;
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(schedd_name) );
-	int x = formatstr(reqline, "%s %d", esc1, jobs.Length());
+	int x = formatstr(reqline, "%s %zu", esc1, jobs.size());
 	free( esc1 );
 	ASSERT( x > 0 );
 		// Add variable arguments
-	SimpleListIterator<PROC_ID> jobs_i (jobs);
-	SimpleListIterator<int> exps_i (expirations);
-	PROC_ID next_job;
-	int next_exp;
-	while ( jobs_i.Next( next_job ) && exps_i.Next( next_exp ) ) {
-		x = formatstr_cat( reqline, " %d.%d %d", next_job.cluster, next_job.proc,
-								 next_exp );
-		ASSERT( x > 0 );
+	auto jobs_i = jobs.begin();
+	auto exps_i = expirations.begin();
+	while (jobs_i != jobs.end() && exps_i != expirations.end()) {
+		formatstr_cat(reqline, " %d.%d %d", jobs_i->cluster, jobs_i->proc,
+		              *exps_i);
+		jobs_i++;
+		exps_i++;
 	}
 	const char *buf = reqline.c_str();
 
@@ -3014,7 +3013,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 		} else {
 			error_string = "";
 		}
-		updated.Clear();
+		updated.clear();
 		char *ptr1 = result->argv[3];
 		while ( ptr1 != NULL && *ptr1 != '\0' ) {
 			int i;
@@ -3028,7 +3027,7 @@ GahpClient::condor_job_update_lease(const char *schedd_name,
 			if ( i != 2 ) {
 				dprintf( D_ALWAYS, "condor_job_update_lease: skipping malformed job id '%s'\n", ptr1 );
 			} else {
-				updated.Append( job_id );
+				updated.emplace_back(job_id);
 			}
 			ptr1 = ptr2;
 		}

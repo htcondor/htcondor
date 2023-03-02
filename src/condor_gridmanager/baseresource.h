@@ -91,7 +91,7 @@ class BaseResource : public Service
 
 	void UpdateLeases();
 	virtual void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
-								 SimpleList<PROC_ID>& update_succeeded );
+	                             std::vector<PROC_ID>& update_succeeded );
 	virtual void DoUpdateSharedLease( unsigned& update_delay,
 									  bool& update_complete,
 									  bool& update_succeeded );
@@ -125,7 +125,7 @@ class BaseResource : public Service
 	bool hasLeases;
 	int updateLeasesTimerId;
 	time_t lastUpdateLeases;
-	SimpleList<BaseJob*> leaseUpdates;
+	std::vector<BaseJob*> leaseUpdates;
 	bool updateLeasesActive;
 	bool updateLeasesCmdActive;
 	bool m_hasSharedLeases;

@@ -75,18 +75,18 @@ CronJobParams::GetParamName( const char *item ) const
 bool
 CronJobParams::Initialize( void )
 {
-	MyString param_prefix;
-	MyString param_executable;
-	MyString param_period;
-	MyString param_mode;
+	std::string param_prefix;
+	std::string param_executable;
+	std::string param_period;
+	std::string param_mode;
 	bool	 param_reconfig = false;
 	bool	 param_reconfig_rerun = false;
 	bool	 param_kill_mode = false;
-	MyString param_args;
-	MyString param_env;
-	MyString param_cwd;
+	std::string param_args;
+	std::string param_env;
+	std::string param_cwd;
 	double   param_job_load;
-	MyString param_condition;
+	std::string param_condition;
 
 	Lookup( "PREFIX", param_prefix );
 	Lookup( "EXECUTABLE", param_executable );
@@ -174,15 +174,15 @@ CronJobParams::Initialize( void )
 }
 
 bool
-CronJobParams::InitArgs( const MyString &param_args )
+CronJobParams::InitArgs( const std::string &param_args )
 {
 	ArgList args;
-	MyString args_errors;
+	std::string args_errors;
 
 	// Force the first arg to be the "Job Name"..
 	m_args.Clear();
 	if( !args.AppendArgsV1RawOrV2Quoted( param_args.c_str(),
-										 &args_errors ) ) {
+										 args_errors ) ) {
 		dprintf( D_ALWAYS,
 				 "CronJobParams: Job '%s': "
 				 "Failed to parse arguments: '%s'\n",
@@ -193,7 +193,7 @@ CronJobParams::InitArgs( const MyString &param_args )
 }
 
 bool
-CronJobParams::InitEnv( const MyString &param_env )
+CronJobParams::InitEnv( const std::string &param_env )
 {
 	Env			env_object;
 	std::string env_error_msg;
@@ -212,7 +212,7 @@ CronJobParams::InitEnv( const MyString &param_env )
 
 // Set job's period
 bool
-CronJobParams::InitPeriod( const MyString &param_period )
+CronJobParams::InitPeriod( const std::string &param_period )
 {
 	// Find the job period
 	m_period = 0;

@@ -30,7 +30,7 @@ class CronParamBase
 	char * Lookup( const char * ) const;
 
 	// Virtual member functions
-	bool Lookup( const char *name, MyString &s ) const;
+	bool Lookup( const char *name, std::string &s ) const;
 	bool Lookup( const char *name, bool &value ) const;
 	bool Lookup( const char	*item,
 				 double		&value,

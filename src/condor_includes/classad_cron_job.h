@@ -36,16 +36,16 @@ class ClassAdCronJobParams : public CronJobParams
 	virtual bool Initialize( void );
 
 	// Get parameters
-	const MyString &GetConfigValProg( void ) const {
+	const std::string &GetConfigValProg( void ) const {
 		return m_config_val_prog;
 	};
-	const MyString &GetMgrNameUc( void ) const {
+	const std::string &GetMgrNameUc( void ) const {
 		return m_mgr_name_uc;
 	};
 
   private:
-	MyString	 m_config_val_prog;
-	MyString	 m_mgr_name_uc;
+	std::string m_config_val_prog;
+	std::string m_mgr_name_uc;
 };
 
 // Define a "ClassAd" 'Cron' job
@@ -69,7 +69,7 @@ class ClassAdCronJob : public CronJob
 
 	ClassAd		*m_output_ad;
 	int 		 m_output_ad_count; // number of attributes inserted in to m_output_ad
-	MyString	 m_output_ad_args;  // optional arguments from after the '-' that separates ads in the script output
+	std::string	 m_output_ad_args;  // optional arguments from after the '-' that separates ads in the script output
 
 	Env          m_classad_env;
 };

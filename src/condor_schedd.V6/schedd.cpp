@@ -16157,7 +16157,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 		//
 		// CronTab validation errors
 		//
-	MyString error;
+	std::string error;
 		//
 		// See if we can get the cached scheduler object 
 		//
