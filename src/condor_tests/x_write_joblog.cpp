@@ -372,7 +372,6 @@ int writeJobDisconnectedEvent(WriteUserLog &logFile)
 	evt.setStartdAddr("<128.105.165.12:32779>");
 	evt.setStartdName("ThatMachine");
 	evt.setDisconnectReason("TL;DR");
-	//evt.setNoReconnectReason();
 	evt.setStartdAddr("<128.105.165.12:32780>");
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobDisconnectedEvent write\n");

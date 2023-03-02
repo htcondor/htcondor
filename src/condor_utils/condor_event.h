@@ -1566,21 +1566,10 @@ public:
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getDisconnectReason(void) const {return disconnect_reason;};
 
-		/// stores a copy of the string in our "reason" member
-	void setNoReconnectReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getNoReconnectReason(void) const {return no_reconnect_reason;};
-
-		/** This flag defaults to true, and is set to false if a
-			NoReconnectReason is specified for the event */
-	bool canReconnect( void ) const {return can_reconnect; };
-
 private:
 	char *startd_addr;
 	char *startd_name;
 	char *disconnect_reason;
-	char *no_reconnect_reason;
-	bool can_reconnect;
 };
 
 

@@ -4338,8 +4338,6 @@ JobDisconnectedEvent::JobDisconnectedEvent(void)
 	startd_addr = NULL;
 	startd_name = NULL;
 	disconnect_reason = NULL;
-	no_reconnect_reason = NULL;
-	can_reconnect = true;
 }
 
 
@@ -4353,9 +4351,6 @@ JobDisconnectedEvent::~JobDisconnectedEvent(void)
 	}
 	if( disconnect_reason ) {
 		delete [] disconnect_reason;
-	}
-	if( no_reconnect_reason ) {
-		delete [] no_reconnect_reason;
 	}
 }
 
@@ -4408,23 +4403,6 @@ JobDisconnectedEvent::setDisconnectReason( const char* reason_str )
 }
 
 
-void
-JobDisconnectedEvent::setNoReconnectReason( const char* reason_str )
-{
-	if( no_reconnect_reason ) {
-		delete [] no_reconnect_reason;
-		no_reconnect_reason = NULL;
-	}
-	if( reason_str ) {
-		no_reconnect_reason = strnewp( reason_str );
-		if( !no_reconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-		can_reconnect = false;
-	}
-}
-
-
 bool
 JobDisconnectedEvent::formatBody( std::string &out )
 {
@@ -4440,30 +4418,16 @@ JobDisconnectedEvent::formatBody( std::string &out )
 		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
 				"startd_name" );
 	}
-	if( ! can_reconnect && ! no_reconnect_reason ) {
-		EXCEPT( "impossible: JobDisconnectedEvent::formatBody() called "
-				"without no_reconnect_reason when can_reconnect is FALSE" );
-	}
 
-	if( formatstr_cat( out, "Job disconnected, %s reconnect\n",
-					   can_reconnect ? "attempting to" : "can not" ) < 0 ) {
+	if( formatstr_cat(out, "Job disconnected, attempting to reconnect\n") < 0 ) {
 		return false;
 	}
 	if( formatstr_cat( out, "    %.8191s\n", disconnect_reason ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %s reconnect to %s %s\n",
-					   can_reconnect ? "Trying to" : "Can not",
+	if( formatstr_cat( out, "    Trying to reconnect to %s %s\n",
 					   startd_name, startd_addr ) < 0 ) {
 		return false;
-	}
-	if( no_reconnect_reason ) {
-		if( formatstr_cat( out, "    %.8191s\n", no_reconnect_reason ) < 0 ) {
-			return false;
-		}
-		if( formatstr_cat( out, "    Rescheduling job\n" ) < 0 ) {
-			return false;
-		}
 	}
 	return true;
 }
@@ -4473,16 +4437,9 @@ int
 JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
 	MyString line;
-	if(line.readLine(file) && line.replaceString("Job disconnected, ", "")) {
-		line.chomp();
-		if( line == "attempting to reconnect" ) {
-			can_reconnect = true;
-		} else if( line == "can not reconnect" ) {
-			can_reconnect = false;
-		} else {
-			return 0;
-		}
-	} else {
+		// the first line contains no useful information for us, but
+		// it better be there or we've got a parse error.
+	if( ! line.readLine(file) ) {
 		return 0;
 	}
 
@@ -4505,26 +4462,6 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 			setStartdAddr( line.c_str()+(i+1) );
 			line.truncate( i );
 			setStartdName( line.c_str() );
-		} else {
-			return 0;
-		}
-	} else if( line.replaceString("    Can not reconnect to ", "") ) {
-		if( can_reconnect ) {
-			return 0;
-		}
-		int i = line.FindChar( ' ' );
-		if( i > 0 ) {
-			setStartdAddr( line.c_str()+(i+1) );
-			line.truncate( i );
-			setStartdName( line.c_str() );
-		} else {
-			return 0;
-		}
-		if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
-			&& line[2] == ' ' && line[3] == ' ' && line[4] )
-		{
-			line.chomp();
-			setNoReconnectReason( line.c_str()+4 );
 		} else {
 			return 0;
 		}
@@ -4551,11 +4488,6 @@ JobDisconnectedEvent::toClassAd(bool event_time_utc)
 		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
 				"startd_name" );
 	}
-	if( ! can_reconnect && ! no_reconnect_reason ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"no_reconnect_reason when can_reconnect is FALSE" );
-	}
-
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) {
@@ -4575,21 +4507,10 @@ JobDisconnectedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	MyString line = "Job disconnected, ";
-	if( can_reconnect ) {
-		line += "attempting to reconnect";
-	} else {
-		line += "can not reconnect, rescheduling job";
-	}
+	MyString line = "Job disconnected, attempting to reconnect";
 	if( !myad->InsertAttr("EventDescription", line.c_str()) ) {
 		delete myad;
 		return NULL;
-	}
-
-	if( no_reconnect_reason ) {
-		if( !myad->InsertAttr("NoReconnectReason", no_reconnect_reason) ) {
-			return NULL;
-		}
 	}
 
 	return myad;
@@ -4610,13 +4531,6 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 	ad->LookupString( "DisconnectReason", &mallocstr );
 	if( mallocstr ) {
 		setDisconnectReason( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
-
-	ad->LookupString( "NoReconnectReason", &mallocstr );
-	if( mallocstr ) {
-		setNoReconnectReason( mallocstr );
 		free( mallocstr );
 		mallocstr = NULL;
 	}
