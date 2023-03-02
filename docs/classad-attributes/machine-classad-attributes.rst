@@ -281,7 +281,7 @@ Machine ClassAd Attributes
     A boolean value set to ``True`` if the machine being advertised
     supports running jobs within Singularity containers.
 
-:classad-attribute:`HasSshs`
+:classad-attribute:`HasSshd`
     A boolean value set to ``True`` if the machine has a
     /usr/sbin/sshd installed.  If ``False``, *condor_ssh_to_job* 
     is unlikely to function.
