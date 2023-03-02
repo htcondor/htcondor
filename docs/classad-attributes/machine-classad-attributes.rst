@@ -206,6 +206,12 @@ Machine ClassAd Attributes
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.
 
+:classad-attribute:`DockerCachedImageSizeMb`
+    An integer value containing the number of megabytes of space used
+    by the docker image cache for cached images used by a worker node.
+    Excludes any images that may be in the cache that were not placed
+    there by HTCondor.
+
 :classad-attribute:`HasSandboxImage`
     A boolean value set to ``True`` if the machine is capable of
     executing container universe jobs with a singularity "sandbox"
@@ -274,6 +280,11 @@ Machine ClassAd Attributes
 :classad-attribute:`HasSingularity`
     A boolean value set to ``True`` if the machine being advertised
     supports running jobs within Singularity containers.
+
+:classad-attribute:`HasSshd`
+    A boolean value set to ``True`` if the machine has a
+    /usr/sbin/sshd installed.  If ``False``, *condor_ssh_to_job* 
+    is unlikely to function.
 
 :classad-attribute:`HasVM`
     If the configuration triggers the detection of virtual machine

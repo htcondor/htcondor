@@ -1327,7 +1327,7 @@ void CondorJob::ProcessRemoteAd( ClassAd *remote_ad )
 		std::vector<std::string> sl = split(config_attrs_to_copy);
 		freeAttrs = true;
 		attrs_to_copy = new char *[sl.size() + 1];
-		for (int i = 0; i < sl.size(); i++) {
+		for (size_t i = 0; i < sl.size(); i++) {
 			attrs_to_copy[i] = new char[ sl[i].length() + 1 ];
 			strcpy(attrs_to_copy[i], sl[i].c_str());
 		}

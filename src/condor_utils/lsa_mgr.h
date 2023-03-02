@@ -82,7 +82,7 @@ class lsa_mgr {
 		
 
 		// convert unicode to LSA_UNICODE_STRING object
-		void InitLsaString( PLSA_UNICODE_STRING LsaString, const LPWSTR String );
+		void InitLsaString( PLSA_UNICODE_STRING LsaString, PCWSTR String );
 
 		// load all password data from registry
 		bool loadDataFromRegistry();

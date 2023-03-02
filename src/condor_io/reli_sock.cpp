@@ -1354,8 +1354,9 @@ ReliSock::type() const
 
 char * ReliSock::serializeMsgInfo() const
 {
-	char *buf = new char[20 + 3*m_final_mds.size()];
-	sprintf(buf, "%i*%i*%i*%i*%zu",
+	size_t buf_sz = 20 + 3*m_final_mds.size();
+	char *buf = new char[buf_sz];
+	snprintf(buf, buf_sz, "%i*%i*%i*%i*%zu",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,

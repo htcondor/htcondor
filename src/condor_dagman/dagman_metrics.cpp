@@ -30,8 +30,6 @@
 #include <queue>
 #include <unordered_map>
 
-using namespace std;
-
 double DagmanMetrics::_startTime = 0.0;
 std::string DagmanMetrics::_dagmanId;
 std::string DagmanMetrics::_parentDagmanId;

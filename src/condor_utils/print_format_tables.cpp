@@ -834,7 +834,7 @@ bool render_elapsed_time (long long & tm, ClassAd *al , Formatter &)
 const char * format_load_avg (double fl, Formatter &)
 {
 	static char load_avg_buf[60];
-	sprintf(load_avg_buf, "%.3f", fl);
+	snprintf(load_avg_buf, sizeof(load_avg_buf), "%.3f", fl);
 	return load_avg_buf;
 }
 

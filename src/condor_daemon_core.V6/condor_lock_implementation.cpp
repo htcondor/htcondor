@@ -88,7 +88,7 @@ CondorLockImpl::~CondorLockImpl( void )
 {
 		// Lock lost; notify application
 	if ( have_lock ) {
-		LockLost( LOCK_SRC_POLL );
+		ReleaseLock();
 	}
 
 		// Free up the timer

@@ -1259,22 +1259,22 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
 
 		// The old format, one big ad
 	if (accountingAds.size() == 0) {
-		sprintf(strI, "%d", i);
+		snprintf(strI, sizeof(strI), "%d", i);
 	} else {
 		// The new format, all ads in the vector
 		strI[0] = '\0';
 		ad = & accountingAds[i - 1];
 	}
 
-    sprintf( attrName , "Name%s", strI );
-    sprintf( attrPrio , "Priority%s", strI );
-    sprintf( attrResUsed , "ResourcesUsed%s", strI );
-    sprintf( attrRequested , "Requested%s", strI );
-    sprintf( attrWtResUsed , "WeightedResourcesUsed%s", strI );
-    sprintf( attrFactor , "PriorityFactor%s", strI );
-    sprintf( attrBeginUsage , "BeginUsageTime%s", strI );
-    sprintf( attrLastUsage , "LastUsageTime%s", strI );
-    sprintf( attrAccUsage , "WeightedAccumulatedUsage%s", strI );
+	snprintf(attrName, sizeof(attrName), "Name%s", strI);
+	snprintf(attrPrio, sizeof(attrPrio), "Priority%s", strI);
+	snprintf(attrResUsed, sizeof(attrResUsed), "ResourcesUsed%s", strI);
+	snprintf(attrRequested, sizeof(attrRequested), "Requested%s", strI);
+	snprintf(attrWtResUsed, sizeof(attrWtResUsed), "WeightedResourcesUsed%s", strI);
+	snprintf(attrFactor, sizeof(attrFactor), "PriorityFactor%s", strI);
+	snprintf(attrBeginUsage, sizeof(attrBeginUsage), "BeginUsageTime%s", strI);
+	snprintf(attrLastUsage, sizeof(attrLastUsage), "LastUsageTime%s", strI);
+	snprintf(attrAccUsage, sizeof(attrAccUsage), "WeightedAccumulatedUsage%s", strI);
     formatstr(attrAcctGroup, "AccountingGroup%s", strI);
     formatstr(attrIsAcctGroup, "IsAccountingGroup%s", strI);
     formatstr(attrCeiling, "Ceiling%s", strI);
@@ -1311,9 +1311,9 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
     }
 
     char attr[64];
-    sprintf( attr, "EffectiveQuota%s", strI );
+    snprintf( attr, sizeof(attr), "EffectiveQuota%s", strI );
     if (ad->LookupFloat(attr, effective_quota)) LR[i-1].HasDetail |= DetailEffQuota;
-    sprintf( attr, "ConfigQuota%s", strI );
+    snprintf( attr, sizeof(attr), "ConfigQuota%s", strI );
     if (ad->LookupFloat(attr, config_quota)) LR[i-1].HasDetail |= DetailCfgQuota;
 
     if (IsAcctGroup) {
@@ -1321,14 +1321,14 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
         if (!strcmp(name,"<none>") || !strcmp(name,"."))
            LR[i-1].GroupId = 0;
 
-        sprintf( attr, "GroupAutoRegroup%s", strI );
+        snprintf( attr, sizeof(attr), "GroupAutoRegroup%s", strI );
         bool regroup = false;
         if (ad->LookupBool(attr, regroup)) LR[i-1].HasDetail |= DetailSurplus;
         LR[i-1].Surplus = regroup ? SurplusRegroup : SurplusNone;
         if (regroup)
            GlobalSurplusPolicy = SurplusRegroup;
 
-        sprintf( attr, "SurplusPolicy%s", strI );
+        snprintf( attr, sizeof(attr), "SurplusPolicy%s", strI );
         if (ad->LookupString(attr, policy, COUNTOF(policy) )) {
            LR[i-1].HasDetail |= DetailSurplus;
            if (MATCH == strcasecmp(policy, "regroup")) {
@@ -1345,11 +1345,11 @@ static void CollectInfo(int numElem, ClassAd* ad, std::vector<ClassAd> &accounti
         }
 
         double sort_key = LR[i-1].SortKey;
-        sprintf( attr, "GroupSortKey%s", strI );
+        snprintf( attr, sizeof(attr), "GroupSortKey%s", strI );
         if (ad->LookupFloat(attr, sort_key)) LR[i-1].HasDetail |= DetailSortKey;
         LR[i-1].SortKey = sort_key;
 
-        sprintf( attr, "SubtreeQuota%s", strI );
+        snprintf( attr, sizeof(attr), "SubtreeQuota%s", strI );
         if (ad->LookupFloat(attr, subtree_quota)) LR[i-1].HasDetail |= DetailTreeQuota;
         if (GroupRollup && !(LR[i-1].HasDetail & DetailEffQuota)) {
            LR[i-1].HasDetail &= ~DetailPrios;
@@ -1540,14 +1540,14 @@ static char * FormatDeltaTime(char * pszDest, int cchDest, int tmDelta, const ch
 static char * FormatFloat(char * pszDest, int width, int decimal, double value)
 {
    char sz[60];
-   char fmt[16] = "%";
-   sprintf(fmt+1, "%d.%df", width, decimal);
-   sprintf(sz, fmt, value);
+   char fmt[16];
+   snprintf(fmt, sizeof(fmt), "%%%d.%df", width, decimal);
+   snprintf(sz, sizeof(sz), fmt, value);
    int cch = strlen(sz);
    if (cch > width)
       {
-      sprintf(fmt+1,".%dg", width-6);
-      sprintf(sz, fmt, value);
+      snprintf(fmt, sizeof(fmt), "%%.%dg", width-6);
+      snprintf(sz, sizeof(sz), fmt, value);
       cch = strlen(sz);
       }
    CopyAndPadToWidth(pszDest, sz, width+1, ' ', PAD_LEFT);
@@ -1623,7 +1623,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 
    char UserCountStr[30];
    const char * UserCountFmt = "Number of users: %d";
-   sprintf(UserCountStr, UserCountFmt, NumElem);
+   snprintf(UserCountStr, sizeof(UserCountStr), UserCountFmt, NumElem);
    const int min_name = strlen(UserCountStr);
 
    if (max_name > MAX_NAME_COLUMN_WIDTH) max_name = MAX_NAME_COLUMN_WIDTH;
@@ -1834,7 +1834,7 @@ static void PrintInfo(int tmLast, LineRec* LR, int NumElem, bool HierFlag)
 
    // print summary/footer
    // 
-   sprintf(UserCountStr, UserCountFmt, UserCount);
+   snprintf(UserCountStr, sizeof(UserCountStr), UserCountFmt, UserCount);
    CopyAndPadToWidth(Line,UserCountStr,max_name+1,' ');
    ix = max_name;
    for (int ii = 0; ii < (int)COUNTOF(aCols); ++ii)
@@ -1953,8 +1953,8 @@ static void PrintResList(ClassAd* ad)
   int i;
 
   for (i=1;;i++) {
-    sprintf( attrName , "Name%d", i );
-    sprintf( attrStartTime , "StartTime%d", i );
+    snprintf( attrName, sizeof(attrName), "Name%d", i );
+    snprintf( attrStartTime, sizeof(attrStartTime), "StartTime%d", i );
 
     if( !ad->LookupString   ( attrName, name, COUNTOF(name) ) ||
 		!ad->LookupInteger  ( attrStartTime, StartTime))

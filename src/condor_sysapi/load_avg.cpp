@@ -302,6 +302,7 @@ sysapi_load_avg_raw(void)
 	double totalLoad=0.0;
 	DWORD exitCode = 0;
 	BOOL createNewThread = FALSE;
+	bool in_startup = false;
 	int numSamples=0, i;
 
 	sysapi_internal_reconfig();
@@ -311,6 +312,7 @@ sysapi_load_avg_raw(void)
 		sysapi_ncpus(NULL, &ncpus);
 		InitializeCriticalSection(&cs);
 		createNewThread = TRUE;	
+		in_startup = true;
 	} else {
 		if ( ! GetExitCodeThread( threadHandle, &exitCode ) ) {
 			dprintf(D_ALWAYS, "GetExitCodeThread() failed. (err=%li)\n",
@@ -336,16 +338,17 @@ sysapi_load_avg_raw(void)
 			NULL, 0, (LPDWORD)&threadID);
 		if (threadHandle == NULL) {
 #ifndef TESTING
-			dprintf(D_ALWAYS, "failed to create loadavg thread, errno = %d\n",
-				GetLastError());
+			dprintf(D_ALWAYS, "failed to create loadavg thread, errno = %d\n", GetLastError());
 #endif
 			return 0.0;
 		}
-		Sleep(SAMPLE_INTERVAL*5);	/* wait for ~5 samples */
+		// TJ: removing this bacause it causes the STARTD to block for 5 seconds during startup
+		// Sleep(SAMPLE_INTERVAL*5);	/* wait for ~5 samples */
 	}
 	
 	currentTime = time(NULL);
-	
+	float avg_load = 0.0;
+
 	EnterCriticalSection(&cs);
 	for (i=0; i < NUM_SAMPLES; i++) {
 		/* if this sample occurred within the minute, then add to total */
@@ -356,19 +359,18 @@ sysapi_load_avg_raw(void)
 	}
 	LeaveCriticalSection(&cs);
 
-	if (numSamples == 0) {
+	if (numSamples == 0 && ! in_startup) {
 #ifndef TESTING
 		dprintf(D_ALWAYS, "no loadavg samples this minute, maybe thread died???\n");
 #endif
-		return 0.0;
 	}
 
+	if (numSamples > 0) { avg_load = ((float)totalLoad)/((float)numSamples); }
 #ifndef TESTING
-	dprintf(D_LOAD, "loadavg=%.2f with %d samples\n",
-			((float)totalLoad)/((float)numSamples), numSamples);
+	dprintf(D_LOAD, "loadavg=%.2f with %d samples\n", avg_load, numSamples);
 #endif
 
-	return ((float)totalLoad)/((float)numSamples);
+	return avg_load;
 }
 
 #if defined(TESTING)

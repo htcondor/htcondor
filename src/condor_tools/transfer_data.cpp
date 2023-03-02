@@ -151,7 +151,7 @@ void
 handleAll()
 {
 	char constraint[128];
-	sprintf( constraint, "%s >= 0", ATTR_CLUSTER_ID );
+	snprintf( constraint, sizeof(constraint), "%s >= 0", ATTR_CLUSTER_ID );
 
 	addConstraint(constraint);
 }

@@ -484,7 +484,7 @@ SYSTEM_TABLE = {
     ),
 
     "path-facility": System( **{
-        "pretty_name":      "PATh Facilty",
+        "pretty_name":      "PATh Facility",
         "host_name":        "ap1.facility.path-cc.io",
         "default_queue":    "cpu",
         "batch_system":     "HTCondor",

@@ -141,7 +141,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->void_release_claim();
+		rip->release_claim();
 	}
 
 	return rval;
@@ -229,11 +229,11 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::void_retire_claim );
+		resmgr->vacate_all(false);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->walk( &Resource::void_kill_claim );
+		resmgr->vacate_all(true);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -247,7 +247,7 @@ int
 command_pckpt_all(int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( &Resource::void_periodic_checkpoint );
+	resmgr->checkpoint_all();
 	return TRUE;
 }
 
@@ -945,8 +945,6 @@ return return_code;
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
-		// Formerly known as "reqservice"
-
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
 	double rank = 0;
@@ -1094,7 +1092,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	bool has_cp = false;
 	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
-	if (rip->can_create_dslot()) {
+
+	// If we are being claimed to go to work for another CM
+	// check here.
+	std::string workingCM;
+	req_classad->LookupString("WorkingCM", workingCM);
+
+	if (workingCM.empty() && rip->can_create_dslot()) {
 		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
 		if ( ! new_rip) {
 			refuse(stream);
@@ -1112,9 +1116,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		rip = new_rip;
 	}
 
-
 		// Make sure we're willing to run this job at all.
-	if (!rip->willingToRun(req_classad)) {
+	if (workingCM.empty() && !rip->willingToRun(req_classad)) {
 	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
 		refuse(stream);
 		ABORT;
@@ -1253,6 +1256,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
+	// Claimed for a temporary CM
+	if (workingCM.empty()) {
+		rip->workingCMStartTime = 0; // meaning "never"
+		rip->workingCM = "";
+	} else {
+		rip->workingCMStartTime = time(nullptr);
+		rip->workingCM = workingCM;
+	}
 #if HAVE_BACKFILL
 	if( rip->state() == backfill_state ) {
 			// we're currently in Backfill, so we can't just accept
@@ -1265,7 +1276,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 #endif /* HAVE_BACKFILL */
 
-		// If we're still here, we're ready to accpet the claim now.
+		// If we're still here, we're ready to accept the claim now.
 		// Call this other function to actually reply to the schedd
 		// and perform the last half of the protocol.  We use the same
 		// function after the preemption has completed when the startd
@@ -1460,7 +1471,11 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	rip->r_cur->setRequestStream( NULL );
 
 	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
-	rip->change_state( claimed_state );
+
+	// If we're a real claim, set us into claimed state
+	if (rip->workingCM.empty()) {
+		rip->change_state( claimed_state );
+	}
 	return true;
 }
 
@@ -1520,7 +1535,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
-	resmgr->compute_dynamic(true, rip);
+	resmgr->compute_and_refresh(rip);
 
 		// Possibly print out the ads we just got to the logs.
 	if( IsDebugLevel( D_JOB ) ) {
@@ -1620,30 +1635,21 @@ activate_claim( Resource* rip, Stream* stream )
 		// If the starter successfully spawns then ownership of the
 		// Starter object and the request classad (i.e. the job ad)
 		// will be transferred
-	if ( ! rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock)) {
+	pid_t starter_pid = rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock);
+	if ( ! starter_pid) {
 			// if Claim::spawnStarter fails, it calls resetClaim()
 		delete req_classad; req_classad = NULL;
 		delete tmp_starter; tmp_starter = NULL;
 		ABORT;
 	}
-	// Once we spawn the starter, we no longer own the request ad
+	// Once we spawn the starter, we no longer own the request ad or the Starter object
 	req_classad = NULL;
-
-	// keep track of the pointer to the Starter object with a new variable
-	// so we remember that we don't own it anymore.
-	// this variable will be used to know the IP of Starter later.
-	Starter* vm_starter = tmp_starter;
 	tmp_starter = NULL;
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
-		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
-				== false ) {
+		if( ! resmgr->AllocVM(starter_pid, vm_classad, rip)) {
 			ABORT;
 		}
-		vm_starter = NULL;
-
-		// update VM related info
-		resmgr->walk(&Resource::update_walk_for_vm_change);
 	}
 
 		// Finally, update all these things into the resource classad.

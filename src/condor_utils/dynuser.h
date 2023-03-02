@@ -57,7 +57,7 @@ public:
 
 	HANDLE get_token();
 
-    bool cleanup_condor_users(char* user_prefix);
+    bool cleanup_condor_users(const char* user_prefix);
 
 	void reset(); // used to be private
 

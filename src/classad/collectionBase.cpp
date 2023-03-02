@@ -29,7 +29,13 @@
 #include <sys/timeb.h>
 #endif
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::map;
+using std::cout;
+using std::endl;
+
 
 namespace classad {
 
@@ -91,9 +97,7 @@ InitializeFromLog( const string &logfile, const string storagefile, const string
           //Read all the ClassAd from storage file and build up the index
 	  if( ( storagefd = open( storagefile.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {	    
 	    CondorErrno = ERR_CACHE_FILE_ERROR;
-	    char buf[10];
-	    sprintf( buf, "%d", errno );
-	    CondorErrMsg = "failed to open storage file " + storagefile + " errno=" +string(buf);
+	    CondorErrMsg = "failed to open storage file " + storagefile + " errno=" + std::to_string(errno);
 	    return( false );
 	  };
 	  
@@ -1781,9 +1785,7 @@ WriteCheckPoint(){
 
       LatestCheckpoint.tv_sec=ctime.tv_sec;
 	  LatestCheckpoint.tv_usec=ctime.tv_usec;
-	  char arr[20];
-	  sprintf(arr,"%d.%d",(int)ctime.tv_sec,(int)ctime.tv_usec);
-	  string arr_s=arr;
+	  string arr_s = std::to_string(ctime.tv_sec) + '.' + std::to_string(ctime.tv_usec);
 	  ClassAd cla;
 	  //Dump all the dirty ClassAd into storagefile
 	  map<string,int>::iterator itr=DirtyClassad.begin();
@@ -1806,9 +1808,7 @@ WriteCheckPoint(){
 	  int fd_check;
 	  if( ( fd_check = open( CheckFileName.c_str(), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
                    CondorErrno = ERR_CACHE_FILE_ERROR;
-		   char buf[10];
-		   sprintf( buf, "%d", errno );
-		   CondorErrMsg = "failed to open checkpoint file " + CheckFileName + " errno=" +string(buf);
+				   CondorErrMsg = "failed to open checkpoint file " + CheckFileName + " errno=" + std::to_string(errno);
 		   return( false );
 	  }
 	  string buffer;
@@ -1816,9 +1816,7 @@ WriteCheckPoint(){
 	  buffer += "\n";
 	  int result = write(fd_check,(void*)(buffer.c_str()),(unsigned int)buffer.size());
 	  if (result < 0) {
-			char buf[10];
-			sprintf( buf, "%d", errno );
-			CondorErrMsg = "failed to write to checkpoint file " + CheckFileName + " errno=" +string(buf);
+			CondorErrMsg = "failed to write to checkpoint file " + CheckFileName + " errno=" + std::to_string(errno);
 			fsync(fd_check);
 			close(fd_check);
 			return( false );

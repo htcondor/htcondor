@@ -13,6 +13,7 @@ from htcondor_cli.verb import Verb
 
 # Most of the annex add/create code is stored in a separate file.
 from htcondor_cli.annex_create import annex_add, annex_create, create_annex_token
+from htcondor_cli.annex_validate import SYSTEM_TABLE
 
 class Create(Verb):
     """
@@ -139,6 +140,19 @@ class Create(Verb):
 class Add(Create):
     def __init__(self, logger, **options):
         annex_add(logger, **options)
+
+
+class Systems(Verb):
+    """
+    Display the known systems and queues.
+    """
+
+    def __init__(self, logger, **options):
+        for system in SYSTEM_TABLE.keys():
+            print(f"    {system}")
+            for queue in SYSTEM_TABLE[system].queues:
+                print(f"        {queue}")
+            print(f"")
 
 
 class Status(Verb):
@@ -449,7 +463,11 @@ class Annex(Noun):
         pass
 
 
+    class systems(Systems):
+        pass
+
+
     @classmethod
     def verbs(cls):
-        return [cls.create, cls.add, cls.status, cls.shutdown]
+        return [cls.create, cls.add, cls.status, cls.shutdown, cls.systems]
 

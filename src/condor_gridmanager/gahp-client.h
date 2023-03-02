@@ -71,7 +71,7 @@ class GahpServer : public Service {
 	GahpServer(const char *id, const char *path, const ArgList *args = NULL);
 	~GahpServer();
 
-	bool Startup();
+	bool Startup(bool force=false);
 	bool Initialize(Proxy * proxy);
 	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
@@ -235,7 +235,7 @@ class GenericGahpClient : public Service {
 							const ArgList * args = NULL );
 		virtual ~GenericGahpClient();
 
-		bool Startup();
+		bool Startup(bool force=false);
 		bool Initialize( Proxy * proxy );
 		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
@@ -390,9 +390,12 @@ class GahpClient : public GenericGahpClient {
 
 		int
 		condor_job_update_lease(const char *schedd_name,
-								const SimpleList<PROC_ID> &jobs,
-								const SimpleList<int> &expirations,
-								SimpleList<PROC_ID> &updated );
+		                        const std::vector<PROC_ID> &jobs,
+		                        const std::vector<int> &expirations,
+		                        std::vector<PROC_ID> &updated);
+
+		int
+		blah_ping(const std::string& lrms);
 
 		int
 		blah_job_submit(ClassAd *job_ad, char **job_id);

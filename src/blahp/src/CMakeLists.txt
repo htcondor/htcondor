@@ -238,6 +238,9 @@ set(blah_scripts
     scripts/pbs_status.py
     scripts/slurm_status.py
     scripts/lsf_status.py
+    scripts/condor_ping.sh scripts/kubernetes_ping.sh
+    scripts/lsf_ping.sh scripts/nqs_ping.sh scripts/pbs_ping.sh
+    scripts/sge_ping.sh scripts/slurm_ping.sh
    )
 
 install(FILES

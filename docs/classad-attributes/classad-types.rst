@@ -53,6 +53,16 @@ to a list attributes relevant to that type.
     the :doc:`/classad-attributes/defrag-classad-attributes` page.
     This ad can be shown by running condor_status -defrag.
 
+:index:`Grid (ClassAd Types)`
+
+``Grid``
+    The *condor_gridmanager* describes the state of each remote
+    service to which it submits grid universe jobs. ClassAd attributes
+    that appear in a Grid ClassAd are listed and described in the
+    unnumbered subsection labeled Grid ClassAd Attributes on
+    the :doc:`/classad-attributes/grid-classad-attributes` page.
+    These ad can be shown by running condor_status -grid.
+
 :index:`Job (ClassAd Types)`
 
 ``Job``

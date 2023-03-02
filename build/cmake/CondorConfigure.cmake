@@ -78,90 +78,80 @@ endif (WINDOWS)
 
 # To find python in Windows we will use alternate technique
 if(NOT WINDOWS)
-    if(WANT_PYTHON_WHEELS)
-        include (FindPythonInterp)
-        message(STATUS "Got PYTHON_VERSION_STRING = ${PYTHON_VERSION_STRING}")
-        # As of cmake 2.8.8, the variable below is defined by FindPythonInterp.
-        # This helps ensure we get the same version of the libraries and python
-        # on systems with both python2 and python3.
-        if (DEFINED PYTHON_VERSION_STRING)
-            set(Python_ADDITIONAL_VERSIONS "${PYTHON_VERSION_STRING}")
-        endif()
-        include (FindPythonLibs)
-        message(STATUS "Got PYTHONLIBS_VERSION_STRING = ${PYTHONLIBS_VERSION_STRING}")
-        if (PYTHON_EXECUTABLE)
-			if (${PYTHON_VERSION_MAJOR} VERSION_GREATER_EQUAL 3) 
-				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('EXT_SUFFIX'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
-			else()
-				execute_process( COMMAND "${PYTHON_EXECUTABLE}" "-c" "import distutils.sysconfig; import sys; sys.stdout.write(distutils.sysconfig.get_config_var('SO'))" OUTPUT_VARIABLE PYTHON_MODULE_SUFFIX)
-			endif()
-        endif()
-	else(WANT_PYTHON_WHEELS)
+	# We don't support python2 on mac (anymore)
+	if (APPLE)
+		set(WANT_PYTHON2_BINDINGS OFF)
+	endif()
 
-		# Not Windows nor Wheels
+	# Wheels are build in an environment that intentionlly doesn't have the
+	# python .so's or .a's installed, but does have the header files.
+	# cmake find_package throws an error when you ask for development
+	# artifacts, and the libraries are missing.  So, we ask for just
+	# the interpreter, which find the root directory where the interpreter
+	# is installed, and exports the python major/minor/patch version 
+	# cmake variables.  To build the wheels, we rely on an outside script
+	# to set the PYTHON_INCLUDE_DIR 
 
-		# We don't support python2 on mac (anymore)
-		if (APPLE)
-			set(WANT_PYTHON2_BINDINGS OFF)
+	if (WANT_PYTHON_WHEELS)
+		find_package (Python3 COMPONENTS Interpreter)
+	endif()
+
+	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
+
+		find_package (Python2 COMPONENTS Interpreter Development)
+
+		set(PYTHON_VERSION_STRING    ${Python2_VERSION})
+		set(PYTHON_VERSION_MAJOR     ${Python2_VERSION_MAJOR})
+		set(PYTHON_VERSION_MINOR     ${Python2_VERSION_MINOR})
+		set(PYTHON_VERSION_PATCH     ${Python2_VERSION_PATCH})
+		set(PYTHON_INCLUDE_DIRS      ${Python2_INCLUDE_DIRS})
+		set(PYTHON_LIB               ${Python2_LIBRARIES})
+		set(PYTHON_MODULE_EXTENSION  "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
+		set(PYTHON_EXECUTABLE        ${Python2_EXECUTABLE})
+
+		set(PYTHON_LIBRARIES "${PYTHON_LIB}")
+
+		set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
+		set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
+		set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+
+		if (Python2_FOUND)
+			set(PYTHONLIBS_FOUND TRUE)
+			message(STATUS "Python2 library found at ${PYTHON_LIB}")
 		endif()
 
-		if (WANT_PYTHON2_BINDINGS)
+	endif(WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
-			find_package (Python2 COMPONENTS Interpreter Development)
+	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
+		find_package (Python3 COMPONENTS Interpreter Development)
 
-			set(PYTHON_VERSION_STRING    ${Python2_VERSION})
-			set(PYTHON_VERSION_MAJOR     ${Python2_VERSION_MAJOR})
-			set(PYTHON_VERSION_MINOR     ${Python2_VERSION_MINOR})
-			set(PYTHON_VERSION_PATCH     ${Python2_VERSION_PATCH})
-			set(PYTHON_INCLUDE_DIRS      ${Python2_INCLUDE_DIRS})
-			set(PYTHON_LIB               ${Python2_LIBRARIES})
-			set(PYTHON_MODULE_EXTENSION  "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+		# All these variables are used later, and were defined in cmake 2.6
+		# days.  At some point, we should not copy the find_package python
+		# variables into these, and use the native cmake variables and targets.
+		set(PYTHON3_VERSION_STRING    ${Python3_VERSION})
+		set(PYTHON3_VERSION_MAJOR     ${Python3_VERSION_MAJOR})
+		set(PYTHON3_VERSION_MINOR     ${Python3_VERSION_MINOR})
+		set(PYTHON3_VERSION_PATCH     ${Python3_VERSION_PATCH})
+		set(PYTHON3_INCLUDE_DIRS      ${Python3_INCLUDE_DIRS})
+		set(PYTHON3_LIB               ${Python3_LIBRARIES})
+		#Always so, even on apple
+		set(PYTHON3_MODULE_EXTENSION  ".${Python3_SOABI}.so")
 
-			set(PYTHON_EXECUTABLE        ${Python2_EXECUTABLE})
+		set(PYTHON3_EXECUTABLE        ${Python3_EXECUTABLE})
 
-			set(PYTHON_LIBRARIES "${PYTHON_LIB}")
+		set(PYTHON3_LIBRARIES "${PYTHON3_LIB}")
 
-			set(PYTHON_INCLUDE_PATH "${PYTHON_INCLUDE_DIRS}")
-			set(PYTHONLIBS_VERSION_STRING "${PYTHON_VERSION_STRING}")
-			set(PYTHON_MODULE_SUFFIX "${PYTHON_MODULE_EXTENSION}")
+		set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
+		set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
+		set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
 
-			if (Python2_FOUND)
-				set(PYTHONLIBS_FOUND TRUE)
-				message(STATUS "Python2 library found at ${PYTHON_LIB}")
-			endif()
+		if (Python3_FOUND)
+			set(PYTHON3LIBS_FOUND TRUE)
+			message(STATUS "Python3 library found at ${PYTHON3_LIB}")
+		endif()
 
-		endif(WANT_PYTHON2_BINDINGS)
-
-		if (WANT_PYTHON3_BINDINGS)
-			find_package (Python3 COMPONENTS Interpreter Development)
-
-			# All these variables are used later, and were defined in cmake 2.6
-			# days.  At some point, we should not copy the find_package python
-			# variables into these, and use the native cmake variables and targets.
-			set(PYTHON3_VERSION_STRING    ${Python3_VERSION})
-			set(PYTHON3_VERSION_MAJOR     ${Python3_VERSION_MAJOR})
-			set(PYTHON3_VERSION_MINOR     ${Python3_VERSION_MINOR})
-			set(PYTHON3_VERSION_PATCH     ${Python3_VERSION_PATCH})
-			set(PYTHON3_INCLUDE_DIRS      ${Python3_INCLUDE_DIRS})
-			set(PYTHON3_LIB               ${Python3_LIBRARIES})
-			#Always so, even on apple
-			set(PYTHON3_MODULE_EXTENSION  ".${Python3_SOABI}.so")
-
-			set(PYTHON3_EXECUTABLE        ${Python3_EXECUTABLE})
-
-			set(PYTHON3_LIBRARIES "${PYTHON3_LIB}")
-
-			set(PYTHON3_INCLUDE_PATH "${PYTHON3_INCLUDE_DIRS}")
-			set(PYTHON3LIBS_VERSION_STRING "${PYTHON3_VERSION_STRING}")
-			set(PYTHON3_MODULE_SUFFIX "${PYTHON3_MODULE_EXTENSION}")
-
-			if (Python3_FOUND)
-				set(PYTHON3LIBS_FOUND TRUE)
-				message(STATUS "Python3 library found at ${PYTHON3_LIB}")
-			endif()
-
-		endif(WANT_PYTHON3_BINDINGS)
-	endif(WANT_PYTHON_WHEELS)
+	endif(WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 else(NOT WINDOWS)
     #if(WINDOWS)
@@ -504,9 +494,9 @@ if( NOT WINDOWS)
 	check_include_files("procfs.h" HAVE_PROCFS_H)
 	check_include_files("sys/procfs.h" HAVE_SYS_PROCFS_H)
 
-	check_type_exists("struct inotify_event" "sys/inotify.h" HAVE_INOTIFY)
-	check_type_exists("struct ifconf" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
-	check_type_exists("struct ifreq" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
+	check_struct_has_member("struct inotify_event" "len" "sys/inotify.h" HAVE_INOTIFY)
+	check_struct_has_member("struct ifconf" "ifc_len" "sys/socket.h;net/if.h" HAVE_STRUCT_IFCONF)
+	check_struct_has_member("struct ifreq" "ifr_name" "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ)
 	check_struct_has_member("struct ifreq" ifr_hwaddr "sys/socket.h;net/if.h" HAVE_STRUCT_IFREQ_IFR_HWADDR)
 
 	check_struct_has_member("struct sockaddr_in" sin_len "netinet/in.h" HAVE_STRUCT_SOCKADDR_IN_SIN_LEN)
@@ -923,7 +913,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/classad)
 include_directories(${CONDOR_SOURCE_DIR}/src/safefile)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src/safefile)
-include_directories(${CONDOR_SOURCE_DIR}/src/jwt-cpp/include)
+include_directories(${CONDOR_SOURCE_DIR}/src/vendor/jwt-cpp/include)
 # set these so contrib modules can add to their include path without being reliant on specific directory names.
 set (CONDOR_MASTER_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_master.V6)
 set (CONDOR_COLLECTOR_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_collector.V6)

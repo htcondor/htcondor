@@ -166,7 +166,8 @@ printClassAd( void )
 	if (htcondor::Singularity::enabled()) {
 
 		bool can_run_sandbox = false;
-		if (htcondor::Singularity::canRunSandbox())  {
+		bool can_use_pidnamespaces = true;
+		if (htcondor::Singularity::canRunSandbox(can_use_pidnamespaces))  {
 			can_run_sandbox = true;
 		}
 		bool can_run_sif = false;
@@ -187,6 +188,11 @@ printClassAd( void )
 			if (can_run_sif) {
 				printf("%s = True\n", ATTR_HAS_SIF);
 			}
+			// So canRunSandbox() determined if this Singularity install can use pid namespaces.
+			// Use the result to set ATTR_HAS_SINGULARITY_PIDNAMESPACES explicitly to True or False for
+			// insertion into the slot ad, as subsequent invocations of the condor_starter
+			// will lookup this slot attribute to determine if pid namesapces are available.
+			printf("%s = %s\n", ATTR_HAS_SINGULARITY_PIDNAMESPACES, can_use_pidnamespaces ? "True" : "False");
 		}
 		else {
 			// If we made it here, we cannot run either sif or sandbox images.
@@ -230,6 +236,25 @@ printClassAd( void )
 #if defined(WIN32)
 		// Advertise our ability to run jobs as the submitting user
 	printf("%s = True\n", ATTR_HAS_WIN_RUN_AS_OWNER);
+#endif
+
+#ifndef WIN32
+	// Many site intentionally remove /usr/sbin/ssh, which will
+	// break condor_ssh_to_job.  Let's advertise if it exists
+	// as if it doesn't, there's no hope of running condor_ssh_to_job
+
+	std::string sshd;
+	bool hasSshd = false;
+
+	param(sshd,"SSH_TO_JOB_SSHD", "/usr/sbin/sshd");
+	if (!sshd.empty()) {
+		int rc = access(sshd.c_str(), X_OK);
+		if (rc == 0) {
+			hasSshd = true;
+		}
+
+	}
+	printf("HasSshd = %s\n", hasSshd ? "true" : "false");
 #endif
 }
 

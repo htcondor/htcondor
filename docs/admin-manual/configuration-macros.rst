@@ -1707,7 +1707,7 @@ that DaemonCore uses which affect all HTCondor daemons.
 
 :macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
-    the configuration file in its ClassAd. Give the comma-separated list
+    the configuration file in its ClassAd. Give the list
     of entries from the configuration file you want in the given
     daemon's ClassAd. Frequently used to add attributes to machines so
     that the machines can discriminate between other machines in a job's
@@ -3312,6 +3312,42 @@ section.
         JobUniverse, NiceUser, ExecutableSize and ImageSize are advertised
         into the machine ClassAd.
 
+:macro-def:`STARTD_LATCH_EXPRS`
+    Each time a slot is created, activated, or when periodicy STARTD policy
+    is evaluated HTCondor will evaluate expressions whose names are listed
+    in this configuration variable.  If the evaluated value can be converted
+    to an integer, and the value of the integer changes, the time of the change
+    will be published.
+
+    This macro should be a list of the names of configuration variables that contain
+    an expression to be evaluated, the name of the configuration variable will be
+    treated as the base name of attributes published for the macro. Thus expressions listed
+    behave like :macro:`STARTD_ATTRS` with the additional behavior the most recent evaluated
+    value will be advertised as ``<name>Value`` and the time the value changed will be
+    advertised as ``<name>Time``.  Entries in this list can also be the names of standard
+    slot attributes like ``NumDynamicSlots``, in which case the change time will be advertised
+    but the evaluated value will not be advertised, since that would be redundant.
+
+    It is not an error when the result of evaluation is undefined, in that case the STARTD
+    will remember the time that the value became undefined but not advertise the time. If
+    the evaluated value becomes defined again, the time that it changed from undefined to
+    the new value will again be advertised.
+
+    Example:
+
+    .. code-block:: condor-config
+
+          STARTD_LATCH_EXPRS = HalfFull NumDynamicSlots
+          HalfFull = Cpus < (TotalSlotCPUs/2) || Memory < (TotalSlotMemory/2)
+
+    For the configuration fragment above, the STARTD will advertise ``HalfFull`` as an expression,
+    along with the last evaluated value of that expression as ``HalfFullValue``, and the time
+    it changed to that value as ``HalfFullTime``.  It will also advertise the time that the number
+    of dynamic slots changed to its current value as ``NumDynamicSlotsTime``. It will not advertise
+    a ``NumDynamicSlotsValue`` because the ``<name>Value`` attribute is only advertised if ``<name>``
+    is an expression in the configuration that is not simple literal value.
+
+
 :macro-def:`STARTD_ATTRS`
     This macro is described in :macro:`<SUBSYS>_ATTRS`.
 
@@ -4275,6 +4311,13 @@ details.
     default is used.
     This is used to configure the size of the container's ``/dev/shm`` size adapting
     to the job's requested memory.
+
+:macro-def:`DOCKER_CACHE_ADVERTISE_INTERVAL`
+    The *condor_startd* periodically advertises how much disk
+    space the docker daemon is using to store images into the
+    slot attribute DockerCachedImageSize.  This knob, which 
+    defaults to 1200 (seconds), controls how often the start
+    polls the docker daemon for this information.
 
 :macro-def:`OPENMPI_INSTALL_PATH`
     The location of the Open MPI installation on the local machine.
@@ -5844,6 +5887,51 @@ These settings affect the *condor_shadow*.
     if the remap is an absolute path or if the remap tries to write to
     a directory specified within ``LIMIT_DIRECTORY_ACCESS``.
 
+:macro-def:`JOB_EPOCH_HISTORY`
+    A full path and filename of a file where the *condor_shadow* will
+    write to a per run job history file in an analogous way to that of
+    the history file defined by the configuration variable ``HISTORY``.
+    It will be rotated in the same way, and has similar parameters that
+    apply to the ``HISTORY`` file rotation apply to the *condor_shadow*
+    daemon epoch history as well. This can be read with the *condor_history*
+    command using the -epochs option. By default this option is not
+    set.
+
+    .. code-block:: console
+
+        $ condor_history -epochs
+
+:macro-def:`MAX_EPOCH_HISTORY_LOG`
+    Defines the maximum size for the epoch history file, in bytes. It
+    defaults to 20MB.
+
+:macro-def:`MAX_EPOCH_HISTORY_ROTATIONS`
+    Controls the maximum number of backup epoch history files to be kept.
+    It defaults to 2, which means that there may be up to three epoch history
+    files (two backups, plus the epoch history file that is being currently
+    written to). When the epoch history file is rotated, and this rotation
+    would cause the number of backups to be too large, the oldest file is removed.
+
+:macro-def:`JOB_EPOCH_HISTORY_DIR`
+    A full path to an existing directory that the *condor_shadow* will write
+    the jobs current job ad to a per job run history file with the name
+    ``job.runs.X.Y.ads``. Where ``X`` is the jobs cluster id and ``Y`` is
+    the jobs process id. For example, job 35.2 would write a job ad for each run
+    to the file ``job.runs.35.2.ads``. These files can be read through *condor_history*
+    when ran with the -epochs and -directory options.
+
+    .. code-block:: console
+
+        $ condor_history -epochs -directory
+
+    HTCondor does not automatically  delete these files, so unchecked the
+    directory can grow very large. Either an external entity needs to clean
+    up or *condor_history* can use the -epochs options optional ``:d``
+    extention to read and delete the files.
+
+    .. code-block:: console
+
+        $ condor_history -epochs:d -directory
 
 condor_starter Configuration File Entries
 ------------------------------------------
@@ -8495,6 +8583,17 @@ General
     submit description file unless *VARS* specifies *PREPEND* or *APPEND*.
     When ``False``, the parsed variables will be prepended unless specified.
 
+:macro-def:`DAGMAN_MANAGER_JOB_APPEND_GETENV`
+    A comma separated list of variable names to add to the DAGMan ``.condor.sub``
+    file's ``getenv`` option. This will in turn add any found matching environment
+    variables to the DAGMan proper jobs **environment**. Setting this value to
+    ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
+    ``getenv`` are:
+
+    .. code-block:: dagman-base-getenv
+
+        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ
+
 Throttling
 ''''''''''
 
@@ -11006,6 +11105,13 @@ has.
     Therefore, multiples of 20 between 20 and 300 makes sense for this
     value. Negative values inhibit sending data to Ganglia. The default
     value is 60.
+
+:macro-def:`GANGLIAD_MIN_METRIC_LIFETIME`
+    An integer value representing the minimum DMAX value for all metrics.
+    Where DMAX is the number number of seconds without updating that
+    a metric will be kept before deletion. This value defaults to ``86400``
+    which is equivalent to 1 day. This value will be overridden by a
+    specific metric defined ``Lifetime`` value.
 
 :macro-def:`GANGLIAD_VERBOSITY`
     An integer that specifies the maximum verbosity level of metrics to

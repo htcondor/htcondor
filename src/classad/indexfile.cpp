@@ -21,7 +21,11 @@
 #include "classad/indexfile.h"
 #include <iostream>
 
-using namespace std;
+using std::string;
+using std::pair;
+using std::cout;
+using std::endl;
+
 
 namespace classad {
 
@@ -91,12 +95,10 @@ TruncateStorageFile()
 	close(new_filed);
 	if( rename(filename, logfilename) < 0 ) {
 		CondorErrno = ERR_CACHE_FILE_ERROR;
-		char buf[10];
-		sprintf( buf, "%d", errno );
 		CondorErrMsg = "failed to truncate storagefile: rename(" 
 			+ string(filename) + " , " 
 			+ string(logfilename) +", errno=" 
-			+ string(buf);    
+			+ std::to_string(errno);
 		return( false );
 	}
 	return true;

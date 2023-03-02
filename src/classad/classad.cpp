@@ -24,7 +24,10 @@
 #include "classad/sink.h"
 #include "classad/classadCache.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 extern "C" void to_lower (char *);	// from util_lib (config.c)
 
@@ -688,22 +691,6 @@ find(string const& attrName) const
 // --- end STL-like functions
 
 // --- begin lookup methods
-ExprTree *ClassAd::
-Lookup( const string &name ) const
-{
-	ExprTree *tree;
-	AttrList::const_iterator itr;
-
-	itr = attrList.find( name );
-	if (itr != attrList.end()) {
-		tree = itr->second;
-	} else if (chained_parent_ad != NULL) {
-		tree = chained_parent_ad->Lookup(name);
-	} else {
-		tree = NULL;
-	}
-	return tree;
-}
 
 ExprTree *ClassAd::
 LookupIgnoreChain( const string &name ) const

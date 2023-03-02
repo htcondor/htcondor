@@ -28,7 +28,10 @@
 #include "classad/util.h"
 #include <assert.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 

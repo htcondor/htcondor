@@ -56,7 +56,7 @@ CronJobOut::Output( const char *buf, int len )
 	if ( '-' == buf[0] ) {
 		if (buf[1]) {
 			m_q_sep = &buf[1];
-			m_q_sep.trim();
+			trim(m_q_sep);
 		}
 		return 1;
 	}

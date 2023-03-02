@@ -23,7 +23,10 @@
 #include "classad/util.h"
 #include <limits>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 #include <algorithm>
 namespace classad {

@@ -321,8 +321,6 @@ hibernation_manager.cpp
 hibernation_manager.h
 hibernator.cpp
 hibernator.h
-hibernator.tools.cpp
-hibernator.tools.h
 historyFileFinder.cpp
 historyFileFinder.h
 history_queue.cpp
@@ -643,6 +641,13 @@ condor_shared_lib(condor_utils
 	$<TARGET_OBJECTS:condor_utils_objects>
 	$<TARGET_OBJECTS:condor_extra_objects>
 )
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+			target_link_libraries(condor_utils PRIVATE stdc++fs)
+        endif()
+    endif()
+endif()
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
@@ -666,6 +671,14 @@ if (LINUX OR APPLE)
    if (HAVE_GNU_LD)
 	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
    endif()
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+			target_link_libraries(condor_utils_s stdc++fs)
+        endif()
+    endif()
+endif()
+
 endif(LINUX OR APPLE)
 
 

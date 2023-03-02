@@ -42,10 +42,12 @@
 #define ATTR_AGGREGATE_GROUP "AggregateGroup"
 #define ATTR_IP "IP"
 #define ATTR_SCALE "Scale"
+#define ATTR_LIFETIME "Lifetime"
 
 Metric::Metric():
 	derivative(false),
 	verbosity(0),
+	lifetime(-1),
     scale(1.0),
 	type(AUTO),
 	aggregate(NO_AGGREGATE),
@@ -166,6 +168,8 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		// avoid doing more work; this metric requires higher verbosity
 		return false;
 	}
+
+	metric_ad.EvaluateAttrInt(ATTR_LIFETIME, lifetime);
 
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;

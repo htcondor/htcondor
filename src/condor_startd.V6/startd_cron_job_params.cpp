@@ -43,7 +43,7 @@ StartdCronJobParams::Initialize( void )
 		return false;
 	}
 
-	MyString	slots_str;
+	std::string slots_str;
 	Lookup( "SLOTS", slots_str );
 
 	m_slots.clear();

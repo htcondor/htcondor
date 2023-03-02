@@ -21,26 +21,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "filename_tools.h"
-#include "MyString.h"
-
-// keep this function in sync with filename_split() in filename_tools.c
-int filename_split( const char *path, MyString &dir, MyString &file )
-{
-	char const *last_slash;
-
-	last_slash = strrchr(path,DIR_DELIM_CHAR);
-	if(last_slash) {
-		dir = path;
-		dir.truncate(last_slash - path);
-		last_slash++;
-		file = last_slash;
-		return 1;
-	} else {
-		file = path;
-		dir = ".";
-		return 0;
-	}
-}
 
 // keep this function in sync with filename_split() in filename_tools.c
 int filename_split( const char *path, std::string &dir, std::string &file ) {
@@ -125,15 +105,7 @@ static char * copy_upto( char *in, char *out, char delim, int length )
 	}
 }
 
-int
-filename_remap_find( const char * input, const char * filename, std::string & output, int cur_remap_level ) {
-    MyString ms;
-    int rv = filename_remap_find( input, filename, ms, cur_remap_level );
-    if(! ms.empty()) { output = ms; }
-    return rv;
-}
-
-int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_remap_level )
+int filename_remap_find( const char *input, const char *filename, std::string &output, int cur_remap_level )
 {
 	if (cur_remap_level == 0) {
 		dprintf( D_FULLDEBUG, "REMAP: begin with rules: %s\n", input);
@@ -144,7 +116,7 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 	int max_remap_level = param_integer("MAX_REMAP_RECURSIONS", 128);
 	if (cur_remap_level > max_remap_level) {
 		dprintf( D_FULLDEBUG, "REMAP: aborting after %i iterations\n", cur_remap_level);
-		output.formatstr("<abort>");
+		output = "<abort>";
 		return -1;
 	}
 
@@ -210,29 +182,29 @@ int filename_remap_find( const char *input, const char *filename, MyString &outp
 
 	if(found) {
 		// recurse, using the same remap rules (input)
-		MyString new_map;
+		std::string new_map;
 		int res = filename_remap_find( input, output.c_str(), new_map, cur_remap_level+1 );
 		if (res == -1) {
-			MyString tmp = output;
-			output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_map.c_str());
+			std::string tmp = output;
+			formatstr(output, "<%i: %s>%s", cur_remap_level, filename, new_map.c_str());
 			return -1;
 		}
 		if (res) {
 			output = new_map;
 		}
 	} else {
-		MyString parent;
-		MyString entry;
+		std::string parent;
+		std::string entry;
     	if(filename_split( filename, parent, entry )) {
-			MyString new_parent;
+			std::string new_parent;
 			int res = filename_remap_find( input, parent.c_str(), new_parent, cur_remap_level+1 );
 			if (res == -1) {
-				output.formatstr("<%i: %s>%s", cur_remap_level, filename, new_parent.c_str());
+				formatstr(output, "<%i: %s>%s", cur_remap_level, filename, new_parent.c_str());
 				return -1;
 			}
 			if (res) {
 				found = 1;
-				output.formatstr("%s%c%s",new_parent.c_str(),DIR_DELIM_CHAR,entry.c_str());
+				formatstr(output, "%s%c%s",new_parent.c_str(),DIR_DELIM_CHAR,entry.c_str());
 			}
 		} else {
 			// can't be split

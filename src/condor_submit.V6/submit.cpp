@@ -252,10 +252,10 @@ void ReportSubmitException(const char * msg, int /*src_line*/, const char * /*sr
 {
 	char loc[100];
 	switch (ErrContext.phase) {
-	case PHASE_READ_SUBMIT: sprintf(loc, " on Line %d of submit file", FileMacroSource.line); break;
-	case PHASE_DASH_APPEND: sprintf(loc, " with -a argument #%d", ExtraLineNo); break;
-	case PHASE_QUEUE:       sprintf(loc, " at Queue statement on Line %d", FileMacroSource.line); break;
-	case PHASE_QUEUE_ARG:   sprintf(loc, " with -queue argument"); break;
+	case PHASE_READ_SUBMIT: snprintf(loc, sizeof(loc), " on Line %d of submit file", FileMacroSource.line); break;
+	case PHASE_DASH_APPEND: snprintf(loc, sizeof(loc), " with -a argument #%d", ExtraLineNo); break;
+	case PHASE_QUEUE:       snprintf(loc, sizeof(loc), " at Queue statement on Line %d", FileMacroSource.line); break;
+	case PHASE_QUEUE_ARG:   snprintf(loc, sizeof(loc), " with -queue argument"); break;
 	default: loc[0] = 0; break;
 	}
 
@@ -940,7 +940,7 @@ main( int argc, const char *argv[] )
 		std::string userdom;
 		auto_free_ptr the_username(my_username());
 		auto_free_ptr the_domainname(my_domainname());
-		userdom = the_username;
+		userdom = the_username.ptr();
 		userdom += "@";
 		if (the_domainname) { userdom += the_domainname.ptr(); }
 
@@ -1268,7 +1268,7 @@ main( int argc, const char *argv[] )
 			sshargs[i++] = "-name";
 			sshargs[i++] = ScheddName;
 		}
-		sprintf(jobid,"%d.0",ClusterId);
+		snprintf(jobid, sizeof(jobid), "%d.0", ClusterId);
 		sshargs[i++] = jobid;
 		sleep(3);	// with luck, schedd will start the job while we sleep
 		// We cannot fork before calling ssh_to_job, since ssh will want
@@ -2125,7 +2125,7 @@ int queue_connect()
 static char ClusterString[20]="1", ProcessString[20]="0", EmptyItemString[] = "";
 void init_vars(SubmitHash & hash, int cluster_id, StringList & vars)
 {
-	sprintf(ClusterString, "%d", cluster_id);
+	snprintf(ClusterString, sizeof(ClusterString), "%d", cluster_id);
 	strcpy(ProcessString, "0");
 
 	// establish live buffers for $(Cluster) and $(Process), and other loop variables
@@ -2333,8 +2333,8 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 		}
 
 		// update the live $(Cluster), $(Process) and $(Step) string buffers
-		(void)sprintf(ClusterString, "%d", ClusterId);
-		(void)sprintf(ProcessString, "%d", ProcId);
+		(void)snprintf(ClusterString, sizeof(ClusterString), "%d", ClusterId);
+		(void)snprintf(ProcessString, sizeof(ProcessString), "%d", ProcId);
 
 		// we move this outside the above, otherwise it appears that we have 
 		// received no queue command (or several, if there were multiple ones)

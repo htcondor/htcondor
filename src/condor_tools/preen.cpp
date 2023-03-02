@@ -61,8 +61,6 @@
 #define PREEN_EXIT_STATUS_FAILURE       1
 #define PREEN_EXIT_STATUS_EMAIL_FAILURE 2
 
-using namespace std;
-
 State get_machine_state();
 
 extern void		_condor_set_debug_flags( const char *strflags, int flags );

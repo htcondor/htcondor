@@ -1877,7 +1877,7 @@ class DaemonCore : public Service
 	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki, Stream* accepted_sock=NULL);
+    int HandleReq(size_t socki, Stream* accepted_sock=NULL);
 	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
@@ -1989,9 +1989,7 @@ class DaemonCore : public Service
     };
 
     void                DumpCommandTable(int, const char* = NULL);
-    int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of command handlers used
-    ExtArray<CommandEnt>         comTable;       // command table
+	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 
@@ -2010,9 +2008,7 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
-    int                 maxSig;      // max number of signal handlers
-    int                 nSig;        // high-water mark of entries used
-    ExtArray<SignalEnt> sigTable;    // signal table
+	std::vector<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt
@@ -2035,11 +2031,9 @@ class DaemonCore : public Service
 		bool            is_command_sock;
     };
     void              DumpSocketTable(int, const char* = NULL);
-    int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handler slots in use use
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
-    ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
+	std::vector<SockEnt> sockTable; // socket table; grows dynamically if needed
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -2053,11 +2047,10 @@ class DaemonCore : public Service
 #else
 	typedef int PipeHandle;
 #endif
-	ExtArray<PipeHandle>* pipeHandleTable;
-	int maxPipeHandleIndex;
-	int pipeHandleTableInsert(PipeHandle);
-	void pipeHandleTableRemove(int);
-	int pipeHandleTableLookup(int, PipeHandle* = NULL);
+	std::vector<PipeHandle> pipeHandleTable;
+	size_t pipeHandleTableInsert(PipeHandle);
+	void pipeHandleTableRemove(size_t);
+	int pipeHandleTableLookup(size_t, PipeHandle* = NULL);
 	int maxPipeBuffer;
 
 	// this table is for dispatching registered pipes
@@ -2094,10 +2087,9 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpReapTable(int, const char* = NULL);
-    int                 maxReap;        // max number of reaper handlers
-    int                 nReap;          // number of reaper handlers used
+    size_t              nReap;          // number of reaper handlers used
     int                 nextReapId;     // next reaper id to use
-    ExtArray<ReapEnt>  reapTable;      // reaper table
+	std::vector<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service
@@ -2251,9 +2243,7 @@ class DaemonCore : public Service
 		// i - index of registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
 		//                          if there is no other callback function
-		// On return, i may be modified so that when incremented,
-		// it will index the next registered socket.
-	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+	void CallSocketHandler( const size_t i, bool default_to_HandleCommand );
 	static void CallSocketHandler_worker_demarshall(void *args);
 	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
 	

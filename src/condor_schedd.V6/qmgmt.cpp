@@ -5776,7 +5776,7 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	char number[10];
 	for (std::map<int, int>::iterator mit = num_procs.begin(); mit != num_procs.end(); ++mit) {
 		job_id.set(mit->first, -1);
-		sprintf(number, "%d", mit->second);
+		snprintf(number, sizeof(number), "%d", mit->second);
 		JobQueue->SetAttribute(job_id, ATTR_TOTAL_SUBMIT_PROCS, number, false);
 	}
 }
@@ -6181,6 +6181,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			// that is never aborted in the event our caller never checks...
 			// Current thinking is do not call AbortTransaction here, let the caller do it so 
 			// that the logic in AbortTranscationAndRecomputeClusters() works correctly...
+			dprintf(D_FULLDEBUG, "CheckTransaction error %d : %s\n", rval, errorStack ? errorStack->message() : "");
 			return rval;
 		}
 	}
@@ -7219,14 +7220,15 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 					if (!value) {
 						if(fallback) {
-							char *rebuild = (char *) malloc(  strlen(name)
+							size_t sz = strlen(name)
 								+ 3  // " = "
 								+ 1  // optional '"'
 								+ strlen(fallback)
 								+ 1  // optional '"'
-								+ 1); // null terminator
+								+ 1; // null terminator
+							char *rebuild = (char *) malloc(sz);
                             // fallback is defined as being a string value, encode it thusly:
-                            sprintf(rebuild,"%s = \"%s\"", name, fallback);
+                            snprintf(rebuild, sz, "%s = \"%s\"", name, fallback);
 							value = rebuild;
 						}
 						if(!fallback || !value) {
@@ -7281,10 +7283,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 								tvalue[endquoteindex] = '\0';
 						}
 					}
-					size_t lenBigbuf = strlen(left) + strlen(tvalue)  + strlen(right);
-					bigbuf2 = (char *) malloc( lenBigbuf +1 );
+					size_t lenBigbuf = strlen(left) + strlen(tvalue)  + strlen(right) + 1;
+					bigbuf2 = (char *) malloc( lenBigbuf );
 					ASSERT(bigbuf2);
-					sprintf(bigbuf2,"%s%s%n%s",left,tvalue,&search_pos,right);
+					snprintf(bigbuf2,lenBigbuf,"%s%s%n%s",left,tvalue,&search_pos,right);
 					expanded_ad->AssignExpr(curr_attr_to_expand, bigbuf2);
 					dprintf(D_FULLDEBUG,"$$ substitution: %s=%s\n",curr_attr_to_expand,bigbuf2);
 					free(value);	// must use free here, not delete[]
@@ -8622,7 +8624,7 @@ void load_job_factories()
 				if (paused == mmInvalid && JobFactoryIsRunning(clusterad)) {
 					// if the former pause mode was mmInvalid, but the factory loaded OK on this time
 					// remove the pause since mmInvalid basically means 'factory failed to load'
-					setJobFactoryPauseAndLog(clusterad, mmRunning, 0, NULL);
+					setJobFactoryPauseAndLog(clusterad, mmRunning, 0, "");
 				} else {
 					PauseJobFactory(clusterad->factory, (MaterializeMode)paused);
 					++num_paused;
@@ -8791,10 +8793,6 @@ void FindRunnableJob(PROC_ID & jobid, ClassAd* my_match_ad,
 	bool match_any_user = (user == NULL) ? true : false;
 
 	ASSERT(my_match_ad);
-
-	bool scheddsAreSubmitters = false;
-	my_match_ad->LookupBool(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
-	if (scheddsAreSubmitters) match_any_user = true;
 
 	bool restrict_to_user = false;
 	std::string match_user;

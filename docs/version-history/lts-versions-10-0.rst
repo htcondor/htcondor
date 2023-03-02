@@ -7,6 +7,69 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1003:
+
+Version 10.0.3
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.3 released on Month Date, 2023.
+
+- HTCondor version 10.0.3 not yet released.
+
+- If you set :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` and use ``/`` to
+  mark the beginning and end of a regular expression, the character sequence
+  ``\\`` in the mapfile now passes a single ``\`` to the regular expression
+  engine.  This allows you to pass the sequence ``\/`` to the regular
+  expression engine (put ``\\\/`` in the map file), which was not previously
+  possible.  If the macro above is set and you have a ``\\`` in your map file,
+  you will need to replace it with ``\\\\``.
+  :jira:`1573`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a rare bug in the late materialization code that could
+  cause a schedd crash.
+  :jira:`1581`
+
+- Fixed bug where the *condor_shadow* would crash during job removal.
+  :jira:`1585`
+
+- Fixed a bug where two *condor_schedd* daemons in a High Availability
+  configuration could be active at the same time.
+  :jira:`1590`
+
+- Improved the HTCondor's systemd configuration to not start HTCondor until the
+  system attempts (and mostly likely succeeds) to mount remote filesystems.
+  :jira:`1594`
+
+- Fixed a bug where the *condor_master* of a glidein submitted to
+  SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
+  of the HTCondor-CE.
+  :jira:`1604`
+
+- Fixed a bug in the *condor_schedd* that could result in the ``TotalSubmitProcs``
+  attribute of a late materialization job being set to a value smaller than the
+  correct value shortly after the *condor_schedd* was restarted.
+  :jira:`1603`
+
+- If a job's requested credentials are not available when the job is
+  about to start, the job is now placed on hold.
+  :jira:`1600`
+
+- Fixed how the *condor_gridmanager* handles failed ARC CE jobs.
+  Before, it would endlessly re-query the status of jobs that failed
+  during submission to the LRMS behind ARC CE.
+  If ARC CE reports a job as FAILED because the job exited with a
+  non-zero exit code, the *condor_gridmanager* now treats it as a
+  successful execution.
+  :jira:`1583`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
@@ -22,24 +85,58 @@ New Features:
 
 - Added configuration option called :macro:`ALLOW_TRANSFER_REMAP_TO_MKDIR` to allow
   a transfer output remap to create directories in allowed places if they
-  do not exist at tranfser output time.
+  do not exist at transfer output time.
   :jira:`1480`
+
+- Improved scalability of *condor_schedd* when running more than 1,000 jobs
+  from the same user.
+  :jira:`1549`
+
+- *condor_ssh_to_job* should now work in glidein and other environments
+  where the job or HTCondor is running as a Unix user id that doesn't
+  have an entry in the /etc/passwd database.
+  :jira:`1543`
+
+- VM universe jobs are now configured to pass through the host CPU model
+  to the VM. This change enables VMs with newer kernels (such as Enterprise
+  Linux 9) to operate in VM Universe.
+  :jira:`1559`
+
+- The *condor_remote_cluster* command was updated to fetch the Alma Linux
+  tarballs for Enterprise Linux 8 and 9.
+  :jira:`1562`
+
+Bugs Fixed:
+
+- In the python bindings, the attribute ``ServerTime`` is now included
+  in job ads returned by ``Schedd.query()``.
+  :jira:`1531`
+
+- Fixed issue when HTCondor could not be installed on Ubuntu 18.04
+  (Bionic Beaver).
+  :jira:`1548`
+
+- Attempting to use a file-transfer plug-in that doesn't exist is no longer
+  silently ignored.  This could happen due to different bug, also fixed, where plug-ins
+  specified only in ``transfer_output_remaps`` were not automatically added
+  to a job's requirements.
+  :jira:`1501`
 
 - Fixed a bug where **condor_now** could not use the resources freed by
   evicting a job if its procID was 1.
   :jira:`1519`
 
-Bugs Fixed:
-
-- Attempting to use a file-transfer plug-in that doesn't exist is no longer
-  silently ignored.  This could happen due to different bug, where plug-ins
-  specified only in ``transfer_output_remaps`` were not automatically added
-  to a job's requirements.
-  :jira:`1501`
-
 - Fixed a bug that caused the *condor_startd* to exit when thinpool
-  provisioned filesystems were enabled
+  provisioned filesystems were enabled.
   :jira:`1524`
+
+- Fixed a bug causing a Python warning when installing on Ubuntu 22.04.
+  :jira:`1534`
+
+- Fixed a bug where the *condor_history* tool would crash
+  when doing a remote query with a constraint expression or specified
+  job IDs.
+  :jira:`1564`
 
 .. _lts-version-history-1001:
 

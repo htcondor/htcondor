@@ -931,7 +931,7 @@ drop_addr_file()
 	prefix += get_mySubSystem()->getName();
 
 	// Fill in addrFile[0] and addr[0] with info about regular command port
-	sprintf( addr_file, "%s_ADDRESS_FILE", prefix.c_str() );
+	snprintf( addr_file, sizeof(addr_file), "%s_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[0] ) {
 		free( addrFile[0] );
 	}
@@ -944,7 +944,7 @@ drop_addr_file()
 	}
 
 	// Fill in addrFile[1] and addr[1] with info about superuser command port
-	sprintf( addr_file, "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
+	snprintf( addr_file, sizeof(addr_file), "%s_SUPER_ADDRESS_FILE", prefix.c_str() );
 	if( addrFile[1] ) {
 		free( addrFile[1] );
 	}
@@ -1004,7 +1004,6 @@ do_kill()
 	FILE	*PID_FILE;
 	pid_t 	pid = 0;
 	unsigned long tmp_ul_int = 0;
-	char	*log, *tmp;
 
 	if( !pidFile ) {
 		fprintf( stderr, 
@@ -1012,13 +1011,12 @@ do_kill()
 		exit( 1 );
 	}
 	if( pidFile[0] != '/' ) {
-			// There's no absolute path, append the LOG directory
-		if( (log = param("LOG")) ) {
-			tmp = (char*)malloc( (strlen(log) + strlen(pidFile) + 2) * 
-								 sizeof(char) );
-			sprintf( tmp, "%s/%s", log, pidFile );
-			free( log );
-			pidFile = tmp;
+			// There's no absolute path, prepend the LOG directory
+		std::string log;
+		if (param(log, "LOG")) {
+			log += '/';
+			log += pidFile;
+			pidFile = strdup(log.c_str());
 		}
 	}
 	if( (PID_FILE = safe_fopen_wrapper_follow(pidFile, "r")) ) {
@@ -1107,20 +1105,15 @@ handle_log_append( char* append_str )
 	if( ! append_str ) {
 		return;
 	}
-	char *tmp1, *tmp2;
+	std::string fname;
 	char buf[100];
-	sprintf( buf, "%s_LOG", get_mySubSystem()->getName() );
-	if( !(tmp1 = param(buf)) ) { 
+	snprintf( buf, sizeof(buf), "%s_LOG", get_mySubSystem()->getName() );
+	if( !param(fname, buf) ) {
 		EXCEPT( "%s not defined!", buf );
 	}
-	tmp2 = (char*)malloc( (strlen(tmp1) + strlen(append_str) + 2)
-						  * sizeof(char) );
-	if( !tmp2 ) {	
-		EXCEPT( "Out of memory!" );
-	}
-	sprintf( tmp2, "%s.%s", tmp1, append_str );
-	config_insert( buf, tmp2 );
-	free( tmp1 );
+	fname += '.';
+	fname += append_str;
+	config_insert( buf, fname.c_str() );
 
 	if (get_mySubSystem()->getLocalName()) {
 		std::string fullParamName;
@@ -1129,9 +1122,8 @@ handle_log_append( char* append_str )
 		fullParamName.append(get_mySubSystem()->getName());
 		fullParamName.append("_LOG");
 
-		config_insert( fullParamName.c_str(), tmp2 );
+		config_insert( fullParamName.c_str(), fname.c_str() );
 	}
-	free( tmp2 );
 }
 
 
@@ -1229,7 +1221,7 @@ handle_dynamic_dirs()
 	int mypid = daemonCore->getpid();
 	char buf[256];
 	// TODO: Picking IPv4 arbitrarily.
-	sprintf( buf, "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
+	snprintf( buf, sizeof(buf), "%s-%d", get_local_ipaddr(CP_IPV4).to_ip_string().c_str(), mypid );
 
 	dprintf(D_DAEMONCORE | D_VERBOSE, "Using dynamic directories with suffix: %s\n", buf);
 	set_dynamic_dir( "LOG", buf );
@@ -1240,9 +1232,9 @@ handle_dynamic_dirs()
 		// variable, so that the startd will have a unique name. 
 	std::string cur_startd_name;
 	if(param(cur_startd_name, "STARTD_NAME")) {
-		sprintf( buf, "_condor_STARTD_NAME=%d@%s", mypid, cur_startd_name.c_str());
+		snprintf( buf, sizeof(buf), "_condor_STARTD_NAME=%d@%s", mypid, cur_startd_name.c_str());
 	} else {
-		sprintf( buf, "_condor_STARTD_NAME=%d", mypid );
+		snprintf( buf, sizeof(buf), "_condor_STARTD_NAME=%d", mypid );
 	}
 
 		// insert modified startd name
@@ -1741,10 +1733,8 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 
 	free(name);
 
-	auto_free_ptr history_file(param(history_file_param));
-	std::vector<std::string> historyFiles = findHistoryFiles(history_file);
-
-	if (historyFiles.empty()) {
+	std::string history_file;
+	if (!param(history_file, history_file_param)) {
 		dprintf( D_ALWAYS, "DaemonCore: handle_fetch_log_history: no parameter named %s\n", history_file_param);
 		if (!stream->code(result)) {
 				dprintf(D_ALWAYS,"DaemonCore: handle_fetch_log: and the remote side hung up\n");
@@ -1752,6 +1742,8 @@ handle_fetch_log_history(ReliSock *stream, char *name) {
 		stream->end_of_message();
 		return FALSE;
 	}
+
+	std::vector<std::string> historyFiles = findHistoryFiles(history_file.c_str());
 
 	result = DC_FETCH_LOG_RESULT_SUCCESS;
 	if (!stream->code(result)) {
@@ -3367,7 +3359,7 @@ int dc_main( int argc, char** argv )
 	int		command_port = -1;
 	char const *daemon_sock_name = NULL;
 	int		dcargs = 0;		// number of daemon core command-line args found
-	char	*ptmp, *ptmp1;
+	char	*ptmp;
 	int		i;
 	int		wantsKill = FALSE, wantsQuiet = FALSE;
 	bool	done;
@@ -3514,12 +3506,7 @@ int dc_main( int argc, char** argv )
 				ptmp = *ptr;
 				dcargs += 2;
 
-				ptmp1 = (char *)malloc( strlen(ptmp) + 16 );
-				if ( ptmp1 ) {
-					sprintf(ptmp1,"CONDOR_CONFIG=%s", ptmp);
-					SetEnv(ptmp1);
-					free(ptmp1);
-				}
+				SetEnv("CONDOR_CONFIG", ptmp);
 			} else {
 				fprintf( stderr, 
 						 "DaemonCore: ERROR: -config needs another argument.\n" );
@@ -4025,6 +4012,28 @@ int dc_main( int argc, char** argv )
 		 fcntl(daemonCore->async_pipe[1],F_SETFL,O_NONBLOCK) == -1 ) {
 			EXCEPT("Failed to create async pipe");
 	}
+#ifdef LINUX
+	// By default, Linux now allocates 16 4kbyte pages for each pipe,
+	// until the sum of all pages used for pipe buffers for a user hits
+	// /proc/sys/fs/pipe-user-pages-soft , which defaults to 16k.
+	// We create one of these pipes to forward signals
+	// for each daemon core process, which means that once 1,000 shadows
+	// are running for a user, Linux will switch to using one 4k page
+	// per pipe.  This particular pipe we just created to forward signals
+	// from a signal handler to the select loop doesn't need to be that
+	// big, especially as we just turned on non-blocking i/o above.
+	// Reduce the size of this pipe to one page, to save pages for
+	// other pipes which really need bigger buffers.
+
+	int defaultPipeSize = 0;
+	int smallPipeSize = 256; // probably will get rounded up to 4096
+
+	defaultPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
+	fcntl(daemonCore->async_pipe[0], F_SETPIPE_SZ, smallPipeSize);
+	smallPipeSize = fcntl(daemonCore->async_pipe[0], F_GETPIPE_SZ);
+	dprintf(D_FULLDEBUG, "Internal pipe for signals resized to %d from %d\n", smallPipeSize, defaultPipeSize);
+#endif
+
 #else
 	if ( daemonCore->async_pipe[1].connect_socketpair(daemonCore->async_pipe[0])==false )
 	{

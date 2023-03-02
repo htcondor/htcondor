@@ -22,7 +22,10 @@
 #include "classad/collection.h"
 #include <fcntl.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
@@ -384,22 +387,18 @@ bool ClassAdCollectionInterface::
 ReadLogFile( )
 {
     int     fd;
-    char    buf[16];
 
 	// open the file and wrap a source around it
     if( ( fd = open( logFileName.c_str( ), O_RDWR | O_CREAT, 0600 ) ) < 0 ) {
         CondorErrno = ERR_LOG_OPEN_FAILED;
-        sprintf( buf, "%d", errno );
         CondorErrMsg = "failed to open log " + logFileName + " errno=" +
-            string(buf);
+            std::to_string(errno);
         return( false );
     }
     if( ( log_fp = fdopen( fd, "r+" ) ) == NULL ) {
         CondorErrno = ERR_LOG_OPEN_FAILED;
-        sprintf( buf, "%d", fd );
-        CondorErrMsg = "failed to fdopen(" + string( buf ) + ") file ";
-        sprintf( buf, "%d", errno );
-        CondorErrMsg += logFileName + " errno=" + string( buf );
+        CondorErrMsg = "failed to fdopen(" + std::to_string(fd) + ") file ";
+        CondorErrMsg += logFileName + " errno=" + std::to_string(errno);
         close( fd );
         return( false );
     }
@@ -426,7 +425,6 @@ TruncateLog( )
     int     newLog_fd;
     FILE    *newLog_fp;
 	string	logLine;
-    char    buf[16];
 
     if( logFileName.empty( ) ) {
         CondorErrno = ERR_BAD_LOG_FILENAME;
@@ -441,16 +439,13 @@ TruncateLog( )
         CondorErrno = ERR_LOG_OPEN_FAILED;
         CondorErrMsg = "when truncating log, failed to open " + tmpLogFileName
             + " errno=";
-        sprintf( buf, "%d", errno );
-        CondorErrMsg += string( buf );
+        CondorErrMsg += std::to_string( errno );
         return( false );
     }
     if( ( newLog_fp = fdopen( newLog_fd, "r+" ) ) == NULL ) {
         CondorErrno = ERR_LOG_OPEN_FAILED;
-        sprintf( buf, "%d", newLog_fd );
-        CondorErrMsg = "when truncating log, failed to fdopen(" + string( buf );
-        sprintf( buf, "%d", errno );
-        CondorErrMsg += ") file " + tmpLogFileName + " errno=" + string( buf );
+        CondorErrMsg = "when truncating log, failed to fdopen(" + std::to_string(newLog_fd);
+        CondorErrMsg += ") file " + tmpLogFileName + " errno=" + std::to_string(errno);
         return( false );
     }
         // dump current state to file
@@ -468,17 +463,15 @@ TruncateLog( )
     if( MoveFileEx(tmpLogFileName.c_str( ), logFileName.c_str( ),
         MOVEFILE_REPLACE_EXISTING) == 0 ) {
         CondorErrno = ERR_RENAME_FAILED;
-        sprintf( buf, "%d", GetLastError( ) );
         CondorErrMsg = "failed to truncate log: MoveFileEx failed with "
-            "error=" + string( buf );
+            "error=" + std::to_string( GetLastError() );
         return false;
     }
 #else
     if( rename(tmpLogFileName.c_str( ), logFileName.c_str( ) ) < 0 ) {
         CondorErrno = ERR_RENAME_FAILED;
-        sprintf( buf, "%d", errno );
         CondorErrMsg = "failed to truncate log: rename(" + tmpLogFileName +
-            "," + logFileName + ") returned errno=" + string( buf );
+            "," + logFileName + ") returned errno=" + std::to_string(errno);
         return( false );
     }
 #endif
@@ -486,8 +479,7 @@ TruncateLog( )
         // re-open new log file
     if( ( log_fp = fopen( logFileName.c_str( ), "a+" ) ) == NULL ) {
         CondorErrno = ERR_LOG_OPEN_FAILED;
-        sprintf( buf, "%d", errno );
-        CondorErrMsg = "failed to reopen "+logFileName+", errno="+string(buf);
+        CondorErrMsg = "failed to reopen "+logFileName+", errno="+std::to_string(errno);
         return( false );
     }
 

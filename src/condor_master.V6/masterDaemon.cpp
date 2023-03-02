@@ -151,7 +151,7 @@ daemon::daemon(const char *name, bool is_daemon_core, bool is_h )
 	DoConfig( true );
 
 	// Default log file name...
-	sprintf(buf, "%s_LOG", name);
+	snprintf(buf, sizeof(buf), "%s_LOG", name);
 	log_filename_in_config_file = strdup(buf);
 
 	// Check the process name (is it me?)
@@ -372,7 +372,7 @@ daemon::DoConfig( bool init )
 	char	buf[1000];
 
 	// Check for the _FLAG parameter
-	sprintf(buf, "%s_FLAG", name_in_config_file );
+	snprintf(buf, sizeof(buf), "%s_FLAG", name_in_config_file );
 	tmp = param(buf);
 
 	// Previously defind?
@@ -400,7 +400,7 @@ daemon::DoConfig( bool init )
 	}
 
 	// get env settings from config file if present
-	sprintf(buf, "%s_ENVIRONMENT", name_in_config_file );
+	snprintf(buf, sizeof(buf), "%s_ENVIRONMENT", name_in_config_file );
 	char *env_string = param( buf );
 
 	Env env_parser;
@@ -420,7 +420,7 @@ daemon::DoConfig( bool init )
 		DetachController();
 		free( controller_name );
 	}
-	sprintf(buf, "MASTER_%s_CONTROLLER", name_in_config_file );
+	snprintf(buf, sizeof(buf), "MASTER_%s_CONTROLLER", name_in_config_file );
 	controller_name = param( buf );
 	controller = NULL;		// Setup later in Daemons::CheckDaemonConfig()
 	if ( controller_name ) {
@@ -436,19 +436,19 @@ daemon::DoConfig( bool init )
 
 	// XXX These defaults look to be very wrong, compare with 
 	// MASTER_BACKOFF_*.
-	sprintf(buf, "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
+	snprintf(buf, sizeof(buf), "MASTER_%s_BACKOFF_CONSTANT", name_in_config_file );
 	m_backoff_constant = param_integer( buf, master_backoff_constant, 1 );
 
-	sprintf(buf, "MASTER_%s_BACKOFF_CEILING", name_in_config_file );
+	snprintf(buf, sizeof(buf), "MASTER_%s_BACKOFF_CEILING", name_in_config_file );
 	m_backoff_ceiling = param_integer( buf, master_backoff_ceiling, 1 );
 
-	sprintf(buf, "MASTER_%s_BACKOFF_FACTOR", name_in_config_file );
+	snprintf(buf, sizeof(buf), "MASTER_%s_BACKOFF_FACTOR", name_in_config_file );
 	m_backoff_factor = param_double( buf, master_backoff_factor, 0 );
 	if( m_backoff_factor <= 0.0 ) {
     	m_backoff_factor = master_backoff_factor;
     }
 	
-	sprintf(buf, "MASTER_%s_RECOVER_FACTOR", name_in_config_file );
+	snprintf(buf, sizeof(buf), "MASTER_%s_RECOVER_FACTOR", name_in_config_file );
 	m_recover_time = param_integer( buf, master_recover_time, 1 );
 
 
@@ -462,7 +462,7 @@ daemon::DoConfig( bool init )
 	// bin/condor_schedd, ... we can simply say SCHEDD = /unsup/...
 	if( ( NULL == flag_in_config_file ) && ( NULL != daemon_name ) ) {
 		*(daemon_name - 2) = '\0';
-		sprintf(buf, "%s_FLAG", name_in_config_file);
+		snprintf(buf, sizeof(buf), "%s_FLAG", name_in_config_file);
 		flag_in_config_file = param(buf);
 		*(daemon_name - 2) = '_';
 	} 
@@ -1461,7 +1461,7 @@ daemon::Obituary( int status )
 		email_subject += fmt;
 	}
 
-    sprintf( buf, "%s_ADMIN_EMAIL", name_in_config_file );
+    snprintf( buf, sizeof(buf), "%s_ADMIN_EMAIL", name_in_config_file );
     char *address = param(buf);
     if(address) {
         mailer = email_nonjob_open(address, email_subject.c_str());
@@ -1589,7 +1589,7 @@ daemon::Kill( int sig ) const
 	const char* sig_name = signalName( sig );
 	char buf[32];
 	if( ! sig_name ) {
-		sprintf( buf, "signal %d", sig );
+		snprintf( buf, sizeof(buf), "signal %d", sig );
 		sig_name = buf;
 	}
 	if( status < 0 ) {
@@ -2565,7 +2565,6 @@ Daemons::StopAllDaemons()
 {
 	CancelRetryStartAllDaemons();
 	daemons.SetAllReaper();
-	int running = 0;
 
 	int any_running = 0;
 	int startds_running = 0;
@@ -2598,7 +2597,6 @@ Daemons::StopAllDaemons()
 				!iter->second->OnlyStopWhenMasterStops() )
 			{
 				iter->second->Stop();
-				running++;
 			}
 		}
 	}
@@ -3446,16 +3444,16 @@ Daemons::Update( ClassAd* ca )
 
 	for( iter = daemon_ptr.begin(); iter != daemon_ptr.end(); iter++ ) {
 		if( iter->second->runs_here || iter->second == master ) {
-			sprintf( buf, "%s_Timestamp",
+			snprintf( buf, sizeof(buf), "%s_Timestamp",
 					 iter->second->name_in_config_file );
 			ca->Assign( buf, (long)iter->second->timeStamp );
 			if( iter->second->pid ) {
-				sprintf( buf, "%s_StartTime",
+				snprintf( buf, sizeof(buf), "%s_StartTime",
 						 iter->second->name_in_config_file );
 				ca->Assign( buf, (long)iter->second->startTime );
 			} else {
 					// No pid, but daemon's supposed to be running.
-				sprintf( buf, "%s_StartTime",
+				snprintf( buf, sizeof(buf), "%s_StartTime",
 						 iter->second->name_in_config_file );
 				ca->Assign( buf, 0 );
 			}

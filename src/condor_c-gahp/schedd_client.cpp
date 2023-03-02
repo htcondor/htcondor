@@ -213,7 +213,7 @@ doContactSchedd()
 				this_reason = current_command->reason;
 				
 			char job_id_buff[30];
-			sprintf (job_id_buff, "%d.%d",
+			snprintf (job_id_buff, sizeof(job_id_buff), "%d.%d",
 				current_command->cluster_id,
 				current_command->proc_id);
 			id_list.append (job_id_buff);
@@ -276,7 +276,7 @@ doContactSchedd()
 			// Check the result
 			char job_id_buff[30];
 			if (result_ad && (error == FALSE)) {
-				sprintf (job_id_buff, "job_%d_%d",
+				snprintf (job_id_buff, sizeof(job_id_buff), "job_%d_%d",
 					current_command->cluster_id,
 					current_command->proc_id);
 				
@@ -1000,7 +1000,7 @@ update_report_result:
 
 submit_report_result:
 		char job_id_buff[30];
-		sprintf (job_id_buff, "%d.%d", ClusterId, ProcId);
+		snprintf (job_id_buff, sizeof(job_id_buff), "%d.%d", ClusterId, ProcId);
 
 		if (error) {
 			const char * result[] = {

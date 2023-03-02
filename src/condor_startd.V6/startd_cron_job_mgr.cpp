@@ -180,7 +180,7 @@ StartdCronJobMgr::ShouldStartJob( const CronJob &job ) const
 		resmgr->m_attr->publish_static(& context);
 		resmgr->m_attr->publish_common_dynamic(& context);
 		resmgr->publish_static(& context);
-		resmgr->publish_dynamic(& context);
+		resmgr->publish_resmgr_dynamic(& context);
 		if (IsDebugCategory(D_MATCH)) {
 			std::string buf;
 			dprintf( D_MATCH, "StartdCronJobMgr::ShouldStartJob(%s): evaluating in context:\n%s\n",

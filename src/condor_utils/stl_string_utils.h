@@ -21,7 +21,9 @@
 #define _stl_string_utils_h_ 1
 
 #include <string>
+#include <string.h>
 #include <vector>
+#include <climits>
 #include "condor_header_features.h"
 
 // formatstr() will try to write to a fixed buffer first, for reasons of 
@@ -139,22 +141,112 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, int res=40, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0) { current.reserve(res); };
-	StringTokenIterator(const std::string & s, int res=40, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0) { current.reserve(res); };
+	StringTokenIterator(const char *s = NULL, int res=40, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
+	StringTokenIterator(const std::string & s, int res=40, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
 
-	void rewind() { ixNext = 0; }
+	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
-	const char * first() { ixNext = 0; return next(); }
+	const char * first() { ixNext = 0; pastEnd = false; return next(); }
 	const char * remain() { if (!str || !str[ixNext]) return NULL; return str + ixNext; }
 
 	int next_token(int & length); // return start and length of next token or -1 if no tokens remain
 	const std::string * next_string(); // return NULL or a pointer to current token
 
+	// Allow us to use this as a bona-fide STL iterator
+	using iterator_category = std::input_iterator_tag;
+	using value_type        = std::string;
+	using difference_type   = std::ptrdiff_t;
+	using pointer           = std::string *;
+	using reference         = std::string *;
+
+	StringTokenIterator begin() const {
+		StringTokenIterator sti{str, 0, delims};
+		sti.next();
+		return sti;
+	}
+
+	StringTokenIterator end() const {
+		StringTokenIterator sti{str, 0, delims};
+		sti.ixNext = strlen(str);
+		sti.pastEnd = true;
+		return sti;
+	}
+
+	std::string &operator*() {
+		return current;
+	}
+	
+	StringTokenIterator &operator++() {
+		next();
+		return *this;
+	}
+
+friend bool operator==(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {
+	return lhs.ixNext == rhs.ixNext && lhs.pastEnd == rhs.pastEnd;
+}
+
+friend bool operator!=(const StringTokenIterator &lhs, const StringTokenIterator &rhs) {
+	return (lhs.ixNext != rhs.ixNext) || (lhs.pastEnd != rhs.pastEnd);
+}
+
 protected:
 	const char * str;   // The string we are tokenizing. it's not a copy, caller must make sure it continues to exist.
 	const char * delims;
-	int ixNext;
 	std::string current;
+	size_t ixNext;
+	bool pastEnd;
 };
+
+// Case insensitive string_view
+// Mostly cribbed from cppreference.com/w/cpp/string/char_traits
+struct case_char_traits : public std::char_traits<char>
+{
+    static constexpr char to_upper(char ch)
+    {
+		if ((ch >= 'a') && (ch <= 'z')) {
+			return ch - 'a' + 'A';
+		} else {
+			return ch;
+		}
+    }
+ 
+    static constexpr bool eq(char c1, char c2)
+    {
+        return to_upper(c1) == to_upper(c2);
+    }
+ 
+    static constexpr bool lt(char c1, char c2)
+    {
+         return to_upper(c1) < to_upper(c2);
+    }
+ 
+    static constexpr int compare(const char* s1, const char* s2, std::size_t n)
+    {
+        while (n-- != 0)
+        {
+            if (to_upper(*s1) < to_upper(*s2))
+                return -1;
+            if (to_upper(*s1) > to_upper(*s2))
+                return 1;
+            ++s1;
+            ++s2;
+        }
+        return 0;
+    }
+ 
+    static constexpr const char* find(const char* s, std::size_t n, char a)
+    {
+        auto const ua (to_upper(a));
+        while (n-- != 0) 
+        {
+            if (to_upper(*s) == ua)
+                return s;
+            s++;
+        }
+        return nullptr;
+    }
+};
+
+using istring_view = std::basic_string_view<char, case_char_traits>;
 
 #endif // _stl_string_utils_h_

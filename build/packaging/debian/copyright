@@ -132,17 +132,6 @@ License: Expat
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  DEALINGS IN THE SOFTWARE.
 
-Files: build/cmake/macros/CheckTypeExists.cmake
-Copyright: 2009, Michihiro NAKAJIMA
-           2011 Red Hat, Inc
-           2006, Alexander Neundorf, <neundorf@kde.org>
-License: Apache-2.0
-
-Files: build/cmake/modules/CPackDeb.cmake
-Copyright: 2007-2009 Kitware, Inc
-           2007-2009 Mathieu Malaterre <mathieu.malaterre@gmail.com>
-License: BSD-3-clause
-
 Files: *.cmake
  src/condor_collector.V6/*CollectorPlugin*
  src/condor_master.V6/*MasterPlugin*

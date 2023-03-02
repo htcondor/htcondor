@@ -313,7 +313,7 @@ int WINAPI WinMain( __in HINSTANCE hInstance, __in_opt HINSTANCE hPrevInstance, 
 	}
 	char **parameters = (char**)malloc(sizeof(char*)*cArgs + 1);
 	ASSERT( parameters != NULL );
-	parameters[0] = "condor_kbdd";
+	parameters[0] = (char *)"condor_kbdd";
 	parameters[cArgs] = NULL;
 
 	/*

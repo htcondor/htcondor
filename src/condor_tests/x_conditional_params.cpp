@@ -78,7 +78,7 @@ int main(int argc, const char ** argv)
 			if (argv[ix+1]) filename = use_next_arg("memory-shapshot", argv, ix);
 			char copy_smaps[300];
 			pid_t pid = getpid();
-			sprintf(copy_smaps, "cat /proc/%d/smaps > %s", pid, filename);
+			snprintf(copy_smaps, sizeof(copy_smaps), "cat /proc/%d/smaps > %s", pid, filename);
 			int r = system(copy_smaps);
 			if (r != 0) {
 				fprintf(stdout, "%d return copy smaps", r);

@@ -674,19 +674,65 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if ( info_ad.Lookup("EndTime") == nullptr && info_ad.Lookup("ComputingManagerEndTime") == nullptr ) {
+			// Element State is a list of strings, one of which is of
+			// the form "arcrest:XXX", where XXX is the job's status
+			// as reported in the rest of the REST interface.
+			// If that status isn't one of the terminal states, then
+			// we received stale data, and we should re-query after a
+			// short delay.
+			classad::ExprTree *expr = info_ad.Lookup("State");
+			if (expr == nullptr || expr->GetKind() != classad::ExprTree::EXPR_LIST_NODE) {
+				errorString = "Job exit information is missing State element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing State element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			std::string info_status;
+			std::vector<classad::ExprTree*> state_list;
+			((classad::ExprList*)expr)->GetComponents(state_list);
+			for (auto item : state_list) {
+				std::string str;
+				classad::Value value;
+				classad::Value::NumberFactor f;
+				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
+					continue;
+				}
+				((classad::Literal*)item)->getValue(f).IsStringValue(str);
+				if (str.compare(0, 8, "arcrest:") == 0) {
+					info_status = str.substr(8);
+					break;
+				}
+			}
+			if (info_status.empty()) {
+				errorString = "Job exit information is missing arcrest element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing arcrest element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			if (info_status != REMOTE_STATE_FINISHED &&
+			    info_status != REMOTE_STATE_FAILED &&
+			    info_status != REMOTE_STATE_KILLED &&
+			    info_status != REMOTE_STATE_WIPED)
+			{
 				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
 				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;
 			}
+			if (info_status != remoteJobState) {
+				remoteJobState = info_status;
+				SetRemoteJobStatus(info_status.c_str());
+			}
 
-			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
-				int exit_code = 0;
+			// With some LRMS, the job is FAILED if it has a non-zero exit
+			// code. So use the presence of an ExitCode attribute to
+			// determine whether the job ran to completion.
+			if (info_ad.LookupString("ExitCode", val)) {
+				int exit_code = atoi(val.c_str());
 				int wallclock = 0;
 				int cpu = 0;
-				if ( info_ad.LookupString("ExitCode", val ) ) {
-					exit_code = atoi(val.c_str());
-				}
+
 				if ( info_ad.LookupString("UsedTotalWallTime", val ) ) {
 					wallclock = atoi(val.c_str());
 				}
@@ -708,7 +754,7 @@ void ArcJob::doEvaluateState()
 				} else {
 					errorString = "ARC job failed for unknown reason";
 				}
-				gmState = GM_STAGE_OUT;
+				gmState = GM_CANCEL_CLEAN;
 			}
 			} break;
 		case GM_STAGE_OUT: {
@@ -747,8 +793,6 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) File stage-out failed: %s\n",
 				         procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_HOLD;
-			} else if ( remoteJobState != REMOTE_STATE_FINISHED ) {
-				gmState = GM_CANCEL_CLEAN;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
@@ -1070,12 +1114,12 @@ bool ArcJob::buildJobADL()
 	RSL += "</Path>";
 
 	ArgList args;
-	MyString arg_errors;
-	if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+	std::string arg_errors;
+	if(!args.AppendArgsFromClassAd(jobAd,arg_errors)) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-				procID.cluster, procID.proc, arg_errors.Value());
+				procID.cluster, procID.proc, arg_errors.c_str());
 		formatstr(errorString,"Failed to read job arguments: %s\n",
-				arg_errors.Value());
+				arg_errors.c_str());
 		RSL.clear();
 		return false;
 	}
@@ -1343,7 +1387,7 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 {
 	StringList *stage_local_list;
 	char *remaps = NULL;
-	MyString local_name;
+	std::string local_name;
 	char *remote_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
@@ -1368,9 +1412,9 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
 		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
-			local_name = stdout_name.c_str();
+			local_name = stdout_name;
 		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
-			local_name = stderr_name.c_str();
+			local_name = stderr_name;
 		} else if( remaps && filename_remap_find( remaps, remote_name,
 												  local_name ) ) {
 				// file is remapped
@@ -1378,11 +1422,11 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 			local_name = condor_basename( remote_name );
 		}
 
-		if ( (local_name.Length() && local_name[0] == '/')
-			 || IsUrl( local_name.Value() ) ) {
+		if ( (local_name.length() && local_name[0] == '/')
+			 || IsUrl( local_name.c_str() ) ) {
 			buff = local_name;
 		} else {
-			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
 		}
 		stage_local_list->append( buff.c_str() );
 	}

@@ -1356,7 +1356,7 @@ int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preser
 
 	if (preserve_linenumbers && (FileSource.line != 0)) {
 		// if we aren't starting at line zero, inject a comment indicating the starting line number
-		MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+		std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
 		lines.append(buf.c_str());
 	}
 	while (true) {
@@ -1367,7 +1367,7 @@ int MacroStreamCharSource::load(FILE* fp, MACRO_SOURCE & FileSource, bool preser
 		lines.append(line);
 		if (preserve_linenumbers && (FileSource.line != lineno+1)) {
 			// if we read more than a single line, inject a comment indicating the new line number
-			MyString buf; buf.formatstr("#opt:lineno:%d", FileSource.line);
+			std::string buf; formatstr(buf, "#opt:lineno:%d", FileSource.line);
 			lines.append(buf.c_str());
 		}
 	}
@@ -1404,8 +1404,8 @@ Parse_macros(
 	int opt_meta_colon = (macro_set.options & CONFIG_OPT_COLON_IS_META_ONLY) ? 1 : 0;
 	ConfigIfStack ifstack;
 	StringList    hereList; // used to accumulate @= multiline values
-	MyString      hereName;
-	MyString      hereTag;
+	std::string      hereName;
+	std::string      hereTag;
 	MACRO_EVAL_CONTEXT defctx; defctx.init(NULL);
 	if ( ! pctx) pctx = &defctx;
 
@@ -1924,8 +1924,8 @@ FILE* Open_macro_source (
 	if (is_pipe_cmd) {
 		if ( is_valid_command(source) ) {
 			ArgList argList;
-			MyString args_errors;
-			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+			std::string args_errors;
+			if(!argList.AppendArgsV1RawOrV2Quoted(cmd, args_errors)) {
 				formatstr(config_errmsg, "Can't append args, %s", args_errors.c_str());
 				return NULL;
 			}
@@ -1984,8 +1984,8 @@ FILE* Copy_macro_source_into (
 	source = fixup_pipe_source(source, source_is_command, cmd, cmdbuf);
 	if (source_is_command) {
 		ArgList argList;
-		MyString args_errors;
-		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, &args_errors)) {
+		std::string args_errors;
+		if(!argList.AppendArgsV1RawOrV2Quoted(cmd, args_errors)) {
 			formatstr(errmsg, "Can't append args, %s", args_errors.c_str());
 			return NULL;
 		}
@@ -2981,10 +2981,11 @@ char * expand_meta_args(const char *value, std::string & argstr)
 				tvalue = *tvalue ? "1" : "0";
 			}
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}
@@ -3733,10 +3734,11 @@ expand_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, special_id, name, tbuf, macro_set, ctx);
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}
@@ -3745,10 +3747,10 @@ expand_macro(const char *value,
 	// Now, deal with the special $(DOLLAR) macro.
 	DollarOnlyBody dollar_only; // matches only $(DOLLAR)
 	while( next_config_macro(is_config_macro, dollar_only, tmp, 0, &left, &name, &right, &func) ) {
-		rval = (char *)malloc( (unsigned)(strlen(left) + 1 +
-										  strlen(right) + 1));
+		size_t rval_sz = strlen(left) + 1 + strlen(right) + 1;
+		rval = (char *)malloc(rval_sz);
 		ASSERT( rval != NULL );
-		(void)sprintf( rval, "%s$%s", left, right );
+		(void)snprintf( rval, rval_sz, "%s$%s", left, right );
 		free( tmp );
 		tmp = rval;
 	}
@@ -4896,10 +4898,11 @@ expand_self_macro(const char *value,
 			auto_free_ptr tbuf; // malloc or strdup'd buffer (if needed)
 			tvalue = evaluate_macro_func(func, func_id, body, tbuf, macro_set, ctx);
 
-			rval = (char *)malloc( (unsigned)(strlen(left) + strlen(tvalue) + strlen(right) + 1));
+			size_t rval_sz = strlen(left) + strlen(tvalue) + strlen(right) + 1;
+			rval = (char *)malloc(rval_sz);
 			ASSERT(rval);
 
-			(void)sprintf( rval, "%s%s%s", left, tvalue, right );
+			(void)snprintf( rval, rval_sz, "%s%s%s", left, tvalue, right );
 			free( tmp );
 			tmp = rval;
 		}

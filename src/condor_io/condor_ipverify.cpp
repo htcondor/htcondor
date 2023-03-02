@@ -147,7 +147,7 @@ IpVerify::Init()
 		PermTypeEntry* pentry = new PermTypeEntry();
 		ASSERT( pentry );
 		PermTypeArray[perm] = pentry;
-		MyString allow_param, deny_param;
+		std::string allow_param, deny_param;
 
 		dprintf(D_SECURITY,"IPVERIFY: Subsystem %s\n",ssysname);
 		dprintf(D_SECURITY,"IPVERIFY: Permission %s\n",PermString(perm));

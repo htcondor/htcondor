@@ -35,6 +35,7 @@ typedef struct command_s {
 
 /* Command handlers prototypes
  * */
+void *cmd_ping(void *args);
 void *cmd_submit_job(void *args);
 void *cmd_cancel_job(void *args);
 void *cmd_status_job(void *args);

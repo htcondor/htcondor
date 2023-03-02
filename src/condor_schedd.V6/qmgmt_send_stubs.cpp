@@ -758,7 +758,6 @@ int
 GetDirtyAttributes(int cluster_id, int proc_id, ClassAd *updated_attrs)
 {
 	int	rval = -1;
-	MyString errs;
 
 	CurrentSysCall = CONDOR_GetDirtyAttributes;
 

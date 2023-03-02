@@ -106,7 +106,6 @@ CondorLockFile::CondorLockFile( const char	*l_url,
 // Destructor
 CondorLockFile::~CondorLockFile( void )
 {
-	(void) FreeLock( );
 }
 
 // Shared initialization code
@@ -134,7 +133,7 @@ CondorLockFile::BuildLock( const char	*l_url,
 		// Build a temporary file name
 	char	hostname[128];
 	if ( condor_gethostname( hostname, sizeof( hostname ) ) ) {
-		sprintf( hostname, "unknown-%d", rand( ) );
+		snprintf( hostname, sizeof(hostname), "unknown-%d", rand( ) );
 	}
 	formatstr( temp_file, "%s.%s-%d", lock_file.c_str(), hostname, getpid( ) );
 

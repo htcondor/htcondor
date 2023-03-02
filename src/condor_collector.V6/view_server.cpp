@@ -511,15 +511,14 @@ int ViewServer::SendDataReply(Stream* sock,const std::string& FileName, int From
 		}
 		else {
 			char OutLine[200];
-			char* OutLinePtr=OutLine;
 
 			const char *tmp = strchr(InpLine.c_str(),':');
 			OutTime=float(T-FromDate)/float(ToDate-FromDate);
 			NewTime=(int)rint(1000*OutTime);
 			if (NewTime==OldTime) continue;
             OldTime=NewTime;
-			sprintf(OutLinePtr,"%.2f%s",OutTime*100,tmp+1);
-			if (!sock->code(OutLinePtr)) {
+			snprintf(OutLine,sizeof(OutLine),"%.2f%s",OutTime*100,tmp+1);
+			if (!sock->put(OutLine)) {
 				dprintf(D_ALWAYS,"Can't send information to client!\n");
 				Status=-1;
 				break;
@@ -784,8 +783,8 @@ void ViewServer::WriteHistory()
 			// Check for size limitation and take necessary action
 
 			if (stat(DataSet[i][j].NewFileName.c_str(),&statbuf)) {
-				dprintf(D_ALWAYS,"Could not check data file %s size!!! errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
-				EXCEPT("Could not check data file size!!!");
+				dprintf(D_ALWAYS,"Could not check data file %s size, that we just wrote to. Errno=%d\n",DataSet[i][j].NewFileName.c_str(),errno);
+				continue;
 			}
 			if (statbuf.st_size>MaxFileSize) {
 				int r = rotate_file(DataSet[i][j].NewFileName.c_str(), DataSet[i][j].OldFileName.c_str());

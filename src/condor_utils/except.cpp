@@ -67,7 +67,7 @@ _EXCEPT_(const char *fmt, ...)
 
 	va_start(pvar, fmt);
 
-	vsprintf( buf, fmt, pvar );
+	vsnprintf( buf, BUFSIZ, fmt, pvar );
 
 	if (_EXCEPT_Reporter) {
 		_EXCEPT_Reporter(buf, _EXCEPT_Line, _EXCEPT_File);

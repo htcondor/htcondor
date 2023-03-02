@@ -119,7 +119,7 @@ bool userlog_to_classads(const char *filename,
 
 	  // Create a reasonable looking global ID
 	  char globalid[256];
-	  sprintf(globalid,"localhost#%i.%i#%li",event->cluster,event->proc,long(eventTime));
+	  snprintf(globalid,sizeof(globalid),"localhost#%i.%i#%li",event->cluster,event->proc,long(eventTime));
 	  jobClassAd->InsertAttr("GlobalJobId",globalid);
 	}
 

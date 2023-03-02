@@ -92,21 +92,21 @@ class CronJobParams : public CronParamBase
 
   private:
 	virtual const char *GetParamName( const char *item ) const;
-	bool InitArgs( const MyString &param );
-	bool InitEnv( const MyString &param );
-	bool InitPeriod( const MyString &period );
+	bool InitArgs( const std::string &param );
+	bool InitEnv( const std::string &param );
+	bool InitPeriod( const std::string &period );
 
   protected:
 	const CronJobMgr&m_mgr;				// My manager
 	CronJobMode		 m_mode;			// Job's scheduling mode
 	const char		*m_modestr;			// Mode's string
 	CronJob			*m_job;				// The associated job
-	MyString		 m_name;			// Logical name of the job
-	MyString		 m_prefix;			// Publishing prefix
-	MyString		 m_executable;		// Path to the executable
+	std::string		 m_name;			// Logical name of the job
+	std::string		 m_prefix;			// Publishing prefix
+	std::string		 m_executable;		// Path to the executable
 	ArgList          m_args;			// Arguments to pass it
 	Env              m_env;				// Environment variables
-	MyString		 m_cwd;				// Process's initial CWD
+	std::string		 m_cwd;				// Process's initial CWD
 	unsigned		 m_period;			// The configured period
 	double			 m_jobLoad;			// Job's assigned load
 	ConstraintHolder	 m_condition;			// should the job run?
@@ -116,9 +116,6 @@ class CronJobParams : public CronParamBase
 	bool			 m_optReconfig;		// Send the job a HUP for reconfig
 	bool			 m_optReconfigRerun;// Rerun the job on reconfig?
 	bool			 m_optIdle;			// Only run when idle
-
-  protected:
-	MyString		 m_config_val_prog;	// Path to _config_val
 };
 
 #endif /* _CONDOR_CRON_JOB_PARAMS_H */

@@ -54,11 +54,6 @@
 #include "NegotiatorPlugin.h"
 #endif
 
-// the comparison function must be declared before the declaration of the
-// matchmaker class in order to preserve its static-ness.  (otherwise, it
-// is forced to be extern.)
-
-static int comparisonFunction (ClassAd *, ClassAd *, void *);
 #include "matchmaker.h"
 
 extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
@@ -339,6 +334,57 @@ static int rankSorter(ClassAd *left, ClassAd *right, void * that) {
 	return left < right;
 }
 
+struct submitterLessThan {
+	Matchmaker *mm;
+	submitterLessThan(Matchmaker *mm) : mm(mm) {}
+
+	bool operator()(ClassAd *ad1, ClassAd *ad2) {
+
+		std::string subname1;
+		std::string subname2;
+
+		// nameless submitters are filtered elsewhere
+		ad1->LookupString(ATTR_NAME, subname1);
+		ad2->LookupString(ATTR_NAME, subname2);
+		double prio1 = mm->accountant.GetPriority(subname1);
+		double prio2 = mm->accountant.GetPriority(subname2);
+
+		// primary sort on submitter priority
+		if (prio1 < prio2) return true;
+		if (prio1 > prio2) return false;
+
+		double sr1 = DBL_MAX;
+		double sr2 = DBL_MAX;
+
+		if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = DBL_MAX;
+		if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = DBL_MAX;
+
+		// secondary sort on job prio, if want_globaljobprio is true (see gt #3218)
+		if ( mm->want_globaljobprio ) {
+			int p1 = INT_MIN;	// no priority should be treated as lowest priority
+			int p2 = INT_MIN;
+			ad1->LookupInteger(ATTR_JOB_PRIO,p1);
+			ad2->LookupInteger(ATTR_JOB_PRIO,p2);
+			if (p1 > p2) return true;	// note: higher job prio is "better"
+			if (p1 < p2) return false;
+		}
+
+		// tertiary sort on submitter starvation
+		if (sr1 < sr2) return true;
+		if (sr1 > sr2) return false;
+
+		int ts1=0;
+		int ts2=0;
+		ad1->LookupInteger(ATTR_LAST_HEARD_FROM, ts1);
+		ad2->LookupInteger(ATTR_LAST_HEARD_FROM, ts2);
+
+		// when submitters have same name from different schedd, their priorities
+		// and starvation ratios will be equal: fallback is to order them randomly
+		// to prevent long-term starvation of any one submitter
+		return (ts1 % 1009) < (ts2 % 1009);
+	}
+};
+
 // Return the cpu user time for the current process in seconds.
 // TODO Should we include the system time as well?
 static double
@@ -375,10 +421,10 @@ Matchmaker ()
 	NegotiatorPostJobRank = NULL;
 	sockCache = NULL;
 
-	sprintf (buf, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buf, sizeof(buf), "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buf, rankCondStd);
 
-	sprintf (buf, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buf, sizeof(buf), "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buf, rankCondPrioPreempt);
 
 	negotiation_timerID = -1;
@@ -873,7 +919,7 @@ reinitialize ()
 }
 
 void
-Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
+Matchmaker::SetupMatchSecurity(std::vector<ClassAd *> &submitterAds)
 {
 	if (!param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true)) {
 		return;
@@ -882,9 +928,7 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 
 	std::set<std::pair<std::string, std::string>> capabilities;
 	SecMan *secman = daemonCore->getSecMan();
-	submitterAds.Open();
-	classad::ClassAd *ad;
-	while ((ad = submitterAds.Next())) {
+	for (classad::ClassAd *ad: submitterAds) {
 		std::string capability;
 		std::string sinful;
 		std::string version;
@@ -935,7 +979,6 @@ Matchmaker::SetupMatchSecurity(ClassAdListDoesNotDeleteAds &submitterAds)
 		);
 
 	}
-	submitterAds.Close();
 }
 
 int Matchmaker::
@@ -1605,7 +1648,7 @@ negotiationTime ()
 	ClassAdListDoesNotDeleteAds startdAds; // ptrs to startd ads in allAds
     ClaimIdHash claimIds;
 	std::set<std::string> accountingNames; // set of active submitter names to publish
-	ClassAdListDoesNotDeleteAds submitterAds; // ptrs to submitter ads in allAds
+	std::vector<ClassAd*> submitterAds; // ptrs to submitter ads in allAds
 
 	ranksMap.clear();
 	m_slotNameToAdMap.clear();
@@ -1779,11 +1822,11 @@ negotiationTime ()
 
 		// If there are any submitters who have a floor defined, and their current usage is below
 		// their floor, negotiator for just those, and only up to their floor.
-		ClassAdListDoesNotDeleteAds submittersBelowFloor;
+		std::vector<ClassAd *> submittersBelowFloor;
 		findBelowFloorSubmitters(submitterAds,submittersBelowFloor);
-		if (submittersBelowFloor.Length() > 0) {
-			dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
-					submittersBelowFloor.Length());
+		if (submittersBelowFloor.size() > 0) {
+			dprintf(D_FULLDEBUG, "   %zu submitters have a floor defined and are below it, running a floor round for them\n",
+					submittersBelowFloor.size());
 			negotiateWithGroup(true /*isFloorRound*/, cPoolsize, weightedPoolsize, minSlotWeight, startdAds, claimIds, submittersBelowFloor);
 			dprintf(D_FULLDEBUG, "   Floor round finished, commencing with full negotiator round\n");
 		}
@@ -1808,11 +1851,11 @@ negotiationTime ()
 					name = nullptr;
 				}
 
-				ClassAdListDoesNotDeleteAds submittersBelowFloor;
+				std::vector<ClassAd*> submittersBelowFloor;
 				findBelowFloorSubmitters(*(g->submitterAds), submittersBelowFloor);
-				if (submittersBelowFloor.Length() > 0) {
-					dprintf(D_FULLDEBUG, "   %d submitters have a floor defined and are below it, running a floor round for them\n",
-							submittersBelowFloor.Length());
+				if (submittersBelowFloor.size() > 0) {
+					dprintf(D_FULLDEBUG, "   %zu submitters have a floor defined and are below it, running a floor round for them\n",
+							submittersBelowFloor.size());
 					negotiateWithGroup(true /*isFloorRound*/, cPoolsize, 
 							weightedPoolsize, 
 							minSlotWeight, 
@@ -2055,9 +2098,8 @@ Matchmaker::forwardGroupAccounting(GroupEntry* group) {
     }
 }
 
-void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
-	submitterAds.Open();
-	while (ClassAd* ad = submitterAds.Next()) {
+void filter_submitters_no_idle(std::vector<ClassAd *>& submitterAds) {
+	auto isIdle = [](ClassAd *ad) -> bool {
         int idle = 0;
         ad->LookupInteger(ATTR_IDLE_JOBS, idle);
 
@@ -2065,9 +2107,12 @@ void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
             std::string submitterName;
             ad->LookupString(ATTR_NAME, submitterName);
             dprintf(D_FULLDEBUG, "Ignoring submitter %s with no idle jobs\n", submitterName.c_str());
-            submitterAds.Remove(ad);
+			return true;
         }
-    }
+		return false;
+    };
+	auto it = std::remove_if(submitterAds.begin(), submitterAds.end(), isIdle);
+	submitterAds.erase(it, submitterAds.end());
 }
 
 /*
@@ -2079,24 +2124,30 @@ void filter_submitters_no_idle(ClassAdListDoesNotDeleteAds& submitterAds) {
  false if there is a data structure inconsistency and/or want_globaljobprio should be false.
 */
 bool Matchmaker::
-consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAds) const
+consolidate_globaljobprio_submitter_ads(std::vector<ClassAd *>& submitterAds) const
 {
 	// nothing to do if unless want_globaljobprio is true...
 	if (!want_globaljobprio) {
 		return false;  // keep want_globajobprio false
 	}
 
-	ClassAd *curr_ad = NULL;
 	ClassAd *prev_ad = NULL;
 	std::string curr_name, curr_addr, prev_name, prev_addr;
 	int min_prio=INT_MAX, max_prio=INT_MIN; // initialize to shut gcc up, the loop always sets before using.
 
-	submitterAds.Open();
-	while ( (curr_ad = submitterAds.Next()) )
-	{
+	auto it = submitterAds.begin();
+	while (it != submitterAds.end()) {
+		ClassAd *curr_ad = *it;
+
 		// skip this submitter if we cannot identify its origin
-		if (!curr_ad->LookupString(ATTR_NAME,curr_name)) continue;
-		if (!curr_ad->LookupString(ATTR_SCHEDD_IP_ADDR,curr_addr)) continue;
+		if (!curr_ad->LookupString(ATTR_NAME,curr_name)) {
+			it++;
+			continue;
+		}
+		if (!curr_ad->LookupString(ATTR_SCHEDD_IP_ADDR,curr_addr)) {
+			it++;
+			continue;
+		}
 
 		// In obtainAdsFromCollector() inserted an ATTR_JOB_PRIO attribute; if
 		// it is not there, then the value of want_globaljobprio must have changed
@@ -2112,7 +2163,10 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 		// If this ad has no ATTR_JOB_PRIO_ARRAY, then we don't want to assign
 		// any JOBPRIO_MIN or MAX, as this must be a schedd that does not (or cannot)
 		// play the global job prios game.  So just continue along.
-		if ( !curr_ad->Lookup(ATTR_JOB_PRIO_ARRAY) ) continue;
+		if ( !curr_ad->Lookup(ATTR_JOB_PRIO_ARRAY)) {
+			it++;
+			continue;
+		}
 
 		// If this ad is not from the same user and schedd previously
 		// seen, insert JOBPRIO_MIX and MAX attributes, update our notion
@@ -2124,6 +2178,7 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 			prev_name = curr_name;
 			prev_addr = curr_addr;
 			max_prio = min_prio = curr_prio;
+			it++;
 			continue;
 		}
 
@@ -2144,7 +2199,7 @@ consolidate_globaljobprio_submitter_ads(ClassAdListDoesNotDeleteAds& submitterAd
 		}
 		// and now may as well delete the curr_ad, since negotiation will
 		// be handled by the first ad for this user/schedd_addr
-		submitterAds.Remove(curr_ad);
+		it = submitterAds.erase(it);
 	}	// end of while iterate through submitterAds
 
 	return true;
@@ -2157,10 +2212,9 @@ negotiateWithGroup ( bool isFloorRound,
 					 double minSlotWeight,
 					 ClassAdListDoesNotDeleteAds& startdAds,
 					 ClaimIdHash& claimIds,
-					 ClassAdListDoesNotDeleteAds& submitterAds,
+					 std::vector<ClassAd *>& submitterAds,
 					 double groupQuota, const char* groupName)
 {
-	ClassAd		*submitter_ad;
 	std::string    submitterName;
 	std::string    scheddName;
 	std::string    scheddAddr;
@@ -2177,7 +2231,7 @@ negotiateWithGroup ( bool isFloorRound,
 	double		submitterAbsShare = 0.0;
 	double		pieLeft;
 	double 		pieLeftOrig;
-	int         submitterAdsCountOrig;
+	size_t		submitterAdsCountOrig;
 	int			totalTime;
 	int			totalTimeSchedd;
 	int			num_idle_jobs;
@@ -2262,7 +2316,8 @@ negotiateWithGroup ( bool isFloorRound,
             time_t start_time_phase3 = time(NULL);
 			double start_usage_phase3 = get_rusage_utime();
             dprintf(D_ALWAYS, "Phase 3:  Sorting submitter ads by priority ...\n");
-            submitterAds.Sort((lessThanFunc)comparisonFunction, this);
+
+			std::sort(submitterAds.begin(), submitterAds.end(), submitterLessThan(this));
 
 			// Now that the submitter ad list (submitterAds) is sorted, we can
 			// scan through it looking for globaljobprio submitter ads, consolidating
@@ -2283,7 +2338,7 @@ negotiateWithGroup ( bool isFloorRound,
 		negotiation_cycle_stats[0]->prefetch_cpu_time += get_rusage_utime() - start_usage_prefetch;
 
 		pieLeftOrig = pieLeft;
-		submitterAdsCountOrig = submitterAds.MyLength();
+		submitterAdsCountOrig = submitterAds.size();
 
 		// ----- Negotiate with the schedds in the sorted list
 		dprintf( D_ALWAYS, "Phase 4.%d:  Negotiating with schedds ...\n",
@@ -2294,15 +2349,17 @@ negotiateWithGroup ( bool isFloorRound,
 		dprintf (D_FULLDEBUG, "    pieLeft = %.3f\n", pieLeft);
 		dprintf (D_FULLDEBUG, "    NormalFactor = %f\n", normalFactor);
 		dprintf (D_FULLDEBUG, "    MaxPrioValue = %f\n", maxPrioValue);
-		dprintf (D_FULLDEBUG, "    NumSubmitterAds = %d\n", submitterAds.MyLength());
-		submitterAds.Open();
-		while( (submitter_ad = submitterAds.Next()) )
-		{
-            if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
-                // If we met group quota, and if we're respecting submitter limits, halt.
-                // (output message at top of outer loop above)
-                break;
-            }
+		dprintf (D_FULLDEBUG, "    NumSubmitterAds = %zu\n", submitterAds.size());
+
+		auto submitterIter = submitterAds.begin();
+		while (submitterIter != submitterAds.end()) {
+			ClassAd		*submitter_ad = *submitterIter;
+			bool removeMe = false;
+			if (!ignore_submitter_limit && (NULL != groupName) && (accountant.GetWeightedResourcesUsed(groupName) >= groupQuota)) {
+				// If we met group quota, and if we're respecting submitter limits, halt.
+				// (output message at top of outer loop above)
+				break;
+			}
 			// get the name of the submitter and address of the schedd-daemon it came from
 			if( !submitter_ad->LookupString( ATTR_NAME, submitterName ) ||
 				!submitter_ad->LookupString( ATTR_SCHEDD_NAME, scheddName ) ||
@@ -2311,7 +2368,7 @@ negotiateWithGroup ( bool isFloorRound,
 				dprintf (D_ALWAYS,"  Error!  Could not get %s, %s and %s from ad\n",
 						 ATTR_NAME, ATTR_SCHEDD_NAME, ATTR_SCHEDD_IP_ADDR);
 				dprintf( D_ALWAYS, "  Ignoring this submitter and continuing\n" );
-				submitterAds.Remove( submitter_ad );
+				submitterIter = submitterAds.erase(submitterIter);
 				continue;
 			}
 
@@ -2526,7 +2583,7 @@ negotiateWithGroup ( bool isFloorRound,
                         scheddUsed += accountant.GetWeightedResourcesUsed(submitterName);
                         dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
                                  accountant.GetWeightedResourcesUsed(submitterName));
-						submitterAds.Remove( submitter_ad );
+						removeMe = true;
 					}
 					break;
 				case MM_ERROR:
@@ -2537,19 +2594,23 @@ negotiateWithGroup ( bool isFloorRound,
 					scheddUsed += accountant.GetWeightedResourcesUsed(submitterName);
 					dprintf( D_FULLDEBUG, " resources used by %s are %f\n",submitterName.c_str(),
 						    accountant.GetWeightedResourcesUsed(submitterName));
-					submitterAds.Remove( submitter_ad );
 					negotiation_cycle_stats[0]->submitters_failed.insert(submitterName.c_str());
+					removeMe = true;
+			}
+			if (removeMe) {
+				submitterIter = submitterAds.erase(submitterIter);
+			} else {
+				submitterIter++;
 			}
 		}
-		submitterAds.Close();
 		dprintf( D_FULLDEBUG, " resources used scheddUsed= %f\n",scheddUsed);
 
-	} while ( ( pieLeft < pieLeftOrig || submitterAds.MyLength() < submitterAdsCountOrig )
-			  && (submitterAds.MyLength() > 0)
+	} while ( ( pieLeft < pieLeftOrig || submitterAds.size() < submitterAdsCountOrig )
+			  && (submitterAds.size() > 0)
 			  && (startdAds.MyLength() > 0)
 		   	  && !isFloorRound);
 
-	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %d \n",submitterAds.MyLength());
+	dprintf( D_ALWAYS, " negotiateWithGroup resources used submitterAds length %zu \n", submitterAds.size());
 
     negotiation_cycle_stats[0]->duration_phase3 += duration_phase3;
     negotiation_cycle_stats[0]->duration_phase4 += (time(NULL) - start_time_phase4) - duration_phase3;
@@ -2560,54 +2621,6 @@ negotiateWithGroup ( bool isFloorRound,
 	return TRUE;
 }
 
-static int
-comparisonFunction (ClassAd *ad1, ClassAd *ad2, void *m)
-{
-	Matchmaker* mm = (Matchmaker*)m;
-
-	std::string subname1;
-	std::string subname2;
-
-    // nameless submitters are filtered elsewhere
-	ad1->LookupString(ATTR_NAME, subname1);
-	ad2->LookupString(ATTR_NAME, subname2);
-	double prio1 = mm->accountant.GetPriority(subname1);
-	double prio2 = mm->accountant.GetPriority(subname2);
-
-    // primary sort on submitter priority
-    if (prio1 < prio2) return true;
-    if (prio1 > prio2) return false;
-
-    double sr1 = DBL_MAX;
-    double sr2 = DBL_MAX;
-
-    if (!ad1->LookupFloat("SubmitterStarvation", sr1)) sr1 = DBL_MAX;
-    if (!ad2->LookupFloat("SubmitterStarvation", sr2)) sr2 = DBL_MAX;
-
-	// secondary sort on job prio, if want_globaljobprio is true (see gt #3218)
-	if ( mm->want_globaljobprio ) {
-		int p1 = INT_MIN;	// no priority should be treated as lowest priority
-		int p2 = INT_MIN;
-		ad1->LookupInteger(ATTR_JOB_PRIO,p1);
-		ad2->LookupInteger(ATTR_JOB_PRIO,p2);
-		if (p1 > p2) return true;	// note: higher job prio is "better"
-		if (p1 < p2) return false;
-	}
-
-    // tertiary sort on submitter starvation
-    if (sr1 < sr2) return true;
-    if (sr1 > sr2) return false;
-
-    int ts1=0;
-    int ts2=0;
-    ad1->LookupInteger(ATTR_LAST_HEARD_FROM, ts1);
-    ad2->LookupInteger(ATTR_LAST_HEARD_FROM, ts2);
-
-    // when submitters have same name from different schedd, their priorities
-    // and starvation ratios will be equal: fallback is to order them randomly
-    // to prevent long-term starvation of any one submitter
-    return (ts1 % 1009) < (ts2 % 1009);
-}
 
 int Matchmaker::
 trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
@@ -2791,6 +2804,17 @@ sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds, double* minSlotWeight, Ex
         }
 
 		double slotWeight = accountant.GetSlotWeight(ad);
+
+		// The negotiator will always stop matching if it thinks it's
+		// filled up the pool, so for offline ads representing a type
+		// of resource, we need to multiply its weight accordingly.
+		//
+		// The offline ad MUST specify WantAdRevaluate if you want to
+		// see information about more than one matching autocluster.
+		int multiplier = 1;
+		ad->LookupInteger( "GhostMultiplier", multiplier );
+		slotWeight *= multiplier;
+
 		sum+=slotWeight;
 		if (minSlotWeight && (slotWeight < *minSlotWeight)) {
 			*minSlotWeight = slotWeight;
@@ -2857,8 +2881,8 @@ bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
 						ClassAdListDoesNotDeleteAds &startdAds,
-						ClassAdListDoesNotDeleteAds &submitterAds,
-						std::set<std::string> &submitterNames,
+						std::vector<ClassAd *> &submitterAds,
+						std::set<std::string>  &submitterNames,
 						ClaimIdHash &claimIds )
 {
 	CondorQuery privateQuery(STARTD_PVT_AD);
@@ -3072,20 +3096,17 @@ obtainAdsFromCollector (
                 cp_resources = true;
             }
 
+			// Reset the per-negotiation-cycle match count, in case the
+			// negotiation cycle is faster than the startd update interval.
+			ad->Assign("MachineMatchCount", 0);
+			ad->Delete("OfflineMatches");
+
 			// If startd didn't set a slot weight expression, add in our own
 			double slot_weight;
 			if (!ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 
-			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-				std::string scheddName;
-				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
-					dprintf(D_ALWAYS, "WARNING: slot ad %s is missing a schedd name, skipping\n",remoteHost);
-					continue;
-				}
-				ad->Assign(ATTR_REMOTE_USER, scheddName);
-			}
 			OptimizeMachineAdForMatchmaking( ad );
 
 			startdAds.Insert(ad);
@@ -3102,16 +3123,6 @@ obtainAdsFromCollector (
 			if ( !IsValidSubmitterName( subname.c_str() ) ) {
 				dprintf( D_ALWAYS, "WARNING: ignoring submitter ad with invalid name: %s\n", subname.c_str() );
 				continue;
-			}
-
-			if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-				std::string scheddName;
-				if (!ad->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
-					dprintf(D_ALWAYS, "WARNING: Submitter Ad %s is missing a schedd name, skipping\n",subname.c_str());
-					continue;
-				}
-				ad->Assign(ATTR_NAME, scheddName);
-				subname = scheddName;
 			}
 
 			if (!TransformSubmitterAd(*ad)) {
@@ -3163,12 +3174,12 @@ obtainAdsFromCollector (
 					ClassAd *adCopy = new ClassAd( *ad );
 					ASSERT(adCopy);
 					adCopy->Assign(ATTR_JOB_PRIO,atoi(prio));
-					submitterAds.Insert(adCopy);
+					submitterAds.push_back(adCopy);
 				}
 			} else {
 				// want_globaljobprio is false, so just insert the submitter
 				// ad into our list as-is
-				submitterAds.Insert(ad);
+				submitterAds.push_back(ad);
 			}
 		}
         free(remoteHost);
@@ -3185,8 +3196,7 @@ obtainAdsFromCollector (
 	// ads found into submitterAds. No worries about duplicates since the Insert()
 	// method checks for duplicates already.
 	if (want_globaljobprio) {
-		submitterAds.Open();
-		while( (ad=submitterAds.Next()) ) {
+		for (auto ad: submitterAds) {
 			allAds.Insert(ad);
 		}
 	}
@@ -3209,8 +3219,8 @@ obtainAdsFromCollector (
 	dprintf(D_ALWAYS, "Got ads: %d public and %zu private\n",
 	        allAds.MyLength(),claimIds.size());
 
-	dprintf(D_ALWAYS, "Public ads include %d submitter, %d startd\n",
-		submitterAds.MyLength(), startdAds.MyLength() );
+	dprintf(D_ALWAYS, "Public ads include %zu submitter, %d startd\n",
+		submitterAds.size(), startdAds.MyLength() );
 
 	return true;
 }
@@ -3417,7 +3427,7 @@ assignWork(const ScheddWorkMap &workMap, CurrentWorkMap &curWork, ScheddWork &ne
 
 
 void
-Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterAds)
+Matchmaker::prefetchResourceRequestLists(std::vector<ClassAd *> &submitterAds)
 {
 	if (!param_boolean("NEGOTIATOR_PREFETCH_REQUESTS", true))
 	{
@@ -3428,11 +3438,8 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 
 	m_cachedRRLs.clear();
 	ScheddWorkMap scheddWorkQueues;
-	submitterAds.Open();
-	ClassAd *submitterAd;
 	unsigned todoPrefetches = 0;
-	while ((submitterAd = submitterAds.Next()))
-	{
+	for (ClassAd *submitterAd: submitterAds) {
 		std::string scheddAddr;
 		if (!getScheddAddr(*submitterAd, scheddAddr))
 		{
@@ -3447,7 +3454,6 @@ Matchmaker::prefetchResourceRequestLists(ClassAdListDoesNotDeleteAds &submitterA
 		iter->second->push_back(submitterAd);
 		todoPrefetches++;
 	}
-	submitterAds.Close();
 	dprintf(D_ALWAYS, "Starting prefetch round; %u potential prefetches to do.\n", todoPrefetches);
 
 	// Make sure our socket cache is big enough for all our current schedds.
@@ -3788,10 +3794,6 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		negotiate_ad.InsertAttr(ATTR_AUTO_CLUSTER_ATTRS, job_attr_references ? job_attr_references : "");
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
-
-		if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-			negotiate_ad.InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
-		}
 
 		if (!putClassAd(sock, negotiate_ad))
 		{
@@ -5004,7 +5006,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	offer->LookupBool(ATTR_OFFLINE,offline);
 	if( offline ) {
 		want_claiming = false;
-		RegisterAttemptedOfflineMatch( &request, offer );
+		RegisterAttemptedOfflineMatch( &request, offer, scheddAddr );
 	}
 	else {
 			// see if offer supports claiming or not
@@ -5110,10 +5112,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	// used by schedd_negotiate.cpp when resource request lists are being used
 	offer->Assign(ATTR_RESOURCE_REQUEST_CLUSTER,cluster);
 	offer->Assign(ATTR_RESOURCE_REQUEST_PROC,proc);
-
-	if (param_boolean("NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS", false)) {
-		offer->InsertAttr(ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS, true);
-	}
 
 	// ---- real matchmaking protocol begins ----
 	// 1.  contact the startd
@@ -5283,7 +5281,7 @@ Matchmaker::calculateSubmitterLimit(
 
 void
 Matchmaker::calculatePieLeft(
-	ClassAdListDoesNotDeleteAds &submitterAds,
+	std::vector<ClassAd *> &submitterAds,
 	char const *groupAccountingName,
 	float groupQuota,
 	float groupusage,
@@ -5295,14 +5293,11 @@ Matchmaker::calculatePieLeft(
 		/* result parameters: */
 	double &pieLeft)
 {
-	ClassAd *submitter;
 
 		// Calculate sum of submitterLimits in this spin of the pie.
 	pieLeft = 0;
 
-	submitterAds.Open();
-	while ((submitter = submitterAds.Next()))
-	{
+	for (ClassAd *submitter: submitterAds) {
 		double submitterShare = 0.0;
 		double submitterAbsShare = 0.0;
 		double submitterPrio = 0.0;
@@ -5338,18 +5333,16 @@ Matchmaker::calculatePieLeft(
 			
 		pieLeft += submitterLimit;
 	}
-	submitterAds.Close();
 }
 
 void Matchmaker::
-calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
+calculateNormalizationFactor (std::vector<ClassAd *> &submitterAds,
 							  double &max, double &normalFactor,
 							  double &maxAbs, double &normalAbsFactor)
 {
 	// find the maximum of the priority values (i.e., lowest priority)
 	max = maxAbs = DBL_MIN;
-	submitterAds.Open();
-	while (ClassAd* ad = submitterAds.Next()) {
+	for (ClassAd* ad: submitterAds) {
 		// this will succeed (comes from collector)
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
@@ -5358,7 +5351,6 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 		double prioFactor = accountant.GetPriorityFactor(subname);
 		if (prioFactor > maxAbs) maxAbs = prioFactor;
 	}
-	submitterAds.Close();
 
 	// calculate the normalization factor, i.e., sum of the (max/scheddprio)
 	// also, do not factor in ads with the same ATTR_NAME more than once -
@@ -5367,8 +5359,7 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 	std::set<std::string> names;
 	normalFactor = 0.0;
 	normalAbsFactor = 0.0;
-	submitterAds.Open();
-	while (ClassAd* ad = submitterAds.Next()) {
+	for (ClassAd* ad: submitterAds) {
 		std::string subname;
 		ad->LookupString(ATTR_NAME, subname);
         std::pair<std::set<std::string>::iterator, bool> r = names.insert(subname);
@@ -5380,7 +5371,6 @@ calculateNormalizationFactor (ClassAdListDoesNotDeleteAds &submitterAds,
 		double prioFactor = accountant.GetPriorityFactor(subname);
 		normalAbsFactor += maxAbs/prioFactor;
 	}
-	submitterAds.Close();
 }
 
 
@@ -5492,11 +5482,8 @@ addRemoteUserPrios( ClassAd	*ad )
 }
 
 void
-Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, ClassAdListDoesNotDeleteAds &submittersBelowFloor) {
-	ClassAd *submitterAd; 
-
-	submitterAds.Open ();
-	while ((submitterAd = submitterAds.Next())) {
+Matchmaker::findBelowFloorSubmitters(std::vector<ClassAd *> &submitterAds, std::vector<ClassAd *> &submittersBelowFloor) {
+	for (ClassAd *submitterAd : submitterAds) {
 		std::string submitterName;
 		submitterAd->LookupString(ATTR_NAME, submitterName);
 		double floor = accountant.GetFloor(submitterName);
@@ -5505,10 +5492,9 @@ Matchmaker::findBelowFloorSubmitters(ClassAdListDoesNotDeleteAds &submitterAds, 
 		// If any floor is defined, and we're below it, we get into the
 		// special floor-only round
 		if ((floor > 0.0) && (usage < floor)) {
-			submittersBelowFloor.Insert(submitterAd);
+			submittersBelowFloor.push_back(submitterAd);
 		}
 	}
-
 	return;
 }
 
@@ -5960,7 +5946,7 @@ Matchmaker::invalidateNegotiatorAd( void )
 	daemonCore->sendUpdates( INVALIDATE_NEGOTIATOR_ADS, &cmd_ad, NULL, false );
 }
 
-void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad )
+void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd_ad, const char *schedd_addr )
 {
 	if( IsFulldebug(D_FULLDEBUG) ) {
 		std::string name;
@@ -5980,6 +5966,61 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 	time_t now = time(NULL);
 	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
+
+
+	// How many times did we match this machine this negotiation cycle?
+	int matchCount = 0;
+	startd_ad->LookupInteger("MachineMatchCount", matchCount);
+
+	// 1 is an undercount, and ATTR_RESOURCE_REQUEST_COUNT is an overcount
+	// unless no other machine matches, but it's probably the right number
+	// assuming the pool is full (which is the case we care about).
+	int requestCount = 1;
+	job_ad->LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, requestCount);
+	matchCount += requestCount;
+
+	startd_ad->Assign(       "MachineMatchCount", matchCount);
+	update_ad.Assign(        "MachineMatchCount", matchCount);
+
+
+	// For each matching resource request, record its originating schedd and
+	// autocluster ID (so that the external scaler can look it up) and the
+	// requestCount (so that the external scaler knows how much to care).
+
+	ClassAd * record = new ClassAd();
+	record->Assign( "Scheduler", schedd_addr );
+
+	int autoclusterID = -1;
+	job_ad->LookupInteger( ATTR_AUTO_CLUSTER_ID, autoclusterID );
+	record->Assign( "AutoclusterID", autoclusterID );
+
+	record->Assign( "RequestCount", requestCount );
+
+	// This is clumsy because of the ClassAd memory-managment model; see
+	// classad/classad/classad.h's commented-out EvalauteAttrList().
+
+	//
+	// `record` is heap-allocated and _not_ freed because the ExprList
+	// will gain ownership of it (and thus try to free it when it goes
+	// out of scope).  The ExprList is heap-allocated so that the
+	// shared ptr can deallocate it.  We make a copy for each ad because
+	// we can't pass a shared pointer in and ClassAds assume they own
+	// everything.
+	//
+
+	classad::Value result;
+	classad_shared_ptr<classad::ExprList> list( new classad::ExprList() );
+	if( startd_ad->EvaluateAttr( "OfflineMatches", result ) ) {
+		result.IsSListValue(list);
+	}
+	list->push_back(record);
+
+	classad::ExprList * copyA = (classad::ExprList *)list->Copy();
+	startd_ad->Insert( "OfflineMatches", copyA );
+
+	classad::ExprList * copyB = (classad::ExprList *)list->Copy();
+	update_ad.Insert( "OfflineMatches", copyB );
+
 
 	classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
 	classy_counted_ptr<DCCollector> collector = new DCCollector();

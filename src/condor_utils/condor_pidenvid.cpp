@@ -107,7 +107,7 @@ pidenvid_format_to_envid( char *dest, unsigned size,
 
 	/* Here is the representation which will end up in an environment 
 		somewhere. time_t doesn't always match %lu, so coerce it*/
-	sprintf(dest, "%s%d=%d%s%lu%s%u", 
+	snprintf(dest, size, "%s%d=%d%s%lu%s%u",
 			PIDENVID_PREFIX, forker_pid, 
 			forked_pid, PIDENVID_SEP, (long)t, PIDENVID_SEP, mii);
 

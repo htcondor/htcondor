@@ -25,7 +25,10 @@
 #include "classad/classadCache.h"
 #include "classad/sink.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
@@ -69,8 +72,7 @@ Unparse( string &buffer, const Value &val )
 		case Value::INTEGER_VALUE: {
 			long long	i;
 			val.IsIntegerValue( i );
-			sprintf( tempBuf, "%lld", i );
-			buffer += tempBuf;
+			buffer += std::to_string(i);
 			return;
 		}
 		case Value::REAL_VALUE: {
@@ -82,7 +84,7 @@ Unparse( string &buffer, const Value &val )
                 // We also want to print it with as few
                 // digits as possible, which is why we don't use the 
                 // case below.
-                sprintf(tempBuf, "%.1f", real);
+                snprintf(tempBuf, sizeof(tempBuf), "%.1f", real);
                 buffer += tempBuf;
             } else if (classad_isnan(real)) {
 				UnparseAuxQuoteExpr( buffer, "real(\"NaN\")" );
@@ -93,7 +95,7 @@ Unparse( string &buffer, const Value &val )
             } else {
 				// Use the more user-friendly formatting of reals
 				// that we use for old ClassAds format
-                sprintf(tempBuf, "%.16G", real);
+                snprintf(tempBuf, sizeof(tempBuf), "%.16G", real);
                 // %G may print something that looks like an integer or exponent.
                 // In that case, tack on a ".0"
                 if (tempBuf[strcspn(tempBuf, ".Ee")] == '\0') {
@@ -305,7 +307,7 @@ UnparseAuxEscapeString( std::string &buffer, const std::string &value )
 		default:
 			if( *itr > 0 && *itr < 32 ) {
 				// print unicode representation
-				sprintf( tempBuf, "\\u00%02X", (int)*itr );
+				snprintf( tempBuf, sizeof(tempBuf), "\\u00%02X", (int)*itr );
 				buffer += tempBuf;
 				continue;
 			}

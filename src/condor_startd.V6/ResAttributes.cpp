@@ -33,6 +33,8 @@
 #include "winreg.windows.h"
 #endif
 
+#include "docker-api.h"
+
 MachAttributes::MachAttributes()
    : m_user_specified(NULL, ";"), m_user_settings_init(false), m_named_chroot()
 {
@@ -63,6 +65,8 @@ MachAttributes::MachAttributes()
 	m_load = -1.0;
 	m_owner_load = -1.0;
 	m_virt_mem = 0;
+	m_docker_cached_image_size = -1;
+	m_docker_cached_image_size_time = time(nullptr) - docker_cached_image_size_interval;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -449,17 +453,32 @@ MachAttributes::compute_config()
 			dprintf(D_FULLDEBUG, "Named chroots: %s\n", result_str.c_str() );
 			m_named_chroot = result_str;
 		}
-
 	}
 }
 
 void
 MachAttributes::compute_for_update()
 {
+
 	{  // formerly IS_UPDATE(how_much) && IS_SHARED(how_much)
 
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lld\n", m_virt_mem );
+
+		time_t now = resmgr->now();
+		time_t interval = (now - m_docker_cached_image_size_time);
+		if (docker_cached_image_size_interval && (interval >= docker_cached_image_size_interval)) {
+			m_docker_cached_image_size_time = now;
+			int64_t size_in_bytes = DockerAPI::imageCacheUsed();
+			if (size_in_bytes >= 0) {
+				const int64_t ONEMB =  1024 * 1024;
+				m_docker_cached_image_size = (DockerAPI::imageCacheUsed() + ONEMB/2) / ONEMB;
+			} else {
+				// negative values returned above indicate failure to fetch the imageSize
+				// negative values here suppress advertise of the attribute
+				m_docker_cached_image_size = -1;
+			}
+		}
 
 #if defined(WIN32)
 		credd_test();
@@ -1271,8 +1290,6 @@ MachAttributes::publish_static(ClassAd* cp)
 		if (pav) pav->AssignToClassAd(cp);
 	}
 
-	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
-
 #else
 	// temporary attributes for raw utsname info
 	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
@@ -1402,11 +1419,19 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 {
 	// things that need to be refreshed periodially
 
+#ifdef WIN32
+	// we periodically probe to see if there is a valid local credd.
+	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
+#endif
+
 	// KFLOPS and MIPS are only conditionally computed; thus, only
 	// advertise them if we computed them.
 	if (m_kflops > 0) { cp->Assign( ATTR_KFLOPS, m_kflops ); }
 	if (m_mips > 0) { cp->Assign( ATTR_MIPS, m_mips ); }
 
+	if (m_docker_cached_image_size >= 0) {
+		cp->Assign(ATTR_DOCKER_CACHED_IMAGE_SIZE, m_docker_cached_image_size);
+	}
 	// publish offline ids for any of the resources
 	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
 		string ids;

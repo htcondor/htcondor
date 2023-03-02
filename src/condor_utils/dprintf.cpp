@@ -461,7 +461,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 			if (cat_and_flags & (D_VERBOSE_MASK | D_FULLDEBUG)) {
 				int verb = 1 + ((cat_and_flags & D_VERBOSE_MASK) >> 8);
 				if (cat_and_flags & D_FULLDEBUG) verb = 2;
-				sprintf_error = sprintf(verbosity, ":%d", verb);
+				sprintf_error = snprintf(verbosity, sizeof(verbosity), ":%d", verb);
 				if(sprintf_error < 0)
 				{
 					_condor_dprintf_exit(sprintf_error, "Error writing to debug header\n");	
@@ -577,7 +577,7 @@ _dprintf_global_func(int cat_and_flags, int hdr_flags, DebugHeaderInfo & info, c
 					MEMORY_BASIC_INFORMATION mbi;
 					SIZE_T cb = VirtualQuery (pfn, &mbi, sizeof(mbi));
 					int off = (int)((const char*)pfn - (const char*)mbi.AllocationBase);
-					if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+					if (cb == sizeof(mbi) && mbi.AllocationBase != nullptr) {
 						if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
 							// print only the part after the last path separator.
 							char * pname = filename_from_path(szModule);
@@ -1487,7 +1487,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 	priv = _set_priv(PRIV_CONDOR, __FILE__, __LINE__, 0);
 	(void)setBaseName(filePath.c_str());
 	timestamp = createRotateFilename(NULL, it->maxLogNum, now);
-	(void)sprintf( old, "%s.%s", filePath.c_str() , timestamp);
+	(void)snprintf( old, sizeof(old), "%s.%s", filePath.c_str() , timestamp);
 	_condor_dfprintf( it, "Saving log file to \"%s\"\n", old );
 	(void)fflush( debug_file_ptr );
 
@@ -1779,11 +1779,11 @@ _condor_dprintf_exit( int error_code, const char* msg )
 		snprintf( header, sizeof(header), "dprintf() had a fatal error in pid %d\n", (int)getpid() );
 		tail[0] = '\0';
 		if( error_code ) {
-			sprintf( tail, " errno: %d (%s)", error_code,
+			snprintf( tail, sizeof(tail), " errno: %d (%s)", error_code,
 					 strerror(error_code) );
 		}
 #ifndef WIN32			
-		sprintf( buf, " euid: %d, ruid: %d", (int)geteuid(),
+		snprintf( buf, sizeof(buf), " euid: %d, ruid: %d", (int)geteuid(),
 				 (int)getuid() );
 		strcat( tail, buf );
 #endif
@@ -2368,7 +2368,7 @@ static void backtrace_symbols_fd(void* trace[], int cFrames, int fd)
 	#endif // _DGBHELP_
 		MEMORY_BASIC_INFORMATION mbi;
 		SIZE_T cb = VirtualQuery (trace[ix], &mbi, sizeof(mbi));
-		if (cb == sizeof(mbi) && mbi.AllocationBase > 0) {
+		if (cb == sizeof(mbi) && mbi.AllocationBase != nullptr) {
 			if (GetModuleFileNameA ((HMODULE)mbi.AllocationBase, szModule, COUNTOF(szModule))) {
 				args[1] = (ULONG_PTR)szModule;
 				// print only the part after the last path separator.

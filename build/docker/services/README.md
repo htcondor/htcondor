@@ -22,7 +22,7 @@ Start the container by running:
 ```console
 dockerhost$ docker run --detach \
                 --name=minicondor \
-                htcondor/mini:el7
+                htcondor/mini:latest
 ```
 Then, enter the container by running:
 ```console

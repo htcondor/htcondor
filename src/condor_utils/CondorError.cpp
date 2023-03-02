@@ -106,7 +106,7 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 	int l = vprintf_length( the_format, ap );
 	tmp->_message = (char*)malloc( l+1 );
 	if (tmp->_message)
-		vsprintf ( tmp->_message, the_format, ap );
+		vsnprintf ( tmp->_message, l+1, the_format, ap );
 	tmp->_next = _next;
 	_next = tmp;
 	va_end(ap);

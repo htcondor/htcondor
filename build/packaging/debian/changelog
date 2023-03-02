@@ -1,3 +1,36 @@
+condor (10.2.5-1) stable; urgency=medium
+
+  * Fix counting of unmaterialized jobs in the condor_schedd
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 27 Feb 2023 14:50:00 -0600
+
+condor (10.2.4-1) stable; urgency=medium
+
+  * Improve counting of unmaterialized jobs in the condor_schedd
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 23 Feb 2023 20:46:00 -0600
+
+condor (10.2.3-1) stable; urgency=medium
+
+  * Add a count of unmaterialized jobs to condor_schedd statistics
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 21 Feb 2023 07:10:00 -0600
+
+condor (10.2.2-1) stable; urgency=medium
+
+  * Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Feb 2023 21:52:00 -0600
+
+condor (10.2.1-1) stable; urgency=medium
+
+  * Improved condor_schedd scalability when a user runs more than 1,000 jobs
+  * Fix issue where condor_ssh_to_job fails if the user is not in /etc/passwd
+  * The Python Schedd.query() now returns the ServerTime attribute
+  * Fixed issue that prevented HTCondor installation on Ubuntu 18.04
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 24 Jan 2023 07:12:00 -0600
+
 condor (10.2.0-1) stable; urgency=medium
 
   * Preliminary support for Enterprise Linux 9

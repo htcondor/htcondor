@@ -52,7 +52,7 @@ class CronJobOut : public CronJobIO
 	int FlushQueue( void );
   private:
 	std::queue<char *> m_lineq;
-	MyString m_q_sep; // when record separator '-' is read from the stream, this holds that line with the '-'
+	std::string m_q_sep; // when record separator '-' is read from the stream, this holds that line with the '-'
 };
 
 // Cron's StdErr Line Buffer

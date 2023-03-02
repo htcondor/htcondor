@@ -1605,7 +1605,7 @@ bool GceInstanceList::workerFunction(char **argv, int argc, string &result_strin
 		}
 		if (next_page_token.empty()) {
 			char buff[16];
-			sprintf( buff, "%d", (int)(results.size() / 4) );
+			snprintf( buff, sizeof(buff), "%d", (int)(results.size() / 4) );
 
 			StringList response;
 			response.append( buff );

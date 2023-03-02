@@ -5,6 +5,9 @@
 %define _python_bytecompile_errors_terminate_build 0
 %endif
 
+# Don't use changelog date in CondorVersion
+%global source_date_epoch_from_changelog 0
+
 # optionally define any of these, here or externally
 # % define fedora   16
 # % define osg      0
@@ -1074,6 +1077,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/exit_37.sif
 %dir %_libexecdir/condor/singularity_test_sandbox/
 %dir %_libexecdir/condor/singularity_test_sandbox/dev/
+%dir %_libexecdir/condor/singularity_test_sandbox/proc/
 %_libexecdir/condor/singularity_test_sandbox/exit_37
 %_libexecdir/condor/condor_limits_wrapper.sh
 %_libexecdir/condor/condor_rooster
@@ -1577,6 +1581,24 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Feb 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.5-1
+- Fix counting of unmaterialized jobs in the condor_schedd
+
+* Fri Feb 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.4-1
+- Improve counting of unmaterialized jobs in the condor_schedd
+
+* Tue Feb 21 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.3-1
+- Add a count of unmaterialized jobs to condor_schedd statistics
+
+* Tue Feb 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.2-1
+- Fixed bugs with configuration knob SINGULARITY_USE_PID_NAMESPACES
+
+* Tue Jan 24 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.1-1
+- Improved condor_schedd scalability when a user runs more than 1,000 jobs
+- Fix issue where condor_ssh_to_job fails if the user is not in /etc/passwd
+- The Python Schedd.query() now returns the ServerTime attribute
+- Fixed issue that prevented HTCondor installation on Ubuntu 18.04
+
 * Thu Jan 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.0-1
 - Preliminary support for Enterprise Linux 9
 - Preliminary support for cgroups v2

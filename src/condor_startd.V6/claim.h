@@ -240,7 +240,7 @@ public:
 	int activationCount() const {return c_activation_count;}
 
 		// starter-related functions
-	int	 spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
+	pid_t spawnStarter( Starter* starter, ClassAd * job, Stream* = NULL );
 	void starterExited( Starter* starter, int status );
 	bool starterPidMatches( pid_t starter_pid ) const;
 	bool isDeactivating( void );

@@ -96,23 +96,45 @@ public:
 	}
 
 	// calculate the number of rows selected by the slice
-	int TotalProcs(bool & changed_value) {
-		changed_value = false;
+	// also returns a boolean to indicate that we set the cached_total_procs value
+	// this happens when all of the itemdata is present, which it is at submit time
+	// but it can take a bit of time to reload after a schedd restart.
+	int TotalProcs(bool & updated_cache) {
+		int total_procs = cached_total_procs;
+		updated_cache = false;
 		if (cached_total_procs == -42) {
-			int selected_rows = 1;
+			total_procs = 1;
 			if (fea.foreach_mode != foreach_not) {
 				int num_rows = fea.items.number();
-				selected_rows = 0;
-				for (int row = 0; row < num_rows; ++row) {
-					if (fea.slice.selected(row, num_rows)) {
-						++selected_rows;
-					}
-				}
+				int selected_rows = fea.slice.length_for(num_rows);
+				if (selected_rows > 1) total_procs = selected_rows;
 			}
-			changed_value = true;
-			cached_total_procs = StepSize() * selected_rows;
+			if (fea.queue_num > 1) {
+				total_procs *= fea.queue_num;
+			}
+			if (fea.foreach_mode != foreach_from_async) {
+				updated_cache = true;
+				cached_total_procs = total_procs;
+			}
 		}
-		return cached_total_procs;
+		return total_procs;
+	}
+
+	// return the current best guess as to the total number of procs that will materialize
+	// returns true when it is not a guess, and false if it is still a guess
+	// the false return can happen on restart when we have not yet read in all of the itemdata
+	bool KnownTotalProcs(int & num) const {
+		int step_size = fea.queue_num ? fea.queue_num : 1;
+		if (fea.foreach_mode == foreach_not) {
+			num = step_size;
+			return true;
+		}
+		if (cached_total_procs > 0) {
+			num = cached_total_procs;
+			return true;
+		}
+		num = fea.slice.length_for(fea.items.number()) * step_size;
+		return fea.foreach_mode != foreach_from_async;
 	}
 
 protected:
@@ -381,6 +403,28 @@ bool JobFactoryIsRunning(JobQueueCluster * cad)
 	if ( ! cad || ! cad->factory) return true;
 	return cad->factory->PauseMode() == mmRunning;
 }
+
+int UnMaterializedJobCount(JobQueueCluster * cad, bool include_paused /*=false*/)
+{
+	if ( ! cad || ! cad->factory) return 0;
+	if (cad->factory->IsComplete()) return 0;
+	if ( ! include_paused && cad->factory->IsPaused()) return 0;
+	int next_proc_id = 0;
+	int total_procs = 0;
+	if ( ! cad->factory->KnownTotalProcs(total_procs)) {
+		// If the factory hasn't loaded the itemdata yet, use the current TOTAL_SUBMIT_PROCS value
+		// LookupInteger will not change total_procs if the lookup fails
+		// So we end up using the tentative KnownTotalProcs value in that case
+		cad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS, total_procs);
+	}
+	if (total_procs > 0 &&
+		cad->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, next_proc_id) &&
+		next_proc_id > 0 && total_procs > next_proc_id) {
+		return total_procs - next_proc_id;
+	}
+	return 0;
+}
+
 
 bool GetJobFactoryMaterializeMode(JobQueueCluster * cad, int & pause_code)
 {
