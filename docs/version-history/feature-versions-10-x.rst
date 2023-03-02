@@ -43,6 +43,11 @@ New Features:
   Apptainer/Singularity image.
   :jira:`1588`
 
+- The *condor_startd* now advertises whether there appears to be
+  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
+  to work.
+  :jira:`1614`
+
 - For grid universe jobs of type **batch**, add detection of when the
   target batch system is unreachable or not functioning. When this is
   the case, HTCondor marks the resource as unavailable instead of
