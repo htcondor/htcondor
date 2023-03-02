@@ -382,9 +382,9 @@ int writeJobDisconnectedEvent(WriteUserLog &logFile)
 int writeJobReconnectedEvent(WriteUserLog &logFile)
 {
 	JobReconnectedEvent evt;
-	evt.setStartdAddr("<128.105.165.12:32779>");
-	evt.setStartdName("ThatMachine");
-	evt.setStarterAddr("<128.105.165.12:32780>");
+	evt.startd_addr = "<128.105.165.12:32779>";
+	evt.startd_name = "ThatMachine";
+	evt.starter_addr = "<128.105.165.12:32780>";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobReconnectedEvent write\n");
 		exit(1);

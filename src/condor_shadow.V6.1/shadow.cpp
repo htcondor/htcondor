@@ -527,12 +527,12 @@ UniShadow::logReconnectedEvent( void )
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdAddr( dc_startd->addr() );
-	event.setStartdName( dc_startd->name() );
+	event.startd_addr = dc_startd->addr();
+	event.startd_name = dc_startd->name();
 
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
-	event.setStarterAddr( starter );
+	event.starter_addr = starter;
 	free( starter );
 	starter = NULL;
 

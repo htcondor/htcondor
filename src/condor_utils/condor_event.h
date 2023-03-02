@@ -1566,7 +1566,6 @@ class JobReconnectedEvent : public ULogEvent
 {
 public:
 	JobReconnectedEvent(void);
-	~JobReconnectedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1580,22 +1579,15 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "startd_addr" member
-	void setStartdAddr( char const *startd );
-	const char* getStartdAddr(void) const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr.c_str();}
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name.c_str();}
 
-		/// stores a copy of the string in our "starter_addr" member
-	void setStarterAddr( char const *starter );
-	const char* getStarterAddr(void) const {return startd_addr;}
+	const char* getStarterAddr(void) const {return startd_addr.c_str();}
 
-private:
-	char *startd_addr;
-	char *startd_name;
-	char *starter_addr;
+	std::string startd_addr;
+	std::string startd_name;
+	std::string starter_addr;
 };
 
 

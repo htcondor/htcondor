@@ -4473,97 +4473,31 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 JobReconnectedEvent::JobReconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECTED;
-	startd_addr = NULL;
-	startd_name = NULL;
-	starter_addr = NULL;
 }
-
-
-JobReconnectedEvent::~JobReconnectedEvent(void)
-{
-	if( startd_addr ) {
-		delete [] startd_addr;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-	if( starter_addr ) {
-		delete [] starter_addr;
-	}
-}
-
-
-void
-JobReconnectedEvent::setStartdAddr( const char* startd )
-{
-	if( startd_addr ) {
-		delete[] startd_addr;
-		startd_addr = NULL;
-	}
-	if( startd ) {
-		startd_addr = strnewp( startd );
-		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectedEvent::setStarterAddr( const char* starter )
-{
-	if( starter_addr ) {
-		delete[] starter_addr;
-		starter_addr = NULL;
-	}
-	if( starter ) {
-		starter_addr = strnewp( starter );
-		if( !starter_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
 
 bool
 JobReconnectedEvent::formatBody( std::string &out )
 {
-	if( ! startd_addr ) {
+	if( startd_addr.empty() ) {
 		EXCEPT( "JobReconnectedEvent::formatBody() called without "
 				"startd_addr" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobReconnectedEvent::formatBody() called without "
 				"startd_name" );
 	}
-	if( ! starter_addr ) {
+	if( starter_addr.empty() ) {
 		EXCEPT( "JobReconnectedEvent::formatBody() called without "
 				"starter_addr" );
 	}
 
-	if( formatstr_cat( out, "Job reconnected to %s\n", startd_name ) < 0 ) {
+	if( formatstr_cat( out, "Job reconnected to %s\n", startd_name.c_str() ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    startd address: %s\n", startd_addr ) < 0 ) {
+	if( formatstr_cat( out, "    startd address: %s\n", startd_addr.c_str() ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    starter address: %s\n", starter_addr ) < 0 ) {
+	if( formatstr_cat( out, "    starter address: %s\n", starter_addr.c_str() ) < 0 ) {
 		return false;
 	}
 	return true;
@@ -4573,31 +4507,31 @@ JobReconnectedEvent::formatBody( std::string &out )
 int
 JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
+	std::string line;
 
-	if( line.readLine(file) &&
-		line.replaceString("Job reconnected to ", "") )
+	if( readLine(line, file) &&
+		replace_str(line, "Job reconnected to ", "") )
 	{
-		line.chomp();
-		setStartdName( line.c_str() );
+		chomp(line);
+		startd_name = line;
 	} else {
 		return 0;
 	}
 
-	if( line.readLine(file) &&
-		line.replaceString( "    startd address: ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    startd address: ", "") )
 	{
-		line.chomp();
-		setStartdAddr( line.c_str() );
+		chomp(line);
+		startd_addr = line;
 	} else {
 		return 0;
 	}
 
-	if( line.readLine(file) &&
-		line.replaceString( "    starter address: ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    starter address: ", "") )
 	{
-		line.chomp();
-		setStarterAddr( line.c_str() );
+		chomp(line);
+		starter_addr = line;
 	} else {
 		return 0;
 	}
@@ -4609,15 +4543,15 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobReconnectedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! startd_addr ) {
+	if( startd_addr.empty() ) {
 		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
 				"startd_addr" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
 				"startd_name" );
 	}
-	if( ! starter_addr ) {
+	if( starter_addr.empty() ) {
 		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
 				"starter_addr" );
 	}
@@ -4656,37 +4590,11 @@ JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "StartdAddr", &mallocstr );
-	if( mallocstr ) {
-		if( startd_addr ) {
-			delete [] startd_addr;
-		}
-		startd_addr = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdAddr", startd_addr );
 
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		if( startd_name ) {
-			delete [] startd_name;
-		}
-		startd_name = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 
-	ad->LookupString( "StarterAddr", &mallocstr );
-	if( mallocstr ) {
-		if( starter_addr ) {
-			delete [] starter_addr;
-		}
-		starter_addr = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StarterAddr", starter_addr );
 }
 
 
