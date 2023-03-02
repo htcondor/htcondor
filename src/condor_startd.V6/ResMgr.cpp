@@ -1030,11 +1030,11 @@ ResMgr::directAttachToSchedd()
 
 	std::vector<Resource*> offer_resources;
 
-	for ( int i = 0; i < nresources; i++ ) {
-		if ( resources[i]->state() != unclaimed_state ) {
+	for (auto resource: slots) {
+		if ( resource->state() != unclaimed_state ) {
 			continue;
 		}
-		offer_resources.push_back(resources[i]);
+		offer_resources.push_back(resource);
 	}
 
 	if ( offer_resources.empty() ) {
