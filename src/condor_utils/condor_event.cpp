@@ -4603,62 +4603,16 @@ JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 JobReconnectFailedEvent::JobReconnectFailedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECT_FAILED;
-	reason = NULL;
-	startd_name = NULL;
 }
-
-
-JobReconnectFailedEvent::~JobReconnectFailedEvent(void)
-{
-	if( reason ) {
-		delete [] reason;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-}
-
-
-void
-JobReconnectFailedEvent::setReason( const char* reason_str )
-{
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectFailedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
 
 bool
 JobReconnectFailedEvent::formatBody( std::string &out )
 {
-	if( ! reason ) {
+	if( reason.empty() ) {
 		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
 				"reason" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
 				"startd_name" );
 	}
@@ -4666,11 +4620,11 @@ JobReconnectFailedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job reconnection failed\n" ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %.8191s\n", reason ) < 0 ) {
+	if( formatstr_cat( out, "    %.8191s\n", reason.c_str() ) < 0 ) {
 		return false;
 	}
 	if( formatstr_cat( out, "    Can not reconnect to %s, rescheduling job\n",
-					   startd_name ) < 0 ) {
+					   startd_name.c_str() ) < 0 ) {
 		return false;
 	}
 	return true;
@@ -4680,33 +4634,33 @@ JobReconnectFailedEvent::formatBody( std::string &out )
 int
 JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
+	std::string line;
 
 		// the first line contains no useful information for us, but
 		// it better be there or we've got a parse error.
-	if( ! line.readLine(file) ) {
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
 
 		// 2nd line is the reason
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
+	if( readLine(line, file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
-		line.chomp();
-		setReason( line.c_str()+4 );
+		chomp(line);
+		reason = line.c_str()+4;
 	} else {
 		return 0;
 	}
 
 		// 3rd line is who we tried to reconnect to
-	if( line.readLine(file) &&
-		line.replaceString( "    Can not reconnect to ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    Can not reconnect to ", "") )
 	{
 			// now everything until the first ',' will be the name
-		int i = line.FindChar( ',' );
-		if( i > 0 ) {
-			line.truncate( i );
-			setStartdName( line.c_str() );
+		size_t i = line.find( ',' );
+		if( i != std::string::npos ) {
+			line.erase( i );
+			startd_name = line;
 		} else {
 			return 0;
 		}
@@ -4721,11 +4675,11 @@ JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobReconnectFailedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! reason ) {
+	if( reason.empty() ) {
 		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
 				"reason" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
 				"startd_name" );
 	}
@@ -4759,27 +4713,9 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "Reason", &mallocstr );
-	if( mallocstr ) {
-		if( reason ) {
-			delete [] reason;
-		}
-		reason = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "Reason", reason );
 
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		if( startd_name ) {
-			delete [] startd_name;
-		}
-		startd_name = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 }
 
 

@@ -395,8 +395,8 @@ int writeJobReconnectedEvent(WriteUserLog &logFile)
 int writeJobReconnectFailedEvent(WriteUserLog &logFile)
 {
 	JobReconnectFailedEvent evt;
-	evt.setStartdName("ThatMachine");
-	evt.setReason("The're just not into you");
+	evt.startd_name = "ThatMachine";
+	evt.reason = "The're just not into you";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobReconnectFailedEvent write\n");
 		exit(1);

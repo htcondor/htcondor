@@ -413,9 +413,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason=evict_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("LastVacateReason",reason);
+	  if (!evict_event->reason.empty()) {
+	    jobClassAd->InsertAttr("LastVacateReason",evict_event->reason);
 	  }
 	}
       }

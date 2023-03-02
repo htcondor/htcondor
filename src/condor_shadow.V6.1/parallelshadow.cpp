@@ -1021,7 +1021,7 @@ ParallelShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.setReason( reason );
+	event.reason = reason;
 
 /*
 	DCStartd* dc_startd = remRes->getDCStartd();

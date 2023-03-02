@@ -547,13 +547,13 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.setReason( reason );
+	event.reason = reason;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdName( dc_startd->name() );
+	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );

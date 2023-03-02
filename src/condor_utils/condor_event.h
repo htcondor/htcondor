@@ -1595,7 +1595,6 @@ class JobReconnectFailedEvent : public ULogEvent
 {
 public:
 	JobReconnectFailedEvent(void);
-	~JobReconnectFailedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1609,18 +1608,12 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "reason" member
-	void setReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason(void) const {return reason;};
+	const char* getReason(void) const {return reason.c_str();};
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name.c_str();}
 
-private:
-	char *startd_name;
-	char *reason;
+	std::string startd_name;
+	std::string reason;
 };
 
 
