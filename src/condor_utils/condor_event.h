@@ -1539,7 +1539,6 @@ class JobDisconnectedEvent : public ULogEvent
 {
 public:
 	JobDisconnectedEvent(void);
-	~JobDisconnectedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1553,23 +1552,13 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "startd_addr" member
-	void setStartdAddr( char const *startd );
-	const char* getStartdAddr(void) const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr.c_str();}
+	const char* getStartdName(void) const {return startd_name.c_str();}
+	const char* getDisconnectReason(void) const {return disconnect_reason.c_str();};
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
-
-		/// stores a copy of the string in our "reason" member
-	void setDisconnectReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getDisconnectReason(void) const {return disconnect_reason;};
-
-private:
-	char *startd_addr;
-	char *startd_name;
-	char *disconnect_reason;
+	std::string startd_addr;
+	std::string startd_name;
+	std::string disconnect_reason;
 };
 
 

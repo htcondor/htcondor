@@ -4335,86 +4335,20 @@ PostScriptTerminatedEvent::initFromClassAd(ClassAd* ad)
 JobDisconnectedEvent::JobDisconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_DISCONNECTED;
-	startd_addr = NULL;
-	startd_name = NULL;
-	disconnect_reason = NULL;
 }
-
-
-JobDisconnectedEvent::~JobDisconnectedEvent(void)
-{
-	if( startd_addr ) {
-		delete [] startd_addr;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-	if( disconnect_reason ) {
-		delete [] disconnect_reason;
-	}
-}
-
-
-void
-JobDisconnectedEvent::setStartdAddr( const char* startd )
-{
-	if( startd_addr ) {
-		delete[] startd_addr;
-		startd_addr = NULL;
-	}
-	if( startd ) {
-		startd_addr = strnewp( startd );
-		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobDisconnectedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobDisconnectedEvent::setDisconnectReason( const char* reason_str )
-{
-	if( disconnect_reason ) {
-		delete [] disconnect_reason;
-		disconnect_reason = NULL;
-	}
-	if( reason_str ) {
-		disconnect_reason = strnewp( reason_str );
-		if( !disconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
 
 bool
 JobDisconnectedEvent::formatBody( std::string &out )
 {
-	if( ! disconnect_reason ) {
+	if( disconnect_reason.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
 				"disconnect_reason" );
 	}
-	if( ! startd_addr ) {
+	if( startd_addr.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
 				"startd_addr" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
 				"startd_name" );
 	}
@@ -4422,11 +4356,11 @@ JobDisconnectedEvent::formatBody( std::string &out )
 	if( formatstr_cat(out, "Job disconnected, attempting to reconnect\n") < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %.8191s\n", disconnect_reason ) < 0 ) {
+	if( formatstr_cat( out, "    %.8191s\n", disconnect_reason.c_str() ) < 0 ) {
 		return false;
 	}
 	if( formatstr_cat( out, "    Trying to reconnect to %s %s\n",
-					   startd_name, startd_addr ) < 0 ) {
+					   startd_name.c_str(), startd_addr.c_str() ) < 0 ) {
 		return false;
 	}
 	return true;
@@ -4436,32 +4370,32 @@ JobDisconnectedEvent::formatBody( std::string &out )
 int
 JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
+	std::string line;
 		// the first line contains no useful information for us, but
 		// it better be there or we've got a parse error.
-	if( ! line.readLine(file) ) {
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
 
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
+	if( readLine(line, file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
-		line.chomp();
-		setDisconnectReason( line.c_str()+4 );
+		chomp(line);
+		disconnect_reason = line.c_str()+4;
 	} else {
 		return 0;
 	}
 
-	if( ! line.readLine(file) ) {
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
-	line.chomp();
-	if( line.replaceString("    Trying to reconnect to ", "") ) {
-		int i = line.FindChar( ' ' );
-		if( i > 0 ) {
-			setStartdAddr( line.c_str()+(i+1) );
-			line.truncate( i );
-			setStartdName( line.c_str() );
+	chomp(line);
+	if( replace_str(line, "    Trying to reconnect to ", "") ) {
+		size_t i = line.find( ' ' );
+		if( i != std::string::npos ) {
+			startd_addr = line.c_str()+(i+1);
+			line.erase( i );
+			startd_name = line.c_str();
 		} else {
 			return 0;
 		}
@@ -4476,15 +4410,15 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobDisconnectedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! disconnect_reason ) {
+	if( disconnect_reason.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::toClassAd() called without"
 				"disconnect_reason" );
 	}
-	if( ! startd_addr ) {
+	if( startd_addr.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
 				"startd_addr" );
 	}
-	if( ! startd_name ) {
+	if( startd_name.empty() ) {
 		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
 				"startd_name" );
 	}
@@ -4507,8 +4441,8 @@ JobDisconnectedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	MyString line = "Job disconnected, attempting to reconnect";
-	if( !myad->InsertAttr("EventDescription", line.c_str()) ) {
+	std::string line = "Job disconnected, attempting to reconnect";
+	if( !myad->InsertAttr("EventDescription", line) ) {
 		delete myad;
 		return NULL;
 	}
@@ -4526,28 +4460,11 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "DisconnectReason", &mallocstr );
-	if( mallocstr ) {
-		setDisconnectReason( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "DisconnectReason", disconnect_reason );
 
-	ad->LookupString( "StartdAddr", &mallocstr );
-	if( mallocstr ) {
-		setStartdAddr( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdAddr", startd_addr );
 
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		setStartdName( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 }
 
 

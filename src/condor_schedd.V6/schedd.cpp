@@ -8272,9 +8272,9 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
-		event.setDisconnectReason( txt );
-		event.setStartdAddr( startd_addr );
-		event.setStartdName( startd_name );
+		event.disconnect_reason = txt;
+		event.startd_addr = startd_addr;
+		event.startd_name = startd_name;
 
 		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
