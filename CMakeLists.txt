@@ -32,6 +32,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if (${CMAKE_VERSION} VERSION_GREATER_EQUAL 3.24)
   cmake_policy(SET CMP0135 OLD)
 endif()
+ 
+# generate a compile_commands.json file which tools
+# like clang-tidy use
+SET(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 
 ##########################################################################
 #Setup package meta-data (used in packaging)
