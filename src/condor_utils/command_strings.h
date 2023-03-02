@@ -24,6 +24,8 @@
 #include "condor_common.h"
 #include "condor_commands.h"
 #include "translation_utils.h"
+#include "stl_string_utils.h"
+#include <array>
 
 /* This file contains a mapping from Commands and Signals in 
    condor to the appropriate strings.  Some supporting functions
@@ -77,13 +79,75 @@ typedef enum {
 	CA_INVALID_REPLY,
 	CA_LOCATE_FAILED,
 	CA_CONNECT_FAILED,
-	CA_COMMUNICATION_ERROR,
+	CA_COMMUNICATION_ERROR
 } CAResult;
 
-const char* getCAResultString( CAResult r );
-CAResult getCAResultNum( const char* str );
 
-int getDrainingScheduleNum( char const *name );
-char const *getDrainingScheduleName( int num );
+// Return a std::array at compile time that other
+// consteval functions can use as a lookup table
+constexpr 
+std::array<std::pair<const char *, CAResult>,10>
+makeCATable() {
+	return {{ // yes, there needs to be 2 open braces here...
+		{ "Success", CA_SUCCESS },
+		{ "Failure", CA_FAILURE },
+		{ "NotAuthenticated", CA_NOT_AUTHENTICATED },
+		{ "NotAuthorized", CA_NOT_AUTHORIZED },
+		{ "InvalidRequest", CA_INVALID_REQUEST },
+		{ "InvalidState", CA_INVALID_STATE },
+		{ "InvalidReply", CA_INVALID_REPLY },
+		{ "LocateFailed", CA_LOCATE_FAILED },
+		{ "ConnectFailed", CA_CONNECT_FAILED },
+		{ "CommunicationError", CA_COMMUNICATION_ERROR },
+	}};
+}
+
+// Almost all uses of this pass in a compile
+// time constant argument, so make it consteval
+// to do the lookup at compile time
+constexpr 
+const char* getCAResultString( CAResult r) {
+	for (auto &[str, e]: makeCATable()) {
+		if (e == r)  return str;
+	}
+
+	return nullptr;
+}
+
+constexpr
+CAResult getCAResultNum(const char* instr) {
+	for (auto &[str, e]: makeCATable()) {
+		if (istring_view(str) == istring_view(instr)) return e;
+	}
+	return (CAResult)-1;
+}
+
+constexpr 
+std::array<std::pair<const char *,int>,3>
+makeDrainTable() {
+	return {{
+		{ "graceful",	DRAIN_GRACEFUL},
+		{ "quick", 		DRAIN_QUICK},
+		{ "fast", 		DRAIN_FAST},
+	}};	
+}
+
+constexpr
+int getDrainingScheduleNum(char const *name) {
+	for (auto &[str, e]: makeDrainTable()) {
+		if (istring_view(str) == istring_view(name)) return e;
+	}
+	return -1;
+}
+
+/* Turn out this one is never called
+constexpr
+char const *getDrainingScheduleName( int num ) {
+	for (auto &[str, e]: makeDrainTable()) {
+		if (e == num)  return str;
+	}
+	return nullptr;
+}
+*/
 
 #endif
