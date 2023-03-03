@@ -2012,7 +2012,7 @@ Dag::PostScriptReaper( Job *job, int status )
 
 	PostScriptTerminatedEvent event;
 	
-	event.dagNodeName = strnewp( job->GetJobName() );
+	event.dagNodeName = job->GetJobName();
 
 	if( WIFSIGNALED( status ) ) {
 		debug_printf( DEBUG_QUIET, "POST script died on signal %d\n", status );
@@ -3905,7 +3905,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		event->cluster == -1 ) {
 		const PostScriptTerminatedEvent* pst_event =
 			(const PostScriptTerminatedEvent*)event;
-		node = FindNodeByName( pst_event->dagNodeName );
+		node = FindNodeByName( pst_event->dagNodeName.c_str() );
 		return node;
 	}
 	

@@ -4145,17 +4145,7 @@ PostScriptTerminatedEvent::PostScriptTerminatedEvent(void) :
 	normal = false;
 	returnValue = -1;
 	signalNumber = -1;
-	dagNodeName = NULL;
 }
-
-
-PostScriptTerminatedEvent::~PostScriptTerminatedEvent(void)
-{
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-	}
-}
-
 
 bool
 PostScriptTerminatedEvent::formatBody( std::string &out )
@@ -4176,9 +4166,9 @@ PostScriptTerminatedEvent::formatBody( std::string &out )
         }
     }
 
-    if( dagNodeName ) {
+    if( !dagNodeName.empty() ) {
         if( formatstr_cat( out, "    %s%.8191s\n",
-					 dagNodeNameLabel, dagNodeName ) < 0 ) {
+					 dagNodeNameLabel, dagNodeName.c_str() ) < 0 ) {
             return false;
         }
     }
@@ -4191,12 +4181,9 @@ int
 PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 {
 		// first clear any existing DAG node name
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-	}
-    dagNodeName = NULL;
+    dagNodeName.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("POST Script terminated.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -4228,10 +4215,10 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;
 	}
-	line.trim();
-	if (starts_with(line.c_str(), dagNodeNameLabel)) {
+	trim(line);
+	if (starts_with(line, dagNodeNameLabel)) {
 		size_t label_len = strlen( dagNodeNameLabel );
-		dagNodeName = strnewp( line.c_str() + label_len );
+		dagNodeName = line.c_str() + label_len;
 	}
 
     return 1;
@@ -4259,7 +4246,7 @@ PostScriptTerminatedEvent::toClassAd(bool event_time_utc)
 			return NULL;
 		}
 	}
-	if( dagNodeName && dagNodeName[0] ) {
+	if( !dagNodeName.empty() ) {
 		if( !myad->InsertAttr( dagNodeNameAttr, dagNodeName ) ) {
 			delete myad;
 			return NULL;
@@ -4284,17 +4271,8 @@ PostScriptTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-		dagNodeName = NULL;
-	}
-	char* mallocstr = NULL;
-	ad->LookupString( dagNodeNameAttr, &mallocstr );
-	if( mallocstr ) {
-		dagNodeName = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	dagNodeName.clear();
+	ad->LookupString( dagNodeNameAttr, dagNodeName );
 }
 
 

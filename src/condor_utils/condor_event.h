@@ -1034,8 +1034,6 @@ class PostScriptTerminatedEvent : public ULogEvent
  public:
     ///
     PostScriptTerminatedEvent(void);
-    ///
-    ~PostScriptTerminatedEvent(void);
 
     /** Read the body of the next PostScriptTerminated event.
         @param file the non-NULL readable log file
@@ -1069,7 +1067,7 @@ class PostScriptTerminatedEvent : public ULogEvent
     int signalNumber;
 
 		// DAG node name
-	char* dagNodeName;
+	std::string dagNodeName;
 
 		// text label printed before DAG node name
 	const char* const dagNodeNameLabel;
