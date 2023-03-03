@@ -228,9 +228,9 @@ LocalUserLog::logStarterError( const char* err_msg, bool critical )
 	}
 
 	RemoteErrorEvent event;
-	event.setErrorText( err_msg );
-	event.setDaemonName( "starter" );
-	event.setExecuteHost( daemonCore->InfoCommandSinfulString() );
+	event.error_str = err_msg;
+	event.daemon_name = "starter";
+	event.execute_host = daemonCore->InfoCommandSinfulString();
 	event.setCriticalError( critical );
 
 	if( !u_log.writeEvent(&event) ) {

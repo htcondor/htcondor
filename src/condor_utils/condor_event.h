@@ -455,7 +455,6 @@ class RemoteErrorEvent : public ULogEvent
 {
  public:
 	RemoteErrorEvent(void);
-	~RemoteErrorEvent(void);
 
     /** Read the body of the next RemoteError event.
         @param file the non-NULL readable log file
@@ -480,14 +479,11 @@ class RemoteErrorEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 	//Methods for accessing the error description.
-	void setErrorText(char const *str);
-	char const *getErrorText(void) {return error_str;}
+	char const *getErrorText(void) {return error_str.c_str();}
 
-	void setDaemonName(char const *name);
-	char const *getDaemonName(void) {return daemon_name;}
+	char const *getDaemonName(void) {return daemon_name.c_str();}
 
-	void setExecuteHost(char const *host);
-	char const *getExecuteHost(void) {return execute_host;}
+	char const *getExecuteHost(void) {return execute_host.c_str();}
 
 	bool isCriticalError(void) const {return critical_error;}
 	void setCriticalError(bool f);
@@ -495,12 +491,11 @@ class RemoteErrorEvent : public ULogEvent
 	void setHoldReasonCode(int hold_reason_code);
 	void setHoldReasonSubCode(int hold_reason_subcode);
 
- private:
     /// A host string in the form: "<128.105.165.12:32779>".
-    char execute_host[128];
+	std::string execute_host;
 	/// Normally "condor_starter":
-	char daemon_name[128];
-	char *error_str;
+	std::string daemon_name;
+	std::string error_str;
 	bool critical_error; //tells shadow to give up
 	int hold_reason_code;
 	int hold_reason_subcode;

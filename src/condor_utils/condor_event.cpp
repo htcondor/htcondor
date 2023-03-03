@@ -1702,17 +1702,10 @@ GenericEvent::setInfoText(char const *str)
 // ----- the RemoteErrorEvent class
 RemoteErrorEvent::RemoteErrorEvent(void)
 {
-	error_str = NULL;
-	execute_host[0] = daemon_name[0] = '\0';
 	eventNumber = ULOG_REMOTE_ERROR;
 	critical_error = true;
 	hold_reason_code = 0;
 	hold_reason_subcode = 0;
-}
-
-RemoteErrorEvent::~RemoteErrorEvent(void)
-{
-	delete[] error_str;
 }
 
 void
@@ -1738,8 +1731,8 @@ RemoteErrorEvent::formatBody( std::string &out )
 	  out,
 	  "%s from %s on %s:\n",
 	  error_type,
-	  daemon_name,
-	  execute_host);
+	  daemon_name.c_str(),
+	  execute_host.c_str());
 
 
 
@@ -1749,7 +1742,24 @@ RemoteErrorEvent::formatBody( std::string &out )
     }
 
 	//output each line of error_str, indented by one tab
-	char *line = error_str;
+	size_t ix = 0;
+	while (ix < error_str.size()) {
+		size_t len = std::string::npos;
+		size_t eol = error_str.find('\n', ix);
+		if (eol != std::string::npos) {
+			len = eol - ix;
+		}
+		out += '\t';
+		out += error_str.substr(ix, len);
+		out += '\n';
+		if (eol != std::string::npos && error_str[eol] == '\n') {
+			eol++;
+		}
+		ix = eol;
+	}
+#if 0
+	char *cpy = strdup(error_str.c_str());
+	char *line = cpy;
 	if (line) while(*line) {
 		char *next_line = strchr(line,'\n');
 		if(next_line) *next_line = '\0';
@@ -1761,6 +1771,8 @@ RemoteErrorEvent::formatBody( std::string &out )
 		*next_line = '\n';
 		line = next_line+1;
 	}
+	free(cpy);
+#endif
 
 	if (hold_reason_code) {
 		formatstr_cat( out, "\tCode %d Subcode %d\n",
@@ -1775,7 +1787,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 {
 	char error_type[128];
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
@@ -1785,48 +1797,46 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	// " from ", " on ", and the trailing ":" are added by format body and should be removed here.
 
 	int retval = 0;
-	line.trim();
-	int ix = line.find(" from ");
-	if (ix > 0) {
-		MyString et = line.substr(0, ix);
-		et.trim();
+	trim(line);
+	size_t ix = line.find(" from ");
+	if (ix != std::string::npos) {
+		std::string et = line.substr(0, ix);
+		trim(et);
 		strncpy(error_type, et.c_str(), sizeof(error_type) - 1);
 		line = line.substr(ix + 6, line.length());
-		line.trim();
+		trim(line);
 	} else {
 		strncpy(error_type, "Error", sizeof(error_type) - 1);
 		retval = -1;
 	}
 
 	ix = line.find(" on ");
-	if (ix <= 0) {
-		daemon_name[0] = 0;
+	if (ix == 0 || ix == std::string::npos) {
+		daemon_name.clear();
 	} else {
-		MyString dn = line.substr(0, ix);
-		dn.trim();
-		strncpy(daemon_name, dn.c_str(), sizeof(daemon_name) - 1);
+		std::string dn = line.substr(0, ix);
+		trim(dn);
+		daemon_name = dn;
 		line = line.substr(ix + 4, line.length());
-		line.trim();
+		trim(line);
 	}
 
 	// we expect to see a : after the daemon name, if we find it. remove it.
 	ix = line.length();
-	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
+	if (ix > 0 && line[ix-1] == ':') { line.erase(ix - 1); }
 
-	strncpy(execute_host, line.c_str(), sizeof(execute_host) - 1);
+	execute_host = line;
 
 	if (retval < 0) {
 		return 0;
 	}
 
 	error_type[sizeof(error_type)-1] = '\0';
-	daemon_name[sizeof(daemon_name)-1] = '\0';
-	execute_host[sizeof(execute_host)-1] = '\0';
 
 	if(!strcmp(error_type,"Error")) critical_error = true;
 	else if(!strcmp(error_type,"Warning")) critical_error = false;
 
-	MyString lines;
+	error_str.clear();
 
 	while(!feof(file)) {
 		// see if the next line contains an optional event notes string,
@@ -1836,7 +1846,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		if ( ! read_optional_line(line, file, got_sync_line) || got_sync_line) {
 			break;
 		}
-		line.chomp();
+		chomp(line);
 		const char *l = line.c_str();
 
 		if(l[0] == '\t') l++;
@@ -1848,11 +1858,10 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 			continue;
 		}
 
-		if(lines.length()) lines += "\n";
-		lines += l;
+		if(error_str.length()) error_str += "\n";
+		error_str += l;
 	}
 
-	setErrorText(lines.c_str());
 	return 1;
 }
 
@@ -1862,13 +1871,13 @@ RemoteErrorEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if(*daemon_name) {
+	if(!daemon_name.empty()) {
 		myad->Assign("Daemon",daemon_name);
 	}
-	if(*execute_host) {
+	if(!execute_host.empty()) {
 		myad->Assign("ExecuteHost",execute_host);
 	}
-	if(error_str) {
+	if(!error_str.empty()) {
 		myad->Assign("ErrorMsg",error_str);
 	}
 	if(!critical_error) { //default is true
@@ -1888,17 +1897,13 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char *buf = nullptr;
 	int crit_err = 0;
 
 	if( !ad ) return;
 
-	ad->LookupString("Daemon", daemon_name, sizeof(daemon_name));
-	ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host));
-	if( ad->LookupString("ErrorMsg", &buf) ) {
-		setErrorText(buf);
-		free(buf);
-	}
+	ad->LookupString("Daemon", daemon_name);
+	ad->LookupString("ExecuteHost", execute_host);
+	ad->LookupString("ErrorMsg", error_str);
 	if( ad->LookupInteger("CriticalError",crit_err) ) {
 		critical_error = (crit_err != 0);
 	}
@@ -1910,30 +1915,6 @@ void
 RemoteErrorEvent::setCriticalError(bool f)
 {
 	critical_error = f;
-}
-
-void
-RemoteErrorEvent::setErrorText(char const *str)
-{
-	char *s = strnewp(str);
-	delete [] error_str;
-	error_str = s;
-}
-
-void
-RemoteErrorEvent::setDaemonName(char const *str)
-{
-	if(!str) str = "";
-	strncpy(daemon_name,str,sizeof(daemon_name) - 1);
-	daemon_name[sizeof(daemon_name)-1] = '\0';
-}
-
-void
-RemoteErrorEvent::setExecuteHost(char const *str)
-{
-	if(!str) str = "";
-	strncpy(execute_host,str,sizeof(execute_host) - 1);
-	execute_host[sizeof(execute_host)-1] = '\0';
 }
 
 // ----- the ExecuteEvent class
