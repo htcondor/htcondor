@@ -39,23 +39,6 @@ New Features:
   subsets of those to its child processes.
   :jira:`1496`
 
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
-  no longer tries to mount the various cgroup filesystems.  We assume that
-  any reasonable Linux system will have done this in a manner that it 
-  deems appropriate.
-  :jira:`1528`
-
-- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
-  megabytes that are used in the docker image cache.
-  :jira:`1494`
-
-ZZZ
-- When a file-transfer plug-in aborts due to lack of progress, the message
-  now includes the ``https_proxy`` environment variable, and the phrasing
-  has been changed to avoid suggesting that the plug-in respected it (or
-  ``http_proxy``).
-  :jira:`1473`
-
 - Added capabilities for per job run instance history recording. Where during
   the *condor_shadow* daemon's shutdown it will write the current job ad
   to a file designated by :macro:`JOB_EPOCH_HISTORY` and/or a directory
@@ -75,12 +58,6 @@ ZZZ
   to search for history.
   :jira:`1514`
 
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
-  now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
-  to 128k, if it was below this.  This improves the scalability of the
-  schedd when running more than 16k jobs from any one user.
-  :jira:`1556`
-
 - Added ability to set a gangliad metrics lifetime (DMAX value) within the
   metric definition language with the new ``Lifetime`` keyword.
   :jira:`1547`
@@ -90,15 +67,37 @@ ZZZ
   for all metrics without a specified ``Lifetime``.
   :jira:`1547`
 
-Bugs Fixed:
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
+  to 128k, if it was below this.  This improves the scalability of the
+  schedd when running more than 16k jobs from any one user.
+  :jira:`1556`
 
-- The HTCondor starter now removes any cgroup that it has created for
-  a job when it exits.
-  :jira:`1500`
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  no longer tries to mount the various cgroup filesystems.  We assume that
+  any reasonable Linux system will have done this in a manner that it
+  deems appropriate.
+  :jira:`1528`
+
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
+
+- When a file-transfer plug-in aborts due to lack of progress, the message
+  now includes the ``https_proxy`` (or ``http_proxy``) environment variable,
+  and the phrasing has been changed to avoid suggesting that the plug-in
+  actually respected it.
+  :jira:`1473`
+
+Bugs Fixed:
 
 - Added support for older cgroup v2 systems with missing memory.peak
   files in the memory controller.
   :jira:`1529`
+
+- The HTCondor starter now removes any cgroup that it has created for
+  a job when it exits.
+  :jira:`1500`
 
 - Fixed bug where ``condor_history`` would occasionally fail to display
   all matching user requested job ids.
