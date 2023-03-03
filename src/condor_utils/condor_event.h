@@ -843,15 +843,12 @@ class JobEvictedEvent : public ULogEvent
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
-	const char* getReason(void) const;
-	void setReason( const char* );
+	const char* getReason(void) const { return reason.c_str(); }
 
-	const char* getCoreFile(void);
-	void setCoreFile( const char* );
+	const char* getCoreFile(void) { return core_file.c_str(); }
 
- private:
-	char* reason;
-	char* core_file;
+	std::string reason;
+	std::string core_file;
 
 };
 

@@ -134,8 +134,8 @@ int writeJobAbortedEvent(WriteUserLog &logFile)
 int writeJobEvictedEvent(WriteUserLog &logFile)
 {
 	JobEvictedEvent jobevicted;
-	jobevicted.setReason("It misbehaved!");
-	jobevicted.setCoreFile("corefile");
+	jobevicted.reason = "It misbehaved!";
+	jobevicted.core_file = "corefile";
 	rusage ru;
 	simulateUsage(ru);
 	jobevicted.run_local_rusage = ru;

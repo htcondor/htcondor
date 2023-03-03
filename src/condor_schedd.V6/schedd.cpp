@@ -4756,7 +4756,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		event.signal_number = WTERMSIG(status);
 	}
 	if(reason) {
-		event.setReason(reason);
+		event.reason = reason;
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;

@@ -1351,12 +1351,12 @@ BaseShadow::logRequeueEvent( const char* reason )
 		event.return_value = exitCode();
 	}
 			
-	if( exit_reason == JOB_COREDUMPED ) {
-		event.setCoreFile( core_file_name );
+	if( exit_reason == JOB_COREDUMPED && core_file_name ) {
+		event.core_file = core_file_name;
 	}
 
 	if( reason ) {
-		event.setReason( reason );
+		event.reason = reason;
 	}
 
 		// TODO: fill in local rusage

@@ -1520,8 +1520,8 @@ EventInfo::GenEventJobEvicted( void )
 {
 	SetName( "Evicted" );
 	JobEvictedEvent *e = new JobEvictedEvent;
-	e->setReason("EVICT");
-	e->setCoreFile("corefile");
+	e->reason = "EVICT";
+	e->core_file = "corefile";
 	e->checkpointed = randint(10) > 8;
 	e->sent_bytes = GetSize( );
 	e->recvd_bytes = GetSize( );

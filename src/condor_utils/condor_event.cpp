@@ -2211,8 +2211,6 @@ JobEvictedEvent::JobEvictedEvent(void)
 	normal = false;
 	return_value = -1;
 	signal_number = -1;
-	reason = NULL;
-	core_file = NULL;
 	pusageAd = NULL;
 }
 
@@ -2220,52 +2218,7 @@ JobEvictedEvent::JobEvictedEvent(void)
 JobEvictedEvent::~JobEvictedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
-	delete[] reason;
-	delete[] core_file;
 }
-
-
-void
-JobEvictedEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
-
-const char*
-JobEvictedEvent::getReason( void ) const
-{
-	return reason;
-}
-
-
-void
-JobEvictedEvent::setCoreFile( const char* core_name )
-{
-	delete[] core_file;
-	core_file = NULL;
-	if( core_name ) {
-		core_file = strnewp( core_name );
-		if( !core_file ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-JobEvictedEvent::getCoreFile( void )
-{
-	return core_file;
-}
-
 
 int
 JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
@@ -2273,12 +2226,10 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 	int  ckpt;
 	char buffer [128];
 
-	delete [] reason;
-	reason = NULL;
-	delete [] core_file;
-	core_file = NULL;
+	reason.clear();
+	core_file.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line) || 
 		 ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
@@ -2348,10 +2299,10 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			return 0;
 		}
-		line.trim();
+		trim(line);
 		const char cpre[] = "(1) Corefile in: ";
 		if (starts_with(line.c_str(), cpre)) {
-			setCoreFile( line.c_str() + strlen(cpre) );
+			core_file = line.c_str() + strlen(cpre);
 		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
@@ -2359,8 +2310,8 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 
 	// finally, see if there's a reason.  this is optional.
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		line.trim();
-		reason = line.detach_buffer();
+		trim(line);
+		reason = line;
 	}
 
 	return 1;
@@ -2418,8 +2369,8 @@ JobEvictedEvent::formatBody( std::string &out )
 	return false;
       }
 
-      if( core_file ) {
-	retval = formatstr_cat( out, "\t(1) Corefile in: %s\n", core_file );
+      if( !core_file.empty() ) {
+	retval = formatstr_cat( out, "\t(1) Corefile in: %s\n", core_file.c_str() );
       }
       else {
 	retval = formatstr_cat( out, "\t(0) No core file\n" );
@@ -2429,8 +2380,8 @@ JobEvictedEvent::formatBody( std::string &out )
       }
     }
 
-    if( reason ) {
-      if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+    if( !reason.empty() ) {
+      if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 	return false;
       }
     }
@@ -2505,13 +2456,13 @@ JobEvictedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	if( reason ) {
+	if( !reason.empty() ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
 		}
 	}
-	if( core_file ) {
+	if( !core_file.empty() ) {
 		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
@@ -2557,19 +2508,8 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", return_value);
 	ad->LookupInteger("TerminatedBySignal", signal_number);
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("Reason", reason);
+	ad->LookupString("CoreFile", core_file);
 }
 
 
