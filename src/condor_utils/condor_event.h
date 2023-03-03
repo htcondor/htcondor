@@ -906,8 +906,7 @@ class TerminatedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signalNumber;
 
-	const char* getCoreFile(void);
-	void setCoreFile( const char* );
+	const char* getCoreFile(void) { return core_file.c_str(); }
 
     /** Local  usage for the run */    rusage  run_local_rusage;
     /** Remote usage for the run */    rusage  run_remote_rusage;
@@ -931,12 +930,9 @@ class TerminatedEvent : public ULogEvent
 	// This method just makes a copy of toeTag (if it's not NULL).
 	virtual void setToeTag( classad::ClassAd * toeTag );
 
- protected:
 	classad::ClassAd * toeTag;
 
- private:
-
-	char* core_file;
+	std::string core_file;
 
 };
 

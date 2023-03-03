@@ -75,7 +75,7 @@ MpiResource::resourceExit( int reason, int status )
 			bool had_core = false;
 			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 			if( had_core ) {
-				event.setCoreFile( shadow->getCoreName() );
+				event.core_file = shadow->getCoreName();
 			}
 
 				// TODO: fill in local/total rusage

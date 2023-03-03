@@ -2623,7 +2623,6 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 {
 	normal = false;
-	core_file = NULL;
 	returnValue = signalNumber = -1;
 	pusageAd = NULL;
 
@@ -2636,7 +2635,6 @@ TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
-	delete[] core_file;
 	if( toeTag ) { delete toeTag; }
 }
 
@@ -2647,27 +2645,6 @@ TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
 		toeTag = new classad::ClassAd( * tt );
 	}
 }
-
-void
-TerminatedEvent::setCoreFile( const char* core_name )
-{
-	delete[] core_file;
-	core_file = NULL;
-	if( core_name ) {
-		core_file = strnewp( core_name );
-		if( !core_file ) {
-            EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-TerminatedEvent::getCoreFile( void )
-{
-	return core_file;
-}
-
 
 bool
 TerminatedEvent::formatBody( std::string &out, const char *header )
@@ -2686,9 +2663,9 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 			return false;
 		}
 
-		if( core_file ) {
+		if( !core_file.empty() ) {
 			retval = formatstr_cat( out, "\t(1) Corefile in: %s\n\t",
-									core_file );
+									core_file.c_str() );
 		} else {
 			retval = formatstr_cat( out, "\t(0) No core file\n\t" );
 		}
@@ -2738,7 +2715,7 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 
 	// when we get here, all of the header line will have been read
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line) ||
 		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normalTerm, buffer))) {
 		return 0;
@@ -2757,10 +2734,10 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			return 0;
 		}
-		line.trim();
+		trim(line);
 		const char cpre[] = "(1) Corefile in: ";
 		if (starts_with(line.c_str(), cpre)) {
-			setCoreFile( line.c_str() + strlen(cpre) );
+			core_file = line.c_str() + strlen(cpre);
 		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
@@ -2969,7 +2946,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 int
 JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString str;
+	std::string str;
 	if ( ! read_line_value("Job terminated.", str, file, got_sync_line)) {
 		return 0;
 	}
@@ -2977,7 +2954,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
 	if(! rv) { return rv; }
 
-	MyString line;
+	std::string line;
 	if( got_sync_line ) { return 1; }
 	if( read_optional_line( line, file, got_sync_line ) ) {
 		if(line.empty()) {
@@ -2985,7 +2962,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 				return 0;
 			}
 		}
-		if( line.remove_prefix( "\tJob terminated of its own accord at " ) ) {
+		if( replace_str(line, "\tJob terminated of its own accord at ", "") ) {
 			if( toeTag != NULL ) {
 				delete toeTag;
 			}
@@ -3014,7 +2991,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 					}
 				}
 			}
-		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
+		} else if( replace_str(line, "\tJob terminated by ", "") ) {
 			ToE::Tag tag;
 			if(! tag.readFromString( line )) {
 				return 0;
@@ -3060,9 +3037,8 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	const char* core = getCoreFile();
-	if( core ) {
-		if( !myad->InsertAttr("CoreFile", core) ) {
+	if( !core_file.empty() ) {
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3142,14 +3118,9 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	char* multi = NULL;
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("CoreFile", core_file);
 
+	char* multi = NULL;
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
 		free(multi);
@@ -3942,9 +3913,8 @@ NodeTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	const char* core = getCoreFile();
-	if( core ) {
-		if( !myad->InsertAttr("CoreFile", core) ) {
+	if( !core_file.empty() ) {
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
 		}
@@ -4023,14 +3993,9 @@ NodeTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	char* multi = NULL;
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("CoreFile", core_file);
 
+	char* multi = NULL;
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
 		free(multi);

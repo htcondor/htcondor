@@ -170,7 +170,7 @@ int writeJobTerminatedEvent(WriteUserLog &logFile)
 	jobterminated.sent_bytes = 400000;
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
-	jobterminated.setCoreFile( "badfilecore" );
+	jobterminated.core_file = "badfilecore";
 	jobterminated.normal = false;
 	if ( !logFile.writeEvent(&jobterminated) ) {
 	        printf("Complain about bad jobterminated write\n");
@@ -208,7 +208,7 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	nodeterminated.sent_bytes = 400000;
 	nodeterminated.total_recvd_bytes = 800000;
 	nodeterminated.total_sent_bytes = 900000;
-	nodeterminated.setCoreFile( "badfilecore" );
+	nodeterminated.core_file = "badfilecore";
 
 	nodeterminated.initUsageFromAd(use);
 
