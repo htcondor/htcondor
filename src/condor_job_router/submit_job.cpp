@@ -890,7 +890,6 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
-	char removeReason[256];
 
 		// This code is copied from gridmanager basejob.C with a small
 		// amount of refactoring.
@@ -903,11 +902,8 @@ bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job
 			 "(%d.%d) Writing abort record to user logfile\n",
 			 cluster, proc );
 
-	removeReason[0] = '\0';
-	job_ad.EvaluateAttrString( ATTR_REMOVE_REASON, removeReason,
-						   sizeof(removeReason) - 1 );
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
 
-	event->setReason( removeReason );
 	return true;
 }
 

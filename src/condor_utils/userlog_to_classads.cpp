@@ -517,9 +517,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason = abort_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("RemoveReason",reason);
+	  if (!abort_event->reason.empty()) {
+	    jobClassAd->InsertAttr("RemoveReason",abort_event->reason);
 	  }
 	}
       }

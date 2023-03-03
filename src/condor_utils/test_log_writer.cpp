@@ -1558,7 +1558,7 @@ EventInfo::GenEventJobAborted( void )
 {
 	SetName( "Job aborted" );
 	JobAbortedEvent *e = new JobAbortedEvent;
-	e->setReason("ABORT");
+	e->reason = "ABORT";
 
 	return SetEvent( e );
 }

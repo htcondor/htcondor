@@ -4524,12 +4524,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	JobAbortedEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	}
+	GetAttributeString(job_id.cluster, job_id.proc,
+	                   ATTR_REMOVE_REASON, event.reason);
 
 	// Jobs usually have a shadow, and this event is usually written after
 	// that shadow dies, but that's by no means certain.  If we happen to

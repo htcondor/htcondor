@@ -123,7 +123,7 @@ int writeCheckpointedEvent(WriteUserLog &logFile)
 int writeJobAbortedEvent(WriteUserLog &logFile)
 {
 	JobAbortedEvent jobabort;
-	jobabort.setReason("cause I said so!");
+	jobabort.reason = "cause I said so!";
 	if ( !logFile.writeEvent(&jobabort) ) {
 	        printf("Complain about bad jobabort write\n");
 			exit(1);
