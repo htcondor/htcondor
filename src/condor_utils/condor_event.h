@@ -2369,13 +2369,11 @@ class DataflowJobSkippedEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	const char* getReason(void) const;
-	void setReason( const char* );
+	const char* getReason(void) const { return reason.c_str(); }
 
 	void setToeTag( classad::ClassAd * toeTag );
 
- private:
-	char* reason;
+	std::string reason;
 	ToE::Tag * toeTag;
 };
 

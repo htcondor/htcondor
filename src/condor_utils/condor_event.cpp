@@ -6647,14 +6647,10 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 DataflowJobSkippedEvent::DataflowJobSkippedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_DATAFLOW_JOB_SKIPPED;
-	reason = NULL;
 }
 
 DataflowJobSkippedEvent::~DataflowJobSkippedEvent(void)
 {
-	if( reason ) {
-		delete[] reason;
-	}
 	if( toeTag ) {
 		delete toeTag;
 	}
@@ -6671,27 +6667,6 @@ DataflowJobSkippedEvent::setToeTag( classad::ClassAd * tt ) {
 	}
 }
 
-void
-DataflowJobSkippedEvent::setReason( const char* reason_str )
-{
-	delete[] reason;
-	reason = NULL;
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-DataflowJobSkippedEvent::getReason( void ) const
-{
-	return reason;
-}
-
-
 bool
 DataflowJobSkippedEvent::formatBody( std::string &out )
 {
@@ -6699,8 +6674,8 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Dataflow job was skipped.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		}
 	}
@@ -6716,17 +6691,16 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 int
 DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete [] reason;
-	reason = NULL;
+	reason.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Dataflow job was skipped.", line, file, got_sync_line)) {
 		return 0;
 	}
 	// try to read the reason, this is optional
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		line.trim();
-		reason = line.detach_buffer();
+		trim(line);
+		reason = line;
 	}
 
 	// Try to read the ToE tag.
@@ -6738,7 +6712,7 @@ DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 			}
 		}
 
-		if( line.remove_prefix( "\tJob terminated by " ) ) {
+		if( replace_str(line, "\tJob terminated by ", "") ) {
 			if( toeTag != NULL ) { delete toeTag; }
 			toeTag = new ToE::Tag();
 			if(! toeTag->readFromString( line )) {
@@ -6758,7 +6732,7 @@ DataflowJobSkippedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( reason ) {
+	if( !reason.empty() ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
@@ -6789,13 +6763,7 @@ DataflowJobSkippedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("Reason", reason);
 
 	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }
