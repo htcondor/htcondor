@@ -25,7 +25,7 @@ Release Notes:
   it would pick a different process.
   :jira:`1512`
 
-- This versions changes the semantics of the ``output_destination`` submit
+- This version changes the semantics of the ``output_destination`` submit
   command.  It no longer sends the files named by the ``output`` or
   ``error`` submit commands to the output destination.  Submitters may
   instead specify those locations with URLs directly.
@@ -39,21 +39,22 @@ New Features:
   subsets of those to its child processes.
   :jira:`1496`
 
-- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
-  megabytes that are used in the docker image cache.
-  :jira:`1494`
-
-- When a file-transfer plug-in aborts due to lack of progress, the message
-  now includes the ``https_proxy`` environment variable, and the phrasing
-  has been changed to avoid suggesting that the plug-in respected it (or
-  ``http_proxy``).
-  :jira:`1473`
-
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   no longer tries to mount the various cgroup filesystems.  We assume that
   any reasonable Linux system will have done this in a manner that it 
   deems appropriate.
   :jira:`1528`
+
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
+
+ZZZ
+- When a file-transfer plug-in aborts due to lack of progress, the message
+  now includes the ``https_proxy`` environment variable, and the phrasing
+  has been changed to avoid suggesting that the plug-in respected it (or
+  ``http_proxy``).
+  :jira:`1473`
 
 - Added capabilities for per job run instance history recording. Where during
   the *condor_shadow* daemon's shutdown it will write the current job ad
