@@ -1581,6 +1581,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Mar 02 2023 John Knoeller <johnkn@cs.wisc.edu> - 10.0.2-1
+- HTCondor can optionally create intermediate directories for output files
+- Improved condor_schedd scalability when a user runs more than 1,000 jobs
+- Fix issue where condor_ssh_to_job fails if the user is not in /etc/passwd
+- The Python Schedd.query() now returns the ServerTime attribute for Fifemon
+- VM Universe jobs pass through the host CPU model to support newer kernels
+- HTCondor Python wheel is now available for Python 3.11
+- Fix issue that prevented HTCondor installation on Ubuntu 18.04
+
 * Tue Feb 28 2023 Tim Theisen <tim@cs.wisc.edu> - 10.2.5-1
 - Fix counting of unmaterialized jobs in the condor_schedd
 
