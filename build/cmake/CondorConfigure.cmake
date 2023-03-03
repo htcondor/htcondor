@@ -42,12 +42,6 @@ if("${OS_NAME}" MATCHES "^WIN")
 		file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/msconfig DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 	endif()
 
-	# means user did not specify, so change the default.
-	if ( ${CMAKE_INSTALL_PREFIX} MATCHES "Program Files" )
-		# mimic *nix for consistency
-		set( CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
-	endif()
-
 	# when building x64 on Windows, cmake's SYS_ARCH value is wrong... so fix it here before we use it to brand the binaries.
 	if ( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
 		set(SYS_ARCH "X86_64")
@@ -57,6 +51,10 @@ if("${OS_NAME}" MATCHES "^WIN")
 
 endif()
 
+# means user did not specify, so change the default.
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+	set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
+ endif()
 
 message(STATUS "***********************************************************")
 message(STATUS "System(${HOSTNAME}): ${OS_NAME}(${OS_VER}) Arch=${SYS_ARCH} BitMode=${BIT_MODE} BUILDID:${BUILDID}")
