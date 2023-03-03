@@ -1973,8 +1973,6 @@ class PreSkipEvent : public ULogEvent
   public:
     ///
     PreSkipEvent(void);
-    ///
-    ~PreSkipEvent(void);
 
     /** Read the body of the next PreSkip event.
         @param file the non-NULL readable log file
@@ -1998,10 +1996,8 @@ class PreSkipEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 	
-	void setSkipNote(const char*);
-
-    // dagman-supplied text to include in the log event
-	char* skipEventLogNotes;
+	// dagman-supplied text to include in the log event
+	std::string skipEventLogNotes;
 
 };
 

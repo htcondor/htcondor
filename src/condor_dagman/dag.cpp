@@ -3912,10 +3912,10 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 	if( event->eventNumber == ULOG_PRESKIP ) {
 		const PreSkipEvent* skip_event = (const PreSkipEvent*)event;
 		char nodeName[1024] = "";
-		if( !skip_event->skipEventLogNotes ) { 
+		if( skip_event->skipEventLogNotes.empty() ) {
 			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
 			node = NULL;
-		} else if( sscanf( skip_event->skipEventLogNotes, "DAG Node: %1023s",
+		} else if( sscanf( skip_event->skipEventLogNotes.c_str(), "DAG Node: %1023s",
 				nodeName ) == 1) {
 			node = FindNodeByName( nodeName );
 			if( node ) {
@@ -3939,7 +3939,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 						"in skip event notes: <%s>\n",
-						skip_event->skipEventLogNotes );
+						  skip_event->skipEventLogNotes.c_str() );
 		}
 		return node;
 	}

@@ -5392,21 +5392,15 @@ AttributeUpdate::setOldValue(const char* attr_value)
 }
 
 
-PreSkipEvent::PreSkipEvent(void) : skipEventLogNotes(0)
+PreSkipEvent::PreSkipEvent(void)
 {
 	eventNumber = ULOG_PRESKIP;
 }
 
-PreSkipEvent::~PreSkipEvent(void)
-{
-	delete [] skipEventLogNotes;
-}
-
 int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] skipEventLogNotes;
-	skipEventLogNotes = NULL;
-	MyString line;
+	skipEventLogNotes.clear();
+	std::string line;
 
 	// read the remainder of the event header line
 	if ( ! read_optional_line(line, file, got_sync_line)) {
@@ -5419,10 +5413,10 @@ int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 		// some users of this library (dagman) depend on whitespace
 		// being stripped from the beginning of the log notes field
-	line.trim();
-	skipEventLogNotes = line.detach_buffer();
+	trim(line);
+	skipEventLogNotes = line;
 
-	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 )?0:1;
+	return ( skipEventLogNotes.empty() )?0:1;
 }
 
 bool
@@ -5430,11 +5424,11 @@ PreSkipEvent::formatBody( std::string &out )
 {
 	int retval = formatstr_cat( out, "PRE script return value is PRE_SKIP value\n" );
 		// 
-	if (!skipEventLogNotes || retval < 0)
+	if (skipEventLogNotes.empty() || retval < 0)
 	{
 		return false;
 	}
-	retval = formatstr_cat( out, "    %.8191s\n", skipEventLogNotes );
+	retval = formatstr_cat( out, "    %.8191s\n", skipEventLogNotes.c_str() );
 	if( retval < 0 ) {
 		return false;
 	}
@@ -5446,7 +5440,7 @@ ClassAd* PreSkipEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( skipEventLogNotes && skipEventLogNotes[0] ) {
+	if( !skipEventLogNotes.empty() ) {
 		if( !myad->InsertAttr("SkipEventLogNotes",skipEventLogNotes) ) return NULL;
 	}
 	return myad;
@@ -5457,27 +5451,7 @@ void PreSkipEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SkipEventLogNotes", &mallocstr);
-	if( mallocstr ) {
-		setSkipNote(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
-}
-
-void PreSkipEvent::setSkipNote(const char* s)
-{
-	if( skipEventLogNotes ) {
-		delete[] skipEventLogNotes;
-	}
-	if( s ) {
-		skipEventLogNotes = strnewp(s);
-		ASSERT( skipEventLogNotes );
-	}
-	else {
-		skipEventLogNotes = NULL;
-	}
+	ad->LookupString("SkipEventLogNotes", skipEventLogNotes);
 }
 
 // ----- the ClusterSubmitEvent class

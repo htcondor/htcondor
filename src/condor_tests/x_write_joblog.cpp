@@ -509,7 +509,7 @@ int writeAttributeUpdateEvent(WriteUserLog &logFile)
 int writePreSkipEvent(WriteUserLog &logFile)
 {
 	PreSkipEvent evt;
-	evt.setSkipNote("DAGMan info");
+	evt.skipEventLogNotes = "DAGMan info";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad PreSkipEvent write\n");
 		exit(1);
