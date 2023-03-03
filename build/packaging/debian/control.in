@@ -68,7 +68,7 @@ Depends: adduser,
          python3,
          python3-requests,
          lsb-base (>= 3.0-6),
-         libclassad15 (= ${binary:Version}),
+         libclassad16 (= ${binary:Version}),
          libcom-err2,
          libgssapi-krb5-2,
          libk5crypto3,
@@ -283,7 +283,7 @@ Description: distributed workload management system - debugging symbols
 Package: libclassad-dev
 Architecture: any
 Section: libdevel
-Depends: libclassad15 (= ${binary:Version}),
+Depends: libclassad16 (= ${binary:Version}),
          ${misc:Depends}
 Conflicts: libclassad0-dev
 Replaces: libclassad0-dev
@@ -296,7 +296,7 @@ Description: HTCondor classads expression language - development library
  .
  This package provides the static library and header files.
 
-Package: libclassad15
+Package: libclassad16
 Architecture: any
 Section: libs
 Depends: ${misc:Depends},
