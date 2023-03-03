@@ -19,7 +19,7 @@ Release Notes:
 - HTCondor Python wheel is now available for Python 3.11 on PyPI.
   :jira:`1586`
 
-- macOS tarball is now being built on macOS 11.
+- The macOS tarball is now being built on macOS 11.
   :jira:`1610`
 
 New Features:
