@@ -37,7 +37,6 @@
 #include "my_username.h"
 
 
-extern char *strnewp(const char *); // can't include this w/o including the world
 struct hostent *NameEnt;
 
 int writeSubmitEvent(WriteUserLog *log);
