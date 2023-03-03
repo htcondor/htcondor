@@ -895,14 +895,14 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	}
 
 	// Print table header.
-	MyString fString;
-	fString.formatstr( "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
+	std::string fString;
+	formatstr( fString, "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
 		cchUse, cchReq, MAX(cchAlloc, 9) );
 	formatstr_cat( out, fString.c_str(), "Usage", "Request",
 		 cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "" );
 
 	// Print table.
-	fString.formatstr( "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
+	formatstr( fString, "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
 		cchRes + 8, cchUse, cchReq, MAX(cchAlloc, 9) );
 	for( const auto & i : useMap ) {
 		if( i.first.empty() ) { continue; }
@@ -1032,14 +1032,14 @@ FutureEvent::readEvent (FILE * file, bool & got_sync_line)
 	fgetpos( file, &filep );
 
 	bool athead = true;
-	MyString line;
-	while (line.readLine(file)) {
+	std::string line;
+	while (readLine(line, file)) {
 		if (line[0] == '.' && (line == "...\n" || line == "...\r\n")) {
 			got_sync_line = true;
 			break;
 		}
 		else if (athead) {
-			line.chomp();
+			chomp(line);
 			head = line;
 			athead = false;
 		} else {
@@ -1656,8 +1656,8 @@ GenericEvent::formatBody( std::string &out )
 int
 GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-	MyString str;
-	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= (int)sizeof(info)) {
+	std::string str;
+	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= sizeof(info)) {
 		return 0;
 	}
 	strncpy(info, str.c_str(), sizeof(info)-1);
@@ -2021,7 +2021,7 @@ ExecutableErrorEvent::formatBody( std::string &out )
 int
 ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("(", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -2108,7 +2108,7 @@ CheckpointedEvent::formatBody( std::string &out )
 int
 CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was checkpointed.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3191,7 +3191,7 @@ JobImageSizeEvent::formatBody( std::string &out )
 int
 JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString str;
+	std::string str;
 	if ( ! read_line_value("Image size of job updated: ", str, file, got_sync_line) || 
 		! YourStringDeserializer(str.c_str()).deserialize_int(&image_size_kb))
 	{
@@ -3303,7 +3303,7 @@ ShadowExceptionEvent::~ShadowExceptionEvent (void)
 int
 ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Shadow exception!", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3390,7 +3390,7 @@ JobSuspendedEvent::~JobSuspendedEvent (void)
 int
 JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was suspended.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3452,7 +3452,7 @@ JobUnsuspendedEvent::~JobUnsuspendedEvent (void)
 int
 JobUnsuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was unsuspended.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3880,7 +3880,7 @@ NodeTerminatedEvent::formatBody( std::string &out )
 int
 NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	MyString str;
+	std::string str;
 	if ( ! read_optional_line(str, file, got_sync_line) || 
 		(1 != sscanf(str.c_str(), "Node %d terminated.", &node)))
 	{
@@ -4812,7 +4812,7 @@ JobAdInformationEvent::formatBody( std::string &out, ClassAd *jobad_arg )
 int
 JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job ad information event triggered.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -4822,7 +4822,7 @@ JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 	int num_attrs = 0;
 	while (read_optional_line(line, file, got_sync_line)) {
 		if ( ! jobad->Insert(line.c_str())) {
-			// dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.Value());
+			// dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.c_str());
 			return 0;
 		}
 		++num_attrs;
@@ -4949,7 +4949,7 @@ JobStatusUnknownEvent::formatBody( std::string &out )
 
 int JobStatusUnknownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("The job's remote status is unknown", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -4993,7 +4993,7 @@ JobStatusKnownEvent::formatBody( std::string &out )
 
 int JobStatusKnownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("The job's remote status is known again", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5040,7 +5040,7 @@ JobStageInEvent::formatBody( std::string &out )
 int
 JobStageInEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job is performing stage-in of input files", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5086,7 +5086,7 @@ JobStageOutEvent::formatBody( std::string &out )
 int
 JobStageOutEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job is performing stage-out of output files", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5159,7 +5159,7 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 	if (old_value) { free(old_value); }
 	name = value = old_value = NULL;
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5807,7 +5807,7 @@ FileTransferEvent::formatBody( std::string & out ) {
 int
 FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Require an 'optional' line  because read_line_value() requires a prefix.
-	MyString eventString;
+	std::string eventString;
 	if(! read_optional_line( eventString, f, got_sync_line )) {
 		return 0;
 	}
@@ -5825,16 +5825,16 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 
 
 	// Check for an optional line.
-	MyString optionalLine;
+	std::string optionalLine;
 	if(! read_optional_line( optionalLine, f, got_sync_line )) {
 		return got_sync_line ? 1 : 0;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 
 	// Did we record the queueing delay?
-	MyString prefix = "\tSeconds spent in queue: ";
+	std::string prefix = "\tSeconds spent in queue: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		MyString value = optionalLine.substr( prefix.length(), optionalLine.length() );
+		std::string value = optionalLine.substr( prefix.length() );
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
@@ -5846,21 +5846,21 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 		if(! read_optional_line( optionalLine, f, got_sync_line )) {
 			return got_sync_line ? 1 : 0;
 		}
-		optionalLine.chomp();
+		chomp(optionalLine);
 	}
 
 
 	// Did we record the starter host?
 	prefix = "\tTransferring to host: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		host = optionalLine.substr( prefix.length(), optionalLine.length() );
+		host = optionalLine.substr( prefix.length() );
 
 /*
 		// If we read an optional line, check for the next one.
 		if(! read_optional_line( optionalLine, f, got_sync_line )) {
 			return got_sync_line ? 1 : 0;
 		}
-		optionalLine.chomp();
+		chomp(optionalLine);
 */
 	}
 
@@ -5988,16 +5988,16 @@ ReserveSpaceEvent::formatBody(std::string &out)
 
 int
 ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for bytes reserved.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes reserved:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -6017,10 +6017,10 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	prefix = "\tReservation Expiration:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string expiry_str = optionalLine.substr(prefix.size());
 		long long expiry_long;
 		try {
 			expiry_long = stoll(expiry_str);
@@ -6042,7 +6042,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tReservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -6054,7 +6054,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -6120,7 +6120,7 @@ ReleaseSpaceEvent::formatBody(std::string &out)
 
 int
 ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check the reservation UUID.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
@@ -6128,7 +6128,7 @@ ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	std::string prefix = "Reservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid= optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid= optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -6215,16 +6215,16 @@ FileCompleteEvent::formatBody(std::string &out)
 
 int
 FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for filesize in bytes.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -6246,7 +6246,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -6258,7 +6258,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -6270,7 +6270,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tUUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
 		return false;
@@ -6343,16 +6343,16 @@ FileUsedEvent::formatBody(std::string &out)
 
 int
 FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check the checksum value.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Checksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -6364,7 +6364,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -6376,7 +6376,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -6464,16 +6464,16 @@ FileRemovedEvent::formatBody(std::string &out)
 
 int
 FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for filesize in bytes.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -6493,10 +6493,10 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -6508,7 +6508,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -6520,7 +6520,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "File tag line missing.\n");
 		return false;
