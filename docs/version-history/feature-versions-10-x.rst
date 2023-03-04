@@ -43,11 +43,6 @@ New Features:
   Apptainer/Singularity image.
   :jira:`1588`
 
-- The *condor_startd* now advertises whether there appears to be
-  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
-  to work.
-  :jira:`1614`
-
 - For grid universe jobs of type **batch**, add detection of when the
   target batch system is unreachable or not functioning. When this is
   the case, HTCondor marks the resource as unavailable instead of
@@ -80,6 +75,24 @@ Bugs Fixed:
 - Fixed a bug in the view server where it would assert and exit if
   the view server stats file are deleted at just the wrong time.
   :jira:`1599`
+
+Version 10.3.1
+--------------
+
+.. HTCondor version 10.3.1 released on March 7, 2023.
+
+- HTCondor version 10.3.1 not yet released.
+
+New Features:
+
+- The *condor_startd* now advertises whether there appears to be
+  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
+  to work.
+  :jira:`1614`
+
+Bugs Fixed:
+
+- None.
 
 Version 10.3.0
 --------------
