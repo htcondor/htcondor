@@ -15,7 +15,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- The *condor_startd* now advertises whether there appears to be
+  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
+  to work.
+  :jira:`1614`
 
 Bugs Fixed:
 
