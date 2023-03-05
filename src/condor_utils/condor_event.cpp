@@ -3749,16 +3749,19 @@ bool
 JobDisconnectedEvent::formatBody( std::string &out )
 {
 	if( disconnect_reason.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"disconnect_reason" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "disconnect_reason");
+		return false;
 	}
 	if( startd_addr.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"startd_addr" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "startd_addr");
+		return false;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
 
 	if( formatstr_cat(out, "Job disconnected, attempting to reconnect\n") < 0 ) {
@@ -3819,16 +3822,19 @@ ClassAd*
 JobDisconnectedEvent::toClassAd(bool event_time_utc)
 {
 	if( disconnect_reason.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without"
-				"disconnect_reason" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without"
+		        "disconnect_reason");
+		return nullptr;
 	}
 	if( startd_addr.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"startd_addr" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without "
+		        "startd_addr");
+		return nullptr;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
@@ -3887,16 +3893,19 @@ bool
 JobReconnectedEvent::formatBody( std::string &out )
 {
 	if( startd_addr.empty() ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"startd_addr" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "startd_addr");
+		return false;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
 	if( starter_addr.empty() ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"starter_addr" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "starter_addr");
+		return false;
 	}
 
 	if( formatstr_cat( out, "Job reconnected to %s\n", startd_name.c_str() ) < 0 ) {
@@ -3952,16 +3961,19 @@ ClassAd*
 JobReconnectedEvent::toClassAd(bool event_time_utc)
 {
 	if( startd_addr.empty() ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"startd_addr" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "startd_addr");
+		return nullptr;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
 	if( starter_addr.empty() ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"starter_addr" );
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "starter_addr");
+		return nullptr;
 	}
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
@@ -4017,12 +4029,14 @@ bool
 JobReconnectFailedEvent::formatBody( std::string &out )
 {
 	if( reason.empty() ) {
-		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
-				"reason" );
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::formatBody() called without "
+		        "reason");
+		return false;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
 
 	if( formatstr_cat( out, "Job reconnection failed\n" ) < 0 ) {
@@ -4084,12 +4098,14 @@ ClassAd*
 JobReconnectFailedEvent::toClassAd(bool event_time_utc)
 {
 	if( reason.empty() ) {
-		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
-				"reason" );
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::toClassAd() called without "
+		        "reason");
+		return nullptr;
 	}
 	if( startd_name.empty() ) {
-		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
-				"startd_name" );
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
