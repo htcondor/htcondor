@@ -232,52 +232,6 @@ int writePostScriptTerminatedEvent(WriteUserLog &logFile)
 	return(0);
 }
 
-int writeGlobusSubmitEvent(WriteUserLog &logFile)
-{
-	GlobusSubmitEvent globussubmitevent;
-	globussubmitevent.rmContact = strdup("ResourceManager");;
-	globussubmitevent.jmContact = strdup("JobManager");;
-	globussubmitevent.restartableJM = true;
-	if ( !logFile.writeEvent(&globussubmitevent) ) {
-	        printf("Complain about bad globussubmitevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusSubmitFailedEvent(WriteUserLog &logFile)
-{
-	GlobusSubmitFailedEvent globussubmitfailedevent;
-	globussubmitfailedevent.reason = strdup("Cause it could");;
-	if ( !logFile.writeEvent(&globussubmitfailedevent) ) {
-	        printf("Complain about bad globussubmitfailedevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusResourceUpEvent(WriteUserLog &logFile)
-{
-	GlobusResourceUpEvent globusresourceupevent;
-	globusresourceupevent.rmContact = strdup("ResourceUp");;
-	if ( !logFile.writeEvent(&globusresourceupevent) ) {
-	        printf("Complain about bad globusresourceupevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusResourceDownEvent(WriteUserLog &logFile)
-{
-	GlobusResourceDownEvent globusresourcedownevent;
-	globusresourcedownevent.rmContact = strdup("ResourceDown");;
-	if ( !logFile.writeEvent(&globusresourcedownevent) ) {
-	        printf("Complain about bad globusresourcedownevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
 int writeJobImageSizeEvent(WriteUserLog &logFile)
 {
 	JobImageSizeEvent jobimagesizeevent;
@@ -595,10 +549,6 @@ main(int argc, const char * argv[])
 	writeNodeExecuteEvent(logFile);
 	writeNodeTerminatedEvent(logFile);
 	writePostScriptTerminatedEvent(logFile);
-	writeGlobusSubmitEvent(logFile);
-	writeGlobusSubmitFailedEvent(logFile);
-	writeGlobusResourceUpEvent(logFile);
-	writeGlobusResourceDownEvent(logFile);
 	writeRemoteErrorEvent(logFile);
 
 	writeJobDisconnectedEvent(logFile);

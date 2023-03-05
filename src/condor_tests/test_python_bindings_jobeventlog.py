@@ -118,10 +118,10 @@ def compareEvent(event, count):
 		      "AssignedPets": "Spot", "MemoryUsage": 33,
 		      "TotalReceivedBytes": 800000 },
 		16: { "TerminatedBySignal": 9, "TerminatedNormally": False },
-		17: { "RestartableJM": True, "RMContact": "ResourceManager", "JMContact": "JobManager" },
-		18: { "Reason": "Cause it could" },
-		19: { "RMContact": "ResourceUp" },
-		20: { "RMContact": "ResourceDown" },
+		#17: { "RestartableJM": True, "RMContact": "ResourceManager", "JMContact": "JobManager" },
+		#18: { "Reason": "Cause it could" },
+		#19: { "RMContact": "ResourceUp" },
+		#20: { "RMContact": "ResourceDown" },
 		21: { "ErrorMsg": "this is the write test error string",
 			   "Daemon": "<write job log test>",
 			   "ExecuteHost": standardHost },
@@ -184,6 +184,9 @@ class TestJobEventLog:
 		for event in jel.events(stop_after=0):
 			assert(compareEvent(event, count))
 			count += 1
+			# event types 17-20 are the old Globus ones
+			if count == 17:
+				count += 4
 
 		assert(count == 39)
 
