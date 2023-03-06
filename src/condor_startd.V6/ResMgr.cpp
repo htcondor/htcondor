@@ -33,6 +33,7 @@
 #include "token_utils.h"
 #include "data_reuse.h"
 #include <algorithm>
+#include "dc_schedd.h"
 
 #include "slot_builder.h"
 
@@ -57,6 +58,7 @@ struct slotOrderSorter {
 
 ResMgr::ResMgr() :
 	extras_classad( NULL ),
+	m_lastDirectAttachToSchedd(0),
 	max_job_retirement_time_override(-1),
 	m_token_requester(&ResMgr::token_request_callback, this)
 {
@@ -966,6 +968,7 @@ ResMgr::update_all( void )
 		// What this actually does is insure that the update timers have been registered for all slots
 	walk( &Resource::update_walk_for_timer );
 
+	directAttachToSchedd();
 	report_updates();
 	check_polling();
 	check_use();
@@ -1000,6 +1003,115 @@ ResMgr::eval_all( void )
 #if HAVE_HIBERNATION
 	}
 #endif
+}
+
+void
+ResMgr::directAttachToSchedd()
+{
+	std::string schedd_name;
+	std::string schedd_pool;
+	std::string offer_submitter;
+	int interval = 0;
+
+	param(schedd_name, "STARTD_DIRECT_ATTACH_SCHEDD_NAME");
+	param(schedd_pool, "STARTD_DIRECT_ATTACH_SCHEDD_POOL");
+	param(offer_submitter, "STARTD_DIRECT_ATTACH_SUBMITTER_NAME");
+
+	if ( schedd_name.empty() ) {
+		dprintf(D_FULLDEBUG, "No direct attach schedd configured\n");
+		return;
+	}
+
+	interval = param_integer("STARTD_DIRECT_ATTACH_INTERVAL", 300);
+	if ( m_lastDirectAttachToSchedd + interval > time(NULL) ) {
+		dprintf(D_FULLDEBUG," Delaying direct attach to schedd\n");
+		return;
+	}
+
+	std::vector<Resource*> offer_resources;
+
+	for (auto resource: slots) {
+		if ( resource->state() != unclaimed_state ) {
+			continue;
+		}
+		offer_resources.push_back(resource);
+	}
+
+	if ( offer_resources.empty() ) {
+		dprintf(D_FULLDEBUG, "No unclaimed slots, nothing to offer to schedd\n");
+		return;
+	}
+	dprintf(D_FULLDEBUG, "Found %d slots to offer to schedd\n", (int)offer_resources.size());
+
+	// Do we need this if we only trigger when updating the collector?
+	compute_dynamic(true);
+
+	m_lastDirectAttachToSchedd = time(NULL);
+
+	int timeout = 30;
+	DCSchedd schedd(schedd_name.c_str(), schedd_pool.empty() ? nullptr : schedd_pool.c_str());
+	ReliSock *sock = schedd.reliSock(timeout);
+	if ( ! sock ) {
+		dprintf(D_FULLDEBUG, "Failed to contact schedd for offer\n");
+		return;
+	}
+	if (!schedd.startCommand(DIRECT_ATTACH, sock, timeout)) {
+		dprintf(D_FULLDEBUG, "Failed to send DIRECT_ATTACH command to %s\n",
+		        schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	sock->encode();
+	ClassAd cmd_ad;
+	cmd_ad.InsertAttr(ATTR_NUM_ADS, (long)offer_resources.size());
+	if (!offer_submitter.empty()) {
+		cmd_ad.InsertAttr(ATTR_SUBMITTER, offer_submitter);
+	}
+	if ( !putClassAd(sock, cmd_ad) ) {
+		dprintf(D_FULLDEBUG, "Failed to send GIVE_ADS ad to %s\n",
+		        schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	for ( auto slot: offer_resources ) {
+		ClassAd offer_ad;
+		slot->publish_single_slot_ad(offer_ad, time(NULL), Resource::Purpose::for_query);
+			// TODO This assumes the resource has no preempting claimids,
+			//   because we're only looking at unclaimed slots.
+		std::string claimid = slot->r_cur->id();
+
+		if ( !sock->put_secret(claimid) ||
+		     !putClassAd(sock, offer_ad) )
+		{
+			dprintf(D_FULLDEBUG, "Failed to send offer ad to %s\n",
+			        schedd_name.c_str());
+			delete sock;
+			return;
+		}
+	}
+
+	if ( !sock->end_of_message() ) {
+		dprintf(D_FULLDEBUG, "Failed to send eom to %s\n",
+		        schedd_name.c_str());
+	}
+
+	sock->decode();
+	ClassAd reply_ad;
+	if (!getClassAd(sock, reply_ad) || !sock->end_of_message()) {
+		dprintf(D_FULLDEBUG, "Failed to read reply from %s\n", schedd_name.c_str());
+		delete sock;
+		return;
+	}
+
+	int reply_code = NOT_OK;
+	reply_ad.LookupInteger(ATTR_ACTION_RESULT, reply_code);
+	if (reply_code != OK) {
+		dprintf(D_FULLDEBUG, "Schedd returned error\n");
+	}
+
+	delete sock;
 }
 
 

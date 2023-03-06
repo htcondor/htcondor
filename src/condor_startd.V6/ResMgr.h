@@ -298,6 +298,9 @@ public:
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
 
+	void directAttachToSchedd();
+	time_t m_lastDirectAttachToSchedd;
+
 	VMUniverseMgr m_vmuniverse_mgr;
 
 	bool AllocVM(pid_t starter_pid, ClassAd & vm_classad, Resource* rip)

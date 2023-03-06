@@ -539,6 +539,7 @@
 #define ATTR_WINDOWS_SERVICE_PACK_MAJOR  "WindowsServicePackMajorVersion"
 #define ATTR_WINDOWS_SERVICE_PACK_MINOR  "WindowsServicePackMinorVersion"
 #define ATTR_WINDOWS_PRODUCT_TYPE  "WindowsProductType"
+#define ATTR_NUM_ADS "NumAds"
 #define ATTR_NUM_COD_CLAIMS  "NumCODClaims"
 #define ATTR_NUM_CKPTS  "NumCkpts"
 #define ATTR_NUM_CKPTS_RAW  "NumCkpts_RAW"
@@ -619,6 +620,7 @@
 #define ATTR_RESOURCE_REQUEST_COUNT "_condor_RESOURCE_COUNT"  // used in resource request ad
 #define ATTR_RESOURCE_REQUEST_CLUSTER "_condor_RESOURCE_CLUSTER"
 #define ATTR_RESOURCE_REQUEST_PROC "_condor_RESOURCE_PROC"
+#define ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY "RestrictToAuthenticatedIdentity"
 #define ATTR_SLOT_TYPE  "SlotType"
 #define ATTR_SLOT_TYPE_ID  "SlotTypeID"
 #define ATTR_SLOT_WEIGHT  "SlotWeight"
@@ -674,6 +676,7 @@
 #define ATTR_STREAM_ERROR  "StreamErr"
 #define ATTR_SUBMIT_EVENT_NOTES  "SubmitEventNotes"
 #define ATTR_SUBMIT_EVENT_USER_NOTES  "SubmitEventUserNotes"
+#define ATTR_SUBMITTER "Submitter"
 #define ATTR_SUBMITTER_GLOBAL_JOB_ID  "SubmitterGlobalJobId"
 #define ATTR_SUBMITTER_ID  "SubmitterId"
 #define ATTR_SUBMITTER_TAG  "SubmitterTag"
