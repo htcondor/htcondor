@@ -1581,6 +1581,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.1-1
+- Execution points now advertise if an sshd is available for ssh to job
+
 * Mon Mar 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.0-1
 - Now evicts OOM killed jobs when they are under their requested memory
 - HTCondor glideins can now use cgroups if one has been prepared

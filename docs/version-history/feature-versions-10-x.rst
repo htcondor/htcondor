@@ -9,9 +9,7 @@ Version 10.3.1
 
 Release Notes:
 
-.. HTCondor version 10.3.1 released on March 7, 2023.
-
-- HTCondor version 10.3.1 not yet released.
+- HTCondor version 10.3.1 released on March 7, 2023.
 
 New Features:
 
