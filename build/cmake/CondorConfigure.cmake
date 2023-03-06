@@ -53,7 +53,7 @@ endif()
 
 # means user did not specify, so change the default.
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-	set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
+	set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir" CACHE PATH "..." FORCE)
  endif()
 
 message(STATUS "***********************************************************")
