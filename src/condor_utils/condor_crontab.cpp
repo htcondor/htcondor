@@ -884,6 +884,14 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// Sort! Makes life easier later on
 		//
 	this->sort( *list );	
+
+	// The topmost (DOW) can be empty, but if any other
+	// index generated an empty list, it indicates an error
+	// as an empty range passed in gets expanded to *
+
+	if ((attribute_idx != CRONTAB_DOW_IDX) && (0 == list->length())) {
+		return false;
+	}
 	return ( true );
 }
 
