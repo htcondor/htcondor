@@ -595,7 +595,6 @@ endif()
 ##################################################
 ##################################################
 # compilation/build options.
-option(UW_BUILD "Variable to allow UW-esk builds." OFF)
 option(HAVE_HIBERNATION "Support for condor controlled hibernation" ON)
 option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
@@ -610,11 +609,8 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 
 #####################################
 # PROPER option
-if (UW_BUILD OR WINDOWS)
+if (APPLE OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
-
-  dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
-
 else()
   option(PROPER "Try to build using native env" ON)
 endif()
