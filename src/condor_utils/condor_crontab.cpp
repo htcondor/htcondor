@@ -890,6 +890,9 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 	// as an empty range passed in gets expanded to *
 
 	if ((attribute_idx != CRONTAB_DOW_IDX) && (0 == list->length())) {
+		std::string msg = "Invalid cron attribute: ";
+		msg += param->c_str();
+		CronTab::errorLog += msg;
 		return false;
 	}
 	return ( true );
