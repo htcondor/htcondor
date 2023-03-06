@@ -53,9 +53,6 @@ namespace classad {
 using classad::ClassAd;
 
 
-class MyString; // potential forward reference.
-
-
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
@@ -314,19 +311,10 @@ class ULogEvent {
 	// if chomp is true, trailing \r and \n will be changed to \0
 	bool read_optional_line(FILE* file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp=true, bool trim=false);
 
-	// read a line into a MyString 
-	bool read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp=true);
+	// read a line into a string 
 	bool read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
 
-	// returns a new'ed pointer to a buffer containing the next line if there is a next line
-	// and it is not a sync line. got_sync_line will be set to true if it was a sync line
-	// if chomp is true, trailing \r and \n will not be returned
-	// if trim is true, leading whitespace will not be returned.
-	char * read_optional_line(FILE* file, bool & got_sync_line, bool chomp=true, bool trim=false);
-
-	// read a value after a prefix into a MyString
-	// for 
-	bool read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp=true);
+	// read a value after a prefix into a string
 	bool read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp=true);
 
   private:

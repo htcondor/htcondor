@@ -482,20 +482,6 @@ bool ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, char * buf,
 	return true;
 }
 
-// read a line into a MyString 
-bool ULogEvent::read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
-{
-	if ( ! str.readLine(file, false)) {
-		return false;
-	}
-	if (is_sync_line(str.c_str())) {
-		got_sync_line = true;
-		return false;
-	}
-	if (chomp) { str.chomp(); }
-	return true;
-}
-
 bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
 {
 	if ( ! readLine(str, file, false)) {
@@ -509,25 +495,6 @@ bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_syn
 	if (want_chomp) { chomp(str); }
 	if (want_trim) { trim(str); }
 	return true;
-}
-
-bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
-{
-	val.clear();
-	MyString str;
-	if ( ! str.readLine(file, false)) {
-		return false;
-	}
-	if (is_sync_line(str.c_str())) {
-		got_sync_line = true;
-		return false;
-	}
-	if (chomp) { str.chomp(); }
-	if (starts_with(str.c_str(), prefix)) {
-		val = str.substr((int)strlen(prefix), str.length());
-		return true;
-	}
-	return false;
 }
 
 bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/)
@@ -548,21 +515,6 @@ bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* fi
 		return true;
 	}
 	return false;
-}
-
-
-// returns a new'ed pointer to a buffer containing the next line if there is a next line
-// and it is not a sync line. got_sync_line will be set to true if it was a sync line
-// if chomp is true, trailing \r and \n will not be returned
-// if trim is true, leading whitespace will not be returned.
-char * ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, bool chomp /*=true*/, bool trim /*=false*/)
-{
-	MyString str;
-	if (read_optional_line(str, file, got_sync_line, chomp)) {
-		if (trim) { str.trim(); }
-		return str.detach_buffer();
-	}
-	return NULL;
 }
 
 
