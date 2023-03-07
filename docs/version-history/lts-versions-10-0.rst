@@ -64,7 +64,11 @@ Bugs Fixed:
 
 - Fixed a bug that would cause the *condor_schedd* to hang if an
   invalid condor cron argument was submitted
-  :jira:`1618`
+  :jira:`1624`
+
+- Fixed a bug where cron jobs put on hold due to invalid time specifications
+  would be unable to be removed from the job queue with tools.
+  :jira:`1629`
 
 - Fixed how the *condor_gridmanager* handles failed ARC CE jobs.
   Before, it would endlessly re-query the status of jobs that failed
