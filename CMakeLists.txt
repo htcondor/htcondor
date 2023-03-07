@@ -18,8 +18,8 @@
 
 ##########################################################################
 # Set project
-project(CONDOR LANGUAGES C CXX)
 cmake_minimum_required(VERSION 3.8)
+project(CONDOR LANGUAGES C CXX)
 
 # Exactly c++ 20 for all platforms
 set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake

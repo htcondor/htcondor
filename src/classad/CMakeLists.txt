@@ -208,27 +208,6 @@ install( FILES ${Headers} DESTINATION ${C_INCLUDE_PUBLIC}/classad )
 message (STATUS "configured (CLASSADS_FOUND= ${CLASSADS_FOUND})")
 
 # finally add dependencies if there are any
-if (NOT PROPER)
-  
-  if(PCRE2_REF)
+if(PCRE2_REF)
 	add_dependencies( classads_objects ${PCRE2_REF} )
-  endif()
-
-  if (NOT WIN32)
-	############################################################################## 
-	file( COPY ${Headers} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include/classad )
-	set_target_properties( classads
-		PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
-		LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
-		RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
-		OUTPUT_NAME classad)
-	if ( UNIX )
-		set_target_properties( classad
-			PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib 
-			LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib
-			RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-	endif()
-
-  endif()
-
-endif(NOT PROPER)
+endif()
