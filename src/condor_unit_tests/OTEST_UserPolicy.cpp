@@ -27,6 +27,7 @@
 #include "unit_test_utils.h"
 #include "emit.h"
 #include "user_job_policy.h"
+#include "condor_crontab.h"
 
   #define POLICY_INIT(ad) policy.Init()
   #define POLICY_ANALYZE(ad,mode) policy.AnalyzePolicy(*ad,mode)
@@ -140,6 +141,7 @@ static bool test_hold_macro_firing_expression_value(void);
 static bool test_hold_macro_firing_reason(void);
 static bool test_hold_macro_analyze_policy_bug(void);
 
+static bool test_invalid_cron(void);
 static bool test_hold_multi_macro_analyze_policy(void);
 static bool test_hold_multi_macro_firing_expression(void);
 static bool test_hold_multi_macro_firing_expression_value(void);
@@ -306,6 +308,7 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_hold_multi_macro_firing_expression_value);
 	driver.register_function(test_hold_multi_macro_firing_reason);
 	driver.register_function(test_hold_multi_macro_firing_custom_reason);
+	driver.register_function(test_invalid_cron);
 
 	return driver.do_all_functions();
 }
@@ -3031,3 +3034,30 @@ static bool test_hold_multi_macro_firing_custom_reason() {
 	PASS;
 }
 
+static bool test_invalid_cron(void) {
+
+	emit_test("Test that the CondorCron class handles invalid cron specification");
+	emit_input_header();
+
+	ClassAd jobWithCron;
+	jobWithCron.Assign(ATTR_CRON_MINUTES, "1/10");
+
+	CronTab::initRegexObject();
+
+	CronTab ct(&jobWithCron);
+
+	std::string reason;
+	if (!ct.needsCronTab(&jobWithCron)) {
+		reason = "CronTab::needsCronTab actually returned false, should be true";
+		FAIL;
+	}
+	if (!ct.isValid()) {
+		reason = "CronTab::isValid actually returned false, should be true";
+		PASS;
+	}
+
+	emit_output_expected_header();
+	emit_output_actual_header();
+
+	FAIL;
+}
