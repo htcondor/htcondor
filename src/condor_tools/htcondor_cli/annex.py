@@ -138,13 +138,15 @@ class Status(Verb):
         the_annex_name = options["annex_name"]
 
         schedd = htcondor.Schedd()
-        query = f'hpc_annex_name =!= undefined'
+        constraint = f'hpc_annex_name =!= undefined'
         if the_annex_name is not None:
-            query = f'hpc_annex_name == "{the_annex_name}"'
+            constraint = f'hpc_annex_name == "{the_annex_name}"'
+
         annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
         authenticated_identity = f"{getpass.getuser()}@{annex_token_domain}"
-        query = f'({query}) && (AuthenticatedIdentity == "{authenticated_identity}")'
-        annex_jobs = schedd.query(query, opts=htcondor.QueryOpts.DefaultMyJobsOnly)
+        constraint = f'({constraint) && (AuthenticatedIdentity == "{authenticated_identity}")'
+
+        annex_jobs = schedd.query(constraint, opts=htcondor.QueryOpts.DefaultMyJobsOnly)
 
         ## This all very ugly and can't possibly be the best way to do this.
 
@@ -179,8 +181,10 @@ class Status(Verb):
         constraint = 'AnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'AnnexName == "{the_annex_name}"'
+
         annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
-        constraint = f'{constraint} && AuthenticatedIdentity == "{getpass.getuser()}@{annex_token_domain}"'
+        authenticated_identity = f"{getpass.getuser()}@{annex_token_domain}"
+        constraint = f'({constraint}) && (AuthenticatedIdentity == "{authenticated_identity}")'
 
         token_file = create_annex_token(logger, "status")
         atexit.register(lambda: os.unlink(token_file))
@@ -223,6 +227,11 @@ class Status(Verb):
         constraint = 'TargetAnnexName =!= undefined'
         if the_annex_name is not None:
             constraint = f'TargetAnnexName == "{the_annex_name}"'
+
+        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+        authenticated_identity = f"{getpass.getuser()}@{annex_token_domain}"
+        constraint = f'({constraint}) && (AuthenticatedIdentity == "{authenticated_identity}")'
+
         target_jobs = schedd.query(
             constraint,
             opts=htcondor.QueryOpts.DefaultMyJobsOnly,
@@ -371,9 +380,15 @@ class Shutdown(Verb):
 
         token_file = create_annex_token(logger, "shutdown")
         atexit.register(lambda: os.unlink(token_file))
+
+        constraint = f'AnnexName =?= "{annex_name}"'
+        annex_token_domain = htcondor.param.get("ANNEX_TOKEN_DOMAIN", "annex.osgdev.chtc.io")
+        authenticated_identity = f"{getpass.getuser()}@{annex_token_domain}"
+        constraint = f'({constraint}) && AuthenticatedIdentity == "{authenticated_identity}"'
+
         location_ads = collector.query(
             ad_type=htcondor.AdTypes.Master,
-            constraint=f'AnnexName =?= "{annex_name}"',
+            constraint=constraint,
         )
 
         if len(location_ads) == 0:
