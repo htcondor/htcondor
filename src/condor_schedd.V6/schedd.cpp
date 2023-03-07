@@ -16259,6 +16259,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			if ( valid ) {
 				this->cronTabs->insert( id, cronTab, true );
 			} else {
+				error = cronTab->getError();
 				delete cronTab;
 				cronTab = 0;
 			}
