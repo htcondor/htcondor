@@ -898,7 +898,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster  ) {
+	if ( job->AllProcsDone() ) {
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
@@ -911,18 +911,16 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
 	if ( failed && job->_scriptPost == NULL ) {
 		if ( job->DoRetry() ) {
-			// If this is a cluster job with multiple procs, do not restart it now.
-			// That should happen in ProcessClusterRemoveEvent().
-			if ( !job->is_cluster ) {
-				RestartNode( job, recovery );
-			}
+			if (job->AllProcsDone()) { RestartNode( job, recovery ); }
 		} else if ( putFailedJobsOnHold ) {
 			job->SetHold( true );
 			// Increase the job's retry max, so it will try again after the
 			// retry count gets increased in the RestartNode() function.
 			// We might want to limit this to avoid livelock.
-			job->SetRetryMax( job->GetRetryMax() + 1 );
-			RestartNode( job, recovery );
+			if (job->AllProcsDone()) {
+				job->SetRetryMax( job->GetRetryMax() + 1 );
+				RestartNode( job, recovery );
+			}
 		} else {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {
@@ -944,7 +942,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// If this is *not* a multi-proc cluster job, and no more procs are
 	// outstanding, start shutting things down now.
 	// Multi-proc cluster jobs get shut down in ProcessClusterRemoveEvent().
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster ) {
+	if ( job->AllProcsDone() ) {
 			// All procs for this job are done.
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
@@ -1316,7 +1314,7 @@ Dag::ProcessClusterSubmitEvent(Job *job) {
 	if ( !job ) {
 		return;
 	}
-	job->is_cluster = true;
+	job->is_factory = true;
 }
 
 //---------------------------------------------------------------------------
@@ -1329,7 +1327,7 @@ Dag::ProcessClusterRemoveEvent(Job *job, bool recovery) {
 
 	// Make sure the job is a multi-proc cluster, and has no more queued procs. 
 	// Otherwise something is wrong.
-	if ( job->_queuedNodeJobProcs == 0 && job->is_cluster ) {
+	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
 		// All procs for this job are done.
 		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 			job->GetJobName() );
@@ -4353,7 +4351,7 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( !node->is_cluster && node->_queuedNodeJobProcs == 0 ) {
+	if( node->AllProcsDone() ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}

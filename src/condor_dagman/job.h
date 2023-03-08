@@ -175,6 +175,9 @@ class Job {
 	static const char* JobTypeString() { return "HTCondor"; }
 	inline int GetProcEventsSize() const { return _gotEvents.size(); }
 	inline unsigned char GetProcEvent( int proc ) const { return _gotEvents[proc]; }
+	//If this is a factory/late materialization cluster we have to wait for a cluster
+	//remove event. Otherwise if queued nodes is 0 then all job procs are done
+	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, std::string &whynot );
@@ -431,8 +434,8 @@ public:
 		// Indicates whether abort_dag_return_val was set.
 	bool have_abort_dag_return_val;
 
-		// Indicates if this is a cluster job or not
-	bool is_cluster;
+		// Indicates if this is a factory submit cluster in terms of late materialization
+	bool is_factory;
 
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
