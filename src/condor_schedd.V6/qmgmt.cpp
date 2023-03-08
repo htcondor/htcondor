@@ -2156,6 +2156,8 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			}
 			continue;  // done with this cluster ad for the first pass
 		}
+		if ( ! bad->IsJob()) continue;
+
 		cluster_num = key.cluster;
 
 		JobQueueJob *ad = static_cast<JobQueueJob*>(bad);
@@ -4163,15 +4165,8 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	// loop through the job queue, setting attribute on jobs that match
 	JobQueue->StartIterateAllClassAds();
 	while(JobQueue->IterateAllClassAds(ad,key)) {
+		if (IsSpecialJobId(key.cluster,key.proc)) continue; // skip non-editable ads
 		JobQueueJob * job = static_cast<JobQueueJob*>(ad);
-
-		// ignore header and ads.
-		if (job->IsHeader())
-			continue;
-
-		// ignore jobset ads
-		if (job->IsJobSet())
-			continue;
 
 		// ignore cluster ads unless the PostSubmitClusterChange flag is set.
 		if (job->IsCluster() && ! (flags & SetAttribute_PostSubmitClusterChange))
@@ -5648,7 +5643,7 @@ CheckTransaction( const std::list<std::string> &newAdKeys,
 		ClassAd * procAd = &tmpAd;
 		classad::References tmpAttrs, *xform_attrs = nullptr;
 		JobQueueKey jid( it->c_str() );
-		if (jid.proc < -1) {
+		if (jid.proc < -1 || jid.cluster <= 0) {
 			// ignore jobset ads for now
 			continue;
 		}
@@ -5755,7 +5750,7 @@ void SetSubmitTotalProcs(std::list<std::string> & new_ad_keys)
 	JobQueueKeyBuf job_id;
 	for(std::list<std::string>::iterator it = new_ad_keys.begin(); it != new_ad_keys.end(); it++ ) {
 		job_id.set(it->c_str());
-		if (job_id.proc < 0) continue; // ignore the cluster ad and set ads
+		if (job_id.proc < 0 || job_id.cluster <= 0) continue; // ignore the cluster ad and set ads
 
 		// ignore jobs produced by an existing factory.
 		// ATTR_TOTAL_SUBMIT_PROCS is determined by the factory for them.
@@ -5998,7 +5993,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 		std::string x509up;
 		std::string iwd;
 		JobQueueKey job( it->c_str() );
-		if (job.proc < -1) continue; // ignore jobsets for now
+		if (job.proc < -1 || job.cluster <= 0) continue; // ignore jobsets for now
 
 		GetAttributeString(job.cluster, job.proc, ATTR_X509_USER_PROXY, x509up);
 		GetAttributeString(job.cluster, job.proc, ATTR_JOB_IWD, iwd);
@@ -6349,7 +6344,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 				}
 				continue; // skip remaining processing for cluster ads
-			} else if (job_id.proc < 0) {
+			} else if (job_id.proc < 0 || job_id.cluster <= 0) {
 				continue; // no further processing of jobset ads needed
 			}
 			// we want to fsync per cluster and on the last ad
@@ -8452,6 +8447,8 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 			if (! with_jobsets) { continue; }
 		} else if (ad->IsCluster()) { // cluster ads have cluster > 0 && proc < 0
 			if (! with_clusters) { continue; }
+		} else if ( ! ad->IsJob()) {
+			continue;
 		} else { // jobads have cluster > 0 && proc >= 0
 			if (with_no_jobs) { continue; }
 		}
