@@ -62,6 +62,10 @@ Bugs Fixed:
   about to start, the job is now placed on hold.
   :jira:`1600`
 
+- Fixed a bug that would cause the *condor_schedd* to hang if an
+  invalid condor cron argument was submitted
+  :jira:`1618`
+
 - Fixed how the *condor_gridmanager* handles failed ARC CE jobs.
   Before, it would endlessly re-query the status of jobs that failed
   during submission to the LRMS behind ARC CE.
