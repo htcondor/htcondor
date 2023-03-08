@@ -194,7 +194,7 @@ class Env final {
 	void getDelimitedStringV2Raw(std::string & result) const;
 
 	 // old-style ; or | delimited
-	bool getDelimitedStringV1Raw(MyString *result,std::string * error_msg=nullptr,char delim='\0') const;
+	bool getDelimitedStringV1Raw(std::string& result,std::string * error_msg=nullptr,char delim='\0') const;
 
 		// Returns V2Quoted string (i.e. enclosed in double quotes).
 	void getDelimitedStringV2Quoted(std::string& result) const;
@@ -241,6 +241,7 @@ class Env final {
 		// Convert a V2Quoted string to a V2Raw string.
 		// (IsV2QuotedString() must be true or this will EXCEPT.)
 	static bool V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *error_msg=nullptr);
+	static bool V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& error_msg);
 
 	bool InputWasV1() const {return input_was_v1;}
 
@@ -317,7 +318,7 @@ class Env final {
 
 	static bool ReadFromDelimitedString( char const *&input, char *output, char delim );
 
-	static void WriteToDelimitedString(char const *input,MyString &output);
+	static void WriteToDelimitedString(char const *input, std::string &output);
 
 	static void AddErrorMessage(char const *msg,std::string &error_buffer) {
 		if ( ! error_buffer.empty()) { error_buffer += "\n"; }

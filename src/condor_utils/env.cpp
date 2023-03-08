@@ -131,9 +131,9 @@ Env::InsertEnvV1IntoClassAd( ClassAd & ad, std::string & error_msg, char delim /
 		delim = env_delimiter;
 	}
 
-	MyString env1;
-	if(getDelimitedStringV1Raw(&env1,&error_msg,delim)) {
-		ad.Assign(ATTR_JOB_ENV_V1,env1.c_str());
+	std::string env1;
+	if(getDelimitedStringV1Raw(env1,&error_msg,delim)) {
+		ad.Assign(ATTR_JOB_ENV_V1,env1);
 
 		if(delim_str.empty()) {
 			// Save the delimiter that we have chosen, in case the ad
@@ -263,7 +263,7 @@ Env::IsSafeEnvV2Value(char const *str)
 }
 
 void
-Env::WriteToDelimitedString(char const *input,MyString &output) {
+Env::WriteToDelimitedString(char const *input, std::string &output) {
 	// Append input to output.
 	// Would be nice to escape special characters here, but the
 	// existing syntax does not support it, so we leave the
@@ -280,14 +280,14 @@ Env::WriteToDelimitedString(char const *input,MyString &output) {
 
 	while(*input) {
 		end = input + strcspn(input,specials);
-		ret = output.formatstr_cat("%.*s", (int)(end-input), input);
+		ret = formatstr_cat(output, "%.*s", (int)(end-input), input);
 		ASSERT(ret);
 		input = end;
 
 		if(*input != '\0') {
 			// Escape this special character.
 			// Escaping is not yet implemented, so we will never get here.
-			ret = output.formatstr_cat("%c",*input);
+			ret = formatstr_cat(output, "%c",*input);
 			ASSERT(ret);
 			input++;
 		}
@@ -335,6 +335,12 @@ bool
 Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
 {
 	return ArgList::V2QuotedToV2Raw(v1_quoted,v2_raw,errmsg);
+}
+
+bool
+Env::V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& errmsg)
+{
+	return ArgList::V2QuotedToV2Raw(v1_quoted, v2_raw, errmsg);
 }
 
 bool
@@ -610,13 +616,11 @@ Env::GetEnvV1Delimiter(const ClassAd& ad)
 
 
 bool
-Env::getDelimitedStringV1Raw(MyString *result,std::string * error_msg,char delim) const
+Env::getDelimitedStringV1Raw(std::string& result,std::string * error_msg,char delim) const
 {
 	MyString var, val;
 
 	if(!delim) delim = env_delimiter;
-
-	ASSERT(result);
 
 	_envTable->startIterations();
 	while( _envTable->iterate( var, val ) ) {
@@ -631,11 +635,11 @@ Env::getDelimitedStringV1Raw(MyString *result,std::string * error_msg,char delim
 			return false;
 		}
 		// only insert the delimiter if there's already an entry...
-		if( ! result->empty()) { (*result) += delim; }
-		WriteToDelimitedString(var.c_str(),*result);
+		if( ! result.empty()) { result += delim; }
+		WriteToDelimitedString(var.c_str(),result);
 		if(val != NO_ENVIRONMENT_VALUE) {
-			WriteToDelimitedString("=",*result);
-			WriteToDelimitedString(val.c_str(),*result);
+			WriteToDelimitedString("=",result);
+			WriteToDelimitedString(val.c_str(),result);
 		}
 	}
 	return true;
