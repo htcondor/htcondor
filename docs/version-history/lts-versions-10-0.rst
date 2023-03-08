@@ -40,7 +40,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Allow remote submission of **batch** grid universe jobs via ssh to work
+  with sites that were configured with the old *bosco_cluster* tool.
+  :jira:`1632`
 
 Bugs Fixed:
 
