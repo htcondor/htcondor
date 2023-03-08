@@ -76,7 +76,7 @@ def update_regional_functions( region, ak_file, sk_file, function_ARNs ):
         aws_access_key_id=accessKeyID,
         aws_secret_access_key=secretAccessKey )
 
-    runtime = 'nodejs12.x'
+    runtime = 'nodejs18.x'
     for function in function_ARNs:
         print( "Upgrading function " + function + "..." )
         update = lc.update_function_configuration( FunctionName=function, Runtime=runtime )
