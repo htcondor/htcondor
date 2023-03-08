@@ -76,6 +76,11 @@ Bugs Fixed:
   the view server stats file are deleted at just the wrong time.
   :jira:`1599`
 
+- Fixed a bug where *condor_shadow* was unable to write the job ad to the
+  :macro:`JOB_EPOCH_HISTORY` file when located in condor owned directories
+  such as the spool directory.
+  :jira:`1631`
+
 Version 10.3.1
 --------------
 

@@ -166,6 +166,8 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 */
 static void
 writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, const char* new_path = NULL) {
+	//Set priv_condor to allow writing to condor owned locations i.e. spool directory
+	TemporaryPrivSentry tps(PRIV_CONDOR);
 	//Check if we want to rotate the file
 	MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
 	//Open file and append Job Ad to it
