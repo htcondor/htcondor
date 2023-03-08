@@ -292,8 +292,8 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(shallowOpts.priority);
 	}
 
-	MyString arg_str,args_error;
-	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
+	std::string arg_str,args_error;
+	if(!args.GetArgsStringV1WackedOrV2Quoted(arg_str, args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.c_str());
 		exit(1);
 	}
