@@ -311,6 +311,7 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_hold_multi_macro_firing_reason);
 	driver.register_function(test_hold_multi_macro_firing_custom_reason);
 	driver.register_function(test_cron_minute);
+	driver.register_function(test_invalid_cron);
 
 	return driver.do_all_functions();
 }
