@@ -4165,9 +4165,9 @@ static bool test_get_delim_str_v1_raw_return_empty() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an empty "
 		"Env object.");
 	Env env;
-	MyString result;
+	std::string result;
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result);
+	bool actual = env.getDelimitedStringV1Raw(result);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4186,10 +4186,10 @@ static bool test_get_delim_str_v1_raw_return_v1() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an Env "
 		"object using V1 format.");
 	Env env;
-	MyString result;
+	std::string result;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result);
+	bool actual = env.getDelimitedStringV1Raw(result);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4208,10 +4208,10 @@ static bool test_get_delim_str_v1_raw_return_v2() {
 	emit_test("Test that getDelimitedStringV1Raw() returns true for an Env "
 		"object using V2 format.");
 	Env env;
-	MyString result;
+	std::string result;
 	env.MergeFromV2Raw(V2R, NULL);
 	bool expect = true;
-	bool actual = env.getDelimitedStringV1Raw(&result);
+	bool actual = env.getDelimitedStringV1Raw(result);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4230,10 +4230,10 @@ static bool test_get_delim_str_v1_raw_return_delim() {
 	emit_test("Test that getDelimitedStringV1Raw() returns false for an Env "
 		"object using V2 format with a ';'.");
 	Env env;
-	MyString result;
+	std::string result;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
 	bool expect = false;
-	bool actual = env.getDelimitedStringV1Raw(&result);
+	bool actual = env.getDelimitedStringV1Raw(result);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_SEMI);
 	emit_param("MyString", "%s", "");
@@ -4253,10 +4253,10 @@ static bool test_get_delim_str_v1_raw_error_delim() {
 		"for an Env object using V2 format with a ';'.");
 	emit_comment("This test just checks if the error message is not empty.");
 	Env env;
-	MyString result;
+	std::string result;
 	std::string error;
 	env.MergeFromV2Raw(V2R_SEMI, NULL);
-	env.getDelimitedStringV1Raw(&result, &error);
+	env.getDelimitedStringV1Raw(result, &error);
 	emit_input_header();
 	emit_param("Env", "%s", V2R_SEMI);
 	emit_param("MyString", "%s", "");
@@ -4275,8 +4275,8 @@ static bool test_get_delim_str_v1_raw_result_empty() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an empty Env object.");
 	Env env;
-	MyString actual;
-	env.getDelimitedStringV1Raw(&actual);
+	std::string actual;
+	env.getDelimitedStringV1Raw(actual);
 	emit_input_header();
 	emit_param("Env", "%s", "");
 	emit_param("MyString", "%s", "");
@@ -4295,9 +4295,9 @@ static bool test_get_delim_str_v1_raw_result_v1() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an Env object in V1 format.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual);
+	env.getDelimitedStringV1Raw(actual);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4316,9 +4316,9 @@ static bool test_get_delim_str_v1_raw_result_v2() {
 	emit_test("Test that getDelimitedStringV1Raw() sets the result MyString "
 		"to the expected value for an Env object in V2 format.");
 	Env env;
-	MyString actual;
+	std::string actual;
 	env.MergeFromV2Raw(V2R, NULL);
-	env.getDelimitedStringV1Raw(&actual);
+	env.getDelimitedStringV1Raw(actual);
 	emit_input_header();
 	emit_param("Env", "%s", V2R);
 	emit_param("MyString", "%s", "");
@@ -4338,11 +4338,11 @@ static bool test_get_delim_str_v1_raw_result_add() {
 		"to the expected value after adding environment variables with "
 		"MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2;
+	std::string actual1, actual2;
 	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual1);
+	env.getDelimitedStringV1Raw(actual1);
 	env.MergeFromV1Raw(V1R_ADD, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual2);
+	env.getDelimitedStringV1Raw(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R_REP);
 	emit_param("MyString", "%s", "");
@@ -4351,10 +4351,10 @@ static bool test_get_delim_str_v1_raw_result_add() {
 	emit_param("Result MyString Before", "%s", V1R_REP);
 	emit_param("Result MyString After", "%s", V1R_REP_ADD);
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R_REP, V1_ENV_DELIM) || 
-		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM))
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V1R_REP, V1_ENV_DELIM) ||
+		!strings_similar(actual2.c_str(), V1R_REP_ADD, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
@@ -4366,11 +4366,11 @@ static bool test_get_delim_str_v1_raw_result_replace() {
 		"to the expected value after replacing environment variables with "
 		"MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2;
+	std::string actual1, actual2;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual1);
+	env.getDelimitedStringV1Raw(actual1);
 	env.MergeFromV1Raw(V1R_REP, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual2);
+	env.getDelimitedStringV1Raw(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4379,10 +4379,10 @@ static bool test_get_delim_str_v1_raw_result_replace() {
 	emit_param("Result MyString Before", "%s", V1R);
 	emit_param("Result MyString After", "%s", V1R_REP); 
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) || 
-		!strings_similar(actual2.Value(), V1R_REP, V1_ENV_DELIM))
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.c_str(), V1R_REP, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
@@ -4394,11 +4394,11 @@ static bool test_get_delim_str_v1_raw_result_add_replace() {
 		"to the expected value after adding and replacing environment variables"
 		" with MergeFromV1Raw().");
 	Env env;
-	MyString actual1, actual2;
+	std::string actual1, actual2;
 	env.MergeFromV1Raw(V1R, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual1);
+	env.getDelimitedStringV1Raw(actual1);
 	env.MergeFromV1Raw(V1R_REP_ADD, V1_ENV_DELIM_CHAR, NULL);
-	env.getDelimitedStringV1Raw(&actual2);
+	env.getDelimitedStringV1Raw(actual2);
 	emit_input_header();
 	emit_param("Env", "%s", V1R);
 	emit_param("MyString", "%s", "");
@@ -4407,10 +4407,10 @@ static bool test_get_delim_str_v1_raw_result_add_replace() {
 	emit_param("Result MyString Before", "%s", V1R);
 	emit_param("Result MyString After", "%s", V1R_REP);
 	emit_output_actual_header();
-	emit_param("Result MyString Before", "%s", actual1.Value());
-	emit_param("Result MyString After", "%s", actual2.Value());
-	if(!strings_similar(actual1.Value(), V1R, V1_ENV_DELIM) || 
-		!strings_similar(actual2.Value(), V1R_REP_ADD, V1_ENV_DELIM))
+	emit_param("Result MyString Before", "%s", actual1.c_str());
+	emit_param("Result MyString After", "%s", actual2.c_str());
+	if(!strings_similar(actual1.c_str(), V1R, V1_ENV_DELIM) ||
+		!strings_similar(actual2.c_str(), V1R_REP_ADD, V1_ENV_DELIM))
 	{
 		FAIL;
 	}
