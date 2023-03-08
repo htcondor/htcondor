@@ -7157,7 +7157,7 @@ int SubmitHash::SetTransferFiles()
 	bool default_should = false;
 	bool default_when;
 	FileTransferOutput_t when_output;
-	MyString err_msg;
+	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
 	// if they didn't check to see if the admin did. 
@@ -7617,8 +7617,8 @@ int SubmitHash::FixupTransferInputFiles()
 			job->Assign(ATTR_TRANSFER_INPUT_FILES,expanded_list.c_str());
 		}
 	} else {
-		MyString err_msg;
-		err_msg.formatstr( "\n%s\n",error_msg.c_str());
+		std::string err_msg;
+		formatstr(err_msg, "\n%s\n",error_msg.c_str());
 		print_wrapped_text( err_msg.c_str(), stderr );
 		ABORT_AND_RETURN( 1 );
 	}
