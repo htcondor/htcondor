@@ -16435,7 +16435,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				 ATTR_JOB_STATUS);
 		return ( false );
 	}
-	if ( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
+	if ( status != IDLE ) {
 		return ( true );
 	}
 
