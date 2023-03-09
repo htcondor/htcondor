@@ -332,12 +332,6 @@ Env::IsV2QuotedString(char const *str)
 }
 
 bool
-Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
-{
-	return ArgList::V2QuotedToV2Raw(v1_quoted,v2_raw,errmsg);
-}
-
-bool
 Env::V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& errmsg)
 {
 	return ArgList::V2QuotedToV2Raw(v1_quoted, v2_raw, errmsg);
@@ -360,8 +354,8 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
 	if(IsV2QuotedString(delimitedString)) {
-		MyString v2, msg;
-		if(!V2QuotedToV2Raw(delimitedString,&v2,&msg)) {
+		std::string v2, msg;
+		if(!V2QuotedToV2Raw(delimitedString, v2, msg)) {
 			if ( ! msg.empty()) { AddErrorMessage(msg.c_str(), error_msg); }
 			return false;
 		}
@@ -509,21 +503,6 @@ Env::SetEnv( const char* var, const char* val )
 	MyString myVar = var;
 	MyString myVal = val;
 	return SetEnv( myVar, myVal );
-}
-
-bool
-Env::SetEnv( const MyString & var, const MyString & val )
-{
-	if( var.length() == 0 ) {
-		return false;
-	}
-	bool ret = (_envTable->insert( var, val, true ) == 0);
-	ASSERT( ret );
-#if defined(WIN32)
-	m_sorted_varnames.erase(var.Value());
-	m_sorted_varnames.insert(var.Value());
-#endif
-	return true;
 }
 
 bool
@@ -717,18 +696,6 @@ void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), 
 	}
 }
 
-void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const
-{
-	const MyString *var;
-	MyString *val;
-
-	_envTable->startIterations();
-	while (_envTable->iterate_nocopy(&var, &val)) {
-		if ( ! walk_func(pv, *var, *val))
-			break;
-	}
-}
-
 //
 // This makes me sad.  Consider replacing this (in
 // condor_starter.V6/singulariy.cpp, at any rate), with a function which,
@@ -752,7 +719,7 @@ Env::Walk(bool (*walk_func)(void* pv, const std::string &var, const std::string 
 }
 
 bool
-Env::HasEnv(MyString const &var) const
+Env::HasEnv(std::string const &var) const
 {
 #ifdef WIN32
 	// on Windows, we have to do case-insensitive check for existance, luckily
@@ -761,13 +728,6 @@ Env::HasEnv(MyString const &var) const
 #else
 	return _envTable->exists(var) == 0;
 #endif
-}
-
-bool
-Env::GetEnv(MyString const &var,MyString &val) const
-{
-	// lookup returns 0 on success
-	return _envTable->lookup(var,val) == 0;
 }
 
 bool

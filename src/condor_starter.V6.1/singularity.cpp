@@ -463,9 +463,8 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	std::list<std::string> envNames;
 	job_env.Walk(envToList, (void *)&envNames);
 	for (const std::string & name : envNames) {
-		MyString myValue;
-		job_env.GetEnv(name.c_str(), myValue);
-		std::string  value = myValue;
+		std::string value;
+		job_env.GetEnv(name, value);
 		auto index_execute_dir = value.find(execute_dir);
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;

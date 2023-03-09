@@ -165,11 +165,6 @@ class Env final {
 		// Add (or overwrite) specified environment variable.
 		// Returns false if not a valid var=value (i.e. if empty var).
 		// ASSERTS if it runs out of memory.
-	bool SetEnv( const MyString &, const MyString & );
-
-		// Add (or overwrite) specified environment variable.
-		// Returns false if not a valid var=value (i.e. if empty var).
-		// ASSERTS if it runs out of memory.
 	bool SetEnv( const std::string &, const std::string & );
 
 		// Removes an environment variable; returns true if the variable
@@ -213,12 +208,10 @@ class Env final {
 
 		// Walk the environment, calling walk_func for each entry until walk_func returns false
 	void Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv);
-	void Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const;
 
     void Walk(bool (*walk_func)(void* pv, const std::string & var, const std::string & val), void* pv) const;
 
-	bool HasEnv(MyString const &var) const;
-	bool GetEnv(MyString const &var,MyString &val) const;
+	bool HasEnv(const std::string &var) const;
 	bool GetEnv(const std::string &var, std::string &val) const;
 
 		// Returns true if string is safe to insert in old-style
@@ -240,7 +233,6 @@ class Env final {
 
 		// Convert a V2Quoted string to a V2Raw string.
 		// (IsV2QuotedString() must be true or this will EXCEPT.)
-	static bool V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *error_msg=nullptr);
 	static bool V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& error_msg);
 
 	bool InputWasV1() const {return input_was_v1;}
