@@ -281,7 +281,6 @@ all attributes.
 
           -append +DAGParentNodeNames="B,C"
 
-
 :classad-attribute:`DAGManNodesLog`
     For a DAGMan node job only, gives the path to an event log used
     exclusively by DAGMan to monitor the state of the DAG's jobs. Events
@@ -315,6 +314,11 @@ all attributes.
     If ``DAGManNodesLog`` is not defined, it has no effect. The value of
     ``DAGManNodesMask`` does not affect events recorded in the job event
     log file referred to by ``UserLog``.
+
+:classad-attribute:`DAGManNodeRetry`
+    For a DAGMan node job only, the current retry attempt number for the node
+    that this job belongs. This attribute is only included if specified by
+    :macro:`DAGMAN_NODE_RECORD_INFO` configuration option.
 
 :classad-attribute:`DeferralPrepTime`
     An integer representing the number of seconds before the jobs ``DeferralTime``

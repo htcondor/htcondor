@@ -63,6 +63,10 @@ New Features:
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
 
+- Added ability for DAGMan to automatically record the Node Retry attempt in that
+  nodes job ad. This is done by setting the new configuration option :macro:`DAGMAN_NODE_RECORD_INFO`.
+  :jira:`1634`
+
 Bugs Fixed:
 
 - Fixed bug where the *condor_shadow* would crash during job removal

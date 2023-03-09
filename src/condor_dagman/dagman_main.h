@@ -191,6 +191,10 @@ class Dagman {
 		//Only applied if neither APPEND nor PREPEND are specified
 	bool doAppendVars;
 
+		//Represents the desire to insert Node retry into the job ad at
+		//submission time.
+	bool jobInsertRetry;
+
 		// The interval (in seconds) between reports on what nodes
 		// are pending.
 	int pendingReportInterval;
