@@ -36,7 +36,6 @@
 #include <resolv.h>
 #endif
 
-static const int DEFAULT_MAXPIPES = 8;
 static const int DEFAULT_MAX_PID_COLLISIONS = 9;
 static const char* DEFAULT_INDENT = "DaemonCore--> ";
 static const int MIN_FILE_DESCRIPTOR_SAFETY_LIMIT = 20;
@@ -259,7 +258,7 @@ get_tracking_id()
 }
 
 DaemonCore::DaemonCore(int ComSize,int SigSize,
-				int SocSize,int ReapSize,int PipeSize)
+				int SocSize,int ReapSize)
 	: m_use_udp_for_dc_signals(false),
 #ifdef WIN32
 	m_never_use_kill_for_dc_signals(true),
@@ -309,8 +308,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	//
 	m_proc_family = NULL;
 
-	maxPipe = PipeSize;
-
 	m_unregisteredCommand.num = 0;
 
 	sec_man = new SecMan();
@@ -326,20 +323,6 @@ DaemonCore::DaemonCore(int ComSize,int SigSize,
 	m_advertise_ipv4_first = param_boolean( "ADVERTISE_IPV4_FIRST", false );
 
 	m_dirty_sinful = true;
-
-	if(maxPipe == 0)
-		maxPipe = DEFAULT_MAXPIPES;
-
-	pipeTable = new ExtArray<PipeEnt>(maxPipe);
-	if(pipeTable == NULL)
-	{
-		EXCEPT("Out of memory!");
-	}
-	nPipe = 0;
-	PipeEnt blankPipeEnt;
-	memset(&blankPipeEnt,'\0',sizeof(PipeEnt));
-	blankPipeEnt.index = -1;
-	pipeTable->fill(blankPipeEnt);
 
 	maxPipeBuffer = 10240;
 
@@ -549,12 +532,9 @@ DaemonCore::~DaemonCore()
 		}
 	}
 
-	if( pipeTable ) {
-		for ( i = 0; i < nPipe; i++ ) {
-			free( (*pipeTable)[i].pipe_descrip );
-			free( (*pipeTable)[i].handler_descrip );
-		}
-		delete( pipeTable );
+	for (auto &pe: pipeTable) {
+		free( pe.pipe_descrip );
+		free( pe.handler_descrip );
 	}
 
 	t.CancelAllTimers();
@@ -2120,59 +2100,58 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 				const char *handler_descrip, Service* s,
 				HandlerType handler_type, int is_cpp)
 {
-    int     i;
-    int     j;
-
 	size_t index = pipe_end - PIPE_INDEX_OFFSET;
 	if (pipeHandleTableLookup(index) == FALSE) {
 		dprintf(D_DAEMONCORE, "Register_Pipe: invalid index\n");
 		return -1;
 	}
 
-	i = nPipe;
-
-	// Make certain that entry i is empty.
-	if ( (*pipeTable)[i].index != -1 ) {
-        EXCEPT("Pipe table fubar!  nPipe = %d", nPipe );
-	}
 
 	// Verify that this piepfd has not already been registered
-	for ( j=0; j < nPipe; j++ )
-	{
-		if ( (*pipeTable)[j].index == (int)index ) {
+	//
+	for (auto &pe: pipeTable) {
+		if ( pe.index == (int)index ) {
 			EXCEPT("DaemonCore: Same pipe registered twice");
-        }
+		}
+	}
+
+	size_t i;
+	for (i = 0; i < pipeTable.size(); i++) {
+		if (pipeTable[i].index == -1) break;
+	}
+
+	if (i == pipeTable.size()) {
+		pipeTable.push_back({});
+		pipeTable[i].pipe_descrip    = nullptr;
+		pipeTable[i].handler_descrip = nullptr;
 	}
 
     dc_stats.NewProbe("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
 	// Found a blank entry at index i. Now add in the new data.
-	(*pipeTable)[i].pentry = NULL;
-	(*pipeTable)[i].call_handler = false;
-	(*pipeTable)[i].in_handler = false;
-	(*pipeTable)[i].index = index;
-	(*pipeTable)[i].handler = handler;
-	(*pipeTable)[i].handler_type = handler_type;
-	(*pipeTable)[i].handlercpp = handlercpp;
-	(*pipeTable)[i].is_cpp = (bool)is_cpp;
-	(*pipeTable)[i].service = s;
-	(*pipeTable)[i].data_ptr = NULL;
-	free((*pipeTable)[i].pipe_descrip);
+	pipeTable[i].pentry = NULL;
+	pipeTable[i].call_handler = false;
+	pipeTable[i].in_handler = false;
+	pipeTable[i].index = index;
+	pipeTable[i].handler = handler;
+	pipeTable[i].handler_type = handler_type;
+	pipeTable[i].handlercpp = handlercpp;
+	pipeTable[i].is_cpp = (bool)is_cpp;
+	pipeTable[i].service = s;
+	pipeTable[i].data_ptr = NULL;
+	free(pipeTable[i].pipe_descrip);
 	if ( pipe_descrip )
-		(*pipeTable)[i].pipe_descrip = strdup(pipe_descrip);
+		pipeTable[i].pipe_descrip = strdup(pipe_descrip);
 	else
-		(*pipeTable)[i].pipe_descrip = strdup(EMPTY_DESCRIP);
-	free((*pipeTable)[i].handler_descrip);
+		pipeTable[i].pipe_descrip = strdup(EMPTY_DESCRIP);
+	free(pipeTable[i].handler_descrip);
 	if ( handler_descrip )
-		(*pipeTable)[i].handler_descrip = strdup(handler_descrip);
+		pipeTable[i].handler_descrip = strdup(handler_descrip);
 	else
-		(*pipeTable)[i].handler_descrip = strdup(EMPTY_DESCRIP);
-
-	// Increment the counter of total number of entries
-	nPipe++;
+		pipeTable[i].handler_descrip = strdup(EMPTY_DESCRIP);
 
 	// Update curr_regdataptr for SetDataPtr()
-	curr_regdataptr = &((*pipeTable)[i].data_ptr);
+	curr_regdataptr = &(pipeTable[i].data_ptr);
 
 #ifndef WIN32
 	// On Unix, pipe fds are given to select.  So
@@ -2190,14 +2169,14 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 	// tell our PipeEnd object that we're registered
 	pipeHandleTable[index]->set_registered();
 
-	(*pipeTable)[i].pentry = new PidEntry;
-	(*pipeTable)[i].pentry->hProcess = 0;
-	(*pipeTable)[i].pentry->hThread = 0;
-	(*pipeTable)[i].pentry->pipeReady = 0;
-	(*pipeTable)[i].pentry->deallocate = 0;
-	(*pipeTable)[i].pentry->pipeEnd = pipeHandleTable[index];
+	pipeTable[i].pentry = new PidEntry;
+	pipeTable[i].pentry->hProcess = 0;
+	pipeTable[i].pentry->hThread = 0;
+	pipeTable[i].pentry->pipeReady = 0;
+	pipeTable[i].pentry->deallocate = 0;
+	pipeTable[i].pentry->pipeEnd = pipeHandleTable[index];
 
-	WatchPid((*pipeTable)[i].pentry);
+	WatchPid(pipeTable[i].pentry);
 #endif
 
 	return pipe_end;
@@ -2216,81 +2195,71 @@ int DaemonCore::Cancel_Pipe( int pipe_end )
 		EXCEPT("Cancel_Pipe error");
 	} 
 
-	int i,j;
-
-	i = -1;
-	for (j=0;j<nPipe;j++) {
-		if ( (*pipeTable)[j].index == index ) {
-			i = j;
+	bool found = false;
+	size_t i;
+	for (i = 0; i < pipeTable.size(); i++) {
+		if ( pipeTable[i].index == index ) {
+			found = true;
 			break;
 		}
 	}
 
-	if ( i == -1 ) {
+	if (!found) {
 		dprintf( D_ALWAYS,"Cancel_Pipe: called on non-registered pipe!\n");
 		dprintf( D_ALWAYS,"Offending pipe end number %d\n", pipe_end );
 		return FALSE;
 	}
 
-	// Remove entry at index i by moving the last one in the table here.
+	// Remove entry at index i
 
 	// Clear any data_ptr which go to this entry we just removed
-	if ( curr_regdataptr == &( (*pipeTable)[i].data_ptr) )
+	if ( curr_regdataptr == &( pipeTable[i].data_ptr) )
 		curr_regdataptr = NULL;
-	if ( curr_dataptr == &( (*pipeTable)[i].data_ptr) )
+	if ( curr_dataptr == &(pipeTable[i].data_ptr) )
 		curr_dataptr = NULL;
 
 	// Log a message
 	dprintf(D_DAEMONCORE,
-			"Cancel_Pipe: cancelled pipe end %d <%s> (entry=%d)\n",
-			pipe_end,(*pipeTable)[i].pipe_descrip, i );
+			"Cancel_Pipe: cancelled pipe end %d <%s> (entry=%zu)\n",
+			pipe_end,pipeTable[i].pipe_descrip, i );
 
-	// Remove entry, move the last one in the list into this spot
-	(*pipeTable)[i].index = -1;
-	free( (*pipeTable)[i].pipe_descrip );
-	(*pipeTable)[i].pipe_descrip = NULL;
-	free( (*pipeTable)[i].handler_descrip );
-	(*pipeTable)[i].handler_descrip = NULL;
+	// mark entry unused
+	pipeTable[i].index = -1;
+	free(pipeTable[i].pipe_descrip );
+	pipeTable[i].pipe_descrip = nullptr;
+	free(pipeTable[i].handler_descrip );
+	pipeTable[i].handler_descrip = nullptr;
 
 #ifdef WIN32
 	// we need to notify the PID-watcher thread that it should
 	// no longer watch this pipe
 	// note: we must acccess the deallocate flag in a thread-safe manner.
-	ASSERT( (*pipeTable)[i].pentry );
-	InterlockedExchange(&((*pipeTable)[i].pentry->deallocate),1L);
-	if ((*pipeTable)[i].pentry->watcherEvent) {
-		SetEvent((*pipeTable)[i].pentry->watcherEvent);
+	ASSERT( pipeTable[i].pentry );
+	InterlockedExchange(&(pipeTable[i].pentry->deallocate),1L);
+	if (pipeTable[i].pentry->watcherEvent) {
+		SetEvent(pipeTable[i].pentry->watcherEvent);
 	}
 
 	// call cancel on the PipeEnd, which won't return until the
 	// PID-watcher is no longer using the object and it has been
 	// marked as unregistered
-	(*pipeTable)[i].pentry->pipeEnd->cancel();
+	pipeTable[i].pentry->pipeEnd->cancel();
 
-	if ((*pipeTable)[i].in_handler) {
+	if (pipeTable[i].in_handler) {
 		// Cancel_Pipe is being called from the handler. when the
 		// handler returns, the Driver needs to know whether to
 		// call WatchPid on our PidEntry again. we set the pipeEnd
 		// member of our PidEntry to NULL to tell it not to. the
 		// Driver will deallocate the PidEntry then
-		(*pipeTable)[i].pentry->pipeEnd = NULL;
+		pipeTable[i].pentry->pipeEnd = NULL;
 	}
 	else {
 		// we're not in the handler so we can simply deallocate the
 		// PidEntry now
-		delete (*pipeTable)[i].pentry;
+		delete pipeTable[i].pentry;
 	}
 #endif
-	(*pipeTable)[i].pentry = NULL;
-	if ( i < nPipe - 1 ) {
-            // if not the last entry in the table, move the last one here
-		(*pipeTable)[i] = (*pipeTable)[nPipe - 1];
-		(*pipeTable)[nPipe - 1].index = -1;
-		(*pipeTable)[nPipe - 1].pipe_descrip = NULL;
-		(*pipeTable)[nPipe - 1].handler_descrip = NULL;
-		(*pipeTable)[nPipe - 1].pentry = NULL;
-	}
-	nPipe--;
+	pipeTable[i].pentry = NULL;
 
 #ifndef WIN32
 	// On Unix, pipe fds are passed into select.  So
@@ -2334,15 +2303,14 @@ int DaemonCore::Close_Pipe( int pipe_end )
 	}
 
 	// First, call Cancel_Pipe on this pipefd.
-	int i,j;
-	i = -1;
-	for (j=0;j<nPipe;j++) {                                    
-		if ( (*pipeTable)[j].index == index ) {
-			i = j;
-			break;
+	bool found = false;
+	for (auto &pe: pipeTable) {
+		if (pe.index == index) {
+			found = true;
 		}
 	}
-	if ( i != -1 ) {
+	
+	if (found) {
 		// We now know that this pipe end is registed.  Cancel it.
 		int result = Cancel_Pipe(pipe_end);
 		// ASSERT that it did not fail, because the only reason it should
@@ -2399,12 +2367,9 @@ DaemonCore::Cancel_And_Close_All_Pipes(void)
 	// It will return the number of pipes cancelled + closed.
 	int i = 0;
 
-	while ( nPipe > 0 ) {
-		if ( (*pipeTable)[0].index != -1 ) {	// if a valid entry....
-				// Note:  calling Close_Pipe will decrement
-				// variable nPipe (number of registered Sockets)
-				// by one.
-			Close_Pipe( (*pipeTable)[0].index + PIPE_INDEX_OFFSET );
+	for (auto &pe: pipeTable) {
+		if ( pe.index != -1 ) {	// if a valid entry....
+			Close_Pipe(pe.index + PIPE_INDEX_OFFSET);
 			i++;
 		}
 	}
@@ -3571,10 +3536,10 @@ void DaemonCore::Driver()
 #if !defined(WIN32)
 		// Add the registered pipe fds into the list of descriptors to
 		// select on.
-		for (i = 0; i < nPipe; i++) {
-			if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry....
-				int pipefd = pipeHandleTable[(*pipeTable)[i].index];
-				switch( (*pipeTable)[i].handler_type ) {
+		for (i = 0; i < (int)pipeTable.size(); i++) {
+			if ( pipeTable[i].index != -1 ) {	// if a valid entry....
+				int pipefd = pipeHandleTable[pipeTable[i].index];
+				switch( pipeTable[i].handler_type ) {
 				case HANDLE_READ:
 					selector.add_fd( pipefd, Selector::IO_READ );
 					break;
@@ -3811,28 +3776,28 @@ void DaemonCore::Driver()
 			group_runtime = runtime;
 
 			// scan through the pipe table to find which ones select() set
-			for(i = 0; i < nPipe; i++) {
-				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
+			for(i = 0; i < (int) pipeTable.size(); i++) {
+				if (pipeTable[i].index != -1 ) {	// if a valid entry...
 					// figure out if we should call a handler.
-					(*pipeTable)[i].call_handler = false;
+					pipeTable[i].call_handler = false;
 #ifdef WIN32
 					// For Windows, check if our pidwatcher thread set the flag
-					ASSERT( (*pipeTable)[i].pentry );
-					if (InterlockedExchange(&((*pipeTable)[i].pentry->pipeReady),0L))
+					ASSERT( pipeTable[i].pentry );
+					if (InterlockedExchange(&(pipeTable[i].pentry->pipeReady),0L))
 					{
 						// pipeReady flag was set by the pidwatcher thread.
-						(*pipeTable)[i].call_handler = true;
+						pipeTable[i].call_handler = true;
 					}
 #else
 					// For Unix, check if select set the bit
-					int pipefd = pipeHandleTable[(*pipeTable)[i].index];
+					int pipefd = pipeHandleTable[pipeTable[i].index];
 					if ( selector.fd_ready( pipefd, Selector::IO_READ ) )
 					{
-						(*pipeTable)[i].call_handler = true;
+						pipeTable[i].call_handler = true;
 					}
 					if ( selector.fd_ready( pipefd, Selector::IO_WRITE ) )
 					{
-						(*pipeTable)[i].call_handler = true;
+						pipeTable[i].call_handler = true;
 					}
 #endif
 				}	// end of if valid pipe entry
@@ -3841,18 +3806,18 @@ void DaemonCore::Driver()
 
 			// Now loop through all pipe entries, calling handlers if required.
 			runtime = _condor_debug_get_time_double();
-			for(i = 0; i < nPipe; i++) {
-				if ( (*pipeTable)[i].index != -1 ) {	// if a valid entry...
+			for(i = 0; i < (int) pipeTable.size(); i++) {
+				if ( pipeTable[i].index != -1 ) {	// if a valid entry...
 
-					if ( (*pipeTable)[i].call_handler ) {
+					if ( pipeTable[i].call_handler ) {
 
-						(*pipeTable)[i].call_handler = false;
+						pipeTable[i].call_handler = false;
 
                         dc_stats.PipeMessages += 1;
 
 						// save the pentry on the stack, since we'd otherwise lose it
 						// if the user's handler call Cancel_Pipe().
-						PidEntry* saved_pentry = (*pipeTable)[i].pentry;
+						PidEntry* saved_pentry = pipeTable[i].pentry;
 
 						if ( recheck_status || saved_pentry ) {
 							// we have already called at least one callback handler.  what
@@ -3876,7 +3841,7 @@ void DaemonCore::Driver()
 
 #else
 							// UNIX
-							int pipefd = pipeHandleTable[(*pipeTable)[i].index];
+							int pipefd = pipeHandleTable[pipeTable[i].index];
 							selector.reset();
 							selector.set_timeout( 0 );
 							selector.add_fd( pipefd, Selector::IO_READ );
@@ -3888,25 +3853,25 @@ void DaemonCore::Driver()
 #endif
 						}	// end of if ( recheck_status || saved_pentry )
 
-						(*pipeTable)[i].in_handler = true;
+						pipeTable[i].in_handler = true;
 
 						// log a message
-						int pipe_end = (*pipeTable)[i].index + PIPE_INDEX_OFFSET;
+						int pipe_end = pipeTable[i].index + PIPE_INDEX_OFFSET;
 						dprintf(D_COMMAND,"Calling pipe Handler <%s> for Pipe end=%d <%s>\n",
-									(*pipeTable)[i].handler_descrip,
+									pipeTable[i].handler_descrip,
 									pipe_end,
-									(*pipeTable)[i].pipe_descrip);
+									pipeTable[i].pipe_descrip);
 
 						// Update curr_dataptr for GetDataPtr()
-						curr_dataptr = &( (*pipeTable)[i].data_ptr);
+						curr_dataptr = &( pipeTable[i].data_ptr);
 						recheck_status = true;
-						if ( (*pipeTable)[i].handler )
+						if (pipeTable[i].handler )
 							// a C handler
-							(*( (*pipeTable)[i].handler))(pipe_end);
+							(*(pipeTable[i].handler))(pipe_end);
 						else
-						if ( (*pipeTable)[i].handlercpp )
+						if ( pipeTable[i].handlercpp )
 							// a C++ handler
-							((*pipeTable)[i].service->*( (*pipeTable)[i].handlercpp))(pipe_end);
+							(pipeTable[i].service->*( pipeTable[i].handlercpp))(pipe_end);
 						else
 						{
 							// no handler registered
@@ -3915,7 +3880,7 @@ void DaemonCore::Driver()
 
 						dprintf(D_COMMAND,"Return from pipe Handler\n");
 
-						(*pipeTable)[i].in_handler = false;
+						pipeTable[i].in_handler = false;
 
 						// Make sure we didn't leak our priv state
 						CheckPrivState();
@@ -3935,9 +3900,9 @@ void DaemonCore::Driver()
 #endif
 
 						// update per-handler runtime statistics
-						runtime = dc_stats.AddRuntime((*pipeTable)[i].handler_descrip, runtime);
+						runtime = dc_stats.AddRuntime(pipeTable[i].handler_descrip, runtime);
 
-						if ( (*pipeTable)[i].call_handler == true ) {
+						if ( pipeTable[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
 							// and now entry i no longer points to what we
 							// think it points to.  Decrement i now, so when
@@ -3947,7 +3912,7 @@ void DaemonCore::Driver()
 
 					}	// if call_handler is True
 				}	// if valid entry in pipeTable
-			}	// for 0 thru nPipe checking if call_handler is true
+			}
 
 
 			runtime = _condor_debug_get_time_double();
