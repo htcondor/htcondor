@@ -1551,7 +1551,9 @@ fi
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+%if 0%{?rhel} >= 9
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+%endif
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
 fi
 %endif

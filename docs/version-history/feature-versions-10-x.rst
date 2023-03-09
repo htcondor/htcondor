@@ -81,6 +81,9 @@ Bugs Fixed:
   such as the spool directory.
   :jira:`1631`
 
+- Remove warning when installing HTCondor RPMs on Enterprise Linux 9.
+  :jira:`1571`
+
 Version 10.3.1
 --------------
 
