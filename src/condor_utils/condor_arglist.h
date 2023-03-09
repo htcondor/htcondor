@@ -86,6 +86,7 @@ bool success = split_args("one 'two and' three",&argv,&errmsg);
 // Parse a string into a list of tokens.
 // This expects args in "raw V2" format (no surrounding double-quotes)
 bool split_args(char const *args, SimpleList<MyString> *args_list, std::string* error_msg=NULL);
+bool split_args(char const *args, std::vector<std::string>& args_list, std::string* error_msg=NULL);
 
 // Parse a string into a NULL-terminated string array.
 // This expects args in "raw V2" format (no surrounding double-quotes)
@@ -96,6 +97,7 @@ bool split_args(char const *args, char ***args_array, std::string* error_msg=NUL
 // This produces args in "raw V2" format (no surrounding double-quotes)
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg=0);
 void join_args(SimpleList<MyString> const & args_list, std::string & result, int start_arg=0);
+void join_args(std::vector<std::string> const & args_list, std::string & result, int start_arg=0);
 
 // Produce a string from a NULL-terminated string array, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)

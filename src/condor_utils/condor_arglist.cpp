@@ -105,6 +105,16 @@ join_args( SimpleList<MyString> const & args_list, std::string & result, int sta
 	}
 }
 
+void
+join_args(std::vector<std::string> const & args_list, std::string & result, int start_arg)
+{
+	int i = 0;
+	for (auto& arg : args_list) {
+		if(i++<start_arg) continue;
+		append_arg(arg.c_str(), result);
+	}
+}
+
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
 {
 	SimpleListIterator<MyString> it(args_list);
@@ -193,6 +203,70 @@ bool split_args(
 	}
 	if(parsed_token) {
 		args_list->Append(buf);
+	}
+	return true;
+}
+
+bool split_args(
+  char const *args,
+  std::vector<std::string>& args_list,
+  std::string* error_msg)
+{
+	std::string buf = "";
+	bool parsed_token = false;
+
+	if(!args) return true;
+
+	while(*args) {
+		switch(*args) {
+		case '\'': {
+			char const *quote = args++;
+			parsed_token = true;
+			while(*args) {
+				if(*args == *quote) {
+					if(args[1] == *quote) {
+						// This is a repeated quote, which we treat as an
+						// escape mechanism for quotes.
+						buf += *(args++);
+						args++;
+					}
+					else {
+						break;
+					}
+				}
+				else {
+					buf += *(args++);
+				}
+			}
+			if(!*args) {
+				if(error_msg) {
+					formatstr(*error_msg, "Unbalanced quote starting here: %s", quote);
+				}
+				return false;
+			}
+			args++; //eat the closing quote
+			break;
+		}
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r': {
+			args++; // eat whitespace
+			if(parsed_token) {
+				parsed_token = false;
+				args_list.emplace_back(buf);
+				buf = "";
+			}
+			break;
+		}
+		default:
+			parsed_token = true;
+			buf += *(args++);
+			break;
+		}
+	}
+	if(parsed_token) {
+		args_list.emplace_back(buf);
 	}
 	return true;
 }
