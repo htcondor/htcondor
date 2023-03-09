@@ -692,6 +692,11 @@ find src -perm /a+x -type f -name "*.[Cch]" -exec chmod a-x {} \;
 
 %build
 
+%if 0%{?rhel} == 9
+echo HTCondor 10.0.x is not supported on EL9
+exit 1
+%endif
+
 %if 0%{?rhel} == 7 && 0%{?devtoolset}
 . /opt/rh/devtoolset-%{devtoolset}/enable
 export CC=$(which cc)
