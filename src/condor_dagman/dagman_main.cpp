@@ -393,17 +393,15 @@ Dagman::Config()
 	auto_free_ptr adInjectInfo(param("DAGMAN_NODE_RECORD_INFO"));
 	if (adInjectInfo) {
 		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
-		char* info = strtok(adInjectInfo.ptr(), ",");
-		while (info != NULL) {
-			size_t len = 0;
-			while (isspace(*info)) { ++info; }
-			while (info[len] != '\0' && !isspace(info[len])) { ++len; }
+		StringTokenIterator list(adInjectInfo);
+		for (auto& info : list) {
+			trim(info);
+			lower_case(info);
 			//TODO: If adding more keywords consider using an unsigned int and bit mask
-			if (strncasecmp(info,"retry",len) == MATCH) {
+			if (info.compare("retry") == MATCH) {
 				jobInsertRetry = true;
 				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
 			}
-			info = strtok(NULL, ",");
 		}
 	}
 
