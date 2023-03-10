@@ -295,8 +295,8 @@ where devenv || goto :msb_build
 devenv CONDOR.sln /Build RelWithDebInfo /project ALL_BUILD
 if ERRORLEVEL 1 goto finis
 :RELEASE
-@echo cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=release_dir -P cmake_install.cmake
-cmake.exe -DBUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=release_dir -P cmake_install.cmake
+@echo cmake.exe -DBUILD_TYPE=RelWithDebInfo -P cmake_install.cmake
+cmake.exe -DBUILD_TYPE=RelWithDebInfo -P cmake_install.cmake
 goto finis
 :msb_build
 where msbuild

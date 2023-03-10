@@ -28,16 +28,16 @@
  * LoadDLL class
  ***************************************************************/
 
-LoadDLL::LoadDLL () 
+LoadDLL::LoadDLL () noexcept
 : _dll ( NULL ) {
 }
 
-LoadDLL::LoadDLL ( LPCSTR name ) 
+LoadDLL::LoadDLL ( LPCSTR name ) noexcept
 : _dll ( NULL ) {
     load ( name );
 }
 
-LoadDLL::~LoadDLL () {
+LoadDLL::~LoadDLL () noexcept {
 	if ( NULL != _dll ) {
 		unload ();
 	}

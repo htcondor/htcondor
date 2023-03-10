@@ -503,14 +503,14 @@ void
 UniShadow::logDisconnectedEvent( const char* reason )
 {
 	JobDisconnectedEvent event;
-	event.setDisconnectReason( reason );
+	event.disconnect_reason = reason;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdAddr( dc_startd->addr() );
-	event.setStartdName( dc_startd->name() );
+	event.startd_addr = dc_startd->addr();
+	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
@@ -527,12 +527,12 @@ UniShadow::logReconnectedEvent( void )
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdAddr( dc_startd->addr() );
-	event.setStartdName( dc_startd->name() );
+	event.startd_addr = dc_startd->addr();
+	event.startd_name = dc_startd->name();
 
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
-	event.setStarterAddr( starter );
+	event.starter_addr = starter;
 	free( starter );
 	starter = NULL;
 
@@ -547,13 +547,13 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.setReason( reason );
+	event.reason = reason;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdName( dc_startd->name() );
+	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );

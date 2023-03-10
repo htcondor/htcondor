@@ -1551,7 +1551,9 @@ fi
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+%if 0%{?rhel} < 9
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+%endif
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
 fi
 %endif
@@ -1581,6 +1583,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Mar 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.1-1
+- Execution points now advertise if an sshd is available for ssh to job
+
+* Mon Mar 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.0-1
+- Now evicts OOM killed jobs when they are under their requested memory
+- HTCondor glideins can now use cgroups if one has been prepared
+- Can write job information in an AP history file for each execution attempt
+- Can now specify a lifetime for condor_gangliad metrics
+- The condor_schedd now advertises a count of unmaterialized jobs
+
 * Thu Mar 02 2023 John Knoeller <johnkn@cs.wisc.edu> - 10.0.2-1
 - HTCondor can optionally create intermediate directories for output files
 - Improved condor_schedd scalability when a user runs more than 1,000 jobs

@@ -53,7 +53,7 @@ endif()
 
 # means user did not specify, so change the default.
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-	set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir")
+	set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/release_dir" CACHE PATH "..." FORCE)
  endif()
 
 message(STATUS "***********************************************************")
@@ -509,12 +509,6 @@ if( NOT WINDOWS)
 	set(SIGWAIT_ARGS "2")
 
 	check_function_exists("sched_setaffinity" HAVE_SCHED_SETAFFINITY)
-
-	# Some versions of Clang require an additional C++11 flag, as the default stdlib
-	# is from an old GCC version.
-	if ( "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" )
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-	endif()
 endif()
 
 find_program(LN ln)
@@ -595,7 +589,6 @@ endif()
 ##################################################
 ##################################################
 # compilation/build options.
-option(UW_BUILD "Variable to allow UW-esk builds." OFF)
 option(HAVE_HIBERNATION "Support for condor controlled hibernation" ON)
 option(HAVE_JOB_HOOKS "Enable job hook functionality" ON)
 option(HAVE_BACKFILL "Compiling support for any backfill system" ON)
@@ -610,11 +603,8 @@ option(DOCKER_ALLOW_RUN_AS_ROOT "Support for allow docker universe jobs to run a
 
 #####################################
 # PROPER option
-if (UW_BUILD OR WINDOWS)
+if (APPLE OR WINDOWS)
   option(PROPER "Try to build using native env" OFF)
-
-  dprint("**TO UW: IF YOU WANT CUSTOM SETTINGS ADD THEM HERE**")
-
 else()
   option(PROPER "Try to build using native env" ON)
 endif()
@@ -1066,10 +1056,10 @@ else(MSVC)
 	endif(c_Wvolatile_register_var)
 
 	check_c_compiler_flag(-Wunused-local-typedefs c_Wunused_local_typedefs)
-	if (c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" )
+	if (c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang" )
 		# we don't ever want the 'unused local typedefs' warning treated as an error.
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error=unused-local-typedefs")
-	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+	endif(c_Wunused_local_typedefs AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 
 	# check compiler flag not working for this flag.
 	check_c_compiler_flag(-Wdeprecated-declarations c_Wdeprecated_declarations)
@@ -1092,7 +1082,7 @@ else(MSVC)
 	# Clang on Mac OS X doesn't support -rdynamic, but the
 	# check below claims it does. This is probably because the compiler
 	# just prints a warning, rather than failing.
-	if ( NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "Clang" )
+	if ( NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang" )
 		check_c_compiler_flag(-rdynamic c_rdynamic)
 		if (c_rdynamic)
 			set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -rdynamic")
@@ -1111,9 +1101,9 @@ else(MSVC)
 		set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--enable-new-dtags")
 	endif(LINUX)
 
-	if (HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	if (HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+	endif(HAVE_PTHREADS AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
 
 	check_cxx_compiler_flag(-shared HAVE_CC_SHARED)
 

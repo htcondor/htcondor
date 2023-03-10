@@ -27,6 +27,17 @@ Release Notes:
   you will need to replace it with ``\\\\``.
   :jira:`1573`
 
+- For *condor_annex* users: Amazon Web Services is deprecating the Node.js
+  12.x runtime.  If you ran the *condor_annex* setup command with a previous
+  version of HTCondor, you'll need to update your setup.  Go to the AWS
+  CloudFormation `console <https://console.aws.amazon.com/cloudformation/>`_
+  and look for the stack named ``HTCondorAnnex-LambdaFunctions``.  (You
+  may have to switch regions.)  Click on that stack's radio button, hit
+  the delete button in the table header, and confirm.  Wait for the delete
+  to finish.  Then run ``condor_annex -aws-region region-name-N -setup``
+  for the region.  Repeat for each region of interest.
+  :jira:`1627`.
+
 New Features:
 
 - None.
@@ -48,6 +59,12 @@ Bugs Fixed:
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
 
+- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilites would instantly
+  restart that node everytime it saw a job proc failure. This would result in nodes
+  with multi-proc jobs to resubmit the entire node multiple times causing internal
+  issues for DAGMan.
+  :jira:`1607`
+
 - Fixed a bug where the *condor_master* of a glidein submitted to
   SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
   of the HTCondor-CE.
@@ -61,6 +78,14 @@ Bugs Fixed:
 - If a job's requested credentials are not available when the job is
   about to start, the job is now placed on hold.
   :jira:`1600`
+
+- Fixed a bug that would cause the *condor_schedd* to hang if an
+  invalid condor cron argument was submitted
+  :jira:`1624`
+
+- Fixed a bug where cron jobs put on hold due to invalid time specifications
+  would be unable to be removed from the job queue with tools.
+  :jira:`1629`
 
 - Fixed how the *condor_gridmanager* handles failed ARC CE jobs.
   Before, it would endlessly re-query the status of jobs that failed

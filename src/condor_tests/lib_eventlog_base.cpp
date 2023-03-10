@@ -178,7 +178,7 @@ WriteEventLog( const char *event_log, int &num_events )
 	jobterminated.sent_bytes = 400000;
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
-	jobterminated.setCoreFile( "core" );
+	jobterminated.core_file = "core";
 	if ( !writer.writeEvent(&jobterminated) ) {
 		fprintf( stderr, "Failed to write execute event\n");
 		errors++;

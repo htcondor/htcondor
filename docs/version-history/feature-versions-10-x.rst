@@ -70,6 +70,10 @@ New Features:
   the SCITOKENS authentication method.
   :jira:`1515`
 
+- Added ability for DAGMan to automatically record the Node Retry attempt in that
+  nodes job ad. This is done by setting the new configuration option :macro:`DAGMAN_NODE_RECORD_INFO`.
+  :jira:`1634`
+
 Bugs Fixed:
 
 - Fixed bug where the *condor_shadow* would crash during job removal
@@ -83,12 +87,18 @@ Bugs Fixed:
   the view server stats file are deleted at just the wrong time.
   :jira:`1599`
 
+- Fixed a bug where *condor_shadow* was unable to write the job ad to the
+  :macro:`JOB_EPOCH_HISTORY` file when located in condor owned directories
+  such as the spool directory.
+  :jira:`1631`
+
+- Remove warning when installing HTCondor RPMs on Enterprise Linux 9.
+  :jira:`1571`
+
 Version 10.3.1
 --------------
 
-.. HTCondor version 10.3.1 released on March 7, 2023.
-
-- HTCondor version 10.3.1 not yet released.
+- HTCondor version 10.3.1 released on March 7, 2023.
 
 New Features:
 
@@ -106,9 +116,7 @@ Version 10.3.0
 
 Release Notes:
 
-.. HTCondor version 10.3.0 released on Month Date, 2023.
-
-- HTCondor version 10.3.0 not yet released.
+- HTCondor version 10.3.0 released on March 6, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1002`.
 

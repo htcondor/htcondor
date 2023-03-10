@@ -530,7 +530,7 @@ pseudo_ulog( ClassAd *ad )
 			//Insert remote host information.
 			char *execute_host = NULL;
 			thisRemoteResource->getMachineName(execute_host);
-			err->setExecuteHost(execute_host);
+			err->execute_host = execute_host;
 			free(execute_host);
 		}
 

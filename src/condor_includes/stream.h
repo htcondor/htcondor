@@ -367,6 +367,7 @@ public:
 		// The length returned in argument len includes the NUL terminator.
 	int get_secret( char *&s );
 	int get_secret( const char *&s, int &len );
+	int get_secret( std::string& s );
 
 		// This is just like put(char const *), but it calls
 		// prepare_crypto_for_secret() before and

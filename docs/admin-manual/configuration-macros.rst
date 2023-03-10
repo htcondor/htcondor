@@ -8570,12 +8570,12 @@ General
     footprint, parse time, and submit speed.
 
 :macro-def:`DAGMAN_PUT_FAILED_JOBS_ON_HOLD`
-    A boolean value that controls what happens when a job in a DAG fails.
-    When set to ``True``, *condor_dagman* will keep the job in the queue and
-    put it on hold. If the failure was due to a transient error (i.e. a
-    temporary network outage), this gives users an opportunity to fix the
-    problem, release the job and continue their DAG execution. Defaults 
-    to ``False``.
+    A boolean value that when set to ``True`` causes DAGMan to automatically
+    retry a node with its job submitted on hold, if any of the nodes job procs
+    fail. This only applies for job failures and not ``PRE``, ``POST``, or
+    ``HOLD`` script failures within a DAG node. The job is only put on hold
+    if the node has no more declared ``RETRY`` attempts. The default value is
+    ``False``.
 
 :macro-def:`DAGMAN_DEFAULT_APPEND_VARS`
     A boolean value that defaults to ``False``. When ``True``, variables
@@ -8593,6 +8593,11 @@ General
     .. code-block:: dagman-base-getenv
 
         getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ
+
+:macro-def:`DAGMAN_NODE_RECORD_INFO`
+    A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current
+    retry attempt number into the nodes job ad as the attribute ``DAGManNodeRetry``
+    at submission time. This knob is not set by default.
 
 Throttling
 ''''''''''

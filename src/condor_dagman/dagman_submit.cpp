@@ -339,6 +339,12 @@ condor_submit( const Dagman &dm, const char* cmdFile, CondorID& condorID,
 	std::string jobarg("JOB="); jobarg += DAGNodeName;
 	args.AppendArg(jobarg.c_str());
 
+	if (dm.jobInsertRetry && retry > 0) {
+		std::string adRetryStr = "MY.DAGManNodeRetry=";
+		adRetryStr += std::to_string(retry);
+		args.AppendArg(adRetryStr.c_str());
+	}
+
 	for (auto & nodeVar : node->varsFromDag) {
 		
 			// Substitute the node retry count if necessary.  Note that
@@ -519,6 +525,10 @@ static void init_dag_vars(SubmitHash * submitHash,
 
 		// set RETRY for $(RETRY) substitution
 		submitHash->set_arg_variable("RETRY", std::to_string(retry).c_str());
+
+		if (dm.jobInsertRetry && retry > 0) {
+			submitHash->set_arg_variable("MY.DAGManNodeRetry", std::to_string(retry).c_str());
+		}
 
 		// Set the special DAG_STATUS variable (mainly for use by "final" nodes).
 		submitHash->set_arg_variable("DAG_STATUS", std::to_string((int)dm.dag->_dagStatus).c_str());
@@ -912,10 +922,8 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	pEvent.proc = condorID._proc;
 	pEvent.subproc = condorID._subproc;
 
-	std::string pEventNotes("DAG Node: " );
-	pEventNotes += DAGNodeName;
-		// skipEventLogNotes gets deleted in PreSkipEvent destructor.
-	pEvent.skipEventLogNotes = strnewp( pEventNotes.c_str() );
+	pEvent.skipEventLogNotes = "DAG Node: ";
+	pEvent.skipEventLogNotes += DAGNodeName;
 
 	if ( !ulog.writeEvent( &pEvent ) ) {
 		EXCEPT( "Error: writing PRESKIP event failed!" );

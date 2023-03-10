@@ -125,6 +125,8 @@ Dagman::Dagman() :
 	submitDepthFirst (false), // so Coverity is happy
 	abortOnScarySubmit (true), // so Coverity is happy
 	useDirectSubmit (true), // so Coverity is happy
+	doAppendVars (false),
+	jobInsertRetry (false),
 	pendingReportInterval (10 * 60), // 10 minutes
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(true),
@@ -384,6 +386,24 @@ Dagman::Config()
 	doAppendVars = param_boolean("DAGMAN_DEFAULT_APPEND_VARS", false);
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n",
 		doAppendVars ? "True" : "False" );
+
+	//DAGMan information to be added to node jobs job ads (expects comma seperated list)
+	//Note: If more keywords/options added please update the config knob description accordingly
+	//-Cole Bollig 2023-03-09
+	auto_free_ptr adInjectInfo(param("DAGMAN_NODE_RECORD_INFO"));
+	if (adInjectInfo) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
+		StringTokenIterator list(adInjectInfo);
+		for (auto& info : list) {
+			trim(info);
+			lower_case(info);
+			//TODO: If adding more keywords consider using an unsigned int and bit mask
+			if (info.compare("retry") == MATCH) {
+				jobInsertRetry = true;
+				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
+			}
+		}
+	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );

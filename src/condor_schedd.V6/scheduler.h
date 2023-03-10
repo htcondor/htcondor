@@ -532,6 +532,7 @@ class Scheduler : public Service
 	void			removeJobFromIndexes(const JOB_ID_KEY& job_id, int job_prio=0);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
+	int				CmdDirectAttach(int cmd, Stream* stream);
 
 	int			FindGManagerPid(PROC_ID job_id);
 

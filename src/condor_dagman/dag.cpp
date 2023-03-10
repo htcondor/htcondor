@@ -39,7 +39,6 @@
 #include "dagman_main.h"
 #include "write_user_log.h"
 #include "simplelist.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "condor_daemon_core.h"
 #include <set>
 #include "dagman_metrics.h"
@@ -904,7 +903,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// being used to parse a splice.
 	ASSERT ( _isSplice == false );
 
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster  ) {
+	if ( job->AllProcsDone() ) {
 			// Log job success or failure if necessary.
 		_jobstateLog.WriteJobSuccessOrFailure( job );
 	}
@@ -917,18 +916,16 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	bool putFailedJobsOnHold = param_boolean("DAGMAN_PUT_FAILED_JOBS_ON_HOLD", false);
 	if ( failed && job->_scriptPost == NULL ) {
 		if ( job->DoRetry() ) {
-			// If this is a cluster job with multiple procs, do not restart it now.
-			// That should happen in ProcessClusterRemoveEvent().
-			if ( !job->is_cluster ) {
-				RestartNode( job, recovery );
-			}
+			if (job->AllProcsDone()) { RestartNode( job, recovery ); }
 		} else if ( putFailedJobsOnHold ) {
 			job->SetHold( true );
 			// Increase the job's retry max, so it will try again after the
 			// retry count gets increased in the RestartNode() function.
 			// We might want to limit this to avoid livelock.
-			job->SetRetryMax( job->GetRetryMax() + 1 );
-			RestartNode( job, recovery );
+			if (job->AllProcsDone()) {
+				job->SetRetryMax( job->GetRetryMax() + 1 );
+				RestartNode( job, recovery );
+			}
 		} else {
 				// no more retries -- job failed
 			if( job->GetRetryMax() > 0 ) {
@@ -950,7 +947,7 @@ Dag::ProcessJobProcEnd(Job *job, bool recovery, bool failed) {
 	// If this is *not* a multi-proc cluster job, and no more procs are
 	// outstanding, start shutting things down now.
 	// Multi-proc cluster jobs get shut down in ProcessClusterRemoveEvent().
-	if ( job->_queuedNodeJobProcs == 0 && !job->is_cluster ) {
+	if ( job->AllProcsDone() ) {
 			// All procs for this job are done.
 			debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 				job->GetJobName() );
@@ -1285,8 +1282,8 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	ASSERT( event );
 
 	const JobHeldEvent *heldEvent = (const JobHeldEvent *)event;
-	const char *reason = heldEvent->getReason() ?
-				heldEvent->getReason() : "(unknown)";
+	const char *reason = heldEvent->reason.empty() ?
+		"(unknown)" : heldEvent->reason.c_str();
 	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", reason );
 
 	if( job->Hold( event->proc ) ) {
@@ -1323,7 +1320,7 @@ Dag::ProcessClusterSubmitEvent(Job *job) {
 	if ( !job ) {
 		return;
 	}
-	job->is_cluster = true;
+	job->is_factory = true;
 }
 
 //---------------------------------------------------------------------------
@@ -1336,7 +1333,7 @@ Dag::ProcessClusterRemoveEvent(Job *job, bool recovery) {
 
 	// Make sure the job is a multi-proc cluster, and has no more queued procs. 
 	// Otherwise something is wrong.
-	if ( job->_queuedNodeJobProcs == 0 && job->is_cluster ) {
+	if ( job->_queuedNodeJobProcs == 0 && job->is_factory ) {
 		// All procs for this job are done.
 		debug_printf( DEBUG_NORMAL, "Node %s job completed\n",
 			job->GetJobName() );
@@ -2012,7 +2009,7 @@ Dag::PostScriptReaper( Job *job, int status )
 
 	PostScriptTerminatedEvent event;
 	
-	event.dagNodeName = strnewp( job->GetJobName() );
+	event.dagNodeName = job->GetJobName();
 
 	if( WIFSIGNALED( status ) ) {
 		debug_printf( DEBUG_QUIET, "POST script died on signal %d\n", status );
@@ -3905,17 +3902,17 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		event->cluster == -1 ) {
 		const PostScriptTerminatedEvent* pst_event =
 			(const PostScriptTerminatedEvent*)event;
-		node = FindNodeByName( pst_event->dagNodeName );
+		node = FindNodeByName( pst_event->dagNodeName.c_str() );
 		return node;
 	}
 	
 	if( event->eventNumber == ULOG_PRESKIP ) {
 		const PreSkipEvent* skip_event = (const PreSkipEvent*)event;
 		char nodeName[1024] = "";
-		if( !skip_event->skipEventLogNotes ) { 
+		if( skip_event->skipEventLogNotes.empty() ) {
 			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
 			node = NULL;
-		} else if( sscanf( skip_event->skipEventLogNotes, "DAG Node: %1023s",
+		} else if( sscanf( skip_event->skipEventLogNotes.c_str(), "DAG Node: %1023s",
 				nodeName ) == 1) {
 			node = FindNodeByName( nodeName );
 			if( node ) {
@@ -3939,7 +3936,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 						"in skip event notes: <%s>\n",
-						skip_event->skipEventLogNotes );
+						  skip_event->skipEventLogNotes.c_str() );
 		}
 		return node;
 	}
@@ -4369,7 +4366,7 @@ Dag::DecrementProcCount( Job *node )
 	node->_queuedNodeJobProcs--;
 	ASSERT( node->_queuedNodeJobProcs >= 0 );
 
-	if( !node->is_cluster && node->_queuedNodeJobProcs == 0 ) {
+	if( node->AllProcsDone() ) {
 		UpdateJobCounts( node, -1 );
 		node->Cleanup();
 	}

@@ -4524,12 +4524,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	JobAbortedEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	}
+	GetAttributeString(job_id.cluster, job_id.proc,
+	                   ATTR_REMOVE_REASON, event.reason);
 
 	// Jobs usually have a shadow, and this event is usually written after
 	// that shadow dies, but that's by no means certain.  If we happen to
@@ -4566,30 +4562,18 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	}
 	JobHeldEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_HOLD_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	} else {
+	if( GetAttributeString(job_id.cluster, job_id.proc,
+	                       ATTR_HOLD_REASON, event.reason) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
 
-	int hold_reason_code;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_CODE, &hold_reason_code) >= 0 )
-	{
-		event.setReasonCode(hold_reason_code);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_CODE, &event.code);
 
-	int hold_reason_subcode;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_SUBCODE, &hold_reason_subcode)	>= 0 )
-	{
-		event.setReasonSubCode(hold_reason_subcode);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_SUBCODE, &event.subcode);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -4616,12 +4600,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	}
 	JobReleasedEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_RELEASE_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	}
+	GetAttributeString(job_id.cluster, job_id.proc,
+	                   ATTR_RELEASE_REASON, event.reason);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -4776,7 +4756,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		event.signal_number = WTERMSIG(status);
 	}
 	if(reason) {
-		event.setReason(reason);
+		event.reason = reason;
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -7769,6 +7749,75 @@ Scheduler::negotiate(int command, Stream* s)
 }
 
 
+int
+Scheduler::CmdDirectAttach(int, Stream* stream)
+{
+	ReliSock *rsock = (ReliSock*)stream;
+	ClassAd cmd_ad;
+	int num_ads = 0;
+	std::string claim_id;
+	ClassAd slot_ad;
+	std::string slot_user;
+	std::string slot_submitter;
+	PROC_ID jobid;
+	jobid.cluster = jobid.proc = -1;
+
+	dprintf(D_FULLDEBUG, "Got DIRECT_ATTACH from %s\n", rsock->peer_description());
+
+	if (!getClassAd(rsock, cmd_ad)) {
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read command ad\n");
+		return 0;
+	}
+
+	slot_user = rsock->getFullyQualifiedUser();
+
+	if (!cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter)) {
+		slot_submitter = slot_user;
+	}
+
+		// TODO handle alternate submitter names
+	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
+
+	cmd_ad.LookupInteger(ATTR_NUM_ADS, num_ads);
+	dprintf(D_FULLDEBUG, "CmdDirectAttach() reading %d slot ads\n", num_ads);
+
+	for (int i = 0; i < num_ads; i++) {
+		std::string slot_name;
+		if (!rsock->get_secret(claim_id) || !getClassAd(rsock, slot_ad)) {
+			dprintf(D_ALWAYS, "CmdDirectAttach() failed to read slot ad %d\n", i);
+			return 0;
+		}
+
+			// TODO allow trusted users to match all jobs
+			//   Could use ATTR_NEGOTIATOR_SCHEDDS_ARE_SUBMITTERS
+		slot_ad.Assign(ATTR_AUTHENTICATED_IDENTITY, slot_user);
+		slot_ad.Assign(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, true);
+
+		slot_ad.LookupString(ATTR_NAME, slot_name);
+
+			// TODO handle pre-claimed slots
+			// TODO handle slots already in use
+		sn.scheduler_handleMatch(jobid, claim_id.c_str(), "", slot_ad, slot_name.c_str());
+	}
+
+	if (!rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to read eom\n");
+		return 0;
+	}
+
+	ClassAd reply_ad;
+	reply_ad.Assign(ATTR_ACTION_RESULT, OK);
+
+	rsock->encode();
+	if (!putClassAd(rsock, reply_ad) || !rsock->end_of_message()) {
+		dprintf(D_ALWAYS, "CmdDirectAttach() failed to send reply\n");
+		return 0;
+	}
+
+	return 0;
+}
+
+
 void
 Scheduler::release_claim(int, Stream *sock)
 {
@@ -8077,6 +8126,11 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 			}
 		}
 
+		// These attributes are added by the schedd to slot ads that
+		// arrive via DIRECT_ATTACH. Copy them into the lefteovers ad.
+		CopyAttribute(ATTR_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
+		CopyAttribute(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
+
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
 		ClaimIdParser idp( msg->leftover_claim_id() );
@@ -8288,9 +8342,9 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
-		event.setDisconnectReason( txt );
-		event.setStartdAddr( startd_addr );
-		event.setStartdName( startd_name );
+		event.disconnect_reason = txt;
+		event.startd_addr = startd_addr;
+		event.startd_name = startd_name;
 
 		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
@@ -13356,6 +13410,11 @@ Scheduler::Register()
 			(CommandHandlercpp)&Scheduler::RecycleShadow,
 			"RecycleShadow", this, DAEMON,
 			true /*force authentication*/);
+	 daemonCore->Register_CommandWithPayload(DIRECT_ATTACH,
+			"DIRECT_ATTACH",
+			(CommandHandlercpp)&Scheduler::CmdDirectAttach,
+			"DirectAttach", this, WRITE,
+			true /*force authentication*/);
 
 		 // Commands used by the startd are registered at READ
 		 // level rather than something like DAEMON or WRITE in order
@@ -16145,7 +16204,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 				 ATTR_JOB_STATUS);
 		return ( false );
 	}
-	if ( status == RUNNING || status == TRANSFERRING_OUTPUT ) {
+	if ( status != IDLE ) {
 		return ( true );
 	}
 
@@ -16180,6 +16239,7 @@ Scheduler::calculateCronTabSchedule( ClassAd *jobAd, bool calculate )
 			if ( valid ) {
 				this->cronTabs->insert( id, cronTab, true );
 			} else {
+				error = cronTab->getError();
 				delete cronTab;
 				cronTab = 0;
 			}

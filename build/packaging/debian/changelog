@@ -1,3 +1,19 @@
+condor (10.3.1-1) stable; urgency=medium
+
+  * Execution points now advertise if an sshd is available for ssh to job
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Mar 2023 14:36:00 -0600
+
+condor (10.3.0-1) stable; urgency=medium
+
+  * Now evicts OOM killed jobs when they are under their requested memory
+  * HTCondor glideins can now use cgroups if one has been prepared
+  * Can write job information in an AP history file for each execution attempt
+  * Can now specify a lifetime for condor_gangliad metrics
+  * The condor_schedd now advertises a count of unmaterialized jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 06 Mar 2023 14:22:00 -0600
+
 condor (10.0.2-1) stable; urgency=medium
 
   * HTCondor can optionally create intermediate directories for output files

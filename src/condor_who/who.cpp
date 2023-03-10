@@ -30,7 +30,7 @@
 #include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "condor_api.h"
-#include "condor_string.h"   // for strnewp()
+#include "condor_string.h"
 #include "status_types.h"
 #include "directory.h"
 #include "format_time.h"
