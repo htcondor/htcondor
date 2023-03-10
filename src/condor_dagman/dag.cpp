@@ -39,7 +39,6 @@
 #include "dagman_main.h"
 #include "write_user_log.h"
 #include "simplelist.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "condor_daemon_core.h"
 #include <set>
 #include "dagman_metrics.h"
@@ -1283,8 +1282,8 @@ Dag::ProcessHeldEvent(Job *job, const ULogEvent *event) {
 	ASSERT( event );
 
 	const JobHeldEvent *heldEvent = (const JobHeldEvent *)event;
-	const char *reason = heldEvent->getReason() ?
-				heldEvent->getReason() : "(unknown)";
+	const char *reason = heldEvent->reason.empty() ?
+		"(unknown)" : heldEvent->reason.c_str();
 	debug_printf( DEBUG_VERBOSE, "  Hold reason: %s\n", reason );
 
 	if( job->Hold( event->proc ) ) {
@@ -2010,7 +2009,7 @@ Dag::PostScriptReaper( Job *job, int status )
 
 	PostScriptTerminatedEvent event;
 	
-	event.dagNodeName = strnewp( job->GetJobName() );
+	event.dagNodeName = job->GetJobName();
 
 	if( WIFSIGNALED( status ) ) {
 		debug_printf( DEBUG_QUIET, "POST script died on signal %d\n", status );
@@ -3903,17 +3902,17 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		event->cluster == -1 ) {
 		const PostScriptTerminatedEvent* pst_event =
 			(const PostScriptTerminatedEvent*)event;
-		node = FindNodeByName( pst_event->dagNodeName );
+		node = FindNodeByName( pst_event->dagNodeName.c_str() );
 		return node;
 	}
 	
 	if( event->eventNumber == ULOG_PRESKIP ) {
 		const PreSkipEvent* skip_event = (const PreSkipEvent*)event;
 		char nodeName[1024] = "";
-		if( !skip_event->skipEventLogNotes ) { 
+		if( skip_event->skipEventLogNotes.empty() ) {
 			debug_printf( DEBUG_NORMAL, "No DAG Node indicated in a PRE_SKIP event\n" );	
 			node = NULL;
-		} else if( sscanf( skip_event->skipEventLogNotes, "DAG Node: %1023s",
+		} else if( sscanf( skip_event->skipEventLogNotes.c_str(), "DAG Node: %1023s",
 				nodeName ) == 1) {
 			node = FindNodeByName( nodeName );
 			if( node ) {
@@ -3937,7 +3936,7 @@ Dag::LogEventNodeLookup( const ULogEvent* event,
 		} else {
 			debug_printf( DEBUG_QUIET, "ERROR: 'DAG Node:' not found "
 						"in skip event notes: <%s>\n",
-						skip_event->skipEventLogNotes );
+						  skip_event->skipEventLogNotes.c_str() );
 		}
 		return node;
 	}

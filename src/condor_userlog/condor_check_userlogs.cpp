@@ -106,8 +106,8 @@ int main(int argc, char **argv)
 			
 			if( e->eventNumber == ULOG_JOB_HELD ) {
 				JobHeldEvent* ee = (JobHeldEvent*) e;
-				printf( " (code=%d subcode=%d)", ee->getReasonCode(),
-						ee->getReasonSubCode());
+				printf( " (code=%d subcode=%d)", ee->code,
+						ee->subcode);
 			}
 
 			if( e->eventNumber == ULOG_JOB_TERMINATED ) {

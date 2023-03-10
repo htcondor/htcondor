@@ -36,7 +36,6 @@
 #include "dagman_main.h"
 #include "tmp_dir.h"
 #include "basename.h"
-#include "condor_string.h"  /* for strnewp() */
 #include "condor_getcwd.h"
 
 static const char   COMMENT    = '#';

@@ -1014,7 +1014,6 @@ bool
 WriteAbortEventToUserLog( ClassAd *job_ad )
 {
 	int cluster, proc;
-	char removeReason[256];
 	WriteUserLog ulog;
 	// TODO Check return value of initialize()
 	ulog.initialize( *job_ad );
@@ -1032,11 +1031,7 @@ WriteAbortEventToUserLog( ClassAd *job_ad )
 
 	JobAbortedEvent event;
 
-	removeReason[0] = '\0';
-	job_ad->LookupString( ATTR_REMOVE_REASON, removeReason,
-						   sizeof(removeReason) );
-
-	event.setReason( removeReason );
+	job_ad->LookupString(ATTR_REMOVE_REASON, event.reason);
 
 	int rc = ulog.writeEvent(&event,job_ad);
 

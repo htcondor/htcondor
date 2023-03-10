@@ -4524,12 +4524,8 @@ Scheduler::WriteAbortToUserLog( PROC_ID job_id )
 	}
 	JobAbortedEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_REMOVE_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	}
+	GetAttributeString(job_id.cluster, job_id.proc,
+	                   ATTR_REMOVE_REASON, event.reason);
 
 	// Jobs usually have a shadow, and this event is usually written after
 	// that shadow dies, but that's by no means certain.  If we happen to
@@ -4566,30 +4562,18 @@ Scheduler::WriteHoldToUserLog( PROC_ID job_id )
 	}
 	JobHeldEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_HOLD_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	} else {
+	if( GetAttributeString(job_id.cluster, job_id.proc,
+	                       ATTR_HOLD_REASON, event.reason) < 0 ) {
 		dprintf( D_ALWAYS, "Scheduler::WriteHoldToUserLog(): "
 				 "Failed to get %s from job %d.%d\n", ATTR_HOLD_REASON,
 				 job_id.cluster, job_id.proc );
 	}
 
-	int hold_reason_code;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_CODE, &hold_reason_code) >= 0 )
-	{
-		event.setReasonCode(hold_reason_code);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_CODE, &event.code);
 
-	int hold_reason_subcode;
-	if( GetAttributeInt(job_id.cluster, job_id.proc,
-	                    ATTR_HOLD_REASON_SUBCODE, &hold_reason_subcode)	>= 0 )
-	{
-		event.setReasonSubCode(hold_reason_subcode);
-	}
+	GetAttributeInt(job_id.cluster, job_id.proc,
+	                ATTR_HOLD_REASON_SUBCODE, &event.subcode);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -4616,12 +4600,8 @@ Scheduler::WriteReleaseToUserLog( PROC_ID job_id )
 	}
 	JobReleasedEvent event;
 
-	char* reason = NULL;
-	if( GetAttributeStringNew(job_id.cluster, job_id.proc,
-							  ATTR_RELEASE_REASON, &reason) >= 0 ) {
-		event.setReason( reason );
-		free( reason );
-	}
+	GetAttributeString(job_id.cluster, job_id.proc,
+	                   ATTR_RELEASE_REASON, event.reason);
 
 	bool status =
 		ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
@@ -4776,7 +4756,7 @@ Scheduler::WriteRequeueToUserLog( PROC_ID job_id, int status, const char * reaso
 		event.signal_number = WTERMSIG(status);
 	}
 	if(reason) {
-		event.setReason(reason);
+		event.reason = reason;
 	}
 	bool rval = ULog->writeEvent(&event,GetJobAd(job_id.cluster,job_id.proc));
 	delete ULog;
@@ -8362,9 +8342,9 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		JobDisconnectedEvent event;
 		const char* txt = "Local schedd and job shadow died, "
 			"schedd now running again";
-		event.setDisconnectReason( txt );
-		event.setStartdAddr( startd_addr );
-		event.setStartdName( startd_name );
+		event.disconnect_reason = txt;
+		event.startd_addr = startd_addr;
+		event.startd_name = startd_name;
 
 		if( !ULog->writeEventNoFsync(&event,GetJobAd(cluster,proc)) ) {
 			dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );

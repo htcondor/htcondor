@@ -922,10 +922,8 @@ bool writePreSkipEvent( CondorID& condorID, Job* job, const char* DAGNodeName,
 	pEvent.proc = condorID._proc;
 	pEvent.subproc = condorID._subproc;
 
-	std::string pEventNotes("DAG Node: " );
-	pEventNotes += DAGNodeName;
-		// skipEventLogNotes gets deleted in PreSkipEvent destructor.
-	pEvent.skipEventLogNotes = strnewp( pEventNotes.c_str() );
+	pEvent.skipEventLogNotes = "DAG Node: ";
+	pEvent.skipEventLogNotes += DAGNodeName;
 
 	if ( !ulog.writeEvent( &pEvent ) ) {
 		EXCEPT( "Error: writing PRESKIP event failed!" );

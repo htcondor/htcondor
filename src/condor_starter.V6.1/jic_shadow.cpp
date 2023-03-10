@@ -1012,8 +1012,8 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;
-		event.setErrorText( err_msg );
-		event.setDaemonName( "starter" );
+		event.error_str = err_msg;
+		event.daemon_name = "starter";
 		event.setCriticalError( false );
 		event.setHoldReasonCode( hold_reason_code );
 		event.setHoldReasonSubCode( hold_reason_subcode );

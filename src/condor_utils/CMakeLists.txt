@@ -86,7 +86,6 @@ stl_string_utils.h
 strcasestr.cpp
 string_list.cpp
 string_list.h
-strnewp.cpp
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h

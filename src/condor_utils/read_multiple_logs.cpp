@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
-#include "condor_string.h" // for strnewp()
+#include "condor_string.h"
 #include "tmp_dir.h"
 #include "stat_wrapper.h"
 #include "condor_getcwd.h"

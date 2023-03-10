@@ -992,8 +992,8 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	RemoteErrorEvent event;
 	ClassAd *ad;
 	//NOTE: "ExecuteHost" info will be inserted by the shadow.
-	event.setDaemonName("starter"); //TODO: where should this come from?
-	event.setErrorText( str );
+	event.daemon_name = "starter"; //TODO: where should this come from?
+	event.error_str = str;
 	event.setCriticalError( true );
 	event.setHoldReasonCode( hold_reason_code );
 	event.setHoldReasonSubCode( hold_reason_subcode );

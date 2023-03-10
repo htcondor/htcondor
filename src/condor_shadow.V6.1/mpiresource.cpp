@@ -75,7 +75,7 @@ MpiResource::resourceExit( int reason, int status )
 			bool had_core = false;
 			jobAd->LookupBool( ATTR_JOB_CORE_DUMPED, had_core );
 			if( had_core ) {
-				event.setCoreFile( shadow->getCoreName() );
+				event.core_file = shadow->getCoreName();
 			}
 
 				// TODO: fill in local/total rusage
@@ -138,7 +138,7 @@ MpiResource::beginExecution( void )
 	}
 
 	NodeExecuteEvent event;
-	event.setExecuteHost( startd_addr );
+	event.executeHost = startd_addr;
 	event.node = node_num;
 	if( ! writeULogEvent(&event) ) {
 		dprintf( D_ALWAYS, "Unable to log NODE_EXECUTE event.\n" );
