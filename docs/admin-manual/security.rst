@@ -1544,9 +1544,14 @@ Some other JWT token types can be used with the SciTokens
 authentication method. WLCG tokens are accepted automatically.
 Other token types, such as EGI CheckIn tokens, require some relaxation
 of the SciTokens validation checks.
-For these token types to work, you must set configuration parameter
-``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES`` to ``True``.
-This parameter should be used with caution, as it disables some
+Configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
+determines whether any tokens will be accepted under these relaxed
+checks. It's a boolean value that defaults to ``True``.
+Configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+determines which issuers' tokens will be accepted under these relaxed
+checks. It's a list of issuer URLs that defaults to the EGI CheckIn
+issuer.
+These parameters should be used with caution, as they disable some
 security checks.
 
 Ask MUNGE for Authentication

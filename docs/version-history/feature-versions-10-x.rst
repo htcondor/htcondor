@@ -63,6 +63,13 @@ New Features:
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
 
+- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+  restricts which issuers' tokens will be accepted under
+  ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
+  Updated default values allow EGI CheckIn tokens to be accepted under
+  the SCITOKENS authentication method.
+  :jira:`1515`
+
 - Added ability for DAGMan to automatically record the Node Retry attempt in that
   nodes job ad. This is done by setting the new configuration option :macro:`DAGMAN_NODE_RECORD_INFO`.
   :jira:`1634`
