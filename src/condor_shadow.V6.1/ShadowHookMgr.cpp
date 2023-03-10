@@ -20,6 +20,7 @@
 #include "condor_common.h"
 
 #include "basename.h"
+#include "cred_dir.h"
 #include "condor_attributes.h"
 #include "condor_holdcodes.h"
 #include "directory.h"
@@ -34,6 +35,7 @@ extern BaseShadow *Shadow;
 
 
 namespace {
+
 std::string getCredDir()
 {
 	auto job_ad = Shadow->getJobAd();
@@ -56,6 +58,7 @@ std::string getCredDir()
 		DIR_DELIM_CHAR, cluster, proc);
 	return cred_dir;
 }
+
 }
 
 
@@ -179,148 +182,20 @@ ShadowHookMgr::tryHookPrepareJob()
 	auto hook_name = getHookTypeString(hook_client->type());
 
 	Env env;
-	std::string services_needed;
-	if (job_ad->EvaluateAttrString(ATTR_OAUTH_SERVICES_NEEDED, services_needed)) {
-		dprintf(D_FULLDEBUG, "Will populate credentials directory for hook.\n");
-	} else {
-		dprintf(D_FULLDEBUG, "No OAuth services are requested.\n");
-	}
-	bool send_krb5_credential = false;
-	if (!job_ad->EvaluateAttrBool(ATTR_JOB_SEND_CREDENTIAL, send_krb5_credential)) {
-		send_krb5_credential = false;
-	}
-
-	// Automatically delete the creds directory on failure.
-	std::unique_ptr<std::string, void(*)(std::string*)> cred_dir_deleter(nullptr, [](std::string *path) {
-		Directory cred_dirp(path->c_str(), PRIV_ROOT);
-		cred_dirp.Remove_Entire_Directory();
-	});
-
-	std::string cred_dir;
-	if (send_krb5_credential || !services_needed.empty()) {
-		if ((cred_dir = getCredDir()) == "") {
-			return -1;
-		}
-#ifdef WIN32
-		if (!mkdir_and_parents_if_needed(cred_dir.c_str(), 0755, PRIV_USER))
-#else
-		if (!mkdir_and_parents_if_needed(cred_dir.c_str(), 0755, PRIV_CONDOR))
-#endif
-		{
-			dprintf(D_ALWAYS|D_FAILURE, "Failed to create credentials directory %s for job hook: %s\n",
-				cred_dir.c_str(), strerror(errno));
-			return -1;
-		}
-		cred_dir_deleter.reset(&cred_dir);
-		env.SetEnv("_CONDOR_CREDS", cred_dir.c_str());
-	}
-
-	std::string job_user;
-	if (!job_ad->EvaluateAttrString(ATTR_USER, job_user)) {
-		dprintf(D_ALWAYS|D_FAILURE, "Shadow copy of the job ad does not have user attribute.\n");
+	auto cred_dir = getCredDir();
+	if (cred_dir.empty()) {
 		return -1;
 	}
-	auto at_pos = job_user.find('@');
-	auto user = job_user.substr(0, at_pos);
-	
-	if (send_krb5_credential) {
-		std::string domain;
-		if (at_pos != std::string::npos) {
-			domain = job_user.substr(at_pos + 1);
-		}
-		int credlen;
-		auto cred = getStoredCredential(STORE_CRED_USER_KRB, user.c_str(), domain.c_str(), credlen);
-		if (!cred) {
-			dprintf(D_ALWAYS|D_FAILURE, "Unable to read stored credential for shadow prepare job hook.\n");
-			return -1;
-		}
 
-		std::string ccfilename;
-		dircat(cred_dir.c_str(), user.c_str(), ".cc", ccfilename);
-		{
-			// Ideally, we write out credential directories as condor
-			// and then chown the credential file itself over to the user;
-			// this prevents the user from putting garbage into the credential
-			// directory.
-#ifdef WIN32
-			TemporaryPrivSentry sentry(PRIV_USER);
-#else
-			TemporaryPrivSentry sentry(PRIV_CONDOR);
-#endif
-			if (!write_secure_file(ccfilename.c_str(), cred, credlen, false, false)) {
-				dprintf(D_ALWAYS|D_FAILURE, "Failed to write out kerberos-style credential for shadow prepare job hook: %s\n", strerror(errno));
-				return -1;
-			}
-		}
-#ifndef WIN32
-		{
-			TemporaryPrivSentry sentry(PRIV_ROOT);
-			if (-1 == chmod(ccfilename.c_str(), 0400)) {
-				dprintf(D_ALWAYS|D_FAILURE, "Failed to chmod credential to 0400.\n");
-				return -1;
-			}
-			if (-1 == chown(ccfilename.c_str(), get_user_uid(), get_user_gid())) {
-				dprintf(D_ALWAYS|D_FAILURE, "Failed to chown credential to user.\n");
-				return -1;
-			}
-		}
-#endif
+	htcondor::ShadowHookCredDirCreator creds(*job_ad, cred_dir);
+	CondorError err;
+	if (!creds.PrepareCredDir(err)) {
+		return -1;
 	}
-	if (!services_needed.empty()) {
-		StringList services_list(services_needed.c_str());
-		services_list.rewind();
-		char *curr;
-		auto trust_cred_dir = param_boolean("TRUST_CREDENTIAL_DIRECTORY", false);
-		std::string oauth_cred_dir;
-		if (!param(oauth_cred_dir, "SEC_CREDENTIAL_DIRECTORY_OAUTH")) {
-			dprintf(D_ALWAYS|D_FAILURE, "Unable to retrieve OAuth2-style credentials as SEC_CREDENTIAL_DIRECTORY_OAUTH is unset.\n");
-			return -1;
-		}
 
-		while((curr = services_list.next())) {
-			std::string fname, fullname;
-			formatstr(fname, "%s.use", curr);
-			replace_str(fname, "*", "_");
-
-			formatstr(fullname, "%s%c%s%c%s", oauth_cred_dir.c_str(), DIR_DELIM_CHAR, user.c_str(), DIR_DELIM_CHAR, fname.c_str());
-			const int verify_mode = trust_cred_dir ? 0 : SECURE_FILE_VERIFY_ALL;
-			size_t len = 0;
-			unsigned char *buf = nullptr;
-			if (!read_secure_file(fullname.c_str(), (void**)(&buf), &len, true, verify_mode)) {
-				dprintf(D_ALWAYS|D_FAILURE, "Failed to read credential file %s: %s\n",
-					fullname.c_str(), errno ? strerror(errno) : "unknown error");
-				return -1;
-			}
-			formatstr(fullname, "%s%c%s", cred_dir.c_str(), DIR_DELIM_CHAR, fname.c_str());
-			{
-#ifdef WIN32
-				TemporaryPrivSentry sentry(PRIV_USER);
-#else
-				TemporaryPrivSentry sentry(PRIV_CONDOR);
-#endif
-				if (!write_secure_file(fullname.c_str(), buf, len, false, false)) {
-					dprintf(D_ALWAYS|D_FAILURE, "Failed to write out credential file %s: %s\n",
-						fullname.c_str(), strerror(errno));
-					return -1;
-				}
-			}
-#ifndef WIN32
-			{
-				TemporaryPrivSentry sentry(PRIV_ROOT);
-				if (-1 == chmod(fullname.c_str(), 0400)) {
-					dprintf(D_ALWAYS|D_FAILURE, "Failed to chmod OAuth2 credential to 0400.\n");
-					return -1;
-				}
-				if (-1 == chown(fullname.c_str(), get_user_uid(), get_user_gid())) {
-					dprintf(D_ALWAYS|D_FAILURE, "Failed to chown OAuth2 credential to user.\n");
-					return -1;
-				}
-			}
-#endif
-		}
+	if (creds.MadeCredDir()) {
+		env.SetEnv("_CONDOR_CREDS", cred_dir.c_str());
 	}
-	cred_dir_deleter.release();
-	
 
 	if (!spawn(hook_client, nullptr, hook_stdin, PRIV_USER_FINAL, &env)) {
 		delete hook_client;
