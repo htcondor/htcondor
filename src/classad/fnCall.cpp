@@ -3068,7 +3068,6 @@ static bool regexp_helper(
 	int error_code;
 	pcre2_code * re = NULL;
 	PCRE2_SPTR pattern_pcre2 = reinterpret_cast<const unsigned char *>(pattern);
-	uint32_t group_count = 0;
 	PCRE2_SIZE *ovector = NULL;
 	bool empty_match = false;
 	uint32_t addl_opts = 0;

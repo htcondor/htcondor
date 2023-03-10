@@ -1199,7 +1199,8 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	bool		b1, b2;
+	bool		b1 = false;
+	bool		b2 = false;;
 
 		// first coerece inputs to boolean if they are considered equivalent
 	if( !v1.IsBooleanValue( b1 ) && v1.IsBooleanValueEquiv( b1 ) ) {
