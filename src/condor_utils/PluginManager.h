@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 
-#include "simplelist.h"
+#include <vector>
 
 #include "LoadPlugins.h"
 
@@ -45,7 +45,7 @@
  *     public:
  *       static void actionAll() {
  *         ExamplePlugin *plugin;
- *         SimpleList<ExamplePlugin *> plugins = getPlugins();
+ *         std::vector<ExamplePlugin *> plugins = getPlugins();
  *         plugins.Rewind();
  *         while (plugins.Next(plugin)) {
  *           plugin->action();
@@ -54,7 +54,7 @@
  *   };
  *
  *   template PluginManager<ExamplePlugin>;
- *   template SimpleList<ExamplePlugin *>;
+ *   template std::vector<ExamplePlugin *>;
  *
  * Then somewhere in the Example daemon's initialization:
  *
@@ -102,14 +102,14 @@ class PluginManager
 		/**
 		 * Return a list of plugins for iterating
 		 */
-	static SimpleList<PluginType *> & getPlugins();
+	static std::vector<PluginType *> & getPlugins();
 };
 
 
 template <class PluginType>
-SimpleList<PluginType *> &
+std::vector<PluginType *> &
 PluginManager<PluginType>::getPlugins() {
-    static SimpleList<PluginType *> plugins;
+    static std::vector<PluginType *> plugins;
     return plugins;
 }
 
@@ -117,7 +117,8 @@ template<class PluginType>
 bool
 PluginManager<PluginType>::registerPlugin(PluginType *plugin)
 {
-	return getPlugins().Append(plugin);
+	getPlugins().push_back(plugin);
+	return true;
 }
 
 template <class PluginType>
