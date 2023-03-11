@@ -39,7 +39,27 @@ namespace htcondor {
  */
 struct CredData {
 public:
+	CredData() {}
 	~CredData();
+
+	CredData operator=(const CredData &other) {
+		CredData mine;
+		if (len == 0) {
+			return mine;
+		}
+		mine.len = other.len;
+		mine.buf = static_cast<unsigned char *>(malloc(other.len));
+		memcpy(mine.buf, other.buf, other.len);
+		return mine;
+	}
+
+	CredData(CredData &&other) {
+		buf = other.buf;
+		other.buf = nullptr;
+		len = other.len;
+		other.len = 0;
+	}
+
 	unsigned char *buf{nullptr};
 	size_t len{0};
 };
@@ -73,6 +93,11 @@ public:
 	 * Returns true if the object has created a credentials directory.
 	 */
 	bool MadeCredDir() const {return m_made_cred_dir;}
+
+	/**
+	 * Returns the credentials directory path
+	 */
+	const std::string &CredDir() const {return m_cred_dir;}
 
 protected:
 	// For log/error messages, the use case for the credential directory.

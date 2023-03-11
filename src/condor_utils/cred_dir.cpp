@@ -148,14 +148,17 @@ bool CredDirCreator::PrepareCredDir(CondorError &err)
 		}
 
 		CredData cred;
+			// For the kerberos case, an empty credential means "do not write out a cred"
 		if (!GetKerberosCredential(user, domain, cred, err)) {
 			return false;
 		}
 
-		std::string ccfilename;
-		dircat(m_cred_dir.c_str(), user.c_str(), ".cc", ccfilename);
-		if (!WriteToCredDir(ccfilename, cred, err)) {
-			return false;
+		if (cred.len) {
+			std::string ccfilename;
+			dircat(m_cred_dir.c_str(), user.c_str(), ".cc", ccfilename);
+			if (!WriteToCredDir(ccfilename, cred, err)) {
+				return false;
+			}
 		}
 	}
 
