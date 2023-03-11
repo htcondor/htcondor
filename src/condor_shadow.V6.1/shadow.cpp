@@ -141,7 +141,10 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  true /*force authentication*/ );
 
 		// Register our job hooks
-	m_hook_mgr = std::unique_ptr<ShadowHookMgr>(new ShadowHookMgr(job_ad));
+	m_hook_mgr = std::unique_ptr<ShadowHookMgr>(new ShadowHookMgr());
+	if (!m_hook_mgr->initialize(job_ad)) {
+		m_hook_mgr.reset();
+	}
 }
 
 

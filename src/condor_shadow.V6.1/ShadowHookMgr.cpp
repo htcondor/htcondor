@@ -62,49 +62,9 @@ std::string getCredDir()
 }
 
 
-ShadowHookMgr::ShadowHookMgr(ClassAd *job_ad)
-	: HookClientMgr()
-{
-	dprintf(D_FULLDEBUG, "Instantiating a shadow hook manager.\n");
-
-	// Rules for the shadow hook selection are identical to that in the starter;
-	// see StarterHookMgr.cpp for more information
-	if (param(m_hook_keyword, "SHADOW_JOB_HOOK_KEYWORD")) {
-		dprintf(D_ALWAYS, "Using SHADOW_JOB_HOOK_KEYWORD from config file: \"%s\"\n", m_hook_keyword.c_str());
-	}
-	if (m_hook_keyword.empty() && job_ad->EvaluateAttrString(ATTR_HOOK_KEYWORD, m_hook_keyword)) {
-		auto config_has_hook = false;
-		for (int idx = 0; ; idx++) {
-			auto hook_type = static_cast<HookType>(idx);
-			if (getHookTypeString(hook_type) == nullptr) break;
-			std::string tmp;
-			getHookPath(hook_type, tmp);
-			if (!tmp.empty()) {
-				config_has_hook = true;
-				break;
-			}
-		}
-		if (config_has_hook) {
-			dprintf(D_ALWAYS, "Using %s value from job ClassAd: \"%s\"\n", ATTR_HOOK_KEYWORD,
-				m_hook_keyword.c_str());
-		} else {
-			dprintf(D_ALWAYS, "Ignoring %s value of \"%s\" from job ClassAd because hook not defined"
-				" in config file\n", ATTR_HOOK_KEYWORD, m_hook_keyword.c_str());
-		}
-	}
-	if (m_hook_keyword.empty() && param(m_hook_keyword, "SHADOW_DEFAULT_JOB_HOOK_KEYWORD")) {
-		dprintf(D_ALWAYS, "Using SHADOW_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n",
-			m_hook_keyword.c_str());
-	}
-	if (m_hook_keyword.empty()) {
-		dprintf(D_FULLDEBUG, "Job does not define %s, no config file hooks, not invoking any job hooks.\n",
-			ATTR_HOOK_KEYWORD);
-		return;
-	}
-
-	reconfig();
-	HookClientMgr::initialize();
-}
+ShadowHookMgr::ShadowHookMgr()
+	: JobHookClientMgr()
+{}
 
 
 ShadowHookMgr::~ShadowHookMgr()
@@ -133,34 +93,6 @@ ShadowHookMgr::reconfig()
 	if (!getHookPath(HOOK_SHADOW_PREPARE_JOB, m_hook_prepare_job)) return false;
 
 	return true;
-}
-
-
-bool
-ShadowHookMgr::getHookPath(HookType hook_type, std::string &path)
-{
-	if (m_hook_keyword.empty()) return false;
-	auto hook_string = getHookTypeString(hook_type);
-	if (!hook_string) return false;
-
-	std::string param = m_hook_keyword + "_HOOK_" + hook_string;
-
-	char *hpath;
-	auto result = validateHookPath(param.c_str(), hpath);
-	if (hpath) {
-		path = hpath;
-		free(hpath);
-	}
-	return result;
-}
-
-
-int
-ShadowHookMgr::getHookTimeout(HookType hook_type, int def_value)
-{
-	if (m_hook_keyword.empty()) return 0;
-	std::string param = m_hook_keyword + "_HOOK_" + getHookTypeString(hook_type) + "_TIMEOUT";
-	return param_integer(param.c_str(), def_value);
 }
 
 

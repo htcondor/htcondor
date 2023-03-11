@@ -23,13 +23,15 @@
 #include "HookClientMgr.h"
 #include "HookClient.h"
 
-class ShadowHookMgr : public HookClientMgr
+class ShadowHookMgr final : public JobHookClientMgr
 {
 public:
-	ShadowHookMgr(ClassAd *job_ad);
+	ShadowHookMgr();
 	virtual ~ShadowHookMgr();
 
-	bool reconfig();
+	virtual bool reconfig() override;
+
+	virtual const std::string paramPrefix() const override {return "STARTER";}
 
 	/**
 	 * Invoke the HOOK_PREPARE_JOB as applicable and spawn it.
@@ -37,15 +39,11 @@ public:
 	 *         to use this hook for the job's hook keyword, or -1 on error.
 	 */
 	int tryHookPrepareJob();
-
-	int getHookTimeout(HookType hook_type, int def_value);
 private:
 
 	std::string m_hook_keyword;
 
 	std::string m_hook_prepare_job;
-
-	bool getHookPath(HookType hook_type, std::string &path);
 };
 
 /**

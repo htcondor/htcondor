@@ -22,6 +22,7 @@
 #include "condor_daemon_core.h"
 #include "HookClientMgr.h"
 #include "HookClient.h"
+#include "hook_utils.h"
 #include "status_string.h"
 
 
@@ -174,4 +175,83 @@ HookClientMgr::reaperIgnore(int exit_pid, int exit_status)
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.c_str());
 	return TRUE;
+}
+
+
+bool
+JobHookClientMgr::initialize(classad::ClassAd* job_ad)
+{
+	// If the admin says we must use this hook, use it.
+	if (param(m_hook_keyword, (paramPrefix() + "_JOB_HOOK_KEYWORD").c_str())) {
+		dprintf(D_ALWAYS, "Using %s_JOB_HOOK_KEYWORD value from config file: \"%s\"\n",
+			paramPrefix().c_str(), m_hook_keyword.c_str());
+	}
+
+	// If the admin did not insist on a hook, see if the job wants one.  However, if the job
+	// specifies a hookname that does not exist at all in the config file,
+	// then use the default hook provided by the EP admin. This prevents the user from bypassing
+	// the EP admin's default hook by specifying an invalid hook name.
+	if (m_hook_keyword.empty() && job_ad->EvaluateAttrString(ATTR_HOOK_KEYWORD, m_hook_keyword) ) {
+		auto config_has_this_hook = false;
+		for (int i = 0; !config_has_this_hook; i++) {
+			auto h = static_cast<HookType>(i);
+			if (getHookTypeString(h) == nullptr) break;  // iterated thru all hook types
+			std::string tmp;
+			getHookPath(h, tmp);
+			if (!tmp.empty()) {
+				config_has_this_hook = true;
+				break;
+			}
+		}
+		if (config_has_this_hook) {
+			dprintf(D_ALWAYS, "Using %s value from job ClassAd: \"%s\"\n", ATTR_HOOK_KEYWORD,
+				m_hook_keyword.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Ignoring %s value of \"%s\" from job ClassAd because hook not defined"
+				" in config file\n", ATTR_HOOK_KEYWORD, m_hook_keyword.c_str());
+		}
+	}
+
+        // If we don't have a hook by now, see if the admin defined a default one.
+        if (m_hook_keyword.empty() && param(m_hook_keyword, (paramPrefix() + "_DEFAULT_JOB_HOOK_KEYWORD").c_str())) {
+                dprintf(D_ALWAYS, "Using %s_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n",
+			paramPrefix().c_str(), m_hook_keyword.c_str());
+        }
+        if (m_hook_keyword.empty()) {
+                dprintf(D_FULLDEBUG, "Job does not define %s, no config file hooks, not invoking any job hooks.\n",
+			ATTR_HOOK_KEYWORD);
+		return true;
+	}
+
+	if (!reconfig()) {return false;}
+
+	return HookClientMgr::initialize();
+}
+
+
+bool
+JobHookClientMgr::getHookPath(HookType hook_type, std::string &path)
+{
+	if (m_hook_keyword.empty()) return false;
+	auto hook_string = getHookTypeString(hook_type);
+	if (!hook_string) return false;
+
+	std::string param = m_hook_keyword + "_HOOK_" + hook_string;
+
+	char *hpath;
+	auto result = validateHookPath(param.c_str(), hpath);
+	if (hpath) {
+		path = hpath;
+		free(hpath);
+	}
+	return result;
+}
+
+
+int
+JobHookClientMgr::getHookTimeout(HookType hook_type, int def_value)
+{
+	if (m_hook_keyword.empty()) return 0;
+	std::string param = m_hook_keyword + "_HOOK_" + getHookTypeString(hook_type) + "_TIMEOUT";
+	return param_integer(param.c_str(), def_value);
 }
