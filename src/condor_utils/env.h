@@ -250,7 +250,7 @@ class Env final {
 		// Note: prior to 10.1 overwrite=true was the hard-coded behavior but none of the callers wanted that...
 		const bool overwrite = false;
 		char **my_environ = GetEnviron();
-		MyString varname, value;
+		std::string varname, value;
 		for (int i=0; my_environ[i]; i++) {
 			const char	*p = my_environ[i];
 
@@ -263,7 +263,7 @@ class Env final {
 				// contain a variable name or do not contain an assignment
 				continue;
 			}
-			varname.set(p, j);
+			varname.assign(p, j);
 			if ( ! overwrite && HasEnv(varname)) {
 				// unless we are overwriting, don't import if we already have a value
 				continue;
@@ -278,7 +278,7 @@ class Env final {
 		}
 	}
 
-	static bool everything(MyString &, MyString &) {
+	static bool everything(std::string &, std::string &) {
 		return true;
 	}
 
@@ -327,7 +327,7 @@ public:
 	};
 	virtual ~WhiteBlackEnvFilter( void ) { };
 
-	bool operator()( const MyString & var, const MyString &val );
+	bool operator()( const std::string & var, const std::string &val );
 
 	// take a string of the form  x* !y* *z* !bar
 	// and split it into two string lists

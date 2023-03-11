@@ -742,7 +742,7 @@ Env::GetEnv(const std::string &var, std::string &val) const
 	return false;
 }
 
-bool WhiteBlackEnvFilter::operator()( const MyString & var, const MyString &val )
+bool WhiteBlackEnvFilter::operator()( const std::string & var, const std::string &val )
 {
 	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
 		// Silently filter out environment values containing
@@ -769,15 +769,15 @@ bool WhiteBlackEnvFilter::operator()( const MyString & var, const MyString &val 
 // comma, semicolon and whitespace are item steparators
 void WhiteBlackEnvFilter::AddToWhiteBlackList(const char * list) {
 	StringTokenIterator it(list,40,",; \t\r\n");
-	MyString name;
+	std::string name;
 	for (const char * str = it.first(); str != NULL; str = it.next()) {
 		if (*str == '!') {
-			name = str+1; name.trim();
+			name = str+1; trim(name);
 			if (!name.empty()) {
 				m_black.append(name.c_str());
 			}
 		} else {
-			name = str; name.trim();
+			name = str; trim(name);
 			if (!name.empty()) {
 				m_white.append(name.c_str());
 			}

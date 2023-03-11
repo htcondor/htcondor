@@ -42,8 +42,8 @@ AppendError(std::string &errMsg, const std::string &newError)
 }
 
 static bool
-ImportFilter( const MyString &var, const MyString &val ) {
-	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
+ImportFilter( const std::string &var, const std::string &val ) {
+	if ( (var.find(";") != std::string::npos) || (val.find(";") != std::string::npos) ) {
 		return false;
 	}
 	return Env::IsSafeEnvV2Value( val.c_str() );
