@@ -45,6 +45,10 @@ Build-Depends: cmake (>= 3.8),
                python3-sphinx,
                python3-sphinx-rtd-theme,
 #endif
+#if defined(FOCAL) || defined(JAMMY)
+               python3-nbsphinx,
+               python3-sphinx-autodoc-typehints,
+#endif
                uuid-dev,
                voms-dev,
                zlib1g-dev
