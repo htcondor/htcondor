@@ -114,6 +114,8 @@ ShadowHookMgr::tryHookPrepareJob()
 	auto hook_name = getHookTypeString(hook_client->type());
 
 	Env env;
+	// Note that condor_preen will clean up the directory in case if we crash
+	// and don't do it inside the starter.
 	auto cred_dir = getCredDir();
 	if (cred_dir.empty()) {
 		return -1;
