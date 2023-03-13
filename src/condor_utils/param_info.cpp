@@ -36,7 +36,6 @@ int param_info_init(const void ** pvdefaults)
 	return condor_params::defaults_count;
 }
 
-typedef const struct condor_params::key_value_pair param_table_entry_t;
 const param_table_entry_t * param_generic_default_lookup(const char * param)
 {
 	const param_table_entry_t* found = NULL;
