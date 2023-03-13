@@ -18,6 +18,9 @@ Release Notes:
 
 - HTCondor version 10.0.4 not yet released.
 
+- Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
+  is April 30th, 2023.
+
 New Features:
 
 - None.
