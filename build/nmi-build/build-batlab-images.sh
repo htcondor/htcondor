@@ -51,7 +51,6 @@ buildimage x86_64_AlmaLinux8 almalinux:8 &
 buildimage x86_64_AlmaLinux9 almalinux:9 &
 buildimage x86_64_CentOS7 centos:7 &
 buildimage x86_64_Debian11 debian:bullseye &
-buildimage x86_64_Ubuntu18 ubuntu:bionic &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
 wait

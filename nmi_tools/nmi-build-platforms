@@ -8,14 +8,10 @@ docker://htcondor/nmi-build:x86_64_AlmaLinux8-10040003
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-10040003
 docker://htcondor/nmi-build:x86_64_CentOS7-10040003
 docker://htcondor/nmi-build:x86_64_Debian11-10040003
-# Below not up to snuff for C++20.  Either install
-# newer compiler or newer OS
-#x86_64_MacOSX15
 x86_64_macOS11
-docker://htcondor/nmi-build:x86_64_Ubuntu18-10040003
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10040003
 docker://htcondor/nmi-build:x86_64_Ubuntu22-10040003
-#x86_64_Windows7
+# Windows 9 is really Windows 10 in disquise
 x86_64_Windows9
 x86_64_Windows10
 
