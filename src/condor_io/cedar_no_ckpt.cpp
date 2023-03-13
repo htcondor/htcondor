@@ -627,7 +627,7 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 									 DCTransferQueue *xfer_q)
 {
 	int result;
-	condor_mode_t file_mode;
+	condor_mode_t file_mode = __mode_t_dummy_value;
 
 	// Read the permissions
 	this->decode();
