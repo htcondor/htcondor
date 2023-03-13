@@ -8,7 +8,6 @@ docker://htcondor/nmi-build:x86_64_CentOS7-10000302
 docker://htcondor/nmi-build:x86_64_Debian11-10000302
 x86_64_MacOSX15
 x86_64_macOS11
-docker://htcondor/nmi-build:x86_64_Ubuntu18-10000302
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10000302
 docker://htcondor/nmi-build:x86_64_Ubuntu22-10000302
 x86_64_Windows7
