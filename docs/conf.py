@@ -62,10 +62,8 @@ Licensed under the Apache License, Version 2.0.'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-# The short X.Y version.
-version = '10.4'
 # The full version, including alpha/beta/rc tags.
-release = '10.4.0'
+release = '10.5.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2023
