@@ -25,10 +25,7 @@
 void
 NegotiatorPluginManager::Initialize()
 {
-	NegotiatorPlugin *plugin;
-	SimpleList<NegotiatorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -36,10 +33,7 @@ NegotiatorPluginManager::Initialize()
 void
 NegotiatorPluginManager::Shutdown()
 {
-	NegotiatorPlugin *plugin;
-	SimpleList<NegotiatorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -47,10 +41,7 @@ NegotiatorPluginManager::Shutdown()
 void
 NegotiatorPluginManager::Update(const ClassAd &ad)
 {
-	NegotiatorPlugin *plugin;
-	SimpleList<NegotiatorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->update(ad);
 	}
 }
