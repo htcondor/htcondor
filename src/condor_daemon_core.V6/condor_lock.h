@@ -35,7 +35,7 @@ class CondorLock : public CondorLockBase
 				time_t		poll_period = 0,
 				time_t		lock_hold_time = 0,
 				bool		auto_refresh = false );
-	~CondorLock( void );
+	virtual ~CondorLock( void );
 
 	// Change lock parameters
 	int SetLockParams( const char	*lock_url,

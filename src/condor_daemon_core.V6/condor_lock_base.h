@@ -36,7 +36,7 @@ class CondorLockBase : public Service
 {
   public:
 	CondorLockBase( void );
-	~CondorLockBase( void );
+	virtual ~CondorLockBase( void );
 
 	// Adjust the peeriods
 	virtual int SetPeriods( time_t	poll_period,

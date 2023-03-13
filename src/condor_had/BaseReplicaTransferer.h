@@ -57,7 +57,7 @@ public:
     BaseReplicaTransferer(const std::string&  pDaemonSinfulString,
                           const std::string&  pVersionFilePath,
 						  const StringList& pStateFilePathsList);
-    ~BaseReplicaTransferer();                        
+    virtual ~BaseReplicaTransferer();
     /* Function    : initialize
      * Return value: TRANSFERER_TRUE   - upon success
      *               TRANSFERER_FALSE - upon failure

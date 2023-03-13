@@ -119,7 +119,7 @@ private:
 class StatsD: Service {
  public:
 	StatsD();
-	~StatsD();
+	virtual ~StatsD();
 
 	virtual void initAndReconfig(char const *service_name);
 

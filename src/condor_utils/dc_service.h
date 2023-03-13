@@ -60,7 +60,7 @@ class Service {
         will result when Daemon Core attempts to call methods that no longer
         exist in memory.
     */
-	virtual ~Service() {}
+	~Service() {}
 
     /** Constructor.  Since Service is an abstract class, we'll make
 	  its constructor a protected method to prevent outsiders from

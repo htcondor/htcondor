@@ -32,7 +32,7 @@ class GangliaMetric: public Metric {
 class GangliaD: public StatsD {
  public:
 	GangliaD();
-	~GangliaD();
+	virtual ~GangliaD();
 
 	virtual void initAndReconfig();
 
