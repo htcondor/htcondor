@@ -23,6 +23,12 @@ Release Notes:
   *CpuBusyTime* you will need to modify them to use ``$(CpuBusyTimer)`` from one of those templates
   or make the equivalent change.
 
+- HTCondor will no longer pass all environment variables to the DAGMan proper manager jobs environment.
+  This may result in DAGMan and its various parts (primarily PRE, POST,& HOLD Scripts) to start failing
+  or change behavior due to missing needed environment variables. To revert back to the old behavior or
+  add the missing environment variables to the DAGMan proper jobs environment set the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` configuration option.
+
 New Features:
 
 - The *condor_startd* can now be configured to evaluate a set of expressions
