@@ -624,7 +624,7 @@ Env::getWindowsEnvironmentString() const
 		ASSERT(itr != _envTable.end());
 		output += *i;
 		output += '=';
-		output += itr.second;
+		output += itr->second;
 		output += '\0';
 	}
 	output += '\0';
