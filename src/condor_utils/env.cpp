@@ -620,7 +620,7 @@ Env::getWindowsEnvironmentString() const
 	     i != m_sorted_varnames.end();
 	     i++)
 	{
-		auto itr = _envTable.find(i);
+		auto itr = _envTable.find(*i);
 		ASSERT(itr != _envTable.end());
 		output += *i;
 		output += '=';
