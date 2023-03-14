@@ -622,6 +622,10 @@ if ( NOT CMAKE_SKIP_RPATH )
 	set( CMAKE_BUILD_WITH_INSTALL_RPATH TRUE )
 endif()
 
+# We use @executable_path and @loader_path to find our shared libraries
+# on macOS, not @rpath.
+set(CMAKE_MACOSX_RPATH OFF)
+
 if (WITH_ADDRESS_SANITIZER)
 	# Condor daemons dup stderr to /dev/null, so to see output need to run with
 	# ASAN_OPTIONS="log_path=/tmp/asan" condor_master 
