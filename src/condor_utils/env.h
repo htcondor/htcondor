@@ -66,13 +66,11 @@ Example V2Quoted syntax yielding same as above:
 ***********************************************************************/
 
 
-#include "MyString.h"
 #include "string_list.h"
 #include "condor_arglist.h"
 #include "condor_classad.h"
 #include "condor_ver_info.h"
 #include "setenv.h"
-template <class Key, class Value> class HashTable;
 
 #if defined(WIN32)
 #include <algorithm>
@@ -104,10 +102,9 @@ struct toupper_string_less {
 class Env final {
  public:
 	Env( void );
-	virtual ~Env( void );
 
 		// Returns the number of environment entries.
-	int Count( void ) const;
+	size_t Count( void ) const;
 
 		// Remove all environment entries.
 	void Clear( void );
@@ -207,7 +204,7 @@ class Env final {
 	char **getStringArray() const;
 
 		// Walk the environment, calling walk_func for each entry until walk_func returns false
-	void Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv);
+	void Walk(bool (*walk_func)(void* pv, const std::string &var, std::string &val), void* pv);
 
     void Walk(bool (*walk_func)(void* pv, const std::string & var, const std::string & val), void* pv) const;
 
@@ -304,7 +301,7 @@ class Env final {
 	std::set<std::string, toupper_string_less> m_sorted_varnames;
 #endif
  protected:
-	HashTable<MyString, MyString> *_envTable;
+	std::map<std::string, std::string> _envTable;
 	bool input_was_v1;
 
 

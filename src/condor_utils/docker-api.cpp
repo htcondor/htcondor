@@ -1264,7 +1264,7 @@ static bool docker_add_env_walker (void*pv, const std::string &var, const std::s
 // essentially this means adding each as an argument of the form -e name=value
 bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
 {
-	dprintf(D_ALWAYS | D_VERBOSE, "adding %d environment vars to docker args\n", env.Count());
+	dprintf(D_ALWAYS | D_VERBOSE, "adding %zu environment vars to docker args\n", env.Count());
 	env.Walk(
 #if 1 // sigh
 		docker_add_env_walker,
