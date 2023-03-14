@@ -15,6 +15,12 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1003`.
 
+- HTCondor will no longer pass all environment variables to the DAGMan proper manager jobs environment.
+  This may result in DAGMan and its various parts (primarily PRE, POST,& HOLD Scripts) to start failing
+  or change behavior due to missing needed environment variables. To revert back to the old behavior or
+  add the missing environment variables to the DAGMan proper jobs environment set the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` configuration option.
+
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
   unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
   is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
@@ -22,12 +28,6 @@ Release Notes:
   to account for this fact. If you have written policy expressions of your own that reference
   *CpuBusyTime* you will need to modify them to use ``$(CpuBusyTimer)`` from one of those templates
   or make the equivalent change.
-
-- HTCondor will no longer pass all environment variables to the DAGMan proper manager jobs environment.
-  This may result in DAGMan and its various parts (primarily PRE, POST,& HOLD Scripts) to start failing
-  or change behavior due to missing needed environment variables. To revert back to the old behavior or
-  add the missing environment variables to the DAGMan proper jobs environment set the
-  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` configuration option.
 
 New Features:
 
