@@ -129,7 +129,7 @@ class BasicProps {
 
 		std::string   uuid;
 		std::string   name;
-		char          pciId[16];
+		char          pciId[32];
 		size_t        totalGlobalMem {(size_t)-1};
 		int           ccMajor {-1};
 		int           ccMinor {-1};
