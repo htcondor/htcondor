@@ -27,7 +27,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where Job Ad Information events weren't always written
+  when using the Job Router.
+  :jira:`1642`
 
 .. _lts-version-history-1003:
 
