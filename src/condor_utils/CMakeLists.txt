@@ -593,6 +593,7 @@ if (APPLE)
 	set_source_files_properties(../condor_io/condor_crypt.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_3des.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_blowfish.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_auth_kerberos.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 endif()
 
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
