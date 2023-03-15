@@ -1485,7 +1485,7 @@ DockerAPI::imageCacheUsed() {
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
   
 	MyPopenTimer pgm;
-	if (pgm.start_program( imageArgs, true, NULL, false ) < 0) {
+	if (pgm.start_program( imageArgs, false, NULL, false ) < 0) {
 		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
 		return -2;
 	}
