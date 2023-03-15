@@ -473,7 +473,7 @@ private:
 			Ret r = (rip->*member)();
 			if (r) return r;
 		}
-		return NULL;
+		return (Ret)0;
 	}
 	template <typename Ret, typename Member, typename Arg>
 	Ret call_until(Member member, Arg arg) const {
@@ -482,7 +482,7 @@ private:
 			Ret r = (rip->*member)(arg);
 			if (rip && r) return r;
 		}
-		return NULL;
+		return (Ret)0;
 	}
 
 	// List of Supplemental ClassAds to publish

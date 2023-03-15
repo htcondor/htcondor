@@ -159,9 +159,9 @@ VanillaProc::~VanillaProc()
 	cleanupOOM();
 }
 
+#ifdef LINUX
 static bool cgroup_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
 
-#ifdef LINUX
 	if (relative_cgroup.length() == 0) {
 		return false;
 	}
@@ -208,7 +208,6 @@ static bool cgroup_controller_is_writeable(const std::string &controller, std::s
 	}
 	
 	dprintf(D_ALWAYS, "    Cgroup %s/%s is not writeable, cannot use cgroups\n", controller.c_str(), relative_cgroup.c_str());
-#endif
 	return false;
 }
 
@@ -226,7 +225,6 @@ static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_is_writeable(const std::string &relative_cgroup) {
-#ifdef LINUX
 	dprintf(D_ALWAYS, "Checking to see if %s is a writeable cgroup\n", relative_cgroup.c_str());
 
 	struct stat statbuf;
@@ -239,10 +237,8 @@ static bool cgroup_is_writeable(const std::string &relative_cgroup) {
 		// V1.
 		return cgroup_v1_is_writeable(relative_cgroup);
 	}
-#else
-	return false;
-#endif
 }
+#endif
 
 int
 VanillaProc::StartJob()
