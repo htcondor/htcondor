@@ -711,9 +711,11 @@ FileLock::CreateHashName(const char *orig, bool useDefault)
 	unsigned long hash = 0;
 	char *temp_filename = nullptr;
 	
-#if defined(PATH_MAX) && !defined(WIN32)
+#if !defined(WIN32)
 	temp_filename = realpath(orig, nullptr);
-	orig = temp_filename;
+	if (temp_filename) {
+		orig = temp_filename;
+	}
 #endif
 	int orig_size = strlen(orig);
 	for (int i = 0 ; i < orig_size; i++){
