@@ -118,14 +118,14 @@ public:
 			AD operator ->() const;
 			filter_iterator operator++();
 			filter_iterator operator++(int);
-			bool operator==(const filter_iterator &rhs) {
+			bool operator==(const filter_iterator &rhs) const {
 				if (m_table != rhs.m_table) return false;
 				if (m_done && rhs.m_done) return true;
 				if (m_done != rhs.m_done) return false;
 				if (!(m_cur == rhs.m_cur) ) return false;
 				return true;
 			}
-			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
+			bool operator!=(const filter_iterator &rhs) const {return !(*this == rhs);}
 			int set_options(int options) { int opts = m_options; m_options = options; return opts; }
 			int get_options() { return m_options; }
 

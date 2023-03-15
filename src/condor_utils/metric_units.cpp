@@ -41,7 +41,7 @@ metric_units( double bytes )
 		power++;
 	}
 
-	sprintf( buffer, "%.1f %s", value, suffix[power] );
+	snprintf( buffer, sizeof(buffer), "%.1f %s", value, suffix[power] );
 
 	return buffer;
 }

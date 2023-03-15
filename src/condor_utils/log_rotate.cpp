@@ -141,11 +141,9 @@ rotateTimestamp(const char *timeStamp, int maxNum, time_t tt)
 	const char *ts = createRotateFilename(timeStamp, maxNum, tt);
 
 	// First, select a name for the rotated history file
-	char *rotated_log_name = (char*)malloc(strlen(logBaseName) + strlen(ts) + 2) ;
-	ASSERT( rotated_log_name );
-	(void)sprintf( rotated_log_name, "%s.%s", logBaseName, ts );
-	save_errno = rotate_file_dprintf(logBaseName, rotated_log_name, 1);
-	free(rotated_log_name);
+	std::string rotated_log_name;
+	formatstr( rotated_log_name, "%s.%s", logBaseName, ts );
+	save_errno = rotate_file_dprintf(logBaseName, rotated_log_name.c_str(), 1);
 	return save_errno; // will be 0 in case of success.
 }
 

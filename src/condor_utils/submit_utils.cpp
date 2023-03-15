@@ -727,7 +727,7 @@ int SubmitHash::check_and_universalize_path( std::string &path )
 	result = 0;
 	volume[0] = '\0';
 	if ( path[0] && (path[1]==':') ) {
-		sprintf(volume,"%c:",path[0]);
+		snprintf(volume,sizeof(volume),"%c:",path[0]);
 	}
 
 	if (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))

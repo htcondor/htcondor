@@ -534,9 +534,6 @@ procInfoRaw procRaw;
 void
 get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, unsigned int *vmrss)
 {
-	int procstatus;
-	procstatus = PROCAPI_OK;
- 
 	// clear memory for procRaw
 	// initProcInfoRaw(procRaw);
 	//printf("Entering Darwin only code\n");
@@ -549,7 +546,7 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	// First, let's get the BSD task info for this stucture. This
 	// will tell us things like the pid, ppid, etc. 
 	int mib[4];
-	struct kinfo_proc *kp, *kprocbuf;
+	struct kinfo_proc *kp;
 	task_port_t task;
 	struct task_basic_info     ti;
 	unsigned int count;
@@ -560,15 +557,6 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	mib[3] = jobpid;
 
 	if (sysctl(mib, 4, NULL, &bufSize, NULL, 0) < 0) {
-		if (errno == ESRCH) {
-			// No such process
-			procstatus = PROCAPI_NOPID;
-		} else if (errno == EPERM) {
-			// Operation not permitted
-			procstatus = PROCAPI_PERM;
-		} else {
-			procstatus = PROCAPI_UNSPECIFIED;
-		}
 		printf( "ProcAPI: sysctl() (pass 1) on pid %d failed with %d(%s)\n",
 			jobpid, errno, strerror(errno) );
 
@@ -578,7 +566,7 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	}
 
   
-	kprocbuf = kp = (struct kinfo_proc *)malloc(bufSize);
+	kp = (struct kinfo_proc *)malloc(bufSize);
 	if (kp == NULL) { 
 		printf("ProcAPI: getProcInfo() Out of memory!\n");
 	} else {
@@ -588,15 +576,6 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
  
  
 	if (sysctl(mib, 4, kp, &bufSize, NULL, 0) < 0) {
-		if (errno == ESRCH) {
-			// No such process
-			procstatus = PROCAPI_NOPID;
-		} else if (errno == EPERM) {
-			// Operation not permitted
-			procstatus = PROCAPI_PERM;
-		} else {
-			procstatus = PROCAPI_UNSPECIFIED;
-		}
 		printf( "ProcAPI: sysctl() (pass 2) on pid %d failed with %d(%s)\n",
 			jobpid, errno, strerror(errno) );
   
@@ -608,7 +587,6 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
 	}
 
   	if ( bufSize == 0 ) {
-  		procstatus = PROCAPI_NOPID;
   		printf( "ProcAPI: sysctl() (pass 2) on pid %d returned no data\n",
   			jobpid );
   		free(kp);
@@ -630,7 +608,6 @@ get_mem_data(unsigned int *vmpeak, unsigned int *vmsize, unsigned int *vmhwm, un
   	
 		results = task_info(task, TASK_BASIC_INFO, (task_info_t)&ti,&count);
 		if(results != KERN_SUCCESS) {
-			procstatus = PROCAPI_UNSPECIFIED;
  
 			printf( "ProcAPI: task_info() on pid %d failed with %d(%s)\n",
 				jobpid, results, mach_error_string(results) );

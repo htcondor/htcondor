@@ -44,10 +44,10 @@ void
 ProcIdToStr( int cluster, int proc, char *buf ) {
 	if ( proc == -1 ) {
 		// cluster ad key
-		sprintf(buf,"0%d.-1",cluster);
+		snprintf(buf,PROC_ID_STR_BUFLEN,"0%d.-1",cluster);
 	} else {
 		// proc ad key
-		sprintf(buf,"%d.%d",cluster,proc);
+		snprintf(buf,PROC_ID_STR_BUFLEN,"%d.%d",cluster,proc);
 	}
 }
 

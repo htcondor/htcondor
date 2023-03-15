@@ -65,8 +65,9 @@ int SetEnv( const char *key, const char *value)
 	}
 #else
 	char *buf;
-	buf = new char[strlen(key) + strlen(value) + 2];
-	sprintf(buf, "%s=%s", key, value);
+	size_t bufsz = strlen(key) + strlen(value) + 2;
+	buf = new char[bufsz];
+	snprintf(buf, bufsz, "%s=%s", key, value);
 	if( putenv(buf) != 0 )
 	{
 		dprintf(D_ALWAYS, "putenv failed: %s (errno=%d)\n",
