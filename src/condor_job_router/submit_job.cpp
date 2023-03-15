@@ -1017,7 +1017,8 @@ bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 		return true;
 	}
 
-	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event));
+	// TODO Try to alter writeEvent() to take const arguments
+	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event), const_cast<classad::ClassAd*>(&ad));
 
 	if (!rc) {
 		dprintf( D_FULLDEBUG,

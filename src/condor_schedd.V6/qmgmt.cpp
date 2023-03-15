@@ -6415,20 +6415,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				//IncrementLiveJobCounter(scheduler.liveJobCounts, procad->Universe(), job_status, 1);
 				//if (ownerinfo) { IncrementLiveJobCounter(ownerinfo->live, procad->Universe(), job_status, 1); }
 
-				std::string version;
-				if ( procad->LookupString( ATTR_VERSION, version ) ) {
-					CondorVersionInfo vers( version.c_str() );
-					// CRUFT If the submitter is older than 7.5.4, then
-					// they are responsible for writing the submit event
-					// to the user log.
-					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						std::string warning;
-						if(errorStack && (! errorStack->empty())) {
-							warning = errorStack->getFullText();
-						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
-					}
+				std::string warning;
+				if(errorStack && (! errorStack->empty())) {
+					warning = errorStack->getFullText();
 				}
+				scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 
 				int iDup, iTotal;
 				iDup = procad->PruneChildAd();
