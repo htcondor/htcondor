@@ -38,7 +38,7 @@ class vaulthost:
         self.cafile = cafile
 
     def getips(self):
-        info = socket.getaddrinfo(self.host, 0, 0, socket.IPPROTO_TCP)
+        info = socket.getaddrinfo(self.host, 0, 0, 0, socket.IPPROTO_TCP)
 
         self.ips = []
         # Use only IPv4 addresses if there are any
