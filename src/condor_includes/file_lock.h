@@ -178,7 +178,7 @@ class FileLock : public FileLockBase
 	//
 	// Private methods
 	//
-	char* 		CreateHashName(const char *orig, bool useDefault = false);
+	std::string	CreateHashName(const char *orig, bool useDefault = false);
 	void		Reset( void );
 	void		SetPath(const char *, bool setOrigPath = false);
 	bool		initLockFile(bool);
