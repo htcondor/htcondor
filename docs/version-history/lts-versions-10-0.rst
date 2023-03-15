@@ -27,7 +27,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where the submit event wasn't written to the job event
+  log if the job ad didn't contain a ``CondorVersion`` attribute.
+  :jira:`1643`
 
 .. _lts-version-history-1003:
 
