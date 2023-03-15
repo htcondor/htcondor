@@ -30,6 +30,10 @@ Bugs Fixed:
 - Fixed a bug where Job Ad Information events weren't always written
   when using the Job Router.
   :jira:`1642`
+  
+- Fixed a bug where the submit event wasn't written to the job event
+  log if the job ad didn't contain a ``CondorVersion`` attribute.
+  :jira:`1643`
 
 .. _lts-version-history-1003:
 
