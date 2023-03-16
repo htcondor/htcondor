@@ -481,6 +481,12 @@ customization=normal
 tags=dagman,dagman_main,condor_submit_dag
 restart=never
 
+[DAGMAN_MANAGER_JOB_APPEND_GETENV]
+default=
+type=string
+tags=dagman,condor_submit_dag
+restart=never
+
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
