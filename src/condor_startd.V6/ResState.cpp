@@ -373,7 +373,7 @@ ResState::eval_policy( void )
 
 
 	case unclaimed_state:
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -444,7 +444,7 @@ ResState::eval_policy( void )
 			// of job ClassAd), it may never go back to Unclaimed 
 			// state. So we need to delete the dynmaic slot in owner
 			// state.
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -885,7 +885,7 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		if ( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 			resmgr->removeResource( rip );
 		} else {
 			resmgr->deleteResource( rip );
