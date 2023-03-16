@@ -9329,7 +9329,7 @@ macros are described in the :doc:`/admin-manual/security` section.
     ``user@UID_DOMAIN``.
 
     If you have configured the same signing key on two different machines,
-    and want tokens issued by one machine to be accept by the other (e.g.
+    and want tokens issued by one machine to be accepted by the other (e.g.
     an access point and a central manager), those two machines must have
     the same value for this setting.
 
