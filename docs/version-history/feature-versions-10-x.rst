@@ -82,8 +82,12 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where the *condor_shadow* would crash during job removal
+- Fixed bug where the *condor_shadow* would crash during job removal.
   :jira:`1585`
+
+- Fixed a bug where if the docker command emitted warnings to stderr, the
+  startd would not correctly advertise the amount of used image cache.
+  :jira:`1645`
 
 - Fixed a bug where *condor_history* would fail if the job history
   file doesn't exist.
