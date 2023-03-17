@@ -412,7 +412,7 @@ const c* next_token_ref(const c* pline, const c2* ws, const c* & pToken, int & c
 template <class c>
 BOOL Print(HANDLE hf, const c* output, unsigned int cch) {
     unsigned int cbWrote = 0;
-    return WriteFile(hf, const_cast<c*>(output), cch * sizeof(c), &cbWrote, 0);
+    return WriteFile(hf, output, cch * sizeof(c), &cbWrote, 0);
 }
 template <class c>
 BOOL Print(HANDLE hf, const c* output, int cch) {

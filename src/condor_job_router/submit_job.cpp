@@ -1003,7 +1003,7 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 	return true;
 }
 
-bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
+bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
 
@@ -1017,8 +1017,7 @@ bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 		return true;
 	}
 
-	// TODO Try to alter writeEvent() to take const arguments
-	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event), const_cast<classad::ClassAd*>(&ad));
+	int rc = ulog.writeEvent(&event, &ad);
 
 	if (!rc) {
 		dprintf( D_FULLDEBUG,
