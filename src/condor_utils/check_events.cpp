@@ -48,22 +48,13 @@ CheckEvents::~CheckEvents()
 CheckEvents::check_event_result_t
 CheckEvents::CheckAnEvent(const ULogEvent *event, std::string &errorMsg)
 {
-	MyString ms;
-	auto rv = CheckAnEvent(event, ms);
-	errorMsg = ms;  // unconditional assignment in CheckAnEvent().
-	return rv;
-}
-
-CheckEvents::check_event_result_t
-CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
-{
 	check_event_result_t	result = EVENT_OKAY;
 	errorMsg = "";
 
 	CondorID	id(event->cluster, event->proc, event->subproc);
 
-	MyString	idStr("BAD EVENT: job ");
-	idStr.formatstr_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
+	std::string idStr("BAD EVENT: job ");
+	formatstr_cat(idStr, "(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
 	JobInfo *info = NULL;
 	if ( jobHash.lookup(id, info) == 0 ) {
@@ -122,8 +113,8 @@ CheckEvents::CheckAnEvent(const ULogEvent *event, MyString &errorMsg)
 
 //-----------------------------------------------------------------------------
 void
-CheckEvents::CheckJobSubmit(const MyString &idStr, const JobInfo *info,
-		MyString &errorMsg, check_event_result_t &result)
+CheckEvents::CheckJobSubmit(const std::string &idStr, const JobInfo *info,
+		std::string &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount != 1 ) {
 		formatstr( errorMsg, "%s submitted, submit count != 1 (%d)",
@@ -140,8 +131,8 @@ CheckEvents::CheckJobSubmit(const MyString &idStr, const JobInfo *info,
 
 //-----------------------------------------------------------------------------
 void
-CheckEvents::CheckJobExecute(const MyString &idStr, const JobInfo *info,
-		MyString &errorMsg, check_event_result_t &result)
+CheckEvents::CheckJobExecute(const std::string &idStr, const JobInfo *info,
+		std::string &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount < 1 ) {
 		formatstr( errorMsg, "%s executing, submit count < 1 (%d)",
@@ -159,8 +150,8 @@ CheckEvents::CheckJobExecute(const MyString &idStr, const JobInfo *info,
 
 //-----------------------------------------------------------------------------
 void
-CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
-		MyString &errorMsg, check_event_result_t &result)
+CheckEvents::CheckJobEnd(const std::string &idStr, const JobInfo *info,
+		std::string &errorMsg, check_event_result_t &result)
 {
 	if ( info->submitCount < 1 ) {
 		formatstr( errorMsg, "%s ended, submit count < 1 (%d)",
@@ -198,9 +189,9 @@ CheckEvents::CheckJobEnd(const MyString &idStr, const JobInfo *info,
 
 //-----------------------------------------------------------------------------
 void
-CheckEvents::CheckPostTerm(const MyString &idStr,
+CheckEvents::CheckPostTerm(const std::string &idStr,
 		const CondorID &id, const JobInfo *info,
-		MyString &errorMsg, check_event_result_t &result)
+		std::string &errorMsg, check_event_result_t &result)
 {
 		// Allow for the case where we ran a post script after all submit
 		// attempts fail.
@@ -233,9 +224,9 @@ CheckEvents::CheckPostTerm(const MyString &idStr,
 
 //-----------------------------------------------------------------------------
 void
-CheckEvents::CheckJobFinal(const MyString &idStr,
+CheckEvents::CheckJobFinal(const std::string &idStr,
 		const CondorID &id, const JobInfo *info,
-		MyString &errorMsg, check_event_result_t &result)
+		std::string &errorMsg, check_event_result_t &result)
 {
 		// Allow for the case where we ran a post script after all submit
 		// attempts fail.
@@ -291,15 +282,6 @@ CheckEvents::CheckJobFinal(const MyString &idStr,
 CheckEvents::check_event_result_t
 CheckEvents::CheckAllJobs(std::string &errorMsg)
 {
-	MyString ms;
-	auto rv = CheckAllJobs(ms);
-	errorMsg = ms; // unconditional assignment in CheckAllJobs().
-	return rv;
-}
-
-CheckEvents::check_event_result_t
-CheckEvents::CheckAllJobs(MyString &errorMsg)
-{
 	check_event_result_t	result = EVENT_OKAY;
 	errorMsg = "";
 
@@ -313,16 +295,16 @@ CheckEvents::CheckAllJobs(MyString &errorMsg)
 
 			// Put a limit on the maximum message length so we don't
 			// have a chance of ending up with a ridiculously large
-			// MyString...
+			// string...
 		if ( !msgFull && (errorMsg.length() > MAX_MSG_LEN) ) {
 			errorMsg += " ...";
 			msgFull = true;
 		}
 
-		MyString	idStr("BAD EVENT: job ");
-		idStr.formatstr_cat("(%d.%d.%d)", id._cluster, id._proc, id._subproc);
+		std::string idStr("BAD EVENT: job ");
+		formatstr_cat(idStr, "(%d.%d.%d)", id._cluster, id._proc, id._subproc);
 
-		MyString	tmpMsg;
+		std::string tmpMsg;
 		CheckJobFinal(idStr, id, info, tmpMsg, result);
 		if ( tmpMsg != "" && !msgFull ) {
 			if ( errorMsg != "" ) errorMsg += "; ";

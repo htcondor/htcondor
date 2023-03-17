@@ -1318,8 +1318,8 @@ int SubmitHash::SetJavaVMArgs()
 	RETURN_IF_ABORT();
 
 	ArgList args;
-	MyString error_msg;
-	MyString value;
+	std::string error_msg;
+	std::string value;
 	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
 	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
 		// NOTE: no ATTR_JOB_JAVA_VM_ARGS2 in the following,
@@ -1350,10 +1350,10 @@ int SubmitHash::SetJavaVMArgs()
 	bool args_success = true;
 
 	if(args2) {
-		args_success = args.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_JAVA_VM_ARGS1) || job->Lookup(ATTR_JOB_JAVA_VM_ARGS2)) {
 		return 0;
 	}
@@ -1370,13 +1370,13 @@ int SubmitHash::SetJavaVMArgs()
 	// in the case when we are dumping to a file.
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if( MyCondorVersionRequiresV1 ) {
-		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(value, error_msg);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS1, value.c_str());
 		}
 	}
 	else {
-		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(value);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS2, value.c_str());
 		}
@@ -1632,7 +1632,7 @@ public:
 	bool m_env1=false;
 	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
-	bool operator()( const MyString &var, const MyString &val ) {
+	bool operator()( const std::string &var, const std::string &val ) {
 		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
 			// We silently filter out anything that is not expressible
 			// in the 'environment1' syntax.  This avoids breaking
@@ -1755,9 +1755,9 @@ int SubmitHash::SetEnvironment()
 	if(insert_env2 && ad_contains_env1) insert_env1 = true;
 
 	if (insert_env1) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 		std::string msg;
-		env_success = env.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		env_success = env.getDelimitedStringV1Raw(newenv_raw, &msg);
 		if(!env_success) {
 			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
 			ABORT_AND_RETURN(1);
@@ -1843,7 +1843,7 @@ int SubmitHash::SetTDP()
 	}
 
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 	ArgList args;
 
 	if(tdp_args1_ext && tdp_args1) {
@@ -1863,10 +1863,10 @@ int SubmitHash::SetTDP()
 	}
 
 	if( tdp_args2 ) {
-		args_success = args.AppendArgsV2Quoted(tdp_args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(tdp_args2, error_msg);
 	}
 	else if( tdp_args1 ) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1, error_msg);
 	} else if (job->Lookup(ATTR_TOOL_DAEMON_ARGS1) || job->Lookup(ATTR_TOOL_DAEMON_ARGS2)) {
 		return 0;
 	}
@@ -1879,16 +1879,16 @@ int SubmitHash::SetTDP()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString args_value;
+	std::string args_value;
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(args_value, error_msg);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS1, args_value.c_str());
 		}
 	}
 	else if(args.Count()) {
-		args_success = args.GetArgsStringV2Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(args_value);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS2, args_value.c_str());
 		}
@@ -3886,7 +3886,7 @@ int SubmitHash::SetArguments()
 	char    *args2 = submit_param( SUBMIT_KEY_Arguments2 );
 	bool allow_arguments_v1 = submit_param_bool( SUBMIT_CMD_AllowArgumentsV1, NULL, false );
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3897,10 +3897,10 @@ int SubmitHash::SetArguments()
 	}
 
 	if(args2) {
-		args_success = arglist.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = arglist.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_ARGUMENTS1) || job->Lookup(ATTR_JOB_ARGUMENTS2)) {
 		return 0;
 	}
@@ -3915,14 +3915,14 @@ int SubmitHash::SetArguments()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString value;
+	std::string value;
 	bool MyCondorVersionRequiresV1 = arglist.InputWasV1() || arglist.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV1Raw(value, error_msg);
 		AssignJobString(ATTR_JOB_ARGUMENTS1, value.c_str());
 	}
 	else {
-		args_success = arglist.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV2Raw(value);
 		AssignJobString(ATTR_JOB_ARGUMENTS2, value.c_str());
 	}
 
@@ -7157,7 +7157,7 @@ int SubmitHash::SetTransferFiles()
 	bool default_should = false;
 	bool default_when;
 	FileTransferOutput_t when_output;
-	MyString err_msg;
+	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
 	// if they didn't check to see if the admin did. 
@@ -7617,8 +7617,8 @@ int SubmitHash::FixupTransferInputFiles()
 			job->Assign(ATTR_TRANSFER_INPUT_FILES,expanded_list.c_str());
 		}
 	} else {
-		MyString err_msg;
-		err_msg.formatstr( "\n%s\n",error_msg.c_str());
+		std::string err_msg;
+		formatstr(err_msg, "\n%s\n",error_msg.c_str());
 		print_wrapped_text( err_msg.c_str(), stderr );
 		ABORT_AND_RETURN( 1 );
 	}

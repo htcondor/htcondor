@@ -3177,9 +3177,9 @@ Starter::GetJobEnv( ClassAd *jobad, Env *job_env, std::string & env_errors )
 // helper function
 static void SetEnvironmentForAssignedRes(Env* proc_env, const char * proto, const char * assigned, const char * tag);
 
-bool expandScratchDirInEnv(void * void_scratch_dir, const MyString & /*lhs */, MyString &rhs) {
+bool expandScratchDirInEnv(void * void_scratch_dir, const std::string & /*lhs */, std::string &rhs) {
 	const char *scratch_dir = (const char *) void_scratch_dir;
-	rhs.replaceString("#CoNdOrScRaTcHdIr#", scratch_dir);
+	replace_str(rhs, "#CoNdOrScRaTcHdIr#", scratch_dir);
 	return true;
 }
 

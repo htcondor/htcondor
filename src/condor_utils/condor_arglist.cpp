@@ -105,6 +105,16 @@ join_args( SimpleList<MyString> const & args_list, std::string & result, int sta
 	}
 }
 
+void
+join_args(std::vector<std::string> const & args_list, std::string & result, int start_arg)
+{
+	int i = 0;
+	for (auto& arg : args_list) {
+		if(i++<start_arg) continue;
+		append_arg(arg.c_str(), result);
+	}
+}
+
 void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
 {
 	SimpleListIterator<MyString> it(args_list);
@@ -193,6 +203,70 @@ bool split_args(
 	}
 	if(parsed_token) {
 		args_list->Append(buf);
+	}
+	return true;
+}
+
+bool split_args(
+  char const *args,
+  std::vector<std::string>& args_list,
+  std::string* error_msg)
+{
+	std::string buf = "";
+	bool parsed_token = false;
+
+	if(!args) return true;
+
+	while(*args) {
+		switch(*args) {
+		case '\'': {
+			char const *quote = args++;
+			parsed_token = true;
+			while(*args) {
+				if(*args == *quote) {
+					if(args[1] == *quote) {
+						// This is a repeated quote, which we treat as an
+						// escape mechanism for quotes.
+						buf += *(args++);
+						args++;
+					}
+					else {
+						break;
+					}
+				}
+				else {
+					buf += *(args++);
+				}
+			}
+			if(!*args) {
+				if(error_msg) {
+					formatstr(*error_msg, "Unbalanced quote starting here: %s", quote);
+				}
+				return false;
+			}
+			args++; //eat the closing quote
+			break;
+		}
+		case ' ':
+		case '\t':
+		case '\n':
+		case '\r': {
+			args++; // eat whitespace
+			if(parsed_token) {
+				parsed_token = false;
+				args_list.emplace_back(buf);
+				buf = "";
+			}
+			break;
+		}
+		default:
+			parsed_token = true;
+			buf += *(args++);
+			break;
+		}
+	}
+	if(parsed_token) {
+		args_list.emplace_back(buf);
 	}
 	return true;
 }
@@ -358,6 +432,28 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 		// backwacked.
 	MyString v1;
 	if(!V1WackedToV1Raw(args,&v1,error_msg)) {
+		return false;
+	}
+
+	return AppendArgsV1Raw(v1.c_str(),error_msg);
+}
+
+bool
+ArgList::AppendArgsV1WackedOrV2Quoted(char const *args, std::string& error_msg)
+{
+	if(IsV2QuotedString(args)) {
+			// This is actually a V2Quoted string (enclosed in double-quotes).
+		std::string v2;
+		if(!V2QuotedToV2Raw(args,v2,error_msg)) {
+			return false;
+		}
+		return AppendArgsV2Raw(v2.c_str(),error_msg);
+	}
+
+		// It is a V1Wacked string.  Literal double-quotes are
+		// backwacked.
+	std::string v1;
+	if(!V1WackedToV1Raw(args,v1,error_msg)) {
 		return false;
 	}
 
@@ -780,10 +876,35 @@ ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const
 }
 
 bool
+ArgList::GetArgsStringV2Quoted(std::string& result, std::string& /*error_msg*/) const
+{
+	std::string v2_raw;
+	if(!GetArgsStringV2Raw(v2_raw)) {
+		return false;
+	}
+	V2RawToV2Quoted(v2_raw,result);
+	return true;
+}
+
+bool
 ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const
 {
 	MyString v1_raw;
 	if(GetArgsStringV1Raw(&v1_raw,NULL)) {
+		V1RawToV1Wacked(v1_raw,result);
+		return true;
+	}
+	else {
+		return GetArgsStringV2Quoted(result,error_msg);
+	}
+}
+
+bool
+ArgList::GetArgsStringV1WackedOrV2Quoted(std::string& result, std::string& error_msg) const
+{
+	std::string v1_raw;
+	std::string ignore_err;
+	if(GetArgsStringV1Raw(v1_raw, ignore_err)) {
 		V1RawToV1Wacked(v1_raw,result);
 		return true;
 	}
@@ -808,6 +929,12 @@ void
 ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
 {
 	(*result) += v1_raw.EscapeChars("\"",'\\');
+}
+
+void
+ArgList::V1RawToV1Wacked(std::string const &v1_raw, std::string& result)
+{
+	result += EscapeChars(v1_raw, "\"", '\\');
 }
 
 bool
@@ -973,6 +1100,74 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
 }
 
 bool
+ArgList::GetArgsStringWin32(std::string& result,int skip_args) const
+{
+	SimpleListIterator<MyString> it(args_list);
+	MyString *arg = NULL;
+	int i;
+	for(i=0;it.Next(arg);i++) {
+		if(i<skip_args) continue;
+		if(result.length()) result += ' ';
+		if(input_was_unknown_platform_v1) {
+			// In V1 arg syntax, we just pass on whatever the user entered
+			// directly to the Windows OS, assuming the user wants the
+			// OS to interpret whatever quotes, backslashes, etc., that
+			// are there.
+			result += (*arg);
+		}
+		else {
+			// In V2 arg syntax, we encode arguments in a way that should
+			// be parsed correctly by Windows function CommandLineToArgv().
+
+			char const *argstr = arg->c_str();
+			if(argstr[strcspn(argstr," \t\"")] == '\0') {
+				// No special characters in the argument.
+				result += (*arg);
+			}
+			else {
+				// Special characters, so we need to quote it.
+
+				result += '\"';
+
+				while(*argstr) {
+					if(*argstr == '\\') {
+						int n = 0;
+						while(*argstr == '\\') {
+							n++;
+							result += *(argstr++);
+						}
+						if(*argstr == '"' || *argstr == '\0') {
+							// To produce n backslashes followed by a
+							// literal quote, put 2n+1 backslashes
+							// followed by a quote.  To produce n
+							// backslashes before the terminal quote,
+							// put 2n backslashes.
+							while(n--) {
+								result += '\\';
+							}
+							if(*argstr == '"') {
+								result += '\\';
+								result += *(argstr++);
+							}
+						}
+					}
+					else if(*argstr == '"') {
+						result += '\\';
+						result += *(argstr++);
+					}
+					else {
+						result += *(argstr++);
+					}
+				}
+
+				result += '\"';
+			}
+		}
+	}
+	return true;
+}
+
+bool
 ArgList::IsV2QuotedString(char const *str)
 {
 	if(!str) return false;
@@ -1043,6 +1238,60 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 }
 
 bool
+ArgList::V2QuotedToV2Raw(char const *v1_input, std::string& v2_raw, std::string& errmsg)
+{
+	if(!v1_input) return true;
+
+		// allow leading whitespace
+	while(isspace(*v1_input)) {
+		v1_input++;
+	}
+
+	ASSERT(IsV2QuotedString(v1_input));
+	ASSERT(*v1_input == '"');
+	v1_input++;
+
+	const char *quote_terminated = NULL;
+	while(*v1_input) {
+		if(*v1_input == '"') {
+			v1_input++;
+			if(*v1_input == '"') {
+					// Repeated (i.e. escaped) double-quote.
+				v2_raw += *(v1_input++);
+			}
+			else {
+				quote_terminated = v1_input-1;
+				break;
+			}
+		}
+		else {
+			v2_raw += *(v1_input++);
+		}
+	}
+
+	if(!quote_terminated) {
+		AddErrorMessage("Unterminated double-quote.",errmsg);
+		return false;
+	}
+
+		// allow trailing whitespace
+	while(isspace(*v1_input)) {
+		v1_input++;
+	}
+
+	if(*v1_input) {
+		std::string msg;
+		formatstr(msg,
+			"Unexpected characters following double-quote.  "
+			"Did you forget to escape the double-quote by repeating it?  "
+			"Here is the quote and trailing characters: %s\n",quote_terminated);
+		AddErrorMessage(msg.c_str(), errmsg);
+		return false;
+	}
+	return true;
+}
+
+bool
 ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 {
 	if(!v1_input) return true;
@@ -1065,6 +1314,31 @@ ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
 		}
 		else {
 			(*v1_raw) += *(v1_input++);
+		}
+	}
+	return true;
+}
+
+bool
+ArgList::V1WackedToV1Raw(char const *v1_input, std::string& v1_raw, std::string& errmsg)
+{
+	if(!v1_input) return true;
+	ASSERT(!IsV2QuotedString(v1_input));
+
+	while(*v1_input) {
+		if(*v1_input == '"') {
+			std::string msg;
+			formatstr(msg, "Found illegal unescaped double-quote: %s",v1_input);
+			AddErrorMessage(msg.c_str(),errmsg);
+			return false;
+		}
+		else if(v1_input[0] == '\\' && v1_input[1] == '"') {
+			// Escaped double-quote.
+			v1_input++;
+			v1_raw += *(v1_input++);
+		}
+		else {
+			v1_raw += *(v1_input++);
 		}
 	}
 	return true;

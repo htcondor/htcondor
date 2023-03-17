@@ -42,8 +42,8 @@ AppendError(std::string &errMsg, const std::string &newError)
 }
 
 static bool
-ImportFilter( const MyString &var, const MyString &val ) {
-	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
+ImportFilter( const std::string &var, const std::string &val ) {
+	if ( (var.find(";") != std::string::npos) || (val.find(";") != std::string::npos) ) {
 		return false;
 	}
 	return Env::IsSafeEnvV2Value( val.c_str() );
@@ -292,8 +292,8 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 		args.AppendArg(shallowOpts.priority);
 	}
 
-	MyString arg_str,args_error;
-	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
+	std::string arg_str,args_error;
+	if(!args.GetArgsStringV1WackedOrV2Quoted(arg_str, args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.c_str());
 		exit(1);
 	}
