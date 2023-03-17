@@ -1688,8 +1688,9 @@ void ResMgr::_remove_and_delete_slot_res(Resource * rip)
 void ResMgr::_complete_removes()
 {
 	ASSERT( ! in_walk);
-	for (Resource * rip : _pending_removes) { _remove_and_delete_slot_res(rip); }
+	std::vector<Resource*> removes(_pending_removes);
 	_pending_removes.clear();
+	for (Resource * rip : removes) { _remove_and_delete_slot_res(rip); }
 	// in case we want to null out pointers in the slots vector when they are first removed
 	auto last = std::remove_if(slots.begin(), slots.end(), [](const Resource*rip) { return !rip; });
 	slots.erase(last, slots.end());
@@ -1703,12 +1704,11 @@ ResMgr::removeResource( Resource* rip )
 
 	// If this was a dynamic slot, remove it from parent
 	// Otherwise return this Resource's ID to the dispenser.
-	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
-		Resource *parent = rip->get_parent();
-		if (parent) {
-			parent->remove_dynamic_child(rip);
-		}
-	} else {
+	Resource *parent = rip->get_parent();
+	if (parent) {
+		parent->remove_dynamic_child(rip);
+		rip->clear_parent(); // this turns a DYNAMIC_SLOT into a BROKEN_SLOT
+	} else if ( ! rip->is_dynamic_slot() && ! rip->is_broken_slot()) {
 		id_disp->insert( rip->r_id );
 	}
 
