@@ -2877,6 +2877,12 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	return ad.InsertAttr("Name", new_name);
 }
 
+// A "ghost type" is an arbitrary string used by the autoscaler to connect
+// machines joining the pool by which "ghost ad" (an reevaluate-enabled
+// offline ad) caused them to be created.  This allows the autoscaler's
+// provisioning loop and the negotiator cycle to operate asynchronously.
+std::map<std::string, int> ghostTypeCount;
+
 bool Matchmaker::
 obtainAdsFromCollector (
 						ClassAdList &allAds,
@@ -2948,7 +2954,9 @@ obtainAdsFromCollector (
 
 	dprintf(D_ALWAYS, "  Sorting %d ads ...\n",allAds.MyLength());
 
+
 	allAds.Open();
+	ghostTypeCount.clear();
 	while( (ad=allAds.Next()) ) {
 
 		// Insert each ad into the appropriate list.
@@ -3087,6 +3095,19 @@ obtainAdsFromCollector (
 					ad = new ClassAd(*(oldAdEntry->oldAd));
 					ad->Delete(ATTR_UPDATE_SEQUENCE_NUMBER);
 					allAds.Insert(ad);
+
+					// If we've reinserted the ad, don't do anything else
+					// (like copy it to startdAds).
+					//
+					// This used to work because ClassAdListDoesNotDeleteAds
+					// silently ignored duplicates!  When this logic was
+					// originally written, there was nothing between the
+					// second closing brace below and `startdAds.insert(ad)`,
+					// so there was nothing to execute the second time around.
+					//
+					// It seems like it would have been simpler to re-insert
+					// the ad at the beginning of allAds, instead, but oh well.
+					continue;
 				}
 			}
 
@@ -3105,6 +3126,15 @@ obtainAdsFromCollector (
 			double slot_weight;
 			if (!ad->LookupFloat(ATTR_SLOT_WEIGHT, slot_weight)) {
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
+			}
+
+			// If the ad specifies a ghost type, record it for later use.
+			std::string ghostType;
+			ad->LookupString("GhostType", ghostType);
+			if(! ghostType.empty()) {
+				ghostTypeCount[ghostType]++;
+				std::string adID = MachineAdID(ad);
+				dprintf( D_ZKM, "Adding %s to ghost type count (now %s = %d)\n", adID.c_str(), ghostType.c_str(), ghostTypeCount[ghostType] );
 			}
 
 			OptimizeMachineAdForMatchmaking( ad );
@@ -5981,6 +6011,15 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 
 	startd_ad->Assign(       "MachineMatchCount", matchCount);
 	update_ad.Assign(        "MachineMatchCount", matchCount);
+
+
+	std::string ghostType;
+	startd_ad->LookupString("GhostType", ghostType);
+	dprintf( D_ALWAYS, "updating ghost type '%s'\n", ghostType.c_str() );
+	if( ghostTypeCount.find(ghostType) != ghostTypeCount.end() ) {
+		startd_ad->Assign(       "GhostTypeCount", ghostTypeCount[ghostType] );
+		update_ad.Assign(        "GhostTypeCount", ghostTypeCount[ghostType] );
+	}
 
 
 	// For each matching resource request, record its originating schedd and
