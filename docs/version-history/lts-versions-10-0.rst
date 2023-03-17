@@ -35,6 +35,11 @@ Bugs Fixed:
   log if the job ad didn't contain a ``CondorVersion`` attribute.
   :jira:`1643`
 
+- Fixed a bug where a *condor_schedd* was denied authorization to send
+  reschedule command to a *condor_negotiator* with the IDToken authorization
+  levels recommended in the documentation for setting up a condor pool.
+  :jira:`1615`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
