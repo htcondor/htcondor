@@ -132,10 +132,14 @@ ResState::change( State new_state, Activity new_act )
 				 activity_to_string(new_act) );
 	}
 
+	// we should *try* and use a consistent value for current_time when updating a bunch of slots
+	// but we don't want to use a time that's *too* late, so use the resmgr's current time if its
+	// not too far in the past.
  	time_t now = resmgr->now();
 	time_t actual_now = time(nullptr);
-	if ((actual_now - now) > 2) {
-		dprintf(D_ERROR | D_BACKTRACE, "Warning : ResState::change() time lag %d (%d - %d)\n", actual_now - now, actual_now, now);
+	if ((actual_now - now) > 1) {
+		now = actual_now; 
+		//dprintf(D_ERROR | D_BACKTRACE, "Warning : ResState::change() time lag %d (%d - %d)\n", actual_now - now, actual_now, now);
 	}
 
 		// Record the time we spent in the previous state
