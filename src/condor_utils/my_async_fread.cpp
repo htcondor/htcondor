@@ -310,7 +310,7 @@ int MyAsyncFileReader::check_for_read_completion()
 		if (rval == ENOSYS) {
 			// if the aio_read function was not implemented, just do synchronous reads now.
 			lseek(ab.aio_fildes, ab.aio_offset, SEEK_SET);
-			cbread = read(ab.aio_fildes, const_cast<void*>(ab.aio_buf), ab.aio_nbytes);
+			cbread = read(ab.aio_fildes, ab.aio_buf, ab.aio_nbytes);
 			if ((ssize_t)cbread < 0) {
 				rval = errno;
 			} else {
