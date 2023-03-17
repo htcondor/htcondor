@@ -561,10 +561,13 @@ initialize (const char *neg_name)
 	// read in params
 	reinitialize ();
 
+    //Alternative permissions for RESCHEDULE Command
+    std::vector<DCpermission> alt_reschedulePerms{ADVERTISE_SCHEDD_PERM, ADMINISTRATOR};
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule",
             (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler,
-			"RESCHEDULE_commandHandler", (Service*) this, DAEMON);
+             "RESCHEDULE_commandHandler", (Service*) this, DAEMON,
+             false, 0, &alt_reschedulePerms);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
             (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler,
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
