@@ -24,9 +24,9 @@
 // keep in sync with version in filename_tools_cpp.C
 int filename_split( const char *path, char *dir, char *file )
 {
-	char *last_slash;
+	const char *last_slash;
 
-	last_slash = const_cast<char *>( strrchr(path, DIR_DELIM_CHAR) );
+	last_slash = strrchr(path, DIR_DELIM_CHAR);
 	if(last_slash) {
 		strncpy(dir,path,(last_slash-path));
 		dir[(last_slash-path)] = 0;
