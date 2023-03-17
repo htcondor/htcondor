@@ -260,8 +260,8 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			audiences.emplace_back(aud);
 			audience_ptr.push_back(audiences.back().c_str());
 		}
-		audience_ptr.push_back(nullptr);
 	}
+	audience_ptr.push_back(nullptr);
 	long long expiry_value;
 	if ((*scitoken_deserialize_ptr)(scitoken_str.c_str(), &token, nullptr, &err_msg)) {
 		err.pushf("SCITOKENS", 2, "Failed to deserialize scitoken: %s",

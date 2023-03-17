@@ -134,6 +134,11 @@ Bugs Fixed:
   submit description weren't properly sent to the ARC CE service.
   :jira:`1648`
 
+- Fixed a bug that can cause a daemon to crash during SciTokens
+  authentication if the configuration parameter
+  ``SCITOKENS_SERVER_AUDIENCE`` isn't set.
+  :jira:`1652`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2
