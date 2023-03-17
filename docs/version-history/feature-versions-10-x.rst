@@ -21,7 +21,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug where if the docker command emitted warnings to stderr, the
+  startd would not correctly advertise the amount of used image cache.
+  :jira:`1645`
 
 Version 10.4.0
 --------------
