@@ -130,6 +130,10 @@ Bugs Fixed:
   successful execution.
   :jira:`1583`
 
+- Fixed a bug where values specified with **arc_rte** in the job's
+  submit description weren't properly sent to the ARC CE service.
+  :jira:`1648`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2

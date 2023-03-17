@@ -1089,7 +1089,7 @@ bool ArcJob::buildJobADL()
 	// <Resources>
 	//   Describes the environment the job needs to run in (physical
 	//   resources, batch system parameters).
-	//   Includes special RunTimeEnvironment labels that trigger arbitrary
+	//   Includes special RuntimeEnvironment labels that trigger arbitrary
 	//   additional configuration of the execution envrionment.
 	// <DataStaging>
 	//   Describes input/output files be to staged for the job.
@@ -1234,7 +1234,7 @@ bool ArcJob::buildJobADL()
 				// This shouldn't happen, but let's be safe
 				continue;
 			}
-			resources += "<RunTimeEnvironment>";
+			resources += "<RuntimeEnvironment>";
 			resources += "<Name>";
 			resources += next_opt;
 			resources += "</Name>";
@@ -1243,7 +1243,7 @@ bool ArcJob::buildJobADL()
 				resources += next_opt;
 				resources += "</Option>";
 			}
-			resources += "</RunTimeEnvironment>";
+			resources += "</RuntimeEnvironment>";
 		}
 	}
 
