@@ -457,7 +457,8 @@ public:
 	bool can_create_dslot() const { return is_partitionable_slot(); } // for now, only p-slots are splitable
 
 	void set_parent( Resource* rip );
-    Resource* get_parent() { return m_parent; }
+	Resource* get_parent() { return m_parent; }
+	void clear_parent(); // disconnect from parent (called on deletion of dynamic slots)
 
 	std::string makeChildClaimIds();
 	void add_dynamic_child(Resource *rip) { m_children.insert(rip); }
