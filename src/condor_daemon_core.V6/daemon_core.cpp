@@ -4659,7 +4659,8 @@ int DaemonCore::HandleReq(Stream *insock, Stream* asock)
 		}
 	}
 
-	classy_counted_ptr<DaemonCommandProtocol> r = new DaemonCommandProtocol(asock,is_command_sock);
+	// DaemonCommandProtocol::finalize deletes r after last callback fires
+	DaemonCommandProtocol *r = new DaemonCommandProtocol(asock,is_command_sock);
 
 	int result = r->doProtocol();
 

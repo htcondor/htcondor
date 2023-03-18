@@ -207,10 +207,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		return CommandProtocolFinished;
 	}
 
-		// Do not allow ourselves to be deleted until after
-		// SocketCallback is called.
-	incRefCount();
-
 	condor_gettimestamp( m_async_waiting_start_time );
 
 	return CommandProtocolInProgress;
@@ -230,9 +226,6 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 	m_prev_sock_ent = NULL;
 
 	int rc = doProtocol();
-
-		// get rid of ref counted when callback was registered
-	decRefCount();
 
 	return rc;
 }
@@ -1976,8 +1969,11 @@ int DaemonCommandProtocol::finalize()
 	}
 
 
-	if ( m_result == KEEP_STREAM || m_sock == NULL )
+	if ( m_result == KEEP_STREAM || m_sock == NULL ) {
+		delete this;
 		return KEEP_STREAM;
-	else
+	} else {
+		delete this;
 		return TRUE;
+	}
 }

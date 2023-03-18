@@ -239,7 +239,10 @@ SharedPortServer::HandleConnectRequest(int,Stream *sock)
 	if( strcmp( shared_port_id, "self" ) == 0 ) {
 		// The last 'true' flags this protocol as being "loopback," so
 		// we won't ever end up back here and pass off the request.
-		classy_counted_ptr< DaemonCommandProtocol > r = new DaemonCommandProtocol( sock, true, true );
+
+		// This is delete'd by the DaemonCommandProtocol finalize method
+		// always make sure that all code paths end there.
+		DaemonCommandProtocol *r = new DaemonCommandProtocol( sock, true, true );
 		return r->doProtocol();
 	}
 
