@@ -61,31 +61,30 @@
 Example Usage of ArgList class:
 
 ArgList args;
-MyString errmsg;
+std::string errmsg;
 bool success;
 
 args.AppendArg("one");
 args.AppendArg("two and");
-success = args.AppendArgsV1RawOrV2Quoted("three",&errmsg);
+success = args.AppendArgsV1RawOrV2Quoted("three",errmsg);
 
 
 Example Usage of split_args():
 
 char **argv=NULL;
-MyString errmsg;
+std::string errmsg;
 bool success = split_args("one 'two and' three",&argv,&errmsg);
 
 */
 
-#include "simplelist.h"
-#include "MyString.h"
+#include <vector>
+#include <string>
 #include "condor_classad.h"
 #include "condor_ver_info.h"
 
 
 // Parse a string into a list of tokens.
 // This expects args in "raw V2" format (no surrounding double-quotes)
-bool split_args(char const *args, SimpleList<MyString> *args_list, std::string* error_msg=NULL);
 bool split_args(char const *args, std::vector<std::string>& args_list, std::string* error_msg=NULL);
 
 // Parse a string into a NULL-terminated string array.
@@ -95,12 +94,11 @@ bool split_args(char const *args, char ***args_array, std::string* error_msg=NUL
 
 // Produce a string from a list of tokens, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
-void join_args(SimpleList<MyString> const & args_list, std::string & result, int start_arg=0);
-void join_args(std::vector<std::string> const & args_list, std::string & result, int start_arg=0);
+void join_args(std::vector<std::string> const & args_list, std::string & result, size_t start_arg=0);
 
 // Produce a string from a NULL-terminated string array, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
-void join_args(char const * const *args_array, std::string& result, int start_arg=0);
+void join_args(char const * const *args_array, std::string& result, size_t start_arg=0);
 
 
 // Delete a NULL-terminated array of strings (and delete the strings too).
@@ -111,14 +109,14 @@ class ArgList {
 	ArgList();
 	~ArgList();
 
-	int Count() const;                      // return number of args
+	size_t Count() const;                   // return number of args
 	void Clear();                           // remove all args
-	char const *GetArg(int n) const;        //return nth arg
+	char const *GetArg(size_t n) const;     //return nth arg
 
 	void AppendArg(char const *arg);
 	void AppendArg(const std::string &arg);
-	void InsertArg(char const *arg,int position);
-	void RemoveArg(int position);
+	void InsertArg(char const *arg, size_t position);
+	void RemoveArg(size_t position);
 
 	void AppendArgsFromArgList(ArgList const &args);
 
@@ -167,7 +165,7 @@ class ArgList {
 	static void GetArgsStringForDisplay(ClassAd const *ad,std::string &result);
 
 		// Get arguments from this ArgList object for descriptional purposes.
-	void GetArgsStringForDisplay(std::string & result, int start_arg=0) const;
+	void GetArgsStringForDisplay(std::string & result, size_t start_arg=0) const;
 
 		// ...
 	void GetArgsStringForLogging( std::string & result ) const;
@@ -183,7 +181,7 @@ class ArgList {
 		// Create a V2 format args string.  This differs from
 		// GetArgsStringV2Quoted in that string is _not_ enclosed in
 		// double quotes.
-	bool GetArgsStringV2Raw(std::string & result, int start_arg=0) const;
+	bool GetArgsStringV2Raw(std::string & result, size_t start_arg=0) const;
 
 		// Create V2Quoted args string (i.e. enclosed in double-quotes).
 	bool GetArgsStringV2Quoted(std::string& result, std::string& error_msg) const;
@@ -194,13 +192,13 @@ class ArgList {
 	bool GetArgsStringV1WackedOrV2Quoted(std::string& result, std::string& error_msg) const;
 
 		// Create an args string for windows CreateProcess().
-	bool GetArgsStringWin32(std::string& result,int skip_args) const;
+	bool GetArgsStringWin32(std::string& result, size_t skip_args) const;
 
 		// Create args string for system()
 		// Every argument will be quoted so that it is treated literally
 		// and so that it is treated as a single argument even if it contains
 		// spaces.
-	bool GetArgsStringSystem(std::string & result,int skip_args) const;
+	bool GetArgsStringSystem(std::string & result, size_t skip_args) const;
 
 	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 
@@ -267,7 +265,7 @@ class ArgList {
 	bool AppendArgsV1Raw_unix(char const *args,std::string& error_msg);
 
  private:
-	SimpleList<MyString> args_list;
+	std::vector<std::string> args_list;
 	bool input_was_unknown_platform_v1; //true if we got arguments in V1 format for unknown platform
 	ArgV1Syntax v1_syntax;
 

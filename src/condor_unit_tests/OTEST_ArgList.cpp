@@ -194,18 +194,19 @@ static bool test_append_args_v1_wacked_or_v2_quoted_args() {
 		"for a valid V1Wacked string.");
 	std::string err_msg;
 	arglist.AppendArgsV1WackedOrV2Quoted(test_v1_wacked, err_msg);
-	MyString expect("one,\"two\",'three\\,four'");
-	MyString actual;
-	for(int i = 0; i < arglist.Count(); i++) {
-		actual.append_to_list(arglist.GetArg(i), ",");
+	std::string expect("one,\"two\",'three\\,four'");
+	std::string actual;
+	for(size_t i = 0; i < arglist.Count(); i++) {
+		if (!actual.empty()) actual += ',';
+		actual += arglist.GetArg(i);
 	}
 	emit_input_header();
 	emit_param("Args", test_v1_wacked);
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("ArgList", "%s", actual.Value());
+	emit_param("ArgList", "%s", actual.c_str());
 	emit_output_actual_header();
-	emit_param("ArgList", "%s", expect.Value());
+	emit_param("ArgList", "%s", expect.c_str());
 	arglist.Clear();
 	if(expect != actual) {
 		FAIL;
@@ -257,18 +258,19 @@ static bool test_append_args_v2_quoted_args() {
 		" V2Quoted string.");
 	std::string err_msg;
 	arglist.AppendArgsV2Quoted(test_cooked_string, err_msg);
-	MyString expect("This,'quoted',arg string,contains 'many' \"\"surprises\\");
-	MyString actual;
-	for(int i = 0; i < arglist.Count(); i++) {
-		actual.append_to_list(arglist.GetArg(i), ",");
+	std::string expect("This,'quoted',arg string,contains 'many' \"\"surprises\\");
+	std::string actual;
+	for(size_t i = 0; i < arglist.Count(); i++) {
+		if (!actual.empty()) actual += ',';
+		actual += arglist.GetArg(i);
 	}
 	emit_input_header();
 	emit_param("Args", test_cooked_string);
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("ArgList", "%s", actual.Value());
+	emit_param("ArgList", "%s", actual.c_str());
 	emit_output_actual_header();
-	emit_param("ArgList", "%s", expect.Value());
+	emit_param("ArgList", "%s", expect.c_str());
 	arglist.Clear();
 	if(expect != actual) {
 		FAIL;
@@ -320,18 +322,19 @@ static bool test_append_args_v2_raw_args() {
 		" V2Raw string.");
 	std::string err_msg;
 	arglist.AppendArgsV2Raw(test_string, err_msg);
-	MyString expect("This,'quoted',arg string,contains 'many' \"\"surprises\\");
-	MyString actual;
-	for(int i = 0; i < arglist.Count(); i++) {
-		actual.append_to_list(arglist.GetArg(i), ",");
+	std::string expect("This,'quoted',arg string,contains 'many' \"\"surprises\\");
+	std::string actual;
+	for(size_t i = 0; i < arglist.Count(); i++) {
+		if (!actual.empty()) actual += ',';
+		actual += arglist.GetArg(i);
 	}
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("ArgList", "%s", actual.Value());
+	emit_param("ArgList", "%s", actual.c_str());
 	emit_output_actual_header();
-	emit_param("ArgList", "%s", expect.Value());
+	emit_param("ArgList", "%s", expect.c_str());
 	arglist.Clear();
 	if(expect != actual) {
 		FAIL;
@@ -386,18 +389,19 @@ static bool test_append_args_v1_raw_win32_args() {
 	arglist.SetArgV1Syntax(ArgList::WIN32_ARGV1_SYNTAX);
 	std::string err_msg;
 	arglist.AppendArgsV1Raw(test_win32_v1, err_msg);
-	MyString expect("one,two three,four\\,five \"six\\\",seven\\\"");
-	MyString actual;
-	for(int i = 0; i < arglist.Count(); i++) {
-		actual.append_to_list(arglist.GetArg(i), ",");
+	std::string expect("one,two three,four\\,five \"six\\\",seven\\\"");
+	std::string actual;
+	for(size_t i = 0; i < arglist.Count(); i++) {
+		if (!actual.empty()) actual += ',';
+		actual += arglist.GetArg(i);
 	}
 	emit_input_header();
 	emit_param("Args", test_win32_v1);
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("ArgList", "%s", actual.Value());
+	emit_param("ArgList", "%s", actual.c_str());
 	emit_output_actual_header();
-	emit_param("ArgList", "%s", expect.Value());
+	emit_param("ArgList", "%s", expect.c_str());
 	arglist.Clear();
 	if(expect != actual) {
 		FAIL;
@@ -633,7 +637,7 @@ static bool test_get_args_string_v2_quoted_append_args() {
 	arglist.AppendArgsV1WackedOrV2Quoted(v2_cooked_args.c_str(), err_msg);
 	std::string expect("This,'quoted',arg string,contains 'many' \"\"surprises\\");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -758,7 +762,7 @@ static bool test_get_args_string_win32_append_args() {
 	arglist.AppendArgsV1Raw(win32_result.c_str(),err_msg);
 	std::string expect("two three,four\\,five \"six\\\",seven\\\"");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -832,7 +836,7 @@ static bool test_insert_args() {
 	std::string expect("inserted,This,'quoted',arg string,contains 'many' "
 		"\"\"surprises\\");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -881,7 +885,7 @@ static bool test_append_args() {
 	std::string expect("This,'quoted',arg string,contains 'many' \"\"surprises\\,"
 		"appended");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -928,7 +932,7 @@ static bool test_remove_mid_args() {
 	arglist.RemoveArg(2);
 	std::string expect("This,'quoted',contains 'many' \"\"surprises\\");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -975,7 +979,7 @@ static bool test_remove_beg_args() {
 	arglist.RemoveArg(0);
 	std::string expect("'quoted',arg string,contains 'many' \"\"surprises\\");
 	std::string actual;
-	for(int i = 0; i < arglist.Count(); i++) {
+	for(size_t i = 0; i < arglist.Count(); i++) {
 		if (!actual.empty()) actual += ',';
 		actual += arglist.GetArg(i);
 	}
@@ -995,8 +999,8 @@ static bool test_remove_beg_args() {
 
 static bool test_split_args_ret_true() {
 	emit_test("Test that split_args() returns true for a valid arg string.");
-	SimpleList<MyString> args;
-	bool ret_val = split_args(test_string, &args, NULL);
+	std::vector<std::string> args;
+	bool ret_val = split_args(test_string, args, NULL);
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Args List", "");
@@ -1035,11 +1039,11 @@ static bool test_split_args_ret_true_array() {
 
 static bool test_split_args_ret_false() {
 	emit_test("Test that split_args() returns false when passed a non-NULL "
-		"error message MyString for an invalid arg string due to an unterminated "
+		"error message string for an invalid arg string due to an unterminated "
 		"quote.");
-	SimpleList<MyString> args;
+	std::vector<std::string> args;
 	std::string error_msg;
-	bool ret_val = split_args("Unterminated 'quote", &args, &error_msg);
+	bool ret_val = split_args("Unterminated 'quote", args, &error_msg);
 	emit_input_header();
 	emit_param("Args", "Unterminated 'quote");
 	emit_param("Args List", "");
@@ -1057,10 +1061,10 @@ static bool test_split_args_ret_false() {
 
 static bool test_split_args_ret_false_null() {
 	emit_test("Test that split_args() returns false when passed a NULL error "
-		"message MyString for an invalid arg string due to an unterminated "
+		"message string for an invalid arg string due to an unterminated "
 		"quote.");
-	SimpleList<MyString> args;
-	bool ret_val = split_args("Unterminated 'quote", &args, NULL);
+	std::vector<std::string> args;
+	bool ret_val = split_args("Unterminated 'quote", args, NULL);
 	emit_input_header();
 	emit_param("Args", "Unterminated 'quote");
 	emit_param("Args List", "");
@@ -1079,9 +1083,9 @@ static bool test_split_args_ret_false_null() {
 static bool test_split_args_num() {
 	emit_test("Test that split_args() adds the correct number of args to the "
 		"SimpleList for a valid arg string.");
-	SimpleList<MyString> args;
-	split_args(test_string, &args, NULL);
-	int number = args.Number();
+	std::vector<std::string> args;
+	split_args(test_string, args, NULL);
+	size_t number = args.size();
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Args List", "");
@@ -1089,7 +1093,7 @@ static bool test_split_args_num() {
 	emit_output_expected_header();
 	emit_param("Number", "4");
 	emit_output_actual_header();
-	emit_param("Number", "%d", number); 
+	emit_param("Number", "%zu", number); 
 	arglist.Clear();
 	if(number != 4) {
 		FAIL;
@@ -1100,31 +1104,29 @@ static bool test_split_args_num() {
 static bool test_split_args_args() {
 	emit_test("Test that split_args() adds the correct args to the SimpleList "
 		"for a valid arg string.");
-	SimpleList<MyString> args;
-	SimpleListIterator<MyString> it(args);
-	MyString arg1, arg2, arg3, arg4;
-	MyString expect1("This"), expect2("'quoted'"), expect3("arg string"), 
+	std::vector<std::string> args;
+	std::string arg1, arg2, arg3, arg4;
+	std::string expect1("This"), expect2("'quoted'"), expect3("arg string"), 
 		expect4("contains 'many' \"\"surprises\\");
-	split_args(test_string, &args, NULL);
-	it.ToBeforeFirst();
-	it.Next(arg1);
-	it.Next(arg2);
-	it.Next(arg3);
-	it.Next(arg4);
+	split_args(test_string, args, NULL);
+	arg1 = args[0];
+	arg2 = args[1];
+	arg3 = args[2];
+	arg4 = args[3];
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Args List", "");
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("Arg 1", "%s", expect1.Value());
-	emit_param("Arg 2", "%s", expect2.Value());
-	emit_param("Arg 3", "%s", expect3.Value());
-	emit_param("Arg 4", "%s", expect4.Value());
+	emit_param("Arg 1", "%s", expect1.c_str());
+	emit_param("Arg 2", "%s", expect2.c_str());
+	emit_param("Arg 3", "%s", expect3.c_str());
+	emit_param("Arg 4", "%s", expect4.c_str());
 	emit_output_actual_header();
-	emit_param("Arg 1", "%s", arg1.Value()); 
-	emit_param("Arg 2", "%s", arg2.Value()); 
-	emit_param("Arg 3", "%s", arg3.Value()); 
-	emit_param("Arg 4", "%s", arg4.Value()); 
+	emit_param("Arg 1", "%s", arg1.c_str()); 
+	emit_param("Arg 2", "%s", arg2.c_str()); 
+	emit_param("Arg 3", "%s", arg3.c_str()); 
+	emit_param("Arg 4", "%s", arg4.c_str()); 
 	arglist.Clear();
 	if(arg1 != expect1 || arg2 != expect2 || arg3 != expect3 || 
 		arg4 != expect4) 
@@ -1175,11 +1177,11 @@ static bool test_join_args_ret() {
 	emit_test("Test that split_args() returns true after obtaining the args "
 		"with join_args() for a valid arg string.");
 	std::string joined_args;
-	SimpleList<MyString> args;
-	split_args(test_string, &args, NULL);
+	std::vector<std::string> args;
+	split_args(test_string, args, NULL);
 	join_args(args, joined_args);
-	args.Clear();
-	bool ret_val = split_args(joined_args.c_str(), &args, NULL);
+	args.clear();
+	bool ret_val = split_args(joined_args.c_str(), args, NULL);
 	emit_input_header();
 	emit_param("Args", joined_args.c_str());
 	emit_param("Args List", "");
@@ -1200,12 +1202,12 @@ static bool test_join_args_num() {
 		"SimpleList after obtaining the args with join_args() for a valid arg "
 		"string.");
 	std::string joined_args;
-	SimpleList<MyString> args;
-	split_args(test_string, &args, NULL);
+	std::vector<std::string> args;
+	split_args(test_string, args, NULL);
 	join_args(args, joined_args);
-	args.Clear();
-	split_args(joined_args.c_str(), &args, NULL);
-	int number = args.Number();
+	args.clear();
+	split_args(joined_args.c_str(), args, NULL);
+	size_t number = args.size();
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Args List", "");
@@ -1213,7 +1215,7 @@ static bool test_join_args_num() {
 	emit_output_expected_header();
 	emit_param("Number", "4");
 	emit_output_actual_header();
-	emit_param("Number", "%d", number); 
+	emit_param("Number", "%zu", number); 
 	arglist.Clear();
 	if(number != 4) {
 		FAIL;
@@ -1224,35 +1226,33 @@ static bool test_join_args_num() {
 static bool test_join_args_args() {
 	emit_test("Test that split_args() adds the correct args to the SimpleList "
 		"after obtaining the args with join_args() for a valid arg string.");
-	SimpleList<MyString> args;
-	SimpleListIterator<MyString> it(args);
-	MyString arg1, arg2, arg3, arg4;
+	std::vector<std::string> args;
+	std::string arg1, arg2, arg3, arg4;
 	std::string joined_args;
-	MyString expect1("This"), expect2("'quoted'"), expect3("arg string"), 
+	std::string expect1("This"), expect2("'quoted'"), expect3("arg string"), 
 		expect4("contains 'many' \"\"surprises\\");
-	split_args(test_string, &args, NULL);
+	split_args(test_string, args, NULL);
 	join_args(args, joined_args);
-	args.Clear();
-	split_args(joined_args.c_str(), &args, NULL);
-	it.ToBeforeFirst();
-	it.Next(arg1);
-	it.Next(arg2);
-	it.Next(arg3);
-	it.Next(arg4);
+	args.clear();
+	split_args(joined_args.c_str(), args, NULL);
+	arg1 = args[0];
+	arg2 = args[1];
+	arg3 = args[2];
+	arg4 = args[3];
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_param("Args List", "");
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
-	emit_param("Arg 1", "%s", expect1.Value());
-	emit_param("Arg 2", "%s", expect2.Value());
-	emit_param("Arg 3", "%s", expect3.Value());
-	emit_param("Arg 4", "%s", expect4.Value());
+	emit_param("Arg 1", "%s", expect1.c_str());
+	emit_param("Arg 2", "%s", expect2.c_str());
+	emit_param("Arg 3", "%s", expect3.c_str());
+	emit_param("Arg 4", "%s", expect4.c_str());
 	emit_output_actual_header();
-	emit_param("Arg 1", "%s", arg1.Value()); 
-	emit_param("Arg 2", "%s", arg2.Value()); 
-	emit_param("Arg 3", "%s", arg3.Value()); 
-	emit_param("Arg 4", "%s", arg4.Value()); 
+	emit_param("Arg 1", "%s", arg1.c_str()); 
+	emit_param("Arg 2", "%s", arg2.c_str()); 
+	emit_param("Arg 3", "%s", arg3.c_str()); 
+	emit_param("Arg 4", "%s", arg4.c_str()); 
 	arglist.Clear();
 	if(arg1 != expect1 || arg2 != expect2 || arg3 != expect3 || 
 		arg4 != expect4) 
@@ -1263,12 +1263,12 @@ static bool test_join_args_args() {
 }
 
 static bool test_join_args_equivalent() {
-	emit_test("Test that each join_args() method returns an equivalent MyString"
-		" if called on a SimpleList or a string array.");
+	emit_test("Test that each join_args() method returns an equivalent string"
+		" if called on a vector<string> or a string array.");
 	std::string joined_args, joined_args2;
-	SimpleList<MyString> args;
+	std::vector<std::string> args;
 	char** string_array;
-	split_args(test_string, &args, NULL);
+	split_args(test_string, args, NULL);
 	join_args(args, joined_args);
 	split_args(test_string, &string_array, NULL);
 	join_args(string_array, joined_args2);

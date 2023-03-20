@@ -60,96 +60,21 @@ void append_arg(char const *arg, std::string &result) {
 }
 
 void
-join_args( SimpleList<MyString> const & args_list, std::string & result, int start_arg)
+join_args(std::vector<std::string> const & args_list, std::string & result, size_t start_arg)
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg=NULL;
-	for(int i=0;it.Next(arg);i++) {
-		if(i<start_arg) continue;
-		append_arg(arg->c_str(), result);
-	}
-}
-
-void
-join_args(std::vector<std::string> const & args_list, std::string & result, int start_arg)
-{
-	int i = 0;
+	size_t i = 0;
 	for (auto& arg : args_list) {
 		if(i++<start_arg) continue;
 		append_arg(arg.c_str(), result);
 	}
 }
 
-void join_args(char const * const *args_array,std::string& result,int start_arg) {
+void join_args(char const * const *args_array,std::string& result,size_t start_arg) {
 	if(!args_array) return;
-	for(int i=0;args_array[i];i++) {
+	for(size_t i=0;args_array[i];i++) {
 		if(i<start_arg) continue;
 		append_arg(args_array[i], result);
 	}
-}
-
-bool split_args(
-  char const *args,
-  SimpleList<MyString> *args_list,
-  std::string* error_msg)
-{
-	MyString buf = "";
-	bool parsed_token = false;
-
-	if(!args) return true;
-
-	while(*args) {
-		switch(*args) {
-		case '\'': {
-			char const *quote = args++;
-			parsed_token = true;
-			while(*args) {
-				if(*args == *quote) {
-					if(args[1] == *quote) {
-						// This is a repeated quote, which we treat as an
-						// escape mechanism for quotes.
-						buf += *(args++);
-						args++;
-					}
-					else {
-						break;
-					}
-				}
-				else {
-					buf += *(args++);
-				}
-			}
-			if(!*args) {
-				if(error_msg) {
-					formatstr(*error_msg, "Unbalanced quote starting here: %s", quote);
-				}
-				return false;
-			}
-			args++; //eat the closing quote
-			break;
-		}
-		case ' ':
-		case '\t':
-		case '\n':
-		case '\r': {
-			args++; // eat whitespace
-			if(parsed_token) {
-				parsed_token = false;
-				ASSERT(args_list->Append(buf));
-				buf = "";
-			}
-			break;
-		}
-		default:
-			parsed_token = true;
-			buf += *(args++);
-			break;
-		}
-	}
-	if(parsed_token) {
-		args_list->Append(buf);
-	}
-	return true;
 }
 
 bool split_args(
@@ -217,24 +142,23 @@ bool split_args(
 }
 
 static char **
-ArgListToArgsArray(SimpleList<MyString> const &args_list)
+ArgListToArgsArray(std::vector<std::string> const &args_list)
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg;
-	int i;
-	char **args_array = (char **)malloc((args_list.Number()+1)*sizeof(char*));
+	size_t i = 0;
+	char **args_array = (char **)malloc((args_list.size()+1)*sizeof(char*));
 	ASSERT(args_array);
-	for(i=0;it.Next(arg);i++) {
-		args_array[i] = strdup(arg->c_str());
+	for (const auto& arg: args_list) {
+		args_array[i] = strdup(arg.c_str());
 		ASSERT(args_array[i]);
+		i++;
 	}
 	args_array[i] = NULL;
 	return args_array;
 }
 
 bool split_args(char const *args, char ***args_array, std::string* error_msg) {
-	SimpleList<MyString> args_list;
-	if(!split_args(args,&args_list,error_msg)) {
+	std::vector<std::string> args_list;
+	if(!split_args(args,args_list,error_msg)) {
 		*args_array = NULL;
 		return false;
 	}
@@ -254,68 +178,48 @@ deleteStringArray(char **array)
 }
 
 
-int
+size_t
 ArgList::Count() const {
-	return args_list.Number();
+	return args_list.size();
 }
 void
 ArgList::Clear() {
-	args_list.Clear();
+	args_list.clear();
 	input_was_unknown_platform_v1 = false;
 }
 
 char const *
-ArgList::GetArg(int n) const {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg;
-	int i;
-	for(i=0;it.Next(arg);i++) {
-		if(i == n) return arg->c_str();
+ArgList::GetArg(size_t n) const {
+	if (n >= args_list.size()) {
+		return nullptr;
+	} else {
+		return args_list[n].c_str();
 	}
-	return NULL;
 }
 
 void
 ArgList::AppendArg(const std::string &arg) {
-	ASSERT(args_list.Append(arg.c_str()));
+	args_list.emplace_back(arg);
 }
 
 void
 ArgList::AppendArg(char const *arg) {
 	ASSERT(arg);
-	ASSERT(args_list.Append(arg));
+	args_list.emplace_back(arg);
 }
 
 void
-ArgList::RemoveArg(int pos) {
-	MyString arg;
-	ASSERT(pos >= 0 && pos < Count());
-	args_list.Rewind();
-	for(int i=0;i <= pos;i++) {
-		args_list.Next(arg);
+ArgList::RemoveArg(size_t pos) {
+	if (pos < args_list.size()) {
+		args_list.erase(args_list.begin()+pos);
 	}
-	args_list.DeleteCurrent();
 }
 
 void
-ArgList::InsertArg(char const *arg,int pos) {
-	ASSERT(pos >= 0 && pos <= Count());
+ArgList::InsertArg(char const *arg, size_t pos) {
+	ASSERT(pos <= Count());
 
-	int i;
-	char **args_array = GetStringArray();
-
-	args_list.Clear();
-	for(i=0;args_array[i];i++) {
-		if(i == pos) {
-			args_list.Append(arg);
-		}
-		args_list.Append(args_array[i]);
-	}
-	if(i == pos) {
-		args_list.Append(arg);
-	}
-
-	deleteStringArray(args_array);
+	args_list.insert(args_list.begin()+pos, arg);
 }
 
 char **
@@ -385,7 +289,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,std::string& error_msg)
 
 	while(*args) {
 		char const *begin_arg = args;
-		MyString buf = "";
+		std::string buf = "";
 		while(*args) {
 			if(*args == ' ' || *args == '\t' || \
 			   *args == '\n' || *args == '\r') {
@@ -445,7 +349,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,std::string& error_msg)
 			}
 		}
 		if(args > begin_arg) {
-			ASSERT(args_list.Append(buf));
+			args_list.emplace_back(buf);
 		}
 		while(*args == ' ' || *args == '\t' || *args == '\n' || *args == '\r')
 		{
@@ -470,7 +374,7 @@ ArgList::AppendArgsV1Raw_unix(char const *args,std::string&  /*error_msg*/)
 			args++; // eat whitespace
 			if(parsed_token) {
 				parsed_token = false;
-				ASSERT(args_list.Append(buf));
+				args_list.emplace_back(buf);
 				buf = "";
 			}
 			break;
@@ -482,7 +386,7 @@ ArgList::AppendArgsV1Raw_unix(char const *args,std::string&  /*error_msg*/)
 		}
 	}
 	if(parsed_token) {
-		args_list.Append(buf);
+		args_list.emplace_back(buf);
 	}
 	return true;
 }
@@ -528,7 +432,7 @@ ArgList::AppendArgsV1Raw(char const *args, std::string &error_msg)
 bool
 ArgList::AppendArgsV2Raw(char const *args,std::string &error_msg)
 {
-	return split_args(args,&args_list, &error_msg);
+	return split_args(args, args_list, &error_msg);
 }
 
 void
@@ -536,10 +440,8 @@ ArgList::AppendArgsFromArgList(ArgList const &args)
 {
 	input_was_unknown_platform_v1 = args.input_was_unknown_platform_v1;
 
-	SimpleListIterator<MyString> it(args.args_list);
-	MyString *arg=NULL;
-	while(it.Next(arg)) {
-		AppendArg(arg->c_str());
+	for (const auto& arg: args.args_list) {
+		AppendArg(arg);
 	}
 }
 
@@ -671,17 +573,15 @@ ArgList::IsSafeArgV1Value(char const *str) const
 bool
 ArgList::GetArgsStringV1Raw(std::string & result, std::string & error_msg) const
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg=NULL;
-	while(it.Next(arg)) {
-		if(!IsSafeArgV1Value(arg->c_str())) {
-			formatstr(error_msg,"Cannot represent '%s' in V1 arguments syntax.",arg->c_str());
+	for (const auto& arg: args_list) {
+		if(!IsSafeArgV1Value(arg.c_str())) {
+			formatstr(error_msg,"Cannot represent '%s' in V1 arguments syntax.",arg.c_str());
 			return false;
 		}
 		if(result.length()) {
 			result += " ";
 		}
-		result += arg->c_str();
+		result += arg;
 	}
 	return true;
 }
@@ -724,14 +624,14 @@ ArgList::V1RawToV1Wacked(std::string const &v1_raw, std::string& result)
 }
 
 bool
-ArgList::GetArgsStringV2Raw(std::string & result, int start_arg) const
+ArgList::GetArgsStringV2Raw(std::string & result, size_t start_arg) const
 {
 	join_args(args_list, result, start_arg);
 	return true;
 }
 
 void
-ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
+ArgList::GetArgsStringForDisplay(std::string & result, size_t start_arg) const
 {
 	GetArgsStringV2Raw(result, start_arg);
 }
@@ -741,10 +641,8 @@ ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
 // with their C-style escapes.
 void ArgList::GetArgsStringForLogging( std::string & result ) const {
 
-	MyString * msArg = NULL;
-	SimpleListIterator<MyString> it( args_list );
-	while( it.Next( msArg ) ) {
-		const char * arg = msArg->c_str();
+	for (const auto& msArg: args_list) {
+		const char * arg = msArg.c_str();
 
 		if( result.length() != 0 ) { result += " "; }
 		while( * arg ) {
@@ -784,29 +682,27 @@ ArgList::~ArgList()
 }
 
 bool
-ArgList::GetArgsStringWin32(std::string& result,int skip_args) const
+ArgList::GetArgsStringWin32(std::string& result, size_t skip_args) const
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg = NULL;
-	int i;
-	for(i=0;it.Next(arg);i++) {
-		if(i<skip_args) continue;
+	size_t i = 0;
+	for (const auto& arg: args_list) {
+		if (i++ < skip_args) continue;
 		if(result.length()) result += ' ';
 		if(input_was_unknown_platform_v1) {
 			// In V1 arg syntax, we just pass on whatever the user entered
 			// directly to the Windows OS, assuming the user wants the
 			// OS to interpret whatever quotes, backslashes, etc., that
 			// are there.
-			result += (*arg);
+			result += arg;
 		}
 		else {
 			// In V2 arg syntax, we encode arguments in a way that should
 			// be parsed correctly by Windows function CommandLineToArgv().
 
-			char const *argstr = arg->c_str();
+			char const *argstr = arg.c_str();
 			if(argstr[strcspn(argstr," \t\"")] == '\0') {
 				// No special characters in the argument.
-				result += (*arg);
+				result += arg;
 			}
 			else {
 				// Special characters, so we need to quote it.
@@ -960,18 +856,17 @@ ArgList::SetArgV1SyntaxToCurrentPlatform()
 }
 
 bool
-ArgList::GetArgsStringSystem(std::string & result,int skip_args) const
+ArgList::GetArgsStringSystem(std::string & result, size_t skip_args) const
 {
 #ifdef WIN32
 	return GetArgsStringWin32(result,skip_args);
 #else
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg=NULL;
-	for(int i=0;it.Next(arg);i++) {
-		if(i<skip_args) continue;
+	size_t i = 0;
+	for (const auto& arg: args_list) {
+		if (i++ < skip_args) continue;
 		formatstr_cat(result, "%s\"%s\"",
 							result.empty() ? "" : " ",
-							arg->EscapeChars("\"\\$`",'\\').c_str());
+							EscapeChars(arg,"\"\\$`",'\\').c_str());
 	}
 	return true;
 #endif

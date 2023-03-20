@@ -854,7 +854,7 @@ int daemon::RealStart( )
 			ArgList configArgs;
 			std::string configError;
 			if( configArgs.AppendArgsV1RawOrV2Quoted( daemon_args, configError ) ) {
-				for( int i = 0; i < configArgs.Count(); ++i ) {
+				for( size_t i = 0; i < configArgs.Count(); ++i ) {
 					char const * configArg = configArgs.GetArg( i );
 					if( strcmp( configArg, "-local-name" ) == 0 ) {
 						foundLocalName = true;
@@ -926,7 +926,7 @@ int daemon::RealStart( )
     // allocate them again
     int udp_command_port = command_port;
     if ( isDC ) {
-		int i;
+		size_t i;
 		for(i=0;i<args.Count();i++) {
 			char const *cur_arg = args.GetArg(i);
 			if(strcmp( cur_arg, "-p" ) == 0 ) {

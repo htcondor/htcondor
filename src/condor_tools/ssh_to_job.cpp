@@ -811,7 +811,7 @@ bool SSHToJob::execute_ssh()
 	}
 
 		// now insert any extra ssh options provided by -ssh
-	int insert_arg;
+	size_t insert_arg;
 	for(insert_arg=1; insert_arg<ssh_options_arglist.Count(); insert_arg++) {
 		ssh_arglist.InsertArg(ssh_options_arglist.GetArg(insert_arg),insert_arg);
 	}
