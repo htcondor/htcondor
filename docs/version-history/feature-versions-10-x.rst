@@ -25,6 +25,10 @@ Bugs Fixed:
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
 
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1655`
+
 Version 10.4.0
 --------------
 
