@@ -7310,18 +7310,18 @@ int DaemonCore::Create_Process(
 				// add in what is likely the system default path.  we do this
 				// here, before merging the user env, because if the user
 				// specifies a path in the job ad we want top use that instead.
-			MyString path;
+			std::string path;
 			GetEnv("PATH",path);
-			if (path.Length()) {
-				job_environ.SetEnv("PATH",path.Value());
+			if (path.length()) {
+				job_environ.SetEnv("PATH",path.c_str());
 			}
 
 			// do the same for what likely is the system default TEMP
 			// directory.
-			MyString temp_path;
+			std::string temp_path;
 			GetEnv("TEMP",temp_path);
-			if (temp_path.Length()) {
-				job_environ.SetEnv("TEMP",temp_path.Value());
+			if (temp_path.length()) {
+				job_environ.SetEnv("TEMP",temp_path.c_str());
 			}
 		}
 		else {
@@ -7356,10 +7356,10 @@ int DaemonCore::Create_Process(
 			"\0" };		// must end list with NULL string
 		int ixvar = 0;
 		while ( default_vars[ixvar][0] ) {
-			MyString envbuf;
+			std::string envbuf;
 			GetEnv(default_vars[ixvar],envbuf);
-			if (envbuf.Length()) {
-				job_environ.SetEnv(default_vars[ixvar],envbuf.Value());
+			if (envbuf.length()) {
+				job_environ.SetEnv(default_vars[ixvar],envbuf.c_str());
 			}
 			ixvar++;
 		}

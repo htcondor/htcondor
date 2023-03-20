@@ -176,14 +176,14 @@ const char *GetEnv( const char *env_var )
 	assert( env_var );
 
 #ifdef WIN32
-	static MyString result;
+	static std::string result;
 	return GetEnv( env_var, result );
 #else
 	return getenv( env_var );
 #endif
 }
 
-const char *GetEnv( const char *env_var, MyString &result )
+const char *GetEnv( const char *env_var, std::string &result )
 {
 	assert( env_var );
 
@@ -222,7 +222,8 @@ const char *GetEnv( const char *env_var, MyString &result )
 		free( value );
 	}
 #else
-	result = getenv( env_var );
+	const char* val = getenv(env_var);
+	result = val ? val : "";
 #endif
 	return result.c_str();
 }

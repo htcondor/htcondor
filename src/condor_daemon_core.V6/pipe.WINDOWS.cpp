@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "pipe.WINDOWS.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 
 extern CRITICAL_SECTION Big_fat_mutex;
 
@@ -28,19 +28,19 @@ PipeEnd::PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size
 		m_nonblocking(nonblocking), m_pipe_size(pipe_size),
 		m_registered(false), m_watched_event(NULL)
 {
-	MyString event_name;
+	std::string event_name;
 
 	// create a manual reset Event, set initially to signaled
 	// to be used for overlapped operations
-	event_name.formatstr("pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
-	m_event = CreateEvent( NULL, TRUE, TRUE, event_name.Value() );
+	formatstr(event_name, "pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
+	m_event = CreateEvent( NULL, TRUE, TRUE, event_name.c_str() );
 	ASSERT(m_event);
 	
 	// create the event for waiting until a PID-watcher
 	// is done using this object
-	event_name.formatstr("pipe_watched_event_%d_%x", 
+	formatstr(event_name, "pipe_watched_event_%d_%x", 
 		GetCurrentProcessId(), m_handle);
-	m_watched_event = CreateEvent(NULL, TRUE, TRUE, event_name.Value());
+	m_watched_event = CreateEvent(NULL, TRUE, TRUE, event_name.c_str());
 	ASSERT(m_watched_event);
 }
 
