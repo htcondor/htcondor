@@ -1174,14 +1174,14 @@ static bool test_split_args_args_array() {
 static bool test_join_args_ret() {
 	emit_test("Test that split_args() returns true after obtaining the args "
 		"with join_args() for a valid arg string.");
-	MyString joined_args;
+	std::string joined_args;
 	SimpleList<MyString> args;
 	split_args(test_string, &args, NULL);
-	join_args(args, &joined_args);
+	join_args(args, joined_args);
 	args.Clear();
-	bool ret_val = split_args(joined_args.Value(), &args, NULL);
+	bool ret_val = split_args(joined_args.c_str(), &args, NULL);
 	emit_input_header();
-	emit_param("Args", joined_args.Value());
+	emit_param("Args", joined_args.c_str());
 	emit_param("Args List", "");
 	emit_param("Error Message", "NULL");
 	emit_output_expected_header();
@@ -1199,12 +1199,12 @@ static bool test_join_args_num() {
 	emit_test("Test that split_args() adds the correct number of args to the "
 		"SimpleList after obtaining the args with join_args() for a valid arg "
 		"string.");
-	MyString joined_args;
+	std::string joined_args;
 	SimpleList<MyString> args;
 	split_args(test_string, &args, NULL);
-	join_args(args, &joined_args);
+	join_args(args, joined_args);
 	args.Clear();
-	split_args(joined_args.Value(), &args, NULL);
+	split_args(joined_args.c_str(), &args, NULL);
 	int number = args.Number();
 	emit_input_header();
 	emit_param("Args", test_string);
@@ -1226,13 +1226,14 @@ static bool test_join_args_args() {
 		"after obtaining the args with join_args() for a valid arg string.");
 	SimpleList<MyString> args;
 	SimpleListIterator<MyString> it(args);
-	MyString arg1, arg2, arg3, arg4, joined_args;
+	MyString arg1, arg2, arg3, arg4;
+	std::string joined_args;
 	MyString expect1("This"), expect2("'quoted'"), expect3("arg string"), 
 		expect4("contains 'many' \"\"surprises\\");
 	split_args(test_string, &args, NULL);
-	join_args(args, &joined_args);
+	join_args(args, joined_args);
 	args.Clear();
-	split_args(joined_args.Value(), &args, NULL);
+	split_args(joined_args.c_str(), &args, NULL);
 	it.ToBeforeFirst();
 	it.Next(arg1);
 	it.Next(arg2);
@@ -1264,19 +1265,19 @@ static bool test_join_args_args() {
 static bool test_join_args_equivalent() {
 	emit_test("Test that each join_args() method returns an equivalent MyString"
 		" if called on a SimpleList or a string array.");
-	MyString joined_args, joined_args2;
+	std::string joined_args, joined_args2;
 	SimpleList<MyString> args;
 	char** string_array;
 	split_args(test_string, &args, NULL);
-	join_args(args, &joined_args);
+	join_args(args, joined_args);
 	split_args(test_string, &string_array, NULL);
-	join_args(string_array, &joined_args2);
+	join_args(string_array, joined_args2);
 	emit_input_header();
 	emit_param("Args", test_string);
 	emit_output_expected_header();
 	emit_output_actual_header();
-	emit_param("SimpleList Joined Args  ", "%s", joined_args.Value());
-	emit_param("String Array Joined Args", "%s", joined_args2.Value());
+	emit_param("SimpleList Joined Args  ", "%s", joined_args.c_str());
+	emit_param("String Array Joined Args", "%s", joined_args2.c_str());
 	arglist.Clear();
 	delete_helper(string_array, 4);
 	if(joined_args != joined_args2) {
