@@ -128,7 +128,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/10.x/10.2.0/rc/condor-10.2.0-x86_64_CentOS8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://cs.wisc.edu/~tlmiller/htcondor-1612/condor-10.4.0-0.632564-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -311,7 +311,7 @@ SEC_TOKEN_DIRECTORY = \$(LOCAL_DIR)/tokens.d
 RUNBENCHMARKS = FALSE
 
 # We definitely need CCB.
-CCB_ADDRESS = \$(COLLECTOR_HOST)
+CCB_ADDRESS = ${COLLECTOR}
 
 #
 # Commit suicide after being idle for long enough.
@@ -352,6 +352,21 @@ if defined MY.ContainerImage
     EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
 endif
 @end
+
+#
+# Connect directly to the schedd.
+#
+STARTD_DIRECT_ATTACH_SCHEDD_NAME = azaphrael.org
+STARTD_DIRECT_ATTACH_SCHEDD_POOL = ${COLLECTOR}
+
+# Update slots often enough that we can do more than one job. ;)
+# The direct attach interval is the minimum interval; this interval
+# is checked every UPDATE_INTERVAL.
+STARTD_DIRECT_ATTACH_INTERVAL = 5
+UPDATE_INTERVAL = 5
+
+# FIXME: debuggery
+STARTD_DEBUG = D_FULLDEBUG
 
 #
 # Subsequent configuration is machine-specific.

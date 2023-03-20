@@ -438,7 +438,10 @@ def create_annex_token(logger, type):
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
         '-authz', 'ADVERTISE_MASTER',
+        # Why is _this_ here?
         '-authz', 'ADVERTISE_SCHEDD',
+        # For direct attach.
+        '-authz', 'WRITE',
     ]
 
     proc = subprocess.Popen(
