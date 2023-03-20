@@ -46,7 +46,7 @@ extern "C" unsigned int __stdcall GetLastError(void);
 extern "C" unsigned int __stdcall Sleep(unsigned int millisec);
 extern "C" HANDLE __stdcall GetStdHandle(int idHandle);
 extern "C" const wchar_t * __stdcall GetCommandLineW(void);
-extern "C" BOOL __stdcall WriteFile(HANDLE hFile, char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
+extern "C" BOOL __stdcall WriteFile(HANDLE hFile, const char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
 extern "C" BOOL __stdcall QueryPerformanceCounter(__int64 * counter);
 
 #define LMEM_ZERO 0x40
