@@ -724,7 +724,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	if (append != APPEND_NOTHING) {
 		args.AppendArg("-a");
 		switch (append) {
-		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
+		case APPEND_CLUSTER: args.AppendArg(std::to_string(claim->cluster())); break;
 
 		case APPEND_JOBID: {
 			std::string jobid;

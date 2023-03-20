@@ -1793,11 +1793,11 @@ Claim::makeCODStarterArgs( ArgList &args )
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
 		args.AppendArg("-job-cluster");
-		args.AppendArg(c_cluster);
+		args.AppendArg(std::to_string(c_cluster));
 	} 
 	if( c_proc >= 0 ) {
 		args.AppendArg("-job-proc");
-		args.AppendArg(c_proc);
+		args.AppendArg(std::to_string(c_proc));
 	} 
 
 		// finally, specify how the job should get its ClassAd

@@ -9744,10 +9744,10 @@ Scheduler::spawnLocalStarter( shadow_rec* srec )
 	starter_args.AppendArg("-f");
 
 	starter_args.AppendArg("-job-cluster");
-	starter_args.AppendArg(job_id->cluster);
+	starter_args.AppendArg(std::to_string(job_id->cluster));
 
 	starter_args.AppendArg("-job-proc");
-	starter_args.AppendArg(job_id->proc);
+	starter_args.AppendArg(std::to_string(job_id->proc));
 
 	starter_args.AppendArg("-header");
 	std::string header;

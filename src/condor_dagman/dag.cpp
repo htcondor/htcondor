@@ -873,7 +873,7 @@ Dag::RemoveBatchJob(Job *node) {
 	std::string constraint;
 
 	args.AppendArg( _condorRmExe );
-	args.AppendArg(node->GetCluster());
+	args.AppendArg(std::to_string(node->GetCluster()));
 	args.AppendArg( "-const" );
 
 		// Adding this DAGMan's cluster ID as a constraint to

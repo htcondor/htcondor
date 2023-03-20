@@ -475,7 +475,7 @@ ProcFamilyProxy::start_procd()
 	// condor user
 	//
 	args.AppendArg("-C");
-	args.AppendArg(get_condor_uid());
+	args.AppendArg(std::to_string(get_condor_uid()));
 #endif
 
 #if defined(WIN32)

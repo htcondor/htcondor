@@ -410,7 +410,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 		systemcmd.AppendArg("-t");
 	}
 	systemcmd.AppendArg("-M");
-	systemcmd.AppendArg(VMGAHP_TEST_MODE);
+	systemcmd.AppendArg(std::to_string(VMGAHP_TEST_MODE));
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(vmtype);
 
@@ -864,7 +864,7 @@ VMUniverseMgr::killVM(const char *matchstring)
 		systemcmd.AppendArg("-t");
 	}
 	systemcmd.AppendArg("-M");
-	systemcmd.AppendArg(VMGAHP_KILL_MODE);
+	systemcmd.AppendArg(std::to_string(VMGAHP_KILL_MODE));
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");
