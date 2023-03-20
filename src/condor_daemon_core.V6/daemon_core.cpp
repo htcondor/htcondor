@@ -6739,39 +6739,6 @@ void CreateProcessForkit::exec() {
 #endif
 
 
-int DaemonCore::Create_Process(
-			const char      *executable,
-			ArgList const   &args,
-			priv_state      priv,
-			int             reaper_id,
-			int             want_command_port,
-			int             want_udp_command_port,
-			Env const       *env,
-			const char      *cwd,
-			FamilyInfo      *family_info,
-			Stream          *sock_inherit_list[],
-			int             std[],
-			int             fd_inherit_list[],
-			int             nice_inc,
-			sigset_t        *sigmask,
-			int             job_opt_mask,
-			size_t          *core_hard_limit,
-			int             *affinity_mask,
-			char const      *daemon_sock,
-			std::string     & err_return_msg,
-			FilesystemRemap *remap,
-			long            as_hard_limit
-			) {
-	MyString ms;
-	int rv = Create_Process( executable, args, priv, reaper_id,
-		want_command_port, want_udp_command_port, env, cwd, family_info,
-		sock_inherit_list, std, fd_inherit_list, nice_inc, sigmask,
-		job_opt_mask, core_hard_limit, affinity_mask, daemon_sock,
-		& ms, remap, as_hard_limit );
-	if(! ms.empty()) { err_return_msg = ms; }
-	return rv;
-}
-
 MSC_DISABLE_WARNING(6262) // function uses 62916 bytes of stack
 int DaemonCore::Create_Process(
 			const char    *executable,
@@ -6792,7 +6759,7 @@ int DaemonCore::Create_Process(
 			size_t        *core_hard_limit,
 			int			  *affinity_mask,
 			char const    *daemon_sock,
-			MyString      *err_return_msg,
+			std::string   *err_return_msg,
 			FilesystemRemap *remap,
 			long		  as_hard_limit
             )
@@ -6801,7 +6768,7 @@ int DaemonCore::Create_Process(
 	char *ptmp;
 	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
-	MyString executable_buf;
+	std::string executable_buf;
 	priv_state current_priv = PRIV_UNKNOWN;
 
 	// Remap our executable and CWD if necessary.
@@ -6838,7 +6805,7 @@ int DaemonCore::Create_Process(
 	DWORD create_process_flags = 0;
 	BOOL inherit_handles = FALSE;
 	char *newenv = NULL;
-	MyString strArgs;
+	std::string strArgs;
 	int namelen = 0;
 	bool bIs16Bit = FALSE;
 	int first_arg_to_copy = 0;
@@ -6848,9 +6815,8 @@ int DaemonCore::Create_Process(
 	bool batch_file = false;
 	bool binary_executable = false;
 	CHAR interpreter[MAX_PATH+1];
-	MyString description;
 	BOOL ok;
-	MyString executable_with_exe;	// buffer for executable w/ .exe appended
+	std::string executable_with_exe;	// buffer for executable w/ .exe appended
 
 #else
 	int inherit_handles;
@@ -7426,19 +7392,21 @@ int DaemonCore::Create_Process(
 		/** surround the executable name with quotes or you'll 
 			have problems when the execute directory contains 
 			spaces! */
-		strArgs.formatstr ( 
+		formatstr (
+			strArgs,
 			"\"%s\"",
 			executable );
 		
 		/* make sure we're only using backslashes */
-		strArgs.replaceString (
+		replace_str (
+			strArgs,
 			"/", 
 			"\\", 
 			0 );
 
 		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 ( 
-			&strArgs,
+			strArgs,
 			first_arg_to_copy
 			);
 
@@ -7459,20 +7427,21 @@ int DaemonCore::Create_Process(
 		
 		/** next, stuff the extra cmd.exe args in with 
 			the arguments */
-		strArgs.formatstr ( 
+		formatstr (
+			strArgs,
 			"\"%s\" /Q /C \"%s\"",
 			systemshell,
 			executable );
 
 		/** store the cmd.exe as the executable */
 		executable_buf	= systemshell;
-		executable		= executable_buf.Value();
+		executable		= executable_buf.c_str();
 
 		/** skip argv[0], since it only contains junk and will goof
 			up the args to the batch file. */
 		first_arg_to_copy = 1;
 		args_success = args.GetArgsStringWin32 (
-			&strArgs,
+			strArgs,
 			first_arg_to_copy
 			);
 
@@ -7480,7 +7449,7 @@ int DaemonCore::Create_Process(
 			D_ALWAYS, 
 			"Executable is a batch file, "
 			"running: %s\n",
-			strArgs.Value () );
+			strArgs.c_str () );
 
 	} else if ( allow_scripts && !binary_executable ) {
 
@@ -7533,7 +7502,8 @@ int DaemonCore::Create_Process(
 
 				/** add the script to the command-line. The 
 					executable is actually the script. */
-				strArgs.formatstr (
+				formatstr (
+					strArgs,
 					"\"%s\" \"%s\"",
 					interpreter, 
 					executable );
@@ -7541,13 +7511,13 @@ int DaemonCore::Create_Process(
 				/** change executable to be the interpreter 
 					associated with the file type. */
 				executable_buf	= interpreter;
-				executable		= executable_buf.Value ();
+				executable		= executable_buf.c_str();
 
 				/** skip argv[0], since it only contains junk and
 					will goof up the args to the script. */
 				first_arg_to_copy = 1;
 				args_success = args.GetArgsStringWin32 (
-					&strArgs,
+					strArgs,
 					first_arg_to_copy
 					);
 				
@@ -7556,7 +7526,7 @@ int DaemonCore::Create_Process(
 					"Executable is a *%s script, "
 					"running: %s\n",
 					extension,
-					strArgs.Value () );
+					strArgs.c_str () );
 
 			}
 
@@ -7573,7 +7543,7 @@ int DaemonCore::Create_Process(
 		/** append the arguments given in the submit file. */
 		first_arg_to_copy = 0;
 		args_success = args.GetArgsStringWin32 (
-			&strArgs,
+			strArgs,
 			first_arg_to_copy
 			);
 
@@ -7605,7 +7575,7 @@ int DaemonCore::Create_Process(
 		char *alt_name = alternate_exec_pathname( executable );
 		if ( alt_name ) {
 			executable_with_exe = alt_name;
-			executable = executable_with_exe.Value();
+			executable = executable_with_exe.c_str();
 			free(alt_name);
 				// try GetBinaryType again...
 			gbt_result = GetBinaryType(executable, &binType);
@@ -7628,7 +7598,7 @@ int DaemonCore::Create_Process(
 
 		goto wrapup;
 	} else {
-		dprintf(D_FULLDEBUG, "Create_Process(): BinaryType is %d : arguments '%s'\n", binType, strArgs.Value());
+		dprintf(D_FULLDEBUG, "Create_Process(): BinaryType is %d : arguments '%s'\n", binType, strArgs.c_str());
 	}
 
 	// if we want to create a process family for this new process, we
@@ -7660,7 +7630,7 @@ int DaemonCore::Create_Process(
 	//runtime = dc_stats.AddRuntimeSample("DCCreate_Process000", IF_VERBOSEPUB, runtime);
 
    	if ( priv != PRIV_USER_FINAL || !can_switch_ids() ) {
-		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.Value(),NULL,
+		cp_result = ::CreateProcess(bIs16Bit ? NULL : executable,(char*)strArgs.c_str(),NULL,
 			NULL,inherit_handles, create_process_flags,newenv,cwdBackup,&si,&piProcess);
 
 		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessW32", IF_VERBOSEPUB, runtime);
@@ -7710,7 +7680,7 @@ int DaemonCore::Create_Process(
 		priv_state s = set_user_priv();
 
 		cp_result = ::CreateProcessAsUser(user_token,bIs16Bit ? NULL : executable,
-			(char *)strArgs.Value(),NULL,NULL, inherit_handles,
+			(char *)strArgs.c_str(),NULL,NULL, inherit_handles,
 			create_process_flags, newenv,cwdBackup,&si,&piProcess);
 
 		//runtime = dc_stats.AddRuntimeSample("DCCreateProcessAsUser", IF_VERBOSEPUB, runtime);
@@ -8086,7 +8056,7 @@ int DaemonCore::Create_Process(
 						formatstr(remap_description," remapped to \"%s\"",alt_cwd.c_str());
 					}
 					if (NULL != err_return_msg) {
-						err_return_msg->formatstr("Cannot access initial working directory \"%s\"%s",
+						formatstr(*err_return_msg, "Cannot access initial working directory \"%s\"%s",
 												  cwd, remap_description.c_str());
 					}
 					dprintf( D_ALWAYS, "Create_Process: "
@@ -8121,7 +8091,7 @@ int DaemonCore::Create_Process(
 							"failed due to bad interpreter (%s)\n",
 							executable,
 							buf_begin_ptr );
-						if (err_return_msg) err_return_msg->formatstr(
+						if (err_return_msg) formatstr(*err_return_msg
 							"invalid interpreter (%s) specified on first line of script", buf_begin_ptr);
 					}
 					if (script_fd >= 0)
@@ -11259,16 +11229,14 @@ int DaemonCore::CreateProcessNew(
   const std::string & name,
   const ArgList & argsList,
   const OptionalCreateProcessArgs & ocpa ) {
-	MyString ms(ocpa.err_return_msg);
 	int rv = Create_Process( name.c_str(), argsList,
 		ocpa._priv, ocpa.reaper_id, ocpa.want_command_port,
 		ocpa.want_udp_command_port, ocpa._env, ocpa._cwd, ocpa.family_info,
 		ocpa.socket_inherit_list, ocpa._std, ocpa.fd_inherit_list, ocpa.nice_inc,
 		ocpa.sig_mask, ocpa.job_opt_mask, ocpa.core_hard_limit,
 		ocpa.affinity_mask, ocpa.daemon_sock,
-		& ms,
+		& ocpa.err_return_msg,
 		ocpa._remap, ocpa.as_hard_limit );
-	if(! ms.empty()) { ocpa.err_return_msg = ms; }
 	return rv;
 }
 
