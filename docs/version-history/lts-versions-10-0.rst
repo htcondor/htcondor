@@ -65,6 +65,10 @@ Bugs Fixed:
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1655`
+
 .. _lts-version-history-1005:
 
 Version 10.0.5
