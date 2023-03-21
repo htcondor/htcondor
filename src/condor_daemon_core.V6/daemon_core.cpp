@@ -5233,7 +5233,7 @@ int DaemonCore::Shutdown_Graceful(pid_t pid)
 	}
 	args.AppendArg(softkill_binary);
 	free(softkill_binary);
-	args.AppendArg(pid);
+	args.AppendArg(std::to_string(pid));
 	char* softkill_log = param("WINDOWS_SOFTKILL_LOG");
 	if (softkill_log) {
 		args.AppendArg(softkill_log);
@@ -8091,7 +8091,7 @@ int DaemonCore::Create_Process(
 							"failed due to bad interpreter (%s)\n",
 							executable,
 							buf_begin_ptr );
-						if (err_return_msg) formatstr(*err_return_msg
+						if (err_return_msg) formatstr(*err_return_msg,
 							"invalid interpreter (%s) specified on first line of script", buf_begin_ptr);
 					}
 					if (script_fd >= 0)

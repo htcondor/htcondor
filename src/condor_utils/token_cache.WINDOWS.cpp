@@ -51,7 +51,7 @@ token_cache::getToken(const char* username, const char* domain_raw) {
 		// couldn't find it
 		return NULL;
 	} else {
-		return (*itr)->user_token;
+		return itr->second->user_token;
 	}
 }
 
