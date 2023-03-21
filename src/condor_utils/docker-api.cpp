@@ -342,7 +342,7 @@ int DockerAPI::createContainer(
 			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				runArgs.AppendArg("-p");
-				runArgs.AppendArg(portNo);
+				runArgs.AppendArg(std::to_string(portNo));
 				shouldAskForPorts = true;
 			} else {
 				// FIXME: This should actually be a hold message.
@@ -795,7 +795,7 @@ DockerAPI::kill(const std::string &image, int signal, CondorError &err) {
     ArgList args;
     args.AppendArg( "kill" );
     args.AppendArg( "--signal" );
-    args.AppendArg( signal );
+    args.AppendArg( std::to_string(signal) );
     return run_docker_command( args, image, default_timeout, err);
 }
 

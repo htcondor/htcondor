@@ -3745,7 +3745,7 @@ char* SecMan::my_parent_unique_id() {
 
 		// look in the env for ENV_PARENT_ID
 		const char* envName = ENV_CONDOR_PARENT_ID;
-		MyString value;
+		std::string value;
 		GetEnv( envName, value );
 
 		if (value.length()) {

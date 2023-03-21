@@ -165,7 +165,7 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 		// this change was made so that projection could be empty without causing problems on Windows.
 		args.AppendArg(state.m_streamresults ? "true" : "false"); // new for 8.4.9
 		args.AppendArg(state.MatchCount());
-		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000));
+		args.AppendArg(std::to_string(param_integer("HISTORY_HELPER_MAX_HISTORY", 10000)));
 		args.AppendArg(state.Requirements());
 		args.AppendArg(state.Projection());
 		std::string myargs;
@@ -184,7 +184,7 @@ int HistoryHelperQueue::launcher(const HistoryHelperState &state) {
 			args.AppendArg(state.MatchCount());
 		}
 		args.AppendArg("-scanlimit");
-		args.AppendArg(param_integer("HISTORY_HELPER_MAX_HISTORY", 50000));
+		args.AppendArg(std::to_string(param_integer("HISTORY_HELPER_MAX_HISTORY", 50000)));
 		if ( ! state.Since().empty()) {
 			args.AppendArg("-since");
 			args.AppendArg(state.Since());

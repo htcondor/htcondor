@@ -21,20 +21,13 @@
 #include "condor_common.h"
 #include "token_cache.h"
 
-token_cache::token_cache() : TokenTable(NULL), current_age(1), dummy(0) {
-	TokenTable = new TokenHashTable(hashFunction);
+token_cache::token_cache() : current_age(1), dummy(0) {
 }
 
 token_cache::~token_cache() {
-	token_cache_entry *ent;
-	MyString index;
-	
-	TokenTable->startIterations();
-	while ( TokenTable->iterate(index, ent) ) {
+	for (auto& [index, ent]: TokenTable) {
 		delete ent;
-		TokenTable->remove(index);
 	}
-	delete TokenTable;
 }
 
 /* returns cached user handle if we have it, otherwise NULL if we don't */
@@ -45,7 +38,7 @@ token_cache::getToken(const char* username, const char* domain_raw) {
 	strupr(domain); // force all domain names to be upper case
 
 	token_cache_entry *entry;
-	MyString key(username);
+	std::string key(username);
 	key += "@";
 	key += domain;
 
@@ -53,11 +46,12 @@ token_cache::getToken(const char* username, const char* domain_raw) {
 	free(domain);
 	domain = NULL;
 
-	if (TokenTable->lookup(key, entry) < 0) {
+	auto itr = TokenTable.find(key);
+	if (itr == TokenTable.end()) {
 		// couldn't find it
 		return NULL;
 	} else {
-		return entry->user_token;
+		return itr->second->user_token;
 	}
 }
 
@@ -76,7 +70,7 @@ token_cache::storeToken(const char* username, const char* domain_raw,
 	}
 
 	token_cache_entry *entry;
-	MyString key(username);
+	std::string key(username);
 	key += "@";
 	key += domain;
 
@@ -95,8 +89,9 @@ token_cache::storeToken(const char* username, const char* domain_raw,
 		dprintf(D_FULLDEBUG, "token_cache: Removing oldest token to make space.\n");
 		removeOldestToken();
 	}
-	
-	if ( TokenTable->insert(key, entry) < 0) {
+
+	auto [itr, worked] = TokenTable.insert({key, entry});
+	if (worked == false) {
 		dprintf(D_ALWAYS, "token_cache: failed to cache token!\n");
 		return false;
 	}
@@ -106,16 +101,14 @@ token_cache::storeToken(const char* username, const char* domain_raw,
 void
 token_cache::removeOldestToken() {
 
-	token_cache_entry *ent = NULL, *oldest_ent = NULL;
-	MyString index, oldest_index;
+	token_cache_entry *oldest_ent = NULL;
+	std::string oldest_index;
 	int oldest_age;
 
 	// We want to start with the "youngest" so we don't skip anybody
 	oldest_age = current_age; 
 
-
-	TokenTable->startIterations();
-	while ( TokenTable->iterate(index, ent) ) {
+	for (auto& [index, ent]: TokenTable) {
 		if ( isOlder(ent->age, oldest_age) ) {
 			oldest_index = index;
 			oldest_ent = ent;
@@ -124,23 +117,20 @@ token_cache::removeOldestToken() {
 	}
 	
 	if ( oldest_ent ) { // we may not remove anything if cache is empty
-		CloseHandle ( ent->user_token );
-		delete ent;
-		TokenTable->remove(index);
+		CloseHandle ( oldest_ent->user_token );
+		delete oldest_ent;
+		TokenTable.erase(oldest_index);
 	}
 }
 
 /* return the contents of the cache in the form of a string.
  *
  * nice for debugging. */
-MyString
+std::string
 token_cache::cacheToString() {
-	token_cache_entry *ent = NULL;
-	MyString index;
-	MyString cache_string;
+	std::string cache_string;
 
-	TokenTable->startIterations();
-	while ( TokenTable->iterate(index, ent) ) {
+	for (auto& [index, ent]: TokenTable) {
 		cache_string += index + "\n";	
 	}
 	return cache_string;

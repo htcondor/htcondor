@@ -35,9 +35,9 @@
 
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts, int argc,
+			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[]);
-bool parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
+bool parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
 int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts );
@@ -432,7 +432,7 @@ parseArgumentsLine( const std::string &subLine,
 		return 1;
 	}
 
-	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
+	for ( size_t argNum = 0; argNum < arglist.Count(); argNum++ ) {
 		std::string strArg = arglist.GetArg( argNum );
 		lower_case(strArg);
 		char **args = arglist.GetStringArray();
@@ -447,10 +447,10 @@ parseArgumentsLine( const std::string &subLine,
 //---------------------------------------------------------------------------
 void
 parseCommandLine(SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts, int argc,
+			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[])
 {
-	for (int iArg = 1; iArg < argc; iArg++)
+	for (size_t iArg = 1; iArg < argc; iArg++)
 	{
 		std::string strArg = argv[iArg];
 
@@ -764,7 +764,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		processed by this function
 */
 bool
-parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
+parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts)
 {
 	bool result = false;

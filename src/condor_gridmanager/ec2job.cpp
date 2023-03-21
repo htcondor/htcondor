@@ -359,11 +359,11 @@ EC2Job::EC2Job( ClassAd *classad ) :
 
 	args.AppendArg("-w");
 	gahp_worker_cnt = param_integer( "EC2_GAHP_WORKER_MIN_NUM", 1 );
-	args.AppendArg(gahp_worker_cnt);
+	args.AppendArg(std::to_string(gahp_worker_cnt));
 
 	args.AppendArg("-m");
 	gahp_worker_cnt = param_integer( "EC2_GAHP_WORKER_MAX_NUM", 5 );
-	args.AppendArg(gahp_worker_cnt);
+	args.AppendArg(std::to_string(gahp_worker_cnt));
 
 	args.AppendArg("-d");
 	gahp_debug = param( "EC2_GAHP_DEBUG" );

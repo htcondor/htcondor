@@ -535,7 +535,7 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	ArgList testArgs;
 
 	// The last orig_args_len args are the real exec + its args.  Skip those for the test
-	for (int i = 0; i < args.Count() - orig_args_len; i++) {
+	for (size_t i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
 		if ((strcmp(arg, "run") == 0) || (strcmp(arg, "exec")) == 0) {
 			// Stick a -q before test to keep the download quiet

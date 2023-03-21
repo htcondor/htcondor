@@ -171,14 +171,14 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(".");
 	if ( shallowOpts.iDebugLevel != DEBUG_UNSET ) {
 		args.AppendArg("-Debug");
-		args.AppendArg(shallowOpts.iDebugLevel);
+		args.AppendArg(std::to_string(shallowOpts.iDebugLevel));
 	}
 	args.AppendArg("-Lockfile");
 	args.AppendArg(shallowOpts.strLockFile.c_str());
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(deepOpts.autoRescue);
+	args.AppendArg(std::to_string(deepOpts.autoRescue));
 	args.AppendArg("-DoRescueFrom");
-	args.AppendArg(deepOpts.doRescueFrom);
+	args.AppendArg(std::to_string(deepOpts.doRescueFrom));
 
 	for (auto & dagFile : shallowOpts.dagFiles) {
 		args.AppendArg("-Dag");
@@ -188,25 +188,25 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	if(shallowOpts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
-		args.AppendArg(shallowOpts.iMaxIdle);
+		args.AppendArg(std::to_string(shallowOpts.iMaxIdle));
 	}
 
 	if(shallowOpts.iMaxJobs != 0) 
 	{
 		args.AppendArg("-MaxJobs");
-		args.AppendArg(shallowOpts.iMaxJobs);
+		args.AppendArg(std::to_string(shallowOpts.iMaxJobs));
 	}
 
 	if(shallowOpts.iMaxPre != 0) 
 	{
 		args.AppendArg("-MaxPre");
-		args.AppendArg(shallowOpts.iMaxPre);
+		args.AppendArg(std::to_string(shallowOpts.iMaxPre));
 	}
 
 	if(shallowOpts.iMaxPost != 0) 
 	{
 		args.AppendArg("-MaxPost");
-		args.AppendArg(shallowOpts.iMaxPost);
+		args.AppendArg(std::to_string(shallowOpts.iMaxPost));
 	}
 
 	if ( shallowOpts.bPostRunSet ) {
@@ -289,7 +289,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	if( shallowOpts.priority != 0 ) {
 		args.AppendArg("-Priority");
-		args.AppendArg(shallowOpts.priority);
+		args.AppendArg(std::to_string(shallowOpts.priority));
 	}
 
 	std::string arg_str,args_error;
@@ -459,11 +459,11 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 	}
 
 	args.AppendArg( "-autorescue" );
-	args.AppendArg( deepOpts.autoRescue );
+	args.AppendArg( std::to_string(deepOpts.autoRescue) );
 
 	if ( deepOpts.doRescueFrom != 0 ) {
 		args.AppendArg( "-dorescuefrom" );
-		args.AppendArg( deepOpts.doRescueFrom );
+		args.AppendArg( std::to_string(deepOpts.doRescueFrom) );
 	}
 
 	if ( deepOpts.allowVerMismatch ) {
@@ -494,7 +494,7 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	if( priority != 0) {
 		args.AppendArg( "-Priority" );
-		args.AppendArg( priority );
+		args.AppendArg( std::to_string(priority) );
 	}
 
 	if( deepOpts.suppress_notification ) {

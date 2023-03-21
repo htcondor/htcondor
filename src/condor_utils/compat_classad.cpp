@@ -764,7 +764,7 @@ ArgsToList( const char * name,
 	}
 	std::vector<classad::ExprTree*> list_exprs;
 
-	for (int idx=0; idx<arg_list.Count(); idx++)
+	for (size_t idx=0; idx<arg_list.Count(); idx++)
 	{
 		classad::Value string_val;
 		string_val.SetStringValue(arg_list.GetArg(idx));

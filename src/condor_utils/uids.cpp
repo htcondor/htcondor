@@ -815,7 +815,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			if ( dologging && IsFulldebug(D_FULLDEBUG) ) {
 				dprintf(D_FULLDEBUG, 
 						"TokenCache contents: \n%s", 
-						cached_tokens.cacheToString().Value());
+						cached_tokens.cacheToString().c_str());
 			}
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {

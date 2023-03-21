@@ -43,7 +43,6 @@
 #pragma warning( disable : 4200 )
 
 // #include <afxtempl.h>
-#include "MyString.h"
 #include "HashTable.h"
 #include "list.h"
 
@@ -85,16 +84,16 @@ public:
 	//////////////////////////////////////////////////////////////////////////////////
 	// String conversion functions
 
-	// From wide char string to MyString
-	static void LPCWSTR2MyString( LPCWSTR strW, MyString& str );
+	// From wide char string to std::string
+	static void LPCWSTR2String( LPCWSTR strW, std::string& str );
 	// From unicode string to MyString
-	static void Unicode2MyString( UNICODE_STRING* strU, MyString& str );
+	static void Unicode2String( UNICODE_STRING* strU, std::string& str );
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// File name conversion functions
 
-	static BOOL GetDeviceFileName( LPCTSTR, MyString& );
-	static BOOL GetFsFileName( LPCTSTR, MyString& );
+	static BOOL GetDeviceFileName( LPCTSTR, std::string& );
+	static BOOL GetFsFileName( LPCTSTR, std::string& );
 
 	//////////////////////////////////////////////////////////////////////////////////
 	// Information functions
@@ -293,7 +292,7 @@ protected:
 	typedef struct _GetFileNameThreadParam
 	{
 		HANDLE		hFile;
-		MyString*	pName;
+		std::string*	pName;
 		ULONG		rc;
 	} GetFileNameThreadParam;
 
@@ -302,27 +301,27 @@ public:
 	~SystemHandleInformation();
 
 	BOOL SetFilter( LPCTSTR lpTypeFilter, BOOL bRefresh = TRUE );
-	const MyString& GetFilter();
+	const std::string& GetFilter();
 	
 	BOOL Refresh();
 
 public:
 	//Information functions
 	static BOOL GetType( HANDLE, WORD&, DWORD processId = GetCurrentProcessId() );
-	static BOOL GetTypeToken( HANDLE, MyString&, DWORD processId = GetCurrentProcessId() );
+	static BOOL GetTypeToken( HANDLE, std::string&, DWORD processId = GetCurrentProcessId() );
 	static BOOL GetTypeFromTypeToken( LPCTSTR typeToken, WORD& type );
-	static BOOL GetNameByType( HANDLE, WORD, MyString& str, DWORD processId = GetCurrentProcessId());
-	static BOOL GetName( HANDLE, MyString&, DWORD processId = GetCurrentProcessId() );
+	static BOOL GetNameByType( HANDLE, WORD, std::string& str, DWORD processId = GetCurrentProcessId());
+	static BOOL GetName( HANDLE, std::string&, DWORD processId = GetCurrentProcessId() );
 
 	//Thread related functions
 	static BOOL GetThreadId( HANDLE, DWORD&, DWORD processId = GetCurrentProcessId() );
 
 	//Process related functions
 	static BOOL GetProcessId( HANDLE, DWORD&, DWORD processId = GetCurrentProcessId() );
-	static BOOL GetProcessPath( HANDLE h, MyString& strPath, DWORD processId = GetCurrentProcessId());
+	static BOOL GetProcessPath( HANDLE h, std::string& strPath, DWORD processId = GetCurrentProcessId());
 
 	//File related functions
-	static BOOL GetFileName( HANDLE, MyString&, DWORD processId = GetCurrentProcessId() );
+	static BOOL GetFileName( HANDLE, std::string&, DWORD processId = GetCurrentProcessId() );
 
 public:
 	//For remote handle support
@@ -339,7 +338,7 @@ public:
 	DWORD	m_processId;
 
 protected:
-	MyString	m_strTypeFilter;
+	std::string	m_strTypeFilter;
 };
 
 #endif

@@ -309,10 +309,10 @@ gmetric_send(const char *group, const char *name, const char *value, const char 
 	}
 
 	args.AppendArg("--tmax");
-	args.AppendArg(tmax);
+	args.AppendArg(std::to_string(tmax));
 
 	args.AppendArg("--dmax");
-	args.AppendArg(dmax);
+	args.AppendArg(std::to_string(dmax));
 
 	FILE *fp = my_popen(args,"r",MY_POPEN_OPT_WANT_STDERR);
 	char line[1024];

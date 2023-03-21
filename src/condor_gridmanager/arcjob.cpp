@@ -1123,7 +1123,7 @@ bool ArcJob::buildJobADL()
 		RSL.clear();
 		return false;
 	}
-	for(int i=0;i<args.Count();i++) {
+	for(size_t i=0;i<args.Count();i++) {
 		RSL += "<Argument>";
 		RSL += escapeXML(args.GetArg(i));
 		RSL += "</Argument>";
