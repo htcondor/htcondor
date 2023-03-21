@@ -159,6 +159,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
+	m_useXferGahp = false;
 	myResource = NULL;
 	gahp = NULL;
 	m_xfer_gahp = NULL;
@@ -293,6 +294,14 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		myResource->AlreadySubmitted( this );
 	}
 
+	// If the gahp is running remotely via ssh, then use the ft-gahp to
+	// do file transfers to/from the remote machine.
+	// But if the user has set remote_iwd, assume all job files are
+	// already on the remote machine.
+	if (myResource->GahpIsRemote() && !jobAd->LookupString(ATTR_JOB_REMOTE_IWD, buff) && !jobAd->LookupString("REMOTE_Iwd", buff)) {
+		m_useXferGahp = true;
+	}
+
 		// Does this have to be lower-case for SetRemoteJobId()?
 
 	strlwr( batchType );
@@ -389,7 +398,7 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_HOLD;
 				break;
 			}
-			if ( myResource->GahpIsRemote() ) {
+			if ( m_useXferGahp ) {
 				// This job requires a transfer gahp
 				ASSERT( m_xfer_gahp );
 				bool already_started = m_xfer_gahp->isStarted();
@@ -512,7 +521,7 @@ void INFNBatchJob::doEvaluateState()
 
 			// If our blahp is local, we don't have to do any file transfer,
 			// so go straight to submitting the job.
-			if ( !myResource->GahpIsRemote() ) {
+			if ( m_useXferGahp ) {
 				gmState = GM_SUBMIT;
 				break;
 			}
@@ -613,7 +622,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			}
 			lastSubmitAttempt = time(NULL);
-			if ( !myResource->GahpIsRemote() ) {
+			if ( !m_useXferGahp ) {
 				numSubmitAttempts++;
 			}
 			if ( rc == GAHP_SUCCESS ) {
@@ -722,7 +731,7 @@ void INFNBatchJob::doEvaluateState()
 		case GM_TRANSFER_PROXY: {
 			if ( condorState == REMOVED || condorState == HELD ) {
 				gmState = GM_SUBMITTED;
-			} else if ( !myResource->GahpIsRemote() ) {
+			} else if ( !m_useXferGahp ) {
 				gmState = GM_REFRESH_PROXY;
 			} else {
 				// We should never end up here if we don't have a
@@ -803,7 +812,7 @@ void INFNBatchJob::doEvaluateState()
 				}
 
 				std::string proxy_path = jobProxy->proxy_filename;
-				if ( myResource->GahpIsRemote() ) {
+				if ( m_useXferGahp ) {
 					proxy_path = m_sandboxPath.c_str();
 					proxy_path += DIR_DELIM_CHAR;
 					proxy_path += condor_basename( jobProxy->proxy_filename );
@@ -830,7 +839,7 @@ void INFNBatchJob::doEvaluateState()
 			}
 		} break;
 		case GM_TRANSFER_OUTPUT: {
-			if ( !myResource->GahpIsRemote() ) {
+			if ( !m_useXferGahp ) {
 				gmState = GM_DONE_SAVE;
 				break;
 			}
@@ -969,7 +978,7 @@ void INFNBatchJob::doEvaluateState()
 		case GM_DELETE_SANDBOX: {
 			// Clean up any files left behind by the job execution.
 
-			if ( myResource->GahpIsRemote() ) {
+			if ( m_useXferGahp ) {
 
 				// Delete the remote sandbox
 				if ( gahpAd == NULL ) {
@@ -1576,7 +1585,7 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		}
 	}
 
-	if ( myResource->GahpIsRemote() ) {
+	if ( m_useXferGahp ) {
 		// Rewrite ad so that everything is relative to m_sandboxPath
 		std::string old_value;
 		std::string new_value;

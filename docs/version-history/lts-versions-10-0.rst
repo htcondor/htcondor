@@ -40,6 +40,10 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
+- Fixed a bug where **remote_initialdir** didn't work correctly when
+  submitting a grid universe **batch** job to a remote machine via ssh.
+  :jira:`1560`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
