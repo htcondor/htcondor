@@ -286,14 +286,23 @@ Worker::~Worker()
 bool
 Worker::removeRequest(int req_id)
 {
+	auto delete_matched = [req_id](const Request *r) {
+		if (r->m_reqid == req_id) {
+			delete r;
+			return true;
+		} else {
+			return false;
+		}
+	};
+
+	// Assume only one matches
 	auto it = std::remove_if(m_request_list.begin(), m_request_list.end(),
-			[req_id](const Request *r) { return r->m_reqid == req_id;});
+			delete_matched);
 
 	if (it == m_request_list.end()) {
 		return false; // not found
 	} else {
 		m_request_list.erase(it);
-		delete *it;
 		return true;
 	}
 }

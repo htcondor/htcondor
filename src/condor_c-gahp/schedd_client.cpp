@@ -1214,13 +1214,17 @@ submit_report_result:
 
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
-	// Clean up the list
-	auto last = std::remove_if(command_queue.begin(), command_queue.end(),
-			[](SchedDRequest *req) {return req->status == SchedDRequest::SDCS_COMPLETED;});
-	for (auto it = last; it != command_queue.end(); it++) {
-		delete *it;
-	}
+	auto delete_completed = [](SchedDRequest *req) {
+		if (req->status == SchedDRequest::SDCS_COMPLETED) {
+			delete req;
+			return true;
+		} else {
+			return false;
+		}
+	};
 
+	// Clean up the list
+	auto last = std::remove_if(command_queue.begin(), command_queue.end(), delete_completed);
 	command_queue.erase(last, command_queue.end());
 
 	dprintf (D_FULLDEBUG, "Schedd interaction took %ld seconds.\n", time(nullptr)-starttime);

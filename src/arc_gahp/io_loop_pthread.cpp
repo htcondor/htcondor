@@ -332,11 +332,19 @@ bool
 Worker::removeRequest(int req_id)
 {
 
+	auto delete_req_id = [req_id](GahpRequest *request) {
+		if (request->m_reqid == req_id) {
+			delete request;
+			return true;
+		} else {
+			return false;
+		}
+	};
+
 	auto it = std::remove_if(m_request_list.begin(), m_request_list.end(),
-			[req_id](GahpRequest *request) {return request->m_reqid == req_id;});
+			delete_req_id);
 
 	if (it != m_request_list.end()) {
-		delete *it;
 		m_request_list.erase(it);
 		return true;
 	} else {
