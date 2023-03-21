@@ -278,6 +278,7 @@ if [[ $GPUS ]]; then
     CONDOR_GPUS_LINE="use feature:gpus"
 fi
 
+# Using <${COLLECTOR}> is a hack, but easier than figuring out the quoting.
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
 echo "
@@ -285,7 +286,7 @@ use role:execute
 use security:recommended_v9_0
 use feature:PartitionableSLot
 
-COLLECTOR_HOST = ${COLLECTOR}
+COLLECTOR_HOST = <${COLLECTOR}>
 
 # We shouldn't ever actually need this, but it's convenient for testing.
 SHARED_PORT_PORT = 0
