@@ -32,6 +32,7 @@
 #include "arcgahp_common.h"
 #include "arcCommands.h"
 #include "subsystem_info.h"
+#include <algorithm>
 
 #define ARC_GAHP_VERSION	"0.1"
 
@@ -319,13 +320,10 @@ Worker::Worker(int worker_id)
 
 Worker::~Worker()
 {
-	GahpRequest *request = NULL;
-
-	m_request_list.Rewind();
-	while( m_request_list.Next(request) ) {
-		m_request_list.DeleteCurrent();
+	for (auto request : m_request_list) {
 		delete request;
 	}
+	m_request_list.clear();
 
 	pthread_cond_destroy(&m_cond);
 }
@@ -333,20 +331,17 @@ Worker::~Worker()
 bool
 Worker::removeRequest(int req_id)
 {
-	GahpRequest *request = NULL;
 
-	m_request_list.Rewind();
-	while( m_request_list.Next(request) ) {
+	auto it = std::remove_if(m_request_list.begin(), m_request_list.end(),
+			[req_id](GahpRequest *request) {return request->m_reqid == req_id;});
 
-		if( request->m_reqid == req_id ) {
-			// remove this request from worker request queue
-			m_request_list.DeleteCurrent();
-			delete request;
-			return true;
-		}
+	if (it != m_request_list.end()) {
+		delete *it;
+		m_request_list.erase(it);
+		return true;
+	} else {
+		return false;
 	}
-
-	return false;
 }
 
 
@@ -676,7 +671,7 @@ IOProcess::addRequestToWorker(GahpRequest* request, Worker* worker)
 				request->m_raw_cmd.c_str(), worker->m_id);
 
 		request->m_worker = worker;
-		worker->m_request_list.Append(request);
+		worker->m_request_list.push_back(request);
 		worker->m_is_doing = true;
 
 		if( worker->m_is_waiting ) {
@@ -689,7 +684,7 @@ IOProcess::addRequestToWorker(GahpRequest* request, Worker* worker)
 		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n",
 				request->m_raw_cmd.c_str());
 
-		m_pending_req_list.Append(request);
+		m_pending_req_list.push_back(request);
 	}
 }
 
@@ -697,7 +692,7 @@ int
 IOProcess::numOfPendingRequest(void)
 {
 	int num = 0;
-	num = m_pending_req_list.Number();
+	num = (int) m_pending_req_list.size();
 
 	return num;
 }
@@ -705,39 +700,34 @@ IOProcess::numOfPendingRequest(void)
 GahpRequest*
 IOProcess::popPendingRequest(void)
 {
-	GahpRequest *new_request = NULL;
-
-	m_pending_req_list.Rewind();
-	m_pending_req_list.Next(new_request);
-	if( new_request ) {
-		m_pending_req_list.DeleteCurrent();
+	if (m_pending_req_list.empty()) {
+		return nullptr;
 	}
-
+	GahpRequest *new_request = m_pending_req_list.front();
+	m_pending_req_list.erase(m_pending_req_list.begin());
 	return new_request;
 }
 
 GahpRequest* popRequest(Worker* worker)
 {
-	GahpRequest *new_request = NULL;
+	GahpRequest *new_request = nullptr;
 	if( !worker ) {
-		return NULL;
+		return nullptr;
 	}
 
-	worker->m_request_list.Rewind();
-	worker->m_request_list.Next(new_request);
-
-	if( new_request ) {
+	if (worker->m_request_list.empty()) {
 		// Remove this request from worker request queue
-		worker->m_request_list.DeleteCurrent();
-	}else {
 		new_request = ioprocess.popPendingRequest();
 
 		if( new_request ) {
 			new_request->m_worker = worker;
 
 			dprintf (D_FULLDEBUG, "Assigning %s to worker %d\n",
-					 new_request->m_raw_cmd.c_str(), worker->m_id);
+					new_request->m_raw_cmd.c_str(), worker->m_id);
 		}
+	} else {
+		new_request = worker->m_request_list.front();
+		worker->m_request_list.erase(worker->m_request_list.begin());
 	}
 
 	return new_request;

@@ -30,7 +30,7 @@ static std::string gce_proxy_user;
 static std::string gce_proxy_passwd;
 
 // List for all gce commands
-static SimpleList<GceGahpCommand*> gce_gahp_commands;
+static std::vector<GceGahpCommand*> gce_gahp_commands;
 
 void set_gce_proxy_server(const char* url)
 {
@@ -116,26 +116,23 @@ registerGceGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfun
 	GceGahpCommand* newcommand = new GceGahpCommand(command, iofunc, workerfunc);
 	ASSERT(newcommand);
 
-	gce_gahp_commands.Append(newcommand);
+	gce_gahp_commands.push_back(newcommand);
 }
 
 int
 numofGceCommands(void)
 {
-	return gce_gahp_commands.Number();
+	return (int) gce_gahp_commands.size();
 }
 
 int
 allGceCommands(StringList &output)
 {
-	GceGahpCommand *one_cmd = NULL;
-
-	gce_gahp_commands.Rewind();
-	while( gce_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : gce_gahp_commands) {
 		output.append(one_cmd->command.c_str());
 	}
 
-	return gce_gahp_commands.Number();
+	return (int) gce_gahp_commands.size();
 }
 
 bool
@@ -145,12 +142,9 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 		return false;
 	}
 
-	GceGahpCommand *one_cmd = NULL;
-
-	gce_gahp_commands.Rewind();
-	while( gce_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : gce_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->iocheckfunction ) {
+				one_cmd->iocheckfunction ) {
 			return one_cmd->iocheckfunction(argv, argc);
 		}
 	}
@@ -166,12 +160,9 @@ executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_st
 		return false;
 	}
 
-	GceGahpCommand *one_cmd = NULL;
-
-	gce_gahp_commands.Rewind();
-	while( gce_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : gce_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->workerfunction ) {
+				one_cmd->workerfunction ) {
 			return one_cmd->workerfunction(argv, argc, output_string);
 		}
 	}
