@@ -603,11 +603,8 @@ CCBListeners::GetCCBListener(char const *address)
 		return NULL;
 	}
 
-	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
-		itr != m_ccb_listeners.end();
-		itr++)
-	{
-		ccb_listener = (*itr);
+	for(auto & m_ccb_listener : m_ccb_listeners) {
+		ccb_listener = m_ccb_listener;
 		if( !strcmp(address,ccb_listener->getAddress()) ) {
 			return ccb_listener.get();
 		}
@@ -620,11 +617,8 @@ CCBListeners::GetCCBContactString(std::string &result)
 {
 	classy_counted_ptr<CCBListener> ccb_listener;
 
-	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
-		itr != m_ccb_listeners.end();
-		itr++)
-	{
-		ccb_listener = (*itr);
+	for(auto & m_ccb_listener : m_ccb_listeners) {
+		ccb_listener = m_ccb_listener;
 		char const *ccbid = ccb_listener->getCCBID();
 		if( ccbid && *ccbid ) {
 			if( !result.empty() ) {
@@ -641,11 +635,8 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 	int result = 0;
 
 	classy_counted_ptr<CCBListener> ccb_listener;
-	for(CCBListenerList::iterator itr = m_ccb_listeners.begin();
-		itr != m_ccb_listeners.end();
-		itr++)
-	{
-		ccb_listener = (*itr);
+	for(auto & m_ccb_listener : m_ccb_listeners) {
+		ccb_listener = m_ccb_listener;
 		if( !ccb_listener->RegisterWithCCBServer(blocking) && blocking ) {
 		} else {
 			++result;
@@ -695,11 +686,8 @@ CCBListeners::Configure(char const *addresses)
 	m_ccb_listeners.clear();
 
 	classy_counted_ptr<CCBListener> ccb_listener;
-	for(CCBListenerList::iterator itr = new_ccbs.begin();
-		itr != new_ccbs.end();
-		itr++)
-	{
-		ccb_listener = (*itr);
+	for(auto & new_ccb : new_ccbs) {
+		ccb_listener = new_ccb;
 		if( GetCCBListener( ccb_listener->getAddress() ) ) {
 				// ignore duplicate entries with same address
 			continue;

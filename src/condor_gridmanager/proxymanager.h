@@ -45,7 +45,7 @@ struct Proxy {
 	bool near_expired;
 	int id;
 	int num_references;
-	SimpleList<Callback> m_callbacks;
+	std::vector<Callback> m_callbacks;
 	
 	ProxySubject *subject;
 };
