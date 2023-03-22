@@ -164,9 +164,9 @@ units are megabytes and disk kilobytes.
 
 .. code-block:: condor-submit
 
-    RequestCpus             = 1
-    RequestMemory           = 512M
-    RequestDisk             = 1G
+    request_cpus            = 1
+    request_memory          = 512M
+    request_disk            = 1G
 
 
 If this script/batch file were to to be invoked from the command line, and
