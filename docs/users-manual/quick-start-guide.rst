@@ -336,7 +336,7 @@ Here is the submit description file for this job:
     queue
 
 The input files ``infile-A.txt`` and ``infile-B.txt`` will need to be
-available on the Execution Pointer within the pool where the job
+available on the Execution Point within the pool where the job
 runs.  HTCondor cannot interpret command line arguments, so it cannot know
 that these command line arguments for this job specify input and output
 files.  The submit command ``transfer_input_files`` instructs HTCondor to
