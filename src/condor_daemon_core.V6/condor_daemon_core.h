@@ -458,7 +458,7 @@ class DaemonCore : public Service
 	 * of daemon_core_main.C.
 	 */
     DaemonCore (int ComSize = 0, int SigSize = 0,
-                int SocSize = 0, int ReapSize = 0, int PipeSize = 0);
+                int SocSize = 0, int ReapSize = 0);
     ~DaemonCore();
     void Driver();
 
@@ -2046,10 +2046,7 @@ class DaemonCore : public Service
 		bool			call_handler;
 		bool			in_handler;
     };
-    // void              DumpPipeTable(int, const char* = NULL);
-    int               maxPipe;  // number of pipe handlers to start with
-    int               nPipe;      // number of pipe handlers used
-    ExtArray<PipeEnt> *pipeTable; // pipe table; grows dynamically if needed
+	std::vector<PipeEnt> pipeTable; // pipe table; grows dynamically if needed
 
     struct ReapEnt
     {
