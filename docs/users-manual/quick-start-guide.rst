@@ -451,9 +451,9 @@ for the 100 instances of the following example submit file:
     initialdir              = run$(Process)
     transfer_input_files    = infile-A.txt,infile-B.txt
 
-    RequestCpus             = 1
-    RequestMemory           = 512M
-    RequestDisk             = 1G
+    request_cpus            = 1
+    request_memory          = 512M
+    request_disk            = 1G
 
     log                     = science3.log
     queue 100
