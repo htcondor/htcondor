@@ -464,7 +464,7 @@ distinct for each run due to their placement within a uniquely named
 directory.  This organization also works well for executables that do not
 facilitate command line naming of input or output files.
 
-Here is a listing of the files and directories on the AP machine within
+Here is a listing of the files and directories on the AP within
 this suggested directory structure.  The files created due to submitting and
 running the jobs are shown preceded by an asterisk (*).  Only a subset of the
 100 directories are shown.  Directories are identified using the Linux (and
