@@ -411,9 +411,9 @@ description file for this proposed solution uniquely names the files:
     should_transfer_files   = IF_NEEDED
     when_to_transfer_output = ON_EXIT
 
-    RequestCpus             = 1
-    RequestMemory           = 512M
-    RequestDisk             = 1G
+    request_cpus            = 1
+    request_memory          = 512M
+    request_disk            = 1G
 
     log                     = science2.log
     queue 40
