@@ -442,8 +442,8 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_status_all(const std::string &service_url,
 		                   const std::string &states,
-		                   StringList &job_ids,
-		                   StringList &job_states);
+		                   std::vector<std::string> &job_ids,
+		                   std::vector<std::string> &job_states);
 
 		int
 		arc_job_info(const std::string &service_url,
@@ -453,13 +453,13 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_stage_in(const std::string &service_url,
 		                 const std::string &job_id,
-		                 StringList &files);
+		                 const std::vector<std::string> &files);
 
 		int
 		arc_job_stage_out(const std::string &service_url,
 		                  const std::string &job_id,
-		                  StringList &src_files,
-		                  StringList &dest_files);
+		                  const std::vector<std::string> &src_files,
+		                  const std::vector<std::string> &dest_files);
 
 		int
 		arc_job_kill(const std::string &service_url,

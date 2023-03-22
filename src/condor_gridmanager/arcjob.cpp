@@ -548,16 +548,9 @@ void ArcJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			if ( stageList == NULL ) {
-				const char *file;
-				stageList = buildStageInList();
-				stageList->rewind();
-				while ( (file = stageList->next()) ) {
-					if ( IsUrl( file ) ) {
-						stageList->deleteCurrent();
-					}
-				}
+				stageList = buildStageInList(false);
 			}
-			if ( stageList->isEmpty() ) {
+			if ( stageList->empty() ) {
 				rc = HTTP_200_OK;
 			} else {
 				rc = gahp->arc_job_stage_in( resourceManagerString, remoteJobId,
@@ -762,19 +755,9 @@ void ArcJob::doEvaluateState()
 				stageList = buildStageOutList();
 			}
 			if ( stageLocalList == NULL ) {
-				const char *file;
 				stageLocalList = buildStageOutLocalList( stageList );
-				stageList->rewind();
-				stageLocalList->rewind();
-				while ( (file = stageLocalList->next()) ) {
-					ASSERT( stageList->next() );
-					if ( IsUrl( file ) ) {
-						stageList->deleteCurrent();
-						stageLocalList->deleteCurrent();
-					}
-				}
 			}
-			if ( stageList->isEmpty() ) {
+			if ( stageList->empty() ) {
 				rc = HTTP_200_OK;
 			} else {
 				rc = gahp->arc_job_stage_out( resourceManagerString,
@@ -1063,14 +1046,13 @@ bool AppendEnvVar(void* pv, const std::string & var, const std::string & val)
 bool ArcJob::buildJobADL()
 {
 	bool transfer_exec = true;
-	StringList *stage_list = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string attr_value;
 	std::string iwd;
 	std::string executable;
 	std::string resources;
 	std::string slot_req;
 	long int_value;
-	char *file;
 
 	RSL.clear();
 
@@ -1220,26 +1202,20 @@ bool ArcJob::buildJobADL()
 	}
 
 	if ( jobAd->LookupString(ATTR_ARC_RTE, attr_value) ) {
-		const char *next_rte;
-		StringList rte_list(attr_value, ",");
-		rte_list.rewind();
-		while ( (next_rte = rte_list.next()) ) {
-			const char *next_opt;
-			StringList rte_opts(next_rte, " ");
-			rte_opts.rewind();
-			next_opt = rte_opts.next();
-			if ( next_opt == nullptr ) {
-				// This shouldn't happen, but let's be safe
-				continue;
-			}
+		for (const auto& next_rte : StringTokenIterator(attr_value, ",")) {
+			bool first_time = true;
 			resources += "<RuntimeEnvironment>";
-			resources += "<Name>";
-			resources += next_opt;
-			resources += "</Name>";
-			while ( (next_opt = rte_opts.next()) ) {
-				resources += "<Option>";
-				resources += next_opt;
-				resources += "</Option>";
+			for (const auto& next_opt : StringTokenIterator(next_rte, " ")) {
+				if (first_time) {
+					first_time = false;
+					resources += "<Name>";
+					resources += next_opt;
+					resources += "</Name>";
+				} else {
+					resources += "<Option>";
+					resources += next_opt;
+					resources += "</Option>";
+				}
 			}
 			resources += "</RuntimeEnvironment>";
 		}
@@ -1261,14 +1237,13 @@ bool ArcJob::buildJobADL()
 		RSL += "</ng-adl:DelegationID>";
 	}
 
-	stage_list = buildStageInList();
+	stage_list = buildStageInList(true);
 
-	stage_list->rewind();
-	while ( (file = stage_list->next()) != NULL ) {
+	for (const auto& file : *stage_list) {
 		RSL += "<InputFile><Name>";
-		RSL += escapeXML(condor_basename(file));
+		RSL += escapeXML(condor_basename(file.c_str()));
 		RSL += "</Name>";
-		if ( transfer_exec && ! strcmp(executable.c_str(), file) ) {
+		if ( transfer_exec && ! strcmp(executable.c_str(), file.c_str()) ) {
 			RSL += "<IsExecutable>true</IsExecutable>";
 		}
 		RSL += "</InputFile>";
@@ -1279,10 +1254,9 @@ bool ArcJob::buildJobADL()
 
 	stage_list = buildStageOutList();
 
-	stage_list->rewind();
-	while ( (file = stage_list->next()) != NULL ) {
+	for (const auto& file : *stage_list) {
 		RSL += "<OutputFile><Name>";
-		RSL += escapeXML(condor_basename(file));
+		RSL += escapeXML(condor_basename(file.c_str()));
 		RSL += "</Name></OutputFile>";
 	}
 
@@ -1296,11 +1270,9 @@ dprintf(D_FULLDEBUG,"*** ADL='%s'\n",RSL.c_str());
 	return true;
 }
 
-StringList *ArcJob::buildStageInList()
+std::vector<std::string> *ArcJob::buildStageInList(bool with_urls)
 {
-	StringList *tmp_list = NULL;
-	StringList *stage_list = NULL;
-	char *filename = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string buf;
 	std::string iwd;
 	bool transfer = true;
@@ -1312,13 +1284,14 @@ StringList *ArcJob::buildStageInList()
 	}
 
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
-	tmp_list = new StringList( buf.c_str(), "," );
+	stage_list = new std::vector<std::string>;
+	*stage_list = split(buf);
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
 		GetJobExecutable( jobAd, buf );
-		if ( !tmp_list->file_contains( buf.c_str() ) ) {
-			tmp_list->append( buf.c_str() );
+		if ( !file_contains(*stage_list, buf.c_str()) ) {
+			stage_list->emplace_back(buf);
 		}
 	}
 
@@ -1327,44 +1300,43 @@ StringList *ArcJob::buildStageInList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !tmp_list->file_contains( buf.c_str() ) ) {
-				tmp_list->append( buf.c_str() );
+			if ( !file_contains(*stage_list, buf.c_str()) ) {
+				stage_list->emplace_back(buf);
 			}
 		}
 	}
 
-	stage_list = new StringList;
-
-	tmp_list->rewind();
-	while ( ( filename = tmp_list->next() ) ) {
-		if ( filename[0] == '/' || IsUrl( filename ) ) {
-			formatstr( buf, "%s", filename );
-		} else {
-			formatstr( buf, "%s%s", iwd.c_str(), filename );
-		}
-		stage_list->append( buf.c_str() );
+	if (!with_urls) {
+		auto no_urls = [](std::string& file) { return IsUrl(file.c_str()) != nullptr; };
+		auto it = std::remove_if(stage_list->begin(), stage_list->end(), no_urls);
+		stage_list->erase(it);
 	}
 
-	delete tmp_list;
+	for (auto& filename : *stage_list) {
+		if ( filename[0] != '/' && !IsUrl(filename.c_str()) ) {
+			filename.insert(0, iwd);
+		}
+	}
 
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutList()
+std::vector<std::string> *ArcJob::buildStageOutList()
 {
-	StringList *stage_list = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string buf;
 	bool transfer = true;
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
-	stage_list = new StringList( buf.c_str(), "," );
+	stage_list = new std::vector<std::string>;
+	*stage_list = split(buf);
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
-				stage_list->append( REMOTE_STDOUT_NAME );
+			if ( !file_contains(*stage_list, REMOTE_STDOUT_NAME) ) {
+				stage_list->emplace_back( REMOTE_STDOUT_NAME );
 			}
 		}
 	}
@@ -1374,8 +1346,8 @@ StringList *ArcJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
-				stage_list->append( REMOTE_STDERR_NAME );
+			if ( !file_contains(*stage_list, REMOTE_STDERR_NAME) ) {
+				stage_list->emplace_back( REMOTE_STDERR_NAME );
 			}
 		}
 	}
@@ -1383,12 +1355,11 @@ StringList *ArcJob::buildStageOutList()
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
+std::vector<std::string> *ArcJob::buildStageOutLocalList( std::vector<std::string> *stage_list )
 {
-	StringList *stage_local_list;
+	std::vector<std::string> *stage_local_list;
 	char *remaps = NULL;
 	std::string local_name;
-	char *remote_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
 	std::string buff;
@@ -1403,23 +1374,22 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_name );
 	jobAd->LookupString( ATTR_JOB_ERROR, stderr_name );
 
-	stage_local_list = new StringList;
+	stage_local_list = new std::vector<std::string>;
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
-	stage_list->rewind();
-	while ( (remote_name = stage_list->next()) ) {
+	for (const auto& remote_name : *stage_list) {
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
-		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
+		if ( strcmp( REMOTE_STDOUT_NAME, remote_name.c_str() ) == 0 ) {
 			local_name = stdout_name;
-		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
+		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name.c_str() ) == 0 ) {
 			local_name = stderr_name;
-		} else if( remaps && filename_remap_find( remaps, remote_name,
+		} else if( remaps && filename_remap_find( remaps, remote_name.c_str(),
 												  local_name ) ) {
 				// file is remapped
 		} else {
-			local_name = condor_basename( remote_name );
+			local_name = condor_basename( remote_name.c_str() );
 		}
 
 		if ( (local_name.length() && local_name[0] == '/')
@@ -1428,11 +1398,22 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 		} else {
 			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
 		}
-		stage_local_list->append( buff.c_str() );
+		stage_local_list->emplace_back(buff);
 	}
 
 	if ( remaps ) {
 		free( remaps );
+	}
+
+	// Remove items from both lists where the destination file is a URL
+	size_t i = 0;
+	while (i < stage_list->size()) {
+		if (IsUrl((*stage_local_list)[i].c_str())) {
+			stage_list->erase(stage_list->begin()+i);
+			stage_local_list->erase(stage_local_list->begin()+i);
+		} else {
+			i++;
+		}
 	}
 
 	return stage_local_list;
