@@ -4658,10 +4658,10 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 								   const std::string &account,
 								   const std::string &project,
 								   const std::string &zone,
-								   StringList &instance_ids,
-								   StringList &instance_names,
-								   StringList &statuses,
-								   StringList &status_msgs )
+								   std::vector<std::string> &instance_ids,
+								   std::vector<std::string> &instance_names,
+								   std::vector<std::string> &statuses,
+								   std::vector<std::string> &status_msgs )
 {
 	static const char* command = "GCE_INSTANCE_LIST";
 
@@ -4710,10 +4710,10 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 				EXCEPT( "Bad %s result", command );
 			}
 			for ( int i = 0; i < cnt; i++ ) {
-				instance_ids.append( result->argv[3 + 4*i] );
-				instance_names.append( result->argv[3 + 4*i + 1] );
-				statuses.append( result->argv[3 + 4*i + 2] );
-				status_msgs.append( result->argv[3 + 4*i + 3] );
+				instance_ids.emplace_back( result->argv[3 + 4*i] );
+				instance_names.emplace_back( result->argv[3 + 4*i + 1] );
+				statuses.emplace_back( result->argv[3 + 4*i + 2] );
+				status_msgs.emplace_back( result->argv[3 + 4*i + 3] );
 			}
 		}
 
@@ -4787,7 +4787,8 @@ int GahpClient::azure_ping( const std::string &auth_file,
 
 int GahpClient::azure_vm_create( const std::string &auth_file,
                                  const std::string &subscription,
-                                 StringList &vm_params, std::string &vm_id,
+                                 const std::vector<std::string> &vm_params,
+                                 std::string &vm_id,
                                  std::string &ip_address )
 {
 	static const char* command = "AZURE_VM_CREATE";
@@ -4798,11 +4799,9 @@ int GahpClient::azure_vm_create( const std::string &auth_file,
 	reqline += " ";
 	reqline += escapeGahpString( subscription );
 
-	const char *next_param;
-	vm_params.rewind();
-	while ( (next_param = vm_params.next()) ) {
+	for (const auto& next_param : vm_params) {
 		reqline += " ";
-		reqline += escapeGahpString( next_param );
+		reqline += escapeGahpString( next_param.c_str() );
 	}
 
 	const char *buf = reqline.c_str();
@@ -4911,8 +4910,8 @@ int GahpClient::azure_vm_delete( const std::string &auth_file,
 
 int GahpClient::azure_vm_list( const std::string &auth_file,
                                const std::string &subscription,
-		                       StringList &vm_names,
-		                       StringList &vm_statuses )
+		                       std::vector<std::string> &vm_names,
+		                       std::vector<std::string> &vm_statuses )
 {
 	static const char* command = "AZURE_VM_LIST";
 
@@ -4955,8 +4954,8 @@ int GahpClient::azure_vm_list( const std::string &auth_file,
 				EXCEPT( "Bad %s result", command );
 			}
 			for ( int i = 0; i < cnt; i++ ) {
-				vm_names.append( result->argv[3 + 2*i] );
-				vm_statuses.append( result->argv[3 + 2*i + 1] );
+				vm_names.emplace_back( result->argv[3 + 2*i] );
+				vm_statuses.emplace_back( result->argv[3 + 2*i + 1] );
 			}
 		}
 

@@ -427,7 +427,7 @@ void AzureJob::doEvaluateState()
 					std::string vm_id;
 					std::string ip_address;
 
-					if ( m_vmParams.isEmpty() ) {
+					if ( m_vmParams.empty() ) {
 						if ( !BuildVmParams() ) {
 							myResource->CancelSubmit(this);
 							gmState = GM_HOLD;
@@ -873,11 +873,11 @@ bool AzureJob::BuildVmParams()
 	string value;
 	string name_value;
 
-	m_vmParams.clearAll();
+	m_vmParams.clear();
 
 	name_value = "name=";
 	name_value += m_vmName;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_LOCATION, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_LOCATION;
@@ -885,7 +885,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "location=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_IMAGE, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_IMAGE;
@@ -893,7 +893,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "image=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_SIZE, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_SIZE;
@@ -901,7 +901,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "size=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_USERNAME, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_ADMIN_USERNAME;
@@ -909,7 +909,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "adminUsername=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_KEY, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_ADMIN_KEY;
@@ -917,7 +917,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "key=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	return true;
 }

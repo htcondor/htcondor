@@ -512,17 +512,17 @@ class GahpClient : public GenericGahpClient {
 							   const std::string &account,
 							   const std::string &project,
 							   const std::string &zone,
-							   StringList &instance_ids,
-							   StringList &instance_names,
-							   StringList &statuses,
-							   StringList &status_msgs );
+							   std::vector<std::string> &instance_ids,
+							   std::vector<std::string> &instance_names,
+							   std::vector<std::string> &statuses,
+							   std::vector<std::string> &status_msgs );
 
 		int azure_ping( const std::string &auth_file,
 		                const std::string &subscription );
 
 		int azure_vm_create( const std::string &auth_file,
 		                     const std::string &subscription,
-		                     StringList &vm_params, std::string &vm_id,
+		                     const std::vector<std::string> &vm_params, std::string &vm_id,
 		                     std::string &ip_address );
 
 		int azure_vm_delete( const std::string &auth_file,
@@ -531,8 +531,8 @@ class GahpClient : public GenericGahpClient {
 
 		int azure_vm_list( const std::string &auth_file,
 		                   const std::string &subscription,
-		                   StringList &vm_names,
-		                   StringList &vm_statuses );
+		                   std::vector<std::string> &vm_names,
+		                   std::vector<std::string> &vm_statuses );
 
 	private:
 
