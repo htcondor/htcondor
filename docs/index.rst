@@ -7,7 +7,7 @@ national or international federations of computers.
 
 If you are a user of HTCondor, and have been given a login or credentials to use a batch scheduler on an
 Access Point (sometimes called a scheduler or login node), you may want to read our Quick Start guide
-here: :ref:`users-manual/quick-start-guide:HTCondor Quick Start Guide`
+here: :ref:`users-manual/quick-start-guide:Users' Quick Start Guide`
 
 If you are beginning administrator of HTCondor, or want to install it for the first time, please
 look at our installation guide here: :ref:`getting-htcondor/index:Getting HTCondor`
@@ -29,26 +29,34 @@ Manual built on |release_date|
 .. toctree::
    :maxdepth: 2
    :glob:
-   :caption: Contents
+   :Caption: Quick start guides
 
+   users-manual/quick-start-guide
    getting-htcondor/index
    overview/index
+
+.. toctree::
+   :maxdepth: 2
+   :glob:
+   :caption: Reference Manuals
+
    users-manual/index
    admin-manual/index
    classads/index
+   apis/python-bindings/index
    grid-computing/index
    cloud-computing/index
    apis/index
    platform-specific/index
    faq/index
    version-history/index
-   man-pages/index
 
 .. toctree::
    :maxdepth: 2
    :glob:
-   :caption: Appendix
+   :caption: Appendix and Tables
 
+   man-pages/index
    classad-attributes/index
    codes-other-values/index
    genindex
