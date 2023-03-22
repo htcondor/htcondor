@@ -141,8 +141,8 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, int res=40, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
-	StringTokenIterator(const std::string & s, int res=40, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
+	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0), pastEnd(false) { };
+	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
@@ -160,13 +160,13 @@ public:
 	using reference         = std::string *;
 
 	StringTokenIterator begin() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims};
 		sti.next();
 		return sti;
 	}
 
 	StringTokenIterator end() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims};
 		sti.ixNext = strlen(str);
 		sti.pastEnd = true;
 		return sti;

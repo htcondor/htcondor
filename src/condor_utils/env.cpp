@@ -733,7 +733,7 @@ bool WhiteBlackEnvFilter::operator()( const std::string & var, const std::string
 // all other items go into the whitelist.  leading and trailing whitespace is trimmed
 // comma, semicolon and whitespace are item steparators
 void WhiteBlackEnvFilter::AddToWhiteBlackList(const char * list) {
-	StringTokenIterator it(list,40,",; \t\r\n");
+	StringTokenIterator it(list,",; \t\r\n");
 	std::string name;
 	for (const char * str = it.first(); str != NULL; str = it.next()) {
 		if (*str == '!') {

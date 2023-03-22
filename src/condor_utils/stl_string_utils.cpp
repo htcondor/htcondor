@@ -406,7 +406,7 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 {
 	int start, len;
 	std::vector<std::string> list;
-	StringTokenIterator sti(str, 40, delim);
+	StringTokenIterator sti(str, delim);
 	while ((start = sti.next_token(len)) >= 0) {
 		if (trim) {
 			while (len > 0 && isspace(str[start])) {
