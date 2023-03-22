@@ -1,7 +1,7 @@
 .. _quick_start_guide:
 
-HTCondor Quick Start Guide
-==========================
+Users' Quick Start Guide
+========================
 
 To users, `HTCondor <https://htcondor.org>`_ is a batch job scheduler.  You give
 HTCondor a file with commands to tell it how to run your jobs.  HTCondor
