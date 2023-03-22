@@ -193,8 +193,8 @@ The commands
 
 direct HTCondor to explicitly send the needed files, including the executable,
 to the machine where the job executes.  These commands will likely not be
-necessary for jobs in which the AP and the EP (the Execute Point, or worker
-node) machine access a shared file system.  However, including these commands
+necessary for jobs in which the AP and the EP (the Execution Point, or worker
+node) access a shared file system.  However, including these commands
 will allow this first sample job to work under a large variety of pool
 configurations.
 
