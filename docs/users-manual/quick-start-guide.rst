@@ -3,7 +3,7 @@
 HTCondor Quick Start Guide
 ==========================
 
-To users, `HTCondor <http://htcondor.org>`_ is a batch job scheduler.  You give
+To users, `HTCondor <https://htcondor.org>`_ is a batch job scheduler.  You give
 HTCondor a file with commands to tell it how to run your jobs.  HTCondor
 locates an appropriate machine for each job within the pool(s) of machines,
 packages up the job and ships it off to this Execution Point (EP) to run on.
