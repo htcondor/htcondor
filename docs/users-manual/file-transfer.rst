@@ -330,6 +330,10 @@ transferred back into the directory ``/scratch/test``.
 
     arguments       = in1 in2 out1
 
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 The log file is written on the submit machine, and is not involved
@@ -356,6 +360,10 @@ the input files.
     transfer_input_files = /scratch/test/files/in1,/scratch/test/files/in2
 
     arguments       = in1 in2 out1
+
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
 
     queue
 
@@ -396,6 +404,10 @@ example work correctly.
 
     arguments       = in1 in2 out1
 
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 **Example 4 - Illustrates an Error**
@@ -427,6 +439,10 @@ the execute machine.
 
     arguments       = files/in1 files/in2 files/out1
 
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 This example fails with the following error:
@@ -455,6 +471,10 @@ The executing program's use of absolute paths cannot work.
     transfer_input_files = /scratch/test/files/in1, /scratch/test/files/in2
 
     arguments = /scratch/test/files/in1 /scratch/test/files/in2 /scratch/test/files/out1
+
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
 
     queue
 
@@ -492,6 +512,10 @@ initial working directory as ``/scratch/test/out1``.
     transfer_output_files = /tmp/out1
 
     arguments       = in1 in2 /tmp/out1
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
 
     queue
 

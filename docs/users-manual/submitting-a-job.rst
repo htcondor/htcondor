@@ -124,8 +124,8 @@ we tell HTCondor which input file to send to each instance of the program.
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
+    request_memory = 4096
     request_disk   = 16383
 
     error   = err.$(Process)
@@ -1346,8 +1346,8 @@ To give an example, the following submit file:
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
+    request_memory = 4096
     request_disk   = 16383
 
     error   = err.$(Process)
