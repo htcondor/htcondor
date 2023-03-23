@@ -68,8 +68,8 @@ The corresponding submit description file might look like the following
     log          = myexe.log
 
     request_cpus   = 1
-    request_memory = 1024
-    request_disk   = 10240
+    request_memory = 1024M
+    request_disk   = 10240K
 
     should_transfer_files = yes
 
@@ -124,9 +124,9 @@ we tell HTCondor which input file to send to each instance of the program.
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
-    request_disk   = 16383
+    request_memory = 4096M
+    request_disk   = 16383K
 
     error   = err.$(Process)
     output  = out.$(Process)
@@ -1346,9 +1346,9 @@ To give an example, the following submit file:
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
-    request_disk   = 16383
+    request_memory = 4096M
+    request_disk   = 16383K
 
     error   = err.$(Process)
     output  = out.$(Process)
