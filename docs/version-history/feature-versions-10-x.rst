@@ -17,7 +17,11 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved throughput when submitting a large number of ARC CE jobs.
+  Previously, jobs could remain stalled for a long time in the ARC CE
+  server waiting for their input sandbox to be transferred while other
+  were being submitted.
+  :jira:`1666`
 
 Bugs Fixed:
 

@@ -501,6 +501,7 @@ void ArcJob::doEvaluateState()
 				rc = gahp->arc_job_new(
 									resourceManagerString,
 									RSL,
+									!delegationId.empty(),
 									job_id,
 									job_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||

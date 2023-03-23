@@ -431,6 +431,7 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_new(const std::string &service_url,
 		            const std::string &rsl,
+		            bool has_proxy,
 		            std::string &job_id,
 		            std::string &job_status);
 

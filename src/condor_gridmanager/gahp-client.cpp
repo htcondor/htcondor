@@ -3739,6 +3739,7 @@ GahpClient::arc_ping(const std::string &service_url)
 int
 GahpClient::arc_job_new(const std::string &service_url,
                         const std::string &rsl,
+                        bool has_proxy,
                         std::string &job_id,
                         std::string &job_status)
 {
@@ -3767,7 +3768,10 @@ GahpClient::arc_job_new(const std::string &service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		// The first command of a new job submission to ARC CE should
+		// be low priority. If the job has a proxy, then that was the
+		// ARC_DELEGATION_NEW. Otherwise, this is it.
+		now_pending(command,buf,deleg_proxy,has_proxy?medium_prio:low_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -3914,7 +3918,7 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,high_prio);
 	}
 
 		// If we made it here, command is pending.
@@ -4337,7 +4341,7 @@ GahpClient::arc_delegation_new(const std::string &service_url,
 		if ( m_mode == results_only ) {
 			return GAHPCLIENT_COMMAND_NOT_SUBMITTED;
 		}
-		now_pending(command,buf,deleg_proxy);
+		now_pending(command,buf,deleg_proxy,low_prio);
 	}
 
 		// If we made it here, command is pending.
