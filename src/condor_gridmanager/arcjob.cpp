@@ -27,6 +27,7 @@
 #include "nullfile.h"
 #include "filename_tools.h"
 #include "condor_url.h"
+#include <algorithm>
 
 #include "globus_utils.h"
 #include "gridmanager.h"
