@@ -21,6 +21,9 @@
 #include "generic_query.h"
 #include "condor_attributes.h"
 #include "condor_classad.h"
+#include <algorithm>
+#include <numeric>
+#include <iterator>
 
 static char *new_strdup (const char *);
 
@@ -82,7 +85,7 @@ setNumIntegerCats (const int numCats)
 	integerThreshold = (numCats > 0) ? numCats : 0;
 	if (integerThreshold)
 	{
-		integerConstraints = new SimpleList<int> [integerThreshold];
+		integerConstraints = new std::vector<int> [integerThreshold];
 		if (!integerConstraints)
 			return Q_MEMORY_ERROR;
 		return Q_OK;
@@ -112,7 +115,7 @@ setNumFloatCats (const int numCats)
 	floatThreshold = (numCats > 0) ? numCats : 0;
 	if (floatThreshold)
 	{	
-		floatConstraints = new SimpleList<float> [floatThreshold];
+		floatConstraints = new std::vector<float> [floatThreshold];
 		if (!floatConstraints)
 			return Q_MEMORY_ERROR;
 		return Q_OK;
@@ -127,8 +130,7 @@ addInteger (const int cat, int value)
 {
     if (cat >= 0 && cat < integerThreshold)
     {
-        if (!integerConstraints [cat].Append (value))
-            return Q_MEMORY_ERROR;
+        integerConstraints [cat].push_back(value);
         return Q_OK;
     }
 
@@ -140,8 +142,7 @@ addFloat (const int cat, float value)
 {
     if (cat >= 0 && cat < floatThreshold)
     {
-        if (!floatConstraints [cat].Append (value))
-            return Q_MEMORY_ERROR;
+        floatConstraints [cat].push_back(value);
         return Q_OK;
     }
 
@@ -261,9 +262,8 @@ setFloatKwList (char **value)
 int GenericQuery::
 makeQuery (std::string &req)
 {
-	int		i, value;
+	int		i;
 	char	*item;
-	float   fvalue;
 
 	req = "";
 
@@ -286,47 +286,41 @@ makeQuery (std::string &req)
 				firstTime = false;
 				firstCategory = false;
 			}
-			req += " )";
+			req += ')';
 		}
 	}
 
 	// add integer constraints
 	for (i = 0; i < integerThreshold; i++)
 	{
-		integerConstraints [i].Rewind ();
-		if (!integerConstraints [i].AtEnd ())
-		{
+		if (!integerConstraints[i].empty()) {
 			bool firstTime = true;
 			req += firstCategory ? "(" : " && (";
-			while (integerConstraints [i].Next (value))
-			{
+			for (int ic : integerConstraints[i]) {
 				formatstr_cat (req, "%s(%s == %d)", 
 						 firstTime ? " " : " || ",
-						 integerKeywordList [i], value);
+						 integerKeywordList [i], ic);
 				firstTime = false;
 				firstCategory = false;
 			}
-			req += " )";
+			req += ')';
 		}
 	}
 
 	// add float constraints
 	for (i = 0; i < floatThreshold; i++)
 	{
-		floatConstraints [i].Rewind ();
-		if (!floatConstraints [i].AtEnd ())
-		{
+		if (!floatConstraints[i].empty()) {
 			bool firstTime = true;
 			req += firstCategory ? "(" : " && (";
-			while (floatConstraints [i].Next (fvalue))
-			{
+			for (float fvalue: floatConstraints[i]) {
 				formatstr_cat (req, "%s(%s == %f)", 
-						 firstTime ? " " : " || ",
-						 floatKeywordList [i], fvalue);
+						firstTime ? " " : " || ",
+						floatKeywordList [i], fvalue);
 				firstTime = false;
 				firstCategory = false;
 			}
-			req += " )";
+			req += ')';
 		}
 	}
 
@@ -410,23 +404,15 @@ clearStringCategory (List<char> &str_category)
 }
 
 void GenericQuery::
-clearIntegerCategory (SimpleList<int> &int_category)
+clearIntegerCategory (std::vector<int> &int_category)
 {
-    int item;
-
-    int_category.Rewind ();
-    while (int_category.Next (item))
-        int_category.DeleteCurrent ();
+	int_category.clear();
 }
 
 void GenericQuery::
-clearFloatCategory (SimpleList<float> &float_category)
+clearFloatCategory (std::vector<float> &float_category)
 {
-    float item;
-
-    float_category.Rewind ();
-    while (float_category.Next (item))
-        float_category.DeleteCurrent ();
+	float_category.clear();
 }
 
 
@@ -474,23 +460,17 @@ copyStringCategory (List<char> &to, List<char> &from)
 }
 
 void GenericQuery::
-copyIntegerCategory (SimpleList<int> &to, SimpleList<int> &from)
+copyIntegerCategory (std::vector<int> &to, std::vector<int> &from)
 {
-	int item;
-
 	clearIntegerCategory (to);
-	while (from.Next (item))
-		to.Append (item);
+	std::copy(from.begin(), from.end(), std::back_inserter(to));
 }
 
 void GenericQuery::
-copyFloatCategory (SimpleList<float> &to, SimpleList<float> &from)
+copyFloatCategory (std::vector<float> &to, std::vector<float> &from)
 {
-	float item;
-
 	clearFloatCategory (to);
-	while (from.Next (item))
-		to.Append (item);
+	std::copy(from.begin(), from.end(), std::back_inserter(to));
 }
 
 // strdup() which uses new
