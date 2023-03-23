@@ -23,6 +23,7 @@
 #include "condor_classad.h"
 #include <algorithm>
 #include <numeric>
+#include <iterator>
 
 static char *new_strdup (const char *);
 
