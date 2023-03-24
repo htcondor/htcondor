@@ -78,6 +78,31 @@ StartdCronJobParams::Initialize( void )
 		dprintf( D_ALWAYS, "%s\n", s.c_str() );
 	}
 
+
+	// Set up my own metrics.
+	const char * jobName = this->GetName();
+	char * metricString = this->Lookup( "METRICS" );
+	if( metricString != NULL && metricString[0] != '\0' ) {
+		StringList pairs( metricString );
+		for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
+			StringList tn( pair, ":" );
+			char * metricType = tn.first();
+			if (!metricType) continue;
+
+			char * attributeName = tn.next();
+			if(! this->addMetric( metricType, attributeName )) {
+				dprintf(    D_ALWAYS, "Unknown metric type '%s' for attribute "
+				            "'%s' in monitor '%s', ignoring.\n", metricType,
+				            attributeName, jobName );
+			} else {
+				dprintf(    D_FULLDEBUG, "Added %s as %s metric for %s job\n",
+				            attributeName, metricType, jobName );
+			}
+		}
+	}
+	if (metricString) free( metricString );
+
+
 	return true;
 };
 
