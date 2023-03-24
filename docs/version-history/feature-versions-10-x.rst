@@ -23,6 +23,11 @@ New Features:
   were being submitted.
   :jira:`1666`
 
+- The admin knob `SUBMIT_ALLOW_GETENV` when set to false, now allows
+  submit files to use any value but *true* for their `getenv = ...`
+  commands.
+  :jira:`1671`
+
 Bugs Fixed:
 
 - Fixed a bug where if the docker command emitted warnings to stderr, the
