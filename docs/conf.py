@@ -45,7 +45,7 @@ extensions = [
 # work on python2 sphinxes, as found on el7.
 
 if (sys.version[0:1] == '3'):
-	extensions.append('classad-attribute')
+        extensions.append('classad-attribute')
         extensions.append('sphinx.ext.autodoc')
         extensions.append('sphinx_autodoc_typehints')
 
