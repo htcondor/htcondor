@@ -40,6 +40,15 @@ extensions = [
     'jira',
 ]
 
+# When we drop el7, just put classad-attribute unconditionally
+# into extensions. It requires python3, so it doesn't 
+# work on python2 sphinxes, as found on el7.
+
+if (sys.version[0:1] == '3'):
+	extensions.append('classad-attribute')
+        extensions.append('sphinx.ext.autodoc')
+        extensions.append('sphinx_autodoc_typehints')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
