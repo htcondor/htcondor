@@ -44,7 +44,7 @@ extensions = [
 # into extensions. It requires python3, so it doesn't 
 # work on python2 sphinxes, as found on el7.
 
-if (sys.version[0:1] == '3'):
+if (sys.version_info.major >= 3):
 	extensions.append('classad-attribute')
 
 # Add any paths that contain templates here, relative to this directory.
