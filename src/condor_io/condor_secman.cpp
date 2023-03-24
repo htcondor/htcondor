@@ -1130,7 +1130,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 
 	std::string m_session_key; // "addr,<cmd>"
 	bool m_already_tried_TCP_auth;
-	SimpleList<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
+	std::vector<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
 	classy_counted_ptr<SecManStartCommand> m_tcp_auth_command;
 
 	bool m_is_tcp;
@@ -2745,7 +2745,7 @@ SecManStartCommand::DoTCPAuth_inner()
 				return StartCommandWouldBlock;
 			}
 
-			sc->m_waiting_for_tcp_auth.Append(this);
+			sc->m_waiting_for_tcp_auth.push_back(this);
 
 			if(IsDebugVerbose(D_SECURITY)) {
 				dprintf(D_SECURITY,
@@ -2875,11 +2875,10 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 
 		// Iterate through the list of objects waiting for our TCP auth session
 		// to be done.
-	m_waiting_for_tcp_auth.Rewind();
-	while( m_waiting_for_tcp_auth.Next(sc) ) {
+	for (auto sc: m_waiting_for_tcp_auth) {
 		sc->ResumeAfterTCPAuth(auth_succeeded);
 	}
-	m_waiting_for_tcp_auth.Clear();
+	m_waiting_for_tcp_auth.clear();
 
 	return rc;
 }

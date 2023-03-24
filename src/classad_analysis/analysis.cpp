@@ -458,34 +458,30 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::st
 		List< Condition > sortedCondList;
 		profile->Rewind( );
 		Condition *sortedCond;
-		SimpleList< int > mapList;
+		std::vector<int> mapList;
 		int index = 0;
-		int junk;
 		while( profile->NextCondition( condition ) ) {			
 			if( sortedCondList.IsEmpty( ) ) {
 				sortedCondList.Append( condition );
-				mapList.Append( index );
+				mapList.push_back( index );
 			} else {
 				sortedCondList.Rewind( );
-				mapList.Rewind( );
 				while( sortedCondList.Next( sortedCond ) ) {
-					mapList.Next( junk );
 					if( condition->explain.numberOfMatches <
 						sortedCond->explain.numberOfMatches ) {
 						sortedCondList.Insert( condition );
-						mapList.Prepend( index );
+						mapList.insert(mapList.begin(), index );
 						break;
 					}
 					if( sortedCondList.AtEnd( ) ) {
 						sortedCondList.Append( condition );
-						mapList.Append( index );
+						mapList.push_back(index );
 					}
 				}
 			}
 			index++;
 		}
 		sortedCondList.Rewind( );
-		mapList.Rewind( );
 
 			// create map from original Condition order to sorted order
 		int numConds = 0;
@@ -494,7 +490,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::st
 		condMap.resize(numConds);
 
 		int i = 0;
-		while( mapList.Next( index ) ) {
+		for (int index: mapList) {
 			condMap[index] = i;
 			i++;
 		}
