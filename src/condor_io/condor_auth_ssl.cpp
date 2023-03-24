@@ -2122,7 +2122,7 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 		}
 	} else {
 		// TODO compare names to SEC_SCITOKENS_PLUGIN_NAMES?
-		StringTokenIterator toker(input, 5, ",");
+		StringTokenIterator toker(input, ",");
 		const std::string* next;
 		while ((next = toker.next_string())) {
 			m_pluginState->m_names.push_back(*next);
@@ -2158,7 +2158,7 @@ Condor_Auth_SSL::StartScitokensPlugins(const std::string& input, std::string& re
 				// to ensure the value is valid throughout the iteration
 				// process.
 				std::string value = pair.second.as_string();
-				StringTokenIterator toker(value, 2, " ");
+				StringTokenIterator toker(value, " ");
 				int idx = 0;
 				const std::string* next;
 				while ((next = toker.next_string())) {

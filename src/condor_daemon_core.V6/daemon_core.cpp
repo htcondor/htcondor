@@ -8699,7 +8699,7 @@ int extractInheritedSocks (
 		return 0;
 
 	int cSocks = 0;
-	StringTokenIterator list(inherit, 100, " ");
+	StringTokenIterator list(inherit, " ");
 
 	// first is parent pid and sinful
 	const char * ptmp = list.first();

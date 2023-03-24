@@ -181,7 +181,7 @@ int main(int argc, const char *argv[])
 		} else if (is_dash_arg_colon_prefix(argv[i], "diagnostic", &pcolon, 4)) {
 			dash_diagnostic = JOB_ROUTER_TOOL_FLAG_DIAGNOSTIC;
 			if (pcolon) {
-				StringTokenIterator it(++pcolon,40,",");
+				StringTokenIterator it(++pcolon,",");
 				for (const char * opt = it.first(); opt; opt = it.next()) {
 					if (is_arg_prefix(opt, "match")) {
 						dash_diagnostic |= JOB_ROUTER_TOOL_FLAG_DEBUG_UMBRELLA;

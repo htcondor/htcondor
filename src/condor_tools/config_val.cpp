@@ -507,7 +507,7 @@ static const char * indent_herefile(const char * raw, const char * indent, std::
 {
 	buf.clear();
 	if (tag) { buf += "@="; buf += tag; }
-	StringTokenIterator lines(raw, 200, "\n");
+	StringTokenIterator lines(raw, "\n");
 	for (const char * line = lines.first(); line; line = lines.next()) {
 		buf += "\n";
 		buf += indent;
@@ -944,7 +944,7 @@ main( int argc, const char* argv[] )
 				  "    To override config for a class of daemons, or for a standard daemon use a SUBSYS. prefix.\n"
 				  "    To override config for a specific member of a class of daemons, just use a LOCALNAME. prefix like this:\n"
 				);
-			StringTokenIterator it(obsolete_vars, 40, "\n");
+			StringTokenIterator it(obsolete_vars, "\n");
 			for (const char * line = it.first(); line; line = it.next()) {
 				const char * p1 = strchr(line, '.');
 				if ( ! p1) continue;
@@ -2163,9 +2163,9 @@ void PrintMetaKnob(const char * metaval, bool expand, bool verbose)
 {
 	if ( ! metaval) return;
 	bool print_use = verbose || ! expand;
-	StringTokenIterator lines(metaval, 120, "\n");
+	StringTokenIterator lines(metaval, "\n");
 	for (const char * line = lines.first(); line; line = lines.next()) {
-		StringTokenIterator toks(line, 40, " :");
+		StringTokenIterator toks(line, " :");
 		bool is_use = YourString("use") == toks.first();
 		if ( ! is_use || print_use) {
 			printf("%s\n", line);

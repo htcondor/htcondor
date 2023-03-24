@@ -993,7 +993,7 @@ FutureEvent::toClassAd(bool event_time_utc)
 
 	myad->Assign("EventHead", head);
 	if ( ! payload.empty()) {
-		StringTokenIterator lines(payload, 120, "\r\n");
+		StringTokenIterator lines(payload, "\r\n");
 		const std::string * str;
 		while ((str = lines.next_string())) { 
 			if ( ! myad->Insert(*str)) {

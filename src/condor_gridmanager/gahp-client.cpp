@@ -3890,8 +3890,8 @@ GahpClient::arc_job_status(const std::string &service_url,
 int
 GahpClient::arc_job_status_all(const std::string &service_url,
                                const std::string &states,
-                               StringList &job_ids,
-                               StringList &job_states)
+                               std::vector<std::string> &job_ids,
+                               std::vector<std::string> &job_states)
 {
 	static const char* command = "ARC_JOB_STATUS_ALL";
 
@@ -3943,8 +3943,8 @@ GahpClient::arc_job_status_all(const std::string &service_url,
 				EXCEPT("Bad %s Result",command);
 			}
 			for ( int i = 4;  (i + 1) < result->argc; i += 2 ) {
-				job_ids.append(result->argv[i]);
-				job_states.append(result->argv[i + 1]);
+				job_ids.emplace_back(result->argv[i]);
+				job_states.emplace_back(result->argv[i + 1]);
 			}
 		}
 		delete result;
@@ -4035,7 +4035,7 @@ GahpClient::arc_job_info(const std::string &service_url,
 int
 GahpClient::arc_job_stage_in(const std::string &service_url,
                              const std::string &job_id,
-                             StringList &files)
+                             const std::vector<std::string> &files)
 {
 	static const char* command = "ARC_JOB_STAGE_IN";
 
@@ -4048,18 +4048,13 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service_url) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	int x = formatstr(reqline,"%s %s %d", esc1, esc2, files.number() );
+	int x = formatstr(reqline,"%s %s %zu", esc1, esc2, files.size() );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
-	int cnt = 0;
-	const char *filename;
-	files.rewind();
-	while ( (filename = files.next()) ) {
-		formatstr_cat(reqline, " %s", filename);
-		cnt++;
+	for (auto& filename: files) {
+		formatstr_cat(reqline, " %s", filename.c_str());
 	}
-	ASSERT( cnt == files.number() );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -4107,8 +4102,8 @@ GahpClient::arc_job_stage_in(const std::string &service_url,
 int
 GahpClient::arc_job_stage_out(const std::string &service_url,
                               const std::string &job_id,
-                              StringList &src_files,
-                              StringList &dest_files)
+                              const std::vector<std::string> &src_files,
+                              const std::vector<std::string> &dest_files)
 {
 	static const char* command = "ARC_JOB_STAGE_OUT";
 
@@ -4121,26 +4116,18 @@ GahpClient::arc_job_stage_out(const std::string &service_url,
 	std::string reqline;
 	char *esc1 = strdup( escapeGahpString(service_url) );
 	char *esc2 = strdup( escapeGahpString(job_id) );
-	int x = formatstr(reqline,"%s %s %d", esc1, esc2, src_files.number() );
+	int x = formatstr(reqline,"%s %s %zu", esc1, esc2, src_files.size() );
 	free( esc1 );
 	free( esc2 );
 	ASSERT( x > 0 );
-	int cnt = 0;
-	const char *src_filename;
-	const char *dest_filename;
-	src_files.rewind();
-	dest_files.rewind();
-	while ( (src_filename = src_files.next()) &&
-			(dest_filename = dest_files.next()) ) {
-		esc1 = strdup( escapeGahpString(src_filename) );
-		esc2 = strdup( escapeGahpString(dest_filename) );
+	ASSERT(src_files.size() == dest_files.size());
+	for (size_t i = 0; i < src_files.size(); i++) {
+		esc1 = strdup( escapeGahpString(src_files[i]) );
+		esc2 = strdup( escapeGahpString(dest_files[i]) );
 		formatstr_cat(reqline," %s %s", esc1, esc2);
-		cnt++;
 		free( esc1 );
 		free( esc2 );
 	}
-	ASSERT( cnt == src_files.number() );
-	ASSERT( cnt == dest_files.number() );
 	const char *buf = reqline.c_str();
 
 		// Check if this request is currently pending.  If not, make
@@ -4675,10 +4662,10 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 								   const std::string &account,
 								   const std::string &project,
 								   const std::string &zone,
-								   StringList &instance_ids,
-								   StringList &instance_names,
-								   StringList &statuses,
-								   StringList &status_msgs )
+								   std::vector<std::string> &instance_ids,
+								   std::vector<std::string> &instance_names,
+								   std::vector<std::string> &statuses,
+								   std::vector<std::string> &status_msgs )
 {
 	static const char* command = "GCE_INSTANCE_LIST";
 
@@ -4727,10 +4714,10 @@ int GahpClient::gce_instance_list( const std::string &service_url,
 				EXCEPT( "Bad %s result", command );
 			}
 			for ( int i = 0; i < cnt; i++ ) {
-				instance_ids.append( result->argv[3 + 4*i] );
-				instance_names.append( result->argv[3 + 4*i + 1] );
-				statuses.append( result->argv[3 + 4*i + 2] );
-				status_msgs.append( result->argv[3 + 4*i + 3] );
+				instance_ids.emplace_back( result->argv[3 + 4*i] );
+				instance_names.emplace_back( result->argv[3 + 4*i + 1] );
+				statuses.emplace_back( result->argv[3 + 4*i + 2] );
+				status_msgs.emplace_back( result->argv[3 + 4*i + 3] );
 			}
 		}
 
@@ -4804,7 +4791,8 @@ int GahpClient::azure_ping( const std::string &auth_file,
 
 int GahpClient::azure_vm_create( const std::string &auth_file,
                                  const std::string &subscription,
-                                 StringList &vm_params, std::string &vm_id,
+                                 const std::vector<std::string> &vm_params,
+                                 std::string &vm_id,
                                  std::string &ip_address )
 {
 	static const char* command = "AZURE_VM_CREATE";
@@ -4815,11 +4803,9 @@ int GahpClient::azure_vm_create( const std::string &auth_file,
 	reqline += " ";
 	reqline += escapeGahpString( subscription );
 
-	const char *next_param;
-	vm_params.rewind();
-	while ( (next_param = vm_params.next()) ) {
+	for (const auto& next_param : vm_params) {
 		reqline += " ";
-		reqline += escapeGahpString( next_param );
+		reqline += escapeGahpString( next_param.c_str() );
 	}
 
 	const char *buf = reqline.c_str();
@@ -4928,8 +4914,8 @@ int GahpClient::azure_vm_delete( const std::string &auth_file,
 
 int GahpClient::azure_vm_list( const std::string &auth_file,
                                const std::string &subscription,
-		                       StringList &vm_names,
-		                       StringList &vm_statuses )
+		                       std::vector<std::string> &vm_names,
+		                       std::vector<std::string> &vm_statuses )
 {
 	static const char* command = "AZURE_VM_LIST";
 
@@ -4972,8 +4958,8 @@ int GahpClient::azure_vm_list( const std::string &auth_file,
 				EXCEPT( "Bad %s result", command );
 			}
 			for ( int i = 0; i < cnt; i++ ) {
-				vm_names.append( result->argv[3 + 2*i] );
-				vm_statuses.append( result->argv[3 + 2*i + 1] );
+				vm_names.emplace_back( result->argv[3 + 2*i] );
+				vm_statuses.emplace_back( result->argv[3 + 2*i + 1] );
 			}
 		}
 

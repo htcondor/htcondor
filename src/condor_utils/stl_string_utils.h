@@ -133,16 +133,12 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.
 //
-// NOTE: there are some subtle differences between this code and StringList::initializeFromString.
-// StringList ALWAYS tokenizes on whitespace regardlist of what delims is set to, but
-// this iterator does not, if you want to tokenize on whitespace, then delims must contain the whitepace characters.
-//
-// NOTE also, this class does NOT copy the string that it is passed.  You must insure that it remains in scope and is
+// NOTE, this class does NOT copy the string that it is passed.  You must ensure that it remains in scope and is
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, int res=40, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
-	StringTokenIterator(const std::string & s, int res=40, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
+	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = false) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false), m_trim(trim) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
@@ -160,13 +156,13 @@ public:
 	using reference         = std::string *;
 
 	StringTokenIterator begin() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims, m_trim};
 		sti.next();
 		return sti;
 	}
 
 	StringTokenIterator end() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims, m_trim};
 		sti.ixNext = strlen(str);
 		sti.pastEnd = true;
 		return sti;
@@ -195,6 +191,7 @@ protected:
 	std::string current;
 	size_t ixNext;
 	bool pastEnd;
+	bool m_trim;
 };
 
 // Case insensitive string_view
