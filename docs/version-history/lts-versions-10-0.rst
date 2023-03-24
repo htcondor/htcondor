@@ -27,10 +27,15 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
 - Fixed a bug where Job Ad Information events weren't always written
   when using the Job Router.
   :jira:`1642`
-  
+
 - Fixed a bug where the submit event wasn't written to the job event
   log if the job ad didn't contain a ``CondorVersion`` attribute.
   :jira:`1643`
