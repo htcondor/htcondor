@@ -1708,14 +1708,14 @@ int SubmitHash::SetEnvironment()
 	// are not already set in the envobject
 	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
 	if (envlist) {
-		if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
-			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
-			ABORT_AND_RETURN(1);
-		}
 		// getenv can be a boolean, or it can be a whitelist/blacklist
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
+				if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
+					push_error(stderr, "\ngetenv = true command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
+					ABORT_AND_RETURN(1);
+				}
 				SubmitHashEnvFilter envFilter(env1 && !env2);
 				env.Import(envFilter);
 			}
