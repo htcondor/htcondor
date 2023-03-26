@@ -6967,7 +6967,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		char *bigbuf2 = NULL;
 		char *attribute_value = NULL;
 		ClassAd *expanded_ad;
-		int index;
 		char *left,*name,*right,*value,*tvalue;
 		bool value_came_from_jobad;
 
@@ -7040,12 +7039,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 		std::string cachedAttrName, unparseBuf;
 
-		index = -1;	
 		AttrsToExpand.rewind();
 		bool attribute_not_found = false;
 		while ( !attribute_not_found ) 
 		{
-			index++;
 			curr_attr_to_expand = AttrsToExpand.next();
 
 			if ( curr_attr_to_expand == NULL ) {

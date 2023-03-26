@@ -100,15 +100,13 @@
 // of statistics. It works with the template specialization below to let us
 // capture the type T inside a template expansion as an integer value. 
 //
-enum {
-   STATS_ENTRY_TYPE_INT32 = 1,
-   STATS_ENTRY_TYPE_INT64 = 2,
-   STATS_ENTRY_TYPE_FLOAT = 1 | 4,
-   STATS_ENTRY_TYPE_DOUBLE = 2 | 4,
-   STATS_ENTRY_TYPE_UNSIGNED = 8,
-   STATS_ENTRY_TYPE_UINT32 = STATS_ENTRY_TYPE_INT32 | STATS_ENTRY_TYPE_UNSIGNED,
-   STATS_ENTRY_TYPE_UINT64 = STATS_ENTRY_TYPE_INT64 | STATS_ENTRY_TYPE_UNSIGNED,
-   };
+constexpr const int STATS_ENTRY_TYPE_INT32 = 1;
+constexpr const int   STATS_ENTRY_TYPE_INT64 = 2;
+constexpr const int   STATS_ENTRY_TYPE_FLOAT = 1 | 4;
+constexpr const int   STATS_ENTRY_TYPE_DOUBLE = 2 | 4;
+constexpr const int   STATS_ENTRY_TYPE_UNSIGNED = 8;
+constexpr const int   STATS_ENTRY_TYPE_UINT32 = STATS_ENTRY_TYPE_INT32 | STATS_ENTRY_TYPE_UNSIGNED;
+constexpr const int   STATS_ENTRY_TYPE_UINT64 = STATS_ENTRY_TYPE_INT64 | STATS_ENTRY_TYPE_UNSIGNED;
 
 template <class T> struct stats_entry_type  {static const int id = 0;};
 template<> struct stats_entry_type<int>     {static const int id = STATS_ENTRY_TYPE_INT32; };
