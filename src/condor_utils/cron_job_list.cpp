@@ -25,7 +25,6 @@
 #include "condor_daemon_core.h"
 #include "condor_cron_job_mgr.h"
 #include "condor_cron_job_list.h"
-using namespace std;
 
 // Instantiate the list of Cron Jobs
 
@@ -47,7 +46,7 @@ CondorCronJobList::DeleteAll( void )
 	KillAll( true );
 
 	dprintf( D_ALWAYS, "CronJobList: Deleting all jobs\n" );
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		dprintf( D_ALWAYS,
@@ -66,7 +65,7 @@ CondorCronJobList::KillAll( bool force )
 {
 	// Walk through the list
 	dprintf( D_ALWAYS, "Cron: Killing all jobs\n" );
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		dprintf( D_ALWAYS, "Killing job %s\n", job->GetName() );
@@ -82,7 +81,7 @@ CondorCronJobList::NumAliveJobs( void ) const
 	int			 num_alive = 0;
 
 	// Walk through the list
-	list<CronJob *>::const_iterator iter;
+	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
 		if ( job->IsAlive( ) ) {
@@ -99,7 +98,7 @@ CondorCronJobList::RunningJobLoad( void ) const
 	double		 load = 0.0;
 
 	// Walk through the list
-	list<CronJob *>::const_iterator iter;
+	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
 		load += job->GetRunLoad();
@@ -114,7 +113,7 @@ CondorCronJobList::NumActiveJobs( void ) const
 	int			 num_active = 0;
 
 	// Walk through the list
-	list<CronJob *>::const_iterator iter;
+	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
 		if ( job->IsActive( ) ) {
@@ -131,7 +130,7 @@ CondorCronJobList::GetStringList( StringList &sl ) const
 	sl.clearAll( );
 
 	// Walk through the list
-	list<CronJob *>::const_iterator iter;
+	std::list<CronJob *>::const_iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		const CronJob	*job = *iter;
 		sl.append( job->GetName() );
@@ -144,7 +143,7 @@ int
 CondorCronJobList::HandleReconfig( void )
 {
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		job->HandleReconfig( );
@@ -157,7 +156,7 @@ int
 CondorCronJobList::InitializeAll( void )
 {
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		job->Initialize( );
@@ -170,7 +169,7 @@ int
 CondorCronJobList::ScheduleAll( void )
 {
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		job->Schedule( );
@@ -185,7 +184,7 @@ CondorCronJobList::StartOnDemandJobs( void )
 	int			 num = 0;
 
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		if ( job->Params().IsOnDemand() ) {
@@ -201,7 +200,7 @@ void
 CondorCronJobList::ClearAllMarks( void )
 {
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		job->ClearMark( );
@@ -212,10 +211,10 @@ CondorCronJobList::ClearAllMarks( void )
 void
 CondorCronJobList::DeleteUnmarked( void )
 {
-	list<CronJob *>		 kill_list;
+	std::list<CronJob *>		 kill_list;
 
 	// Walk through the list, delete all that didn't get marked
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		if ( ! job->IsMarked( ) ) {
@@ -257,7 +256,7 @@ int
 CondorCronJobList::DeleteJob( const char *job_name )
 {
 	// Walk through the list, delete all that didn't get marked
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		if ( ! strcmp( job_name, job->GetName( ) ) ) {
@@ -278,7 +277,7 @@ CronJob *
 CondorCronJobList::FindJob( const char *job_name )
 {
 	// Walk through the list
-	list<CronJob *>::iterator iter;
+	std::list<CronJob *>::iterator iter;
 	for( iter = m_job_list.begin(); iter != m_job_list.end(); iter++ ) {
 		CronJob	*job = *iter;
 		if ( ! strcmp( job_name, job->GetName( ) ) ) {

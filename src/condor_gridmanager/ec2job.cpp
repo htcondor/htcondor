@@ -36,8 +36,6 @@
 
 #include <algorithm>
 
-using namespace std;
-
 #define GM_INIT							0
 #define GM_START_VM						1
 #define GM_SAVE_INSTANCE_ID				2
@@ -127,7 +125,7 @@ void EC2JobReconfig()
 bool EC2JobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	string resource;
+	std::string resource;
 
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -164,13 +162,13 @@ EC2Job::EC2Job( ClassAd *classad ) :
 	purgedTwice( false ),
 	updatedOnce( false )
 {
-	string error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
-	string value;
+	std::string value;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -2030,7 +2028,7 @@ void EC2Job::SetInstanceId( const char *instance_id )
 // Use SetClientToken() or SetInstanceId() instead.
 void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_id )
 {
-	string full_job_id;
+	std::string full_job_id;
 	if ( client_token && client_token[0] ) {
 		formatstr( full_job_id, "ec2 %s %s", m_serviceUrl.c_str(), client_token );
 		if ( instance_id && instance_id[0] ) {
@@ -2047,9 +2045,9 @@ void EC2Job::EC2SetRemoteJobId( const char *client_token, const char *instance_i
 
 // if ami_id is empty, client must have assigned upload file name value
 // otherwise the condor_submit will report an error.
-string EC2Job::build_ami_id()
+std::string EC2Job::build_ami_id()
 {
-	string ami_id;
+	std::string ami_id;
 	char* buffer = NULL;
 
 	if ( jobAd->LookupString( ATTR_EC2_AMI_ID, &buffer ) ) {
@@ -2061,7 +2059,7 @@ string EC2Job::build_ami_id()
 
 // Client token is max 64 ASCII chars
 // http://docs.amazonwebservices.com/AWSEC2/latest/UserGuide/Run_Instance_Idempotency.html
-string EC2Job::build_client_token()
+std::string EC2Job::build_client_token()
 {
 #ifdef WIN32
 	GUID guid;
@@ -2080,7 +2078,7 @@ string EC2Job::build_client_token()
 
 	uuid_unparse(uuid, uuid_str);
 	uuid_str[36] = '\0';
-	return string(uuid_str);
+	return std::string(uuid_str);
 #endif
 }
 
@@ -2116,7 +2114,7 @@ std::string EC2Job::build_keypair()
 
 	size_t loc = 0;
 	#define KEYPAIR_FILTER "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 -_"
-	while( (loc = key_pair.find_first_not_of( KEYPAIR_FILTER, loc )) != string::npos ) {
+	while( (loc = key_pair.find_first_not_of( KEYPAIR_FILTER, loc )) != std::string::npos ) {
 		key_pair[loc] = ' ';
 	}
 
@@ -2193,8 +2191,8 @@ void EC2Job::associate_n_attach()
 		tagNames.rewind();
 		while ((tagName = tagNames.next())) {
 				// XXX: Check that tagName does not contain an equal sign (=)
-			string tag;
-			string tagAttr(ATTR_EC2_TAG_PREFIX);
+			std::string tag;
+			std::string tagAttr(ATTR_EC2_TAG_PREFIX);
 			tagAttr.append(tagName);
 			char *value = NULL;
 			if (!jobAd->LookupString(tagAttr, &value)) {

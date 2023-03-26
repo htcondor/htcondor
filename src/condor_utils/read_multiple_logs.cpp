@@ -38,8 +38,6 @@
 #  define D_LOG_FILES D_FULLDEBUG
 #endif
 
-using namespace std;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
