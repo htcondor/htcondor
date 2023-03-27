@@ -79,13 +79,13 @@ int TimerManager::NewTimer(unsigned deltawhen, TimerHandler handler,
 						   Release release, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer(NULL,deltawhen,handler,(TimerHandlercpp)NULL,release,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer(NULL,{deltawhen, 0},handler,(TimerHandlercpp)NULL,release,(Releasecpp)NULL,event_descrip,{period, 0},NULL) );
 }
 
 int TimerManager::NewTimer(unsigned deltawhen, TimerHandler handler, const char* event_descrip,
 						   unsigned period)
 {
-	return( NewTimer((Service *)NULL,deltawhen,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer((Service *)NULL,{deltawhen, 0},handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,{period, 0},NULL) );
 }
 
 int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandlercpp handler, const char* event_descrip,
@@ -95,26 +95,34 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen, TimerHandlercpp handl
 		dprintf( D_DAEMONCORE,"DaemonCore NewTimer() called with c++ pointer & NULL Service*\n");
 		return -1;
 	}
-	return( NewTimer(s,deltawhen,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,period,NULL) );
+	return( NewTimer(s,{deltawhen, 0},(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,{period, 0},NULL) );
 }
 
 int TimerManager::NewTimer (const Timeslice &timeslice,TimerHandler handler,const char * event_descrip)
 {
-	return NewTimer(NULL,0,handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
+	return NewTimer(NULL,{0, 0},handler,(TimerHandlercpp)NULL,(Release)NULL,(Releasecpp)NULL,event_descrip,{0, 0},&timeslice);
 }
 
 int TimerManager::NewTimer (Service* s,const Timeslice &timeslice,TimerHandlercpp handler,const char * event_descrip)
 {
-	return NewTimer(s,0,(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,0,&timeslice);
+	return NewTimer(s,{0, 0},(TimerHandler)NULL,handler,(Release)NULL,(Releasecpp)NULL,event_descrip,{0, 0},&timeslice);
 }
 
 
+int TimerManager::NewTimer(const std::timespec &deltawhen,
+                           TimerHandler         handler,
+                           const char          *event_descrip,
+                           const std::timespec &period)
+{
+	return NewTimer(nullptr, deltawhen, handler, nullptr, nullptr, nullptr, event_descrip, period, nullptr);
+}
+
 // Add a new event in the timer list. if period is 0, this event is a one time
 // event instead of periodical
-int TimerManager::NewTimer(Service* s, unsigned deltawhen,
+int TimerManager::NewTimer(Service* s, const std::timespec &deltawhen_in,
 						   TimerHandler handler, TimerHandlercpp handlercpp,
 						   Release release, Releasecpp releasecpp,
-						   const char *event_descrip, unsigned period, 
+						   const char *event_descrip, const std::timespec &period,
 						   const Timeslice *timeslice)
 {
 	Timer*		new_timer;
@@ -137,19 +145,25 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 	new_timer->period = period;
 	new_timer->service = s; 
 
+	std::timespec deltawhen = deltawhen_in;
 	if( timeslice ) {
 		new_timer->timeslice = new Timeslice( *timeslice );
-		deltawhen = new_timer->timeslice->getTimeToNextRun();
+		deltawhen = {new_timer->timeslice->getTimeToNextRun(), 0};
 	}
 	else {
 		new_timer->timeslice = NULL;
 	}
 
-	new_timer->period_started = time(NULL);
-	if ( TIMER_NEVER == deltawhen ) {
-		new_timer->when = TIME_T_NEVER;
+	std::timespec_get(&new_timer->period_started, TIME_UTC);
+	if ( TIMER_NEVER == deltawhen.tv_sec ) {
+		new_timer->when = {TIME_T_NEVER, 0};
 	} else {
-		new_timer->when = deltawhen + new_timer->period_started;
+		new_timer->when.tv_sec = deltawhen.tv_sec + new_timer->period_started.tv_sec;
+		new_timer->when.tv_nsec = deltawhen.tv_nsec + new_timer->period_started.tv_nsec;
+		if (new_timer->when.tv_nsec > 1'000'000'000) {
+			new_timer->when.tv_nsec -= 1'000'000'000;
+			new_timer->when.tv_sec += 1;
+		}
 	}
 	new_timer->data_ptr = NULL;
 	if ( event_descrip ) 
@@ -198,9 +212,9 @@ time_t TimerManager::GetNextRuntime(int id)
 	Timer *timer_ptr = GetTimer( id, NULL );
 	if (!timer_ptr) { return false; }
 
-	return timer_ptr->when;
+	return timer_ptr->when.tv_sec;
 }
-int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
+int TimerManager::ResetTimer(int id, unsigned deltawhen, unsigned period,
 							 bool recompute_when,
 							 Timeslice const *new_timeslice)
 {
@@ -208,7 +222,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 	Timer*			trail_ptr;
 
 	dprintf( D_DAEMONCORE,
-			 "In reset_timer(), id=%d, time=%d, period=%d\n",id,when,period);
+			 "In reset_timer(), id=%d, time=%d, period=%d\n",id,deltawhen,period);
 	if (timer_list == NULL) {
 		dprintf( D_DAEMONCORE, "Reseting Timer from empty list!\n");
 		return -1;
@@ -233,22 +247,22 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 			*timer_ptr->timeslice = *new_timeslice;
 		}
 
-		timer_ptr->when = timer_ptr->timeslice->getNextStartTime();
+		timer_ptr->when = {timer_ptr->timeslice->getNextStartTime(), 0};
 	}
 	else if ( timer_ptr->timeslice ) {
 		dprintf( D_DAEMONCORE, "Timer %d with timeslice can't be reset\n",
 				 id );
 		return 0;
 	} else if( recompute_when ) {
-		time_t old_when = timer_ptr->when;
+		auto old_when = timer_ptr->when;
 
-		timer_ptr->when = timer_ptr->period_started + period;
+		timer_ptr->when = {timer_ptr->period_started.tv_sec + period, timer_ptr->period_started.tv_nsec};
 
 			// sanity check
-		int wait_time = (int)timer_ptr->when - (int)time(NULL);
-		if( wait_time > (int64_t)period ) {
+		auto wait_time = timer_ptr->when.tv_sec - time(NULL);
+		if( wait_time > (time_t)period ) {
 			dprintf(D_ALWAYS,
-					"ResetTimer() tried to set next call to %d (%s) %ds into"
+					"ResetTimer() tried to set next call to %d (%s) %lds into"
 					" the future, which is larger than the new period %d.\n",
 					id,
 					timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
@@ -256,27 +270,28 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 					period);
 
 				// start a new period now to restore sanity
-			timer_ptr->period_started = time(NULL);
-			timer_ptr->when = timer_ptr->period_started + period;
+			std::timespec_get(&timer_ptr->period_started, TIME_UTC);
+			timer_ptr->when = {timer_ptr->period_started.tv_sec + period, timer_ptr->period_started.tv_nsec};
 		}
 
 		dprintf(D_FULLDEBUG,
-				"Changing period of timer %d (%s) from %u to %u "
-				"(added %ds to time of next scheduled call)\n",
+				"Changing period of timer %d (%s) from %ld to %u "
+				"(added %lds to time of next scheduled call)\n",
 				id, 
 				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
-				timer_ptr->period,
+				timer_ptr->period.tv_sec,
 				period,
-				(int)timer_ptr->when - (int)old_when);
+				timer_ptr->when.tv_sec - old_when.tv_sec);
 	} else {
-		timer_ptr->period_started = time(NULL);
-		if ( when == TIMER_NEVER ) {
-			timer_ptr->when = TIME_T_NEVER;
+		std::timespec_get(&timer_ptr->period_started, TIME_UTC);
+		if ( deltawhen == TIMER_NEVER ) {
+			timer_ptr->when.tv_sec = TIME_T_NEVER;
 		} else {
-			timer_ptr->when = when + timer_ptr->period_started;
+			timer_ptr->when.tv_sec = deltawhen + timer_ptr->period_started.tv_sec;
+			timer_ptr->when.tv_nsec = timer_ptr->period_started.tv_nsec;
 		}
 	}
-	timer_ptr->period = period;
+	timer_ptr->period = {period, 0};
 
 	RemoveTimer( timer_ptr, trail_ptr );
 	InsertTimer( timer_ptr );
@@ -346,28 +361,31 @@ void TimerManager::CancelAllTimers()
 	list_tail = NULL;
 }
 
-// Timeout() is called when a select() time out.  Returns number of seconds
-// until next timeout event, a 0 if there are no more events, or a -1 if
-// called while a handler is active (i.e. handler calls Timeout;
-// Timeout is not re-entrant).
+// Timeout() is called when a select() time out.
 int
-TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
+TimerManager::Timeout(int &numFired, double &runtime, std::timespec &result_time)
 {
-	int				result;
-	time_t			now;
-	int				num_fires = 0;	// num of handlers called in this timeout
+	int				result = 1;
 
-    if (pNumFired) *pNumFired = 0;
+	numFired = 0;
+
+	std::timespec now;
+	std::timespec_get(&now, TIME_UTC);
 
 	if ( in_timeout != NULL ) {
 		dprintf(D_DAEMONCORE,"DaemonCore Timeout() called and in_timeout is non-NULL\n");
 		if ( timer_list == NULL ) {
 			result = 0;
 		} else {
-			result = (timer_list->when) - time(NULL);
+			result_time.tv_sec = timer_list->when.tv_sec - now.tv_sec;
+			result_time.tv_nsec = timer_list->when.tv_nsec - now.tv_nsec;
+			if (result_time.tv_nsec < 0) {
+				result_time.tv_nsec += 1'000'000'000;
+				result_time.tv_sec -= 1;
+			}
 		}
-		if ( result < 0 ) {
-			result = 0;
+		if ( result_time.tv_sec < 0 ) {
+			result_time = {0, 0};
 		}
 		return(result);
 	}
@@ -378,8 +396,6 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		dprintf( D_DAEMONCORE, "Empty timer list, nothing to do\n" );
 	}
 
-	time(&now);
-
 	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
 
     // if we are going to not limit the number of timer handlers we invoke,
@@ -389,7 +405,9 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
     std::unordered_set<int> readyTimerIds;
     if (max_timer_events_per_cycle == INT_MAX) {
         in_timeout = timer_list;
-        while ((in_timeout != NULL) && (in_timeout->when <= now)) {
+        while ((in_timeout != NULL) &&
+            (in_timeout->when.tv_sec <= now.tv_sec || (in_timeout->when.tv_sec == now.tv_sec && in_timeout->when.tv_nsec <= now.tv_nsec)))
+	{
             readyTimerIds.insert(in_timeout->id);
             in_timeout = in_timeout->next;
         }
@@ -404,8 +422,9 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 	// we make certain we do not call more than "max_fires" handlers in a 
 	// single timeout --- this ensures that timers don't starve out the rest
 	// of daemonCore if a timer handler resets itself to 0.
-	while( (timer_list != NULL) && (timer_list->when <= now ) &&
-		   (num_fires < max_timer_events_per_cycle))
+	while( (timer_list != NULL) &&
+	    (timer_list->when.tv_sec <= now.tv_sec || (timer_list->when.tv_sec == now.tv_sec && timer_list->when.tv_nsec <= now.tv_nsec) ) &&
+	    (numFired < max_timer_events_per_cycle))
 	{
         in_timeout = timer_list;
 
@@ -433,7 +452,8 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
                     call_handler = true;
                     readyTimerIds.erase(it);
                 }
-            } while ((!call_handler) && (in_timeout != NULL) && (in_timeout->when <= now));
+            } while ((!call_handler) && (in_timeout != NULL) &&
+                (in_timeout->when.tv_sec <= now.tv_sec || (in_timeout->when.tv_sec == now.tv_sec && in_timeout->when.tv_nsec <= now.tv_nsec) ));
 
             if (!call_handler) {
                 // no timers left that we want to fire at this time, break out of outer while loop
@@ -441,7 +461,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
             }
         }  // end of block if max_timer_events_per_cycle == INT_MAX
 
-        num_fires++;
+        numFired++;
 
 		// Update curr_dataptr for GetDataPtr()
 		curr_dataptr = &(in_timeout->data_ptr);
@@ -489,9 +509,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			}
 		}
 
-		if (pruntime) {           
-			*pruntime = daemonCore->dc_stats.AddRuntime(in_timeout->event_descrip, *pruntime);
-		}
+		runtime = daemonCore->dc_stats.AddRuntime(in_timeout->event_descrip, runtime);
 
         // Make sure we didn't leak our priv state
 		daemonCore->CheckPrivState();
@@ -517,16 +535,17 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			ASSERT( GetTimer(in_timeout->id,&prev) == in_timeout );
 			RemoveTimer( in_timeout, prev );
 
-			if ( in_timeout->period > 0 || in_timeout->timeslice ) {
-				in_timeout->period_started = time(NULL);
+			if ( (in_timeout->period.tv_sec > 0 || in_timeout->period.tv_nsec > 0) || in_timeout->timeslice ) {
+				std::timespec_get(&in_timeout->period_started, TIME_UTC);
 				in_timeout->when = in_timeout->period_started;
 				if ( in_timeout->timeslice ) {
-					in_timeout->when += in_timeout->timeslice->getTimeToNextRun();
+					in_timeout->when.tv_sec += in_timeout->timeslice->getTimeToNextRun();
 				} else {
-					if( in_timeout->period == TIMER_NEVER ) {
-						in_timeout->when = TIME_T_NEVER;
+					if( in_timeout->period.tv_sec == TIMER_NEVER ) {
+						in_timeout->when.tv_sec = TIME_T_NEVER;
 					} else {
-						in_timeout->when += in_timeout->period;
+						in_timeout->when.tv_sec += in_timeout->period.tv_sec;
+						in_timeout->when.tv_nsec += in_timeout->period.tv_nsec;
 					}
 				}
 				InsertTimer( in_timeout );
@@ -547,13 +566,18 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// no timeout.
 		result = -1;
 	} else {
-		result = (timer_list->when) - time(NULL);
-		if (result < 0)
-			result = 0;
+		result_time.tv_sec = timer_list->when.tv_sec - now.tv_sec;
+		result_time.tv_nsec = timer_list->when.tv_nsec - now.tv_nsec;
+		if (result_time.tv_nsec < 0) {
+			result_time.tv_nsec += 1'000'000'000;
+			result_time.tv_sec -= 1;
+		}
+		if (result_time.tv_sec < 0) {
+			result_time = {0, 0};
+		}
 	}
 
 	dprintf( D_DAEMONCORE, "DaemonCore Timeout() Complete, returning %d \n",result);
-    if (pNumFired) *pNumFired = num_fires;
 	in_timeout = NULL;
 	return(result);
 }
@@ -589,7 +613,7 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 
 		std::string slice_desc;
 		if( !timer_ptr->timeslice ) {
-			formatstr(slice_desc, "period = %d, ", timer_ptr->period);
+			formatstr(slice_desc, "period = {%ld,%ld}, ", timer_ptr->period.tv_sec, timer_ptr->period.tv_nsec);
 		}
 		else {
 			formatstr_cat(slice_desc, "timeslice = %.3g, ",
@@ -612,8 +636,8 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 			}
 		}
 		dprintf(flag, 
-				"%sid = %d, when = %ld, %shandler_descrip=<%s>\n", 
-				indent, timer_ptr->id, (long)timer_ptr->when, 
+				"%sid = %d, when = {%ld,%ld}, %shandler_descrip=<%s>\n",
+				indent, timer_ptr->id, timer_ptr->when.tv_sec, timer_ptr->when.tv_nsec,
 				slice_desc.c_str(),ptmp);
 	}
 	dprintf(flag, "\n");
@@ -621,7 +645,7 @@ void TimerManager::DumpTimerList(int flag, const char* indent)
 
 void TimerManager::Start()
 {
-	struct timeval		timer;
+	std::timespec timer;
 
 	for(;;)
 	{
@@ -632,9 +656,10 @@ void TimerManager::Start()
 
 		// Timeout() also returns how many seconds until next 
 		// event, as well as calls any event handlers whose time has come
-		timer.tv_sec = Timeout();  
-		timer.tv_usec = 0;
-		if ( timer.tv_sec == 0 ) {
+		int handlersRun;
+		double runtime;
+		auto result = Timeout(handlersRun, runtime, timer);
+		if ( result == 0 ) {
 			// no timer events registered...  only a signal
 			// can save us now!!
 			dprintf(D_DAEMONCORE,"TimerManager::Start() about to block with no events!\n");
@@ -643,7 +668,10 @@ void TimerManager::Start()
 			dprintf(D_DAEMONCORE,
 				"TimerManager::Start() about to block, timeout=%ld\n",
 				(long)timer.tv_sec);
-			select(0,0,0,0, &timer);
+			struct timeval select_timer;
+			select_timer.tv_sec = timer.tv_sec;
+			select_timer.tv_usec = timer.tv_nsec / 1000;
+			select(0,0,0,0, &select_timer);
 		}		
 	}
 }
@@ -681,13 +709,13 @@ void TimerManager::InsertTimer( Timer *new_timer )
 		// Note: when doing the comparisons, we always use "<" instead
 		// of "<=" -- this makes certain we "round-robin" across 
 		// timers that constantly reset themselves to zero.
-		if ( new_timer->when < timer_list->when ) {
+		if ( new_timer->when.tv_sec < timer_list->when.tv_sec || (new_timer->when.tv_sec == timer_list->when.tv_sec && new_timer->when.tv_nsec < timer_list->when.tv_nsec) ) {
 			// make the this new timer first in line
 			new_timer->next = timer_list;
 			timer_list = new_timer;
 			// since we have a new first timer, we must wake up select
 			daemonCore->Wake_up_select();
-		} else if ( new_timer->when == TIME_T_NEVER ) {
+		} else if ( new_timer->when.tv_sec == TIME_T_NEVER ) {
 			// Our new timer goes to the very back of the list.
 			new_timer->next = NULL;
 			list_tail->next = new_timer;
@@ -698,7 +726,7 @@ void TimerManager::InsertTimer( Timer *new_timer )
 			for (timer_ptr = timer_list; timer_ptr != NULL; 
 				 timer_ptr = timer_ptr->next ) 
 			{
-				if (new_timer->when < timer_ptr->when) {
+				if (new_timer < timer_ptr) {
 					break;
 				}
 				trail_ptr = timer_ptr;

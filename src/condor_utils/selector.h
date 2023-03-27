@@ -55,6 +55,7 @@ public:
 	void delete_fd( int fd, IO_FUNC interest );
 	void set_timeout( time_t sec, long usec = 0 );
 	void set_timeout( timeval tv );
+	void set_timeout( const std::timespec &tv );
 	void unset_timeout();
 	void execute();
 	int select_retval() const;

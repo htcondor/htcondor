@@ -1112,6 +1112,16 @@ class DaemonCore : public Service
                         TimerHandler handler,
                         const char * event_descrip);
 
+    /** Register a fine-grained time callback
+        @param deltawhen       When the timer event callback should fire.
+        @param handler         Callback function for the handler
+        @param handler_descrip Human-friendly description of the timer.
+    */
+    int Register_Timer (const struct timespec &deltawhen,
+                        TimerHandler           handler,
+                        const char            *event_descrip);
+
+
 	/** Not_Yet_Documented
         @param deltawhen       Not_Yet_Documented
         @param event           Not_Yet_Documented

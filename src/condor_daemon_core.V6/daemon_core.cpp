@@ -840,6 +840,12 @@ int	DaemonCore::Register_Timer(unsigned deltawhen, TimerHandler handler,
 	return( t.NewTimer(deltawhen, handler, event_descrip, 0) );
 }
 
+int     DaemonCore::Register_Timer(const std::timespec &deltawhen, TimerHandler handler,
+                                   const char *event_descrip)
+{
+	return (t.NewTimer(deltawhen, handler, event_descrip, {0, 0}));
+}
+
 int DaemonCore::Register_PumpWork_TS(PumpWorkCallback handler, void* cls, void* data)
 {
 #ifdef WIN32
@@ -3346,7 +3352,6 @@ void DaemonCore::Driver()
 	Selector	selector;
 	int			i;
 	int			tmpErrno;
-	time_t		timeout;
 	time_t min_deadline;
 
 #ifndef WIN32
@@ -3481,7 +3486,8 @@ void DaemonCore::Driver()
 		//   starve commands...
 
         int num_timers_fired = 0;
-		timeout = t.Timeout(&num_timers_fired, &runtime);
+		std::timespec timeout{0, 0};
+		auto timeout_result = t.Timeout(num_timers_fired, runtime, timeout);
 
 		num_timers_fired += num_pumpwork_fired;
 		dc_stats.TimersFired = num_timers_fired;
@@ -3491,10 +3497,10 @@ void DaemonCore::Driver()
 		}
 
 		if ( sent_signal == TRUE ) {
-			timeout = 0;
+			timeout = {0, 0};
 		}
-		if ( timeout < 0 ) {
-			timeout = TIME_T_NEVER;
+		if ( !timeout_result ) {
+			timeout = {TIME_T_NEVER, 0};
 		}
 
         // accumulate signal runtime (including timers) as SignalRuntime
@@ -3561,9 +3567,17 @@ void DaemonCore::Driver()
 		}
 
 		if( min_deadline ) {
-			int deadline_timeout = min_deadline - time(NULL) + 1;
-			if(deadline_timeout < timeout) {
-				if(deadline_timeout < 0) deadline_timeout = 0;
+			std::timespec now;
+			std::timespec_get(&now, TIME_UTC);
+			std::timespec deadline_timeout {min_deadline - now.tv_sec + 1, 0};
+			std::timespec diff {timeout.tv_sec  - deadline_timeout.tv_sec,
+			                      timeout.tv_nsec - deadline_timeout.tv_nsec};
+			if (diff.tv_nsec < 0) {
+				diff.tv_nsec += 1000000000;
+				diff.tv_sec -= 1;
+			}
+			if (diff.tv_sec > 0 || (diff.tv_sec == 0 && diff.tv_nsec > 0)) {
+				if (deadline_timeout.tv_sec < 0) deadline_timeout = {0, 0};
 				timeout = deadline_timeout;
 			}
 		}
@@ -3625,13 +3639,12 @@ void DaemonCore::Driver()
 
 		errno = 0;
 		time_t time_before = time(NULL);
-		time_t okay_delta = timeout;
+		auto okay_delta = timeout;
 
 			// Performance around select is of high importance for all
-			// daemons that are single threaded (all of them). If you
-			// have questions ask matt.
+			// daemons that are single threaded (all of them).
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%d\n", (int)timeout);
+			dprintf(D_PERF_TRACE, "PERF: entering select. timeout={%ld,%ld}\n", timeout.tv_sec, timeout.tv_nsec);
 		}
 
 		selector.execute();
@@ -3643,7 +3656,7 @@ void DaemonCore::Driver()
 
 		tmpErrno = errno;
 
-		CheckForTimeSkip(time_before, okay_delta);
+		CheckForTimeSkip(time_before, okay_delta.tv_sec);
 
 #ifndef WIN32
 		// Unix

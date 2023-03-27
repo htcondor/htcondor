@@ -76,9 +76,14 @@ const time_t TIME_T_NEVER	= 0x7fffffff;
 //-----------------------------------------------------------------------------
 /// Not_Yet_Documented
 struct tagTimer {
-    /** Not_Yet_Documented */ time_t            when;
-    /** Not_Yet_Documented */ time_t            period_started;
-    /** Not_Yet_Documented */ unsigned          period;
+    /** When the timer should fire next */
+    std::timespec when{0, 0};
+
+    /** When the current timer period started */
+    std::timespec period_started{0, 0};
+    /** How often the timer should fire */
+    std::timespec period{0, 0};
+
     /** Not_Yet_Documented */ int               id;
     /** Not_Yet_Documented */ TimerHandler             handler;
     /** Not_Yet_Documented */ TimerHandlercpp          handlercpp;
@@ -89,6 +94,14 @@ struct tagTimer {
     /** Not_Yet_Documented */ Timeslice *       timeslice;
 	/** Not_Yet_Documented */ Release           release;
 	/** Not_Yet_Documented */ Releasecpp        releasecpp;
+
+    /** Allow Timers to be comparable; sort by when the next fire occurs */
+    bool operator<(const tagTimer &R) {
+        if (when.tv_sec == R.when.tv_sec) {
+            return when.tv_nsec < R.when.tv_nsec;
+        }
+        return when.tv_sec < R.when.tv_sec;
+    }
 };
 
 ///
@@ -134,6 +147,18 @@ class TimerManager
                  TimerHandler handler,
                  const char * event_descrip, 
                  unsigned     period          =  0);
+
+    /** Create a new timer to be managed by this object
+        @param deltawhen      When the timer should fire
+        @param handler        The callback to invoke when the timer fires.
+        @param event_descrip  A human-readable description of this timer.
+        @param period         How often the timer should be invoked after the first call
+        @return The ID of the new timer or -1 on failure.
+     */
+    int NewTimer(const std::timespec &deltawhen,
+                 TimerHandler         handler,
+                 const char          *event_descrip,
+                 const std::timespec &period);
 
     /** Not_Yet_Documented.
         @param s              Not_Yet_Documented.
@@ -226,10 +251,17 @@ class TimerManager
     /// Not_Yet_Documented.
     void DumpTimerList(int, const char* = NULL );
 
-    /** Not_Yet_Documented.
-        @return Not_Yet_Documented
+    /** Timeout() is called when a select() times out, indicating there may be
+        timer callbacks to invoke.
+
+        Timeout is not re-entrant; -1 is returned if a Timer handler invokes Timeout
+        @param numFired The count of timers whose callback was invoked.
+        @param runtime The total time in seconds that Timeout took to run.
+        @param timeout The time left until the next timer will expire.
+        @return 1 if there are remaining events, 0 if there are no events, or
+                -1 if there's an error.
     */
-    int Timeout(int * pNumFired = NULL, double * pruntime = NULL); 
+    int Timeout(int &pNumFired, double &pruntime, std::timespec &timeout);
 
     /// Not_Yet_Documented.
     void Start();
@@ -240,13 +272,13 @@ class TimerManager
     TimerManager();
     
     int NewTimer (Service*   s,
-                  unsigned   deltawhen,
+                  const std::timespec &deltawhen,
                   TimerHandler handler,
                   TimerHandlercpp handlercpp,
 				  Release	 release,
 				  Releasecpp releasecpp,
                   const char *event_descrip,
-                  unsigned   period          =  0,
+                  const std::timespec &period,
 				  const Timeslice *timeslice = NULL);
 
 	void RemoveTimer( Timer *timer, Timer *prev );

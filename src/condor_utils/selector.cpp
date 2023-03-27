@@ -334,6 +334,15 @@ Selector::set_timeout( timeval tv )
 }
 
 void
+Selector::set_timeout( const std::timespec &ts )
+{
+	timeout_wanted = true;
+
+	timeout.tv_sec = ts.tv_sec;
+	timeout.tv_usec = ts.tv_nsec / 1000;
+}
+
+void
 Selector::unset_timeout()
 {
 	timeout_wanted = false;
@@ -367,7 +376,10 @@ Selector::execute()
 	}
 	else if (m_single_shot == SINGLE_SHOT_OK)
 	{
-		nfds = poll(&m_poll, 1, tp ? (1000*tp->tv_sec + tp->tv_usec/1000) : -1);
+		// Note: Because we round down the microseconds here (tp->tv_usec/1000), an
+		// extra millisecond of sleep is added to ensure that we don't wake up before
+		// the desired timeout occurs.
+		nfds = poll(&m_poll, 1, tp ? (1000*tp->tv_sec + tp->tv_usec/1000 + 1) : -1);
 	}
 	else
 	{
