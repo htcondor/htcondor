@@ -7357,7 +7357,6 @@ int
 Scheduler::negotiate(int command, Stream* s)
 {
 	int		job_index;
-	int		jobs;						// # of jobs that CAN be negotiated
 	int		which_negotiator = 0; 		// >0 implies flocking
 	std::string remote_pool_buf;
 	char const *remote_pool = NULL;
@@ -7641,8 +7640,6 @@ Scheduler::negotiate(int command, Stream* s)
 	}
 
 	BuildPrioRecArray();
-	jobs = N_PrioRecs;
-
 	JobsStarted = 0;
 
 	// owner here is the ATTR_OWNER from the negotiator, which is really the Submitter (i.e. accounting group, etc)
@@ -7657,11 +7654,9 @@ Scheduler::negotiate(int command, Stream* s)
 	SubmitterData * Owner = find_submitter(owner);
 	if ( ! Owner && !scheddsAreSubmitters) {
 		dprintf(D_ALWAYS, "Can't find owner %s in Owners array!\n", owner);
-		jobs = 0;
 		skip_negotiation = true;
 	} else if (shadowsSpawnLimit() == 0) {
 		// shadowsSpawnLimit() prints reason for limit of 0
-		jobs = 0;
 		skip_negotiation = true;
 	}
 
@@ -7679,7 +7674,6 @@ Scheduler::negotiate(int command, Stream* s)
 		// make sure job isn't flagged as not needing matching
 		if (prec->not_runnable || prec->matched)
 		{
-			jobs--;
 			continue;
 		}
 
@@ -7687,7 +7681,6 @@ Scheduler::negotiate(int command, Stream* s)
 
 		if (!scheddsAreSubmitters && owner_str != prec->submitter)
 		{
-			jobs--;
 			continue;
 		}
 
@@ -7695,7 +7688,6 @@ Scheduler::negotiate(int command, Stream* s)
 		if ( consider_jobprio_min > prec->job_prio ||
 			 prec->job_prio > consider_jobprio_max )
 		{
-			jobs--;
 			continue;
 		}
 

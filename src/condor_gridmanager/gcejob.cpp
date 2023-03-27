@@ -33,8 +33,6 @@
 #include "gcejob.h"
 #include "condor_config.h"
 
-using namespace std;
-
 #define GM_INIT							0
 #define GM_START_VM						1
 #define GM_SAVE_INSTANCE_ID				2
@@ -97,7 +95,7 @@ void GCEJobReconfig()
 bool GCEJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	string resource;
+	std::string resource;
 
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -129,13 +127,13 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	m_failure_injection(NULL),
 	probeNow( false )
 {
-	string error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
-	string value;
+	std::string value;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -954,7 +952,7 @@ void GCEJob::SetInstanceId( const char *instance_id )
 // Use SetInstanceName() or SetInstanceId() instead.
 void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_id )
 {
-	string full_job_id;
+	std::string full_job_id;
 	if ( instance_name && instance_name[0] ) {
 		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
 		if ( instance_id && instance_id[0] ) {
@@ -969,7 +967,7 @@ void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_
 
 // Instance name is max 63 characters, matching this pattern:
 //    [a-z]([-a-z0-9]*[a-z0-9])?
-string GCEJob::build_instance_name()
+std::string GCEJob::build_instance_name()
 {
 #ifdef WIN32
 	GUID guid;
@@ -979,7 +977,7 @@ string GCEJob::build_instance_name()
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];
 	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
-	string final_str = "condor-";
+	std::string final_str = "condor-";
 	final_str += uuid_str;
 	return final_str;
 #else

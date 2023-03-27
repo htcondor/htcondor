@@ -32,8 +32,6 @@
 
 #define SERVER_PORT 7678
 
-using namespace std;
-
 int main()
 {
 	SafeSock mySock;
@@ -49,57 +47,57 @@ int main()
 
 	config();
 
-	cout << "(1) Server" << endl;
-	cout << "(2) Client" << endl;
-	cout << "(9) Exit" << endl;
-	cout << "Select: ";
-	cin >> op;
+	std::cout << "(1) Server" << std::endl;
+	std::cout << "(2) Client" << std::endl;
+	std::cout << "(9) Exit" << std::endl;
+	std::cout << "Select: ";
+	std::cin >> op;
 
 	switch(op) {
 		case 1: // Server
 			result = mySock.bind( CP_IPV4, false, SERVER_PORT, false ); // outbound, port, loopback
 			if(result != TRUE) {
-				cout << "Bind failed\n";
+				std::cout << "Bind failed\n";
 				exit(-1);
 			}
-			cout << "Bound to [" << SERVER_PORT << "]\n";
+			std::cout << "Bound to [" << SERVER_PORT << "]\n";
 			while(true) {
 				mySock.decode();
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(c);
-				cout << "char: " << c << endl;
+				std::cout << "char: " << c << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(integer);
-				cout << "int: " << integer << endl;
+				std::cout << "int: " << integer << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(lint);
-				cout << "long: " << lint << endl;
+				std::cout << "long: " << lint << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(sint);
-				cout << "sint: " << sint << endl;
+				std::cout << "sint: " << sint << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(f);
-				cout << "float: " << f << endl;
+				std::cout << "float: " << f << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(d);
-				cout << "double: " << d << endl;
+				std::cout << "double: " << d << std::endl;
 
-				cout << "Type any key continue: ";
-				cin >> cont;
+				std::cout << "Type any key continue: ";
+				std::cin >> cont;
 				mySock.code(charString);
-				cout << "str: " << charString << endl;
+				std::cout << "str: " << charString << std::endl;
 
 				mySock.end_of_message();
 			}
@@ -108,45 +106,45 @@ int main()
 			char serverName[30];
 
 			// Connect to the server
-			cout << "Server: ";
-			cin >> serverName;
+			std::cout << "Server: ";
+			std::cin >> serverName;
 			result = mySock.connect(serverName, SERVER_PORT);
 			if(result != TRUE) {
-				cout << "Connection failed\n";
+				std::cout << "Connection failed\n";
 				exit(-1);
 			}
-			cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
+			std::cout << "Connected to [" << serverName<< ", " << SERVER_PORT << "]\n";
 			
 
 			while(true) {
 				mySock.encode();
 				
-				cout << "Type char: ";
-				cin >> c;
+				std::cout << "Type char: ";
+				std::cin >> c;
 				mySock.code(c);
 
-				cout << "Type int: ";
-				cin >> integer;
+				std::cout << "Type int: ";
+				std::cin >> integer;
 				mySock.code(integer);
 
-				cout << "Type long: ";
-				cin >> lint;
+				std::cout << "Type long: ";
+				std::cin >> lint;
 				mySock.code(lint);
 
-				cout << "Type short: ";
-				cin >> sint;
+				std::cout << "Type short: ";
+				std::cin >> sint;
 				mySock.code(sint);
 
-				cout << "Type float: ";
-				cin >> f;
+				std::cout << "Type float: ";
+				std::cin >> f;
 				mySock.code(f);
 
-				cout << "Type double: ";
-				cin >> d;
+				std::cout << "Type double: ";
+				std::cin >> d;
 				mySock.code(d);
 
-				cout << "Type string: ";
-				cin >> charString;
+				std::cout << "Type string: ";
+				std::cin >> charString;
 				mySock.code(charString);
 
 				mySock.end_of_message();

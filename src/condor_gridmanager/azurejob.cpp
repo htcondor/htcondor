@@ -33,8 +33,6 @@
 #include "azurejob.h"
 #include "condor_config.h"
 
-using namespace std;
-
 #define GM_INIT							0
 #define GM_START_VM						1
 #define GM_SAVE_VM_INFO					2
@@ -95,7 +93,7 @@ void AzureJobReconfig()
 bool AzureJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	string resource;
+	std::string resource;
 
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -125,9 +123,9 @@ AzureJob::AzureJob( ClassAd *classad ) :
 	m_retry_times( 0 ),
 	probeNow( false )
 {
-	string error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
-	string value;
+	std::string value;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -815,7 +813,7 @@ BaseResource* AzureJob::GetResource()
 
 void AzureJob::SetRemoteJobId( const char *vm_name )
 {
-	string full_job_id;
+	std::string full_job_id;
 	if ( vm_name && vm_name[0] ) {
 		m_vmName = vm_name;
 		formatstr( full_job_id, "azure %s", vm_name );
@@ -827,7 +825,7 @@ void AzureJob::SetRemoteJobId( const char *vm_name )
 
 
 // Instance name is max 64 characters, alphanumberic, underscore, and hyphen
-string AzureJob::build_vm_name()
+std::string AzureJob::build_vm_name()
 {
 	// TODO Currently, a storage account name is derived from our
 	//   unique name, and those have max length 24 and must be
@@ -835,7 +833,7 @@ string AzureJob::build_vm_name()
 	//   Once the gahp can support using managed disks in Azure,
 	//   this naming restriction will go away.
 #if 1
-	string final_str;
+	std::string final_str;
 	formatstr( final_str, "condorc%dp%d", procID.cluster, procID.proc );
 	return final_str;
 #else
@@ -870,8 +868,8 @@ string AzureJob::build_vm_name()
 
 bool AzureJob::BuildVmParams()
 {
-	string value;
-	string name_value;
+	std::string value;
+	std::string name_value;
 
 	m_vmParams.clear();
 

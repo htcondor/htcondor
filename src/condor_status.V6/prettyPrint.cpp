@@ -78,12 +78,10 @@ static int ppWidthOpts(int width, int truncate)
 	return opts;
 }
 
-enum {
-	FormatOptionSpecial001 = FormatOptionSpecialBase,
-	FormatOptionSpecial002 = FormatOptionSpecialBase<<1,
-	FormatOptionSpecial004 = FormatOptionSpecialBase<<2,
-	FormatOptionSpecial008 = FormatOptionSpecialBase<<3,
-};
+constexpr const int	FormatOptionSpecial001 = FormatOptionSpecialBase;
+constexpr const int	FormatOptionSpecial002 = FormatOptionSpecialBase<<1;
+//constexpr const int	FormatOptionSpecial004 = FormatOptionSpecialBase<<2;
+//constexpr const int	FormatOptionSpecial008 = FormatOptionSpecialBase<<3;
 
 static int ppAltOpts(ivfield alt_in)
 {
