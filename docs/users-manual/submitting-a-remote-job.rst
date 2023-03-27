@@ -31,7 +31,8 @@ ID tokens, as it is easy for a user to setup, and secure.
    machine to balance load.
 
 Assuming that an administrator has set up signing keys
-(see :ref: ), to create a token that can authenticate you for remote
+(see :ref:`admin-manual/security:token authentication`),
+to create a token that can authenticate you for remote
 submission, login to the access point and run the command
 
 .. code-block:: console
