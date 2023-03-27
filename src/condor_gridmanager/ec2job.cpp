@@ -2069,7 +2069,7 @@ std::string EC2Job::build_client_token()
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];
 	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
-	return string(uuid_str);
+	return std::string(uuid_str);
 #else
 	char uuid_str[37];
 	uuid_t uuid;
