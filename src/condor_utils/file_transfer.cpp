@@ -6860,7 +6860,7 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 		return 0;
 	}
 
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
@@ -6896,7 +6896,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	}
 
 	// process the user plugins
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {

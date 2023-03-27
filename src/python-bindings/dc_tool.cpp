@@ -29,7 +29,7 @@ bool extractParentSinful(
 	if (! inherit || ! inherit[0])
 		return false;
 
-	StringTokenIterator list(inherit, 100, " ");
+	StringTokenIterator list(inherit, " ");
 
 	// first is parent pid and sinful
 	const char * ptmp = list.first();

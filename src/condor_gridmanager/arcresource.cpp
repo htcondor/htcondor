@@ -204,8 +204,8 @@ void ArcResource::DoJobStatus()
 
 	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );
 
-	StringList job_ids;
-	StringList job_states;
+	std::vector<std::string> job_ids;
+	std::vector<std::string> job_states;
 
 	if ( m_jobStatusActive == false ) {
 
@@ -238,19 +238,15 @@ void ArcResource::DoJobStatus()
 		}
 
 		if ( rc == HTTP_201_CREATED ) {
-			const char *next_job_id = NULL;
-			const char *next_job_state = NULL;
 			std::string key;
 
-			job_ids.rewind();
-			job_states.rewind();
-			while ( (next_job_id = job_ids.next()) && (next_job_state = job_states.next()) ) {
-
+			ASSERT(job_ids.size() == job_states.size());
+			for (size_t i = 0; i < job_ids.size(); i++) {
 				ArcJob *job = NULL;
-				formatstr( key, "arc %s %s", resourceName, next_job_id );
+				formatstr(key, "arc %s %s", resourceName, job_ids[i].c_str());
 				auto itr = BaseJob::JobsByRemoteId.find(key);
 				if ( itr != BaseJob::JobsByRemoteId.end() && (job = dynamic_cast<ArcJob*>(itr->second)) ) {
-					job->NotifyNewRemoteStatus( next_job_state );
+					job->NotifyNewRemoteStatus(job_states[i].c_str());
 				}
 			}
 

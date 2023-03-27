@@ -1010,17 +1010,14 @@ void INFNBatchJob::doEvaluateState()
 					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
 						TemporaryPrivSentry sentry(PRIV_USER);
 
-						const char *job_id = NULL;
-						const char *token = NULL;
-						StringList sl( remoteJobId, "/" );
-						sl.rewind();
-						while ( (token = sl.next()) ) {
+						std::string job_id;
+						for (auto& token : StringTokenIterator(remoteJobId, "/")) {
 							job_id = token;
 						}
-						ASSERT( job_id );
+						ASSERT( !job_id.empty() );
 						std::string proxy;
 						formatstr( proxy, "%s/.blah_jobproxy_dir/%s.proxy",
-								   pw->pw_dir, job_id );
+								   pw->pw_dir, job_id.c_str() );
 						struct stat statbuf;
 						int rc = lstat( proxy.c_str(), &statbuf );
 						if ( rc < 0 ) {
@@ -1421,11 +1418,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			// CERequirements is string. Split on comma/space and lookup
 			// the resulting names in the job ad to build the goofy
 			// blahp expression.
-			StringList attr_list( cereq_str.c_str() );
 			ExprTree *new_cereq = NULL;
-			const char *next_attr = NULL;
-			attr_list.rewind();
-			while ( (next_attr = attr_list.next()) ) {
+			for (const auto& next_attr : StringTokenIterator(cereq_str)) {
 				classad::Value val;
 				jobAd->EvaluateAttr( next_attr, val );
 				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
@@ -1610,19 +1604,14 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		old_value = "";
 		submit_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, old_value );
 		if ( !old_value.empty() ) {
-			StringList old_paths( NULL, "," );
-			StringList new_paths( NULL, "," );
-			const char *old_path;
-			old_paths.initializeFromString( old_value.c_str() );
-
-			old_paths.rewind();
-			while ( (old_path = old_paths.next()) ) {
-				new_paths.append( condor_basename( old_path ) );
+			std::vector<std::string> file_list = split(old_value, ",");
+			for (auto& file : file_list) {
+				// We make a copy of file, since condor_basename() will
+				// return a pointer inside the passed string
+				std::string tmp_name = file;
+				file = condor_basename( tmp_name.c_str() );
 			}
-
-			char *new_list = new_paths.print_to_string();
-			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, new_list );
-			free( new_list );
+			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, join(file_list, ",") );
 		}
 
 		submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
@@ -1723,20 +1712,16 @@ void INFNBatchJob::CreateSandboxId()
 	// Our pattern is <collector name>_<GlobalJobId>
 
 	// get condor pool name
-	// In case there are multiple collectors, strip out the spaces
 	// If there's no collector, insert a dummy name
 	char* pool_name = param( "COLLECTOR_HOST" );
-	if ( pool_name ) {
-		StringList collectors( pool_name );
-		free( pool_name );
-		pool_name = collectors.print_to_string();
-	} else {
+	if ( !pool_name ) {
 		pool_name = strdup( "NoPool" );
 	}
 
 	// The sandbox id becomes a directory on the remote side.
 	// Having ':', '?', ' ', or ',' in a path can mess up PBS and
 	// other systems, so we need to remove them.
+	// If pool_name has a list of collectors, just the first will be used.
 	for ( char *ptr = pool_name; *ptr != '\0'; ptr++ ) {
 		switch( *ptr ) {
 		case ':':

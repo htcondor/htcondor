@@ -774,7 +774,7 @@ ClassAd * JobAggregationResults::next()
 
 		// the autocluster key (or signature), is a string containing key value
 		// pairs separated by \n. So we can easily turn it into a classad.
-		StringTokenIterator iter(it->first, 100, "\n");
+		StringTokenIterator iter(it->first, "\n");
 		const char * line;
 		while ((line = iter.next())) {
 			(void) ad.Insert(line);

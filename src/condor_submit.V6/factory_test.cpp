@@ -606,7 +606,7 @@ int NewProcFromAd(FILE * out, const classad::ClassAd * ad, int ProcId, JobFactor
 	// already been materialized.
 	classad::References clusterAttrs;
 	if (ClusterAd->LookupString(ATTR_EDITED_CLUSTER_ATTRS, buffer)) {
-		StringTokenIterator it(buffer, 40, ", \t\r\n");
+		StringTokenIterator it(buffer, ", \t\r\n");
 		const std::string * attr;
 		while ((attr = it.next_string())) { clusterAttrs.insert(*attr); }
 	}

@@ -91,13 +91,13 @@ class ArcJob : public BaseJob
 		// cleared once the call completes.
 	std::string RSL;
 		// Same as for RSL, but used by the file staging calls.
-	StringList *stageList;
-	StringList *stageLocalList;
+	std::vector<std::string> *stageList;
+	std::vector<std::string> *stageLocalList;
 
 	bool buildJobADL();
-	StringList *buildStageInList();
-	StringList *buildStageOutList();
-	StringList *buildStageOutLocalList( StringList *stage_list );
+	std::vector<std::string> *buildStageInList(bool with_urls);
+	std::vector<std::string> *buildStageOutList();
+	std::vector<std::string> *buildStageOutLocalList( std::vector<std::string> *stage_list );
 
  protected:
 };

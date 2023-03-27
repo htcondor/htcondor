@@ -769,7 +769,7 @@ VanillaProc::StartJob()
 			// is.  chown the leaf v1 cgroups to the owner, so that the job can
 			// create sub-cgroups
 
-			std::array controllers = {"blkio/", "cpu,cpuset/", "freezer/", "memory/"};
+			std::array controllers = {"blkio/", "cpu,cpuacct/", "freezer/", "memory/"};
 			uid_t user  = get_user_uid();
 			gid_t group = get_user_gid();
 

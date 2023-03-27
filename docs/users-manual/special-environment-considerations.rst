@@ -255,6 +255,10 @@ submit description file that queues three jobs for this example:
       output       = povray.out.$(Process)
       error        = povray.err.$(Process)
 
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
       requirements = (Arch == "INTEL" && OpSys == "LINUX") || \
                      (Arch == "X86_64" && OpSys =="LINUX")
 
@@ -302,6 +306,10 @@ specific operating systems and versions in heterogeneous pools.
 
       Requirements = (OpSysName == "RedHat")
 
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
       Queue
 
 .. code-block:: condor-submit
@@ -316,6 +324,10 @@ specific operating systems and versions in heterogeneous pools.
 
       requirements = ( OpSysName == "RedHat" && OpSysMajorVer == 6 )
 
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
+
       queue
 
 Here is a more compact way to specify a RedHat 6 platform.
@@ -329,6 +341,10 @@ Here is a more compact way to specify a RedHat 6 platform.
       log          = distro.log
       output       = distro.out
       error        = distro.err
+
+      request_cpus            = 1
+      request_memory          = 512M
+      request_disk            = 1G
 
       requirements = (OpSysAndVer == "RedHat6")
 

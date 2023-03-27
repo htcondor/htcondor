@@ -543,7 +543,10 @@ Here is a sample HTCondor submit description file for this DAG:
     output       = diamond.out.$(cluster)
     error        = diamond.err.$(cluster)
     log          = diamond_condor.log
-    universe     = vanilla
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Since each node uses the same HTCondor submit description file, this
@@ -2333,6 +2336,11 @@ simple HTCondor submit description file:
       error        = $(jobname).err
       log          = submit.log
       notification = NEVER
+
+      request_cpus   = 1
+      request_memory = 1024M
+      request_disk   = 10240K
+
       queue
       # END SUBMIT FILE submit.condor
 
@@ -3845,6 +3853,10 @@ naming and numbering scheme, the submit description file for
     input = job6.in
     output = job6.out
     arguments = "-file job6.out"
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Submission of the entire set of jobs uses the command line:
@@ -3891,6 +3903,10 @@ files. This submit description file might appear as
     input = job$(runnumber).in
     output = job$(runnumber).out
     arguments = "-$(runnumber)"
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 The job with ``runnumber="8"`` expects to find its input file
@@ -3955,6 +3971,10 @@ the same directory as the DAG input file.
     output = out
     arguments = "-$(runnumber)"
     initialdir = dir$(runnumber)
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 One item to care about with this set up is the underlying file system

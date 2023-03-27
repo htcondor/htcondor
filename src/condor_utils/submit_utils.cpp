@@ -6333,7 +6333,7 @@ int SubmitHash::SetRequirements()
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
 				// xferplugs is of the form "TAR=mytarplugin; HTTP,HTTPS=myhttplugin"
-				StringTokenIterator plugs(xferplugs.c_str(), 100, ";");
+				StringTokenIterator plugs(xferplugs.c_str(), ";");
 				for (const char * plug = plugs.first(); plug != NULL; plug = plugs.next()) {
 					const char * colon = strchr(plug, '=');
 					if (colon) {

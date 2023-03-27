@@ -17,13 +17,22 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved throughput when submitting a large number of ARC CE jobs.
+  Previously, jobs could remain stalled for a long time in the ARC CE
+  server waiting for their input sandbox to be transferred while other
+  were being submitted.
+  :jira:`1666`
 
 Bugs Fixed:
 
 - Fixed a bug where if the docker command emitted warnings to stderr, the
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
+
+- Fixed a bug when running with root on a Linux systems with cgroup v1
+  that would print a warning to the StarterLog claiming
+  Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
+  :jira:`1672`
 
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
