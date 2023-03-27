@@ -32,8 +32,6 @@
 #include <vector>
 #include <utility>
 
-using namespace std;
-
 bool test_sPrintExpr(ClassAd *c1, int verbose);
 bool test_IsValidAttrValue(ClassAd *c1, int verbose);
 bool test_fPrintAdAsXML(ClassAd *c1, int verbose);
@@ -53,12 +51,10 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2,int verbose);
 void setAllFalse(bool* b);
 
 bool test_GIR(int verbose);
-classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full = true);
+bool correctRefs(classad::References* ref, std::vector<std::string> expected);
+bool runAndCheckGIR(classad::ClassAd* c, std::string attr, std::string listString, bool full, int verbose );
 
-bool correctRefs(classad::References* ref, std::vector<string> expected);
-bool runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose );
-
-void printExprType(classad::ClassAd* c, string attr);
+void printExprType(classad::ClassAd* c, std::string attr);
 
 void setUpAndRun(int verbose);
 
@@ -67,14 +63,14 @@ class GIRTestCase
     private:
         const int numTests;
         int testNumber;
-        string refString;
-        vector< pair<string, string> > attrExpectedValPair;
+		std::string refString;
+        std::vector< std::pair<std::string, std::string> > attrExpectedValPair;
         int verbose;
         bool dontRun;
 
     public:
         GIRTestCase();
-        GIRTestCase(int _numTests, string _refString, vector< pair<string, string> > _attrExpectedValPair, int _verbosity, int _testNumber);
+        GIRTestCase(int _numTests, std::string _refString, std::vector< std::pair<std::string, std::string> > _attrExpectedValPair, int _verbosity, int _testNumber);
 
         bool runTests(void);
 
@@ -86,8 +82,8 @@ GIRTestCase::GIRTestCase() : numTests(0)
     testNumber = 0;
 }
 
-GIRTestCase::GIRTestCase(int _numTests, string _refString, 
-            vector< pair<string, string> > _attrExpectedValPair,
+GIRTestCase::GIRTestCase(int _numTests, std::string _refString, 
+            std::vector< std::pair<std::string, std::string> > _attrExpectedValPair,
             int _verbosity, int _testNumber)
             : numTests(_numTests)
 {
@@ -141,8 +137,8 @@ GIRTestCase::runTests(void)
 
     if(verbose == 2)
     {
-        printf("Working on ref string number %d. Fullname = true\n", testNumber);
-        printf("ref string is %s.\n", refString.c_str());
+        printf("Working on ref std::string number %d. Fullname = true\n", testNumber);
+        printf("ref std::string is %s.\n", refString.c_str());
     }
 
     for(int i = 0; i < numTests; i++)
@@ -168,7 +164,7 @@ GIRTestCase::runTests(void)
 
     if(verbose == 2) 
     {
-        printf("Working on ref string number %d. Fullname = false\n", testNumber);
+        printf("Working on ref std::string number %d. Fullname = false\n", testNumber);
     }
 
     for(int i = 0; i < numTests; i++)
@@ -435,7 +431,7 @@ bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
-    int esRetVal[2]; //evalstring return value
+    int esRetVal[2]; //evalstd::string return value
 
     for(int i = 0; i < 4; i++)
     {
@@ -517,7 +513,7 @@ bool test_EvalStringCharStarStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
-    int esRetVal[2]; //evalstring return value
+    int esRetVal[2]; //evalstd::string return value
 
     for(int i = 0; i < 4; i++)
     {
@@ -599,7 +595,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
-    int esRetVal[2]; //evalstring return value
+    int esRetVal[2]; //evalstd::string return value
 
     for(int i = 0; i < 4; i++)
     {
@@ -609,7 +605,7 @@ bool test_EvalStringStdString(ClassAd *c1, ClassAd *c2, int verbose)
     classad::AttrList::iterator itr;
     itr = c1->begin();
 
-	std::string tmpValue; 
+	std::std::string tmpValue; 
 
     passedTest[0] = c1->EvalString((*itr).first.c_str(), c1, tmpValue);
 
@@ -740,9 +736,9 @@ bool test_QuoteAdStringValue(ClassAd *c1, int verbose)
 	const char *ans2 = "\"abc\\\"\\efg\\\"";
 
     const char *tmp; 
-    string tmpString;
+    std::string tmpString;
 
-    string msTmp;
+    std::string msTmp;
     c1->EvaluateAttrString("A", tmpString);
 
     tmp = QuoteAdStringValue(tmpString.c_str(), msTmp);
@@ -796,7 +792,7 @@ bool test_EvalExprTree(ClassAd *c1, ClassAd *c2, int verbose)
     bool passedNullMineRealTarget = false;
 
 	classad::ClassAdUnParser unp;
-    string buf;
+    std::string buf;
    
     classad::AttrList::iterator itr;
     itr = c1->begin();
@@ -929,9 +925,9 @@ bool test_GIR(int verbose)
 
     // expr C is an opnode
 
-    string input_ref = "[ A = 3; B = {1,3,5}; C = 1 + D.A; D = [A = E; B = 8;]; E = 4; ]";
+    std::string input_ref = "[ A = 3; B = {1,3,5}; C = 1 + D.A; D = [A = E; B = 8;]; E = 4; ]";
 
-    vector<pair<string, string> > expected;
+    std::vector<pair<std::string, std::string> > expected;
     
     expected.push_back(make_pair("A", ""));
     expected.push_back(make_pair("B", ""));
@@ -953,7 +949,7 @@ bool test_GIR(int verbose)
     
     //test case 2
 
-    string input_ref2 = "[ A = 3; B = {1}; C = G.F; D = [A = B; B = 9;]; E = C + D.A; ]";
+    std::string input_ref2 = "[ A = 3; B = {1}; C = G.F; D = [A = B; B = 9;]; E = C + D.A; ]";
 
     expected.push_back(make_pair("A", ""));
     expected.push_back(make_pair("B", ""));
@@ -973,7 +969,7 @@ bool test_GIR(int verbose)
 
     expected.clear();
 
-    string input_ref3 = "[ A = G.B; B = {5}; C = D.B + A; D = [A = 2; B = E.C;]; E = [C = 7;]; ]";
+    std::string input_ref3 = "[ A = G.B; B = {5}; C = D.B + A; D = [A = 2; B = E.C;]; E = [C = 7;]; ]";
 
     expected.push_back(make_pair("A", ""));
     expected.push_back(make_pair("B", ""));
@@ -993,7 +989,7 @@ bool test_GIR(int verbose)
 
     expected.clear();
 
-    string input_ref4 = "[ A = G.B; B = {5}; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = A;]; ]";
+    std::string input_ref4 = "[ A = G.B; B = {5}; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = A;]; ]";
 
     expected.push_back(make_pair("A", ""));
     expected.push_back(make_pair("B", ""));
@@ -1012,7 +1008,7 @@ bool test_GIR(int verbose)
 
     expected.clear();
 
-    string input_ref5 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B.G; D = [A = 2; B = [A = 3; G = E;]]; E = [C = A;]; ]";
+    std::string input_ref5 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B.G; D = [A = 2; B = [A = 3; G = E;]]; E = [C = A;]; ]";
 
     //these are non-sensical for now.
     expected.push_back(make_pair("A", ""));
@@ -1032,7 +1028,7 @@ bool test_GIR(int verbose)
 
     expected.clear();
 
-    string input_ref6 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = B.Y;]; ]";
+    std::string input_ref6 = "[ A = G.B; B = [X = A; Y = D.A;]; C = A + D.B; D = [A = 2; B = E.C;]; E = [C = B.Y;]; ]";
 
     //these are non-sensical for now.
     expected.push_back(make_pair("A", ""));
@@ -1066,7 +1062,7 @@ bool test_GIR(int verbose)
 //}}}
 
 //{{{ GIR helper
-classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, bool full)
+classad::References* gir_helper(classad::ClassAd* c, std::string attr, int verbose, bool full)
 {
 
     classad::References* refs = new classad::References();
@@ -1107,13 +1103,13 @@ classad::References* gir_helper(classad::ClassAd* c, string attr, int verbose, b
 //}}}
 
 //{{{ correctRefs
-bool correctRefs(classad::References* ref, std::vector<string> expected)
+bool correctRefs(classad::References* ref, std::std::vector<std::string> expected)
 {
     bool passed = false;
 
     classad::References::iterator itr;
     classad::References::iterator itr2;
-    std::vector<string>::iterator vecItr;
+    std::std::vector<std::string>::iterator vecItr;
 
     //refs didn't have anything 
     if(ref->size() == 0 && expected.size() == 0)
@@ -1169,13 +1165,13 @@ bool correctRefs(classad::References* ref, std::vector<string> expected)
 
 //{{{ runAndCheckGIR
 bool 
-runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, int verbose )
+runAndCheckGIR(classad::ClassAd* c, std::string attr, std::string listString, bool full, int verbose )
 {
     bool passed = false;
     bool passedTest = false;
 
     classad::References* retRefs;
-    std::vector<string> expectedVec;
+    std::std::vector<std::string> expectedVec;
 
     /*
     int subStrStart = 0;
@@ -1183,13 +1179,13 @@ runAndCheckGIR(classad::ClassAd* c, string attr, string listString, bool full, i
     */
 
     //if "," doesn't exist, then skip the splitting-stage.
-    bool singleAttr = (listString.find(" ") == string::npos);
+    bool singleAttr = (listString.find(" ") == std::string::npos);
 
     if(!singleAttr)
     {
     
-        string word;
-        istringstream iss(listString, istringstream::in);
+        std::string word;
+        istd::stringstream iss(listString, istd::stringstream::in);
 
         while ( iss >> word )
         {
@@ -1267,7 +1263,7 @@ char* getType(classad::ExprTree* expr)
     return "Huh?";
 }
 
-void printExprType(classad::ClassAd* c, string attr)
+void printExprType(classad::ClassAd* c, std::string attr)
 {
 
     enum{
@@ -1306,8 +1302,8 @@ void printExprType(classad::ClassAd* c, string attr)
                 case CLASSAD_NODE:
                     {
                     printf("attr \"%s\" is an CLASSAD_NODE\n", attr.c_str());
-                    vector< pair<string, classad::ExprTree*> >               attrs;
-                    vector< pair<string, classad::ExprTree*> >:: iterator    itr; 
+                    std::vector< pair<std::string, classad::ExprTree*> >               attrs;
+                    std::vector< pair<std::string, classad::ExprTree*> >:: iterator    itr; 
 
                     ((classad::ClassAd*)expr)->GetComponents(attrs);
                     for(itr = attrs.begin(); itr != attrs.end(); itr++){
