@@ -977,7 +977,7 @@ std::string GCEJob::build_instance_name()
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];
 	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
-	string final_str = "condor-";
+	std::string final_str = "condor-";
 	final_str += uuid_str;
 	return final_str;
 #else
