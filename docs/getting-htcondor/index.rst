@@ -1,7 +1,7 @@
 .. _getting_htcondor:
 
-Getting HTCondor
-================
+Downloading and Installing
+==========================
 
 .. toctree::
     :maxdepth: 2

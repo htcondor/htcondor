@@ -10,7 +10,7 @@ Access Point (sometimes called a scheduler or login node), you may want to read 
 here: :ref:`users-manual/quick-start-guide:Users' Quick Start Guide`
 
 If you are beginning administrator of HTCondor, or want to install it for the first time, please
-look at our installation guide here: :ref:`getting-htcondor/index:Getting HTCondor`
+look at our installation guide here: :ref:`getting-htcondor/index:Downloading and Installing`
 
 Otherwise, for users of HTCondor who want more information, a complete user's reference manual
 is here: :ref:`users-manual/index:Users' Manual`, and a similar complete reference for 
@@ -44,6 +44,12 @@ Manual built on |release_date|
    admin-manual/index
    classads/index
    apis/python-bindings/index
+
+.. toctree::
+   :maxdepth: 2
+   :glob:
+   :caption: Additional Docs 
+
    grid-computing/index
    cloud-computing/index
    apis/index
