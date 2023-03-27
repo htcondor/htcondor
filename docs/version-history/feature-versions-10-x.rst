@@ -29,6 +29,11 @@ Bugs Fixed:
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
 
+- Fixed a bug when running with root on a Linux systems with cgroup v1
+  that would print a warning to the StarterLog claiming
+  Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
+  :jira:`1672`
+
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
