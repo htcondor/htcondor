@@ -106,6 +106,11 @@ Bugs Fixed:
   ``SCITOKENS_SERVER_AUDIENCE`` isn't set.
   :jira:`1652`
 
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
 .. _lts-version-history-1002:
 
 Version 10.0.2

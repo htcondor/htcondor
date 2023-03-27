@@ -67,6 +67,7 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 			return r;
 	}
 	(* runningSampleCount) += sampleCount;
+	samples.resize(sampleCount);
 
 	// Samples are usually but not always in order.
 	std::sort(samples.begin(), samples.end(), compareSamples);
