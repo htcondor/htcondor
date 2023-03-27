@@ -6616,7 +6616,8 @@ do not specify their own with:
 
 :macro-def:`SUBMIT_ALLOW_GETENV`
     A boolean attribute which defaults to true. If set to false, the
-    submit command getenv becomes and error.
+    submit command "getenv = true" is an error.  Any restricted
+    form of "getenv = some_env_var_name" is still allowed. 
 
 :macro-def:`LOG_ON_NFS_IS_ERROR`
     A boolean value that controls whether *condor_submit* prohibits job
