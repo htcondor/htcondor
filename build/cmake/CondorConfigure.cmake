@@ -855,16 +855,6 @@ else (NOT WINDOWS)
 endif (NOT WINDOWS)
 endif(CONDOR_EXTERNALS)
 
-#####################################
-# Do we want to link in the VOMS libraries or dlopen() them at runtime?
-if (NOT DEFINED DLOPEN_VOMS_LIBS)
-    if (HAVE_EXT_VOMS AND LINUX AND NOT WANT_PYTHON_WHEELS)
-        set(DLOPEN_VOMS_LIBS TRUE)
-	else()
-        set(DLOPEN_VOMS_LIBS FALSE)
-	endif()
-endif()
-
 message(STATUS "********* External configuration complete (dropping config.h) *********")
 dprint("CONDOR_EXTERNALS=${CONDOR_EXTERNALS}")
 
@@ -921,17 +911,15 @@ set (CONDOR_STARTD_SRC_DIR ${CONDOR_SOURCE_DIR}/src/condor_startd.V6)
 ###########################################
 # order of the below elements is important, do not touch unless you know what you are doing.
 # otherwise you will break due to stub collisions.
-if (DLOPEN_VOMS_LIBS)
+set (SECURITY_LIBS crypto)
+if (DLOPEN_SECURITY_LIBS)
 	if (WITH_SCITOKENS)
-	set (SECURITY_LIBS SciTokens-headers;crypto)
-	else()
-	set (SECURITY_LIBS crypto)
+		list (PREPEND SECURITY_LIBS SciTokens-headers)
 	endif()
 else()
+	list (PREPEND SECURITY_LIBS "${VOMS_FOUND};${EXPAT_FOUND};${MUNGE_FOUND};openssl;${KRB5_FOUND}")
 	if (WITH_SCITOKENS)
-		set (SECURITY_LIBS "${VOMS_FOUND};SciTokens;openssl;crypto;${EXPAT_FOUND}")
-	else()
-		set (SECURITY_LIBS "${VOMS_FOUND};openssl;crypto;${EXPAT_FOUND}")
+		list (PREPEND SECURITY_LIBS SciTokens)
 	endif()
 endif()
 
@@ -942,11 +930,11 @@ if (LINUX)
 endif()
 
 
-set (CONDOR_LIBS      "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${MUNGE_FOUND}")
-set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS};${MUNGE_FOUND}")
+set (CONDOR_LIBS      "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS}")
+set (CONDOR_TOOL_LIBS "condor_utils;${RT_FOUND};${CLASSADS_FOUND};${SECURITY_LIBS}")
 set (CONDOR_SCRIPT_PERMS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 if (LINUX)
-	set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;openssl-headers;${SECURITY_LIBS};${RT_FOUND};${KRB5_FOUND};${IOKIT_FOUND};${COREFOUNDATION_FOUND};${MUNGE_FOUND}")
+	set (CONDOR_LIBS_FOR_SHADOW "condor_utils_s;classads;${SECURITY_LIBS};${RT_FOUND}")
 else ()
   set (CONDOR_LIBS_FOR_SHADOW "${CONDOR_LIBS}")
 endif ()
