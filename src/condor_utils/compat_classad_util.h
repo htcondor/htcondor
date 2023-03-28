@@ -151,7 +151,7 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 int add_user_mapping(const char * mapname, char * mapdata);
 // these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
 int reconfig_user_maps();
-bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
+bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
 
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree

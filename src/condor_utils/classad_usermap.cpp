@@ -205,7 +205,7 @@ int reconfig_user_maps()
 // if the mapname contains a . it is treated as mapname.method
 // otherise the method is "*" which should match all methods.
 // return is true if the mapname exists and mapping was found within it, false if not.
-bool user_map_do_mapping(const char * mapname, const char * input, MyString & output) {
+bool user_map_do_mapping(const char * mapname, const char * input, std::string & output) {
 	if ( ! g_user_maps) return false;
 
 	std::string name(mapname);

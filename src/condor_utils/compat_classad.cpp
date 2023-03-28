@@ -35,10 +35,6 @@
 #include <sstream>
 #include <unordered_set>
 
-class MapFile;
-extern int reconfig_user_maps();
-extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
-
 #if defined(UNIX)
 #include <dlfcn.h>
 #endif
@@ -503,7 +499,7 @@ bool userMap_func( const char * /*name*/,
 		return true;
 	}
 
-	MyString output;
+	std::string output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
 		StringList items(output.c_str(), ",");
 

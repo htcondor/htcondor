@@ -33,8 +33,8 @@
 int
 main(int argc, char **argv)
 {
-	MyString canonical_filename = argv[1];
-	MyString user_filename = argv[2];
+	std::string canonical_filename = argv[1];
+	std::string user_filename = argv[2];
 	MapFile map;
 	int line;
 

@@ -116,7 +116,7 @@ int param_integer(const char *, int default_value)
 
 // stubs for classad_usermap.cpp functions needed by compat_classad
 int reconfig_user_maps() { return 0; }
-bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
+bool user_map_do_mapping(const char *, const char *, std::string & output) { output.clear(); return false; }
 
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)

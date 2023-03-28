@@ -40,7 +40,7 @@ extern void get_mapfile_re_info(size_t *info); // pass an array of 4 elements
 extern void clear_mapfile_re_info();
 
 class YourString ystr; // most recent lookup
-MyString gmstr;   // holds the result of a mapfile lookup
+std::string gmstr;   // holds the result of a mapfile lookup
 MapFile* gmf = NULL;  // global mapfile used for lookup testing.
 bool   grequire_failed;
 double gstart_time; // start time for REQUIRE condition
