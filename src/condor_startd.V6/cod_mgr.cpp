@@ -21,6 +21,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include <algorithm>
 
 
 CODMgr::CODMgr( Resource* my_rip )
