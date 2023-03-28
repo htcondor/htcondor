@@ -80,7 +80,7 @@ The standard output for this job will go to the file
 **output** :index:`output<single: output; submit commands>` command. Likewise,
 the standard error output will go to ``errorfile``. 
 
-HTCondor will append events about the job to a log file wih the 
+HTCondor will append events about the job to a log file with the 
 requested name ``myexe.log``. When the job
 finishes, its exit conditions and resource usage will also be noted in the log file. 
 This file's contents are an excellent way to figure out what happened to jobs.
@@ -1106,7 +1106,7 @@ The submit file would need to contain
 Some credential providers may also require the user to provide
 the name of the resource (or "audience") that a credential should allow access to.
 Resource naming is done using the ``<service name>_oauth_resource`` submit file command.
-For example, if our CloudBoxDrive service has servers located at some unversities
+For example, if our CloudBoxDrive service has servers located at some universities
 and the documentation says that we should pick one near us and specify it as the audience,
 the submit file might look like
 
@@ -1200,8 +1200,13 @@ Jobs That Require GPUs
 
 :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
 
-A job that needs GPUs to run identifies the number of GPUs needed in the
-submit description file by adding the submit command
+:index:`Request_GPUs<single: Request_GPUS; submit commands>`
+:index:`Require_GPUs<single: Require_GPUS; submit commands>`
+
+HTCondor has built-in support for detecting machines with GPUs, and
+matching jobs that need GPUs to machines that have them.  If your
+job needs a GPU, you'll first need to tell HTCondor how many GPUs
+each job needs with the submit command: 
 
 .. code-block:: condor-submit
 
@@ -1214,18 +1219,31 @@ the job. For example, a job that needs 1 GPU uses
 
     request_GPUs = 1
 
-Because there are different capabilities among GPUs, the job might need
-to further qualify which GPU of available ones is required. Do this by
-specifying or adding a clause to an existing
-**Requirements** :index:`Requirements<single: Requirements; submit commands>` submit
-command. As an example, assume that the job needs a speed and capacity
-of a CUDA GPU that meets or exceeds the value 1.2. In the submit
-description file, place
+Because there are different capabilities among GPUs, your job might need
+to further qualify which GPU is required. The submit command
+`require_gpus` does this.  For example, to request  a CUDA GPU whose
+CUDA Capability is at least 8, add the following to your submit file:
 
 .. code-block:: condor-submit
 
     request_GPUs = 1
-    requirements = (CUDACapability >= 1.2) && $(requirements:True)
+    require_gpus = Capability >= 8.0
+
+To see which CUDA capabilities are available in your HTCondor pool,
+you can run the command
+
+.. code-block:: console
+
+      $ condor_status -af Name GPUS_Capability
+
+
+To see which GPU devices HTCondor has detected on your pool,
+you can run the command
+
+.. code-block:: console
+
+      $ condor_status -af Name GPUS_DeviceName
+
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
@@ -1365,7 +1383,7 @@ To give an example, the following submit file:
 
 
 When submitted as a late materialization factory, the *submit digest* for this factory
-will contain only the submit statments that vary between jobs, and the collapsed queue statement
+will contain only the submit statements that vary between jobs, and the collapsed queue statement
 like this:
 
 .. code-block:: condor-submit
@@ -1382,7 +1400,7 @@ Materialization log events
 
 When a Late Materialization job factory is submitted to the *condor_schedd*, a ``Cluster submitted`` event
 will be written to the UserLog of the Cluster ad.  This will be the same log file used by the first job
-materialized by the factory.  To avoid confustion,
+materialized by the factory.  To avoid confusion,
 it is recommended that you use the same log file for all jobs in the factory.
 
 When the Late Materialization job factory is removed from the *condor_schedd*, a ``Cluster removed`` event
