@@ -8440,6 +8440,8 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
 	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
 	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
+	int num_jobs = 0;
+	bool stopped_early = false;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8462,16 +8464,22 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 		} else if ( ! ad->IsJob()) {
 			continue;
 		} else { // jobads have cluster > 0 && proc >= 0
+			num_jobs++;
 			if (with_no_jobs) { continue; }
 		}
 		int rval = func(ad, key, pv);
 		if (rval < 0)
+			stopped_early = true;
 			break;
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
 	ftm += runtime;
 	WalkJobQ_runtime += runtime;
+
+	if (!stopped_early) {
+		TotalJobsCount = num_jobs;
+	}
 
 	in_walk_job_queue--;
 }
