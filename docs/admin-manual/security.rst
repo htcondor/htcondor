@@ -1322,24 +1322,31 @@ authentication to flock to a remote pool.
 
 Token-based authentication is a newer extension to ``PASSWORD`` authentication
 that allows the pool administrator to generate new, low-privilege tokens
-from a pool signing key.  It also allows the administrator to install what are
-effectively multiple passwords. As tokens are derived from a specific signing key,
-if an administrator removes the signing key from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
+using one of several pool signing keys.
+It also allows a daemon or tool to authenticate to a remote pool
+without having that pool's password.
+As tokens are derived from a specific signing key,
+if an administrator removes a signing key from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
 then all derived tokens are immediately invalid.  Most simple installs will
-utilize a single signing key, kept in ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``.  On Linux the same file
+utilize a single signing key, named ``POOL``.
+
+While most token signing keys are placed in the directory specified by
+``SEC_PASSWORD_DIRECTORY``, with the filename within the directory
+determining the key's name, the ``POOL`` token signing key can be
+located elsewhere by setting ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+to the full pathname of the desired file.
+On Linux the same file
 can be both the pool signing key and the pool password if ``SEC_PASSWORD_FILE``
-and ``SEC_TOKEN_POOL_SIGNING_KEY_FILE`` to refer to the same file.  However this is not preferred
+and ``SEC_TOKEN_POOL_SIGNING_KEY_FILE`` refer to the same file.  However this is not preferred
 because in order to properly interoperate with older versions of HTCondor the pool password will
-be read as a text file and truncated at the first NULL character.  This differs from
+be read as a text file and truncated at the first NUL character.  This differs from
 the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9 releases
 used the pool password as the pool signing key for tokens, those versions will not
-interoperate with 9.0 if the pool signing key file contains NULL characters.
+interoperate with 9.0 if the pool signing key file contains NUL characters.
 
-The pool password in the ``SEC_PASSWORD_FILE`` can be created utilizing ``condor_store_cred``
-(as specified in
-:ref:`admin-manual/security:password authentication`).  Alternately, the *condor_collector*
-process will automatically generate a pool signing key in ``SEC_TOKEN_POOL_SIGNING_KEY_FILE`` on startup
-if that file does not exist
+The *condor_collector*
+process will automatically generate the pool signing key named ``POOL`` on startup
+if that file does not exist.
 
 To generate a token, the administrator may utilize the ``condor_token_create``
 command-line utility:
@@ -1416,6 +1423,13 @@ the network), then the auto-approval mechanism may be used.  When in place, auto
 allows any token authentication request on an approved network to be automatically
 approved by HTCondor on behalf of the pool administrator - even when requests do not come over
 confidential connnections.
+
+When a daemon issues a token for a client (e.g. for
+``condor_token_fetch`` or ``condor_token_request``), the signing key it
+uses must appear in the list ``SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS``.
+If the client doesn't request a specific signing key to use, then the
+key given by ``SEC_TOKEN_ISSUER_KEY`` is used.
+The default for both of these configuration parameters is ``POOL``.
 
 If there are multiple tokens in files in the ``SEC_TOKEN_SYSTEM_DIRECTORY``, then
 the daemon will search for tokens in that directory based on lexicographical order;
