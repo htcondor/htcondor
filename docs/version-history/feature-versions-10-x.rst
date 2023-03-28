@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
 
 Version 10.4.0
 --------------
