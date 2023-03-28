@@ -24,6 +24,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "forkwork.h"
+#include <algorithm>
 
 // Instantiate the list of Cron Jobs
 
