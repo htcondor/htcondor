@@ -1342,7 +1342,7 @@ because in order to properly interoperate with older versions of HTCondor the po
 be read as a text file and truncated at the first NUL character.  This differs from
 the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9 releases
 used the pool password as the pool signing key for tokens, those versions will not
-interoperate with 9.0 if the pool signing key file contains NULL characters.
+interoperate with 9.0 if the pool signing key file contains NUL characters.
 
 The *condor_collector*
 process will automatically generate the pool signing key named ``POOL`` on startup
