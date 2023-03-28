@@ -143,6 +143,7 @@ ForkWork::DeleteAll( void )
 	for (ForkWorker *worker: workerList) {
 		delete worker;
 	}
+	workerList.clear();
 	return 0;
 }
 
