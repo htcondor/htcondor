@@ -64,10 +64,6 @@ public:
 				 int * errcode,
 				 int * erroffset,
 				 uint32_t options = 0);
-	bool compile(const MyString & pattern,
-				 int * errcode,
-				 int * erroffset,
-				 uint32_t options = 0);
 	bool compile(const std::string & pattern,
 				 int * errcode,
 				 int * erroffset,
@@ -81,8 +77,7 @@ public:
 		 * substring matches. The nsubstrings argument specifies the
 		 * number of slots in the substrings array.
 		 */
-	bool match(const MyString & string);
-	bool match_str(const std::string & string,
+	bool match(const std::string & string,
 			   std::vector<std::string> * groups = NULL);
 
 		/**
