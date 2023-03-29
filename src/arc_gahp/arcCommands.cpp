@@ -56,7 +56,7 @@ std::string fillURL(const char *url)
 	bool patternOK = r.compile( "([^:]+://)?([^:/]+)(:[0-9]*)?(.*)", &errCode, &errOffset);
 	ASSERT( patternOK );
 	std::vector<std::string> groups;
-	if(! r.match_str(url, &groups )) {
+	if(! r.match(url, &groups )) {
 		return url;
 	}
 	if( groups[1].empty() ) {

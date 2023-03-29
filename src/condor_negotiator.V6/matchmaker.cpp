@@ -56,8 +56,6 @@
 
 #include "matchmaker.h"
 
-extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
-
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
 // possible outcomes of negotiating with a schedd
@@ -1132,7 +1130,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 			return returnPrioFactor(strm, errstack);
 		}
 
-		MyString map_output;
+		std::string map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
 			StringList items(map_output.c_str(), ",");
 			items.rewind();

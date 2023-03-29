@@ -12937,7 +12937,7 @@ Scheduler::Init()
 				// unfortunately it's been lowercased by the time we get here, so we can't
 				// let the user choose the case, just capitalize it and use it as the prefix
 				std::vector<std::string> groups;
-				if (re.match_str(name, &groups)) {
+				if (re.match(name, &groups)) {
 					std::string byorfor = groups[1]; // this will by "by" or "for"
 					std::string other = groups[2]; // this will be lowercase
 					if (isdigit(other[0])) {

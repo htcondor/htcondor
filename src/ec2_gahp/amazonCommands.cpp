@@ -315,7 +315,7 @@ bool parseURL(	const std::string & url,
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
     ASSERT( patternOK );
 	std::vector<std::string> groups;
-    if(! r.match_str( url, & groups )) { 
+    if(! r.match( url, & groups )) {
 		return false;
 	}
 
@@ -4132,7 +4132,7 @@ bool AmazonCreateStack::SendRequest() {
 		bool patternOK = r.compile( "<StackId>(.*)</StackId>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		std::vector<std::string> groups;
-		if( r.match_str( resultString, & groups ) ) {
+		if( r.match( resultString, & groups ) ) {
 			this->stackID = groups[1];
 		}
 	}
@@ -4212,7 +4212,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		std::vector<std::string> statusGroups;
-		if( r.match_str( resultString, & statusGroups ) ) {
+		if( r.match( resultString, & statusGroups ) ) {
 			this->stackStatus = statusGroups[1];
 		}
 
@@ -4220,7 +4220,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		patternOK = s.compile( "<Outputs>(.*)</Outputs>", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
 		std::vector<std::string> outputGroups;
-		if( s.match_str( resultString, & outputGroups ) ) {
+		if( s.match( resultString, & outputGroups ) ) {
 			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
 			std::string membersRemaining = outputGroups[1];
 
@@ -4229,7 +4229,7 @@ bool AmazonDescribeStacks::SendRequest() {
 			ASSERT( patternOK );
 
 			std::vector<std::string> memberGroups;
-			while( t.match_str( membersRemaining, & memberGroups ) ) {
+			while( t.match( membersRemaining, & memberGroups ) ) {
 				std::string member = memberGroups[1];
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
@@ -4239,7 +4239,7 @@ bool AmazonDescribeStacks::SendRequest() {
 
 				std::string outputKey;
 				std::vector<std::string> keyGroups;
-				if( u.match_str( member, & keyGroups ) ) {
+				if( u.match( member, & keyGroups ) ) {
 					outputKey = keyGroups[1];
 				}
 
@@ -4249,7 +4249,7 @@ bool AmazonDescribeStacks::SendRequest() {
 
 				std::string outputValue;
 				std::vector<std::string> valueGroups;
-				if( v.match_str( member, & valueGroups ) ) {
+				if( v.match( member, & valueGroups ) ) {
 					outputValue = valueGroups[1];
 				}
 

@@ -2982,7 +2982,7 @@ SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		// root/condor.
 
 	if( queue_super_user_may_impersonate_regex ) {
-		if( queue_super_user_may_impersonate_regex->match(user.c_str()) ) {
+		if( queue_super_user_may_impersonate_regex->match(user) ) {
 			return true;
 		}
 		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.c_str());

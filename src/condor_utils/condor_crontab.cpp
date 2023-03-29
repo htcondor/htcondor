@@ -192,7 +192,7 @@ CronTab::validateParameter(const char* parameter, const char * attr, std::string
 		// in the parameter string
 		//
 	std::string temp(parameter);
-	if ( CronTab::regex.match_str( temp ) ) {
+	if ( CronTab::regex.match( temp ) ) {
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
