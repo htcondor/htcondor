@@ -128,7 +128,7 @@ public:
 	virtual int peek(char &);
 
 	// serialize and deserialize
-	const char * serialize(const char *);
+	const char * deserialize(const char *);
 	char * serialize() const;
 
 //	PRIVATE INTERFACE TO SAFE SOCKS

@@ -2162,7 +2162,7 @@ char * Sock::serializeMdInfo() const
 	return( outbuf );
 }
 
-const char * Sock::serializeCryptoInfo(const char * buf)
+const char * Sock::deserializeCryptoInfo(const char * buf)
 {
 	unsigned char * kserial = NULL;
     const char * ptmp = buf;
@@ -2271,7 +2271,7 @@ const char * Sock::serializeCryptoInfo(const char * buf)
 	return ptmp;
 }
 
-const char * Sock::serializeMdInfo(const char * buf)
+const char * Sock::deserializeMdInfo(const char * buf)
 {
 	unsigned char * kmd = NULL;
     const char * ptmp = buf;
@@ -2374,7 +2374,7 @@ Sock::close_serialized_socket(char const *buf)
 }
 
 
-const char * Sock::serialize(const char *buf)
+const char * Sock::deserialize(const char *buf)
 {
 	SOCKET passed_sock;
 	size_t fqulen = 0;

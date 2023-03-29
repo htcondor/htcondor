@@ -1277,7 +1277,7 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 	in.deserialize_sep("*"); // note: terminator is missing from HTCondor prior to 8.5.7 so it is optional here...
 	inherit_buf = in.next_pos();
 #else
-	inherit_buf = m_listener_sock.serialize(in.next_pos());
+	inherit_buf = m_listener_sock.deserialize(in.next_pos());
 #endif
 	m_listening = true;
 

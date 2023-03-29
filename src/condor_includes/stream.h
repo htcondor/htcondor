@@ -561,7 +561,7 @@ protected:
 
 	// serialize object (save/restore object state to an ascii string)
 	//
-	virtual const char * serialize(const char *) = 0;
+	virtual const char * deserialize(const char *) = 0;
 	virtual char * serialize() const = 0;
 
 	/*

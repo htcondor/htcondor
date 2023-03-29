@@ -8720,7 +8720,7 @@ int extractInheritedSocks (
 				// inherit a relisock
 				ReliSock * rsock = new ReliSock();
 				ptmp = list.next();
-				rsock->serialize(ptmp);
+				rsock->deserialize(ptmp);
 				rsock->set_inheritable(FALSE);
 				dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 				// place into array...
@@ -8730,7 +8730,7 @@ int extractInheritedSocks (
 			case '2': {
 				SafeSock * ssock = new SafeSock();
 				ptmp = list.next();
-				ssock->serialize(ptmp);
+				ssock->deserialize(ptmp);
 				ssock->set_inheritable(FALSE);
 				dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 				// place into array...
@@ -8887,7 +8887,7 @@ DaemonCore::Inherit( void )
 					// inherit a relisock
 					ReliSock * rsock = new ReliSock();
 					ptmp=inherit_list.next();
-					rsock->serialize(ptmp);
+					rsock->deserialize(ptmp);
 					rsock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 					// place into array...
@@ -8897,7 +8897,7 @@ DaemonCore::Inherit( void )
 				case '2': {
 					SafeSock * ssock = new SafeSock();
 					ptmp=inherit_list.next();
-					ssock->serialize(ptmp);
+					ssock->deserialize(ptmp);
 					ssock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 					// place into array...
@@ -8939,7 +8939,7 @@ DaemonCore::Inherit( void )
 						dc_socks.push_back(SockPair());
 					}
 					dc_socks.back().has_relisock(true);
-					dc_socks.back().rsock()->serialize(ptmp);
+					dc_socks.back().rsock()->deserialize(ptmp);
 					dc_socks.back().rsock()->set_inheritable(FALSE);
 					break;
 				}
@@ -8957,7 +8957,7 @@ DaemonCore::Inherit( void )
 							dc_socks.push_back(SockPair());
 						}
 						dc_socks.back().has_safesock(true);
-						dc_socks.back().ssock()->serialize(ptmp);
+						dc_socks.back().ssock()->deserialize(ptmp);
 						dc_socks.back().ssock()->set_inheritable(FALSE);
 					}
 					break;

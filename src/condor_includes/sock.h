@@ -517,12 +517,12 @@ protected:
 	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) const { return _sock; }
-	const char * serialize(const char *);
+	const char * deserialize(const char *);
 	static void close_serialized_socket(char const *buf);
 	char * serialize() const;
-    const char * serializeCryptoInfo(const char * buf);
+    const char * deserializeCryptoInfo(const char * buf);
     char * serializeCryptoInfo() const;
-    const char * serializeMdInfo(const char * buf);
+    const char * deserializeMdInfo(const char * buf);
     char * serializeMdInfo() const;
         
 	virtual int encrypt(bool);

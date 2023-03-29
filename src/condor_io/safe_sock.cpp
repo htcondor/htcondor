@@ -85,7 +85,7 @@ SafeSock::SafeSock(const SafeSock & orig)
 	char *buf = NULL;
 	buf = orig.serialize();	// get state from orig sock
 	ASSERT(buf);
-	serialize(buf);	// put the state into the new sock
+	deserialize(buf);	// put the state into the new sock
 	delete [] buf;
 }
 
@@ -746,7 +746,7 @@ char * SafeSock::serialize() const
 	return strdup(state.c_str());
 }
 
-const char * SafeSock::serialize(const char *buf)
+const char * SafeSock::deserialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	const char *ptmp, *ptr = NULL;
@@ -755,7 +755,7 @@ const char * SafeSock::serialize(const char *buf)
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
-	ptmp = Sock::serialize(buf);
+	ptmp = Sock::deserialize(buf);
 	ASSERT( ptmp );
 	int itmp;
 	int citems = sscanf(ptmp,"%d*",&itmp);

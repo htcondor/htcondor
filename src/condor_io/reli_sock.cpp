@@ -96,7 +96,7 @@ ReliSock::ReliSock(const ReliSock & orig) : Sock(orig),
 	char *buf = NULL;
 	buf = orig.serialize();	// get state from orig sock
 	ASSERT(buf);
-	serialize(buf);			// put the state into the new sock
+	deserialize(buf);		// put the state into the new sock
 	delete [] buf;
 }
 
@@ -1379,7 +1379,7 @@ char * ReliSock::serializeMsgInfo() const
 }
 
 
-const char * ReliSock::serializeMsgInfo(const char * buf)
+const char * ReliSock::deserializeMsgInfo(const char * buf)
 {
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
@@ -1461,7 +1461,7 @@ ReliSock::serialize() const
 }
 
 const char *
-ReliSock::serialize(const char *buf)
+ReliSock::deserialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	char fqu[256];
@@ -1471,7 +1471,7 @@ ReliSock::serialize(const char *buf)
     ASSERT(buf);
 
 	// first, let our parent class restore its state
-    ptmp = Sock::serialize(buf);
+    ptmp = Sock::deserialize(buf);
     ASSERT( ptmp );
     int itmp;
     int citems = sscanf(ptmp,"%d*",&itmp);
@@ -1489,11 +1489,11 @@ ReliSock::serialize(const char *buf)
 
         ptmp = ++ptr;
         // The next part is for crypto
-        ptmp = serializeCryptoInfo(ptmp);
+        ptmp = deserializeCryptoInfo(ptmp);
         // The next part is for message digest state
-        ptmp = serializeMsgInfo(ptmp);
+        ptmp = deserializeMsgInfo(ptmp);
         // Followed by Md
-        ptmp = serializeMdInfo(ptmp);
+        ptmp = deserializeMdInfo(ptmp);
 
         citems = sscanf(ptmp, "%d*", &len);
 

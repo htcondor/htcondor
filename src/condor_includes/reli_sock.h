@@ -287,7 +287,7 @@ public:
 	bool is_closed() const {return rcv_msg.m_closed;}
 
 	// serialize and deserialize
-	const char * serialize(const char *);	// restore state from buffer
+	const char * deserialize(const char *);	// restore state from buffer
 	char * serialize() const;	// save state into buffer
 
 		// Reset the message digests for header integrity.
@@ -419,7 +419,7 @@ protected:
 	bool m_finished_send_header{false};
 	bool m_finished_recv_header{false};
 	char * serializeMsgInfo() const;
-	const char * serializeMsgInfo(const char * buf);
+	const char * deserializeMsgInfo(const char * buf);
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();
