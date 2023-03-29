@@ -45,6 +45,11 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
+- Fixed a bug where the *condor_schedd* falsely believed there were
+  too many jobs in the queue and rejected new job submissions based on
+  ``MAX_JOBS_SUBMITTED``.
+  :jira:`1688`
+
 - *condor_remote_cluster* now works correctly when the hardware
   architecture of the remote machine isn't x86_64.
   :jira:`1670`

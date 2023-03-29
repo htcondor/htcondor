@@ -1489,6 +1489,10 @@ Scheduler::count_jobs()
 		//    For job factories that have no materialized jobs it will potentially trigger new materialization
 	WalkJobQueueWith(WJQ_WITH_CLUSTERS | WJQ_WITH_JOBSETS, count_a_job, nullptr);
 
+	if (JobsSeenOnQueueWalk >= 0) {
+		TotalJobsCount = JobsSeenOnQueueWalk;
+	}
+
 	if( dedicated_scheduler.hasDedicatedClusters() ) {
 			// We found some dedicated clusters to service.  Wake up
 			// the DedicatedScheduler class when we return to deal
