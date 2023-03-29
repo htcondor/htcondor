@@ -2877,10 +2877,13 @@ Matchmaker::TransformSubmitterAd(classad::ClassAd &ad)
 	return ad.InsertAttr("Name", new_name);
 }
 
+
+//
 // A "ghost type" is an arbitrary string used by the autoscaler to connect
 // machines joining the pool by which "ghost ad" (an reevaluate-enabled
 // offline ad) caused them to be created.  This allows the autoscaler's
 // provisioning loop and the negotiator cycle to operate asynchronously.
+//
 std::map<std::string, int> ghostTypeCount;
 
 bool Matchmaker::
