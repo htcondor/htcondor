@@ -253,11 +253,15 @@ JOB_ID_KEY_BUF HeaderKey(0,0);
 
 ForkWork schedd_forker;
 
+// A negative JobsSeenOnQueueWalk means the last job queue walk terminated
+// early, so no reliable count is available.
+int TotalJobsCount = 0;
+int JobsSeenOnQueueWalk = -1;
+
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
-static int TotalJobsCount = 0;
 static std::set<int> ClustersNeedingCleanup;
 static int defer_cleanup_timer_id = -1;
 static std::set<int> ClustersNeedingMaterialize;
@@ -8440,6 +8444,11 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
 	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
 	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
+	int num_jobs = 0;
+	bool stopped_early = false;
+
+	// This means the walk terminated early, and we don't have a valid count
+	JobsSeenOnQueueWalk = -1;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8462,16 +8471,23 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 		} else if ( ! ad->IsJob()) {
 			continue;
 		} else { // jobads have cluster > 0 && proc >= 0
+			num_jobs++;
 			if (with_no_jobs) { continue; }
 		}
 		int rval = func(ad, key, pv);
-		if (rval < 0)
+		if (rval < 0) {
+			stopped_early = true;
 			break;
+		}
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
 	ftm += runtime;
 	WalkJobQ_runtime += runtime;
+
+	if (!stopped_early) {
+		JobsSeenOnQueueWalk = num_jobs;
+	}
 
 	in_walk_job_queue--;
 }
@@ -8481,6 +8497,11 @@ void
 WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
+	int num_jobs = 0;
+	bool stopped_early = false;
+
+	// This means the walk terminated early, and we don't have a valid count
+	JobsSeenOnQueueWalk = -1;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8495,16 +8516,23 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 	JobQueuePayload ad;
 	while(JobQueue->Iterate(key, ad)) {
 		if (ad->IsJob()) {
+			num_jobs++;
 			JobQueueJob * job = static_cast<JobQueueJob*>(ad);
 			int rval = func(job, key, pv);
-			if (rval < 0)
+			if (rval < 0) {
+				stopped_early = true;
 				break;
+			}
 		}
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
 	ftm += runtime;
 	WalkJobQ_runtime += runtime;
+
+	if (!stopped_early) {
+		JobsSeenOnQueueWalk = num_jobs;
+	}
 
 	in_walk_job_queue--;
 }
