@@ -45,6 +45,10 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
