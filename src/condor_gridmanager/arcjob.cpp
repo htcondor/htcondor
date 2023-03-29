@@ -1310,8 +1310,9 @@ std::vector<std::string> *ArcJob::buildStageInList(bool with_urls)
 
 	if (!with_urls) {
 		auto no_urls = [](std::string& file) { return IsUrl(file.c_str()) != nullptr; };
-		auto it = std::remove_if(stage_list->begin(), stage_list->end(), no_urls);
-		stage_list->erase(it);
+		stage_list->erase(std::remove_if(stage_list->begin(),
+		                                 stage_list->end(), no_urls),
+		                  stage_list->end());
 	}
 
 	for (auto& filename : *stage_list) {
