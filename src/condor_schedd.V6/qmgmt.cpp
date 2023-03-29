@@ -8468,9 +8468,10 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 			if (with_no_jobs) { continue; }
 		}
 		int rval = func(ad, key, pv);
-		if (rval < 0)
+		if (rval < 0) {
 			stopped_early = true;
 			break;
+		}
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
