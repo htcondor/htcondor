@@ -5811,30 +5811,6 @@ These settings affect the *condor_shadow*.
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor_shadow* to exit after running a single job.
 
-:macro-def:`COMPRESS_PERIODIC_CKPT`
-    A boolean value that when ``True``, directs the *condor_shadow* to
-    instruct applications to compress periodic checkpoints when
-    possible. The default is ``False``.
-
-:macro-def:`COMPRESS_VACATE_CKPT`
-    A boolean value that when ``True``, directs the *condor_shadow* to
-    instruct applications to compress vacate checkpoints when possible.
-    The default is ``False``.
-
-:macro-def:`PERIODIC_MEMORY_SYNC`
-    This boolean value specifies whether the *condor_shadow* should
-    instruct applications to commit dirty memory pages to swap space
-    during a periodic checkpoint. The default is ``False``. This
-    potentially reduces the number of dirty memory pages at vacate time,
-    thereby reducing swapping activity on the remote machine.
-
-:macro-def:`SLOW_CKPT_SPEED`
-    This macro specifies the speed at which vacate checkpoints should be
-    written, in kilobytes per second. If zero (the default), vacate
-    checkpoints are written as fast as possible. Writing vacate
-    checkpoints slowly can avoid overwhelming the remote machine with
-    swapping activity.
-
 :macro-def:`SHADOW_JOB_CLEANUP_RETRY_DELAY`
     This integer specifies the number of seconds to wait between tries
     to commit the final update to the job ClassAd in the
@@ -6532,22 +6508,6 @@ do not specify their own with:
     ``DEFAULT_RANK`` and ``DEFAULT_RANK_VANILLA`` are defined, the value
     for ``DEFAULT_RANK_VANILLA`` is used for vanilla universe jobs.
 
-:macro-def:`DEFAULT_IO_BUFFER_SIZE`
-    HTCondor keeps a buffer of recently-used data for each file an
-    application opens. This macro specifies the default maximum number
-    of bytes to be buffered for each open file at the executing machine.
-    The *condor_status* ``buffer_size`` command will override this
-    default. If this macro is undefined, a default size of 512 KB will
-    be used.
-
-:macro-def:`DEFAULT_IO_BUFFER_BLOCK_SIZE`
-    When buffering is enabled, HTCondor will attempt to consolidate
-    small read and write operations into large blocks. This macro
-    specifies the default block size HTCondor will use. The
-    *condor_status* ``buffer_block_size`` command will override this
-    default. If this macro is undefined, a default size of 32 KB will be
-    used.
-
 :macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`
     If ``True``, *condor_submit* will treat any attribute in the job
     ClassAd that begins with ``Request`` as a request for a custom resource
@@ -6721,7 +6681,6 @@ These macros affect the *condor_collector*.
     -  ``NEGOTIATOR_UPDATE_INTERVAL``
     -  ``SCHEDD_INTERVAL``
     -  ``MASTER_UPDATE_INTERVAL``
-    -  ``CKPT_SERVER_INTERVAL``
     -  ``DEFRAG_UPDATE_INTERVAL``
     -  ``HAD_UPDATE_INTERVAL``
 
