@@ -431,7 +431,7 @@ bool test_EvalStringCharStar(ClassAd *c1, ClassAd *c2, int verbose)
 {
     bool passed = false;
     bool passedTest[4];
-    int esRetVal[2]; //evalstd::string return value
+    int esRetVal[2]; //evalstring return value
 
     for(int i = 0; i < 4; i++)
     {
@@ -1185,7 +1185,7 @@ runAndCheckGIR(classad::ClassAd* c, std::string attr, std::string listString, bo
     {
     
         std::string word;
-        istd::stringstream iss(listString, istd::stringstream::in);
+        std::istringstream iss(listString, std::istringstream::in);
 
         while ( iss >> word )
         {
