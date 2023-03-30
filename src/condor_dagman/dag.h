@@ -28,11 +28,11 @@
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_id.h"
-#include "prioritysimplelist.h"
 #include "throttle_by_category.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 #include "dagman_classad.h"
+#include "dag_priority_q.h"
 
 #include <queue>
 
@@ -369,7 +369,7 @@ class Dag {
 
     /** @return the number of nodes ready to submit job to batch system
      */
-    inline int NumNodesReady() const { return _readyQ->Number(); }
+    inline int NumNodesReady() const { return _readyQ->size(); }
 
     /** @param whether to include final node, if any, in the count
 	    @return the number of nodes not ready to submit to batch system
@@ -1167,7 +1167,7 @@ private:
 	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to HTCondor
-	PrioritySimpleList<Job*>* _readyQ;
+	DagPriorityQ* _readyQ;
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log

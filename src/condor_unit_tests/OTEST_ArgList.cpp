@@ -1082,7 +1082,7 @@ static bool test_split_args_ret_false_null() {
 
 static bool test_split_args_num() {
 	emit_test("Test that split_args() adds the correct number of args to the "
-		"SimpleList for a valid arg string.");
+		"vector for a valid arg string.");
 	std::vector<std::string> args;
 	split_args(test_string, args, NULL);
 	size_t number = args.size();
@@ -1102,7 +1102,7 @@ static bool test_split_args_num() {
 }
 
 static bool test_split_args_args() {
-	emit_test("Test that split_args() adds the correct args to the SimpleList "
+	emit_test("Test that split_args() adds the correct args to the vector "
 		"for a valid arg string.");
 	std::vector<std::string> args;
 	std::string arg1, arg2, arg3, arg4;
@@ -1199,7 +1199,7 @@ static bool test_join_args_ret() {
 
 static bool test_join_args_num() {
 	emit_test("Test that split_args() adds the correct number of args to the "
-		"SimpleList after obtaining the args with join_args() for a valid arg "
+		"vector after obtaining the args with join_args() for a valid arg "
 		"string.");
 	std::string joined_args;
 	std::vector<std::string> args;
@@ -1224,7 +1224,7 @@ static bool test_join_args_num() {
 }
 
 static bool test_join_args_args() {
-	emit_test("Test that split_args() adds the correct args to the SimpleList "
+	emit_test("Test that split_args() adds the correct args to the vector "
 		"after obtaining the args with join_args() for a valid arg string.");
 	std::vector<std::string> args;
 	std::string arg1, arg2, arg3, arg4;
@@ -1276,7 +1276,7 @@ static bool test_join_args_equivalent() {
 	emit_param("Args", test_string);
 	emit_output_expected_header();
 	emit_output_actual_header();
-	emit_param("SimpleList Joined Args  ", "%s", joined_args.c_str());
+	emit_param("vector Joined Args  ", "%s", joined_args.c_str());
 	emit_param("String Array Joined Args", "%s", joined_args2.c_str());
 	arglist.Clear();
 	delete_helper(string_array, 4);
