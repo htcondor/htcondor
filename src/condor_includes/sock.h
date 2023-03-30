@@ -519,11 +519,11 @@ protected:
 	inline SOCKET get_socket (void) const { return _sock; }
 	const char * deserialize(const char *);
 	static void close_serialized_socket(char const *buf);
-	char * serialize() const;
+	void serialize(std::string& outbuf) const;
     const char * deserializeCryptoInfo(const char * buf);
-    char * serializeCryptoInfo() const;
+    void serializeCryptoInfo(std::string& outbuf) const;
     const char * deserializeMdInfo(const char * buf);
-    char * serializeMdInfo() const;
+    void serializeMdInfo(std::string& outbuf) const;
         
 	virtual int encrypt(bool);
 	///

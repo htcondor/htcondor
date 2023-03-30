@@ -86,6 +86,7 @@ class SharedPortEndpoint: Service {
 		// to be inherited so that this object can be reconstructed
 		// in a child process.
 	bool serialize(MyString &inherit_buf,int &inherit_fd);
+	bool serialize(std::string &inherit_buf,int &inherit_fd);
 
 		// Restore state of object stored with serialize().
 		// Returns pointer to anything trailing in inherit_buf.

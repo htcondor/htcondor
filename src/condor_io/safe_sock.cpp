@@ -82,11 +82,9 @@ SafeSock::SafeSock(const SafeSock & orig)
 {
 	init();
 	// now copy all cedar state info via the serialize() method
-	char *buf = NULL;
-	buf = orig.serialize();	// get state from orig sock
-	ASSERT(buf);
-	deserialize(buf);	// put the state into the new sock
-	delete [] buf;
+	std::string buf;
+	orig.serialize(buf);	// get state from orig sock
+	deserialize(buf.c_str());	// put the state into the new sock
 }
 
 Stream *
@@ -735,15 +733,11 @@ int SafeSock::attach_to_file_desc(int fd)
 #endif
 
 
-char * SafeSock::serialize() const
+void SafeSock::serialize(std::string& outbuf) const
 {
-	char * parent_state = Sock::serialize();
+	Sock::serialize(outbuf);
 
-	std::string state;
-	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().c_str() );
-	delete[] parent_state;
-
-	return strdup(state.c_str());
+	formatstr_cat( outbuf, "%d*%s*", _special_state, _who.to_sinful().c_str() );
 }
 
 const char * SafeSock::deserialize(const char *buf)

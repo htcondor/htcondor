@@ -2070,7 +2070,7 @@ Sock::timeout(int sec)
 	return t;
 }
 
-char * Sock::serializeCryptoInfo() const
+void Sock::serializeCryptoInfo(std::string& outbuf) const
 {
     const unsigned char * kserial = NULL;
     int len = 0;
@@ -2084,54 +2084,36 @@ char * Sock::serializeCryptoInfo() const
     // currently we are not serializing the ivec.  this works because the
     // crypto state (including ivec) is reset to zero after inheriting.
 
-    // here we want to save our state into a buffer
-    char * outbuf = NULL;
-    if (len > 0) {
-        int buflen = len*2+32;
-	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		// grow the buffer to hold the StreamCryptoState data
-		buflen += (3 * sizeof(StreamCryptoState));
-	}
-        outbuf = new char[buflen];
+	if (len > 0) {
+		formatstr_cat(outbuf, "%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
+		              (int)get_encryption());
 
-        snprintf(outbuf, buflen, "%d*%d*%d*", len*2, (int)get_crypto_key().getProtocol(),
-                (int)get_encryption());
+		// if protocol is 3 (AES) then we need to send the StreamCryptoState
+		if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
+			// this is daemon-to-daemon inheritance so no need to worry
+			// about byte-order.  furthermore there are no pointers, just a
+			// struct with data.  we send hex bytes, receiver serializes
+			// them.
 
-	// if protocol is 3 (AES) then we need to send the StreamCryptoState
-	if(get_crypto_key().getProtocol() == CONDOR_AESGCM) {
-		dprintf(D_NETWORK|D_VERBOSE, "SOCK: sending more StreamCryptoState!.\n");
-		// this is daemon-to-daemon inheritance so no need to worry
-		// about byte-order.  furthermore there are no pointers, just a
-		// struct with data.  we send hex bytes, receiver serializes
-		// them.
+			unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
+			for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++) {
+				formatstr_cat(outbuf, "%02X", *ccs_serial);
+			}
 
-		char * ptr = outbuf + strlen(outbuf);
-		unsigned char * ccs_serial = (unsigned char*)(&(crypto_state_->m_stream_crypto_state));
-		dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: encoding %zu bytes.\n", sizeof(StreamCryptoState));
-		for (unsigned int i=0; i < sizeof(StreamCryptoState); i++, ccs_serial++, ptr+=2) {
-			sprintf(ptr, "%02X", *ccs_serial);
+			outbuf += '*';
 		}
 
-		sprintf(ptr, "*");
-		ptr++;
+		// Hex encode the binary key
+		for (int i=0; i < len; i++, kserial++) {
+			formatstr_cat(outbuf, "%02X", *kserial);
+		}
 	}
-	dprintf(D_NETWORK|D_VERBOSE, "SOCK: buf so far: %s.\n", outbuf);
-
-        // Hex encode the binary key
-        char *ptr = outbuf + strlen(outbuf);
-        for (int i=0; i < len; i++, kserial++, ptr+=2) {
-            sprintf(ptr, "%02X", *kserial);
-        }
-    }
-    else {
-        outbuf = new char[2];
-        memset(outbuf, 0, 2);
-        snprintf(outbuf, 2, "%d", 0);
-    }
-    return( outbuf );
+	else {
+		outbuf += '0';
+	}
 }
 
-char * Sock::serializeMdInfo() const
+void Sock::serializeMdInfo(std::string& outbuf) const
 {
     const unsigned char * kmd = NULL;
     int len = 0;
@@ -2142,24 +2124,17 @@ char * Sock::serializeMdInfo() const
     }
 
 	// here we want to save our state into a buffer
-	char * outbuf = NULL;
-    if (len > 0) {
-        int buflen = len*2+32;
-        outbuf = new char[buflen];
-        snprintf(outbuf, buflen, "%d*", len*2);
+	if (len > 0) {
+		formatstr_cat(outbuf, "%d*", len*2);
 
-        // Hex encode the binary key
-        char * ptr = outbuf + strlen(outbuf);
-        for (int i=0; i < len; i++, kmd++, ptr+=2) {
-            sprintf(ptr, "%02X", *kmd);
-        }
-    }
-    else {
-        outbuf = new char[2];
-        memset(outbuf, 0, 2);
-        sprintf(outbuf,"%d",0);
-    }
-	return( outbuf );
+		// Hex encode the binary key
+		for (int i=0; i < len; i++, kmd++) {
+			formatstr_cat(outbuf, "%02X", *kmd);
+		}
+	}
+	else {
+		outbuf += '0';
+	}
 }
 
 const char * Sock::deserializeCryptoInfo(const char * buf)
@@ -2321,7 +2296,7 @@ const char * Sock::deserializeMdInfo(const char * buf)
 }
 
 
-char * Sock::serialize() const
+void Sock::serialize(std::string& outbuf) const
 {
 	// here we want to save our state into a buffer
 	size_t fqu_len = _fqu ? strlen(_fqu) : 0;
@@ -2341,25 +2316,23 @@ char * Sock::serialize() const
 		}
 	}
 
-	MyString out;
-	char * outbuf = NULL;
-	if (out.serialize_int(_sock)                 && out.serialize_sep("*") &&
-		out.serialize_int((int)_state)           && out.serialize_sep("*") &&
-		out.serialize_int(_timeout)              && out.serialize_sep("*") &&
-		out.serialize_int(triedAuthentication()) && out.serialize_sep("*") &&
-		out.serialize_int(fqu_len)               && out.serialize_sep("*") &&
-		out.serialize_int(verstring_len)         && out.serialize_sep("*") &&
-		out.serialize_string(_fqu)               && out.serialize_sep("*") &&
-		out.serialize_string(verstring)          && out.serialize_sep("*"))
-	{
-		outbuf = out.detach_buffer();
-	}
-	else
-	{
-		dprintf(D_ALWAYS, "Sock::serialize failed - Out of memory?\n");
-	}
+	outbuf += std::to_string(_sock);
+	outbuf += '*';
+	outbuf += std::to_string((int)_state);
+	outbuf += '*';
+	outbuf += std::to_string(_timeout);
+	outbuf += '*';
+	outbuf += std::to_string(triedAuthentication());
+	outbuf += '*';
+	outbuf += std::to_string(fqu_len);
+	outbuf += '*';
+	outbuf += std::to_string(verstring_len);
+	outbuf += '*';
+	outbuf += _fqu ? _fqu : "";
+	outbuf += '*';
+	outbuf += verstring ? verstring : "";
+	outbuf += '*';
 	free( verstring );
-	return( outbuf );
 }
 
 void

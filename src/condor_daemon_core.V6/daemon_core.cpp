@@ -6731,7 +6731,7 @@ int DaemonCore::Create_Process(
             )
 {
 	int i, j;
-	char *ptmp;
+	std::string ptmp;
 	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
 	std::string executable_buf;
@@ -6941,9 +6941,9 @@ int DaemonCore::Create_Process(
 					break;
 			}
 			// now serialize object into inheritbuf
-			 ptmp = sock_inherit_list[i]->serialize();
+			 ptmp.clear();
+			 sock_inherit_list[i]->serialize(ptmp);
 			 inheritbuf += ptmp;
-			 delete []ptmp;
 		}
 	}
 	inheritbuf += " 0";
@@ -6996,14 +6996,14 @@ int DaemonCore::Create_Process(
 
 			// and now add these new command sockets to the inheritbuf
 			inheritbuf += " 1 ";
-			ptmp = it->rsock()->serialize();
+			ptmp.clear();
+			it->rsock()->serialize(ptmp);
 			inheritbuf += ptmp;
-			delete []ptmp;
 			if (it->has_safesock()) {
 				inheritbuf += " 2 ";
-				ptmp = it->ssock()->serialize();
+				ptmp.clear();
+				it->ssock()->serialize(ptmp);
 				inheritbuf += ptmp;
-				free(ptmp);
 			}
 
 				// now put the actual fds into the list of fds to inherit

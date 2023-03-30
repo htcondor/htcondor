@@ -129,7 +129,7 @@ public:
 
 	// serialize and deserialize
 	const char * deserialize(const char *);
-	char * serialize() const;
+	void serialize(std::string& outbuf) const;
 
 //	PRIVATE INTERFACE TO SAFE SOCKS
 //
