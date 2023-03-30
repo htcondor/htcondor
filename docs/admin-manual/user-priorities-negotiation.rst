@@ -776,7 +776,7 @@ setting parameters in the submit file.  This can be useful if a person
 is a member of multiple groups.  However, many sites want to force all
 jobs submitted by a given user into one accounting group, and forbid
 the user to submit to any other group.  An HTCondor metaknob makes this
-easy.  By adding to the submit machine's configuration, the setting
+easy.  By adding to the access point's configuration, the setting
 
 .. code-block:: condor-config
 
