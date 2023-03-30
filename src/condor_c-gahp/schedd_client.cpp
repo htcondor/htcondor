@@ -125,6 +125,7 @@ doContactSchedd()
 	int failure_line_num = 0;
 	int failure_errno = 0;
 	std::set< std::string, classad::CaseIgnLTStr > filter_attrs;
+	std::set< std::string, classad::CaseIgnLTStr > proc_attrs;
 	bool rerun_immediately = false;
 	int max_file_requests = param_integer("C_GAHP_MAX_FILE_REQUESTS", 10);
 	int curr_file_requests = 0;
@@ -845,6 +846,9 @@ update_report_result:
 	filter_attrs.insert( ATTR_TOKEN_SCOPES );
 	filter_attrs.insert( ATTR_TOKEN_ID );
 
+	proc_attrs.insert(ATTR_PROC_ID);
+	proc_attrs.insert(ATTR_JOB_STATUS);
+
 	// SUBMIT_JOB
 	for (auto current_command: command_queue) {
 		if (current_command->status != SchedDRequest::SDCS_NEW)
@@ -860,6 +864,7 @@ update_report_result:
 
 		int ClusterId = -1;
 		int ProcId = -1;
+		bool put_in_proc = false;
 
 		if (qmgr_connection == NULL) {
 			error = TRUE;
@@ -957,13 +962,14 @@ update_report_result:
 				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 					continue;
 				}
+				put_in_proc = proc_attrs.find(lhstr) != proc_attrs.end();
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
 					formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
-				} else if( SetAttribute (ClusterId, ProcId,
+				} else if( SetAttribute (ClusterId, put_in_proc ? ProcId : -1,
 											lhstr,
 											rhstr,
 											SetAttribute_NoAck) == -1 ) {
