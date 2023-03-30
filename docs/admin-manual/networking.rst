@@ -315,7 +315,7 @@ exclusively bound to its port, which means that other non-HTCondor
 processes cannot accidentally bind to that port.
 
 A second benefit of the *condor_shared_port* daemon is that it helps
-address the scalability issues of a submit machine. Without the
+address the scalability issues of a access point. Without the
 *condor_shared_port* daemon, more than 2 ephemeral ports per running
 job are often required, depending on the rate of job completion. There
 are only 64K ports in total, and most standard Unix installations only
@@ -576,7 +576,7 @@ private network. This execute node's *condor_startd* is process B. This
 execute node cannot normally run jobs submitted from a machine that is
 outside of that private network, because bi-directional connectivity
 between the submit node and the execute node is normally required.
-However, if both execute and submit machine can connect to the CCB
+However, if both execute and access point can connect to the CCB
 server, if both are authorized by the CCB server, and if it is possible
 for the execute node within the private network to connect to the submit
 node, then it is possible for the submit node to run jobs on the execute
@@ -645,7 +645,7 @@ an equivalent. Each HTCondor process configured to use CCB with
 ``CCB_ADDRESS`` requires one persistent TCP connection to the CCB
 server. A typical execute node requires one connection for the
 *condor_master*, one for the *condor_startd*, and one for each running
-job, as represented by a *condor_starter*. A typical submit machine
+job, as represented by a *condor_starter*. A typical access point
 requires one connection for the *condor_master*, one for the
 *condor_schedd*, and one for each running job, as represented by a
 *condor_shadow*. If there will be no administrative commands required

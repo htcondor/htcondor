@@ -11,7 +11,7 @@ Enabling the Transfer of Files Specified by a URL
 :index:`output file(s) specified by URL<single: output file(s) specified by URL; file transfer mechanism>`
 :index:`URL file transfer`
 
-Because staging data on the submit machine is not always efficient,
+Because staging data on the access point is not always efficient,
 HTCondor permits input files to be transferred from a location specified
 by a URL; likewise, output files may be transferred to a location
 specified by a URL. All transfers (both input and output) are
@@ -321,7 +321,7 @@ HTCondor jobs.
 If on the other hand a Vault server is used as the OAuth client, it
 stores the refresh token long term (typically about a month since last
 use) for multiple use cases.  It can be used both by multiple HTCondor
-submit machines and by other client commands that need access tokens.
+access points and by other client commands that need access tokens.
 Submit machines keep a medium term vault token (typically about a week)
 so at most users have to authorize in their web browser once a week.  If
 kerberos is also available, new vault tokens can be obtained automatically
@@ -360,7 +360,7 @@ machine needs to be configured to execute its wsgi script as the user
 you can copy to an apache webserver's configuration directory.
 
 Third, for each OAuth2 service that one wishes to configure,
-an OAuth2 client application should be registered for each submit machine
+an OAuth2 client application should be registered for each access point
 on each service's API console.
 For example, for Box.com,
 a client can be registered by logging in to `<https://app.box.com/developers/console>`_,
@@ -386,7 +386,7 @@ For our Box.com example, this might look like:
     EXAmpL3ClI3NtS3cREt
 
 Each service will need to redirect users back
-to a known URL on the submit machine
+to a known URL on the access point
 after each user has approved access to their credentials.
 For example, Box.com asks for the "OAuth 2.0 Redirect URI."
 This should be set to match ``<OAuth2ServiceName>_RETURN_URL_SUFFIX`` such that
@@ -426,7 +426,7 @@ Using Vault as the OAuth client
 To instead configure HTCondor to use Vault as the OAuth client,
 install the ``condor-credmon-vault`` rpm.  Also install the htgettoken
 (`https://github.com/fermitools/htgettoken <https://github.com/fermitools/htgettoken>`_)
-rpm on the submit machine.  Additionally, on the submit machine
+rpm on the access point.  Additionally, on the access point
 set the ``SEC_CREDENTIAL_GETTOKEN_OPTS`` configuration option to
 ``-a <vault.name>`` where <vault.name> is the fully qualified domain name
 of the Vault machine.  *condor_submit* users will then be able to select
@@ -780,9 +780,9 @@ act as the dedicated scheduler. This becomes the machine from upon which
 all users submit their parallel universe jobs. The perfect choice for
 the dedicated scheduler is the single, front-end machine for a dedicated
 cluster of compute nodes. For the pool without an obvious choice for a
-submit machine, choose a machine that all users can log into, as well as
+access point, choose a machine that all users can log into, as well as
 one that is likely to be up and running all the time. All of HTCondor's
-other resource requirements for a submit machine apply to this machine,
+other resource requirements for a access point apply to this machine,
 such as having enough disk space in the spool directory to hold jobs.
 See :doc:`directories` for more information.
 
@@ -1988,13 +1988,13 @@ An administrator may be able to set up special AFS groups that can make
 unauthenticated access to the program's files less scary. For example,
 there is supposed to be a way for AFS to grant access to any
 unauthenticated process on a given host. If set up, write access need
-only be granted to unauthenticated processes on the submit machine, as
+only be granted to unauthenticated processes on the access point, as
 opposed to any unauthenticated process on the Internet. Similarly,
 unauthenticated read access could be granted only to processes running
-on the submit machine.
+on the access point.
 
 A solution to this problem is to not use AFS for output files. If disk
-space on the submit machine is available in a partition not on AFS,
+space on the access point is available in a partition not on AFS,
 submit the jobs from there. While the *condor_shadow* daemon is not
 authenticated to AFS, it does run with the effective UID of the user who
 submitted the jobs. So, on a local (or NFS) file system, the

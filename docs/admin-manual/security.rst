@@ -234,8 +234,8 @@ the other configured; it is enough to have secure channels from the SchedD to
 the Collector and from the StartD to the collector.  Likewise, a Negotiator can
 establish trust with a SchedD in the same way: the SchedD trusts the Collector
 to tell only trustworthy Negotiators its secret.  However, some features such
-as *condor_ssh_to_job* and *condor_tail* will not work unless the submit machine
-can authenticate directly to the execute machine, which is why we mentioned
+as *condor_ssh_to_job* and *condor_tail* will not work unless the access point
+can authenticate directly to the execute point, which is why we mentioned
 needing to distribute the signing key earlier -- if the server does not have
 the signing key, it cannot directly validate the incoming ``IDTOKEN`` used for
 authentication.

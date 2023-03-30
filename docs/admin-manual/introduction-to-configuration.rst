@@ -1037,9 +1037,7 @@ restart of HTCondor in order to use the changed value.
 
     -  C_GAHP
     -  C_GAHP_WORKER_THREAD
-    -  CKPT_SERVER
     -  COLLECTOR
-    -  DBMSD
     -  DEFRAG
     -  EC2_GAHP
     -  GANGLIAD
@@ -1060,7 +1058,6 @@ restart of HTCondor in order to use the changed value.
     -  STARTER
     -  SUBMIT
     -  TOOL
-    -  TRANSFERER
 
 ``$(DETECTED_CPUS)`` :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by
