@@ -23,8 +23,6 @@
 
 #include <iostream>
 
-using namespace std;
-
 int fill_array(Tree<int>* tree, int array[][2], int size, int index)
 {
 	int num_inserted = 0;
@@ -64,9 +62,9 @@ main()
 
 	// just a root node
 	Tree<int>* t1 = new Tree<int>(1);
-	cout << "test 1:" << endl;
+	std::cout << "test 1:" << std::endl;
 	print(t1);
-	cout << endl;
+	std::cout << std::endl;
 	
 	// root node with three children
 	Tree<int>* t12;
@@ -78,9 +76,9 @@ main()
 	assert(t13 != NULL);
 	t14 = t1->add_child(14);
 	assert(t14 != NULL);
-	cout << "test 2:" << endl;
+	std::cout << "test 2:" << std::endl;
 	print(t1);
-	cout << endl;
+	std::cout << std::endl;
 
 	// give two children each to "13" and "14"
 	tmp = t13->add_child(20);
@@ -91,27 +89,27 @@ main()
 	assert(tmp != NULL);
 	tmp = t14->add_child(23);
 	assert(tmp != NULL);
-	cout << "test 3:" << endl;
+	std::cout << "test 3:" << std::endl;
 	print(t1);
-	cout << endl;
+	std::cout << std::endl;
 
 	// detach 13
 	t13->remove();
-	cout << "test 4 (detached):" << endl;
+	std::cout << "test 4 (detached):" << std::endl;
 	print(t13);
-	cout << endl;
-	cout << "test 4 (original):" << endl;
+	std::cout << std::endl;
+	std::cout << "test 4 (original):" << std::endl;
 	print(t1);
-	cout << endl;
+	std::cout << std::endl;
 
 	// detach 14
 	t14->remove();
-	cout << "test 5 (detached):" << endl;
+	std::cout << "test 5 (detached):" << std::endl;
 	print(t14);
-	cout << endl;
-	cout << "test 5 (original):" << endl;
+	std::cout << std::endl;
+	std::cout << "test 5 (original):" << std::endl;
 	print(t1);
-	cout << endl;
+	std::cout << std::endl;
 
 	delete t1;
 
