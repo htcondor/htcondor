@@ -1222,41 +1222,6 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 #endif
 
 bool
-SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
-{
-	inherit_buf.serialize_string(m_full_name.c_str());
-	inherit_buf.serialize_sep("*");
-#ifdef WIN32
-	/*
-	Serializing requires acquiring the handles of the respective pipes and seeding them into
-	the buffer.
-	*/
-	if (inheritable_to_child && inheritable_to_child != INVALID_HANDLE_VALUE) {
-		dprintf(D_ALWAYS, "SharedPortEndpoint::serialize called when inheritable_to_child already has a value\n");
-		CloseHandle(inheritable_to_child); inheritable_to_child = INVALID_HANDLE_VALUE;
-	}
-
-	HANDLE current_process = GetCurrentProcess();
-	if(!DuplicateHandle(current_process, pipe_end, current_process, &inheritable_to_child, NULL, true, DUPLICATE_SAME_ACCESS))
-	{
-		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
-		return false;
-	}
-	inherit_buf.serialize_int((LONG_PTR)inheritable_to_child);
-	inherit_buf.serialize_sep("*");
-#else
-	inherit_fd = m_listener_sock.get_file_desc();
-	ASSERT( inherit_fd != -1 );
-
-	std::string named_sock_serial;
-	m_listener_sock.serialize(named_sock_serial);
-	inherit_buf += named_sock_serial;
-#endif
-
-	return true;
-}
-
-bool
 SharedPortEndpoint::serialize(std::string &inherit_buf,int &inherit_fd)
 {
 	inherit_buf += m_full_name;
