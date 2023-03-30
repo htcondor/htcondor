@@ -54,6 +54,10 @@ Bugs Fixed:
   architecture of the remote machine isn't x86_64.
   :jira:`1670`
 
+- Fixed *condor_c-gahp* and *condor_job_router* to submit jobs in the
+  same way as *condor_submit*.
+  :jira:`1695`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
