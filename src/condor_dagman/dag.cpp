@@ -150,7 +150,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		PrintDagFiles( dagFiles );
 	}
 
- 	_readyQ = new PrioritySimpleList<Job*>;
+ 	_readyQ = new DagPriorityQ;
 	_submitQ = new std::queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
 		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
@@ -1572,12 +1572,12 @@ Dag::StartNode( Job *node, bool isRetry )
 
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_effectivePriority );
+		_readyQ->prepend(node);
 	} else {
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_effectivePriority );
+			_readyQ->prepend(node);
 		} else {
-			_readyQ->Append( node, -node->_effectivePriority );
+			_readyQ->append(node);
 		}
 	}
 	return TRUE;
@@ -1596,17 +1596,19 @@ Dag::StartFinalNode()
 			// Note:  maybe we should change nodes in the prerun state
 			// to not ready here, to be more consistent.  But I'm not
 			// dealing with that for now.  wenger 2014-03-17
-		Job* job;
-		_readyQ->Rewind();
-		while ( _readyQ->Next( job ) ) {
+		auto nonFinal = [](Job *job) -> bool {
 			if ( !(job->GetType() == NodeType::FINAL) ) {
 				debug_printf( DEBUG_DEBUG_1,
-							"Removing node %s from ready queue\n",
-							job->GetJobName() );
-				_readyQ->DeleteCurrent();
+						"Removing node %s from ready queue\n",
+						job->GetJobName() );
 				job->SetStatus( Job::STATUS_NOT_READY );
+				return true;
 			}
-		}
+			return false;
+		};
+		auto it = std::remove_if(_readyQ->begin(), _readyQ->end(), nonFinal);
+		_readyQ->erase(it, _readyQ->end());
+		_readyQ->make_heap();
 
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
@@ -1684,7 +1686,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	time_t cycleStart = time( NULL );
 
 		// Jobs deferred by category throttles.
-	PrioritySimpleList<Job*> deferredJobs;
+	std::vector<Job*> deferredJobs;
 
 	int numSubmitsThisCycle = 0;
 
@@ -1741,7 +1743,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 //		PrintReadyQ( DEBUG_DEBUG_4 );
 
 			// no jobs ready to submit
-    	if( _readyQ->IsEmpty() ) {
+    	if( _readyQ->empty() ) {
 			break; // break out of while loop
     	}
 
@@ -1750,18 +1752,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         	debug_printf( DEBUG_DEBUG_1,
                       	"Max jobs (%d) already running; "
 					  	"deferring submission of %d ready job%s.\n",
-                      	_maxJobsSubmitted, _readyQ->Number(),
-					  	_readyQ->Number() == 1 ? "" : "s" );
-			_maxJobsDeferredCount += _readyQ->Number();
+                      	_maxJobsSubmitted, _readyQ->size(),
+					  	_readyQ->size() == 1 ? "" : "s" );
+			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
     	}
 		if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
         	debug_printf( DEBUG_DEBUG_1,
 					  	"Hit max number of idle DAG nodes (%d); "
 					  	"deferring submission of %d ready job%s.\n",
-					  	_maxIdleJobProcs, _readyQ->Number(),
-					  	_readyQ->Number() == 1 ? "" : "s" );
-			_maxIdleDeferredCount += _readyQ->Number();
+					  	_maxIdleJobProcs, _readyQ->size(),
+					  	_readyQ->size() == 1 ? "" : "s" );
+			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
 
@@ -1780,10 +1782,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		}
 
 			// remove & submit first job from ready queue
-		Job* job;
-		_readyQ->Rewind();
-		_readyQ->Next( job );
-		_readyQ->DeleteCurrent();
+		Job* job = _readyQ->pop();
 		ASSERT( job != NULL );
 
 		debug_printf( DEBUG_DEBUG_1, "Got node %s from the ready queue\n",
@@ -1803,7 +1802,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->c_str(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_effectivePriority );
+			deferredJobs.push_back(job);
 			_catThrottleDeferredCount++;
 		} else if (_dry_run) {
 			// Don't actually submit the job. Just terminate it right away
@@ -1840,13 +1839,11 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	}
 
 		// Put any deferred jobs back into the ready queue for next time.
-	deferredJobs.Rewind();
-	Job *job;
-	while ( deferredJobs.Next( job ) ) {
+	for (Job *job : deferredJobs) {
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_effectivePriority );
+		_readyQ->prepend(job);
 	}
 
 	return numSubmitsThisCycle;
@@ -1959,9 +1956,9 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_effectivePriority );
+			_readyQ->prepend(job);
 		} else {
-			_readyQ->Append( job, -job->_effectivePriority );
+			_readyQ->append(job);
 		}
 	}
 
@@ -2105,20 +2102,22 @@ void
 Dag::PrintReadyQ( debug_level_t level ) const {
 	if( DEBUG_LEVEL( level ) ) {
 		dprintf( D_ALWAYS, "Ready Queue: " );
-		if( _readyQ->IsEmpty() ) {
+		if( _readyQ->empty() ) {
 			dprintf( D_ALWAYS | D_NOHEADER, "<empty>\n" );
 			return;
 		}
-		_readyQ->Rewind();
-		Job* job = 0;
-		_readyQ->Next( job );
-		if( job ) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%s", job->GetJobName() );
+
+		auto it = _readyQ->begin();
+		bool first = true;
+		while (it != _readyQ->end()) {
+			if (first) {
+				first = false;
+				dprintf( D_ALWAYS | D_NOHEADER, "%s", (*it)->GetJobName() );
+			} else {
+				dprintf( D_ALWAYS | D_NOHEADER, ", %s", (*it)->GetJobName() );
+			}
+			it++;
 		}
-		while( _readyQ->Next( job ) ) {
-			dprintf( D_ALWAYS | D_NOHEADER, ", %s", job->GetJobName() );
-		}
-		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 	}
 }
 
@@ -4352,9 +4351,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_effectivePriority);
+			_readyQ->prepend(node);
 		} else {
-			_readyQ->Append(node, -node->_effectivePriority);
+			_readyQ->append(node);
 		}
 	}
 }

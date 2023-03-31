@@ -402,6 +402,7 @@ class Job {
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
 
+	void setSubPrio(int subPrio) { this->subPriority = subPrio;}
 private:
     /** */ CondorID _CondorID;
 public:
@@ -486,6 +487,13 @@ public:
 		// actually submit the job (explicit priority adjusted
 		// according to the DAG priority algorithm).
 	int _effectivePriority;
+
+	// We sort the nodes by effective priority above, but we often want
+	// to further sort nodes of the same effective priority by another
+	// criteria, e.g. to shuffle a recently-failed node to the end
+	// of the set of nodes of the same priority.  This field does
+	// that.
+	int subPriority;
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster
