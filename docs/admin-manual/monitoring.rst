@@ -34,13 +34,13 @@ If Ganglia is already deployed in the pool, the monitoring of HTCondor
 is enabled by running the *condor_gangliad* daemon on a single machine
 within the pool. If the machine chosen is the one running Ganglia's
 *gmetad*, then the HTCondor configuration consists of adding
-``GANGLIAD`` to the definition of configuration variable ``DAEMON_LIST``
+:macro:`GANGLIAD` to the definition of configuration variable :macro:`DAEMON_LIST`
 on that machine. It may be advantageous to run the *condor_gangliad*
 daemon on the same machine as is running the *condor_collector* daemon,
 because on a large pool with many ClassAds, there is likely to be less
 network traffic. If the *condor_gangliad* daemon is to run on a
 different machine than the one running Ganglia's *gmetad*, modify
-configuration variable ``GANGLIA_GSTAT_COMMAND``
+configuration variable :macro:`GANGLIA_GSTAT_COMMAND`
 :index:`GANGLIA_GSTAT_COMMAND` to get the list of monitored hosts
 from the master *gmond* program.
 
@@ -49,27 +49,22 @@ separate server running Ganglia.
 
 By default, the *condor_gangliad* will only propagate metrics to hosts
 that are already monitored by Ganglia. Set configuration variable
-``GANGLIA_SEND_DATA_FOR_ALL_HOSTS``
-:index:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a
+:macro:`GANGLIA_SEND_DATA_FOR_ALL_HOSTS` to ``True`` to set up a
 Ganglia host to monitor a pool not monitored by Ganglia or have a
 heterogeneous pool where some hosts are not monitored. In this case,
 default graphs that Ganglia provides will not be present. However, the
 HTCondor metrics will appear.
 
 On large pools, setting configuration variable
-``GANGLIAD_PER_EXECUTE_NODE_METRICS``
-:index:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will
-reduce the amount of data sent to Ganglia. The execute node data is the
-least important to monitor. One can also limit the amount of data by
-setting configuration variable ``GANGLIAD_REQUIREMENTS``
-:index:`GANGLIAD_REQUIREMENTS`. Be aware that aggregate sums over
-the entire pool will not be accurate if this variable limits the
-ClassAds queried.
+:macro:`GANGLIAD_PER_EXECUTE_NODE_METRICS` to ``False`` will reduce the amount
+of data sent to Ganglia. The execute node data is the least important to
+monitor. One can also limit the amount of data by setting configuration
+variable :macro:`GANGLIAD_REQUIREMENTS` Be aware that aggregate sums over the
+entire pool will not be accurate if this variable limits the ClassAds queried.
 
 Metrics to be sent to Ganglia are specified in all files within the
 directory specified by configuration variable
-``GANGLIAD_METRICS_CONFIG_DIR``
-:index:`GANGLIAD_METRICS_CONFIG_DIR`. Each file in the directory
+:macro:`GANGLIAD_METRICS_CONFIG_DIR`. Each file in the directory
 is read, and the format within each file is that of New ClassAds. Here
 is an example of a single metric definition given as a New ClassAd:
 
@@ -100,8 +95,7 @@ Recognized metric attribute names and their use:
  Verbosity
     The integer verbosity level of this metric. Metrics with a higher
     verbosity level than that specified by configuration variable
-    ``GANGLIA_VERBOSITY`` :index:`GANGLIA_VERBOSITY` will not be
-    published.
+    :macro:`GANGLIA_VERBOSITY` will not be published.
  TargetType
     A string containing a comma-separated list of daemon ClassAd types
     that this metric monitors. The specified values should match the
@@ -125,8 +119,7 @@ Recognized metric attribute names and their use:
  Cluster
     A string specifying the cluster name for this metric. The default
     cluster name is taken from the configuration variable
-    ``GANGLIAD_DEFAULT_CLUSTER``
-    :index:`GANGLIAD_DEFAULT_CLUSTER`.
+    :macro:`GANGLIAD_DEFAULT_CLUSTER`.
  Units
     A string describing the units of this metric.
  Scale
@@ -193,8 +186,7 @@ Recognized metric attribute names and their use:
     *condor_collector* daemon's machine name.
  Machine
     The name of the host associated with this metric. If configuration
-    variable ``GANGLIAD_DEFAULT_MACHINE``
-    :index:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
+    variable :macro:`GANGLIAD_DEFAULT_MACHINE` is not specified, the
     default is taken from the ``Machine`` attribute of the daemon
     ClassAd. If the daemon name is of the form name@hostname, this may
     indicate that there are multiple instances of HTCondor running on
@@ -204,8 +196,7 @@ Recognized metric attribute names and their use:
     of ``Machine`` will be the name of the *condor_collector* host.
  IP
     A string containing the IP address of the host associated with this
-    metric. If ``GANGLIAD_DEFAULT_IP``
-    :index:`GANGLIAD_DEFAULT_IP` is not specified, the default is
+    metric. If :macro:`GANGLIAD_DEFAULT_IP` is not specified, the default is
     extracted from the ``MyAddress`` attribute of the daemon ClassAd.
     This value must be unique for each machine published to Ganglia. It
     need not be a valid IP address. If the value of ``Machine`` contains
@@ -228,9 +219,9 @@ Absent ClassAds
 
 By default, HTCondor assumes that resources are transient: the
 *condor_collector* will discard ClassAds older than
-``CLASSAD_LIFETIME`` :index:`CLASSAD_LIFETIME` seconds. Its
+:macro:`CLASSAD_LIFETIME` seconds. Its
 default configuration value is 15 minutes, and as such, the default
-value for ``UPDATE_INTERVAL`` :index:`UPDATE_INTERVAL` will pass
+value for :macro:`UPDATE_INTERVAL` will pass
 three times before HTCondor forgets about a resource. In some pools,
 especially those with dedicated resources, this approach may make it
 unnecessarily difficult to determine what the composition of the pool
@@ -240,7 +231,7 @@ pool, if HTCondor were properly functioning on all of them.
 This assumption of transient machines can be modified by the use of
 absent ClassAds. When a machine ClassAd would otherwise expire, the
 *condor_collector* evaluates the configuration variable
-``ABSENT_REQUIREMENTS`` :index:`ABSENT_REQUIREMENTS` against the
+:macro:`ABSENT_REQUIREMENTS` against the
 machine ClassAd. If ``True``, the machine ClassAd will be saved in a
 persistent manner and be marked as absent; this causes the machine to
 appear in the output of ``condor_status -absent``. When the machine
@@ -249,13 +240,11 @@ invalidate the absent machine ClassAd.
 
 Absent ClassAds, like offline ClassAds, are stored to disk to ensure
 that they are remembered, even across *condor_collector* crashes. The
-configuration variable ``COLLECTOR_PERSISTENT_AD_LOG``
-:index:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
+configuration variable :macro:`COLLECTOR_PERSISTENT_AD_LOG` defines the file in which the
 ClassAds are stored, and replaces the no longer used variable
 ``OFFLINE_LOG``. Absent ClassAds are retained on disk as maintained by
 the *condor_collector* for a length of time in seconds defined by the
-configuration variable ``ABSENT_EXPIRE_ADS_AFTER``
-:index:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
+configuration variable :macro:`ABSENT_EXPIRE_ADS_AFTER`. A value of 0 for this variable
 means that the ClassAds are never discarded, and the default value is
 thirty days.
 
@@ -273,9 +262,9 @@ invalidated ClassAd. An example of a ClassAd that could benefit from
 being absent is a system with an uninterruptible power supply that shuts
 down cleanly but unexpectedly as a result of a power outage. To cause
 all invalidated ClassAds to become absent instead of invalidated, set
-``EXPIRE_INVALIDATED_ADS`` :index:`EXPIRE_INVALIDATED_ADS` to
+:macro:`EXPIRE_INVALIDATED_ADS` to
 ``True``. Invalidated ClassAds will instead be treated as if they
-expired, including when evaluating ``ABSENT_REQUIREMENTS``.
+expired, including when evaluating :macro:`ABSENT_REQUIREMENTS`.
 
 GPUs
 ----
@@ -400,8 +389,8 @@ example:
       $ condor_status -pool condor.view.host[:portnumber]
 
 A *condor_collector* may also be configured to report to multiple
-HTCondorView servers. The configuration variable ``CONDOR_VIEW_HOST``
-:index:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
+HTCondorView servers. The configuration variable 
+:macro:`CONDOR_VIEW_HOST` can be given as a list of HTCondorView
 servers separated by commas and/or spaces.
 
 The following demonstrates an example configuration for two HTCondorView
@@ -427,9 +416,8 @@ are running on the same machine, localhost.localdomain:
     CONDOR_VIEW_HOST = localhost.localdomain:12345 localhost.localdomain:24680
     DAEMON_LIST = $(DAEMON_LIST) VIEWSERV01 VIEWSERV02
 
-Note that the value of ``CONDOR_VIEW_HOST``
-:index:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02 is unset,
-to prevent them from inheriting the global value of ``CONDOR_VIEW_HOST``
-and attempting to report to themselves or each other. If the
-HTCondorView servers are running on different machines where there is no
+Note that the value of :macro:`CONDOR_VIEW_HOST` for VIEWSERV01 and VIEWSERV02
+is unset, to prevent them from inheriting the global value of
+``CONDOR_VIEW_HOST`` and attempting to report to themselves or each other. If
+the HTCondorView servers are running on different machines where there is no
 global value for ``CONDOR_VIEW_HOST``, this precaution is not required.
