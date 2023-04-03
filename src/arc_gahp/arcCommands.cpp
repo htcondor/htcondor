@@ -952,8 +952,7 @@ bool ArcJobStatusAllArgsCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 4) &&
 		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]);
+		verify_string_name(argv[2]);
 }
 
 // Expecting:ARC_JOB_STATUS_ALL <req_id> <serviceurl> <statuses>
