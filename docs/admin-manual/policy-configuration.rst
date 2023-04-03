@@ -2618,7 +2618,7 @@ allocating the job-requested number of cores to the dynamic slot, and
 use :macro:`SLOT_WEIGHT` to assess the user usage
 that will affect user priority by the number of cores allocated. Note
 that the only attributes valid within the 
-:ndex:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
+:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
 must the set to the same value on all machines in the pool.
 
 .. code-block:: text
