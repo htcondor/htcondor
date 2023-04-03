@@ -264,7 +264,7 @@ down cleanly but unexpectedly as a result of a power outage. To cause
 all invalidated ClassAds to become absent instead of invalidated, set
 :macro:`EXPIRE_INVALIDATED_ADS` to
 ``True``. Invalidated ClassAds will instead be treated as if they
-expired, including when evaluating macro:`ABSENT_REQUIREMENTS`.
+expired, including when evaluating :macro:`ABSENT_REQUIREMENTS`.
 
 GPUs
 ----
