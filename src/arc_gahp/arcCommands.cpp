@@ -603,9 +603,13 @@ bool HttpRequest::SendRequest()
 	}
 
 	arc_gahp_release_big_mutex();
-	pthread_mutex_lock( & globalCurlMutex );
+	if (lock_for_curl) {
+		pthread_mutex_lock( & globalCurlMutex );
+	}
 	rv = curl_easy_perform( curl );
-	pthread_mutex_unlock( & globalCurlMutex );
+	if (lock_for_curl) {
+		pthread_mutex_unlock( & globalCurlMutex );
+	}
 	arc_gahp_grab_big_mutex();
 	if( rv != 0 ) {
 		this->errorCode = "499";
