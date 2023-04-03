@@ -73,7 +73,7 @@ else (WINDOWS)
 	# The following is helpful if you are trying to debug cmake find module
 	#  set (Boost_DEBUG TRUE)
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
-	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
+	find_package( Boost 1.68 COMPONENTS ${BOOST_COMPONENTS} )
 
 	append_var (CONDOR_EXTERNAL_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 	set (BOOST_VER ${Boost_VERSION})
