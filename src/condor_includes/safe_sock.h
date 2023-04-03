@@ -128,8 +128,8 @@ public:
 	virtual int peek(char &);
 
 	// serialize and deserialize
-	const char * serialize(const char *);
-	char * serialize() const;
+	const char * deserialize(const char *);
+	void serialize(std::string& outbuf) const;
 
 //	PRIVATE INTERFACE TO SAFE SOCKS
 //

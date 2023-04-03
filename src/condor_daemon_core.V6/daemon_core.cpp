@@ -5644,8 +5644,8 @@ public:
 		const ArgList &the_args,
 		int the_job_opt_mask,
 		const Env *the_env,
-		const MyString &the_inheritbuf,
-		const MyString &the_privateinheritbuf,
+		const std::string &the_inheritbuf,
+		const std::string &the_privateinheritbuf,
 		pid_t the_forker_pid,
 		time_t the_time_of_fork,
 		unsigned int the_mii,
@@ -5716,8 +5716,8 @@ private:
 	const ArgList &m_args;
 	const int m_job_opt_mask;
 	const Env *m_env;
-	const MyString &m_inheritbuf;
-	const MyString &m_privateinheritbuf;
+	const std::string &m_inheritbuf;
+	const std::string &m_privateinheritbuf;
 	const pid_t m_forker_pid;
 	const time_t m_time_of_fork;
 	const unsigned int m_mii;
@@ -6731,7 +6731,7 @@ int DaemonCore::Create_Process(
             )
 {
 	int i, j;
-	char *ptmp;
+	std::string ptmp;
 	int inheritFds[MAX_INHERIT_FDS + 1];
 	int numInheritFds = 0;
 	std::string executable_buf;
@@ -6749,7 +6749,7 @@ int DaemonCore::Create_Process(
 	int return_errno = 0;
 	pid_t newpid = FALSE; //return FALSE to caller, by default
 
-	MyString inheritbuf;
+	std::string inheritbuf;
 		// note that these are on the stack; they go away nicely
 		// upon return from this function.
 	SockPairVec socks;
@@ -6762,7 +6762,7 @@ int DaemonCore::Create_Process(
 	pid_t forker_pid;
 	//Security session ID and key for daemon core processes.
 	std::string session_id;
-	MyString privateinheritbuf;
+	std::string privateinheritbuf;
 
 #ifdef WIN32
 
@@ -6885,7 +6885,7 @@ int DaemonCore::Create_Process(
 		ASSERT(m_proc_family);
 	}
 
-	inheritbuf.formatstr("%lu ",(unsigned long)mypid);
+	formatstr(inheritbuf, "%lu ",(unsigned long)mypid);
 
 		// true = Give me a real local address, circumventing
 		//  CCB's trickery if present.  As this address is
@@ -6894,12 +6894,12 @@ int DaemonCore::Create_Process(
 		// If m_inherit_parent_sinful is set, then the daemon wants
 		//   this child to use an alternate sinful to contact it.
 	if ( m_inherit_parent_sinful.empty() ) {
-		MyString mysin = InfoCommandSinfulStringMyself(true);
-		// ASSERT(mysin.Length() > 0); // Empty entry means unparsable string.
-		if ( mysin.length() < 1 ) {
+		const char* mysin = InfoCommandSinfulStringMyself(true);
+		// ASSERT(mysin && mysin[0]); // Empty entry means unparsable string.
+		if ( !mysin || !mysin[0] ) {
 			dprintf( D_ALWAYS, "Warning: mysin has length 0 (ignore if produced by DAGMan; see gittrac #4987, #5031)\n" );
 		}
-		inheritbuf += mysin;
+		inheritbuf += mysin ? mysin : "";
 	} else {
 		inheritbuf += m_inherit_parent_sinful;
 	}
@@ -6941,9 +6941,7 @@ int DaemonCore::Create_Process(
 					break;
 			}
 			// now serialize object into inheritbuf
-			 ptmp = sock_inherit_list[i]->serialize();
-			 inheritbuf += ptmp;
-			 delete []ptmp;
+			 sock_inherit_list[i]->serialize(inheritbuf);
 		}
 	}
 	inheritbuf += " 0";
@@ -6996,14 +6994,10 @@ int DaemonCore::Create_Process(
 
 			// and now add these new command sockets to the inheritbuf
 			inheritbuf += " 1 ";
-			ptmp = it->rsock()->serialize();
-			inheritbuf += ptmp;
-			delete []ptmp;
+			it->rsock()->serialize(inheritbuf);
 			if (it->has_safesock()) {
 				inheritbuf += " 2 ";
-				ptmp = it->ssock()->serialize();
-				inheritbuf += ptmp;
-				free(ptmp);
+				it->ssock()->serialize(inheritbuf);
 			}
 
 				// now put the actual fds into the list of fds to inherit
@@ -7298,10 +7292,10 @@ int DaemonCore::Create_Process(
 
 
 		if( HAS_DCJOBOPT_ENV_INHERIT(job_opt_mask) && HAS_DCJOBOPT_CONDOR_ENV_INHERIT(job_opt_mask) ) {
-			job_environ.SetEnv( ENV_CONDOR_INHERIT, inheritbuf.Value() );
+			job_environ.SetEnv( ENV_CONDOR_INHERIT, inheritbuf.c_str() );
 
-			if( !privateinheritbuf.IsEmpty() ) {
-				job_environ.SetEnv( ENV_CONDOR_PRIVATE, privateinheritbuf.Value() );
+			if( !privateinheritbuf.empty() ) {
+				job_environ.SetEnv( ENV_CONDOR_PRIVATE, privateinheritbuf.c_str() );
 			}
 		}
 
@@ -8720,7 +8714,7 @@ int extractInheritedSocks (
 				// inherit a relisock
 				ReliSock * rsock = new ReliSock();
 				ptmp = list.next();
-				rsock->serialize(ptmp);
+				rsock->deserialize(ptmp);
 				rsock->set_inheritable(FALSE);
 				dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 				// place into array...
@@ -8730,7 +8724,7 @@ int extractInheritedSocks (
 			case '2': {
 				SafeSock * ssock = new SafeSock();
 				ptmp = list.next();
-				ssock->serialize(ptmp);
+				ssock->deserialize(ptmp);
 				ssock->set_inheritable(FALSE);
 				dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 				// place into array...
@@ -8887,7 +8881,7 @@ DaemonCore::Inherit( void )
 					// inherit a relisock
 					ReliSock * rsock = new ReliSock();
 					ptmp=inherit_list.next();
-					rsock->serialize(ptmp);
+					rsock->deserialize(ptmp);
 					rsock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a ReliSock\n");
 					// place into array...
@@ -8897,7 +8891,7 @@ DaemonCore::Inherit( void )
 				case '2': {
 					SafeSock * ssock = new SafeSock();
 					ptmp=inherit_list.next();
-					ssock->serialize(ptmp);
+					ssock->deserialize(ptmp);
 					ssock->set_inheritable(FALSE);
 					dprintf(D_DAEMONCORE,"Inherited a SafeSock\n");
 					// place into array...
@@ -8939,7 +8933,7 @@ DaemonCore::Inherit( void )
 						dc_socks.push_back(SockPair());
 					}
 					dc_socks.back().has_relisock(true);
-					dc_socks.back().rsock()->serialize(ptmp);
+					dc_socks.back().rsock()->deserialize(ptmp);
 					dc_socks.back().rsock()->set_inheritable(FALSE);
 					break;
 				}
@@ -8957,7 +8951,7 @@ DaemonCore::Inherit( void )
 							dc_socks.push_back(SockPair());
 						}
 						dc_socks.back().has_safesock(true);
-						dc_socks.back().ssock()->serialize(ptmp);
+						dc_socks.back().ssock()->deserialize(ptmp);
 						dc_socks.back().ssock()->set_inheritable(FALSE);
 					}
 					break;
