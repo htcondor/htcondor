@@ -1362,9 +1362,8 @@ void ReliSock::serializeMsgInfo(std::string& outbuf) const
 
 	if(m_final_mds.size()) {
 		outbuf += '*';
-		const unsigned char * vecdata = m_final_mds.data();
-		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++) {
-			formatstr_cat(outbuf, "%02X", *vecdata);
+		for (unsigned char c: m_final_mds) {
+			formatstr_cat(outbuf, "%02X", c);
 		}
 	}
 }
