@@ -812,39 +812,36 @@ Authentication
 
 The client side of any communication uses one of two macros to specify
 whether authentication is to occur:
-:macro:`SEC_DEFAULT_AUTHENTICATION`
-:macro:`SEC_CLIENT_AUTHENTICATION`
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION
-        SEC_CLIENT_AUTHENTICATION
++-----------------------------------+-----------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION`|:macro:`SEC_CLIENT_AUTHENTICATION` |
++-----------------------------------+-----------------------------------+
 
 For the daemon side, there are a larger number of macros to specify
 whether authentication is to take place, based upon the necessary access
-level: :macro:`SEC_DEFAULT_AUTHENTICATION`
-:macro:`SEC_READ_AUTHENTICATION`
-:macro:`SEC_WRITE_AUTHENTICATION`
-:macro:`SEC_ADMINISTRATOR_AUTHENTICATION`
-:macro:`SEC_CONFIG_AUTHENTICATION`
-:macro:`SEC_DAEMON_AUTHENTICATION`
-:macro:`SEC_NEGOTIATOR_AUTHENTICATION`
-:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION`
-:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION`
-:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION`
+level:
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION
-        SEC_READ_AUTHENTICATION
-        SEC_WRITE_AUTHENTICATION
-        SEC_ADMINISTRATOR_AUTHENTICATION
-        SEC_CONFIG_AUTHENTICATION
-        SEC_DAEMON_AUTHENTICATION
-        SEC_NEGOTIATOR_AUTHENTICATION
-        SEC_ADVERTISE_MASTER_AUTHENTICATION
-        SEC_ADVERTISE_STARTD_AUTHENTICATION
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION
++--------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION`         |
++--------------------------------------------+
+|:macro:`SEC_READ_AUTHENTICATION`            |
++--------------------------------------------+
+|:macro:`SEC_WRITE_AUTHENTICATION`           |
++--------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_AUTHENTICATION`   |
++--------------------------------------------+
+|:macro:`SEC_CONFIG_AUTHENTICATION`          |
++--------------------------------------------+
+|:macro:`SEC_DAEMON_AUTHENTICATION`          |
++--------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_AUTHENTICATION`      |
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION`|
++--------------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -870,38 +867,36 @@ definition.
 If authentication is to be done, then the communicating parties must
 negotiate a mutually acceptable method of authentication to be used. A
 list of acceptable methods may be provided by the client, using the
-macros :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`
-:macro:`SEC_CLIENT_AUTHENTICATION_METHODS`
+macros
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION_METHODS
-        SEC_CLIENT_AUTHENTICATION_METHODS
++-------------------------------------------+-------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`|:macro:`SEC_CLIENT_AUTHENTICATION_METHODS` |
++-------------------------------------------+-------------------------------------------+
 
 A list of acceptable methods may be provided by the daemon, using the
-macros :macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`
-:macro:`SEC_READ_AUTHENTICATION_METHODS`
-:macro:`SEC_WRITE_AUTHENTICATION_METHODS`
-:macro:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`
-:macro:`SEC_DAEMON_AUTHENTICATION_METHODS`
-:macro:`SEC_CONFIG_AUTHENTICATION_METHODS`
-:macro:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`
-:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`
-:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`
-:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS`
+macros
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION_METHODS
-        SEC_READ_AUTHENTICATION_METHODS
-        SEC_WRITE_AUTHENTICATION_METHODS
-        SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
-        SEC_CONFIG_AUTHENTICATION_METHODS
-        SEC_DAEMON_AUTHENTICATION_METHODS
-        SEC_NEGOTIATOR_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS
++----------------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`         |
++----------------------------------------------------+
+|:macro:`SEC_READ_AUTHENTICATION_METHODS`            |
++----------------------------------------------------+
+|:macro:`SEC_WRITE_AUTHENTICATION_METHODS`           |
++----------------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`   |
++----------------------------------------------------+
+|:macro:`SEC_DAEMON_AUTHENTICATION_METHODS`          |
++----------------------------------------------------+
+|:macro:`SEC_CONFIG_AUTHENTICATION_METHODS`          |
++----------------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`      |
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available to be
@@ -1752,38 +1747,34 @@ Through configuration macros, both the client and the daemon can specify
 whether encryption is required for further communication.
 
 The client uses one of two macros to enable or disable encryption:
-:macro:`SEC_DEFAULT_ENCRYPTION`
-:macro:`SEC_CLIENT_ENCRYPTION`
 
-.. code-block:: text
-
-    SEC_DEFAULT_ENCRYPTION
-    SEC_CLIENT_ENCRYPTION
++-------------------------------+-------------------------------+
+|:macro:`SEC_DEFAULT_ENCRYPTION`|:macro:`SEC_CLIENT_ENCRYPTION` |
++-------------------------------+-------------------------------+
 
 For the daemon, there are many macros to enable or disable encryption:
-:macro:`SEC_DEFAULT_ENCRYPTION`
-:macro:`SEC_READ_ENCRYPTION`
-:macro:`SEC_WRITE_ENCRYPTION`
-:macro:`SEC_ADMINISTRATOR_ENCRYPTION`
-:macro:`SEC_DAEMON_ENCRYPTION`
-:macro:`SEC_CONFIG_ENCRYPTION`
-:macro:`SEC_NEGOTIATOR_ENCRYPTION`
-:macro:`SEC_ADVERTISE_MASTER_ENCRYPTION`
-:macro:`SEC_ADVERTISE_STARTD_ENCRYPTION`
-:macro:`SEC_ADVERTISE_SCHEDD_ENCRYPTION`
 
-.. code-block:: text
-
-    SEC_DEFAULT_ENCRYPTION
-    SEC_READ_ENCRYPTION
-    SEC_WRITE_ENCRYPTION
-    SEC_ADMINISTRATOR_ENCRYPTION
-    SEC_CONFIG_ENCRYPTION
-    SEC_DAEMON_ENCRYPTION
-    SEC_NEGOTIATOR_ENCRYPTION
-    SEC_ADVERTISE_MASTER_ENCRYPTION
-    SEC_ADVERTISE_STARTD_ENCRYPTION
-    SEC_ADVERTISE_SCHEDD_ENCRYPTION
++----------------------------------------+
+|:macro:`SEC_DEFAULT_ENCRYPTION`         |
++----------------------------------------+
+|:macro:`SEC_READ_ENCRYPTION`            |
++----------------------------------------+
+|:macro:`SEC_WRITE_ENCRYPTION`           |
++----------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_ENCRYPTION`   |
++----------------------------------------+
+|:macro:`SEC_DAEMON_ENCRYPTION`          |
++----------------------------------------+
+|:macro:`SEC_CONFIG_ENCRYPTION`          |
++----------------------------------------+
+|:macro:`SEC_NEGOTIATOR_ENCRYPTION`      |
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_ENCRYPTION`|
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_ENCRYPTION`|
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_ENCRYPTION`|
++----------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1817,29 +1808,28 @@ macros :macro:`SEC_DEFAULT_CRYPTO_METHODS` and
 
 A list of acceptable methods may be provided by the daemon, using the
 macros 
-:macro:`SEC_DEFAULT_CRYPTO_METHODS`
-:macro:`SEC_READ_CRYPTO_METHODS`
-:macro:`SEC_WRITE_CRYPTO_METHODS`
-:macro:`SEC_ADMINISTRATOR_CRYPTO_METHODS`
-:macro:`SEC_DAEMON_CRYPTO_METHODS`
-:macro:`SEC_CONFIG_CRYPTO_METHODS`
-:macro:`SEC_NEGOTIATOR_CRYPTO_METHODS`
-:macro:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`
-:macro:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`
-:macro:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS`
 
-.. code-block:: text
-
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_READ_CRYPTO_METHODS
-    SEC_WRITE_CRYPTO_METHODS
-    SEC_ADMINISTRATOR_CRYPTO_METHODS
-    SEC_CONFIG_CRYPTO_METHODS
-    SEC_DAEMON_CRYPTO_METHODS
-    SEC_NEGOTIATOR_CRYPTO_METHODS
-    SEC_ADVERTISE_MASTER_CRYPTO_METHODS
-    SEC_ADVERTISE_STARTD_CRYPTO_METHODS
-    SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
++--------------------------------------------+
+|:macro:`SEC_DEFAULT_CRYPTO_METHODS`         |
++--------------------------------------------+
+|:macro:`SEC_READ_CRYPTO_METHODS`            |
++--------------------------------------------+
+|:macro:`SEC_WRITE_CRYPTO_METHODS`           |
++--------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_CRYPTO_METHODS`   |
++--------------------------------------------+
+|:macro:`SEC_DAEMON_CRYPTO_METHODS`          |
++--------------------------------------------+
+|:macro:`SEC_CONFIG_CRYPTO_METHODS`          |
++--------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_CRYPTO_METHODS`      |
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS`|
++--------------------------------------------+
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the encryption methods that are available to be
@@ -1869,36 +1859,36 @@ both the client and the daemon can specify whether an integrity check is
 required of further communication.
 
 The client uses one of two macros to enable or disable an integrity
-check: :macro:`SEC_DEFAULT_INTEGRITY`
-:macro:`SEC_CLIENT_INTEGRITY`
+check:
 
-.. code-block:: text
-
-    SEC_DEFAULT_INTEGRITY
-    SEC_CLIENT_INTEGRITY
++------------------------------+-----------------------------+
+|:macro:`SEC_DEFAULT_INTEGRITY`|:macro:`SEC_CLIENT_INTEGRITY`|
++------------------------------+-----------------------------+
 
 For the daemon, there are macros to enable or disable an integrity
-check: :macro:`SEC_DEFAULT_INTEGRITY`
-:macro:`SEC_READ_INTEGRITY` :index:`SEC_WRITE_INTEGRITY`
-:macro:`SEC_ADMINISTRATOR_INTEGRITY`
-:macro:`SEC_DAEMON_INTEGRITY` :index:`SEC_CONFIG_INTEGRITY`
-:macro:`SEC_NEGOTIATOR_INTEGRITY`
-:macro:`SEC_ADVERTISE_MASTER_INTEGRITY`
-:macro:`SEC_ADVERTISE_STARTD_INTEGRITY`
-:macro:`SEC_ADVERTISE_SCHEDD_INTEGRITY`
+check:
 
-.. code-block:: text
-
-    SEC_DEFAULT_INTEGRITY
-    SEC_READ_INTEGRITY
-    SEC_WRITE_INTEGRITY
-    SEC_ADMINISTRATOR_INTEGRITY
-    SEC_CONFIG_INTEGRITY
-    SEC_DAEMON_INTEGRITY
-    SEC_NEGOTIATOR_INTEGRITY
-    SEC_ADVERTISE_MASTER_INTEGRITY
-    SEC_ADVERTISE_STARTD_INTEGRITY
-    SEC_ADVERTISE_SCHEDD_INTEGRITY
++---------------------------------------+
+|:macro:`SEC_DEFAULT_INTEGRITY`         |
++---------------------------------------+
+|:macro:`SEC_READ_INTEGRITY`            |
++---------------------------------------+
+|:macro:`SEC_WRITE_INEGRITY`            |
++---------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_INTEGRITY`   |
++---------------------------------------+
+|:macro:`SEC_DAEMON_INTEGRITY`          |
++---------------------------------------+
+|:macro:`SEC_CONFIG_INTEGRITY`          |
++---------------------------------------+
+|:macro:`SEC_NEGOTIATOR_INTEGRITY`      |
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_INTEGRITY`|
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_INTEGRITY`|
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_INTEGRITY`|
++---------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1961,48 +1951,34 @@ daemon is executed.
 These configuration macros define a set of users that will be allowed to
 (or denied from) carrying out various HTCondor commands. Each access
 level may have its own list of authorized users. A complete list of the
-authorization macros: :macro:`ALLOW_READ`
-:macro:`ALLOW_WRITE` :macro:`ALLOW_ADMINISTRATOR`
-:macro:`ALLOW_CONFIG` :macro:`ALLOW_DAEMON`
-:macro:`ALLOW_NEGOTIATOR`
-:macro:`DENY_READ` :macro:`DENY_WRITE`
-:macro:`DENY_ADMINISTRATOR` :macro:`DENY_CONFIG`
-:macro:`DENY_DAEMON`
-:macro:`DENY_NEGOTIATOR`
+authorization macros:
 
-.. code-block:: text
-
-    ALLOW_READ
-    ALLOW_WRITE
-    ALLOW_ADMINISTRATOR
-    ALLOW_CONFIG
-    ALLOW_NEGOTIATOR
-    ALLOW_DAEMON
-    DENY_READ
-    DENY_WRITE
-    DENY_ADMINISTRATOR
-    DENY_CONFIG
-    DENY_NEGOTIATOR
-    DENY_DAEMON
++----------------------------+----------------------------+
+|:macro:`ALLOW_READ`         |:macro:`DENY_READ`          |
++----------------------------+----------------------------+
+|:macro:`ALLOW_WRITE`        |:macro:`DENY_WRITE`         |
++----------------------------+----------------------------+
+|:macro:`ALLOW_ADMINISTRATOR`|:macro:`DENY_ADMINISTRATOR` |
++----------------------------+----------------------------+
+|:macro:`ALLOW_CONFIG`       |:macro:`DENY_CONFIG`        |
++----------------------------+----------------------------+
+|:macro:`ALLOW_DAEMON`       |:macro:`DENY_DAEMON`        |
++----------------------------+----------------------------+
+|:macro:`ALLOW_NEGOTIATOR`   |:macro:`DENY_NEGOTIATOR`    |
++----------------------------+----------------------------+
 
 In addition, the following are used to control authorization of specific
 types of HTCondor daemons when advertising themselves to the pool. If
 unspecified, these default to the broader ``ALLOW_DAEMON`` and
-``DENY_DAEMON`` settings. :macro:`ALLOW_ADVERTISE_MASTER`
-:macro:`ALLOW_ADVERTISE_STARTD`
-:macro:`ALLOW_ADVERTISE_SCHEDD`
-:macro:`DENY_ADVERTISE_MASTER`
-:macro:`DENY_ADVERTISE_STARTD`
-:macro:`DENY_ADVERTISE_SCHEDD`
+``DENY_DAEMON`` settings.
 
-.. code-block:: text
-
-    ALLOW_ADVERTISE_MASTER
-    ALLOW_ADVERTISE_STARTD
-    ALLOW_ADVERTISE_SCHEDD
-    DENY_ADVERTISE_MASTER
-    DENY_ADVERTISE_STARTD
-    DENY_ADVERTISE_SCHEDD
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_MASTER`|:macro:`DENY_ADVERTISE_MASTER` |
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_STARTD`|:macro:`DENY_ADVERTISE_STARTD` |
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_SCHEDD`|:macro:`DENY_ADVERTISE_SCHEDD` |
++-------------------------------+-------------------------------+
 
 Each client side of a connection may also specify its own list of
 trusted servers. This is done using the following settings. Note that
