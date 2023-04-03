@@ -789,7 +789,7 @@ HTCondor will not start. Likewise, to require IPv6, you may set
 
 If you set :macro:`ENABLE_IPV4` to false, HTCondor
 will not use IPv4, even if it is available; likewise for ``ENABLE_IPV6``
-:index:`ENABLE_IPV6` and IPv6.
+:macro:`ENABLE_IPV6` and IPv6.
 
 The default setting for :macro:`ENABLE_IPV4` and
 :macro:`ENABLE_IPV6` is ``auto``. If HTCondor does
