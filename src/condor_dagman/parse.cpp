@@ -2420,7 +2420,8 @@ parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
 	jobName = tmpJobName.c_str();
 
 	//Get save file name/path&name
-	std::string saveFile = strtok(NULL, DELIMITERS) ?: "";
+	const char* p = strtok(NULL, DELIMITERS);
+	std::string saveFile = p ? p : "";
 	if (!saveFile.empty()) { //Name was specified
 		//Check for any extra invalid tokens
 		char* token = strtok(NULL, DELIMITERS);
