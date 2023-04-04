@@ -51,7 +51,7 @@ However, if you see repeated entries like
      007 (781.000.000) 2022-01-30 15:15:38 Shadow exception!
      ...
 
-Then this is the problem that, and you'll need to figure out why.  Perhaps a
+Then this flapping is the problem, and you'll need to figure out why.  Perhaps a
 *condor_submit -i* interactive login, and trying to start the job by hand is
 useful, maybe you'll need to ask a system administrator.
 
@@ -113,7 +113,7 @@ this:
 
 In this example, RequestMemory is set too high, so the job won't match any machines.
 Maybe it was a typo.  Try setting it lower to see if the job will match.
-If *condor_q -better* tells you that some machines do match, then 
+If *condor_q -better-analyze* tells you that some machines do match, then 
 this probably isn't the problem, or, it could be that very few machines in your
 pool match your job, and you'll just need to wait until they are available.
 
