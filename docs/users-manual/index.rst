@@ -12,6 +12,7 @@ Users' Manual
    submitting-a-remote-job
    managing-a-job
    automatic-job-management
+   when-job-wont-run
    services-for-jobs
    priorities-and-preemption
    dagman-workflows
