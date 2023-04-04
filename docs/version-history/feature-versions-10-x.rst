@@ -28,6 +28,11 @@ New Features:
   commands.
   :jira:`1671`
 
+- The *arc_gahp* can now issue multiple HTTPS requests in parallel in
+  different threads. This is controled by the new configuration
+  parameter :macro:`ARC_GAHP_USE_THREADS`.
+  :jira:`1690`
+
 Bugs Fixed:
 
 - Fixed a bug where if the docker command emitted warnings to stderr, the
