@@ -517,13 +517,13 @@ protected:
 	void set_connect_addr(char const *addr);
 
 	inline SOCKET get_socket (void) const { return _sock; }
-	const char * serialize(const char *);
+	const char * deserialize(const char *);
 	static void close_serialized_socket(char const *buf);
-	char * serialize() const;
-    const char * serializeCryptoInfo(const char * buf);
-    char * serializeCryptoInfo() const;
-    const char * serializeMdInfo(const char * buf);
-    char * serializeMdInfo() const;
+	void serialize(std::string& outbuf) const;
+    const char * deserializeCryptoInfo(const char * buf);
+    void serializeCryptoInfo(std::string& outbuf) const;
+    const char * deserializeMdInfo(const char * buf);
+    void serializeMdInfo(std::string& outbuf) const;
         
 	virtual int encrypt(bool);
 	///

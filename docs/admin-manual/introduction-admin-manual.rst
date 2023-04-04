@@ -5,17 +5,17 @@ This is the HTCondor Administrator's Manual. Its purpose is to aid in
 the installation and administration of an HTCondor pool. For help on
 using HTCondor, see the HTCondor User's Manual.
 
-An HTCondor pool
-:index:`pool<single: pool; HTCondor>`\ :index:`pool of machines` is
-comprised of a single machine which serves as the central manager,
-:index:`central manager`\ and an arbitrary number of other
-machines that have joined the pool. Conceptually, the pool is a
-collection of resources (machines) and resource requests (jobs). The
-role of HTCondor is to match waiting requests with available resources.
-Every part of HTCondor sends periodic updates to the central manager,
-the centralized repository of information about the state of the pool.
-Periodically, the central manager assesses the current state of the pool
-and tries to match pending requests with the appropriate resources.
+An HTCondor pool :index:`pool<single: pool; HTCondor>`\ :index:`pool of
+machines` is comprised of a single machine which serves as the central manager,
+:index:`central manager`\ and an arbitrary number of other machines.  Machines
+intended to run work are called Execution Points (EP)s, also known as worker
+nodes.  Machines that hold a queue of jobs ready to run, or the results of jobs
+that have run are called Access Points (AP)s, also known as submit machines.
+The role of HTCondor is to match waiting requests with available resources.
+Every part of HTCondor sends periodic updates to the central manager, the
+centralized repository of information about the state of the pool.
+Periodically, the central manager assesses the current state of the pool and
+tries to match pending requests with the appropriate resources.
 
 Each resource has an owner,
 :index:`owner<single: owner; resource>`\ :index:`owner<single: owner; machine>` the one who
@@ -63,7 +63,7 @@ Central Manager
     network to the central manager. :index:`execute machine`
     :index:`execute<single: execute; machine>`
 
-Execute
+Execution Point
     Any machine in the pool, including the central manager, can be
     configured as to whether or not it should execute HTCondor jobs.
     Obviously, some of the machines will have to serve this function, or
@@ -71,18 +71,20 @@ Execute
     require lots of resources. About the only resource that might matter
     is disk space. In general the more resources a machine has in terms
     of swap space, memory, number of CPUs, the larger variety of
-    resource requests it can serve. :index:`submit machine`
-    :index:`submit<single: submit; machine>`
+    resource requests it can serve. :index:`access point`
+    :index:`access<single: submit; machine>`
 
-Submit
+Access Point
     Any machine in the pool, including the central manager, can be
     configured as to whether or not it should allow HTCondor jobs to be
-    submitted. The resource requirements for a submit machine are
+    submitted. The resource requirements for an access point are
     actually much greater than the resource requirements for an execute
-    machine. First, every submitted job that is currently running on a
-    remote machine runs a process on the submit machine. As a result,
+    machine. Every submitted job that is currently running on a
+    remote machine runs a process on the access point. As a result,
     lots of running jobs will need a fair amount of swap space and/or
-    real memory.
+    real memory.  HTCondor pools can scale out horizontally by adding
+    additional access points.  Older terminology called these submit
+    machines or scheduler machine.
 
 The HTCondor Daemons
 --------------------
@@ -129,7 +131,7 @@ started under HTCondor and what they do:
 
 *condor_schedd*
     This daemon represents resource requests to the HTCondor pool. Any
-    machine that is to be a submit machine needs to have a
+    machine that is to be an access point needs to have a
     *condor_schedd* running. When users submit jobs, the jobs go to the
     *condor_schedd*, where they are stored in the job queue. The
     *condor_schedd* manages the job queue. Various tools to view and
@@ -196,7 +198,7 @@ started under HTCondor and what they do:
     to the *condor_startd*. That way, the *condor_startd* knows the
     machine owner is using the machine again and can perform whatever
     actions are necessary, given the policy it has been configured to
-    enforce. :index:`condor_ckpt_server daemon`
+    enforce. :index:`condor_kbdd daemon`
 
 *condor_gridmanager*
     This daemon handles management and execution of all **grid**
@@ -260,10 +262,3 @@ started under HTCondor and what they do:
     This daemon listens for incoming TCP packets on behalf of HTCondor
     daemons, thereby reducing the number of required ports that must be
     opened when HTCondor is accessible through a firewall.
-
-When compiled from source code, the following daemons may be compiled in
-to provide optional functionality. :index:`condor_hdfs daemon`
-
-*condor_hdfs*
-    This daemon manages the configuration of a Hadoop file system as
-    well as the invocation of a properly configured Hadoop file system.

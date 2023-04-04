@@ -1222,10 +1222,10 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 #endif
 
 bool
-SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
+SharedPortEndpoint::serialize(std::string &inherit_buf,int &inherit_fd)
 {
-	inherit_buf.serialize_string(m_full_name.c_str());
-	inherit_buf.serialize_sep("*");
+	inherit_buf += m_full_name;
+	inherit_buf += '*';
 #ifdef WIN32
 	/*
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
@@ -1242,16 +1242,13 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.serialize_int((LONG_PTR)inheritable_to_child);
-	inherit_buf.serialize_sep("*");
+	inherit_buf += std::to_string((LONG_PTR)inheritable_to_child);
+	inherit_buf += '*';
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
 
-	char *named_sock_serial = m_listener_sock.serialize();
-	ASSERT( named_sock_serial );
-	inherit_buf += named_sock_serial;
-	delete []named_sock_serial;
+	m_listener_sock.serialize(inherit_buf);
 #endif
 
 	return true;
@@ -1277,7 +1274,7 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 	in.deserialize_sep("*"); // note: terminator is missing from HTCondor prior to 8.5.7 so it is optional here...
 	inherit_buf = in.next_pos();
 #else
-	inherit_buf = m_listener_sock.serialize(in.next_pos());
+	inherit_buf = m_listener_sock.deserialize(in.next_pos());
 #endif
 	m_listening = true;
 

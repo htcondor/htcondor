@@ -82,10 +82,10 @@ implementation of security in HTCondor.
 
         $ condor_off -schedd <hostname>
 
-    If it is instead desired that the submit machine shuts down only
-    after all jobs that are currently in the queue are finished, first
-    disable new submissions to the queue by setting the configuration
-    variable
+    If it is instead desired that the access point (which runs the
+    *condor_schedd*) shuts down only after all jobs that are currently in the
+    queue are finished, first disable new submissions to the queue by setting
+    the configuration variable
 
     .. code-block:: condor-config
 

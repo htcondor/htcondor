@@ -2295,7 +2295,7 @@ using a shared file system`.
     jobs. If the ``$(UID_DOMAIN)`` on the submitting machine is
     different than the ``$(UID_DOMAIN)`` on the machine that runs a job,
     then HTCondor runs the job as the user nobody. For example, if the
-    submit machine has a ``$(UID_DOMAIN)`` of flippy.cs.wisc.edu, and
+    access point has a ``$(UID_DOMAIN)`` of flippy.cs.wisc.edu, and
     the machine where the job will execute has a ``$(UID_DOMAIN)`` of
     cs.wisc.edu, the job will run as user nobody, because the two
     ``$(UID_DOMAIN)``\ s are not the same. If the ``$(UID_DOMAIN)`` is
@@ -2305,7 +2305,7 @@ using a shared file system`.
     A further check attempts to assure that the submitting machine can
     not lie about its ``UID_DOMAIN``. HTCondor compares the submit
     machine's claimed value for ``UID_DOMAIN`` to its fully qualified
-    name. If the two do not end the same, then the submit machine is
+    name. If the two do not end the same, then the access point is
     presumed to be lying about its ``UID_DOMAIN``. In this case,
     HTCondor will run the job as user nobody. For example, a job
     submission to the HTCondor pool at the UW Madison from
@@ -2338,7 +2338,7 @@ using a shared file system`.
 
 :macro-def:`TRUST_UID_DOMAIN`
     As an added security precaution when HTCondor is about to spawn a
-    job, it ensures that the ``UID_DOMAIN`` of a given submit machine is
+    job, it ensures that the ``UID_DOMAIN`` of a given access point is
     a substring of that machine's fully-qualified host name. However, at
     some sites, there may be multiple UID spaces that do not clearly
     correspond to Internet domain names. In these cases, administrators
@@ -2347,8 +2347,8 @@ using a shared file system`.
     HTCondor must not do this regular security check. If the
     ``TRUST_UID_DOMAIN`` setting is defined to ``True``, HTCondor will
     not perform this test, and will trust whatever ``UID_DOMAIN`` is
-    presented by the submit machine when trying to spawn a job, instead
-    of making sure the submit machine's host name matches the
+    presented by the access point when trying to spawn a job, instead
+    of making sure the access point's host name matches the
     ``UID_DOMAIN``. When not defined, the default is ``False``, since it
     is more secure to perform this test.
 
@@ -2453,7 +2453,7 @@ using a shared file system`.
 
 :macro-def:`FILESYSTEM_DOMAIN`
     An arbitrary string that is used to decide if the two machines, a
-    submit machine and an execute machine, share a file system. Although
+    access point and an execute machine, share a file system. Although
     this configuration variable name contains the word "DOMAIN", its
     value is not required to be a domain name. It often is a domain
     name.
@@ -4455,7 +4455,7 @@ These macros control the *condor_schedd*.
     refers to constants either directly or via macro substitution. The
     default value is an expression that depends on the total amount of
     memory and the operating system. The default expression requires
-    1MByte of RAM per running job on the submit machine. In some
+    1MByte of RAM per running job on the access point. In some
     environments and configurations, this is overly generous and can be
     cut by as much as 50%. On Windows platforms, the number of running
     jobs is capped at 2000. A 64-bit version of Windows is recommended
@@ -4552,7 +4552,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`MAX_CONCURRENT_DOWNLOADS`
     This specifies the maximum number of simultaneous transfers of
-    output files from execute machines to the submit machine. The limit
+    output files from execute machines to the access point. The limit
     applies to all jobs submitted from the same *condor_schedd*. The
     default is 100. A setting of 0 means unlimited transfers. This limit
     currently does not apply to grid universe jobs,
@@ -4562,7 +4562,7 @@ These macros control the *condor_schedd*.
 
 :macro-def:`MAX_CONCURRENT_UPLOADS`
     This specifies the maximum number of simultaneous transfers of input
-    files from the submit machine to execute machines. The limit applies
+    files from the access point to execute machines. The limit applies
     to all jobs submitted from the same *condor_schedd*. The default is
     100. A setting of 0 means unlimited transfers. This limit currently
     does not apply to grid universe jobs. When
@@ -5811,30 +5811,6 @@ These settings affect the *condor_shadow*.
     job completion rates. The default is 3600, one hour. The value 0
     causes *condor_shadow* to exit after running a single job.
 
-:macro-def:`COMPRESS_PERIODIC_CKPT`
-    A boolean value that when ``True``, directs the *condor_shadow* to
-    instruct applications to compress periodic checkpoints when
-    possible. The default is ``False``.
-
-:macro-def:`COMPRESS_VACATE_CKPT`
-    A boolean value that when ``True``, directs the *condor_shadow* to
-    instruct applications to compress vacate checkpoints when possible.
-    The default is ``False``.
-
-:macro-def:`PERIODIC_MEMORY_SYNC`
-    This boolean value specifies whether the *condor_shadow* should
-    instruct applications to commit dirty memory pages to swap space
-    during a periodic checkpoint. The default is ``False``. This
-    potentially reduces the number of dirty memory pages at vacate time,
-    thereby reducing swapping activity on the remote machine.
-
-:macro-def:`SLOW_CKPT_SPEED`
-    This macro specifies the speed at which vacate checkpoints should be
-    written, in kilobytes per second. If zero (the default), vacate
-    checkpoints are written as fast as possible. Writing vacate
-    checkpoints slowly can avoid overwhelming the remote machine with
-    swapping activity.
-
 :macro-def:`SHADOW_JOB_CLEANUP_RETRY_DELAY`
     This integer specifies the number of seconds to wait between tries
     to commit the final update to the job ClassAd in the
@@ -5949,7 +5925,7 @@ These settings affect the *condor_starter*.
 :macro-def:`EXEC_TRANSFER_ATTEMPTS`
     Sometimes due to a router misconfiguration, kernel bug, or other
     network problem, the transfer of the initial checkpoint from the
-    submit machine to the execute machine will fail midway through. This
+    access point to the execute machine will fail midway through. This
     parameter allows a retry of the transfer a certain number of times
     that must be equal to or greater than 1. If this parameter is not
     specified, or specified incorrectly, then it will default to three.
@@ -6187,9 +6163,9 @@ These settings affect the *condor_starter*.
 
 :macro-def:`STARTER_UPLOAD_TIMEOUT`
     An integer value that specifies the network communication timeout to
-    use when transferring files back to the submit machine. The default
+    use when transferring files back to the access point. The default
     value is set by the *condor_shadow* daemon to 300. Increase this
-    value if the disk on the submit machine cannot keep up with large
+    value if the disk on the access point cannot keep up with large
     bursts of activity, such as many jobs all completing at the same
     time.
 
@@ -6532,22 +6508,6 @@ do not specify their own with:
     ``DEFAULT_RANK`` and ``DEFAULT_RANK_VANILLA`` are defined, the value
     for ``DEFAULT_RANK_VANILLA`` is used for vanilla universe jobs.
 
-:macro-def:`DEFAULT_IO_BUFFER_SIZE`
-    HTCondor keeps a buffer of recently-used data for each file an
-    application opens. This macro specifies the default maximum number
-    of bytes to be buffered for each open file at the executing machine.
-    The *condor_status* ``buffer_size`` command will override this
-    default. If this macro is undefined, a default size of 512 KB will
-    be used.
-
-:macro-def:`DEFAULT_IO_BUFFER_BLOCK_SIZE`
-    When buffering is enabled, HTCondor will attempt to consolidate
-    small read and write operations into large blocks. This macro
-    specifies the default block size HTCondor will use. The
-    *condor_status* ``buffer_block_size`` command will override this
-    default. If this macro is undefined, a default size of 32 KB will be
-    used.
-
 :macro-def:`SUBMIT_GENERATE_CUSTOM_RESOURCE_REQUIREMENTS`
     If ``True``, *condor_submit* will treat any attribute in the job
     ClassAd that begins with ``Request`` as a request for a custom resource
@@ -6721,7 +6681,6 @@ These macros affect the *condor_collector*.
     -  ``NEGOTIATOR_UPDATE_INTERVAL``
     -  ``SCHEDD_INTERVAL``
     -  ``MASTER_UPDATE_INTERVAL``
-    -  ``CKPT_SERVER_INTERVAL``
     -  ``DEFRAG_UPDATE_INTERVAL``
     -  ``HAD_UPDATE_INTERVAL``
 
@@ -8959,7 +8918,7 @@ Log files
 
 
        will cause failure when more than one DAG is run at the same time
-       on a given submit machine.
+       on a given access point.
 
 :macro-def:`DAGMAN_LOG_ON_NFS_IS_ERROR`
     A boolean value that controls whether *condor_dagman* prohibits a

@@ -400,7 +400,6 @@ PluginManager.h
 printf_format.cpp
 print_wrapped_text.cpp
 print_wrapped_text.h
-prioritysimplelist.h
 proc.cpp
 procd_config.cpp
 procd_config.h

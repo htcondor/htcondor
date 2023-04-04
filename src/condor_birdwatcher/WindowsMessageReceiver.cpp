@@ -23,13 +23,12 @@
 
 //#pragma warning(disable:4786)
 #include "birdwatcher.h"
-using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-map<HWND, WindowsMessageReceiver *> &mapWindowsMessageReceivers()
+std::map<HWND, WindowsMessageReceiver *> &mapWindowsMessageReceivers()
 {
-	static map<HWND, WindowsMessageReceiver *> mapWMRs;
+	static std::map<HWND, WindowsMessageReceiver *> mapWMRs;
 	return mapWMRs;
 }
 
