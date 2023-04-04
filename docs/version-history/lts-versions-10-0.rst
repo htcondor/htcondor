@@ -46,6 +46,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fix bug, introduced in HTCondor version 10.0.2, that prevented new
+  installations of HTCondor from working on Debian or Ubuntu.
+  :jira:`1689`
+
 - Fixed a rare bug in the late materialization code that could
   cause a schedd crash.
   :jira:`1581`
