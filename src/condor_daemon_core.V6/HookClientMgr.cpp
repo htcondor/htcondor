@@ -23,6 +23,7 @@
 #include "HookClientMgr.h"
 #include "HookClient.h"
 #include "status_string.h"
+#include <algorithm>
 
 
 HookClientMgr::HookClientMgr() {
@@ -32,13 +33,12 @@ HookClientMgr::HookClientMgr() {
 
 
 HookClientMgr::~HookClientMgr() {
-	HookClient *client;	
-	m_client_list.Rewind();
-	while (m_client_list.Next(client)) {
+	for (HookClient *client: m_client_list) {
 			// TODO: kill them, too?
-		m_client_list.DeleteCurrent();
 		delete client;
 	}
+	m_client_list.clear();
+
 	if (daemonCore && m_reaper_output_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_output_id);
 	}
@@ -115,7 +115,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
 	if (wants_output) {
-		m_client_list.Append(client);
+		m_client_list.push_back(client);
 	}
 	return true;
 }
@@ -123,9 +123,14 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 
 bool
 HookClientMgr::remove(HookClient* client) {
-    return m_client_list.Delete(client);
+	auto it = std::find(m_client_list.begin(), m_client_list.end(), client);
+	if (it != m_client_list.end()) {
+		m_client_list.erase(it);
+		return true;
+	} else {
+		return false;
+	}
 }
-
 
 int
 HookClientMgr::reaperOutput(int exit_pid, int exit_status)
@@ -134,13 +139,15 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 	daemonCore->Kill_Family(exit_pid);
 
 	bool found_it = false;
-	HookClient *client;	
-	m_client_list.Rewind();
-	while (m_client_list.Next(client)) {
+	HookClient *client = nullptr;	
+	auto it = m_client_list.begin();
+	while (it != m_client_list.end()) {
+		client = *it;
 		if (exit_pid == client->getPid()) {
 			found_it = true;
 			break;
 		}
+		it++;
 	}
 
 	if (!found_it) {
@@ -154,7 +161,7 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 
 		// Now that hookExited() returned, we need to delete this
 		// client object and remove it from our list.
-	m_client_list.DeleteCurrent();
+	m_client_list.erase(it);
 	delete client;
 
 	return TRUE;

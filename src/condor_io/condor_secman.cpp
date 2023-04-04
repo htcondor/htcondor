@@ -1105,13 +1105,6 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		}
 	}
 
-	int operator== (const SecManStartCommand &other) const {
-			// We do not care about a deep comparison.
-			// This is just to make the compiler happy on
-			// SimpleList< classy_counted_ptr< SecManStartCommand > >
-		return this == &other;
-	}
-
  private:
 	int m_cmd;
 	int m_subcmd;
