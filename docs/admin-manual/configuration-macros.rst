@@ -8591,7 +8591,7 @@ General
     ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
     ``getenv`` are:
 
-    .. code-block:: dagman-base-getenv
+    .. code-block:: condor-submit
 
         getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ
 

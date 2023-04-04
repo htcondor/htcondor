@@ -28,6 +28,14 @@ New Features:
   commands.
   :jira:`1671`
 
+- Added new *Save File* functionality to DAGMan which allows users to
+  specify DAG nodes as save points to record the current DAG's progress
+  in a file similar to a rescue file. These files can then be specified
+  with the new *condor_submit_dag* flag ``load_save`` to re-run the
+  DAG from that point of progression. For more information visit
+  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :jira:`1636`
+
 Bugs Fixed:
 
 - Fixed a bug where if the docker command emitted warnings to stderr, the
