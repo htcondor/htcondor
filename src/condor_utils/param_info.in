@@ -5456,6 +5456,10 @@ default=$(SBIN)/arc_gahp
 [ARC_GAHP_LOG]
 default=/tmp/ArcGahpLog.$(USERNAME)
 
+[ARC_GAHP_USE_THREADS]
+default=false
+type=bool
+
 [GAHP_SSL_CAFILE]
 default=
 type=path
