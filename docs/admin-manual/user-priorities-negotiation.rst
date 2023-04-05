@@ -802,7 +802,7 @@ against a *condor_collector*, and still consider it one pool.
 
 In such a scenario, each *condor_negotiator* is responsible for some
 non-overlapping partition of the slots in the pool.  This might be for
-performance -- if you have more than 100,000 slot in the pool, you may need to
+performance -- if you have more than 100,000 slots in the pool, you may need to
 shard this pool into several smaller setions in order to lower the time each
 negotiator spends.  Because accounting is done at the the negotiator level, you
 may want to do this to have seperate accounting and distinct fair share between
@@ -811,7 +811,7 @@ GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
 not "count" against the fair-share usage of GPU machines.  One way to do this
 would be to have a separate negotiator for the GPU machines vs the non-GPU
 machines.   At Wisconsin, we have a separate, small subset of our pool for
-quick-starting interacttive jobs.  By allocating a negotiator to only negotiate
+quick-starting interactive jobs.  By allocating a negotiator to only negotiate
 for these few machines, we can speed up the time to match these machines to
 interative users who submit with *condor_submit -i*.
 
@@ -824,7 +824,7 @@ should use.
 
 Running with multiple negotiators also means you need to be careful with the
 *condor_userprio* command.  As there is no default negotiator, you should
-always name the specfiic negotiator you want to *condor_userprio* to talk to
+always name the specific negotiator you want to *condor_userprio* to talk to
 with the `-name` option.
 
 
