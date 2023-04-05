@@ -46,12 +46,23 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
 - Fix bug, introduced in HTCondor version 10.0.2, that prevented new
   installations of HTCondor from working on Debian or Ubuntu.
   :jira:`1689`
 
+- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilities would instantly
+  restart that node every time it saw a job proc failure. This would result in nodes
+  with multi-proc jobs to resubmit the entire node multiple times causing internal
+  issues for DAGMan.
+  :jira:`1607`
+
 - Fixed a rare bug in the late materialization code that could
-  cause a schedd crash.
+  cause a *condor_schedd* crash.
   :jira:`1581`
 
 - Fixed bug where the *condor_shadow* would crash during job removal.
@@ -64,12 +75,6 @@ Bugs Fixed:
 - Improved the HTCondor's systemd configuration to not start HTCondor until the
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
-
-- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilites would instantly
-  restart that node everytime it saw a job proc failure. This would result in nodes
-  with multi-proc jobs to resubmit the entire node multiple times causing internal
-  issues for DAGMan.
-  :jira:`1607`
 
 - Fixed a bug where the *condor_master* of a glidein submitted to
   SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
@@ -97,8 +102,8 @@ Bugs Fixed:
   Before, it would endlessly re-query the status of jobs that failed
   during submission to the LRMS behind ARC CE.
   If ARC CE reports a job as FAILED because the job exited with a
-  non-zero exit code, the *condor_gridmanager* now treats it as a
-  successful execution.
+  non-zero exit code, the *condor_gridmanager* now treats it as
+  completed.
   :jira:`1583`
 
 - Fixed a bug where values specified with **arc_rte** in the job's
@@ -109,11 +114,6 @@ Bugs Fixed:
   authentication if the configuration parameter
   ``SCITOKENS_SERVER_AUDIENCE`` isn't set.
   :jira:`1652`
-
-- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
-  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
-  a bug where GPU (core) utilization could be wildly over-reported.
-  :jira:`1660`
 
 .. _lts-version-history-1002:
 
