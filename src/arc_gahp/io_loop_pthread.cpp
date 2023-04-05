@@ -238,6 +238,14 @@ main( int argc, char ** const argv )
 
 	lock_for_curl = ! param_boolean("ARC_GAHP_USE_THREADS", false);
 
+	// curl_global_init() is not thread-safe. Call it now before we
+	// create any threads.
+	CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
+	if( rv != 0 ) {
+		dprintf(D_ALWAYS, "curl_global_init() failed, failing.\n");
+		exit(1);
+	}
+
 	const char *buff;
 
 	//Try to read env for arc_http_proxy

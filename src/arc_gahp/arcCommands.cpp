@@ -263,16 +263,7 @@ bool HttpRequest::SendRequest()
 		dprintf( D_FULLDEBUG, "Request body is '%s'\n", requestBody.c_str() );
 	}
 
-	// curl_global_init() is not thread-safe.  However, it's safe to call
-	// multiple times.  Therefore, we'll just call it before we drop the
-	// mutex, since we know that means only one thread is running.
-	CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
-	if( rv != 0 ) {
-		this->errorCode = "499";
-		this->errorMessage = "curl_global_init() failed.";
-		dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
-		return false;
-	}
+	CURLcode rv;
 
 	CURL * curl = curl_easy_init();
 	if( curl == NULL ) {
