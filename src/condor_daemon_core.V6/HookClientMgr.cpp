@@ -140,14 +140,12 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 
 	bool found_it = false;
 	HookClient *client = nullptr;	
-	auto it = m_client_list.begin();
-	while (it != m_client_list.end()) {
-		client = *it;
+	for (HookClient *local_client : m_client_list) {
+		client = local_client;
 		if (exit_pid == client->getPid()) {
 			found_it = true;
 			break;
 		}
-		it++;
 	}
 
 	if (!found_it) {
@@ -157,13 +155,17 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 				exit_pid);
 		return FALSE;
 	}
-	client->hookExited(exit_status);
 
 		// Now that hookExited() returned, we need to delete this
 		// client object and remove it from our list.
-	m_client_list.erase(it);
-	delete client;
+	auto it = std::find(m_client_list.begin(), m_client_list.end(), client);
+	if (it != m_client_list.end()) {
+		m_client_list.erase(it);
+	}
 
+	client->hookExited(exit_status);
+
+	delete client;
 	return TRUE;
 }
 
