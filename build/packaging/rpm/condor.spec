@@ -1600,6 +1600,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.0-1
+- DAGMan no longer carries the entire environment into the DAGMan job
+- Allows EGI CheckIn tokens to be used the with SciTokens authentication
+
 * Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.3-1
 - GPU metrics continues to be reported after the startd is reconfigured
 - Fixed issue where GPU metrics could be wildly over-reported

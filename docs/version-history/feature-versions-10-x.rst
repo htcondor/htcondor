@@ -9,9 +9,7 @@ Version 10.4.0
 
 Release Notes:
 
-.. HTCondor version 10.4.0 released on Month Date, 2023.
-
-- HTCondor version 10.4.0 not yet released.
+- HTCondor version 10.4.0 released on April 6, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1003`.
 
@@ -41,11 +39,6 @@ New Features:
   ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
-
-- Added an attribute to the *condor_schedd* classad that advertises the number of
-  late materialization jobs that have been submitted, but have not yet materialized.
-  The new attribute is called ``JobsUnmaterialized``
-  :jira:`1591`
 
 - New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
   restricts which issuers' tokens will be accepted under
@@ -180,6 +173,11 @@ New Features:
   the minimum value for gangliads calculated metric lifetime (DMAX value)
   for all metrics without a specified ``Lifetime``.
   :jira:`1547`
+
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
 
 - The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
   now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
