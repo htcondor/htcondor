@@ -1,3 +1,12 @@
+condor (10.0.3-1) stable; urgency=medium
+
+  * GPU metrics continues to be reported after the startd is reconfigured
+  * Fixed issue where GPU metrics could be wildly over-reported
+  * Fixed issue that kept jobs from running when installed on Debian or Ubuntu
+  * Fixed DAGMan problem when retrying a proc failure in a multi-proc node
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Apr 2023 10:36:00 -0500
+
 condor (10.3.1-1) stable; urgency=medium
 
   * Execution points now advertise if an sshd is available for ssh to job

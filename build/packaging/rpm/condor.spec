@@ -1600,6 +1600,12 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.3-1
+- GPU metrics continues to be reported after the startd is reconfigured
+- Fixed issue where GPU metrics could be wildly over-reported
+- Fixed issue that kept jobs from running when installed on Debian or Ubuntu
+- Fixed DAGMan problem when retrying a proc failure in a multi-proc node
+
 * Tue Mar 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.1-1
 - Execution points now advertise if an sshd is available for ssh to job
 
