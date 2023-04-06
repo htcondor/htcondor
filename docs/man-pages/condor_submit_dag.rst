@@ -144,7 +144,7 @@ Options
  **-r** *schedd_name*
     Submit *condor_dagman* to a remote machine, specifically the
     *condor_schedd* daemon on that machine. The *condor_dagman* job
-    will not run on the local *condor_schedd* (the submit machine), but
+    will not run on the local *condor_schedd* (the access point), but
     on the specified one. This is implemented using the **-remote**
     option to *condor_submit*. Note that this option does not currently
     specify input files for *condor_dagman*, nor the individual nodes

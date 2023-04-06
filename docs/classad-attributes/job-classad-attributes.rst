@@ -937,7 +937,7 @@ all attributes.
 
 :classad-attribute:`IwdFlushNFSCache`
     A boolean expression that controls whether or not HTCondor attempts
-    to flush a submit machine's NFS cache, in order to refresh an
+    to flush a access point's NFS cache, in order to refresh an
     HTCondor job's initial working directory. The value will be
     ``True``, unless a job explicitly adds this attribute, setting it to
     ``False``.
@@ -1717,7 +1717,7 @@ all attributes.
     true, this job is eligible to run on that slot.  If the job
     requirements does not mention the (startd) attribute ``OPSYS``,
     the schedd will append a clause to Requirements forcing the job to
-    match the same ``OPSYS`` as the submit machine. :index:`OPSYS`
+    match the same ``OPSYS`` as the access point. :index:`OPSYS`
     The schedd appends a simliar clause to match the ``ARCH``. :index:`ARCH`
     The schedd parameter ``APPEND_REQUIREMENTS``, will, if set, append that
     value to every job's requirements expression.
@@ -1763,7 +1763,7 @@ all attributes.
 :classad-attribute:`StreamErr`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, and ``TransferErr`` is ``True``, then
-    standard error is streamed back to the submit machine, instead of
+    standard error is streamed back to the access point, instead of
     doing the transfer (as a whole) after the job completes. If
     ``False``, then standard error is transferred back to the submit
     machine (as a whole) after the job completes. If ``TransferErr`` is
@@ -1772,9 +1772,9 @@ all attributes.
 :classad-attribute:`StreamOut`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, and ``TransferOut`` is ``True``, then job
-    output is streamed back to the submit machine, instead of doing the
+    output is streamed back to the access point, instead of doing the
     transfer (as a whole) after the job completes. If ``False``, then
-    job output is transferred back to the submit machine (as a whole)
+    job output is transferred back to the access point (as a whole)
     after the job completes. If ``TransferOut`` is ``False``, then this
     job attribute is ignored.
 
@@ -1861,7 +1861,7 @@ all attributes.
 :classad-attribute:`TransferCheckpoint`
     A string attribute containing a comma separated list of directories
     and/or files that should be transferred from the execute machine to the
-    submit machine's spool when the job successfully checkpoints.
+    access point's spool when the job successfully checkpoints.
 
 :classad-attribute:`TransferContainer`
     A boolean expresion that controls whether the HTCondor should transfer the
@@ -1870,17 +1870,17 @@ all attributes.
 :classad-attribute:`TransferErr`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the error output from the job is
-    transferred from the remote machine back to the submit machine. The
+    transferred from the remote machine back to the access point. The
     name of the file after transfer is the file referred to by job
     attribute ``Err``. If ``False``, no transfer takes place (remote to
-    submit machine), and the name of the file is the file referred to by
+    access point), and the name of the file is the file referred to by
     job attribute ``Err``.
 
 :classad-attribute:`TransferExecutable`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the job executable is transferred
-    from the submit machine to the remote machine. The name of the file
-    (on the submit machine) that is transferred is given by the job
+    from the access point to the remote machine. The name of the file
+    (on the access point) that is transferred is given by the job
     attribute ``Cmd``. If ``False``, no transfer takes place, and the
     name of the file used (on the remote machine) will be as given in
     the job attribute ``Cmd``.
@@ -1888,7 +1888,7 @@ all attributes.
 :classad-attribute:`TransferIn`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the job input is transferred from the
-    submit machine to the remote machine. The name of the file that is
+    access point to the remote machine. The name of the file that is
     transferred is given by the job attribute ``In``. If ``False``, then
     the job's input is taken from a file on the remote machine
     (pre-staged), and the name of the file is given by the job attribute
@@ -1896,7 +1896,7 @@ all attributes.
 
 :classad-attribute:`TransferInput`
     A string attribute containing a comma separated list of directories, files and/or URLs
-    that should be transferred from the submit machine to the remote machine when
+    that should be transferred from the access point to the remote machine when
     input file transfer is enabled.
 
 :classad-attribute:`TransferInFinished`
@@ -1942,15 +1942,15 @@ all attributes.
 :classad-attribute:`TransferOut`
     An attribute utilized only for grid universe jobs. The default value
     is ``True``. If ``True``, then the output from the job is
-    transferred from the remote machine back to the submit machine. The
+    transferred from the remote machine back to the access point. The
     name of the file after transfer is the file referred to by job
     attribute ``Out``. If ``False``, no transfer takes place (remote to
-    submit machine), and the name of the file is the file referred to by
+    access point), and the name of the file is the file referred to by
     job attribute ``Out``.
 
 :classad-attribute:`TransferOutput`
     A string attribute containing a comma separated list of files and/or URLs that should be transferred
-    from the remote machine to the submit machine when output file transfer is enabled.
+    from the remote machine to the access point when output file transfer is enabled.
 
 :classad-attribute:`TransferOutFinished`
     When the job finished the most recent recent transfer of its
@@ -2003,7 +2003,7 @@ all attributes.
     or ``MAX_CONCURRENT_UPLOADS``. :index:`MAX_CONCURRENT_UPLOADS`
 
 :classad-attribute:`UserLog`
-    The full path and file name on the submit machine of the log file of
+    The full path and file name on the access point of the log file of
     job events.
 
 :classad-attribute:`WantContainer`
