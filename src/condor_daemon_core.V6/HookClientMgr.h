@@ -23,6 +23,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "HookClient.h"
+#include <vector>
 
 class HookClientMgr : public Service
 {
@@ -53,7 +54,7 @@ protected:
 		   List of HookClient objects we've spawned and are waiting
 		   for output from.
 		*/
-    SimpleList<HookClient*> m_client_list;
+	std::vector<HookClient*> m_client_list;
 
 private:
 		/// DC reaper ID. @see reaperIgnore()

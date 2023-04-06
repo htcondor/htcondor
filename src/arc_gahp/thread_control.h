@@ -31,6 +31,7 @@
 	 */
 
 extern pthread_mutex_t global_big_mutex;
+extern bool lock_for_curl;
 
 #define arc_gahp_grab_big_mutex()	\
 	pthread_mutex_lock(&global_big_mutex)

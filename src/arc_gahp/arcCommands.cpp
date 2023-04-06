@@ -263,16 +263,7 @@ bool HttpRequest::SendRequest()
 		dprintf( D_FULLDEBUG, "Request body is '%s'\n", requestBody.c_str() );
 	}
 
-	// curl_global_init() is not thread-safe.  However, it's safe to call
-	// multiple times.  Therefore, we'll just call it before we drop the
-	// mutex, since we know that means only one thread is running.
-	CURLcode rv = curl_global_init( CURL_GLOBAL_ALL );
-	if( rv != 0 ) {
-		this->errorCode = "499";
-		this->errorMessage = "curl_global_init() failed.";
-		dprintf( D_ALWAYS, "curl_global_init() failed, failing.\n" );
-		return false;
-	}
+	CURLcode rv;
 
 	CURL * curl = curl_easy_init();
 	if( curl == NULL ) {
@@ -603,9 +594,13 @@ bool HttpRequest::SendRequest()
 	}
 
 	arc_gahp_release_big_mutex();
-	pthread_mutex_lock( & globalCurlMutex );
+	if (lock_for_curl) {
+		pthread_mutex_lock( & globalCurlMutex );
+	}
 	rv = curl_easy_perform( curl );
-	pthread_mutex_unlock( & globalCurlMutex );
+	if (lock_for_curl) {
+		pthread_mutex_unlock( & globalCurlMutex );
+	}
 	arc_gahp_grab_big_mutex();
 	if( rv != 0 ) {
 		this->errorCode = "499";
@@ -948,8 +943,7 @@ bool ArcJobStatusAllArgsCheck(char **argv, int argc)
 {
 	return verify_number_args(argc, 4) &&
 		verify_request_id(argv[1]) &&
-		verify_string_name(argv[2]) &&
-		verify_string_name(argv[3]);
+		verify_string_name(argv[2]);
 }
 
 // Expecting:ARC_JOB_STATUS_ALL <req_id> <serviceurl> <statuses>

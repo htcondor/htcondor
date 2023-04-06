@@ -8035,6 +8035,11 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the ARC GAHP executable.
     The default value is ``$(SBIN)``/arc_gahp.
 
+:macro-def:`ARC_GAHP_USE_THREADS`
+    Controls whether the *arc_gahp* should run multiple HTTPS requests
+    in parallel in different threads.
+    The default is ``False``.
+
 :macro-def:`GCE_GAHP`
     The complete path and file name of the GCE GAHP executable. The
     default value is ``$(SBIN)``/gce_gahp.

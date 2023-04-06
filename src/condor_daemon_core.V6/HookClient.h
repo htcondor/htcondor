@@ -33,7 +33,7 @@ public:
 		// Functions to retrieve data about this client.
 	int getPid() const {return m_pid;};
 	const char* path() {return (const char*)m_hook_path;};
-	HookType type() {return m_hook_type;};
+	HookType type() const {return m_hook_type;};
 	bool wantsOutput() const {return m_wants_output;};
 	MyString* getStdOut();
 	MyString* getStdErr();

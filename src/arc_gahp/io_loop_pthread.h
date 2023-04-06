@@ -63,7 +63,7 @@ class Worker {
 };
 
 #define MIN_NUMBER_WORKERS 2
-#define MAX_NUMBER_WORKERS 50
+#define MAX_NUMBER_WORKERS 10
 #define WORKER_MANAGER_TIMER_INTERVAL	15
 
 class IOProcess {

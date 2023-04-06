@@ -649,6 +649,7 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
+				break;
 			}
 
 			if ( reply.empty() ) {

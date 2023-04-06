@@ -792,3 +792,39 @@ If so, it represents the set of valid accounting groups a user can
 opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
 
+Running Multiple Negotiators in One Pool
+----------------------------------------
+
+Usually, a single HTCondor pool will have a single *condor_collector* instance
+running and a single *condor_negotiator* instance running.  However, there are
+special situation where you may want to run more than one *condor_negotiator*
+against a *condor_collector*, and still consider it one pool.
+
+In such a scenario, each *condor_negotiator* is responsible for some
+non-overlapping partition of the slots in the pool.  This might be for
+performance -- if you have more than 100,000 slots in the pool, you may need to
+shard this pool into several smaller setions in order to lower the time each
+negotiator spends.  Because accounting is done at the the negotiator level, you
+may want to do this to have seperate accounting and distinct fair share between
+different kinds of machines in your pool.  For example, let's say you have some
+GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
+not "count" against the fair-share usage of GPU machines.  One way to do this
+would be to have a separate negotiator for the GPU machines vs the non-GPU
+machines.   At Wisconsin, we have a separate, small subset of our pool for
+quick-starting interactive jobs.  By allocating a negotiator to only negotiate
+for these few machines, we can speed up the time to match these machines to
+interative users who submit with *condor_submit -i*.
+
+Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
+the :macro:`DAEMON_LIST` on an additional machine.  While is is possible to run
+multiple negotiators on one machine, we may not want to, if we are trying to
+improve performance.  Then, in each negotiator, set
+:macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
+should use.
+
+Running with multiple negotiators also means you need to be careful with the
+*condor_userprio* command.  As there is no default negotiator, you should
+always name the specific negotiator you want to *condor_userprio* to talk to
+with the `-name` option.
+
+
