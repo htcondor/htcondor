@@ -65,9 +65,7 @@ Version 10.0.3
 
 Release Notes:
 
-.. HTCondor version 10.0.3 released on Month Date, 2023.
-
-- HTCondor version 10.0.3 not yet released.
+- HTCondor version 10.0.3 released on April 6, 2023.
 
 - If you set :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` and use ``/`` to
   mark the beginning and end of a regular expression, the character sequence
