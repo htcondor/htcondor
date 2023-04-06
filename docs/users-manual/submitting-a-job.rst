@@ -1049,12 +1049,12 @@ Jobs That Require Credentials
 
 :index:`requesting OAuth credentials for a job<single: requesting OAuth credentials for a job; OAuth>`
 
-If the HTCondor pool administrator has configured the submit machine
+If the HTCondor pool administrator has configured the access point
 with one or more credential monitors,
 jobs submitted on that machine may automatically be provided with credentials
 and/or it may be possible for users to request and obtain credentials for their jobs.
 
-Suppose the administrator has configured the submit machine
+Suppose the administrator has configured the access point
 such that users may obtain credentials from a storage service called "CloudBoxDrive."
 A job that needs credentials from CloudBoxDrive
 should contain the submit command
@@ -1064,13 +1064,13 @@ should contain the submit command
     use_oauth_services = cloudboxdrive
 
 Upon submitting this job for the first time,
-the user will be directed to a webpage hosted on the submit machine
+the user will be directed to a webpage hosted on the access point
 which will guide the user through the process of obtaining a CloudBoxDrive credential.
-The credential is then stored securely on the submit machine.
+The credential is then stored securely on the access point.
 (**Note: depending on which credential monitor is used, the original
 job may have to be re-submitted at this point.**)
-(Also note that at no point is the user's *password* stored on the submit machine.)
-Once a credential is stored on the submit machine,
+(Also note that at no point is the user's *password* stored on the access point.)
+Once a credential is stored on the access point,
 as long as it remains valid,
 it is transferred securely to all subsequently submitted jobs that contain ``use_oauth_services = cloudboxdrive``.
 
@@ -1119,7 +1119,7 @@ the submit file might look like
 It is possible for a single job to request and/or use credentials from multiple services
 by listing each service in the ``use_oauth_services`` command.
 Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the submit machine to allow users to obtain credentials from this service,
+and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
 and that a user has write access to the `/foo` directory on the storage machine.
 A submit file that would result in a job that contains credentials
 that can read from CloudBoxDrive and write to the local university storage might look like

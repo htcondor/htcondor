@@ -136,7 +136,7 @@ command identifies that eight machines are required for this job.
 Because no
 **requirements** :index:`requirements<single: requirements; submit commands>` are
 specified, the dedicated scheduler claims eight machines with the same
-architecture and operating system as the submit machine. When all the
+architecture and operating system as the access point. When all the
 machines are ready, it invokes the */bin/sleep* command, with a command
 line argument of 30 on each of the eight machines more or less
 simultaneously. Job events are written to the log specified in the
@@ -144,8 +144,8 @@ simultaneously. Job events are written to the log specified in the
 
 The file transfer mechanism is enabled for this parallel job, such that
 if any of the eight claimed execute machines does not share a file
-system with the submit machine, HTCondor will correctly transfer the
-executable. This */bin/sleep* example implies that the submit machine is
+system with the access point, HTCondor will correctly transfer the
+executable. This */bin/sleep* example implies that the access point is
 running a Unix operating system, and the default assumption for
 submission from a Unix machine would be that there is a shared file
 system.

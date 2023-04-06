@@ -3,7 +3,7 @@ How To Debug an Always Idle Job
 
 Sometimes, when you submit a job to HTCondor, it sits idle seemingly forever,
 *condor_q* shows it in the idle state, when you expect it should start running.
-This can be frustrating, but there are tools to give visibibility so you can
+This can be frustrating, but there are tools to give visibility so you can
 debug what is going on.
 
 Jobs that start but are quickly evicted
@@ -72,7 +72,7 @@ problems.
       $ condor_q -better-analyze 781.0
 
 
-Now, as *condor_q -better-analyze* by default, tries to simluate matching
+Now, as *condor_q -better-analyze* by default, tries to simulate matching
 this job to all slots in the pool, this can take a while, and generate
 a lot of output.  Sometimes, you are pretty sure that a job should match one 
 particular slot, in that case, you can restrict the matching attempt to
