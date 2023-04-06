@@ -64,6 +64,7 @@ Release Notes:
   or change behavior due to missing needed environment variables. To revert back to the old behavior or
   add the missing environment variables to the DAGMan proper jobs environment set the
   :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` configuration option.
+  :jira:`1580`
 
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
   unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
@@ -72,8 +73,30 @@ Release Notes:
   to account for this fact. If you have written policy expressions of your own that reference
   *CpuBusyTime* you will need to modify them to use ``$(CpuBusyTimer)`` from one of those templates
   or make the equivalent change.
+  :jira:`1502`
 
 New Features:
+
+- DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the
+  ability to better control the environment passed to the DAGMan proper job.
+  ``getenv`` will default to ``CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ``
+  in the ``.condor.sub`` file which can be appended to via the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new *condor_submit_dag* flag
+  ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
+  directly set key=value pairs of information into the ``.condor.sub`` environment.
+  :jira:`1580`
+
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
+
+- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+  restricts which issuers' tokens will be accepted under
+  ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
+  Updated default values allow EGI CheckIn tokens to be accepted under
+  the SCITOKENS authentication method.
+  :jira:`1515`
 
 - The *condor_startd* can now be configured to evaluate a set of expressions
   defined by :macro:`STARTD_LATCH_EXPRS`.  For each expression, the last
@@ -83,12 +106,7 @@ New Features:
   was created or destroyed.
   :jira:`1502`
 
-- Added an attribute to the *condor_schedd* classad that advertises the number of
-  late materialization jobs that have been submitted, but have not yet materialized.
-  The new attribute is called ``JobsUnmaterialized``
-  :jira:`1591`
-
-- Add new field ```ContainerDuration``` to TransferInput attribute of 
+- Add new field ``ContainerDuration`` to TransferInput attribute of 
   jobs that measure the number of seconds to transfer the 
   Apptainer/Singularity image.
   :jira:`1588`
@@ -101,24 +119,8 @@ New Features:
   Grid ads in the collector now contain attributes
   ``GridResourceUnavailableTimeReason`` and
   ``GridResourceUnavailableTimeReasonCode``, which give details about
-  why the remote scheduing system is considered unavailable.
+  why the remote scheduling system is considered unavailable.
   :jira:`1582`
-
-- DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the
-  ability to better control the environment passed to the DAGMan proper job.
-  ``getenv`` will default to ``CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ``
-  in the ``.condor.sub`` file which can be appended to via the
-  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` or the new *condor_submit_dag* flag
-  ``include_env``. Also added new *condor_submit_dag* flag ``insert_env`` to
-  directly set key=value pairs of information into the ``.condor.sub`` environment.
-  :jira:`1580`
-
-- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
-  restricts which issuers' tokens will be accepted under
-  ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
-  Updated default values allow EGI CheckIn tokens to be accepted under
-  the SCITOKENS authentication method.
-  :jira:`1515`
 
 - Added ability for DAGMan to automatically record the Node Retry attempt in that
   nodes job ad. This is done by setting the new configuration option :macro:`DAGMAN_NODE_RECORD_INFO`.
@@ -126,11 +128,8 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed bug where the *condor_shadow* would crash during job removal.
-  :jira:`1585`
-
 - Fixed a bug where if the docker command emitted warnings to stderr, the
-  startd would not correctly advertise the amount of used image cache.
+  *condor_startd* would not correctly advertise the amount of used image cache.
   :jira:`1645`
 
 - Fixed a bug where *condor_history* would fail if the job history
