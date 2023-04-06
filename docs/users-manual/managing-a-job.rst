@@ -34,7 +34,7 @@ queued in the local scheduler. An example of the output from *condor_q* is
     2388 jobs; 0 completed, 1 removed, 58 idle, 2276 running, 53 held, 0 suspended
 
 The goal of the HTCondor system is to effectively manage many jobs. As you may have thousands
-of jobs in a queue, by default *condor_q* summarizes many similiar jobs on one line.  Depending
+of jobs in a queue, by default *condor_q* summarizes many similar jobs on one line.  Depending
 on the types of your jobs, this output may look a little different.
 
 Often, when you are starting out, and have few jobs, you may want to see one line of output
@@ -86,7 +86,7 @@ in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor_shadow* process
 :index:`condor_shadow`\ :index:`condor_shadow<single: condor_shadow; remote system call>`
-on the submit machine. The shadow process is the mechanism by which the
+on the access point. The shadow process is the mechanism by which the
 remotely executing jobs can access the environment from which it was
 submitted, such as input and output files.
 
@@ -145,7 +145,7 @@ Peeking in on a running job's output files
 
 When a job is running, you may be curious about any output it has created.
 The **condor_tail** command can copy output files from a running job on a remote
-machine back to the submit machine.  **condor_tail** uses the same networking
+machine back to the access point.  **condor_tail** uses the same networking
 stack as HTCondor proper, so it will work if the execute machine is behind a firewall.
 Simply run, where xx.yy is the job id of a running job:
 

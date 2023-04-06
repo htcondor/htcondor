@@ -158,7 +158,7 @@ possible on each EP without overloading them.  Jobs must declare the
 number of CPUs, the amount of memory and disk they need.  Special jobs
 may need to request other resources, such as GPUs or licenses.  Ask your
 administrator if your jobs requires such things.  The amount of cpus
-is unitless, but memory and disk requires can have a "M" for megabyte,
+is unit less, but memory and disk requires can have a "M" for megabyte,
 "G" for Gigabyte suffix for legibility.  Without the suffix, memory
 units are megabytes and disk kilobytes.
 

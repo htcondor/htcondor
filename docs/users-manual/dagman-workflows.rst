@@ -199,7 +199,7 @@ after a job completes its execution is
 :index:`POST script<single: POST script; DAGMan>` called a *POST* script. Note that
 the executable specified does not necessarily have to be a shell script
 (Unix) or batch file (Windows); but it should be relatively light weight
-because it will be run directly on the submit machine, not submitted as
+because it will be run directly on the access point, not submitted as
 an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
@@ -266,7 +266,7 @@ for any DAG with a *JobName* of DEFER.
 Scripts as part of a DAG workflow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Scripts are executed on the submit machine; the submit machine is not
+Scripts are executed on the access point; the access point is not
 necessarily the same machine upon which the node's job is run. Further,
 a single cluster of HTCondor jobs may be spread across several machines.
 
@@ -1001,7 +1001,7 @@ Suspending a Running DAG
 :index:`suspending a running DAG<single: suspending a running DAG; DAGMan>`
 
 It may be desired to temporarily suspend a running DAG. For example, the
-load may be high on the submit machine, and therefore it is desired to
+load may be high on the access point, and therefore it is desired to
 prevent DAGMan from submitting any more jobs until the load goes down.
 There are two ways to suspend (and resume) a running DAG.
 
@@ -1272,7 +1272,7 @@ Prepend or Append Variables to Node
 After *JobName* the word *PREPEND* or *APPEND* can be added to specify how
 a variable is passed to a node at job submission time. *APPEND* will add
 the variable after the submit description file is read. Resulting in the
-passed variable being added as a macro or overwitting any already existing
+passed variable being added as a macro or overwritting any already existing
 variable values. *PREPEND* will add the variable before the submit
 description file is read. This allows the variable to be used in submit
 description file conditionals.
@@ -3063,7 +3063,7 @@ The *ALL_NODES* option is case-insensitive.
 It is important to note that the *ALL_NODES* option does not apply
 across splices and sub-DAGs. In other words, an *ALL_NODES* option
 within a splice or sub-DAG will apply only to nodes within that splice
-or sub-DAG; also, an *ALL_NODES* option in a parent DAG willPRIORITY DAG (again,
+or sub-DAG; also, an *ALL_NODES* option in a parent DAG will PRIORITY DAG (again,
 except any FINAL node).
 
 As of version 8.5.8, the *ALL_NODES* option cannot be used when
@@ -3210,7 +3210,7 @@ the start of node A will be written to ``dag-progress.save``. Then when node B s
 the present ``dag-progress.save`` will become ``dag-progress.save.old`` and a new
 ``dag-progress.save`` will be written. Finally, once node C starts ``dag-progress.save.old``
 will be deleted, the present ``dag-progress.save`` will become ``dag-progress.save.old``
-and a new ``dag-progress.save`` will be written. Allowing a single save file that progesses
+and a new ``dag-progress.save`` will be written. Allowing a single save file that progresses
 with the DAG to be created.
 
 .. _rescue-dags:
@@ -3682,7 +3682,7 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 An *ancestor* is a node that a another node depends on either directly or indirectly
 through a chain of **PARENT/CHILD** relationships. For example, the **DAG** shown below
 would result in node **G**'s *ancestors* to be nodes **A**, **B**, **D**, and **F**
-because the **PARENT** to **CHILD** realtionships appear as ``A & B -> D -> F -> G``
+because the **PARENT** to **CHILD** relationships appear as ``A & B -> D -> F -> G``
 
 .. code-block:: text
 
