@@ -402,7 +402,12 @@ class Job {
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
 
+	void SetSaveFile(const std::string& saveFile) { _saveFile = saveFile; _isSavePoint = true; }
+	inline std::string GetSaveFile() const { return _saveFile; }
+	inline bool IsSavePoint() const { return _isSavePoint; }
+
 	void setSubPrio(int subPrio) { this->subPriority = subPrio;}
+
 private:
     /** */ CondorID _CondorID;
 public:
@@ -453,6 +458,9 @@ public:
 	// for a given node); it should not be examined or changed
 	// unless/until node is STATUS_DONE
 	bool countedAsDone;
+
+	// Indicates that this node is going to write a save point file.
+	bool _isSavePoint;
 
 private:
 		// Whether this is a noop job (shouldn't actually be submitted
@@ -550,6 +558,9 @@ private:
   
     // name given to the job by the user
     char* _jobName;
+
+	// Filename to write save point rescue file as
+	std::string _saveFile;
 
     /** */ status_t _Status;
 

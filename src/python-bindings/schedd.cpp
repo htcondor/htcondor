@@ -2902,6 +2902,8 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             deep_opts.autoRescue = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
+        else if (key_lc == "load_save")
+            shallow_opts.saveFile = value;
         else if (key_lc == "allowversionmismatch")
             deep_opts.allowVerMismatch = (value == "true") ? true : false;
         else if (key_lc == "do_recurse")
@@ -4835,11 +4837,12 @@ void export_schedd()
                 ``schedd-address-file`` *(str)*, ``AlwaysRunPost`` *(bool)*,
                 ``maxidle`` *(int)*, ``maxjobs`` *(int)*, ``MaxPre`` *(int)*,
                 ``MaxPost`` *(int)*, ``UseDagDir`` *(bool)*, ``debug`` *(int)*,
-                ``outfile_dir`` *(str)*, ``config`` *(str)*,
-                ``batch-name`` *(str)*, ``AutoRescue`` *(bool)*,
+                ``outfile_dir`` *(str)*, ``config`` *(str)*, ``batch-name`` *(str)*,
+                ``load_save`` *(str)*, ``AutoRescue`` *(bool)*,
                 ``DoRescueFrom`` *(int)*, ``AllowVersionMismatch`` *(bool)*,
                 ``do_recurse`` *(bool)*, ``update_submit`` *(bool)*,
-                ``import_env`` *(bool)*, ``DumpRescue`` *(bool)*,
+                ``import_env`` *(bool)*, ``include_env`` *(str)*,
+                ``insert_env`` *(str)*, ``DumpRescue`` *(bool)*,
                 ``valgrind`` *(bool)*, ``priority`` *(int)*,
                 ``suppress_notification`` *(bool)*, ``DoRecov`` *(bool)*
             :return: A :class:`Submit` description for the DAG described in ``filename``

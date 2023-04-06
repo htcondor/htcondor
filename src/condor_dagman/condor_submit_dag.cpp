@@ -627,6 +627,14 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.doRescueFrom = atoi(argv[++iArg]);
 			}
+			else if (strArg.find("-load") != std::string::npos) //-load_save
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-load_save requires a filename\n");
+					printUsage();
+				}
+				shallowOpts.saveFile = argv[++iArg];
+			}
 			else if (strArg.find("-allowver") != std::string::npos) // -AllowVersionMismatch
 			{
 				deepOpts.allowVerMismatch = true;
@@ -849,6 +857,7 @@ int printUsage(int iExitCode)
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
+	printf("    -load_save <filename> (File with optional path to start DAG with saved progress)");
 	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");

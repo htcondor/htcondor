@@ -20,7 +20,8 @@ Synopsis
 [**-outfile_dir** *directory*] [**-config** *ConfigFileName*]
 [**-insert_sub_file** *FileName*] [**-append** *Command*]
 [**-batch-name** *batch_name*] [**-autorescue** *0|1*]
-[**-dorescuefrom** *number*] [**-allowversionmismatch** ]
+[**-dorescuefrom** *number*] [**-load_save** *filename*]
+[**-allowversionmismatch** ]
 [**-no_recurse** ] [**-do_recurse** ] [**-update_submit** ]
 [**-import_env** ] [**-include_env** *Variables*] [**-insert_env** *Key=Value*]
 [**-DumpRescue** ] [**-valgrind** ] [**-DontAlwaysRunPost** ] [**-AlwaysRunPost** ]
@@ -228,6 +229,11 @@ Options
     Forces *condor_dagman* to run the specified rescue DAG number for
     the given DAG. A value of 0 is the same as not specifying this
     option. Specifying a non-existent rescue DAG is a fatal error.
+ **-load_save** *filename*
+    Specify a file with saved DAG progress to re-run the DAG from. If
+    given a path DAGMan will attempt to read that file following that
+    path. Otherwise, DAGMan will check for the file in the DAG's
+    ``save_files`` sub-directory.
  **-allowversionmismatch**
     This optional argument causes *condor_dagman* to allow a version
     mismatch between *condor_dagman* itself and the ``.condor.sub``

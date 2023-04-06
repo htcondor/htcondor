@@ -558,8 +558,8 @@ class Dag {
 			DAG file)
     */
     void WriteRescue (const char * rescue_file,
-				const char * dagFile, bool parseFailed = false,
-				bool isPartial = false) /* const */;
+				const char * headerInfo, bool parseFailed = false,
+				bool isPartial = false, bool isSavePoint = false) /* const */;
 
 	int PreScriptReaper( Job *job, int status );
 	int PostScriptReaper( Job *job, int status );
@@ -1063,6 +1063,8 @@ class Dag {
 		    @param script: the script to write
 		*/
 	static void WriteScriptToRescue( FILE *fp, Script *script );
+
+	void WriteSavePoint(Job* node);
 
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).

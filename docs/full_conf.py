@@ -493,6 +493,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^final", token.Keyword, "final"),
             (r"^dot", token.Keyword, "dot"),
             (r"^node_status_file", token.Keyword, "node_status_file"),
+            (r"^save_point_file", token.Keyword, "save_point_file"),
             # examples sometimes use ... to indicate continuation
             (r"^.{3}$", token.Text),
         ],
@@ -567,6 +568,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
+        "save_point_file": DAGMAN_COMMON,
     }
 
 
