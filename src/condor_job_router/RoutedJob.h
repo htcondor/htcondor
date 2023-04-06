@@ -26,6 +26,7 @@
 #include <xform_utils.h>
 
 #include "classad/classad_distribution.h"
+#include <vector>
 
 class JobRoute;
 
@@ -147,8 +148,8 @@ class JobRoute {
 	//   copy_XXX = YYY    (copies value of XXX to attribute YYY in job ad)
 	bool ApplyRoutingJobEdits(
 		ClassAd *src_ad,
-		SimpleList<MacroStreamXFormSource*>& pre_route_xfms,
-		SimpleList<MacroStreamXFormSource*>& post_route_xfms,
+		std::vector<MacroStreamXFormSource*>& pre_route_xfms,
+		std::vector<MacroStreamXFormSource*>& post_route_xfms,
 		unsigned int xform_flags);
 
 	bool AcceptingMoreJobs() const;

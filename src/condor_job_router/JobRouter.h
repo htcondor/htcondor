@@ -26,6 +26,7 @@
 #include "RoutedJob.h"
 
 #include "classad/classad_distribution.h"
+#include <vector>
 
 #if HAVE_JOB_HOOKS
 #include "JobRouterHookMgr.h"
@@ -260,8 +261,8 @@ private:
 
 	// these transforms are applied when a route is chosen, before and after the route is applied
 	// they serve the same purpose that JOB_ROUTER_DEFAULTS did in the old schema
-	SimpleList<MacroStreamXFormSource*> m_pre_route_xfms;
-	SimpleList<MacroStreamXFormSource*> m_post_route_xfms;
+	std::vector<MacroStreamXFormSource*> m_pre_route_xfms;
+	std::vector<MacroStreamXFormSource*> m_post_route_xfms;
 	void clear_pre_and_post_xfms();
 
 	JobRoute *GetRouteByName(char const *name);
