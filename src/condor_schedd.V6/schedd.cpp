@@ -9591,6 +9591,11 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   Someday, hopefully soon, we'll fix this and spawn the
 	   shadow/handler with PRIV_USER_FINAL... */
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName(name);
+	if( rid == shadowReaperId ) {
+		if(! fip) { fip = &fi; }
+		fip->want_pid_namespace = true;
+		dprintf( D_ALWAYS, "Spawning shadow in a PID namespace.\n" );
+	}
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  true, true, env, NULL, fip, NULL, 
 	                                  std_fds_p, NULL, niceness,
@@ -9631,6 +9636,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	ASSERT( job_ad );
 	std::string ad_str;
 	sPrintAdWithSecrets(ad_str, *job_ad);
+	formatstr_cat( ad_str, "shadow_pid = %d\n", pid );
 	const char* ptr = ad_str.c_str();
 	int len = ad_str.length();
 	while (len) {

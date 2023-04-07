@@ -153,6 +153,9 @@ parseArgs( int argc, char *argv[] )
 }
 
 
+// For display_dprintf_header(), mostly.
+extern pid_t shadow_pid;
+
 static FILE* fp = NULL;
 ClassAd* 
 readJobAd( void )
@@ -213,6 +216,10 @@ readJobAd( void )
 	if( IsDebugVerbose(D_JOB) ) {
 		dPrintAd( D_JOB, *ad );
 	} 
+
+	// We don't know our own (external/real) PID if we were started in
+	// a PID namespace.
+	ad->LookupInteger( "shadow_pid", shadow_pid );
 
 	// For debugging, see if there's a special attribute in the
 	// job ad that sends us into an infinite loop, waiting for
@@ -511,7 +518,7 @@ recycleShadow(int previous_job_exit_reason)
 
 		DCSchedd schedd(schedd_addr);
 		std::string error_msg;
-		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg ) )
+		if( !schedd.recycleShadow( previous_job_exit_reason, &new_job_ad, error_msg, shadow_pid ) )
 		{
 			dprintf(D_ALWAYS,"recycleShadow() failed: %s\n",error_msg.c_str());
 			delete new_job_ad;

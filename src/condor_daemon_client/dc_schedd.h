@@ -366,7 +366,7 @@ public:
 		// Caller should delete new_job_ad when done with it.
 		// Returns false on error (see error_msg)
 		// If no new job found, returns true with *new_job_ad=NULL
-	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg );
+	bool recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg, pid_t my_pid = 0 );
 
 
 		/*

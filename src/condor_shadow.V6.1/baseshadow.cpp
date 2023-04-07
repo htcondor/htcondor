@@ -1660,16 +1660,18 @@ BaseShadow::publishShadowAttrs( ClassAd* ad )
 // It is only needed for this last function.
 extern BaseShadow *Shadow;
 
+pid_t shadow_pid = 0;
+
 // This function is called by dprintf - always display our job, proc,
 // and pid in our log entries. 
 int
 display_dprintf_header(char **buf,int *bufpos,int *buflen)
 {
-	static pid_t mypid = 0;
 	int mycluster = -1;
 	int myproc = -1;
 
-	if (!mypid) {
+	pid_t mypid = shadow_pid;
+	if(! mypid) {
 		mypid = daemonCore->getpid();
 	}
 

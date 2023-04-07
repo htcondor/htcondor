@@ -679,6 +679,9 @@ DCTokenRequester::daemonUpdateCallback(bool success, Sock *sock, CondorError *er
 void
 check_parent( )
 {
+    // If we're in a PID namespace and don't _have_ a parent, that's OK.
+    if( getppid() == 0 ) { return; }
+
 	if ( daemonCore->Is_Pid_Alive( daemonCore->getppid() ) == FALSE ) {
 		// our parent is gone!
 		dprintf(D_ALWAYS,

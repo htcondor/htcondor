@@ -1772,7 +1772,7 @@ bool DCSchedd::getJobConnectInfo(
 	return result;
 }
 
-bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg )
+bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad, std::string & error_msg, pid_t my_pid )
 {
 	int timeout = 300;
 	CondorError errstack;
@@ -1802,8 +1802,8 @@ bool DCSchedd::recycleShadow( int previous_job_exit_reason, ClassAd **new_job_ad
 	}
 
 	sock.encode();
-	int mypid = getpid();
-	if( !sock.put( mypid ) ||
+	if(! my_pid) { my_pid = getpid(); }
+	if( !sock.put( my_pid ) ||
 		!sock.put( previous_job_exit_reason ) ||
 		!sock.end_of_message() )
 	{

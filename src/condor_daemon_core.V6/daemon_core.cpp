@@ -5974,6 +5974,14 @@ pid_t CreateProcessForkit::fork_exec() {
 			ASSERT(child_stack_ptr);
 		}
 
+
+		int clone_flags = CLONE_VM|CLONE_VFORK|SIGCHLD;
+		if( m_family_info && m_family_info->want_pid_namespace ) {
+			clone_flags |= CLONE_NEWPID;
+			/* HACK: we should pass CLONE_NEWPID in opts, instead */ m_family_info = NULL;
+		}
+
+
 			// save some state in dprintf
 		dprintf_before_shared_mem_clone();
 
@@ -5987,11 +5995,24 @@ pid_t CreateProcessForkit::fork_exec() {
 
 		enterCreateProcessChild(this);
 
+	priv_state original_priv = get_priv();
+	if( clone_flags & CLONE_NEWPID ) {
+		/* HACK */ m_clone_newpid_pid = -2;
+		/* HACK */ m_clone_newpid_ppid = -2;
+		set_root_priv();
+	}
+
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
 			child_stack_ptr,
-			(CLONE_VM|CLONE_VFORK|SIGCHLD),
+			clone_flags,
 			this );
+
+	set_priv(original_priv);
+	if( clone_flags & CLONE_NEWPID ) {
+		/* HACK */ m_clone_newpid_pid = -1;
+		/* HACK */ m_clone_newpid_ppid = -1;
+	}
 
 		exitCreateProcessChild();
 
