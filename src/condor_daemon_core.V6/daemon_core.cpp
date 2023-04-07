@@ -5975,31 +5975,36 @@ pid_t CreateProcessForkit::fork_exec() {
 		}
 
 
+		// reason for flags passed to clone:
+		// CLONE_VM    - child shares same address space (so no time
+		//               wasted copying page tables)
+		// CLONE_VFORK - parent is suspended until child calls exec/exit
+		//               (so we do not throw away child's stack etc.)
+		// SIGCHLD     - we want this signal when child dies, as opposed
+		//               to some other non-standard signal
 		int clone_flags = CLONE_VM|CLONE_VFORK|SIGCHLD;
 		if( m_job_opt_mask & DCJOBOPT_PID_NAMESPACE ) {
 			clone_flags |= CLONE_NEWPID;
 		}
 
-
-			// save some state in dprintf
+		// save some state in dprintf
 		dprintf_before_shared_mem_clone();
 
-			// reason for flags passed to clone:
-			// CLONE_VM    - child shares same address space (so no time
-			//               wasted copying page tables)
-			// CLONE_VFORK - parent is suspended until child calls exec/exit
-			//               (so we do not throw away child's stack etc.)
-			// SIGCHLD     - we want this signal when child dies, as opposed
-			//               to some other non-standard signal
 
 		enterCreateProcessChild(this);
 
-	priv_state original_priv = get_priv();
-	if( clone_flags & CLONE_NEWPID ) {
-		/* HACK */ m_clone_newpid_pid = -2;
-		/* HACK */ m_clone_newpid_ppid = -2;
-		set_root_priv();
-	}
+		priv_state original_priv = get_priv();
+		if( clone_flags & CLONE_NEWPID ) {
+			// If we create a process with both CLONE_VFORK and CLONE_NEWPID,
+			// the parent can't send the child's PID or its own to the child
+			// before the child checks to see if the new PID collides.  The
+			// does the check so that daemon core can call waitpid() when
+			// the error pipe indicates a failure.  (I'm not sure how this
+			// avoids catching a "bogus" SIGCHLD in the parent....)
+			/* HACK */ m_clone_newpid_pid = -2;
+			/* HACK */ m_clone_newpid_ppid = -2;
+			set_root_priv();
+		}
 
 		newpid = clone(
 			CreateProcessForkit::clone_fn,
@@ -6007,19 +6012,25 @@ pid_t CreateProcessForkit::fork_exec() {
 			clone_flags,
 			this );
 
-	set_priv(original_priv);
-	if( clone_flags & CLONE_NEWPID ) {
-		/* HACK */ m_clone_newpid_pid = -1;
-		/* HACK */ m_clone_newpid_ppid = -1;
-	}
+		set_priv(original_priv);
 
 		exitCreateProcessChild();
+
 
 			// Since we used the CLONE_VFORK flag, the child has exited
 			// or called exec by now.
 
 			// restore state
 		dprintf_after_shared_mem_clone();
+
+
+		if( clone_flags & CLONE_NEWPID ) {
+			DaemonCore::PidEntry* pidinfo = NULL;
+			if( daemonCore->pidTable->lookup(newpid, pidinfo) >= 0 ) {
+				EXCEPT("PID %d re-used for CLONE_NEWPID\n", newpid);
+			}
+		}
+
 
 		return newpid;
 	}
