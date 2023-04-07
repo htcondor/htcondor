@@ -6249,7 +6249,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(error)) {
+		if(-1 == InitializeSystemPlugins(error, false)) {
 			return "";
 		}
 	}
@@ -6301,7 +6301,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, false)) {
 			return TransferPluginResult::Error;
 		}
 	}
@@ -6545,7 +6545,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
 	if (input_file == nullptr) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-					"Could not open %s for writing, aborting\n", input_filename.c_str());
+			"Could not open %s for writing (%s, errno=%d), aborting\n",
+			input_filename.c_str(), strerror(errno), errno );
 		return TransferPluginResult::Error;
 	}
 	fputs( transfer_files_string.c_str(), input_file );
@@ -6823,7 +6824,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, true)) {
 			return "";
 		}
 	}
@@ -6891,7 +6892,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	}
 
 	// start with the system table
-	if (-1 == InitializeSystemPlugins(e)) {
+	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
 	}
 
@@ -6908,7 +6909,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			trim(plugin_path);
 			std::string plugin(condor_basename(plugin_path.c_str()));
 
-			InsertPluginMappings(methods, plugin);
+			InsertPluginMappings(methods, plugin, false);
 			plugins_multifile_support[plugin] = true;
 			plugins_from_job[plugin.c_str()] = true;
 			multifile_plugins_enabled = true;
@@ -6922,7 +6923,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 }
 
 
-int FileTransfer::InitializeSystemPlugins(CondorError &e) {
+int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 
 	// don't leak even if Initialize gets called more than once
 	if (plugin_table) {
@@ -6949,7 +6950,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 	char *p;
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
-		SetPluginMappings( e, p );
+		SetPluginMappings( e, p, enable_testing );
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
@@ -6967,7 +6968,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 
 
 void
-FileTransfer::SetPluginMappings( CondorError &e, const char* path )
+FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_testing )
 {
     FILE* fp;
     const char *args[] = { path, "-classad", NULL};
@@ -7019,7 +7020,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
 		if (ad->LookupString( "SupportedMethods", methods)) {
-			InsertPluginMappings( methods, path );
+			InsertPluginMappings( methods, path, enable_testing );
 		}
 	}
 
@@ -7029,7 +7030,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 
 void
-FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing)
 {
 	StringList method_list(methods.c_str());
 
@@ -7037,11 +7038,117 @@ FileTransfer::InsertPluginMappings(const std::string& methods, const std::string
 
 	method_list.rewind();
 	while((m = method_list.next())) {
+		if (enable_testing && !TestPlugin(m, p)) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m, p.c_str());
+			continue;
+		}
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.c_str());
 		if ( plugin_table->insert(m, p, true) != 0 ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
 		}
 	}
+}
+
+namespace {
+
+class AutoDeleteDirectory {
+public:
+	AutoDeleteDirectory(std::string dir, ClassAd *ad) : m_dirname(dir), m_ad(ad) {}
+
+	~AutoDeleteDirectory() {
+		if (m_dirname.empty()) {return;}
+
+		dprintf(D_FULLDEBUG, "FILETRANSFER: Cleaning up directory %s.\n", m_dirname.c_str());
+		Directory dir_obj(m_dirname.c_str());
+		if (!dir_obj.Remove_Entire_Directory()) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s contents.\n", m_dirname.c_str());
+			return;
+		}
+		if (-1 == rmdir(m_dirname.c_str())) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s: %s (errno=%d).\n",
+				m_dirname.c_str(), strerror(errno), errno);
+		}
+
+		if (m_ad) {
+			m_ad->Delete("Iwd");
+		}
+	}
+
+private:
+	std::string m_dirname;
+	ClassAd *m_ad;
+};
+
+}
+
+bool
+FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
+{
+	const std::string test_url_param = std::string(method) + "_test_url";
+	std::string test_url;
+	if (!param(test_url, test_url_param.c_str())) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());
+		return true;
+	}
+
+#ifdef WIN32
+	return true;
+#else
+	// If we are running as a test starter, we may not have Iwd set appropriately.
+	// In this case, create an execute directory.
+	std::string iwd, directory;
+	if (!jobAd.EvaluateAttrString("Iwd", iwd)) {
+		std::string execute_dir;
+		if (!param(execute_dir, "EXECUTE")) {
+			dprintf(D_ALWAYS, "FILETRANSFER: EXECUTE configuration variable not set; cannot test plugin.\n");
+			return false;
+		}
+		auto test_dir = execute_dir + "/test_file_transfer.XXXXXX";
+		std::unique_ptr<char, decltype(&free)> test_dir_template(strdup(test_dir.c_str()), &free);
+		{
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_CONDOR);
+			auto result = mkdtemp(test_dir_template.get());
+			if (!result) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to create temporary test directory %s: %s (errno=%d).\n",
+					test_dir_template.get(), strerror(errno), errno);
+				return false;
+			}
+			directory = std::string(result);
+		}
+		if (user_ids_are_inited()) {
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_ROOT);
+			if (0 != chown(directory.c_str(), get_user_uid(), get_user_gid())) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to chown temporary test directory %s to user UID %d: %s (errno=%d).\n",
+					directory.c_str(), get_user_uid(), strerror(errno), errno);
+				return false;
+			}
+		}
+		iwd = directory;
+		jobAd.InsertAttr("Iwd", directory);
+	}
+	AutoDeleteDirectory dir_delete(directory, &jobAd);
+#endif
+
+	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
+
+	classad::ClassAd testAd;
+	testAd.InsertAttr("Url", test_url);
+	testAd.InsertAttr("LocalFileName", fullname);
+	std::string testAdString;
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(testAdString, &testAd);
+
+	std::vector<std::unique_ptr<ClassAd>> result_ads;
+	CondorError err;
+	auto result = InvokeMultipleFileTransferPlugin(err, plugin, testAdString, nullptr, false, &result_ads );
+	if (result != TransferPluginResult::Success) {
+		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
+			test_url.c_str(), plugin.c_str(), err.getFullText().c_str());
+		return false;
+	}
+	dprintf(D_ALWAYS, "FILETRANSFER: Successfully downloaded test URL %s using plugin %s.\n",
+		test_url.c_str(), plugin.c_str());
+	return true;
 }
 
 bool
