@@ -2353,9 +2353,9 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) )
 	{
-		MyString session_id;
-		MyString session_key;
-		MyString session_info;
+		std::string session_id;
+		std::string session_key;
+		std::string session_info;
 			// there is no sec session info yet in the claim id, so
 			// we call secSessionId with ignore_session_info=true to
 			// force it to give us the session id

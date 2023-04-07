@@ -300,7 +300,6 @@ public:
 		// Get security session info to send to our peer so that peer
 		// can create pre-built security session compatible with ours.
 		// This basically serializes selected attributes of the session.
-	bool ExportSecSessionInfo(char const *session_id,MyString &session_info);
 	bool ExportSecSessionInfo(char const *session_id,std::string &session_info);
 
 		// This can be used, for example, to expire a non-negotiated session

@@ -1908,7 +1908,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 				// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -1922,10 +1922,10 @@ SecManStartCommand::sendAuthInfo_inner()
 				// if the encryption method is AES, we don't actually want to enable the MAC
 				// here as that instantiates an MD5 object which will cause FIPS to blow up.
 				if(ki->getProtocol() != CONDOR_AESGCM) {
-					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.c_str());
 				} else {
 					dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
-					m_sock->set_MD_mode(MD_OFF, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_OFF, ki, key_id.c_str());
 				}
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
@@ -1946,7 +1946,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 					// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 					// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -2501,12 +2501,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
 				// gather some additional data for useful error reporting
 				std::string response_user;
-				MyString response_method = m_sock->getAuthenticationMethodUsed();
+				const char* response_method = m_sock->getAuthenticationMethodUsed();
 				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
 
 				// push error message on the stack and print to the log
 				std::string errmsg;
-				if (response_method == "") {
+				if (response_method == nullptr || response_method[0] == '\0') {
 					response_method = "(no authentication)";
 					formatstr( errmsg, "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
 						response_rc.c_str(), response_user.c_str(),
@@ -2516,7 +2516,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				} else {
 					m_sock->setShouldTryTokenRequest(true);
 					formatstr(errmsg, "Received \"%s\" from server for user %s using method %s.",
-						response_rc.c_str(), response_user.c_str(), response_method.c_str());
+						response_rc.c_str(), response_user.c_str(), response_method);
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.c_str());
@@ -2764,11 +2764,14 @@ SecManStartCommand::DoTCPAuth_inner()
 	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
-	MyString tcp_addr = m_sock->get_connect_addr();
-	if (!tcp_auth_sock->connect(tcp_addr.c_str(),0,m_nonblocking)) {
-		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.c_str());
+	const char* tcp_addr = m_sock->get_connect_addr();
+	if (tcp_addr == nullptr) {
+		tcp_addr = "";
+	}
+	if (!tcp_auth_sock->connect(tcp_addr,0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr);
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "TCP auth connection to %s failed.", tcp_addr.c_str());
+		                  "TCP auth connection to %s failed.", tcp_addr);
 		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
@@ -4187,14 +4190,6 @@ SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name,
 
 bool
 SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
-    MyString ms;
-    bool rv = ExportSecSessionInfo(session_id, ms);
-    if(! ms.empty()) { session_info = ms; }
-    return rv;
-}
-
-bool
-SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;
