@@ -146,10 +146,10 @@ RemoteResource::~RemoteResource()
 
 
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId() ) {
+		if( m_claim_session.secSessionId()[0] != '\0' ) {
 			daemonCore->getSecMan()->invalidateKey( m_claim_session.secSessionId() );
 		}
-		if( m_filetrans_session.secSessionId() ) {
+		if( m_filetrans_session.secSessionId()[0] != '\0' ) {
 			daemonCore->getSecMan()->invalidateKey( m_filetrans_session.secSessionId() );
 		}
 	}
@@ -740,7 +740,7 @@ RemoteResource::initStartdInfo( const char *name, const char *pool,
 
 	m_claim_session = ClaimIdParser(claim_id);
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( m_claim_session.secSessionId() == NULL ) {
+		if( m_claim_session.secSessionId()[0] == '\0' ) {
 			dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: warning - failed to create security session from claim id %s because claim has no session information, likely because the matched startd has SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION set to False\n",m_claim_session.publicClaimId());
 		}
 		else {
@@ -2590,7 +2590,7 @@ RemoteResource::getSecSessionInfo(
 		dprintf(D_ALWAYS,"Request for security session info from starter, but SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION is not True, so ignoring.\n");
 		return false;
 	}
-	if (!m_claim_session.secSessionId() || !m_filetrans_session.secSessionId()) {
+	if (m_claim_session.secSessionId()[0] == '\0' || m_filetrans_session.secSessionId()[0] == '\0') {
 		dprintf(D_ALWAYS,"Request for security session info from starter, but claim id has no security session, so ignoring.\n");
 		return false;
 	}

@@ -83,10 +83,8 @@ class ClaimIdParser {
 			// changes.
 		if( !ignore_session_info && !secSessionInfo() ) {
 				// There is no session info, so no security session
-				// was created.  Returning NULL here simplifies
-				// the call sites that pass the session id to
-				// startCommand().
-			return NULL;
+				// was created.
+			return "";
 		}
 		if( m_session_id.empty() ) {
 			char const *str = m_claim_id.c_str();
@@ -110,7 +108,7 @@ class ClaimIdParser {
 				// skip past the session info
 			ptr = ptr2;
 		}
-		return ptr;
+		return ptr ? ptr : "";
 	}
 	char const *secSessionInfo() {
 			// expected format: blah#blah#...#[session_info]SESSION_KEY
@@ -119,23 +117,19 @@ class ClaimIdParser {
 			char const *ptr = strrchr(str,'#');
 			char const *endptr;
 			if( !ptr ) {
-				return NULL;
+				return "";
 			}
 			ptr+=1;
 			if( *ptr != '[' ) {
-				return NULL;
+				return "";
 			}
 			endptr = strrchr(str,']');
 			if(!endptr || endptr < ptr) {
-				return NULL;
+				return "";
 			}
 			m_session_info.assign(ptr,endptr+1);
 		}
 
-		if( m_session_info.empty() ) {
-				// returning NULL here is a convenience for call sites
-			return NULL;
-		}
 		return m_session_info.c_str();
 	}
 	void setSecSessionInfo(char const *session_info) {

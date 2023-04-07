@@ -2408,7 +2408,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 ClaimId::~ClaimId()
 {
-	if( claimid_parser.secSessionId() ) {
+	if( claimid_parser.secSessionId()[0] != '\0' ) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
