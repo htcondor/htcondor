@@ -24,9 +24,9 @@
 
 #include "dc_service.h"
 #include "dc_transfer_queue.h"
-#include "simplelist.h"
 #include "reli_sock.h"
 #include "generic_stats.h"
+#include <vector>
 
 class IOStats {
  public:
@@ -116,7 +116,7 @@ class TransferQueueManager: public Service {
 
 	void AddRecentIOStats(IOStats &s,const std::string &up_down_queue_user);
  private:
-	SimpleList<TransferQueueRequest *> m_xfer_queue;
+	std::vector<TransferQueueRequest *> m_xfer_queue;
 	int m_max_uploads;   // 0 if unlimited
 	int m_max_downloads; // 0 if unlimited
 	time_t m_default_max_queue_age; // 0 if unlimited
