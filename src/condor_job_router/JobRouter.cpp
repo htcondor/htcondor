@@ -803,7 +803,7 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 
 	// dump post route transforms
 	if ( ! m_post_route_xfms.empty()) {
-		for (MacroStreamXFormSource *xfm : m_pre_route_xfms) {
+		for (MacroStreamXFormSource *xfm : m_post_route_xfms) {
 			fprintf(hf, "Post-Route Transform : %s\n", xfm->getName());
 			buf.clear();
 			xfm->getFormattedText(buf, "\t", true);
@@ -3164,7 +3164,7 @@ JobRoute::ApplyRoutingJobEdits(
 	}
 
 	if (m_use_pre_route_transform && ! post_route.empty()) {
-		for (MacroStreamXFormSource* xfm: pre_route) {
+		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
