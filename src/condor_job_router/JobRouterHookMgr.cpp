@@ -25,10 +25,11 @@
 #include "set_user_priv_from_ad.h"
 #include "Scheduler.h"
 #include "submit_job.h"
+#include <algorithm>
 
 extern JobRouter* job_router;
 
-SimpleList<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
+std::vector<HOOK_RUN_INFO*> JobRouterHookMgr::m_job_hook_list;
 
 
 // // // // // // // // // // // // 
@@ -498,17 +499,15 @@ JobRouterHookMgr::addKnownHook(const char* key, HookType hook)
 	hook_info->hook_type = hook;
 	hook_info->key = strdup(key);
 	ASSERT( hook_info->key );
-	return(m_job_hook_list.Append(hook_info));
+	m_job_hook_list.push_back(hook_info);
+	return true;
 }
 
 
 bool
 JobRouterHookMgr::checkHookKnown(const char* key, HookType hook)
 {
-	HOOK_RUN_INFO *hook_info;
-	m_job_hook_list.Rewind();
-	while (m_job_hook_list.Next(hook_info))
-	{
+	for (HOOK_RUN_INFO *hook_info : m_job_hook_list) {
 		if ((0 == strncmp(hook_info->key,key,strlen(hook_info->key))) &&
 			 (hook_info->hook_type == hook))
 		{
@@ -522,47 +521,35 @@ JobRouterHookMgr::checkHookKnown(const char* key, HookType hook)
 bool
 JobRouterHookMgr::removeKnownHook(const char* key, HookType hook)
 {
-	bool found = false;
-	HOOK_RUN_INFO *hook_info;
-	m_job_hook_list.Rewind();
-	while (m_job_hook_list.Next(hook_info))
-	{
-		if ((0 == strncmp(hook_info->key,key,strlen(hook_info->key))) &&
-			 (hook_info->hook_type == hook))
-		{
-			found = true;
-			break;
-		}
-	}
+	auto same = [key, hook](HOOK_RUN_INFO *hook_info) {
+		return ((0 == strncmp(hook_info->key,key,strlen(hook_info->key))) &&
+			 (hook_info->hook_type == hook));
+	};
 
-	if (true == found)
-	{
-		// Delete the information about this hook process
-		m_job_hook_list.DeleteCurrent();
+	auto it = std::find_if(m_job_hook_list.begin(), m_job_hook_list.end(), same);
+
+	if (it != m_job_hook_list.end()) {
+		HOOK_RUN_INFO *hook_info = *it;
 		free(hook_info->key);
 		free(hook_info);
-	}
-	else
-	{
-		dprintf(D_FULLDEBUG, "JobRouterHookMgr::removeKnownHook "
-			"called for unknown job key %s.\n", key);
+		m_job_hook_list.erase(it);
+		return true;
 	}
 
-	return found;
+	dprintf(D_FULLDEBUG, "JobRouterHookMgr::removeKnownHook "
+			"called for unknown job key %s.\n", key);
+	return false;
 }
 
 
 void
 JobRouterHookMgr::removeAllKnownHooks()
 {
-	HOOK_RUN_INFO *hook_info;
-	m_job_hook_list.Rewind();
-	while (m_job_hook_list.Next(hook_info))
-	{
-		m_job_hook_list.DeleteCurrent();
+	for (HOOK_RUN_INFO *hook_info : m_job_hook_list) {
 		free(hook_info->key);
 		free(hook_info);
 	}
+	m_job_hook_list.clear();
 }
 
 
