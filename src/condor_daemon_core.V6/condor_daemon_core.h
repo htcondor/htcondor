@@ -195,6 +195,7 @@ const int DCJOBOPT_NO_UDP           = (1<<4);
 const int DCJOBOPT_NO_CONDOR_ENV_INHERIT = (1<<5);   // do not pass CONDOR_INHERIT to the child
 const int DCJOBOPT_USE_SYSTEMD_INET_SOCKET = (1<<6);	     // Pass the reli sock from systemd as the command socket.
 const int DCJOBOPT_INHERIT_FAMILY_SESSION = (1<<7);
+const int DCJOBOPT_PID_NAMESPACE = (1<<8);
 
 const int DC_STATUS_OOM_KILLED = (1 << 24);
 

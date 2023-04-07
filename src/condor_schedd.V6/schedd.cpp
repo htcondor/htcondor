@@ -9592,9 +9592,7 @@ Scheduler::spawnJobHandlerRaw( shadow_rec* srec, const char* path,
 	   shadow/handler with PRIV_USER_FINAL... */
 	std::string daemon_sock = SharedPortEndpoint::GenerateEndpointName(name);
 	if( rid == shadowReaperId ) {
-		if(! fip) { fip = &fi; }
-		fip->want_pid_namespace = true;
-		dprintf( D_ALWAYS, "Spawning shadow in a PID namespace.\n" );
+		create_process_opts |= DCJOBOPT_PID_NAMESPACE;
 	}
 	pid = daemonCore->Create_Process( path, args, PRIV_ROOT, rid, 
 	                                  true, true, env, NULL, fip, NULL, 

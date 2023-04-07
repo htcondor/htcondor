@@ -5976,9 +5976,8 @@ pid_t CreateProcessForkit::fork_exec() {
 
 
 		int clone_flags = CLONE_VM|CLONE_VFORK|SIGCHLD;
-		if( m_family_info && m_family_info->want_pid_namespace ) {
+		if( m_job_opt_mask & DCJOBOPT_PID_NAMESPACE ) {
 			clone_flags |= CLONE_NEWPID;
-			/* HACK: we should pass CLONE_NEWPID in opts, instead */ m_family_info = NULL;
 		}
 
 
