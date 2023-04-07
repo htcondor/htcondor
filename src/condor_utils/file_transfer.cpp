@@ -7092,6 +7092,9 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 	}
 
 #ifdef WIN32
+	dprintf(D_ALWAYS,
+		"WARNING - FILETRANSFER: test url defined for method %s in config, but this is not supported on Windows OS.\n",
+		method.c_str());
 	return true;
 #else
 	// If we are running as a test starter, we may not have Iwd set appropriately.
@@ -7127,7 +7130,6 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 		jobAd.InsertAttr("Iwd", directory);
 	}
 	AutoDeleteDirectory dir_delete(directory, &jobAd);
-#endif
 
 	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
 
@@ -7149,6 +7151,7 @@ FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
 	dprintf(D_ALWAYS, "FILETRANSFER: Successfully downloaded test URL %s using plugin %s.\n",
 		test_url.c_str(), plugin.c_str());
 	return true;
+#endif
 }
 
 bool
