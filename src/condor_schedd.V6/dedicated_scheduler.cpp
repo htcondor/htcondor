@@ -857,7 +857,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec )
 
 	rsock.encode();
     d.startCommand( RELEASE_CLAIM, &rsock);
-	rsock.put( m_rec->claimId() );
+	rsock.put( m_rec->claim_id.claimId() );
 	rsock.end_of_message();
 
 	if( IsFulldebug(D_FULLDEBUG) ) { 
@@ -903,9 +903,9 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	sock.encode();
 
-	if( !sock.put(m_rec->claimId()) ) {
+	if( !sock.put(m_rec->claim_id.claimId()) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code ClaimId (%s)\n", m_rec->publicClaimId() );
+				 "Can't code ClaimId (%s)\n", m_rec->claim_id.publicClaimId() );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -1243,7 +1243,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->put( (*matches)[i]->claimId() ) ) {
+			if( ! stream->put( (*matches)[i]->claim_id.claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "ClaimId for match %zu of proc %d\n", i, p );
 				return FALSE;
@@ -1824,7 +1824,7 @@ DedicatedScheduler::sortResources( void )
 				char *slot_name = NULL;
 				resource->LookupString(ATTR_NAME, &slot_name);
 				ASSERT( all_matches->insert(slot_name, mr) == 0 );
-				ASSERT( all_matches_by_id->insert(mr->claimId(), mr) == 0 );
+				ASSERT( all_matches_by_id->insert(mr->claim_id.claimId(), mr) == 0 );
 				free(slot_name);
 			}
 		}
@@ -2031,7 +2031,7 @@ DedicatedScheduler::spawnJobs( void )
 			  aboutToSpawnJobHandler() hook to complete.
 			*/
 		allocation->status = A_RUNNING;
-		allocation->setClaimId( mrec->claimId() );
+		allocation->setClaimId( mrec->claim_id.claimId() );
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -2063,8 +2063,8 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				// Foreach node within this proc...
 			for( int i=0; i < n; i++ ) {
 					// Grab the claim from the mrec
-				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
-				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
+				char const *claim = (*(*allocation->matches)[p])[i]->claim_id.claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->claim_id.publicClaimId();
 
 				std::string claim_buf;
 				if( strchr(claim,',') ) {
@@ -3308,10 +3308,10 @@ DedicatedScheduler::AddMrec(
     if (slot_type_id == 1) { // Cannot include Resource.h from here.
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
-        pending_claims[mrec->publicClaimId()] = claim_id;
+        pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
     } else {
         ASSERT( all_matches->insert(slot_name, mrec) == 0 );
-        ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
@@ -3328,7 +3328,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 				 "match not deleted\n" );
 		return false;
 	}
-	return DelMrec( rec->claimId() );
+	return DelMrec( rec->claim_id.claimId() );
 }
 
 
@@ -3352,14 +3352,14 @@ DedicatedScheduler::DelMrec( char const* id )
 		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
-		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
+		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
 			if(rit->second){
 				delete rit->second;
 				pending_requests.erase(rit);
 			}
 		}
 		std::map<std::string,std::string>::iterator cit;
-		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
+		if((cit = pending_claims.find(rec->claim_id.publicClaimId())) != pending_claims.end()){
 			pending_claims.erase(cit);
 		}
 		delete rec;
@@ -4216,7 +4216,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			mrec->setStatus(M_CLAIMED);
 
 			ASSERT( all_matches->insert(host, mrec) == 0 );
-			ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
+			ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
 
 			jobsToAllocate.Append(job);
 
@@ -4487,7 +4487,7 @@ DedicatedScheduler::GetMatchRequestAd( match_rec* qmrec ) {
         return NULL;
     }
 
-    std::map<std::string, ClassAd*>::iterator f(pending_requests.find(qmrec->claimId()));
+    std::map<std::string, ClassAd*>::iterator f(pending_requests.find(qmrec->claim_id.claimId()));
     if (f == pending_requests.end()) {
         dprintf(D_ALWAYS, "DedicatedScheduler::GetMatchRequestAd -- failed to find job assigned to claim\n");
         return NULL;
