@@ -905,7 +905,7 @@ key or by other means.
 
 By default, the dedicated scheduler will never preempt running parallel
 universe jobs. Two configuration variables control preemption of these
-dedicated resources: :mcaro:`SCHEDD_PREEMPTION_REQUIREMENTS` and
+dedicated resources: :macro:`SCHEDD_PREEMPTION_REQUIREMENTS` and
 :macro:`SCHEDD_PREEMPTION_RANK`. These
 variables have no default value, so if either are not defined,
 preemption will never occur. :macro:`SCHEDD_PREEMPTION_REQUIREMENTS` must
