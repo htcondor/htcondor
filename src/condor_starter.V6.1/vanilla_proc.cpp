@@ -142,9 +142,6 @@ void StarterStatistics::Publish(ClassAd& ad, int flags) const {
 
 VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 	m_memory_limit(-1),
-	m_oom_fd(-1),
-	m_oom_efd(-1),
-	m_oom_efd2(-1),
 	isCheckpointing(false),
 	isSoftKilling(false)
 {
@@ -154,10 +151,7 @@ VanillaProc::VanillaProc(ClassAd* jobAd) : OsProc(jobAd),
 #endif
 }
 
-VanillaProc::~VanillaProc()
-{
-	cleanupOOM();
-}
+VanillaProc::~VanillaProc() {}
 
 #ifdef LINUX
 static bool cgroup_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
@@ -467,8 +461,16 @@ VanillaProc::StartJob()
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
 			ASSERT(false);
 		}
-		fi.cgroup_memory_limit = ((unsigned) memory) * 1024 * 1024;
-		m_memory_limit = memory;
+		fi.cgroup_memory_limit = 0;
+
+		// Need to set this in the unlikely case that we get OOM killed without
+		// setting cgroup memory limits
+		m_memory_limit = ((unsigned) memory) * 1024 * 1024;
+		std::string policy;
+		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "none");
+		if (policy == "hard") {
+			fi.cgroup_memory_limit = ((unsigned) memory) * 1024 * 1024;
+		}
 
 		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %d).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
 	}
@@ -756,39 +758,6 @@ VanillaProc::StartJob()
 	}
 
 #ifdef LINUX
-	// Set fairshare limits.  Note that retval == 1 indicates success, 0 is failure.
-	// See Note near setup of param(BASE_CGROUP)
-	if (CONDOR_UNIVERSE_LOCAL != job_universe && cgroup && retval) {
-#if defined(HAVE_EXT_LIBCGROUP)
-		// memory limits here only for v1
-		if (!ProcFamilyDirectCgroupV2::can_create_cgroup_v2()) {
-			setCgroupMemoryLimits(cgroup);
-
-			// This is a bit of a hack. In cgroup v1, ideally, the procd should
-			// set the ownership of the cgroups, but it doesn't know who the user
-			// is.  chown the leaf v1 cgroups to the owner, so that the job can
-			// create sub-cgroups
-
-			std::array controllers = {"blkio/", "cpu,cpuacct/", "freezer/", "memory/"};
-			uid_t user  = get_user_uid();
-			gid_t group = get_user_gid();
-
-			if ((user > 0) && (group > 0)) {
-				for (const char *c : controllers) {
-					TemporaryPrivSentry sentry(PRIV_ROOT);
-					std::string leaf_cgroup = std::string("/sys/fs/cgroup/") + c + cgroup;
-					int r = chown(leaf_cgroup.c_str(), user, group);
-					if (r < 0) {
-						dprintf(D_ALWAYS, "Warning: cannot chown %s to %d.%d: %s\n", leaf_cgroup.c_str(), user, group, strerror(errno));
-					}
-
-				}
-			}
-		}
-#endif
-		setupOOMEvent(cgroup);
-	}
-
     m_statistics.Reconfig();
 
 	// Now that the job is started, decrease the likelihood that the starter
@@ -994,6 +963,73 @@ void VanillaProc::restartCheckpointedJob() {
 	StartJob();
 }
 
+
+/*
+ * This will be called when DC tells us the process exited to due a OOM event.
+ */
+int
+VanillaProc::outOfMemoryEvent() {
+
+	/* The cgroup API generates this notification whenever the OOM fires OR
+	 * the cgroup is removed. If the cgroups are not pre-created, the kernel will
+	 * remove the cgroup when the job completes. So if we land here and there are
+	 * no more job pids, we assume the cgroup was removed and just ignore the event.
+	 * However, if we land here and we still have job pids, we assume the OOM fired
+	 * and thus we place the job on hold. See gt#3824.
+	 */
+
+	// The OOM killer has fired, and the process is frozen.  However,
+	// the cgroup still has accurate memory usage.  Let's grab that
+	// and make a final update, so the user can see exactly how much
+	// memory they used.
+	ClassAd updateAd;
+	PublishUpdateAd( &updateAd );
+	Starter->jic->periodicJobUpdate( &updateAd, true );
+	int usage = 0;
+	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
+
+		//
+	//  Cgroup memory limits are limits, not reservations.
+	//  For many reasons, a job could be below the memory limit,
+	//  but still get an OOM notification.  Commonly, this happens
+	//  when other processes on the system are using large amounts
+	//  of memory.  
+	//
+	//  Check to see if this is the case, and if so, it 
+	//  isn't our job's fault, but we need to 
+	//  evict the job, so it might run more successfully somewhere
+	//  else.  The situation is pretty dire, so we likely can't
+	//  checkpoint or otherwise exit gracefully, but at least let's
+	//  try to get a message a back to the shadow.
+
+	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
+	// lower than the limit when the OOM killer fired.
+	// So have some slop, just in case.
+	if (usage < (0.9 * m_memory_limit)) {
+		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %d Mb\n", usage);
+		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
+		Starter->jic->allJobsGone(); // and exit to clean up more memory
+		return 0;
+	}
+
+	std::stringstream ss;
+	if (m_memory_limit >= 0) {
+		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
+	} else {
+		ss << "Job has encountered an out-of-memory event.";
+	}
+	if( isCheckpointing ) {
+		ss << "  This occurred while the job was checkpointing.";
+	}
+
+	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
+
+	// This ulogs the hold event and KILLS the shadow
+	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
+
+	return 0;
+}
+
 bool
 VanillaProc::JobReaper(int pid, int status)
 {
@@ -1001,7 +1037,8 @@ VanillaProc::JobReaper(int pid, int status)
 
 	// If cgroup v2 is enabled, we'll get this high bit set in exit_status
 	if (status & DC_STATUS_OOM_KILLED) {
-		outOfMemoryEvent(-1);
+		// Will put the job on hold
+		this->outOfMemoryEvent();
 		status &= ~DC_STATUS_OOM_KILLED;
 	} 
 	
@@ -1014,26 +1051,6 @@ VanillaProc::JobReaper(int pid, int status)
 	}
 	bool jobExited = OsProc::JobReaper( pid, status );
 	if( pid != JobPid ) { return jobExited; }
-
-#if defined(LINUX)
-	// On newer kernels if memory.use_hierarchy==1, then we cannot disable
-	// the OOM killer.  Hence, we have to be ready for a SIGKILL to be delivered
-	// by the kernel at the same time we get the notification.  Hence, if we
-	// see an exit signal, we must also check the event file descriptor.
-	//
-	// outOfMemoryEvent() is aware of checkpointing and will mention that
-	// the OOM event happened during a checkpoint.
-	int efd = -1;
-	if( (m_oom_efd >= 0) && daemonCore->Get_Pipe_FD(m_oom_efd, &efd) && (efd != -1) ) {
-		Selector selector;
-		selector.add_fd(efd, Selector::IO_READ);
-		selector.set_timeout(0);
-		selector.execute();
-		if( !selector.failed() && !selector.timed_out() && selector.has_ready() && selector.fd_ready(efd, Selector::IO_READ) ) {
-			outOfMemoryEvent( m_oom_efd );
-		}
-	}
-#endif
 
 	//
 	// We have three cases to consider:
@@ -1208,123 +1225,7 @@ VanillaProc::finishShutdownFast()
 	//   -gquinn, 2007-11-14
 	daemonCore->Kill_Family(JobPid);
 
-	if (m_oom_efd != -1) {dprintf(D_FULLDEBUG, "Closing event FD pipe in shutdown %d.\n", m_oom_efd);}
-	cleanupOOM();
-
 	return false;	// shutdown is pending, so return false
-}
-
-/*
- * Clean up any file descriptors associated with the OOM control.
- */
-void
-VanillaProc::cleanupOOM()
-{
-	if (m_oom_efd != -1)
-	{
-		daemonCore->Close_Pipe(m_oom_efd);
-		daemonCore->Close_Pipe(m_oom_efd2);
-		m_oom_efd = -1;
-		m_oom_efd2 = -1;
-	}
-	if (m_oom_fd != -1)
-	{
-		close(m_oom_fd);
-		m_oom_fd = -1;
-	}
-}
-
-/*
- * This will be called when the event fd fires, indicating an OOM event.
- */
-int
-VanillaProc::outOfMemoryEvent(int /* fd */)
-{
-
-	/* The cgroup API generates this notification whenever the OOM fires OR
-	 * the cgroup is removed. If the cgroups are not pre-created, the kernel will
-	 * remove the cgroup when the job completes. So if we land here and there are
-	 * no more job pids, we assume the cgroup was removed and just ignore the event.
-	 * However, if we land here and we still have job pids, we assume the OOM fired
-	 * and thus we place the job on hold. See gt#3824.
-	 */
-
-	// If we have no jobs left, prolly just cgroup removed, so do nothing and return
-	
-	if (num_pids == 0) {
-		dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
-		cleanupOOM();
-		return 0;
-	}
-
-	// The OOM killer has fired, and the process is frozen.  However,
-	// the cgroup still has accurate memory usage.  Let's grab that
-	// and make a final update, so the user can see exactly how much
-	// memory they used.
-	ClassAd updateAd;
-	PublishUpdateAd( &updateAd );
-	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int usage = 0;
-	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
-
-		//
-#ifdef LINUX
-	//  Cgroup memory limits are limits, not reservations.
-	//  For many reasons, a job could be below the memory limit,
-	//  but still get an OOM notification.  Commonly, this happens
-	//  when other processes on the system are using large amounts
-	//  of memory.  
-	//
-	//  Check to see if this is the case, and if so, it 
-	//  isn't our job's fault, but we need to 
-	//  evict the job, so it might run more successfully somewhere
-	//  else.  The situation is pretty dire, so we likely can't
-	//  checkpoint or otherwise exit gracefully, but at least let's
-	//  try to get a message a back to the shadow.
-
-	// First drain the pipe, if there is one, so it doesn't fire
-	// again.
-	if (m_oom_efd != -1) {
-		long long oomData = 0xdeadbeef;
-		int efd = -1;
-		ASSERT( daemonCore->Get_Pipe_FD(m_oom_efd, &efd) );
-		int r = read(efd, &oomData, 8);
-		// Should be zero, but need to quiet compiler warnings in this rare case
-		dprintf(D_FULLDEBUG, "Draining OOM pipe result is %d\n", r);
-		cleanupOOM();
-	}
-
-	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
-	// lower than the limit when the OOM killer fired.
-	// So have some slop, just in case.
-	if (usage < (0.9 * m_memory_limit)) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %d Mb\n", usage);
-		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
-		Starter->jic->allJobsGone(); // and exit to clean up more memory
-		return 0;
-	}
-
-#endif
-
-	std::stringstream ss;
-	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
-	} else {
-		ss << "Job has encountered an out-of-memory event.";
-	}
-	if( isCheckpointing ) {
-		ss << "  This occurred while the job was checkpointing.";
-	}
-
-	dprintf( D_ALWAYS, "Job was held due to OOM event: %s\n", ss.str().c_str());
-
-	dprintf(D_FULLDEBUG, "Closing event FD pipe %d.\n", m_oom_efd);
-	cleanupOOM();
-
-	// This ulogs the hold event and KILLS the shadow
-	Starter->jic->holdJob(ss.str().c_str(), CONDOR_HOLD_CODE::JobOutOfResources, 0);
-
-	return 0;
 }
 
 int
@@ -1374,168 +1275,6 @@ VanillaProc::setupOOMScore(int oom_adj, int oom_score_adj)
 		return 1;
 	}
 	close(oom_score_fd);
-	return 0;
-#endif
-}
-
-int
-VanillaProc::setupOOMEvent(const std::string &cgroup_string)
-{
-#if !(defined(HAVE_EVENTFD) && defined(HAVE_EXT_LIBCGROUP))
-	// Shut the compiler up.
-	cgroup_string.size();
-	return 0;
-#else
-	// Initialize the event descriptor
-	int tmp_efd = eventfd(0, EFD_CLOEXEC);
-	if (tmp_efd == -1) {
-		dprintf(D_ALWAYS,
-			"Unable to create new event FD for starter: %u %s\n",
-			errno, strerror(errno));
-		return 1;
-	}
-
-	// Find the memcg location on disk
-	void * handle = NULL;
-	struct cgroup_mount_point mount_info;
-	int ret = cgroup_get_controller_begin(&handle, &mount_info);
-	std::stringstream oom_control;
-	std::stringstream event_control;
-	bool found_memcg = false;
-	while (ret == 0) {
-		if (strcmp(mount_info.name, MEMORY_CONTROLLER_STR) == 0) {
-			found_memcg = true;
-			oom_control << mount_info.path << "/";
-			event_control << mount_info.path << "/";
-			break;
-		}
-		ret = cgroup_get_controller_next(&handle, &mount_info);
-	}
-	if (!found_memcg && (ret != ECGEOF)) {
-		dprintf(D_ALWAYS,
-			"Error while locating memcg controller for starter: %u %s\n",
-			ret, cgroup_strerror(ret));
-		return 1;
-	}
-	cgroup_get_controller_end(&handle);
-	if (found_memcg == false) {
-		dprintf(D_ALWAYS,
-			"Memcg is not available; OOM notification disabled for starter.\n");
-		return 1;
-	}
-
-	// Finish constructing the location of the control files
-	oom_control << cgroup_string << "/memory.oom_control";
-	std::string oom_control_str = oom_control.str();
-	event_control << cgroup_string << "/cgroup.event_control";
-	std::string event_control_str = event_control.str();
-
-	// Open the oom_control and event control files
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	m_oom_fd = open(oom_control_str.c_str(), O_RDONLY | O_CLOEXEC);
-	if (m_oom_fd == -1) {
-		dprintf(D_ALWAYS,
-			"Unable to open the OOM control file for starter: %u %s\n",
-			errno, strerror(errno));
-		return 1;
-	}
-	int event_ctrl_fd = open(event_control_str.c_str(), O_WRONLY | O_CLOEXEC);
-	if (event_ctrl_fd == -1) {
-		dprintf(D_ALWAYS,
-			"Unable to open event control for starter: %u %s\n",
-			errno, strerror(errno));
-		return 1;
-	}
-
-	// Inform Linux we will be handling the OOM events for this container.
-	int oom_fd2 = open(oom_control_str.c_str(), O_WRONLY | O_CLOEXEC);
-	if (oom_fd2 == -1) {
-		dprintf(D_ALWAYS,
-			"Unable to open the OOM control file for writing for starter: %u %s\n",
-			errno, strerror(errno));
-		close(event_ctrl_fd);
-		return 1;
-	}
-	const char limits [] = "1";
-        ssize_t nwritten = full_write(oom_fd2, &limits, 1);
-	if (nwritten < 0) {
-		/* Newer kernels return EINVAL if you attempt to enable OOM management
-		 * on a cgroup where use_hierarchy is set to 1 and it is not the parent
-		 * cgroup.
-		 *
-		 * This is a common setup, so we log and move along.
-		 *
-		 * See also #4435.
-		 */
-		if (errno == EINVAL)
-		{
-			dprintf(D_FULLDEBUG, "Unable to setup OOM killer management because"
-				" memory.use_hierarchy is enabled for this cgroup; consider"
-				" disabling it for this host or set BASE_CGROUP=/.  The hold"
-				" message for an OOM event may not be reliably set.\n");
-		}
-		else
-		{
-			dprintf(D_ALWAYS, "Failure when attempting to enable OOM killer "
-				" management for this job (errno=%d, %s).\n", errno, strerror(errno));
-			close(event_ctrl_fd);
-			close(oom_fd2);
-			close(tmp_efd);
-			return 1;
-		}
-
-	}
-	close(oom_fd2);
-
-	// Create the subscription string:
-	std::stringstream sub_ss;
-	sub_ss << tmp_efd << " " << m_oom_fd;
-	std::string sub_str = sub_ss.str();
-
-	if ((nwritten = full_write(event_ctrl_fd, sub_str.c_str(), sub_str.size())) < 0) {
-		dprintf(D_ALWAYS,
-			"Unable to write into event control file for starter: %u %s\n",
-			errno, strerror(errno));
-		close(event_ctrl_fd);
-		close(tmp_efd);
-		return 1;
-	}
-	close(event_ctrl_fd);
-
-	// Fool DC into talking to the eventfd
-	int pipes[2]; pipes[0] = -1; pipes[1] = -1;
-	int fd_to_replace = -1;
-	if (!daemonCore->Create_Pipe(pipes, true) || pipes[0] == -1) {
-		dprintf(D_ALWAYS, "Unable to create a DC pipe\n");
-		close(tmp_efd);
-		close(m_oom_fd);
-		m_oom_fd = -1;
-		return 1;
-	}
-	if (!daemonCore->Get_Pipe_FD(pipes[0], &fd_to_replace) || fd_to_replace == -1) {
-		dprintf(D_ALWAYS, "Unable to lookup pipe's FD\n");
-		close(tmp_efd);
-		close(m_oom_fd); m_oom_fd = -1;
-		daemonCore->Close_Pipe(pipes[0]);
-		daemonCore->Close_Pipe(pipes[1]);
-		return 1;
-	}
-	dup3(tmp_efd, fd_to_replace, O_CLOEXEC);
-	close(tmp_efd);
-	m_oom_efd = pipes[0];
-	m_oom_efd2 = pipes[1];
-
-	// Inform DC we want to receive notifications from this FD.
-	if (-1 == daemonCore->Register_Pipe(pipes[0],"OOM event fd", static_cast<PipeHandlercpp>(&VanillaProc::outOfMemoryEvent),"OOM Event Handler",this,HANDLE_READ))
-	{
-		dprintf(D_ALWAYS, "Failed to register OOM event FD pipe.\n");
-		daemonCore->Close_Pipe(pipes[0]);
-		daemonCore->Close_Pipe(pipes[1]);
-		m_oom_fd = -1;
-		m_oom_efd = -1;
-		m_oom_efd2 = -1;
-	}
-	dprintf(D_FULLDEBUG, "Subscribed the starter to OOM notification for this cgroup; jobs triggering an OOM will be put on hold.\n");
 	return 0;
 #endif
 }
@@ -1590,116 +1329,3 @@ int VanillaProc::streamingOpenFlags( bool isOutput ) {
 		return this->OsProc::streamingOpenFlags( isOutput );
 	}
 }
-
-#if defined(HAVE_EXT_LIBCGROUP)
-#ifdef LINUX
-void 
-VanillaProc::setCgroupMemoryLimits(const char *cgroup) {
-
-		ClassAd * MachineAd = Starter->jic->machClassAd();
-		std::string cgroup_string = cgroup;
-		CgroupLimits climits(cgroup_string);
-
-		// First, set the CPU shares
-		int numCores = 1;
-		if (MachineAd->LookupInteger(ATTR_CPUS, numCores)) {
-			climits.set_cpu_shares(numCores*100);
-		} else {
-			dprintf(D_FULLDEBUG, "Invalid value of Cpus in machine ClassAd; ignoring.\n");
-		}
-
-		// Now, set the memory limits
-		std::string mem_limit;
-		param(mem_limit, "CGROUP_MEMORY_LIMIT_POLICY", "none");
-		if (mem_limit == "none") {
-			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is \"none\".\n");
-			return;
-		}
-
-		if ((mem_limit != "hard") && (mem_limit != "soft") && (mem_limit != "custom")) {
-			dprintf(D_ALWAYS, "Not enforcing cgroup memory limit because CGROUP_MEMORY_LIMIT_POLICY is an unknown value: %s.\n", mem_limit.c_str());
-			return;
-		}
-
-		// The default hard memory limit -- the amount of memory in the slot
-		std::string hard_memory_limit_expr = "My.Memory";
-
-		// The default soft memory limit -- 90% of the amount of memory in the slot
-		std::string soft_memory_limit_expr = "0.9 * My.Memory";
-
-		if (mem_limit == "soft") {
-				// If the policy is soft, make the hard limit the total memory for this startd
-				hard_memory_limit_expr = "My.TotalMemory";
-				// If the policy is soft, make the soft limit the slot size
-				soft_memory_limit_expr = "My.Memory";
-		} else if (mem_limit == "custom") {
-				param(hard_memory_limit_expr, "CGROUP_HARD_MEMORY_LIMIT_EXPR", "");
-				if (hard_memory_limit_expr.empty()) {
-					dprintf(D_ALWAYS, "Missing CGROUP_HARD_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
-					return;
-				}
-				param(soft_memory_limit_expr, "CGROUP_SOFT_MEMORY_LIMIT_EXPR", "");
-				if (soft_memory_limit_expr.empty()) {
-					dprintf(D_ALWAYS, "Missing CGROUP_SOFT_MEMORY_LIMIT_EXPR, this must be set when CGROUP_MEMORY_LIMIT_POLICY is custom\n");
-					return;
-				}
-		}
-
-		int64_t hard_limit = 0;
-		int64_t soft_limit = 0;
-
-		ExprTree *expr = nullptr;
-		::ParseClassAdRvalExpr(hard_memory_limit_expr.c_str(), expr);
-		if (expr == nullptr) {
-			dprintf(D_ALWAYS, "Can't parse CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
-			return;
-		}
-
-		classad::Value value;
-		int evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
-		if ((!evalRet) || (!value.IsNumber(hard_limit))) {
-			dprintf(D_ALWAYS, "Can't evaluate CGROUP_HARD_MEMORY_LIMIT_EXPR: %s, ignoring\n", hard_memory_limit_expr.c_str());
-			delete expr;
-			return;
-		}
-
-		delete expr;
-		expr = nullptr;
-
-		::ParseClassAdRvalExpr(soft_memory_limit_expr.c_str(), expr);
-		if (expr == nullptr) {
-			dprintf(D_ALWAYS, "Can't parse CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
-			return;
-		}
-
-		evalRet = EvalExprToNumber(expr, MachineAd, JobAd, value);
-		if ((!evalRet) || (!value.IsNumber(soft_limit))) {
-			dprintf(D_ALWAYS, "Can't evaluate CGROUP_SOFT_MEMORY_LIMIT_EXPR: %s, ignoring\n", soft_memory_limit_expr.c_str());
-			delete expr;
-			return;
-		}
-		delete expr;
-
-		// cgroups prevents us from setting hard limits above
-		// the memsw limit.  If we are reusing this cgroup,
-		// we don't know what the previous values were
-		// So, set mem to 0, memsw to +inf, so that the real
-		// values can be set without interference
-
-		climits.set_memory_limit_bytes(0, true);
-		climits.set_memsw_limit_bytes(LONG_MAX);
-
-		// If we get an OOM, check against this value to see if it our fault, or a global OOM
-		m_memory_limit = soft_limit;
-		climits.set_memory_limit_bytes(1024 * 1024 * hard_limit, false /* == hard */);
-		climits.set_memory_limit_bytes(1024 * 1024 * soft_limit, true /* == soft */);
-
-		// if DISABLE_SWAP_FOR_JOB is true, set swap to hard memory limit
-		// otherwise, leave at infinity
-
-		if (param_boolean("DISABLE_SWAP_FOR_JOB", false)) {
-			climits.set_memsw_limit_bytes(1024 * 1024 * hard_limit);
-		}
-}
-#endif
-#endif

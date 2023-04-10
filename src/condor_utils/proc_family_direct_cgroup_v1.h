@@ -1,6 +1,6 @@
 /***************************************************************
  *
- * Copyright (C) 1990-2022, Condor Team, Computer Sciences Department,
+ * Copyright (C) 1990-2023, Condor Team, Computer Sciences Department,
  * University of Wisconsin-Madison, WI.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you
@@ -18,8 +18,8 @@
  ***************************************************************/
 
 
-#ifndef _PROC_FAMILY_DIRECT_CGROUP_V2_H
-#define _PROC_FAMILY_DIRECT_CGROUP_V2_H
+#ifndef _PROC_FAMILY_DIRECT_CGROUP_V1_H
+#define _PROC_FAMILY_DIRECT_CGROUP_V1_H
 
 #include "proc_family_interface.h"
 
@@ -27,37 +27,26 @@
 // This is efficient, so we do it in the caller's process,
 // not via the procd.  
 //
-// This requires that any sub-families of this family
-// are managed by cgroups and those cgroups are children
-// of this one, so that we can measure the family tree
-// in one cgroup call, as well as signal them all.
+// Originally, cgroup v1 was managed in the procd using
+// the libcgroup library.  This library was abandoned,
+// and only availble on platforms that support cgroup v1
+// natively.  Sometimes, we run on platforms like el9
+// that don't support cgroup v1, and thus don't have a
+// libcgroup avaible, but we are running inside a container,
+// and the *host's* cgroup version is what matters.  In 
+// this case we need to manipulate cgroupv1.
+//
+// So, we do it ourselves now, via raw writes to /sys/fs/cgropu
+// in the same way we do with cgroup v1.  See the 
+// proc_family_direct_cgroup_v1 header file for more info
+// about the hierarchy
 
-// ProcAPI -- a retro design doc
-// The root class is ProcFamilyInterface.  It has a static factory
-// method, ::create, which is called from daemon core::Create_Process
-// to decide which of two concrete classes to instantiate, either
-// ProcFamilyDirect or ProcFamilyProxy, the latter of which talks
-// to the ProcD daemon.  This decision is done early, mainly
-// looking at the USE_PROCD knob.
-//
-// Once DaemonCore has a ProcFamily[Direct|Proxy] instance
-// it keeps it for the lifetime of the process.
-//
-// When a DaemonCore client wants to tracke a family of
-// processes it creates, it passes in a familyInfo to 
-// DC::Create_Process, and daemonCore calls first
-// register_subfamily on the instance, then 
-// track_family_via_[env|login|cgroup|cgroup].
-//
-// Later calls to get usage are keyed by pid, which is
-// a bit of a problem.
-
-class ProcFamilyDirectCgroupV2 : public ProcFamilyInterface {
+class ProcFamilyDirectCgroupV1 : public ProcFamilyInterface {
 
 public:
 
-	ProcFamilyDirectCgroupV2() = default;
-	virtual ~ProcFamilyDirectCgroupV2() = default;
+	ProcFamilyDirectCgroupV1() = default;
+	virtual ~ProcFamilyDirectCgroupV1() = default;
 	
 	bool register_subfamily(pid_t pid, pid_t /*ppid*/, int /*snapshot_interval*/) {
 		family_root_pid = pid;
@@ -104,12 +93,12 @@ public:
 	bool track_family_via_login(pid_t, const char*) {return true;}
 	bool track_family_via_allocated_supplementary_group(pid_t, gid_t&) { return true; }
 
-	// Returns true if cgroup v2 is mounted and we aren't
+	// Returns true if cgroup v1 is mounted and we aren't
 	// in "unified mode"
-	static bool has_cgroup_v2();
+	static bool has_cgroup_v1();
 	
-	// Returns true if cgroup v2 is mounted and we can write to it
-	static bool can_create_cgroup_v2();
+	// Returns true if cgroup v1 is mounted and we can write to it
+	static bool can_create_cgroup_v1();
 private:
 
 	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
