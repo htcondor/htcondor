@@ -377,10 +377,11 @@ struct job_data_transfer_t {
 	char peer_version[1]; // We'll malloc enough extra space for this
 };
 
-match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id, 
+match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 					  const ClassAd *match, char const *the_user, char const *my_pool,
 					  bool is_dedicated_arg ):
-	ClaimIdParser(claim_id)
+	use_sec_session(false),
+	claim_id(the_claim_id)
 {
 	peer = strdup( p );
 	origcluster = cluster = job_id->cluster;
@@ -413,18 +414,22 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 	makeDescription();
 
-	bool suppress_sec_session = true;
-
+	// use_sec_session defaults to false. This means we won't try to do
+	// anything with the claimid security session unless we successfully
+	// add it to our cache below. Most importantly, we will not try to
+	// delete it when this match rec is destroyed. (If we fail to
+	// create the session, that may because it already exists, and this
+	// is a duplicate match record that will soon be thrown out.)
 	if( param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) ) {
-		if( secSessionId() == NULL ) {
-			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",publicClaimId());
+		if( claim_id.secSessionId()[0] == '\0' ) {
+			dprintf(D_FULLDEBUG,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: did not create security session from claim id, because claim id does not contain session information: %s\n",claim_id.publicClaimId());
 		}
 		else {
 			bool rc = daemonCore->getSecMan()->CreateNonNegotiatedSecuritySession(
 				DAEMON,
-				secSessionId(),
-				secSessionKey(),
-				secSessionInfo(),
+				claim_id.secSessionId(),
+				claim_id.secSessionKey(),
+				claim_id.secSessionInfo(),
 				AUTH_METHOD_MATCH,
 				EXECUTE_SIDE_MATCHSESSION_FQU,
 				peer,
@@ -433,21 +438,12 @@ match_rec::match_rec( char const* claim_id, char const* p, PROC_ID* job_id,
 
 			if( rc ) {
 					// we're good to go; use the claimid security session
-				suppress_sec_session = false;
+				use_sec_session = true;
 			}
 			if( !rc ) {
-				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",publicClaimId());
+				dprintf(D_ALWAYS,"SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION: failed to create security session for %s, so will try to obtain a new security session\n",claim_id.publicClaimId());
 			}
 		}
-	}
-	if( suppress_sec_session ) {
-		suppressSecSession( true );
-			// Now secSessionId() will always return NULL, so we will
-			// not try to do anything with the claimid security session.
-			// Most importantly, we will not try to delete it when this
-			// match rec is destroyed.  (If we failed to create the session,
-			// that may because it already exists, and this is a duplicate
-			// match record that will soon be thrown out.)
 	}
 
 	std::string value;
@@ -495,7 +491,7 @@ match_rec::makeDescription() {
 		m_description += " ";
 	}
 	if( IsFulldebug(D_FULLDEBUG) ) {
-		m_description += publicClaimId();
+		m_description += claim_id.publicClaimId();
 	}
 	else if( peer ) {
 		m_description += peer;
@@ -532,17 +528,17 @@ match_rec::~match_rec()
 		claim_requester = NULL;
 	}
 
-	if( secSessionId()) {
+	if(use_sec_session) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully
 			// handle any final communication from the startd that may
 			// still be in flight.
-		daemonCore->getSecMan()->SetSessionExpiration(secSessionId(),time(NULL)+600);
+		daemonCore->getSecMan()->SetSessionExpiration(claim_id.secSessionId(),time(NULL)+600);
 			// In case we get the same claim id again before the slop time
 			// expires, mark this session as "lingering" so we know it can
 			// be replaced.
-		daemonCore->getSecMan()->SetSessionLingerFlag(secSessionId());
+		daemonCore->getSecMan()->SetSessionLingerFlag(claim_id.secSessionId());
 	}
 }
 
@@ -7963,7 +7959,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	mrec->claim_requester = cb;
 	mrec->setStatus( M_STARTD_CONTACT_LIMBO );
 
-	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claimId(), args->extraClaims());
+	classy_counted_ptr<DCStartd> startd = new DCStartd(mrec->description(),NULL,mrec->peer,mrec->claim_id.claimId(), args->extraClaims());
 
 	this->num_pending_startd_contacts++;
 
@@ -10678,8 +10674,8 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 			// or, in the case of ATTR_LAST_JOB_LEASE_RENEWAL,
 			// clobbers accurate info with a now-bogus value.
 
-		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claimId() );
-		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->publicClaimId() );
+		SetPrivateAttributeString( cluster, proc, ATTR_CLAIM_ID, mrec->claim_id.claimId() );
+		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
 						 (int)time(0) ); 
@@ -11430,12 +11426,14 @@ Scheduler::preempt( int n, bool force_sched_jobs )
 void
 send_vacate(match_rec* match,int cmd)
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),NULL,match->peer,match->claimId() );
-	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claimId() );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),NULL,match->peer,match->claim_id.claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( cmd, match->claim_id.claimId() );
 
 	msg->setSuccessDebugLevel(D_ALWAYS);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
-	msg->setSecSessionId( match->secSessionId() );
+	if (match->use_sec_session) {
+		msg->setSecSessionId( match->claim_id.secSessionId() );
+	}
 
 	if ( !startd->hasUDPCommandPort() || param_boolean("SCHEDD_SEND_VACATE_VIA_TCP",true) ) {
 		dprintf( D_FULLDEBUG, "Called send_vacate( %s, %d ) via TCP\n", 
@@ -11683,7 +11681,7 @@ Scheduler::child_exit(int pid, int status)
 	job_id.proc = srec->job_id.proc;
 
 	if( srec->match ) {
-		claim_id = srec->match->claimId();
+		claim_id = srec->match->claim_id.claimId();
 	}
 	// store this in case srec is deleted before we need it
 	srec_keep_claim_attributes = srec->keepClaimAttributes;
@@ -14015,7 +14013,7 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 	// spit out a warning and return NULL if we already have this mrec
 	match_rec *tempRec;
 	if( matches->lookup( id, tempRec ) == 0 ) {
-		char const *pubid = tempRec->publicClaimId();
+		char const *pubid = tempRec->claim_id.publicClaimId();
 		dprintf( D_ALWAYS,
 				 "attempt to add pre-existing match \"%s\" ignored\n",
 				 pubid ? pubid : "(null)" );
@@ -14115,7 +14113,7 @@ Scheduler::unlinkMrec(match_rec* match)
 	dprintf( D_ALWAYS, "Match record (%s, %d.%d) deleted\n",
 			 match->description(), match->cluster, match->proc ); 
 
-	matches->remove(match->claimId());
+	matches->remove(match->claim_id.claimId());
 
 	PROC_ID jobId;
 	jobId.cluster = match->cluster;
@@ -14270,8 +14268,8 @@ int Scheduler::AlreadyMatched(PROC_ID* id)
 bool
 sendAlive( match_rec* mrec )
 {
-	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claimId() );
-	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claimId() );
+	classy_counted_ptr<DCStartd> startd = new DCStartd( mrec->description(),NULL,mrec->peer,mrec->claim_id.claimId() );
+	classy_counted_ptr<DCClaimIdMsg> msg = new DCClaimIdMsg( ALIVE, mrec->claim_id.claimId() );
 
 	msg->setSuccessDebugLevel(D_PROTOCOL);
 	msg->setTimeout( STARTD_CONTACT_TIMEOUT );
@@ -14280,7 +14278,9 @@ sendAlive( match_rec* mrec )
 	msg->setDeadlineTimeout( 300 );
 	Stream::stream_type st = startd->hasUDPCommandPort() ? Stream::safe_sock : Stream::reli_sock;
 	msg->setStreamType( st );
-	msg->setSecSessionId( mrec->secSessionId() );
+	if (mrec->use_sec_session) {
+		msg->setSecSessionId( mrec->claim_id.secSessionId() );
+	}
 
 	dprintf (D_PROTOCOL,"## 6. Sending alive msg to %s\n", mrec->description());
 
@@ -14984,18 +14984,20 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		std::string global_job_id;
 		std::string startd_addr = mrec->peer;
 
-		DCStartd startd(startd_name.c_str(),NULL,startd_addr.c_str(),mrec->secSessionId() );
+		DCStartd startd(startd_name.c_str(),NULL,startd_addr.c_str(),mrec->claim_id.claimId() );
 
 		jobad->LookupString(ATTR_GLOBAL_JOB_ID,global_job_id);
 
-		if( !startd.locateStarter(global_job_id.c_str(),mrec->claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
+		if( !startd.locateStarter(global_job_id.c_str(),mrec->claim_id.claimId(),daemonCore->publicNetworkIpAddr(),&starter_ad,ltimeout) )
 		{
 			error_msg = "Failed to get address of starter for this job";
 			retry_is_sensible = true; // maybe shadow hasn't activated starter yet?
 			goto error_wrapup;
 		}
-		job_claimid = mrec->claimId();
-		match_sec_session_id = mrec->secSessionId();
+		job_claimid = mrec->claim_id.claimId();
+		if (mrec->use_sec_session) {
+			match_sec_session_id = mrec->claim_id.secSessionId();
+		}
 	}
 
 		// now connect to the starter and create a security session for
@@ -17201,7 +17203,7 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 			}
 
 			send_matchless_vacate( match->description(), NULL, match->peer,
-				match->claimId(), RELEASE_CLAIM );
+				match->claim_id.claimId(), RELEASE_CLAIM );
 		}
 	} else if( flags & RS_TEST_PCCC ) {
 		if( pcccTest() ) {
