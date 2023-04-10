@@ -3010,9 +3010,7 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	}
 	pkey.reset(pkey_raw);
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L
-	EVP_PKEY_set_utf8_string_param(pkey.get(),"encoding","named_curve");
-#else
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(EVP_PKEY_get1_EC_KEY(pkey.get()), &EC_KEY_free);
 	if (key) {
 		EC_KEY_set_asn1_flag(key.get(), OPENSSL_EC_NAMED_CURVE);
