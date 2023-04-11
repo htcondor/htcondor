@@ -37,7 +37,7 @@ New Features:
   :jira:`1636`
 
 - Linux Cgroup support has been redone in a way that doesn't depend on
-  using the procd.  There should be now user visible changes in
+  using the procd.  There should be no user visible changes in
   the usual cases.
   :jira:`1589`
 

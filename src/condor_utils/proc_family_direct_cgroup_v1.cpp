@@ -53,8 +53,7 @@ void fullyRemoveCgroup(const stdfs::path &absCgroup) {
 	}
 
 	// Otherwise, we need to depth-firstly remove any subdirs
-	for (auto const& entry: std::filesystem::directory_iterator{absCgroup})
-    {
+	for (auto const& entry: std::filesystem::directory_iterator{absCgroup}) {
 		if (entry.is_directory()) {
 			// Must go depth-first
 			fullyRemoveCgroup(absCgroup / entry);
@@ -139,7 +138,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 
 	// Set cpu limits, if any
 	if (cgroup_cpu_shares > 0) {
-		// write memory limits
+		// write CPU limits
 		stdfs::path cpu_shares_path = cgroup_root_dir / "cpu,cpuacct" / cgroup_name / "cpu.shares";
 		int fd = open(cpu_shares_path.c_str(), O_WRONLY, 0666);
 		if (fd > 0) {
@@ -173,8 +172,6 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, const FamilyInfo *f
 	}
 
 	return cgroupify_process(cgroup_name, pid);
-
-	return true;
 }
 
 bool
@@ -296,7 +293,7 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 // Note that in cgroup v1, cgroup.procs contains only those processes in
 // this direct cgroup, and does not contain processes in any descendent
 // cgroup (except the / croup, which does).
-	bool
+bool
 ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 {
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::signal_process for %u sig %d\n", pid, sig);
@@ -324,7 +321,7 @@ ProcFamilyDirectCgroupV1::signal_process(pid_t pid, int sig)
 
 // Writing FREEZE to freeze freezes all the processes in this cgroup
 // and also freezes all descendent cgroups. 
-	bool
+bool
 ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
@@ -352,7 +349,7 @@ ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 	return success;
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];
