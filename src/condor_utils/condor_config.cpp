@@ -2626,39 +2626,24 @@ expand_param(const char *str, const char * localname, const char *subsys, int us
 	return expand_macro(str, ConfigMacroSet, ctx);
 }
 
-const char *
-param_append_location(const MACRO_META * pmet, std::string & value) {
-	MyString ms(value.c_str());
-	const char * rv = param_append_location(pmet, ms);
-	value = ms;
-	return rv;
-}
-
-const char * param_append_location(const MACRO_META * pmet, MyString & value)
+const char * param_append_location(const MACRO_META * pmet, std::string & value)
 {
 	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
-		value.formatstr_cat(", line %d", pmet->source_line);
+		formatstr_cat(value, ", line %d", pmet->source_line);
 		MACRO_TABLE_PAIR * ptable = nullptr;
 		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id, &ptable);
 		if (pmsi) {
-			value.formatstr_cat(", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
+			formatstr_cat(value, ", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
 		}
 	}
 	return value.c_str();
 }
 
-const char * param_get_location(const MACRO_META * pmet, MyString & value)
+const char * param_get_location(const MACRO_META * pmet, std::string & value)
 {
 	value.clear();
 	return param_append_location(pmet, value);
-}
-
-const char * param_get_location(const MACRO_META * pmet, std::string & value)
-{
-	MyString mystr;
-	value = param_append_location(pmet, mystr);
-	return value.c_str();
 }
 
 
@@ -2667,7 +2652,7 @@ bool param_find_item (
 	const char * name,
 	const char * subsys,
 	const char * local,
-	MyString & name_found, // out
+	std::string & name_found, // out
 	HASHITER& it)          //
 {
 	it = HASHITER(ConfigMacroSet, 0);
@@ -2681,7 +2666,7 @@ bool param_find_item (
 #if 0
 	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 	if (subsys && local) {
-		name_found.formatstr("%s.%s", subsys, local);
+		formatstr(name_found, "%s.%s", subsys, local);
 		pi = find_macro_item(name, name_found.c_str(), ConfigMacroSet);
 		if (pi) {
 			name_found = pi->key;
@@ -2708,7 +2693,7 @@ bool param_find_item (
 		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(subsys, name);
 		if (pdf) {
 			name_found = subsys;
-			name_found.upper_case();
+			upper_case(name_found);
 			name_found += ".";
 			name_found += pdf->key;
 			it.is_def = true;
@@ -2730,8 +2715,8 @@ bool param_find_item (
 		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(name, pdot+1);
 		if (pdf) {
 			name_found = name;
-			name_found.upper_case();
-			name_found.truncate((int)(pdot - name)+1);
+			upper_case(name_found);
+			name_found.erase((size_t)(pdot - name)+1);
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;
@@ -2760,7 +2745,7 @@ const char * hash_iter_info(
 	HASHITER& it,
 	int& use_count,
 	int& ref_count,
-	MyString &source_name,
+	std::string &source_name,
 	int &line_number)
 {
 	MACRO_META * pmet = hash_iter_meta(it);
@@ -2792,7 +2777,7 @@ const char * param_get_info(
 	const char * name,
 	const char * subsys,
 	const char * local,
-	MyString & name_used,
+	std::string & name_used,
 	const char ** pdef_val,
 	const MACRO_META **ppmet)
 {
@@ -2801,7 +2786,7 @@ const char * param_get_info(
 	if (ppmet)    { *ppmet = NULL; }
 	name_used.clear();
 
-	MyString ms;
+	std::string ms;
 	HASHITER it(ConfigMacroSet, 0);
 	if (param_find_item(name, subsys, local, ms, it)) {
 		name_used = ms;
@@ -2810,15 +2795,6 @@ const char * param_get_info(
 		if (ppmet) { *ppmet = hash_iter_meta(it); }
 	}
 	return val;
-}
-
-const char * param_get_info(const char * name, const char * subsys, const char * local,
-	std::string & name_used, const char ** pdef_val, const MACRO_META **ppmet)
-{
-	MyString my_name;
-	const char * rv = param_get_info(name, subsys, local, my_name, pdef_val, ppmet);
-	name_used = my_name.c_str();
-	return rv;
 }
 
 void
