@@ -380,7 +380,7 @@ ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 	return success;
 }
 
-	bool
+bool
 ProcFamilyDirectCgroupV1::kill_family(pid_t pid)
 {
 	std::string cgroup_name = cgroup_map[pid];

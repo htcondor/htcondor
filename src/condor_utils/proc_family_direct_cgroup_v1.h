@@ -29,7 +29,7 @@
 //
 // Originally, cgroup v1 was managed in the procd using
 // the libcgroup library.  This library was abandoned,
-// and only availble on platforms that support cgroup v1
+// and only available on platforms that support cgroup v1
 // natively.  Sometimes, we run on platforms like el9
 // that don't support cgroup v1, and thus don't have a
 // libcgroup avaible, but we are running inside a container,
@@ -37,7 +37,7 @@
 // this case we need to manipulate cgroupv1.
 //
 // So, we do it ourselves now, via raw writes to /sys/fs/cgropu
-// in the same way we do with cgroup v1.  See the 
+// in the same way we did via the procd.  See the 
 // proc_family_direct_cgroup_v1 header file for more info
 // about the hierarchy
 

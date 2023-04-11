@@ -988,7 +988,7 @@ VanillaProc::outOfMemoryEvent() {
 	int usage = 0;
 	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
 
-		//
+	//
 	//  Cgroup memory limits are limits, not reservations.
 	//  For many reasons, a job could be below the memory limit,
 	//  but still get an OOM notification.  Commonly, this happens
