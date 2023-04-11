@@ -497,6 +497,8 @@ class RemoteResource : public Service {
         time_t TerminationTime;
     } activation;
 
+	void abortFileTransfer();
+
 private:
 
 		/// Private helper methods for trying to reconnect
@@ -545,7 +547,6 @@ private:
 	void startCheckingProxy();
 	void attemptShutdownTimeout();
 	void attemptShutdown();
-	void abortFileTransfer();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 
