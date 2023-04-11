@@ -36,6 +36,11 @@ New Features:
   :ref:`users-manual/dagman-workflows:dag save point files`.
   :jira:`1636`
 
+- Linux Cgroup support has been redone in a way that doesn't depend on
+  using the procd.  There should be now user visible changes in
+  the usual cases.
+  :jira:`1589`
+
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
   different threads. This is controled by the new configuration
   parameter :macro:`ARC_GAHP_USE_THREADS`.
