@@ -788,11 +788,48 @@ void clean_files()
 }
 
 
+void
+DaemonCore::kill_immediate_children() {
+	// Disabled by default for everything but the schedd in stable.
+	bool enabled = param_boolean( "DEFAULT_KILL_CHILDREN_ON_EXIT", true );
+
+	std::string pname;
+	formatstr( pname, "%s_KILL_CHILDREN_ON_EXIT", get_mySubSystem()->getName() );
+	enabled = param_boolean( pname.c_str(), enabled );
+
+	if(! enabled) { return; }
+
+
+	//
+	// Send each of our children a SIGKILL.  We'd rather kill each child's
+	// whole process tree, but we don't want to block talking to the procd.
+	//
+	PidEntry * pid_entry = NULL;
+	pidTable->startIterations();
+	while( pidTable->iterate(pid_entry) ) {
+		// Don't try to kill our parent process; it's a bad idea, Send_Signal()
+		// will fail, and we don't want the attempt in the log.
+		if( pid_entry->pid == ppid ) { continue; }
+		// Don't try to kill processes which have already exited; this avoids
+		// a race condition with PID reuse, logging an error in the attempt,
+		// and looking like we're trying to kill the job after noticing it die.
+		if( ProcessExitedButNotReaped(pid_entry->pid) ) { continue; }
+
+		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry->pid );
+		Send_Signal( pid_entry->pid, SIGKILL );
+	}
+}
+
+
 // All daemons call this function when they want daemonCore to really
 // exit.  Put any daemon-wide shutdown code in here.   
 void
 DC_Exit( int status, const char *shutdown_program )
 {
+	if( daemonCore ) {
+		daemonCore->kill_immediate_children();
+	}
+
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
