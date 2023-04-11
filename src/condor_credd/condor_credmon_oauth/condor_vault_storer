@@ -80,6 +80,14 @@ fi
 # make sure we can find condor_store_cred
 PATH=/usr/sbin:$PATH
 
+# CONDOR_VAULT_STORER_USER and CONDOR_VAULT_STORER_ID can be set by a
+# service that needs to impersonate different users, assuming the service
+# has tokens for the users.
+STOREUSER=""
+if [ -n "$CONDOR_VAULT_STORER_USER" ]; then
+    STOREUSER=" -u $CONDOR_VAULT_STORER_USER"
+fi
+
 # Keep the standard duration vault token in $VTOKEN-$SERVICE to make
 #  sure that credmon has a long-duration one, but copy it to $VTOKEN if a
 #  new one is generated.
@@ -100,7 +108,7 @@ NL="
 querycred() {
     STORENAME="$1"
     verbose "Checking if $@ credentials exist"
-    STOREMSG="`condor_store_cred query-oauth -s "$@" >$STOREOUT 2>&1`"
+    STOREMSG="`condor_store_cred query-oauth$STOREUSER -s "$@" >$STOREOUT 2>&1`"
     case $? in
         0) ;;
         1)  if [ -n "$STOREMSG" ]; then
@@ -110,7 +118,7 @@ querycred() {
             ;;
         2) fatal "Credentials exist that do not match the request.
 They can be removed by
-  condor_store_cred delete-oauth -s $STORENAME
+  condor_store_cred delete-oauth$STOREUSER -s $STORENAME
 but make sure no other job is using them."
             ;;
         *) fatal "${STOREMSG}${NL}Querying condor credentials failed";;
@@ -130,7 +138,7 @@ storecred() {
     fi
     echo "  \"vault_url\": \"$VAULTURL\""
     echo "}"
-    )|condor_store_cred add-oauth -s "$@" -i - >$STOREOUT
+    )|condor_store_cred add-oauth$STOREUSER -s "$@" -i - >$STOREOUT
     if [ $? != 0 ]; then
         fatal "Failed to store condor credentials for $STORENAME"
     fi
