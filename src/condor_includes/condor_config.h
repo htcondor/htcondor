@@ -140,8 +140,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 } MACRO_EVAL_CONTEXT_EX;
 
 
-	extern MyString global_config_source;
-	extern MyString global_root_config_source;
+	extern std::string global_config_source;
 	extern StringList local_config_sources;
 	class Regex;
 
