@@ -73,6 +73,8 @@ is a list of items that administrators should be aware of.
   to assume that all GPUs will have a single value for this property.  Instead the properties of
   each GPU will be advertised individually in a format that allows a job to request it run
   on a specific GPU or type of GPU.
+  See :ref:`users-manual/submitting-a-job:jobs that require gpus` for more information on
+  about the ``require_gpus`` submit command.
   :jira:`953`
 
 - We have updated to using the PCRE2 regular expression library. This library
