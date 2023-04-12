@@ -43,6 +43,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing succesfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
+
 - Fixed a bug where if the docker command emitted warnings to stderr, the
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
