@@ -2203,13 +2203,13 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		bad->CheckJidAndType(key); // make sure that QueueBase object has correct jid and type fields
 		if (bad->IsHeader()) { continue; }
 
-	#ifdef USE_JOB_QUEUE_USERREC
 		if (bad->IsUserRec()) {
+			#ifdef USE_JOB_QUEUE_USERREC
 			JobQueueUserRec * urec = static_cast<JobQueueUserRec*>(bad);
 			// TODO: validate ?
+			#endif
 			continue;
 		}
-	#endif
 
 		// populate the ownerinfo for cluster ads and jobset ads,
 		// we can't do proc ads yet because we have not yet chained them to the clusters
@@ -5939,7 +5939,7 @@ static bool MakeUserRec(JobQueueKey & key,
 	const char * ntdomain=nullptr,
 	bool enabled=true)
 {
-	bool rval = JobQueue->NewClassAd(key, JOB_USER_ADTYPE, "") &&
+	bool rval = JobQueue->NewClassAd(key, OWNER_ADTYPE, "") &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_USER, user) &&
 		0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_OWNER, owner) &&
 		( ! ntdomain || 0 == SetSecureAttributeString(key.cluster, key.proc, ATTR_NT_DOMAIN, ntdomain)) &&

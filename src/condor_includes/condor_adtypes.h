@@ -30,7 +30,7 @@
 #define CKPT_SRVR_ADTYPE		"CkptServer"
 #define JOB_ADTYPE			"Job"
 #define JOB_SET_ADTYPE			"JobSet"
-#define JOB_USER_ADTYPE		"JobUser"
+#define OWNER_ADTYPE		"Owner"	 /* schedd's owner-of-jobs ad */
 #define QUERY_ADTYPE			"Query"
 #define COLLECTOR_ADTYPE		"Collector"
 #define CKPT_FILE_ADTYPE		"CkptFile"
