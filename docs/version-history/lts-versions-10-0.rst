@@ -7,6 +7,57 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1004:
+
+Version 10.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.4 released on Month Date, 2023.
+
+- HTCondor version 10.0.4 not yet released.
+
+- Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
+  is April 30th, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
+- Fixed a bug where Job Ad Information events weren't always written
+  when using the Job Router.
+  :jira:`1642`
+
+- Fixed a bug where the submit event wasn't written to the job event
+  log if the job ad didn't contain a ``CondorVersion`` attribute.
+  :jira:`1643`
+
+- Fixed a bug where a *condor_schedd* was denied authorization to send
+  reschedule command to a *condor_negotiator* with the IDToken authorization
+  levels recommended in the documentation for setting up a condor pool.
+  :jira:`1615`
+
+- Fixed a bug where the *condor_schedd* falsely believed there were
+  too many jobs in the queue and rejected new job submissions based on
+  ``MAX_JOBS_SUBMITTED``.
+  :jira:`1688`
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
+- Fixed *condor_c-gahp* and *condor_job_router* to submit jobs in the
+  same way as *condor_submit*.
+  :jira:`1695`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
