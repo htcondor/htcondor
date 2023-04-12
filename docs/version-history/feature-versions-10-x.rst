@@ -56,6 +56,26 @@ Bugs Fixed:
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
 
+Version 10.4.1
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.1 released on April 12, 2023.
+
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
+  :jira:`1668`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
 Version 10.4.0
 --------------
 
