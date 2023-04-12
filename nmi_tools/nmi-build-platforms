@@ -7,7 +7,6 @@ docker://htcondor/nmi-build:ppc64le_Ubuntu20-10000303
 docker://htcondor/nmi-build:x86_64_AlmaLinux8-10000303
 docker://htcondor/nmi-build:x86_64_CentOS7-10000303
 docker://htcondor/nmi-build:x86_64_Debian11-10000303
-docker://htcondor/nmi-build:x86_64_Ubuntu18-10000303
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10000303
 docker://htcondor/nmi-build:x86_64_Ubuntu22-10000303
 x86_64_macOS11
