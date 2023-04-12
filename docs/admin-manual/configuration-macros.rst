@@ -24,6 +24,15 @@ system. Other system-wide settings can be found in
 :ref:`admin-manual/configuration-macros:network-related configuration file entries`
 and :ref:`admin-manual/configuration-macros:shared file system configuration file macros`.
 
+:macro-def:`SUBSYSTEM`
+    Various configuration macros described below may include ``<SUBSYS>`` in the macro name.
+    This allows for one general macro name to apply to specific subsystems via a common
+    pattern. Just replace the ``<SUBSYS>`` part of the given macro with a valid HTCondor
+    subsystem name to apply that macro. Note that some configuration macros with ``<SUBSYS>``
+    only work for select subsystems. List of HTCondor Subsystems:
+
+    .. include:: subsystems.rst
+
 :macro-def:`CONDOR_HOST`
     This macro is used to define the ``$(COLLECTOR_HOST)`` macro.
     Normally the *condor_collector* and *condor_negotiator* would run
@@ -368,6 +377,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     will send mail to if something goes wrong with the named
     ``<SUBSYS>``. Identical to ``CONDOR_ADMIN``, but done on a per
     subsystem basis. There is no default value.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`CONDOR_SUPPORT_EMAIL`
     The email address to be included at the bottom of all email HTCondor
@@ -928,6 +939,8 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
     mappings for the specified daemon. Names must be separated by spaces
     or commas.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`CLASSAD_USER_MAPFILE_<name>`
     A string giving the name of a file to parse to initialize the map
     for the given username. Note that this macro is only used if
@@ -1013,8 +1026,7 @@ Daemon Logging Configuration File Entries
 
 These entries control how and where the HTCondor daemons write to log
 files. Many of the entries in this section represents multiple macros.
-There is one for each subsystem (listed in
-:ref:`admin-manual/introduction-to-configuration:pre-defined macros`).
+There is one for each subsystem (listed in :macro:`SUBSYSTEM`).
 The macro name for each substitutes ``<SUBSYS>`` with the name of the
 subsystem corresponding to the daemon.
 
@@ -1031,6 +1043,8 @@ subsystem corresponding to the daemon.
     attempt to log this into a new file of the name
     ``$(LOG)/dprintf_failure.<SUBSYS>`` before the daemon exits.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`LOG_TO_SYSLOG`
     A boolean value that is ``False`` by default. When ``True``, all
     daemon logs are routed to the syslog facility on Linux.
@@ -1045,6 +1059,8 @@ subsystem corresponding to the daemon.
     Note that a log file for the *condor_procd* does not use this
     configuration variable definition. Its implementation is separate.
     See :macro:`MAX_PROCD_LOG`.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MAX_DEFAULT_LOG`
     Controls the maximum size in bytes or amount of time that any log
@@ -1079,12 +1095,16 @@ subsystem corresponding to the daemon.
     Thus, at most ``MAX_NUM_<SUBSYS>_LOG + 1`` log files of the same
     program coexist at a given time. The default value is 1.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`TRUNC_<SUBSYS>_LOG_ON_OPEN`
     If this macro is defined and set to ``True``, the affected log will
     be truncated and started from an empty file with each invocation of
     the program. Otherwise, new invocations of the program will append
     to the previous log file. By default this setting is ``False`` for
     all daemons.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_LOG_KEEP_OPEN`
     A boolean value that controls
@@ -1101,6 +1121,8 @@ subsystem corresponding to the daemon.
     all daemons, except the *condor_shadow*, due to a global file
     descriptor limit.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`<SUBSYS>_LOCK`
     This macro specifies the lock file used
     to synchronize append operations to the log file for this subsystem.
@@ -1110,6 +1132,8 @@ subsystem corresponding to the daemon.
     required for log files which are accessed by more than one process.
     Currently, this includes only the ``SHADOW`` subsystem. This macro
     is defined relative to the ``$(LOCK)`` macro.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`JOB_QUEUE_LOG`
     A full path and file name, specifying the job queue log. The default
@@ -1436,6 +1460,8 @@ subsystem corresponding to the daemon.
         of each line in the log file will contain a fractional part to
         the seconds field that is accurate to the millisecond.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`ALL_DEBUG`
     Used to make all subsystems share a debug flag. Set the parameter
     ``ALL_DEBUG`` instead of changing all of the individual parameters.
@@ -1463,12 +1489,13 @@ Log files may optionally be specified per debug level as follows:
     specifies a log file that only captures *condor_negotiator* debug
     events occurring with matches.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`MAX_<SUBSYS>_<LEVEL>_LOG`
     See :macro:`MAX_<SUBSYS>_LOG`.
 
 :macro-def:`TRUNC_<SUBSYS>_<LEVEL>_LOG_ON_OPEN`
-    Similar to ``TRUNC_<SUBSYS>_LOG_ON_OPEN``
-    :index:`TRUNC_<SUBSYS>_LOG_ON_OPEN`.
+    See :macro:`TRUNC_<SUBSYS>_LOG_ON_OPEN`.
 
 The following macros control where and what is written to the event log,
 a file that receives job events, but across all users and user's jobs.
@@ -1679,9 +1706,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     daemon. This macro is not necessary for the *condor_collector*
     daemon, since its command socket is at a well-known port.
 
-    The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_SUPER_ADDRESS_FILE`
     :index:`SCHEDD_SUPER_ADDRESS_FILE`
@@ -1698,12 +1723,16 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``$(LOG)/.collector_address.super``. When not defined for other
     DaemonCore daemons, there will be no higher priority command port.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`<SUBSYS>_DAEMON_AD_FILE`
     A complete path to a file
     that is to contain the ClassAd for a daemon. When the daemon sends a
     ClassAd describing itself to the *condor_collector*, it will also
     place a copy of the ClassAd in this file. Currently, this setting
     only works for the *condor_schedd*. :index:`<SUBSYS>_ATTRS`
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_ATTRS`
     Allows any DaemonCore daemon to advertise arbitrary expressions from
@@ -1714,8 +1743,7 @@ that DaemonCore uses which affect all HTCondor daemons.
     **rank** and **requirements**.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
     .. note::
 
@@ -1743,6 +1771,7 @@ that DaemonCore uses which affect all HTCondor daemons.
             MY_STRING = "$(STRING)"
             STARTD_ATTRS = MY_STRING, NUMBER, BOOL1, BOOL2
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`DAEMON_SHUTDOWN`
     Starting with HTCondor version 6.9.3, whenever a daemon is about to
@@ -1817,6 +1846,8 @@ that DaemonCore uses which affect all HTCondor daemons.
     ``SCHEDD_NOT_RESPONDING_TIMEOUT`` controls how long the
     *condor_schedd* 's parent daemon will wait without receiving an
     alive and well message from the *condor_schedd* before killing it.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`NOT_RESPONDING_WANT_CORE`
     A boolean value with a default value of ``False``. This parameter is
@@ -2012,6 +2043,8 @@ More information about networking in HTCondor can be found in
     *condor_schedd* daemon, the value defaults to 4096. If the
     *condor_shared_port* daemon is in use, its value for this
     parameter should match the largest value set for the other daemons.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MAX_FILE_DESCRIPTORS`
     Under Unix, this specifies the maximum number of file descriptors to
@@ -2228,6 +2261,8 @@ More information about networking in HTCondor can be found in
     until a timeout occurs. This configuration variable is intended for
     use by developers for debugging purposes, where communication
     timeouts interfere.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`NONBLOCKING_COLLECTOR_UPDATE`
     A boolean value that defaults to ``True``. When ``True``, the
@@ -2549,8 +2584,7 @@ These macros control the *condor_master*.
     These are most often defined relative to the ``$(SBIN)`` macro.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`<DaemonName>_ENVIRONMENT`
     ``<DaemonName>`` is the name of a daemon listed in ``DAEMON_LIST``.
@@ -2582,8 +2616,7 @@ These macros control the *condor_master*.
     extra command line arguments to the *condor_startd*.
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`<SUBSYS>_USERID`
     The account name that should be used
@@ -2610,6 +2643,8 @@ These macros control the *condor_master*.
     necessary to make a copy of the credential, make it be owned by the
     account the daemons are using, and configure the daemons to use that
     copy.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`PREEN`
     In addition to the daemons defined in ``$(DAEMON_LIST)``, the
@@ -9892,6 +9927,8 @@ These macros affect the high availability operation of HTCondor.
     not defined for each subsystem, ``HA_<SUBSYS>_LOCK_URL`` is ignored,
     and the value of ``HA_LOCK_URL`` is used.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`HA_LOCK_HOLD_TIME`
     This macro specifies the number of seconds that the *condor_master*
     will hold the lock for each High Availability daemon. Upon gaining
@@ -9912,6 +9949,8 @@ These macros affect the high availability operation of HTCondor.
     ``HA_<SUBSYS>_LOCK_HOLD_TIME`` is ignored, and the value of
     ``HA_LOCK_HOLD_TIME`` is used.
 
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
+
 :macro-def:`HA_POLL_PERIOD`
     This macro specifies how often the *condor_master* polls the High
     Availability locks to see if any locks are either stale (meaning not
@@ -9928,6 +9967,8 @@ These macros affect the high availability operation of HTCondor.
     ``HA_POLL_PERIOD``. If not defined for each subsystem,
     ``HA_<SUBSYS>_POLL_PERIOD`` is ignored, and the value of
     ``HA_POLL_PERIOD`` is used.
+
+    List of possible subsystems to set ``<SUBSYS>`` can be found at :macro:`SUBSYSTEM`.
 
 :macro-def:`MASTER_<SUBSYS>_CONTROLLER`
     Used only in HA configurations involving the *condor_had*.
@@ -9950,8 +9991,7 @@ These macros affect the high availability operation of HTCondor.
         MASTER_NEGOTIATOR_CONTROLLER = HAD
 
     The macro is named by substituting ``<SUBSYS>`` with the appropriate
-    subsystem string as defined in
-    :ref:`admin-manual/introduction-to-configuration:pre-defined macros`.
+    subsystem string as defined by :macro:`SUBSYSTEM`.
 
 :macro-def:`HAD_LIST`
     A comma-separated list of all *condor_had* daemons in the form
