@@ -21,6 +21,9 @@ Release Notes:
 - Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
   is April 30th, 2023.
 
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+  :jira:`1668`
+
 New Features:
 
 - None.
