@@ -380,7 +380,6 @@ ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 bool
 ProcFamilyDirectCgroupV1::kill_family(pid_t pid)
 {
-	std::string cgroup_name = cgroup_map[pid];
 
 	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::kill_family for pid %u\n", pid);
 
