@@ -917,6 +917,16 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	return matches.size() > 0;
 }
 
+bool IsAConstraintMatch( ClassAd *query, ClassAd *target )
+{
+	classad::MatchClassAd *mad = getTheMatchAd( query, target );
+
+	bool result = mad->rightMatchesLeft();
+
+	releaseTheMatchAd();
+	return result;
+}
+
 bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
@@ -936,12 +946,7 @@ bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 		return false;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( my, target );
-
-	bool result = mad->rightMatchesLeft();
-
-	releaseTheMatchAd();
-	return result;
+	return IsAConstraintMatch(my, target);
 }
 
 /**************************************************************************

@@ -141,6 +141,10 @@ bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
 bool IsAHalfMatch( ClassAd *my, ClassAd *target );
 
+// evaluates the query REQUIREMENTS against the target ad
+// but does *NOT* care about TargetType
+bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
+
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 
 void AddClassAdXMLFileHeader(std::string &buffer);

@@ -41,6 +41,7 @@
 //#include "dc_collector.h"
 #include "basename.h"
 #include "match_prefix.h"
+#include "console-utils.h"
 
 // For schedd commands
 #include "condor_commands.h"
@@ -112,6 +113,62 @@ static int str_to_cmd(const char * str) { return getNumFromName(str, MyCommandTr
 typedef std::map<std::string, MyRowOfValues> ROD_MAP_BY_KEY;
 typedef std::map<std::string, ClassAd*> AD_MAP_BY_KEY;
 
+const char * const userDefault_PrintFormat = "SELECT\n"
+"   User         AS USER      WIDTH AUTO\n"
+"   Owner        AS OWNER     WIDTH AUTO\n"
+"   NTDomain     AS NTDOMAIN  WIDTH AUTO PRINTF %s OR ''\n"
+"   Enabled?Enabled:\"\"   AS ENABLED\n"
+"SUMMARY STANDARD\n";
+
+static  int  testing_width = 0;
+int getDisplayWidth() {
+	if (testing_width <= 0) {
+		testing_width = getConsoleWindowSize();
+		if (testing_width <= 0)
+			testing_width = 80;
+	}
+	return testing_width;
+}
+
+static void initOutputMask(AttrListPrintMask & prmask, int qdo_mode, bool wide_mode)
+{
+	static const struct {
+		const int mode;
+		const char * tag;
+		const char * fmt;
+	} info[] = {
+		{ 0,      "",         userDefault_PrintFormat },
+	};
+
+	int ixInfo = -1;
+	for (int ix = 0; ix < (int)COUNTOF(info); ++ix) {
+		if (info[ix].mode == qdo_mode) {
+			ixInfo = ix;
+			break;
+		}
+	}
+
+	if (ixInfo < 0)
+		return;
+
+	const char * fmt = info[ixInfo].fmt;
+	const char * tag = info[ixInfo].tag;
+
+	if ( ! wide_mode) {
+		int display_wid = getDisplayWidth();
+		prmask.SetOverallWidth(display_wid-1);
+	}
+
+	PrintMaskMakeSettings propt;
+	std::vector<GroupByKeyInfo> grkeys; // future
+	std::string messages;
+
+	StringLiteralInputStream stream(fmt);
+	if (SetAttrListPrintMaskFromStream(stream, nullptr, prmask, propt, grkeys, nullptr, messages) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+}
+
 bool store_ads(void*pv, ClassAd* ad)
 {
 	AD_MAP_BY_KEY & ads = *(AD_MAP_BY_KEY*)pv;
@@ -132,7 +189,10 @@ struct _render_ads_info {
 	FILE *        hfDiag=nullptr; // write raw ads to this file for diagnostic purposes
 	unsigned int  diag_flags=0;
 	AttrListPrintMask * pm = nullptr;
-	_render_ads_info(ROD_MAP_BY_KEY* map, AttrListPrintMask * _pm) : pmap(map), pm(_pm) {}
+	_render_ads_info(ROD_MAP_BY_KEY* map, AttrListPrintMask * _pm) 
+		: pmap(map)
+		, pm(_pm)
+	{}
 };
 
 bool render_ads(void* pv, ClassAd* ad)
@@ -170,8 +230,8 @@ bool render_ads(void* pv, ClassAd* ad)
 		done_with_ad = true;
 	} else {
 		MyRowOfValues & rov = pp.first->second;
-		// set this to truncate output to window width
-		//rov.SetMaxCols(pi->columns);
+		int cols = MAX(pi->columns, pi->pm->ColCount());
+		rov.SetMaxCols(cols); // reserve space for column data
 		pi->pm->render(rov, ad);
 		done_with_ad = true;
 	}
@@ -364,6 +424,10 @@ main( int argc, const char *argv[] )
 	}
 
 	if (!cmd) cmd = QUERY_USERREC_ADS;
+
+	if ((cmd == QUERY_USERREC_ADS) && ! dash_long && prmask.IsEmpty()) {
+		initOutputMask(prmask, 0, false);
+	}
 
 	DCSchedd schedd(name, pool);
 	if ( ! schedd.locate()) {
@@ -623,18 +687,51 @@ usage(FILE *out, const char *appname)
 		fprintf( stderr, "Use -help to see usage information\n" );
 		exit(1);
 	}
-	fprintf(out, "Usage: %s [OPTIONS] <username>\n", appname );
-	fprintf(out, "\nOPTIONS:\n" );
-	fprintf(out, "-cancel           Stop draining.\n" );
-	fprintf(out, "-debug            Display debugging info to console\n" );
-	fprintf(out, "-graceful         (the default) Honor MaxVacateTime and MaxJobRetirementTime.\n" );
-	fprintf(out, "-quick            Honor MaxVacateTime but not MaxJobRetirementTime.\n" );
-	fprintf(out, "-fast             Honor neither MaxVacateTime nor MaxJobRetirementTime.\n" );
-	fprintf(out, "-reason <text>    While draining, advertise <text> as the reason.\n" );
-	fprintf(out, "-resume-on-completion    When done draining, resume normal operation.\n" );
-	fprintf(out, "-exit-on-completion      When done draining, STARTD should exit and not restart.\n" );
-	fprintf(out, "-restart-on-completion   When done draining, STARTD should restart.\n" );
-	fprintf(out, "-request-id <id>  Specific request id to cancel (optional).\n" );
-	fprintf(out, "-check <expr>     Must be true for all slots to be drained or request is aborted.\n" );
-	fprintf(out, "-start <expr>     Change START expression to this while draining.\n" );
+	fprintf(out, "Usage: %s [ADDRESS] [DISPLAY] [USERS]\n", appname );
+	fprintf(out, "       %s [ADDRESS] [OPERATION] [USERS]\n", appname );
+	fprintf(out, "       %s [ADDRESS] -edit [USERS] <attr>=<value> [<attr>=<value> ...]\n", appname );
+
+	fprintf(out, "\n  ADDRESS is:\n"
+		"    -name <name>\t Name or address of Scheduler\n"
+		"    -pool <host>\t Use host as the central manager to query\n"
+		);
+
+	fprintf(out, "\n  DISPLAY is:\n" );
+	fprintf(out, "    -help\t\t Display this message to stdout and exit.\n" );
+	fprintf(out, "    -version\t\t Display the HTCondor version and exit.\n" );
+	fprintf(out, "    -debug[:<level>]\t Write a debug log to stderr. <level> overrides TOOL_DEBUG.\n");
+	//fprintf(out, "    -verbose\t\t Narrate the process\n" );
+	fprintf(out, "    -long[:format]\t Display full classads. format can long,json,xml,new or auto\n" );
+	fprintf(out, "    -af[:jlhVr,tng] <attr> [attr2 [...]]\n"
+		"        Print attr(s) with automatic formatting\n"
+		"        the [jlhVr,tng] options modify the formatting\n"
+		"            l   attribute labels\n"
+		"            h   attribute column headings\n"
+		"            V   %%V formatting (string values are quoted)\n"
+		"            r   %%r formatting (raw/unparsed values)\n"
+		"            ,   comma after each value\n"
+		"            t   tab before each value (default is space)\n"
+		"            n   newline after each value\n"
+		"            g   newline between ClassAds, no space before values\n"
+		"        use -af:h to get tabular values with headings\n"
+		"        use -af:lrng to get -long equivalent format\n"
+		"    -format <fmt> <attr> Print attribute attr using format fmt\n"
+		);
+
+	fprintf(out, "\n  USERS is zero or more of:\n"
+		"    <user>\t\t Operate on <user>\n"
+		"    -me\t\t\t Operate on the user running the command\n"
+		"    -constraint <expr>\t Operate on users matching the <expr>\n"
+		);
+
+	fprintf(out, "\n  OPERATION is one of:\n");
+	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
+	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
+	fprintf(out, "    -disable\t\t Disable user records\n" );
+	fprintf(out, "    -delete\t\t Delete user records\n" );
+	fprintf(out, "    -reset\t\t Reset user records to defaults\n" );
+	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+	fprintf(out, "\n"
+		"  This tool is use to query, modify and delete User/Owner records in the Schedd. the default\n"
+		"  operation is to query and display users.\n" );
 }

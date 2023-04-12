@@ -2272,7 +2272,7 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	for (const auto & it : OwnersInfo) {
 		if (num_ads >= limit) break;
 		ClassAd * ad = it.second;
-		if (!has_constraint || IsAHalfMatch(&queryAd, ad)) {
+		if (!has_constraint || IsAConstraintMatch(&queryAd, ad)) {
 			if ( !putClassAd(stream, *ad)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
@@ -2404,7 +2404,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 	for (auto & act : acts) {
 		if (act.Lookup(ATTR_REQUIREMENTS)) {
 			for (auto it : OwnersInfo) {
-				if (IsAHalfMatch(&act, it.second)) {
+				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack);
 					if (rval) break;
 				}

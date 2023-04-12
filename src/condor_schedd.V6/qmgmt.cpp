@@ -2206,7 +2206,11 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 		if (bad->IsUserRec()) {
 			#ifdef USE_JOB_QUEUE_USERREC
 			JobQueueUserRec * urec = static_cast<JobQueueUserRec*>(bad);
-			// TODO: validate ?
+			if (urec) {
+				// TODO: fix it so that job queue does not set TargetType 
+				urec->Delete(ATTR_TARGET_TYPE);
+				// TODO: validate ?
+			}
 			#endif
 			continue;
 		}
