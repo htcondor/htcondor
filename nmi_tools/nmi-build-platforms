@@ -9,7 +9,6 @@ docker://htcondor/nmi-build:x86_64_AlmaLinux8-10040004
 docker://htcondor/nmi-build:x86_64_AlmaLinux9-10040004
 docker://htcondor/nmi-build:x86_64_CentOS7-10040004
 docker://htcondor/nmi-build:x86_64_Debian11-10040004
-docker://htcondor/nmi-build:x86_64_Ubuntu18-10040004
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10040004
 docker://htcondor/nmi-build:x86_64_Ubuntu22-10040004
 x86_64_macOS11
