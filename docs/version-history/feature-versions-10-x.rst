@@ -9,11 +9,9 @@ Version 10.4.1
 
 Release Notes:
 
-.. HTCondor version 10.4.1 released on Month Date, 2023.
+- HTCondor version 10.4.1 released on April 12, 2023.
 
-- HTCondor version 10.4.1 not yet released.
-
-- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
   :jira:`1668`
 
 New Features:
