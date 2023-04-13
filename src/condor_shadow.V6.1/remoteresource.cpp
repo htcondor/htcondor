@@ -606,6 +606,8 @@ RemoteResource::closeClaimSock( void )
 void
 RemoteResource::disconnectClaimSock(const char *err_msg)
 {
+	abortFileTransfer();
+
 	if (!claim_sock) {
 		return;
 	}
