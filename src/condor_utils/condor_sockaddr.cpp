@@ -401,13 +401,6 @@ bool condor_sockaddr::from_ip_string(const std::string & ip_string)
 	return from_ip_string(ip_string.c_str());
 }
 
-/*
-bool condor_sockaddr::from_ip_string(const MyString& ip_string)
-{
-	return from_ip_string(ip_string.c_str());
-}
-*/
-
 bool condor_sockaddr::from_ip_and_port_string( const char * ip_and_port_string ) {
 	ASSERT( ip_and_port_string );
 
