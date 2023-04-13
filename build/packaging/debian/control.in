@@ -241,7 +241,7 @@ Description: distributed workload management system - single node configuration
  This package provides files needed to create a stand-alone HTCondor tarball.
 
 Package: htcondor-test
-Architecture: all
+Architecture: any
 Section: science
 Depends: htcondor (= ${binary:Version}),
          ${misc:Depends}
