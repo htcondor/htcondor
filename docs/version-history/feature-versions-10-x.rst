@@ -41,7 +41,7 @@ Release Notes:
   :jira:`1580`
 
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
-  unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
+  unless the configuration template ``use POLICY : DESKTOP`` or ``use POLICY : UWCS_DESKTOP``
   is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
   a duration value. The policy expressions in those templates have been modified
   to account for this fact. If you have written policy expressions of your own that reference
