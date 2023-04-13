@@ -1483,7 +1483,9 @@ int DaemonCore::Register_Signal(int sig, const char* sig_descrip,
 		return -1;
     }
 
-    dc_stats.NewProbe("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	if (handler_descrip) {
+		dc_stats.NewProbe("Signal", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
 
 	// Semantics dictate that certain signals CANNOT be caught!
 	// In addition, allow SIGCHLD to be automatically replaced (for backwards
@@ -1651,7 +1653,9 @@ int DaemonCore::Register_Socket(Stream *iosock, const char* iosock_descrip,
 		EXCEPT("DaemonCore: Socket table messed up");
 	}
 
-    dc_stats.NewProbe("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	if (handler_descrip) {
+		dc_stats.NewProbe("Socket", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
     //if (iosock_descrip && iosock_descrip[0] && ! strcmp(handler_descrip, "DC Command Handler"))
     //   dc_stats.New("Command", iosock_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
 
@@ -2126,7 +2130,9 @@ int DaemonCore::Register_Pipe(int pipe_end, const char* pipe_descrip,
 		pipeTable[i].handler_descrip = nullptr;
 	}
 
-    dc_stats.NewProbe("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	if (handler_descrip) {
+		dc_stats.NewProbe("Pipe", handler_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
 
 	// Found a blank entry at index i. Now add in the new data.
 	pipeTable[i].pentry = NULL;
@@ -3410,7 +3416,9 @@ void DaemonCore::Driver()
 					CheckPrivState();
 
 					// update per-timer runtime and count statistics
-					runtime = dc_stats.AddRuntime(sigEntry.handler_descrip, runtime);
+					if (sigEntry.handler_descrip) {
+						runtime = dc_stats.AddRuntime(sigEntry.handler_descrip, runtime);
+					}
 				}
 			}
 		}
@@ -3853,6 +3861,12 @@ void DaemonCore::Driver()
 #endif
 						}	// end of if ( recheck_status || saved_pentry )
 
+						// The handler may cancel the registration,
+						// invalidating the table entry, so
+						// save the description now for the stats update
+						// below.
+						std::string handler_desc = pipeTable[i].handler_descrip ? pipeTable[i].handler_descrip : "";
+
 						pipeTable[i].in_handler = true;
 
 						// log a message
@@ -3900,7 +3914,9 @@ void DaemonCore::Driver()
 #endif
 
 						// update per-handler runtime statistics
-						runtime = dc_stats.AddRuntime(pipeTable[i].handler_descrip, runtime);
+						if (!handler_desc.empty()) {
+							runtime = dc_stats.AddRuntime(handler_desc.c_str(), runtime);
+						}
 
 						if ( pipeTable[i].call_handler == true ) {
 							// looks like the handler called Cancel_Pipe(),
@@ -3951,11 +3967,19 @@ void DaemonCore::Driver()
 
 						// ok, select says this socket table entry has new data.
 
+						// The handler may cancel the registration,
+						// invalidating the table entry, so
+						// save the description now for the stats update
+						// below.
+						std::string handler_desc = sockTable[i].handler_descrip ? sockTable[i].handler_descrip : "";
+
 						recheck_status = true;
 						CallSocketHandler( i, true );
 
 						// update per-handler runtime statistics
-						runtime = dc_stats.AddRuntime(sockTable[i].handler_descrip, runtime);
+						if (!handler_desc.empty()) {
+							runtime = dc_stats.AddRuntime(handler_desc.c_str(), runtime);
+						}
 
 					}	// if call_handler is True
 				}	// if valid entry in sockTable

@@ -457,7 +457,7 @@ inline int ClassAdAssign(ClassAd & ad, const char * pattr, int64_t value) {
 
 template <class T>
 inline int ClassAdAssign2(ClassAd & ad, const char * pattr1, const char * pattr2, T value) {
-   MyString attr(pattr1);
+   std::string attr(pattr1);
    attr += pattr2;
    return ClassAdAssign(ad, attr.c_str(), value);
 }
@@ -538,9 +538,9 @@ public:
    }
    void Unpublish(ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
-      MyString attr(pattr);
+      std::string attr(pattr);
       attr += "Peak";
-      ad.Delete(attr.c_str());
+      ad.Delete(attr);
       };
 
    void Clear() {
@@ -845,9 +845,9 @@ public:
    }
    void Unpublish(ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
-      MyString attr;
-      attr.formatstr("Recent%s", pattr);
-      ad.Delete(attr.c_str());
+      std::string attr;
+      formatstr(attr, "Recent%s", pattr);
+      ad.Delete(attr);
       };
 
    void PublishDebug(ClassAd & ad, const char * pattr, int flags) const;
@@ -973,9 +973,9 @@ public:
    }
    void Unpublish(ClassAd & ad, const char * pattr) const {
       ad.Delete(pattr);
-      MyString attr;
-      attr.formatstr("Recent%s", pattr);
-      ad.Delete(attr.c_str());
+      std::string attr;
+      formatstr(attr, "Recent%s", pattr);
+      ad.Delete(attr);
       };
 
    void Clear() {
@@ -1253,7 +1253,7 @@ public:
 
    // helper methods for parsing configuration
    //static int ParseLimits(const char * psz, T * pLimits, int cMax);
-   //static int PrintLimits(MyString & str, const T * pLimits, int cLimits);
+   //static int PrintLimits(std::string & str, const T * pLimits, int cLimits);
 
    // callback methods/fetchers for use by the StatisticsPool class
    static const int unit = IS_HISTOGRAM | stats_entry_type<T>::id;
@@ -1379,9 +1379,9 @@ T stats_histogram<T>::Remove(T val)
 
 // helper functions for parsing configuration for histogram limits
 int stats_histogram_ParseSizes(const char * psz, int64_t * pSizes, int cMaxSizes);
-void stats_histogram_PrintSizes(MyString & str, const int64_t * pSizes, int cSizes);
+void stats_histogram_PrintSizes(std::string & str, const int64_t * pSizes, int cSizes);
 int stats_histogram_ParseTimes(const char * psz, time_t * pTimes, int cMaxTimes);
-void stats_histogram_PrintTimes(MyString & str, const time_t * pTimes, int cTimes);
+void stats_histogram_PrintTimes(std::string & str, const time_t * pTimes, int cTimes);
 
 // --------------------------------------------------------------------
 //  statistics probe combining a histogram class with Recent ring buffer
@@ -1561,7 +1561,7 @@ int generic_stats_ParseConfigString(
 class StatisticsPool {
 public:
    StatisticsPool()
-      : pub(hashFunction)
+      : zpub(hashFunction)
       , pool(hashFuncVoidPtr)
       {
       };
@@ -1598,7 +1598,7 @@ public:
    template <typename T> T* GetProbe(const char * name)
    {
       pubitem item;
-      if (pub.lookup(name, item) >= 0)
+      if (zpub.lookup(name, item) >= 0)
          return (T*)item.pitem;
       return 0;
    }
@@ -1606,7 +1606,7 @@ public:
    stats_entry_base* GetProbe(const char * name, int & units)
    {
       pubitem item;
-      if (pub.lookup(name, item) >= 0) {
+      if (zpub.lookup(name, item) >= 0) {
          units = item.units;
          return (stats_entry_base*)item.pitem;
       }
@@ -1712,7 +1712,7 @@ private:
       FN_STATS_ENTRY_DELETE  Delete;
    };
    // table of values to publish, possibly more than one for each probe
-   HashTable<MyString,pubitem> pub;
+   HashTable<std::string,pubitem> zpub;
 
    // table of unique probes counters, used to Advance and Clear the items.
    HashTable<void*,poolitem> pool;

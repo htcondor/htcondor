@@ -126,7 +126,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 		return -1;
 	}
 
-    if (daemonCore) {
+    if (daemonCore && event_descrip) {
        daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
     }
 
@@ -489,7 +489,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			}
 		}
 
-		if (pruntime) {           
+		if (pruntime && in_timeout->event_descrip) {
 			*pruntime = daemonCore->dc_stats.AddRuntime(in_timeout->event_descrip, *pruntime);
 		}
 
