@@ -30,6 +30,12 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing succesfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
+
 - Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
   a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
   a bug where GPU (core) utilization could be wildly over-reported.
