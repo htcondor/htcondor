@@ -61,6 +61,10 @@ Bugs Fixed:
   same way as *condor_submit*.
   :jira:`1695`
 
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
