@@ -116,6 +116,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		}
 	}
 
+
 	// Set limits, if any
 	if (cgroup_memory_limit > 0) {
 		// write memory limits
@@ -151,6 +152,23 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 			close(fd);
 		} else {
 			dprintf(D_ALWAYS, "Error setting cgroup cpu weight of %d in cgroup %s: %s\n", cgroup_cpu_shares, cpu_shares_path.c_str(), strerror(errno));
+		}
+	}
+
+	// Chown the leaf cgroup dirs to the non-root owner.  The control files wlil
+	// still be owned by root, so the job can't change them, but they can
+	// create sub-dirs, so that a glidein can manage the resources given in this
+	// cgroup
+	pid_t uid = get_user_uid();
+	pid_t gid = get_user_gid();;
+
+	// in a personal condor, uid/gid aren't returned properly.
+	if ((uid > 0) && (gid > 0)) {
+		for (auto &controller: controllers) {
+			int r = chown((cgroup_root_dir / controller / cgroup_name).c_str(), uid, gid);
+			if (r < 0) {
+				dprintf(D_FULLDEBUG, "Error chowning cgroup directory: %s to (%d.%d)\n", strerror(errno), uid, gid);
+			}
 		}
 	}
 
@@ -465,17 +483,71 @@ ProcFamilyDirectCgroupV1::has_cgroup_v1() {
 	return found;
 }
 
-bool 
-ProcFamilyDirectCgroupV1::can_create_cgroup_v1() {
-	bool success = false;
+static bool cgroup_controller_is_writeable(const std::string &controller, std::string relative_cgroup) {
 
+	if (relative_cgroup.length() == 0) {
+		return false;
+	}
+
+	// In Cgroup v1, need to test each controller separately
+	// For cgroup v2, controller will be empty string, but that's OK.
+	std::string test_path = cgroup_mount_point();
+	test_path += '/';
+
+	if (!controller.empty()) {
+		// cgroup v1 with controller at root
+		test_path += controller + '/';
+	} 
+
+	// Regardless of v1 or v2, the relative cgroup at the end
+	test_path += relative_cgroup;
+
+	// The relative path given might not completly exist.  We can write
+	// to it if we can write to the fully given path (the usual case)
+	// OR, if we have write power to the parent of the top-most non-existing
+	// directory.
+
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
+
+		dprintf(D_ALWAYS, "GGT GGT GGT about to access %s\n", test_path.c_str());
+		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
+			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
+			return true;
+		}
+	}
+
+	// The directory doesn't exist.  See if we can write to the parent.
+	if ((errno == ENOENT) && (relative_cgroup.length() > 1))  {
+		size_t trailing_slash = relative_cgroup.find_last_of('/');
+		if (trailing_slash == std::string::npos) {
+			relative_cgroup = '/'; // last try from the root of the mount point
+		} else {
+			relative_cgroup.resize(trailing_slash); // Retry one directory up
+		}
+		return cgroup_controller_is_writeable(controller, relative_cgroup);
+
+	}
+	
+	dprintf(D_ALWAYS, "    Cgroup %s/%s is not writeable, cannot use cgroups\n", controller.c_str(), relative_cgroup.c_str());
+	return false;
+}
+
+static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
+	return 
+		// These should be synchronized to the required_controllers in the procd
+		cgroup_controller_is_writeable("memory", relative_cgroup)     &&
+		cgroup_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
+		cgroup_controller_is_writeable("freezer", relative_cgroup)    &&
+		cgroup_controller_is_writeable("blkio", relative_cgroup);
+}
+
+bool 
+ProcFamilyDirectCgroupV1::can_create_cgroup_v1(std::string &cgroup) {
 	if (!has_cgroup_v1()) {
 		return false;
 	}
 
-	TemporaryPrivSentry sentry(PRIV_ROOT);
-	if (access((cgroup_mount_point() / "memory").c_str(), R_OK | W_OK) == 0) {
-		success = true;
-	}
-	return success;
+	// see if cgroup is writeable
+	return cgroup_v1_is_writeable(cgroup);
 }

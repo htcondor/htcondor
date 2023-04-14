@@ -98,7 +98,7 @@ public:
 	static bool has_cgroup_v1();
 	
 	// Returns true if cgroup v1 is mounted and we can write to it
-	static bool can_create_cgroup_v1();
+	static bool can_create_cgroup_v1(std::string &cgroup);
 private:
 
 	bool cgroupify_process(const std::string &cgroup_name, pid_t pid);
