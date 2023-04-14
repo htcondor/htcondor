@@ -563,7 +563,7 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_P
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, (cch + 1), format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -580,7 +580,7 @@ void SubmitHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, (cch + 1), format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {

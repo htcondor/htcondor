@@ -109,14 +109,11 @@ void
 AWSv4Impl::convertMessageDigestToLowercaseHex(
   const unsigned char * messageDigest,
   unsigned int mdLength, std::string & hexEncoded ) {
-	char * buffer = (char *)malloc( (mdLength * 2) + 1 );
-	ASSERT( buffer );
-	char * ptr = buffer;
-	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
+	hexEncoded.clear();
+	hexEncoded.reserve(mdLength * 2);
+	for( unsigned int i = 0; i < mdLength; i++ ) {
+		formatstr_cat(hexEncoded, "%02x", messageDigest[i]);
 	}
-	hexEncoded.assign( buffer, mdLength * 2 );
-	free(buffer);
 }
 
 bool

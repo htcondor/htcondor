@@ -4,6 +4,7 @@
 #include <utility>
 #include "ranger.h"
 #include "proc.h"
+#include "stl_string_utils.h"
 
 using namespace std::rel_ops;
 
@@ -243,9 +244,9 @@ static const char *read_element(const char *s, int *out)
 }
 
 // write 'in' to buf, return number of bytes written
-static int write_element(int in, char *buf)
+static void write_element(int in, std::string& buf)
 {
-    return sprintf(buf, "%d", in);
+	formatstr_cat(buf, "%d", in);
 }
 
 
@@ -255,9 +256,9 @@ static const char *read_element(const char *s, JOB_ID_KEY *out)
     return ret != 2 ? s : s + len;
 }
 
-static int write_element(JOB_ID_KEY in, char *buf)
+static void write_element(JOB_ID_KEY in, std::string& buf)
 {
-    return sprintf(buf, "%d.%d", in.cluster, in.proc);
+    formatstr_cat(buf, "%d.%d", in.cluster, in.proc);
 }
 
 
@@ -265,15 +266,12 @@ template <class T>
 static
 void persist_range_single(std::string &s, const typename ranger<T>::range &rr)
 {
-    char buf[64];
-    int n;
-    n = write_element(rr._start, buf);
-    if (rr._start != rr._end - 1) {
-        buf[n++] = '-';
-        n += write_element(rr._end - 1, buf+n);
-    }
-    buf[n++] = ';';
-    s.append(buf, n);
+	write_element(rr._start, s);
+	if (rr._start != rr._end - 1) {
+		s += '-';
+		write_element(rr._end - 1, s);
+	}
+	s += ';';
 }
 
 template <class T>

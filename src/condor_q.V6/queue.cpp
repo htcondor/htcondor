@@ -3619,7 +3619,8 @@ bool print_jobs_analysis (
 			for (int ii = 0; ii < cJobsToEval; ++ii) {
 				ClassAd *job = it->second[ii];
 
-				char achJobId[32], achAutocluster[48], achRunning[32];
+				char achJobId[32], achAutocluster[48];
+				std::string achRunning;
 				int cluster_id = 0, proc_id = 0;
 				job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
 				job->LookupInteger(ATTR_PROC_ID, proc_id);
@@ -3657,14 +3658,13 @@ bool print_jobs_analysis (
 				doJobRunAnalysis(job, NULL, job_status, true, ac, &prio, NULL);
 				const char * fmt = "%-13s %-12s %12d %11d %11s %10d %9d %s\n";
 
-				achRunning[0] = 0;
-				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
-				sprintf(achRunning+strlen(achRunning), "%d", ac.machinesRunningUsersJobs);
+				if (cRunning) { formatstr(achRunning, "%d/", cRunning); }
+				formatstr_cat(achRunning, "%d", ac.machinesRunningUsersJobs);
 
 				printf(fmt, achJobId, achAutocluster,
 						ac.totalMachines - ac.fReqConstraint,
 						ac.fOffConstraint,
-						achRunning,
+						achRunning.c_str(),
 						ac.machinesRunningJobs - ac.machinesRunningUsersJobs,
 						ac.available,
 						owner.c_str());

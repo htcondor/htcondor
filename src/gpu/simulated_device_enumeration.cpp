@@ -220,7 +220,7 @@ cudaError_t CUDACALL sim_getBasicProps(int devID, BasicProps * p) {
 	const struct _simulated_cuda_device * dev = sim_devices[devID]->device;
 	p->name = dev->name;
 	p->setUUIDFromBuffer( sim_makeuuid(devID) );
-	sprintf(p->pciId, "0000:%02x:00.0", devID + 0x40);
+	snprintf(p->pciId, sizeof(p->pciId), "0000:%02x:00.0", devID + 0x40);
 	p->ccMajor = (dev->SM & 0xF0) >> 4;
 	p->ccMinor = (dev->SM & 0x0F);
 	p->multiProcessorCount = dev->multiProcessorCount;
@@ -353,7 +353,7 @@ sim_nvmlDeviceGetUUID(nvmlDevice_t device, char *buf, unsigned int bufsize ) {
 			bogus_uuid = "MIG-GPU-";
 			print_uuid(uuidbuf, NVML_DEVICE_UUID_V2_BUFFER_SIZE, sim_makeuuid(devID));
 			bogus_uuid += uuidbuf;
-			sprintf(uuidbuf, "/%d/0", migID);
+			snprintf(uuidbuf, sizeof(uuidbuf), "/%d/0", migID);
 			bogus_uuid += uuidbuf;
 		}
 	} else {

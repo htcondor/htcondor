@@ -631,11 +631,12 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum(2*md_len + 1, 0);
+	std::string computed_checksum;
+	computed_checksum.reserve(2*md_len);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		formatstr_cat(computed_checksum, "%02x", md_value[idx]);
 	}
-	if (strcmp(&computed_checksum[0], checksum.c_str())) {
+	if (computed_checksum != checksum) {
 		err.pushf("DataReuse", 11, "Source file checksum does not match expected one.");
 		unlink(&dest_tmp_fname[0]);
 		return false;
@@ -839,11 +840,12 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	unsigned int md_len;
 	EVP_DigestFinal_ex(mdctx, md_value, &md_len);
 	EVP_MD_CTX_destroy(mdctx);
-	std::vector<char> computed_checksum(2*md_len + 1, 0);
+	std::string computed_checksum;
+	computed_checksum.reserve(2*md_len);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		formatstr_cat(computed_checksum, "%02x", md_value[idx]);
 	}
-	if (strcmp(&computed_checksum[0], checksum.c_str())) {
+	if (computed_checksum != checksum) {
 		err.pushf("DataReuse", 10, "Source file checksum does not match expected one.");
 		// TODO: remove file.
 		return false;

@@ -63,7 +63,7 @@ void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 			int   length  =  k->getKeyLength();
 
 			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
+				snprintf (&hexout[i*2], sizeof(hexout)-(i*2), "%02x", *dataptr++);
 			}
 
 			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
