@@ -3993,8 +3993,6 @@ void
 DedicatedScheduler::checkReconnectQueue( void ) {
 	dprintf(D_FULLDEBUG, "In DedicatedScheduler::checkReconnectQueue\n");
 
-	PROC_ID id;
-
 	CondorQuery query(STARTD_AD);
 	ClassAdList result;
 	ClassAdList ads;
@@ -4048,8 +4046,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	while ((machine = ads.Next()) ) {
 		char buf[256];
 		machine->LookupString(ATTR_NAME, buf, sizeof(buf));
-		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job (%d.%d)\n", 
-				buf, id.cluster, id.proc);
+		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job\n", buf);
 		machines.Append(machine);
 	}
 
@@ -4218,13 +4215,13 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
-		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", id.cluster);
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list
 		removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 		createAllocations(&machinesToAllocate, &jobsToAllocate, 
-					  id.cluster, nprocs, true);
+					  last_id.cluster, nprocs, true);
 		
 	}
 	spawnJobs();
