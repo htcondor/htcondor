@@ -1521,7 +1521,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 		else {
 			// This absurd construction is because there's no other way to
 			// tell gcc 8 that we really do want to truncate the arguments.
-			int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old ); ++rv;
+			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -1631,7 +1631,7 @@ _condor_fd_panic( int line, const char* file )
 		save_errno = errno;
 		// This absurd construction is because there's no other way to
 		// tell gcc 8 that we really do want to truncate the arguments.
-		int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg ); ++rv;
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg );
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */

@@ -965,11 +965,11 @@ define_sandbox_path(std::string sid, std::string &path)
 	unsigned char hash_buf[SHA256_DIGEST_LENGTH];
 	SHA256((unsigned char*)const_cast<char*>(sid.c_str()), sid.length(), hash_buf);
 
-	char c_hex_sha256[SHA256_DIGEST_LENGTH*2+1];
+	std::string c_hex_sha256;
+	c_hex_sha256.reserve(SHA256_DIGEST_LENGTH*2);
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		sprintf(&(c_hex_sha256[i*2]), "%02x", hash_buf[i]);
+		formatstr_cat(c_hex_sha256, "%02x", hash_buf[i]);
 	}
-	c_hex_sha256[SHA256_DIGEST_LENGTH*2] = 0;
 
 	// now construct a two-level directory from the hash.
 	path += DIR_DELIM_CHAR;

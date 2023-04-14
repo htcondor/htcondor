@@ -2882,7 +2882,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 		// Assume all procs start at 0, and are monotonically increasing
 	int last_proc = -1;
-	int node = 0;
 
 		// Foreach machine we've matched
 	while( (machine = idle_candidates->Next()) ) {
@@ -2914,7 +2913,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// We're now at a new proc
 		if( proc != last_proc) {
 			last_proc = proc;
-			node = 0;
 
 				// create a new MRecArray
 			matches = new MRecArray();
@@ -2926,7 +2924,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 			// And put the mrec into the matches for this node in the proc
 		matches->push_back(mrec);
-		node++;
 	}
 	
 	ASSERT( allocations->insert( cluster, alloc ) == 0 );
