@@ -3247,7 +3247,7 @@ JobRoute::ParseNext(
 
 	// insure that the resulting xform will parse, and also populate the XFormHash with it's params
 	// so that we can query/store them for use in the routing process prior to actual job transformation.
-	if ( ! ValidateXForm(m_route, mset, errmsg)) {
+	if ( ! ValidateXForm(m_route, mset, nullptr, errmsg)) {
 		dprintf(D_ALWAYS, "JobRouter: route %s is not valid: %s\n", name, errmsg.c_str());
 		return false;
 	}

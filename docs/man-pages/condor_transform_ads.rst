@@ -12,6 +12,7 @@ Synopsis
 
 **condor_transform_ads** [**-rules** *rules-file*]
 [**-jobtransforms** *name-list*]
+[**-jobroute** *route-name*]
 [**-in[:<form>]  ** *infile*] [**-out[:<form>[,
 nosort]]  ** *outfile*] [*<key>=<value>* ] [**-long** ] [**-json** ]
 [**-xml** ] [**-verbose** ] [**-terse** ] [**-debug** ]
@@ -19,7 +20,7 @@ nosort]]  ** *outfile*] [*<key>=<value>* ] [**-long** ] [**-json** ]
 ...infileN* ]
 
 Note that one or more transforms must be specified in the form of a rules
-file or a ``JOB_TRANSFORM_`` name and at least one input file must be
+file or a ``JOB_TRANSFORM_`` or ``JOB_ROUTER_ROUTE_`` name and at least one input file must be
 specified. Transforms will be applied in the order they are given on the command
 line.  If a rules file has a TRANSFORM statement with arguments it must be the last
 rules file.  If no output file is specified, output will be written to
@@ -42,10 +43,15 @@ Options
     information about the available transformation rules.
  **-rules** *rules-file*
     Specifies the file containing definitions of the transformation
-    rules.
+    rules, or configuration that declares a ``JOB_TRANSFORM_<name>`` or
+    ``JOB_ROUTER_ROUTE_<name>`` variable for use in a subsequent ``-jobtransforms <name>``
+    or ``-jobroute <name>`` argument.
  **-jobtransforms** *name-list*
     A comma-separated list of more transform names.  The transform rules will be read
-    from the configuration file ``JOB_TRANSFORM_<name>`` values.
+    from a previous rules file or the configured ``JOB_TRANSFORM_<name>`` values
+ **-jobroute** *name*
+    A job route.  The transform rules will be read
+    from a previous rules file or the configured ``JOB_ROUTER_ROUTE_<name>`` values
  **-in[:<form>]** *infile*
     Specifies an input file containing ClassAd(s) to be transformed.
     **<form>**, if specified, is one of:
