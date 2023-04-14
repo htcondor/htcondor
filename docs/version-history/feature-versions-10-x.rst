@@ -41,6 +41,11 @@ New Features:
   parameter :macro:`ARC_GAHP_USE_THREADS`.
   :jira:`1690`
 
+- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
+  to give a list of machine attributes that will be added to DAGMan submitted
+  jobs for recording in the various produced job ads and userlogs.
+  :jira:`1717`
+
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in

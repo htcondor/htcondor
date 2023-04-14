@@ -8599,6 +8599,12 @@ General
     retry attempt number into the nodes job ad as the attribute ``DAGManNodeRetry``
     at submission time. This knob is not set by default.
 
+:macro-def:`DAGMAN_RECORD_MACHINE_ATTRS`
+    A comma separated list of machine attributes that DAGMan will insert into a
+    node jobs submit description for ``job_ad_information_attrs`` and ``job_machine_attrs``.
+    This will reuslt in the listed machine attributes to be injected into the nodes
+    produced job ads and userlog. This knob is not set by default.
+
 Throttling
 ''''''''''
 

@@ -797,6 +797,18 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_NODE_RECORD_INFO]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_RECORD_MACHINE_ATTRS]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
