@@ -407,6 +407,22 @@ Dagman::Config()
 		}
 	}
 
+	param(_requestedMachineAttrs,"DAGMAN_RECORD_MACHINE_ATTRS");
+	if (!_requestedMachineAttrs.empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
+		//Use machine attrs list to construct new job ad attributes to add to userlog
+		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		bool firstAttr = true;
+		_ulogMachineAttrs.clear();
+		for(auto& attr : requestAttrs) {
+			if (!firstAttr) { _ulogMachineAttrs += ","; }
+			else { firstAttr = false; }
+			_ulogMachineAttrs += "MachineAttr" + attr + "0";
+		}
+		//Also add DAGNodeName to list of attrs to put in userlog event
+		_ulogMachineAttrs += ",DAGNodeName";
+	}
+
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",
