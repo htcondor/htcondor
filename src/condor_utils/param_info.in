@@ -2437,10 +2437,13 @@ type=string
 tags=condor_auth_passwd
 
 [SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS]
-default=POOL
+default=POOL AP
 description=StringList of keys allowed to sign from condor_token_request
 type=string
 tags=condor_auth_passwd
+
+[SEC_TOKEN_AP_SIGNING_KEY_NAME]
+default=AP
 
 [SEC_TOKEN_POOL_SIGNING_KEY_FILE]
 default=$(SEC_PASSWORD_FILE)
@@ -6761,6 +6764,11 @@ default : @fin
 	# Let the command-line tool know that things are configured.
 	HPC_ANNEX_ENABLED = true
 
+	# The annex EPs need a specific port number.
+	ispersonal = "127.0.0.1:0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
+	endif
 
 	# Create an "AP collector".  At some point, we'd like to make such a
 	# thing first-class.  In the short term, adding a command-line flag
@@ -6783,17 +6791,28 @@ default : @fin
 
 	# Until we can give the schedd a stable shared port ID, the annex
 	# pilot needs to be able to look the schedd up in the AP collector.
-	if $(COLLECTOR_HOST)
+	if defined COLLECTOR_HOST
 		SCHEDD.COLLECTOR_HOST = $(COLLECTOR_HOST) $(ANNEX_COLLECTOR)
 	else
 		SCHEDD.COLLECTOR_HOST = $(ANNEX_COLLECTOR)
 	endif
 
-
-	# By default, don't use a special domain or signing key for annex tokens.
-	# Using the POOL signing key is convenient, because it always exists.
+	# The AP collector creates the "AP" signing key.
+	ANNEX_TOKEN_KEY_NAME = $(SEC_TOKEN_AP_SIGNING_KEY_NAME)
 	ANNEX_TOKEN_DOMAIN = $(UID_DOMAIN)
-	ANNEX_TOKEN_KEY_NAME = POOL
+
+
+	# This is so broken, but fixing it is out of scope.
+	if ! $(CondorIsAdmin)
+		# This doesn't presently work, but it should.
+		SEC_TOKEN_SYSTEM_DIRECTORY = $(LOCAL_DIR)/tokens.d
+
+		# This is just wrong, but presently necessary.
+		SEC_TOKEN_DIRECTORY = $(SEC_TOKEN_SYSTEM_DIRECTORY)
+
+		# This where we look for signing keys.
+		SEC_PASSWORD_DIRECTORY = $(LOCAL_DIR)/passwords.d
+	endif
 
 
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex

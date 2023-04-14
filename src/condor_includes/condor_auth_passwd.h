@@ -166,6 +166,7 @@ class Condor_Auth_Passwd : public Condor_Auth_Base {
 
 	/** Check and generate a POOL token signing key if not already done */
 	static void create_pool_signing_key_if_needed();
+	static void create_signing_key(const std::string & file, const char * name);
 
 		/** Simple wrapper around the OpenSSL HKDF function. */
 	static int hkdf(const unsigned char *sk, size_t sk_len,

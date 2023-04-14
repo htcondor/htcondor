@@ -2936,16 +2936,35 @@ Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 {
 	// This method is invoked by DaemonCore upon startup and a reconfig.
 
-	// Currently only the Collector will generate a token signing key by default...
-	if (!get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR)) {
-		return;
+	// The collector will generate a token signing key by default.
+	if( get_mySubSystem()->isType(SUBSYSTEM_TYPE_COLLECTOR) ) {
+		std::string filepath;
+		if(! param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
+			return;
+		}
+
+		create_signing_key( filepath, "POOL" );
 	}
 
-	std::string filepath;
-	if (!param(filepath, "SEC_TOKEN_POOL_SIGNING_KEY_FILE")) {
-		return;
-	}
+	const char * localName = get_mySubSystem()->getLocalName();
+	if( localName && strcmp( localName, "AP_COLLECTOR" ) == 0 ) {
+		std::string filepath;
+		if(! param(filepath, "SEC_PASSWORD_DIRECTORY")) {
+			return;
+		}
 
+		std::string tokenname;
+		if(! param(tokenname, "SEC_TOKEN_AP_SIGNING_KEY_NAME")) {
+			return;
+		}
+
+		filepath += "/" + tokenname;
+		create_signing_key( filepath, "AP" );
+	}
+}
+
+void
+Condor_Auth_Passwd::create_signing_key( const std::string & filepath, const char * name ) {
 		// Try to create the signing key file if it doesn't exist.
 	int fd = -1;
 	{
@@ -2974,10 +2993,10 @@ Condor_Auth_Passwd::create_pool_signing_key_if_needed()
 
 		// Write out the signing key.
 	if (TRUE == write_binary_password_file(filepath.c_str(), rand_buffer, sizeof(rand_buffer))) {
-		dprintf(D_ALWAYS, "Created a POOL token signing key in file %s\n", filepath.c_str());
+		dprintf(D_ALWAYS, "Created %s token signing key in file %s\n", name, filepath.c_str());
 	}
 	else {
-		dprintf(D_ALWAYS, "WARNING: Failed to create a POOL token signing keyin file %s\n", filepath.c_str());
+		dprintf(D_ALWAYS, "WARNING: Failed to create %s token signing key in file %s\n", name, filepath.c_str());
 	}
 }
 
