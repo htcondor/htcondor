@@ -673,6 +673,10 @@ sysapi_find_linux_name( const char *info_str )
         {
                 distro = strdup("Rocky");
         }
+        else if ( strstr(distro_name_lc, "almalinux") )
+        {
+	        distro = strdup("AlmaLinux");
+        }
         else if ( strstr(distro_name_lc, "amazon linux") )
         {
                 distro = strdup("AmazonLinux");
