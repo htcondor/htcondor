@@ -90,8 +90,10 @@ elif [ "$VERSION_CODENAME" = 'focal' ]; then
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
+elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
+    dch --distribution $dist --nmu 'place holder entry'
 else
-    echo ERROR: Unknown codename
+    echo ERROR: Unknown codename "${VERSION_CODENAME}"
     exit 1
 fi
 
