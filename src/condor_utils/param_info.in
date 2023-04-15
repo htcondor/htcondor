@@ -6774,7 +6774,7 @@ default : @fin
 	endif
 
 	# This is the default value from the `make-personal-condor` script.
-	ispersonal = "$(FULLL_HOSTNAME):0"=="$(COLLECTOR_HOST)"
+	ispersonal = "$(FULL_HOSTNAME):0"=="$(COLLECTOR_HOST)"
 	if $INT(ispersonal)
 		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
 	endif
