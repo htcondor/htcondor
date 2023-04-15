@@ -6764,11 +6764,21 @@ default : @fin
 	# Let the command-line tool know that things are configured.
 	HPC_ANNEX_ENABLED = true
 
-	# The annex EPs need a specific port number.
+
+	## The annex EPs need a specific port number.
+
+	# This is the default value from `use role:personal`.
 	ispersonal = "127.0.0.1:0"=="$(COLLECTOR_HOST)"
 	if $INT(ispersonal)
 		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
 	endif
+
+	# This is the default value from the `make-personal-condor` script.
+	ispersonal = "$(FULLL_HOSTNAME):0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
+	endif
+
 
 	# Create an "AP collector".  At some point, we'd like to make such a
 	# thing first-class.  In the short term, adding a command-line flag
