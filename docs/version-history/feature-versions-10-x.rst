@@ -54,6 +54,10 @@ New Features:
 
 Bugs Fixed:
 
+- *condor_tail* no longer hangs when given a ClusterId but not
+  a proc id.
+  :jira:`1726`
+
 - Fixed a bug where certain errors during file transfer could result in
   file-transfer processes not being cleaned up.  This would manifest as
   jobs completing succesfully, including final file transfer, but ending
