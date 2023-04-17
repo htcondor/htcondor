@@ -91,7 +91,7 @@ elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    true
 else
     echo ERROR: Unknown codename "${VERSION_CODENAME}"
     exit 1
