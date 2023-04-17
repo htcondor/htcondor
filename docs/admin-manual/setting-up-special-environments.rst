@@ -1519,6 +1519,8 @@ regardless of the :macro:`USE_PROCD` setting.
 Changes to :macro:`MIN_TRACKING_GID` and :macro:`MAX_TRACKING_GID` require a full
 restart of HTCondor.
 
+.. _resource_limits_with_cgroups:
+
 Cgroup-Based Process Tracking
 -----------------------------
 
