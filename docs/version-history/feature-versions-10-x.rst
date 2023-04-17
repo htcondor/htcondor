@@ -36,6 +36,12 @@ New Features:
   :ref:`users-manual/dagman-workflows:dag save point files`.
   :jira:`1636`
 
+- The *condor_transform_ads* tool can now read a configuration file containing
+   ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+   any or all of the transforms declared in that file.  This makes it
+   easier to test job transforms before deploying them.
+   :jira:`1710`
+
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
   different threads. This is controled by the new configuration
   parameter :macro:`ARC_GAHP_USE_THREADS`.

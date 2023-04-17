@@ -328,6 +328,15 @@ main( int argc, const char *argv[] )
 		exit(1);
 	}
 
+	// lookup context for config: rules so that
+	// we can pick up a template from config or from a previous rules file.
+	MACRO_EVAL_CONTEXT rules_ctx;
+	rules_ctx.init(MySubsys);
+	rules_ctx.also_in_config = true;
+	// a temporary hashtable used when validating rules files
+	XFormHash rules_hash;
+	rules_hash.init();
+
 	bool iterating_rules = false;
 	for (auto ptr : rules) {
 		// if we already have an iterating rule, then it is an error to have more rules
@@ -350,7 +359,10 @@ main( int argc, const char *argv[] )
 			StringTokenIterator it(list+1);
 			for (const char * name = it.first(); name != nullptr; name = it.next()) {
 				formatstr(knob, knob_pattern.c_str(), name);
-				const char * raw_text = param_unexpanded(knob.c_str());
+				// read transform statements from the config or from a previous rules file
+				// if the rules_hash here does not find the desired transform, the rules_ctx
+				// variable will tell the lookup to also look in the global config.
+				const char * raw_text = rules_hash.lookup(knob.c_str(), rules_ctx);
 				if (raw_text) {
 					while (isspace(*raw_text)) ++raw_text;
 
@@ -405,9 +417,24 @@ main( int argc, const char *argv[] )
 		// then promote the xform hash to iterating
 		// and set a global flag to remember that fact
 		if ( ! xforms.empty()) {
-			if (xforms.back().iterate_init_pending()) {
+			MacroStreamXFormSource & ms = xforms.back();
+			if (ms.iterate_init_pending()) {
 				xform_hash.set_flavor(XFormHash::Flavor::Iterating);
 				iterating_rules = true;
+			} else {
+				// if the transform rules did not contain an iterator, then it might be a config file
+				// We can figure out if it is by validating the transform rules. This will return a 
+				// count of transform statements, and also populate the rules_hash with variable declarations
+				// And we can use the rules_hash variables to populate a subsequent "config://" rule
+				int step_count = 0;
+				if ( ! ValidateXForm(ms, rules_hash, &step_count, errmsg)) {
+					fprintf(stderr, "Invalid rules file %s : %s\n", ms.getName(), errmsg.c_str());
+				}
+				if ( ! step_count) {
+					// this was just a config file, and the config statements have been
+					// merged into the rules_hash so we don't need it anymore.
+					xforms.pop_back();
+				}
 			}
 		}
 	}
@@ -467,8 +494,9 @@ Usage(FILE * out)
 	fprintf(out,
 		"    [transforms] are one or more of\n"
 		"\t-rules <rules-file>          Read transform rules from <rules-file>. see -help for the format\n"
-		"\t-jobtransforms <xform-names> Apply the Schedd JOB_TRANSFORM_* transforms listed in <xform-names>\n\n"
-		"    [options] are\n"
+		"\t-jobtransforms <xform-names> Apply the Schedd JOB_TRANSFORM_* transforms listed in <xform-names>\n"
+		"\t-jobroute <route-name>       Apply the JOB_ROUTER_ROUTE_* transform listed in <route-name>\n"
+		"\n    [options] are\n"
 		"\t-help [rules]\t\t Display this screen or rules documentation and exit\n"
 		"\t-out[:<form>,nosort] <outfile>\n"
 		"\t\t\t\t Write transformed ClassAd(s) to <outfile> in format <form>\n"
@@ -488,6 +516,7 @@ Usage(FILE * out)
 		//"\t-debug  \t\tDisplay debugging output\n"
 		"\n    <key>=<value> Arguments are assigned before the rules file is parsed and can be used\n"
 		"                  to pass arguments or enable optional behavior in the rules\n\n"
+		"    If <rules-file> is config://<var>/ then the <var> configuration variable is read\n"
 		"    If <rules-file> is -, transform rules are read from stdin until the TRANSFORM rule\n"
 		"    If <infile> is -, ClassAd(s) are read from stdin.\n"
 		"    Transformed ads are written to stdout unless an -out argument is provided\n"
@@ -527,9 +556,12 @@ void PrintRules(FILE* out)
 		"<newattrs> before they are parsed as ClassAd expressions or attribute names.\n"
 		"\nWhen a COPY,RENAME or DELETE with regex is used, regex capture groups are substituted in\n"
 		"<newattrs> after $() expansion. \\0 will expand to the entire match, \\1 to the first capture, etc.\n"
-		"\nA TRANSFORM command must be the last command in the rules file. It takes the same options as the\n"
-		"QUEUE statement from a HTCONDOR submit file. There is an implicit TRANSFORM 1 at the end of a rules file\n"
-		"if there is no explicit TRANSFORM command.\n"
+		"\nIf a TRANSFORM command is used. it must be the last command in the rules file. It takes the same\n"
+		"options as the QUEUE statement from a HTCONDOR submit file. There is an implicit TRANSFORM 1 at the\n"
+		"end of a rules file if there is no explicit TRANSFORM command.\n"
+		"A rules file may be a HTCondor configuration file that defines JOB_TRANSFORM_* or JOB_ROUTER_ROUTE_*\n"
+		"variables.  A rules file of this form will be loaded, but will have no effect unless a later\n" 
+		"-jobtransforms or -jobroute argument refers to one of the transforms it defines.\n"
 		);
 
 	fprintf(out, "\n");

@@ -689,6 +689,33 @@ void XFormHash::dump(FILE* out, int flags)
 	hash_iter_delete(&it);
 }
 
+// returns a pointer to the here tag if the line is the beginning of a herefile
+static const char * is_herefile_statement(const char * line)
+{
+	const char * ptr = line;
+	while (*ptr && isspace(*ptr)) ++ptr;
+	// parse to the end of the name
+	while (*ptr) {
+		if (isspace(*ptr) || *ptr == '=') {
+			break;
+		}
+		++ptr;
+	}
+	// parse to see if the operator is @=
+	while (*ptr) {
+		if (*ptr == '@') {
+			if (ptr[1] != '=' || !ptr[2] || isspace(ptr[2])) {
+				break;
+			}
+			return &ptr[2]; // return ptr to tag
+		} else if ( ! isspace(*ptr)) {
+			break;
+		}
+		++ptr;
+	}
+	return nullptr;
+}
+
 // returns a pointer to the iteration args if this line is an TRANSFORM statement
 // returns NULL if it is not.
 static const char * is_xform_statement(const char * line, const char * keyword)
@@ -750,8 +777,27 @@ int MacroStreamXFormSource::setUniverse(const char * uni) {
 
 int MacroStreamXFormSource::open(StringList & lines, const MACRO_SOURCE & FileSource, std::string & errmsg)
 {
+	std::string   hereTag;
+
+	// process and remove meta statements.  NAME, REQUIREMENTS, UNIVERSE and TRANSFORM
 	for (const char *line = lines.first(); line; line = lines.next()) {
 		const char * p;
+
+		// if we are processing a here @= variable, we don't
+		// want to remove at the lines inside the variable
+		if ( ! hereTag.empty()) {
+			p = line;
+			while (*p && isspace(*p)) ++p;
+			if (hereTag == p) {
+				hereTag.clear();
+			}
+			continue;
+		} else if (NULL != (p = is_herefile_statement(line))) {
+			hereTag = '@'; hereTag += p;
+			trim(hereTag);
+			continue;
+		}
+
 		if (NULL != (p = is_xform_statement(line, "name"))) {
 			std::string tmp(p); trim(tmp);
 			if ( ! tmp.empty()) name = tmp;
@@ -1243,6 +1289,7 @@ struct _parse_rules_args {
 	FILE * errfd;
 	FILE * outfd;
 	unsigned int options;
+	int step_count;
 };
 
 
@@ -1480,9 +1527,9 @@ static ExprTree * XFormCopyValueToTree(classad::Value & val)
 	return tree;
 }
 
-static int ValidateRulesCallback(void* /*pv*/, MACRO_SOURCE& /*source*/, MACRO_SET& /*mset*/, char * line, std::string & errmsg)
+static int ValidateRulesCallback(void* pv, MACRO_SOURCE& /*source*/, MACRO_SET& /*mset*/, char * line, std::string & errmsg)
 {
-	//struct _parse_rules_args * pargs = (struct _parse_rules_args*)pv;
+	struct _parse_rules_args * pargs = (struct _parse_rules_args*)pv;
 	//XFormHash & mset = pargs->mset;
 	//MacroStreamXFormSource & xform = pargs->xfm;
 
@@ -1498,6 +1545,7 @@ static int ValidateRulesCallback(void* /*pv*/, MACRO_SOURCE& /*source*/, MACRO_S
 		formatstr(errmsg, "%s is not a valid transform keyword\n", tok.c_str());
 		return -1;
 	}
+	pargs->step_count += 1;
 	// there must be something after the keyword
 	if ( ! toke.next()) { return (pkw->value == kw_TRANSFORM) ? 0 : -1; }
 
@@ -1595,6 +1643,8 @@ static int ParseRulesCallback(void* pv, MACRO_SOURCE& source, MACRO_SET& /*mset*
 		if (toke.is_quoted_string()) --off;
 		rhs.set(mset.expand_macro(line + off, xform.context()));
 	}
+
+	pargs->step_count += 1;
 
 	// at this point
 	// pkw   identifies the keyword
@@ -1756,7 +1806,7 @@ int TransformClassAd (
 	ctx.adname = "MY.";
 	ctx.also_in_config = true;
 
-	_parse_rules_args args = { xfm, mset, input_ad, nullptr, nullptr, nullptr, flags };
+	_parse_rules_args args = { xfm, mset, input_ad, nullptr, nullptr, nullptr, flags, 0 };
 	if (flags) {
 		if (flags & XFORM_UTILS_LOG_TO_DPRINTF) {
 			args.fnlog = ParseRuleDprintLog;
@@ -2263,6 +2313,7 @@ int XFormLoadFromClassadJobRouterRoute (
 bool ValidateXForm (
 	MacroStreamXFormSource & xfm,  // the set of transform rules
 	XFormHash & mset,              // the hashtable used as temporary storage
+	int * step_count,              // if non-null returns the number of transform commands
 	std::string & errmsg)          // holds parse errors on failure
 {
 	MACRO_EVAL_CONTEXT_EX & ctx = xfm.context();
@@ -2271,9 +2322,10 @@ bool ValidateXForm (
 	const char * name = xfm.getName();
 	if ( ! name) name = "";
 
-	_parse_rules_args args = { xfm, mset, nullptr, nullptr, nullptr, nullptr, 0 };
+	_parse_rules_args args = { xfm, mset, nullptr, nullptr, nullptr, nullptr, 0, 0 };
 
 	xfm.rewind();
 	int rval = Parse_macros(xfm, 0, mset.macros(), READ_MACROS_SUBMIT_SYNTAX, &ctx, errmsg, ValidateRulesCallback, &args);
+	if (step_count) { *step_count = args.step_count; }
 	return rval == 0;
 }
