@@ -160,7 +160,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	// create sub-dirs, so that a glidein can manage the resources given in this
 	// cgroup
 	pid_t uid = get_user_uid();
-	pid_t gid = get_user_gid();;
+	pid_t gid = get_user_gid();
 
 	// in a personal condor, uid/gid aren't returned properly.
 	if ((uid > 0) && (gid > 0)) {
