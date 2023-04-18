@@ -957,23 +957,24 @@ Macros That Will Require a Restart When Changed
 
 :index:`configuration change requiring a restart of HTCondor`
 
-When any of the following listed configuration variables are changed,
-HTCondor must be restarted. Reconfiguration using *condor_reconfig*
-will not be enough.
+The HTCondor daemons will generally not undo any work they have already done when the configuration changes
+so any change that would require undoing of work will require a restart before it takes effect.  There a very
+few exceptions to this rule.  The *condor_master* will pick up changes to ``DAEMON_LIST`` on a reconfig.
+Although it may take hours for a *condor_startd* to drain and exit when it is removed from the daemon list.
 
--  BIND_ALL_INTERFACES
--  FetchWorkDelay
--  MAX_NUM_CPUS
--  MAX_TRACKING_GID
--  MEMORY
--  MIN_TRACKING_GID
--  NETWORK_HOSTNAME
--  NETWORK_INTERFACE
--  NUM_CPUS
--  PREEMPTION_REQUIREMENTS_STABLE
--  PROCD_ADDRESS
--  SLOT_TYPE_<N>
--  OFFLINE_MACHINE_RESOURCE_<name>
+Examples of changes requiring a restart would any change to how HTCondor uses the network. A configuration change 
+to ``NETWORK_INTERFACE``, ``NETWORK_HOSTNAME``, ``ENABLE_IPV4`` and ``ENABLE_IPV6`` require a restart. A change in the
+way daemons locate each other, such as ``PROCD_ADDRESS``, ``BIND_ALL_INTERFACES``, ``USE_SHARED_PORT`` or ``SHARED_PORT_PORT``
+require a restart of the *condor_master* and all of the daemons under it.
+
+The *condor_startd* requires a restart to make any change to the slot resource configuration, This would include ``MEMORY``,
+``NUM_CPUS`` and ``NUM_SLOTS_TYPE_<n>``.  It would also include resource detection like GPUs and Docker support.
+A general rule of thumb is that changes to the *condor_startd* require a restart, but there are a few exceptions.
+``STARTD_ATTRS`` as well as ``START``, ``PREEMPT``, and other policy expressions take effect on reconfig.
+
+For more information about specific configuration variables and whether a restart is required, refer to the documentation
+of the individual variables.
+
 
 Pre-Defined Macros
 ------------------
