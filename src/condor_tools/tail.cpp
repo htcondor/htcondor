@@ -214,6 +214,10 @@ HTCondorPeek::parse_args(int argc, char *argv[])
 		usage(argv[0]);
 		exit(1);
 	}
+
+	if (m_id.proc == -1) {
+		m_id.proc = 0;
+	}
 	return true;
 }
 
