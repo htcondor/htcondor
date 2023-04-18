@@ -174,6 +174,28 @@ UniShadow::logExecuteEvent( void )
 	remRes->getStartdAddress( sinful );
 	event.setExecuteHost( sinful );
 	free( sinful );
+
+	// TODO: change this to be the ATTR_NAME attribute sent by the starter ?
+	// right now the remRes throws that away...
+	char * slotname = nullptr;
+	remRes->getStartdName(slotname);
+	//dprintf(D_ZKM, "logExecuteEvent: getStartdName=%s\n", slotname ? slotname : "");
+	if (slotname) {
+		event.setSlotName(slotname);
+		free(slotname);
+	} else {
+		remRes->getMachineName(slotname);
+		//dprintf(D_ZKM, "logExecuteEvent: getMachineName=%s\n", slotname ? slotname : "");
+		if (slotname) {
+			event.setSlotName(slotname);
+			free(slotname);
+		}
+	}
+
+	// TODO: add resource properties like cpus, disk, memory, gpus, gpu props
+	//ClassAd & execprops = event.setProp();
+	//execprops.Assign("Dummy", 42);
+
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -411,6 +433,11 @@ void
 UniShadow::resourceDisconnected( RemoteResource* rr )
 {
 	ASSERT( rr == remRes );
+
+
+	// All of our children should be gone already, but let's be sure.
+	daemonCore->kill_immediate_children();
+
 
 	const char* txt = "Socket between submit and execute hosts "
 		"closed unexpectedly";

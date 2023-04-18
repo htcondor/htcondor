@@ -69,7 +69,7 @@ static time_t now;
 
 const int DedicatedScheduler::MPIShadowSockTimeout = 60;
 
-void removeFromList(SimpleList<PROC_ID> *, CAList *);
+void removeFromList(std::vector<PROC_ID> &, CAList *);
 
 //////////////////////////////////////////////////////////////
 //  AllocationNode
@@ -2268,9 +2268,7 @@ DedicatedScheduler::computeSchedule( void )
 			}
 
 			// If this job is waiting for a reconnect, don't even try here
-			jobsToReconnect.Rewind();
-			PROC_ID reconId;
-			while (jobsToReconnect.Next(reconId)) {
+			for (PROC_ID reconId: jobsToReconnect) {
 				if ((reconId.cluster == cluster) &&
 				    (reconId.proc    == proc_id)) {
 					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waiting to reconnect\n", cluster, proc_id);
@@ -2882,7 +2880,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 		// Assume all procs start at 0, and are monotonically increasing
 	int last_proc = -1;
-	int node = 0;
 
 		// Foreach machine we've matched
 	while( (machine = idle_candidates->Next()) ) {
@@ -2914,7 +2911,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// We're now at a new proc
 		if( proc != last_proc) {
 			last_proc = proc;
-			node = 0;
 
 				// create a new MRecArray
 			matches = new MRecArray();
@@ -2926,7 +2922,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 			// And put the mrec into the matches for this node in the proc
 		matches->push_back(mrec);
-		node++;
 	}
 	
 	ASSERT( allocations->insert( cluster, alloc ) == 0 );
@@ -3965,11 +3960,7 @@ bool
 DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 
 	 
-	if( ! jobsToReconnect.Append(job) ) {
-		dprintf( D_ALWAYS, "Failed to enqueue job id (%d.%d)\n",
-				 job.cluster, job.proc );
-		return false;
-	}
+	jobsToReconnect.push_back(job);
 	dprintf( D_FULLDEBUG,
 			 "Enqueued dedicated job %d.%d to spawn shadow for reconnect\n",
 			 job.cluster, job.proc );
@@ -4002,17 +3993,14 @@ void
 DedicatedScheduler::checkReconnectQueue( void ) {
 	dprintf(D_FULLDEBUG, "In DedicatedScheduler::checkReconnectQueue\n");
 
-	PROC_ID id;
-
 	CondorQuery query(STARTD_AD);
 	ClassAdList result;
 	ClassAdList ads;
 	std::string constraint;
 
-	SimpleList<PROC_ID> jobsToReconnectLater = jobsToReconnect;
+	std::vector<PROC_ID> jobsToReconnectLater = jobsToReconnect;
 
-	jobsToReconnect.Rewind();
-	while( jobsToReconnect.Next(id) ) {
+	for (PROC_ID id: jobsToReconnect) {
 			// there's a pending registration in the queue:
 		dprintf( D_FULLDEBUG, "In checkReconnectQueue(), job: %d.%d\n", 
 				 id.cluster, id.proc );
@@ -4058,8 +4046,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	while ((machine = ads.Next()) ) {
 		char buf[256];
 		machine->LookupString(ATTR_NAME, buf, sizeof(buf));
-		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job (%d.%d)\n", 
-				buf, id.cluster, id.proc);
+		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job\n", buf);
 		machines.Append(machine);
 	}
 
@@ -4076,8 +4063,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	last_id.cluster = last_id.proc = -1;
 
 		// OK, we now have all the matched machines
-	jobsToReconnect.Rewind();
-	while( jobsToReconnect.Next(id) ) {
+	for (PROC_ID id : jobsToReconnect) {
 	
 		dprintf(D_FULLDEBUG, "Trying to find machines for job (%d.%d)\n",
 			id.cluster, id.proc);
@@ -4090,7 +4076,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
 			if (machinesToAllocate.Number() > 0) {
-				removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+				removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 				createAllocations(&machinesToAllocate, &jobsToAllocate, 
 							  last_id.cluster, nprocs, true);
@@ -4229,20 +4215,20 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
-		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", id.cluster);
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list
-		removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+		removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 		createAllocations(&machinesToAllocate, &jobsToAllocate, 
-					  id.cluster, nprocs, true);
+					  last_id.cluster, nprocs, true);
 		
 	}
 	spawnJobs();
 
 	jobsToReconnect = jobsToReconnectLater;
 
-	if (jobsToReconnect.Number() > 0) {
+	if (jobsToReconnect.size() > 0) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
@@ -4292,7 +4278,7 @@ DedicatedScheduler::FindMrecByClaimID(char const* claim_id) {
 
 // Set removal.  Remove each jobsToAllocate entry from jobsToReconnectLater
 void
-removeFromList(SimpleList<PROC_ID> *jobsToReconnectLater, CAList *jobsToAllocate) {
+removeFromList(std::vector<PROC_ID> &jobsToReconnectLater, CAList *jobsToAllocate) {
 	jobsToAllocate->Rewind();
 	ClassAd *job;
 	while ((job = jobsToAllocate->Next())) {
@@ -4300,14 +4286,14 @@ removeFromList(SimpleList<PROC_ID> *jobsToReconnectLater, CAList *jobsToAllocate
 		job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 		job->LookupInteger(ATTR_PROC_ID, id.proc);
 
-		PROC_ID id2;
-		jobsToReconnectLater->Rewind();
-		while ((jobsToReconnectLater->Next(id2))) {
-			if ((id.cluster == id2.cluster) &&
-			    (id.proc    == id2.proc)) {
-					jobsToReconnectLater->DeleteCurrent();
-					break;
-			}
+		auto samey = [id](const PROC_ID &id2) {
+			return (id.cluster == id2.cluster) &&
+			   (id.proc == id2.proc);
+		};
+
+		auto it = std::find_if(jobsToReconnectLater.begin(), jobsToReconnectLater.end(), samey);
+		if (it != jobsToReconnectLater.end()) {
+			jobsToReconnectLater.erase(it);
 		}
 	}
 }

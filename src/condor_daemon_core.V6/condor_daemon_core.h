@@ -1780,7 +1780,9 @@ class DaemonCore : public Service
 		// its selfAd.
 	bool SetupAdministratorSession(unsigned duration, std::string &capability);
 
-  private:      
+	void kill_immediate_children();
+
+  private:
 
 		// do and our parents/children want/have a udp comment socket?
 	bool m_wants_dc_udp;

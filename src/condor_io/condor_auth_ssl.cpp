@@ -171,16 +171,8 @@ static decltype(&SSLv23_method) SSL_method_ptr = nullptr;
 #else
 static decltype(&TLS_method) SSL_method_ptr = nullptr;
 #endif
-static decltype(&ERR_error_string) ERR_error_string_ptr = nullptr;
-static decltype(&ERR_get_error) ERR_get_error_ptr = nullptr;
-static decltype(&SSL_CTX_get_cert_store) SSL_CTX_get_cert_store_ptr = nullptr;
-static decltype(&PEM_read_X509) PEM_read_X509_ptr = nullptr;
-static decltype(&X509_STORE_add_cert) X509_STORE_add_cert_ptr = nullptr;
 static decltype(&SSL_get_current_cipher) SSL_get_current_cipher_ptr = nullptr;
 static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
-static decltype(&X509_digest) X509_digest_ptr = nullptr;
-static decltype(&X509_free) X509_free_ptr = nullptr;
-static decltype(&X509_STORE_CTX_get_ex_data) X509_STORE_CTX_get_ex_data_ptr = nullptr;
 static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
 static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
 static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
@@ -277,19 +269,11 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_read_ptr = reinterpret_cast<decltype(SSL_read_ptr)>(dlsym(dl_hdl, "SSL_read"))) ||
 		 !(SSL_set_bio_ptr = reinterpret_cast<decltype(SSL_set_bio_ptr)>(dlsym(dl_hdl, "SSL_set_bio"))) ||
 		 !(SSL_write_ptr = reinterpret_cast<decltype(SSL_write_ptr)>(dlsym(dl_hdl, "SSL_write"))) ||
-		 !(ERR_error_string_ptr = reinterpret_cast<decltype(ERR_error_string_ptr)>(dlsym(dl_hdl, "ERR_error_string"))) ||
-		 !(SSL_CTX_get_cert_store_ptr = reinterpret_cast<decltype(SSL_CTX_get_cert_store_ptr)>(dlsym(dl_hdl, "SSL_CTX_get_cert_store"))) ||
-		 !(PEM_read_X509_ptr = reinterpret_cast<decltype(PEM_read_X509_ptr)>(dlsym(dl_hdl, "PEM_read_X509"))) ||
-		 !(X509_STORE_add_cert_ptr = reinterpret_cast<decltype(X509_STORE_add_cert_ptr)>(dlsym(dl_hdl, "X509_STORE_add_cert"))) ||
 		 !(SSL_get_current_cipher_ptr = reinterpret_cast<decltype(SSL_get_current_cipher_ptr)>(dlsym(dl_hdl, "SSL_get_current_cipher"))) ||
 		 !(SSL_CIPHER_get_name_ptr = reinterpret_cast<decltype(SSL_CIPHER_get_name_ptr)>(dlsym(dl_hdl, "SSL_CIPHER_get_name"))) ||
-		 !(X509_free_ptr = reinterpret_cast<decltype(X509_free_ptr)>(dlsym(dl_hdl, "X509_free"))) ||
-		 !(X509_digest_ptr = reinterpret_cast<decltype(X509_digest_ptr)>(dlsym(dl_hdl, "X509_digest"))) ||
-		 !(X509_STORE_CTX_get_ex_data_ptr = reinterpret_cast<decltype(X509_STORE_CTX_get_ex_data_ptr)>(dlsym(dl_hdl, "X509_STORE_CTX_get_ex_data"))) ||
 		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
-		 !(ERR_get_error_ptr = reinterpret_cast<decltype(ERR_get_error_ptr)>(dlsym(dl_hdl, "ERR_get_error"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "SSLv23_method")))
 #else
@@ -341,21 +325,13 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_read_ptr = SSL_read;
 	SSL_set_bio_ptr = SSL_set_bio;
 	SSL_write_ptr = SSL_write;
-	ERR_get_error_ptr = ERR_get_error;
-	ERR_error_string_ptr = ERR_error_string;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_method_ptr = SSLv23_method;
 #else
 	SSL_method_ptr = TLS_method;
 #endif
-	SSL_CTX_get_cert_store_ptr = SSL_CTX_get_cert_store;
-	PEM_read_X509_ptr = PEM_read_X509;
-	X509_STORE_add_cert_ptr = X509_STORE_add_cert;
 	SSL_get_current_cipher_ptr = SSL_get_current_cipher;
 	SSL_CIPHER_get_name_ptr = SSL_CIPHER_get_name;
-	X509_free_ptr = X509_free;
-	X509_digest_ptr = X509_digest;
-	X509_STORE_CTX_get_ex_data_ptr = X509_STORE_CTX_get_ex_data;
 	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
 	SSL_get_ex_data_ptr = SSL_get_ex_data;
 	SSL_set_ex_data_ptr = SSL_set_ex_data;
@@ -514,7 +490,7 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    dprintf(D_SECURITY, "SSL: library failure: %s\n", ERR_error_string_ptr((*ERR_get_error_ptr)(), NULL));
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", ERR_error_string(ERR_get_error(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
@@ -828,7 +804,7 @@ Condor_Auth_SSL::authenticate_server_connect(CondorError *errstack, bool non_blo
                     ouch("SSL: Syscall.\n" );
                     break;
                 case SSL_ERROR_SSL:
-                    dprintf(D_SECURITY, "SSL: library failure: %s\n", ERR_error_string_ptr((*ERR_get_error_ptr)(), NULL));
+                    dprintf(D_SECURITY, "SSL: library failure: %s\n", ERR_error_string(ERR_get_error(), NULL));
                     break;
                 default:
                     ouch("SSL: unknown error?\n" );
@@ -1416,7 +1392,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
         dprintf( D_SECURITY, "  subject  = %s\n", data );
         dprintf( D_SECURITY, "  err %i:%s\n", err, X509_verify_cert_error_string( err ) );
 
-		const SSL* ssl = (const SSL*)X509_STORE_CTX_get_ex_data_ptr(store, (*SSL_get_ex_data_X509_STORE_CTX_idx_ptr)());
+		const SSL* ssl = (const SSL*)X509_STORE_CTX_get_ex_data(store, (*SSL_get_ex_data_X509_STORE_CTX_idx_ptr)());
 		Condor_Auth_SSL::LastVerifyError *verify_ptr = (Condor_Auth_SSL::LastVerifyError *)(g_last_verify_error_index >= 0 ? SSL_get_ex_data_ptr(ssl, g_last_verify_error_index) : nullptr);
 		if (verify_ptr) verify_ptr->m_skip_error = 0;
 
@@ -1461,7 +1437,7 @@ int verify_callback(int ok, X509_STORE_CTX *store)
 					unsigned char md[EVP_MAX_MD_SIZE];
 					auto digest = EVP_get_digestbyname("sha256");
 					unsigned int len;
-					if (1 != X509_digest_ptr(cert, digest, md, &len)) {
+					if (1 != X509_digest(cert, digest, md, &len)) {
 						dprintf(D_SECURITY, "Failed to create a digest of the provided X.509 certificate.\n");
 						return ok;
 					}

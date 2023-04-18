@@ -64,8 +64,7 @@ job queue log
     The job queue log is a transactional representation of the current
     job queue. If the *condor_schedd* crashes, the job queue can be
     rebuilt using this log. The file name is set by configuration
-    variable :macro:`JOB_QUEUE_LOG` :index:`JOB_QUEUE_LOG`, and
-    defaults to ``$(SPOOL)/job_queue.log``.
+    variable :macro:`JOB_QUEUE_LOG`, and defaults to ``$(SPOOL)/job_queue.log``.
 
     Within the log, each transaction is identified with an integer value
     and followed where appropriate with other values relevant to the

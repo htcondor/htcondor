@@ -513,7 +513,9 @@ sysapi_get_darwin_info(void)
 	opsys_major_version = major;
 
 	const char *osname = "Unknown";
-	if ( major == 12 ) {
+	if ( major == 13 ) {
+		osname = "Ventura";
+	} else if ( major == 12 ) {
 		osname = "Monterey";
 	} else if ( major == 11 ) {
 		osname = "BigSur";

@@ -622,7 +622,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
          Pool.NewProbe<stats_recent_counter_timer>(name, attr.c_str(), as);
         #if 0 // def DEBUG
          attr += "Debug";
-         Pool.AddPublish(attr.Value(), probe, NULL, 0, 
+         Pool.AddPublish(attr.c_str(), probe, NULL, 0,
                        (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::PublishDebug);
         #endif
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);

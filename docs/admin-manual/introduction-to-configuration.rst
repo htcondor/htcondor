@@ -1035,29 +1035,7 @@ restart of HTCondor in order to use the changed value.
     :index:`subsystem names`
     :index:`subsystem names<single: subsystem names; macro>`
 
-    -  C_GAHP
-    -  C_GAHP_WORKER_THREAD
-    -  COLLECTOR
-    -  DEFRAG
-    -  EC2_GAHP
-    -  GANGLIAD
-    -  GCE_GAHP
-    -  GRIDMANAGER
-    -  HAD
-    -  JOB_ROUTER
-    -  KBDD
-    -  LEASEMANAGER
-    -  MASTER
-    -  NEGOTIATOR
-    -  REPLICATION
-    -  ROOSTER
-    -  SCHEDD
-    -  SHADOW
-    -  SHARED_PORT
-    -  STARTD
-    -  STARTER
-    -  SUBMIT
-    -  TOOL
+    .. include:: subsystems.rst
 
 ``$(DETECTED_CPUS)`` :index:`DETECTED_CPUS`
     The integer number of hyper-threaded CPUs, as given by

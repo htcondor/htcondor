@@ -21,11 +21,20 @@ Release Notes:
 - Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
   is April 30th, 2023.
 
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+  :jira:`1668`
+
 New Features:
 
 - None.
 
 Bugs Fixed:
+
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing succesfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
 
 - Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
   a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed

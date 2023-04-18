@@ -1600,6 +1600,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Apr 12 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.1-1
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el)
+
 * Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.0-1
 - DAGMan no longer carries the entire environment into the DAGMan job
 - Allows EGI CheckIn tokens to be used the with SciTokens authentication

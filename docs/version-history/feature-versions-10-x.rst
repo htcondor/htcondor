@@ -41,12 +41,29 @@ New Features:
   the usual cases.
   :jira:`1589`
 
+- The *condor_transform_ads* tool can now read a configuration file containing
+   ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+   any or all of the transforms declared in that file.  This makes it
+   easier to test job transforms before deploying them.
+   :jira:`1710`
+
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
   different threads. This is controled by the new configuration
   parameter :macro:`ARC_GAHP_USE_THREADS`.
   :jira:`1690`
 
+- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
+  to give a list of machine attributes that will be added to DAGMan submitted
+  jobs for recording in the various produced job ads and userlogs.
+  :jira:`1717`
+
 Bugs Fixed:
+
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing succesfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
 
 - Fixed a bug where if the docker command emitted warnings to stderr, the
   startd would not correctly advertise the amount of used image cache.
@@ -60,6 +77,26 @@ Bugs Fixed:
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
+
+Version 10.4.1
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.1 released on April 12, 2023.
+
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
+  :jira:`1668`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
 
 Version 10.4.0
 --------------
@@ -78,7 +115,7 @@ Release Notes:
   :jira:`1580`
 
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
-  unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
+  unless the configuration template ``use POLICY : DESKTOP`` or ``use POLICY : UWCS_DESKTOP``
   is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
   a duration value. The policy expressions in those templates have been modified
   to account for this fact. If you have written policy expressions of your own that reference
