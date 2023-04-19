@@ -91,7 +91,7 @@ if(NOT WINDOWS)
 	# to set the PYTHON_INCLUDE_DIR 
 
 	if (WANT_PYTHON_WHEELS)
-		find_package (Python3 COMPONENTS Interpreter)
+        find_package (Python3 ${USE_PYTHON_VERSION} EXACT)
 	endif()
 
 	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
