@@ -81,22 +81,6 @@ if(NOT WINDOWS)
 		set(WANT_PYTHON2_BINDINGS OFF)
 	endif()
 
-	# Wheels are build in an environment that intentionlly doesn't have the
-	# python .so's or .a's installed, but does have the header files.
-	# cmake find_package throws an error when you ask for development
-	# artifacts, and the libraries are missing.  So, we ask for just
-	# the interpreter, which find the root directory where the interpreter
-	# is installed, and exports the python major/minor/patch version 
-	# cmake variables.  To build the wheels, we rely on an outside script
-	# to set the PYTHON_INCLUDE_DIR 
-
-	if (WANT_PYTHON_WHEELS)
-        find_package (Python3 ${USE_PYTHON_VERSION} EXACT)
-		if (Python_FOUND)
-            set(PYTHONLIBS_FOUND TRUE)
-        endif()
-	endif()
-
 	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
 		find_package (Python2 COMPONENTS Interpreter Development)
@@ -124,8 +108,20 @@ if(NOT WINDOWS)
 
 	endif(WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
 
-	if (WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
-		find_package (Python3 COMPONENTS Interpreter Development)
+	if (WANT_PYTHON3_BINDINGS)
+        if (WANT_PYTHON_WHEELS)
+            # Wheels are build in an environment that intentionlly doesn't have the
+            # python .so's or .a's installed, but does have the header files.
+            # cmake find_package throws an error when you ask for development
+            # artifacts, and the libraries are missing.  So, we ask for just
+            # the interpreter, which finds the root directory where the interpreter
+            # is installed, and exports the python major/minor/patch version 
+            # cmake variables.  To build the wheels, we rely on an outside script
+            # to set USE_PYTHON_VERSION and Python3_ROOT_DIR
+            find_package (Python3 ${USE_PYTHON_VERSION} EXACT)
+        else()
+            find_package (Python3 COMPONENTS Interpreter Development)
+        endif()
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
@@ -152,7 +148,7 @@ if(NOT WINDOWS)
 			message(STATUS "Python3 library found at ${PYTHON3_LIB}")
 		endif()
 
-	endif(WANT_PYTHON3_BINDINGS AND NOT WANT_PYTHON_WHEELS)
+	endif(WANT_PYTHON3_BINDINGS)
 
 else(NOT WINDOWS)
     #if(WINDOWS)
