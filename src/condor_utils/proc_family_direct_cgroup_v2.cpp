@@ -96,9 +96,9 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	stdfs::path procs_filename = leaf / "cgroup.procs";
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
 	if (fd > 0) {
-		char buf[16];
-		sprintf(buf, "%u", pid);
-		int r = write(fd, buf, strlen(buf));
+		std::string buf;
+		formatstr(buf, "%u", pid);
+		int r = write(fd, buf.c_str(), strlen(buf.c_str()));
 		if (r < 0) {
 			dprintf(D_ALWAYS, "Error writing procid %d to %s: %s\n", pid, procs_filename.c_str(), strerror(errno));
 			close(fd);

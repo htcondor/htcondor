@@ -36,6 +36,11 @@ New Features:
   :ref:`users-manual/dagman-workflows:dag save point files`.
   :jira:`1636`
 
+- Linux Cgroup support has been redone in a way that doesn't depend on
+  using the procd.  There should be no user visible changes in
+  the usual cases.
+  :jira:`1589`
+
 - The *condor_transform_ads* tool can now read a configuration file containing
    ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
    any or all of the transforms declared in that file.  This makes it
