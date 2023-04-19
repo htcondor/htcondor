@@ -105,7 +105,7 @@ if(NOT WINDOWS)
         set(PYTHON3_MODULE_SUFFIX     ${USE_PYTHON_EXT_SUFFIX})
 
 		if (Python3_FOUND)
-			set(PYTHONLIBS_FOUND TRUE)
+			set(PYTHON3LIBS_FOUND TRUE)
 		endif()
 
 	endif()
