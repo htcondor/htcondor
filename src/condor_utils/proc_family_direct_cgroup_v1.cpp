@@ -101,7 +101,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		// Now move pid to the leaf of the newly-created tree
 		stdfs::path procs_filename = absolute_cgroup / "cgroup.procs";
 		int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			std::string buf;
 			formatstr(buf, "%u", pid);
 			int r = write(fd, buf.c_str(), strlen(buf.c_str()));
@@ -113,6 +113,9 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 				dprintf(D_ALWAYS, "Moved process %d to cgroup %s\n", pid, absolute_cgroup.c_str());
 			}
 			close(fd);
+		} else {
+			dprintf(D_ALWAYS, "Error opening %s: %s\n", procs_filename.c_str(), strerror(errno));
+			return false;
 		}
 	}
 
@@ -122,7 +125,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		// write memory limits
 		stdfs::path memory_limits_path = cgroup_root_dir / "memory" / cgroup_name / "memory.limit_in_bytes";
 		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			std::string buf;
 			formatstr(buf, "%lu", cgroup_memory_limit);
 			int r = write(fd, buf.c_str(), strlen(buf.c_str()));
@@ -142,7 +145,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		// write CPU limits
 		stdfs::path cpu_shares_path = cgroup_root_dir / "cpu,cpuacct" / cgroup_name / "cpu.shares";
 		int fd = open(cpu_shares_path.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			std::string buf;
 			formatstr(buf, "%d", cgroup_cpu_shares);
 			int r = write(fd, buf.c_str(), buf.length());
@@ -351,7 +354,7 @@ ProcFamilyDirectCgroupV1::suspend_family(pid_t pid)
 	bool success = true;
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 	int fd = open(freezer.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
+	if (fd >= 0) {
 
 		const static char *frozen = "FROZEN"; // Let it go...
 		ssize_t result = write(fd, frozen, strlen(frozen));
@@ -378,7 +381,7 @@ ProcFamilyDirectCgroupV1::continue_family(pid_t pid)
 	bool success = true;
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 	int fd = open(freezer.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
+	if (fd >= 0) {
 
 		const static char *thawed = "THAWED";
 		ssize_t result = write(fd, thawed, strlen(thawed));
