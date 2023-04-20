@@ -69,8 +69,6 @@ RemoteResource::RemoteResource( BaseShadow *shad )
 	dc_startd = NULL;
 	machineName = NULL;
 	starterAddress = NULL;
-	starterArch = NULL;
-	starterOpsys = NULL;
 	jobAd = NULL;
 	claim_sock = NULL;
 	last_job_lease_renewal = 0;
@@ -128,8 +126,7 @@ RemoteResource::~RemoteResource()
 	if ( dc_startd     ) delete dc_startd;
 	if ( machineName   ) free( machineName );
 	if ( starterAddress) free( starterAddress );
-	if ( starterArch   ) free( starterArch );
-	if ( starterOpsys  ) free( starterOpsys );
+	if ( starterAd ) { delete starterAd; starterAd = nullptr; }
 	closeClaimSock();
 	if ( jobAd && jobAd != shadow->getJobAd() ) {
 		delete jobAd;
@@ -826,66 +823,46 @@ void
 RemoteResource::setStarterInfo( ClassAd* ad )
 {
 
-	char* tmp = NULL;
+	std::string buf;
+	dprintf(D_MACHINE, "StarterInfo ad:\n%s", formatAd(buf, *ad, "\t")); // formatAt guarantees a newline.
 
-	if( ad->LookupString(ATTR_STARTER_IP_ADDR, &tmp) ) {
-		setStarterAddress( tmp );
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_STARTER_IP_ADDR, tmp ); 
-		free( tmp );
-		tmp = NULL;
+	// save (most of) the incoming starter ad for later
+	if (starterAd) { starterAd->Clear(); }
+	else { starterAd = new ClassAd(); }
+	starterAd->Update(*ad);
+
+	if( ad->LookupString(ATTR_STARTER_IP_ADDR, buf) ) {
+		setStarterAddress( buf.c_str() );
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_STARTER_IP_ADDR, buf.c_str() );
+		starterAd->Delete(ATTR_STARTER_IP_ADDR);
 	}
 
-	if( ad->LookupString(ATTR_UID_DOMAIN, &tmp) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, tmp );
-		free( tmp );
-		tmp = NULL;
+	if( ad->LookupString(ATTR_UID_DOMAIN, buf) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_UID_DOMAIN, buf.c_str() );
+		starterAd->Delete(ATTR_UID_DOMAIN);
 	}
 
-	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, &tmp) ) {
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN,
-				 tmp );  
-		free( tmp );
-		tmp = NULL;
+	if( ad->LookupString(ATTR_FILE_SYSTEM_DOMAIN, buf) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_FILE_SYSTEM_DOMAIN, buf.c_str() );
+		starterAd->Delete(ATTR_FILE_SYSTEM_DOMAIN);
 	}
 
-	if( ad->LookupString(ATTR_NAME, &tmp) ) {
+	if( ad->LookupString(ATTR_NAME, buf) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				free(machineName);
-				machineName = strdup( tmp );
+				machineName = strdup( buf.c_str() );
 			}
 		}	
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
-		free( tmp );
-		tmp = NULL;
-	} else if( ad->LookupString(ATTR_MACHINE, &tmp) ) {
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
+	} else if( ad->LookupString(ATTR_MACHINE, buf) ) {
 		if( machineName ) {
 			if( is_valid_sinful(machineName) ) {
 				free(machineName);
-				machineName = strdup( tmp );
+				machineName = strdup( buf.c_str() );
 			}
 		}	
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, tmp );
-		free( tmp );
-		tmp = NULL;
-	}
-
-	if( ad->LookupString(ATTR_ARCH, &tmp) ) {
-		if( starterArch ) {
-			free( starterArch );
-		}	
-		starterArch = tmp;
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_ARCH, tmp ); 
-		tmp = NULL;
-	}
-
-	if( ad->LookupString(ATTR_OPSYS, &tmp) ) {
-		if( starterOpsys ) {
-			free( starterOpsys );
-		}	
-		starterOpsys = tmp;
-		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_OPSYS, tmp ); 
-		tmp = NULL;
+		dprintf( D_SYSCALLS, "  %s = %s\n", ATTR_MACHINE, buf.c_str() );
 	}
 
 	char* starter_version=NULL;
@@ -913,6 +890,29 @@ RemoteResource::setStarterInfo( ClassAd* ad )
 	}
 }
 
+void
+RemoteResource::populateExecuteEvent(std::string & slotName, ClassAd & props)
+{
+	const ClassAd * starterAd = getStarterAd();
+	if (starterAd) {
+		starterAd->LookupString(ATTR_NAME, slotName);
+
+		std::string scratch;
+		if (starterAd->LookupString(ATTR_CONDOR_SCRATCH_DIR, scratch)) {
+			props.Assign(ATTR_CONDOR_SCRATCH_DIR, scratch);
+		}
+
+		CopyMachineResources(props, *starterAd, false);
+
+	} else if (machineName) {
+		slotName = machineName;
+	} else if (dc_startd) {
+		const char* localName = dc_startd->name();
+		if (localName ) {
+			slotName = localName;
+		}
+	}
+}
 
 void
 RemoteResource::setMachineName( const char * mName )
