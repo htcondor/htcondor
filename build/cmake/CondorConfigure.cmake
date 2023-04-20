@@ -88,11 +88,10 @@ if(NOT WINDOWS)
 	# the interpreter, which find the root directory where the interpreter
 	# is installed, and exports the python major/minor/patch version 
 	# cmake variables.  To build the wheels, we rely on an outside script
-	# to set the Python3_ROOT_DIR, USE_PYTHON3_VERSION,
-	# USE_PYTHON3_INCLUDE_DIR, and USE_PYTHON3_EXT_SUFFIX
+	# to set the USE_PYTHON3_INCLUDE_DIR and USE_PYTHON3_EXT_SUFFIX
 
 	if (WANT_PYTHON_WHEELS)
-		find_package (Python3 ${USE_PYTHON3_VERSION} EXACT)
+		find_package (Python3 COMPONENTS Interpreter)
 
 		# All these variables are used later, and were defined in cmake 2.6
 		# days.  At some point, we should not copy the find_package python
