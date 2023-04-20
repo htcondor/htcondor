@@ -388,7 +388,7 @@ else()
 
       # build libpyclassad *not* linked against libpython
       add_library( wheel_pyclassad SHARED classad.cpp classad_wrapper.h exprtree_wrapper.h exception_utils.cpp classad_exceptions.cpp )
-      target_link_libraries( wheel_pyclassad ${CLASSADS_FOUND} ${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      target_link_libraries( wheel_pyclassad ${CLASSADS_FOUND} ${PYTHON3_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       if ( APPLE )
         set_target_properties( wheel_pyclassad PROPERTIES SUFFIX ".dylib" )
         set_target_properties( wheel_pyclassad PROPERTIES INSTALL_NAME_DIR "${WHEEL_BINARY_DIR}/htcondor/htcondor_libs" )
@@ -401,7 +401,7 @@ else()
 
       # next, build the classad module *not* linked against libpython
       add_library( wheel_classad_module SHARED classad_module.cpp classad_module_impl.cpp classad_parsers.cpp )
-      target_link_libraries( wheel_classad_module wheel_pyclassad ${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      target_link_libraries( wheel_classad_module wheel_pyclassad ${PYTHON3_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( wheel_classad_module PROPERTIES PREFIX "" OUTPUT_NAME "classad" SUFFIX ".so")
       set_target_properties( wheel_classad_module PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/classad" )
       if ( NOT APPLE )
@@ -411,7 +411,7 @@ else()
       # finally, build the htcondor module *not* linked against libpython
       # See note above about deprecating log_reader.cpp.
       add_library( wheel_htcondor SHARED htcondor.cpp ${HTCONDOR_BINDINGS_SOURCES} log_reader.cpp )
-      target_link_libraries( wheel_htcondor wheel_pyclassad condor_utils ${PYTHON_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
+      target_link_libraries( wheel_htcondor wheel_pyclassad condor_utils ${PYTHON3_BOOST_LIB} ${NOLINK_PYTHON_LIB} )
       set_target_properties( wheel_htcondor PROPERTIES PREFIX "" OUTPUT_NAME "htcondor" SUFFIX ".so")
       set_target_properties( wheel_htcondor PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${WHEEL_BINARY_DIR}/htcondor" )
       if ( NOT APPLE )
