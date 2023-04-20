@@ -374,7 +374,7 @@ else()
     # more targets are built if we plan on building wheels
     if ( WANT_PYTHON_WHEELS )
       set ( WHEEL_BINARY_DIR "${CMAKE_BINARY_DIR}/bindings/python" )
-      include_directories(${PYTHON_INCLUDE_DIRS} ${BOOST_INCLUDE})
+      include_directories(${PYTHON3_INCLUDE_DIRS} ${BOOST_INCLUDE})
 
       # the pyclassad library and the classad and htcondor modules should not link libpython
       # instead, the user's python interpreter will look for any such missing symbols
