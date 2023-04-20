@@ -63,7 +63,7 @@ if (WITH_PYTHON_BINDINGS)
         endif()
     endif()
 
-    if (PYTHON3LIBS_FOUND)
+    if (PYTHONLIBS_FOUND OR (WINDOWS AND PYTHON3LIBS_FOUND))
         set(TIMESTAMP_FILE "${CMAKE_CURRENT_BINARY_DIR}/build/timestamp")
         if (WINDOWS) # build scaffolding for both Python 2 and 3 on Windows
             add_custom_command(
