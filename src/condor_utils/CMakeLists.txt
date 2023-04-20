@@ -151,7 +151,6 @@ AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h
 backward_file_reader.cpp
-binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
@@ -393,8 +392,6 @@ param_info.cpp
 param_info.h
 param_info_help.cpp
 param_info_tables.h
-path_utils.cpp
-path_utils.h
 perm.h
 PluginManager.h
 printf_format.cpp
