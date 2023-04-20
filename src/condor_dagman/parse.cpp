@@ -194,9 +194,8 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 	TmpDir		dagDir;
 
 	if ( useDagDir ) {
-		char *dirname = condor_dirname( filename );
+		std::string dirname = condor_dirname( filename );
 		tmpDirectory = dirname;
-		free(dirname);
 
 		std::string	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {

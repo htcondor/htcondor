@@ -886,12 +886,8 @@ destroy_sandbox(std::string sid, std::string &err)
 	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
 
 	// remove (rm -rf) the sandbox dir
-	char *buff = condor_dirname( iwd.c_str() );
-	std::string parent_dir = buff;
-	free( buff );
-	buff = condor_dirname( parent_dir.c_str() );
-	std::string gparent_dir = buff;
-	free( buff );
+	std::string parent_dir  = condor_dirname(iwd.c_str());
+	std::string gparent_dir = condor_dirname( parent_dir.c_str() );
 
 	dprintf( D_FULLDEBUG, "parent_dir: %s\n", parent_dir.c_str() );
 	dprintf( D_FULLDEBUG, "gparent_dir: %s\n", gparent_dir.c_str() );

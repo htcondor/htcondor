@@ -1046,7 +1046,6 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 	int	retry = 0;
 	int save_errno = 0;
 	priv_state	priv;
-	char*		dirpath = NULL;
 	int lock_fd;
 
 	if( !filename ) {
@@ -1064,26 +1063,26 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 				   we created it as root, we need to try to
 				   chown() it to condor.
 				*/ 
-			dirpath = condor_dirname( filename );
+			std::string dirpath = condor_dirname( filename );
 			errno = 0;
-			if( mkdir(dirpath, 0777) < 0 ) {
+			if( mkdir(dirpath.c_str(), 0777) < 0 ) {
 				if( errno == EACCES ) {
 						/* Try as root */ 
 					_set_priv(PRIV_ROOT, __FILE__, __LINE__, 0);
-					if( mkdir(dirpath, 0777) < 0 ) {
+					if( mkdir(dirpath.c_str(), 0777) < 0 ) {
 						/* We failed, we're screwed */
 						fprintf( stderr, "Can't create lock directory \"%s\", "
-								 "errno: %d (%s)\n", dirpath, errno, 
+								 "errno: %d (%s)\n", dirpath.c_str(), errno, 
 								 strerror(errno) );
 					} else {
 						/* It worked as root, so chown() the
 						   new directory and set a flag so we
 						   retry the safe_open_wrapper(). */
 #ifndef WIN32
-						if (chown( dirpath, get_condor_uid(),
+						if (chown( dirpath.c_str(), get_condor_uid(),
 								   get_condor_gid() )) {
 							fprintf( stderr, "Failed to chown(%s) to %d.%d: %s\n",
-									 dirpath, get_condor_uid(),
+									 dirpath.c_str(), get_condor_uid(),
 									 get_condor_gid(), strerror(errno) );
 						}
 #endif
@@ -1093,7 +1092,7 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 				} else {
 						/* Some other error than access, give up */ 
 					fprintf( stderr, "Can't create lock directory: \"%s\""
-							 "errno: %d (%s)\n", dirpath, errno, 
+							 "errno: %d (%s)\n", dirpath.c_str(), errno, 
 							 strerror(errno) );							
 				}
 			} else {
@@ -1101,9 +1100,6 @@ _condor_open_lock_file(const char *filename,int flags, mode_t perm)
 					   try the safe_open_wrapper() again */
 				retry = 1;
 			}
-				/* At this point, we're done with this, so
-				   don't leak it. */
-			free( dirpath );
 		}
 		if( retry ) {
 			lock_fd = safe_open_wrapper_follow(filename,flags,perm);

@@ -95,14 +95,12 @@ static bool test_null() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -114,14 +112,12 @@ static bool test_empty_string() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -133,14 +129,12 @@ static bool test_current_directory() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -152,14 +146,12 @@ static bool test_simple_path_1() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -171,14 +163,12 @@ static bool test_simple_path_2() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -190,14 +180,12 @@ static bool test_simple_directory_1() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -209,14 +197,12 @@ static bool test_simple_directory_2() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -228,14 +214,12 @@ static bool test_directory_and_file_1() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -247,14 +231,12 @@ static bool test_directory_and_file_2() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -266,14 +248,12 @@ static bool test_root_directory() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -285,14 +265,12 @@ static bool test_directory_and_directory() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -304,14 +282,12 @@ static bool test_directory_and_directory_in_root() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -323,14 +299,12 @@ static bool test_forward_slash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -342,14 +316,12 @@ static bool test_backslash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -361,14 +333,12 @@ static bool test_period_and_forward_slash_1() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -380,14 +350,12 @@ static bool test_period_and_backslash_1() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -399,14 +367,12 @@ static bool test_period_and_forward_slash_2() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -418,14 +384,12 @@ static bool test_period_and_backslash_2() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -437,14 +401,12 @@ static bool test_backslash_and_period() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -456,14 +418,12 @@ static bool test_forward_slash_and_file_extension() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -475,14 +435,12 @@ static bool test_backslash_and_file_extension() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -494,14 +452,12 @@ static bool test_period_and_forward_slash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -513,14 +469,12 @@ static bool test_period_and_backslash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -532,14 +486,12 @@ static bool test_period_and_forward_slash_with_special_file() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -551,14 +503,12 @@ static bool test_period_and_backslash_with_special_file() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -570,14 +520,12 @@ static bool test_double_forward_slash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 
@@ -589,14 +537,12 @@ static bool test_double_backslash() {
 	emit_param("STRING", param);
 	emit_output_expected_header();
 	emit_retval("%s", expect);
-	char *path = condor_dirname(param);
+	std::string path = condor_dirname(param);
 	emit_output_actual_header();
-	emit_retval("%s", path);
-	if(strcmp(path, expect) != MATCH) {
-		free(path);
+	emit_retval("%s", path.c_str());
+	if(strcmp(path.c_str(), expect) != MATCH) {
 		FAIL;
 	}
-	free(path);
 	PASS;
 }
 

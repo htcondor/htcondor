@@ -2580,10 +2580,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// semantic change, and one that changes a job from going
 					// on hold (after running for its duration) to succeeding.
 					if( param_boolean("ALLOW_TRANSFER_REMAP_TO_MKDIR",false) ) {
-						char * dirname = condor_dirname(remap_filename.c_str());
-						if( strcmp(dirname, ".") ) {
+						std::string dirname = condor_dirname(remap_filename.c_str());
+						if( strcmp(dirname.c_str(), ".") ) {
 							std::string path;
-                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname);
+                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname.c_str());
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
 							// So this fails on a dirA/dirB/filename remaps,
 							// which seemed like the easiest way to trigger
@@ -2627,7 +2627,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								}
 							}
 						}
-						free(dirname);
 					}
 
                     formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,remap_filename.c_str());
@@ -7335,9 +7334,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		file_xfer_item.setFileSize(st.GetFileSize());
 
 		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
-			char * dirname_raw = condor_dirname( file_xfer_item.srcName().c_str() );
-			std::string dirname(dirname_raw);
-			free(dirname_raw);
+			std::string dirname = condor_dirname( file_xfer_item.srcName().c_str() );
 
 			if( strcmp( dirname.c_str(), "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );

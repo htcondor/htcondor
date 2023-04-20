@@ -1612,7 +1612,7 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 void
 Dagman::ResolveDefaultLog()
 {
-	char *dagDir = condor_dirname( primaryDagFile.c_str() );
+	std::string dagDir = condor_dirname( primaryDagFile.c_str() );
 	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
 	std::string owner;
@@ -1623,7 +1623,6 @@ Dagman::ResolveDefaultLog()
 	replace_str( _defaultNodeLog, "@(DAG_FILE)", dagFile );
 	std::string cluster( std::to_string( DAGManJobId._cluster ) );
 	replace_str( _defaultNodeLog, "@(CLUSTER)", cluster.c_str() );
-	free( dagDir );
 	replace_str( _defaultNodeLog, "@(OWNER)", owner.c_str() );
 	replace_str( _defaultNodeLog, "@(NODE_NAME)", nodeName.c_str() );
 

@@ -330,27 +330,19 @@ bool TruncateClassAdLog(
 #ifndef WIN32
 	// POSIX does not provide any durability guarantees for rename().  Instead, we must
 	// open the parent directory and invoke fsync there.
-	char * parent_dir = condor_dirname(filename);
-	if (parent_dir)
+	std::string parent_dir = condor_dirname(filename);
+	int parent_fd = safe_open_wrapper_follow(parent_dir.c_str(), O_RDONLY);
+	if (parent_fd >= 0)
 	{
-		int parent_fd = safe_open_wrapper_follow(parent_dir, O_RDONLY);
-		if (parent_fd >= 0)
+		if (condor_fsync(parent_fd) == -1)
 		{
-			if (condor_fsync(parent_fd) == -1)
-			{
-				formatstr(errmsg, "Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
-			}
-			close(parent_fd);
+			formatstr(errmsg, "Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir.c_str(), errno, strerror(errno));
 		}
-		else
-		{
-			formatstr(errmsg, "Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
-		}
-		free( parent_dir );
+		close(parent_fd);
 	}
 	else
 	{
-		formatstr(errmsg, "Failed to determine log's directory name\n");
+		formatstr(errmsg, "Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir.c_str(), errno, strerror(errno));
 	}
 #endif
 
