@@ -100,8 +100,8 @@ VolumeManager::~VolumeManager()
 
 VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err)
 {
-    auto extra_volume_size_mb = param_integer("THINPOOL_EXTRA_SIZE_MB", 0);
-    size_kb += 1024*extra_volume_size_mb;
+    int extra_volume_size_mb = param_integer("THINPOOL_EXTRA_SIZE_MB", 0);
+    size_kb += 1024LL * extra_volume_size_mb;
 
     if (!VolumeManager::CreateThinLV(size_kb, volume, pool, vg_name, err)) {
         return;
