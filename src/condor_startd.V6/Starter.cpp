@@ -573,7 +573,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 #ifdef LINUX
 	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
 		auto &slot_name = claim->rip()->r_id_str;
-		dprintf(D_ZKM,"Attempting to cleanup LVM partition for %s\n",slot_name);
+		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
                 if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
 			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
