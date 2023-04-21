@@ -88,10 +88,26 @@ if(NOT WINDOWS)
 	# the interpreter, which find the root directory where the interpreter
 	# is installed, and exports the python major/minor/patch version 
 	# cmake variables.  To build the wheels, we rely on an outside script
-	# to set the PYTHON_INCLUDE_DIR 
+	# to set the USE_PYTHON3_INCLUDE_DIR and USE_PYTHON3_EXT_SUFFIX
 
 	if (WANT_PYTHON_WHEELS)
 		find_package (Python3 COMPONENTS Interpreter)
+
+		# All these variables are used later, and were defined in cmake 2.6
+		# days.  At some point, we should not copy the find_package python
+		# variables into these, and use the native cmake variables and targets.
+		set(PYTHON3_EXECUTABLE        ${Python3_EXECUTABLE})
+		set(PYTHON3_VERSION_STRING    ${Python3_VERSION})
+		set(PYTHON3_VERSION_MAJOR     ${Python3_VERSION_MAJOR})
+		set(PYTHON3_VERSION_MINOR     ${Python3_VERSION_MINOR})
+
+		set(PYTHON3_INCLUDE_DIRS      ${USE_PYTHON3_INCLUDE_DIR})
+		set(PYTHON3_MODULE_SUFFIX     ${USE_PYTHON3_EXT_SUFFIX})
+
+		if (Python3_FOUND)
+			set(PYTHON3LIBS_FOUND TRUE)
+		endif()
+
 	endif()
 
 	if (WANT_PYTHON2_BINDINGS AND NOT WANT_PYTHON_WHEELS)
