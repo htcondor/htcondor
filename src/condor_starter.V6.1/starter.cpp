@@ -1855,7 +1855,6 @@ Starter::createTempExecuteDir( void )
 			return false;
 		}
 #if !defined(WIN32)
-		WriteAdFiles();
 		if (use_chown) {
 			priv_state p = set_root_priv();
 			if (chown(WorkingDir.c_str(),
@@ -1954,9 +1953,6 @@ Starter::createTempExecuteDir( void )
 	// this is where we honor that.  Note that a registry create/load can take multiple seconds
 	loadUserRegistry(jic->jobClassAd());
 
-	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
-
 #endif /* WIN32 */
 
 #ifdef LINUX
@@ -1992,6 +1988,8 @@ Starter::createTempExecuteDir( void )
 	}
 #endif // LINUX
 
+	// now we can finally write .machine.ad and .job.ad into the sandbox
+	WriteAdFiles();
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
