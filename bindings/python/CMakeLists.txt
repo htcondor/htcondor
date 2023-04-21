@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+set(PACKAGES      "classad3" "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -24,7 +24,12 @@ htcondor/dags/rescue.py
 htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
+
 classad/__init__.py
+
+classad3/__init__.py
+classad3/ClassAd.py
+classad3/Expression.py
 )
 
 set(SETUP_PY_IN   "${CMAKE_CURRENT_SOURCE_DIR}/setup.py.cmake_template")
@@ -42,6 +47,7 @@ if (WITH_PYTHON_BINDINGS)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/htchirp)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/htcondor/compat_enum)
 	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad)
+	file (MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/classad3)
 
 	# Now make a command to copy each source file to the destination
 	foreach(PYTHON_SOURCE_FILE ${PYTHON_SOURCES})
@@ -118,7 +124,7 @@ if (WITH_PYTHON_BINDINGS)
             OUTPUT ${TIMESTAMP3_FILE}
             COMMAND ${PYTHON3_EXECUTABLE} ${SETUP_PY} build
             COMMAND ${CMAKE_COMMAND} ARGS -E touch ${TIMESTAMP3_FILE}
-            DEPENDS ${DEPS} py3classad_module py3htcondor
+            DEPENDS ${DEPS} py3classad_module py3htcondor py3classad3_impl py3htcondor2_impl
         )
 
         add_custom_target(python3_bindings ALL DEPENDS ${TIMESTAMP3_FILE})

@@ -1,5 +1,30 @@
 # We'll be deprecating event.cpp shortly.
-set( HTCONDOR_BINDINGS_SOURCES collector.cpp negotiator.cpp config.cpp daemon_and_ad_types.cpp daemon_location.cpp dc_tool.cpp export_headers.h old_boost.h schedd.cpp credd.cpp secman.cpp event.cpp module_lock.cpp export_compat_classad.cpp enable_deprecation_warnings.cpp claim.cpp startd.cpp bulk_query_iterator.cpp JobEventLog.cpp exception_utils.cpp )
+set( HTCONDOR_BINDINGS_SOURCES
+    bulk_query_iterator.cpp
+    claim.cpp
+    collector.cpp
+    config.cpp
+    credd.cpp
+    daemon_and_ad_types.cpp
+    daemon_location.cpp
+    dc_tool.cpp
+    enable_deprecation_warnings.cpp
+    event.cpp
+    exception_utils.cpp
+    export_compat_classad.cpp
+    export_headers.h
+    JobEventLog.cpp
+    module_lock.cpp
+    negotiator.cpp
+    old_boost.h
+    schedd.cpp
+    secman.cpp
+    startd.cpp
+
+    classad3_impl.cpp
+
+    htcondor2_impl.cpp
+)
 
 if(WINDOWS)
   if(WITH_PYTHON_BINDINGS AND ( PYTHONLIBS_FOUND OR PYTHON3LIBS_FOUND ))
@@ -360,8 +385,25 @@ else()
         set_target_properties(py3htcondor PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
       endif()
 
+
+      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
+      add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
+      target_include_directories(   py3htcondor2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3htcondor2_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      set_target_properties(        py3htcondor2_impl PROPERTIES PREFIX "" OUTPUT_NAME htcondor2_impl )
+      set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
+      install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
+      install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
 
       if ( APPLE )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )

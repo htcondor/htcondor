@@ -94,3 +94,12 @@ from .htcondor import *
 from .htcondor import _Param
 
 from ._job_status import JobStatus
+
+
+#
+# Replace functions implemented in Boost with ones written in pure C API.
+#
+from .htcondor2_impl import _version as version;
+from .htcondor2_impl import _platform as platform;
+
+from .htcondor2_impl import _set_subsystem as set_subsystem;

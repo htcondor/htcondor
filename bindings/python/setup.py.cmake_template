@@ -11,9 +11,11 @@ package_data = {}
 if os.name == "posix":
     package_data["htcondor"] = ["*.so", "htcondor_libs/*.so*"]
     package_data["classad"] = ["*.so"]
+    package_data["classad3"] = ["*.so"]
 else:
     package_data["htcondor"] = ["*.pyd", "*.dll", "htcondor_libs/*.dll*"]
     package_data["classad"] = ["*.pyd", "*.dll"]
+    package_data["classad3"] = ["*.pyd", "*.dll"]
 
 class BinaryDistribution(Distribution):
     """ Forces BinaryDistribution. """
