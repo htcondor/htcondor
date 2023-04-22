@@ -83,12 +83,9 @@ if [ "$VERSION_CODENAME" = 'bullseye' ]; then
     true
 elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif [ "$VERSION_CODENAME" = 'bionic' ]; then
-    true
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    true
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
     dch --distribution $dist --nmu 'place holder entry'
 elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
     true
