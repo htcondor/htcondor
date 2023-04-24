@@ -107,6 +107,7 @@
 #define ATTR_CONCURRENCY_LIMITS  "ConcurrencyLimits"
 #define ATTR_PREEMPTING_CONCURRENCY_LIMITS  "PreemptingConcurrencyLimits"
 #define ATTR_CONDOR_LOAD_AVG			"CondorLoadAvg"
+#define ATTR_CONDOR_SCRATCH_DIR			"CondorScratchDir"
 #define ATTR_CONDOR_ADMIN				"CondorAdmin"
 #define ATTR_CONSOLE_IDLE  "ConsoleIdle"
 #define ATTR_CONTAINER_IMAGE "ContainerImage"

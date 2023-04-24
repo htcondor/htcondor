@@ -52,6 +52,10 @@ New Features:
   parameter :macro:`ARC_GAHP_USE_THREADS`.
   :jira:`1690`
 
+- The Execute event in the user log now prints out slot name, sandbox path
+  and resource quantities of execution slot.
+  :jira:`1722`
+
 - Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
   to give a list of machine attributes that will be added to DAGMan submitted
   jobs for recording in the various produced job ads and userlogs.
