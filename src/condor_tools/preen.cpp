@@ -360,9 +360,7 @@ public:
 void
 check_spool_dir()
 {
-    size_t	history_length, startd_history_length;
 	const char  	*f;
-    const char      *history, *startd_history;
 	Directory  		dir(Spool, PRIV_ROOT);
 	StringList 		well_known_list;
 	JobIdSpoolFiles maybe_stale;
@@ -373,13 +371,14 @@ check_spool_dir()
 		return;
 	}
 
-    history = param("HISTORY");
-    history = condor_basename(history); // condor_basename never returns NULL
-    history_length = strlen(history);
-
-    startd_history = param("STARTD_HISTORY");
-   	startd_history = condor_basename(startd_history);
-	startd_history_length = strlen(startd_history);
+	//List of known history like config knobs to not delete if in spool
+	std::string history_knobs[] = {"HISTORY","JOB_EPOCH_HISTORY","STARTD_HISTORY"};
+	//Param the knobs for the file name and add to data structure
+	std::deque<std::string> history_files;
+	for(auto &knob : history_knobs) {
+		auto_free_ptr option(param(knob.c_str()));
+		if (option) { history_files.push_back(condor_basename(option)); }
+	}
 
 	well_known_list.initializeFromString (ValidSpoolFiles);
 	if (UserValidSpoolFiles) {
@@ -426,18 +425,17 @@ check_spool_dir()
 			good_file( Spool, f );
 			continue;
 		}
-            // see if it's a rotated history file. 
-        if (   strlen(f) >= history_length 
-            && strncmp(f, history, history_length) == 0) {
-            good_file( Spool, f );
-            continue;
-        }
 
-			// if startd_history is defined, so if it's one of those
-		if ( startd_history_length > 0 &&
-			strlen(f) >= startd_history_length &&
-			strncmp(f, startd_history, startd_history_length) == 0) {
-
+		//Check to see if file is a history
+		bool isValidHistory = false;
+		for (auto &file : history_files) {
+			if (strncmp(f, file.c_str(), file.length()) == MATCH) {
+				isValidHistory = true;
+				break;
+			}
+		}
+		//If we found a match to a history file then mark this as good
+		if (isValidHistory) {
 			good_file( Spool, f );
 			continue;
 		}
