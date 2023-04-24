@@ -73,6 +73,10 @@ Bugs Fixed:
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
 
+- Fixed a bug in *condor_preen* that would remove any recorded job epoch
+  history files stored in the spool directory.
+  :jira:`1738`
+
 Version 10.4.1
 --------------
 
