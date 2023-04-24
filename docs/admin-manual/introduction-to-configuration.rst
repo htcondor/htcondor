@@ -1148,5 +1148,12 @@ determined automatically at run time but which can be overwritten.
     evaluated on. See the :doc:`/admin-manual/configuration-macros` section for the full
     description of this configuration variable.
 
+``$(CONFIG_ROOT)`` :index:`CONFIG_ROOT`
+   Set to the directory where the the main config file will be read prior to reading any 
+   config files. The value will usually be ``/etc/condor`` for an RPM install,
+   ``C:\Condor`` for a Windows MSI install and the directory part of the ``CONDOR_CONFIG`` environment
+   variable for a tarball install. This variable will not be set when ``CONDOR_CONFIG`` is
+   set to ``ONLY_ENV`` so that no configuration files are read.
+
 Since ``$(ARCH)`` and ``$(OPSYS)`` will automatically be set to the
 correct values, we recommend that you do not overwrite them.
