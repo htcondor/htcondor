@@ -335,7 +335,11 @@ bool HttpRequest::SendRequest()
 
 	} else if ( requestMethod == "PUT" ) {
 
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 12)
+		rv = curl_easy_setopt( curl, CURLOPT_UPLOAD, 1 );
+#else
 		rv = curl_easy_setopt( curl, CURLOPT_PUT, 1 );
+#endif
 		if( rv != CURLE_OK ) {
 			this->errorCode = "499";
 			this->errorMessage = "curl_easy_setopt( CURLOPT_PUT ) failed.";
