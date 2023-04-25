@@ -6812,17 +6812,9 @@ default : @fin
 	ANNEX_TOKEN_DOMAIN = $(UID_DOMAIN)
 
 
-	# This is so broken, but fixing it is out of scope.
-	if ! $(CondorIsAdmin)
-		# This doesn't presently work, but it should.
-		SEC_TOKEN_SYSTEM_DIRECTORY = $(LOCAL_DIR)/tokens.d
-
-		# This is just wrong, but presently necessary.
-		SEC_TOKEN_DIRECTORY = $(SEC_TOKEN_SYSTEM_DIRECTORY)
-
-		# This where we look for signing keys.
-		SEC_PASSWORD_DIRECTORY = $(LOCAL_DIR)/passwords.d
-	endif
+	# We assume that the token directories (passwords.d and tokens.d) are
+	# already set.  HTCondor should create and populate the appropriately,
+	# if so.
 
 
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
