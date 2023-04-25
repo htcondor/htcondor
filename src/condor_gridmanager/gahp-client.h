@@ -200,6 +200,7 @@ class GahpServer : public Service {
 	std::string m_gahp_error_buffer;
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
+	bool m_setCondorInherit;
 	char m_gahp_version[150];
 	std::string m_gahp_condor_version;
 	std::vector<std::string> m_commands_supported;
@@ -239,6 +240,8 @@ class GenericGahpClient : public Service {
 		bool Initialize( Proxy * proxy );
 		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
+
+		void SetCondorInherit(bool set_inherit) { server->m_setCondorInherit = set_inherit; }
 
 		void purgePendingRequests() { clear_pending(); }
 		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
