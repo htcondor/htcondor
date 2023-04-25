@@ -18,7 +18,7 @@ there's no real reason to implement `queue matching buckets` instead.
 
 The line in the jobset file would then look like the following:
 ```
-iterator = bucket [var-name] bucket-url
+iterator = bucket [var-name] bucket-url {token-file token-file [token-file]}
 ```
 where *var-name* is the optional name of the variable that will iterate over
 the objects in the bucket, and *bucket-url* is the URL of the bucket in question.
@@ -35,10 +35,38 @@ built-in support for S3 URLs in the file-transfer object.
 
 #### Security
 
-The above blithely ignores that 2 (or sometimes 3) different security security
-things could be needed to list the contents of an S3 bucket.  [FIXME]
+The above blithely ignores that 2 (or sometimes 3) different security tokens
+could be needed to list the contents of an S3 bucket.  To minimize the scope
+of change, we will not propose a general mechanism by which the user can
+specify arbitrary key-value pairs to propogate into each submit file; instead,
+the `bucket` iterator type will accept three arguments instead of one: the
+*bucket-url*, the name of the file containing the access key, and
+the name of the file containing the secret key (in that order).  This retains
+the same general ordering as the `table` iterator type, where the variable
+name precedes the file name or table data.  Because *var-name* is optional,
+and we don't know how many arguments there will be, we should surround the
+arguments -- maybe only the variable-length security section -- with curly
+braces.  (We could also require the user indicate which type of credential
+they're using in the iterator type, but that seems user-hostile and a bad
+precedent.)
 
 ### Implementation
+
+Given that the current iterator is implemented client-side, we propose a
+client-side iterator for S3 buckets, as well.  A client-side iterator has
+a number of advantages:
+
+*  Early error checking and better error-reporting.  It's a little sad that
+   error reporting from the schedd is not as good as error reporting from
+   a command-line tool, but changing that is out of scope.
+*  It ensures that the snapshot-in-time of the contents of the bucket occurs
+   at a well-known and readily-comprehensible time.  It also allows the tool
+   to immediately record provenance information, and/or inform the user.
+*  The tool would also know how many objects were in the iterator.  It could
+   let the user know as a quick sanity check ("I expected to submit 10 jobs
+   and it said I submitted 10,000!"), and/or help implement policy in a
+   user-friendly way ("You're trying to submit more than 100,000 jobs; are
+   you sure you want to do that?").
 
 Presuming the implementation is permitted to use Boto3 (now AWS' official Python
 API, AFAICT), implementation should be simple.  We could, if desired, even not
