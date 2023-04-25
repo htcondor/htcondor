@@ -90,16 +90,14 @@ void setBaseName(const char *baseName) {
 		isInitialized = 0;
 	}
 	if (isInitialized == 0) {
-		char *tmpDir;
 
 		if (logBaseName)
 			free(logBaseName);
 		logBaseName = strdup(baseName);
-		tmpDir = condor_dirname(logBaseName);
+		std::string tmpDir = condor_dirname(logBaseName);
 		if (baseDirName)
 			free(baseDirName);
-		baseDirName = strdup(tmpDir);
-		free(tmpDir);
+		baseDirName = strdup(tmpDir.c_str());
 #ifdef WIN32
 		if (searchLogName)
 			free(searchLogName);

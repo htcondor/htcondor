@@ -1262,9 +1262,8 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 		EXCEPT("Failed to parse serialized shared-port information at offset %d: '%s'", (int)in.offset(), inherit_buf);
 	}
 
-	m_local_id = condor_basename(m_full_name.c_str());
-	auto_free_ptr socket_dir(condor_dirname(m_full_name.c_str()));
-	m_socket_dir = socket_dir.ptr();
+	m_local_id    = condor_basename(m_full_name.c_str());
+	m_socket_dir  = condor_dirname(m_full_name.c_str());
 #ifdef WIN32
 	/*
 	Deserializing requires getting the handles out of the buffer and getting the pid pipe name
@@ -1384,11 +1383,8 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 		{
 				// if socket_dir doesn't exist, see if we are allowed to
 				// create it
-			char *parent_dir = condor_dirname( socket_dir.c_str() );
-			if( parent_dir ) {
-				cached_result = access(parent_dir,W_OK)==0;
-				free( parent_dir );
-			}
+			std::string parent_dir = condor_dirname(socket_dir.c_str());
+			cached_result = access(parent_dir.c_str(), W_OK)==0;
 		}
 
 		if( !cached_result && why_not ) {

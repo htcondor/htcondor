@@ -189,14 +189,12 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// If useDagDir is true, we have to cd into the directory so we can
 		// parse the submit files correctly.
 		// 
-	std::string		tmpDirectory("");
+	std::string		tmpDirectory;
 	const char *	tmpFilename = filename;
 	TmpDir		dagDir;
 
 	if ( useDagDir ) {
-		char *dirname = condor_dirname( filename );
-		tmpDirectory = dirname;
-		free(dirname);
+		tmpDirectory = condor_dirname( filename );
 
 		std::string	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {

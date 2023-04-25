@@ -1559,9 +1559,10 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 				if ( strncmp(config_source, "\\\\", 2 ) == 0 ) {
 					// UNC Path, so run a 'net use' on it first.
 					NETRESOURCE nr;
+					std::string dirName = condor_dirname(config_source);
 					nr.dwType = RESOURCETYPE_DISK;
 					nr.lpLocalName = NULL;
-					nr.lpRemoteName = condor_dirname(config_source);
+					nr.lpRemoteName = const_cast<char *>(dirName.c_str());
 					nr.lpProvider = NULL;
 					
 					if ( NO_ERROR != WNetAddConnection2(
@@ -1591,10 +1592,6 @@ find_file(const char *env_name, const char *file_name, int config_options, std::
 						// try the safe_open_wrapper() anyways, and at
 						// worst we'll fail fast and the user can fix
 						// their file server.
-					}
-
-					if (nr.lpRemoteName) {
-						free(nr.lpRemoteName);
 					}
 				}
 
