@@ -17,7 +17,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
 
 Version 10.4.1
 --------------
