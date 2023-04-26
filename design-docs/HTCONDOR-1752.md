@@ -18,9 +18,9 @@ there's no real reason to implement `queue matching buckets` instead.
 
 The line in the jobset file would then look like the following:
 ```
-iterator = bucket [var-name] bucket-url {token-file token-file [token-file]}
+iterator = bucket var-name bucket-url token-file token-file [token-file]
 ```
-where *var-name* is the optional name of the variable that will iterate over
+where *var-name* is the name of the variable that will iterate over
 the objects in the bucket, and *bucket-url* is the URL of the bucket in question.
 For now, we'll require that *bucket-url* is an `https` URL of the form
 `https://s3-server-name/bucket-name/object-prefix`, where *object-prefix* may
@@ -35,20 +35,19 @@ built-in support for S3 URLs in the file-transfer object.
 
 #### Security
 
-The above blithely ignores that 2 (or sometimes 3) different security tokens
-could be needed to list the contents of an S3 bucket.  To minimize the scope
-of change, we will not propose a general mechanism by which the user can
+Although the natural (orthogonal) approach to specifying security tokens
+would additional attributes specifying those security tokens in the jobset
+file, to minimize the scope
+of change, we do not propose a general mechanism by which the user can
 specify arbitrary key-value pairs to propogate into each submit file; instead,
-the `bucket` iterator type will accept three arguments instead of one: the
+the `bucket` iterator type will accept multiple arguments: the
 *bucket-url*, the name of the file containing the access key, and
-the name of the file containing the secret key (in that order).  This retains
+the name of the file containing the secret key, and (optionally), the
+name of the file containing the session token, in that order.  This retains
 the same general ordering as the `table` iterator type, where the variable
-name precedes the file name or table data.  Because *var-name* is optional,
-and we don't know how many arguments there will be, we should surround the
-arguments -- maybe only the variable-length security section -- with curly
-braces.  (We could also require the user indicate which type of credential
-they're using in the iterator type, but that seems user-hostile and a bad
-precedent.)
+names precede the file name or table data.  As a special case, the *bucket*
+iterator will set the S3 credential attributes to the values in its arguments
+for each job in the set.
 
 ### Implementation
 
