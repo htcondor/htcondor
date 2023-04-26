@@ -424,9 +424,9 @@ command_release_claim(int cmd, Stream* stream )
 	State s = rip->state();
 
 	// stash current user
-	MyString curuser;
+	std::string curuser;
 
-	if (rip->r_cur && rip->r_cur->client()) {
+	if (rip->r_cur && rip->r_cur->client() && rip->r_cur->client()->user()) {
 		curuser = rip->r_cur->client()->user();
 	}
 
@@ -1376,8 +1376,8 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	#endif
 
 		pad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
-		MyString claimId(leftover_claim->id());
-		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
+		const char* claimId = leftover_claim->id() ? leftover_claim->id() : "";
+		if ( !(secure_claim_id ? stream->put_secret(claimId) : stream->put(claimId)) ||
 			 !putClassAd(stream, *pad) )
 		{
 			rip->dprintf( D_ALWAYS, 

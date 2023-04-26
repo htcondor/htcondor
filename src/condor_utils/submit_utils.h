@@ -482,7 +482,7 @@ public:
 
 	void init(int value=-1);
 	void clear(); // clear, but do not deallocate
-	void setScheddVersion(const char * version) { ScheddVersion = version; }
+	void setScheddVersion(const char * version) { ScheddVersion = version ? version : ""; }
 	bool setDisableFileChecks(bool value) { bool old = DisableFileChecks; DisableFileChecks = value; return old; }
 	bool setFakeFileCreationChecks(bool value) { bool old = FakeFileCreationChecks; FakeFileCreationChecks = value; return old; }
 	bool addExtendedCommands(const classad::ClassAd & cmds) { return extendedCmds.Update(cmds); }
@@ -739,7 +739,7 @@ protected:
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.
 	std::string VMType;
 	std::string TempPathname; // temporary path used by full_path
-	MyString ScheddVersion; // target version of schedd, influences how jobad is filled in.
+	std::string ScheddVersion; // target version of schedd, influences how jobad is filled in.
 	classad::References stringReqRes; // names of request_xxx submit variables that are string valued
 	classad::References forcedSubmitAttrs; // + and MY. attribute names from SUBMIT_ATTRS/EXPRS
 
@@ -806,16 +806,12 @@ protected:
 	// a LOT of the above functions must happen before SetTransferFiles, which in turn must be before SetRequirements
 	int SetTransferFiles();
 	int FixupTransferInputFiles();
-	//bool check_requirements( char const *orig, MyString &answer );
 	int SetRequirements(); // after SetTransferFiles
 
 	int SetForcedSubmitAttrs(); // set +Attrib (MY.Attrib) values from SUBMIT_ATTRS directly into the job ad. this should be called second to last
 	int SetForcedAttributes();	// set +Attrib (MY.Attrib) hashtable keys directly into the job ad.  this should be called last.
 
 	int ProcessJobsetAttributes();
-
-	// construct the Requirements expression for a VM uinverse job.
-	int AppendVMRequirements(MyString & vmanswer, bool VMCheckpoint, bool VMNetworking, const MyString &VMNetworkType, bool VMHardwareVT, bool vm_need_fsdomain);
 
 	// check if the job ad has  Cron attributes set, checked by SetRequirements
 	// return value is NULL if false,
