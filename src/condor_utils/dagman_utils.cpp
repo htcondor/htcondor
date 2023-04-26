@@ -25,7 +25,6 @@
 #include "condor_version.h"
 #include "dagman_utils.h"
 #include "my_popen.h"
-#include "MyString.h"
 #include "read_multiple_logs.h"
 #include "../condor_procapi/processid.h"
 #include "../condor_procapi/procapi.h"
@@ -662,10 +661,9 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 
 				// Initialize list of tokens from logicalLine
 				std::list<std::string> tokens;
-				MyStringTokener tok;
 				trim(logicalLine);
-				tok.Tokenize(logicalLine.c_str());
-				while( const char* token = tok.GetNextToken(" \t", true) ) {
+				StringTokenIterator tok_line(logicalLine, " \t\r\n", true);
+				for (auto token : tok_line) {
 					tokens.emplace_back(token);
 				}
 
