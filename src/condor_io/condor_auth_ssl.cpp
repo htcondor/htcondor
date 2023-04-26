@@ -362,7 +362,7 @@ int
 Condor_Auth_SSL::authenticate_continue(CondorError *errstack, bool non_blocking)
 {
 	if (!m_auth_state) {
-		ouch("Trying to ontinue authentication after failure!\n");
+		ouch("Trying to continue authentication after failure!\n");
 		return static_cast<int>(CondorAuthSSLRetval::Fail);
 	}
 	switch (m_auth_state->m_phase) {
