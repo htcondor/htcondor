@@ -733,6 +733,8 @@ class Scheduler : public Service
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
 #endif
+	void deleteZombieOwners(); // delete all zombies (called on shutdown)
+	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
@@ -844,6 +846,7 @@ private:
 	int				NextOwnerId;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
 	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
+	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;

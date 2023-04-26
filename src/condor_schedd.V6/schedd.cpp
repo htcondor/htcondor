@@ -1449,6 +1449,9 @@ Scheduler::count_jobs()
 	#endif
 		Owner.num.clear_counters();	// clear the jobs counters 
 	}
+	for (OwnerInfo * owni : zombieOwners) {
+		owni->num.clear_counters(); // clear refcounts for zombies also
+	}
 
 	FlockPools.clear();
 	if (FlockCollectors) {
@@ -1600,6 +1603,7 @@ Scheduler::count_jobs()
 		#endif
 		}
 	}
+	purgeZombieOwners();
 
 	// set FlockLevel for owners
 	if (MaxFlockLevel) {
@@ -3765,8 +3769,25 @@ void Scheduler::jobqueue_deleteUserRec(JobQueueUserRec * uad)
 		pendingOwners.erase(found);
 	}
 
-	// TODO : detach it from jobs before we delete it?
-	delete uad;
+	// we can't safely delete the object until there a no jobs referencing it.
+	// we detect that in count_jobs, so here we put the pointer into the
+	// zombie collection until then
+	zombieOwners.push_back(uad);
+}
+
+// called on shutdown after we delete the job queue.
+void Scheduler::deleteZombieOwners()
+{
+	for (OwnerInfo * owni : zombieOwners) { delete owni; }
+	zombieOwners.clear();
+}
+
+// called in count_jobs to delete zombie owners that no longer have any refs
+void Scheduler::purgeZombieOwners()
+{
+	auto zombie_dust = [](OwnerInfo* & owni){ return ! owni->num.Hits; };
+	auto it = std::remove_if(zombieOwners.begin(), zombieOwners.end(), zombie_dust);
+	zombieOwners.erase(it, zombieOwners.end());
 }
 
 // called by InitJobQueue to put newly added UserRec ads into the OwnerInfo map

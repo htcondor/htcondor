@@ -656,7 +656,9 @@ ConstructClassAdLogTableEntry<JobQueuePayload>::Delete(ClassAd* &ad) const
 		return;
 	}
 #endif
-	if (bad->IsCluster()) {
+	if (in_DestroyJobQueue) {
+		// skip the IsCluster() and IsJob() record keeping below when we are shutting down
+	} else if (bad->IsCluster()) {
 		// this is a cluster, detach all jobs
 		JobQueueCluster * clusterad = static_cast<JobQueueCluster*>(bad);
 		if (clusterad->HasAttachedJobs()) {
@@ -2264,6 +2266,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
 					InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+
+					// backward compat hack.  Older versions of grid universe and job router don't populate the cluster ad
+					// so if we failed to get ownerinfo, copy attributes from the proc ad and try again
+					if ( ! clusterad->ownerinfo && owner.empty()) {
+						if ( ! clusterad->LookupString(ATTR_USER, buffer) && ad->LookupString(ATTR_USER, buffer)) {
+							clusterad->Assign(ATTR_USER, buffer);
+						}
+						if ( ! clusterad->LookupString(ATTR_OWNER, buffer) && ad->LookupString(ATTR_OWNER, buffer)) {
+							clusterad->Assign(ATTR_OWNER, buffer);
+						}
+						InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+					}
 				}
 				clusterad->AttachJob(ad);
 				clusterad->autocluster_id = -1;
@@ -2689,6 +2703,7 @@ DestroyJobQueue( void )
 	delete JobQueue;
 	JobQueue = NULL;
 
+	scheduler.deleteZombieOwners();
 	DirtyJobIDs.clearAll();
 
 		// There's also our hashtable of the size of each cluster
@@ -8747,6 +8762,11 @@ void load_job_factories()
 
 	JobQueue->StartIterateAllClassAds();
 
+	bool allow_unspooled_factories = false;
+	if ( ! can_switch_ids()) {
+		allow_unspooled_factories = param_boolean("SCHEDD_ALLOW_UNSPOOLED_JOB_FACTORIES", false);;
+	}
+
 	std::string submit_digest;
 
 	dprintf(D_ALWAYS, "Reloading job factories\n");
@@ -8769,7 +8789,7 @@ void load_job_factories()
 			// because it needs to know whether to impersonate the user or not.
 			std::string spooled_filename;
 			GetSpooledSubmitDigestPath(spooled_filename, clusterad->jid.cluster, Spool);
-			bool spooled_digest = YourStringNoCase(spooled_filename) == submit_digest;
+			bool spooled_digest = ! allow_unspooled_factories || (YourStringNoCase(spooled_filename) == submit_digest);
 
 			std::string errmsg;
 			clusterad->factory = MakeJobFactory(clusterad,
