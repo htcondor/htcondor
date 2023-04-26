@@ -85,7 +85,7 @@ CronParamBase::Lookup( const char *item,
 	}
 }
 
-// Read a MyString parameter
+// Read a string parameter
 bool
 CronParamBase::Lookup( const char *item,
 					   bool       &value ) const
