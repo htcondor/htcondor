@@ -86,6 +86,12 @@ Bugs Fixed:
   history files stored in the spool directory.
   :jira:`1738`
 
+- Expanded default list of environment variables to include in the DAGMan
+  proper manager jobs getenv to include ``HOME``, ``USER``, ``LANG``, and
+  ``LC_ALL``. Thus resulting in these variables appearing in the DAGMan
+  manager jobs environment.
+  :jira:`1725`
+
 Version 10.4.2
 --------------
 

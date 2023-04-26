@@ -24,7 +24,7 @@ from time import time
 #Global variable for expected variables to be found in getenv in the submit file
 GETENV_VALUES = {
     #Base always added values
-    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ"],
+    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL"],
     #getenv added values from the above configuration
     "CONFIG":["Beer","Donuts"],
     #When config knob is set to True then getenve should be set to just true
