@@ -24,7 +24,6 @@
 
 #include "condor_common.h"
 #include "condor_crypt.h"             // For now, we include it
-#include "MyString.h"
 #include "CryptKey.h"                 // KeyInfo
 #include "condor_ver_info.h"
 #include "classy_counted_ptr.h"
@@ -210,8 +209,6 @@ public:
     ///
 	int code(char *&);
     ///
-	int code(MyString &);
-    ///
 	int code(std::string &);
 	///
 	// DO NOT USE THIS FUNCTION!
@@ -300,7 +297,6 @@ public:
 	int put(float);
 	int put(double);
 	int put(char const *);
-	int put(const MyString &);
 	int put(const std::string &str) {return this->put(str.c_str(), 1 + (int)str.length());}
 	// The second argument is the length of the string, including the
 	// NUL terminator.
@@ -332,7 +328,6 @@ public:
 	int get(float &);
 	int get(double &);
 
-	int get(MyString &);
 	int get(std::string &);
 
 		// This function assigns the argument to a freshly mallocated string.
