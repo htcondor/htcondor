@@ -1960,6 +1960,7 @@ Starter::createTempExecuteDir( void )
 	const char *thinpool_vg = getenv("_CONDOR_THINPOOL_VG");
 	const char *thinpool_size = getenv("_CONDOR_THINPOOL_SIZE_KB");
 	if (thinpool && thinpool_vg && thinpool_size) {
+		bool lvm_setup_successful = false;
 		try {
 			m_lvm_max_size_kb = std::stol(thinpool_size);
 		} catch (...) {
@@ -1967,24 +1968,27 @@ Starter::createTempExecuteDir( void )
 		}
 		if (m_lvm_max_size_kb > 0) {
 			CondorError err;
-                        std::string thinpool_str(thinpool), slot_name(getMySlotName());
-                        bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
-                        if (do_encrypt) {
-                            slot_name += "-enc";
-                            thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
-                        }
+			std::string thinpool_str(thinpool), slot_name(getMySlotName());
+			bool do_encrypt = thinpool_str.substr(thinpool_str.size() - 4, 4) == "-enc";
+			if (do_encrypt) {
+				slot_name += "-enc";
+				thinpool_str = thinpool_str.substr(0, thinpool_str.size() - 4);
+			}
 			m_volume_mgr.reset(new VolumeManager::Handle(WorkingDir, slot_name, thinpool_str, thinpool_vg, m_lvm_max_size_kb, err));
 			if (!err.empty()) {
 				dprintf(D_ALWAYS, "Failure when setting up filesystem for job: %s\n", err.getFullText().c_str());
-				m_volume_mgr.reset();
+				m_volume_mgr.reset(); //This calls handle destructor and cleans up any partial setup
+			} else {
+				lvm_setup_successful = true;
+				m_lvm_thin_volume = slot_name;
+				m_lvm_thin_pool = thinpool_str;
+				m_lvm_volume_group = thinpool_vg;
+				m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
+					(TimerHandlercpp)&Starter::CheckDiskUsage,
+					"check disk usage", this);
 			}
-			m_lvm_thin_volume = slot_name;
-			m_lvm_thin_pool = thinpool_str;
-			m_lvm_volume_group = thinpool_vg;
-			m_lvm_poll_tid = daemonCore->Register_Timer(10, 10,
-				(TimerHandlercpp)&Starter::CheckDiskUsage,
-				"check disk usage", this);
 		}
+		ASSERT( lvm_setup_successful );
 	}
 #endif // LINUX
 
@@ -3749,6 +3753,14 @@ Starter::removeTempExecuteDir( void )
 	if (chdir(Execute)) {
 		dprintf(D_ALWAYS, "Error: chdir(%s) failed: %s\n", Execute, strerror(errno));
 	}
+
+#ifdef LINUX
+	if (m_volume_mgr) {
+		//LVM managed... reset handle pointer to call destructor for cleanup
+		m_volume_mgr.reset();
+		return true;
+	}
+#endif /* LINUX */
 
 	// Remove the directory from all possible chroots.
 	// On Windows, we expect the root_dir_list to have only a single entry - "/"
