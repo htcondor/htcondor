@@ -1040,7 +1040,7 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 			if(m_auth_state->m_client_status == AUTH_SSL_HOLDING) {
 				m_auth_state->m_done = 1;
 			}
-			if (server_verify_scitoken()) {
+			if (server_verify_scitoken(errstack)) {
 				m_auth_state->m_server_status = AUTH_SSL_HOLDING;
 			} else {
 				m_auth_state->m_server_status = AUTH_SSL_QUITTING;
@@ -1106,18 +1106,17 @@ Condor_Auth_SSL::authenticate_server_scitoken(CondorError *errstack, bool non_bl
 
 
 bool
-Condor_Auth_SSL::server_verify_scitoken()
+Condor_Auth_SSL::server_verify_scitoken(CondorError* errstack)
 {
-	CondorError err;
 	std::string issuer, subject;
 	long long expiry;
 	std::vector<std::string> bounding_set;
 	std::vector<std::string> groups, scopes;
 	std::string jti;
 	if (!htcondor::validate_scitoken(m_client_scitoken, issuer, subject, expiry,
-		bounding_set, groups, scopes, jti, mySock_->getUniqueId(), err))
+		bounding_set, groups, scopes, jti, mySock_->getUniqueId(), *errstack))
 	{
-		dprintf(D_SECURITY, "%s\n", err.getFullText().c_str());
+		dprintf(D_SECURITY, "SCITOKENS error: %s\n", errstack->message(0));
 		return false;
 	}
 	classad::ClassAd ad;
