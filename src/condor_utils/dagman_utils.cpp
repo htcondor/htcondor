@@ -662,7 +662,7 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 				// Initialize list of tokens from logicalLine
 				std::list<std::string> tokens;
 				trim(logicalLine);
-				StringTokenIterator tok_line(logicalLine, " \t\r\n", true);
+				StringTokenIterator tok_line(logicalLine, " \t", true);
 				for (auto token : tok_line) {
 					tokens.emplace_back(token);
 				}
