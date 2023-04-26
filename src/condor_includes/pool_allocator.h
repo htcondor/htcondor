@@ -41,8 +41,8 @@
 
  *    // build the list
  *    stuff.insert("literal"); // literals can be stored directly in in the list
- *    MyString number; number.formatstr("%d", num);
- *    const char * number_lit = pool.insert(number.Value()); // generated strings are stored in the string pool
+ *    std::string number; formatstr(number, "%d", num);
+ *    const char * number_lit = pool.insert(number.c_str()); // generated strings are stored in the string pool
  *    stuff.insert(number_lit); // and can then be treated as a string literal in the List
  *
  *    // use the list here

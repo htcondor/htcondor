@@ -2371,7 +2371,7 @@ const char * Sock::deserialize(const char *buf)
 
 	setTriedAuthentication(tried_authentication);
 
-	MyString str;
+	std::string str;
 	if ( ! in.deserialize_string(str, "*") || ! in.deserialize_sep("*")) {
 		EXCEPT("Failed to parse serialized socket FullyQualifiedUser at offset %d: '%s'",(int)in.offset(),buf);
 	}
@@ -2384,7 +2384,7 @@ const char * Sock::deserialize(const char *buf)
 	if ( ! str.empty()) {
 		// daemoncore does not like spaces in our serialized string so they were changed to _
 		// we need to put them back now.
-		str.replaceString("_"," ");
+		replace_str(str, "_", " ");
 		CondorVersionInfo peer_version(str.c_str());
 		set_peer_version( &peer_version );
 	}

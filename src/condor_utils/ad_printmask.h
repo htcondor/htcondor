@@ -192,7 +192,7 @@ class AttrListPrintMask
 	void clearPrefixes();
 	ALLOCATION_POOL stringpool;
 
-	void PrintCol(MyString * pretval, Formatter & fmt, const char * value);
+	void PrintCol(std::string * pretval, Formatter & fmt, const char * value);
 	void commonRegisterFormat (int wid, int opts, const char *print, const CustomFormatFn & sf,
 							const char *attr
 							);

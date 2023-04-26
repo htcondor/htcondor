@@ -624,7 +624,7 @@ void FilesystemRemap::ParseMountinfo() {
 
 #if defined(LINUX)
 
-	MyString str2;
+	std::string str2;
 	const char * token;
 	FILE *fd;
 	bool is_shared;
@@ -638,8 +638,8 @@ void FilesystemRemap::ParseMountinfo() {
 		return;
 	}
 
-	while (str2.readLine(fd, false)) {
-		MyStringWithTokener str(str2);
+	while (readLine(str2, fd, false)) {
+		MyStringWithTokener str(str2.c_str());
 		str.Tokenize();
 		ADVANCE_TOKEN(token, str) // mount ID
 		ADVANCE_TOKEN(token, str) // parent ID

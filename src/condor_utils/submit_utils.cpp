@@ -1398,7 +1398,7 @@ int SubmitHash::SetJavaVMArgs()
 
 int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
 {
-	MyString strPathname;
+	std::string strPathname;
 	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
@@ -1425,9 +1425,9 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
 	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		strPathname.replaceString("#MpInOdE#", "0");
+		replace_str(strPathname, "#MpInOdE#", "0");
 	} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
-		strPathname.replaceString("#pArAlLeLnOdE#", "0");
+		replace_str(strPathname, "#pArAlLeLnOdE#", "0");
 	}
 
 
@@ -2313,7 +2313,6 @@ int SubmitHash::SetLeaveInQueue()
 int SubmitHash::SetNoopJob()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	auto_free_ptr noop(submit_param(SUBMIT_KEY_Noop, ATTR_JOB_NOOP));
 	if (noop) {
@@ -3757,7 +3756,6 @@ int SubmitHash::SetNotifyUser()
 {
 	RETURN_IF_ABORT();
 	bool needs_warning = false;
-	MyString buffer;
 
 	char *who = submit_param( SUBMIT_KEY_NotifyUser, ATTR_NOTIFY_USER );
 
@@ -3797,7 +3795,6 @@ int SubmitHash::SetEmailAttributes()
 
 		if ( !attr_list.isEmpty() ) {
 			char *tmp;
-			MyString buffer;
 
 			tmp = attr_list.print_to_string();
 			AssignJobString(ATTR_EMAIL_ATTRIBUTES, tmp);
@@ -3817,7 +3814,6 @@ int SubmitHash::SetEmailAttributes()
 int SubmitHash::SetCronTab()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 		//
 		// For convienence I put all the attributes in array
 		// and just run through the ad looking for them
@@ -4309,13 +4305,13 @@ int SubmitHash::SetRemoteAttrs()
 					strcasecmp(key, item.job_expr)) {
 					continue;
 				}
-				MyString key1 = preremote + item.submit_expr;
-				MyString key2 = preremote + item.special_expr;
-				MyString key3 = preremote + item.job_expr;
-				const char * ckey1 = key1.Value();
-				const char * ckey2 = key2.Value();
+				std::string key1 = preremote + item.submit_expr;
+				std::string key2 = preremote + item.special_expr;
+				std::string key3 = preremote + item.job_expr;
+				const char * ckey1 = key1.c_str();
+				const char * ckey2 = key2.c_str();
 				if(item.special_expr == NULL) { ckey2 = NULL; }
-				const char * ckey3 = key3.Value();
+				const char * ckey3 = key3.c_str();
 				char * val = submit_param(ckey1, ckey2);
 				if( val == NULL ) {
 					val = submit_param(ckey3);
@@ -6594,9 +6590,9 @@ int SubmitHash::SetAccountingGroup()
 		if (!group) {
 			group.set(param("NICE_USER_ACCOUNTING_GROUP_NAME"));
 		} else {
-			MyString nicegroup;
+			std::string nicegroup;
 			param(nicegroup, "NICE_USER_ACCOUNTING_GROUP_NAME");
-			if (nicegroup != group) {
+			if (nicegroup != group.ptr()) {
 				if ( ! nice_user_is_prefix) {
 					push_warning(stderr,
 						SUBMIT_KEY_NiceUser " conflicts with "  SUBMIT_KEY_AcctGroup ". "
@@ -6605,7 +6601,7 @@ int SubmitHash::SetAccountingGroup()
 					// append accounting group to nice-user group
 					nicegroup += ".";
 					nicegroup += group.ptr();
-					group.set(nicegroup.StrDup());
+					group.set(strdup(nicegroup.c_str()));
 				}
 			}
 		}
