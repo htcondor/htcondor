@@ -92,7 +92,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
