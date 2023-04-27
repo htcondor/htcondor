@@ -65,6 +65,15 @@ Bugs Fixed:
   private network address when ``PRIVATE_NETWORK_NAME`` was configured.
   :jira:`1713`
 
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
