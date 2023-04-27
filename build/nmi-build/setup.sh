@@ -190,8 +190,6 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
         (cd "$externals_dir"; apt download libboost-python1.74.0)
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
         (cd "$externals_dir"; apt download libboost-python1.74.0)
-    elif [ $VERSION_CODENAME = 'bionic' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.65.1)
     elif [ $VERSION_CODENAME = 'focal' ]; then
         (cd "$externals_dir"; apt download libboost-python1.71.0)
     elif [ $VERSION_CODENAME = 'jammy' ]; then

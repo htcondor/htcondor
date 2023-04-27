@@ -153,7 +153,6 @@ get_distribution() {
 		# platforms follow.
 		#
 		#     debian bullseye 11
-		#     ubuntu bionic
 		#     ubuntu focal
 		#     ubuntu jammy
 		#     centos 7

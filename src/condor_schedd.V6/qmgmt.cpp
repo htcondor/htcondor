@@ -2189,6 +2189,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
 					InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+
+					// backward compat hack.  Older versions of grid universe and job router don't populate the cluster ad
+					// so if we failed to get ownerinfo, copy attributes from the proc ad and try again
+					if ( ! clusterad->ownerinfo && owner.empty()) {
+						if ( ! clusterad->LookupString(ATTR_USER, buffer) && ad->LookupString(ATTR_USER, buffer)) {
+							clusterad->Assign(ATTR_USER, buffer);
+						}
+						if ( ! clusterad->LookupString(ATTR_OWNER, buffer) && ad->LookupString(ATTR_OWNER, buffer)) {
+							clusterad->Assign(ATTR_OWNER, buffer);
+						}
+						InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+					}
 				}
 				clusterad->AttachJob(ad);
 				clusterad->autocluster_id = -1;
