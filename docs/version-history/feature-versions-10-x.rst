@@ -108,6 +108,10 @@ Bugs Fixed:
   attempting to do file transfer.
   :jira:`1747`
 
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
 Version 10.4.1
 --------------
 
