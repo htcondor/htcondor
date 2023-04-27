@@ -21,7 +21,6 @@
 #define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "simplelist.h"
 #include "extArray.h"
@@ -318,9 +317,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	const MACRO_DEF_ITEM * find_macro_def_item(const char * name, MACRO_SET & set, int use);
 
 	void optimize_macros(MACRO_SET& macro_set);
-
-	/* A convenience function that calls param() with a MyString buffer. */
-	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf, char const *param_name, char const *default_value=NULL);

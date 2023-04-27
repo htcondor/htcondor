@@ -461,7 +461,6 @@ public:
   MyStringTokener &operator=(MyStringTokener &&rhs) noexcept ;
   ~MyStringTokener();
   void Tokenize(const char * str);
-  void Tokenize(const MyString & str) { Tokenize(str.c_str()); }
   const char *GetNextToken(const char *delim, bool skipBlankTokens);
 protected:
   char *tokenBuf;

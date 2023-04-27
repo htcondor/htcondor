@@ -709,25 +709,24 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 				// Split out the integers
 				//
 			token.Tokenize();
-			MyString *_temp;
 			int value;
 			
 				//
 				// Min
 				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
+			const char *t = token.GetNextToken( CRONTAB_RANGE, true);
+			std::string _tempstr(t ? t : "");
+			trim(_tempstr);
+			value = atoi( _tempstr.c_str());
 			cur_min = ( value >= min ? value : min );
-			delete _temp;
 				//
 				// Max
 				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
+			t = token.GetNextToken( CRONTAB_RANGE, true );
+			_tempstr = t ? t : "";
+			trim(_tempstr);
+			value = atoi( _tempstr.c_str() );
 			cur_max = ( value <= max ? value : max );
-			delete _temp;
 			
 			// -------------------------------------------------
 			// WILDCARD
