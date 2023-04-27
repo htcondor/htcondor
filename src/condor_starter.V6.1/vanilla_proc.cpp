@@ -222,7 +222,7 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
-	return cgroup_controller_is_writeable("", relative_cgroup);
+	return can_switch_ids() && cgroup_controller_is_writeable("", relative_cgroup);
 }
 
 static bool cgroup_is_writeable(const std::string &relative_cgroup) {
