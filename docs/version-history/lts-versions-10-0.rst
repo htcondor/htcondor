@@ -74,6 +74,13 @@ Bugs Fixed:
   jobs after a restart.
   :jira:`1755`
 
+- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+  Vault tokens when downscoping access tokens.
+  :jira:`1527`
+
+- Fixed a missing library import in *condor_credmon_vault*.
+  :jira:`1527`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
