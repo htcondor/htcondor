@@ -70,6 +70,10 @@ Bugs Fixed:
   jobs after a restart.
   :jira:`1755`
 
+- Fixed a bug that could cause a daemon or tool to crash when
+  attempting SSL or SCITOKENS authentication.
+  :jira:`1756`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
