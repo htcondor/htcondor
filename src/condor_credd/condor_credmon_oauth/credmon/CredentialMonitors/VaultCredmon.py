@@ -9,6 +9,7 @@ import tempfile
 import re
 import urllib3
 import socket
+import http.client
 
 try:
     import htcondor
