@@ -61,6 +61,10 @@ Bugs Fixed:
   same way as *condor_submit*.
   :jira:`1695`
 
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
 - Fixed a bug introduced in HTCondor 10.0.3 that caused remote
   submission of **batch** grid universe jobs via ssh to fail when
   attempting to do file transfer.
