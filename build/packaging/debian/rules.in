@@ -30,17 +30,11 @@ endif
 
 # one ring to rule them all ...
 %:
-#if defined(BIONIC)
-	dh $@ --with python2,python3
-#else
 	dh $@ --with python3
-#endif
 
 override_dh_auto_configure:
 	dh_auto_configure -- \\
-#if !defined(BIONIC)
 		$(CMAKE_TOOLCHAIN) \\
-#endif
 		-DCONDOR_PACKAGE_BUILD:BOOL=ON \\
 		-DPROPER:BOOL=ON \\
 		-D_DEBUG:BOOL=TRUE \\
@@ -63,12 +57,6 @@ override_dh_auto_build: doc/build
 	#cp src/condor_chirp/*.java src/condor_chirp/chirp/java/client/
 	#$(MAKE) -C src/condor_chirp/chirp/java/client/
 	#cp src/condor_chirp/chirp/java/client/Chirp.jar src/condor_chirp/
-
-
-#if defined(BIONIC)
-override_dh_python2:
-	dh_python2 $@ --no-guessing-versions
-#endif
 
 
 override_dh_shlibdeps:

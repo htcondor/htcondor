@@ -61,6 +61,10 @@ Bugs Fixed:
   same way as *condor_submit*.
   :jira:`1695`
 
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
 - Fixed a bug introduced in HTCondor 10.0.3 that caused remote
   submission of **batch** grid universe jobs via ssh to fail when
   attempting to do file transfer.
@@ -73,6 +77,13 @@ Bugs Fixed:
 - Fixed a bug that could cause a daemon or tool to crash when
   attempting SSL or SCITOKENS authentication.
   :jira:`1756`
+
+- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+  Vault tokens when downscoping access tokens.
+  :jira:`1527`
+
+- Fixed a missing library import in *condor_credmon_vault*.
+  :jira:`1527`
 
 .. _lts-version-history-1003:
 
