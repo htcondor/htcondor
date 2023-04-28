@@ -26,17 +26,17 @@ PCRE2_POSIX_CHARS = ["[:alnum:]","[:alpha:]","[:ascii:]","[:blank:]",
                      "[:word:]" ,"[:xdigit:]"]
 PCRE2_TEST_FILE = "HTCondor-PCRE2-Test.txt"
 
-#===================================================================================
-#Custom print function to help with output spacing
+
 def format_print(msg,offset=0,newline=False):
+    """Custom print function to help with output spacing"""
     linestart = ""
     if newline:
         linestart = "\n"
     print("{}{}".format(linestart.ljust(offset," "),msg))
 
-#===================================================================================
-#Get IDToken information from the given system configuration
+
 def get_token_configuration(param, is_ce, checking_remote_collector):
+    """Get IDToken information from the given system configuration"""
     #Base return info
     ret_info = {"trust_domain"     : {"is_default" : False, "unexpanded" : None, "value" : None},
                 "version"          : 9,
@@ -99,9 +99,9 @@ def get_token_configuration(param, is_ce, checking_remote_collector):
                     ret_info["has_signing_key"] = True
     return ret_info
 
-#-----------------------------------------------------------------------------------
-#Read this hosts stored IDTokens and parse out the issuer field
+
 def get_token_issuers():
+    """Read this hosts stored IDTokens and parse out the issuer field"""
     #Return dict = {issuer:Number tokens issued}
     issuers = {}
     #Run condor_token_list
@@ -123,9 +123,9 @@ def get_token_issuers():
         return issuers
     return None
 
-#-----------------------------------------------------------------------------------
-#Check IDToken information for possible breakages due to V9 to V10 changes
+
 def check_idtokens(is_ce):
+    """Check IDToken information for possible breakages due to V9 to V10 changes"""
     format_print("Checking IDTokens:")
     #The original default value for TRUST_DOMAIN
     v9_default_value = htcondor.param.get("COLLECTOR_HOST")
@@ -192,9 +192,9 @@ def check_idtokens(is_ce):
     format_print("Note: Any IDTokens issued from other collectors used for flocking will likely need to be re-issued",12)
     format_print("      once those hosts HTCondor system is upgraded to V10.",12)
 
-#===================================================================================
-#Digest a map file and attempt to digest regex sequences in file
+
 def read_map_file(filename,is_el7,has_cmd):
+    """Digest a map file and attempt to digest regex sequences in file"""
     #Try to read map file
     try:
         fd = open(filename,"r")
@@ -239,9 +239,9 @@ def read_map_file(filename,is_el7,has_cmd):
     except IOError:
         format_print("Failed to open {}".format(filename),12)
 
-#-----------------------------------------------------------------------------------
-#Check map files for known PCRE2 breakages
+
 def check_pcre2():
+    """Check map files for known PCRE2 breakages"""
     is_el7 = False
     has_pcre2_cmd = False
     #Check if platform is EL7
@@ -280,9 +280,9 @@ def check_pcre2():
     if has_pcre2_cmd and os.path.exists(PCRE2_TEST_FILE):
         os.remove(PCRE2_TEST_FILE)
 
-#===================================================================================
-#Digest job ad for known keywords
+
 def process_ad(ad):
+    """Digest job ad for known keywords"""
     owner = "UNKNOWN"
     if "Owner" in ad:
         for var in ad:
@@ -291,9 +291,9 @@ def process_ad(ad):
                 break
     return owner
 
-#-----------------------------------------------------------------------------------
-#Check job ads for known pre V10 GPU requesting
+
 def check_gpu_requirements():
+    """Check job ads for known pre V10 GPU requesting"""
     return
     #No schedd Daemon then no check needed
     if "SCHEDD" not in htcondor.param["daemon_list"]:
@@ -329,7 +329,7 @@ def check_gpu_requirements():
     except htcondor.HTCondorLocateError:
         format_print("Failed to locate local schedd.",8)
 
-#===================================================================================
+
 def main():
     #Make sure script is running as root because we need to run 'condor_token_list'
     if os.geteuid() != 0:
@@ -359,6 +359,6 @@ def main():
     format_print("For more information reagrding incompatibilities visit: https://htcondor.readthedocs.io/en/latest/version-history/upgrading-from-9-0-to-10-0-versions.html#upgrading-from-an-9-0-lts-version-to-an-10-0-lts-version-of-htcondor",0,True)
     format_print("To ask any questions regarding incompatibilities email: htcondor-users@cs.wisc.edu",0,True)
 
-#-----------------------------------------------------------------------------------
+
 if __name__ == "__main__":
     main()
