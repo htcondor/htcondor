@@ -6,7 +6,7 @@
 #        2. Upgrade to PCRE2 breaking map file regex secuences
 #        3. The way to request GPU resources for a job
 #   This script can still be ran post upgrade as a post mortem
-#   Note: Requires sudo and HTCONDOR python bindings
+#   Note: Requires root and HTCONDOR python bindings
 import os
 import sys
 import platform
@@ -41,12 +41,13 @@ PCRE2_POSIX_CHARS = [
 PCRE2_TEST_FILE = "HTCondor-PCRE2-Test.txt"
 
 
-def format_print(msg, offset=0, newline=False):
+def format_print(msg, offset=0, newline=False, err=False):
     """Custom print function to help with output spacing"""
-    linestart = ""
+    f = sys.stderr if err else sys.stdout
     if newline:
-        linestart = "\n"
-    print("{}{}".format(linestart.ljust(offset, " "), msg))
+        print(file=f)
+
+    print(f"{msg:>{offset}s}", file=f)
 
 
 def get_token_configuration(param, is_ce, checking_remote_collector):
@@ -172,13 +173,11 @@ def check_idtokens(is_ce):
     format_print("Diagnosis:", 4)
     # Look at local host TRUST_DOMAIN information
     trust_domain = my_config_info["trust_domain"]
-    td_line = "Has non-default TRUST_DOMAIN ({}) set.".format(trust_domain["value"])
+    td_line = f"Has non-default TRUST_DOMAIN ({trust_domain['value']}) set."
     if trust_domain["is_default"]:
-        td_line = "Using default TRUST_DOMAIN '{}'.".format(trust_domain["unexpanded"])
-    version_line = (
-        "HTCONDOR-CE" if is_ce else "HTCONDOR V{}".format(my_config_info["version"])
-    )
-    format_print("This Host: {} | {}".format(version_line, td_line), 8)
+        td_line = "Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
+    version_line = "HTCONDOR-CE" if is_ce else "HTCONDOR V{my_config_info['version']}"
+    format_print(f"This Host: {version_line} | {td_line}", 8)
     # Determine if this host has issued IDTokens by checking if signing key exists
     if my_config_info["has_signing_key"]:
         format_print(
@@ -190,25 +189,19 @@ def check_idtokens(is_ce):
         format_print("Did not find any stored IDTokens on host.", 19)
     else:
         format_print(
-            "Found {} IDTokens with the following issuers:".format(
-                len(my_token_issuers)
-            ),
+            f"Found {len(my_token_issuers)} IDTokens with the following issuers:",
             19,
         )
         for key, value in my_token_issuers.items():
-            format_print("->'{}' used for {} tokens.".format(key, value), 21)
+            format_print(f"->'{key}' used for {value} tokens.", 21)
     # Analyze local collector host information
     if remote_config_info != None and remote_config_info["using_token_auth"]:
         trust_domain = remote_config_info["trust_domain"]
-        td_line = "Has non-default TRUST_DOMAIN ({}) set.".format(trust_domain["value"])
+        td_line = f"Has non-default TRUST_DOMAIN ({trust_domain['value']}) set."
         if trust_domain["is_default"]:
-            td_line = "Using default TRUST_DOMAIN '{}'.".format(
-                trust_domain["unexpanded"]
-            )
+            td_line = f"Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
         format_print(
-            "Local Collector: HTCONDOR V{} | {}".format(
-                remote_config_info["version"], td_line
-            ),
+            f"Local Collector: HTCONDOR V{remote_config_info['version']} | {td_line}",
             8,
         )
 
@@ -217,7 +210,7 @@ def check_idtokens(is_ce):
         format_print(
             "*** HTCondor system should be unaffected by V9 to V10 upgrade IDToken default changes ***",
             8,
-            True,
+            newline=True,
         )
         return
     elif not my_config_info["trust_domain"]["is_default"]:
@@ -230,29 +223,24 @@ def check_idtokens(is_ce):
             format_print(
                 "*** HTCondor system should be unaffected by V9 to V10 upgrade IDToken default changes ***",
                 8,
-                True,
+                newline=True,
             )
             return
     format_print(
         "*** HTCondor system possibly affected by V9 to V10 upgrade IDToken default changes ***",
         8,
-        True,
+        newline=True,
     )
     format_print(
         "IDToken authentication may fail if in use. If tokens have been created and", 8
     )
     format_print("distributed consider doing the following. Possible Solutions:", 8)
-    set_trust_domain = (
-        "TRUST_DOMAIN to local collectors value in{}tokens issuers field".format(
-            "\n".ljust(13, " ")
-        )
-    )
+    set_trust_domain = """TRUST_DOMAIN to local collectors value in
+             tokens issuers field"""
     if my_token_issuers != None and v9_default_value in my_token_issuers:
-        set_trust_domain = "'TRUST_DOMAIN = {}'".format(v9_default_value)
+        set_trust_domain = f"'TRUST_DOMAIN = {v9_default_value}'"
     format_print(
-        "1. To keep using existing distributed tokens set {} on all hosts in the pool and reconfig.".format(
-            set_trust_domain
-        ),
+        f"1. To keep using existing distributed tokens set {set_trust_domain} on all hosts in the pool and reconfig.",
         12,
     )
     format_print(
@@ -293,17 +281,17 @@ def read_map_file(filename, is_el7, has_cmd):
                 # If we found 'pcre2grep' cmd then find regex sequence and try to use it
                 start = line.find(" ") + 1
                 length = line.rfind(" ")
-                sequence = '"{}"'.format(line[start:length])
+                sequence = f'"{line[start:length]}"'
                 p = subprocess.run(
                     ["pcre2grep", sequence, PCRE2_TEST_FILE], stderr=subprocess.PIPE
                 )
                 error = p.stderr.rstrip().decode()
                 if len(error) > 0:
                     format_print(
-                        "Invalid: {0}|line-{1}: '{2}'".format(filename, line_num, line),
+                        f"Invalid: {filename}|line-{line_num}: '{line}'",
                         12,
                     )
-                    format_print("Error: {}".format(error), 14)
+                    format_print(f"Error: {error}", 14)
             elif is_el7:
                 # No 'pcre2grep' cmd found so if EL7 & manually check for known incompatibility
                 for char in PCRE2_POSIX_CHARS:
@@ -312,15 +300,13 @@ def read_map_file(filename, is_el7, has_cmd):
                         if line[pos + len(char)] == "-":
                             invalid = True
                             format_print(
-                                "Invalid: {0}|line-{1}: '{2}'".format(
-                                    filename, line_num, line
-                                ),
+                                f"Invalid: {filename}|line-{line_num}: '{line}'",
                                 12,
                             )
                             break
         fd.close()
     except IOError:
-        format_print("Failed to open {}".format(filename), 12)
+        format_print(f"ERROR: Failed to open {filename}", 12, err=True)
 
 
 def check_pcre2():
@@ -330,7 +316,7 @@ def check_pcre2():
     # Check if platform is EL7
     if platform.system() == "Linux" and "el7" in platform.release():
         is_el7 = True
-    format_print("Checking for incompatibilities with PCRE2.", 0, True)
+    format_print("Checking for incompatibilities with PCRE2.", newline=True)
     format_print("Known PCRE2 incompatibilities:", 8)
     format_print("1. Hyphens in a regex character sequence must occur at the end.", 16)
     if is_el7:
@@ -346,11 +332,13 @@ def check_pcre2():
             format_print(
                 "Failed to find 'pcre2grep' command. Only checking for known issue #2.",
                 8,
+                err=True,
             )
         else:
             format_print(
                 "Failed to find 'pcre2grep' command. Unable to check Map files for incompatibilties.",
                 8,
+                err=True,
             )
             return
     # Temporary file to test pcre2grep against
@@ -366,7 +354,7 @@ def check_pcre2():
     # Get certificate map file and digest it (plus any @include files)
     map_cert_file = htcondor.param.get("CERTIFICATE_MAPFILE")
     if map_cert_file != None:
-        format_print("Reading {}...".format(map_cert_file), 8)
+        format_print(f"Reading {map_cert_file}...", 8)
         read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
     if has_pcre2_cmd and os.path.exists(PCRE2_TEST_FILE):
         os.remove(PCRE2_TEST_FILE)
@@ -411,9 +399,7 @@ def check_gpu_requirements():
         # If we found jobs with known keywords inform
         if len(ppl_using_gpu) > 0:
             format_print(
-                "There are currently {} user(s) using V9 GPU requirements specification.".format(
-                    len(ppl_using_gpu)
-                ),
+                f"There are currently {len(ppl_using_gpu)} user(s) using V9 GPU requirements specification.",
                 8,
             )
             format_print(
@@ -425,18 +411,18 @@ def check_gpu_requirements():
             format_print(
                 "The following user(s) were found during the query for the old style of requesting GPUs:",
                 8,
-                True,
+                newline=True,
             )
             for user in ppl_using_gpu:
-                format_print("{}".format(user), 16)
+                format_print(user, 16)
     except htcondor.HTCondorLocateError:
-        format_print("Failed to locate local schedd.", 8)
+        format_print("Failed to locate local schedd.", 8, err=True)
 
 
 def main():
     # Make sure script is running as root because we need to run 'condor_token_list'
     if os.geteuid() != 0:
-        format_print("Error: Script not ran under 'sudo'")
+        format_print("Error: Script not ran as root")
         sys.exit(1)
     # Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
@@ -448,7 +434,7 @@ def main():
     # Check for incompatibilities
     for system in ecosystems:
         format_print(
-            "----- Checking V9 to V10 incompatibilities for {} -----".format(system),
+            f"----- Checking V9 to V10 incompatibilities for {system} -----",
             16,
             True,
         )
@@ -463,14 +449,14 @@ def main():
             check_gpu_requirements()
     # Final information to direct people to help
     format_print(
-        "For more information reagrding incompatibilities visit: https://htcondor.readthedocs.io/en/latest/version-history/upgrading-from-9-0-to-10-0-versions.html#upgrading-from-an-9-0-lts-version-to-an-10-0-lts-version-of-htcondor",
-        0,
-        True,
+        """For more information reagrding incompatibilities visit:
+  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html#upgrading-from-an-9-0-lts-version-to-an-10-0-lts-version-of-htcondor""",
+        newline=True,
     )
     format_print(
-        "To ask any questions regarding incompatibilities email: htcondor-users@cs.wisc.edu",
-        0,
-        True,
+        """To ask any questions regarding incompatibilities email:
+  htcondor-users@cs.wisc.edu""",
+        newline=True,
     )
 
 
