@@ -80,6 +80,10 @@ Bugs Fixed:
   jobs after a restart.
   :jira:`1755`
 
+- Fixed a bug that could cause a daemon or tool to crash when
+  attempting SSL or SCITOKENS authentication.
+  :jira:`1756`
+
 - *condor_store_cred* and *condor_credmon_vault* now reuses existing
   Vault tokens when downscoping access tokens.
   :jira:`1527`

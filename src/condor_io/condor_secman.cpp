@@ -1759,7 +1759,9 @@ SecManStartCommand::sendAuthInfo_inner()
 		global_dc_get_cookie (len, randomjunk);
 		
 		m_auth_info.Assign(ATTR_SEC_COOKIE,randomjunk);
-		dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		}
 
 		free(randomjunk);
 		randomjunk = NULL;

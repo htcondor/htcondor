@@ -183,7 +183,6 @@ void
 main_init( int, char ** const)
 {
 	dprintf(D_ALWAYS, "FT-GAHP IO thread\n");
-	dprintf(D_SECURITY | D_FULLDEBUG, "FT-GAHP IO thread\n");
 
 	int stdin_pipe = -1;
 #if defined(WIN32)

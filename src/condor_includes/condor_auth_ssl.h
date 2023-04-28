@@ -222,7 +222,7 @@ class Condor_Auth_SSL final : public Condor_Auth_Base {
                                  BIO *conn_in, BIO *conn_out);
 //    int verify_callback(int ok, X509_STORE_CTX *store);
     long post_connection_check(SSL *ssl, int role);
-	bool server_verify_scitoken();
+	bool server_verify_scitoken(CondorError* errstack);
 
 		/** This stores the shared session key produced as output of
 			the protocol. 
