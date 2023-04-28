@@ -17,7 +17,7 @@ try:
 except ImportError:
     print("Failed to find HTCondor python bindings.")
     print("Please make sure PYTHONPATH is set and the script is being ran with the correct version of python.")
-    exit(1)
+    sys.exit(1)
 
 #Base special posix characters for PCRE2 regex sequences
 PCRE2_POSIX_CHARS = ["[:alnum:]","[:alpha:]","[:ascii:]","[:blank:]",
@@ -334,7 +334,7 @@ def main():
     #Make sure script is running as root because we need to run 'condor_token_list'
     if os.geteuid() != 0:
         format_print("Error: Script not ran under 'sudo'")
-        exit(1)
+        sys.exit(1)
     #Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
     #Check if passed -ce flag to indicate this host is a CE
@@ -349,7 +349,6 @@ def main():
         if system == "HTCondor-CE":
             os.environ["CONDOR_CONFIG"] = "/etc/condor-ce/condor_config"
             htcondor.reload_config()
-            pass
         check_idtokens(system == "HTCondor-CE")
         check_pcre2()
         #Only worry about GPU incompatibility if not CE
