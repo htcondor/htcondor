@@ -1301,7 +1301,8 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 int Sock::do_connect(
 	char const	*host,
 	int		port,
-	bool	non_blocking_flag
+	bool	non_blocking_flag,
+	CondorError * errorStack
 	)
 {
 	if (!host || port < 0) return FALSE;
@@ -1333,7 +1334,7 @@ int Sock::do_connect(
 	// to a shared port (SharedPortServer) that needs further information
 	// to route us to the final destination.
 
-	int retval=special_connect(host,port,non_blocking_flag);
+	int retval=special_connect(host,port,non_blocking_flag,errorStack);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}

@@ -286,22 +286,22 @@ ReliSock::accept()
 	return c_rs;
 }
 
-int 
-ReliSock::connect( char	const *host, int port, bool non_blocking_flag )
+int
+ReliSock::connect( char	const *host, int port, bool non_blocking_flag, CondorError * errorStack )
 {
 	if (hostAddr != NULL)
 	{
 		free(hostAddr);
 		hostAddr = NULL;
 	}
- 
-	init();     
+
+	init();
 	is_client = 1;
 	if( ! host ) {
 		return FALSE;
 	}
 	hostAddr = strdup( host );
-	return do_connect( host, port, non_blocking_flag );
+	return do_connect( host, port, non_blocking_flag, errorStack );
 }
 
 int 
