@@ -492,18 +492,22 @@ VanillaProc::StartJob()
                bool acceptable_chroot = false;
                std::string requested_chroot;
                while ( (next_chroot=chroot_list.next()) ) {
-                       MyStringWithTokener chroot_spec(next_chroot);
-                       chroot_spec.Tokenize();
-                       const char * chroot_name = chroot_spec.GetNextToken("=", false);
-                       if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
+                       StringTokenIterator chroot_spec(next_chroot, "=");
+                       const char* tok;
+                       tok = chroot_spec.next();
+                       if (tok == NULL) {
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               continue;
                        }
-                       const char * next_dir = chroot_spec.GetNextToken("=", false);
-                       if (chroot_name == NULL) {
-                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", chroot_spec.c_str());
+                       std::string chroot_name = tok;
+                       tok = chroot_spec.next();
+                       if (tok == NULL) {
+                               dprintf(D_ALWAYS, "Invalid named chroot: %s\n", next_chroot);
+                               continue;
                        }
-                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir, chroot_spec.c_str());
-                       if (IsDirectory(next_dir) && chroot_name && (strcmp(requested_chroot_name.c_str(), chroot_name) == 0)) {
+                       std::string next_dir = tok;
+                       dprintf(D_FULLDEBUG, "Considering directory %s for chroot %s.\n", next_dir.c_str(), next_chroot);
+                       if (IsDirectory(next_dir.c_str()) && requested_chroot_name == chroot_name) {
                                acceptable_chroot = true;
                                requested_chroot = next_dir;
                        }
