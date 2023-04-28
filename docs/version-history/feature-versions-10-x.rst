@@ -61,6 +61,11 @@ New Features:
   jobs for recording in the various produced job ads and userlogs.
   :jira:`1717`
 
+- Added new submit command ``ulog_execute_attrs`` for a jobs submit file. This
+  command takes a comma-separated list of machine ClassAd attributes to be
+  written to the user logs execute event.
+  :jira:`1759`
+
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in

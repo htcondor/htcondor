@@ -1080,6 +1080,12 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 		ClassAd * machineAd = Starter->jic->machClassAd();
 		if( machineAd ) {
 			CopyMachineResources(*ad, *machineAd, true);
+			//Check for requested machine attrs to return for execution event
+			if (job_ad) {
+				std::string requestAttrs;
+				job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs);
+				CopySelectAttrs(*ad, *machineAd, requestAttrs);
+			}
 		}
 	}
 

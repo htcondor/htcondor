@@ -84,6 +84,7 @@
 #define SUBMIT_KEY_ExitRequirements "exit_requirements"
 #define SUBMIT_KEY_UserLogFile "log"
 #define SUBMIT_KEY_UserLogUseXML "log_xml"
+#define SUBMIT_KEY_ULogExecuteEventAttrs "ulog_execute_attrs"
 #define SUBMIT_KEY_DagmanLogFile "dagman_log"
 #define SUBMIT_KEY_CoreSize "core_size"
 #define SUBMIT_KEY_NiceUser "nice_user"

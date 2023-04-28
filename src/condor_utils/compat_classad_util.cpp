@@ -794,6 +794,28 @@ void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_r
 	}
 }
 
+// Copy all matching attributes in attrs list along with any referenced attrs
+// from srcAd to destAd.
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, std::string attrs)
+{
+	StringTokenIterator listAttrs(attrs);
+	for (auto attr : listAttrs) {
+		ExprTree *tree = srcAd.Lookup(attr);
+		if (tree) {
+			tree = SkipExprEnvelope(tree);
+			destAd.Insert(attr, tree->Copy());
+			classad::References refs;
+			srcAd.GetInternalReferences(tree, refs, true);
+			for (auto it : refs) {
+				ExprTree *expr = srcAd.Lookup(it);
+				if (expr) {
+					expr = SkipExprEnvelope(expr);
+					destAd.Insert(it, expr->Copy());
+				}
+			}
+		}
+	}
+}
 
 int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
