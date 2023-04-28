@@ -35,8 +35,8 @@ public:
 	const char* path() {return (const char*)m_hook_path;};
 	HookType type() const {return m_hook_type;};
 	bool wantsOutput() const {return m_wants_output;};
-	MyString* getStdOut();
-	MyString* getStdErr();
+	std::string* getStdOut();
+	std::string* getStdErr();
 
 		/// Records the pid of this client once spawned.
 	void setPid(int pid) {m_pid = pid;};
@@ -50,12 +50,12 @@ public:
 	virtual void hookExited(int exit_status);
 
 protected:
-	void logHookErr(int lvl, const std::string &prefix, MyString *err);
+	void logHookErr(int lvl, const std::string &prefix, std::string *err);
 	char* m_hook_path;
 	HookType m_hook_type;
 	int m_pid;
-	MyString m_std_out;
-	MyString m_std_err;
+	std::string m_std_out;
+	std::string m_std_err;
 	int m_exit_status;
 	bool m_has_exited;
 	bool m_wants_output;

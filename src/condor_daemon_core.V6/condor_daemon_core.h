@@ -88,7 +88,7 @@ static const int MAX_SOCKS_INHERITED = 4;
    Magic fd to include in the 'std' array argument to Create_Process()
    which means you want a pipe automatically created and handled.
    If you do this to stdin, you get a writeable pipe end (exposed as a FILE*
-   Write pipes created like this are stored as MyString objects, which
+   Write pipes created like this are stored as string objects, which
    you can access via the Get_Pipe_Data() call.
 */
 static const int DC_STD_FD_PIPE = -10;
@@ -1077,9 +1077,9 @@ class DaemonCore : public Service
 	   @param std_fd
 	     The fd to identify the pipe to read: 1 for stdout, 2 for stderr.
 	   @return
-	     Pointer to a MyString object containing all the data written so far.
+	     Pointer to a string object containing all the data written so far.
 	*/
-	MyString* Read_Std_Pipe(int pid, int std_fd);
+	std::string* Read_Std_Pipe(int pid, int std_fd);
 
 	/**
 	   Write data to the given DC process's stdin pipe.
@@ -1330,7 +1330,7 @@ class DaemonCore : public Service
                pipe and register everything for you automatically. If
                you use this for stdin, you can use Write_Std_Pipe() to
                write to the stdin of the child. If you use this for
-               std(out|err) then you can get a pointer to a MyString
+               std(out|err) then you can get a pointer to a string
                with all the data written by the child using Read_Std_Pipe().
         @param nice_inc The value to be passed to nice() in the
                child.  0 < nice < 20, and greater numbers mean
@@ -2092,7 +2092,7 @@ class DaemonCore : public Service
         int parent_is_local;
         int reaper_id;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
-        MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
+        std::string* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
 
 		// these three data members are set/used by the DaemonKeepAlive class

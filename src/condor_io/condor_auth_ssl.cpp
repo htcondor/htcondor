@@ -2334,7 +2334,7 @@ Condor_Auth_SSL::PluginReaper(int exit_pid, int exit_status)
 	} else if (!it->second->m_pluginState) {
 		dprintf(D_SECURITY, "SciTokens auth object has no plugin state, ignoring plugin\n");
 	} else {
-		MyString *output;
+		std::string *output;
 		std::string result;
 		output = daemonCore->Read_Std_Pipe(exit_pid, 1);
 		if (output) {
