@@ -365,10 +365,10 @@ MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
     curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
 
     if(bytes_downloaded > 0) {
-        _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+        _this_file_stats->TransferTotalBytes += (int64_t) bytes_downloaded;
     }
     else {
-        _this_file_stats->TransferTotalBytes += ( long ) bytes_uploaded;
+        _this_file_stats->TransferTotalBytes += (int64_t) bytes_uploaded;
     }
 
     _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
