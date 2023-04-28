@@ -455,9 +455,10 @@ int Condor_Auth_SSL::authenticate(const char * /* remoteHost */, CondorError* er
         } else {
             (*SSL_set_bio_ptr)( m_auth_state->m_ssl, m_auth_state->m_conn_in,
 				m_auth_state->m_conn_out );
+            if (g_last_verify_error_index >= 0) {
+                (*SSL_set_ex_data_ptr)( m_auth_state->m_ssl, g_last_verify_error_index, &m_last_verify_error);
+            }
         }
-		if (g_last_verify_error_index >= 0)
-			(*SSL_set_ex_data_ptr)( m_auth_state->m_ssl, g_last_verify_error_index, &m_last_verify_error);
         m_auth_state->m_server_status = client_share_status( m_auth_state->m_client_status );
         if( m_auth_state->m_server_status != AUTH_SSL_A_OK ||
 		m_auth_state->m_client_status != AUTH_SSL_A_OK ) {
