@@ -51,8 +51,8 @@ for file in $rpmdir/*.rpm; do
     fi
 done
 
-if [[ $dist == amzn2 ]]; then
-    arch_dist="${arch}_AmazonLinux2"
+if [[ $dist == amzn2023 ]]; then
+    arch_dist="${arch}_AmazonLinux2023"
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then

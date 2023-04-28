@@ -675,7 +675,12 @@ export CXX=$(which c++)
 %endif
 
 # build man files
+%if 0%{?amzn}
+# if this environment variable is set, sphinx-build cannot import markupsafe
+env -u RPM_BUILD_ROOT make -C docs man
+%else
 make -C docs man
+%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
