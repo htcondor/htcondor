@@ -258,53 +258,52 @@ def read_map_file(filename, is_el7, has_cmd):
     """Digest a map file and attempt to digest regex sequences in file"""
     # Try to read map file
     try:
-        fd = open(filename, "r")
-        line_num = 0
-        for line in fd:
-            line_num += 1
-            line = line.strip()
-            # Skip empty and comment lines
-            if line == "" or line[0] == "#":
-                continue
-            # Digest @include line to other map files
-            elif line[0:8] == "@include":
-                path = line.split()[1].strip()
-                # If include file then read it
-                if os.path.isfile(path):
-                    read_map_file(path, is_el7, has_cmd)
-                # If directory then read all files in directory
-                elif os.path.isdir(path):
-                    for map_file in os.listdir(path):
-                        full_path = os.path.join(path, map_file)
-                        read_map_file(full_path, is_el7, has_cmd)
-            elif has_cmd:
-                # If we found 'pcre2grep' cmd then find regex sequence and try to use it
-                start = line.find(" ") + 1
-                length = line.rfind(" ")
-                sequence = f'"{line[start:length]}"'
-                p = subprocess.run(
-                    ["pcre2grep", sequence, PCRE2_TEST_FILE], stderr=subprocess.PIPE
-                )
-                error = p.stderr.rstrip().decode()
-                if len(error) > 0:
-                    format_print(
-                        f"Invalid: {filename}|line-{line_num}: '{line}'",
-                        12,
+        with open(filename, "r") as fd:
+            line_num = 0
+            for line in fd:
+                line_num += 1
+                line = line.strip()
+                # Skip empty and comment lines
+                if line == "" or line[0] == "#":
+                    continue
+                # Digest @include line to other map files
+                elif line[0:8] == "@include":
+                    path = line.split()[1].strip()
+                    # If include file then read it
+                    if os.path.isfile(path):
+                        read_map_file(path, is_el7, has_cmd)
+                    # If directory then read all files in directory
+                    elif os.path.isdir(path):
+                        for map_file in os.listdir(path):
+                            full_path = os.path.join(path, map_file)
+                            read_map_file(full_path, is_el7, has_cmd)
+                elif has_cmd:
+                    # If we found 'pcre2grep' cmd then find regex sequence and try to use it
+                    start = line.find(" ") + 1
+                    length = line.rfind(" ")
+                    sequence = f'"{line[start:length]}"'
+                    p = subprocess.run(
+                        ["pcre2grep", sequence, PCRE2_TEST_FILE], stderr=subprocess.PIPE
                     )
-                    format_print(f"Error: {error}", 14)
-            elif is_el7:
-                # No 'pcre2grep' cmd found so if EL7 & manually check for known incompatibility
-                for char in PCRE2_POSIX_CHARS:
-                    if char in line:
-                        pos = line.find(char)
-                        if line[pos + len(char)] == "-":
-                            invalid = True
-                            format_print(
-                                f"Invalid: {filename}|line-{line_num}: '{line}'",
-                                12,
-                            )
-                            break
-        fd.close()
+                    error = p.stderr.rstrip().decode()
+                    if len(error) > 0:
+                        format_print(
+                            f"Invalid: {filename}|line-{line_num}: '{line}'",
+                            12,
+                        )
+                        format_print(f"Error: {error}", 14)
+                elif is_el7:
+                    # No 'pcre2grep' cmd found so if EL7 & manually check for known incompatibility
+                    for char in PCRE2_POSIX_CHARS:
+                        if char in line:
+                            pos = line.find(char)
+                            if line[pos + len(char)] == "-":
+                                invalid = True
+                                format_print(
+                                    f"Invalid: {filename}|line-{line_num}: '{line}'",
+                                    12,
+                                )
+                                break
     except IOError:
         format_print(f"ERROR: Failed to open {filename}", 12, err=True)
 
