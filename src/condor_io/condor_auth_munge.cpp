@@ -28,6 +28,7 @@
 #include "CondorError.h"
 #include "condor_mkstemp.h"
 #include "ipv6_hostname.h"
+#include "condor_config.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
