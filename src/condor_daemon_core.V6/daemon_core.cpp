@@ -2453,7 +2453,7 @@ DaemonCore::Close_FD(int fd)
 	return retval;
 }
 
-MyString*
+std::string*
 DaemonCore::Read_Std_Pipe(int pid, int std_fd) {
 	PidEntry *pidinfo = NULL;
 	if ((pidTable->lookup(pid, pidinfo) < 0)) {
@@ -2483,7 +2483,7 @@ DaemonCore::Write_Stdin_Pipe(int pid, const void* buffer, int /* len */ ) {
 			// TODO-pipe: set custom errno?
 		return -1;
 	}
-	pidinfo->pipe_buf[0] = new MyString;
+	pidinfo->pipe_buf[0] = new std::string;
 	*pidinfo->pipe_buf[0] = (const char*)buffer;
 	daemonCore->Register_Pipe(pidinfo->std_pipes[0], "DC stdin pipe", static_cast<PipeHandlercpp>(&DaemonCore::PidEntry::pipeFullWrite), "Guarantee all data written to pipe", pidinfo, HANDLE_WRITE);
 	return 0;
@@ -6583,7 +6583,7 @@ void CreateProcessForkit::exec() {
 #endif
 
 	if( IsDebugLevel( D_DAEMONCORE ) ) {
-			// This MyString is scoped to free itself before the call to
+			// This string is scoped to free itself before the call to
 			// exec().  Otherwise, it would be a leak.
 		std::string msg = "Printing fds to inherit: ";
 		for ( int a=0 ; a<m_numInheritFds ; a++ ) {
@@ -7553,7 +7553,7 @@ int DaemonCore::Create_Process(
 	// if GetBinaryType() failed,
 	// try an alternate exec pathname (aka perhaps append .exe etc) and 
 	// try again. if there is an alternate exec pathname, stash the name
-	// in a C++ MyString buffer (so it is deallocated automagically) and
+	// in a C++ string buffer (so it is deallocated automagically) and
 	// change executable to point into that buffer.
 	if ( !gbt_result ) {
 		char *alt_name = alternate_exec_pathname( executable );
@@ -11046,7 +11046,7 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
     char buf[DC_PIPE_BUF_SIZE + 1];
     int bytes, max_read_bytes, max_buffer;
 	int pipe_index = 0;
-	MyString* cur_buf = NULL;
+	std::string* cur_buf = NULL;
 	const char* pipe_desc=NULL;
 	if (std_pipes[1] == pipe_fd) {
 		pipe_index = 1;
@@ -11062,29 +11062,29 @@ DaemonCore::PidEntry::pipeHandler(int pipe_fd) {
 	}
 
 	if (pipe_buf[pipe_index] == NULL) {
-			// Make a MyString buffer to hold the data.
-		pipe_buf[pipe_index] = new MyString;
+			// Make a string buffer to hold the data.
+		pipe_buf[pipe_index] = new std::string;
 	}
 	cur_buf = pipe_buf[pipe_index];
 
 	// Read until we consume all the data (or loop too many times...)
 	max_buffer = daemonCore->Get_Max_Pipe_Buffer();
 
-	max_read_bytes = max_buffer - cur_buf->length();
+	max_read_bytes = max_buffer - (int)cur_buf->length();
 	if (max_read_bytes > DC_PIPE_BUF_SIZE) {
 		max_read_bytes = DC_PIPE_BUF_SIZE;
 	}
 
 	bytes = daemonCore->Read_Pipe(pipe_fd, buf, max_read_bytes);
 	if (bytes > 0) {
-		// Actually read some data, so append it to our MyString.
+		// Actually read some data, so append it to our string.
 		// First, null-terminate the buffer so that formatstr_cat()
 		// doesn't go berserk. This is always safe since buf was
 		// created on the stack with 1 extra byte, just in case.
 		buf[bytes] = '\0';
 		*cur_buf += buf;
 
-		if (cur_buf->length() >= max_buffer) {
+		if ((int)cur_buf->length() >= max_buffer) {
 			dprintf(D_DAEMONCORE, "DC %s pipe closed for "
 					"pid %d because max bytes (%d)"
 					"read\n", pipe_desc, (int)pid,

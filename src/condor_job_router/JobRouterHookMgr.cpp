@@ -594,9 +594,8 @@ TranslateClient::hookExited(int exit_status)
 		ClassAd job_ad;
 		const char* hook_line = NULL;
 
-		MyStringTokener tok;
-		tok.Tokenize(m_std_out.c_str());
-		while ((hook_line = tok.GetNextToken("\n", true)))
+		StringTokenIterator tok(m_std_out, "\n", true);
+		while ((hook_line = tok.next()))
 		{
 			if (!job_ad.Insert(hook_line))
 			{
@@ -682,9 +681,8 @@ StatusClient::hookExited(int exit_status)
 			ATTR_TARGET_TYPE,
 			NULL };
 
-		MyStringTokener tok;
-		tok.Tokenize(m_std_out.c_str());
-		while ((hook_line = tok.GetNextToken("\n", true)))
+		StringTokenIterator tok(m_std_out, "\n", true);
+		while ((hook_line = tok.next()))
 		{
 			if (!job_ad.Insert(hook_line))
 			{
@@ -770,9 +768,8 @@ ExitClient::hookExited(int exit_status) {
 			classad::ClassAdCollection *ad_collection = job_router->GetScheduler()->GetClassAds();
 			classad::ClassAd *orig_ad = ad_collection->GetClassAd(m_routed_job->src_key);
 
-			MyStringTokener tok;
-			tok.Tokenize(m_std_out.c_str());
-			while ((hook_line = tok.GetNextToken("\n", true)))
+			StringTokenIterator tok(m_std_out, "\n", true);
+			while ((hook_line = tok.next()))
 			{
 				if (!job_ad.Insert(hook_line))
 				{
