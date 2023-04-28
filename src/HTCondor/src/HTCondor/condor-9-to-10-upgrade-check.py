@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 # HTCondor V9 to V10 check for incompatibilites script
 #   This is intended to check a current system before upgrade
 #   for known 'gotcha' breaking changes:
@@ -13,13 +13,12 @@ import platform
 import subprocess
 
 try:
-    import classad
     import htcondor
 except ImportError:
-    print("Failed to find HTCondor python bindings.")
-    print(
-        "Please make sure PYTHONPATH is set and the script is being ran with the correct version of python."
-    )
+    msg = """Failed to find HTCondor Python bindings.
+Please check your current Python environment or install the bindings if needed:
+https://htcondor.readthedocs.io/en/latest/apis/python-bindings/install.html"""
+    print(msg, file=sys.stderr)
     sys.exit(1)
 
 # Base special posix characters for PCRE2 regex sequences
