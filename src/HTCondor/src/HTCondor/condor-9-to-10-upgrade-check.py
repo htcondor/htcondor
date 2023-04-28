@@ -12,6 +12,7 @@ import sys
 import platform
 import subprocess
 import shlex
+from tempfile import NamedTemporaryFile
 from pathlib import Path
 
 try:
@@ -40,7 +41,6 @@ PCRE2_POSIX_CHARS = [
     "[:word:]",
     "[:xdigit:]",
 ]
-PCRE2_TEST_FILE = "HTCondor-PCRE2-Test.txt"
 
 
 def format_print(msg, offset=0, newline=False, err=False):
@@ -289,9 +289,13 @@ def read_map_file(filename, is_el7, has_cmd):
                             err=True,
                         )
                         continue
-                    p = subprocess.run(
-                        ["pcre2grep", sequence, PCRE2_TEST_FILE], stderr=subprocess.PIPE
-                    )
+                    with NamedTemporaryFile("w") as tf:
+                        tf.write("HTCondor is cool")
+                        tf.flush()
+                        os.fsync(tf.fileno())
+                        p = subprocess.run(
+                            ["pcre2grep", sequence, tf.name], stderr=subprocess.PIPE
+                        )
                     error = p.stderr.rstrip().decode()
                     if len(error) > 0:
                         format_print(
@@ -347,10 +351,6 @@ def check_pcre2():
                 err=True,
             )
             return
-    # Temporary file to test pcre2grep against
-    if has_pcre2_cmd:
-        with open(PCRE2_TEST_FILE, "w") as f:
-            f.write("HTCondor is cool")
     # Get regular user map files and digest them
     format_print("Reading CLASSAD_USER_MAPFILE_* files...", 8)
     for key in htcondor.param.keys():
@@ -362,8 +362,6 @@ def check_pcre2():
     if map_cert_file != None:
         format_print(f"Reading {map_cert_file}...", 8)
         read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
-    if has_pcre2_cmd and os.path.exists(PCRE2_TEST_FILE):
-        os.remove(PCRE2_TEST_FILE)
 
 
 def process_ad(ad):
