@@ -2210,8 +2210,10 @@ case CONDOR_getdir:
 			ASSERT( result );
 			result = ( putClassAd(syscall_sock, ad) );
 			ASSERT( result );
-			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
-			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+			if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
+				dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+			}
 		}
 
 		int last_command = 0;
