@@ -610,10 +610,10 @@ void FilesystemRemap::RemapProc() {
   (11) super options:  per super block options
  */
 
-#define ADVANCE_TOKEN(token, sti) { \
+#define ADVANCE_TOKEN(token, sti, full_str) {	\
 	if ((token = sti.next()) == NULL) { \
 		fclose(fd); \
-		dprintf(D_ALWAYS, "Invalid line in mountinfo file: %s\n", str.c_str()); \
+		dprintf(D_ALWAYS, "Invalid line in mountinfo file: %s\n", full_str.c_str()); \
 		return; \
 	} \
 }
@@ -640,22 +640,22 @@ void FilesystemRemap::ParseMountinfo() {
 
 	while (readLine(str2, fd, false)) {
 		StringTokenIterator sti(str2);
-		ADVANCE_TOKEN(token, sti) // mount ID
-		ADVANCE_TOKEN(token, sti) // parent ID
-		ADVANCE_TOKEN(token, sti) // major:minor
-		ADVANCE_TOKEN(token, sti) // root
-		ADVANCE_TOKEN(token, sti) // mount point
+		ADVANCE_TOKEN(token, sti, str2); // mount ID
+		ADVANCE_TOKEN(token, sti, str2); // parent ID
+		ADVANCE_TOKEN(token, sti, str2); // major:minor
+		ADVANCE_TOKEN(token, sti, str2); // root
+		ADVANCE_TOKEN(token, sti, str2); // mount point
 		std::string mp(token);
-		ADVANCE_TOKEN(token, sti) // mount options
-		ADVANCE_TOKEN(token, sti) // optional fields
+		ADVANCE_TOKEN(token, sti, str2); // mount options
+		ADVANCE_TOKEN(token, sti, str2); // optional fields
 		is_shared = false;
 		while (strcmp(token, "-") != 0) {
 			is_shared = is_shared || (strncmp(token, SHARED_STR, strlen(SHARED_STR)) == 0);
-			ADVANCE_TOKEN(token, sti)
+			ADVANCE_TOKEN(token, sti, str2);
 		}
-		ADVANCE_TOKEN(token, sti) // filesystem type
+		ADVANCE_TOKEN(token, sti, str2); // filesystem type
 		if ((!is_shared) && (strcmp(token, "autofs") == 0)) {
-			ADVANCE_TOKEN(token, sti)
+			ADVANCE_TOKEN(token, sti, str2);
 			m_mounts_autofs.push_back(pair_strings(token, mp));
 		}
 		// This seems a bit too chatty - disabling for now.
