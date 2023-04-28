@@ -11,6 +11,8 @@ import os
 import sys
 import platform
 import subprocess
+import shlex
+from pathlib import Path
 
 try:
     import htcondor
@@ -264,24 +266,29 @@ def read_map_file(filename, is_el7, has_cmd):
                 line_num += 1
                 line = line.strip()
                 # Skip empty and comment lines
-                if line == "" or line[0] == "#":
+                if (not line) or line.startswith("#"):
                     continue
                 # Digest @include line to other map files
                 elif line[0:8] == "@include":
-                    path = line.split()[1].strip()
+                    include_path = Path(shlex.split(line)[1])
                     # If include file then read it
-                    if os.path.isfile(path):
-                        read_map_file(path, is_el7, has_cmd)
+                    if include_path.is_file():
+                        read_map_file(str(include_path), is_el7, has_cmd)
                     # If directory then read all files in directory
-                    elif os.path.isdir(path):
-                        for map_file in os.listdir(path):
-                            full_path = os.path.join(path, map_file)
-                            read_map_file(full_path, is_el7, has_cmd)
+                    elif include_path.is_dir():
+                        for sub_path in include_path.iterdir():
+                            if sub_path.is_file():
+                                read_map_file(str(sub_path), is_el7, has_cmd)
                 elif has_cmd:
                     # If we found 'pcre2grep' cmd then find regex sequence and try to use it
-                    start = line.find(" ") + 1
-                    length = line.rfind(" ")
-                    sequence = f'"{line[start:length]}"'
+                    try:
+                        sequence = shlex.split(line)[1]
+                    except IndexError:
+                        format_print(
+                            f"WARNING: Did not find a regex on line {line_num} of {filename}:\n{line}",
+                            err=True,
+                        )
+                        continue
                     p = subprocess.run(
                         ["pcre2grep", sequence, PCRE2_TEST_FILE], stderr=subprocess.PIPE
                     )
