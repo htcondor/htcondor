@@ -39,7 +39,6 @@
 #include "condor_debug.h"
 #include "string_list.h"
 #include "net_string_list.h"
-#include "MyString.h"
 #include "condor_perms.h"
 #include "condor_sockaddr.h"
 

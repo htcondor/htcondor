@@ -34,7 +34,6 @@
 #include "CryptKey.h"
 #include "store_cred.h"
 #include "my_username.h"
-#include "MyString.h"
 #include "condor_config.h"
 #include "classad/source.h"
 #include "condor_attributes.h"

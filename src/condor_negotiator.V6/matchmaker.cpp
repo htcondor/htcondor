@@ -37,7 +37,6 @@
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 #include "NegotiationUtils.h"
-#include "MyString.h"
 #include "condor_daemon_core.h"
 #include "selector.h"
 #include "consumption_policy.h"

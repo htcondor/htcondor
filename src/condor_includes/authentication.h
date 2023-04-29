@@ -147,8 +147,6 @@ class Authentication {
     //------------------------------------------
     
 	static void split_canonical_name(const std::string& can_name, std::string& user, std::string& domain );
-		// This version of the function exists to avoid use of MyString
-		// in ReliSock, because that gets linked into std univ jobs.
 		// This function is stubbed out in cedar_no_ckpt.C.
 		// The user and domain variables should be freed by the caller.
 	static void split_canonical_name(char const *can_name,char **user,char **domain);
