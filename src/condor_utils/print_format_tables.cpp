@@ -777,6 +777,9 @@ bool render_activity_time (long long & atime, ClassAd *al, Formatter &)
 	long long now = 0;
 	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now) || al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
 		atime = now - atime; // format_time
+		if (atime < 0) {
+			atime = 0;
+		}
 		return true;
 	}
 	return false; // print "   [Unknown]"
