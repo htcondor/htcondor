@@ -78,6 +78,11 @@ Bugs Fixed:
   Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
   :jira:`1672`
 
+- Fixed a bug where *condor_history* would fail to find history files
+  for a remote query if the various history configuration macros were
+  specified with subsystem prefixes i.e. ``SCHEDD.HISTORY = /path``
+  :jira:`1739`
+
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
   :jira:`1655`
