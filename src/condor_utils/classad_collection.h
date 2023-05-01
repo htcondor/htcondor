@@ -24,7 +24,6 @@
 
 #include "condor_classad.h"
 #include "HashTable.h"
-#include "MyString.h"
 #include "classad_log.h"
 
 // these two definitions allow us to dereference a template type

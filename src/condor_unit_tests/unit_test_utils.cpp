@@ -218,8 +218,8 @@ bool strings_similar(const char* str1, const char* str2, const char* delims)
 	return true;
 }
 
-MyString* convert_string_array(char** str, int size, const char* delim){
-	MyString* toReturn = new MyString;
+std::string* convert_string_array(char** str, int size, const char* delim){
+	std::string* toReturn = new std::string;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
 		*toReturn+=str[i];
@@ -228,8 +228,8 @@ MyString* convert_string_array(char** str, int size, const char* delim){
 	return toReturn;
 }
 
-MyString* convert_string_array(const char** str, int size, const char* delim){
-	MyString* toReturn = new MyString;
+std::string* convert_string_array(const char** str, int size, const char* delim){
+	std::string* toReturn = new std::string;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
 		*toReturn+=str[i];
