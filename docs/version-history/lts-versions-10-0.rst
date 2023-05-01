@@ -85,6 +85,10 @@ Bugs Fixed:
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
+- When writing a remove event in JSON, the ``ToE.When`` field is now seconds
+  since the (Unix) epoch, like all other events.
+  :jira:`1763`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
