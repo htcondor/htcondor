@@ -2924,7 +2924,7 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
-    :index:`submit_event_notes<single: ulog_execute_attrs; submit commands>`
+    :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
  ulog_execute_attrs = <attribute-list>
     A comma-seperated list of machine ClassAd attribute names. The named
     attributes and their values are written as part of the execution event

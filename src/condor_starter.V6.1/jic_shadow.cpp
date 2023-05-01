@@ -1083,8 +1083,9 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 			//Check for requested machine attrs to return for execution event
 			if (job_ad) {
 				std::string requestAttrs;
-				job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs);
-				CopySelectAttrs(*ad, *machineAd, requestAttrs);
+				if (job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs)) {
+					CopySelectAttrs(*ad, *machineAd, requestAttrs, false);
+				}
 			}
 		}
 	}

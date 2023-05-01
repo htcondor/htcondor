@@ -795,23 +795,29 @@ void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_r
 }
 
 // Copy all matching attributes in attrs list along with any referenced attrs
-// from srcAd to destAd.
-void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, std::string attrs)
+// from srcAd to destAd. If overwrite is True then an attrbute that already
+// exists in the destAd can be overwritten by data from the srcAd
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, const bool overwrite)
 {
+	classad::References refs;
 	StringTokenIterator listAttrs(attrs);
+	// Create set of attribute references to copy
 	for (auto attr : listAttrs) {
 		ExprTree *tree = srcAd.Lookup(attr);
 		if (tree) {
-			tree = SkipExprEnvelope(tree);
-			destAd.Insert(attr, tree->Copy());
-			classad::References refs;
+			refs.insert(attr);
 			srcAd.GetInternalReferences(tree, refs, true);
-			for (auto it : refs) {
-				ExprTree *expr = srcAd.Lookup(it);
-				if (expr) {
-					expr = SkipExprEnvelope(expr);
-					destAd.Insert(it, expr->Copy());
-				}
+		}
+	}
+	// Copy found references
+	for (auto it : refs) {
+		ExprTree *expr = srcAd.Lookup(it);
+		if (expr) {
+			// Only copy if given overwrite or if not found in destAd
+			ExprTree *destTree = destAd.Lookup(it);
+			if (overwrite || !destTree) {
+				expr = SkipExprEnvelope(expr);
+				destAd.Insert(it, expr->Copy());
 			}
 		}
 	}
