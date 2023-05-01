@@ -989,11 +989,24 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		}
 	}
 
-		// Read in the global file
-	if( config_source ) {
-		process_config_source( config_source, 0, "global config source", NULL, !continue_if_no_config );
-		global_config_source = config_source;
-		config_source = NULL;
+	bool only_env = YourStringNoCase("ONLY_ENV") == config_source;
+	bool null_config = YourString("/dev/null") == config_source || !config_source || !config_source[0];
+
+	if ( ! only_env && ! null_config) {
+		// inject the directory of the root config file into the config
+		// if no directory was supplied, "." will be used
+		// if no root config, "" will be used
+		auto_free_ptr config_root(condor_dirname(config_source));
+		if (config_root && ! null_config) {
+			insert_macro("CONFIG_ROOT", config_root.ptr(), ConfigMacroSet, DetectedMacro, ctx);
+		}
+
+			// Read in the global file
+		if( config_source ) {
+			process_config_source( config_source, 0, "global config source", NULL, !continue_if_no_config );
+			global_config_source = config_source;
+			config_source = NULL;
+		}
 	}
 
 		// Insert entries for "hostname" and "full_hostname".  We do
@@ -1018,13 +1031,13 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
 		// all the files in the order they are listed.
 	char *dirlist = param("LOCAL_CONFIG_DIR");
-	if(dirlist) {
+	if(dirlist && ! only_env) {
 		process_directory(dirlist, host);
 	}
 	process_locals( "LOCAL_CONFIG_FILE", host );
 
 	char* newdirlist = param("LOCAL_CONFIG_DIR");
-	if(newdirlist) {
+	if(newdirlist && ! only_env) {
 		if (dirlist) {
 			if(strcmp(dirlist, newdirlist) ) {
 				process_directory(newdirlist, host);
@@ -1042,7 +1055,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	user_config_source.clear();
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
-	if (!user_config_name.empty()) {
+	if (!user_config_name.empty() && ! only_env) {
 		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
@@ -1079,18 +1092,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// isolate Condor macro_name by skipping magic prefix
 		char *macro_name = varname + prefix_len;
 
-	#if 0 // TJ disabled on 8/18/2022 in preparation for the 10.0 series
-		// special macro START_owner needs to be expanded (for the
-		// glide-in code) [which should probably be fixed to use
-		// the general mechanism and set START itself --pfc]
-		if( !strcmp( macro_name, "START_owner" ) ) {
-			MyString ownerstr;
-			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
-			insert_macro("START", ownerstr.c_str(), ConfigMacroSet, EnvMacro, ctx);
-		}
-		// ignore "_CONDOR_" without any macro name attached
-		else
-	#endif
 		if( macro_name[0] != '\0' ) {
 			insert_macro(macro_name, varvalue, ConfigMacroSet, EnvMacro, ctx);
 		}

@@ -26,7 +26,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added ``CONFIG_ROOT`` configuration variable that is set to the directory
+  of the main config file before the configuration files are read.
+  :jira:`1733`
 
 Bugs Fixed:
 
