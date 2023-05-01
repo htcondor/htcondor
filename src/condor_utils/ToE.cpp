@@ -165,10 +165,8 @@ encode( const Tag & tag, classad::ClassAd * ca ) {
     ca->InsertAttr( "How", tag.how );
     ca->InsertAttr( "HowCode", (int)tag.howCode );
 
-    std::string str_when;
-    ca->EvaluateAttrString( "When", str_when );
     struct tm eventTime;
-    iso8601_to_time( str_when.c_str(), & eventTime, NULL, NULL );
+    iso8601_to_time( tag.when.c_str(), & eventTime, NULL, NULL );
     ca->InsertAttr( "When", timegm(&eventTime) );
 
     if( tag.howCode == ToE::OfItsOwnAccord ) {
