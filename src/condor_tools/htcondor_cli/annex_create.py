@@ -631,13 +631,14 @@ def annex_inner_func(
     # schedd from the schedd itself (?!), we might as well ask the annex collector
     # ourselves and verify that the pilot will get an answer.
     #
-    c = htcondor.Collector(collector)
-    r = c.query(ad_type=htcondor.AdTypes.Schedd)
-    if test is None and len(r) != 1:
-        raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
-    schedd_name = r[0].get('name')
-    if schedd_name is None:
-        raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
+    if test is None:
+        c = htcondor.Collector(collector)
+        r = c.query(ad_type=htcondor.AdTypes.Schedd)
+        if len(r) != 1:
+            raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        schedd_name = r[0].get('name')
+        if schedd_name is None:
+            raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
 
 
     ##
