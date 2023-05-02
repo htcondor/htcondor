@@ -373,9 +373,6 @@ STARTD_DIRECT_ATTACH_SCHEDD_POOL = ${COLLECTOR}
 STARTD_DIRECT_ATTACH_INTERVAL = 5
 UPDATE_INTERVAL = 5
 
-# FIXME: debuggery
-STARTD_DEBUG = D_FULLDEBUG
-
 #
 # Subsequent configuration is machine-specific.
 #
