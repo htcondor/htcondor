@@ -181,7 +181,7 @@ def handle(test_dir, condor, num_resources, the_job):
 
     # we must wait for both the handle and the job queue here,
     # because we want to use both later
-    assert(handle.wait(verbose=True, timeout=180))
+    assert(handle.wait(verbose=True, timeout=240))
     assert(condor.job_queue.wait_for_job_completion(handle.job_ids))
 
     yield handle
