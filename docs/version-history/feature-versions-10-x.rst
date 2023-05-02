@@ -4,6 +4,28 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.4.2
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.2 released on May 2, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
 Version 10.4.1
 --------------
 
@@ -11,7 +33,7 @@ Release Notes:
 
 - HTCondor version 10.4.1 released on April 12, 2023.
 
-- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
   :jira:`1668`
 
 New Features:

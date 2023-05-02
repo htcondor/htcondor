@@ -128,6 +128,7 @@ GahpServer *GahpServer::FindOrCreateGahpServer(const char *id,
 }
 
 GahpServer::GahpServer(const char *id, const char *path, const ArgList *args)
+	: m_setCondorInherit(false)
 {
 	m_gahp_pid = -1;
 	m_gahp_startup_failed = false;
@@ -826,8 +827,10 @@ GahpServer::Startup(bool force)
 	io_redirect[2] = stderr_pipefds[1]; // stderr get write side of err pipe
 
 
-	// Don't set CONDOR_INHERIT in the GAHP's environment
-	job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	// Don't set CONDOR_INHERIT in the GAHP's environment, unless requested
+	if (!m_setCondorInherit) {
+		job_opt_mask = DCJOBOPT_NO_CONDOR_ENV_INHERIT;
+	}
 
 	m_gahp_pid = daemonCore->Create_Process(
 			binary_path,	// Name of executable
