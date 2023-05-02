@@ -1623,6 +1623,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 02 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.2-1
+- Fix bug where remote submission of batch grid universe jobs fail
+- Fix bug where HTCondor-CE fails to handle jobs after HTCondor restarts
+
 * Wed Apr 12 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.1-1
 - Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el)
 

@@ -104,7 +104,7 @@ Bugs Fixed:
 Version 10.4.2
 --------------
 
-- HTCondor version 10.4.2 released on Month Date, 2023.
+- HTCondor version 10.4.2 released on May 2, 2023.
 
 New Features:
 
