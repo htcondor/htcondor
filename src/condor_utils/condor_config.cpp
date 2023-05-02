@@ -857,9 +857,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// inject the directory of the root config file into the config
 		// if no directory was supplied, "." will be used
 		// if no root config, "" will be used
-		auto_free_ptr config_root(condor_dirname(config_source));
-		if (config_root && ! null_config) {
-			insert_macro("CONFIG_ROOT", config_root.ptr(), ConfigMacroSet, DetectedMacro, ctx);
+		std::string config_root = condor_dirname(config_source);
+		if (!config_root.empty() && ! null_config) {
+			insert_macro("CONFIG_ROOT", config_root.c_str(), ConfigMacroSet, DetectedMacro, ctx);
 		}
 
 			// Read in the global file
