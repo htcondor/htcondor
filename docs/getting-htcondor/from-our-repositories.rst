@@ -27,11 +27,12 @@ For Enterprise Linux 9, HTCondor also supports ARM ("aarch64").
 
 Repository packages are available for each platform:
 
+* `Amazon Linux 2023 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.amzn2023.noarch.rpm>`_
 * `Enterprise Linux 7 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el7.noarch.rpm>`_
 * `Enterprise Linux 8 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el8.noarch.rpm>`_
 * `Enterprise Linux 9 <https://research.cs.wisc.edu/htcondor/repo/10.x/htcondor-release-current.el9.noarch.rpm>`_
 
-The HTCondor packages on these platforms depend on the corresponding
+Except for Amazon Linux, the HTCondor packages on these platforms depend on the corresponding
 version of `EPEL <https://fedoraproject.org/wiki/EPEL>`_.
 
 Additionally, the following repositories are required for specific platforms:

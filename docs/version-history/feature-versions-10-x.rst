@@ -15,6 +15,10 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1004`.
 
+- Add support for Amazon Linux 2023. VOMS authentication is omitted on this
+  platform.
+  :jira:`1742`
+
 New Features:
 
 - Improved throughput when submitting a large number of ARC CE jobs.
@@ -48,7 +52,7 @@ New Features:
    :jira:`1710`
 
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
-  different threads. This is controled by the new configuration
+  different threads. This is controlled by the new configuration
   parameter :macro:`ARC_GAHP_USE_THREADS`.
   :jira:`1690`
 
@@ -65,7 +69,7 @@ Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
   file-transfer processes not being cleaned up.  This would manifest as
-  jobs completing succesfully, including final file transfer, but ending
+  jobs completing successfully, including final file transfer, but ending
   up without one of their output files (the one the error occurred during).
   :jira:`1687`
 
@@ -124,7 +128,7 @@ Release Notes:
 
 - HTCondor version 10.4.1 released on April 12, 2023.
 
-- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
   :jira:`1668`
 
 New Features:
