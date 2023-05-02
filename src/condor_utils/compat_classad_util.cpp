@@ -814,8 +814,7 @@ void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &a
 		ExprTree *expr = srcAd.Lookup(it);
 		if (expr) {
 			// Only copy if given overwrite or if not found in destAd
-			ExprTree *destTree;
-			if (overwrite || !(destTree = destAd.Lookup(it))) {
+			if (overwrite || !destAd.Lookup(it)) {
 				expr = SkipExprEnvelope(expr);
 				destAd.Insert(it, expr->Copy());
 			}
