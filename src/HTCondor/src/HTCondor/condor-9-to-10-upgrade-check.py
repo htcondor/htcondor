@@ -425,11 +425,21 @@ def check_gpu_requirements():
         format_print("Failed to locate local schedd.", offset=8, err=True)
 
 
+def usage():
+    """Print Script Usage"""
+    format_print("HTCondor Upgrade Incompatabilities Script", newline=True)
+    format_print(
+        """  This Script is to help assist catching possible issues that
+  may occur while upgrading an HTCondor system from
+  version 9 to version 10.""")
+    format_print("Options:", newline=True, offset=8)
+    format_print("-h/-help         Display Usage", offset=12)
+    format_print("-ce              This host is an HTCondor-CE", offset=12)
+    format_print("-ignore-gpu      Skip checking GPU requirements incompatability", offset=12)
+    sys.exit(0)
+
+
 def main():
-    # Make sure script is running as root because we need to run 'condor_token_list'
-    if os.geteuid() != 0:
-        format_print("Error: Script not ran as root", err=True)
-        sys.exit(1)
     # Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
     check_gpu_reqs = True
@@ -440,6 +450,12 @@ def main():
             ecosystems.append("HTCondor-CE")
         elif arg == "-ignore-gpu":
             check_gpu_reqs = False
+        elif arg == "-h" or arg == "-help":
+            usage()
+    # Make sure script is running as root because we need to run 'condor_token_list'
+    if os.geteuid() != 0:
+        format_print("Error: Script not ran as root", err=True)
+        sys.exit(1)
     # Check for incompatibilities
     for system in ecosystems:
         format_print(
