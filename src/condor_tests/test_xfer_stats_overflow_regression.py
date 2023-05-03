@@ -20,6 +20,7 @@
 
 
 from ornithology import *
+from time import sleep
 
 #-----------------------------------------------------------------------------------------
 @action
@@ -295,14 +296,22 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
           count=1
      )
      #Wait for job to complete. Gave a hefty amount of time due to large files being transfered
+     clustId = job_handle.clusterid
      assert job_handle.wait(condition=ClusterState.all_complete,timeout=30)
      schedd = default_condor.get_local_schedd()
      #once job is done get job ad attributes needed for test verification
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["TransferInput","TransferInputStats","TransferOutputStats"],
-          match=1,
-     )
+     job_ad = []
+     for i in range(0,5):
+          hist_itr = schedd.history(
+               constraint=f"ClusterId=={clustId}",
+               projection=["TransferInput","TransferInputStats","TransferOutputStats"],
+               match=1,
+          )
+          job_ad = list(hist_itr)
+          if len(job_ad) > 0:
+              break
+          sleep(1)
+     assert len(job_ad) > 0
      #Return job ad for checking attributes
      return (request.param,job_ad)
 
@@ -310,7 +319,7 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
 #JobSubmitMethod Tests
 class TestTransferStatsOverflowRegression:
 
-     #Test that a job submited with value < Minimum doestn't add JobSubmitMethod attr
+     #Test that a job submited with value < Minimum doesn't add JobSubmitMethod attr
      def test_transfer_stats_bytes_dont_overflow(self,run_file_xfer_job):
           passed = True
           is_0K = False
