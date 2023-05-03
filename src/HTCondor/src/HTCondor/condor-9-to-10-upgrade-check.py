@@ -159,7 +159,7 @@ def check_idtokens(is_ce):
     # No token auth means extremely unlikely system will have problems wiht upgrade
     if not my_config_info["using_token_auth"]:
         format_print(
-            "*** Not using token authentication. Should be unaffected by upgrade ***", 8
+            "*** Not using token authentication. Should be unaffected by upgrade ***", offset=8
         )
         return
     # Get this hosts stored IDToken issuers
@@ -172,30 +172,30 @@ def check_idtokens(is_ce):
             htcondor.RemoteParam(location_ad), is_ce, True
         )
     # Digest collected information
-    format_print("Diagnosis:", 4)
+    format_print("Diagnosis:", offset=4)
     # Look at local host TRUST_DOMAIN information
     trust_domain = my_config_info["trust_domain"]
     td_line = f"Has non-default TRUST_DOMAIN ({trust_domain['value']}) set."
     if trust_domain["is_default"]:
         td_line = "Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
     version_line = "HTCONDOR-CE" if is_ce else "HTCONDOR V{my_config_info['version']}"
-    format_print(f"This Host: {version_line} | {td_line}", 8)
+    format_print(f"This Host: {version_line} | {td_line}", offset=8)
     # Determine if this host has issued IDTokens by checking if signing key exists
     if my_config_info["has_signing_key"]:
         format_print(
             "Found possible IDToken signing key. Likely that tokens have been issued.",
-            19,
+            offset=19,
         )
     # Does this host have any stored issued IDTokens
     if my_token_issuers == None:
-        format_print("Did not find any stored IDTokens on host.", 19)
+        format_print("Did not find any stored IDTokens on host.", offset=19)
     else:
         format_print(
             f"Found {len(my_token_issuers)} IDTokens with the following issuers:",
-            19,
+            offset=19,
         )
         for key, value in my_token_issuers.items():
-            format_print(f"->'{key}' used for {value} tokens.", 21)
+            format_print(f"->'{key}' used for {value} tokens.", offset=21)
     # Analyze local collector host information
     if remote_config_info != None and remote_config_info["using_token_auth"]:
         trust_domain = remote_config_info["trust_domain"]
@@ -204,14 +204,14 @@ def check_idtokens(is_ce):
             td_line = f"Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
         format_print(
             f"Local Collector: HTCONDOR V{remote_config_info['version']} | {td_line}",
-            8,
+            offset=8,
         )
 
     # Do our best to output findings
     if not my_config_info["has_signing_key"] and my_token_issuers == None:
         format_print(
             "*** HTCondor system should be unaffected by V9 to V10 upgrade IDToken default changes ***",
-            8,
+            offset=8,
             newline=True,
         )
         return
@@ -224,36 +224,36 @@ def check_idtokens(is_ce):
         else:
             format_print(
                 "*** HTCondor system should be unaffected by V9 to V10 upgrade IDToken default changes ***",
-                8,
+                offset=8,
                 newline=True,
             )
             return
     format_print(
         "*** HTCondor system possibly affected by V9 to V10 upgrade IDToken default changes ***",
-        8,
+        offset=8,
         newline=True,
     )
     format_print(
-        "IDToken authentication may fail if in use. If tokens have been created and", 8
+        "IDToken authentication may fail if in use. If tokens have been created and", offset=8
     )
-    format_print("distributed consider doing the following. Possible Solutions:", 8)
+    format_print("distributed consider doing the following. Possible Solutions:", offset=8)
     set_trust_domain = """TRUST_DOMAIN to local collectors value in
              tokens issuers field"""
     if my_token_issuers != None and v9_default_value in my_token_issuers:
         set_trust_domain = f"'TRUST_DOMAIN = {v9_default_value}'"
     format_print(
         f"1. To keep using existing distributed tokens set {set_trust_domain} on all hosts in the pool and reconfig.",
-        12,
+        offset=12,
     )
     format_print(
         "2. Or re-issue all tokens after hosts have been upgraded or TRUST_DOMAIN is explicilty set in configuration.",
-        12,
+        offset=12,
     )
     format_print(
         "Note: Any IDTokens issued from other collectors used for flocking will likely need to be re-issued",
-        12,
+        offset=12,
     )
-    format_print("      once those hosts HTCondor system is upgraded to V10.", 12)
+    format_print("      once those hosts HTCondor system is upgraded to V10.", offset=12)
 
 
 def read_map_file(filename, is_el7, has_cmd):
@@ -302,7 +302,7 @@ def read_map_file(filename, is_el7, has_cmd):
                             f"Invalid: {filename}|line-{line_num}: '{line}'",
                             12,
                         )
-                        format_print(f"Error: {error}", 14)
+                        format_print(f"Error: {error}", offset=14)
                 elif is_el7:
                     # No 'pcre2grep' cmd found so if EL7 & manually check for known incompatibility
                     for char in PCRE2_POSIX_CHARS:
@@ -312,11 +312,11 @@ def read_map_file(filename, is_el7, has_cmd):
                                 invalid = True
                                 format_print(
                                     f"Invalid: {filename}|line-{line_num}: '{line}'",
-                                    12,
+                                    offset=12,
                                 )
                                 break
     except IOError:
-        format_print(f"ERROR: Failed to open {filename}", 12, err=True)
+        format_print(f"ERROR: Failed to open {filename}", offset=12, err=True)
 
 
 def check_pcre2():
@@ -327,11 +327,11 @@ def check_pcre2():
     if platform.system() == "Linux" and "el7" in platform.release():
         is_el7 = True
     format_print("Checking for incompatibilities with PCRE2.", newline=True)
-    format_print("Known PCRE2 incompatibilities:", 8)
-    format_print("1. Hyphens in a regex character sequence must occur at the end.", 16)
+    format_print("Known PCRE2 incompatibilities:", offset=8)
+    format_print("1. Hyphens in a regex character sequence must occur at the end.", offset=16)
     if is_el7:
         format_print(
-            "2. On EL7 posix name sets ([:space:]) followed by hyphen are invalid.", 16
+            "2. On EL7 posix name sets ([:space:]) followed by hyphen are invalid.", offset=16
         )
     # Check for 'pcre2grep' cmd
     try:
@@ -341,18 +341,18 @@ def check_pcre2():
         if is_el7:
             format_print(
                 "Failed to find 'pcre2grep' command. Only checking for known issue #2.",
-                8,
+                offset=8,
                 err=True,
             )
         else:
             format_print(
                 "Failed to find 'pcre2grep' command. Unable to check Map files for incompatibilties.",
-                8,
+                offset=8,
                 err=True,
             )
             return
     # Get regular user map files and digest them
-    format_print("Reading CLASSAD_USER_MAPFILE_* files...", 8)
+    format_print("Reading CLASSAD_USER_MAPFILE_* files...", offset=8)
     for key in htcondor.param.keys():
         if key[0:21] == "CLASSAD_USER_MAPFILE_":
             filename = htcondor.param[key]
@@ -360,7 +360,7 @@ def check_pcre2():
     # Get certificate map file and digest it (plus any @include files)
     map_cert_file = htcondor.param.get("CERTIFICATE_MAPFILE")
     if map_cert_file != None:
-        format_print(f"Reading {map_cert_file}...", 8)
+        format_print(f"Reading {map_cert_file}...", offset=8)
         read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
 
 
@@ -381,20 +381,20 @@ def check_gpu_requirements():
     # No schedd Daemon then no check needed
     if "SCHEDD" not in htcondor.param["daemon_list"]:
         return
-    format_print("Checking GPU resource matching:", 0, True)
+    format_print("Checking GPU resource matching:", newline=True)
     # Try to locate schedd
     try:
         ppl_using_gpu = []
         schedd = htcondor.Schedd()
         # Check jobs currently running in queue
-        format_print("Checking current schedd queue job ads.", 8)
+        format_print("Checking current schedd queue job ads.", offset=8)
         queue = schedd.xquery()
         for ad in queue:
             ad_owner = process_ad(ad)
             if ad_owner != "UNKNOWN" and ad_owner not in ppl_using_gpu:
                 ppl_using_gpu.append(ad_owner)
         # Check a bit of the history too
-        format_print("Checking last 5000 job ads in history.", 8)
+        format_print("Checking last 5000 job ads in history.", offset=8)
         history = schedd.history(None, [], 5000)
         for ad in history:
             ad_owner = process_ad(ad)
@@ -404,29 +404,29 @@ def check_gpu_requirements():
         if len(ppl_using_gpu) > 0:
             format_print(
                 f"There are currently {len(ppl_using_gpu)} user(s) using V9 GPU requirements specification.",
-                8,
+                offset=8,
             )
             format_print(
                 "The method to request GPUs changes in V10 to use the new submit description keywords:",
-                8,
+                offset=8,
             )
-            format_print("- request_gpus", 16)
-            format_print("- require_gpus", 16)
+            format_print("- request_gpus", offset=16)
+            format_print("- require_gpus", offset=16)
             format_print(
                 "The following user(s) were found during the query for the old style of requesting GPUs:",
-                8,
+                offset=8,
                 newline=True,
             )
             for user in ppl_using_gpu:
-                format_print(user, 16)
+                format_print(user, offset=16)
     except htcondor.HTCondorLocateError:
-        format_print("Failed to locate local schedd.", 8, err=True)
+        format_print("Failed to locate local schedd.", offset=8, err=True)
 
 
 def main():
     # Make sure script is running as root because we need to run 'condor_token_list'
     if os.geteuid() != 0:
-        format_print("Error: Script not ran as root")
+        format_print("Error: Script not ran as root", err=True)
         sys.exit(1)
     # Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
@@ -439,8 +439,8 @@ def main():
     for system in ecosystems:
         format_print(
             f"----- Checking V9 to V10 incompatibilities for {system} -----",
-            16,
-            True,
+            offset=16,
+            newline=True,
         )
         # If CE then digest CE configuration
         if system == "HTCondor-CE":
