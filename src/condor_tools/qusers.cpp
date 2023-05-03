@@ -441,7 +441,7 @@ main( int argc, const char *argv[] )
 		const char * scheddName = fullname ? fullname : (name?name:"LOCAL");
 		const char * ver = schedd.version();
 		CondorVersionInfo v(ver);
-		if ( ! v.built_since_version(10,4,0)) {
+		if ( ! v.built_since_version(10,6,0)) {
 			fprintf(stderr, "Schedd %s version %d.%d too old for this query\n", scheddName, v.getMajorVer(), v.getMinorVer());
 			exit(1);
 		}
@@ -720,18 +720,18 @@ usage(FILE *out, const char *appname)
 
 	fprintf(out, "\n  USERS is zero or more of:\n"
 		"    <user>\t\t Operate on <user>\n"
-		"    -me\t\t\t Operate on the user running the command\n"
+//		"    -me\t\t\t Operate on the user running the command\n"
 		"    -constraint <expr>\t Operate on users matching the <expr>\n"
 		);
 
 	fprintf(out, "\n  OPERATION is one of:\n");
 	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
-	fprintf(out, "    -disable\t\t Disable user records\n" );
-	fprintf(out, "    -delete\t\t Delete user records\n" );
-	fprintf(out, "    -reset\t\t Reset user records to defaults\n" );
-	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
+//	fprintf(out, "    -disable\t\t Disable user records\n" );
+//	fprintf(out, "    -delete\t\t Delete user records\n" );
+//	fprintf(out, "    -reset\t\t Reset user records to defaults\n" );
+//	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
 	fprintf(out, "\n"
-		"  This tool is use to query, modify and delete User/Owner records in the Schedd. the default\n"
-		"  operation is to query and display users.\n" );
+//		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
+		"  The default operation is to query and display users.\n" );
 }
