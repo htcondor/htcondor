@@ -2196,7 +2196,20 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 #ifdef USE_JOB_QUEUE_USERREC
 	// add OwnerInfo to the scheduler map for JobQueueUserRec records that we just loaded
 	// this will clear the pending owners collection
-	scheduler.mapPendingOwners();
+	if (scheduler.HasPersistentOwnerInfo()) {
+		scheduler.mapPendingOwners();
+	} else {
+		// if we loaded any JobQueueUserRec ads, destroy them now
+		auto pending_owners = scheduler.queryPendingOwners();
+		if ( ! pending_owners.empty()) {
+			JobQueue->BeginTransaction();
+			for (auto it : pending_owners) {
+				JobQueue->DestroyClassAd(it.second->jid);
+			}
+			JobQueue->CommitNondurableTransaction();
+			scheduler.deleteZombieOwners();
+		}
+	}
 #endif
 
 	next_cluster_num = cluster_initial_val;

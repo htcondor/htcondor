@@ -614,6 +614,7 @@ Scheduler::Scheduler() :
 	MaxJobsRunning = 0;
 	AllowLateMaterialize = false;
 	NonDurableLateMaterialize = false;
+	EnablePersistentOwnerInfo = true;
 	EnableJobQueueTimestamps = false;
 	MaxMaterializedJobsPerCluster = INT_MAX;
 	MaxJobsSubmitted = INT_MAX;
@@ -3785,7 +3786,11 @@ void Scheduler::deleteZombieOwners()
 // called in count_jobs to delete zombie owners that no longer have any refs
 void Scheduler::purgeZombieOwners()
 {
-	auto zombie_dust = [](OwnerInfo* & owni){ return ! owni->num.Hits; };
+	auto zombie_dust = [](OwnerInfo* & owni){ 
+		if (owni->num.Hits) return false;
+		delete owni;
+		return true;
+	};
 	auto it = std::remove_if(zombieOwners.begin(), zombieOwners.end(), zombie_dust);
 	zombieOwners.erase(it, zombieOwners.end());
 }
@@ -3929,13 +3934,15 @@ Scheduler::get_ownerinfo(JobQueueJob * job)
 		if ( ! job->LookupString(ATTR_USER,real_owner) ) {
 			return NULL;
 		}
+		const char *owner = real_owner.c_str();
+		job->ownerinfo = scheduler.find_ownerinfo(owner);
 	#else
 		if ( ! job->LookupString(attr_JobUser,real_owner) ) {
 			return NULL;
 		}
-	#endif
 		const char *owner = real_owner.c_str();
 		job->ownerinfo = scheduler.insert_ownerinfo(owner);
+	#endif
 	}
 	return job->ownerinfo;
 }
@@ -3967,7 +3974,10 @@ Scheduler::get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitte
 		if ( ! job->LookupString(ATTR_USER,real_owner)) {
 			return NULL;
 		}
-		job->ownerinfo = scheduler.insert_ownerinfo(real_owner.c_str());
+		// We really shouldn't get here without the job having a validing ownerinfo pointer
+		// but if we can do this lookup and fix it, we keep going.
+		job->ownerinfo = scheduler.find_ownerinfo(real_owner.c_str());
+		if ( ! job->ownerinfo) return NULL;
 	}
 	// but use the unqualified "owner" name as the submitter
 	auto last_at = real_owner.find_last_of('@');
@@ -9231,6 +9241,12 @@ Scheduler::AddRunnableLocalJobs()
 				if (scheduler.MaxRunningSchedulerJobsPerOwner > 0 &&
 					scheduler.MaxRunningSchedulerJobsPerOwner < scheduler.MaxJobsPerOwner) {
 					OwnerInfo * owndat = scheduler.get_ownerinfo(job);
+					if ( ! owndat) {
+						dprintf( D_FULLDEBUG,
+							"Skipping idle scheduler universe job %d.%d because it has no ownerinfo pointer\n",
+							id.cluster, id.proc);
+						continue;
+					}
 					if (owndat->num.SchedulerJobsRunning >= scheduler.MaxRunningSchedulerJobsPerOwner) {
 						dprintf( D_FULLDEBUG,
 							 "Skipping idle scheduler universe job %d.%d because %s already has %d Scheduler jobs running\n",
@@ -12989,6 +13005,10 @@ Scheduler::Init()
 			jobSets = new JobSets();
 			ASSERT(jobSets);
 		}
+
+		// secret knob.  set to FALSE to cause persistent user records to be deleted on startup
+		EnablePersistentOwnerInfo = param_boolean("PERSISTENT_USER_RECORDS", true);
+
 		// setup the global attribute name we will use as the canonical 'owner' of a job
 		// historically this was "Owner", but in 8.9 we switch to "User" so that we use
 		// the fully qualified name and can handle jobs from other domains in the schedd
@@ -13918,6 +13938,8 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+	//disable these until we decide permissions
+	#if 0
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
@@ -13930,6 +13952,7 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(DELETE_USERREC, "DELETE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+	#endif
 #endif
 
 	// Note: The QMGMT READ/WRITE commands have the same command handler.

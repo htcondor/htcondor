@@ -732,6 +732,7 @@ class Scheduler : public Service
 	// there is no persistnt JobQueueUserRec in the job_queue
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
+	bool HasPersistentOwnerInfo() { return EnablePersistentOwnerInfo; }
 #endif
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
@@ -809,6 +810,7 @@ private:
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
+	bool			EnablePersistentOwnerInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
