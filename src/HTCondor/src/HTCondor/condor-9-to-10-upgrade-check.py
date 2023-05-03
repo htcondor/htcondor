@@ -9,6 +9,7 @@
 #   Note: Requires root and HTCONDOR python bindings
 import os
 import sys
+import json
 import platform
 import subprocess
 import shlex
@@ -135,9 +136,10 @@ def get_token_issuers():
         token = token.strip()
         if token == "":
             continue
-        iss_pos = token.find('"iss":')
-        end_pos = token.find(",", iss_pos)
-        issuer = token[iss_pos + 5 : end_pos].strip('":')
+        payload_start = token.find("Payload:") + 8
+        payload_end = token.rfind("File:")
+        payload = json.loads(token[payload_start : payload_end].strip())
+        issuer = payload["iss"]
         if issuer in issuers:
             issuers[issuer] += 1
         else:
