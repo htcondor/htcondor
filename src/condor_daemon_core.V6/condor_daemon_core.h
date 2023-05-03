@@ -61,6 +61,8 @@
 #include "filesystem_remap.h"
 #include "daemon_keep_alive.h"
 
+#include "dc_coroutines.h"
+
 #include <vector>
 #include <memory>
 #include <deque>
@@ -1190,6 +1192,18 @@ class DaemonCore : public Service
                         TimerHandlercpp handler,
                         const char * event_descrip,
                         Service*     s);
+
+	/**
+	    @param deltaWhen         Delay in seconds before first coroutine call.
+	    @param eventDescription  ...
+	    @param coroutine         co_yield the delay in seconds before the next
+	                             coroutine call.  co_return deletes the timer.
+	 */
+	int Register_Timer_Coroutine(
+		unsigned deltaWhen,
+		const char * eventDescription,
+		DC::Timer * coroutine
+	);
 
     /** Not_Yet_Documented
         @param id The timer's ID

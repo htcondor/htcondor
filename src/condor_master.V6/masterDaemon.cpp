@@ -3352,6 +3352,18 @@ Daemons::AllStartdsGone()
 	}
 }
 
+
+DC::Timer
+foolish_generator( std::string parameter ) {
+	for( size_t i = 0; i < parameter.size(); ++i ) {
+		dprintf( D_ALWAYS, "foolish_generator(): %c\n", parameter[i] );
+		co_yield i;
+	}
+
+	co_return 0;
+}
+
+
 void
 Daemons::StartTimers()
 {
@@ -3394,7 +3406,11 @@ Daemons::StartTimers()
 		StartNewExecTimer();
 	}
 	old_check_int = check_new_exec_interval;
-}	
+
+	// Glorious hack for testing.
+	DC::Timer * coroutine = new DC::Timer(foolish_generator("example"));
+	daemonCore->Register_Timer_Coroutine( 0, "coroutine test", coroutine );
+}
 
 
 void

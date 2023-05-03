@@ -919,6 +919,10 @@ int DaemonCore::Register_Timer (const Timeslice &timeslice,TimerHandlercpp handl
 	return t.NewTimer(s, timeslice, handler, event_descrip );
 }
 
+int DaemonCore::Register_Timer_Coroutine( unsigned deltaWhen, const char * eventDescription, DC::Timer * coroutine ) {
+	return t.NewTimer( deltaWhen, eventDescription, coroutine );
+}
+
 int	DaemonCore::Cancel_Timer( int id )
 {
 	if ( daemonCore == NULL ) {

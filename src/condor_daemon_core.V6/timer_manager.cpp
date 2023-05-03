@@ -173,6 +173,32 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 	return	new_timer->id;
 }
 
+int TimerManager::NewTimer( unsigned deltaWhen, const char * eventDescription, DC::Timer * coroutine ) {
+	dprintf( D_DAEMONCORE, "in TimerManager::NewTimer()\n" );
+
+	Timer * new_timer = new Timer(coroutine, eventDescription);
+	if( new_timer == NULL ) {
+		dprintf( D_ALWAYS, "TimerManager::NewTimer(): Unable to allocate new timer\n" );
+	}
+
+	if( daemonCore && eventDescription ) {
+		daemonCore->dc_stats.NewProbe("Timer", eventDescription, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
+	}
+
+	new_timer->period_started = time(NULL);
+	new_timer->when = new_timer->period_started + deltaWhen;
+
+	new_timer->id = timer_ids++;
+	InsertTimer( new_timer );
+	DumpTimerList(D_DAEMONCORE | D_FULLDEBUG);
+
+	// Update curr_regdataptr for SetDataPtr()
+	curr_regdataptr = &(new_timer->data_ptr);
+
+	dprintf( D_DAEMONCORE, "leaving TimerManager::NewTimer(), id = %d\n", new_timer->id );
+	return new_timer->id;
+}
+
 int TimerManager::ResetTimerPeriod(int id,unsigned period)
 {
 	return ResetTimer(id,0,period,true);
@@ -468,6 +494,15 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		if ( in_timeout->handlercpp ) {
 			// typedef int (*TimerHandlercpp)()
 			((in_timeout->service)->*(in_timeout->handlercpp))();
+		} else if ( in_timeout->coroutine ) {
+			DC::Timer & coroutine = *(in_timeout->coroutine);
+			if( coroutine ) {
+				unsigned deltaWhen = coroutine();
+				ResetTimer( in_timeout->id, deltaWhen, 0, false );
+			}
+
+			// If ResetTimer() isn't called, this timer is considered
+			// a one-time event and deleted in the clean-up code below.
 		} else {
 			// typedef int (*TimerHandler)()
 			(*(in_timeout->handler))();
@@ -731,7 +766,15 @@ void TimerManager::DeleteTimer( Timer *timer )
 	if ( curr_regdataptr == &(timer->data_ptr) )
 		curr_regdataptr = NULL;
 
-	delete timer->timeslice;
+	if( timer->timeslice ) {
+		delete timer->timeslice;
+	}
+
+	if( timer->coroutine ) {
+		delete timer->coroutine;
+	}
+
+	// sigh.
 	delete timer;
 }
 

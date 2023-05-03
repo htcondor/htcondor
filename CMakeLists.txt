@@ -26,6 +26,10 @@ set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(${CMAKE_COMPILER_IS_GNUCXX})
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+endif()
+
 # Remove warnings in cmake 3.24+.  This setting 
 # forces cmake to not update the timestamps on downloaded
 # tarballs.  The autoconf-built externals need this old setting

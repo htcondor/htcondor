@@ -32,6 +32,7 @@
 
 #include "dc_service.h"
 #include "condor_timeslice.h"
+#include "dc_coroutines.h"
 
 #ifdef WIN32
 #include <time.h>
@@ -89,6 +90,29 @@ struct tagTimer {
     /** Not_Yet_Documented */ Timeslice *       timeslice;
 	/** Not_Yet_Documented */ Release           release;
 	/** Not_Yet_Documented */ Releasecpp        releasecpp;
+
+	DC::Timer * coroutine;
+
+	tagTimer() : coroutine(NULL) { }
+
+	tagTimer( DC::Timer * c, const char * e ) : coroutine(c) {
+		if(! e) { e = "<NULL>"; }
+		event_descrip = strdup(e);
+
+		when = 0;
+		period_started = 0;
+		period = 0;
+		id = 0;
+
+		handler = NULL;
+		handlercpp = NULL;
+		service = NULL;
+		next = NULL;
+		data_ptr = NULL;
+		timeslice = NULL;
+		release = NULL;
+		releasecpp = NULL;
+	}
 };
 
 ///
@@ -169,6 +193,8 @@ class TimerManager
                   const Timeslice &timeslice,
                   TimerHandlercpp handler,
                   const char * event_descrip);
+
+	int NewTimer( unsigned deltaWhen, const char * eventDescription, DC::Timer * coroutine );
 
     /** Not_Yet_Documented.
         @param id The ID of the timer
