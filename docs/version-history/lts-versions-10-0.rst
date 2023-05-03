@@ -87,6 +87,12 @@ Bugs Fixed:
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
+- Fixed a bug where DAGMan job submission would fail when not using
+  direct submission due to setting a custom job classad attribute with
+  the ``+`` syntax in a ``VARS`` command that doesn't append the
+  variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
+  :jira:`1771`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
