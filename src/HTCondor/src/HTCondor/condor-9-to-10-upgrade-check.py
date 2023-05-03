@@ -50,6 +50,7 @@ def format_print(msg, offset=0, newline=False, err=False):
     if newline:
         print(file=f)
 
+    offset += len(msg)
     print(f"{msg:>{offset}s}", file=f)
 
 
@@ -180,7 +181,7 @@ def check_idtokens(is_ce):
     td_line = f"Has non-default TRUST_DOMAIN ({trust_domain['value']}) set."
     if trust_domain["is_default"]:
         td_line = "Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
-    version_line = "HTCONDOR-CE" if is_ce else "HTCONDOR V{my_config_info['version']}"
+    version_line = "HTCONDOR-CE" if is_ce else f"HTCONDOR V{my_config_info['version']}"
     format_print(f"This Host: {version_line} | {td_line}", offset=8)
     # Determine if this host has issued IDTokens by checking if signing key exists
     if my_config_info["has_signing_key"]:
@@ -379,7 +380,6 @@ def process_ad(ad):
 
 def check_gpu_requirements():
     """Check job ads for known pre V10 GPU requesting"""
-    return
     # No schedd Daemon then no check needed
     if "SCHEDD" not in htcondor.param["daemon_list"]:
         return
@@ -432,11 +432,14 @@ def main():
         sys.exit(1)
     # Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
+    check_gpu_reqs = True
     # Check if passed -ce flag to indicate this host is a CE
     for arg in sys.argv:
         arg = arg.lower().strip()
         if arg == "-ce" and "HTCondor-CE" not in ecosystems:
             ecosystems.append("HTCondor-CE")
+        elif arg == "-ignore-gpu":
+            check_gpu_reqs = False
     # Check for incompatibilities
     for system in ecosystems:
         format_print(
@@ -451,7 +454,7 @@ def main():
         check_idtokens(system == "HTCondor-CE")
         check_pcre2()
         # Only worry about GPU incompatibility if not CE
-        if system != "HTCondor-CE":
+        if system != "HTCondor-CE" and check_gpu_reqs:
             check_gpu_requirements()
     # Final information to direct people to help
     format_print(
