@@ -487,14 +487,23 @@ sub checkTiming {
 		 ${secondsMatch}\ slot1_\7${jidm}:\ max\ vacate\ time\ expired.\ \ Escalating\ to\ a\ fast\ shutdown\ of\ the\ job
 		 /sx) {
 			my $finalDrainStartTime = $1;
-			if ($finalDrainStartTime != $4) {
-				die( "slot1_$7 did not start retiring immediately, aborting.\n" );
+			# Ugh. We print the log time as the message is printed, so each line will have a different timestamp
+			# if we start at second XX.99something, we will likely wrap to (XX + 1).something, so need to have some 
+			# slop.  If this happens at 59 seconds, also need to accept 00 seconds as the "after" time.
+			if (($4 - $finalDrainStartTime) > 2) {
+				if ($4 != 0) {
+					die( "slot1_$7 did not start retiring immediately, aborting.\n" );
+				}
 			}
-			if ($finalDrainStartTime != $8) {
-				die( "MaxJobRetirementTime was not 0, aborting.\n" );
+			if (($8 - $finalDrainStartTime) > 2) {
+				if ($8 != 0) {
+					die( "MaxJobRetirementTime was not 0, aborting.\n" );
+				}
 			}
-			if ($finalDrainStartTime != $11) {
-				die( "slot1_$7 did not immediately switch from retiring to preempting.\n" );
+			if (($11 - $finalDrainStartTime) > 2) {
+				if ($11 != 0) {
+					die( "slot1_$7 did not immediately switch from retiring to preempting.\n" );
+				}
 			}
 			# Especially with sub-second reporting, allow the startd some time to work.
 			if( (($finalDrainStartTime + 4) % 60) != $14 && (($finalDrainStartTime + 5) % 60) != $14 && (($finalDrainStartTime + 6) % 60) != $14 ) {
