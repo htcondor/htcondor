@@ -1797,6 +1797,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 			}
 			if ( varName.empty() ) {
 				break;
+			} else if (varName[0] == '+') {
+				//convert + syntax vars to 'My.' syntax
+				varName = "My." + varName.substr(1);
 			}
 
 			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
