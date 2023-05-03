@@ -286,9 +286,9 @@ int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const cha
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -353,9 +353,9 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -586,9 +586,9 @@ int main( int /*argc*/, const char ** argv) {
 		MyStringFpSource src(file, true);
 		StringList users;
 		while ( ! src.isEof()) {
-			MyString line;
-			line.readLine(src); // Result ignored, we already monitor EOF
-			line.chomp();
+			std::string line;
+			readLine(line, src); // Result ignored, we already monitor EOF
+			chomp(line);
 			if (line.empty()) continue;
 			users.append(line.c_str());
 		}
