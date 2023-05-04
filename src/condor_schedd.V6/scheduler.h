@@ -222,6 +222,8 @@ typedef JobQueueUserRec OwnerInfo;
 typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
 // attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
 #define ATTR_USERREC_NAME ATTR_OWNER
+constexpr int  CONDOR_USERREC_ID = 1;
+constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
 constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
 #else
 

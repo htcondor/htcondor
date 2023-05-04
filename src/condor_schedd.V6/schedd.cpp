@@ -725,7 +725,7 @@ Scheduler::Scheduler() :
 
 	BadCluster = BadProc = -1;
 	NumUniqueOwners = 0;
-	NextOwnerId = -1;
+	NextOwnerId = -1;  // -1 means not yet initialized
 	shadowReaperId = -1;
 	m_have_xfer_queue_contact = false;
 	AccountantName = 0;
@@ -3737,6 +3737,7 @@ Scheduler::find_ownerinfo(const char * owner)
 
 int Scheduler::nextUnusedUserRecId()
 {
+	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
 	return NextOwnerId++;
 }
 
@@ -3808,7 +3809,7 @@ void Scheduler::mapPendingOwners()
 		OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
 	}
 	pendingOwners.clear();
-	if (NextOwnerId < 1) { NextOwnerId = 1; }
+	if (NextOwnerId <= LAST_RESERVED_USERREC_ID) { NextOwnerId = LAST_RESERVED_USERREC_ID+1; }
 }
 
 // clear the pending owners table and delete any that are still in the pending state
