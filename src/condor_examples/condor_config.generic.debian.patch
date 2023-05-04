@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,36 @@
+@@ -68,5 +66,35 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -62,7 +62,6 @@
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
 +
 +PROCD_ADDRESS = $(RUN)/procd_pipe
-+XDG_CACHE_HOME = $(RUN)/cache
 +
 +# Account for different pki locations for Debian
 +AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-certificates.crt
