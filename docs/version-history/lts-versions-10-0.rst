@@ -30,6 +30,14 @@ New Features:
   of the main config file before the configuration files are read.
   :jira:`1733`
 
+- Added configuration parameter ``XDG_CACHE_HOME``, which causes the
+  *condor_master* to set the environment variable ``XDG_CACHE_HOME``
+  to the given value.
+  If this variable isn't set and the condor user doesn't have a home
+  directory, then SciTokens authentication doesn't cache token issuer
+  credentials, which makes authentication much more expensive to perform.
+  :jira:`1757`
+
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
@@ -92,6 +100,12 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- Fixed a bug where DAGMan job submission would fail when not using
+  direct submission due to setting a custom job classad attribute with
+  the ``+`` syntax in a ``VARS`` command that doesn't append the
+  variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
+  :jira:`1771`
 
 .. _lts-version-history-1003:
 
