@@ -246,9 +246,8 @@ struct ClassadAttrNameHash
 
 	constexpr size_t operator()(const char *s) const {
 		size_t h = 0;
-		unsigned char const *ch = (unsigned const char *)s;
-		for( ; *ch; ch++ ) {
-			h = 5*h + (*ch | 0x20);
+		for( ; *s; s++ ) {
+			h = 5*h + (((unsigned char )*s) | 0x20);
 		}
 		return h;
 	}

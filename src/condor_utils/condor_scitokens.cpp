@@ -260,8 +260,8 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 			audiences.emplace_back(aud);
 			audience_ptr.push_back(audiences.back().c_str());
 		}
-		audience_ptr.push_back(nullptr);
 	}
+	audience_ptr.push_back(nullptr);
 	long long expiry_value;
 	if ((*scitoken_deserialize_ptr)(scitoken_str.c_str(), &token, nullptr, &err_msg)) {
 		err.pushf("SCITOKENS", 2, "Failed to deserialize scitoken: %s",
@@ -299,7 +299,22 @@ htcondor::validate_scitoken(const std::string &scitoken_str, std::string &issuer
 		free(sub);
 		return false;
 	} else if ((*enforcer_generate_acls_ptr)(enf, token, &acls, &err_msg)) {
+		bool allow_foreign_token = false;
 		if (param_boolean("SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES", false)) {
+			std::string foreign_issuers;
+			param(foreign_issuers, "SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS");
+			if (foreign_issuers == "*") {
+				allow_foreign_token = true;
+			} else {
+				for (auto& s: StringTokenIterator(foreign_issuers)) {
+					if (s == iss) {
+						allow_foreign_token = true;
+						break;
+					}
+				}
+			}
+		}
+		if (allow_foreign_token) {
 			dprintf(D_SECURITY, "Token ACL generation failed, treating as foreign token type: %s\n", err_msg ? err_msg : "(unknown failure)");
 			foreign_token = true;
 			success = true;

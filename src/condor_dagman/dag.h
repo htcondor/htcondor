@@ -28,11 +28,11 @@
 #include "read_multiple_logs.h"
 #include "check_events.h"
 #include "condor_id.h"
-#include "prioritysimplelist.h"
 #include "throttle_by_category.h"
 #include "../condor_utils/dagman_utils.h"
 #include "jobstate_log.h"
 #include "dagman_classad.h"
+#include "dag_priority_q.h"
 
 #include <queue>
 
@@ -369,7 +369,7 @@ class Dag {
 
     /** @return the number of nodes ready to submit job to batch system
      */
-    inline int NumNodesReady() const { return _readyQ->Number(); }
+    inline int NumNodesReady() const { return _readyQ->size(); }
 
     /** @param whether to include final node, if any, in the count
 	    @return the number of nodes not ready to submit to batch system
@@ -558,8 +558,8 @@ class Dag {
 			DAG file)
     */
     void WriteRescue (const char * rescue_file,
-				const char * dagFile, bool parseFailed = false,
-				bool isPartial = false) /* const */;
+				const char * headerInfo, bool parseFailed = false,
+				bool isPartial = false, bool isSavePoint = false) /* const */;
 
 	int PreScriptReaper( Job *job, int status );
 	int PostScriptReaper( Job *job, int status );
@@ -1064,6 +1064,8 @@ class Dag {
 		*/
 	static void WriteScriptToRescue( FILE *fp, Script *script );
 
+	void WriteSavePoint(Job* node);
+
 		// True iff the final node is ready to be run, is running,
 		// or has been run (including PRE and POST scripts, if any).
 	bool _finalNodeRun;
@@ -1167,7 +1169,7 @@ private:
 	const CondorID *	_DAGManJobId;
 
 	// queue of jobs ready to be submitted to HTCondor
-	PrioritySimpleList<Job*>* _readyQ;
+	DagPriorityQ* _readyQ;
 
 	// queue of submitted jobs not yet matched with submit events in
 	// the HTCondor job log

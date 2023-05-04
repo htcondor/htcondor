@@ -46,14 +46,21 @@ job:
       #universe = container is optional
       universe                = container
       container_image         = ./image.sif
+
       executable              = /bin/cat
       arguments               = /etc/hosts
+
       should_transfer_files   = YES
       when_to_transfer_output = ON_EXIT
+
       output                  = out.$(Process)
       error                   = err.$(Process)
       log                     = log.$(Process)
-      request_memory          = 100M
+
+      request_cpus   = 1
+      request_memory = 1024M
+      request_disk   = 10240K
+
       queue 1
 
 

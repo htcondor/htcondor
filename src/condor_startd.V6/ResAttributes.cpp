@@ -1396,7 +1396,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// Temporary Hack until this is a fixed path
 	// the Starter will expand this magic string to the
 	// actual value
-	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
+	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
 // return true if the given slot has resources that are assigned to both normal and backfill

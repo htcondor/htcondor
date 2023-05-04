@@ -23,7 +23,6 @@
 #include "Stack.h"
 
 #include <iostream>
-using namespace std;
 
 BoolExpr::
 BoolExpr( )
@@ -44,13 +43,13 @@ bool BoolExpr::
 ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 {
 	if( expr == NULL ) {
-		cerr << "error: input ExprTree is null" << endl;
+		std::cerr << "error: input ExprTree is null" << std::endl;
 			//  error: input ExprTree is null
 		return false;
 	}
 
 	if( !mp->Init( expr ) ) {
-		cerr << "error: problem with MultiProfile::Init" << endl;
+		std::cerr << "error: problem with MultiProfile::Init" << std::endl;
 		return false;
 	}
 
@@ -75,7 +74,7 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 		}
 
 		if( kind != classad::ExprTree::OP_NODE ) {
-			cerr << "error: bad form" << endl;
+			std::cerr << "error: bad form" << std::endl;
 				// error: bad form
 			delete currentProfile;
 			return false;
@@ -109,7 +108,7 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 
 			// Peel of the rightmost profile
 		if( !ExprToProfile( right, currentProfile ) ) {
-			cerr << "error: problem with ExprToProfile" << endl;
+			std::cerr << "error: problem with ExprToProfile" << std::endl;
 				// error: problem with ExprToProfile
 			delete currentProfile;
 			return false;
@@ -123,7 +122,7 @@ ExprToMultiProfile( classad::ExprTree *expr, MultiProfile *&mp )
 
 		// process the leftmost profile
 	if( !ExprToProfile( currentTree, currentProfile ) ) {
-		cerr << "error: problem with ExprToProfile" << endl;
+		std::cerr << "error: problem with ExprToProfile" << std::endl;
 			// error: problem with ExprToProfile
 		delete currentProfile;
 		return false;
@@ -145,7 +144,7 @@ bool BoolExpr::
 ValToMultiProfile( classad::Value &val, MultiProfile *&mp )
 {
 	if( !mp->InitVal( val ) ) {
-		cerr << "error: problem with MultiProfile::Init" << endl;
+		std::cerr << "error: problem with MultiProfile::Init" << std::endl;
 		return false;
 	}	
 	return true;
@@ -155,14 +154,14 @@ bool BoolExpr::
 ExprToProfile( classad::ExprTree *expr, Profile *&p )
 {
 	if( expr == NULL ) {
-		cerr << "error: input ExprTree is null" << endl;
+		std::cerr << "error: input ExprTree is null" << std::endl;
 			//  error: input ExprTree is null
 		return false;
 	}
 
 		// create the Profile object
 	if( !p->Init( expr ) ) {
-		cerr << "error: problem with Profile::Init" << endl;
+		std::cerr << "error: problem with Profile::Init" << std::endl;
 		return false;
 	}
 	
@@ -188,7 +187,7 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 		}
 
 		if( kind != classad::ExprTree::OP_NODE ) {
-			cerr << "error: bad form" << endl;
+			std::cerr << "error: bad form" << std::endl;
 				// error: bad form
 			delete currentCondition;
 			return false;
@@ -222,7 +221,7 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 
 			// Peel of the rightMost condition
 		if( !ExprToCondition( right, currentCondition ) ) {
-			cerr << "error: found NULL ptr in expr" << endl;
+			std::cerr << "error: found NULL ptr in expr" << std::endl;
 				// error: found NULL ptr in expr
 			delete currentCondition;
 			return false;
@@ -237,7 +236,7 @@ ExprToProfile( classad::ExprTree *expr, Profile *&p )
 
 		// process the leftmost condition
 	if( !ExprToCondition( currentTree, currentCondition ) ) {
-		cerr << "error: found NULL ptr in expr" << endl;
+		std::cerr << "error: found NULL ptr in expr" << std::endl;
 			// error: found NULL ptr in expr
 		delete currentCondition;
 		return false;
@@ -256,7 +255,7 @@ bool BoolExpr::
 ExprToCondition( classad::ExprTree *expr, Condition *&c )
 {
 	if( expr == NULL ) {
-		cerr << "error: ExprToCondition given NULL ptr" << endl;
+		std::cerr << "error: ExprToCondition given NULL ptr" << std::endl;
 			// error: ExprToCondition given NULL ptr
 		return false;
 	}
@@ -267,7 +266,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 	classad::ExprTree *right = NULL;
 	classad::ExprTree *base = NULL;
 	classad::ExprTree *junk = NULL;
-	string attr;
+	std::string attr;
 	bool junkBool;
 	classad::Value val;
 
@@ -278,7 +277,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 		( ( classad::AttributeReference * )expr )->GetComponents( base, attr,
 																  junkBool);
 		if( !c->Init( attr, expr->Copy( ), false ) ) {
-  				cerr << "error: problem with Condition::Init" << endl;
+			std::cerr << "error: problem with Condition::Init" << std::endl;
   				return false;
 		}
 		return true;
@@ -286,14 +285,14 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 
 	if( kind == classad::ExprTree::FN_CALL_NODE ) {
 		if( !c->InitComplex( expr->Copy( ) ) ) {
-  				cerr << "error: problem with Condition::InitComplex" << endl;
+			std::cerr << "error: problem with Condition::InitComplex" << std::endl;
   				return false;
 		}
 		return true;
 	}
 
 	if( kind != classad::ExprTree::OP_NODE ) {
-		cerr << "error: no operator/attribute found" << endl;
+		std::cerr << "error: no operator/attribute found" << std::endl;
 			// error: no operator/attribute  found;
 		return false;
 	}
@@ -305,7 +304,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 			((classad::AttributeReference *)left)->GetComponents( base, attr,
 																  junkBool);
 			if( !c->Init( attr, expr->Copy( ), true ) ) {
-  				cerr << "error: problem with Condition::Init" << endl;
+				std::cerr << "error: problem with Condition::Init" << std::endl;
   				return false;
 			}
 			return true;
@@ -326,7 +325,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 		classad::ExprTree *right1 = NULL;
 		classad::ExprTree *left2 = NULL;
 		classad::ExprTree *right2 = NULL;
-		string leftAttr, rightAttr;
+		std::string leftAttr, rightAttr;
 
 		if( left != NULL && 
 			right != NULL &&
@@ -373,8 +372,8 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 					( ( classad::Literal * )right2 )->GetValue( rightVal );
 					if( !c->InitComplex( leftAttr, leftOp, leftVal,
 										 rightOp, rightVal, expr ) ) {
-						cerr << "error: problem with Condition:InitComplex"
-							 << endl;
+						std::cerr << "error: problem with Condition:InitComplex"
+							 << std::endl;
 						return false;
 					}
 					return true;
@@ -388,7 +387,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 	if( op >= classad::Operation::__LOGIC_START__ &&
 		op <= classad::Operation::__LOGIC_END__ ) {
 		if( !c->InitComplex( expr ) ) {
-			cerr << "error: problem with Condition:InitComplex" << endl;
+			std::cerr << "error: problem with Condition:InitComplex" << std::endl;
 			return false;
 		}
 		return true;
@@ -397,7 +396,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 	if( !( op >= classad::Operation::__COMPARISON_START__ && 
 		   op <= classad::Operation::__COMPARISON_END__) ) {
 		if( !c->InitComplex( expr ) ) {
-			cerr << "error: operator not comparison: " << (int)op << endl;
+			std::cerr << "error: operator not comparison: " << (int)op << std::endl;
 				// error: operator not comparison
 			return false;
 		}
@@ -405,7 +404,7 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 	}
 
 	if( left == NULL || right == NULL ) {
-		cerr << "error: NULL ptr in expr" << endl;
+		std::cerr << "error: NULL ptr in expr" << std::endl;
 			// error: NULL ptr in expr
 		return false;
 	}
@@ -422,13 +421,13 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 			( ( classad::Literal * )right )->GetValue( val ); 
  			if (!c->Init( attr, op, val, expr->Copy( ),
 						  Condition::ATTR_POS_LEFT ) ) {
-  				cerr << "error: problem with Condition::Init" << endl;
+				std::cerr << "error: problem with Condition::Init" << std::endl;
   				return false;
   			}
 			return true;
 		}
 		if( !c->InitComplex( expr ) ) {
-			cerr << "error: problem with Condition:InitComplex" << endl;
+			std::cerr << "error: problem with Condition:InitComplex" << std::endl;
 			return false;
 		}
 		return true;
@@ -444,20 +443,20 @@ ExprToCondition( classad::ExprTree *expr, Condition *&c )
 			( ( classad::Literal * )left )->GetValue( val );
   			if( !c->Init( attr, op, val, expr->Copy( ),
 						  Condition::ATTR_POS_RIGHT ) ) {
-  				cerr << "error: problem with Condition::Init" << endl;
+				std::cerr << "error: problem with Condition::Init" << std::endl;
   				return false;
   			}
 			return true;
 		}
 		if( !c->InitComplex( expr ) ) {
-			cerr << "error: problem with Condition:InitComplex" << endl;
+			std::cerr << "error: problem with Condition:InitComplex" << std::endl;
 			return false;
 		}
 		return true;
 	}
 
 	if( !c->InitComplex( expr ) ) {
-		cerr << "error: problem with Condition:InitComplex" << endl;
+		std::cerr << "error: problem with Condition:InitComplex" << std::endl;
 		return false;
 	}
 	return true;
@@ -508,7 +507,7 @@ EvalInContext( classad::MatchClassAd &mad, classad::ClassAd *context,
 }
 
 bool BoolExpr::
-ToString( string& buffer )
+ToString( std::string& buffer )
 {
 	if( !initialized ) {
 		return false;

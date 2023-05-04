@@ -253,7 +253,7 @@ main(int argc, const char* argv[])
   bool readFromDir = false;
 
   const char* JobHistoryFileName=NULL;
-  const char* passedMatchFileName=NULL;
+  const char* searchPath=NULL;
   const char* setRecordSrcFlag=NULL;
   const char * pcolon=NULL;
   auto_free_ptr matchFileName;
@@ -506,7 +506,7 @@ main(int argc, const char* argv[])
 			fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
 			exit(1);
 		}
-		passedMatchFileName = argv[++i];
+		searchPath = argv[++i];
 	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		// make sure we have at least one more argument
@@ -692,9 +692,9 @@ main(int argc, const char* argv[])
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
       } else if (readFromDir) { //Searching for files in a directory
-      readHistoryFromDirectory(searchDirectory, my_constraint.c_str(), constraintExpr);
+      readHistoryFromDirectory(searchPath ? searchPath : searchDirectory, my_constraint.c_str(), constraintExpr);
       } else { //Normal search with files
-      readHistoryFromFiles(passedMatchFileName ? passedMatchFileName : matchFileName, my_constraint.c_str(), constraintExpr);
+      readHistoryFromFiles(searchPath ? searchPath : matchFileName, my_constraint.c_str(), constraintExpr);
       }
   }
   else {

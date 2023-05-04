@@ -270,8 +270,8 @@ ResMgr::init_config_classad( void )
 #if HAVE_HIBERNATION
 	configInsert( config_classad, "HIBERNATE", false );
 	if( !configInsert( config_classad, ATTR_UNHIBERNATE, false ) ) {
-		MyString default_expr;
-		default_expr.formatstr("MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
+		std::string default_expr;
+		formatstr(default_expr, "MY.%s =!= UNDEFINED",ATTR_MACHINE_LAST_MATCH_TIME);
 		config_classad->AssignExpr( ATTR_UNHIBERNATE, default_expr.c_str() );
 	}
 #endif /* HAVE_HIBERNATION */
@@ -656,21 +656,6 @@ ResMgr::adlist_find( const char * name )
 	return dynamic_cast<StartdNamedClassAd*>(nad);
 }
 
-int
-ResMgr::adlist_replace( const char *name, ClassAd *newAd, bool report_diff, const char *prefix )
-{
-	if( report_diff ) {
-		StringList ignore_list;
-		MyString ignore = prefix;
-		ignore += "LastUpdate";
-		ignore_list.append( ignore.c_str() );
-		return extra_ads.Replace( name, newAd, true, &ignore_list );
-	}
-	else {
-		return extra_ads.Replace( name, newAd );
-	}
-}
-
 bool ResMgr::needsPolling(void) { return call_until<bool>(&Resource::needsPolling); }
 bool ResMgr::hasAnyClaim(void) {  return call_until<bool>(&Resource::hasAnyClaim); }
 Claim* ResMgr::getClaimByPid(pid_t pid)     { return call_until<Claim*>(&Resource::findClaimByPid, pid); }
@@ -921,14 +906,14 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 		if ( ! param_boolean("STARTD_SEND_READY_AFTER_FIRST_UPDATE", true)) return res;
 
 		// send a DC_SET_READY message to the master to indicate the STARTD is ready to go
-		MyString master_sinful(daemonCore->InfoCommandSinfulString(-2));
-		if ( ! master_sinful.empty()) {
-			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful.c_str());
+		const char* master_sinful(daemonCore->InfoCommandSinfulString(-2));
+		if ( master_sinful ) {
+			dprintf( D_ALWAYS, "Sending DC_SET_READY message to master %s\n", master_sinful);
 			ClassAd readyAd;
 			readyAd.Assign("DaemonPID", getpid());
 			readyAd.Assign("DaemonName", "STARTD"); // fix to use the environment
 			readyAd.Assign("DaemonState", "Ready");
-			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful.c_str());
+			classy_counted_ptr<Daemon> dmn = new Daemon(DT_ANY,master_sinful);
 			classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(DC_SET_READY, readyAd);
 			dmn->sendMsg(msg.get());
 		}
@@ -1124,11 +1109,12 @@ ResMgr::report_updates( void ) const
 
 	CollectorList* collectors = daemonCore->getCollectorList();
 	if( collectors ) {
-		MyString list;
+		std::string list;
 		Daemon * collector;
 		collectors->rewind();
 		while (collectors->next (collector)) {
-			list += collector->fullHostname();
+			const char* host = collector->fullHostname();
+			list += host ? host : "";
 			list += " ";
 		}
 		dprintf( D_FULLDEBUG,
@@ -1688,8 +1674,9 @@ void ResMgr::_remove_and_delete_slot_res(Resource * rip)
 void ResMgr::_complete_removes()
 {
 	ASSERT( ! in_walk);
-	for (Resource * rip : _pending_removes) { _remove_and_delete_slot_res(rip); }
+	std::vector<Resource*> removes(_pending_removes);
 	_pending_removes.clear();
+	for (Resource * rip : removes) { _remove_and_delete_slot_res(rip); }
 	// in case we want to null out pointers in the slots vector when they are first removed
 	auto last = std::remove_if(slots.begin(), slots.end(), [](const Resource*rip) { return !rip; });
 	slots.erase(last, slots.end());
@@ -1703,12 +1690,11 @@ ResMgr::removeResource( Resource* rip )
 
 	// If this was a dynamic slot, remove it from parent
 	// Otherwise return this Resource's ID to the dispenser.
-	if( rip->get_feature() == Resource::DYNAMIC_SLOT) {
-		Resource *parent = rip->get_parent();
-		if (parent) {
-			parent->remove_dynamic_child(rip);
-		}
-	} else {
+	Resource *parent = rip->get_parent();
+	if (parent) {
+		parent->remove_dynamic_child(rip);
+		rip->clear_parent(); // this turns a DYNAMIC_SLOT into a BROKEN_SLOT
+	} else if ( ! rip->is_dynamic_slot() && ! rip->is_broken_slot()) {
 		id_disp->insert( rip->r_id );
 	}
 

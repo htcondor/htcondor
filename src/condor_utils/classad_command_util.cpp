@@ -73,7 +73,7 @@ sendErrorReply( Stream* s, const char* cmd_str, CAResult result,
 int
 unknownCmd( Stream* s, const char* cmd_str )
 {
-	MyString line = "Unknown command (";
+	std::string line = "Unknown command (";
 	line += cmd_str;
 	line += ") in ClassAd";
 	

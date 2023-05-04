@@ -43,7 +43,6 @@
 #ifdef WIN32
 # define usleep(_x_) Sleep((_x_)/1000)
 #endif
-using namespace std;
 
 static const char *	VERSION = "1.0.0";
 
@@ -171,7 +170,7 @@ public:
 	bool Verbose( Verbosity v ) const { return m_shared.Verbose(v); };
 
 private:
-	vector<WorkerOptions *>	 m_workerOptions;	// List of worker's options
+	std::vector<WorkerOptions *>	 m_workerOptions;	// List of worker's options
 	SharedOptions			 m_shared;
 };
 
@@ -226,7 +225,7 @@ public:
 
 private:
 	const GlobalOptions	&m_options;
-	vector<Worker *>	 m_workers;
+	std::vector<Worker *>	 m_workers;
 	int					 m_runningChildren;
 	int					 m_errors;
 };
@@ -1520,8 +1519,8 @@ EventInfo::GenEventJobEvicted( void )
 {
 	SetName( "Evicted" );
 	JobEvictedEvent *e = new JobEvictedEvent;
-	e->setReason("EVICT");
-	e->setCoreFile("corefile");
+	e->reason = "EVICT";
+	e->core_file = "corefile";
 	e->checkpointed = randint(10) > 8;
 	e->sent_bytes = GetSize( );
 	e->recvd_bytes = GetSize( );
@@ -1558,7 +1557,7 @@ EventInfo::GenEventJobAborted( void )
 {
 	SetName( "Job aborted" );
 	JobAbortedEvent *e = new JobAbortedEvent;
-	e->setReason("ABORT");
+	e->reason = "ABORT";
 
 	return SetEvent( e );
 }
@@ -1578,9 +1577,9 @@ EventInfo::GenEventJobHeld( void )
 {
 	SetName( "Job held" );
 	JobHeldEvent *e = new JobHeldEvent;
-	e->setReason("HELD");
-	e->setReasonCode(404);
-	e->setReasonSubCode(0xff);
+	e->reason = "HELD";
+	e->code = 404;
+	e->subcode = 0xff;
 
 	return SetEvent( e );
 }
@@ -1590,7 +1589,7 @@ EventInfo::GenEventJobReleased( void )
 {
 	SetName( "Job released" );
 	JobReleasedEvent *e = new JobReleasedEvent;
-	e->setReason("RELEASED");
+	e->reason = "RELEASED";
 
 	return SetEvent( e );
 }

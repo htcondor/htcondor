@@ -183,12 +183,9 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 		return 0;
 	}
 
-	HookClient *hook_client;
-
 		// Next, in case of retry, make sure we didn't already spawn
 		// this hook and are just waiting for it to return.
-    m_client_list.Rewind();
-    while (m_client_list.Next(hook_client)) {
+	for (const HookClient *hook_client : m_client_list) {
 		if (hook_client->type() == HOOK_JOB_EXIT) {
 			dprintf(D_FULLDEBUG,
 					"StarterHookMgr::tryHookJobExit() retried while still "
@@ -209,7 +206,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	ArgList args;
 	args.AppendArg(exit_reason);
 
-	hook_client = new HookJobExitClient(m_hook_job_exit.c_str());
+	HookClient *hook_client = new HookJobExitClient(m_hook_job_exit.c_str());
 
 	Env env;
 	Starter->PublishToEnv(&env);

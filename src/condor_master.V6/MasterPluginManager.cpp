@@ -24,10 +24,7 @@
 void
 MasterPluginManager::Initialize()
 {
-	MasterPlugin *plugin;
-	SimpleList<MasterPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -35,10 +32,7 @@ MasterPluginManager::Initialize()
 void
 MasterPluginManager::Shutdown()
 {
-	MasterPlugin *plugin;
-	SimpleList<MasterPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -46,10 +40,7 @@ MasterPluginManager::Shutdown()
 void
 MasterPluginManager::Update(const ClassAd *ad)
 {
-	MasterPlugin *plugin;
-	SimpleList<MasterPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->update(ad);
 	}
 }

@@ -61,31 +61,31 @@
 Example Usage of ArgList class:
 
 ArgList args;
-MyString errmsg;
+std::string errmsg;
 bool success;
 
 args.AppendArg("one");
 args.AppendArg("two and");
-success = args.AppendArgsV1RawOrV2Quoted("three",&errmsg);
+success = args.AppendArgsV1RawOrV2Quoted("three",errmsg);
 
 
 Example Usage of split_args():
 
 char **argv=NULL;
-MyString errmsg;
+std::string errmsg;
 bool success = split_args("one 'two and' three",&argv,&errmsg);
 
 */
 
-#include "simplelist.h"
-#include "MyString.h"
+#include <vector>
+#include <string>
 #include "condor_classad.h"
 #include "condor_ver_info.h"
 
 
 // Parse a string into a list of tokens.
 // This expects args in "raw V2" format (no surrounding double-quotes)
-bool split_args(char const *args, SimpleList<MyString> *args_list, std::string* error_msg=NULL);
+bool split_args(char const *args, std::vector<std::string>& args_list, std::string* error_msg=NULL);
 
 // Parse a string into a NULL-terminated string array.
 // This expects args in "raw V2" format (no surrounding double-quotes)
@@ -94,13 +94,11 @@ bool split_args(char const *args, char ***args_array, std::string* error_msg=NUL
 
 // Produce a string from a list of tokens, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
-void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg=0);
-void join_args(SimpleList<MyString> const & args_list, std::string & result, int start_arg=0);
+void join_args(std::vector<std::string> const & args_list, std::string & result, size_t start_arg=0);
 
 // Produce a string from a NULL-terminated string array, quoting as necessary.
 // This produces args in "raw V2" format (no surrounding double-quotes)
-void join_args(char const * const *args_array,MyString *result,int start_arg=0);
-void join_args(char const * const *args_array, std::string& result, int start_arg=0);
+void join_args(char const * const *args_array, std::string& result, size_t start_arg=0);
 
 
 // Delete a NULL-terminated array of strings (and delete the strings too).
@@ -111,22 +109,19 @@ class ArgList {
 	ArgList();
 	~ArgList();
 
-	int Count() const;                      // return number of args
+	size_t Count() const;                   // return number of args
 	void Clear();                           // remove all args
-	char const *GetArg(int n) const;        //return nth arg
+	char const *GetArg(size_t n) const;     //return nth arg
 
 	void AppendArg(char const *arg);
-	void AppendArg(MyString arg);
 	void AppendArg(const std::string &arg);
-	void AppendArg(int arg);
-	void InsertArg(char const *arg,int position);
-	void RemoveArg(int position);
+	void InsertArg(char const *arg, size_t position);
+	void RemoveArg(size_t position);
 
 	void AppendArgsFromArgList(ArgList const &args);
 
 		// Parse args string in plain old V1 syntax.
 		// Double-quotes should not be backwacked.
-	bool AppendArgsV1Raw(char const *args,MyString *error_msg);
 	bool AppendArgsV1Raw(char const *args, std::string & error_msg);
 
 		// Parse args string in V1Raw or V2Quoted syntax.  This is used
@@ -140,7 +135,6 @@ class ArgList {
 		// have a V1 string that begins with a double-quote.  This
 		// format was chosen for maximal backward compatibility with
 		// the old V1 syntax in the places where this function is used.
-	bool AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg);
 	bool AppendArgsV1RawOrV2Quoted(char const *args,std::string & error_msg);
 
 		// Parse args string in V1Wacked or V2Quoted syntax.  This is
@@ -149,22 +143,17 @@ class ArgList {
 		// otherwise it will be treated as V1.  In V1 syntax, any
 		// literal double-quotes must be escaped (backwacked), for
 		// compatibility with the original V1 submit-file syntax.
-	bool AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg);
+	bool AppendArgsV1WackedOrV2Quoted(char const *args, std::string& error_msg);
 
 		// Parse args string in V2 syntax.
 		// Double quotes have no special meaning, unlike V2Quoted syntax.
-	bool AppendArgsV2Raw(char const *args,MyString *error_msg);
 	bool AppendArgsV2Raw(char const *args, std::string & error_msg);
 
 		// Parse args string in V2Quoted syntax.
 		// Just like AppendArgsV1BlahOrV2Quoted(), except the input string
 		// _must_ be enclosed in double-quotes or an error (and message)
 		// will be generated.
-	bool AppendArgsV2Quoted(char const *args,MyString *error_msg);
 	bool AppendArgsV2Quoted(char const *args,std::string & error_msg);
-
-	bool AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg);
-	bool InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_string) const;
 
 	bool AppendArgsFromClassAd(ClassAd const *ad, std::string & error_msg);
 	bool InsertArgsIntoClassAd(ClassAd *ad, CondorVersionInfo *condor_version, std::string & error_string) const;
@@ -173,15 +162,12 @@ class ArgList {
 	static bool CondorVersionRequiresV1(CondorVersionInfo const &condor_version);
 
 		// Get arguments from ClassAd for descriptional purposes.
-	static void GetArgsStringForDisplay(ClassAd const *ad,MyString *result);
 	static void GetArgsStringForDisplay(ClassAd const *ad,std::string &result);
 
 		// Get arguments from this ArgList object for descriptional purposes.
-	void GetArgsStringForDisplay(MyString *result,int start_arg=0) const;
-	void GetArgsStringForDisplay(std::string & result, int start_arg=0) const;
+	void GetArgsStringForDisplay(std::string & result, size_t start_arg=0) const;
 
 		// ...
-	void GetArgsStringForLogging( MyString * result ) const;
 	void GetArgsStringForLogging( std::string & result ) const;
 
 		// Return a NULL-terminated string array of args.
@@ -191,31 +177,28 @@ class ArgList {
 		// Create a V1 format args string (no quoting or backwacking)
 		// false on error (e.g. because an argument contains spaces).
 	bool GetArgsStringV1Raw(std::string & result, std::string & error_msg) const;
-	bool GetArgsStringV1Raw(MyString *result,MyString *error_msg) const;
 
 		// Create a V2 format args string.  This differs from
 		// GetArgsStringV2Quoted in that string is _not_ enclosed in
 		// double quotes.
-	bool GetArgsStringV2Raw(std::string & result, int start_arg=0) const;
-	bool GetArgsStringV2Raw(MyString *result,MyString *error_msg,int start_arg=0) const;
+	bool GetArgsStringV2Raw(std::string & result, size_t start_arg=0) const;
 
 		// Create V2Quoted args string (i.e. enclosed in double-quotes).
-	bool GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const;
+	bool GetArgsStringV2Quoted(std::string& result, std::string& error_msg) const;
 
 		// Create V1Wacked args string if possible; o.w. V2Quoted.  In
 		// other words, if possible, produce a string that is
 		// backward-compatible with older versions of condor_submit.
-	bool GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const;
+	bool GetArgsStringV1WackedOrV2Quoted(std::string& result, std::string& error_msg) const;
 
 		// Create an args string for windows CreateProcess().
-	bool GetArgsStringWin32(MyString *result,int skip_args) const;
+	bool GetArgsStringWin32(std::string& result, size_t skip_args) const;
 
 		// Create args string for system()
 		// Every argument will be quoted so that it is treated literally
 		// and so that it is treated as a single argument even if it contains
 		// spaces.
-	bool GetArgsStringSystem(MyString *result,int skip_args) const;
-	bool GetArgsStringSystem(std::string & result,int skip_args) const;
+	bool GetArgsStringSystem(std::string & result, size_t skip_args) const;
 
 	bool InputWasV1() const {return input_was_unknown_platform_v1;}
 
@@ -231,26 +214,23 @@ class ArgList {
 	    // In other words, remove the surrounding double quotes
 	    // and remove backwacks in front of inner double-quotes.
 		// (IsV2QuotedString() must be true or this will EXCEPT.)
-	static bool V2QuotedToV2Raw(char const *v2_quoted,MyString *v2_raw,MyString *errmsg);
+	static bool V2QuotedToV2Raw(char const *v2_quoted, std::string& v2_raw, std::string& errmsg);
 
 		// Convert V1Wacked string to V1Raw string.
 		// In other words, remove backwacks in front of double-quotes.
 		// (IsV2QuotedString() must be false or this will EXCEPT.)
-	static bool V1WackedToV1Raw(char const *v1_wacked,MyString *v1_raw,MyString *errmsg);
+	static bool V1WackedToV1Raw(char const *v1_wacked, std::string& v1_raw, std::string& errmsg);
 
 		// Convert V2Raw to V2Quoted string.
 		// In other words, enclose in double-quotes (and escape as necessary).
-	static void V2RawToV2Quoted(MyString const &v2_raw,MyString *result);
 	static void V2RawToV2Quoted(std::string const &v2_raw, std::string& result);
 
 		// Convert V1Raw to V1Wacked string.
 		// In other words, escape double-quotes with backwacks.
-	static void V1RawToV1Wacked(MyString const &v1_raw,MyString *result);
+	static void V1RawToV1Wacked(std::string const &v1_raw, std::string& result);
 
 		// Convenience function for appending error messages.
 		// Each new message begins on a new line.
-	static void AddErrorMessage(char const *msg,MyString *error_buffer);
-
 	static void AddErrorMessage(char const *msg,std::string & error_buffer) {
 		if ( ! error_buffer.empty()) { error_buffer += "\n"; }
 		error_buffer += msg;
@@ -279,13 +259,13 @@ class ArgList {
 	void SetArgV1SyntaxToCurrentPlatform();
 
 		// Parse V1Raw args in win32 format.
-	bool AppendArgsV1Raw_win32(char const *args,MyString *error_msg);
+	bool AppendArgsV1Raw_win32(char const *args,std::string& error_msg);
 
 		// Parse V1Raw args in unix format.
-	bool AppendArgsV1Raw_unix(char const *args,MyString *error_msg);
+	bool AppendArgsV1Raw_unix(char const *args,std::string& error_msg);
 
  private:
-	SimpleList<MyString> args_list;
+	std::vector<std::string> args_list;
 	bool input_was_unknown_platform_v1; //true if we got arguments in V1 format for unknown platform
 	ArgV1Syntax v1_syntax;
 

@@ -254,11 +254,15 @@ JOB_ID_KEY_BUF HeaderKey(0,0);
 
 ForkWork schedd_forker;
 
+// A negative JobsSeenOnQueueWalk means the last job queue walk terminated
+// early, so no reliable count is available.
+int TotalJobsCount = 0;
+int JobsSeenOnQueueWalk = -1;
+
 // Create a hash table which, given a cluster id, tells how
 // many procs are in the cluster
 typedef HashTable<int, int> ClusterSizeHashTable_t;
 static ClusterSizeHashTable_t *ClusterSizeHashTable = 0;
-static int TotalJobsCount = 0;
 static std::set<int> ClustersNeedingCleanup;
 static int defer_cleanup_timer_id = -1;
 static std::set<int> ClustersNeedingMaterialize;
@@ -2185,6 +2189,18 @@ InitJobQueue(const char *job_queue_name,int max_historical_logs)
 			if (clusterad) {
 				if ( ! clusterad->ownerinfo) {
 					InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+
+					// backward compat hack.  Older versions of grid universe and job router don't populate the cluster ad
+					// so if we failed to get ownerinfo, copy attributes from the proc ad and try again
+					if ( ! clusterad->ownerinfo && owner.empty()) {
+						if ( ! clusterad->LookupString(ATTR_USER, buffer) && ad->LookupString(ATTR_USER, buffer)) {
+							clusterad->Assign(ATTR_USER, buffer);
+						}
+						if ( ! clusterad->LookupString(ATTR_OWNER, buffer) && ad->LookupString(ATTR_OWNER, buffer)) {
+							clusterad->Assign(ATTR_OWNER, buffer);
+						}
+						InitClusterAd(clusterad, owner, ownerinfo_is, jobset_ids, needed_sets);
+					}
 				}
 				clusterad->AttachJob(ad);
 				clusterad->autocluster_id = -1;
@@ -2982,7 +2998,7 @@ SuperUserAllowedToSetOwnerTo(const std::string &user) {
 		// root/condor.
 
 	if( queue_super_user_may_impersonate_regex ) {
-		if( queue_super_user_may_impersonate_regex->match(user.c_str()) ) {
+		if( queue_super_user_may_impersonate_regex->match(user) ) {
 			return true;
 		}
 		dprintf(D_FULLDEBUG,"Queue super user not allowed to set owner to %s, because this does not match the QUEUE_SUPER_USER_MAY_IMPERSONATE regular expression.\n",user.c_str());
@@ -6415,20 +6431,11 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 				//IncrementLiveJobCounter(scheduler.liveJobCounts, procad->Universe(), job_status, 1);
 				//if (ownerinfo) { IncrementLiveJobCounter(ownerinfo->live, procad->Universe(), job_status, 1); }
 
-				std::string version;
-				if ( procad->LookupString( ATTR_VERSION, version ) ) {
-					CondorVersionInfo vers( version.c_str() );
-					// CRUFT If the submitter is older than 7.5.4, then
-					// they are responsible for writing the submit event
-					// to the user log.
-					if ( vers.built_since_version( 7, 5, 4 ) ) {
-						std::string warning;
-						if(errorStack && (! errorStack->empty())) {
-							warning = errorStack->getFullText();
-						}
-						scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
-					}
+				std::string warning;
+				if(errorStack && (! errorStack->empty())) {
+					warning = errorStack->getFullText();
 				}
+				scheduler.WriteSubmitToUserLog( procad, doFsync, warning.empty() ? NULL : warning.c_str() );
 
 				int iDup, iTotal;
 				iDup = procad->PruneChildAd();
@@ -6665,19 +6672,6 @@ GetAttributeStringNew( int cluster_id, int proc_id, const char *attr_name,
 	}
 	errno = EINVAL;
 	return -1;
-}
-
-// returns -1 if the lookup fails or if the value is not a string, 0 if
-// the lookup succeeds in the job queue, 1 if it succeeds in the current
-// transaction; val is set to the empty string on failure
-int
-GetAttributeString( int cluster_id, int proc_id, const char *attr_name, 
-					MyString &val )
-{
-	std::string strVal;
-	int rc = GetAttributeString(cluster_id, proc_id, attr_name, strVal);
-	val = strVal;
-	return rc;
 }
 
 // returns -1 if the lookup fails or if the value is not a string, 0 if
@@ -6976,7 +6970,6 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 		char *bigbuf2 = NULL;
 		char *attribute_value = NULL;
 		ClassAd *expanded_ad;
-		int index;
 		char *left,*name,*right,*value,*tvalue;
 		bool value_came_from_jobad;
 
@@ -7049,12 +7042,10 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 
 		std::string cachedAttrName, unparseBuf;
 
-		index = -1;	
 		AttrsToExpand.rewind();
 		bool attribute_not_found = false;
 		while ( !attribute_not_found ) 
 		{
-			index++;
 			curr_attr_to_expand = AttrsToExpand.next();
 
 			if ( curr_attr_to_expand == NULL ) {
@@ -8428,6 +8419,11 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 	const bool with_jobsets = (with & WJQ_WITH_JOBSETS) != 0;
 	const bool with_clusters = (with & WJQ_WITH_CLUSTERS) != 0;
 	const bool with_no_jobs = (with & WJQ_WITH_NO_JOBS) != 0;
+	int num_jobs = 0;
+	bool stopped_early = false;
+
+	// This means the walk terminated early, and we don't have a valid count
+	JobsSeenOnQueueWalk = -1;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8450,16 +8446,23 @@ WalkJobQueueEntries(int with, queue_scan_func func, void* pv, schedd_runtime_pro
 		} else if ( ! ad->IsJob()) {
 			continue;
 		} else { // jobads have cluster > 0 && proc >= 0
+			num_jobs++;
 			if (with_no_jobs) { continue; }
 		}
 		int rval = func(ad, key, pv);
-		if (rval < 0)
+		if (rval < 0) {
+			stopped_early = true;
 			break;
+		}
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
 	ftm += runtime;
 	WalkJobQ_runtime += runtime;
+
+	if (!stopped_early) {
+		JobsSeenOnQueueWalk = num_jobs;
+	}
 
 	in_walk_job_queue--;
 }
@@ -8469,6 +8472,11 @@ void
 WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 {
 	double begin = _condor_debug_get_time_double();
+	int num_jobs = 0;
+	bool stopped_early = false;
+
+	// This means the walk terminated early, and we don't have a valid count
+	JobsSeenOnQueueWalk = -1;
 
 	if( in_walk_job_queue ) {
 		dprintf(D_ALWAYS,"ERROR: WalkJobQueue called recursively!  Generating stack trace:\n");
@@ -8483,16 +8491,23 @@ WalkJobQueue3(queue_job_scan_func func, void* pv, schedd_runtime_probe & ftm)
 	JobQueuePayload ad;
 	while(JobQueue->Iterate(key, ad)) {
 		if (ad->IsJob()) {
+			num_jobs++;
 			JobQueueJob * job = static_cast<JobQueueJob*>(ad);
 			int rval = func(job, key, pv);
-			if (rval < 0)
+			if (rval < 0) {
+				stopped_early = true;
 				break;
+			}
 		}
 	}
 
 	double runtime = _condor_debug_get_time_double() - begin;
 	ftm += runtime;
 	WalkJobQ_runtime += runtime;
+
+	if (!stopped_early) {
+		JobsSeenOnQueueWalk = num_jobs;
+	}
 
 	in_walk_job_queue--;
 }

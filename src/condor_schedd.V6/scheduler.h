@@ -264,7 +264,7 @@ struct OwnerInfo {
 typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
 
 
-class match_rec: public ClaimIdParser
+class match_rec
 {
  public:
     match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
@@ -294,6 +294,8 @@ class match_rec: public ClaimIdParser
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
+	bool use_sec_session;
+	ClaimIdParser claim_id;
 	classy_counted_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level

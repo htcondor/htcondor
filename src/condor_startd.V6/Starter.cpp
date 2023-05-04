@@ -569,19 +569,23 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// If we created the parent execute directory (say for filesystem
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 
 #ifdef LINUX
-        if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
 		auto &slot_name = claim->rip()->r_id_str;
+		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
                 if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
 			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
 				slot_name, err.getFullText().c_str());
 		}
-        }
+	} else {
+		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
+	}
+#else
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 #endif // LINUX
-	
+
 }
 
 
@@ -724,7 +728,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	if (append != APPEND_NOTHING) {
 		args.AppendArg("-a");
 		switch (append) {
-		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
+		case APPEND_CLUSTER: args.AppendArg(std::to_string(claim->cluster())); break;
 
 		case APPEND_JOBID: {
 			std::string jobid;

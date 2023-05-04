@@ -1072,8 +1072,8 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;
-		event.setErrorText( err_msg );
-		event.setDaemonName( "starter" );
+		event.error_str = err_msg;
+		event.daemon_name = "starter";
 		event.setCriticalError( false );
 		event.setHoldReasonCode( hold_reason_code );
 		event.setHoldReasonSubCode( hold_reason_subcode );
@@ -1121,8 +1121,6 @@ JICShadow::registerStarterInfo( void )
 void
 JICShadow::publishStarterInfo( ClassAd* ad )
 {
-	char* tmp_val = NULL;
-
 	ad->Assign( ATTR_UID_DOMAIN, uid_domain );
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
@@ -1134,17 +1132,28 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	tmp_val = param( "ARCH" );
-	ad->Assign( ATTR_ARCH, tmp_val );
-	free( tmp_val );
-
-	tmp_val = param( "OPSYS" );
-	ad->Assign( ATTR_OPSYS, tmp_val );
-	free( tmp_val );
+	const char * sandbox_dir = Starter->GetWorkingDir(false);
+	if (sandbox_dir && sandbox_dir[0]) {
+		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
+	}
+	if (Starter->jic) {
+		ClassAd * machineAd = Starter->jic->machClassAd();
+		if( machineAd ) {
+			CopyMachineResources(*ad, *machineAd, true);
+			//Check for requested machine attrs to return for execution event
+			if (job_ad) {
+				std::string requestAttrs;
+				if (job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs)) {
+					CopySelectAttrs(*ad, *machineAd, requestAttrs, false);
+				}
+			}
+		}
+	}
 
 	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.
+		// this sets CondorVersion, Address and MyAddress
 	daemonCore->publish(ad);
 }
 

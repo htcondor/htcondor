@@ -5,13 +5,14 @@ Users' Manual
    :maxdepth: 2
    :glob:
 
-   quick-start-guide
    welcome-to-htcondor
    running-a-job-steps
    submitting-a-job
    file-transfer
+   submitting-a-remote-job
    managing-a-job
    automatic-job-management
+   when-job-wont-run
    services-for-jobs
    priorities-and-preemption
    dagman-workflows

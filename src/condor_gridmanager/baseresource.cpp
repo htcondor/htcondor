@@ -369,10 +369,7 @@ void BaseResource::UnregisterJob( BaseJob *job )
 	pingRequesters.Delete( job );
 	registeredJobs.Delete( job );
 
-	// Some of our platforms don't support std::erase()
-	//std::erase(leaseUpdates, job);
-	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
-	leaseUpdates.erase(it, leaseUpdates.end());
+	std::erase(leaseUpdates, job);
 
 	if ( IsEmpty() ) {
 		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
@@ -458,10 +455,7 @@ void BaseResource::CancelSubmit( BaseJob *job )
 		submitsWanted.Delete( job );
 	}
 
-	// Some of our platforms don't support std::erase()
-	//std::erase(leaseUpdates, job);
-	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
-	leaseUpdates.erase(it, leaseUpdates.end());
+	std::erase(leaseUpdates, job);
 
 	SetJobPollInterval();
 

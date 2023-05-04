@@ -128,9 +128,8 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			if (allow) {
 				rpath = realpath(path, nullptr);
 				if (!rpath) {
-					char *d = condor_dirname(path);
-					rpath = realpath(d, nullptr);
-					free(d);
+					std::string d = condor_dirname(path);
+					rpath = realpath(d.c_str(), nullptr);
 					if (!rpath) {
 						allow = false;
 						dprintf(D_ALWAYS,

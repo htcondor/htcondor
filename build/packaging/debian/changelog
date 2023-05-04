@@ -1,3 +1,32 @@
+condor (10.4.2-1) stable; urgency=medium
+
+  * Fix bug where remote submission of batch grid universe jobs fail
+  * Fix bug where HTCondor-CE fails to handle jobs after HTCondor restarts
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 02 May 2023 07:11:00 -0500
+
+condor (10.4.1-1) stable; urgency=medium
+
+  * Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el)
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Wed, 12 Apr 2023 13:47:00 -0500
+
+condor (10.4.0-1) stable; urgency=medium
+
+  * DAGMan no longer carries the entire environment into the DAGMan job
+  * Allows EGI CheckIn tokens to be used the with SciTokens authentication
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Apr 2023 10:36:00 -0500
+
+condor (10.0.3-1) stable; urgency=medium
+
+  * GPU metrics continues to be reported after the startd is reconfigured
+  * Fixed issue where GPU metrics could be wildly over-reported
+  * Fixed issue that kept jobs from running when installed on Debian or Ubuntu
+  * Fixed DAGMan problem when retrying a proc failure in a multi-proc node
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Thu, 06 Apr 2023 10:36:00 -0500
+
 condor (10.3.1-1) stable; urgency=medium
 
   * Execution points now advertise if an sshd is available for ssh to job

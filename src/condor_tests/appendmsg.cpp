@@ -46,7 +46,7 @@ extern "C" unsigned int __stdcall GetLastError(void);
 extern "C" unsigned int __stdcall Sleep(unsigned int millisec);
 extern "C" HANDLE __stdcall GetStdHandle(int idHandle);
 extern "C" const wchar_t * __stdcall GetCommandLineW(void);
-extern "C" BOOL __stdcall WriteFile(HANDLE hFile, char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
+extern "C" BOOL __stdcall WriteFile(HANDLE hFile, const char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
 extern "C" BOOL __stdcall QueryPerformanceCounter(__int64 * counter);
 
 #define LMEM_ZERO 0x40
@@ -321,7 +321,7 @@ const c* next_token_ref(const c* pline, const c2* ws, const c* & pToken, int & c
 template <class c>
 BOOL Print(HANDLE hf, const c* output, unsigned int cch) {
     unsigned int cbWrote = 0;
-    return WriteFile(hf, const_cast<c*>(output), cch * sizeof(c), &cbWrote, 0);
+    return WriteFile(hf, output, cch * sizeof(c), &cbWrote, 0);
 }
 template <class c>
 BOOL Print(HANDLE hf, const c* output, int cch) {

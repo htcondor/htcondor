@@ -75,15 +75,6 @@ Regex::compile(const char * pattern,
 }
 
 bool
-Regex::compile(const MyString & pattern,
-			   int * errcode,
-			   int * erroffset,
-			   uint32_t options_param)
-{
-	return compile(pattern.c_str(), errcode, erroffset, options_param);
-}
-
-bool
 Regex::compile(const std::string & pattern,
 			   int * errcode,
 			   int * erroffset,
@@ -95,7 +86,7 @@ Regex::compile(const std::string & pattern,
 
 // Make sure this is an exact copy of match() before the final purge.
 bool
-Regex::match_str(const std::string & string, std::vector<std::string> * groups) {
+Regex::match(const std::string & string, std::vector<std::string> * groups) {
 	if ( ! this->isInitialized() ) {
 		return false;
 	}
@@ -122,23 +113,6 @@ Regex::match_str(const std::string & string, std::vector<std::string> * groups) 
 	pcre2_match_data_free(matchdata);
 	return rc > 0;
 }
-
-bool
-Regex::match(const MyString & string)
-{
-	if ( ! this->isInitialized() ) {
-		return false;
-	}
-
-	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
-	PCRE2_SPTR string_pcre2str = reinterpret_cast<const unsigned char *>(string.c_str());
-
-	int rc = pcre2_match(re, string_pcre2str, static_cast<PCRE2_SIZE>(string.length()), 0, options, matchdata, NULL);
-
-	pcre2_match_data_free(matchdata);
-	return rc > 0;
-}
-
 
 
 /**

@@ -88,6 +88,7 @@ struct SubmitDagShallowOptions
     std::string appendFile; // append to .condor.sub file before queue
     std::list<std::string> appendLines; // append to .condor.sub file before queue
     std::string strConfigFile;
+    std::string saveFile;
     bool dumpRescueDag;
     bool runValgrind;
     std::string primaryDagFile;
@@ -119,6 +120,7 @@ struct SubmitDagShallowOptions
         iMaxPost = 0;
         param(appendFile, "DAGMAN_INSERT_SUB_FILE");
         strConfigFile = "";
+        saveFile = "";
         dumpRescueDag = false;
         runValgrind = false;
         doRecovery = false;

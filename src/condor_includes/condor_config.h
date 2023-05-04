@@ -21,7 +21,6 @@
 #define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "simplelist.h"
 #include "extArray.h"
@@ -140,8 +139,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 } MACRO_EVAL_CONTEXT_EX;
 
 
-	extern MyString global_config_source;
-	extern MyString global_root_config_source;
+	extern std::string global_config_source;
 	extern StringList local_config_sources;
 	class Regex;
 
@@ -228,17 +226,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// A convenience function for use with trinary parameters.
 	bool param_false( const char * name );
 
-	const char * param_append_location(const MACRO_META * pmet, MyString & value);
 	const char * param_append_location(const MACRO_META * pmet, std::string & value);
-	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 	const char * param_get_location(const MACRO_META * pmet, std::string & value);
-
-	const char * param_get_info(const char * name,
-								const char * subsys,
-								const char * local,
-								MyString & name_used,
-								const char ** pdef_value,
-								const MACRO_META **ppmet);
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
@@ -328,9 +317,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	const MACRO_DEF_ITEM * find_macro_def_item(const char * name, MACRO_SET & set, int use);
 
 	void optimize_macros(MACRO_SET& macro_set);
-
-	/* A convenience function that calls param() with a MyString buffer. */
-	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf, char const *param_name, char const *default_value=NULL);
@@ -428,9 +414,9 @@ const char * hash_iter_key(HASHITER& it);
 const char * hash_iter_value(HASHITER& it);
 int hash_iter_used_value(HASHITER& it);
 MACRO_META * hash_iter_meta(HASHITER& it);
-const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
+const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, std::string& source_name, int& line_number);
 const char * hash_iter_def_value(HASHITER& it);
-bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
+bool param_find_item (const char * name, const char * subsys, const char * local, std::string& name_found, HASHITER& it);
 void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 

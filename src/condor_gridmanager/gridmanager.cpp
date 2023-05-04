@@ -42,6 +42,8 @@
 #include "gcejob.h"
 #include "azurejob.h"
 
+#include <algorithm>
+
 #define QMGMT_TIMEOUT 15
 
 #define UPDATE_SCHEDD_DELAY		5
@@ -57,7 +59,7 @@ struct JobType
 
 List<JobType> jobTypes;
 
-SimpleList<int> scheddUpdateNotifications;
+std::vector<int> scheddUpdateNotifications;
 
 struct ScheddUpdateRequest {
 	BaseJob *m_job;
@@ -174,9 +176,10 @@ requestScheddUpdate( BaseJob *job, bool notify )
 void
 requestScheddUpdateNotification( int timer_id )
 {
-	if ( scheddUpdateNotifications.IsMember( timer_id ) == false ) {
+	if ( scheddUpdateNotifications.end() == std::find(
+				scheddUpdateNotifications.begin(), scheddUpdateNotifications.end(), timer_id)) {
 		// A new request; add it to the list
-		scheddUpdateNotifications.Append( timer_id );
+		scheddUpdateNotifications.push_back( timer_id );
 		RequestContactSchedd();
 	}
 }
@@ -992,12 +995,10 @@ contact_schedd_next_add_job:
 
 	// Poke objects that wanted to be notified when a schedd update completed
 	// successfully (possibly minus deletes)
-	int timer_id;
-	scheddUpdateNotifications.Rewind();
-	while ( scheddUpdateNotifications.Next( timer_id ) ) {
+	for (int timer_id : scheddUpdateNotifications) {
 		daemonCore->Reset_Timer( timer_id, 0 );
 	}
-	scheddUpdateNotifications.Clear();
+	scheddUpdateNotifications.clear();
 
 	if ( send_reschedule == true ) {
 		ScheddObj->reschedule();

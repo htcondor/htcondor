@@ -305,6 +305,7 @@ def invoke_pilot_script(
     mem_mb,
     gpus,
     gpu_type,
+    schedd_name,
 ):
     ssh_target = ssh_host_name
     if ssh_user_name is not None:
@@ -332,6 +333,7 @@ def invoke_pilot_script(
         str(allocation),
         request_id,
         str(remote_script_dir / password_file.name),
+        schedd_name,
         str(cpus),
         str(mem_mb),
         gpu_argument
@@ -438,7 +440,8 @@ def create_annex_token(logger, type):
         '-authz', 'READ',
         '-authz', 'ADVERTISE_STARTD',
         '-authz', 'ADVERTISE_MASTER',
-        '-authz', 'ADVERTISE_SCHEDD',
+        # For direct attach.
+        '-authz', 'WRITE',
     ]
 
     proc = subprocess.Popen(
@@ -621,6 +624,22 @@ def annex_inner_func(
     )
     if login_host is not None:
         ssh_host_name = login_host
+
+    #
+    # The pilot needs to know the name of the schedd so it can look the schedd
+    # up in the annex collector.  Since it's hard to extract the name of the
+    # schedd from the schedd itself (?!), we might as well ask the annex collector
+    # ourselves and verify that the pilot will get an answer.
+    #
+    if test is None:
+        c = htcondor.Collector(collector)
+        r = c.query(ad_type=htcondor.AdTypes.Schedd)
+        if len(r) != 1:
+            raise RuntimeError("Found more than one scheduler in the AP collector; this configuration is not supported.  Contact your administrator.")
+        schedd_name = r[0].get('name')
+        if schedd_name is None:
+            raise RuntimeError("Scheduler ad in AP collector did not contain the scheduler's name.")
+
 
     ##
     ## While we're requiring that jobs are submitted before creating the
@@ -932,6 +951,7 @@ def annex_inner_func(
         mem_mb,
         gpus,
         gpu_type,
+        schedd_name,
     )
 
     if rc == 0:

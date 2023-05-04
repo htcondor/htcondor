@@ -116,11 +116,11 @@ Communicating with the Submit machine via Chirp
 -----------------------------------------------
 
 HTCondor provides a method for running jobs to read or write information
-to or from the submit machine, called "chirp".  Chirp allows jobs to
+to or from the access point, called "chirp".  Chirp allows jobs to
 
 - Write to the job ad in the schedd.
   This can be used for long-running jobs to write progress information
-  back to the submit machine, so that a *condor_q* query will reveal
+  back to the access point, so that a *condor_q* query will reveal
   how far along a running job is.  Or, if a job is listening on a network
   port, chirp can write the port number to the job ad, so that others
   can connect to this job.
@@ -135,14 +135,14 @@ to or from the submit machine, called "chirp".  Chirp allows jobs to
   allows anyone with access to that file to see how much progress a running
   job has made.
 
-- Read a file from the submit machine.
-  This allows a job to read a file from the submit machine at runtime.  
+- Read a file from the access point.
+  This allows a job to read a file from the access point at runtime.  
   While file transfer is generally a better approach, file transfer requires
   the submitter to know the files to be transferred at submit time.
 
-- Write a file to the submit machine.
+- Write a file to the access point.
   Again, while file transfer is usually the better choice, with chirp, a job
-  can write intermediate results back to the submit machine before the job exits.
+  can write intermediate results back to the access point before the job exits.
 
 HTCondor ships a command-line tool, called *condor_chirp* that can do these
 actions, and provides python bindings so that they can be done natively in 
@@ -153,7 +153,7 @@ When changes to a job made by chirp take effect
 
 When *condor_chirp* successfully updates a job ad attribute, that change
 will be reflected in the copy of the job ad in the *condor_schedd* on 
-the submit machine.  However, most job ad attributes are read by the *condor_starter*
+the access point.  However, most job ad attributes are read by the *condor_starter*
 or *condor_startd* at job start up time, and should chirp change these
 attributes at run time, it will not impact the running job.  In particular,
 the attributes relating to resource requests, such as RequestCpus, RequestMemory,

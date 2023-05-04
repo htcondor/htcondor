@@ -475,7 +475,7 @@ ProcFamilyProxy::start_procd()
 	// condor user
 	//
 	args.AppendArg("-C");
-	args.AppendArg(get_condor_uid());
+	args.AppendArg(std::to_string(get_condor_uid()));
 #endif
 
 #if defined(WIN32)
@@ -523,8 +523,8 @@ ProcFamilyProxy::start_procd()
 			       max_tracking_gid);
 		}
 		args.AppendArg("-G");
-		args.AppendArg(min_tracking_gid);
-		args.AppendArg(max_tracking_gid);
+		args.AppendArg(std::to_string(min_tracking_gid));
+		args.AppendArg(std::to_string(max_tracking_gid));
 	}
 #endif
 

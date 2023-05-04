@@ -88,7 +88,7 @@ private:
 
 	int m_retry_times;
 	
-	StringList m_vmParams;
+	std::vector<std::string> m_vmParams;
 
 	// This is actually a global.
 	const char * m_failure_injection;

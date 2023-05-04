@@ -532,7 +532,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 		}
 	}
 
-	int rc = sock->connect(_addr, 0, non_blocking);
+	int rc = sock->connect(_addr, 0, non_blocking, errstack);
 	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return true;
 	}
@@ -2091,6 +2091,17 @@ Daemon::New_addr( char* str )
 
 	if( _addr ) {
 		Sinful sinful(_addr);
+
+		// Extract the alias first. This ensures that if we
+		// rewrite the sinful, we'll re-insert the alias
+		// afterwards. This is important for SSL authentication,
+		// where the alias is used to verify the daemon's host
+		// certificate.
+		const char* sinful_alias = sinful.getAlias();
+		if (sinful_alias) {
+			New_alias(strdup(sinful_alias));
+		}
+
 		char const *priv_net = sinful.getPrivateNetworkName();
 		if( priv_net ) {
 			bool using_private = false;

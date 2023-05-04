@@ -243,6 +243,7 @@ endif ()
 			condor_pl_test(test_dagman_futile_nodes "Test DAGMan accurately sets futile nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_history "Test condor_history tools capabilities" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -312,11 +313,14 @@ endif ()
 	condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_procapi_pidtracking-snapshot.cmd;src/condor_tests/x_pid_tracking.pl")
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	# test gives false positives on darwin and windows
 	if (LINUX)
-		# test gives false positives on darwin and windows
-		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
-		if (${BIT_MODE} MATCHES "32")
-			condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+		# The shadow memory test fails under qemu, as qemu itself eats a lot of memory.
+		if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+			condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+			if (${BIT_MODE} MATCHES "32")
+				condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+			endif()
 		endif()
 	endif(LINUX)
 

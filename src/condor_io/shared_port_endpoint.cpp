@@ -1222,10 +1222,10 @@ SharedPortEndpoint::ReceiveSocket( ReliSock *named_sock, ReliSock *return_remote
 #endif
 
 bool
-SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
+SharedPortEndpoint::serialize(std::string &inherit_buf,int &inherit_fd)
 {
-	inherit_buf.serialize_string(m_full_name.c_str());
-	inherit_buf.serialize_sep("*");
+	inherit_buf += m_full_name;
+	inherit_buf += '*';
 #ifdef WIN32
 	/*
 	Serializing requires acquiring the handles of the respective pipes and seeding them into
@@ -1242,16 +1242,13 @@ SharedPortEndpoint::serialize(MyString &inherit_buf,int &inherit_fd)
 		dprintf(D_ALWAYS, "SharedPortEndpoint: Failed to duplicate named pipe for inheritance.\n");
 		return false;
 	}
-	inherit_buf.serialize_int((LONG_PTR)inheritable_to_child);
-	inherit_buf.serialize_sep("*");
+	inherit_buf += std::to_string((LONG_PTR)inheritable_to_child);
+	inherit_buf += '*';
 #else
 	inherit_fd = m_listener_sock.get_file_desc();
 	ASSERT( inherit_fd != -1 );
 
-	char *named_sock_serial = m_listener_sock.serialize();
-	ASSERT( named_sock_serial );
-	inherit_buf += named_sock_serial;
-	delete []named_sock_serial;
+	m_listener_sock.serialize(inherit_buf);
 #endif
 
 	return true;
@@ -1265,9 +1262,8 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 		EXCEPT("Failed to parse serialized shared-port information at offset %d: '%s'", (int)in.offset(), inherit_buf);
 	}
 
-	m_local_id = condor_basename(m_full_name.c_str());
-	auto_free_ptr socket_dir(condor_dirname(m_full_name.c_str()));
-	m_socket_dir = socket_dir.ptr();
+	m_local_id    = condor_basename(m_full_name.c_str());
+	m_socket_dir  = condor_dirname(m_full_name.c_str());
 #ifdef WIN32
 	/*
 	Deserializing requires getting the handles out of the buffer and getting the pid pipe name
@@ -1277,7 +1273,7 @@ SharedPortEndpoint::deserialize(const char *inherit_buf)
 	in.deserialize_sep("*"); // note: terminator is missing from HTCondor prior to 8.5.7 so it is optional here...
 	inherit_buf = in.next_pos();
 #else
-	inherit_buf = m_listener_sock.serialize(in.next_pos());
+	inherit_buf = m_listener_sock.deserialize(in.next_pos());
 #endif
 	m_listening = true;
 
@@ -1387,15 +1383,12 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 		{
 				// if socket_dir doesn't exist, see if we are allowed to
 				// create it
-			char *parent_dir = condor_dirname( socket_dir.c_str() );
-			if( parent_dir ) {
-				cached_result = access(parent_dir,W_OK)==0;
-				free( parent_dir );
-			}
+			std::string parent_dir = condor_dirname(socket_dir.c_str());
+			cached_result = access(parent_dir.c_str(), W_OK)==0;
 		}
 
 		if( !cached_result && why_not ) {
-			formatstr(*why_not, "cannot write to %s: %s",
+			formatstr(*why_not, "cannot write to the DAEMON_SOCKET_DIR '%s': %s",
 						   socket_dir.c_str(),
 						   strerror(errno));
 		}

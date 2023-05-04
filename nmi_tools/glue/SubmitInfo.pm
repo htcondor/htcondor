@@ -494,6 +494,7 @@ our %submit_info = (
 	},
 	'x86_64_MacOSX15',	=> 'x86_64_MacOSX',
 	'x86_64_macOS11',	=> 'x86_64_MacOSX',
+	'x86_64_macOS13',	=> 'x86_64_MacOSX',
 
 	#
 	# The SWAMP platforms.
@@ -556,6 +557,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',
 	'x86_64_fedora_16'				=> 'x86_64_Fedora',
@@ -667,6 +669,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Ubuntu18'	=> 'x86_64_Ubuntu18',
 	'nmi-build:x86_64_Ubuntu20'	=> 'x86_64_Ubuntu18',
 	'nmi-build:x86_64_Ubuntu22'	=> 'x86_64_Ubuntu18',
+	'nmi-build:ppc64le_Ubuntu20'	=> 'x86_64_Ubuntu18',
 
 	# Add the SWAMP's (temporary) platform name
 	'swamp:ubuntu-12.04-64'					=> 'x86_64_Ubuntu12',

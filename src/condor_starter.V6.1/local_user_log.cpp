@@ -228,9 +228,9 @@ LocalUserLog::logStarterError( const char* err_msg, bool critical )
 	}
 
 	RemoteErrorEvent event;
-	event.setErrorText( err_msg );
-	event.setDaemonName( "starter" );
-	event.setExecuteHost( daemonCore->InfoCommandSinfulString() );
+	event.error_str = err_msg;
+	event.daemon_name = "starter";
+	event.execute_host = daemonCore->InfoCommandSinfulString();
 	event.setCriticalError( critical );
 
 	if( !u_log.writeEvent(&event) ) {
@@ -413,10 +413,7 @@ LocalUserLog::logRequeueEvent( ClassAd* ad, bool checkpointed )
     	//
     	// Grab the exit reason out of the ad
     	//
-	std::string reason;
-	if ( ad->LookupString( ATTR_REQUEUE_REASON, reason ) ) {
-		event.setReason( reason.c_str() );
-	}
+	ad->LookupString( ATTR_REQUEUE_REASON, event.reason );
     
 	event.run_local_rusage = run_local_rusage;
     event.checkpointed = checkpointed;

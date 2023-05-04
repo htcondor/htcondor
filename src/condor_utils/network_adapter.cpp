@@ -145,12 +145,12 @@ NetworkAdapterBase::wolSetBit ( WOL_TYPE type, WOL_BITS bit )
 	return 0;
 }
 
-struct WolTable
+struct WolTableGeneric
 {
 	NetworkAdapterBase::WOL_BITS	 wol_bits;
 	const char						*string;
 };
-static WolTable wol_table [] =
+static WolTableGeneric wol_table [] =
 {
 	{ NetworkAdapterBase::WOL_PHYSICAL,		"Physical Packet" },
 	{ NetworkAdapterBase::WOL_UCAST,		"UniCast Packet", },

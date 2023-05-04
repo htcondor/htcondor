@@ -23,6 +23,7 @@
 #include "condor_common.h"
 #include "condor_daemon_core.h"
 #include "HookClient.h"
+#include <vector>
 
 
 namespace classad {
@@ -40,7 +41,6 @@ public:
 	bool initialize();
 
 	bool spawn(HookClient* client, ArgList* args, const std::string & hook_stdin, priv_state priv = PRIV_CONDOR_FINAL, Env *env = NULL);
-	bool spawn(HookClient* client, ArgList* args, MyString* hook_stdin, priv_state priv = PRIV_CONDOR_FINAL, Env *env = NULL);
 	bool remove(HookClient* client);
 
 		/**
@@ -60,7 +60,7 @@ protected:
 		   List of HookClient objects we've spawned and are waiting
 		   for output from.
 		*/
-    SimpleList<HookClient*> m_client_list;
+	std::vector<HookClient*> m_client_list;
 
 private:
 		/// DC reaper ID. @see reaperIgnore()

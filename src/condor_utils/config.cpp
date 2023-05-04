@@ -1236,7 +1236,7 @@ static bool parse_include_options(char * str, int & opts, char *& pinto, const c
 {
 	err = NULL;
 	pinto = NULL;
-	StringTokenIterator it(str, 100, " \t");
+	StringTokenIterator it(str, " \t");
 	const std::string * tok = it.next_string();
 	if ( ! tok) return true;
 
@@ -1313,7 +1313,7 @@ bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _s
 {
 	src = _src;
 	if (input) delete input;
-	input = new StringTokenIterator(src_string, 128, "\n");
+	input = new StringTokenIterator(src_string, "\n");
 	return input != NULL;
 }
 
@@ -2943,7 +2943,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 		if (special_id) {
 			all_done = false;
 
-			StringTokenIterator it(argstr, 40, ","); it.rewind();
+			StringTokenIterator it(argstr, ","); it.rewind();
 
 			std::string buf;
 			if (meta_only.index <= 0) {

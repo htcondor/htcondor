@@ -69,7 +69,7 @@ static time_t now;
 
 const int DedicatedScheduler::MPIShadowSockTimeout = 60;
 
-void removeFromList(SimpleList<PROC_ID> *, CAList *);
+void removeFromList(std::vector<PROC_ID> &, CAList *);
 
 //////////////////////////////////////////////////////////////
 //  AllocationNode
@@ -857,7 +857,7 @@ DedicatedScheduler::releaseClaim( match_rec* m_rec )
 
 	rsock.encode();
     d.startCommand( RELEASE_CLAIM, &rsock);
-	rsock.put( m_rec->claimId() );
+	rsock.put( m_rec->claim_id.claimId() );
 	rsock.end_of_message();
 
 	if( IsFulldebug(D_FULLDEBUG) ) { 
@@ -903,9 +903,9 @@ DedicatedScheduler::deactivateClaim( match_rec* m_rec )
 
 	sock.encode();
 
-	if( !sock.put(m_rec->claimId()) ) {
+	if( !sock.put(m_rec->claim_id.claimId()) ) {
         	dprintf( D_ALWAYS, "ERROR in deactivateClaim(): "
-				 "Can't code ClaimId (%s)\n", m_rec->publicClaimId() );
+				 "Can't code ClaimId (%s)\n", m_rec->claim_id.publicClaimId() );
 		return false;
 	}
 	if( !sock.end_of_message() ) {
@@ -1243,7 +1243,7 @@ DedicatedScheduler::giveMatches( int, Stream* stream )
 						 sinful, i, p );
 				return FALSE;
 			}				
-			if( ! stream->put( (*matches)[i]->claimId() ) ) {
+			if( ! stream->put( (*matches)[i]->claim_id.claimId() ) ) {
 				dprintf( D_ALWAYS, "ERROR in giveMatches: can't send "
 						 "ClaimId for match %zu of proc %d\n", i, p );
 				return FALSE;
@@ -1824,7 +1824,7 @@ DedicatedScheduler::sortResources( void )
 				char *slot_name = NULL;
 				resource->LookupString(ATTR_NAME, &slot_name);
 				ASSERT( all_matches->insert(slot_name, mr) == 0 );
-				ASSERT( all_matches_by_id->insert(mr->claimId(), mr) == 0 );
+				ASSERT( all_matches_by_id->insert(mr->claim_id.claimId(), mr) == 0 );
 				free(slot_name);
 			}
 		}
@@ -2031,7 +2031,7 @@ DedicatedScheduler::spawnJobs( void )
 			  aboutToSpawnJobHandler() hook to complete.
 			*/
 		allocation->status = A_RUNNING;
-		allocation->setClaimId( mrec->claimId() );
+		allocation->setClaimId( mrec->claim_id.claimId() );
 
 			// We must set all the match recs to point at this srec.
 		for( p=0; p<allocation->num_procs; p++ ) {
@@ -2063,8 +2063,8 @@ DedicatedScheduler::addReconnectAttributes(AllocationNode *allocation)
 				// Foreach node within this proc...
 			for( int i=0; i < n; i++ ) {
 					// Grab the claim from the mrec
-				char const *claim = (*(*allocation->matches)[p])[i]->claimId();
-				char const *publicClaim = (*(*allocation->matches)[p])[i]->publicClaimId();
+				char const *claim = (*(*allocation->matches)[p])[i]->claim_id.claimId();
+				char const *publicClaim = (*(*allocation->matches)[p])[i]->claim_id.publicClaimId();
 
 				std::string claim_buf;
 				if( strchr(claim,',') ) {
@@ -2268,9 +2268,7 @@ DedicatedScheduler::computeSchedule( void )
 			}
 
 			// If this job is waiting for a reconnect, don't even try here
-			jobsToReconnect.Rewind();
-			PROC_ID reconId;
-			while (jobsToReconnect.Next(reconId)) {
+			for (PROC_ID reconId: jobsToReconnect) {
 				if ((reconId.cluster == cluster) &&
 				    (reconId.proc    == proc_id)) {
 					dprintf(D_FULLDEBUG, "skipping %d.%d because it is waiting to reconnect\n", cluster, proc_id);
@@ -2882,7 +2880,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 		// Assume all procs start at 0, and are monotonically increasing
 	int last_proc = -1;
-	int node = 0;
 
 		// Foreach machine we've matched
 	while( (machine = idle_candidates->Next()) ) {
@@ -2914,7 +2911,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 			// We're now at a new proc
 		if( proc != last_proc) {
 			last_proc = proc;
-			node = 0;
 
 				// create a new MRecArray
 			matches = new MRecArray();
@@ -2926,7 +2922,6 @@ DedicatedScheduler::createAllocations( CAList *idle_candidates,
 
 			// And put the mrec into the matches for this node in the proc
 		matches->push_back(mrec);
-		node++;
 	}
 	
 	ASSERT( allocations->insert( cluster, alloc ) == 0 );
@@ -3308,10 +3303,10 @@ DedicatedScheduler::AddMrec(
     if (slot_type_id == 1) { // Cannot include Resource.h from here.
         update_negotiator_attrs_for_partitionable_slots(mrec->my_match_ad);
         pending_matches[claim_id] = mrec;
-        pending_claims[mrec->publicClaimId()] = claim_id;
+        pending_claims[mrec->claim_id.publicClaimId()] = claim_id;
     } else {
         ASSERT( all_matches->insert(slot_name, mrec) == 0 );
-        ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
+        ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
     }
 
 	removeRequest( job_id );
@@ -3328,7 +3323,7 @@ DedicatedScheduler::DelMrec( match_rec* rec )
 				 "match not deleted\n" );
 		return false;
 	}
-	return DelMrec( rec->claimId() );
+	return DelMrec( rec->claim_id.claimId() );
 }
 
 
@@ -3352,14 +3347,14 @@ DedicatedScheduler::DelMrec( char const* id )
 		dprintf( D_FULLDEBUG, "Found record for claim %s in pending matches\n",id);
 		pending_matches.erase(it);
 		std::map<std::string,ClassAd*>::iterator rit;
-		if((rit = pending_requests.find(rec->publicClaimId())) != pending_requests.end()){
+		if((rit = pending_requests.find(rec->claim_id.publicClaimId())) != pending_requests.end()){
 			if(rit->second){
 				delete rit->second;
 				pending_requests.erase(rit);
 			}
 		}
 		std::map<std::string,std::string>::iterator cit;
-		if((cit = pending_claims.find(rec->publicClaimId())) != pending_claims.end()){
+		if((cit = pending_claims.find(rec->claim_id.publicClaimId())) != pending_claims.end()){
 			pending_claims.erase(cit);
 		}
 		delete rec;
@@ -3965,11 +3960,7 @@ bool
 DedicatedScheduler::enqueueReconnectJob( PROC_ID job) {
 
 	 
-	if( ! jobsToReconnect.Append(job) ) {
-		dprintf( D_ALWAYS, "Failed to enqueue job id (%d.%d)\n",
-				 job.cluster, job.proc );
-		return false;
-	}
+	jobsToReconnect.push_back(job);
 	dprintf( D_FULLDEBUG,
 			 "Enqueued dedicated job %d.%d to spawn shadow for reconnect\n",
 			 job.cluster, job.proc );
@@ -4002,17 +3993,14 @@ void
 DedicatedScheduler::checkReconnectQueue( void ) {
 	dprintf(D_FULLDEBUG, "In DedicatedScheduler::checkReconnectQueue\n");
 
-	PROC_ID id;
-
 	CondorQuery query(STARTD_AD);
 	ClassAdList result;
 	ClassAdList ads;
 	std::string constraint;
 
-	SimpleList<PROC_ID> jobsToReconnectLater = jobsToReconnect;
+	std::vector<PROC_ID> jobsToReconnectLater = jobsToReconnect;
 
-	jobsToReconnect.Rewind();
-	while( jobsToReconnect.Next(id) ) {
+	for (PROC_ID id: jobsToReconnect) {
 			// there's a pending registration in the queue:
 		dprintf( D_FULLDEBUG, "In checkReconnectQueue(), job: %d.%d\n", 
 				 id.cluster, id.proc );
@@ -4058,8 +4046,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	while ((machine = ads.Next()) ) {
 		char buf[256];
 		machine->LookupString(ATTR_NAME, buf, sizeof(buf));
-		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job (%d.%d)\n", 
-				buf, id.cluster, id.proc);
+		dprintf(D_ALWAYS, "DedicatedScheduler found machine %s for possibly reconnection for job\n", buf);
 		machines.Append(machine);
 	}
 
@@ -4076,8 +4063,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 	last_id.cluster = last_id.proc = -1;
 
 		// OK, we now have all the matched machines
-	jobsToReconnect.Rewind();
-	while( jobsToReconnect.Next(id) ) {
+	for (PROC_ID id : jobsToReconnect) {
 	
 		dprintf(D_FULLDEBUG, "Trying to find machines for job (%d.%d)\n",
 			id.cluster, id.proc);
@@ -4090,7 +4076,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			// We're going to try to start this reconnect job, so remove it
 			// from the reconnectLater list
 			if (machinesToAllocate.Number() > 0) {
-				removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+				removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 				createAllocations(&machinesToAllocate, &jobsToAllocate, 
 							  last_id.cluster, nprocs, true);
@@ -4216,7 +4202,7 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 			mrec->setStatus(M_CLAIMED);
 
 			ASSERT( all_matches->insert(host, mrec) == 0 );
-			ASSERT( all_matches_by_id->insert(mrec->claimId(), mrec) == 0 );
+			ASSERT( all_matches_by_id->insert(mrec->claim_id.claimId(), mrec) == 0 );
 
 			jobsToAllocate.Append(job);
 
@@ -4229,20 +4215,20 @@ DedicatedScheduler::checkReconnectQueue( void ) {
 
 		// Last time through, create the last bit of allocations, if there are any
 	if (machinesToAllocate.Number() > 0) {
-		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", id.cluster);
+		dprintf(D_ALWAYS, "DedicatedScheduler creating Allocations for reconnected job (%d.*)\n", last_id.cluster);
 		// We're going to try to start this reconnect job, so remove it
 		// from the reconnectLater list
-		removeFromList(&jobsToReconnectLater, &jobsToAllocate);
+		removeFromList(jobsToReconnectLater, &jobsToAllocate);
 
 		createAllocations(&machinesToAllocate, &jobsToAllocate, 
-					  id.cluster, nprocs, true);
+					  last_id.cluster, nprocs, true);
 		
 	}
 	spawnJobs();
 
 	jobsToReconnect = jobsToReconnectLater;
 
-	if (jobsToReconnect.Number() > 0) {
+	if (jobsToReconnect.size() > 0) {
 		reconnect_tid = daemonCore->Register_Timer( 60,
 			  (TimerHandlercpp)&DedicatedScheduler::checkReconnectQueue,
 			   "checkReconnectQueue", this );
@@ -4292,7 +4278,7 @@ DedicatedScheduler::FindMrecByClaimID(char const* claim_id) {
 
 // Set removal.  Remove each jobsToAllocate entry from jobsToReconnectLater
 void
-removeFromList(SimpleList<PROC_ID> *jobsToReconnectLater, CAList *jobsToAllocate) {
+removeFromList(std::vector<PROC_ID> &jobsToReconnectLater, CAList *jobsToAllocate) {
 	jobsToAllocate->Rewind();
 	ClassAd *job;
 	while ((job = jobsToAllocate->Next())) {
@@ -4300,14 +4286,14 @@ removeFromList(SimpleList<PROC_ID> *jobsToReconnectLater, CAList *jobsToAllocate
 		job->LookupInteger(ATTR_CLUSTER_ID, id.cluster);
 		job->LookupInteger(ATTR_PROC_ID, id.proc);
 
-		PROC_ID id2;
-		jobsToReconnectLater->Rewind();
-		while ((jobsToReconnectLater->Next(id2))) {
-			if ((id.cluster == id2.cluster) &&
-			    (id.proc    == id2.proc)) {
-					jobsToReconnectLater->DeleteCurrent();
-					break;
-			}
+		auto samey = [id](const PROC_ID &id2) {
+			return (id.cluster == id2.cluster) &&
+			   (id.proc == id2.proc);
+		};
+
+		auto it = std::find_if(jobsToReconnectLater.begin(), jobsToReconnectLater.end(), samey);
+		if (it != jobsToReconnectLater.end()) {
+			jobsToReconnectLater.erase(it);
 		}
 	}
 }
@@ -4487,7 +4473,7 @@ DedicatedScheduler::GetMatchRequestAd( match_rec* qmrec ) {
         return NULL;
     }
 
-    std::map<std::string, ClassAd*>::iterator f(pending_requests.find(qmrec->claimId()));
+    std::map<std::string, ClassAd*>::iterator f(pending_requests.find(qmrec->claim_id.claimId()));
     if (f == pending_requests.end()) {
         dprintf(D_ALWAYS, "DedicatedScheduler::GetMatchRequestAd -- failed to find job assigned to claim\n");
         return NULL;

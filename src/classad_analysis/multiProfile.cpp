@@ -22,7 +22,6 @@
 #include "multiProfile.h"
 
 #include <iostream>
-using namespace std;
 
 MultiProfile::
 MultiProfile( )
@@ -106,7 +105,7 @@ NextProfile( Profile *&result )
 }
 
 bool MultiProfile::
-ToString( string& buffer )
+ToString( std::string& buffer )
 {
 	if( !initialized ) {
 		return false;
@@ -153,7 +152,7 @@ InitVal( classad::Value &val )
 	} else if( val.IsErrorValue( ) ) {
 		literalValue = ERROR_VALUE;
 	} else {
-		cerr << "error: value not boolean, error, or undef" << endl;
+		std::cerr << "error: value not boolean, error, or undef" << std::endl;
 		return false;
 	}
 

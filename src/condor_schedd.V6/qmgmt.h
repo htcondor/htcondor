@@ -667,6 +667,11 @@ void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm)
 
 bool InWalkJobQueue();
 
+// A negative JobsSeenOnQueueWalk means the last job queue walk terminated
+// early, so no reliable count is available.
+extern int TotalJobsCount;
+extern int JobsSeenOnQueueWalk;
+
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void PostInitJobQueue();

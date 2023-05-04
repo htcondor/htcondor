@@ -481,6 +481,12 @@ customization=normal
 tags=dagman,dagman_main,condor_submit_dag
 restart=never
 
+[DAGMAN_MANAGER_JOB_APPEND_GETENV]
+default=
+type=string
+tags=dagman,condor_submit_dag
+restart=never
+
 [DAGMAN_DEBUG_CACHE_ENABLE]
 default=false
 type=bool
@@ -791,6 +797,18 @@ customization=normal
 tags=dagman,dagman_main
 restart=never
 
+[DAGMAN_NODE_RECORD_INFO]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
+[DAGMAN_RECORD_MACHINE_ATTRS]
+default=
+type=string
+tags=dagman,dagman_main
+restart=never
+
 [LIBEXEC]
 default=$(RELEASE_DIR)/libexec
 win32_default=$(BIN)
@@ -895,6 +913,18 @@ default=false
 type=bool
 usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
 tags=security
+
+[SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES]
+default=true
+type=bool
+
+[SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS]
+default=https://aai-dev.egi.eu/auth/realms/egi
+type=string
+
+[XDG_CACHE_HOME]
+default=$(LOCK)/cache
+type=path
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
@@ -2437,10 +2467,13 @@ type=string
 tags=condor_auth_passwd
 
 [SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS]
-default=POOL
+default=POOL AP
 description=StringList of keys allowed to sign from condor_token_request
 type=string
 tags=condor_auth_passwd
+
+[SEC_TOKEN_AP_SIGNING_KEY_NAME]
+default=AP
 
 [SEC_TOKEN_POOL_SIGNING_KEY_FILE]
 default=$(SEC_PASSWORD_FILE)
@@ -5442,6 +5475,10 @@ default=$(SBIN)/arc_gahp
 [ARC_GAHP_LOG]
 default=/tmp/ArcGahpLog.$(USERNAME)
 
+[ARC_GAHP_USE_THREADS]
+default=false
+type=bool
+
 [GAHP_SSL_CAFILE]
 default=
 type=path
@@ -5836,6 +5873,15 @@ default=240
 description=Where should condor_adstash place JSON files if using the jsonfile interface
 type=path
 default=$(LOG)
+[TOOLS_ASSUME_FIREWALLS]
+description=If a connection to a daemon using CCB is from a machine using shared port, and the connecting client can not listen on the shared port because it can not write to the daemon socket directory (e.g., it's a tool), give up -- assuming a firewall -- rather than hang after opening a listen socket.
+default=false
+type=bool
+
+[DEFAULT_KILL_CHILDREN_ON_EXIT]
+description=Hidden knob.  If true, all daemon core daemons will kill all of their children on exit.
+type=bool
+default=true
 
 ######
 ## add metaknobs below this banner
@@ -6755,28 +6801,70 @@ default : @end
 	STARTD_CRON_cloud_PREFIX = Cloud
 @end
 
-[$FEATURE.AssignAnnex]
-description=Automatically sets jobs' annex attributes if jobs set TargetAnnexName args:(annex_collector[, annex_token_domain])
+[$FEATURE.HPC_ANNEX]
+description=Enable HPC Annex
 default : @fin
-	if ! $(1?)
-		error : use FEATURE : AssignAnnex requires at least 1 argument: annex_collector [,annex_token_domain]
-	endif
+	# Let the command-line tool know that things are configured.
 	HPC_ANNEX_ENABLED = true
-	ANNEX_COLLECTOR = $(1)
-	ANNEX_TOKEN_DOMAIN = $(ANNEX_COLLECTOR)
-	if $(2?)
-		ANNEX_TOKEN_DOMAIN = $(2)
+
+
+	## The annex EPs need a specific port number.
+
+	# This is the default value from `use role:personal`.
+	ispersonal = "127.0.0.1:0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
 	endif
+
+	# This is the default value from the `make-personal-condor` script.
+	ispersonal = "$(FULL_HOSTNAME):0"=="$(COLLECTOR_HOST)"
+	if $INT(ispersonal)
+		COLLECTOR_HOST = $(FULL_HOSTNAME):$(COLLECTOR_PORT)
+	endif
+
+
+	# Create an "AP collector".  At some point, we'd like to make such a
+	# thing first-class.  In the short term, adding a command-line flag
+	# to the collector to set its subsystem would be an improvement.
+	AP_COLLECTOR = $(COLLECTOR)
+	AP_COLLECTOR.COLLECTOR_LOG = $(LOG)/AP_Collector.log
+	AP_COLLECTOR.CCB_RECONNECT_FILE = $(SPOOL)/AP_Collector.ccb_reconnect
+	DAEMON_LIST = $(DAEMON_LIST) AP_COLLECTOR
+
+	# Giving the AP collector a stable shared port ID means we don't
+	# have to worry about updating annex pilots because of a restart.
+	AP_COLLECTOR_ARGS = -f -local-name AP_COLLECTOR -sock ap_collector
+
+	# For now, don't worry about quoting the Sinful brackets.
+	ANNEX_COLLECTOR = $(FULL_HOSTNAME):$(SHARED_PORT_PORT)?sock=ap_collector
+
+	# Any user who can submit jobs can use the AP collector for annex.
+	AP_COLLECTOR.ALLOW_ADVERTISE_STARTD = $(ALLOW_ADVERTISE_STARTD) $(ALLOW_WRITE)
+	AP_COLLECTOR.ALLOW_ADVERTISE_MASTER = $(ALLOW_ADVERTISE_MASTER) $(ALLOW_WRITE)
+
+	# Until we can give the schedd a stable shared port ID, the annex
+	# pilot needs to be able to look the schedd up in the AP collector.
+	if defined COLLECTOR_HOST
+		SCHEDD.COLLECTOR_HOST = $(COLLECTOR_HOST) $(ANNEX_COLLECTOR)
+	else
+		SCHEDD.COLLECTOR_HOST = $(ANNEX_COLLECTOR)
+	endif
+
+	# The AP collector creates the "AP" signing key.
+	ANNEX_TOKEN_KEY_NAME = $(SEC_TOKEN_AP_SIGNING_KEY_NAME)
+	ANNEX_TOKEN_DOMAIN = $(UID_DOMAIN)
+
+
+	# We assume that the token directories (passwords.d and tokens.d) are
+	# already set.  HTCondor should create and populate the appropriately,
+	# if so.
+
+
 	JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AssignAnnex
 	JOB_TRANSFORM_AssignAnnex @=end
 		REQUIREMENTS TargetAnnexName =!= undefined
 		my_identity = "$(MY.Owner)@$(ANNEX_TOKEN_DOMAIN)"
 		addl_reqs = ifThenElse(TARGET.AuthenticatedIdentity is undefined, true, $(my_identity) == TARGET.AuthenticatedIdentity) && (MY.TargetAnnexName == TARGET.AnnexName)
-		if defined MY.FlockTo
-			SET FlockTo "$(MY.FlockTo),$(ANNEX_COLLECTOR)"
-		else
-			SET FlockTo "$(ANNEX_COLLECTOR)"
-		endif
 		if defined MY.JobMachineAttrs
 			SET JobMachineAttrs "$(MY.JobMachineAttrs),AnnexName"
 		else
@@ -6789,7 +6877,12 @@ default : @fin
 		endif
 	@end
 
-	if $(ANNEX_JOBS_EXCLUSIVELY:TRUE)
+	# The schedd will not try to activate a directly-connected claim
+	# with a job whose owner is not the authenticated identity of the
+	# directly-connected EP.  This limits the damage that can be done
+	# by a misconfigured EP to only running the annex owner's other
+	# jobs, which I think no long justifies tranforming all other jobs.
+	if $(ANNEX_JOBS_EXCLUSIVELY:FALSE)
 		JOB_TRANSFORM_NAMES = $(JOB_TRANSFORM_NAMES) AnnexJobsExclusively
 		JOB_TRANSFORM_AnnexJobsExclusively @=end
 			REQUIREMENTS TargetAnnexName =?= undefined

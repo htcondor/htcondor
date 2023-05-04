@@ -21,13 +21,11 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_debug.h"
 #include "filename_tools.h"
 #include "stl_string_utils.h"
-
-extern "C" char *CondorVersion(void);
-extern "C" char *CondorPlatform(void);
 
 CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
 									 const char *subsystem,

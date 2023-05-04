@@ -106,35 +106,12 @@ UnixNetworkAdapter::detectWOL ( void )
 	return false;
 }
 
-//
-// Memset like things which take const pointers
-//
-void *
-UnixNetworkAdapter::MemZero( const void *buf, unsigned size )
-{
-	void *p = const_cast<void *>( buf );
-	memset( p, 0, size );
-	return p;
-}
-char *
-UnixNetworkAdapter::StrZero( const char *buf, unsigned size )
-{
-	return (char *) MemZero( buf, size );
-}
-void *
-UnixNetworkAdapter::MemCopy( const void *dest, const void *src, unsigned size )
-{
-	void *p = const_cast<void *>( dest );
-	memcpy( p, src, size );
-	return p;
-}
-
 // Set the IP address
 void
 UnixNetworkAdapter::resetIpAddr( bool /*init*/ )
 {
 	m_ip_addr.clear();
-	//MemZero( &m_in_addr, sizeof(m_in_addr) );
+	//memset( &m_in_addr, 0, sizeof(m_in_addr) );
 }
 void
 UnixNetworkAdapter::setIpAddr( const condor_sockaddr& ip )
@@ -148,16 +125,16 @@ UnixNetworkAdapter::setIpAddr( const condor_sockaddr& ip )
 void
 UnixNetworkAdapter::resetHwAddr( bool /*init*/ )
 {
-	MemZero( m_hw_addr, sizeof(m_hw_addr) );
-	StrZero( m_hw_addr_str, sizeof(m_hw_addr_str) );
+	memset( m_hw_addr, 0, sizeof(m_hw_addr) );
+	memset( m_hw_addr_str, 0, sizeof(m_hw_addr_str) );
 }
 
 // Reset the net mask
 void
 UnixNetworkAdapter::resetNetMask( bool /*init*/ )
 {
-	MemZero( &m_netmask, sizeof(m_netmask) );
-	StrZero( m_netmask_str, sizeof(m_netmask_str) );
+	memset( &m_netmask, 0, sizeof(m_netmask) );
+	memset( m_netmask_str, 0, sizeof(m_netmask_str) );
 }
 
 // Set interface name methods
@@ -206,7 +183,7 @@ void
 UnixNetworkAdapter::setHwAddr( const struct ifreq &ifr )
 {
 	resetHwAddr( );
-	MemCopy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
+	memcpy( m_hw_addr, &(ifr.ifr_hwaddr.sa_data), 8 );
 
 	char			*str = m_hw_addr_str;
 	unsigned		 len = 0;
@@ -236,8 +213,8 @@ UnixNetworkAdapter::setIpAddr( const struct ifreq &ifr )
 
 //	const struct sockaddr_in *in = (const struct sockaddr_in*)&(ifr.ifr_addr);
 //	struct sockaddr_in	sin_addr;
-//	MemCopy( &sin_addr, in, sizeof(struct sockaddr_in) );
-//	MemCopy( &m_in_addr, &sin_addr.sin_addr, sizeof(struct in_addr) );
+//	memcpy( &sin_addr, in, sizeof(struct sockaddr_in) );
+//	memcpy( &m_in_addr, &sin_addr.sin_addr, sizeof(struct in_addr) );
 //	m_ip_addr = in->sin_addr.s_addr;
 }
 
@@ -248,7 +225,7 @@ UnixNetworkAdapter::setNetMask( const struct ifreq &ifr )
 	resetNetMask( );
 
 	struct sockaddr *maskptr = &m_netmask;
-	MemCopy( maskptr, &(ifr.ifr_netmask), sizeof(m_netmask) );
+	memcpy( maskptr, &(ifr.ifr_netmask), sizeof(m_netmask) );
 
 	const struct sockaddr_in *in_addr =
 		(const struct sockaddr_in *) &(m_netmask);

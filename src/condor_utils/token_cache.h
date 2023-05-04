@@ -23,8 +23,7 @@
 #ifdef WIN32
 
 #include "condor_common.h"
-#include "HashTable.h"
-#include "MyString.h"
+#include <map>
 
 #define MAX_CACHE_SIZE 10		// maximum number of tokens to cache. This 
 								// might be a config file knob one day.
@@ -37,8 +36,6 @@ struct token_cache_entry {
 	HANDLE user_token;
 };
 
-typedef HashTable<MyString, token_cache_entry*> TokenHashTable;
-
 /* This class manages our cached user tokens. */
 
 class token_cache {
@@ -49,12 +46,12 @@ class token_cache {
 		HANDLE getToken(const char* username, const char* domain);
 		bool storeToken(const char* username, const char* domain, 
 			const HANDLE token);
-		MyString cacheToString();		
+		std::string cacheToString();
 		
 	private:
 
 		/* Data Members */
-		TokenHashTable *TokenTable;
+		std::map<std::string, token_cache_entry*> TokenTable;
 		int current_age;
 		int dummy;
 
@@ -64,7 +61,7 @@ class token_cache {
 		bool isOlder(int index, int olderIndex) { 
 			return ( index < olderIndex); 
 		}
-		int getCacheSize() { return TokenTable->getNumElements(); }
+		size_t getCacheSize() { return TokenTable.size(); }
 	
 };
 

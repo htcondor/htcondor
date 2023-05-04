@@ -32,56 +32,6 @@ whether or not the function:
 	2) Copies the contents of the pointer and cleans it up itself.
 	3) Just inspects the pointer.
 
-Forward Declarations
-
-If a C++ header file uses a struct or object in a way that it doesn't
-need to know the size of the object (e.g. that object is passed by
-reference or pointer), then you have the choice of either forward
-declaring the type, or fully declaring the type.  The latter is done
-by #include'ing the appropriate header file.  For example:
-
-class MyString; // forward declaration   OR
-#include "MyString.h"    // Full declaration by inclusion
-
-class Foo {
-	Foo(const MyString &s);
-};
-
-If you have the option, you should _always_ chose the former, and add
-the #include only into the implementation file for that class.
-Forward declaration has the following benefits:
-
-1) You minimize the number of unintended dependencies.  If MyString.h
-includes or declares other headers, those symbols now pollute your
-class and every class that has ever #include'd it.
-
-2) Forward declaration creates faster compiles because the compiler
-doesn't need to open and reparse all the header files over and over
-again.  Because we've done a bad job of this in the past in Condor, it
-is common for a 1 kloc source file to cause the compiler to parse over
-100klines of headers.
-
-3) Forward declaration creates smaller debug sections in the
-executables.  Our current schedd is about 5 Mb of code and 27Mb of
-symbols.  Full inclusions causes a lot of redundant debug information,
-which means it is hard for us to ship debugable binaries by default.
-It also slows down link time, and generally makes our build process
-unwieldy.
-
-Forward declaration is also possible for templated types, though the
-syntax is a bit of a mouthful.  For example:
-
-class MyString;
-template <class Key, class Value> class HashTable;
-class Foo {
-	HashTable<MyString,MyString> *m_someTable;
-};
-
-This is especially beneficial, as template .h files usually include
-the full implementation.
-
-
-
 Class Members:
 
 - Class member variables should be prefixed with m_. This is the
@@ -375,7 +325,7 @@ instead.
 
 The macro MAXPATHLEN is not generally avaiable on POSIX sytems.   Use
 _POSIX_PATH_MAX from <limits.h> if you really must.  In most cases, it
-is better to use a dynamic buffer (e.g. MyString) rather than a fixed length
+is better to use a dynamic buffer (e.g. std::string ) rather than a fixed length
 buffer, because many platforms support path names much longer than
 _POSIX_PATH_MAX.
 

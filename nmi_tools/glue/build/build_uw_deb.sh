@@ -30,9 +30,8 @@ condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
-# Do everything in a temp dir that will go away on errors or end of script
-tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
-trap 'rm -rf "$tmpd"' EXIT
+# Do everything in a temp dir that will go away at end of script
+tmpd=$(mktemp -d "$PWD/build-XXXXXX")
 
 cd "$tmpd"
 
@@ -83,15 +82,14 @@ if [ "$VERSION_CODENAME" = 'bullseye' ]; then
     true
 elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-elif [ "$VERSION_CODENAME" = 'bionic' ]; then
-    true
 elif [ "$VERSION_CODENAME" = 'focal' ]; then
-    dch --distribution $dist --nmu 'place holder entry'
+    true
 elif [ "$VERSION_CODENAME" = 'jammy' ]; then
     dch --distribution $dist --nmu 'place holder entry'
-    dch --distribution $dist --nmu 'place holder entry'
+elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
+    true
 else
-    echo ERROR: Unknown codename
+    echo ERROR: Unknown codename "${VERSION_CODENAME}"
     exit 1
 fi
 
@@ -101,5 +99,5 @@ cd ..
 
 mv ./*.dsc ./*.debian.tar.xz ./*.orig.tar.gz "$dest_dir"
 mv ./*.changes ./*.deb "$dest_dir"
+rm -rf "$tmpd"
 ls -lh "$dest_dir"
-

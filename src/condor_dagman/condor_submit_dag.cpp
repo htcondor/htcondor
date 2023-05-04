@@ -35,9 +35,9 @@
 
 int printUsage(int iExitCode=1); // NOTE: printUsage calls exit(1), so it doesn't return
 void parseCommandLine(SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts, int argc,
+			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[]);
-bool parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
+bool parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts);
 int doRecursionNew( SubmitDagDeepOptions &deepOpts,
 			SubmitDagShallowOptions &shallowOpts );
@@ -432,7 +432,7 @@ parseArgumentsLine( const std::string &subLine,
 		return 1;
 	}
 
-	for ( int argNum = 0; argNum < arglist.Count(); argNum++ ) {
+	for ( size_t argNum = 0; argNum < arglist.Count(); argNum++ ) {
 		std::string strArg = arglist.GetArg( argNum );
 		lower_case(strArg);
 		char **args = arglist.GetStringArray();
@@ -447,10 +447,10 @@ parseArgumentsLine( const std::string &subLine,
 //---------------------------------------------------------------------------
 void
 parseCommandLine(SubmitDagDeepOptions &deepOpts,
-			SubmitDagShallowOptions &shallowOpts, int argc,
+			SubmitDagShallowOptions &shallowOpts, size_t argc,
 			const char * const argv[])
 {
-	for (int iArg = 1; iArg < argc; iArg++)
+	for (size_t iArg = 1; iArg < argc; iArg++)
 	{
 		std::string strArg = argv[iArg];
 
@@ -627,6 +627,14 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				deepOpts.doRescueFrom = atoi(argv[++iArg]);
 			}
+			else if (strArg.find("-load") != std::string::npos) //-load_save
+			{
+				if (iArg + 1 >= argc) {
+					fprintf(stderr, "-load_save requires a filename\n");
+					printUsage();
+				}
+				shallowOpts.saveFile = argv[++iArg];
+			}
 			else if (strArg.find("-allowver") != std::string::npos) // -AllowVersionMismatch
 			{
 				deepOpts.allowVerMismatch = true;
@@ -764,7 +772,7 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 		processed by this function
 */
 bool
-parsePreservedArgs(const std::string &strArg, int &argNum, int argc,
+parsePreservedArgs(const std::string &strArg, size_t &argNum, size_t argc,
 			const char * const argv[], SubmitDagShallowOptions &shallowOpts)
 {
 	bool result = false;
@@ -849,6 +857,7 @@ int printUsage(int iExitCode)
 	printf("    -AutoRescue 0|1     (whether to automatically run newest rescue DAG;\n");
 	printf("         0 = false, 1 = true)\n");
 	printf("    -DoRescueFrom <number>  (run rescue DAG of given number)\n");
+	printf("    -load_save <filename> (File with optional path to start DAG with saved progress)");
 	printf("    -AllowVersionMismatch (allow version mismatch between the\n");
 	printf("         .condor.sub file and the condor_dagman binary)\n");
 	printf("    -no_recurse         (don't recurse in nested DAGs)\n");

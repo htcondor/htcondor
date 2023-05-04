@@ -1176,7 +1176,7 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 
 		if( exited_by_signal == TRUE ) {
 			jobAd->LookupString(ATTR_JOB_CORE_FILENAME, corefile);
-			event.setCoreFile( corefile.c_str() );
+			event.core_file = corefile;
 		}
 
 		classad::ClassAd * toeTag = dynamic_cast<classad::ClassAd *>(jobAd->Lookup(ATTR_JOB_TOE));
@@ -1230,8 +1230,8 @@ BaseShadow::logTerminateEvent( int exitReason, update_style_t kind )
 	event.total_recvd_bytes = prev_run_bytes_recvd + bytesSent();
 	event.total_sent_bytes = prev_run_bytes_sent + bytesReceived();
 
-	if( exitReason == JOB_COREDUMPED ) {
-		event.setCoreFile( core_file_name );
+	if( exitReason == JOB_COREDUMPED && core_file_name ) {
+		event.core_file = core_file_name;
 	}
 
 #if 1
@@ -1351,12 +1351,12 @@ BaseShadow::logRequeueEvent( const char* reason )
 		event.return_value = exitCode();
 	}
 			
-	if( exit_reason == JOB_COREDUMPED ) {
-		event.setCoreFile( core_file_name );
+	if( exit_reason == JOB_COREDUMPED && core_file_name ) {
+		event.core_file = core_file_name;
 	}
 
 	if( reason ) {
-		event.setReason( reason );
+		event.reason = reason;
 	}
 
 		// TODO: fill in local rusage
@@ -1444,7 +1444,7 @@ BaseShadow::log_except(const char *msg)
 		event.began_execution = TRUE;
 	}
 
-	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,NULL))
+	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);
 	}

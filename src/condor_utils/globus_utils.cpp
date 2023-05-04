@@ -26,7 +26,7 @@
 #include "DelegationInterface.h"
 #include "subsystem_info.h"
 
-#if defined(DLOPEN_VOMS_LIBS)
+#if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
 #endif
 
@@ -133,7 +133,7 @@ initialize_voms()
 		return -1;
 	}
 
-#if defined(DLOPEN_VOMS_LIBS)
+#if defined(DLOPEN_SECURITY_LIBS)
 	void *dl_hdl;
 
 	if ( (dl_hdl = dlopen(LIBVOMSAPI_SO, RTLD_LAZY)) == NULL ||

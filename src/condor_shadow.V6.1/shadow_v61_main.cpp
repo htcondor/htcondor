@@ -61,6 +61,7 @@ int
 ExceptCleanup(int, int, const char *buf)
 {
   BaseShadow::log_except(buf);
+  daemonCore->kill_immediate_children();
   return 0;
 }
 

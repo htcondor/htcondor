@@ -993,8 +993,8 @@ REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char co
 	RemoteErrorEvent event;
 	ClassAd *ad;
 	//NOTE: "ExecuteHost" info will be inserted by the shadow.
-	event.setDaemonName("starter"); //TODO: where should this come from?
-	event.setErrorText( str );
+	event.daemon_name = "starter"; //TODO: where should this come from?
+	event.error_str = str;
 	event.setCriticalError( true );
 	event.setHoldReasonCode( hold_reason_code );
 	event.setHoldReasonSubCode( hold_reason_subcode );
@@ -2645,6 +2645,10 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
 		ClassAd ad;
 		result = ( getClassAd(syscall_sock, ad) );
 		ON_ERROR_RETURN( result );
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
+			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		}
 
 		std::string fname, b64;
 		ad.LookupString("Service", fname);

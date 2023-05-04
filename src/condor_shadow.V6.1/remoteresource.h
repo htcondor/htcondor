@@ -141,6 +141,8 @@ class RemoteResource : public Service {
 		*/
 	void getStarterAddress( char *& starterAddr );
 
+	const ClassAd* getStarterAd() { return starterAd; }
+
 		/** Return the sinful string of the remote startd.
 			@param sinful Will contain the host's sinful string.  If
 			NULL, this will be a string allocated with new().  If
@@ -287,6 +289,8 @@ class RemoteResource : public Service {
 	int64_t getDiskUsage( void ) const { return disk_usage; };
 	struct rusage getRUsage( void ) { return remote_rusage; };
 
+	void populateExecuteEvent(std::string & slotName, ClassAd & props);
+
 		/** Return the state that this resource is in. */
 	ResourceState getResourceState() { return state; };
 
@@ -421,8 +425,7 @@ class RemoteResource : public Service {
 		/* internal data: if you can't figure the following out.... */
 	char *machineName;
 	char *starterAddress;
-	char *starterArch;
-	char *starterOpsys;
+	ClassAd * starterAd = nullptr;
 	ReliSock *claim_sock;
 	int exit_reason;
 	bool claim_is_closing;
@@ -497,6 +500,8 @@ class RemoteResource : public Service {
         time_t TerminationTime;
     } activation;
 
+	void abortFileTransfer();
+
 private:
 
 		/// Private helper methods for trying to reconnect
@@ -545,7 +550,6 @@ private:
 	void startCheckingProxy();
 	void attemptShutdownTimeout();
 	void attemptShutdown();
-	void abortFileTransfer();
 	int transferStatusUpdateCallback(FileTransfer *transobject);
 };
 

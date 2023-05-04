@@ -514,14 +514,15 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// this information out of m_reject_reason.
 		size_t pos = m_reject_reason.find('|');
 		if ( pos != std::string::npos ) {
-			MyStringTokener tok;
-			tok.Tokenize(m_reject_reason.c_str());
-			/*const char *reason =*/ tok.GetNextToken("|",false);
-			const char *ac = tok.GetNextToken("|",false);
-			const char *jobid = tok.GetNextToken("|",false);
-			if (ac && jobid) {
-				int rr_cluster, rr_proc;
+			StringTokenIterator tok(m_reject_reason, "|");
+			/*const char *reason =*/ tok.next();
+			const char *ac = tok.next();
+			if (ac) {
 				m_current_auto_cluster_id = atoi(ac);
+			}
+			const char *jobid = tok.next();
+			if (jobid) {
+				int rr_cluster, rr_proc;
 				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;

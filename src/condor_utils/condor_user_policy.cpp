@@ -20,7 +20,6 @@
 
 #include "condor_common.h"
 #include "condor_user_policy.h"
-#include "MyString.h"
 
 /**
  * Constructor
