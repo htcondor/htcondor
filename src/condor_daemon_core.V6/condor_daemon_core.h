@@ -1198,6 +1198,10 @@ class DaemonCore : public Service
 	    @param eventDescription  ...
 	    @param coroutine         co_yield the delay in seconds before the next
 	                             coroutine call.  co_return deletes the timer.
+	                             couroutine must be heap-allocated, and the
+	                             timer object ends up owning the pointer.
+	                             (This will be denoted with a std::unique_ptr
+	                             once we figure out why that's not working.)
 	 */
 	int Register_Timer_Coroutine(
 		unsigned deltaWhen,

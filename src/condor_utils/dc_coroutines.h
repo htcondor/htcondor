@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <string>
+#include <exception>
 #include <coroutine>
 
 #if THIS_IS_AN_EXAMPLE

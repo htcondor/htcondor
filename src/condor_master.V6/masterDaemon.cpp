@@ -3353,6 +3353,13 @@ Daemons::AllStartdsGone()
 }
 
 
+//
+// If you're looking at this for inspiration, note `parameter` is passed
+// by value, and it must be to become part of the stored stack frame. (The
+// reference or pointer would become part of the stored stack frame, but
+// doesn't guarantee liveness of the object being referred to/pointed at.)
+//
+
 DC::Timer
 foolish_generator( std::string parameter ) {
 	for( size_t i = 0; i < parameter.size(); ++i ) {
