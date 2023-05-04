@@ -30,14 +30,6 @@ New Features:
   of the main config file before the configuration files are read.
   :jira:`1733`
 
-- Added configuration parameter ``XDG_CACHE_HOME``, which causes the
-  *condor_master* to set the environment variable ``XDG_CACHE_HOME``
-  to the given value.
-  If this variable isn't set and the condor user doesn't have a home
-  directory, then SciTokens authentication doesn't cache token issuer
-  credentials, which makes authentication much more expensive to perform.
-  :jira:`1757`
-
 Bugs Fixed:
 
 - Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
