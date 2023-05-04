@@ -282,16 +282,17 @@ def read_map_file(filename, is_el7, has_cmd):
                         for sub_path in include_path.iterdir():
                             if sub_path.is_file():
                                 read_map_file(str(sub_path), is_el7, has_cmd)
-                elif has_cmd:
-                    # If we found 'pcre2grep' cmd then find regex sequence and try to use it
-                    try:
-                        sequence = shlex.split(line)[1]
-                    except IndexError:
-                        format_print(
-                            f"WARNING: Did not find a regex on line {line_num} of {filename}:\n{line}",
-                            err=True,
-                        )
-                        continue
+                # This is a normal map line so try to get the regex sequence
+                try:
+                    sequence = shlex.split(line)[1]
+                except IndexError:
+                    format_print(
+                        f"WARNING: Did not find a regex on line {line_num} of {filename}:\n{line}",
+                        err=True,
+                    )
+                    continue
+                if has_cmd:
+                    # If we found 'pcre2grep' cmd then try regex sequence with cmd
                     with NamedTemporaryFile("w") as tf:
                         tf.write("HTCondor is cool")
                         tf.flush()
@@ -303,11 +304,45 @@ def read_map_file(filename, is_el7, has_cmd):
                     if len(error) > 0:
                         format_print(
                             f"Invalid: {filename}|line-{line_num}: '{line}'",
-                            12,
+                            offset=12,
                         )
                         format_print(f"Error: {error}", offset=14)
-                elif is_el7:
-                    # No 'pcre2grep' cmd found so if EL7 & manually check for known incompatibility
+                else:
+                    # No 'pcre2grep' cmd so do a best effort check
+                    bracket_cnt = 0
+                    prev_char = None
+                    pos = 0
+                    # Manually check sequence line for hyphens in non common cases
+                    for char in sequence:
+                        if char == "[":
+                            bracket_cnt += 1
+                        elif char == "]":
+                            bracket_cnt -= 1
+                        elif char == "-" and bracket_cnt > 0:
+                            # Ignore correct/common cases
+                            if sequence[pos + 1] == "]":
+                                # Hyphen at end of pcre statement
+                                pass
+                            elif prev_char == "A" and sequence[pos + 1] == "Z":
+                                # A-Z
+                                pass
+                            elif prev_char == "a" and sequence[pos + 1] == "z":
+                                # a-z
+                                pass
+                            elif prev_char == "0" and sequence[pos + 1] == "9":
+                                # 0-9
+                                pass
+                            else:
+                                # Not a normal case so output
+                                format_print(
+                                    f"Possibly Invalid: {filename}|line-{line_num}: '{line}'",
+                                    offset=12,
+                                )
+                                break
+                        prev_char = char
+                        pos += 1
+                if not has_cmd and is_el7:
+                    # No 'pcre2grep' cmd and EL7 so manually check for known incompatibility
                     for char in PCRE2_POSIX_CHARS:
                         if char in line:
                             pos = line.find(char)
@@ -341,19 +376,12 @@ def check_pcre2():
         p = subprocess.run(["pcre2grep"], stderr=subprocess.PIPE)
         has_pcre2_cmd = True
     except FileNotFoundError:
-        if is_el7:
-            format_print(
-                "Failed to find 'pcre2grep' command. Only checking for known issue #2.",
-                offset=8,
-                err=True,
-            )
-        else:
-            format_print(
-                "Failed to find 'pcre2grep' command. Unable to check Map files for incompatibilties.",
-                offset=8,
-                err=True,
-            )
-            return
+        format_print(
+            """Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
+        Recommended to install 'pcre2grep' command for better check of map files.""",
+            offset=8,
+            err=True,
+        )
     # Get regular user map files and digest them
     format_print("Reading CLASSAD_USER_MAPFILE_* files...", offset=8)
     for key in htcondor.param.keys():
