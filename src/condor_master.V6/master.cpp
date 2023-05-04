@@ -762,12 +762,6 @@ main_init( int argc, char* argv[] )
 	}
 #endif
 
-	std::string buff;
-	param(buff, "XDG_CACHE_HOME");
-	if (!buff.empty()) {
-		SetEnv("XDG_CACHE_HOME", buff.c_str());
-	}
-
 	if( StartDaemons ) {
 		daemons.StartAllDaemons();
 	} else {
