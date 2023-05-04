@@ -81,9 +81,8 @@ namespace DC {
 			}
 
 			template <std::convertible_to<int> from_t>
-			std::suspend_always return_value( from_t && from ) {
+			void return_value( from_t && from ) {
 				value = std::forward<from_t>(from);
-				return {};
 			}
 		};
 
