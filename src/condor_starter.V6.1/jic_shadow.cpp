@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "basename.h"
 #include "condor_config.h"
+#include "cred_dir.h"
 #include "util_lib_proto.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
@@ -70,6 +71,65 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_contains contains
 #	define file_remove remove
 #endif
+
+
+namespace {
+
+class ShadowCredDirCreator final : public htcondor::CredDirCreator {
+public:
+	ShadowCredDirCreator(const classad::ClassAd &ad, const std::string &cred_dir)
+	: CredDirCreator(ad, cred_dir, "starter")
+	{m_creddir_user_priv = true;}
+
+	/**
+	 * Fetch the credentials from the remote shadow
+	 * - err: On error, this will be popuated with an error message
+	 * - returns: True on success
+	 */
+	bool GetCreds(CondorError &err);
+
+private:
+	// Kerberos credential management logic is quite embedded in the JIC shadow; for now,
+	// don't extract it out into the shared logic
+	virtual bool GetKerberosCredential(const std::string & /*user*/, const std::string & /*domain*/,
+		htcondor::CredData &/*cred*/, CondorError & /*err*/) override {return true;}
+
+	virtual bool GetOAuth2Credential(const std::string &service_name, const std::string &user, htcondor::CredData &cred,
+		CondorError &err) override;
+
+	std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> m_creds;
+};
+
+
+bool
+ShadowCredDirCreator::GetCreds(CondorError &err)
+{
+	dprintf(D_FULLDEBUG, "Starter is retrieving credentials from the shadow.\n");
+	if (REMOTE_CONDOR_getcreds(CredDir().c_str(), m_creds) <= 0) {
+		err.push("GetCreds", 1, "Failed to receive user credentials");
+		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		return false;
+	}
+	return true;
+}
+
+
+bool
+ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const std::string &/*user*/,
+	htcondor::CredData &cred, CondorError &err)
+{
+	auto iter = m_creds.find(service_name);
+	if (iter == m_creds.end()) {
+		err.pushf("GetOAuth2Credential", 1, "Shadow failed to provide credential for service %s",
+			service_name.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		return false;
+	}
+	cred = *iter->second;
+	return true;
+}
+
+}
 
 JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	m_wrote_chirp_config(false), m_job_update_attrs_set(false)
@@ -2750,7 +2810,6 @@ JICShadow::initIOProxy( void )
 
 bool
 JICShadow::initUserCredentials() {
-#if 1 //ndef WIN32
 
 	// check to see if the job needs any OAuth services (scitokens)
 	// if so, call the function that does that.
@@ -2889,9 +2948,6 @@ JICShadow::initUserCredentials() {
 	rc = refreshSandboxCredentialsKRB();
 
 	return rc;
-#else   // WIN32
-	return true;
-#endif  // WIN32
 }
 
 #if 1 //ndef WIN32
@@ -3051,28 +3107,9 @@ JICShadow::refreshSandboxCredentialsOAuth()
 	std::string sandbox_dir_name;
 	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
-	// from here on out, do everything as the user.
-	TemporaryPrivSentry mysentry(PRIV_USER);
-
-	// create dir to hold creds
-	int rc = 0;
-	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.c_str());
-	rc = mkdir(sandbox_dir_name.c_str(), 0700);
-
-	if(rc != 0) {
-		if(errno != 17) {
-			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.c_str(), errno);
-			return false;
-		} else {
-			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.c_str());
-		}
-	} else {
-		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.c_str());
-	}
-
-	// do syscall to receive credential wallet directly into sandbox
-	if (REMOTE_CONDOR_getcreds(sandbox_dir_name.c_str()) <= 0) {
-		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
+	ShadowCredDirCreator creds(*job_ad, sandbox_dir_name);
+	CondorError err;
+	if (!creds.GetCreds(err) || !creds.PrepareCredDir(err)) {
 		return false;
 	}
 

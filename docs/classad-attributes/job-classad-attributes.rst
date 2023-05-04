@@ -898,6 +898,12 @@ all attributes.
     | | 47                             | The job's allowed execution time    |                          |
     | | [JobExecuteExceeded]           | was exceeded.                       |                          |
     +----------------------------------+-------------------------------------+--------------------------+
+    | | 48                             | ``<Keyword>_HOOK_SHADOW_PREPARE_JOB`` |                        |
+    | | [HookShadowPrepareJobFailure]  | :index:`<Keyword>_HOOK_SHADOW_PREPARE_JOB` |                   |
+    |                                  | failed when it was executed;        |                          |
+    |                                  | status code indicated job should be |                          |
+    |                                  | held.                               |                          |
+    +----------------------------------+-------------------------------------+--------------------------+
 
     Note for hold codes 12 [TransferOutputError] and 13 [TransferInputError]:
     file transfer may invoke file-transfer plug-ins.  If it does, the hold
