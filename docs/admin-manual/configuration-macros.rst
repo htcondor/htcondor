@@ -9579,14 +9579,6 @@ macros are described in the :doc:`/admin-manual/security` section.
     token discovery protocol defined by the WLCG (https://zenodo.org/record/3937438)
     to find one.
 
-:macro-def:`XDG_CACHE_HOME`
-    The directory where the SciTokens library should put its issuer
-    credential cache.
-    If this parameter is not set and the condor user doesn't have a
-    home directory, then SciTokens authentication becomes much more
-    expensive to perform.
-    The default value is ``$(LOCK)/cache``.
-
 :macro-def:`SEC_CREDENTIAL_SWEEP_DELAY`
     The number of seconds to wait before cleaning up unused credentials.
     Defaults to 3,600 seconds (1 hour).
