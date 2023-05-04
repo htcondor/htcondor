@@ -34,7 +34,7 @@ if(${CMAKE_COMPILER_IS_GNUCXX})
 endif()
 
 if(${MSVC})
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /await")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /await:strict")
 endif()
 
 
