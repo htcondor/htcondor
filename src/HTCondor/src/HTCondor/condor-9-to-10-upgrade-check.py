@@ -377,9 +377,8 @@ def check_pcre2():
         has_pcre2_cmd = True
     except FileNotFoundError:
         format_print(
-            """Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
+            """        Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
         Recommended to install 'pcre2grep' command for better check of map files.""",
-            offset=8,
             err=True,
         )
     # Get regular user map files and digest them
