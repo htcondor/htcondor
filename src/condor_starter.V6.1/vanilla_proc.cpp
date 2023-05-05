@@ -456,7 +456,7 @@ VanillaProc::StartJob()
 		}
 		fi.cgroup_cpu_shares = 100 * numCores;
 
-		int memory = 0;
+		int64_t memory = 0;
 		if (!Starter->jic->machClassAd()->LookupInteger(ATTR_MEMORY, memory)) {
 			dprintf(D_ALWAYS, "Invalid value of memory in machine ClassAd; aboring\n");
 			ASSERT(false);
@@ -465,14 +465,14 @@ VanillaProc::StartJob()
 
 		// Need to set this in the unlikely case that we get OOM killed without
 		// setting cgroup memory limits
-		m_memory_limit = ((unsigned) memory) * 1024 * 1024;
+		m_memory_limit = memory * 1024 * 1024;
 		std::string policy;
 		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "none");
 		if (policy == "hard") {
-			fi.cgroup_memory_limit = ((unsigned) memory) * 1024 * 1024;
+			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
 		}
 
-		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %d).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
+		dprintf(D_FULLDEBUG, "Requesting cgroup %s for job with %d cpu weight and memory limit of %lu (slot memory is %ld).\n", cgroup, fi.cgroup_cpu_shares, fi.cgroup_memory_limit, memory);
 	}
 
 #endif
@@ -989,8 +989,8 @@ VanillaProc::outOfMemoryEvent() {
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int usage = 0;
-	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usage);
+	int64_t usageMB = 0;
+	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usageMB);
 
 	//
 	//  Cgroup memory limits are limits, not reservations.
@@ -1009,8 +1009,8 @@ VanillaProc::outOfMemoryEvent() {
 	// Why not 100%?  We have seen cases where our last cgroup poll was a bit 
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
-	if (usage < (0.9 * m_memory_limit)) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %d Mb\n", usage);
+	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
+		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %ld Mb limit is %ld\n", usageMB, m_memory_limit);
 		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
 		Starter->jic->allJobsGone(); // and exit to clean up more memory
 		return 0;
@@ -1018,7 +1018,7 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usage << " megabytes.";
+		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usageMB << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}
