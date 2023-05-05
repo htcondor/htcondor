@@ -30,6 +30,10 @@ New Features:
   of the main config file before the configuration files are read.
   :jira:`1733`
 
+- Ensure that the SciTokens library can create its cache of token
+  issuer credentials.
+  :jira:`1757`
+
 Bugs Fixed:
 
 - Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
