@@ -116,6 +116,9 @@ Bugs Fixed:
   variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
   :jira:`1771`
 
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3
