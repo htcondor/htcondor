@@ -125,7 +125,7 @@ private:
 #endif
 
 	// Configure OOM killer for this job
-	int m_memory_limit; // Memory limit, in MB.
+	int64_t m_memory_limit; // Memory limit, in MB.
 
 		// old kernels have /proc/self/oom_adj, newer /proc/self/oom_score_adj
 		// and the scales are different.
