@@ -472,7 +472,7 @@ def main():
     ecosystems = ["HTCondor"]
     check_gpu_reqs = True
     # Check if passed -ce flag to indicate this host is a CE
-    for arg in sys.argv:
+    for arg in sys.argv[1:]:
         arg = arg.lower().strip()
         if arg == "-ce" and "HTCondor-CE" not in ecosystems:
             ecosystems.append("HTCondor-CE")
