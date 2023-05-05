@@ -199,7 +199,7 @@ htcondor::init_scitokens()
 			dprintf(D_SECURITY|D_VERBOSE, "Setting SciTokens cache directory to %s\n", cache_loc.c_str());
 			char *err = nullptr;
 			if (config_set_str_ptr("keycache.cache_home", cache_loc.c_str(), &err) < 0) {
-				dprintf(D_SECURITY, "Failed to set SciTokens cache directory to %s: %s\n", cache_loc.c_str(), err);
+				dprintf(D_ALWAYS, "Failed to set SciTokens cache directory to %s: %s\n", cache_loc.c_str(), err);
 				free(err);
 			}
 		}
