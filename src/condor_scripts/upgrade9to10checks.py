@@ -481,6 +481,8 @@ def usage():
     format_print("Options:", newline=True, offset=8)
     format_print("-h/-help         Display Usage", offset=12)
     format_print("-ce              This host is an HTCondor-CE", offset=12)
+    format_print("-ignore-pcre2    Skip checking PCRE2 incompatability", offset=12)
+    format_print("-ignore-token    Skip checking IDTokens incompatability", offset=12)
     format_print(
         "-ignore-gpu      Skip checking GPU requirements incompatability", offset=12
     )
@@ -490,14 +492,18 @@ def usage():
 def main():
     # Systems with config to check: Base condor and condor-ce
     ecosystems = ["HTCondor"]
-    check_gpu_reqs = True
+    do_check = {"token": True, "pcre2": True, "gpu": True}
     # Check if passed -ce flag to indicate this host is a CE
     for arg in sys.argv[1:]:
         arg = arg.lower().strip()
         if arg == "-ce" and "HTCondor-CE" not in ecosystems:
             ecosystems.append("HTCondor-CE")
         elif arg == "-ignore-gpu":
-            check_gpu_reqs = False
+            do_check["gpu"] = False
+        elif arg == "-ignore-pcre2":
+            do_check["pcre2"] = False
+        elif arg == "-ignore-token":
+            do_check["token"] = False
         elif arg == "-h" or arg == "-help":
             usage()
     # Make sure script is running as root because we need to run 'condor_token_list'
@@ -515,10 +521,12 @@ def main():
         if system == "HTCondor-CE":
             os.environ["CONDOR_CONFIG"] = "/etc/condor-ce/condor_config"
             htcondor.reload_config()
-        check_idtokens(system == "HTCondor-CE")
-        check_pcre2()
+        if do_check["token"]:
+            check_idtokens(system == "HTCondor-CE")
+        if do_check["pcre2"]:
+            check_pcre2()
         # Only worry about GPU incompatibility if not CE
-        if system != "HTCondor-CE" and check_gpu_reqs:
+        if system != "HTCondor-CE" and do_check["gpu"]:
             check_gpu_requirements()
     # Final information to direct people to help
     format_print(
