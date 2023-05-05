@@ -386,9 +386,8 @@ def check_pcre2():
         has_pcre2_cmd = True
     except FileNotFoundError:
         format_print(
-            """Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
+            """        Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
         Recommended to install 'pcre2grep' command for better check of map files.""",
-            offset=8,
             err=True,
         )
     # Get regular user map files and digest them
@@ -484,7 +483,7 @@ def main():
     ecosystems = ["HTCondor"]
     check_gpu_reqs = True
     # Check if passed -ce flag to indicate this host is a CE
-    for arg in sys.argv:
+    for arg in sys.argv[1:]:
         arg = arg.lower().strip()
         if arg == "-ce" and "HTCondor-CE" not in ecosystems:
             ecosystems.append("HTCondor-CE")
