@@ -13,6 +13,7 @@ import json
 import platform
 import subprocess
 import shlex
+from shutil import which
 from tempfile import NamedTemporaryFile
 from pathlib import Path
 
@@ -381,14 +382,22 @@ def check_pcre2():
             offset=16,
         )
     # Check for 'pcre2grep' cmd
-    try:
-        p = subprocess.run(["pcre2grep"], stderr=subprocess.PIPE)
+    if which("pcre2grep") is not None:
         has_pcre2_cmd = True
-    except FileNotFoundError:
+    else:
+        format_print("Failed to find 'pcre2grep' command.", offset=8, err=True)
         format_print(
-            """        Failed to find 'pcre2grep' command. Will do a simple check for incompatibilties.
-        Recommended to install 'pcre2grep' command for better check of map files.""",
-            err=True,
+            "Only checking for issues assuming common case valid ranges 'A-Z' 'a-z' '0-9'",
+            offset=8,
+        )
+        package = "'pcre2grep' command line tool"
+        if which("apt") is not None:
+            package = "deb package pcre2-utils"
+        elif which("yum") is not None or which("dnf") is not None:
+            package = "rpm package pcre2-tools"
+        format_print(
+            f"For more accurate results we recommend installing the {package}.",
+            offset=8,
         )
     # Get regular user map files and digest them
     format_print("Reading CLASSAD_USER_MAPFILE_* files...", offset=8)
