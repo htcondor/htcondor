@@ -139,7 +139,7 @@ def get_token_issuers():
             continue
         payload_start = token.find("Payload:") + 8
         payload_end = token.rfind("File:")
-        payload = json.loads(token[payload_start : payload_end].strip())
+        payload = json.loads(token[payload_start:payload_end].strip())
         issuer = payload["iss"]
         if issuer in issuers:
             issuers[issuer] += 1
@@ -162,7 +162,8 @@ def check_idtokens(is_ce):
     # No token auth means extremely unlikely system will have problems wiht upgrade
     if not my_config_info["using_token_auth"]:
         format_print(
-            "*** Not using token authentication. Should be unaffected by upgrade ***", offset=8
+            "*** Not using token authentication. Should be unaffected by upgrade ***",
+            offset=8,
         )
         return
     # Get this hosts stored IDToken issuers
@@ -237,9 +238,12 @@ def check_idtokens(is_ce):
         newline=True,
     )
     format_print(
-        "IDToken authentication may fail if in use. If tokens have been created and", offset=8
+        "IDToken authentication may fail if in use. If tokens have been created and",
+        offset=8,
     )
-    format_print("distributed consider doing the following. Possible Solutions:", offset=8)
+    format_print(
+        "distributed consider doing the following. Possible Solutions:", offset=8
+    )
     set_trust_domain = """TRUST_DOMAIN to local collectors value in
              tokens issuers field"""
     if my_token_issuers != None and v9_default_value in my_token_issuers:
@@ -256,7 +260,9 @@ def check_idtokens(is_ce):
         "Note: Any IDTokens issued from other collectors used for flocking will likely need to be re-issued",
         offset=12,
     )
-    format_print("      once those hosts HTCondor system is upgraded to V10.", offset=12)
+    format_print(
+        "      once those hosts HTCondor system is upgraded to V10.", offset=12
+    )
 
 
 def read_map_file(filename, is_el7, has_cmd):
@@ -366,10 +372,13 @@ def check_pcre2():
         is_el7 = True
     format_print("Checking for incompatibilities with PCRE2.", newline=True)
     format_print("Known PCRE2 incompatibilities:", offset=8)
-    format_print("1. Hyphens in a regex character sequence must occur at the end.", offset=16)
+    format_print(
+        "1. Hyphens in a regex character sequence must occur at the end.", offset=16
+    )
     if is_el7:
         format_print(
-            "2. On EL7 posix name sets ([:space:]) followed by hyphen are invalid.", offset=16
+            "2. On EL7 posix name sets ([:space:]) followed by hyphen are invalid.",
+            offset=16,
         )
     # Check for 'pcre2grep' cmd
     try:
@@ -459,11 +468,14 @@ def usage():
     format_print(
         """  This Script is to help assist catching possible issues that
   may occur while upgrading an HTCondor system from
-  version 9 to version 10.""")
+  version 9 to version 10."""
+    )
     format_print("Options:", newline=True, offset=8)
     format_print("-h/-help         Display Usage", offset=12)
     format_print("-ce              This host is an HTCondor-CE", offset=12)
-    format_print("-ignore-gpu      Skip checking GPU requirements incompatability", offset=12)
+    format_print(
+        "-ignore-gpu      Skip checking GPU requirements incompatability", offset=12
+    )
     sys.exit(0)
 
 
