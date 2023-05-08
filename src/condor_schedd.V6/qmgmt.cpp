@@ -1841,6 +1841,11 @@ void JobQueueJob::PopulateFromAd()
 		this->LookupInteger(ATTR_JOB_SET_ID, set_id);
 	}
 
+	// NOTE: we do *NOT* want to populate job state here because we 
+	// want to count state transitions.  JobQueueJob objects are always created in IDLE state
+	// and transitioned to the submitted state (if different) at the end of CommitTransaction
+	// or InitJobQueue
+
 #if 0	// we don't do this anymore, since we update both the ad and the job object
 		// when we calculate the autocluster - the on-disk value is never useful.
 	if (autocluster_id < 0) {
@@ -6540,12 +6545,13 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			if( job_id.proc == -1 ) {
 				clusterad = GetClusterAd(job_id);
 				if (clusterad) {
-					clusterad->PopulateFromAd();
-					// TODO: this is wrong if the cluster is not created by external connection
-					const char * euser = EffectiveUser(Q_SOCK);
-					if (euser && euser[0]) {
-						clusterad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(euser));
+					// attach an OwnerInfo pointer to the clusterad. This can fail if the cluster ad
+					// does not have a User attribute. which can happen with older gridmanager or
+					// job router submits.  They put the User attribute into the proc ad
+					if ( ! clusterad->ownerinfo) {
+						InitOwnerinfo(clusterad, owner, ownerinfo_is);
 					}
+					clusterad->PopulateFromAd();
 
 					// add the cluster ad to any jobsets it may be in
 					if (scheduler.jobSets) {
@@ -6623,33 +6629,47 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			}
 			if ( ! clusterad) {
 				clusterad = GetClusterAd(job_id.cluster);
+				if (clusterad && ! clusterad->ownerinfo) {
+					// in case we haven't seen the new cluster yet in this loop, init the cluster ownerinfo now
+					InitOwnerinfo(clusterad, owner, ownerinfo_is);
+				}
 			}
 			if (clusterad && JobQueue->Lookup(job_id, procad))
 			{
 				dprintf(D_FULLDEBUG,"New job: %s\n",job_id.c_str());
 
-					// increment the 'recently added' job count for this owner
-				OwnerInfo * ownerinfo = clusterad->ownerinfo;
-				if (ownerinfo) {
-					scheduler.incrementRecentlyAdded( ownerinfo, NULL );
-				} else if ( Q_SOCK && EffectiveUser(Q_SOCK)[0] ) {
-					ownerinfo = scheduler.incrementRecentlyAdded( ownerinfo, EffectiveUser(Q_SOCK) );
-					clusterad->ownerinfo = ownerinfo;
-				} else {
-					ASSERT(ownerinfo);
-				}
-
 					// chain proc ads to cluster ad
+				procad->jid = job_id; // can probably remove this...
 				procad->ChainToAd(clusterad);
+					// this will count the procad as IDLE in the cluster aggregates,
+					// DoSetAttributeCallbacks will set the real state if it isn't IDLE
+				clusterad->AttachJob(procad);
+
+					// increment the 'recently added' job count for this owner
+				if (clusterad->ownerinfo) {
+					procad->ownerinfo = clusterad->ownerinfo;
+					scheduler.incrementRecentlyAdded(procad->ownerinfo, NULL);
+				} else {
+					// HACK! 
+					// we get here only when the Cluster ad does not have an Owner or User attribute
+					// older versions of the job router and gridmanager submit this way, so fix things up
+					// minimally here, a restart of the schedd will fix things fully
+					if ( ! InitOwnerinfo(procad, owner, ownerinfo_is) && Q_SOCK) {
+						// last ditch effort, just use the socket owner as the job owner
+						const char * user = EffectiveUser(Q_SOCK);
+						procad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(user));
+					}
+					ASSERT(procad->ownerinfo);
+					clusterad->ownerinfo = procad->ownerinfo;
+					clusterad->Assign(ATTR_USERREC_NAME, procad->ownerinfo->Name());
+					scheduler.incrementRecentlyAdded(procad->ownerinfo, NULL);
+				}
 
 					// convert any old attributes for backwards compatbility
 				ConvertOldJobAdAttrs(procad, false);
 
 					// make sure the job objd and cluster object are populated
-				procad->jid = job_id;
-				clusterad->AttachJob(procad);
 				procad->PopulateFromAd();
-				procad->ownerinfo = ownerinfo;
 
 				// if the cluster is in a jobset, the job is also
 				procad->set_id = clusterad->set_id;
