@@ -48,13 +48,23 @@ extern "C"
     {
         if (!Py_IsInitialized())
         {
-#if PY_MAJOR_VERSION >= 3
-            wchar_t pname[] = L"htcondor";
+#if PY_VERSION_HEX >= 0x03080000
+		PyConfig config;
+		PyConfig_InitPythonConfig(&config);
+		wchar_t pname[] = L"htcondor";
+		PyConfig_SetString(&config, &config.program_name, pname);
+		Py_InitializeFromConfig(&config);
 #else
-            char pname[] = "htcondor";
-#endif
-            Py_SetProgramName(pname);
+
+/* Python 3 takes a wchar for the program name, Python 2 a char */
+#if PY_VERSION_HEX >= 0x03000000 
+		wchar_t pname[] = L"htcondor";
+#else
+		char pname[] = "htcondor";
+#endif 
+		Py_SetProgramName(pname);
             Py_InitializeEx(0);
+#endif
         }
         return functions;
     }
