@@ -70,6 +70,11 @@ namespace DC {
 			std::exception_ptr exception;
 
 			protocol get_return_object() { return protocol(handle_type::from_promise(*this)); }
+			// In `auto h = handle_blocking_protocol()`, above, the fact that
+			// this initial_suspend() returns `suspend_always` means that the
+			// the body of handle_blocking_protocol() won't execute until
+			// `if( h() )`, when operator bool() invokes it to generate the
+			// next (or last) value in the sequence.
 			std::suspend_always initial_suspend() { return {}; }
 			std::suspend_always final_suspend() noexcept { return {}; }
 			void unhandled_exception() { exception = std::current_exception(); }
