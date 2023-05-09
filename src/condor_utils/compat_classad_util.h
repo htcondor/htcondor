@@ -92,6 +92,8 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NU
 
 void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list);
 
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, bool overwrite=true);
+
 // returns TRUE if the expression evaluates successfully and the result was a pod type
 // or one of the complex types in the type mask.  If a mask of 0 matches all types.
 // returns FALSE if the expression could not be evaluated or if the value was unsafe and not in the type mask

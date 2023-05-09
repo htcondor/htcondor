@@ -4835,6 +4835,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_KeepClaimIdle, ATTR_JOB_KEEP_CLAIM_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobAdInformationAttrs, ATTR_JOB_AD_INFORMATION_ATTRS, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_ULogExecuteEventAttrs, ATTR_ULOG_EXECUTE_EVENT_ATTRS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},

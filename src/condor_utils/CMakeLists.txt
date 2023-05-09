@@ -246,6 +246,8 @@ consumption_policy.h
 copy_file.cpp
 credmon_interface.cpp
 credmon_interface.h
+cred_dir.cpp
+cred_dir.h
 cron_job.cpp
 cron_job_io.cpp
 cron_job_list.cpp

@@ -903,7 +903,12 @@ RemoteResource::populateExecuteEvent(std::string & slotName, ClassAd & props)
 		}
 
 		CopyMachineResources(props, *starterAd, false);
-
+		if (jobAd) {
+			std::string requestAttrs;
+			if (jobAd->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS, requestAttrs)) {
+				CopySelectAttrs(props, *starterAd, requestAttrs, false); //Don't allow overwrites
+			}
+		}
 	} else if (machineName) {
 		slotName = machineName;
 	} else if (dc_startd) {

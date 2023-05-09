@@ -4,6 +4,27 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.6.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.6.0 released on Month Date, 2023.
+
+- HTCondor version 10.6.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-1005`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
+  not be enforced correctly.
+  :jira:`1775`
+
 Version 10.5.0
 --------------
 
@@ -65,6 +86,11 @@ New Features:
   jobs for recording in the various produced job ads and userlogs.
   :jira:`1717`
 
+- Added new submit command ``ulog_execute_attrs`` for a jobs submit file. This
+  command takes a comma-separated list of machine ClassAd attributes to be
+  written to the user logs execute event.
+  :jira:`1759`
+
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
@@ -76,6 +102,10 @@ Bugs Fixed:
 - Fixed a bug where if the docker command emitted warnings to stderr, the
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
+
+- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
+  not be enforced correctly.
+  :jira:`1775`
 
 - Fixed a bug when running with root on a Linux systems with cgroup v1
   that would print a warning to the StarterLog claiming

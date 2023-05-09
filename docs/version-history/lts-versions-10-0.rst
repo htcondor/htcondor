@@ -7,6 +7,25 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1005:
+
+Version 10.0.5
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.5 released on Month Date, 2023.
+
+- HTCondor version 10.0.5 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
@@ -92,6 +111,15 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- Fixed a bug where DAGMan job submission would fail when not using
+  direct submission due to setting a custom job classad attribute with
+  the ``+`` syntax in a ``VARS`` command that doesn't append the
+  variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
+  :jira:`1771`
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
 
 .. _lts-version-history-1003:
 
