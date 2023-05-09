@@ -54,6 +54,8 @@ class ArcJob : public BaseJob
 	static int maxConnectFailures;
 	static int jobInfoInterval;
 
+	static int m_arcGahpId;
+
 	static void setSubmitInterval( int new_interval )
 		{ submitInterval = new_interval; }
 	static void setGahpCallTimeout( int new_timeout )

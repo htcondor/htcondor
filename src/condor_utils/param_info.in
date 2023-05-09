@@ -5471,6 +5471,10 @@ default=$(SBIN)/arc_gahp
 [ARC_GAHP_LOG]
 default=/tmp/ArcGahpLog.$(USERNAME)
 
+[ARC_GAHP_COMMAND_LIMIT]
+default=1000
+type=int
+
 [ARC_GAHP_USE_THREADS]
 default=false
 type=bool

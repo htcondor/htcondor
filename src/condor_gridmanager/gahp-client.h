@@ -279,6 +279,8 @@ class GenericGahpClient : public Service {
 		const char * getVersion();
 		const char * getCondorVersion();
 
+		int getNextReqId() { return server->next_reqid; }
+
 		enum PrioLevel {
 			low_prio,
 			medium_prio,
