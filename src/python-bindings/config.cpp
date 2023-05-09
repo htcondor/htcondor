@@ -605,10 +605,6 @@ struct Param
 
 };
 
-std::string CondorVersionWrapper() { return CondorVersion(); }
-
-std::string CondorPlatformWrapper() { return CondorPlatform(); }
-
 //BOOST_PYTHON_FUNCTION_OVERLOADS(config_overloads, config, 0, 3);
 void configWrapper() {
 #ifdef WIN32
@@ -645,14 +641,6 @@ void export_config()
     param_insert("ENABLE_CLASSAD_CACHING", "false");
     classad::ClassAdSetExpressionCaching(false);
 
-    def("version", CondorVersionWrapper,
-        R"C0ND0R(
-        Returns the version of HTCondor this module is linked against.
-        )C0ND0R");
-    def("platform", CondorPlatformWrapper,
-        R"C0ND0R(
-        Returns the platform of HTCondor this module is running on.
-        )C0ND0R");
     def("reload_config", configWrapper,
         R"C0ND0R(
         Reload the HTCondor configuration from disk.

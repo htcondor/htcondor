@@ -278,19 +278,6 @@ enable_log()
     dprintf_config(get_mySubSystem()->getName());
 }
 
-
-void
-set_subsystem(std::string subsystem, SubsystemType type=SUBSYSTEM_TYPE_AUTO)
-{
-    //Assume Python Tool Subsystem is false
-    set_mySubSystem(subsystem.c_str(), false, type);
-    //Get the Subsystem
-    SubsystemInfo *subsys = get_mySubSystem();
-    //If Subsystem is a Daemon class the set m_trusted to true
-    if (subsys->isDaemon()) { subsys->setIsTrusted(true); }
-}
-
-
 static void
 dprintf_wrapper2(int level, const char *fmt, ...)
 {
@@ -354,43 +341,6 @@ export_dc_tool()
         .value("Reconfig", DDC_RECONFIG_FULL)
         .value("Restart", DRESTART)
         .value("RestartPeacful", DRESTART_PEACEFUL)
-        ;
-
-    enum_<SubsystemType>("SubsystemType",
-            R"C0ND0R(
-            An enumeration of known subsystem names.
-
-            The values of the enumeration are:
-
-            .. attribute:: Collector
-            .. attribute:: Daemon
-            .. attribute:: Dagman
-            .. attribute:: GAHP
-            .. attribute:: Job
-            .. attribute:: Master
-            .. attribute:: Negotiator
-            .. attribute:: Schedd
-            .. attribute:: Shadow
-            .. attribute:: SharedPort
-            .. attribute:: Startd
-            .. attribute:: Starter
-            .. attribute:: Submit
-            .. attribute:: Tool
-            )C0ND0R")
-        .value("Master", SUBSYSTEM_TYPE_MASTER)
-        .value("Collector", SUBSYSTEM_TYPE_COLLECTOR)
-        .value("Negotiator", SUBSYSTEM_TYPE_NEGOTIATOR)
-        .value("Schedd", SUBSYSTEM_TYPE_SCHEDD)
-        .value("Shadow", SUBSYSTEM_TYPE_SHADOW)
-        .value("Startd", SUBSYSTEM_TYPE_STARTD)
-        .value("Starter", SUBSYSTEM_TYPE_STARTER)
-        .value("GAHP", SUBSYSTEM_TYPE_GAHP)
-        .value("Dagman", SUBSYSTEM_TYPE_DAGMAN)
-        .value("SharedPort", SUBSYSTEM_TYPE_SHARED_PORT)
-        .value("Daemon", SUBSYSTEM_TYPE_DAEMON)
-        .value("Tool", SUBSYSTEM_TYPE_TOOL)
-        .value("Submit", SUBSYSTEM_TYPE_SUBMIT)
-        .value("Job", SUBSYSTEM_TYPE_JOB)
         ;
 
     enum_<LogLevel>("LogLevel",
@@ -488,19 +438,6 @@ export_dc_tool()
         :param str state: Name of the state to set the daemon to.
         )C0ND0R",
         boost::python::arg("state")=std::string("Ready"))
-        ;
-
-    def("set_subsystem", set_subsystem,
-        R"C0ND0R(
-        Set the subsystem name for the object.
-
-        The subsystem is primarily used for the parsing of the HTCondor configuration file.
-
-        :param str name: The subsystem name.
-        :param daemon_type: The HTCondor daemon type. The default value of Auto infers the type from the name parameter.
-        :type daemon_type: :class:`SubsystemType`
-        )C0ND0R",
-        (boost::python::arg("subsystem"), boost::python::arg("type")=SUBSYSTEM_TYPE_AUTO))
         ;
 
     def("enable_debug", enable_debug,

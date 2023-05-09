@@ -38,7 +38,9 @@ _set_subsystem( PyObject *, PyObject * args ) {
 		PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor" );
 		PyObject * py_subsystemtype_class = PyObject_GetAttrString( py_htcondor_module, "SubsystemType" );
 		if(! PyObject_IsInstance( py_subsystem_type, py_subsystemtype_class )) {
-			PyErr_SetString( PyExc_TypeError , "daemonType must be of type htcondor.SubsystemType" );
+			// This is technically an API violation; we should raise an
+			// instance of HTCondorTypeError, instead.
+			PyErr_SetString( PyExc_TypeError, "daemonType must be of type htcondor.SubsystemType" );
 			return NULL;
 		}
 
@@ -62,9 +64,24 @@ _set_subsystem( PyObject *, PyObject * args ) {
 
 
 static PyMethodDef htcondor2_impl_methods[] = {
-	{"_version", & _version, METH_VARARGS, NULL /* no function documentation */},
-	{"_platform", & _platform, METH_VARARGS, NULL /* no function documentation */},
-	{"_set_subsystem", & _set_subsystem, METH_VARARGS, NULL /* no function documentation */},
+	{"_version", & _version, METH_VARARGS, R"C0ND0R(
+        Returns the version of HTCondor this module is linked against.
+    )C0ND0R"},
+
+	{"_platform", & _platform, METH_VARARGS, R"C0ND0R(
+        Returns the platform of HTCondor this module was compiled for.
+    )C0ND0R"},
+
+	{"_set_subsystem", & _set_subsystem, METH_VARARGS, R"C0ND0R(
+        Set the subsystem name for the object.
+
+        The subsystem is primarily used for the parsing of the HTCondor configuration file.
+
+        :param str name: The subsystem name.
+        :param daemon_type: The HTCondor daemon type. The default value of :attr:`SubsystemType.Auto` infers the type from the name parameter.
+        :type daemon_type: :class:`SubsystemType`
+    )C0ND0R"},
+
 	{NULL, NULL, 0, NULL}
 };
 

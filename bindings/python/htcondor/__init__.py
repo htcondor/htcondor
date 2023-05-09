@@ -72,13 +72,15 @@ _check_for_config()
 
 with _add_dll_dir():
     import classad
-    from . import htcondor, _lock
+    from . import htcondor
+    from . import htcondor2_impl
+    from . import _lock
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:
-    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor.version()).group(1)
+    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor2_impl._version()).group(1)
 except (AttributeError, IndexError):
-    __version__ = htcondor.version().split()[1]
+    __version__ = htcondor2_impl._version().split()[1]
 
 # add locks in-place
 _lock.add_locks(htcondor, skip=_lock.DO_NOT_LOCK)
@@ -102,4 +104,5 @@ from ._job_status import JobStatus
 from .htcondor2_impl import _version as version;
 from .htcondor2_impl import _platform as platform;
 
+from ._subsystem_type import SubsystemType
 from .htcondor2_impl import _set_subsystem as set_subsystem;

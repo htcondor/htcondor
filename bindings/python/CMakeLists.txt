@@ -24,6 +24,7 @@ htcondor/dags/rescue.py
 htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
+htcondor/_subsystem_type.py
 
 classad/__init__.py
 
