@@ -20,7 +20,7 @@
 #ifndef STAT_WRAPPER_H
 #define STAT_WRAPPER_H
 
-#include "MyString.h"
+#include <string>
 
 	// Define common "struct stat" and inode types
 #if defined(HAVE_STAT64) && !defined(DARWIN)

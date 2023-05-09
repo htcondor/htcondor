@@ -396,7 +396,7 @@ public:
 	// called by readline/get_data() to check to see if pending buffers are ready.
 	int check_for_read_completion();
 
-	// Classes that parse via MyString::readLine can use this as a source once is_closed() or eof_was_read() returns true.
+	// Classes that parse via readLine can use this as a source once is_closed() or eof_was_read() returns true.
 	// if you call this before is_closed() is true, you must deal the fact that it's readLine method will return false when data is pending.
 	MyStringAioSource& output() { return src; }
 

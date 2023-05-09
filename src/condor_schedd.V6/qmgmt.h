@@ -515,7 +515,7 @@ public:
 		cluster = c; proc = p;
 		job_id_str[0] = 0; // this will force re-rendering of the string
 	}
-	void sprint(MyString & s) { s = this->c_str(); }
+	void sprint(std::string & s) { s = this->c_str(); }
 	JOB_ID_KEY_BUF(const char * jid)          : JOB_ID_KEY(0,0) { set(jid); }
 	JOB_ID_KEY_BUF(int c, int p)              : JOB_ID_KEY(c,p) { job_id_str[0] = 0; }
 	JOB_ID_KEY_BUF(const JOB_ID_KEY_BUF& rhs) : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }

@@ -44,7 +44,9 @@ int replace_str( std::string & str, const std::string & from, const std::string 
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
-// to replace MyString with std::string we need a compatible read-line function
+// Read one line from fp and store it in dst, including the '\n'.
+// Handles lines of any length.
+// Return true if any data was placed in dst.
 bool readLine(std::string& dst, FILE *fp, bool append = false);
 
 //Return true iff the given string is a blank line.
