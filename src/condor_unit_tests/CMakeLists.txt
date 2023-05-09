@@ -43,7 +43,6 @@ OTEST_FileLock.cpp
 OTEST_HashTable.cpp
 OTEST_Regex.cpp
 OTEST_Iso_Dates.cpp
-OTEST_MyString.cpp
 OTEST_Old_Classads.cpp
 OTEST_ranger.cpp
 OTEST_StatInfo.cpp
