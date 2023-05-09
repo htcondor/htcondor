@@ -628,9 +628,17 @@ sub check_status {
 'ActvtyTime' => sub{
 	my $convert_time;
 	if (defined $Attr_new{$_[0]-1}{MyCurrentTime}){
-		$convert_time = convert_unix_time($Attr_new{$_[0]-1}{MyCurrentTime}-$Attr_new{$_[0]-1}{EnteredCurrentActivity});
+		my $t = $Attr_new{$_[0]-1}{MyCurrentTime} - $Attr_new{$_[0]-1}{EnteredCurrentActivity};
+		if ($t < 0) {
+			$t = 0;
+		}
+		$convert_time = convert_unix_time($t);
 	} else {
-		$convert_time = convert_unix_time($Attr_new{$_[0]-1}{LastHeardFrom}-$Attr_new{$_[0]-1}{EnteredCurrentActivity});
+		my $t = $Attr_new{$_[0]-1}{LastHeardFrom} - $Attr_new{$_[0]-1}{EnteredCurrentActivity};
+		if ($t < 0) {
+			$t = 0;
+		}
+		$convert_time = convert_unix_time($t);
 	}
 	if ($_[1] eq $convert_time){
 		return 1;

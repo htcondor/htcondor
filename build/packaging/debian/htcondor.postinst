@@ -9,14 +9,16 @@ db_version 2.0
 
 condor_user=condor
 condor_gecos="HTCondor Daemons"
-local_dir=$(condor_config_val LOCAL_DIR 2>/dev/null)
+# make this one fixed because 'condor_config_val -tilde' relies on the user
+# home dir to exist
+condor_home=/var/lib/condor
 
 
 case "$1" in
     configure)
         # according to http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=621833#119
         # this should always work
-        if ! adduser --system --group --gecos "$condor_gecos" --home $local_dir \
+        if ! adduser --system --group --gecos "$condor_gecos" --home $condor_home \
                 --disabled-password --disabled-login $condor_user --quiet 2>/dev/null; then
             # the only time where it would fail, is when there is an existing
             # non-system 'condor' user. This could happen e.g. in a heterogenous
@@ -37,11 +39,10 @@ case "$1" in
                 exit 1
             fi
         fi
-        # The local dir (which is often condor's home directry)
-        # needs to be world readable for proper operation
-        if [ -d $local_dir ]; then
+        # condor's home directory needs to be world readable for proper operation
+        if [ -d $condor_home ]; then
             # Open up the permission, if the directory exists
-            chmod o+rx $local_dir
+            chmod o+rx $condor_home
         fi
         # condor_master needs a log directory to start up
         dirname=$(condor_config_val LOG 2>/dev/null)

@@ -280,6 +280,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 		free( gahp_path );
 
+		m_xfer_gahp->SetCondorInherit(true);
 		m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
 		m_xfer_gahp->setMode( GahpClient::normal );
 		// TODO: This can't be the normal gahp timeout value. Does it need to

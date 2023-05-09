@@ -116,7 +116,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ $VERSION_CODENAME = 'bionic' ]; then
+if [ $VERSION_CODENAME = 'focal' ] && [ "$ARCH" = 'ppc64le' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
@@ -147,10 +147,10 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 
-if [ $VERSION_CODENAME = 'bionic' ]; then
+if [ $VERSION_CODENAME = 'focal' ]; then
     # Need to upgrade compiler on this old platform
-    $INSTALL gcc-8 g++-8
-    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 800 --slave /usr/bin/g++ g++ /usr/bin/g++-8
+    $INSTALL gcc-10 g++-10
+    update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
 fi
 
 # Add useful debugging tools
@@ -190,8 +190,6 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
         (cd "$externals_dir"; apt download libboost-python1.74.0)
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
         (cd "$externals_dir"; apt download libboost-python1.74.0)
-    elif [ $VERSION_CODENAME = 'bionic' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.65.1)
     elif [ $VERSION_CODENAME = 'focal' ]; then
         (cd "$externals_dir"; apt download libboost-python1.71.0)
     elif [ $VERSION_CODENAME = 'jammy' ]; then

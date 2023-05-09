@@ -69,22 +69,24 @@ if [ -d usr/lib64 ]; then
     ln -s ../lib64/condor/libgetpwnam.so usr/lib/
     # Link for executables to pick up shared libaries
     ln -s ../lib64 usr/libexec/lib64
-    (cd usr/lib64/python3*/site-packages; ln -s ../.. lib64)
     # Links for Java Universe
     (cd usr/lib; ln -s ../share/condor/*.class .)
     # Standard place for Python3 packages)
     (cd lib; ln -s ../lib64/python3*/site-packages python3)
+    # Link for Python to pick up shared libaries
+    (cd usr/lib64/python3*/site-packages; ln -s ../.. lib64)
 else
     # Debian based systems
     # Link to pickup condor_ssh_to_job_template
     ln -s condor/condor_ssh_to_job_sshd_config_template usr/lib/condor_ssh_to_job_sshd_config_template
     # Link for executables to pick up shared libaries
     ln -s .. usr/lib/condor/lib
-    (cd usr/lib/python3/dist-packages; ln -s ../.. lib)
     # Links for Java Universe
     (cd usr/lib; ln -s condor/*.class .)
     # Standard place for Python3 packages)
     (cd lib; mv python3 tmp; mv tmp/dist-packages python3; rmdir tmp)
+    # Link for Python to pick up shared libaries
+    (cd usr/lib/python3; ln -s .. lib)
     # Remove the python2 packages
     rm -rf usr/lib/python2*
 fi

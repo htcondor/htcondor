@@ -7,19 +7,16 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-1004:
+.. _lts-version-history-1005:
 
-Version 10.0.4
+Version 10.0.5
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.0.4 released on Month Date, 2023.
+.. HTCondor version 10.0.5 released on Month Date, 2023.
 
-- HTCondor version 10.0.4 not yet released.
-
-- Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
-  is April 30th, 2023.
+- HTCondor version 10.0.5 not yet released.
 
 New Features:
 
@@ -27,10 +24,42 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where **remote_initialdir** didn't work correctly when 
+  submitting a grid universe **batch** job to a remote machine via ssh. 
+  :jira:`1560`
+
+.. _lts-version-history-1004:
+
+Version 10.0.4
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.4 released on April 6, 2023.
+
+- Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
+  is April 30th, 2023.
+
+- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+  :jira:`1668`
+
+New Features:
+
+- Added ``CONFIG_ROOT`` configuration variable that is set to the directory
+  of the main config file before the configuration files are read.
+  :jira:`1733`
+
+Bugs Fixed:
+
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
 - Fixed a bug where Job Ad Information events weren't always written
   when using the Job Router.
   :jira:`1642`
-  
+
 - Fixed a bug where the submit event wasn't written to the job event
   log if the job ad didn't contain a ``CondorVersion`` attribute.
   :jira:`1643`
@@ -40,9 +69,51 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
-- Fixed a bug where **remote_initialdir** didn't work correctly when
-  submitting a grid universe **batch** job to a remote machine via ssh.
-  :jira:`1560`
+- Fixed a bug where the *condor_schedd* falsely believed there were
+  too many jobs in the queue and rejected new job submissions based on
+  ``MAX_JOBS_SUBMITTED``.
+  :jira:`1688`
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
+- Fixed *condor_c-gahp* and *condor_job_router* to submit jobs in the
+  same way as *condor_submit*.
+  :jira:`1695`
+
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
+- Fixed a bug that could cause a daemon or tool to crash when
+  attempting SSL or SCITOKENS authentication.
+  :jira:`1756`
+
+- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+  Vault tokens when downscoping access tokens.
+  :jira:`1527`
+
+- Fixed a missing library import in *condor_credmon_vault*.
+  :jira:`1527`
+
+- Fixed a bug where DAGMan job submission would fail when not using
+  direct submission due to setting a custom job classad attribute with
+  the ``+`` syntax in a ``VARS`` command that doesn't append the
+  variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
+  :jira:`1771`
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
 
 .. _lts-version-history-1003:
 
@@ -51,9 +122,7 @@ Version 10.0.3
 
 Release Notes:
 
-.. HTCondor version 10.0.3 released on Month Date, 2023.
-
-- HTCondor version 10.0.3 not yet released.
+- HTCondor version 10.0.3 released on April 6, 2023.
 
 - If you set :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` and use ``/`` to
   mark the beginning and end of a regular expression, the character sequence
@@ -83,8 +152,23 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
+  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
+  a bug where GPU (core) utilization could be wildly over-reported.
+  :jira:`1660`
+
+- Fix bug, introduced in HTCondor version 10.0.2, that prevented new
+  installations of HTCondor from working on Debian or Ubuntu.
+  :jira:`1689`
+
+- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilities would instantly
+  restart that node every time it saw a job proc failure. This would result in nodes
+  with multi-proc jobs to resubmit the entire node multiple times causing internal
+  issues for DAGMan.
+  :jira:`1607`
+
 - Fixed a rare bug in the late materialization code that could
-  cause a schedd crash.
+  cause a *condor_schedd* crash.
   :jira:`1581`
 
 - Fixed bug where the *condor_shadow* would crash during job removal.
@@ -97,12 +181,6 @@ Bugs Fixed:
 - Improved the HTCondor's systemd configuration to not start HTCondor until the
   system attempts (and mostly likely succeeds) to mount remote filesystems.
   :jira:`1594`
-
-- Fixed bug where a *condor_dagman* node with ``RETRY`` capabilites would instantly
-  restart that node everytime it saw a job proc failure. This would result in nodes
-  with multi-proc jobs to resubmit the entire node multiple times causing internal
-  issues for DAGMan.
-  :jira:`1607`
 
 - Fixed a bug where the *condor_master* of a glidein submitted to
   SLURM via HTCondor-CE would try to talk to the *condor_gridmanager*
@@ -130,8 +208,8 @@ Bugs Fixed:
   Before, it would endlessly re-query the status of jobs that failed
   during submission to the LRMS behind ARC CE.
   If ARC CE reports a job as FAILED because the job exited with a
-  non-zero exit code, the *condor_gridmanager* now treats it as a
-  successful execution.
+  non-zero exit code, the *condor_gridmanager* now treats it as
+  completed.
   :jira:`1583`
 
 - Fixed a bug where values specified with **arc_rte** in the job's

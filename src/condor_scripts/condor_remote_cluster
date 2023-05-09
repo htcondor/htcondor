@@ -187,16 +187,19 @@ ssh_find_remote () {
     remote_host=$1
 
     # Returns 'Darwin' for Mac OS X or 'Linux'
-    detect_os=`ssh $remote_host "uname -s"`
+    detect=(`ssh $remote_host "uname -s -m"`)
     [[ $? -eq 0 ]] || return 1
+
+    detect_os=${detect[0]}
+    detect_arch=${detect[1]}
 
     case "$detect_os" in
         Linux)
-            ssh_detect_linux_distro "$remote_host"
+            echo ${detect_arch}_`ssh_detect_linux_distro "$remote_host"`
             return $?
             ;;
         Darwin)
-            echo "MacOSX"
+            echo "x86_64_macOS"
             return 0
             ;;
         *)
@@ -834,12 +837,12 @@ if [ -z "${release_url}" ]; then
         fi
     fi
 
-    release_url="${url_base}${series}/${version}/release/condor-${version}-x86_64_${platform}-stripped.tar.gz"
+    release_url="${url_base}${series}/${version}/release/condor-${version}-${platform}-stripped.tar.gz"
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e "DAILY" -e "UW_development" ; then
-        daily_url="${url_base}${series}/${version}/daily/condor-${version}-x86_64_${platform}-stripped.tar.gz"
+        daily_url="${url_base}${series}/${version}/daily/condor-${version}-${platform}-stripped.tar.gz"
     fi
     if echo "${ver_str[*]}" | grep -q -e "PRE-RELEASE" -e " RC " -e "UW_development" ; then
-        rc_url="${url_base}${series}/${version}/rc/condor-${version}-x86_64_${platform}-stripped.tar.gz"
+        rc_url="${url_base}${series}/${version}/rc/condor-${version}-${platform}-stripped.tar.gz"
     fi
 fi
 
