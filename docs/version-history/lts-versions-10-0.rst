@@ -7,25 +7,6 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-1005:
-
-Version 10.0.5
---------------
-
-Release Notes:
-
-.. HTCondor version 10.0.5 released on Month Date, 2023.
-
-- HTCondor version 10.0.5 not yet released.
-
-New Features:
-
-- None.
-
-Bugs Fixed:
-
-- None.
-
 .. _lts-version-history-1004:
 
 Version 10.0.4
@@ -33,7 +14,9 @@ Version 10.0.4
 
 Release Notes:
 
-.. HTCondor version 10.0.4 released on April 6, 2023.
+.. HTCondor version 10.0.4 released on Month Date, 2023.
+
+- HTCondor version 10.0.4 not yet released.
 
 - Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
   is April 30th, 2023.
