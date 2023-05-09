@@ -4,6 +4,24 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.4.3
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.3 released on May 9, 2023.
+
+- Tarballs in this release contain the recent scitokens-cpp 1.0.1 library.
+  :jira:`1779`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.4.2
 --------------
 
