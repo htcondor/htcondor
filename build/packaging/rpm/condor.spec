@@ -1623,6 +1623,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.3-1
+- Fix bug than could cause the collector audit plugin to crash
+
 * Tue May 02 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.2-1
 - Fix bug where remote submission of batch grid universe jobs fail
 - Fix bug where HTCondor-CE fails to handle jobs after HTCondor restarts
