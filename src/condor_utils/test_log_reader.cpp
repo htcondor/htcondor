@@ -25,7 +25,6 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_distribution.h"
-#include "MyString.h"
 #include "subsystem_info.h"
 #include "simple_arg.h"
 #include <stdio.h>
@@ -410,7 +409,7 @@ ReadEvents(Options &opts, int &totalEvents)
 #     if ENABLE_STATE_DUMP
 		if ( opts.dumpState ) {
 			ReadUserLogState	rstate(state, 60);
-			MyString			str;
+			std::string			str;
 
 			rstate.GetStateString( state, str, "Restore File State" );
 			puts( str.Value() );
@@ -692,7 +691,7 @@ ReadEvents(Options &opts, int &totalEvents)
 #  if ENABLE_STATE_DUMP
 	if ( opts.dumpState ) {
 		ReadUserLogState	rstate(state, 60);
-		MyString			str;
+		std::string			str;
 
 		rstate.GetStateString( state, str, "Final File State" );
 		puts( str.Value() );

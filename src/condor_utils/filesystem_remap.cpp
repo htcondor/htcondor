@@ -19,7 +19,6 @@
 
 #include "filename_tools.h"
 #include "condor_debug.h"
-#include "MyString.h"
 #include "condor_uid.h"
 #include "filesystem_remap.h"
 #include "condor_config.h"

@@ -117,7 +117,6 @@ int formatstr_cat(std::string& s, const char* format, ...) {
     return r;
 }
 
-// to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& str, FILE *fp, bool append)
 {
 	bool first_time = true;

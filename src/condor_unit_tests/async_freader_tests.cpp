@@ -120,7 +120,7 @@ BEGIN_TEST_CASE(10_lines) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_10_lines.data"), 0);
@@ -130,7 +130,7 @@ BEGIN_TEST_CASE(10_lines) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { ++lineno; }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -153,7 +153,7 @@ BEGIN_TEST_CASE(no_newlines) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_no_newlines.data"), 0);
@@ -163,7 +163,7 @@ BEGIN_TEST_CASE(no_newlines) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { ++lineno; }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -186,7 +186,7 @@ BEGIN_TEST_CASE(no_data) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_no_data.data"), 0);
@@ -196,7 +196,7 @@ BEGIN_TEST_CASE(no_data) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { cbdata += str.size(); }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -219,7 +219,7 @@ BEGIN_TEST_CASE(1byte) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1byte.data"), 0);
@@ -230,7 +230,7 @@ BEGIN_TEST_CASE(1byte) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { cbdata += str.size(); ++nlines; }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -253,7 +253,7 @@ BEGIN_TEST_CASE(2bytes) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_2bytes.data"), 0);
@@ -264,7 +264,7 @@ BEGIN_TEST_CASE(2bytes) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { cbdata += str.size(); ++nlines; }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -288,7 +288,7 @@ BEGIN_TEST_CASE(1Kilobyte) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Kilobyte.data"), 0);
@@ -298,7 +298,7 @@ BEGIN_TEST_CASE(1Kilobyte) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { cbdata += str.size(); }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", cbdata, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -321,7 +321,7 @@ BEGIN_TEST_CASE(2000_lines) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_2000_lines.data"), 0);
@@ -331,7 +331,7 @@ BEGIN_TEST_CASE(2000_lines) {
 	for (;;) {
 		if (reader.get_data(p1, c1, p2, c2)) {
 			if (reader.output().readLine(str, false)) { ++lineno; }
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -350,7 +350,7 @@ BEGIN_TEST_CASE(2000_lines) {
 } END_TEST_CASE
 
 BEGIN_TEST_CASE(2000_lines_again) {
-	MyString str;
+	std::string str;
 	MyAsyncFileReader reader;
 
 	CHECK_SYNC(reader);
@@ -361,7 +361,7 @@ BEGIN_TEST_CASE(2000_lines_again) {
 	for (;;) {
 		if (reader.readline(str)) {
 			++lineno;
-			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+			if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.c_str());
 		} else if (reader.done_reading()) {
 			diag.collect(reader);
 			break;
@@ -384,7 +384,7 @@ BEGIN_TEST_CASE(300000_bytes) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_300000_bytes.data"), 0);
@@ -415,7 +415,7 @@ BEGIN_TEST_CASE(1Megabyte) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte.data"), 0);
@@ -446,7 +446,7 @@ BEGIN_TEST_CASE(1Megabyte_whole_file) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte.data", true), 0);
@@ -476,7 +476,7 @@ BEGIN_TEST_CASE(1Megabyte_whole_file) {
 	int lineno = 0;
 	while (src.readLine(str)) { 
 		++lineno;
-		if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.Value());
+		if (diagnostic) fprintf(stdout, "[%d] : %s\n", lineno, str.c_str());
 		cbdata += str.size();
 	}
 	CHECK_EQUAL_INT(cbdata, 1024*1024);
@@ -489,7 +489,7 @@ BEGIN_TEST_CASE(1Megabyte_no_final_newline) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_1Megabyte_no_final_newline.data"), 0);
@@ -521,7 +521,7 @@ BEGIN_TEST_CASE(30Megabytes) {
 	MyAsyncFileReader reader;
 	const char * p1, *p2;
 	int c1, c2;
-	MyString str;
+	std::string str;
 
 	CHECK_SYNC(reader);
 	CHECK_EQUAL_INT(reader.open("async_test_30Megabytes.data"), 0);
@@ -602,9 +602,9 @@ public:
 
 int generate_file(const char *filename, const char * dir, char* buf, int bufsize, const char * (*generate)(void *inst, int step, int cbtot, int &cb), void*inst)
 {
-	MyString fullpath;
+	std::string fullpath;
 	if (dir) { 
-		fullpath.formatstr("%s%c%s", dir, DIR_DELIM_CHAR, filename);
+		formatstr(fullpath, "%s%c%s", dir, DIR_DELIM_CHAR, filename);
 		filename = fullpath.c_str();
 	}
 

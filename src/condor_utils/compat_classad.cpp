@@ -20,7 +20,6 @@
 #include <algorithm>
 #include "compat_classad.h"
 
-#include "MyString.h"
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"

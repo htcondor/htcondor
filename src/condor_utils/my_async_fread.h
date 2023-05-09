@@ -122,7 +122,6 @@ class MyStringAioSource : public MyStringSource {
 public:
 	MyStringAioSource(MyAsyncFileReader& _aio) : aio(_aio) {}
 	virtual ~MyStringAioSource() {};
-	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 	bool allDataIsAvailable(); // becomes true once EOF has been buffered.
@@ -379,7 +378,7 @@ public:
 	// call done_reading() to determine if it is worthwhile to retry later.
 	// If this function returns true, the returned data is removed from this classes internal buffers
 	// by calling the consume_data() method below.
-	bool readline(MyString & str, bool append=false) { return src.readLine(str, append); }
+	bool readline(std::string & str, bool append=false) { return src.readLine(str, append); }
 
 	// returns raw pointers to available data without consuming it.
 	// returns true if there is any data, false if there was an error or there is no data
@@ -397,7 +396,7 @@ public:
 	// called by readline/get_data() to check to see if pending buffers are ready.
 	int check_for_read_completion();
 
-	// Classes that parse via MyString::readLine can use this as a source once is_closed() or eof_was_read() returns true.
+	// Classes that parse via readLine can use this as a source once is_closed() or eof_was_read() returns true.
 	// if you call this before is_closed() is true, you must deal the fact that it's readLine method will return false when data is pending.
 	MyStringAioSource& output() { return src; }
 

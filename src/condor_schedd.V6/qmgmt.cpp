@@ -7105,31 +7105,31 @@ dollarDollarExpand(int cluster_id, int proc_id, ClassAd *ad, ClassAd *startd_ad,
 				if(name[0] == '[' && name[namelen-1] == ']') {
 					// This is a classad expression to be considered
 
-					MyString expr_to_add;
-					expr_to_add.formatstr("string(%s", name + 1);
-					expr_to_add.setAt(expr_to_add.length()-1, ')');
+					std::string expr_to_add;
+					formatstr(expr_to_add, "string(%s", name + 1);
+					expr_to_add[expr_to_add.length()-1] = ')';
 
 						// Any backwacked double quotes or backwacks
 						// within the []'s should be unbackwacked.
-					int read_pos;
-					int write_pos;
+					size_t read_pos;
+					size_t write_pos;
 					for( read_pos = 0, write_pos = 0;
 						 read_pos < expr_to_add.length();
 						 read_pos++, write_pos++ )
 					{
 						if( expr_to_add[read_pos] == '\\'  &&
 							read_pos+1 < expr_to_add.length() &&
-							( expr_to_add[read_pos+1] == '\"' ||
+							( expr_to_add[read_pos+1] == '"' ||
 							  expr_to_add[read_pos+1] == '\\' ) )
 						{
 							read_pos++; // skip over backwack
 						}
 						if( read_pos != write_pos ) {
-							expr_to_add.setAt(write_pos,expr_to_add[read_pos]);
+							expr_to_add[write_pos] = expr_to_add[read_pos];
 						}
 					}
 					if( read_pos != write_pos ) { // terminate the string
-						expr_to_add.truncate(write_pos);
+						expr_to_add.erase(write_pos);
 					}
 
 					ClassAd tmpJobAd(*ad);
