@@ -170,8 +170,7 @@ boost::shared_ptr<ClassAdWrapper> parseOne(boost::python::object input, ParserTy
             }
             else {boost::python::throw_error_already_set();}
         }
-        const ClassAdWrapper &ad = boost::python::extract<ClassAdWrapper>(next_obj);
-        result_ad->Update(ad);
+        result_ad->Update(boost::python::extract<ClassAdWrapper>(next_obj));
     }
     return result_ad;
 }
