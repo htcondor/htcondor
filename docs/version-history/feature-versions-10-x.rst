@@ -20,7 +20,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
+
 
 Version 10.4.2
 --------------
