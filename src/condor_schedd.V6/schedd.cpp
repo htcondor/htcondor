@@ -2295,7 +2295,7 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	return TRUE;
 }
 
-int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack)
+int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & /*errstack*/)
 {
 	int rval = 0;
 

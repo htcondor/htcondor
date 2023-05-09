@@ -459,10 +459,10 @@ main( int argc, const char *argv[] )
 		}
 
 		StringList white;
-		StringList * whitelist = nullptr;
+		//StringList * whitelist = nullptr;
 		if ( ! attrs.empty()) {
 			for (auto attr : attrs) { white.insert(attr.c_str()); }
-			whitelist = &white;
+			//whitelist = &white;
 			// make sure we ask for the key attribute when we query
 			attrs.insert(ATTR_USER);
 		}
@@ -500,7 +500,7 @@ main( int argc, const char *argv[] )
 			}
 		#else
 			CondorClassAdListWriter writer(dash_long_format);
-			for (const auto it : ads) { writer.writeAd(*it.second, stdout); }
+			for (const auto &[key, ad]: ads) { writer.writeAd(*ad, stdout); }
 			if (writer.needsFooter()) { writer.writeFooter(stdout); }
 		#endif
 		} else {
@@ -533,7 +533,7 @@ int makeUsersRequestAd(
 	classad::ClassAd & request_ad,
 	const char * constraint,
 	classad::References &attrs,
-	int fetch_opts /*= 0*/,
+	int /* fetch_opts = 0*/,
 	int match_limit /*=-1*/)
 {
 	if (constraint && constraint[0]) {
