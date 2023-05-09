@@ -8070,6 +8070,12 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the ARC GAHP executable.
     The default value is ``$(SBIN)``/arc_gahp.
 
+:macro-def:`ARC_GAHP_COMMAND_LIMIT`
+    On systems where libcurl uses NSS for security, start a new
+    *arc_gahp* process when the existing one has handled the given
+    number of commands.
+    The default is 1000.
+
 :macro-def:`ARC_GAHP_USE_THREADS`
     Controls whether the *arc_gahp* should run multiple HTTPS requests
     in parallel in different threads.
