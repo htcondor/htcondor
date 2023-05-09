@@ -344,6 +344,7 @@ struct Credd
 				memset(&cred_in[0], 0, cred_in.size());
 			}
 		#else
+#if PY_MAJOR_VERSION == 2
 			if (!PyObject_CheckReadBuffer(py_credential.ptr())) {
 				THROW_EX(HTCondorValueError, "credendial not in a form usable by Credd binding");
 			}
@@ -357,6 +358,19 @@ struct Credd
 				memcpy(cred.ptr(), buf, buflen);
 				credlen = buflen;
 			}
+#else
+			Py_buffer buffer;
+			if (PyObject_GetBuffer(py_credential.ptr(), &buffer, PyBUF_SIMPLE) < 0) {
+				THROW_EX(HTCondorValueError, "credential not in usable format for python bindings");
+			} else {
+				if (buffer.len > 0) {
+					cred.set((char*)malloc(buffer.len));
+					memcpy(cred.ptr(), buffer.buf, buffer.len);
+					credlen = buffer.len;
+				}
+			}
+			PyBuffer_Release(&buffer);
+#endif 
 		#endif
 		}
 
@@ -553,6 +567,7 @@ struct Credd
 				memset(&cred_in[0], 0, cred_in.size());
 			}
 		#else
+#if PY_MAJOR_VERSION == 2
 			if (!PyObject_CheckReadBuffer(py_credential.ptr())) {
 				THROW_EX(HTCondorValueError, "credendial not in a form usable by Credd binding");
 			}
@@ -566,6 +581,19 @@ struct Credd
 				memcpy(cred.ptr(), buf, buflen);
 				credlen = buflen;
 			}
+#else
+			Py_buffer buffer;
+			if (PyObject_GetBuffer(py_credential.ptr(), &buffer, PyBUF_SIMPLE) < 0) {
+				THROW_EX(HTCondorValueError, "credential not in usable format for python bindings");
+			} else {
+				if (buffer.len > 0) {
+					cred.set((char*)malloc(buffer.len));
+					memcpy(cred.ptr(), buffer.buf, buffer.len);
+					credlen = buffer.len;
+				}
+			}
+			PyBuffer_Release(&buffer);
+#endif
 		#endif
 		}
 
