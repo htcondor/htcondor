@@ -198,6 +198,14 @@ NAMETABLE_DIRECTIVE:TABLE:DCTranslation
 
 #define DIRECT_ATTACH (SCHED_VERS+131) // Provide slot ads to the schedd (not from the negotiator)
 
+// command ids from +140 to +149 reserved for Schedd UserRec commands
+#define QUERY_USERREC_ADS (SCHED_VERS+140)
+#define ENABLE_USERREC    (SCHED_VERS+141) // enbable is also add
+#define DISABLE_USERREC   (SCHED_VERS+142)
+#define EDIT_USERREC      (SCHED_VERS+143)
+#define RESET_USERREC     (SCHED_VERS+144)
+#define DELETE_USERREC    (SCHED_VERS+149)
+
 // values used for "HowFast" in the draining request
 #define DRAIN_GRACEFUL 0  // retirement time and vacate time are honored
 #define DRAIN_QUICK 10	  // retirement time will not be honored, but vacate time will
