@@ -137,6 +137,29 @@ static PyType_Spec with_one_pointer_spec = {
 };
 
 
+template<class T>
+struct DynamicPyType {
+    DynamicPyType(const char * module_dot_typename) {
+        type_spec.name = module_dot_typename;
+    }
+
+    typedef struct {
+        PyObject_HEAD
+        T t;
+    } dynamic_pytype;
+
+    PyType_Spec type_spec = {
+        .name = NULL, /* set by constructor */
+        .basicsize = sizeof(dynamic_pytype),
+        .itemsize = 0, /* not a variable-sized object */
+        .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE | Py_TPFLAGS_BASETYPE,
+        .slots = dynamic_slots,
+    };
+
+    PyType_Slot dynamic_slots[1] = { {0, NULL} };
+};
+
+
 PyMODINIT_FUNC
 PyInit_htcondor2_impl(void) {
 	// Initialization for HTCondor.  *sigh*
@@ -146,9 +169,14 @@ PyInit_htcondor2_impl(void) {
 	PyObject * the_module = PyModule_Create(& htcondor2_impl_module);
 
 	// Register a "dynamic" type.
-	PyObject * the_type_object = PyType_FromSpec(& with_one_pointer_spec);
-	Py_INCREF(the_type_object);
-	PyModule_AddObject(the_module, "_with_one_pointer", the_type_object);
+	// PyObject * the_type_object = PyType_FromSpec(& with_one_pointer_spec);
+	// Py_INCREF(the_type_object);
+	// PyModule_AddObject(the_module, "_with_one_pointer", the_type_object);
+
+    DynamicPyType<int> a_py_type("htcondor2_impl._a_py_type");
+    PyObject * a_type_object = PyType_FromSpec(& a_py_type.type_spec);
+    Py_INCREF(a_type_object);
+	PyModule_AddObject(the_module, "_a_py_type", a_type_object);
 
 	return the_module;
 }
