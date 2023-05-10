@@ -182,7 +182,7 @@ private:
 
   bool DeleteClassAd(const std::string& Key);
 
-  void SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue);
+  void SetAttributeInt(const std::string& Key, const std::string& AttrName, long long AttrValue);
   void SetAttributeFloat(const std::string& Key, const std::string& AttrName, double AttrValue);
   void SetAttributeString(const std::string& Key, const std::string& AttrName, const std::string& AttrValue);
 

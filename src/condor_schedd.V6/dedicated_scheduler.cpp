@@ -3826,7 +3826,7 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 			// This is the case we're really interested in.  We're
 			// claimed, but not active (a.k.a "Claimed/Idle").  We
 			// need to see how long we've been like this.
-		return( (int)time(0) - mrec->entered_current_status );
+		return( (int)(time(0) - mrec->entered_current_status) );
 		break;
 	default:
 		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );

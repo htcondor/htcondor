@@ -1488,7 +1488,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 
 		// Finally, we need to update some attributes in our in-memory
 		// copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int total_suspensions = 0;
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -2461,7 +2461,7 @@ RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
 {
 	m_remote_proxy_expiration = expiration_time;
 	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
-	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, (int)expiration_time);
+	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, expiration_time);
 }
 
 void

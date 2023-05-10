@@ -1682,14 +1682,14 @@ bool Accountant::DeleteClassAd(const std::string& Key)
 // Set an Integer attribute
 //------------------------------------------------------------------
 
-void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue)
+void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, long long AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
     AcctLog->AppendLog(log);
   }
   char value[50];
-  snprintf(value,sizeof(value),"%d",AttrValue);
+  snprintf(value,sizeof(value),"ll%d",AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }

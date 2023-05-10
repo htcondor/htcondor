@@ -547,7 +547,7 @@ void
 match_rec::setStatus( int stat )
 {
 	if ( stat != status ) {
-		entered_current_status = (int)time(0);
+		entered_current_status = time(0);
 	}
 	status = stat;
 	if( status == M_CLAIMED ) {
@@ -11090,7 +11090,7 @@ mark_job_running(PROC_ID* job_id)
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 	SetAttributeInt(job_id->cluster, job_id->proc,
-					ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+					ATTR_ENTERED_CURRENT_STATUS, time(0) );
 	SetAttributeInt(job_id->cluster, job_id->proc,
 					ATTR_LAST_SUSPENSION_TIME, 0 );
 
@@ -11166,7 +11166,7 @@ _mark_job_stopped(PROC_ID* job_id)
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
-						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 );
 

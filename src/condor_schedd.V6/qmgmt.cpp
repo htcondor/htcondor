@@ -8290,8 +8290,8 @@ jobLeaseIsValid( ClassAd* job, int cluster, int proc )
 	int remaining = duration - diff;
 	dprintf( D_FULLDEBUG, "%d.%d: %s is defined: %d\n", cluster, proc, 
 			 ATTR_JOB_LEASE_DURATION, duration );
-	dprintf( D_FULLDEBUG, "%d.%d: now: %d, last_renewal: %d, diff: %d\n", 
-			 cluster, proc, (int)now, last_renewal, diff );
+	dprintf( D_FULLDEBUG, "%d.%d: now: %lld, last_renewal: %d, diff: %d\n",
+			 cluster, proc, (long long)now, last_renewal, diff );
 
 	if( remaining <= 0 ) {
 		dprintf( D_FULLDEBUG, "%d.%d: %s remaining: EXPIRED!\n", 

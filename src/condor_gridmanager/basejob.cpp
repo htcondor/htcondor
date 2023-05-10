@@ -338,7 +338,7 @@ void BaseJob::JobHeld( const char *hold_reason, int hold_code,
 		}
 		condorState = HELD;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		jobAd->Assign( ATTR_HOLD_REASON, hold_reason );
 		jobAd->Assign(ATTR_HOLD_REASON_CODE, hold_code);

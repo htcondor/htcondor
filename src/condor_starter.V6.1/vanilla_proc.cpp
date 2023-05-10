@@ -115,14 +115,14 @@ time_t StarterStatistics::Tick(time_t now) {
 
 void StarterStatistics::Publish(ClassAd& ad, int flags) const {
     if ((flags & IF_PUBLEVEL) > 0) {
-        ad.Assign("StatsLifetime", (int)StatsLifetime);
+        ad.Assign("StatsLifetime", StatsLifetime);
         if (flags & IF_VERBOSEPUB)
-            ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+            ad.Assign("StatsLastUpdateTime", StatsLastUpdateTime);
         if (flags & IF_RECENTPUB) {
-            ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+            ad.Assign("RecentStatsLifetime", RecentStatsLifetime);
             if (flags & IF_VERBOSEPUB) {
-                ad.Assign("RecentWindowMax", (int)RecentWindowMax);
-                ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+                ad.Assign("RecentWindowMax", RecentWindowMax);
+                ad.Assign("RecentStatsTickTime", RecentStatsTickTime);
             }
         }
     }
