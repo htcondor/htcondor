@@ -21,6 +21,11 @@ New Features:
 
 Bugs Fixed:
 
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
+
 - Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
   not be enforced correctly.
   :jira:`1775`
