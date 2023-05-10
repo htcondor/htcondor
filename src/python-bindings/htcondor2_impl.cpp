@@ -113,29 +113,27 @@ static struct PyModuleDef htcondor2_impl_module = {
 // it wouldn't be so bad, or even better, just to declare ints in Python
 // that only the C side uses for pointers.
 
+// So the following seems to more-or-less work as a way to more-or-less
+// easily add a Python type that has-a more-or-less arbitrary singular
+// (by-value) type.  Note that the value's storage space will be
+// deallocated but th destructor, if any, won't be called.
 
-typedef struct {
-    PyObject_HEAD
-    void * ptr;
-} with_one_pointer;
+// In some cases, we may not, effectively, be able to use value-types
+// and have to use reference types.  However, we don't have to use
+// pointers or references -- we could maintain a handle table.  Only
+// the C side of the code would ever remove an entry from the handle
+// table (which would have to be an owning pointer).  Stale handles
+// would raise ValueErrors, and if at some point in the future we
+// feel like doing a lot of work, we could extend the handle type
+// to (a) be uncopyable and (b) call a C function when the Python
+// side runs out of refcounts...
 
-
-static PyType_Slot with_one_pointer_slots[] = {
-    // Optional.
-    // {Py_tp_doc, (void *)"private implementation detail"},
-    // Optional.  Probably already inherited from Object.
-    // {Py_tp_new, (void *)PyType_GenericNew},
-    {0, NULL},
-};
-
-static PyType_Spec with_one_pointer_spec = {
-    .name = "htcondor2_impl.with_one_pointer",
-    .basicsize = sizeof(with_one_pointer),
-    .itemsize = 0, /* not a variable-sized object */
-    .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE | Py_TPFLAGS_BASETYPE,
-    .slots = with_one_pointer_slots,
-};
-
+//
+// So we can do something with __copy__ and __deepcopy__ to prevent
+// copies from being made in the usual way.  It looks like we would
+// otherwise only need to set `tp_dealloc` ... which could maybe
+// just deal with a shared pointer?
+//
 
 template<class T>
 struct DynamicPyType {
@@ -168,14 +166,9 @@ PyInit_htcondor2_impl(void) {
 
 	PyObject * the_module = PyModule_Create(& htcondor2_impl_module);
 
-	// Register a "dynamic" type.
-	// PyObject * the_type_object = PyType_FromSpec(& with_one_pointer_spec);
-	// Py_INCREF(the_type_object);
-	// PyModule_AddObject(the_module, "_with_one_pointer", the_type_object);
-
-    DynamicPyType<int> a_py_type("htcondor2_impl._a_py_type");
-    PyObject * a_type_object = PyType_FromSpec(& a_py_type.type_spec);
-    Py_INCREF(a_type_object);
+	DynamicPyType<int> a_py_type("htcondor2_impl._a_py_type");
+	PyObject * a_type_object = PyType_FromSpec(& a_py_type.type_spec);
+	Py_INCREF(a_type_object);
 	PyModule_AddObject(the_module, "_a_py_type", a_type_object);
 
 	return the_module;
