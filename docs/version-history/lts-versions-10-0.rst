@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug in the python bindings where some attributes were
+  omitted from accounting ads queried from the *condor_negotiator*.
+  :jira:`1780`
 
 .. _lts-version-history-1004:
 
