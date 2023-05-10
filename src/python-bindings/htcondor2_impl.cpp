@@ -92,10 +92,48 @@ static struct PyModuleDef htcondor2_impl_module = {
 	.m_doc = NULL, /* no module documentation */
 	.m_size = -1, /* this module has global state */
 	.m_methods = htcondor2_impl_methods,
+
+	// In C99, we could just leave these off.
 	.m_slots = NULL,
 	.m_traverse = NULL,
 	.m_clear = NULL,
 	.m_free = NULL,
+};
+
+
+// We can't statically define Python types from C if Py_LIMITED_API is set,
+// which we're not quite ready to give up on yet.  Also, it's a pain to
+// define even a single Python type, so the plan was to define that single
+// Python type to have a C-side-only void * for whatever nefarious purpose
+// the C-side needs, and have the interface types inherit from that type in
+// pure Python.
+
+// For now, we're going to try to "dynamically" define that type.  If we
+// can't make that work, given that we're declaring a void * here, maybe
+// it wouldn't be so bad, or even better, just to declare ints in Python
+// that only the C side uses for pointers.
+
+
+typedef struct {
+    PyObject_HEAD
+    void * ptr;
+} with_one_pointer;
+
+
+static PyType_Slot with_one_pointer_slots[] = {
+    // Optional.
+    // {Py_tp_doc, (void *)"private implementation detail"},
+    // Optional.  Probably already inherited from Object.
+    // {Py_tp_new, (void *)PyType_GenericNew},
+    {0, NULL},
+};
+
+static PyType_Spec with_one_pointer_spec = {
+    .name = "htcondor2_impl.with_one_pointer",
+    .basicsize = sizeof(with_one_pointer),
+    .itemsize = 0, /* not a variable-sized object */
+    .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE | Py_TPFLAGS_BASETYPE,
+    .slots = with_one_pointer_slots,
 };
 
 
@@ -105,5 +143,12 @@ PyInit_htcondor2_impl(void) {
 	config();
 	dprintf_set_tool_debug( "TOOL", 0 );
 
-	return PyModule_Create(& htcondor2_impl_module);
+	PyObject * the_module = PyModule_Create(& htcondor2_impl_module);
+
+	// Register a "dynamic" type.
+	PyObject * the_type_object = PyType_FromSpec(& with_one_pointer_spec);
+	Py_INCREF(the_type_object);
+	PyModule_AddObject(the_module, "_with_one_pointer", the_type_object);
+
+	return the_module;
 }

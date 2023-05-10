@@ -106,3 +106,5 @@ from .htcondor2_impl import _platform as platform;
 
 from ._subsystem_type import SubsystemType
 from .htcondor2_impl import _set_subsystem as set_subsystem;
+
+from .htcondor2_impl import _with_one_pointer;
