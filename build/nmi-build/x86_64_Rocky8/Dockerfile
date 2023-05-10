@@ -165,6 +165,3 @@ RUN dnf install -y \
     && dnf clean all
 
 RUN pip3 install pytest pytest-httpserver
-
-# Enable daily repo to get latest packages for tarballs
-RUN dnf config-manager --set-enabled htcondor-daily && dnf list -y blahp && dnf clean all
