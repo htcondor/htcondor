@@ -57,7 +57,7 @@ Version: %{tarball_version}
 
 # Only edit the %condor_base_release to bump the rev number
 %define condor_git_base_release 0.1
-%define condor_base_release 1
+%define condor_base_release 2
 %if %git_build
         %define condor_release %condor_git_base_release.%{git_rev}.git
 %else
@@ -664,6 +664,22 @@ on a non-EC2 image.
 if [ $1 == 0 ]; then
     /bin/systemctl disable condor-annex-ec2
 fi
+
+#######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/upgrade9to10checks.py
 
 #######################
 %package all
@@ -1682,6 +1698,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
 * Thu Sep 29 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-1
 - Fix file descriptor leak when schedd fails to launch scheduler jobs
 - Fix failure to forward batch grid universe job's refreshed X.509 proxy

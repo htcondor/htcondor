@@ -3,19 +3,9 @@
 # Officially supported platforms
 docker://htcondor/nmi-zdev:x86_64_AmazonLinux2-09000900
 docker://htcondor/nmi-zdev:x86_64_CentOS7-09000900
-docker://htcondor/nmi-zdev:x86_64_Debian9-09000900
 docker://htcondor/nmi-zdev:x86_64_Debian10-09000900
 docker://htcondor/nmi-zdev:x86_64_Debian11-09000900
-#docker://htcondor/nmi-zdev:x86_64_Debian12-09000900
-x86_64_MacOSX15
-docker://htcondor/nmi-zdev:x86_64_Rocky8-09000900
+docker://htcondor/nmi-zdev:x86_64_Rocky8-09001700
 docker://htcondor/nmi-zdev:x86_64_Ubuntu18-09000900
 docker://htcondor/nmi-zdev:x86_64_Ubuntu20-09000900
-x86_64_Windows7
 x86_64_Windows10
-
-# Using 64-bit CentOS 7 hardware for IPv6 tests
-x86_64_CentOS7
-
-# We want to build on Fedora because it is our "warning check" platform
-docker://htcondor/nmi-zdev:x86_64_Fedora32-09000900
