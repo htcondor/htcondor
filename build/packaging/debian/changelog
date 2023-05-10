@@ -1,3 +1,9 @@
+condor (10.4.3-1) stable; urgency=medium
+
+  * Fix bug than could cause the collector audit plugin to crash
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 08 May 2023 21:53:00 -0500
+
 condor (10.4.2-1) stable; urgency=medium
 
   * Fix bug where remote submission of batch grid universe jobs fail
