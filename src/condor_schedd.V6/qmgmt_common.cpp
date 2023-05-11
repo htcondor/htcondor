@@ -31,12 +31,12 @@
 extern Scheduler scheduler;
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )
+SetAttributeInt(int cl, int pr, const char *name, long long val, SetAttributeFlags_t flags )
 {
 	char buf[100];
 	int rval;
 
-	snprintf(buf,100,"%d",val);
+	snprintf(buf,100,"%lld",val);
 	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
@@ -79,12 +79,12 @@ SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttri
 }
 
 int
-SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
+SetAttributeIntByConstraint(const char *con, const char *name, long long val, SetAttributeFlags_t flags)
 {
 	char buf[100];
 	int rval;
 
-	snprintf(buf,100,"%d",val);
+	snprintf(buf,100,"%lld",val);
 	rval = SetAttributeByConstraint(con,name,buf, flags);
 	return(rval);
 }

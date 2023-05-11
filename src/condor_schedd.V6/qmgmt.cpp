@@ -3849,7 +3849,7 @@ int DestroyProc(int cluster_id, int proc_id)
 		ad->LookupInteger(ATTR_COMPLETION_DATE,completion_time);
 		if ( !completion_time ) {
 			SetAttributeInt(cluster_id,proc_id,ATTR_COMPLETION_DATE,
-			                (int)time(NULL), true /*nondurable*/);
+			                time(nullptr), true /*nondurable*/);
 		}
 	} else if ( job_status != REMOVED ) {
 		// Jobs must be in COMPLETED or REMOVED status to leave the queue

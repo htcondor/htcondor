@@ -744,7 +744,7 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
-		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+		ATTR_LAST_REJ_MATCH_TIME, time(0), NONDURABLE);
 }
 
 void

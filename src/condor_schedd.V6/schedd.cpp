@@ -4427,7 +4427,7 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 			 "jobIsFinished() completed, calling DestroyProc(%d.%d)\n",
 			 cluster, proc );
 	SetAttributeInt( cluster, proc, ATTR_JOB_FINISHED_HOOK_DONE,
-					 (int)time(NULL), NONDURABLE);
+					 time(nullptr), NONDURABLE);
 	return DestroyProc( cluster, proc );
 }
 
@@ -7222,7 +7222,7 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
-		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+		ATTR_LAST_REJ_MATCH_TIME, time(0), NONDURABLE);
 }
 
 void
@@ -9377,7 +9377,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		  pipe.
 		*/
 		SetAttributeInt( job_id->cluster, job_id->proc, 
-						 ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0) );
+						 ATTR_LAST_JOB_LEASE_RENEWAL, time(0) );
 	}
 
 		// if this is a shadow for an MPI job, we need to tell the
@@ -10593,7 +10593,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad, bool 
 
 		SetAttributeInt(cluster, proc, ATTR_NUM_MATCHES, num_matches);
 
-		SetAttributeInt(cluster, proc, ATTR_LAST_MATCH_TIME, (int)time(0));
+		SetAttributeInt(cluster, proc, ATTR_LAST_MATCH_TIME, time(0));
 	}
 
 		// Now handle JOB_MACHINE_ATTRS
@@ -10678,7 +10678,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
-						 (int)time(0) ); 
+						 time(0) );
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -11607,7 +11607,7 @@ set_job_status(int cluster, int proc, int status)
 								status);
 				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 								 ATTR_ENTERED_CURRENT_STATUS,
-								 (int)time(0) ); 
+								 time(0) );
 				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 								 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 			}
@@ -15488,7 +15488,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	fixReasonAttrs( tmp_id, JA_HOLD_JOBS );
 
 	if( SetAttributeInt(cluster, proc, ATTR_ENTERED_CURRENT_STATUS, 
-						(int)time(0)) < 0 ) {
+						time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}
@@ -15634,7 +15634,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 	fixReasonAttrs( tmp_id, JA_RELEASE_JOBS );
 
 	if( SetAttributeInt(cluster, proc, ATTR_ENTERED_CURRENT_STATUS, 
-						(int)time(0)) < 0 ) {
+						time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}
