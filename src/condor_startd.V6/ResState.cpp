@@ -1299,7 +1299,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 		total += (time(NULL) - m_atime);
 	}
 	if (total) {
-		cap->Assign(info.attr_name, (int)total);
+		cap->Assign(info.attr_name, total);
 		return true;
 	}
 	return false;

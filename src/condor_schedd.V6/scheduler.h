@@ -299,7 +299,7 @@ class match_rec
     int     		status;
 	shadow_rec*		shadowRec;
 	int				num_exceptions;
-	int				entered_current_status;
+	time_t			entered_current_status;
 	ClassAd*		my_match_ad;
 	char*			user;
 	bool            is_dedicated; // true if this match belongs to ded. sched.

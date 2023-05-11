@@ -268,7 +268,7 @@ static void set_job_status_held(classad::ClassAd const &orig,classad::ClassAd &u
 		}
 	}
 	update.InsertAttr(ATTR_JOB_STATUS, HELD);
-	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(0));
 	if( ! hold_reason) {
 		hold_reason = "Unknown reason";
 	}

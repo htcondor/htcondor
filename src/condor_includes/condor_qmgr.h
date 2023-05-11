@@ -159,7 +159,7 @@ int SetAttributeByConstraint(const char *constraint, const char *attr,
 	@return -1 on failure; 0 on success
 */
 int SetAttributeIntByConstraint(const char *constraint, const char *attr,
-							 int value,
+							 int64_t value,
 							 SetAttributeFlags_t flags=0);
 /** For all jobs in the queue for which constraint evaluates to true, set
 	attr = value.  The value will be a ClassAd floating-point literal.
@@ -193,7 +193,7 @@ int SetAttribute(int cluster, int proc, const char *attr, const char *value, Set
 	will be a ClassAd integer literal.
 	@return -1 on failure; 0 on success
 */
-int SetAttributeInt(int cluster, int proc, const char *attr, int value, SetAttributeFlags_t flags = 0 );
+int SetAttributeInt(int cluster, int proc, const char *attr, int64_t value, SetAttributeFlags_t flags = 0 );
 /** Set attr = value for job with specified cluster and proc.  The value
 	will be a ClassAd floating-point literal.
 	@return -1 on failure; 0 on success

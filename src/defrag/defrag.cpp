@@ -463,7 +463,7 @@ int Defrag::countMachines(char const *constraint,char const *constraint_source,	
 void Defrag::saveState()
 {
 	ClassAd ad;
-	ad.Assign(ATTR_LAST_POLL,(int)m_last_poll);
+	ad.Assign(ATTR_LAST_POLL, m_last_poll);
 
 	std::string new_state_file;
 	formatstr(new_state_file,"%s.new",m_state_file.c_str());

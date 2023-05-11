@@ -23,6 +23,7 @@
 #include <climits>
 #include <math.h>
 #include <iomanip>
+#include <charconv>
 
 #include "condor_accountant.h"
 #include "condor_debug.h"
@@ -1682,14 +1683,14 @@ bool Accountant::DeleteClassAd(const std::string& Key)
 // Set an Integer attribute
 //------------------------------------------------------------------
 
-void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue)
+void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
     AcctLog->AppendLog(log);
   }
-  char value[50];
-  snprintf(value,sizeof(value),"%d",AttrValue);
+  char value[24] = { 0 };
+  std::to_chars(value, value+sizeof(value)-1, AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }

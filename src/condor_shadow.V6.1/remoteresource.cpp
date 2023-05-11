@@ -1488,7 +1488,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 
 		// Finally, we need to update some attributes in our in-memory
 		// copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int total_suspensions = 0;
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1932,8 +1932,8 @@ RemoteResource::reconnect( void )
 					ATTR_LAST_JOB_LEASE_RENEWAL );
 		}
 		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
-		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
-				 (int)last_job_lease_renewal, 
+		dprintf( D_ALWAYS, "%s: %lld %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+				 (long long)last_job_lease_renewal,
 				 ctime(&last_job_lease_renewal) );
 		dprintf( D_ALWAYS, "%s: %d seconds\n",
 				 ATTR_JOB_LEASE_DURATION, lease_duration );
@@ -2461,7 +2461,7 @@ RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
 {
 	m_remote_proxy_expiration = expiration_time;
 	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
-	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, (int)expiration_time);
+	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, expiration_time);
 }
 
 void
