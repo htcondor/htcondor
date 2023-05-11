@@ -387,7 +387,7 @@ void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
 	int cLookups = 0;
 	int cFailed = 0;
 	if (lookup_method) {
-		MyString meth(lookup_method);
+		std::string meth(lookup_method);
 		double dstart = _condor_debug_get_time_double();
 		for (const char * user = users.first(); user; user = users.next()) {
 			gmstr.clear();

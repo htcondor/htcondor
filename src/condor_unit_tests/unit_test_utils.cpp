@@ -52,28 +52,6 @@ const char* tfnze( int var ) {
 	return "FALSE";
 }
 
-bool vsprintfHelper(MyString* str, const char* format, ...) {
-	va_list args;
-	bool toReturn;
-
-	va_start(args, format);
-	toReturn = str->vformatstr(format, args);
-	va_end(args);
-
-	return toReturn;
-}
-
-bool vformatstr_catHelper(MyString* str, const char* format, ...) {
-	va_list args;
-	bool toReturn;
-
-	va_start(args, format);
-	toReturn = str->vformatstr_cat(format, args);
-	va_end(args);
-
-	return toReturn;
-}
-
 /* Returns the empty string when the passed string is null */
 const char* nicePrint(const char* str) {
 	if(!str)
@@ -183,12 +161,6 @@ bool floats_close( double one, double two, double diff) {
 	} else {
 		return(true);
 	}
-}
-
-bool strings_similar(const MyString* str1, const MyString* str2, 
-	const char* delims) 
-{
-	return strings_similar(str1->Value(), str2->Value(), delims);
 }
 
 bool strings_similar(const std::string& str1, const std::string& str2,
