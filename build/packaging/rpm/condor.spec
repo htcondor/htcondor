@@ -612,6 +612,22 @@ if [ $1 == 0 ]; then
 fi
 
 #######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/upgrade9to10checks.py
+
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -1623,6 +1639,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
 * Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.3-1
 - Fix bug than could cause the collector audit plugin to crash
 
