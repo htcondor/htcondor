@@ -3441,7 +3441,7 @@ int dc_main( int argc, char** argv )
 	}
 	if( !get_mySubSystem()->isValid() ) {
 		get_mySubSystem()->printf( );
-		EXCEPT( "Programmer error: get_mySubSystem() info is invalid(%s,%d,%s)!",
+		EXCEPT( "Programmer error: get_mySubSystem() info is invalid(%s,%ld,%s)!",
 				get_mySubSystem()->getName(),
 				get_mySubSystem()->getType(),
 				get_mySubSystem()->getTypeName() );

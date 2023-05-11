@@ -2,10 +2,8 @@
 set( HTCONDOR_BINDINGS_SOURCES
     bulk_query_iterator.cpp
     claim.cpp
-    collector.cpp
     config.cpp
     credd.cpp
-    daemon_and_ad_types.cpp
     daemon_location.cpp
     dc_tool.cpp
     enable_deprecation_warnings.cpp

@@ -13,7 +13,7 @@
 
 
 static PyObject *
-_external_refs( PyObject * self, PyObject * args ) {
+_external_refs( PyObject * /* self */, PyObject * args ) {
 	const char * ad_str = NULL;
 	const char * expr_str = NULL;
 
@@ -69,7 +69,7 @@ _external_refs( PyObject * self, PyObject * args ) {
 
 
 static PyObject *
-_internal_refs( PyObject * self, PyObject * args ) {
+_internal_refs( PyObject * /* self */, PyObject * args ) {
 	const char * ad_str = NULL;
 	const char * expr_str = NULL;
 
@@ -125,7 +125,7 @@ _internal_refs( PyObject * self, PyObject * args ) {
 
 
 static PyObject *
-_flatten( PyObject * self, PyObject * args ) {
+_flatten( PyObject * /* self */, PyObject * args ) {
 	const char * expr_str = NULL;
 	const char * scope_str = NULL;
 
@@ -201,7 +201,7 @@ EvaluateLooseExpr( classad::ExprTree * expr,
 
 
 static PyObject *
-_evaluate( PyObject * self, PyObject * args ) {
+_evaluate( PyObject * /* self */, PyObject * args ) {
 	const char * expr_str = NULL;
 	const char * scope_str = NULL;
 	const char * target_str = NULL;
@@ -279,7 +279,7 @@ _evaluate( PyObject * self, PyObject * args ) {
 
 
 static PyObject *
-_classad_quoted( PyObject * self, PyObject * args ) {
+_classad_quoted( PyObject * /* self */, PyObject * args ) {
 	const char * str_to_quote = NULL;
 	// 's': ClassAd strings don't allow embedded NULs, I hope.
 	if(! PyArg_ParseTuple( args, "s", & str_to_quote )) {
@@ -302,7 +302,7 @@ _classad_quoted( PyObject * self, PyObject * args ) {
 
 
 static PyObject *
-_canonicalize_expr_string( PyObject * self, PyObject * args ) {
+_canonicalize_expr_string( PyObject * /* self */, PyObject * args ) {
 	const char * expr_string = NULL;
 	// 's': Valid ClassAd expressions don't have embedded NULs.
 	if(! PyArg_ParseTuple( args, "s", & expr_string )) {
@@ -326,7 +326,7 @@ _canonicalize_expr_string( PyObject * self, PyObject * args ) {
 
 
 static PyObject *
-_collector_query_hack_for_demo_purposes( PyObject * self, PyObject * args ) {
+_collector_query_hack_for_demo_purposes( PyObject *, PyObject * ) {
 	CondorQuery query(STARTD_AD);
 
 	// This uses the config system, which makes us all sad.
@@ -380,11 +380,17 @@ static PyMethodDef classad3_impl_methods[] = {
 
 
 static struct PyModuleDef classad3_impl_module = {
-	PyModuleDef_HEAD_INIT,
-	"classad3_impl",
-	NULL, /* no module documentation */
-	-1,
-	classad3_impl_methods
+	.m_base = PyModuleDef_HEAD_INIT,
+	.m_name = "classad3_impl",
+	.m_doc = NULL, /* no module documentation */
+	.m_size = -1, /* this module has global state */
+	.m_methods = classad3_impl_methods,
+
+	// In C99, we could just leave these off.
+	.m_slots = NULL,
+	.m_traverse = NULL,
+	.m_clear = NULL,
+	.m_free = NULL,
 };
 
 

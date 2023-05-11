@@ -29,9 +29,7 @@ BOOST_PYTHON_MODULE(htcondor)
     //docstring_options local_docstring_options(true, false, false);
 
     export_config();
-    export_daemon_and_ad_types();
     export_daemon_location();
-    export_collector();
     export_negotiator();
     export_schedd();
     export_credd();
