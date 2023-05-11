@@ -1932,8 +1932,8 @@ RemoteResource::reconnect( void )
 					ATTR_LAST_JOB_LEASE_RENEWAL );
 		}
 		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
-		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
-				 (int)last_job_lease_renewal, 
+		dprintf( D_ALWAYS, "%s: %lld %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+				 (long long)last_job_lease_renewal,
 				 ctime(&last_job_lease_renewal) );
 		dprintf( D_ALWAYS, "%s: %d seconds\n",
 				 ATTR_JOB_LEASE_DURATION, lease_duration );

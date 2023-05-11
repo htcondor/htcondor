@@ -371,7 +371,7 @@ void BaseJob::JobRemoved( const char *remove_reason )
 	if ( condorState != REMOVED ) {
 		condorState = REMOVED;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		jobAd->Assign( ATTR_REMOVE_REASON, remove_reason );
 
@@ -546,10 +546,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) SetJobLeaseTimers()\n",procID.cluster,procID.proc);
 	}
 }
 
-void BaseJob::UpdateJobLeaseSent( int new_expiration_time )
+void BaseJob::UpdateJobLeaseSent( time_t new_expiration_time )
 {
-dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
-	int old_expiration_time = TIMER_UNSET;
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%lld)\n",procID.cluster,procID.proc,(long long)new_expiration_time);
+	time_t old_expiration_time = TIMER_UNSET;
 
 	jobAd->LookupInteger( ATTR_JOB_LEASE_EXPIRATION,
 						  old_expiration_time );
@@ -583,10 +583,10 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseSent(%d)\n",procID.cluster,procID.pro
 	}
 }
 
-void BaseJob::UpdateJobLeaseReceived( int new_expiration_time )
+void BaseJob::UpdateJobLeaseReceived( time_t new_expiration_time )
 {
-	int old_expiration_time = TIMER_UNSET;
-dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%d)\n",procID.cluster,procID.proc,(int)new_expiration_time);
+	time_t old_expiration_time = TIMER_UNSET;
+dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,procID.proc,(long long)new_expiration_time);
 
 	jobAd->LookupInteger( ATTR_TIMER_REMOVE_CHECK, old_expiration_time );
 

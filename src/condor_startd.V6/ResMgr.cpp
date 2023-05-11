@@ -130,8 +130,8 @@ ResMgr::ResMgr() :
 	const char *death_time = getenv(ENV_DAEMON_DEATHTIME);
 	if (death_time && death_time[0]) {
 		deathTime = atoi(death_time);
-		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%d seconds from now)\n",
-			death_time, (int)time_to_live());
+		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%lld seconds from now)\n",
+			death_time, (long long)time_to_live());
 	}
 
 	max_types = 0;

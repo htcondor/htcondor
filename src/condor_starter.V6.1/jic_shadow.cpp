@@ -2139,8 +2139,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
@@ -2195,8 +2195,8 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 

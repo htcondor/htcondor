@@ -386,7 +386,7 @@ dev_idle_time( const char *path, time_t now )
 	}
 
 	if( IsDebugVerbose( D_IDLE ) ) {
-        dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
+        dprintf( D_IDLE, "%s: %lld secs\n", pathname, (long long)answer );
 	}
 
 	return answer;
