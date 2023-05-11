@@ -639,6 +639,22 @@ if [ $1 == 0 ]; then
 fi
 
 #######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/upgrade9to10checks.py
+
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -1614,6 +1630,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
 * Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.3-1
 - GPU metrics continues to be reported after the startd is reconfigured
 - Fixed issue where GPU metrics could be wildly over-reported
