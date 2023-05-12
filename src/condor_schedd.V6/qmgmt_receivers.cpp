@@ -792,7 +792,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		int cluster_id = -1;
 		int proc_id = -1;
 		std::string attr_name;
-		long long value = 0;
+		int value = 0;
 		int terrno;
 
 		neg_on_error( syscall_sock->code(cluster_id) );
@@ -816,7 +816,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 			dprintf( D_SYSCALLS, "GetAttributeInt(%d, %d, %s) not found.\n",
 					cluster_id, proc_id, attr_name.c_str());
 		} else {
-			dprintf( D_SYSCALLS, "  value: %lld\n", value );
+			dprintf( D_SYSCALLS, "  value: %d\n", value );
 			dprintf( D_SYSCALLS, "\trval = %d, errno = %d\n", rval, terrno );
 		}
 
