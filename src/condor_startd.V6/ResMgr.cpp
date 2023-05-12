@@ -2205,7 +2205,7 @@ bool ResMgr::hibernating () const {
 void
 ResMgr::check_use( void )
 {
-	int current_time = time(NULL);
+	time_t current_time = time(NULL);
 	if( hasAnyClaim() ) {
 		last_in_use = current_time;
 	}
@@ -2618,10 +2618,10 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME, total_draining_unclaimed );
 	}
 	if( last_drain_start_time != 0 ) {
-		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
+		cap->Assign( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
 	}
 	if( last_drain_stop_time != 0 ) {
-	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 }
 

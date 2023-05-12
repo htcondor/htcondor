@@ -1088,7 +1088,7 @@ updateClassAd (CollectorHashTable &hashTable,
 		insert = 1;
 
 		if ( m_forwardFilteringEnabled && ( strcmp( label, "Start" ) == 0 || strcmp( label, "StartdPvt" ) == 0 || strcmp( label, "Submittor" ) == 0 ) ) {
-			new_ad->Assign( ATTR_LAST_FORWARDED, (int)time(NULL) );
+			new_ad->Assign( ATTR_LAST_FORWARDED, time(nullptr) );
 		}
 
 		return record;

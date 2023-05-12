@@ -279,6 +279,8 @@ int GetAttributeFloat(int cluster, int proc, const char *attr, double *value);
 	@return -1 on failure; 0 on success
 */
 int GetAttributeInt(int cluster, int proc, const char *attr, int *value);
+int GetAttributeInt(int cluster, int proc, const char *attr, long *value);
+int GetAttributeInt(int cluster, int proc, const char *attr, long long *value);
 /** Get value of attr for job with specified cluster and proc.
 	@return -1 on failure; 0 on success
 */

@@ -253,7 +253,7 @@ int main( int argc, char *argv[] )
 	while( 1 ) {
 		int timeout_ms = -1;
 		if(! dont_wait) {
-			int now = time(NULL);
+			time_t now = time(nullptr);
 			if( stoptime && now > stoptime ) {
 				printf( "Time expired.\n" );
 				EXIT_FAILURE;

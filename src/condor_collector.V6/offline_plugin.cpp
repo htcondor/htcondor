@@ -335,7 +335,7 @@ OfflineCollectorPlugin::update (
 		ad.Assign ( ATTR_ENTERED_CURRENT_ACTIVITY, 0 );
 
 		/* Set the heart-beat time */
-		int now = static_cast<int> ( time ( NULL ) );
+		time_t now = time(nullptr);
 		ad.Assign ( ATTR_MY_CURRENT_TIME, now );
 		ad.Assign ( ATTR_LAST_HEARD_FROM, now );
 

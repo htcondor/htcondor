@@ -480,7 +480,7 @@ UniShadow::resourceDisconnected( RemoteResource* rr )
 		"closed unexpectedly";
 	logDisconnectedEvent( txt );
 
-	int now = time(NULL);
+	time_t now = time(NULL);
 	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
 
 	if (m_lazy_queue_update) {
@@ -724,7 +724,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
-		time_t now = (int)time(NULL);
+		time_t now = time(nullptr);
 		jobAd->Assign( "TransferInStarted", now );
 
 		time_t then;

@@ -664,7 +664,7 @@ GetAttributeFloat( int cluster_id, int proc_id, char *attr_name, float *value )
 
 
 int
-GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value )
+GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, long long *value )
 {
 	int	rval = -1;
 
@@ -688,6 +688,30 @@ GetAttributeInt( int cluster_id, int proc_id, char const *attr_name, int *value 
 		neg_on_error( qmgmt_sock->code(*value) );
 		neg_on_error( qmgmt_sock->end_of_message() );
 
+	return rval;
+}
+
+
+int
+GetAttributeInt(int cluster_id, int proc_id, char const *attr_name, long *value)
+{
+	long long ll_value = *value;
+	int	rval = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_value);
+	if (rval >= 0) {
+		*value = (long)ll_value;
+	}
+	return rval;
+}
+
+
+int
+GetAttributeInt(int cluster_id, int proc_id, char const *attr_name, int *value)
+{
+	long long ll_value = *value;
+	int	rval = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_value);
+	if (rval >= 0) {
+		*value = (int)ll_value;
+	}
 	return rval;
 }
 

@@ -1664,7 +1664,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
 	int len = snprintf( event.info, COUNTOF(event.info),
 			  "Global JobLog:"
-			  " ctime=%d"
+			  " ctime=%lld"
 			  " id=%s"
 			  " sequence=%d"
 			  " size=" FILESIZE_T_FORMAT""
@@ -1673,7 +1673,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  " event_off=%" PRId64""
 			  " max_rotation=%d"
 			  " creator_name=<%s>",
-			  (int) getCtime(),
+			  (long long) getCtime(),
 			  getId().c_str(),
 			  getSequence(),
 			  getSize(),

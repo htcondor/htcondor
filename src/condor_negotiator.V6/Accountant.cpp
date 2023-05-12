@@ -706,7 +706,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
       DeleteClassAd(ResourceRecord+ResourceName);
       return;
   }
-  int StartTime=0;
+  time_t StartTime=0;
   GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -839,7 +839,7 @@ void Accountant::DisplayMatches()
 
 void Accountant::UpdatePriorities() 
 {
-  int T=time(0);
+  time_t T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
 
@@ -1074,7 +1074,7 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
 
     std::string HK;
     ClassAd* ResourceAd;
-    int StartTime;
+    time_t StartTime;
 
     ClassAd* ad = new ClassAd();
 
@@ -1734,6 +1734,22 @@ void Accountant::SetAttributeString(const std::string& Key, const std::string& A
 //------------------------------------------------------------------
 
 bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue)
 {
   ClassAd* ad;
   if (AcctLog->table.lookup(Key,ad)==-1) return false;

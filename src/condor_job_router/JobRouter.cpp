@@ -1092,7 +1092,7 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 	if (REMOVED != status)
 	{
 		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
 		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
 		{

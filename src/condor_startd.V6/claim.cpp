@@ -2325,8 +2325,8 @@ newIdString( char** id_str_ptr )
 	// contain '#'. Parsers should look for the first '>' in the
 	// string to reliably extract the startd's sinful.
 
-	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
-	           (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%lld#%d#", daemonCore->publicNetworkIpAddr(),
+	           (long long)startd_startup, sequence_num );
 
 	char *keybuf = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 	id += keybuf;

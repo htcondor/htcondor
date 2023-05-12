@@ -125,7 +125,7 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 		return false;
 	}
 
-	int deadline = sock->get_deadline();
+	time_t deadline = sock->get_deadline();
 	if( deadline ) {
 		deadline -= time(NULL);
 		if( deadline < 0 ) {

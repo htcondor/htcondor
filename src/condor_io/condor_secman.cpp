@@ -2596,7 +2596,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			char *dur = NULL;
 			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
-			int expiration_time = 0;
+			time_t expiration_time = 0;
 			time_t now = time(0);
 			if( dur ) {
 				expiration_time = now + atoi(dur);
@@ -3709,8 +3709,8 @@ char* SecMan::my_unique_id() {
 #endif
 
 		std::string tid;
-        formatstr( tid, "%s:%i:%i", get_local_hostname().c_str(), mypid, 
-					 (int)time(0));
+        formatstr( tid, "%s:%i:%lld", get_local_hostname().c_str(), mypid,
+		           (long long)time(0));
 
         _my_unique_id = strdup(tid.c_str());
     }
@@ -3939,7 +3939,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 		// extract the session duration from the (imported) policy
-	int expiration_time = 0;
+	time_t expiration_time = 0;
 
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
