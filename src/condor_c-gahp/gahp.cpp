@@ -63,7 +63,7 @@ int main() {
 		count = 0;
 		do {
 			int c = getchar();
-			sprintf (buff2, "%c", c);
+			buff2[0] = (char) c;
 			if (buff2[0] != '\n') {
 				buff[count++]=buff2[0];
 			}

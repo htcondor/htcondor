@@ -434,9 +434,7 @@ VanillaProc::StartJob()
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
-			char buf[16];
-			sprintf(buf, "%d", getpid());
-			starter_name = buf;
+			formatstr(starter_name, "%d", getpid());
 		}
 		//ASSERT (starter_name.size());
 		formatstr(cgroup_uniq, "%s_%s", execute_str.c_str(), starter_name.c_str());
