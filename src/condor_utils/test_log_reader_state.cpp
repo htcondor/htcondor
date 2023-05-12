@@ -866,7 +866,7 @@ Options::handleOpt( SimpleArg &arg, int &argno )
 		}
 
 	} else if ( arg.Match("version") ) {
-		printf("test_log_reader_state: %s, %s\n", VERSION, __DATE__);
+		printf("test_log_reader_state: %s\n", VERSION);
 		return 1;
 	}
 	else {

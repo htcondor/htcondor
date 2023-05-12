@@ -603,7 +603,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,proc
 		}
 
 		if ( new_expiration_time < old_expiration_time ) {
-			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%d) is older than old lease expiration (%d), ignoring!\n",
+			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%ld) is older than old lease expiration (%ld), ignoring!\n",
 					 procID.cluster, procID.proc, new_expiration_time,
 					 old_expiration_time );
 			return;

@@ -332,7 +332,7 @@ CheckArgs(int argc, const char **argv, Options &opts)
 			}
 
 		} else if ( arg.Match("version") ) {
-			printf("test_log_reader: %s, %s\n", VERSION, __DATE__);
+			printf("test_log_reader: %s\n", VERSION);
 			status = STATUS_CANCEL;
 
 		} else if ( arg.Match("p-wo") ) {
