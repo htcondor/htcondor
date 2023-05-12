@@ -1166,7 +1166,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
 			return false;
 		}
-		char hex[3*5 + 1];
+		char hex[3 * MAX_HEADER_SIZE + 1];
 		dprintf(D_NETWORK, "Send Header contents: %s\n",
 			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
 
