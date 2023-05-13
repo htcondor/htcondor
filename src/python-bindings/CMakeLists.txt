@@ -18,10 +18,6 @@ set( HTCONDOR_BINDINGS_SOURCES
     schedd.cpp
     secman.cpp
     startd.cpp
-
-    classad3_impl.cpp
-
-    htcondor2_impl.cpp
 )
 
 if(WINDOWS)
@@ -384,11 +380,11 @@ else()
       endif()
 
 
-      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
-      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
-      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARES} )
-      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
-      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+      add_library(                  py3classad2_impl SHARED classad2_impl.cpp )
+      target_include_directories(   py3classad2_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad2_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      set_target_properties(        py3classad2_impl PROPERTIES PREFIX "" OUTPUT_NAME classad2_impl )
+      set_target_properties(        py3classad2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
 
 
       add_library(                  py3htcondor2_impl SHARED htcondor2_impl.cpp )
@@ -398,10 +394,27 @@ else()
       set_target_properties(        py3htcondor2_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
 
 
+      add_library(                  py3classad3_impl SHARED classad3_impl.cpp )
+      target_include_directories(   py3classad3_impl PUBLIC ${PYTHON3_INCLUDE_DIRS} )
+      target_link_libraries(        py3classad3_impl classad condor_utils ${PYTHON3_LIBRARES} )
+      set_target_properties(        py3classad3_impl PROPERTIES PREFIX "" OUTPUT_NAME classad3_impl )
+      set_target_properties(        py3classad3_impl PROPERTIES SUFFIX "${PYTHON3_MODULE_SUFFIX}" )
+
+
+
+      if ( NOT CMAKE_SKIP_RPATH )
+        set_target_properties(py3classad2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+        set_target_properties(py3htcondor2_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+        set_target_properties(py3classad3_impl PROPERTIES INSTALL_RPATH "${PYTHON_RPATH}")
+      endif()
+
+
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
+      install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad2 )
       install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
+
 
       if ( APPLE )
           set_target_properties( py3classad PROPERTIES INSTALL_NAME_DIR ${CMAKE_CURRENT_BINARY_DIR} )

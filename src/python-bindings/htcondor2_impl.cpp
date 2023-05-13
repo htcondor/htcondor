@@ -41,15 +41,15 @@ static PyMethodDef htcondor2_impl_methods[] = {
     )C0ND0R"},
 
 
-    {"_collector_init", &_collector_init, METH_VARARGS, NULL},
+	{"_collector_init", &_collector_init, METH_VARARGS, NULL},
 
-    {"_collector_query", &_collector_query, METH_VARARGS, NULL},
+	{"_collector_query", &_collector_query, METH_VARARGS, NULL},
 
-    {"_collector_locate_local", & _collector_locate_local, METH_VARARGS, NULL},
+	{"_collector_locate_local", & _collector_locate_local, METH_VARARGS, NULL},
 
-    {"_collector_advertise", & _collector_advertise, METH_VARARGS, NULL},
+	{"_collector_advertise", & _collector_advertise, METH_VARARGS, NULL},
 
-    {"_hack", & _hack, METH_VARARGS, NULL},
+	{"_hack", & _hack, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}

@@ -70,17 +70,33 @@ _collector_query( PyObject *, PyObject * args ) {
 	}
 
 	if( result == Q_OK ) {
+		PyObject * list = PyList_New(0);
+		if( list == NULL ) {
+			PyErr_SetString( PyExc_MemoryError, "_collector_query" );
+			return NULL;
+		}
 
-ClassAd * classAd = NULL;
-for( adList.Open(); ( classAd = adList.Next() ); ) {
-	// dPrintAd( D_ALWAYS, * classAd );
-	std::string name;
-	classAd->LookupString( "Name", name );
-	dprintf( D_ALWAYS, "_condor_query(): found '%s'\n", name.c_str() );
-}
+		ClassAd * classAd = NULL;
+		for( adList.Open(); ( classAd = adList.Next() ); ) {
+			// Obviously should be functionalized and cached.
+			PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor" );
+			PyObject * py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+			PyObject * py_ClassAd_class = PyObject_GetAttrString( py_htcondor_classad_module, "ClassAd" );
+			PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
 
-		// FIXME: return a Python list of Python ClassAds.
-		Py_RETURN_NONE;
+			// Obviously this should also be functionalized.
+			auto * handle = (PyObject_Handle *)PyObject_GetAttrString( pyClassAd, "_handle" );
+
+			// The ClassAdList owns the ClassAd.
+			handle->t = (void *)classAd->Copy();
+
+			if(PyList_Append( list, pyClassAd ) != 0) {
+				// PyList_Append() has already set an exception for us.
+				return NULL;
+			}
+		}
+
+		return list;
 	} else {
 		// FIXME
 

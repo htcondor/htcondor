@@ -1,0 +1,9 @@
+from .classad2_impl import _handle as handle_t
+
+from .classad2_impl import _collector_init
+
+class ClassAd:
+
+    def __init__(self):
+        self._handle = handle_t()
+        _classad_init(self, self._handle)

@@ -71,7 +71,7 @@ def _add_dll_dir():
 _check_for_config()
 
 with _add_dll_dir():
-    import classad
+    import classad2 as classad
     from . import htcondor
     from . import htcondor2_impl
     from . import _lock
