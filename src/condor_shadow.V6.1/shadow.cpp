@@ -416,6 +416,11 @@ UniShadow::resourceDisconnected( RemoteResource* rr )
 {
 	ASSERT( rr == remRes );
 
+
+	// All of our children should be gone already, but let's be sure.
+	daemonCore->kill_immediate_children();
+
+
 	const char* txt = "Socket between submit and execute hosts "
 		"closed unexpectedly";
 	logDisconnectedEvent( txt );
