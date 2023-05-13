@@ -9492,11 +9492,13 @@ DaemonCore::HandleDC_SERVICEWAITPIDS(int)
 			// queue is empty, just return cuz nothing more to do
 			return TRUE;
 		}
-		wait_entry = WaitpidQueue.front();
-		WaitpidQueue.pop_front();
 
+		wait_entry = WaitpidQueue.front();
 		// we pulled something off the queue, handle it
 		HandleProcessExit(wait_entry.child_pid, wait_entry.exit_status);
+		// Remove wait_entry from the queue _after_ invoking the callback
+		// so that the callback can tell that the process is gone.
+		WaitpidQueue.pop_front();
 
 		iReapsCnt--;
 	}
