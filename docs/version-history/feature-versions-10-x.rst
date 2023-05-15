@@ -21,6 +21,11 @@ New Features:
 
 Bugs Fixed:
 
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
 - Forced condor_ssh_to_job to never try to use a Control Master, which would
   break ssh_to_job.  Also raised the timeout for ssh_to_job which might
   be needed for slow WANs.
