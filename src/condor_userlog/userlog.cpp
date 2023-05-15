@@ -275,7 +275,7 @@ display_stats()
 }
 
 void
-new_record(int cluster, int proc, int start_time, int evict_time, 
+new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 		   int good_time, int cpu_usage, char const *host)
 {
 	static bool initialized = false;
@@ -492,8 +492,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						cpu_usage = 0;
 					}
 				}
-				new_record(event->cluster, event->proc, (int)start_time,
-						   (int)end_time,
+				new_record(event->cluster, event->proc, start_time,
+						   end_time,
 						   (int)ckpt_time-start_time, cpu_usage,
 						   execEvent->getExecuteHost());
 				delete execEvent;
@@ -527,8 +527,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)start_time,
-							   (int)end_time,
+					new_record(event->cluster, event->proc, start_time,
+							   end_time,
 							   (int)end_time-start_time,
 							   terminateEvent->
 							   run_remote_rusage.ru_utime.tv_sec +
@@ -581,8 +581,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					cpu_usage = 0;
 				}
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)start_time,
-							   (int)end_time,
+					new_record(event->cluster, event->proc, start_time,
+							   end_time,
 							   (int)ckpt_time-start_time, cpu_usage,
 							   execEvent->getExecuteHost());
 				}

@@ -6840,7 +6840,7 @@ GetAttributeFloat(int cluster_id, int proc_id, const char *attr_name, double *va
 
 
 int
-GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
+GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long long *val)
 {
 	ClassAd	*ad;
 	JobQueueKeyBuf key;
@@ -6867,6 +6867,28 @@ GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
 	if (ad->LookupInteger(attr_name, *val) == 1) return 0;
 	errno = EINVAL;
 	return -1;
+}
+
+int
+GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, long *val)
+{
+	long long ll_val = *val;
+	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	if (rc >= 0) {
+		*val = (long)ll_val;
+	}
+	return rc;
+}
+
+int
+GetAttributeInt(int cluster_id, int proc_id, const char *attr_name, int *val)
+{
+	long long ll_val = *val;
+	int rc = GetAttributeInt(cluster_id, proc_id, attr_name, &ll_val);
+	if (rc >= 0) {
+		*val = (int)ll_val;
+	}
+	return rc;
 }
 
 int

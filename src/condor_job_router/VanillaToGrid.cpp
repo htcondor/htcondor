@@ -236,7 +236,7 @@ static bool set_job_status_simple(classad::ClassAd const &orig,classad::ClassAd 
 		}
 	}
 	update.InsertAttr(ATTR_JOB_STATUS, new_status);
-	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(0));
+	update.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(0));
 	if( hold_copied_from_target ) {
 		update.InsertAttr( ATTR_HOLD_COPIED_FROM_TARGET_JOB, false );
 	}

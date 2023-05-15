@@ -142,8 +142,8 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	}
 
 	if( IsDebugVerbose( D_IDLE ) ) {
-		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
-				 (int)m_idle, (int)m_console_idle );
+		dprintf( D_IDLE, "Idle Time: user= %lld , console= %lld seconds\n",
+				 (long long)m_idle, (long long)m_console_idle );
 	}
 	return;
 }

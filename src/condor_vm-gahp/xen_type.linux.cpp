@@ -1201,7 +1201,7 @@ VirshType::createCkptFiles(void)
 			Resume();
 			return false;
 		}
-		if( fprintf(fp, "%d\n", (int)current_time) < 0 ) {
+		if( fprintf(fp, "%lld\n", (long long)current_time) < 0 ) {
 			fclose(fp);
 			unlink(timestampfile.c_str());
 			vmprintf(D_ALWAYS, "failed to fprintf for checkpoint timestamp "
@@ -1353,8 +1353,8 @@ VirshType::checkCkptSuspendFile(const char* file)
 			// compare
 			if( disk_mtime != timestamp ) {
 				vmprintf(D_ALWAYS, "Checkpoint timestamp mismatch: "
-						"timestamp of suspend file=%d, mtime of disk file=%d\n",
-						(int)timestamp, (int)disk_mtime);
+						"timestamp of suspend file=%lld, mtime of disk file=%lld\n",
+						(long long)timestamp, (long long)disk_mtime);
 				return false;
 			}
 		}

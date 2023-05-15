@@ -60,7 +60,7 @@ classad_visa_write(ClassAd* ad,
 		// make a copy of the passed-in ad and tack on some attributes
 		// describing this visa
 	visa_ad = *ad;
-	if (visa_ad.Assign(ATTR_VISA_TIMESTAMP, (int)time(NULL)) != TRUE) {
+	if (visa_ad.Assign(ATTR_VISA_TIMESTAMP, time(nullptr)) != TRUE) {
 		dprintf(D_ALWAYS | D_FAILURE,
 		        "classad_visa_write ERROR: could not add attribute %s\n",
 		        ATTR_VISA_TIMESTAMP);
