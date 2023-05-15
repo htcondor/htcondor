@@ -3955,7 +3955,7 @@ static bool test_insert_env_into_classad_version_v2() {
 static bool test_condor_version_requires_v1_false() {
 	emit_test("Test that CondorVersionRequiresV1() returns false for condor "
 		"version 7.0.0.");
-	CondorVersionInfo info("$CondorVersion: 7.0.0 " __DATE__ " PRE-RELEASE $");
+	CondorVersionInfo info("$CondorVersion: 7.0.0 PRE-RELEASE $");
 	bool expect = false;
 	bool actual = Env::CondorVersionRequiresV1(info);
 	char* version = info.get_version_string();
@@ -3976,7 +3976,7 @@ static bool test_condor_version_requires_v1_false() {
 static bool test_condor_version_requires_v1_true() {
 	emit_test("Test that CondorVersionRequiresV1() returns true for condor "
 		"version 6.0.0.");
-	CondorVersionInfo info("$CondorVersion: 6.0.0 " __DATE__ " PRE-RELEASE $");
+	CondorVersionInfo info("$CondorVersion: 6.0.0  PRE-RELEASE $");
 	bool expect = true;
 	bool actual = Env::CondorVersionRequiresV1(info);
 	char* version = info.get_version_string();
