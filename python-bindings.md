@@ -24,3 +24,21 @@
 - The htcondor._collector class has identical semantics for its handle.
   (Note: we should probably move the htcondor2 python files to their own
   module directory and do only the monkey-patching in the htcondor/ dir.)
+
+- Because we're setting Py_LIMITED_API, we have to construct our types
+  "dynamically" (meaning, we can't just declare new Python type objects
+  because the internals change between minor versions).  This is annoying,
+  because the tutorial assumes static types; new types were already painful
+  enough to introduce.  So the "handle" type is a bare-bones as possible.
+
+- Python-side objects which need to keep a C/C++ pointer alive should have
+  the following lines in their __init__() function:
+
+    self._handle = handle_t()
+    _<typename>_init(self, self._handle)
+
+  so that the C/C++ _<typename>_init() function can easily store the
+  proper pointer.  (You can add extra arguments if you want.)
+
+- Use the functions in py_util to deal with handles.  You MUST NOT
+  increase the reference count on a handle from C/C++.

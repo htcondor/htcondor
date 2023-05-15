@@ -1,6 +1,8 @@
 static PyObject_Handle *
 get_handle_from(PyObject * pyClassAd) {
-	return (PyObject_Handle *)PyObject_GetAttrString( pyClassAd, "_handle" );
+	auto * py_handle = PyObject_GetAttrString( pyClassAd, "_handle" );
+	Py_DecRef(py_handle);
+	return (PyObject_Handle *)py_handle;
 }
 
 

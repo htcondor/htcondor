@@ -79,8 +79,10 @@ _collector_query( PyObject *, PyObject * args ) {
 		ClassAd * classAd = NULL;
 		for( adList.Open(); ( classAd = adList.Next() ); ) {
 			PyObject * pyClassAd = py_new_classad_classad(classAd->Copy());
+			auto rv = PyList_Append( list, pyClassAd );
+			Py_DecRef(pyClassAd);
 
-			if(PyList_Append( list, pyClassAd ) != 0) {
+			if(rv != 0) {
 				// PyList_Append() has already set an exception for us.
 				return NULL;
 			}
