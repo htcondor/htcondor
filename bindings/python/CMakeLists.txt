@@ -34,6 +34,7 @@ classad/__init__.py
 
 classad2/__init__.py
 classad2/_class_ad.py
+classad2/_value.py
 
 classad3/__init__.py
 classad3/ClassAd.py

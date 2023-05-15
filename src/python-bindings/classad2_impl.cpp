@@ -5,7 +5,7 @@
 
 // For module initialization.
 #include "condor_config.h"
-#include "htcondor2/py_handle.cpp"
+#include "common2/py_handle.cpp"
 
 
 // classad.*
@@ -13,7 +13,9 @@
 #include "classad2/loose_functions.cpp"
 
 
-// htcondor.*
+// classad.ClassAd
+#include "classad/classadCache.h"
+#include "common2/py_util.cpp"
 #include "classad2/classad.cpp"
 
 
@@ -24,7 +26,9 @@ static PyMethodDef classad2_impl_methods[] = {
 
     {"_classad_init", & _classad_init, METH_VARARGS, NULL},
     {"_classad_to_string", & _classad_to_string, METH_VARARGS, NULL},
+    {"_classad_to_repr", & _classad_to_repr, METH_VARARGS, NULL},
     {"_classad_get_item", & _classad_get_item, METH_VARARGS, NULL},
+    {"_classad_set_item", & _classad_set_item, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };

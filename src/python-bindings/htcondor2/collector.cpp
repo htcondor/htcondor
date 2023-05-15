@@ -78,17 +78,7 @@ _collector_query( PyObject *, PyObject * args ) {
 
 		ClassAd * classAd = NULL;
 		for( adList.Open(); ( classAd = adList.Next() ); ) {
-			// Obviously should be functionalized and cached.
-			PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor" );
-			PyObject * py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
-			PyObject * py_ClassAd_class = PyObject_GetAttrString( py_htcondor_classad_module, "ClassAd" );
-			PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
-
-			// Obviously this should also be functionalized.
-			auto * handle = (PyObject_Handle *)PyObject_GetAttrString( pyClassAd, "_handle" );
-
-			// The ClassAdList owns the ClassAd.
-			handle->t = (void *)classAd->Copy();
+			PyObject * pyClassAd = py_new_classad_classad(classAd->Copy());
 
 			if(PyList_Append( list, pyClassAd ) != 0) {
 				// PyList_Append() has already set an exception for us.

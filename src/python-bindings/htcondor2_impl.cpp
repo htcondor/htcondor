@@ -9,7 +9,7 @@
 
 // For module initialization.
 #include "condor_config.h"
-#include "htcondor2/py_handle.cpp"
+#include "common2/py_handle.cpp"
 
 // htcondor.*
 #include "condor_version.h"
@@ -18,6 +18,7 @@
 
 // htcondor.Collector
 #include "daemon_list.h"
+#include "common2/py_util.cpp"
 #include "htcondor2/collector.cpp"
 
 
