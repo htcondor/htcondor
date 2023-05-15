@@ -434,11 +434,8 @@ VanillaProc::StartJob()
 			// Note: Starter is a global variable from os_proc.cpp
 		Starter->jic->machClassAd()->LookupString(ATTR_NAME, starter_name);
 		if (starter_name.size() == 0) {
-			char buf[16];
-			sprintf(buf, "%d", getpid());
-			starter_name = buf;
+			starter_name = std::to_string(getpid());
 		}
-		//ASSERT (starter_name.size());
 		formatstr(cgroup_uniq, "%s_%s", execute_str.c_str(), starter_name.c_str());
 		const char dir_delim[2] = {DIR_DELIM_CHAR, '\0'};
 		replace_str(cgroup_uniq, dir_delim, "_");
@@ -1010,7 +1007,7 @@ VanillaProc::outOfMemoryEvent() {
 	// lower than the limit when the OOM killer fired.
 	// So have some slop, just in case.
 	if (usageMB < (0.9 * (m_memory_limit / (1024 * 1024)))) {
-		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %ld Mb limit is %ld\n", usageMB, m_memory_limit);
+		dprintf(D_ALWAYS, "Evicting job because system is out of memory, even though the job is below requested memory: Usage is %lld Mb limit is %lld\n", (long long)usageMB, (long long)m_memory_limit);
 		Starter->jic->notifyStarterError("Worker node is out of memory", true, 0, 0);
 		Starter->jic->allJobsGone(); // and exit to clean up more memory
 		return 0;

@@ -51,6 +51,7 @@
 #include "ToE.h"
 
 #include <sstream>
+#include <charconv>
 
 extern Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -1205,7 +1206,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
 	char buf[32];
-	sprintf(buf,"%d", pid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, pid); *p = '\0';}
 	args.AppendArg(buf); // pid of running job
 
 	// get_user_[ug]id only works if uids has been initted
@@ -1217,14 +1218,14 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (uid < 0) uid = getuid();
 
 	args.AppendArg("-S");
-	sprintf(buf, "%d", uid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, uid); *p = '\0';}
 	args.AppendArg(buf);
 
 	int gid = (int) get_user_gid();
 	if (gid < 0) gid = getgid();
 
 	args.AppendArg("-G");
-	sprintf(buf, "%d", gid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, gid); *p = '\0';}
 	args.AppendArg(buf);
 
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);

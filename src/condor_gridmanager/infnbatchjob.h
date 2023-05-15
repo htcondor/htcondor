@@ -72,7 +72,7 @@ class INFNBatchJob : public BaseJob
 	char *batchType;
 	char *remoteSandboxId;
 	char *remoteJobId;
-	int lastPollTime;
+	time_t lastPollTime;
 	bool pollNow;
 
 	Proxy *jobProxy;

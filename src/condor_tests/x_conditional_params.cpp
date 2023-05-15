@@ -24,6 +24,7 @@
 #include "param_info_tables.h"
 #include "condor_version.h"
 #include <stdlib.h>
+#include <charconv>
 
 const char * check_configif = NULL;
 
@@ -246,7 +247,7 @@ const char* fixup_version(const char * cond, char* buf, int cbBuf)
 			if (v > -10) {
 				if (v < 0) return NULL; // version cannot be fixed up!
 				++ix;
-				sprintf(p, "%d", (int)v);
+				{ auto [end, ec] = std::to_chars(p, p + 16, (int)v); *end = '\0';}
 				p += strlen(p);
 			}
 		} else {

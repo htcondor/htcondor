@@ -118,7 +118,7 @@ DaemonKeepAlive::get_stats()
 int
 DaemonKeepAlive::ScanForHungChildren()
 {
-	unsigned int now = (unsigned int)time(NULL);
+	time_t now = time(nullptr);
 
 	DaemonCore::PidEntry *pid_entry;
 	daemonCore->pidTable->startIterations();
@@ -282,7 +282,7 @@ DaemonKeepAlive::HandleChildAliveCommand(int, Stream* stream)
 		return FALSE;
 	}
 
-	pidentry->hung_past_this_time = (unsigned int) time(NULL) + timeout_secs;
+	pidentry->hung_past_this_time = time(nullptr) + timeout_secs;
 	pidentry->was_not_responding = FALSE;
 	pidentry->got_alive_msg += 1;
 
@@ -384,7 +384,7 @@ DaemonKeepAlive::KillHungChild(void *child)
 		else {
 			dprintf(D_ALWAYS, "Sending SIGABRT to child to generate a core file.\n");
 			const unsigned int want_core_timeout = 600;
-			pidentry->hung_past_this_time = (unsigned int) time(NULL) + want_core_timeout;
+			pidentry->hung_past_this_time = time(nullptr) + want_core_timeout;
 		}
 	}
 #endif

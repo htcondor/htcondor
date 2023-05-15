@@ -525,12 +525,12 @@ void process_cred_mark_file(const char *src) {
 	}
 
 	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
-	int now = time(0);
-	int mtime = si.GetModifyTime();
+	time_t now = time(0);
+	time_t mtime = si.GetModifyTime();
 	if ( (now - mtime) > sweep_delay ) {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Sweeping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Sweeping...\n", src, (long long)mtime, sweep_delay);
 	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Skipping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Skipping...\n", src, (long long)mtime, sweep_delay);
 		return;
 	}
 

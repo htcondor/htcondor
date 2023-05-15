@@ -2096,7 +2096,7 @@ class DaemonCore : public Service
         int stdin_offset;
 
 		// these three data members are set/used by the DaemonKeepAlive class
-        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        time_t hung_past_this_time;   // if >0, child is hung if time() > this value
         int was_not_responding;
         int got_alive_msg; // number of child alive messages received
 

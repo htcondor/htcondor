@@ -32,7 +32,7 @@
 
 //------------------------------------------------------------------------
 
-static int CalcTime(int,int,int);
+static time_t CalcTime(int,int,int);
 static int TimeLine(const std::string& Name, time_t FromDate, time_t ToDate, int Res);
 
 //------------------------------------------------------------------------
@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
   return 0;
 }
 
-int CalcTime(int month, int day, int year) {
+time_t CalcTime(int month, int day, int year) {
   struct tm time_str;
   if (year<50) year+= 100; // If I ask for 1 1 00, I want 1 1 2000
   if (year>1900) year-=1900;

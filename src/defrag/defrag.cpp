@@ -501,11 +501,11 @@ void Defrag::loadState()
 			dprintf(D_ALWAYS,"WARNING: failed to parse state from %s\n",m_state_file.c_str());
 		}
 
-		int timestamp = (int)m_last_poll;
+		time_t timestamp = m_last_poll;
 		ad->LookupInteger(ATTR_LAST_POLL,timestamp);
-		m_last_poll = (time_t)timestamp;
+		m_last_poll = timestamp;
 
-		dprintf(D_ALWAYS,"Last poll: %d\n",(int)m_last_poll);
+		dprintf(D_ALWAYS, "Last poll: %lld\n", (long long)m_last_poll);
 
 		delete ad;
 	}

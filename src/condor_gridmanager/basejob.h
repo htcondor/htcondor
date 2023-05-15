@@ -113,7 +113,7 @@ class BaseJob : public Service
 	bool resourcePingPending;
 	bool resourcePingComplete;
 
-	int m_lastRemoteStatusUpdate;
+	time_t m_lastRemoteStatusUpdate;
 	bool m_currentStatusUnknown;
 
 	int evaluateStateTid;

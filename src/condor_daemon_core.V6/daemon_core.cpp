@@ -3604,7 +3604,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%d\n", (int)timeout);
+			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%lld\n", (long long)timeout);
 		}
 
 		selector.execute();
@@ -10857,7 +10857,7 @@ DaemonCore::publish(ClassAd *ad) {
 	config_fill_ad(ad);
 
 		// Include our local current time.
-	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
+	ad->Assign(ATTR_MY_CURRENT_TIME, time(nullptr));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
 	ad->Assign(ATTR_MACHINE, get_local_fqdn().c_str());

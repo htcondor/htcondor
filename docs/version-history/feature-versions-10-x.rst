@@ -112,6 +112,11 @@ Bugs Fixed:
   not be enforced correctly.
   :jira:`1775`
 
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
+
 - Fixed a bug when running with root on a Linux systems with cgroup v1
   that would print a warning to the StarterLog claiming
   Warning: cannot chown /sys/fs/cgroup/cpu,cpuset

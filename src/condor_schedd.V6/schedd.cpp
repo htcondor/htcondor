@@ -1019,7 +1019,7 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 				if(hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput) {
 					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
 						"Checking how long...\n",cluster,proc);
-					int stage_in_start;
+					time_t stage_in_start;
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
@@ -3370,7 +3370,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
             scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
             OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
-            int job_start_date = 0;
+            time_t job_start_date = 0;
             int job_running_time = 0;
             if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
                 job_running_time = (now - job_start_date);
@@ -5467,7 +5467,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		BeginTransaction();
 
 			// Set ATTR_STAGE_IN_FINISH if not already set.
-		int spool_completion_time = 0;
+		time_t spool_completion_time = 0;
 		GetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,&spool_completion_time);
 		if ( !spool_completion_time ) {
 			// The transfer thread specifically slept for 1 second
@@ -5871,7 +5871,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						// subsequent operations, such as rewriting of
 						// paths in the ClassAd and the job being in
 						// the middle of using the files.
-					int finish_time;
+					time_t finish_time;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
 						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
@@ -6603,7 +6603,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// REAL WORK
 		// // // // //
 	
-	int now = (int)time(0);
+	time_t now = time(0);
 
 	JobActionResults results( result_type );
 
@@ -10853,15 +10853,15 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
 			 cluster, proc );
     time_t now = time(NULL);
-	int current_time = (int)now;
-	int job_start_date = 0;
+	time_t current_time = now;
+	time_t job_start_date = 0;
 	SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, current_time);
 	if (GetAttributeInt(cluster, proc,
 						ATTR_JOB_START_DATE, &job_start_date) < 0) {
 		// this is the first time the job has ever run, so set JobStartDate
 		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
         
-        int qdate = 0;
+        time_t qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
 
 		time_t now = scheduler.stats.Tick();
@@ -10930,7 +10930,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		// check if this run is a restart from checkpoint
-		int lastckptTime = 0;
+		time_t lastckptTime = 0;
 		GetAttributeInt(cluster, proc, ATTR_LAST_CKPT_TIME, &lastckptTime);
 		if( lastckptTime > 0 ) {
 			// There was a checkpoint.
@@ -11261,7 +11261,7 @@ void
 CkptWallClock()
 {
 	int first_time = 1;
-	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
+	time_t current_time = time(0);
 	ClassAd *ad;
 	bool began_transaction = false;
 	while( (ad = GetNextJob(first_time)) ) {
@@ -11269,7 +11269,7 @@ CkptWallClock()
 		int status = IDLE;
 		ad->LookupInteger(ATTR_JOB_STATUS, status);
 		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
-			int bday = 0;
+			time_t bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
 			int run_time = current_time - bday;
 			if (bday && run_time > WallClockCkptInterval) {
@@ -11298,7 +11298,7 @@ update_remote_wall_clock(int cluster, int proc)
 		// update ATTR_JOB_REMOTE_WALL_CLOCK.  note: must do this before
 		// we call check_zombie below, since check_zombie is where the
 		// job actually gets removed from the queue if job completed or deleted
-	int bday = 0;
+	time_t bday = 0;
 	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
 	if (bday) {
 		double accum_time = 0;
@@ -12334,7 +12334,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	bool is_goodput = false;
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
-	int job_start_date = 0;
+	time_t job_start_date = 0;
 	int job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
@@ -12605,7 +12605,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		int job_executing_time = 0;
 		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
 		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
-		int job_start_exec_date = 0; 
+		time_t job_start_exec_date = 0;
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
 			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
 			job_executing_time = updateTime - MAX(job_start_date, job_start_exec_date);
@@ -12620,7 +12620,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// this time is also set in the shadow, but there is no gurantee that transfer output ever happened
 		// so it may not exist. it's possible for transfer out date to be from a previous run, so we
 		// have to make sure that it's at least later than the start time for this run before we use it.
-		int job_start_xfer_out_date = 0;
+		time_t job_start_xfer_out_date = 0;
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)
 			&& job_start_xfer_out_date >= job_start_date) {
 			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
@@ -14844,7 +14844,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 		if ( match->status == M_ACTIVE ) {
 			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
-				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0));
+				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, time(nullptr));
 			}
 		}
 	} else {
@@ -15037,12 +15037,12 @@ Scheduler::sendAlives()
 		  transaction...  2003-12-07 Derek <wright@cs.wisc.edu>
 		*/
 
-	int now = (int)time(0);
+	time_t now = time(nullptr);
 	BeginTransaction();
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
-			int renew_time;
+			time_t renew_time;
 			if ( starter_handles_alives && 
 				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
 			{
@@ -15090,7 +15090,7 @@ Scheduler::sendAlives()
 		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
 			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
-			int last_lease_renewal = -1;
+			time_t last_lease_renewal = -1;
 			GetAttributeInt( mrec->cluster, mrec->proc,
 							 ATTR_JOB_LEASE_DURATION, &lease_duration );
 			GetAttributeInt( mrec->cluster, mrec->proc,
@@ -15183,7 +15183,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "BadProc", BadProc );
 	cad->Assign( "NumOwners", NumUniqueOwners );
 	cad->Assign( "NumSubmitters", NumSubmitters );
-	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
+	cad->Assign( "NegotiationRequestTime", NegotiationRequestTime  );
 	cad->Assign( "ExitWhenDone", ExitWhenDone );
 	cad->Assign( "StartJobTimer", StartJobTimer );
 	if ( CondorAdministrator ) {
@@ -15679,7 +15679,7 @@ bool
 moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			 bool verbose )
 {
-	int value;
+	long long value;
 	int rval;
 
 	if( GetAttributeInt(job_id.cluster, job_id.proc, old_attr, &value) < 0 ) {
@@ -15861,7 +15861,7 @@ abortJobsByConstraint( const char *constraint,
 void
 incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
 {
-	int val = 0;
+	long long val = 0;
 	if (!attrName || !attrName[0]) return;
 	if (nestedAdAttrName) {
 		// Here we are going to increment an attribute in an ad nested inside the job ad.

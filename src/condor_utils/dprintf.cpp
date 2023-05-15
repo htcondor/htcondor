@@ -372,7 +372,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
-				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d ", (int)clock_now );
+				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%lld ", (long long)clock_now );
 			}
 			if( rc < 0 ) {
 				sprintf_errno = errno;
@@ -1765,7 +1765,7 @@ _condor_dprintf_exit( int error_code, const char* msg )
 				// Probably format should be %ld, and we should cast to long
 				// int, but I'm afraid of changing the output format.
 				// wenger 2009-02-24.
-			snprintf( header, sizeof(header), "%d ", (int)clock_now );
+			snprintf( header, sizeof(header), "%lld ", (long long)clock_now );
 		} else {
 			tm = localtime( &clock_now );
 			snprintf( header, sizeof(header), "%d/%d %02d:%02d:%02d ",

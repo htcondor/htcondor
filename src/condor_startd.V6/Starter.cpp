@@ -522,7 +522,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
-		dummyAd.Assign(ATTR_Q_DATE, (int)s_birthdate);
+		dummyAd.Assign(ATTR_Q_DATE, s_birthdate);
 		dummyAd.Assign(ATTR_JOB_PRIO, 0);
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");

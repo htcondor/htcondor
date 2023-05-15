@@ -188,7 +188,7 @@ void BaseJob::JobRunning()
 
 		condorState = RUNNING;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -210,7 +210,7 @@ void BaseJob::JobIdle()
 
 		condorState = IDLE;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -254,7 +254,7 @@ void BaseJob::JobCompleted()
 
 		condorState = COMPLETED;
 		jobAd->Assign( ATTR_JOB_STATUS, condorState );
-		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+		jobAd->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 		UpdateRuntimeStats();
 
@@ -393,8 +393,8 @@ void BaseJob::UpdateRuntimeStats()
 	if ( condorState == RUNNING && shadowBirthdate == 0 ) {
 
 		// The job has started a new interval of running
-		int current_time = (int)time(NULL);
-		int last_start_date = 0;
+		time_t current_time = time(nullptr);
+		time_t last_start_date = 0;
 		jobAd->Assign( ATTR_SHADOW_BIRTHDATE, current_time );
 		if ( jobAd->LookupInteger( ATTR_JOB_START_DATE, last_start_date ) == 0 ) {
 			jobAd->Assign( ATTR_JOB_START_DATE, current_time );
@@ -603,9 +603,9 @@ dprintf(D_FULLDEBUG,"(%d.%d) UpdateJobLeaseReceived(%lld)\n",procID.cluster,proc
 		}
 
 		if ( new_expiration_time < old_expiration_time ) {
-			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%ld) is older than old lease expiration (%ld), ignoring!\n",
-					 procID.cluster, procID.proc, new_expiration_time,
-					 old_expiration_time );
+			dprintf( D_ALWAYS, "(%d.%d) New lease expiration (%lld) is older than old lease expiration (%lld), ignoring!\n",
+			         procID.cluster, procID.proc, (long long)new_expiration_time,
+			         (long long)old_expiration_time );
 			return;
 		}
 
@@ -944,7 +944,7 @@ void BaseJob::NotifyResourceDown()
 	resourceStateKnown = true;
 	if ( resourceDown == false ) {
 		WriteGridResourceDownEventToUserLog( jobAd );
-		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, (int)time(NULL) );
+		jobAd->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME, time(nullptr) );
 		requestScheddUpdate( this, false );
 	}
 	resourceDown = true;
