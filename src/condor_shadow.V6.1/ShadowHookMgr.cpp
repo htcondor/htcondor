@@ -118,12 +118,14 @@ ShadowHookMgr::tryHookPrepareJob()
 	// and don't do it inside the starter.
 	auto cred_dir = getCredDir();
 	if (cred_dir.empty()) {
+		delete hook_client;
 		return -1;
 	}
 
 	htcondor::ShadowHookCredDirCreator creds(*job_ad, cred_dir);
 	CondorError err;
 	if (!creds.PrepareCredDir(err)) {
+		delete hook_client;
 		return -1;
 	}
 

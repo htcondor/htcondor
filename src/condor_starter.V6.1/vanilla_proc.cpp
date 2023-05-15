@@ -381,7 +381,7 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
-	FilesystemRemap * fs_remap = NULL;
+	std::unique_ptr<FilesystemRemap> fs_remap;
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -544,7 +544,7 @@ VanillaProc::StartJob()
                            }
                        }
                        if (!fs_remap) {
-                               fs_remap = new FilesystemRemap();
+                           fs_remap.reset(new FilesystemRemap());
                        }
                        dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
                        if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
@@ -609,7 +609,7 @@ VanillaProc::StartJob()
 
 			mount_list.rewind();
 			if (!fs_remap) {
-				fs_remap = new FilesystemRemap();
+				fs_remap.reset(new FilesystemRemap());
 			}
 			const char * next_dir;
 			while ( (next_dir=mount_list.next()) ) {
@@ -634,18 +634,15 @@ VanillaProc::StartJob()
 
 						if (!mkdir_and_parents_if_needed( full_dir, S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
-							delete fs_remap;
 							return FALSE;
 						}
 						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
 						if (fs_remap->AddMapping(full_dir, next_dir)) {
 							// FilesystemRemap object prints out an error message for us.
-							delete fs_remap;
 							return FALSE;
 						}
 					} else {
 						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
-						delete fs_remap;
 						return FALSE;
 					}
 				} else {
@@ -655,7 +652,6 @@ VanillaProc::StartJob()
 		Starter->setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
-			delete fs_remap;
 			return FALSE;
 		}
 	}
@@ -676,7 +672,7 @@ VanillaProc::StartJob()
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
 			if (!fs_remap) {
-				fs_remap = new FilesystemRemap();
+				fs_remap.reset(new FilesystemRemap());
 			}
 			fs_remap->RemapProc();
 		}
@@ -701,14 +697,12 @@ VanillaProc::StartJob()
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
 
 			if (!env.InsertEnvIntoClassAd(*JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 
@@ -725,20 +719,17 @@ VanillaProc::StartJob()
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 
 			if (!args.InsertArgsIntoClassAd(JobAd, NULL, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
@@ -752,11 +743,7 @@ VanillaProc::StartJob()
 
 	// have OsProc start the job
 	//
-	int retval = OsProc::StartJob(&fi, fs_remap);
-
-	if (fs_remap != NULL) {
-		delete fs_remap;
-	}
+	int retval = OsProc::StartJob(&fi, fs_remap.get());
 
 #ifdef LINUX
     m_statistics.Reconfig();
