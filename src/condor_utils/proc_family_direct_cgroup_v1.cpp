@@ -37,11 +37,9 @@ static stdfs::path cgroup_mount_point() {
 }
 
 // The controllers we use.  We manipulate and measure all
-// of these except for blkio.  We believe that merely 
-// putting the job into the blkio controller will give
-// job-level fair share to filesystem io.
-static std::array<const std::string, 4> controllers {
-		"memory", "cpu,cpuacct", "freezer", "blkio"};
+// of these.
+static std::array<const std::string, 3> controllers {
+		"memory", "cpu,cpuacct", "freezer"};
 
 // Note that even root can't remove control group *files*,
 // only directories.
@@ -541,8 +539,7 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 		// These should be synchronized to the required_controllers in the procd
 		cgroup_controller_is_writeable("memory", relative_cgroup)     &&
 		cgroup_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
-		cgroup_controller_is_writeable("freezer", relative_cgroup)    &&
-		cgroup_controller_is_writeable("blkio", relative_cgroup);
+		cgroup_controller_is_writeable("freezer", relative_cgroup);
 }
 
 bool 
