@@ -210,8 +210,7 @@ static bool cgroup_v1_is_writeable(const std::string &relative_cgroup) {
 		// These should be synchronized to the required_controllers in the procd
 		cgroup_controller_is_writeable("memory", relative_cgroup)     &&
 		cgroup_controller_is_writeable("cpu,cpuacct", relative_cgroup) &&
-		cgroup_controller_is_writeable("freezer", relative_cgroup)    &&
-		cgroup_controller_is_writeable("blkio", relative_cgroup);
+		cgroup_controller_is_writeable("freezer", relative_cgroup);
 }
 
 static bool cgroup_v2_is_writeable(const std::string &relative_cgroup) {
