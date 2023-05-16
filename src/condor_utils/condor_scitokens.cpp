@@ -40,7 +40,7 @@ static int (*scitoken_get_expiration_ptr)(const SciToken token, long long *value
 	nullptr;
 static int (*scitoken_get_claim_string_list_ptr)(const SciToken token, const char *key, char ***value, char **err_msg) = nullptr;
 static void (*scitoken_free_string_list_ptr)(char **value) = nullptr;
-static int (*config_set_str_ptr)(const char *key, const char *value, char **err_msg) = nullptr;
+static int (*scitoken_config_set_str_ptr)(const char *key, const char *value, char **err_msg) = nullptr;
 
 #define LIBSCITOKENS_SO "libSciTokens.so.0"
 
@@ -155,7 +155,7 @@ htcondor::init_scitokens()
 			// are missing it's considered non-fatal.
 		scitoken_get_claim_string_list_ptr = (int (*)(const SciToken token, const char *key, char ***value, char **err_msg))dlsym(dl_hdl, "scitoken_get_claim_string_list");
 		scitoken_free_string_list_ptr = (void (*)(char **value))dlsym(dl_hdl, "scitoken_free_string_list");
-		config_set_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(dl_hdl, "config_set_str");
+		scitoken_config_set_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(dl_hdl, "scitoken_config_set_str");
 	}
 #else
 #if defined(HAVE_EXT_SCITOKENS)
@@ -169,8 +169,8 @@ htcondor::init_scitokens()
 	scitoken_get_expiration_ptr = scitoken_get_expiration;
 	scitoken_get_claim_string_list_ptr = scitoken_get_claim_string_list;
 	scitoken_free_string_list_ptr = scitoken_free_string_list;
-#if defined(config_set_str)
-	config_set_str_ptr = config_set_str;
+#if defined(scitoken_config_set_str)
+	scitoken_config_set_str_ptr = scitoken_config_set_str;
 #endif
 	g_init_success = true;
 #else
@@ -184,7 +184,7 @@ htcondor::init_scitokens()
 #endif
 	g_init_tried = true;
 
-	if (config_set_str_ptr) {
+	if (scitoken_config_set_str_ptr) {
 		std::string cache_loc;
 		param(cache_loc, "SEC_SCITOKENS_CACHE");
 		if (cache_loc == "auto") {
@@ -198,7 +198,7 @@ htcondor::init_scitokens()
 		if (!cache_loc.empty()) {
 			dprintf(D_SECURITY|D_VERBOSE, "Setting SciTokens cache directory to %s\n", cache_loc.c_str());
 			char *err = nullptr;
-			if (config_set_str_ptr("keycache.cache_home", cache_loc.c_str(), &err) < 0) {
+			if (scitoken_config_set_str_ptr("keycache.cache_home", cache_loc.c_str(), &err) < 0) {
 				dprintf(D_ALWAYS, "Failed to set SciTokens cache directory to %s: %s\n", cache_loc.c_str(), err);
 				free(err);
 			}
