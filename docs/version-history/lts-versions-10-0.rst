@@ -40,20 +40,20 @@ Release Notes:
 - Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
   is April 30th, 2023.
 
-- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
   :jira:`1668`
 
 New Features:
 
 - Added ``CONFIG_ROOT`` configuration variable that is set to the directory
-  of the main config file before the configuration files are read.
+  of the main configuration file before the configuration files are read.
   :jira:`1733`
 
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
   file-transfer processes not being cleaned up.  This would manifest as
-  jobs completing succesfully, including final file transfer, but ending
+  jobs completing successfully, including final file transfer, but ending
   up without one of their output files (the one the error occurred during).
   :jira:`1687`
 
@@ -106,14 +106,14 @@ Bugs Fixed:
   :jira:`1756`
 
 - *condor_store_cred* and *condor_credmon_vault* now reuses existing
-  Vault tokens when downscoping access tokens.
+  Vault tokens when down scoping access tokens.
   :jira:`1527`
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
 - Fixed a bug where DAGMan job submission would fail when not using
-  direct submission due to setting a custom job classad attribute with
+  direct submission due to setting a custom job ClassAd attribute with
   the ``+`` syntax in a ``VARS`` command that doesn't append the
   variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
   :jira:`1771`
