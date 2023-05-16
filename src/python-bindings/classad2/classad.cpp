@@ -10,6 +10,7 @@ _classad_init( PyObject *, PyObject * args ) {
     }
 
     handle->t = new classad::ClassAd();
+    handle->f = [](void * & v){ delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
 
@@ -141,11 +142,9 @@ convert_classad_value_to_python(classad::Value & v) {
             }
 
             for( auto i = l->begin(); i != l->end(); ++i ) {
-                // The ExprList owns the ExprTree.
-                classad::ExprTree * copy = (*i)->Copy();
-                if( should_convert_to_python(copy) ) {
+                if( should_convert_to_python(*i) ) {
                     classad::Value v;
-                    if(! copy->Evaluate( v )) {
+                    if(! (*i)->Evaluate( v )) {
                         // FIXME: ClassAdEvaluationError
                         PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
                         return NULL;
@@ -157,11 +156,7 @@ convert_classad_value_to_python(classad::Value & v) {
                         return NULL;
                     }
                 } else {
-                    // FIXME: See NOTE_ONE below.  The ExprTree `copy` could
-                    // (still?) have a parent scope, so turn the code that
-                    // handles NOTE_ONE into a function...
-                    PyErr_SetString( PyExc_NotImplementedError, "classad2.ExprTree" );
-                    return NULL;
+                    return py_new_classad_exprtree( *i );
                 }
             }
 
@@ -207,17 +202,7 @@ _classad_get_item( PyObject *, PyObject * args ) {
     }
 
 
-    // FIXME: NOTE_ONE
-    // If we can't convert the ExprTree into a Python object and return that,
-    // make a deep copy of it, clear the parent scope, and return the
-    // ExprTree Python type with its _handle member set to the deep copy.
-    //
-    // If the API implies that the Python ExprTree can later be evaluated in
-    // the context of its (original) parent ad, then the Python ExprTree
-    // should have a member pointing to the `self` in this function.
-
-    PyErr_SetString( PyExc_NotImplementedError, "_classad_get_item" );
-    return NULL;
+    return py_new_classad_exprtree( expr );
 }
 
 

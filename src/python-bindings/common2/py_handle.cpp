@@ -17,6 +17,10 @@ struct DynamicPyType {
     typedef struct {
         PyObject_HEAD
         T t;
+        // There's no mechanism by which Python could know to use the
+        // initializer we put here when it allocates space for this object,
+        // so let's not tempt people to make bad assumptions.
+        void (* f)(T & t);
     } python_object_type;
 
     PyType_Spec type_spec = {
@@ -44,7 +48,11 @@ _handle_dealloc(PyObject * self) {
     dprintf( D_ALWAYS, "_handle_dealloc(%p)\n", handle->t );
     PyTypeObject * tp = Py_TYPE(self);
 
-    // FIXME: delete something.
+    if(handle->f == NULL) {
+        dprintf( D_ALWAYS, "_handle_dealloc(%p) has no registered callback\n", handle->t );
+    } else {
+        handle->f(handle->t);
+    }
 
     // The examples all call `tp->tp_free(self)`, but of course we
     // can't do that because we set Py_LIMITED_API.  However, if we

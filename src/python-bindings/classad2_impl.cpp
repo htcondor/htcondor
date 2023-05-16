@@ -17,7 +17,7 @@
 #include "classad/classadCache.h"
 #include "common2/py_util.cpp"
 #include "classad2/classad.cpp"
-
+#include "classad2/exprtree.cpp"
 
 static PyMethodDef classad2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -29,6 +29,8 @@ static PyMethodDef classad2_impl_methods[] = {
     {"_classad_to_repr", & _classad_to_repr, METH_VARARGS, NULL},
     {"_classad_get_item", & _classad_get_item, METH_VARARGS, NULL},
     {"_classad_set_item", & _classad_set_item, METH_VARARGS, NULL},
+
+    {"_exprtree_init", & _exprtree_init, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };
