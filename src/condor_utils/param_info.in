@@ -932,6 +932,10 @@ type=bool
 usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
 tags=security
 
+[SEC_SCITOKENS_CACHE]
+default=auto
+type=string
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool

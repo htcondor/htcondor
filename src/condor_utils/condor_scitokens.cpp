@@ -169,9 +169,9 @@ htcondor::init_scitokens()
 	scitoken_get_expiration_ptr = scitoken_get_expiration;
 	scitoken_get_claim_string_list_ptr = scitoken_get_claim_string_list;
 	scitoken_free_string_list_ptr = scitoken_free_string_list;
-#if defined(scitoken_config_set_str)
-	scitoken_config_set_str_ptr = scitoken_config_set_str;
-#endif
+	// Do a dlsym() in case we end up being linked against an older
+	// version of the SciTokens library.
+	scitoken_config_set_str_ptr = (int (*)(const char *key, const char *value, char **err_msg))dlsym(RTLD_DEFAULT,"scitoken_config_set_str");
 	g_init_success = true;
 #else
 	dprintf(D_SECURITY, "SciTokens support is not compiled in.\n");
