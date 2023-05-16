@@ -305,7 +305,9 @@ def read_map_file(filename, is_el7, has_cmd):
                         tf.flush()
                         os.fsync(tf.fileno())
                         p = subprocess.run(
-                            ["pcre2grep", sequence, tf.name], stderr=subprocess.PIPE
+                            ["pcre2grep", sequence, tf.name],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.PIPE,
                         )
                     error = p.stderr.rstrip().decode()
                     if len(error) > 0:
