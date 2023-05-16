@@ -10,7 +10,7 @@ _classad_init( PyObject *, PyObject * args ) {
     }
 
     handle->t = new classad::ClassAd();
-    handle->f = [](void * & v){ delete (classad::ClassAd *)v; v = NULL; };
+    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
 

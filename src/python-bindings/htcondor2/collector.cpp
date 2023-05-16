@@ -26,7 +26,7 @@ _collector_init( PyObject *, PyObject * args ) {
 		handle->t = (void *) CollectorList::create(pool);
 	}
 
-	handle->f = [](void *& v) { delete (CollectorList *)v; v = NULL; };
+	handle->f = [](void *& v) { dprintf( D_ALWAYS, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
 	Py_RETURN_NONE;
 }
 

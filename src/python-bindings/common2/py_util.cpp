@@ -32,7 +32,7 @@ py_new_classad_classad(void * classAd) {
 	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 
 	handle->t = (void *)classAd;
-	handle->f = [](void * & v) { delete (classad::ClassAd *)v; v = NULL; };
+	// handle->f = [](void * & v) { dprintf( D_ALWAYS, "{classad::ClassAd}\n" ); delete (classad::ClassAd *)v; v = NULL; };
 	return pyClassAd;
 }
 
@@ -118,6 +118,6 @@ py_new_classad_exprtree( ExprTree * original ) {
 	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 
 	handle->t = (void *)copy;
-	handle->f = [](void * & v) { delete (classad::ExprTree *)v; v = NULL; };
+	// handle->f = [](void * & v) { dprintf( D_ALWAYS, "{classad::ExprTree *}\n" ); delete (classad::ExprTree *)v; v = NULL; };
 	return pyExprTree;
 }

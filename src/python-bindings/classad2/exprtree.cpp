@@ -12,5 +12,6 @@ _exprtree_init(PyObject *, PyObject * args) {
     // We don't know which kind of ExprTree this is going to be yet,
     // so we can't initialize it to anything (ExprTree proper is abstract).
     handle->t = NULL;
+    handle->f = [](void *& v) { dprintf( D_ALWAYS, "[ExprTree]\n" ); delete (classad::ExprTree *)v; v = NULL; };
     Py_RETURN_NONE;
 }
