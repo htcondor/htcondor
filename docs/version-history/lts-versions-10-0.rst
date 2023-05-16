@@ -30,6 +30,11 @@ New Features:
   of the main configuration file before the configuration files are read.
   :jira:`1733`
 
+- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
+  which allows the client to present an X.509 proxy certificate during
+  SSL authentication with a daemon.
+  :jira:`1781`
+
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
