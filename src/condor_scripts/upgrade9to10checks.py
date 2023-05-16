@@ -268,6 +268,7 @@ def check_idtokens(is_ce):
 
 def read_map_file(filename, is_el7, has_cmd):
     """Digest a map file and attempt to digest regex sequences in file"""
+    successful_reading = True
     # Try to read map file
     try:
         with open(filename, "r") as fd:
@@ -288,7 +289,9 @@ def read_map_file(filename, is_el7, has_cmd):
                     elif include_path.is_dir():
                         for sub_path in include_path.iterdir():
                             if sub_path.is_file():
-                                read_map_file(str(sub_path), is_el7, has_cmd)
+                                temp = read_map_file(str(sub_path), is_el7, has_cmd)
+                                if successful_reading:
+                                    successful_reading = temp
                 # This is a normal map line so try to get the regex sequence
                 try:
                     sequence = shlex.split(line)[1]
@@ -311,6 +314,7 @@ def read_map_file(filename, is_el7, has_cmd):
                         )
                     error = p.stderr.rstrip().decode()
                     if len(error) > 0:
+                        successful_reading = False
                         format_print(
                             f"Invalid: {filename}|line-{line_num}: '{line}'",
                             offset=12,
@@ -343,6 +347,7 @@ def read_map_file(filename, is_el7, has_cmd):
                                 pass
                             else:
                                 # Not a normal case so output
+                                successful_reading = False
                                 format_print(
                                     f"Possibly Invalid: {filename}|line-{line_num}: '{line}'",
                                     offset=12,
@@ -356,14 +361,16 @@ def read_map_file(filename, is_el7, has_cmd):
                         if char in line:
                             pos = line.find(char)
                             if line[pos + len(char)] == "-":
-                                invalid = True
+                                successful_reading = False
                                 format_print(
                                     f"Invalid: {filename}|line-{line_num}: '{line}'",
                                     offset=12,
                                 )
                                 break
     except IOError:
+        successful_reading = False
         format_print(f"ERROR: Failed to open {filename}", offset=12, err=True)
+    return successful_reading
 
 
 def check_pcre2():
@@ -401,17 +408,28 @@ def check_pcre2():
             f"For more accurate results we recommend installing the {package}.",
             offset=8,
         )
+    no_issues = True
     # Get regular user map files and digest them
     format_print("Reading CLASSAD_USER_MAPFILE_* files...", offset=8)
     for key in htcondor.param.keys():
         if key[0:21] == "CLASSAD_USER_MAPFILE_":
             filename = htcondor.param[key]
-            read_map_file(filename, is_el7, has_pcre2_cmd)
+            success = read_map_file(filename, is_el7, has_pcre2_cmd)
+            if no_issues:
+                no_issues = success
     # Get certificate map file and digest it (plus any @include files)
     map_cert_file = htcondor.param.get("CERTIFICATE_MAPFILE")
     if map_cert_file != None:
         format_print(f"Reading {map_cert_file}...", offset=8)
-        read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
+        success = read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
+        if no_issues:
+            no_issues = success
+    if no_issues:
+        format_print(
+            "*** HTCondor system should be unaffected by V9 to V10 upgrade changes to PCRE2 ***",
+            offset=8,
+            newline=True,
+        )
 
 
 def process_ad(ad):
@@ -468,6 +486,13 @@ def check_gpu_requirements():
             )
             for user in ppl_using_gpu:
                 format_print(user, offset=16)
+        else:
+            format_print("No users found using old style of requesting GPUs.", offset=8)
+            format_print(
+                "*** System users should be unaffected by V9 to V10 upgrade changes for requesting GPUs ***",
+                offset=8,
+                newline=True,
+            )
     except htcondor.HTCondorLocateError:
         format_print("Failed to locate local schedd.", offset=8, err=True)
 
