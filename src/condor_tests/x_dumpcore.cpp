@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifdef WIN32
 #pragma warning(disable: 6011) // deref of null pointer warning.
@@ -33,6 +34,7 @@ int main( int , char ** /*argv*/ )
 #endif
 
 	space = (char *) malloc(600000);
+	memset(space, '\0', 600000);
 
 	/* try a couple of different ways to dump core. */
 #ifndef WIN32
