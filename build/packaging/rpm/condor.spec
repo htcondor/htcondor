@@ -1717,6 +1717,12 @@ fi
 - Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
 - Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
 
+* Tue Nov 22 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.3-1
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+
+* Tue Nov 15 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.2-1
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook
 - Fix bug where Apptainer only systems couldn't run with Docker style images

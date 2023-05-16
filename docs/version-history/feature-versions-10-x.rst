@@ -109,6 +109,11 @@ Bugs Fixed:
   up without one of their output files (the one the error occurred during).
   :jira:`1687`
 
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
 - Fixed a bug where if the docker command emitted warnings to stderr, the
   startd would not correctly advertise the amount of used image cache.
   :jira:`1645`
