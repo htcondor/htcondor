@@ -3,7 +3,7 @@
 #   This is intended to check a current system before upgrade
 #   for known 'gotcha' breaking changes:
 #        1. IDToken TRUST_DOMAIN default value change
-#        2. Upgrade to PCRE2 breaking map file regex secuences
+#        2. Upgrade to PCRE2 breaking map file regular expressions
 #        3. The way to request GPU resources for a job
 #   This script can still be ran post upgrade as a post mortem
 #   Note: Requires root and HTCONDOR python bindings
@@ -26,7 +26,7 @@ https://htcondor.readthedocs.io/en/latest/apis/python-bindings/install.html"""
     print(msg, file=sys.stderr)
     sys.exit(1)
 
-# Base special posix characters for PCRE2 regex sequences
+# Base special posix characters for PCRE2 regular expression character classes
 PCRE2_POSIX_CHARS = [
     "[:alnum:]",
     "[:alpha:]",
@@ -267,7 +267,7 @@ def check_idtokens(is_ce):
 
 
 def read_map_file(filename, is_el7, has_cmd):
-    """Digest a map file and attempt to digest regex sequences in file"""
+    """Digest a map file and attempt to digest regular expressions in file"""
     successful_reading = True
     # Try to read map file
     try:
@@ -292,17 +292,17 @@ def read_map_file(filename, is_el7, has_cmd):
                                 temp = read_map_file(str(sub_path), is_el7, has_cmd)
                                 if successful_reading:
                                     successful_reading = temp
-                # This is a normal map line so try to get the regex sequence
+                # This is a normal map line so try to get the regular expression
                 try:
                     sequence = shlex.split(line)[1]
                 except IndexError:
                     format_print(
-                        f"WARNING: Did not find a regex on line {line_num} of {filename}:\n{line}",
+                        f"WARNING: Did not find a regular expression on line {line_num} of {filename}:\n{line}",
                         err=True,
                     )
                     continue
                 if has_cmd:
-                    # If we found 'pcre2grep' cmd then try regex sequence with cmd
+                    # If we found 'pcre2grep' cmd then try regular expression with cmd
                     with NamedTemporaryFile("w") as tf:
                         tf.write("HTCondor is cool")
                         tf.flush()
@@ -383,7 +383,8 @@ def check_pcre2():
     format_print("Checking for incompatibilities with PCRE2.", newline=True)
     format_print("Known PCRE2 incompatibilities:", offset=8)
     format_print(
-        "1. Hyphens in a regex character sequence must occur at the end.", offset=16
+        "1. Hyphens in a regular expression character class must occur at the end.",
+        offset=16,
     )
     if is_el7:
         format_print(
