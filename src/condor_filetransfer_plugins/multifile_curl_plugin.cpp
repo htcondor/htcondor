@@ -910,7 +910,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     // Work around a bug in libcurl; see HTCONDOR-1426.
     // Also, buffer may not be NUL-terminated
     char* buffer2 = (char*)malloc(nitems+1);
-    strncpy(buffer, buffer, nitems);
+    strncpy(buffer2, buffer, nitems);
     buffer2[nitems] = '\0';
 
     const char* delimiters = " \r\n";
