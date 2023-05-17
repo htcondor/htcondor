@@ -522,7 +522,7 @@ void INFNBatchJob::doEvaluateState()
 
 			// If our blahp is local, we don't have to do any file transfer,
 			// so go straight to submitting the job.
-			if ( m_useXferGahp ) {
+			if ( !m_useXferGahp ) {
 				gmState = GM_SUBMIT;
 				break;
 			}
