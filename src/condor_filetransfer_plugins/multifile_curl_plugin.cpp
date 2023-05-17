@@ -908,17 +908,23 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
     // Work around a bug in libcurl; see HTCONDOR-1426.
-    buffer = strdup(buffer);
+    // Also, buffer may not be NUL-terminated
+    char* buffer2 = (char*)malloc(nitems+1);
+    strncpy(buffer, buffer, nitems);
+    buffer2[nitems] = '\0';
 
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
     // In some unique cases, ftstats get passed in as null. If this happens, abort.
-    if( !ft_stats ) return numBytes;
+    if( !ft_stats ) {
+        free(buffer2);
+        return numBytes;
+    }
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
-    char* token = strtok( buffer, delimiters );
+    char* token = strtok( buffer2, delimiters );
     while( token ) {
         // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
@@ -937,7 +943,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
         }
         token = strtok( NULL, delimiters );
     }
-    free(buffer);
+    free(buffer2);
     return numBytes;
 }
 
