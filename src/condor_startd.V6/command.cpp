@@ -953,6 +953,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	int interval;
 	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
+	bool send_claimed_ad = false;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1074,6 +1075,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// If we include a claim id in our response, should it be
 		// encrypted? In the old protocol, it was sent in the clear.
 	req_classad->LookupBool("_condor_SECURE_CLAIM_ID", secure_claim_id);
+
+		// Should we send the claimed slot ad.
+	req_classad->LookupBool("_condor_SEND_CLAIMED_AD", send_claimed_ad);
 
 		// At this point, the schedd has registered this socket (stream)
 		// and likely has gone off to service other requests.  Thus, 
@@ -1282,7 +1286,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, secure_claim_id, leftover_claim );
+	accept_request_claim( rip, secure_claim_id, send_claimed_ad, leftover_claim );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1321,7 +1325,7 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim )
+accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad, Claim* leftover_claim )
 {
 	int interval = -1;
 	char *client_addr = NULL;
@@ -1344,7 +1348,24 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
 		  the claim id is encrypted.
 		Reply of 6 (REQUEST_CLAIM_PAIR_2) is no longer used
+		Reply of 7 (REQUEST_CLAIM_SLOT_AD) means claim accepted, the
+		  claimed slot ad will be sent next, and either OK or p-slot
+		  leftovers will be sent after that.
 	*/
+	stream->encode();
+	if (send_claimed_ad) {
+		rip->dprintf(D_FULLDEBUG, "Will send claimed slot ad\n");
+		if (!stream->put(REQUEST_CLAIM_SLOT_AD) ||
+		    !stream->put_secret(rip->r_cur->id()) ||
+		    !putClassAd(stream, *rip->r_classad) )
+		{
+			rip->dprintf( D_ALWAYS,
+				"Can't send claimed slot to schedd.\n" );
+			abort_accept_claim(rip, stream);
+			return false;
+		}
+	}
+
 	int cmd = OK;
 	if ( leftover_claim && leftover_claim->id() && 
 		 leftover_claim->rip()->r_classad ) 
@@ -1353,7 +1374,6 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		cmd = secure_claim_id ? REQUEST_CLAIM_LEFTOVERS_2 : REQUEST_CLAIM_LEFTOVERS;
 	}
 
-	stream->encode();
 	if( !stream->put( cmd ) ) {
 		rip->dprintf( D_ALWAYS, 
 			"Can't to send cmd %d to schedd as claim request reply.\n", cmd );
