@@ -199,26 +199,6 @@ tdp_wait_stopped_child (pid_t pid)
 
 #endif /* LINUX && TDP */
 
-/*
-void zz2printf(int debug_levels, KeyInfo *k) {
-	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
-		if (k) {
-			char hexout[260];  // holds (at least) a 128 byte key.
-			const unsigned char* dataptr = k->getKeyData();
-			int   length  =  k->getKeyLength();
-
-			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
-			}
-
-			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
-		} else {
-			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
-		}
-	}
-}
-*/
-
 static int _condor_fast_exit = 0;
 static int dummyGlobal;
 

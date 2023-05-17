@@ -5871,7 +5871,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						// subsequent operations, such as rewriting of
 						// paths in the ClassAd and the job being in
 						// the middle of using the files.
-					time_t finish_time;
+					time_t finish_time = 0;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
 						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
@@ -5881,8 +5881,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						delete jobs;
 						return FALSE;
 					}
-					int holdcode;
-					int job_status;
+					int holdcode = -1;
+					int job_status = -1;
 					int job_status_result = GetAttributeInt(a_job.cluster,
 						a_job.proc,ATTR_JOB_STATUS,&job_status);
 					if( job_status_result >= 0 &&
@@ -6674,7 +6674,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 			// Check to make sure the job's status makes sense for
 			// the command we're trying to perform
-		int status;
+		int status = -1;
 		std::string job_user;
 		int on_release_status = IDLE;
 		int hold_reason_code = -1;
@@ -8768,8 +8768,10 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
 	
-	int universe;
+	int universe = -1;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
+	ASSERT(universe != -1);
+
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
@@ -9387,7 +9389,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 shadow_rec*
 Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
-	int		universe;
+	int		universe = -1;
 	int		rval;
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
@@ -12293,7 +12295,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Get job status.  Note we only except if there is no job status AND the job
 		// is still in the queue, since we do not want to except if the job ad is gone
 		// perhaps due to condor_rm -f.
-	int q_status;
+	int q_status = -1;
 	if (GetAttributeInt(job_id.cluster,job_id.proc,
 						ATTR_JOB_STATUS,&q_status) < 0)	
 	{
@@ -12870,7 +12872,7 @@ void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
  
-	int	  status;
+	int	  status = -1;
 	
 	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0 ) {
@@ -15909,7 +15911,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool system_hold )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
@@ -16080,7 +16082,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
