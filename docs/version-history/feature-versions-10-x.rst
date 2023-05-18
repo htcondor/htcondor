@@ -114,10 +114,6 @@ Bugs Fixed:
   and crashed when they had active jobs in the blkio controller.
   :jira:`1786`
 
-- Fixed a bug where if the docker command emitted warnings to stderr, the
-  startd would not correctly advertise the amount of used image cache.
-  :jira:`1645`
-
 - Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
   not be enforced correctly.
   :jira:`1775`
