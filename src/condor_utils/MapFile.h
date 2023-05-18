@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_regex.h"
-#include "extArray.h"
 #include "MyString.h"
 
 #include "pool_allocator.h"

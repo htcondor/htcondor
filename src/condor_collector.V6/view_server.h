@@ -25,7 +25,6 @@
 #include "collector.h"
 #include <set>
 #include "HashTable.h"
-#include "extArray.h"
 
 //---------------------------------------------------
 
