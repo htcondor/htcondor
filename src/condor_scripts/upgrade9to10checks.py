@@ -268,7 +268,7 @@ def check_idtokens(is_ce):
 
 def read_map_file(filename, is_el7, has_cmd):
     """Digest a map file and attempt to digest regular expressions in file"""
-    successful_reading = True
+    num_errors = 0
     # Try to read map file
     try:
         with open(filename, "r") as fd:
@@ -289,9 +289,9 @@ def read_map_file(filename, is_el7, has_cmd):
                     elif include_path.is_dir():
                         for sub_path in include_path.iterdir():
                             if sub_path.is_file():
-                                temp = read_map_file(str(sub_path), is_el7, has_cmd)
-                                if successful_reading:
-                                    successful_reading = temp
+                                num_errors += read_map_file(
+                                    str(sub_path), is_el7, has_cmd
+                                )
                 # This is a normal map line so try to get the regular expression
                 try:
                     sequence = shlex.split(line)[1]
@@ -314,7 +314,7 @@ def read_map_file(filename, is_el7, has_cmd):
                         )
                     error = p.stderr.rstrip().decode()
                     if len(error) > 0:
-                        successful_reading = False
+                        num_errors += 1
                         format_print(
                             f"Invalid: {filename}|line-{line_num}: '{line}'",
                             offset=12,
@@ -347,7 +347,7 @@ def read_map_file(filename, is_el7, has_cmd):
                                 pass
                             else:
                                 # Not a normal case so output
-                                successful_reading = False
+                                num_errors += 1
                                 format_print(
                                     f"Possibly Invalid: {filename}|line-{line_num}: '{line}'",
                                     offset=12,
@@ -361,16 +361,16 @@ def read_map_file(filename, is_el7, has_cmd):
                         if char in line:
                             pos = line.find(char)
                             if line[pos + len(char)] == "-":
-                                successful_reading = False
+                                num_errors += 1
                                 format_print(
                                     f"Invalid: {filename}|line-{line_num}: '{line}'",
                                     offset=12,
                                 )
                                 break
     except IOError:
-        successful_reading = False
+        num_errors += 1
         format_print(f"ERROR: Failed to open {filename}", offset=12, err=True)
-    return successful_reading
+    return num_errors
 
 
 def check_pcre2():
@@ -409,23 +409,19 @@ def check_pcre2():
             f"For more accurate results we recommend installing the {package}.",
             offset=8,
         )
-    no_issues = True
+    total_errors = 0
     # Get regular user map files and digest them
     format_print("Reading CLASSAD_USER_MAPFILE_* files...", offset=8)
     for key in htcondor.param.keys():
         if key[0:21] == "CLASSAD_USER_MAPFILE_":
             filename = htcondor.param[key]
-            success = read_map_file(filename, is_el7, has_pcre2_cmd)
-            if no_issues:
-                no_issues = success
+            total_errors += read_map_file(filename, is_el7, has_pcre2_cmd)
     # Get certificate map file and digest it (plus any @include files)
     map_cert_file = htcondor.param.get("CERTIFICATE_MAPFILE")
     if map_cert_file != None:
         format_print(f"Reading {map_cert_file}...", offset=8)
-        success = read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
-        if no_issues:
-            no_issues = success
-    if no_issues:
+        total_errors += read_map_file(map_cert_file, is_el7, has_pcre2_cmd)
+    if total_errors == 0:
         format_print(
             "*** HTCondor system should be unaffected by V9 to V10 upgrade changes to PCRE2 ***",
             offset=8,
