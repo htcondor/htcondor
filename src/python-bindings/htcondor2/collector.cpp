@@ -39,10 +39,10 @@ _collector_query( PyObject *, PyObject * args ) {
 	AdTypes ad_type = NO_AD;
 	const char * constraint = NULL;
 	PyObject * projection = NULL;
-	PyObject * statistics = NULL;
+	const char * statistics = NULL;
 	const char * name = NULL;
 
-	if(! PyArg_ParseTuple( args, "OlzOOz", & handle, & ad_type, & constraint, & projection, & statistics, & name )) {
+	if(! PyArg_ParseTuple( args, "OlzOzz", & handle, & ad_type, & constraint, & projection, & statistics, & name )) {
 		// PyArg_ParseTuple() has already set an exception for us.
 		return NULL;
 	}
@@ -54,7 +54,9 @@ _collector_query( PyObject *, PyObject * args ) {
 		query.addANDConstraint(constraint);
 	}
 
-	/* FIXME: statistics */
+	if( statistics && strlen(statistics) ) {
+		query.addExtraAttributeString( "STATISTICS_TO_PUBLISH", statistics );
+	}
 
 	if( name && strlen(name) ) {
 		query.addExtraAttributeString( "LocationQuery", name );

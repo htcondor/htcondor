@@ -39,7 +39,9 @@ class Collector():
       ad_type: AdType = AdType.Any,
       constraint: Optional[str] = None,
       projection: Optional[list[str]] = None,
-      statistics: Optional[list[str]] = None,
+      # The documentation does not match the implementation in version 1.
+      # statistics: Optional[list[str]] = None,
+      statistics: str = None,
     ):
         # str(None) is "None", which is a valid ClassAd expression (a bare
         # attribute reference), so convert to the empty string, instead.
@@ -49,14 +51,25 @@ class Collector():
         # in Python.
         if constraint is None:
             constraint = ""
+        if projection is None:
+            projection = []
+
+        # We should consider converting automagically, since it's absurd
+        # that this is the only function in the class which takes an AdType
+        # instead of a DaemonType.
+        if not isinstance(ad_type, AdType):
+            raise TypeError("ad_type must be an htcondor.AdType");
+
         return _collector_query(self._handle, int(ad_type), str(constraint), projection, statistics, None)
 
 
     def directQuery(self,
-        daemon_type,
-        name: Optional[str] = None,
-        projection: Optional[list[str]] = None,
-        statistics: Optional[list[str]] = None,
+      daemon_type: DaemonType,
+      name: Optional[str] = None,
+      projection: Optional[list[str]] = None,
+      # The documentation does not match the implementation in version 1.
+      # statistics: Optional[list[str]] = None,
+      statistics: str = None,
     ):
         daemon_ad = self.locate(daemon_type, name)
         return _collector_query(self._handle, int(daemon_type), daemon_ad, projection, statistics, None)
