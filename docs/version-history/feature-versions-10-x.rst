@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
+  before the user was disabled are allowed to run to completion.
+  :jira:`1723`
 
 Bugs Fixed:
 

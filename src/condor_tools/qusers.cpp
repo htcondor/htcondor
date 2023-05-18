@@ -117,7 +117,14 @@ const char * const userDefault_PrintFormat = "SELECT\n"
 "   User         AS USER      WIDTH AUTO\n"
 "   Owner        AS OWNER     WIDTH AUTO\n"
 "   NTDomain     AS NTDOMAIN  WIDTH AUTO PRINTF %s OR ''\n"
-"   Enabled?Enabled:\"\"   AS ENABLED\n"
+"   {\"no\",\"yes\"}[Enabled?:0] AS ENABLED   WIDTH AUTO OR _\n"
+//"   MaxJobs?:\"default\" AS MAX_JOBS WIDTH AUTO\n"
+"   MaxJobsRunning?:\"default\" AS MAX_RUN WIDTH AUTO\n"
+"   NumIdle    AS 'JOBS:Idle' WIDTH AUTO PRINTF %9d\n"
+"   NumRunning AS Running WIDTH AUTO PRINTF %7d\n"
+"   NumHeld    AS '   Held' WIDTH AUTO PRINTF %7d\n"
+"   TotalRemovedJobs + NumRemoved AS Removed WIDTH AUTO PRINTF %7d\n"
+"   TotalCompletedJobs + NumCompleted AS Completed WIDTH AUTO PRINTF %9d\n"
 "SUMMARY STANDARD\n";
 
 static  int  testing_width = 0;
@@ -252,6 +259,7 @@ main( int argc, const char *argv[] )
 	const char* pool = nullptr;
 	const char* name = nullptr;
 	int cmd = 0;
+	int rval = 0;
 	classad::References attrs;
 	const char * constraint=nullptr;
 	AttrListPrintMask prmask;
@@ -517,16 +525,23 @@ main( int argc, const char *argv[] )
 
 	} else if (cmd == ENABLE_USERREC) {
 		CondorError errstack;
-		if (actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), &errstack)) {
+		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), &errstack);
+		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
-			exit(1);
+		}
+	} else if (cmd == DISABLE_USERREC) {
+		CondorError errstack;
+		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), &errstack);
+		if (rval != 0) {
+			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
 	} else {
 		fprintf(stderr, "Unsupported command %d\n", cmd);
+		rval = 1;
 	}
 
-	dprintf_SetExitCode(0);
-	return 0;
+	dprintf_SetExitCode(rval);
+	return rval;
 }
 
 int makeUsersRequestAd(
@@ -727,9 +742,9 @@ usage(FILE *out, const char *appname)
 	fprintf(out, "\n  OPERATION is one of:\n");
 	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
-//	fprintf(out, "    -disable\t\t Disable user records\n" );
+	fprintf(out, "    -disable\t\t Disable existing user records, user cannot submit jobs\n" );
 //	fprintf(out, "    -delete\t\t Delete user records\n" );
-//	fprintf(out, "    -reset\t\t Reset user records to defaults\n" );
+//	fprintf(out, "    -reset\t\t Reset user records to default settings and limits\n" );
 //	fprintf(out, "    -edit\t\t Edit fields of user records\n" );
 	fprintf(out, "\n"
 //		"  This tool is use to query, modify and delete User/Owner records in the Schedd.\n"
