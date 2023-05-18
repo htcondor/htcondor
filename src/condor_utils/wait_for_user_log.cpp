@@ -61,9 +61,18 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 				// possible for reader.readEvent() to return ULOG_NO_EVENT
 				// here, so if we just return that, we might break our promise
 				// about how long we waited for a new event.
-				struct timeval now; condor_gettimestamp( now );
-				int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
-				return readEvent( event, timeout - elapsedMilliseconds, following );
+
+				// struct timeval now; condor_gettimestamp( now );
+				// int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
+				// return readEvent( event, timeout - elapsedMilliseconds, following );
+				//
+				// Um, actually, the above code causes hangs if the original timeout
+				// was zero, or if the elapsed time was greater than the requested timeout
+				// or if the original timeout requested was negative.  Instead of trying
+				// to be clever, let's try again with the original timeout, understanding
+				// that we may take longer than requested, but that's true for any time
+				// based sleep in the whole system.
+				return readEvent(event, timeout, following);
 				}
 			default:
 				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.\n", result );
