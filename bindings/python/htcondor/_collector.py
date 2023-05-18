@@ -70,7 +70,7 @@ class Collector():
         name: Optional[str] = None,
     ):
         if name is None:
-            return _collector_locate_local(self, _handle, int(daemon_type))
+            return _collector_locate_local(self, self._handle, int(daemon_type))
         else:
             ad_type = _ad_type_from_daemon_type(daemon_type)
             constraint = f'stricmp(Name, "{name}") == 0'
@@ -81,7 +81,6 @@ class Collector():
         daemon_type: DaemonType,
     ):
         ad_type = _ad_type_from_daemon_type(daemon_type)
-        projection = ["MyAddress", "MyAddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]
         return self.query(ad_type, projection=Collector._for_location)
 
 

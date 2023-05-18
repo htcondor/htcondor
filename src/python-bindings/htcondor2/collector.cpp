@@ -57,10 +57,40 @@ _collector_query( PyObject *, PyObject * args ) {
 	/* FIXME: statistics */
 
 	if( name && strlen(name) ) {
-		query.addExtraAttribute( "LocationQuery", name );
+		query.addExtraAttributeString( "LocationQuery", name );
 	}
 
-	/* FIXME: projection */
+	if(! PyList_Check(projection)) {
+		PyErr_SetString(PyExc_TypeError, "projection must be a list");
+		return NULL;
+	}
+
+	// In version 1, an empty list was ignored.
+	Py_ssize_t size = PyList_Size(projection);
+	if( size > 0 ) {
+		std::vector<std::string> attributes;
+		for( int i = 0; i < size; ++i ) {
+			PyObject * py_attr = PyList_GetItem(projection, i);
+			if( py_attr == NULL ) {
+				// PyList_GetItem() has already set an exception for us.
+				return NULL;
+			}
+
+			if(! PyUnicode_Check(py_attr)) {
+				PyErr_SetString(PyExc_TypeError, "projection must be a list of strings");
+				return NULL;
+			}
+
+			std::string attribute;
+			if( py_str_to_std_string(py_attr, attribute) != -1 ) {
+				attributes.push_back(attribute);
+			} else {
+				// py_str_to_std_str() has already set an exception for us.
+				return NULL;
+			}
+		}
+		query.setDesiredAttrs(attributes);
+	}
 
 	ClassAdList adList;
 	QueryResult result;
@@ -113,6 +143,7 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 
 
 	// FIXME
+
 
 	PyErr_SetString( PyExc_NotImplementedError, "_collector_locate" );
 	return NULL;

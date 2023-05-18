@@ -47,7 +47,7 @@ _external_refs( PyObject * /* self */, PyObject * args ) {
 		delete expr;
 		delete ad;
 
-		// FIXME: should be something else.
+		// This was ClassAdValueError in version 1.
 		PyErr_SetString( PyExc_ValueError, "Unable to determine external reference." );
 		return NULL;
 	}
@@ -103,7 +103,7 @@ _internal_refs( PyObject * /* self */, PyObject * args ) {
 		delete expr;
 		delete ad;
 
-		// FIXME: should be something else.
+		// This was ClassAdValueError in version 1.
 		PyErr_SetString( PyExc_ValueError, "Unable to determine internal reference." );
 		return NULL;
 	}
@@ -260,7 +260,7 @@ _evaluate( PyObject * /* self */, PyObject * args ) {
 		delete( scope ); // FIXME?
 		delete( target ); // FIXME?
 
-		// FIXME: this should ClassAdErrorValue.
+		// This was ClassAdErrorValue in version 1.
 		// (Should we do the translation in the Python layer?)
 		PyErr_SetString( PyExc_ValueError, "Expression failed to evaluate" );
 		return NULL;

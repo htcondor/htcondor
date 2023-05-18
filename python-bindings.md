@@ -18,7 +18,7 @@
 
 - For classad2._class_ad, the invariant is that handle->t is always pointing
   to an owned (and valid) ClassAd on the heap.  When Python deallocates a
-  classad2._class_ad, (FIXME) the C deallocation function will delete the
+  classad2._class_ad, the deallocation function (handle->f) will delete the
   pointer.  The pointer will never otherwise be deleted.
 
 - The htcondor._collector class has identical semantics for its handle.

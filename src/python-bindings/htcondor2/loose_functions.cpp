@@ -24,10 +24,11 @@ _set_subsystem( PyObject *, PyObject * args ) {
 	// If py_subsystem_type is not NULL, set subsystem_type.
 	SubsystemType subsystem_type = SUBSYSTEM_TYPE_AUTO;
 	if( py_subsystem_type ) {
-		// We can't use a C reference to a global here because the
-		// `htcondor.SubsystemType` type was defined by Boost.
+		// FIXME: cache the next two results in statics.
 		PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor" );
 		PyObject * py_subsystemtype_class = PyObject_GetAttrString( py_htcondor_module, "SubsystemType" );
+		// FIXME: PyObject_IsInstance() can fail and raise an exception
+		// instead of answering the question.
 		if(! PyObject_IsInstance( py_subsystem_type, py_subsystemtype_class )) {
 			// This is technically an API violation; we should raise an
 			// instance of HTCondorTypeError, instead.

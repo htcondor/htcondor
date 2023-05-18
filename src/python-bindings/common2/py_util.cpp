@@ -1,6 +1,6 @@
 static PyObject_Handle *
-get_handle_from(PyObject * pyClassAd) {
-	auto * py_handle = PyObject_GetAttrString( pyClassAd, "_handle" );
+get_handle_from(PyObject * py) {
+	auto * py_handle = PyObject_GetAttrString( py, "_handle" );
 	Py_DecRef(py_handle);
 	return (PyObject_Handle *)py_handle;
 }
@@ -115,9 +115,53 @@ py_new_classad_exprtree( ExprTree * original ) {
 	// PyObject_CallObject() should have called __init__() for us, which
 	// should call _exprtree_init(), which should have made sure that the
 	// Python ClassAd object is valid by creating a new ExprTree for it.
+	//
+	// _exprtree_init() should have already set handle->f for us, as well.
 	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
 
 	handle->t = (void *)copy;
-	// handle->f = [](void * & v) { dprintf( D_ALWAYS, "{classad::ExprTree *}\n" ); delete (classad::ExprTree *)v; v = NULL; };
 	return pyExprTree;
+}
+
+
+int
+py_is_classad_exprtree(PyObject * py) {
+	static PyObject * py_htcondor_module = NULL;
+	if( py_htcondor_module == NULL ) {
+		 py_htcondor_module = PyImport_ImportModule( "htcondor" );
+	}
+
+	static PyObject * py_htcondor_classad_module = NULL;
+	if( py_htcondor_classad_module == NULL ) {
+		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	}
+
+	static PyObject * py_exprtree_class = NULL;
+	if( py_exprtree_class == NULL ) {
+		py_exprtree_class = PyObject_GetAttrString( py_htcondor_classad_module, "ExprTree" );
+	}
+
+	// The above should probably be factored out into its own function,
+	// since it's identical in this one and in py_new_classad_exprtree.
+	return PyObject_IsInstance( py, py_exprtree_class );
+}
+
+
+int
+py_str_to_std_string(PyObject * py, std::string & str) {
+	PyObject * py_bytes = PyUnicode_AsUTF8String(py);
+	if( py_bytes == NULL ) {
+		// PyUnicode_AsUTF8String() has already set an exception for us.
+		return -1;
+	}
+
+	char * buffer = NULL;
+	Py_ssize_t size = -1;
+	if( PyBytes_AsStringAndSize(py_bytes, &buffer, &size) == -1 ) {
+		// PyBytes_AsStringAndSize() has already set an exception for us.
+		return -1;
+	}
+
+	str.assign( buffer, size );
+	return 0;
 }

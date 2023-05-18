@@ -212,9 +212,25 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         return classad::Literal::MakeUndefined();
     }
 
-    // FIXME: Is py_v a ClassAd.ExprTree?
+    int check = py_is_classad_exprtree(py_v);
+    if( check == -1 ) { return NULL; }
+    if( check == 1 ) {
+        // `py_v` is a htcondor.ClassAd.ExprTree that owns it own ExprTree *,
+        // so we have to return a copy here.  We don't have to deparent
+        // the ExprTree, because it's already loose (by invariant).
+        auto * handle = get_handle_from(py_v);
+        return ((classad::ExprTree *)handle->t)->Copy();
+    }
 
-    // FIXME: Is py_v a ClassAd.Value?
+    // We can't convert classad.Value to a native Python type in Python
+    // because there's no native Python type for classad.Value.Error.
+/*
+    int check = py_is_classad_value(py_v);
+    if( check == -1 ) { return NULL; }
+    if( check == 1 ) {
+        // FIXME
+    }
+*/
 
     // FIXME: Is py_v a DateTime object?
 
