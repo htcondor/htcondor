@@ -4550,15 +4550,17 @@ int DaemonCore::ServiceCommandSocket()
 				}
 #endif
 				if ( selector.has_ready() ) {
+						// Index -1 means the initial command socket
+					int idx = (i == -1) ? initial_command_sock() : i;
 						// CallSocketHandler_worker called by CallSocketHandler
 						// also calls CheckPrivState in order to
 						// Make sure we didn't leak our priv state.
-					CallSocketHandler(i, true);
+					CallSocketHandler(idx, true);
 					commands_served++;
 						// If the slot in sockTable just got removed, make sure we exit the loop
-					if ( (sockTable[i].iosock == NULL) ||  // slot is empty
-						 (sockTable[i].remove_asap &&           // slot available
-						  sockTable[i].servicing_tid==0 ) ) {
+					if ( (sockTable[idx].iosock == NULL) ||  // slot is empty
+						 (sockTable[idx].remove_asap &&           // slot available
+						  sockTable[idx].servicing_tid==0 ) ) {
 						break;
 					}
 				} 
