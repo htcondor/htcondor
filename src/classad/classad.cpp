@@ -604,6 +604,7 @@ AssignExpr(const std::string &name, const char *value)
 		return false;
 	}
 	if ( !par.ParseExpression( value, expr, true ) ) {
+		delete expr;
 		return false;
 	}
 	if ( !Insert( name, expr ) ) {
