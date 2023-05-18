@@ -35,12 +35,14 @@ std::map <std::string, ArcResource *>
     ArcResource::ResourcesByName;
 
 std::string& ArcResource::HashName( const char *resource_name,
+                                    int gahp_id,
                                     const char *proxy_subject,
                                     const std::string& token_file )
 {
 	static std::string hash_name;
 
-	formatstr( hash_name, "arc %s#%s#%s", resource_name,
+	formatstr( hash_name, "arc %s#%d#%s#%s", resource_name,
+	           gahp_id,
 	           proxy_subject ? proxy_subject : "NULL",
 	           token_file.c_str() );
 
@@ -48,14 +50,15 @@ std::string& ArcResource::HashName( const char *resource_name,
 }
 
 ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
+                                                int gahp_id,
                                                 const Proxy *proxy,
                                                 const std::string& token_file )
 {
 	ArcResource *resource = NULL;
-	const std::string &key = HashName( resource_name, proxy ? proxy->subject->fqan : "", token_file );
+	const std::string &key = HashName( resource_name, gahp_id, proxy ? proxy->subject->fqan : "", token_file );
 	auto itr = ResourcesByName.find( key );
 	if ( itr == ResourcesByName.end() ) {
-		resource = new ArcResource( resource_name, proxy, token_file );
+		resource = new ArcResource( resource_name, gahp_id, proxy, token_file );
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName[key] = resource;
@@ -68,6 +71,7 @@ ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
 }
 
 ArcResource::ArcResource( const char *resource_name,
+                          int gahp_id,
                           const Proxy *proxy,
                           const std::string& token_file )
 	: BaseResource( resource_name )
@@ -75,11 +79,13 @@ ArcResource::ArcResource( const char *resource_name,
 	proxySubject = proxy ? strdup( proxy->subject->subject_name ) : nullptr;
 	proxyFQAN = proxy ? strdup( proxy->subject->fqan ) : nullptr;
 	m_tokenFile = token_file;
+	m_gahpId = gahp_id;
 
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s#%s",
+	formatstr( buff, "ARC/%d/%s#%s",
+	           m_gahpId,
 	           (m_tokenFile.empty() && proxyFQAN) ? proxyFQAN : "",
 	           m_tokenFile.c_str() );
 
@@ -103,7 +109,7 @@ ArcResource::ArcResource( const char *resource_name,
 
 ArcResource::~ArcResource()
 {
-	ResourcesByName.erase( HashName( resourceName, proxyFQAN, m_tokenFile ) );
+	ResourcesByName.erase( HashName( resourceName, m_gahpId, proxyFQAN, m_tokenFile ) );
 	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -131,7 +137,7 @@ const char *ArcResource::ResourceType()
 
 const char *ArcResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN, m_tokenFile ).c_str();
+	return HashName( resourceName, m_gahpId, proxyFQAN, m_tokenFile ).c_str();
 }
 
 void ArcResource::PublishResourceAd( ClassAd *resource_ad )

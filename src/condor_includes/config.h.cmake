@@ -313,6 +313,9 @@
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
 
+/* Define if libcurl uses NSS */
+#cmakedefine CURL_USES_NSS
+
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"
 #cmakedefine LIBKRB5SUPPORT_SO "${LIBKRB5SUPPORT_SO}"
