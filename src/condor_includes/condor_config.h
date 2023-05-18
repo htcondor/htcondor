@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "string_list.h"
 #include "simplelist.h"
-#include "extArray.h"
 
 #include <vector>
 #include <string>
