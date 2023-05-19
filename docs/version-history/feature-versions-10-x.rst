@@ -32,6 +32,10 @@ Bugs Fixed:
   and crashed when they had active jobs in the blkio controller.
   :jira:`1786`
 
+- Fixed a very recently introduced bug where the .job.ad and .machine.ad
+  files would not be written into the job sandbox.
+  :jira:`1737`
+
 - Forced condor_ssh_to_job to never try to use a Control Master, which would
   break ssh_to_job.  Also raised the timeout for ssh_to_job which might
   be needed for slow WANs.
