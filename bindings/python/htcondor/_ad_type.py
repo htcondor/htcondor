@@ -68,3 +68,21 @@ class AdType(enum.IntEnum):
     # LeaseManager = 21
     # Defrag = 22
     Accounting = 23
+
+
+AdTypeToMyType = {
+    AdType.Startd: "Machine",
+    AdType.Schedd: "Scheduler",
+    AdType.Master: "DaemonMaster",
+    AdType.StartdPrivate: "MachinePrivate",
+    AdType.Submitter: "Submitter",
+    AdType.Collector: "Collector",
+    AdType.License: "License",
+    AdType.Any: "Any",
+    AdType.Negotiator: "Negotiator",
+    AdType.HAD: "HAD",
+    AdType.Generic: "Generic",
+    AdType.Credd: "CredD",
+    AdType.Grid: "Grid",
+    AdType.Accounting: "Accounting",
+}

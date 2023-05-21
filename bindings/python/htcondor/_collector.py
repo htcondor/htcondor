@@ -7,9 +7,7 @@ from .htcondor2_impl import _collector_query
 from .htcondor2_impl import _collector_locate_local
 from .htcondor2_impl import _collector_advertise
 
-# Only necessary for typehints, which we may prefer to use docstrings for,
-# so that the names are the externally-visible ones in the documentation.
-from ._ad_type import AdType
+from ._ad_type import AdType, AdTypeToMyType
 from ._daemon_type import DaemonType
 
 
@@ -82,13 +80,27 @@ class Collector():
         daemon_type: DaemonType,
         name: Optional[str] = None,
     ):
-        if name is None:
-            return _collector_locate_local(self, self._handle, int(daemon_type))
-        else:
-            ad_type = _ad_type_from_daemon_type(daemon_type)
+        ad_type = _ad_type_from_daemon_type(daemon_type)
+        if name is not None:
             constraint = f'stricmp(Name, "{name}") == 0'
-            return _collector_query(self._handle, int(ad_type), constraint, Collector._for_location, None, name)
+            return _collector_query(self._handle, int(ad_type), constraint, self._for_location, None, name)
 
+        if self.default is False:
+            constraint = True
+            return self.query(ad_type, constraint, self._for_location)
+
+        # This is kind of dumb, but someone broke daemon.daemonAd(),
+        # and I don't feel like fixing it.
+        (ad, my_addr, name, machine, daemon_version, condor_version, condor_platform) = _collector_locate_local(self, self._handle, int(daemon_type))
+        ad["MyAddr"] = my_addr
+        ad["Name"] = name
+        ad["Machine"] = machine
+        ad["CondorVersion"] = daemon_version
+        ad["MyType"] = AdTypeToMyType[ad_type]
+        # This is almost certainly wrong, but it's what version 1 did.
+        ad["CondorVersion"] = condor_version
+        ad["ConodrPlatform"] = condor_platform
+        return [ad]
 
     def locateAll(self,
         daemon_type: DaemonType,

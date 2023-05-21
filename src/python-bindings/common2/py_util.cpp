@@ -29,9 +29,11 @@ py_new_classad_classad(void * classAd) {
 	// PyObject_CallObject() should have called __init__() for us, which
 	// should call _classad_init(), which should have made sure that the
 	// Python ClassAd object is valid by creating a new ClassAd for it.
-	if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
+	if( classAd != NULL ) {
+		if( handle->t != NULL ) { delete (ClassAd *)handle->t; }
+		handle->t = (void *)classAd;
+	}
 
-	handle->t = (void *)classAd;
 	// handle->f = [](void * & v) { dprintf( D_ALWAYS, "{classad::ClassAd}\n" ); delete (classad::ClassAd *)v; v = NULL; };
 	return pyClassAd;
 }

@@ -24,6 +24,11 @@ _collector_init( PyObject *, PyObject * args ) {
 		}
 	} else {
 		handle->t = (void *) CollectorList::create(pool);
+
+		if( PyObject_SetAttrString( self, "default", Py_False ) != 0 ) {
+			// PyObject_setAttrString() has already set an exception for us.
+			return NULL;
+		}
 	}
 
 	handle->f = [](void *& v) { dprintf( D_ALWAYS, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
@@ -33,7 +38,7 @@ _collector_init( PyObject *, PyObject * args ) {
 
 static PyObject *
 _collector_query( PyObject *, PyObject * args ) {
-    // _collector_query(_handle, ad_type, constraint, projection, statistics, name)
+	// _collector_query(_handle, ad_type, constraint, projection, statistics, name)
 
 	PyObject_Handle * handle = NULL;
 	AdTypes ad_type = NO_AD;
@@ -143,9 +148,25 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 		return NULL;
 	}
 
+	Daemon local( daemon_type, 0, 0 );
+	if( local.locate() ) {
+        PyObject * ad = py_new_classad_classad(NULL);
 
-	// FIXME
+		PyObject * tuple = Py_BuildValue( "Ozzzzzz",
+		  ad, local.addr(), local.name(), local.fullHostname(), local.version(),
+		  CondorVersion(), CondorPlatform()
+		);
+		if( tuple == NULL ) {
+			// Py_BuildValue() has already set an exception for us.
+			return NULL;
+		}
 
+		return tuple;
+	} else {
+		// This was HTCondorLocateError in version 1.
+		PyErr_SetString( PyExc_RuntimeError, "Unable to locate local daemon." );
+		return NULL;
+	}
 
 	PyErr_SetString( PyExc_NotImplementedError, "_collector_locate" );
 	return NULL;
