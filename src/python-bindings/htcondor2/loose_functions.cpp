@@ -24,16 +24,30 @@ _set_subsystem( PyObject *, PyObject * args ) {
 	// If py_subsystem_type is not NULL, set subsystem_type.
 	SubsystemType subsystem_type = SUBSYSTEM_TYPE_AUTO;
 	if( py_subsystem_type ) {
-		// FIXME: cache the next two results in statics.
-		PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor2" );
-		PyObject * py_subsystemtype_class = PyObject_GetAttrString( py_htcondor_module, "SubsystemType" );
-		// FIXME: PyObject_IsInstance() can fail and raise an exception
-		// instead of answering the question.
-		if(! PyObject_IsInstance( py_subsystem_type, py_subsystemtype_class )) {
-			// This is technically an API violation; we should raise an
-			// instance of HTCondorTypeError, instead.
-			PyErr_SetString( PyExc_TypeError, "daemonType must be of type htcondor.SubsystemType" );
-			return NULL;
+		static PyObject * py_htcondor_module = NULL;
+		if( py_htcondor_module == NULL ) {
+			py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+		}
+
+		static PyObject * py_subsystemtype_class = NULL;
+		if( py_subsystemtype_class == NULL ) {
+			py_subsystemtype_class = PyObject_GetAttrString( py_htcondor_module, "SubsystemType" );
+		}
+
+		int ii = PyObject_IsInstance( py_subsystem_type, py_subsystemtype_class );
+		switch (ii) {
+			case 1:
+				break;
+			case 0:
+				// This was HTCondorTypeError in version 1.
+				PyErr_SetString( PyExc_TypeError, "subsystem_ype must be of type htcondor.SubsystemType" );
+				return NULL;
+			case -1:
+				// PyObject_IsInstance() has already set an exception for us.
+				return NULL;
+			default:
+				PyErr_SetString( PyExc_AssertionError, "Undocumented return from PyObject_IsInstance()." );
+				return NULL;
 		}
 
 		// SubsystemType is defined to be a long.

@@ -128,10 +128,32 @@ _collector_query( PyObject *, PyObject * args ) {
 
 		return list;
 	} else {
-		// FIXME
+		switch (result) {
+			case Q_COMMUNICATION_ERROR:
+				// This was HTCondorIOError in version 1.
+				PyErr_SetString( PyExc_RuntimeError, "Failed communication with collector." );
+				return NULL;
 
-		PyErr_SetString( PyExc_NotImplementedError, "_collector_query" );
-		return NULL;
+			case Q_INVALID_QUERY:
+				// This was HTCondorIOError in version 1.
+				PyErr_SetString( PyExc_RuntimeError, "Invalid query." );
+				return NULL;
+
+			case Q_NO_COLLECTOR_HOST:
+				// This was HTCondorLocateError in version 1.
+				PyErr_SetString( PyExc_RuntimeError, "Invalid query." );
+				return NULL;
+
+			// In version 1, we believe these errors were impossible.
+			case Q_PARSE_ERROR:
+			case Q_MEMORY_ERROR:
+			case Q_INVALID_CATEGORY:
+
+			default:
+				// This was HTCondorInternalError in version 1.
+				PyErr_SetString( PyExc_RuntimeError, "Unknown error from collector query." );
+				return NULL;
+		}
 	}
 }
 
