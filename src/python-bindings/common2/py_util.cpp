@@ -10,7 +10,7 @@ static PyObject *
 py_new_classad_classad(void * classAd) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor" );
+		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 
 	static PyObject * py_htcondor_classad_module = NULL;
@@ -63,7 +63,7 @@ PyObject *
 py_new_classad_value( classad::Value::ValueType vt ) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor" );
+		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 
 	static PyObject * py_htcondor_classad_module = NULL;
@@ -94,7 +94,7 @@ PyObject *
 py_new_classad_exprtree( ExprTree * original ) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor" );
+		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 
 	static PyObject * py_htcondor_classad_module = NULL;
@@ -130,7 +130,7 @@ int
 py_is_classad_exprtree(PyObject * py) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor" );
+		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 
 	static PyObject * py_htcondor_classad_module = NULL;

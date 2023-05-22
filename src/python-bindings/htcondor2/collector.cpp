@@ -157,8 +157,8 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 		}
 
 		PyObject * pyClassAd = py_new_classad_classad(locateOnlyAd->Copy());
-		PyObject * list = Py_BuildValue( "[N]", pyClassAd );
-		return list;
+		// PyObject * list = Py_BuildValue( "[N]", pyClassAd );
+		return pyClassAd;
 	} else {
 		// This was HTCondorLocateError in version 1.
 		PyErr_SetString( PyExc_RuntimeError, "Unable to locate local daemon." );

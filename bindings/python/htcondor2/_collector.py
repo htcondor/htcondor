@@ -73,7 +73,7 @@ class Collector():
         return _collector_query(self._handle, int(daemon_type), daemon_ad, projection, statistics, None)
 
 
-    _for_location = ["MyAddress", "MyAddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]
+    _for_location = ["MyAddress", "AddressV1", "CondorVersion", "CondorPlatform", "Name", "Machine"]
 
 
     def locate(self,
@@ -83,11 +83,11 @@ class Collector():
         ad_type = _ad_type_from_daemon_type(daemon_type)
         if name is not None:
             constraint = f'stricmp(Name, "{name}") == 0'
-            return _collector_query(self._handle, int(ad_type), constraint, self._for_location, None, name)
+            return _collector_query(self._handle, int(ad_type), constraint, self._for_location, None, name)[0]
 
         if self.default is False:
             constraint = True
-            return self.query(ad_type, constraint, self._for_location)
+            return self.query(ad_type, constraint, self._for_location)[0]
 
         return _collector_locate_local(self, self._handle, int(daemon_type))
 

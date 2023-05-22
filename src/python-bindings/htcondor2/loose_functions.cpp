@@ -25,7 +25,7 @@ _set_subsystem( PyObject *, PyObject * args ) {
 	SubsystemType subsystem_type = SUBSYSTEM_TYPE_AUTO;
 	if( py_subsystem_type ) {
 		// FIXME: cache the next two results in statics.
-		PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor" );
+		PyObject * py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 		PyObject * py_subsystemtype_class = PyObject_GetAttrString( py_htcondor_module, "SubsystemType" );
 		// FIXME: PyObject_IsInstance() can fail and raise an exception
 		// instead of answering the question.
