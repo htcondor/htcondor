@@ -145,7 +145,7 @@ convert_classad_value_to_python(classad::Value & v) {
                 if( should_convert_to_python(*i) ) {
                     classad::Value v;
                     if(! (*i)->Evaluate( v )) {
-                        // FIXME: ClassAdEvaluationError
+                        // This was ClassAdEvaluationError in version 1.
                         PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
                         return NULL;
                     }
@@ -164,7 +164,7 @@ convert_classad_value_to_python(classad::Value & v) {
             } break;
 
         default:
-            // FIXME: ClassAdEnumError
+            // This was ClassAdEnumError in version 1.
             PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type" );
             return NULL;
     }
@@ -193,7 +193,7 @@ _classad_get_item( PyObject *, PyObject * args ) {
     if( should_convert_to_python( expr ) ) {
         classad::Value v;
         if(! expr->Evaluate( v )) {
-            // FIXME: ClassAdEvaluationError
+            // This was ClassAdEvaluationError in version 1.
             PyErr_SetString( PyExc_RuntimeError, "Failed to evaluate convertible expression" );
             return NULL;
         }
@@ -222,19 +222,34 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         return ((classad::ExprTree *)handle->t)->Copy();
     }
 
+    classad::Value v;
+
     // We can't convert classad.Value to a native Python type in Python
     // because there's no native Python type for classad.Value.Error.
-/*
-    int check = py_is_classad_value(py_v);
+    check = py_is_classad_value(py_v);
     if( check == -1 ) { return NULL; }
     if( check == 1 ) {
-        // FIXME
+        PyObject * py_v_int = PyNumber_Long(py_v);
+        if( py_v_int == NULL ) {
+            // This was ClassAdInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type." );
+            return NULL;
+        }
+        long lv = PyLong_AsLong(py_v_int);
+        if( lv == 1<<0 ) {
+            v.SetErrorValue();
+            return classad::Literal::MakeLiteral(v);
+        } else if( lv == 1<<1 ) {
+            v.SetUndefinedValue();
+            return classad::Literal::MakeLiteral(v);
+        } else {
+            // This was ClassAdInternalError in version 1.
+            PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type." );
+            return NULL;
+        }
     }
-*/
 
     // FIXME: Is py_v a DateTime object?
-
-    classad::Value v;
 
     if( PyBool_Check(py_v) ) {
         v.SetBooleanValue( py_v == Py_True );
@@ -286,8 +301,8 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
 
     // FIXME: PyObject_GetIter()
 
-    // FIXME: ClassAdEnumError
-    PyErr_SetString( PyExc_RuntimeError, "Unknown ClassAd value type" );
+    // This was ClassAdValueError in version 1.
+    PyErr_SetString( PyExc_RuntimeError, "Unable to convert Python object to a ClassAd expression." );
     return NULL;
 }
 

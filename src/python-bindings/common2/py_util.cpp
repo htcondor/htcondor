@@ -167,3 +167,26 @@ py_str_to_std_string(PyObject * py, std::string & str) {
 	str.assign( buffer, size );
 	return 0;
 }
+
+
+int
+py_is_classad_value(PyObject * py) {
+	static PyObject * py_htcondor_module = NULL;
+	if( py_htcondor_module == NULL ) {
+		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+	}
+
+	static PyObject * py_htcondor_classad_module = NULL;
+	if( py_htcondor_classad_module == NULL ) {
+		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	}
+
+	static PyObject * py_value_class = NULL;
+	if( py_value_class == NULL ) {
+		py_value_class = PyObject_GetAttrString( py_htcondor_classad_module, "Value" );
+	}
+
+	// The above should probably be factored out into its own function,
+	// since it's identical in this one and in py_new_classad_exprtree.
+	return PyObject_IsInstance( py, py_value_class );
+}
