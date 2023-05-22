@@ -26,4 +26,16 @@ export LC_ALL LANG
 export FLASK_APP=condor_restd
 export FLASK_ENV=dev
 
-exec /usr/bin/flask-3 run -h 0.0.0.0 -p 8080
+# The location and name of the flask executable is also distro-dependent
+for flask in {/usr/bin,/usr/local/bin}/{flask,flask-3} NOTFOUND; do
+    if [[ -x $flask ]]; then
+        break
+    fi
+done
+
+if [[ $flask == NOTFOUND ]]; then
+    echo 1>&2 "No flask executable found - bailing"
+    exit 127
+fi
+
+exec "$flask" run -h 0.0.0.0 -p 8080
