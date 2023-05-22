@@ -1308,7 +1308,9 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 bool
 QmgmtPeer::setEffectiveOwner(char const *o)
 {
-	if (owner && o && MATCH == strcmp(owner, o)) {
+	if (o && ((owner  && MATCH == strcmp(owner , o)) ||
+		      (fquser && MATCH == strcmp(fquser, o)))
+		) {
 		// nothing to do.
 		return true;
 	}
@@ -1320,7 +1322,12 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 
 	if ( o ) {
 		owner = strdup(o);
-		std::string user = std::string(o) + "@" + scheduler.uidDomain();
+		// truncate owner if the input is fully qualified
+		// note that this is wrong, but backward compatible.
+		// We will fix this properly in 10.x
+		char * at = strchr(owner,'@');
+		if (at) { *at = 0; }
+		std::string user = std::string(owner) + "@" + scheduler.uidDomain();
 		fquser = strdup(user.c_str());
 	}
 	return true;
@@ -1825,7 +1832,9 @@ void JobQueueBase::PopulateFromAd()
 			this->LookupInteger(ATTR_PROC_ID, jid.proc);
 		}
 		entry_type = TypeOfJid(jid);
-		dprintf(D_ERROR, "WARNING - JobQueueBase has no entry_type set %d.%d", jid.cluster, jid.proc);
+		if (entry_type) {
+			dprintf(D_ERROR, "WARNING - JobQueueBase had no entry_type set %d.%d\n", jid.cluster, jid.proc);
+		}
 	}
 }
 
@@ -3135,12 +3144,25 @@ QmgmtSetEffectiveOwner(char const *o)
 	// always allow request to set effective owner to NULL,
 	// because this means set effective owner --> real owner
 	if( o && !qmgmt_all_users_trusted ) {
-		if( !isQueueSuperUser(real_owner) ||
-			!SuperUserAllowedToSetOwnerTo( o ) )
+		// for now, look only at the owner part of an incoming fully qualified user
+		// we will fix this properly in 10.x
+		std::string buf;
+		const char * p0wn = o;
+		const char * at = strchr(o, '@');
+		if (at) { buf.assign(o, at - o); p0wn = buf.c_str(); }
+		if (at) { dprintf(D_FULLDEBUG, "QmgmtSetEffectiveOwner(%s) using %s\n", o, p0wn); }
+		bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(p0wn);
+		bool is_super = isQueueSuperUser(real_owner);
+		if( !is_super || !is_allowed_owner)
 		{
-			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
-					"setting owner to %s when active owner is \"%s\"\n",
-					o, real_owner ? real_owner : "(null)" );
+			if ( ! is_allowed_owner) {
+				dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+					"attempting to set owner to dis-allowed value %s\n", o);
+			} else {
+				dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+					"setting owner to %s when active owner is non-superuser \"%s\"\n",
+					o, real_owner ? real_owner : "(null)");
+			}
 			errno = EACCES;
 			return -1;
 		}
