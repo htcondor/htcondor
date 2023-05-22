@@ -28,6 +28,13 @@ Bugs Fixed:
   omitted from accounting ads queried from the *condor_negotiator*.
   :jira:`1780`
 
+- The classad functions ``anycompare``, ``allcompare``, ``sum``, ``min``,
+  ``max``, ``avg`` and ``join`` no longer treat a single undefined input
+  as forcing the result to be undefined.  ``sum``, ``min``, ``max``, ``avg`` and ``join``
+  will skip over undefined inputs, while ``anycompare`` and ``allcompare`` will compare
+  them correctly.
+  :jira:`1799`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4

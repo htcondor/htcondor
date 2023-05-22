@@ -634,34 +634,38 @@ Optional parameters are given within square brackets.
     :index:`sum()<single: sum(); ClassAd functions>`
 
 ``Number sum([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the sum of the values, 
+    The elements of l are evaluated, producing a list l of values. Undefined values
+    are removed. If the resulting l is composed only of numbers, the result is the sum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the 
-    list is empty, the result is 0. In other cases, the result is ``ERROR``.
+    list is empty, the result is 0. If the list has only Undefined values, the result
+    is ``UNDEFINED``. In other cases, the result is ``ERROR``.
 
     This function returns ``ERROR`` if greater than 1 argument is given.
     
     :index:`avg()<single: avg(); ClassAd functions>`
 
 ``Number avg([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the average of the values, 
-    as a Real. If the list is empty, the result is 0.  In other cases, 
-    the result is ERROR.
+    The elements of l are evaluated, producing a list l of values. Undefined values
+    are removed. If the resulting l is composed only of numbers, the result is the average of the values,
+    as a Real. If the list is empty, the result is 0.
+    If the list has only Undefined values, the result is ``UNDEFINED``.
+    In other cases,  the result is ERROR.
     
     :index:`min()<single: min(); ClassAd functions>`
 
 ``Number min([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the minimum of the values, 
+    The elements of l are evaluated, producing a list l of values.
+    Undefined values are removed.
+    If the resulting l is composed only of numbers, the result is the minimum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the list 
     is empty, the result is UNDEFINED. In other cases, the result is ERROR.
     
     :index:`max()<single: max(); ClassAd functions>`
 
 ``Number max([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the maximum of the values, 
+    The elements of l are evaluated, producing a list l of values.
+    Undefined values are removed.
+    If the resulting l is composed only of numbers, the result is the maximum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the list 
     is empty, the result is UNDEFINED. In other cases, the result is ERROR.
     
@@ -679,9 +683,9 @@ Optional parameters are given within square brackets.
     Returns the string which is the concatenation of all arguments after
     the first one. The first argument is the separator, and it is
     inserted between each of the other arguments during concatenation.
-    All arguments are converted to type ``String`` by function
-    ``string(Expr)`` before concatenation. When there are exactly two
-    arguments, If the second argument is a List, all members of the list
+    All arguments which are not undefined are converted to type ``String`` by function
+    ``string(Expr)`` before concatenation. Undefined arguments are skipped.
+    When there are exactly two arguments, If the second argument is a List, all members of the list
     are converted to strings and then joined using the separator. When
     there is only one argument, and the argument is a List, all members
     of the list are converted to strings and then concatenated.
