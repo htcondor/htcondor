@@ -78,7 +78,17 @@ def job_one_handle(default_condor, test_dir, path_to_sleep):
 @action
 def job_one_ad(job_one_handle):
     for ad in job_one_handle.query():
-        return ad
+        # On rare occasions, the job may be in the
+        # 'C'omplete status, but the schedd hasn't
+        # written the "CompletionDate" yet.  Check
+        # to see if we are in this state, and if so
+        # sleep 10 seconds and try again.
+        try:
+            cl = ad['CompletionDate']
+            return ad
+        except:
+            time.sleep(10);
+            return job_one_handle.query()[0]
 
 
 @action

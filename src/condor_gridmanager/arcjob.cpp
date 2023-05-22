@@ -181,6 +181,8 @@ int ArcJob::maxConnectFailures = 3;	// default value
 // If ARC_JOB_INFO retruns stale data, how long to wait before retrying
 int ArcJob::jobInfoInterval = 60;
 
+int ArcJob::m_arcGahpId = 0;
+
 ArcJob::ArcJob( ClassAd *classad )
 	: BaseJob( classad )
 {
@@ -227,10 +229,26 @@ ArcJob::ArcJob( ClassAd *classad )
 		error_string = "ARC_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "ARC/%s#%s",
+	snprintf( buff, sizeof(buff), "ARC/%d/%s#%s",
+	          m_arcGahpId,
 	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
 	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
+#if CURL_USES_NSS
+	// NSS as used by libcurl has a memory leak. To deal with this, we
+	// start a new arc_gahp for new jobs when the previous gahp has
+	// handled too many requests. Once the previous jobs leave the system,
+	// the old arc_gahp will quietly exit.
+	if (gahp->getNextReqId() > param_integer("ARC_GAHP_COMMAND_LIMIT", 1000)) {
+		delete gahp;
+		m_arcGahpId++;
+		snprintf(buff, sizeof(buff), "ARC/%d/%s#%s",
+		         m_arcGahpId,
+		         (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
+		          m_tokenFile.c_str());
+		gahp = new GahpClient(buff, gahp_path);
+	}
+#endif
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -268,7 +286,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
-	                 m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
+	                 m_arcGahpId, m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';

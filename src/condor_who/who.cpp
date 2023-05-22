@@ -26,7 +26,6 @@
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "extArray.h"
 #include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "condor_api.h"
