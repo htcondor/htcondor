@@ -26,8 +26,8 @@ Release Notes:
 
 New Features:
 
-- Added new script called ``upgrade9to10checks.py`` to help admins check for
-  possible issues that may occur and changes needed for an HTCondor system when
+- Added new script called ``upgrade9to10checks.py`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
   upgrading from ``V9`` to ``V10``. This script checks for three well known
   breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
   changing to using ``PCRE2`` for regular expression matching, and changes
