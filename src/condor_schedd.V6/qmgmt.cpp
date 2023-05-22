@@ -3150,7 +3150,7 @@ QmgmtSetEffectiveOwner(char const *o)
 		const char * p0wn = o;
 		const char * at = strchr(o, '@');
 		if (at) { buf.assign(o, at - o); p0wn = buf.c_str(); }
-		if (at) { dprintf(D_ALWAYS, "QmgmtSetEffectiveOwner(%s) using %s\n", o, p0wn); }
+		if (at) { dprintf(D_FULLDEBUG, "QmgmtSetEffectiveOwner(%s) using %s\n", o, p0wn); }
 		bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(p0wn);
 		bool is_super = isQueueSuperUser(real_owner);
 		if( !is_super || !is_allowed_owner)
