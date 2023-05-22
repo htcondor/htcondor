@@ -32,6 +32,8 @@ LOCK = threading.RLock()
 # * enums don't need to be listed; they have no methods, not even __init__
 # * context manager __enter__ methods SHOULD be listed here if they return self (avoid recursion)
 DO_NOT_LOCK = {
+    htcondor.version,
+    htcondor.platform,
     htcondor.JobEventLog,
     htcondor.JobEvent,
     htcondor.SubmitResult,

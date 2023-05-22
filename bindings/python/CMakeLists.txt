@@ -1,6 +1,6 @@
 
 # These are expanded in setup.py.cmake_template
-set(PACKAGES      "classad3" "classad2" "classad" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
+set(PACKAGES      "classad3" "classad2" "classad" "htcondor2" "htcondor2/compat_enum" "htcondor" "htcondor/dags" "htcondor/htchirp" "htcondor/compat_enum")
 
 # The python sources to copy
 set(PYTHON_SOURCES
@@ -25,10 +25,13 @@ htcondor/dags/node.py
 htcondor/_deprecation.py
 htcondor/_job_status.py
 
-htcondor/_collector.py
-htcondor/_subsystem_type.py
-htcondor/_daemon_type.py
-htcondor/_ad_type.py
+htcondor2/compat_enum/__init__.py
+htcondor2/compat_enum/LICENSE
+htcondor2/_collector.py
+htcondor2/_subsystem_type.py
+htcondor2/_daemon_type.py
+htcondor2/_ad_type.py
+htcondor2/__init__.py
 
 classad/__init__.py
 

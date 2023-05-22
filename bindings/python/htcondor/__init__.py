@@ -71,16 +71,14 @@ def _add_dll_dir():
 _check_for_config()
 
 with _add_dll_dir():
-    import classad2 as classad
-    from . import htcondor
-    from . import htcondor2_impl
-    from . import _lock
+    import classad
+    from . import htcondor, _lock
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:
-    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor2_impl._version()).group(1)
+    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor.version()).group(1)
 except (AttributeError, IndexError):
-    __version__ = htcondor2_impl._version().split()[1]
+    __version__ = htcondor.version().split()[1]
 
 # add locks in-place
 _lock.add_locks(htcondor, skip=_lock.DO_NOT_LOCK)
@@ -96,20 +94,3 @@ from .htcondor import *
 from .htcondor import _Param
 
 from ._job_status import JobStatus
-
-
-#
-# Replace functions implemented in Boost with ones written in pure C API.
-#
-from .htcondor2_impl import _version as version
-from .htcondor2_impl import _platform as platform
-
-from ._subsystem_type import SubsystemType
-from .htcondor2_impl import _set_subsystem as set_subsystem
-
-from ._daemon_type import DaemonType
-from ._ad_type import AdType
-from ._collector import Collector
-
-from .htcondor2_impl import _hack
-from .htcondor2_impl import _handle

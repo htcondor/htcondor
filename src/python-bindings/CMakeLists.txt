@@ -2,7 +2,9 @@
 set( HTCONDOR_BINDINGS_SOURCES
     bulk_query_iterator.cpp
     claim.cpp
+    collector.cpp
     config.cpp
+    daemon_and_ad_types.cpp
     credd.cpp
     daemon_location.cpp
     dc_tool.cpp
@@ -14,7 +16,6 @@ set( HTCONDOR_BINDINGS_SOURCES
     JobEventLog.cpp
     module_lock.cpp
     negotiator.cpp
-    old_boost.h
     schedd.cpp
     secman.cpp
     startd.cpp
@@ -410,7 +411,7 @@ else()
 
 
       install ( TARGETS py3htcondor DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
-      install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor )
+      install ( TARGETS py3htcondor2_impl DESTINATION ${C_PYTHON3ARCHLIB}/htcondor2 )
       install ( TARGETS py3classad_module DESTINATION ${C_PYTHON3ARCHLIB}/classad )
       install ( TARGETS py3classad2_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad2 )
       install ( TARGETS py3classad3_impl DESTINATION ${C_PYTHON3ARCHLIB}/classad3 )
