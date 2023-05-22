@@ -573,5 +573,6 @@ NAMETABLE_DIRECTIVE:END_SECTION:collector
 //#define REQUEST_CLAIM_PAIR			4	// Not used
 #define REQUEST_CLAIM_LEFTOVERS_2	5
 //#define REQUEST_CLAIM_PAIR_2		6		// Not used
+#define REQUEST_CLAIM_SLOT_AD		7
 
 #endif  /* of ifndef _CONDOR_COMMANDS_H */
