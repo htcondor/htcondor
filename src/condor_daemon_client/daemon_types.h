@@ -20,6 +20,7 @@
 #ifndef _CONDOR_DAEMON_TYPES_H
 #define _CONDOR_DAEMON_TYPES_H
 
+#include "condor_adtypes.h"
 
 // if you add another type to this list, make sure to edit
 // daemon_types.C and add the string equivilant.
@@ -38,5 +39,8 @@ typedef enum : long {
 const char* daemonString( daemon_t dt );
 daemon_t stringToDaemonType( const char* name );
 
+// If `d` corresponds to an ad type, sets `a` to that type and return true;
+// otherwise, returns false.
+bool convert_daemon_type_to_ad_type(daemon_t d, AdTypes & a);
 
 #endif /* _CONDOR_DAEMON_TYPES_H */

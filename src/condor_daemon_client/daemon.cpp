@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_config.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 #include "condor_open.h"
 
 #include "daemon.h"
@@ -286,6 +287,63 @@ Daemon::~Daemon()
 //////////////////////////////////////////////////////////////////////
 // Data-providing methods
 //////////////////////////////////////////////////////////////////////
+
+ClassAd *
+Daemon::locationAd() {
+	if( m_daemon_ad_ptr ) {
+		// dprintf( D_ALWAYS, "locationAd(): found daemon ad, returning it\n" );
+		return m_daemon_ad_ptr;
+	}
+
+	if( m_location_ad_ptr ) {
+		// dprintf( D_ALWAYS, "locationAd(): found location ad, returning it\n" );
+		return m_location_ad_ptr;
+	}
+
+	ClassAd * locationAd = new ClassAd();
+	const char * buffer = NULL;
+
+	buffer = this->addr();
+	if(! buffer) { goto failure; }
+	if(! locationAd->InsertAttr(ATTR_MY_ADDRESS, buffer)) { goto failure; }
+
+	buffer = this->name();
+	if(! buffer) { buffer = "Unknown"; }
+	if(! locationAd->InsertAttr(ATTR_NAME, buffer)) { goto failure; }
+
+	buffer = this->fullHostname();
+	if(! buffer) { buffer = "Unknown"; }
+	if(! locationAd->InsertAttr(ATTR_MACHINE, buffer)) { goto failure; }
+
+	/* This will inevitably be overwritten by CondorVersion(), below,
+	   so I don't know what the original was attempting accomplish here. */
+	buffer = this->version();
+	if(! buffer) { buffer = ""; }
+	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+
+	AdTypes ad_type;
+	if(! convert_daemon_type_to_ad_type(this->type(), ad_type)) { goto failure; }
+	buffer = AdTypeToString(ad_type);
+	if(! buffer) { goto failure; }
+	if(! locationAd->InsertAttr(ATTR_MY_TYPE, buffer)) { goto failure; }
+
+	buffer = CondorVersion();
+	if(! locationAd->InsertAttr(ATTR_VERSION, buffer)) { goto failure; }
+
+	buffer = CondorPlatform();
+	if(! locationAd->InsertAttr(ATTR_PLATFORM, buffer)) { goto failure; }
+
+	// dprintf( D_ALWAYS, "locationAd(): synthesized location ad, returning it.\n" );
+	m_location_ad_ptr = locationAd;
+	return m_location_ad_ptr;
+
+  failure:;
+	// dprintf( D_ALWAYS, "Daemon::locationAd() failed.\n" );
+	delete locationAd;
+	return NULL;
+}
+
+
 
 const char*
 Daemon::name( void )

@@ -7,7 +7,7 @@ from .htcondor2_impl import _collector_query
 from .htcondor2_impl import _collector_locate_local
 from .htcondor2_impl import _collector_advertise
 
-from ._ad_type import AdType, AdTypeToMyType
+from ._ad_type import AdType
 from ._daemon_type import DaemonType
 
 
@@ -89,18 +89,8 @@ class Collector():
             constraint = True
             return self.query(ad_type, constraint, self._for_location)
 
-        # This is kind of dumb, but someone broke daemon.daemonAd(),
-        # and I don't feel like fixing it.
-        (ad, my_addr, name, machine, daemon_version, condor_version, condor_platform) = _collector_locate_local(self, self._handle, int(daemon_type))
-        ad["MyAddr"] = my_addr
-        ad["Name"] = name
-        ad["Machine"] = machine
-        ad["CondorVersion"] = daemon_version
-        ad["MyType"] = AdTypeToMyType[ad_type]
-        # This is almost certainly wrong, but it's what version 1 did.
-        ad["CondorVersion"] = condor_version
-        ad["ConodrPlatform"] = condor_platform
-        return [ad]
+        return _collector_locate_local(self, self._handle, int(daemon_type))
+
 
     def locateAll(self,
         daemon_type: DaemonType,

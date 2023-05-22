@@ -150,26 +150,20 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 
 	Daemon local( daemon_type, 0, 0 );
 	if( local.locate() ) {
-        PyObject * ad = py_new_classad_classad(NULL);
-
-		PyObject * tuple = Py_BuildValue( "Ozzzzzz",
-		  ad, local.addr(), local.name(), local.fullHostname(), local.version(),
-		  CondorVersion(), CondorPlatform()
-		);
-		if( tuple == NULL ) {
-			// Py_BuildValue() has already set an exception for us.
+		ClassAd * locateOnlyAd = local.locationAd();
+		if( locateOnlyAd == NULL ) {
+			PyErr_SetString( PyExc_RuntimeError, "Found local daemon but failed to acquire its ad." );
 			return NULL;
 		}
 
-		return tuple;
+		PyObject * pyClassAd = py_new_classad_classad(locateOnlyAd->Copy());
+		PyObject * list = Py_BuildValue( "[N]", pyClassAd );
+		return list;
 	} else {
 		// This was HTCondorLocateError in version 1.
 		PyErr_SetString( PyExc_RuntimeError, "Unable to locate local daemon." );
 		return NULL;
 	}
-
-	PyErr_SetString( PyExc_NotImplementedError, "_collector_locate" );
-	return NULL;
 }
 
 
