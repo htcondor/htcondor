@@ -27,4 +27,3 @@ Users' Manual
    self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   potential-problems
