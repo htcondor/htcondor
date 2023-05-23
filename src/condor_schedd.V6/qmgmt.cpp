@@ -1801,7 +1801,9 @@ void JobQueueBase::PopulateFromAd()
 			this->LookupInteger(ATTR_PROC_ID, jid.proc);
 		}
 		entry_type = TypeOfJid(jid);
-		dprintf(D_ERROR, "WARNING - JobQueueBase has no entry_type set %d.%d", jid.cluster, jid.proc);
+		if (entry_type) {
+			dprintf(D_ERROR, "WARNING - JobQueueBase had no entry_type set %d.%d\n", jid.cluster, jid.proc);
+		}
 	}
 }
 

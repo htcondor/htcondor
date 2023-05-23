@@ -972,8 +972,10 @@ VanillaProc::outOfMemoryEvent() {
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int64_t usageMB = 0;
-	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usageMB);
+	int64_t usageKB = 0;
+	// This is the peak
+	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);
+	int64_t usageMB = usageKB / 1024;
 
 	//
 	//  Cgroup memory limits are limits, not reservations.
@@ -1001,7 +1003,7 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usageMB << " megabytes.";
+		ss << "Job has gone over memory limit of " << (m_memory_limit / (1024 * 1024))  << " megabytes. Peak usage: " << usageMB << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}

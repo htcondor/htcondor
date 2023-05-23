@@ -35,6 +35,12 @@ Bugs Fixed:
 - Fixed a bug that would very rarely cause *condor_wait* to hang forever.
   :jria:`1792`
 
+- Fixed recently introduced bug where only on Enterprise Linux 7
+  system, startds with hard cgroup memory enforcement would not
+  put jobs that went over their memory usage on hold, they would
+  exit and leave the queue.
+  :jira:`1801`
+
 - Fixed a very recently introduced bug where the .job.ad and .machine.ad
   files would not be written into the job sandbox.
   :jira:`1737`
