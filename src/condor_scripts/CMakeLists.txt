@@ -38,6 +38,7 @@ if (NOT WINDOWS)
     install ( FILES condor_remote_cluster DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     clone_install( condor_remote_cluster "${C_BIN}" bosco_cluster "${C_BIN}" )
     install ( FILES condor_ssh_start DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+    install ( FILES upgrade9to10checks.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
     install ( FILES condor_configure DESTINATION ${C_SBIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
     install ( FILES condor_configure DESTINATION ${C_SBIN} RENAME condor_install PERMISSIONS ${CONDOR_SCRIPT_PERMS} )

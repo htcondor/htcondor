@@ -29,7 +29,7 @@ def max_victim_jobs():
     params={
         # PyTest and HTCondor can both handle spaces in the parameter name,
         # but it's easier debugging in the shell without them.
-        "time_out": ("1", "[now job {0}]: coalesce command timed out, failing"),
+        "time_out": ("1", "Failed to send COALESCE_SLOTS to startd"),
         "transient_failure": (
             "2",
             "[now job {0}]: coalesce failed: FAILURE INJECTION: 2",
@@ -137,7 +137,7 @@ def sched_log_containing_failure(
     assert sched_log.wait(
         # The documentation of DaemonLogMessage looks incomplete, but since
         # this doesn't start with an underscore, I'm assuming it's public.
-        condition=lambda line: line.message == failure_log_message_with_job_id,
+        condition=lambda line: failure_log_message_with_job_id in line.message,
         timeout=60,
     )
 

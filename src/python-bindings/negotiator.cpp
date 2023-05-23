@@ -225,6 +225,14 @@ struct Negotiator {
         attrs.push_back("IsAccountingGroup");
         attrs.push_back("AccumulatedUsage");
         attrs.push_back("Ceiling");
+        attrs.push_back("EffectiveQuota");
+        attrs.push_back("ConfigQuota");
+        attrs.push_back("SubtreeQuota");
+        attrs.push_back("GroupSortKey");
+        attrs.push_back("SurplusPolicy");
+        attrs.push_back("HierWeightedResourcesUsed");
+        attrs.push_back("SubmitterShare");
+        attrs.push_back("SubmitterLimit");
         return toList(ad, attrs);
     }
 

@@ -9420,6 +9420,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     will be tried.
     The default is ``False``.
 
+:macro-def:`AUTH_SSL_ALLOW_CLIENT_PROXY`
+    A boolean value that controls whether a daemon will accept an
+    X.509 proxy certificate from a client during SSL authentication.
+    The default is ``False``.
+
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
     by the client during an SSL authentication of a Condor daemon. This
