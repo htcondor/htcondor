@@ -187,6 +187,7 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
 	if (oomc < 0) {
 		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
 		return false;
 	}
 
@@ -195,6 +196,8 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
 	if (ccp < 0) {
 		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		close(oomc);
 		return false;
 	}
 
@@ -205,6 +208,9 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
 	if (r < 0) {
 		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
+		close(efd);
+		close(ccp);
+		close(oomc);
 		return false;
 	}
 
@@ -477,16 +483,18 @@ ProcFamilyDirectCgroupV1::has_been_oom_killed(pid_t pid) {
 	// reading 8 bytes from the eventfd will result in a non-zero
 	// oom count, meaning we got oom killed, or -1 with EAGAIN
 	// if it is zero
-	int efd = cgroup_eventfd_map[pid];
-	int64_t oom_count = 0;
-	int r = read(efd, &oom_count, sizeof(oom_count));
-	if (r < 0) {
+	if (cgroup_eventfd_map.contains(pid)) {
+		int efd = cgroup_eventfd_map[pid];
+		int64_t oom_count = 0;
+		int r = read(efd, &oom_count, sizeof(oom_count));
+		if (r < 0) {
 		dprintf(D_FULLDEBUG, "reading from eventfd oom returns -1: %s\n", strerror(errno));
-	}
-	killed = oom_count > 0;
+		}
+		killed = oom_count > 0;
 
-	cgroup_eventfd_map.erase(efd);
-	close(efd);
+		cgroup_eventfd_map.erase(efd);
+		close(efd);
+	}
 
 	return killed;
 }
