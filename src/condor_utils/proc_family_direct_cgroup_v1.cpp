@@ -27,10 +27,12 @@
 #include <array>
 
 #include <filesystem>
+#include <sys/eventfd.h>
 
 namespace stdfs = std::filesystem;
 
 static std::map<pid_t, std::string> cgroup_map;
+static std::map<pid_t, int> cgroup_eventfd_map;
 
 static stdfs::path cgroup_mount_point() {
 	return "/sys/fs/cgroup";
@@ -87,7 +89,6 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 
 		// If the full cgroup exists, remove it to clear the various
 		// peak statistics and any existing memory
-		// GGT TODO should be remove_fully (also in v2)
 		fullyRemoveCgroup(absolute_cgroup);
 
 		bool can_make_cgroup_dir = mkdir_and_parents_if_needed(absolute_cgroup.c_str(), 0755, 0755, PRIV_ROOT);
@@ -173,6 +174,53 @@ ProcFamilyDirectCgroupV1::cgroupify_process(const std::string &cgroup_name, pid_
 		}
 	}
 
+	// Make an eventfd than we can read on job exit to see if an OOM fired
+	// EFD_NONBLOCK means don't block reading it, if there are no OOMs
+	int efd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+	if (efd < 0) {
+		dprintf(D_ALWAYS, "Cannot create eventfd for monitoring OOM: %s\n", strerror(errno));
+		return false;
+	}
+
+	// get the fd to memory.oom_control to put into event_control
+	stdfs::path oom_control_path = cgroup_root_dir / "memory" / cgroup_name / "memory.oom_control";
+	int oomc = open(oom_control_path.c_str(), O_WRONLY, 0666);
+	if (oomc < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		return false;
+	}
+
+	// get the fd to cgroup.event_control to tell the kernel to increment oom event count in the eventfd
+	stdfs::path cgroup_control_path = cgroup_root_dir / "memory" / cgroup_name / "cgroup.event_control";
+	int ccp = open(cgroup_control_path.c_str(), O_WRONLY, 0666);
+	if (ccp < 0) {
+		dprintf(D_ALWAYS, "Cannot open memory.oom_control for monitoring OOM: %s\n", strerror(errno));
+		close(efd);
+		close(oomc);
+		return false;
+	}
+
+	// tell the cgroup_event control the eventfd and the oom_control
+	std::string two_fds;
+	formatstr(two_fds, "%d %d", efd, oomc);
+
+	int r = write(ccp, two_fds.c_str(), strlen(two_fds.c_str()));
+	if (r < 0) {
+		dprintf(D_ALWAYS, "Cannot write %s to  cgroup.event_control for monitoring OOM: %s\n", two_fds.c_str(), strerror(errno));
+		close(efd);
+		close(ccp);
+		close(oomc);
+		return false;
+	}
+
+	// Close the ones we don't need, keep the one eventfd we will use later
+	close(ccp);
+	close(oomc);
+
+	// and save the eventfd, so we can read from it when the job exits to 
+	// check for ooms
+	cgroup_eventfd_map[pid] = efd;
 	return true;
 }
 
@@ -432,36 +480,21 @@ bool
 ProcFamilyDirectCgroupV1::has_been_oom_killed(pid_t pid) {
 	bool killed = false;
 
-	std::string cgroup_name = cgroup_map[pid];
-
-	stdfs::path cgroup_root_dir = cgroup_mount_point();
-	stdfs::path leaf            = cgroup_root_dir / "memory" / cgroup_name;
-	stdfs::path memory_events   = leaf / "memory.oom_control"; // includes children, if any
-
-	dprintf(D_FULLDEBUG, "ProcFamilyDirectCgroupV1::checking if pid %u was oom killed... \n", pid);
-	FILE *f = fopen(memory_events.c_str(), "r");
-	if (!f) {
-		dprintf(D_ALWAYS, "ProcFamilyDirectCgroupV1::has_been_oom_killed cannot open %s: %d %s\n", memory_events.c_str(), errno, strerror(errno));
-		return false;
-	}
-
-	uint64_t oom_count = 0;
-
-	char word[128]; // max size of a word in memory_events
-	while (fscanf(f, "%s", word) != EOF) {
-		// if word is oom_killed
-		if (strcmp(word, "oom_kill") == 0) {
-			// next word is the count
-			if (fscanf(f, "%ld", &oom_count) != 1) {
-				dprintf(D_ALWAYS, "Error reading oom_count field out of cpu.stat\n");
-				fclose(f);
-				return false;
-			}
+	// reading 8 bytes from the eventfd will result in a non-zero
+	// oom count, meaning we got oom killed, or -1 with EAGAIN
+	// if it is zero
+	if (cgroup_eventfd_map.contains(pid)) {
+		int efd = cgroup_eventfd_map[pid];
+		int64_t oom_count = 0;
+		int r = read(efd, &oom_count, sizeof(oom_count));
+		if (r < 0) {
+		dprintf(D_FULLDEBUG, "reading from eventfd oom returns -1: %s\n", strerror(errno));
 		}
-	}
-	fclose(f);
+		killed = oom_count > 0;
 
-	killed = oom_count > 0;
+		cgroup_eventfd_map.erase(efd);
+		close(efd);
+	}
 
 	return killed;
 }
@@ -511,7 +544,6 @@ static bool cgroup_controller_is_writeable(const std::string &controller, std::s
 	{
 		TemporaryPrivSentry sentry(PRIV_ROOT); // Test with all our powers
 
-		dprintf(D_ALWAYS, "GGT GGT GGT about to access %s\n", test_path.c_str());
 		if (access(test_path.c_str(), R_OK | W_OK) == 0) {
 			dprintf(D_ALWAYS, "    Cgroup %s/%s is useable\n", controller.c_str(), relative_cgroup.c_str());
 			return true;
