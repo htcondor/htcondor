@@ -21,25 +21,39 @@ Release Notes:
 - Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
   is April 30th, 2023.
 
-- Prelimary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
   :jira:`1668`
 
 New Features:
 
+- Added new script called ``upgrade9to10checks.py`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
+
 - Added ``CONFIG_ROOT`` configuration variable that is set to the directory
-  of the main config file before the configuration files are read.
+  of the main configuration file before the configuration files are read.
   :jira:`1733`
 
 - Ensure that the SciTokens library can create its cache of token
   issuer credentials.
   :jira:`1757`
 
+- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
+  which allows the client to present an X.509 proxy certificate during
+  SSL authentication with a daemon.
+  :jira:`1781`
+
 Bugs Fixed:
 
-- Fixed two problems with GPU metrics.  First, fixed a bug where reconfiguring
-  a *condor_startd* caused GPU metrics to stop being reported.  Second, fixed
-  a bug where GPU (core) utilization could be wildly over-reported.
-  :jira:`1660`
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing successfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
 
 - Fixed a bug where Job Ad Information events weren't always written
   when using the Job Router.
@@ -85,17 +99,20 @@ Bugs Fixed:
   :jira:`1756`
 
 - *condor_store_cred* and *condor_credmon_vault* now reuses existing
-  Vault tokens when downscoping access tokens.
+  Vault tokens when down scoping access tokens.
   :jira:`1527`
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
 - Fixed a bug where DAGMan job submission would fail when not using
-  direct submission due to setting a custom job classad attribute with
+  direct submission due to setting a custom job ClassAd attribute with
   the ``+`` syntax in a ``VARS`` command that doesn't append the
   variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
   :jira:`1771`
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
 
 .. _lts-version-history-1003:
 
