@@ -127,6 +127,10 @@ Bugs Fixed:
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
 
+- When writing a remove event in JSON, the ``ToE.When`` field is now seconds
+  since the (Unix) epoch, like all other events.
+  :jira:`1763`
+
 - Fixed a bug where DAGMan job submission would fail when not using
   direct submission due to setting a custom job ClassAd attribute with
   the ``+`` syntax in a ``VARS`` command that doesn't append the
