@@ -26,7 +26,6 @@
 #include <set>
 #include "directory.h"
 #include "view_server.h"
-#include "extArray.h"
 #include "util_lib_proto.h" // for rotate_file
 
 //-------------------------------------------------------------------

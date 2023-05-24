@@ -596,6 +596,16 @@ elseif(APPLE)
 	set(CMAKE_STRIP ${CMAKE_SOURCE_DIR}/src/condor_scripts/macosx_strip CACHE FILEPATH "Command to remove sybols from binaries" FORCE)
 
 	set(HAVE_PTHREADS TRUE)
+
+	# Does libcurl use NSS for security?
+	# We need to employ some workarounds for NSS problems.
+	execute_process(COMMAND /usr/bin/curl --version
+		COMMAND grep -q NSS
+		RESULT_VARIABLE CURL_NSS_TEST)
+	if (CURL_NSS_TEST EQUAL 0)
+		set(CURL_USES_NSS TRUE)
+	endif()
+
 endif()
 
 ##################################################

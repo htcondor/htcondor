@@ -77,7 +77,6 @@
 #include "condor_mkstemp.h"
 #include "basename.h"
 #include "condor_random_num.h"
-#include "extArray.h"
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
@@ -2995,8 +2994,6 @@ public:
 	char *admin;
 	char *config;
 };
-
-#include "extArray.h"
 
 static std::vector<RuntimeConfigItem> rArray;
 

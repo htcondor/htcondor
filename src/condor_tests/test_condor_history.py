@@ -15,12 +15,14 @@
 #       - This test will also test some various expected failures
 
 #Configuration for personal condor. We add names for STARTD & SCHEDD to trick history for remote queries
+#Note: I put set the config dir to the execute dir because we don't run any actual jobs still might be
+#      nice to have a better config dir location.
 #testreq: personal
 """<<CONDOR_TESTREQ_CONFIG
     # Configuration to assist testing condor_history tool
     SCHEDD_NAME = TEST_SCHEDD@
     STARTD_NAME = TEST_STARTD@
-    LOCAL_CONFIG_DIR = $(LOCAL_DIR)
+    LOCAL_CONFIG_DIR = $(EXECUTE)
 """
 #endtestreq
 
@@ -106,12 +108,23 @@ TEST_ERROR_CASES = {
 }
 #===============================================================================================
 # Reconfig condor to how we want
-def reconfig(condor, config={}):
+def reconfig(condor, test_name, test_dir, config={}):
     p = condor.run_command(["condor_config_val","LOCAL_CONFIG_DIR"])
-    filename =  os.path.join(p.stdout,"00_Temp.conf")
+    #Move any old config dir files to the test dir for archiving of test config
+    for tmp_file in os.listdir(p.stdout):
+        old_path = os.path.join(p.stdout,tmp_file)
+        new_path = os.path.join(str(test_dir),tmp_file)
+        os.rename(old_path,new_path)
+    #If no config is needed then run reconfig and return
+    if len(config) == 0:
+        p = condor.run_command(["condor_reconfig"])
+        return
+    #Else make a config file = test_name.conf and write key=value config information
+    filename =  os.path.join(p.stdout,f"{test_name}.conf")
     with open(filename, "w") as f:
         for knob,value in config.items():
             f.write(f"{knob}={value}\n")
+    #Reconfig
     p = condor.run_command(["condor_reconfig"])
 #-----------------------------------------------------------------------------------------------
 #Write cluster(s) job history to specified file
@@ -361,7 +374,7 @@ def runHistoryCmds(default_condor, test_dir, setUpFiles):
     for key in TEST_CASES.keys():
         if key == "remote_schedd.hist":
             p = default_condor.run_command(["condor_config_val","HISTORY"])
-            reconfig(default_condor, {"SCHEDD.HISTORY":p.stdout,"HISTORY":""})
+            reconfig(default_condor, key, test_dir, {"SCHEDD.HISTORY":p.stdout,"HISTORY":""})
         #Split command into list for .run_command()
         cmd = TEST_CASES[key].cmd.split()
         #For each special flag that needs a file appended
@@ -405,7 +418,7 @@ def runErrorCmds(default_condor, test_dir):
     for key in TEST_ERROR_CASES.keys():
         config = TEST_ERROR_CASES[key]["config"]
         if config != None:
-            reconfig(default_condor, config)
+            reconfig(default_condor, key, test_dir, config)
         cmd = TEST_ERROR_CASES[key]["cmd"].split()
         p = default_condor.run_command(cmd)
         #Make file in output dir with as `test name`.out

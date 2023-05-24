@@ -334,6 +334,9 @@ class FileTransfer final: public Service {
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
+	void setRenameExecutable(bool rename_exec)
+	{ PeerRenamesExecutable = rename_exec; }
+
 	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
 
 	void setTransferQueueContactInfo(char const *contact);
@@ -490,6 +493,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesXferInfo{false};
 	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
+	bool PeerRenamesExecutable{true};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};

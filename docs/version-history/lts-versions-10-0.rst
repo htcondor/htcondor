@@ -28,6 +28,13 @@ Bugs Fixed:
   omitted from accounting ads queried from the *condor_negotiator*.
   :jira:`1780`
 
+- The classad functions ``anycompare``, ``allcompare``, ``sum``, ``min``,
+  ``max``, ``avg`` and ``join`` no longer treat a single undefined input
+  as forcing the result to be undefined.  ``sum``, ``min``, ``max``, ``avg`` and ``join``
+  will skip over undefined inputs, while ``anycompare`` and ``allcompare`` will compare
+  them correctly.
+  :jira:`1799`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
@@ -46,6 +53,14 @@ Release Notes:
   :jira:`1668`
 
 New Features:
+
+- Added new script called ``upgrade9to10checks.py`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
 
 - Added ``CONFIG_ROOT`` configuration variable that is set to the directory
   of the main configuration file before the configuration files are read.

@@ -507,9 +507,12 @@ void INFNBatchJob::doEvaluateState()
 				// In 8.1, the file transfer protocol changed and we added
 				// a command to exchange Condor version strings with the
 				// FT GAHP.
+				// Also, never rename the executable during transfer, even
+				// to an older FT GAHP.
 				const char *ver_str = m_xfer_gahp->getCondorVersion();
 				if ( ver_str && ver_str[0] ) {
 					m_filetrans->setPeerVersion( ver_str );
+					m_filetrans->setRenameExecutable(false);
 				} else {
 					CondorVersionInfo ver( 8, 0, 0 );
 					m_filetrans->setPeerVersion( ver );
@@ -1565,9 +1568,9 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
 		if ( xfer_exec ) {
-			//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
-			//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
-			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
+			submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+			//formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
 			submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
 		}
 

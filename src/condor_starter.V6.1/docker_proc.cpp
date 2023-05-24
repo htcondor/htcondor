@@ -140,21 +140,11 @@ int DockerProc::StartJob() {
 	std::string innerdir = Starter->jic->jobRemoteIWD();
 #endif
 
-	//
-	// This code is deliberately wrong, probably for backwards-compability.
-	// (See the code in JICShadow::beginFileTransfer(), which assumes that
-	// we transferred the executable if ATTR_TRANSFER_EXECUTABLE is unset.)
-	// Rather than risk breaking anything by fixing condor_submit (which
-	// does not set ATTR_TRANSFER_EXECUTABLE unless it's false) -- and
-	// introducing a version dependency -- assume the executable was
-	// transferred unless it was explicitly noted otherwise.
-	//
-	
 	bool transferExecutable = true;
 	JobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transferExecutable );
-	if( transferExecutable ) {
-		// Transfered executables are still renamed (sadly)
-		command = "./condor_exec.exe";
+	if( Starter->jic->usingFileTransfer() && transferExecutable ) {
+		std::string old_cmd = command;
+		formatstr(command, "./%s", condor_basename(old_cmd.c_str()));
 	}
 
 	ArgList args;

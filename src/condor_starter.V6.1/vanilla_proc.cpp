@@ -238,120 +238,6 @@ VanillaProc::StartJob()
 {
 	dprintf(D_FULLDEBUG,"in VanillaProc::StartJob()\n");
 
-	// vanilla jobs, unlike standard jobs, are allowed to run 
-	// shell scripts (or as is the case on NT, batch files).  so
-	// edit the ad so we start up a shell, pass the executable as
-	// an argument to the shell, if we are asked to run a .bat file.
-#ifdef WIN32
-
-	CHAR		interpreter[MAX_PATH+1],
-				systemshell[MAX_PATH+1];    
-	const char* jobtmp				= Starter->jic->origJobName();
-	size_t		joblen				= strlen(jobtmp);
-	const char	*extension			= joblen > 0 ? &(jobtmp[joblen-4]) : NULL;
-	bool		binary_executable	= ( extension && 
-										( MATCH == strcasecmp ( ".exe", extension ) || 
-										  MATCH == strcasecmp ( ".com", extension ) ) ),
-				java_universe		= ( CONDOR_UNIVERSE_JAVA == job_universe );
-	ArgList		arguments;
-	std::string	filename;
-	std::string	jobname;
-	std::string error;
-	
-	if ( extension && !java_universe && !binary_executable ) {
-
-		/** since we do not actually know how long the extension of
-			the file is, we'll need to hunt down the '.' in the path,
-			if it exists */
-		extension = strrchr ( jobtmp, '.' );
-
-		if ( !extension ) {
-
-			dprintf ( 
-				D_ALWAYS, 
-				"VanillaProc::StartJob(): Failed to extract "
-				"the file's extension.\n" );
-
-			/** don't fail here, since we want executables to run
-				as usual.  That is, some condor jobs submit 
-				executables that do not have the '.exe' extension,
-				but are, nonetheless, executable binaries.  For
-				instance, a submit script may contain:
-
-				executable = executable$(OPSYS) */
-
-		} else {
-
-			/** pull out the path to the executable */
-			if ( !JobAd->LookupString ( 
-				ATTR_JOB_CMD, 
-				jobname ) ) {
-				
-				/** fall back on Starter->jic->origJobName() */
-				jobname = jobtmp;
-
-			}
-
-			/** If we transferred the job, it may have been
-				renamed to condor_exec.exe even though it is
-				not an executable. Here we rename it back to
-				a the correct extension before it will run. */
-			if ( MATCH == strcasecmp ( 
-					CONDOR_EXEC, 
-					condor_basename ( jobname.c_str () ) ) ) {
-				formatstr ( filename, "condor_exec%s", extension );
-				if (rename(CONDOR_EXEC, filename.c_str()) != 0) {
-					dprintf (D_ALWAYS, "VanillaProc::StartJob(): ERROR: "
-							"failed to rename executable from %s to %s\n", 
-							CONDOR_EXEC, filename.c_str() );
-				}
-			} else {
-				filename = jobname;
-			}
-			
-			/** Since we've renamed our executable, we need to
-				update the job ad to reflect this change. */
-			if ( !JobAd->Assign ( 
-				ATTR_JOB_CMD, 
-				filename ) ) {
-
-				dprintf (
-					D_ALWAYS,
-					"VanillaProc::StartJob(): ERROR: failed to "
-					"set new executable name.\n" );
-
-				return FALSE;
-
-			}
-
-			/** We've moved the script to argv[1], so we need to 
-				add	the remaining arguments to positions argv[2]..
-				argv[/n/]. */
-			if ( !arguments.AppendArgsFromClassAd ( JobAd, error ) ||
-				 !arguments.InsertArgsIntoClassAd ( JobAd, NULL, error ) ) {
-
-				dprintf (
-					D_ALWAYS,
-					"VanillaProc::StartJob(): ERROR: failed to "
-					"get arguments from job ad: %s\n",
-					error.c_str () );
-
-				return FALSE;
-
-			}
-
-			/** Since we know already we don't want this file returned
-				to us, we explicitly add it to an exception list which
-				will stop the file transfer mechanism from considering
-				it for transfer back to its submitter */
-			Starter->jic->removeFromOutputFiles (
-				filename.c_str () );
-
-		}
-			
-	}
-#endif
-
 	// set up a FamilyInfo structure to tell OsProc to register a family
 	// with the ProcD in its call to DaemonCore::Create_Process
 	//
@@ -380,7 +266,7 @@ VanillaProc::StartJob()
 		        fi.login);
 	}
 
-	FilesystemRemap * fs_remap = NULL;
+	std::unique_ptr<FilesystemRemap> fs_remap;
 #if defined(LINUX)
 	// on Linux, we also have the ability to track processes via
 	// a phony supplementary group ID
@@ -543,7 +429,7 @@ VanillaProc::StartJob()
                            }
                        }
                        if (!fs_remap) {
-                               fs_remap = new FilesystemRemap();
+                           fs_remap.reset(new FilesystemRemap());
                        }
                        dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", execute_dir.c_str(), full_dir_str.c_str());
                        if (fs_remap->AddMapping(execute_dir, full_dir_str)) {
@@ -608,7 +494,7 @@ VanillaProc::StartJob()
 
 			mount_list.rewind();
 			if (!fs_remap) {
-				fs_remap = new FilesystemRemap();
+				fs_remap.reset(new FilesystemRemap());
 			}
 			const char * next_dir;
 			while ( (next_dir=mount_list.next()) ) {
@@ -633,18 +519,15 @@ VanillaProc::StartJob()
 
 						if (!mkdir_and_parents_if_needed( full_dir, S_IRWXU, PRIV_USER )) {
 							dprintf(D_ALWAYS, "Failed to create scratch directory %s\n", full_dir);
-							delete fs_remap;
 							return FALSE;
 						}
 						dprintf(D_FULLDEBUG, "Adding mapping: %s -> %s.\n", full_dir, next_dir);
 						if (fs_remap->AddMapping(full_dir, next_dir)) {
 							// FilesystemRemap object prints out an error message for us.
-							delete fs_remap;
 							return FALSE;
 						}
 					} else {
 						dprintf(D_ALWAYS, "Unable to concatenate %s and %s.\n", working_dir, next_dir);
-						delete fs_remap;
 						return FALSE;
 					}
 				} else {
@@ -654,7 +537,6 @@ VanillaProc::StartJob()
 		Starter->setTmpDir("/tmp");
 		} else {
 			dprintf(D_ALWAYS, "Unable to perform mappings because %s doesn't exist.\n", working_dir);
-			delete fs_remap;
 			return FALSE;
 		}
 	}
@@ -675,7 +557,7 @@ VanillaProc::StartJob()
 		fi.want_pid_namespace = this->SupportsPIDNamespace();
 		if (fi.want_pid_namespace) {
 			if (!fs_remap) {
-				fs_remap = new FilesystemRemap();
+				fs_remap.reset(new FilesystemRemap());
 			}
 			fs_remap->RemapProc();
 		}
@@ -700,14 +582,12 @@ VanillaProc::StartJob()
 
 			if (!env.MergeFrom(JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot merge environ from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 			env.SetEnv("_CONDOR_PID_NS_INIT_STATUS_FILENAME", filename);
 
 			if (!env.InsertEnvIntoClassAd(*JobAd,  env_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert environ from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 
@@ -724,20 +604,17 @@ VanillaProc::StartJob()
 			args.AppendArg(cmd);
 			if (!args.AppendArgsFromClassAd(JobAd, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Append args from classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 
 			if (!args.InsertArgsIntoClassAd(JobAd, NULL, arg_errors)) {
 				dprintf(D_ALWAYS, "Cannot Insert args into classad so cannot run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 	
 			std::string libexec;
 			if( !param(libexec,"LIBEXEC") ) {
 				dprintf(D_ALWAYS, "Cannot find LIBEXEC so can not run condor_pid_ns_init\n");
-				delete fs_remap;
 				return 0;
 			}
 			std::string c_p_n_i = libexec + "/condor_pid_ns_init";
@@ -751,11 +628,7 @@ VanillaProc::StartJob()
 
 	// have OsProc start the job
 	//
-	int retval = OsProc::StartJob(&fi, fs_remap);
-
-	if (fs_remap != NULL) {
-		delete fs_remap;
-	}
+	int retval = OsProc::StartJob(&fi, fs_remap.get());
 
 #ifdef LINUX
     m_statistics.Reconfig();
@@ -985,8 +858,10 @@ VanillaProc::outOfMemoryEvent() {
 	ClassAd updateAd;
 	PublishUpdateAd( &updateAd );
 	Starter->jic->periodicJobUpdate( &updateAd, true );
-	int64_t usageMB = 0;
-	updateAd.LookupInteger(ATTR_MEMORY_USAGE, usageMB);
+	int64_t usageKB = 0;
+	// This is the peak
+	updateAd.LookupInteger(ATTR_IMAGE_SIZE, usageKB);
+	int64_t usageMB = usageKB / 1024;
 
 	//
 	//  Cgroup memory limits are limits, not reservations.
@@ -1014,7 +889,7 @@ VanillaProc::outOfMemoryEvent() {
 
 	std::stringstream ss;
 	if (m_memory_limit >= 0) {
-		ss << "Job has gone over memory limit of " << m_memory_limit << " megabytes. Peak usage: " << usageMB << " megabytes.";
+		ss << "Job has gone over memory limit of " << (m_memory_limit / (1024 * 1024))  << " megabytes. Peak usage: " << usageMB << " megabytes.";
 	} else {
 		ss << "Job has encountered an out-of-memory event.";
 	}

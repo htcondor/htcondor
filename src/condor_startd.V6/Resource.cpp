@@ -1582,6 +1582,7 @@ Resource::do_update( void )
 
 		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
+		delete workingCollectors;
 	} 
 
 	// We _must_ reset update_tid to -1 before we return so

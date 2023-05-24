@@ -21,12 +21,37 @@ New Features:
   before the user was disabled are allowed to run to completion.
   :jira:`1723`
 
+- Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
+  NSS for security.
+  When an *arc_gahp* process has handled a certain number of commands,
+  a new *arc_gahp* is started and old process exits.
+  The number of commands that triggers a new process is controlled by
+  new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
+  :jira:`1778`
+
+- The job's executable is no longer renamed to *condor_exec.exe* when
+  the job's sandbox is transferred to the Execution Point.
+  :jira:`1227`
+
 Bugs Fixed:
 
 - HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
   HTCondor never put limits on the i/o, and some kernel version panicked
   and crashed when they had active jobs in the blkio controller.
   :jira:`1786`
+
+- Fixed a bug that would very rarely cause *condor_wait* to hang forever.
+  :jria:`1792`
+
+- Fixed recently introduced bug where only on Enterprise Linux 7
+  system, startds with hard cgroup memory enforcement would not
+  put jobs that went over their memory usage on hold, they would
+  exit and leave the queue.
+  :jira:`1801`
+
+- Fixed a very recently introduced bug where the .job.ad and .machine.ad
+  files would not be written into the job sandbox.
+  :jira:`1737`
 
 - Forced condor_ssh_to_job to never try to use a Control Master, which would
   break ssh_to_job.  Also raised the timeout for ssh_to_job which might
