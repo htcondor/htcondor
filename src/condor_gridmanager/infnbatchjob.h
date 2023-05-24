@@ -74,6 +74,7 @@ class INFNBatchJob : public BaseJob
 	char *remoteJobId;
 	int lastPollTime;
 	bool pollNow;
+	bool m_remoteIwdSet;
 
 	Proxy *jobProxy;
 	time_t remoteProxyExpireTime;

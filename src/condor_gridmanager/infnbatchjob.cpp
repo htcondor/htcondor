@@ -159,6 +159,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
+	m_remoteIwdSet = false;
 	myResource = NULL;
 	gahp = NULL;
 	m_xfer_gahp = NULL;
@@ -176,6 +177,11 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	int int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
 		remoteProxyExpireTime = (time_t)int_value;
+	}
+
+	if (jobAd->LookupString("REMOTE_Iwd", m_sandboxPath) ||
+	    jobAd->LookupString(ATTR_JOB_REMOTE_IWD, m_sandboxPath)) {
+		m_remoteIwdSet = true;
 	}
 
 	buff = "";
@@ -569,8 +575,8 @@ void INFNBatchJob::doEvaluateState()
 			}
 
 			std::string sandbox_path;
-			rc = m_xfer_gahp->blah_download_sandbox( remoteSandboxId, gahpAd,
-													 m_sandboxPath );
+			rc = m_xfer_gahp->blah_download_sandbox( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd,
+													 sandbox_path );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -586,6 +592,9 @@ void INFNBatchJob::doEvaluateState()
 				errorString = m_xfer_gahp->getErrorString();
 				gmState = GM_CLEAR_REQUEST;
 			} else {
+				if (!m_remoteIwdSet) {
+					m_sandboxPath = sandbox_path;
+				}
 				gmState = GM_SUBMIT;
 			}
 		} break;
@@ -776,7 +785,7 @@ void INFNBatchJob::doEvaluateState()
 					gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 				}
 
-				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd );
+				rc = m_xfer_gahp->blah_download_proxy( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -904,7 +913,7 @@ void INFNBatchJob::doEvaluateState()
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 			}
 
-			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
+			rc = m_xfer_gahp->blah_upload_sandbox( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -970,7 +979,7 @@ void INFNBatchJob::doEvaluateState()
 		case GM_DELETE_SANDBOX: {
 			// Clean up any files left behind by the job execution.
 
-			if ( myResource->GahpIsRemote() ) {
+			if ( myResource->GahpIsRemote() && !m_remoteIwdSet ) {
 
 				// Delete the remote sandbox
 				if ( gahpAd == NULL ) {
@@ -1145,7 +1154,9 @@ void INFNBatchJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
-			m_sandboxPath = "";
+			if (!m_remoteIwdSet) {
+				m_sandboxPath = "";
+			}
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
@@ -1686,7 +1697,6 @@ ClassAd *INFNBatchJob::buildTransferAd()
 
 	ClassAd *xfer_ad = new ClassAd();
 	ExprTree *next_expr;
-	const char *next_name;
 
 	std::string stdout_path;
 	std::string stderr_path;
@@ -1717,17 +1727,11 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		}
 	}
 
-	for ( auto itr = jobAd->begin(); itr != jobAd->end(); itr++ ) {
-		next_name = itr->first.c_str();
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
-			 strlen( next_name ) > 7 ) {
-
-			char const *attr_name = &(next_name[7]);
-
-			ExprTree * pTree = itr->second->Copy();
-			xfer_ad->Insert( attr_name, pTree );
-		}
-	}
+	// Don't process "REMOTE_*" attributes like we do for the ad given
+	// to the blahp.
+	// This ad is used for both local and remote ends of FileTransfer.
+	// We don't want Remote_Iwd to apply to the local ad, and the ft-gahp
+	// will overwrite Iwd in the remote ad.
 
 	// TODO This may require some additional attributes to be set.
 
