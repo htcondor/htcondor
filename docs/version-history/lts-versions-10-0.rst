@@ -35,6 +35,10 @@ Bugs Fixed:
   them correctly.
   :jira:`1799`
 
+- Fixed a bug where the *condor_startd* would sometimes not remove docker images
+  that had been left behind when a *condor_starter* exited abruptly.
+  :jira:`1814`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
