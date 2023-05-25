@@ -40,6 +40,10 @@ Bugs Fixed:
   use of ``condor_history`` specifying a file to read with ``-f`` flag instead
   of full ``-file``.
   :jira:`1812`
+  
+- Fixed a bug where the *condor_startd* would sometimes not remove docker images
+  that had been left behind when a *condor_starter* exited abruptly.
+  :jira:`1814`
 
 .. _lts-version-history-1004:
 
