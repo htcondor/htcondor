@@ -35,6 +35,11 @@ Bugs Fixed:
   them correctly.
   :jira:`1799`
 
+- The submit commands **remote_initialdir**, **transfer_input**,
+  **transfer_output**, and **transfer_error** now work properly when
+  submitting a **batch** grid universe job to a remote system via ssh.
+  :jira:`1560`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
