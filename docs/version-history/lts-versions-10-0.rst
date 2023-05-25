@@ -66,6 +66,10 @@ New Features:
   of the main configuration file before the configuration files are read.
   :jira:`1733`
 
+- Ensure that the SciTokens library can create its cache of token
+  issuer credentials.
+  :jira:`1757`
+
 - Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
   which allows the client to present an X.509 proxy certificate during
   SSL authentication with a daemon.
@@ -128,6 +132,10 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- When writing a remove event in JSON, the ``ToE.When`` field is now seconds
+  since the (Unix) epoch, like all other events.
+  :jira:`1763`
 
 - Fixed a bug where DAGMan job submission would fail when not using
   direct submission due to setting a custom job ClassAd attribute with

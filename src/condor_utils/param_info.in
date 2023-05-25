@@ -922,6 +922,10 @@ type=bool
 default=https://aai-dev.egi.eu/auth/realms/egi
 type=string
 
+[SEC_SCITOKENS_CACHE]
+default=auto
+type=string
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
