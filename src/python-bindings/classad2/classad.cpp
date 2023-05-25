@@ -206,6 +206,28 @@ _classad_get_item( PyObject *, PyObject * args ) {
 }
 
 
+static PyObject *
+_classad_del_item( PyObject *, PyObject * args ) {
+    // _classad_del_item( self._handle, key )
+
+    PyObject_Handle * handle = NULL;
+    const char * key = NULL;
+    if(! PyArg_ParseTuple( args, "Os", (PyObject **)& handle, & key )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)handle->t;
+    if(! classAd->Delete( key )) {
+        // There's a bug in version 1 where del() never raises exceptions.
+        PyErr_SetString( PyExc_KeyError, key );
+        return NULL;
+    }
+
+    Py_RETURN_NONE;
+}
+
+
 ExprTree *
 convert_python_to_classad_exprtree(PyObject * py_v) {
     if( py_v == Py_None ) {
