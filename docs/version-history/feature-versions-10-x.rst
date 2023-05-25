@@ -26,6 +26,10 @@ Bugs Fixed:
   and crashed when they had active jobs in the blkio controller.
   :jira:`1786`
 
+- condor_restd service in the htcondor/mini container no longer crashes
+  on startup due to the `en_US.UTF-8` locale being unavailable.
+  :jira:`1785`
+
 - Forced condor_ssh_to_job to never try to use a Control Master, which would
   break ssh_to_job.  Also raised the timeout for ssh_to_job which might
   be needed for slow WANs.
