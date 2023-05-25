@@ -171,6 +171,7 @@ static decltype(&SSLv23_method) SSL_method_ptr = nullptr;
 #else
 static decltype(&TLS_method) SSL_method_ptr = nullptr;
 #endif
+static decltype(&SSL_CTX_set1_param) SSL_CTX_set1_param_ptr = nullptr;
 static decltype(&SSL_get_current_cipher) SSL_get_current_cipher_ptr = nullptr;
 static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
 static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
@@ -269,6 +270,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_read_ptr = reinterpret_cast<decltype(SSL_read_ptr)>(dlsym(dl_hdl, "SSL_read"))) ||
 		 !(SSL_set_bio_ptr = reinterpret_cast<decltype(SSL_set_bio_ptr)>(dlsym(dl_hdl, "SSL_set_bio"))) ||
 		 !(SSL_write_ptr = reinterpret_cast<decltype(SSL_write_ptr)>(dlsym(dl_hdl, "SSL_write"))) ||
+		 !(SSL_CTX_set1_param_ptr = reinterpret_cast<decltype(SSL_CTX_set1_param_ptr)>(dlsym(dl_hdl, "SSL_CTX_set1_param"))) ||
 		 !(SSL_get_current_cipher_ptr = reinterpret_cast<decltype(SSL_get_current_cipher_ptr)>(dlsym(dl_hdl, "SSL_get_current_cipher"))) ||
 		 !(SSL_CIPHER_get_name_ptr = reinterpret_cast<decltype(SSL_CIPHER_get_name_ptr)>(dlsym(dl_hdl, "SSL_CIPHER_get_name"))) ||
 		 !(SSL_get_ex_data_X509_STORE_CTX_idx_ptr = reinterpret_cast<decltype(SSL_get_ex_data_X509_STORE_CTX_idx_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data_X509_STORE_CTX_idx"))) ||
@@ -330,6 +332,7 @@ bool Condor_Auth_SSL::Initialize()
 #else
 	SSL_method_ptr = TLS_method;
 #endif
+	SSL_CTX_set1_param_ptr = SSL_CTX_set1_param;
 	SSL_get_current_cipher_ptr = SSL_get_current_cipher;
 	SSL_CIPHER_get_name_ptr = SSL_CIPHER_get_name;
 	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
@@ -1834,7 +1837,9 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
+    X509_VERIFY_PARAM *verify_param = nullptr;
     bool i_need_cert   = is_server;
+    bool allow_peer_proxy = false;
     const char *cafile_preferred = nullptr;
     std::string cafile_preferred_str;
 
@@ -1850,6 +1855,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		cadir      = param( AUTH_SSL_SERVER_CADIR_STR );
 		certfile   = param( AUTH_SSL_SERVER_CERTFILE_STR );
 		keyfile    = param( AUTH_SSL_SERVER_KEYFILE_STR );
+		allow_peer_proxy = param_boolean("AUTH_SSL_ALLOW_CLIENT_PROXY", false);
 	} else {
 		cafile     = param( AUTH_SSL_CLIENT_CAFILE_STR );
 		cadir      = param( AUTH_SSL_CLIENT_CADIR_STR );
@@ -1881,6 +1887,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)   dprintf( D_SECURITY, "CERTFILE:   '%s'\n", certfile   );
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
     if(cipherlist) dprintf( D_SECURITY, "CIPHERLIST: '%s'\n", cipherlist );
+    if(is_server)  dprintf( D_SECURITY, "ALLOW_PROXY: %d\n", (int)allow_peer_proxy );
     if (!m_scitokens_file.empty())
 	dprintf( D_SECURITY, "SCITOKENSFILE:   '%s'\n", m_scitokens_file.c_str()   );
         
@@ -1900,6 +1907,17 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 #else
 	SSL_CTX_set_options_ptr( ctx, SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 #endif
+
+	if (allow_peer_proxy) {
+		verify_param = X509_VERIFY_PARAM_new();
+		if (!verify_param ||
+			X509_VERIFY_PARAM_set_flags(verify_param, X509_V_FLAG_ALLOW_PROXY_CERTS) != 1 ||
+			SSL_CTX_set1_param_ptr(ctx, verify_param) != 1)
+		{
+			ouch("Error configuring X509_VERIFY_PARAM\n");
+			goto setup_server_ctx_err;
+		}
+	}
 
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
@@ -1986,6 +2004,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
+    if(verify_param)    X509_VERIFY_PARAM_free(verify_param);
     return ctx;
   setup_server_ctx_err:
     if(cafile)          free(cafile);
@@ -1993,6 +2012,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
+    if(verify_param)    X509_VERIFY_PARAM_free(verify_param);
 	if(ctx)		        SSL_CTX_free_ptr(ctx);
     return NULL;
 }

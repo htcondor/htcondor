@@ -2240,9 +2240,15 @@ int allocate_a_cluster()
 
 	if ((ClusterId = MyQ->get_NewCluster()) < 0) {
 		fprintf(stderr, "\nERROR: Failed to create cluster\n");
-		if ( ClusterId == -2 ) {
+		if ( ClusterId == NEWJOB_ERR_MAX_JOBS_SUBMITTED ) {
 			fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
+		} else if ( ClusterId == NEWJOB_ERR_MAX_JOBS_PER_OWNER ) {
+			fprintf(stderr,
+				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n");
+		} else if ( ClusterId == NEWJOB_ERR_DISABLED_USER ) {
+			fprintf(stderr,
+				"User is disabled\n");
 		}
 		exit(1);
 	}
@@ -2312,13 +2318,13 @@ int queue_item(int num, StringList & vars, char * item, int item_index, int opti
 
 		if ( ProcId < 0 ) {
 			fprintf(stderr, "\nERROR: Failed to create proc\n");
-			if ( ProcId == -2 ) {
+			if ( ProcId == NEWJOB_ERR_MAX_JOBS_SUBMITTED ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");
-			} else if( ProcId == -3 ) {
+			} else if( ProcId == NEWJOB_ERR_MAX_JOBS_PER_OWNER ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_PER_OWNER\n");
-			} else if( ProcId == -4 ) {
+			} else if( ProcId == NEWJOB_ERR_MAX_JOBS_PER_SUBMISSION ) {
 				fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_PER_SUBMISSION\n");
 			}

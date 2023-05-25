@@ -962,7 +962,7 @@ define_sandbox_path(std::string sid, std::string &path)
 
 	char c_hex_sha256[SHA256_DIGEST_LENGTH*2+1];
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		sprintf(&(c_hex_sha256[i*2]), "%02x", hash_buf[i]);
+		snprintf(&(c_hex_sha256[i*2]), 3, "%02x", hash_buf[i]);
 	}
 	c_hex_sha256[SHA256_DIGEST_LENGTH*2] = 0;
 

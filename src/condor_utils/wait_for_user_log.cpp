@@ -61,10 +61,22 @@ WaitForUserLog::readEvent( ULogEvent * & event, int timeout, bool following ) {
 				// possible for reader.readEvent() to return ULOG_NO_EVENT
 				// here, so if we just return that, we might break our promise
 				// about how long we waited for a new event.
-				struct timeval now; condor_gettimestamp( now );
-				int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
-				return readEvent( event, timeout - elapsedMilliseconds, following );
+
+				// If the original timeout was > 0, decrement by the
+				// real time we just spent waiting.  If the result is <= 0,
+				// we are done.
+				int revised_timeout = timeout;
+				if (timeout > 0) {
+					struct timeval now; condor_gettimestamp( now );
+					int elapsedMilliseconds = timersub_usec( now, then ) / 1000;
+					if (elapsedMilliseconds < timeout) {
+						revised_timeout = timeout - elapsedMilliseconds;
+					} else {
+						return ULOG_NO_EVENT;
+					}
 				}
+				return readEvent( event, revised_timeout, following );
+			}
 			default:
 				EXCEPT( "Unknown return value from FileModifiedTrigger::wait(): %d, aborting.\n", result );
 		}

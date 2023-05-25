@@ -42,7 +42,6 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "basename.h" // for condor_basename 
-#include "extArray.h"
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"

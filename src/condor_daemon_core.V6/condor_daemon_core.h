@@ -42,7 +42,6 @@
 #include "condor_secman.h"
 #include "KeyCache.h"
 #include "list.h"
-#include "extArray.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"

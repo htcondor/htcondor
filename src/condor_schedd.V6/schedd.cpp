@@ -2276,9 +2276,11 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	stream->encode();
 	for (const auto & it : OwnersInfo) {
 		if (num_ads >= limit) break;
-		ClassAd * ad = it.second;
-		if (!has_constraint || IsAConstraintMatch(&queryAd, ad)) {
-			if ( !putClassAd(stream, *ad)) {
+		if (!has_constraint || IsAConstraintMatch(&queryAd, it.second)) {
+			JobQueueUserRec * urec = it.second;
+			ClassAd ad(*urec);
+			urec->live.publish(ad,"Num");
+			if ( !putClassAd(stream, ad)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
 			}
@@ -2299,13 +2301,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 {
 	int rval = 0;
 
-	const OwnerInfo * urec = find_ownerinfo(username.c_str());
+	OwnerInfo * urec = find_ownerinfo(username.c_str());
 
 	switch (cmd) {
 	case ENABLE_USERREC:
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 1);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2320,7 +2322,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	case DISABLE_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}
@@ -2331,13 +2333,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			// TODO: this should be a DeleteSecureAttribute
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_MAX_JOBS_RUNNING, -1);
+			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
 		}
 		break;
 	case DELETE_USERREC:
 		if (urec) { // disable
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 			// TODO: check if unused so we can just delete it now...
 			// UserRecDestroy(urec->jid.proc);
 		} else {
@@ -2389,8 +2391,8 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
-	if ( ! UserCheck2(NULL, EffectiveUser(rsock))) {
+	auto * rsock_user = EffectiveUser(rsock);
+	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
 		resultAd.Assign(ATTR_RESULT, EACCES);
 		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
 		if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
@@ -2412,6 +2414,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack);
 					if (rval) break;
+					++num_ads;
 				}
 			}
 			if (rval) break;
@@ -2421,6 +2424,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 			}
 			rval = act_on_user(cmd, username, act, txn, errstack);
 			if (rval) break;
+			++num_ads;
 		} else {
 			rval = 1;
 			errstack.push("SCHEDD", rval, "Dont know what user to act on.");
@@ -5871,7 +5875,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						// subsequent operations, such as rewriting of
 						// paths in the ClassAd and the job being in
 						// the middle of using the files.
-					time_t finish_time;
+					time_t finish_time = 0;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
 						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
@@ -5881,8 +5885,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						delete jobs;
 						return FALSE;
 					}
-					int holdcode;
-					int job_status;
+					int holdcode = -1;
+					int job_status = -1;
 					int job_status_result = GetAttributeInt(a_job.cluster,
 						a_job.proc,ATTR_JOB_STATUS,&job_status);
 					if( job_status_result >= 0 &&
@@ -6674,7 +6678,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 			// Check to make sure the job's status makes sense for
 			// the command we're trying to perform
-		int status;
+		int status = -1;
 		std::string job_user;
 		int on_release_status = IDLE;
 		int hold_reason_code = -1;
@@ -8768,8 +8772,10 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
 	
-	int universe;
+	int universe = -1;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
+	ASSERT(universe != -1);
+
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
@@ -9387,7 +9393,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 shadow_rec*
 Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
-	int		universe;
+	int		universe = -1;
 	int		rval;
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
@@ -12293,7 +12299,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Get job status.  Note we only except if there is no job status AND the job
 		// is still in the queue, since we do not want to except if the job ad is gone
 		// perhaps due to condor_rm -f.
-	int q_status;
+	int q_status = -1;
 	if (GetAttributeInt(job_id.cluster,job_id.proc,
 						ATTR_JOB_STATUS,&q_status) < 0)	
 	{
@@ -12870,7 +12876,7 @@ void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
  
-	int	  status;
+	int	  status = -1;
 	
 	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0 ) {
@@ -13939,11 +13945,12 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
-	//disable these until we decide permissions
-	#if 0
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+
+	//disable these until we decide permissions
+	#if 0
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
@@ -15909,7 +15916,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool system_hold )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
@@ -16080,7 +16087,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;

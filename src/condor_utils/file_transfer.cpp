@@ -374,6 +374,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	std::string buffer;
 
 	jobAd = *Ad;	// save job ad
 
@@ -551,15 +552,14 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
 
-		std::string buf;
-		SpooledJobFiles::getJobSpoolPath(Ad, buf);
-		SpoolSpace = strdup(buf.c_str());
+		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
+		SpoolSpace = strdup(buffer.c_str());
 		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
 		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	if ( (IsServer() || (IsClient() && simple_init)) &&
-		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) )
+	Ad->LookupString(ATTR_JOB_CMD, buffer);
+	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
 		//   we switch priv state for these file checks?
@@ -584,16 +584,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
 #ifdef WIN32
-			// buf doesn't refer to a real file when this code is executed in the SCHEDD when spooling
+			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buf) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-					"FileTrans: permission denied reading %s\n",buf);
+				        "FileTrans: permission denied reading %s\n",buffer.c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buf);
+			ExecFile = strdup(buffer.c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
@@ -611,7 +611,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			InputFiles->append(ExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( CONDOR_EXEC );
+		ExecFile = strdup( condor_basename(buffer.c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -1266,8 +1266,8 @@ FileTransfer::FindChangedFiles()
 
 	const char *f;
 	while( (f=dir.Next()) ) {
-		// don't send back condor_exec.*
-		if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+		// don't send back the executable
+		if ( ExecFile && MATCH == file_strcmp ( f, ExecFile ) ) {
 			dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
 			continue;
 		}
@@ -2521,6 +2521,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// This allows us to consume the rest of the downloads and
 			// propagate the error message, put the job on hold, etc.
 			filename = NULL_FILE;
+		}
+
+		// An old peer is sending us a renamed executable.
+		// Use the real filename from the job ad
+		if( ExecFile && IsClient() && !simple_init && !file_strcmp(filename.c_str(), CONDOR_EXEC)) {
+			filename = ExecFile;
 		}
 
 		if( !strcmp(filename.c_str(),NULL_FILE) ) {
@@ -4857,7 +4863,16 @@ FileTransfer::uploadFileList(
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename.c_str())==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
-			dest_filename = CONDOR_EXEC;
+			if (PeerRenamesExecutable) {
+				// Our peer is old and expects us to rename the executable
+				dest_filename = CONDOR_EXEC;
+			} else {
+				// Strip path information and preserve the original name
+				// (in case copy_to_spool gave us an ickpt filename).
+				std::string cmd;
+				jobAd.LookupString(ATTR_JOB_CMD, cmd);
+				dest_filename = condor_basename(cmd.c_str());
+			}
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
@@ -6091,6 +6106,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 
 	PeerDoesReuseInfo = peer_version.built_since_version(8,9,4);
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
+	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 }
 
 

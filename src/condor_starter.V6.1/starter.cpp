@@ -1854,20 +1854,6 @@ Starter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-#if !defined(WIN32)
-		if (use_chown) {
-			priv_state p = set_root_priv();
-			if (chown(WorkingDir.c_str(),
-			          get_user_uid(),
-			          get_user_gid()) == -1)
-			{
-				EXCEPT("chown error on %s: %s",
-				       WorkingDir.c_str(),
-				       strerror(errno));
-			}
-			set_priv(p);
-		}
-#endif
 	}
 
 #ifdef WIN32
@@ -1993,7 +1979,24 @@ Starter::createTempExecuteDir( void )
 #endif // LINUX
 
 	// now we can finally write .machine.ad and .job.ad into the sandbox
-	WriteAdFiles();
+	{
+		TemporaryPrivSentry sentry(PRIV_CONDOR);
+		WriteAdFiles();
+	}
+#if !defined(WIN32)
+	if (use_chown) {
+		priv_state p = set_root_priv();
+		if (chown(WorkingDir.c_str(),
+					get_user_uid(),
+					get_user_gid()) == -1)
+		{
+			EXCEPT("chown error on %s: %s",
+					WorkingDir.c_str(),
+					strerror(errno));
+		}
+		set_priv(p);
+	}
+#endif
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();

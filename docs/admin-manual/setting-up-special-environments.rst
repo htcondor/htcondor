@@ -1189,9 +1189,7 @@ Whenever the *condor_startd* decides to spawn the *boinc_client* to
 perform backfill computations, it will spawn a *condor_starter* to
 directly launch and monitor the *boinc_client* program. This
 *condor_starter* is just like the one used to invoke any other HTCondor
-jobs. In fact, the argv[0] of the *boinc_client* will be renamed to
-*condor_exec*, as described in the
-:ref:`users-manual/potential-problems:renaming of argv[0]` section.
+jobs.
 
 This *condor_starter* reads values out of the HTCondor configuration
 files to define the job it should run, as opposed to getting these

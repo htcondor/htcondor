@@ -1440,9 +1440,16 @@ InitQmgmt()
 	} else {
 		s_users.initializeFromString( default_super_user );
 	}
+#ifdef WIN32
+	const char * process_dom_and_user = get_condor_username();
+	const char * process_user = strchr(process_dom_and_user, '/');
+	if (process_user) { ++process_user; } else { process_user = process_dom_and_user; }
+	if( ! s_users.contains(process_user) ) { s_users.append(process_user); }
+#else
 	if( ! s_users.contains(get_condor_username()) ) {
 		s_users.append( get_condor_username() );
 	}
+#endif
 	super_users.clear();
 	super_users.reserve(s_users.number() + 3);
 	s_users.rewind();
@@ -1801,7 +1808,9 @@ void JobQueueBase::PopulateFromAd()
 			this->LookupInteger(ATTR_PROC_ID, jid.proc);
 		}
 		entry_type = TypeOfJid(jid);
-		dprintf(D_ERROR, "WARNING - JobQueueBase has no entry_type set %d.%d", jid.cluster, jid.proc);
+		if (entry_type) {
+			dprintf(D_ERROR, "WARNING - JobQueueBase had no entry_type set %d.%d\n", jid.cluster, jid.proc);
+		}
 	}
 }
 
@@ -1816,7 +1825,7 @@ void JobQueueUserRec::PopulateFromAd()
 	}
 	if (this->flags & JQU_F_DIRTY) {
 		this->LookupBool(ATTR_ENABLED, this->enabled);
-		this->LookupString(ATTR_NT_DOMAIN, this->domain);
+		if ( ! this->LookupString(ATTR_NT_DOMAIN, this->domain)) { this->domain.clear(); }
 		this->flags &= ~JQU_F_DIRTY;
 	}
 }
@@ -3429,7 +3438,7 @@ unsetQmgmtConnection()
 		// Note that this is effectively a no-op if getQmgmtConnectionInfo()
 		// was called previously, since getQmgmtConnectionInfo() clears 
 		// out the transaction after returning the handle.
-	JobQueue->AbortTransaction();	
+	AbortTransaction();
 
 	ASSERT(Q_SOCK == NULL);
 
@@ -3603,11 +3612,12 @@ NewCluster()
 			"Current total is %d. Limit is %d\n",
 			total_jobs, maxJobsSubmitted );
 		errno = EINVAL;
-		return -2;
+		return NEWJOB_ERR_MAX_JOBS_SUBMITTED;
 	}
 
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we have not seen this user before, add a JobQueueUserRec for them
+	// if we *have* seen the user before, check to see if the user is enabled
 	if (Q_SOCK) {
 		const char * user = EffectiveUser(Q_SOCK);
 		if (user && user[0]) {
@@ -3622,9 +3632,14 @@ NewCluster()
 				urec = scheduler.insert_owner_const(user);
 				if ( ! MakeUserRec(urec, true)) {
 					dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
-					errno = EINVAL;
-					return -2;
+					errno = EACCES;
+					return -1;
 				}
+			} else if ( ! urec->IsEnabled()) {
+				// We only check to see if the User is disabled if we are not creating it automatically with the submit
+				dprintf(D_ALWAYS, "NewCluster(): rejecting attempt by disabled user %s to submit a job\n", urec->Name());
+				errno = EACCES;
+				return NEWJOB_ERR_DISABLED_USER;
 			}
 			ASSERT(urec);
 			// TODO: attach urec to Q_SOCK so we can use it for permission and various limit checks?
@@ -3649,7 +3664,7 @@ NewCluster()
     if (JobQueue->LookupClassAd(test_cluster_key, test_cluster_ad)) {
         dprintf(D_ALWAYS, "NewCluster(): collision with existing cluster id %d\n", active_cluster_num);
         errno = EINVAL;
-        return -3;
+        return NEWJOB_ERR_INTERNAL;
     }
 
 	char cluster_str[PROC_ID_STR_BUFLEN];
@@ -3689,7 +3704,7 @@ NewProc(int cluster_id)
 		dprintf(D_ALWAYS,
 			"NewProc(): MAX_JOBS_SUBMITTED exceeded, submit failed\n");
 		errno = EINVAL;
-		return -2;
+		return NEWJOB_ERR_MAX_JOBS_SUBMITTED;
 	}
 
 
@@ -3728,7 +3743,7 @@ NewProc(int cluster_id)
 					"Current total is %d.  Limit is %d.\n",
 					ownerJobCount, maxJobsPerOwner );
 				errno = EINVAL;
-				return -3;
+				return NEWJOB_ERR_MAX_JOBS_PER_OWNER;
 			}
 		}
 	}
@@ -3740,7 +3755,7 @@ NewProc(int cluster_id)
 			"Current total is %d.  Limit is %d.\n",
 			jobs_added_this_transaction, maxJobsPerSubmission );
 		errno = EINVAL;
-		return -4;
+		return NEWJOB_ERR_MAX_JOBS_PER_SUBMISSION;
 	}
 
 	proc_id = next_proc_num++;
@@ -4069,6 +4084,26 @@ int DestroyProc(int cluster_id, int proc_id)
 
 	JobQueue->DestroyClassAd(key);
 
+#ifdef USE_JOB_QUEUE_USERREC
+	/* update JobQueueUserRec counts of completed/removed jobs
+	 */
+	if (ad->ownerinfo) {
+		if (ad->Status() >= REMOVED && ad->Status() <= COMPLETED) {
+			static const char * const attrs[]{
+				ATTR_TOTAL_REMOVED_JOBS, "Scheduler" ATTR_TOTAL_REMOVED_JOBS,
+				ATTR_TOTAL_COMPLETED_JOBS, "Scheduler" ATTR_TOTAL_COMPLETED_JOBS,
+			};
+			int ix = 2 * (ad->Status() - REMOVED) + (ad->Universe() == CONDOR_UNIVERSE_SCHEDULER);
+			const char * attr = attrs[ix];
+				int val = 0;
+				ad->ownerinfo->LookupInteger(attr, val);
+				val++;
+				SetUserAttributeInt(*(ad->ownerinfo), attr, val);
+		}
+	}
+
+#endif
+
 	/* If job is a member of the set, remove the job from the set
 	   and also at the same time save persistent set aggregates
 	   now before the job leaves the queue, so that we dont lose info
@@ -4325,6 +4360,7 @@ enum {
 	catSpoolingHold = 0x0200,    // hold reason was set to CONDOR_HOLD_CODE::SpoolingInput
 	catPostSubmitClusterChange = 0x400, // a cluster ad was changed after submit time which calls for special processing in commit transaction
 	catJobset       = 0x800,     // job membership in a jobset changed or a new jobset should be created
+	catSetUserRec   = 0x1000,    // a UserRec was edited
 	catNewUser      = 0x2000,    // a new job "owner" or "user" was added
 	catSetOwner     = 0x4000,    // the ATTR_OWNER or ATTR_USER of a job or jobset was set/changed
 	catCallbackTrigger = 0x10000, // indicates that a callback should happen on commit of this attribute
@@ -4451,6 +4487,41 @@ SetSecureAttribute(int cluster_id, int proc_id, const char *attr_name, const cha
 
 	return 0;
 }
+
+// Internal helper functions for setting UserRec attributes into a transaction
+//
+int SetUserAttribute(JobQueueUserRec & urec, const char * attr_name, const char * expr_string)
+{
+	if (attr_name == NULL || expr_string == NULL) {return -1;}
+
+	if (JobQueue->SetAttribute(urec.jid, attr_name, expr_string, false)) {
+		JobQueue->SetTransactionTriggers(catSetUserRec);
+		urec.setDirty();
+		return 0;
+	}
+	return -1;
+}
+
+int SetUserAttributeInt(JobQueueUserRec & urec, const char * attr_name, long long attr_value)
+{
+	char buf[100];
+	snprintf(buf,100,"%lld",attr_value);
+	return SetUserAttribute(urec, attr_name, buf);
+}
+
+int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const classad::Value & attr_value)
+{
+	if (attr_name == NULL) {return -1;}
+
+	classad::ClassAdUnParser unparse;
+	unparse.SetOldClassAd( true, true );
+
+	std::string buf;
+	unparse.Unparse(buf, attr_value);
+
+	return SetUserAttribute(urec, attr_name, buf.c_str());
+}
+
 
 // Check whether modification of a job attribute should be allowed.
 // return <0 : reject, return error to client
@@ -6415,10 +6486,6 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 			// Current thinking is do not call AbortTransaction here, let the caller do it so 
 			// that the logic in AbortTranscationAndRecomputeClusters() works correctly...
 			dprintf(D_FULLDEBUG, "CheckTransaction error %d : %s\n", rval, errorStack ? errorStack->message() : "");
-		#ifdef USE_JOB_QUEUE_USERREC
-			// delete any speculative JobQueueUserRec objects we created for this transaction
-			scheduler.clearPendingOwners();
-		#endif
 			return rval;
 		}
 	}
@@ -6494,13 +6561,17 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 
 	// if we modified "User" or "owner" attributes, but not as part of making new ads
 	// we need to do a pass to fixup the ownerinfo pointer on the modified jobs and jobsets
-	if (new_ad_keys.empty() && (triggers & catSetOwner)) {
+	if (new_ad_keys.empty() && (triggers & (catSetOwner|catSetUserRec))) {
+		bool set_owner = (triggers & catSetOwner) != 0;
+		bool edit_user = (triggers & catSetUserRec) != 0;
 		for(auto it : ad_keys) {
 			JobQueueKey jid(it.c_str());
 			JobQueueBase *bad = nullptr;
 			if ( ! JobQueue->Lookup(jid, bad) || ! bad) continue; // safety
 			if (bad->IsCluster() || bad->IsJob() || bad->IsJobSet()) {
-				InitOwnerinfo(bad, owner, ownerinfo_is);
+				if (set_owner) { InitOwnerinfo(bad, owner, ownerinfo_is); }
+			} else if (bad->IsUserRec() && edit_user) {
+				static_cast<JobQueueUserRec*>(bad)->PopulateFromAd();
 			}
 		}
 	}
@@ -6747,12 +6818,25 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 int
 AbortTransaction()
 {
+	if (JobQueue->InTransaction()) {
+	#ifdef USE_JOB_QUEUE_USERREC
+		// delete any speculative JobQueueUserRec objects we created for this transaction
+		scheduler.clearPendingOwners();
+	#endif
+	}
 	return JobQueue->AbortTransaction();
 }
 
 void
 AbortTransactionAndRecomputeClusters()
 {
+	if (JobQueue->InTransaction()) {
+		dprintf(D_ALWAYS | D_BACKTRACE, "AbortTransactionAndRecomputeClusters\n");
+	#ifdef USE_JOB_QUEUE_USERREC
+		// delete any speculative JobQueueUserRec objects we created for this transaction
+		scheduler.clearPendingOwners();
+	#endif
+	}
 	if ( JobQueue->AbortTransaction() ) {
 		/*	If we made it here, a transaction did exist that was not
 			committed, and we now aborted it.  This would happen if 
@@ -6804,6 +6888,7 @@ AbortTransactionAndRecomputeClusters()
 				}
 			}
 		}
+
 	}	// end of if JobQueue->AbortTransaction == True
 }
 

@@ -98,7 +98,7 @@ decode( classad::ClassAd * ca, Tag & tag ) {
     time_t ttWhen = (time_t)when;
     gmtime_r( & ttWhen, & eventTime );
     // We should also respect the time format flag, once local times
-    // round-trip between differente machines (e.g., once we write
+    // round-trip between different machines (e.g., once we write
     // time zones as part of our time stamps).
     time_to_iso8601( whenStr, eventTime, ISO8601_ExtendedFormat,
         ISO8601_DateAndTime, true );
@@ -163,8 +163,11 @@ encode( const Tag & tag, classad::ClassAd * ca ) {
 
     ca->InsertAttr( "Who", tag.who );
     ca->InsertAttr( "How", tag.how );
-    ca->InsertAttr( "When",tag.when );
     ca->InsertAttr( "HowCode", (int)tag.howCode );
+
+    struct tm eventTime;
+    iso8601_to_time( tag.when.c_str(), & eventTime, NULL, NULL );
+    ca->InsertAttr( "When", timegm(&eventTime) );
 
     if( tag.howCode == ToE::OfItsOwnAccord ) {
         ca->InsertAttr( ATTR_ON_EXIT_BY_SIGNAL, tag.exitBySignal );

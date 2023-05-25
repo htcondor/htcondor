@@ -23,7 +23,6 @@
 
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "extArray.h"
 #include "internet.h"
 #include "collector_stats.h"
 #include "condor_config.h"

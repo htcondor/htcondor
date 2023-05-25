@@ -19,7 +19,5 @@ it with the HTCondor community.
 
    python-bindings/index.rst
    chirp
-   user-job-log-reader-api
-   command-line-interface
 
       

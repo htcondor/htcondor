@@ -199,26 +199,6 @@ tdp_wait_stopped_child (pid_t pid)
 
 #endif /* LINUX && TDP */
 
-/*
-void zz2printf(int debug_levels, KeyInfo *k) {
-	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
-		if (k) {
-			char hexout[260];  // holds (at least) a 128 byte key.
-			const unsigned char* dataptr = k->getKeyData();
-			int   length  =  k->getKeyLength();
-
-			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
-			}
-
-			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
-		} else {
-			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
-		}
-	}
-}
-*/
-
 static int _condor_fast_exit = 0;
 static int dummyGlobal;
 
@@ -4570,15 +4550,17 @@ int DaemonCore::ServiceCommandSocket()
 				}
 #endif
 				if ( selector.has_ready() ) {
+						// Index -1 means the initial command socket
+					int idx = (i == -1) ? initial_command_sock() : i;
 						// CallSocketHandler_worker called by CallSocketHandler
 						// also calls CheckPrivState in order to
 						// Make sure we didn't leak our priv state.
-					CallSocketHandler(i, true);
+					CallSocketHandler(idx, true);
 					commands_served++;
 						// If the slot in sockTable just got removed, make sure we exit the loop
-					if ( (sockTable[i].iosock == NULL) ||  // slot is empty
-						 (sockTable[i].remove_asap &&           // slot available
-						  sockTable[i].servicing_tid==0 ) ) {
+					if ( (sockTable[idx].iosock == NULL) ||  // slot is empty
+						 (sockTable[idx].remove_asap &&           // slot available
+						  sockTable[idx].servicing_tid==0 ) ) {
 						break;
 					}
 				} 
@@ -9676,6 +9658,15 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 			}
 		}
 	}
+
+	if (this->m_proc_family) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
+		if (was_oom_killed) {
+			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
+			exit_status |= DC_STATUS_OOM_KILLED;
+		} 
+	}
+
 	if( !reaper || !(reaper->handler || reaper->handlercpp) ) {
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
@@ -9696,14 +9687,6 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		"DaemonCore: %s %lu exited with status %d, invoking reaper "
 		"%d <%s>\n",
 		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip);
-
-	if (this->m_proc_family) {
-		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_oom_killed) {
-			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
-			exit_status |= DC_STATUS_OOM_KILLED;
-		} 
-	}
 
 	if ( reaper->handler ) {
 		// a C handler

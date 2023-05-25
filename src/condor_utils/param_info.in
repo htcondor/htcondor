@@ -922,6 +922,10 @@ type=bool
 default=https://aai-dev.egi.eu/auth/realms/egi
 type=string
 
+[SEC_SCITOKENS_CACHE]
+default=auto
+type=string
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
@@ -2571,6 +2575,10 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
+[AUTH_SSL_ALLOW_CLIENT_PROXY]
 default=false
 type=bool
 
@@ -5470,6 +5478,10 @@ default=$(SBIN)/arc_gahp
 
 [ARC_GAHP_LOG]
 default=/tmp/ArcGahpLog.$(USERNAME)
+
+[ARC_GAHP_COMMAND_LIMIT]
+default=1000
+type=int
 
 [ARC_GAHP_USE_THREADS]
 default=false

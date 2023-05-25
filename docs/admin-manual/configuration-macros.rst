@@ -8070,6 +8070,12 @@ These macros affect the *condor_gridmanager*.
     The complete path and file name of the ARC GAHP executable.
     The default value is ``$(SBIN)``/arc_gahp.
 
+:macro-def:`ARC_GAHP_COMMAND_LIMIT`
+    On systems where libcurl uses NSS for security, start a new
+    *arc_gahp* process when the existing one has handled the given
+    number of commands.
+    The default is 1000.
+
 :macro-def:`ARC_GAHP_USE_THREADS`
     Controls whether the *arc_gahp* should run multiple HTTPS requests
     in parallel in different threads.
@@ -9544,6 +9550,11 @@ macros are described in the :doc:`/admin-manual/security` section.
     If set to ``True`` and the client doesn't have a credential, then
     the SSL authentication will fail and other authentication methods
     will be tried.
+    The default is ``False``.
+
+:macro-def:`AUTH_SSL_ALLOW_CLIENT_PROXY`
+    A boolean value that controls whether a daemon will accept an
+    X.509 proxy certificate from a client during SSL authentication.
     The default is ``False``.
 
 :macro-def:`SSL_SKIP_HOST_CHECK`

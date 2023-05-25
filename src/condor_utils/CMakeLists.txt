@@ -288,7 +288,6 @@ escapes.cpp
 exit_utils.cpp
 expr_analyze.cpp
 expr_analyze.h
-extArray.h
 file_modified_trigger.cpp
 file_modified_trigger.h
 filename_tools_cpp.cpp
