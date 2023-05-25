@@ -35,6 +35,12 @@ Bugs Fixed:
   them correctly.
   :jira:`1799`
 
+- Fixed bug in ``condor_pool_job_report`` script that broke the script and
+  outputted error messages about invalid constraint expressions due internal
+  use of ``condor_history`` specifying a file to read with ``-f`` flag instead
+  of full ``-file``.
+  :jira:`1812`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
