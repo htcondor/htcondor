@@ -1593,6 +1593,9 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		std::string old_value;
 		std::string new_value;
 		bool xfer_exec = true;
+		bool xfer_stdin = true;
+		bool xfer_stdout = true;
+		bool xfer_stderr = true;
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
@@ -1606,20 +1609,23 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 
 		old_value = "";
 		submit_ad->LookupString( ATTR_JOB_INPUT, old_value );
-		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+		jobAd->LookupBool(ATTR_TRANSFER_INPUT, xfer_stdin);
+		if ( xfer_stdin && !old_value.empty() && !nullFile( old_value.c_str() ) ) {
 			submit_ad->InsertAttr( ATTR_JOB_INPUT, condor_basename( old_value.c_str() ) );
 		}
 
 		old_value = "";
 		submit_ad->LookupString( ATTR_JOB_OUTPUT, old_value );
-		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, xfer_stdout);
+		if ( xfer_stdout && !old_value.empty() && !nullFile( old_value.c_str() ) ) {
 			submit_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
 		}
 
 		new_value = "";
 		submit_ad->LookupString( ATTR_JOB_ERROR, new_value );
-		if ( !new_value.empty() && !nullFile( new_value.c_str() ) ) {
-			if ( old_value == new_value ) {
+		jobAd->LookupBool(ATTR_TRANSFER_ERROR, xfer_stderr);
+		if ( xfer_stderr && !new_value.empty() && !nullFile( new_value.c_str() ) ) {
+			if ( xfer_stdout && old_value == new_value ) {
 				submit_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
 			} else {
 				submit_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
@@ -1668,6 +1674,9 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_TRANSFER_EXECUTABLE,
+		ATTR_TRANSFER_INPUT,
+		ATTR_TRANSFER_OUTPUT,
+		ATTR_TRANSFER_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_REMAPS,
@@ -1700,13 +1709,17 @@ ClassAd *INFNBatchJob::buildTransferAd()
 
 	std::string stdout_path;
 	std::string stderr_path;
+	bool xfer_stdout = true;
+	bool xfer_stderr = true;
+	jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, xfer_stdout);
+	jobAd->LookupBool(ATTR_TRANSFER_ERROR, xfer_stderr);
 	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_path );
-	if ( !stdout_path.empty() && !nullFile( stdout_path.c_str() ) ) {
+	if ( xfer_stdout && !stdout_path.empty() && !nullFile( stdout_path.c_str() ) ) {
 		xfer_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
 	}
 	jobAd->LookupString( ATTR_JOB_ERROR, stderr_path );
-	if ( !stderr_path.empty() && !nullFile( stderr_path.c_str() ) ) {
-		if ( stdout_path == stderr_path ) {
+	if ( xfer_stderr && !stderr_path.empty() && !nullFile( stderr_path.c_str() ) ) {
+		if ( xfer_stdout && stdout_path == stderr_path ) {
 			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
 		} else {
 			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
