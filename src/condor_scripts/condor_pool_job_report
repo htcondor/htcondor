@@ -45,7 +45,7 @@ do
 	condor_fetchlog $host STARTD_HISTORY
 
 done 2> histories.errors | 
-condor_history -forward -f /dev/stdin -const 'formattime(CompletionDate, "%j") == formattime(time() - (24 * 3600), "%j")' -l | sed -e 's/^$/\*\*\*/' | gzip > histories.gz
+condor_history -forwards -file /dev/stdin -const 'formattime(CompletionDate, "%j") == formattime(time() - (24 * 3600), "%j")' -l | sed -e 's/^$/\*\*\*/' | gzip > histories.gz
 
 GoodStartds=`wc -l hosts`
 echo "Got data from $GoodStartds" >> JobReport
@@ -53,16 +53,16 @@ echo "Got data from $GoodStartds" >> JobReport
 echo >> JobReport
 echo >> JobReport
 
-gunzip < histories.gz | condor_history -forward -f /dev/stdin -const 'owner =!= "boinc" && JobUniverse == 5 && RemoteWallClockTime > 252000' -af User -af RemoteWallClockTime | grep -v Warning: > MaxJobPreemptedJobsDaily
+gunzip < histories.gz | condor_history -forwards -file /dev/stdin -const 'owner =!= "boinc" && JobUniverse == 5 && RemoteWallClockTime > 252000' -af User -af RemoteWallClockTime | grep -v Warning: > MaxJobPreemptedJobsDaily
 
 
-gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: > CompletedJobTimesDaily
+gunzip < histories.gz | condor_history -forwards -file /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: > CompletedJobTimesDaily
 
-gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus =!= 4 && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > RemovedJobTimesDaily
+gunzip < histories.gz | condor_history -forwards -file /dev/stdin -const 'JobStatus =!= 4 && RemoteWallClockTime < 251000' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > RemovedJobTimesDaily
 
-gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000 && WantGlidein' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > UserWantedGlidein
+gunzip < histories.gz | condor_history -forwards -file /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000 && WantGlidein' -af User -af RemoteWallClockTime | grep -v Warning: | awk '{user[$1]+=$2} END {for (i in user) {print i, int(user[i]/3600)}}' > UserWantedGlidein
 
-gunzip < histories.gz | condor_history -forwards -f /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -format "%s " User -format "%d." ClusteriD -format "%d\n" ProcId | grep -v Warning: | sort | uniq -c | awk '{print $2}' | sort | uniq -c > UserDistinctJobs
+gunzip < histories.gz | condor_history -forwards -file /dev/stdin -const 'JobStatus == 4 && ExitBySignal == false && RemoteWallClockTime < 251000' -format "%s " User -format "%d." ClusteriD -format "%d\n" ProcId | grep -v Warning: | sort | uniq -c | awk '{print $2}' | sort | uniq -c > UserDistinctJobs
 
 TotalJobs=`wc -l < CompletedJobTimesDaily`
 TotalHours=`awk '{s+=$2} END {print int(s/3600)}' < CompletedJobTimesDaily`
