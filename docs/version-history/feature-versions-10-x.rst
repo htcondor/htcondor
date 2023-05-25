@@ -126,12 +126,6 @@ New Features:
 
 Bugs Fixed:
 
-- Fixed a bug where certain errors during file transfer could result in
-  file-transfer processes not being cleaned up.  This would manifest as
-  jobs completing successfully, including final file transfer, but ending
-  up without one of their output files (the one the error occurred during).
-  :jira:`1687`
-
 - HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
   HTCondor never put limits on the i/o, and some kernel version panicked
   and crashed when they had active jobs in the blkio controller.
