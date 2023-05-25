@@ -7,6 +7,7 @@ from .classad2_impl import _classad_get_item
 from .classad2_impl import _classad_set_item
 
 from collections import UserDict
+from datetime import datetime, timedelta, timezone
 
 class ClassAd(UserDict):
 
@@ -33,3 +34,13 @@ class ClassAd(UserDict):
         if not isinstance(key, str):
             raise KeyError("ClassAd keys are strings")
         return _classad_set_item(self._handle, key, value)
+
+
+def _convert_local_datetime_to_utc_ts(dt):
+    if dt.tzinfo is not None and dt.tzinfo.utcoffset(dt) is not None:
+        the_epoch = datetime(1970, 1, 1, tzinfo=dt.tzinfo)
+        return (dt - the_epoch) // timedelta(seconds=1)
+    else:
+        utc_dt = dt.astimezone(timezone.utc)
+        the_epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        return (utc_dt - the_epoch) // timedelta(seconds=1)

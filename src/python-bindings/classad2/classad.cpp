@@ -236,6 +236,8 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             return NULL;
         }
         long lv = PyLong_AsLong(py_v_int);
+        Py_DecRef(py_v_int);
+
         if( lv == 1<<0 ) {
             v.SetErrorValue();
             return classad::Literal::MakeLiteral(v);
@@ -249,7 +251,43 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         }
     }
 
-    // FIXME: Is py_v a DateTime object?
+    if( py_is_datetime_datetime(py_v) ) {
+
+
+        // We do this song-and-dance in a bunch of places...
+        static PyObject * py_htcondor_module = NULL;
+        if( py_htcondor_module == NULL ) {
+             py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+        }
+
+        static PyObject * py_htcondor_classad_module = NULL;
+        if( py_htcondor_classad_module == NULL ) {
+            py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+        }
+
+
+        PyObject * py_ts = PyObject_CallMethod(
+            py_htcondor_classad_module,
+            "_convert_local_datetime_to_utc_ts",
+            "O", py_v
+        );
+        if( py_ts == NULL ) {
+            // PyObject_CallMethod() has already set an exception for us.
+            return NULL;
+        }
+
+
+        classad::abstime_t atime;
+        atime.offset = 0;
+        atime.secs = PyLong_AsLong(py_ts);
+        if( PyErr_Occurred() ) {
+            // PyLong_AsLong() has already set an exception for us.
+            return NULL;
+        }
+
+        v.SetAbsoluteTimeValue(atime);
+        return classad::Literal::MakeLiteral(v);
+    }
 
     if( PyBool_Check(py_v) ) {
         v.SetBooleanValue( py_v == Py_True );

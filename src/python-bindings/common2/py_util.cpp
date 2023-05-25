@@ -190,3 +190,19 @@ py_is_classad_value(PyObject * py) {
 	// since it's identical in this one and in py_new_classad_exprtree.
 	return PyObject_IsInstance( py, py_value_class );
 }
+
+
+int
+py_is_datetime_datetime(PyObject * py) {
+	static PyObject * py_module = NULL;
+	if( py_module == NULL ) {
+		 py_module = PyImport_ImportModule( "datetime" );
+	}
+
+	static PyObject * py_class = NULL;
+	if( py_class == NULL ) {
+		py_class = PyObject_GetAttrString( py_module, "datetime" );
+	}
+
+	return PyObject_IsInstance( py, py_class );
+}
