@@ -64,6 +64,10 @@ New Features:
   of the main configuration file before the configuration files are read.
   :jira:`1733`
 
+- Ensure that the SciTokens library can create its cache of token
+  issuer credentials.
+  :jira:`1757`
+
 - Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
   which allows the client to present an X.509 proxy certificate during
   SSL authentication with a daemon.
