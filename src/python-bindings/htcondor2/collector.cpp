@@ -116,7 +116,7 @@ _collector_query( PyObject *, PyObject * args ) {
 
 		ClassAd * classAd = NULL;
 		for( adList.Open(); ( classAd = adList.Next() ); ) {
-			PyObject * pyClassAd = py_new_classad_classad(classAd->Copy());
+			PyObject * pyClassAd = py_new_htcondor2_classad(classAd->Copy());
 			auto rv = PyList_Append( list, pyClassAd );
 			Py_DecRef(pyClassAd);
 
@@ -178,7 +178,7 @@ _collector_locate_local( PyObject *, PyObject * args ) {
 			return NULL;
 		}
 
-		PyObject * pyClassAd = py_new_classad_classad(locateOnlyAd->Copy());
+		PyObject * pyClassAd = py_new_htcondor2_classad(locateOnlyAd->Copy());
 		// PyObject * list = Py_BuildValue( "[N]", pyClassAd );
 		return pyClassAd;
 	} else {

@@ -80,7 +80,7 @@ convert_classad_value_to_python(classad::Value & v) {
             ClassAd * c;
             (void) v.IsClassAdValue(c);
 
-            return py_new_classad_classad(c->Copy());
+            return py_new_htcondor2_classad(c->Copy());
             } break;
 
         case classad::Value::BOOLEAN_VALUE: {

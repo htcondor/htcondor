@@ -7,20 +7,20 @@ get_handle_from(PyObject * py) {
 
 
 static PyObject *
-py_new_classad_classad(void * classAd) {
-	static PyObject * py_htcondor_module = NULL;
-	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+py_new_htcondor2_classad(void * classAd) {
+	static PyObject * py_htcondor2_module = NULL;
+	if( py_htcondor2_module == NULL ) {
+		 py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
 	}
 
-	static PyObject * py_htcondor_classad_module = NULL;
-	if( py_htcondor_classad_module == NULL ) {
-		py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+	static PyObject * py_htcondor2_classad_module = NULL;
+	if( py_htcondor2_classad_module == NULL ) {
+		py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
 	}
 
 	static PyObject * py_ClassAd_class = NULL;
 	if( py_ClassAd_class == NULL ) {
-		py_ClassAd_class = PyObject_GetAttrString( py_htcondor_classad_module, "ClassAd" );
+		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
 	}
 
 	PyObject * pyClassAd = PyObject_CallObject(py_ClassAd_class, NULL);
