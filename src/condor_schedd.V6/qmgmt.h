@@ -246,7 +246,7 @@ public:
 	//JOB_ID_KEY jid;
 	char        flags=JQU_F_DIRTY;   // dirty on creation
 protected:
-	bool        enabled=false;
+	bool        enabled=true;
 	//bool        super=false;  // near-term future use
 	//bool        local=false;  // near-term future use
 	std::string name;   // the name used in the schedd's map of OwnerInfo records
@@ -268,6 +268,7 @@ public:
 	const char * Name() const { return name.empty() ? "" : name.c_str(); }
 	const char * NTDomain() const { return domain.empty() ? nullptr : domain.c_str(); }
 	bool isDirty() const { return (flags & JQU_F_DIRTY) != 0; }
+	void setDirty() { flags |= JQU_F_DIRTY; }
 	bool isPending() const { return (flags & JQU_F_PENDING) != 0; }
 	void clearPending() { flags &= ~JQU_F_PENDING; }
 	void setPending() { flags |= JQU_F_PENDING; }
@@ -277,6 +278,18 @@ public:
 };
 
 typedef JobQueueUserRec OwnerInfo;
+
+// Internal set attribute functions for only the schedd to use.
+// these functions add attributes to a transaction and also set a transaction trigger
+int SetUserAttribute(JobQueueUserRec & urec, const char * attr_name, const char * expr_string);
+int SetUserAttributeInt(JobQueueUserRec & urec, const char * attr_name, long long attr_value);
+int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const classad::Value & attr_value);
+inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name, const char * attr_value) {
+	classad::Value tmp;
+	if (attr_value) tmp.SetStringValue(attr_value);
+	return SetUserAttributeValue(urec, attr_name, tmp);
+}
+
 #else
 typedef struct OwnerInfo OwnerInfo;
 #endif

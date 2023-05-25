@@ -101,16 +101,24 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorErr
 
 /** Start a new job cluster.  This cluster becomes the
 	active cluster, and jobs may only be submitted to this cluster.
-	@return the new cluster id on success, < 0 on failure: -1 == "owner check failed"
-    -2 == "MAX_JOBS_SUBMITTED exceeded", -3 == "cluster id collision"
+	@return the new cluster id on success, < 0 on failure: -1 == "access denied"
+		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
 int NewCluster(void);
 
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())
-	@return -1 on failure; the new proc id on success
+	@return the new proc id on success, < 0 on failure; -1 == "general failure"
+		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
 int NewProc( int cluster_id);
+
+const int NEWJOB_ERR_MAX_JOBS_SUBMITTED = -2;
+const int NEWJOB_ERR_MAX_JOBS_PER_OWNER = -3;
+const int NEWJOB_ERR_MAX_JOBS_PER_SUBMISSION = -4;
+const int NEWJOB_ERR_DISABLED_USER = -5;
+const int NEWJOB_ERR_UNKNOWN_USER = -6;
+const int NEWJOB_ERR_INTERNAL = -10;
 
 const int DESTROYPROC_SUCCESS_DELAY = 1; // DestoryProc succeeded. The job is still enqueued, but that's okay
 const int DESTROYPROC_SUCCESS = 0; // DestroyProc succeeded

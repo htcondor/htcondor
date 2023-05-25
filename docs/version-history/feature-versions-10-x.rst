@@ -17,6 +17,10 @@ Release Notes:
 
 New Features:
 
+- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
+  before the user was disabled are allowed to run to completion.
+  :jira:`1723`
+
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
   When an *arc_gahp* process has handled a certain number of commands,

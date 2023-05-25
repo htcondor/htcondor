@@ -1773,7 +1773,7 @@ sub runCondorTool
 
 		$status = ${$hashref}{"exitcode"};
 		if(defined $retval ) {
-			$retval = $status;
+			$$retval = $status;
 		}
 		#print "runCondorTool: Status was <$status>\n";
 		TestDebug("Status is $status after command\n",4);

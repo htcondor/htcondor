@@ -2276,9 +2276,11 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	stream->encode();
 	for (const auto & it : OwnersInfo) {
 		if (num_ads >= limit) break;
-		ClassAd * ad = it.second;
-		if (!has_constraint || IsAConstraintMatch(&queryAd, ad)) {
-			if ( !putClassAd(stream, *ad)) {
+		if (!has_constraint || IsAConstraintMatch(&queryAd, it.second)) {
+			JobQueueUserRec * urec = it.second;
+			ClassAd ad(*urec);
+			urec->live.publish(ad,"Num");
+			if ( !putClassAd(stream, ad)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
 			}
@@ -2299,13 +2301,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 {
 	int rval = 0;
 
-	const OwnerInfo * urec = find_ownerinfo(username.c_str());
+	OwnerInfo * urec = find_ownerinfo(username.c_str());
 
 	switch (cmd) {
 	case ENABLE_USERREC:
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 1);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2320,7 +2322,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	case DISABLE_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}
@@ -2331,13 +2333,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			// TODO: this should be a DeleteSecureAttribute
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_MAX_JOBS_RUNNING, -1);
+			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
 		}
 		break;
 	case DELETE_USERREC:
 		if (urec) { // disable
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 			// TODO: check if unused so we can just delete it now...
 			// UserRecDestroy(urec->jid.proc);
 		} else {
@@ -2389,8 +2391,8 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
-	if ( ! UserCheck2(NULL, EffectiveUser(rsock))) {
+	auto * rsock_user = EffectiveUser(rsock);
+	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
 		resultAd.Assign(ATTR_RESULT, EACCES);
 		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
 		if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
@@ -2412,6 +2414,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack);
 					if (rval) break;
+					++num_ads;
 				}
 			}
 			if (rval) break;
@@ -2421,6 +2424,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 			}
 			rval = act_on_user(cmd, username, act, txn, errstack);
 			if (rval) break;
+			++num_ads;
 		} else {
 			rval = 1;
 			errstack.push("SCHEDD", rval, "Dont know what user to act on.");
@@ -13941,11 +13945,12 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
-	//disable these until we decide permissions
-	#if 0
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+
+	//disable these until we decide permissions
+	#if 0
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
