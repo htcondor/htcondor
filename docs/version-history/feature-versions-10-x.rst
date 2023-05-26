@@ -27,12 +27,12 @@ New Features:
   were being submitted.
   :jira:`1666`
 
-- The admin knob `SUBMIT_ALLOW_GETENV` when set to false, now allows
-  submit files to use any value but *true* for their `getenv = ...`
+- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+  submit files to use any value but *true* for their ``getenv = ...``
   commands.
   :jira:`1671`
 
-- Added new *Save File* functionality to DAGMan which allows users to
+- Added new **Save File** functionality to DAGMan which allows users to
   specify DAG nodes as save points to record the current DAG's progress
   in a file similar to a rescue file. These files can then be specified
   with the new *condor_submit_dag* flag ``load_save`` to re-run the
@@ -46,10 +46,10 @@ New Features:
   :jira:`1589`
 
 - The *condor_transform_ads* tool can now read a configuration file containing
-   ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
-   any or all of the transforms declared in that file.  This makes it
-   easier to test job transforms before deploying them.
-   :jira:`1710`
+  ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+  any or all of the transforms declared in that file.  This makes it
+  easier to test job transforms before deploying them.
+  :jira:`1710`
 
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
   different threads. This is controlled by the new configuration
