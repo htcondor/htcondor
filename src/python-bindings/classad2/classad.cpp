@@ -277,19 +277,19 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
 
 
         // We do this song-and-dance in a bunch of places...
-        static PyObject * py_htcondor_module = NULL;
-        if( py_htcondor_module == NULL ) {
-             py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+        static PyObject * py_htcondor2_module = NULL;
+        if( py_htcondor2_module == NULL ) {
+             py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
         }
 
-        static PyObject * py_htcondor_classad_module = NULL;
-        if( py_htcondor_classad_module == NULL ) {
-            py_htcondor_classad_module = PyObject_GetAttrString( py_htcondor_module, "classad" );
+        static PyObject * py_htcondor2_classad_module = NULL;
+        if( py_htcondor2_classad_module == NULL ) {
+            py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
         }
 
 
         PyObject * py_ts = PyObject_CallMethod(
-            py_htcondor_classad_module,
+            py_htcondor2_classad_module,
             "_convert_local_datetime_to_utc_ts",
             "O", py_v
         );
@@ -381,7 +381,9 @@ _classad_set_item( PyObject *, PyObject * args ) {
     auto * classAd = (ClassAd *)handle->t;
     ExprTree * v = convert_python_to_classad_exprtree(value);
     if(! classAd->Insert(key, v)) {
-        PyErr_SetString(PyExc_AttributeError, key);
+        if(! PyErr_Occurred()) {
+            PyErr_SetString(PyExc_AttributeError, key);
+        }
         return NULL;
     }
 

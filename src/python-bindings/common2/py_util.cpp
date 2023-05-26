@@ -51,10 +51,22 @@ py_new_datetime_datetime(long secs) {
 		py_datetime_class = PyObject_GetAttrString( py_datetime_module, "datetime" );
 	}
 
-	return PyObject_CallMethodObjArgs(
+	static PyObject * py_timezone_class = NULL;
+	if( py_timezone_class == NULL ) {
+		py_timezone_class = PyObject_GetAttrString( py_datetime_module, "timezone" );
+	}
+
+	static PyObject * py_timezone_utc = NULL;
+	if( py_timezone_utc == NULL ) {
+		py_timezone_utc = PyObject_GetAttrString( py_timezone_class, "utc" );
+	}
+
+	return PyObject_CallMethod(
 	    py_datetime_class,
-	    PyUnicode_FromString("fromtimestamp"),
-	    PyLong_FromLong(secs)
+	    "fromtimestamp",
+	    "OO",
+	    PyLong_FromLong(secs),
+	    py_timezone_utc
 	);
 }
 

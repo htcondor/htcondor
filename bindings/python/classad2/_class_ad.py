@@ -48,6 +48,7 @@ def _convert_local_datetime_to_utc_ts(dt):
         the_epoch = datetime(1970, 1, 1, tzinfo=dt.tzinfo)
         return (dt - the_epoch) // timedelta(seconds=1)
     else:
-        utc_dt = dt.astimezone(timezone.utc)
-        the_epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
-        return (utc_dt - the_epoch) // timedelta(seconds=1)
+        the_epoch = datetime(1970, 1, 1)
+        naive_ts = (dt - the_epoch) // timedelta(seconds=1)
+        offset = dt.astimezone().utcoffset() // timedelta(seconds=1)
+        return naive_ts - offset
