@@ -1,10 +1,7 @@
 #!/usr/bin/env pytest
 
-import classad
 import htcondor
 import logging
-import time
-import re
 
 from ornithology import *
 
