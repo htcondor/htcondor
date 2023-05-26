@@ -505,6 +505,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	// remember that we have reaped this starter.
 	s_was_reaped = true;
 	s_exit_status = status;
+	bool abnormal_exit = WIFSIGNALED(status) || status != 0;
 
 	ClassAd *jobAd = NULL;
 	ClassAd dummyAd; // used then claim is NULL
@@ -575,15 +576,17 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		auto &slot_name = claim->rip()->r_id_str;
 		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
-                if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
-				slot_name, err.getFullText().c_str());
+		if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+			if (abnormal_exit) {
+				dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
+					slot_name, err.getFullText().c_str());
+			}
 		}
 	} else {
-		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
+		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 	}
 #else
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 #endif // LINUX
 
 }
