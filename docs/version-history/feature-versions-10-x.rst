@@ -40,6 +40,10 @@ Bugs Fixed:
   and crashed when they had active jobs in the blkio controller.
   :jira:`1786`
 
+- condor_restd service in the htcondor/mini container no longer crashes
+  on startup due to the `en_US.UTF-8` locale being unavailable.
+  :jira:`1785`
+
 - Fixed a bug that would very rarely cause *condor_wait* to hang forever.
   :jria:`1792`
 
