@@ -73,7 +73,7 @@ def get_token_configuration(param, is_ce, checking_remote_collector):
             delim_char = "," if "," in param[key] else " "
             for method in param[key].split(delim_char):
                 method = method.strip(", ")
-                if method.upper() == "TOKEN":
+                if "TOKEN" in method.upper() and "SCI" not in method.upper():
                     ret_info["using_token_auth"] = True
                     break
     if not ret_info["using_token_auth"]:
@@ -156,6 +156,9 @@ def check_idtokens(is_ce):
     format_print("Checking IDTokens:")
     # The original default value for TRUST_DOMAIN
     v9_default_value = htcondor.param.get("COLLECTOR_HOST")
+    v9_default_value = v9_default_value.replace(",", " ")
+    v9_default_value = v9_default_value.replace("\t", " ")
+    v9_default_value = v9_default_value.split()[0]
     # Daemon list to determin if this host is running collector
     daemon_list = htcondor.param["daemon_list"]
     # Get this hosts IDToken configuration infor
@@ -182,7 +185,7 @@ def check_idtokens(is_ce):
     trust_domain = my_config_info["trust_domain"]
     td_line = f"Has non-default TRUST_DOMAIN ({trust_domain['value']}) set."
     if trust_domain["is_default"]:
-        td_line = "Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
+        td_line = f"Using default TRUST_DOMAIN '{trust_domain['unexpanded']}'."
     version_line = "HTCONDOR-CE" if is_ce else f"HTCONDOR V{my_config_info['version']}"
     format_print(f"This Host: {version_line} | {td_line}", offset=8)
     # Determine if this host has issued IDTokens by checking if signing key exists
@@ -196,7 +199,7 @@ def check_idtokens(is_ce):
         format_print("Did not find any stored IDTokens on host.", offset=19)
     else:
         format_print(
-            f"Found {len(my_token_issuers)} IDTokens with the following issuers:",
+            f"Found {len(my_token_issuers)} IDToken issuers:",
             offset=19,
         )
         for key, value in my_token_issuers.items():
@@ -234,35 +237,44 @@ def check_idtokens(is_ce):
             )
             return
     format_print(
-        "*** HTCondor system possibly affected by V9 to V10 upgrade IDToken default changes ***",
+        "*** HTCondor system affected by V9 to V10 upgrade IDToken default changes ***",
         offset=8,
         newline=True,
     )
     format_print(
         "IDToken authentication may fail if in use. If tokens have been created and",
         offset=8,
+        newline=True,
     )
-    format_print(
-        "distributed consider doing the following. Possible Solutions:", offset=8
-    )
-    set_trust_domain = """TRUST_DOMAIN to local collectors value in
-             tokens issuers field"""
+    format_print("distributed consider doing the following solutions:", offset=8)
+    set_trust_domain = "TRUST_DOMAIN to local collectors"
+    extra_bit = "value found in IDTokens issuers field "
     if my_token_issuers != None and v9_default_value in my_token_issuers:
         set_trust_domain = f"'TRUST_DOMAIN = {v9_default_value}'"
+        extra_bit = ""
     format_print(
-        f"1. To keep using existing distributed tokens set {set_trust_domain} on all hosts in the pool and reconfig.",
+        f"1. To keep using existing distributed tokens set {set_trust_domain}",
         offset=12,
     )
     format_print(
-        "2. Or re-issue all tokens after hosts have been upgraded or TRUST_DOMAIN is explicilty set in configuration.",
+        f"   {extra_bit}in the pools configuration and reconfigure.",
         offset=12,
     )
     format_print(
-        "Note: Any IDTokens issued from other collectors used for flocking will likely need to be re-issued",
+        "2. Or re-issue all tokens after hosts have been upgraded or TRUST_DOMAIN is",
         offset=12,
     )
     format_print(
-        "      once those hosts HTCondor system is upgraded to V10.", offset=12
+        "   explicilty set to a string literal in configuration.",
+        offset=12,
+    )
+    format_print(
+        "Note: Any IDTokens issued from other collectors used for flocking may need to be",
+        offset=12,
+    )
+    format_print(
+        "      re-issued once those hosts HTCondor system is upgraded to V10.",
+        offset=12,
     )
 
 
@@ -555,7 +567,7 @@ def main():
     # Final information to direct people to help
     format_print(
         """For more information reagrding incompatibilities visit:
-  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html#upgrading-from-an-9-0-lts-version-to-an-10-0-lts-version-of-htcondor""",
+  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html""",
         newline=True,
     )
     format_print(
