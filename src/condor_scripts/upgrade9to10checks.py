@@ -567,7 +567,7 @@ def main():
     # Final information to direct people to help
     format_print(
         """For more information reagrding incompatibilities visit:
-  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html#upgrading-from-an-9-0-lts-version-to-an-10-0-lts-version-of-htcondor""",
+  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html""",
         newline=True,
     )
     format_print(
