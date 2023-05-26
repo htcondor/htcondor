@@ -28,6 +28,10 @@ Bugs Fixed:
   omitted from accounting ads queried from the *condor_negotiator*.
   :jira:`1780`
 
+- Fixed a bug in the python bindings where an incorrect version was
+  being reported.
+  :jira:`1813`
+
 - The classad functions ``anycompare``, ``allcompare``, ``sum``, ``min``,
   ``max``, ``avg`` and ``join`` no longer treat a single undefined input
   as forcing the result to be undefined.  ``sum``, ``min``, ``max``, ``avg`` and ``join``
