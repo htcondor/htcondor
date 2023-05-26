@@ -8506,10 +8506,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		}
 	}
 
-	if (msg->have_claimed_slot_info()) {
-		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
-	}
-
 	// If the startd returned any "leftover" partitionable slot resources,
 	// we want to create a match record for it (so we can subsequently find
 	// a job to run on it). 
@@ -8595,6 +8591,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 		delete sn;
 	} 
+
+	if (msg->have_claimed_slot_info()) {
+		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
+	}
 
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
