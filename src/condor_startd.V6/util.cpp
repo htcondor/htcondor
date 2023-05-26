@@ -168,34 +168,33 @@ check_execute_dir_perms( StringList &list )
 }
 
 void
-check_recovery_file( const char *execute_dir )
+check_recovery_file( const char *sandbox_dir, bool abnormal_exit )
 {
-	std::string recovery_file;
 	FILE *recovery_fp = NULL;
 	ClassAd *recovery_ad = NULL;
-	if ( execute_dir == NULL ) {
+	if ( sandbox_dir == NULL ) {
 		return;
 	}
 
-	formatstr(recovery_file, "%s.recover", execute_dir );
-
-	StatInfo si( recovery_file.c_str() );
-
-	if ( si.Error() ) {
-		if ( si.Error() != SINoFile ) {
-			if (unlink(recovery_file.c_str()) < 0) {
-				dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
-			}
-		}
-		return;
+	// the caller might pass the path to a job sandbox dir
+	// or a path to the recovery file itself.  so if the passed-in
+	// filename does not end in .recovery, append it.
+	std::string recovery_file(sandbox_dir);
+	if ( ! ends_with(recovery_file, ".recover")) {
+		recovery_file += ".recover";
 	}
-
-		// TODO: check file ownership?
 
 	recovery_fp = safe_fopen_wrapper_follow( recovery_file.c_str(), "r" );
 	if ( recovery_fp == NULL ) {
-		if (unlink(recovery_file.c_str()) < 0) {
-			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
+		int err = errno;
+		if (errno != ENOENT) {
+			dprintf( D_ALWAYS, "check_recovery_file: could not open '%s', error %d : %s\n",
+				recovery_file.c_str(), err, strerror(err));
+			if (unlink(recovery_file.c_str()) < 0) {
+				dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
+			}
+		} else if (abnormal_exit) {
+			dprintf(D_FULLDEBUG, "check_recovery_file: '%s' does not exist\n", recovery_file.c_str());
 		}
 		return;
 	}
@@ -206,11 +205,19 @@ check_recovery_file( const char *execute_dir )
 	recovery_ad = new ClassAd;
 	InsertFromFile( recovery_fp, *recovery_ad, "***", eof, error, empty );
 	if ( error || empty ) {
+		dprintf( D_ALWAYS, "check_recovery_file(%s): read error %d %s\n",
+			recovery_file.c_str(), error, empty?"empty file":"");
 		fclose( recovery_fp );
 		if (unlink(recovery_file.c_str()) < 0) {
 			dprintf( D_FULLDEBUG, "check_recovery_file: Failed to remove file '%s'\n", recovery_file.c_str() );
 		} 
 		return;
+	}
+
+	if (abnormal_exit) {
+		std::string buf;
+		dprintf(D_FULLDEBUG, "check_recovery_file('%s') ad:%s\n",
+			recovery_file.c_str(), formatAd(buf, *recovery_ad, "\t"));
 	}
 
 	int universe = 0;
@@ -263,7 +270,7 @@ cleanup_execute_dirs( StringList &list )
 
 		execute_dir.Rewind();
 		while ( execute_dir.Next() ) {
-			check_recovery_file( execute_dir.GetFullPath() );
+			check_recovery_file( execute_dir.GetFullPath(), true );
 		}
 
 		execute_dir.Remove_Entire_Directory();
@@ -278,7 +285,7 @@ cleanup_execute_dirs( StringList &list )
 
 				execute_dir.Rewind();
 				while ( execute_dir.Next() ) {
-					check_recovery_file( execute_dir.GetFullPath() );
+					check_recovery_file( execute_dir.GetFullPath(), true );
 				}
 
 				execute_dir.Remove_Entire_Directory();
@@ -330,7 +337,7 @@ bool retry_cleanup_execute_dir(const std::string & path, int /*options*/, int & 
 }
 
 void
-cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
+cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_path, bool abnormal_exit)
 {
 	ASSERT( pid );
 
@@ -356,7 +363,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 
 	formatstr(buf, "%s\\dir_%d", exec_path, pid );
  
-	check_recovery_file( buf.c_str() );
+	check_recovery_file(buf.c_str(), abnormal_exit);
 
 	int err = 0;
 	if ( ! retry_cleanup_execute_dir(buf, 0, err)) {
@@ -375,7 +382,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 	formatstr(pid_dir, "dir_%d", pid );
 	formatstr(pid_dir_path, "%s/%s", exec_path, pid_dir.c_str() );
 
-	check_recovery_file( pid_dir_path.c_str());
+	check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
 
 	// Instantiate a directory object pointing at the execute directory
 	std::string dirbuf;
@@ -385,7 +392,7 @@ cleanup_execute_dir(int pid, char const *exec_path, bool remove_exec_subdir)
 
 		Directory execute_dir( exec_path_full, PRIV_ROOT );
 
-		if (remove_exec_subdir) {
+		if (remove_exec_path) {
 			// Remove entire subdirectory; used to remove
 			// an encrypted execute directory
 			execute_dir.Remove_Full_Path(exec_path_full);

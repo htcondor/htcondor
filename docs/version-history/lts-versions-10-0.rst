@@ -40,6 +40,16 @@ Bugs Fixed:
   submitting a **batch** grid universe job to a remote system via ssh.
   :jira:`1560`
 
+- Fixed bug in ``condor_pool_job_report`` script that broke the script and
+  outputted error messages about invalid constraint expressions due internal
+  use of ``condor_history`` specifying a file to read with ``-f`` flag instead
+  of full ``-file``.
+  :jira:`1812`
+  
+- Fixed a bug where the *condor_startd* would sometimes not remove docker images
+  that had been left behind when a *condor_starter* exited abruptly.
+  :jira:`1814`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
@@ -68,6 +78,10 @@ New Features:
 - Added ``CONFIG_ROOT`` configuration variable that is set to the directory
   of the main configuration file before the configuration files are read.
   :jira:`1733`
+
+- Ensure that the SciTokens library can create its cache of token
+  issuer credentials.
+  :jira:`1757`
 
 - Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
   which allows the client to present an X.509 proxy certificate during
@@ -131,6 +145,10 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- When writing a remove event in JSON, the ``ToE.When`` field is now seconds
+  since the (Unix) epoch, like all other events.
+  :jira:`1763`
 
 - Fixed a bug where DAGMan job submission would fail when not using
   direct submission due to setting a custom job ClassAd attribute with
