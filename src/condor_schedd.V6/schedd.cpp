@@ -4671,7 +4671,7 @@ callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 bool
 Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
-	int universe;
+	int universe = 0;
 	if( srec ) {
 		universe = srec->universe;
 	} else {
@@ -11563,7 +11563,7 @@ mark_job_running(PROC_ID* job_id)
 	int univ = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, &univ);
 	if (univ == CONDOR_UNIVERSE_SCHEDULER) {
-		int num;
+		int num = 0;
 		if (GetAttributeInt(job_id->cluster, job_id->proc,
 							ATTR_NUM_JOB_STARTS, &num) < 0) {
 			num = 0;
@@ -11593,9 +11593,9 @@ mark_serial_job_running( PROC_ID *job_id )
 void
 _mark_job_stopped(PROC_ID* job_id)
 {
-	int		status;
-	int		orig_max;
-	int		had_orig;
+	int		status    = 0;
+	int		orig_max  = 0;
+	int		had_orig  = 0;
 
 		// NOTE: This function is wrapped in a NONDURABLE transaction.
 
@@ -15044,7 +15044,7 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
-			time_t renew_time;
+			time_t renew_time = 0;
 			if ( starter_handles_alives && 
 				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
 			{

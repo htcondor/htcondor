@@ -978,7 +978,7 @@ int
 DedicatedScheduler::reaper( int pid, int status )
 {
 	shadow_rec*		srec;
-	int q_status;  // status of this job in the queue
+	int q_status = 0;  // status of this job in the queue
 
 	dprintf( D_ALWAYS, "In DedicatedScheduler::reaper pid %d has status %d\n", pid, status);
 
@@ -1945,7 +1945,7 @@ DedicatedScheduler::spawnJobs( void )
 	AllocationNode* allocation;
 	match_rec* mrec;
 	shadow_rec* srec;
-	int univ;
+	int univ = 0;
 	int i, p, n;
 	PROC_ID id;
 
