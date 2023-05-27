@@ -248,4 +248,51 @@ struct case_char_traits : public std::char_traits<char>
 
 using istring_view = std::basic_string_view<char, case_char_traits>;
 
+// Some strings contain sensitive data that we want to clear out as soon
+// as we are done with them, like credentials.  This allocator is intended
+// to be used with std::strings, so we can use all the goodness of the standard
+// string, but clear out memory when we are done with the object.
+
+namespace htcondor {
+template <typename T>
+class allocator {
+	public:
+		using value_type = T;
+		using propagate_on_container_move_assignment = std::true_type;
+		using is_always_equal = std::true_type;
+
+		allocator() noexcept = default;
+		allocator(const allocator &) noexcept = default;
+		~allocator() = default;
+
+		T *allocate(std::size_t n) {
+			return static_cast<T*>(malloc(n * sizeof(T)));
+		}	
+
+		void deallocate(T *ptr, std::size_t n) {
+			// C++23 has memset_explicit which is guaranteed not to be optimized away
+			// memset_explicit(T, '\0', n);
+			memset(ptr, '\0', n);
+			free(ptr);
+		}	
+
+		template <class U>
+		allocator(const allocator<U>&) noexcept {}
+};
+		
+template <class T, class U>
+bool operator==(const allocator<T>&, const allocator<U>&) noexcept
+{
+	return true;
+}
+
+template <class T, class U>
+bool operator!=(const allocator<T>&, const allocator<U>&) noexcept
+{
+	return false;
+}
+}
+
+using secure_string = std::basic_string<char, std::char_traits<char>, htcondor::allocator<char>>;
+using secure_vector = std::vector<unsigned char, htcondor::allocator<char>>;
 #endif // _stl_string_utils_h_
