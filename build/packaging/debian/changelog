@@ -1,6 +1,12 @@
+condor (9.0.17-3) stable; urgency=medium
+
+  * Improved upgrade9to10checks.py script
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 27 May 2023 06:40:00 -0500
+
 condor (9.0.17-2) stable; urgency=medium
 
-  * Add upgrade9to10checks script
+  * Add upgrade9to10checks.py script
 
  -- Tim Theisen <tim@cs.wisc.edu>  Tue, 09 May 2023 15:57:00 -0500
 
