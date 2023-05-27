@@ -1,4 +1,4 @@
-static PyObject_Handle *
+PyObject_Handle *
 get_handle_from(PyObject * py) {
 	auto * py_handle = PyObject_GetAttrString( py, "_handle" );
 	Py_DecRef(py_handle);
@@ -6,7 +6,7 @@ get_handle_from(PyObject * py) {
 }
 
 
-static PyObject *
+PyObject *
 py_new_htcondor2_classad(void * classAd) {
 	static PyObject * py_htcondor2_module = NULL;
 	if( py_htcondor2_module == NULL ) {
@@ -216,5 +216,30 @@ py_is_datetime_datetime(PyObject * py) {
 		py_class = PyObject_GetAttrString( py_module, "datetime" );
 	}
 
+	// The above should probably be factored out into its own function,
+	// since it's identical in this one and in py_new_datetime_datetime.
 	return PyObject_IsInstance( py, py_class );
+}
+
+
+int
+py_is_htcondor2_classad(PyObject * py) {
+	static PyObject * py_htcondor2_module = NULL;
+	if( py_htcondor2_module == NULL ) {
+		 py_htcondor2_module = PyImport_ImportModule( "htcondor2" );
+	}
+
+	static PyObject * py_htcondor2_classad_module = NULL;
+	if( py_htcondor2_classad_module == NULL ) {
+		py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
+	}
+
+	static PyObject * py_ClassAd_class = NULL;
+	if( py_ClassAd_class == NULL ) {
+		py_ClassAd_class = PyObject_GetAttrString( py_htcondor2_classad_module, "ClassAd" );
+	}
+
+	// The above should probably be factored out into its own function,
+	// since it's identical in this one and in py_new_htcondor2_classad
+	return PyObject_IsInstance( py, py_ClassAd_class );
 }

@@ -16,6 +16,32 @@ _classad_init( PyObject *, PyObject * args ) {
 
 
 static PyObject *
+_classad_init_from_string( PyObject *, PyObject * args ) {
+    // _classad_init( self, self._handle, str )
+
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+    const char * from_string = NULL;
+    if(! PyArg_ParseTuple( args, "OOz", & self, (PyObject **)& handle, & from_string)) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    classad::ClassAdParser parser;
+    classad::ClassAd * result = parser.ParseClassAd(from_string);
+    if( result == NULL ) {
+        // This was ClassAdParseError in version 1.
+        PyErr_SetString( PyExc_RuntimeError, "Unable to parse string into a ClassAd." );
+        return NULL;
+    }
+
+    handle->t = result;
+    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
 _classad_to_string( PyObject *, PyObject * args ) {
     // _classad_to_string( self._handle )
 
@@ -237,9 +263,16 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
     int check = py_is_classad_exprtree(py_v);
     if( check == -1 ) { return NULL; }
     if( check == 1 ) {
-        // `py_v` is a htcondor.ClassAd.ExprTree that owns it own ExprTree *,
+        // `py_v` is a htcondor.ClassAd.ExprTree that owns its own ExprTree *,
         // so we have to return a copy here.  We don't have to deparent
         // the ExprTree, because it's already loose (by invariant).
+        auto * handle = get_handle_from(py_v);
+        return ((classad::ExprTree *)handle->t)->Copy();
+    }
+
+    check = py_is_htcondor2_classad(py_v);
+    if( check == -1 ) { return NULL; }
+    if( check == 1 ) {
         auto * handle = get_handle_from(py_v);
         return ((classad::ExprTree *)handle->t)->Copy();
     }
@@ -274,8 +307,6 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
     }
 
     if( py_is_datetime_datetime(py_v) ) {
-
-
         // We do this song-and-dance in a bunch of places...
         static PyObject * py_htcondor2_module = NULL;
         if( py_htcondor2_module == NULL ) {
@@ -287,7 +318,6 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             py_htcondor2_classad_module = PyObject_GetAttrString( py_htcondor2_module, "classad" );
         }
 
-
         PyObject * py_ts = PyObject_CallMethod(
             py_htcondor2_classad_module,
             "_convert_local_datetime_to_utc_ts",
@@ -297,7 +327,6 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
             // PyObject_CallMethod() has already set an exception for us.
             return NULL;
         }
-
 
         classad::abstime_t atime;
         atime.offset = 0;
@@ -355,7 +384,11 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         return classad::Literal::MakeLiteral(v);
     }
 
-    // FIXME: PyDict_Check()
+    // Dictionaries are handled by the Python side.
+    if( PyDict_Check(py_v) ) {
+        PyErr_SetString( PyExc_AssertionError, "convert_python_to_classad_exprtree() called with a dict" );
+        return NULL;
+    }
 
     // FIXME: PyMapping_Check()
 

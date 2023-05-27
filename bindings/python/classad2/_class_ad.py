@@ -1,6 +1,7 @@
 from .classad2_impl import _handle as handle_t
 
 from .classad2_impl import _classad_init
+from .classad2_impl import _classad_init_from_string
 from .classad2_impl import _classad_to_string
 from .classad2_impl import _classad_to_repr
 from .classad2_impl import _classad_get_item
@@ -12,9 +13,21 @@ from datetime import datetime, timedelta, timezone
 
 class ClassAd(UserDict):
 
-    def __init__(self):
+    def __init__(self, input=None):
         self._handle = handle_t()
-        _classad_init(self, self._handle)
+
+        if input is None:
+            _classad_init(self, self._handle)
+            return
+        if isinstance(input, dict):
+            _classad_init(self, self._handle)
+            for key in input:
+                self[key] = input[key]
+            return
+        if isinstance(input, str):
+            _classad_init_from_string(self, self._handle, input)
+            return
+        raise TypeError("input must be None, str, or dict")
 
 
     def __repr__(self):
@@ -34,6 +47,8 @@ class ClassAd(UserDict):
     def __setitem__(self, key, value):
         if not isinstance(key, str):
             raise KeyError("ClassAd keys are strings")
+        if isinstance(value, dict):
+            return _classad_set_item(self._handle, key, ClassAd(value))
         return _classad_set_item(self._handle, key, value)
 
 
