@@ -1010,16 +1010,16 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 
 	//PRAGMA_REMIND("tj asks: is it really ok that this function will look inside an uncommitted transaction to get the job status?")
 
-	int hold_status;
+	int hold_status = 0;
 	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
 		if(hold_status == HELD) {
-			int hold_reason_code;
+			int hold_reason_code = 0;
 			if( GetAttributeInt(cluster,proc,ATTR_HOLD_REASON_CODE,
 					&hold_reason_code) >= 0) {
 				if(hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput) {
 					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
 						"Checking how long...\n",cluster,proc);
-					time_t stage_in_start;
+					time_t stage_in_start = 0;
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
@@ -10909,7 +10909,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
 		// For the local universe, "shadow" means local starter.
-	int num;
+	int num = 0;
 	switch (job_univ) {
 	case CONDOR_UNIVERSE_SCHEDULER:
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
@@ -11928,7 +11928,8 @@ Scheduler::shadow_prio_recs_consistent()
 {
 	int		i;
 	struct shadow_rec	*srp;
-	int		status, universe;
+	int		status = 0;
+	int universe = 0;
 
 	dprintf( D_FULLDEBUG, "Checking consistency of running and runnable jobs\n" );
 	BadCluster = -1;
