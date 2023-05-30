@@ -1639,6 +1639,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
+- Improved upgrade9to10checks.py script
+
 * Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
 - Add upgrade9to10checks.py script
 

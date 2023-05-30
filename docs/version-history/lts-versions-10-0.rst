@@ -34,6 +34,11 @@ New Features:
   to how users request GPUs.
   :jira:`1658`
 
+- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
+  which allows the client to present an X.509 proxy certificate during
+  SSL authentication with a daemon.
+  :jira:`1781`
+
 - Added ``CONFIG_ROOT`` configuration variable that is set to the directory
   of the main configuration file before the configuration files are read.
   :jira:`1733`
@@ -42,11 +47,6 @@ New Features:
   issuer credentials.
   :jira:`1757`
 
-- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
-  which allows the client to present an X.509 proxy certificate during
-  SSL authentication with a daemon.
-  :jira:`1781`
-
 Bugs Fixed:
 
 - Fixed a bug where certain errors during file transfer could result in
@@ -54,6 +54,23 @@ Bugs Fixed:
   jobs completing successfully, including final file transfer, but ending
   up without one of their output files (the one the error occurred during).
   :jira:`1687`
+
+- Fixed a bug where the *condor_schedd* falsely believed there were
+  too many jobs in the queue and rejected new job submissions based on
+  ``MAX_JOBS_SUBMITTED``.
+  :jira:`1688`
+
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
+- Fixed a bug that could cause a daemon or tool to crash when
+  attempting SSL or SCITOKENS authentication.
+  :jira:`1756`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
 
 - Fixed a bug where Job Ad Information events weren't always written
   when using the Job Router.
@@ -68,11 +85,6 @@ Bugs Fixed:
   levels recommended in the documentation for setting up a condor pool.
   :jira:`1615`
 
-- Fixed a bug where the *condor_schedd* falsely believed there were
-  too many jobs in the queue and rejected new job submissions based on
-  ``MAX_JOBS_SUBMITTED``.
-  :jira:`1688`
-
 - *condor_remote_cluster* now works correctly when the hardware
   architecture of the remote machine isn't x86_64.
   :jira:`1670`
@@ -81,22 +93,10 @@ Bugs Fixed:
   same way as *condor_submit*.
   :jira:`1695`
 
-- Fix a bug where SSL authentication would fail when using a daemon's
-  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
-  :jira:`1713`
-
 - Fixed a bug introduced in HTCondor 10.0.3 that caused remote
   submission of **batch** grid universe jobs via ssh to fail when
   attempting to do file transfer.
   :jira:`1747`
-
-- Fixed a bug where the HTCondor-CE would fail to handle any of its
-  jobs after a restart.
-  :jira:`1755`
-
-- Fixed a bug that could cause a daemon or tool to crash when
-  attempting SSL or SCITOKENS authentication.
-  :jira:`1756`
 
 - *condor_store_cred* and *condor_credmon_vault* now reuses existing
   Vault tokens when down scoping access tokens.
