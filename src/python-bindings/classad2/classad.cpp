@@ -410,26 +410,48 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         ClassAd * c = new classad::ClassAd();
 
         PyObject * items = PyMapping_Items(py_v);
-        Py_ssize_t size = PyList_Size(items);
-        for( Py_ssize_t i = 0; i < size; ++i ) {
-            PyObject * item = PyList_GetItem(items, i);
+        if( items == NULL ) {
+            // A python list passes PyMapping_Check() because it supports
+            // slices, but since it doesn't have keys, it fails here;
+            // we'll catch in the last clause, below.  We do it in this
+            // order because all dictionaries have iterators.
+            PyErr_Clear();
+        } else {
+            Py_ssize_t size = PyList_Size(items);
+            for( Py_ssize_t i = 0; i < size; ++i ) {
+                PyObject * item = PyList_GetItem(items, i);
 
-            const char * key = NULL;
-            PyObject * value = NULL;
-            if(! PyArg_ParseTuple( item, "zO", &key, &value)) {
-                // PyArg_ParseTuple() has already set an exception for us.
-                return NULL;
+                const char * key = NULL;
+                PyObject * value = NULL;
+                if(! PyArg_ParseTuple( item, "zO", &key, &value)) {
+                    // PyArg_ParseTuple() has already set an exception for us.
+                    return NULL;
+                }
+
+                classad::ExprTree * e = convert_python_to_classad_exprtree(value);
+                c->Insert(key, e);
             }
+            Py_DecRef(items);
 
-            classad::ExprTree * e = convert_python_to_classad_exprtree(value);
-            c->Insert(key, e);
+            return c;
         }
-        Py_DecRef(items);
-
-        return c;
     }
 
-    // FIXME: PyObject_GetIter()
+    PyObject * iter = PyObject_GetIter(py_v);
+    if( iter != NULL ) {
+        classad::ExprList * exprList = new classad::ExprList();
+
+        PyObject * item = NULL;
+        while( (item = PyIter_Next(iter)) != NULL ) {
+            exprList->push_back(convert_python_to_classad_exprtree(item));
+            Py_DecRef(item);
+        }
+        Py_DecRef(iter);
+
+        return exprList;
+    } else {
+        PyErr_Clear();
+    }
 
     // This was ClassAdValueError in version 1.
     PyErr_SetString( PyExc_RuntimeError, "Unable to convert Python object to a ClassAd expression." );
