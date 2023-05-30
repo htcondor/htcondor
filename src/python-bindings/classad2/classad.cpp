@@ -1,3 +1,5 @@
+ExprTree * convert_python_to_classad_exprtree(PyObject * py_v);
+
 static PyObject *
 _classad_init( PyObject *, PyObject * args ) {
     // _classad_init( self, self._handle )
@@ -36,6 +38,24 @@ _classad_init_from_string( PyObject *, PyObject * args ) {
     }
 
     handle->t = result;
+    handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
+    Py_RETURN_NONE;
+}
+
+
+static PyObject *
+_classad_init_from_dict( PyObject *, PyObject * args ) {
+    // _classad_init( self, self._handle, str )
+
+    PyObject * self = NULL;
+    PyObject_Handle * handle = NULL;
+    PyObject * dict = NULL;
+    if(! PyArg_ParseTuple( args, "OOO", & self, (PyObject **)& handle, & dict)) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    handle->t = convert_python_to_classad_exprtree(dict);
     handle->f = [](void * & v){ dprintf( D_ALWAYS, "[ClassAd]\n" ); delete (classad::ClassAd *)v; v = NULL; };
     Py_RETURN_NONE;
 }
@@ -356,7 +376,7 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         }
         v.SetStringValue( buffer, size );
 
-        Py_DECREF(py_bytes);
+        Py_DecRef(py_bytes);
         return classad::Literal::MakeLiteral(v);
     }
 
@@ -384,13 +404,30 @@ convert_python_to_classad_exprtree(PyObject * py_v) {
         return classad::Literal::MakeLiteral(v);
     }
 
-    // Dictionaries are handled by the Python side.
-    if( PyDict_Check(py_v) ) {
-        PyErr_SetString( PyExc_AssertionError, "convert_python_to_classad_exprtree() called with a dict" );
-        return NULL;
-    }
+    // PyDict_Check() is not part of the stable ABI.
 
-    // FIXME: PyMapping_Check()
+    if( PyMapping_Check(py_v) ) {
+        ClassAd * c = new classad::ClassAd();
+
+        PyObject * items = PyMapping_Items(py_v);
+        Py_ssize_t size = PyList_Size(items);
+        for( Py_ssize_t i = 0; i < size; ++i ) {
+            PyObject * item = PyList_GetItem(items, i);
+
+            const char * key = NULL;
+            PyObject * value = NULL;
+            if(! PyArg_ParseTuple( item, "zO", &key, &value)) {
+                // PyArg_ParseTuple() has already set an exception for us.
+                return NULL;
+            }
+
+            classad::ExprTree * e = convert_python_to_classad_exprtree(value);
+            c->Insert(key, e);
+        }
+        Py_DecRef(items);
+
+        return c;
+    }
 
     // FIXME: PyObject_GetIter()
 

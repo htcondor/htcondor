@@ -2,6 +2,7 @@ from .classad2_impl import _handle as handle_t
 
 from .classad2_impl import _classad_init
 from .classad2_impl import _classad_init_from_string
+from .classad2_impl import _classad_init_from_dict
 from .classad2_impl import _classad_to_string
 from .classad2_impl import _classad_to_repr
 from .classad2_impl import _classad_get_item
@@ -20,9 +21,7 @@ class ClassAd(UserDict):
             _classad_init(self, self._handle)
             return
         if isinstance(input, dict):
-            _classad_init(self, self._handle)
-            for key in input:
-                self[key] = input[key]
+            _classad_init_from_dict(self, self._handle, input)
             return
         if isinstance(input, str):
             _classad_init_from_string(self, self._handle, input)

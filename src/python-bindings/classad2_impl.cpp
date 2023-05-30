@@ -25,9 +25,10 @@ static PyMethodDef classad2_impl_methods[] = {
     )C0ND0R"},
 
     {"_classad_init", & _classad_init, METH_VARARGS, NULL},
+    {"_classad_init_from_dict", & _classad_init_from_dict, METH_VARARGS, NULL},
     {"_classad_init_from_string", & _classad_init_from_string, METH_VARARGS, NULL},
-    {"_classad_to_string", & _classad_to_string, METH_VARARGS, NULL},
     {"_classad_to_repr", & _classad_to_repr, METH_VARARGS, NULL},
+    {"_classad_to_string", & _classad_to_string, METH_VARARGS, NULL},
     {"_classad_get_item", & _classad_get_item, METH_VARARGS, NULL},
     {"_classad_set_item", & _classad_set_item, METH_VARARGS, NULL},
     {"_classad_del_item", & _classad_del_item, METH_VARARGS, NULL},
