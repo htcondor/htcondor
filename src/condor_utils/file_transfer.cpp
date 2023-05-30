@@ -6389,7 +6389,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		drop_privs
 	);
 
-	int rc;
+	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_for_exit( timeout, & rc );
 

@@ -1010,16 +1010,16 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 
 	//PRAGMA_REMIND("tj asks: is it really ok that this function will look inside an uncommitted transaction to get the job status?")
 
-	int hold_status;
+	int hold_status = 0;
 	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
 		if(hold_status == HELD) {
-			int hold_reason_code;
+			int hold_reason_code = 0;
 			if( GetAttributeInt(cluster,proc,ATTR_HOLD_REASON_CODE,
 					&hold_reason_code) >= 0) {
 				if(hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput) {
 					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
 						"Checking how long...\n",cluster,proc);
-					time_t stage_in_start;
+					time_t stage_in_start = 0;
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
@@ -4675,7 +4675,7 @@ callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 bool
 Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
-	int universe;
+	int universe = 0;
 	if( srec ) {
 		universe = srec->universe;
 	} else {
@@ -10913,7 +10913,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
 		// For the local universe, "shadow" means local starter.
-	int num;
+	int num = 0;
 	switch (job_univ) {
 	case CONDOR_UNIVERSE_SCHEDULER:
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
@@ -11567,7 +11567,7 @@ mark_job_running(PROC_ID* job_id)
 	int univ = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, &univ);
 	if (univ == CONDOR_UNIVERSE_SCHEDULER) {
-		int num;
+		int num = 0;
 		if (GetAttributeInt(job_id->cluster, job_id->proc,
 							ATTR_NUM_JOB_STARTS, &num) < 0) {
 			num = 0;
@@ -11597,9 +11597,9 @@ mark_serial_job_running( PROC_ID *job_id )
 void
 _mark_job_stopped(PROC_ID* job_id)
 {
-	int		status;
-	int		orig_max;
-	int		had_orig;
+	int		status    = 0;
+	int		orig_max  = 0;
+	int		had_orig  = 0;
 
 		// NOTE: This function is wrapped in a NONDURABLE transaction.
 
@@ -11932,7 +11932,8 @@ Scheduler::shadow_prio_recs_consistent()
 {
 	int		i;
 	struct shadow_rec	*srp;
-	int		status, universe;
+	int		status = 0;
+	int universe = 0;
 
 	dprintf( D_FULLDEBUG, "Checking consistency of running and runnable jobs\n" );
 	BadCluster = -1;
@@ -15049,7 +15050,7 @@ Scheduler::sendAlives()
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
-			time_t renew_time;
+			time_t renew_time = 0;
 			if ( starter_handles_alives && 
 				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
 			{

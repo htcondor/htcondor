@@ -42,6 +42,7 @@
 #include "list.h"
 #include "my_popen.h"
 
+#include <charconv>
 #include <string>
 #include <set>
 
@@ -437,19 +438,19 @@ void XFormHash::clear_live_variables() const
 
 void XFormHash::set_factory_vars(int isCluster, bool latMat)
 {
-	if (LiveProcessString) sprintf(LiveProcessString, "%d", latMat?1:0);
-	if (LiveStepString) sprintf(LiveStepString, "%d", isCluster);
+	if (LiveProcessString) { auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 3, latMat ? 1 :0); *p = '\0';}
+	if (LiveStepString)    { auto [p, ec] = std::to_chars(LiveStepString,    LiveStepString + 3, isCluster); *p = '\0';}
 }
 
 void XFormHash::set_iterate_step(int step, int proc)
 {
-	if (LiveProcessString) sprintf(LiveProcessString, "%d", proc);
-	if (LiveStepString) sprintf(LiveStepString, "%d", step);
+	if (LiveProcessString) { auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, proc); *p = '\0';}
+	if (LiveStepString)    { auto [p, ec] = std::to_chars(LiveStepString,    LiveStepString + 12, step); *p = '\0';}
 }
 
 void XFormHash::set_iterate_row(int row, bool iterating)
 {
-	if (LiveRowString) sprintf(LiveRowString, "%d", row);
+	if (LiveRowString) { auto [p, ec] = std::to_chars(LiveRowString,    LiveRowString + 12, row); *p = '\0';}
 	if (LiveIteratingMacroDef) LiveIteratingMacroDef->psz = const_cast<char*>(iterating ? "1" : "0");
 }
 
