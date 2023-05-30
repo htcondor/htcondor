@@ -49,6 +49,13 @@ Bugs Fixed:
   that had been left behind when a *condor_starter* exited abruptly.
   :jira:`1814`
 
+- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+  Vault tokens when down scoping access tokens.
+  :jira:`1527`
+
+- Fixed a missing library import in *condor_credmon_vault*.
+  :jira:`1527`
+
 .. _lts-version-history-1004:
 
 Version 10.0.4
@@ -137,13 +144,6 @@ Bugs Fixed:
 - Fixed a bug that could cause a daemon or tool to crash when
   attempting SSL or SCITOKENS authentication.
   :jira:`1756`
-
-- *condor_store_cred* and *condor_credmon_vault* now reuses existing
-  Vault tokens when down scoping access tokens.
-  :jira:`1527`
-
-- Fixed a missing library import in *condor_credmon_vault*.
-  :jira:`1527`
 
 - When writing a remove event in JSON, the ``ToE.When`` field is now seconds
   since the (Unix) epoch, like all other events.
