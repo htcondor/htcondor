@@ -1640,6 +1640,19 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.4-1
+- Provides script to assist updating from HTCondor version 9 to version 10
+- Fixes a bug where rarely an output file would not be transferred back
+- Fixes counting of submitted jobs, so MAX_JOBS_SUBMITTED works correctly
+- Fixes SSL Authentication failure when PRIVATE_NETWORK_NAME was set
+- Fixes rare crash when SSL or SCITOKENS authentication was attempted
+- Can allow client to present an X.509 proxy during SSL authentication
+- Fixes issue where a users jobs were ignored by the HTCondor-CE on restart
+- Fixes issues where some events that HTCondor-CE depends on were missing
+
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
+- Improved upgrade9to10checks.py script
+
 * Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
 - Add upgrade9to10checks.py script
 

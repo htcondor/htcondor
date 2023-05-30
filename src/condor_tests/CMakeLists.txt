@@ -222,6 +222,7 @@ endif ()
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
