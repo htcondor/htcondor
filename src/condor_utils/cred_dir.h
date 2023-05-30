@@ -42,15 +42,12 @@ public:
 	CredData() {}
 	~CredData();
 
-	CredData operator=(const CredData &other) {
-		CredData mine;
-		if (len == 0) {
-			return mine;
+	CredData(const CredData& other) {
+		len = other.len;
+		if (len != 0) {
+			buf = static_cast<unsigned char *>(malloc(other.len));
+			memcpy(buf, other.buf, other.len);
 		}
-		mine.len = other.len;
-		mine.buf = static_cast<unsigned char *>(malloc(other.len));
-		memcpy(mine.buf, other.buf, other.len);
-		return mine;
 	}
 
 	CredData(CredData &&other) {
@@ -58,6 +55,29 @@ public:
 		other.buf = nullptr;
 		len = other.len;
 		other.len = 0;
+	}
+
+	CredData& operator=(const CredData &other) {
+		if (this != &other) {
+			free(buf);
+			len = other.len;
+			if (len == 0) {
+				buf = nullptr;
+			} else {
+				buf = static_cast<unsigned char *>(malloc(other.len));
+				memcpy(buf, other.buf, other.len);
+			}
+		}
+		return *this;
+	}
+
+	CredData& operator=(CredData&& other) {
+		free(buf);
+		buf = other.buf;
+		other.buf = nullptr;
+		len = other.len;
+		other.len = 0;
+		return *this;
 	}
 
 	unsigned char *buf{nullptr};
