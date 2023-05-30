@@ -155,8 +155,8 @@ get_distribution() {
 		#     debian stretch 9
 		#     debian buster 10
 		#     debian bullseye 11
-		#     ubuntu bionic
 		#     ubuntu focal
+		#     ubuntu jammy
 		#     centos 7
 		#     rocky 8
 		#     alma 8
@@ -418,7 +418,7 @@ do_install() {
 				# but for now let's not risk screwing things up by adding them
 				# on the platforms that don't need them.
 				case $lsb_dist.$dist_version in
-				    ubuntu.focal|ubuntu.bionic)
+				    ubuntu.focal|ubuntu.jammy)
     					echo -e "\n# Preconfiguring packages for Ubuntu."
 	    				$sh_c "DEBIAN_FRONTEND=noninteractive apt-get install -y keyboard-configuration console-setup tzdata"
                     ;;

@@ -7,6 +7,111 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1004:
+
+Version 10.0.4
+--------------
+
+Release Notes:
+
+- HTCondor version 10.0.4 released on May 30, 2023.
+
+- Ubuntu 18.04 (Bionic Beaver) is no longer supported, since its end of life
+  is April 30th, 2023.
+
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64le).
+  :jira:`1668`
+
+New Features:
+
+- Added new script called ``upgrade9to10checks.py`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
+
+- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
+  which allows the client to present an X.509 proxy certificate during
+  SSL authentication with a daemon.
+  :jira:`1781`
+
+- Added ``CONFIG_ROOT`` configuration variable that is set to the directory
+  of the main configuration file before the configuration files are read.
+  :jira:`1733`
+
+- Ensure that the SciTokens library can create its cache of token
+  issuer credentials.
+  :jira:`1757`
+
+Bugs Fixed:
+
+- Fixed a bug where certain errors during file transfer could result in
+  file-transfer processes not being cleaned up.  This would manifest as
+  jobs completing successfully, including final file transfer, but ending
+  up without one of their output files (the one the error occurred during).
+  :jira:`1687`
+
+- Fixed a bug where the *condor_schedd* falsely believed there were
+  too many jobs in the queue and rejected new job submissions based on
+  ``MAX_JOBS_SUBMITTED``.
+  :jira:`1688`
+
+- Fix a bug where SSL authentication would fail when using a daemon's
+  private network address when ``PRIVATE_NETWORK_NAME`` was configured.
+  :jira:`1713`
+
+- Fixed a bug that could cause a daemon or tool to crash when
+  attempting SSL or SCITOKENS authentication.
+  :jira:`1756`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
+- Fixed a bug where Job Ad Information events weren't always written
+  when using the Job Router.
+  :jira:`1642`
+
+- Fixed a bug where the submit event wasn't written to the job event
+  log if the job ad didn't contain a ``CondorVersion`` attribute.
+  :jira:`1643`
+
+- Fixed a bug where a *condor_schedd* was denied authorization to send
+  reschedule command to a *condor_negotiator* with the IDToken authorization
+  levels recommended in the documentation for setting up a condor pool.
+  :jira:`1615`
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
+- Fixed *condor_c-gahp* and *condor_job_router* to submit jobs in the
+  same way as *condor_submit*.
+  :jira:`1695`
+
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
+
+- *condor_store_cred* and *condor_credmon_vault* now reuses existing
+  Vault tokens when down scoping access tokens.
+  :jira:`1527`
+
+- Fixed a missing library import in *condor_credmon_vault*.
+  :jira:`1527`
+
+- Fixed a bug where DAGMan job submission would fail when not using
+  direct submission due to setting a custom job ClassAd attribute with
+  the ``+`` syntax in a ``VARS`` command that doesn't append the
+  variables i.e. ``VARS NodeA PREPEND +customAttr="value"``
+  :jira:`1771`
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
+
 .. _lts-version-history-1003:
 
 Version 10.0.3

@@ -1010,6 +1010,7 @@ sub createSubmitFilesNew
 		print CMDFILE "nmi-build:ppc64le_AlmaLinux8_request_memory = 12G\n";
 		print CMDFILE "nmi-build:aarch64_AlmaLinux8_request_memory = 12G\n";
 		print CMDFILE "nmi-build:aarch64_AlmaLinux9_request_memory = 12G\n";
+		print CMDFILE "nmi-build:ppc64le_Ubuntu20_request_memory = 12G\n";
 		print CMDFILE "request_disk = 8G\n";
 
 		# Select Docker NAT network to avoid port exhaustion when running lots of test runs

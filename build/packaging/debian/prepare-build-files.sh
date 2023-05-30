@@ -4,9 +4,12 @@ VERSION_CODENAME='unknown'
 . /etc/os-release
 VERSION_CODENAME=${VERSION_CODENAME^^?}
 
-echo "Preparing build files for ${VERSION_CODENAME}"
+ARCH=$(arch)
+ARCH=${ARCH^^?}
 
-gpp -D${VERSION_CODENAME} control.in > control
-gpp -D${VERSION_CODENAME} htcondor.install.in > htcondor.install
-gpp -D${VERSION_CODENAME} rules.in > rules
+echo "Preparing build files for ${VERSION_CODENAME} on ${ARCH}"
+
+gpp -D${VERSION_CODENAME} -D${ARCH} control.in > control
+gpp -D${VERSION_CODENAME} -D${ARCH} htcondor.install.in > htcondor.install
+gpp -D${VERSION_CODENAME} -D${ARCH} rules.in > rules
 chmod 755 rules

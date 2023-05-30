@@ -932,6 +932,10 @@ type=bool
 usage=Allows SCITOKENS map file entries to match with an extra trailing slash.
 tags=security
 
+[SEC_SCITOKENS_CACHE]
+default=auto
+type=string
+
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
 default=true
 type=bool
@@ -2538,6 +2542,10 @@ type=path
 tags=condor_auth_ssl
 
 [AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE]
+default=false
+type=bool
+
+[AUTH_SSL_ALLOW_CLIENT_PROXY]
 default=false
 type=bool
 
@@ -5895,6 +5903,11 @@ default=240
 description=Where should condor_adstash place JSON files if using the jsonfile interface
 type=path
 default=$(LOG)
+
+[DEFAULT_KILL_CHILDREN_ON_EXIT]
+description=Hidden knob.  If true, all daemon core daemons will kill all of their children on exit.
+type=bool
+default=true
 
 ######
 ## add metaknobs below this banner
