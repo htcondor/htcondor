@@ -1110,6 +1110,7 @@ class TestCheckpointDestination:
             ".local.sh.out",
             ".machine.ad",
             ".update.ad",
+            ".update.ad.tmp",
 
             # Created at run-time by the job.
             "saved-state",
