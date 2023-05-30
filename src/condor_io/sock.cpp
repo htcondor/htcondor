@@ -1603,7 +1603,7 @@ Sock::reportConnectionFailure(bool timed_out) const
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];
 	if((!reason || !*reason) && timed_out) {
-		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf) - 1, 
+		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf), 
 		        "timed out after %d seconds",
 		        connect_state.retry_timeout_interval);
 		reason = timeout_reason_buf;
