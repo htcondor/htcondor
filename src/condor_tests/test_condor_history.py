@@ -109,6 +109,7 @@ TEST_ERROR_CASES = {
 #===============================================================================================
 # Reconfig condor to how we want
 def reconfig(condor, test_name, test_dir, config={}):
+    reconfig_cmd = ["condor_reconfig","-schedd"]
     p = condor.run_command(["condor_config_val","LOCAL_CONFIG_DIR"])
     #Move any old config dir files to the test dir for archiving of test config
     for tmp_file in os.listdir(p.stdout):
@@ -117,7 +118,7 @@ def reconfig(condor, test_name, test_dir, config={}):
         os.rename(old_path,new_path)
     #If no config is needed then run reconfig and return
     if len(config) == 0:
-        p = condor.run_command(["condor_reconfig"])
+        p = condor.run_command(reconfig_cmd)
         return
     #Else make a config file = test_name.conf and write key=value config information
     filename =  os.path.join(p.stdout,f"{test_name}.conf")
@@ -125,7 +126,7 @@ def reconfig(condor, test_name, test_dir, config={}):
         for knob,value in config.items():
             f.write(f"{knob}={value}\n")
     #Reconfig
-    p = condor.run_command(["condor_reconfig"])
+    p = condor.run_command(reconfig_cmd)
 #-----------------------------------------------------------------------------------------------
 #Write cluster(s) job history to specified file
 def writeAdToHistory(filename, clusters, ad):
