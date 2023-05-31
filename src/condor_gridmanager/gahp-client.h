@@ -41,7 +41,7 @@
 struct GahpProxyInfo
 {
 	Proxy *proxy;
-	int cached_expiration;
+	time_t cached_expiration;
 	int num_references;
 };
 
