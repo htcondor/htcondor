@@ -8,7 +8,7 @@ from .classad2_impl import _classad_to_repr
 from .classad2_impl import _classad_get_item
 from .classad2_impl import _classad_set_item
 from .classad2_impl import _classad_del_item
-from .classad2_impl import _classad_eq
+from .classad2_impl import _exprtree_eq
 
 from collections import UserDict
 from datetime import datetime, timedelta, timezone
@@ -60,7 +60,7 @@ class ClassAd(UserDict):
 
     def __eq__(self, other):
         if type(self) is type(other):
-            return _classad_eq(self._handle, other._handle)
+            return _exprtree_eq(self._handle, other._handle)
         else:
             return False
 

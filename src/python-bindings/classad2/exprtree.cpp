@@ -15,3 +15,22 @@ _exprtree_init(PyObject *, PyObject * args) {
     handle->f = [](void *& v) { dprintf( D_ALWAYS, "[ExprTree]\n" ); delete (classad::ExprTree *)v; v = NULL; };
     Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_exprtree_eq( PyObject *, PyObject * args ) {
+    // _classad_eq( self._handle, other._handle )
+
+    PyObject_Handle * self = NULL;
+    PyObject_Handle * other = NULL;
+    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& other)) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    if( *(classad::ExprTree *)self->t == *(classad::ExprTree *)other->t ) {
+        Py_RETURN_TRUE;
+    } else {
+        Py_RETURN_FALSE;
+    }
+}

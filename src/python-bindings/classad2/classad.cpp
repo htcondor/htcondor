@@ -482,22 +482,3 @@ _classad_set_item( PyObject *, PyObject * args ) {
 
     Py_RETURN_NONE;
 }
-
-
-static PyObject *
-_classad_eq( PyObject *, PyObject * args ) {
-    // _classad_eq( self._handle, other._handle )
-
-    PyObject_Handle * self = NULL;
-    PyObject_Handle * other = NULL;
-    if(! PyArg_ParseTuple( args, "OO", (PyObject **)& self, (PyObject **)& other)) {
-        // PyArg_ParseTuple() has already set an exception for us.
-        return NULL;
-    }
-
-    if( *(ClassAd *)self->t == *(ClassAd *)other->t ) {
-        Py_RETURN_TRUE;
-    } else {
-        Py_RETURN_FALSE;
-    }
-}
