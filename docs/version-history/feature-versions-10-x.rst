@@ -59,8 +59,8 @@ New Features:
   jobs for recording in the various produced job ads and userlogs.
   :jira:`1717`
 
-- The *condor_transform_ads* tool can now read a configuration file containing
-  ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+- The *condor_transform_ads* tool can now read a configuration file
+  containing ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
   any or all of the transforms declared in that file.  This makes it
   easier to test job transforms before deploying them.
   :jira:`1710`
