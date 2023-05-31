@@ -23,6 +23,27 @@
 #include <array>
 #include <climits>
 
+/*
+*** Replies used in various stages of various protocols
+*/
+
+/* Failure cases */
+const int NOT_OK		= 0;
+
+/* Success cases */
+const int OK			= 1;
+
+/* Other replies */
+const int CONDOR_TRY_AGAIN	= 2;
+const int CONDOR_ERROR	    = 3;
+
+/* Replies specific to the REQUEST_CLAIM command */
+const int REQUEST_CLAIM_LEFTOVERS		 = 3;
+//const int REQUEST_CLAIM_PAIR			 = 4;	// Not used
+const int REQUEST_CLAIM_LEFTOVERS_2	     = 5;
+
+
+//#define REQUEST_CLAIM_PAIR_2		6		// Not used
 // The contraints on this file are
 // 1) We want a #define'd symbol for each command for client code to use
 // 2) We don't want to pollute every .o's data segment with a copy of a table
@@ -859,33 +880,4 @@ std::array<std::pair<int, const char *>, 61> makeCollectorCommandTable() {
 }
 
 static_assert(makeCollectorCommandTable().back().first == COLLECTOR_COMMAND_LAST, "Is the size of the std::array correct?");
-/*
-*** Replies used in various stages of various protocols
-*/
-
-/* Failure cases */
-#ifndef NOT_OK 
-#define NOT_OK		0
-#endif
-#ifndef REJECTED
-#define REJECTED	0
-#endif
-
-/* Success cases */
-#ifndef OK
-#define OK			1
-#endif
-#ifndef ACCEPTED
-#define ACCEPTED	1
-#endif
-
-/* Other replies */
-#define CONDOR_TRY_AGAIN	2
-#define CONDOR_ERROR	3
-
-/* Replies specific to the REQUEST_CLAIM command */
-#define REQUEST_CLAIM_LEFTOVERS		3
-//#define REQUEST_CLAIM_PAIR			4	// Not used
-#define REQUEST_CLAIM_LEFTOVERS_2	5
-//#define REQUEST_CLAIM_PAIR_2		6		// Not used
 #endif  /* if ifndef _CONDOR_COMMANDS_H */
