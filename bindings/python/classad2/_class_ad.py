@@ -8,6 +8,7 @@ from .classad2_impl import _classad_to_repr
 from .classad2_impl import _classad_get_item
 from .classad2_impl import _classad_set_item
 from .classad2_impl import _classad_del_item
+from .classad2_impl import _classad_eq
 
 from collections import UserDict
 from datetime import datetime, timedelta, timezone
@@ -55,6 +56,13 @@ class ClassAd(UserDict):
         if not isinstance(key, str):
             raise KeyError("ClassAd keys are strings")
         return _classad_del_item(self._handle, key)
+
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return _classad_eq(self._handle, other._handle)
+        else:
+            return False
 
 
 def _convert_local_datetime_to_utc_ts(dt):

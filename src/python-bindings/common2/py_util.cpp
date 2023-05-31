@@ -75,7 +75,8 @@ PyObject *
 py_new_classad_value( classad::Value::ValueType vt ) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		 py_htcondor_module = PyImport_ImportModule( "htcondor2" );
+		// Consider making this "classad2", instead.
+		py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 
 	static PyObject * py_htcondor_classad_module = NULL;
@@ -88,7 +89,7 @@ py_new_classad_value( classad::Value::ValueType vt ) {
 		py_value_class = PyObject_GetAttrString( py_htcondor_classad_module, "Value" );
 	}
 
-	return PyObject_CallObject(py_value_class, PyLong_FromLong(vt));
+	return PyObject_CallFunction(py_value_class, "l", vt);
 }
 
 
