@@ -634,8 +634,8 @@ Directory::rmdirAttempt( const char* path, priv_state priv )
 priv_state
 Directory::setOwnerPriv( const char* path, si_error_t &err)
 {
-	uid_t	uid;
-	gid_t	gid;
+	uid_t	uid = 0;
+	gid_t	gid = 0;
 	bool is_root_dir = false;
 
 	if( ! strcmp(path, curr_dir) ) {

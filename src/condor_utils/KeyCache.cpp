@@ -24,7 +24,7 @@
 #include "condor_attributes.h"
 #include "internet.h"
 
-KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, const KeyInfo* key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, const KeyInfo* key_param, const ClassAd * policy_param, time_t expiration_param, int lease_interval )
 	: _id(id_param)
 	, _addr(addr_param)
 {
@@ -50,7 +50,7 @@ KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& ad
 
 // NOTE: In this constructor, we assume ownership of the KeyInfo objects
 //   in the vector. In the single-KeyInfo constructor, we copy it.
-KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, int expiration_param, int lease_interval )
+KeyCacheEntry::KeyCacheEntry( const std::string& id_param, const std::string& addr_param, std::vector<KeyInfo*> key_param, const ClassAd * policy_param, time_t expiration_param, int lease_interval )
 	: _id(id_param)
 	, _addr(addr_param)
 {
@@ -108,7 +108,7 @@ ClassAd* KeyCacheEntry::policy() {
 	return _policy;
 }
 
-int KeyCacheEntry::expiration() const {
+time_t KeyCacheEntry::expiration() const {
 		// Return the sooner of the two expiration timestamps.
 		// A 0 timestamp indicates no expiration.
 	if( _expiration ) {
@@ -132,7 +132,7 @@ char const *KeyCacheEntry::expirationType() const {
 	return "";
 }
 
-void KeyCacheEntry::setExpiration(int new_expiration) {
+void KeyCacheEntry::setExpiration(time_t new_expiration) {
 	_expiration = new_expiration;
 }
 

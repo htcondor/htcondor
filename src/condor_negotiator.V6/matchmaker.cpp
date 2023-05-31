@@ -5965,7 +5965,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	CopyAttribute(ATTR_STARTD_IP_ADDR, update_ad, *startd_ad);
 
 	time_t now = time(NULL);
-	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
+	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,now);
 
 
 	// How many times did we match this machine this negotiation cycle?

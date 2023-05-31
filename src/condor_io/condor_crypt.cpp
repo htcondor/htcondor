@@ -190,7 +190,7 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 	ASSERT( hex );
 	int i;
 	for(i=0; i<length; i++) {
-		sprintf(hex+i*2,"%02x",bytes[i]);
+		snprintf(hex+i*2, 3, "%02x",bytes[i]);
 	}
 	free(bytes);
 	return hex;

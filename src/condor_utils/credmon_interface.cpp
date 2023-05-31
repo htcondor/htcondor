@@ -477,13 +477,13 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 		}
 
 		// also make sure the .mark file is older than the sweep delay.
-		int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
-		int now = time(0);
-		int mtime = cred_dir.GetModifyTime();
+		time_t sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
+		time_t now = time(0);
+		time_t mtime = cred_dir.GetModifyTime();
 		if ( (now - mtime) >= sweep_delay ) {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is at least %i seconds old. Sweeping...\n", markfile, mtime, sweep_delay);
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is at least %lld seconds old. Sweeping...\n", markfile, (long long)mtime, (long long)sweep_delay);
 		} else {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is less than %i seconds old. Skipping...\n", markfile, mtime, sweep_delay);
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is less than %lld seconds old. Skipping...\n", markfile, (long long)mtime, (long long)sweep_delay);
 			return;
 		}
 	} else {
@@ -525,12 +525,12 @@ void process_cred_mark_file(const char *src) {
 	}
 
 	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
-	int now = time(0);
-	int mtime = si.GetModifyTime();
+	time_t now = time(0);
+	time_t mtime = si.GetModifyTime();
 	if ( (now - mtime) > sweep_delay ) {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Sweeping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Sweeping...\n", src, (long long)mtime, sweep_delay);
 	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Skipping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Skipping...\n", src, (long long)mtime, sweep_delay);
 		return;
 	}
 

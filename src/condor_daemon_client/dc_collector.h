@@ -25,7 +25,6 @@
 #include "daemon.h"
 #include "condor_classad.h"
 #include "condor_io.h"
-#include "extArray.h"
 #include "daemon_list.h"
 #include "condor_timeslice.h"
 

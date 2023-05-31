@@ -65,6 +65,7 @@ Manual built on |release_date|
    man-pages/index
    classad-attributes/index
    codes-other-values/index
+   codes-other-values/glossary
    genindex
 
 

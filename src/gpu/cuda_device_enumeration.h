@@ -83,7 +83,7 @@ class BasicProps;
 typedef CUresult (CUDACALL* cu_uint_t)(unsigned int);
 typedef cudaError_t (CUDACALL* cuda_t)(int *);
 typedef cudaError_t (CUDACALL* dev_basic_props)(int, BasicProps *);
-typedef cudaError_t (CUDACALL* cuda_DevicePropBuf_int)(struct cudaDevicePropBuffer *, int);
+typedef cudaError_t (CUDACALL* cuda_DevicePropBuf_int)(union cudaDevicePropBuffer *, int);
 
 GPUFP cu_uint_t                 cuInit;
 GPUFP cuda_t                    cuDeviceGetCount;

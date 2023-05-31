@@ -20,7 +20,6 @@
 #ifndef KILLFAMILY_H
 #define KILLFAMILY_H
 
-#include "extArray.h"
 #include "condor_uid.h"
 #include "condor_daemon_core.h"
 #include "../condor_procapi/procapi.h"

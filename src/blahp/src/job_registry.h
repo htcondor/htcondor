@@ -119,8 +119,8 @@ typedef struct job_registry_entry_s
         JOB_REGISTRY_ENTRY_UPDATE_3, 0 };
 
 #define JOB_REGISTRY_ASSIGN_ENTRY(dest,src) \
-  (dest)[sizeof(dest)-1]='\000'; \
-  strncpy((dest),(src),sizeof(dest) - 1); 
+  strncpy((dest),(src),sizeof(dest)); \
+  (dest)[sizeof(dest)-1]='\000';
 
 typedef struct job_registry_index_s
  {

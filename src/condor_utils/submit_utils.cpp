@@ -4668,25 +4668,31 @@ int SubmitHash::SetUniverse()
 			} else {
 
 				// Otherwise, guess container image type from container image string
-				ContainerImageType image_type = image_type_from_string(container_image.ptr());
-				switch (image_type) {
-					case ContainerImageType::DockerRepo:
-						AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
-						break;
-					case ContainerImageType::SIF:
-						AssignJobVal(ATTR_WANT_SIF,true);
-						break;
-					case ContainerImageType::SandboxImage:
-						AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
-						break;
-					case ContainerImageType::Unknown:
+				if (container_image) {
+					ContainerImageType image_type = image_type_from_string(container_image.ptr());
+					switch (image_type) {
+						case ContainerImageType::DockerRepo:
+							AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+							break;
+						case ContainerImageType::SIF:
+							AssignJobVal(ATTR_WANT_SIF,true);
+							break;
+						case ContainerImageType::SandboxImage:
+							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+							break;
+						case ContainerImageType::Unknown:
+							push_error(stderr, SUBMIT_KEY_ContainerImage
+									" must be a directory, have a docker:: prefix, or end in .sif.\n");
+							ABORT_AND_RETURN(1);
+					}
+				} else {
 						push_error(stderr, SUBMIT_KEY_ContainerImage
-								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+								" must be defined for container universe jobs.\n");
 						ABORT_AND_RETURN(1);
+					}
 				}
 			}
-		}
-		return 0;
+			return 0;
 	}
 
 	// "globus" or "grid" universe

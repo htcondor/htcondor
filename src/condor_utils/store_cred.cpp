@@ -239,7 +239,7 @@ PWD_STORE_CRED(const char *username, const unsigned char * rawbuf, const int raw
 
 	ccfile.clear();
 
-	int rc;
+	long long rc;
 	std::string pw;
 	if ((mode & MODE_MASK) == GENERIC_ADD) {
 		pw.assign((const char *)rawbuf, rawlen);

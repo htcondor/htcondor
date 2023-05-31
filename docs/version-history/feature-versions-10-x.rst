@@ -17,9 +17,45 @@ Release Notes:
 
 New Features:
 
-- None.
+- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
+  before the user was disabled are allowed to run to completion.
+  :jira:`1723`
+
+- Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
+  NSS for security.
+  When an *arc_gahp* process has handled a certain number of commands,
+  a new *arc_gahp* is started and old process exits.
+  The number of commands that triggers a new process is controlled by
+  new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
+  :jira:`1778`
+
+- The job's executable is no longer renamed to *condor_exec.exe* when
+  the job's sandbox is transferred to the Execution Point.
+  :jira:`1227`
 
 Bugs Fixed:
+
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
+- condor_restd service in the htcondor/mini container no longer crashes
+  on startup due to the `en_US.UTF-8` locale being unavailable.
+  :jira:`1785`
+
+- Fixed a bug that would very rarely cause *condor_wait* to hang forever.
+  :jria:`1792`
+
+- Fixed recently introduced bug where only on Enterprise Linux 7
+  system, startds with hard cgroup memory enforcement would not
+  put jobs that went over their memory usage on hold, they would
+  exit and leave the queue.
+  :jira:`1801`
+
+- Fixed a very recently introduced bug where the .job.ad and .machine.ad
+  files would not be written into the job sandbox.
+  :jira:`1737`
 
 - Forced condor_ssh_to_job to never try to use a Control Master, which would
   break ssh_to_job.  Also raised the timeout for ssh_to_job which might
@@ -47,18 +83,7 @@ Release Notes:
 
 New Features:
 
-- Improved throughput when submitting a large number of ARC CE jobs.
-  Previously, jobs could remain stalled for a long time in the ARC CE
-  server waiting for their input sandbox to be transferred while other
-  were being submitted.
-  :jira:`1666`
-
-- The admin knob `SUBMIT_ALLOW_GETENV` when set to false, now allows
-  submit files to use any value but *true* for their `getenv = ...`
-  commands.
-  :jira:`1671`
-
-- Added new *Save File* functionality to DAGMan which allows users to
+- Added new **Save File** functionality to DAGMan which allows users to
   specify DAG nodes as save points to record the current DAG's progress
   in a file similar to a rescue file. These files can then be specified
   with the new *condor_submit_dag* flag ``load_save`` to re-run the
@@ -66,16 +91,16 @@ New Features:
   :ref:`users-manual/dagman-workflows:dag save point files`.
   :jira:`1636`
 
-- Linux Cgroup support has been redone in a way that doesn't depend on
-  using the procd.  There should be no user visible changes in
-  the usual cases.
-  :jira:`1589`
+- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+  submit files to use any value but *true* for their ``getenv = ...``
+  commands.
+  :jira:`1671`
 
-- The *condor_transform_ads* tool can now read a configuration file containing
-   ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
-   any or all of the transforms declared in that file.  This makes it
-   easier to test job transforms before deploying them.
-   :jira:`1710`
+- Improved throughput when submitting a large number of ARC CE jobs.
+  Previously, jobs could remain stalled for a long time in the ARC CE
+  server waiting for their input sandbox to be transferred while other
+  were being submitted.
+  :jira:`1666`
 
 - The *arc_gahp* can now issue multiple HTTPS requests in parallel in
   different threads. This is controlled by the new configuration
@@ -86,31 +111,48 @@ New Features:
   and resource quantities of execution slot.
   :jira:`1722`
 
-- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
-  to give a list of machine attributes that will be added to DAGMan submitted
-  jobs for recording in the various produced job ads and userlogs.
-  :jira:`1717`
-
 - Added new submit command ``ulog_execute_attrs`` for a jobs submit file. This
   command takes a comma-separated list of machine ClassAd attributes to be
   written to the user logs execute event.
   :jira:`1759`
 
+- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
+  to give a list of machine attributes that will be added to DAGMan submitted
+  jobs for recording in the various produced job ads and userlogs.
+  :jira:`1717`
+
+- The *condor_transform_ads* tool can now read a configuration file containing
+  ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+  any or all of the transforms declared in that file.  This makes it
+  easier to test job transforms before deploying them.
+  :jira:`1710`
+
+- Linux Cgroup support has been redone in a way that doesn't depend on
+  using the procd.  There should be no user visible changes in
+  the usual cases.
+  :jira:`1589`
+
 Bugs Fixed:
 
-- Fixed a bug where certain errors during file transfer could result in
-  file-transfer processes not being cleaned up.  This would manifest as
-  jobs completing successfully, including final file transfer, but ending
-  up without one of their output files (the one the error occurred during).
-  :jira:`1687`
-
-- Fixed a bug where if the docker command emitted warnings to stderr, the
-  startd would not correctly advertise the amount of used image cache.
-  :jira:`1645`
+- Expanded default list of environment variables to include in the DAGMan
+  proper manager jobs getenv to include ``HOME``, ``USER``, ``LANG``, and
+  ``LC_ALL``. Thus resulting in these variables appearing in the DAGMan
+  manager jobs environment.
+  :jira:`1725`
 
 - Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
   not be enforced correctly.
   :jira:`1775`
+
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
 
 - Fixed a bug when running with root on a Linux systems with cgroup v1
   that would print a warning to the StarterLog claiming
@@ -130,11 +172,24 @@ Bugs Fixed:
   history files stored in the spool directory.
   :jira:`1738`
 
-- Expanded default list of environment variables to include in the DAGMan
-  proper manager jobs getenv to include ``HOME``, ``USER``, ``LANG``, and
-  ``LC_ALL``. Thus resulting in these variables appearing in the DAGMan
-  manager jobs environment.
-  :jira:`1725`
+Version 10.4.3
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.3 released on May 9, 2023.
+
+- Tarballs in this release contain the recent scitokens-cpp 1.0.1 library.
+  :jira:`1779`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
 
 Version 10.4.2
 --------------

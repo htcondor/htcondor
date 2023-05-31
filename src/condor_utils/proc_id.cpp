@@ -22,7 +22,7 @@
 #include "proc.h"
 #include "string_list.h"
 #include "stl_string_utils.h"
-#include "extArray.h"
+#include "condor_debug.h"
 
 PROC_ID
 getProcByString( const char* str )

@@ -1,17 +1,17 @@
 # One platform per line. Comments (starting with #) and blank lines are ignored.
 
 # Officially supported platforms
-docker://htcondor/nmi-build:aarch64_AlmaLinux8-10040004
-docker://htcondor/nmi-build:aarch64_AlmaLinux9-10040004
-docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10040004
-docker://htcondor/nmi-build:ppc64le_Ubuntu20-10040004
-docker://htcondor/nmi-build:x86_64_AlmaLinux8-10040004
-docker://htcondor/nmi-build:x86_64_AlmaLinux9-10040004
-docker://htcondor/nmi-build:x86_64_AmazonLinux2023-10050005
-docker://htcondor/nmi-build:x86_64_CentOS7-10040004
-docker://htcondor/nmi-build:x86_64_Debian11-10040004
-docker://htcondor/nmi-build:x86_64_Ubuntu20-10040004
-docker://htcondor/nmi-build:x86_64_Ubuntu22-10040004
+docker://htcondor/nmi-build:aarch64_AlmaLinux8-10060000
+docker://htcondor/nmi-build:aarch64_AlmaLinux9-10060000
+docker://htcondor/nmi-build:ppc64le_AlmaLinux8-10060000
+docker://htcondor/nmi-build:ppc64le_Ubuntu20-10060000
+docker://htcondor/nmi-build:x86_64_AlmaLinux8-10060000
+docker://htcondor/nmi-build:x86_64_AlmaLinux9-10060000
+docker://htcondor/nmi-build:x86_64_AmazonLinux2023-10060000
+docker://htcondor/nmi-build:x86_64_CentOS7-10060000
+docker://htcondor/nmi-build:x86_64_Debian11-10060000
+docker://htcondor/nmi-build:x86_64_Ubuntu20-10060000
+docker://htcondor/nmi-build:x86_64_Ubuntu22-10060000
 x86_64_macOS13
 # Windows 9 is really Windows 10 in disquise
 x86_64_Windows9

@@ -1,0 +1,184 @@
+#! /usr/bin/env perl
+#testreq: personal
+##**************************************************************
+##
+## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
+## University of Wisconsin-Madison, WI.
+##
+## Licensed under the Apache License, Version 2.0 (the "License"); you
+## may not use this file except in compliance with the License.  You may
+## obtain a copy of the License at
+##
+##    http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing, software
+## distributed under the License is distributed on an "AS IS" BASIS,
+## WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+## See the License for the specific language governing permissions and
+## limitations under the License.
+##
+##**************************************************************
+
+use CondorTest;
+use CondorUtils;
+use Check::SimpleJob;
+use strict;
+use warnings;
+
+my $testname = "disable_owner_test";
+
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	MAX_JOBS_PER_OWNER = 10
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+my $pid = $$;
+my $executable = "x_sleep.pl";
+my $arguments = 600;
+my @content;
+my $ok=0;
+my $cmd_retval=42;
+
+# create a submit file for use by this test
+my $submitfile = "$testname$pid.sub";
+open (FH, ">$submitfile") || print "error writing to $submitfile: $!\n";
+print FH "executable = $executable\narguments=$arguments\n";
+close(FH);
+
+TLOG("Expect no User records");
+@content = `condor_qusers -af Owner Enabled`;
+print @content;
+my $num_users = scalar @content;
+if ($num_users eq 0) { $ok = 1; }
+else { $ok = 0; print "\tERROR: There should be 0 User records at startup, saw: $num_users\n"; }
+RegisterResult($ok, check_name => "no users at startup", test_name => $testname);
+
+####################
+TLOG("Expect submit failure and User creation failure because of MAX_JOBS_PER_OWNER\n");
+# submit 12 jobs, expecting to fail
+`condor_submit hold=true $submitfile -q 12`;
+@content = `condor_q -af:j Owner User JobStatus`;
+print @content;
+
+my $num_jobs = scalar @content;
+if ($num_jobs eq 0){ $ok = 1; }
+else { $ok = 0; print "\tERROR: submit should have failed\n"; }
+RegisterResult($ok, check_name => "submit fail max jobs", test_name => $testname);
+
+# in case submit did not fail, remove all jobs
+`condor_rm -all`;
+
+####################
+TLOG("Expect submit of 8 jobs and User creation to succeed.\n");
+# submit 8 jobs then submit 4 jobs
+@content = `condor_submit -terse hold=true $submitfile -q 8`;
+print @content;
+@content = `condor_q -af:j Owner User JobStatus`;
+print @content;
+
+$num_jobs = scalar @content;
+if ($num_jobs eq 8){ $ok = 1; }
+else { $ok = 0; print "\tERROR: submit should have succeeded\n"; }
+RegisterResult($ok, check_name => "submit success 8 jobs", test_name => $testname);
+
+TLOG("Expect one user with 8 jobs in the queue.\n");
+
+@content = `condor_qusers -af NumJobs NumHeld Owner User`;
+print @content;
+$num_users = scalar @content;
+if ($num_users eq 1){ $ok = 1; }
+else { $ok = 0; print "\tERROR: there should be 1 user\n"; }
+RegisterResult($ok, check_name => "one user", test_name => $testname);
+
+my ($tot,$held,$owner,$user) = ($content[0] =~ m{^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)});
+if ($tot eq 8 && $held eq 8) { $ok = 1; }
+else { $ok = 0; print "\tERROR: User should have 8 total and 8 held jobs, found $tot,$held\n"; }
+RegisterResult($ok, check_name => "user job count", test_name => $testname);
+
+######################
+TLOG("condor_qusers -disable $user\n");
+$ok = runCondorTool("condor_qusers -disable $user",\@content,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+print @content;
+if ($cmd_retval) {
+	$ok = 0;
+	print "\tERROR: condor_qusers -disable failed : exit_code=$cmd_retval\n";
+}
+RegisterResult($ok, check_name => "disable user", test_name => $testname);
+
+TLOG("condor_qusers\n");
+$ok = runCondorTool("condor_qusers",\@content,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+print @content;
+if ($cmd_retval) {
+	$ok = 0;
+	print "\tERROR: exit_code=$cmd_retval\n";
+}
+RegisterResult($ok, check_name => "standard qusers query", test_name => $testname);
+
+TLOG("condor_qusers -af Enabled User Owner\n");
+$ok = runCondorTool("condor_qusers -af Enabled User Owner",\@content,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+print @content;
+$num_users = scalar @content;
+if ($cmd_retval || $num_users ne 1) {
+	$ok = 0;
+	print "\tERROR: exit_code=$cmd_retval\n";
+} else {
+	my ($e,$u) = $content[0] =~ m{^(\S+)\s+(\S+)\s+};
+	$ok = 0 if ($e ne 0 || $u ne $user);
+}
+RegisterResult($ok, check_name => "user shows disabled", test_name => $testname);
+
+######################
+TLOG("Check that a disabled user cannot submit jobs.\n");
+$ok = runCondorTool("condor_submit hold=true $submitfile -q 1",\@content,2,{emit_output=>0,expect_result=>\ANY},\$cmd_retval);
+print @content;
+print "ok=$ok exit_code=$cmd_retval\n";
+if ($cmd_retval eq 0) {
+	$ok = 0;
+	print "\tERROR: submit did not fail, exit_code=$cmd_retval\n";
+} else {
+	@content = `condor_q -af:j Owner User JobStatus`;
+	print @content;
+
+	my $num_jobs = scalar @content;
+	if ($num_jobs ne 8){
+		$ok = 0;
+		print "\tERROR: expected 8 jobs in the queue\n";
+	}
+}
+RegisterResult($ok, check_name => "disabled user cannot submit", test_name => $testname);
+
+TLOG("condor_rm -all\n");
+`condor_rm -all`;
+
+TLOG("Expect one user with 8 removed jobs in the queue.\n");
+# check for correct removed jobs count
+$ok = runCondorTool("condor_qusers -af NumJobs TotalRemovedJobs Owner User",\@content,2,{emit_output=>1,expect_result=>\ANY},\$cmd_retval);
+$num_users = scalar @content;
+if ($num_users eq 1){ $ok = 1; }
+else { $ok = 0; print "\tERROR: there should still be 1 user\n"; }
+RegisterResult($ok, check_name => "still one user", test_name => $testname);
+
+($tot,$held,$owner,$user) = ($content[0] =~ m{^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)});
+$ok = ($tot eq 0 && $held eq 8);
+if ( ! $ok) {
+	print "\tERROR: Expected 0 jobs in queue, and 8 jobs removed\n";
+}
+RegisterResult($ok, check_name => "User has no jobs", test_name => $testname);
+
+TLOG("condor_qusers -enable $user\n");
+$ok = runCondorTool("condor_qusers -enable $user",\@content,2,{emit_output=>1,expect_result=>\ANY},\$cmd_retval);
+print @content;
+if ($cmd_retval) {
+	$ok = 0;
+	print "\tERROR: condor_qusers -enable failed : exit_code=$cmd_retval\n";
+}
+RegisterResult($ok, check_name => "enable user", test_name => $testname);
+
+$ok = runCondorTool("condor_submit hold=true $submitfile -q 1",\@content,2,{emit_output=>1,expect_result=>\ANY},\$cmd_retval);
+RegisterResult($ok, check_name => "submit after enable", test_name => $testname);
+
+`condor_rm -all`;
+
+CondorTest::EndTest();
+exit(0);

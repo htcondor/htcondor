@@ -1110,17 +1110,18 @@ class TestCheckpointDestination:
             ".local.sh.out",
             ".machine.ad",
             ".update.ad",
+            ".update.ad.tmp",
 
             # Created at run-time by the job.
             "saved-state",
 
             # Downloaded at run-time by HTCondor.
+            "counting.py",
             "local.sh",
 
             # Created at run-time by HTCondor.
             "_condor_stdout",
             "_condor_stderr",
-            "condor_exec.exe",
         ]
 
         extra_file_in_check_path = f"Only in {check_path}: "

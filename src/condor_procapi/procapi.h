@@ -29,7 +29,6 @@
 #include "condor_pidenvid.h"
 #include "processid.h"
 #include "HashTable.h"
-#include "extArray.h"
 
 #ifndef WIN32 // all the below is for UNIX
 

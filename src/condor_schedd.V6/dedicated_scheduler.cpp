@@ -744,7 +744,7 @@ DedicatedScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const 
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
-		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+		ATTR_LAST_REJ_MATCH_TIME, time(0), NONDURABLE);
 }
 
 void
@@ -934,7 +934,7 @@ DedicatedScheduler::sendAlives( void )
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
-	int now = (int)time(0);
+	time_t now = time(0);
 	bool starter_handles_alives = param_boolean("STARTER_HANDLES_ALIVES",true);
 
 	BeginTransaction();
@@ -951,7 +951,7 @@ DedicatedScheduler::sendAlives( void )
 		if (mrec->m_startd_sends_alives && (mrec->status == M_ACTIVE)) {
 				// in receive_startd_update, we've updated the lease time only in the job ad
 				// actually write it to the job log here in one big transaction.
-			int renew_time = 0;
+			time_t renew_time = 0;
 			if ( starter_handles_alives && 
 				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
 			{
@@ -978,7 +978,7 @@ int
 DedicatedScheduler::reaper( int pid, int status )
 {
 	shadow_rec*		srec;
-	int q_status;  // status of this job in the queue
+	int q_status = 0;  // status of this job in the queue
 
 	dprintf( D_ALWAYS, "In DedicatedScheduler::reaper pid %d has status %d\n", pid, status);
 
@@ -1945,7 +1945,7 @@ DedicatedScheduler::spawnJobs( void )
 	AllocationNode* allocation;
 	match_rec* mrec;
 	shadow_rec* srec;
-	int univ;
+	int univ = 0;
 	int i, p, n;
 	PROC_ID id;
 
@@ -3826,7 +3826,7 @@ DedicatedScheduler::getUnusedTime( match_rec* mrec )
 			// This is the case we're really interested in.  We're
 			// claimed, but not active (a.k.a "Claimed/Idle").  We
 			// need to see how long we've been like this.
-		return( (int)time(0) - mrec->entered_current_status );
+		return( (int)(time(0) - mrec->entered_current_status) );
 		break;
 	default:
 		EXCEPT( "Unknown status in match rec %p (%d)", mrec, mrec->status );

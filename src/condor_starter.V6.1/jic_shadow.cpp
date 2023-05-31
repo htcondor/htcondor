@@ -1646,15 +1646,6 @@ JICShadow::initWithFileTransfer()
 	job_iwd = strdup( Starter->GetWorkingDir(0) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
-	// Only rename the executable if it is transferred.
-	bool xferExec = true;
-	job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
-	if( xferExec ) {
-		dprintf( D_FULLDEBUG, "Changing the executable name\n" );
-		job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC);
-	}
-
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
 		// job's standard files.  this is shared code if we're
@@ -2139,8 +2130,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
@@ -2195,8 +2186,8 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
@@ -2626,19 +2617,21 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
+		bool xferExec = true;
+		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
+
 		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
-		    (cmd == CONDOR_EXEC))
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) && xferExec)
 		{
 				// if we are running as root, the files were downloaded
 				// as PRIV_USER, so switch to that priv level to do chmod
 			priv_state saved_priv = set_priv( PRIV_USER );
 
-			if (chmod(CONDOR_EXEC, 0755) == -1) {
+			if (chmod(condor_basename(cmd.c_str()), 0755) == -1) {
 				dprintf(D_ALWAYS,
 				        "warning: unable to chmod %s to "
 				            "ensure execute bit is set: %s\n",
-				        CONDOR_EXEC,
+				        condor_basename(cmd.c_str()),
 				        strerror(errno));
 			}
 

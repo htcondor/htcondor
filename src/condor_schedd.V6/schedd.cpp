@@ -552,7 +552,7 @@ void
 match_rec::setStatus( int stat )
 {
 	if ( stat != status ) {
-		entered_current_status = (int)time(0);
+		entered_current_status = time(0);
 	}
 	status = stat;
 	if( status == M_CLAIMED ) {
@@ -1010,16 +1010,16 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 
 	//PRAGMA_REMIND("tj asks: is it really ok that this function will look inside an uncommitted transaction to get the job status?")
 
-	int hold_status;
+	int hold_status = 0;
 	if( GetAttributeInt(cluster,proc,ATTR_JOB_STATUS,&hold_status) >= 0 ) {
 		if(hold_status == HELD) {
-			int hold_reason_code;
+			int hold_reason_code = 0;
 			if( GetAttributeInt(cluster,proc,ATTR_HOLD_REASON_CODE,
 					&hold_reason_code) >= 0) {
 				if(hold_reason_code == CONDOR_HOLD_CODE::SpoolingInput) {
 					dprintf( D_FULLDEBUG, "Job %d.%d held for spooling. "
 						"Checking how long...\n",cluster,proc);
-					int stage_in_start;
+					time_t stage_in_start = 0;
 					int ret = GetAttributeInt(cluster,proc,ATTR_STAGE_IN_START,
 							&stage_in_start);
 					if(ret >= 0) {
@@ -2276,9 +2276,11 @@ int Scheduler::command_query_user_ads(int /*command*/, Stream* stream)
 	stream->encode();
 	for (const auto & it : OwnersInfo) {
 		if (num_ads >= limit) break;
-		ClassAd * ad = it.second;
-		if (!has_constraint || IsAConstraintMatch(&queryAd, ad)) {
-			if ( !putClassAd(stream, *ad)) {
+		if (!has_constraint || IsAConstraintMatch(&queryAd, it.second)) {
+			JobQueueUserRec * urec = it.second;
+			ClassAd ad(*urec);
+			urec->live.publish(ad,"Num");
+			if ( !putClassAd(stream, ad)) {
 				dprintf (D_ALWAYS,  "Error sending query result to client -- aborting\n");
 				return FALSE;
 			}
@@ -2299,13 +2301,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 {
 	int rval = 0;
 
-	const OwnerInfo * urec = find_ownerinfo(username.c_str());
+	OwnerInfo * urec = find_ownerinfo(username.c_str());
 
 	switch (cmd) {
 	case ENABLE_USERREC:
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 1);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2320,7 +2322,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 	case DISABLE_USERREC:
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}
@@ -2331,13 +2333,13 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			// TODO: this should be a DeleteSecureAttribute
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_MAX_JOBS_RUNNING, -1);
+			SetUserAttributeInt(*urec, ATTR_MAX_JOBS_RUNNING, -1);
 		}
 		break;
 	case DELETE_USERREC:
 		if (urec) { // disable
 			txn.BeginOrContinue(urec->jid.proc);
-			SetSecureAttributeInt(urec->jid.cluster, urec->jid.proc, ATTR_ENABLED, 0);
+			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
 			// TODO: check if unused so we can just delete it now...
 			// UserRecDestroy(urec->jid.proc);
 		} else {
@@ -2389,8 +2391,8 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
-	if ( ! UserCheck2(NULL, EffectiveUser(rsock))) {
+	auto * rsock_user = EffectiveUser(rsock);
+	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
 		resultAd.Assign(ATTR_RESULT, EACCES);
 		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
 		if( !putClassAd(stream, resultAd) || !stream->end_of_message() ) {
@@ -2412,6 +2414,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 				if (IsAConstraintMatch(&act, it.second)) {
 					rval = act_on_user(cmd, it.first, act, txn, errstack);
 					if (rval) break;
+					++num_ads;
 				}
 			}
 			if (rval) break;
@@ -2421,6 +2424,7 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 			}
 			rval = act_on_user(cmd, username, act, txn, errstack);
 			if (rval) break;
+			++num_ads;
 		} else {
 			rval = 1;
 			errstack.push("SCHEDD", rval, "Dont know what user to act on.");
@@ -3370,7 +3374,7 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
             scheduler.stats.JobsRunningSizes += (int64_t)job_image_size * 1024;
             OTHER.JobsRunningSizes += (int64_t)job_image_size * 1024;
 
-            int job_start_date = 0;
+            time_t job_start_date = 0;
             int job_running_time = 0;
             if (job->LookupInteger(ATTR_JOB_START_DATE, job_start_date))
                 job_running_time = (now - job_start_date);
@@ -4671,7 +4675,7 @@ callAboutToSpawnJobHandler( int cluster, int proc, shadow_rec* srec )
 bool
 Scheduler::spawnJobHandler( int cluster, int proc, shadow_rec* srec )
 {
-	int universe;
+	int universe = 0;
 	if( srec ) {
 		universe = srec->universe;
 	} else {
@@ -4881,7 +4885,7 @@ jobIsFinishedDone( int cluster, int proc, void*, int )
 			 "jobIsFinished() completed, calling DestroyProc(%d.%d)\n",
 			 cluster, proc );
 	SetAttributeInt( cluster, proc, ATTR_JOB_FINISHED_HOOK_DONE,
-					 (int)time(NULL), NONDURABLE);
+					 time(nullptr), NONDURABLE);
 	return DestroyProc( cluster, proc );
 }
 
@@ -5467,7 +5471,7 @@ Scheduler::spoolJobFilesReaper(int tid,int exit_status)
 		BeginTransaction();
 
 			// Set ATTR_STAGE_IN_FINISH if not already set.
-		int spool_completion_time = 0;
+		time_t spool_completion_time = 0;
 		GetAttributeInt(cluster,proc,ATTR_STAGE_IN_FINISH,&spool_completion_time);
 		if ( !spool_completion_time ) {
 			// The transfer thread specifically slept for 1 second
@@ -5871,7 +5875,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						// subsequent operations, such as rewriting of
 						// paths in the ClassAd and the job being in
 						// the middle of using the files.
-					int finish_time;
+					time_t finish_time = 0;
 					if( GetAttributeInt(a_job.cluster,a_job.proc,
 					    ATTR_STAGE_IN_FINISH,&finish_time) >= 0 ) {
 						dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
@@ -5881,8 +5885,8 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 						delete jobs;
 						return FALSE;
 					}
-					int holdcode;
-					int job_status;
+					int holdcode = -1;
+					int job_status = -1;
 					int job_status_result = GetAttributeInt(a_job.cluster,
 						a_job.proc,ATTR_JOB_STATUS,&job_status);
 					if( job_status_result >= 0 &&
@@ -6603,7 +6607,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// REAL WORK
 		// // // // //
 	
-	int now = (int)time(0);
+	time_t now = time(0);
 
 	JobActionResults results( result_type );
 
@@ -6674,7 +6678,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 			// Check to make sure the job's status makes sense for
 			// the command we're trying to perform
-		int status;
+		int status = -1;
 		std::string job_user;
 		int on_release_status = IDLE;
 		int hold_reason_code = -1;
@@ -7676,7 +7680,7 @@ MainScheddNegotiate::scheduler_handleJobRejected(PROC_ID job_id,char const *reas
 
 	SetAttributeInt(
 		job_id.cluster, job_id.proc,
-		ATTR_LAST_REJ_MATCH_TIME, (int)time(0), NONDURABLE);
+		ATTR_LAST_REJ_MATCH_TIME, time(0), NONDURABLE);
 }
 
 void
@@ -8772,8 +8776,10 @@ Scheduler::makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad )
 		SetAttributeString(cluster, proc, ATTR_STARTD_IP_ADDR, startd_addr);
 	}
 	
-	int universe;
+	int universe = -1;
 	GetAttributeInt( cluster, proc, ATTR_JOB_UNIVERSE, &universe );
+	ASSERT(universe != -1);
+
 
 	if( GetAttributeStringNew(cluster, proc, ATTR_REMOTE_POOL,
 							  &pool) < 0 ) {
@@ -9391,7 +9397,7 @@ Scheduler::IsLocalJobEligibleToRun(JobQueueJob* job) {
 shadow_rec*
 Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 {
-	int		universe;
+	int		universe = -1;
 	int		rval;
 
 	rval = GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, 
@@ -9841,7 +9847,7 @@ Scheduler::spawnShadow( shadow_rec* srec )
 		  pipe.
 		*/
 		SetAttributeInt( job_id->cluster, job_id->proc, 
-						 ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0) );
+						 ATTR_LAST_JOB_LEASE_RENEWAL, time(0) );
 	}
 
 		// if this is a shadow for an MPI job, we need to tell the
@@ -10857,15 +10863,15 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 	dprintf( D_ALWAYS, "Starting add_shadow_birthdate(%d.%d)\n",
 			 cluster, proc );
     time_t now = time(NULL);
-	int current_time = (int)now;
-	int job_start_date = 0;
+	time_t current_time = now;
+	time_t job_start_date = 0;
 	SetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE, current_time);
 	if (GetAttributeInt(cluster, proc,
 						ATTR_JOB_START_DATE, &job_start_date) < 0) {
 		// this is the first time the job has ever run, so set JobStartDate
 		SetAttributeInt(cluster, proc, ATTR_JOB_START_DATE, current_time);
         
-        int qdate = 0;
+        time_t qdate = 0;
         GetAttributeInt(cluster, proc, ATTR_Q_DATE, &qdate);
 
 		time_t now = scheduler.stats.Tick();
@@ -10911,7 +10917,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 		// Update the job's counter for the number of times a shadow
 		// was started (if this job has a shadow at all, that is).
 		// For the local universe, "shadow" means local starter.
-	int num;
+	int num = 0;
 	switch (job_univ) {
 	case CONDOR_UNIVERSE_SCHEDULER:
 			// CRUFT: ATTR_JOB_RUN_COUNT is deprecated
@@ -10934,7 +10940,7 @@ void add_shadow_birthdate(int cluster, int proc, bool is_reconnect)
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
 		// check if this run is a restart from checkpoint
-		int lastckptTime = 0;
+		time_t lastckptTime = 0;
 		GetAttributeInt(cluster, proc, ATTR_LAST_CKPT_TIME, &lastckptTime);
 		if( lastckptTime > 0 ) {
 			// There was a checkpoint.
@@ -11058,7 +11064,7 @@ Scheduler::InsertMachineAttrs( int cluster, int proc, ClassAd *machine_ad, bool 
 
 		SetAttributeInt(cluster, proc, ATTR_NUM_MATCHES, num_matches);
 
-		SetAttributeInt(cluster, proc, ATTR_LAST_MATCH_TIME, (int)time(0));
+		SetAttributeInt(cluster, proc, ATTR_LAST_MATCH_TIME, time(0));
 	}
 
 		// Now handle JOB_MACHINE_ATTRS
@@ -11143,7 +11149,7 @@ Scheduler::add_shadow_rec( shadow_rec* new_rec )
 		SetAttributeString( cluster, proc, ATTR_PUBLIC_CLAIM_ID, mrec->claim_id.publicClaimId() );
 		SetAttributeString( cluster, proc, ATTR_STARTD_IP_ADDR, mrec->peer );
 		SetAttributeInt( cluster, proc, ATTR_LAST_JOB_LEASE_RENEWAL,
-						 (int)time(0) ); 
+						 time(0) );
 
 		bool have_remote_host = false;
 		if( mrec->my_match_ad ) {
@@ -11265,7 +11271,7 @@ void
 CkptWallClock()
 {
 	int first_time = 1;
-	int current_time = (int)time(0); // bad cast, but ClassAds only know ints
+	time_t current_time = time(0);
 	ClassAd *ad;
 	bool began_transaction = false;
 	while( (ad = GetNextJob(first_time)) ) {
@@ -11273,7 +11279,7 @@ CkptWallClock()
 		int status = IDLE;
 		ad->LookupInteger(ATTR_JOB_STATUS, status);
 		if (status == RUNNING || status == TRANSFERRING_OUTPUT) {
-			int bday = 0;
+			time_t bday = 0;
 			ad->LookupInteger(ATTR_SHADOW_BIRTHDATE, bday);
 			int run_time = current_time - bday;
 			if (bday && run_time > WallClockCkptInterval) {
@@ -11302,7 +11308,7 @@ update_remote_wall_clock(int cluster, int proc)
 		// update ATTR_JOB_REMOTE_WALL_CLOCK.  note: must do this before
 		// we call check_zombie below, since check_zombie is where the
 		// job actually gets removed from the queue if job completed or deleted
-	int bday = 0;
+	time_t bday = 0;
 	GetAttributeInt(cluster, proc, ATTR_SHADOW_BIRTHDATE,&bday);
 	if (bday) {
 		double accum_time = 0;
@@ -11555,7 +11561,7 @@ mark_job_running(PROC_ID* job_id)
 
 	SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, status);
 	SetAttributeInt(job_id->cluster, job_id->proc,
-					ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+					ATTR_ENTERED_CURRENT_STATUS, time(0) );
 	SetAttributeInt(job_id->cluster, job_id->proc,
 					ATTR_LAST_SUSPENSION_TIME, 0 );
 
@@ -11565,7 +11571,7 @@ mark_job_running(PROC_ID* job_id)
 	int univ = CONDOR_UNIVERSE_VANILLA;
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_UNIVERSE, &univ);
 	if (univ == CONDOR_UNIVERSE_SCHEDULER) {
-		int num;
+		int num = 0;
 		if (GetAttributeInt(job_id->cluster, job_id->proc,
 							ATTR_NUM_JOB_STARTS, &num) < 0) {
 			num = 0;
@@ -11595,9 +11601,9 @@ mark_serial_job_running( PROC_ID *job_id )
 void
 _mark_job_stopped(PROC_ID* job_id)
 {
-	int		status;
-	int		orig_max;
-	int		had_orig;
+	int		status    = 0;
+	int		orig_max  = 0;
+	int		had_orig  = 0;
 
 		// NOTE: This function is wrapped in a NONDURABLE transaction.
 
@@ -11631,7 +11637,7 @@ _mark_job_stopped(PROC_ID* job_id)
 
 		SetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, IDLE);
 		SetAttributeInt( job_id->cluster, job_id->proc,
-						 ATTR_ENTERED_CURRENT_STATUS, (int)time(0) );
+						 ATTR_ENTERED_CURRENT_STATUS, time(0) );
 		SetAttributeInt( job_id->cluster, job_id->proc,
 						 ATTR_LAST_SUSPENSION_TIME, 0 );
 
@@ -11930,7 +11936,8 @@ Scheduler::shadow_prio_recs_consistent()
 {
 	int		i;
 	struct shadow_rec	*srp;
-	int		status, universe;
+	int		status = 0;
+	int universe = 0;
 
 	dprintf( D_FULLDEBUG, "Checking consistency of running and runnable jobs\n" );
 	BadCluster = -1;
@@ -12072,7 +12079,7 @@ set_job_status(int cluster, int proc, int status)
 								status);
 				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 								 ATTR_ENTERED_CURRENT_STATUS,
-								 (int)time(0) ); 
+								 time(0) );
 				SetAttributeInt( tmp_id.cluster, tmp_id.proc,
 								 ATTR_LAST_SUSPENSION_TIME, 0 ); 
 			}
@@ -12297,7 +12304,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// Get job status.  Note we only except if there is no job status AND the job
 		// is still in the queue, since we do not want to except if the job ad is gone
 		// perhaps due to condor_rm -f.
-	int q_status;
+	int q_status = -1;
 	if (GetAttributeInt(job_id.cluster,job_id.proc,
 						ATTR_JOB_STATUS,&q_status) < 0)	
 	{
@@ -12338,7 +12345,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 	bool is_goodput = false;
 	int job_image_size = 0;
 	GetAttributeInt(job_id.cluster, job_id.proc, ATTR_IMAGE_SIZE, &job_image_size);
-	int job_start_date = 0;
+	time_t job_start_date = 0;
 	int job_running_time = 0;
 	if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_DATE, &job_start_date))
 		job_running_time = (updateTime - job_start_date);
@@ -12609,7 +12616,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		int job_executing_time = 0;
 		// this time is set in the shadow (remoteresource::beginExecution) so we don't need to worry
 		// if we are talking to a shadow that supports it. the shadow and schedd should be from the same build.
-		int job_start_exec_date = 0; 
+		time_t job_start_exec_date = 0;
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_EXECUTING_DATE, &job_start_exec_date)) {
 			job_pre_exec_time = MAX(0, job_start_exec_date - job_start_date);
 			job_executing_time = updateTime - MAX(job_start_date, job_start_exec_date);
@@ -12624,7 +12631,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 		// this time is also set in the shadow, but there is no gurantee that transfer output ever happened
 		// so it may not exist. it's possible for transfer out date to be from a previous run, so we
 		// have to make sure that it's at least later than the start time for this run before we use it.
-		int job_start_xfer_out_date = 0;
+		time_t job_start_xfer_out_date = 0;
 		if (0 == GetAttributeInt(job_id.cluster, job_id.proc, ATTR_JOB_CURRENT_START_TRANSFER_OUTPUT_DATE, &job_start_xfer_out_date)
 			&& job_start_xfer_out_date >= job_start_date) {
 			job_post_exec_time = MAX(0, updateTime - job_start_xfer_out_date);
@@ -12874,7 +12881,7 @@ void
 Scheduler::check_zombie(int pid, PROC_ID* job_id)
 {
  
-	int	  status;
+	int	  status = -1;
 	
 	if( GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS,
 						&status) < 0 ) {
@@ -13943,11 +13950,12 @@ Scheduler::Register()
 	daemonCore->Register_CommandWithPayload(ENABLE_USERREC, "ENABLE_USERREC", // enable/add user/owner
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
-	//disable these until we decide permissions
-	#if 0
 	daemonCore->Register_CommandWithPayload(DISABLE_USERREC, "DISABLE_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
+
+	//disable these until we decide permissions
+	#if 0
 	daemonCore->Register_CommandWithPayload(EDIT_USERREC, "EDIT_USERREC",
 		(CommandHandlercpp)&Scheduler::command_act_on_user_ads,
 		"command_act_on_user_ads", this, WRITE, true /*force authentication*/);
@@ -14848,7 +14856,7 @@ Scheduler::receive_startd_alive(int cmd, Stream *s) const
 		if ( match->status == M_ACTIVE ) {
 			job_ad = GetJobAd(match->cluster, match->proc);
 			if (job_ad) {
-				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, (int)time(0));
+				job_ad->Assign(ATTR_LAST_JOB_LEASE_RENEWAL, time(nullptr));
 			}
 		}
 	} else {
@@ -15041,12 +15049,12 @@ Scheduler::sendAlives()
 		  transaction...  2003-12-07 Derek <wright@cs.wisc.edu>
 		*/
 
-	int now = (int)time(0);
+	time_t now = time(nullptr);
 	BeginTransaction();
 	matches->startIterations();
 	while (matches->iterate(mrec) == 1) {
 		if( mrec->status == M_ACTIVE ) {
-			int renew_time;
+			time_t renew_time = 0;
 			if ( starter_handles_alives && 
 				 mrec->shadowRec && mrec->shadowRec->pid > 0 ) 
 			{
@@ -15094,7 +15102,7 @@ Scheduler::sendAlives()
 		if ( mrec->m_startd_sends_alives == true && mrec->status == M_ACTIVE &&
 			 mrec->shadowRec && mrec->shadowRec->pid > 0 ) {
 			int lease_duration = -1;
-			int last_lease_renewal = -1;
+			time_t last_lease_renewal = -1;
 			GetAttributeInt( mrec->cluster, mrec->proc,
 							 ATTR_JOB_LEASE_DURATION, &lease_duration );
 			GetAttributeInt( mrec->cluster, mrec->proc,
@@ -15187,7 +15195,7 @@ Scheduler::publish( ClassAd *cad ) {
 	cad->Assign( "BadProc", BadProc );
 	cad->Assign( "NumOwners", NumUniqueOwners );
 	cad->Assign( "NumSubmitters", NumSubmitters );
-	cad->Assign( "NegotiationRequestTime", (int)NegotiationRequestTime  );
+	cad->Assign( "NegotiationRequestTime", NegotiationRequestTime  );
 	cad->Assign( "ExitWhenDone", ExitWhenDone );
 	cad->Assign( "StartJobTimer", StartJobTimer );
 	if ( CondorAdministrator ) {
@@ -15683,7 +15691,7 @@ bool
 moveIntAttr( PROC_ID job_id, const char* old_attr, const char* new_attr,
 			 bool verbose )
 {
-	int value;
+	long long value;
 	int rval;
 
 	if( GetAttributeInt(job_id.cluster, job_id.proc, old_attr, &value) < 0 ) {
@@ -15865,7 +15873,7 @@ abortJobsByConstraint( const char *constraint,
 void
 incrementJobAdAttr(int cluster, int proc, const char* attrName, const char *nestedAdAttrName)
 {
-	int val = 0;
+	long long val = 0;
 	if (!attrName || !attrName[0]) return;
 	if (nestedAdAttrName) {
 		// Here we are going to increment an attribute in an ad nested inside the job ad.
@@ -15913,7 +15921,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool system_hold )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
@@ -15983,7 +15991,7 @@ holdJobRaw( int cluster, int proc, const char* reason,
 	fixReasonAttrs( tmp_id, JA_HOLD_JOBS );
 
 	if( SetAttributeInt(cluster, proc, ATTR_ENTERED_CURRENT_STATUS, 
-						(int)time(0)) < 0 ) {
+						time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}
@@ -16084,7 +16092,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 		 bool email_user,
 		 bool email_admin, bool write_to_user_log )
 {
-	int status;
+	int status = -1;
 	PROC_ID tmp_id;
 	tmp_id.cluster = cluster;
 	tmp_id.proc = proc;
@@ -16129,7 +16137,7 @@ releaseJobRaw( int cluster, int proc, const char* reason,
 	fixReasonAttrs( tmp_id, JA_RELEASE_JOBS );
 
 	if( SetAttributeInt(cluster, proc, ATTR_ENTERED_CURRENT_STATUS, 
-						(int)time(0)) < 0 ) {
+						time(0)) < 0 ) {
 		dprintf( D_ALWAYS, "WARNING: Failed to set %s for job %d.%d\n",
 				 ATTR_ENTERED_CURRENT_STATUS, cluster, proc );
 	}

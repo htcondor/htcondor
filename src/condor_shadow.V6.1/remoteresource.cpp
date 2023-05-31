@@ -1488,7 +1488,7 @@ RemoteResource::recordSuspendEvent( ClassAd* update_ad )
 
 		// Finally, we need to update some attributes in our in-memory
 		// copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int total_suspensions = 0;
 
 	jobAd->LookupInteger( ATTR_TOTAL_SUSPENSIONS, total_suspensions );
@@ -1522,9 +1522,9 @@ RemoteResource::recordResumeEvent( ClassAd* /* update_ad */ )
 	}
 
 		// Now, update our in-memory copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 	int cumulative_suspension_time = 0;
-	int last_suspension_time = 0;
+	time_t last_suspension_time = 0;
 
 		// add in the time I spent suspended to a running total
 	jobAd->LookupInteger( ATTR_CUMULATIVE_SUSPENSION_TIME,
@@ -1564,7 +1564,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 {
 	bool rval = true;
 	std::string string_value;
-	int int_value = 0;
+	time_t int_value = 0;
 	static float last_recv_bytes = 0.0;
 
 		// First, log this to the UserLog
@@ -1584,7 +1584,7 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	}
 
 	// Now, update our in-memory copy of the job ClassAd
-	int now = (int)time(NULL);
+	time_t now = time(nullptr);
 
 	// Increase the total count of checkpoint
 	// by default, we round ATTR_NUM_CKPTS, so fetch the raw value
@@ -1596,10 +1596,10 @@ RemoteResource::recordCheckpointEvent( ClassAd* update_ad )
 	ckpt_count++;
 	jobAd->Assign(ATTR_NUM_CKPTS, ckpt_count);
 
-	int last_ckpt_time = 0;
+	time_t last_ckpt_time = 0;
 	jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
 
-	int current_start_time = 0;
+	time_t current_start_time = 0;
 	jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
 
 	int_value = (last_ckpt_time > current_start_time) ? 
@@ -1880,7 +1880,7 @@ void
 RemoteResource::hadContact( void )
 {
 	last_job_lease_renewal = time(0);
-	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, (int)last_job_lease_renewal );
+	jobAd->Assign( ATTR_LAST_JOB_LEASE_RENEWAL, last_job_lease_renewal );
 }
 
 
@@ -1932,8 +1932,8 @@ RemoteResource::reconnect( void )
 					ATTR_LAST_JOB_LEASE_RENEWAL );
 		}
 		dprintf( D_ALWAYS, "Trying to reconnect to disconnected job\n" );
-		dprintf( D_ALWAYS, "%s: %d %s", ATTR_LAST_JOB_LEASE_RENEWAL,
-				 (int)last_job_lease_renewal, 
+		dprintf( D_ALWAYS, "%s: %lld %s", ATTR_LAST_JOB_LEASE_RENEWAL,
+				 (long long)last_job_lease_renewal,
 				 ctime(&last_job_lease_renewal) );
 		dprintf( D_ALWAYS, "%s: %d seconds\n",
 				 ATTR_JOB_LEASE_DURATION, lease_duration );
@@ -2014,7 +2014,7 @@ RemoteResource::remainingLeaseDuration( void )
 			// No lease, nothing remains.
 		return 0;
 	}
-	int now = (int)time(0);
+	time_t now = (int)time(0);
 	int remaining = lease_duration - (now - last_job_lease_renewal);
 	return ((remaining < 0) ? 0 : remaining);
 }
@@ -2461,7 +2461,7 @@ RemoteResource::setRemoteProxyRenewTime(time_t expiration_time)
 {
 	m_remote_proxy_expiration = expiration_time;
 	m_remote_proxy_renew_time = GetDelegatedProxyRenewalTime(expiration_time);
-	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, (int)expiration_time);
+	jobAd->Assign(ATTR_DELEGATED_PROXY_EXPIRATION, expiration_time);
 }
 
 void
