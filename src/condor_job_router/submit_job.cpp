@@ -118,7 +118,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, con
 	ASSERT(proc >= 0);
 
 	// Check that the job's status is still IDLE
-	int status;
+	int status = 0;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
 			formatstr(*error_details, "Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 

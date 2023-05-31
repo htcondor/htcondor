@@ -10370,6 +10370,8 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 	bool cannot_open_files = false;
 	priv_state priv;
 	int i;
+	int core_size_truncated = 0;
+	size_t core_size = 0;
 	size_t *core_size_ptr = NULL;
 	char *ckpt_name = NULL;
 	// This is the temporary directory we create for the job, but it
@@ -10673,8 +10675,6 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// attribute is read/written to the job queue log by/or
 		// shared between versions of Condor which view the type
 		// of that attribute differently, calamity would arise.
-	int core_size_truncated;
-	size_t core_size;
 	if (GetAttributeInt(job_id->cluster, job_id->proc, 
 						   ATTR_CORE_SIZE, &core_size_truncated) == 0) {
 		// make the hard limit be what is specified.
@@ -11539,7 +11539,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 void
 mark_job_running(PROC_ID* job_id)
 {
-	int status;
+	int status = 0;
 	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);

@@ -210,7 +210,8 @@ compute_adj( char *arg )
 
 void UpdateJobAd(int cluster, int proc)
 {
-	int old_prio, new_prio;
+	int old_prio = 0;
+	int new_prio;
 	if( (GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &old_prio) < 0) ) {
 		fprintf(stderr, "Couldn't retrieve current priority for %d.%d.\n",
 				cluster, proc);

@@ -375,7 +375,6 @@ sim_nvmlDeviceGetName(nvmlDevice_t device, char *buf, unsigned int /* bufsize */
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	/* int devID = */ nvmldev_to_sim_index(device);
 	if (nvmldev_is_mig(device)) {
 		// TODO: is driver 470 different than driver 450 ?
 		// strcpy(buf, config->device->name);
@@ -391,7 +390,6 @@ sim_nvmlDeviceGetMemoryInfo(nvmlDevice_t device, nvmlMemory_t * memory ) {
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	/* int devID = */ nvmldev_to_sim_index(device);
 	if (nvmldev_is_mig(device)) {
 		memory->total = config->mig->inst[nvmldev_to_mig_index(device)].memory * (size_t)(1024*1024);
 	} else {
@@ -407,7 +405,6 @@ sim_nvmlDeviceGetEccMode( nvmlDevice_t device, nvmlEnableState_t* current, nvmlE
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	/* int devID = */ nvmldev_to_sim_index(device);
 	int enabled = 0;
 	if (nvmldev_is_mig(device)) { // TODO: per MIG ecc?
 		enabled = config->device->ECCEnabled;
@@ -423,7 +420,6 @@ sim_nvmlDeviceGetMaxClockInfo( nvmlDevice_t device, nvmlClockType_t /*ct*/, unsi
 	const struct _simulated_cuda_config * config = nullptr;
 	nvmlReturn_t ret = sim_getconfig(device, config);
 	if (ret != NVML_SUCCESS) { return ret; }
-	/* int devID = */ nvmldev_to_sim_index(device);
 	int clockRate = 0;
 	if (nvmldev_is_mig(device)) { // TODO: per MIG ecc?
 		clockRate = config->device->clockRate;

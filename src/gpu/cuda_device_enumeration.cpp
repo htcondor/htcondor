@@ -418,6 +418,9 @@ setCUDAFunctionPointers( bool force_nvcuda, bool force_cudart, bool must_load ) 
 		print_error(MODE_DIAGNOSTIC_MSG, "# Unable to load a CUDA library (%s or %s).\n",
 			cuda_library, cudart_library);
 	}
+	if (cuda_handle) {
+		dlclose(cuda_handle);
+	}
 	return NULL;
 }
 
