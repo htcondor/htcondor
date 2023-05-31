@@ -11539,7 +11539,7 @@ Scheduler::delete_shadow_rec( shadow_rec *rec )
 void
 mark_job_running(PROC_ID* job_id)
 {
-	int status;
+	int status = 0;
 	int orig_max = 1; // If it was not set this is the same default
 
 	GetAttributeInt(job_id->cluster, job_id->proc, ATTR_JOB_STATUS, &status);
