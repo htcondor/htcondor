@@ -16,16 +16,16 @@ class TestClassAds:
     #
     #  - classad.ClassAd()
     #  - classad.ClassAd(string)
-    #  * classad.ClassAd(dictionary)
-    #  * __repr__, __str__, and round-trips
+    #  - classad.ClassAd(dictionary)
+    #  - __repr__, __str__, and round-trips
     #  * __delitem__
-    #  * __getitem__, __setitem__ for/with:
-    #    * ClassAds, lists, recursion/intermixing
+    #  - __getitem__, __setitem__ for/with:
+    #    - ClassAds, lists, recursion/intermixing
     #    - dictionaries
     #    - booleans, strings, integers, floats, byte strings
     #    - datetime.datetime (see below)
     #    - error, undefined [classad.Value]
-    #    * ExprTrees / expressions
+    #    - ExprTrees / expressions
     #
 
     def test_equality_operators(self):
@@ -169,3 +169,74 @@ class TestClassAds:
         else:
             assert f"{now.isoformat(sep=' ', timespec='seconds')}" == str(ad["naive"])
 
+
+    def test_repr(self):
+        c = classad.ClassAd()
+
+        c["a"] = True
+        c["b"] = False
+        c["c"] = -1.1
+        c["v"] = classad.Value.Undefined
+
+        if 'classad2' in str(type(c)):
+            c["w"] = classad.Value.Error
+            assert c["w"] == classad.Value.Error
+
+        c["x"] = 7
+        c["y"] = "eight"
+        c["z"] = b"seventy-five"
+
+        d = dict()
+        d["a"] = "a"
+        d["b"] = 7
+        d["c"] = -1.1
+        c["d"] = d
+
+        e = classad.ClassAd()
+        e["a"] = 1
+        e["b"] = "two"
+        e["zz"] = classad.ClassAd("[foo = 2+2]")
+
+        d["e"] = e
+
+        the_str = str(c)
+        round_trip = classad.ClassAd(the_str)
+        assert round_trip == c
+
+        the_repr = repr(c)
+        round_trip = classad.ClassAd(the_repr)
+        assert round_trip == c
+
+
+    def test_classad_dictionary_constructor(self):
+        d = dict()
+        d["a"] = "a"
+        d["b"] = 7
+        d["c"] = -1.1
+
+        e = classad.ClassAd()
+        for key in d.keys():
+            e[key] = d[key]
+        e["l"] = [1, 'a', 2.0, False]
+        if 'classad2' in str(type(e)):
+            # BUG: d["e"] is a dictionary in version 1
+            d["e"] = e
+
+        now = datetime.datetime.now(tz=datetime.timezone.utc)
+        now = now.replace(microsecond=0)
+        if 'classad2' in str(type(e)):
+            # BUG: d["now"] is naive datetime in version 1
+            d["now"] = now
+
+        l = list()
+        for key in d.keys():
+            l.append(d[key])
+        d["l"] = l
+
+        c = classad.ClassAd(d)
+        if 'classad2' in str(type(e)):
+            assert c["e"] == e
+        assert c["l"] == l
+
+        for key in c.keys():
+            assert c[key] == d[key]

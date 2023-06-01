@@ -1,19 +1,34 @@
 from .classad2_impl import _handle as handle_t
 
-from .classad2_impl import _classad_init
-from .classad2_impl import _classad_init_from_string
-from .classad2_impl import _classad_init_from_dict
-from .classad2_impl import _classad_to_string
-from .classad2_impl import _classad_to_repr
-from .classad2_impl import _classad_get_item
-from .classad2_impl import _classad_set_item
-from .classad2_impl import _classad_del_item
-from .classad2_impl import _exprtree_eq
+from .classad2_impl import (
+    _classad_init,
+    _classad_init_from_string,
+    _classad_init_from_dict,
+    _classad_to_string,
+    _classad_to_repr,
+    _classad_get_item,
+    _classad_set_item,
+    _classad_del_item,
+    _exprtree_eq,
+    _classad_size,
+    _classad_keys,
+)
 
-from collections import UserDict
+from collections.abc import MutableMapping
 from datetime import datetime, timedelta, timezone
 
-class ClassAd(UserDict):
+
+#
+# MutableMapping provides generic implementations for all mutable mapping
+# methods except for __[get|set|del]item__(), __iter__, and __len__.
+#
+# The version 1 documentation says "[A] ClassAd object is iterable
+# (returning the attributes) and implements the dictionary protocol.
+# The items(), keys(), values(), get(), setdefault(), and update()
+# methods have the same semantics as a dictionary."
+#
+
+class ClassAd(MutableMapping):
 
     def __init__(self, input=None):
         self._handle = handle_t()
@@ -38,6 +53,27 @@ class ClassAd(UserDict):
         return _classad_to_string(self._handle)
 
 
+    # In version 1, we didn't allow Python to check it other knew how
+    # to do equality comparisons against us, which was probably wrong.
+    #
+    # If don't define __eq__(), the one we get from the ABC Mapping
+    # allows comparisons against other `Mapping`s, which we may or
+    # may not actually want.
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return _exprtree_eq(self._handle, other._handle)
+        else:
+            return NotImplemented
+
+
+    #
+    # The MutableMapping abstract methods.
+    #
+
+    def __len__(self):
+        return _classad_size(self._handle)
+
+
     def __getitem__(self, key):
         if not isinstance(key, str):
             raise KeyError("ClassAd keys are strings")
@@ -58,11 +94,10 @@ class ClassAd(UserDict):
         return _classad_del_item(self._handle, key)
 
 
-    def __eq__(self, other):
-        if type(self) is type(other):
-            return _exprtree_eq(self._handle, other._handle)
-        else:
-            return False
+    def __iter__(self):
+        keys = _classad_keys(self._handle)
+        for key in keys:
+            yield key
 
 
 def _convert_local_datetime_to_utc_ts(dt):

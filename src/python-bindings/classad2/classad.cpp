@@ -482,3 +482,53 @@ _classad_set_item( PyObject *, PyObject * args ) {
 
     Py_RETURN_NONE;
 }
+
+
+static PyObject *
+_classad_size( PyObject *, PyObject * args ) {
+    // _classad_size( self._handle )
+
+    PyObject_Handle * handle = NULL;
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)handle->t;
+    long size = classAd->size();
+    return PyLong_FromLong(size);
+}
+
+
+static PyObject *
+_classad_keys( PyObject *, PyObject * args ) {
+    // _classad_size( self._handle )
+
+    PyObject_Handle * handle = NULL;
+    if(! PyArg_ParseTuple( args, "O", (PyObject **)& handle )) {
+        // PyArg_ParseTuple() has already set an exception for us.
+        return NULL;
+    }
+
+    auto * classAd = (ClassAd *)handle->t;
+
+    PyObject * list = PyList_New(0);
+    if( list == NULL ) {
+        PyErr_SetString( PyExc_MemoryError, "convert_classad_value_to_python" );
+        return NULL;
+    }
+
+    for( auto i = classAd->begin(); i != classAd->end(); ++i ) {
+        // dprintf( D_ALWAYS, "%s\n", i->first.c_str() );
+        PyObject * py_str = PyUnicode_FromString(i->first.c_str());
+        auto rv = PyList_Append( list, py_str );
+        Py_DecRef(py_str);
+
+        if(rv != 0) {
+            // PyList_Append() has already set an exception for us.
+            return NULL;
+        }
+    }
+
+    return list;
+}
