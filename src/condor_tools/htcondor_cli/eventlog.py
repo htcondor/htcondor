@@ -39,7 +39,10 @@ class Read(Verb):
                 event_summary = event_summaries.get(job_id, {})
                 if event.type == htcondor.JobEventType.SUBMIT:
                     ip_address = re.search(r"\d+\.\d+\.\d+\.\d+", event.get("SubmitHost")).group()
-                    event_summaries[job_id] = {"Host": ip_address, "Evictions": 0,}
+                    event_summaries[job_id] = {"Host": ip_address, "Evictions": 0, "Executed": False}
+                elif event.type == htcondor.JobEventType.JOB_ABORTED and event_summary.get("Executed", False) is False:
+                    # remove job from dictionary if it was aborted before being executed
+                    event_summaries.pop(job_id)
                 elif event.type == htcondor.JobEventType.EXECUTE:
                     # get hostname if possible
                     if event.get("SlotName") is not None:
@@ -49,16 +52,24 @@ class Read(Verb):
                     start_time = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
                     event_summary["Start Time"] = start_time
                     event_summary["last_exec_time"] = start_time
+                    # set boolean that job has been executed
+                    event_summary["Executed"] = True
                 elif event.type == htcondor.JobEventType.JOB_EVICTED or event.type == htcondor.JobEventType.JOB_TERMINATED:
                     # get good time and cpu usage
+                    cpu_usage_key = "RunRemoteUsage" if event.type == htcondor.JobEventType.JOB_EVICTED else "TotalRemoteUsage"
+                    cpu_usage = str(event.get(cpu_usage_key))
+                    user_time = re.search(r"Usr \d+ (\d+):(\d+):(\d+),", cpu_usage)
+                    sys_time = re.search(r"Sys \d+ (\d+):(\d+):(\d+)", cpu_usage)
+                    user_minutes, user_seconds = user_time.group(1, 2)
+                    sys_minutes, sys_seconds = sys_time.group(1, 2)
+                    total_minutes = int(user_minutes) + int(sys_minutes)
+                    total_seconds = int(user_seconds) + int(sys_seconds)
+                    cpu_usage_formatted = f"0+{total_minutes:02d}:{total_seconds:02d}"
+                    event_summary["CPU Usage"] = cpu_usage_formatted
                     if event.type == htcondor.JobEventType.JOB_EVICTED:
                         event_summary["Evictions"] = event_summary.get("Evictions", 0) + 1
-                        cpu_usage = re.search(r"(\d+):(\d+):(\d+)", str(event.get("RunRemoteUsage"))).group()
-                        event_summary["CPU Usage"] = cpu_usage
                         event_summary["last_exec_time"] = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
-                    else:
-                        cpu_usage = re.search(r"(\d+):(\d+):(\d+)", str(event.get("TotalRemoteUsage"))).group()
-                        event_summary["CPU Usage"] = cpu_usage
+
                     event_summary["Evict Time"] = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
                     delta = datetime.strptime(event_summary["Evict Time"], "%m/%d %H:%M") - datetime.strptime(event_summary["Start Time"], "%m/%d %H:%M")
                     wall_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
