@@ -8596,6 +8596,10 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		delete sn;
 	} 
 
+	if (msg->have_claimed_slot_info()) {
+		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
+	}
+
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
 			// since we might be able to spawn something now.

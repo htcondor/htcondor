@@ -38,12 +38,13 @@ const int CONDOR_TRY_AGAIN	= 2;
 const int CONDOR_ERROR	    = 3;
 
 /* Replies specific to the REQUEST_CLAIM command */
-const int REQUEST_CLAIM_LEFTOVERS		 = 3;
-//const int REQUEST_CLAIM_PAIR			 = 4;	// Not used
+const int REQUEST_CLAIM_LEFTOVERS        = 3;
+//const int REQUEST_CLAIM_PAIR           = 4;   // Not used
 const int REQUEST_CLAIM_LEFTOVERS_2	     = 5;
+//const int REQUEST_CLAIM_PAIR_2         = 6;   // Not used
+const int REQUEST_CLAIM_SLOT_AD          = 7;
 
 
-//#define REQUEST_CLAIM_PAIR_2		6		// Not used
 // The contraints on this file are
 // 1) We want a #define'd symbol for each command for client code to use
 // 2) We don't want to pollute every .o's data segment with a copy of a table

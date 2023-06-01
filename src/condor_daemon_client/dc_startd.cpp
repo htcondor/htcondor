@@ -104,6 +104,7 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, char const *extra_clai
 	m_alive_interval = alive_interval;
 	m_reply = NOT_OK;
 	m_have_leftovers = false;
+	m_have_claimed_slot_info = false;
 }
 
 void
@@ -130,6 +131,10 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// the newer protocol where any claim id in the response
 		// is encrypted.
 	m_job_ad.Assign("_condor_SECURE_CLAIM_ID", true);
+
+		// Insert an attribute requesting the startd to send the
+		// claimed slot ad in its response.
+	m_job_ad.Assign("_condor_SEND_CLAIMED_AD", true);
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -231,7 +236,21 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
 		  the claim id is encrypted.
 		Reply of 6 (REQUEST_CLAIM_PAIR_2) is no longer used
+		Reply of 7 (REQUEST_CLAIM_SLOT_AD) means claim accepted, the
+		  claimed slot ad will be sent next, and either OK or p-slot
+		  leftovers will be sent after that.
 	*/
+
+	if (m_reply == REQUEST_CLAIM_SLOT_AD) {
+		if (!sock->get_secret(m_claimed_slot_claim_id) || !getClassAd(sock, m_claimed_slot_ad) || !sock->get(m_reply)) {
+			dprintf(failureDebugLevel(),
+			        "Response problem from startd when requesting claim %s.\n",
+			        description());
+			sockFailed(sock);
+			return false;
+		}
+		m_have_claimed_slot_info = true;
+	}
 
 	if( m_reply == OK ) {
 			// no need to log success, because DCMsg::reportSuccess() will
