@@ -424,7 +424,7 @@ calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
     
     *user_idle = *console_idle = -1;
     
-    if (IOMasterPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
+    if (IOMainPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
         dprintf(D_ALWAYS, "IDLE: Couldn't create a master I/O Kit port.\n");
     } else {
         hidMatchDictionary = IOServiceMatching("IOHIDSystem");
