@@ -59,6 +59,7 @@
 #include "zkm_base64.h"
 
 #include <algorithm>
+#include <charconv>
 #include <string>
 #include <set>
 
@@ -467,7 +468,7 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 	sv->psz = &times[8];
 
 	// set SUBMIT_TIME macro value
-	sprintf(&times[12], "%lu", (unsigned long)stime);
+	{ auto [p, ec] = std::to_chars(&times[12], &times[23], (unsigned long) stime); *p = '\0';}
 	sv = allocate_live_default_string(SubmitMacroSet, UnliveSubmitTimeMacroDef, 0);
 	sv->psz = &times[12];
 }
@@ -563,7 +564,7 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_P
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -580,7 +581,7 @@ void SubmitHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -8090,11 +8091,11 @@ ClassAd* SubmitHash::make_job_ad (
 	FnCheckFile = check_file;
 	CheckFileArg = pv_check_arg;
 
-	strcpy(LiveNodeString,"");
-	(void)sprintf(LiveClusterString, "%d", job_id.cluster);
-	(void)sprintf(LiveProcessString, "%d", job_id.proc);
-	(void)sprintf(LiveRowString, "%d", item_index);
-	(void)sprintf(LiveStepString, "%d", step);
+	LiveNodeString[0] = '\0';
+	{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, job_id.cluster); *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, job_id.proc);    *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveRowString, LiveRowString + 12, item_index);             *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveStepString, LiveStepString + 12, step);                 *p = '\0';}
 
 	// calling this function invalidates the job returned from the previous call
 	delete job; job = NULL;
@@ -8324,11 +8325,11 @@ int qslice::to_string(char * buf, int cch) const {
 	if ( ! (flags&1)) return 0;
 	char * p = sz;
 	*p++  = '[';
-	if (flags&2) { p += sprintf(p,"%d", start); }
+	if (flags&2) { auto [ptr, ec] = std::to_chars(p, p + 12, start); p = ptr;}
 	*p++ = ':';
-	if (flags&4) { p += sprintf(p,"%d", end); }
+	if (flags&4) { auto [ptr, ec] = std::to_chars(p, p + 12, end); p = ptr;}
 	*p++ = ':';
-	if (flags&8) { p += sprintf(p,"%d", step); }
+	if (flags&8) { auto [ptr, ec] = std::to_chars(p, p + 12, step); p = ptr;}
 	*p++ = ']';
 	*p = 0;
 	strncpy(buf, sz, cch); buf[cch-1] = 0;
@@ -9227,7 +9228,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	}
 
 	if (cluster_id > 0) {
-		(void)sprintf(LiveClusterString, "%d", cluster_id);
+		{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, cluster_id); *p = '\0';}
 	} else {
 		skip_knobs.insert("Cluster");
 		skip_knobs.insert("ClusterId");

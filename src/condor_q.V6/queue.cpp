@@ -3659,7 +3659,7 @@ bool print_jobs_analysis (
 
 				achRunning[0] = 0;
 				if (cRunning) { snprintf(achRunning, sizeof(achRunning), "%d/", cRunning); }
-				sprintf(achRunning+strlen(achRunning), "%d", ac.machinesRunningUsersJobs);
+				snprintf(achRunning+strlen(achRunning), 12, "%d", ac.machinesRunningUsersJobs);
 
 				printf(fmt, achJobId, achAutocluster,
 						ac.totalMachines - ac.fReqConstraint,
