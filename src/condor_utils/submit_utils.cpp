@@ -468,7 +468,7 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 	sv->psz = &times[8];
 
 	// set SUBMIT_TIME macro value
-	{ auto [p, ec] = std::to_chars(&times[12], &times[36], (unsigned long) stime); *p = '\0';}
+	{ auto [p, ec] = std::to_chars(&times[12], &times[23], (unsigned long) stime); *p = '\0';}
 	sv = allocate_live_default_string(SubmitMacroSet, UnliveSubmitTimeMacroDef, 0);
 	sv->psz = &times[12];
 }
