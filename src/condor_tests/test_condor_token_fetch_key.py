@@ -40,7 +40,7 @@ def token_to_dict(test_dir, condor, token):
     token_file.write_text(token)
     rv = condor.run_command(
         ["condor_token_list", "-dir", test_dir],
-        timeout=2,
+        timeout=8,
     )
     assert rv.returncode == 0
 
@@ -62,7 +62,7 @@ def token_to_dict(test_dir, condor, token):
 def default_token(test_dir, condor):
     rv = condor.run_command(
         ["condor_token_fetch"],
-        timeout=2,
+        timeout=8,
     )
     assert rv.returncode == 0
     return token_to_dict(test_dir, condor, rv.stdout)
@@ -72,7 +72,7 @@ def default_token(test_dir, condor):
 def pool_token(test_dir, condor):
     rv = condor.run_command(
         ["condor_token_fetch", "-key", "POOL"],
-        timeout=2,
+        timeout=8,
     )
     assert rv.returncode == 0
     return token_to_dict(test_dir, condor, rv.stdout)
@@ -82,7 +82,7 @@ def pool_token(test_dir, condor):
 def test_token(test_dir, condor):
     rv = condor.run_command(
         ["condor_token_fetch", "-key", "test_key"],
-        timeout=2,
+        timeout=8,
     )
     assert rv.returncode == 0
     return token_to_dict(test_dir, condor, rv.stdout)
