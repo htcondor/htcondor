@@ -4362,12 +4362,24 @@ static const char * check_docker_image(char * docker_image)
 	return docker_image;
 }
 
-static const char * check_container_image(char * container_image)
+static const char * check_container_image(char * container_image, bool &valid)
 {
 	// trim leading & trailing whitespace and remove surrounding "" if any.
 	container_image = trim_and_strip_quotes_in_place(container_image);
 
+	   std::array<std::string, 3> invalid_prefixes {"instance://", "library://", "shub://"};
+	   for (auto &prefix : invalid_prefixes) {
+			   std::string image_str = container_image ? container_image : "";
+			   if (image_str.starts_with(prefix)) {
+					   valid = false;
+					   return container_image;
+			   }
+	   }
+
 	// TODO: add code here to validate docker image argument (if possible)
+	   if (container_image == nullptr) {
+			   valid = false;
+	   }
 	return container_image;
 }
 
@@ -4424,9 +4436,10 @@ int SubmitHash::SetExecutable()
 		}
 		auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 		if (container_image) {
-			const char * image = check_container_image(container_image.ptr());
-			if (! image || ! image[0]) {
-				push_error(stderr, "'%s' is not a valid container_image\n", container_image.ptr());
+					   bool valid = true;
+					   const char * image = check_container_image(container_image.ptr(), valid);
+					   if (! image || ! image[0] || !valid) {
+							   push_error(stderr, "'%s' is not a valid container image\n", container_image.ptr());
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobString(ATTR_CONTAINER_IMAGE, image);
