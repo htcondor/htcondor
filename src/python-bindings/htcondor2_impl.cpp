@@ -21,6 +21,9 @@
 #include "common2/py_util.cpp"
 #include "htcondor2/collector.cpp"
 
+// htcondor.Negotiator
+#include "htcondor2/negotiator.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -50,7 +53,8 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 	{"_collector_advertise", & _collector_advertise, METH_VARARGS, NULL},
 
-	{"_hack", & _hack, METH_VARARGS, NULL},
+
+	{"_negotiator_init", &_negotiator_init, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}

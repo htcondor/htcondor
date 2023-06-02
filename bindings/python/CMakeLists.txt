@@ -27,6 +27,7 @@ htcondor/_job_status.py
 
 htcondor2/compat_enum/__init__.py
 htcondor2/compat_enum/LICENSE
+htcondor2/_negotiator.py
 htcondor2/_collector.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py

@@ -13,6 +13,7 @@ from ._ad_type import AdType
 
 # Classes.
 from ._collector import Collector
+from ._negotiator import Negotiator
 
 # Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes
