@@ -1320,8 +1320,6 @@ abort_accept_claim( Resource* rip, Stream* stream )
 bool
 accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad, Claim* leftover_claim )
 {
-	int interval = -1;
-	char *client_addr = NULL;
 	std::string RemoteOwner;
 
 		// There should not be a pre claim object now.
