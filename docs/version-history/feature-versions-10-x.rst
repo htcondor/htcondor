@@ -19,7 +19,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- For grid universe jobs of type **batch**, detecting if a SLURM
+  system is functioning now works with older versions of SLURM.
+  :jira:`1826`
 
 Version 10.5.0
 --------------
