@@ -1,6 +1,7 @@
-import classad2 as classad
+# Modules.
+from ._common_imports import classad
 
-# Loose (module) functions.
+# Functions.
 from .htcondor2_impl import _version as version
 from .htcondor2_impl import _platform as platform
 from .htcondor2_impl import _set_subsystem as set_subsystem
@@ -13,6 +14,6 @@ from ._ad_type import AdType
 # Classes.
 from ._collector import Collector
 
-# For compatibility with the `htcondor` module.
+# Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes
 from ._ad_type import AdType as AdTypes

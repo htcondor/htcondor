@@ -75,7 +75,6 @@ PyObject *
 py_new_classad_value( classad::Value::ValueType vt ) {
 	static PyObject * py_htcondor_module = NULL;
 	if( py_htcondor_module == NULL ) {
-		// Consider making this "classad2", instead.
 		py_htcondor_module = PyImport_ImportModule( "htcondor2" );
 	}
 

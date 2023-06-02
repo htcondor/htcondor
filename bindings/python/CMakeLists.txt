@@ -31,6 +31,7 @@ htcondor2/_collector.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_common_imports.py
 htcondor2/__init__.py
 
 classad/__init__.py

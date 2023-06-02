@@ -10,6 +10,7 @@ from .htcondor2_impl import _collector_advertise
 from ._ad_type import AdType
 from ._daemon_type import DaemonType
 
+from ._common_imports import classad
 
 def _ad_type_from_daemon_type(daemon_type: DaemonType):
     map = {
@@ -27,9 +28,28 @@ def _ad_type_from_daemon_type(daemon_type: DaemonType):
 
 class Collector():
 
-    def __init__(self, pool: Optional[str] = None):
+    #
+    # In version 1, there was a distinct DaemonLocation type (a named tuple)
+    # that `pool` could also be, but that functionality was never documented.
+    #
+    def __init__(self, pool = None):
         self._handle = handle_t()
-        _collector_init(self, self._handle, pool)
+
+        if pool is None or isinstance(pool, str):
+            _collector_init(self, self._handle, pool)
+            return
+
+        if isinstance(pool, classad.ClassAd):
+            addr = pool.get("MyAddress")
+            if addr is None:
+                raise ValueError("if ClassAd, pool must have MyAddress attribute")
+            _collector_init(self, self._handle, addr)
+            return
+
+        if isinstance(pool, list):
+            str_list = ", ".join(list)
+            _collector_init(self, self._handle, str_list)
+            return
 
 
     # FIXME: In version 1, `constraint` could also be an ExprTree.
