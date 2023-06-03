@@ -66,6 +66,23 @@ Bugs Fixed:
   not be enforced correctly.
   :jira:`1775`
 
+Version 10.5.1
+--------------
+
+.. HTCondor version 10.5.1 released on Month Date, 2023.
+
+- HTCondor version 10.5.1 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- For grid universe jobs of type **batch**, detecting if a SLURM
+  system is functioning now works with older versions of SLURM.
+  :jira:`1826`
+
 Version 10.5.0
 --------------
 
