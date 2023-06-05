@@ -54,7 +54,15 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_collector_advertise", & _collector_advertise, METH_VARARGS, NULL},
 
 
-	{"_negotiator_init", &_negotiator_init, METH_VARARGS, NULL},
+	{"_negotiator_command", &_negotiator_command, METH_VARARGS, NULL},
+
+	{"_negotiator_command_return", &_negotiator_command_return, METH_VARARGS, NULL},
+
+	{"_negotiator_command_user", &_negotiator_command_user, METH_VARARGS, NULL},
+
+	{"_negotiator_command_user_return", &_negotiator_command_user_return, METH_VARARGS, NULL},
+
+	{"_negotiator_command_user_value", &_negotiator_command_user_value, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}
