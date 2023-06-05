@@ -1640,6 +1640,16 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jun 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.0-1
+- Can now define DAGMan save points to be able to rerun DAGs from there
+- Expand default list of environment variables passed to the DAGMan manager
+- Administrators can prevent users using "getenv = true" in submit files
+- Improved throughput when submitting a large number of ARC-CE jobs
+- Execute events contain the slot name, sandbox path, resource quantities
+- Can add attributes of the execution point to be recorded in the user log
+- Enhanced condor_transform_ads tool to ease offline job transform testing
+- Fixed a bug where memory limits over 2 GiB might not be correctly enforced
+
 * Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.4-1
 - Provides script to assist updating from HTCondor version 9 to version 10
 - Fixes a bug where rarely an output file would not be transferred back
