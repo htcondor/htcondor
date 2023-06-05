@@ -521,7 +521,7 @@ class FileTransfer final: public Service {
 	char* TransSock{nullptr};
 	char* TransKey{nullptr};
 	char* SpoolSpace{nullptr};
-	char* TmpSpoolSpace{nullptr};
+	std::string TmpSpoolSpace;
 	int user_supplied_key{false};
 	bool upload_changed_files{false};
 	int m_final_transfer_flag{false};
