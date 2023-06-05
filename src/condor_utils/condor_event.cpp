@@ -993,7 +993,7 @@ FutureEvent::toClassAd(bool event_time_utc)
 
 	myad->Assign("EventHead", head);
 	if ( ! payload.empty()) {
-		StringTokenIterator lines(payload, 120, "\r\n");
+		StringTokenIterator lines(payload, "\r\n");
 		const std::string * str;
 		while ((str = lines.next_string())) { 
 			if ( ! myad->Insert(*str)) {
@@ -1451,6 +1451,12 @@ ExecuteEvent::ExecuteEvent(void)
 	eventNumber = ULOG_EXECUTE;
 }
 
+ExecuteEvent::~ExecuteEvent(void)
+{
+	if (executeProps) delete executeProps;
+	executeProps = nullptr;
+}
+
 void
 ExecuteEvent::setExecuteHost(char const *addr)
 {
@@ -1461,6 +1467,21 @@ char const *
 ExecuteEvent::getExecuteHost()
 {
 	return executeHost.c_str();
+}
+
+void
+ExecuteEvent::setSlotName(char const *name)
+{
+	slotName = name ? name : "";
+}
+
+bool ExecuteEvent::hasProps() {
+	return executeProps && executeProps->size() > 0;
+}
+
+ClassAd & ExecuteEvent::setProp() {
+	if ( ! executeProps) executeProps = new ClassAd(); 
+	return *executeProps;
 }
 
 bool
@@ -1474,6 +1495,17 @@ ExecuteEvent::formatBody( std::string &out )
 		return false;
 	}
 
+	if ( ! slotName.empty()) {
+		formatstr_cat(out, "\tSlotName: %s\n", slotName.c_str());
+	}
+
+	if (hasProps()) {
+		// print sorted key=value pairs for the properties
+		classad::References attrs;
+		sGetAdAttrs(attrs, *executeProps);
+		sPrintAdAttrs(out, *executeProps, attrs, "\t");
+	}
+
 	return true;
 }
 
@@ -1482,6 +1514,26 @@ ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	if ( ! read_line_value("Job executing on host: ", executeHost, file, got_sync_line)) {
 		return 0;
+	}
+	ExprTree * tree = nullptr;
+	std::string line, attr;
+	// read optional SlotName : <name>
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		return 1; // OK for there to be no more lines - backwards compatibility
+	}
+	if (starts_with(line, "\tSlotName:")) {
+		slotName = strchr(line.c_str(),':') + 1,
+		trim(slotName);
+		trim_quotes(slotName, "\"");
+	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+		setProp().Insert(attr, tree);
+	}
+	if (got_sync_line) return 1;
+	// read optional other properties
+	while (read_optional_line(line, file, got_sync_line)) {
+		if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+			setProp().Insert(attr, tree);
+		}
 	}
 	return 1;
 }
@@ -1495,6 +1547,12 @@ ExecuteEvent::toClassAd(bool event_time_utc)
 	if( !executeHost.empty() ) {
 		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
 	}
+	if( !slotName.empty()) {
+		myad->Assign("SlotName", slotName);
+	}
+	if (hasProps()) {
+		myad->Insert("ExecuteProps", executeProps->Copy());
+	}
 
 	return myad;
 }
@@ -1507,6 +1565,17 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	ad->LookupString("ExecuteHost", executeHost);
+	slotName.clear();
+	ad->LookupString("SlotName", slotName);
+
+	delete executeProps;
+	executeProps = nullptr;
+
+	ClassAd * props = nullptr;
+	ExprTree * tree = ad->Lookup("ExecuteProps");
+	if (tree && tree->isClassad(&props)) {
+		executeProps = static_cast<ClassAd*>(props->Copy());
+	}
 }
 
 
@@ -3329,27 +3398,76 @@ NodeExecuteEvent::NodeExecuteEvent(void)
 	node = -1;
 }
 
+NodeExecuteEvent::~NodeExecuteEvent(void)
+{
+	if (executeProps) delete executeProps;
+	executeProps = nullptr;
+}
+
+
 bool
 NodeExecuteEvent::formatBody( std::string &out )
 {
-	return( formatstr_cat( out, "Node %d executing on host: %s\n",
-						   node, executeHost.c_str() ) >= 0 );
+	int retval = formatstr_cat( out, "Node %d executing on host: %s\n", node, executeHost.c_str());
+	if (retval < 0) {
+		return false;
+	}
+
+	if ( ! slotName.empty()) {
+		formatstr_cat(out, "\tSlotName: %s\n", slotName.c_str());
+	}
+
+	if (hasProps()) {
+		// print sorted key=value pairs for the properties
+		classad::References attrs;
+		sGetAdAttrs(attrs, *executeProps);
+		sPrintAdAttrs(out, *executeProps, attrs, "\t");
+	}
+
+	return true;
 }
 
 
 int
-NodeExecuteEvent::readEvent (FILE *file, bool & /*got_sync_line*/)
+NodeExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	char buffer[128];
-	std::string line;
+	std::string line, attr;
 	if( !readLine(line, file) ) {
 		return 0; // EOF or error
 	}
+	if (is_sync_line(line.c_str())) {
+		got_sync_line = true;
+		return 0;
+	}
 	chomp(line);
-	int retval = sscanf(line.c_str(), "Node %d executing on host: %127s",
-						&node, buffer);
-	executeHost = buffer;
-	return retval == 2;
+	int retval = sscanf(line.c_str(), "Node %d executing on host: ", &node);
+	if (retval == 1) {
+		executeHost = strchr(line.c_str(), ':')+1;
+		trim(executeHost);
+	} else {
+		return 0;
+	}
+
+	ExprTree * tree = nullptr;
+	// read optional SlotName : <name>
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		return 1; // OK for there to be no more lines - backwards compatibility
+	}
+	if (starts_with(line, "\tSlotName:")) {
+		slotName = strchr(line.c_str(),':') + 1,
+			trim(slotName);
+		trim_quotes(slotName, "\"");
+	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+		setProp().Insert(attr, tree);
+	}
+	if (got_sync_line) return 1;
+	// read optional other properties
+	while (read_optional_line(line, file, got_sync_line)) {
+		if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+			setProp().Insert(attr, tree);
+		}
+	}
+	return 1;
 }
 
 ClassAd*
@@ -3366,6 +3484,14 @@ NodeExecuteEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
+	if( !slotName.empty()) {
+		myad->Assign("SlotName", slotName);
+	}
+	if (hasProps()) {
+		myad->Insert("ExecuteProps", executeProps->Copy());
+	}
+
+
 	return myad;
 }
 
@@ -3379,7 +3505,35 @@ NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupString("ExecuteHost", executeHost);
 
 	ad->LookupInteger("Node", node);
+
+	slotName.clear();
+	ad->LookupString("SlotName", slotName);
+
+	delete executeProps;
+	executeProps = nullptr;
+
+	ClassAd * props = nullptr;
+	ExprTree * tree = ad->Lookup("ExecuteProps");
+	if (tree && tree->isClassad(&props)) {
+		executeProps = static_cast<ClassAd*>(props->Copy());
+	}
 }
+
+void
+NodeExecuteEvent::setSlotName(char const *name)
+{
+	slotName = name ? name : "";
+}
+
+bool NodeExecuteEvent::hasProps() {
+	return executeProps && executeProps->size() > 0;
+}
+
+ClassAd & NodeExecuteEvent::setProp() {
+	if ( ! executeProps) executeProps = new ClassAd(); 
+	return *executeProps;
+}
+
 
 // ----- NodeTerminatedEvent class
 NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()

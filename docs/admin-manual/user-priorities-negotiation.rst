@@ -42,14 +42,12 @@ So, if a specific user continuously uses exactly ten cores
 for a long period of time, the RUP of that user asymptotically 
 approaches ten.
 
-However, if the user decreases the number of cores used, the RUP
-asymptotically lowers to the new value. The rate at which the priority 
-value decays can be set by the macro ``PRIORITY_HALFLIFE`` 
-:index:`PRIORITY_HALFLIFE`, a time period defined in seconds. Intuitively,
-if the ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE` in a pool is set 
-to the default of 86400 seconds (one day), and a user with a RUP of 10 
-has no running jobs, that user's RUP would be 5 one day later, 2.5 
-two days later, and so on.
+However, if the user decreases the number of cores used, the RUP asymptotically
+lowers to the new value. The rate at which the priority value decays can be set
+by the macro :macro:`PRIORITY_HALFLIFE`, a time period defined in seconds.
+Intuitively, if the :macro:`PRIORITY_HALFLIFE` in a pool is set to the default
+of 86400 seconds (one day), and a user with a RUP of 10 has no running jobs,
+that user's RUP would be 5 one day later, 2.5 two days later, and so on.
 
 For example, if a new user has no historical usage, their RUP will start 
 at 0.5  If that user then has 100 cores running, their RUP will grow
@@ -75,17 +73,15 @@ Effective User Priority (EUP)
 :index:`effective user priority (EUP)`
 :index:`effective (EUP)<single: effective (EUP); user priority>`
 
-The effective user priority (EUP) of a user is used to determine how
-many cores a user should receive. The EUP is simply the
-RUP multiplied by a priority factor the administrator can set per-user.
-The default initial priority factor for all new users as
-they first submit jobs is set by the configuration variable
-``DEFAULT_PRIO_FACTOR`` :index:`DEFAULT_PRIO_FACTOR`, and defaults
-to 1000.0. An administrator can change this priority factor 
-using the *condor_userprio* command.  For example, setting
-the priority factor of some user to 2,000 will grant that user
-twice as many cores as a user with the default priority factor of 
-1,000, assuming they both have the same historical usage.
+The effective user priority (EUP) of a user is used to determine how many cores
+a user should receive. The EUP is simply the RUP multiplied by a priority
+factor the administrator can set per-user.  The default initial priority factor
+for all new users as they first submit jobs is set by the configuration
+variable :macro:`DEFAULT_PRIO_FACTOR`, and defaults to 1000.0. An administrator
+can change this priority factor using the *condor_userprio* command.  For
+example, setting the priority factor of some user to 2,000 will grant that user
+twice as many cores as a user with the default priority factor of 1,000,
+assuming they both have the same historical usage.
 
 The number of resources that a user may receive is inversely related to
 the ratio between the EUPs of submitting users. User A with
@@ -101,7 +97,7 @@ User A submits a very large number of short-running jobs at time t = 0 zero.  Us
 B waits until 48 hours later, and also submits an infinite number of short jobs.
 At the beginning, the EUP doesn't matter, as there is only one user with jobs, 
 and so user A gets the whole pool.  At the 48 hour mark, both users compete for
-the pool.  Assuming the default PRIORITY_HALFLIFE of 24 hours, user A's RUP
+the pool.  Assuming the default :macro:`PRIORITY_HALFLIFE` of 24 hours, user A's RUP
 should be about 75.0 at the 48 hour mark, and User B will still be the minimum of
 .5.  At that instance, User B deserves 150 times User A.  However, this ratio will
 decay quickly.  User A's share of the pool will drop from all 100 cores to less than
@@ -123,7 +119,7 @@ Nice users
     A job may be submitted with the submit command
     **nice_user** :index:`nice_user<single: nice_user; submit commands>` set to
     ``True``. This nice user job will have its RUP boosted by the
-    ``NICE_USER_PRIO_FACTOR``\ :index:`NICE_USER_PRIO_FACTOR`
+    :macro:`NICE_USER_PRIO_FACTOR`
     priority factor specified in the configuration, leading to a very
     large EUP. This corresponds to a low priority for resources,
     therefore using resources not used by other HTCondor users.
@@ -136,7 +132,7 @@ Remote Users
     to the local pool. It may be desirable to have HTCondor treat local
     users preferentially over these remote users. If configured,
     HTCondor will boost the RUPs of remote users by
-    ``REMOTE_PRIO_FACTOR`` :index:`REMOTE_PRIO_FACTOR` specified
+    :macro:`REMOTE_PRIO_FACTOR` specified
     in the configuration, thereby lowering their priority for resources.
 
 The priority boost factors for individual users can be set with the
@@ -159,16 +155,15 @@ machine claim and reallocate it when conditions change.
 Too many preemptions lead to thrashing, a condition in which negotiation
 for a machine identifies a new job with a better priority most every
 cycle. Each job is, in turn, preempted, and no job finishes. To avoid
-this situation, the ``PREEMPTION_REQUIREMENTS``
-:index:`PREEMPTION_REQUIREMENTS` configuration variable is defined
+this situation, the :macro:`PREEMPTION_REQUIREMENTS` configuration variable is defined
 for and used only by the *condor_negotiator* daemon to specify the
 conditions that must be met for a preemption to occur. When preemption
 is enabled, it is usually defined to deny preemption if a current
 running job has been running for a relatively short period of time. This
 effectively limits the number of preemptions per resource per time
-interval. Note that ``PREEMPTION_REQUIREMENTS`` only applies to
+interval. Note that :macro:`PREEMPTION_REQUIREMENTS` only applies to
 preemptions due to user priority. It does not have any effect if the
-machine's ``RANK`` expression prefers a different job, or if the
+machine's :macro:`RANK` expression prefers a different job, or if the
 machine's policy causes the job to vacate due to other activity on the
 machine. See the :ref:`admin-manual/policy-configuration:*condor_startd* policy
 configuration` section for the current default policy on preemption.
@@ -184,19 +179,17 @@ expression to check if defined such as
 
 is likely necessary.
 
-Within these attributes, those with names that contain the string
-``Submitter`` refer to characteristics about the candidate job's user;
-those with names that contain the string ``Remote`` refer to
-characteristics about the user currently using the resource. Further,
-those with names that end with the string ``ResourcesInUse`` have values
-that may change within the time period associated with a single
-negotiation cycle. Therefore, the configuration variables
-``PREEMPTION_REQUIREMENTS_STABLE``
-:index:`PREEMPTION_REQUIREMENTS_STABLE` and and
-``PREEMPTION_RANK_STABLE`` :index:`PREEMPTION_RANK_STABLE` exist
-to inform the *condor_negotiator* daemon that values may change. See
-the :ref:`admin-manual/configuration-macros:condor_negotiator configuration
-file entries` section for definitions of these configuration variables.
+Within these attributes, those with names that contain the string ``Submitter``
+refer to characteristics about the candidate job's user; those with names that
+contain the string ``Remote`` refer to characteristics about the user currently
+using the resource. Further, those with names that end with the string
+``ResourcesInUse`` have values that may change within the time period
+associated with a single negotiation cycle. Therefore, the configuration
+variables :macro:`PREEMPTION_REQUIREMENTS_STABLE` and
+:macro:`PREEMPTION_RANK_STABLE` exist to inform the *condor_negotiator* daemon
+that values may change. See the
+:ref:`admin-manual/configuration-macros:condor_negotiator configuration file
+entries` section for definitions of these configuration variables.
 
 
 :index:`SubmitterUserPrio<single: SubmitterUserPrio; ClassAd attribute, ephemeral>`\ ``SubmitterUserPrio``
@@ -279,7 +272,7 @@ time interval :math:`\delta t` using the formula
 
 where :math:`\rho (u,t)` is the number of resources used by user :math:`u` at time :math:`t`,
 and :math:`\beta = 0.5^{\delta t / h}`.
-:math:`h` is the half life period set by ``PRIORITY_HALFLIFE`` :index:`PRIORITY_HALFLIFE`.
+:math:`h` is the half life period set by :macro:`PRIORITY_HALFLIFE`.
 
 The EUP of user :math:`u` at time :math:`t`, :math:`\pi_{e}(u,t)` is calculated by
 
@@ -349,24 +342,24 @@ the following ordered list of items.
                     match list by reason of Rank.
                  -  If the EUP of this job is better than the EUP of the
                     currently running job, and
-                    ``PREEMPTION_REQUIREMENTS`` is ``True``, and the
+                    :macro:`PREEMPTION_REQUIREMENTS` is ``True``, and the
                     ``machine.RANK`` on this job is not worse than the
                     currently running job, add this machine to the
                     potential match list by reason of Priority.
                     See example below.
 
            -  Of machines in the potential match list, sort by
-              ``NEGOTIATOR_PRE_JOB_RANK``, ``job.RANK``,
-              ``NEGOTIATOR_POST_JOB_RANK``, Reason for claim (No
-              Preemption, then Rank, then Priority), ``PREEMPTION_RANK``
+              :macro:`NEGOTIATOR_PRE_JOB_RANK`, ``job.RANK``,
+              :macro:`NEGOTIATOR_POST_JOB_RANK`, Reason for claim (No
+              Preemption, then Rank, then Priority), :macro:`PREEMPTION_RANK`
            -  The job is assigned to the top machine on the potential
               match list. The machine is removed from the list of
               resources to match (on this negotiation cycle).
 
 As described above, the *condor_negotiator* tries to match each job
 to all slots in the pool.  Assume that five slots match one request for
-three jobs, and that their ``NEGOTIATOR_PRE_JOB_RANK``, ``Job.Rank``, 
-and ``NEGOTIATOR_POST_JOB_RANK`` expressions evaluate (in the context 
+three jobs, and that their :macro:`NEGOTIATOR_PRE_JOB_RANK`, ``Job.Rank``, 
+and :macro:`NEGOTIATOR_POST_JOB_RANK` expressions evaluate (in the context 
 of both the slot ad and the job ad) to the following values.
 
 +------------+-------------------------+----------+-------------------------+
@@ -385,11 +378,12 @@ of both the slot ad and the job ad) to the following values.
 
 Table 3.1: Example of slots before sorting
 
-These slots would be sorted first on `NEGOTIATOR_PRE_JOB_RANK``, then sorting all ties based on ``Job.Rank``
-and any remaining ties sorted by ``NEGOTIATOR_POST_JOB_RANK``.  After that, the first three slots would be
-handed to the *condor_schedd*.  This
-means that ``NEGOTIATOR_PRE_JOB_RANK`` is very strong, and overrides any
-ranking expression by the submitter of the job.  After sorting, the slots would look
+These slots would be sorted first on :macro:`NEGOTIATOR_PRE_JOB_RANK`, then
+sorting all ties based on ``Job.Rank`` and any remaining ties sorted by
+:macro:`NEGOTIATOR_POST_JOB_RANK`.  After that, the first three slots would be
+handed to the *condor_schedd*.  This means that
+:macro:`NEGOTIATOR_PRE_JOB_RANK` is very strong, and overrides any ranking
+expression by the submitter of the job.  After sorting, the slots would look
 like this, and the schedd would be given slot5, slot3 and slot2:
 
 +-------------+-------------------------+----------+-------------------------+
@@ -409,20 +403,17 @@ like this, and the schedd would be given slot5, slot3 and slot2:
 Table 3.2: Example of slots after sorting
 
 
-The *condor_negotiator* asks the *condor_schedd* for the "next job"
-from a given submitter/user. Typically, the *condor_schedd* returns
-jobs in the order of job priority. If priorities are the same, job
-submission time is used; older jobs go first. If a cluster has multiple
-procs in it and one of the jobs cannot be matched, the *condor_schedd*
-will not return any more jobs in that cluster on that negotiation pass.
-This is an optimization based on the theory that the cluster jobs are
-similar. The configuration variable ``NEGOTIATE_ALL_JOBS_IN_CLUSTER``
-:index:`NEGOTIATE_ALL_JOBS_IN_CLUSTER` disables the
-cluster-skipping optimization. Use of the configuration variable
-``SIGNIFICANT_ATTRIBUTES`` :index:`SIGNIFICANT_ATTRIBUTES` will
-change the definition of what the *condor_schedd* considers a cluster
-from the default definition of all jobs that share the same
-``ClusterId``.
+The *condor_negotiator* asks the *condor_schedd* for the "next job" from a
+given submitter/user. Typically, the *condor_schedd* returns jobs in the order
+of job priority. If priorities are the same, job submission time is used; older
+jobs go first. If a cluster has multiple procs in it and one of the jobs cannot
+be matched, the *condor_schedd* will not return any more jobs in that cluster
+on that negotiation pass.  This is an optimization based on the theory that the
+cluster jobs are similar. The configuration variable
+:macro:`NEGOTIATE_ALL_JOBS_IN_CLUSTER` disables the cluster-skipping
+optimization. Use of the configuration variable :macro:`SIGNIFICANT_ATTRIBUTES`
+will change the definition of what the *condor_schedd* considers a cluster from
+the default definition of all jobs that share the same ``ClusterId``.
 
 The Layperson's Description of the Pie Spin and Pie Slice
 ---------------------------------------------------------
@@ -564,8 +555,8 @@ example, there were 30 original slots at the root of the tree. If a
 power failure removed half of the original 30, leaving fifteen slots,
 physics would be scaled back to a quota of ten, and chemistry to five.
 This scaling can be disabled by setting the *condor_negotiator*
-configuration variable ``NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION``
-:index:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION` to ``True``. If
+configuration variable
+:macro:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION` to ``True``. If
 the sum of the child quotas is less than that of the parent, the child
 quotas remain intact; they are not scaled up. That is, if somehow the
 number of slots doubled from thirty to sixty, physics would still be
@@ -665,10 +656,9 @@ If a given group or sub-group accepts surplus, then that given group is
 allowed to exceed its configured quota, by using the leftover, unused
 quota of other groups. Surplus is disabled for all groups by default.
 Accepting surplus may be enabled for all groups by setting
-``GROUP_ACCEPT_SURPLUS`` :index:`GROUP_ACCEPT_SURPLUS` to
+:macro:`GROUP_ACCEPT_SURPLUS` to
 ``True``. Surplus may be enabled for individual groups by setting
-``GROUP_ACCEPT_SURPLUS_<groupname>``
-:index:`GROUP_ACCEPT_SURPLUS_<groupname>` to ``True``. Consider
+:macro:`GROUP_ACCEPT_SURPLUS_<groupname>` to ``True``. Consider
 the following example:
 
 .. code-block:: condor-config
@@ -684,12 +674,12 @@ the following example:
       GROUP_ACCEPT_SURPLUS_group_physics.hep = true
 
 This configuration is the same as above for the chemistry users.
-However, ``GROUP_ACCEPT_SURPLUS`` is set to ``False`` globally,
+However, :macro:`GROUP_ACCEPT_SURPLUS` is set to ``False`` globally,
 ``False`` for the physics parent group, and ``True`` for the subgroups
 group_physics.lep and group_physics.lep. This means that
 group_physics.lep and group_physics.hep are allowed to exceed their
 quota of 15 and 5, but their sum cannot exceed 20, for that is their
-parent's quota. If the group_physics had ``GROUP_ACCEPT_SURPLUS`` set
+parent's quota. If the group_physics had :macro:`GROUP_ACCEPT_SURPLUS` set
 to ``True``, then either group_physics.lep and group_physics.hep would
 not be limited by quota.
 
@@ -700,20 +690,17 @@ to the parent node and over to all of its children, recursively. Any
 node that does not accept surplus implements a hard cap on the number of
 slots that the sum of it's children use.
 
-After the *condor_negotiator* calculates the quota assigned to each
-group, possibly adding in surplus, it then negotiates with the
-*condor_schedd* daemons in the system to try to match jobs to each
-group. It does this one group at a time. By default, it goes in
-"starvation group order." That is, the group whose current usage is the
-smallest fraction of its quota goes first, then the next, and so on. The
-"<none>" group implicitly at the root of the tree goes last. This
-ordering can be replaced by defining configuration variable
-``GROUP_SORT_EXPR`` :index:`GROUP_SORT_EXPR`. The
-*condor_negotiator* evaluates this ClassAd expression for each group
-ClassAd, sorts the groups by the floating point result, and then
-negotiates with the smallest positive value going first. Available
-attributes for sorting with ``GROUP_SORT_EXPR``
-:index:`GROUP_SORT_EXPR` include:
+After the *condor_negotiator* calculates the quota assigned to each group,
+possibly adding in surplus, it then negotiates with the *condor_schedd* daemons
+in the system to try to match jobs to each group. It does this one group at a
+time. By default, it goes in "starvation group order." That is, the group whose
+current usage is the smallest fraction of its quota goes first, then the next,
+and so on. The "<none>" group implicitly at the root of the tree goes last.
+This ordering can be replaced by defining configuration variable
+:macro:`GROUP_SORT_EXPR`. The *condor_negotiator* evaluates this ClassAd
+expression for each group ClassAd, sorts the groups by the floating point
+result, and then negotiates with the smallest positive value going first.
+Available attributes for sorting with :macro:`GROUP_SORT_EXPR` include:
 
 +-------------------------+------------------------------------------+
 | Attribute Name          | Description                              |
@@ -735,8 +722,7 @@ prefers physics users to match as many slots as they can, and only when
 all the physics jobs are running, and idle slots remain, are chemistry
 jobs allowed to run. The default "starvation group order" can be used to
 implement this. By setting configuration variable
-``NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION``
-:index:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION` to ``True``, and
+:macro:`NEGOTIATOR_ALLOW_QUOTA_OVERSUBSCRIPTION` to ``True``, and
 setting the physics quota to a number so large that it cannot ever be
 met, such as one million, the physics group will always be the "most
 starving" group, will always negotiate first, and will always be unable
@@ -776,7 +762,7 @@ setting parameters in the submit file.  This can be useful if a person
 is a member of multiple groups.  However, many sites want to force all
 jobs submitted by a given user into one accounting group, and forbid
 the user to submit to any other group.  An HTCondor metaknob makes this
-easy.  By adding to the submit machine's configuration, the setting
+easy.  By adding to the access point's configuration, the setting
 
 .. code-block:: condor-config
 
@@ -805,4 +791,40 @@ a quota on the central manager machine.  This file is re-read on a
 If so, it represents the set of valid accounting groups a user can
 opt into.  If the user does not set an accounting group in the submit file
 the first entry in the list will be used.
+
+Running Multiple Negotiators in One Pool
+----------------------------------------
+
+Usually, a single HTCondor pool will have a single *condor_collector* instance
+running and a single *condor_negotiator* instance running.  However, there are
+special situation where you may want to run more than one *condor_negotiator*
+against a *condor_collector*, and still consider it one pool.
+
+In such a scenario, each *condor_negotiator* is responsible for some
+non-overlapping partition of the slots in the pool.  This might be for
+performance -- if you have more than 100,000 slots in the pool, you may need to
+shard this pool into several smaller setions in order to lower the time each
+negotiator spends.  Because accounting is done at the the negotiator level, you
+may want to do this to have seperate accounting and distinct fair share between
+different kinds of machines in your pool.  For example, let's say you have some
+GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
+not "count" against the fair-share usage of GPU machines.  One way to do this
+would be to have a separate negotiator for the GPU machines vs the non-GPU
+machines.   At Wisconsin, we have a separate, small subset of our pool for
+quick-starting interactive jobs.  By allocating a negotiator to only negotiate
+for these few machines, we can speed up the time to match these machines to
+interative users who submit with *condor_submit -i*.
+
+Sharding the negotiator is straightforward.  Simply add the NEGOTIATOR entry to
+the :macro:`DAEMON_LIST` on an additional machine.  While is is possible to run
+multiple negotiators on one machine, we may not want to, if we are trying to
+improve performance.  Then, in each negotiator, set
+:macro:`NEGOTIATOR_SLOT_CONSTRAINT` to only match those slots this negotiator
+should use.
+
+Running with multiple negotiators also means you need to be careful with the
+*condor_userprio* command.  As there is no default negotiator, you should
+always name the specific negotiator you want to *condor_userprio* to talk to
+with the `-name` option.
+
 

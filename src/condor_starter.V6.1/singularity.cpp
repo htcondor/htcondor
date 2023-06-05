@@ -463,9 +463,8 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	std::list<std::string> envNames;
 	job_env.Walk(envToList, (void *)&envNames);
 	for (const std::string & name : envNames) {
-		MyString myValue;
-		job_env.GetEnv(name.c_str(), myValue);
-		std::string  value = myValue;
+		std::string value;
+		job_env.GetEnv(name, value);
 		auto index_execute_dir = value.find(execute_dir);
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;
@@ -536,7 +535,7 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	ArgList testArgs;
 
 	// The last orig_args_len args are the real exec + its args.  Skip those for the test
-	for (int i = 0; i < args.Count() - orig_args_len; i++) {
+	for (size_t i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
 		if ((strcmp(arg, "run") == 0) || (strcmp(arg, "exec")) == 0) {
 			// Stick a -q before test to keep the download quiet

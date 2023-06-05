@@ -300,16 +300,19 @@ StatInfo::make_dirpath( const char* dir )
 	ASSERT(dir);
 
 	char* rval;
+	size_t rvalsz;
 	int dirlen = (int)strlen(dir);
 	if( dir[dirlen - 1] == DIR_DELIM_CHAR ) {
 			// We've already got the delim, just return a copy of what
 			// we were passed in:
-		rval = (char *)malloc(dirlen + 1);
-		sprintf( rval, "%s", dir );
+		rvalsz = dirlen + 1;
+		rval = (char *)malloc(rvalsz);
+		snprintf( rval, rvalsz, "%s", dir );
 	} else {
 			// We need to include the delim character.
-		rval = (char *)malloc(dirlen + 2);
-		sprintf( rval, "%s%c", dir, DIR_DELIM_CHAR );
+		rvalsz = dirlen + 2;
+		rval = (char *)malloc(rvalsz);
+		snprintf( rval, rvalsz, "%s%c", dir, DIR_DELIM_CHAR );
 	}
 	return rval;
 }

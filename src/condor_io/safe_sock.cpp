@@ -82,11 +82,9 @@ SafeSock::SafeSock(const SafeSock & orig)
 {
 	init();
 	// now copy all cedar state info via the serialize() method
-	char *buf = NULL;
-	buf = orig.serialize();	// get state from orig sock
-	ASSERT(buf);
-	serialize(buf);	// put the state into the new sock
-	delete [] buf;
+	std::string buf;
+	orig.serialize(buf);	// get state from orig sock
+	deserialize(buf.c_str());	// put the state into the new sock
 }
 
 Stream *
@@ -272,8 +270,9 @@ MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int SafeSock::connect(
 	char const	*host,
-	int		port, 
-	bool
+	int		port,
+	bool,
+	CondorError * errorStack
 	)
 {
 	if (!host || port < 0) return FALSE;
@@ -298,7 +297,7 @@ int SafeSock::connect(
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
 	// instead of a forward connect
-	int retval=special_connect(host,port,true);
+	int retval=special_connect(host,port,true,errorStack);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -735,18 +734,14 @@ int SafeSock::attach_to_file_desc(int fd)
 #endif
 
 
-char * SafeSock::serialize() const
+void SafeSock::serialize(std::string& outbuf) const
 {
-	char * parent_state = Sock::serialize();
+	Sock::serialize(outbuf);
 
-	std::string state;
-	formatstr( state, "%s%d*%s*", parent_state, _special_state, _who.to_sinful().c_str() );
-	delete[] parent_state;
-
-	return strdup(state.c_str());
+	formatstr_cat( outbuf, "%d*%s*", _special_state, _who.to_sinful().c_str() );
 }
 
-const char * SafeSock::serialize(const char *buf)
+const char * SafeSock::deserialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	const char *ptmp, *ptr = NULL;
@@ -755,7 +750,7 @@ const char * SafeSock::serialize(const char *buf)
 	// here we want to restore our state from the incoming buffer
 
 	// first, let our parent class restore its state
-	ptmp = Sock::serialize(buf);
+	ptmp = Sock::deserialize(buf);
 	ASSERT( ptmp );
 	int itmp;
 	int citems = sscanf(ptmp,"%d*",&itmp);

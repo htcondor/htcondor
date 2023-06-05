@@ -74,7 +74,7 @@ FILE* LoadClassAdLog(
 	time_t & m_original_log_birthdate,
 	bool & is_clean,
 	bool & requires_successful_cleaning,
-	MyString & errmsg)
+	std::string & errmsg)
 {
 	FILE* log_fp = NULL;
 	Transaction * active_transaction = NULL;
@@ -85,13 +85,13 @@ FILE* LoadClassAdLog(
 	// TODO: this should open O_BINARY because on windows, text files have \r\n with the c-runtime magically adding/removing \r as needed.
 	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_CREAT | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
-		errmsg.formatstr("failed to open log %s, errno = %d\n", filename, errno);
+		formatstr(errmsg, "failed to open log %s, errno = %d\n", filename, errno);
 		return NULL;
 	}
 
 	log_fp = fdopen(log_fd, "r+");
 	if (log_fp == NULL) {
-		errmsg.formatstr("failed to fdopen log %s, errno = %d\n", filename, errno);
+		formatstr(errmsg, "failed to fdopen log %s, errno = %d\n", filename, errno);
 		return NULL;
 	}
 
@@ -110,7 +110,7 @@ FILE* LoadClassAdLog(
 		switch (log_rec->get_op_type()) {
 		case CondorLogOp_Error:
 			// this is defensive, ought to be caught in InstantiateLogEntry()
-			errmsg.formatstr("ERROR: in log %s transaction record %lu was bad (byte offset %lld)\n", filename, count, curr_log_entry_pos);
+			formatstr(errmsg, "ERROR: in log %s transaction record %lu was bad (byte offset %lld)\n", filename, count, curr_log_entry_pos);
 			fclose(log_fp); log_fp = NULL;
 
 			delete active_transaction;
@@ -121,7 +121,7 @@ FILE* LoadClassAdLog(
 			// have been cleanly shut down
 			is_clean = false;
 			if (active_transaction) {
-				errmsg.formatstr_cat("Warning: Encountered nested transactions, log may be bogus...\n");
+				formatstr_cat(errmsg, "Warning: Encountered nested transactions, log may be bogus...\n");
 			} else {
 				active_transaction = new Transaction();
 			}
@@ -129,7 +129,7 @@ FILE* LoadClassAdLog(
 			break;
 		case CondorLogOp_EndTransaction:
 			if (!active_transaction) {
-				errmsg.formatstr_cat("Warning: Encountered unmatched end transaction, log may be bogus...\n");
+				formatstr_cat(errmsg, "Warning: Encountered unmatched end transaction, log may be bogus...\n");
 			} else {
 				active_transaction->Commit(NULL, NULL, &la); // commit in memory only
 				delete active_transaction;
@@ -139,7 +139,7 @@ FILE* LoadClassAdLog(
 			break;
 		case CondorLogOp_LogHistoricalSequenceNumber:
 			if(count != 1) {
-				errmsg.formatstr_cat("Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
+				formatstr_cat(errmsg, "Warning: Encountered historical sequence number after first log entry (entry number = %ld)\n",count);
 			}
 			historical_sequence_number = ((LogHistoricalSequenceNumber *)log_rec)->get_historical_sequence_number();
 			m_original_log_birthdate = ((LogHistoricalSequenceNumber *)log_rec)->get_timestamp();
@@ -163,7 +163,7 @@ FILE* LoadClassAdLog(
 		// rotate the log anyway, we may as well just require the rotation
 		// to be successful.  In the case where rotation fails, we will
 		// probably soon fail to write to the log file anyway somewhere else.)
-		errmsg.formatstr_cat("Detected unterminated log entry\n");
+		formatstr_cat(errmsg, "Detected unterminated log entry\n");
 		requires_successful_cleaning = true;
 	}
 	if (active_transaction) {	// abort incomplete transaction
@@ -173,14 +173,14 @@ FILE* LoadClassAdLog(
 		if( !requires_successful_cleaning ) {
 			// For similar reasons as with broken log entries above,
 			// we need to force rotation.
-			errmsg.formatstr_cat("Detected unterminated transaction\n");
+			formatstr_cat(errmsg, "Detected unterminated transaction\n");
 			requires_successful_cleaning = true;
 		}
 	}
 	if(!count) {
 		log_rec = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 		if (log_rec->Write(log_fp) < 0) {
-			errmsg.formatstr("write to %s failed, errno = %d\n", filename, errno);
+			formatstr(errmsg, "write to %s failed, errno = %d\n", filename, errno);
 			fclose(log_fp); log_fp = NULL;
 		}
 		delete log_rec;
@@ -214,8 +214,8 @@ bool SaveHistoricalClassAdLogs(
 {
 	if(!max_historical_logs) return true;
 
-	MyString new_histfile;
-	if(!new_histfile.formatstr("%s.%lu",filename,historical_sequence_number))
+	std::string new_histfile;
+	if(!formatstr(new_histfile,"%s.%lu",filename,historical_sequence_number))
 	{
 		dprintf(D_ALWAYS,"Aborting save of historical log: out of memory.\n");
 		return false;
@@ -228,8 +228,8 @@ bool SaveHistoricalClassAdLogs(
 		return false;
 	}
 
-	MyString old_histfile;
-	if(!old_histfile.formatstr("%s.%lu", filename, historical_sequence_number - max_historical_logs))
+	std::string old_histfile;
+	if(!formatstr(old_histfile, "%s.%lu", filename, historical_sequence_number - max_historical_logs))
 	{
 		dprintf(D_ALWAYS,"Aborting cleanup of historical logs: out of memory.\n");
 		return true; // this is not a fatal error
@@ -258,23 +258,23 @@ bool TruncateClassAdLog(
 	FILE* &log_fp,                  // in,out
 	unsigned long & historical_sequence_number, // in,out
 	time_t & m_original_log_birthdate, // in,out
-	MyString & errmsg) // out
+	std::string & errmsg) // out
 {
-	MyString	tmp_log_filename;
+	std::string tmp_log_filename;
 	int new_log_fd;
 	FILE *new_log_fp;
 
-	tmp_log_filename.formatstr( "%s.tmp", filename);
+	formatstr(tmp_log_filename, "%s.tmp", filename);
 	new_log_fd = safe_create_replace_if_exists(tmp_log_filename.c_str(), O_RDWR | O_CREAT | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (new_log_fd < 0) {
-		errmsg.formatstr("failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
+		formatstr(errmsg, "failed to rotate log: safe_create_replace_if_exists(%s) failed with errno %d (%s)\n",
 			tmp_log_filename.c_str(), errno, strerror(errno));
 		return false;
 	}
 
 	new_log_fp = fdopen(new_log_fd, "r+");
 	if (new_log_fp == NULL) {
-		errmsg.formatstr("failed to rotate log: fdopen(%s) returns NULL\n",
+		formatstr(errmsg, "failed to rotate log: fdopen(%s) returns NULL\n",
 				tmp_log_filename.c_str());
 		close(new_log_fd);
 		unlink(tmp_log_filename.c_str());
@@ -306,17 +306,17 @@ bool TruncateClassAdLog(
 
 	fclose(new_log_fp);	// avoid sharing violation on move
 	if (rotate_file(tmp_log_filename.c_str(), filename) < 0) {
-		errmsg.formatstr("failed to rotate job queue log!\n");
+		formatstr(errmsg, "failed to rotate job queue log!\n");
 
 		unlink(tmp_log_filename.c_str());
 
 		int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 		if (log_fd < 0) {
-			errmsg.formatstr("failed to reopen log %s, errno = %d after failing to rotate log.",filename,errno);
+			formatstr(errmsg, "failed to reopen log %s, errno = %d after failing to rotate log.",filename,errno);
 		} else {
 			log_fp = fdopen(log_fd, "a+");
 			if (log_fp == NULL) {
-				errmsg.formatstr("failed to refdopen log %s, errno = %d after failing to rotate log.",filename,errno);
+				formatstr(errmsg, "failed to refdopen log %s, errno = %d after failing to rotate log.",filename,errno);
 				close(log_fd);
 			}
 		}
@@ -330,39 +330,31 @@ bool TruncateClassAdLog(
 #ifndef WIN32
 	// POSIX does not provide any durability guarantees for rename().  Instead, we must
 	// open the parent directory and invoke fsync there.
-	char * parent_dir = condor_dirname(filename);
-	if (parent_dir)
+	std::string parent_dir = condor_dirname(filename);
+	int parent_fd = safe_open_wrapper_follow(parent_dir.c_str(), O_RDONLY);
+	if (parent_fd >= 0)
 	{
-		int parent_fd = safe_open_wrapper_follow(parent_dir, O_RDONLY);
-		if (parent_fd >= 0)
+		if (condor_fsync(parent_fd) == -1)
 		{
-			if (condor_fsync(parent_fd) == -1)
-			{
-				errmsg.formatstr("Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
-			}
-			close(parent_fd);
+			formatstr(errmsg, "Failed to fsync directory %s after rename. (errno=%d, msg=%s)", parent_dir.c_str(), errno, strerror(errno));
 		}
-		else
-		{
-			errmsg.formatstr("Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir, errno, strerror(errno));
-		}
-		free( parent_dir );
+		close(parent_fd);
 	}
 	else
 	{
-		errmsg.formatstr("Failed to determine log's directory name\n");
+		formatstr(errmsg, "Failed to open parent directory %s for fsync after rename. (errno=%d, msg=%s)", parent_dir.c_str(), errno, strerror(errno));
 	}
 #endif
 
 	int log_fd = safe_open_wrapper_follow(filename, O_RDWR | O_APPEND | O_LARGEFILE | _O_NOINHERIT, 0600);
 	if (log_fd < 0) {
-		errmsg.formatstr( "failed to open log in append mode: "
+		formatstr(errmsg, "failed to open log in append mode: "
 			"safe_open_wrapper(%s) returns %d", filename, log_fd);
 	} else {
 		log_fp = fdopen(log_fd, "a+");
 		if (log_fp == NULL) {
 			close(log_fd);
-			errmsg.formatstr("failed to fdopen log in append mode: "
+			formatstr(errmsg, "failed to fdopen log in append mode: "
 				"fdopen(%s) returns %d", filename, log_fd);
 		}
 	}
@@ -541,7 +533,7 @@ bool WriteClassAdLogState(
 	time_t m_original_log_birthdate, // in
 	LoggableClassAdTable & la,
 	const ConstructLogEntry& maker,
-	MyString & errmsg)
+	std::string & errmsg)
 {
 	LogRecord	*log=NULL;
 	ExprTree	*expr=NULL;
@@ -549,7 +541,7 @@ bool WriteClassAdLogState(
 	// This must always be the first entry in the log.
 	log = new LogHistoricalSequenceNumber( historical_sequence_number, m_original_log_birthdate );
 	if (log->Write(fp) < 0) {
-		errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+		formatstr(errmsg, "write to %s failed, errno = %d", filename, errno);
 		delete log;
 		return false;
 	}
@@ -562,7 +554,7 @@ bool WriteClassAdLogState(
 	while(la.nextIteration(key, ad)) {
 		log = new LogNewClassAd(key, GetMyTypeName(*ad), GetTargetTypeName(*ad), maker);
 		if (log->Write(fp) < 0) {
-			errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+			formatstr(errmsg, "write to %s failed, errno = %d", filename, errno);
 			delete log;
 			return false;
 		}
@@ -581,7 +573,7 @@ bool WriteClassAdLogState(
 				log = new LogSetAttribute(key, itr->first.c_str(),
 										  ExprTreeToString(expr));
 				if (log->Write(fp) < 0) {
-					errmsg.formatstr("write to %s failed, errno = %d", filename, errno);
+					formatstr(errmsg, "write to %s failed, errno = %d", filename, errno);
 					delete log;
 					return false;
 				}
@@ -592,10 +584,10 @@ bool WriteClassAdLogState(
 		ad->ChainToAd(chain);
 	}
 	if (fflush(fp) !=0){
-		errmsg.formatstr("fflush of %s failed, errno = %d", filename, errno);
+		formatstr(errmsg, "fflush of %s failed, errno = %d", filename, errno);
 	}
 	if (condor_fdatasync(fileno(fp)) < 0) {
-		errmsg.formatstr("fsync of %s failed, errno = %d", filename, errno);
+		formatstr(errmsg, "fsync of %s failed, errno = %d", filename, errno);
 	}
 	return true;
 }

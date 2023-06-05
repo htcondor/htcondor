@@ -24,10 +24,7 @@
 void
 ScheddPluginManager::EarlyInitialize()
 {
-	ScheddPlugin *plugin;
-	SimpleList<ScheddPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->earlyInitialize();
 	}
 }
@@ -35,10 +32,7 @@ ScheddPluginManager::EarlyInitialize()
 void
 ScheddPluginManager::Initialize()
 {
-	ScheddPlugin *plugin;
-	SimpleList<ScheddPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -46,10 +40,7 @@ ScheddPluginManager::Initialize()
 void
 ScheddPluginManager::Shutdown()
 {
-	ScheddPlugin *plugin;
-	SimpleList<ScheddPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -57,10 +48,7 @@ ScheddPluginManager::Shutdown()
 void
 ScheddPluginManager::Update(int cmd, const ClassAd *ad)
 {
-	ScheddPlugin *plugin;
-	SimpleList<ScheddPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->update(cmd, ad);
 	}
 }
@@ -68,10 +56,7 @@ ScheddPluginManager::Update(int cmd, const ClassAd *ad)
 void
 ScheddPluginManager::Archive(const ClassAd *ad)
 {
-	ScheddPlugin *plugin;
-	SimpleList<ScheddPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->archive(ad);
 	}
 }
@@ -85,6 +70,6 @@ ScheddPlugin::ScheddPlugin()
 	}
 }
 
-ScheddPlugin::~ScheddPlugin() { }
+ScheddPlugin::~ScheddPlugin() = default;
 
 

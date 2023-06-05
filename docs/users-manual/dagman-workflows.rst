@@ -199,7 +199,7 @@ after a job completes its execution is
 :index:`POST script<single: POST script; DAGMan>` called a *POST* script. Note that
 the executable specified does not necessarily have to be a shell script
 (Unix) or batch file (Windows); but it should be relatively light weight
-because it will be run directly on the submit machine, not submitted as
+because it will be run directly on the access point, not submitted as
 an HTCondor job.
 
 The syntax used for each *PRE* or *POST* command is
@@ -266,7 +266,7 @@ for any DAG with a *JobName* of DEFER.
 Scripts as part of a DAG workflow
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Scripts are executed on the submit machine; the submit machine is not
+Scripts are executed on the access point; the access point is not
 necessarily the same machine upon which the node's job is run. Further,
 a single cluster of HTCondor jobs may be spread across several machines.
 
@@ -543,7 +543,10 @@ Here is a sample HTCondor submit description file for this DAG:
     output       = diamond.out.$(cluster)
     error        = diamond.err.$(cluster)
     log          = diamond_condor.log
-    universe     = vanilla
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Since each node uses the same HTCondor submit description file, this
@@ -998,7 +1001,7 @@ Suspending a Running DAG
 :index:`suspending a running DAG<single: suspending a running DAG; DAGMan>`
 
 It may be desired to temporarily suspend a running DAG. For example, the
-load may be high on the submit machine, and therefore it is desired to
+load may be high on the access point, and therefore it is desired to
 prevent DAGMan from submitting any more jobs until the load goes down.
 There are two ways to suspend (and resume) a running DAG.
 
@@ -1269,7 +1272,7 @@ Prepend or Append Variables to Node
 After *JobName* the word *PREPEND* or *APPEND* can be added to specify how
 a variable is passed to a node at job submission time. *APPEND* will add
 the variable after the submit description file is read. Resulting in the
-passed variable being added as a macro or overwitting any already existing
+passed variable being added as a macro or overwritting any already existing
 variable values. *PREPEND* will add the variable before the submit
 description file is read. This allows the variable to be used in submit
 description file conditionals.
@@ -2333,6 +2336,11 @@ simple HTCondor submit description file:
       error        = $(jobname).err
       log          = submit.log
       notification = NEVER
+
+      request_cpus   = 1
+      request_memory = 1024M
+      request_disk   = 10240K
+
       queue
       # END SUBMIT FILE submit.condor
 
@@ -3055,7 +3063,7 @@ The *ALL_NODES* option is case-insensitive.
 It is important to note that the *ALL_NODES* option does not apply
 across splices and sub-DAGs. In other words, an *ALL_NODES* option
 within a splice or sub-DAG will apply only to nodes within that splice
-or sub-DAG; also, an *ALL_NODES* option in a parent DAG willPRIORITY DAG (again,
+or sub-DAG; also, an *ALL_NODES* option in a parent DAG will PRIORITY DAG (again,
 except any FINAL node).
 
 As of version 8.5.8, the *ALL_NODES* option cannot be used when
@@ -3104,6 +3112,106 @@ Here is an example DAG using the *ALL_NODES* option:
     VARS B name="nodeB"
 
     RETRY all_nodes 3
+
+DAG Save Point Files
+--------------------
+
+:index:`DAG save point file<single: DAG save point file; DAGMan>`
+
+A DAG can be set up to write the current progress of the DAG at specified
+nodes to a save point file. These files are written the first time the
+designated node starts running. Meaning any retries won't save the DAG
+progress again. The save point file is written in the exact same format
+as a partial Rescue DAG except that all node retry values will be reset
+to their max value. The DAG save point file can then be specified when
+re-running a DAG to start the DAG at a certain point of progress.
+
+To specify a save point file use the DAG submit description keyword
+``SAVE_POINT_FILE`` followed by the name of the node designated as the save
+point to write a save file, and optionally a filename. If a filename is not
+specified the file will be written as ``[Node Name]-[DAG filename].save``
+where the DAG filename is the DAG file that the save file declaration was
+read from.
+
+If the specified save point filename includes a path then DAGMan will attempt
+to write the file to that location. If the *condor_submit_dag* ``useDagDir``
+flag is used and a path is specified for a save point then the file will be
+written to that path relative to a DAG's working directory. Any save point
+files without a specified path will be written to a sub-directory called
+``save_files`` created near all other DAGMan procuded files (i.e. ``.condor.sub``,
+``.dagman.out``, etc.).
+
+.. code-block:: condor-dagman
+
+    # File: savepointEx.dag
+    JOB A node.sub
+    JOB B node.sub
+    JOB C node.sub
+    JOB D node.sub
+
+    PARENT A B C CHILD D
+
+    #SAVE_POINT_FILE NodeName Filename
+    SAVE_POINT_FILE A
+    SAVE_POINT_FILE B Node-B_custom.save
+    SAVE_POINT_FILE C ../example/subdir/Node-C_custom.save
+    SAVE_POINT_FILE D ./Node-D_custom.save
+
+Given the above example DAG file, if ``condor_submit_dag savepointEx.dag`` was ran
+from the below directory ``my_work`` then the produced files appear in the
+directory tree as follows:
+
+.. code-block:: text
+
+    Directory Tree Visualized
+    └─Home
+        ├─example
+        │   └─subdir
+        │       └─Node-C_custom.save
+        └─my_work
+            ├─savepointEx.dag
+            ├─savepointEx.dag.condor.sub
+            ├─savepointEx.dag.dagman.out
+            ├─...
+            ├─Node-D_custom.save
+            └─save_files
+                  ├─ A-savepointEx.dag.save
+                  └─ Node-B_custom.save
+
+Once a DAG has ran and produce save point files, the DAG can then be re-run from
+a save file by passing a filename via the ``-load_save`` flag for *condor_submit_dag*.
+If the save point file is passed with a specified path then DAGMan will attempt to
+read the file from that path. If just a save point filename is given then DAGMan will
+assume the file is located in the``save_files`` directory. The path to save point
+files will be checked relative to the current working directory that *condor_submit_dag*
+was ran from.
+
+When DAGMan writes save point files, if a save file with the same name already exists
+then DAGMan will rotate the file to ``[filename].old`` before writing the new save.
+Any already existing "old" save files will be removed prior to rotation and saving.
+So, if the above example DAG was re-run with ``condor_submit_dag -load_save
+./Node-D_custom.save savepointEx.dag`` from the same directory then once node D starts
+the previous save would become ``Node-D_custom.save.old``. This behavior does not just
+effect save point files when re-running a DAG. If a DAG was set up as follows:
+
+.. code-block:: condor-dagman
+
+    # File: progessSavefile.dag
+    JOB A node.sub
+    JOB B node.sub
+    JOB C node.sub
+    ...
+    SAVE_POINT_FILE A dag-progress.save
+    SAVE_POINT_FILE B dag-progress.save
+    SAVE_POINT_FILE C dag-progress.save
+
+Then assuming the parent/child relationships is ``A->B->C``, the first save written at
+the start of node A will be written to ``dag-progress.save``. Then when node B starts
+the present ``dag-progress.save`` will become ``dag-progress.save.old`` and a new
+``dag-progress.save`` will be written. Finally, once node C starts ``dag-progress.save.old``
+will be deleted, the present ``dag-progress.save`` will become ``dag-progress.save.old``
+and a new ``dag-progress.save`` will be written. Allowing a single save file that progresses
+with the DAG to be created.
 
 .. _rescue-dags:
 
@@ -3574,7 +3682,7 @@ Possible ``DagStatus`` and ``NodeStatus`` attribute values are:
 An *ancestor* is a node that a another node depends on either directly or indirectly
 through a chain of **PARENT/CHILD** relationships. For example, the **DAG** shown below
 would result in node **G**'s *ancestors* to be nodes **A**, **B**, **D**, and **F**
-because the **PARENT** to **CHILD** realtionships appear as ``A & B -> D -> F -> G``
+because the **PARENT** to **CHILD** relationships appear as ``A & B -> D -> F -> G``
 
 .. code-block:: text
 
@@ -3845,6 +3953,10 @@ naming and numbering scheme, the submit description file for
     input = job6.in
     output = job6.out
     arguments = "-file job6.out"
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Submission of the entire set of jobs uses the command line:
@@ -3891,6 +4003,10 @@ files. This submit description file might appear as
     input = job$(runnumber).in
     output = job$(runnumber).out
     arguments = "-$(runnumber)"
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 The job with ``runnumber="8"`` expects to find its input file
@@ -3955,6 +4071,10 @@ the same directory as the DAG input file.
     output = out
     arguments = "-$(runnumber)"
     initialdir = dir$(runnumber)
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 One item to care about with this set up is the underlying file system

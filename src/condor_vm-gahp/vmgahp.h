@@ -138,7 +138,7 @@ class VMGahp : public Service {
 
 		HashTable<int,VMRequest*> m_pending_req_table;
 		StringList m_result_list;
-		SimpleList<VMType*> m_vm_list;
+		std::vector<VMType*> m_vm_list;
 
 		bool m_need_output_for_quit;
 };

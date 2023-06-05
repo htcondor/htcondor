@@ -26,7 +26,6 @@
 #include "classad_cron_job.h"
 #include "startd_cron_job.h"
 #include <list>
-using namespace std;
 
 // Override the lookup methods so that we can stuff in default values
 StartdCronJobParams::StartdCronJobParams(
@@ -70,7 +69,7 @@ StartdCronJobParams::Initialize( void )
 			s += "ALL";
 		}
 		else {
-			list<unsigned>::iterator iter;
+			std::list<unsigned>::iterator iter;
 			for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
 				formatstr_cat( s, "%u ", *iter );
 			}
@@ -113,7 +112,7 @@ StartdCronJobParams::InSlotList( unsigned slot ) const
 		return true;
 	}
 
-	list<unsigned>::const_iterator iter;
+	std::list<unsigned>::const_iterator iter;
 	for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
 		if ( slot == *iter ) {
 			return true;

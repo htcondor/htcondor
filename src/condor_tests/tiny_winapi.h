@@ -1082,7 +1082,7 @@ bool str_starts_with_nocase(const c* a, const c* pre) {
 template <class c>
 BOOL Print(HANDLE hf, const c* output, unsigned int cch) {
     unsigned int cbWrote = 0;
-    return WriteFile(hf, (char*)const_cast<c*>(output), cch * sizeof(c), &cbWrote, 0);
+    return WriteFile(hf, output, cch * sizeof(c), &cbWrote, 0);
 }
 template <class c>
 BOOL Print(HANDLE hf, const c* output, int cch) {

@@ -116,7 +116,7 @@ int param_integer(const char *, int default_value)
 
 // stubs for classad_usermap.cpp functions needed by compat_classad
 int reconfig_user_maps() { return 0; }
-bool user_map_do_mapping(const char *, const char *, MyString & output) { output.clear(); return false; }
+bool user_map_do_mapping(const char *, const char *, std::string & output) { output.clear(); return false; }
 
 int param_integer(const char *, int default_value, int, int, ClassAd *, 
 	ClassAd *, bool)
@@ -163,8 +163,8 @@ priv_state _set_priv(priv_state s, const char*, int, int)
 Regex::Regex() {not_impl();}
 Regex::~Regex() {}
 bool Regex::compile(const char *, int* , int* , uint32_t) {not_impl();return false;}
-bool Regex::compile(MyString const& , int*, int* , uint32_t) {not_impl();return false;}
-bool Regex::match(MyString const&) {not_impl();return false;}
+bool Regex::compile(std::string const& , int*, int* , uint32_t) {not_impl();return false;}
+bool Regex::match(const std::string&, std::vector<std::string> *) {not_impl();return false;}
 
 // CCB me harder
 BEGIN_C_DECLS

@@ -1750,7 +1750,6 @@ cmd_status_job_all(void *args)
 	char *reqId = argv[1];
 	char *selectad = argv[2]; /* May be NULL */
 	classad_expr_tree selecttr = NULL;
-	int n_jobs=0;
 	FILE *fd;
 	job_registry_entry *en;
 	int select_ret, select_result;
@@ -1819,7 +1818,6 @@ cmd_status_job_all(void *args)
 				str_cad[0] = '\000';
 			}
 			strcat(str_cad, en_cad);
-			n_jobs++;
 			free(en_cad);
 		}
 		free(en);

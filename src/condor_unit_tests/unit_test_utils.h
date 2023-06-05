@@ -111,11 +111,10 @@ bool strings_similar(const char* str1, const char* str2,
 	const char* delims = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
-MyString* convert_string_array(char** str, int size, const char* delim = " ");
+std::string * convert_string_array(char** str, int size, const char* delim = " ");
 
 /* Converts the given char** into a MyString seperated by the given delims */
-MyString* convert_string_array(const char** str, int size, 
-	const char* delim = " ");
+std::string * convert_string_array(const char** str, int size, const char* delim = " ");
 
 /* Deletes a char** */
 void delete_helper(char** array, int num_strs);

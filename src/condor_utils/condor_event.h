@@ -554,6 +554,7 @@ class ExecuteEvent : public ULogEvent
   public:
     ///
     ExecuteEvent(void);
+    virtual ~ExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -578,9 +579,12 @@ class ExecuteEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/** @return execute host or empty string (never NULL) */
-	char const *getExecuteHost();
+	const char *getExecuteHost();
 
 	void setExecuteHost(char const *addr);
+	void setSlotName(const char *name);
+	bool hasProps();     // return true if non-zero number of execute properties
+	ClassAd & setProp(); // get a ref to the execute properties ad, creating if does not exist.
 
 	/** Identifier for the machine the job executed on.
 		For Vanilla, Standard, and other non-Grid Universes, a
@@ -590,6 +594,8 @@ class ExecuteEvent : public ULogEvent
 		or GridTyps.
 	*/
 	std::string executeHost;
+	std::string slotName;
+	ClassAd * executeProps = nullptr;
 };
 
 //----------------------------------------------------------------------------
@@ -1304,6 +1310,7 @@ class NodeExecuteEvent : public ULogEvent
   public:
     ///
     NodeExecuteEvent(void);
+	virtual ~NodeExecuteEvent(void);
 
     /** Read the body of the next NodeExecute event.
         @param file the non-NULL readable log file
@@ -1327,13 +1334,18 @@ class NodeExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	char const *getExecuteHost() { return executeHost.c_str(); }
+	const char *getExecuteHost() { return executeHost.c_str(); }
+	void setSlotName(const char *name);
+	bool hasProps();     // return true if non-zero number of execute properties
+	ClassAd & setProp(); // get a ref to the execute properties ad, creating if does not exist.
 
 		/// Node identifier
 	int node;
 
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
 	std::string executeHost;
+	std::string slotName;
+	ClassAd * executeProps = nullptr;
 };
 
 

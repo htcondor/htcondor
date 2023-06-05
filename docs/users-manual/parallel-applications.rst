@@ -122,6 +122,10 @@ that is as simple as possible:
     log = log
     should_transfer_files = IF_NEEDED
     when_to_transfer_output = ON_EXIT
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 This job specifies the **universe** as **parallel**, letting HTCondor
@@ -132,7 +136,7 @@ command identifies that eight machines are required for this job.
 Because no
 **requirements** :index:`requirements<single: requirements; submit commands>` are
 specified, the dedicated scheduler claims eight machines with the same
-architecture and operating system as the submit machine. When all the
+architecture and operating system as the access point. When all the
 machines are ready, it invokes the */bin/sleep* command, with a command
 line argument of 30 on each of the eight machines more or less
 simultaneously. Job events are written to the log specified in the
@@ -140,8 +144,8 @@ simultaneously. Job events are written to the log specified in the
 
 The file transfer mechanism is enabled for this parallel job, such that
 if any of the eight claimed execute machines does not share a file
-system with the submit machine, HTCondor will correctly transfer the
-executable. This */bin/sleep* example implies that the submit machine is
+system with the access point, HTCondor will correctly transfer the
+executable. This */bin/sleep* example implies that the access point is
 running a Unix operating system, and the default assumption for
 submission from a Unix machine would be that there is a shared file
 system.
@@ -167,6 +171,10 @@ RedHat platforms, the requirements expression may specify this:
     should_transfer_files = IF_NEEDED
     when_to_transfer_output = ON_EXIT
     requirements = (OpSysName == "RedHat")
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 The machine selection may be further narrowed, instead using the
@@ -186,6 +194,10 @@ The machine selection may be further narrowed, instead using the
     should_transfer_files = IF_NEEDED
     when_to_transfer_output = ON_EXIT
     requirements = (OpSysAndVer == "RedHat6")
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Using the ``$(Node)`` Macro
@@ -230,6 +242,10 @@ command that also specifies the number of needed machines.
     executable = special.exe
     machine_count = 1
     requirements = ( machine == "machine1@example.com")
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
     machine_count = 3
@@ -268,6 +284,10 @@ multiple cores within the same slot, multi-core slots may be specified.
     request_cpus = 8
     should_transfer_files = IF_NEEDED
     when_to_transfer_output = ON_EXIT
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 This parallel job causes the scheduler to match and claim two machines,
@@ -331,6 +351,10 @@ Here is a sample submit description file for an MPICH MPI application:
     should_transfer_files = yes
     when_to_transfer_output = on_exit
     transfer_input_files = my_mpich_linked_executable
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 The **executable** :index:`executable<single: executable; submit commands>` is the
@@ -362,6 +386,10 @@ MPI application:
     should_transfer_files = yes
     when_to_transfer_output = on_exit
     transfer_input_files = my_openmpi_linked_executable
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Most MPI implementations require two system-wide prerequisites. The
@@ -426,6 +454,10 @@ using static libraries and a static version of ``mpirun`` is available.
     should_transfer_files = yes
     when_to_transfer_output = on_exit
     transfer_input_files = my_mpi_linked_executable
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 Any additional input files that will be needed for the executable that

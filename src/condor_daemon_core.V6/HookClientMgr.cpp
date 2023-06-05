@@ -22,7 +22,9 @@
 #include "condor_daemon_core.h"
 #include "HookClientMgr.h"
 #include "HookClient.h"
+#include "hook_utils.h"
 #include "status_string.h"
+#include <algorithm>
 
 
 HookClientMgr::HookClientMgr() {
@@ -32,13 +34,12 @@ HookClientMgr::HookClientMgr() {
 
 
 HookClientMgr::~HookClientMgr() {
-	HookClient *client;	
-	m_client_list.Rewind();
-	while (m_client_list.Next(client)) {
+	for (HookClient *client: m_client_list) {
 			// TODO: kill them, too?
-		m_client_list.DeleteCurrent();
 		delete client;
 	}
+	m_client_list.clear();
+
 	if (daemonCore && m_reaper_output_id != -1) {
 		daemonCore->Cancel_Reaper(m_reaper_output_id);
 	}
@@ -64,12 +65,6 @@ HookClientMgr::initialize() {
 
 bool
 HookClientMgr::spawn(HookClient* client, ArgList* args, const std::string & hook_stdin, priv_state priv, Env *env) {
-    MyString ms(hook_stdin);
-    return spawn(client, args, &ms, priv, env);
-}
-
-bool
-HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, priv_state priv, Env *env) {
 	int reaper_id;
 	bool wants_output = client->wantsOutput();
 	const char* hook_path = client->path();
@@ -81,7 +76,7 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
     int std_fds[3] = {DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE, DC_STD_FD_NOPIPE};
-    if (hook_stdin && hook_stdin->length()) {
+    if (hook_stdin.length()) {
 		std_fds[0] = DC_STD_FD_PIPE;
 	}
 	if (wants_output) {
@@ -109,13 +104,13 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 	}
 
 		// If we've got initial input to write to stdin, do so now.
-    if (hook_stdin && hook_stdin->length()) {
-		daemonCore->Write_Stdin_Pipe(pid, hook_stdin->c_str(),
-									 hook_stdin->length());
+    if (hook_stdin.length()) {
+		daemonCore->Write_Stdin_Pipe(pid, hook_stdin.c_str(),
+									 hook_stdin.length());
 	}
 
 	if (wants_output) {
-		m_client_list.Append(client);
+		m_client_list.push_back(client);
 	}
 	return true;
 }
@@ -123,9 +118,14 @@ HookClientMgr::spawn(HookClient* client, ArgList* args, MyString *hook_stdin, pr
 
 bool
 HookClientMgr::remove(HookClient* client) {
-    return m_client_list.Delete(client);
+	auto it = std::find(m_client_list.begin(), m_client_list.end(), client);
+	if (it != m_client_list.end()) {
+		m_client_list.erase(it);
+		return true;
+	} else {
+		return false;
+	}
 }
-
 
 int
 HookClientMgr::reaperOutput(int exit_pid, int exit_status)
@@ -134,9 +134,9 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 	daemonCore->Kill_Family(exit_pid);
 
 	bool found_it = false;
-	HookClient *client;	
-	m_client_list.Rewind();
-	while (m_client_list.Next(client)) {
+	HookClient *client = nullptr;	
+	for (HookClient *local_client : m_client_list) {
+		client = local_client;
 		if (exit_pid == client->getPid()) {
 			found_it = true;
 			break;
@@ -150,13 +150,17 @@ HookClientMgr::reaperOutput(int exit_pid, int exit_status)
 				exit_pid);
 		return FALSE;
 	}
-	client->hookExited(exit_status);
 
 		// Now that hookExited() returned, we need to delete this
 		// client object and remove it from our list.
-	m_client_list.DeleteCurrent();
-	delete client;
+	auto it = std::find(m_client_list.begin(), m_client_list.end(), client);
+	if (it != m_client_list.end()) {
+		m_client_list.erase(it);
+	}
 
+	client->hookExited(exit_status);
+
+	delete client;
 	return TRUE;
 }
 
@@ -174,4 +178,83 @@ HookClientMgr::reaperIgnore(int exit_pid, int exit_status)
 	statusString(exit_status, status_txt);
 	dprintf(D_FULLDEBUG, "%s\n", status_txt.c_str());
 	return TRUE;
+}
+
+
+bool
+JobHookClientMgr::initialize(classad::ClassAd* job_ad)
+{
+	// If the admin says we must use this hook, use it.
+	if (param(m_hook_keyword, (paramPrefix() + "_JOB_HOOK_KEYWORD").c_str())) {
+		dprintf(D_ALWAYS, "Using %s_JOB_HOOK_KEYWORD value from config file: \"%s\"\n",
+			paramPrefix().c_str(), m_hook_keyword.c_str());
+	}
+
+	// If the admin did not insist on a hook, see if the job wants one.  However, if the job
+	// specifies a hookname that does not exist at all in the config file,
+	// then use the default hook provided by the EP admin. This prevents the user from bypassing
+	// the EP admin's default hook by specifying an invalid hook name.
+	if (m_hook_keyword.empty() && job_ad->EvaluateAttrString(ATTR_HOOK_KEYWORD, m_hook_keyword) ) {
+		auto config_has_this_hook = false;
+		for (int i = 0; !config_has_this_hook; i++) {
+			auto h = static_cast<HookType>(i);
+			if (getHookTypeString(h) == nullptr) break;  // iterated thru all hook types
+			std::string tmp;
+			getHookPath(h, tmp);
+			if (!tmp.empty()) {
+				config_has_this_hook = true;
+				break;
+			}
+		}
+		if (config_has_this_hook) {
+			dprintf(D_ALWAYS, "Using %s value from job ClassAd: \"%s\"\n", ATTR_HOOK_KEYWORD,
+				m_hook_keyword.c_str());
+		} else {
+			dprintf(D_ALWAYS, "Ignoring %s value of \"%s\" from job ClassAd because hook not defined"
+				" in config file\n", ATTR_HOOK_KEYWORD, m_hook_keyword.c_str());
+		}
+	}
+
+        // If we don't have a hook by now, see if the admin defined a default one.
+        if (m_hook_keyword.empty() && param(m_hook_keyword, (paramPrefix() + "_DEFAULT_JOB_HOOK_KEYWORD").c_str())) {
+                dprintf(D_ALWAYS, "Using %s_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n",
+			paramPrefix().c_str(), m_hook_keyword.c_str());
+        }
+        if (m_hook_keyword.empty()) {
+                dprintf(D_FULLDEBUG, "Job does not define %s, no config file hooks, not invoking any job hooks.\n",
+			ATTR_HOOK_KEYWORD);
+		return true;
+	}
+
+	if (!reconfig()) {return false;}
+
+	return HookClientMgr::initialize();
+}
+
+
+bool
+JobHookClientMgr::getHookPath(HookType hook_type, std::string &path)
+{
+	if (m_hook_keyword.empty()) return false;
+	auto hook_string = getHookTypeString(hook_type);
+	if (!hook_string) return false;
+
+	std::string param = m_hook_keyword + "_HOOK_" + hook_string;
+
+	char *hpath;
+	auto result = validateHookPath(param.c_str(), hpath);
+	if (hpath) {
+		path = hpath;
+		free(hpath);
+	}
+	return result;
+}
+
+
+int
+JobHookClientMgr::getHookTimeout(HookType hook_type, int def_value)
+{
+	if (m_hook_keyword.empty()) return 0;
+	std::string param = m_hook_keyword + "_HOOK_" + getHookTypeString(hook_type) + "_TIMEOUT";
+	return param_integer(param.c_str(), def_value);
 }

@@ -58,7 +58,7 @@ static bool test_match() {
 	bool compile_result = r.compile("abcdefg", &errcode, &erroffset, options);
 	bool regex_match = false;
 	if (compile_result) {
-		regex_match = r.match_str("01234abcdefgzzzzzz");
+		regex_match = r.match("01234abcdefgzzzzzz");
 	}
 
 	emit_input_header();
@@ -81,7 +81,7 @@ static bool test_doesnt_match() {
 	bool compile_result = r.compile("abcdefg", &errcode, &erroffset, options);
 	bool regex_match = false;
 	if (compile_result) {
-		regex_match = r.match_str("01234bcdefgzzzzzz");
+		regex_match = r.match("01234bcdefgzzzzzz");
 	}
 
 	emit_input_header();
@@ -108,7 +108,7 @@ static bool test_captures() {
 	bool regex_match = false;
 	std::vector<std::string> groups(8);
 	if (compile_result) {
-		regex_match = r.match_str("yabba dabba doo", &groups);
+		regex_match = r.match("yabba dabba doo", &groups);
 	}
 
 	emit_input_header();

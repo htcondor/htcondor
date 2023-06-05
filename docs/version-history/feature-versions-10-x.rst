@@ -4,6 +4,110 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.5.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.5.0 released on June 5, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1004`.
+
+- Add support for Amazon Linux 2023. VOMS authentication is omitted on this
+  platform.
+  :jira:`1742`
+
+New Features:
+
+- Added new **Save File** functionality to DAGMan which allows users to
+  specify DAG nodes as save points to record the current DAG's progress
+  in a file similar to a rescue file. These files can then be specified
+  with the new *condor_submit_dag* flag ``load_save`` to re-run the
+  DAG from that point of progression. For more information visit
+  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :jira:`1636`
+
+- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+  submit files to use any value but *true* for their ``getenv = ...``
+  commands.
+  :jira:`1671`
+
+- Improved throughput when submitting a large number of ARC CE jobs.
+  Previously, jobs could remain stalled for a long time in the ARC CE
+  server waiting for their input sandbox to be transferred while other
+  were being submitted.
+  :jira:`1666`
+
+- The *arc_gahp* can now issue multiple HTTPS requests in parallel in
+  different threads. This is controlled by the new configuration
+  parameter :macro:`ARC_GAHP_USE_THREADS`.
+  :jira:`1690`
+
+- The Execute event in the user log now prints out slot name, sandbox path
+  and resource quantities of execution slot.
+  :jira:`1722`
+
+- Added new submit command ``ulog_execute_attrs`` for a jobs submit file. This
+  command takes a comma-separated list of machine ClassAd attributes to be
+  written to the user logs execute event.
+  :jira:`1759`
+
+- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
+  to give a list of machine attributes that will be added to DAGMan submitted
+  jobs for recording in the various produced job ads and userlogs.
+  :jira:`1717`
+
+- The *condor_transform_ads* tool can now read a configuration file containing
+  ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+  any or all of the transforms declared in that file.  This makes it
+  easier to test job transforms before deploying them.
+  :jira:`1710`
+
+- Linux Cgroup support has been redone in a way that doesn't depend on
+  using the procd.  There should be no user visible changes in
+  the usual cases.
+  :jira:`1589`
+
+Bugs Fixed:
+
+- Expanded default list of environment variables to include in the DAGMan
+  proper manager jobs getenv to include ``HOME``, ``USER``, ``LANG``, and
+  ``LC_ALL``. Thus resulting in these variables appearing in the DAGMan
+  manager jobs environment.
+  :jira:`1725`
+
+- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
+  not be enforced correctly.
+  :jira:`1775`
+
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
+
+- Fixed a bug when running with root on a Linux systems with cgroup v1
+  that would print a warning to the StarterLog claiming
+  Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
+  :jira:`1672`
+
+- Fixed a bug where *condor_history* would fail to find history files
+  for a remote query if the various history configuration macros were
+  specified with subsystem prefixes i.e. ``SCHEDD.HISTORY = /path``
+  :jira:`1739`
+
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1655`
+
+- Fixed a bug in *condor_preen* that would remove any recorded job epoch
+  history files stored in the spool directory.
+  :jira:`1738`
+
 Version 10.4.3
 --------------
 
@@ -23,11 +127,8 @@ Bugs Fixed:
 - The ce-audit collector plug-in should no longer crash.
   :jira:`1774`
 
-
 Version 10.4.2
 --------------
-
-Release Notes:
 
 - HTCondor version 10.4.2 released on May 2, 2023.
 
@@ -514,7 +615,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/Hooks` manual section.
+  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
@@ -552,7 +653,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/Hooks` manual section.
+  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
   :jira:`1400`
 
 Bugs Fixed:

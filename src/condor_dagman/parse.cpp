@@ -88,6 +88,7 @@ static bool parse_maxjobs(Dag *dag, const char *filename, int lineNumber);
 static bool parse_splice(Dag *dag, const char *filename, int lineNumber);
 static bool parse_node_status_file(Dag  *dag, const char *filename,
 		int  lineNumber);
+static bool parse_save_point_file(Dag *dag, const char* filename, int lineNumber);
 static bool parse_reject(Dag  *dag, const char *filename,
 		int  lineNumber);
 static bool parse_jobstate_log(Dag  *dag, const char *filename,
@@ -188,14 +189,12 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 		// If useDagDir is true, we have to cd into the directory so we can
 		// parse the submit files correctly.
 		// 
-	std::string		tmpDirectory("");
+	std::string		tmpDirectory;
 	const char *	tmpFilename = filename;
 	TmpDir		dagDir;
 
 	if ( useDagDir ) {
-		char *dirname = condor_dirname( filename );
-		tmpDirectory = dirname;
-		free(dirname);
+		tmpDirectory = condor_dirname( filename );
 
 		std::string	errMsg;
 		if ( !dagDir.Cd2TmpDir( tmpDirectory.c_str(), errMsg ) ) {
@@ -668,6 +667,11 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 						filename, lineNumber);
 		}
 
+		// Handle a SAVE_POINT_FILE spec
+		else if(strcasecmp(token, "SAVE_POINT_FILE") == MATCH) {
+			parsed_line_successfully = parse_save_point_file(dag, filename, lineNumber);
+		}
+
 		// Handle a REJECT spec
 		else if(strcasecmp(token, "REJECT") == 0) {
 			parsed_line_successfully = parse_reject(dag,
@@ -753,7 +757,8 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 				"RETRY, ABORT-DAG-ON, DOT, VARS, PRIORITY, CATEGORY, "
 				"MAXJOBS, CONFIG, SET_JOB_ATTR, SPLICE, PROVISIONER, SERVICE, "
 				"NODE_STATUS_FILE, REJECT, JOBSTATE_LOG, PRE_SKIP, DONE, "
-				"CONNECT, PIN_IN, PIN_OUT, INCLUDE or SUBMIT-DESCRIPTION token "
+				"CONNECT, PIN_IN, PIN_OUT, INCLUDE, SAVE_POINT_FILE or"
+				"SUBMIT-DESCRIPTION token "
 				"(found %s)\n",
 				filename, lineNumber, token );
 			parsed_line_successfully = false;
@@ -1796,6 +1801,9 @@ static bool parse_vars(Dag *dag, const char *filename, int lineNumber)
 			}
 			if ( varName.empty() ) {
 				break;
+			} else if (varName[0] == '+') {
+				//convert + syntax vars to 'My.' syntax
+				varName = "My." + varName.substr(1);
 			}
 
 			job->AddVar(varName.c_str(), varValue.c_str(), filename, lineNumber, prepend);
@@ -2378,6 +2386,70 @@ parse_node_status_file(
 	}
 
 	dag->SetNodeStatusFileName( statusFileName, minUpdateTime, alwaysUpdate );
+	return true;
+}
+
+//-----------------------------------------------------------------------------
+// Function: parse_save_point_file
+// Purpose:  Parses a line specifying a node to write a save point file. The
+//           save point file will be written first time we start a node. This
+//           while will be written out as a partial rescue. Users can optionally
+//           designate a filename for the file to be written as. If filename
+//           includes a path then we respect that. Otherwise, we write save file
+//           to save_files subdir created near all other DAG files.
+//-----------------------------------------------------------------------------
+static bool
+parse_save_point_file(Dag *dag, const char* filename, int lineNumber)
+{
+	std::string example = "SAVE_POINT_FILE JobName [Filename]";
+	//Get node name to apply save file info to
+	const char* jobName = strtok(NULL, DELIMITERS);
+	if (jobName == NULL) {
+		debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): No Node specified for SAVE_POINT_FILE.\n",
+					 filename, lineNumber);
+		exampleSyntax(example.c_str());
+		return false;
+	} else if (strcasecmp(jobName,dag->ALL_NODES) == MATCH) { //It is redundant to use all nodes for save files
+		debug_printf(DEBUG_NORMAL, "ERROR: %s (line %d): SAVE_POINT_FILE does not allow ALL_NODES option.\n",
+					 filename, lineNumber);
+		exampleSyntax(example.c_str());
+		return false;
+	}
+
+	const char *jobNameOrig = jobName; // for error output
+	std::string tmpJobName = munge_job_name(jobName);
+	jobName = tmpJobName.c_str();
+
+	//Get save file name/path&name
+	const char* p = strtok(NULL, DELIMITERS);
+	std::string saveFile = p ? p : "";
+	if (!saveFile.empty()) { //Name was specified
+		//Check for any extra invalid tokens
+		char* token = strtok(NULL, DELIMITERS);
+		if (token != NULL) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): Extra token (%s) found in SAVE_POINT_FILE declaration.\n",
+						 filename, lineNumber, token);
+			exampleSyntax(example.c_str());
+			return false;
+		}
+	} else { //No name given so create one using job name and associated dag filename
+		formatstr(saveFile,"%s-%s.save",jobNameOrig,condor_basename(filename));
+	}
+
+	//Find node and set save file
+	Job *node = dag->FindNodeByName(jobName);
+	if (node == NULL) {
+		debug_printf(DEBUG_QUIET, "Warning: %s (line %d): Unknown Job %s\n",
+								  filename, lineNumber, jobNameOrig);
+		return !check_warning_strictness(DAG_STRICT_1, false);
+	} else {
+		if (node->GetType() == NodeType::SERVICE || node->GetType() == NodeType::PROVISIONER) {
+			debug_printf(DEBUG_QUIET, "ERROR: %s (line %d): SAVE_POINT_FILE can not be declared with neither SERVICE nor PROVISIONER nodes.\n",
+									  filename, lineNumber);
+			return false;
+		}
+		node->SetSaveFile(saveFile);
+	}
 	return true;
 }
 

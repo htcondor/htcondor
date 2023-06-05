@@ -788,11 +788,48 @@ void clean_files()
 }
 
 
+void
+DaemonCore::kill_immediate_children() {
+	// Disabled by default for everything but the schedd in stable.
+	bool enabled = param_boolean( "DEFAULT_KILL_CHILDREN_ON_EXIT", true );
+
+	std::string pname;
+	formatstr( pname, "%s_KILL_CHILDREN_ON_EXIT", get_mySubSystem()->getName() );
+	enabled = param_boolean( pname.c_str(), enabled );
+
+	if(! enabled) { return; }
+
+
+	//
+	// Send each of our children a SIGKILL.  We'd rather kill each child's
+	// whole process tree, but we don't want to block talking to the procd.
+	//
+	PidEntry * pid_entry = NULL;
+	pidTable->startIterations();
+	while( pidTable->iterate(pid_entry) ) {
+		// Don't try to kill our parent process; it's a bad idea, Send_Signal()
+		// will fail, and we don't want the attempt in the log.
+		if( pid_entry->pid == ppid ) { continue; }
+		// Don't try to kill processes which have already exited; this avoids
+		// a race condition with PID reuse, logging an error in the attempt,
+		// and looking like we're trying to kill the job after noticing it die.
+		if( ProcessExitedButNotReaped(pid_entry->pid) ) { continue; }
+
+		dprintf( D_ALWAYS, "Daemon exiting before all child processes gone; killing %d\n", pid_entry->pid );
+		Send_Signal( pid_entry->pid, SIGKILL );
+	}
+}
+
+
 // All daemons call this function when they want daemonCore to really
 // exit.  Put any daemon-wide shutdown code in here.   
 void
 DC_Exit( int status, const char *shutdown_program )
 {
+	if( daemonCore ) {
+		daemonCore->kill_immediate_children();
+	}
+
 		// First, delete any files we might have created, like the
 		// address file or the pid file.
 	clean_files();
@@ -903,8 +940,8 @@ DC_Skip_Core_Init()
 static void
 kill_daemon_ad_file()
 {
-	MyString param_name;
-	param_name.formatstr( "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
+	std::string param_name;
+	formatstr( param_name, "%s_DAEMON_AD_FILE", get_mySubSystem()->getName() );
 	char *ad_file = param(param_name.c_str());
 	if( !ad_file ) {
 		return;
@@ -926,7 +963,7 @@ drop_addr_file()
 	// build up a prefix as LOCALNAME.SUBSYSTEM or just SUBSYSTEM if no localname
 	// that way, daemons that have a localname will never stomp the address file of the
 	// primary daemon of that subsys unless explicitly told to do so.
-	MyString prefix(get_mySubSystem()->getLocalName());
+	std::string prefix(get_mySubSystem()->getLocalName(""));
 	if ( ! prefix.empty()) { prefix += "."; }
 	prefix += get_mySubSystem()->getName();
 
@@ -953,8 +990,8 @@ drop_addr_file()
 
 	for (int i=0; i<2; i++) {
 		if( addrFile[i] ) {
-			MyString newAddrFile;
-			newAddrFile.formatstr("%s.new",addrFile[i]);
+			std::string newAddrFile;
+			formatstr(newAddrFile,"%s.new",addrFile[i]);
 			if( (ADDR_FILE = safe_fopen_wrapper_follow(newAddrFile.c_str(), "w")) ) {
 				fprintf( ADDR_FILE, "%s\n", addr[i] );
 				fprintf( ADDR_FILE, "%s\n", CondorVersion() );
@@ -1165,7 +1202,7 @@ void
 set_dynamic_dir( const char* param_name, const char* append_str )
 {
 	std::string val;
-	MyString newdir;
+	std::string newdir;
 
 	if( !param( val, param_name ) ) {
 			// nothing to do
@@ -1173,7 +1210,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 	}
 
 		// First, create the new name.
-	newdir.formatstr( "%s.%s", val.c_str(), append_str );
+	formatstr( newdir, "%s.%s", val.c_str(), append_str );
 	
 		// Next, try to create the given directory, if it doesn't
 		// already exist.
@@ -1185,7 +1222,7 @@ set_dynamic_dir( const char* param_name, const char* append_str )
 
 	// Finally, insert the _condor_<param_name> environment
 	// variable, so our children get the right configuration.
-	MyString env_str( "_condor_" );
+	std::string env_str( "_condor_" );
 	env_str += param_name;
 	env_str += "=";
 	env_str += newdir;
@@ -1421,7 +1458,7 @@ drop_core_in_log( void )
 #ifdef WIN32
 	{
 		// give our Win32 exception handler a filename for the core file
-		MyString pseudoCoreFileName;
+		std::string pseudoCoreFileName;
 		formatstr(pseudoCoreFileName,"%s\\%s", ptmp, core_name ? core_name : "core.WIN32");
 		g_ExceptionHandler.SetLogFileName(pseudoCoreFileName.c_str());
 
@@ -1674,7 +1711,7 @@ handle_fetch_log(int cmd, Stream *s )
 		return FALSE;
 	}
 
-	MyString full_filename = filename;
+	std::string full_filename = filename;
 	if(ext) {
 		full_filename += ext;
 
@@ -1785,7 +1822,7 @@ handle_fetch_log_history_dir(ReliSock *stream, char *paramName) {
 			break;
 		}
 		stream->put(filename);
-		MyString fullPath(dirName);
+		std::string fullPath(dirName);
 		fullPath += "/";
 		fullPath += filename;
 		int fd = safe_open_wrapper_follow(fullPath.c_str(),O_RDONLY);
@@ -1862,11 +1899,11 @@ handle_dc_query_instance( int, Stream* stream)
 	if ( ! instance_id) {
 		unsigned char * bytes = Condor_Crypt_Base::randomKey(instance_length/2);
 		ASSERT(bytes);
-		MyString tmp; tmp.reserve_at_least(instance_length+1);
+		std::string tmp; tmp.reserve(instance_length+1);
 		for (int ii = 0; ii < instance_length/2; ++ii) {
-			tmp.formatstr_cat("%02x", bytes[ii]);
+			formatstr_cat(tmp, "%02x", bytes[ii]);
 		}
-		instance_id = tmp.StrDup();
+		instance_id = strdup(tmp.c_str());
 		free(bytes);
 	}
 
@@ -2803,7 +2840,7 @@ handle_config_val(int idCmd, Stream* stream )
 
 			if ( ! re.compile(restr, &errcode, &erroffset, PCRE2_CASELESS)) {
 				dprintf( D_ALWAYS, "Can't compile regex for DC_CONFIG_VAL ?names query\n" );
-				MyString errmsg; errmsg.formatstr("!error:regex:%d: error code %d", erroffset, errcode);
+				std::string errmsg; formatstr(errmsg, "!error:regex:%d: error code %d", erroffset, errcode);
 				if (!stream->code(errmsg)) {
 						dprintf( D_ALWAYS, "and remote side disconnected from use\n" );
 				}
@@ -2819,7 +2856,7 @@ handle_config_val(int idCmd, Stream* stream )
 						}
 					}
 				} else {
-					MyString empty("");
+					std::string empty("");
 					if ( ! stream->code(empty)) {
 						dprintf( D_ALWAYS, "Can't send ?names reply for DC_CONFIG_VAL\n" );
 						retval = FALSE;
@@ -2838,8 +2875,8 @@ handle_config_val(int idCmd, Stream* stream )
 			int cQueries = get_config_stats(&stats);
 			// for backward compatility, we have to put a single string on the wire
 			// before we can put the stats classad.
-			MyString queries;
-			queries.formatstr("%d", cQueries);
+			std::string queries;
+			formatstr(queries, "%d", cQueries);
 			if ( ! stream->code(queries)) {
 				dprintf(D_ALWAYS, "Can't send param stats for DC_CONFIG_VAL\n");
 				retval = false;
@@ -2863,7 +2900,7 @@ handle_config_val(int idCmd, Stream* stream )
 
 		} else { // unrecognised ?command
 
-			MyString errmsg; errmsg.formatstr("!error:unsup:1: '%s' is not supported", param_name);
+			std::string errmsg; formatstr(errmsg, "!error:unsup:1: '%s' is not supported", param_name);
 			if ( ! stream->code(errmsg)) retval = FALSE;
 			if (retval && ! stream->end_of_message()) retval = FALSE;
 		}
@@ -2883,7 +2920,7 @@ handle_config_val(int idCmd, Stream* stream )
 		int retval = TRUE; // assume success
 
 		std::string name_used;
-		MyString value;
+		std::string value;
 		const char * def_val = NULL;
 		const MACRO_META * pmet = NULL;
 		const char * subsys = get_mySubSystem()->getName();
@@ -2922,8 +2959,8 @@ handle_config_val(int idCmd, Stream* stream )
 			if ( ! stream->put_nullstr(def_val)) {
 				dprintf( D_ALWAYS, "Can't send default reply for DC_CONFIG_VAL\n" );
 			}
-			if (pmet->ref_count) { value.formatstr("%d / %d", pmet->use_count, pmet->ref_count);
-			} else  { value.formatstr("%d", pmet->use_count); }
+			if (pmet->ref_count) { formatstr(value, "%d / %d", pmet->use_count, pmet->ref_count);
+			} else  { formatstr(value, "%d", pmet->use_count); }
 			if ( ! stream->code(value)) {
 				dprintf( D_ALWAYS, "Can't send use count reply for DC_CONFIG_VAL\n" );
 			}
@@ -3841,8 +3878,8 @@ int dc_main( int argc, char** argv )
 	}	// if if !Foreground
 
 	// See if the config tells us to wait on startup for a debugger to attach.
-	MyString debug_wait_param;
-	debug_wait_param.formatstr("%s_DEBUG_WAIT", get_mySubSystem()->getName() );
+	std::string debug_wait_param;
+	formatstr(debug_wait_param, "%s_DEBUG_WAIT", get_mySubSystem()->getName() );
 	if (param_boolean(debug_wait_param.c_str(), false, false)) {
 		volatile int debug_wait = 1;
 		dprintf(D_ALWAYS,
@@ -3859,8 +3896,8 @@ int dc_main( int argc, char** argv )
 	}
 
 #ifdef WIN32
-	debug_wait_param.formatstr("%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
-	int wait_for_win32_debugger = param_integer(debug_wait_param.Value(), 0);
+	formatstr(debug_wait_param, "%s_WAIT_FOR_DEBUGGER", get_mySubSystem()->getName() );
+	int wait_for_win32_debugger = param_integer(debug_wait_param.c_str(), 0);
 	if (wait_for_win32_debugger) {
 		UINT ms = GetTickCount() - 10;
 		BOOL is_debugger = IsDebuggerPresent();
@@ -3868,7 +3905,7 @@ int dc_main( int argc, char** argv )
 			if (GetTickCount() > ms) {
 				dprintf(D_ALWAYS,
 						"%s is %d, waiting for debugger to attach to pid %d.\n", 
-						debug_wait_param.Value(), wait_for_win32_debugger, GetCurrentProcessId());
+						debug_wait_param.c_str(), wait_for_win32_debugger, GetCurrentProcessId());
 				ms = GetTickCount() + (1000 * 60 * 1); // repeat message every 1 minute
 			}
 			sleep(10);
@@ -4366,7 +4403,7 @@ int dc_main( int argc, char** argv )
 	// zmiller
 	// look in the env for ENV_PARENT_ID
 	const char* envName = ENV_CONDOR_PARENT_ID;
-	MyString parent_id;
+	std::string parent_id;
 
 	GetEnv( envName, parent_id );
 

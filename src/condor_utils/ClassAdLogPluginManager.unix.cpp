@@ -26,10 +26,7 @@
 void
 ClassAdLogPluginManager::EarlyInitialize()
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->earlyInitialize();
 	}
 }
@@ -37,10 +34,7 @@ ClassAdLogPluginManager::EarlyInitialize()
 void
 ClassAdLogPluginManager::Initialize()
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -48,10 +42,7 @@ ClassAdLogPluginManager::Initialize()
 void
 ClassAdLogPluginManager::Shutdown()
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -59,10 +50,7 @@ ClassAdLogPluginManager::Shutdown()
 void
 ClassAdLogPluginManager::NewClassAd(const char *key)
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->newClassAd(key);
 	}
 }
@@ -70,10 +58,7 @@ ClassAdLogPluginManager::NewClassAd(const char *key)
 void
 ClassAdLogPluginManager::DestroyClassAd(const char *key)
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->destroyClassAd(key);
 	}
 }
@@ -83,10 +68,7 @@ ClassAdLogPluginManager::SetAttribute(const char *key,
 								  const char *name,
 								  const char *value)
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->setAttribute(key, name, value);
 	}
 }
@@ -95,30 +77,21 @@ void
 ClassAdLogPluginManager::DeleteAttribute(const char *key,
 									 const char *name)
 {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->deleteAttribute(key, name);
 	}
 }
 
 void
 ClassAdLogPluginManager::BeginTransaction() {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->beginTransaction();
 	}
 }
 
 void
 ClassAdLogPluginManager::EndTransaction() {
-	ClassAdLogPlugin *plugin;
-	SimpleList<ClassAdLogPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->endTransaction();
 	}
 }
@@ -132,6 +105,6 @@ ClassAdLogPlugin::ClassAdLogPlugin()
 	}
 }
 
-ClassAdLogPlugin::~ClassAdLogPlugin() { }
+ClassAdLogPlugin::~ClassAdLogPlugin() = default;
 
 

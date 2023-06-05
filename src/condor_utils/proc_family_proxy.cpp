@@ -282,9 +282,15 @@ ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi)
 bool
 ProcFamilyProxy::track_family_via_cgroup(pid_t , const FamilyInfo *)
 {
-	dprintf(D_ALWAYS, "FATAL ERROR: Requested cgroup support on platform without support\n");
-	ASSERT(false);
-	return false;
+	// We can hit this path when the first DaemonCore::Create_Proces doesn't request
+	// a cgroup, but a subsequent one does.  Currently, this only happens when a docker
+	// universe job (which doesn't request a cgroup for the docker command) subsequently
+	// runs ssh-to-job (which does (although it doesn't need to)).
+	//
+	// For now fix this by just ignoring this, it doesn't cause any real problems, 
+	// but we should have a more robust solution in the future
+	dprintf(D_ALWAYS, "Cgroup based family tracking requested, but we have a proc family that can't, skipping.\n");
+	return true;
 }
 #endif
 
@@ -475,7 +481,7 @@ ProcFamilyProxy::start_procd()
 	// condor user
 	//
 	args.AppendArg("-C");
-	args.AppendArg(get_condor_uid());
+	args.AppendArg(std::to_string(get_condor_uid()));
 #endif
 
 #if defined(WIN32)
@@ -523,8 +529,8 @@ ProcFamilyProxy::start_procd()
 			       max_tracking_gid);
 		}
 		args.AppendArg("-G");
-		args.AppendArg(min_tracking_gid);
-		args.AppendArg(max_tracking_gid);
+		args.AppendArg(std::to_string(min_tracking_gid));
+		args.AppendArg(std::to_string(max_tracking_gid));
 	}
 #endif
 

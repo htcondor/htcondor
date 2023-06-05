@@ -32,6 +32,7 @@
 #include "dagman_main.h"
 #include "dagman_commands.h"
 #include "condor_getcwd.h"
+#include "directory.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "dagman_metrics.h"
@@ -68,6 +69,7 @@ static void Usage() {
 			"\t\t[-UseDagDir]\n"
 			"\t\t[-AutoRescue <0|1>]\n"
 			"\t\t[-DoRescueFrom <int N>]\n"
+			"\t\t[-load_save filename]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
 			"\t\t[-Verbose]\n"
@@ -403,6 +405,22 @@ Dagman::Config()
 				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
 			}
 		}
+	}
+
+	param(_requestedMachineAttrs,"DAGMAN_RECORD_MACHINE_ATTRS");
+	if (!_requestedMachineAttrs.empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
+		//Use machine attrs list to construct new job ad attributes to add to userlog
+		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		bool firstAttr = true;
+		_ulogMachineAttrs.clear();
+		for(auto& attr : requestAttrs) {
+			if (!firstAttr) { _ulogMachineAttrs += ","; }
+			else { firstAttr = false; }
+			_ulogMachineAttrs += "MachineAttr" + attr + "0";
+		}
+		//Also add DAGNodeName to list of attrs to put in userlog event
+		_ulogMachineAttrs += ",DAGNodeName";
 	}
 
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
@@ -749,6 +767,7 @@ void main_init (int argc, char ** const argv) {
 	//
 	bool alwaysRunPostSet = false;
 	bool onlyDumpDot = false;
+	std::string loadSaveFile;
 
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
@@ -876,6 +895,12 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman.doRescueFrom = atoi (argv[i]);
 
+		} else if (strcasecmp("-load_save", argv[i]) == MATCH) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No save file specified");
+				Usage();
+			}
+			loadSaveFile = argv[i];
 		} else if( !strcasecmp( "-CsdVersion", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -974,6 +999,14 @@ void main_init (int argc, char ** const argv) {
 						argv[i] );
 			Usage();
 		}
+	}
+
+	if (!loadSaveFile.empty() && dagman.doRescueFrom != 0) {
+		debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from both a save file and a specified rescue file.\n");
+		Usage();
+	} else if (!loadSaveFile.empty() && dagman._doRecovery) {
+		debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from a save file in recovery mode.\n");
+		Usage();
 	}
 
 	// We expect at the very least to have a dag filename specified
@@ -1328,12 +1361,45 @@ void main_init (int argc, char ** const argv) {
 	// Set nodes marked as DONE in dag file to STATUS_DONE
 	dagman.dag->SetPreDoneNodes();
 
-		//
+	if (!loadSaveFile.empty()) {
+		// Parse rescue formatted Save file. Reading from a save file
+		// and a specific rescue number is prohibited (enforced post cmd arg parsing)
+		// But if auto rescue is on and a rescue file is found prioritize
+		// specified save file for parsing. - Cole Bollig 2023-03-30
+		debug_printf(DEBUG_QUIET, "Loading saved progress from %s for DAG.\n",loadSaveFile.c_str());
+		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		std::string saveDir = condor_dirname(loadSaveFile.c_str());
+		bool no_path = loadSaveFile.compare(condor_basename(loadSaveFile.c_str())) == MATCH;
+		//If path is current directory '.' but save file is not specified as ./filename
+		//then make path to save_files sub directory
+		if (saveDir.compare(".") == MATCH && no_path) {
+			std::string cwd = ".";
+			std::string subDir = condor_dirname(dagman.primaryDagFile.c_str());
+			if (subDir.compare(".") != MATCH) {
+				std::string tmp;
+				dircat(cwd.c_str(), subDir.c_str(), tmp);
+				cwd = tmp;
+			}
+			dircat(cwd.c_str(), "save_files", saveDir);
+			debug_printf(DEBUG_QUIET,"Checking %s for DAG save files.\n", saveDir.c_str());
+			std::string temp;
+			dircat(saveDir.c_str(), loadSaveFile.c_str(), temp);
+			loadSaveFile = temp;
+		}
+		//Don't munge node names because save files written via rescue code already munged
+		parseSetDoNameMunge(false);
+		//Attempt to parse the save file. Run parse with useDagDir = false because
+		//there is no point risking changing directories just to read save file (i.e. partial rescue)
+		if (!parse(dagman.dag, loadSaveFile.c_str(), false, dagman._schedd, dagman.doAppendVars)) {
+			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, true, true);
+			dagmanUtils.tolerant_unlink(lockFileName.c_str());
+			dagman.CleanUp();
+			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
+		}
+	} else if ( rescueDagNum > 0 ) {
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
 		// are lifted!
-		//
-	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = dagmanUtils.RescueDagName(
 					dagman.primaryDagFile.c_str(),
 					dagman.multiDags, rescueDagNum );
@@ -1546,7 +1612,7 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 void
 Dagman::ResolveDefaultLog()
 {
-	char *dagDir = condor_dirname( primaryDagFile.c_str() );
+	std::string dagDir = condor_dirname( primaryDagFile.c_str() );
 	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
 	std::string owner;
@@ -1557,7 +1623,6 @@ Dagman::ResolveDefaultLog()
 	replace_str( _defaultNodeLog, "@(DAG_FILE)", dagFile );
 	std::string cluster( std::to_string( DAGManJobId._cluster ) );
 	replace_str( _defaultNodeLog, "@(CLUSTER)", cluster.c_str() );
-	free( dagDir );
 	replace_str( _defaultNodeLog, "@(OWNER)", owner.c_str() );
 	replace_str( _defaultNodeLog, "@(NODE_NAME)", nodeName.c_str() );
 

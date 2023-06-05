@@ -50,7 +50,7 @@ class Worker {
 	~Worker();
 
 	bool removeRequest(int req_id);
-	int numOfRequest(void) const { return m_request_list.Number(); }
+	int numOfRequest(void) const { return (int) m_request_list.size(); }
 
 	int m_id;
 
@@ -59,11 +59,11 @@ class Worker {
 
 	pthread_cond_t m_cond;
 
-	SimpleList<GahpRequest*> m_request_list;
+	std::vector<GahpRequest*> m_request_list;
 };
 
 #define MIN_NUMBER_WORKERS 2
-#define MAX_NUMBER_WORKERS 50
+#define MAX_NUMBER_WORKERS 10
 #define WORKER_MANAGER_TIMER_INTERVAL	15
 
 class IOProcess {
@@ -110,7 +110,7 @@ class IOProcess {
 
 	std::map<int, Worker*> m_workers_list;
 
-	SimpleList<GahpRequest*> m_pending_req_list;
+	std::vector<GahpRequest*> m_pending_req_list;
 
 	std::map<std::string, std::string> m_cached_proxies;
 	std::string m_active_proxy;

@@ -35,6 +35,7 @@
 #include "io_loop.h"
 #include "file_transfer.h"
 
+#include <algorithm>
 #include "schedd_client.h"
 #include "SchedDCommands.h"
 
@@ -51,7 +52,7 @@ int contact_schedd_interval = 20;
 char *proxySubjectName = NULL;
 
 // Queue for pending commands to schedd
-SimpleList <SchedDRequest*> command_queue;
+std::vector<SchedDRequest*> command_queue;
 
 // Buffer for reading requests from the IO thread
 PipeBuffer request_buffer;
@@ -59,7 +60,7 @@ PipeBuffer request_buffer;
 
 
 // Queue for command results to be written to our output pipe.
-SimpleList<std::string *> results_queue;
+std::vector<std::string *> results_queue;
 
 int RESULT_OUTBOX = -1;
 int REQUEST_INBOX = -1;
@@ -110,14 +111,12 @@ request_pipe_handler(int) {
 void
 doContactSchedd()
 {
-	if (command_queue.IsEmpty()) {
+	if (command_queue.empty()) {
 		daemonCore->Reset_Timer( contactScheddTid, contact_schedd_interval ); // Come back in a min
 		return;
 	}
 
 	dprintf(D_FULLDEBUG,"in doContactSchedd\n");
-
-	SchedDRequest * current_command = NULL;
 
 	int error=FALSE;
 	std::string error_msg;
@@ -126,6 +125,7 @@ doContactSchedd()
 	int failure_line_num = 0;
 	int failure_errno = 0;
 	std::set< std::string, classad::CaseIgnLTStr > filter_attrs;
+	std::set< std::string, classad::CaseIgnLTStr > proc_attrs;
 	bool rerun_immediately = false;
 	int max_file_requests = param_integer("C_GAHP_MAX_FILE_REQUESTS", 10);
 	int curr_file_requests = 0;
@@ -138,8 +138,7 @@ doContactSchedd()
 		dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 
 		// If you can't connect return "Failure" on every job request
-		command_queue.Rewind();
-		while (command_queue.Next(current_command)) {
+		for (auto current_command: command_queue) {
 			if (current_command->status != SchedDRequest::SDCS_NEW)
 				continue;
 
@@ -187,7 +186,7 @@ doContactSchedd()
 	while (i<3) {
 		
 		StringList id_list;
-		SimpleList <SchedDRequest*> this_batch;
+		std::vector<SchedDRequest*> this_batch;
 
 		SchedDRequest::schedd_command_type this_command = commands[i];
 		const char * this_action = command_titles[i];
@@ -198,8 +197,7 @@ doContactSchedd()
 		error = FALSE;
 
 		// Create a batch of commands with the same command type AND the same reason		
-		command_queue.Rewind();
-		while (command_queue.Next(current_command)) {
+		for (auto current_command: command_queue) {
 			if (current_command->status != SchedDRequest::SDCS_NEW)
 				continue;
 
@@ -218,7 +216,7 @@ doContactSchedd()
 				current_command->proc_id);
 			id_list.append (job_id_buff);
 
-			this_batch.Append (current_command);
+			this_batch.push_back(current_command);
 		}
 
 		// If we haven't found any....
@@ -270,9 +268,7 @@ doContactSchedd()
 		}
 
 		// Go through the batch again, and create responses for each request
-		this_batch.Rewind();
-		while (this_batch.Next(current_command)) {
-			
+		for(auto current_command : this_batch) {
 			// Check the result
 			char job_id_buff[30];
 			if (result_ad && (error == FALSE)) {
@@ -357,14 +353,12 @@ doContactSchedd()
 	int MAX_BATCH_SIZE=1; // This should be a config param
 	curr_file_requests = 0;
 
-	SimpleList <SchedDRequest*> stage_in_batch;
+	std::vector<SchedDRequest*> stage_in_batch;
 	do {
 
-		stage_in_batch.Clear();
+		stage_in_batch.clear();
 
-		command_queue.Rewind();
-		while (command_queue.Next(current_command)) {
-
+		for (auto current_command: command_queue) {
 			if (current_command->status != SchedDRequest::SDCS_NEW)
 				continue;
 
@@ -375,23 +369,22 @@ doContactSchedd()
 					 current_command->cluster_id,
 					 current_command->proc_id);
 
-			stage_in_batch.Append (current_command);
+			stage_in_batch.push_back(current_command);
 			curr_file_requests++;
-			if (stage_in_batch.Number() >= MAX_BATCH_SIZE || curr_file_requests > max_file_requests)
+			if (stage_in_batch.size() >= (size_t) MAX_BATCH_SIZE || curr_file_requests > max_file_requests)
 				break;
 		}
 
-		if (stage_in_batch.Number() > 0) {
-			ClassAd ** array = new ClassAd*[stage_in_batch.Number()];
+		if (stage_in_batch.size() > 0) {
+			ClassAd ** array = new ClassAd*[stage_in_batch.size()];
 			i=0;
-			stage_in_batch.Rewind();
-			while (stage_in_batch.Next(current_command)) {
+			for (auto current_command: stage_in_batch) {
 				array[i++] = current_command->classad;
 			}
 
 			error = FALSE;
 			errstack.clear();
-			if (!dc_schedd.spoolJobFiles( stage_in_batch.Number(),
+			if (!dc_schedd.spoolJobFiles( (int) stage_in_batch.size(),
 										  array,
 										  &errstack )) {
 				error = TRUE;
@@ -400,8 +393,7 @@ doContactSchedd()
 			}
 			delete [] array;
   
-			stage_in_batch.Rewind();
-			while (stage_in_batch.Next(current_command)) {
+			for (auto current_command: stage_in_batch) {
 				current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 				if (error) {
@@ -418,7 +410,7 @@ doContactSchedd()
 				}
 			} // elihw (command_queue)
 		} // fi has STAGE_IN requests
-	} while (stage_in_batch.Number() > 0 && curr_file_requests < max_file_requests);
+	} while (stage_in_batch.size() > 0 && curr_file_requests < max_file_requests);
 
 	if (curr_file_requests >= max_file_requests) {
 		rerun_immediately = true;
@@ -428,11 +420,11 @@ doContactSchedd()
 	
 
 	// JOB_STAGE_OUT
-	SimpleList <SchedDRequest*> stage_out_batch;
+	std::vector <SchedDRequest*> stage_out_batch;
 	curr_file_requests = 0;
 
-	command_queue.Rewind();
-	while (command_queue.Next(current_command) && curr_file_requests < max_file_requests) {
+	for (auto current_command: command_queue) {
+		if (curr_file_requests >= max_file_requests) break;
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
@@ -441,7 +433,7 @@ doContactSchedd()
 			continue;
 
 
-		stage_out_batch.Append (current_command);
+		stage_out_batch.push_back(current_command);
 		curr_file_requests++;
 	}
 
@@ -449,11 +441,10 @@ doContactSchedd()
 		rerun_immediately = true;
 	}
 
-	if (stage_out_batch.Number() > 0) {
+	if (stage_out_batch.size() > 0) {
 		std::string constraint = "";
-		stage_out_batch.Rewind();
-		int jobsexpected = stage_out_batch.Number();
-		while (stage_out_batch.Next(current_command)) {
+		int jobsexpected = stage_out_batch.size();
+		for (auto current_command : stage_out_batch) {
 			formatstr_cat( constraint, "(ClusterId==%d&&ProcId==%d)||",
 									current_command->cluster_id,
 									current_command->proc_id );
@@ -478,8 +469,7 @@ doContactSchedd()
 			dprintf (D_ALWAYS, "Transfered files for %d jobs but got files for %d jobs. (Schedd %s with contraint %s\n", jobsexpected, jobssent, ScheddAddr, constraint.c_str());
 		}
   
-		stage_out_batch.Rewind();
-		while (stage_out_batch.Next(current_command)) {
+		for (auto current_command : stage_out_batch) {
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 			if (error) {
@@ -511,8 +501,8 @@ doContactSchedd()
 
 	// JOB_REFRESH_PROXY
 	curr_file_requests = 0;
-	command_queue.Rewind();
-	while (command_queue.Next(current_command) && curr_file_requests < max_file_requests) {
+	for (auto current_command: command_queue) {
+		if (curr_file_requests >= max_file_requests) break;
 
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
@@ -612,8 +602,7 @@ doContactSchedd()
 	
 	// UPDATE_CONSTRAINED
 	// UDATE_JOB
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
+	for (auto current_command: command_queue) {
 		
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
@@ -737,9 +726,7 @@ update_report_result:
 	dprintf (D_FULLDEBUG, "Processing UPDATE_LEASE requests\n");
 
 	// UPDATE_LEASE
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
-		
+	for (auto current_command: command_queue) {
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
@@ -859,10 +846,11 @@ update_report_result:
 	filter_attrs.insert( ATTR_TOKEN_SCOPES );
 	filter_attrs.insert( ATTR_TOKEN_ID );
 
-	// SUBMIT_JOB
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
+	proc_attrs.insert(ATTR_PROC_ID);
+	proc_attrs.insert(ATTR_JOB_STATUS);
 
+	// SUBMIT_JOB
+	for (auto current_command: command_queue) {
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
@@ -876,6 +864,7 @@ update_report_result:
 
 		int ClusterId = -1;
 		int ProcId = -1;
+		bool put_in_proc = false;
 
 		if (qmgr_connection == NULL) {
 			error = TRUE;
@@ -973,13 +962,14 @@ update_report_result:
 				if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 					continue;
 				}
+				put_in_proc = proc_attrs.find(lhstr) != proc_attrs.end();
 				rhstr = ExprTreeToString( tree );
 				if( !lhstr || !rhstr) {
 					formatstr( error_msg, "ERROR: ClassAd problem in Updating by constraint %s",
 												 current_command->constraint );
 					dprintf( D_ALWAYS, "%s\n", error_msg.c_str() );
 					error = TRUE;
-				} else if( SetAttribute (ClusterId, ProcId,
+				} else if( SetAttribute (ClusterId, put_in_proc ? ProcId : -1,
 											lhstr,
 											rhstr,
 											SetAttribute_NoAck) == -1 ) {
@@ -1053,7 +1043,6 @@ submit_report_result:
 	dprintf (D_FULLDEBUG, "Processing STATUS_CONSTRAINED requests\n");
 		
 	// STATUS_CONSTRAINED
-	command_queue.Rewind();
 	if (qmgr_connection != NULL)
 	{
 		DisconnectQ(qmgr_connection, FALSE);
@@ -1066,8 +1055,7 @@ submit_report_result:
 			goto contact_schedd_disconnect;
 		}
 	}
-	while (command_queue.Next(current_command)) {
-
+	for (auto current_command: command_queue) {
 		if (current_command->status != SchedDRequest::SDCS_NEW)
 			continue;
 
@@ -1079,8 +1067,8 @@ submit_report_result:
 			break;
 		}
 
-		if (qmgr_connection != NULL) {
-			SimpleList <std::string *> matching_ads;
+		if (qmgr_connection != nullptr) {
+			std::vector<std::string *> matching_ads;
 
 			ClassAd *next_ad;
 			ClassAdList adlist;
@@ -1114,7 +1102,7 @@ submit_report_result:
 				std::string * da_buffer = new std::string();	// Use a ptr to avoid excessive copying
 				classad::ClassAdUnParser unparser;
 				unparser.Unparse( *da_buffer, next_ad );
-				matching_ads.Append (da_buffer);
+				matching_ads.push_back(da_buffer);
 			}
 			if ( errno == ETIMEDOUT ) {
 				failure_line_num = __LINE__;
@@ -1123,20 +1111,18 @@ submit_report_result:
 			}
 
 			// now output this list of classads into a result
-			const char ** result  = new const char* [matching_ads.Length() + 3];
+			const char ** result  = new const char* [matching_ads.size() + 3];
 			ASSERT(result);
 
 			std::string _ad_count;
-			formatstr( _ad_count, "%d", matching_ads.Length() );
+			formatstr( _ad_count, "%zu", matching_ads.size() );
 
 			int count=0;
 			result[count++] = GAHP_RESULT_SUCCESS;
 			result[count++] = NULL;
 			result[count++] = _ad_count.c_str();
 
-			std::string *next_string;
-			matching_ads.Rewind();
-			while (matching_ads.Next(next_string)) {
+			for (auto next_string : matching_ads) {
 				result[count++] = next_string->c_str();
 			}
 
@@ -1144,8 +1130,7 @@ submit_report_result:
 			current_command->status = SchedDRequest::SDCS_COMPLETED;
 
 			// Cleanup
-			matching_ads.Rewind();
-			while (matching_ads.Next(next_string)) {
+			for (auto next_string : matching_ads) { 
 				delete next_string;
 			}
 			//CommitTransaction();
@@ -1185,8 +1170,7 @@ submit_report_result:
 				formatstr( error_msg, "Error talking to schedd" );
 			}
 		}
-		command_queue.Rewind();
-		while (command_queue.Next(current_command)) {
+		for (auto current_command: command_queue) {
 			if ( current_command->status != SchedDRequest::SDCS_NEW ) {
 				continue;
 			}
@@ -1236,16 +1220,20 @@ submit_report_result:
 
 	dprintf (D_FULLDEBUG, "Finishing doContactSchedd()\n");
 
-	// Clean up the list
-	command_queue.Rewind();
-	while (command_queue.Next(current_command)) {
-		if (current_command->status == SchedDRequest::SDCS_COMPLETED) {
-			command_queue.DeleteCurrent();
-			delete current_command;
+	auto delete_completed = [](SchedDRequest *req) {
+		if (req->status == SchedDRequest::SDCS_COMPLETED) {
+			delete req;
+			return true;
+		} else {
+			return false;
 		}
-	}
+	};
 
-	dprintf (D_FULLDEBUG, "Schedd interaction took %ld seconds.\n", time(NULL)-starttime);
+	// Clean up the list
+	auto last = std::remove_if(command_queue.begin(), command_queue.end(), delete_completed);
+	command_queue.erase(last, command_queue.end());
+
+	dprintf (D_FULLDEBUG, "Schedd interaction took %ld seconds.\n", time(nullptr)-starttime);
 	if (rerun_immediately) {
 		dprintf (D_FULLDEBUG, "Schedd interaction time hit limit; will retry immediately.\n");
 	}
@@ -1589,22 +1577,19 @@ get_class_ad (const char * s, ClassAd ** class_ad) {
 int
 enqueue_command (SchedDRequest * request) {
 	request->status = SchedDRequest::SDCS_NEW;
-	command_queue.Append (request);
+	command_queue.push_back(request);
 	return TRUE;
 }
 
 void
 flush_results()
 {
-	std::string *next_str;
-
-	results_queue.Rewind();
-	while ( results_queue.Next( next_str ) ) {
+	for (auto next_str : results_queue) {
 		daemonCore->Write_Pipe( RESULT_OUTBOX, next_str->c_str(),
 								next_str->length() );
 		delete next_str;
 	}
-	results_queue.Clear();
+	results_queue.clear();
 }
 
 void
@@ -1636,5 +1621,5 @@ enqueue_result (int req_id, const char ** results, const int argc)
 	}
 
 	*buffer += '\n';
-	results_queue.Append( buffer );
+	results_queue.push_back( buffer );
 }

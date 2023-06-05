@@ -43,6 +43,9 @@
 #include <set>
 #include "dagman_metrics.h"
 #include "enum_utils.h"
+#include "condor_getcwd.h"
+#include "directory.h"
+#include "tmp_dir.h"
 #include <iostream>
 
 const CondorID Dag::_defaultCondorId;
@@ -150,7 +153,7 @@ Dag::Dag( /* const */ std::list<std::string> &dagFiles,
 		PrintDagFiles( dagFiles );
 	}
 
- 	_readyQ = new PrioritySimpleList<Job*>;
+ 	_readyQ = new DagPriorityQ;
 	_submitQ = new std::queue<Job*>;
 	if( !_readyQ || !_submitQ ) {
 		EXCEPT( "ERROR: out of memory (%s:%d)!", __FILE__, __LINE__ );
@@ -873,7 +876,7 @@ Dag::RemoveBatchJob(Job *node) {
 	std::string constraint;
 
 	args.AppendArg( _condorRmExe );
-	args.AppendArg(node->GetCluster());
+	args.AppendArg(std::to_string(node->GetCluster()));
 	args.AppendArg( "-const" );
 
 		// Adding this DAGMan's cluster ID as a constraint to
@@ -1556,6 +1559,8 @@ Dag::StartNode( Job *node, bool isRetry )
 		EXCEPT( "Node %s not ready to submit!", node->GetJobName() );
 	}
 
+	if (!isRetry) { WriteSavePoint(node); }
+
 	// We should never be calling this function when the dag is being used
 	// as a splicing dag.
 	ASSERT( _isSplice == false );
@@ -1572,12 +1577,12 @@ Dag::StartNode( Job *node, bool isRetry )
 
 	// no PRE script exists or is done, so add job to the queue of ready jobs
 	if ( isRetry && m_retryNodeFirst ) {
-		_readyQ->Prepend( node, -node->_effectivePriority );
+		_readyQ->prepend(node);
 	} else {
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( node, -node->_effectivePriority );
+			_readyQ->prepend(node);
 		} else {
-			_readyQ->Append( node, -node->_effectivePriority );
+			_readyQ->append(node);
 		}
 	}
 	return TRUE;
@@ -1596,17 +1601,19 @@ Dag::StartFinalNode()
 			// Note:  maybe we should change nodes in the prerun state
 			// to not ready here, to be more consistent.  But I'm not
 			// dealing with that for now.  wenger 2014-03-17
-		Job* job;
-		_readyQ->Rewind();
-		while ( _readyQ->Next( job ) ) {
+		auto nonFinal = [](Job *job) -> bool {
 			if ( !(job->GetType() == NodeType::FINAL) ) {
 				debug_printf( DEBUG_DEBUG_1,
-							"Removing node %s from ready queue\n",
-							job->GetJobName() );
-				_readyQ->DeleteCurrent();
+						"Removing node %s from ready queue\n",
+						job->GetJobName() );
 				job->SetStatus( Job::STATUS_NOT_READY );
+				return true;
 			}
-		}
+			return false;
+		};
+		auto it = std::remove_if(_readyQ->begin(), _readyQ->end(), nonFinal);
+		_readyQ->erase(it, _readyQ->end());
+		_readyQ->make_heap();
 
 			// Now start up the final node.
 		_final_job->SetStatus( Job::STATUS_READY );
@@ -1684,7 +1691,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	time_t cycleStart = time( NULL );
 
 		// Jobs deferred by category throttles.
-	PrioritySimpleList<Job*> deferredJobs;
+	std::vector<Job*> deferredJobs;
 
 	int numSubmitsThisCycle = 0;
 
@@ -1741,7 +1748,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 //		PrintReadyQ( DEBUG_DEBUG_4 );
 
 			// no jobs ready to submit
-    	if( _readyQ->IsEmpty() ) {
+    	if( _readyQ->empty() ) {
 			break; // break out of while loop
     	}
 
@@ -1750,18 +1757,18 @@ Dag::SubmitReadyJobs(const Dagman &dm)
         	debug_printf( DEBUG_DEBUG_1,
                       	"Max jobs (%d) already running; "
 					  	"deferring submission of %d ready job%s.\n",
-                      	_maxJobsSubmitted, _readyQ->Number(),
-					  	_readyQ->Number() == 1 ? "" : "s" );
-			_maxJobsDeferredCount += _readyQ->Number();
+                      	_maxJobsSubmitted, _readyQ->size(),
+					  	_readyQ->size() == 1 ? "" : "s" );
+			_maxJobsDeferredCount += _readyQ->size();
 			break; // break out of while loop
     	}
 		if ( _maxIdleJobProcs && (_numIdleJobProcs >= _maxIdleJobProcs) ) {
         	debug_printf( DEBUG_DEBUG_1,
 					  	"Hit max number of idle DAG nodes (%d); "
 					  	"deferring submission of %d ready job%s.\n",
-					  	_maxIdleJobProcs, _readyQ->Number(),
-					  	_readyQ->Number() == 1 ? "" : "s" );
-			_maxIdleDeferredCount += _readyQ->Number();
+					  	_maxIdleJobProcs, _readyQ->size(),
+					  	_readyQ->size() == 1 ? "" : "s" );
+			_maxIdleDeferredCount += _readyQ->size();
 			break; // break out of while loop
 		}
 
@@ -1780,10 +1787,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 		}
 
 			// remove & submit first job from ready queue
-		Job* job;
-		_readyQ->Rewind();
-		_readyQ->Next( job );
-		_readyQ->DeleteCurrent();
+		Job* job = _readyQ->pop();
 		ASSERT( job != NULL );
 
 		debug_printf( DEBUG_DEBUG_1, "Got node %s from the ready queue\n",
@@ -1803,7 +1807,7 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 						"Node %s deferred by category throttle (%s, %d)\n",
 						job->GetJobName(), catThrottle->_category->c_str(),
 						catThrottle->_maxJobs );
-			deferredJobs.Prepend( job, -job->_effectivePriority );
+			deferredJobs.push_back(job);
 			_catThrottleDeferredCount++;
 		} else if (_dry_run) {
 			// Don't actually submit the job. Just terminate it right away
@@ -1840,13 +1844,11 @@ Dag::SubmitReadyJobs(const Dagman &dm)
 	}
 
 		// Put any deferred jobs back into the ready queue for next time.
-	deferredJobs.Rewind();
-	Job *job;
-	while ( deferredJobs.Next( job ) ) {
+	for (Job *job : deferredJobs) {
 		debug_printf( DEBUG_DEBUG_1,
 					"Returning deferred node %s to the ready queue\n",
 					job->GetJobName() );
-		_readyQ->Prepend( job, -job->_effectivePriority );
+		_readyQ->prepend(job);
 	}
 
 	return numSubmitsThisCycle;
@@ -1959,9 +1961,9 @@ Dag::PreScriptReaper( Job *job, int status )
 		job->retval = 0; // for safety on retries
 		job->SetStatus( Job::STATUS_READY );
 		if ( _submitDepthFirst ) {
-			_readyQ->Prepend( job, -job->_effectivePriority );
+			_readyQ->prepend(job);
 		} else {
-			_readyQ->Append( job, -job->_effectivePriority );
+			_readyQ->append(job);
 		}
 	}
 
@@ -2105,20 +2107,22 @@ void
 Dag::PrintReadyQ( debug_level_t level ) const {
 	if( DEBUG_LEVEL( level ) ) {
 		dprintf( D_ALWAYS, "Ready Queue: " );
-		if( _readyQ->IsEmpty() ) {
+		if( _readyQ->empty() ) {
 			dprintf( D_ALWAYS | D_NOHEADER, "<empty>\n" );
 			return;
 		}
-		_readyQ->Rewind();
-		Job* job = 0;
-		_readyQ->Next( job );
-		if( job ) {
-			dprintf( D_ALWAYS | D_NOHEADER, "%s", job->GetJobName() );
+
+		auto it = _readyQ->begin();
+		bool first = true;
+		while (it != _readyQ->end()) {
+			if (first) {
+				first = false;
+				dprintf( D_ALWAYS | D_NOHEADER, "%s", (*it)->GetJobName() );
+			} else {
+				dprintf( D_ALWAYS | D_NOHEADER, ", %s", (*it)->GetJobName() );
+			}
+			it++;
 		}
-		while( _readyQ->Next( job ) ) {
-			dprintf( D_ALWAYS | D_NOHEADER, ", %s", job->GetJobName() );
-		}
-		dprintf( D_ALWAYS | D_NOHEADER, "\n" );
 	}
 }
 
@@ -2308,9 +2312,11 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 			bool isPartial ) /* const */
 {
 	std::string rescueDagFile;
+	std::string headerInfo;
 	if ( parseFailed ) {
 		rescueDagFile = dagFile;
 		rescueDagFile += ".parse_failed";
+		formatstr(headerInfo,"# \"Rescue\" DAG file, created after failure parsing\n#   the %s DAG file\n", dagFile);
 	} else {
 		int nextRescue = _dagmanUtils.FindLastRescueDagNum( dagFile, multiDags,
 					maxRescueDagNum ) + 1;
@@ -2321,6 +2327,7 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 			nextRescue = maxRescueDagNum;
 		}
 		rescueDagFile = _dagmanUtils.RescueDagName( dagFile, multiDags, nextRescue );
+		formatstr(headerInfo,"# Rescue DAG file, created after running\n#   the %s DAG file\n", dagFile);
 	}
 
 		// Note: there could possibly be a race condition here if two
@@ -2328,17 +2335,77 @@ void Dag::Rescue ( const char * dagFile, bool multiDags,
 		// should be avoided by the lock file, though, so I'm not doing
 		// anything about it right now.  wenger 2007-02-27
 
-	WriteRescue( rescueDagFile.c_str(), dagFile, parseFailed, isPartial );
+	WriteRescue( rescueDagFile.c_str(), headerInfo.c_str(), parseFailed, isPartial );
+}
+
+//-----------------------------------------------------------------------------
+void Dag::WriteSavePoint(Job* node) {
+	if (!node || !node->IsSavePoint()) { return; }
+	std::string saveFile = node->GetSaveFile();
+	std::string saveDir = condor_dirname(saveFile.c_str());
+	bool no_path = saveFile.compare(condor_basename(saveFile.c_str())) == MATCH;
+	//If path is current directory '.' but save file is not specified as ./filename
+	//then make path to save_files sub directory
+	if (saveDir.compare(".") == MATCH && no_path) {
+		//Use full path from condor_getcwd so writing save files written to save_files
+		//directory are unaffected by useDagDir
+		std::string cwd;
+		condor_getcwd(cwd);
+		std::string subDir = condor_dirname(_dagFiles.front().c_str());
+		if (subDir.compare(".") != MATCH) {
+			std::string tmp;
+			dircat(cwd.c_str(), subDir.c_str(), tmp);
+			cwd = tmp;
+		}
+		dircat(cwd.c_str(), "save_files", saveDir);
+		Directory dir(saveDir.c_str());
+		if (!dir.IsDirectory()) {
+			if (mkdir(saveDir.c_str(),0755) < 0 && errno != EEXIST) {
+				debug_printf(DEBUG_QUIET, "Error: Failed to create save file dir (%s): Errno %d (%s)\n",
+							saveDir.c_str(), errno, strerror(errno));
+				return;
+			}
+		}
+		std::string temp;
+		dircat(saveDir.c_str(), saveFile.c_str(), temp);
+		saveFile = temp;
+	}
+	TmpDir tmpDir;
+	std::string errMsg;
+	//If using useDagDir then switch to directory to write save files
+	//in case relative path was given
+	if (_useDagDir) {
+		if (!tmpDir.Cd2TmpDir(node->GetDirectory(), errMsg)) {
+			debug_printf(DEBUG_QUIET, "Error: Failed to change to directory %s: %s\n", node->GetDirectory(), errMsg.c_str());
+			debug_printf(DEBUG_QUIET, "       Not writing save file (%s) at node %s.\n", saveFile.c_str(), node->GetJobName());
+			return;
+		}
+	}
+	//At the moment only keep one older iteration of save files marked as filename.old
+	if (_dagmanUtils.fileExists(saveFile)) {
+		std::string rotateName;
+		formatstr(rotateName, "%s.old", saveFile.c_str());
+		remove(rotateName.c_str());
+		rename(saveFile.c_str(), rotateName.c_str());
+	}
+	//Write save file
+	std::string headerInfo;
+	formatstr(headerInfo, "# Save file written at Start Node %s\n", node->GetJobName());
+	WriteRescue(saveFile.c_str(), headerInfo.c_str(), false, true, true);
+	if (_useDagDir) {
+		if (!tmpDir.Cd2MainDir(errMsg)) {
+			debug_printf(DEBUG_QUIET, "Error: Failed to change back to original directory: %s\n", errMsg.c_str());
+		}
+	}
 }
 
 static const char *RESCUE_DAG_VERSION = "2.0.1";
 
 //-----------------------------------------------------------------------------
-void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
-			bool parseFailed, bool isPartial) /* const */
+void Dag::WriteRescue (const char * rescue_file, const char * headerInfo,
+			bool parseFailed, bool isPartial, bool isSavePoint) /* const */
 {
-	debug_printf( DEBUG_NORMAL, "Writing Rescue DAG to %s...\n",
-				rescue_file );
+	debug_printf(DEBUG_NORMAL, "Writing %s to %s...\n", isSavePoint ? "Save File" : "Rescue DAG", rescue_file);
 
     FILE *fp = safe_fopen_wrapper_follow(rescue_file, "w");
     if (fp == NULL) {
@@ -2347,17 +2414,12 @@ void Dag::WriteRescue (const char * rescue_file, const char * dagFile,
         return;
     }
 
-	bool reset_retries_upon_rescue =
-		param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
-
-
-	if ( parseFailed ) {
-    	fprintf(fp, "# \"Rescue\" DAG file, created after failure parsing\n");
-    	fprintf(fp, "#   the %s DAG file\n", dagFile);
-	} else {
-    	fprintf(fp, "# Rescue DAG file, created after running\n");
-    	fprintf(fp, "#   the %s DAG file\n", dagFile);
+	bool reset_retries_upon_rescue = true;
+	if (!isSavePoint) {
+		reset_retries_upon_rescue = param_boolean( "DAGMAN_RESET_RETRIES_UPON_RESCUE", true );
 	}
+
+	fprintf(fp,"%s",headerInfo);
 
 	time_t timestamp;
 	(void)time( &timestamp );
@@ -4352,9 +4414,9 @@ Dag::ProcessFailedSubmit( Job *node, int max_submit_attempts )
 				thisSubmitDelay == 1 ? "" : "s" );
 
 		if ( m_retrySubmitFirst ) {
-			_readyQ->Prepend(node, -node->_effectivePriority);
+			_readyQ->prepend(node);
 		} else {
-			_readyQ->Append(node, -node->_effectivePriority);
+			_readyQ->append(node);
 		}
 	}
 }

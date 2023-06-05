@@ -89,9 +89,8 @@ public:
 	
 	// Note this isn't called in the starter, as DaemonCore calls
 	// it after calling the Reaper, and the starter exits in the
-	// job reaperNote this isn't called in the starter, as DaemonCore calls
-	// it after calling the Reaper, and the starter exits in the
-	// job reaper.  Also, it should be called unregister_subfamily
+	// job reaper
+	// Also, it should be called unregister_subfamily
 	//
 	bool unregister_family(pid_t);
 

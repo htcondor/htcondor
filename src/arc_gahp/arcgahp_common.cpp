@@ -30,7 +30,7 @@ static std::string arc_proxy_user;
 static std::string arc_proxy_passwd;
 
 // List for all arc commands
-static SimpleList<ArcGahpCommand*> arc_gahp_commands;
+static std::vector<ArcGahpCommand*> arc_gahp_commands;
 
 void set_arc_proxy_server(const char* url)
 {
@@ -129,26 +129,23 @@ registerArcGahpCommand(const char* command, ioCheckfn iofunc, workerfn workerfun
 	ArcGahpCommand* newcommand = new ArcGahpCommand(command, iofunc, workerfunc);
 	ASSERT(newcommand);
 
-	arc_gahp_commands.Append(newcommand);
+	arc_gahp_commands.push_back(newcommand);
 }
 
 int
 numofArcCommands(void)
 {
-	return arc_gahp_commands.Number();
+	return (int) arc_gahp_commands.size();
 }
 
 int
 allArcCommands(StringList &output)
 {
-	ArcGahpCommand *one_cmd = NULL;
-
-	arc_gahp_commands.Rewind();
-	while( arc_gahp_commands.Next(one_cmd) ) {
-		output.append(one_cmd->command.c_str());
+	for (auto acg : arc_gahp_commands) {
+		output.append(acg->command.c_str());
 	}
 
-	return arc_gahp_commands.Number();
+	return (int) arc_gahp_commands.size();
 }
 
 bool
@@ -158,13 +155,10 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 		return false;
 	}
 
-	ArcGahpCommand *one_cmd = NULL;
-
-	arc_gahp_commands.Rewind();
-	while( arc_gahp_commands.Next(one_cmd) ) {
-		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->iocheckfunction ) {
-			return one_cmd->iocheckfunction(argv, argc);
+	for (auto agc: arc_gahp_commands) {
+		if( !strcasecmp(agc->command.c_str(), cmd) &&
+			agc->iocheckfunction ) {
+			return agc->iocheckfunction(argv, argc);
 		}
 	}
 
@@ -179,13 +173,10 @@ executeWorkerFunc(const char* cmd, GahpRequest *gahp_request)
 		return false;
 	}
 
-	ArcGahpCommand *one_cmd = NULL;
-
-	arc_gahp_commands.Rewind();
-	while( arc_gahp_commands.Next(one_cmd) ) {
-		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->workerfunction ) {
-			return one_cmd->workerfunction(gahp_request);
+	for (auto agc: arc_gahp_commands) {
+		if( !strcasecmp(agc->command.c_str(), cmd) &&
+			agc->workerfunction ) {
+			return agc->workerfunction(gahp_request);
 		}
 	}
 	dprintf (D_ALWAYS, "Unknown command %s\n", cmd);

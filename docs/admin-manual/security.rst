@@ -212,14 +212,14 @@ If the condor daemon receiving the connection is the *condor_collector*, it firs
 checks to see if there are specific authorization lists for daemons advertising
 to the collector (i.e. joining the pool).  If the incoming command is
 advertising a submit node (i.e. a *condor_schedd* daemon), it will check
-``ALLOW_ADVERTISE_SCHEDD``.  If the incoming command is for an execute node (a
+:macro:`ALLOW_ADVERTISE_SCHEDD`.  If the incoming command is for an execute node (a
 *condor_startd* daemon), it will check ``ALLOW_ADVERTISE_STARTD``.  And if the
 incoming command is for a *condor_master* (which runs on all HTCondor nodes) it
-will check ``ALLOW_ADVERTISE_MASTER``.  If the list it checks is undefined, it will
-then check ``ALLOW_DAEMON`` instead.
+will check :macro:`ALLOW_ADVERTISE_MASTER`.  If the list it checks is undefined, it will
+then check :macro:`ALLOW_DAEMON` instead.
 
 If the condor daemon receiving the connection is not a *condor_collector*, the
-``ALLOW_DAEMON`` is the only list that is looked at.
+:macro:`ALLOW_DAEMON` is the only list that is looked at.
 
 It is notable that many daemon-to-daemon connections have been optimized to not
 need to authenticate using one of the standard methods.  Similar to the
@@ -234,8 +234,8 @@ the other configured; it is enough to have secure channels from the SchedD to
 the Collector and from the StartD to the collector.  Likewise, a Negotiator can
 establish trust with a SchedD in the same way: the SchedD trusts the Collector
 to tell only trustworthy Negotiators its secret.  However, some features such
-as *condor_ssh_to_job* and *condor_tail* will not work unless the submit machine
-can authenticate directly to the execute machine, which is why we mentioned
+as *condor_ssh_to_job* and *condor_tail* will not work unless the access point
+can authenticate directly to the execute point, which is why we mentioned
 needing to distribute the signing key earlier -- if the server does not have
 the signing key, it cannot directly validate the incoming ``IDTOKEN`` used for
 authentication.
@@ -297,8 +297,7 @@ Privacy
     data sent for internal communication, as well as user data, such as
     files and executables. Encryption operates on network transmissions:
     unencrypted data is stored on disk by default. However, see the
-    ``ENCRYPT_EXECUTE_DIRECTORY``
-    :index:`ENCRYPT_EXECUTE_DIRECTORY` setting for how to encrypt
+    :macro:`ENCRYPT_EXECUTE_DIRECTORY` setting for how to encrypt
     job data on the disk of an execute node.
 
 Integrity
@@ -442,7 +441,7 @@ described.
     operation of HTCondor. An example of this internal operation is when
     the *condor_startd* daemon sends its ClassAd updates to the
     *condor_collector* daemon (which may be more specifically
-    controlled by the ``ADVERTISE_STARTD`` access level). Authorization
+    controlled by the ADVERTISE_STARTD access level). Authorization
     at this access level should only be given to the user account under
     which the HTCondor daemons run. The ``DAEMON`` level of access
     implies both ``READ`` and ``WRITE`` access.
@@ -589,8 +588,8 @@ SCHEDD:
     claim. Therefore, if one desires to only authorize specific execute
     machines to run jobs, one must either limit which machines are
     allowed to advertise themselves to the pool (most common) or
-    configure the *condor_schedd* 's ``ALLOW_CLIENT``
-    :index:`ALLOW_CLIENT` setting to only allow connections from
+    configure the *condor_schedd* 's
+    :macro:`ALLOW_CLIENT` setting to only allow connections from
     the *condor_schedd* to the trusted execute machines.
 
 MASTER: All commands are registered with ``ADMINISTRATOR`` access:
@@ -711,7 +710,7 @@ policy could allow *condor_q* to happen without any authentication.
 
 Whether or not security negotiation occurs depends on the setting at
 both the client and daemon side of the configuration variable(s) defined
-by ``SEC_*_NEGOTIATION``. ``SEC_DEFAULT_NEGOTIATION`` is a variable
+by ``SEC_*_NEGOTIATION``. :macro:`SEC_DEFAULT_NEGOTIATION` is a variable
 representing the entire set of configuration variables for
 ``NEGOTIATION``. For the client side setting, the only definitions that
 make sense are ``REQUIRED`` and ``NEVER``. For the daemon side setting,
@@ -782,7 +781,7 @@ The DEFAULT value for <context> provides a way to set a policy for all
 access levels (READ, WRITE, etc.) that do not have a specific
 configuration variable defined. In addition, some access levels will
 default to the settings specified for other access levels. For example,
-``ADVERTISE_STARTD`` defaults to ``DAEMON``, and ``DAEMON`` defaults to
+:macro:`ADVERTISE_STARTD` defaults to ``DAEMON``, and ``DAEMON`` defaults to
 ``WRITE``, which then defaults to the general DEFAULT setting.
 
 Configuration for Security Methods
@@ -813,39 +812,36 @@ Authentication
 
 The client side of any communication uses one of two macros to specify
 whether authentication is to occur:
-:index:`SEC_DEFAULT_AUTHENTICATION`
-:index:`SEC_CLIENT_AUTHENTICATION`
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION
-        SEC_CLIENT_AUTHENTICATION
++-----------------------------------+-----------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION`|:macro:`SEC_CLIENT_AUTHENTICATION` |
++-----------------------------------+-----------------------------------+
 
 For the daemon side, there are a larger number of macros to specify
 whether authentication is to take place, based upon the necessary access
-level: :index:`SEC_DEFAULT_AUTHENTICATION`
-:index:`SEC_READ_AUTHENTICATION`
-:index:`SEC_WRITE_AUTHENTICATION`
-:index:`SEC_ADMINISTRATOR_AUTHENTICATION`
-:index:`SEC_CONFIG_AUTHENTICATION`
-:index:`SEC_DAEMON_AUTHENTICATION`
-:index:`SEC_NEGOTIATOR_AUTHENTICATION`
-:index:`SEC_ADVERTISE_MASTER_AUTHENTICATION`
-:index:`SEC_ADVERTISE_STARTD_AUTHENTICATION`
-:index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION`
+level:
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION
-        SEC_READ_AUTHENTICATION
-        SEC_WRITE_AUTHENTICATION
-        SEC_ADMINISTRATOR_AUTHENTICATION
-        SEC_CONFIG_AUTHENTICATION
-        SEC_DAEMON_AUTHENTICATION
-        SEC_NEGOTIATOR_AUTHENTICATION
-        SEC_ADVERTISE_MASTER_AUTHENTICATION
-        SEC_ADVERTISE_STARTD_AUTHENTICATION
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION
++--------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION`         |
++--------------------------------------------+
+|:macro:`SEC_READ_AUTHENTICATION`            |
++--------------------------------------------+
+|:macro:`SEC_WRITE_AUTHENTICATION`           |
++--------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_AUTHENTICATION`   |
++--------------------------------------------+
+|:macro:`SEC_CONFIG_AUTHENTICATION`          |
++--------------------------------------------+
+|:macro:`SEC_DAEMON_AUTHENTICATION`          |
++--------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_AUTHENTICATION`      |
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION`|
++--------------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -871,38 +867,36 @@ definition.
 If authentication is to be done, then the communicating parties must
 negotiate a mutually acceptable method of authentication to be used. A
 list of acceptable methods may be provided by the client, using the
-macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
-:index:`SEC_CLIENT_AUTHENTICATION_METHODS`
+macros
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION_METHODS
-        SEC_CLIENT_AUTHENTICATION_METHODS
++-------------------------------------------+-------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`|:macro:`SEC_CLIENT_AUTHENTICATION_METHODS` |
++-------------------------------------------+-------------------------------------------+
 
 A list of acceptable methods may be provided by the daemon, using the
-macros :index:`SEC_DEFAULT_AUTHENTICATION_METHODS`
-:index:`SEC_READ_AUTHENTICATION_METHODS`
-:index:`SEC_WRITE_AUTHENTICATION_METHODS`
-:index:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`
-:index:`SEC_DAEMON_AUTHENTICATION_METHODS`
-:index:`SEC_CONFIG_AUTHENTICATION_METHODS`
-:index:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`
-:index:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`
-:index:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`
-:index:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS`
+macros
 
-.. code-block:: text
-
-        SEC_DEFAULT_AUTHENTICATION_METHODS
-        SEC_READ_AUTHENTICATION_METHODS
-        SEC_WRITE_AUTHENTICATION_METHODS
-        SEC_ADMINISTRATOR_AUTHENTICATION_METHODS
-        SEC_CONFIG_AUTHENTICATION_METHODS
-        SEC_DAEMON_AUTHENTICATION_METHODS
-        SEC_NEGOTIATOR_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS
-        SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS
++----------------------------------------------------+
+|:macro:`SEC_DEFAULT_AUTHENTICATION_METHODS`         |
++----------------------------------------------------+
+|:macro:`SEC_READ_AUTHENTICATION_METHODS`            |
++----------------------------------------------------+
+|:macro:`SEC_WRITE_AUTHENTICATION_METHODS`           |
++----------------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_AUTHENTICATION_METHODS`   |
++----------------------------------------------------+
+|:macro:`SEC_DAEMON_AUTHENTICATION_METHODS`          |
++----------------------------------------------------+
+|:macro:`SEC_CONFIG_AUTHENTICATION_METHODS`          |
++----------------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_AUTHENTICATION_METHODS`      |
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_AUTHENTICATION_METHODS`|
++----------------------------------------------------+
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the authentication methods that are available to be
@@ -988,8 +982,8 @@ SSL authentication may be mutual or server-only.
 That is, the server always needs a certificate that can be verified by
 the client, but a certificate for the client may be optional.
 Whether a client certificate is required is controlled by
-configuration variable ``AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE``
-:index:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`, a boolean value
+configuration variable
+:macro:`AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE`, a boolean value
 that defaults to ``False``.
 If the value is ``False``, then the client may present a certificate
 to be verified by the server.
@@ -1005,26 +999,21 @@ defined by settings in the configuration files. The contents of the
 files are identical in format and interpretation to those used by other
 systems which use SSL, such as Apache httpd.
 
-The configuration variables ``AUTH_SSL_CLIENT_CERTFILE``
-:index:`AUTH_SSL_CLIENT_CERTFILE` and ``AUTH_SSL_SERVER_CERTFILE``
-:index:`AUTH_SSL_SERVER_CERTFILE` specify the file location for
-the certificate file for the initiator and recipient of connections,
-respectively. Similarly, the configuration variables
-``AUTH_SSL_CLIENT_KEYFILE`` :index:`AUTH_SSL_CLIENT_KEYFILE` and
-``AUTH_SSL_SERVER_KEYFILE`` :index:`AUTH_SSL_SERVER_KEYFILE`
-specify the locations for keys.  If no client certificate is used,
-the client will authenticate as user ``anonymous@ssl``.
+The configuration variables :macro:`AUTH_SSL_CLIENT_CERTFILE` and
+:macro:`AUTH_SSL_SERVER_CERTFILE` specify the file location for the certificate
+file for the initiator and recipient of connections, respectively. Similarly,
+the configuration variables
+:macro:`AUTH_SSL_CLIENT_KEYFILE` and
+:macro:`AUTH_SSL_SERVER_KEYFILE` specify the locations for keys.  If no client
+certificate is used, the client will authenticate as user ``anonymous@ssl``.
 
-The configuration variables ``AUTH_SSL_SERVER_CAFILE``
-:index:`AUTH_SSL_SERVER_CAFILE` and ``AUTH_SSL_CLIENT_CAFILE``
-:index:`AUTH_SSL_CLIENT_CAFILE` each specify a path and file name,
-providing the location of a file containing one or more certificates
-issued by trusted certificate authorities. Similarly,
-``AUTH_SSL_SERVER_CADIR`` :index:`AUTH_SSL_SERVER_CADIR` and
-``AUTH_SSL_CLIENT_CADIR`` :index:`AUTH_SSL_CLIENT_CADIR` each
-specify a directory with one or more files, each which may contain a
-single CA certificate. The directories must be prepared using the
-OpenSSL ``c_rehash`` utility.
+The configuration variables :macro:`AUTH_SSL_SERVER_CAFILE` and
+:macro:`AUTH_SSL_CLIENT_CAFILE` each specify a path and file name, providing
+the location of a file containing one or more certificates issued by trusted
+certificate authorities. Similarly, :macro:`AUTH_SSL_SERVER_CADIR` and
+:macro:`AUTH_SSL_CLIENT_CADIR` each specify a directory with one or more files,
+each which may contain a single CA certificate. The directories must be
+prepared using the OpenSSL ``c_rehash`` utility.
 
 Bootstrapping SSL Authentication
 ''''''''''''''''''''''''''''''''
@@ -1032,14 +1021,13 @@ HTCondor daemons exposed to the Internet may utilize server certificates provide
 by well-known authorities; however, SSL can be difficult to bootstrap for non-public
 hosts.
 
-Accordingly, on first startup, if
-``COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`` is ``True``,
-the *condor_collector* generates a new CA and key
-in the locations pointed to by ``TRUST_DOMAIN_CAFILE`` :index:`TRUST_DOMAIN_CAFILE`
-and ``TRUST_DOMAIN_CAKEY`` :index:`TRUST_DOMAIN_CAKEY`,
-respectively.  If ``AUTH_SSL_SERVER_CERTFILE`` or ``AUTH_SSL_SERVER_KEYFILE`` does
-not exist, the collector will generate a host certificate and key using the generated
-CA and write them to the respective locations.
+Accordingly, on first startup, if :macro:`COLLECTOR_BOOTSTRAP_SSL_CERTIFICATE`
+is ``True``, the *condor_collector* generates a new CA and key in the locations
+pointed to by :macro:`TRUST_DOMAIN_CAFILE` and :macro:`TRUST_DOMAIN_CAKEY`,
+respectively.  If :macro:`AUTH_SSL_SERVER_CERTFILE` or
+:macro:`AUTH_SSL_SERVER_KEYFILE` do not exist, the collector will generate a
+host certificate and key using the generated CA and write them to the
+respective locations.
 
 The first time an unknown CA is encountered by tool such as ``condor_status``, the tool
 will prompt the user on whether it should trust the CA; the prompt looks like the following:
@@ -1055,11 +1043,11 @@ will prompt the user on whether it should trust the CA; the prompt looks like th
 
 The result will be persisted in a file at ``.condor/known_hosts`` inside the user's home directory.
 
-Similarly, a daemon authenticating as a client against a remote server will record the result
-of the authentication in a system-wide trust whose location is kept in the configuration variable
-``SEC_SYSTEM_KNOWN_HOSTS`` :index:`SEC_SYSTEM_KNOWN_HOSTS`.  Since a daemon cannot prompt the
-administrator for a decision, it will always deny unknown CAs _unless_ ``BOOTSTRAP_SSL_SERVER_TRUST``
-:index:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
+Similarly, a daemon authenticating as a client against a remote server will
+record the result of the authentication in a system-wide trust whose location
+is kept in the configuration variable :macro:`SEC_SYSTEM_KNOWN_HOSTS`.  Since a
+daemon cannot prompt the administrator for a decision, it will always deny
+unknown CAs _unless_ :macro:`BOOTSTRAP_SSL_SERVER_TRUST` is set to ``true``.
 
 The first time any daemon is authenticated, even if it's not through SSL, it will be noted in the
 ``known_hosts`` file.
@@ -1094,15 +1082,14 @@ Kerberos Authentication
 :index:`Kerberos<single: Kerberos; authentication>`
 :index:`Kerberos authentication`
 
-If Kerberos is used for authentication, then a mapping from a Kerberos
-domain (called a realm) to an HTCondor UID domain is necessary. There
-are two ways to accomplish this mapping. For a first way to specify the
-mapping, see :ref:`admin-manual/security:the unified map file for authentication`
-to use HTCondor's unified map file. A second way to specify the mapping is to set
-the configuration variable ``KERBEROS_MAP_FILE``
-:index:`KERBEROS_MAP_FILE` to the path of an
-administrator-maintained Kerberos-specific map file. The configuration
-syntax is
+If Kerberos is used for authentication, then a mapping from a Kerberos domain
+(called a realm) to an HTCondor UID domain is necessary. There are two ways to
+accomplish this mapping. For a first way to specify the mapping, see
+:ref:`admin-manual/security:the unified map file for authentication` to use
+HTCondor's unified map file. A second way to specify the mapping is to set the
+configuration variable :macro:`KERBEROS_MAP_FILE` to the path of an
+administrator-maintained Kerberos-specific map file. The configuration syntax
+is
 
 .. code-block:: condor-config
 
@@ -1121,25 +1108,24 @@ Here are two lines from a map file to use as an example:
        CS.WISC.EDU   = cs.wisc.edu
        ENGR.WISC.EDU = ee.wisc.edu
 
-If a ``KERBEROS_MAP_FILE`` configuration variable is defined and set,
+If a :macro:`KERBEROS_MAP_FILE` configuration variable is defined and set,
 then all permitted realms must be explicitly mapped. If no map file is
 specified, then HTCondor assumes that the Kerberos realm is the same as
 the HTCondor UID domain.
 :index:`Kerberos principal<single: Kerberos principal; authentication>`
 
-The configuration variable ``KERBEROS_SERVER_PRINCIPAL``
-:index:`KERBEROS_SERVER_PRINCIPAL` defines the name of a Kerberos
-principal, to override the default ``host/<hostname>@<realm>``.
-A principal specifies a unique name to which a set of
-credentials may be assigned.
+The configuration variable :macro:`KERBEROS_SERVER_PRINCIPAL` defines the name
+of a Kerberos principal, to override the default ``host/<hostname>@<realm>``.
+A principal specifies a unique name to which a set of credentials may be
+assigned.
 
-The configuration variable ``KERBEROS_SERVER_SERVICE``
-:index:`KERBEROS_SERVER_SERVICE` defines a Kerberos service to override
-the default ``host``. HTCondor prefixes this to ``/<hostname>@<realm>``
-to obtain the default Kerberos principal.  Configuration variable
-``KERBEROS_SERVER_PRINCIPAL`` overrides ``KERBEROS_SERVER_SERVICE``.
+The configuration variable :macro:`KERBEROS_SERVER_SERVICE` defines a Kerberos
+service to override the default ``host``. HTCondor prefixes this to
+``/<hostname>@<realm>`` to obtain the default Kerberos principal.
+Configuration variable ``KERBEROS_SERVER_PRINCIPAL`` overrides
+``KERBEROS_SERVER_SERVICE``.
 
-As an example, the configuration
+For example, the configuration
 
 .. code-block:: condor-config
 
@@ -1182,7 +1168,7 @@ shared secret in this context is referred to as the pool password.
 Before a daemon can use password authentication, the pool password must
 be stored on the daemon's local machine. On Unix, the password will be
 placed in a file defined by the configuration variable
-``SEC_PASSWORD_FILE`` :index:`SEC_PASSWORD_FILE`. This file will
+:macro:`SEC_PASSWORD_FILE`. This file will
 be accessible only by the UID that HTCondor is started as. On Windows,
 the same secure password store that is used for user passwords will be
 used for the pool password (see the
@@ -1326,23 +1312,23 @@ using one of several pool signing keys.
 It also allows a daemon or tool to authenticate to a remote pool
 without having that pool's password.
 As tokens are derived from a specific signing key,
-if an administrator removes a signing key from the directory specified in ``SEC_PASSWORD_DIRECTORY``,
+if an administrator removes a signing key from the directory specified in :macro:`SEC_PASSWORD_DIRECTORY`,
 then all derived tokens are immediately invalid.  Most simple installs will
 utilize a single signing key, named ``POOL``.
 
 While most token signing keys are placed in the directory specified by
-``SEC_PASSWORD_DIRECTORY``, with the filename within the directory
-determining the key's name, the ``POOL`` token signing key can be
-located elsewhere by setting ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
-to the full pathname of the desired file.
-On Linux the same file
-can be both the pool signing key and the pool password if ``SEC_PASSWORD_FILE``
-and ``SEC_TOKEN_POOL_SIGNING_KEY_FILE`` refer to the same file.  However this is not preferred
-because in order to properly interoperate with older versions of HTCondor the pool password will
-be read as a text file and truncated at the first NUL character.  This differs from
-the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9 releases
-used the pool password as the pool signing key for tokens, those versions will not
-interoperate with 9.0 if the pool signing key file contains NUL characters.
+``SEC_PASSWORD_DIRECTORY``, with the filename within the directory determining
+the key's name, the ``POOL`` token signing key can be located elsewhere by
+setting :macro:`SEC_TOKEN_POOL_SIGNING_KEY_FILE` to the full pathname of the
+desired file.  On Linux the same file can be both the pool signing key and the
+pool password if :macro:`SEC_PASSWORD_FILE` and ``SEC_TOKEN_POOL_SIGNING_KEY_FILE``
+refer to the same file.  However this is not preferred because in order to
+properly interoperate with older versions of HTCondor the pool password will be
+read as a text file and truncated at the first NUL character.  This differs
+from the pool signing key which is read as binary in HTCondor 9.0.  Some 8.9
+releases used the pool password as the pool signing key for tokens, those
+versions will not interoperate with 9.0 if the pool signing key file contains
+NUL characters.
 
 The *condor_collector*
 process will automatically generate the pool signing key named ``POOL`` on startup
@@ -1356,19 +1342,20 @@ command-line utility:
     $ condor_token_create -identity frida@pool.example.com
 
 The resulting token may be given to Frida and appended to a file in the directory
-specified by ``SEC_TOKEN_DIRECTORY`` (defaults to ``~/.condor/tokens.d``).  Subsequent
+specified by :macro:`SEC_TOKEN_DIRECTORY` (defaults to ``~/.condor/tokens.d``).  Subsequent
 authentications to the pool will utilize this token and cause Frida to be authenticated
 as the identity ``frida@pool.example.com``.  For daemons, tokens are stored in
-``SEC_TOKEN_SYSTEM_DIRECTORY``; on Unix platforms, this defaults to
+:macro:`SEC_TOKEN_SYSTEM_DIRECTORY`; on Unix platforms, this defaults to
 ``/etc/condor/tokens.d`` which should be a directory with permissions that only allow
 read and write access by user root.
 
-*Note* that each pool signing key is named (the pool signing key defaults to the special name
-``POOL``) by its corresponding filename in ``SEC_PASSWORD_DIRECTORY``; HTCondor
-will assume that, for all daemons in the same *trust domain* (defaulting to the
-HTCondor pool) will have the same signing key for the same name.  That is, the
-signing key contained in ``key1`` in host ``pool.example.com`` is identical to the
-signing key contained in ``key1`` in host ``submit.example.com``.
+*Note* that each pool signing key is named (the pool signing key defaults to
+the special name ``POOL``) by its corresponding filename in
+:macro:`SEC_PASSWORD_DIRECTORY`; HTCondor will assume that, for all daemons in
+the same *trust domain* (defaulting to the HTCondor pool) will have the same
+signing key for the same name.  That is, the signing key contained in ``key1``
+in host ``pool.example.com`` is identical to the signing key contained in
+``key1`` in host ``submit.example.com``.
 
 Unlike pool passwords, tokens can have a limited lifetime and can limit the
 authorizations allowed to the client.  For example,
@@ -1426,12 +1413,12 @@ confidential connnections.
 
 When a daemon issues a token for a client (e.g. for
 ``condor_token_fetch`` or ``condor_token_request``), the signing key it
-uses must appear in the list ``SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS``.
+uses must appear in the list :macro:`SEC_TOKEN_FETCH_ALLOWED_SIGNING_KEYS`.
 If the client doesn't request a specific signing key to use, then the
-key given by ``SEC_TOKEN_ISSUER_KEY`` is used.
+key given by :macro:`SEC_TOKEN_ISSUER_KEY` is used.
 The default for both of these configuration parameters is ``POOL``.
 
-If there are multiple tokens in files in the ``SEC_TOKEN_SYSTEM_DIRECTORY``, then
+If there are multiple tokens in files in the :macro:`SEC_TOKEN_SYSTEM_DIRECTORY`, then
 the daemon will search for tokens in that directory based on lexicographical order;
 the exception is that the file ``$(SUBSYS)_auto_generated_token`` will be searched first for
 daemons of type ``$(SUBSYS)``.  For example, if ``SEC_TOKEN_SYSTEM_DIRECTORY`` is set to
@@ -1442,7 +1429,7 @@ Users may create their own tokens with ``condor_token_fetch``.  This command-lin
 utility will contact the default ``condor_schedd`` and request a new
 token given the user's authenticated identity.  Unlike ``condor_token_create``,
 the ``condor_token_fetch`` has no control over the mapped identity (but does not
-need to read the files in ``SEC_PASSWORD_DIRECTORY``).
+need to read the files in :macro:`SEC_PASSWORD_DIRECTORY`).
 
 If no security authentication methods specified by the administrator - and the
 daemon or user has access to at least one token - then ``IDTOKENS`` authentication
@@ -1457,7 +1444,7 @@ to setup ``IDTOKENS`` authentication, enable it in the list of authentication me
 **Revoking Token**: If a token is lost, stolen, or accidentally exposed,
 then the system administrator may use the token revocation mechanism in order
 to prevent unauthorized use.  Revocation can be accomplished by setting the
-``SEC_TOKEN_REVOCATION_EXPR`` configuration parameter;
+:macro:`SEC_TOKEN_REVOCATION_EXPR` configuration parameter;
 when set, the value of this parameter will be
 evaluated as a ClassAd expression against the token's contents.
 
@@ -1497,12 +1484,12 @@ the revocation:
     # Revokes *only* this token:
     SEC_TOKEN_REVOCATION_EXPR = jti =?= "c760c2af193a1fd4e40bc9c53c96ee7c"
 
-The revocation only works on the daemon where ``SEC_TOKEN_REVOCATION_EXPR`` is
-set; to revoke a token across the entire pool, set
-``SEC_TOKEN_REVOCATION_EXPR`` on every host.
+The revocation only works on the daemon where
+:macro:`SEC_TOKEN_REVOCATION_EXPR` is set; to revoke a token across the entire
+pool, set :macro:`SEC_TOKEN_REVOCATION_EXPR` on every host.
 
 In order to invalidate all tokens issued by a given master password in
-``SEC_PASSWORD_DIRECTORY``, simply remove the file from the directory.
+:macro:`SEC_PASSWORD_DIRECTORY`, simply remove the file from the directory.
 
 File System Authentication
 ''''''''''''''''''''''''''
@@ -1527,7 +1514,7 @@ the ownership of a file in the identity verification of a client. In
 this case, a daemon authenticating a client requires the client to write
 a file in a specific location, but the location is not restricted to
 ``/tmp``. The location of the file is specified by the configuration
-variable ``FS_REMOTE_DIR`` :index:`FS_REMOTE_DIR`.
+variable :macro:`FS_REMOTE_DIR`.
 
 Windows Authentication
 ''''''''''''''''''''''
@@ -1554,19 +1541,16 @@ is done via an SSL host certificate (the same as with SSL authentication).
 More information about SciTokens can be found at
 `https://scitokens.org <https://scitokens.org>`_.
 
-Some other JWT token types can be used with the SciTokens
-authentication method. WLCG tokens are accepted automatically.
-Other token types, such as EGI CheckIn tokens, require some relaxation
-of the SciTokens validation checks.
-Configuration parameter ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``
-determines whether any tokens will be accepted under these relaxed
-checks. It's a boolean value that defaults to ``True``.
-Configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
-determines which issuers' tokens will be accepted under these relaxed
-checks. It's a list of issuer URLs that defaults to the EGI CheckIn
-issuer.
-These parameters should be used with caution, as they disable some
-security checks.
+Some other JWT token types can be used with the SciTokens authentication
+method. WLCG tokens are accepted automatically.  Other token types, such as EGI
+CheckIn tokens, require some relaxation of the SciTokens validation checks.
+Configuration parameter :macro:`SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES`
+determines whether any tokens will be accepted under these relaxed checks. It's
+a boolean value that defaults to ``True``.  Configuration parameter
+:macro:`SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS` determines which issuers' tokens
+will be accepted under these relaxed checks. It's a list of issuer URLs that
+defaults to the EGI CheckIn issuer.  These parameters should be used with
+caution, as they disable some security checks.
 
 Ask MUNGE for Authentication
 ''''''''''''''''''''''''''''
@@ -1595,14 +1579,13 @@ The Unified Map File for Authentication
 :index:`unified map file<single: unified map file; security>`
 :index:`unified map file<single: unified map file; authentication>`
 
-HTCondor's unified map file allows the mappings from authenticated names
-to an HTCondor canonical user name to be specified as a single list
-within a single file. The location of the unified map file is defined by
-the configuration variable ``CERTIFICATE_MAPFILE``
-:index:`CERTIFICATE_MAPFILE`; it specifies the path and file name
-of the unified map file. Each mapping is on its own line of the unified
-map file. Each line contains either an ``@include`` directive, or 3 fields,
-separated by white space (space or tab characters):
+HTCondor's unified map file allows the mappings from authenticated names to an
+HTCondor canonical user name to be specified as a single list within a single
+file. The location of the unified map file is defined by the configuration
+variable :macro:`CERTIFICATE_MAPFILE`; it specifies the path and file name of
+the unified map file. Each mapping is on its own line of the unified map file.
+Each line contains either an ``@include`` directive, or 3 fields, separated by
+white space (space or tab characters):
 
 #. The name of the authentication method to which the mapping applies.
 #. A name or a regular expression representing the authenticated name to
@@ -1610,7 +1593,7 @@ separated by white space (space or tab characters):
 #. The canonical HTCondor user name.
 
 Allowable authentication method names are the same as used to define any
-of the configuration variables ``SEC_*_AUTHENTICATION_METHODS``, as
+of the configuration variables :macro:`SEC_*_AUTHENTICATION_METHODS`, as
 repeated here:
 
 .. code-block:: text
@@ -1627,21 +1610,19 @@ repeated here:
         CLAIMTOBE
         ANONYMOUS
 
-The fields that represent an authenticated name and the canonical
-HTCondor user name may utilize regular expressions as defined by PCRE
-(Perl-Compatible Regular Expressions). Due to this, more than one line
-(mapping) within the unified map file may match. Look ups are therefore
-defined to use the first mapping that matches.
+The fields that represent an authenticated name and the canonical HTCondor user
+name may utilize regular expressions as defined by PCRE2 (Perl-Compatible
+Regular Expressions). Due to this, more than one line (mapping) within the
+unified map file may match. Look ups are therefore defined to use the first
+mapping that matches.
 
-For HTCondor version 8.5.8 and later, the authenticated name field will
-be interpreted as a regular expression or as a simple string based on
-the value of the ``CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS``
-:index:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` configuration
-variable. If this configuration varible is true, then the authenticated
-name field is a regular expression only when it begins and ends with the
-/ character. If this configuration variable is false, or on HTCondor
-versions older than 8.5.8, the authenticated name field is always a
-regular expression.
+For HTCondor version 8.5.8 and later, the authenticated name field will be
+interpreted as a regular expression or as a simple string based on the value of
+the :macro:`CERTIFICATE_MAPFILE_ASSUME_HASH_KEYS` configuration variable. If
+this configuration varible is true, then the authenticated name field is a
+regular expression only when it begins and ends with the / character. If this
+configuration variable is false, or on HTCondor versions older than 8.5.8, the
+authenticated name field is always a regular expression.
 
 A regular expression may need to contain spaces, and in this case the
 entire expression can be surrounded by double quote marks. If a double
@@ -1653,7 +1634,7 @@ followed by a file or directory path in the second field.  If a
 file is specified, it will be read and parsed as map file.  If
 a directory is specified, then each file in the directory is read
 as a map file unless the name of the file matches the pattern
-specified in the ``LOCAL_CONFIG_DIR_EXCLUDE_REGEXP`` configuration variable.
+specified in the :macro:`LOCAL_CONFIG_DIR_EXCLUDE_REGEXP` configuration variable.
 Files in the directory are read in lexical order.  When a map file
 is read as a result of an ``@include`` statement, any ``@include`` statements
 that it contains will be ignored.  If the file or directory path specified
@@ -1678,7 +1659,7 @@ the following mappings, with some additional logic noted below:
 For SciTokens, the authenticated name is the ``iss`` and ``sub``
 claims of the token, separated by a comma.
 
-For Kerberos, if ``KERBEROS_MAP_FILE`` :index:`KERBEROS_MAP_FILE`
+For Kerberos, if :macro:`KERBEROS_MAP_FILE`
 is specified, the domain portion of the name is obtained by mapping the
 Kerberos realm to the value specified in the map file, rather than just
 using the realm verbatim as the domain portion of the condor user name.
@@ -1709,24 +1690,21 @@ matching line in the map file (the canonical name) should be the text
 that no spaces should be used within the list.
 
 For each plugin, the configuration paramater
-``SEC_SCITOKENS_PLUGIN_<name>_COMMAND`` gives the executable and
-optional command line arguments needed to invoke the plugin.
-The optional configuration parameter
-``SEC_SCITOKENS_PLUGIN_<name>_MAPPING`` specifies the mapped identity
-if the plugin accepts the token. If this paramater isn't set, then the
-plugin must write the mapped identity to its stdout.
-If the special value ``PLUGIN:*`` is given in the map file, then the
-configuration parameter ``SEC_SCITOKENS_PLUGIN_NAMES`` is consulted to
-determine the names of the plugins to run.
+:macro:`SEC_SCITOKENS_PLUGIN_<name>_COMMAND` gives the executable and optional
+command line arguments needed to invoke the plugin.  The optional configuration
+parameter :macro:`SEC_SCITOKENS_PLUGIN_<name>_MAPPING` specifies the mapped
+identity if the plugin accepts the token. If this paramater isn't set, then the
+plugin must write the mapped identity to its stdout.  If the special value
+``PLUGIN:*`` is given in the map file, then the configuration parameter
+:macro:`SEC_SCITOKENS_PLUGIN_NAMES` is consulted to determine the names of the
+plugins to run.
 
-When a plugin is invoked, the given binary is run. The payload of the
-token is provided via stdin and a series of environment variables
-(compatible with those set by ARC CE for its token plugins).
-If the plugin exits with status 0, then it accepts the token.
-If the plugin exits with status 1, then it declines the token and
-other plugins may be consulted.
-If the plugin exits with any other status, the entire mapping
-procedure fails and the client is rejected.
+When a plugin is invoked, the given binary is run. The payload of the token is
+provided via stdin and a series of environment variables (compatible with those
+set by ARC CE for its token plugins).  If the plugin exits with status 0, then
+it accepts the token.  If the plugin exits with status 1, then it declines the
+token and other plugins may be consulted.  If the plugin exits with any other
+status, the entire mapping procedure fails and the client is rejected.
 
 Here's an example where one plugin is used for tokens from a specific
 issuer, and two other plugins are used for tokens from all other
@@ -1769,37 +1747,34 @@ Through configuration macros, both the client and the daemon can specify
 whether encryption is required for further communication.
 
 The client uses one of two macros to enable or disable encryption:
-:index:`SEC_DEFAULT_ENCRYPTION`
-:index:`SEC_CLIENT_ENCRYPTION`
 
-.. code-block:: text
++-------------------------------+-------------------------------+
+|:macro:`SEC_DEFAULT_ENCRYPTION`|:macro:`SEC_CLIENT_ENCRYPTION` |
++-------------------------------+-------------------------------+
 
-    SEC_DEFAULT_ENCRYPTION
-    SEC_CLIENT_ENCRYPTION
+For the daemon, there are many macros to enable or disable encryption:
 
-For the daemon, there are seven macros to enable or disable encryption:
-:index:`SEC_DEFAULT_ENCRYPTION` :index:`SEC_READ_ENCRYPTION`
-:index:`SEC_WRITE_ENCRYPTION`
-:index:`SEC_ADMINISTRATOR_ENCRYPTION`
-:index:`SEC_DAEMON_ENCRYPTION`
-:index:`SEC_CONFIG_ENCRYPTION`
-:index:`SEC_NEGOTIATOR_ENCRYPTION`
-:index:`SEC_ADVERTISE_MASTER_ENCRYPTION`
-:index:`SEC_ADVERTISE_STARTD_ENCRYPTION`
-:index:`SEC_ADVERTISE_SCHEDD_ENCRYPTION`
-
-.. code-block:: text
-
-    SEC_DEFAULT_ENCRYPTION
-    SEC_READ_ENCRYPTION
-    SEC_WRITE_ENCRYPTION
-    SEC_ADMINISTRATOR_ENCRYPTION
-    SEC_CONFIG_ENCRYPTION
-    SEC_DAEMON_ENCRYPTION
-    SEC_NEGOTIATOR_ENCRYPTION
-    SEC_ADVERTISE_MASTER_ENCRYPTION
-    SEC_ADVERTISE_STARTD_ENCRYPTION
-    SEC_ADVERTISE_SCHEDD_ENCRYPTION
++----------------------------------------+
+|:macro:`SEC_DEFAULT_ENCRYPTION`         |
++----------------------------------------+
+|:macro:`SEC_READ_ENCRYPTION`            |
++----------------------------------------+
+|:macro:`SEC_WRITE_ENCRYPTION`           |
++----------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_ENCRYPTION`   |
++----------------------------------------+
+|:macro:`SEC_DAEMON_ENCRYPTION`          |
++----------------------------------------+
+|:macro:`SEC_CONFIG_ENCRYPTION`          |
++----------------------------------------+
+|:macro:`SEC_NEGOTIATOR_ENCRYPTION`      |
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_ENCRYPTION`|
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_ENCRYPTION`|
++----------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_ENCRYPTION`|
++----------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1823,8 +1798,8 @@ precedence over any default given.
 If encryption is to be done, then the communicating parties must find
 (negotiate) a mutually acceptable method of encryption to be used. A
 list of acceptable methods may be provided by the client, using the
-macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
-:index:`SEC_CLIENT_CRYPTO_METHODS`
+macros :macro:`SEC_DEFAULT_CRYPTO_METHODS` and
+:macro:`SEC_CLIENT_CRYPTO_METHODS`
 
 .. code-block:: text
 
@@ -1832,29 +1807,29 @@ macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
     SEC_CLIENT_CRYPTO_METHODS
 
 A list of acceptable methods may be provided by the daemon, using the
-macros :index:`SEC_DEFAULT_CRYPTO_METHODS`
-:index:`SEC_READ_CRYPTO_METHODS`
-:index:`SEC_WRITE_CRYPTO_METHODS`
-:index:`SEC_ADMINISTRATOR_CRYPTO_METHODS`
-:index:`SEC_DAEMON_CRYPTO_METHODS`
-:index:`SEC_CONFIG_CRYPTO_METHODS`
-:index:`SEC_NEGOTIATOR_CRYPTO_METHODS`
-:index:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`
-:index:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`
-:index:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS`
+macros 
 
-.. code-block:: text
-
-    SEC_DEFAULT_CRYPTO_METHODS
-    SEC_READ_CRYPTO_METHODS
-    SEC_WRITE_CRYPTO_METHODS
-    SEC_ADMINISTRATOR_CRYPTO_METHODS
-    SEC_CONFIG_CRYPTO_METHODS
-    SEC_DAEMON_CRYPTO_METHODS
-    SEC_NEGOTIATOR_CRYPTO_METHODS
-    SEC_ADVERTISE_MASTER_CRYPTO_METHODS
-    SEC_ADVERTISE_STARTD_CRYPTO_METHODS
-    SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS
++--------------------------------------------+
+|:macro:`SEC_DEFAULT_CRYPTO_METHODS`         |
++--------------------------------------------+
+|:macro:`SEC_READ_CRYPTO_METHODS`            |
++--------------------------------------------+
+|:macro:`SEC_WRITE_CRYPTO_METHODS`           |
++--------------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_CRYPTO_METHODS`   |
++--------------------------------------------+
+|:macro:`SEC_DAEMON_CRYPTO_METHODS`          |
++--------------------------------------------+
+|:macro:`SEC_CONFIG_CRYPTO_METHODS`          |
++--------------------------------------------+
+|:macro:`SEC_NEGOTIATOR_CRYPTO_METHODS`      |
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_CRYPTO_METHODS`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_CRYPTO_METHODS`|
++--------------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_CRYPTO_METHODS`|
++--------------------------------------------+
 
 The methods are given as a comma-separated list of acceptable values.
 These variables list the encryption methods that are available to be
@@ -1884,36 +1859,36 @@ both the client and the daemon can specify whether an integrity check is
 required of further communication.
 
 The client uses one of two macros to enable or disable an integrity
-check: :index:`SEC_DEFAULT_INTEGRITY`
-:index:`SEC_CLIENT_INTEGRITY`
+check:
 
-.. code-block:: text
++------------------------------+-----------------------------+
+|:macro:`SEC_DEFAULT_INTEGRITY`|:macro:`SEC_CLIENT_INTEGRITY`|
++------------------------------+-----------------------------+
 
-    SEC_DEFAULT_INTEGRITY
-    SEC_CLIENT_INTEGRITY
+For the daemon, there are macros to enable or disable an integrity
+check:
 
-For the daemon, there are seven macros to enable or disable an integrity
-check: :index:`SEC_DEFAULT_INTEGRITY`
-:index:`SEC_READ_INTEGRITY` :index:`SEC_WRITE_INTEGRITY`
-:index:`SEC_ADMINISTRATOR_INTEGRITY`
-:index:`SEC_DAEMON_INTEGRITY` :index:`SEC_CONFIG_INTEGRITY`
-:index:`SEC_NEGOTIATOR_INTEGRITY`
-:index:`SEC_ADVERTISE_MASTER_INTEGRITY`
-:index:`SEC_ADVERTISE_STARTD_INTEGRITY`
-:index:`SEC_ADVERTISE_SCHEDD_INTEGRITY`
-
-.. code-block:: text
-
-    SEC_DEFAULT_INTEGRITY
-    SEC_READ_INTEGRITY
-    SEC_WRITE_INTEGRITY
-    SEC_ADMINISTRATOR_INTEGRITY
-    SEC_CONFIG_INTEGRITY
-    SEC_DAEMON_INTEGRITY
-    SEC_NEGOTIATOR_INTEGRITY
-    SEC_ADVERTISE_MASTER_INTEGRITY
-    SEC_ADVERTISE_STARTD_INTEGRITY
-    SEC_ADVERTISE_SCHEDD_INTEGRITY
++---------------------------------------+
+|:macro:`SEC_DEFAULT_INTEGRITY`         |
++---------------------------------------+
+|:macro:`SEC_READ_INTEGRITY`            |
++---------------------------------------+
+|:macro:`SEC_WRITE_INEGRITY`            |
++---------------------------------------+
+|:macro:`SEC_ADMINISTRATOR_INTEGRITY`   |
++---------------------------------------+
+|:macro:`SEC_DAEMON_INTEGRITY`          |
++---------------------------------------+
+|:macro:`SEC_CONFIG_INTEGRITY`          |
++---------------------------------------+
+|:macro:`SEC_NEGOTIATOR_INTEGRITY`      |
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_MASTER_INTEGRITY`|
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_STARTD_INTEGRITY`|
++---------------------------------------+
+|:macro:`SEC_ADVERTISE_SCHEDD_INTEGRITY`|
++---------------------------------------+
 
 As an example, the macro defined in the configuration file for a daemon
 as
@@ -1976,48 +1951,34 @@ daemon is executed.
 These configuration macros define a set of users that will be allowed to
 (or denied from) carrying out various HTCondor commands. Each access
 level may have its own list of authorized users. A complete list of the
-authorization macros: :index:`ALLOW_READ`
-:index:`ALLOW_WRITE` :index:`ALLOW_ADMINISTRATOR`
-:index:`ALLOW_CONFIG` :index:`ALLOW_DAEMON`
-:index:`ALLOW_NEGOTIATOR`
-:index:`DENY_READ` :index:`DENY_WRITE`
-:index:`DENY_ADMINISTRATOR` :index:`DENY_CONFIG`
-:index:`DENY_DAEMON`
-:index:`DENY_NEGOTIATOR`
+authorization macros:
 
-.. code-block:: text
-
-    ALLOW_READ
-    ALLOW_WRITE
-    ALLOW_ADMINISTRATOR
-    ALLOW_CONFIG
-    ALLOW_NEGOTIATOR
-    ALLOW_DAEMON
-    DENY_READ
-    DENY_WRITE
-    DENY_ADMINISTRATOR
-    DENY_CONFIG
-    DENY_NEGOTIATOR
-    DENY_DAEMON
++----------------------------+----------------------------+
+|:macro:`ALLOW_READ`         |:macro:`DENY_READ`          |
++----------------------------+----------------------------+
+|:macro:`ALLOW_WRITE`        |:macro:`DENY_WRITE`         |
++----------------------------+----------------------------+
+|:macro:`ALLOW_ADMINISTRATOR`|:macro:`DENY_ADMINISTRATOR` |
++----------------------------+----------------------------+
+|:macro:`ALLOW_CONFIG`       |:macro:`DENY_CONFIG`        |
++----------------------------+----------------------------+
+|:macro:`ALLOW_DAEMON`       |:macro:`DENY_DAEMON`        |
++----------------------------+----------------------------+
+|:macro:`ALLOW_NEGOTIATOR`   |:macro:`DENY_NEGOTIATOR`    |
++----------------------------+----------------------------+
 
 In addition, the following are used to control authorization of specific
 types of HTCondor daemons when advertising themselves to the pool. If
 unspecified, these default to the broader ``ALLOW_DAEMON`` and
-``DENY_DAEMON`` settings. :index:`ALLOW_ADVERTISE_MASTER`
-:index:`ALLOW_ADVERTISE_STARTD`
-:index:`ALLOW_ADVERTISE_SCHEDD`
-:index:`DENY_ADVERTISE_MASTER`
-:index:`DENY_ADVERTISE_STARTD`
-:index:`DENY_ADVERTISE_SCHEDD`
+``DENY_DAEMON`` settings.
 
-.. code-block:: text
-
-    ALLOW_ADVERTISE_MASTER
-    ALLOW_ADVERTISE_STARTD
-    ALLOW_ADVERTISE_SCHEDD
-    DENY_ADVERTISE_MASTER
-    DENY_ADVERTISE_STARTD
-    DENY_ADVERTISE_SCHEDD
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_MASTER`|:macro:`DENY_ADVERTISE_MASTER` |
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_STARTD`|:macro:`DENY_ADVERTISE_STARTD` |
++-------------------------------+-------------------------------+
+|:macro:`ALLOW_ADVERTISE_SCHEDD`|:macro:`DENY_ADVERTISE_SCHEDD` |
++-------------------------------+-------------------------------+
 
 Each client side of a connection may also specify its own list of
 trusted servers. This is done using the following settings. Note that
@@ -2025,18 +1986,18 @@ the FS and CLAIMTOBE authentication methods are not symmetric. The
 client is authenticated by the server, but the server is not
 authenticated by the client. When the server is not authenticated to the
 client, only the network address of the host may be authorized and not
-the specific identity of the server. :index:`ALLOW_CLIENT`
-:index:`DENY_CLIENT`
+the specific identity of the server. :macro:`ALLOW_CLIENT`
+:macro:`DENY_CLIENT`
 
 .. code-block:: text
 
       ALLOW_CLIENT
       DENY_CLIENT
 
-The names ``ALLOW_CLIENT`` and ``DENY_CLIENT`` should be thought of as
-"when I am acting as a client, these are the servers I allow or deny."
-It should not be confused with the incorrect thought "when I am the
-server, these are the clients I allow or deny."
+The names :macro:`ALLOW_CLIENT` and :macro:`DENY_CLIENT` should be thought of
+as "when I am acting as a client, these are the servers I allow or deny." It
+should not be confused with the incorrect thought "when I am the server, these
+are the clients I allow or deny."
 
 All authorization settings are defined by a comma-separated list of
 fully qualified users. Each fully qualified user is described using the
@@ -2155,8 +2116,8 @@ This flexible set of configuration macros could be used to define
 conflicting authorization. Therefore, the following protocol defines the
 precedence of the configuration macros.
 
-1.  ``DENY_*`` macros take precedence over ``ALLOW_* macros``
-    :index:`ALLOW_* macros` where there is a conflict. This
+1.  ``DENY_*`` macros take precedence over
+    :macro:`ALLOW_* macros` where there is a conflict. This
     implies that if a specific user is both denied and granted
     authorization, the conflict is resolved by denying access.
 2.  If macros are omitted, the default behavior is to deny
@@ -2182,12 +2143,11 @@ be modified by configuration. :index:`unauthenticated`
    collector or that the *condor_schedd* 's ``ALLOW_CLIENT`` setting
    prevent it from allowing connections to *condor_startd* s that it
    does not trust to run jobs.
-#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
-   :index:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
+#. When 
+   :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true,
    execute-side@matchsession is automatically granted ``READ`` access to
    the *condor_schedd* and ``DAEMON`` access to the *condor_shadow*.
-#. When ``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION``
-   :index:``SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION`` is true, then
+#. When :macro:`SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION` is true, then
    ``negotiator-side@matchsession`` is automatically granted ``NEGOTIATOR``
    access to the *condor_schedd*.
 
@@ -2253,7 +2213,7 @@ the explanations of why requests are granted or denied.
 FIPS
 ----
 As of version 9.0.2, HTCondor is now FIPS compliant when configured to be so.
-In practice this means that MD5 digests and Blowfish encryption are no longer
+In practice this means that MD5 digests and Blowfish encryption are not
 used anywhere.  To make this easy to configure, we have added a configuration
 macro, and all you need to add to your config is the following:
 
@@ -2269,10 +2229,8 @@ UDP would be if you had configured a large pool to be supported by Collector
 trees using UDP, or if you are using Windows (because HTCondor sends signals to
 daemons on Windows using UDP).
  
-[optional inclusion depending on HAD test success/failure] Currently, the use
-of the High-Availability Daemon (HAD) is not supported when running on a
-machine that is FIPS compliant.
-
+Currently, the use of the High-Availability Daemon (HAD) is not supported when
+running on a machine that is FIPS compliant.
 
 
 Security Sessions
@@ -2320,7 +2278,7 @@ connection for nefarious purposes. It is strongly recommended that if
 you have authentication turned on, you should also turn on integrity
 and/or encryption.
 
-The configuration parameter ``SEC_DEFAULT_NEGOTIATION`` will allow a
+The configuration parameter :macro:`SEC_DEFAULT_NEGOTIATION` will allow a
 user to set the default level of secure sessions in HTCondor. Like other
 security settings, the possible values for this parameter can be
 REQUIRED, PREFERRED, OPTIONAL, or NEVER. If you disable sessions and you
@@ -2607,7 +2565,7 @@ this.
 -  Only allow machines at NCSA and UW-Madison's CS department to view
    the pool. Only NCSA machines and the machine raven.cs.wisc.edu can
    join the pool. Note: the machine raven.cs.wisc.edu has the read
-   access it needs through the wild card setting in ``ALLOW_READ``. This
+   access it needs through the wild card setting in :macro:`ALLOW_READ`. This
    example also shows how to use the continuation character, \\, to
    continue a long list of machines onto multiple lines, making it more
    readable. This works for all configuration file entries, not just
@@ -2676,7 +2634,7 @@ the most restrictive security level possible.
 The most secure use of this feature allows HTCondor users to set
 attributes in the configuration file which are not used by HTCondor
 directly. These are custom attributes published by various HTCondor
-daemons with the ``<SUBSYS>_ATTRS`` setting described in
+daemons with the :macro:`<SUBSYS>_ATTRS` setting described in
 :ref:`admin-manual/configuration-macros:daemoncore configuration file entries`.
 It is secure to grant access only to modify attributes that are used by HTCondor
 to publish information. Granting access to modify settings used to control
@@ -2707,8 +2665,8 @@ each kind of HTCondor daemon (for example, ``STARTD``, ``SCHEDD``, and
 differently for each daemon that use this <SUBSYS> naming convention.
 See :ref:`admin-manual/introduction-to-configuration:pre-defined macros`
 for a list. If there is no daemon-specific value for a given daemon,
-HTCondor will look for ``SETTABLE_ATTRS_<PERMISSION-LEVEL>``
-:index:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`.
+HTCondor will look for
+:macro:`SETTABLE_ATTRS_<PERMISSION-LEVEL>`.
 
 Each control list is defined by a comma-separated list of attribute
 names which should be allowed to be modified. The lists can contain wild
@@ -2729,16 +2687,9 @@ Some examples of valid definitions of control lists with explanations:
        SETTABLE_ATTRS_ADMINISTRATOR = *_DEBUG, MAX_*_LOG
 
    Grant access to change any configuration setting that ended with
-   _DEBUG (for example, ``STARTD_DEBUG``) and any attribute that
-   matched MAX_*_LOG (for example, ``MAX_SCHEDD_LOG``) to any host
+   _DEBUG (for example, :macro:`STARTD_DEBUG`) and any attribute that
+   matched MAX_*_LOG (for example, :macro:`MAX_SCHEDD_LOG`) to any host
    with ``ADMINISTRATOR`` access.
-
-Using HTCondor w/ Firewalls, Private Networks, and NATs
--------------------------------------------------------
-
-This topic is now addressed in more detail in the
-:doc:`/admin-manual/networking` section, which explains network communication
-in HTCondor.
 
 User Accounts in HTCondor on Unix Platforms
 -------------------------------------------
@@ -2770,7 +2721,7 @@ files.
 If there is no condor user and group on the system, an administrator can
 specify which UID and GID the HTCondor daemons should use when they do
 not need root privileges in two ways: either with the ``CONDOR_IDS``
-environment variable or the ``CONDOR_IDS`` :index:`CONDOR_IDS`
+environment variable or the :macro:`CONDOR_IDS`
 configuration variable. In either case, the value should be the UID
 integer, followed by a period, followed by the GID integer. For example,
 if an HTCondor administrator does not want to create a condor user, and
@@ -2792,20 +2743,20 @@ the job were running locally, without HTCondor.
 
 On the machine where the job executes, the job runs either as the
 submitting user or as user nobody, to help ensure that the job cannot
-access local resources or do harm. If the ``UID_DOMAIN``
-:index:`UID_DOMAIN` matches, and the user exists as the same UID
+access local resources or do harm. If the
+:macro:`UID_DOMAIN` matches, and the user exists as the same UID
 in password files on both the submitting machine and on the execute
 machine, the job will run as the submitting user. If the user does not
-exist in the execute machine's password file and ``SOFT_UID_DOMAIN``
-:index:`SOFT_UID_DOMAIN` is True, then the job will run under the
+exist in the execute machine's password file and
+:macro:`SOFT_UID_DOMAIN` is True, then the job will run under the
 submitting user's UID anyway (as defined in the submitting machine's
-password file). If ``SOFT_UID_DOMAIN`` is False, and ``UID_DOMAIN``
+password file). If :macro:`SOFT_UID_DOMAIN` is False, and :macro:`UID_DOMAIN`
 matches, and the user is not in the execute machine's password file,
 then the job execution attempt will be aborted.
 
 Jobs that run as nobody are low priviledge, but can still interfere with each other.
-To avoid this, you can configure ``NOBODY_SLOT_USER`` to the value
-``$(STARTER_SLOT_NAME)`` or configure ``SLOT<N>_USER`` for each slot
+To avoid this, you can configure :macro:`NOBODY_SLOT_USER` to the value
+``$(STARTER_SLOT_NAME)`` or configure :macro:`SLOT<N>_USER` for each slot
 to define a different username to use for each slot instead of the user nobody.
 If ``NOBODY_SLOT_USER`` is configured to be ``$(STARTER_SLOT_NAME)``
 usernames such as ``slot1``, ``slot2`` and ``slot1_2`` will be used instead of
@@ -2835,7 +2786,7 @@ classified for each daemon:
     users. By running as root, the HTCondor daemons run with a different
     UID than the HTCondor job. The user's job is started as either the
     UID of the user who submitted it, or as user nobody, depending on
-    the ``UID_DOMAIN`` :index:`UID_DOMAIN` settings. Therefore,
+    the :macro:`UID_DOMAIN` settings. Therefore,
     the HTCondor job cannot do anything to the HTCondor daemons. Without
     starting the daemons as root, all processes started by HTCondor,
     including the user's job, run with the same UID. Only root can
@@ -2952,11 +2903,10 @@ Under Unix, HTCondor runs jobs as one of
 
 -  the user called nobody
 
-   Running jobs as the nobody user is the least preferable. HTCondor
-   uses user nobody if the value of the ``UID_DOMAIN`` configuration
-   variable of the submitting and executing machines are different, or
-   if configuration variable ``STARTER_ALLOW_RUNAS_OWNER``
-   :index:`STARTER_ALLOW_RUNAS_OWNER` is ``False``, or if the job
+   Running jobs as the nobody user is the least preferable. HTCondor uses user
+   nobody if the value of the :macro:`UID_DOMAIN` configuration variable of the
+   submitting and executing machines are different, or if configuration
+   variable :macro:`STARTER_ALLOW_RUNAS_OWNER` is ``False``, or if the job
    ClassAd contains ``RunAsOwner=False``.
 
    When HTCondor cleans up after executing a vanilla universe job, it
@@ -2990,8 +2940,8 @@ Under Unix, HTCondor runs jobs as one of
    from one slot to affect another slot. For a sample machine with two
    compute slots, create two users that are intended only to be used by
    HTCondor. As an example, call them cndrusr1 and cndrusr2.
-   Configuration identifies these users with the ``SLOT<N>_USER``
-   :index:`SLOT<N>_USER` configuration variable, where ``<N>`` is
+   Configuration identifies these users with the
+   :macro:`SLOT<N>_USER` configuration variable, where ``<N>`` is
    replaced with the slot number. Here is configuration for this
    example:
 
@@ -3003,8 +2953,7 @@ Under Unix, HTCondor runs jobs as one of
    Also tell HTCondor that these accounts are intended only to be used
    by HTCondor, so HTCondor can kill all the processes belonging to
    these users upon job completion. The configuration variable
-   ``DEDICATED_EXECUTE_ACCOUNT_REGEXP``
-   :index:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` is introduced and set
+   :macro:`DEDICATED_EXECUTE_ACCOUNT_REGEXP` is introduced and set
    to a regular expression that matches the account names just created:
 
    .. code-block:: condor-config
@@ -3023,15 +2972,14 @@ Under Unix, HTCondor runs jobs as one of
    submitted the job.
 
    #. In the configuration, the value of variable
-      ``STARTER_ALLOW_RUNAS_OWNER``
-      :index:`STARTER_ALLOW_RUNAS_OWNER` must be ``True`` on the
+      :macro:`STARTER_ALLOW_RUNAS_OWNER` must be ``True`` on the
       machine that will run the job. Its default value is ``True`` on
       Unix platforms and ``False`` on Windows platforms.
    #. If the job's ClassAd has the attribute ``RunAsOwner``, it must be
       set to ``True``; if unset, the job must be run on a Unix system.
       This attribute can be set up for all users by adding an attribute
-      to configuration variable ``SUBMIT_ATTRS``
-      :index:`SUBMIT_ATTRS`. If this were the only attribute to be
+      to configuration variable
+      :macro:`SUBMIT_ATTRS`. If this were the only attribute to be
       added to all job ClassAds, it would be set up with
 
       .. code-block:: condor-config
@@ -3039,12 +2987,12 @@ Under Unix, HTCondor runs jobs as one of
             SUBMIT_ATTRS = RunAsOwner
             RunAsOwner = True
 
-   #. The value of configuration variable ``UID_DOMAIN`` must be the
+   #. The value of configuration variable :macro:`UID_DOMAIN` must be the
       same for both the *condor_startd* and *condor_schedd* daemons.
    #. The UID_DOMAIN must be trusted. For example, if the
       *condor_starter* daemon does a reverse DNS lookup on the
       *condor_schedd* daemon, and finds that the result is not the same
-      as defined for configuration variable ``UID_DOMAIN``, then it is
+      as defined for configuration variable :macro:`UID_DOMAIN`, then it is
       not trusted. To correct this, set in the configuration for the
       *condor_starter*
 
@@ -3057,10 +3005,10 @@ Notes:
 #. Under Windows, HTCondor by default runs jobs under a dynamically
    created local account that exists for the duration of the job, but it
    can optionally run the job as the user account that owns the job if
-   ``STARTER_ALLOW_RUNAS_OWNER`` is ``True`` and the job contains
+   :macro:`STARTER_ALLOW_RUNAS_OWNER` is ``True`` and the job contains
    ``RunAsOwner``\ =True.
 
-   ``SLOT<N>_USER`` will only work if the credential of the specified
+   :macro:`SLOT<N>_USER` will only work if the credential of the specified
    user is stored on the execute machine using *condor_store_cred*.
    for details of this command. However, the default behavior in Windows
    is to run jobs under a dynamically created dedicated execution

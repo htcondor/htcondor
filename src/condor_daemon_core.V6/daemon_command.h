@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-class DaemonCommandProtocol: Service, public ClassyCountedPtr {
+class DaemonCommandProtocol: Service {
 
 	friend class DaemonCore;
 

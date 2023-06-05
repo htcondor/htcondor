@@ -1444,7 +1444,7 @@ BaseShadow::log_except(const char *msg)
 		event.began_execution = TRUE;
 	}
 
-	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,NULL))
+	if (!exception_already_logged && !shadow->uLog.writeEventNoFsync (&event,shadow->jobAd))
 	{
 		::dprintf (D_ALWAYS, "Failed to log ULOG_SHADOW_EXCEPTION event: %s\n", msg);
 	}

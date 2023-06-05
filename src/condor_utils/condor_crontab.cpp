@@ -22,7 +22,7 @@
 #include "condor_crontab.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 #include "date_util.h"
 #include "utc_time.h"
 #include <algorithm>
@@ -192,7 +192,7 @@ CronTab::validateParameter(const char* parameter, const char * attr, std::string
 		// in the parameter string
 		//
 	std::string temp(parameter);
-	if ( CronTab::regex.match_str( temp ) ) {
+	if ( CronTab::regex.match( temp ) ) {
 		error  = "Invalid parameter value '";
 		error += parameter;
 		error += "' for ";
@@ -658,43 +658,30 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// out into a range that can be put in array of integers
 		// First start by spliting the string by commas
 		//
-	MyStringTokener tok;
-	tok.Tokenize(param->c_str());
-	const char *_token;
-	while ( ( _token = tok.GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
-		MyStringWithTokener token( _token );
+	for (std::string token: StringTokenIterator(*param, CRONTAB_DELIMITER)) {
 		int cur_min = min, cur_max = max, cur_step = 1;
+		size_t idx = 0;
 		
 			// -------------------------------------------------
 			// STEP VALUES
 			// The step value is independent of whether we have
 			// a range, the wildcard, or a single number.
 			// -------------------------------------------------
-		if ( token.find( CRONTAB_STEP ) > 0 ) {
+		if ( (idx = token.find(CRONTAB_STEP)) != std::string::npos ) {
 				//
 				// Just look for the step value to replace 
 				// the current step value. The other code will
 				// handle the rest
 				//
-			token.Tokenize();
-			const char *_temp;
-				//
-				// Take out the numerator, keep it for later
-				//
-			const char *_numerator = token.GetNextToken( CRONTAB_STEP, true );
-			if ( ( _temp = token.GetNextToken( CRONTAB_STEP, true ) ) != NULL ) {
-				std::string stepStr( _temp );
-				trim(stepStr);
-				cur_step = atoi( stepStr.c_str() );
-				if (cur_step == 0) {
-					return false;
-				}
+			cur_step = atoi(token.c_str() + idx + 1);
+			if (cur_step == 0) {
+				return false;
 			}
 				//
 				// Now that we have the denominator, put the numerator back
 				// as the token. This makes it easier to parse later on
 				//
-			token = _numerator;
+			token.erase(idx);
 		} // STEP
 		
 			// -------------------------------------------------
@@ -704,36 +691,29 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 			// Note that the find will ignore the token if the
 			// range delimiter is in the first character position
 			// -------------------------------------------------
-		if ( token.find( CRONTAB_RANGE ) > 0 ) {
+		if ( (idx = token.find(CRONTAB_RANGE)) != std::string::npos ) {
 				//
 				// Split out the integers
 				//
-			token.Tokenize();
-			MyString *_temp;
 			int value;
 			
 				//
-				// Min
-				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
-			cur_min = ( value >= min ? value : min );
-			delete _temp;
-				//
 				// Max
 				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
+			value = atoi(token.c_str() + idx + 1);
 			cur_max = ( value <= max ? value : max );
-			delete _temp;
+				//
+				// Min
+				//
+			token.erase(idx);
+			value = atoi( token.c_str() );
+			cur_min = ( value >= min ? value : min );
 			
 			// -------------------------------------------------
 			// WILDCARD
 			// This will select all values for the given range
 			// -------------------------------------------------
-		} else if ( token.find( CRONTAB_WILDCARD ) >= 0 ) {
+		} else if ( token.find( CRONTAB_WILDCARD ) != std::string::npos ) {
 				//
 				// For this we do nothing since it will just 
 				// be the min-max range

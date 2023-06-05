@@ -788,7 +788,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	}
 
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		if ( dologging ) {
+		if ( (s != PRIV_USER) && (s != PRIV_USER_FINAL) && dologging ) {
 			dprintf(D_ALWAYS,
 				"warning: attempted switch out of PRIV_USER_FINAL\n");
 		}
@@ -796,7 +796,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	}
 
 	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
-		if ( dologging ) {
+		if ( (s != PRIV_CONDOR) && (s != PRIV_CONDOR_FINAL) && dologging ) {
 			dprintf(D_ALWAYS,
 				"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
 		}
@@ -815,7 +815,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			if ( dologging && IsFulldebug(D_FULLDEBUG) ) {
 				dprintf(D_FULLDEBUG, 
 						"TokenCache contents: \n%s", 
-						cached_tokens.cacheToString().Value());
+						cached_tokens.cacheToString().c_str());
 			}
 			if ( CurrUserHandle ) {
 				if ( PrevPrivState == PRIV_UNKNOWN ) {
@@ -1584,14 +1584,14 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 	priv_state PrevPrivState = CurrentPrivState;
 	if (s == CurrentPrivState) return s;
 	if (CurrentPrivState == PRIV_USER_FINAL) {
-		if ( dologging ) {
+		if ( (s != PRIV_USER) && (s != PRIV_USER_FINAL) && dologging ) {
 			dprintf(D_ALWAYS,
 					"warning: attempted switch out of PRIV_USER_FINAL\n");
 		}
 		return PRIV_USER_FINAL;
 	}
 	if (CurrentPrivState == PRIV_CONDOR_FINAL) {
-		if ( dologging ) {
+		if ( (s != PRIV_CONDOR) && (s != PRIV_CONDOR_FINAL) && dologging ) {
 			dprintf(D_ALWAYS,
 					"warning: attempted switch out of PRIV_CONDOR_FINAL\n");
 		}

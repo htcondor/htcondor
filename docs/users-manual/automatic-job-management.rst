@@ -33,8 +33,8 @@ to the integer value that is considered successful.
     log          = myexe.log
 
     request_cpus   = 1
-    request_memory = 1024
-    request_disk   = 10240
+    request_memory = 1024M
+    request_disk   = 10240K
 
     should_transfer_files = yes
 

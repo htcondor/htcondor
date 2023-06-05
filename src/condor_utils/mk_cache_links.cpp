@@ -37,14 +37,12 @@
 
 #ifdef HAVE_HTTP_PUBLIC_FILES
 
-using namespace std;
-
 namespace {	// Anonymous namespace to limit scope of names to this file
 	
 const int HASHNAMELEN = 17;
 
 
-static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
+static std::string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 
 	unsigned char hashResult[HASHNAMELEN * 3]; // Allocate extra space for safety.
 
@@ -82,7 +80,7 @@ static string MakeHashName(const char* fileName, time_t fileModifiedTime) {
 // WARNING!  This code changes priv state.  Be very careful if modifying it.
 // Do not return in the block of code where the priv has been set to either
 // condor or root.  -zmiller
-static bool MakeLink(const char* srcFilePath, const string &newLink) {
+static bool MakeLink(const char* srcFilePath, const std::string &newLink) {
 
 	bool retVal = false;
 	int srcFileInodeNum;
@@ -234,9 +232,9 @@ static bool MakeLink(const char* srcFilePath, const string &newLink) {
 	return retVal;
 }
 
-static string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
+static std::string MakeAbsolutePath(const char* path, const char* initialWorkingDir) {
 	if (!fullpath(path)) {
-		string fullPath = initialWorkingDir;
+		std::string fullPath = initialWorkingDir;
 		fullPath += DIR_DELIM_CHAR;
 		fullPath += path;
 		return (fullPath);
@@ -267,7 +265,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 		}
 
 		// Build out the base URL for public files
-		string url = "http://";
+		std::string url = "http://";
 		url += webServerAddress; 
 		url += "/";
 
@@ -280,7 +278,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 		}
 		while ((path = PubInpFiles.next()) != NULL) {
 			// Determine the full path of the file to be transferred
-			string fullPath = MakeAbsolutePath(path, initialWorkingDir);
+			std::string fullPath = MakeAbsolutePath(path, initialWorkingDir);
 
 			// Determine the time last modified of the file to be transferred
 			if( stat( fullPath.c_str(), &fileStat ) == 0 ) {
@@ -294,7 +292,7 @@ void ProcessCachedInpFiles(ClassAd *const Ad, StringList *const InputFiles,
 				return;
 			}
 
-			string hashName = MakeHashName( fullPath.c_str(), fileModifiedTime );
+			std::string hashName = MakeHashName( fullPath.c_str(), fileModifiedTime );
 			if (MakeLink(fullPath.c_str(), hashName)) {
 				InputFiles->remove(path); // Remove plain file name from InputFiles
 				remap += hashName;

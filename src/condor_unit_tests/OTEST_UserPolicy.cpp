@@ -36,8 +36,6 @@
 	classad_string.clear(); \
 	delete ad
 
-using namespace std;
-
 using namespace classad;
 
 static bool test_init_null(void);
@@ -155,7 +153,7 @@ static bool test_cron_minute(void);
 static ClassAdParser parser;
 static ClassAdUnParser unparser;
 static ClassAd* ad;
-static string classad_string;
+static std::string classad_string;
 
 //string constants used for initializing ClassAds
 static const char
@@ -3076,7 +3074,7 @@ static bool test_cron_minute(void) {
 
 	std::string output_as_string;
 	for (int i : actual) {
-		output_as_string += to_string(i) + ',';
+		output_as_string += std::to_string(i) + ',';
 	}
 
 	emit_retval("%s", output_as_string.c_str());

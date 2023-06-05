@@ -34,7 +34,7 @@
 // userMap stuff
 class MapHolder {
 public:
-	MyString filename;
+	std::string filename;
 	time_t   file_timestamp; // last modify time of the file 
 	MapFile * mf;
 	MapHolder(MapFile * _mf=NULL) : file_timestamp(0), mf(_mf) {}
@@ -117,7 +117,7 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 		}
 	}
 	MapHolder * pmh = &((*g_user_maps)[mapname]);
-	pmh->filename = filename;
+	pmh->filename = filename ? filename : "";
 	pmh->file_timestamp = ts;
 	pmh->mf = mf;
 	return 0;
@@ -167,7 +167,7 @@ int reconfig_user_maps()
 		return 0;
 	}
 
-	MyString param_name(subsys); param_name += "_CLASSAD_USER_MAP_NAMES";
+	std::string param_name(subsys); param_name += "_CLASSAD_USER_MAP_NAMES";
 	auto_free_ptr user_map_names(param(param_name.c_str()));
 	if (user_map_names) {
 		StringList names(user_map_names.ptr());
@@ -205,7 +205,7 @@ int reconfig_user_maps()
 // if the mapname contains a . it is treated as mapname.method
 // otherise the method is "*" which should match all methods.
 // return is true if the mapname exists and mapping was found within it, false if not.
-bool user_map_do_mapping(const char * mapname, const char * input, MyString & output) {
+bool user_map_do_mapping(const char * mapname, const char * input, std::string & output) {
 	if ( ! g_user_maps) return false;
 
 	std::string name(mapname);

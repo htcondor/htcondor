@@ -25,7 +25,6 @@
 #include "condor_version.h"
 #include "dagman_utils.h"
 #include "my_popen.h"
-#include "MyString.h"
 #include "read_multiple_logs.h"
 #include "../condor_procapi/processid.h"
 #include "../condor_procapi/procapi.h"
@@ -42,8 +41,8 @@ AppendError(std::string &errMsg, const std::string &newError)
 }
 
 static bool
-ImportFilter( const MyString &var, const MyString &val ) {
-	if ( (var.find(";") >= 0) || (val.find(";") >= 0) ) {
+ImportFilter( const std::string &var, const std::string &val ) {
+	if ( (var.find(";") != std::string::npos) || (val.find(";") != std::string::npos) ) {
 		return false;
 	}
 	return Env::IsSafeEnvV2Value( val.c_str() );
@@ -92,7 +91,7 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	*	Update DAGMAN_MANAGER_JOB_APPEND_GETENV Macro documentation if base
 	*	getEnv value changes. -Cole Bollig 2023-02-21
 	*/
-	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ";
+	std::string getEnv = "CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL";
 	auto_free_ptr conf_getenvVars = param("DAGMAN_MANAGER_JOB_APPEND_GETENV");
 	if (conf_getenvVars && strcasecmp(conf_getenvVars.ptr(),"true") == MATCH) {
 		getEnv = "true";
@@ -171,14 +170,14 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	args.AppendArg(".");
 	if ( shallowOpts.iDebugLevel != DEBUG_UNSET ) {
 		args.AppendArg("-Debug");
-		args.AppendArg(shallowOpts.iDebugLevel);
+		args.AppendArg(std::to_string(shallowOpts.iDebugLevel));
 	}
 	args.AppendArg("-Lockfile");
 	args.AppendArg(shallowOpts.strLockFile.c_str());
 	args.AppendArg("-AutoRescue");
-	args.AppendArg(deepOpts.autoRescue);
+	args.AppendArg(std::to_string(deepOpts.autoRescue));
 	args.AppendArg("-DoRescueFrom");
-	args.AppendArg(deepOpts.doRescueFrom);
+	args.AppendArg(std::to_string(deepOpts.doRescueFrom));
 
 	for (auto & dagFile : shallowOpts.dagFiles) {
 		args.AppendArg("-Dag");
@@ -188,25 +187,25 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 	if(shallowOpts.iMaxIdle != 0) 
 	{
 		args.AppendArg("-MaxIdle");
-		args.AppendArg(shallowOpts.iMaxIdle);
+		args.AppendArg(std::to_string(shallowOpts.iMaxIdle));
 	}
 
 	if(shallowOpts.iMaxJobs != 0) 
 	{
 		args.AppendArg("-MaxJobs");
-		args.AppendArg(shallowOpts.iMaxJobs);
+		args.AppendArg(std::to_string(shallowOpts.iMaxJobs));
 	}
 
 	if(shallowOpts.iMaxPre != 0) 
 	{
 		args.AppendArg("-MaxPre");
-		args.AppendArg(shallowOpts.iMaxPre);
+		args.AppendArg(std::to_string(shallowOpts.iMaxPre));
 	}
 
 	if(shallowOpts.iMaxPost != 0) 
 	{
 		args.AppendArg("-MaxPost");
-		args.AppendArg(shallowOpts.iMaxPost);
+		args.AppendArg(std::to_string(shallowOpts.iMaxPost));
 	}
 
 	if ( shallowOpts.bPostRunSet ) {
@@ -279,21 +278,26 @@ DagmanUtils::writeSubmitFile( /* const */ SubmitDagDeepOptions &deepOpts,
 
 	if(!deepOpts.getFromEnv.empty()) {
 		args.AppendArg("-Include_env");
-		args.AppendArg(deepOpts.getFromEnv.c_str());
+		args.AppendArg(deepOpts.getFromEnv);
 	}
 
 	for (auto &kv_pairs : deepOpts.addToEnv) {
 		args.AppendArg( "-Insert_env" );
-		args.AppendArg(kv_pairs.c_str());
+		args.AppendArg(kv_pairs);
 	}
 
 	if( shallowOpts.priority != 0 ) {
 		args.AppendArg("-Priority");
-		args.AppendArg(shallowOpts.priority);
+		args.AppendArg(std::to_string(shallowOpts.priority));
 	}
 
-	MyString arg_str,args_error;
-	if(!args.GetArgsStringV1WackedOrV2Quoted(&arg_str,&args_error)) {
+	if (!shallowOpts.saveFile.empty()) {
+		args.AppendArg("-load_save");
+		args.AppendArg(shallowOpts.saveFile);
+	}
+
+	std::string arg_str,args_error;
+	if(!args.GetArgsStringV1WackedOrV2Quoted(arg_str, args_error)) {
 		fprintf(stderr,"Failed to insert arguments: %s",args_error.c_str());
 		exit(1);
 	}
@@ -459,11 +463,11 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 	}
 
 	args.AppendArg( "-autorescue" );
-	args.AppendArg( deepOpts.autoRescue );
+	args.AppendArg( std::to_string(deepOpts.autoRescue) );
 
 	if ( deepOpts.doRescueFrom != 0 ) {
 		args.AppendArg( "-dorescuefrom" );
-		args.AppendArg( deepOpts.doRescueFrom );
+		args.AppendArg( std::to_string(deepOpts.doRescueFrom) );
 	}
 
 	if ( deepOpts.allowVerMismatch ) {
@@ -494,7 +498,7 @@ DagmanUtils::runSubmitDag( const SubmitDagDeepOptions &deepOpts,
 
 	if( priority != 0) {
 		args.AppendArg( "-Priority" );
-		args.AppendArg( priority );
+		args.AppendArg( std::to_string(priority) );
 	}
 
 	if( deepOpts.suppress_notification ) {
@@ -657,10 +661,9 @@ DagmanUtils::GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bo
 
 				// Initialize list of tokens from logicalLine
 				std::list<std::string> tokens;
-				MyStringTokener tok;
 				trim(logicalLine);
-				tok.Tokenize(logicalLine.c_str());
-				while( const char* token = tok.GetNextToken(" \t", true) ) {
+				StringTokenIterator tok_line(logicalLine, " \t", true);
+				for (auto token : tok_line) {
 					tokens.emplace_back(token);
 				}
 
@@ -971,7 +974,8 @@ DagmanUtils::ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
 	bool bHadError = false;
 		// If not running a rescue DAG, check for existing files
 		// generated by condor_submit_dag...
-	if (!autoRunningRescue && deepOpts.doRescueFrom < 1 && !deepOpts.updateSubmit) {
+	if (!autoRunningRescue && deepOpts.doRescueFrom < 1 &&
+				!deepOpts.updateSubmit && shallowOpts.saveFile.empty()) {
 		if (fileExists(shallowOpts.strSubFile))
 		{
 			fprintf( stderr, "ERROR: \"%s\" already exists.\n",

@@ -1,3 +1,41 @@
+condor (10.5.0-1) stable; urgency=medium
+
+  * Can now define DAGMan save points to be able to rerun DAGs from there
+  * Expand default list of environment variables passed to the DAGMan manager
+  * Administrators can prevent users using "getenv = true" in submit files
+  * Improved throughput when submitting a large number of ARC-CE jobs
+  * Execute events contain the slot name, sandbox path, resource quantities
+  * Can add attributes of the execution point to be recorded in the user log
+  * Enhanced condor_transform_ads tool to ease offline job transform testing
+  * Fixed a bug where memory limits over 2 GiB might not be correctly enforced
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 05 Jun 2023 12:24:00 -0500
+
+condor (10.0.4-1) stable; urgency=medium
+
+  * Provides script to assist updating from HTCondor version 9 to version 10
+  * Fixes a bug where rarely an output file would not be transferred back
+  * Fixes counting of submitted jobs, so MAX_JOBS_SUBMITTED works correctly
+  * Fixes SSL Authentication failure when PRIVATE_NETWORK_NAME was set
+  * Fixes rare crash when SSL or SCITOKENS authentication was attempted
+  * Can allow client to present an X.509 proxy during SSL authentication
+  * Fixes issue where a users jobs were ignored by the HTCondor-CE on restart
+  * Fixes issues where some events that HTCondor-CE depends on were missing
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 30 May 2023 09:33:00 -0500
+
+condor (9.0.17-3) stable; urgency=medium
+
+  * Improved upgrade9to10checks.py script
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Sat, 27 May 2023 06:40:00 -0500
+
+condor (9.0.17-2) stable; urgency=medium
+
+  * Add upgrade9to10checks.py script
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 09 May 2023 15:57:00 -0500
+
 condor (10.4.3-1) stable; urgency=medium
 
   * Fix bug than could cause the collector audit plugin to crash
@@ -116,6 +154,18 @@ condor (10.0.1-1) stable; urgency=medium
   * Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
 
  -- Tim Theisen <tim@cs.wisc.edu>  Thu, 05 Jan 2023 06:36:00 -0600
+
+condor (10.1.3-1) stable; urgency=medium
+
+  * Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 21 Nov 2022 15:53:00 -0600
+
+condor (10.1.2-1) stable; urgency=medium
+
+  * OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 14 Nov 2022 15:53:00 -0600
 
 condor (10.1.1-1) stable; urgency=medium
 

@@ -37,7 +37,6 @@
 #include "condor_claimid_parser.h"
 #include "misc_utils.h"
 #include "NegotiationUtils.h"
-#include "MyString.h"
 #include "condor_daemon_core.h"
 #include "selector.h"
 #include "consumption_policy.h"
@@ -55,8 +54,6 @@
 #endif
 
 #include "matchmaker.h"
-
-extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
 static int jobsInSlot(ClassAd &job, ClassAd &offer);
 
@@ -561,10 +558,13 @@ initialize (const char *neg_name)
 	// read in params
 	reinitialize ();
 
+    //Alternative permissions for RESCHEDULE Command
+    std::vector<DCpermission> alt_reschedulePerms{ADVERTISE_SCHEDD_PERM, ADMINISTRATOR};
     // register commands
     daemonCore->Register_Command (RESCHEDULE, "Reschedule",
             (CommandHandlercpp) &Matchmaker::RESCHEDULE_commandHandler,
-			"RESCHEDULE_commandHandler", (Service*) this, DAEMON);
+             "RESCHEDULE_commandHandler", (Service*) this, DAEMON,
+             false, 0, &alt_reschedulePerms);
     daemonCore->Register_Command (RESET_ALL_USAGE, "ResetAllUsage",
             (CommandHandlercpp) &Matchmaker::RESET_ALL_USAGE_commandHandler,
 			"RESET_ALL_USAGE_commandHandler", this, ADMINISTRATOR);
@@ -1129,7 +1129,7 @@ SET_PRIORITYFACTOR_commandHandler (int, Stream *strm)
 			return returnPrioFactor(strm, errstack);
 		}
 
-		MyString map_output;
+		std::string map_output;
 		if (user_map_do_mapping("PRIORITY_FACTOR_AUTHORIZATION", peer_identity, map_output)) {
 			StringList items(map_output.c_str(), ",");
 			items.rewind();

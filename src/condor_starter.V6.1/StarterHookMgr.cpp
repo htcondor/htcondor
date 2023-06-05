@@ -35,14 +35,8 @@ extern Starter *Starter;
 // // // // // // // // // // // //
 
 StarterHookMgr::StarterHookMgr()
-	: HookClientMgr()
+	: JobHookClientMgr()
 {
-	m_hook_keyword = NULL;
-	m_hook_prepare_job = NULL;
-	m_hook_prepare_job_before_transfer = NULL;
-	m_hook_update_job_info = NULL;
-	m_hook_job_exit = NULL;
-
 	m_hook_job_exit_timeout = 0;
 
 	dprintf( D_FULLDEBUG, "Instantiating a StarterHookMgr\n" );
@@ -55,90 +49,16 @@ StarterHookMgr::~StarterHookMgr()
 
 		// Delete our copies of the paths for each hook.
 	clearHookPaths();
-
-	if (m_hook_keyword) {
-		free(m_hook_keyword);
-	}
 }
 
 
 void
 StarterHookMgr::clearHookPaths()
 {
-	if (m_hook_prepare_job) {
-		free(m_hook_prepare_job);
-        m_hook_prepare_job = NULL;
-	}
-	if (m_hook_prepare_job_before_transfer) {
-		free(m_hook_prepare_job_before_transfer);
-		m_hook_prepare_job_before_transfer = NULL;
-	}
-	if (m_hook_update_job_info) {
-		free(m_hook_update_job_info);
-        m_hook_update_job_info = NULL;
-	}
-	if (m_hook_job_exit) {
-		free(m_hook_job_exit);
-        m_hook_job_exit = NULL;
-	}
-}
-
-
-bool
-StarterHookMgr::initialize(ClassAd* job_ad)
-{
-	// If EP admin says we must use this hook, use it.
-	char* tmp = param("STARTER_JOB_HOOK_KEYWORD");
-	if (tmp) {
-		m_hook_keyword = tmp;
-		dprintf(D_ALWAYS, "Using STARTER_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
-	}
-
-	// If EP admin did not insist on a hook, see if the job wants one.  However, if the job
-	// specifies a hookname that does not exist at all in the EP's config file,
-	// then use the default hook provided by the EP admin. This prevents the user from bypassing
-	// the EP admin's default hook by specifying an invalid hook name.
-	if ( !m_hook_keyword && job_ad->LookupString(ATTR_HOOK_KEYWORD, &m_hook_keyword) ) {
-		bool config_has_this_hook = false;
-		for (int i = 0; !config_has_this_hook; i++) {
-			HookType h = static_cast<HookType>(i);
-			if (getHookTypeString(h) == NULL) break;  // iterated thru all hook types
-			getHookPath(h, tmp);
-			if ( tmp ) {
-				free(tmp);
-				config_has_this_hook = true;
-			}
-		}
-		if ( config_has_this_hook )
-		{
-			dprintf(D_ALWAYS,
-				"Using %s value from job ClassAd: \"%s\"\n",
-				ATTR_HOOK_KEYWORD, m_hook_keyword);
-		}
-		else {
-			dprintf(D_ALWAYS,
-				"Ignoring %s value of \"%s\" from job ClassAd because hook not defined in config file\n",
-				ATTR_HOOK_KEYWORD, m_hook_keyword);
-			free(m_hook_keyword);
-			m_hook_keyword = NULL;
-		}
-	}
-
-	// If we don't have a hook by now, see if EP admin defined a default one.
-	if ( !m_hook_keyword && (tmp=param("STARTER_DEFAULT_JOB_HOOK_KEYWORD")) ) {
-		m_hook_keyword = tmp;
-		dprintf(D_ALWAYS, "Using STARTER_DEFAULT_JOB_HOOK_KEYWORD value from config file: \"%s\"\n", m_hook_keyword);
-	}
-
-	if ( !m_hook_keyword ) {
-		dprintf(D_FULLDEBUG,
-				"Job does not define %s, no config file hooks, not invoking any job hooks.\n",
-				ATTR_HOOK_KEYWORD);
-		return true;
-	}
-
-	if (!reconfig()) return false;
-	return HookClientMgr::initialize();
+	m_hook_prepare_job.clear();
+	m_hook_prepare_job_before_transfer.clear();
+	m_hook_update_job_info.clear();
+	m_hook_job_exit.clear();
 }
 
 
@@ -148,10 +68,10 @@ StarterHookMgr::reconfig()
 	// Clear out our old copies of each hook's path.
 	clearHookPaths();
 
-    if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
+	if (!getHookPath(HOOK_PREPARE_JOB, m_hook_prepare_job)) return false;
 	if (!getHookPath(HOOK_PREPARE_JOB_BEFORE_TRANSFER, m_hook_prepare_job_before_transfer)) return false;
-    if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
-    if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
+	if (!getHookPath(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info)) return false;
+	if (!getHookPath(HOOK_JOB_EXIT, m_hook_job_exit)) return false;
 
 	m_hook_job_exit_timeout = getHookTimeout(HOOK_JOB_EXIT, 30);
 
@@ -159,44 +79,24 @@ StarterHookMgr::reconfig()
 }
 
 
-bool StarterHookMgr::getHookPath(HookType hook_type, char*& hpath)
-{
-    hpath = NULL;
-	if (!m_hook_keyword) return true;
-	std::string _param;
-	const char* hook_string = getHookTypeString(hook_type);
-	if (!hook_string) return false;  // undefined hook_type
-	formatstr(_param, "%s_HOOK_%s", m_hook_keyword, hook_string);
-	return validateHookPath(_param.c_str(), hpath);
-}
-
-
-int StarterHookMgr::getHookTimeout(HookType hook_type, int def_value)
-{
-	if (!m_hook_keyword) return 0;
-	std::string _param;
-	formatstr(_param, "%s_HOOK_%s_TIMEOUT", m_hook_keyword, getHookTypeString(hook_type));
-	return param_integer(_param.c_str(), def_value);
-}
-
 int
 StarterHookMgr::tryHookPrepareJob()
 {
-	if (!m_hook_prepare_job) {
+	if (m_hook_prepare_job.empty()) {
 		return 0;
 	}
 
-	return tryHookPrepareJob_implementation(m_hook_prepare_job, true);
+	return tryHookPrepareJob_implementation(m_hook_prepare_job.c_str(), true);
 }
 
 int
 StarterHookMgr::tryHookPrepareJobPreTransfer()
 {
-	if (!m_hook_prepare_job_before_transfer) {
+	if (m_hook_prepare_job_before_transfer.empty()) {
 		return 0;
 	}
 
-	return tryHookPrepareJob_implementation(m_hook_prepare_job_before_transfer, false);
+	return tryHookPrepareJob_implementation(m_hook_prepare_job_before_transfer.c_str(), false);
 }
 
 
@@ -238,7 +138,7 @@ StarterHookMgr::tryHookPrepareJob_implementation(const char *m_hook_prepare_job,
 bool
 StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 {
-	if (!m_hook_update_job_info) {
+	if (m_hook_update_job_info.empty()) {
 			// No need to dprintf() here, since this happens a lot.
 		return false;
 	}
@@ -252,7 +152,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 
 		// Since we're not saving the output, this can just live on
         // the stack and be destroyed as soon as we return.
-    HookClient client(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info, false);
+    HookClient client(HOOK_UPDATE_JOB_INFO, m_hook_update_job_info.c_str(), false);
 
 	Env env;
 	Starter->PublishToEnv(&env);
@@ -261,12 +161,12 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::hookUpdateJobInfo: "
 				"failed to spawn HOOK_UPDATE_JOB_INFO (%s)\n",
-				m_hook_update_job_info);
+				m_hook_update_job_info.c_str());
 		return false;
 	}
 
 	dprintf(D_ALWAYS, "HOOK_UPDATE_JOB_INFO (%s) invoked.\n",
-			m_hook_update_job_info);
+			m_hook_update_job_info.c_str());
 	return true;
 }
 
@@ -274,7 +174,7 @@ StarterHookMgr::hookUpdateJobInfo(ClassAd* job_info)
 int
 StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 {
-	if (!m_hook_job_exit) {
+	if (m_hook_job_exit.empty()) {
 		static bool logged_not_configured = false;
 		if (!logged_not_configured) {
 			dprintf(D_FULLDEBUG, "HOOK_JOB_EXIT not configured.\n");
@@ -283,12 +183,9 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 		return 0;
 	}
 
-	HookClient *hook_client;
-
 		// Next, in case of retry, make sure we didn't already spawn
 		// this hook and are just waiting for it to return.
-    m_client_list.Rewind();
-    while (m_client_list.Next(hook_client)) {
+	for (const HookClient *hook_client : m_client_list) {
 		if (hook_client->type() == HOOK_JOB_EXIT) {
 			dprintf(D_FULLDEBUG,
 					"StarterHookMgr::tryHookJobExit() retried while still "
@@ -309,7 +206,7 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	ArgList args;
 	args.AppendArg(exit_reason);
 
-	hook_client = new HookJobExitClient(m_hook_job_exit);
+	HookClient *hook_client = new HookJobExitClient(m_hook_job_exit.c_str());
 
 	Env env;
 	Starter->PublishToEnv(&env);
@@ -317,13 +214,13 @@ StarterHookMgr::tryHookJobExit(ClassAd* job_info, const char* exit_reason)
 	if (!spawn(hook_client, &args, hook_stdin, PRIV_USER_FINAL, &env)) {
 		dprintf(D_ALWAYS|D_FAILURE,
 				"ERROR in StarterHookMgr::tryHookJobExit: "
-				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit);
+				"failed to spawn HOOK_JOB_EXIT (%s)\n", m_hook_job_exit.c_str());
 		delete hook_client;
 		return -1;
 	}
 
 	dprintf(D_ALWAYS, "HOOK_JOB_EXIT (%s) invoked with reason: \"%s\"\n",
-			m_hook_job_exit, exit_reason);
+			m_hook_job_exit.c_str(), exit_reason);
 	return 1;
 }
 

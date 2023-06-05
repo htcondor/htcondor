@@ -38,8 +38,6 @@
 #  define D_LOG_FILES D_FULLDEBUG
 #endif
 
-using namespace std;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 ReadMultipleUserLogs::ReadMultipleUserLogs() :
@@ -499,17 +497,13 @@ MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 
 	const char *DELIM = "=";
 
-	MyStringTokener submittok;
-	submittok.Tokenize(submitLineIn.c_str());
-	const char *	rawToken = submittok.GetNextToken(DELIM, true);
-	if ( rawToken ) {
-		std::string token(rawToken);
-		trim(token);
-		if ( !strcasecmp(token.c_str(), paramName) ) {
-			rawToken = submittok.GetNextToken(DELIM, true);
-			if ( rawToken ) {
-				paramValue = rawToken;
-				trim(paramValue);
+	StringTokenIterator submittok(submitLineIn, DELIM, true);
+	const char *token = submittok.next();
+	if ( token ) {
+		if ( !strcasecmp(token, paramName) ) {
+			token = submittok.next();
+			if ( token ) {
+				paramValue = token;
 			}
 		}
 	}

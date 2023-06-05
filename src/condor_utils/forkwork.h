@@ -60,7 +60,7 @@ class ForkWork : public Service
 
 	// # of worker stats
 	void setMaxWorkers( int max_workers );
-	int getNumWorkers( void ) { return workerList.Number(); };
+	int getNumWorkers( void ) { return (int)workerList.size(); };
 	int getMaxWorkers( void ) const { return maxWorkers; };
 	int getPeakWorkers( void ) const { return peakWorkers; };
 
@@ -71,7 +71,7 @@ class ForkWork : public Service
 	virtual int Reaper( int exitPid, int exitStatus );
 
   private:
-	SimpleList<ForkWorker *>	workerList;
+	std::vector<ForkWorker *>	workerList;
 	int			maxWorkers;		// Max # of children allowed
 	int			peakWorkers;	// Most # of children alive at once
 	int			reaperId;		// ID Of the child reaper

@@ -24,7 +24,6 @@
 #include "ca_utils.h"
 #include "CondorError.h"
 #include "string_list.h"
-#include "MyString.h"
 
 #include <openssl/err.h>
 #include <openssl/pem.h>

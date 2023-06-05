@@ -36,8 +36,6 @@
 /* maximum length of a machine name */
 #define  MAXHOSTLEN     1024
 
-#include "MyString.h"
-
 /* Extract the port from a string of the form "<xx.xx.xx.xx:pppp>" */
 int string_to_port( const char* addr );
 

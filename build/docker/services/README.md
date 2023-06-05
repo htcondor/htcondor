@@ -42,7 +42,7 @@ run docker like this:
 ```console
 dockerhost$ docker run --detach \
                 --name=minicondor \
-                -v `pwd`/condor_config.local:/etc/condor/condor_config.local \
+                -v "$(pwd)"/condor_config.local:/etc/condor/condor_config.local \
                 htcondor/mini:el7
 ```
 See the [Providing Additional

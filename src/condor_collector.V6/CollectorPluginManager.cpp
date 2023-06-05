@@ -21,10 +21,7 @@
 void
 CollectorPluginManager::Initialize()
 {
-	CollectorPlugin *plugin;
-	SimpleList<CollectorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -32,10 +29,7 @@ CollectorPluginManager::Initialize()
 void
 CollectorPluginManager::Shutdown()
 {
-	CollectorPlugin *plugin;
-	SimpleList<CollectorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -43,10 +37,7 @@ CollectorPluginManager::Shutdown()
 void
 CollectorPluginManager::Update(int command, const ClassAd &ad)
 {
-	CollectorPlugin *plugin;
-	SimpleList<CollectorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->update(command, ad);
 	}
 }
@@ -54,10 +45,7 @@ CollectorPluginManager::Update(int command, const ClassAd &ad)
 void
 CollectorPluginManager::Invalidate(int command, const ClassAd &ad)
 {
-	CollectorPlugin *plugin;
-	SimpleList<CollectorPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->invalidate(command, ad);
 	}
 }

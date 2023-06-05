@@ -23,7 +23,6 @@
 #include "condor_attributes.h"
 
 #include "env.h"
-#include "HashTable.h"
 #include "setenv.h"
 
 // Since ';' is the PATH delimiter in Windows, we use a different
@@ -42,26 +41,18 @@ static bool is_permitted_delim(char ch) { return strchr("!#$%&*+,-/:;<>?@^`|~\x1
 Env::Env()
 {
 	input_was_v1 = false;
-	_envTable = new HashTable<MyString, MyString>
-		( &hashFunction );
-	ASSERT( _envTable );
 }
 
-Env::~Env()
-{
-	delete _envTable;
-}
-
-int
+size_t
 Env::Count() const
 {
-	return _envTable->getNumElements();
+	return _envTable.size();
 }
 
 void
 Env::Clear()
 {
-	_envTable->clear();
+	_envTable.clear();
 #if defined(WIN32)
 	m_sorted_varnames.clear();
 #endif
@@ -131,9 +122,9 @@ Env::InsertEnvV1IntoClassAd( ClassAd & ad, std::string & error_msg, char delim /
 		delim = env_delimiter;
 	}
 
-	MyString env1;
-	if(getDelimitedStringV1Raw(&env1,&error_msg,delim)) {
-		ad.Assign(ATTR_JOB_ENV_V1,env1.c_str());
+	std::string env1;
+	if(getDelimitedStringV1Raw(env1,&error_msg,delim)) {
+		ad.Assign(ATTR_JOB_ENV_V1,env1);
 
 		if(delim_str.empty()) {
 			// Save the delimiter that we have chosen, in case the ad
@@ -215,11 +206,8 @@ Env::MergeFrom( char const * env_str )
 void
 Env::MergeFrom( Env const &env )
 {
-	MyString var,val;
-
-	env._envTable->startIterations();
-	while(env._envTable->iterate(var,val)) {
-		SetEnv(var,val);
+	for (const auto& [var, val]: env._envTable) {
+		SetEnv(var, val);
 	}
 }
 
@@ -263,7 +251,7 @@ Env::IsSafeEnvV2Value(char const *str)
 }
 
 void
-Env::WriteToDelimitedString(char const *input,MyString &output) {
+Env::WriteToDelimitedString(char const *input, std::string &output) {
 	// Append input to output.
 	// Would be nice to escape special characters here, but the
 	// existing syntax does not support it, so we leave the
@@ -280,14 +268,14 @@ Env::WriteToDelimitedString(char const *input,MyString &output) {
 
 	while(*input) {
 		end = input + strcspn(input,specials);
-		ret = output.formatstr_cat("%.*s", (int)(end-input), input);
+		ret = formatstr_cat(output, "%.*s", (int)(end-input), input);
 		ASSERT(ret);
 		input = end;
 
 		if(*input != '\0') {
 			// Escape this special character.
 			// Escaping is not yet implemented, so we will never get here.
-			ret = output.formatstr_cat("%c",*input);
+			ret = formatstr_cat(output, "%c",*input);
 			ASSERT(ret);
 			input++;
 		}
@@ -332,9 +320,9 @@ Env::IsV2QuotedString(char const *str)
 }
 
 bool
-Env::V2QuotedToV2Raw(char const *v1_quoted,MyString *v2_raw,MyString *errmsg)
+Env::V2QuotedToV2Raw(char const *v1_quoted, std::string& v2_raw, std::string& errmsg)
 {
-	return ArgList::V2QuotedToV2Raw(v1_quoted,v2_raw,errmsg);
+	return ArgList::V2QuotedToV2Raw(v1_quoted, v2_raw, errmsg);
 }
 
 bool
@@ -354,8 +342,8 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 {
 	if(!delimitedString) return true;
 	if(IsV2QuotedString(delimitedString)) {
-		MyString v2, msg;
-		if(!V2QuotedToV2Raw(delimitedString,&v2,&msg)) {
+		std::string v2, msg;
+		if(!V2QuotedToV2Raw(delimitedString, v2, msg)) {
 			if ( ! msg.empty()) { AddErrorMessage(msg.c_str(), error_msg); }
 			return false;
 		}
@@ -370,18 +358,16 @@ Env::MergeFromV2Quoted( const char *delimitedString, std::string & error_msg )
 bool
 Env::MergeFromV2Raw( const char *delimitedString, std::string* error_msg )
 {
-	SimpleList<MyString> env_list;
+	std::vector<std::string> env_list;
 
 	if(!delimitedString) return true;
 
-	if(!split_args(delimitedString,&env_list,error_msg)) {
+	if(!split_args(delimitedString, env_list, error_msg)) {
 		return false;
 	}
 
-	SimpleListIterator<MyString> it(env_list);
-	MyString *env_entry;
-	while(it.Next(env_entry)) {
-		if(!SetEnvWithErrorMessage(env_entry->c_str(),error_msg)) {
+	for (const auto& env_entry: env_list) {
+		if(!SetEnvWithErrorMessage(env_entry.c_str(),error_msg)) {
 			return false;
 		}
 	}
@@ -500,24 +486,9 @@ Env::SetEnvWithErrorMessage( const char *nameValueExpr, std::string* error_msg )
 bool
 Env::SetEnv( const char* var, const char* val )
 {
-	MyString myVar = var;
-	MyString myVal = val;
+	std::string myVar = var ? var : "";
+	std::string myVal = val ? val : "";
 	return SetEnv( myVar, myVal );
-}
-
-bool
-Env::SetEnv( const MyString & var, const MyString & val )
-{
-	if( var.length() == 0 ) {
-		return false;
-	}
-	bool ret = (_envTable->insert( var, val, true ) == 0);
-	ASSERT( ret );
-#if defined(WIN32)
-	m_sorted_varnames.erase(var.Value());
-	m_sorted_varnames.insert(var.Value());
-#endif
-	return true;
 }
 
 bool
@@ -526,8 +497,7 @@ Env::SetEnv( const std::string & var, const std::string & val )
 	if( var.length() == 0 ) {
 		return false;
 	}
-	bool ret = (_envTable->insert( var, val, true ) == 0);
-	ASSERT( ret );
+	_envTable[var] = val;
 #if defined(WIN32)
 	m_sorted_varnames.erase(var.c_str());
 	m_sorted_varnames.insert(var.c_str());
@@ -540,7 +510,7 @@ Env::DeleteEnv(const std::string & name)
 {
 	if (!name.size()) { return false; }
 
-	bool ret = (_envTable->remove(name.c_str()) == 0);
+	bool ret = (_envTable.erase(name) != 0);
 
 #if defined(WIN32)
 	m_sorted_varnames.erase(name.c_str());
@@ -559,18 +529,16 @@ Env::getDelimitedStringV2Quoted(std::string& result) const
 void
 Env::getDelimitedStringV2Raw(std::string& result) const
 {
-	MyString var, val;
-	SimpleList<MyString> env_list;
+	std::vector<std::string> env_list;
 
-	_envTable->startIterations();
-	while( _envTable->iterate( var, val ) ) {
+	for (const auto& [var, val]: _envTable) {
 		if(val == NO_ENVIRONMENT_VALUE) {
-			env_list.Append(var);
+			env_list.push_back(var);
 		}
 		else {
-			MyString var_val;
-			var_val.formatstr("%s=%s",var.c_str(),val.c_str());
-			env_list.Append(var_val);
+			std::string var_val;
+			formatstr(var_val, "%s=%s", var.c_str(), val.c_str());
+			env_list.push_back(var_val);
 		}
 	}
 
@@ -610,16 +578,11 @@ Env::GetEnvV1Delimiter(const ClassAd& ad)
 
 
 bool
-Env::getDelimitedStringV1Raw(MyString *result,std::string * error_msg,char delim) const
+Env::getDelimitedStringV1Raw(std::string& result,std::string * error_msg,char delim) const
 {
-	MyString var, val;
-
 	if(!delim) delim = env_delimiter;
 
-	ASSERT(result);
-
-	_envTable->startIterations();
-	while( _envTable->iterate( var, val ) ) {
+	for (const auto& [var, val]: _envTable) {
 		if(!IsSafeEnvV1Value(var.c_str(),delim) ||
 		   !IsSafeEnvV1Value(val.c_str(),delim)) {
 
@@ -631,11 +594,11 @@ Env::getDelimitedStringV1Raw(MyString *result,std::string * error_msg,char delim
 			return false;
 		}
 		// only insert the delimiter if there's already an entry...
-		if( ! result->empty()) { (*result) += delim; }
-		WriteToDelimitedString(var.c_str(),*result);
+		if( ! result.empty()) { result += delim; }
+		WriteToDelimitedString(var.c_str(),result);
 		if(val != NO_ENVIRONMENT_VALUE) {
-			WriteToDelimitedString("=",*result);
-			WriteToDelimitedString(val.c_str(),*result);
+			WriteToDelimitedString("=",result);
+			WriteToDelimitedString(val.c_str(),result);
 		}
 	}
 	return true;
@@ -657,12 +620,11 @@ Env::getWindowsEnvironmentString() const
 	     i != m_sorted_varnames.end();
 	     i++)
 	{
-		MyString val;
-		int ret = _envTable->lookup(i->c_str(), val);
-		ASSERT(ret != -1);
+		auto itr = _envTable.find(*i);
+		ASSERT(itr != _envTable.end());
 		output += *i;
 		output += '=';
-		output += val.Value();
+		output += itr->second;
 		output += '\0';
 	}
 	output += '\0';
@@ -677,16 +639,13 @@ Env::getWindowsEnvironmentString() const
 char **
 Env::getStringArray() const {
 	char **array = NULL;
-	int numVars = _envTable->getNumElements();
-	int i;
+	size_t numVars = _envTable.size();
+	size_t i = 0;
 
 	array = (char **)malloc((numVars+1)*sizeof(char*));
 	ASSERT( array );
 
-    MyString var, val;
-
-    _envTable->startIterations();
-	for( i = 0; _envTable->iterate( var, val ); i++ ) {
+	for (const auto& [var, val]: _envTable) {
 		ASSERT( i < numVars );
 		ASSERT( var.length() > 0 );
 		array[i] = (char *)malloc(var.length() + val.length() + 2);
@@ -696,31 +655,16 @@ Env::getStringArray() const {
 			strcat( array[i], "=" );
 			strcat( array[i], val.c_str() );
 		}
+		i++;
 	}
 	array[i] = NULL;
 	return array;
 }
 
-void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, MyString &val), void* pv)
+void Env::Walk(bool (*walk_func)(void* pv, const std::string &var, std::string &val), void* pv)
 {
-	const MyString *var;
-	MyString *val;
-
-	_envTable->startIterations();
-	while (_envTable->iterate_nocopy(&var, &val)) {
-		if ( ! walk_func(pv, *var, *val))
-			break;
-	}
-}
-
-void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &val), void* pv) const
-{
-	const MyString *var;
-	MyString *val;
-
-	_envTable->startIterations();
-	while (_envTable->iterate_nocopy(&var, &val)) {
-		if ( ! walk_func(pv, *var, *val))
+	for (auto& [var, val]: _envTable) {
+		if ( ! walk_func(pv, var, val))
 			break;
 	}
 }
@@ -734,51 +678,36 @@ void Env::Walk(bool (*walk_func)(void* pv, const MyString &var, const MyString &
 void
 Env::Walk(bool (*walk_func)(void* pv, const std::string &var, const std::string &val), void* pv) const
 {
-	const MyString *var;
-	MyString *val;
-
-	_envTable->startIterations();
-	while (_envTable->iterate_nocopy(&var, &val)) {
-	    std::string s(var->c_str());
-	    std::string t(val->c_str());
-		if ( ! walk_func(pv, s, t))
+	for (auto& [var, val]: _envTable) {
+		if ( ! walk_func(pv, var, val))
 			break;
 	}
-
 }
 
 bool
-Env::HasEnv(MyString const &var) const
+Env::HasEnv(std::string const &var) const
 {
 #ifdef WIN32
 	// on Windows, we have to do case-insensitive check for existance, luckily
 	// we have m_sorted_varnames for just this purpose
 	return m_sorted_varnames.find(var.c_str()) != m_sorted_varnames.end();
 #else
-	return _envTable->exists(var) == 0;
+	return _envTable.find(var) != _envTable.end();
 #endif
-}
-
-bool
-Env::GetEnv(MyString const &var,MyString &val) const
-{
-	// lookup returns 0 on success
-	return _envTable->lookup(var,val) == 0;
 }
 
 bool
 Env::GetEnv(const std::string &var, std::string &val) const
 {
-	// lookup returns 0 on success
-	MyString mystr;
-	if (_envTable->lookup(var,mystr) == 0) {
-		val = mystr.c_str();
+	auto itr = _envTable.find(var);
+	if (itr != _envTable.end()) {
+		val = itr->second;
 		return true;
 	}
 	return false;
 }
 
-bool WhiteBlackEnvFilter::operator()( const MyString & var, const MyString &val )
+bool WhiteBlackEnvFilter::operator()( const std::string & var, const std::string &val )
 {
 	if( !Env::IsSafeEnvV2Value(val.c_str()) ) {
 		// Silently filter out environment values containing
@@ -804,16 +733,16 @@ bool WhiteBlackEnvFilter::operator()( const MyString & var, const MyString &val 
 // all other items go into the whitelist.  leading and trailing whitespace is trimmed
 // comma, semicolon and whitespace are item steparators
 void WhiteBlackEnvFilter::AddToWhiteBlackList(const char * list) {
-	StringTokenIterator it(list,40,",; \t\r\n");
-	MyString name;
+	StringTokenIterator it(list,",; \t\r\n");
+	std::string name;
 	for (const char * str = it.first(); str != NULL; str = it.next()) {
 		if (*str == '!') {
-			name = str+1; name.trim();
+			name = str+1; trim(name);
 			if (!name.empty()) {
 				m_black.append(name.c_str());
 			}
 		} else {
-			name = str; name.trim();
+			name = str; trim(name);
 			if (!name.empty()) {
 				m_white.append(name.c_str());
 			}

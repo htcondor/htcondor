@@ -56,9 +56,8 @@ condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
-# Do everything in a temp dir that will go away on errors or end of script
-tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
-trap 'rm -rf "$tmpd"' EXIT
+# Do everything in a temp dir that will go away at end of script
+tmpd=$(mktemp -d "$PWD/build-XXXXXX")
 
 cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
@@ -101,4 +100,5 @@ rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
 mv "${rpm_files[@]}" "$dest_dir"
+rm -rf "$tmpd"
 ls -lh "$dest_dir"

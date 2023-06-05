@@ -22,6 +22,7 @@
 #include "condor_debug.h"
 #include "condor_io.h"
 #include "condor_classad.h"
+#include "cred_dir.h"
 #include "condor_sys.h"
 #include "starter.h"
 #include "condor_event.h"
@@ -2595,7 +2596,8 @@ REMOTE_CONDOR_dprintf_stats(const char *message)
 // on the wire, for future compatibility, we send a string.  currently
 // this is ignored by the receiver.
 int
-REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
+REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
+	std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> &creds)
 {
 	int result = 0;
 
@@ -2643,46 +2645,35 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir)
 		ClassAd ad;
 		result = ( getClassAd(syscall_sock, ad) );
 		ON_ERROR_RETURN( result );
-		dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
-		dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad:\n" );
+			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+		}
 
 		std::string fname, b64;
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		std::string full_name = creds_receive_dir;
-		full_name += DIR_DELIM_CHAR;
-		full_name += fname;
+		// The service name is of the form "foo.use"
+		if (fname.size() <= 4) {
+			EXCEPT("Shadow sent an invalid service name");
+		}
+		fname = fname.substr(0, fname.size() - 4);
 
-		std::string tmpname = full_name;
-		tmpname += ".tmp";
+		dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad with credentials for service '%s'\n",
+			fname.c_str());
 
-		// contents of pw are base64 encoded.  decode now just before they go
-		// into the file.
-		int rawlen = -1;
-		unsigned char* rawbuf = NULL;
-		zkm_base64_decode(b64.c_str(), &rawbuf, &rawlen);
+		// contents of pw are base64 encoded.
+		std::unique_ptr<htcondor::CredData> cred(new htcondor::CredData());
+		int credlen;
+		zkm_base64_decode(b64.c_str(), &cred->buf, &credlen);
+		cred->len = credlen;
 
-		if (rawlen <= 0) {
+		if (cred->len <= 0) {
 			EXCEPT("Failed to decode credential sent by shadow!");
 		}
 
-		// write temp file
-		dprintf (D_SECURITY, "Writing data to %s\n", tmpname.c_str());
-		// 4th param false means "as user"  (as opposed to as root)
-		bool rc = write_secure_file(tmpname.c_str(), rawbuf, rawlen, false);
-
-		// caller of condor_base64_decode is responsible for freeing buffer
-		free(rawbuf);
-
-		if (rc != true) {
-			dprintf(D_ALWAYS, "REMOTE_CONDOR_getcreds: failed to write secure temp file %s\n", tmpname.c_str());
-			EXCEPT("failure");
-		}
-
-		// do this as the user (no priv switching to root)
-		dprintf (D_SECURITY, "Moving %s to %s\n", tmpname.c_str(), full_name.c_str());
-		rename(tmpname.c_str(), full_name.c_str());
+		creds[fname] = std::move(cred);
 	}
 
 	result = ( syscall_sock->end_of_message() );

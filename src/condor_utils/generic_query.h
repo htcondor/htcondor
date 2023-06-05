@@ -22,7 +22,6 @@
 
 #include "condor_classad.h"
 #include "list.h"
-#include "simplelist.h"
 #include "query_result_type.h"	
 
 class GenericQuery
@@ -77,8 +76,8 @@ class GenericQuery
 	char * const *floatKeywordList;
 
 	// pointers to store the arrays of Lists neessary to store the constraints
-	SimpleList<int>   *integerConstraints;
-	SimpleList<float> *floatConstraints;
+	std::vector<int>   *integerConstraints;
+	std::vector<float> *floatConstraints;
 	List<char> 		  *stringConstraints;
 	List<char> 		  customORConstraints;
 	List<char> 		  customANDConstraints;
@@ -86,12 +85,12 @@ class GenericQuery
 	// helper functions
 	void clearQueryObject     (void);
     void clearStringCategory  (List<char> &);
-    void clearIntegerCategory (SimpleList<int> &);
-    void clearFloatCategory   (SimpleList<float> &);
+    void clearIntegerCategory (std::vector<int> &);
+    void clearFloatCategory   (std::vector<float> &);
     void copyQueryObject      (const GenericQuery &);
     void copyStringCategory   (List<char> &, List<char> &);
-    void copyIntegerCategory  (SimpleList<int> &, SimpleList<int> &);
-    void copyFloatCategory    (SimpleList<float>&, SimpleList<float>&);
+    void copyIntegerCategory  (std::vector<int> &, std::vector<int> &);
+    void copyFloatCategory    (std::vector<float>&, std::vector<float>&);
 };
 
 #endif

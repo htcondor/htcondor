@@ -91,6 +91,10 @@ bool EvalExprBool(ClassAd *ad, classad::ExprTree *tree);
 
 bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NULL, bool verbose=false );
 
+void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list);
+
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, bool overwrite=true);
+
 // returns TRUE if the expression evaluates successfully and the result was a pod type
 // or one of the complex types in the type mask.  If a mask of 0 matches all types.
 // returns FALSE if the expression could not be evaluated or if the value was unsafe and not in the type mask
@@ -151,7 +155,7 @@ int add_user_map(const char * mapname, const char * filename, MapFile * mf /*=NU
 int add_user_mapping(const char * mapname, char * mapdata);
 // these functions are in classad_usermap.cpp (and also libcondorapi_stubs.cpp)
 int reconfig_user_maps();
-bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
+bool user_map_do_mapping(const char * mapname, const char * input, std::string & output);
 
 // a class to hold (and delete) a constraint ExprTree
 // it can be initialized with either a string for a tree

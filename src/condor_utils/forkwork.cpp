@@ -24,6 +24,7 @@
 #include "condor_debug.h"
 #include "condor_daemon_core.h"
 #include "forkwork.h"
+#include <algorithm>
 
 // Instantiate the list of Cron Jobs
 
@@ -126,8 +127,8 @@ ForkWork::setMaxWorkers( int max_workers )
 	max_workers = 0;
 # endif
 	maxWorkers = max_workers;
-	if ( workerList.Number() > maxWorkers ) {
-		dprintf( D_FULLDEBUG, "Warning: # forked workers (%d) exceeds new max (%d)\n", workerList.Number(), maxWorkers );
+	if ( (int)workerList.size() > maxWorkers ) {
+		dprintf( D_FULLDEBUG, "Warning: # forked workers (%zu) exceeds new max (%d)\n", workerList.size(), maxWorkers );
 	}
 }
 
@@ -135,17 +136,14 @@ ForkWork::setMaxWorkers( int max_workers )
 int
 ForkWork::DeleteAll( void )
 {
-	ForkWorker	*worker;
-
 	// Kill 'em all
 	KillAll( true );
 
 	// Walk through the list
-	workerList.Rewind( );
-	while ( workerList.Next( worker ) ) {
-		workerList.DeleteCurrent( );
+	for (ForkWorker *worker: workerList) {
 		delete worker;
 	}
+	workerList.clear();
 	return 0;
 }
 
@@ -153,13 +151,11 @@ ForkWork::DeleteAll( void )
 int
 ForkWork::KillAll( bool force )
 {
-	ForkWorker	*worker;
 	int		mypid = getpid();
 	int		num_killed = 0;
 
 	// Walk through the list
-	workerList.Rewind( );
-	while ( workerList.Next( worker ) ) {
+	for (ForkWorker *worker: workerList) {
 		// If I'm the parent, kill it
 		if ( mypid == worker->getParent() ) {
 			num_killed++;
@@ -173,8 +169,8 @@ ForkWork::KillAll( bool force )
 
 	// If we killed some, log it...
 	if ( num_killed ) {
-		dprintf( D_ALWAYS, "ForkWork %d: Killed %d jobs\n",
-				 mypid, workerList.Number() );
+		dprintf( D_ALWAYS, "ForkWork %d: Killed %zu jobs\n",
+				 mypid, workerList.size() );
 	}
 	return 0;
 }
@@ -186,7 +182,7 @@ ForkWork::NewJob( void )
 	ForkStatus status = FORK_BUSY;
 	
 	// Any open slots?
-	if ( workerList.Number() >= maxWorkers ) {
+	if ( (int) workerList.size() >= maxWorkers ) {
 		if ( maxWorkers ) {
 			dprintf( D_ALWAYS, "ForkWork: not forking because reached max workers %d\n", maxWorkers );
 		}
@@ -199,9 +195,9 @@ ForkWork::NewJob( void )
 
 	  // Ok, let's see what happenned..
 	  if ( FORK_PARENT == status ) {
-		  dprintf( D_ALWAYS, "Number of Active Workers %d\n", workerList.Number());
-		  workerList.Append( worker );
-		  peakWorkers = MAX( peakWorkers, workerList.Number() );
+		  dprintf( D_ALWAYS, "Number of Active Workers %zu\n", workerList.size());
+		  workerList.push_back( worker );
+		  peakWorkers = std::max( peakWorkers, (int)workerList.size() );
 	  } else if ( FORK_FAILED == status ) {
 		  delete worker;
 	  } else {
@@ -228,16 +224,17 @@ ForkWork::WorkerDone( int exit_status )
 int
 ForkWork::Reaper( int exitPid, int /*exitStatus*/ )
 {
-	ForkWorker	*worker;
-
 	// Let's find out if it's one of our children...
-	workerList.Rewind( );
-	while ( workerList.Next( worker ) ) {
-		if ( worker->getPid() == exitPid ) {
-			workerList.DeleteCurrent( );
-			delete worker;	
-		return 0;
+	auto findChild = [exitPid](const ForkWorker *worker) {
+		if (worker->getPid() == exitPid) {
+			delete worker;
+			return true;
 		}
-	}
+		return false;
+	};
+
+	auto it = std::remove_if(workerList.begin(), workerList.end(),
+			findChild);
+	workerList.erase(it, workerList.end());
 	return 0;
 }

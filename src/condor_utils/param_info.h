@@ -41,6 +41,7 @@ namespace condor_params {
 typedef const struct condor_params::key_value_pair MACRO_DEF_ITEM;
 typedef const struct condor_params::key_table_pair MACRO_TABLE_PAIR;
 typedef const struct condor_params::ktp_value      MACRO_META_TABLES;
+typedef const struct condor_params::key_value_pair param_table_entry_t;
 
 int param_info_init(const void ** pvdefaults);
 
@@ -62,7 +63,7 @@ int param_default_help_by_id(int ix, const char * & descrip, const char * & tags
 param_info_t_type_t param_default_type_by_id(int ix);
 bool param_default_ispath_by_id(int ix);
 MACRO_DEF_ITEM *param_subsys_default_lookup(const char *subsys, const char *name);
-MACRO_DEF_ITEM *param_default_lookup(const char *name);
+param_table_entry_t *param_default_lookup(const char *name);
 int param_get_subsys_table(const void* pvdefaults, const char* subsys, MACRO_DEF_ITEM** ppTable);
 
 MACRO_TABLE_PAIR * param_meta_table(const char * meta, int * base_meta_id);

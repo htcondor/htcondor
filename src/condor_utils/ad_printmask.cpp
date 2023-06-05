@@ -20,7 +20,6 @@
 #include "condor_common.h"
 #include "ad_printmask.h"
 #include "escapes.h"
-#include "MyString.h"
 #include "printf_format.h"
 #include "format_time.h"
 
@@ -150,7 +149,7 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 			// an expression, we need to remember that, as 1.
 			// it needs to be deleted, and 2. there is some
 			// special handling for the string case.
-		MyString  colval(alt);
+		std::string  colval(alt);
 
 		switch (fmt->fmtKind)
 		{
@@ -182,13 +181,12 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 				}
 				if (eval_ok) {
 					bool fQuote = fmt->fmt_letter == 'V';
-					std::string buff;
-					if ( fQuote || !result.IsStringValue( buff ) ) {
+					colval.clear();
+					if ( fQuote || !result.IsStringValue( colval ) ) {
 						classad::ClassAdUnParser unparser;
 						unparser.SetOldClassAd( true, true );
-						unparser.Unparse( buff, val );
+						unparser.Unparse( colval, val );
 					}
-					colval = buff.c_str();
 				}
 			}
 			break;
@@ -223,7 +221,7 @@ calc_widths(ClassAd * al, ClassAd *target /*=NULL*/ )
 			break;
 		}
 
-		int width = colval.Length();
+		int width = (int)colval.length();
 		fmt->width = MAX(fmt->width, width);
 	}
 
@@ -298,7 +296,7 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 	int columns = formats.Length();
 	int icol = 0;
 
-	MyString retval("");
+	std::string retval;
 	if (row_prefix)
 		retval = row_prefix;
 
@@ -319,10 +317,10 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 			retval += col_prefix;
 		}
 
-		MyString tmp_fmt;
+		std::string tmp_fmt;
 		if (fmt->width) {
-			tmp_fmt.formatstr("%%-%ds", fmt->width);
-			retval.formatstr_cat(tmp_fmt.c_str(), pszHead);
+			formatstr(tmp_fmt, "%%-%ds", fmt->width);
+			formatstr_cat(retval, tmp_fmt.c_str(), pszHead);
 		} else {
 			retval += pszHead;
 		}
@@ -333,13 +331,13 @@ char * AttrListPrintMask::display_Headings(List<const char> & headings)
 
 	}
 
-	if (overall_max_width && retval.length() > overall_max_width)
-		retval.truncate(overall_max_width);
+	if (overall_max_width && (int)retval.length() > overall_max_width)
+		retval.erase(overall_max_width);
 
 	if (row_suffix)
 		retval += row_suffix;
 
-	// Convert return MyString to new char *.
+	// Convert return std::string to new char *.
 	return strdup(retval.c_str() );
 }
 
@@ -389,7 +387,7 @@ display (FILE *file, ClassAd *al, ClassAd *target /* =NULL */)
 // append column data to the row string
 //
 void AttrListPrintMask::
-PrintCol(MyString * prow, Formatter & fmt, const char * value)
+PrintCol(std::string * prow, Formatter & fmt, const char * value)
 {
 	char tmp_fmt[40];
 
@@ -412,7 +410,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 	}
 
 	if (printfFmt && (fmt.fmt_type == PFT_STRING)) {
-		prow->formatstr_cat(printfFmt, value ? value : "");
+		formatstr_cat(*prow, printfFmt, value ? value : "");
 	} else if (value) {
 		(*prow) += value;
 	}
@@ -426,7 +424,7 @@ PrintCol(MyString * prow, Formatter & fmt, const char * value)
 		(*prow) += col_suffix;
 }
 
-static void appendFieldofChar(MyString & buf, int width, char ch = '?')
+static void appendFieldofChar(std::string & buf, int width, char ch = '?')
 {
 	int cq = width;
 	if ( ! cq)
@@ -435,10 +433,9 @@ static void appendFieldofChar(MyString & buf, int width, char ch = '?')
 		cq = 0-width;
 
 	if (cq < 3) {
-		char ach[2] = { ch, 0 };
-		buf += ach;
+		buf += ch;
 	} else {
-		buf.reserve_at_least(buf.length() + cq+1);
+		buf.reserve(buf.length() + cq+1);
 		buf += '[';
 		--cq;
 		while (--cq) buf += ch;
@@ -495,7 +492,7 @@ classad::Value * MyRowOfValues::next(int & index) {
 	return NULL;
 }
 
-static void append_alt(MyString & buf, Formatter & fmt)
+static void append_alt(std::string & buf, Formatter & fmt)
 {
 	static const char alt_chars[] = { ' ', '?', '*', '.', '-', '_', '#', '0', };
 	int alt = (int)fmt.altKind * AltQuestion;
@@ -503,12 +500,11 @@ static void append_alt(MyString & buf, Formatter & fmt)
 	if (alt & AltWide) {
 		appendFieldofChar(buf, fmt.width, alt_char);
 	} else if (alt_char != ' ') {
-		char ach[2] = { alt_char, 0 };
-		buf += ach;
+		buf += alt_char;
 	}
 }
 
-static const char * set_alt(MyString & buf, Formatter & fmt)
+static const char * set_alt(std::string & buf, Formatter & fmt)
 {
 	buf = "";
 	append_alt(buf, fmt);
@@ -516,14 +512,14 @@ static const char * set_alt(MyString & buf, Formatter & fmt)
 }
 
 template <typename t>
-static const char * format_value(MyString & str, t & val, printf_fmt_t fmt_type, const Formatter & fmt)
+static const char * format_value(std::string & str, t & val, printf_fmt_t fmt_type, const Formatter & fmt)
 {
 	switch (fmt_type) {
-	case PFT_FLOAT: str.formatstr(fmt.printfFmt, (double)val);
+	case PFT_FLOAT: formatstr(str, fmt.printfFmt, (double)val);
 		break;
 	case PFT_POINTER:
 	case PFT_CHAR:
-	case PFT_INT:   str.formatstr(fmt.printfFmt, (long long)val);
+	case PFT_INT:   formatstr(str, fmt.printfFmt, (long long)val);
 		break;
 	case PFT_TIME:  str = format_time(val);
 		break;
@@ -531,27 +527,25 @@ static const char * format_value(MyString & str, t & val, printf_fmt_t fmt_type,
 		break;
 	case PFT_RAW: // we don't really expect to see raw and value here...
 	case PFT_VALUE:
-	case PFT_STRING:  str.formatstr(fmt.printfFmt, val);
+	case PFT_STRING:  formatstr(str, fmt.printfFmt, val);
 		break;
 	default:
 		ASSERT(0);
 		break;
 	}
 	if (fmt.width > (int)str.length()) {
-		std::string tmp(str.c_str());
-		tmp.insert(0, (size_t)fmt.width - str.length(), ' ');
-		str = tmp.c_str();
+		str.insert(0, (size_t)fmt.width - str.length(), ' ');
 	}
 	return str.c_str();
 }
 
 #ifdef WIN32
 template <>
-static const char * format_value<const char *>(MyString & str, const char* & val, printf_fmt_t fmt_type, const Formatter & fmt)
+static const char * format_value<const char *>(std::string & str, const char* & val, printf_fmt_t fmt_type, const Formatter & fmt)
 #else
 // we really expect this template to catch only the case where val is type const char*
 template <typename t>
-static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_type, const Formatter & fmt)
+static const t * format_value(std::string & str, const t* & val, printf_fmt_t fmt_type, const Formatter & fmt)
 #endif
 {
 	switch (fmt_type) {
@@ -563,30 +557,30 @@ static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_t
 		break;
 	case PFT_CHAR:
 	case PFT_POINTER:
-		str.formatstr(fmt.printfFmt, val);
+		formatstr(str, fmt.printfFmt, val);
 		break;
 	case PFT_RAW:
 	case PFT_VALUE:
 	case PFT_STRING:
 		if (fmt.printfFmt) {
-			str.formatstr(fmt.printfFmt, val);
+			formatstr(str, fmt.printfFmt, val);
 		} else {
 			char tfmt[40];
 			int width = (fmt.options & FormatOptionLeftAlign) ? -fmt.width : fmt.width;
 			if ( ! width) {
-				str = val;
+				str = val ? val : "";
 			} else {
 				if (fmt.options & FormatOptionNoTruncate) {
 					snprintf(tfmt, sizeof(tfmt), "%%%ds", width);
 				} else {
 					snprintf(tfmt, sizeof(tfmt), "%%%d.%ds", width, fmt.width);
 				}
-				str.formatstr(tfmt, val);
+				formatstr(str, tfmt, val);
 			}
 		}
 		break;
 	default:
-		str = val;
+		str = val ? val : "";
 		break;
 	}
 	return str.c_str();
@@ -599,7 +593,7 @@ static const t * format_value(MyString & str, const t* & val, printf_fmt_t fmt_t
 
 static int calc_column_width(Formatter *fmt, classad::Value * pval)
 {
-	MyString tmp;
+	std::string tmp;
 	printf_fmt_t fmt_type = (printf_fmt_t)(fmt->fmt_type);
 	switch (pval->GetType()) {
 	case classad::Value::REAL_VALUE: {
@@ -626,7 +620,7 @@ static int calc_column_width(Formatter *fmt, classad::Value * pval)
 			return (int)tmp.length();
 			}
 		else if (fmt_type == PFT_VALUE || fmt_type == PFT_STRING || fmt_type == PFT_RAW) {
-			tmp.formatstr("%lld", intValue);
+			formatstr(tmp, "%lld", intValue);
 			return (int)tmp.length();
 			}
 		}
@@ -843,7 +837,7 @@ int AttrListPrintMask::
 display (std::string & out, MyRowOfValues & rov)
 {
 	Formatter *fmt;
-	MyString mstrValue;
+	std::string mstrValue;
 	std::string strValue;
 	std::string tfmt;
 	long long intValue;
@@ -950,7 +944,7 @@ display (std::string & out, MyRowOfValues & rov)
 						pszVal = strValue.c_str();
 					}
 					tfmt = printfFmt; tfmt[(ptag-1)-printfFmt] = 's';
-					mstrValue.formatstr(tfmt.c_str(), pszVal);
+					formatstr(mstrValue, tfmt.c_str(), pszVal);
 					pszVal = mstrValue.c_str();
 					break;
 				default:  // just here to make g++ shut up
@@ -1219,7 +1213,7 @@ int parse_autoformat_args (
 			return -ixArg;
 		}
 
-		MyString lbl = "";
+		std::string lbl = "";
 		int wid = 0;
 		int opts = FormatOptionNoTruncate;
 		if (fheadings || print_mask.has_headings()) {
@@ -1228,7 +1222,7 @@ int parse_autoformat_args (
 			opts = FormatOptionAutoWidth | FormatOptionNoTruncate;
 			print_mask.set_heading(hd);
 		}
-		else if (flabel) { lbl.formatstr("%s = ", parg); wid = 0; opts = 0; }
+		else if (flabel) { formatstr(lbl, "%s = ", parg); wid = 0; opts = 0; }
 
 		lbl += fRaw ? "%r" : (fCapV ? "%V" : "%v");
 		if (diagnostic) {

@@ -768,13 +768,13 @@ submit description file may cause the hooks to be invoked with
     +HookKeyword = "HOOKNAME"
 
 Adding this attribute to the job's ClassAd causes the
-*condor_job_router* daemon on the submit machine to invoke hooks
+*condor_job_router* daemon on the access point to invoke hooks
 prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
 example; any string may be used.
 
 The job's ClassAd attribute definition of ``HookKeyword`` takes
 precedence, but if not present, hooks may be enabled by defining on the
-submit machine the configuration variable
+access point the configuration variable
 
 .. code-block:: condor-config
 

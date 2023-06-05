@@ -224,7 +224,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				 itr++ )
 			{
 				std::vector<std::string> the_regex_groups;
-				if( re.match_str(itr->first.c_str(),&the_regex_groups) ) {
+				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
 					std::shared_ptr<Metric> metric(statsd->newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());

@@ -510,6 +510,8 @@ class AmazonMetadataQuery : private AmazonRequest {
 		AmazonMetadataQuery( int i, const char * c ) : AmazonRequest( i, c ) { }
 		virtual ~AmazonMetadataQuery() { }
 
+		using AmazonRequest::SendRequest;
+
 		virtual bool SendRequest( const std::string & uri );
 
 		virtual std::string & getResultString() {

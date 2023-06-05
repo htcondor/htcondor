@@ -20,8 +20,6 @@
 #ifndef _SETENV_H
 #define _SETENV_H
 
-class MyString;
-
 /** @name Environment management.
  */
 //@{
@@ -59,9 +57,9 @@ const char *GetEnv( const char *env_var );
 	@param result A buffer in which to place the result.
     @return A pointer to the corresponding value or NULL (if an error
 	occurred or the variable is not present). The returned string should
-	not be deallocated.  It is merely a pointer to result.Value().
+	not be deallocated.  It is merely a pointer to result.c_str().
 */
-const char *GetEnv( const char *env_var, MyString &result );
+const char *GetEnv( const char *env_var, std::string &result );
 
 char **GetEnviron();
 //@}
