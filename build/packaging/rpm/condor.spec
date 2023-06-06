@@ -1630,9 +1630,6 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
-* Tue June 6 2023 Cole Bollig <cabollig@wisc.edu> - 10.0.5-1
-- Renamed upgrade9to10checks.py script to condor_upgrade_script
-
 * Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.4-1
 - Provides script to assist updating from HTCondor version 9 to version 10
 - Fixes a bug where rarely an output file would not be transferred back

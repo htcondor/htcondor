@@ -1,9 +1,3 @@
-condor (10.0.5-1) stable; urgency=medium
-
-  * Renamed upgrade9to10checks.py script to condor_upgrade_check
-
- -- Cole Bollig <cabollig@wisc.edu>  Tue, 6 June 2023 10:05:00 -0500
-
 condor (10.0.4-1) stable; urgency=medium
 
   * Provides script to assist updating from HTCondor version 9 to version 10
