@@ -414,7 +414,7 @@ void testing_stringListSubsetMatch(int verbose)
 	testing_from("stringListSubsetMatch", stm, verbose);
 }
 
-int main(int argc, char **argv)
+int main(int /*argc*/, const char *argv[])
 {
 	int test_flags = 0;
 	const char * pcolon;
@@ -426,7 +426,6 @@ int main(int argc, char **argv)
 		if (is_dash_arg_prefix(arg, "verbose", 1)) {
 			dash_verbose = 1;
 		} else if (is_dash_arg_colon_prefix(arg, "test", &pcolon, 1)) {
-			int verbose = 0;
 			if (pcolon) {
 				while (*++pcolon) {
 					switch (*pcolon) {
