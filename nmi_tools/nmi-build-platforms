@@ -9,7 +9,6 @@ docker://htcondor/nmi-build:x86_64_CentOS7-10000500
 docker://htcondor/nmi-build:x86_64_Debian11-10000500
 docker://htcondor/nmi-build:x86_64_Ubuntu20-10000500
 docker://htcondor/nmi-build:x86_64_Ubuntu22-10000500
-x86_64_macOS11
 x86_64_macOS13
 x86_64_Windows9
 x86_64_Windows10
