@@ -18,9 +18,13 @@ Release Notes:
 
 - HTCondor version 9.0.18 not yet released.
 
+- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``.
+
 New Features:
 
-- None.
+- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
+  to match standard HTCSS naming scheme.
+  :jira:`1828`
 
 Bugs Fixed:
 
