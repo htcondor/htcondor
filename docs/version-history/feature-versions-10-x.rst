@@ -4,6 +4,23 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.5.1
+--------------
+
+Release Notes:
+
+- HTCondor version 10.5.1 released on June 6, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- For grid universe jobs of type **batch**, detecting if a Slurm
+  system is functioning now works with older versions of Slurm.
+  :jira:`1826`
+
 Version 10.5.0
 --------------
 

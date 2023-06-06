@@ -1,3 +1,9 @@
+condor (10.5.1-1) stable; urgency=medium
+
+  * Fix issue with grid batch jobs interacting with older Slurm versions
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Tue, 06 Jun 2023 07:10:00 -0500
+
 condor (10.5.0-1) stable; urgency=medium
 
   * Can now define DAGMan save points to be able to rerun DAGs from there
