@@ -1,1 +1,1 @@
-debian/tmp/usr/bin/upgrade9to10checks.py
+debian/tmp/usr/bin/condor_upgrade_check
