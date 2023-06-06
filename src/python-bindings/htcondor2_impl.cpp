@@ -24,6 +24,10 @@
 // htcondor.Negotiator
 #include "htcondor2/negotiator.cpp"
 
+// htcondor.Startd
+#include "dc_startd.h"
+#include "htcondor2/startd.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -63,6 +67,11 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_negotiator_command_user_return", &_negotiator_command_user_return, METH_VARARGS, NULL},
 
 	{"_negotiator_command_user_value", &_negotiator_command_user_value, METH_VARARGS, NULL},
+
+
+	{"_startd_drain_jobs", &_startd_drain_jobs, METH_VARARGS, NULL},
+
+	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}

@@ -1,11 +1,8 @@
-from ._common_imports import classad
-
-# Should these be in _common_imports?
-from ._collector import Collector
-from ._daemon_type import DaemonType
-
-# Should this be in _common_imports?
-from .htcondor2_impl import _handle as handle_t
+from ._common_imports import (
+    classad,
+    Collector,
+    DaemonType,
+)
 
 from .htcondor2_impl import (
     _negotiator_command,

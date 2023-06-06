@@ -29,9 +29,12 @@ htcondor2/compat_enum/__init__.py
 htcondor2/compat_enum/LICENSE
 htcondor2/_negotiator.py
 htcondor2/_collector.py
+htcondor2/_startd.py
 htcondor2/_subsystem_type.py
 htcondor2/_daemon_type.py
 htcondor2/_ad_type.py
+htcondor2/_drain_type.py
+htcondor2/_completion_type.py
 htcondor2/_common_imports.py
 htcondor2/__init__.py
 

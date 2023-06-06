@@ -10,10 +10,13 @@ from .htcondor2_impl import _set_subsystem as set_subsystem
 from ._subsystem_type import SubsystemType
 from ._daemon_type import DaemonType
 from ._ad_type import AdType
+from ._drain_type import DrainType
+from ._completion_type import CompletionType
 
 # Classes.
 from ._collector import Collector
 from ._negotiator import Negotiator
+from ._startd import Startd
 
 # Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes
