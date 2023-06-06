@@ -8481,6 +8481,15 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		return;
 	}
 
+	// If we got information for the newly-claimed slot, then update our
+	// local data to match.
+	// Make sure to preserve attributes from the old ad that were added
+	// outside of the startd.
+	if (msg->have_claimed_slot_info()) {
+		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
+		match->my_match_ad->Update(match->m_added_attrs);
+	}
+
 	match->setStatus( M_CLAIMED );
 
 	// now that we've completed authentication (if enabled),
@@ -8554,32 +8563,9 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 		msg->leftover_startd_ad()->LookupString(ATTR_NAME,slot_name_buf);
 		char const *slot_name = slot_name_buf.c_str();
 
-			// Carry Negotiator Match expressions over from the
-			// match record.
-		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
-		for ( auto itr = match->my_match_ad->begin(); itr != match->my_match_ad->end(); itr++ ) {
-			if( !strncmp(itr->first.c_str(),ATTR_NEGOTIATOR_MATCH_EXPR,len) ) {
-				ExprTree *expr = msg->leftover_startd_ad()->LookupExpr(itr->first);
-				if ( expr ) {
-					continue;
-				}
-				expr = itr->second;
-				if( !expr ) {
-					continue;
-				}
-				const char *new_value = NULL;
-				new_value = ExprTreeToString(expr);
-				ASSERT(new_value);
-				msg->leftover_startd_ad()->AssignExpr(itr->first,new_value);
- 				dprintf( D_FULLDEBUG, "%s: Negotiator match attribute %s==%s carried over from match record.\n",
-				         slot_name, itr->first.c_str(), new_value);
-			}
-		}
-
-		// These attributes are added by the schedd to slot ads that
-		// arrive via DIRECT_ATTACH. Copy them into the lefteovers ad.
-		CopyAttribute(ATTR_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
-		CopyAttribute(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, *msg->leftover_startd_ad(), *match->my_match_ad);
+		// Copy attributes that were added to the original slot ad after
+		// it left the startd into the fresh pslot leftovers ad
+		msg->leftover_startd_ad()->Update(match->m_added_attrs);
 
 			// dprintf a message saying we got a new match, but be certain
 			// to only output the public claim id (keep the capability private)
@@ -8595,10 +8581,6 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 
 		delete sn;
 	} 
-
-	if (msg->have_claimed_slot_info()) {
-		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
-	}
 
 	if (match->is_dedicated) {
 			// Set a timer to call handleDedicatedJobs() when we return,
@@ -14553,6 +14535,27 @@ Scheduler::AddMrec(char const* id, char const* peer, PROC_ID* jobId, const Class
 		if( EvalFloat(ATTR_RANK, rec->my_match_ad, job_ad, new_startd_rank) ) {
 			rec->my_match_ad->Assign(ATTR_CURRENT_RANK, new_startd_rank);
 		}
+	}
+
+	// These are attributes that were added to the slot ad after it
+	// left the startd. We want to preserve them when we get a fresh copy
+	// of the slot ad from the startd.
+	if(rec->my_match_ad) {
+			// Carry Negotiator Match expressions over from the
+			// match record.
+		size_t len = strlen(ATTR_NEGOTIATOR_MATCH_EXPR);
+		for (auto itr = rec->my_match_ad->begin(); itr != rec->my_match_ad->end(); itr++) {
+			if(!strncmp(itr->first.c_str(), ATTR_NEGOTIATOR_MATCH_EXPR, len)) {
+				CopyAttribute(itr->first, rec->m_added_attrs, *rec->my_match_ad);
+			}
+		}
+
+		// These attributes are added by the schedd to slot ads that
+		// arrive via DIRECT_ATTACH.
+		// ATTR_AUTHENTICATED_IDENTITY is also added by the collector
+		// when the slot ad passes through it.
+		CopyAttribute(ATTR_AUTHENTICATED_IDENTITY, rec->m_added_attrs, *rec->my_match_ad);
+		CopyAttribute(ATTR_RESTRICT_TO_AUTHENTICATED_IDENTITY, rec->m_added_attrs, *rec->my_match_ad);
 	}
 
 	if( rec->my_match_ad ) {
