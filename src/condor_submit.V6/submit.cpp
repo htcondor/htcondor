@@ -2238,8 +2238,11 @@ int allocate_a_cluster()
 		exit(1);
 	}
 
-	if ((ClusterId = MyQ->get_NewCluster()) < 0) {
-		fprintf(stderr, "\nERROR: Failed to create cluster\n");
+	CondorError errstack;
+	if ((ClusterId = MyQ->get_NewCluster(errstack)) < 0) {
+		const char * msg = "Failed to create cluster";
+		if (errstack.message()) { msg = errstack.message(); }
+		fprintf(stderr, "\nERROR: %s\n", msg);
 		if ( ClusterId == NEWJOB_ERR_MAX_JOBS_SUBMITTED ) {
 			fprintf(stderr,
 				"Number of submitted jobs would exceed MAX_JOBS_SUBMITTED\n");

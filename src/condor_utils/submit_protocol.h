@@ -6,7 +6,7 @@
 class AbstractScheddQ {
 public:
 	virtual ~AbstractScheddQ() {}
-	virtual int get_NewCluster() = 0;
+	virtual int get_NewCluster(CondorError & errstack) = 0;
 	virtual int get_NewProc(int cluster_id) = 0;
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL) = 0;
 	virtual int get_Capabilities(ClassAd& reply) = 0;
@@ -49,7 +49,7 @@ public:
 		, has_jobsets(false), use_jobsets(false), jobsets_ver(0)
 	{}
 	virtual ~ActualScheddQ();
-	virtual int get_NewCluster();
+	virtual int get_NewCluster(CondorError & errstack);
 	virtual int get_NewProc(int cluster_id);
 	virtual int destroy_Cluster(int cluster_id, const char *reason = NULL);
 	virtual int get_Capabilities(ClassAd& reply);

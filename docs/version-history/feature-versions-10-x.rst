@@ -18,8 +18,12 @@ Release Notes:
 New Features:
 
 - Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
-  before the user was disabled are allowed to run to completion.
+  before the user was disabled are allowed to run to completion.  When a user
+  is disabled, an optional reason string can be provided.  The reason will be
+  included in the error message from *condor_submit* when submission is refused
+  because the user is disabled.
   :jira:`1723`
+  :jira:`1834`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.

@@ -104,7 +104,11 @@ bool DisconnectQ(Qmgr_connection *qmgr, bool commit_transactions=true, CondorErr
 	@return the new cluster id on success, < 0 on failure: -1 == "access denied"
 		-2 == "MAX_JOBS_SUBMITTED exceeded", see NEWJOB_ERR_* codes
 */
+int NewCluster(CondorError* errstack);
+#ifdef SCHEDD_EXTERNAL_DECLARATIONS
+// external callers have access to a backward compat NewCluster function
 int NewCluster(void);
+#endif
 
 /** Signal the start of a new job description (a new job process).
 	@param cluster_id cluster id of the active job cluster (from NewCluster())
