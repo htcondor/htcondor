@@ -124,6 +124,11 @@ public:
 
 	int next_token(int & length); // return start and length of next token or -1 if no tokens remain
 	const std::string * next_string(); // return NULL or a pointer to current token
+	const std::string * next_string_trim() {
+		if (!next_string()) return nullptr;
+		trim(current);
+		return &current;
+	}
 
 protected:
 	const char * str;   // The string we are tokenizing. it's not a copy, caller must make sure it continues to exist.

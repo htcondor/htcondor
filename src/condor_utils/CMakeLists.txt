@@ -770,6 +770,7 @@ endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 
+condor_exe_test(test_classad_funcs "test_classad_funcs.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")
