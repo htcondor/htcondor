@@ -12,12 +12,16 @@ from ._daemon_type import DaemonType
 from ._ad_type import AdType
 from ._drain_type import DrainType
 from ._completion_type import CompletionType
+from ._cred_type import CredType
 
 # Classes.
 from ._collector import Collector
 from ._negotiator import Negotiator
 from ._startd import Startd
+from ._credd import Credd
+from ._cred_check import CredCheck
 
 # Additional aliases for compatibility with the `htcondor` module.
 from ._daemon_type import DaemonType as DaemonTypes
 from ._ad_type import AdType as AdTypes
+from ._cred_type import CredType as CredTypes
