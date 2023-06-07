@@ -23,7 +23,7 @@ New Features:
   included in the error message from *condor_submit* when submission is refused
   because the user is disabled.
   :jira:`1723`
-  :jira:`1834`
+  :jira:`1835`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
