@@ -164,7 +164,7 @@ static bool check_expectation (
 			return false;
 		}
 	} else {
-		if ( ! EvalExprTree(tree, &myad, &targetad, result)) {
+		if ( ! EvalExprTree(tree, &myad, &targetad, result, classad::Value::ALL_VALUES)) {
 			message = std::string("could not evaluate: ") + exprstr;
 			return false;
 		}
