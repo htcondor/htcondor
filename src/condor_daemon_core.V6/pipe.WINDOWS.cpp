@@ -330,7 +330,7 @@ int ReadPipeEnd::read_helper(void* buffer, int len)
 						bytes = 0;
 					}
 					else {
-						dprintf(D_FULLDEBUG, "GetOverlappedResult error: %d\n", GetLastError());
+						dprintf(D_ALWAYS | D_BACKTRACE, "read_helper: GetOverlappedResult error: %d\n", GetLastError());
 						return -1;
 					}
 				}
@@ -539,7 +539,7 @@ bool WritePipeEnd::complete_async_write(bool nonblocking)
 		
 		DWORD bytes;
 		if (!GetOverlappedResult(m_handle, &m_overlapped_struct, &bytes, TRUE)) {
-			dprintf(D_ALWAYS, "GetOverlappedResult error: %d\n", GetLastError());
+			dprintf(D_ALWAYS | D_BACKTRACE, "complete_async_write: GetOverlappedResult error: %d\n", GetLastError());
 			m_async_io_error = GetLastError();
 
 			// return true since false indicates EWOULDBLOCK, which is not what we want
