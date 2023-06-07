@@ -1444,6 +1444,9 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 		acct_grp = NULL;
 	}
 
+	rip->r_cur->client()->c_scheddName.clear();
+	rip->r_cur->ad()->LookupString(ATTR_SCHEDD_NAME, rip->r_cur->client()->c_scheddName);
+
 	rip->r_cur->loadRequestInfo();
 
 		// Since we're done talking to this schedd, delete the stream.

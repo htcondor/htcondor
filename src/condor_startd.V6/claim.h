@@ -109,6 +109,9 @@ public:
 		// send a message to the client and accountant that the claim
 		// is a being vacated
 	void	vacate( char* claim_id );
+
+	std::string c_scheddName;
+
 private:
 	char	*c_owner;	// name of the owner
 	char	*c_user;	// name of the user

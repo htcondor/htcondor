@@ -218,6 +218,9 @@ Claim::publish( ClassAd* cad )
 	cad->Assign( ATTR_CURRENT_RANK, c_rank );
 
 	if( c_client ) {
+		if (!c_client->c_scheddName.empty()) {
+			cad->Assign(ATTR_REMOTE_SCHEDD_NAME, c_client->c_scheddName);
+		}
 		remoteUser = c_client->user();
 		if( remoteUser ) {
 			cad->Assign( ATTR_REMOTE_USER, remoteUser );

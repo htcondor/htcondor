@@ -7647,6 +7647,9 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 	// Tell the startd which CM to report to for real work
 	not_a_real_job.Assign("WorkingCM", local_cm.ptr());
 
+	// Tell the startd our name, which will go into the slot ad
+	not_a_real_job.Assign(ATTR_SCHEDD_NAME, Name);
+
 	startd->asyncRequestOpportunisticClaim(
 		&not_a_real_job,
 		slot_name,
@@ -8405,6 +8408,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	// Tell the startd if to should not send alives if starter is alive
 	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
 					param_boolean("STARTER_HANDLES_ALIVES",true) );
+
+	// Tell the startd our name, which will go into the slot ad
+	jobAd->Assign(ATTR_SCHEDD_NAME, Name);
 
 	// Setup to claim the slot asynchronously
 
