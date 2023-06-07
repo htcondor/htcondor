@@ -102,6 +102,8 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, char const *extra_clai
 	m_description = the_description;
 	m_scheduler_addr = scheduler_addr;
 	m_alive_interval = alive_interval;
+	m_num_dslots = 1;
+	m_claim_pslot = false;
 	m_reply = NOT_OK;
 	m_have_leftovers = false;
 	m_have_claimed_slot_info = false;
@@ -135,6 +137,14 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 		// Insert an attribute requesting the startd to send the
 		// claimed slot ad in its response.
 	m_job_ad.Assign("_condor_SEND_CLAIMED_AD", true);
+
+		// Tell the startd whether we want the pslot to become Claimed
+	m_job_ad.Assign("_condor_CLAIM_PARTITIONABLE_SLOT", m_claim_pslot);
+
+		// Tell the startd how many dslots we want created off of a pslot
+		// for this request. 0 is a reasonable answer when claiming the
+		// pslot.
+	m_job_ad.Assign("_condor_NUM_DYNAMIC_SLOTS", m_num_dslots);
 
 	if( !sock->put_secret( m_claim_id.c_str() ) ||
 	    !putClassAd( sock, m_job_ad ) ||
@@ -294,7 +304,7 @@ ClaimStartdMsg::readMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 
 void
-DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
+DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb )
 {
 	dprintf(D_FULLDEBUG|D_PROTOCOL,"Requesting claim %s\n",description);
 
@@ -306,6 +316,11 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 	ASSERT( msg.get() );
 	msg->setCallback(cb);
+
+	if (claim_pslot) {
+		msg->m_claim_pslot = true;
+		msg->m_num_dslots = 0;
+	}
 
 	msg->setSuccessDebugLevel(D_ALWAYS|D_PROTOCOL);
 

@@ -1557,15 +1557,6 @@ Resource::do_update( void )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
-	std::string priorState;
-
-	// If we are sending to a temporary "working" collector
-	// lie to our primary collector that we are claimed
-	// But keep the activity the same
-	if (!workingCM.empty()) {
-		public_ad.LookupString(ATTR_STATE, priorState);
-		public_ad.Assign(ATTR_STATE, "Claimed");
-	}
 		// Send class ads to owning collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -1577,13 +1568,10 @@ Resource::do_update( void )
 
 	// If we have a temporary CM, send update there, too
 	if (!workingCM.empty()) {
-		// And resource ATTR_STATE back to the correct value for our working collector
-		public_ad.Assign(ATTR_STATE, priorState);
-
 		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
 		delete workingCollectors;
-	} 
+	}
 
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.
@@ -2731,6 +2719,10 @@ Resource::publish_dynamic(ClassAd* cap)
 		} else if ( ! internal_ad) {
 			caInsert(cap, r_classad, ATTR_MAX_JOB_RETIREMENT_TIME);
 		}
+	}
+
+	if (!workingCM.empty()) {
+		cap->Assign("WorkingCM", workingCM);
 	}
 
 	//TODO: move this and startd_slot_attrs publishing out of here an into a separate pass
@@ -3940,17 +3932,21 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 		new_rip->init_classad();
 		new_rip->refresh_classad_slot_attrs(); 
 
-			// The new resource needs the claim from its
-			// parititionable parent
-		delete new_rip->r_cur;
-		new_rip->r_cur = rip->r_cur;
-		new_rip->r_cur->setResource( new_rip );
+			// If the pslot isn't claimed, then move its current Claim
+			// to the new dslot. Otherwise, leave the current Claim with
+			// the pslot.
+		if (rip->state() != claimed_state) {
+				// The new resource needs the claim from its
+				// parititionable parent
+			delete new_rip->r_cur;
+			new_rip->r_cur = rip->r_cur;
+			new_rip->r_cur->setResource( new_rip );
 
-			// And the partitionable parent needs a new claim
-		rip->r_cur = new Claim( rip );
+				// And the partitionable parent needs a new claim
+			rip->r_cur = new Claim( rip );
+		}
 
 			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
 			// Call update() in case we were never matched, i.e. no state change
 			// Note: update() may create a new claim if pass thru Owner state
 		rip->update_needed(Resource::WhyFor::wf_dslotCreate);

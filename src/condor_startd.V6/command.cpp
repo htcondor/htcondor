@@ -360,7 +360,7 @@ command_request_claim(int cmd, Stream* stream )
 	}
 
 	Claim *claim = NULL;
-	if( rip->state() == claimed_state ) {
+	if( rip->state() == claimed_state && !rip->is_partitionable_slot() ) {
 		if( rip->r_pre_pre ) {
 			claim = rip->r_pre_pre;
 		}
@@ -950,10 +950,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	double rank = 0;
 	double oldrank = 0;
 	std::string client_addr;
+	std::string schedd_name;
 	int interval;
 	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
 	bool send_claimed_ad = false;
+	bool claim_pslot = false;
+	int num_dslots = 1;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1090,12 +1093,45 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
 
+	if (rip->is_partitionable_slot()) {
+		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
+		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
+	}
+
+	if (claim_pslot && rip->state() == claimed_state) {
+		rip->dprintf(D_ALWAYS, "Refusing claim of pslot that's already claimed\n");
+		refuse(stream);
+		ABORT;
+	}
+
+	// For now, the client can either claim a pslot or claim a new dslot
+	// under the pslot. It can't do both yet.
+	if (num_dslots != (claim_pslot ? 0 : 1)) {
+		rip->dprintf(D_ALWAYS, "Refusing to claim %d dslots%s\n",
+		             num_dslots, claim_pslot ? " while claiming pslot" : "");
+		refuse(stream);
+		ABORT;
+	}
+
+	// When a pslot is already claimed, only the schedd that claimed it
+	// can do new dslot requests.
+	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
+	if (rip->is_partitionable_slot() && rip->state() == claimed_state &&
+		schedd_name != rip->r_cur->client()->c_scheddName)
+	{
+		rip->dprintf(D_ALWAYS, "Refusing request from schedd %s for claimed pslot (claimed by schedd %s)\n", schedd_name.c_str(), rip->r_cur->client()->c_scheddName.c_str());
+		refuse(stream);
+		ABORT;
+	}
+
 	// If we are being claimed to go to work for another CM
 	// check here.
 	std::string workingCM;
-	req_classad->LookupString("WorkingCM", workingCM);
+	if (claim_pslot) {
+		req_classad->LookupString("WorkingCM", workingCM);
+	}
 
-	if (workingCM.empty() && rip->can_create_dslot()) {
+	if (!claim_pslot && rip->can_create_dslot()) {
 		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
 		if ( ! new_rip) {
 			refuse(stream);
@@ -1114,7 +1150,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 		// Make sure we're willing to run this job at all.
-	if (workingCM.empty() && !rip->willingToRun(req_classad)) {
+	if (!claim_pslot && !rip->willingToRun(req_classad)) {
 	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
 		refuse(stream);
 		ABORT;
@@ -1128,7 +1164,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rank = rip->compute_rank(req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
-	if( rip->state() == claimed_state ) {
+	if (new_dynamic_slot) {
+		rip->dprintf( D_ALWAYS, "Request accepted.\n" );
+		cmd = OK;
+	} else if (rip->state() == claimed_state) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
 		if( !rip->r_pre ) {
@@ -1254,7 +1293,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->setoldrank( oldrank );
 
 	// Claimed for a temporary CM
-	if (workingCM.empty()) {
+	if (!claim_pslot) {
 		rip->workingCMStartTime = 0; // meaning "never"
 		rip->workingCM = "";
 	} else {
@@ -1454,10 +1493,8 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 
 	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
 
-	// If we're a real claim, set us into claimed state
-	if (rip->workingCM.empty()) {
-		rip->change_state( claimed_state );
-	}
+	rip->change_state( claimed_state );
+
 	return true;
 }
 

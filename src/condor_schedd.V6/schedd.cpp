@@ -7654,7 +7654,7 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 		&not_a_real_job,
 		slot_name,
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(),
+		scheduler.aliveInterval(), false,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		20,       // overall timeout on completing claim request
 		cb);
@@ -8439,7 +8439,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd,
 		description.c_str(),
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(),
+		scheduler.aliveInterval(), false,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		deadline_timeout,       // overall timeout on completing claim request
 		cb );
