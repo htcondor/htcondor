@@ -1,5 +1,6 @@
 import os
 import re
+import json
 
 from pathlib import Path
 
@@ -19,7 +20,17 @@ class Read(Verb):
         "log_file": {
             "args": ("log_file",),
             "help": "Log file",
-        }
+       },
+        "json": {
+            "args": ("-json",),
+            "action": "store_true",
+            "help": "Output logs in JSON format",
+        },
+        "csv": {
+            "args": ("-csv",),
+            "action": "store_true",
+            "help": "Output logs in CSV format",
+        },
     }
 
     def __init__(self, logger, log_file, **options):
@@ -80,28 +91,51 @@ class Read(Verb):
                     good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}"
                     event_summary["Good Time"] = good_time
         
-        # determine maximum length of each column
-        max_job_id_len = max(len(str(job_id)) for job_id in event_summaries.keys())+2
-        max_host_len = max(len(data.get("Host", "")) for data in event_summaries.values())+2
-        max_start_time_len = max(len(data.get("Start Time", "")) for data in event_summaries.values())+2
-        max_evict_time_len = max(len(data.get("Evict Time", "")) for data in event_summaries.values())+2
-        max_evictions_len = len(str("Evictions"))+2
-        max_time_format = len(str("0+00:00:00"))+2
+        if options.get("json", True) or options.get("csv", True):
+            # add event summaries as objects to list for JSON output
+            json_output = []
+            for job_id, event_summary in event_summaries.items():
+                # convert cpu usage, wall time, and good time to seconds
+                cpu_usage = event_summary.get("CPU Usage", "0+00:00:00")
+                cpu_usage_seconds = int(cpu_usage.split("+")[1].replace(":", ""))
+                wall_time = event_summary.get("Wall Time", "0+00:00:00")
+                wall_time_seconds = int(wall_time.split("+")[1].replace(":", ""))
+                good_time = event_summary.get("Good Time", "0+00:00:00")
+                good_time_seconds = int(good_time.split("+")[1].replace(":", ""))
+                # replace cpu usage, wall time, and good time with seconds
+                event_summary["CPU Usage"] = cpu_usage_seconds
+                event_summary["Wall Time"] = wall_time_seconds
+                event_summary["Good Time"] = good_time_seconds
+                json_output.append({"Job ID": job_id, **event_summary})
+            if options.get("csv", True):
+                print("Job ID,Host,Start Time,Evict Time,Evictions,Wall Time,Good Time,CPU Usage")
+                for job_id, event_summary in event_summaries.items():
+                    print(f"{job_id},{event_summary.get('Host', '')},{event_summary.get('Start Time', '')},{event_summary.get('Evict Time', '')},{event_summary.get('Evictions', '')},{event_summary.get('Wall Time', '')},{event_summary.get('Good Time', '')},{event_summary.get('CPU Usage', '')}")
+            else:
+                print(json.dumps(json_output, indent=4))
+        else:
+            # determine maximum length of each column
+            max_job_id_len = max(len(str(job_id)) for job_id in event_summaries.keys())+2
+            max_host_len = max(len(data.get("Host", "")) for data in event_summaries.values())+2
+            max_start_time_len = max(len(data.get("Start Time", "")) for data in event_summaries.values())+2
+            max_evict_time_len = max(len(data.get("Evict Time", "")) for data in event_summaries.values())+2
+            max_evictions_len = len(str("Evictions"))+2
+            max_time_format = len(str("0+00:00:00"))+2
 
-        # print header with dynamic column spacing
-        print(f"{'Job':<{max_job_id_len}} {'Host':<{max_host_len}} {'Start Time':<{max_start_time_len}} {'Evict Time':<{max_evict_time_len}} {'Evictions':<{max_evictions_len}} {'Wall Time':<{max_time_format}} {'Good Time':<{max_time_format}} {'CPU Usage':<{max_time_format}}  ")
+            # print header with dynamic column spacing
+            print(f"{'Job':<{max_job_id_len}} {'Host':<{max_host_len}} {'Start Time':<{max_start_time_len}} {'Evict Time':<{max_evict_time_len}} {'Evictions':<{max_evictions_len}} {'Wall Time':<{max_time_format}} {'Good Time':<{max_time_format}} {'CPU Usage':<{max_time_format}}  ")
 
-        # print data for each job with dynamic column spacing
-        for job_id, data in event_summaries.items():
-            host = data.get("Host", "")
-            start_time = data.get("Start Time", "")
-            # should anything be output if there is no evict time?
-            evict_time = data.get("Evict Time", "")
-            evictions = data.get("Evictions", "")
-            wall_time = data.get("Wall Time", "")
-            good_time = data.get("Good Time", "")
-            cpu_usage = data.get("CPU Usage", "")
-            print(f"{job_id:<{max_job_id_len}} {host:<{max_host_len}} {start_time:<{max_start_time_len}} {evict_time:<{max_evict_time_len}} {evictions:<{max_evictions_len}} {wall_time:<{max_time_format}} {good_time:<{max_time_format}} {cpu_usage:<{max_time_format}} ")
+            # print data for each job with dynamic column spacing
+            for job_id, data in event_summaries.items():
+                host = data.get("Host", "")
+                start_time = data.get("Start Time", "")
+                # should anything be output if there is no evict time?
+                evict_time = data.get("Evict Time", "")
+                evictions = data.get("Evictions", "")
+                wall_time = data.get("Wall Time", "")
+                good_time = data.get("Good Time", "")
+                cpu_usage = data.get("CPU Usage", "")
+                print(f"{job_id:<{max_job_id_len}} {host:<{max_host_len}} {start_time:<{max_start_time_len}} {evict_time:<{max_evict_time_len}} {evictions:<{max_evictions_len}} {wall_time:<{max_time_format}} {good_time:<{max_time_format}} {cpu_usage:<{max_time_format}} ")
             
 
 class EventLog(Noun):
