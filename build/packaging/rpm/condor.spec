@@ -625,7 +625,7 @@ HTCondor V9 to V10 check for for known breaking changes:
 3. The way to request GPU resources for a job
 
 %files upgrade-checks
-%_bindir/upgrade9to10checks.py
+%_bindir/condor_upgrade_check
 
 #######################
 %package all
@@ -1640,6 +1640,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jun 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.1-1
+- Fix issue with grid batch jobs interacting with older Slurm versions
+
 * Mon Jun 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.0-1
 - Can now define DAGMan save points to be able to rerun DAGs from there
 - Expand default list of environment variables passed to the DAGMan manager

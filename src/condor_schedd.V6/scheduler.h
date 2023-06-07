@@ -301,6 +301,7 @@ class match_rec
 	int				num_exceptions;
 	time_t			entered_current_status;
 	ClassAd*		my_match_ad;
+	ClassAd         m_added_attrs;
 	char*			user;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler

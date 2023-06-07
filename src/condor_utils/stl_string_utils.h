@@ -149,6 +149,11 @@ public:
 
 	int next_token(int & length); // return start and length of next token or -1 if no tokens remain
 	const std::string * next_string(); // return NULL or a pointer to current token
+	const std::string * next_string_trim() {
+		if (!next_string()) return nullptr;
+		trim(current);
+		return &current;
+	}
 
 	// Allow us to use this as a bona-fide STL iterator
 	using iterator_category = std::input_iterator_tag;
