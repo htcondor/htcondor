@@ -309,7 +309,7 @@ bool stringListSummarize_func( const char *name,
 template <class T>
 inline bool insert_items_from_string_tokens(T & items, const std::string & str, const char * delims) {
 	if (str.empty()) return false;
-	StringTokenIterator it(str, 40, delims);
+	StringTokenIterator it(str, delims);
 	const std::string * pstr;
 	std::string item;
 	while ((pstr = it.next_string_trim())) { 
@@ -395,7 +395,7 @@ bool stringListMember_func( const char *name,
 		if (case_sensitive) {
 			std::set<std::string> listset;
 			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
-			StringTokenIterator items(item_str, 32, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
 			const std::string * item;
 			while ((item = items.next_string_trim())) {
 				if (item->empty()) continue;
@@ -405,7 +405,7 @@ bool stringListMember_func( const char *name,
 		} else {
 			classad::References listset;
 			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
-			StringTokenIterator items(item_str, 32, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
 			const std::string * item;
 			while ((item = items.next_string_trim())) {
 				if (item->empty()) continue;
