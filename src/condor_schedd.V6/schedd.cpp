@@ -8223,7 +8223,7 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 		// If the startd doesn't set a submitter, then we'll match jobs
 		// from any submitter. But the code below ensures we only match
-		// jobs from the authentication user identity.
+		// jobs from the authenticated user identity.
 	cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter);
 
 		// TODO handle alternate submitter names
