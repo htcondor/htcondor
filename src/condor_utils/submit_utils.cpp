@@ -228,7 +228,6 @@ static char OneString[] = "1", ZeroString[] = "0";
 //static char ParallelNodeString[] = "#pArAlLeLnOdE#";
 static char UnsetString[] = "";
 
-
 static condor_params::string_value ArchMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysVerMacroDef = { UnsetString, 0 };
@@ -269,6 +268,10 @@ static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
 // The same for CPUs.
 static char rec[] = "$(RequestCPUs)";
 static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
+// a convenience so you can use $(JobId) in your submit description
+static char jid[] = "$(ClusterId).$(ProcId)";
+static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
@@ -324,6 +327,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
+	{ "JobId",     &JobIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },

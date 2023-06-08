@@ -2950,10 +2950,13 @@ ADVANCED COMMANDS
     provided to differentiate between multiple credentials from the same
     credential service provider.
 
- +<attribute> = <value>
-    A line that begins with a '+' (plus) character instructs
-    *condor_submit* to insert the given *attribute* into the job
-    ClassAd with the given *value*. Note that setting an attribute
+ MY.<attribute> = <value> or +<attribute> = <value>
+    A macro that begins with MY. or a line that begins with a '+' (plus) character instructs
+    *condor_submit* to insert the given *attribute* (without + or MY.) into the job
+    ClassAd with the given *value*. The macro can be referenced in other submit statements
+    by using ``$(MY.<attribute>)``. A +<attribute> is converted to MY.<attribute> when the file is read.
+
+    Note that setting an job attribute in this way
     should not be used in place of one of the specific commands listed
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
@@ -2977,14 +2980,15 @@ and comments.
 
                 <macro_name> = <string>
 
-    Two pre-defined macros are supplied by the submit description file
+    Several pre-defined macros are supplied by the submit description file
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. These
-    macros are intended to aid in the specification of input/output
+    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
+    These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
     be used to supply an HTCondor process with its own cluster and
     process numbers on the command line.
@@ -3220,6 +3224,9 @@ will not be modified during
  Process
     Alternate name for the ProcId submit variable. Before HTCondor
     version 8.4 this was the only name.
+ JobId
+    Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
+    id of the job.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is

@@ -21,6 +21,10 @@ New Features:
   before the user was disabled are allowed to run to completion.
   :jira:`1723`
 
+- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
+  id of the submitted job.
+  :jira:`1836`
+
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
   When an *arc_gahp* process has handled a certain number of commands,
