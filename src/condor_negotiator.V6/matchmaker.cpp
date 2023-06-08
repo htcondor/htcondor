@@ -440,6 +440,7 @@ Matchmaker ()
 	PublishCrossSlotPrios = false;
 	ConsiderPreemption = true;
 	ConsiderEarlyPreemption = false;
+	MatchWorkingCmSlots = false;
 	want_nonblocking_startd_contact = true;
 
 	startedLastCycleTime = 0;
@@ -830,6 +831,7 @@ reinitialize ()
 	if( ConsiderEarlyPreemption && !ConsiderPreemption ) {
 		dprintf(D_ALWAYS,"WARNING: NEGOTIATOR_CONSIDER_EARLY_PREEMPTION=true will be ignored, because NEGOTIATOR_CONSIDER_PREEMPTION=false\n");
 	}
+	MatchWorkingCmSlots = param_boolean("MATCH_WORKING_CM_SLOTS", false);
 	want_inform_startd = param_boolean("NEGOTIATOR_INFORM_STARTD", false);
 	want_nonblocking_startd_contact = param_boolean("NEGOTIATOR_USE_NONBLOCKING_STARTD_CONTACT",true);
 
@@ -2766,12 +2768,24 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 		return removed;
 	}
 
+	bool is_pslot;
+	std::string working_cm;
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
 		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
 			if ( strcmp(curState,claimed_state_str)==0
 			     || strcmp(curState,preempting_state_str)==0)
 			{
+				// Keep Claimed pslots if there's no WorkingCM or
+				// MatchWorkingCmSlots is true
+				ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+				working_cm.clear();
+				if (is_pslot) {
+					ad->LookupString("WorkingCM", working_cm);
+				}
+				if (is_pslot && (MatchWorkingCmSlots || working_cm.empty())) {
+					continue;
+				}
 				startdAds.Remove(ad);
 				removed++;
 			}
@@ -2922,7 +2936,7 @@ obtainAdsFromCollector (
 
 	if (!ConsiderPreemption) {
 		const char *projectionString =
-			"ifThenElse(State == \"Claimed\",\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
+			"ifThenElse((State == \"Claimed\"&&!PartitionableSlot),\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
 		publicQuery.setDesiredAttrsExpr(projectionString);
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
@@ -3795,6 +3809,8 @@ Matchmaker::startNegotiateProtocol(const std::string &submitter, const ClassAd &
 		// Tell the schedd a submitter tag value (used for flocking levels)
 		negotiate_ad.InsertAttr(ATTR_SUBMITTER_TAG, submitter_tag.c_str());
 
+		negotiate_ad.Assign(ATTR_MATCH_CLAIMED_PSLOTS, true);
+
 		if (!putClassAd(sock, negotiate_ad))
 		{
 			dprintf(D_ALWAYS, "    Failed to send negotiation header to %s\n",
@@ -3869,6 +3885,11 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 	classad_shared_ptr<ResourceRequestList> request_list = startNegotiate(submitterName, *submitterAd, sock);
 	if (!request_list.get()) {return MM_ERROR;}
 
+	std::string scheddName;
+	if (!submitterAd->LookupString(ATTR_SCHEDD_NAME, scheddName)) {
+		dprintf(D_ALWAYS, "Matchmaker::negotiate: Internal error: Missing schedd name for submitter %s.\n", submitterName);
+		return MM_ERROR;
+	}
 	std::string scheddAddr;
 	if (!getScheddAddr(*submitterAd, scheddAddr))
 	{
@@ -4010,7 +4031,7 @@ negotiate(char const* groupName, char const *submitterName, const ClassAd *submi
 		{
             remoteUser = "";
 			// 2e(i).  find a compatible offer
-			offer=matchmakingAlgorithm(submitterName, scheddAddr.c_str(), request,
+			offer=matchmakingAlgorithm(submitterName, scheddAddr.c_str(), scheddName.c_str(), request,
                                              startdAds, priority,
                                              limitUsed, limitUsedUnclaimed,
                                              submitterLimit, submitterLimitUnclaimed,
@@ -4384,7 +4405,7 @@ schedd, thanks to CCB.  It _is_ suitable for use as a unique identifier, for
 display to the user, or for calls to sockCache->invalidateSock.
 */
 ClassAd *Matchmaker::
-matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd &request,
+matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const char* scheddName, ClassAd &request,
 					 ClassAdListDoesNotDeleteAds &startdAds,
 					 double preemptPrio,
 					 double limitUsed, double limitUsedUnclaimed,
@@ -4550,6 +4571,8 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 	// scan the offer ads
 	startdAds.Open ();
 	std::string machineAddr;
+	std::string pslot_claimer;
+	bool is_pslot;
 
 	bool isIPv4 = false;
 	bool isIPv6 = false;
@@ -4579,6 +4602,22 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 				if ( rollup ) {
 					continue;
 				}
+			}
+		}
+
+		int cluster_id=-1,proc_id=-1;
+		std::string machine_name;
+		if( IsDebugLevel( D_MACHINE ) ) {
+			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
+			request.LookupInteger(ATTR_PROC_ID,proc_id);
+			candidate->LookupString(ATTR_NAME,machine_name);
+		}
+
+		candidate->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+		if (is_pslot && candidate->LookupString(ATTR_REMOTE_SCHEDD_NAME, pslot_claimer)) {
+			if (pslot_claimer != scheddName) {
+				dprintf(D_MACHINE, "Job %d.%d is not from the schedd that has pslot %s claimed (%s)\n", cluster_id, proc_id, machine_name.c_str(), pslot_claimer.c_str());
+				continue;
 			}
 		}
 
@@ -4625,18 +4664,11 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, ClassAd 
 			}
 		}
 
-		int cluster_id=-1,proc_id=-1;
-		std::string machine_name;
-		if( IsDebugLevel( D_MACHINE ) ) {
-			request.LookupInteger(ATTR_CLUSTER_ID,cluster_id);
-			request.LookupInteger(ATTR_PROC_ID,proc_id);
-			candidate->LookupString(ATTR_NAME,machine_name);
-			dprintf(D_MACHINE,"Job %d.%d %s match with %s.\n",
-					cluster_id,
-					proc_id,
-					is_a_match ? "does" : "does not",
-					machine_name.c_str());
-		}
+		dprintf(D_MACHINE,"Job %d.%d %s match with %s.\n",
+		        cluster_id,
+		        proc_id,
+		        is_a_match ? "does" : "does not",
+		        machine_name.c_str());
 
 		if( !is_a_match ) {
 				// they don't match; continue
