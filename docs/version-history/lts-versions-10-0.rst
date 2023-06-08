@@ -16,17 +16,21 @@ Release Notes:
 
 - HTCondor version 10.0.5 released on June 9, 2023.
 
-- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``.
-
-New Features:
-
 - Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
   to match standard HTCSS naming scheme.
   :jira:`1828`
 
-Bugs Fixed:
+New Features:
 
 - None.
+
+Bugs Fixed:
+
+- Fix spurious compatibility reports for regular expression that contain a space.
+  :jira:`1840`
+
+- The ``condor_upgrade_check`` script no longer attempts to check for problems
+  for an HTCondor pool when requesting checks for an HTCondor-CE.
 
 .. _lts-version-history-1004:
 
