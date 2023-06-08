@@ -29,6 +29,10 @@ New Features:
   new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
   :jira:`1778`
 
+- Container universe jobs may now specify the *container_image* to
+  be an image transfered via a file transfer plugin.
+  :jira:`1820`
+
 - The job's executable is no longer renamed to *condor_exec.exe* when
   the job's sandbox is transferred to the Execution Point.
   :jira:`1227`
