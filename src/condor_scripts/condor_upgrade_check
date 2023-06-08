@@ -306,7 +306,8 @@ def read_map_file(filename, is_el7, has_cmd):
                                 )
                 # This is a normal map line so try to get the regular expression
                 try:
-                    sequence = shlex.split(line)[1]
+                    line_split = shlex.split(line)
+                    sequence = " ".join(line_split[1:-1])
                 except IndexError:
                     format_print(
                         f"WARNING: Did not find a regular expression on line {line_num} of {filename}:\n{line}",
@@ -527,21 +528,24 @@ def usage():
 
 def main():
     # Systems with config to check: Base condor and condor-ce
-    ecosystems = ["HTCondor"]
+    ecosystems = []
     do_check = {"token": True, "pcre2": True, "gpu": True}
     # Check if passed -ce flag to indicate this host is a CE
     for arg in sys.argv[1:]:
         arg = arg.lower().strip()
-        if arg == "-ce" and "HTCondor-CE" not in ecosystems:
+        arg = arg.strip("-")
+        if arg == "ce" and "HTCondor-CE" not in ecosystems:
             ecosystems.append("HTCondor-CE")
-        elif arg == "-ignore-gpu":
+        elif arg == "ignore-gpu":
             do_check["gpu"] = False
-        elif arg == "-ignore-pcre2":
+        elif arg == "ignore-pcre2":
             do_check["pcre2"] = False
-        elif arg == "-ignore-token":
+        elif arg == "ignore-token":
             do_check["token"] = False
-        elif arg == "-h" or arg == "-help":
+        elif arg == "h" or arg == "help":
             usage()
+    if len(ecosystems) == 0:
+        ecosystems = ["HTCondor"]
     # Make sure script is running as root because we need to run 'condor_token_list'
     if os.geteuid() != 0:
         format_print("Error: Script not ran as root", err=True)
