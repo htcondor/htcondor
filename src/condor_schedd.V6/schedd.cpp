@@ -8221,9 +8221,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 	slot_user = rsock->getFullyQualifiedUser();
 
-	if (!cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter)) {
-		slot_submitter = slot_user;
-	}
+		// If the startd doesn't set a submitter, then we'll match jobs
+		// from any submitter. But the code below ensures we only match
+		// jobs from the authentication user identity.
+	cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter);
 
 		// TODO handle alternate submitter names
 	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
