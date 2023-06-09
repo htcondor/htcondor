@@ -161,6 +161,7 @@ static const SSL_METHOD *(*SSL_method_ptr)() = NULL;
 #endif
 static char *(*ERR_error_string_ptr)(unsigned long, char *) = nullptr;
 static unsigned long (*ERR_get_error_ptr)(void) = nullptr;
+static decltype(&SSL_CTX_set1_param) SSL_CTX_set1_param_ptr = nullptr;
 
 
 bool Condor_Auth_SSL::m_initTried = false;
@@ -250,6 +251,7 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_write_ptr = (int (*)(SSL *, const void *, int))dlsym(dl_hdl, "SSL_write")) ||
 		 !(ERR_error_string_ptr = (char *(*)(unsigned long, char *))dlsym(dl_hdl, "ERR_error_string")) ||
 		 !(ERR_get_error_ptr = (unsigned long (*)(void))dlsym(dl_hdl, "ERR_get_error")) ||
+		 !(SSL_CTX_set1_param_ptr = reinterpret_cast<decltype(SSL_CTX_set1_param_ptr)>(dlsym(dl_hdl, "SSL_CTX_set1_param"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
 		 !(SSL_method_ptr = (const SSL_METHOD *(*)())dlsym(dl_hdl, "SSLv23_method"))
 #else
@@ -303,6 +305,7 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_write_ptr = SSL_write;
 	ERR_get_error_ptr = ERR_get_error;
 	ERR_error_string_ptr = ERR_error_string;
+	SSL_CTX_set1_param_ptr = SSL_CTX_set1_param;
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	SSL_method_ptr = SSLv23_method;
 #else
@@ -1683,7 +1686,9 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     char *certfile     = NULL;
     char *keyfile      = NULL;
     char *cipherlist   = NULL;
+    X509_VERIFY_PARAM *verify_param = nullptr;
     bool i_need_cert   = is_server;
+    bool allow_peer_proxy = false;
 
 		// Not sure where we want to get these things from but this
 		// will do for now.
@@ -1692,6 +1697,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		cadir      = param( AUTH_SSL_SERVER_CADIR_STR );
 		certfile   = param( AUTH_SSL_SERVER_CERTFILE_STR );
 		keyfile    = param( AUTH_SSL_SERVER_KEYFILE_STR );
+		allow_peer_proxy = param_boolean("AUTH_SSL_ALLOW_CLIENT_PROXY", false);
 	} else {
 		cafile     = param( AUTH_SSL_CLIENT_CAFILE_STR );
 		cadir      = param( AUTH_SSL_CLIENT_CADIR_STR );
@@ -1723,6 +1729,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)   dprintf( D_SECURITY, "CERTFILE:   '%s'\n", certfile   );
     if(keyfile)    dprintf( D_SECURITY, "KEYFILE:    '%s'\n", keyfile    );
     if(cipherlist) dprintf( D_SECURITY, "CIPHERLIST: '%s'\n", cipherlist );
+    if(is_server)  dprintf( D_SECURITY, "ALLOW_PROXY: %d\n", (int)allow_peer_proxy );
     if (!m_scitokens_file.empty())
 	dprintf( D_SECURITY, "SCITOKENSFILE:   '%s'\n", m_scitokens_file.c_str()   );
         
@@ -1742,6 +1749,17 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 #else
 	(*SSL_CTX_set_options_ptr)( ctx, SSL_OP_NO_SSLv3 | SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
 #endif
+
+	if (allow_peer_proxy) {
+		verify_param = X509_VERIFY_PARAM_new();
+		if (!verify_param ||
+			X509_VERIFY_PARAM_set_flags(verify_param, X509_V_FLAG_ALLOW_PROXY_CERTS) != 1 ||
+			SSL_CTX_set1_param_ptr(ctx, verify_param) != 1)
+		{
+			ouch("Error configuring X509_VERIFY_PARAM\n");
+			goto setup_server_ctx_err;
+		}
+	}
 
 	// Only load the verify locations if they are explicitly specified;
 	// otherwise, we will use the system default.
@@ -1773,6 +1791,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
+	if(cipherlist)      free(cipherlist);
     return ctx;
   setup_server_ctx_err:
     if(cafile)          free(cafile);
@@ -1780,6 +1799,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
+	if(verify_param)    X509_VERIFY_PARAM_free(verify_param);
 	if(ctx)		        (*SSL_CTX_free_ptr)(ctx);
     return NULL;
 }
