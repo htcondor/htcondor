@@ -26,6 +26,12 @@ New Features:
   to match standard HTCSS naming scheme.
   :jira:`1828`
 
+- Added configuration parameter :macro:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`,
+  which controls whether the client checks the environment variable
+  `X509_USER_PROXY` for the location of a credential to use during SSL
+  authentication with a daemon.
+  :jira:`1841`
+
 Bugs Fixed:
 
 - Fixed a bug in the python bindings where some attributes were
