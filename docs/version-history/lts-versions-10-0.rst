@@ -26,11 +26,12 @@ New Features:
 
 Bugs Fixed:
 
-- Fix spurious compatibility reports for regular expression that contain a space.
+- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
   :jira:`1840`
 
-- The ``condor_upgrade_check`` script no longer attempts to check for problems
+- ``condor_upgrade_check`` no longer attempts to check for problems
   for an HTCondor pool when requesting checks for an HTCondor-CE.
+  :jira:`1840`
 
 .. _lts-version-history-1004:
 
