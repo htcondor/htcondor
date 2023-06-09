@@ -1708,8 +1708,14 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 			// will auth anonymously.
 		} else if (SecMan::getTagCredentialOwner().empty()) {
 			i_need_cert = param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false);
-			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
-			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+			const char* proxy_path=nullptr;
+			if (param_boolean("AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR", false) && (proxy_path=getenv("X509_USER_PROXY"))) {
+				certfile   = strdup(proxy_path);
+				keyfile    = strdup(proxy_path);
+			} else {
+				certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
+				keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+			}
 		}
 	}		
 	cipherlist = param( AUTH_SSL_CIPHERLIST_STR );
