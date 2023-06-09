@@ -173,6 +173,7 @@
 #define ATTR_DEFERRAL_TIME  "DeferralTime"
 #define ATTR_DEFERRAL_WINDOW  "DeferralWindow"
 #define ATTR_DESTINATION  "Destination"
+#define ATTR_DISABLE_REASON "DisableReason"
 #define ATTR_DISK  "Disk"
 #define ATTR_DISK_USAGE  "DiskUsage"
 #define ATTR_SCRATCH_DIR_FILE_COUNT "ScratchDirFileCount"

@@ -289,6 +289,7 @@ inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name
 	if (attr_value) tmp.SetStringValue(attr_value);
 	return SetUserAttributeValue(urec, attr_name, tmp);
 }
+int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
 
 #else
 typedef struct OwnerInfo OwnerInfo;

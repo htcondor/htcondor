@@ -2308,6 +2308,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
+			DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2323,6 +2324,10 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, reason.c_str());
+			}
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}

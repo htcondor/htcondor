@@ -77,6 +77,7 @@ int actOnUsers (
 	DCSchedd & schedd,
 	const char * usernames[],
 	int num_usernames,
+	const char * reason,
 	CondorError *errstack,
 	int connect_timeout = 20);
 
@@ -258,6 +259,7 @@ main( int argc, const char *argv[] )
 	std::vector<const char*> edit_args;
 	const char* pool = nullptr;
 	const char* name = nullptr;
+	const char* disableReason = nullptr;
 	int cmd = 0;
 	int rval = 0;
 	classad::References attrs;
@@ -334,6 +336,14 @@ main( int argc, const char *argv[] )
 				exit(1);
 			}
 			cmd = DISABLE_USERREC;
+		}
+		else
+		if (is_dash_arg_prefix(argv[i], "reason", 2)) {
+			if( i+1 >= argc ) {
+				fprintf( stderr, "Error: -reason requires a argument\n"); 
+				exit(1);
+			}
+			disableReason = argv[++i];
 		}
 		else
 		if (is_dash_arg_prefix(argv[i], "delete", 2)) {
@@ -458,6 +468,12 @@ main( int argc, const char *argv[] )
 		}
 	}
 
+	// -reason requires -disable
+	if (disableReason && cmd != DISABLE_USERREC) {
+		fprintf(stdout, "-reason argument can only be used with -disable argument\n");
+		exit(1);
+	}
+
 	if (cmd == QUERY_USERREC_ADS) {
 
 		classad::ClassAd req_ad;
@@ -525,13 +541,13 @@ main( int argc, const char *argv[] )
 
 	} else if (cmd == ENABLE_USERREC) {
 		CondorError errstack;
-		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), &errstack);
+		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), nullptr, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
 	} else if (cmd == DISABLE_USERREC) {
 		CondorError errstack;
-		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), &errstack);
+		rval = actOnUsers (cmd, schedd, &usernames[0], (int)usernames.size(), disableReason, &errstack);
 		if (rval != 0) {
 			fprintf(stderr, "Error: %s failed - %s\n", cmd_to_str(cmd), errstack.getFullText().c_str());
 		}
@@ -649,6 +665,7 @@ int actOnUsers (
 	DCSchedd & schedd,
 	const char * usernames[],
 	int num_usernames,
+	const char * reason,
 	CondorError *errstack,
 	int connect_timeout /*=20*/)
 {
@@ -667,7 +684,9 @@ int actOnUsers (
 	for (int  ii = 0; ii < num_usernames; ++ii) {
 		cmd_ad.Assign(ATTR_USER, usernames[ii]);
 		if (dash_add) { cmd_ad.Assign("Create", true); }
-
+		if (reason) {
+			if (cmd == DISABLE_USERREC) cmd_ad.Assign(ATTR_DISABLE_REASON, reason);
+		}
 		if (!putClassAd(sock, cmd_ad)) return Q_SCHEDD_COMMUNICATION_ERROR;
 		dprintf(D_FULLDEBUG, "Sent %s User %s to schedd\n", cmd_to_str(cmd), usernames[ii]);
 	}
@@ -704,6 +723,7 @@ usage(FILE *out, const char *appname)
 	}
 	fprintf(out, "Usage: %s [ADDRESS] [DISPLAY] [USERS]\n", appname );
 	fprintf(out, "       %s [ADDRESS] [OPERATION] [USERS]\n", appname );
+	fprintf(out, "       %s [ADDRESS] -disable [USERS] [-reason <reason-string>]\n", appname );
 	fprintf(out, "       %s [ADDRESS] -edit [USERS] <attr>=<value> [<attr>=<value> ...]\n", appname );
 
 	fprintf(out, "\n  ADDRESS is:\n"
@@ -743,6 +763,7 @@ usage(FILE *out, const char *appname)
 	fprintf(out, "    -add\t\t Add new, enabled user records\n" );
 	fprintf(out, "    -enable\t\t Enable existing user records, Add new records as needed\n" );
 	fprintf(out, "    -disable\t\t Disable existing user records, user cannot submit jobs\n" );
+	fprintf(out, "    -reason <string>\t Reason for disabling the user. Use with -disable\n" );
 //	fprintf(out, "    -delete\t\t Delete user records\n" );
 //	fprintf(out, "    -reset\t\t Reset user records to default settings and limits\n" );
 //	fprintf(out, "    -edit\t\t Edit fields of user records\n" );

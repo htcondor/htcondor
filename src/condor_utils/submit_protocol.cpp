@@ -110,7 +110,7 @@ bool ActualScheddQ::disconnect(bool commit_transaction, CondorError & errstack) 
 	return rval;
 }
 
-int ActualScheddQ::get_NewCluster() { return NewCluster(); }
+int ActualScheddQ::get_NewCluster(CondorError & errstack) { return NewCluster(&errstack); }
 int ActualScheddQ::get_NewProc(int cluster_id) { return NewProc(cluster_id); }
 int ActualScheddQ::destroy_Cluster(int cluster_id, const char *reason) { return DestroyCluster(cluster_id, reason); }
 
