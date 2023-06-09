@@ -255,15 +255,15 @@ using istring_view = std::basic_string_view<char, case_char_traits>;
 
 namespace htcondor {
 template <typename T>
-class allocator {
+class zeroing_allocator {
 	public:
 		using value_type = T;
 		using propagate_on_container_move_assignment = std::true_type;
 		using is_always_equal = std::true_type;
 
-		allocator() noexcept = default;
-		allocator(const allocator &) noexcept = default;
-		~allocator() = default;
+		zeroing_allocator() noexcept = default;
+		zeroing_allocator(const zeroing_allocator &) noexcept = default;
+		~zeroing_allocator() = default;
 
 		T *allocate(std::size_t n) {
 			return static_cast<T*>(malloc(n * sizeof(T)));
@@ -271,28 +271,28 @@ class allocator {
 
 		void deallocate(T *ptr, std::size_t n) {
 			// C++23 has memset_explicit which is guaranteed not to be optimized away
-			// memset_explicit(T, '\0', n);
-			memset(ptr, '\0', n);
+			// memset_explicit(T, '\0', n * sizeof(T));
+			memset(ptr, '\0', n * sizeof(T));
 			free(ptr);
 		}	
 
 		template <class U>
-		allocator(const allocator<U>&) noexcept {}
+		zeroing_allocator(const zeroing_allocator<U>&) noexcept {}
 };
 		
 template <class T, class U>
-bool operator==(const allocator<T>&, const allocator<U>&) noexcept
+bool operator==(const zeroing_allocator<T>&, const zeroing_allocator<U>&) noexcept
 {
 	return true;
 }
 
 template <class T, class U>
-bool operator!=(const allocator<T>&, const allocator<U>&) noexcept
+bool operator!=(const zeroing_allocator<T>&, const zeroing_allocator<U>&) noexcept
 {
 	return false;
 }
 }
 
-using secure_string = std::basic_string<char, std::char_traits<char>, htcondor::allocator<char>>;
-using secure_vector = std::vector<unsigned char, htcondor::allocator<char>>;
+using secure_string = std::basic_string<char, std::char_traits<char>, htcondor::zeroing_allocator<char>>;
+using secure_vector = std::vector<unsigned char, htcondor::zeroing_allocator<unsigned char>>;
 #endif // _stl_string_utils_h_
