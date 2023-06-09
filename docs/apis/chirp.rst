@@ -1,5 +1,5 @@
-Chirp -- Updates from jobs
-==========================
+Chirp
+=====
 
 :index:`Chirp<single: Chirp; API>` :index:`Chirp API`
 
