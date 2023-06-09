@@ -174,10 +174,10 @@ and :ref:`admin-manual/configuration-macros:shared file system configuration fil
 
 :macro-def:`SPOOL`
     The spool directory is where certain files used by the
-    *condor_schedd* are stored, such as the job queue file and the
-    initial executables of any jobs that have been submitted. In
-    addition, all the checkpoint files from jobs that have been submitted
-    will be stored in that machine's spool directory. Therefore,
+    *condor_schedd* are stored, such as the job queue file.  The
+    spool also stores all input and output files for
+    remotely-submitted jobs and all intermediate or checkpoint
+    files.  Therefore,
     you will want to ensure that the spool directory is located on a
     partition with enough disk space. If a given machine is only set up
     to execute HTCondor jobs and not submit them, it would not need a
@@ -3084,7 +3084,7 @@ section.
 :macro-def:`KILL`
     A boolean expression that, when ``True``, causes HTCondor to
     immediately stop the execution of a vacating job, without delay. The
-    job is hard-killed, so any attempt by the job to checkpoint or clean
+    job is hard-killed, so any attempt by the job to clean
     up will be aborted. This expression should normally be ``False``.
     When desired, it may be used to abort the graceful shutdown of a job
     earlier than the limit imposed by ``MachineMaxVacateTime``
@@ -3092,7 +3092,7 @@ section.
 
 :macro-def:`PERIODIC_CHECKPOINT`
     A boolean expression that, when ``True``, causes HTCondor to
-    initiate a checkpoint of the currently running job. This setting
+    initiate a checkpoint of the currently running job.  This setting
     applies to vm universe jobs that have set
     **vm_checkpoint** :index:`vm_checkpoint<single: vm_checkpoint; submit commands>`
     to ``True`` in the submit description file.
@@ -3136,7 +3136,7 @@ section.
 :macro-def:`WANT_VACATE`
     A boolean expression that, when ``True``, defines that a preempted
     HTCondor job is to be vacated, instead of killed. This means the job
-    will be soft-killed and given time to checkpoint or clean up. The
+    will be soft-killed and given time to clean up. The
     amount of time given depends on ``MachineMaxVacateTime``
     :index:`MachineMaxVacateTime` and ``KILL``
     :index:`KILL`. The default value is ``True``.
@@ -4940,7 +4940,7 @@ These macros control the *condor_schedd*.
     ``job_queue.log`` file, not the ``SchedLog`` file). This file
     contains an initial state of the job queue, and a series of
     transactions that were performed on the queue (such as new jobs
-    submitted, jobs completing, and checkpointing). Periodically, the
+    submitted or jobs completing). Periodically, the
     *condor_schedd* will go through this log, truncate all the
     transactions and create a new file with containing only the new
     initial state of the log. This is a somewhat expensive operation,
@@ -5957,21 +5957,6 @@ These settings affect the *condor_starter*.
     enabled (i.e. to disallow setuid binaries) by setting ``DISABLE_SETUID``
     to true.
 
-:macro-def:`EXEC_TRANSFER_ATTEMPTS`
-    Sometimes due to a router misconfiguration, kernel bug, or other
-    network problem, the transfer of the initial checkpoint from the
-    access point to the execute machine will fail midway through. This
-    parameter allows a retry of the transfer a certain number of times
-    that must be equal to or greater than 1. If this parameter is not
-    specified, or specified incorrectly, then it will default to three.
-    If the transfer of the initial executable fails every attempt, then
-    the job goes back into the idle state until the next renegotiation
-    cycle.
-
-    .. note::
-
-        This parameter does not exist in the NT starter.
-
 :macro-def:`JOB_RENICE_INCREMENT`
     When the *condor_starter* spawns an HTCondor job, it can do so with
     a nice-level. A nice-level is a Unix mechanism that allows users to
@@ -6457,7 +6442,7 @@ condor_submit Configuration File Entries
     defaults to ``NEVER``, such that HTCondor will not send email about
     events for jobs. Possible values are ``NEVER``, ``ERROR``,
     ``ALWAYS``, or ``COMPLETE``. If ``ALWAYS``, the owner will be
-    notified whenever the job produces a checkpoint, as well as when the
+    notified whenever the
     job completes. If ``COMPLETE``, the owner will be notified when the
     job terminates. If ``ERROR``, the owner will only be notified if the
     job terminates abnormally, or if the job is placed on hold because
@@ -11113,12 +11098,12 @@ general discussion of *condor_defrag* may be found in
         jobs is the longer one.
      quick
         ``MaxJobRetirementTime`` is not honored. Eviction of jobs is
-        immediately initiated. Jobs are given time to shut down and
-        produce a checkpoint according to the usual policy, as given by
+        immediately initiated. Jobs are given time to shut down
+        according to the usual policy, as given by
         ``MachineMaxVacateTime``.
      fast
         Jobs are immediately hard-killed, with no chance to gracefully
-        shut down or produce a checkpoint.
+        shut down.
 
 :macro-def:`DEFRAG_STATE_FILE`
     The path to a file used to record information used by

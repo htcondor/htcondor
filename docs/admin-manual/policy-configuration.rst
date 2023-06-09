@@ -511,9 +511,10 @@ The following list describes all the possible state/activity pairs.
    it checks the :macro:`WANT_VACATE` expression to determine its activity.
 
     Vacating
-       In the Vacating activity, the job that was running is in the
-       process of terminating. As soon as the termination process
-       completes, the machine moves into either the Owner state or the
+       In the Vacating activity, the job is given a chance to exit
+       cleanly.  This may include uploading intermediate files.  As
+       soon as the job finishes exiting,
+       the machine moves into either the Owner state or the
        Claimed state, depending on the reason for its preemption.
        :index:`Killing<single: Killing; machine activity>`
     Killing
@@ -785,7 +786,7 @@ Claimed State
 The Claimed state is certainly the most complex state. It has the most
 possible activities and the most expressions that determine its next
 activities. In addition, the *condor_vacate*
-commands affect the machine when it is in the Claimed state.
+command affects the machine when it is in the Claimed state.
 
 In general, there are two sets of expressions that might take effect,
 depending on the universe of the job running on the claim: vanilla,
