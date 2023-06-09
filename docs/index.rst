@@ -52,7 +52,7 @@ Manual built on |release_date|
 
    grid-computing/index
    cloud-computing/index
-   apis/index
+   apis/chirp.rst
    platform-specific/index
    faq/index
    version-history/index
