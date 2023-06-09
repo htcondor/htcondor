@@ -2549,6 +2549,10 @@ type=bool
 default=false
 type=bool
 
+[AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR]
+default=false
+type=bool
+
 [BOOTSTRAP_SSL_SERVER_TRUST]
 default=false
 description=Automatically trust the remote CA over SSL
