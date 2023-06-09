@@ -14,17 +14,11 @@ Version 10.0.6
 
 Release Notes:
 
-.. HTCondor version 10.0.5 released on Month Date, 2023.
+.. HTCondor version 10.0.6 released on Month Date, 2023.
 
-- HTCondor version 10.0.5 not yet released.
-
-- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``.
+- HTCondor version 10.0.6 not yet released.
 
 New Features:
-
-- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
-  to match standard HTCSS naming scheme.
-  :jira:`1828`
 
 - Added configuration parameter :macro:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`,
   which controls whether the client checks the environment variable
@@ -73,9 +67,11 @@ Version 10.0.5
 
 Release Notes:
 
-.. HTCondor version 10.0.X released on Month Date, 2023.
+- HTCondor version 10.0.5 released on June 9, 2023.
 
-- HTCondor version 10.0.X not yet released.
+- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
+  to match standard HTCSS naming scheme.
+  :jira:`1828`
 
 New Features:
 
@@ -83,7 +79,12 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
+  :jira:`1840`
+
+- ``condor_upgrade_check`` no longer attempts to check for problems
+  for an HTCondor pool when requesting checks for an HTCondor-CE.
+  :jira:`1840`
 
 .. _lts-version-history-1004:
 
