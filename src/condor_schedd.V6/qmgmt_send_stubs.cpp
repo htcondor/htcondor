@@ -125,7 +125,6 @@ NewCluster(CondorError* errstack)
 		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
 			neg_on_error( qmgmt_sock->code(terrno) );
-			errno = terrno;
 
 			// Older versions of the SCHEDD do not return an error reply ad
 			// To handle that, look at what's on the wire, rather than what we should expect.
@@ -135,7 +134,7 @@ NewCluster(CondorError* errstack)
 				gotClassad = getClassAd(qmgmt_sock, reply);
 			}
 			if ( ! qmgmt_sock->end_of_message() && ! terrno) { // prefer existing errno
-				errno = ETIMEDOUT;
+				terrno = ETIMEDOUT;
 			}
 
 			if (errstack) {
@@ -151,6 +150,7 @@ NewCluster(CondorError* errstack)
 				errstack->push( "SCHEDD", errCode, errmsg );
 			}
 
+			errno = terrno;
 			return rval;
 		}
 		neg_on_error( qmgmt_sock->end_of_message() );
