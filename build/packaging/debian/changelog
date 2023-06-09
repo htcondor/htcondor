@@ -1,3 +1,10 @@
+condor (10.0.5-1) stable; urgency=medium
+
+  * Rename upgrade9to10checks.py script to condor_upgrade_check
+  * Fix spurious warning from condor_upgrade_check about regexes with spaces
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 09 Jun 2023 08:17:00 -0500
+
 condor (10.5.1-1) stable; urgency=medium
 
   * Fix issue with grid batch jobs interacting with older Slurm versions

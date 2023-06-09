@@ -1640,6 +1640,10 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.5-1
+- Rename upgrade9to10checks.py script to condor_upgrade_check
+- Fix spurious warning from condor_upgrade_check about regexes with spaces
+
 * Tue Jun 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.1-1
 - Fix issue with grid batch jobs interacting with older Slurm versions
 
