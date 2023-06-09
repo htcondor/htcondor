@@ -43,6 +43,11 @@ Bugs Fixed:
   them correctly.
   :jira:`1799`
 
+- The submit commands **remote_initialdir**, **transfer_input**,
+  **transfer_output**, and **transfer_error** now work properly when
+  submitting a **batch** grid universe job to a remote system via ssh.
+  :jira:`1560`
+
 - Fixed bug in ``condor_pool_job_report`` script that broke the script and
   outputted error messages about invalid constraint expressions due internal
   use of ``condor_history`` specifying a file to read with ``-f`` flag instead
