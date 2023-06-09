@@ -1020,6 +1020,7 @@ struct SubmitJobsIterator {
 		} else {
 			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
+		process_submit_errstack(m_hash.error_stack());
 
 		if ( ! job) {
 			THROW_EX(HTCondorInternalError, "Failed to get next job");
@@ -4144,7 +4145,7 @@ void export_schedd()
         .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
         ;
 
-    class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
+    class_<ConnectionSentry>("Transaction", "DEPRECATED. An ongoing transaction in the HTCondor schedd", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
         ;
@@ -4403,6 +4404,7 @@ void export_schedd()
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
             Start a transaction with the *condor_schedd*.
+            DEPRECATED. use schedd.Submit instead
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
             flag is set.
@@ -4598,14 +4600,18 @@ void export_schedd()
 
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
-            ``items``, and ``values`` methods.
+            ``items``, and ``values`` methods.  Values in the submit discription language have
+            no data type, they are all stored as strings
             )C0ND0R", boost::python::no_init)
         .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
             :param input: Submit descriptors as
-                ``key = value`` pairs in a dictionary,
-                or as keyword arguments,
-                or as a string containing the text of a submit file.
+                a string containing the text of a submit file
+                or as ``key = value`` pairs in a dictionary,
+                or as keyword arguments.
+
+                Only the single multi-line string form can contain a ``QUEUE`` statement.
+
                 For example, these calls all produce identical
                 submit descriptions:
 
@@ -4615,32 +4621,56 @@ void export_schedd()
                         """
                         executable = /bin/sleep
                         arguments = 5s
+                        log = $(ClusterId).log
                         My.CustomAttribute = "foobar"
                         """
                     )
 
-                    # we need to quote the string "foobar" correctly
-                    from_dict = htcondor.Submit({
+                    # create an empty submit object, then populate it as a dict
+                    # use of classad.quote here insures that the value is properly escaped as a classad string
+                    submit_dict = htcondor.Submit()
+                    submit_dict["executable"] = "/bin/sleep"
+                    submit_dict["arguments"] = "5s"
+                    submit_dict["log"] = "$(ClusterId).log"
+                    submit_dict["My.CustomAttribute"] = classad.quote("foobar")
+
+                    # initialize a submit object from a python dict
+                    # note that values should be strings
+                    mydict = {
                         "executable": "/bin/sleep",
                         "arguments": "5s",
+                        "log": "$(ClusterId).log",
                         "My.CustomAttribute": classad.quote("foobar"),
-                    })
+                    }
+                    from_dict = htcondor.Submit(mydict)
 
+                    # initialize a submit object from keyword arguments
                     # the **{} is a trick to get a keyword argument that contains a .
                     from_kwargs = htcondor.Submit(
-                        executable = "/bin/sleep",
-                        arguments = "5s",
-                        **{
-                            "My.CustomAttribute": classad.quote("foobar"),
-                        }
+                        executable="/bin/sleep",
+                        arguments="5s",
+                        log="$(ClusterId).log",
+                        **{ "My.CustomAttribute": classad.quote("foobar") }
                     )
 
-                If a string is used, it may include a single *condor_submit* ``QUEUE``
-                statement.
+                If a string initalizer is used, it may include a single *condor_submit* ``QUEUE``
+                statement at the end. If omitted, the submit description is initially empty.
+
                 The arguments to the ``QUEUE`` statement will be stored
-                in the ``QArgs`` member of this class and used when :meth:`Submit.queue`
-                or :meth:`Submit.queue_with_itemdata` are called.
-                If omitted, the submit description is initially empty.
+                in the ``QArgs`` member of this class and can be passed to :meth:`schedd.Submit`
+                as the itemdata iterator like this
+
+                .. code-block:: python
+
+                    sub = htcondor.Submit(
+                        """
+                        executable = /bin/sleep
+                        QUEUE arguments in (1s, 10s, 5m)
+                        """
+                    )
+                    schedd.Submit(sub, count=1, itemdata=sub.itemdata())
+
+
             :type input: dict or str
             )C0ND0R")
         .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
@@ -4658,6 +4688,7 @@ void export_schedd()
         .def("queue", &Submit::queue,
             R"C0ND0R(
             Submit the current object to a remote queue.
+            This method is DEPRECATED. use schedd.Submit() instead.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4677,6 +4708,7 @@ void export_schedd()
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
             Submit the current object to a remote queue.
+            This method is DEPRECATED. use schedd.Submit() instead.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4742,7 +4774,7 @@ void export_schedd()
             This is the same iterator used by *condor_submit* when processing
             ``QUEUE`` statements.
 
-            :param str queue: a submit queue statement, or the arguments to a submit queue statement.
+            :param str queue: a submit file queue statement, or the arguments to a submit file queue statement.
             :return: An iterator for the resulting items
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
@@ -4750,16 +4782,13 @@ void export_schedd()
         .def("getQArgs", &Submit::getQArgs,
             R"C0ND0R(
             Returns arguments specified in the ``QUEUE`` statement passed to the constructor.
-            These are the arguments that will be used by the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
+            These are the arguments that will be used by the :meth:`Submit.itemdata`
             )C0ND0R",
             boost::python::args("self"))
         .def("setQArgs", &Submit::setQArgs,
             R"C0ND0R(
             Sets the arguments to be used by
-            subsequent calls to the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods
-            if not overridden by arguments to those methods.
+            subsequent calls to the :meth:`Submit.itemdata`
 
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",
