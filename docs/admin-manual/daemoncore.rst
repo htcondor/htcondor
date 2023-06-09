@@ -68,8 +68,8 @@ quick shutdown methods. In both cases, the *condor_master* exits after
 all its children have exited. In the *condor_startd*, if the machine is
 not claimed and running a job, both the ``SIGTERM`` and ``SIGQUIT``
 signals result in an immediate exit. However, if the *condor_startd* is
-running a job, a graceful shutdown results in that job writing a
-checkpoint, while a fast shutdown does not. In the *condor_schedd*, if
+running a job, a graceful shutdown gives that job a chance to write
+a checkpoint, while a fast shutdown does not. In the *condor_schedd*, if
 there are no jobs currently running, there will be no *condor_shadow*
 processes, and both signals result in an immediate exit. However, with
 jobs running, a graceful shutdown causes the *condor_schedd* to ask

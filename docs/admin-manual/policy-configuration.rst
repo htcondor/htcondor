@@ -15,8 +15,8 @@ Policy Configuration for Execute Hosts and for Submit Hosts
 
 This section describes the configuration of machines, such that they,
 through the *condor_startd* daemon, implement a desired policy for when
-remote jobs should start, be suspended, (possibly) resumed, vacate (with
-a checkpoint) or be killed. This policy is the heart of HTCondor's
+remote jobs should start, be suspended, (possibly) resumed, vacate
+or be killed. This policy is the heart of HTCondor's
 balancing act between the needs and wishes of resource owners (machine
 owners) and resource users (people submitting their jobs to HTCondor).
 Please read this section carefully before changing any of the settings
@@ -512,13 +512,13 @@ The following list describes all the possible state/activity pairs.
 
     Vacating
        In the Vacating activity, the job that was running is in the
-       process of checkpointing. As soon as the checkpoint process
+       process of terminating. As soon as the termination process
        completes, the machine moves into either the Owner state or the
        Claimed state, depending on the reason for its preemption.
        :index:`Killing<single: Killing; machine activity>`
     Killing
        Killing means that the machine has requested the running job to
-       exit the machine immediately, without checkpointing.
+       exit the machine immediately.
 
    :index:`Backfill<single: Backfill; machine activity>`
 -  Backfill
@@ -784,7 +784,7 @@ Claimed State
 
 The Claimed state is certainly the most complex state. It has the most
 possible activities and the most expressions that determine its next
-activities. In addition, the *condor_checkpoint* and *condor_vacate*
+activities. In addition, the *condor_vacate*
 commands affect the machine when it is in the Claimed state.
 
 In general, there are two sets of expressions that might take effect,
@@ -897,12 +897,6 @@ Claimed/Idle
 Claimed/Suspended
     If both the ``WANT_SUSPEND`` and ``SUSPEND`` expressions evaluate to
     TRUE, the machine suspends the job (transition **14**).
-
-If a *condor_checkpoint* command arrives, or the
-``PERIODIC_CHECKPOINT`` expression evaluates to TRUE, there is no state
-change. The startd has no way of knowing when this process completes, so
-periodic checkpointing can not be another state. Periodic checkpointing
-remains in the Claimed/Busy state and appears as a running job.
 
 From the Claimed/Suspended state, the following transitions may occur:
 
@@ -1223,11 +1217,6 @@ It serves as a quick reference.
     the *condor_starter* and all its children to try to kill the job as
     quickly as possible.
 
-``PERIODIC_CHECKPOINT``
-    If the machine is in the Claimed/Busy state and
-    ``PERIODIC_CHECKPOINT`` is TRUE, the user's job begins a periodic
-    checkpoint.
-
 ``RANK`` :index:`RANK`
     If this expression evaluates to a higher number for a pending
     resource request than it does for the current request, the machine
@@ -1273,9 +1262,6 @@ The following are macros to help write the expressions clearly.
 ``ActivationTimer``
     Amount of time in seconds that the job has been running on this
     machine.
-
-``LastCkpt``
-    Amount of time since the last periodic checkpoint.
 
 ``NonCondorLoadAvg``
     The difference between the system load and the HTCondor load (the
@@ -1333,7 +1319,6 @@ perhaps will go unused by many configurations.
     StateTimer      = (time() - EnteredCurrentState)
     ActivityTimer   = (time() - EnteredCurrentActivity)
     ActivationTimer = (time() - JobStart)
-    LastCkpt        = (time() - LastPeriodicCheckpoint)
 
     NonCondorLoadAvg        = (LoadAvg - CondorLoadAvg)
     BackgroundLoad          = 0.3
@@ -1362,25 +1347,6 @@ Preemption is disabled as a default. Always desire to start jobs.
     # Kill jobs that take too long leaving gracefully.
     MachineMaxVacateTime = 10 * $(MINUTE)
     KILL                 = False
-
-Periodic checkpointing specifies that for jobs smaller than 60 Mbytes,
-take a periodic checkpoint every 6 hours. For larger jobs, only take a
-checkpoint every 12 hours.
-
-.. code-block:: condor-config
-
-    PERIODIC_CHECKPOINT     = ( (ImageSize < 60000) && \
-                                ($(LastCkpt) > (6 * $(HOUR))) ) || \
-                              ( $(LastCkpt) > (12 * $(HOUR)) )
-
-:index:`at UW-Madison<single: at UW-Madison; policy>`
-
-At UW-Madison, we have a fast network. We simplify our expression
-considerably to
-
-.. code-block:: condor-config
-
-    PERIODIC_CHECKPOINT     = $(LastCkpt) > (3 * $(HOUR))
 
 :index:`test job<single: test job; policy>`
 
@@ -1415,7 +1381,7 @@ HTCondor can be configured to only run jobs at certain times of the day.
 In general, we discourage configuring a system like this, since there
 will often be lots of good cycles on machines, even when their owners
 say "I'm always using my machine during the day." However, if you submit
-mostly vanilla jobs or other jobs that cannot produce checkpoints, it
+mostly jobs that cannot produce checkpoints, it
 might be a good idea to only allow the jobs to run when you know the
 machines will be idle and when they will not be interrupted.
 
@@ -1605,8 +1571,8 @@ policy:
    identifies itself as suspendable will be suspended, which means it is
    frozen in place, and will later be unfrozen when the preempting job
    is finished. A job that identifies itself as nonsuspendable is
-   evicted, which means it writes a checkpoint, when possible, and then
-   is killed. The job will return to the idle state in the job queue,
+   evicted, giving it a chance to write a checkpoint, and then is killed. The
+   job will return to the idle state in the job queue,
    and it can try to run again in the future.
 
 :index:`eval()<single: eval(); ClassAd functions>`
@@ -2691,7 +2657,7 @@ This example policy tells *condor_defrag* to initiate draining jobs
 from 1 machine per hour, but to avoid initiating new draining if there
 are 20 completely defragmented machines or 10 machines in a draining
 state. A full description of each configuration variable used by the
-*condor_defrag* daemon may be found in the 
+*condor_defrag* daemon may be found in the
 :ref:`admin-manual/configuration-macros:condor_defrag configuration file
 macros` section.
 
