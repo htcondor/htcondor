@@ -7,6 +7,34 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9018:
+
+Version 9.0.18
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.18 released on Month Date, 2022.
+
+- HTCondor version 9.0.18 not yet released.
+
+- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
+  to match standard HTCSS naming scheme.
+  :jira:`1828`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
+  :jira:`1840`
+
+- The ``condor_upgrade_check`` script no longer attempts to check for problems
+  for an HTCondor pool when requesting checks for an HTCondor-CE.
+  :jira:`1840`
+
 .. _lts-version-history-9017:
 
 Version 9.0.17
@@ -14,24 +42,22 @@ Version 9.0.17
 
 Release Notes:
 
-.. HTCondor version 9.0.17 released on Month Date, 2022.
-
-- HTCondor version 9.0.17 not yet released.
+- HTCondor version 9.0.17 released on September 29, 2022.
 
 New Features:
 
 - Increased the length of the password generated for Windows default
   slot user accounts from 14 characters to 32 characters, and added
-  some code to insure that complexity measures that look at
+  some code to ensure that complexity measures that look at
   character set and not length will still be satisfied.
   :jira:`1232`
 
 - Added ``-debug`` option to *condor_drain* tool.
   :jira:`1236`
 
-- Removed support from the startd for querying keyboard and mouse idle time,
+- Removed support from the *condor_startd* for querying keyboard and mouse idle time,
   on legacy x86 Linux machines that used an 8042 keyboard controller.
-  This caused significant performance degradation in the startd
+  This caused significant performance degradation in the *condor_startd*
   on machines with many CPUs.
   :jira:`1297`
 
@@ -76,6 +102,12 @@ Bugs Fixed:
   job submit command in the :ref:`man-pages/condor_submit:*condor_submit*`
   man page.
   :jira:`1350`
+
+- If "Singularity" is really the "Apptainer" runtime, HTCondor now
+  sets environment variables to be passed to the job appropriately, which
+  prevents Apptainer from displaying ugly warnings about how this won't
+  work in the future.
+  :jira:`1137`
 
 
 .. _lts-version-history-9016:
@@ -279,7 +311,7 @@ Bugs Fixed:
   values for configuration parameter ``UID_DOMAIN``.
   :jira:`1005`
 
-- Fixed a bug in the startd drain command in the Python bindings that prevented
+- Fixed a bug in the *condor_startd* drain command in the Python bindings that prevented
   it from working with zero arguments.
   :jira:`936`
 

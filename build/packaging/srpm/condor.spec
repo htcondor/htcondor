@@ -666,6 +666,22 @@ if [ $1 == 0 ]; then
 fi
 
 #######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/condor_upgrade_check
+
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -748,7 +764,7 @@ export CMAKE_PREFIX_PATH=/usr
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
 %if %blahp
        -DWITH_BLAHP:BOOL=TRUE \
        -DBLAHP_FOUND=/usr/libexec/blahp/BLClient \
@@ -787,7 +803,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DPACKAGEID:STRING=%{version}-%{condor_release} \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BACKFILL:BOOL=TRUE \
-       -DHAVE_BOINC:BOOL=FALSE \
+       -DHAVE_BOINC:BOOL=TRUE \
        -DHAVE_KBDD:BOOL=TRUE \
        -DHAVE_HIBERNATION:BOOL=TRUE \
        -DWANT_HDFS:BOOL=FALSE \
@@ -1682,6 +1698,20 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
+- Improved upgrade9to10checks.py script
+
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
+* Thu Sep 29 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-1
+- Fix file descriptor leak when schedd fails to launch scheduler jobs
+- Fix failure to forward batch grid universe job's refreshed X.509 proxy
+- Fix DAGMan failure when the DONE keyword appeared in the JOB line
+- Fix HTCondor's handling of extremely large UIDs on Linux
+- Fix bug where OAUTH tokens lose their scope and audience upon refresh
+- Support for Apptainer in addition to Singularity
+
 * Tue Aug 16 2022 Tim Theisen <tim@cs.wisc.edu> - 9.0.16-1
 - Singularity now mounts /tmp and /var/tmp under the scratch directory
 - Fix bug where Singularity jobs go on hold at the first checkpoint
