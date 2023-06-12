@@ -19,7 +19,6 @@
 
 
 #include "condor_common.h"
-#include "MyString.h"
 
 void
 statusString( int status, std::string& str )

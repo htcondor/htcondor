@@ -27,15 +27,12 @@
 
 class ClaimIdParser {
  public:
-	ClaimIdParser():
-		m_suppress_session(false) {
-	}
+	ClaimIdParser()
+	{ }
 	ClaimIdParser(char const *claim_id):
-		m_claim_id(claim_id),
-		m_suppress_session(false) {
-	}
-	ClaimIdParser(char const *session_id,char const *session_info,char const *session_key):
-		m_suppress_session(false)
+		m_claim_id(claim_id)
+	{ }
+	ClaimIdParser(char const *session_id,char const *session_info,char const *session_key)
 	{
 		formatstr(m_claim_id,"%s#%s%s",
 						   session_id ? session_id : "",
@@ -84,15 +81,10 @@ class ClaimIdParser {
 			// This must return the same thing for both the schedd and
 			// the startd, so be careful making any version-incompatible
 			// changes.
-		if( m_suppress_session ) {
-			return NULL;
-		}
 		if( !ignore_session_info && !secSessionInfo() ) {
 				// There is no session info, so no security session
-				// was created.  Returning NULL here simplifies
-				// the call sites that pass the session id to
-				// startCommand().
-			return NULL;
+				// was created.
+			return "";
 		}
 		if( m_session_id.empty() ) {
 			char const *str = m_claim_id.c_str();
@@ -116,7 +108,7 @@ class ClaimIdParser {
 				// skip past the session info
 			ptr = ptr2;
 		}
-		return ptr;
+		return ptr ? ptr : "";
 	}
 	char const *secSessionInfo() {
 			// expected format: blah#blah#...#[session_info]SESSION_KEY
@@ -125,23 +117,19 @@ class ClaimIdParser {
 			char const *ptr = strrchr(str,'#');
 			char const *endptr;
 			if( !ptr ) {
-				return NULL;
+				return "";
 			}
 			ptr+=1;
 			if( *ptr != '[' ) {
-				return NULL;
+				return "";
 			}
 			endptr = strrchr(str,']');
 			if(!endptr || endptr < ptr) {
-				return NULL;
+				return "";
 			}
 			m_session_info.assign(ptr,endptr+1);
 		}
 
-		if( m_session_info.empty() ) {
-				// returning NULL here is a convenience for call sites
-			return NULL;
-		}
 		return m_session_info.c_str();
 	}
 	void setSecSessionInfo(char const *session_info) {
@@ -160,9 +148,6 @@ class ClaimIdParser {
 			// reset everything using the new claim id
 		*this = ClaimIdParser(new_claim_id.c_str());
 	}
-	void suppressSecSession( bool toggle ) {
-		m_suppress_session = toggle;
-	}
 
  private:
 	std::string m_claim_id;
@@ -170,7 +155,6 @@ class ClaimIdParser {
 	std::string m_sinful_part;
 
 		// The following fields are for SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION
-	bool m_suppress_session; // if true, secSessionId() always returns NULL
 	std::string m_session_id;
 	std::string m_session_info;
 };

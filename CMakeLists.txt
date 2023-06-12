@@ -18,8 +18,8 @@
 
 ##########################################################################
 # Set project
+cmake_minimum_required(VERSION 3.16)
 project(CONDOR LANGUAGES C CXX)
-cmake_minimum_required(VERSION 3.8)
 
 # Exactly c++ 20 for all platforms
 set(CMAKE_CXX_STANDARD 20) # when changing this, also change classad CMake
@@ -47,7 +47,7 @@ set(TEST_PACKAGE "condor_tests")
 #   Condor and other systems parse this number. Keep it simple:
 #   Number.Number.Number. Do nothing else.  If you need to add
 #   more information, PRE_RELEASE is usually the right location.
-set(VERSION "10.4.0")
+set(VERSION "10.7.0")
 
 # Set PRE_RELEASE to either a string (i.e. "PRE-RELEASE-UWCS") or OFF
 #   This should be "PRE-RELEASE-UWCS" most of the time, "DAILY" for

@@ -116,7 +116,7 @@ private:
 	ClassAd m_vmgahp_info;
 	std::string m_vm_type;
 
-	SimpleList<VMStarterInfo*> m_vm_starter_list;
+	std::vector<VMStarterInfo*> m_vm_starter_list;
 	int m_vm_max_memory;	// maximum amount of memory for VMs
 	int m_vm_used_memory;	// memory being used for VMs
 	int m_vm_max_num;	// maximum number of running VM

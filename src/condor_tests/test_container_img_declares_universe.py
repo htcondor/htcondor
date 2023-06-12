@@ -14,8 +14,13 @@ from ornithology import *
 io_names = [
     "both",
     "universe",
+    "xfer_instance",
     "docker",
     "container",
+    "xfer_docker",
+    "xfer_oras",
+    "xfer_osdf",
+    "xfer_file"
 ]
 #Global test number
 subtest_num = -1
@@ -27,6 +32,8 @@ f"""
 executable = {exe}
 log = test.log
 arguments = 1
+should_transfer_files = yes
+when_to_transfer_output = on_exit
 {info}
 queue
 """
@@ -38,12 +45,16 @@ queue
 @action(params={ #Params: TestName : added lines to submit file
     "BothImages":"docker_image=htcondor/mini:9.12-el7\ncontainer_image=docker://htcondor/mini:9.12-el7", #Both docker & container image: Fail
     "InvalidUniverse":"universe=vanilla\ndocker_image=htcondor/mini:9.12-el7",                           #Image and other Universe: Fail
+    "XferInstance":"container_image=instance://htcondor/mini:9.12-el7",                                      #instance image : Fail
     "DockerImg":"docker_image=htcondor/mini:9.12-el7",                                                   #Docker image & no universe: Pass
     "ContainerImg":"container_image=docker://htcondor/mini:9.12-el7",                                    #Container image & no universe: Pass
+    "XferDocker":"container_image=docker://htcondor/mini:9.12-el7",                                    #docker image & verify image not in transfer_input_files
+    "XferOras":"container_image=oras://htcondor/mini:9.12-el7",                                      #oras image & verify image not in transfer_input_files
+    "OSDFInstance":"container_image=osdf://htcondor/mini:9.12-el7",                                      #instance image & verify image in transfer_input_files
+    "FileInstance":"container_image=/htcondor/mini:9.12-el7",                                      #local filel image & verify image in transfer_input_files
 })
 def dry_run_job(default_condor,test_dir,path_to_sleep,request):
     global subtest_num
-    #Increment Test number
     subtest_num += 1
     #Write submit file with correct lines
     submit = write_sub_file(test_dir,path_to_sleep,f"{io_names[subtest_num]}.sub",request.param)
@@ -58,12 +69,19 @@ class TestContainerImgDeclaresUniverse:
             #Failed submission outputs
             "Only one can be declared in a submit file.",
             "universe for job does not allow use of",
+            "not a valid container image",
             #Successful submission job ad attributes
             "WantDocker=true",
             "WantContainer=true",
+            "WantContainer=true",
+            "WantContainer=true",
+            "WantContainer=true",
+            "WantContainer=true",
+            "WantContainer=true",
+            "WantContainer=true",
         ]
-        #If first test (Fail because of both docker and container image)
-        if subtest_num < 2:
+        #First tests expected to return non-zero
+        if subtest_num < 3:
             #Make sure error message exists
             if dry_run_job.stderr == "":
                 assert False
@@ -84,5 +102,3 @@ class TestContainerImgDeclaresUniverse:
                         foundAttr = True
                         break
                 assert foundAttr is True
-
-

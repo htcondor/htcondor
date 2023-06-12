@@ -81,8 +81,6 @@ struct IUnknown;
 #define strcasecmp _stricmp
 #define strncasecmp _strnicmp
 #define strtoll _strtoi64
-#define isnan _isnan
-	// isinf() defined in util.h
 
 // anotations that help the MSVC code analyzer
 #define PREFAST_NORETURN __declspec(noreturn)
@@ -98,6 +96,8 @@ struct IUnknown;
 #pragma warning( disable : 4800 )  
 	// Disable warnings about truncated debug identifiers
 #pragma warning( disable : 4786 )
+	// Disable warnings about str* needing to be _str*
+#pragma warning( disable : 4996 )
 
 #else
 #define PREFAST_NORETURN
@@ -246,9 +246,8 @@ struct ClassadAttrNameHash
 
 	constexpr size_t operator()(const char *s) const {
 		size_t h = 0;
-		unsigned char const *ch = (unsigned const char *)s;
-		for( ; *ch; ch++ ) {
-			h = 5*h + (*ch | 0x20);
+		for( ; *s; s++ ) {
+			h = 5*h + (((unsigned char )*s) | 0x20);
 		}
 		return h;
 	}

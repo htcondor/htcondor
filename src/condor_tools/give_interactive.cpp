@@ -31,7 +31,6 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "daemon.h"
-#include "extArray.h"
 #include "HashTable.h"
 #include "basename.h"
 #include "condor_distribution.h"

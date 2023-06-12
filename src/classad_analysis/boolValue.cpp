@@ -22,8 +22,6 @@
 #include "boolValue.h"
 #include "list.h"
 
-using namespace std;
-
 // F && (T|F|U|E) = F
 // E && (T|F|U|E) = E 
 // (T|U) && F = F
@@ -230,7 +228,7 @@ IsTrueSubsetOf( BoolVector &bv, bool &result )
 }
 
 bool BoolVector::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ){
 		return false;
@@ -318,7 +316,7 @@ HasContext( int index, bool &result )
 }
 
 bool AnnotatedBoolVector::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
@@ -785,7 +783,7 @@ GenerateMinimalFalseBVList( List< BoolVector > &result )
 }
 
 bool BoolTable::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;

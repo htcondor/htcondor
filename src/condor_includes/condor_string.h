@@ -43,9 +43,6 @@ char * getline_trim ( FILE *fp );
 char * chomp( char *buffer );
 
 
-/* like strdup() but uses new[] */
-char *strnewp( const char * );
-
 // Get an effective line, after removing line continuation characters and
 // trimming leading and trailing whitespace. More than 1 line may be read
 // from the file for each line returned here. if you need an accurate

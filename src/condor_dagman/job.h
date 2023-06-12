@@ -176,6 +176,9 @@ class Job {
 	static const char* JobTypeString() { return "HTCondor"; }
 	inline int GetProcEventsSize() const { return _gotEvents.size(); }
 	inline unsigned char GetProcEvent( int proc ) const { return _gotEvents[proc]; }
+	//If this is a factory/late materialization cluster we have to wait for a cluster
+	//remove event. Otherwise if queued nodes is 0 then all job procs are done
+	inline bool AllProcsDone() const { return !is_factory && _queuedNodeJobProcs == 0; }
 
 	bool AddScript( ScriptType script_type, const char *cmd, int defer_status,
 				time_t defer_time, std::string &whynot );
@@ -399,6 +402,12 @@ class Job {
 	bool SetCondorID(const CondorID& cid);
 	const CondorID& GetID() const { return _CondorID; }
 
+	void SetSaveFile(const std::string& saveFile) { _saveFile = saveFile; _isSavePoint = true; }
+	inline std::string GetSaveFile() const { return _saveFile; }
+	inline bool IsSavePoint() const { return _isSavePoint; }
+
+	void setSubPrio(int subPrio) { this->subPriority = subPrio;}
+
 private:
     /** */ CondorID _CondorID;
 public:
@@ -440,8 +449,8 @@ public:
 		// Indicates whether abort_dag_return_val was set.
 	bool have_abort_dag_return_val;
 
-		// Indicates if this is a cluster job or not
-	bool is_cluster;
+		// Indicates if this is a factory submit cluster in terms of late materialization
+	bool is_factory;
 
 	// somewhat kludgey, but this indicates to Dag::TerminateJob()
 	// whether Dag::_numJobsDone has been incremented for this node
@@ -449,6 +458,9 @@ public:
 	// for a given node); it should not be examined or changed
 	// unless/until node is STATUS_DONE
 	bool countedAsDone;
+
+	// Indicates that this node is going to write a save point file.
+	bool _isSavePoint;
 
 private:
 		// Whether this is a noop job (shouldn't actually be submitted
@@ -483,6 +495,13 @@ public:
 		// actually submit the job (explicit priority adjusted
 		// according to the DAG priority algorithm).
 	int _effectivePriority;
+
+	// We sort the nodes by effective priority above, but we often want
+	// to further sort nodes of the same effective priority by another
+	// criteria, e.g. to shuffle a recently-failed node to the end
+	// of the set of nodes of the same priority.  This field does
+	// that.
+	int subPriority;
 
 		// The number of times this job has been held.  (Note: the current
 		// implementation counts holds for all procs in a multi-proc cluster
@@ -539,6 +558,9 @@ private:
   
     // name given to the job by the user
     char* _jobName;
+
+	// Filename to write save point rescue file as
+	std::string _saveFile;
 
     /** */ status_t _Status;
 

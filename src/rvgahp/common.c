@@ -28,8 +28,8 @@ char *timestamp() {
     struct tm tm;
     localtime_r(&t, &tm);
 
-    static char ts[32];
-    snprintf(ts, 32, "%04d-%02d-%02d %02d:%02d:%02d.%06d",
+    static char ts[64];
+    snprintf(ts, 63, "%04d-%02d-%02d %02d:%02d:%02d.%06d",
             1900 + tm.tm_year, 1 + tm.tm_mon, tm.tm_mday,
             tm.tm_hour, tm.tm_min, tm.tm_sec, (int)tv.tv_usec);
 

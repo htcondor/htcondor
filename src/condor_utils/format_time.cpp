@@ -36,7 +36,7 @@ format_date( time_t date )
 	}
 
     tm = localtime( &date );
-    sprintf( buf, "%2d/%-2d %02d:%02d",
+    snprintf( buf, sizeof(buf), "%2d/%-2d %02d:%02d",
         (tm->tm_mon)+1, tm->tm_mday, tm->tm_hour, tm->tm_min
     );
     return buf;
@@ -57,7 +57,7 @@ format_date_year( time_t date )
 	}
 
     tm = localtime( &date );
-    sprintf( buf, "%2d/%02d/%-4d %02d:%02d",
+    snprintf( buf, sizeof(buf), "%2d/%02d/%-4d %02d:%02d",
         (tm->tm_mon)+1, tm->tm_mday, (tm->tm_year + 1900), tm->tm_hour, tm->tm_min
     );
     return buf;
@@ -79,7 +79,7 @@ format_time( int tot_secs )
     static char answer[25];
 
 	if ( tot_secs < 0 ) {
-		sprintf(answer,"[?????]");
+		snprintf(answer, sizeof(answer), "[?????]");
 		return answer;
 	}
 
@@ -90,7 +90,7 @@ format_time( int tot_secs )
     min = tot_secs / MINUTE;
     secs = tot_secs % MINUTE;
 
-    (void)sprintf( answer, "%3d+%02d:%02d:%02d", days, hours, min, secs );
+    (void)snprintf( answer, sizeof(answer), "%3d+%02d:%02d:%02d", days, hours, min, secs );
     return answer;
 }
 
@@ -132,7 +132,7 @@ format_time_nosecs( int tot_secs )
     static char answer[25];
 
 	if ( tot_secs < 0 ) {
-		sprintf(answer,"[?????]");
+		snprintf(answer, sizeof(answer), "[?????]");
 		return answer;
 	}
 
@@ -142,7 +142,7 @@ format_time_nosecs( int tot_secs )
     tot_secs %= HOUR;
     min = tot_secs / MINUTE;
 
-    (void)sprintf( answer, "%3d+%02d:%02d", days, hours, min );
+    (void)snprintf( answer, sizeof(answer), "%3d+%02d:%02d", days, hours, min );
     return answer;
 }
 

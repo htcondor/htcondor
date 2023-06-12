@@ -25,7 +25,11 @@
 %endif
 %endif
 
+# Use devtoolset 11 for EL7
 %define devtoolset 11
+# Use gcc-toolset 12 for EL8
+%define gcctoolset 12
+
 %if %uw_build
 %define debug 1
 %endif
@@ -116,11 +120,6 @@ Source8: htcondor.pp
 # Patch credmon-oauth to use Python 2 on EL7
 Patch1: rhel7-python2.patch
 
-# Patch to use Python 2 for file transfer plugins
-# The use the python-requests library and the one in EPEL is based Python 3.6
-# However, Amazon Linux 2 has Python 3.7
-Patch2: amzn2-python2.patch
-
 #% if 0% osg
 Patch8: osg_sysconfig_in_init_script.patch
 #% endif
@@ -131,7 +130,9 @@ BuildRequires: cmake
 BuildRequires: pcre2-devel
 BuildRequires: openssl-devel
 BuildRequires: krb5-devel
+%if ! 0%{?amzn}
 BuildRequires: libvirt-devel
+%endif
 BuildRequires: bind-utils
 BuildRequires: libX11-devel
 BuildRequires: libXScrnSaver-devel
@@ -172,7 +173,9 @@ BuildRequires: python-devel
 BuildRequires: libcurl-devel
 
 # Authentication build requirements
+%if ! 0%{?amzn}
 BuildRequires: voms-devel
+%endif
 BuildRequires: munge-devel
 BuildRequires: scitokens-cpp-devel
 
@@ -184,6 +187,11 @@ Requires: libcgroup
 %if 0%{?rhel} == 7 && 0%{?devtoolset}
 BuildRequires: which
 BuildRequires: devtoolset-%{devtoolset}-toolchain
+%endif
+
+%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+BuildRequires: which
+BuildRequires: gcc-toolset-%{gcctoolset}
 %endif
 
 %if 0%{?rhel} == 7 && ! 0%{?amzn}
@@ -214,7 +222,7 @@ Requires: systemd
 BuildRequires: python-sphinx python-sphinx_rtd_theme
 %endif
 
-%if 0%{?rhel} >= 8
+%if 0%{?rhel} >= 8 || 0%{?amzn}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
@@ -267,7 +275,9 @@ Requires(post): selinux-policy-targeted
 
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
+%if ! 0%{?amzn}
 Requires: voms
+%endif
 Requires: krb5-libs
 Requires: libcom_err
 Requires: munge-libs
@@ -350,6 +360,7 @@ useful on systems where no device (e.g. /dev/*) can be used to
 determine console idle time.
 
 #######################
+%if ! 0%{?amzn}
 %package vm-gahp
 Summary: HTCondor's VM Gahp
 Group: Applications/System
@@ -362,6 +373,7 @@ The condor_vm-gahp enables the Virtual Machine Universe feature of
 HTCondor. The VM Universe uses libvirt to start and control VMs under
 HTCondor's Startd.
 
+%endif
 #######################
 %package classads
 Summary: HTCondor's classified advertisement language
@@ -600,13 +612,31 @@ if [ $1 == 0 ]; then
 fi
 
 #######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/condor_upgrade_check
+
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
 Requires: %name = %version-%release
 Requires: %name-procd = %version-%release
 Requires: %name-kbdd = %version-%release
+%if ! 0%{?amzn}
 Requires: %name-vm-gahp = %version-%release
+%endif
 Requires: %name-classads = %version-%release
 %if 0%{?rhel} >= 7 || 0%{?fedora}
 Requires: python3-condor = %version-%release
@@ -636,13 +666,6 @@ exit 0
 %patch1 -p1
 %endif
 
-# Patch to use Python 2 for file transfer plugins
-# The use the python-requests library and the one in EPEL is based Python 3.6
-# However, Amazon Linux 2 has Python 3.7
-%if 0%{?amzn}
-%patch2 -p1
-%endif
-
 %if 0%{?osg} || 0%{?hcc}
 %patch8 -p1
 %endif
@@ -659,8 +682,21 @@ export CC=$(which cc)
 export CXX=$(which c++)
 %endif
 
+%if 0%{?rhel} == 8 && 0%{?gcctoolset}
+. /opt/rh/gcc-toolset-%{gcctoolset}/enable
+export CC=$(which cc)
+export CXX=$(which c++)
+# gcc-toolset does not include gcc-annobin.so
+%undefine _annotated_build
+%endif
+
 # build man files
+%if 0%{?amzn}
+# if this environment variable is set, sphinx-build cannot import markupsafe
+env -u RPM_BUILD_ROOT make -C docs man
+%else
 make -C docs man
+%endif
 
 export CMAKE_PREFIX_PATH=/usr
 
@@ -678,6 +714,10 @@ export CMAKE_PREFIX_PATH=/usr
        -DWITH_LIBCGROUP:BOOL=FALSE \
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
+%endif
+%if 0%{?amzn}
+       -DWITH_VOMS:BOOL=FALSE \
+       -DWITH_LIBVIRT:BOOL=FALSE \
 %endif
        -D_VERBOSE:BOOL=TRUE \
        -DBUILD_TESTING:BOOL=TRUE \
@@ -712,6 +752,10 @@ export CMAKE_PREFIX_PATH=/usr
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
 %endif
+%if 0%{?amzn}
+       -DWITH_VOMS:BOOL=FALSE \
+       -DWITH_LIBVIRT:BOOL=FALSE \
+%endif
        -DCMAKE_INSTALL_PREFIX:PATH=/ \
        -DINCLUDE_INSTALL_DIR:PATH=/usr/include \
        -DSYSCONF_INSTALL_DIR:PATH=/etc \
@@ -722,6 +766,9 @@ export CMAKE_PREFIX_PATH=/usr
        -DBUILD_SHARED_LIBS:BOOL=ON
 %endif
 
+%if 0%{?amzn}
+cd amazon-linux-build
+%endif
 %if 0%{?rhel} == 9
 cd redhat-linux-build
 %endif
@@ -731,6 +778,9 @@ make %{?_smp_mflags} tests
 %endif
 
 %install
+%if 0%{?amzn}
+cd amazon-linux-build
+%endif
 %if 0%{?rhel} == 9
 cd redhat-linux-build
 %endif
@@ -752,7 +802,11 @@ make tests-tar-pkg
 %if 0%{?rhel} == 9
 cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
+%if 0%{?amzn}
+cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%endif
 %endif
 %endif
 
@@ -1234,6 +1288,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_transferer
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
+%_bindir/condor_qusers
 %_bindir/condor_userlog
 %_bindir/condor_release
 %_bindir/condor_userlog_job_counter
@@ -1381,12 +1436,14 @@ rm -rf %{buildroot}
 %_sbindir/condor_kbdd
 
 #################
+%if ! 0%{?amzn}
 %files vm-gahp
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt
 %_sbindir/condor_vm-gahp
 %_libexecdir/condor/libvirt_simple_script.awk
 
+%endif
 #################
 %files classads
 %defattr(-,root,root,-)
@@ -1551,7 +1608,9 @@ fi
 test -x /usr/sbin/selinuxenabled && /usr/sbin/selinuxenabled
 if [ $? = 0 ]; then
    /usr/sbin/semodule -i /usr/share/condor/htcondor.pp
+%if 0%{?rhel} < 9
    /usr/sbin/setsebool -P condor_domain_can_network_connect 1
+%endif
    /usr/sbin/setsebool -P daemons_enable_cluster_mode 1
 fi
 %endif
@@ -1581,6 +1640,69 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.5-1
+- Rename upgrade9to10checks.py script to condor_upgrade_check
+- Fix spurious warning from condor_upgrade_check about regexes with spaces
+
+* Tue Jun 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.1-1
+- Fix issue with grid batch jobs interacting with older Slurm versions
+
+* Mon Jun 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.0-1
+- Can now define DAGMan save points to be able to rerun DAGs from there
+- Expand default list of environment variables passed to the DAGMan manager
+- Administrators can prevent users using "getenv = true" in submit files
+- Improved throughput when submitting a large number of ARC-CE jobs
+- Execute events contain the slot name, sandbox path, resource quantities
+- Can add attributes of the execution point to be recorded in the user log
+- Enhanced condor_transform_ads tool to ease offline job transform testing
+- Fixed a bug where memory limits over 2 GiB might not be correctly enforced
+
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.4-1
+- Provides script to assist updating from HTCondor version 9 to version 10
+- Fixes a bug where rarely an output file would not be transferred back
+- Fixes counting of submitted jobs, so MAX_JOBS_SUBMITTED works correctly
+- Fixes SSL Authentication failure when PRIVATE_NETWORK_NAME was set
+- Fixes rare crash when SSL or SCITOKENS authentication was attempted
+- Can allow client to present an X.509 proxy during SSL authentication
+- Fixes issue where a users jobs were ignored by the HTCondor-CE on restart
+- Fixes issues where some events that HTCondor-CE depends on were missing
+
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
+- Improved upgrade9to10checks.py script
+
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.3-1
+- Fix bug than could cause the collector audit plugin to crash
+
+* Tue May 02 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.2-1
+- Fix bug where remote submission of batch grid universe jobs fail
+- Fix bug where HTCondor-CE fails to handle jobs after HTCondor restarts
+
+* Wed Apr 12 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.1-1
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el)
+
+* Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.0-1
+- DAGMan no longer carries the entire environment into the DAGMan job
+- Allows EGI CheckIn tokens to be used the with SciTokens authentication
+
+* Thu Apr 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.3-1
+- GPU metrics continues to be reported after the startd is reconfigured
+- Fixed issue where GPU metrics could be wildly over-reported
+- Fixed issue that kept jobs from running when installed on Debian or Ubuntu
+- Fixed DAGMan problem when retrying a proc failure in a multi-proc node
+
+* Tue Mar 07 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.1-1
+- Execution points now advertise if an sshd is available for ssh to job
+
+* Mon Mar 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.3.0-1
+- Now evicts OOM killed jobs when they are under their requested memory
+- HTCondor glideins can now use cgroups if one has been prepared
+- Can write job information in an AP history file for each execution attempt
+- Can now specify a lifetime for condor_gangliad metrics
+- The condor_schedd now advertises a count of unmaterialized jobs
+
 * Thu Mar 02 2023 John Knoeller <johnkn@cs.wisc.edu> - 10.0.2-1
 - HTCondor can optionally create intermediate directories for output files
 - Improved condor_schedd scalability when a user runs more than 1,000 jobs
@@ -1624,6 +1746,12 @@ fi
 - Fix bug where Docker repository images cannot be run under Singularity
 - Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
 - Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
+* Tue Nov 22 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.3-1
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+
+* Tue Nov 15 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.2-1
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
 
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook

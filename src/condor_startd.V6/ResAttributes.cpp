@@ -1396,7 +1396,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// Temporary Hack until this is a fixed path
 	// the Starter will expand this magic string to the
 	// actual value
-	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
+	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
 // return true if the given slot has resources that are assigned to both normal and backfill
@@ -1981,9 +1981,9 @@ CpuAttributes::display(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
-				"Idle time: %s %-8d %s %d\n",
-				"Keyboard:", (int)c_idle, 
-				"Console:", (int)c_console_idle );
+				"Idle time: %s %-8lld %s %lld\n",
+				"Keyboard:", (long long)c_idle,
+				"Console:", (long long)c_console_idle );
 
 	dprintf( D_LOAD | dpf_flags,
 				"%s %.2f  %s %.2f  %s %.2f\n",

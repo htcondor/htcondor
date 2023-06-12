@@ -148,14 +148,15 @@ JobRouter::~JobRouter() {
 
 void JobRouter::clear_pre_and_post_xfms()
 {
-	MacroStreamXFormSource *xfm = NULL;
-	m_pre_route_xfms.Rewind();
-	while (m_pre_route_xfms.Next(xfm)) { delete xfm; }
-	m_pre_route_xfms.Clear();
+	for (MacroStreamXFormSource *xfm : m_pre_route_xfms) {
+		delete xfm;
+	}
+	m_pre_route_xfms.clear();
 
-	m_post_route_xfms.Rewind();
-	while (m_post_route_xfms.Next(xfm)) { delete xfm; }
-	m_post_route_xfms.Clear();
+	for (MacroStreamXFormSource *xfm : m_post_route_xfms) {
+		delete xfm;
+	}
+	m_post_route_xfms.clear();
 }
 
 void
@@ -495,7 +496,7 @@ JobRouter::config() {
 				m_enable_job_routing = false;
 				delete xfm;
 			} else {
-				m_pre_route_xfms.Append(xfm);
+				m_pre_route_xfms.push_back(xfm);
 			}
 		} else {
 			dprintf(D_ALWAYS, "ERROR: %s not found\n", xfm_param.c_str());
@@ -519,7 +520,7 @@ JobRouter::config() {
 				m_enable_job_routing = false;
 				delete xfm;
 			} else {
-				m_post_route_xfms.Append(xfm);
+				m_post_route_xfms.push_back(xfm);
 			}
 		} else {
 			dprintf(D_ALWAYS, "ERROR: %s not found\n", xfm_param.c_str());
@@ -783,17 +784,15 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 {
 	// build a set of route names, we will remove names from this list as we print them
 	classad::References remaining_names;
-	for (auto it = m_routes->begin(); it != m_routes->end(); ++it) {
-		JobRoute * route = it->second;
+	for (auto & m_route : *m_routes) {
+		JobRoute * route = m_route.second;
 		remaining_names.insert(route->Name());
 	}
 
 	// dump pre route transforms
 	std::string buf;
-	if ( ! m_pre_route_xfms.IsEmpty()) {
-		m_pre_route_xfms.Rewind();
-		MacroStreamXFormSource * xfm;
-		while (m_pre_route_xfms.Next(xfm)) {
+	if ( ! m_pre_route_xfms.empty()) {
+		for (MacroStreamXFormSource *xfm : m_pre_route_xfms) {
 			fprintf(hf, "Pre-Route Transform : %s\n", xfm->getName());
 			buf.clear();
 			xfm->getFormattedText(buf, "\t", true);
@@ -803,10 +802,8 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 	}
 
 	// dump post route transforms
-	if ( ! m_post_route_xfms.IsEmpty()) {
-		m_post_route_xfms.Rewind();
-		MacroStreamXFormSource * xfm;
-		while (m_post_route_xfms.Next(xfm)) {
+	if ( ! m_post_route_xfms.empty()) {
+		for (MacroStreamXFormSource *xfm : m_post_route_xfms) {
 			fprintf(hf, "Post-Route Transform : %s\n", xfm->getName());
 			buf.clear();
 			xfm->getFormattedText(buf, "\t", true);
@@ -818,8 +815,8 @@ void JobRouter::dump_routes(FILE* hf) // dump the routing information to the giv
 
 	// print the enabled routes in the order that they will be used
 	int ixRoute = 1;
-	for (auto it = m_route_order.begin(); it != m_route_order.end(); ++it) {
-		JobRoute *route = safe_lookup_route(*it);
+	for (auto & it : m_route_order) {
+		JobRoute *route = safe_lookup_route(it);
 		if ( ! route) continue;
 		remaining_names.erase(route->Name());
 		/*
@@ -1045,7 +1042,7 @@ JobRouter::SetJobHeld(classad::ClassAd& ad, const char* hold_reason, int hold_co
 	if (HELD != status && REMOVED != status && COMPLETED != status)
 	{
 		ad.InsertAttr(ATTR_JOB_STATUS, HELD);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_HOLD_REASON, hold_reason);
 		ad.InsertAttr(ATTR_HOLD_REASON_CODE, hold_code);
 		ad.InsertAttr(ATTR_HOLD_REASON_SUBCODE, sub_code);
@@ -1095,7 +1092,7 @@ JobRouter::SetJobRemoved(classad::ClassAd& ad, const char* remove_reason)
 	if (REMOVED != status)
 	{
 		ad.InsertAttr(ATTR_JOB_STATUS, REMOVED);
-		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL));
+		ad.InsertAttr(ATTR_ENTERED_CURRENT_STATUS, time(nullptr));
 		ad.InsertAttr(ATTR_REMOVE_REASON, remove_reason);
 		if(false == push_dirty_attributes(ad,m_schedd1_name,m_schedd1_pool))
 		{
@@ -3129,8 +3126,8 @@ JobRoute::AdjustFailureThrottles() {
 bool
 JobRoute::ApplyRoutingJobEdits(
 	ClassAd *src_ad,
-	SimpleList<MacroStreamXFormSource*>& pre_route,
-	SimpleList<MacroStreamXFormSource*>& post_route,
+	std::vector<MacroStreamXFormSource*>& pre_route,
+	std::vector<MacroStreamXFormSource*>& post_route,
 	unsigned int xform_flags)
 {
 	XFormHash mset(XFormHash::Flavor::Basic);
@@ -3139,10 +3136,8 @@ JobRoute::ApplyRoutingJobEdits(
 
 	std::string errmsg;
 	int rval = 0;
-	if (m_use_pre_route_transform && !pre_route.IsEmpty()) {
-		MacroStreamXFormSource* xfm;
-		pre_route.Rewind();
-		while (pre_route.Next(xfm)) {
+	if (m_use_pre_route_transform && !pre_route.empty()) {
+		for (MacroStreamXFormSource* xfm: pre_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter pre-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
@@ -3168,10 +3163,8 @@ JobRoute::ApplyRoutingJobEdits(
 		return false;
 	}
 
-	if (m_use_pre_route_transform && ! post_route.IsEmpty()) {
-		MacroStreamXFormSource* xfm;
-		post_route.Rewind();
-		while (post_route.Next(xfm)) {
+	if (m_use_pre_route_transform && ! post_route.empty()) {
+		for (MacroStreamXFormSource* xfm: post_route) {
 			if ( ! xfm->matches(src_ad)) {
 				dprintf(D_FULLDEBUG, "JobRouter post-route transform %s: does not match job. skippping it.\n", xfm->getName());
 				continue;
@@ -3254,7 +3247,7 @@ JobRoute::ParseNext(
 
 	// insure that the resulting xform will parse, and also populate the XFormHash with it's params
 	// so that we can query/store them for use in the routing process prior to actual job transformation.
-	if ( ! ValidateXForm(m_route, mset, errmsg)) {
+	if ( ! ValidateXForm(m_route, mset, nullptr, errmsg)) {
 		dprintf(D_ALWAYS, "JobRouter: route %s is not valid: %s\n", name, errmsg.c_str());
 		return false;
 	}

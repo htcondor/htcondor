@@ -34,11 +34,7 @@
 
 static bool test_case_string_view(void);
 static bool test_sprintf_string(void);
-static bool test_sprintf_MyString(void);
 static bool test_formatstr_cat_string(void);
-static bool test_formatstr_cat_MyString(void);
-static bool test_comparison_ops_lhs_string(void);
-static bool test_comparison_ops_lhs_MyString(void);
 static bool test_lower_case_empty(void);
 static bool test_lower_case_non_empty(void);
 static bool test_upper_case_empty(void);
@@ -71,13 +67,9 @@ bool FTEST_stl_string_utils(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(test_comparison_ops_lhs_string);
-	driver.register_function(test_comparison_ops_lhs_MyString);
 	driver.register_function(test_case_string_view);
 	driver.register_function(test_sprintf_string);
-	driver.register_function(test_sprintf_MyString);
 	driver.register_function(test_formatstr_cat_string);
-	driver.register_function(test_formatstr_cat_MyString);
 	driver.register_function(test_lower_case_empty);
 	driver.register_function(test_lower_case_non_empty);
 	driver.register_function(test_upper_case_empty);
@@ -189,72 +181,6 @@ static bool test_sprintf_string() {
 	PASS;
 }
 
-static bool test_sprintf_MyString() {
-    emit_test("Test sprintf overloading for MyString");
-
-    int nchars = 0;
-    int rchars = 0;
-    MyString dst;
-    MyString src;
-
-    nchars = STL_STRING_UTILS_FIXBUF / 2;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF - 1;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF + 1;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF * 2;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
 static bool test_formatstr_cat_string() {
     emit_test("Test formatstr_cat overloading for std::string");
 
@@ -264,171 +190,6 @@ static bool test_formatstr_cat_string() {
 		FAIL;        
     }
     if (r != 3) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
-static bool test_formatstr_cat_MyString() {
-    emit_test("Test formatstr_cat overloading for MyString");
-
-    MyString s = "foo";
-    int r = formatstr_cat(s, "%s", "bar");
-    if (s != "foobar") {
-		FAIL;        
-    }
-    if (r != 3) {
-		FAIL;        
-    }    
-
-	PASS;
-}
-
-static bool test_comparison_ops_lhs_string() {
-    emit_test("Test comparison operators: LHS is std::string and RHS is MyString");
-
-    std::string lhs;
-    MyString rhs;
-
-        // test operators when lhs == rhs
-    lhs = "a";
-    rhs = "a";
-    if ((lhs == rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-        // test operators when lhs < rhs
-    lhs = "a";
-    rhs = "b";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != false) {
-		FAIL;        
-    }
-
-        // test operators when lhs > rhs
-    lhs = "b";
-    rhs = "a";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
-static bool test_comparison_ops_lhs_MyString() {
-    emit_test("Test comparison operators: LHS is MyString and LHS is std::string");
-
-    MyString lhs;
-    std::string rhs;
-
-        // test operators when lhs == rhs
-    lhs = "a";
-    rhs = "a";
-    if ((lhs == rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-        // test operators when lhs < rhs
-    lhs = "a";
-    rhs = "b";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != false) {
-		FAIL;        
-    }
-
-        // test operators when lhs > rhs
-    lhs = "b";
-    rhs = "a";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
 		FAIL;        
     }
 

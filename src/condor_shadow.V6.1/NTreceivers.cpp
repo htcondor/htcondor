@@ -46,9 +46,9 @@ static bool write_access(const char * filename ) {
 	return thisRemoteResource->allowRemoteWriteFileAccess( filename );
 }
 
-static int stat_string( char *line, struct stat *info )
+static int stat_string( char *line, size_t sz, struct stat *info )
 {
-	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",
+	return snprintf(line,sz,"%lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\n",
 		(long long) info->st_dev,
 		(long long) info->st_ino,
 		(long long) info->st_mode,
@@ -70,12 +70,12 @@ static int stat_string( char *line, struct stat *info )
 	);
 }
 
-static int statfs_string( char *line, struct statfs *info )
+static int statfs_string( char *line, size_t sz, struct statfs *info )
 {
 #ifdef WIN32
 	return 0;
 #else
-	return sprintf(line,"%lld %lld %lld %lld %lld %lld %lld\n",
+	return snprintf(line,sz,"%lld %lld %lld %lld %lld %lld %lld\n",
 		(long long) info->f_type,
 		(long long) info->f_bsize,
 		(long long) info->f_blocks,
@@ -1378,7 +1378,7 @@ case CONDOR_getlongdir:
 				if(rval == -1) {
 					break;
 				}
-				if(stat_string(line, &stat_buf) < 0) {
+				if(stat_string(line, sizeof(line), &stat_buf) < 0) {
 					rval = -1;
 					break;
 				}
@@ -1554,7 +1554,7 @@ case CONDOR_getdir:
 		char line[1024];
 		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
-			if(statfs_string(line, &statfs_buf) < 0) {
+			if(statfs_string(line, sizeof(line), &statfs_buf) < 0) {
 				rval = -1;
 				terrno = (condor_errno_t)errno;
 			}
@@ -1776,7 +1776,7 @@ case CONDOR_getdir:
 		char line[1024];
 		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
-			if(stat_string(line, &stat_buf) < 0) {
+			if(stat_string(line, sizeof(line), &stat_buf) < 0) {
 				rval = -1;
 				terrno = (condor_errno_t)errno;
 			}
@@ -1814,7 +1814,7 @@ case CONDOR_getdir:
 		char line[1024];
 		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
-			if(statfs_string(line, &statfs_buf) < 0) {
+			if(statfs_string(line, sizeof(line), &statfs_buf) < 0) {
 				rval = -1;
 				terrno = (condor_errno_t)errno;
 			}
@@ -1952,7 +1952,7 @@ case CONDOR_getdir:
 		char line[1024];
 		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
-			if(stat_string(line, &stat_buf) < 0) {
+			if(stat_string(line, sizeof(line), &stat_buf) < 0) {
 				rval = -1;
 				terrno = (condor_errno_t)errno;
 			}
@@ -1989,7 +1989,7 @@ case CONDOR_getdir:
 		char line[1024];
 		memset( line, 0, sizeof(line) );
 		if(rval == 0) {
-			if(stat_string(line, &stat_buf) < 0) {
+			if(stat_string(line, sizeof(line), &stat_buf) < 0) {
 				rval = -1;
 				terrno = (condor_errno_t)errno;
 			}
@@ -2214,8 +2214,10 @@ case CONDOR_getdir:
 			ASSERT( result );
 			result = ( putClassAd(syscall_sock, ad) );
 			ASSERT( result );
-			dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
-			dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+			if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+				dprintf( D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: sent ad:\n" );
+				dPrintAd(D_SECURITY|D_FULLDEBUG, ad);
+			}
 		}
 
 		int last_command = 0;

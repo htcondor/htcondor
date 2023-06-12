@@ -450,7 +450,7 @@ SetPartitionExprs( ClassAdCollection *coll, ExprList *el )
 		CondorErrMsg = "invalid 'PartitionExprs'; failed to partition";
 		return( false );
 	}
-	if( !( ad->Insert( ATTR_PARTITION_EXPRS, (ExprTree* &)el ) ) ) {
+	if( !( ad->Insert( ATTR_PARTITION_EXPRS, el))) {
 		CondorErrMsg += "failed to set partition expressions on view";
 		return( false );
 	}

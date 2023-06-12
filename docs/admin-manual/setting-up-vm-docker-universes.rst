@@ -43,7 +43,7 @@ fully support **vm** universe jobs.
 
 Configuration is required to enable the execution of **vm** universe
 jobs. The type of virtual machine that is installed on the execute
-machine must be specified with the ``VM_TYPE`` :index:`VM_TYPE`
+machine must be specified with the :macro:`VM_TYPE`
 variable. For now, only one type can be utilized per machine. For
 instance, the following tells HTCondor to use KVM:
 
@@ -201,8 +201,7 @@ the container.
 These directories will be bind-mounted unconditionally inside the
 container. If an administrator wants to bind mount a directory only for
 some jobs, perhaps only those submitted by some trusted user, the
-setting ``DOCKER_VOLUME_DIR_xxx_MOUNT_IF``
-:index:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
+setting :macro:`DOCKER_VOLUME_DIR_xxx_MOUNT_IF` may be used. This is a
 class ad expression, evaluated in the context of the job ad and the
 machine ad. Only when it evaluted to TRUE, is the volume mounted.
 Extending the above example,
@@ -220,10 +219,10 @@ only for jobs owned by user "smith", and who set +WantSomeDirMounted =
 true in their submit file.
 
 In addition to installing the Docker service, the single configuration
-variable ``DOCKER`` :index:`DOCKER` must be set. It defines the
+variable :macro:`DOCKER` must be set. It defines the
 location of the Docker CLI and can also specify that the
 *condor_starter* daemon has been given a password-less sudo permission
-to start the container as root. Details of the ``DOCKER`` configuration
+to start the container as root. Details of the :macro:`DOCKER` configuration
 variable are in the :ref:`admin-manual/configuration-macros:condor_startd
 configuration file macros` section.
 
@@ -267,27 +266,24 @@ Enterprise Linux machine.
         HasDocker = true
         DockerVersion = "Docker Version 1.6.0, build xxxxx/1.6.0"
 
-By default, HTCondor will keep the 8 most recently used Docker images
-on the local machine. This number may be controlled with the
-configuration variable ``DOCKER_IMAGE_CACHE_SIZE``
-:index:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the
-number of images, and the corresponding disk space, used by Docker.
+By default, HTCondor will keep the 8 most recently used Docker images on the
+local machine. This number may be controlled with the configuration variable
+:macro:`DOCKER_IMAGE_CACHE_SIZE`, to increase or decrease the number of images,
+and the corresponding disk space, used by Docker.
 
-By default, Docker containers will be run with all rootly capabilties
-dropped, and with setuid and setgid binaries disabled, for security
-reasons. If you need to run containers with root privilige, you may set
-the configuration parameter ``DOCKER_DROP_ALL_CAPABILITIES``
-:index:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that
-evalutes to false. This expression is evaluted in the context of the
-machine ad (my) and the job ad (target).
+By default, Docker containers will be run with all rootly capabilties dropped,
+and with setuid and setgid binaries disabled, for security reasons. If you need
+to run containers with root privilige, you may set the configuration parameter
+:macro:`DOCKER_DROP_ALL_CAPABILITIES` to an expression that evalutes to false.
+This expression is evaluted in the context of the machine ad (my) and the job
+ad (target).
 
 Docker support an enormous number of command line options when creating
-containers. While HTCondor tries to map as many useful options from
-submit files and machine descriptions to command line options, an
-administrator may want additional options passed to the docker container
-create command. To do so, the parameter ``DOCKER_EXTRA_ARGUMENTS``
-:index:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will append
-these to the docker container create command.
+containers. While HTCondor tries to map as many useful options from submit
+files and machine descriptions to command line options, an administrator may
+want additional options passed to the docker container create command. To do
+so, the parameter :macro:`DOCKER_EXTRA_ARGUMENTS` can be set, and condor will
+append these to the docker container create command.
 
 Docker universe jobs may fail to start on certain Linux machines when
 SELinux is enabled. The symptom is a permission denied error when

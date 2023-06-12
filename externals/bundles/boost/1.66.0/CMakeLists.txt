@@ -85,7 +85,7 @@ else (WINDOWS)
     endif()
 
 	message (STATUS "Boost components: ${BOOST_COMPONENTS}" )
-	find_package( Boost 1.33.1 COMPONENTS ${BOOST_COMPONENTS} )
+	find_package( Boost 1.66 COMPONENTS ${BOOST_COMPONENTS} )
 
 	# always prefer system libraries where possible
 	if(Boost_FOUND)

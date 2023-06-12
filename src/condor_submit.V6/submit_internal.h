@@ -54,7 +54,7 @@ class SimScheddQ : public AbstractScheddQ {
 public:
 	SimScheddQ(int starting_cluster=0);
 	virtual ~SimScheddQ();
-	virtual int get_NewCluster();
+	virtual int get_NewCluster(CondorError & errstack);
 	virtual int get_NewProc(int cluster_id);
 	virtual int get_Capabilities(ClassAd& reply);
 	virtual int get_ExtendedHelp(std::string &content);

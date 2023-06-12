@@ -114,14 +114,14 @@ void DefragStats::Publish(ClassAd & ad) const
 void DefragStats::Publish(ClassAd & ad, int flags) const
 {
    if ((flags & IF_PUBLEVEL) > 0) {
-      ad.Assign("StatsLifetime", (int)Lifetime);
+      ad.Assign("StatsLifetime", Lifetime);
       if (flags & IF_VERBOSEPUB)
-         ad.Assign("StatsLastUpdateTime", (int)LastUpdateTime);
+         ad.Assign("StatsLastUpdateTime", LastUpdateTime);
       if (flags & IF_RECENTPUB) {
-         ad.Assign("RecentStatsLifetime", (int)RecentLifetime);
+         ad.Assign("RecentStatsLifetime", RecentLifetime);
          if (flags & IF_VERBOSEPUB) {
-            ad.Assign("RecentWindowMax", (int)RecentWindowMax);
-            ad.Assign("RecentStatsTickTime", (int)RecentTickTime);
+            ad.Assign("RecentWindowMax", RecentWindowMax);
+            ad.Assign("RecentStatsTickTime", RecentTickTime);
          }
       }
    }

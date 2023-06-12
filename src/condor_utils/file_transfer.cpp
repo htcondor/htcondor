@@ -315,7 +315,6 @@ FileTransfer::~FileTransfer()
 	if (UserLogFile) free(UserLogFile);
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
-	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
@@ -374,6 +373,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	std::string buffer;
 
 	jobAd = *Ad;	// save job ad
 
@@ -551,15 +551,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
 
-		std::string buf;
-		SpooledJobFiles::getJobSpoolPath(Ad, buf);
-		SpoolSpace = strdup(buf.c_str());
-		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
+		SpoolSpace = strdup(buffer.c_str());
+		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	if ( (IsServer() || (IsClient() && simple_init)) &&
-		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) )
+	Ad->LookupString(ATTR_JOB_CMD, buffer);
+	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
 		//   we switch priv state for these file checks?
@@ -584,16 +582,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
 #ifdef WIN32
-			// buf doesn't refer to a real file when this code is executed in the SCHEDD when spooling
+			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buf) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-					"FileTrans: permission denied reading %s\n",buf);
+				        "FileTrans: permission denied reading %s\n",buffer.c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buf);
+			ExecFile = strdup(buffer.c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
@@ -611,7 +609,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			InputFiles->append(ExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( CONDOR_EXEC );
+		ExecFile = strdup( condor_basename(buffer.c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -1266,8 +1264,8 @@ FileTransfer::FindChangedFiles()
 
 	const char *f;
 	while( (f=dir.Next()) ) {
-		// don't send back condor_exec.*
-		if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+		// don't send back the executable
+		if ( ExecFile && MATCH == file_strcmp ( f, ExecFile ) ) {
 			dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
 			continue;
 		}
@@ -2523,6 +2521,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			filename = NULL_FILE;
 		}
 
+		// An old peer is sending us a renamed executable.
+		// Use the real filename from the job ad
+		if( ExecFile && IsClient() && !simple_init && !file_strcmp(filename.c_str(), CONDOR_EXEC)) {
+			filename = ExecFile;
+		}
+
 		if( !strcmp(filename.c_str(),NULL_FILE) ) {
 			fullname = filename;
 		}
@@ -2580,10 +2584,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// semantic change, and one that changes a job from going
 					// on hold (after running for its duration) to succeeding.
 					if( param_boolean("ALLOW_TRANSFER_REMAP_TO_MKDIR",false) ) {
-						char * dirname = condor_dirname(remap_filename.c_str());
-						if( strcmp(dirname, ".") ) {
+						std::string dirname = condor_dirname(remap_filename.c_str());
+						if( strcmp(dirname.c_str(), ".") ) {
 							std::string path;
-                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname);
+                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname.c_str());
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
 							// So this fails on a dirA/dirB/filename remaps,
 							// which seemed like the easiest way to trigger
@@ -2627,7 +2631,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								}
 							}
 						}
-						free(dirname);
 					}
 
                     formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,remap_filename.c_str());
@@ -2657,7 +2660,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 #endif
 		} else {
-			formatstr(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
@@ -3472,7 +3475,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// we just stashed all the files in the TmpSpoolSpace.
 		// write out the commit file.
 
-		formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+		formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
 		if ((fd = safe_open_wrapper_follow(buf.c_str(), O_WRONLY | O_CREAT | O_TRUNC |
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
@@ -3666,9 +3669,9 @@ FileTransfer::CommitFiles()
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
+	Directory tmpspool( TmpSpoolSpace.c_str(), desired_priv_state );
 
-	formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+	formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.c_str(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 
@@ -3683,7 +3686,7 @@ FileTransfer::CommitFiles()
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
-			formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
+			formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 			formatstr(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
 			formatstr(swapbuf,"%s%c%s",SwapSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 
@@ -4858,7 +4861,16 @@ FileTransfer::uploadFileList(
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename.c_str())==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
-			dest_filename = CONDOR_EXEC;
+			if (PeerRenamesExecutable) {
+				// Our peer is old and expects us to rename the executable
+				dest_filename = CONDOR_EXEC;
+			} else {
+				// Strip path information and preserve the original name
+				// (in case copy_to_spool gave us an ickpt filename).
+				std::string cmd;
+				jobAd.LookupString(ATTR_JOB_CMD, cmd);
+				dest_filename = condor_basename(cmd.c_str());
+			}
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
@@ -6092,6 +6104,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 
 	PeerDoesReuseInfo = peer_version.built_since_version(8,9,4);
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
+	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 }
 
 
@@ -6249,7 +6262,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(error)) {
+		if(-1 == InitializeSystemPlugins(error, false)) {
 			return "";
 		}
 	}
@@ -6301,7 +6314,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, false)) {
 			return TransferPluginResult::Error;
 		}
 	}
@@ -6374,7 +6387,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		drop_privs
 	);
 
-	int rc;
+	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_for_exit( timeout, & rc );
 
@@ -6545,7 +6558,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
 	if (input_file == nullptr) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-					"Could not open %s for writing, aborting\n", input_filename.c_str());
+			"Could not open %s for writing (%s, errno=%d), aborting\n",
+			input_filename.c_str(), strerror(errno), errno );
 		return TransferPluginResult::Error;
 	}
 	fputs( transfer_files_string.c_str(), input_file );
@@ -6823,7 +6837,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, true)) {
 			return "";
 		}
 	}
@@ -6860,7 +6874,7 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 		return 0;
 	}
 
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
@@ -6891,12 +6905,12 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	}
 
 	// start with the system table
-	if (-1 == InitializeSystemPlugins(e)) {
+	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
 	}
 
 	// process the user plugins
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
@@ -6908,7 +6922,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			trim(plugin_path);
 			std::string plugin(condor_basename(plugin_path.c_str()));
 
-			InsertPluginMappings(methods, plugin);
+			InsertPluginMappings(methods, plugin, false);
 			plugins_multifile_support[plugin] = true;
 			plugins_from_job[plugin.c_str()] = true;
 			multifile_plugins_enabled = true;
@@ -6922,7 +6936,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 }
 
 
-int FileTransfer::InitializeSystemPlugins(CondorError &e) {
+int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 
 	// don't leak even if Initialize gets called more than once
 	if (plugin_table) {
@@ -6949,7 +6963,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 	char *p;
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
-		SetPluginMappings( e, p );
+		SetPluginMappings( e, p, enable_testing );
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
@@ -6967,7 +6981,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 
 
 void
-FileTransfer::SetPluginMappings( CondorError &e, const char* path )
+FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_testing )
 {
     FILE* fp;
     const char *args[] = { path, "-classad", NULL};
@@ -7019,7 +7033,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
 		if (ad->LookupString( "SupportedMethods", methods)) {
-			InsertPluginMappings( methods, path );
+			InsertPluginMappings( methods, path, enable_testing );
 		}
 	}
 
@@ -7029,7 +7043,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 
 void
-FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing)
 {
 	StringList method_list(methods.c_str());
 
@@ -7037,11 +7051,120 @@ FileTransfer::InsertPluginMappings(const std::string& methods, const std::string
 
 	method_list.rewind();
 	while((m = method_list.next())) {
+		if (enable_testing && !TestPlugin(m, p)) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m, p.c_str());
+			continue;
+		}
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.c_str());
 		if ( plugin_table->insert(m, p, true) != 0 ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
 		}
 	}
+}
+
+namespace {
+
+class AutoDeleteDirectory {
+public:
+	AutoDeleteDirectory(std::string dir, ClassAd *ad) : m_dirname(dir), m_ad(ad) {}
+
+	~AutoDeleteDirectory() {
+		if (m_dirname.empty()) {return;}
+
+		dprintf(D_FULLDEBUG, "FILETRANSFER: Cleaning up directory %s.\n", m_dirname.c_str());
+		Directory dir_obj(m_dirname.c_str());
+		if (!dir_obj.Remove_Entire_Directory()) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s contents.\n", m_dirname.c_str());
+			return;
+		}
+		if (-1 == rmdir(m_dirname.c_str())) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s: %s (errno=%d).\n",
+				m_dirname.c_str(), strerror(errno), errno);
+		}
+
+		if (m_ad) {
+			m_ad->Delete("Iwd");
+		}
+	}
+
+private:
+	std::string m_dirname;
+	ClassAd *m_ad;
+};
+
+}
+
+bool
+FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
+{
+	const std::string test_url_param = std::string(method) + "_test_url";
+	std::string test_url;
+	if (!param(test_url, test_url_param.c_str())) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());
+		return true;
+	}
+
+#ifdef WIN32
+	dprintf(D_ALWAYS,
+		"WARNING - FILETRANSFER: test url defined for method %s in config, but this is not supported on Windows OS.\n",
+		method.c_str());
+	return true;
+#else
+	// If we are running as a test starter, we may not have Iwd set appropriately.
+	// In this case, create an execute directory.
+	std::string iwd, directory;
+	if (!jobAd.EvaluateAttrString("Iwd", iwd)) {
+		std::string execute_dir;
+		if (!param(execute_dir, "EXECUTE")) {
+			dprintf(D_ALWAYS, "FILETRANSFER: EXECUTE configuration variable not set; cannot test plugin.\n");
+			return false;
+		}
+		auto test_dir = execute_dir + "/test_file_transfer.XXXXXX";
+		std::unique_ptr<char, decltype(&free)> test_dir_template(strdup(test_dir.c_str()), &free);
+		{
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_CONDOR);
+			auto result = mkdtemp(test_dir_template.get());
+			if (!result) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to create temporary test directory %s: %s (errno=%d).\n",
+					test_dir_template.get(), strerror(errno), errno);
+				return false;
+			}
+			directory = std::string(result);
+		}
+		if (user_ids_are_inited()) {
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_ROOT);
+			if (0 != chown(directory.c_str(), get_user_uid(), get_user_gid())) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to chown temporary test directory %s to user UID %d: %s (errno=%d).\n",
+					directory.c_str(), get_user_uid(), strerror(errno), errno);
+				return false;
+			}
+		}
+		iwd = directory;
+		jobAd.InsertAttr("Iwd", directory);
+	}
+	AutoDeleteDirectory dir_delete(directory, &jobAd);
+
+	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
+
+	classad::ClassAd testAd;
+	testAd.InsertAttr("Url", test_url);
+	testAd.InsertAttr("LocalFileName", fullname);
+	std::string testAdString;
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(testAdString, &testAd);
+
+	std::vector<std::unique_ptr<ClassAd>> result_ads;
+	CondorError err;
+	auto result = InvokeMultipleFileTransferPlugin(err, plugin, testAdString, nullptr, false, &result_ads );
+	if (result != TransferPluginResult::Success) {
+		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
+			test_url.c_str(), plugin.c_str(), err.getFullText().c_str());
+		return false;
+	}
+	dprintf(D_ALWAYS, "FILETRANSFER: Successfully downloaded test URL %s using plugin %s.\n",
+		test_url.c_str(), plugin.c_str());
+	return true;
+#endif
 }
 
 bool
@@ -7225,9 +7348,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		file_xfer_item.setFileSize(st.GetFileSize());
 
 		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
-			char * dirname_raw = condor_dirname( file_xfer_item.srcName().c_str() );
-			std::string dirname(dirname_raw);
-			free(dirname_raw);
+			std::string dirname = condor_dirname( file_xfer_item.srcName().c_str() );
 
 			if( strcmp( dirname.c_str(), "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );

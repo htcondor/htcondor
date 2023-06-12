@@ -27,7 +27,11 @@ struct xferProgress {
 };
 struct xferProgress myProgress;
 
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 32)
+static int xferInfo(void *p, curl_off_t /* dltotal */, curl_off_t dlnow, curl_off_t /* ultotal */, curl_off_t ulnow)
+#else
 static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultotal */, double ulnow)
+#endif
 {
 	/* Note : we cannot rely on dltotal or ultotal being correct, since
 	they will only be non-zero if the server responded with the optional
@@ -37,8 +41,13 @@ static int xferInfo(void *p, double /* dltotal */, double dlnow, double /* ultot
     CURL *curl = progress->curl;
     double curTime = 0;
     static double prevTime = 0; //Previous checks total time
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 32)
     static double dlprev   = 0; //Previous checks dlnow
     static double ulprev   = 0; //Previous checks ulnow
+#else
+    static curl_off_t dlprev   = 0; //Previous checks dlnow
+    static curl_off_t ulprev   = 0; //Previous checks ulnow
+#endif
 
     curl_easy_getinfo(curl, CURLINFO_TOTAL_TIME, &curTime);
 
@@ -288,7 +297,11 @@ MultiFileCurlPlugin::InitializeCurlHandle(const std::string &url, const std::str
     // transfer is not making progress, and if not then abort it.
     myProgress.curl = _handle;
     myProgress.lastRunTime = 0;
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 32)
+    r = curl_easy_setopt(_handle, CURLOPT_XFERINFOFUNCTION, xferInfo);
+#else
     r = curl_easy_setopt(_handle, CURLOPT_PROGRESSFUNCTION, xferInfo);
+#endif
 	if (r != CURLE_OK) {
 		fprintf(stderr, "Can't setopt PROGRESSFUNCTION\n");
 	}
@@ -329,22 +342,33 @@ void
 MultiFileCurlPlugin::FinishCurlTransfer( int rval, FILE *file ) {
 
     // Gather more statistics
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 55)
+    curl_off_t bytes_downloaded = 0;
+    curl_off_t bytes_uploaded = 0;
+#else
     double bytes_downloaded = 0;
     double bytes_uploaded = 0;
+#endif
     double transfer_connection_time;
     double transfer_total_time;
     long return_code;
+
+#if (LIBCURL_VERSION_MAJOR > 7) || (LIBCURL_VERSION_MAJOR == 7 && LIBCURL_VERSION_MINOR > 55)
+    curl_easy_getinfo( _handle, CURLINFO_SIZE_DOWNLOAD_T, &bytes_downloaded );
+    curl_easy_getinfo( _handle, CURLINFO_SIZE_UPLOAD_T, &bytes_uploaded );
+#else
     curl_easy_getinfo( _handle, CURLINFO_SIZE_DOWNLOAD, &bytes_downloaded );
     curl_easy_getinfo( _handle, CURLINFO_SIZE_UPLOAD, &bytes_uploaded );
+#endif
     curl_easy_getinfo( _handle, CURLINFO_CONNECT_TIME, &transfer_connection_time );
     curl_easy_getinfo( _handle, CURLINFO_TOTAL_TIME, &transfer_total_time );
     curl_easy_getinfo( _handle, CURLINFO_RESPONSE_CODE, &return_code );
 
     if(bytes_downloaded > 0) {
-        _this_file_stats->TransferTotalBytes += ( long ) bytes_downloaded;
+        _this_file_stats->TransferTotalBytes += (int64_t) bytes_downloaded;
     }
     else {
-        _this_file_stats->TransferTotalBytes += ( long ) bytes_uploaded;
+        _this_file_stats->TransferTotalBytes += (int64_t) bytes_uploaded;
     }
 
     _this_file_stats->ConnectionTimeSeconds +=  ( transfer_total_time - transfer_connection_time );
@@ -884,17 +908,23 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
     auto ft_stats = static_cast<FileTransferStats*>(userdata);
 
     // Work around a bug in libcurl; see HTCONDOR-1426.
-    buffer = strdup(buffer);
+    // Also, buffer may not be NUL-terminated
+    char* buffer2 = (char*)malloc(nitems+1);
+    strncpy(buffer2, buffer, nitems);
+    buffer2[nitems] = '\0';
 
     const char* delimiters = " \r\n";
     size_t numBytes = nitems * size;
 
     // In some unique cases, ftstats get passed in as null. If this happens, abort.
-    if( !ft_stats ) return numBytes;
+    if( !ft_stats ) {
+        free(buffer2);
+        return numBytes;
+    }
 
     // Parse this HTTP header
     // We should probably add more error checking to this parse method...
-    char* token = strtok( buffer, delimiters );
+    char* token = strtok( buffer2, delimiters );
     while( token ) {
         // X-Cache header provides details about cache hits
         if( strcmp ( token, "X-Cache:" ) == 0 ) {
@@ -913,7 +943,7 @@ MultiFileCurlPlugin::HeaderCallback( char* buffer, size_t size, size_t nitems, v
         }
         token = strtok( NULL, delimiters );
     }
-    free(buffer);
+    free(buffer2);
     return numBytes;
 }
 

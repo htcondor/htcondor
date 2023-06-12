@@ -12,13 +12,17 @@
 #       - This test DOES NOT check for correct job order output (could be added)
 #       - This test DOES NOT check epoch stuff or the following flag options:
 #               xml,json,jsonl,long,attributes,format,pool,or autoformat
+#       - This test will also test some various expected failures
 
 #Configuration for personal condor. We add names for STARTD & SCHEDD to trick history for remote queries
+#Note: I put set the config dir to the execute dir because we don't run any actual jobs still might be
+#      nice to have a better config dir location.
 #testreq: personal
 """<<CONDOR_TESTREQ_CONFIG
     # Configuration to assist testing condor_history tool
     SCHEDD_NAME = TEST_SCHEDD@
     STARTD_NAME = TEST_STARTD@
+    LOCAL_CONFIG_DIR = $(EXECUTE)
 """
 #endtestreq
 
@@ -80,14 +84,49 @@ TEST_CASES = {
     "competed_since"    : TestReqs("condor_history -completedsince 125 -file", ["104.0","104.1","105.0","105.1","105.2","105.3","105.4"], STD_HEADER),
     "af_headers"        : TestReqs("condor_history -af:jh Owner QDate DAGManJobId CMD -limit 1", ["5.4"], ["ID","Owner","QDate","DAGManJobId","CMD"]),
     "no_match_af_const" : TestReqs("condor_history -af:j Beers -const Beers>10 -file"),
+    # Remote history checks
     "remote_schedd"     : TestReqs("condor_history -name TEST_SCHEDD@", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
     "remote_startd"     : TestReqs("condor_history -name TEST_STARTD@ -startd", ["1.0","2.0","2.1","2.2","3.0","4.0","4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
     "remote_cluster"    : TestReqs("condor_history 5 -name TEST_SCHEDD@", ["5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
     "remote_clust.proc" : TestReqs("condor_history 5.3 -name TEST_SCHEDD@", ["5.3"], STD_HEADER),
     "remote_match"      : TestReqs("condor_history 5 -name TEST_SCHEDD@ -limit 2", ["5.4","5.3"], STD_HEADER),
     "remote_since"      : TestReqs("condor_history -name TEST_SCHEDD@ -since 4.0", ["4.1","5.0","5.1","5.2","5.3","5.4"], STD_HEADER),
+    # Special case requires reconfig
+    # Test remote query works when history=  and schedd.history=file
+    "remote_schedd.hist": TestReqs("condor_history 4 -name TEST_SCHEDD@", ["4.0","4.1"], STD_HEADER),
 }
-
+#-----------------------------------------------------------------------------------------------
+# Test cases where we expect to get failures
+# add case: test name : { cmd:command to run, err: expected error message, config: None does nothing otherwise write dictionary options}
+TEST_ERROR_CASES = {
+    "fail_remote_no_history" : { "cmd":"condor_history -af ClusterId -name TEST_SCHEDD@",
+                                 "err":"undefined in remote configuration. No such related history to be queried.",
+                                 "config":{"SCHEDD.HISTORY":"","HISTORY":""}},
+    "fail_multi_source"      : { "cmd":"condor_history -startd -epoch",
+                                 "err":"can not be used in association with",
+                                 "config":{}},
+}
+#===============================================================================================
+# Reconfig condor to how we want
+def reconfig(condor, test_name, test_dir, config={}):
+    reconfig_cmd = ["condor_reconfig","-schedd"]
+    p = condor.run_command(["condor_config_val","LOCAL_CONFIG_DIR"])
+    #Move any old config dir files to the test dir for archiving of test config
+    for tmp_file in os.listdir(p.stdout):
+        old_path = os.path.join(p.stdout,tmp_file)
+        new_path = os.path.join(str(test_dir),tmp_file)
+        os.rename(old_path,new_path)
+    #If no config is needed then run reconfig and return
+    if len(config) == 0:
+        p = condor.run_command(reconfig_cmd)
+        return
+    #Else make a config file = test_name.conf and write key=value config information
+    filename =  os.path.join(p.stdout,f"{test_name}.conf")
+    with open(filename, "w") as f:
+        for knob,value in config.items():
+            f.write(f"{knob}={value}\n")
+    #Reconfig
+    p = condor.run_command(reconfig_cmd)
 #-----------------------------------------------------------------------------------------------
 #Write cluster(s) job history to specified file
 def writeAdToHistory(filename, clusters, ad):
@@ -334,6 +373,9 @@ def runHistoryCmds(default_condor, test_dir, setUpFiles):
     ran_cmds ={}
     #Run each test
     for key in TEST_CASES.keys():
+        if key == "remote_schedd.hist":
+            p = default_condor.run_command(["condor_config_val","HISTORY"])
+            reconfig(default_condor, key, test_dir, {"SCHEDD.HISTORY":p.stdout,"HISTORY":""})
         #Split command into list for .run_command()
         cmd = TEST_CASES[key].cmd.split()
         #For each special flag that needs a file appended
@@ -368,7 +410,33 @@ def testInfo(runTests):
 def testOutputFile(runTests):
     return runTests[2]
 #===============================================================================================
+@action
+def runErrorCmds(default_condor, test_dir):
+    #Creat path to output directory
+    out_dir = os.path.join(str(test_dir),OUTPUT_DIR)
+    ran_cmds = {}
+    #For each error test reconfig if needed then run command
+    for key in TEST_ERROR_CASES.keys():
+        config = TEST_ERROR_CASES[key]["config"]
+        if config != None:
+            reconfig(default_condor, key, test_dir, config)
+        cmd = TEST_ERROR_CASES[key]["cmd"].split()
+        p = default_condor.run_command(cmd)
+        #Make file in output dir with as `test name`.out
+        filename = f"{key}.out"
+        out_file = os.path.join(out_dir,filename)
+        #Write command processes stdout and stderr to test output file
+        with open(out_file,"a") as f:
+            f.write(p.stdout + p.stderr)
+        ran_cmds[key] = (TEST_ERROR_CASES[key]["err"], out_file)
+    yield ran_cmds
+#-----------------------------------------------------------------------------------------------
+@action(params={name: name for name in TEST_ERROR_CASES})
+def runFailed(request, runErrorCmds):
+    return (request.param,runErrorCmds[request.param][0], runErrorCmds[request.param][1])
+#===============================================================================================
 class TestCondorHistory:
+
     def test_condor_history(self, testName, testInfo, testOutputFile):
         passed = True
         #We always expect a file to be created. If file DNE fail
@@ -437,4 +505,17 @@ class TestCondorHistory:
                     print(f"\nERROR: {testName} output from '{testInfo.cmd}' is missing job ids ({missing}).")
                     passed = False
         assert passed == True
+    def test_history_errors(self, runFailed):
+        error_found = False
+        #Open output file and check for given error message
+        with open(runFailed[2], "r") as f:
+            for line in f:
+                line = line.strip()
+                if runFailed[1] in line:
+                    error_found = True
+            if not error_found:
+                print(f"\nERROR: {runFailed[0]} failed to produce error message '{runFailed[1]}'")
+        assert error_found == True
+
+
 

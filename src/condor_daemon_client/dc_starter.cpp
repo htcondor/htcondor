@@ -296,6 +296,14 @@ DCStarter::createJobOwnerSecSession(int timeout,char const *job_claim_id,char co
 	return true;
 }
 
+bool
+fnHadSharedPortProblem( void * v, int code, const char * /* subsys */, const char * msg ) {
+	if( code == CEDAR_ERR_NO_SHARED_PORT ) {
+		*(const char **)v = msg;
+	}
+	return true;
+}
+
 bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_client_key_file,char const *preferred_shells,char const *slot_name,char const *ssh_keygen_args,ReliSock &sock,int timeout,char const *sec_session_id,std::string &remote_user,std::string &error_msg,bool &retry_is_sensible)
 {
 
@@ -310,8 +318,16 @@ bool DCStarter::startSSHD(char const *known_hosts_file,char const *private_clien
 			getCommandStringSafe(START_SSHD), _addr ? _addr : "NULL");
 	}
 
-	if( !connectSock(&sock, timeout, NULL) ) {
-		error_msg = "Failed to connect to starter";
+	CondorError errorStack;
+	if( !connectSock(&sock, timeout, &errorStack) ) {
+		const char * theSharedPortProblem = NULL;
+		errorStack.walk( fnHadSharedPortProblem, &theSharedPortProblem );
+
+		if( theSharedPortProblem != NULL ) {
+			formatstr( error_msg, "Can't connect to starter: %s.", theSharedPortProblem );
+		} else {
+			error_msg = "Failed to connect to starter";
+		}
 		return false;
 	}
 

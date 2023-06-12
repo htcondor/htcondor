@@ -77,7 +77,6 @@
 #include "condor_mkstemp.h"
 #include "basename.h"
 #include "condor_random_num.h"
-#include "extArray.h"
 #include "subsystem_info.h"
 #include "param_info.h"
 #include "param_info_tables.h"
@@ -109,8 +108,8 @@ void process_directory( const char* dirlist, const char* host);
 static int  process_dynamic_configs();
 void do_smart_auto_use(int options);
 
-static const char* find_global(int options, MyString & config_file);
-static const char* find_file(const char*, const char*, int config_options, MyString & config_file);
+static const char* find_global(int options, std::string & config_file);
+static const char* find_file(const char*, const char*, int config_options, std::string & config_file);
 
 // pull from config.cpp
 void param_default_set_use(const char * name, int use, MACRO_SET & set);
@@ -379,7 +378,7 @@ static bool have_config_source = true;
 static bool continue_if_no_config = false; // so condor_who won't exit if no config found.
 extern bool condor_fsync_on;
 
-MyString global_config_source;
+std::string global_config_source;
 StringList local_config_sources;
 std::string user_config_source; // which if the files in local_config_sources is the user file
 
@@ -486,7 +485,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 {
 	const char * subsys = get_mySubSystem()->getName();
 	StringList reqdAttrs;
-	MyString param_name;
+	std::string param_name;
 
 	if( !ad ) return;
 
@@ -503,16 +502,16 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 	param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 	// SYSTEM_<SUBSYS>_ATTRS is the set of attrs that are required by HTCondor, this is a non-public config knob.
-	param_name.formatstr("SYSTEM_%s_ATTRS", subsys);
+	formatstr(param_name, "SYSTEM_%s_ATTRS", subsys);
 	param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 	if (prefix) {
 		// <PREFIX>_<SUBSYS>_ATTRS is additional attributes needed
-		param_name.formatstr("%s_%s_ATTRS", prefix, subsys);
+		formatstr(param_name, "%s_%s_ATTRS", prefix, subsys);
 		param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 
 		// <PREFIX>_<SUBSYS>_EXPRS is deprecated, but still supported for now.
-		param_name.formatstr("%s_%s_EXPRS", prefix, subsys);
+		formatstr(param_name, "%s_%s_EXPRS", prefix, subsys);
 		param_and_insert_unique_items(param_name.c_str(), reqdAttrs);
 	}
 
@@ -521,7 +520,7 @@ config_fill_ad( ClassAd* ad, const char *prefix )
 		for (const char * attr = reqdAttrs.first(); attr; attr = reqdAttrs.next()) {
 			auto_free_ptr expr(NULL);
 			if (prefix) {
-				param_name.formatstr("%s_%s", prefix, attr);
+				formatstr(param_name, "%s_%s", prefix, attr);
 				expr.set(param(param_name.c_str()));
 			}
 			if ( ! expr) {
@@ -624,8 +623,8 @@ bool validate_config(bool abort_if_invalid, int opt)
 	bool deprecation_check = (opt & CONFIG_OPT_DEPRECATION_WARNINGS);
 	unsigned int invalid_entries = 0;
 	unsigned int deprecated_entries = 0;
-	MyString invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
-	MyString deprecated_out;
+	std::string invalid_out = "The following configuration macros appear to contain default values that must be changed before Condor will run.  These macros are:\n";
+	std::string deprecated_out;
 	Regex re;
 	if (deprecation_check) {
 		int errcode, erroffset;
@@ -651,7 +650,6 @@ bool validate_config(bool abort_if_invalid, int opt)
 			invalid_entries++;
 		}
 		if (deprecation_check && re.match(name)) {
-			MyString filename;
 			deprecated_out += "   ";
 			deprecated_out += name;
 			MACRO_META * pmet = hash_iter_meta(it);
@@ -752,7 +750,7 @@ bool
 real_config(const char* host, int wantsQuiet, int config_options, const char * root_config)
 {
 	const char* config_source = root_config;
-	MyString config_file_tmp; // used as a temp buffer by find_global
+	std::string config_file_tmp; // used as a temp buffer by find_global
 	char* tmp = NULL;
 
 	#ifdef WARN_COLON_FOR_PARAM_ASSIGN
@@ -851,11 +849,24 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		}
 	}
 
-		// Read in the global file
-	if( config_source ) {
-		process_config_source( config_source, 0, "global config source", NULL, !continue_if_no_config );
-		global_config_source = config_source;
-		config_source = NULL;
+	bool only_env = YourStringNoCase("ONLY_ENV") == config_source;
+	bool null_config = YourString("/dev/null") == config_source || !config_source || !config_source[0];
+
+	if ( ! only_env && ! null_config) {
+		// inject the directory of the root config file into the config
+		// if no directory was supplied, "." will be used
+		// if no root config, "" will be used
+		std::string config_root = condor_dirname(config_source);
+		if (!config_root.empty() && ! null_config) {
+			insert_macro("CONFIG_ROOT", config_root.c_str(), ConfigMacroSet, DetectedMacro, ctx);
+		}
+
+			// Read in the global file
+		if( config_source ) {
+			process_config_source( config_source, 0, "global config source", NULL, !continue_if_no_config );
+			global_config_source = config_source;
+			config_source = NULL;
+		}
 	}
 
 		// Insert entries for "hostname" and "full_hostname".  We do
@@ -880,13 +891,13 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// Read in the LOCAL_CONFIG_FILE as a string list and process
 		// all the files in the order they are listed.
 	char *dirlist = param("LOCAL_CONFIG_DIR");
-	if(dirlist) {
+	if(dirlist && ! only_env) {
 		process_directory(dirlist, host);
 	}
 	process_locals( "LOCAL_CONFIG_FILE", host );
 
 	char* newdirlist = param("LOCAL_CONFIG_DIR");
-	if(newdirlist) {
+	if(newdirlist && ! only_env) {
 		if (dirlist) {
 			if(strcmp(dirlist, newdirlist) ) {
 				process_directory(newdirlist, host);
@@ -904,7 +915,7 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	user_config_source.clear();
 	std::string user_config_name;
 	param(user_config_name, "USER_CONFIG_FILE");
-	if (!user_config_name.empty()) {
+	if (!user_config_name.empty() && ! only_env) {
 		if (find_user_file(user_config_source, user_config_name.c_str(), true, false)) {
 			dprintf(D_FULLDEBUG|D_CONFIG, "Reading condor user-specific configuration from '%s'\n", user_config_source.c_str());
 			process_config_source(user_config_source.c_str(), 1, "user_config source", host, false);
@@ -941,18 +952,6 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 		// isolate Condor macro_name by skipping magic prefix
 		char *macro_name = varname + prefix_len;
 
-	#if 0 // TJ disabled on 8/18/2022 in preparation for the 10.0 series
-		// special macro START_owner needs to be expanded (for the
-		// glide-in code) [which should probably be fixed to use
-		// the general mechanism and set START itself --pfc]
-		if( !strcmp( macro_name, "START_owner" ) ) {
-			MyString ownerstr;
-			ownerstr.formatstr( "Owner == \"%s\"", varvalue );
-			insert_macro("START", ownerstr.c_str(), ConfigMacroSet, EnvMacro, ctx);
-		}
-		// ignore "_CONDOR_" without any macro name attached
-		else
-	#endif
 		if( macro_name[0] != '\0' ) {
 			insert_macro(macro_name, varvalue, ConfigMacroSet, EnvMacro, ctx);
 		}
@@ -1133,8 +1132,8 @@ template <class T> bool re_match(const char * str, pcre2_code * re, PCRE2_SIZE o
 	PCRE2_SIZE * ovec = pcre2_get_ovector_pointer(matchdata);
 
 	for (int ii = 1; ii < rc; ++ii) {
-		tags[ii-1].set(str + ovec[ii * 2], 
-			static_cast<int>(ovec[ii * 2 + 1] - ovec[ii * 2]));
+		tags[ii-1].assign(str + ovec[ii * 2], 
+			static_cast<size_t>(ovec[ii * 2 + 1] - ovec[ii * 2]));
 	}
 
 	pcre2_match_data_free(matchdata);
@@ -1152,7 +1151,7 @@ void do_smart_auto_use(int /*options*/)
 		&errcode, &erroffset, NULL);
 	ASSERT(re);
 
-	MyString tags[2];
+	std::string tags[2];
 	MACRO_EVAL_CONTEXT ctx; init_macro_eval_context(ctx);
 	MACRO_SOURCE src = {true, false, -1, -2, -1, -2};
 	std::string errstring;
@@ -1385,7 +1384,7 @@ get_tilde()
 
 
 const char*
-find_global(int config_options, MyString & config_file)
+find_global(int config_options, std::string & config_file)
 {
 	return find_file( ENV_CONDOR_CONFIG, "condor_config", config_options, config_file);
 }
@@ -1443,7 +1442,7 @@ find_user_file(std::string &file_location, const char * basename, bool check_acc
 // and also returned as the return value of this function. if file not found
 // then NULL is returned or the process is exited depending on the config_options
 const char*
-find_file(const char *env_name, const char *file_name, int config_options, MyString & config_file)
+find_file(const char *env_name, const char *file_name, int config_options, std::string & config_file)
 {
 	const char * config_source = NULL;
 	char* env = NULL;
@@ -1500,17 +1499,17 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 			// List of condor_config file locations we'll try to open.
 			// As soon as we find one, we'll stop looking.
 		const int locations_length = 4;
-		MyString locations[locations_length];
+		std::string locations[locations_length];
 			// 1) $HOME/.condor/condor_config
 		// $HOME/.condor/condor_config was added for BOSCO and never used, We are removing it in 8.3.1, but may put it back if users complain.
 		//find_user_file(locations[0], file_name, false);
 			// 2) /etc/condor/condor_config
-		locations[1].formatstr( "/etc/condor/%s", file_name );
+		formatstr( locations[1], "/etc/condor/%s", file_name );
 			// 3) /usr/local/etc/condor_config (FreeBSD)
-		locations[2].formatstr( "/usr/local/etc/%s", file_name );
+		formatstr( locations[2], "/usr/local/etc/%s", file_name );
 		if (tilde) {
 				// 4) ~condor/condor_config
-			locations[3].formatstr( "%s/%s", tilde, file_name );
+			formatstr( locations[3], "%s/%s", tilde, file_name );
 		}
 
 		int ctr;	
@@ -1560,9 +1559,10 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 				if ( strncmp(config_source, "\\\\", 2 ) == 0 ) {
 					// UNC Path, so run a 'net use' on it first.
 					NETRESOURCE nr;
+					std::string dirName = condor_dirname(config_source);
 					nr.dwType = RESOURCETYPE_DISK;
 					nr.lpLocalName = NULL;
-					nr.lpRemoteName = condor_dirname(config_source);
+					nr.lpRemoteName = const_cast<char *>(dirName.c_str());
 					nr.lpProvider = NULL;
 					
 					if ( NO_ERROR != WNetAddConnection2(
@@ -1592,10 +1592,6 @@ find_file(const char *env_name, const char *file_name, int config_options, MyStr
 						// try the safe_open_wrapper() anyways, and at
 						// worst we'll fail fast and the user can fix
 						// their file server.
-					}
-
-					if (nr.lpRemoteName) {
-						free(nr.lpRemoteName);
 					}
 				}
 
@@ -2627,39 +2623,24 @@ expand_param(const char *str, const char * localname, const char *subsys, int us
 	return expand_macro(str, ConfigMacroSet, ctx);
 }
 
-const char *
-param_append_location(const MACRO_META * pmet, std::string & value) {
-	MyString ms(value.c_str());
-	const char * rv = param_append_location(pmet, ms);
-	value = ms;
-	return rv;
-}
-
-const char * param_append_location(const MACRO_META * pmet, MyString & value)
+const char * param_append_location(const MACRO_META * pmet, std::string & value)
 {
 	value += config_source_by_id(pmet->source_id);
 	if (pmet->source_line >= 0) {
-		value.formatstr_cat(", line %d", pmet->source_line);
+		formatstr_cat(value, ", line %d", pmet->source_line);
 		MACRO_TABLE_PAIR * ptable = nullptr;
 		MACRO_DEF_ITEM * pmsi = param_meta_source_by_id(pmet->source_meta_id, &ptable);
 		if (pmsi) {
-			value.formatstr_cat(", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
+			formatstr_cat(value, ", use %s:%s+%d", ptable->key, pmsi->key, pmet->source_meta_off);
 		}
 	}
 	return value.c_str();
 }
 
-const char * param_get_location(const MACRO_META * pmet, MyString & value)
+const char * param_get_location(const MACRO_META * pmet, std::string & value)
 {
 	value.clear();
 	return param_append_location(pmet, value);
-}
-
-const char * param_get_location(const MACRO_META * pmet, std::string & value)
-{
-	MyString mystr;
-	value = param_append_location(pmet, mystr);
-	return value.c_str();
 }
 
 
@@ -2668,7 +2649,7 @@ bool param_find_item (
 	const char * name,
 	const char * subsys,
 	const char * local,
-	MyString & name_found, // out
+	std::string & name_found, // out
 	HASHITER& it)          //
 {
 	it = HASHITER(ConfigMacroSet, 0);
@@ -2682,7 +2663,7 @@ bool param_find_item (
 #if 0
 	//PRAGMA_REMIND("tj: remove subsys.local.knob support in the 8.5 devel series")
 	if (subsys && local) {
-		name_found.formatstr("%s.%s", subsys, local);
+		formatstr(name_found, "%s.%s", subsys, local);
 		pi = find_macro_item(name, name_found.c_str(), ConfigMacroSet);
 		if (pi) {
 			name_found = pi->key;
@@ -2709,7 +2690,7 @@ bool param_find_item (
 		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(subsys, name);
 		if (pdf) {
 			name_found = subsys;
-			name_found.upper_case();
+			upper_case(name_found);
 			name_found += ".";
 			name_found += pdf->key;
 			it.is_def = true;
@@ -2731,8 +2712,8 @@ bool param_find_item (
 		const MACRO_DEF_ITEM* pdf = (const MACRO_DEF_ITEM*)param_subsys_default_lookup(name, pdot+1);
 		if (pdf) {
 			name_found = name;
-			name_found.upper_case();
-			name_found.truncate((int)(pdot - name)+1);
+			upper_case(name_found);
+			name_found.erase((size_t)(pdot - name)+1);
 			name_found += pdf->key;
 			it.is_def = true;
 			it.pdef = pdf;
@@ -2761,7 +2742,7 @@ const char * hash_iter_info(
 	HASHITER& it,
 	int& use_count,
 	int& ref_count,
-	MyString &source_name,
+	std::string &source_name,
 	int &line_number)
 {
 	MACRO_META * pmet = hash_iter_meta(it);
@@ -2793,7 +2774,7 @@ const char * param_get_info(
 	const char * name,
 	const char * subsys,
 	const char * local,
-	MyString & name_used,
+	std::string & name_used,
 	const char ** pdef_val,
 	const MACRO_META **ppmet)
 {
@@ -2802,7 +2783,7 @@ const char * param_get_info(
 	if (ppmet)    { *ppmet = NULL; }
 	name_used.clear();
 
-	MyString ms;
+	std::string ms;
 	HASHITER it(ConfigMacroSet, 0);
 	if (param_find_item(name, subsys, local, ms, it)) {
 		name_used = ms;
@@ -2811,15 +2792,6 @@ const char * param_get_info(
 		if (ppmet) { *ppmet = hash_iter_meta(it); }
 	}
 	return val;
-}
-
-const char * param_get_info(const char * name, const char * subsys, const char * local,
-	std::string & name_used, const char ** pdef_val, const MACRO_META **ppmet)
-{
-	MyString my_name;
-	const char * rv = param_get_info(name, subsys, local, my_name, pdef_val, ppmet);
-	name_used = my_name.c_str();
-	return rv;
 }
 
 void
@@ -3023,11 +2995,9 @@ public:
 	char *config;
 };
 
-#include "extArray.h"
-
 static std::vector<RuntimeConfigItem> rArray;
 
-static MyString toplevel_persistent_config;
+static std::string toplevel_persistent_config;
 
 /*
   we want these two bools to be global, and only initialized on
@@ -3067,8 +3037,8 @@ init_dynamic_config()
 
 		// if we're using runtime config, try a subsys-specific config
 		// knob for the root location
-	MyString filename_parameter;
-	filename_parameter.formatstr( "%s_CONFIG", get_mySubSystem()->getName() );
+	std::string filename_parameter;
+	formatstr( filename_parameter, "%s_CONFIG", get_mySubSystem()->getName() );
 	tmp = param( filename_parameter.c_str() );
 	if( tmp ) {
 		toplevel_persistent_config = tmp;
@@ -3097,7 +3067,7 @@ init_dynamic_config()
 			exit( 1 );
 		}
 	}
-	toplevel_persistent_config.formatstr( "%s%c.config.%s", tmp,
+	formatstr( toplevel_persistent_config, "%s%c.config.%s", tmp,
 										DIR_DELIM_CHAR,
 										get_mySubSystem()->getName() );
 	free(tmp);
@@ -3120,8 +3090,8 @@ set_persistent_config(char *admin, char *config)
 {
 	int fd, rval;
 	char *tmp;
-	MyString filename;
-	MyString tmp_filename;
+	std::string filename;
+	std::string tmp_filename;
 	priv_state priv;
 
 	if (!admin || !admin[0] || !enable_persistent) {
@@ -3149,8 +3119,8 @@ set_persistent_config(char *admin, char *config)
 	priv = set_root_priv();
 	if (config && config[0]) {	// (re-)set config
 			// write new config to temporary file
-		filename.formatstr( "%s.%s", toplevel_persistent_config.c_str(), admin );
-		tmp_filename.formatstr( "%s.tmp", filename.c_str() );
+		formatstr( filename, "%s.%s", toplevel_persistent_config.c_str(), admin );
+		formatstr( tmp_filename, "%s.tmp", filename.c_str() );
 		do {
 			MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 			unlink( tmp_filename.c_str() );
@@ -3204,7 +3174,7 @@ set_persistent_config(char *admin, char *config)
 	}		
 
 	// update admin list on disk
-	tmp_filename.formatstr( "%s.tmp", toplevel_persistent_config.c_str() );
+	formatstr( tmp_filename, "%s.tmp", toplevel_persistent_config.c_str() );
 	do {
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( tmp_filename.c_str() );
@@ -3266,7 +3236,7 @@ set_persistent_config(char *admin, char *config)
 
 	// if we removed a config, then we should clean up by removing the file(s)
 	if (!config || !config[0]) {
-		filename.formatstr( "%s.%s", toplevel_persistent_config.c_str(), admin );
+		formatstr( filename, "%s.%s", toplevel_persistent_config.c_str(), admin );
 		MSC_SUPPRESS_WARNING_FIXME(6031) // warning: return value of 'unlink' ignored.
 		unlink( filename.c_str() );
 		if (PersistAdminList.number() == 0) {
@@ -3414,8 +3384,8 @@ process_persistent_configs()
 	PersistAdminList.rewind();
 	while ((tmp = PersistAdminList.next())) {
 		processed = true;
-		MyString config_source;
-		config_source.formatstr( "%s.%s", toplevel_persistent_config.c_str(),
+		std::string config_source;
+		formatstr( config_source, "%s.%s", toplevel_persistent_config.c_str(),
 							   tmp );
 		process_persistent_config_or_die(config_source.c_str(), false);
 	}
@@ -3564,26 +3534,6 @@ bool config_test_if_expression(const char * expr, bool & result, const char * lo
 	if (ctx.localname && !ctx.localname[0]) ctx.localname = NULL;
 	if (ctx.subsys && !ctx.subsys[0]) ctx.subsys = NULL;
 	return Test_config_if_expression(expr, result, err_reason, ConfigMacroSet, ctx);
-}
-
-/* End code for runtime support for modifying a daemon's config source. */
-
-bool param(MyString &buf,char const *param_name,char const *default_value)
-{
-	bool found = false;
-	char *param_value = param(param_name);
-	if( param_value ) {
-		buf = param_value;
-		found = true;
-	}
-	else if( default_value ) {
-		buf = default_value;
-	}
-	else {
-		buf = "";
-	}
-	free( param_value );
-	return found;
 }
 
 bool param(std::string &buf,char const *param_name, char const *default_value)

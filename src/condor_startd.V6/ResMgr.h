@@ -235,7 +235,6 @@ public:
 	int		adlist_register( StartdNamedClassAd *ad );
 	StartdNamedClassAd* adlist_find( const char *name );
 	int		adlist_replace( const char *name, ClassAd *ad) { return extra_ads.Replace( name, ad ); }
-	int		adlist_replace( const char *name, ClassAd *ad, bool report_diff, const char *prefix);
 	int		adlist_delete( const char *name ) { return extra_ads.Delete( name ); }
 	int		adlist_delete( StartdCronJob * job ) { return extra_ads.DeleteJob( job ); }
 	int		adlist_clear( StartdCronJob * job )  { return extra_ads.ClearJob( job ); } // delete child ads, and clear the base job ad
@@ -297,6 +296,9 @@ public:
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
+
+	void directAttachToSchedd();
+	time_t m_lastDirectAttachToSchedd;
 
 	VMUniverseMgr m_vmuniverse_mgr;
 
@@ -470,7 +472,7 @@ private:
 			Ret r = (rip->*member)();
 			if (r) return r;
 		}
-		return NULL;
+		return (Ret)0;
 	}
 	template <typename Ret, typename Member, typename Arg>
 	Ret call_until(Member member, Arg arg) const {
@@ -479,7 +481,7 @@ private:
 			Ret r = (rip->*member)(arg);
 			if (rip && r) return r;
 		}
-		return NULL;
+		return (Ret)0;
 	}
 
 	// List of Supplemental ClassAds to publish

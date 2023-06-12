@@ -1199,7 +1199,8 @@ doArithmetic (OpKind op, Value &v1, Value &v2, Value &result)
 int Operation::
 doLogical (OpKind op, Value &v1, Value &v2, Value &result)
 {
-	bool		b1, b2;
+	bool		b1 = false;
+	bool		b2 = false;;
 
 		// first coerece inputs to boolean if they are considered equivalent
 	if( !v1.IsBooleanValue( b1 ) && v1.IsBooleanValueEquiv( b1 ) ) {
@@ -2014,8 +2015,8 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 		}
 	} else {
 		// Flatten arms of the if expression
-		if( child2 && !child2->Flatten( state, eval2, fChild2 ) ||
-			!child3->Flatten( state, eval3, fChild3 ) ) {
+		if ((child2 && !child2->Flatten( state, eval2, fChild2)) ||
+			!child3->Flatten( state, eval3, fChild3)) {
 			// clean up
 			if( fChild1 ) delete fChild1;
 			if( fChild2 ) delete fChild2;

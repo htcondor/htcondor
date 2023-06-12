@@ -4,60 +4,303 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.7.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.7.0 released on Month Date, 2023.
+
+- HTCondor version 10.7.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-1007`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
+Version 10.6.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.6.0 released on Month Date, 2023.
+
+- HTCondor version 10.6.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-1005`.
+
+New Features:
+
+- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
+  before the user was disabled are allowed to run to completion.  When a user
+  is disabled, an optional reason string can be provided.  The reason will be
+  included in the error message from *condor_submit* when submission is refused
+  because the user is disabled.
+  :jira:`1723`
+  :jira:`1835`
+
+- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
+  id of the submitted job.
+  :jira:`1836`
+
+- Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
+  NSS for security.
+  When an *arc_gahp* process has handled a certain number of commands,
+  a new *arc_gahp* is started and old process exits.
+  The number of commands that triggers a new process is controlled by
+  new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
+  :jira:`1778`
+
+- Container universe jobs may now specify the *container_image* to
+  be an image transfered via a file transfer plugin.
+  :jira:`1820`
+
+- The job's executable is no longer renamed to *condor_exec.exe* when
+  the job's sandbox is transferred to the Execution Point.
+  :jira:`1227`
+
+Bugs Fixed:
+
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
+- condor_restd service in the htcondor/mini container no longer crashes
+  on startup due to the `en_US.UTF-8` locale being unavailable.
+  :jira:`1785`
+
+- Fixed a bug that would very rarely cause *condor_wait* to hang forever.
+  :jria:`1792`
+
+- Fixed recently introduced bug where only on Enterprise Linux 7
+  system, startds with hard cgroup memory enforcement would not
+  put jobs that went over their memory usage on hold, they would
+  exit and leave the queue.
+  :jira:`1801`
+
+- Fixed a very recently introduced bug where the .job.ad and .machine.ad
+  files would not be written into the job sandbox.
+  :jira:`1737`
+
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
+
+- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
+  not be enforced correctly.
+  :jira:`1775`
+
+Version 10.5.1
+--------------
+
+- HTCondor version 10.5.1 released on June 6, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- For grid universe jobs of type **batch**, detecting if a Slurm
+  system is functioning now works with older versions of Slurm.
+  :jira:`1826`
+
+Version 10.5.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.5.0 released on June 5, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1004`.
+
+- Add support for Amazon Linux 2023. VOMS authentication is omitted on this
+  platform.
+  :jira:`1742`
+
+New Features:
+
+- Added new **Save File** functionality to DAGMan which allows users to
+  specify DAG nodes as save points to record the current DAG's progress
+  in a file similar to a rescue file. These files can then be specified
+  with the new *condor_submit_dag* flag ``load_save`` to re-run the
+  DAG from that point of progression. For more information visit
+  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :jira:`1636`
+
+- The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
+  submit files to use any value but *true* for their ``getenv = ...``
+  commands.
+  :jira:`1671`
+
+- Improved throughput when submitting a large number of ARC CE jobs.
+  Previously, jobs could remain stalled for a long time in the ARC CE
+  server waiting for their input sandbox to be transferred while other
+  were being submitted.
+  :jira:`1666`
+
+- The *arc_gahp* can now issue multiple HTTPS requests in parallel in
+  different threads. This is controlled by the new configuration
+  parameter :macro:`ARC_GAHP_USE_THREADS`.
+  :jira:`1690`
+
+- The Execute event in the user log now prints out slot name, sandbox path
+  and resource quantities of execution slot.
+  :jira:`1722`
+
+- Added new submit command ``ulog_execute_attrs`` for a jobs submit file. This
+  command takes a comma-separated list of machine ClassAd attributes to be
+  written to the user logs execute event.
+  :jira:`1759`
+
+- Added new DAGMan configuration macro :macro:`DAGMAN_RECORD_MACHINE_ATTRS`
+  to give a list of machine attributes that will be added to DAGMan submitted
+  jobs for recording in the various produced job ads and userlogs.
+  :jira:`1717`
+
+- The *condor_transform_ads* tool can now read a configuration file containing
+  ``JOB_TRANSFORM_<name>`` or ``JOB_ROUTER_ROUTE_<name>`` and then apply
+  any or all of the transforms declared in that file.  This makes it
+  easier to test job transforms before deploying them.
+  :jira:`1710`
+
+- Linux Cgroup support has been redone in a way that doesn't depend on
+  using the procd.  There should be no user visible changes in
+  the usual cases.
+  :jira:`1589`
+
+Bugs Fixed:
+
+- Expanded default list of environment variables to include in the DAGMan
+  proper manager jobs getenv to include ``HOME``, ``USER``, ``LANG``, and
+  ``LC_ALL``. Thus resulting in these variables appearing in the DAGMan
+  manager jobs environment.
+  :jira:`1725`
+
+- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
+  not be enforced correctly.
+  :jira:`1775`
+
+- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
+  HTCondor never put limits on the i/o, and some kernel version panicked
+  and crashed when they had active jobs in the blkio controller.
+  :jira:`1786`
+
+- Forced condor_ssh_to_job to never try to use a Control Master, which would
+  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
+  be needed for slow WANs.
+  :jira:`1782`
+
+- Fixed a bug when running with root on a Linux systems with cgroup v1
+  that would print a warning to the StarterLog claiming
+  Warning: cannot chown /sys/fs/cgroup/cpu,cpuset
+  :jira:`1672`
+
+- Fixed a bug where *condor_history* would fail to find history files
+  for a remote query if the various history configuration macros were
+  specified with subsystem prefixes i.e. ``SCHEDD.HISTORY = /path``
+  :jira:`1739`
+
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1655`
+
+- Fixed a bug in *condor_preen* that would remove any recorded job epoch
+  history files stored in the spool directory.
+  :jira:`1738`
+
+Version 10.4.3
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.3 released on May 9, 2023.
+
+- Tarballs in this release contain the recent scitokens-cpp 1.0.1 library.
+  :jira:`1779`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- The ce-audit collector plug-in should no longer crash.
+  :jira:`1774`
+
+Version 10.4.2
+--------------
+
+- HTCondor version 10.4.2 released on May 2, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug introduced in HTCondor 10.0.3 that caused remote
+  submission of **batch** grid universe jobs via ssh to fail when
+  attempting to do file transfer.
+  :jira:`1747`
+
+- Fixed a bug where the HTCondor-CE would fail to handle any of its
+  jobs after a restart.
+  :jira:`1755`
+
+Version 10.4.1
+--------------
+
+Release Notes:
+
+- HTCondor version 10.4.1 released on April 12, 2023.
+
+- Preliminary support for Ubuntu 20.04 (Focal Fossa) on PowerPC (ppc64el).
+  :jira:`1668`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- *condor_remote_cluster* now works correctly when the hardware
+  architecture of the remote machine isn't x86_64.
+  :jira:`1670`
+
 Version 10.4.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.4.0 released on Month Date, 2023.
-
-- HTCondor version 10.4.0 not yet released.
+- HTCondor version 10.4.0 released on April 6, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1003`.
 
+- HTCondor will no longer pass all environment variables to the DAGMan proper manager jobs environment.
+  This may result in DAGMan and its various parts (primarily PRE, POST,& HOLD Scripts) to start failing
+  or change behavior due to missing needed environment variables. To revert back to the old behavior or
+  add the missing environment variables to the DAGMan proper jobs environment set the
+  :macro:`DAGMAN_MANAGER_JOB_APPEND_GETENV` configuration option.
+  :jira:`1580`
+
 - The *condor_startd* will no longer advertise *CpuBusy* or *CpuBusyTime*
-  unless the configuration template ``use FEATURE : DESKTOP`` or ``use FEATURE : UWCS_DESKTOP``
+  unless the configuration template ``use POLICY : DESKTOP`` or ``use POLICY : UWCS_DESKTOP``
   is used. Those templates will cause *CpuBusyTime* to be advertised as a time value and not
   a duration value. The policy expressions in those templates have been modified
   to account for this fact. If you have written policy expressions of your own that reference
   *CpuBusyTime* you will need to modify them to use ``$(CpuBusyTimer)`` from one of those templates
   or make the equivalent change.
-
-New Features:
-
-- The *condor_startd* can now be configured to evaluate a set of expressions
-  defined by :macro:`STARTD_LATCH_EXPRS`.  For each expression, the last
-  evaluated value will be advertised as well as the time that the evaluation
-  changed to that value.  This new generic mechanism was used to add a new
-  slot attribute *NumDynamicSlotsTime* that is the last time a dynamic slot
-  was created or destroyed.
   :jira:`1502`
 
-- Added an attribute to the *condor_schedd* classad that advertises the number of
-  late materialization jobs that have been submitted, but have not yet materialized.
-  The new attribute is called ``JobsUnmaterialized``
-  :jira:`1591`
-
-- Add new field ```ContainerDuration``` to TransferInput attribute of 
-  jobs that measure the number of seconds to transfer the 
-  Apptainer/Singularity image.
-  :jira:`1588`
-
-- The *condor_startd* now advertises whether there appears to be
-  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
-  to work.
-  :jira:`1614`
-
-- For grid universe jobs of type **batch**, add detection of when the
-  target batch system is unreachable or not functioning. When this is
-  the case, HTCondor marks the resource as unavailable instead of
-  putting the affected jobs on hold. This matches the behavior for
-  other grid universe job types.
-  Grid ads in the collector now contain attributes
-  ``GridResourceUnavailableTimeReason`` and
-  ``GridResourceUnavailableTimeReasonCode``, which give details about
-  why the remote scheduing system is considered unavailable.
-  :jira:`1582`
+New Features:
 
 - DAGMan no longer sets ``getenv = true`` in the ``.condor.sub`` file  while adding the
   ability to better control the environment passed to the DAGMan proper job.
@@ -68,10 +311,46 @@ New Features:
   directly set key=value pairs of information into the ``.condor.sub`` environment.
   :jira:`1580`
 
+- New configuration parameter ``SEC_SCITOKENS_FOREIGN_TOKEN_ISSUERS``
+  restricts which issuers' tokens will be accepted under
+  ``SEC_SCITOKENS_ALLOW_FOREIGN_TOKEN_TYPES``.
+  Updated default values allow EGI CheckIn tokens to be accepted under
+  the SCITOKENS authentication method.
+  :jira:`1515`
+
+- The *condor_startd* can now be configured to evaluate a set of expressions
+  defined by :macro:`STARTD_LATCH_EXPRS`.  For each expression, the last
+  evaluated value will be advertised as well as the time that the evaluation
+  changed to that value.  This new generic mechanism was used to add a new
+  slot attribute *NumDynamicSlotsTime* that is the last time a dynamic slot
+  was created or destroyed.
+  :jira:`1502`
+
+- Add new field ``ContainerDuration`` to TransferInput attribute of 
+  jobs that measure the number of seconds to transfer the 
+  Apptainer/Singularity image.
+  :jira:`1588`
+
+- For grid universe jobs of type **batch**, add detection of when the
+  target batch system is unreachable or not functioning. When this is
+  the case, HTCondor marks the resource as unavailable instead of
+  putting the affected jobs on hold. This matches the behavior for
+  other grid universe job types.
+  Grid ads in the collector now contain attributes
+  ``GridResourceUnavailableTimeReason`` and
+  ``GridResourceUnavailableTimeReasonCode``, which give details about
+  why the remote scheduling system is considered unavailable.
+  :jira:`1582`
+
+- Added ability for DAGMan to automatically record the Node Retry attempt in that
+  nodes job ad. This is done by setting the new configuration option :macro:`DAGMAN_NODE_RECORD_INFO`.
+  :jira:`1634`
+
 Bugs Fixed:
 
-- Fixed bug where the *condor_shadow* would crash during job removal
-  :jira:`1585`
+- Fixed a bug where if the docker command emitted warnings to stderr, the
+  *condor_startd* would not correctly advertise the amount of used image cache.
+  :jira:`1645`
 
 - Fixed a bug where *condor_history* would fail if the job history
   file doesn't exist.
@@ -81,14 +360,36 @@ Bugs Fixed:
   the view server stats file are deleted at just the wrong time.
   :jira:`1599`
 
+- Fixed a bug where *condor_shadow* was unable to write the job ad to the
+  :macro:`JOB_EPOCH_HISTORY` file when located in condor owned directories
+  such as the spool directory.
+  :jira:`1631`
+
+- Remove warning when installing HTCondor RPMs on Enterprise Linux 9.
+  :jira:`1571`
+
+Version 10.3.1
+--------------
+
+- HTCondor version 10.3.1 released on March 7, 2023.
+
+New Features:
+
+- The *condor_startd* now advertises whether there appears to be
+  a useful /usr/sbin/sshd on the system, in order for *condor_ssh_to_job*
+  to work.
+  :jira:`1614`
+
+Bugs Fixed:
+
+- None.
+
 Version 10.3.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.3.0 released on Month Date, 2023.
-
-- HTCondor version 10.3.0 not yet released.
+- HTCondor version 10.3.0 released on March 6, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1002`.
 
@@ -102,7 +403,7 @@ Release Notes:
   it would pick a different process.
   :jira:`1512`
 
-- This versions changes the semantics of the ``output_destination`` submit
+- This version changes the semantics of the ``output_destination`` submit
   command.  It no longer sends the files named by the ``output`` or
   ``error`` submit commands to the output destination.  Submitters may
   instead specify those locations with URLs directly.
@@ -115,22 +416,6 @@ New Features:
   to sub-divide the resource limits it has been given, and allocate
   subsets of those to its child processes.
   :jira:`1496`
-
-- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
-  megabytes that are used in the docker image cache.
-  :jira:`1494`
-
-- When a file-transfer plug-in aborts due to lack of progress, the message
-  now includes the ``https_proxy`` environment variable, and the phrasing
-  has been changed to avoid suggesting that the plug-in respected it (or
-  ``http_proxy``).
-  :jira:`1473`
-
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
-  no longer tries to mount the various cgroup filesystems.  We assume that
-  any reasonable Linux system will have done this in a manner that it 
-  deems appropriate.
-  :jira:`1528`
 
 - Added capabilities for per job run instance history recording. Where during
   the *condor_shadow* daemon's shutdown it will write the current job ad
@@ -151,12 +436,6 @@ New Features:
   to search for history.
   :jira:`1514`
 
-- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
-  now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
-  to 128k, if it was below this.  This improves the scalability of the
-  schedd when running more than 16k jobs from any one user.
-  :jira:`1556`
-
 - Added ability to set a gangliad metrics lifetime (DMAX value) within the
   metric definition language with the new ``Lifetime`` keyword.
   :jira:`1547`
@@ -166,15 +445,42 @@ New Features:
   for all metrics without a specified ``Lifetime``.
   :jira:`1547`
 
-Bugs Fixed:
+- Added an attribute to the *condor_schedd* classad that advertises the number of
+  late materialization jobs that have been submitted, but have not yet materialized.
+  The new attribute is called ``JobsUnmaterialized``
+  :jira:`1591`
 
-- The HTCondor starter now removes any cgroup that it has created for
-  a job when it exits.
-  :jira:`1500`
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  now tries to increase the value of /proc/sys/fs/pipe-user-pages-soft
+  to 128k, if it was below this.  This improves the scalability of the
+  schedd when running more than 16k jobs from any one user.
+  :jira:`1556`
+
+- The *linux_kernel_tuning_script*, run by the *condor_master* at startup,
+  no longer tries to mount the various cgroup filesystems.  We assume that
+  any reasonable Linux system will have done this in a manner that it
+  deems appropriate.
+  :jira:`1528`
+
+- Linux worker nodes now advertise *DockerCachedImageSizeMb*, the number of
+  megabytes that are used in the docker image cache.
+  :jira:`1494`
+
+- When a file-transfer plug-in aborts due to lack of progress, the message
+  now includes the ``https_proxy`` (or ``http_proxy``) environment variable,
+  and the phrasing has been changed to avoid suggesting that the plug-in
+  actually respected it.
+  :jira:`1473`
+
+Bugs Fixed:
 
 - Added support for older cgroup v2 systems with missing memory.peak
   files in the memory controller.
   :jira:`1529`
+
+- The HTCondor starter now removes any cgroup that it has created for
+  a job when it exits.
+  :jira:`1500`
 
 - Fixed bug where ``condor_history`` would occasionally fail to display
   all matching user requested job ids.
@@ -417,7 +723,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/Hooks` manual section.
+  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
@@ -455,7 +761,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/Hooks` manual section.
+  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
   :jira:`1400`
 
 Bugs Fixed:

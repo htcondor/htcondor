@@ -424,9 +424,9 @@ command_release_claim(int cmd, Stream* stream )
 	State s = rip->state();
 
 	// stash current user
-	MyString curuser;
+	std::string curuser;
 
-	if (rip->r_cur && rip->r_cur->client()) {
+	if (rip->r_cur && rip->r_cur->client() && rip->r_cur->client()->user()) {
 		curuser = rip->r_cur->client()->user();
 	}
 
@@ -953,6 +953,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	int interval;
 	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
+	bool send_claimed_ad = false;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -981,18 +982,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 		// Try now to read the schedd addr and aline interval.
-		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
-		// not send this information until after we accept the request, and we
-		// want to make an attempt to be backwards-compatibile.
-	if ( stream->code(client_addr) ) {
-		// We got the schedd addr, we must be talking to a post 6.1.11 schedd
+	if (!stream->code(client_addr) || !stream->code(interval)) {
+		rip->dprintf( D_ALWAYS, "Can't receive schedd addr or alive interval\n" );
+		ABORT;
+	} else {
 		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr.c_str() );
-		if( !stream->code(interval) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			ABORT;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
-		}
+		rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
+
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
 		claim->client()->setaddr( client_addr.c_str() );
@@ -1062,8 +1058,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				parent->refresh_classad_resources();
 			}
 		}
-	} else {
-		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
 
 	if( !stream->end_of_message() ) {
@@ -1074,6 +1068,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// If we include a claim id in our response, should it be
 		// encrypted? In the old protocol, it was sent in the clear.
 	req_classad->LookupBool("_condor_SECURE_CLAIM_ID", secure_claim_id);
+
+		// Should we send the claimed slot ad.
+	req_classad->LookupBool("_condor_SEND_CLAIMED_AD", send_claimed_ad);
 
 		// At this point, the schedd has registered this socket (stream)
 		// and likely has gone off to service other requests.  Thus, 
@@ -1282,7 +1279,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, secure_claim_id, leftover_claim );
+	accept_request_claim( rip, secure_claim_id, send_claimed_ad, leftover_claim );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1321,10 +1318,8 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim )
+accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad, Claim* leftover_claim )
 {
-	int interval = -1;
-	char *client_addr = NULL;
 	std::string RemoteOwner;
 
 		// There should not be a pre claim object now.
@@ -1344,7 +1339,24 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
 		  the claim id is encrypted.
 		Reply of 6 (REQUEST_CLAIM_PAIR_2) is no longer used
+		Reply of 7 (REQUEST_CLAIM_SLOT_AD) means claim accepted, the
+		  claimed slot ad will be sent next, and either OK or p-slot
+		  leftovers will be sent after that.
 	*/
+	stream->encode();
+	if (send_claimed_ad) {
+		rip->dprintf(D_FULLDEBUG, "Will send claimed slot ad\n");
+		if (!stream->put(REQUEST_CLAIM_SLOT_AD) ||
+		    !stream->put_secret(rip->r_cur->id()) ||
+		    !putClassAd(stream, *rip->r_classad) )
+		{
+			rip->dprintf( D_ALWAYS,
+				"Can't send claimed slot to schedd.\n" );
+			abort_accept_claim(rip, stream);
+			return false;
+		}
+	}
+
 	int cmd = OK;
 	if ( leftover_claim && leftover_claim->id() && 
 		 leftover_claim->rip()->r_classad ) 
@@ -1353,7 +1365,6 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		cmd = secure_claim_id ? REQUEST_CLAIM_LEFTOVERS_2 : REQUEST_CLAIM_LEFTOVERS;
 	}
 
-	stream->encode();
 	if( !stream->put( cmd ) ) {
 		rip->dprintf( D_ALWAYS, 
 			"Can't to send cmd %d to schedd as claim request reply.\n", cmd );
@@ -1376,8 +1387,8 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	#endif
 
 		pad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
-		MyString claimId(leftover_claim->id());
-		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
+		const char* claimId = leftover_claim->id() ? leftover_claim->id() : "";
+		if ( !(secure_claim_id ? stream->put_secret(claimId) : stream->put(claimId)) ||
 			 !putClassAd(stream, *pad) )
 		{
 			rip->dprintf( D_ALWAYS, 
@@ -1391,38 +1402,6 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		abort_accept_claim( rip, stream );
 		return false;
-	}
-
-		// Grab the schedd addr and alive interval if the alive interval is still
-		// unitialized (-1) which means we are talking to an old (pre v6.1.11) schedd.
-		// Normally, we want to get this information from the schedd when the claim request
-		// first arrives.  This prevents a deadlock in the claiming protocol between the
-		// schedd and startd when the startd is running on an SMP.  -Todd 1/2000
-	if ( rip->r_cur->getaliveint() == -1 ) {
-		stream->decode();
-		if( ! stream->code(client_addr) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-			abort_accept_claim( rip, stream );
-			return false;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
-		}
-		if( !stream->code(interval) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			free( client_addr );
-			client_addr = NULL;
-			abort_accept_claim( rip, stream );
-			return false;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
-		}
-		stream->end_of_message();
-
-			// Now, store them into r_cur
-		rip->r_cur->setaliveint( interval );
-		rip->r_cur->client()->setaddr( client_addr );
-		free( client_addr );
-		client_addr = NULL;
 	}
 
 		// Figure out the hostname of our client.

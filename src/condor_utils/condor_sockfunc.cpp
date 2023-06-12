@@ -1,5 +1,4 @@
 #include "condor_common.h"
-#include "MyString.h"
 #include "condor_sockfunc.h"
 #include "ipv6_hostname.h"
 #include "ipv6_interface.h"

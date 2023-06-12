@@ -70,6 +70,7 @@ public:
 			process as head. */
 	virtual int StartJob();
 
+	virtual int outOfMemoryEvent();
 		/** Make certain all decendants are	dead via the ProcFamily,
 			save final usage statistics, and call OsProc::JobReaper().
 		*/
@@ -99,11 +100,6 @@ public:
 			@return true if success, false if failure
 		*/
 	virtual bool PublishUpdateAd( ClassAd* ad );
-#if defined(HAVE_EXT_LIBCGROUP)
-#ifdef LINUX
-	void setCgroupMemoryLimits(const char *cgroup);
-#endif
-#endif
 
 	virtual std::string CgroupSuffix() { return "";}
 
@@ -129,17 +125,11 @@ private:
 #endif
 
 	// Configure OOM killer for this job
-	int m_memory_limit; // Memory limit, in MB.
-	int m_oom_fd; // The file descriptor which receives events
-	int m_oom_efd; // The event FD "pipe" to watch
-	int m_oom_efd2; // The other end of m_oom_efd.
+	int64_t m_memory_limit; // Memory limit, in MB.
 
 		// old kernels have /proc/self/oom_adj, newer /proc/self/oom_score_adj
 		// and the scales are different.
 	int setupOOMScore(int oom_adj, int oom_score_adj);
-	void cleanupOOM();
-	int outOfMemoryEvent(int fd);
-	int setupOOMEvent(const std::string & cgroup_string);
 
 	std::string m_pid_ns_status_filename;
 

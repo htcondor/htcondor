@@ -308,7 +308,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
 	if ( resourceDown ) {
 		resource_ad->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
-							 (int)lastStatusChange );
+							 lastStatusChange );
 		if (!m_pingErrMsg.empty()) {
 			resource_ad->Assign(ATTR_GRID_RESOURCE_UNAVAILABLE_REASON,
 			                    m_pingErrMsg);
@@ -369,10 +369,7 @@ void BaseResource::UnregisterJob( BaseJob *job )
 	pingRequesters.Delete( job );
 	registeredJobs.Delete( job );
 
-	// Some of our platforms don't support std::erase()
-	//std::erase(leaseUpdates, job);
-	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
-	leaseUpdates.erase(it, leaseUpdates.end());
+	std::erase(leaseUpdates, job);
 
 	if ( IsEmpty() ) {
 		int delay = param_integer( "GRIDMANAGER_EMPTY_RESOURCE_DELAY", 5*60 );
@@ -458,10 +455,7 @@ void BaseResource::CancelSubmit( BaseJob *job )
 		submitsWanted.Delete( job );
 	}
 
-	// Some of our platforms don't support std::erase()
-	//std::erase(leaseUpdates, job);
-	auto it = std::remove(leaseUpdates.begin(), leaseUpdates.end(), job);
-	leaseUpdates.erase(it, leaseUpdates.end());
+	std::erase(leaseUpdates, job);
 
 	SetJobPollInterval();
 
@@ -580,7 +574,7 @@ time_t BaseResource::GetLeaseExpiration( const BaseJob *job ) const
 	// Some jobs may have no lease (default for grid-type condor).
 	// Otherwise, if we haven't established a shared lease yet,
 	// calculate one for this job only.
-	int new_expiration = 0;
+	time_t new_expiration = 0;
 	int job_lease_duration = m_defaultLeaseDuration;
 	job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 	if ( job_lease_duration > 0 ) {

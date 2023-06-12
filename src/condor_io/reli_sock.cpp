@@ -93,11 +93,9 @@ ReliSock::ReliSock(const ReliSock & orig) : Sock(orig),
 {
 	init();
 	// now copy all cedar state info via the serialize() method
-	char *buf = NULL;
-	buf = orig.serialize();	// get state from orig sock
-	ASSERT(buf);
-	serialize(buf);			// put the state into the new sock
-	delete [] buf;
+	std::string buf;
+	orig.serialize(buf);	// get state from orig sock
+	deserialize(buf.c_str());	// put the state into the new sock
 }
 
 Stream *
@@ -286,22 +284,22 @@ ReliSock::accept()
 	return c_rs;
 }
 
-int 
-ReliSock::connect( char	const *host, int port, bool non_blocking_flag )
+int
+ReliSock::connect( char	const *host, int port, bool non_blocking_flag, CondorError * errorStack )
 {
 	if (hostAddr != NULL)
 	{
 		free(hostAddr);
 		hostAddr = NULL;
 	}
- 
-	init();     
+
+	init();
 	is_client = 1;
 	if( ! host ) {
 		return FALSE;
 	}
 	hostAddr = strdup( host );
-	return do_connect( host, port, non_blocking_flag );
+	return do_connect( host, port, non_blocking_flag, errorStack );
 }
 
 int 
@@ -1168,7 +1166,7 @@ int ReliSock::SndMsg::snd_packet( char const *peer_description, int _sock, int e
 			dprintf(D_NETWORK, "IO: Failed to update the message digest.\n");
 			return false;
 		}
-		char hex[3*5 + 1];
+		char hex[3 * MAX_HEADER_SIZE + 1];
 		dprintf(D_NETWORK, "Send Header contents: %s\n",
 			debug_hex_dump(hex, reinterpret_cast<char*>(hdr), header_size));
 
@@ -1352,11 +1350,9 @@ ReliSock::type() const
 	return Stream::reli_sock; 
 }
 
-char * ReliSock::serializeMsgInfo() const
+void ReliSock::serializeMsgInfo(std::string& outbuf) const
 {
-	size_t buf_sz = 20 + 3*m_final_mds.size();
-	char *buf = new char[buf_sz];
-	snprintf(buf, buf_sz, "%i*%i*%i*%i*%zu",
+	formatstr_cat(outbuf, "%i*%i*%i*%i*%zu",
 		m_final_send_header,
 		m_final_recv_header,
 		m_finished_send_header,
@@ -1365,21 +1361,15 @@ char * ReliSock::serializeMsgInfo() const
 		);
 
 	if(m_final_mds.size()) {
-		strcat(buf, "*");
-		char * ptr = buf + strlen(buf);
-		const unsigned char * vecdata = m_final_mds.data();
-		for (unsigned int i=0; i < m_final_mds.size(); i++, vecdata++, ptr+=2) {
-			sprintf(ptr, "%02X", *vecdata);
+		outbuf += '*';
+		for (unsigned char c: m_final_mds) {
+			formatstr_cat(outbuf, "%02X", c);
 		}
 	}
-
-	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: MsgInfo out: %s.\n", buf);
-
-	return buf;
 }
 
 
-const char * ReliSock::serializeMsgInfo(const char * buf)
+const char * ReliSock::deserializeMsgInfo(const char * buf)
 {
 	dprintf(D_NETWORK|D_VERBOSE, "SERIALIZE: reading MsgInfo at beginning of %s.\n", buf);
 
@@ -1440,28 +1430,24 @@ const char * ReliSock::serializeMsgInfo(const char * buf)
 }
 
 
-char *
-ReliSock::serialize() const
+void
+ReliSock::serialize(std::string& outbuf) const
 {
-	MyString state;
-
-	char * parent_state = Sock::serialize();
-	char * crypto = serializeCryptoInfo();
-	char * msg = serializeMsgInfo();
-	char * md = serializeMdInfo();
-
-	formatstr( state, "%s%d*%s*%s*%s*%s*", parent_state, _special_state, _who.to_sinful().c_str(), crypto, msg, md );
-
-	delete[] parent_state;
-	delete[] crypto;
-	delete[] msg;
-	delete[] md;
-
-	return state.detach_buffer();
+	Sock::serialize(outbuf);
+	outbuf += std::to_string(_special_state);
+	outbuf += '*';
+	outbuf += _who.to_sinful();
+	outbuf += '*';
+	serializeCryptoInfo(outbuf);
+	outbuf += '*';
+	serializeMsgInfo(outbuf);
+	outbuf += '*';
+	serializeMdInfo(outbuf);
+	outbuf += '*';
 }
 
 const char *
-ReliSock::serialize(const char *buf)
+ReliSock::deserialize(const char *buf)
 {
 	char * sinful_string = NULL;
 	char fqu[256];
@@ -1471,7 +1457,7 @@ ReliSock::serialize(const char *buf)
     ASSERT(buf);
 
 	// first, let our parent class restore its state
-    ptmp = Sock::serialize(buf);
+    ptmp = Sock::deserialize(buf);
     ASSERT( ptmp );
     int itmp;
     int citems = sscanf(ptmp,"%d*",&itmp);
@@ -1489,11 +1475,11 @@ ReliSock::serialize(const char *buf)
 
         ptmp = ++ptr;
         // The next part is for crypto
-        ptmp = serializeCryptoInfo(ptmp);
+        ptmp = deserializeCryptoInfo(ptmp);
         // The next part is for message digest state
-        ptmp = serializeMsgInfo(ptmp);
+        ptmp = deserializeMsgInfo(ptmp);
         // Followed by Md
-        ptmp = serializeMdInfo(ptmp);
+        ptmp = deserializeMdInfo(ptmp);
 
         citems = sscanf(ptmp, "%d*", &len);
 

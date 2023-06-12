@@ -129,27 +129,6 @@ StartdCronJobMgr::CreateJob( CronJobParams *job_params )
 		dynamic_cast<StartdCronJobParams *>( job_params );
 	ASSERT( params );
 
-	char * metricString = params->Lookup( "METRICS" );
-	if( metricString != NULL && metricString[0] != '\0' ) {
-		StringList pairs( metricString );
-		for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
-			StringList tn( pair, ":" );
-			char * metricType = tn.first();
-			if (!metricType) continue;
-
-			char * attributeName = tn.next();
-			if(! params->addMetric( metricType, attributeName )) {
-				dprintf( 	D_ALWAYS, "Unknown metric type '%s' for attribute "
-							"'%s' in monitor '%s', ignoring.\n", metricType,
-							attributeName, jobName );
-			} else {
-				dprintf(	D_FULLDEBUG, "Added %s as %s metric for %s job\n",
-							attributeName, metricType, jobName );
-			}
-		}
-	}
-	if (metricString) free( metricString );
-
 	return new StartdCronJob( params, *this );
 }
 

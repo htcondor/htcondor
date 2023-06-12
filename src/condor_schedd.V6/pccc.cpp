@@ -158,13 +158,13 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 	auto i = matches.begin();
 	match_rec * match = * i;
 	classy_counted_ptr<DCStartd> startd = new DCStartd( match->description(),
-		NULL, match->peer, match->claimId() );
+		NULL, match->peer, match->claim_id.claimId() );
 
 	ClassAd commandAd;
 	std::string claimIDList;
-	formatstr( claimIDList, "%s", match->claimId() );
+	formatstr( claimIDList, "%s", match->claim_id.claimId() );
 	for( ++i; i != matches.end(); ++i ) {
-		formatstr( claimIDList, "%s, %s", claimIDList.c_str(), (* i)->claimId() );
+		formatstr( claimIDList, "%s, %s", claimIDList.c_str(), (* i)->claim_id.claimId() );
 	}
 	// ATTR_CLAIM_ID_LIST is one of the magic attributes that we automatically
 	// encrypt/decrypt whenever we're about to put/get it on/from the wire.
@@ -184,7 +184,9 @@ pcccStartCoalescing( PROC_ID nowJob, int retriesRemaining ) {
 
 	classy_counted_ptr<TwoClassAdMsg> cMsg = new TwoClassAdMsg( COALESCE_SLOTS, commandAd, * jobAd );
 	cMsg->setStreamType( Stream::reli_sock );
-	cMsg->setSecSessionId( match->secSessionId() );
+	if (match->use_sec_session) {
+		cMsg->setSecSessionId( match->claim_id.secSessionId() );
+	}
 	cMsg->setSuccessDebugLevel( D_FULLDEBUG );
 	pcccStopCallback * pcs = new pcccStopCallback( nowJob, cMsg, match->description(), match->peer, retriesRemaining );
 	// Annoyingly, the deadline only applies to /sending/ the message.

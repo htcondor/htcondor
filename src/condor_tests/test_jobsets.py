@@ -20,6 +20,7 @@ def condor(test_dir):
         local_dir=test_dir / "condor",
         config={
             "USE_JOBSETS": True,
+            "SCHEDD_DEBUG":"D_CAT D_SUB_SECOND D_ALWAYS:2 D_COMMAND:2 D_ZKM",
         },
     ) as condor:
         yield condor

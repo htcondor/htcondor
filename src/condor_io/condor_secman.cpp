@@ -63,7 +63,7 @@ void SecMan::key_printf(int debug_levels, KeyInfo *k) {
 			int   length  =  k->getKeyLength();
 
 			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
+				snprintf (&hexout[i*2], 3, "%02x", *dataptr++);
 			}
 
 			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
@@ -1105,13 +1105,6 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 		}
 	}
 
-	int operator== (const SecManStartCommand &other) {
-			// We do not care about a deep comparison.
-			// This is just to make the compiler happy on
-			// SimpleList< classy_counted_ptr< SecManStartCommand > >
-		return this == &other;
-	}
-
  private:
 	int m_cmd;
 	int m_subcmd;
@@ -1130,7 +1123,7 @@ class SecManStartCommand: Service, public ClassyCountedPtr {
 
 	std::string m_session_key; // "addr,<cmd>"
 	bool m_already_tried_TCP_auth;
-	SimpleList<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
+	std::vector<classy_counted_ptr<SecManStartCommand> > m_waiting_for_tcp_auth;
 	classy_counted_ptr<SecManStartCommand> m_tcp_auth_command;
 
 	bool m_is_tcp;
@@ -1766,7 +1759,9 @@ SecManStartCommand::sendAuthInfo_inner()
 		global_dc_get_cookie (len, randomjunk);
 		
 		m_auth_info.Assign(ATTR_SEC_COOKIE,randomjunk);
-		dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			dprintf (D_SECURITY, "SECMAN: %s=\"%s\"\n", ATTR_SEC_COOKIE,randomjunk);
+		}
 
 		free(randomjunk);
 		randomjunk = NULL;
@@ -1915,7 +1910,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 				// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 				// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -1929,10 +1924,10 @@ SecManStartCommand::sendAuthInfo_inner()
 				// if the encryption method is AES, we don't actually want to enable the MAC
 				// here as that instantiates an MD5 object which will cause FIPS to blow up.
 				if(ki->getProtocol() != CONDOR_AESGCM) {
-					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_ALWAYS_ON, ki, key_id.c_str());
 				} else {
 					dprintf(D_SECURITY|D_VERBOSE, "SECMAN: because protocal is AES, not using other MAC.\n");
-					m_sock->set_MD_mode(MD_OFF, ki, key_id.Value());
+					m_sock->set_MD_mode(MD_OFF, ki, key_id.c_str());
 				}
 
 				dprintf ( D_SECURITY, "SECMAN: successfully enabled message authenticator!\n");
@@ -1953,7 +1948,7 @@ SecManStartCommand::sendAuthInfo_inner()
 				}
 
 					// prepare the buffer to pass in udp header
-				MyString key_id = session_entry->id();
+				std::string key_id = session_entry->id();
 
 					// stick our command socket sinful string in there
 				char const* dcsss = global_dc_sinful();
@@ -2508,12 +2503,12 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			if((response_rc != "") && (response_rc != "AUTHORIZED")) {
 				// gather some additional data for useful error reporting
 				std::string response_user;
-				MyString response_method = m_sock->getAuthenticationMethodUsed();
+				const char* response_method = m_sock->getAuthenticationMethodUsed();
 				post_auth_info.LookupString(ATTR_SEC_USER,response_user);
 
 				// push error message on the stack and print to the log
 				std::string errmsg;
-				if (response_method == "") {
+				if (response_method == nullptr || response_method[0] == '\0') {
 					response_method = "(no authentication)";
 					formatstr( errmsg, "Received \"%s\" from server for user %s using no authentication method, which may imply host-based security.  Our address was '%s', and server's address was '%s'.  Check your ALLOW settings and IP protocols.",
 						response_rc.c_str(), response_user.c_str(),
@@ -2523,7 +2518,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 				} else {
 					m_sock->setShouldTryTokenRequest(true);
 					formatstr(errmsg, "Received \"%s\" from server for user %s using method %s.",
-						response_rc.c_str(), response_user.c_str(), response_method.c_str());
+						response_rc.c_str(), response_user.c_str(), response_method);
 				}
 				dprintf (D_ALWAYS, "SECMAN: FAILED: %s\n", errmsg.c_str());
 				m_errstack->push ("SECMAN", SECMAN_ERR_AUTHORIZATION_FAILED, errmsg.c_str());
@@ -2601,7 +2596,7 @@ SecManStartCommand::receivePostAuthInfo_inner()
 			char *dur = NULL;
 			m_auth_info.LookupString(ATTR_SEC_SESSION_DURATION, &dur);
 
-			int expiration_time = 0;
+			time_t expiration_time = 0;
 			time_t now = time(0);
 			if( dur ) {
 				expiration_time = now + atoi(dur);
@@ -2745,7 +2740,7 @@ SecManStartCommand::DoTCPAuth_inner()
 				return StartCommandWouldBlock;
 			}
 
-			sc->m_waiting_for_tcp_auth.Append(this);
+			sc->m_waiting_for_tcp_auth.push_back(this);
 
 			if(IsDebugVerbose(D_SECURITY)) {
 				dprintf(D_SECURITY,
@@ -2771,11 +2766,14 @@ SecManStartCommand::DoTCPAuth_inner()
 	tcp_auth_sock->timeout(TCP_SOCK_TIMEOUT);
 
 		// we already know the address - condor uses the same TCP port as it does UDP port.
-	MyString tcp_addr = m_sock->get_connect_addr();
-	if (!tcp_auth_sock->connect(tcp_addr.c_str(),0,m_nonblocking)) {
-		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr.c_str());
+	const char* tcp_addr = m_sock->get_connect_addr();
+	if (tcp_addr == nullptr) {
+		tcp_addr = "";
+	}
+	if (!tcp_auth_sock->connect(tcp_addr,0,m_nonblocking)) {
+		dprintf ( D_SECURITY, "SECMAN: couldn't connect via TCP to %s, failing...\n", tcp_addr);
 		m_errstack->pushf("SECMAN", SECMAN_ERR_CONNECT_FAILED,
-						  "TCP auth connection to %s failed.", tcp_addr.c_str());
+		                  "TCP auth connection to %s failed.", tcp_addr);
 		delete tcp_auth_sock;
 		return StartCommandFailed;
 	}
@@ -2875,11 +2873,10 @@ SecManStartCommand::TCPAuthCallback_inner( bool auth_succeeded, Sock *tcp_auth_s
 
 		// Iterate through the list of objects waiting for our TCP auth session
 		// to be done.
-	m_waiting_for_tcp_auth.Rewind();
-	while( m_waiting_for_tcp_auth.Next(sc) ) {
+	for (auto sc: m_waiting_for_tcp_auth) {
 		sc->ResumeAfterTCPAuth(auth_succeeded);
 	}
-	m_waiting_for_tcp_auth.Clear();
+	m_waiting_for_tcp_auth.clear();
 
 	return rc;
 }
@@ -3018,10 +3015,12 @@ SecMan::GenerateKeyExchange(CondorError *errstack)
 	}
 	pkey.reset(pkey_raw);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	std::unique_ptr<EC_KEY, decltype(&EC_KEY_free)> key(EVP_PKEY_get1_EC_KEY(pkey.get()), &EC_KEY_free);
 	if (key) {
 		EC_KEY_set_asn1_flag(key.get(), OPENSSL_EC_NAMED_CURVE);
 	}
+#endif
 	return pkey;
 }
 
@@ -3710,8 +3709,8 @@ char* SecMan::my_unique_id() {
 #endif
 
 		std::string tid;
-        formatstr( tid, "%s:%i:%i", get_local_hostname().c_str(), mypid, 
-					 (int)time(0));
+        formatstr( tid, "%s:%i:%lld", get_local_hostname().c_str(), mypid,
+		           (long long)time(0));
 
         _my_unique_id = strdup(tid.c_str());
     }
@@ -3745,7 +3744,7 @@ char* SecMan::my_parent_unique_id() {
 
 		// look in the env for ENV_PARENT_ID
 		const char* envName = ENV_CONDOR_PARENT_ID;
-		MyString value;
+		std::string value;
 		GetEnv( envName, value );
 
 		if (value.length()) {
@@ -3940,7 +3939,7 @@ SecMan::CreateNonNegotiatedSecuritySession(DCpermission auth_level, char const *
 	}
 
 		// extract the session duration from the (imported) policy
-	int expiration_time = 0;
+	time_t expiration_time = 0;
 
 	if( policy.LookupInteger(ATTR_SEC_SESSION_EXPIRES,expiration_time) ) {
 		duration = expiration_time ? expiration_time - time(NULL) : 0;
@@ -4195,14 +4194,6 @@ SecMan::getSessionStringAttribute(const char *session_id, const char *attr_name,
 
 bool
 SecMan::ExportSecSessionInfo(char const *session_id,std::string &session_info) {
-    MyString ms;
-    bool rv = ExportSecSessionInfo(session_id, ms);
-    if(! ms.empty()) { session_info = ms; }
-    return rv;
-}
-
-bool
-SecMan::ExportSecSessionInfo(char const *session_id,MyString &session_info) {
 	ASSERT( session_id );
 
 	KeyCacheEntry *session_key = NULL;

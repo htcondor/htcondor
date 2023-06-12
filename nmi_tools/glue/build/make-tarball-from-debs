@@ -60,12 +60,12 @@ if [ $VERSION_CODENAME = 'bullseye' ]; then
     arch_dist="${arch}_Debian11"
 elif [ $VERSION_CODENAME = 'bookworm' ]; then
     arch_dist="${arch}_Debian12"
-elif [ $VERSION_CODENAME = 'bionic' ]; then
-    arch_dist="${arch}_Ubuntu18"
 elif [ $VERSION_CODENAME = 'focal' ]; then
     arch_dist="${arch}_Ubuntu20"
 elif [ $VERSION_CODENAME = 'jammy' ]; then
     arch_dist="${arch}_Ubuntu22"
+elif [ $VERSION_CODENAME = 'chimaera' ]; then
+    arch_dist="${arch}_Devuan4"
 else
     echo 'Platform not defined'
     exit 1

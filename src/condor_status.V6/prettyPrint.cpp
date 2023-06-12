@@ -38,7 +38,7 @@ extern bool absentMode;
 extern bool offlineMode;
 extern bool compactMode;
 
-static int stashed_now = 0;
+static time_t stashed_now = 0;
 const int cchReserveForPrintingAds = 16384;
 
 void printCOD    		(ClassAd *);
@@ -78,12 +78,10 @@ static int ppWidthOpts(int width, int truncate)
 	return opts;
 }
 
-enum {
-	FormatOptionSpecial001 = FormatOptionSpecialBase,
-	FormatOptionSpecial002 = FormatOptionSpecialBase<<1,
-	FormatOptionSpecial004 = FormatOptionSpecialBase<<2,
-	FormatOptionSpecial008 = FormatOptionSpecialBase<<3,
-};
+constexpr const int	FormatOptionSpecial001 = FormatOptionSpecialBase;
+constexpr const int	FormatOptionSpecial002 = FormatOptionSpecialBase<<1;
+//constexpr const int	FormatOptionSpecial004 = FormatOptionSpecialBase<<2;
+//constexpr const int	FormatOptionSpecial008 = FormatOptionSpecialBase<<3;
 
 static int ppAltOpts(ivfield alt_in)
 {
@@ -629,7 +627,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 	}
 	if( ! ad->LookupInteger(ATTR_LAST_HEARD_FROM, now) ) {
 		if( ! stashed_now ) {
-			stashed_now = (int)time(NULL);
+			stashed_now = time(nullptr);
 		}
 		now = stashed_now;
 	}

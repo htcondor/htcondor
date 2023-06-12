@@ -20,7 +20,7 @@
 #ifndef _STATUS_STRING_H
 #define _STATUS_STRING_H
 
-#include "MyString.h"
+#include <string>
 
 void statusString( int status, std::string &str );
 

@@ -30,7 +30,7 @@ static std::string amazon_proxy_user;
 static std::string amazon_proxy_passwd;
 
 // List for all amazon commands
-static SimpleList<AmazonGahpCommand*> amazon_gahp_commands;
+static std::vector<AmazonGahpCommand*> amazon_gahp_commands;
 
 void set_amazon_proxy_server(const char* url) 
 {
@@ -116,26 +116,24 @@ registerAmazonGahpCommand(const char* command, ioCheckfn iofunc, workerfn worker
 	AmazonGahpCommand* newcommand = new AmazonGahpCommand(command, iofunc, workerfunc);
 	ASSERT(newcommand);
 
-	amazon_gahp_commands.Append(newcommand);
+	amazon_gahp_commands.push_back(newcommand);
 }
 
 int
 numofAmazonCommands(void)
 {
-	return amazon_gahp_commands.Number();
+	return (int) amazon_gahp_commands.size();
 }
 
 int 
 allAmazonCommands(StringList &output)
 {
-	AmazonGahpCommand *one_cmd = NULL;
 
-	amazon_gahp_commands.Rewind();
-	while( amazon_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : amazon_gahp_commands) {
 		output.append(one_cmd->command.c_str());
 	}
 
-	return amazon_gahp_commands.Number();
+	return (int) amazon_gahp_commands.size();
 }
 
 bool
@@ -145,12 +143,9 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 		return false;
 	}
 
-	AmazonGahpCommand *one_cmd = NULL;
-
-	amazon_gahp_commands.Rewind();
-	while( amazon_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : amazon_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) && 
-		 	one_cmd->iocheckfunction ) {
+				one_cmd->iocheckfunction ) {
 			return one_cmd->iocheckfunction(argv, argc);
 		}
 	}
@@ -166,10 +161,7 @@ executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_st
 		return false;
 	}
 
-	AmazonGahpCommand *one_cmd = NULL;
-
-	amazon_gahp_commands.Rewind();
-	while( amazon_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : amazon_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) && 
 			one_cmd->workerfunction ) {
 			return one_cmd->workerfunction(argv, argc, output_string);

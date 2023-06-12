@@ -118,14 +118,14 @@ public:
 			AD operator ->() const;
 			filter_iterator operator++();
 			filter_iterator operator++(int);
-			bool operator==(const filter_iterator &rhs) {
+			bool operator==(const filter_iterator &rhs) const {
 				if (m_table != rhs.m_table) return false;
 				if (m_done && rhs.m_done) return true;
 				if (m_done != rhs.m_done) return false;
 				if (!(m_cur == rhs.m_cur) ) return false;
 				return true;
 			}
-			bool operator!=(const filter_iterator &rhs) {return !(*this == rhs);}
+			bool operator!=(const filter_iterator &rhs) const {return !(*this == rhs);}
 			int set_options(int options) { int opts = m_options; m_options = options; return opts; }
 			int get_options() { return m_options; }
 
@@ -243,7 +243,7 @@ private:
 	FILE* log_fp;
 
 	char const *logFilename() { return log_filename_buf.c_str(); }
-	MyString log_filename_buf;
+	std::string log_filename_buf;
 	Transaction *active_transaction;
 	int max_historical_logs;
 	unsigned long historical_sequence_number;
@@ -450,7 +450,7 @@ bool TruncateClassAdLog(
 	FILE* &log_fp,                  // in,out
 	unsigned long & historical_sequence_number, // in,out
 	time_t & m_original_log_birthdate, // in,out
-	MyString & errmsg);             // out
+	std::string & errmsg);          // out
 
 bool WriteClassAdLogState(
 	FILE *fp,                       // in
@@ -459,7 +459,7 @@ bool WriteClassAdLogState(
 	time_t original_log_birthdate,  // in
 	LoggableClassAdTable & la,      // in
 	const ConstructLogEntry& maker, // in
-	MyString & errmsg);             // out
+	std::string & errmsg);          // out
 
 FILE* LoadClassAdLog(
 	const char *filename,           // in
@@ -469,7 +469,7 @@ FILE* LoadClassAdLog(
 	time_t & m_original_log_birthdate, // in,out
 	bool & is_clean,  // out: true if log was shutdown cleanly
 	bool & requires_successful_cleaning, // out: true if log must be cleaned (i.e rotated) before it can be written to again.
-	MyString & errmsg);             // out, contains error or warning messages
+	std::string & errmsg);          // out, contains error or warning messages
 
 int FlushClassAdLog(FILE* fp, bool force);
 
@@ -518,7 +518,7 @@ ClassAdLog<K,AD>::InitLogFile(const char *filename,int max_historical_logs_arg)
 
 	bool is_clean = true;
 	bool requires_successful_cleaning = false;
-	MyString errmsg;
+	std::string errmsg;
 
 	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
 
@@ -651,7 +651,7 @@ ClassAdLog<K,AD>::TruncLog()
 		return false;
 	}
 
-	MyString errmsg;
+	std::string errmsg;
 	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
 	bool rotated = TruncateClassAdLog(logFilename(),
 		la, this->GetTableEntryMaker(),
@@ -683,7 +683,7 @@ template <typename K, typename AD>
 void
 ClassAdLog<K,AD>::LogState(FILE *fp)
 {
-	MyString errmsg;
+	std::string errmsg;
 	ClassAdLogTable<K,AD> la(table); // this gives the ability to add & remove table items.
 	bool success = WriteClassAdLogState(fp, logFilename(),
 		historical_sequence_number, m_original_log_birthdate,

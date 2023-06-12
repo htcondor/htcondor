@@ -35,6 +35,7 @@
 #include "condor_vm_universe_types.h"
 #include "vm_univ_utils.h"
 #include "setenv.h"
+#include <algorithm>
 
 extern ResMgr* resmgr;
 
@@ -335,12 +336,10 @@ VMUniverseMgr::publish( ClassAd* ad)
 	// Now, we will publish mac and ip addresses of all guest VMs.
 	std::string all_macs;
 	std::string all_ips;
-	VMStarterInfo *info = NULL;
 	const char* guest_ip = NULL;
 	const char* guest_mac = NULL;
 
-	m_vm_starter_list.Rewind();
-	while( m_vm_starter_list.Next(info) ) {
+	for (VMStarterInfo *info: m_vm_starter_list) {
 		guest_ip = info->getIPForVM();
 		if( guest_ip ) {
 			if( all_ips.length() == 0 ) {
@@ -410,7 +409,7 @@ VMUniverseMgr::testVMGahp(const char* gahppath, const char* vmtype)
 		systemcmd.AppendArg("-t");
 	}
 	systemcmd.AppendArg("-M");
-	systemcmd.AppendArg(VMGAHP_TEST_MODE);
+	systemcmd.AppendArg(std::to_string(VMGAHP_TEST_MODE));
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(vmtype);
 
@@ -661,7 +660,7 @@ VMUniverseMgr::allocVM(pid_t s_pid, ClassAd &ad, char const *execute_dir)
 	}
 	*/
 
-	m_vm_starter_list.Append(newinfo);
+	m_vm_starter_list.push_back(newinfo);
 	return true;
 }
 
@@ -685,10 +684,10 @@ VMUniverseMgr::freeVM(pid_t s_pid)
 	}
 
 	m_vm_used_memory -= info->m_memory;
-	m_vm_starter_list.Delete(info);
+	m_vm_starter_list.erase(std::find(m_vm_starter_list.begin(), m_vm_starter_list.end(), info));
 	delete info;
 
-	if( !m_vm_starter_list.Number() && m_needCheck ) { 
+	if( !m_vm_starter_list.size() && m_needCheck ) { 
 		// the last vm job is just finished
 		// if m_needCheck is true, we need to call docheckVMUniverse
 		docheckVMUniverse();
@@ -699,18 +698,15 @@ VMStarterInfo *
 VMUniverseMgr::findVMStarterInfoWithStarterPid(pid_t s_pid)
 {
 	if( s_pid <= 0 ) {
-		return NULL;
+		return nullptr;
 	}
 
-	VMStarterInfo *info = NULL;
-
-	m_vm_starter_list.Rewind();
-	while( m_vm_starter_list.Next(info) ) {
+	for (VMStarterInfo *info: m_vm_starter_list) {
 		if( info->m_pid == s_pid ) {
 			return info;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 VMStarterInfo *
@@ -720,15 +716,12 @@ VMUniverseMgr::findVMStarterInfoWithVMPid(pid_t vm_pid)
 		return NULL;
 	}
 
-	VMStarterInfo *info = NULL;
-
-	m_vm_starter_list.Rewind();
-	while( m_vm_starter_list.Next(info) ) {
+	for (VMStarterInfo *info: m_vm_starter_list) {
 		if( info->m_vm_pid == vm_pid ) {
 			return info;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 VMStarterInfo *
@@ -738,33 +731,27 @@ VMUniverseMgr::findVMStarterInfoWithMac(const char* mac)
 		return NULL;
 	}
 
-	VMStarterInfo *info = NULL;
-
-	m_vm_starter_list.Rewind();
-	while( m_vm_starter_list.Next(info) ) {
+	for (VMStarterInfo *info: m_vm_starter_list) {
 		if( !strcasecmp(info->m_vm_mac.c_str(), mac) ) {
 			return info;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 VMStarterInfo *
 VMUniverseMgr::findVMStarterInfoWithIP(const char* ip)
 {
 	if( !ip ) {
-		return NULL;
+		return nullptr;
 	}
 
-	VMStarterInfo *info = NULL;
-
-	m_vm_starter_list.Rewind();
-	while( m_vm_starter_list.Next(info) ) {
+	for (VMStarterInfo *info: m_vm_starter_list) {
 		if( !strcasecmp(info->m_vm_ip.c_str(), ip) ) {
 			return info;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 void
@@ -838,7 +825,7 @@ VMUniverseMgr::setStarterAbility(bool has_vmcode)
 int
 VMUniverseMgr::numOfRunningVM(void)
 {
-	return m_vm_starter_list.Number();
+	return (int) m_vm_starter_list.size();
 }
 
 void
@@ -864,7 +851,7 @@ VMUniverseMgr::killVM(const char *matchstring)
 		systemcmd.AppendArg("-t");
 	}
 	systemcmd.AppendArg("-M");
-	systemcmd.AppendArg(VMGAHP_KILL_MODE);
+	systemcmd.AppendArg(std::to_string(VMGAHP_KILL_MODE));
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");

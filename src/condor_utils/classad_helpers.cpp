@@ -292,7 +292,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 
 	job_ad->Assign( ATTR_JOB_STATUS, IDLE );
-	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 	job_ad->Assign( ATTR_JOB_PRIO, 0 );
 #ifdef NO_DEPRECATE_NICE_USER
@@ -367,7 +367,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL)
 {
 	if (str && str[0]) {
-		StringTokenIterator it(str, 40, delims ? delims : ", \t\r\n");
+		StringTokenIterator it(str, delims ? delims : ", \t\r\n");
 		const std::string * attr;
 		while ((attr = it.next_string())) { attrs.insert(*attr); }
 		return true;

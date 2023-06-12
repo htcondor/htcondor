@@ -22,7 +22,6 @@
 
 #include "condor_common.h"
 #include "condor_regex.h"
-#include "extArray.h"
 #include "MyString.h"
 
 #include "pool_allocator.h"
@@ -47,37 +46,25 @@ class MapFile
 	~MapFile();
 
 	int
-	ParseCanonicalizationFile(const MyString filename, bool assume_hash=false, bool allow_include=true);
+	ParseCanonicalizationFile(const std::string& filename, bool assume_hash=false, bool allow_include=true);
 
 	int
 	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true);
 
 	int
-	ParseUsermapFile(const MyString filename, bool assume_hash=true);
+	ParseUsermapFile(const std::string& filename, bool assume_hash=true);
 
 	int
 	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
 
 	int
-	GetCanonicalization(const std::string& method, const std::string& principal,
-						std::string &canonicalization)
-	{
-		MyString internal_canon;
-		auto retval = GetCanonicalization(MyString(method), MyString(principal), internal_canon);
-		if (!retval) {
-			canonicalization = internal_canon;
-		}
-		return retval;
-	}
+	GetCanonicalization(const std::string& method,
+	                    const std::string& principal,
+	                    std::string & canonicalization);
 
 	int
-	GetCanonicalization(const MyString& method,
-						const MyString& principal,
-						MyString & canonicalization);
-
-	int
-	GetUser(const MyString canonicalization,
-			MyString & user);
+	GetUser(const std::string canonicalization,
+	        std::string & user);
 
 	bool empty() { return methods.empty(); }
 	void reserve(int cbReserve) { apool.reserve(cbReserve); } // reserve space in the allocation pool
@@ -99,14 +86,14 @@ class MapFile
 
 	bool
 	FindMapping(CanonicalMapList* list,       // in: the mapping data set
-				const MyString & input,         // in: the input to be matched and mapped.
-				std::vector<MyString> * groups,  // out: match groups from the input
-				const char ** pcanon);        // out: canonicalization pattern
+	            const std::string & input,         // in: the input to be matched and mapped.
+	            std::vector<std::string> * groups,  // out: match groups from the input
+	            const char ** pcanon);        // out: canonicalization pattern
 
 	void
-	PerformSubstitution(std::vector<MyString> & groups, // in: match gropus (usually from FindMapping)
+	PerformSubstitution(std::vector<std::string> & groups, // in: match gropus (usually from FindMapping)
 						const char * pattern,        // in: canonicalization pattern
-						MyString & output);          // out: the input pattern with groups substituted is appended to this
+						std::string & output);          // out: the input pattern with groups substituted is appended to this
 
 	size_t
 	ParseField(const std::string & line, size_t offset, std::string & field, uint32_t * popts = NULL);

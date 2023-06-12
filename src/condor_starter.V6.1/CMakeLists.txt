@@ -20,8 +20,6 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 set( starterElements
 starter.cpp
-cgroup_limits.cpp
-cgroup.linux.cpp
 docker_proc.cpp
 find_child_proc.cpp
 has_sysadmin_cap.cpp
@@ -59,7 +57,6 @@ vm_proc.cpp
 if (LINUX)
 	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
-		cgroup.linux.cpp  
 		../condor_startd.V6/VolumeManager.cpp
 	)
 endif(LINUX)

@@ -73,7 +73,7 @@ private:
 	void interactionLogicCODStopped( void );
 
 	Resource* rip;
-	SimpleList<Claim*> claims;
+	std::vector<Claim*> claims;
 
 
 };

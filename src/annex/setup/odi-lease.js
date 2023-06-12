@@ -28,16 +28,17 @@ exports.handler = function( event, context, callback ) {
 
 	var timestamp = Math.floor( Date.now() / 1000 );
 	if( timestamp <= leaseExpiration ) {
-		console.log( "Lease has not expired yet (" + timestamp + " <= " + leaseExpiration + ")." )
+		console.log( "Lease has not expired yet (" + timestamp + " <= " + leaseExpiration + ")." );
 		callback( null );
 		return;
 	}
-	console.log( "Lease has expired: " + timestamp + " > " + leaseExpiration + "." )
+	console.log( "Lease has expired: " + timestamp + " > " + leaseExpiration + "." );
 
+	// var AWS = require( 'aws-sdk' );
+	// var s3 = new AWS.S3();
+	const { S3 } = require("@aws-sdk/client-s3");
+	var s3 = new S3({});
 
-	var AWS = require( 'aws-sdk' );
-
-	var s3 = new AWS.S3();
 	var r = {
 			Bucket: s3BucketName,
 			Key: "config-" + annexID + ".tar.gz"
@@ -45,12 +46,13 @@ exports.handler = function( event, context, callback ) {
 	s3.deleteObject( r, function( err, data ) {
 		if( err ) {
 			console.log( err, err.stack );
-			callback( err, err.stack )
+			callback( err, err.stack );
 		} else {
 			console.log( "Succesfully deleted config tarball." );
 
-
-	var ec2 = new AWS.EC2();
+	// var ec2 = new AWS.EC2();
+	const { EC2 } = require("@aws-sdk/client-ec2");
+	var ec2 = new EC2({});
 
 	// Assumes we have fewer than 1000 instances.
 	var q = {
@@ -86,7 +88,10 @@ exports.handler = function( event, context, callback ) {
 			console.log( "Succesfully cancelled instances." );
 
 
-	var cwe = new AWS.CloudWatchEvents();
+	// var cwe = new AWS.CloudWatchEvents();
+	const { CloudWatchEvents } = require("@aws-sdk/client-cloudwatch-events");
+	var cwe = new CloudWatchEvents({});
+
 	var params = {
 		Rule : annexID,
 		Ids : [ annexID ]
@@ -100,13 +105,13 @@ exports.handler = function( event, context, callback ) {
 		if( err ) {
 			callback( err, err.stack );
 		} else {
-			callback( "Failed to remove targets.", data )
+			callback( "Failed to remove targets.", data );
 		}
 	} else {
 		console.log( "Successfully removed targets.", data );
 
 
-	var params = { Name : annexID }
+	var params = { Name : annexID };
 	// It's OK for this to fail if it's got targets we
 	// weren't told about.  We could check for that and
 	// clean up our output if the daemon ever starts

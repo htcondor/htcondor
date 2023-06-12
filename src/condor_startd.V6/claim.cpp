@@ -1793,11 +1793,11 @@ Claim::makeCODStarterArgs( ArgList &args )
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
 		args.AppendArg("-job-cluster");
-		args.AppendArg(c_cluster);
+		args.AppendArg(std::to_string(c_cluster));
 	} 
 	if( c_proc >= 0 ) {
 		args.AppendArg("-job-proc");
-		args.AppendArg(c_proc);
+		args.AppendArg(std::to_string(c_proc));
 	} 
 
 		// finally, specify how the job should get its ClassAd
@@ -2325,8 +2325,8 @@ newIdString( char** id_str_ptr )
 	// contain '#'. Parsers should look for the first '>' in the
 	// string to reliably extract the startd's sinful.
 
-	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
-	           (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%lld#%d#", daemonCore->publicNetworkIpAddr(),
+	           (long long)startd_startup, sequence_num );
 
 	char *keybuf = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 	id += keybuf;
@@ -2353,9 +2353,9 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) )
 	{
-		MyString session_id;
-		MyString session_key;
-		MyString session_info;
+		std::string session_id;
+		std::string session_key;
+		std::string session_info;
 			// there is no sec session info yet in the claim id, so
 			// we call secSessionId with ignore_session_info=true to
 			// force it to give us the session id
@@ -2408,7 +2408,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 ClaimId::~ClaimId()
 {
-	if( claimid_parser.secSessionId() ) {
+	if( claimid_parser.secSessionId()[0] != '\0' ) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully

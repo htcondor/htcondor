@@ -117,7 +117,6 @@ int formatstr_cat(std::string& s, const char* format, ...) {
     return r;
 }
 
-// to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& str, FILE *fp, bool append)
 {
 	bool first_time = true;
@@ -406,17 +405,8 @@ std::vector<std::string> split(const std::string& str, const char* delim, bool t
 {
 	int start, len;
 	std::vector<std::string> list;
-	StringTokenIterator sti(str, 40, delim);
+	StringTokenIterator sti(str, delim, trim);
 	while ((start = sti.next_token(len)) >= 0) {
-		if (trim) {
-			while (len > 0 && isspace(str[start])) {
-				start++;
-				len--;
-			}
-			while (len > 0 && isspace(str[start+len-1])) {
-				len--;
-			}
-		}
 		list.emplace_back(&str[start], len);
 	}
 	return list;
@@ -743,19 +733,26 @@ int StringTokenIterator::next_token(int & length)
 	if ( ! str) return -1;
 
 	size_t ix = ixNext;
+	size_t ixEnd = ix;
 
-	// skip leading separators and whitespace
-	while (str[ix] && strchr(delims, str[ix])) ++ix;
+	// skip leading separators and whitespace (if trimming)
+	while (str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
 	ixNext = ix;
+	ixEnd = ix;
 
 	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) ++ix;
+	while (str[ix] && !strchr(delims, str[ix])) {
+		if (!m_trim || !isspace(str[ix])) {
+			ixEnd = ix;
+		}
+		++ix;
+	}
 	if (ix <= ixNext) {
 		pastEnd = true;
 		return -1;
 	}
 
-	length = ix-ixNext;
+	length = (ixEnd - ixNext) + 1;
 	int ixStart = ixNext;
 	ixNext = ix;
 	return ixStart;

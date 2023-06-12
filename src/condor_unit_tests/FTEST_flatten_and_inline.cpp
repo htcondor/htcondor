@@ -30,8 +30,6 @@
 #include <string>
 #include <iterator>
 
-using namespace std;
-
 using namespace classad;
 
 static bool test_empty_simple_return(void);
@@ -112,7 +110,7 @@ static bool test_empty_simple_return() {
 	classad::ExprTree *fexpr;
 
 	ClassAdUnParser unparser;
-	string expr_string, classad_string;
+	std::string expr_string, classad_string;
 	unparser.Unparse(expr_string, expr);
 	unparser.Unparse(classad_string, &classad);
 	bool flattenResult = classad.FlattenAndInline(expr, value, fexpr);
@@ -143,7 +141,7 @@ static bool test_empty_simple_value() {
 	classad::ExprTree *fexpr;
 
 	ClassAdUnParser unparser;
-	string value_string, expr_string, classad_string;
+	std::string value_string, expr_string, classad_string;
 	unparser.Unparse(expr_string, expr);
 	unparser.Unparse(classad_string, &classad);
 	
@@ -176,7 +174,7 @@ static bool test_empty_simple_flattened_expression() {
 	classad::ExprTree *fexpr;
 
 	ClassAdUnParser unparser;
-	string value_string, expr_string, classad_string;
+	std::string value_string, expr_string, classad_string;
 	unparser.Unparse(expr_string, expr);
 	unparser.Unparse(classad_string, &classad);
 	
@@ -210,8 +208,8 @@ static bool test_non_empty_simple_return() {
 	Value value;
 	classad::ExprTree *fexpr;
 
-	string classad_string = "[a = 1; b = \"Cardini\"]";
-	string expr_string = "a";
+	std::string classad_string = "[a = 1; b = \"Cardini\"]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
@@ -244,15 +242,15 @@ static bool test_non_empty_simple_value() {
 	Value value;
 	classad::ExprTree *fexpr;
 
-	string classad_string = "[a = 1; b = \"Cardini\"]";
-	string expr_string = "a";
+	std::string classad_string = "[a = 1; b = \"Cardini\"]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string;
+	std::string value_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -282,15 +280,15 @@ static bool test_non_empty_simple_flattened_expression() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = 1; b = \"Cardini\"]";
-	string expr_string = "a";
+	std::string classad_string = "[a = 1; b = \"Cardini\"]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string;
+	std::string value_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -364,15 +362,15 @@ static bool test_equivalence_no_change() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = 1]";
-	string expr_string = "f";
+	std::string classad_string = "[a = 1]";
+	std::string expr_string = "f";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -406,15 +404,15 @@ static bool test_equivalence_full_simple() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = 1]";
-	string expr_string = "a";
+	std::string classad_string = "[a = 1]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -448,15 +446,15 @@ static bool test_equivalence_partial_simple() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = f]";
-	string expr_string = "a";
+	std::string classad_string = "[a = f]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string, value2_string;
+	std::string value_string, fexpr_string, value2_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -491,10 +489,10 @@ static bool test_equivalence_full_multiple() {
 	Value value;
 	classad::ExprTree *fexpr1, *fexpr2, *fexpr3;
 	
-	string classad1_string = "[a = 1]";
-	string classad2_string = "[b = 2]";
-	string classad3_string = "[c = 3]";
-	string expr_string = "a + b - c";
+	std::string classad1_string = "[a = 1]";
+	std::string classad2_string = "[b = 2]";
+	std::string classad3_string = "[c = 3]";
+	std::string expr_string = "a + b - c";
 	ClassAdParser parser;
 	
 	classad1 = parser.ParseClassAd(classad1_string, true);
@@ -503,7 +501,7 @@ static bool test_equivalence_full_multiple() {
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad1->FlattenAndInline(expr, value, fexpr1);
 	classad2->FlattenAndInline(fexpr1, value, fexpr2);
@@ -544,10 +542,10 @@ static bool test_equivalence_partial_multiple() {
 	Value value;
 	classad::ExprTree *fexpr1, *fexpr2, *fexpr3;
 	
-	string classad1_string = "[a = b]";
-	string classad2_string = "[b = c]";
-	string classad3_string = "[c = d]";
-	string expr_string = "a + b - c";
+	std::string classad1_string = "[a = b]";
+	std::string classad2_string = "[b = c]";
+	std::string classad3_string = "[c = d]";
+	std::string expr_string = "a + b - c";
 	ClassAdParser parser;
 	
 	classad1 = parser.ParseClassAd(classad1_string, true);
@@ -556,7 +554,7 @@ static bool test_equivalence_partial_multiple() {
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad1->FlattenAndInline(expr, value, fexpr1);
 	classad2->FlattenAndInline(fexpr1, value, fexpr2);
@@ -597,15 +595,15 @@ static bool test_equivalence_full_arithmetic_constants() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = b; b = c; c = 1]";
-	string expr_string = "a + b + (c*5) - (25*b/5))";
+	std::string classad_string = "[a = b; b = c; c = 1]";
+	std::string expr_string = "a + b + (c*5) - (25*b/5))";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -643,16 +641,16 @@ static bool test_equivalence_partial_arithmetic_constants() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = f; b = c; c = 1]";
-	string expr_string = "a + b + (c*5) - (25*b/5))";
+	std::string classad_string = "[a = f; b = c; c = 1]";
+	std::string expr_string = "a + b + (c*5) - (25*b/5))";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
-	string value2_string, fexpr2_string;
+	std::string value_string, fexpr_string;
+	std::string value2_string, fexpr2_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -686,15 +684,15 @@ static bool test_equivalence_full_arithmetic() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = b; b = c; c = 1]";
-	string expr_string = "a + b + c";
+	std::string classad_string = "[a = b; b = c; c = 1]";
+	std::string expr_string = "a + b + c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -729,16 +727,16 @@ static bool test_equivalence_partial_arithmetic_beginning() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = f; b = c; c = 1]";
-	string expr_string = "a + b + c";
+	std::string classad_string = "[a = f; b = c; c = 1]";
+	std::string expr_string = "a + b + c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
-	string value2_string, fexpr2_string;
+	std::string value_string, fexpr_string;
+	std::string value2_string, fexpr2_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -773,16 +771,16 @@ static bool test_equivalence_partial_arithmetic_middle() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = 1; b = f; c = a]";
-	string expr_string = "a + b + c";
+	std::string classad_string = "[a = 1; b = f; c = a]";
+	std::string expr_string = "a + b + c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
-	string value2_string, fexpr2_string;
+	std::string value_string, fexpr_string;
+	std::string value2_string, fexpr2_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -817,16 +815,16 @@ static bool test_equivalence_partial_arithmetic_end() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = b; b = 1; c = f]";
-	string expr_string = "a + b + c";
+	std::string classad_string = "[a = b; b = 1; c = f]";
+	std::string expr_string = "a + b + c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
-	string value2_string, fexpr2_string;
+	std::string value_string, fexpr_string;
+	std::string value2_string, fexpr2_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -860,15 +858,15 @@ static bool test_equivalence_full_simple_boolean() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = true; b = false]";
-	string expr_string = "a || b";
+	std::string classad_string = "[a = true; b = false]";
+	std::string expr_string = "a || b";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -902,15 +900,15 @@ static bool test_equivalence_partial_simple_boolean() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = true; b = false; c = d]";
-	string expr_string = "a && b || c";
+	std::string classad_string = "[a = true; b = false; c = d]";
+	std::string expr_string = "a && b || c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -944,16 +942,16 @@ static bool test_equivalence_full_complex_boolean() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = true; b = false; c = a || b; d = a && b; "
+	std::string classad_string = "[a = true; b = false; c = a || b; d = a && b; "
 		"e = c && !d; f = !c]";
-	string expr_string = "e || !c";
+	std::string expr_string = "e || !c";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -988,16 +986,16 @@ static bool test_equivalence_partial_complex_boolean() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = true; b = false; c = a || b; d = a && b; "
+	std::string classad_string = "[a = true; b = false; c = a || b; d = a && b; "
 		"e = c && !d; f = !c; g = h]";
-	string expr_string = "!e && c || g ";
+	std::string expr_string = "!e && c || g ";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -1032,15 +1030,15 @@ static bool test_equivalence_nested_classad() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = [b = c]; c = 1]";
-	string expr_string = "a";
+	std::string classad_string = "[a = [b = c]; c = 1]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = classad->Lookup("a");
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -1074,15 +1072,15 @@ static bool test_equivalence_nested_loop_classad() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = [b = a]]";
-	string expr_string = "a";
+	std::string classad_string = "[a = [b = a]]";
+	std::string expr_string = "a";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -1119,15 +1117,15 @@ static bool test_equivalence_simple_list() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = 1; b = 2; c = a; d = b]";
-	string expr_string = "{a, b, c, d}";
+	std::string classad_string = "[a = 1; b = 2; c = a; d = b]";
+	std::string expr_string = "{a, b, c, d}";
 	ClassAdParser parser;
 	
 	classad = parser.ParseClassAd(classad_string, true);
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);
@@ -1162,8 +1160,8 @@ static bool test_equivalence_complex_list() {
 	Value value;
 	classad::ExprTree *fexpr;
 	
-	string classad_string = "[a = b; b = 2; c = d;]";
-	string expr_string = "{a, b, c, d, true || false, true && false, 10 + a,"
+	std::string classad_string = "[a = b; b = 2; c = d;]";
+	std::string expr_string = "{a, b, c, d, true || false, true && false, 10 + a,"
 		"10 - a, 10 * a, 10 / a}";
 	ClassAdParser parser;
 	
@@ -1171,7 +1169,7 @@ static bool test_equivalence_complex_list() {
 	expr = parser.ParseExpression(expr_string);
 
 	ClassAdUnParser unparser;
-	string value_string, fexpr_string;
+	std::string value_string, fexpr_string;
 	
 	classad->FlattenAndInline(expr, value, fexpr);
 	unparser.Unparse(value_string, value);

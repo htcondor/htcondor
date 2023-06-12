@@ -412,34 +412,6 @@ class PostScriptTerminateEvent( BaseEvent ) :
     def EventNum( self ) :
         return 16
 
-# Job Submitted to Globus     ULOG_GLOBUS_SUBMIT 			= 17
-class GlobusSubmitEvent( BaseEvent ) :
-    def __init__( self ) :
-        BaseEvent.__init__( self, 17, "globus submit", BaseRealEvent )
-    def EventNum( self ) :
-        return 17
-
-# Globus Submit failed        ULOG_GLOBUS_SUBMIT_FAILED 	= 18
-class GlobusSubmitFailedEvent( BaseEvent ) :
-    def __init__( self ) :
-        BaseEvent.__init__( self, 18, "globus submit failed", BaseRealEvent )
-    def EventNum( self ) :
-        return 18
-
-# Globus Resource Up          ULOG_GLOBUS_RESOURCE_UP 		= 19
-class GlobusResourceUpEvent( BaseEvent ) :
-    def __init__( self ) :
-        BaseEvent.__init__( self, 19, "globus resource up", BaseRealEvent )
-    def EventNum( self ) :
-        return 19
-
-# Globus Resource Down        ULOG_GLOBUS_RESOURCE_DOWN 	= 20
-class GlobusResourceDownEvent( BaseEvent ) :
-    def __init__( self ) :
-        BaseEvent.__init__( self, 20, "globus resource down", BaseRealEvent )
-    def EventNum( self ) :
-        return 20
-
 # Remote Error                ULOG_REMOTE_ERROR             = 21
 class RemoteErrorEvent( BaseEvent ) :
     def __init__( self ) :
@@ -544,9 +516,6 @@ class EventParser( object ) :
             self.EventLookup( NodeExecuteEvent ),
             self.EventLookup( NodeTerminateEvent ),
             self.EventLookup( PostScriptTerminateEvent ),
-            self.EventLookup( GlobusSubmitFailedEvent ),
-            self.EventLookup( GlobusResourceUpEvent ),
-            self.EventLookup( GlobusResourceDownEvent ),
             self.EventLookup( RemoteErrorEvent ),
             self.EventLookup( JobDisconnectedEvent ),
             self.EventLookup( JobReconnectedEvent ),

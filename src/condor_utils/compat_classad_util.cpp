@@ -22,6 +22,7 @@
 #include "classad_oldnew.h"
 #include "string_list.h"
 #include "condor_adtypes.h"
+#include "condor_attributes.h"
 #include "classad/classadCache.h" // for CachedExprEnvelope
 
 #include "compat_classad_list.h"
@@ -751,6 +752,76 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList *ignored_attrs, bo
 	return ! found_diff;
 }
 
+// copy attributes listed as "MachineResources" from the src to the destination ad
+// This will also copy Available<res> attributes and any attributes referenced therein
+void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list)
+{
+	std::string resnames, attr;
+	if(srcAd.LookupString( ATTR_MACHINE_RESOURCES, resnames)) {
+		if (include_res_list) { destAd.Assign(ATTR_MACHINE_RESOURCES, resnames); }
+	} else {
+		resnames = "CPUs, Disk, Memory";
+	}
+
+	// copy the primary quantities of each of the machine resources into the starter ad
+	// for AvailableGPUs, also copy the gpu properties if any
+	StringTokenIterator tags(resnames);
+	for (const char * tag = tags.first(); tag != nullptr; tag = tags.next()) {
+		ExprTree * tree = srcAd.Lookup(tag);
+		if (tree) { 
+			tree = SkipExprEnvelope(tree);
+			destAd.Insert(tag, tree->Copy());
+		}
+
+		// if there is an attribute "Available<tag>" in the machine ad
+		// copy it, and also any attributes that it references
+		attr = "Available"; attr += tag;
+		tree = srcAd.Lookup(attr);
+		if (tree) {
+			tree = SkipExprEnvelope(tree);
+			destAd.Insert(attr, tree->Copy());
+
+			classad::References refs;
+			srcAd.GetInternalReferences(tree, refs, true);
+			for (auto it : refs) {
+				ExprTree * expr = srcAd.Lookup(it);
+				if (expr) { 
+					expr = SkipExprEnvelope(expr);
+					destAd.Insert(it, expr->Copy());
+				}
+			}
+		}
+	}
+}
+
+// Copy all matching attributes in attrs list along with any referenced attrs
+// from srcAd to destAd. If overwrite is True then an attrbute that already
+// exists in the destAd can be overwritten by data from the srcAd
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, bool overwrite)
+{
+	classad::References refs;
+	StringTokenIterator listAttrs(attrs);
+	// Create set of attribute references to copy
+	for (auto attr : listAttrs) {
+		ExprTree *tree = srcAd.Lookup(attr);
+		if (tree) {
+			refs.insert(attr);
+			srcAd.GetInternalReferences(tree, refs, true);
+		}
+	}
+	// Copy found references
+	for (auto it : refs) {
+		ExprTree *expr = srcAd.Lookup(it);
+		if (expr) {
+			// Only copy if given overwrite or if not found in destAd
+			if (overwrite || !destAd.Lookup(it)) {
+				expr = SkipExprEnvelope(expr);
+				destAd.Insert(it, expr->Copy());
+			}
+		}
+	}
+}
+
 int EvalExprTree( classad::ExprTree *expr, ClassAd *source,
 				  ClassAd *target, classad::Value &result,
 				  classad::Value::ValueType type_mask,
@@ -917,6 +988,16 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	return matches.size() > 0;
 }
 
+bool IsAConstraintMatch( ClassAd *query, ClassAd *target )
+{
+	classad::MatchClassAd *mad = getTheMatchAd( query, target );
+
+	bool result = mad->rightMatchesLeft();
+
+	releaseTheMatchAd();
+	return result;
+}
+
 bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 {
 		// The collector relies on this function to check the target type.
@@ -936,12 +1017,7 @@ bool IsAHalfMatch( ClassAd *my, ClassAd *target )
 		return false;
 	}
 
-	classad::MatchClassAd *mad = getTheMatchAd( my, target );
-
-	bool result = mad->rightMatchesLeft();
-
-	releaseTheMatchAd();
-	return result;
+	return IsAConstraintMatch(my, target);
 }
 
 /**************************************************************************

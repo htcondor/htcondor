@@ -123,7 +123,7 @@ bool
 ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 			bool printWarning ) const
 {
-	int val;
+	int val = 0;
 	if ( GetAttributeInt( _jobId._cluster, _jobId._proc,
 				attrName, &val ) == -1 ) {
 		if ( printWarning ) {
@@ -223,11 +223,11 @@ DagmanClassad::Update( const Dagman &dagman )
 	
 	// Certain DAGMan properties (MaxJobs, MaxIdle, etc.) can be changed by
 	// users. Start by declaring variables for these properties.
-	int jobAdMaxIdle;
-	int jobAdMaxJobs;
-	int jobAdMaxPreScripts;
-	int jobAdMaxPostScripts;
-	int jobAdMaxHoldScripts;
+	int jobAdMaxIdle = dagman.maxIdle;
+	int jobAdMaxJobs = dagman.maxJobs;
+	int jobAdMaxPreScripts  = dagman.maxPreScripts;
+	int jobAdMaxPostScripts = dagman.maxPostScripts;
+	int jobAdMaxHoldScripts = dagman.maxHoldScripts;
 
 	// Look up the current values of these properties in the condor_dagman job ad.
 	GetAttribute( ATTR_DAGMAN_MAXIDLE, jobAdMaxIdle );

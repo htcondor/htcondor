@@ -41,8 +41,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace std;
-
 // Externs
 extern int dc_main(int, char**);
 extern int line_where_service_stopped;
@@ -60,8 +58,8 @@ static BOOL runningService = FALSE;
 
 static void ErrorHandler(const char *s, DWORD err)
 {
-	cout << s << endl;
-	cout << "Error number: " << err << endl;
+	std::cout << s << std::endl;
+	std::cout << "Error number: " << err << std::endl;
 	ExitProcess(err);
 }
 

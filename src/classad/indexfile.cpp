@@ -132,8 +132,7 @@ string IndexFile::
 GetClassadFromFile(string, int offset) const
 {
 	if (filed != 0){
-		int curset;
-		curset = lseek(filed,offset,SEEK_SET);
+		lseek(filed,offset,SEEK_SET);
 		char  k[1];
 		string m;
 		int l;

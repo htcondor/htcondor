@@ -29,7 +29,7 @@ bool extractParentSinful(
 	if (! inherit || ! inherit[0])
 		return false;
 
-	StringTokenIterator list(inherit, 100, " ");
+	StringTokenIterator list(inherit, " ");
 
 	// first is parent pid and sinful
 	const char * ptmp = list.first();
@@ -91,6 +91,14 @@ enum LogLevel
   DNOHEADER = D_NOHEADER
 };
 
+bool
+fnHadSharedPortProblem( void * v, int code, const char * /* subsys */, const char * msg ) {
+    if( code == CEDAR_ERR_NO_SHARED_PORT ) {
+        *(const char **)v = msg;
+    }
+    return true;
+}
+
 void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::string &target="")
 {
     std::string addr;
@@ -133,13 +141,20 @@ void send_command(const ClassAdWrapper & ad, DaemonCommands dc, const std::strin
         THROW_EX(HTCondorLocateError, "Unable to locate daemon.");
     }
     ReliSock sock;
+    CondorError errorStack;
     {
     condor::ModuleLock ml;
-    result = !sock.connect(d.addr());
+    result = !sock.connect(d.addr(), 0, false, & errorStack);
     }
     if (result)
     {
-        THROW_EX(HTCondorIOError, "Unable to connect to the remote daemon");
+        const char * theSharedPortProblem = NULL;
+        errorStack.walk( fnHadSharedPortProblem, &theSharedPortProblem );
+        if( theSharedPortProblem != NULL ) {
+            THROW_EX(HTCondorIOError, theSharedPortProblem );
+        } else {
+            THROW_EX(HTCondorIOError, "Unable to connect to the remote daemon");
+        }
     }
     {
     condor::ModuleLock ml;

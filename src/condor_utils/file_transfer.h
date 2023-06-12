@@ -334,13 +334,23 @@ class FileTransfer final: public Service {
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
+	void setRenameExecutable(bool rename_exec)
+	{ PeerRenamesExecutable = rename_exec; }
+
 	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p);
-	void SetPluginMappings( CondorError &e, const char* path );
-	int InitializeSystemPlugins(CondorError &e);
+	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing);
+		// Run a test invocation of URL schema using plugin.  Will attempt to download
+		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
+	bool TestPlugin(const std::string &schema, const std::string &plugin);
+		// Run a specific file transfer plugin, specified by `path`, to determine which schemas are
+		// supported.  If `enable_testing` is true, then additionally test if the plugin is functional.
+	void SetPluginMappings( CondorError &e, const char* path, bool enable_testing );
+		// Initialize and probe the plugins from the condor configuration.  If `enable_testing`
+		// is set to true, then potentially test the plugins as well.
+	int InitializeSystemPlugins(CondorError &e, bool enable_testing);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
@@ -483,6 +493,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesXferInfo{false};
 	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
+	bool PeerRenamesExecutable{true};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};
@@ -510,7 +521,7 @@ class FileTransfer final: public Service {
 	char* TransSock{nullptr};
 	char* TransKey{nullptr};
 	char* SpoolSpace{nullptr};
-	char* TmpSpoolSpace{nullptr};
+	std::string TmpSpoolSpace;
 	int user_supplied_key{false};
 	bool upload_changed_files{false};
 	int m_final_transfer_flag{false};

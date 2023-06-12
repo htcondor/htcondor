@@ -20,7 +20,6 @@
 #include <algorithm>
 #include "compat_classad.h"
 
-#include "MyString.h"
 #include "condor_classad.h"
 #include "classad_oldnew.h"
 #include "condor_attributes.h"
@@ -34,10 +33,6 @@
 
 #include <sstream>
 #include <unordered_set>
-
-class MapFile;
-extern int reconfig_user_maps();
-extern bool user_map_do_mapping(const char * mapname, const char * input, MyString & output);
 
 #if defined(UNIX)
 #include <dlfcn.h>
@@ -310,6 +305,27 @@ bool stringListSummarize_func( const char *name,
 	return true;
 }
 
+// build a set or case-insensitive set from a string list
+template <class T>
+inline bool insert_items_from_string_tokens(T & items, const std::string & str, const char * delims) {
+	if (str.empty()) return false;
+	StringTokenIterator it(str, delims);
+	const std::string * pstr;
+	std::string item;
+	while ((pstr = it.next_string_trim())) { 
+		if (pstr->empty()) continue;
+		items.insert(*pstr);
+	}
+	return true;
+}
+
+// implements stringListMember, stringListIMember, stringListSubsetMatch, and stringListISubsetMatch
+// all functions return bool or undefined
+// the stringListI functions are case-insensitive
+// Member functions return true when the first arg is a member of the second arg when the second arg is parsed as a stringlist
+// SubsetMatch functions return true when the first arg is parsed as a string list and each item
+//    is a member of the second arg when the second arg is parsed as a string list
+// If there is a third argument, it will be used as the delimiter set for stringlist parsing
 static
 bool stringListMember_func( const char *name,
 							const classad::ArgumentList &arg_list,
@@ -318,7 +334,7 @@ bool stringListMember_func( const char *name,
 	classad::Value arg0, arg1, arg2;
 	std::string item_str;
 	std::string list_str;
-	std::string delim_str = ", ";
+	std::string delim_str = ", \t\r\n";
 
 	// Must have two or three arguments
 	if ( arg_list.size() < 2 || arg_list.size() > 3 ) {
@@ -334,21 +350,73 @@ bool stringListMember_func( const char *name,
 		return false;
 	}
 
-	// If any argument isn't a string, then the result is
+	// If any argument isn't a string or undefined, then the result is
 	// an error.
-	if( !arg0.IsStringValue( item_str) ||
-		!arg1.IsStringValue( list_str) ||
-		( arg_list.size() == 3 && !arg2.IsStringValue( delim_str ) ) ) {
+	if( ( !arg0.IsUndefinedValue() && !arg0.IsStringValue(item_str)) ||
+		( !arg1.IsUndefinedValue() && !arg1.IsStringValue(list_str)) ||
+		( arg_list.size() == 3 && (!arg2.IsUndefinedValue() && !arg2.IsStringValue(delim_str)) ) ) {
 		result.SetErrorValue();
 		return true;
 	}
 
-	StringList sl( list_str.c_str(), delim_str.c_str() );
-	int rc;
-	if ( strcasecmp( name, "stringlistmember" ) == 0 ) {
-		rc = sl.contains( item_str.c_str() );
+	// if both args are undefined, there result is undefined
+	// otherwise, undefined values behave like empty strings
+	if (arg0.IsUndefinedValue() && arg1.IsUndefinedValue()) {
+		result.SetUndefinedValue();
+		return true;
+	}
+
+	// decode function name into case-sensitive and Member vs SubsetMatch
+	const char * op = name + sizeof("stringlist")-1;
+	bool case_sensitive = true;
+	if (toupper(*op) == 'I') {
+		case_sensitive = false;
+		++op;
+	}
+	bool member = toupper(*op) == 'M';
+	bool subset_match = toupper(*op) == 'S';
+
+	int rc = 0;
+	if (member) {
+		StringList sl( list_str.c_str(), delim_str.c_str() );
+		if (case_sensitive) {
+			rc = sl.contains( item_str.c_str() );
+		} else {
+			rc = sl.contains_anycase( item_str.c_str() );
+		}
+	} else if (subset_match) { // SubsetMatch
+
+		// the empty string is always a subset
+		if (item_str.empty()) {
+			result.SetBooleanValue(true);
+			return true;
+		}
+
+		if (case_sensitive) {
+			std::set<std::string> listset;
+			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
+			const std::string * item;
+			while ((item = items.next_string_trim())) {
+				if (item->empty()) continue;
+				rc = listset.count(*item);
+				if ( ! rc) break;
+			}
+		} else {
+			classad::References listset;
+			insert_items_from_string_tokens(listset, list_str, delim_str.c_str());
+			StringTokenIterator items(item_str, delim_str.c_str());
+			const std::string * item;
+			while ((item = items.next_string_trim())) {
+				if (item->empty()) continue;
+				rc = listset.count(*item);
+				if ( ! rc) break;
+			}
+		}
 	} else {
-		rc = sl.contains_anycase( item_str.c_str() );
+		// this should be unreachable
+		result.SetErrorValue();
+		return true;
 	}
 	result.SetBooleanValue( rc ? true : false );
 
@@ -503,7 +571,7 @@ bool userMap_func( const char * /*name*/,
 		return true;
 	}
 
-	MyString output;
+	std::string output;
 	if (user_map_do_mapping(mapName.c_str(), userName.c_str(), output)) {
 		StringList items(output.c_str(), ",");
 
@@ -764,7 +832,7 @@ ArgsToList( const char * name,
 	}
 	std::vector<classad::ExprTree*> list_exprs;
 
-	for (int idx=0; idx<arg_list.Count(); idx++)
+	for (size_t idx=0; idx<arg_list.Count(); idx++)
 	{
 		classad::Value string_val;
 		string_val.SetStringValue(arg_list.GetArg(idx));
@@ -1378,6 +1446,12 @@ void registerClassadFunctions()
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListMember_func );
 	name = "stringListIMember";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
+	name = "stringListSubsetMatch";
+	classad::FunctionCall::RegisterFunction( name,
+											 stringListMember_func );
+	name = "stringListISubsetMatch";
 	classad::FunctionCall::RegisterFunction( name,
 											 stringListMember_func );
 	name = "stringList_regexpMember";

@@ -25,7 +25,6 @@
 #include "collector.h"
 #include <set>
 #include "HashTable.h"
-#include "extArray.h"
 
 //---------------------------------------------------
 
@@ -108,7 +107,7 @@ private:
 
 	// Constants
 
-	enum { HistoryLevels=3 };
+	static const int HistoryLevels=3;
 	enum { SubmittorData, StartdData, GroupsData, SubmittorGroupsData, CkptData, DataSetCount };
 
 	// State variables - data set information

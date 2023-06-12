@@ -24,7 +24,6 @@
 
 #include "condor_common.h"
 #include "condor_crypt.h"             // For now, we include it
-#include "MyString.h"
 #include "CryptKey.h"                 // KeyInfo
 #include "condor_ver_info.h"
 #include "classy_counted_ptr.h"
@@ -210,8 +209,6 @@ public:
     ///
 	int code(char *&);
     ///
-	int code(MyString &);
-    ///
 	int code(std::string &);
 	///
 	// DO NOT USE THIS FUNCTION!
@@ -300,7 +297,6 @@ public:
 	int put(float);
 	int put(double);
 	int put(char const *);
-	int put(const MyString &);
 	int put(const std::string &str) {return this->put(str.c_str(), 1 + (int)str.length());}
 	// The second argument is the length of the string, including the
 	// NUL terminator.
@@ -332,7 +328,6 @@ public:
 	int get(float &);
 	int get(double &);
 
-	int get(MyString &);
 	int get(std::string &);
 
 		// This function assigns the argument to a freshly mallocated string.
@@ -367,6 +362,7 @@ public:
 		// The length returned in argument len includes the NUL terminator.
 	int get_secret( char *&s );
 	int get_secret( const char *&s, int &len );
+	int get_secret( std::string& s );
 
 		// This is just like put(char const *), but it calls
 		// prepare_crypto_for_secret() before and
@@ -560,8 +556,8 @@ protected:
 
 	// serialize object (save/restore object state to an ascii string)
 	//
-	virtual const char * serialize(const char *) = 0;
-	virtual char * serialize() const = 0;
+	virtual const char * deserialize(const char *) = 0;
+	virtual void serialize(std::string&) const = 0;
 
 	/*
 	**	Type definitions

@@ -106,7 +106,7 @@ condor_read( char const *peer_description, SOCKET fd, char *buf, int sz, int tim
 {
 	Selector selector;
 	int nr = 0, nro;
-	unsigned int start_time=0, cur_time=0;
+	time_t start_time=0, cur_time=0;
 	char sinbuf[SINFUL_STRING_BUF_SIZE];
 
 	if( IsDebugLevel(D_NETWORK) ) {
@@ -348,7 +348,7 @@ int
 condor_write( char const *peer_description, SOCKET fd, const char *buf, int sz, int timeout, int flags, bool non_blocking )
 {
 	int nw = 0, nwo = 0;
-	unsigned int start_time = 0, cur_time = 0;
+	time_t start_time = 0, cur_time = 0;
 	char tmpbuf[1];
 	int nro;
 	bool select_for_read = true;

@@ -38,6 +38,7 @@
 #include "gridmanager.h"
 
 #include <sstream>
+#include <algorithm>
 
 
 HashTable <std::string, Proxy *> ProxiesByFilename( hashFunction );
@@ -77,9 +78,7 @@ SetMasterProxy( Proxy *master, const Proxy *copy_src )
 	master->expiration_time = copy_src->expiration_time;
 	master->near_expired = copy_src->near_expired;
 
-	Callback cb;
-	master->m_callbacks.Rewind();
-	while ( master->m_callbacks.Next( cb ) ) {
+	for (Callback cb: master->m_callbacks) {
 		((cb.m_data)->*(cb.m_func_ptr))();
 	}
 
@@ -146,7 +145,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 		return NULL;
 	}
 
-	int expire_time;
+	time_t expire_time;
 	Proxy *proxy = NULL;
 	ProxySubject *proxy_subject = NULL;
 	char *subject_name = NULL;
@@ -183,8 +182,10 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			Callback cb;
 			cb.m_func_ptr = func_ptr;
 			cb.m_data = data;
-			if ( proxy->m_callbacks.IsMember( cb ) == false ) {
-				proxy->m_callbacks.Append( cb );
+			if (proxy->m_callbacks.end() == 
+					std::find(proxy->m_callbacks.begin(),
+						proxy->m_callbacks.end(), cb)) {
+				proxy->m_callbacks.push_back( cb );
 			}
 		}
 		return proxy;
@@ -240,8 +241,10 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 			Callback cb;
 			cb.m_func_ptr = func_ptr;
 			cb.m_data = data;
-			if ( proxy->m_callbacks.IsMember( cb ) == false ) {
-				proxy->m_callbacks.Append( cb );
+			if (proxy->m_callbacks.end() == 
+					std::find(proxy->m_callbacks.begin(),
+						proxy->m_callbacks.end(), cb)) {
+				proxy->m_callbacks.push_back( cb );
 			}
 		}
 
@@ -303,8 +306,10 @@ AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 		Callback cb;
 		cb.m_func_ptr = func_ptr;
 		cb.m_data = data;
-		if ( proxy->m_callbacks.IsMember( cb ) == false ) {
-			proxy->m_callbacks.Append( cb );
+		if (proxy->m_callbacks.end() == 
+				std::find(proxy->m_callbacks.begin(),
+					proxy->m_callbacks.end(), cb)) {
+			proxy->m_callbacks.push_back( cb );
 		}
 	}
 	return proxy;
@@ -326,7 +331,10 @@ ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 		Callback cb;
 		cb.m_func_ptr = func_ptr;
 		cb.m_data = data;
-		proxy->m_callbacks.Delete( cb );
+		auto it = std::find(proxy->m_callbacks.begin(), proxy->m_callbacks.end(), cb);
+		if (it != proxy->m_callbacks.end()) {
+			proxy->m_callbacks.erase(it);
+		}
 	}
 
 	if ( proxy->num_references < 0 ) {
@@ -391,8 +399,8 @@ void doCheckProxies()
 // if a proxy is about to expire.
 void CheckProxies()
 {
-	int now = time(NULL);
-	int next_check = CheckProxies_interval + now;
+	time_t now = time(NULL);
+	time_t next_check = CheckProxies_interval + now;
 	ProxySubject *curr_subject;
 
 	dprintf( D_FULLDEBUG, "Checking proxies\n" );
@@ -408,7 +416,7 @@ void CheckProxies()
 
 		while ( curr_subject->proxies.Next( curr_proxy ) != false ) {
 
-			int new_expiration =
+			time_t new_expiration =
 				x509_proxy_expiration_time( curr_proxy->proxy_filename );
 
 			curr_proxy->near_expired =
@@ -421,9 +429,7 @@ void CheckProxies()
 				curr_proxy->near_expired =
 					(curr_proxy->expiration_time - now) <= minProxy_time;
 
-				Callback cb;
-				curr_proxy->m_callbacks.Rewind();
-				while ( curr_proxy->m_callbacks.Next( cb ) ) {
+				for (Callback cb: curr_proxy->m_callbacks) {
 					((cb.m_data)->*(cb.m_func_ptr))();
 				}
 
@@ -433,9 +439,7 @@ void CheckProxies()
 
 			} else if ( curr_proxy->near_expired ) {
 
-				Callback cb;
-				curr_proxy->m_callbacks.Rewind();
-				while ( curr_proxy->m_callbacks.Next( cb ) ) {
+				for (Callback cb: curr_proxy->m_callbacks) {
 					((cb.m_data)->*(cb.m_func_ptr))();
 				}
 			}

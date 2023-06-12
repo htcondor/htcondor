@@ -53,9 +53,6 @@ namespace classad {
 using classad::ClassAd;
 
 
-class MyString; // potential forward reference.
-
-
 //----------------------------------------------------------------------------
 /** Enumeration of all possible events.
     If you modify this enum, you must also modify ULogEventNumberNames array
@@ -314,19 +311,10 @@ class ULogEvent {
 	// if chomp is true, trailing \r and \n will be changed to \0
 	bool read_optional_line(FILE* file, bool & got_sync_line, char * buf, size_t bufsize, bool chomp=true, bool trim=false);
 
-	// read a line into a MyString 
-	bool read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp=true);
+	// read a line into a string 
 	bool read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp=true, bool want_trim=false);
 
-	// returns a new'ed pointer to a buffer containing the next line if there is a next line
-	// and it is not a sync line. got_sync_line will be set to true if it was a sync line
-	// if chomp is true, trailing \r and \n will not be returned
-	// if trim is true, leading whitespace will not be returned.
-	char * read_optional_line(FILE* file, bool & got_sync_line, bool chomp=true, bool trim=false);
-
-	// read a value after a prefix into a MyString
-	// for 
-	bool read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp=true);
+	// read a value after a prefix into a string
 	bool read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp=true);
 
   private:
@@ -455,7 +443,6 @@ class RemoteErrorEvent : public ULogEvent
 {
  public:
 	RemoteErrorEvent(void);
-	~RemoteErrorEvent(void);
 
     /** Read the body of the next RemoteError event.
         @param file the non-NULL readable log file
@@ -480,14 +467,11 @@ class RemoteErrorEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 	//Methods for accessing the error description.
-	void setErrorText(char const *str);
-	char const *getErrorText(void) {return error_str;}
+	char const *getErrorText(void) {return error_str.c_str();}
 
-	void setDaemonName(char const *name);
-	char const *getDaemonName(void) {return daemon_name;}
+	char const *getDaemonName(void) {return daemon_name.c_str();}
 
-	void setExecuteHost(char const *host);
-	char const *getExecuteHost(void) {return execute_host;}
+	char const *getExecuteHost(void) {return execute_host.c_str();}
 
 	bool isCriticalError(void) const {return critical_error;}
 	void setCriticalError(bool f);
@@ -495,12 +479,11 @@ class RemoteErrorEvent : public ULogEvent
 	void setHoldReasonCode(int hold_reason_code);
 	void setHoldReasonSubCode(int hold_reason_subcode);
 
- private:
     /// A host string in the form: "<128.105.165.12:32779>".
-    char execute_host[128];
+	std::string execute_host;
 	/// Normally "condor_starter":
-	char daemon_name[128];
-	char *error_str;
+	std::string daemon_name;
+	std::string error_str;
 	bool critical_error; //tells shadow to give up
 	int hold_reason_code;
 	int hold_reason_subcode;
@@ -571,6 +554,7 @@ class ExecuteEvent : public ULogEvent
   public:
     ///
     ExecuteEvent(void);
+    virtual ~ExecuteEvent(void);
 
     /** Read the body of the next Execute event.
         @param file the non-NULL readable log file
@@ -595,9 +579,12 @@ class ExecuteEvent : public ULogEvent
 	virtual void initFromClassAd(ClassAd* ad);
 
 		/** @return execute host or empty string (never NULL) */
-	char const *getExecuteHost();
+	const char *getExecuteHost();
 
 	void setExecuteHost(char const *addr);
+	void setSlotName(const char *name);
+	bool hasProps();     // return true if non-zero number of execute properties
+	ClassAd & setProp(); // get a ref to the execute properties ad, creating if does not exist.
 
 	/** Identifier for the machine the job executed on.
 		For Vanilla, Standard, and other non-Grid Universes, a
@@ -607,6 +594,8 @@ class ExecuteEvent : public ULogEvent
 		or GridTyps.
 	*/
 	std::string executeHost;
+	std::string slotName;
+	ClassAd * executeProps = nullptr;
 };
 
 //----------------------------------------------------------------------------
@@ -728,13 +717,11 @@ class JobAbortedEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	const char* getReason(void) const;
-	void setReason( const char* );
+	const char* getReason(void) const { return reason.c_str(); }
 
 	void setToeTag( classad::ClassAd * toeTag );
 
- private:
-	char* reason;
+	std::string reason;
 	ToE::Tag * toeTag;
 };
 
@@ -845,15 +832,12 @@ class JobEvictedEvent : public ULogEvent
 
 	ClassAd * pusageAd; // attributes represening resource used/provisioned etc
 
-	const char* getReason(void) const;
-	void setReason( const char* );
+	const char* getReason(void) const { return reason.c_str(); }
 
-	const char* getCoreFile(void);
-	void setCoreFile( const char* );
+	const char* getCoreFile(void) { return core_file.c_str(); }
 
- private:
-	char* reason;
-	char* core_file;
+	std::string reason;
+	std::string core_file;
 
 };
 
@@ -916,8 +900,7 @@ class TerminatedEvent : public ULogEvent
     /// The signal that terminated it (valid only on abnormal exit)
     int     signalNumber;
 
-	const char* getCoreFile(void);
-	void setCoreFile( const char* );
+	const char* getCoreFile(void) { return core_file.c_str(); }
 
     /** Local  usage for the run */    rusage  run_local_rusage;
     /** Remote usage for the run */    rusage  run_remote_rusage;
@@ -941,12 +924,9 @@ class TerminatedEvent : public ULogEvent
 	// This method just makes a copy of toeTag (if it's not NULL).
 	virtual void setToeTag( classad::ClassAd * toeTag );
 
- protected:
 	classad::ClassAd * toeTag;
 
- private:
-
-	char* core_file;
+	std::string core_file;
 
 };
 
@@ -1036,8 +1016,6 @@ class PostScriptTerminatedEvent : public ULogEvent
  public:
     ///
     PostScriptTerminatedEvent(void);
-    ///
-    ~PostScriptTerminatedEvent(void);
 
     /** Read the body of the next PostScriptTerminated event.
         @param file the non-NULL readable log file
@@ -1071,172 +1049,13 @@ class PostScriptTerminatedEvent : public ULogEvent
     int signalNumber;
 
 		// DAG node name
-	char* dagNodeName;
+	std::string dagNodeName;
 
 		// text label printed before DAG node name
 	const char* const dagNodeNameLabel;
 
 		// classad attribute name for DAG node name string
 	const char* const dagNodeNameAttr;
-};
-
-
-
-//----------------------------------------------------------------------------
-/** Framework for a GlobusSubmitEvent object.  Occurs when a Globus Universe
-    job is actually submitted to a Globus Gatekeeper (and the submit is 
-	committed if using a recent version of Globus which understands the
-	two-phase commit protocol).
-*/
-class GlobusSubmitEvent : public ULogEvent
-{
-  public:
-    ///
-    GlobusSubmitEvent(void);
-    ///
-    ~GlobusSubmitEvent(void);
-
-    /** Read the body of the next GlobusSubmit event.
-        @param file the non-NULL readable log file
-        @return 0 for failure, 1 for success
-    */
-    virtual int readEvent (FILE *, bool & got_sync_line);
-
-    /** Format the body of this event.
-        @param out string to which the formatted text should be appended
-        @return false for failure, true for success
-    */
-    virtual bool formatBody( std::string &out );
-
-	/** Return a ClassAd representation of this GlobusSubmitEvent.
-		@return NULL for failure, the ClassAd pointer otherwise
-	*/
-	virtual ClassAd* toClassAd(bool event_time_utc);
-
-	/** Initialize from this ClassAd.
-		@param a pointer to the ClassAd to initialize from
-	*/
-	virtual void initFromClassAd(ClassAd* ad);
-
-    /// Globus Resource Manager (Gatekeeper) Conctact String
-    char* rmContact;
-
-	/// Globus Job Manager Contact String
-    char* jmContact;
-
-	/// If true, then the JobManager supports restart recovery
-	bool restartableJM;
-};
-
-//----------------------------------------------------------------------------
-/** Framework for a GlobusSubmitFailedEvent object.  Occurs when a Globus 
-	Universe job is is removed from the queue because it was unable to be
-	sucessfully submitted to a Globus Gatekeeper after a certain number of 
-	attempts.
-*/
-class GlobusSubmitFailedEvent : public ULogEvent
-{
-  public:
-    ///
-    GlobusSubmitFailedEvent(void);
-    ///
-    ~GlobusSubmitFailedEvent(void);
-
-    /** Read the body of the next GlobusSubmitFailed event.
-        @param file the non-NULL readable log file
-        @return 0 for failure, 1 for success
-    */
-    virtual int readEvent (FILE *, bool & got_sync_line);
-
-    /** Format the body of this event.
-        @param out string to which the formatted text should be appended
-        @return false for failure, true for success
-    */
-    virtual bool formatBody( std::string &out );
-
-	/** Return a ClassAd representation of this GlobusSubmitFailedEvent.
-		@return NULL for failure, the ClassAd pointer otherwise
-	*/
-	virtual ClassAd* toClassAd(bool event_time_utc);
-
-	/** Initialize from this ClassAd.
-		@param a pointer to the ClassAd to initialize from
-	*/
-	virtual void initFromClassAd(ClassAd* ad);
-
-    /// Globus Resource Manager (Gatekeeper) Conctact String
-    char* reason;
-
-};
-
-class GlobusResourceUpEvent : public ULogEvent
-{
-  public:
-    ///
-    GlobusResourceUpEvent(void);
-    ///
-    ~GlobusResourceUpEvent(void);
-
-    /** Read the body of the next GlobusResourceUp event.
-        @param file the non-NULL readable log file
-        @return 0 for failure, 1 for success
-    */
-    virtual int readEvent (FILE *, bool & got_sync_line);
-
-    /** Format the body of this event.
-        @param out string to which the formatted text should be appended
-        @return false for failure, true for success
-    */
-    virtual bool formatBody( std::string &out );
-
-	/** Return a ClassAd representation of this GlobusResourceUpEvent.
-		@return NULL for failure, the ClassAd pointer otherwise
-	*/
-	virtual ClassAd* toClassAd(bool event_time_utc);
-
-	/** Initialize from this ClassAd.
-		@param a pointer to the ClassAd to initialize from
-	*/
-	virtual void initFromClassAd(ClassAd* ad);
-
-    /// Globus Resource Manager (Gatekeeper) Conctact String
-    char* rmContact;
-
-};
-
-class GlobusResourceDownEvent : public ULogEvent
-{
-  public:
-    ///
-    GlobusResourceDownEvent(void);
-    ///
-    ~GlobusResourceDownEvent(void);
-
-    /** Read the body of the next GlobusResourceDown event.
-        @param file the non-NULL readable log file
-        @return 0 for failure, 1 for success
-    */
-    virtual int readEvent (FILE *, bool & got_sync_line);
-
-    /** Format the body of this event.
-        @param out string to which the formatted text should be appended
-        @return false for failure, true for success
-    */
-    virtual bool formatBody( std::string &out );
-
-	/** Return a ClassAd representation of this GlobusResourceDownEvent.
-		@return NULL for failure, the ClassAd pointer otherwise
-	*/
-	virtual ClassAd* toClassAd(bool event_time_utc);
-
-	/** Initialize from this ClassAd.
-		@param a pointer to the ClassAd to initialize from
-	*/
-	virtual void initFromClassAd(ClassAd* ad);
-
-    /// Globus Resource Manager (Gatekeeper) Conctact String
-    char* rmContact;
-
 };
 
 //----------------------------------------------------------------------------
@@ -1411,8 +1230,6 @@ class JobHeldEvent : public ULogEvent
   public:
     ///
     JobHeldEvent (void);
-    ///
-    ~JobHeldEvent (void);
 
     /** Read the body of the next JobHeld event.
         @param file the non-NULL readable log file
@@ -1442,16 +1259,8 @@ class JobHeldEvent : public ULogEvent
 	int getReasonCode(void) const;
 	int getReasonSubCode(void) const;
 
-		/// makes a copy of the string in our "reason" member
-	void setReason( const char* );
-
-	void setReasonCode( const int );
-	void setReasonSubCode( const int );
-
- private:
-
 		/// why the job was held 
-	char* reason;
+	std::string reason;
 	int code;
 	int subcode;
 };
@@ -1465,8 +1274,6 @@ class JobReleasedEvent : public ULogEvent
   public:
     ///
     JobReleasedEvent (void);
-    ///
-    ~JobReleasedEvent (void);
 
     /** Read the body of the next JobReleased event.
         @param file the non-NULL readable log file
@@ -1493,13 +1300,8 @@ class JobReleasedEvent : public ULogEvent
 		/// @return pointer to our copy of the reason, or NULL if not set
 	const char* getReason(void) const;
 
-		/// makes a copy of the string in our "reason" member
-	void setReason( const char* );
-
- private:
-
 		/// why the job was released
-	char* reason;
+	std::string reason;
 };
 
 /* MPI (or parallel) events */
@@ -1508,8 +1310,7 @@ class NodeExecuteEvent : public ULogEvent
   public:
     ///
     NodeExecuteEvent(void);
-    ///
-    ~NodeExecuteEvent(void);
+	virtual ~NodeExecuteEvent(void);
 
     /** Read the body of the next NodeExecute event.
         @param file the non-NULL readable log file
@@ -1533,16 +1334,18 @@ class NodeExecuteEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	void setExecuteHost(char const *addr);
-
-	char const *getExecuteHost() { return executeHost; }
+	const char *getExecuteHost() { return executeHost.c_str(); }
+	void setSlotName(const char *name);
+	bool hasProps();     // return true if non-zero number of execute properties
+	ClassAd & setProp(); // get a ref to the execute properties ad, creating if does not exist.
 
 		/// Node identifier
 	int node;
 
- private:
     /// For Condor v6, a host string in the form: "<128.105.165.12:32779>".
-    char *executeHost;
+	std::string executeHost;
+	std::string slotName;
+	ClassAd * executeProps = nullptr;
 };
 
 
@@ -1561,7 +1364,6 @@ class JobDisconnectedEvent : public ULogEvent
 {
 public:
 	JobDisconnectedEvent(void);
-	~JobDisconnectedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1575,34 +1377,13 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "startd_addr" member
-	void setStartdAddr( char const *startd );
-	const char* getStartdAddr(void) const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr.c_str();}
+	const char* getStartdName(void) const {return startd_name.c_str();}
+	const char* getDisconnectReason(void) const {return disconnect_reason.c_str();};
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
-
-		/// stores a copy of the string in our "reason" member
-	void setDisconnectReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getDisconnectReason(void) const {return disconnect_reason;};
-
-		/// stores a copy of the string in our "reason" member
-	void setNoReconnectReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getNoReconnectReason(void) const {return no_reconnect_reason;};
-
-		/** This flag defaults to true, and is set to false if a
-			NoReconnectReason is specified for the event */
-	bool canReconnect( void ) const {return can_reconnect; };
-
-private:
-	char *startd_addr;
-	char *startd_name;
-	char *disconnect_reason;
-	char *no_reconnect_reason;
-	bool can_reconnect;
+	std::string startd_addr;
+	std::string startd_name;
+	std::string disconnect_reason;
 };
 
 
@@ -1610,7 +1391,6 @@ class JobReconnectedEvent : public ULogEvent
 {
 public:
 	JobReconnectedEvent(void);
-	~JobReconnectedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1624,22 +1404,15 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "startd_addr" member
-	void setStartdAddr( char const *startd );
-	const char* getStartdAddr(void) const {return startd_addr;}
+	const char* getStartdAddr(void) const {return startd_addr.c_str();}
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name.c_str();}
 
-		/// stores a copy of the string in our "starter_addr" member
-	void setStarterAddr( char const *starter );
-	const char* getStarterAddr(void) const {return startd_addr;}
+	const char* getStarterAddr(void) const {return startd_addr.c_str();}
 
-private:
-	char *startd_addr;
-	char *startd_name;
-	char *starter_addr;
+	std::string startd_addr;
+	std::string startd_name;
+	std::string starter_addr;
 };
 
 
@@ -1647,7 +1420,6 @@ class JobReconnectFailedEvent : public ULogEvent
 {
 public:
 	JobReconnectFailedEvent(void);
-	~JobReconnectFailedEvent(void);
 
 	virtual int readEvent( FILE * , bool & got_sync_line);
 
@@ -1661,18 +1433,12 @@ public:
 
 	virtual void initFromClassAd( ClassAd* ad );
 
-		/// stores a copy of the string in our "reason" member
-	void setReason( const char* );
-		/// @return pointer to our copy of the reason, or NULL if not set
-	const char* getReason(void) const {return reason;};
+	const char* getReason(void) const {return reason.c_str();};
 
-		/// stores a copy of the string in our "startd_name" member
-	void setStartdName( char const *name );
-	const char* getStartdName(void) const {return startd_name;}
+	const char* getStartdName(void) const {return startd_name.c_str();}
 
-private:
-	char *startd_name;
-	char *reason;
+	std::string startd_name;
+	std::string reason;
 };
 
 
@@ -2034,8 +1800,6 @@ class PreSkipEvent : public ULogEvent
   public:
     ///
     PreSkipEvent(void);
-    ///
-    ~PreSkipEvent(void);
 
     /** Read the body of the next PreSkip event.
         @param file the non-NULL readable log file
@@ -2059,10 +1823,8 @@ class PreSkipEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 	
-	void setSkipNote(const char*);
-
-    // dagman-supplied text to include in the log event
-	char* skipEventLogNotes;
+	// dagman-supplied text to include in the log event
+	std::string skipEventLogNotes;
 
 };
 
@@ -2436,13 +2198,11 @@ class DataflowJobSkippedEvent : public ULogEvent
 	*/
 	virtual void initFromClassAd(ClassAd* ad);
 
-	const char* getReason(void) const;
-	void setReason( const char* );
+	const char* getReason(void) const { return reason.c_str(); }
 
 	void setToeTag( classad::ClassAd * toeTag );
 
- private:
-	char* reason;
+	std::string reason;
 	ToE::Tag * toeTag;
 };
 

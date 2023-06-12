@@ -41,8 +41,6 @@
 
 #include <fstream>
 
-using namespace std;
-
 // for MD5 blocks computation, and for backward compat leading 0's
 #define MD5_MAC_SIZE   16
 

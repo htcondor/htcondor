@@ -24,6 +24,14 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 
+#include <memory>
+
+namespace htcondor {
+
+struct CredData;
+
+}
+
 	int REMOTE_CONDOR_register_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_mpi_master_info( ClassAd *ad );
 	int REMOTE_CONDOR_register_starter_info( ClassAd *ad );
@@ -82,7 +90,7 @@
 	int REMOTE_CONDOR_truncate( char *path, int length );
 	int REMOTE_CONDOR_utime( char *path, int actime, int modtime );
 	int REMOTE_CONDOR_dprintf_stats(const char *message);
-	int REMOTE_CONDOR_getcreds( const char *creds_receive_dir );
+	int REMOTE_CONDOR_getcreds( const char *creds_receive_dir, std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> &);
 	int REMOTE_CONDOR_get_delegated_proxy( const char* proxy_source_path, const char* proxy_dest_path, time_t proxy_expiration );
 
 	int REMOTE_CONDOR_get_sec_session_info(

@@ -76,7 +76,7 @@ with _add_dll_dir():
 
 # get the version using regexp ideally, and fall back to basic string parsing
 try:
-    __version__ = _re.match("^.*(\d+\.\d+\.\d+)", htcondor.version()).group(1)
+    __version__ = _re.match("^\D*(\d+\.\d+\.\d+)\D", htcondor.version()).group(1)
 except (AttributeError, IndexError):
     __version__ = htcondor.version().split()[1]
 

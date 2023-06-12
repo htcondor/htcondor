@@ -26,6 +26,7 @@
 #include <numeric>
 
 #include <filesystem>
+#include <charconv>
 
 namespace stdfs = std::filesystem;
 
@@ -67,7 +68,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		// we need to tell it which cgroup controllers *it's* child has
 		stdfs::path controller_filename = interior / "cgroup.subtree_control";
 		int fd = open(controller_filename.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			// TODO: write these individually
 			const char *child_controllers = "+cpu +io +memory +pids";
 			int r = write(fd, child_controllers, strlen(child_controllers));
@@ -95,10 +96,10 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	// Now move pid to the leaf of the newly-created tree
 	stdfs::path procs_filename = leaf / "cgroup.procs";
 	int fd = open(procs_filename.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
-		char buf[16];
-		sprintf(buf, "%u", pid);
-		int r = write(fd, buf, strlen(buf));
+	if (fd >= 0) {
+		std::string buf;
+		formatstr(buf, "%u", pid);
+		int r = write(fd, buf.c_str(), strlen(buf.c_str()));
 		if (r < 0) {
 			dprintf(D_ALWAYS, "Error writing procid %d to %s: %s\n", pid, procs_filename.c_str(), strerror(errno));
 			close(fd);
@@ -112,7 +113,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		// write memory limits
 		stdfs::path memory_limits_path = leaf / "memory.max";
 		int fd = open(memory_limits_path.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			char buf[16];
 			sprintf(buf, "%lu", cgroup_memory_limit);
 			int r = write(fd, buf, strlen(buf));
@@ -130,9 +131,9 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		// write memory limits
 		stdfs::path cpu_shares_path = leaf / "cpu.weight";
 		int fd = open(cpu_shares_path.c_str(), O_WRONLY, 0666);
-		if (fd > 0) {
+		if (fd >= 0) {
 			char buf[16];
-			sprintf(buf, "%d", cgroup_cpu_shares);
+			{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, cgroup_cpu_shares); *p = '\0';}
 			int r = write(fd, buf, strlen(buf));
 			if (r < 0) {
 				dprintf(D_ALWAYS, "Error setting cgroup cpu weight of %d in cgroup %s: %s\n", cgroup_cpu_shares, leaf.c_str(), strerror(errno));
@@ -147,7 +148,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 	// we made it decades without this support
 	stdfs::path oom_group = cgroup_mount_point() / stdfs::path(cgroup_name) / "memory.oom.group";
 	fd = open(oom_group.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
+	if (fd >= 0) {
 		char one[1] = {'1'};
 		ssize_t result = write(fd, one, 1);
 		if (result < 0) {
@@ -341,7 +342,7 @@ ProcFamilyDirectCgroupV2::suspend_family(pid_t pid)
 	bool success = true;
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 	int fd = open(freezer.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
+	if (fd >= 0) {
 
 		char one[1] = {'1'};
 		ssize_t result = write(fd, one, 1);
@@ -368,7 +369,7 @@ ProcFamilyDirectCgroupV2::continue_family(pid_t pid)
 	bool success = true;
 	TemporaryPrivSentry sentry( PRIV_ROOT );
 	int fd = open(freezer.c_str(), O_WRONLY, 0666);
-	if (fd > 0) {
+	if (fd >= 0) {
 
 		char zero[1] = {'0'};
 		ssize_t result = write(fd, zero, 1);

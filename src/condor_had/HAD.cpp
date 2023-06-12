@@ -34,7 +34,6 @@
 #include "StateMachine.h"
 
 #include <iostream>
-using namespace std;
 
 extern char* myName;
 
@@ -49,7 +48,7 @@ main_init (int, char *[])
 
         stateMachine->initialize();
     } catch (char* rr) {
-        cout << rr << endl;
+		std::cout << rr << std::endl;
         dprintf(D_ALWAYS, "Exception in main_init %s \n", rr);
     }
 }

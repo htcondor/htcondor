@@ -41,7 +41,7 @@
 struct GahpProxyInfo
 {
 	Proxy *proxy;
-	int cached_expiration;
+	time_t cached_expiration;
 	int num_references;
 };
 
@@ -200,6 +200,7 @@ class GahpServer : public Service {
 	std::string m_gahp_error_buffer;
 	std::list<std::string> m_gahp_error_list;
 	bool m_gahp_startup_failed;
+	bool m_setCondorInherit;
 	char m_gahp_version[150];
 	std::string m_gahp_condor_version;
 	std::vector<std::string> m_commands_supported;
@@ -240,6 +241,8 @@ class GenericGahpClient : public Service {
 		bool UpdateToken(const std::string &token_file);
 		bool CreateSecuritySession();
 
+		void SetCondorInherit(bool set_inherit) { server->m_setCondorInherit = set_inherit; }
+
 		void purgePendingRequests() { clear_pending(); }
 		bool pendingRequestIssued() { return pending_submitted_to_gahp || pending_result; }
 
@@ -275,6 +278,8 @@ class GenericGahpClient : public Service {
 		const char * getGahpStderr();
 		const char * getVersion();
 		const char * getCondorVersion();
+
+		int getNextReqId() { return server->next_reqid; }
 
 		enum PrioLevel {
 			low_prio,
@@ -431,6 +436,7 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_new(const std::string &service_url,
 		            const std::string &rsl,
+		            bool has_proxy,
 		            std::string &job_id,
 		            std::string &job_status);
 
@@ -442,8 +448,8 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_status_all(const std::string &service_url,
 		                   const std::string &states,
-		                   StringList &job_ids,
-		                   StringList &job_states);
+		                   std::vector<std::string> &job_ids,
+		                   std::vector<std::string> &job_states);
 
 		int
 		arc_job_info(const std::string &service_url,
@@ -453,13 +459,13 @@ class GahpClient : public GenericGahpClient {
 		int
 		arc_job_stage_in(const std::string &service_url,
 		                 const std::string &job_id,
-		                 StringList &files);
+		                 const std::vector<std::string> &files);
 
 		int
 		arc_job_stage_out(const std::string &service_url,
 		                  const std::string &job_id,
-		                  StringList &src_files,
-		                  StringList &dest_files);
+		                  const std::vector<std::string> &src_files,
+		                  const std::vector<std::string> &dest_files);
 
 		int
 		arc_job_kill(const std::string &service_url,
@@ -512,17 +518,17 @@ class GahpClient : public GenericGahpClient {
 							   const std::string &account,
 							   const std::string &project,
 							   const std::string &zone,
-							   StringList &instance_ids,
-							   StringList &instance_names,
-							   StringList &statuses,
-							   StringList &status_msgs );
+							   std::vector<std::string> &instance_ids,
+							   std::vector<std::string> &instance_names,
+							   std::vector<std::string> &statuses,
+							   std::vector<std::string> &status_msgs );
 
 		int azure_ping( const std::string &auth_file,
 		                const std::string &subscription );
 
 		int azure_vm_create( const std::string &auth_file,
 		                     const std::string &subscription,
-		                     StringList &vm_params, std::string &vm_id,
+		                     const std::vector<std::string> &vm_params, std::string &vm_id,
 		                     std::string &ip_address );
 
 		int azure_vm_delete( const std::string &auth_file,
@@ -531,8 +537,8 @@ class GahpClient : public GenericGahpClient {
 
 		int azure_vm_list( const std::string &auth_file,
 		                   const std::string &subscription,
-		                   StringList &vm_names,
-		                   StringList &vm_statuses );
+		                   std::vector<std::string> &vm_names,
+		                   std::vector<std::string> &vm_statuses );
 
 	private:
 

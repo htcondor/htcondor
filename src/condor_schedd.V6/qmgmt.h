@@ -39,6 +39,7 @@ GCC_DIAG_OFF(invalid-offsetof)
 #endif
 
 #define JOB_QUEUE_PAYLOAD_IS_BASE 1
+#define USE_JOB_QUEUE_USERREC 1 // replace ephemeral OwnerInfo struct with a persistent JobQueueUserRec struct
 
 class Service;
 
@@ -67,10 +68,11 @@ class QmgmtPeer {
 
 		const char *endpoint_ip_str() const;
 		const condor_sockaddr endpoint() const;
-		const char* getOwner() const;
-		const char* getDomain() const;
-		const char* getRealOwner() const;
-		const char* getFullyQualifiedUser() const;
+		const char* getOwner() const { return owner ? owner : (sock ? sock->getOwner() : nullptr); }
+		const char* getDomain() const { return sock ? sock->getDomain() : nullptr; }
+		const char* getRealOwner() const { return sock ? sock->getOwner() : owner; }
+		const char* getRealUser() const { return sock ? sock->getFullyQualifiedUser() : fquser; }
+		const char* getUser() const  { return fquser ? fquser : (sock ? sock->getFullyQualifiedUser() : nullptr); }
 		int isAuthenticated() const;
 		bool isAuthorizationInBoundingSet(const char *authz) const {return sock->isAuthorizationInBoundingSet(authz);}
 
@@ -101,18 +103,22 @@ extern bool user_is_the_new_owner; // set in schedd.cpp at startup
 extern bool ignore_domain_mismatch_when_setting_owner;
 inline const char * EffectiveUser(QmgmtPeer * peer) {
 	if (peer) {
+	#ifdef USE_JOB_QUEUE_USERREC
+		// with JobQueueUserRec we always want to know the full username
+		// so regardless of the setting for user_is_the_new_owner, we want
+		// return a fully qualified user here
+		return peer->getUser();
+	#else
 		if (user_is_the_new_owner) {
 			if (peer->sock) return peer->sock->getFullyQualifiedUser();
 			if (peer->fquser && peer->fquser[0]) return peer->fquser;
 		} else {
 			return peer->getOwner();
 		}
+	#endif
 	}
 	return "";
 }
-
-#define USE_JOB_QUEUE_JOB 1 // contents of the JobQueue is a class *derived* from ClassAd, (new for 8.3)
-//#define TJ_REFACTOR_CLUSTER_REFCOUNTING 1 // move cluster ref counting from a qmgmt hashtable into the JobQueueCluster object
 
 #define JQJ_CACHE_DIRTY_JOBOBJ        0x00001 // set when an attribute cached in the JobQueueJob that doesn't have it's own flag has changed
 #define JQJ_CACHE_DIRTY_SUBMITTERDATA 0x00002 // set when an attribute that affects the submitter name is changed
@@ -147,6 +153,15 @@ private:
 	qelm *prv;
 };
 
+#ifdef USE_JOB_QUEUE_USERREC
+const int USERRECID_qkey1 = 0;
+inline int USERRECID_to_qkey2(unsigned int userrec_id) {
+	if ((int)userrec_id <= 0) dprintf(D_ALWAYS | D_BACKTRACE, "USERRECID_to_qkey2 called with id=%d", userrec_id);
+	ASSERT(userrec_id > 0);
+	return (int)(userrec_id);
+}
+#endif
+
 const int JOBSETID_qkey2 = -100;
 const int CLUSTERID_qkey2 = -1;
 // jobset ids are id.-100
@@ -179,6 +194,7 @@ public:
 	enum {
 		entry_type_unknown = 0,
 		entry_type_header,
+		entry_type_userrec,
 		entry_type_jobset,
 		entry_type_cluster,
 		entry_type_job,
@@ -188,21 +204,100 @@ public:
 			if (key.proc >= 0) { return entry_type_job; }
 			if (key.proc == JOBSETID_qkey2) { return entry_type_jobset; }
 			if (key.proc == CLUSTERID_qkey2) { return entry_type_cluster; }
-		} else if ( ! key.cluster && ! key.proc) { return entry_type_header; }
+		} else if ( ! key.cluster) {
+			if ( ! key.proc) { return entry_type_header; }
+			else if (key.proc > 0) { return entry_type_userrec; }
+		}
 		return entry_type_unknown;
 	}
 	void CheckJidAndType(const JOB_ID_KEY &key); // called when reloading the job queue
 	bool IsType(char _type) { if (!entry_type) this->PopulateFromAd(); return entry_type == _type; }
 	bool IsJob() { return IsType(entry_type_job); }
 	bool IsHeader() { return IsType(entry_type_header); }
+	bool IsUserRec() { return IsType(entry_type_userrec); }
 	bool IsJobSet() { return IsType(entry_type_jobset); }
 	bool IsCluster() { return IsType(entry_type_cluster); }
 };
 
+#ifdef USE_JOB_QUEUE_USERREC
+
+// flag values for JobQueueUserRec
+#define JQU_F_DIRTY    0x01   // PopulateFromAd needed 
+#define JQU_F_PENDING  0x80   // JobQueueUserRec is in the pendingOwners collection
+
+class JobQueueUserRec : public JobQueueBase {
+public:
+	struct CountJobsCounters {
+		int Hits=0;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
+		int JobsCounted=0;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
+		int JobsRecentlyAdded=0;    // ALL jobs owned by this owner that were added since count_jobs() was run
+		int JobsIdle=0;             // does not count Local or Scheduler universe jobs, or Grid jobs that are externally managed.
+		int JobsRunning=0;
+		int JobsHeld=0;
+		int LocalJobsIdle=0;
+		int LocalJobsRunning=0;
+		int LocalJobsHeld=0;
+		int SchedulerJobsIdle=0;
+		int SchedulerJobsRunning=0;
+		int SchedulerJobsHeld=0;
+		void clear_counters() { memset(this, 0, sizeof(*this)); }
+	};
+
+	//JOB_ID_KEY jid;
+	char        flags=JQU_F_DIRTY;   // dirty on creation
+protected:
+	bool        enabled=true;
+	//bool        super=false;  // near-term future use
+	//bool        local=false;  // near-term future use
+	std::string name;   // the name used in the schedd's map of OwnerInfo records
+	std::string domain; // holds windows NTDomain, this is future use on *nix
+public:
+	CountJobsCounters num; // job counts by OWNER rather than by submitter
+	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
+	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
+
+	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr)
+		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
+		, name(_name?_name:""), domain(_domain?_domain:"")
+	{}
+	virtual ~JobQueueUserRec() {};
+
+	virtual void PopulateFromAd(); // populate this structure from contained ClassAd state
+
+	bool empty() const { return name.empty(); }
+	const char * Name() const { return name.empty() ? "" : name.c_str(); }
+	const char * NTDomain() const { return domain.empty() ? nullptr : domain.c_str(); }
+	bool isDirty() const { return (flags & JQU_F_DIRTY) != 0; }
+	void setDirty() { flags |= JQU_F_DIRTY; }
+	bool isPending() const { return (flags & JQU_F_PENDING) != 0; }
+	void clearPending() { flags &= ~JQU_F_PENDING; }
+	void setPending() { flags |= JQU_F_PENDING; }
+	bool IsEnabled() const { return enabled; }
+	//bool IsSuperUser() const { return super; }
+	//bool IsLocalUser() const { return local; }
+};
+
+typedef JobQueueUserRec OwnerInfo;
+
+// Internal set attribute functions for only the schedd to use.
+// these functions add attributes to a transaction and also set a transaction trigger
+int SetUserAttribute(JobQueueUserRec & urec, const char * attr_name, const char * expr_string);
+int SetUserAttributeInt(JobQueueUserRec & urec, const char * attr_name, long long attr_value);
+int SetUserAttributeValue(JobQueueUserRec & urec, const char * attr_name, const classad::Value & attr_value);
+inline int SetUserAttributeString(JobQueueUserRec & urec, const char * attr_name, const char * attr_value) {
+	classad::Value tmp;
+	if (attr_value) tmp.SetStringValue(attr_value);
+	return SetUserAttributeValue(urec, attr_name, tmp);
+}
+int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name);
+
+#else
+typedef struct OwnerInfo OwnerInfo;
+#endif
 
 class JobQueueJob : public JobQueueBase {
 public:
-	//TT JOB_ID_KEY jid;
+	//JOB_ID_KEY jid;
 protected:
 	char universe;      // this is in sync with ATTR_JOB_UNIVERSE
 	char has_noop_attr; // 1 if job has ATTR_JOB_NOOP
@@ -214,7 +309,7 @@ public:
 	// cached pointer into schedulers's SubmitterDataMap and OwnerInfoMap
 	// it is set by count_jobs() or by scheduler::get_submitter_and_owner()
 	// DO NOT FREE FROM HERE!
-	struct OwnerInfo * ownerinfo;
+	OwnerInfo * ownerinfo;
 	struct SubmitterData * submitterdata;
 protected:
 	JobQueueCluster * parent; // job pointer back to the 
@@ -326,7 +421,7 @@ protected:
 public:
 	garbagePolicyEnum garbagePolicy = garbagePolicyEnum::immediateAfterEmpty;
 	unsigned int member_count = 0;
-	struct OwnerInfo * ownerinfo = nullptr;
+	OwnerInfo * ownerinfo = nullptr;
 	LiveJobCounters jobStatusAggregates;
 	unsigned int Jobset() const { return (unsigned int)jid.cluster; }
 #else
@@ -515,7 +610,7 @@ public:
 		cluster = c; proc = p;
 		job_id_str[0] = 0; // this will force re-rendering of the string
 	}
-	void sprint(MyString & s) { s = this->c_str(); }
+	void sprint(std::string & s) { s = this->c_str(); }
 	JOB_ID_KEY_BUF(const char * jid)          : JOB_ID_KEY(0,0) { set(jid); }
 	JOB_ID_KEY_BUF(int c, int p)              : JOB_ID_KEY(c,p) { job_id_str[0] = 0; }
 	JOB_ID_KEY_BUF(const JOB_ID_KEY_BUF& rhs) : JOB_ID_KEY(rhs.cluster, rhs.proc) { job_id_str[0] = 0; }
@@ -537,8 +632,10 @@ template <>
 class ConstructClassAdLogTableEntry<JobQueuePayload> : public ConstructLogEntry
 {
 public:
+	ConstructClassAdLogTableEntry(class Scheduler * _schedd) : schedd(_schedd) {}
 	virtual ClassAd* New(const char * /*key*/, const char * /*mytype*/) const;
 	virtual void Delete(ClassAd* &val) const;
+	class Scheduler* schedd = nullptr;
 };
 
 // specialize the helper class for used by ClassAdLog transactional insert/remove functions
@@ -667,6 +764,11 @@ void WalkJobQueue3(queue_job_scan_func fn, void* pv, schedd_runtime_probe & ftm)
 
 bool InWalkJobQueue();
 
+// A negative JobsSeenOnQueueWalk means the last job queue walk terminated
+// early, so no reliable count is available.
+extern int TotalJobsCount;
+extern int JobsSeenOnQueueWalk;
+
 void InitQmgmt();
 void InitJobQueue(const char *job_queue_name,int max_historical_logs);
 void PostInitJobQueue();
@@ -686,6 +788,11 @@ QmgmtPeer* getQmgmtConnectionInfo();
 // JobSet qmgmt support functions
 bool JobSetDestroy(int setid);
 bool JobSetCreate(int setId, const char * setName, const char * ownerinfoName);
+
+#ifdef USE_JOB_QUEUE_USERREC
+bool UserRecDestroy(int userrec_id);
+bool UserRecCreate(int userrec_id, const char * ownerinfoName, bool enabled);
+#endif
 
 // priority records
 extern prio_rec *PrioRec;

@@ -122,10 +122,11 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 		int		len = buflen - (end_ptr - buf);
 		if( len <= 5 ) {
 			// we need a larger buffer -- grow buffer by 4kbytes
+			ptrdiff_t line_offset = line_ptr - buf;
 			char *newbuf = (char *)realloc(buf, 4096 + buflen);
 			if ( newbuf ) {
 				end_ptr = (end_ptr - buf) + newbuf;
-				line_ptr = (line_ptr - buf) + newbuf;
+				line_ptr = line_offset + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
 				len += 4096;
@@ -1196,7 +1197,7 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 			if (message[cchPre-1] == '\n') { --cchPre; }
 			else { message[cchPre-1] = ' '; }
 		}
-		vsprintf ( message + cchPre, format, ap );
+		vsnprintf(message + cchPre, cch + 1, format, ap);
 	}
 	va_end(ap);
 
@@ -1236,7 +1237,7 @@ static bool parse_include_options(char * str, int & opts, char *& pinto, const c
 {
 	err = NULL;
 	pinto = NULL;
-	StringTokenIterator it(str, 100, " \t");
+	StringTokenIterator it(str, " \t");
 	const std::string * tok = it.next_string();
 	if ( ! tok) return true;
 
@@ -1313,7 +1314,7 @@ bool MacroStreamCharSource::open(const char * src_string, const MACRO_SOURCE& _s
 {
 	src = _src;
 	if (input) delete input;
-	input = new StringTokenIterator(src_string, 128, "\n");
+	input = new StringTokenIterator(src_string, "\n");
 	return input != NULL;
 }
 
@@ -2943,7 +2944,7 @@ char * expand_meta_args(const char *value, std::string & argstr)
 		if (special_id) {
 			all_done = false;
 
-			StringTokenIterator it(argstr, 40, ","); it.rewind();
+			StringTokenIterator it(argstr, ","); it.rewind();
 
 			std::string buf;
 			if (meta_only.index <= 0) {

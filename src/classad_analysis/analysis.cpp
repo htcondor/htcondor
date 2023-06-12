@@ -25,12 +25,10 @@
 #include "analysis.h"
 #include "list.h"
 #include "simplelist.h"
-#include "extArray.h"
 #include "condor_classad.h"
 
 #include <sstream>
 
-using namespace std;
 using namespace classad_analysis;
 using namespace classad_analysis::job;
 
@@ -38,9 +36,9 @@ ClassAdAnalyzer::
 ClassAdAnalyzer( bool ras ) :
   result_as_struct(ras), m_result(NULL), jobReq(NULL) { 
 
-  stringstream std_rank;
-  stringstream preempt_rank;
-  stringstream preempt_prio;
+  std::stringstream std_rank;
+  std::stringstream preempt_rank;
+  std::stringstream preempt_prio;
   
   std_rank << "MY." << ATTR_RANK << " > MY." << ATTR_CURRENT_RANK;
   preempt_rank << "MY." << ATTR_RANK << " >= MY." << ATTR_CURRENT_RANK;
@@ -240,7 +238,7 @@ result_add_machine(const classad::ClassAd &resource) {
 
 
 bool ClassAdAnalyzer::
-AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, string &buffer, std::string &pretty_req )
+AnalyzeJobReqToBuffer( ClassAd *request, ClassAdList &offers, std::string &buffer, std::string &pretty_req )
 {
 	ResourceGroup     rg;
     classad::ClassAd  *explicit_classad;
@@ -297,7 +295,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request,
 
 bool ClassAdAnalyzer::
 AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
-						 string &buffer )
+						 std::string &buffer )
 {
 	ResourceGroup     rg;
     classad::ClassAd  *explicit_classad;
@@ -320,7 +318,7 @@ AnalyzeJobAttrsToBuffer( ClassAd *request, ClassAdList &offers,
 
 
 bool ClassAdAnalyzer::
-AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string &buffer, string &pretty_req)
+AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, std::string &buffer, std::string &pretty_req)
 {
 	if( !request ) {
 			// request is NULL;
@@ -352,9 +350,9 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		// Print out requirements expression to buffer
 
 		// Format req expression for 80 column screen.
-	string temp_buffer;
+	std::string temp_buffer;
 	pp.Unparse( temp_buffer, reqExpr );
-	string::iterator t, lastAnd, lineStart;
+	std::string::iterator t, lastAnd, lineStart;
 	t = lastAnd = lineStart = temp_buffer.begin( );
 	while( t != temp_buffer.end( ) ) {
 		if( ( *t == '&' ) && ( *( t+1 ) == '&' ) ) {
@@ -425,7 +423,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		// The following should probably make use of ClassAdPrintMask
 
 		// Get information from data structures and print to the buffer
-	string cond_s, value_s;
+	std::string cond_s, value_s;
 	char formatted[2048];
 	char cond[1024];
 	char info[64];
@@ -459,34 +457,30 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		List< Condition > sortedCondList;
 		profile->Rewind( );
 		Condition *sortedCond;
-		SimpleList< int > mapList;
+		std::vector<int> mapList;
 		int index = 0;
-		int junk;
 		while( profile->NextCondition( condition ) ) {			
 			if( sortedCondList.IsEmpty( ) ) {
 				sortedCondList.Append( condition );
-				mapList.Append( index );
+				mapList.push_back( index );
 			} else {
 				sortedCondList.Rewind( );
-				mapList.Rewind( );
 				while( sortedCondList.Next( sortedCond ) ) {
-					mapList.Next( junk );
 					if( condition->explain.numberOfMatches <
 						sortedCond->explain.numberOfMatches ) {
 						sortedCondList.Insert( condition );
-						mapList.Prepend( index );
+						mapList.insert(mapList.begin(), index );
 						break;
 					}
 					if( sortedCondList.AtEnd( ) ) {
 						sortedCondList.Append( condition );
-						mapList.Append( index );
+						mapList.push_back(index );
 					}
 				}
 			}
 			index++;
 		}
 		sortedCondList.Rewind( );
-		mapList.Rewind( );
 
 			// create map from original Condition order to sorted order
 		int numConds = 0;
@@ -495,7 +489,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 		condMap.resize(numConds);
 
 		int i = 0;
-		while( mapList.Next( index ) ) {
+		for (int index: mapList) {
 			condMap[index] = i;
 			i++;
 		}
@@ -586,7 +580,7 @@ AnalyzeJobReqToBuffer( classad::ClassAd *request, ResourceGroup &offers, string 
 
 bool ClassAdAnalyzer::
 AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
-						 string &buffer )
+						 std::string &buffer )
 						                                        
 {
 	if( !request ) {
@@ -603,7 +597,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 	char suggest[64];
 
 	if( !( AnalyzeAttributes( request, offers, adExplain ) ) ) {
-		errstm << "error in AnalyzeAttributes" << endl << endl;
+		errstm << "error in AnalyzeAttributes" << std::endl << std::endl;
 	}
 
 		// get information from ClassAdExplain
@@ -614,7 +608,7 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 		buffer += "The following attributes are missing from the job ClassAd:";
 		buffer += "\n";
 		buffer += "\n";
-		string undefAttr = "";
+		std::string undefAttr = "";
 		adExplain.undefAttrs.Rewind( );
 		while( adExplain.undefAttrs.Next( undefAttr ) ) {
 		  result_add_suggestion(suggestion(suggestion::DEFINE_ATTRIBUTE, undefAttr));
@@ -625,9 +619,9 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 
 		// print ideal ranges for attributes
 	if( !adExplain.attrExplains.IsEmpty( ) ) {
-		string value_s = "";
-		string suggest_s = "";
-		string tempBuff = "";
+		std::string value_s = "";
+		std::string suggest_s = "";
+		std::string tempBuff = "";
 		int numModAttrs = 0;
 
 		tempBuff += "\nThe following attributes should be added or modified:";
@@ -702,12 +696,12 @@ AnalyzeJobAttrsToBuffer( classad::ClassAd *request, ResourceGroup &offers,
 }
 
 bool ClassAdAnalyzer::
-AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, string &attr,
-					 string &buffer )
+AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, std::string &attr,
+					 std::string &buffer )
 {
 	classad::PrettyPrint pp;
 	classad::Value val;
-	string tempBuff_s = "";
+	std::string tempBuff_s = "";
 	ResourceGroup rg;
 	List<classad::ClassAd> contextList;
 	MultiProfile *mp = new MultiProfile;
@@ -717,9 +711,9 @@ AnalyzeExprToBuffer( classad::ClassAd *mainAd, classad::ClassAd *contextAd, stri
 	classad::ExprTree *flatExpr = NULL;
 	classad::ExprTree *prunedExpr = NULL;
 	char formatted[2048];
-	string cond_s = "";
+	std::string cond_s = "";
 	char cond[1024];
-	string value_s = "";
+	std::string value_s = "";
 	char value[64];
 
     classad::ClassAd *copyContextAd = (classad::ClassAd *) contextAd->Copy();
@@ -836,19 +830,19 @@ BuildBoolTable( MultiProfile *mp, ResourceGroup &rg, BoolTable &result )
 	int numContexts = 0;
 
 	if( !mp->GetNumberOfProfiles( numProfs ) ) {
-		errstm << "BuildBoolTable: error calling GetNumberOfProfiles" << endl;
+		errstm << "BuildBoolTable: error calling GetNumberOfProfiles" << std::endl;
 	}
 
 	if( !rg.GetNumberOfClassAds( numContexts ) ) {
-		errstm << "BuildBoolTable: error calling GetNumberOfClassAds" << endl;
+		errstm << "BuildBoolTable: error calling GetNumberOfClassAds" << std::endl;
 	}
 
 	if( !rg.GetClassAds( contexts ) ) {
-		errstm << "BuildBoolTable: error calling GetClassAds" << endl;
+		errstm << "BuildBoolTable: error calling GetClassAds" << std::endl;
 	}
 
 	if( !result.Init( numContexts, numProfs ) ) {
-		errstm << "BuildBoolTable: error calling BoolTable::Init" << endl;
+		errstm << "BuildBoolTable: error calling BoolTable::Init" << std::endl;
 	}
 
 	contexts.Rewind( );
@@ -954,7 +948,7 @@ SuggestCondition( MultiProfile *mp, ResourceGroup &rg )
 {
 	if( mp == NULL ) {
 		errstm << "SuggestCondition: tried to pass null MultiProfile"
-			 << endl;
+			 << std::endl;
 		return false;
 	}
 
@@ -994,7 +988,7 @@ SuggestCondition( MultiProfile *mp, ResourceGroup &rg )
 	mp->Rewind( );
 	while( mp->NextProfile( currentProfile ) ) {
 		if( !SuggestConditionModify( currentProfile, rg ) ) {
-			errstm << "error in SuggestConditionModify" << endl;
+			errstm << "error in SuggestConditionModify" << std::endl;
 			return false;
 		}
 //		if( !SuggestConditionRemove( currentProfile, rg ) ) {
@@ -1023,7 +1017,7 @@ SuggestConditionRemove( Profile *p, ResourceGroup &rg )
 
 	AnnotatedBoolVector *bestABV = NULL;
 	AnnotatedBoolVector *abv = NULL;
-	string buffer;
+	std::string buffer;
 
 	if( !BuildBoolTable( p, rg, bt ) ) {
 		return false;
@@ -1087,7 +1081,7 @@ SuggestConditionRemove( Profile *p, ResourceGroup &rg )
 		// find first ABV with max frequency & max total true	
 		// set up ConditionExplains using ABV
 	if( !AnnotatedBoolVector::MostFreqABV( abvList, bestABV ) ) {
-		errstm << "Analysis::SuggestConditionRemove(): error - bad ABV" << endl;
+		errstm << "Analysis::SuggestConditionRemove(): error - bad ABV" << std::endl;
 		abvList.Rewind( );
 		while( abvList.Next( abv ) ) {
 			delete abv;
@@ -1158,9 +1152,9 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 		// Get info from BoolTable for ConditionExplains
 		// set up array of operators and get list of attrs;
-	std::vector<string> attrs;
+	std::vector<std::string> attrs;
 	std::vector<ValueRange *> vrs;
-	string attr = "";
+	std::string attr = "";
 	std::vector<int> vr4Cond(numConds);
 	int attrNum = 0;
 	int condNum = 0;
@@ -1178,7 +1172,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 
 				// Attribute
 			condition->GetAttr( attr );
-			string currAttr;
+			std::string currAttr;
 			bool seenAttr = false;
 			vrNum = 0;
 			for( size_t i = 0; i < attrs.size(); i++ ) {
@@ -1252,7 +1246,7 @@ SuggestConditionModify( Profile *p, ResourceGroup &rg )
 	for( int row = 0; row < numVRs; row++ ) {
 		attr = attrs[row];
 		p->Rewind( );
-		string currAttr;
+		std::string currAttr;
 		while( p->NextCondition( condition ) ) {
 			if( !condition->HasMultipleAttrs( ) ) {
 				condition->GetAttr( currAttr );
@@ -1465,7 +1459,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	classad::ExprTree *prunedReqExpr = NULL;
 	classad::Value val;
 
-  	string buffer;
+	std::string buffer;
   	classad::PrettyPrint pp;
 
 	List<classad::ClassAd> offerList;
@@ -1484,7 +1478,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		// get list of ClassAds from ResourceGroup
 	if( !( rg.GetClassAds( offerList ) ) ) {
-		errstm << "CA::AA: error with GetClassAds" << endl << endl;
+		errstm << "CA::AA: error with GetClassAds" << std::endl << std::endl;
 		return false;
 	}
 
@@ -1513,7 +1507,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		currReq = new MultiProfile( );
 
 		if( !( reqExpr = offer->Lookup( ATTR_REQUIREMENTS ) ) ) {
-			errstm << "error looking up requirements" << endl << endl;
+			errstm << "error looking up requirements" << std::endl << std::endl;
             delete currReq;
 			reqList.Rewind( );
 			while( reqList.Next( currReq ) ) {
@@ -1524,7 +1518,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 		
 		if( !( offer->FlattenAndInline( reqExpr, val, flatReqExpr ) ) ) {
-			errstm << "error flattening request" << endl << endl;
+			errstm << "error flattening request" << std::endl << std::endl;
             delete currReq;
 			reqList.Rewind( );
 			while( reqList.Next( currReq ) ) {
@@ -1537,9 +1531,9 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 				// we have a non-literal boolean expression 
 
 			if( !( PruneDisjunction( flatReqExpr, prunedReqExpr ) ) ) {
-				errstm << "error pruning expression:" << endl;
+				errstm << "error pruning expression:" << std::endl;
 				pp.Unparse( buffer, flatReqExpr );
-				errstm << buffer << endl << endl;
+				errstm << buffer << std::endl << std::endl;
 				buffer = "";
 				delete flatReqExpr;
                 delete currReq;
@@ -1551,7 +1545,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 			}
 			
 			if( !( BoolExpr::ExprToMultiProfile( prunedReqExpr, currReq ) ) ) {
-				errstm << "error in ExprToMultiProfile" << endl << endl;
+				errstm << "error in ExprToMultiProfile" << std::endl << std::endl;
 				delete flatReqExpr;
 				delete prunedReqExpr;
 				delete currReq;
@@ -1571,7 +1565,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 				// we have a literal boolean expression
 			if( !( BoolExpr::ValToMultiProfile( val, currReq ) ) ) {
-				errstm << "error in ValToMultiProfile" << endl << endl;
+				errstm << "error in ValToMultiProfile" << std::endl << std::endl;
 				delete currReq;
 				reqList.Rewind( );
 				while( reqList.Next( currReq ) ) {
@@ -1590,12 +1584,12 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	int numReqs = reqList.Number( );
 
 	std::vector<int> firstContext ( numReqs );
-    List< string > jobAttrs, undefAttrs, refdAttrs;
+    List< std::string > jobAttrs, undefAttrs, refdAttrs;
 	classad::ClassAd::iterator itr;
 
 		// build list of attributes
 	for( itr = ad->begin( ); itr != ad->end( ); itr++ ) {
-		jobAttrs.Append( new string( itr->first ) );
+		jobAttrs.Append( new std::string( itr->first ) );
 	}
 
 	int numRefdAttrs = 0;
@@ -1668,15 +1662,15 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					continue;
 				}
 
-				string currAttr;
+				std::string currAttr;
 				if( !currCondition->GetAttr( currAttr ) ) {
-					errstm << "AA error: couldn't get attribute" << endl;
+					errstm << "AA error: couldn't get attribute" << std::endl;
 					exit(1);
 				}
 
 					// Try to find attribute in job
 				bool attrInJob = false;
-				string jobAttr;
+				std::string jobAttr;
 				jobAttrs.Rewind( );
 				while( jobAttrs.Next( jobAttr ) ) {
 					if( EqualsIgnoreCase( currAttr, jobAttr ) ) {
@@ -1687,7 +1681,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 					// See if attribute has been previously referenced
 				bool attrInRefdAttrs = false;
-				string refdAttr;
+				std::string refdAttr;
 				int attrNum = 0;
 				refdAttrs.Rewind( );
 				while( refdAttrs.Next( refdAttr ) ) { 
@@ -1700,7 +1694,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 				BoolValue conditionValue;
 				if( !currCondition->EvalInContext( mad, ad, conditionValue) ) {
-					errstm << "AA error: BoolExpr::EvalInContext failed" << endl;
+					errstm << "AA error: BoolExpr::EvalInContext failed" << std::endl;
 					exit(1);
 				}
 
@@ -1719,7 +1713,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					// attribute is undefined and has thus far not been in any
 					// machine requirements.
 				else {
-					refdAttrs.Append( new string( currAttr ) );
+					refdAttrs.Append( new std::string( currAttr ) );
 					numRefdAttrs++;				   
 					if( tempBools == NULL ) {
 						tempBools = new std::vector< BoolValue>( numRefdAttrs );
@@ -1746,10 +1740,10 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 					// attribute is not defined in job
 				if( !attrInJob ) {
 					if( undefAttrs.IsEmpty( ) ) {
-						undefAttrs.Append( new string( currAttr ) );
+						undefAttrs.Append( new std::string( currAttr ) );
 					}
 					else {
-						string undefAttr = "";
+						std::string undefAttr = "";
 						bool foundAttr = false;
 						undefAttrs.Rewind( );
 						while( undefAttrs.Next( undefAttr ) ) { 
@@ -1759,7 +1753,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 							}
 						}
 						if( !foundAttr ) {
-							undefAttrs.Append( new string( currAttr ) );
+							undefAttrs.Append( new std::string( currAttr ) );
 						}
 					}
 				}
@@ -1771,7 +1765,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 		reqNo++;
 	}
 
-	string* attr;
+	std::string* attr;
 	jobAttrs.Rewind( );
 	while( jobAttrs.Next( attr ) ) {
 		delete attr;
@@ -1819,7 +1813,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	}
 
   	if( !bt.GenerateMaxTrueABVList( abvList ) ) {
-		cout << "CA::AA: error in GenerateMaxTrueABVList" << endl;
+		std::cout << "CA::AA: error in GenerateMaxTrueABVList" << std::endl;
 		reqList.Rewind( );
 		while( reqList.Next( currReq ) ) {
 			if( currReq ) {
@@ -1958,7 +1952,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 
 	List< AttributeExplain> attrExplains;
 	AttributeExplain *currAttrExplain;
-	string refdAttr = "";
+	std::string refdAttr = "";
 	Interval *ival = NULL;
 	refdAttrs.Rewind( );
 	int i = 0;
@@ -2002,7 +1996,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 	}
 
 	if( !caExplain.Init( undefAttrs, attrExplains ) ) {
-		cout << "error with ClassAdExplain::Init" << endl;
+		std::cout << "error with ClassAdExplain::Init" << std::endl;
 		reqList.Rewind( );
 		while( reqList.Next( currReq ) ) {
 			delete currReq;
@@ -2042,7 +2036,7 @@ AnalyzeAttributes( classad::ClassAd *ad, ResourceGroup &rg, ClassAdExplain &caEx
 }
 
 bool ClassAdAnalyzer::
-EqualsIgnoreCase( const string &s1, const string &s2 )
+EqualsIgnoreCase( const std::string &s1, const std::string &s2 )
 {
 	return( strcasecmp( s1.c_str( ), s2.c_str( ) ) == 0 );
 }
@@ -2060,23 +2054,23 @@ bool ClassAdAnalyzer::
 AddConstraint( ValueRange *&vr, Condition *condition )
 {
 	classad::PrettyPrint pp;
-	string buffer;
+	std::string buffer;
 	if( condition == NULL ) {
 		errstm << "Error: passed NULL Condition pointer to AddConstraint"
-			 << endl;
+			 << std::endl;
 		return false;
 	}
 
 	if( vr == NULL ) {
 		errstm << "Error: passed NULL ValueRange pointer to AddConstraint"
-			 << endl;
+			 << std::endl;
 		return false;
 	}
 
 	if( condition->IsComplex( ) && condition->HasMultipleAttrs( ) ) {
-		errstm << "AddConstraint: can't process complex Condition:" << endl;
+		errstm << "AddConstraint: can't process complex Condition:" << std::endl;
 		condition->ToString( buffer );
-		errstm << buffer << endl;
+		errstm << buffer << std::endl;
 		return false;
 	}
 
@@ -2121,15 +2115,15 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 				twoVals = true;
 			}
 			else {
-				errstm << "AddConstraint: can't process complex Condition"<<endl;
+				errstm << "AddConstraint: can't process complex Condition"<< std::endl;
 				pp.Unparse( buffer, val1 );
-				errstm << "val1 is " << buffer << endl;
+				errstm << "val1 is " << buffer << std::endl;
 				buffer = "";
 				pp.Unparse( buffer, val2 );
-				errstm << "val2 is " << buffer << endl;
+				errstm << "val2 is " << buffer << std::endl;
 				buffer = "";
                 condition->ToString( buffer );
-                errstm << buffer << endl;
+                errstm << buffer << std::endl;
                 return false;
 			}
 //			}
@@ -2214,7 +2208,7 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 			}
 			else {
 				errstm << "AddConstraint: error: boolean value expected"
-					 << endl;
+					 << std::endl;
 				return false;
 			}
 		}
@@ -2275,9 +2269,9 @@ AddConstraint( ValueRange *&vr, Condition *condition )
 		}
 		return true;
 		default: {
-			string expr;
+			std::string expr;
 			condition->ToString(expr);
-			errstm << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << endl;
+			errstm << "AddConstraint: Condition value not literal: '" << val << "' in '" << expr << "'" << std::endl;
 			return false;
 		}
 		}
@@ -2445,7 +2439,7 @@ bool ClassAdAnalyzer::
 PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 {
 	if( !expr ) {
-		errstm << "PD error: null expr" << endl; 
+		errstm << "PD error: null expr" << std::endl; 
 		return false;
 	}
 
@@ -2472,7 +2466,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 		}
 		else if( !( result=classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
 													 result, NULL, NULL ) ) ) {
-			errstm << "PD error: can't make Operation" << endl;
+			errstm << "PD error: can't make Operation" << std::endl;
 			return false;
 		}
 		else {
@@ -2497,7 +2491,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 		!newLeft || !newRight ||
 		!( result = classad::Operation::MakeOperation( classad::Operation::LOGICAL_OR_OP,
 											  newLeft, newRight, NULL ) ) ) {
-		errstm << "PD error: can't make Operation" << endl;
+		errstm << "PD error: can't make Operation" << std::endl;
 		return false;
 	}
 	return true;
@@ -2506,7 +2500,7 @@ PruneDisjunction( classad::ExprTree *expr, classad::ExprTree *&result )
 bool ClassAdAnalyzer::
 PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 	if( !expr ) {
-		errstm << "PC error: null expr" << endl; 
+		errstm << "PC error: null expr" << std::endl; 
 		return false;
 	}
 
@@ -2533,7 +2527,7 @@ PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 		}
 		else if( !( result=classad::Operation::MakeOperation( classad::Operation::PARENTHESES_OP,
 													 result, NULL, NULL ) ) ) {
-			errstm << "PC error: can't make Operation" << endl;
+			errstm << "PC error: can't make Operation" << std::endl;
 			return false;
 		}
 		else {
@@ -2562,7 +2556,7 @@ PruneConjunction( classad::ExprTree *expr, classad::ExprTree *&result ) {
 		!newLeft || !newRight  ||
 		!( result = classad::Operation::MakeOperation( classad::Operation::LOGICAL_AND_OP,
 											  newLeft, newRight, NULL ) ) ) {
-		errstm << "PC error: can't Make Operation" << endl;
+		errstm << "PC error: can't Make Operation" << std::endl;
 		return false;
 	}
 	return true;
@@ -2572,7 +2566,7 @@ bool ClassAdAnalyzer::
 PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 {
 	if( !expr ) {
-		errstm << "PA error: null expr" << endl; 
+		errstm << "PA error: null expr" << std::endl; 
 		return false;
 	}
 
@@ -2581,7 +2575,7 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 	classad::ExprTree *left, *right, *junk;
 	classad::Value val;
 	bool boolValue;
-	string attr;
+	std::string attr;
 
 	kind = expr->GetKind( );
 
@@ -2594,12 +2588,12 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 
 	if( op == classad::Operation::PARENTHESES_OP ) {
 		if( !PruneAtom( left, result ) ) {
-			errstm << "PA error: problem with expression in parens" << endl;
+			errstm << "PA error: problem with expression in parens" << std::endl;
 			return false;
 		}
 		else if( !( result=classad::Operation::MakeOperation(classad::Operation::PARENTHESES_OP, 
 													result, NULL, NULL ) ) ) {
-			errstm << "PA error: can't make Operation" << endl;
+			errstm << "PA error: can't make Operation" << std::endl;
 			return false;
 		}
 		else {
@@ -2616,14 +2610,14 @@ PruneAtom( classad::ExprTree *expr, classad::ExprTree *&result )
 	}
 
 	if( left == NULL || right == NULL ) {
-		errstm << "PA error: NULL ptr in expr" << endl;
+		errstm << "PA error: NULL ptr in expr" << std::endl;
 			// error: NULL ptr in expr
 		return false;
 	}
 
 	if( !( result = classad::Operation::MakeOperation( op, left->Copy( ), right->Copy(),
 											  NULL ) ) ) {
-		errstm << "PA error: can't make Operation" << endl;
+		errstm << "PA error: can't make Operation" << std::endl;
 		return false;
 	}
 
@@ -2635,7 +2629,7 @@ bool ClassAdAnalyzer::
 InDNF( classad::ExprTree * tree )
 {
 	if( tree == NULL ) {
-		errstm << "InDNF: tried to pass null pointer" << endl;
+		errstm << "InDNF: tried to pass null pointer" << std::endl;
 		return false;
 	}
 
@@ -2675,7 +2669,7 @@ bool ClassAdAnalyzer::
 IsAtomicBooleanFormula( classad::Operation *tree )
 {
 	if( tree == NULL ) {
-		errstm << "IsAtomicBooleanFormula: tried to pass null pointer" << endl;
+		errstm << "IsAtomicBooleanFormula: tried to pass null pointer" << std::endl;
 		return false;
 	}
 
@@ -2688,7 +2682,7 @@ bool ClassAdAnalyzer::
 PropagateNegation( classad::ExprTree *tree, classad::ExprTree *&result )
 {
 	if( tree == NULL ) {
-		errstm << "PropagateNegation: tried to pass null pointer" << endl;
+		errstm << "PropagateNegation: tried to pass null pointer" << std::endl;
 		return false;
 	}
 
@@ -2701,7 +2695,7 @@ bool ClassAdAnalyzer::
 ToDNF( classad::ExprTree *tree, classad::ExprTree *&result )
 {
 	if( tree == NULL ) {
-		errstm << "ToDNF: tried to pass null pointer" << endl;
+		errstm << "ToDNF: tried to pass null pointer" << std::endl;
 		return false;
 	}
 		// FINISH THIS CODE

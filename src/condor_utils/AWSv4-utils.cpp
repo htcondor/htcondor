@@ -113,7 +113,7 @@ AWSv4Impl::convertMessageDigestToLowercaseHex(
 	ASSERT( buffer );
 	char * ptr = buffer;
 	for( unsigned int i = 0; i < mdLength; ++i, ptr += 2 ) {
-		sprintf( ptr, "%02x", messageDigest[i] );
+		snprintf( ptr, 3, "%02x", messageDigest[i] );
 	}
 	hexEncoded.assign( buffer, mdLength * 2 );
 	free(buffer);

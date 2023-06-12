@@ -53,10 +53,6 @@ if (WITH_MUNGE)
 
 	endif(NOT PROPER)
 
-	if( DLOPEN_SECURITY_LIBS )
-		set( MUNGE_FOUND "" CACHE STRING "Munge Found" FORCE )
-	endif()
-
 	message( STATUS "external configured (MUNGE_FOUND=${MUNGE_FOUND})" )
 	set( HAVE_EXT_MUNGE ON PARENT_SCOPE )
 	set( MUNGE_FOUND ${MUNGE_FOUND} PARENT_SCOPE )

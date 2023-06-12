@@ -351,25 +351,7 @@ Resource::~Resource()
 	}
 #endif /* HAVE_JOB_HOOKS */
 
-		// Note on "&& !m_currently_fetching": A DYNAMIC slot will
-		// defer its destruction while it is waiting on a fetch work
-		// hook. The only time when a slot with a parent will be
-		// destroyed while waiting on a hook is during
-		// shutdown. During shutdown there is no need to give
-		// resources back to the parent slot, and doing so may
-		// actually be dangerous if our parent was deleted first.
-
-		// If we have a parent, return our resources to it
-	if( m_parent && !m_currently_fetching ) {
-		r_attr->unbind_DevIds(r_id, r_sub_id);
-		*(m_parent->r_attr) += *(r_attr);
-		m_parent->m_id_dispenser->insert( r_sub_id );
-		m_parent->refresh_classad_resources();
-		m_parent->update_needed(wf_dslotDelete);
-		// TODO: fold this code in to update_needed ?
-		resmgr->res_conflict_change(m_parent, true);
-		m_parent = NULL;
-	}
+	clear_parent();
 
 	if( m_id_dispenser ) {
 		delete m_id_dispenser;
@@ -398,6 +380,30 @@ Resource::~Resource()
 
 }
 
+void
+Resource::clear_parent()
+{
+	// Note on "&& !m_currently_fetching": A DYNAMIC slot will
+	// defer its destruction while it is waiting on a fetch work
+	// hook. The only time when a slot with a parent will be
+	// destroyed while waiting on a hook is during
+	// shutdown. During shutdown there is no need to give
+	// resources back to the parent slot, and doing so may
+	// actually be dangerous if our parent was deleted first.
+
+	// If we have a parent, return our resources to it
+	if( m_parent && !m_currently_fetching ) {
+		r_attr->unbind_DevIds(r_id, r_sub_id);
+		*(m_parent->r_attr) += *(r_attr);
+		m_parent->m_id_dispenser->insert( r_sub_id );
+		m_parent->refresh_classad_resources();
+		m_parent->update_needed(wf_dslotDelete);
+		// TODO: fold this code in to update_needed ?
+		resmgr->res_conflict_change(m_parent, true);
+		m_parent = NULL;
+		set_feature( BROKEN_SLOT );
+	}
+}
 
 void
 Resource::set_parent( Resource* rip )
@@ -1576,6 +1582,7 @@ Resource::do_update( void )
 
 		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
+		delete workingCollectors;
 	} 
 
 	// We _must_ reset update_tid to -1 before we return so
@@ -3073,7 +3080,10 @@ void Resource::reconfig_latches()
 		if (r_config_classad) {
 			classad::ExprTree* expr = r_config_classad->Lookup(attr);
 			if ( ! expr) {
-				dprintf(D_STATUS, "Warning : Latch expression %s not found in config\n", attr);
+				// TODO: figure out a better way to do this...
+				if (YourStringNoCase(ATTR_NUM_DYNAMIC_SLOTS) != attr) {
+					dprintf(D_FULLDEBUG, "Warning : Latch expression %s not found in config\n", attr);
+				}
 			} else {
 				classad::Value val;
 				publish_value = ! ExprTreeIsLiteral(expr, val);

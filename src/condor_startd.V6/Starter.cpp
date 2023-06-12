@@ -505,6 +505,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	// remember that we have reaped this starter.
 	s_was_reaped = true;
 	s_exit_status = status;
+	bool abnormal_exit = WIFSIGNALED(status) || status != 0;
 
 	ClassAd *jobAd = NULL;
 	ClassAd dummyAd; // used then claim is NULL
@@ -522,7 +523,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
-		dummyAd.Assign(ATTR_Q_DATE, (int)s_birthdate);
+		dummyAd.Assign(ATTR_Q_DATE, s_birthdate);
 		dummyAd.Assign(ATTR_JOB_PRIO, 0);
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
@@ -569,19 +570,25 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		// If we created the parent execute directory (say for filesystem
 		// encryption), then clean that up, too.
 	ASSERT( executeDir() );
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 
 #ifdef LINUX
-        if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
 		auto &slot_name = claim->rip()->r_id_str;
+		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
-                if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
-				slot_name, err.getFullText().c_str());
+		if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+			if (abnormal_exit) {
+				dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
+					slot_name, err.getFullText().c_str());
+			}
 		}
-        }
+	} else {
+		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
+	}
+#else
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 #endif // LINUX
-	
+
 }
 
 
@@ -724,7 +731,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	if (append != APPEND_NOTHING) {
 		args.AppendArg("-a");
 		switch (append) {
-		case APPEND_CLUSTER: args.AppendArg(claim->cluster()); break;
+		case APPEND_CLUSTER: args.AppendArg(std::to_string(claim->cluster())); break;
 
 		case APPEND_JOBID: {
 			std::string jobid;

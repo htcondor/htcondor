@@ -83,7 +83,7 @@ protected:
 	// attributes and the type for each attribute.
 	virtual bool CreateVirshConfigFile(const char* filename);
 
-	SimpleList<XenDisk*> m_disk_list;
+	std::vector<XenDisk*> m_disk_list;
 
 	std::string m_xen_cdrom_device;
 	std::string m_suspendfile;

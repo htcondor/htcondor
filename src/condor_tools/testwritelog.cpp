@@ -42,7 +42,6 @@
 #include "daemon.h"
 #include "condor_distribution.h"
 #include "basename.h" // for condor_basename 
-#include "extArray.h"
 #include "link.h"
 #include "shared_port_endpoint.h"
 #include "file_lock.h"
@@ -73,7 +72,6 @@ int 			Range;				// are Min and Max different
 unsigned int 	Seed;				// srand seed
 int    			rtime;
 int				rsleep;
-time_t 			sleeptime;			// Cast to this for sleep
 char        	*ValidSpoolFiles;   // well known files in the spool dir
 char        	*InvalidLogFiles;   // files we know we want to delete from log
 bool			LogFlag;			// true if we should set the log file name
@@ -169,7 +167,6 @@ main( int /*argc*/, char *argv[] )
 				SleepFlag = true;
 				argv++;
 				SleepTime = atoi(*argv);
-				sleeptime = (time_t)SleepTime;
 				//fprintf( stderr, "sleep requested: %d\n", SleepTime );
 				break;
 
@@ -230,7 +227,7 @@ main( int /*argc*/, char *argv[] )
 	srand(Seed);
 	while(DataCount > 0) {
 		if(SleepFlag) {
-			sleep(sleeptime);
+			sleep(SleepTime);
 		}
 		if(RandomRangeFlag) {
 			rtime = rand();
@@ -239,9 +236,9 @@ main( int /*argc*/, char *argv[] )
 			//fprintf(stderr,"Mod %d yielded %d\n",Range,rtime);
 			rsleep = Min + rtime;
 			//fprintf(stderr,"Min:%d and rtime:%d yields:%d\n",Min, rtime, rsleep);
-			sleeptime = rsleep;
+			SleepTime = rsleep;
 			//fprintf(stderr,"Random sleep time %d\n", rsleep);
-			sleep(sleeptime);
+			sleep(SleepTime);
 		}
 		if(WriterFlag) {
     		dprintf( D_ALWAYS, "%s,%d,%s\n", WriterMark, DataCount, FillData);

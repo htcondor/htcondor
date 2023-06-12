@@ -126,7 +126,7 @@ int TimerManager::NewTimer(Service* s, unsigned deltawhen,
 		return -1;
 	}
 
-    if (daemonCore) {
+    if (daemonCore && event_descrip) {
        daemonCore->dc_stats.NewProbe("Timer", event_descrip, AS_COUNT | IS_RCT | IF_NONZERO | IF_VERBOSEPUB);
     }
 
@@ -267,7 +267,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
 				timer_ptr->period,
 				period,
-				(int)timer_ptr->when - (int)old_when);
+				(int)(timer_ptr->when - old_when));
 	} else {
 		timer_ptr->period_started = time(NULL);
 		if ( when == TIMER_NEVER ) {
@@ -489,7 +489,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 			}
 		}
 
-		if (pruntime) {           
+		if (pruntime && in_timeout->event_descrip) {
 			*pruntime = daemonCore->dc_stats.AddRuntime(in_timeout->event_descrip, *pruntime);
 		}
 

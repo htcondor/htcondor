@@ -497,7 +497,7 @@ BASIC COMMANDS
     environment variables that the user had at submit time. Defaults to
     ``False``.  A wholesale import of the user's environment is very likely to lead
     to problems executing the job on a remote machine unless there is a shared 
-    file system for users' home directories between the submit machine and execute machine.
+    file system for users' home directories between the access point and execute machine.
     So rather than setting getenv to ``True``, it is much better to set it to a list
     of environment variables to import. 
 
@@ -563,7 +563,7 @@ BASIC COMMANDS
     **log** entry is specified, HTCondor does not create a log for this
     cluster. If a relative path is specified, it is relative to the
     current working directory as the job is submitted or the directory
-    specified by submit command **initialdir** on the submit machine.
+    specified by submit command **initialdir** on the access point.
 
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
     :index:`notification<single: notification; submit commands>`
@@ -934,7 +934,7 @@ COMMANDS FOR MATCHMAKING
 
     For scheduler and local universe jobs, the requirements expression
     is evaluated against the ``Scheduler`` ClassAd which represents the
-    the *condor_schedd* daemon running on the submit machine, rather
+    the *condor_schedd* daemon running on the access point, rather
     than a remote machine. Like all commands in the submit description
     file, if multiple requirements commands are present, all but the
     last one are ignored. By default, *condor_submit* appends the
@@ -961,7 +961,7 @@ COMMANDS FOR MATCHMAKING
     #. Memory >= RequestMemory, if the job ClassAd attribute
        ``RequestMemory`` is defined.
     #. If Universe is set to Vanilla, FileSystemDomain is set equal to
-       the submit machine's FileSystemDomain.
+       the access point's FileSystemDomain.
 
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
@@ -1097,7 +1097,7 @@ FILE TRANSFER COMMANDS
     subset of output files as specified by the submit command
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
     The plug-in does the transfer of files, and no files are sent back
-    to the submit machine. The HTCondor Administrator's manual has full
+    to the access point. The HTCondor Administrator's manual has full
     details.
 
     :index:`should_transfer_files<single: should_transfer_files; submit commands>`
@@ -1113,7 +1113,7 @@ FILE TRANSFER COMMANDS
     equal to *YES* will cause HTCondor to always transfer files for the
     job. *NO* disables HTCondor's file transfer mechanism. *IF_NEEDED*
     will not transfer files for the job if it is matched with a resource
-    in the same ``FileSystemDomain`` as the submit machine (and
+    in the same ``FileSystemDomain`` as the access point (and
     therefore, on a machine with the same shared file system). If the
     job is matched with a remote resource in a different
     ``FileSystemDomain``, HTCondor will transfer the necessary files.
@@ -1285,7 +1285,7 @@ FILE TRANSFER COMMANDS
  transfer_output_files = < file1,file2,file... >
     This command forms an explicit list of output files and directories
     to be transferred back from the temporary working directory on the
-    execute machine to the submit machine. If there are multiple files,
+    execute machine to the access point. If there are multiple files,
     they must be delimited with commas. Setting
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
     to the empty string ("") means that no files are to be transferred.
@@ -1303,7 +1303,7 @@ FILE TRANSFER COMMANDS
 
     For grid universe jobs other than with grid type **condor**, to have
     files other than standard output and standard error transferred from
-    the execute machine back to the submit machine, do use
+    the execute machine back to the access point, do use
     **transfer_output_files**, listing all files to be transferred.
     These files are found on the execute machine in the working
     directory of the job.
@@ -2139,11 +2139,11 @@ COMMANDS FOR THE GRID
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
-    remote machine back to the submit machine. The name of the file
+    remote machine back to the access point. The name of the file
     after transfer is given by the
     **error** :index:`error<single: error; submit commands>` command. If
     ``False``, no transfer takes place (from the remote machine to
-    submit machine), and the name of the file is given by the
+    access point), and the name of the file is given by the
     **error** :index:`error<single: error; submit commands>` command. The
     default value is ``True``.
 
@@ -2166,11 +2166,11 @@ COMMANDS FOR THE GRID
  transfer_output = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     output (from ``stdout``) from the job is transferred from the remote
-    machine back to the submit machine. The name of the file after
+    machine back to the access point. The name of the file after
     transfer is given by the
     **output** :index:`output<single: output; submit commands>` command. If
     ``False``, no transfer takes place (from the remote machine to
-    submit machine), and the name of the file is given by the
+    access point), and the name of the file is given by the
     **output** :index:`output<single: output; submit commands>` command. The
     default value is ``True``.
 
@@ -2924,6 +2924,12 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
+    :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
+ ulog_execute_attrs = <attribute-list>
+    A comma-seperated list of machine ClassAd attribute names. The named
+    attributes and their values are written as part of the execution event
+    in the job event log.
+
     :index:`use_oauth_services<single: use_oauth_services; submit commands>`
  use_oauth_services = <list of credential service names>
     A comma-separated list of credential-providing service names for
@@ -2944,10 +2950,13 @@ ADVANCED COMMANDS
     provided to differentiate between multiple credentials from the same
     credential service provider.
 
- +<attribute> = <value>
-    A line that begins with a '+' (plus) character instructs
-    *condor_submit* to insert the given *attribute* into the job
-    ClassAd with the given *value*. Note that setting an attribute
+ MY.<attribute> = <value> or +<attribute> = <value>
+    A macro that begins with MY. or a line that begins with a '+' (plus) character instructs
+    *condor_submit* to insert the given *attribute* (without + or MY.) into the job
+    ClassAd with the given *value*. The macro can be referenced in other submit statements
+    by using ``$(MY.<attribute>)``. A +<attribute> is converted to MY.<attribute> when the file is read.
+
+    Note that setting an job attribute in this way
     should not be used in place of one of the specific commands listed
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
@@ -2971,14 +2980,15 @@ and comments.
 
                 <macro_name> = <string>
 
-    Two pre-defined macros are supplied by the submit description file
+    Several pre-defined macros are supplied by the submit description file
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. These
-    macros are intended to aid in the specification of input/output
+    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
+    These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
     be used to supply an HTCondor process with its own cluster and
     process numbers on the command line.
@@ -3214,6 +3224,9 @@ will not be modified during
  Process
     Alternate name for the ProcId submit variable. Before HTCondor
     version 8.4 this was the only name.
+ JobId
+    Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
+    id of the job.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is

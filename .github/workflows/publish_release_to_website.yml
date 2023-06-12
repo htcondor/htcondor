@@ -5,7 +5,7 @@ on:
 
 jobs:
   Publish-Release-To-Website:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     env:
       publish_path: _data/releases/
       publish_branch: master

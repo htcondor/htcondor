@@ -59,6 +59,7 @@
 #include "zkm_base64.h"
 
 #include <algorithm>
+#include <charconv>
 #include <string>
 #include <set>
 
@@ -227,7 +228,6 @@ static char OneString[] = "1", ZeroString[] = "0";
 //static char ParallelNodeString[] = "#pArAlLeLnOdE#";
 static char UnsetString[] = "";
 
-
 static condor_params::string_value ArchMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysVerMacroDef = { UnsetString, 0 };
@@ -268,6 +268,10 @@ static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
 // The same for CPUs.
 static char rec[] = "$(RequestCPUs)";
 static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
+// a convenience so you can use $(JobId) in your submit description
+static char jid[] = "$(ClusterId).$(ProcId)";
+static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
@@ -323,6 +327,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
+	{ "JobId",     &JobIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
@@ -467,7 +472,7 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 	sv->psz = &times[8];
 
 	// set SUBMIT_TIME macro value
-	sprintf(&times[12], "%lu", (unsigned long)stime);
+	{ auto [p, ec] = std::to_chars(&times[12], &times[23], (unsigned long) stime); *p = '\0';}
 	sv = allocate_live_default_string(SubmitMacroSet, UnliveSubmitTimeMacroDef, 0);
 	sv->psz = &times[12];
 }
@@ -563,7 +568,7 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_P
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -580,7 +585,7 @@ void SubmitHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -727,7 +732,7 @@ int SubmitHash::check_and_universalize_path( std::string &path )
 	result = 0;
 	volume[0] = '\0';
 	if ( path[0] && (path[1]==':') ) {
-		sprintf(volume,"%c:",path[0]);
+		snprintf(volume,sizeof(volume),"%c:",path[0]);
 	}
 
 	if (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))
@@ -1318,8 +1323,8 @@ int SubmitHash::SetJavaVMArgs()
 	RETURN_IF_ABORT();
 
 	ArgList args;
-	MyString error_msg;
-	MyString value;
+	std::string error_msg;
+	std::string value;
 	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
 	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
 		// NOTE: no ATTR_JOB_JAVA_VM_ARGS2 in the following,
@@ -1350,10 +1355,10 @@ int SubmitHash::SetJavaVMArgs()
 	bool args_success = true;
 
 	if(args2) {
-		args_success = args.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_JAVA_VM_ARGS1) || job->Lookup(ATTR_JOB_JAVA_VM_ARGS2)) {
 		return 0;
 	}
@@ -1370,13 +1375,13 @@ int SubmitHash::SetJavaVMArgs()
 	// in the case when we are dumping to a file.
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if( MyCondorVersionRequiresV1 ) {
-		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(value, error_msg);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS1, value.c_str());
 		}
 	}
 	else {
-		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(value);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS2, value.c_str());
 		}
@@ -1398,7 +1403,7 @@ int SubmitHash::SetJavaVMArgs()
 
 int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
 {
-	MyString strPathname;
+	std::string strPathname;
 	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
@@ -1425,9 +1430,9 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
 	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		strPathname.replaceString("#MpInOdE#", "0");
+		replace_str(strPathname, "#MpInOdE#", "0");
 	} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
-		strPathname.replaceString("#pArAlLeLnOdE#", "0");
+		replace_str(strPathname, "#pArAlLeLnOdE#", "0");
 	}
 
 
@@ -1632,7 +1637,7 @@ public:
 	bool m_env1=false;
 	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
-	bool operator()( const MyString &var, const MyString &val ) {
+	bool operator()( const std::string &var, const std::string &val ) {
 		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
 			// We silently filter out anything that is not expressible
 			// in the 'environment1' syntax.  This avoids breaking
@@ -1708,14 +1713,14 @@ int SubmitHash::SetEnvironment()
 	// are not already set in the envobject
 	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
 	if (envlist) {
-		if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
-			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
-			ABORT_AND_RETURN(1);
-		}
 		// getenv can be a boolean, or it can be a whitelist/blacklist
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
+				if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
+					push_error(stderr, "\ngetenv = true command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
+					ABORT_AND_RETURN(1);
+				}
 				SubmitHashEnvFilter envFilter(env1 && !env2);
 				env.Import(envFilter);
 			}
@@ -1755,9 +1760,9 @@ int SubmitHash::SetEnvironment()
 	if(insert_env2 && ad_contains_env1) insert_env1 = true;
 
 	if (insert_env1) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 		std::string msg;
-		env_success = env.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		env_success = env.getDelimitedStringV1Raw(newenv_raw, &msg);
 		if(!env_success) {
 			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
 			ABORT_AND_RETURN(1);
@@ -1843,7 +1848,7 @@ int SubmitHash::SetTDP()
 	}
 
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 	ArgList args;
 
 	if(tdp_args1_ext && tdp_args1) {
@@ -1863,10 +1868,10 @@ int SubmitHash::SetTDP()
 	}
 
 	if( tdp_args2 ) {
-		args_success = args.AppendArgsV2Quoted(tdp_args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(tdp_args2, error_msg);
 	}
 	else if( tdp_args1 ) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1, error_msg);
 	} else if (job->Lookup(ATTR_TOOL_DAEMON_ARGS1) || job->Lookup(ATTR_TOOL_DAEMON_ARGS2)) {
 		return 0;
 	}
@@ -1879,16 +1884,16 @@ int SubmitHash::SetTDP()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString args_value;
+	std::string args_value;
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(args_value, error_msg);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS1, args_value.c_str());
 		}
 	}
 	else if(args.Count()) {
-		args_success = args.GetArgsStringV2Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(args_value);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS2, args_value.c_str());
 		}
@@ -2313,7 +2318,6 @@ int SubmitHash::SetLeaveInQueue()
 int SubmitHash::SetNoopJob()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	auto_free_ptr noop(submit_param(SUBMIT_KEY_Noop, ATTR_JOB_NOOP));
 	if (noop) {
@@ -3757,7 +3761,6 @@ int SubmitHash::SetNotifyUser()
 {
 	RETURN_IF_ABORT();
 	bool needs_warning = false;
-	MyString buffer;
 
 	char *who = submit_param( SUBMIT_KEY_NotifyUser, ATTR_NOTIFY_USER );
 
@@ -3797,7 +3800,6 @@ int SubmitHash::SetEmailAttributes()
 
 		if ( !attr_list.isEmpty() ) {
 			char *tmp;
-			MyString buffer;
 
 			tmp = attr_list.print_to_string();
 			AssignJobString(ATTR_EMAIL_ATTRIBUTES, tmp);
@@ -3817,7 +3819,6 @@ int SubmitHash::SetEmailAttributes()
 int SubmitHash::SetCronTab()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 		//
 		// For convienence I put all the attributes in array
 		// and just run through the ad looking for them
@@ -3886,7 +3887,7 @@ int SubmitHash::SetArguments()
 	char    *args2 = submit_param( SUBMIT_KEY_Arguments2 );
 	bool allow_arguments_v1 = submit_param_bool( SUBMIT_CMD_AllowArgumentsV1, NULL, false );
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3897,10 +3898,10 @@ int SubmitHash::SetArguments()
 	}
 
 	if(args2) {
-		args_success = arglist.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = arglist.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_ARGUMENTS1) || job->Lookup(ATTR_JOB_ARGUMENTS2)) {
 		return 0;
 	}
@@ -3915,14 +3916,14 @@ int SubmitHash::SetArguments()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString value;
+	std::string value;
 	bool MyCondorVersionRequiresV1 = arglist.InputWasV1() || arglist.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV1Raw(value, error_msg);
 		AssignJobString(ATTR_JOB_ARGUMENTS1, value.c_str());
 	}
 	else {
-		args_success = arglist.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV2Raw(value);
 		AssignJobString(ATTR_JOB_ARGUMENTS2, value.c_str());
 	}
 
@@ -4309,13 +4310,13 @@ int SubmitHash::SetRemoteAttrs()
 					strcasecmp(key, item.job_expr)) {
 					continue;
 				}
-				MyString key1 = preremote + item.submit_expr;
-				MyString key2 = preremote + item.special_expr;
-				MyString key3 = preremote + item.job_expr;
-				const char * ckey1 = key1.Value();
-				const char * ckey2 = key2.Value();
+				std::string key1 = preremote + item.submit_expr;
+				std::string key2 = preremote + item.special_expr;
+				std::string key3 = preremote + item.job_expr;
+				const char * ckey1 = key1.c_str();
+				const char * ckey2 = key2.c_str();
 				if(item.special_expr == NULL) { ckey2 = NULL; }
-				const char * ckey3 = key3.Value();
+				const char * ckey3 = key3.c_str();
 				char * val = submit_param(ckey1, ckey2);
 				if( val == NULL ) {
 					val = submit_param(ckey3);
@@ -4365,12 +4366,23 @@ static const char * check_docker_image(char * docker_image)
 	return docker_image;
 }
 
-static const char * check_container_image(char * container_image)
+static const char * check_container_image(char * container_image, bool &valid)
 {
 	// trim leading & trailing whitespace and remove surrounding "" if any.
 	container_image = trim_and_strip_quotes_in_place(container_image);
 
-	// TODO: add code here to validate docker image argument (if possible)
+	std::array<std::string, 3> invalid_prefixes {"instance://", "library://", "shub://"};
+	for (auto &prefix : invalid_prefixes) {
+		std::string image_str = container_image ? container_image : "";
+		if (image_str.starts_with(prefix)) {
+			valid = false;
+			return container_image;
+		}
+	}
+
+	if (container_image == nullptr) {
+		valid = false;
+	}
 	return container_image;
 }
 
@@ -4427,9 +4439,10 @@ int SubmitHash::SetExecutable()
 		}
 		auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 		if (container_image) {
-			const char * image = check_container_image(container_image.ptr());
-			if (! image || ! image[0]) {
-				push_error(stderr, "'%s' is not a valid container_image\n", container_image.ptr());
+					   bool valid = true;
+					   const char * image = check_container_image(container_image.ptr(), valid);
+					   if (! image || ! image[0] || !valid) {
+							   push_error(stderr, "'%s' is not a valid container image\n", container_image.ptr());
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobString(ATTR_CONTAINER_IMAGE, image);
@@ -4672,25 +4685,30 @@ int SubmitHash::SetUniverse()
 			} else {
 
 				// Otherwise, guess container image type from container image string
-				ContainerImageType image_type = image_type_from_string(container_image.ptr());
-				switch (image_type) {
-					case ContainerImageType::DockerRepo:
-						AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
-						break;
-					case ContainerImageType::SIF:
-						AssignJobVal(ATTR_WANT_SIF,true);
-						break;
-					case ContainerImageType::SandboxImage:
-						AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
-						break;
-					case ContainerImageType::Unknown:
+				if (container_image) {
+					ContainerImageType image_type = image_type_from_string(container_image.ptr());
+					switch (image_type) {
+						case ContainerImageType::DockerRepo:
+							AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+							break;
+						case ContainerImageType::SIF:
+							AssignJobVal(ATTR_WANT_SIF,true);
+							break;
+						case ContainerImageType::SandboxImage:
+							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+							break;
+						default:
+							// Hope for the best...
+							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+					}
+				} else {
 						push_error(stderr, SUBMIT_KEY_ContainerImage
-								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+								" must be defined for container universe jobs.\n");
 						ABORT_AND_RETURN(1);
+					}
 				}
 			}
-		}
-		return 0;
+			return 0;
 	}
 
 	// "globus" or "grid" universe
@@ -4839,6 +4857,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_KeepClaimIdle, ATTR_JOB_KEEP_CLAIM_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobAdInformationAttrs, ATTR_JOB_AD_INFORMATION_ATTRS, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_ULogExecuteEventAttrs, ATTR_ULOG_EXECUTE_EVENT_ATTRS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
@@ -6333,7 +6352,7 @@ int SubmitHash::SetRequirements()
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
 				// xferplugs is of the form "TAR=mytarplugin; HTTP,HTTPS=myhttplugin"
-				StringTokenIterator plugs(xferplugs.c_str(), 100, ";");
+				StringTokenIterator plugs(xferplugs.c_str(), ";");
 				for (const char * plug = plugs.first(); plug != NULL; plug = plugs.next()) {
 					const char * colon = strchr(plug, '=');
 					if (colon) {
@@ -6383,6 +6402,15 @@ int SubmitHash::SetRequirements()
 								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 							}
 						}
+					}
+				}
+
+				// check container image
+				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
+				if (container_image) {
+					if (IsUrl(container_image.ptr())) {
+						std::string tag = getURLType(container_image.ptr(), true);
+						if (!jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
 
@@ -6594,9 +6622,9 @@ int SubmitHash::SetAccountingGroup()
 		if (!group) {
 			group.set(param("NICE_USER_ACCOUNTING_GROUP_NAME"));
 		} else {
-			MyString nicegroup;
+			std::string nicegroup;
 			param(nicegroup, "NICE_USER_ACCOUNTING_GROUP_NAME");
-			if (nicegroup != group) {
+			if (nicegroup != group.ptr()) {
 				if ( ! nice_user_is_prefix) {
 					push_warning(stderr,
 						SUBMIT_KEY_NiceUser " conflicts with "  SUBMIT_KEY_AcctGroup ". "
@@ -6605,7 +6633,7 @@ int SubmitHash::SetAccountingGroup()
 					// append accounting group to nice-user group
 					nicegroup += ".";
 					nicegroup += group.ptr();
-					group.set(nicegroup.StrDup());
+					group.set(strdup(nicegroup.c_str()));
 				}
 			}
 		}
@@ -6933,13 +6961,23 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 				return 0;
 			}
 		}
+	} else {
+		return 0;
+	}
+
+	// don't xfer if URL proto is on known never xfer list
+	std::array<std::string, 2> neverTransferPrefixes {"docker://", "oras://" };
+	for (auto &prefix : neverTransferPrefixes) {
+		std::string container_image_str = container_image.ptr();
+		if (container_image_str.starts_with(prefix)) {
+			return 0;
+		}
 	}
 
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	struct stat buf;
-	if (container_image.ptr() && (stat(container_image.ptr(), &buf) == 0))  {
+	if (container_image.ptr())  {
 		input_files.append(container_image.ptr());
 		if (accumulate_size_kb) {
 			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
@@ -6991,7 +7029,9 @@ int SubmitHash::process_input_file_list(StringList * input_list, long long * acc
 }
 
 SubmitHash::ContainerImageType 
-SubmitHash::image_type_from_string(const std::string &image) const {
+SubmitHash::image_type_from_string(std::string image) const {
+
+	trim(image);
 	if (starts_with(image, "docker:")) {
 		return SubmitHash::ContainerImageType::DockerRepo;
 	}
@@ -7002,14 +7042,8 @@ SubmitHash::image_type_from_string(const std::string &image) const {
 		return SubmitHash::ContainerImageType::SandboxImage;
 	}
 
-	struct stat buf;
-	if (0 == stat(image.c_str(), &buf)) {
-		if( buf.st_mode & S_IFDIR ) {
-			return SubmitHash::ContainerImageType::SandboxImage;
-		}
-	}
-
-	return SubmitHash::ContainerImageType::Unknown;
+	// assume everything else is a directory
+	return SubmitHash::ContainerImageType::SandboxImage;
 }
 
 // SetTransferFiles also sets a global "should_transfer", which is 
@@ -7051,36 +7085,6 @@ int SubmitHash::SetTransferFiles()
 		free(macro_value); macro_value = NULL;
 	}
 	RETURN_IF_ABORT();
-
-
-#if defined( WIN32 )
-	if (JobUniverse == CONDOR_UNIVERSE_MPI) {
-		// On NT, if we're an MPI job, we need to find the
-		// mpich.dll file and automatically include that in the
-		// transfer input files
-		std::string dll_name("mpich.dll");
-
-		// first, check to make sure the user didn't already
-		// specify mpich.dll in transfer_input_files
-		if (! input_file_list.contains(dll_name.c_str())) {
-			// nothing there yet, try to find it ourselves
-			std::string dll_path = which(dll_name);
-			if (dll_path.length() == 0) {
-				// File not found, fatal error.
-				push_error(stderr, "Condor cannot find the "
-					"\"mpich.dll\" file it needs to run your MPI job.\n"
-					"Please specify the full path to this file in the "
-					"\"transfer_input_files\"\n"
-					"setting in your submit description file.\n");
-				ABORT_AND_RETURN(1);
-			}
-			// If we made it here, which() gave us a real path.
-			// so, now we just have to append that to our list of
-			// files. 
-			input_file_list.append(dll_path.c_str());
-		}
-	}
-#endif /* WIN32 */
 
 	if (process_input_file_list(&input_file_list, pInputFilesSizeKb) > 0) {
 		in_files_specified = true;
@@ -7157,7 +7161,7 @@ int SubmitHash::SetTransferFiles()
 	bool default_should = false;
 	bool default_when;
 	FileTransferOutput_t when_output;
-	MyString err_msg;
+	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
 	// if they didn't check to see if the admin did. 
@@ -7617,8 +7621,8 @@ int SubmitHash::FixupTransferInputFiles()
 			job->Assign(ATTR_TRANSFER_INPUT_FILES,expanded_list.c_str());
 		}
 	} else {
-		MyString err_msg;
-		err_msg.formatstr( "\n%s\n",error_msg.c_str());
+		std::string err_msg;
+		formatstr(err_msg, "\n%s\n",error_msg.c_str());
 		print_wrapped_text( err_msg.c_str(), stderr );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -8087,11 +8091,11 @@ ClassAd* SubmitHash::make_job_ad (
 	FnCheckFile = check_file;
 	CheckFileArg = pv_check_arg;
 
-	strcpy(LiveNodeString,"");
-	(void)sprintf(LiveClusterString, "%d", job_id.cluster);
-	(void)sprintf(LiveProcessString, "%d", job_id.proc);
-	(void)sprintf(LiveRowString, "%d", item_index);
-	(void)sprintf(LiveStepString, "%d", step);
+	LiveNodeString[0] = '\0';
+	{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, job_id.cluster); *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, job_id.proc);    *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveRowString, LiveRowString + 12, item_index);             *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveStepString, LiveStepString + 12, step);                 *p = '\0';}
 
 	// calling this function invalidates the job returned from the previous call
 	delete job; job = NULL;
@@ -8321,11 +8325,11 @@ int qslice::to_string(char * buf, int cch) const {
 	if ( ! (flags&1)) return 0;
 	char * p = sz;
 	*p++  = '[';
-	if (flags&2) { p += sprintf(p,"%d", start); }
+	if (flags&2) { auto [ptr, ec] = std::to_chars(p, p + 12, start); p = ptr;}
 	*p++ = ':';
-	if (flags&4) { p += sprintf(p,"%d", end); }
+	if (flags&4) { auto [ptr, ec] = std::to_chars(p, p + 12, end); p = ptr;}
 	*p++ = ':';
-	if (flags&8) { p += sprintf(p,"%d", step); }
+	if (flags&8) { auto [ptr, ec] = std::to_chars(p, p + 12, step); p = ptr;}
 	*p++ = ']';
 	*p = 0;
 	strncpy(buf, sz, cch); buf[cch-1] = 0;
@@ -9224,7 +9228,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	}
 
 	if (cluster_id > 0) {
-		(void)sprintf(LiveClusterString, "%d", cluster_id);
+		{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, cluster_id); *p = '\0';}
 	} else {
 		skip_knobs.insert("Cluster");
 		skip_knobs.insert("ClusterId");

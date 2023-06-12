@@ -172,7 +172,9 @@ BETTER_ENUM(CONDOR_HOLD_CODE, int,
 	SingularityTestFailed = 45,
 
 	JobDurationExceeded = 46,
-	JobExecuteExceeded = 47
+	JobExecuteExceeded = 47,
+
+	HookShadowPrepareJobFailure = 48
 
 	// NOTE!!! If you add a new hold code here, don't forget to add a commas after all entries but the last!
 	// NOTE!!! If you add a new hold code here, don't forget to update the Appendix in the Manual for Job ClassAds!

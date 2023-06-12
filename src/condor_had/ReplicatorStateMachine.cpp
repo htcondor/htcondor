@@ -842,7 +842,7 @@ ReplicatorStateMachine::replicationTimer( )
     if( m_state == VERSION_REQUESTING ) {
         return ;
     }
-	int currentTime = time( NULL );
+	time_t currentTime = time( NULL );
     /* Killing stuck uploading/downloading processes: allowing downloading/
      * uploading for about several replication intervals only
      */

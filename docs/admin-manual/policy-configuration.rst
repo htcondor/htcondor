@@ -61,8 +61,8 @@ command:
 The ``START`` Expression
 ''''''''''''''''''''''''
 
-The most important expression to the *condor_startd* is the ``START``
-:index:`START` expression. This expression describes the
+The most important expression to the *condor_startd* is the
+:macro:`START` expression. This expression describes the
 conditions that must be met for a machine or slot to run a job. This
 expression can reference attributes in the machine's ClassAd (such as
 ``KeyboardIdle`` and ``LoadAvg``) and attributes in a job ClassAd (such
@@ -111,7 +111,7 @@ reference only machine ClassAd attributes.
 .. note::
     If you have machines with lots of real memory and swap space such
     that the only scarce resource is CPU time, consider defining
-    ``JOB_RENICE_INCREMENT`` :index:`JOB_RENICE_INCREMENT` so that
+    :macro:`JOB_RENICE_INCREMENT` so that
     HTCondor starts jobs on the machine with low priority. Then, further
     configure to set up the machines with:
 
@@ -324,7 +324,7 @@ is described below.
     F
        The machine moves from Matched to Owner if either the ``START``
        expression locally evaluates to FALSE, or if the
-       ``MATCH_TIMEOUT``\ :index:`MATCH_TIMEOUT` timer expires.
+       :macro:`MATCH_TIMEOUT` timer expires.
        This timeout is used to ensure that if a machine is matched with
        a given *condor_schedd*, but that *condor_schedd* does not
        contact the *condor_startd* to claim it, that the machine will
@@ -350,7 +350,7 @@ is described below.
 
        -  The *condor_schedd* that has claimed the machine has no more
           work to perform and releases the claim
-       -  The ``PREEMPT`` expression evaluates to ``True`` (which
+       -  The :macro:`PREEMPT` expression evaluates to ``True`` (which
           usually means the resource owner has started using the machine
           again and is now using the keyboard, mouse, CPU, etc.)
        -  The *condor_startd* receives a *condor_vacate* command
@@ -378,7 +378,7 @@ is described below.
        The resource will move from Backfill to Owner for the following
        reasons:
 
-       -  The ``EVICT_BACKFILL`` expression evaluates to TRUE
+       -  The :macro:`EVICT_BACKFILL` expression evaluates to TRUE
        -  The *condor_startd* receives a *condor_vacate* command
        -  The *condor_startd* is being shutdown
 
@@ -420,8 +420,8 @@ which the *condor_schedd* sends keep alive updates to all
 *condor_startd*. Updates are UDP packets.
 
 Initially, as when the *condor_schedd* starts up, the alive interval
-starts at the value set by the configuration variable ``ALIVE_INTERVAL``
-:index:`ALIVE_INTERVAL`. It may be modified when a job is started.
+starts at the value set by the configuration variable
+:macro:`ALIVE_INTERVAL`. It may be modified when a job is started.
 The job's ClassAd attribute ``JobLeaseDuration`` is checked. If the
 value of ``JobLeaseDuration/3`` is less than the current alive interval,
 then the alive interval is set to either this lower value or the imposed
@@ -471,7 +471,7 @@ The following list describes all the possible state/activity pairs.
     Benchmarking
        The machine is running benchmarks to determine the speed on this
        machine. This activity only occurs in the Unclaimed state. How
-       often the activity occurs is determined by the ``RUNBENCHMARKS``
+       often the activity occurs is determined by the :macro:`RUNBENCHMARKS`
        expression.
 
 -  Matched
@@ -501,15 +501,14 @@ The following list describes all the possible state/activity pairs.
     Retiring
        When an active claim is about to be preempted for any reason, it
        enters retirement, while it waits for the current job to finish.
-       The ``MaxJobRetirementTime`` expression determines how long to
+       The :macro:`MaxJobRetirementTime` expression determines how long to
        wait (counting since the time the job started). Once the job
        finishes or the retirement time expires, the Preempting state is
        entered.
 
 -  Preempting The Preempting state is used for evicting an HTCondor job
    from a given machine. When the machine enters the Preempting state,
-   it checks the ``WANT_VACATE`` expression to determine its activity.
-   :index:`Vacating<single: Vacating; machine activity>`
+   it checks the :macro:`WANT_VACATE` expression to determine its activity.
 
     Vacating
        In the Vacating activity, the job that was running is in the
@@ -588,7 +587,7 @@ Owner State
 
 When the startd is first spawned, the machine it represents enters the
 Owner state. The machine remains in the Owner state while the expression
-``IS_OWNER`` :index:`IS_OWNER` evaluates to TRUE. If the
+:macro:`IS_OWNER` evaluates to TRUE. If the
 ``IS_OWNER`` expression evaluates to FALSE, then the machine transitions
 to the Unclaimed state. The default value of ``IS_OWNER`` is FALSE,
 which is intended for dedicated resources. But when the
@@ -649,7 +648,7 @@ minutes. However, since coltrane might claim this resource, but has not
 yet, the machine goes to the Unclaimed state.
 
 While in the Owner state, the startd polls the status of the machine
-every ``UPDATE_INTERVAL`` :index:`UPDATE_INTERVAL` to see if
+every :macro:`UPDATE_INTERVAL` to see if
 anything has changed that would lead it to a different state. This
 minimizes the impact on the Owner while the Owner is using the machine.
 Frequently waking up, computing load averages, checking the access times
@@ -743,12 +742,11 @@ skipped, and the machine goes directly to the Claimed/Idle state
 (transition **5**). However, normally the machine will enter the Matched
 state (transition **6**), even if it is only for a brief period of time.
 
-If the machine has been configured to perform backfill jobs (see
-the :doc:`/admin-manual/setting-up-special-environments` section),
-while it is in Unclaimed/Idle it will evaluate the ``START_BACKFILL``
-:index:`START_BACKFILL` expression. Once ``START_BACKFILL``
-evaluates to TRUE, the machine will enter the Backfill/Idle state
-(transition **7**) to begin the process of running backfill jobs.
+If the machine has been configured to perform backfill jobs (see the
+:doc:`/admin-manual/setting-up-special-environments` section), while it is in
+Unclaimed/Idle it will evaluate the :macro:`START_BACKFILL` expression. Once
+``START_BACKFILL`` evaluates to TRUE, the machine will enter the Backfill/Idle
+state (transition **7**) to begin the process of running backfill jobs.
 
 If draining of the machine is initiated while in the Unclaimed state,
 the slot transitions to Drained/Retiring (transition **37**).
@@ -763,8 +761,8 @@ this state is that the machine lies about its ``START`` expression while
 in this state and says that ``Requirements`` are ``False`` to prevent
 being matched again before it has been claimed. Also interesting is that
 the startd starts a timer to make sure it does not stay in the Matched
-state too long. The timer is set with the ``MATCH_TIMEOUT``
-:index:`MATCH_TIMEOUT` configuration file macro. It is specified
+state too long. The timer is set with the
+:macro:`MATCH_TIMEOUT` configuration file macro. It is specified
 in seconds and defaults to 120 (2 minutes). If the schedd that was
 matched with this machine does not claim it within this period of time,
 the machine gives up, and goes back into the Owner state via transition
@@ -814,7 +812,7 @@ Without specific vanilla versions, the normal versions will be used for
 all jobs, including vanilla jobs. In this manual, the normal expressions
 are referenced.
 
-While Claimed, the ``POLLING_INTERVAL`` :index:`POLLING_INTERVAL`
+While Claimed, the :macro:`POLLING_INTERVAL`
 takes effect, and the startd polls the machine much more frequently to
 evaluate its state.
 
@@ -983,8 +981,8 @@ If the machine is in the Vacating activity, it keeps evaluating the
 machine enters the Killing activity (transition **21**). If the Vacating
 activity lasts for as long as the maximum vacating time, then the
 machine also enters the Killing activity. The maximum vacating time is
-determined by the configuration variable ``MachineMaxVacateTime``
-:index:`MachineMaxVacateTime`. This may be adjusted by the setting
+determined by the configuration variable
+:macro:`MachineMaxVacateTime`. This may be adjusted by the setting
 of the job ClassAd attribute ``JobMaxVacateTime``.
 
 When the starter exits, or if there was no starter running when the
@@ -1002,8 +1000,7 @@ If the machine enters the Killing activity, (because either
 ``True``), it attempts to force the *condor_starter* to immediately
 kill the underlying HTCondor job. Once the machine has begun to hard
 kill the HTCondor job, the *condor_startd* starts a timer, the length
-of which is defined by the ``KILLING_TIMEOUT``
-:index:`KILLING_TIMEOUT` macro
+of which is defined by the :macro:`KILLING_TIMEOUT` macro
 (:ref:`admin-manual/configuration-macros:condor_startd configuration file
 macros`). This macro is defined in seconds and defaults to 30. If this timer
 expires and the machine is still in the Killing activity, something has gone
@@ -1750,12 +1747,12 @@ Evenly divide all resources.
     default, all slots are reported to HTCondor.
 
     How many slots are reported at a time is accomplished by setting the
-    configuration variable ``NUM_SLOTS`` :index:`NUM_SLOTS` to the
+    configuration variable :macro:`NUM_SLOTS` to the
     integer number of slots desired. If variable ``NUM_SLOTS`` is not
     defined, it defaults to the number of cores within the machine.
     Variable ``NUM_SLOTS`` may not be used to make HTCondor advertise
     more slots than there are cores on the machine. The number of cores
-    is defined by ``NUM_CPUS`` :index:`NUM_CPUS`.
+    is defined by :macro:`NUM_CPUS`.
 
 Define slot types.
     Instead of an even division of resources per slot, the machine may
@@ -1767,11 +1764,10 @@ Define slot types.
     Configuration variables define the slot types, as well as variables
     that list how much of each system resource goes to each slot type.
 
-    Configuration variable ``SLOT_TYPE_<N>``
-    :index:`SLOT_TYPE_<N>`, where <N> is an integer (for example,
-    ``SLOT_TYPE_1``) defines the slot type. Note that there may be
-    multiple slots of each type. The number of slots created of a given
-    type is configured with ``NUM_SLOTS_TYPE_<N>``.
+    Configuration variable :macro:`SLOT_TYPE_<N>`, where <N> is an integer (for
+    example, ``SLOT_TYPE_1``) defines the slot type. Note that there may be
+    multiple slots of each type. The number of slots created of a given type is
+    configured with ``NUM_SLOTS_TYPE_<N>``.
 
     The type can be defined by:
 
@@ -1812,8 +1808,8 @@ Define slot types.
     that as its available amount.
 
     The disk space allocated to each slot is taken from the disk
-    partition containing the slot's ``EXECUTE`` or ``SLOT<N>_EXECUTE``
-    :index:`SLOT<N>_EXECUTE` directory. If every slot is in a
+    partition containing the slot's :macro:`EXECUTE` or 
+    :macro:`SLOT<N>_EXECUTE` directory. If every slot is in a
     different partition, then each one may be defined with up to
     100% for its disk share. If some slots are in the same partition,
     then their total is not allowed to exceed 100%.
@@ -1882,7 +1878,7 @@ Define slot types.
 
     The resource names and quantities of available resources are defined
     using configuration variables of the form
-    ``MACHINE_RESOURCE_<name>`` :index:`MACHINE_RESOURCE_<name>`,
+    :macro:`MACHINE_RESOURCE_<name>`,
     as shown in this example:
 
     .. code-block:: condor-config
@@ -1891,7 +1887,7 @@ Define slot types.
         MACHINE_RESOURCE_actuator = 8
 
     If the configuration uses the optional configuration variable
-    ``MACHINE_RESOURCE_NAMES`` :index:`MACHINE_RESOURCE_NAMES` to
+    :macro:`MACHINE_RESOURCE_NAMES` to
     enable and disable local machine resources, also add the resource
     names to this variable. For example:
 
@@ -1902,7 +1898,7 @@ Define slot types.
         endif
 
     Local machine resource names defined in this way may now be used in
-    conjunction with ``SLOT_TYPE_<N>`` :index:`SLOT_TYPE_<N>`,
+    conjunction with :macro:`SLOT_TYPE_<N>`,
     using all the same syntax described earlier in this section. The
     following example demonstrates the definition of static and
     partitionable slot types with local machine resources:
@@ -2168,7 +2164,7 @@ tool to create a custom resource, with a custom resource name of
 the GPUs. *condor_gpu_discovery* is invoked in a mode that discovers
 and advertises both CUDA and OpenCL GPUs.
 
-This configuration template refers to macro ``GPU_DISCOVERY_EXTRA``,
+This configuration template refers to macro :macro:`GPU_DISCOVERY_EXTRA`,
 which can be used to define additional command line arguments for the
 *condor_gpu_discovery* tool. For example, setting
 
@@ -2185,7 +2181,7 @@ properties using attributes with a name prefix that indicated which GPU
 the property referred to.  Beginning with version 9.11, discovery would
 default to using nested ClassAds for GPU properties.  The administrator
 can be explict about which form to use for properties by adding either the
-``-nested`` or ``-not-nested`` option to ``GPU_DISCOVERY_EXTRA``. 
+``-nested`` or ``-not-nested`` option to :macro:`GPU_DISCOVERY_EXTRA`. 
 
 The format -- nested or not -- of GPU properties in the slot ad is the same as published
 by *condor_gpu_discovery*.  The use of nested GPU property ads is necessary
@@ -2245,7 +2241,7 @@ constraint expression may be truncated.
 Configuring STARTD_ATTRS on a per-slot basis
 '''''''''''''''''''''''''''''''''''''''''''''
 
-The ``STARTD_ATTRS`` :index:`STARTD_ATTRS`  settings can be configured on a per-slot basis. The
+The :macro:`STARTD_ATTRS`  settings can be configured on a per-slot basis. The
 *condor_startd* daemon builds the list of items to advertise by
 combining the lists in this order:
 
@@ -2353,8 +2349,8 @@ resources have been consumed by jobs.
 
 To enable dynamic provisioning, define a slot type. and declare at least
 one slot of that type. Then, identify that slot type as partitionable by
-setting configuration variable ``SLOT_TYPE_<N>_PARTITIONABLE``
-:index:`SLOT_TYPE_<N>_PARTITIONABLE` to ``True``. The value of
+setting configuration variable
+:macro:`SLOT_TYPE_<N>_PARTITIONABLE` to ``True``. The value of
 ``<N>`` within the configuration variable name is the same value as in
 slot type definition configuration variable ``SLOT_TYPE_<N>``. For the
 most common cases the machine should be configured for one slot,
@@ -2619,10 +2615,10 @@ and that it is partitionable.
 
 Enable use of the *condor_negotiator*-side resource consumption policy,
 allocating the job-requested number of cores to the dynamic slot, and
-use ``SLOT_WEIGHT`` :index:`SLOT_WEIGHT` to assess the user usage
+use :macro:`SLOT_WEIGHT` to assess the user usage
 that will affect user priority by the number of cores allocated. Note
-that the only attributes valid within the ``SLOT_WEIGHT``
-:index:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
+that the only attributes valid within the 
+:macro:`SLOT_WEIGHT` expression are Cpus, Memory, and disk. This
 must the set to the same value on all machines in the pool.
 
 .. code-block:: text
@@ -2675,7 +2671,7 @@ partitionable slots. The draining of a machine configured to have both
 partitionable slots and static slots would have a negative impact on
 single slot jobs running in static slots.
 
-To use this daemon, ``DEFRAG`` must be added to ``DAEMON_LIST``, and the
+To use this daemon, ``DEFRAG`` must be added to :macro:`DAEMON_LIST`, and the
 defragmentation policy must be configured. Typically, only one instance
 of the *condor_defrag* daemon would be run per pool. It is a
 lightweight daemon that should not require a lot of system resources.
@@ -2721,9 +2717,8 @@ because they run past the end of their retirement time during draining,
 this also adds to the cost of draining.
 
 To reduce these costs, you may set the configuration macro
-``DEFRAG_DRAINING_START_EXPR``
-:index:`DEFRAG_DRAINING_START_EXPR`. If draining gracefully, the
-defrag daemon will set the ``START`` :index:`START` expression for
+:macro:`DEFRAG_DRAINING_START_EXPR`. If draining gracefully, the
+defrag daemon will set the :macro:`START` expression for
 the machine to this value expression. Do not set this to your usual
 ``START`` expression; jobs accepted while draining will not be given
 their ``MaxRetirementTime``. Instead, when the last retiring job
@@ -2788,10 +2783,10 @@ Requirements expression to indicate which jobs it should transform and
 which it should ignore. Transforms without a Requirements expression
 apply to all jobs. Job transforms are applied in order. The set of
 transforms and their order are configured using the Configuration
-variable ``JOB_TRANSFORM_NAMES`` :index:`JOB_TRANSFORM_NAMES`.
+variable :macro:`JOB_TRANSFORM_NAMES`.
 
 For each entry in this list there must be a corresponding
-``JOB_TRANSFORM_<name>`` :index:`JOB_TRANSFORM_<name>`
+:macro:`JOB_TRANSFORM_<name>`
 configuration variable that specifies the transform rules. Transforms
 can use the same syntax as *condor_job_router* transforms; although unlike
 the *condor_job_router* there is no default transform, and all
@@ -2830,7 +2825,7 @@ Vanilla jobs to Docker jobs.
 
 The AssignGroup transform above assumes that a mapfile that can map an
 owner to one or more accounting groups has been configured via
-``SCHEDD_CLASSAD_USER_MAP_NAMES``, and given the name "Groups".
+:macro:`SCHEDD_CLASSAD_USER_MAP_NAMES`, and given the name "Groups".
 
 The SL6ToDocker transform above is most likely incomplete, as it assumes
 a custom attribute (``WantSL6``) that your pool may or may not use.
@@ -2849,7 +2844,7 @@ do not request a minimum amount of memory. Or, it may be appropriate to
 prevent certain users from using a specific submit host.
 
 Rejection criteria are configured. Configuration variable
-``SUBMIT_REQUIREMENT_NAMES`` :index:`SUBMIT_REQUIREMENT_NAMES`
+:macro:`SUBMIT_REQUIREMENT_NAMES`
 lists criteria, where each criterion is given a name. The chosen name is
 a major component of the default error message output if a user attempts
 to submit a job which fails to meet the requirements. Therefore, choose
@@ -2860,8 +2855,8 @@ a descriptive name. For the three example submit requirements described:
     SUBMIT_REQUIREMENT_NAMES = NotStandardUniverse, MinimalRequestMemory, NotChris
 
 The criterion for each submit requirement is then specified in
-configuration variable ``SUBMIT_REQUIREMENT_<Name>``
-:index:`SUBMIT_REQUIREMENT_<Name>`, where ``<Name>`` matches the
+configuration variable 
+:macro:`SUBMIT_REQUIREMENT_<Name>`, where ``<Name>`` matches the
 chosen name listed in ``SUBMIT_REQUIREMENT_NAMES``. The value is a
 boolean ClassAd expression. The three example criterion result in these
 configuration variable definitions:
@@ -2881,8 +2876,7 @@ and the job ClassAd, which is the ``TARGET.`` name space. Note that
 ``JobUniverse`` and ``RequestMemory`` are both job ClassAd attributes.
 
 Further configuration may associate a rejection reason with a submit
-requirement with the ``SUBMIT_REQUIREMENT_<Name>_REASON``
-:index:`SUBMIT_REQUIREMENT_<Name>_REASON`.
+requirement with the :macro:`SUBMIT_REQUIREMENT_<Name>_REASON`.
 
 .. code-block:: text
 
@@ -2900,7 +2894,7 @@ produces a string in the definition of
 
 Rejection reasons are sent back to the submitting program and will
 typically be immediately presented to the user. If an optional
-``SUBMIT_REQUIREMENT_<Name>_REASON`` is not defined, a default reason
+:macro:`SUBMIT_REQUIREMENT_<Name>_REASON` is not defined, a default reason
 will include the ``<Name>`` chosen for the submit requirement.
 Completing the presentation of the example submit requirements, upon an
 attempt to submit a standard universe job, *condor_submit* would print
@@ -2922,8 +2916,7 @@ Submit Warnings
 
 Starting in HTCondor 8.7.4, you may instead configure submit warnings. A
 submit warning is a submit requirement for which
-``SUBMIT_REQUIREMENT_<Name>_IS_WARNING``
-:index:`SUBMIT_REQUIREMENT_<Name>_IS_WARNING` is true. A submit
+:macro:`SUBMIT_REQUIREMENT_<Name>_IS_WARNING` is true. A submit
 warning does not cause the submission to fail; instead, it returns a
 warning to the user's console (when triggered via *condor_submit*) or
 writes a message to the user log (always). Submit warnings are intended

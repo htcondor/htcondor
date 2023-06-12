@@ -44,7 +44,9 @@ int replace_str( std::string & str, const std::string & from, const std::string 
 int formatstr_cat(std::string& s, const char* format, ...) CHECK_PRINTF_FORMAT(2,3);
 int vformatstr_cat(std::string& s, const char* format, va_list pargs);
 
-// to replace MyString with std::string we need a compatible read-line function
+// Read one line from fp and store it in dst, including the '\n'.
+// Handles lines of any length.
+// Return true if any data was placed in dst.
 bool readLine(std::string& dst, FILE *fp, bool append = false);
 
 //Return true iff the given string is a blank line.
@@ -133,16 +135,12 @@ void randomlyGenerateShortLivedPassword(std::string &str, int len);
 // iterate a Null terminated string constant in the same way that StringList does in initializeFromString
 // Use this class instead of creating a throw-away StringList just so you can iterate the tokens in a string.
 //
-// NOTE: there are some subtle differences between this code and StringList::initializeFromString.
-// StringList ALWAYS tokenizes on whitespace regardlist of what delims is set to, but
-// this iterator does not, if you want to tokenize on whitespace, then delims must contain the whitepace characters.
-//
-// NOTE also, this class does NOT copy the string that it is passed.  You must insure that it remains in scope and is
+// NOTE, this class does NOT copy the string that it is passed.  You must ensure that it remains in scope and is
 // unchanged during iteration.  This is trivial for string literals, of course.
 class StringTokenIterator {
 public:
-	StringTokenIterator(const char *s = NULL, int res=40, const char *delim = ", \t\r\n" ) : str(s), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
-	StringTokenIterator(const std::string & s, int res=40, const char *delim = ", \t\r\n" ) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false) { current.reserve(res); };
+	StringTokenIterator(const char *s = NULL, const char *delim = ", \t\r\n", bool trim = false) : str(s), delims(delim), ixNext(0), pastEnd(false), m_trim(trim) { };
+	StringTokenIterator(const std::string & s, const char *delim = ", \t\r\n", bool trim = false) : str(s.c_str()), delims(delim), ixNext(0), pastEnd(false), m_trim(trim) { };
 
 	void rewind() { ixNext = 0; pastEnd = false;}
 	const char * next() { const std::string * s = next_string(); return s ? s->c_str() : NULL; }
@@ -151,6 +149,11 @@ public:
 
 	int next_token(int & length); // return start and length of next token or -1 if no tokens remain
 	const std::string * next_string(); // return NULL or a pointer to current token
+	const std::string * next_string_trim() {
+		if (!next_string()) return nullptr;
+		trim(current);
+		return &current;
+	}
 
 	// Allow us to use this as a bona-fide STL iterator
 	using iterator_category = std::input_iterator_tag;
@@ -160,13 +163,13 @@ public:
 	using reference         = std::string *;
 
 	StringTokenIterator begin() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims, m_trim};
 		sti.next();
 		return sti;
 	}
 
 	StringTokenIterator end() const {
-		StringTokenIterator sti{str, 0, delims};
+		StringTokenIterator sti{str, delims, m_trim};
 		sti.ixNext = strlen(str);
 		sti.pastEnd = true;
 		return sti;
@@ -195,6 +198,7 @@ protected:
 	std::string current;
 	size_t ixNext;
 	bool pastEnd;
+	bool m_trim;
 };
 
 // Case insensitive string_view
@@ -249,4 +253,51 @@ struct case_char_traits : public std::char_traits<char>
 
 using istring_view = std::basic_string_view<char, case_char_traits>;
 
+// Some strings contain sensitive data that we want to clear out as soon
+// as we are done with them, like credentials.  This allocator is intended
+// to be used with std::strings, so we can use all the goodness of the standard
+// string, but clear out memory when we are done with the object.
+
+namespace htcondor {
+template <typename T>
+class zeroing_allocator {
+	public:
+		using value_type = T;
+		using propagate_on_container_move_assignment = std::true_type;
+		using is_always_equal = std::true_type;
+
+		zeroing_allocator() noexcept = default;
+		zeroing_allocator(const zeroing_allocator &) noexcept = default;
+		~zeroing_allocator() = default;
+
+		T *allocate(std::size_t n) {
+			return static_cast<T*>(malloc(n * sizeof(T)));
+		}	
+
+		void deallocate(T *ptr, std::size_t n) {
+			// C++23 has memset_explicit which is guaranteed not to be optimized away
+			// memset_explicit(T, '\0', n * sizeof(T));
+			memset(ptr, '\0', n * sizeof(T));
+			free(ptr);
+		}	
+
+		template <class U>
+		zeroing_allocator(const zeroing_allocator<U>&) noexcept {}
+};
+		
+template <class T, class U>
+bool operator==(const zeroing_allocator<T>&, const zeroing_allocator<U>&) noexcept
+{
+	return true;
+}
+
+template <class T, class U>
+bool operator!=(const zeroing_allocator<T>&, const zeroing_allocator<U>&) noexcept
+{
+	return false;
+}
+}
+
+using secure_string = std::basic_string<char, std::char_traits<char>, htcondor::zeroing_allocator<char>>;
+using secure_vector = std::vector<unsigned char, htcondor::zeroing_allocator<unsigned char>>;
 #endif // _stl_string_utils_h_

@@ -132,10 +132,14 @@ ResState::change( State new_state, Activity new_act )
 				 activity_to_string(new_act) );
 	}
 
+	// we should *try* and use a consistent value for current_time when updating a bunch of slots
+	// but we don't want to use a time that's *too* late, so use the resmgr's current time if its
+	// not too far in the past.
  	time_t now = resmgr->now();
 	time_t actual_now = time(nullptr);
-	if ((actual_now - now) > 2) {
-		dprintf(D_ERROR | D_BACKTRACE, "Warning : ResState::change() time lag %d (%d - %d)\n", actual_now - now, actual_now, now);
+	if ((actual_now - now) > 1) {
+		now = actual_now; 
+		//dprintf(D_ERROR | D_BACKTRACE, "Warning : ResState::change() time lag %d (%d - %d)\n", actual_now - now, actual_now, now);
 	}
 
 		// Record the time we spent in the previous state
@@ -373,7 +377,7 @@ ResState::eval_policy( void )
 
 
 	case unclaimed_state:
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -444,7 +448,7 @@ ResState::eval_policy( void )
 			// of job ClassAd), it may never go back to Unclaimed 
 			// state. So we need to delete the dynmaic slot in owner
 			// state.
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -885,7 +889,7 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		if ( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 			resmgr->removeResource( rip );
 		} else {
 			resmgr->deleteResource( rip );
@@ -1295,7 +1299,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 		total += (time(NULL) - m_atime);
 	}
 	if (total) {
-		cap->Assign(info.attr_name, (int)total);
+		cap->Assign(info.attr_name, total);
 		return true;
 	}
 	return false;

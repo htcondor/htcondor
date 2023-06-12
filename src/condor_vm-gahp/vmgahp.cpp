@@ -32,6 +32,7 @@
 #include "vm_type.h"
 #include "xen_type.linux.h"
 #include "vmgahp_error_codes.h"
+#include <algorithm>
 
 #define QUIT_FAST_TIME				30		// 30 seconds
 
@@ -213,12 +214,10 @@ VMGahp::cleanUp()
 	m_result_list.clearAll();
 
 	// delete VMs
-	VMType *vm = NULL;
-	m_vm_list.Rewind();
-	while( m_vm_list.Next(vm) ) {
-		m_vm_list.DeleteCurrent();
+	for (auto vm : m_vm_list) {
 		delete vm;
 	}
+	m_vm_list.clear();
 
 	// Cancel registered timers
 	if( vmgahp_stderr_tid != -1 ) {
@@ -252,7 +251,7 @@ VMGahp::getNewVMId(void)
 int
 VMGahp::numOfVM(void)
 {
-	 return m_vm_list.Number();
+	 return (int) m_vm_list.size();
 }
 
 int
@@ -350,16 +349,19 @@ VMGahp::findPendingRequest(int req_id)
 void
 VMGahp::addVM(VMType *new_vm)
 {
-	m_vm_list.Append(new_vm);
+	m_vm_list.push_back(new_vm);
 }
 
 void
 VMGahp::removeVM(int vm_id)
 {
 	VMType *vm = findVM(vm_id);
-	if( vm != NULL ) {
-		m_vm_list.Delete(vm);
-		delete vm;
+	if( vm != nullptr ) {
+		auto it = std::find(m_vm_list.begin(), m_vm_list.end(), vm);
+		if (it != m_vm_list.end()) {
+			delete *it;
+			m_vm_list.erase(it);
+		}
 		return;
 	}
 }
@@ -370,23 +372,23 @@ VMGahp::removeVM(VMType *vm)
 	if( !vm ) {
 		return;
 	}
-	m_vm_list.Delete(vm);
-	delete vm;
+	auto it = std::find(m_vm_list.begin(), m_vm_list.end(), vm);
+	if (it != m_vm_list.end()) {
+		delete *it;
+		m_vm_list.erase(it);
+	}
 	return;
 }
 
 VMType *
 VMGahp::findVM(int vm_id)
 {
-	VMType *vm = NULL;
-
-	m_vm_list.Rewind();
-	while( m_vm_list.Next(vm) ) {
+	for (auto vm : m_vm_list) {
 		if( vm->getVMId() == vm_id ) {
 			return vm;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 

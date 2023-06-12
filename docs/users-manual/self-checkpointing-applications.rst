@@ -121,6 +121,10 @@ the :doc:`/man-pages/condor_submit` man page.
     error                       = example.err
     log                         = example.log
 
+    request_cpus            = 1
+    request_memory          = 512M
+    request_disk            = 1G
+
     queue 1
 
 This example does not remove the "checkpoint file" generated for

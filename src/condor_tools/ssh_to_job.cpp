@@ -799,7 +799,7 @@ bool SSHToJob::execute_ssh()
 	std::string param_name;
 	formatstr(param_name,"SSH_TO_JOB_%s_CMD",m_ssh_basename.c_str());
 	std::string default_ssh_cmd;
-	formatstr(default_ssh_cmd, "\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s\"",
+	formatstr(default_ssh_cmd, "\"%s -oUser=%%u -oIdentityFile=%%i -oStrictHostKeyChecking=yes -oUserKnownHostsFile=%%k -oGlobalKnownHostsFile=%%k -oProxyCommand=%%x%s -S none\"",
 							ssh_options_arglist.GetArg(0),
 							is_scp ? "" : " condor-job.%h");
 	param(ssh_cmd,param_name.c_str(),default_ssh_cmd.c_str());
@@ -811,7 +811,7 @@ bool SSHToJob::execute_ssh()
 	}
 
 		// now insert any extra ssh options provided by -ssh
-	int insert_arg;
+	size_t insert_arg;
 	for(insert_arg=1; insert_arg<ssh_options_arglist.Count(); insert_arg++) {
 		ssh_arglist.InsertArg(ssh_options_arglist.GetArg(insert_arg),insert_arg);
 	}

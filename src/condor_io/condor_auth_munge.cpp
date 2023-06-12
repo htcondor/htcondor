@@ -28,6 +28,7 @@
 #include "CondorError.h"
 #include "condor_mkstemp.h"
 #include "ipv6_hostname.h"
+#include "condor_config.h"
 
 #if defined(DLOPEN_SECURITY_LIBS)
 #include <dlfcn.h>
@@ -93,6 +94,7 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 	int server_result = -1;
 	int fail = -1 == 0;
 	char *munge_token = NULL;
+	const char* print_munge_token = "XXX";
 	munge_err_t err;
 
 	if ( mySock_->isClient() ) {
@@ -131,7 +133,10 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 		// key no longer needed.
 		free(key);
 
-		dprintf (D_SECURITY | D_FULLDEBUG, "AUTHENTICATE_MUNGE: sending client_result %i, munge_token %s\n", client_result, munge_token);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			print_munge_token = munge_token;
+		}
+		dprintf (D_SECURITY | D_FULLDEBUG, "AUTHENTICATE_MUNGE: sending client_result %i, munge_token %s\n", client_result, print_munge_token);
 
 		// send over result as a success/failure indicator (-1 == failure)
 		mySock_->encode();
@@ -180,7 +185,10 @@ int Condor_Auth_MUNGE::authenticate(const char * /* remoteHost */, CondorError* 
 			return fail;
 		}
 
-		dprintf (D_SECURITY | D_FULLDEBUG, "AUTHENTICATE_MUNGE: received client_result %i, munge_token %s\n", client_result, munge_token);
+		if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
+			print_munge_token = munge_token;
+		}
+		dprintf (D_SECURITY | D_FULLDEBUG, "AUTHENTICATE_MUNGE: received client_result %i, munge_token %s\n", client_result, print_munge_token);
 
 		if (client_result != 0) {
 			// in this case the token is actually the error message client encountered.

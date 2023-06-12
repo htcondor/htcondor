@@ -207,10 +207,6 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::WaitForSocke
 		return CommandProtocolFinished;
 	}
 
-		// Do not allow ourselves to be deleted until after
-		// SocketCallback is called.
-	incRefCount();
-
 	condor_gettimestamp( m_async_waiting_start_time );
 
 	return CommandProtocolInProgress;
@@ -230,9 +226,6 @@ DaemonCommandProtocol::SocketCallback( Stream *stream )
 	m_prev_sock_ent = NULL;
 
 	int rc = doProtocol();
-
-		// get rid of ref counted when callback was registered
-	decRefCount();
 
 	return rc;
 }
@@ -961,9 +954,9 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::ReadCommand(
 
 					// generate a unique ID.
 					std::string tmpStr;
-					formatstr( tmpStr, "%s:%i:%i:%i",
+					formatstr( tmpStr, "%s:%i:%lld:%i",
 									get_local_hostname().c_str(), daemonCore->mypid,
-							 (int)time(0), ZZZ_always_increase() );
+							   (long long)time(0), ZZZ_always_increase() );
 					assert (m_sid == NULL);
 					m_sid = strdup(tmpStr.c_str());
 
@@ -1763,7 +1756,7 @@ DaemonCommandProtocol::CommandProtocolResult DaemonCommandProtocol::SendResponse
 		int slop = param_integer("SEC_SESSION_DURATION_SLOP", 20);
 		int durint = atoi(dur) + slop;
 		time_t now = time(0);
-		int expiration_time = now + durint;
+		time_t expiration_time = now + durint;
 
 		// extract the session lease time (max unused time)
 		int session_lease = 0;
@@ -1976,8 +1969,11 @@ int DaemonCommandProtocol::finalize()
 	}
 
 
-	if ( m_result == KEEP_STREAM || m_sock == NULL )
+	if ( m_result == KEEP_STREAM || m_sock == NULL ) {
+		delete this;
 		return KEEP_STREAM;
-	else
+	} else {
+		delete this;
 		return TRUE;
+	}
 }
