@@ -7,7 +7,7 @@ from ._common_imports import (
 )
 
 from .htcondor2_impl import (
-    _startd_drain_jobs,
+    _credd_do_store_cred,
 )
 
 
@@ -29,7 +29,12 @@ class Credd():
 
 
     def add_password(self, password : str, user : str = None) -> None:
-        pass
+        if len(password) == 0:
+            # This was HTCondorValueError in version 1.
+            raise ValueError("password may not be empty")
+
+        mode = self._STORE_CRED_LEGACY_PWD | self._GENERIC_ADD
+        _credd_do_store_cred(self._addr, user, password, mode)
 
 
     def delete_password(self, user : str = None) -> None:
@@ -69,3 +74,16 @@ class Credd():
 
     def check_user_service_creds(self, credtype : CredType, services : list[str], user : str = None) -> CredCheck:
         pass
+
+
+    _STORE_CRED_USER_KRB         = 0x20
+    _STORE_CRED_USER_PWD         = 0x24
+    _STORE_CRED_USER_OAUTH       = 0x28
+    _STORE_CRED_LEGACY           = 0x40
+    _STORE_CRED_WAIT_FOR_CREDMON = 0x80
+    _STORE_CRED_LEGACY_PWD       = _STORE_CRED_LEGACY | _STORE_CRED_USER_PWD | 0x40
+
+    _GENERIC_ADD    = 0
+    _GENERIC_DELETE = 1
+    _GENERIC_QUERY  = 2
+    _GENERIC_CONFIG = 3

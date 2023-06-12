@@ -28,6 +28,11 @@
 #include "dc_startd.h"
 #include "htcondor2/startd.cpp"
 
+// htcondor.Credd
+#include "store_cred.h"
+#include "my_username.h"
+#include "htcondor2/credd.cpp"
+
 
 static PyMethodDef htcondor2_impl_methods[] = {
 	{"_version", & _version, METH_VARARGS, R"C0ND0R(
@@ -72,6 +77,9 @@ static PyMethodDef htcondor2_impl_methods[] = {
 	{"_startd_drain_jobs", &_startd_drain_jobs, METH_VARARGS, NULL},
 
 	{"_startd_cancel_drain_jobs", &_startd_cancel_drain_jobs, METH_VARARGS, NULL},
+
+
+	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
 
 
 	{NULL, NULL, 0, NULL}
