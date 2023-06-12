@@ -95,7 +95,7 @@ bool SimScheddQ::disconnect(bool /*commit_transaction*/, CondorError & /*errstac
 	return true;
 }
 
-int SimScheddQ::get_NewCluster() {
+int SimScheddQ::get_NewCluster(CondorError & errstack) {
 	proc = -1;
 	if (log_all_communication) fprintf(fp, "::get_newCluster\n");
 	return ++cluster;

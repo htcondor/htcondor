@@ -90,7 +90,7 @@ class Read(Verb):
                     delta = datetime.strptime(event_time, "%m/%d %H:%M") - datetime.strptime(event_summary["last_exec_time"], "%m/%d %H:%M")
                     good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}"
                     event_summary["Good Time"] = good_time
-        
+
         if options.get("json", True) or options.get("csv", True):
             # add event summaries as objects to list for JSON output
             json_output = []

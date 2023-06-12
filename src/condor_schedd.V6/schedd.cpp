@@ -2308,6 +2308,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
+			DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2323,6 +2324,10 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, reason.c_str());
+			}
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}
@@ -8221,9 +8226,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 	slot_user = rsock->getFullyQualifiedUser();
 
-	if (!cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter)) {
-		slot_submitter = slot_user;
-	}
+		// If the startd doesn't set a submitter, then we'll match jobs
+		// from any submitter. But the code below ensures we only match
+		// jobs from the authenticated user identity.
+	cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter);
 
 		// TODO handle alternate submitter names
 	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);

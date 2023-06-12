@@ -164,7 +164,7 @@ int vsprintf_realloc( char **buf, int *bufpos, int *buflen, const char *format, 
 		*buflen = realloc_buflen;
     }
 
-	written = vsprintf(*buf + *bufpos, format, args);
+	written = vsnprintf(*buf + *bufpos, append_len + 1, format, args);
 
 	if( written != append_len ) {
 		if( errno == 0 ) {

@@ -1,6 +1,7 @@
 #include "condor_common.h"
 
 #include <algorithm>
+#include <charconv>
 #include <utility>
 #include "ranger.h"
 #include "proc.h"
@@ -245,7 +246,8 @@ static const char *read_element(const char *s, int *out)
 // write 'in' to buf, return number of bytes written
 static int write_element(int in, char *buf)
 {
-    return sprintf(buf, "%d", in);
+	auto [last, ec] = std::to_chars(buf, buf + 12, in);
+    return last - buf;
 }
 
 
@@ -257,7 +259,7 @@ static const char *read_element(const char *s, JOB_ID_KEY *out)
 
 static int write_element(JOB_ID_KEY in, char *buf)
 {
-    return sprintf(buf, "%d.%d", in.cluster, in.proc);
+    return snprintf(buf, 26, "%d.%d", in.cluster, in.proc);
 }
 
 

@@ -9557,6 +9557,15 @@ macros are described in the :doc:`/admin-manual/security` section.
     X.509 proxy certificate from a client during SSL authentication.
     The default is ``False``.
 
+:macro-def:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`
+    A boolean value that controls whether a client checks environment
+    varaible `X509_USER_PROXY` for the location the X.509 credential
+    to use for SSL authentication with a daemon.
+    If this parameter is ``True`` and `X509_USER_PROXY` is set, then
+    that file is used instead of the files specified by
+    `AUTH_SSL_CLIENT_CERTFILE` and `AUTH_SSL_CLIENT_KEYFILE`.
+    The default is ``False``.
+
 :macro-def:`SSL_SKIP_HOST_CHECK`
     A boolean variable that controls whether a host check is performed
     by the client during an SSL authentication of a Condor daemon. This

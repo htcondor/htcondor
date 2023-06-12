@@ -2094,7 +2094,7 @@ CreateNeededJobsets(
 				continue;
 			} else {
 				// allocate a new jobset id here
-				jobset_id = NewCluster();
+				jobset_id = NewCluster(nullptr);
 				dprintf(D_STATUS, "new jobset id %d allocated for %s\n", jobset_id, alias.c_str());
 				sad = nullptr;
 			}
@@ -3588,7 +3588,7 @@ InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
 
 
 int
-NewCluster()
+NewCluster(CondorError* errstack)
 {
 
 	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
@@ -3611,6 +3611,7 @@ NewCluster()
 			"NewCluster(): MAX_JOBS_SUBMITTED exceeded, submit failed. "
 			"Current total is %d. Limit is %d\n",
 			total_jobs, maxJobsSubmitted );
+		if (errstack) errstack->pushf("SCHEDD",EINVAL,"MAX_JOBS_SUBMITTED exceeded. Current=%d, Limit=%d", total_jobs, maxJobsSubmitted);
 		errno = EINVAL;
 		return NEWJOB_ERR_MAX_JOBS_SUBMITTED;
 	}
@@ -3637,8 +3638,18 @@ NewCluster()
 				}
 			} else if ( ! urec->IsEnabled()) {
 				// We only check to see if the User is disabled if we are not creating it automatically with the submit
-				dprintf(D_ALWAYS, "NewCluster(): rejecting attempt by disabled user %s to submit a job\n", urec->Name());
+				std::string reason;
+				urec->LookupString(ATTR_DISABLE_REASON, reason);
+
+				dprintf(D_ALWAYS, "NewCluster(): rejecting attempt by disabled user %s to submit a job. %s\n", urec->Name(), reason.c_str());
 				errno = EACCES;
+				if (errstack) {
+					if (!reason.empty()) {
+						errstack->pushf("SCHEDD",EACCES,"User %s is disabled : %s", urec->Name(), reason.c_str());
+					} else {
+						errstack->pushf("SCHEDD",EACCES,"User %s is disabled", urec->Name());
+					}
+				}
 				return NEWJOB_ERR_DISABLED_USER;
 			}
 			ASSERT(urec);
@@ -4495,6 +4506,18 @@ int SetUserAttribute(JobQueueUserRec & urec, const char * attr_name, const char 
 	if (attr_name == NULL || expr_string == NULL) {return -1;}
 
 	if (JobQueue->SetAttribute(urec.jid, attr_name, expr_string, false)) {
+		JobQueue->SetTransactionTriggers(catSetUserRec);
+		urec.setDirty();
+		return 0;
+	}
+	return -1;
+}
+
+int DeleteUserAttribute(JobQueueUserRec & urec, const char * attr_name)
+{
+	if (attr_name == NULL) {return -1;}
+
+	if (JobQueue->DeleteAttribute(urec.jid, attr_name)) {
 		JobQueue->SetTransactionTriggers(catSetUserRec);
 		urec.setDirty();
 		return 0;

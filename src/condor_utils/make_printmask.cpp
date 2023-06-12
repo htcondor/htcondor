@@ -21,6 +21,7 @@
 #include "ad_printmask.h"
 #include "condor_string.h"	// for getline
 #include "tokener.h"
+#include <charconv>
 #include <string>
 
 /* Construct a PrintMask and query from a formatted file/string
@@ -421,8 +422,14 @@ int SetAttrListPrintMaskFromStream (
 					else {
 						char tmp[40] = "%"; char *p = tmp+1;
 						if (wid < 0) { opts |= FormatOptionLeftAlign; wid = -wid; *p++ = '-'; }
-						p += sprintf(p, "%d", wid);
-						if ( ! (opts & FormatOptionNoTruncate)) p += sprintf(p, ".%d", wid);
+						auto [end, ec] = std::to_chars(p, p + 12, wid);
+						p = end;
+						if ( ! (opts & FormatOptionNoTruncate)) {
+							*p = '.';
+							p++;
+							auto [end, ec] = std::to_chars(p, p + 12, wid);
+							p = end;
+						}
 						*p++ = 'v'; *p = 0;
 						fmt = mask->store(tmp);
 					}

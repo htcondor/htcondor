@@ -4,6 +4,25 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.7.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.7.0 released on Month Date, 2023.
+
+- HTCondor version 10.7.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-1007`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.6.0
 --------------
 
@@ -18,8 +37,16 @@ Release Notes:
 New Features:
 
 - Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
-  before the user was disabled are allowed to run to completion.
+  before the user was disabled are allowed to run to completion.  When a user
+  is disabled, an optional reason string can be provided.  The reason will be
+  included in the error message from *condor_submit* when submission is refused
+  because the user is disabled.
   :jira:`1723`
+  :jira:`1835`
+
+- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
+  id of the submitted job.
+  :jira:`1836`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
@@ -28,6 +55,10 @@ New Features:
   The number of commands that triggers a new process is controlled by
   new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
   :jira:`1778`
+
+- Container universe jobs may now specify the *container_image* to
+  be an image transfered via a file transfer plugin.
+  :jira:`1820`
 
 - The job's executable is no longer renamed to *condor_exec.exe* when
   the job's sandbox is transferred to the Execution Point.

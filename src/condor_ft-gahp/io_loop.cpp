@@ -794,7 +794,11 @@ download_proxy( const std::string &sid, const ClassAd &ad,
 
 	std::string tmp_str;
 	std::string proxy_path;
-	define_sandbox_path(sid, proxy_path);
+	if (sid[0] == '/') {
+		proxy_path = sid;
+	} else {
+		define_sandbox_path(sid, proxy_path);
+	}
 
 	ad.LookupString( ATTR_X509_USER_PROXY, tmp_str );
 	proxy_path += DIR_DELIM_CHAR;
@@ -1011,12 +1015,16 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// first, create the directory that will be IWD.  returns the
 	// directory created.
 	std::string iwd;
-	bool success;
-	success = create_sandbox_dir(sid, iwd);
-	if (!success) {
-		// FAIL
-		write_to_pipe( ChildErrorPipe, "Failed to create sandbox" );
-		return 1;
+	bool success = true;
+	if (sid[0] == '/') {
+		iwd = sid;
+	} else {
+		success = create_sandbox_dir(sid, iwd);
+		if (!success) {
+			// FAIL
+			write_to_pipe( ChildErrorPipe, "Failed to create sandbox" );
+			return 1;
+		}
 	}
 
 	// rewrite the IWD to the newly created sandbox dir
@@ -1084,7 +1092,11 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 
 	// rewrite the IWD to the actual sandbox dir
 	std::string iwd;
-	define_sandbox_path(sid, iwd);
+	if (sid[0] == '/') {
+		iwd = sid;
+	} else {
+		define_sandbox_path(sid, iwd);
+	}
 	ad.Assign(ATTR_JOB_IWD, iwd);
 	char ATTR_SANDBOX_ID[] = "SandboxId";
 	ad.Assign(ATTR_SANDBOX_ID, sid);
