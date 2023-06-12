@@ -1797,7 +1797,7 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
     if(certfile)        free(certfile);
     if(keyfile)         free(keyfile);
     if(cipherlist)      free(cipherlist);
-	if(cipherlist)      free(cipherlist);
+	if(verify_param)    X509_VERIFY_PARAM_free(verify_param);
     return ctx;
   setup_server_ctx_err:
     if(cafile)          free(cafile);
