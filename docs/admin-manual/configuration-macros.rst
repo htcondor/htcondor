@@ -10538,6 +10538,10 @@ details. The other set replace functionality of the
     the *condor_starter* before it runs the job. ``<Keyword>`` is the
     hook keyword defined to distinguish between sets of hooks.
 
+:macro-def:`<Keyword>_HOOK_PREPARE_JOB_ARGS`
+    The arguments for the *condor_starter* to use when invoking the
+    prepare job hook specified by ``<Keyword>``.
+
 :macro-def:`<Keyword>_HOOK_UPDATE_JOB_INFO`
     This configuration variable is used by both fetch work hooks and by
     *condor_job_router* hooks.
