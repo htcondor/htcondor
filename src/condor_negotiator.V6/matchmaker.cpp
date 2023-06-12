@@ -3007,7 +3007,7 @@ obtainAdsFromCollector (
 					subReqs = ExprTreeToString(reqTree);
 					ad->AssignExpr(attrn, subReqs);
 				}
-		
+
 				// Get the requirements expression we're going to
 				// subsititute in, and convert it to a string...
 				// Sadly, this might be the best interface :(
@@ -3131,13 +3131,39 @@ obtainAdsFromCollector (
 				ad->AssignExpr(ATTR_SLOT_WEIGHT, slotWeightStr);
 			}
 
+			bool offline = false;
+			ad->LookupBool(ATTR_OFFLINE, offline);
+
 			// If the ad specifies a ghost type, record it for later use.
 			std::string ghostType;
 			ad->LookupString("GhostType", ghostType);
 			if(! ghostType.empty()) {
-				ghostTypeCount[ghostType]++;
+				if(! offline) {
+					ghostTypeCount[ghostType]++;
+				}
+
 				std::string adID = MachineAdID(ad);
 				dprintf( D_ZKM, "Adding %s to ghost type count (now %s = %d)\n", adID.c_str(), ghostType.c_str(), ghostTypeCount[ghostType] );
+			}
+
+
+			// If an offline ad is never matched, then we never update the
+			// collector's copy of its, which means the autoscaler never
+			// sees MachineMatchCount, OfflineMatches, or GhostTypeCount
+			// get reset.
+			if( offline ) {
+				ClassAd update_ad;
+				CopyAttribute( ATTR_NAME, update_ad, * ad );
+				CopyAttribute( ATTR_STARTD_IP_ADDR, update_ad, * ad );
+
+				update_ad.Assign( "MachineMatchCount", 0 );
+				update_ad.Assign( "OfflineMatches", "undefined" );
+				update_ad.Assign( "GhostTypeCount", 0 );
+
+				classy_counted_ptr<ClassAdMsg> msg = new ClassAdMsg(MERGE_STARTD_AD,update_ad);
+				classy_counted_ptr<DCCollector> collector = new DCCollector();
+				if( !collector->useTCPForUpdates() ) { msg->setStreamType( Stream::safe_sock ); }
+				collector->sendMsg( msg.get() );
 			}
 
 			OptimizeMachineAdForMatchmaking( ad );
@@ -6008,6 +6034,23 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	// 1 is an undercount, and ATTR_RESOURCE_REQUEST_COUNT is an overcount
 	// unless no other machine matches, but it's probably the right number
 	// assuming the pool is full (which is the case we care about).
+	//
+	// FIXME: the negotiator should know at this point how many matches
+	// it's already assigned to this resource request, because otherwise
+	// how does it know when to stop?  Find that number and plumb it
+	// through to here.
+	//
+	// If I understand then negotiator correctly: for each resource request,
+	// it checks the whole list of machine ads for matches, sorts them, and
+	// returns the top _k_, where _k_ is (at most) ATTR_RESOURCE_REQUEST_COUNT;
+	// there may be other machine ads before or after this ad that get sent
+	// back to the schedd.  IIRC, this function is called for each of those
+	// those _k_ matches to the schedd (if the corresponding machine as was
+	// marked as offline).
+	//
+	// GhostMultiplier is therefore largest number of resource requests that
+	// the ghost ad will match, which is may not be a useful knob.
+	//
 	int requestCount = 1;
 	job_ad->LookupInteger(ATTR_RESOURCE_REQUEST_COUNT, requestCount);
 	matchCount += requestCount;
