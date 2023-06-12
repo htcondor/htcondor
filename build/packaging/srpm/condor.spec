@@ -679,7 +679,7 @@ HTCondor V9 to V10 check for for known breaking changes:
 3. The way to request GPU resources for a job
 
 %files upgrade-checks
-%_bindir/upgrade9to10checks.py
+%_bindir/condor_upgrade_check
 
 #######################
 %package all
