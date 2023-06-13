@@ -631,7 +631,7 @@ the execute machine, HTCondor has the ability to transfer files from a
 location specified by a URL for a job's input file, or from the execute
 machine to a location specified by a URL for a job's output file(s).
 This capability requires administrative set up, as described in
-the :doc:`/admin-manual/setting-up-special-environments` section.
+the :doc:`/admin-manual/file-and-cred-transfer` section.
 
 URL file transfers work in most HTCondor job universes, but not grid, local
 or scheduler.  HTCondor's file transfer mechanism must be enabled.
