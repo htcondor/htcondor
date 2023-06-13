@@ -19,10 +19,10 @@ Administrators' Manual
    logging
    monitoring
    high-availability
-   setting-up-special-environments
-   java-support-installation
+   file-and-cred-transfer 
    setting-up-vm-docker-universes
    singularity-support
    power-management
    windows-installer
    directories
+   setting-up-special-environments
