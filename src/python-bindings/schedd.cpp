@@ -4688,7 +4688,7 @@ void export_schedd()
         .def("queue", &Submit::queue,
             R"C0ND0R(
             Submit the current object to a remote queue.
-            This method is DEPRECATED. use schedd.Submit() instead.
+            This method is DEPRECATED. use meth:`schedd.Submit` instead.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4708,7 +4708,7 @@ void export_schedd()
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
             Submit the current object to a remote queue.
-            This method is DEPRECATED. use schedd.Submit() instead.
+            This method is DEPRECATED. use meth:`schedd.Submit` instead.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
