@@ -39,6 +39,7 @@ Command Reference Manual (man pages)
    condor_procd
    condor_q
    condor_qedit
+   condor_qusers
    condor_qsub
    condor_reconfig
    condor_release
