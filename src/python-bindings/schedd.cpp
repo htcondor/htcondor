@@ -4404,7 +4404,7 @@ void export_schedd()
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
             Start a transaction with the *condor_schedd*.
-            DEPRECATED. use schedd.Submit instead
+            DEPRECATED. use :meth:`schedd.Submit` instead
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
             flag is set.
@@ -4601,7 +4601,7 @@ void export_schedd()
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
             ``items``, and ``values`` methods.  Values in the submit discription language have
-            no data type, they are all stored as strings
+            no data type; they are all stored as strings.
             )C0ND0R", boost::python::no_init)
         .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
@@ -4783,12 +4783,13 @@ void export_schedd()
             R"C0ND0R(
             Returns arguments specified in the ``QUEUE`` statement passed to the constructor.
             These are the arguments that will be used by the :meth:`Submit.itemdata`
+            method if not overridden.
             )C0ND0R",
             boost::python::args("self"))
         .def("setQArgs", &Submit::setQArgs,
             R"C0ND0R(
             Sets the arguments to be used by
-            subsequent calls to the :meth:`Submit.itemdata`
+            subsequent calls to the :meth:`Submit.itemdata`.
 
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",
