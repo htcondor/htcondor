@@ -4145,7 +4145,7 @@ void export_schedd()
         .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
         ;
 
-    class_<ConnectionSentry>("Transaction", "DEPRECATED.  An ongoing transaction in the HTCondor schedd", no_init)
+    class_<ConnectionSentry>("Transaction", "DEPRECATED.  An ongoing transaction in the HTCondor schedd.", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
         ;
@@ -4162,7 +4162,7 @@ void export_schedd()
         init<boost::python::object>(
             boost::python::args("self", "location_ad"),
             R"C0ND0R(
-            :param location_ad: An Ad describing the location of the remote *condor_schedd*
+            :param location_ad: A :class:`~classad.ClassAd` describing the location of the remote *condor_schedd*
                 daemon, as returned by the :meth:`Collector.locate` method, or a tuple
                 of type DaemonLocation as returned by :meth:`Schedd.location`. If the parameter is omitted,
                 the local *condor_schedd* daemon is used.
@@ -4415,7 +4415,7 @@ void export_schedd()
             :param bool continue_txn: Set to ``True`` if you would like this transaction to extend any
                 pre-existing transaction; defaults to ``False``.  If this is not set, starting a transaction
                 inside a pre-existing transaction will cause an exception to be thrown.
-            :return: A transaction context manager object.
+            :return: A :class:`~htcondor.Transaction` object.
             )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
