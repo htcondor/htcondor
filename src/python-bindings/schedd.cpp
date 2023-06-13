@@ -4145,7 +4145,7 @@ void export_schedd()
         .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
         ;
 
-    class_<ConnectionSentry>("Transaction", "DEPRECATED. An ongoing transaction in the HTCondor schedd", no_init)
+    class_<ConnectionSentry>("Transaction", "DEPRECATED.  An ongoing transaction in the HTCondor schedd", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
         ;
@@ -4314,19 +4314,19 @@ void export_schedd()
             that contains the cluster ID and ClassAd of the submitted jobs.
 
             For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
-            that describes a single job to submit, but use of this form of is deprecated.
-            Use submit_raw to submit raw job ClassAds.  If the deprecated form is used
+            that describes a single job to submit, but use of this form of is DEPRECATED.
+            If the deprecated form is used
             the return value will be the cluster ID, and ad_results will optionally be the
             actual job ClassAds that were submitted.
 
             :param description: The Submit description or ClassAd describing the job cluster.
-            :type description: :class:`~htcondor.Submit` (or deprecated :class:`~class.ClassAd`)
+            :type description: :class:`~htcondor.Submit` (or DEPRECATED :class:`~class.ClassAd`)
             :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
             :param bool spool: If ``True``, jobs will be submitted in a spooling hold mode
                so that input files can be spooled to a remote *condor_schedd* daemon before starting the jobs.
                This parameter is necessary for jobs submitted to a remote *condor_schedd* that use HTCondor file transfer.
                When True, job will be left in the HOLD state until the :func:`spool` method is called.
-            :param ad_results: deprecated. If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
+            :param ad_results: DEPRECATED.  If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
                 that were submitted.
             :type ad_results: list[:class:`~classad.ClassAd`]
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
@@ -4403,8 +4403,9 @@ void export_schedd()
             boost::python::args("self", "ad_list"))
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Start a transaction with the *condor_schedd*.
-            DEPRECATED. use :meth:`schedd.Submit` instead
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
             flag is set.
@@ -4687,8 +4688,9 @@ void export_schedd()
             boost::python::args("self", "attr"))
         .def("queue", &Submit::queue,
             R"C0ND0R(
-            Submit the current object to a remote queue.
-            This method is DEPRECATED. use meth:`schedd.Submit` instead.
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
+	        Submit the current object to a remote queue.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4707,8 +4709,9 @@ void export_schedd()
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Submit the current object to a remote queue.
-            This method is DEPRECATED. use meth:`schedd.Submit` instead.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
