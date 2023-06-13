@@ -3050,11 +3050,20 @@ and comments.
 
         D = 24
 
-    This is of limited value, as the scope of macro substitution is the
-    submit description file. Thus, either the macro is or is not defined
-    within the submit description file. If the macro is defined, then
-    the default value is useless. If the macro is not defined, then
-    there is no point in using it in a submit command.
+    This is useful for creating submit templates where values can be 
+    passed on the *condor_submit* command line, but that have a default value as well.
+    In the above example, if you give a value for E on the command line like this
+
+    .. code-block:: console
+
+        condor_submit E=99 <submit-file>
+
+    The value of 99 is used for E, resulting in
+
+    .. code-block:: text
+
+        D = 99
+
     :index:`as a literal character in a submit description file<single: as a literal character in a submit description file; $>`
 
     To use the dollar sign character ($) as a literal, without macro
