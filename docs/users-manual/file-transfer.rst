@@ -633,7 +633,7 @@ machine to a location specified by a URL for a job's output file(s).
 This capability requires administrative set up, as described in
 the :doc:`/admin-manual/setting-up-special-environments` section.
 
-URL file transfers work is most HTCondor job universe, but not grid, local
+URL file transfers work in most HTCondor job universes, but not grid, local
 or scheduler.  HTCondor's file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
 **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
