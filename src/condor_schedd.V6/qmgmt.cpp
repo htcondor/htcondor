@@ -3378,7 +3378,7 @@ UserCheck2(const ClassAd *ad, const char *test_user, const char *job_user)
 		opt = (CompareUsersOpt)(COMPARE_IGNORE_DOMAIN | (opt & CASELESS_USER));
 		if (is_same_user(test_user, job_user, opt, scheduler.uidDomain())) {
 			if (warn_domain_for_OwnerCheck) {
-				dprintf(D_FULLDEBUG, "OwnerCheck success, but '%s' is not ad owner: '%s' UID_DOMAIN=%s future HTCondor versions will not ignore domain.\n",
+				dprintf(D_FULLDEBUG, "OwnerCheck success, but '%s' is not ad owner: '%s' UID_DOMAIN=%s. Future HTCondor versions will not ignore domain.\n",
 					test_user, job_user, scheduler.uidDomain());
 			}
 			return true;
