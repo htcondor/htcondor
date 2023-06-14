@@ -13047,9 +13047,9 @@ Scheduler::Init()
 
 
 	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
-	ignore_domain_for_OwnerCheck = param_boolean("IGNORE_DOMAIN_FOR_JOB_OWNER_CHECK", ignore_domain_for_OwnerCheck);
-	warn_domain_for_OwnerCheck = param_boolean("WARN_DOMAIN_FOR_JOB_OWNER_CHECK", warn_domain_for_OwnerCheck);;
-	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", job_owner_must_be_UidDomain);
+	ignore_domain_for_OwnerCheck = param_boolean("IGNORE_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	warn_domain_for_OwnerCheck = param_boolean("WARN_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
 
 		// UidDomain will always be defined, since config() will put
 		// in get_local_fqdn() if it's not defined in the file.
