@@ -45,6 +45,12 @@ New Features:
   authentication with a daemon.
   :jira:`1841`
 
+- During SSL authentication, when the client uses a proxy certificate,
+  the server now uses the End Entity certificate's subject as the
+  authenticated identity to map, instead of the proxy certificate's
+  subject.
+  :jira:`1866`
+
 Bugs Fixed:
 
 - Fixed a bug in the python bindings where some attributes were
@@ -86,7 +92,7 @@ Bugs Fixed:
 
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
-  :jira:`1655`
+  :jira:`1829`
 
 .. _lts-version-history-1005:
 
