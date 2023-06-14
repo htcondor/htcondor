@@ -43,6 +43,7 @@ Manual built on |release_date|
    users-manual/index
    admin-manual/index
    classads/index
+   automated-workflows/index
    apis/python-bindings/index
 
 .. toctree::

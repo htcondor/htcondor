@@ -132,7 +132,7 @@ New Features:
   in a file similar to a rescue file. These files can then be specified
   with the new *condor_submit_dag* flag ``load_save`` to re-run the
   DAG from that point of progression. For more information visit
-  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :ref:`automated-workflows/dagman-save-files:dag save point files`.
   :jira:`1636`
 
 - The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows

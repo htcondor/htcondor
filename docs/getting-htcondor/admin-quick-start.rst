@@ -198,7 +198,7 @@ on machines with GPUs -- using the options described in
 
 * It may be helpful to at least skim the :doc:`../users-manual/index` to get
   an idea of what your users might want or expect, particularly the
-  sections on :doc:`../users-manual/dagman-workflows`,
+  sections on :doc:`../automated-workflows/dagman-introduction`,
   :doc:`../users-manual/choosing-an-htcondor-universe`, and
   :doc:`../users-manual/self-checkpointing-applications`.
 * Understanding :doc:`../classads/classad-mechanism` is essential for
