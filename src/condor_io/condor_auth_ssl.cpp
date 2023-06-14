@@ -177,6 +177,11 @@ static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
 static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
 static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
 static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+static decltype(&SSL_get_peer_cert_chain) SSL_get_peer_cert_chain_ptr = nullptr;
+#else
+static decltype(&SSL_get0_verified_chain) SSL_get0_verified_chain_ptr = nullptr;
+#endif
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -277,8 +282,10 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
+		 !(SSL_get_peer_cert_chain_ptr = reinterpret_cast<decltype(SSL_get_peer_cert_chain_ptr)>(dlsym(dl_hdl, "SSL_get_peer_cert_chain"))) ||
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "SSLv23_method")))
 #else
+		 !(SSL_get0_verified_chain_ptr = reinterpret_cast<decltype(SSL_get0_verified_chain_ptr)>(dlsym(dl_hdl, "SSL_get0_verified_chain"))) ||
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "TLS_method")))
 #endif
 		 ) {
@@ -338,6 +345,11 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
 	SSL_get_ex_data_ptr = SSL_get_ex_data;
 	SSL_set_ex_data_ptr = SSL_set_ex_data;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	SSL_get_peer_cert_chain_ptr = SSL_get_peer_cert_chain;
+#else
+	SSL_get0_verified_chain_ptr = SSL_get0_verified_chain;
+#endif
 
 	m_initSuccess = true;
 #endif
@@ -1167,8 +1179,35 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 	} else {
 		X509 *peer = SSL_get_peer_certificate_ptr(m_auth_state->m_ssl);
 		if (peer) {
-			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-			(*X509_free)(peer);
+			BASIC_CONSTRAINTS *bs = nullptr;
+			PROXY_CERT_INFO_EXTENSION *pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(peer, NID_proxyCertInfo, NULL, NULL);
+			if (pci) {
+				PROXY_CERT_INFO_EXTENSION_free(pci);
+				STACK_OF(X509)* chain = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+				chain = (*SSL_get_peer_cert_chain_ptr)(m_auth_state->m_ssl);
+#else
+				chain = (*SSL_get0_verified_chain_ptr)(m_auth_state->m_ssl);
+#endif
+				for (int n = 0; n < sk_X509_num(chain); n++) {
+					X509* cert = sk_X509_value(chain, n);
+					bs = (BASIC_CONSTRAINTS *)X509_get_ext_d2i(cert, NID_basic_constraints, NULL, NULL);
+					pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(cert, NID_proxyCertInfo, NULL, NULL);
+					if (!pci && !(bs && bs->ca)) {
+						X509_NAME_oneline(X509_get_subject_name(cert), subjectname, 1024);
+					}
+					if (bs) {
+						BASIC_CONSTRAINTS_free(bs);
+					}
+					if (pci) {
+						PROXY_CERT_INFO_EXTENSION_free(pci);
+					}
+				}
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			} else {
+				X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+			}
+			X509_free(peer);
 			setRemoteUser( "ssl" );
 		} else {
 			strcpy(subjectname, "unauthenticated");
