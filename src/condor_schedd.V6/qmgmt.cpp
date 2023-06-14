@@ -3373,7 +3373,8 @@ UserCheck2(const ClassAd *ad, const char *test_user, const char *job_user)
 	if (is_same_user(test_user, job_user, opt, scheduler.uidDomain())) {
 		return true;
 	}
-	if ( ! ignore_domain_for_OwnerCheck) {
+	if (ignore_domain_for_OwnerCheck) {
+		// if it doesn't match fully qualified, try again ignoring the domain.
 		opt = (CompareUsersOpt)(COMPARE_IGNORE_DOMAIN | (opt & CASELESS_USER));
 		if (is_same_user(test_user, job_user, opt, scheduler.uidDomain())) {
 			if (warn_domain_for_OwnerCheck) {
