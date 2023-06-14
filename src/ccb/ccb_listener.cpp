@@ -157,7 +157,6 @@ CCBListener::SendMsgToCCB(ClassAd &msg,bool blocking)
 				return false;
 			}
 			m_waiting_for_connect = true;
-			incRefCount(); // do not let ourselves be deleted until called back
 			ccb.startCommand_nonblocking( cmd, m_sock, CCB_TIMEOUT, NULL, CCBListener::CCBConnectCallback, this, NULL, false, USE_TMP_SEC_SESSION );
 			return false;
 		}
@@ -202,7 +201,6 @@ CCBListener::CCBConnectCallback(bool success,Sock *sock,CondorError * /*errstack
 		self->Disconnected();
 	}
 
-	self->decRefCount(); // remove ref count from when we started the connect
 }
 
 void
@@ -240,7 +238,6 @@ CCBListener::Disconnected()
 
 	if( m_waiting_for_connect ) {
 		m_waiting_for_connect = false;
-		decRefCount();
 	}
 
 	m_waiting_for_registration = false;
@@ -481,8 +478,6 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		}
 	}
 
-	incRefCount();      // do not delete self until called back
-
 	int rc = daemonCore->Register_Socket(
 		sock,
 		sock->peer_description(),
@@ -494,7 +489,6 @@ CCBListener::DoReversedCCBConnect( char const *address, char const *connect_id, 
 		ReportReverseConnectResult(msg_ad,false,"failed to register socket for non-blocking reversed connection");
 		delete msg_ad;
 		delete sock;
-		decRefCount();
 		return false;
 	}
 
@@ -545,8 +539,6 @@ CCBListener::ReverseConnected(Stream *stream)
 	if( sock ) {
 		delete sock;
 	}
-	decRefCount(); // we incremented ref count when setting up callback
-
 	return KEEP_STREAM;
 }
 
@@ -594,10 +586,10 @@ CCBListener::operator ==(CCBListener const &other)
 }
 
 
-CCBListener *
+std::shared_ptr<CCBListener>
 CCBListeners::GetCCBListener(char const *address)
 {
-	classy_counted_ptr<CCBListener> ccb_listener;
+	std::shared_ptr<CCBListener> ccb_listener;
 
 	if( !address ) {
 		return NULL;
@@ -606,7 +598,7 @@ CCBListeners::GetCCBListener(char const *address)
 	for(auto & m_ccb_listener : m_ccb_listeners) {
 		ccb_listener = m_ccb_listener;
 		if( !strcmp(address,ccb_listener->getAddress()) ) {
-			return ccb_listener.get();
+			return ccb_listener;
 		}
 	}
 	return NULL;
@@ -615,7 +607,7 @@ CCBListeners::GetCCBListener(char const *address)
 void
 CCBListeners::GetCCBContactString(std::string &result)
 {
-	classy_counted_ptr<CCBListener> ccb_listener;
+	std::shared_ptr<CCBListener> ccb_listener;
 
 	for(auto & m_ccb_listener : m_ccb_listeners) {
 		ccb_listener = m_ccb_listener;
@@ -634,7 +626,7 @@ CCBListeners::RegisterWithCCBServer(bool blocking)
 {
 	int result = 0;
 
-	classy_counted_ptr<CCBListener> ccb_listener;
+	std::shared_ptr<CCBListener> ccb_listener;
 	for(auto & m_ccb_listener : m_ccb_listeners) {
 		ccb_listener = m_ccb_listener;
 		if( !ccb_listener->RegisterWithCCBServer(blocking) && blocking ) {
@@ -655,11 +647,9 @@ CCBListeners::Configure(char const *addresses)
 	char const *address;
 	addrlist.rewind();
 	while( (address=addrlist.next()) ) {
-		CCBListener *listener;
-
 			// preserve existing CCBListener if there is one connected
 			// to this address
-		listener = GetCCBListener( address );
+		std::shared_ptr<CCBListener> listener = GetCCBListener( address );
 
 		if( !listener ) {
 
@@ -677,7 +667,7 @@ CCBListeners::Configure(char const *addresses)
 					ccb_addr_str?ccb_addr_str:"null",
 					my_addr_str?my_addr_str:"null");
 
-			listener = new CCBListener(address);
+			listener.reset(new CCBListener(address));
 		}
 
 		new_ccbs.push_back( listener );
@@ -685,9 +675,8 @@ CCBListeners::Configure(char const *addresses)
 
 	m_ccb_listeners.clear();
 
-	classy_counted_ptr<CCBListener> ccb_listener;
 	for(auto & new_ccb : new_ccbs) {
-		ccb_listener = new_ccb;
+		std::shared_ptr<CCBListener> ccb_listener = new_ccb;
 		if( GetCCBListener( ccb_listener->getAddress() ) ) {
 				// ignore duplicate entries with same address
 			continue;

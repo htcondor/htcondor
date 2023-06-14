@@ -29,9 +29,10 @@
  */
 
 #include "condor_daemon_core.h"
+#include <memory>
 #include "simplelist.h"
 
-class CCBListener: public Service, public ClassyCountedPtr {
+class CCBListener: public Service {
  public:
 	CCBListener(char const *ccb_address);
 	~CCBListener();
@@ -91,7 +92,7 @@ class CCBListeners {
 	void Configure(char const *addresses);
 
 		// find CCB listener for given CCB address
-	CCBListener *GetCCBListener(char const *address);
+	std::shared_ptr<CCBListener> GetCCBListener(char const *address);
 
 		// returns string representation of list of CCB id(s)
 		// example: "<ccb server>#<ccbid> <ccb server2>#<ccbid2> ..."
@@ -103,7 +104,7 @@ class CCBListeners {
 	size_t size() const { return m_ccb_listeners.size(); }
 
  private:
-	typedef std::list< classy_counted_ptr<CCBListener> > CCBListenerList;
+	typedef std::list<std::shared_ptr<CCBListener> > CCBListenerList;
 	CCBListenerList m_ccb_listeners;
 	std::string m_ccb_contact;
 };
