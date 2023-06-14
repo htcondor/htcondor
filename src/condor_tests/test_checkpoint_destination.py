@@ -375,7 +375,7 @@ def path_to_the_job_script(default_condor, test_dir):
     if the_checkpoint_number == 0:
         # This is a hack.
         target = Path(posix_test_dir) / sys.argv[1]
-        os.system(f'/bin/cp -a . {target.as_posix()}')
+        os.system(f'/bin/cp -a . {target.as_posix()} 2>/dev/null')
 
     total_steps = 14
     num_completed_steps = 0
