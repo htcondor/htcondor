@@ -194,6 +194,9 @@ extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
+extern bool ignore_domain_for_OwnerCheck;
+extern bool warn_domain_for_OwnerCheck;
+extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
 
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
@@ -1897,7 +1900,7 @@ InitOwnerinfo(
 		if ( ! USERREC_NAME_IS_FULLY_QUALIFIED) {
 			// TODO: romove this once we go fully qualified.
 			if ( ! bad->LookupString(ATTR_USERREC_NAME, owner)) {
-				owner .clear();
+				owner.clear();
 			}
 		}
 	} else {
@@ -3369,6 +3372,16 @@ UserCheck2(const ClassAd *ad, const char *test_user, const char *job_user)
 #endif
 	if (is_same_user(test_user, job_user, opt, scheduler.uidDomain())) {
 		return true;
+	}
+	if ( ! ignore_domain_for_OwnerCheck) {
+		opt = (CompareUsersOpt)(COMPARE_IGNORE_DOMAIN | (opt & CASELESS_USER));
+		if (is_same_user(test_user, job_user, opt, scheduler.uidDomain())) {
+			if (warn_domain_for_OwnerCheck) {
+				dprintf(D_FULLDEBUG, "OwnerCheck success, but '%s' is not ad owner: '%s' UID_DOMAIN=%s future HTCondor versions will not ignore domain.\n",
+					test_user, job_user, scheduler.uidDomain());
+			}
+			return true;
+		}
 	}
 
 	if (isQueueSuperUser(test_user)) {
@@ -6274,10 +6287,10 @@ static void AddImplicitJobsets(const std::list<std::string> &new_ad_keys, std::v
 }
 
 
-static void
-AddSessionAttributes(const std::list<std::string> &new_ad_keys)
+static int
+AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError * errorStack)
 {
-	if (new_ad_keys.empty()) {return;}
+	if (new_ad_keys.empty()) { return 0; }
 
 	ClassAd policy_ad;
 	if (Q_SOCK && Q_SOCK->getReliSock()) {
@@ -6312,7 +6325,24 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 			#ifdef USE_JOB_QUEUE_USERREC
 				// User is cannonical and Owner must be splitusername(user)[0]
 				if (no_user) {
-					JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(euser, qbuf));
+					if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+						JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(euser, qbuf));
+					} else {
+						// If User records are keyed by owner, the User attribute *must* be owner@uid_domain
+						const char * owner = name_of_user(euser, qbuf);
+						if ( ! is_same_user(euser, owner, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())) {
+							if (job_owner_must_be_UidDomain) {
+								if (errorStack) {
+									errorStack->pushf("QMGMT", 1,
+										"username is '%s', but only users with domain %s can submit jobs.",
+										euser, scheduler.uidDomain());
+								}
+								return -1;
+							}
+						}
+						ubuf = std::string(owner) + "@" + scheduler.uidDomain();
+						JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(ubuf.c_str(), qbuf));
+					}
 				} else {
 					euser = ubuf.c_str(); 
 				}
@@ -6437,6 +6467,8 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys)
 			dprintf(D_SECURITY, "ATTRS: SetAttribute %i.%i %s=%s\n", jid.cluster, jid.proc, attr_it->first.c_str(), attr_value_buf.c_str());
 		}
 	}
+
+	return 0;
 }
 
 int CommitTransactionInternal( bool durable, CondorError * errorStack );
@@ -6496,9 +6528,13 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 	if ( ! new_ad_keys.empty()) { SetSubmitTotalProcs(new_ad_keys); }
 
 	if ( !new_ad_keys.empty() ) {
-		AddSessionAttributes(new_ad_keys);
+		int rval = AddSessionAttributes(new_ad_keys, errorStack);
+		if (rval < 0) {
+			dprintf(D_FULLDEBUG, "AddSessionAttributes error %d : %s\n", rval, errorStack ? errorStack->message() : "");
+			return rval;
+		}
 
-		int rval = CheckTransaction(new_ad_keys, errorStack);
+		rval = CheckTransaction(new_ad_keys, errorStack);
 		if ( rval < 0 ) {
 			// This transaction failed checks (e.g. SUBMIT_REQUIREMENTS), so now the question
 			// is should we abort this transaction (that we refuse to commit) right now right here,
