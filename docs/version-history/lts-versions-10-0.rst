@@ -26,6 +26,12 @@ New Features:
   authentication with a daemon.
   :jira:`1841`
 
+- During SSL authentication, when the client uses a proxy certificate,
+  the server now uses the End Entity certificate's subject as the
+  authenticated identity to map, instead of the proxy certificate's
+  subject.
+  :jira:`1866`
+
 Bugs Fixed:
 
 - Fixed a bug in the python bindings where some attributes were
