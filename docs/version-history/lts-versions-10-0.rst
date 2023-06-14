@@ -73,7 +73,7 @@ Bugs Fixed:
 
 - When started on a systemd system, HTCondor will now wait for the SSSD
   service to start.  Previously it only waited for ypbind.
-  :jira:`1655`
+  :jira:`1829`
 
 .. _lts-version-history-1005:
 
