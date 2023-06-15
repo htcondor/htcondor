@@ -4211,6 +4211,10 @@ void export_schedd()
             ))
         .def("xquery", &Schedd::xquery,
             R"C0ND0R(
+            .. warning::
+
+                This function is deprecated.
+
             Query the *condor_schedd* daemon for job ads.
 
             .. warning::
