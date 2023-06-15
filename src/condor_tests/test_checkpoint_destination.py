@@ -471,7 +471,7 @@ def the_job_description(test_dir, path_to_the_job_script):
         "log":                          test_dir / "test_job_$(CLUSTER).log",
         "output":                       test_dir / "test_job_$(CLUSTER).out",
         "error":                        test_dir / "test_job_$(CLUSTER).err",
-        "+WantIOProxy":                 "True",
+        "want_io_proxy":                "True",
 
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",

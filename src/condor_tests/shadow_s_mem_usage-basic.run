@@ -39,7 +39,7 @@ CONDOR_TESTREQ_CONFIG
 
 # run a job and look at shadow memory usage
 my $append_submit_commands = '
-+WantIOProxy = true
+want_io_proxy = true
 executable = x_shadow_mem_usage.pl
 output = ' . $testname . '.out
 error  = ' . $testname . '.err
