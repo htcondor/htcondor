@@ -6257,9 +6257,8 @@ These settings affect the *condor_starter*.
     names for plug-ins that will accomplish the task of doing file
     transfer when a job requests the transfer of an input file by
     specifying a URL. See
-    :ref:`admin-manual/setting-up-special-environments:enabling the transfer
-    of files specified by a url` for a description of the functionality
-    required of a plug-in.
+    :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
+    for a description of the functionality required of a plug-in.
 
 :macro-def:`RUN_FILETRANSFER_PLUGINS_WITH_ROOT`
     A boolean value that affects only Unix platforms and defaults to
