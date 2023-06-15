@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
 
 Bugs Fixed:
 
