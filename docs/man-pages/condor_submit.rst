@@ -1392,7 +1392,7 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins
-    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    (see :doc:`../admin-manual/file-and-cred-transfer`)
     that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,

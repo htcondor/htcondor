@@ -18,20 +18,19 @@ This URL specification works for most HTCondor job universes, but not grid,
 local or scheduler.  The execute machine directly retrieves the files from
 their source. Each URL-transferred file, is
 separately listed in the job submit description file with the command
-``transfer_input_files`` :index:`transfer_input_files<single: transfer_input_files; submit commands>`;
-see the :ref:`users-manual/file-transfer:submitting jobs without a shared
-
-file system: htcondor's file transfer mechanism` section for details.
+``transfer_input_files``;
+:index:`transfer_input_files<single: transfer_input_files; submit commands>`
+see :doc:`../users-manual/file-transfer` for details.
 
 For transferring output files, either the entire output sandbox, or a
 subset of these files, as specified by the submit description file
-command
-``transfer_output_files`` :index:`transfer_output_files<single: transfer_output_files; submit commands>`
+command ``transfer_output_files``
+:index:`transfer_output_files<single: transfer_output_files; submit commands>`
 are transferred to the directory specified by the URL. The URL itself is
 specified in the separate submit description file command
-``output_destination`` :index:`output_destination<single: output_destination; submit commands>`;
-see the :ref:`users-manual/file-transfer:submitting jobs without a shared
-file system: htcondor's file transfer mechanism` section for details. The plug-in
+``output_destination``;
+:index:`output_destination<single: output_destination; submit commands>`
+see :doc:`../users-manual/file-transfer` for details.  The plug-in
 is invoked once for each output file to be transferred.
 
 Configuration identifies the availability of the one or more plug-in(s).
@@ -134,7 +133,6 @@ exit codes:
     - **1**: Transfer failed
     - **2**: Transfer needs a refreshed authentication token, should be retried
       (slated for development, not implemented yet)
-
 
 Custom File Transfer Plugins
 ''''''''''''''''''''''''''''

@@ -32,10 +32,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
 
 If there is no output from the *condor_status* command, then HTCondor
 does not know the location details of the Java Virtual Machine on
-machines in the pool, or no machines have Java correctly installed. In
-this case, contact your system administrator or see the 
-:doc:`/admin-manual/java-support-installation` section
-for more information on getting HTCondor to work together with Java.
+machines in the pool, or no machines have Java correctly installed.
 
 A Simple Example Java Application
 ---------------------------------
