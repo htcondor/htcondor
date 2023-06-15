@@ -71,7 +71,7 @@ class Read(Verb):
                         site = event.get("ExecuteProps").get(groupby)
                         event_summary["Site"] = site
                     # get last execution time
-                    start_time = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
+                    start_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
                     event_summary["Start Time"] = start_time
                     event_summary["last_exec_time"] = start_time
                     # set boolean that job has been executed
@@ -91,13 +91,13 @@ class Read(Verb):
                     event_summary["CPU Usage"] = cpu_usage_formatted
                     if event.type == htcondor.JobEventType.JOB_EVICTED:
                         event_summary["Evictions"] = event_summary.get("Evictions", 0) + 1
-                        event_summary["last_exec_time"] = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
-                    event_summary["Evict Time"] = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
+                        event_summary["last_exec_time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                    event_summary["Evict Time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
                     delta = datetime.strptime(event_summary["Evict Time"], "%m/%d %H:%M") - datetime.strptime(event_summary["Start Time"], "%m/%d %H:%M")
                     wall_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
                     event_summary["Wall Time"] = wall_time
                     # get total execution time for calculating good time
-                    event_time = datetime.fromisoformat(event.get("EventTime")).strftime("%-m/%-d %H:%M")
+                    event_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
                     delta = datetime.strptime(event_time, "%m/%d %H:%M") - datetime.strptime(event_summary["last_exec_time"], "%m/%d %H:%M")
                     good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}"
                     event_summary["Good Time"] = good_time
