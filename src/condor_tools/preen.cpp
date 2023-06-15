@@ -374,7 +374,7 @@ check_spool_dir()
 	}
 
 	//List of known history like config knobs to not delete if in spool
-	std::string history_knobs[] = {"HISTORY","JOB_EPOCH_HISTORY","STARTD_HISTORY"};
+	std::string history_knobs[] = {"HISTORY","JOB_EPOCH_HISTORY","STARTD_HISTORY", "COLLECTOR_PERSISTENT_AD_LOG"};
 	//Param the knobs for the file name and add to data structure
 	std::deque<std::string> history_files;
 	for(auto &knob : history_knobs) {
