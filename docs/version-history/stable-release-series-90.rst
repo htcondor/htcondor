@@ -18,10 +18,6 @@ Release Notes:
 
 - HTCondor version 9.0.18 not yet released.
 
-- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
-  to match standard HTCSS naming scheme.
-  :jira:`1828`
-
 New Features:
 
 - Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
@@ -36,14 +32,17 @@ New Features:
   authentication with a daemon.
   :jira:`1841`
 
+- Added new script called ``condor_upgrade_check`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
+
 Bugs Fixed:
 
-- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
-  :jira:`1840`
-
-- The ``condor_upgrade_check`` script no longer attempts to check for problems
-  for an HTCondor pool when requesting checks for an HTCondor-CE.
-  :jira:`1840`
+- None.
 
 .. _lts-version-history-9017:
 
