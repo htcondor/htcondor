@@ -20,7 +20,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Improved daemon logging for IDTOKENS authentication to make useful
+  messages more prominent.
+  :jira:`1776`
 
 Bugs Fixed:
 
