@@ -2936,7 +2936,7 @@ obtainAdsFromCollector (
 
 	if (!ConsiderPreemption) {
 		const char *projectionString =
-			"ifThenElse((State == \"Claimed\"&&!PartitionableSlot),\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
+			"ifThenElse((State == \"Claimed\"&&PartitionableSlot=!=true),\"Name MyType State Activity StartdIpAddr AccountingGroup Owner RemoteUser Requirements SlotWeight ConcurrencyLimits\",\"\") ";
 		publicQuery.setDesiredAttrsExpr(projectionString);
 
 		dprintf(D_ALWAYS, "Not considering preemption, therefore constraining idle machines with %s\n", projectionString);
@@ -4613,6 +4613,7 @@ matchmakingAlgorithm(const char *submitterName, const char *scheddAddr, const ch
 			candidate->LookupString(ATTR_NAME,machine_name);
 		}
 
+		is_pslot = false;
 		candidate->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
 		if (is_pslot && candidate->LookupString(ATTR_REMOTE_SCHEDD_NAME, pslot_claimer)) {
 			if (pslot_claimer != scheddName) {
