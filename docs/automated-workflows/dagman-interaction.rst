@@ -69,7 +69,7 @@ the job event log file(s), observing the e-mail that job submission to
 HTCondor causes, or by using *condor_q*.
 
 Using just *condor_q* while a DAGMan workflow is running will display
-condensed information regarding the overall workflow progess under the
+condensed information regarding the overall workflow progress under the
 DAGMan proper job as follows:
 
 .. code-block:: console
