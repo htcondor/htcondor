@@ -5,7 +5,7 @@ Chirp is used by Condor (http://www.cs.wisc.edu/condor/) as an I/O proxy
 protocol.  Proxy support is requested by adding the following line to
 the submit file:
 
-+WantIOProxy = true
+want_io_proxy = true
 
 
 The job starter will then create a file called ".chirp.config" in the

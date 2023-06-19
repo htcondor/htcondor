@@ -95,7 +95,7 @@ DLLEXPORT struct chirp_client * chirp_client_connect_default(void);
   Opens connection to the default chirp server.  The default connection
   information is determined by reading ./.chirp.config.  Under Condor,
   the starter can automatically create this file if you specify
-  +WantIOProxy=True in the submit file.
+  want_io_proxy=True in the submit file.
 */
 
 DLLEXPORT struct chirp_client * chirp_client_connect( const char *host, int port );

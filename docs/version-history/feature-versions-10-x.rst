@@ -17,7 +17,9 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added submit command **want_io_proxy**.
+  This replaces the old command **+WantIOProxy**.
+  :jira:`1875`
 
 Bugs Fixed:
 

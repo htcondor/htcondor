@@ -416,7 +416,7 @@ given test programs:
     executable = TestChirp.class
     arguments = TestChirp
     jar_files = Chirp.jar
-    +WantIOProxy = True
+    want_io_proxy = True
     request_cpus   = 1
     request_memory = 1024M
     request_disk   = 10240K
