@@ -2,7 +2,7 @@ Special Node Types
 ==================
 
 While most DAGMan nodes are the standard JOB type that run a job and possibly
-a PRE or POST script, special nodes can be specified in the DAG submit desctription
+a PRE or POST script, special nodes can be specified in the DAG submit description
 to help manage the DAG and its resources in various ways.
 
 .. _final-node:

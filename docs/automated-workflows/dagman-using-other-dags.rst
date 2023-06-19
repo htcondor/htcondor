@@ -573,7 +573,7 @@ Splice Limitations
 
 Because the nodes of a splice are directly incorporated into the DAG
 containing the SPLICE command, splices do not generate their own rescue
-DAGs, unlike SUBDAG EXTERNALs. However, all progess for nodes in the splice
+DAGs, unlike SUBDAG EXTERNALs. However, all progress for nodes in the splice
 DAG will be written in the parent DAGs rescue DAG file.
 
 **Limitation: splice DAGs must exist at submit time**

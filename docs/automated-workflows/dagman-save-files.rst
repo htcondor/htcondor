@@ -81,7 +81,7 @@ effect save point files when re-running a DAG. If a DAG was set up as follows:
 
 .. code-block:: condor-dagman
 
-    # File: progessSavefile.dag
+    # File: progressSavefile.dag
     JOB A node.sub
     JOB B node.sub
     JOB C node.sub

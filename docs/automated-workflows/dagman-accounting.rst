@@ -30,6 +30,6 @@ hierarchical group quotas.
 
 As of version 10.0.0, any explicitly set accounting group information
 within a DAGMan nodes job description will take precedence over the
-acounting information propagated down through DAGMan. This allows
+accounting information propagated down through DAGMan. This allows
 for easy setting of accounting information for all DAG jobs while
-giving a way for specific jobs to run with different acounting information.
+giving a way for specific jobs to run with different accounting information.

@@ -114,7 +114,7 @@ Prepend or Append Variables to Node
 After *JobName* the word *PREPEND* or *APPEND* can be added to specify how
 a variable is passed to a node at job submission time. *APPEND* will add
 the variable after the submit description file is read. Resulting in the
-passed variable being added as a macro or overwritting any already existing
+passed variable being added as a macro or overwriting any already existing
 variable values. *PREPEND* will add the variable before the submit
 description file is read. This allows the variable to be used in submit
 description file conditionals.
