@@ -636,7 +636,7 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`users-manual/dagman-workflows:advanced features of dagman`
+    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
     for more details).
 
     :index:`queue<single: queue; submit commands>`
