@@ -396,8 +396,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		} else {
 			core_size = (size_t)core_size_ad;
 		}
-		core_size_ptr = &core_size;
+	} else {
+		// if ATTR_CORE_SIZE is unset, assume 0
+		core_size = 0;
 	}
+	core_size_ptr = &core_size;
 #endif // !defined(WIN32)
 
 	long rlimit_as_hard_limit = 0;
