@@ -831,6 +831,7 @@ else ()
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/libvirt/0.6.2)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/munge/0.5.13)
 	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/scitokens-cpp/1.0.0)
+	add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/lotman/0.0.1)
 
     if (LINUX)
             add_subdirectory(${CONDOR_EXTERNAL_DIR}/bundles/voms/2.1.0)

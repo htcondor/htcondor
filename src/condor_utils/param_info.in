@@ -949,6 +949,12 @@ type=bool
 tags=master
 usage=Set to true to allow the collector administrator(s) to manage the daemon
 
+[LOTMAN_DB]
+default=auto
+type=string
+description=Filepath to where LotMan db should be placed
+tags=lotman
+
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool

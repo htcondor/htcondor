@@ -130,6 +130,9 @@
 /* Do we have the scitokens external (USED)*/
 #cmakedefine HAVE_EXT_SCITOKENS 1
 
+/* Do we have the lotman external (USED)*/
+#cmakedefine HAVE_EXT_LOTMAN 1
+
 /* Do we have the voms external (USED)*/
 #cmakedefine HAVE_EXT_VOMS 1
 

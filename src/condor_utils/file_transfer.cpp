@@ -65,6 +65,8 @@
 #include <string>
 #include <filesystem>
 
+#include "condor_lotman.h"
+
 const char * const StdoutRemapName = "_condor_stdout";
 const char * const StderrRemapName = "_condor_stderr";
 
@@ -3403,6 +3405,18 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 	// End of the main download loop
 
+#ifdef HAVE_EXT_LOTMAN
+	std::string spool_path;
+	SpooledJobFiles::getJobSpoolPath(&jobAd, spool_path);
+	if (outputDirectory == spool_path) {
+		dprintf( D_ALWAYS, "Updating usage for lot with path %s\n", spool_path.c_str() );
+		bool lot_updated = condor_lotman::update_usage(spool_path.c_str(), numFiles, *total_bytes_ptr, true, true, errstack);
+		if (!lot_updated) {
+			dprintf( D_ALWAYS, "Failed to update lot usage for path %s...\n\n\n", spool_path.c_str() );
+		}
+	}
+#endif
+	
 	// Release transfer queue slot after file has been put but before the
 	// final transfer ACKs are done.  In the future where multifile transfers
 	// plugins are used in DoDownload, this would allow DoDownload side to
