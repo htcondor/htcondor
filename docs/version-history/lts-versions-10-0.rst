@@ -30,6 +30,10 @@ Bugs Fixed:
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
 
+- Print detailed error message when *condor_remote_cluster* fails to
+  fetch a URL.
+  :jira:`1884`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
