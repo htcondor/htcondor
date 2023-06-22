@@ -118,7 +118,8 @@ usage(int retval = 1)
 		"\tvalue is expanded unless -raw, -evaluate, -default or -dump is\n"
 		"\tspecified. When used with -dump, <var> is regular expression.\n"
 		"\n    where <view> is one or more of\n"
-		"\t-summary\tPrint all variables changed by config files\n"
+		"\t-summary[:detected] Print all variables changed by config files\n"
+		"\t\t\toptionally including detected values\n"
 		"\t-dump\t\tPrint values of all variables that match <var>\n"
 		"\t\t\tThe value is raw unless -expanded, -default, or -evaluate\n"
 		"\t\t\tis specified. If no <vars>, Print all variables\n"
@@ -752,6 +753,7 @@ main( int argc, const char* argv[] )
 				for (const char * opt = opts.first(); opt != nullptr; opt = opts.next()) {
 					if (is_arg_prefix(opt, "detected", 3)) {
 						dash_detected = true;
+						write_config_flags.show_detected = true;
 					}
 				}
 			}
