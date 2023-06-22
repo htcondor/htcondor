@@ -24,8 +24,11 @@
 #define ENABLE_JOB_OBJECTS 1
 #include "tiny_winapi.h"
 
+// build in a x64 c++ build prompt by running
+// cl /O1 /GS- timed_cmd.cpp /link /out:timed_cmd.exe
+
 #define BUILD_MODULE_STRING "timed_cmd"
-#define BUILD_VERSION_STRING "1.1.2"
+#define BUILD_VERSION_STRING "1.1.3"
 
 HANDLE hStdOut;
 HANDLE hStdErr;
@@ -640,7 +643,7 @@ extern "C" void __cdecl begin( void )
 
 	if (show_usage || ! was_cmd) {
 		Print(return_code ? hStdErr : hStdOut,
-			BUILD_MODULE_STRING " v" BUILD_VERSION_STRING " " BUILD_ARCH_STRING "  Copyright 2015 HTCondor/John M. Knoeller\r\n"
+			BUILD_MODULE_STRING " v" BUILD_VERSION_STRING " " BUILD_ARCH_STRING "  Copyright 2023 HTCondor/John M. Knoeller\r\n"
 			"\r\nUsage: timed_cmd [options] [-t <maxtime>] [-(e|E) <envfile>] <cmdline>\r\n\r\n"
 			"    execute <cmdline> and report how long it takes to execute.  Optional arguments can be\r\n"
 			"    used to insure that the command does not run longer than <maxtime>.\r\n"
@@ -675,7 +678,8 @@ extern "C" void __cdecl begin( void )
 			"   -j[:<jobname>] Create a JobObject with the given name (or no name) and run the command inside it.\r\n"
 			"       This insures that all child processes are terminated when the timeout expires. \r\n"
 			"       Job objects do not nest on Windows 7, so this option could cause the command to fail.\r\n"
-			"   -d  when <maxtime> expires, print a diagnostic summary of child processes. requires -j option\r\n"
+			"   -d[:<delay>]  when <maxtime> expires, print a diagnostic summary of child processes,\r\n"
+			"       optionally waiting <delay> before terminating child processes. requires -j option\r\n"
 			"\r\n" , -1);
 		if (return_code) {
 			int cchBuf = Length(pwholecmdline) + 1024;

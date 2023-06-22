@@ -170,9 +170,9 @@ typedef struct STARTUPINFO {
 	HANDLE       hStdOutput;
 	HANDLE       hStdError;
 	void Init() {
-		cb = sizeof(STARTUPINFO);
-		wchar_t**p = &lpReserved;
+		void**p = (void**)&cb;
 		for (int ii = 0; ii < sizeof(STARTUPINFO)/sizeof(void*); ++ii) *p++ = NULL;
+		cb = sizeof(STARTUPINFO);
 	}
 } STARTUPINFO;	  // 0x44 0x68
 
@@ -234,7 +234,7 @@ extern "C" BOOL __stdcall SetEnvironmentVariableA(const char * name, const char 
 extern "C" BOOL __stdcall SetEnvironmentVariableW(const wchar_t * name, const wchar_t * value);
 extern "C" UINT __stdcall GetEnvironmentVariableA(const char * name, char * buf, UINT cch);
 extern "C" UINT __stdcall GetEnvironmentVariableW(const wchar_t * name, wchar_t * buf, UINT cch);
-extern "C" BOOL __stdcall WriteFile(HANDLE hFile, char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
+extern "C" BOOL __stdcall WriteFile(HANDLE hFile, const char * buffer, unsigned int cbBuffer, unsigned int * pcbWritten, void* over);
 extern "C" BOOL __stdcall ReadFile(HANDLE hFile, char * buffer, unsigned int cbBuffer, unsigned int * pcbRead, void* over);
 extern "C" BOOL __stdcall GetFileSizeEx(HANDLE hFile, __int64 * pcb);
 extern "C" BOOL __stdcall QueryPerformanceCounter(unsigned __int64 * counter);
@@ -1082,7 +1082,7 @@ bool str_starts_with_nocase(const c* a, const c* pre) {
 template <class c>
 BOOL Print(HANDLE hf, const c* output, unsigned int cch) {
     unsigned int cbWrote = 0;
-    return WriteFile(hf, (char*)const_cast<c*>(output), cch * sizeof(c), &cbWrote, 0);
+    return WriteFile(hf, (const char*)output, cch * sizeof(c), &cbWrote, 0);
 }
 template <class c>
 BOOL Print(HANDLE hf, const c* output, int cch) {
