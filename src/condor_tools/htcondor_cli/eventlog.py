@@ -66,10 +66,9 @@ class Read(Verb):
                     if event.get("SlotName") is not None:
                         hostname = event.get("SlotName")
                         event_summary["Host"] = hostname
-                    # get site name
-                    if groupby == "GLIDEIN_ResourceName":
-                        site = event.get("ExecuteProps").get(groupby)
-                        event_summary["Site"] = site
+                    # get grouping information, if any
+                    if groupby is not None:
+                        event_summary[groupby] = event.get("ExecuteProps").get(groupby)
                     # get last execution time
                     start_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
                     event_summary["Start Time"] = start_time
@@ -104,12 +103,12 @@ class Read(Verb):
                     # get Return Value
                     event_summary["Return Value"] = event.get("ReturnValue")
         # will probably need to refactor this to be more efficient for other groupby options
-        if groupby:
+        if groupby is not None:
             if groupby == "GLIDEIN_ResourceName":
                 # get total stats for each site
                 site_stats = {}
                 for job_id, event_summary in event_summaries.items():
-                    site = event_summary.get("Site", "")
+                    site = event_summary.get(groupby, "")
                     if site not in site_stats:
                         site_stats[site] = {"Evictions": 0, "Wall Time": 0, "Good Time": 0, "CPU Usage": 0, "Successes": 0, "Failures": 0}
                     site_stats[site]["Evictions"] += int(event_summary.get("Evictions", 0))
@@ -164,8 +163,7 @@ class Read(Verb):
             json_output = []
             for job_id, event_summary in event_summaries.items():
                 # convert cpu usage, wall time, and good time to seconds
-                cpu_usage = event_summary.get("CPU Usage", "0+00:00:00")
-                cpu_usage_seconds = int(cpu_usage.split("+")[1].replace(":", ""))
+                convert_dhms_to_seconds(event_summary, "CPU Usage")
                 wall_time = event_summary.get("Wall Time", "0+00:00:00")
                 wall_time_seconds = int(wall_time.split("+")[1].replace(":", ""))
                 good_time = event_summary.get("Good Time", "0+00:00:00")
