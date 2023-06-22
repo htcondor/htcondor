@@ -576,12 +576,26 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		auto &slot_name = claim->rip()->r_id_str;
 		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
-		if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-			std::string msg = err.getFullText();
-			if (abnormal_exit && msg.find("Failed to find logical volume") == std::string::npos) {
-				dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
-					slot_name, msg.c_str());
+		// Attempt LV cleanup n times to prevent race condition between
+		// killing of family processes and LV cleanup causing failure
+		int max_attempts = 5;
+		for (int attempt=1; attempt<=max_attempts; attempt++) {
+			// Attempt a cleanup
+			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
+			if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+				std::string msg = err.getFullText();
+				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
+					break; // If starter exited normally and we failed to find LV assume it is cleaned up
+				} else if (attempt == max_attempts){
+					// We have failed and this was the last attempt so output error message
+					dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s", slot_name, msg.c_str());
+				}
+				err.clear();
+			} else {
+				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
+				break;
 			}
+			sleep(1);
 		}
 	}
 #endif // LINUX
