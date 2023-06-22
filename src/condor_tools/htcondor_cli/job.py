@@ -83,7 +83,6 @@ class Submit(Verb):
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time")
 
-            schedd = htcondor.Schedd()
             try:
                 result = schedd.submit(submit_description, count=1)
                 cluster_id = result.cluster()
@@ -135,7 +134,6 @@ class Submit(Verb):
                 raise ValueError("Can only submit one job at a time. "
                     "See the job-set syntax for submitting multiple jobs.")
 
-            schedd = htcondor.Schedd()
             try:
                 result = schedd.submit(submit_description, count=1)
                 cluster_id = result.cluster()
@@ -160,7 +158,6 @@ class Submit(Verb):
                 raise ValueError("Can only submit one job at a time. "
                     "See the job-set syntax for submitting multiple jobs.")
 
-            schedd = htcondor.Schedd()
             try:
                 result = schedd.submit(submit_description, count=1)
                 cluster_id = result.cluster()
