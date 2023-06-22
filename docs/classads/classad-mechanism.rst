@@ -1073,10 +1073,10 @@ string.
 ``Boolean stringListSubsetMatch(String list1, String list2 [ , String delimiter ])``
     Returns ``TRUE`` if all item in the string ``list1`` are also in the string ``list2``, as
     delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
-    ``list1`` has any items that are not in ``list2``. Both lists are treated as sets, empty items
+    ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
     and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
     and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
-    ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` is ``UNDEFINED``.
+    ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
     The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
 
     :index:`stringListISubsetMatch()<single: stringListISubsetMatch(); ClassAd functions>`

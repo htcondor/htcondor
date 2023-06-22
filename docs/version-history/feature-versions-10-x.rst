@@ -29,7 +29,7 @@ New Features:
   id of the submitted job.
   :jira:`1836`
 
-- Added two new function for using ClassAd expressions. ``stringListSubsetMatch`` and
+- Added two new functions for using ClassAd expressions. The ``stringListSubsetMatch`` and
   ``stringListISubsetMatch`` functions can be used to check if all of the members of a
   stringlist are also in a target stringlist.  A single ``stringListSubsetMatch`` function
   call can replace a whole set of ``stringListMember`` calls once the whole pool is
