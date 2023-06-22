@@ -1630,6 +1630,15 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.6-1
+- In SSL Authentication, use the identity instead of the X.509 proxy subject
+- Can use environment variable to locate the client's SSL X.509 credential
+- ClassAd aggregate functions now tolerate undefined values
+- Fix Python binding bug where accounting ads were omitted from the result
+- The Python bindings now properly report the HTCondor version
+- remote_initial_dir works when submitting a grid batch job remotely via ssh
+- Add a ClassAd stringlist subset match function
+
 * Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.18-1
 - Can configure clients to present an X.509 proxy during SSL authentication
 - Provides script to assist updating from HTCondor version 9 to version 10
