@@ -87,6 +87,7 @@ from . import _deprecation
 
 # deprecate in-place
 _deprecation.deprecate_8_9_8()
+_deprecation.deprecate_10_7_0()
 
 # re-import htcondor with a splat to get it into our namespace
 # because of import caching, this respects the mutation we did above
