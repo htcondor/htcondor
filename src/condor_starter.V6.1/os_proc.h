@@ -104,6 +104,7 @@ public:
 	int *makeCpuAffinityMask(int slotId);
 
 	virtual bool SupportsPIDNamespace() { return true;}
+	virtual bool ShouldConvertCmdToAbsolutePath() { return true;}
 
 protected:
 
