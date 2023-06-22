@@ -20,6 +20,11 @@ Release Notes:
 
 New Features:
 
+- The ``-summary`` option of *condor_config_val* now works with a remote
+  config query when the daemon being queried is 10.0.7 or later. It behaves
+  like ``-dump`` when the daemon is older.
+  :jira:`1879`
+
 - Improved daemon logging for IDTOKENS authentication to make useful
   messages more prominent.
   :jira:`1776`

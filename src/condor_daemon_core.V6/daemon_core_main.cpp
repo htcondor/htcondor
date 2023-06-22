@@ -2857,6 +2857,52 @@ handle_config_val(int idCmd, Stream* stream )
 		if (is_arg_colon_prefix(param_name, "?names", &pcolon, -1)) {
 			const char * restr = ".*";
 			if (pcolon) { restr = ++pcolon; }
+
+			// magic pattern that means they want the -summary names.
+			if  (starts_with(restr, ".*|.summary")) {
+				// this is a request to return the names that condor_config_val -summary would show (mostly)
+				// and in the same order that summary would show, we will also return comment lines
+				// with filenames as separators
+				std::map<int64_t, std::string> names;
+				if (param_names_for_summary(names)) {
+					int source_id = -999999;
+					std::string line;
+					line = "#";
+					const char * localname = get_mySubSystem()->getLocalName();
+					if ( ! localname || !localname[0]) { localname = get_mySubSystem()->getName(); }
+					line += localname; line += " "; line += CondorVersion();
+					if ( ! stream->code(line)) {
+						dprintf( D_ALWAYS, "Can't send ?names (summary) reply for DC_CONFIG_VAL\n" );
+						retval = FALSE;
+						names.clear(); // skip the loop.
+					}
+					for (auto it = names.begin(); it != names.end(); ++it) {
+						_param_names_sumy_key key; key.all = it->first;
+						if (source_id != key.sid) {
+							source_id = key.sid;
+							const char * source = config_source_by_id(source_id);
+							line = "#";
+							if (source) { line += source; }
+							if ( ! stream->code(line)) {
+								dprintf( D_ALWAYS, "Can't send ?names (summary) reply for DC_CONFIG_VAL\n" );
+								retval = FALSE;
+								break;
+							}
+						}
+						if ( ! stream->code(it->second)) {
+							dprintf( D_ALWAYS, "Can't send ?names (summary) reply for DC_CONFIG_VAL\n" );
+							retval = FALSE;
+							break;
+						}
+					}
+					if (retval && ! stream->end_of_message() ) {
+						dprintf( D_ALWAYS, "Can't send end of message for DC_CONFIG_VAL\n" );
+						retval = FALSE;
+					}
+					return retval;
+				}
+			}
+
 			Regex re; int errcode = 0, erroffset = 0;
 
 			if ( ! re.compile(restr, &errcode, &erroffset, PCRE2_CASELESS)) {
