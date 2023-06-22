@@ -29,6 +29,13 @@ New Features:
   id of the submitted job.
   :jira:`1836`
 
+- Added two new functions for using ClassAd expressions. The ``stringListSubsetMatch`` and
+  ``stringListISubsetMatch`` functions can be used to check if all of the members of a
+  stringlist are also in a target stringlist.  A single ``stringListSubsetMatch`` function
+  call can replace a whole set of ``stringListMember`` calls once the whole pool is
+  updated to 10.6.0.
+  :jira:`1817`
+
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
   When an *arc_gahp* process has handled a certain number of commands,
