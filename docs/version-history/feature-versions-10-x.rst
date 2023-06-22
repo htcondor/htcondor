@@ -27,6 +27,10 @@ Bugs Fixed:
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
 
+- Fixed a bug where empty execute sandboxes failed to be cleaned up on the
+  EP when using Startd disk enforcement.
+  :jira:`1821`
+
 Version 10.6.0
 --------------
 
