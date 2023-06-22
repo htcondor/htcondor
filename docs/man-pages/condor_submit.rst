@@ -557,8 +557,8 @@ BASIC COMMANDS
     name where HTCondor will write a log file of what is happening with
     this job cluster, called a job event log. For example, HTCondor will
     place a log entry into this file when and where the job begins
-    running, when the job produces a checkpoint, or moves (migrates) to
-    another machine, and when the job completes. Most users find
+    running, when it transfers files, if the job is evicted,
+    and when the job completes. Most users find
     specifying a **log** file to be handy; its use is recommended. If no
     **log** entry is specified, HTCondor does not create a log for this
     cluster. If a relative path is specified, it is relative to the
@@ -569,9 +569,8 @@ BASIC COMMANDS
     :index:`notification<single: notification; submit commands>`
  notification = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
-    occur. If defined by *Always*, the owner will be notified whenever
-    the job produces a checkpoint, as well as when the job completes. If
-    defined by *Complete*, the owner will be notified when the job
+    occur. If defined by *Always* or *Complete*,
+    the owner will be notified when the job
     terminates. If defined by *Error*, the owner will only be notified
     if the job terminates abnormally, (as defined by
     ``JobSuccessExitCode``, if defined) or if the job is placed on hold
@@ -719,11 +718,7 @@ BASIC COMMANDS
 
     The **vanilla** universe is the default (except where the
     configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise), and is an
-    execution environment for jobs which do not use HTCondor's
-    mechanisms for taking checkpoints; these are ones that have not been
-    linked with the HTCondor libraries. Use the **vanilla** universe to
-    submit shell scripts to HTCondor.
+    :index:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -3375,8 +3370,9 @@ Examples
    ``out.0``, and ``err.0`` for the first run of this program (process
    0). Stdin, stdout, and stderr will refer to ``in.1``, ``out.1``, and
    ``err.1`` for process 1, and so forth. A log file containing entries
-   about where and when HTCondor runs, takes checkpoints, and migrates
-   processes in this cluster will be written into file ``foo.log``.
+   about where and when HTCondor runs, transfers file, if it's evicted,
+   and when it terminates, among other things, the various processes in
+   this cluster will be written into file ``foo.log``.
 
    .. code-block:: text
 

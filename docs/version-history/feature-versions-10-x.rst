@@ -45,7 +45,7 @@ Bugs Fixed:
   :jira:`1785`
 
 - Fixed a bug that would very rarely cause *condor_wait* to hang forever.
-  :jria:`1792`
+  :jira:`1792`
 
 - Fixed recently introduced bug where only on Enterprise Linux 7
   system, startds with hard cgroup memory enforcement would not
