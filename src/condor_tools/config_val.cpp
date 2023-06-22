@@ -118,12 +118,12 @@ usage(int retval = 1)
 		"\tvalue is expanded unless -raw, -evaluate, -default or -dump is\n"
 		"\tspecified. When used with -dump, <var> is regular expression.\n"
 		"\n    where <view> is one or more of\n"
-		"\t-summary\t\tPrint all variables changed by config files\n"
+		"\t-summary\tPrint all variables changed by config files\n"
 		"\t-dump\t\tPrint values of all variables that match <var>\n"
 		"\t\t\tThe value is raw unless -expanded, -default, or -evaluate\n"
 		"\t\t\tis specified. If no <vars>, Print all variables\n"
 		"\t-default\tPrint default value\n"
-		"\t-expanded\t\tPrint expanded value\n"
+		"\t-expanded\tPrint expanded value\n"
 		"\t-raw\t\tPrint raw value as it appears in the file\n"
 		//"\t-stats\t\tPrint statistics of the configuration system\n"
 		"\t-verbose\tPrint source, raw, expanded, and default values\n"
@@ -964,7 +964,7 @@ main( int argc, const char* argv[] )
 		}
 	}
 
-	if (dash_summary && (name_arg || addr || mt != CONDOR_QUERY || dt != DT_MASTER)) {
+	if (dash_summary && (name_arg || addr || mt != CONDOR_QUERY || dt != DT_MASTER || ask_a_daemon)) {
 		// new for 10.0.7 and 10.7 summary works with ask_a_daemon
 		ask_a_daemon = true;
 	} else
