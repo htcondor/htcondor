@@ -14,9 +14,7 @@ Version 10.0.6
 
 Release Notes:
 
-.. HTCondor version 10.0.6 released on Month Date, 2023.
-
-- HTCondor version 10.0.6 not yet released.
+- HTCondor version 10.0.6 released on June 22, 2023.
 
 New Features:
 
