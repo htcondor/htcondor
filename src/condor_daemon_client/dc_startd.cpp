@@ -319,6 +319,13 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 
 	if (claim_pslot) {
 		msg->m_claim_pslot = true;
+	}
+
+	// For now, requesting a WorkingCM means we don't want a dslot
+	// (and our req_ad isn't a full job ad)
+	std::string working_cm;
+	req_ad->LookupString("WorkingCM", working_cm);
+	if (!working_cm.empty()) {
 		msg->m_num_dslots = 0;
 	}
 

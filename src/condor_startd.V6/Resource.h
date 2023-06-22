@@ -430,7 +430,6 @@ public:
 	bool			r_no_collector_updates;
 
 	std::string		workingCM; // if claimed for another CM, our temporary CM
-	time_t			workingCMStartTime; // when the above started
 
 	int				type( void ) { return r_attr->type(); };
 

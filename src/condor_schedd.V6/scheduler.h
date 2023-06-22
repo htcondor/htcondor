@@ -317,6 +317,7 @@ class match_rec
 	std::string*	auth_hole_id;
 
 	bool m_startd_sends_alives;
+	bool m_claim_pslot;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
 	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim

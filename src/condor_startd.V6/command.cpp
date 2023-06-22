@@ -1093,7 +1093,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	consumption_map_t consumption;
 	Claim* leftover_claim = NULL; 
 
-	if (rip->is_partitionable_slot()) {
+	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
 		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
 	}
@@ -1104,11 +1104,18 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		ABORT;
 	}
 
-	// For now, the client can either claim a pslot or claim a new dslot
-	// under the pslot. It can't do both yet.
-	if (num_dslots != (claim_pslot ? 0 : 1)) {
-		rip->dprintf(D_ALWAYS, "Refusing to claim %d dslots%s\n",
-		             num_dslots, claim_pslot ? " while claiming pslot" : "");
+	if (claim_pslot && rip->r_has_cp) {
+		// TODO refuse claim entirely, or accept claim of single dslot or
+		//   sending to to WorkingCM?
+		rip->dprintf(D_FULLDEBUG, "Refusing claim of pslot with consumption policy\n");
+		refuse(stream);
+		ABORT;
+	}
+
+	// The client can claim at most one new dslot.
+	// This will change in the future.
+	if (num_dslots < 0 || num_dslots > 1) {
+		rip->dprintf(D_ALWAYS, "Refusing to claim %d dslots\n", num_dslots);
 		refuse(stream);
 		ABORT;
 	}
@@ -1131,7 +1138,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		req_classad->LookupString("WorkingCM", workingCM);
 	}
 
-	if (!claim_pslot && rip->can_create_dslot()) {
+	if (num_dslots > 0 && rip->can_create_dslot()) {
 		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
 		if ( ! new_rip) {
 			refuse(stream);
@@ -1150,7 +1157,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 		// Make sure we're willing to run this job at all.
-	if (!claim_pslot && !rip->willingToRun(req_classad)) {
+	if (num_dslots > 0 && !rip->willingToRun(req_classad)) {
 	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
 		refuse(stream);
 		ABORT;
@@ -1292,14 +1299,22 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
+	rip->r_cur->client()->c_scheddName = schedd_name;
+
 	// Claimed for a temporary CM
-	if (!claim_pslot) {
-		rip->workingCMStartTime = 0; // meaning "never"
-		rip->workingCM = "";
-	} else {
-		rip->workingCMStartTime = time(nullptr);
-		rip->workingCM = workingCM;
+	if (claim_pslot && leftover_claim) {
+		leftover_claim->rip()->workingCM = workingCM;
 	}
+	if (new_dynamic_slot && leftover_claim) {
+		rip->workingCM = leftover_claim->rip()->workingCM;
+	}
+
+	if (claim_pslot && leftover_claim) {
+		leftover_claim->client()->setaddr(client_addr.c_str());
+		leftover_claim->client()->c_scheddName = schedd_name;
+		leftover_claim->rip()->change_state(claimed_state);
+	}
+
 #if HAVE_BACKFILL
 	if( rip->state() == backfill_state ) {
 			// we're currently in Backfill, so we can't just accept
@@ -1368,6 +1383,9 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
 
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->change_state( claimed_state );
+
 	/* 
 		Reply of 0 (NOT_OK) means claim rejected.
 		Reply of 1 (OK) means claim accepted.
@@ -1406,7 +1424,7 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 
 	if( !stream->put( cmd ) ) {
 		rip->dprintf( D_ALWAYS, 
-			"Can't to send cmd %d to schedd as claim request reply.\n", cmd );
+			"Failed to send cmd %d to schedd as claim request reply.\n", cmd );
 		abort_accept_claim( rip, stream );
 		return false;
 	}
@@ -1483,17 +1501,10 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 		acct_grp = NULL;
 	}
 
-	rip->r_cur->client()->c_scheddName.clear();
-	rip->r_cur->ad()->LookupString(ATTR_SCHEDD_NAME, rip->r_cur->client()->c_scheddName);
-
 	rip->r_cur->loadRequestInfo();
 
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
-
-	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
-
-	rip->change_state( claimed_state );
 
 	return true;
 }

@@ -416,6 +416,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	claim_requester = NULL;
 	auth_hole_id = NULL;
 	m_startd_sends_alives = false;
+	m_claim_pslot = false;
 
 	makeDescription();
 
@@ -7512,13 +7513,18 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
-	bool claim_pslot = false;
-	bool need_local_cm = false;
+	bool scheddsAreSubmitters = false;
 	if (strncmp("AllSubmittersAt", getMatchUser(), 15) == 0) {
-		claim_pslot = true;
-		need_local_cm = true;
+		scheddsAreSubmitters = true;
 	}
 
+	if (scheddsAreSubmitters) {
+		// Not a real match we can directly use.  Send it to our sidecar cm, and let
+		// it figure out the fair-share, etc.
+		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name, need_local_cm);
+	}
+
+	bool claim_pslot = false;
 	bool is_pslot = false;
 	std::string slot_state;
 	match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
@@ -7527,12 +7533,6 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		if (slot_state == "Unclaimed" && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
 			claim_pslot = true;
 		}
-	}
-
-	if (claim_pslot) {
-		// Not a real match we can directly use.  Send it to our sidecar cm, and let
-		// it figure out the fair-share, etc.
-		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name, need_local_cm);
 	}
 
 	const char* because = "";
@@ -7616,6 +7616,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 			// There is already a match for this claim id.
 		return false;
 	}
+
+	mrec->m_claim_pslot = claim_pslot;
 
 	ContactStartdArgs *args = new ContactStartdArgs( claim_id, extra_claims, startd.addr(), false );
 
@@ -8457,7 +8459,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd,
 		description.c_str(),
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(), false,
+		scheduler.aliveInterval(), mrec->m_claim_pslot,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		deadline_timeout,       // overall timeout on completing claim request
 		cb );
