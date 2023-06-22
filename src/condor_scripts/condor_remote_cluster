@@ -852,21 +852,21 @@ fi
 tmp_dir=`mktemp -d /tmp/tmp.XXXXXXXX`
 rc=1
 if [ ! -z "$daily_url" ] ; then
-    show_progress "Downloading daily build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $daily_url
+    show_progress "Downloading daily build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $daily_url
     rc=$?
     if [ $rc -ne 0 ] ; then
         echo "Failed to download daily build."
     fi
 fi
 if [ ! -z "$rc_url" -a $rc -ne 0 ] ; then
-    show_progress "Downloading rc build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $rc_url
+    show_progress "Downloading rc build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $rc_url
     rc=$?
     if [ $rc -ne 0 ] ; then
         echo "Failed to download rc build."
     fi
 fi
 if [ $rc -ne 0 ] ; then
-    show_progress "Downloading release build for $remote_host" curl -f -s -o $tmp_dir/bosco-download.tar.gz $release_url
+    show_progress "Downloading release build for $remote_host" curl -f -s -S -o $tmp_dir/bosco-download.tar.gz $release_url
     rc=$?
     if [ $rc -ne 0 ] ; then
         echo "Failed to download release build."

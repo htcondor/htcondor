@@ -20,6 +20,11 @@ Release Notes:
 
 New Features:
 
+- The ``-summary`` option of *condor_config_val* now works with a remote
+  config query when the daemon being queried is 10.0.7 or later. It behaves
+  like ``-dump`` when the daemon is older.
+  :jira:`1879`
+
 - Improved daemon logging for IDTOKENS authentication to make useful
   messages more prominent.
   :jira:`1776`
@@ -29,6 +34,10 @@ Bugs Fixed:
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
+
+- Print detailed error message when *condor_remote_cluster* fails to
+  fetch a URL.
+  :jira:`1884`
 
 .. _lts-version-history-1006:
 

@@ -172,6 +172,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
+	union _param_names_sumy_key { int64_t all; struct { short int iter; short int off; short int line; short int sid; }; };
+	int param_names_for_summary(std::map<int64_t, std::string>& names);
+	const short int summary_env_source_id = 0x7FFE;
+	const short int summary_wire_source_id = 0x7FFF;
 
 	bool param_defined(const char* name);
 	// Does not check if the expanded parameter is nonempty, only that
