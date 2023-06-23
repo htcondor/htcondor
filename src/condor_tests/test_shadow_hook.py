@@ -13,7 +13,6 @@ import os
 import stat
 from ornithology import *
 
-
 #
 # Write out some simple shadow job hook scripts.
 #
@@ -51,6 +50,7 @@ def write_job_hook_scripts(test_dir):
     # shadow
     filepath = test_dir / "test.out"
     script_file = test_dir / "hook_shadow_test_prepare.sh"
+    # will replace starter text if starter ran first, this should not happen
     script_contents = f"""#!/bin/bash
         echo 'From the shadows!' > {filepath}
         exit 0
@@ -63,6 +63,7 @@ def write_job_hook_scripts(test_dir):
 
     # before_transfer starter
     script_file = test_dir / "hook_starter_test_prepare.sh"
+    # in append mode so should add after shadow, otherwise only this will me in test.out
     script_contents = f"""#!/bin/bash
         echo 'From the starter!' >> {filepath}
         echo 'HookStatusCode = 190'
@@ -73,6 +74,8 @@ def write_job_hook_scripts(test_dir):
     script.close()
     st = os.stat(script_file)
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
+
 
 
 
@@ -170,12 +173,17 @@ def idlejob(condor,submit_idlejob):
     # Return the first (and only) job ad in the cluster for testing class to reference
     return submit_idlejob.query()[0]
 
+# get the shadow log to ensure errors are recorded there
+@action
+def shadow_job_log(condor, heldjob, idlejob):
+    filepath = condor.shadow_log
+    return filepath
 
 
 class TestShadowHook:
     # Methods that begin with test_* are tests.
 
-    #Testing of status messages:
+    # Testing of status messages, see job classad changed:
     def test_holdreasoncode(self, heldjob):
         assert heldjob["HoldReasonCode"] == 48 #48 means HookShadowPrepareJobFailure (we want that)
 
@@ -185,6 +193,7 @@ class TestShadowHook:
     def test_holdreasonsubcode(self, testjob):
         assert testjob["HoldReasonSubCode"] == 190
 
+    # Check to see if shadow always runs before the starter
     def test_shadowbeforestarter(self, testjob):
         with open('test.out') as f:
             log = f.read()
@@ -212,5 +221,19 @@ class TestShadowHook:
             log = f.read()
             assert 'Kinda bad' in log
 
+    # find that the error messages are in shadow log
+    def test_in_shadow_log(self, shadow_job_log):
+        f = shadow_job_log.open()
+        log = f.read()
+        found_messages = {"idle" : False, "held" : False}
+        for line in log:
+            if 'Really bad' in line:
+                found_messages["held"] = True
+            elif 'Kinda bad' in line:
+                found_messages["idle"] = True
+            if found_messages["held"] == True and found_messages["idle"] == True:
+                break
+        assert found_messages["held"] == True
+        assert found_messages["idle"] == True
 
 
