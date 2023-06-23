@@ -104,7 +104,7 @@ used by each instance of the job. So, ``stdout``, and ``stderr`` will refer to
 ``out.0``, and ``err.0`` for the first run of the program,
 ``out.1``, and ``err.1`` for the second run of the program,
 and so forth. A log file containing entries about when and where
-HTCondor runs, checkpoints, and migrates processes for all the 150
+HTCondor runs, transfer files, and terminates for all the 150
 queued programs will be written into the single file ``foo.log``.
 If there are 150 or more available slots in your pool, all 150 instances
 might be run at the same time, otherwise, HTCondor will run as many as
@@ -914,7 +914,7 @@ the machine of 0.0. The ``Rank`` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a ``Rank`` expression to check if the
+So, it is wise when writing a ``Rank`` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the *condor_status* command
 with the *-constraint* argument. This allows the user to see a list of
