@@ -573,6 +573,12 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 
 #ifdef LINUX
 	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+		// Attempt to cleanup of recovery files/directories used by docker/vm universe
+		std::string pid_dir, pid_dir_path;
+		formatstr(pid_dir, "dir_%d", s_pid);
+		formatstr(pid_dir_path, "%s/%s", executeDir(), pid_dir.c_str());
+		check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
+		// Attempt LV cleanup
 		auto &slot_name = claim->rip()->r_id_str;
 		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
