@@ -12300,6 +12300,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				if ( cronTab ) {
 					delete cronTab;
 					this->cronTabs->remove(job_id);
+					this->cronTabs->insert(job_id, nullptr);
 				}
 			} // CronTab
 
