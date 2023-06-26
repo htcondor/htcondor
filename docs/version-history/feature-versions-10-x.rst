@@ -31,6 +31,12 @@ Bugs Fixed:
   EP when using Startd disk enforcement.
   :jira:`1821`
 
+- When using Startd disk enforcement, if a *condor_starter* running a container
+  or VM universe job is abrubtly killed (like SIGABRT) then the *condor_startd*
+  would fail to cleanup the running docker container or VM and underlying logical
+  volume.
+  :jira:`1895`
+
 Version 10.6.0
 --------------
 
