@@ -5153,8 +5153,8 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	} else {
 		// TerminateProcess failed!!!??!
 		// should we try anything else here?
-		dprintf(D_PROCFAMILY,
-			"Shutdown_Fast: Failed to TerminateProcess on pid %d\n",pid);
+		dprintf(D_ALWAYS,
+			"Shutdown_Fast: Failed to TerminateProcess on pid %d: %u (must_free_handle: %d)\n",pid, GetLastError(), must_free_handle);
 		ret_value = FALSE;
 	}
 	if ( must_free_handle ) {
