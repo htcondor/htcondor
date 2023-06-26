@@ -35,7 +35,7 @@ set to ``True`` in the job ClassAd. To do this, place
 
 .. code-block:: condor-submit
 
-    +WantIOProxy = true
+    want_io_proxy = true
 
 in the submit description file of the job.
 

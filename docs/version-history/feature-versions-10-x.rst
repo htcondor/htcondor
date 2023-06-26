@@ -17,11 +17,25 @@ Release Notes:
 
 New Features:
 
-- None.
+- Added submit command **want_io_proxy**.
+  This replaces the old command **+WantIOProxy**.
+  :jira:`1875`
 
 Bugs Fixed:
 
-- None.
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
+
+- Fixed a bug where empty execute sandboxes failed to be cleaned up on the
+  EP when using Startd disk enforcement.
+  :jira:`1821`
+
+- When using Startd disk enforcement, if a *condor_starter* running a container
+  or VM universe job is abrubtly killed (like SIGABRT) then the *condor_startd*
+  would fail to cleanup the running docker container or VM and underlying logical
+  volume.
+  :jira:`1895`
 
 Version 10.6.0
 --------------
@@ -32,7 +46,7 @@ Release Notes:
 
 - HTCondor version 10.6.0 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-1005`.
+- This version includes all the updates from :ref:`lts-version-history-1006`.
 
 New Features:
 
@@ -47,6 +61,13 @@ New Features:
 - Added a new automatic submit file macro ``$(JobId)`` which expands to the full
   id of the submitted job.
   :jira:`1836`
+
+- Added two new functions for using ClassAd expressions. The ``stringListSubsetMatch`` and
+  ``stringListISubsetMatch`` functions can be used to check if all of the members of a
+  stringlist are also in a target stringlist.  A single ``stringListSubsetMatch`` function
+  call can replace a whole set of ``stringListMember`` calls once the whole pool is
+  updated to 10.6.0.
+  :jira:`1817`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
@@ -66,36 +87,12 @@ New Features:
 
 Bugs Fixed:
 
-- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
-  HTCondor never put limits on the i/o, and some kernel version panicked
-  and crashed when they had active jobs in the blkio controller.
-  :jira:`1786`
-
 - condor_restd service in the htcondor/mini container no longer crashes
   on startup due to the `en_US.UTF-8` locale being unavailable.
   :jira:`1785`
 
 - Fixed a bug that would very rarely cause *condor_wait* to hang forever.
-  :jria:`1792`
-
-- Fixed recently introduced bug where only on Enterprise Linux 7
-  system, startds with hard cgroup memory enforcement would not
-  put jobs that went over their memory usage on hold, they would
-  exit and leave the queue.
-  :jira:`1801`
-
-- Fixed a very recently introduced bug where the .job.ad and .machine.ad
-  files would not be written into the job sandbox.
-  :jira:`1737`
-
-- Forced condor_ssh_to_job to never try to use a Control Master, which would
-  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
-  be needed for slow WANs.
-  :jira:`1782`
-
-- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
-  not be enforced correctly.
-  :jira:`1775`
+  :jira:`1792`
 
 Version 10.5.1
 --------------
@@ -132,7 +129,7 @@ New Features:
   in a file similar to a rescue file. These files can then be specified
   with the new *condor_submit_dag* flag ``load_save`` to re-run the
   DAG from that point of progression. For more information visit
-  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :ref:`automated-workflows/dagman-save-files:dag save point files`.
   :jira:`1636`
 
 - The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows

@@ -4439,10 +4439,10 @@ int SubmitHash::SetExecutable()
 		}
 		auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 		if (container_image) {
-					   bool valid = true;
-					   const char * image = check_container_image(container_image.ptr(), valid);
-					   if (! image || ! image[0] || !valid) {
-							   push_error(stderr, "'%s' is not a valid container image\n", container_image.ptr());
+			bool valid = true;
+			const char * image = check_container_image(container_image.ptr(), valid);
+			if (! image || ! image[0] || !valid) {
+				push_error(stderr, "'%s' is not a valid container image\n", container_image.ptr());
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobString(ATTR_CONTAINER_IMAGE, image);
@@ -4865,6 +4865,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -6019,11 +6020,11 @@ int SubmitHash::SetRequirements()
 				answer += " && ";
 			}
 			answer += "TARGET.HasContainer";
+			std::string image;
 			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
 				answer += "&& TARGET.HasDockerURL";
-			} else {
-				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
-				ContainerImageType image_type = image_type_from_string(container_image.ptr());
+			} else if (job->LookupString(ATTR_CONTAINER_IMAGE, image)) {
+				ContainerImageType image_type = image_type_from_string(image.c_str());
 				switch (image_type) {
 					case ContainerImageType::DockerRepo:
 						answer += "&& TARGET.HasDockerURL";
@@ -6362,9 +6363,9 @@ int SubmitHash::SetRequirements()
 				}
 
 				// check input
-				auto_free_ptr file_list(submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt));
-				if (file_list) {
-					StringList files(file_list.ptr(), ",");
+				std::string file_list;
+				if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, file_list)) {
+					StringList files(file_list.c_str(), ",");
 					for (const char * file = files.first(); file; file = files.next()) {
 						if (IsUrl(file)){
 							std::string tag = getURLType(file, true);
@@ -6374,22 +6375,16 @@ int SubmitHash::SetRequirements()
 				}
 
 				// check output (only a single file this time)
-				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION));
-				if (file_list) {
-					if (IsUrl(file_list)) {
-						std::string tag = getURLType(file_list, true);
+				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
+					if (IsUrl(file_list.c_str())) {
+						std::string tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
 
 				// check output remaps
-				file_list.set(submit_param(SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS));
-				if (file_list) {
-					std::string remap_list(file_list.ptr());
-					if(remap_list[0] == '"') { remap_list = remap_list.substr(1); }
-					if(remap_list[remap_list.size()] == '"' ) { remap_list = remap_list.substr(0, remap_list.size() - 1); }
-
-					StringList files(remap_list.c_str(), ";");
+				if (job->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS, file_list)) {
+					StringList files(file_list.c_str(), ";");
 					for (const char * file = files.first(); file; file = files.next()) {
 						std::string remap(file);
 						auto eq = remap.find("=");
@@ -6402,15 +6397,6 @@ int SubmitHash::SetRequirements()
 								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 							}
 						}
-					}
-				}
-
-				// check container image
-				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
-				if (container_image) {
-					if (IsUrl(container_image.ptr())) {
-						std::string tag = getURLType(container_image.ptr(), true);
-						if (!jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
 

@@ -42,6 +42,8 @@ ProcFamilyInterface* ProcFamilyInterface::create(FamilyInfo *fi, const char* sub
 	if (fi && fi->cgroup && ProcFamilyDirectCgroupV1::can_create_cgroup_v1(scgroup)) {
 		return new ProcFamilyDirectCgroupV1;
 	}
+#else
+	(void)fi; // shut the compiler up
 #endif
 
 	ProcFamilyInterface* ptr;

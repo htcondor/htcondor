@@ -28,7 +28,7 @@ where the exit code is the value 100. The following table lists these codes:
 +---------+------------------------------------+--------------------------------------------------------------+
 | 100     | JOB_EXITED                         | the job exited (not killed)                                  |
 +---------+------------------------------------+--------------------------------------------------------------+
-| 101     | JOB_CKPTED                         | the job did produce a checkpoint                             |
+| 101     | JOB_CKPTED                         | no longer used                                               |
 +---------+------------------------------------+--------------------------------------------------------------+
 | 102     | JOB_KILLED                         | the job was killed                                           |
 +---------+------------------------------------+--------------------------------------------------------------+
@@ -38,7 +38,7 @@ where the exit code is the value 100. The following table lists these codes:
 +---------+------------------------------------+--------------------------------------------------------------+
 | 106     | JOB_SHADOW_USAGE                   | incorrect arguments to condor_shadow                         |
 +---------+------------------------------------+--------------------------------------------------------------+
-| 107     | JOB_NOT_CKPTED                     | the job vacated without a checkpoint                         |
+| 107     | JOB_NOT_CKPTED                     | no longer used                                               |
 +---------+------------------------------------+--------------------------------------------------------------+
 | 107     | JOB_SHOULD_REQUEUE                 | same number as JOB_NOT_CKPTED,                               |
 +         |                                    | to achieve the same behavior.                                |
@@ -52,7 +52,7 @@ where the exit code is the value 100. The following table lists these codes:
 +---------+------------------------------------+--------------------------------------------------------------+
 | 110     | JOB_EXEC_FAILED                    | exec failed for some reason other than ENOMEM                |
 +---------+------------------------------------+--------------------------------------------------------------+
-| 111     | JOB_NO_CKPT_FILE                   | there is no checkpoint file (as it was lost)                 |
+| 111     | JOB_NO_CKPT_FILE                   | no longer used                                               |
 +---------+------------------------------------+--------------------------------------------------------------+
 | 112     | JOB_SHOULD_HOLD                    | the job should be put on hold                                |
 +---------+------------------------------------+--------------------------------------------------------------+

@@ -7,6 +7,38 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1007:
+
+Version 10.0.7
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.7 released on Month Date, 2023.
+
+- HTCondor version 10.0.7 not yet released.
+
+New Features:
+
+- The ``-summary`` option of *condor_config_val* now works with a remote
+  config query when the daemon being queried is 10.0.7 or later. It behaves
+  like ``-dump`` when the daemon is older.
+  :jira:`1879`
+
+- Improved daemon logging for IDTOKENS authentication to make useful
+  messages more prominent.
+  :jira:`1776`
+
+Bugs Fixed:
+
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
+
+- Print detailed error message when *condor_remote_cluster* fails to
+  fetch a URL.
+  :jira:`1884`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
@@ -14,9 +46,7 @@ Version 10.0.6
 
 Release Notes:
 
-.. HTCondor version 10.0.6 released on Month Date, 2023.
-
-- HTCondor version 10.0.6 not yet released.
+- HTCondor version 10.0.6 released on June 22, 2023.
 
 New Features:
 
@@ -25,6 +55,12 @@ New Features:
   `X509_USER_PROXY` for the location of a credential to use during SSL
   authentication with a daemon.
   :jira:`1841`
+
+- During SSL authentication, when the client uses a proxy certificate,
+  the server now uses the End Entity certificate's subject as the
+  authenticated identity to map, instead of the proxy certificate's
+  subject.
+  :jira:`1866`
 
 Bugs Fixed:
 
@@ -64,6 +100,10 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1829`
 
 .. _lts-version-history-1005:
 

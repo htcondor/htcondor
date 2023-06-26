@@ -147,7 +147,18 @@ extern DedicatedScheduler dedicated_scheduler;
 std::string ownerinfo_attr_name;
 const std::string & attr_JobUser = ownerinfo_attr_name;
 bool user_is_the_new_owner = false;
-bool ignore_domain_mismatch_when_setting_owner = false;
+bool ignore_domain_mismatch_when_setting_owner = false; // obsolete user_is_the_new_owner knob
+
+// these knobs give fine grained control for choosing between using fully-qualified
+// names for ownership checks, or the old behavior of using unqualifed names (i.e. User vs Owner) 
+// The ideal future will have ignore=false, warn=true and must_be=false
+// But that will require that we be able to run jobs as Nobody for users from a foreign UID_DOMAIN
+// Until have have that, the most we can do is ignore=false, warn=false, and must_be=true
+// while the most backward compatible mode would be ignore=true, warn=false must_be=false
+bool ignore_domain_for_OwnerCheck = true; // do UserCheck2 ignoring the domain part of the socket
+bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but would fail if we weren't ignoring the domain
+bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
+
 inline const char * EffectiveUser(const Sock * sock) {
 	if (!sock) return "";
 #if 0 // def USE_JOB_QUEUE_USERREC - disabling for now, it's ok to use Owner here in 10.5.x
@@ -13034,11 +13045,16 @@ Scheduler::Init()
 			"WARNING: CONDOR_ADMIN not specified in config file" );
 	}
 
+
+	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
+	ignore_domain_for_OwnerCheck = param_boolean("IGNORE_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	warn_domain_for_OwnerCheck = param_boolean("WARN_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
+
 		// UidDomain will always be defined, since config() will put
 		// in get_local_fqdn() if it's not defined in the file.
 		// See if the value of this changes, since if so, we've got
 		// work to do...
-	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
 	char* oldUidDomain = UidDomain;
 	UidDomain = param( "UID_DOMAIN" );
 	if( oldUidDomain ) {

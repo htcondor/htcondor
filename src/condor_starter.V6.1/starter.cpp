@@ -3760,8 +3760,8 @@ Starter::removeTempExecuteDir( void )
 #ifdef LINUX
 	if (m_volume_mgr) {
 		//LVM managed... reset handle pointer to call destructor for cleanup
-		m_volume_mgr.reset();
-		return true;
+		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		m_volume_mgr.reset(nullptr);
 	}
 #endif /* LINUX */
 

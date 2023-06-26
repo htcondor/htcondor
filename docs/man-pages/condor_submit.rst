@@ -557,8 +557,8 @@ BASIC COMMANDS
     name where HTCondor will write a log file of what is happening with
     this job cluster, called a job event log. For example, HTCondor will
     place a log entry into this file when and where the job begins
-    running, when the job produces a checkpoint, or moves (migrates) to
-    another machine, and when the job completes. Most users find
+    running, when it transfers files, if the job is evicted,
+    and when the job completes. Most users find
     specifying a **log** file to be handy; its use is recommended. If no
     **log** entry is specified, HTCondor does not create a log for this
     cluster. If a relative path is specified, it is relative to the
@@ -569,9 +569,8 @@ BASIC COMMANDS
     :index:`notification<single: notification; submit commands>`
  notification = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
-    occur. If defined by *Always*, the owner will be notified whenever
-    the job produces a checkpoint, as well as when the job completes. If
-    defined by *Complete*, the owner will be notified when the job
+    occur. If defined by *Always* or *Complete*,
+    the owner will be notified when the job
     terminates. If defined by *Error*, the owner will only be notified
     if the job terminates abnormally, (as defined by
     ``JobSuccessExitCode``, if defined) or if the job is placed on hold
@@ -636,7 +635,7 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`users-manual/dagman-workflows:advanced features of dagman`
+    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
     for more details).
 
     :index:`queue<single: queue; submit commands>`
@@ -719,11 +718,7 @@ BASIC COMMANDS
 
     The **vanilla** universe is the default (except where the
     configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise), and is an
-    execution environment for jobs which do not use HTCondor's
-    mechanisms for taking checkpoints; these are ones that have not been
-    linked with the HTCondor libraries. Use the **vanilla** universe to
-    submit shell scripts to HTCondor.
+    :index:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -1392,7 +1387,7 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins
-    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    (see :doc:`../admin-manual/file-and-cred-transfer`)
     that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
@@ -3050,11 +3045,20 @@ and comments.
 
         D = 24
 
-    This is of limited value, as the scope of macro substitution is the
-    submit description file. Thus, either the macro is or is not defined
-    within the submit description file. If the macro is defined, then
-    the default value is useless. If the macro is not defined, then
-    there is no point in using it in a submit command.
+    This is useful for creating submit templates where values can be 
+    passed on the *condor_submit* command line, but that have a default value as well.
+    In the above example, if you give a value for E on the command line like this
+
+    .. code-block:: console
+
+        condor_submit E=99 <submit-file>
+
+    The value of 99 is used for E, resulting in
+
+    .. code-block:: text
+
+        D = 99
+
     :index:`as a literal character in a submit description file<single: as a literal character in a submit description file; $>`
 
     To use the dollar sign character ($) as a literal, without macro
@@ -3382,8 +3386,9 @@ Examples
    ``out.0``, and ``err.0`` for the first run of this program (process
    0). Stdin, stdout, and stderr will refer to ``in.1``, ``out.1``, and
    ``err.1`` for process 1, and so forth. A log file containing entries
-   about where and when HTCondor runs, takes checkpoints, and migrates
-   processes in this cluster will be written into file ``foo.log``.
+   about where and when HTCondor runs, transfers file, if it's evicted,
+   and when it terminates, among other things, the various processes in
+   this cluster will be written into file ``foo.log``.
 
    .. code-block:: text
 

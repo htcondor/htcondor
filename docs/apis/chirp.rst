@@ -16,7 +16,7 @@ submit description file:
 
 .. code-block:: condor-submit
 
-    +WantIOProxy = True
+    want_io_proxy = True
 
 This places the needed attribute into the job ClassAd.
 

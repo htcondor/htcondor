@@ -541,6 +541,11 @@ bool WritePipeEnd::complete_async_write(bool nonblocking)
 		if (!GetOverlappedResult(m_handle, &m_overlapped_struct, &bytes, TRUE)) {
 			dprintf(D_ALWAYS | D_BACKTRACE, "complete_async_write: GetOverlappedResult error: %d\n", GetLastError());
 			m_async_io_error = GetLastError();
+			if (m_async_io_error == ERROR_PIPE_NOT_CONNECTED || m_async_io_error == ERROR_BROKEN_PIPE) {
+				// the operation cannot complete
+				delete[] m_async_io_buf;
+				m_async_io_buf = NULL;
+			}
 
 			// return true since false indicates EWOULDBLOCK, which is not what we want
 			return true;

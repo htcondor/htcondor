@@ -1,5 +1,5 @@
 universe   = parallel
-+WantIOProxy = true
+want_io_proxy = true
 executable = job_core_chirp_par_executable.exe
 output = job_core_chirp_par$(NODE).out
 error = job_core_chirp_par$(NODE).err
