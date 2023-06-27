@@ -234,7 +234,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
 	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
-#if CURL_USES_NSS
+#if defined(CURL_USES_NSS)
 	// NSS as used by libcurl has a memory leak. To deal with this, we
 	// start a new arc_gahp for new jobs when the previous gahp has
 	// handled too many requests. Once the previous jobs leave the system,
