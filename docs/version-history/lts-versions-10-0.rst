@@ -39,6 +39,11 @@ Bugs Fixed:
   fetch a URL.
   :jira:`1884`
 
+- Fixed bug where condor cron jobs put on hold by the *condor_shadow*
+  or *condor_starter* would never start running again and stay ``IDLE``
+  when released from the ``HELD`` state.
+  :jira:`1869`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
