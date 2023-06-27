@@ -44,6 +44,11 @@ Bugs Fixed:
   when released from the ``HELD`` state.
   :jira:`1869`
 
+- Fixed a bug when creating the default value for :macro:`DC_DAEMON_LIST` where a
+  secondary daemon such as ``COLLECTOR01`` would not be considered a DC daemon if
+  the primary daemon was not in :macro:`DAEMON_LIST`.
+  :jira:`1900`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
