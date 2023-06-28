@@ -6735,7 +6735,7 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	if( rc == 0 ) {
 		// If it already exists and is larger than 5 Mb, copy the contents
 		// to a .old file.
-		if( stats_file_buf.st_size > 5000000 ) {
+		if( stats_file_buf.st_size > 5'000'000 ) {
 			std::string stats_file_old_path = stats_file_path;
 			stats_file_old_path += ".old";
 			// TODO: Add a lock to prevent two starters from rotating the log

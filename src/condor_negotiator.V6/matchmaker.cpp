@@ -397,7 +397,7 @@ get_rusage_utime()
 #else
 	struct rusage usage;
 	ASSERT( getrusage( RUSAGE_SELF, &usage ) == 0 );
-	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1000000.0 );
+	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1'000'000.0 );
 #endif
 }
 

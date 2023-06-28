@@ -154,7 +154,7 @@ class Throttle {
                 delay.tv_nsec = when.tv_nsec - delay.tv_nsec;
                 if ( delay.tv_nsec < 0 ) {
                     delay.tv_sec -= 1;
-                    delay.tv_nsec += 1000000000;
+                    delay.tv_nsec += 1'000'000'000;
                 }
                 if ( delay.tv_sec < 0 ) {
                     return;
@@ -183,7 +183,7 @@ class Throttle {
 
         static long difference( const struct timespec * s, const struct timespec * t ) {
             long secondsDiff = t->tv_sec - s->tv_sec;
-            long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500000)/1000000;
+            long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500'000)/1'000'000;
 			// If secondsDiff is too large (as when, for instance, the
 			// the liveline is 0 because the limit has never been exceeded
 			// and the deadline based on the monotonic clock of a mchine
@@ -210,14 +210,14 @@ class Throttle {
             unsigned milliseconds = (1 << count) * 100;
    			if( rateLimit > 0 && milliseconds < (unsigned)rateLimit ) { milliseconds = rateLimit; }
             unsigned seconds = milliseconds / 1000;
-            unsigned nanoseconds = (milliseconds % 1000) * 1000000;
+            unsigned nanoseconds = (milliseconds % 1000) * 1'000'000;
 
             dprintf( D_PERF_TRACE | D_VERBOSE,
             	"limitExceeded(): setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            if( when.tv_nsec > 1000000000 ) {
-                when.tv_nsec -= 1000000000;
+            if( when.tv_nsec > 1'000'000'000 ) {
+                when.tv_nsec -= 1'000'000'000;
                 when.tv_sec += 1;
             }
             dprintf( D_PERF_TRACE | D_VERBOSE,
@@ -251,14 +251,14 @@ class Throttle {
             now( & when );
             unsigned milliseconds = rateLimit;
             unsigned seconds = milliseconds / 1000;
-            unsigned nanoseconds = (milliseconds % 1000) * 1000000;
+            unsigned nanoseconds = (milliseconds % 1000) * 1'000'000;
             dprintf( D_PERF_TRACE | D_VERBOSE,
             	"rate limiting: setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
 
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            if( when.tv_nsec > 1000000000 ) {
-                when.tv_nsec -= 1000000000;
+            if( when.tv_nsec > 1'000'000'000 ) {
+                when.tv_nsec -= 1'000'000'000;
                 when.tv_sec += 1;
             }
             dprintf( D_PERF_TRACE | D_VERBOSE,

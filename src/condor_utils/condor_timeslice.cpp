@@ -163,7 +163,7 @@ Timeslice::updateNextStartTime()
 	if( delay > 0.5 || delay < 0.0 ) {
 		m_next_start_time = (time_t)floor(
 	      delay +
-		  m_start_time.tv_sec + (m_start_time.tv_usec / 1000000.0) +
+		  m_start_time.tv_sec + (m_start_time.tv_usec / 1'000'000.0) +
 	      0.5 /*round to nearest integer*/ );
 	}
 	else {
@@ -192,7 +192,7 @@ Timeslice::updateNextStartTime()
 
 		double cutoff = 1.0 - sqrt(2.0*delay);
 		m_next_start_time = (time_t)m_start_time.tv_sec;
-		if( m_start_time.tv_usec/1000000.0 > cutoff ) {
+		if( m_start_time.tv_usec/1'000'000.0 > cutoff ) {
 			m_next_start_time++;
 		}
 	}

@@ -47,7 +47,7 @@ time_t condor_gettimestamp(long & usec)
 		unsigned long now = 0;
 		time_to_1970(&nanos, &now);
 		sec = now;
-		usec = (long)((nanos / 10) % 1000000);
+		usec = (long)((nanos / 10) % 1'000'000);
 	} else {
 		struct _timeb tb;
 		_ftime(&tb);

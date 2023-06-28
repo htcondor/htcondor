@@ -110,14 +110,14 @@ sysapi_is_linux_version_atleast(const char *version_num_to_check)
 	free(ver);
 	kernelscalar=0;
 	if (fld==3) {
-		kernelscalar = MajorVer * 1000000 + MinorVer * 1000 + SubMinorVer;
+		kernelscalar = MajorVer * 1'000'000 + MinorVer * 1000 + SubMinorVer;
 	}
 	// set a scalar prepresenting the input version
 	fld = sscanf(version_num_to_check,"%d.%d.%d",&MajorVer,&MinorVer,
 			&SubMinorVer);
 	inputscalar =0;
 	if (fld==3) {
-		inputscalar  = MajorVer * 1000000 + MinorVer * 1000 + SubMinorVer;
+		inputscalar  = MajorVer * 1'000'000 + MinorVer * 1000 + SubMinorVer;
 	}
 	// compare
 	if ( kernelscalar >= inputscalar ) {

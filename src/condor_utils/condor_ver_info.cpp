@@ -173,7 +173,7 @@ bool
 CondorVersionInfo::built_since_version(int MajorVer, int MinorVer, 
 									   int SubMinorVer) const
 {
-	int Scalar = MajorVer * 1000000 + MinorVer * 1000 
+	int Scalar = MajorVer * 1'000'000 + MinorVer * 1'000 
 					+ SubMinorVer;
 
 	return ( myversion.Scalar >= Scalar );
@@ -404,7 +404,7 @@ CondorVersionInfo::numbers_to_VersionData( int major, int minor, int subminor,
 		return false;
 	}
 
-	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+	ver.Scalar = ver.MajorVer * 1'000'000 + ver.MinorVer * 1'000 
 					+ ver.SubMinorVer;
 
 	if ( rest ) {
@@ -449,7 +449,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		return false;
 	}
 
-	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+	ver.Scalar = ver.MajorVer * 1'000'000 + ver.MinorVer * 1'000 
 					+ ver.SubMinorVer;
 
 		// Now move ptr the next space, which should be 
