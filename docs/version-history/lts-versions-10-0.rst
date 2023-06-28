@@ -31,6 +31,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if the $(SPOOL) directory was on a separate file system
+  *condor_preen* could delete the special 'lost+found' directory.
+  :jira:`1906`
+
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
