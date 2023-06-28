@@ -18,7 +18,8 @@
 ###############################################################
 
 if (UNIX)
-	option(WITH_LOTMAN "Compiling with support for LotMan" ON)
+	# Set default not to use LotMan
+	option(WITH_LOTMAN "Compiling with support for LotMan" OFF)
 endif(UNIX)
 
 # If we build condor to dlopen the lotman library, we'll need a target that holds
@@ -30,11 +31,10 @@ if (WITH_LOTMAN)
 	if ( NOT PROPER OR WANT_LOTMAN_EXTERNAL )
 		include(FetchContent)
 
-		# This runs the wget at cmake time, runs the cmake in the tarball, and sets a bunch of scitokens_ variables
 		FetchContent_declare(
-			scitokens
-			URL ${EXTERNALS_SOURCE_URL}/lotman-0.0.1.tar.gz
-			#URL_HASH MD5=23af2833a3f4459344913d18385a6473
+			lotman
+			GIT_REPOSITORY https://github.com/PelicanPlatform/lotman.git
+			GIT_TAG        20c6bfe73a14c5b9f2db9973530ae9c55c1033eb # release-0.0.1
 		)
 
 		# Check if population has already been performed
@@ -51,7 +51,7 @@ if (WITH_LOTMAN)
 		endif()
 		target_include_directories(LotMan-headers INTERFACE "${lotman_SOURCE_DIR}/src")
 		install(TARGETS LotMan DESTINATION "${C_LIB}/condor")
-		add_dependencies(SciTokens)
+		add_dependencies(LotMan)
 
 	else(NOT PROPER)
 

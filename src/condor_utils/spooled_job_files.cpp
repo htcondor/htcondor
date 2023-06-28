@@ -279,11 +279,6 @@ createJobSpoolDirectory(classad::ClassAd const *job_ad,priv_state desired_priv_s
 		return false;
 	}
 
-	// bool lot_added = condor_lotman::add_dir(owner.c_str(), spool_path);
-	// dprintf( D_ALWAYS, 
-	// 		 lot_added ? "\n\n\nThe path %s was successfully associated with the lot for user %s\n\n\n":"\n\n\nFailed to associate the path %s with lot for user %s\n\n\n",
-	// 		 spool_path, owner.c_str());
-
 #else	/* WIN32 */
 
 	std::string owner;
