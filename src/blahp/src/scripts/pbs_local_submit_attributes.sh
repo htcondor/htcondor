@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # This file is sourced by blahp before submitting the job to PBS
 # Anything printed to stdout is included in the submit file.
