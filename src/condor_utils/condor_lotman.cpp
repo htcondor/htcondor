@@ -4,13 +4,12 @@
 #include "condor_uid.h"
 
 #include "condor_lotman.h"
-#include <nlohmann/json.hpp>
 #include <filesystem>
-
-using json = nlohmann::json;
 
 #ifdef HAVE_EXT_LOTMAN
 #include <lotman/lotman.h>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
 #endif
 
 namespace {
@@ -353,7 +352,7 @@ condor_lotman::update_usage(const char *dir_path, int num_obj,
     base["path"] = dir_path;
     base["num_obj"] = num_obj;
     base["includes_subdirs"] = false;
-    base["size_GB"] = dir_size;
+    base["size_GB"] = dir_size / (1024 * 1024 * 1024);
     base["subdirs"] = json::array();
 
     json outer_array = json::array();
