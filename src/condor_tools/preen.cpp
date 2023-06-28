@@ -779,8 +779,8 @@ check_log_dir()
 	const char	*f;
 	Directory dir(Log, PRIV_ROOT);
 	long long coreFileMaxSize;
-	param_longlong("PREEN_COREFILE_MAX_SIZE", coreFileMaxSize, true, 50000000);
-	int coreFileStaleAge = param_integer("PREEN_COREFILE_STALE_AGE", 5184000);
+	param_longlong("PREEN_COREFILE_MAX_SIZE", coreFileMaxSize, true, 50'000'000);
+	int coreFileStaleAge = param_integer("PREEN_COREFILE_STALE_AGE", 5'184'000);
 	unsigned int coreFilesPerProgram = param_integer("PREEN_COREFILES_PER_PROCESS", 10);
 	//Max Disk space daemon type core files can take up (schedd:5GB can have files 1GB 1GB 3GB)
 	long long scheddCoresMaxSum, negotiatorCoresMaxSum, collectorCoresMaxSum;

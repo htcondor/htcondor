@@ -500,10 +500,10 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 
 	iostats.bytes_sent = (double)recent_bytes_sent;
 	iostats.bytes_received = (double)recent_bytes_received;
-	iostats.file_read = (double)recent_usec_file_read/1000000;
-	iostats.file_write = (double)recent_usec_file_write/1000000;
-	iostats.net_read = (double)recent_usec_net_read/1000000;
-	iostats.net_write = (double)recent_usec_net_write/1000000;
+	iostats.file_read = (double)recent_usec_file_read   / 1'000'000;
+	iostats.file_write = (double)recent_usec_file_write / 1'000'000;
+	iostats.net_read = (double)recent_usec_net_read     / 1'000'000;
+	iostats.net_write = (double)recent_usec_net_write   / 1'000'000;
 
 	manager->AddRecentIOStats(iostats,m_up_down_queue_user);
 	return true;

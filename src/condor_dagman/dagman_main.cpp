@@ -472,7 +472,7 @@ Dagman::Config()
 				_generateSubdagSubmits ? "True" : "False" );
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
-				0, 1000000 );
+				0, 1'000'000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
 				_maxJobHolds );
 
