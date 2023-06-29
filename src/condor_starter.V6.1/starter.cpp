@@ -1979,10 +1979,8 @@ Starter::createTempExecuteDir( void )
 #endif // LINUX
 
 	// now we can finally write .machine.ad and .job.ad into the sandbox
-	{
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		WriteAdFiles();
-	}
+	WriteAdFiles();
+
 #if !defined(WIN32)
 	if (use_chown) {
 		priv_state p = set_root_priv();
