@@ -975,10 +975,6 @@ contact_schedd_next_add_job:
 				continue;
 			}
 
-				// If wantRematch is set, send a reschedule now
-			if ( curr_job->wantRematch ) {
-				send_reschedule = true;
-			}
 			pendingScheddUpdates.remove( curr_job->procID );
 			delete curr_job;
 

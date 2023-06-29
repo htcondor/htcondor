@@ -106,7 +106,6 @@ class BaseJob : public Service
 
 	bool wantResubmit;
 	int doResubmit;
-	bool wantRematch;
 
 	bool resourceDown;
 	bool resourceStateKnown;

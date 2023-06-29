@@ -891,7 +891,6 @@
 #define ATTR_TIMER_REMOVE_CHECK  "TimerRemove"
 #define ATTR_TIMER_REMOVE_CHECK_SENT  "TimerRemoveSent"
 #define ATTR_GLOBUS_RESUBMIT_CHECK  "GlobusResubmit"
-#define ATTR_REMATCH_CHECK  "Rematch"
 
 #define ATTR_SEC_AUTHENTICATED_NAME  "AuthenticatedName"
 #define ATTR_SEC_AUTHENTICATION_METHODS_LIST  "AuthMethodsList"
