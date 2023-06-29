@@ -3,15 +3,20 @@
 Users' Quick Start Guide
 ========================
 
-`HTCondor <https://htcondor.org>`_ is a batch job scheduler.  It
-takes a file with commands to tell it how to run your jobs.  HTCondor
-locates an appropriate machine for each job within the pool(s) of machines,
-packages up the job and ships it off to this Execution Point (EP) to run on.
-The jobs run, and output is returned to the machine that submitted the jobs.
+`HTCondor <https://htcondor.org>`_ is a system for dynamically sharing
+computational resources between competing computational tasks.  As an
+HTCondor user, you will describe your computational tasks as a series
+of independent, asynchronous "jobs."  You access computational resources
+managed by HTCondor by submitting (or "placing") job descriptions at an
+HTCondor "access point" (AP), also known as a "submit node."  HTCondor
+locates an appropriate machine for each job,
+packages up the job and ships it off to that machine for execution.
+Machines providing resources to HTCondor are therefore known as execution
+points (EP).
 
-Here is just enough guidance to submit and observe the successful
-completion of a first job.  It then suggests extensions that you can apply
-to your particular jobs.
+This guide covers submitting and observing the successful completion
+of a first, example job.  It then suggests extensions that you can apply to
+your own jobs.
 
 This guide presumes that
 
