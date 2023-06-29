@@ -37,6 +37,11 @@ Bugs Fixed:
   volume.
   :jira:`1895`
 
+- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
+  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
+  directory because of the *condor_starter* having the wrong permissions.
+  :jira:`1912`
+
 Version 10.6.0
 --------------
 
