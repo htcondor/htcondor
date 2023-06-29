@@ -73,6 +73,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_alive_inprogress_sock(NULL)
 	, c_lease_duration(lease_duration)
 	, c_aliveint(-1)
+	, c_lease_endtime(0)
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
@@ -801,6 +802,13 @@ Claim::setaliveint( int new_alive )
 	c_lease_duration = max_claim_alives_missed * new_alive;
 }
 
+void
+Claim::setLeaseEndtime(time_t end_time)
+{
+	// TODO reset timer if updated after timer start?
+	c_lease_endtime = end_time;
+}
+
 void Claim::cacheJobInfo( ClassAd* job )
 {
 	job->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
@@ -878,8 +886,12 @@ Claim::startLeaseTimer()
 	   EXCEPT( "Claim::startLeaseTimer() called w/ c_lease_tid = %d", 
 			   c_lease_tid );
 	}
+	int when = c_lease_duration;
+	if (c_lease_endtime && (c_lease_endtime < time(NULL) + c_lease_duration)) {
+		when = (int)(c_lease_endtime - time(NULL));
+	}
 	c_lease_tid =
-		daemonCore->Register_Timer( c_lease_duration, 0, 
+		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
 	if( c_lease_tid == -1 ) {
@@ -961,6 +973,16 @@ void
 Claim::sendAlive()
 {
 	const char* c_addr = NULL;
+
+	if (c_rip->is_partitionable_slot()) {
+		// For a claimed pslot, assume the schedd is alive.
+		// The claim has a limited lifetime, which will eventually
+		// be hit.
+		// TODO We plan to add a variant of the ALIVE command that
+		//   includes the current pslot ad.
+		alive();
+		return;
+	}
 
 	if ( c_starter_handles_alives && isActive() ) {
 			// If the starter is dealing with the alive protocol,
@@ -1223,7 +1245,11 @@ Claim::alive( bool alive_from_schedd )
 		startLeaseTimer();
 	}
 	else {
-		daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+		int when = c_lease_duration;
+		if (c_lease_endtime && (c_lease_endtime < time(NULL) + c_lease_duration)) {
+			when = (int)(c_lease_endtime - time(NULL));
+		}
+		daemonCore->Reset_Timer( c_lease_tid, when, 0 );
 	}
 
 		// And now push forward our send alives timer.  Plus,

@@ -103,6 +103,7 @@ ClaimStartdMsg::ClaimStartdMsg( char const *the_claim_id, char const *extra_clai
 	m_scheduler_addr = scheduler_addr;
 	m_alive_interval = alive_interval;
 	m_num_dslots = 1;
+	m_pslot_claim_lease = 0;
 	m_claim_pslot = false;
 	m_reply = NOT_OK;
 	m_have_leftovers = false;
@@ -140,6 +141,9 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 
 		// Tell the startd whether we want the pslot to become Claimed
 	m_job_ad.Assign("_condor_CLAIM_PARTITIONABLE_SLOT", m_claim_pslot);
+	if (m_claim_pslot) {
+		m_job_ad.Assign("_condor_PARTITIONABLE_SLOT_LEASE_TIME", m_pslot_claim_lease);
+	}
 
 		// Tell the startd how many dslots we want created off of a pslot
 		// for this request. 0 is a reasonable answer when claiming the
@@ -318,6 +322,9 @@ DCStartd::asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *des
 	msg->setCallback(cb);
 
 	if (claim_pslot) {
+		// TODO Currently, we always request the pslot's max lease time
+		//   (msg->m_pslot_claim_lease=0).
+		//   Consider adding option to let client request shorter lease time.
 		msg->m_claim_pslot = true;
 	}
 

@@ -957,6 +957,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	bool send_claimed_ad = false;
 	bool claim_pslot = false;
 	int num_dslots = 1;
+	int pslot_claim_lease = 0;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -1096,12 +1097,24 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
 		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
+		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_LEASE_TIME", pslot_claim_lease);
 	}
 
 	if (claim_pslot && rip->state() == claimed_state) {
 		rip->dprintf(D_ALWAYS, "Refusing claim of pslot that's already claimed\n");
 		refuse(stream);
 		ABORT;
+	}
+
+	if (claim_pslot) {
+		int max_pslot_claim_lease = param_integer("MAX_PARTITIONABLE_SLOT_LEASE_TIME", 3600);
+		if (pslot_claim_lease <= 0) {
+			pslot_claim_lease = max_pslot_claim_lease;
+		} else if (pslot_claim_lease > max_pslot_claim_lease) {
+			rip->dprintf(D_ALWAYS, "Refusing claim of pslot with lease time %d larger than max time %d\n", pslot_claim_lease, max_pslot_claim_lease);
+			refuse(stream);
+			ABORT;
+		}
 	}
 
 	if (claim_pslot && rip->r_has_cp) {
@@ -1310,6 +1323,8 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 	if (claim_pslot && leftover_claim) {
+		leftover_claim->setaliveint(interval);
+		leftover_claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
 		leftover_claim->client()->setaddr(client_addr.c_str());
 		leftover_claim->client()->c_scheddName = schedd_name;
 		leftover_claim->rip()->change_state(claimed_state);

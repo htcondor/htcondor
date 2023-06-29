@@ -235,6 +235,7 @@ private:
 	int m_alive_interval;
 public:
 	int m_num_dslots;
+	int m_pslot_claim_lease;
 	bool m_claim_pslot;
 
 private:

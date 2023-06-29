@@ -272,7 +272,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		startd->asyncRequestOpportunisticClaim(jobAd, 
 											   "description", 
 											   daemonCore->InfoCommandSinfulString(), 
-											   1200 /*alive interval*/, false,
+											   1200 /*alive interval*/,
+											   false, /* don't claim pslot */
 											   20 /* net timeout*/, 
 											   100 /*total timeout*/, 
 											   cb);

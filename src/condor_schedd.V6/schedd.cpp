@@ -7521,7 +7521,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	if (scheddsAreSubmitters) {
 		// Not a real match we can directly use.  Send it to our sidecar cm, and let
 		// it figure out the fair-share, etc.
-		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name, need_local_cm);
+		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
 	bool claim_pslot = false;
@@ -7633,11 +7633,11 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 // Negotiator has send the schedd a match to use for any user.  Forward the slot to our cm-on-the-side
 // for subsequent matching
 bool 
-Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name, bool need_local_cm) {
+Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claims, ClassAd &match_ad, const char *slot_name) {
 	dprintf(D_FULLDEBUG, "Forwarding match %s for use only for this schedd\n", slot_name);
 	auto_free_ptr local_cm(param("SCHEDD_LOCAL_CM"));
 
-	if (need_local_cm && !local_cm) {
+	if (!local_cm) {
 		dprintf(D_ALWAYS, "Got forwarding match for %s, but no knob SCHEDD_LOCAL_CM defined, dropping match\n", slot_name);
 		return false;
 	}
