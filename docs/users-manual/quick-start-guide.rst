@@ -31,11 +31,11 @@ This guide presumes that
 What is a Job?
 --------------
 
-Job is a very specific term in HTCondor. A job is the atomic unit of work.
+"Job" is a very specific term in HTCondor. A job is the atomic unit of work.
 A job may use multiple cores on one machine, but one job may not (in general)
 run across more than one machine.  To effectively use HTCondor, you will
 need to divide your total work (often called a workflow) into a number
-of jobs, which can run asynchronously with respect to each other, but which
+of jobs.  These atomic units of work run asynchronously with respect to each other, but 
 may be connected by input and output files.  Each job is described by a
 Job ClassAd, which is usually created by the system from a submit description file.
 HTCondor is a High Throughput system, which means it has been designed to 
