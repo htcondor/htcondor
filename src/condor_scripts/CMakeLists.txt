@@ -22,10 +22,11 @@ install ( FILES classad_eval DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PE
 install ( FILES condor_watch_q DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_password DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES condor_check_config DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
+install ( DIRECTORY annex DESTINATION ${C_LIBEXEC} FILE_PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 install ( FILES annex/hpc.sh annex/path-facility.sh annex/annex-local-universe.py DESTINATION ${C_LIBEXEC} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
 
 # These files should be installed without execute bits set
-install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/expanse.fragment annex/hpc.multi-pilot annex/hpc.pilot annex/path-facility.multi-pilot annex/path-facility.pilot annex/perlmutter.fragment annex/perlmutter.multi-pilot annex/stampede2.fragment DESTINATION ${C_LIBEXEC})
+install ( FILES annex/anvil.fragment annex/bridges2.fragment annex/expanse.fragment annex/hpc.multi-pilot annex/hpc.pilot annex/path-facility.multi-pilot annex/path-facility.pilot annex/perlmutter.fragment annex/perlmutter.multi-pilot annex/stampede2.fragment DESTINATION ${C_LIBEXEC}/annex)
 
 if (WINDOWS)
   install ( FILES box_plugin.py gdrive_plugin.py onedrive_plugin.py DESTINATION ${C_BIN} PERMISSIONS ${CONDOR_SCRIPT_PERMS} )
