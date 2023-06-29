@@ -1640,6 +1640,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Thu Jun 29 2023 Tim Theisen <tim@cs.wisc.edu> - 10.6.0-1
+- Administrators can enable and disable job submission for a specific user
+- Work around memory leak in libcurl on EL7 when using the ARC-CE GAHP
+- Container images may now be transferred via a file transfer plugin
+- Add ClassAd stringlist subset match function
+- Add submit file macro '$(JobId)' which expands to full ID of the job
+- The job's executable is no longer renamed to 'condor_exec.exe'
+
 * Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.6-1
 - In SSL Authentication, use the identity instead of the X.509 proxy subject
 - Can use environment variable to locate the client's SSL X.509 credential
