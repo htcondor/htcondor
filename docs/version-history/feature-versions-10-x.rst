@@ -21,6 +21,11 @@ New Features:
   This replaces the old command **+WantIOProxy**.
   :jira:`1875`
 
+- A single HTCondor pool can now have multiple *condor_defrag* daemons running
+  and they will not interfere with each other so long as each has
+  :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
+  :jira:`1903`
+
 Bugs Fixed:
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
