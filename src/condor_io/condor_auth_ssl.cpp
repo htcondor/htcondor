@@ -140,7 +140,6 @@ static SSL_CTX *(*SSL_CTX_new_ptr)(const SSL_METHOD *) = NULL;
 #endif
 static int (*SSL_CTX_set_cipher_list_ptr)(SSL_CTX *, const char *) = NULL;
 static void (*SSL_CTX_set_verify_ptr)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)) = NULL;
-static void (*SSL_CTX_set_verify_depth_ptr)(SSL_CTX *, int) = NULL;
 static int (*SSL_CTX_use_PrivateKey_file_ptr)(SSL_CTX *, const char *, int) = NULL;
 static int (*SSL_CTX_use_certificate_chain_file_ptr)(SSL_CTX *, const char *) = NULL;
 static int (*SSL_accept_ptr)(SSL *) = NULL;
@@ -250,7 +249,6 @@ bool Condor_Auth_SSL::Initialize()
 #endif
 		 !(SSL_CTX_set_cipher_list_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_set_cipher_list")) ||
 		 !(SSL_CTX_set_verify_ptr = (void (*)(SSL_CTX *, int, int (*)(int, X509_STORE_CTX *)))dlsym(dl_hdl, "SSL_CTX_set_verify")) ||
-		 !(SSL_CTX_set_verify_depth_ptr = (void (*)(SSL_CTX *, int))dlsym(dl_hdl, "SSL_CTX_set_verify_depth")) ||
 		 !(SSL_CTX_use_PrivateKey_file_ptr = (int (*)(SSL_CTX *, const char *, int))dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file")) ||
 		 !(SSL_CTX_use_certificate_chain_file_ptr = (int (*)(SSL_CTX *, const char *))dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file")) ||
 		 !(SSL_accept_ptr = (int (*)(SSL *))dlsym(dl_hdl, "SSL_accept")) ||
@@ -321,7 +319,6 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_CTX_new_ptr = SSL_CTX_new;
 	SSL_CTX_set_cipher_list_ptr = SSL_CTX_set_cipher_list;
 	SSL_CTX_set_verify_ptr = SSL_CTX_set_verify;
-	SSL_CTX_set_verify_depth_ptr = SSL_CTX_set_verify_depth;
 	SSL_CTX_use_PrivateKey_file_ptr = SSL_CTX_use_PrivateKey_file;
 	SSL_CTX_use_certificate_chain_file_ptr = SSL_CTX_use_certificate_chain_file;
 	SSL_accept_ptr = SSL_accept;
@@ -1996,7 +1993,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
 
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
-    (*SSL_CTX_set_verify_depth_ptr)( ctx, 4 ); // TODO arbitrary?
     if((*SSL_CTX_set_cipher_list_ptr)( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;
