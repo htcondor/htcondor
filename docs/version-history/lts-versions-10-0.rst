@@ -48,6 +48,11 @@ Bugs Fixed:
   when released from the ``HELD`` state.
   :jira:`1869`
 
+- Fixed a bug that caused *condor_preen* to crash if configuration
+  parameter ``PREEN_COREFILE_MAX_SIZE`` was set to a value larger than
+  2 gigabytes.
+  :jira:`1908`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
