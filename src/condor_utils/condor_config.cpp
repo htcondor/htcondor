@@ -2403,13 +2403,8 @@ param_longlong( const char *name, long long int &value,
 		if (subsys && ! subsys[0]) subsys = NULL;
 
 		int def_valid = 0;
-		int was_truncated = false;
-		int is_long = 0;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
-		bool tbl_check_ranges = 
-			(param_range_long(name, &min_value, &max_value)==-1) 
-				? false : true;
-
+		long long tbl_default_value = param_default_long(name, subsys, &def_valid);
+		bool tbl_check_ranges = param_range_long(name, &min_value, &max_value) != -1;
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively
