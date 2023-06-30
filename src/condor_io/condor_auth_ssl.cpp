@@ -147,7 +147,6 @@ static decltype(&SSL_CTX_load_verify_locations) SSL_CTX_load_verify_locations_pt
 static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
 static decltype(&SSL_CTX_set_cipher_list) SSL_CTX_set_cipher_list_ptr = nullptr;
 static decltype(&SSL_CTX_set_verify) SSL_CTX_set_verify_ptr = nullptr;
-static decltype(&SSL_CTX_set_verify_depth) SSL_CTX_set_verify_depth_ptr = nullptr;
 static decltype(&SSL_CTX_use_PrivateKey_file) SSL_CTX_use_PrivateKey_file_ptr = nullptr;
 static decltype(&SSL_CTX_use_certificate_chain_file) SSL_CTX_use_certificate_chain_file_ptr = nullptr;
 static decltype(&SSL_accept) SSL_accept_ptr = nullptr;
@@ -252,7 +251,6 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_CTX_new_ptr = reinterpret_cast<decltype(SSL_CTX_new_ptr)>(dlsym(dl_hdl, "SSL_CTX_new"))) ||
 		 !(SSL_CTX_set_cipher_list_ptr = reinterpret_cast<decltype(SSL_CTX_set_cipher_list_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_cipher_list"))) ||
 		 !(SSL_CTX_set_verify_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify"))) ||
-		 !(SSL_CTX_set_verify_depth_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_depth_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify_depth"))) ||
 		 !(SSL_CTX_use_PrivateKey_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_PrivateKey_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file"))) ||
 		 !(SSL_CTX_use_certificate_chain_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_certificate_chain_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file"))) ||
 		 !(SSL_accept_ptr = reinterpret_cast<decltype(SSL_accept_ptr)>(dlsym(dl_hdl, "SSL_accept"))) ||
@@ -315,7 +313,6 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_CTX_new_ptr = SSL_CTX_new;
 	SSL_CTX_set_cipher_list_ptr = SSL_CTX_set_cipher_list;
 	SSL_CTX_set_verify_ptr = SSL_CTX_set_verify;
-	SSL_CTX_set_verify_depth_ptr = SSL_CTX_set_verify_depth;
 	SSL_CTX_use_PrivateKey_file_ptr = SSL_CTX_use_PrivateKey_file;
 	SSL_CTX_use_certificate_chain_file_ptr = SSL_CTX_use_certificate_chain_file;
 	SSL_accept_ptr = SSL_accept;
@@ -2031,7 +2028,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
 
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
-    SSL_CTX_set_verify_depth_ptr( ctx, 4 ); // TODO arbitrary?
     if(SSL_CTX_set_cipher_list_ptr( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;

@@ -1640,6 +1640,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
+- Remove limit on certificate chain length in SSL authentication
+
 * Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.6-1
 - In SSL Authentication, use the identity instead of the X.509 proxy subject
 - Can use environment variable to locate the client's SSL X.509 credential
