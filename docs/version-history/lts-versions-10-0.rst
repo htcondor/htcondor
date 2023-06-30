@@ -53,6 +53,9 @@ Bugs Fixed:
   2 gigabytes.
   :jira:`1908`
 
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
+
 .. _lts-version-history-1006:
 
 Version 10.0.6
