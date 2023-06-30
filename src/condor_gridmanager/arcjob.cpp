@@ -891,24 +891,9 @@ void ArcJob::doEvaluateState()
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( remoteJobId != NULL
-				     && condorState != REMOVED
-					 && wantResubmit == false
-					 && doResubmit == 0 ) {
+			if (remoteJobId != NULL && condorState != REMOVED) {
 				gmState = GM_HOLD;
 				break;
-			}
-			if ( wantResubmit ) {
-				wantResubmit = false;
-				dprintf(D_ALWAYS,
-						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-			}
-			if ( doResubmit ) {
-				doResubmit = 0;
-				dprintf(D_ALWAYS,
-					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 			}
 			errorString = "";
 			if ( remoteJobId != NULL ) {
