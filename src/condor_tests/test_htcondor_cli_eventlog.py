@@ -52,8 +52,8 @@ def read_success_csv(default_condor, test_dir):
     p = default_condor.run_command(["htcondor", "eventlog", "read", Path(test_dir / "helloworld.log"), "-csv"])
     return p
 
-# test groupby
-# test follow
+# test groupby - not sure how to test this since sites aren't showing up 
+# test follow - same as above
 # potentially write tests for start time, wall time etc. but will ask greg about this
 
 
@@ -79,8 +79,9 @@ class TestHtcondorCliEventlog:
 
     def test_read_success(self, test_dir, read_success):
         # submit a job and write to a log file
-        expected_output = "Job   Host                           Start Time   Evict Time   Evictions   Wall Time    Good Time    CPU Usage"
-        assert expected_output in read_success.stdout
+        expected_headers = ["Job", "Host", "Start Time", "Evict Time", "Evictions", "Wall Time", "Good Time", "CPU Usage"]
+        for header in expected_headers:
+            assert header in read_success.stdout
 
     def test_read_success_json(self, test_dir, read_success_json):
         # assert that the output is in json format
