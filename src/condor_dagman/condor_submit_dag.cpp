@@ -543,15 +543,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				}
 				shallowOpts.iDebugLevel = atoi(argv[++iArg]);
 			}
-			else if (strArg.find("-noev") != std::string::npos) // -noeventchecks
-			{
-				printf( "Warning: -NoEventChecks is ignored; please use "
-							"the DAGMAN_ALLOW_EVENTS config parameter instead\n");
-			}
-			else if (strArg.find("-allowlog") != std::string::npos) // -allowlogerror
-			{
-				fprintf( stderr, "Warning: -AllowLogError is no longer supported\n" );
-			}
 			else if (strArg.find("-use") != std::string::npos) // -usedagdir
 			{
 				deepOpts.useDagDir = true;
@@ -706,11 +697,6 @@ parseCommandLine(SubmitDagDeepOptions &deepOpts,
 				shallowOpts.bPostRunSet = true;
 				shallowOpts.bPostRun = true;
 			}
-			else if ( (strArg.find("-dont_use_default_node_log") != std::string::npos) )
-			{
-				fprintf( stderr, "Error: -dont_use_default_node_log is no longer allowed\n" );
-				printUsage();
-			}
 			else if ( (strArg.find("-suppress_notification") != std::string::npos) )
 			{
 				deepOpts.suppress_notification = true;
@@ -838,12 +824,8 @@ int printUsage(int iExitCode)
     printf("    -MaxPost <number>   (Maximum number of POST scripts to run at once)\n");
     printf("    -notification <value> (Determines how much email you get from HTCondor.\n");
     printf("        See the condor_submit man page for values.)\n");
-    printf("    -NoEventChecks      (Now ignored -- use DAGMAN_ALLOW_EVENTS)\n"); 
     printf("    -DontAlwaysRunPost  (Don't run POST script if PRE script fails)\n");
     printf("    -AlwaysRunPost      (Run POST script if PRE script fails)\n");
-	printf("    -AllowLogError      (Allows the DAG to attempt execution even if the log\n");
-    printf("        reading code finds errors when parsing the submit files)\n"); 
-	printf("        (-AllowLogError is no longer supported as of 8.5.5)\n");
 	printf("    -UseDagDir          (Run DAGs in directories specified in DAG file paths)\n");
     printf("    -debug <number>     (Determines how verbosely DAGMan logs its work\n");
     printf("         about the life of the condor_dagman job.  'value' must be\n");
@@ -869,8 +851,6 @@ int printUsage(int iExitCode)
 	printf("    -DumpRescue         (DAGMan dumps rescue DAG and exits)\n");
 	printf("    -valgrind           (create submit file to run valgrind on DAGMan)\n");
 	printf("    -priority <priority> (jobs will run with this priority by default)\n");
-	printf("    -dont_use_default_node_log (Restore pre-7.9.0 behavior of using UserLog only)\n");
-	printf("        (-dont_use_default_node_log is no longer allowed as of 8.3.1)\n");
 	printf("    -suppress_notification (Set \"notification = never\" in all jobs submitted by this DAGMan)\n");
 	printf("    -dont_suppress_notification (Allow jobs to specify notification)\n");
 	printf("    -DoRecov            (run in recovery mode)\n");
