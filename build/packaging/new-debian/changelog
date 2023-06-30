@@ -1,3 +1,9 @@
+condor (9.0.19-1) stable; urgency=medium
+
+  * Remove limit on certificate chain length in SSL authentication
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Fri, 30 Jun 2023 06:18:00 -0500
+
 condor (9.0.18-1) stable; urgency=medium
 
   * Can configure clients to present an X.509 proxy during SSL authentication
