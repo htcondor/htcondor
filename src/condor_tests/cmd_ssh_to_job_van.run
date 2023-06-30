@@ -84,6 +84,8 @@ print SUBMIT "error = $testname.err\n";
 print SUBMIT "log = $testname.log\n";
 print SUBMIT "arguments = \"$temp_file\"\n";
 print SUBMIT "notification = never\n";
+print SUBMIT "should_transfer_files = yes\n";
+print SUBMIT "when_to_transfer_output = on_exit\n";
 print SUBMIT "queue\n";
 close( SUBMIT );
 

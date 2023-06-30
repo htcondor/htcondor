@@ -85,7 +85,7 @@ Accountant::Accountant():
   DefaultPriorityFactor = 1e3;
   HalfLifePeriod = 1.0f;
   LastUpdateTime = 0;
-  MaxAcctLogSize = 1000000;
+  MaxAcctLogSize = 1'000'000;
   NiceUserPriorityFactor = 1e10;
   RemoteUserPriorityFactor = 1e7;
   hgq_root_group = NULL;
@@ -156,7 +156,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       RemoteUserPriorityFactor=1;
   }
 
-  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1000000);
+  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
 
   if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
 	tmp = param("SPOOL");

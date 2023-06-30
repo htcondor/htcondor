@@ -63,6 +63,13 @@ my $count = 4;
 
 my $SubmitSuccess = sub
 {
+	my @submitters = ();
+	# Make sure both submitters ads (nice and rude) are in the collector
+	while ($#submitters  < 1) {
+		CondorTest::runCondorTool("condor_status -af Name -submitters", \@submitters, 2, {emit_output=>0});
+		sleep(2);
+}
+
 	CondorTest::runCondorTool("condor_on -negotiator");
 };
 

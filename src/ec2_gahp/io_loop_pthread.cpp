@@ -678,7 +678,7 @@ IOProcess::newWorkerId(void)
 	int starting_worker_id = m_next_worker_id++;
 
 	while( starting_worker_id != m_next_worker_id ) {
-		if( m_next_worker_id > 990000000 ) {
+		if( m_next_worker_id > 990'000'000 ) {
 			m_next_worker_id = 1;
 			m_rotated_worker_ids = true;
 		}

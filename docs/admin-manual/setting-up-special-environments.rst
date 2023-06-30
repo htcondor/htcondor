@@ -495,8 +495,7 @@ taken.
 Note that preempting one node of a running parallel universe job
 requires killing the entire job on all of its nodes. So, when preemption
 occurs, it may end up freeing more machines than are needed for the new
-job. Also, as HTCondor does not produce checkpoints for parallel
-universe jobs, preempted jobs will be re-run, starting again from the
+job. Also, preempted jobs will be re-run, starting again from the
 beginning. Thus, the administrator should be careful when enabling
 preemption of these dedicated resources. Enable dedicated preemption
 with the configuration:

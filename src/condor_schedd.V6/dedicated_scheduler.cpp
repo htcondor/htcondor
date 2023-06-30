@@ -3802,7 +3802,7 @@ DedicatedScheduler::checkSanity( void )
 			// managing the sanity_tid in funny ways.  If we never had
 			// a timer in the first place, don't set it now.
 		if( sanity_tid != -1 ) {
-			daemonCore->Reset_Timer( sanity_tid, 100000000 );
+			daemonCore->Reset_Timer( sanity_tid, 100'000'000 );
 		}
 	}
 }

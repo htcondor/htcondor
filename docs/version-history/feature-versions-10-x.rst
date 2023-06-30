@@ -27,30 +27,40 @@ Bugs Fixed:
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
 
+- Fixed a bug where empty execute sandboxes failed to be cleaned up on the
+  EP when using Startd disk enforcement.
+  :jira:`1821`
+
+- When using Startd disk enforcement, if a *condor_starter* running a container
+  or VM universe job is abrubtly killed (like SIGABRT) then the *condor_startd*
+  would fail to cleanup the running docker container or VM and underlying logical
+  volume.
+  :jira:`1895`
+
+- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
+  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
+  directory because of the *condor_starter* having the wrong permissions.
+  :jira:`1912`
+
 Version 10.6.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.6.0 released on Month Date, 2023.
+- HTCondor version 10.6.0 released on June 29, 2023.
 
-- HTCondor version 10.6.0 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-1005`.
+- This version includes all the updates from :ref:`lts-version-history-1006`.
 
 New Features:
 
-- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
+- Added the :ref:`man-pages/condor_qusers:*condor_qusers*` command to monitor and control users at the Access Point.
+  Users disabled at the Access Point are no longer allowed to submit jobs.  Jobs submitted
   before the user was disabled are allowed to run to completion.  When a user
   is disabled, an optional reason string can be provided.  The reason will be
   included in the error message from *condor_submit* when submission is refused
   because the user is disabled.
   :jira:`1723`
   :jira:`1835`
-
-- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
-  id of the submitted job.
-  :jira:`1836`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
@@ -61,8 +71,19 @@ New Features:
   :jira:`1778`
 
 - Container universe jobs may now specify the *container_image* to
-  be an image transfered via a file transfer plugin.
+  be an image transferred via a file transfer plugin.
   :jira:`1820`
+
+- Added two new functions for using ClassAd expressions. The ``stringListSubsetMatch`` and
+  ``stringListISubsetMatch`` functions can be used to check if all of the members of a
+  stringlist are also in a target stringlist.  A single ``stringListSubsetMatch`` function
+  call can replace a whole set of ``stringListMember`` calls once the whole pool is
+  updated to 10.6.0.
+  :jira:`1817`
+
+- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
+  id of the submitted job.
+  :jira:`1836`
 
 - The job's executable is no longer renamed to *condor_exec.exe* when
   the job's sandbox is transferred to the Execution Point.

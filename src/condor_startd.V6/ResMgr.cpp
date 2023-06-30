@@ -472,7 +472,10 @@ ResMgr::init_resources( void )
 	m_execution_xfm.config("JOB_EXECUTION");
 
 #ifdef LINUX
-	m_volume_mgr.reset(new VolumeManager());
+	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
+		m_volume_mgr.reset(nullptr);
+	} else { m_volume_mgr.reset(new VolumeManager()); }
 #endif // LINUX
 
     stats.Init();

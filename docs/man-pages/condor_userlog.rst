@@ -42,14 +42,9 @@ information:
     allocated to the job.
  Good Time
     The allocated time (days+hours:min) which contributed to the
-    completion of this job. If the job exited during the allocation,
-    then this value will equal "Wall Time." If the job performed a
-    checkpoint, then the value equals the work saved in the checkpoint
-    during this allocation. If the job did not exit or perform a
-    checkpoint during this allocation, the value will be 0+00:00. This
-    value can be greater than 0 and less than "Wall Time" if the
-    application completed a periodic checkpoint during the allocation
-    but failed to checkpoint when evicted.
+    completion of this job.  If the job exited during the allocation,
+    then this value will equal "Wall Time."  Otherwise, it will 0+00:00;
+    self-checkpoint are presently ignored.
  CPU Usage
     The CPU time (days+hours:min) which contributed to the completion of
     this job.
@@ -73,7 +68,8 @@ information:
     (days+hours:minutes).
  Avg Lost
     The average amount of work lost (days+hours:minutes) when a job was
-    evicted from this host without successfully performing a checkpoint.
+    evicted from this host.  
+    
  Goodput
     This percentage is computed as Good Time divided by Wall Time.
  Util.
@@ -97,8 +93,7 @@ information:
     in minutes (days+hours:minutes).
  Avg Lost
     The average amount of work lost (days+hours:minutes) when this job
-    was evicted from a host without successfully performing a
-    checkpoint.
+    was evicted from a host; self-checkpoints are presently ignored.
  Goodput
     This percentage is computed as Good Time divided by Wall Time.
  Util.

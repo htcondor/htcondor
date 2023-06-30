@@ -7,6 +7,61 @@ These are Long Term Support (LTS) releases of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-9019:
+
+Version 9.0.19
+--------------
+
+Release Notes:
+
+.. HTCondor version 9.0.19 released on Month Date, 2022.
+
+- HTCondor version 9.0.19 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
+
+.. _lts-version-history-9018:
+
+Version 9.0.18
+--------------
+
+Release Notes:
+
+- HTCondor version 9.0.18 released on June 22, 2022.
+
+New Features:
+
+- Added configuration parameter :macro:`AUTH_SSL_ALLOW_CLIENT_PROXY`,
+  which allows the client to present an X.509 proxy certificate during
+  SSL authentication with a daemon.
+  :jira:`1781`
+  :jira:`1866`
+
+- Added configuration parameter :macro:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`,
+  which controls whether the client checks the environment variable
+  `X509_USER_PROXY` for the location of a credential to use during SSL
+  authentication with a daemon.
+  :jira:`1841`
+
+- Added new script called ``condor_upgrade_check`` to help administrators check
+  for known issues that exist and changes needed for an HTCondor system when
+  upgrading from ``V9`` to ``V10``. This script checks for three well known
+  breaking changes: changing of the default value for :macro:`TRUST_DOMAIN`,
+  changing to using ``PCRE2`` for regular expression matching, and changes
+  to how users request GPUs.
+  :jira:`1658`
+
+Bugs Fixed:
+
+- None.
+
 .. _lts-version-history-9017:
 
 Version 9.0.17

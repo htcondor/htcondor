@@ -2006,13 +2006,13 @@ handle_dc_start_token_request(int, Stream* stream)
 		error_code = 3;
 		error_string = "Too many requests in the system.";
 	} else {
-		unsigned request_id = get_csrng_uint() % 10000000;
+		unsigned request_id = get_csrng_uint() % 10'000'000;
 		auto iter = g_request_map.find(request_id);
 		int idx = 0;
 			// Try a few randomly generated request IDs; to avoid strange issues,
 			// bail out after a fixed limit.
 		while ((iter != g_request_map.end() && (idx++ < 5))) {
-			request_id = get_csrng_uint() % 10000000;
+			request_id = get_csrng_uint() % 10'000'000;
 			iter = g_request_map.find(request_id);
 		}
 		std::string request_id_str;

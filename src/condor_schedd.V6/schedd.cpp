@@ -12552,6 +12552,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				if ( cronTab ) {
 					delete cronTab;
 					this->cronTabs->remove(job_id);
+					this->cronTabs->insert(job_id, nullptr);
 				}
 			} // CronTab
 
@@ -16448,7 +16449,7 @@ Scheduler::claimLocalStartd()
 
 		// Check when we last had a negotiation cycle; if recent, return.
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-			2000000000);
+			2'000'000'000);
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
 			// we have negotiated recently, no need to claim the local startd
 		return false;

@@ -368,7 +368,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#else
 				int seconds = (int)clock_now;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) { micros = 0; seconds += 1; }
+				if( micros >= 1'000'000 ) { micros = 0; seconds += 1; }
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
@@ -384,7 +384,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#else
 				struct tm * then = info.tm;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) {
+				if( micros >= 1'000'000 ) {
 					micros = 0;
 					time_t seconds = clock_now + 1;
 					then = localtime(& seconds);

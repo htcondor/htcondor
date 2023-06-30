@@ -720,15 +720,15 @@ VirshType::Status()
 
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
-	    m_cpu_time = info->cpuTime / 1000000000.0;
+	    m_cpu_time = info->cpuTime / 1'000'000'000.0;
 	    m_result_msg += "Running";
 
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
 	      // Old calc method because of libvirt version mismatches.
 	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
-	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
-	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
+	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1'000'000'000.0);
+	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1'000'000'000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
 	    formatstr_cat( m_result_msg, " %s=%f",
