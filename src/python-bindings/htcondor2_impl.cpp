@@ -80,7 +80,7 @@ static PyMethodDef htcondor2_impl_methods[] = {
 
 
 	{"_credd_do_store_cred", &_credd_do_store_cred, METH_VARARGS, NULL},
-
+	{"_credd_do_check_oauth_creds", &_credd_do_check_oauth_creds, METH_VARARGS, NULL},
 
 	{NULL, NULL, 0, NULL}
 };

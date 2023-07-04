@@ -31,6 +31,7 @@ _collector_init( PyObject *, PyObject * args ) {
 		}
 	}
 
+
 	handle->f = [](void *& v) { dprintf( D_ALWAYS, "[CollectorList]\n" ); delete (CollectorList *)v; v = NULL; };
 	Py_RETURN_NONE;
 }
@@ -236,6 +237,7 @@ _collector_advertise( PyObject *, PyObject * args ) {
 		sock.reset();
 		for( Py_ssize_t i = 0; i < length; ++i ) {
 			PyObject * py_classad = PyList_GetItem(py_list_of_ads, i);
+			// FIXME: We should instead verify these on the Python side.
 			int check = py_is_htcondor2_classad(py_classad);
 			if( check == -1 ) {
 				return NULL;
