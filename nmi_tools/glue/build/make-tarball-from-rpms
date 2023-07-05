@@ -40,7 +40,7 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == */python2-* ]]; then
         # Skip Python 2 bindings
         echo Skipping $file
-    elif [[ $file == *-credmonh-* ]]; then
+    elif [[ $file == *-credmon-* ]]; then
         # Skip any credmon
         echo Skipping $file
     else

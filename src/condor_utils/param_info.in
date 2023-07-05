@@ -86,7 +86,7 @@ type=int
 
 [PREEN_COREFILE_MAX_SIZE]
 default=50000000
-type=int
+type=long
 description=Maximum size allowed for coredump files. Anything bigger gets erased. Default 50Mb.
 tags=preen
 

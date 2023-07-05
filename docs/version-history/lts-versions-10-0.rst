@@ -31,6 +31,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug where if the $(SPOOL) directory was on a separate file system
+  *condor_preen* could delete the special 'lost+found' directory.
+  :jira:`1906`
+
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
@@ -48,6 +52,14 @@ Bugs Fixed:
   secondary daemon such as ``COLLECTOR01`` would not be considered a DC daemon if
   the primary daemon was not in :macro:`DAEMON_LIST`.
   :jira:`1900`
+
+- Fixed a bug that caused *condor_preen* to crash if configuration
+  parameter ``PREEN_COREFILE_MAX_SIZE`` was set to a value larger than
+  2 gigabytes.
+  :jira:`1908`
+
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
 
 .. _lts-version-history-1006:
 
