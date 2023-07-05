@@ -1437,6 +1437,24 @@ init_params()
 	FS_Preen = param( "PREEN" );
 }
 
+// helper function to determin if the executable of a daemon matches the executable of a DC daemon
+static bool same_exe_as_daemon(const char * daemon_name, StringList & dc_names, std::set<std::string> & dc_exes)
+{
+	// first time we call this, build a collection of daemon executables paths
+	if (dc_exes.empty() && ! dc_names.isEmpty()) {
+		for (const char * name = dc_names.first(); name != nullptr; name = dc_names.next()) {
+			auto_free_ptr program(param(name));
+			if (program) { dc_exes.insert(program.ptr()); }
+		}
+	}
+
+	// check to see if the give daemon has the same binary as one of the DC daemons
+	auto_free_ptr program(param(daemon_name));
+	if (program && dc_exes.count(program.ptr())) {
+		return true;
+	}
+	return false;
+}
 
 void
 init_daemon_list()
@@ -1444,6 +1462,7 @@ init_daemon_list()
 	char	*daemon_name;
 	StringList daemon_names, dc_daemon_names;
 	bool have_primary_collector = false; // daemon list has COLLECTOR (just that - VIEW_COLLECTOR or COLLECTOR_B doesn't count)
+	std::set<std::string> dc_daemon_exes; // paths to daemon binaries for the daemon core daemons, used if needed
 
 	daemons.ordered_daemon_names.clearAll();
 	char* dc_daemon_list = param("DC_DAEMON_LIST");
@@ -1592,11 +1611,13 @@ init_daemon_list()
 		daemon_names.rewind();
 		while( (daemon_name = daemon_names.next()) ) {
 			if(daemons.FindDaemon(daemon_name) == NULL) {
-				if( dc_daemon_names.contains(daemon_name) ) {
-					new class daemon(daemon_name);
-				} else {
-					new class daemon(daemon_name, false);
+				bool is_DC = dc_daemon_names.contains(daemon_name);
+				if ( ! is_DC) {
+					// daemon is not in the DC list, check to see if uses the same executable
+					// as on of the DC daemons, if so, we presume it is DC
+					is_DC = same_exe_as_daemon(daemon_name, dc_daemon_names, dc_daemon_exes);
 				}
+				new class daemon(daemon_name, is_DC);
 			}
 		}
 	} else {
