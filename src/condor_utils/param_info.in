@@ -955,6 +955,12 @@ type=string
 description=Filepath to where LotMan db should be placed
 tags=lotman
 
+[LOTMAN_TRACK_SPOOL]
+default=false
+type=bool
+description=Trigger that will cause LotMan to track the spool directory
+tags=lotman
+
 [DELEGATE_JOB_GSI_CREDENTIALS]
 default=true
 type=bool

@@ -439,21 +439,22 @@ SpooledJobFiles::removeJobSpoolDirectory(classad::ClassAd * ad)
 
 	chownSpoolDirectoryToCondor(ad);
 
-#ifdef HAVE_EXT_LOTMAN
-	// Before deleting the dir, get some stats for LotMan to update the new lot usage
-	// We know we're not tracking the log file, so we need to exclude it
-	std::vector<std::string> excluded_files;
-    std::string logFileName;
-    if (ad->LookupString(ATTR_ULOG_FILE, logFileName)) {
-		excluded_files.push_back(logFileName);
-    } else {
-        dprintf( D_ALWAYS, "Could not determine name of the log file from the classad.\n" );
-    }
-	
-	bool lot_removed = condor_lotman::rm_dir(spool_path.c_str(), excluded_files);
-		dprintf( D_ALWAYS, lot_removed ? "Successfully removed path %s from lot db":"Failed to remove path %s from lot db\n",
-		         spool_path.c_str() );
-#endif
+	bool use_lotman = param_true("LOTMAN_TRACK_SPOOL");
+	if (use_lotman) {
+		// Before deleting the dir, get some stats for LotMan to update the new lot usage
+		// We know we're not tracking the log file, so we need to exclude it
+		std::vector<std::string> excluded_files;
+		std::string logFileName;
+		if (ad->LookupString(ATTR_ULOG_FILE, logFileName)) {
+			excluded_files.push_back(logFileName);
+		} else {
+			dprintf( D_ALWAYS, "Could not determine name of the log file from the classad.\n" );
+		}
+		
+		bool lot_removed = condor_lotman::rm_dir(spool_path.c_str(), excluded_files);
+			dprintf( D_ALWAYS, lot_removed ? "Successfully removed path %s from lot db":"Failed to remove path %s from lot db\n",
+					spool_path.c_str() );
+	}
 
 	remove_spool_directory(spool_path.c_str());
 

@@ -5,11 +5,10 @@
 
 #include "condor_lotman.h"
 #include <filesystem>
+#include <picojson/picojson.h>
 
 #ifdef HAVE_EXT_LOTMAN
 #include <lotman/lotman.h>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
 #endif
 
 namespace {
@@ -43,19 +42,24 @@ int user_has_lot(const char *user) {
 
 std::string
 create_user_lot_json(const char *user) {
-    // For now, we are initializing everything to 0, since Condor doesn't yet use these stats
-    json base;
-    base["lot_name"] = user;
-    base["owner"] = "condor";
-    base["parents"] = {user};
-    base["management_policy_attrs"]["dedicated_GB"] = 0;
-    base["management_policy_attrs"]["opportunistic_GB"] = 0;
-    base["management_policy_attrs"]["max_num_objects"] = 0;
-    base["management_policy_attrs"]["creation_time"] = 0;
-    base["management_policy_attrs"]["expiration_time"] = 0;
-    base["management_policy_attrs"]["deletion_time"] = 0;
 
-    return base.dump();
+    // For now, we are initializing everything to 0, since Condor doesn't yet use these stats
+    picojson::object base;
+    base["lot_name"] = picojson::value(user);
+    base["owner"] = picojson::value("condor");
+    base["parents"] = picojson::value(picojson::array{picojson::value(user)});
+
+    picojson::object management_policy_attrs;
+    management_policy_attrs["dedicated_GB"] = picojson::value(static_cast<double>(0));
+    management_policy_attrs["opportunistic_GB"] = picojson::value(static_cast<double>(0));
+    management_policy_attrs["max_num_objects"] = picojson::value(static_cast<double>(0));
+    management_policy_attrs["creation_time"] = picojson::value(static_cast<double>(0));
+    management_policy_attrs["expiration_time"] = picojson::value(static_cast<double>(0));
+    management_policy_attrs["deletion_time"] = picojson::value(static_cast<double>(0));
+
+    base["management_policy_attrs"] = picojson::value(management_policy_attrs);
+
+    return picojson::value(base).serialize();
 }
 
 bool create_user_lot(const char *user) {
@@ -121,17 +125,19 @@ bool create_user_lot(const char *user) {
 }
 
 std::string create_add_dirs_json(const char *lot_name, std::map<std::string, bool>  paths) {
-    json base;
-    base["paths"] = json::array();
-    base["lot_name"] = lot_name;
-    for (const auto & [key, value] : paths) {
-        json path_obj;
-        path_obj["path"] = key;
-        path_obj["recursive"] = value;
-        base["paths"].push_back(path_obj);
+    
+    picojson::object base;
+    base["paths"] = picojson::value(picojson::array());
+    base["lot_name"] = picojson::value(lot_name);
+
+    for (const auto& [key, value] : paths) {
+        picojson::object path_obj;
+        path_obj["path"] = picojson::value(key);
+        path_obj["recursive"] = picojson::value(value);
+        base["paths"].get<picojson::array>().push_back(picojson::value(path_obj));
     }
 
-    return base.dump();
+    return picojson::value(base).serialize();
 }
 
 } // anonymous namespace
@@ -185,22 +191,24 @@ condor_lotman::init_lotman()
 #endif
 	g_init_tried = true;
 
-    std::string lotdb_loc;
-    param(lotdb_loc, "LOTMAN_DB");
-    if (lotdb_loc == "auto") {
-        if (!param(lotdb_loc, "RUN")) {
-            param(lotdb_loc, "LOCK");
+    if (g_init_success) { // only set lot home if we succeeded initialization
+        std::string lotdb_loc;
+        param(lotdb_loc, "LOTMAN_DB");
+        if (lotdb_loc == "auto") {
+            if (!param(lotdb_loc, "RUN")) {
+                param(lotdb_loc, "LOCK");
+            }
+            if (!lotdb_loc.empty()) {
+                lotdb_loc += "/lot";
+            }
         }
         if (!lotdb_loc.empty()) {
-            lotdb_loc += "/lot";
-        }
-    }
-    if (!lotdb_loc.empty()) {
-        dprintf( D_ALWAYS|D_VERBOSE, "Setting LotMan DB directory to %s\n", lotdb_loc.c_str() );
-        char *err = nullptr;
-        if (lotman_set_context_str_ptr("lot_home", lotdb_loc.c_str(), &err) < 0) {
-            dprintf( D_ALWAYS, "Failed to set LotMan database directory to %s: %s\n", lotdb_loc.c_str(), err );
-            free(err);
+            dprintf( D_ALWAYS|D_VERBOSE, "Setting LotMan DB directory to %s\n", lotdb_loc.c_str() );
+            char *err = nullptr;
+            if (lotman_set_context_str_ptr("lot_home", lotdb_loc.c_str(), &err) < 0) {
+                dprintf( D_ALWAYS, "Failed to set LotMan database directory to %s: %s\n", lotdb_loc.c_str(), err );
+                free(err);
+            }
         }
     }
 
@@ -292,12 +300,12 @@ bool condor_lotman::rm_dir(const char *dir_path, std::vector<std::string> exclud
     }
 
     // Use the dir path to build the removal JSON
-    json removal_JSON;
-    removal_JSON["paths"] = json::array();
-    removal_JSON["paths"].push_back(dir_path);
+    picojson::object removal_JSON;
+    removal_JSON["paths"] = picojson::value(picojson::array());
+    removal_JSON["paths"].get<picojson::array>().push_back(picojson::value(dir_path));
 
     // Try to remove the dir from whichever lot claims it
-    rc = lotman_rm_paths_from_lots_ptr(removal_JSON.dump().c_str(), &err_msg);
+    rc = lotman_rm_paths_from_lots_ptr(picojson::value(removal_JSON).serialize().c_str(), &err_msg);
     if (rc != 0) { // There was an error
         dprintf( D_ALWAYS, "Failed to remove the dir %s from the lot db\n", dir_path );
         free(err_msg);
@@ -348,20 +356,20 @@ condor_lotman::update_usage(const char *dir_path, int num_obj,
 
     }
 
-    json base;
-    base["path"] = dir_path;
-    base["num_obj"] = num_obj;
-    base["includes_subdirs"] = false;
-    base["size_GB"] = dir_size / (1024 * 1024 * 1024);
-    base["subdirs"] = json::array();
+    picojson::object base;
+    base["path"] = picojson::value(dir_path);
+    base["num_obj"] = picojson::value(static_cast<double>(num_obj));
+    base["includes_subdirs"] = picojson::value(false);
+    base["size_GB"] = picojson::value(static_cast<double>(dir_size) / (1024.0 * 1024.0 * 1024.0));
+    base["subdirs"] = picojson::value(picojson::array());
 
-    json outer_array = json::array();
-    outer_array.push_back(base);
+    picojson::array outer_array;
+    outer_array.push_back(picojson::value(base));
 
-    dprintf( D_FULLDEBUG, "I will attempt to update the lot with the following input:\n%s\n", outer_array.dump(4).c_str() );
+    dprintf( D_FULLDEBUG, "I will attempt to update the lot with the following input:\n%s\n", picojson::value(outer_array).serialize().c_str() );
 
     char *err_msg;
-    auto rv = lotman_update_lot_usage_by_dir_ptr(outer_array.dump().c_str(), delta_mode, &err_msg);
+    auto rv = lotman_update_lot_usage_by_dir_ptr(picojson::value(outer_array).serialize().c_str(), delta_mode, &err_msg);
     bool success = (rv == 0);
 
     if (!success) {
