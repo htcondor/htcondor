@@ -704,12 +704,6 @@ These attributes are only reported once a full time span has accumulated.
     is published only if configuration variable
     ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
 
-:classad-attribute:`FileTransferDiskThrottleLevel`
-    The current concurrency limit set by the disk load throttle. The
-    limit is applied to the sum of uploads and downloads. This attribute
-    is published only if configuration variable
-    ``FILE_TRANSFER_DISK_LOAD_THROTTLE`` is defined.
-
 :classad-attribute:`FileTransferDiskThrottleLow`
     The lower limit for the disk load from file transfers, as configured
     by ``FILE_TRANSFER_DISK_LOAD_THROTTLE``. :index:`FILE_TRANSFER_DISK_LOAD_THROTTLE`

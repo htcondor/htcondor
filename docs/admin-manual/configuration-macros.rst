@@ -8643,6 +8643,11 @@ Throttling
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
 
+:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS`
+    An integer defining the maximum number of HOLD scripts that any
+    given *condor_dagman* will run at the same time. The default value
+    0 allows any number of HOLD scripts to run.
+
 :macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
     A boolean that determines if after changing some of these throttle limits,
     *condor_dagman* should forceably remove jobs to meet the new limit.
