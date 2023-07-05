@@ -719,7 +719,7 @@ Sock::bindWithin(condor_protocol proto, const int low_port, const int high_port)
 #else
 	LARGE_INTEGER li;
 	::QueryPerformanceCounter(&li);
-	randomish_val = li.LowPart % 1000000; // force into range of usec to avoid overflow when we multiply
+	randomish_val = li.LowPart % 1'000'000; // force into range of usec to avoid overflow when we multiply
 #endif
 
 	int range = high_port - low_port + 1;
@@ -1301,7 +1301,8 @@ bool Sock::chooseAddrFromAddrs( char const * host, std::string & addr_str, condo
 int Sock::do_connect(
 	char const	*host,
 	int		port,
-	bool	non_blocking_flag
+	bool	non_blocking_flag,
+	CondorError * errorStack
 	)
 {
 	if (!host || port < 0) return FALSE;
@@ -1333,7 +1334,7 @@ int Sock::do_connect(
 	// to a shared port (SharedPortServer) that needs further information
 	// to route us to the final destination.
 
-	int retval=special_connect(host,port,non_blocking_flag);
+	int retval=special_connect(host,port,non_blocking_flag,errorStack);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}
@@ -1602,7 +1603,7 @@ Sock::reportConnectionFailure(bool timed_out) const
 	char const *reason = connect_state.connect_failure_reason;
 	char timeout_reason_buf[100];
 	if((!reason || !*reason) && timed_out) {
-		sprintf(timeout_reason_buf,
+		snprintf(timeout_reason_buf, sizeof(timeout_reason_buf), 
 		        "timed out after %d seconds",
 		        connect_state.retry_timeout_interval);
 		reason = timeout_reason_buf;

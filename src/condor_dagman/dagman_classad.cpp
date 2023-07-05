@@ -123,7 +123,7 @@ bool
 ScheddClassad::GetAttribute( const char *attrName, int &attrVal,
 			bool printWarning ) const
 {
-	int val;
+	int val = 0;
 	if ( GetAttributeInt( _jobId._cluster, _jobId._proc,
 				attrName, &val ) == -1 ) {
 		if ( printWarning ) {

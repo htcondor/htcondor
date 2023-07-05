@@ -137,3 +137,34 @@ def deprecate_8_9_8():
     htcondor.Schedd.query = normalize_query_args(htcondor.Schedd.query)
     htcondor.Schedd.xquery = normalize_query_args(htcondor.Schedd.xquery)
     htcondor.Schedd.history = normalize_query_args(htcondor.Schedd.history)
+
+
+def deprecate_10_7_0():
+    deprecate_class(
+        "Transaction was deprecated in version 10.7.0 and will be removed in a future release.",
+        htcondor.Transaction,
+    )
+
+    deprecate_method(
+        "Schedd.transaction() was deprecated in version 10.7.0 and will be removed in a future release.  Use Schedd.submit() instead.",
+        htcondor.Schedd,
+        htcondor.Schedd.transaction
+    )
+
+    deprecate_method(
+        "Schedd.xquery() was deprecated in version 10.7.0 and will be removed in a future release.",
+        htcondor.Schedd,
+        htcondor.Schedd.xquery
+    )
+
+    deprecate_method(
+        "Submit.queue() was deprecated in version 10.7.0 and will be removed in a future release.  Use Schedd.submit() instead.",
+        htcondor.Submit,
+        htcondor.Submit.queue
+    )
+
+    deprecate_method(
+        "Submit.queue_with_itemdata() was deprecated in version 10.7.0 and will be removed in a future release.  Use Schedd.submit() instead.",
+        htcondor.Submit,
+        htcondor.Submit.queue_with_itemdata
+    )

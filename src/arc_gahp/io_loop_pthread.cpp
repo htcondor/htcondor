@@ -281,7 +281,7 @@ main( int argc, char ** const argv )
 
 	// check to see if we're going to quit after a certain time
 	time_t die_time = 0;
-	int lifetime = param_integer("ARC_GAHP_LIFETIME", 86400);
+	int lifetime = param_integer("ARC_GAHP_LIFETIME", 0);
 	if (lifetime) {
 		die_time = time(0) + lifetime;
 	}
@@ -690,7 +690,7 @@ IOProcess::newWorkerId(void)
 	int starting_worker_id = m_next_worker_id++;
 
 	while( starting_worker_id != m_next_worker_id ) {
-		if( m_next_worker_id > 990000000 ) {
+		if( m_next_worker_id > 990'000'000 ) {
 			m_next_worker_id = 1;
 			m_rotated_worker_ids = true;
 		}

@@ -25,7 +25,6 @@
 
 int main() {
 	char buff[500];
-	char buff2[2];
 	int count=0;
 
 	int p = 0;
@@ -56,18 +55,15 @@ int main() {
 
 	printf ("Child PID %d\n", child_pid);
 
-	buff2[1] = '\n';
-
-
 	do {
 		count = 0;
+		int c;
 		do {
-			int c = getchar();
-			sprintf (buff2, "%c", c);
-			if (buff2[0] != '\n') {
-				buff[count++]=buff2[0];
+			c = getchar();
+			if (c != '\n') {
+				buff[count++]=(char)c;
 			}
-		} while (buff2[0] != '\n');
+		} while (c != '\n');
 
 		buff [count++] = '\0';
 

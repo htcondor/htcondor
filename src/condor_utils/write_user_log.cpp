@@ -169,8 +169,9 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 
 		uninit_user_ids();
 		if ( ! init_user_ids(owner.c_str(), domain.c_str()) ) {
+			if ( ! domain.empty()) { owner += "@"; owner += domain; }
 			dprintf(D_ALWAYS,
-				"WriteUserLog::initialize: init_user_ids() failed!\n");
+				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
 			return false;
 		}
 		m_init_user_ids = true;
@@ -410,7 +411,7 @@ WriteUserLog::Configure( bool force )
 	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", false );
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1'000'000, 0 );
 	}
 	if ( m_global_max_filesize == 0 ) {
 		m_global_max_rotations = 0;
@@ -467,7 +468,7 @@ WriteUserLog::Reset( void )
 	m_global_disable = true;
 	m_global_format_opts = 0;
 	m_global_count_events = false;
-	m_global_max_filesize = 1000000;
+	m_global_max_filesize = 1'000'000;
 	m_global_max_rotations = 1;
 	m_global_lock_enable = true;
 	m_global_fsync_enable = false;
@@ -1663,7 +1664,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
 	int len = snprintf( event.info, COUNTOF(event.info),
 			  "Global JobLog:"
-			  " ctime=%d"
+			  " ctime=%lld"
 			  " id=%s"
 			  " sequence=%d"
 			  " size=" FILESIZE_T_FORMAT""
@@ -1672,7 +1673,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  " event_off=%" PRId64""
 			  " max_rotation=%d"
 			  " creator_name=<%s>",
-			  (int) getCtime(),
+			  (long long) getCtime(),
 			  getId().c_str(),
 			  getSequence(),
 			  getSize(),

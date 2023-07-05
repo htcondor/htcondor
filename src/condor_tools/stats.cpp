@@ -32,8 +32,8 @@
 
 //------------------------------------------------------------------------
 
-static int CalcTime(int,int,int);
-static int TimeLine(const std::string& Name,int FromDate, int ToDate, int Res);
+static time_t CalcTime(int,int,int);
+static int TimeLine(const std::string& Name, time_t FromDate, time_t ToDate, int Res);
 
 //------------------------------------------------------------------------
 
@@ -102,9 +102,9 @@ int main(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
-  int Now=time(0);
-  int ToDate=Now;
-  int FromDate=ToDate-DaySec;
+  time_t Now=time(0);
+  time_t ToDate=Now;
+  time_t FromDate=ToDate-DaySec;
   int Options=0;
 
   int QueryType=-1;
@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
   return 0;
 }
 
-int CalcTime(int month, int day, int year) {
+time_t CalcTime(int month, int day, int year) {
   struct tm time_str;
   if (year<50) year+= 100; // If I ask for 1 1 00, I want 1 1 2000
   if (year>1900) year-=1900;
@@ -335,7 +335,7 @@ int CalcTime(int month, int day, int year) {
   return mktime(&time_str);
 }
 
-int TimeLine(const std::string& TimeFileName,int FromDate, int ToDate, int Res)
+int TimeLine(const std::string& TimeFileName,time_t FromDate, time_t ToDate, int Res)
 {
   double Interval=double(ToDate-FromDate)/double(Res);
   float RelT;
@@ -343,7 +343,7 @@ int TimeLine(const std::string& TimeFileName,int FromDate, int ToDate, int Res)
   FILE* TimeFile=safe_fopen_wrapper_follow(TimeFileName.c_str(),"w");
   if (!TimeFile) return -1;
   for (int i=0; i<=Res; i++) {
-    T=(time_t)FromDate+((int)Interval*i);
+    T=FromDate+((int)Interval*i);
     RelT=float(100.0/Res)*i;
 	fprintf(TimeFile,"%.2f\t%s",RelT,asctime(localtime(&T)));
   }

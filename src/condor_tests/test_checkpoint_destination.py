@@ -375,7 +375,7 @@ def path_to_the_job_script(default_condor, test_dir):
     if the_checkpoint_number == 0:
         # This is a hack.
         target = Path(posix_test_dir) / sys.argv[1]
-        os.system(f'/bin/cp -a . {target.as_posix()}')
+        os.system(f'/bin/cp -a . {target.as_posix()} 2>/dev/null')
 
     total_steps = 14
     num_completed_steps = 0
@@ -471,7 +471,7 @@ def the_job_description(test_dir, path_to_the_job_script):
         "log":                          test_dir / "test_job_$(CLUSTER).log",
         "output":                       test_dir / "test_job_$(CLUSTER).out",
         "error":                        test_dir / "test_job_$(CLUSTER).err",
-        "+WantIOProxy":                 "True",
+        "want_io_proxy":                "True",
 
         "checkpoint_exit_code":         "17",
         "transfer_checkpoint_files":    "saved-state",
@@ -1110,17 +1110,18 @@ class TestCheckpointDestination:
             ".local.sh.out",
             ".machine.ad",
             ".update.ad",
+            ".update.ad.tmp",
 
             # Created at run-time by the job.
             "saved-state",
 
             # Downloaded at run-time by HTCondor.
+            "counting.py",
             "local.sh",
 
             # Created at run-time by HTCondor.
             "_condor_stdout",
             "_condor_stderr",
-            "condor_exec.exe",
         ]
 
         extra_file_in_check_path = f"Only in {check_path}: "

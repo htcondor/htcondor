@@ -26,6 +26,7 @@
 #include <numeric>
 
 #include <filesystem>
+#include <charconv>
 
 namespace stdfs = std::filesystem;
 
@@ -132,7 +133,7 @@ ProcFamilyDirectCgroupV2::cgroupify_process(const std::string &cgroup_name, pid_
 		int fd = open(cpu_shares_path.c_str(), O_WRONLY, 0666);
 		if (fd >= 0) {
 			char buf[16];
-			sprintf(buf, "%d", cgroup_cpu_shares);
+			{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, cgroup_cpu_shares); *p = '\0';}
 			int r = write(fd, buf, strlen(buf));
 			if (r < 0) {
 				dprintf(D_ALWAYS, "Error setting cgroup cpu weight of %d in cgroup %s: %s\n", cgroup_cpu_shares, leaf.c_str(), strerror(errno));

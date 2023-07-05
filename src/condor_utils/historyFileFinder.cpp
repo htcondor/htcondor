@@ -26,7 +26,6 @@
 #include "dc_collector.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "directory.h"
 #include "iso_dates.h"

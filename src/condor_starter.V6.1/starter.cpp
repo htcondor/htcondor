@@ -1854,20 +1854,6 @@ Starter::createTempExecuteDir( void )
 			set_priv( priv );
 			return false;
 		}
-#if !defined(WIN32)
-		if (use_chown) {
-			priv_state p = set_root_priv();
-			if (chown(WorkingDir.c_str(),
-			          get_user_uid(),
-			          get_user_gid()) == -1)
-			{
-				EXCEPT("chown error on %s: %s",
-				       WorkingDir.c_str(),
-				       strerror(errno));
-			}
-			set_priv(p);
-		}
-#endif
 	}
 
 #ifdef WIN32
@@ -1994,6 +1980,21 @@ Starter::createTempExecuteDir( void )
 
 	// now we can finally write .machine.ad and .job.ad into the sandbox
 	WriteAdFiles();
+
+#if !defined(WIN32)
+	if (use_chown) {
+		priv_state p = set_root_priv();
+		if (chown(WorkingDir.c_str(),
+					get_user_uid(),
+					get_user_gid()) == -1)
+		{
+			EXCEPT("chown error on %s: %s",
+					WorkingDir.c_str(),
+					strerror(errno));
+		}
+		set_priv(p);
+	}
+#endif
 
 	// switch to user priv -- it's the owner of the directory we just made
 	priv_state ch_p = set_user_priv();
@@ -3757,8 +3758,8 @@ Starter::removeTempExecuteDir( void )
 #ifdef LINUX
 	if (m_volume_mgr) {
 		//LVM managed... reset handle pointer to call destructor for cleanup
-		m_volume_mgr.reset();
-		return true;
+		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		m_volume_mgr.reset(nullptr);
 	}
 #endif /* LINUX */
 

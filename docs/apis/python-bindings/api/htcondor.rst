@@ -50,6 +50,8 @@ Interacting with Schedulers
 
 .. autoclass:: JobAction
 
+.. autoclass:: Transaction
+
 .. autoclass:: TransactionFlags
 
 .. autoclass:: QueryOpts

@@ -557,8 +557,8 @@ BASIC COMMANDS
     name where HTCondor will write a log file of what is happening with
     this job cluster, called a job event log. For example, HTCondor will
     place a log entry into this file when and where the job begins
-    running, when the job produces a checkpoint, or moves (migrates) to
-    another machine, and when the job completes. Most users find
+    running, when it transfers files, if the job is evicted,
+    and when the job completes. Most users find
     specifying a **log** file to be handy; its use is recommended. If no
     **log** entry is specified, HTCondor does not create a log for this
     cluster. If a relative path is specified, it is relative to the
@@ -569,9 +569,8 @@ BASIC COMMANDS
     :index:`notification<single: notification; submit commands>`
  notification = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
-    occur. If defined by *Always*, the owner will be notified whenever
-    the job produces a checkpoint, as well as when the job completes. If
-    defined by *Complete*, the owner will be notified when the job
+    occur. If defined by *Always* or *Complete*,
+    the owner will be notified when the job
     terminates. If defined by *Error*, the owner will only be notified
     if the job terminates abnormally, (as defined by
     ``JobSuccessExitCode``, if defined) or if the job is placed on hold
@@ -636,7 +635,7 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`users-manual/dagman-workflows:advanced features of dagman`
+    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
     for more details).
 
     :index:`queue<single: queue; submit commands>`
@@ -719,11 +718,7 @@ BASIC COMMANDS
 
     The **vanilla** universe is the default (except where the
     configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise), and is an
-    execution environment for jobs which do not use HTCondor's
-    mechanisms for taking checkpoints; these are ones that have not been
-    linked with the HTCondor libraries. Use the **vanilla** universe to
-    submit shell scripts to HTCondor.
+    :index:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -1392,7 +1387,7 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins
-    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    (see :doc:`../admin-manual/file-and-cred-transfer`)
     that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
@@ -2924,6 +2919,12 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
+    :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
+ ulog_execute_attrs = <attribute-list>
+    A comma-seperated list of machine ClassAd attribute names. The named
+    attributes and their values are written as part of the execution event
+    in the job event log.
+
     :index:`use_oauth_services<single: use_oauth_services; submit commands>`
  use_oauth_services = <list of credential service names>
     A comma-separated list of credential-providing service names for
@@ -2944,10 +2945,13 @@ ADVANCED COMMANDS
     provided to differentiate between multiple credentials from the same
     credential service provider.
 
- +<attribute> = <value>
-    A line that begins with a '+' (plus) character instructs
-    *condor_submit* to insert the given *attribute* into the job
-    ClassAd with the given *value*. Note that setting an attribute
+ MY.<attribute> = <value> or +<attribute> = <value>
+    A macro that begins with MY. or a line that begins with a '+' (plus) character instructs
+    *condor_submit* to insert the given *attribute* (without + or MY.) into the job
+    ClassAd with the given *value*. The macro can be referenced in other submit statements
+    by using ``$(MY.<attribute>)``. A +<attribute> is converted to MY.<attribute> when the file is read.
+
+    Note that setting an job attribute in this way
     should not be used in place of one of the specific commands listed
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
@@ -2971,14 +2975,15 @@ and comments.
 
                 <macro_name> = <string>
 
-    Two pre-defined macros are supplied by the submit description file
+    Several pre-defined macros are supplied by the submit description file
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. These
-    macros are intended to aid in the specification of input/output
+    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
+    These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
     be used to supply an HTCondor process with its own cluster and
     process numbers on the command line.
@@ -3040,11 +3045,20 @@ and comments.
 
         D = 24
 
-    This is of limited value, as the scope of macro substitution is the
-    submit description file. Thus, either the macro is or is not defined
-    within the submit description file. If the macro is defined, then
-    the default value is useless. If the macro is not defined, then
-    there is no point in using it in a submit command.
+    This is useful for creating submit templates where values can be 
+    passed on the *condor_submit* command line, but that have a default value as well.
+    In the above example, if you give a value for E on the command line like this
+
+    .. code-block:: console
+
+        condor_submit E=99 <submit-file>
+
+    The value of 99 is used for E, resulting in
+
+    .. code-block:: text
+
+        D = 99
+
     :index:`as a literal character in a submit description file<single: as a literal character in a submit description file; $>`
 
     To use the dollar sign character ($) as a literal, without macro
@@ -3214,6 +3228,9 @@ will not be modified during
  Process
     Alternate name for the ProcId submit variable. Before HTCondor
     version 8.4 this was the only name.
+ JobId
+    Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
+    id of the job.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is
@@ -3369,8 +3386,9 @@ Examples
    ``out.0``, and ``err.0`` for the first run of this program (process
    0). Stdin, stdout, and stderr will refer to ``in.1``, ``out.1``, and
    ``err.1`` for process 1, and so forth. A log file containing entries
-   about where and when HTCondor runs, takes checkpoints, and migrates
-   processes in this cluster will be written into file ``foo.log``.
+   about where and when HTCondor runs, transfers file, if it's evicted,
+   and when it terminates, among other things, the various processes in
+   this cluster will be written into file ``foo.log``.
 
    .. code-block:: text
 

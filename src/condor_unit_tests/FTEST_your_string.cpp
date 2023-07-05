@@ -59,10 +59,6 @@ static bool test_your_string() {
 	const char * pbaa = "baa";
 	const char * pBBB = "BBB";
 	const char * pnull = NULL;
-	MyString myaaa("aaa");
-	MyString mybbb("bbb");
-	MyString myBBB("BBB");
-	MyString mynull;
 	std::string straaa("aaa");
 	std::string strbbb("bbb");
 	std::string strBBB("BBB");
@@ -79,13 +75,11 @@ static bool test_your_string() {
 
 	REQUIRE(YourString().empty());
 	REQUIRE(YourString(NULL).empty());
-	REQUIRE(YourString(mynull).empty());
 	REQUIRE(YourString(pnull).empty());
 	REQUIRE(YourString("").empty());
 	REQUIRE(YourString() == YourString());
 	REQUIRE(YourString() == YourString(NULL));
 	REQUIRE(YourString(NULL) == YourString(pnull));
-	REQUIRE(YourString(NULL) == YourString(mynull));
 	REQUIRE(YourString("") == YourString(""));
 	REQUIRE(YourString() != YourString(""));
 	REQUIRE(YourString("") != YourString());
@@ -101,8 +95,6 @@ static bool test_your_string() {
 	REQUIRE(YourString("aaa") != YourString("aa"));
 	REQUIRE(YourString("aaa") != YourString(pbbb));
 	REQUIRE(YourString("aaa") != YourString(pnull));
-	REQUIRE(YourString("aaa") != mynull);
-	REQUIRE(YourString() == mynull);
 
 	REQUIRE(YourString("aaa") == "aaa");
 	REQUIRE(YourString("aaa") != "bb");
@@ -111,14 +103,6 @@ static bool test_your_string() {
 	REQUIRE(YourString("aaa") == paaaa+1);
 	REQUIRE(YourString("aaa") != pbbb);
 	REQUIRE(YourString("aaa") != NULL);
-
-	REQUIRE(YourString(myaaa) == "aaa");
-	REQUIRE(YourString(myaaa) != "bb");
-	REQUIRE(YourString(myaaa) == paaa);
-	REQUIRE(YourString(myaaa) != paaaa);
-	REQUIRE(YourString(myaaa) == paaaa+1);
-	REQUIRE(YourString(myaaa) != pbbb);
-	REQUIRE(YourString(myaaa) != NULL);
 
 	REQUIRE(YourString(straaa) == "aaa");
 	REQUIRE(YourString(straaa) != "bb");
@@ -129,7 +113,6 @@ static bool test_your_string() {
 	REQUIRE(YourString(straaa) != NULL);
 
 	REQUIRE(YourString(pbbb) != NULL);
-	REQUIRE(YourString(pbbb) != myBBB);
 	REQUIRE(YourString(pbbb) != pBBB);
 	REQUIRE(YourString(pbbb) != strBBB);
 	REQUIRE(YourString(pbbb) != "BBB");
@@ -138,16 +121,12 @@ static bool test_your_string() {
 	REQUIRE(YourString(pbbb) == pbbb);
 	REQUIRE(YourString(pbbb) == "bbb");
 	REQUIRE( ! (YourString(pbbb) == "BBB"));
-	REQUIRE( ! (YourString(pbbb) == myBBB));
-	REQUIRE(YourString(pbbb) == mybbb);
 	REQUIRE(YourString(pbbb) == strbbb);
 	REQUIRE( ! (YourString(pbbb) != pbbb));
 	REQUIRE( ! (YourString(pbbb) != "bbb"));
-	REQUIRE( ! (YourString(pbbb) != mybbb));
 	REQUIRE( ! (YourString(pbbb) != strbbb));
 
 	REQUIRE(YourString("aaa") < "bbb");
-	REQUIRE(YourString("aaa") < mybbb);
 	REQUIRE(YourString("aaa") < strbbb);
 	REQUIRE(YourString("aaa") < pbaa);
 	REQUIRE( ! (YourString("aaa") < paAa));
@@ -155,7 +134,6 @@ static bool test_your_string() {
 	REQUIRE( ! (YourString("aaa") < NULL));
 	REQUIRE( ! (YourString("aaa") < pnull));
 	REQUIRE( ! (YourString("aaa") < "BBB"));
-	REQUIRE( ! (YourString("aaa") < myBBB));
 	REQUIRE( ! (YourString("aaa") < strBBB));
 
 	return REQUIRED_RESULT();
@@ -172,10 +150,6 @@ static bool test_your_string_no_case() {
 	const char * pbaa = "baa";
 	const char * pBBB = "BBB";
 	const char * pnull = NULL;
-	MyString myaaa("aaa");
-	MyString mybbb("bbb");
-	MyString myBBB("BBB");
-	MyString mynull;
 	std::string straaa("aaa");
 	std::string strbbb("bbb");
 	std::string strBBB("BBB");
@@ -190,13 +164,11 @@ static bool test_your_string_no_case() {
 
 	REQUIRE(YourStringNoCase().empty());
 	REQUIRE(YourStringNoCase(NULL).empty());
-	REQUIRE(YourStringNoCase(mynull).empty());
 	REQUIRE(YourStringNoCase(pnull).empty());
 	REQUIRE(YourStringNoCase("").empty());
 	REQUIRE(YourStringNoCase() == YourStringNoCase());
 	REQUIRE(YourStringNoCase() == YourStringNoCase(NULL));
 	REQUIRE(YourStringNoCase(NULL) == YourStringNoCase(pnull));
-	REQUIRE(YourStringNoCase(NULL) == YourStringNoCase(mynull));
 	REQUIRE(YourStringNoCase("") == YourStringNoCase(""));
 	REQUIRE(YourStringNoCase() != YourStringNoCase(""));
 	REQUIRE(YourStringNoCase("") != YourStringNoCase());
@@ -216,8 +188,6 @@ static bool test_your_string_no_case() {
 	REQUIRE(YourStringNoCase("aaa") != YourStringNoCase("aa"));
 	REQUIRE(YourStringNoCase("aaa") != YourStringNoCase(pbbb));
 	REQUIRE(YourStringNoCase("aaa") != YourStringNoCase(pnull));
-	REQUIRE(YourStringNoCase("aaa") != mynull);
-	REQUIRE(YourStringNoCase() == mynull);
 	REQUIRE(YourStringNoCase("") == "\0");
 
 	REQUIRE(YourStringNoCase("aaa") == "AAA");
@@ -231,14 +201,6 @@ static bool test_your_string_no_case() {
 	REQUIRE(YourStringNoCase("aaa") != pbbb);
 	REQUIRE(YourStringNoCase("aaa") != NULL);
 
-	REQUIRE(YourStringNoCase(myaaa) == "aaa");
-	REQUIRE(YourStringNoCase(myaaa) != "bb");
-	REQUIRE(YourStringNoCase(myaaa) == paaa);
-	REQUIRE(YourStringNoCase(myaaa) != paaaa);
-	REQUIRE(YourStringNoCase(myaaa) == paaaa+1);
-	REQUIRE(YourStringNoCase(myaaa) != pbbb);
-	REQUIRE(YourStringNoCase(myaaa) != NULL);
-
 	REQUIRE(YourStringNoCase(straaa) == "aaa");
 	REQUIRE(YourStringNoCase(straaa) != "bb");
 	REQUIRE(YourStringNoCase(straaa) == paaa);
@@ -248,7 +210,6 @@ static bool test_your_string_no_case() {
 	REQUIRE(YourStringNoCase(straaa) != NULL);
 
 	REQUIRE(YourStringNoCase(pbbb) != NULL);
-	REQUIRE(YourStringNoCase(pbbb) == myBBB);
 	REQUIRE(YourStringNoCase(pbbb) == pBBB);
 	REQUIRE(YourStringNoCase(pbbb) == strBBB);
 	REQUIRE(YourStringNoCase(pbbb) == "BBB");
@@ -257,16 +218,12 @@ static bool test_your_string_no_case() {
 	REQUIRE(YourStringNoCase(pbbb) == pbbb);
 	REQUIRE(YourStringNoCase(pbbb) == "bbb");
 	REQUIRE( ! (YourStringNoCase(pbbb) != "BBB"));
-	REQUIRE( ! (YourStringNoCase(pbbb) != myBBB));
-	REQUIRE(YourStringNoCase(pbbb) == mybbb);
 	REQUIRE(YourStringNoCase(pbbb) == strbbb);
 	REQUIRE( ! (YourStringNoCase(pbbb) != pbbb));
 	REQUIRE( ! (YourStringNoCase(pbbb) != "bbb"));
-	REQUIRE( ! (YourStringNoCase(pbbb) != mybbb));
 	REQUIRE( ! (YourStringNoCase(pbbb) != strbbb));
 
 	REQUIRE(YourStringNoCase("aaa") < "bbb");
-	REQUIRE(YourStringNoCase("aaa") < mybbb);
 	REQUIRE(YourStringNoCase("aaa") < strbbb);
 	REQUIRE(YourStringNoCase("aaa") < pbaa);
 	REQUIRE( ! (YourStringNoCase("aaa") < pAAA));
@@ -274,7 +231,6 @@ static bool test_your_string_no_case() {
 	REQUIRE( ! (YourStringNoCase("aaa") < NULL));
 	REQUIRE( ! (YourStringNoCase("aaa") < pnull));
 	REQUIRE(YourStringNoCase("aaa") < "BBB");
-	REQUIRE(YourStringNoCase("aaa") < myBBB);
 	REQUIRE(YourStringNoCase("aaa") < strBBB);
 
 	return REQUIRED_RESULT();

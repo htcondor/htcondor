@@ -111,7 +111,7 @@ QmgmtSetEffectiveOwner(char const *o)
 }
 
 int
-NewCluster()
+NewCluster(CondorError* errstack)
 {
 	int	rval = -1;
 
@@ -125,7 +125,31 @@ NewCluster()
 		neg_on_error( qmgmt_sock->code(rval) );
 		if( rval < 0 ) {
 			neg_on_error( qmgmt_sock->code(terrno) );
-			neg_on_error( qmgmt_sock->end_of_message() );
+
+			// Older versions of the SCHEDD do not return an error reply ad
+			// To handle that, look at what's on the wire, rather than what we should expect.
+			ClassAd reply;
+			bool gotClassad = false;
+			if ( ! qmgmt_sock->peek_end_of_message()) {
+				gotClassad = getClassAd(qmgmt_sock, reply);
+			}
+			if ( ! qmgmt_sock->end_of_message() && ! terrno) { // prefer existing errno
+				terrno = ETIMEDOUT;
+			}
+
+			if (errstack) {
+				std::string reason;
+				const char * errmsg = nullptr;
+				int errCode = terrno;
+				if (gotClassad) {
+					if (reply.LookupString("ErrorReason", reason)) {
+						errmsg = reason.c_str();
+						reply.LookupInteger("ErrorCode", errCode);
+					}
+				}
+				errstack->push( "SCHEDD", errCode, errmsg );
+			}
+
 			errno = terrno;
 			return rval;
 		}
@@ -133,6 +157,9 @@ NewCluster()
 
 	return rval;
 }
+// old form of NewCluster with no errstack
+int NewCluster() { return NewCluster(nullptr); }
+
 
 
 int

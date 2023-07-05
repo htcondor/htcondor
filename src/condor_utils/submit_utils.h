@@ -84,6 +84,7 @@
 #define SUBMIT_KEY_ExitRequirements "exit_requirements"
 #define SUBMIT_KEY_UserLogFile "log"
 #define SUBMIT_KEY_UserLogUseXML "log_xml"
+#define SUBMIT_KEY_ULogExecuteEventAttrs "ulog_execute_attrs"
 #define SUBMIT_KEY_DagmanLogFile "dagman_log"
 #define SUBMIT_KEY_CoreSize "core_size"
 #define SUBMIT_KEY_NiceUser "nice_user"
@@ -150,6 +151,7 @@
 #define SUBMIT_KEY_TransferPlugins "transfer_plugins"
 #define SUBMIT_KEY_MaxTransferInputMB "max_transfer_input_mb"
 #define SUBMIT_KEY_MaxTransferOutputMB "max_transfer_output_mb"
+#define SUBMIT_KEY_WantIoProxy "want_io_proxy"
 
 #define SUBMIT_KEY_ManifestDesired "manifest"
 #define SUBMIT_KEY_ManifestDir "manifest_dir"
@@ -855,7 +857,7 @@ private:
 
 	int process_container_input_files(StringList & input_files, long long * accumulate_size_kb); // call after building the input files list to find .vmx and .vmdk files in that list
 
-	ContainerImageType image_type_from_string(const std::string &image) const;
+	ContainerImageType image_type_from_string(std::string image) const;
 
 	int s_method; //-1 represents undefined job submit method
 };

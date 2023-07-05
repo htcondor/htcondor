@@ -2015,8 +2015,8 @@ flatten( EvalState &state, Value &val, ExprTree *&tree ) const
 		}
 	} else {
 		// Flatten arms of the if expression
-		if( child2 && !child2->Flatten( state, eval2, fChild2 ) ||
-			!child3->Flatten( state, eval3, fChild3 ) ) {
+		if ((child2 && !child2->Flatten( state, eval2, fChild2)) ||
+			!child3->Flatten( state, eval3, fChild3)) {
 			// clean up
 			if( fChild1 ) delete fChild1;
 			if( fChild2 ) delete fChild2;

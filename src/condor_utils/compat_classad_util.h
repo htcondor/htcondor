@@ -21,7 +21,6 @@
 #define COMPAT_CLASSAD_UTIL_H
 
 #include "compat_classad.h"
-#include "MyString.h"
 
 // parse str into attr=expression, returning the attr and the expression and true on success
 bool ParseLongFormAttrValue(const char*str, std::string &attr, classad::ExprTree*& tree);
@@ -93,6 +92,8 @@ bool ClassAdsAreSame( ClassAd *ad1, ClassAd * ad2, StringList * ignored_attrs=NU
 
 void CopyMachineResources(ClassAd &destAd, const ClassAd & srcAd, bool include_res_list);
 
+void CopySelectAttrs(ClassAd &destAd, const ClassAd &srcAd, const std::string &attrs, bool overwrite=true);
+
 // returns TRUE if the expression evaluates successfully and the result was a pod type
 // or one of the complex types in the type mask.  If a mask of 0 matches all types.
 // returns FALSE if the expression could not be evaluated or if the value was unsafe and not in the type mask
@@ -142,6 +143,10 @@ inline int EvalExprToScalar( classad::ExprTree *expr, ClassAd *source,
 bool IsAMatch( ClassAd *ad1, ClassAd *ad2 );
 
 bool IsAHalfMatch( ClassAd *my, ClassAd *target );
+
+// evaluates the query REQUIREMENTS against the target ad
+// but does *NOT* care about TargetType
+bool IsAConstraintMatch( ClassAd *query, ClassAd *target );
 
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch = false);
 

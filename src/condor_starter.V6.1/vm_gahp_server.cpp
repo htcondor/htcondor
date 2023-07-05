@@ -967,7 +967,7 @@ VMGahpServer::new_reqid(void)
 
 	m_next_reqid++;
 	while (starting_reqid != m_next_reqid) {
-		if( m_next_reqid > 990000000 ) {
+		if( m_next_reqid > 990'000'000 ) {
 			m_next_reqid = 1;
 			m_rotated_reqids = true;
 		}

@@ -81,7 +81,7 @@ Another useful method of tracking the progress of jobs is through the
 job event log. The specification of a ``log`` in the submit description
 file causes the progress of the job to be logged in a file. Follow the
 events by viewing the job event log file. Various events such as
-execution commencement, checkpoint, eviction and termination are logged
+execution commencement, file transfer, eviction and termination are logged
 in the file. Also logged is the time at which the event occurred.
 
 When a job begins to run, HTCondor starts up a *condor_shadow* process
@@ -183,8 +183,8 @@ Removing a job from the queue
 
 A job can be removed from the queue at any time by using the
 *condor_rm* :index:`condor_rm<single: condor_rm; HTCondor commands>`\ command. If
-the job that is being removed is currently running, the job is killed
-without a checkpoint, and its queue entry is removed. The following
+the job that is being removed is currently running, the job is killed,
+and its queue entry is removed. The following
 example shows the queue of jobs before and after a job is removed.
 
 .. code-block:: console
@@ -501,7 +501,7 @@ statistics (as appropriate) about the job:
     the elapsed time between when the job was submitted and when it
     completed, given in a form of ``<days> <hours>:<minutes>:<seconds>``
  Virtual Image Size:
-    memory size of the job, computed when the job checkpoints
+    memory size of the job
 
 Statistics about just the last time the job ran:
 
@@ -511,12 +511,12 @@ Statistics about just the last time the job ran:
  Remote User Time:
     total CPU time the job spent executing in user mode on remote
     machines; this does not count time spent on run attempts that were
-    evicted without a checkpoint. Given in the form
+    evicted. Given in the form
     ``<days> <hours>:<minutes>:<seconds>``
  Remote System Time:
     total CPU time the job spent executing in system mode (the time
     spent at system calls); this does not count time spent on run
-    attempts that were evicted without a checkpoint. Given in the form
+    attempts that were evicted. Given in the form
     ``<days> <hours>:<minutes>:<seconds>``
 
 The Run Time accumulated by all run attempts are summarized with the

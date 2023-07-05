@@ -401,7 +401,6 @@ class MyString
 		@returns True if we found data, false if we're at the EOF 
 	 */
 	bool readLine( FILE* fp, bool append = false);
-	bool readLine( MyStringSource & src, bool append = false);
 
 #if 0
 	// ----------------------------------------
@@ -612,7 +611,6 @@ struct CaseIgnLTYourString {
 class MyStringSource {
 public:
 	virtual ~MyStringSource() {};
-	virtual bool readLine(MyString & str, bool append = false) = 0;
 	virtual bool readLine(std::string & str, bool append = false) = 0;
 	virtual bool isEof()=0;
 };
@@ -621,7 +619,6 @@ class MyStringFpSource : public MyStringSource {
 public:
 	MyStringFpSource(FILE*_fp=NULL, bool delete_fp=false) : fp(_fp), owns_fp(delete_fp) {}
 	virtual ~MyStringFpSource() { if (fp && owns_fp) fclose(fp); fp = NULL; };
-	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 protected:
@@ -637,14 +634,13 @@ public:
 	char* Attach(char* src) { char* pOld = ptr; ptr = src; return pOld; }
 	char* Detach() { return Attach(NULL); }
 	const char * data() const { return ptr; }
-	int          pos() const { return ix; }
+	size_t       pos() const { return ix; }
 	void rewind() { ix = 0; }
-	virtual bool readLine(MyString & str, bool append = false);
 	virtual bool readLine(std::string & str, bool append = false);
 	virtual bool isEof();
 protected:
 	char * ptr;
-	int    ix;
+	size_t ix;
 	bool   owns_ptr;
 };
 

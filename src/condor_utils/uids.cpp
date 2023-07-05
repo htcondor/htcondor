@@ -1645,7 +1645,7 @@ _set_priv(priv_state s, const char *file, int line, int dologging)
 			// convert the timeout to a count and only try that many times.
 			int timeout = keyring_session_creation_timeout();
 			const int sleep_amount = 1000; // 1000 usec == 1 millisec
-			int max_attempts = timeout * (1000000/sleep_amount);
+			int max_attempts = timeout * (1'000'000/sleep_amount);
 
 			// attempt creation and loop until success or timeout.
 			while( condor_keyctl_session(NULL) == -1 ) {
@@ -2261,15 +2261,33 @@ priv_identifier( priv_state s )
 	return (const char*) id;
 }
 
+// given a bare user name "bob" or fully-qualified user name "bob@domain" return "bob". buffer used only if needed.
+const char * name_of_user(const char user[], std::string & buf)
+{
+	const char * at = strrchr(user, '@');
+	if ( ! at) return user;
+	buf.assign(user, at - user);
+	return buf.c_str();
+}
+
+// given a bare username "bob" or fully-qualified user name "bob@domain" return "domain" or def_domain
+const char * domain_of_user(const char user[], const char * def_domain)
+{
+	const char * at = strrchr(user, '@');
+	if (at && MATCH != strcmp(at, "@.")) { return at+1; }
+	return def_domain;
+}
+
 // compare 2 usernames that may or may not be fully qualified
 // to see of they both refer to the same user.
 //
 bool is_same_user(
    const char user1[],  // "user@domain" or "user"
    const char user2[],  // "user@domain" or "user"
-   CompareUsersOpt opt)
+   CompareUsersOpt opt,
+   const char * uid_domain)
 {
-   // for now, treat COMPARE_DEFAULT as meaning IGNORE_DOMAINS
+   // for now, treat COMPARE_DEFAULT as meaning COMPARE_DOMAIN_PREFIX
    // TODO: qualify domains and then compare them.
    if (COMPARE_DOMAIN_DEFAULT == opt) {
       opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN);
@@ -2277,11 +2295,15 @@ bool is_same_user(
 
    const char * pu1 = user1;
    const char * pu2 = user2;
+   const bool caseless = (opt & CASELESS_USER) != 0;
 
    // first compare the username part
    while (pu1[0] && pu1[0] != '@') {
 
-      if (pu1[0] != pu2[0])
+      char ch1 = pu1[0];
+      char ch2 = pu2[0];
+      if (caseless) { ch1 = toupper(ch1); ch2 = toupper(ch2); }
+      if (ch1 != ch2)
          return false;
 
       ++pu1;
@@ -2294,29 +2316,47 @@ bool is_same_user(
    if (pu2[0] && pu2[0] != '@')
       return false;
 
-   int cmp = opt & COMPARE_MASK;
+   int cmp = opt & DOMAIN_MASK;
    if (COMPARE_IGNORE_DOMAIN == cmp)
       return true;
-
-   // compare domain part
-   bool fmatch = true;
 
    if (pu1[0] == '@') ++pu1;
    if (pu2[0] == '@') ++pu2;
 
-   char *domain = NULL; // in case we need to fetch UID_DOMAIN
-   if (pu1[0] == '.' || (0 == pu1[0] && (opt & ASSUME_UID_DOMAIN))) {
-      domain = param("UID_DOMAIN");
+   return is_same_domain(pu1, pu2, opt, uid_domain);
+}
+
+bool is_same_domain(
+   const char * pu1,  // "domain.full" or "domain" or "." or ""
+   const char * pu2,  // "domain.full" or "domain" or "." or ""
+   CompareUsersOpt opt,
+   const char * uid_domain)
+{
+   // compare domain part
+   bool fmatch = true;
+   auto_free_ptr tmp_domain;
+
+   if (COMPARE_DOMAIN_DEFAULT == opt) {
+      opt = (CompareUsersOpt)(COMPARE_DOMAIN_PREFIX | ASSUME_UID_DOMAIN);
+   }
+
+   const char *domain = uid_domain; // use the passed-in uid domain if it is non-null
+   if ((pu1[0] == '.' && pu1[1] == 0) || (0 == pu1[0] && (opt & ASSUME_UID_DOMAIN))) {
+      if ( ! domain) { tmp_domain.set(param("UID_DOMAIN")); domain = tmp_domain; }
       pu1 = domain ? domain : "";
    }
-   if (pu2[0] == '.' || (0 == pu2[0] && (opt & ASSUME_UID_DOMAIN))) {
-      if ( ! domain) domain = param("UID_DOMAIN");
+   if ((pu2[0] == '.' && pu2[1] == 0) || (0 == pu2[0] && (opt & ASSUME_UID_DOMAIN))) {
+      if ( ! domain) { tmp_domain.set(param("UID_DOMAIN")); domain = tmp_domain; }
       pu2 = domain ? domain : "";
    }
+
+
+   int cmp = opt & DOMAIN_MASK;
 
    // compare domains, if one is a valid prefix of the other
    // then we consider that a match. we do this so that
    // tonic.cs.wisc.edu matches tonic
+   // note that "valid prefix" means X matches X.Y, but not XX.Y
    //
    if (pu1 != pu2) {
       if (COMPARE_DOMAIN_FULL == cmp) {
@@ -2344,8 +2384,6 @@ bool is_same_user(
          }
       }
    }
-
-   if (domain) free (domain);
 
    return fmatch;
 }

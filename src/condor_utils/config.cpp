@@ -122,10 +122,11 @@ getline_implementation( T & src, int requested_bufsize, int options, int & line_
 		int		len = buflen - (end_ptr - buf);
 		if( len <= 5 ) {
 			// we need a larger buffer -- grow buffer by 4kbytes
+			ptrdiff_t line_offset = line_ptr - buf;
 			char *newbuf = (char *)realloc(buf, 4096 + buflen);
 			if ( newbuf ) {
 				end_ptr = (end_ptr - buf) + newbuf;
-				line_ptr = (line_ptr - buf) + newbuf;
+				line_ptr = line_offset + newbuf;
 				buf = newbuf;	// note: realloc() freed our old buf if needed
 				buflen += 4096;
 				len += 4096;
@@ -1196,7 +1197,7 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 			if (message[cchPre-1] == '\n') { --cchPre; }
 			else { message[cchPre-1] = ' '; }
 		}
-		vsprintf ( message + cchPre, format, ap );
+		vsnprintf(message + cchPre, cch + 1, format, ap);
 	}
 	va_end(ap);
 

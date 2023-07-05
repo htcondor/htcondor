@@ -91,7 +91,7 @@ sub test_policy {
 	}
 
 	@who = ();
-	$result = runCondorTool('condor_who -quick -wait:60 IsReady', \@who,2,{emit_output=>0});
+	$result = runCondorTool('condor_who -quick -wait:120 IsReady', \@who,2,{emit_output=>0});
 	TLOG("query STARTD state:\n");
 	foreach my $line (@who) {
 		winchomp($line);

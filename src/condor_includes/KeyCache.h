@@ -37,7 +37,7 @@ class KeyCacheEntry {
 			const std::string& addr,
 			const KeyInfo * key,
 			const ClassAd * policy,
-			int expiration,
+			time_t expiration,
 			int session_lease
 			);
     KeyCacheEntry(
@@ -45,7 +45,7 @@ class KeyCacheEntry {
 			const std::string& addr,
 			std::vector<KeyInfo *> key,
 			const ClassAd * policy,
-			int expiration,
+			time_t expiration,
 			int session_lease
 			);
     KeyCacheEntry(const KeyCacheEntry &copy);
@@ -58,9 +58,9 @@ class KeyCacheEntry {
     KeyInfo*              key();
     KeyInfo*              key(Protocol protocol);
     ClassAd*              policy();
-    int                   expiration() const;
+    time_t                expiration() const;
 	char const *          expirationType() const;
-	void                  setExpiration(int new_expiration);
+	void                  setExpiration(time_t new_expiration);
 	void                  setLingerFlag(bool flag) { _lingering = flag; }
 	bool                  getLingerFlag() const { return _lingering; }
 	bool                  setPreferredProtocol(Protocol preferred);
@@ -77,7 +77,7 @@ class KeyCacheEntry {
 	std::string           _addr;
 	std::vector<KeyInfo*> _keys;
     ClassAd*             _policy;
-    int                  _expiration;
+    time_t               _expiration;
 	int                  _lease_interval;   // max seconds of unused time
 	time_t               _lease_expiration; // time of lease expiration
 	bool                 _lingering; // true if session only exists

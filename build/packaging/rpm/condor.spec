@@ -612,6 +612,22 @@ if [ $1 == 0 ]; then
 fi
 
 #######################
+%package upgrade-checks
+Summary: Script to check for manual interventions needed to upgrade
+Group: Applications/System
+Requires: python3-condor
+Requires: pcre2-tools
+
+%description upgrade-checks
+HTCondor V9 to V10 check for for known breaking changes:
+1. IDToken TRUST_DOMAIN default value change
+2. Upgrade to PCRE2 breaking map file regex sequences
+3. The way to request GPU resources for a job
+
+%files upgrade-checks
+%_bindir/condor_upgrade_check
+
+#######################
 %package all
 Summary: All condor packages in a typical installation
 Group: Applications/System
@@ -1272,6 +1288,7 @@ rm -rf %{buildroot}
 %_libexecdir/condor/condor_transferer
 %_bindir/condor_docker_enter
 %_bindir/condor_qedit
+%_bindir/condor_qusers
 %_bindir/condor_userlog
 %_bindir/condor_release
 %_bindir/condor_userlog_job_counter
@@ -1623,6 +1640,66 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
+- Remove limit on certificate chain length in SSL authentication
+
+* Thu Jun 29 2023 Tim Theisen <tim@cs.wisc.edu> - 10.6.0-1
+- Administrators can enable and disable job submission for a specific user
+- Work around memory leak in libcurl on EL7 when using the ARC-CE GAHP
+- Container images may now be transferred via a file transfer plugin
+- Add ClassAd stringlist subset match function
+- Add submit file macro '$(JobId)' which expands to full ID of the job
+- The job's executable is no longer renamed to 'condor_exec.exe'
+
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.6-1
+- In SSL Authentication, use the identity instead of the X.509 proxy subject
+- Can use environment variable to locate the client's SSL X.509 credential
+- ClassAd aggregate functions now tolerate undefined values
+- Fix Python binding bug where accounting ads were omitted from the result
+- The Python bindings now properly report the HTCondor version
+- remote_initial_dir works when submitting a grid batch job remotely via ssh
+- Add a ClassAd stringlist subset match function
+
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.18-1
+- Can configure clients to present an X.509 proxy during SSL authentication
+- Provides script to assist updating from HTCondor version 9 to version 10
+
+* Fri Jun 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.5-1
+- Rename upgrade9to10checks.py script to condor_upgrade_check
+- Fix spurious warning from condor_upgrade_check about regexes with spaces
+
+* Tue Jun 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.1-1
+- Fix issue with grid batch jobs interacting with older Slurm versions
+
+* Mon Jun 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.0-1
+- Can now define DAGMan save points to be able to rerun DAGs from there
+- Expand default list of environment variables passed to the DAGMan manager
+- Administrators can prevent users using "getenv = true" in submit files
+- Improved throughput when submitting a large number of ARC-CE jobs
+- Execute events contain the slot name, sandbox path, resource quantities
+- Can add attributes of the execution point to be recorded in the user log
+- Enhanced condor_transform_ads tool to ease offline job transform testing
+- Fixed a bug where memory limits over 2 GiB might not be correctly enforced
+
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.4-1
+- Provides script to assist updating from HTCondor version 9 to version 10
+- Fixes a bug where rarely an output file would not be transferred back
+- Fixes counting of submitted jobs, so MAX_JOBS_SUBMITTED works correctly
+- Fixes SSL Authentication failure when PRIVATE_NETWORK_NAME was set
+- Fixes rare crash when SSL or SCITOKENS authentication was attempted
+- Can allow client to present an X.509 proxy during SSL authentication
+- Fixes issue where a users jobs were ignored by the HTCondor-CE on restart
+- Fixes issues where some events that HTCondor-CE depends on were missing
+
+* Tue May 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-3
+- Improved upgrade9to10checks.py script
+
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.17-2
+- Add upgrade9to10checks.py script
+
+* Tue May 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.3-1
+- Fix bug than could cause the collector audit plugin to crash
+
 * Tue May 02 2023 Tim Theisen <tim@cs.wisc.edu> - 10.4.2-1
 - Fix bug where remote submission of batch grid universe jobs fail
 - Fix bug where HTCondor-CE fails to handle jobs after HTCondor restarts
@@ -1693,6 +1770,12 @@ fi
 - Fix bug where Docker repository images cannot be run under Singularity
 - Fix issue where blahp scripts were missing on Debian and Ubuntu platforms
 - Fix bug where curl file transfer plugins would fail on Enterprise Linux 8
+
+* Tue Nov 22 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.3-1
+- Improvements to jobs hooks, including new PREPARE_JOB_BEFORE_TRANSFER hook
+
+* Tue Nov 15 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.2-1
+- OpenCL jobs now work inside Singularity, if OpenCL drivers are on the host
 
 * Thu Nov 10 2022 Tim Theisen <tim@cs.wisc.edu> - 10.1.1-1
 - Improvements to job hooks and the ability to save stderr from a job hook

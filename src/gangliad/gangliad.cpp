@@ -101,7 +101,7 @@ locateSharedLib(std::string libpath,std::string libname,std::string &result)
 }
 
 void
-GangliaD::initAndReconfig()
+GangliaD::initAndReconfig(const char * /*unused */)
 {
 	std::string libname;
 	std::string gmetric_path;

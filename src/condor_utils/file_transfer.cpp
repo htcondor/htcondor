@@ -315,7 +315,6 @@ FileTransfer::~FileTransfer()
 	if (UserLogFile) free(UserLogFile);
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
-	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
@@ -374,6 +373,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	std::string buffer;
 
 	jobAd = *Ad;	// save job ad
 
@@ -551,15 +551,13 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
 
-		std::string buf;
-		SpooledJobFiles::getJobSpoolPath(Ad, buf);
-		SpoolSpace = strdup(buf.c_str());
-		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
+		SpoolSpace = strdup(buffer.c_str());
+		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	if ( (IsServer() || (IsClient() && simple_init)) &&
-		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) )
+	Ad->LookupString(ATTR_JOB_CMD, buffer);
+	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
 		//   we switch priv state for these file checks?
@@ -584,16 +582,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
 #ifdef WIN32
-			// buf doesn't refer to a real file when this code is executed in the SCHEDD when spooling
+			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buf) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-					"FileTrans: permission denied reading %s\n",buf);
+				        "FileTrans: permission denied reading %s\n",buffer.c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buf);
+			ExecFile = strdup(buffer.c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
@@ -611,7 +609,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			InputFiles->append(ExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( CONDOR_EXEC );
+		ExecFile = strdup( condor_basename(buffer.c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -1266,8 +1264,8 @@ FileTransfer::FindChangedFiles()
 
 	const char *f;
 	while( (f=dir.Next()) ) {
-		// don't send back condor_exec.*
-		if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+		// don't send back the executable
+		if ( ExecFile && MATCH == file_strcmp ( f, ExecFile ) ) {
 			dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
 			continue;
 		}
@@ -2523,6 +2521,12 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			filename = NULL_FILE;
 		}
 
+		// An old peer is sending us a renamed executable.
+		// Use the real filename from the job ad
+		if( ExecFile && IsClient() && !simple_init && !file_strcmp(filename.c_str(), CONDOR_EXEC)) {
+			filename = ExecFile;
+		}
+
 		if( !strcmp(filename.c_str(),NULL_FILE) ) {
 			fullname = filename;
 		}
@@ -2656,7 +2660,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 #endif
 		} else {
-			formatstr(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
@@ -3471,7 +3475,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// we just stashed all the files in the TmpSpoolSpace.
 		// write out the commit file.
 
-		formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+		formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
 		if ((fd = safe_open_wrapper_follow(buf.c_str(), O_WRONLY | O_CREAT | O_TRUNC |
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
@@ -3665,9 +3669,9 @@ FileTransfer::CommitFiles()
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
+	Directory tmpspool( TmpSpoolSpace.c_str(), desired_priv_state );
 
-	formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+	formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.c_str(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 
@@ -3682,7 +3686,7 @@ FileTransfer::CommitFiles()
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
-			formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
+			formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 			formatstr(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
 			formatstr(swapbuf,"%s%c%s",SwapSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 
@@ -4857,7 +4861,16 @@ FileTransfer::uploadFileList(
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename.c_str())==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
-			dest_filename = CONDOR_EXEC;
+			if (PeerRenamesExecutable) {
+				// Our peer is old and expects us to rename the executable
+				dest_filename = CONDOR_EXEC;
+			} else {
+				// Strip path information and preserve the original name
+				// (in case copy_to_spool gave us an ickpt filename).
+				std::string cmd;
+				jobAd.LookupString(ATTR_JOB_CMD, cmd);
+				dest_filename = condor_basename(cmd.c_str());
+			}
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
@@ -6091,6 +6104,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 
 	PeerDoesReuseInfo = peer_version.built_since_version(8,9,4);
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
+	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 }
 
 
@@ -6373,7 +6387,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		drop_privs
 	);
 
-	int rc;
+	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_for_exit( timeout, & rc );
 
@@ -6721,7 +6735,7 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	if( rc == 0 ) {
 		// If it already exists and is larger than 5 Mb, copy the contents
 		// to a .old file.
-		if( stats_file_buf.st_size > 5000000 ) {
+		if( stats_file_buf.st_size > 5'000'000 ) {
 			std::string stats_file_old_path = stats_file_path;
 			stats_file_old_path += ".old";
 			// TODO: Add a lock to prevent two starters from rotating the log

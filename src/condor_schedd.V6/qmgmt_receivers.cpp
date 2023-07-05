@@ -167,12 +167,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_NewCluster:
 	  {
 		int terrno;
+		const char * reason = "";
 
 		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = NewCluster( );
+		rval = NewCluster(g_transaction_error.get());
 		terrno = errno;
 		dprintf(D_SYSCALLS, 
 				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
@@ -185,10 +186,21 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			neg_on_error( syscall_sock->code(terrno) );
-		}
-		neg_on_error( syscall_sock->end_of_message() );;
 
-		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
+			// Send a classad, for less backwards-incompatibility.
+			reason = "Cannot allocate a cluster id";
+			if ( ! g_transaction_error->empty()) {
+				reason = g_transaction_error->message();
+			}
+
+			ClassAd reply;
+			reply.Assign( "ErrorCode", terrno );
+			reply.Assign( "ErrorReason", reason );
+			neg_on_error( putClassAd( syscall_sock, reply ) );
+		}
+		neg_on_error( syscall_sock->end_of_message() );
+
+		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d %s\n",rval,terrno,reason);
 
 		return 0;
 	}

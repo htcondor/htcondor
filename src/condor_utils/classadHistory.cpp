@@ -83,7 +83,7 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     if (DoHistoryRotation) {
         dprintf(D_ALWAYS, "History file rotation is enabled.\n");
         dprintf(D_ALWAYS, "  Maximum history file size is: %zd bytes\n",
-                hri.MaxHistoryFileSize);
+                (ssize_t)hri.MaxHistoryFileSize);
         dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
                 hri.NumberBackupHistoryFiles);
     } else {

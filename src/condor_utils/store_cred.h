@@ -153,6 +153,11 @@ bool isValidCredential( const char *user, const char* pw );
 */
 char* getStoredPassword(const char *user, const char *domain);
 
+/**
+ * Retrieve the stored credential from the KRB5 credential directory.
+ */
+unsigned char* getStoredCredential(int mode, const char *username, const char *domain, int & credlen);
+
 /** Get an IDTOKEN signing key from disk. */
 bool getTokenSigningKey(const std::string &key_id, std::string &contents, CondorError *err);
 /** Check to see if an IDTOKEN signing key exists,

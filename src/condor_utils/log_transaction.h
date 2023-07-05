@@ -38,7 +38,6 @@
 #include "log.h"
 #include "list.h"
 #include "HashTable.h"
-#include "MyString.h"
 
 typedef List<LogRecord> LogRecordList;
 

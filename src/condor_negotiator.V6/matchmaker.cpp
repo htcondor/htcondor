@@ -397,7 +397,7 @@ get_rusage_utime()
 #else
 	struct rusage usage;
 	ASSERT( getrusage( RUSAGE_SELF, &usage ) == 0 );
-	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1000000.0 );
+	return usage.ru_utime.tv_sec + ( usage.ru_utime.tv_usec / 1'000'000.0 );
 #endif
 }
 
@@ -5965,7 +5965,7 @@ void Matchmaker::RegisterAttemptedOfflineMatch( ClassAd *job_ad, ClassAd *startd
 	CopyAttribute(ATTR_STARTD_IP_ADDR, update_ad, *startd_ad);
 
 	time_t now = time(NULL);
-	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,(int)now);
+	update_ad.Assign(ATTR_MACHINE_LAST_MATCH_TIME,now);
 
 
 	// How many times did we match this machine this negotiation cycle?

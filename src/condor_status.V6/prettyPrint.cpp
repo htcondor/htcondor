@@ -38,7 +38,7 @@ extern bool absentMode;
 extern bool offlineMode;
 extern bool compactMode;
 
-static int stashed_now = 0;
+static time_t stashed_now = 0;
 const int cchReserveForPrintingAds = 16384;
 
 void printCOD    		(ClassAd *);
@@ -627,7 +627,7 @@ printCODDetailLine( ClassAd* ad, const char* id )
 	}
 	if( ! ad->LookupInteger(ATTR_LAST_HEARD_FROM, now) ) {
 		if( ! stashed_now ) {
-			stashed_now = (int)time(NULL);
+			stashed_now = time(nullptr);
 		}
 		now = stashed_now;
 	}

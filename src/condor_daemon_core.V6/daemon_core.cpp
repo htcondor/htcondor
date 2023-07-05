@@ -199,26 +199,6 @@ tdp_wait_stopped_child (pid_t pid)
 
 #endif /* LINUX && TDP */
 
-/*
-void zz2printf(int debug_levels, KeyInfo *k) {
-	if (param_boolean("SEC_DEBUG_PRINT_KEYS", false)) {
-		if (k) {
-			char hexout[260];  // holds (at least) a 128 byte key.
-			const unsigned char* dataptr = k->getKeyData();
-			int   length  =  k->getKeyLength();
-
-			for (int i = 0; (i < length) && (i < 24); i++) {
-				sprintf (&hexout[i*2], "%02x", *dataptr++);
-			}
-
-			dprintf (debug_levels, "KEYPRINTF: [%i] %s\n", length, hexout);
-		} else {
-			dprintf (debug_levels, "KEYPRINTF: [NULL]\n");
-		}
-	}
-}
-*/
-
 static int _condor_fast_exit = 0;
 static int dummyGlobal;
 
@@ -3608,7 +3588,7 @@ void DaemonCore::Driver()
 			// daemons that are single threaded (all of them). If you
 			// have questions ask matt.
 		if (IsDebugLevel(D_PERF_TRACE)) {
-			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%d\n", (int)timeout);
+			dprintf(D_PERF_TRACE, "PERF: entering select. timeout=%lld\n", (long long)timeout);
 		}
 
 		selector.execute();
@@ -4574,15 +4554,17 @@ int DaemonCore::ServiceCommandSocket()
 				}
 #endif
 				if ( selector.has_ready() ) {
+						// Index -1 means the initial command socket
+					int idx = (i == -1) ? initial_command_sock() : i;
 						// CallSocketHandler_worker called by CallSocketHandler
 						// also calls CheckPrivState in order to
 						// Make sure we didn't leak our priv state.
-					CallSocketHandler(i, true);
+					CallSocketHandler(idx, true);
 					commands_served++;
 						// If the slot in sockTable just got removed, make sure we exit the loop
-					if ( (sockTable[i].iosock == NULL) ||  // slot is empty
-						 (sockTable[i].remove_asap &&           // slot available
-						  sockTable[i].servicing_tid==0 ) ) {
+					if ( (sockTable[idx].iosock == NULL) ||  // slot is empty
+						 (sockTable[idx].remove_asap &&           // slot available
+						  sockTable[idx].servicing_tid==0 ) ) {
 						break;
 					}
 				} 
@@ -5175,8 +5157,8 @@ int DaemonCore::Shutdown_Fast(pid_t pid, bool want_core )
 	} else {
 		// TerminateProcess failed!!!??!
 		// should we try anything else here?
-		dprintf(D_PROCFAMILY,
-			"Shutdown_Fast: Failed to TerminateProcess on pid %d\n",pid);
+		dprintf(D_ALWAYS,
+			"Shutdown_Fast: Failed to TerminateProcess on pid %d: %u (must_free_handle: %d)\n",pid, GetLastError(), must_free_handle);
 		ret_value = FALSE;
 	}
 	if ( must_free_handle ) {
@@ -9680,6 +9662,15 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 			}
 		}
 	}
+
+	if (this->m_proc_family) {
+		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
+		if (was_oom_killed) {
+			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
+			exit_status |= DC_STATUS_OOM_KILLED;
+		} 
+	}
+
 	if( !reaper || !(reaper->handler || reaper->handlercpp) ) {
 			// no registered reaper
 			dprintf(D_DAEMONCORE,
@@ -9700,14 +9691,6 @@ DaemonCore::CallReaper(int reaper_id, char const *whatexited, pid_t pid, int exi
 		"DaemonCore: %s %lu exited with status %d, invoking reaper "
 		"%d <%s>\n",
 		whatexited, (unsigned long)pid, exit_status, reaper_id, hdescrip);
-
-	if (this->m_proc_family) {
-		bool was_oom_killed = m_proc_family->has_been_oom_killed(pid);
-		if (was_oom_killed) {
-			dprintf(D_ALWAYS, "Process pid %d was OOM killed\n", pid);
-			exit_status |= DC_STATUS_OOM_KILLED;
-		} 
-	}
 
 	if ( reaper->handler ) {
 		// a C handler
@@ -10861,7 +10844,7 @@ DaemonCore::publish(ClassAd *ad) {
 	config_fill_ad(ad);
 
 		// Include our local current time.
-	ad->Assign(ATTR_MY_CURRENT_TIME, (int)time(NULL));
+	ad->Assign(ATTR_MY_CURRENT_TIME, time(nullptr));
 
 		// Every daemon wants ATTR_MACHINE to be the full hostname:
 	ad->Assign(ATTR_MACHINE, get_local_fqdn().c_str());

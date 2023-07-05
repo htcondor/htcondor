@@ -130,8 +130,8 @@ ResMgr::ResMgr() :
 	const char *death_time = getenv(ENV_DAEMON_DEATHTIME);
 	if (death_time && death_time[0]) {
 		deathTime = atoi(death_time);
-		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%d seconds from now)\n",
-			death_time, (int)time_to_live());
+		dprintf( D_ALWAYS, ENV_DAEMON_DEATHTIME " Env set to %s (%lld seconds from now)\n",
+			death_time, (long long)time_to_live());
 	}
 
 	max_types = 0;
@@ -472,7 +472,10 @@ ResMgr::init_resources( void )
 	m_execution_xfm.config("JOB_EXECUTION");
 
 #ifdef LINUX
-	m_volume_mgr.reset(new VolumeManager());
+	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
+		m_volume_mgr.reset(nullptr);
+	} else { m_volume_mgr.reset(new VolumeManager()); }
 #endif // LINUX
 
     stats.Init();
@@ -2205,7 +2208,7 @@ bool ResMgr::hibernating () const {
 void
 ResMgr::check_use( void )
 {
-	int current_time = time(NULL);
+	time_t current_time = time(NULL);
 	if( hasAnyClaim() ) {
 		last_in_use = current_time;
 	}
@@ -2618,10 +2621,10 @@ ResMgr::publish_draining_attrs(Resource *rip, ClassAd *cap)
 		cap->Assign( ATTR_TOTAL_MACHINE_DRAINING_UNCLAIMED_TIME, total_draining_unclaimed );
 	}
 	if( last_drain_start_time != 0 ) {
-		cap->Assign( ATTR_LAST_DRAIN_START_TIME, (int)last_drain_start_time );
+		cap->Assign( ATTR_LAST_DRAIN_START_TIME, last_drain_start_time );
 	}
 	if( last_drain_stop_time != 0 ) {
-	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, (int)last_drain_stop_time );
+	    cap->Assign( ATTR_LAST_DRAIN_STOP_TIME, last_drain_stop_time );
 	}
 }
 

@@ -532,7 +532,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 		}
 	}
 
-	int rc = sock->connect(_addr, 0, non_blocking);
+	int rc = sock->connect(_addr, 0, non_blocking, errstack);
 	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return true;
 	}

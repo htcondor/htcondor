@@ -41,7 +41,7 @@
 struct GahpProxyInfo
 {
 	Proxy *proxy;
-	int cached_expiration;
+	time_t cached_expiration;
 	int num_references;
 };
 
@@ -278,6 +278,8 @@ class GenericGahpClient : public Service {
 		const char * getGahpStderr();
 		const char * getVersion();
 		const char * getCondorVersion();
+
+		int getNextReqId() { return server->next_reqid; }
 
 		enum PrioLevel {
 			low_prio,

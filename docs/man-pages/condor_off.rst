@@ -22,8 +22,8 @@ Description
 -----------
 
 *condor_off* shuts down a set of the HTCondor daemons running on a set
-of one or more machines. It does this cleanly so that checkpointable
-jobs may gracefully exit with minimal loss of work.
+of one or more machines.  By default, it does this cleanly, so that
+jobs have time to shut down.
 
 The command *condor_off* without any arguments will shut down all
 daemons except *condor_master*, unless **-annex** *name* is

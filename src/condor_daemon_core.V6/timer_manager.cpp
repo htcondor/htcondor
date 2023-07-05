@@ -293,7 +293,7 @@ int TimerManager::ResetTimer(int id, unsigned when, unsigned period,
 				timer_ptr->event_descrip ? timer_ptr->event_descrip : "",
 				timer_ptr->period,
 				period,
-				(int)timer_ptr->when - (int)old_when);
+				(int)(timer_ptr->when - old_when));
 	} else {
 		timer_ptr->period_started = time(NULL);
 		if ( when == TIMER_NEVER ) {

@@ -633,7 +633,7 @@ DataReuseDirectory::CacheFile(const std::string &source, const std::string &chec
 	EVP_MD_CTX_destroy(mdctx);
 	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		snprintf(&computed_checksum[2*idx], 3, "%02x", md_value[idx]);
 	}
 	if (strcmp(&computed_checksum[0], checksum.c_str())) {
 		err.pushf("DataReuse", 11, "Source file checksum does not match expected one.");
@@ -841,7 +841,7 @@ DataReuseDirectory::RetrieveFile(const std::string &destination, const std::stri
 	EVP_MD_CTX_destroy(mdctx);
 	std::vector<char> computed_checksum(2*md_len + 1, 0);
 	for (unsigned int idx = 0; idx < md_len; idx++) {
-		sprintf(&computed_checksum[2*idx], "%02x", md_value[idx]);
+		snprintf(&computed_checksum[2*idx], 3, "%02x", md_value[idx]);
 	}
 	if (strcmp(&computed_checksum[0], checksum.c_str())) {
 		err.pushf("DataReuse", 10, "Source file checksum does not match expected one.");
@@ -986,11 +986,11 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	auto retval = true;
 	retval &= ad.InsertAttr("HasDataReuse", m_valid);
 	retval &= ad.InsertAttr("DataReuseAllocatedMB",
-		static_cast<double>(m_allocated_space)/1000000.0);
+		static_cast<double>(m_allocated_space)/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseReservedMB",
-		static_cast<double>(m_reserved_space)/1000000.0);
+		static_cast<double>(m_reserved_space)/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseUsedMB",
-		static_cast<double>(m_stored_space)/1000000.0);
+		static_cast<double>(m_stored_space)/1'000'000.0);
 
 	std::unordered_map<std::string, SpaceUtilization> per_user_lifetime;
 	SpaceUtilization global_util;
@@ -1004,18 +1004,18 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 		global_util.incDeleted(entry.second.deleted());
 	}
 	retval &= ad.InsertAttr("DataReuseAggregateWrittenMB",
-		static_cast<double>(global_util.written())/1000000.0);
+		static_cast<double>(global_util.written())/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseAggregateReadMB",
-		static_cast<double>(global_util.used())/1000000.0);
+		static_cast<double>(global_util.used())/1'000'000.0);
 	retval &= ad.InsertAttr("DataReuseAggregateDeletedMB",
-		static_cast<double>(global_util.deleted())/1000000.0);
+		static_cast<double>(global_util.deleted())/1'000'000.0);
 	for (const auto &entry : per_user_lifetime) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateWrittenMB",
-			static_cast<double>(entry.second.written())/1000000.0);
+			static_cast<double>(entry.second.written())/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateReadMB",
-			static_cast<double>(entry.second.used()/1000000.0));
+			static_cast<double>(entry.second.used()/1'000'000.0));
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_AggregateDeletedMB",
-			static_cast<double>(entry.second.deleted()/1000000.0));
+			static_cast<double>(entry.second.deleted()/1'000'000.0));
 	}
 
 		// No reason to print out per-user info for an invalid directory.
@@ -1035,7 +1035,7 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	}
 	for (const auto &entry : per_user_reservations) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_SpaceReservedMB",
-			static_cast<double>(entry.second.first)/1000000.0);
+			static_cast<double>(entry.second.first)/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_ReservationCount",
 			static_cast<int32_t>(entry.second.second));
 	}
@@ -1051,7 +1051,7 @@ DataReuseDirectory::Publish(classad::ClassAd &ad)
 	}
 	for (const auto &entry : per_user_space) {
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_SpaceUsedMB",
-			static_cast<double>(entry.second.first)/1000000.0);
+			static_cast<double>(entry.second.first)/1'000'000.0);
 		retval &= ad.InsertAttr("DataReuse_" + entry.first + "_FileCount",
 			static_cast<int32_t>(entry.second.second));
 	}

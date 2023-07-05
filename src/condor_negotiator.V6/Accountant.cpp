@@ -23,6 +23,7 @@
 #include <climits>
 #include <math.h>
 #include <iomanip>
+#include <charconv>
 
 #include "condor_accountant.h"
 #include "condor_debug.h"
@@ -84,7 +85,7 @@ Accountant::Accountant():
   DefaultPriorityFactor = 1e3;
   HalfLifePeriod = 1.0f;
   LastUpdateTime = 0;
-  MaxAcctLogSize = 1000000;
+  MaxAcctLogSize = 1'000'000;
   NiceUserPriorityFactor = 1e10;
   RemoteUserPriorityFactor = 1e7;
   hgq_root_group = NULL;
@@ -155,7 +156,7 @@ void Accountant::Initialize(GroupEntry* root_group)
       RemoteUserPriorityFactor=1;
   }
 
-  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1000000);
+  MaxAcctLogSize = param_integer("MAX_ACCOUNTANT_DATABASE_SIZE",1'000'000);
 
   if ( ! param(LogFileName, "ACCOUNTANT_DATABASE_FILE")) {
 	tmp = param("SPOOL");
@@ -705,7 +706,7 @@ void Accountant::RemoveMatch(const std::string& ResourceName, time_t T)
       DeleteClassAd(ResourceRecord+ResourceName);
       return;
   }
-  int StartTime=0;
+  time_t StartTime=0;
   GetAttributeInt(ResourceRecord+ResourceName,StartTimeAttr,StartTime);
   int ResourcesUsed=0;
   GetAttributeInt(CustomerRecord+CustomerName,ResourcesUsedAttr,ResourcesUsed);
@@ -838,7 +839,7 @@ void Accountant::DisplayMatches()
 
 void Accountant::UpdatePriorities() 
 {
-  int T=time(0);
+  time_t T=time(0);
   int TimePassed=T-LastUpdateTime;
   if (TimePassed==0) return;
 
@@ -1073,7 +1074,7 @@ ClassAd* Accountant::ReportState(const std::string& CustomerName) {
 
     std::string HK;
     ClassAd* ResourceAd;
-    int StartTime;
+    time_t StartTime;
 
     ClassAd* ad = new ClassAd();
 
@@ -1682,14 +1683,14 @@ bool Accountant::DeleteClassAd(const std::string& Key)
 // Set an Integer attribute
 //------------------------------------------------------------------
 
-void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int AttrValue)
+void Accountant::SetAttributeInt(const std::string& Key, const std::string& AttrName, int64_t AttrValue)
 {
   if (AcctLog->AdExistsInTableOrTransaction(Key) == false) {
     LogNewClassAd* log=new LogNewClassAd(Key.c_str(),"*","*");
     AcctLog->AppendLog(log);
   }
-  char value[50];
-  snprintf(value,sizeof(value),"%d",AttrValue);
+  char value[24] = { 0 };
+  std::to_chars(value, value+sizeof(value)-1, AttrValue);
   LogSetAttribute* log=new LogSetAttribute(Key.c_str(),AttrName.c_str(),value);
   AcctLog->AppendLog(log);
 }
@@ -1733,6 +1734,22 @@ void Accountant::SetAttributeString(const std::string& Key, const std::string& A
 //------------------------------------------------------------------
 
 bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, int& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long& AttrValue)
+{
+  ClassAd* ad;
+  if (AcctLog->table.lookup(Key,ad)==-1) return false;
+  if (ad->LookupInteger(AttrName,AttrValue)==0) return false;
+  return true;
+}
+
+bool Accountant::GetAttributeInt(const std::string& Key, const std::string& AttrName, long long& AttrValue)
 {
   ClassAd* ad;
   if (AcctLog->table.lookup(Key,ad)==-1) return false;

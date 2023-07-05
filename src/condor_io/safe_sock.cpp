@@ -270,8 +270,9 @@ MSC_RESTORE_WARNING(6262) // function uses 64k of stack
 
 int SafeSock::connect(
 	char const	*host,
-	int		port, 
-	bool
+	int		port,
+	bool,
+	CondorError * errorStack
 	)
 {
 	if (!host || port < 0) return FALSE;
@@ -296,7 +297,7 @@ int SafeSock::connect(
 	// now that we have set _who (useful for getting informative
 	// peer_description), see if we should do a reverse connect
 	// instead of a forward connect
-	int retval=special_connect(host,port,true);
+	int retval=special_connect(host,port,true,errorStack);
 	if( retval != CEDAR_ENOCCB ) {
 		return retval;
 	}

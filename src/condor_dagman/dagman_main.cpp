@@ -61,8 +61,6 @@ static void Usage() {
 			"\t\t[-MaxPre <int N>]\n"
 			"\t\t[-MaxPost <int N>]\n"
 			"\t\t[-MaxHold <int N>]\n"
-			"\t\t(obsolete) [-NoEventChecks]\n"
-			"\t\t(obsolete) [-AllowLogError]\n"
 			"\t\t[-DontAlwaysRunPost]\n"
 			"\t\t[-AlwaysRunPost]\n"
 			"\t\t[-WaitForDebug]\n"
@@ -84,7 +82,6 @@ static void Usage() {
 			"\t\t[-Include_env <Variables>]\n"
 			"\t\t[-Insert_env <Key=Value>]\n"
 			"\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
 			"\twhere NAME is the name of your DAG.\n"
 			"\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
@@ -472,7 +469,7 @@ Dagman::Config()
 				_generateSubdagSubmits ? "True" : "False" );
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
-				0, 1000000 );
+				0, 1'000'000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
 				_maxJobHolds );
 
@@ -842,17 +839,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman.maxHoldScripts = atoi( argv[i] );
-		} else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
-						"ignored; please use the DAGMAN_ALLOW_EVENTS "
-						"config parameter instead\n");
-			check_warning_strictness( DAG_STRICT_2 );
-
-		} else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -AllowLogError is "
-						"no longer supported\n" );
-			check_warning_strictness( DAG_STRICT_2 );
-
 		} else if( !strcasecmp( "-DontAlwaysRunPost", argv[i] ) ) {
 			if ( alwaysRunPostSet && dagman._runPost ) {
 				debug_printf( DEBUG_QUIET,
@@ -985,11 +971,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman._priority = atoi(argv[i]);
-
-		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-	   		debug_printf( DEBUG_QUIET,
-						"Error: -dont_use_default_node_log is no longer allowed\n" );
-			DC_Exit( EXIT_ERROR );
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;

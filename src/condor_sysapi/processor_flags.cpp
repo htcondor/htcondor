@@ -32,6 +32,7 @@
 
 static struct sysapi_cpuinfo theInfo;
 
+#ifdef LINUX
 static const struct sysapi_cpuinfo *sysapi_processor_flags_read_proc_cpuinfo( void ) {
     sysapi_internal_reconfig();
     
@@ -120,6 +121,9 @@ static const struct sysapi_cpuinfo *sysapi_processor_flags_read_proc_cpuinfo( vo
     return &theInfo;
 }
 
+#endif
+
+#ifdef LINUX
 // Turn a string of words separated by exactly one space
 // into a vector of words and return int.
 static std::vector<std::string>
@@ -186,6 +190,8 @@ cpuflags_to_microarch_string(std::vector<std::string> &cpuinfoFlags) {
 	return ""; // only x86_64 defines microarch today
 #endif
 }
+
+#endif
 
 const struct sysapi_cpuinfo *sysapi_processor_flags( void ) {
 

@@ -323,15 +323,15 @@ void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
    if ( ! this->enabled) return;
 
    if ((flags & IF_PUBLEVEL) > 0) {
-      ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+      ad.Assign("DCStatsLifetime", StatsLifetime);
       if (flags & IF_VERBOSEPUB)
-         ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+         ad.Assign("DCStatsLastUpdateTime", StatsLastUpdateTime);
 
       if (flags & IF_RECENTPUB) {
-         ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+         ad.Assign("DCRecentStatsLifetime", RecentStatsLifetime);
          if (flags & IF_VERBOSEPUB) {
-            ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
-            ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
+            ad.Assign("DCRecentStatsTickTime", RecentStatsTickTime);
+            ad.Assign("DCRecentWindowMax", RecentWindowMax);
          }
       }
    }

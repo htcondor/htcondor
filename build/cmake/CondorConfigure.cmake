@@ -585,6 +585,16 @@ if("${OS_NAME}" STREQUAL "LINUX")
     option(HAVE_HTTP_PUBLIC_FILES "Support for public input file transfer via HTTP" ON)
 
     option(WITH_BLAHP "Compiling the blahp" ON)
+
+	# Does libcurl use NSS for security?
+	# We need to employ some workarounds for NSS problems.
+	execute_process(COMMAND /usr/bin/curl --version
+		COMMAND grep -q NSS
+		RESULT_VARIABLE CURL_NSS_TEST)
+	if (CURL_NSS_TEST EQUAL 0)
+		set(CURL_USES_NSS TRUE)
+	endif()
+
 elseif(APPLE)
 	add_definitions(-DDarwin)
 	# CRUFT Remove this variable. All cmake files should be using APPLE.

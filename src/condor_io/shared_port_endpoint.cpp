@@ -1388,7 +1388,7 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 		}
 
 		if( !cached_result && why_not ) {
-			formatstr(*why_not, "cannot write to %s: %s",
+			formatstr(*why_not, "cannot write to the DAEMON_SOCKET_DIR '%s': %s",
 						   socket_dir.c_str(),
 						   strerror(errno));
 		}

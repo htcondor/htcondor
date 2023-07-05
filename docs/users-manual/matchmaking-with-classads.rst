@@ -104,12 +104,8 @@ location attribute to your machine ClassAds.
     Name = "turunmaa.cs.wisc.edu"
     CondorPlatform = "$CondorPlatform: x86_rhap_5 $"
     Cpus = 1
-    IsValidCheckpointPlatform = ( ( ( TARGET.JobUniverse == 1 ) == false ) ||
-     ( ( MY.CheckpointPlatform =!= undefined ) &&
-     ( ( TARGET.LastCheckpointPlatform =?= MY.CheckpointPlatform ) ||
-     ( TARGET.NumCkpts == 0 ) ) ) )
     CondorVersion = "$CondorVersion: 7.6.3 Aug 18 2011 BuildID: 361356 $"
-    Requirements = ( START ) && ( IsValidCheckpointPlatform )
+    Requirements = START
     EnteredCurrentActivity = 1316094896
     MyAddress = "<128.105.175.125:58026>"
     EnteredCurrentState = 1316094896
@@ -124,7 +120,6 @@ location attribute to your machine ClassAds.
     StartdIpAddr = "<128.105.175.125:58026>"
     TargetType = "Job"
     LoadAvg = 0.210000
-    CheckpointPlatform = "LINUX INTEL 2.6.x normal 0x40000000"
     Disk = 92309744
     VirtualMemory = 2069476
     TotalSlots = 1

@@ -26,7 +26,6 @@
 #include <set>
 #include "directory.h"
 #include "view_server.h"
-#include "extArray.h"
 #include "util_lib_proto.h" // for rotate_file
 
 //-------------------------------------------------------------------
@@ -157,7 +156,7 @@ void ViewServer::Config()
 
 	HistoryInterval=param_integer("POOL_HISTORY_SAMPLING_INTERVAL",60);
 
-	int MaxStorage=param_integer("POOL_HISTORY_MAX_STORAGE",10000000);
+	int MaxStorage=param_integer("POOL_HISTORY_MAX_STORAGE",10'000'000);
 
 	MaxFileSize=MaxStorage/(HistoryLevels*DataSetCount*2);
 

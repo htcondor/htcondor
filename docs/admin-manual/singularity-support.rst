@@ -253,7 +253,7 @@ to the StarterLog might look like the following:
 
 .. code-block:: text
 
-    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/condor_exec.exe 3
+    About to exec /usr/bin/singularity -s exec -S /tmp -S /var/tmp --pwd /execute/dir_462373 -B /execute/dir_462373 --no-home -C /images/debian /execute/dir_462373/demo 3
 
 In this example, no GPUs have been requested, so there is no ``-nv`` option.
 :macro:`MOUNT_UNDER_SCRATCH` is set to the default of ``/tmp,/var/tmp``, so condor

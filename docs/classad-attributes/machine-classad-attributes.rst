@@ -22,7 +22,7 @@ Machine ClassAd Attributes
         A job is currently suspended
 
     ``"Vacating"``
-        A job is currently checkpointing
+        A job is currently vacating
 
     ``"Killing"``
         A job is currently being killed
@@ -164,7 +164,7 @@ Machine ClassAd Attributes
     The job run time in cpu-seconds that would be lost if graceful
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that jobs will run for the full retirement time
-    and then be evicted without saving a checkpoint.
+    and then be evicted.
 
 :classad-attribute:`ExpectedMachineGracefulDrainingCompletion`
     The estimated time at which graceful draining of the machine could
@@ -893,7 +893,7 @@ Machine ClassAd Attributes
         The machine is claimed by a remote *condor_schedd* and is
         probably running a job.
      ``"Preempting"``
-        An HTCondor job is being preempted (possibly via checkpointing)
+        An HTCondor job is being preempted
         in order to clear the machine for either a higher priority job
         or because the machine owner wants the machine back.
      ``"Drained"``

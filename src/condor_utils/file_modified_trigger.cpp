@@ -198,9 +198,9 @@ FileModifiedTrigger::wait( int timeout_in_ms ) {
 
 	deadline.tv_sec += timeout_in_ms / 1000;
 	deadline.tv_usec += (timeout_in_ms % 1000) * 1000;
-	if( deadline.tv_usec >= 1000000 ) {
+	if( deadline.tv_usec >= 1'000'000 ) {
 		deadline.tv_sec += 1;
-		deadline.tv_usec = deadline.tv_usec % 1000000;
+		deadline.tv_usec = deadline.tv_usec % 1'000'000;
 	}
 
 	while( true ) {

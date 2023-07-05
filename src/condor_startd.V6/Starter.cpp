@@ -505,6 +505,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 	// remember that we have reaped this starter.
 	s_was_reaped = true;
 	s_exit_status = status;
+	bool abnormal_exit = WIFSIGNALED(status) || status != 0;
 
 	ClassAd *jobAd = NULL;
 	ClassAd dummyAd; // used then claim is NULL
@@ -522,7 +523,7 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 		dummyAd.Assign(ATTR_CLUSTER_ID, now);
 		dummyAd.Assign(ATTR_PROC_ID, 1);
 		dummyAd.Assign(ATTR_OWNER, "boinc");
-		dummyAd.Assign(ATTR_Q_DATE, (int)s_birthdate);
+		dummyAd.Assign(ATTR_Q_DATE, s_birthdate);
 		dummyAd.Assign(ATTR_JOB_PRIO, 0);
 		dummyAd.Assign(ATTR_IMAGE_SIZE, 0);
 		dummyAd.Assign(ATTR_JOB_CMD, "boinc");
@@ -572,19 +573,39 @@ Starter::exited(Claim * claim, int status) // Claim may be NULL.
 
 #ifdef LINUX
 	if (claim && claim->rip() && claim->rip()->getVolumeManager()) {
+		// Attempt to cleanup of recovery files/directories used by docker/vm universe
+		std::string pid_dir, pid_dir_path;
+		formatstr(pid_dir, "dir_%d", s_pid);
+		formatstr(pid_dir_path, "%s/%s", executeDir(), pid_dir.c_str());
+		check_recovery_file(pid_dir_path.c_str(), abnormal_exit);
+		// Attempt LV cleanup
 		auto &slot_name = claim->rip()->r_id_str;
-		dprintf(D_ALWAYS,"Starter::exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
+		dprintf(D_ALWAYS,"Starter::Exited for %s. Attempting to cleanup LVM partition.\n",slot_name);
 		CondorError err;
-                if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
-			dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s",
-				slot_name, err.getFullText().c_str());
+		// Attempt LV cleanup n times to prevent race condition between
+		// killing of family processes and LV cleanup causing failure
+		int max_attempts = 5;
+		for (int attempt=1; attempt<=max_attempts; attempt++) {
+			// Attempt a cleanup
+			dprintf(D_FULLDEBUG, "LV cleanup attempt %d/%d\n", attempt, max_attempts);
+			if (!claim->rip()->getVolumeManager()->CleanupSlot(slot_name, err)) {
+				std::string msg = err.getFullText();
+				if (!abnormal_exit && msg.find("Failed to find logical volume") != std::string::npos) {
+					break; // If starter exited normally and we failed to find LV assume it is cleaned up
+				} else if (attempt == max_attempts){
+					// We have failed and this was the last attempt so output error message
+					dprintf(D_ALWAYS, "Failed to cleanup slot %s logical volume: %s", slot_name, msg.c_str());
+				}
+				err.clear();
+			} else {
+				dprintf(D_FULLDEBUG, "LVM cleanup succesful.\n");
+				break;
+			}
+			sleep(1);
 		}
-	} else {
-		cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 	}
-#else
-	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir );
 #endif // LINUX
+	cleanup_execute_dir( s_pid, executeDir(), s_created_execute_dir, abnormal_exit );
 
 }
 

@@ -41,7 +41,7 @@ struct ProxySubject;
 
 struct Proxy {
 	char *proxy_filename;
-	int expiration_time;
+	time_t expiration_time;
 	bool near_expired;
 	int id;
 	int num_references;

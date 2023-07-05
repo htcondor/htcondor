@@ -102,12 +102,13 @@ public:
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port
     */
-	virtual int connect(char const *s, int port=0, 
-							bool do_not_block = false);
+	virtual int connect(char const *s, int port = 0,
+							bool do_not_block = false,
+							CondorError * errorStack = NULL);
 
 	virtual int close();
 
-	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack);
 
 	virtual void cancel_reverse_connect();
 

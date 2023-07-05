@@ -35,8 +35,8 @@
 #include <unordered_map>
 #include <queue>
 
-// switch to using User (fully qualified) over Owner as the main job identity
-#define USER_IS_THE_NEW_OWNER 1
+// use a persistent JobQueueUserRec instead of ephemeral OwnerInfo class
+#define USE_JOB_QUEUE_USERREC 1
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -90,6 +90,8 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 class JobQueueCluster;
 class JobQueueJobSet;
 class JobQueueBase;
+class JobQueueUserRec;
+class TransactionWatcher;
 
 //typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 class LocalJobRec {
@@ -214,6 +216,17 @@ struct SubmitterData {
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
+#ifdef USE_JOB_QUEUE_USERREC
+class JobQueueUserRec;
+typedef JobQueueUserRec OwnerInfo;
+typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
+// attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
+#define ATTR_USERREC_NAME ATTR_OWNER
+constexpr int  CONDOR_USERREC_ID = 1;
+constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
+constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
+#else
+
 struct RealOwnerCounters {
   int Hits;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
   int JobsCounted;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
@@ -244,7 +257,6 @@ struct RealOwnerCounters {
   {}
 };
 
-
 // The schedd will have one of these records for each unique owner, it counts jobs that
 // have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
 // attribute and thus have a different SUBMITTER name than their OWNER name
@@ -262,7 +274,7 @@ struct OwnerInfo {
 };
 
 typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
-
+#endif
 
 class match_rec
 {
@@ -287,8 +299,9 @@ class match_rec
     int     		status;
 	shadow_rec*		shadowRec;
 	int				num_exceptions;
-	int				entered_current_status;
+	time_t			entered_current_status;
 	ClassAd*		my_match_ad;
+	ClassAd         m_added_attrs;
 	char*			user;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
@@ -713,6 +726,19 @@ class Scheduler : public Service
 	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
 	classad::References MinimalSigAttrs;
 
+#ifdef USE_JOB_QUEUE_USERREC
+	int		nextUnusedUserRecId();
+	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
+	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
+	void mapPendingOwners();
+	// these are used during startup to handle the case where jobs have Owner/User attributes but
+	// there is no persistnt JobQueueUserRec in the job_queue
+	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
+	void clearPendingOwners();
+	bool HasPersistentOwnerInfo() { return EnablePersistentOwnerInfo; }
+#endif
+	void deleteZombieOwners(); // delete all zombies (called on shutdown)
+	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
@@ -787,6 +813,7 @@ private:
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
+	bool			EnablePersistentOwnerInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
@@ -821,7 +848,10 @@ private:
 	int				NumSubmitters; // number of non-zero entries in Submitters map, set by count_jobs()
 	SubmitterDataMap Submitters;   // map of job counters by submitter, used to make SUBMITTER ads
 	int				NumUniqueOwners;
+	int				NextOwnerId;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
+	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
+	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -902,6 +932,8 @@ private:
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
+	int			command_query_user_ads(int, Stream* stream);
+	int			command_act_on_user_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
 	OwnerInfo     * insert_ownerinfo(const char*);
@@ -909,6 +941,7 @@ private:
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
+	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.

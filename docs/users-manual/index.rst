@@ -15,7 +15,6 @@ Users' Manual
    when-job-wont-run
    services-for-jobs
    priorities-and-preemption
-   dagman-workflows
    job-sets
    matchmaking-with-classads
    choosing-an-htcondor-universe
@@ -27,4 +26,3 @@ Users' Manual
    self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   potential-problems

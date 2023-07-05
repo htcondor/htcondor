@@ -23,7 +23,6 @@
 #include "condor_classad.h"
 #include "string_list.h"
 #include "simplelist.h"
-#include "extArray.h"
 
 #include <vector>
 #include <string>
@@ -158,7 +157,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
 		friend void swap(auto_free_ptr& first, auto_free_ptr& second) { char*t = first.p; first.p = second.p; second.p = t; }
-		auto_free_ptr(const auto_free_ptr& that) { if (that.p) set(strdup(that.p)); else set(NULL); }
+		auto_free_ptr(const auto_free_ptr& that) { if (that.p) p = strdup(that.p); else p = nullptr; }
 		auto_free_ptr & operator=(auto_free_ptr that) { swap(*this, that); return *this; } // swap on assigment.
 		~auto_free_ptr() { clear(); }
 		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
@@ -173,6 +172,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
+	union _param_names_sumy_key { int64_t all; struct { short int iter; short int off; short int line; short int sid; }; };
+	int param_names_for_summary(std::map<int64_t, std::string>& names);
+	const short int summary_env_source_id = 0x7FFE;
+	const short int summary_wire_source_id = 0x7FFF;
 
 	bool param_defined(const char* name);
 	// Does not check if the expanded parameter is nonempty, only that
