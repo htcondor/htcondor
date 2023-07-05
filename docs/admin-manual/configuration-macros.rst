@@ -10977,8 +10977,9 @@ general discussion of *condor_defrag* may be found in
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`DEFRAG_NAME`
-    Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
+    Used to give an prefix value to the ``Name`` attribute in the
+    *condor_defrag* daemon's ClassAd. Defaults to the name given in the :macro:``DAEMON_LIST``.
+    This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two
@@ -11038,7 +11039,8 @@ general discussion of *condor_defrag* may be found in
     This could be used to drain partial rather than whole machines.
     Beginning with version 8.9.11, only machines that have no ``DrainReason``
     or a value of ``"Defrag"`` for ``DrainReason``
-    will be checked to see if draining should be cancelled.
+    will be checked to see if draining should be cancelled.  Beginning with
+    10.7.0 The Defrag daemon will also check for its own name in the ``DrainReason``.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -11112,13 +11114,6 @@ general discussion of *condor_defrag* may be found in
      fast
         Jobs are immediately hard-killed, with no chance to gracefully
         shut down.
-
-:macro-def:`DEFRAG_STATE_FILE`
-    The path to a file used to record information used by
-    *condor_defrag* when it is restarted. This should only need to be
-    modified if there will be multiple instances of the *condor_defrag*
-    daemon running on the same machine. The default is
-    ``$(LOCK)/defrag_state``.
 
 :macro-def:`DEFRAG_LOG`
     The path to the *condor_defrag* daemon's log file. The default log
