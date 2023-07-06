@@ -26,6 +26,13 @@ New Features:
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
 
+- If a job does not define any of the periodic policy expressions (like
+  periodic_hold), HTCondor no longer sets a default value (like false) in the
+  job ad.  The system knows that if these aren't set, to take the default action.
+  This removes about 10% of the attributes in a job ad, with corresponding 
+  benefits for all consumers of the job ad.
+  :jira:`1919`
+
 Bugs Fixed:
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
