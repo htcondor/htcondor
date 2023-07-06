@@ -2202,7 +2202,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
+		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
 			AssignJobVal(ATTR_PERIODIC_HOLD_CHECK, false);
 		}
 	}
@@ -2226,7 +2226,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK)) {
+		if ( ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
 			AssignJobVal(ATTR_PERIODIC_RELEASE_CHECK, false);
 		}
 	}
@@ -2242,7 +2242,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK)) {
+		if ( ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
 			AssignJobVal(ATTR_PERIODIC_REMOVE_CHECK, false);
 		}
 	}
@@ -3663,10 +3663,6 @@ int SubmitHash::SetAutoAttributes()
 	}
 	#endif
 
-	// formerly SetEncryptExecuteDir
-	if ( ! job->Lookup(ATTR_ENCRYPT_EXECUTE_DIRECTORY)) {
-		AssignJobVal(ATTR_ENCRYPT_EXECUTE_DIRECTORY, false);
-	}
 #endif
 
 	return abort_code;
@@ -4111,12 +4107,16 @@ int SubmitHash::SetJobRetries()
 		// if none of these knobs are defined, then there are no retries.
 		// Just insert the default on-exit-hold and on-exit-remove expressions
 		if (erc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK)) { AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true); }
+			if (!job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) { 
+				AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true);
+			}
 		} else {
 			AssignJobExpr (ATTR_ON_EXIT_REMOVE_CHECK, erc.c_str());
 		}
 		if (ehc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_HOLD_CHECK)) { AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false); }
+			if (!job->Lookup(ATTR_ON_EXIT_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+				AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false);
+			}
 		} else {
 			AssignJobExpr(ATTR_ON_EXIT_HOLD_CHECK, ehc.c_str());
 		}
