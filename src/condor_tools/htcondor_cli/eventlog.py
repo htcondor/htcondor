@@ -222,8 +222,7 @@ def output_job_summaries(job_summaries, groupby, options):
             print(json.dumps(json_output, indent=4))
     else:
         # determine maximum length of each column
-        max_job_id_len = max(len(str(job_id))
-                             for job_id in job_summaries.keys())+2
+        max_job_id_len = get_max_column_length(job_summaries, "Job ID")
         max_host_len = get_max_column_length(job_summaries, "Host")
         max_start_time_len = get_max_column_length(job_summaries, "Start Time")
         max_evict_time_len = get_max_column_length(job_summaries, "Evict Time")
