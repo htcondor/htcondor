@@ -70,6 +70,7 @@ def get_job_summaries(log_file, groupby):
                 job_summary["Evictions"] = 0
                 job_summary["Executed"] = False
                 job_summary["starts"] = 0
+                job_summary["Job ID"] = job_id
                 job_summaries[job_id] = job_summary
             if event.type == htcondor.JobEventType.SUBMIT:
                 ip_address = re.search(
