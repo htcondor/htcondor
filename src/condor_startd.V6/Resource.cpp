@@ -1567,8 +1567,8 @@ Resource::do_update( void )
 	}
 
 	// If we have a temporary CM, send update there, too
-	if (!workingCM.empty()) {
-		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
+	if (!r_cur->c_working_cm.empty()) {
+		CollectorList *workingCollectors = CollectorList::create(r_cur->c_working_cm.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
 		delete workingCollectors;
 	}
@@ -2725,10 +2725,6 @@ Resource::publish_dynamic(ClassAd* cap)
 		}
 	}
 
-	if (!workingCM.empty()) {
-		cap->Assign("WorkingCM", workingCM);
-	}
-
 	//TODO: move this and startd_slot_attrs publishing out of here an into a separate pass
 	//      for now this must be here so that when resemgr does Walk(&Resource::refresh_classad_slot_attrs)
 	//      it can see the rollup
@@ -3676,7 +3672,7 @@ Resource::compute_rank( ClassAd* req_classad ) {
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -3962,26 +3958,6 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 			// One thing this doesn't update is owner load and keyboard
 			// note that compute_dynamic will refresh both the d-slot and p-slot
 		resmgr->compute_and_refresh(new_rip);
-
-			// Stash pslot claim as the "leftover_claim", which
-			// we will send back directly to the schedd iff it supports
-			// receiving partitionable slot leftover info as part of the
-			// new-style extended claiming protocol. 
-			// But don't send a leftovers claim if consumption policies
-			// are enabled, as that means the negotiator is carving up
-			// the pslot.
-		bool scheddWantsLeftovers = false;
-			// presence of this attr in request ad tells us in a 
-			// backwards/forwards compatible way if the schedd understands
-			// the claim protocol enhancement to accept leftovers
-		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
-		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
-			 rip->r_has_cp == false )
-		{
-			leftover_claim = rip->r_cur;
-			ASSERT(leftover_claim);
-		}
 
 		return new_rip;
 	}

@@ -303,6 +303,7 @@ class Matchmaker : public Service
 		// Note: these are called by trimStartdAds as required
 		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const;
 		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);

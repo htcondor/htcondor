@@ -955,7 +955,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
 	bool send_claimed_ad = false;
+	bool send_leftovers = false;
 	bool claim_pslot = false;
+	bool want_matching = true;
 	int num_dslots = 1;
 	int pslot_claim_lease = 0;
 
@@ -1076,6 +1078,14 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// Should we send the claimed slot ad.
 	req_classad->LookupBool("_condor_SEND_CLAIMED_AD", send_claimed_ad);
 
+		// Should we send a pslot leftovers claim/ad when creating a
+		// new dslot?
+	req_classad->LookupBool("_condor_SEND_LEFTOVERS", send_leftovers);
+	if (send_leftovers) {
+		send_leftovers = param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
+			rip->r_has_cp == false;
+	}
+
 		// At this point, the schedd has registered this socket (stream)
 		// and likely has gone off to service other requests.  Thus, 
 		// we need change the timeout on the socket to the schedd to be
@@ -1092,12 +1102,17 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	bool has_cp = false;
 	consumption_map_t consumption;
-	Claim* leftover_claim = NULL; 
+	Claim* pslot_claim = nullptr;
+
+	if (rip->is_partitionable_slot()) {
+		pslot_claim = rip->r_cur;
+	}
 
 	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
 		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
 		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_LEASE_TIME", pslot_claim_lease);
+		req_classad->LookupBool("condor_WANT_MATCHING", want_matching);
 	}
 
 	if (claim_pslot && rip->state() == claimed_state) {
@@ -1152,7 +1167,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 	if (num_dslots > 0 && rip->can_create_dslot()) {
-		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
+		Resource * new_rip = create_dslot(rip, req_classad);
 		if ( ! new_rip) {
 			refuse(stream);
 			ABORT;
@@ -1164,9 +1179,12 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			cp_override_requested(*req_classad, *rip->r_classad, consumption);
 		}
 
-		// we don't expect these to be the same, but technically if they are not then no d-slot was created.
-		if (new_rip != rip) { new_dynamic_slot = true; }
-		rip = new_rip;
+		// we don't expect these to be the same, but technically if they are then no d-slot was created.
+		if (new_rip != rip) {
+			new_dynamic_slot = true;
+			pslot_claim = rip->r_cur;
+			rip = new_rip;
+		}
 	}
 
 		// Make sure we're willing to run this job at all.
@@ -1315,19 +1333,25 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->client()->c_scheddName = schedd_name;
 
 	// Claimed for a temporary CM
-	if (claim_pslot && leftover_claim) {
-		leftover_claim->rip()->workingCM = workingCM;
+	if (claim_pslot) {
+		pslot_claim->rip()->r_cur->c_working_cm = workingCM;
 	}
-	if (new_dynamic_slot && leftover_claim) {
-		rip->workingCM = leftover_claim->rip()->workingCM;
+	// If the pslot was previously claimed for a temporary CM, the dslot
+	// should inherit that
+	if (new_dynamic_slot) {
+		rip->r_cur->c_working_cm = pslot_claim->rip()->r_cur->c_working_cm;
 	}
 
-	if (claim_pslot && leftover_claim) {
-		leftover_claim->setaliveint(interval);
-		leftover_claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
-		leftover_claim->client()->setaddr(client_addr.c_str());
-		leftover_claim->client()->c_scheddName = schedd_name;
-		leftover_claim->rip()->change_state(claimed_state);
+	if (claim_pslot) {
+		pslot_claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
+		pslot_claim->c_want_matching = want_matching;
+	}
+
+	if (claim_pslot && new_dynamic_slot) {
+		pslot_claim->setaliveint(interval);
+		pslot_claim->client()->setaddr(client_addr.c_str());
+		pslot_claim->client()->c_scheddName = schedd_name;
+		pslot_claim->rip()->change_state(claimed_state);
 	}
 
 #if HAVE_BACKFILL
@@ -1348,7 +1372,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, secure_claim_id, send_claimed_ad, leftover_claim );
+	accept_request_claim( rip, secure_claim_id, send_claimed_ad, send_leftovers ? pslot_claim : nullptr );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -2485,11 +2509,10 @@ command_coalesce_slots(int, Stream * stream ) {
 	// We just updated the partitionable slot's resources...
 	parent->refresh_classad_resources();
 
-	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
 	if (parent->can_create_dslot()) {
-		coalescedSlot = create_dslot(parent, requestAd, leftoverClaim);
+		coalescedSlot = create_dslot(parent, requestAd);
 	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
@@ -2506,10 +2529,6 @@ command_coalesce_slots(int, Stream * stream ) {
 		sock->end_of_message();
 
 		return FALSE;
-	}
-
-	if( leftoverClaim != NULL ) {
-		dprintf( D_ALWAYS, "command_coalesce_slots(): unexpectedly got partitionable leftovers, ignoring.\n" );
 	}
 
 	// Assign the coalesced slot a new claim ID.  It's currently got

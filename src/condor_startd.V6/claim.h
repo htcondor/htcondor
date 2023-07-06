@@ -373,6 +373,11 @@ private:
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
 	long long c_image_size;	// ImageSize from last call to updateUsage
 
+ public:
+	std::string c_working_cm;	// if claimed for another CM, our temporary CM
+	bool c_want_matching;		// if claimed pslot, should negotiator do matching
+
+ private:
 		// Helper methods
 	int  finishReleaseCmd( void );
 	int  finishDeactivateCmd( void );

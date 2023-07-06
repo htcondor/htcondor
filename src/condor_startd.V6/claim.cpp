@@ -91,6 +91,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
+	, c_want_matching(true)
 {
 	//dprintf(D_ALWAYS | D_BACKTRACE, "constructing claim %p on resource %p\n", this, res_ip);
 
@@ -297,6 +298,14 @@ Claim::publish( ClassAd* cad )
 	// If this claim is for vm universe, update some info about VM
 	if (c_starter_pid > 0) {
 		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad);
+	}
+
+	if (!c_working_cm.empty()) {
+		cad->Assign("WorkingCM", c_working_cm);
+	}
+
+	if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
+		cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
 	}
 
 	publishStateTimes( cad );

@@ -2639,6 +2639,7 @@ trimStartdAds(ClassAdListDoesNotDeleteAds &startdAds)
 
 	removed += trimStartdAds_PreemptionLogic(startdAds);
 	removed += trimStartdAds_ShutdownLogic(startdAds);
+	removed += trimStartdAds_ClaimedPslotLogic(startdAds);
 
 	return removed;
 }
@@ -2768,22 +2769,16 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 		return removed;
 	}
 
-	bool is_pslot;
-	std::string working_cm;
+	bool is_pslot = false;
 	startdAds.Open();
 	while( (ad=startdAds.Next()) ) {
 		if(ad->LookupString(ATTR_STATE, curState, sizeof(curState))) {
 			if ( strcmp(curState,claimed_state_str)==0
 			     || strcmp(curState,preempting_state_str)==0)
 			{
-				// Keep Claimed pslots if there's no WorkingCM or
-				// MatchWorkingCmSlots is true
+				// Ignore Claimed pslots, they aren't eligible for preemption
 				ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
-				working_cm.clear();
 				if (is_pslot) {
-					ad->LookupString("WorkingCM", working_cm);
-				}
-				if (is_pslot && (MatchWorkingCmSlots || working_cm.empty())) {
 					continue;
 				}
 				startdAds.Remove(ad);
@@ -2796,6 +2791,54 @@ trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const
 	dprintf(D_FULLDEBUG,
 			"Trimmed out %d startd ads due to NEGOTIATOR_CONSIDER_PREEMPTION=False\n",
 			removed);
+
+	return removed;
+}
+
+
+int Matchmaker::
+trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds)
+{
+	int removed = 0;
+	ClassAd *ad = nullptr;
+	bool is_pslot = false;
+	std::string cur_state;
+	const char* claimed_state_str = state_to_string(claimed_state);
+	bool want_matching = false;
+	std::string working_cm;
+
+	/*
+	 * Trim out claimed partitionable slots when any of the following
+	 * is true:
+	 * 1) WantMatching is false in the ad
+	 * 2) WorkingCM is set in the ad and MatchWorkingCmSlots is false
+	*/
+
+	startdAds.Open();
+	while( (ad=startdAds.Next()) ) {
+		ad->LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+		cur_state.clear();
+		want_matching = true;
+		working_cm.clear();
+		if (is_pslot) {
+			ad->LookupString(ATTR_STATE, cur_state);
+			if (strcmp(cur_state.c_str(), claimed_state_str) != 0) {
+				continue;
+			}
+			ad->LookupString("WorkingCM", working_cm);
+			ad->LookupBool(ATTR_WANT_MATCHING, want_matching);
+			if (want_matching && (MatchWorkingCmSlots || working_cm.empty())) {
+				continue;
+			}
+			startdAds.Remove(ad);
+			removed++;
+		}
+	}
+	startdAds.Close();
+
+	dprintf(D_FULLDEBUG,
+	        "Trimmed out %d startd ads that are claimed pslots that don't want to be matched by us\n",
+	        removed);
 
 	return removed;
 }
