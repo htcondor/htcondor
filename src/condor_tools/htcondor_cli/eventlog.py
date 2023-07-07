@@ -144,7 +144,6 @@ class Read(Verb):
                         event_summary["Return Value"] = event.get("ReturnValue")
         except htcondor.HTCondorIOError as e:
             print(e)
-            continue
         # will probably need to refactor this to be more efficient for other groupby options
         if groupby is not None:
             if groupby == "GLIDEIN_ResourceName":
