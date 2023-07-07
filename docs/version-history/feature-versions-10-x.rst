@@ -29,7 +29,7 @@ New Features:
 Bugs Fixed:
 
 - Fixed bug introduced in 10.5.0 on cgroup v1 systems where the
-  user and system cpu time measured was low by a factor of 1,000.
+  user and system cpu time measured was low by a factor of 10,000.
   :jira:`1920`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
