@@ -241,6 +241,10 @@ ProcFamilyDirectCgroupV1::track_family_via_cgroup(pid_t pid, const FamilyInfo *f
 	return cgroupify_process(cgroup_name, pid);
 }
 
+#ifndef USER_HZ
+#define USER_HZ (100)
+#endif
+
 bool
 ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*full*/)
 {
@@ -276,15 +280,16 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		return false;
 	}
 
-	uint64_t user_usec = 0;
-	uint64_t sys_usec  = 0;
+	// These are in USER_HZ, which is always (?) 100 hz
+	uint64_t user_hz = 0;
+	uint64_t sys_hz  = 0;
 
 	char word[128]; // max size of a word in cpu.stat
 	while (fscanf(f, "%s", word) != EOF) {
 		// if word is usage_usec
 		if (strcmp(word, "user") == 0) {
 			// next word is the user time in microseconds
-			if (fscanf(f, "%ld", &user_usec) != 1) {
+			if (fscanf(f, "%ld", &user_hz) != 1) {
 				dprintf(D_ALWAYS, "Error reading user_usec field out of cpu.stat\n");
 				fclose(f);
 				return false;
@@ -292,7 +297,7 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 		}
 		if (strcmp(word, "system") == 0) {
 			// next word is the system time in microseconds
-			if (fscanf(f, "%ld", &sys_usec) != 1) {
+			if (fscanf(f, "%ld", &sys_hz) != 1) {
 				dprintf(D_ALWAYS, "Error reading system_usec field out of cpu.stat\n");
 				fclose(f);
 				return false;
@@ -302,10 +307,10 @@ ProcFamilyDirectCgroupV1::get_usage(pid_t pid, ProcFamilyUsage& usage, bool /*fu
 	fclose(f);
 
 	time_t wall_time = time(nullptr) - start_time;
-	usage.percent_cpu = double(user_usec + sys_usec) / double((wall_time * 1'000'000));
+	usage.percent_cpu = double(user_hz + sys_hz) / double((wall_time * USER_HZ));
 
-	usage.user_cpu_time = user_usec / 1'000'000; // usage.user_cpu_times in seconds, ugh
-	usage.sys_cpu_time  =  sys_usec / 1'000'000; //  usage.sys_cpu_times in seconds, ugh
+	usage.user_cpu_time = user_hz / USER_HZ; // usage.user_cpu_times in seconds, ugh
+	usage.sys_cpu_time  =  sys_hz / USER_HZ; //  usage.sys_cpu_times in seconds, ugh
 
 	stdfs::path memory_current = cgroup_root_dir / "memory" / cgroup_name / "memory.usage_in_bytes";
 	stdfs::path memory_peak   = cgroup_root_dir / "memory" / cgroup_name / "memory.max_usage_in_bytes";
