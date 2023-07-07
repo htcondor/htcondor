@@ -137,7 +137,6 @@ def get_job_summaries(log_file, groupby):
                     job_summary["Return Value"] = event.get("ReturnValue")
     except htcondor.HTCondorIOError as e:
         print(f"Error: {e}")
-        continue
     return job_summaries
 
 
