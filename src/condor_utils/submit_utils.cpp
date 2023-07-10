@@ -3634,19 +3634,6 @@ int SubmitHash::SetAutoAttributes()
 	// and not from the schedd, but we can count on the Lookup() never failing when doing late materialization.
 	if ( ! job->Lookup(ATTR_CORE_SIZE)) {
 		long coresize = 0;
-	#if defined(WIN32) /* RLIMIT_CORE not supported */
-	#else
-		struct rlimit rl;
-		if (getrlimit(RLIMIT_CORE, &rl) == -1) {
-			push_error(stderr, "getrlimit failed");
-			abort_code = 1;
-			return abort_code;
-		}
-
-		// this will effectively become the hard limit for core files when
-		// the job is executed
-		coresize = (long)rl.rlim_cur;
-	#endif
 		AssignJobVal(ATTR_CORE_SIZE, coresize);
 	}
 
