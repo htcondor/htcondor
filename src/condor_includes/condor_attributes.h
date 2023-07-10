@@ -234,7 +234,6 @@
 #define ATTR_GID  "Gid"
 #define ATTR_GLOBAL_JOB_ID  "GlobalJobId"
 #define ATTR_GZIP  "GZIP"
-#define ATTR_JOB_MUST_EXPAND  "MustExpand"
 #define ATTR_X509_USER_PROXY  "x509userproxy"
 #define ATTR_X509_USER_PROXY_EXPIRATION  "x509UserProxyExpiration"
 #define ATTR_X509_USER_PROXY_SUBJECT  "x509userproxysubject"

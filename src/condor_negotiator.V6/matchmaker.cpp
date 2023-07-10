@@ -4992,7 +4992,6 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	char remoteOwner[256];
 	std::string startdName;
 	bool send_failed;
-	bool claiming_set = false;
 	bool want_claiming = true;
 	ExprTree *savedRequirements;
 	int length;
@@ -5010,12 +5009,7 @@ matchmakingProtocol (ClassAd &request, ClassAd *offer,
 	}
 	else {
 			// see if offer supports claiming or not
-		claiming_set = offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
-	}
-
-	// if offer says nothing, see if request says something
-	if ( ! claiming_set ) {
-		claiming_set = request.LookupBool(ATTR_WANT_CLAIMING,want_claiming);
+		offer->LookupBool(ATTR_WANT_CLAIMING,want_claiming);
 	}
 
 	// these should too, but may not

@@ -603,35 +603,17 @@ void CondorJob::doEvaluateState()
 					// now check if either call failed w/ -2, which
 					// signifies MAX_JOBS_SUBMITTED was exceeded.
 					if ( jcluster==-2 || jproc==-2 ) {
-						// MAX_JOBS_SUBMITTED error.
-						// For now, we will always put this job back
-						// to idle and tell the schedd to find us
-						// another match.
-						// TODO: this hard-coded logic should be
-						// replaced w/ a WANT_REMATCH expression, like
-						// is currently done in the Globus gridtype.
-						dprintf(D_ALWAYS,"(%d.%d) Requesting schedd to "
-							"rematch job because of MAX_JOBS_SUBMITTED\n",
+						dprintf(D_ALWAYS,"(%d.%d) Job submission failed "
+							"because of MAX_JOBS_SUBMITTED\n",
 							procID.cluster, procID.proc);
-						// Set ad attributes so the schedd finds a new match.
-						bool dummy;
-						if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-							jobAd->Assign( ATTR_JOB_MATCHED, false );
-							jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-						}
-						// We are rematching,  so forget about this job 
-						// cuz we wanna pull a fresh new job ad, with 
-						// a fresh new match, from the all-singing schedd.
-						gmState = GM_DELETE;
-					} else {
-						// unhandled error
-						if ( !resourcePingComplete /* && connect failure */ ) {
-							connect_failure = true;
-							break;
-						}
-						gmState = GM_UNSUBMITTED;
-						reevaluate_state = true;
 					}
+					// unhandled error
+					if ( !resourcePingComplete /* && connect failure */ ) {
+						connect_failure = true;
+						break;
+					}
+					gmState = GM_UNSUBMITTED;
+					reevaluate_state = true;
 				}
 				lastSubmitAttempt = time(NULL);
 				numSubmitAttempts++;
@@ -1470,8 +1452,6 @@ ClassAd *CondorJob::buildSubmitAd()
 	submit_ad->Delete( ATTR_GLOBAL_JOB_ID );
 	submit_ad->Delete( "CondorPlatform" );
 	submit_ad->Delete( ATTR_CONDOR_VERSION );
-	submit_ad->Delete( ATTR_WANT_CLAIMING );
-	submit_ad->Delete( ATTR_WANT_MATCHING );
 	submit_ad->Delete( ATTR_HOLD_REASON );
 	submit_ad->Delete( ATTR_HOLD_REASON_CODE );
 	submit_ad->Delete( ATTR_HOLD_REASON_SUBCODE );
