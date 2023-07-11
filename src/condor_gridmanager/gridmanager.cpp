@@ -607,7 +607,6 @@ doContactSchedd()
 
 			}
 
-contact_schedd_next_add_job:
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
 		if ( errno == ETIMEDOUT ) {
