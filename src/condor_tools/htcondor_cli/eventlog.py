@@ -88,59 +88,62 @@ class Read(Verb):
         event_summaries = {}
 
         # definetly need to refactor this or test to make sure most use cases work like the three end cases should be termination, abort, and remove not evict like it is now
-        with htcondor.JobEventLog(str(log_file)) as event_log:
-            for event in event_log.events(0):
-                job_id = str(event.cluster) + "." + str(event.proc)
-                event_summary = event_summaries.get(job_id, {})
-                if event.type == htcondor.JobEventType.SUBMIT:
-                    ip_address = re.search(r"\d+\.\d+\.\d+\.\d+", event.get("SubmitHost")).group()
-                    event_summaries[job_id] = {"Host": ip_address, "Evictions": 0, "Executed": False, "starts": 0}
-                elif event.type == htcondor.JobEventType.JOB_ABORTED and event_summary.get("Executed", False) is False:
-                    # remove job from dictionary if it was aborted before being executed
-                    event_summaries.pop(job_id)
-                elif event.type == htcondor.JobEventType.EXECUTE:
-                    # get hostname if possible
-                    if event.get("SlotName") is not None:
-                        hostname = event.get("SlotName")
-                        event_summary["Host"] = hostname
-                    # get grouping information, if any
-                    if groupby is not None and event.get("ExecuteProps") is not None:
-                        event_summary[groupby] = event.get("ExecuteProps").get(groupby)
-                    # get last execution time
-                    start_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
-                    event_summary["Start Time"] = start_time
-                    event_summary["last_exec_time"] = start_time
-                    # set boolean that job has been executed
-                    event_summary["Executed"] = True
-                    event_summary["starts"] = event_summary.get("starts", 0) + 1
-                elif event.type == htcondor.JobEventType.JOB_EVICTED or event.type == htcondor.JobEventType.JOB_TERMINATED:
-                    # get good time and cpu usage
-                    cpu_usage_key = "RunRemoteUsage" if event.type == htcondor.JobEventType.JOB_EVICTED else "TotalRemoteUsage"
-                    cpu_usage = str(event.get(cpu_usage_key))
-                    user_time = re.search(r"Usr (\d+) (\d+):(\d+):(\d+),", cpu_usage)
-                    sys_time = re.search(r"Sys (\d+) (\d+):(\d+):(\d+)", cpu_usage)
-                    user_days, user_hours, user_minutes, user_seconds = user_time.group(1, 2, 3, 4)
-                    sys_days, sys_hours, sys_minutes, sys_seconds = sys_time.group(1, 2, 3, 4)
-                    total_days = int(user_days) + int(sys_days)
-                    total_hours = int(user_hours) + int(sys_hours)
-                    total_minutes = int(user_minutes) + int(sys_minutes)
-                    total_seconds = int(user_seconds) + int(sys_seconds)
-                    cpu_usage_formatted = f"{total_days}+{total_hours:02d}:{total_minutes:02d}:{total_seconds:02d}"
-                    event_summary["CPU Usage"] = cpu_usage_formatted
-                    if event.type == htcondor.JobEventType.JOB_EVICTED:
-                        event_summary["Evictions"] = event_summary.get("Evictions", 0) + 1
-                        event_summary["last_exec_time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
-                    event_summary["Evict Time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
-                    delta = datetime.strptime(event_summary["Evict Time"], "%m/%d %H:%M") - datetime.strptime(event_summary["Start Time"], "%m/%d %H:%M")
-                    wall_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
-                    event_summary["Wall Time"] = wall_time
-                    # get total execution time for calculating good time
-                    event_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
-                    delta = datetime.strptime(event_time, "%m/%d %H:%M") - datetime.strptime(event_summary["last_exec_time"], "%m/%d %H:%M")
-                    good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
-                    event_summary["Good Time"] = good_time
-                    # get Return Value
-                    event_summary["Return Value"] = event.get("ReturnValue")
+        try:
+            with htcondor.JobEventLog(str(log_file)) as event_log:
+                for event in event_log.events(0):
+                    job_id = str(event.cluster) + "." + str(event.proc)
+                    event_summary = event_summaries.get(job_id, {})
+                    if event.type == htcondor.JobEventType.SUBMIT:
+                        ip_address = re.search(r"\d+\.\d+\.\d+\.\d+", event.get("SubmitHost")).group()
+                        event_summaries[job_id] = {"Host": ip_address, "Evictions": 0, "Executed": False, "starts": 0, "job_id": job_id}
+                    elif event.type == htcondor.JobEventType.JOB_ABORTED and event_summary.get("Executed", False) is False:
+                        # remove job from dictionary if it was aborted before being executed
+                        event_summaries.pop(job_id)
+                    elif event.type == htcondor.JobEventType.EXECUTE:
+                        # get hostname if possible
+                        if event.get("SlotName") is not None:
+                            hostname = event.get("SlotName")
+                            event_summary["Host"] = hostname
+                        # get grouping information, if any
+                        if groupby is not None and event.get("ExecuteProps") is not None:
+                            event_summary[groupby] = event.get("ExecuteProps").get(groupby)
+                        # get last execution time
+                        start_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                        event_summary["Start Time"] = start_time
+                        event_summary["last_exec_time"] = start_time
+                        # set boolean that job has been executed
+                        event_summary["Executed"] = True
+                        event_summary["starts"] = event_summary.get("starts", 0) + 1
+                    elif event.type == htcondor.JobEventType.JOB_EVICTED or event.type == htcondor.JobEventType.JOB_TERMINATED:
+                        # get good time and cpu usage
+                        cpu_usage_key = "RunRemoteUsage" if event.type == htcondor.JobEventType.JOB_EVICTED else "TotalRemoteUsage"
+                        cpu_usage = str(event.get(cpu_usage_key))
+                        user_time = re.search(r"Usr (\d+) (\d+):(\d+):(\d+),", cpu_usage)
+                        sys_time = re.search(r"Sys (\d+) (\d+):(\d+):(\d+)", cpu_usage)
+                        user_days, user_hours, user_minutes, user_seconds = user_time.group(1, 2, 3, 4)
+                        sys_days, sys_hours, sys_minutes, sys_seconds = sys_time.group(1, 2, 3, 4)
+                        total_days = int(user_days) + int(sys_days)
+                        total_hours = int(user_hours) + int(sys_hours)
+                        total_minutes = int(user_minutes) + int(sys_minutes)
+                        total_seconds = int(user_seconds) + int(sys_seconds)
+                        cpu_usage_formatted = f"{total_days}+{total_hours:02d}:{total_minutes:02d}:{total_seconds:02d}"
+                        event_summary["CPU Usage"] = cpu_usage_formatted
+                        if event.type == htcondor.JobEventType.JOB_EVICTED:
+                            event_summary["Evictions"] = event_summary.get("Evictions", 0) + 1
+                            event_summary["last_exec_time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                        event_summary["Evict Time"] = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                        delta = datetime.strptime(event_summary["Evict Time"], "%m/%d %H:%M") - datetime.strptime(event_summary["Start Time"], "%m/%d %H:%M")
+                        wall_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
+                        event_summary["Wall Time"] = wall_time
+                        # get total execution time for calculating good time
+                        event_time = datetime.strptime(event.get("EventTime"), "%Y-%m-%dT%H:%M:%S").strftime("%-m/%-d %H:%M")
+                        delta = datetime.strptime(event_time, "%m/%d %H:%M") - datetime.strptime(event_summary["last_exec_time"], "%m/%d %H:%M")
+                        good_time = f"{delta.days}+{delta.seconds//3600:02d}:{(delta.seconds//60)%60:02d}:{delta.seconds%60:02d}"
+                        event_summary["Good Time"] = good_time
+                        # get Return Value
+                        event_summary["Return Value"] = event.get("ReturnValue")
+        except htcondor.HTCondorIOError as e:
+            print(e)
         # will probably need to refactor this to be more efficient for other groupby options
         if groupby is not None:
             if groupby == "GLIDEIN_ResourceName":
@@ -208,7 +211,7 @@ class Read(Verb):
                 print(json.dumps(json_output, indent=4))
         else:
             # determine maximum length of each column
-            max_job_id_len = max(len(str(job_id)) for job_id in event_summaries.keys())+2
+            max_job_id_len = get_max_column_length(job_summaries, "Job ID")
             max_host_len = get_max_column_length(event_summaries, "Host")
             max_start_time_len = get_max_column_length(event_summaries, "Start Time")
             max_evict_time_len = get_max_column_length(event_summaries, "Evict Time")
