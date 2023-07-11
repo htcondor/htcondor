@@ -203,7 +203,7 @@ extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) ma
 // running.  Used by SuperUserAllowedToSetOwnerTo().
 static HashTable<std::string,int> owner_history(hashFunction);
 
-int		do_Q_request(QmgmtPeer &,bool &may_fork);
+int		do_Q_request(QmgmtPeer &);
 #if 0 // not used?
 void	FindPrioJob(PROC_ID &);
 #endif
@@ -3528,7 +3528,7 @@ unsetQSock()
 int
 handle_q(int cmd, Stream *sock)
 {
-	int	rval;
+	int	rval = 0;
 	bool all_good;
 
 	all_good = setQSock((ReliSock*)sock);
@@ -3549,21 +3549,18 @@ handle_q(int cmd, Stream *sock)
 
 	BeginTransaction();
 
-	bool may_fork = false;
 	ForkStatus fork_status = FORK_FAILED;
-	do {
-		/* Probably should wrap a timer around this */
-		rval = do_Q_request( *Q_SOCK, may_fork );
 
-		if( may_fork && fork_status == FORK_FAILED ) {
-			fork_status = schedd_forker.NewJob();
+	if (cmd == QMGMT_READ_CMD) {
+		fork_status = schedd_forker.NewJob();
+	}
 
-			if( fork_status == FORK_PARENT ) {
-				break;
-			}
-		}
-	} while(rval >= 0);
-
+	if (fork_status != FORK_PARENT) {
+		do {
+			/* Probably should wrap a timer around this */
+			rval = do_Q_request(*Q_SOCK);
+		} while(rval >= 0);
+	}
 
 	unsetQSock();
 
@@ -3585,21 +3582,6 @@ handle_q(int cmd, Stream *sock)
 
 	return 0;
 }
-
-int
-InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
-{
-		/*
-		  This function used to call init_user_ids(), but we don't
-		  need that anymore.  perhaps the whole thing should go
-		  away...  however, when i tried that, i got all sorts of
-		  strange link errors b/c other parts of the qmgmt code (the
-		  sender stubs, etc) seem to depend on it.  i don't have time
-		  to do more a thorough purging of it.
-		*/
-	return 0;
-}
-
 
 int
 NewCluster(CondorError* errstack)
