@@ -271,7 +271,7 @@ void CondorResource::DoScheddPoll()
 	int rc;
 	ScheddPollInfo *poll_info = NULL;
 
-	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+	if ( ( registeredJobs.empty() || resourceDown ) &&
 		 scheddStatusActive == false ) {
 			// No jobs or we can't talk to the schedd, so no point
 			// in polling
@@ -323,7 +323,6 @@ void CondorResource::DoScheddPoll()
 		while ( poll_info->m_submittedJobs.Next() ) {
 			poll_info->m_submittedJobs.DeleteCurrent();
 		}
-		BaseJob *job;
 		std::string job_id;
 		for (auto &elem : ResourcesByName) {
 			CondorResource *next_resource = elem.second;
@@ -333,8 +332,7 @@ void CondorResource::DoScheddPoll()
 				continue;
 			}
 
-			next_resource->registeredJobs.Rewind();
-			while ( ( job = next_resource->registeredJobs.Next() ) ) {
+			for (auto job: next_resource->registeredJobs) {
 				if ( job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) ) {
 					poll_info->m_submittedJobs.Append( (CondorJob *)job );
 				}

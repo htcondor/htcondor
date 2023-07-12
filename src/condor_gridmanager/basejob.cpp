@@ -110,11 +110,6 @@ BaseJob::BaseJob( ClassAd *classad )
 								(TimerHandlercpp)&BaseJob::doEvaluateState,
 								"doEvaluateState", (Service*) this );;
 
-	wantRematch = false;
-	doResubmit = 0;		// set if gridmanager wants to resubmit job
-	wantResubmit = false;	// set if user wants to resubmit job via RESUBMIT_CHECK
-	jobAd->LookupBool(ATTR_GLOBUS_RESUBMIT_CHECK,wantResubmit);
-
 	jobAd->EnableDirtyTracking();
 	jobAd->ClearAllDirtyFlags();
 

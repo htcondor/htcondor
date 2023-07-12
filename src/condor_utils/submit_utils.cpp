@@ -2909,10 +2909,6 @@ static bool validate_gridtype(const std::string & JobGridType) {
 
 // the grid type is the first token of the grid resource.
 static bool extract_gridtype(const char * grid_resource, std::string & gtype) {
-	if (starts_with(grid_resource, "$$(")) {
-		gtype.clear();
-		return true; // cannot be known at this time, assumed valid
-	}
 	// truncate at the first space
 	const char * pend = strchr(grid_resource, ' ');
 	if (pend) {
@@ -3028,14 +3024,6 @@ int SubmitHash::SetGridParams()
 
 		AssignJobString(ATTR_GRID_RESOURCE, tmp);
 
-		if ( strstr(tmp,"$$") ) {
-				// We need to perform matchmaking on the job in order
-				// to fill GridResource.
-			AssignJobVal(ATTR_JOB_MATCHED, false);
-			AssignJobVal(ATTR_CURRENT_HOSTS, 0);
-			AssignJobVal(ATTR_MAX_HOSTS, 1);
-		}
-
 		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
 			push_error(stderr, "EC2 grid jobs require a service URL\n");
 			ABORT_AND_RETURN( 1 );
@@ -3063,8 +3051,6 @@ int SubmitHash::SetGridParams()
 	}
 
 	YourStringNoCase gridType(JobGridType.c_str());
-
-	AssignJobVal(ATTR_WANT_CLAIMING, false);
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
@@ -9147,13 +9133,9 @@ int SubmitHash::query_universe(std::string & sub_type)
 
 	if (uni == CONDOR_UNIVERSE_GRID) {
 		sub_type = submit_param_string(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
-		if (starts_with(sub_type.c_str(), "$$(")) {
-			sub_type.clear();
-		} else {
-			// truncate at the first space
-			size_t ix = sub_type.find(' ');
-			if (ix != std::string::npos) { sub_type.erase(ix); }
-		}
+		// truncate at the first space
+		size_t ix = sub_type.find(' ');
+		if (ix != std::string::npos) { sub_type.erase(ix); }
 	} else if (uni == CONDOR_UNIVERSE_VM) {
 		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
 		lower_case(sub_type);
