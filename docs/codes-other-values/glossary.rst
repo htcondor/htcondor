@@ -62,3 +62,14 @@ Glossary
     A type of job, describing some of the services it may need on an EP.  The default universe, with the
     minimal additional services needed on the EP is called "vanilla".  Other universes are container, grid,
     Grid, and VM.
+
+   Workflow
+
+    A set of jobs, which are all part of some larger campaign of work.  For example, 1,000 jobs each
+    searching a portion of a larger genome to find some pattern might be all considered part of one
+    workflow.  Workflows where the input of one job must come from the output of a previous job, and
+    thus the former job must wait for the latter to complete, can be ordered in a Directed Acyclic 
+    Graph (DAG), and can be automatically managed and submitted at the proper time by the *condor_dagman*
+    tool.
+    minimal additional services needed on the EP is called "vanilla".  Other universes are container, grid,
+    Grid, and VM.
