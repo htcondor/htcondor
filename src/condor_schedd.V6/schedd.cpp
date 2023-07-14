@@ -3861,6 +3861,7 @@ void Scheduler::mapPendingOwners()
 		uad->clearPending();
 		uad->flags |= JQU_F_DIRTY; // set dirty to force populate
 		uad->PopulateFromAd();
+		uad->setStaleConfigSuper(); // force a superuser check next time we need to know
 		OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
 	}
 	pendingOwners.clear();
