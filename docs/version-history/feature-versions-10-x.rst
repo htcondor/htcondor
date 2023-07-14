@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
 
 Bugs Fixed:
 
