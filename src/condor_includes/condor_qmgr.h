@@ -72,9 +72,16 @@ const SetAttributeFlags_t SetAttribute_PostSubmitClusterChange = (1<<7); // spec
 // bool setQmgmtConnectionInfo(QmgmtPeer *peer);
 void unsetQmgmtConnection();
 
-
+#ifdef SCHEDD_INTERNAL_DECLARATIONS
+// internal use only. External calls to InitializeConnection and InitializeReadOnlyConnection
+// will invoke this function in the schedd.
+int InitializeConnectionInternal(QmgmtPeer & peer, bool read_only, bool write_authorized);
+#else
+// External use only, this is obsolete and just duplicates information
+// we get from the Qmgmt command int and auth
 int InitializeConnection(const char *, const char *);
 int InitializeReadOnlyConnection(const char * );
+#endif
 
 /** Initiate connection to schedd job queue and begin transaction.
     @param schedd is the schedd to connect to

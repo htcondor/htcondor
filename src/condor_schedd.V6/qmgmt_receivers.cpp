@@ -66,9 +66,12 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_InitializeConnection:
 	{
-		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
-		bool authenticated = true;
+		// once we have set read-only we can't go back to read-write
+		if (Q_PEER.getReadOnly()) {
+			return -1;
+		}
 
+		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
 		// Authenticate socket, if not already done by daemonCore
 		if( !syscall_sock->triedAuthentication() ) {
 			if( IsDebugLevel(D_SECURITY) ) {
@@ -80,16 +83,10 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 					// Failed to authenticate
 				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n",
 						 errstack.getFullText().c_str() );
-				authenticated = false;
 			}
 		}
 
-		if ( authenticated ) {
-			InitializeConnection( syscall_sock->getOwner(),
-					syscall_sock->getDomain() );
-		} else {
-			InitializeConnection( NULL, NULL );
-		}
+		InitializeConnectionInternal(Q_PEER, false, true);
 		return 0;
 	}
 
@@ -104,10 +101,7 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		// be authenticated by a previous authenticated connection from
 		// the same address (when using host-based security) less than
 		// the expiration period ago.
-		Q_PEER.setReadOnly(true);
-
-		// same as InitializeConnection but no authenticate()
-		InitializeConnection( NULL, NULL );
+		InitializeConnectionInternal(Q_PEER, true, false);
 
 		may_fork = true;
 		return 0;
