@@ -211,7 +211,7 @@ class Read(Verb):
                 print(json.dumps(json_output, indent=4))
         else:
             # determine maximum length of each column
-            max_job_id_len = get_max_column_length(job_summaries, "Job ID")
+            max_job_id_len = get_max_column_length(event_summaries, "Job ID")
             max_host_len = get_max_column_length(event_summaries, "Host")
             max_start_time_len = get_max_column_length(event_summaries, "Start Time")
             max_evict_time_len = get_max_column_length(event_summaries, "Evict Time")
