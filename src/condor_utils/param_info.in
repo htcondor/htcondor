@@ -4399,12 +4399,6 @@ customization=normal
 description=
 tags=defrag
 
-[DEFRAG_STATE_FILE]
-default=$(LOCK)/defrag_state
-type=string
-description=
-tags=defrag
-
 [DEFRAG_LOG]
 default=$(LOG)/DefragLog
 type=path
@@ -6689,6 +6683,7 @@ default : @end
 	MAX_STORK_LOG
 	STORK_PORT
 	STORK_ARGS
+	DEFRAG_STATE_FILE
 @end
 
 [$UPGRADE.DISCARDX]

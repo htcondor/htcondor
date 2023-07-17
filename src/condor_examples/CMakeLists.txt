@@ -79,9 +79,13 @@ install (FILES
 install (FILES 
 	condor_limits_wrapper.sh
 	condor_schedd.init
-	interactive.sub
 	DESTINATION ${C_LIBEXEC}
 	PERMISSIONS ${CONDOR_SCRIPT_PERMS})
+
+# This one shouldn't have execute bits set
+install (FILES 
+	interactive.sub
+	DESTINATION ${C_LIBEXEC})
 
 #Prepare OS specific config file
 

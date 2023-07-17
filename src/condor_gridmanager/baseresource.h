@@ -101,8 +101,8 @@ class BaseResource : public Service
 
 	char *resourceName;
 	int deleteMeTid;
-	List<BaseJob> registeredJobs;
-	List<BaseJob> pingRequesters;
+	std::set<BaseJob*> registeredJobs;
+	std::set<BaseJob*> pingRequesters;
 
 	bool resourceDown;
 	bool firstPingDone;
@@ -117,10 +117,10 @@ class BaseResource : public Service
 	static int probeDelay;
 
 	// jobs allowed to submit under jobLimit
-	List<BaseJob> submitsAllowed;
+	std::set<BaseJob*> submitsAllowed;
 	// jobs that want to submit but can't due to jobLimit
-	List<BaseJob> submitsWanted;
-	int jobLimit;			// max number of submitted jobs
+	std::deque<BaseJob*> submitsWanted;
+	size_t jobLimit;			// max number of submitted jobs
 
 	bool hasLeases;
 	int updateLeasesTimerId;

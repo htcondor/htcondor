@@ -110,7 +110,7 @@ void BaseResource::Reconfig()
 	tmp_int = param_integer( "GRIDMANAGER_RESOURCE_PROBE_INTERVAL", 5 * 60 );
 	setProbeInterval( tmp_int );
 
-	jobLimit = -1;
+	tmp_int = -1;
 	formatstr( param_name, "GRIDMANAGER_MAX_SUBMITTED_JOBS_PER_RESOURCE_%s",
 						ResourceType() );
 	param_value = param( param_name.c_str() );
@@ -121,26 +121,28 @@ void BaseResource::Reconfig()
 		const char* tmp;
 		StringTokenIterator limits(param_value);
 		if ( (tmp = limits.next()) ) {
-			jobLimit = atoi(tmp);
+			tmp_int = atoi(tmp);
 			while ( (tmp = limits.next()) ) {
 				if (strstr(resourceName, tmp) != 0 && (tmp = limits.next())) {
-					jobLimit = atoi(tmp);
+					tmp_int = atoi(tmp);
 				}
 			}
 		}
 		free( param_value );
 	}
-	if ( jobLimit <= 0 ) {
+	if ( tmp_int <= 0 ) {
 		jobLimit = DEFAULT_MAX_SUBMITTED_JOBS_PER_RESOURCE;
+	} else {
+		jobLimit = tmp_int;
 	}
 
 	// If the jobLimit was widened, move jobs from Wanted to Allowed and
 	// signal them
-	while ( submitsAllowed.Length() < jobLimit &&
-			submitsWanted.Length() > 0 ) {
-		BaseJob *wanted_job = submitsWanted.Head();
-		submitsWanted.Delete( wanted_job );
-		submitsAllowed.Append( wanted_job );
+	while ( submitsAllowed.size() < jobLimit &&
+	        submitsWanted.size() > 0 ) {
+		BaseJob *wanted_job = submitsWanted.front();
+		submitsWanted.pop_front();
+		submitsAllowed.insert(wanted_job);
 		wanted_job->SetEvaluateState();
 	}
 
@@ -302,10 +304,10 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 	if ( SelectionValue ) {
 		resource_ad->Assign( ATTR_GRIDMANAGER_SELECTION_VALUE, SelectionValue );
 	}
-	resource_ad->Assign( "NumJobs", registeredJobs.Number() );
+	resource_ad->Assign( "NumJobs", registeredJobs.size() );
 	resource_ad->Assign( "JobLimit", jobLimit );
-	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.Number() );
-	resource_ad->Assign( "SubmitsWanted", submitsWanted.Number() );
+	resource_ad->Assign( "SubmitsAllowed", submitsAllowed.size() );
+	resource_ad->Assign( "SubmitsWanted", submitsWanted.size() );
 	if ( resourceDown ) {
 		resource_ad->Assign( ATTR_GRID_RESOURCE_UNAVAILABLE_TIME,
 							 lastStatusChange );
@@ -319,9 +321,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 
 	int num_idle = 0;
 	int num_running = 0;
-	BaseJob *job;
-	registeredJobs.Rewind();
-	while ( registeredJobs.Next( job ) ) {
+	for (auto job: registeredJobs) {
 		switch ( job->condorState ) {
 		case IDLE:
 			num_idle++;
@@ -340,7 +340,7 @@ void BaseResource::PublishResourceAd( ClassAd *resource_ad )
 
 void BaseResource::RegisterJob( BaseJob *job )
 {
-	registeredJobs.Append( job );
+	registeredJobs.insert(job);
 
 	if ( firstPingDone == true ) {
 		if ( resourceDown ) {
@@ -366,8 +366,8 @@ void BaseResource::UnregisterJob( BaseJob *job )
 {
 	CancelSubmit( job );
 
-	pingRequesters.Delete( job );
-	registeredJobs.Delete( job );
+	pingRequesters.erase(job);
+	registeredJobs.erase(job);
 
 	std::erase(leaseUpdates, job);
 
@@ -384,12 +384,12 @@ void BaseResource::UnregisterJob( BaseJob *job )
 
 bool BaseResource::IsEmpty()
 {
-	return registeredJobs.IsEmpty();
+	return registeredJobs.empty();
 }
 
 void BaseResource::SetJobPollInterval()
 {
-	m_jobPollInterval = submitsAllowed.Length() / m_paramJobPollRate;
+	m_jobPollInterval = submitsAllowed.size() / m_paramJobPollRate;
 	if ( m_jobPollInterval < m_paramJobPollInterval ) {
 		m_jobPollInterval = m_paramJobPollInterval;
 	}
@@ -401,7 +401,7 @@ void BaseResource::RequestPing( BaseJob *job )
 		// failed collective job status command. They will pass a NULL
 		// for the job pointer.
 	if ( job ) {
-		pingRequesters.Append( job );
+		pingRequesters.insert(job);
 	}
 
 	daemonCore->Reset_Timer( pingTimerId, 0 );
@@ -409,50 +409,51 @@ void BaseResource::RequestPing( BaseJob *job )
 
 bool BaseResource::RequestSubmit( BaseJob *job )
 {
-	BaseJob *jobptr;
-
-	submitsWanted.Rewind();
-	while ( submitsWanted.Next( jobptr ) ) {
+	for (auto jobptr: submitsWanted) {
 		if ( jobptr == job ) {
 			return false;
 		}
 	}
 
-	submitsAllowed.Rewind();
-	while ( submitsAllowed.Next( jobptr ) ) {
-		if ( jobptr == job ) {
-			return true;
-		}
+	if (submitsAllowed.count(job) > 0) {
+		return true;
 	}
 
-	if ( submitsAllowed.Length() < jobLimit &&
-		 submitsWanted.Length() > 0 ) {
+	if ( submitsAllowed.size() < jobLimit &&
+		 submitsWanted.size() > 0 ) {
 		EXCEPT("In BaseResource for %s, SubmitsWanted is not empty and SubmitsAllowed is not full",resourceName);
 	}
-	if ( submitsAllowed.Length() < jobLimit ) {
-		submitsAllowed.Append( job );
+	if ( submitsAllowed.size() < jobLimit ) {
+		submitsAllowed.insert(job);
 		SetJobPollInterval();
 		return true;
 	} else {
-		submitsWanted.Append( job );
+		submitsWanted.push_back(job);
 		return false;
 	}
 }
 
 void BaseResource::CancelSubmit( BaseJob *job )
 {
-	if ( submitsAllowed.Delete( job ) ) {
-		if ( submitsAllowed.Length() < jobLimit &&
-			 submitsWanted.Length() > 0 ) {
-			BaseJob *wanted_job = submitsWanted.Head();
-			submitsWanted.Delete( wanted_job );
-			submitsAllowed.Append( wanted_job );
+	if (submitsAllowed.erase(job)) {
+		if ( submitsAllowed.size() < jobLimit &&
+		     submitsWanted.size() > 0 ) {
+			BaseJob *wanted_job = submitsWanted.front();
+			submitsWanted.pop_front();
+			submitsAllowed.insert(wanted_job);
 			wanted_job->SetEvaluateState();
 		}
 	} else {
 		// We only have to check submitsWanted if the job wasn't in
 		// submitsAllowed.
-		submitsWanted.Delete( job );
+		auto itr = submitsWanted.begin();
+		while (itr != submitsWanted.end()) {
+			if (*itr == job) {
+				itr = submitsWanted.erase(itr);
+			} else {
+				itr++;
+			}
+		}
 	}
 
 	std::erase(leaseUpdates, job);
@@ -464,14 +465,12 @@ void BaseResource::CancelSubmit( BaseJob *job )
 
 void BaseResource::AlreadySubmitted( BaseJob *job )
 {
-	submitsAllowed.Append( job );
+	submitsAllowed.insert(job);
 	SetJobPollInterval();
 }
 
 void BaseResource::Ping()
 {
-	BaseJob *job;
-
 	// Don't start a new ping too soon after the previous one. If the
 	// resource is up, the minimum time between pings is probeDelay. If the
 	// resource is down, the minimum time between pings is probeInterval.
@@ -514,15 +513,14 @@ void BaseResource::Ping()
 		dprintf(D_ALWAYS,"resource %s is still %s\n",resourceName,
 				ping_succeeded?"up":"down");
 
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
+		for (auto job: pingRequesters) {
 			if ( resourceDown ) {
 				job->NotifyResourceDown();
 			} else {
 				job->NotifyResourceUp();
 			}
 		}
+		pingRequesters.clear();
 	} else {
 		// State of resource has changed. Notify every job.
 		dprintf(D_ALWAYS,"resource %s is now %s\n",resourceName,
@@ -533,8 +531,7 @@ void BaseResource::Ping()
 
 		firstPingDone = true;
 
-		registeredJobs.Rewind();
-		while ( registeredJobs.Next( job ) ) {
+		for (auto job: registeredJobs) {
 			if ( resourceDown ) {
 				job->NotifyResourceDown();
 			} else {
@@ -542,10 +539,7 @@ void BaseResource::Ping()
 			}
 		}
 
-		pingRequesters.Rewind();
-		while ( pingRequesters.Next( job ) ) {
-			pingRequesters.DeleteCurrent();
-		}
+		pingRequesters.clear();
 		// TODO trigger ad update here
 		//   UpdateCollector() doesn't allow more frequent updates currently
 	}
@@ -613,11 +607,9 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: last update too recent, delaying %d secs\
 	daemonCore->Reset_Timer( updateLeasesTimerId, TIMER_NEVER );
 
     if ( updateLeasesActive == false ) {
-		BaseJob *curr_job;
 		int new_lease_duration = INT_MAX;
 dprintf(D_FULLDEBUG,"    UpdateLeases: calc'ing new leases\n");
-		registeredJobs.Rewind();
-		while ( registeredJobs.Next( curr_job ) ) {
+		for (auto curr_job: registeredJobs) {
 			int job_lease_duration = m_defaultLeaseDuration;
 			curr_job->jobAd->LookupInteger( ATTR_JOB_LEASE_DURATION, job_lease_duration );
 			if ( job_lease_duration > 0 && job_lease_duration < new_lease_duration ) {
@@ -645,8 +637,7 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: nothing to renew, resetting timer for %ld
 			// Time to renew the lease
 			m_sharedLeaseExpiration = time(NULL) + new_lease_duration;
 			if ( !m_hasSharedLeases ) {
-				registeredJobs.Rewind();
-				while ( registeredJobs.Next( curr_job ) ) {
+				for (auto curr_job: registeredJobs) {
 					std::string job_id;
 					int tmp;
 					if ( curr_job->jobAd->LookupString( ATTR_GRID_JOB_ID, job_id ) &&
@@ -692,10 +683,8 @@ dprintf(D_FULLDEBUG,"    UpdateLeases: DoUpdateLeases complete, processing resul
 	lastUpdateLeases = time(NULL);
 
 	if ( m_hasSharedLeases ) {
-		BaseJob *curr_job;
 		std::string tmp;
-		registeredJobs.Rewind();
-		while ( registeredJobs.Next( curr_job ) ) {
+		for (auto curr_job: registeredJobs) {
 			if ( first_update ) {
 				// New jobs may be waiting for the lease be to established
 				// before they proceed with submission.
@@ -793,7 +782,7 @@ void BaseResource::DoBatchStatus()
 {
 	dprintf(D_FULLDEBUG, "BaseResource::DoBatchStatus for %s.\n", ResourceName());
 
-	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+	if ( ( registeredJobs.empty() || resourceDown ) &&
 		 m_batchStatusActive == false ) {
 			// No jobs or we can't talk to the schedd, so no point
 			// in polling
