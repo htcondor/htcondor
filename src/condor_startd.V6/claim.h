@@ -109,6 +109,9 @@ public:
 		// send a message to the client and accountant that the claim
 		// is a being vacated
 	void	vacate( char* claim_id );
+
+	std::string c_scheddName;
+
 private:
 	char	*c_owner;	// name of the owner
 	char	*c_user;	// name of the user
@@ -209,6 +212,7 @@ public:
 	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
 	int			getaliveint() const	{return c_aliveint;};
+	time_t		getLeaseEndtime() const {return c_lease_endtime;};
 	ClaimState	state()			{return c_state;};
 	void		updateUsage(double & percentCpuUsage, long long & imageSize);
 	CODMgr*		getCODMgr( void );
@@ -230,6 +234,7 @@ public:
 	void setjobad(ClassAd * ad);
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);
+	void setLeaseEndtime(time_t end_time);
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 	void preemptIsTrue() {c_preempt_was_true=true;}
@@ -345,6 +350,7 @@ private:
 	Sock*		c_alive_inprogress_sock;	// NULL if no alive in progress
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
+	time_t		c_lease_endtime;	// timestamp that claim can't go beyond
 	bool		c_starter_handles_alives;  // if true, don't send alives when starter running
 	bool		c_startd_sends_alives; // set by param with override by schedd via an attribute in the job.
 
@@ -367,6 +373,11 @@ private:
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
 	long long c_image_size;	// ImageSize from last call to updateUsage
 
+ public:
+	std::string c_working_cm;	// if claimed for another CM, our temporary CM
+	bool c_want_matching;		// if claimed pslot, should negotiator do matching
+
+ private:
 		// Helper methods
 	int  finishReleaseCmd( void );
 	int  finishDeactivateCmd( void );

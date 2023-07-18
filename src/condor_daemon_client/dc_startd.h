@@ -87,7 +87,7 @@ public:
 			in the DCStartdMsg object, which may be obtained from the callback
 			object at callback time.
 		*/
-	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
+	void asyncRequestOpportunisticClaim( ClassAd const *req_ad, char const *description, char const *scheduler_addr, int alive_interval, bool claim_pslot, int timeout, int deadline_timeout, classy_counted_ptr<DCMsgCallback> cb );
 
 		/** Send the command to this startd to deactivate the claim 
 			@param graceful Should we be graceful or forcful?
@@ -233,7 +233,12 @@ private:
 	std::string m_description;
 	std::string m_scheduler_addr;
 	int m_alive_interval;
+public:
+	int m_num_dslots;
+	int m_pslot_claim_lease;
+	bool m_claim_pslot;
 
+private:
 		// the startd's reply:
 	int m_reply;
 
