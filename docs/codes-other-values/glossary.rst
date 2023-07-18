@@ -71,7 +71,7 @@ Glossary
     might be implemented with 1,000 independent jobs, each searching a subset
     of the full genome. A different workflow might assemble a genome from
     sequences.  Workflows may be composed; a third workflow compose the first
-    two by assembling the genome from sequences, then searching it for a
+    two, so that it assembles the genome from sequences, then searches it for a
     pattern.  The requirements for jobs (or workflows) to run before or after
     others may be represented by a directed acyclic graph
     [https://en.wikipedia.org/wiki/Directed_acyclic_graph] (DAG)
