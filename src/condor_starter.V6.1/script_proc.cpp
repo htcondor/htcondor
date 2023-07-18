@@ -242,11 +242,10 @@ ScriptProc::StartJob()
 	// job queue log by/or shared between versions of Condor which view the
 	// type of that attribute differently, calamity would arise.
 	int core_size_truncated;
-	size_t core_size;
-	size_t *core_size_ptr = NULL;
+	size_t core_size = 0;
+	size_t *core_size_ptr = &core_size;
 	if ( JobAd->LookupInteger(ATTR_CORE_SIZE, core_size_truncated) ) {
 		core_size = (size_t)core_size_truncated;
-		core_size_ptr = &core_size;
 	}
 
 	JobPid = daemonCore->Create_Process(exe_path.c_str(), 

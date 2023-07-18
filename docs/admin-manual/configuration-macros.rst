@@ -4463,6 +4463,23 @@ These macros control the *condor_schedd*.
 
             START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 10
 
+:macro-def:`START_VANILLA_UNIVERSE`
+    A boolean expression that defaults to nothing.
+    When this macro is defined the *condor_schedd* uses it
+    to determine whether to start a **vanilla** universe job.
+    The *condor_schedd* uses the expression
+    when matching a job with a slot in addition to the ``Requirements``
+    expression of the job and the slot ClassAds.  The expression can
+    refer to job attributes by using the prefix ``JOB``, slot attributes
+    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+
+    The following example prevents jobs owned by a user from starting when
+    that user has more than 25 held jobs
+
+    .. code-block:: condor-config
+
+            START_VANILLA_UNIVERSE = OWNER.JobsHeld <= 25
+
 
 :macro-def:`SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE`
     A boolean value that defaults to false. When true, the
@@ -7733,8 +7750,7 @@ condor_procd Configuration File Macros
     receive requests from other HTCondor daemons. On Unix, this should
     point to a file system location that can be used for a named pipe.
     On Windows, named pipes are also used but they do not exist in the
-    file system. The default setting therefore depends on the platform
-    and distribution: $(LOCK)/procd_pipe or $(RUN)/procd_pipe on Unix
+    file system. The default setting is $(RUN)/procd_pipe on Unix
     and \\\\.\\pipe\\procd_pipe on Windows.
 
 :macro-def:`USE_GID_PROCESS_TRACKING`

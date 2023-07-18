@@ -33,7 +33,7 @@
  #LOCAL_CONFIG_DIR_EXCLUDE_REGEXP = ^((\..*)|(.*~)|(#.*)|(.*\.rpmsave)|(.*\.rpmnew))$
  
  ##
-@@ -68,5 +66,35 @@
+@@ -68,5 +66,33 @@
  #FLOCK_TO = condor.cs.wisc.edu, cm.example.edu
  
  ##--------------------------------------------------------------------
@@ -60,8 +60,6 @@
 +LIBEXEC = $(RELEASE_DIR)/lib/condor/libexec
 +SHARE   = $(RELEASE_DIR)/share/condor
 +GANGLIA_LIB64_PATH = /lib,/usr/lib,/usr/local/lib
-+
-+PROCD_ADDRESS = $(RUN)/procd_pipe
 +
 +# Account for different pki locations for Debian
 +AUTH_SSL_SERVER_CAFILE   = /etc/ssl/certs/ca-certificates.crt
