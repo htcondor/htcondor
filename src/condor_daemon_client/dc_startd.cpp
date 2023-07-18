@@ -143,7 +143,7 @@ ClaimStartdMsg::writeMsg( DCMessenger * /*messenger*/, Sock *sock ) {
 	m_job_ad.Assign("_condor_CLAIM_PARTITIONABLE_SLOT", m_claim_pslot);
 	if (m_claim_pslot) {
 		m_job_ad.Assign("_condor_PARTITIONABLE_SLOT_LEASE_TIME", m_pslot_claim_lease);
-		m_job_ad.Assign("condor_WANT_MATCHING", true);
+		m_job_ad.Assign("_condor_WANT_MATCHING", true);
 	}
 
 		// Tell the startd how many dslots we want created off of a pslot

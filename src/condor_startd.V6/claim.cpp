@@ -896,8 +896,9 @@ Claim::startLeaseTimer()
 			   c_lease_tid );
 	}
 	int when = c_lease_duration;
-	if (c_lease_endtime && (c_lease_endtime < time(NULL) + c_lease_duration)) {
-		when = (int)(c_lease_endtime - time(NULL));
+	time_t now = time(nullptr);
+	if (c_lease_endtime && (c_lease_endtime < now + c_lease_duration)) {
+		when = (int)(c_lease_endtime - now);
 	}
 	c_lease_tid =
 		daemonCore->Register_Timer( when, 0,

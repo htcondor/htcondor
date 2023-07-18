@@ -7524,14 +7524,21 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
 	}
 
+	// Claim pslots if we're configured to do so and this negotiator will
+	// make further matches on the claimed pslot for us.
+	// TODO Ignore the negotiator's willingness to match once we're smart
+	//   enough to fully manage the claimed pslot or will be instructing
+	//   the startd to send updates to an AP collector/negotiator.
 	bool claim_pslot = false;
-	bool is_pslot = false;
-	std::string slot_state;
-	match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
-	if (m_will_match_claimed_pslots && is_pslot) {
-		match_ad.LookupString(ATTR_STATE, slot_state);
-		if (slot_state == "Unclaimed" && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
-			claim_pslot = true;
+	if (m_will_match_claimed_pslots) {
+		bool is_pslot = false;
+		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+		if (is_pslot) {
+			std::string slot_state;
+			match_ad.LookupString(ATTR_STATE, slot_state);
+			if (slot_state == "Unclaimed" && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+				claim_pslot = true;
+			}
 		}
 	}
 
