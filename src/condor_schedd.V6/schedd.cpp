@@ -3820,7 +3820,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
-	dprintf(D_ALWAYS | D_BACKTRACE, "Owner %s has no JobQueueUserRec\n", owner);
+	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
 	int userrec_id = nextUnusedUserRecId();
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
