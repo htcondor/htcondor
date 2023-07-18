@@ -4,6 +4,25 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
+Version 10.8.0
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.8.0 released on Month Date, 2023.
+
+- HTCondor version 10.8.0 not yet released.
+
+- This version includes all the updates from :ref:`lts-version-history-1008`.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- None.
+
 Version 10.7.0
 --------------
 
@@ -21,7 +40,16 @@ New Features:
   This replaces the old command **+WantIOProxy**.
   :jira:`1875`
 
+- A single HTCondor pool can now have multiple *condor_defrag* daemons running
+  and they will not interfere with each other so long as each has
+  :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
+  :jira:`1903`
+
 Bugs Fixed:
+
+- Fixed bug introduced in 10.5.0 on cgroup v1 systems where the
+  user and system cpu time measured was low by a factor of 10,000.
+  :jira:`1920`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file

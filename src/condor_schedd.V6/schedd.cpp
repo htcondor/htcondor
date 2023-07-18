@@ -3472,21 +3472,11 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	} 
 
 	if ( universe == CONDOR_UNIVERSE_GRID ) {
-		// for Globus, count jobs in UNSUBMITTED state by owner.
+		// for Grid, count jobs in UNSUBMITTED state by owner.
 		// later we make certain there is a grid manager daemon
 		// per owner.
-		int real_status = status;
-		bool want_service = service_this_universe(universe,job);
 		bool job_managed = jobExternallyManaged(job);
 		bool job_managed_done = jobManagedDone(job);
-		// if job is not already being managed : if we want matchmaking 
-		// for this job, but we have not found a 
-		// match yet, consider it "held" for purposes of the logic here.  we
-		// have no need to tell the gridmanager to deal with it until we've
-		// first found a match.
-		if ( (job_managed == false) && (want_service && cur_hosts == 0) ) {
-			status = HELD;
-		}
 		// if status is REMOVED, but the remote job id is not null,
 		// then consider the job IDLE for purposes of the logic here.  after all,
 		// the gridmanager needs to be around to finish the task of removing the job.
@@ -3524,12 +3514,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			ASSERT(gridcounts);
 			gridcounts->UnmanagedGridJobs++;
 		}
-			// If we do not need to do matchmaking on this job (i.e.
-			// service this globus universe job), than we can bailout now.
-		if (!want_service) {
-			return 0;
-		}
-		status = real_status;	// set status back for below logic...
+
+		return 0;
 	}
 
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
@@ -3617,6 +3603,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 bool
 service_this_universe(int universe, ClassAd* job)
 {
+	// "service" seems to to really mean find a matching resource or not...
+
 	/*  If a non-grid job is externally managed, it's been grabbed by
 		the schedd-on-the-side and we don't want to touch it.
 	 */
@@ -3624,39 +3612,11 @@ service_this_universe(int universe, ClassAd* job)
 		return false;
 	}
 
-	/* If WantMatching attribute exists, evaluate it to discover if we want
-	   to "service" this universe or not.  BTW, "service" seems to really mean
-	   find a matching resource or not.... 
-	   Note: EvalBool returns 0 if evaluation is undefined or error, and
-	   return 1 otherwise....
-	*/
-	bool want_matching;
-	if ( job->LookupBool(ATTR_WANT_MATCHING,want_matching) == 1 ) {
-		return want_matching;
-	}
-
 	/* If we made it to here, the WantMatching was not defined.  So
 	   figure out what to do based on Universe and other misc logic...
 	*/
 	switch (universe) {
 		case CONDOR_UNIVERSE_GRID:
-			{
-				// If this Globus job is already being managed, then the schedd
-				// should leave it alone... the gridmanager is dealing with it.
-				if ( jobExternallyManaged(job) ) {
-					return false;
-				}			
-				// Now if not managed, if GridResource has a "$$", then this
-				// job is at least _matchable_, so return true, else false.
-				std::string resource = "";
-				job->LookupString( ATTR_GRID_RESOURCE, resource );
-				if ( strstr( resource.c_str(), "$$" ) ) {
-					return true;
-				}
-
-				return false;
-			}
-			break;
 		case CONDOR_UNIVERSE_MPI:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_SCHEDULER:
