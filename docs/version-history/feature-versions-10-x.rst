@@ -752,7 +752,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
@@ -790,7 +790,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/hooks:Hooks` manual section.
   :jira:`1400`
 
 Bugs Fixed:
