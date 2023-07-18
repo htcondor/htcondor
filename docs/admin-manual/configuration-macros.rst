@@ -4467,11 +4467,11 @@ These macros control the *condor_schedd*.
     A boolean expression that defaults to nothing.
     When this macro is defined the *condor_schedd* uses it
     to determine whether to start a **vanilla** universe job.
-    he *condor_schedd* uses the expression
+    The *condor_schedd* uses the expression
     when matching a job with a slot in addition to the ``Requirements``
     expression of the job and the slot ClassAds.  The expression can
     refer to job attributes by using the prefix ``JOB``, slot attributes
-    by using the prefix ``SLOT`` and job owner attributes by using the prefix ``OWNER``.
+    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
 
     The following example prevents jobs owned by a user from starting when
     that user has more than 25 held jobs
