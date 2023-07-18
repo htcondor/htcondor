@@ -17108,6 +17108,12 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	const OwnerInfo *match_user = scheduler.lookup_owner_const(mrec->user);
 #ifdef USE_JOB_QUEUE_USERREC
 	// UserCheck2 can handle fully qualified users
+	if ((match_user != cmd_user) && match_user && cmd_user) {
+		dprintf(D_ALWAYS,
+			"RecycleShadow() called by %s failed authorization check. mrec is owned by %s!\n",
+			cmd_user->Name(), match_user->Name());
+		return FALSE;
+	}
 #else
 	std::string match_owner;
 	if (user_is_the_new_owner) {
@@ -17121,7 +17127,7 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 	}
 #endif
 
-	if( !cmd_user || !UserCheck2(NULL, cmd_user, match_user) ) {
+	if( !cmd_user || !UserCheck2(NULL, cmd_user) ) {
 		dprintf(D_ALWAYS,
 				"RecycleShadow() called by %s failed authorization check!\n",
 				cmd_user ? cmd_user->Name() : "(unauthenticated)");

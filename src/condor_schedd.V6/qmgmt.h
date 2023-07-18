@@ -296,7 +296,7 @@ public:
 	LiveJobCounters live; // job counts that are always up-to-date with the committed job state
 	time_t LastHitTime=0; // records the last time we incremented num.Hit, use to expire OwnerInfo
 
-	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr, char is_super=0)
+	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
 		, name(_name?_name:""), domain(_domain?_domain:""), super(is_super)
 	{}

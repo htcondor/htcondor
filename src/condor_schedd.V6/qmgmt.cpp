@@ -7491,7 +7491,7 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & t
 	IdToKey(cluster_id,JOBSETID_qkey2,key);
 #ifdef USE_JOB_QUEUE_USERREC
 	const OwnerInfo * owninfo = EffectiveUserRec(Q_SOCK);
-	if ( ! owninfo || (owninfo->jid.proc == 1)) {
+	if ( ! owninfo || (owninfo->jid.proc == CONDOR_USERREC_ID)) {
 		if (owninfo) { 
 			dprintf(D_FULLDEBUG | D_BACKTRACE, "NewJobset %d socket owned by unreal-user %s\n",
 				cluster_id, owninfo->Name());
