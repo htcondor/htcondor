@@ -401,7 +401,7 @@ check_spool_dir()
 		};
 
 	for (auto & ix : valid_list) {
-		if ( ! well_known_list.contains_withwildcard(ix)) { 
+		if ( ! well_known_list.contains(ix)) { 
 			well_known_list.append(ix);
 		}
 	}
