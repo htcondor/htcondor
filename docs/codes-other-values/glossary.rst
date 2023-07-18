@@ -60,7 +60,7 @@ Glossary
    Universe
 
     A type of job, describing some of the services it may need on an EP.  The
-    default universe, with the minimal additional services needed on the EP is
+    default universe, with the minimal additional services needed, is
     called "vanilla".  Other universes include Container, Grid, and VM.
 
    Workflow
