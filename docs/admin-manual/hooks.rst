@@ -808,7 +808,7 @@ expected output. All hooks must exit successfully.
        None.
     Standard input given to the hook
        The first line will be the information on route that the job matched
-       including the route name. This information will be formated as a classad.
+       including the route name. This information will be formatted as a classad.
        If the route has a  ``TargetUniverse`` or ``GridResource`` they will be
        included in the classad. The route information classad will be followed
        by a separator line of dashes like ``------`` followed by a newline.
