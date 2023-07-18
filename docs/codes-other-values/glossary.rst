@@ -59,6 +59,21 @@ Glossary
 
    Universe
 
-    A type of job, describing some of the services it may need on an EP.  The default universe, with the
-    minimal additional services needed on the EP is called "vanilla".  Other universes are container, grid,
-    Grid, and VM.
+    A type of job, describing some of the services it may need on an EP.  The
+    default universe, with the minimal additional services needed, is
+    called "vanilla".  Other universes include Container, Grid, and VM.
+
+   Workflow
+
+    A set, possibly ordered, of activities necessary to complete a larger task.
+    In high-throughput computing, each activity is a job.  For example,
+    consider the task of searching a large genome for a specific pattern.  This
+    might be implemented with 1,000 independent jobs, each searching a subset
+    of the full genome. A different workflow might assemble a genome from
+    sequences.  Workflows may be composed; a third workflow compose the first
+    two, so that it assembles the genome from sequences, then searches it for a
+    pattern.  The requirements for jobs (or workflows) to run before or after
+    others may be represented by a directed acyclic graph
+    [https://en.wikipedia.org/wiki/Directed_acyclic_graph] (DAG)
+    See the *condor_dagman* (:ref:`automated-workflows/dagman-introduction:DAGMan Introduction`)
+    to automatically execute a workflow represented as a dag.
