@@ -1111,7 +1111,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
 		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
-		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_LEASE_TIME", pslot_claim_lease);
+		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", pslot_claim_lease);
 		req_classad->LookupBool("_condor_WANT_MATCHING", want_matching);
 	}
 
@@ -1122,13 +1122,9 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 	if (claim_pslot) {
-		int max_pslot_claim_lease = param_integer("MAX_PARTITIONABLE_SLOT_LEASE_TIME", 3600);
-		if (pslot_claim_lease <= 0) {
+		int max_pslot_claim_lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
+		if (pslot_claim_lease <= 0 || pslot_claim_lease > max_pslot_claim_lease) {
 			pslot_claim_lease = max_pslot_claim_lease;
-		} else if (pslot_claim_lease > max_pslot_claim_lease) {
-			rip->dprintf(D_ALWAYS, "Refusing claim of pslot with lease time %d larger than max time %d\n", pslot_claim_lease, max_pslot_claim_lease);
-			refuse(stream);
-			ABORT;
 		}
 	}
 

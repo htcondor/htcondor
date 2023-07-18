@@ -2555,8 +2555,11 @@ void Resource::publish_static(ClassAd* cap)
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
 			if (param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
-				int lease = param_integer("MAX_PARTITIONABLE_SLOT_LEASE_TIME", 3600);
-				cap->Assign(ATTR_MAX_PSLOT_LEASE_TIME, lease);
+				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
+				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
+			}
+			if (state() == claimed_state) {
+				cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
 			}
 			break;
 		case DYNAMIC_SLOT:
