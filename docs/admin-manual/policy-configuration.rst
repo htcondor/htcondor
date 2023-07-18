@@ -1,5 +1,5 @@
-Policy Configuration for Execute Hosts and for Submit Hosts
-===========================================================
+Policy Configuration for Execution Points and for Access Points
+===============================================================
 
 .. note::
     Configuration templates make it easier to implement certain
