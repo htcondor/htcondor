@@ -7750,8 +7750,7 @@ condor_procd Configuration File Macros
     receive requests from other HTCondor daemons. On Unix, this should
     point to a file system location that can be used for a named pipe.
     On Windows, named pipes are also used but they do not exist in the
-    file system. The default setting therefore depends on the platform
-    and distribution: $(LOCK)/procd_pipe or $(RUN)/procd_pipe on Unix
+    file system. The default setting is $(RUN)/procd_pipe on Unix
     and \\\\.\\pipe\\procd_pipe on Windows.
 
 :macro-def:`USE_GID_PROCESS_TRACKING`
