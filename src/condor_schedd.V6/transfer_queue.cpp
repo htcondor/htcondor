@@ -989,7 +989,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 
 	for (TransferQueueRequest *client: m_xfer_queue) {
 		if (client->m_gave_go_ahead && ((now - lastNotifiedTime) > quiet_interval)) {
-			time_t age = time(nullptr) - client->m_time_go_ahead;
+			time_t age = now - client->m_time_go_ahead;
 			time_t max_queue_age = client->m_max_queue_age;
 			if( max_queue_age > 0 && max_queue_age < age ) {
 				lastNotifiedTime = now;
