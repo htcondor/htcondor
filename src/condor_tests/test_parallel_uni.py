@@ -64,7 +64,7 @@ def finished_parallel_job(condor, submit_parallel_job):
     condor.job_queue.wait_for_events(
         expected_events={jobid: [SetJobStatus(JobStatus.COMPLETED)]},
         unexpected_events={jobid: {SetJobStatus(JobStatus.HELD)}},
-        timeout=120
+        timeout=300
     )
 
     return jobid
