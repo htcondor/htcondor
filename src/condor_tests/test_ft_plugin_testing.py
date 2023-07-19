@@ -25,22 +25,18 @@ import time
 def createTestFile(test_dir):
     testFile = test_dir / "testFile.txt"
     testFile_contents = "This is a test"
-    file = open(testFile, "w")
-    file.write(testFile_contents)
-    file.close()
+    with open (testFile, "w") as file:
+        file.write(testFile_contents)
+    return testFile
 
 # Set up a personal condor with test_url defined in config:
 @standup
 def condor(test_dir, createTestFile):
-    dir = "log"
-    parent_dir = test_dir / "../../local_dir"
-    path = os.path.join(parent_dir, dir)
-    os.mkdir(path)
     with Condor(
         local_dir = test_dir / "condor",
         config = {
             "STARTER_DEBUG" : "D_FULLDEBUG",
-            "FILE_TEST_URL" : f"file://{test_dir}/testFile.txt", # give it a file that does exist
+            "FILE_TEST_URL" : f"file://{createTestFile}", # give it a file that does exist
             "HTTPS_TEST_URL" : "https://thislinkdoesnotexist461ajsfyxchsajfhlgeu.gov" #give it a url that does not exist
         }
     ) as condor:
