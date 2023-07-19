@@ -14,8 +14,6 @@
 #---------------------------------------------------------------
 
 from ornithology import *
-import os
-import time
 
 
 #
@@ -35,9 +33,9 @@ def condor(test_dir, createTestFile):
     with Condor(
         local_dir = test_dir / "condor",
         config = {
-            "STARTER_DEBUG" : "D_FULLDEBUG",
+            "ENABLE_URL_TRANSFERS" : "TRUE",
             "FILE_TEST_URL" : f"file://{createTestFile}", # give it a file that does exist
-            "HTTPS_TEST_URL" : "https://thislinkdoesnotexist461ajsfyxchsajfhlgeu.gov" #give it a url that does not exist
+            "HTTPS_TEST_URL" : "https://thislinkdoesnotexist461ajsfyxchsajfhlgeu.gov", # give it a url that does not exist
         }
     ) as condor:
         yield condor
