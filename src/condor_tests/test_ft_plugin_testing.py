@@ -14,6 +14,9 @@
 #---------------------------------------------------------------
 
 from ornithology import *
+import os
+import time
+
 
 #
 # Create a test file for the file transfer plugin to use as test
@@ -29,11 +32,15 @@ def createTestFile(test_dir):
 # Set up a personal condor with test_url defined in config:
 @standup
 def condor(test_dir, createTestFile):
+    dir = "log"
+    parent_dir = test_dir / "../../local_dir"
+    path = os.path.join(parent_dir, dir)
+    os.mkdir(path)
     with Condor(
         local_dir = test_dir / "condor",
         config = {
             "STARTER_DEBUG" : "D_FULLDEBUG",
-            "FILE_TEST_URL" : test_dir / "TestFile.txt", # give it a file that does exist
+            "FILE_TEST_URL" : f"file://{test_dir}/testFile.txt", # give it a file that does exist
             "HTTPS_TEST_URL" : "https://thislinkdoesnotexist461ajsfyxchsajfhlgeu.gov" #give it a url that does not exist
         }
     ) as condor:
@@ -42,14 +49,21 @@ def condor(test_dir, createTestFile):
 @action
 def get_starter_classad_output(condor):
     # run command "condor_starter -classad" to see output
-    starter_classad = run_command(['condor_starter', '-classad'], echo=True)
-    return starter_classad
+    starter_classad = condor.run_command(['condor_starter', '-classad'], echo=False)
+    plugins = ""
+    for line in str(starter_classad.stdout).split('\n'):
+        line = line.strip()
+        if "HasFileTransferPluginMethods" in line:
+            plugins = line.split('=')[1]
+            break
+    return plugins
 
 class TestFileTransferPluginsTesting:
     # check to ensure "file" is still acceptable plugin
     def test_file_exist(self, get_starter_classad_output):
-        assert "file" in str(get_starter_classad_output)
+        assert "file" in get_starter_classad_output
 
     # check to ensure "https" was removed from acceptable plugin
     def test_file_does_not_exist(self, get_starter_classad_output):
-        assert "https" not in str(get_starter_classad_output)
+        assert "https" not in get_starter_classad_output
+
