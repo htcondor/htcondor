@@ -158,6 +158,7 @@ bool ignore_domain_mismatch_when_setting_owner = false; // obsolete user_is_the_
 bool ignore_domain_for_OwnerCheck = true; // do UserCheck2 ignoring the domain part of the socket
 bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but would fail if we weren't ignoring the domain
 bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
+bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
 
 #ifdef USE_JOB_QUEUE_USERREC
 JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor", "", true);
@@ -168,11 +169,11 @@ JobQueueUserRec * PersonalUserRec = nullptr;
 // return the CondorUserRec
 // If the real owner is the process owner, return a PersonalUserRec pointer
 // TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED
-JobQueueUserRec * real_owner_is_condor(ReliSock * sock) {
+JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
 	if (sock) {
 		// TODO: check for family session??
 		// TODO: will Windows ever see "root" intended to be a super-user?
-		bool personal_condor = ! is_root();
+		static bool personal_condor = ! is_root();
 		const char* real_owner = sock->getOwner();
 		if (YourString(CondorUserRec.Name()) == real_owner ||
 		#ifdef WIN32
@@ -211,8 +212,10 @@ JobQueueUserRec * real_owner_is_condor(ReliSock * sock) {
 	return nullptr;
 }
 inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
-	if ( ! sock) return &CondorUserRec;
-	return scheduler.lookup_owner_const(sock->getOwner());
+	if ( ! sock) return &CondorUserRec;	 // commands from inside the schedd
+	const OwnerInfo * owni = scheduler.lookup_owner_const(sock->getOwner());
+	if (owni) return owni;
+	return real_owner_is_condor(sock);
 }
 inline const char * EffectiveUserName(const Sock * sock) {
 	if ( ! sock) return "";
@@ -13092,6 +13095,7 @@ Scheduler::Init()
 	ignore_domain_for_OwnerCheck = param_boolean("IGNORE_DOMAIN_FOR_JOB_OWNER_CHECK", true);
 	warn_domain_for_OwnerCheck = param_boolean("WARN_DOMAIN_FOR_JOB_OWNER_CHECK", true);
 	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
+	allow_submit_from_known_users_only = param_boolean("ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY", false);
 
 		// UidDomain will always be defined, since config() will put
 		// in get_local_fqdn() if it's not defined in the file.
@@ -17104,17 +17108,15 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 		// verify that whoever is running this command is either the
 		// queue super user or the owner of the claim
-	const OwnerInfo *cmd_user = EffectiveUserRec(sock);
-	const OwnerInfo *match_user = scheduler.lookup_owner_const(mrec->user);
 #ifdef USE_JOB_QUEUE_USERREC
-	// UserCheck2 can handle fully qualified users
-	if ((match_user != cmd_user) && match_user && cmd_user) {
-		dprintf(D_ALWAYS,
-			"RecycleShadow() called by %s failed authorization check. mrec is owned by %s!\n",
-			cmd_user->Name(), match_user->Name());
-		return FALSE;
-	}
+	// we don't actually want to UserCheck2 for recycling shadows
+	// since the cmd_user will always be condor or equiv, and the match_user
+	// will never be. UserCheck2 is essentially a complex way to
+	// check to see if the cmd_user is a queue superuser.
+	// RecycleShadow is registered at DAEMON level, we should trust that.
 #else
+	char const *cmd_user = EffectiveUser(sock);
+	const char * match_user = mrec->user;
 	std::string match_owner;
 	if (user_is_the_new_owner) {
 		// UserCheck wants fully qualified users
@@ -17125,14 +17127,14 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 			match_user = match_owner.c_str();
 		}
 	}
-#endif
 
-	if( !cmd_user || !UserCheck2(NULL, cmd_user) ) {
+	if( !cmd_user || !UserCheck2(NULL, cmd_user, match_user) ) {
 		dprintf(D_ALWAYS,
 				"RecycleShadow() called by %s failed authorization check!\n",
 				cmd_user ? cmd_user->Name() : "(unauthenticated)");
 		return FALSE;
 	}
+#endif
 
 		// Now handle the exit reason specified for the existing job.
 	if( prev_job_id.cluster != -1 ) {

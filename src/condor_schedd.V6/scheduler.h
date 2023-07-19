@@ -735,7 +735,7 @@ class Scheduler : public Service
 	// there is no persistnt JobQueueUserRec in the job_queue
 	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
 	void clearPendingOwners();
-	bool HasPersistentOwnerInfo() { return EnablePersistentOwnerInfo; }
+	bool HasPersistentOwnerInfo() const { return EnablePersistentOwnerInfo; }
 #endif
 	void deleteZombieOwners(); // delete all zombies (called on shutdown)
 	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)

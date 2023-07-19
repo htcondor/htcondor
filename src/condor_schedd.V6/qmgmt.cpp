@@ -195,7 +195,7 @@ extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
 extern JobQueueUserRec * get_condor_userrec();
-extern JobQueueUserRec * real_owner_is_condor(ReliSock * sock);
+extern JobQueueUserRec * real_owner_is_condor(const Sock * sock);
 JobQueueUserRec * real_owner_is_condor(QmgmtPeer * qsock) {
 	return real_owner_is_condor(qsock->getReliSock());
 }
@@ -203,6 +203,7 @@ JobQueueUserRec * real_owner_is_condor(QmgmtPeer * qsock) {
 extern bool ignore_domain_for_OwnerCheck;
 extern bool warn_domain_for_OwnerCheck;
 extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
+extern bool allow_submit_from_known_users_only; // if false, create UseRec for new users when they submit
 
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
@@ -3841,12 +3842,36 @@ InitializeConnectionInternal(QmgmtPeer & peer, bool read_only, bool write_auth_o
 int
 NewCluster(CondorError* errstack)
 {
-
-	if( Q_SOCK && !UserCheck(NULL, EffectiveUserRec(Q_SOCK) ) ) {
+#ifdef USE_JOB_QUEUE_USERREC
+	if (Q_SOCK) {
+		const auto urec = EffectiveUserRec(Q_SOCK);
+		bool user_check_ok = false;
+		if (urec || allow_submit_from_known_users_only) {
+			// When called from a socket authenticated to a user for which
+			// there is no UserRec urec will be null.  UserCheck will fail
+			// in UserCheck2 in that case with a message about anon users
+			user_check_ok = UserCheck(NULL, urec);
+		} else {
+			// new user, but we are willing to create UserRec on the fly, so
+			// make a dummy UserRec to pass to UserCheck, since
+			// we don't want UserCheck2 to fail at this time
+			JobQueueUserRec dummy(CONDOR_USERREC_ID, EffectiveUserName(Q_SOCK));
+			user_check_ok = UserCheck(NULL, &dummy);
+		}
+		if ( ! user_check_ok) {
+			dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
+			errno = EACCES;
+			return -1;
+		}
+	}
+#else
+	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
 		errno = EACCES;
 		return -1;
 	}
+#endif
+
 
 	int total_jobs = TotalJobsCount;
 
@@ -3870,6 +3895,8 @@ NewCluster(CondorError* errstack)
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we have not seen this user before, add a JobQueueUserRec for them
 	// if we *have* seen the user before, check to see if the user is enabled
+	// note that the sock may have an EffectiveUserRec, but at this point it might
+	// be set to the *real* UserRec, so we want to use the EffectiveUserName here.
 	if (Q_SOCK) {
 		const char * user = EffectiveUserName(Q_SOCK);
 		if (user && user[0]) {
@@ -3877,15 +3904,23 @@ NewCluster(CondorError* errstack)
 			// if we create one here, it will be pending until CommitTransactionInternal
 			auto urec = scheduler.lookup_owner_const(user);
 			if ( ! urec) {
-				// TODO: make auto-create-user-rec a knob?
-				// create user a user record for a new submitter
-				// the insert_owner_const will make a pending user record
-				// which we then add to the current transaction by calling MakeUserRec
-				urec = scheduler.insert_owner_const(user);
-				if ( ! MakeUserRec(urec, true)) {
-					dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+				if (allow_submit_from_known_users_only) {
+					dprintf(D_ALWAYS, "NewCluster(): fail because no User record for %s\n", user);
+					if (errstack) {
+						errstack->pushf("SCHEDD",EACCES,"Unknown User %s. Use condor_qusers to add user before submitting jobs.", user);
+					}
 					errno = EACCES;
-					return -1;
+					return NEWJOB_ERR_DISABLED_USER;
+				} else {
+					// create user a user record for a new submitter
+					// the insert_owner_const will make a pending user record
+					// which we then add to the current transaction by calling MakeUserRec
+					urec = scheduler.insert_owner_const(user);
+					if ( ! MakeUserRec(urec, true)) {
+						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						errno = EACCES;
+						return -1;
+					}
 				}
 			} else if ( ! urec->IsEnabled()) {
 				// We only check to see if the User is disabled if we are not creating it automatically with the submit
@@ -3893,7 +3928,6 @@ NewCluster(CondorError* errstack)
 				urec->LookupString(ATTR_DISABLE_REASON, reason);
 
 				dprintf(D_ALWAYS, "NewCluster(): rejecting attempt by disabled user %s to submit a job. %s\n", urec->Name(), reason.c_str());
-				errno = EACCES;
 				if (errstack) {
 					if (!reason.empty()) {
 						errstack->pushf("SCHEDD",EACCES,"User %s is disabled : %s", urec->Name(), reason.c_str());
@@ -3901,10 +3935,12 @@ NewCluster(CondorError* errstack)
 						errstack->pushf("SCHEDD",EACCES,"User %s is disabled", urec->Name());
 					}
 				}
+				errno = EACCES;
 				return NEWJOB_ERR_DISABLED_USER;
 			}
 			ASSERT(urec);
 			// TODO: attach urec to Q_SOCK so we can use it for permission and various limit checks?
+			//Q_SOCK->setEffectiveOwner(urec, false);
 		}
 	}
 #endif
