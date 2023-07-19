@@ -20,7 +20,7 @@ import stat
 from ornithology import *
 
 #
-# Write out some simple shadow job hook scripts.
+# Write out some job hook scripts.
 #
 @standup
 def write_job_hook_scripts(test_dir):
@@ -48,36 +48,29 @@ def write_job_hook_scripts(test_dir):
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
     # Test hook is on the shadow side
-    # Have 2 hooks, 1 shadow hook that runs before the files are
-    # transferred and run by the shadow and 1 hook_prepare_job_before_transfer
-    # that is also before files are transferred but ran by the starter.
-    # Should show that shadow will always be before the starter.
-
-    # In addition, we run a ps --forest command to show that it was the condor_shadow
-    # that invoked the shadow job hook
+    # Using a schedd environment variable, we check to see if the shadow hook
+    # can access it (since it is on the AP), then to double check we make sure
+    # a starter hook can't access it (since it is on the EP).
 
     # shadow
-    filepath = test_dir / "test.out"
+    filepath = test_dir / "shadow.out"
     script_file = test_dir / "hook_shadow_test_prepare.sh"
-    # will replace starter text if starter ran first, this should not happen
     script_contents = f"""#!/bin/bash
-        echo 'From the shadows!' > {filepath}
-        ps --forest -o cmd --no-headers | sed 's/condor_shadow.*/condor_shadow/' >> {filepath}
+        echo $SPECIAL_MSG > {filepath}
         exit 0
         """
-        # Note: the sed command after ps basically is removing any additional info after 'condor_shadow'
-        # this makes it easier to test
     script = open(script_file, "w")
     script.write(script_contents)
     script.close()
     st = os.stat(script_file)
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
+    # starter
+    filepath = test_dir / "starter.out"
     # before_transfer starter
     script_file = test_dir / "hook_starter_test_prepare.sh"
-    # in append mode so should add after shadow, otherwise text will be replaced if ran before shadow
     script_contents = f"""#!/bin/bash
-        echo 'From the starter!' >> {filepath}
+        echo $SPECIAL_MSG >> {filepath}
         echo 'HookStatusCode = 190'
         exit 0
         """
@@ -126,6 +119,8 @@ def write_job_hook_scripts(test_dir):
 # The "HOLD" hook will put the job on hold.
 # The "IDLE" hook will do a shadow exception and put the job back to idle.
 # The "TEST" hooks will test to ensure the shadow job hook runs from condor_shadow
+# The "CHECK" hooks will test that the changes the hook makes to the classad shows up on
+#   the starter but not the schedd
 #
 @standup
 def condor(test_dir, write_job_hook_scripts):
@@ -133,6 +128,7 @@ def condor(test_dir, write_job_hook_scripts):
         local_dir=test_dir / "condor",
         config={
             "STARTER_DEBUG": "D_FULLDEBUG",
+            "SCHEDD_ENVIRONMENT" : "SPECIAL_MSG='This message is brought to you by the shadow!'",
             "HOLD_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_hold_prepare.sh",
             "IDLE_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_idle_prepare.sh",
             "TEST_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_test_prepare.sh",
@@ -227,7 +223,6 @@ def idlejob(condor,submit_idlejob):
                 ]},
             timeout=60
             )
-    # Return the first (and only) job ad in the cluster for testing class to reference
     return submit_idlejob.query()[0]
 
 # get the shadow log to ensure errors are recorded there
@@ -261,25 +256,27 @@ class TestShadowHook:
     # Test to ensure jobad changes on the starter side but not the schedd
 
     # Check not in schedd by querying the schedd
-    def testNotInSchedd(self, checkjob_schedd):
+    def test_not_in_schedd(self, checkjob_schedd):
         assert 'Really bad, going on hold' not in checkjob_schedd
 
     # Use hooks to check the status message changed in starter
-    def testInStarter(self, checkjob_starter):
+    def test_in_starter(self, checkjob_starter):
         with open('job_ad.out') as f:
             log = f.read()
             assert 'Really bad, going on hold' in log
 
     # Check to see that the shadow hook spawns from the shadow and runs before a starter hook
-    def test_shadowbeforestarter(self, testjob):
-        with open('test.out') as f:
+    # FIX:
+    # shadow environment variable, if script run into file (daemonName_env) custom set env variable. Edit script
+    # to not run ps, but do echo $env_var name >> filename. Double check with starter hook that looks and does not find it
+    def test_from_shadow(self, testjob):
+        with open('shadow.out') as f:
             log = f.read()
-            assert 'shadows!' in log
-            assert """
-     \_ condor_shadow
-         \_ /bin/bash /build/src/condor_tests/test_shadow_hook_ctest/test_shadow_hook/TestShadowHook/hook_shadow_test_prepare.sh
-            """ in log
-            assert 'starter!' in log
+            #assert 'shadows!' in log
+            assert "This message is brought to you by the shadow!" in log
+        with open('starter.out') as f:
+            log = f.read()
+            assert "This message is brought to you by the shadow!" not in log
 
     # Testing of status messages, see job classad changed:
     def test_hold_reason(self, heldjob):
@@ -317,3 +314,4 @@ class TestShadowHook:
                 break
         assert found_messages["held"] == True
         assert found_messages["idle"] == True
+
