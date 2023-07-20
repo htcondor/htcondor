@@ -28,12 +28,12 @@
 
 #include "condor_common.h"
 #include "condor_debug.h"
+#include "condor_io.h"
 #include "condor_config.h"
 
 #include "condor_daemon_core.h"
 #include "subsystem_info.h"
 
-#include "condor_io.h"
 #include "condor_uid.h"
 #include "string_list.h"
 #include "directory.h"
@@ -527,17 +527,6 @@ check_spool_dir()
 			good_file( Spool, f );
 			continue;
 		}
-            // see if it's a rotated history file.
-        if (   strlen(f) >= history_length
-            && strncmp(f, history, history_length) == 0) {
-            good_file( Spool, f );
-            continue;
-        }
-
-			// if startd_history is defined, so if it's one of those
-		if ( startd_history_length > 0 &&
-			strlen(f) >= startd_history_length &&
-			strncmp(f, startd_history, startd_history_length) == 0) {
 
 		//Check to see if file is a history
 		bool isValidHistory = false;
