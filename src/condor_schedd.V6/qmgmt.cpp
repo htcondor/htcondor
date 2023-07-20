@@ -3921,6 +3921,8 @@ NewCluster(CondorError* errstack)
 						errno = EACCES;
 						return -1;
 					}
+					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
+					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
 				}
 			} else if ( ! urec->IsEnabled()) {
 				// We only check to see if the User is disabled if we are not creating it automatically with the submit
@@ -3939,8 +3941,6 @@ NewCluster(CondorError* errstack)
 				return NEWJOB_ERR_DISABLED_USER;
 			}
 			ASSERT(urec);
-			// TODO: attach urec to Q_SOCK so we can use it for permission and various limit checks?
-			//Q_SOCK->setEffectiveOwner(urec, false);
 		}
 	}
 #endif

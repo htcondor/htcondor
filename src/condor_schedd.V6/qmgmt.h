@@ -61,6 +61,8 @@ class QmgmtPeer {
 		void setWriteAuth(bool value) { write_ok = value; }
 	#ifdef USE_JOB_QUEUE_USERREC
 		bool setEffectiveOwner(const class JobQueueUserRec * urec, bool not_super_effective);
+		// used during submit when a UserRec is created as a side effect of submit
+		void attachNewUserRec(const class JobQueueUserRec * urec) { jquser = urec; }
 	#else
 		bool setEffectiveOwner(char const *o);
 	#endif
