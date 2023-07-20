@@ -259,12 +259,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
-	   	debug_printf( DEBUG_QUIET,
-					"Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
 		_submitDagDeepOpts.suppress_notification);
@@ -285,23 +279,6 @@ Dagman::Config()
 			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
 			CheckEvents::ALLOW_DOUBLE_TERMINATE |
 			CheckEvents::ALLOW_DUPLICATE_EVENTS;
-
-		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
-		// we also allow extra runs.
-		// Note: this parameter is probably only used by CDF, and only
-		// really needed until they update all their systems to 6.7.3
-		// or later (not 6.7.3 pre-release), which fixes the "double-run"
-		// bug.
-	bool allowExtraRuns = param_boolean(
-			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
-
-	if ( allowExtraRuns ) {
-		allow_events |= CheckEvents::ALLOW_RUN_AFTER_TERM;
-		debug_printf( DEBUG_NORMAL, "Warning: "
-				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
-				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
 
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 		// all of the previous stuff.
@@ -437,12 +414,6 @@ Dagman::Config()
 				pendingReportInterval );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
-
-	if ( param_boolean( "DAGMAN_OLD_RESCUE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
-	}
 
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
