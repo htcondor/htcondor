@@ -1784,8 +1784,8 @@ int ResMgr::claims_for_this_user(const char * user)
 	int num_matches = 0;
 
 	for (Resource * res : slots) {
-		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
-			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+		if (res && res->r_cur && res->r_cur->client() && !res->r_cur->client()->c_user.empty()) {
+			if (MATCH == strcmp(res->r_cur->client()->c_user.c_str(), user)) {
 				num_matches += 1;
 			}
 		}
