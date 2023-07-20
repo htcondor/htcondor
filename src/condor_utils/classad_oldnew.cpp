@@ -580,7 +580,7 @@ static int _putClassAdTrailingInfo(Stream *sock, const classad::ClassAd& /* ad *
 
         static const char fmt[] = ATTR_SERVER_TIME " = %ld";
         char buf[sizeof(fmt) + 12]; //+12 for time value
-        sprintf(buf, fmt, (long)time(NULL));
+        snprintf(buf, sizeof(buf), fmt, (long)time(NULL));
         if (!sock->put(buf)) {
             return false;
         }

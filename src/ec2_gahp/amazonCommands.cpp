@@ -154,7 +154,7 @@ class Throttle {
                 delay.tv_nsec = when.tv_nsec - delay.tv_nsec;
                 if ( delay.tv_nsec < 0 ) {
                     delay.tv_sec -= 1;
-                    delay.tv_nsec += 1000000000;
+                    delay.tv_nsec += 1'000'000'000;
                 }
                 if ( delay.tv_sec < 0 ) {
                     return;
@@ -183,7 +183,7 @@ class Throttle {
 
         static long difference( const struct timespec * s, const struct timespec * t ) {
             long secondsDiff = t->tv_sec - s->tv_sec;
-            long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500000)/1000000;
+            long millisDiff = ((t->tv_nsec - s->tv_nsec) + 500'000)/1'000'000;
 			// If secondsDiff is too large (as when, for instance, the
 			// the liveline is 0 because the limit has never been exceeded
 			// and the deadline based on the monotonic clock of a mchine
@@ -210,14 +210,14 @@ class Throttle {
             unsigned milliseconds = (1 << count) * 100;
    			if( rateLimit > 0 && milliseconds < (unsigned)rateLimit ) { milliseconds = rateLimit; }
             unsigned seconds = milliseconds / 1000;
-            unsigned nanoseconds = (milliseconds % 1000) * 1000000;
+            unsigned nanoseconds = (milliseconds % 1000) * 1'000'000;
 
             dprintf( D_PERF_TRACE | D_VERBOSE,
             	"limitExceeded(): setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            if( when.tv_nsec > 1000000000 ) {
-                when.tv_nsec -= 1000000000;
+            if( when.tv_nsec > 1'000'000'000 ) {
+                when.tv_nsec -= 1'000'000'000;
                 when.tv_sec += 1;
             }
             dprintf( D_PERF_TRACE | D_VERBOSE,
@@ -251,14 +251,14 @@ class Throttle {
             now( & when );
             unsigned milliseconds = rateLimit;
             unsigned seconds = milliseconds / 1000;
-            unsigned nanoseconds = (milliseconds % 1000) * 1000000;
+            unsigned nanoseconds = (milliseconds % 1000) * 1'000'000;
             dprintf( D_PERF_TRACE | D_VERBOSE,
             	"rate limiting: setting when to %u milliseconds from now (%ld.%09ld)\n", milliseconds, when.tv_sec, when.tv_nsec );
 
             when.tv_sec += seconds;
             when.tv_nsec += nanoseconds;
-            if( when.tv_nsec > 1000000000 ) {
-                when.tv_nsec -= 1000000000;
+            if( when.tv_nsec > 1'000'000'000 ) {
+                when.tv_nsec -= 1'000'000'000;
                 when.tv_sec += 1;
             }
             dprintf( D_PERF_TRACE | D_VERBOSE,
@@ -315,7 +315,7 @@ bool parseURL(	const std::string & url,
     bool patternOK = r.compile( "([^:]+)://(([^/]+)(/.*)?)", &errCode, &errOffset);
     ASSERT( patternOK );
 	std::vector<std::string> groups;
-    if(! r.match_str( url, & groups )) { 
+    if(! r.match( url, & groups )) {
 		return false;
 	}
 
@@ -4132,7 +4132,7 @@ bool AmazonCreateStack::SendRequest() {
 		bool patternOK = r.compile( "<StackId>(.*)</StackId>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		std::vector<std::string> groups;
-		if( r.match_str( resultString, & groups ) ) {
+		if( r.match( resultString, & groups ) ) {
 			this->stackID = groups[1];
 		}
 	}
@@ -4212,7 +4212,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		bool patternOK = r.compile( "<StackStatus>(.*)</StackStatus>", &errCode, &errOffset);
 		ASSERT( patternOK );
 		std::vector<std::string> statusGroups;
-		if( r.match_str( resultString, & statusGroups ) ) {
+		if( r.match( resultString, & statusGroups ) ) {
 			this->stackStatus = statusGroups[1];
 		}
 
@@ -4220,7 +4220,7 @@ bool AmazonDescribeStacks::SendRequest() {
 		patternOK = s.compile( "<Outputs>(.*)</Outputs>", &errCode, &errOffset, Regex::multiline | Regex::dotall );
 		ASSERT( patternOK );
 		std::vector<std::string> outputGroups;
-		if( s.match_str( resultString, & outputGroups ) ) {
+		if( s.match( resultString, & outputGroups ) ) {
 			dprintf( D_ALWAYS, "Found output string '%s'.\n", outputGroups[1].c_str() );
 			std::string membersRemaining = outputGroups[1];
 
@@ -4229,7 +4229,7 @@ bool AmazonDescribeStacks::SendRequest() {
 			ASSERT( patternOK );
 
 			std::vector<std::string> memberGroups;
-			while( t.match_str( membersRemaining, & memberGroups ) ) {
+			while( t.match( membersRemaining, & memberGroups ) ) {
 				std::string member = memberGroups[1];
 				dprintf( D_ALWAYS, "Found member '%s'.\n", member.c_str() );
 
@@ -4239,7 +4239,7 @@ bool AmazonDescribeStacks::SendRequest() {
 
 				std::string outputKey;
 				std::vector<std::string> keyGroups;
-				if( u.match_str( member, & keyGroups ) ) {
+				if( u.match( member, & keyGroups ) ) {
 					outputKey = keyGroups[1];
 				}
 
@@ -4249,7 +4249,7 @@ bool AmazonDescribeStacks::SendRequest() {
 
 				std::string outputValue;
 				std::vector<std::string> valueGroups;
-				if( v.match_str( member, & valueGroups ) ) {
+				if( v.match( member, & valueGroups ) ) {
 					outputValue = valueGroups[1];
 				}
 

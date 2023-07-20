@@ -21,7 +21,7 @@
 #include "condor_common.h"
 #include "condor_debug.h"
 #include "read_multiple_logs.h"
-#include "condor_string.h" // for strnewp()
+#include "condor_string.h"
 #include "tmp_dir.h"
 #include "stat_wrapper.h"
 #include "condor_getcwd.h"
@@ -37,8 +37,6 @@
 #else
 #  define D_LOG_FILES D_FULLDEBUG
 #endif
-
-using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -266,22 +264,6 @@ MultiLogFiles::FileReader::~FileReader()
 	Close();
 }
 
-MyString
-MultiLogFiles::FileReader::Open( const MyString &filename )
-{
-	MyString result( "" );
-
-	_fp = safe_fopen_wrapper_follow( filename.c_str(), "r" );
-	if ( !_fp ) {
-		result.formatstr( "MultiLogFiles::FileReader::Open(): "
-				"safe_fopen_wrapper_follow(%s) failed with errno %d (%s)\n",
-				filename.c_str(), errno, strerror(errno) );
-		dprintf( D_ALWAYS, "%s", result.c_str() );
-	}
-
-	return result;
-}
-
 std::string
 MultiLogFiles::FileReader::Open( const std::string &filename )
 {
@@ -296,19 +278,6 @@ MultiLogFiles::FileReader::Open( const std::string &filename )
 	}
 
 	return result;
-}
-
-bool
-MultiLogFiles::FileReader::NextLogicalLine( MyString &line )
-{
-	int lines_read = 0;
-	char *tmpLine = getline_trim( _fp, lines_read );
-	if ( tmpLine != NULL ) {
-		line = tmpLine;
-		return true;
-	}
-
-	return false; // EOF
 }
 
 bool
@@ -335,13 +304,13 @@ MultiLogFiles::FileReader::Close()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MyString
-MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
+std::string
+MultiLogFiles::fileNameToLogicalLines(const std::string &filename,
 			StringList &logicalLines)
 {
-	MyString	result("");
+	std::string result;
 
-	MyString fileContents = readFileToString(filename);
+	std::string fileContents = readFileToString(filename);
 	if (fileContents == "") {
 		result = "Unable to read file: " + filename;
 		dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
@@ -354,7 +323,7 @@ MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
 	physicalLines.rewind();
 
 		// Combine lines with continuation characters.
-	MyString	combineResult = CombineLines(physicalLines, '\\',
+	std::string combineResult = CombineLines(physicalLines, '\\',
 				filename, logicalLines);
 	if ( combineResult != "" ) {
 		result = combineResult;
@@ -367,8 +336,8 @@ MultiLogFiles::fileNameToLogicalLines(const MyString &filename,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MyString
-MultiLogFiles::readFileToString(const MyString &strFilename)
+std::string
+MultiLogFiles::readFileToString(const std::string &strFilename)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::readFileToString(%s)\n",
 				strFilename.c_str() );
@@ -396,8 +365,8 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 		fclose(pFile);
 		return "";
 	}
-	MyString strToReturn;
-	strToReturn.reserve_at_least(iLength);
+	std::string strToReturn;
+	strToReturn.reserve(iLength);
 
 	if (fseek(pFile, 0, SEEK_SET) < 0) {
 		dprintf( D_ALWAYS, "MultiLogFiles::readFileToString: "
@@ -439,9 +408,9 @@ MultiLogFiles::readFileToString(const MyString &strFilename)
 ///////////////////////////////////////////////////////////////////////////////
 // Note: this method should get speeded up (see Gnats PR 846).
 
-MyString
-MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
-		const MyString &directory, const char *keyword)
+std::string
+MultiLogFiles::loadValueFromSubFile(const std::string &strSubFilename,
+		const std::string &directory, const char *keyword)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::loadValueFromSubFile(%s, %s, %s)\n",
 				strSubFilename.c_str(), directory.c_str(), keyword );
@@ -460,14 +429,14 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 		return "";
 	}
 
-	MyString	value("");
+	std::string value;
 
 		// Now look through the submit file logical lines to find the
 		// value corresponding to the keyword.
 	const char *logicalLine;
 	while( (logicalLine = logicalLines.next()) != NULL ) {
-		MyString	submitLine(logicalLine);
-		MyString	tmpValue = getParamFromSubmitLine(submitLine, keyword);
+		std::string submitLine(logicalLine);
+		std::string tmpValue = getParamFromSubmitLine(submitLine, keyword);
 		if ( tmpValue != "" ) {
 			value = tmpValue;
 		}
@@ -499,28 +468,6 @@ MultiLogFiles::loadValueFromSubFile(const MyString &strSubFilename,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-MultiLogFiles::makePathAbsolute(MyString &filename, CondorError &errstack)
-{
-	if ( !fullpath(filename.c_str()) ) {
-			// I'd like to use realpath() here, but I'm not sure
-			// if that's portable across all platforms.  wenger 2009-01-09.
-		MyString	currentDir;
-		if ( !condor_getcwd(currentDir) ) {
-			errstack.pushf( "MultiLogFiles", UTIL_ERR_GET_CWD,
-						"ERROR: condor_getcwd() failed with errno %d (%s) at %s:%d",
-						errno, strerror(errno), __FILE__, __LINE__);
-			return false;
-		}
-
-		filename = currentDir + DIR_DELIM_STRING + filename;
-	}
-
-	return true;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-bool
 MultiLogFiles::makePathAbsolute(std::string &filename, CondorError &errstack)
 {
 	if ( !fullpath(filename.c_str()) ) {
@@ -542,25 +489,21 @@ MultiLogFiles::makePathAbsolute(std::string &filename, CondorError &errstack)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MyString
-MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
+std::string
+MultiLogFiles::getParamFromSubmitLine(const std::string &submitLineIn,
 		const char *paramName)
 {
-	MyString	paramValue("");
+	std::string paramValue;
 
 	const char *DELIM = "=";
 
-	MyStringTokener submittok;
-	submittok.Tokenize(submitLineIn.c_str());
-	const char *	rawToken = submittok.GetNextToken(DELIM, true);
-	if ( rawToken ) {
-		MyString	token(rawToken);
-		token.trim();
-		if ( !strcasecmp(token.c_str(), paramName) ) {
-			rawToken = submittok.GetNextToken(DELIM, true);
-			if ( rawToken ) {
-				paramValue = rawToken;
-				paramValue.trim();
+	StringTokenIterator submittok(submitLineIn, DELIM, true);
+	const char *token = submittok.next();
+	if ( token ) {
+		if ( !strcasecmp(token, paramName) ) {
+			token = submittok.next();
+			if ( token ) {
+				paramValue = token;
 			}
 		}
 	}
@@ -570,9 +513,9 @@ MultiLogFiles::getParamFromSubmitLine(MyString &submitLineIn,
 
 ///////////////////////////////////////////////////////////////////////////////
 
-MyString
+std::string
 MultiLogFiles::CombineLines(StringList &listIn, char continuation,
-		const MyString &filename, StringList &listOut)
+		const std::string &filename, StringList &listOut)
 {
 	dprintf( D_FULLDEBUG, "MultiLogFiles::CombineLines(%s, %c)\n",
 				filename.c_str(), continuation );
@@ -585,19 +528,19 @@ MultiLogFiles::CombineLines(StringList &listIn, char continuation,
 
 			// Logical line is physical lines combined as needed by
 			// continuation characters (backslash).
-		MyString	logicalLine(physicalLine);
+		std::string logicalLine(physicalLine);
 
 		while ( logicalLine[logicalLine.length()-1] == continuation ) {
 
 				// Remove the continuation character.
-			logicalLine.truncate(logicalLine.length()-1);
+			logicalLine.erase(logicalLine.length()-1);
 
 				// Append the next physical line.
 			physicalLine = listIn.next();
 			if ( physicalLine ) {
 				logicalLine += physicalLine;
 			} else {
-				MyString result = MyString("Improper file syntax: ") +
+				std::string result = std::string("Improper file syntax: ") +
 							"continuation character with no trailing line! (" +
 							logicalLine + ") in file " + filename;
 				dprintf(D_ALWAYS, "MultiLogFiles: %s\n", result.c_str());
@@ -656,7 +599,7 @@ MultiLogFiles::logFileNFSError(const char *logFilename, bool nfsIsError)
 // links to log files; but there are no inodes on Windows, so we're
 // doing what we can.
 bool
-GetFileID( const MyString &filename, MyString &fileID,
+GetFileID( const std::string &filename, std::string &fileID,
 			CondorError &errstack )
 {
 
@@ -677,11 +620,11 @@ GetFileID( const MyString &filename, MyString &fileID,
 	}
 
 #ifdef WIN32
-	char *tmpRealPath = realpath( filename.Value(), NULL );
+	char *tmpRealPath = realpath( filename.c_str(), NULL );
 	if ( !tmpRealPath ) {
 		errstack.pushf( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error (%d, %s) getting real path for specified path %s",
-					errno, strerror( errno ), filename.Value() );
+					errno, strerror( errno ), filename.c_str() );
 		return false;
 	}
 
@@ -695,7 +638,7 @@ GetFileID( const MyString &filename, MyString &fileID,
 					filename.c_str() );
 		return false;
 	}
-	fileID.formatstr( "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
+	formatstr( fileID, "%llu:%llu", (unsigned long long)swrap.GetBuf()->st_dev,
 				(unsigned long long)swrap.GetBuf()->st_ino );
 #endif
 
@@ -705,14 +648,14 @@ GetFileID( const MyString &filename, MyString &fileID,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::monitorLogFile( const MyString & l,
+ReadMultipleUserLogs::monitorLogFile( const std::string & l,
 			bool truncateIfFirst, CondorError &errstack )
 {
-	MyString logfile = l;
+	std::string logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::monitorLogFile(%s, %d)\n",
 				logfile.c_str(), truncateIfFirst );
 
-	MyString fileID;
+	std::string fileID;
 	if ( !GetFileID( logfile, fileID, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting file ID in monitorLogFile()" );
@@ -798,14 +741,14 @@ ReadMultipleUserLogs::monitorLogFile( const MyString & l,
 ///////////////////////////////////////////////////////////////////////////////
 
 bool
-ReadMultipleUserLogs::unmonitorLogFile( const MyString & l,
+ReadMultipleUserLogs::unmonitorLogFile( const std::string & l,
 			CondorError &errstack )
 {
-	MyString logfile = l;
+	std::string logfile = l;
 	dprintf( D_LOG_FILES, "ReadMultipleUserLogs::unmonitorLogFile(%s)\n",
 				logfile.c_str() );
 
-	MyString fileID;
+	std::string fileID;
 	if ( !GetFileID( logfile, fileID, errstack ) ) {
 		errstack.push( "ReadMultipleUserLogs", UTIL_ERR_LOG_FILE,
 					"Error getting file ID in unmonitorLogFile()" );
@@ -914,10 +857,10 @@ ReadMultipleUserLogs::printActiveLogMonitors( FILE *stream ) const
 
 void
 ReadMultipleUserLogs::printLogMonitors( FILE *stream,
-			HashTable<MyString, LogFileMonitor *> logTable ) const
+			HashTable<std::string, LogFileMonitor *> logTable ) const
 {
 	logTable.startIterations();
-	MyString fileID;
+	std::string fileID;
 	LogFileMonitor *	monitor;
 	while ( logTable.iterate( fileID,  monitor ) ) {
 		if ( stream != NULL ) {

@@ -23,10 +23,6 @@ static std::vector<std::string> ListPoolLVs(const std::string &pool_name, Condor
 VolumeManager::VolumeManager()
     : m_encrypt(param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false))
 {
-    if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-        dprintf(D_FULLDEBUG, "Not enforcing disk limits in the startd.\n");
-        return;
-    }
     std::string pool_name; std::string volume_group_name;
     if (!param(pool_name, "THINPOOL_NAME") || !param(volume_group_name, "THINPOOL_VOLUME_GROUP_NAME")) {
         param(m_loopback_filename, "THINPOOL_BACKING_FILE", "$(SPOOL)/startd_disk.img");
@@ -100,8 +96,8 @@ VolumeManager::~VolumeManager()
 
 VolumeManager::Handle::Handle(const std::string &mountpoint, const std::string &volume, const std::string &pool, const std::string &vg_name, uint64_t size_kb, CondorError &err)
 {
-    auto extra_volume_size_mb = param_integer("THINPOOL_EXTRA_SIZE_MB", 0);
-    size_kb += 1024*extra_volume_size_mb;
+    int extra_volume_size_mb = param_integer("THINPOOL_EXTRA_SIZE_MB", 0);
+    size_kb += 1024LL * extra_volume_size_mb;
 
     if (!VolumeManager::CreateThinLV(size_kb, volume, pool, vg_name, err)) {
         return;
@@ -171,6 +167,9 @@ VolumeManager::MountFilesystem(const std::string &device_path, const std::string
     args.AppendArg("barrier=0,noatime,discard,nodev,nosuid,");
     args.AppendArg(device_path);
     args.AppendArg(mountpoint);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> mount_output(
         run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -210,6 +209,9 @@ VolumeManager::CreateFilesystem(const std::string &label, const std::string &dev
     args.AppendArg("-L");
     args.AppendArg(label);
     args.AppendArg(devname);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> mke2fs_output(
         run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -246,6 +248,9 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
         args.AppendArg("--list");
         args.AppendArg("--output");
         args.AppendArg("name,back-file");
+        std::string cmdDisplay;
+        args.GetArgsStringForLogging(cmdDisplay);
+        dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
         int exit_status;
         std::unique_ptr<char, decltype(free)*> losetup_output(
             run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -315,6 +320,9 @@ VolumeManager::CreateLoopback(const std::string &filename, uint64_t size_kb, Con
         args.AppendArg("--find");
         args.AppendArg("--show");
         args.AppendArg(filename.c_str());
+        std::string cmdDisplay;
+        args.GetArgsStringForLogging(cmdDisplay);
+        dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
         int exit_status;
         std::unique_ptr<char, decltype(free)*> losetup_output(
             run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -347,6 +355,9 @@ VolumeManager::CreatePV(const std::string &devname, CondorError &err)
     args.AppendArg("pvcreate");
     args.AppendArg(devname);
     int exit_status;
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     std::unique_ptr<char, decltype(free)*> pvcreate_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
                         args, RUN_COMMAND_OPT_WANT_STDERR, nullptr, &exit_status),
@@ -369,6 +380,9 @@ VolumeManager::CreateVG(const std::string &vg_name, const std::string &devname, 
     args.AppendArg("vgcreate");
     args.AppendArg(vg_name);
     args.AppendArg(devname);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> vgcreate_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -397,6 +411,9 @@ VolumeManager::CreateThinPool(const std::string &lv_name, const std::string &vg_
     args.AppendArg(vg_name);
     args.AppendArg("-n");
     args.AppendArg(lv_name);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> lvcreate_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -433,6 +450,9 @@ VolumeManager::CreateThinLV(uint64_t size_kb, const std::string &lv_name_input, 
     args.AppendArg(vg_name + "/" + pool_name);
     args.AppendArg("-n");
     args.AppendArg(lv_name);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> lvcreate_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -491,6 +511,9 @@ VolumeManager::EncryptThinPool(const std::string &lv_name, const std::string &vg
     args.AppendArg(crypto_key);
     args.AppendArg("/dev/mapper/" + vg_name + "-" + lv_name);
     args.AppendArg(vg_name + "-" + lv_name + "-enc");
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> cryptsetup_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -546,6 +569,9 @@ VolumeManager::RemoveEncryptedThinPool(const std::string &lv_name, const std::st
     args.AppendArg("cryptsetup");
     args.AppendArg("close");
     args.AppendArg(vg_name + "-" + lv_name);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> cryptsetup_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -564,6 +590,32 @@ bool
 VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_name, CondorError &err)
 {
     TemporaryPrivSentry sentry(PRIV_ROOT);
+
+	// If a crash or restart left the volume mounted, unmount it now
+	// Format of /proc/mounts is
+	// device-name mount-point fstype other_stuff
+	// Find the matching device-name field, so we can umount the mount-point
+	FILE *f = fopen("/proc/self/mounts", "r");	
+	if (f == nullptr) {
+		dprintf(D_ALWAYS, "VolumeManager::RemoveLV error opening /proc/self/maps: %s\n", strerror(errno));
+	} else {
+		char dev[PATH_MAX];
+		char mnt[PATH_MAX];
+		char dummy[PATH_MAX];
+
+		std::string per_slot_device = std::string("/dev/mapper/") + vg_name + '-' + lv_name_input;
+		while (fscanf(f, "%s %s %s\n", dev, mnt, dummy) > 0) {
+			if (strcmp(dev, per_slot_device.c_str()) == 0) {
+				dprintf(D_ALWAYS, "VolumeManager::RemoveLV found leftover mount from device %s on path %s, umounting\n", 
+						dev, mnt);
+				int r = umount(mnt);
+				if (r != 0) {
+					dprintf(D_ALWAYS, "VolumeManager::RemoveLV error umounting %s %s\n", mnt, strerror(errno));
+				}
+			}
+		}
+		fclose(f);
+	}
 
     std::string lv_name = lv_name_input;
         // We know we are removing an encrypted logical volume; first invoke
@@ -587,6 +639,9 @@ VolumeManager::RemoveLV(const std::string &lv_name_input, const std::string &vg_
     args.AppendArg("lvremove");
     args.AppendArg(vg_name + "/" + lv_name);
     args.AppendArg("--yes");
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> lvremove_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -610,6 +665,9 @@ VolumeManager::RemoveVG(const std::string &vg_name, CondorError &err)
     args.AppendArg("vgremove");
     args.AppendArg(vg_name);
     args.AppendArg("--yes");
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> vgremove_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -633,6 +691,9 @@ VolumeManager::RemovePV(const std::string &pv_name, CondorError &err)
     args.AppendArg("pvremove");
     args.AppendArg(pv_name);
     args.AppendArg("--yes");
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> pvremove_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -656,6 +717,9 @@ VolumeManager::RemoveLoopDev(const std::string &loopdev_name, CondorError &err)
     args.AppendArg("losetup");
     args.AppendArg("-d");
     args.AppendArg(loopdev_name);
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
     int exit_status;
     std::unique_ptr<char, decltype(free)*> losetup_output(
                 run_command(param_integer("VOLUME_MANAGER_TIMEOUT", VOLUME_MANAGER_TIMEOUT),
@@ -682,6 +746,10 @@ getLVSReport(CondorError &err, rapidjson::Value &result, rapidjson::Document::Al
     args.AppendArg("json");
     args.AppendArg("--units");
     args.AppendArg("b");
+
+    std::string cmdDisplay;
+    args.GetArgsStringForLogging(cmdDisplay);
+    dprintf(D_FULLDEBUG,"Running: %s\n",cmdDisplay.c_str());
 
     int exit_status;
     std::unique_ptr<char, decltype(free)*> losetup_output(

@@ -19,18 +19,9 @@
 
 #include "condor_common.h"
 #include "condor_getcwd.h"
-#include "MyString.h"
 #include "condor_debug.h"
 
-bool condor_getcwd(std::string &path)
-{
-	MyString mystr;
-	bool rv = condor_getcwd(mystr);
-	path = mystr.c_str();
-	return rv;
-}
-
-bool condor_getcwd(MyString &path) {
+bool condor_getcwd(std::string &path) {
 	size_t buflen = 0;
 	char *buf = NULL;
 

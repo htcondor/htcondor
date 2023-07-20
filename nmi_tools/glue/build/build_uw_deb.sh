@@ -30,9 +30,8 @@ condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
-# Do everything in a temp dir that will go away on errors or end of script
-tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
-trap 'rm -rf "$tmpd"' EXIT
+# Do everything in a temp dir that will go away at end of script
+tmpd=$(mktemp -d "$PWD/build-XXXXXX")
 
 cd "$tmpd"
 
@@ -50,35 +49,47 @@ export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
 # if running in a condor slot, set parallelism to slot size
 export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
 
+# Extract prerelease value from top level CMake file
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)
+PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
+PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
+
 # Distribution should be one of experimental, unstable, testing, stable, oldstable, oldoldstable
 # unstable -> daily repo
 # testing -> rc repo
 # stable -> release repo
 
-dist='unstable'
-#dist='testing'
-#dist='stable'
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    dist='stable'
+elif [ "$PRE_RELEASE" = '"RC"' ]; then
+    dist='testing'
+else
+    dist='unstable'
+fi
+
 echo "Distribution is $dist"
 
-# Nightly build changelog
-dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Nightly build"
-
-# Final release changelog
-#dch --release --distribution $dist ignored
-
-if grep -qi bullseye /etc/os-release; then
-    true
-elif grep -qi bookworm /etc/os-release; then
-    dch --distribution $dist --nmu 'place holder entry'
-elif grep -qi bionic /etc/os-release; then
-    true
-elif grep -qi focal /etc/os-release; then
-    dch --distribution $dist --nmu 'place holder entry'
-elif grep -qi jammy /etc/os-release; then
-    dch --distribution $dist --nmu 'place holder entry'
-    dch --distribution $dist --nmu 'place holder entry'
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    # Changelog entry is present for final release build
+    dch --release --distribution $dist ignored
 else
-    echo ERROR: Unknown codename
+    # Generate a changelog entry
+    dch --distribution $dist --newversion "$condor_version-0.$condor_build_id" "Automated build"
+fi
+
+. /etc/os-release
+if [ "$VERSION_CODENAME" = 'bullseye' ]; then
+    true
+elif [ "$VERSION_CODENAME" = 'bookworm' ]; then
+    dch --distribution $dist --nmu 'place holder entry'
+elif [ "$VERSION_CODENAME" = 'focal' ]; then
+    true
+elif [ "$VERSION_CODENAME" = 'jammy' ]; then
+    dch --distribution $dist --nmu 'place holder entry'
+elif [ "$VERSION_CODENAME" = 'chimaera' ]; then
+    true
+else
+    echo ERROR: Unknown codename "${VERSION_CODENAME}"
     exit 1
 fi
 
@@ -88,5 +99,5 @@ cd ..
 
 mv ./*.dsc ./*.debian.tar.xz ./*.orig.tar.gz "$dest_dir"
 mv ./*.changes ./*.deb "$dest_dir"
+rm -rf "$tmpd"
 ls -lh "$dest_dir"
-

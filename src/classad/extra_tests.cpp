@@ -31,7 +31,10 @@
 #include <iostream>
 #include <ctype.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 using namespace classad;
 
 // Note that we are careful to leave no space between the first and 

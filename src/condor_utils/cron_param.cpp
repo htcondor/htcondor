@@ -68,10 +68,10 @@ CronParamBase::Lookup( const char *item ) const
 	return param_buf;
 }
 
-// Read a MyString parameter
+// Read a string parameter
 bool
 CronParamBase::Lookup( const char *item,
-					   MyString   &value ) const
+                       std::string &value ) const
 {
 	char *s = Lookup( item );
 	if ( NULL == s ) {
@@ -85,7 +85,7 @@ CronParamBase::Lookup( const char *item,
 	}
 }
 
-// Read a MyString parameter
+// Read a string parameter
 bool
 CronParamBase::Lookup( const char *item,
 					   bool       &value ) const

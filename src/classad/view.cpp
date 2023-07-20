@@ -23,7 +23,10 @@
 #include "classad/collection.h"
 #include "classad/collectionBase.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 // ----------- <implementation of ViewMember class> -----------------
 
@@ -447,7 +450,7 @@ SetPartitionExprs( ClassAdCollection *coll, ExprList *el )
 		CondorErrMsg = "invalid 'PartitionExprs'; failed to partition";
 		return( false );
 	}
-	if( !( ad->Insert( ATTR_PARTITION_EXPRS, (ExprTree* &)el ) ) ) {
+	if( !( ad->Insert( ATTR_PARTITION_EXPRS, el))) {
 		CondorErrMsg += "failed to set partition expressions on view";
 		return( false );
 	}

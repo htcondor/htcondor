@@ -142,8 +142,8 @@ calc_idle_time_cpp( time_t & m_idle, time_t & m_console_idle )
 	}
 
 	if( IsDebugVerbose( D_IDLE ) ) {
-		dprintf( D_IDLE, "Idle Time: user= %d , console= %d seconds\n", 
-				 (int)m_idle, (int)m_console_idle );
+		dprintf( D_IDLE, "Idle Time: user= %lld , console= %lld seconds\n",
+				 (long long)m_idle, (long long)m_console_idle );
 	}
 	return;
 }
@@ -386,7 +386,7 @@ dev_idle_time( const char *path, time_t now )
 	}
 
 	if( IsDebugVerbose( D_IDLE ) ) {
-        dprintf( D_IDLE, "%s: %d secs\n", pathname, (int)answer );
+        dprintf( D_IDLE, "%s: %lld secs\n", pathname, (long long)answer );
 	}
 
 	return answer;
@@ -424,7 +424,7 @@ calc_idle_time_cpp(time_t * user_idle, time_t * console_idle)
     
     *user_idle = *console_idle = -1;
     
-    if (IOMasterPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
+    if (IOMainPort(bootstrap_port, &masterPort) != kIOReturnSuccess) {
         dprintf(D_ALWAYS, "IDLE: Couldn't create a master I/O Kit port.\n");
     } else {
         hidMatchDictionary = IOServiceMatching("IOHIDSystem");
@@ -498,7 +498,7 @@ extract_idle_time(
 			return idle_time;
 		}
 		// Convert from nanoseconds to seconds
-		idle_time = nanoseconds / 1000000000;
+		idle_time = nanoseconds / 1'000'000'000;
     }
 	// CFRelease seems to be hip with taking a null object. This seems
 	// strange to me, but hey, at least I thought about it

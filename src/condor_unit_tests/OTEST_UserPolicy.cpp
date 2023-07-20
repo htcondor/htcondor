@@ -36,8 +36,6 @@
 	classad_string.clear(); \
 	delete ad
 
-using namespace std;
-
 using namespace classad;
 
 static bool test_init_null(void);
@@ -141,6 +139,7 @@ static bool test_hold_macro_firing_expression_value(void);
 static bool test_hold_macro_firing_reason(void);
 static bool test_hold_macro_analyze_policy_bug(void);
 
+static bool test_invalid_cron(void);
 static bool test_hold_multi_macro_analyze_policy(void);
 static bool test_hold_multi_macro_firing_expression(void);
 static bool test_hold_multi_macro_firing_expression_value(void);
@@ -154,7 +153,7 @@ static bool test_cron_minute(void);
 static ClassAdParser parser;
 static ClassAdUnParser unparser;
 static ClassAd* ad;
-static string classad_string;
+static std::string classad_string;
 
 //string constants used for initializing ClassAds
 static const char
@@ -310,6 +309,7 @@ bool OTEST_UserPolicy(void) {
 	driver.register_function(test_hold_multi_macro_firing_reason);
 	driver.register_function(test_hold_multi_macro_firing_custom_reason);
 	driver.register_function(test_cron_minute);
+	driver.register_function(test_invalid_cron);
 
 	return driver.do_all_functions();
 }
@@ -3074,7 +3074,7 @@ static bool test_cron_minute(void) {
 
 	std::string output_as_string;
 	for (int i : actual) {
-		output_as_string += to_string(i) + ',';
+		output_as_string += std::to_string(i) + ',';
 	}
 
 	emit_retval("%s", output_as_string.c_str());
@@ -3084,4 +3084,32 @@ static bool test_cron_minute(void) {
 	} else {
 		FAIL;
 	}
+}
+
+static bool test_invalid_cron(void) {
+
+	emit_test("Test that the CondorCron class handles invalid cron specification");
+	emit_input_header();
+
+	ClassAd jobWithCron;
+	jobWithCron.Assign(ATTR_CRON_MINUTES, "1/10");
+
+	CronTab::initRegexObject();
+
+	CronTab ct(&jobWithCron);
+
+	std::string reason;
+	if (!ct.needsCronTab(&jobWithCron)) {
+		reason = "CronTab::needsCronTab actually returned false, should be true";
+		FAIL;
+	}
+	if (!ct.isValid()) {
+		reason = "CronTab::isValid actually returned false, should be true";
+		PASS;
+	}
+
+	emit_output_expected_header();
+	emit_output_actual_header();
+
+	FAIL;
 }

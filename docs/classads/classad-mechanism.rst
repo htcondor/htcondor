@@ -634,34 +634,38 @@ Optional parameters are given within square brackets.
     :index:`sum()<single: sum(); ClassAd functions>`
 
 ``Number sum([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the sum of the values, 
+    The elements of l are evaluated, producing a list l of values. Undefined values
+    are removed. If the resulting l is composed only of numbers, the result is the sum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the 
-    list is empty, the result is 0. In other cases, the result is ``ERROR``.
+    list is empty, the result is 0. If the list has only Undefined values, the result
+    is ``UNDEFINED``. In other cases, the result is ``ERROR``.
 
     This function returns ``ERROR`` if greater than 1 argument is given.
     
     :index:`avg()<single: avg(); ClassAd functions>`
 
 ``Number avg([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the average of the values, 
-    as a Real. If the list is empty, the result is 0.  In other cases, 
-    the result is ERROR.
+    The elements of l are evaluated, producing a list l of values. Undefined values
+    are removed. If the resulting l is composed only of numbers, the result is the average of the values,
+    as a Real. If the list is empty, the result is 0.
+    If the list has only Undefined values, the result is ``UNDEFINED``.
+    In other cases,  the result is ERROR.
     
     :index:`min()<single: min(); ClassAd functions>`
 
 ``Number min([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the minimum of the values, 
+    The elements of l are evaluated, producing a list l of values.
+    Undefined values are removed.
+    If the resulting l is composed only of numbers, the result is the minimum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the list 
     is empty, the result is UNDEFINED. In other cases, the result is ERROR.
     
     :index:`max()<single: max(); ClassAd functions>`
 
 ``Number max([ List l ])``
-    The elements of l are evaluated, producing a list l of values. If l
-    is composed only of numbers, the result is the maximum of the values, 
+    The elements of l are evaluated, producing a list l of values.
+    Undefined values are removed.
+    If the resulting l is composed only of numbers, the result is the maximum of the values,
     as a Real if any value is Real, and as an Integer otherwise. If the list 
     is empty, the result is UNDEFINED. In other cases, the result is ERROR.
     
@@ -679,9 +683,9 @@ Optional parameters are given within square brackets.
     Returns the string which is the concatenation of all arguments after
     the first one. The first argument is the separator, and it is
     inserted between each of the other arguments during concatenation.
-    All arguments are converted to type ``String`` by function
-    ``string(Expr)`` before concatenation. When there are exactly two
-    arguments, If the second argument is a List, all members of the list
+    All arguments which are not undefined are converted to type ``String`` by function
+    ``string(Expr)`` before concatenation. Undefined arguments are skipped.
+    When there are exactly two arguments, If the second argument is a List, all members of the list
     are converted to strings and then joined using the separator. When
     there is only one argument, and the argument is a List, all members
     of the list are converted to strings and then concatenated.
@@ -1063,6 +1067,23 @@ string.
     returns ``FALSE`` if the lists do not contain any matching elements.
     Returns ``ERROR`` if either argument is not a string or if an
     incorrect number of arguments are given.
+
+    :index:`stringListSubsetMatch()<single: stringListSubsetMatch(); ClassAd functions>`
+
+``Boolean stringListSubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Returns ``TRUE`` if all item in the string ``list1`` are also in the string ``list2``, as
+    delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
+    ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
+    and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
+    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
+    ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
+    The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
+
+    :index:`stringListISubsetMatch()<single: stringListISubsetMatch(); ClassAd functions>`
+
+``Boolean stringListISubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Same as ``stringListSubsetMatch()``, but the sets are case-insensitive.
+
 
 The following three functions utilize regular expressions as defined and
 supported by the PCRE library. See

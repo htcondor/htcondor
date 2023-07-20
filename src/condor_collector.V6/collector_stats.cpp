@@ -23,7 +23,6 @@
 
 #include "condor_classad.h"
 #include "condor_attributes.h"
-#include "extArray.h"
 #include "internet.h"
 #include "collector_stats.h"
 #include "condor_config.h"
@@ -516,13 +515,13 @@ void UpdatesStats::SetWindowSize(int window)
 
 void UpdatesStats::Publish(ClassAd & ad, int flags) const
 {
-	ad.Assign("StatsLifetime", (int)StatsLifetime);
-	ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+	ad.Assign("StatsLifetime", StatsLifetime);
+	ad.Assign("StatsLastUpdateTime", StatsLastUpdateTime);
 	if (flags & IF_RECENTPUB) {
-		ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+		ad.Assign("RecentStatsLifetime", RecentStatsLifetime);
 		if (flags & IF_VERBOSEPUB) {
-			ad.Assign("RecentWindowMax", (int)RecentWindowMax);
-			ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+			ad.Assign("RecentWindowMax", RecentWindowMax);
+			ad.Assign("RecentStatsTickTime", RecentStatsTickTime);
 		}
 	}
 	Pool.Publish(ad, flags);

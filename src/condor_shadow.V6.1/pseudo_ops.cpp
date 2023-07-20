@@ -416,7 +416,7 @@ static void append_buffer_info( std::string &url, const char *method, char const
 	/* Turn on buffering if the value is set and is not special or local */
 	/* In this case, use the simple syntax 'buffer:' so as not to confuse old libs */
 
-	if( s>0 && bs>0 && method && strcmp(method,"local") && strcmp(method,"special")  ) {
+	if (s>0 && bs>0 && method && strcmp(method,"local")) {
 		url += "buffer:";
 	}
 }
@@ -530,7 +530,7 @@ pseudo_ulog( ClassAd *ad )
 			//Insert remote host information.
 			char *execute_host = NULL;
 			thisRemoteResource->getMachineName(execute_host);
-			err->setExecuteHost(execute_host);
+			err->execute_host = execute_host;
 			free(execute_host);
 		}
 

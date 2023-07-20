@@ -31,6 +31,7 @@ typedef struct ScheddJobCounters {
    stats_entry_abs<int> JobsRunning; // number of running jobs, counted so that we can do BY_* and FOR_* counters
    stats_histogram<int64_t> JobsRunningSizes;
    stats_histogram<time_t>  JobsRunningRuntimes;
+   stats_entry_abs<int> JobsUnmaterialized;
 
    stats_entry_recent<int> JobsSubmitted;        // jobs submitted over lifetime of schedd
    stats_entry_recent<int> JobsStarted;          // jobs started over schedd lifetime

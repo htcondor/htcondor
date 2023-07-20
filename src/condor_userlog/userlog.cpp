@@ -235,7 +235,7 @@ display_stats()
 	char job[40];
 	for (i=0; i < numJobStats; i++) {
 		js = statarray[i];
-		sprintf(job, "%d.%d", js->cluster, js->proc);
+		snprintf(job, sizeof(job), "%d.%d", js->cluster, js->proc);
 		printf("%-15.15s ", job);
 		printf("%9.9s ", format_time_nosecs(js->wall_time));
 		printf("%9.9s ", format_time_nosecs(js->good_time));
@@ -275,7 +275,7 @@ display_stats()
 }
 
 void
-new_record(int cluster, int proc, int start_time, int evict_time, 
+new_record(int cluster, int proc, time_t start_time, time_t evict_time,
 		   int good_time, int cpu_usage, char const *host)
 {
 	static bool initialized = false;
@@ -298,7 +298,7 @@ new_record(int cluster, int proc, int start_time, int evict_time,
 		return;
 	}
 
-	sprintf(hash, "%d.%d", cluster, proc);
+	snprintf(hash, sizeof(hash), "%d.%d", cluster, proc);
 
 	JobStatistics *js = NULL;
 	if (Stats.lookup(hash, js) < 0) {
@@ -388,7 +388,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				delete event;
 				break;
 			case ULOG_EXECUTE: {
-				sprintf(hash, "%d.%d", event->cluster, event->proc);
+				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				// check if we already have an execute event for this job
 				ExecuteEvent *execEvent;
 				if (ExecRecs.lookup(hash, execEvent) >= 0) {
@@ -432,7 +432,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				break;
 			}
 			case ULOG_CHECKPOINTED: {
-				sprintf(hash, "%d.%d", event->cluster, event->proc);
+				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				// remove any previous ckpt events for this job
 				CheckpointedEvent *ckptEvent;
 				if (CkptRecs.lookup(hash, ckptEvent) >= 0) {
@@ -452,7 +452,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_JOB_EVICTED: {
 				ExecuteEvent *execEvent;
 				JobEvictedEvent *evictEvent = (JobEvictedEvent *)event;
-				sprintf(hash, "%d.%d", event->cluster, event->proc);
+				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
@@ -492,8 +492,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 						cpu_usage = 0;
 					}
 				}
-				new_record(event->cluster, event->proc, (int)start_time,
-						   (int)end_time,
+				new_record(event->cluster, event->proc, start_time,
+						   end_time,
 						   (int)ckpt_time-start_time, cpu_usage,
 						   execEvent->getExecuteHost());
 				delete execEvent;
@@ -504,7 +504,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				ExecuteEvent *execEvent;
 				JobTerminatedEvent *terminateEvent =
 					(JobTerminatedEvent *)event;
-				sprintf(hash, "%d.%d", event->cluster, event->proc);
+				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
@@ -527,8 +527,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 				start_time = execEvent->GetEventclock();
 				end_time = event->GetEventclock();
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)start_time,
-							   (int)end_time,
+					new_record(event->cluster, event->proc, start_time,
+							   end_time,
 							   (int)end_time-start_time,
 							   terminateEvent->
 							   run_remote_rusage.ru_utime.tv_sec +
@@ -547,7 +547,7 @@ read_log(const char *filename, int select_cluster, int select_proc)
 			case ULOG_JOB_RECONNECT_FAILED:
 			case ULOG_SHADOW_EXCEPTION: {
 				ExecuteEvent *execEvent;
-				sprintf(hash, "%d.%d", event->cluster, event->proc);
+				snprintf(hash, sizeof(hash), "%d.%d", event->cluster, event->proc);
 				if (ExecRecs.lookup(hash, execEvent) < 0) {
 					if (debug_mode) {
 						fprintf(stderr,
@@ -581,8 +581,8 @@ read_log(const char *filename, int select_cluster, int select_proc)
 					cpu_usage = 0;
 				}
 				if (!evict_only) {
-					new_record(event->cluster, event->proc, (int)start_time,
-							   (int)end_time,
+					new_record(event->cluster, event->proc, start_time,
+							   end_time,
 							   (int)ckpt_time-start_time, cpu_usage,
 							   execEvent->getExecuteHost());
 				}

@@ -21,13 +21,11 @@
 #include "condor_common.h"
 #include "condor_attributes.h"
 #include "condor_ver_info.h"
+#include "condor_version.h"
 #include "subsystem_info.h"
 #include "condor_debug.h"
 #include "filename_tools.h"
 #include "stl_string_utils.h"
-
-extern "C" char *CondorVersion(void);
-extern "C" char *CondorPlatform(void);
 
 CondorVersionInfo::CondorVersionInfo(const char *versionstring, 
 									 const char *subsystem,
@@ -175,7 +173,7 @@ bool
 CondorVersionInfo::built_since_version(int MajorVer, int MinorVer, 
 									   int SubMinorVer) const
 {
-	int Scalar = MajorVer * 1000000 + MinorVer * 1000 
+	int Scalar = MajorVer * 1'000'000 + MinorVer * 1'000 
 					+ SubMinorVer;
 
 	return ( myversion.Scalar >= Scalar );
@@ -406,7 +404,7 @@ CondorVersionInfo::numbers_to_VersionData( int major, int minor, int subminor,
 		return false;
 	}
 
-	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+	ver.Scalar = ver.MajorVer * 1'000'000 + ver.MinorVer * 1'000 
 					+ ver.SubMinorVer;
 
 	if ( rest ) {
@@ -451,7 +449,7 @@ CondorVersionInfo::string_to_VersionData(const char *verstring,
 		return false;
 	}
 
-	ver.Scalar = ver.MajorVer * 1000000 + ver.MinorVer * 1000 
+	ver.Scalar = ver.MajorVer * 1'000'000 + ver.MinorVer * 1'000 
 					+ ver.SubMinorVer;
 
 		// Now move ptr the next space, which should be 

@@ -35,8 +35,8 @@
 #include <unordered_map>
 #include <queue>
 
-// switch to using User (fully qualified) over Owner as the main job identity
-#define USER_IS_THE_NEW_OWNER 1
+// use a persistent JobQueueUserRec instead of ephemeral OwnerInfo class
+#define USE_JOB_QUEUE_USERREC 1
 
 #include "dc_collector.h"
 #include "daemon.h"
@@ -90,6 +90,8 @@ extern int updateSchedDInterval( JobQueueJob*, const JOB_ID_KEY&, void* );
 class JobQueueCluster;
 class JobQueueJobSet;
 class JobQueueBase;
+class JobQueueUserRec;
+class TransactionWatcher;
 
 //typedef std::set<JOB_ID_KEY> JOB_ID_SET;
 class LocalJobRec {
@@ -214,6 +216,17 @@ struct SubmitterData {
 
 typedef std::map<std::string, SubmitterData> SubmitterDataMap;
 
+#ifdef USE_JOB_QUEUE_USERREC
+class JobQueueUserRec;
+typedef JobQueueUserRec OwnerInfo;
+typedef std::map<std::string, JobQueueUserRec*> OwnerInfoMap;
+// attribute of the JobQueueUserRec to use as the Name() and key value of the OwnerInfo struct
+#define ATTR_USERREC_NAME ATTR_OWNER
+constexpr int  CONDOR_USERREC_ID = 1;
+constexpr int  LAST_RESERVED_USERREC_ID = CONDOR_USERREC_ID;
+constexpr bool USERREC_NAME_IS_FULLY_QUALIFIED = false;
+#else
+
 struct RealOwnerCounters {
   int Hits;                 // counts (possibly overcounts) references to this class, used for mark/sweep expiration code
   int JobsCounted;          // ALL jobs in the queue owned by this owner at the time count_jobs() was run
@@ -244,7 +257,6 @@ struct RealOwnerCounters {
   {}
 };
 
-
 // The schedd will have one of these records for each unique owner, it counts jobs that
 // have that Owner attribute even if the jobs also have an AccountingGroup or NiceUser
 // attribute and thus have a different SUBMITTER name than their OWNER name
@@ -262,9 +274,9 @@ struct OwnerInfo {
 };
 
 typedef std::map<std::string, OwnerInfo> OwnerInfoMap;
+#endif
 
-
-class match_rec: public ClaimIdParser
+class match_rec
 {
  public:
     match_rec(char const*, char const*, PROC_ID*, const ClassAd*, char const*, char const* pool,bool is_dedicated);
@@ -287,13 +299,16 @@ class match_rec: public ClaimIdParser
     int     		status;
 	shadow_rec*		shadowRec;
 	int				num_exceptions;
-	int				entered_current_status;
+	time_t			entered_current_status;
 	ClassAd*		my_match_ad;
+	ClassAd         m_added_attrs;
 	char*			user;
 	bool            is_dedicated; // true if this match belongs to ded. sched.
 	bool			allocated;	// For use by the DedicatedScheduler
 	bool			scheduled;	// For use by the DedicatedScheduler
 	bool			needs_release_claim;
+	bool use_sec_session;
+	ClaimIdParser claim_id;
 	classy_counted_ptr<DCMsgCallback> claim_requester;
 
 		// if we created a dynamic hole in the DAEMON auth level
@@ -302,6 +317,7 @@ class match_rec: public ClaimIdParser
 	std::string*	auth_hole_id;
 
 	bool m_startd_sends_alives;
+	bool m_claim_pslot;
 
 	int keep_while_idle; // number of seconds to hold onto an idle claim
 	int idle_timer_deadline; // if the above is nonzero, abstime to hold claim
@@ -319,7 +335,6 @@ class match_rec: public ClaimIdParser
 
 	PROC_ID m_now_job;
 
-private:
 	std::string m_pool; // negotiator hostname if flocking; else empty
 };
 
@@ -532,6 +547,7 @@ class Scheduler : public Service
 	void			removeJobFromIndexes(const JOB_ID_KEY& job_id, int job_prio=0);
 	int				RecycleShadow(int cmd, Stream *stream);
 	void			finishRecycleShadow(shadow_rec *srec);
+	int				CmdDirectAttach(int cmd, Stream* stream);
 
 	int			FindGManagerPid(PROC_ID job_id);
 
@@ -710,6 +726,19 @@ class Scheduler : public Service
 	// it is the basic set needed for correct operation of the Schedd: Requirements,Rank,
 	classad::References MinimalSigAttrs;
 
+#ifdef USE_JOB_QUEUE_USERREC
+	int		nextUnusedUserRecId();
+	JobQueueUserRec * jobqueue_newUserRec(int userrec_id);
+	void jobqueue_deleteUserRec(JobQueueUserRec * uad);
+	void mapPendingOwners();
+	// these are used during startup to handle the case where jobs have Owner/User attributes but
+	// there is no persistnt JobQueueUserRec in the job_queue
+	const std::map<int, OwnerInfo*> & queryPendingOwners() { return pendingOwners; }
+	void clearPendingOwners();
+	bool HasPersistentOwnerInfo() { return EnablePersistentOwnerInfo; }
+#endif
+	void deleteZombieOwners(); // delete all zombies (called on shutdown)
+	void purgeZombieOwners();  // delete unreferenced zombies (called in count_jobs)
 	const OwnerInfo * insert_owner_const(const char*);
 	const OwnerInfo * lookup_owner_const(const char*);
 	OwnerInfo * incrementRecentlyAdded(OwnerInfo * ownerinfo, const char * owner);
@@ -722,6 +751,8 @@ class Scheduler : public Service
 	bool ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir="##");
 	bool ImportExportedJobResults(ClassAd & result, const char * import_dir, const char *user);
 	bool UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *user);
+
+	bool forwardMatchToSidecarCM(const char *claim_id, const char *claim_ids, ClassAd &match_ad, const char *slot_name);
 
 	// Returns false if the checkpoint clean-up failed to launch.
 	bool doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd );
@@ -786,6 +817,7 @@ private:
 	int				JobsThisBurst;
 	int				MaxJobsRunning;
 	bool			AllowLateMaterialize;
+	bool			EnablePersistentOwnerInfo;
 	bool			NonDurableLateMaterialize;	// for testing, use non-durable transactions when materializing new jobs
 	bool			EnableJobQueueTimestamps;	// for testing
 	int				MaxMaterializedJobsPerCluster;
@@ -820,7 +852,10 @@ private:
 	int				NumSubmitters; // number of non-zero entries in Submitters map, set by count_jobs()
 	SubmitterDataMap Submitters;   // map of job counters by submitter, used to make SUBMITTER ads
 	int				NumUniqueOwners;
+	int				NextOwnerId;
 	OwnerInfoMap    OwnersInfo;    // map of job counters by owner, used to enforce MAX_*_PER_OWNER limits
+	std::map<int, OwnerInfo*> pendingOwners; // OwnerInfo records that have been created but not yet committed
+	std::vector<OwnerInfo*> zombieOwners; // OwnerInfo records that have been removed from the job_queue, but not yet deleted
 
 	HashTable<UserIdentity, GridJobCounts> GridJobOwners;
 	time_t			NegotiationRequestTime;
@@ -894,6 +929,8 @@ private:
 	bool			m_use_slot_weights;
 
 	// utility functions
+	void		sumAllSubmitterData(SubmitterData &all);
+	void		updateSubmitterAd(SubmitterData &submitterData, ClassAd &pAd, DCCollector *collector,  int flock_level, time_t time_now);
 	int			count_jobs();
 	bool		fill_submitter_ad(ClassAd & pAd, const SubmitterData & Owner, const std::string &pool_name, int flock_level);
 	int			make_ad_list(ClassAdList & ads, ClassAd * pQueryAd=NULL);
@@ -901,6 +938,8 @@ private:
 	int			command_query_ads(int, Stream* stream);
 	int			command_query_job_ads(int, Stream* stream);
 	int			command_query_job_aggregates(ClassAd & query, Stream* stream);
+	int			command_query_user_ads(int, Stream* stream);
+	int			command_act_on_user_ads(int, Stream* stream);
 	void   			check_claim_request_timeouts( void );
 	OwnerInfo     * find_ownerinfo(const char*);
 	OwnerInfo     * insert_ownerinfo(const char*);
@@ -908,6 +947,7 @@ private:
 	SubmitterData * find_submitter(const char*);
 	OwnerInfo * get_submitter_and_owner(JobQueueJob * job, SubmitterData * & submitterinfo);
 	OwnerInfo * get_ownerinfo(JobQueueJob * job);
+	int			act_on_user(int cmd, const std::string & username, const ClassAd& cmdAd, TransactionWatcher & txn, CondorError & errstack);
 	void		remove_unused_owners();
 	void			child_exit(int, int);
 	// AFAICT, reapers should be be registered void to begin with.
@@ -966,6 +1006,7 @@ private:
 		 */
 	void	contactStartd( ContactStartdArgs* args );
 	void claimedStartd( DCMsgCallback *cb );
+	void claimStartdForUs(DCMsgCallback *cb);
 
 	shadow_rec*		StartJob(match_rec*, PROC_ID*);
 
@@ -987,7 +1028,7 @@ private:
 	HashTable <PROC_ID, match_rec *> *matchesByJobID;
 	HashTable <int, shadow_rec *> *shadowsByPid;
 	HashTable <PROC_ID, shadow_rec *> *shadowsByProcID;
-	HashTable <int, ExtArray<PROC_ID> *> *spoolJobFileWorkers;
+	HashTable <int, std::vector<PROC_ID> *> *spoolJobFileWorkers;
 	int				numMatches;
 	int				numShadows;
 	DaemonList		*FlockCollectors, *FlockNegotiators;

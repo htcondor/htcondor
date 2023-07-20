@@ -68,7 +68,7 @@ ClassAdLogIterator::operator++(int)
 
 
 bool
-ClassAdLogIterator::operator==(const ClassAdLogIterator &rhs)
+ClassAdLogIterator::operator==(const ClassAdLogIterator &rhs) const
 {
 	if (m_current.get() == rhs.m_current.get())
 	{

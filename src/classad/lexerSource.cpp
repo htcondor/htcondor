@@ -21,7 +21,10 @@
 #include "classad/common.h"
 #include "classad/lexerSource.h"
 #include <iostream>
-using namespace std;
+
+using std::string;
+using std::pair;
+
 namespace classad {
 
 /*--------------------------------------------------------------------

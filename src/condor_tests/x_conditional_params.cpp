@@ -24,6 +24,7 @@
 #include "param_info_tables.h"
 #include "condor_version.h"
 #include <stdlib.h>
+#include <charconv>
 
 const char * check_configif = NULL;
 
@@ -78,7 +79,7 @@ int main(int argc, const char ** argv)
 			if (argv[ix+1]) filename = use_next_arg("memory-shapshot", argv, ix);
 			char copy_smaps[300];
 			pid_t pid = getpid();
-			sprintf(copy_smaps, "cat /proc/%d/smaps > %s", pid, filename);
+			snprintf(copy_smaps, sizeof(copy_smaps), "cat /proc/%d/smaps > %s", pid, filename);
 			int r = system(copy_smaps);
 			if (r != 0) {
 				fprintf(stdout, "%d return copy smaps", r);
@@ -246,7 +247,7 @@ const char* fixup_version(const char * cond, char* buf, int cbBuf)
 			if (v > -10) {
 				if (v < 0) return NULL; // version cannot be fixed up!
 				++ix;
-				sprintf(p, "%d", (int)v);
+				{ auto [end, ec] = std::to_chars(p, p + 16, (int)v); *end = '\0';}
 				p += strlen(p);
 			}
 		} else {

@@ -22,7 +22,7 @@
 #include "condor_crontab.h"
 #include "condor_classad.h"
 #include "condor_debug.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 #include "date_util.h"
 #include "utc_time.h"
 #include <algorithm>
@@ -76,14 +76,14 @@ CronTab::CronTab( ClassAd *ad )
 		if ( ad->LookupString( this->attributes[ctr], buffer ) ) {
 			dprintf( D_FULLDEBUG, "CronTab: Pulled out '%s' for %s\n",
 						buffer.c_str(), this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( buffer.c_str() );
+			this->parameters[ctr] = new std::string( buffer );
 			//
 			// The parameter is empty, we'll use the wildcard
 			//
 		} else {
 			dprintf( D_FULLDEBUG, "CronTab: No attribute for %s, using wildcard\n",
 							this->attributes[ctr] );
-			this->parameters[ctr] = new MyString( CRONTAB_WILDCARD );
+			this->parameters[ctr] = new std::string( CRONTAB_WILDCARD );
 		}
 	} // FOR
 	this->init();
@@ -142,7 +142,7 @@ CronTab::needsCronTab( ClassAd *ad ) {
  * @return true if ad had valid CronTab paramter syntax
  **/
 bool
-CronTab::validate( ClassAd *ad, MyString &error ) {
+CronTab::validate( ClassAd *ad, std::string &error ) {
 	bool ret = true;
 		//
 		// Loop through all the fields in the ClassAd
@@ -158,7 +158,7 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
 			// their parameters at once
 			//
 		if ( ad->LookupString( CronTab::attributes[ctr], buffer ) ) {
-			MyString curError;
+			std::string curError;
 			if ( !CronTab::validateParameter( buffer.c_str(), CronTab::attributes[ctr], curError ) ) {
 				ret = false;
 				error += curError;
@@ -184,14 +184,14 @@ CronTab::validate( ClassAd *ad, MyString &error ) {
  * 		 just the characters
  **/
 bool
-CronTab::validateParameter(const char* parameter, const char * attr, MyString& error)
+CronTab::validateParameter(const char* parameter, const char * attr, std::string& error)
 {
 	bool ret = true;
 		//
 		// Make sure there are only valid characters 
 		// in the parameter string
 		//
-	MyString temp(parameter);
+	std::string temp(parameter);
 	if ( CronTab::regex.match( temp ) ) {
 		error  = "Invalid parameter value '";
 		error += parameter;
@@ -276,13 +276,13 @@ CronTab::initRegexObject() {
 		//
 	if ( ! CronTab::regex.isInitialized() ) {
 		int errcode, erroffset;
-		MyString pattern( CRONTAB_PARAMETER_PATTERN ) ;
+		std::string pattern( CRONTAB_PARAMETER_PATTERN ) ;
 			//
 			// It's a big problem if we can't compile the pattern, so
 			// we'll want to dump out right now
 			//
 		if ( ! CronTab::regex.compile( pattern, &errcode, &erroffset )) {
-			MyString error = "CronTab: Failed to compile Regex - ";
+			std::string error = "CronTab: Failed to compile Regex - ";
 			error += pattern;
 			EXCEPT( "%s", error.c_str() );
 		}
@@ -628,7 +628,7 @@ CronTab::matchFields( int *curTime, int *match, int attribute_idx, bool useFirst
 bool
 CronTab::expandParameter( int attribute_idx, int min, int max )
 {
-	MyString *param = this->parameters[attribute_idx];
+	std::string *param = this->parameters[attribute_idx];
 	std::vector<int> *list	= this->ranges[attribute_idx];
 	
 		//
@@ -636,7 +636,7 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// The validation method will have already printed out
 		// the error message to the log
 		//
-	MyString error;
+	std::string error;
 	if ( ! CronTab::validateParameter(	param->c_str(),
 										CronTab::attributes[attribute_idx],
 										error ) ) {
@@ -651,50 +651,37 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		//
 		// Remove any spaces
 		//
-	param->replaceString(" ", "");
+	replace_str(*param, " ", "");
 	
 		//
 		// Now here's the tricky part! We need to expand their parameter
 		// out into a range that can be put in array of integers
 		// First start by spliting the string by commas
 		//
-	MyStringTokener tok;
-	tok.Tokenize(param->c_str());
-	const char *_token;
-	while ( ( _token = tok.GetNextToken( CRONTAB_DELIMITER, true ) ) != NULL ) {
-		MyStringWithTokener token( _token );
+	for (std::string token: StringTokenIterator(*param, CRONTAB_DELIMITER)) {
 		int cur_min = min, cur_max = max, cur_step = 1;
+		size_t idx = 0;
 		
 			// -------------------------------------------------
 			// STEP VALUES
 			// The step value is independent of whether we have
 			// a range, the wildcard, or a single number.
 			// -------------------------------------------------
-		if ( token.find( CRONTAB_STEP ) > 0 ) {
+		if ( (idx = token.find(CRONTAB_STEP)) != std::string::npos ) {
 				//
 				// Just look for the step value to replace 
 				// the current step value. The other code will
 				// handle the rest
 				//
-			token.Tokenize();
-			const char *_temp;
-				//
-				// Take out the numerator, keep it for later
-				//
-			const char *_numerator = token.GetNextToken( CRONTAB_STEP, true );
-			if ( ( _temp = token.GetNextToken( CRONTAB_STEP, true ) ) != NULL ) {
-				MyString stepStr( _temp );
-				stepStr.trim();
-				cur_step = atoi( stepStr.c_str() );
-				if (cur_step == 0) {
-					return false;
-				}
+			cur_step = atoi(token.c_str() + idx + 1);
+			if (cur_step == 0) {
+				return false;
 			}
 				//
 				// Now that we have the denominator, put the numerator back
 				// as the token. This makes it easier to parse later on
 				//
-			token = _numerator;
+			token.erase(idx);
 		} // STEP
 		
 			// -------------------------------------------------
@@ -704,36 +691,29 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 			// Note that the find will ignore the token if the
 			// range delimiter is in the first character position
 			// -------------------------------------------------
-		if ( token.find( CRONTAB_RANGE ) > 0 ) {
+		if ( (idx = token.find(CRONTAB_RANGE)) != std::string::npos ) {
 				//
 				// Split out the integers
 				//
-			token.Tokenize();
-			MyString *_temp;
 			int value;
 			
 				//
-				// Min
-				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
-			cur_min = ( value >= min ? value : min );
-			delete _temp;
-				//
 				// Max
 				//
-			_temp = new MyString( token.GetNextToken( CRONTAB_RANGE, true ) );
-			_temp->trim();
-			value = atoi( _temp->c_str() );
+			value = atoi(token.c_str() + idx + 1);
 			cur_max = ( value <= max ? value : max );
-			delete _temp;
+				//
+				// Min
+				//
+			token.erase(idx);
+			value = atoi( token.c_str() );
+			cur_min = ( value >= min ? value : min );
 			
 			// -------------------------------------------------
 			// WILDCARD
 			// This will select all values for the given range
 			// -------------------------------------------------
-		} else if ( token.find( CRONTAB_WILDCARD ) >= 0 ) {
+		} else if ( token.find( CRONTAB_WILDCARD ) != std::string::npos ) {
 				//
 				// For this we do nothing since it will just 
 				// be the min-max range
@@ -803,6 +783,17 @@ CronTab::expandParameter( int attribute_idx, int min, int max )
 		// Sort! Makes life easier later on
 		//
 	this->sort( *list );	
+
+	// The topmost (DOW) can be empty, but if any other
+	// index generated an empty list, it indicates an error
+	// as an empty range passed in gets expanded to *
+
+	if ((attribute_idx != CRONTAB_DOW_IDX) && (0 == list->size())) {
+		std::string msg = "Invalid cron attribute: ";
+		msg += param->c_str();
+		CronTab::errorLog += msg;
+		return false;
+	}
 	return ( true );
 }
 

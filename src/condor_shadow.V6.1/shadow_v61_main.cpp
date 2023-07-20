@@ -61,6 +61,7 @@ int
 ExceptCleanup(int, int, const char *buf)
 {
   BaseShadow::log_except(buf);
+  daemonCore->kill_immediate_children();
   return 0;
 }
 
@@ -196,6 +197,16 @@ readJobAd( void )
 			EXCEPT( "Failed to insert \"%s\" into ClassAd!", line.c_str() );
         }
     }
+
+	// If we are a shadow running under a schedd, expect only one
+	// classad on stdin, and close it, to free the pipe and
+	// the resources associated with it.
+
+	if (sendUpdatesToSchedd) {
+		fclose(fp);
+		fp = nullptr;
+	}
+
 	if( ! read_something ) {
 		EXCEPT( "reading ClassAd from (%s): file is empty",
 				is_stdin ? "STDIN" : job_ad_file );

@@ -106,7 +106,7 @@ void Usage(const char* name, int iExitCode)
   exit(iExitCode);
 }
 
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false);
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd=false, bool read_dir=false);
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr);
 static void readHistoryFromSingleFile(bool fileisuserlog, const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr);
@@ -132,10 +132,19 @@ struct BannerInfo {
 	JOB_ID_KEY jid;         //Cluster & Proc info for job
 	int runId = -1;         //Job epoch < 0 = no epochs
 	std::string owner = ""; //Job Owner
+	std::string ad_type;    //Ad Type (Not equivalent to MyType)
+};
+// What kind of source file we are reading ads from
+enum HistoryRecordSource {
+	HRS_AUTO = -1,          //Base value if not overwritten will default to schedd or startd history
+	HRS_SCHEDD_JOB_HIST,    //Standard job history from Schedd
+	HRS_STARTD_HIST,        //Standard job history from a startd
+	HRS_JOB_EPOCH,          //Job Epoch (run instance) history
 };
 
+//Source information: Holds Source knob in above enum order
+static const char* source_knobs[] = {"HISTORY","STARTD_HISTORY","JOB_EPOCH_HISTORY"};
 //------------------------------------------------------------------------
-
 static  bool longformat=false;
 static  bool diagnostic = false;
 static  bool use_xml=false;
@@ -164,10 +173,10 @@ static StringList projection;
 static classad::References whitelist;
 static ExprTree *sinceExpr = NULL;
 static bool want_startd_history = false;
-static bool read_epoch_ads = false;
 static bool delete_epoch_ads = false;
 static std::deque<ClusterMatchInfo> jobIdFilterInfo;
 static std::deque<std::string> ownersList;
+static HistoryRecordSource recordSrc = HRS_AUTO;
 
 int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 {
@@ -188,6 +197,52 @@ int getInheritedSocks(Stream* socks[], size_t cMaxSocks, pid_t & ppid)
 	return cSocks;
 }
 
+//Condense the match filter info based on jid information to the minimal checks we need
+static void condenseJobFilterList(bool sort = false) {
+	if (sort) {
+		//Sort info by jid from lowest to highest (Note: Just clusters will be first with JID = X.-1)
+		std::sort(jobIdFilterInfo.begin(),jobIdFilterInfo.end(),
+				  [](const ClusterMatchInfo& left, const ClusterMatchInfo& right) { return left.jid < right.jid; });
+		//Here we check for a cluster search and any following cluster.proc searches with the same ClusterId
+		int searchCluster = -1;
+		for(auto& item : jobIdFilterInfo) {
+			//If search cluster = curr filter items cluster and a procid is set then mark as done
+			if (searchCluster == item.jid.cluster) {
+				if (item.jid.proc >= 0) {
+					item.isDoneMatching = true;
+				}
+			} else if (item.jid.proc < 0) { //New clusterid check if ther is no proc (just cluster match)
+				searchCluster = item.jid.cluster;
+			}
+		}
+	}
+
+	//Shift data structure to set all filter items set to done towards the end
+	auto rm_start = std::remove_if(jobIdFilterInfo.begin(), jobIdFilterInfo.end(),
+								   [](const ClusterMatchInfo& inf){ return inf.isDoneMatching; });
+	//Erase/Remove all elements from first marked for removal to the end of data structure
+	jobIdFilterInfo.erase(rm_start, jobIdFilterInfo.end());
+}
+
+//Use passed info to determine if we can set a record source: do so then return or error out
+static void SetRecordSource(HistoryRecordSource src, const char* curr_flag, const char* new_flag) {
+	ASSERT(src != HRS_AUTO); //Dont set source to AUTO
+	//Check if we have already set a source with a flag
+	if (curr_flag && recordSrc != src) {
+		fprintf(stderr, "Error: %s can not be used in association with %s.\n", curr_flag, new_flag);
+		exit(1);
+	} else if (recordSrc == src) { return; }
+	//check to make sure recordSrc isn't pre set
+	if (recordSrc == HRS_AUTO) {
+		recordSrc = src;
+		return;
+	}
+	//Something is wrong at this point no previous user setting of source
+	//but source enum is set to a value already (future proofing)
+	fprintf(stderr,"Error: Failed to set history record source with %s flag.\n", new_flag);
+	exit(1);
+}
+
 int
 main(int argc, const char* argv[])
 {
@@ -195,8 +250,11 @@ main(int argc, const char* argv[])
   bool readfromfile = true;
   bool fileisuserlog = false;
   bool dash_local = false; // set if -local is passed
+  bool readFromDir = false;
 
   const char* JobHistoryFileName=NULL;
+  const char* searchPath=NULL;
+  const char* setRecordSrcFlag=NULL;
   const char * pcolon=NULL;
   auto_free_ptr matchFileName;
   auto_free_ptr searchDirectory;
@@ -308,10 +366,14 @@ main(int argc, const char* argv[])
 	else if (is_dash_arg_prefix(argv[i],"startd",3)) {
 		// causes "STARTD_HISTORY" to be queried, rather than "HISTORY"
 		want_startd_history = true;
+		SetRecordSource(HRS_STARTD_HIST, setRecordSrcFlag, "-startd");
+		setRecordSrcFlag = argv[i];
 	}
 	else if (is_dash_arg_prefix(argv[i],"schedd",3)) {
 		// causes "HISTORY" to be queried, this is the default
 		want_startd_history = false;
+		SetRecordSource(HRS_SCHEDD_JOB_HIST, setRecordSrcFlag, "-schedd");
+		setRecordSrcFlag = argv[i];
 	}
 	else if (is_dash_arg_colon_prefix(argv[i],"stream-results", &pcolon, 6)) {
 		streamresults = true;
@@ -417,26 +479,15 @@ main(int argc, const char* argv[])
 			constraint.addCustomAND(where_expr.c_str());
 		}
 	}
-	else if (is_dash_arg_colon_prefix(argv[i], "epoch", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
-		//Reset to NULL if previously set else where
+	else if (is_dash_arg_colon_prefix(argv[i], "epochs", &pcolon, 1)) { //TODO: Add flag to usage when ready to share with the world
+		SetRecordSource(HRS_JOB_EPOCH, setRecordSrcFlag, "-epochs");
+		setRecordSrcFlag = argv[i];
 		searchDirectory.clear();
 		matchFileName.clear();
-		//Designate reading job run instance ads from epoch directory
-		read_epoch_ads = true;
 		//Get aggregate epoch history file
 		matchFileName.set(param("JOB_EPOCH_HISTORY"));
-		//If epoch file is NULL then check for an epoch directory
-		if (!matchFileName) {
-			//Get epoch directory and validate passed arg is a directory
-			searchDirectory.set(param("JOB_EPOCH_INSTANCE_DIR"));
-			if (searchDirectory) {
-				StatInfo si(searchDirectory.ptr());
-				if (!si.IsDirectory()) {
-					fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory.ptr());
-					exit(1);
-				}
-			}
-		}
+		//Get epoch directory
+		searchDirectory.set(param("JOB_EPOCH_HISTORY_DIR"));
 		if (!matchFileName && !searchDirectory) {
 			fprintf( stderr, "Error: No Job Run Instance recordings to read.\n");
 			exit(1);
@@ -446,6 +497,16 @@ main(int argc, const char* argv[])
 			++pcolon;
 			if ( *pcolon == 'd' || *pcolon == 'D' ) { delete_epoch_ads = true; break; }
 		}
+	}
+	else if (is_dash_arg_prefix(argv[i],"directory",3)) {
+		readFromDir = true;
+	}
+	else if (is_dash_arg_prefix(argv[i],"search",3)) {
+		if (argc <= i+1) {
+			fprintf( stderr, "Error: Argument %s requires another parameter\n", argv[i]);
+			exit(1);
+		}
+		searchPath = argv[++i];
 	}
     else if (is_dash_arg_prefix(argv[i],"constraint",1)) {
 		// make sure we have at least one more argument
@@ -527,7 +588,7 @@ main(int argc, const char* argv[])
 		jobIdMatch.jid = JOB_ID_KEY(cluster,-1);
 		jobIdFilterInfo.push_back(jobIdMatch);
     }
-    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,1)) {
+    else if (is_dash_arg_colon_prefix(argv[i],"debug",&pcolon,3)) {
           // dprintf to console
           dprintf_set_tool_debug("TOOL", (pcolon && pcolon[1]) ? pcolon+1 : nullptr);
     }
@@ -578,7 +639,14 @@ main(int argc, const char* argv[])
     }
   }
   if (i<argc) Usage(argv[0]);
-  
+
+  condenseJobFilterList(true);
+
+  //If record source is still AUTO then set to original history based on want_startd_history
+  if (recordSrc == HRS_AUTO) {
+    recordSrc = want_startd_history ? HRS_STARTD_HIST : HRS_SCHEDD_JOB_HIST;
+  }
+
   // for remote queries, default to requesting streamed results
   // unless the -stream-results flag was passed explicitly.
   if ( ! readfromfile && ! writetosocket && ! streamresults_specified) {
@@ -623,14 +691,14 @@ main(int argc, const char* argv[])
       // Read from single file, matching files, or a directory (if valid option)
       if (JobHistoryFileName) { //Single file to be read passed
       readHistoryFromSingleFile(fileisuserlog, JobHistoryFileName, my_constraint.c_str(), constraintExpr);
-      } else if (searchDirectory) { //Searching for files in a directory
-      readHistoryFromDirectory(searchDirectory, my_constraint.c_str(), constraintExpr);
+      } else if (readFromDir) { //Searching for files in a directory
+      readHistoryFromDirectory(searchPath ? searchPath : searchDirectory, my_constraint.c_str(), constraintExpr);
       } else { //Normal search with files
-      readHistoryFromFiles(matchFileName, my_constraint.c_str(), constraintExpr);
+      readHistoryFromFiles(searchPath ? searchPath : matchFileName, my_constraint.c_str(), constraintExpr);
       }
   }
   else {
-      readHistoryRemote(constraintExpr, want_startd_history);
+      readHistoryRemote(constraintExpr, want_startd_history, readFromDir);
   }
   delete constraintExpr;
 
@@ -763,12 +831,13 @@ static void printFooter()
 }
 
 // Read history from a remote schedd or startd
-static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd)
+static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_startd, bool read_dir)
 {
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader(); // this has the side effect of setting the projection for the default output
 
 	ClassAd ad;
-	ad.Insert(ATTR_REQUIREMENTS, constraintExpr);
+	if (constraintExpr) { ad.Insert(ATTR_REQUIREMENTS, constraintExpr->Copy()); }
 	ad.InsertAttr(ATTR_NUM_MATCHES, specifiedMatch <= 0 ? -1 : specifiedMatch);
 	// in 8.5.6, we can request that the remote side stream the results back. othewise
 	// the 8.4 protocol will only send EOM after the last result, and thus we print nothing
@@ -793,7 +862,7 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 
 	Daemon daemon(dt, g_name.size() ? g_name.c_str() : NULL, g_pool.size() ? g_pool.c_str() : NULL);
 	if (!daemon.locate(Daemon::LOCATE_FOR_LOOKUP)) {
-		fprintf(stderr, "Unable to locate remote schedd (name=%s, pool=%s).\n", g_name.c_str(), g_pool.c_str());
+		fprintf(stderr, "Unable to locate remote %s (name=%s, pool=%s).\n", daemon_type, g_name.c_str(), g_pool.c_str());
 		exit(1);
 	}
 
@@ -809,9 +878,34 @@ static void readHistoryRemote(classad::ExprTree *constraintExpr, bool want_start
 		} else if (dt == DT_STARTD) {
 			// remote history to the startd was added in 8.9.7
 			if (!v.built_since_version(8, 9, 7)) {
-				fprintf(stderr, "The version of the startd does not support remote history");
+				fprintf(stderr, "The version of the startd does not support remote history.\n");
 				exit(1);
 			}
+		}
+		//Do Record source version checks here and assign needed Ad information
+		std::string err_msg;
+		switch (recordSrc) {
+			//Nothing special needed for HISTORY or STARTD_HISTORY at the moment
+			case HRS_SCHEDD_JOB_HIST:
+				break;
+			case HRS_STARTD_HIST:
+				ad.InsertAttr("HistoryRecordSource","STARTD");
+				break;
+			case HRS_JOB_EPOCH:
+				if (v.built_since_version(10, 3, 0)) {
+					ad.InsertAttr("HistoryRecordSource","JOB_EPOCH");
+					if (read_dir) { ad.InsertAttr("HistoryFromDir",true); }
+				} else {
+					formatstr(err_msg, "The remote schedd (%s) version does not support remote job epoch history.",g_name.c_str());
+				}
+				break;
+			default:
+				err_msg = "No history record source declared. Unsure what ad history to remotely query.";
+				break;
+		}
+		if (!err_msg.empty()) {
+			fprintf(stderr,"Error: %s\n",err_msg.c_str());
+			exit(1);
 		}
 	}
 
@@ -892,31 +986,30 @@ static bool AddToClassAdList(void* pv, ClassAd* ad) {
 // There are multiple history files because we do rotation. 
 static void readHistoryFromFiles(const char* matchFileName, const char* constraint, ExprTree *constraintExpr)
 {
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader();
 	// Default to search for standard job ad history if no files specified
-	const char* knob = want_startd_history ? "STARTD_HISTORY" : "HISTORY";
+	const char* knob = source_knobs[recordSrc];
 	auto_free_ptr origHistory;
-	if (!matchFileName) {
+	if (!matchFileName && (recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST)) {
 		origHistory.set(param(knob));
 		matchFileName = origHistory;
 	}
 
 	// This is the last check for history records. If files is empty then nothing to read exit
 	if (!matchFileName) {
-		fprintf(stderr, "Error: No passed search file and base history configuration key %s is unset.\n", knob);
+		fprintf(stderr, "Error: No passed search file and configuration key %s is unset.\n", knob);
 		fprintf(stderr, "\nExtra Info: The variable %s is not defined in your config file. If you want Condor to "
-						"keep a history of past jobs, you must define %s in your config file\n", knob, knob );
+						"keep a history of information, you must define %s in your config file\n", knob, knob);
 		exit(1);
 	}
 
 	// Find all time rotated files matching the filename in its given directory
 	std::vector<std::string> historyFiles = findHistoryFiles(matchFileName);
-	if (historyFiles.empty()) {
-		fprintf(stderr, "Error: No matching history files for %s\n",matchFileName);
-		exit(1);
-	}
 
 	if (backwards) { std::reverse(historyFiles.begin(), historyFiles.end()); }// Reverse reading of history files vector
+	//Debugging code: Display found files in vector order
+	//for(auto file : historyFiles) { fprintf(stdout, "%s\n",file.c_str()); }
 
 	// Read files for Ads in order
 	for(auto file : historyFiles) {
@@ -927,8 +1020,61 @@ static void readHistoryFromFiles(const char* matchFileName, const char* constrai
 	return;
 }
 
+/*	Function to take a history record sources delimiting banner line and extract
+*	the 'Ad Type' (this is different from MyType ad attribute). A banner should
+*	always be: '*** Adtype Key=Value Key=Value...' where AdType is optional but
+*	If no ad type is found (i.e. older history files) then assume type is standard job ad.
+*	@return char* to "begining" of key=value pairs
+*
+*	'*** AdType Key=Value Key=Value' -> 'AdType' return ' Key=value Key=Value'
+*	'*** Key=Value Key=Value' -> 'JOB' return 'Key=Value Key=Value'
+*/
+static const char* getAdTypeFromBanner(std::string& banner, std::string& ad_type) {
+	//Get position of equal sign for first key=value pair
+	size_t pos_firstEql = banner.find("=");
+	if (pos_firstEql == std::string::npos) { return NULL; }
+	const char * p = banner.c_str();
+	const char * endp = p + pos_firstEql;
+
+	//Clear start & end pointers of whitespace and '='/'*'
+	while (*p == '*') ++p;
+	while (isspace(*p)) ++p;
+	if (*endp == '=') --endp;
+	while (p < endp && isspace(*endp)) --endp;
+
+	//Check for a whitespace between pointers
+	size_t len = endp - p;
+	std::string temp(p, len);
+	//fprintf(stdout, "Reduced banner:%s\n",temp.c_str());
+	//If no whitespace (space/tab) then no specified Type assume standard Job
+	if (temp.find_first_of(" \t") == std::string::npos) { ad_type = "JOB"; return p; }
+
+	//Make current pointer = start pointer and increment pointer until
+	//it is equal to end pointer or whitespace is found
+	const char * curp = p;
+	while (curp != endp) {
+		++curp;
+		if (isspace(*curp)) {
+			endp = curp; //Set true end pointer to current pointer
+		}
+	}
+
+	//Get type string len and copy data to ad_type
+	len = endp - p;
+	ad_type.clear();
+	ad_type.insert(0, p, len);
+	return endp;
+}
+
+static bool parseBanner(BannerInfo& info, std::string banner);
+
+//History source files that we expect to only contain 1 instance of a Job Ad
+static bool hasOneJobInstInFile() {
+	return recordSrc == HRS_SCHEDD_JOB_HIST || recordSrc == HRS_STARTD_HIST;
+}
+
 // Check to see if all possible job ads for cluster or cluster.proc have been found
-static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
+static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL, bool onlyCheckTime = false) {
 
 	//If we have a job ad and are missing data attempt to populate banner info
 	if (ad) {
@@ -938,63 +1084,63 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 			ad->LookupInteger(ATTR_PROC_ID,banner.jid.proc);
 		if (banner.completion < 0)
 			ad->LookupInteger(ATTR_COMPLETION_DATE,banner.completion);
-		if (read_epoch_ads && banner.runId < 0)
+		if (recordSrc == HRS_JOB_EPOCH && banner.runId < 0)
 			ad->LookupInteger(ATTR_NUM_SHADOW_STARTS,banner.runId);
 	}
 
-	//Keep count of number of found matches
-	//Note: This is an unsigned long to prevent
-	//      warning with deque.size() comparison
-	unsigned long numMatchesDone = 0;
 	//For each match item info check record found
 	for (auto& match : jobIdFilterInfo) {
-		if (match.isDoneMatching) { numMatchesDone++; continue; }
-		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d\n",match.jid.cluster,match.jid.proc,match.QDate,match.numProcs); //Debug Match items
-		//If has a specified proc and matched proc and cluster then remove from data structure
-		if (match.jid.proc >= 0 && match.jid == banner.jid) {
-			//If not an epoch file then found else if epoch file reading backwards and run_instance is 0 then all epoch ads found
-			if (!read_epoch_ads || (backwards && banner.runId == 0)) {
-				match.isDoneMatching = true;
-				numMatchesDone++;
-			}
-		} else { //Else this is a cluster only find
-			//If the cluster submit time is greater than the current completion date remove from data structure
-			if (banner.completion > 0 && match.QDate > banner.completion) {
-				match.isDoneMatching = true;
-				numMatchesDone++;
-			} else if (match.jid.cluster == banner.jid.cluster) { //If cluster matches do checks
-				//Get QDate from job ad if not set in info
-				if (match.QDate < 0) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
-				//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
-				if (match.numProcs < 0) {
-					int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
-					if (read_epoch_ads && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
-					if (!ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
-						if (!read_epoch_ads || (backwards && banner.runId == 0)) {
-							match.numProcs = --matchFoundOffset;
+		//fprintf(stdout,"Clust=%d | Proc=%d | Sub=%lld | Num=%d | OCT=%s\n",match.jid.cluster,match.jid.proc,match.QDate,match.numProcs,onlyCheckTime ? "true" : "false"); //Debug Match items
+		if (match.jid.cluster == banner.jid.cluster) { //If cluster matches do checks
+			//Get QDate from job ad if not set in info
+			if (match.QDate < 0 && ad) { ad->LookupInteger(ATTR_Q_DATE,match.QDate); }
+			if (!onlyCheckTime) {
+				if (match.jid.proc >= 0) {
+					//If has a specified proc and matched proc and cluster then remove from data structure
+					//If not an epoch file then found else if epoch file reading backwards and run_instance is 0 then all epoch ads found
+					if (match.jid == banner.jid && (hasOneJobInstInFile() || (backwards && banner.runId == 0))) {
+						match.isDoneMatching = true;
+						onlyCheckTime = true;
+						continue;
+					}
+				} else { //Else this is a cluster only find
+					//If numProcs is negative then set info to current ads info (TotalSubmitProcs)
+					if (match.numProcs < 0) {
+						int matchFoundOffset = match.numProcs; //Starts off at -1 and decrements at each match
+						if (recordSrc == HRS_JOB_EPOCH && banner.runId != 0) { ++matchFoundOffset; } //increment because initial assumed match not guaranteed with epochs
+						if (!ad || !ad->LookupInteger(ATTR_TOTAL_SUBMIT_PROCS,match.numProcs)) {
+							if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
+								match.numProcs = --matchFoundOffset;
+							}
+						} else {
+							match.numProcs += matchFoundOffset;
+							if (match.numProcs <= 0) {
+								match.isDoneMatching = true;
+							}
 						}
-					} else {
-						match.numProcs += matchFoundOffset;
-						if (match.numProcs <= 0) {
-							match.isDoneMatching = true;
-							numMatchesDone++;
+					} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
+						if (hasOneJobInstInFile() || (backwards && banner.runId == 0)) {
+							if (--match.numProcs == 0) {
+								match.isDoneMatching = true;
+							}
 						}
 					}
-				} else { //If decremented numProcs is 0 then we found all procs in cluster so remove from data structure
-					if (!read_epoch_ads || (backwards && banner.runId == 0)) {
-						--match.numProcs;
-						if (match.numProcs == 0) {
-							match.isDoneMatching = true;
-							numMatchesDone++;
-						}
-					}
+					onlyCheckTime = true;
+					continue;
 				}
 			}
 		}
+		//If the cluster submit time is greater than the current completion date remove from data structure
+		if (banner.completion > 0 && match.QDate > banner.completion) {
+			match.isDoneMatching = true;
+		}
 	}
 
+	//Remove all match jid's done searching
+	condenseJobFilterList();
+
 	//If all filter matches have been found return true else return false
-	if (numMatchesDone == jobIdFilterInfo.size())
+	if (jobIdFilterInfo.empty())
 		return true;
 	else
 		return false;
@@ -1003,9 +1149,8 @@ static bool checkMatchJobIdsFound(BannerInfo &banner, ClassAd *ad = NULL) {
 // Read the history from a single file and print it out. 
 static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* constraint, ExprTree *constraintExpr)
 {
-    int EndFlag   = 0;
+    bool EndFlag  = false;
     int ErrorFlag = 0;
-    int EmptyFlag = 0;
     ClassAd *ad = NULL;
     std::string buf;
 
@@ -1046,7 +1191,9 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             fprintf( stderr, "Error:  Out of memory\n" );
             exit( 1 );
         }
-        InsertFromFile(LogFile,*ad,"***", EndFlag, ErrorFlag, EmptyFlag);
+        CondorClassAdFileParseHelper helper("***");
+        int c_attrs = InsertFromFile(LogFile,*ad, EndFlag, ErrorFlag, &helper);
+        std::string banner(helper.getDelimitorLine());
         if( ErrorFlag ) {
             printf( "\t*** Warning: Bad history file; skipping malformed ad(s)\n" );
             ErrorFlag=0;
@@ -1056,8 +1203,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
             }
             continue;
         } 
-        if( EmptyFlag ) {
-            EmptyFlag=0;
+        //If no attribute were read during insertion reset ad and continue
+        if( c_attrs <= 0 ) {
             if(ad) {
                 delete ad;
                 ad = NULL;
@@ -1105,12 +1252,8 @@ static void readHistoryFromFileOld(const char *JobHistoryFileName, const char* c
         }
 
 		if (cluster > 0) { //User specified cluster or cluster.proc.
-			int cluster = -1, proc = -1;
 			BannerInfo ad_info;
-			ad->LookupInteger(ATTR_CLUSTER_ID,cluster);
-			ad->LookupInteger(ATTR_PROC_ID,proc);
-			ad_info.jid = JOB_ID_KEY(cluster,proc);
-			ad->LookupInteger(ATTR_COMPLETION_DATE,ad_info.completion);
+			parseBanner(ad_info, banner);
 			if (checkMatchJobIdsFound(ad_info, ad)) { //Check if all possible matches have been found
 				if (ad) {
 					delete ad;
@@ -1257,15 +1400,14 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	//Parse Banner info
 	BannerInfo newInfo;
 
-	const char * p = banner.c_str();
+	const char * p = getAdTypeFromBanner(banner, newInfo.ad_type);
+	//fprintf(stdout, "parseBanner(%s)\n", p);
+	//Banner contains no Key=value pairs, no info to parse so return true to parse ad
+	if (!p) { info = newInfo; return true; }
 	const char * endp = p + banner.size();
 
 	classad::ClassAdParser parser;
 	parser.SetOldClassAd(true);
-
-	//fprintf(stdout, "parseBanner(%s)\n", p);
-	while (*p == '*') ++p;
-	while (isspace(*p)) ++p;
 
 	const char * rhs;
 	std::string attr;
@@ -1303,7 +1445,8 @@ static bool parseBanner(BannerInfo& info, std::string banner) {
 	}
 	info = newInfo;
 	//For testing output of banner
-	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %lld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
+	//fprintf(stdout,"Ad type: %s\n",info.ad_type.c_str());
+	//fprintf(stdout,"Parsed banner info: %s %d.%d | Comp: %ld | Epoch: %d\n",info.owner.c_str(),info.jid.cluster, info.jid.proc, info.completion, info.runId);
 
 	if(jobIdFilterInfo.empty() && ownersList.empty()) { return true; } //If no searches were specified then return true to print job ad
 	else if (info.jid.cluster <= 0 && !jobIdFilterInfo.empty()) { return true; } //If failed to get cluster info and we are searching for job id info return true
@@ -1365,7 +1508,7 @@ static void readHistoryFromFileEx(const char *JobHistoryFileName, const char* co
 			if (exprs.size() > 0) {
 				printJobIfConstraint(exprs, constraint, constraintExpr, curr_banner);
 				exprs.clear();
-			} else if (cluster > 0 && checkMatchJobIdsFound(curr_banner)){
+			} else if (cluster > 0 && checkMatchJobIdsFound(curr_banner, NULL, true)){
 				//If we don't print an ad we can still check for completion dates vs QDates
 				//for done jobs. If function returns true then we are done
 				break;
@@ -1513,6 +1656,7 @@ static void findEpochDirFiles(std::deque<std::string> *epochFiles, const char* e
 }
 
 static void readHistoryFromDirectory(const char* searchDirectory, const char* constraint, ExprTree *constraintExpr){
+	ASSERT(recordSrc != HRS_AUTO);
 	printHeader();
 	//Make sure match,limit,and/or scanlimit aren't being used with delete function
 	if (maxAds != -1 && delete_epoch_ads) {
@@ -1525,12 +1669,18 @@ static void readHistoryFromDirectory(const char* searchDirectory, const char* co
 	}
 
 	if (!searchDirectory) {
-		fprintf(stderr,"Error: No search directory passed for locating history files.\n");
+		fprintf(stderr,"Error: No search directory found for locating history files.\n");
 		exit(1);
+	} else {
+		StatInfo si(searchDirectory);
+		if (!si.IsDirectory()) {
+			fprintf(stderr, "Error: %s is not a valid directory.\n", searchDirectory);
+			exit(1);
+		}
 	}
 
 	std::deque<std::string> recordFiles;
-	if (read_epoch_ads) { findEpochDirFiles(&recordFiles,searchDirectory); }
+	if (recordSrc == HRS_JOB_EPOCH) { findEpochDirFiles(&recordFiles,searchDirectory); }
 
 	//For each file found read job ads
 	for(auto file : recordFiles) {

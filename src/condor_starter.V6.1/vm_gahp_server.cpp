@@ -285,7 +285,7 @@ VMGahpServer::startUp(Env *job_env, const char *workingdir, int nice_inc, Family
 		vmgahp_args.AppendArg("-t");
 	}
 	vmgahp_args.AppendArg("-M");
-	vmgahp_args.AppendArg(VMGAHP_STANDALONE_MODE);
+	vmgahp_args.AppendArg(std::to_string(VMGAHP_STANDALONE_MODE));
 
 	std::string args_string;
 	vmgahp_args.GetArgsStringForDisplay(args_string, 1);
@@ -967,7 +967,7 @@ VMGahpServer::new_reqid(void)
 
 	m_next_reqid++;
 	while (starting_reqid != m_next_reqid) {
-		if( m_next_reqid > 990000000 ) {
+		if( m_next_reqid > 990'000'000 ) {
 			m_next_reqid = 1;
 			m_rotated_reqids = true;
 		}
@@ -1464,7 +1464,7 @@ VMGahpServer::killVM(void)
 		systemcmd.AppendArg("-t");
 	}
 	systemcmd.AppendArg("-M");
-	systemcmd.AppendArg(VMGAHP_KILL_MODE);
+	systemcmd.AppendArg(std::to_string(VMGAHP_KILL_MODE));
 	systemcmd.AppendArg("vmtype");
 	systemcmd.AppendArg(m_vm_type);
 	systemcmd.AppendArg("match");

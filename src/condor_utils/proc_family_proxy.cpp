@@ -77,9 +77,9 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
 	// the same "command pipe" (which would cause one of them to
 	// fail)
 	//
-	MyString procd_addr_base = m_procd_addr;
+	std::string procd_addr_base = m_procd_addr;
 	if (address_suffix != NULL) {
-		m_procd_addr.formatstr_cat(".%s", address_suffix);
+		formatstr_cat(m_procd_addr, ".%s", address_suffix);
 	}
 
 	// see what log file (if any) the ProcD will be using if we
@@ -94,7 +94,7 @@ ProcFamilyProxy::ProcFamilyProxy(const char* address_suffix)
 			m_procd_log = procd_log;
 			free(procd_log);
 			if (address_suffix != NULL) {
-				m_procd_log.formatstr_cat(".%s", address_suffix);
+				formatstr_cat(m_procd_log, ".%s", address_suffix);
 			}
 		}
 	}
@@ -282,9 +282,15 @@ ProcFamilyProxy::track_family_via_cgroup(pid_t pid, const FamilyInfo *fi)
 bool
 ProcFamilyProxy::track_family_via_cgroup(pid_t , const FamilyInfo *)
 {
-	dprintf(D_ALWAYS, "FATAL ERROR: Requested cgroup support on platform without support\n");
-	ASSERT(false);
-	return false;
+	// We can hit this path when the first DaemonCore::Create_Proces doesn't request
+	// a cgroup, but a subsequent one does.  Currently, this only happens when a docker
+	// universe job (which doesn't request a cgroup for the docker command) subsequently
+	// runs ssh-to-job (which does (although it doesn't need to)).
+	//
+	// For now fix this by just ignoring this, it doesn't cause any real problems, 
+	// but we should have a more robust solution in the future
+	dprintf(D_ALWAYS, "Cgroup based family tracking requested, but we have a proc family that can't, skipping.\n");
+	return true;
 }
 #endif
 
@@ -387,7 +393,7 @@ ProcFamilyProxy::start_procd()
 
 	// now, we build up an ArgList for the procd
 	//
-	MyString exe;
+	std::string exe;
 	ArgList args;
 
 	// path to the executable
@@ -440,10 +446,8 @@ ProcFamilyProxy::start_procd()
 	
 		// pass a log size arg if it is > 0 (-1 is the internal default, and 0 means to disable the log)
 		if (log_size > 0) {
-			MyString size_arg;
-			size_arg.serialize_int(log_size);
 			args.AppendArg("-R");
-			args.AppendArg(size_arg.c_str());
+			args.AppendArg(std::to_string(log_size));
 		}
 	}
 
@@ -477,7 +481,7 @@ ProcFamilyProxy::start_procd()
 	// condor user
 	//
 	args.AppendArg("-C");
-	args.AppendArg(get_condor_uid());
+	args.AppendArg(std::to_string(get_condor_uid()));
 #endif
 
 #if defined(WIN32)
@@ -525,8 +529,8 @@ ProcFamilyProxy::start_procd()
 			       max_tracking_gid);
 		}
 		args.AppendArg("-G");
-		args.AppendArg(min_tracking_gid);
-		args.AppendArg(max_tracking_gid);
+		args.AppendArg(std::to_string(min_tracking_gid));
+		args.AppendArg(std::to_string(max_tracking_gid));
 	}
 #endif
 

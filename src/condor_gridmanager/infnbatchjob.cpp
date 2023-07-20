@@ -159,6 +159,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	remoteJobId = NULL;
 	lastPollTime = 0;
 	pollNow = false;
+	m_remoteIwdSet = false;
 	myResource = NULL;
 	gahp = NULL;
 	m_xfer_gahp = NULL;
@@ -176,6 +177,11 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	int int_value = 0;
 	if ( jobAd->LookupInteger( ATTR_DELEGATED_PROXY_EXPIRATION, int_value ) ) {
 		remoteProxyExpireTime = (time_t)int_value;
+	}
+
+	if (jobAd->LookupString("REMOTE_Iwd", m_sandboxPath) ||
+	    jobAd->LookupString(ATTR_JOB_REMOTE_IWD, m_sandboxPath)) {
+		m_remoteIwdSet = true;
 	}
 
 	buff = "";
@@ -227,7 +233,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		remoteState = JOB_STATE_UNSUBMITTED;
 	}
 
-	strupr( batchType );
+	strlwr( batchType );
 
 	if ( gahp_args.Count() > 0 ) {
 		gahp_path = param( "REMOTE_GAHP" );
@@ -279,6 +285,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 		m_xfer_gahp = new GahpClient( buff.c_str(), gahp_path, &gahp_args );
 		free( gahp_path );
 
+		m_xfer_gahp->SetCondorInherit(true);
 		m_xfer_gahp->setNotificationTimerId( evaluateStateTid );
 		m_xfer_gahp->setMode( GahpClient::normal );
 		// TODO: This can't be the normal gahp timeout value. Does it need to
@@ -362,8 +369,15 @@ void INFNBatchJob::doEvaluateState()
 			"(%d.%d) doEvaluateState called: gmState %s, remoteState %d\n",
 			procID.cluster,procID.proc,GMStateNames[gmState],remoteState);
 
-	if ( gahp ) {
-		gahp->setMode( GahpClient::normal );
+	GahpClient::mode gahp_mode = GahpClient::normal;
+	if ( !resourceStateKnown || resourcePingPending || resourceDown ) {
+		gahp_mode = GahpClient::results_only;
+	}
+	if (gahp) {
+		gahp->setMode(gahp_mode);
+	}
+	if (m_xfer_gahp) {
+		m_xfer_gahp->setMode(gahp_mode);
 	}
 
 	do {
@@ -379,55 +393,12 @@ void INFNBatchJob::doEvaluateState()
 			// is first created. Here, we do things that we didn't want to
 			// do in the constructor because they could block (the
 			// constructor is called while we're connected to the schedd).
-			if ( gahp->Startup() == false ) {
-				dprintf( D_ALWAYS, "(%d.%d) Error starting GAHP\n",
-						 procID.cluster, procID.proc );
-				std::string error_string = "Failed to start GAHP: ";
-				error_string += gahp->getGahpStderr();
 
-				jobAd->Assign( ATTR_HOLD_REASON, error_string );
-				gmState = GM_HOLD;
+			// We let the Resource object do the spawning of the gahp
+			// servers in the ping code. This allows us to treat an ssh
+			// failure for a remote gahp as a failed ping of the resource.
+			if (!myResource->didFirstPing()) {
 				break;
-			}
-			if ( myResource->GahpIsRemote() ) {
-				// This job requires a transfer gahp
-				ASSERT( m_xfer_gahp );
-				bool already_started = m_xfer_gahp->isStarted();
-				if ( m_xfer_gahp->Startup() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error starting transfer GAHP\n",
-							 procID.cluster, procID.proc );
-
-					std::string error_string = "Failed to start transfer GAHP: ";
-					error_string += gahp->getGahpStderr();
-
-					jobAd->Assign( ATTR_HOLD_REASON, error_string );
-					gmState = GM_HOLD;
-					break;
-				}
-				// Try creating the security session only when we first
-				// start up the FT GAHP.
-				// For now, failure to create the security session is
-				// not fatal. FT GAHPs older than 8.1.1 didn't have a
-				// CEDAR security session command and BOSCO had another
-				// way to authenticate FileTransfer connections.
-				if ( !already_started &&
-					 m_xfer_gahp->CreateSecuritySession() == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error creating security session with transfer GAHP\n",
-							 procID.cluster, procID.proc );
-				}
-			}
-			if ( jobProxy ) {
-				if ( gahp->Initialize( jobProxy ) == false ) {
-					dprintf( D_ALWAYS, "(%d.%d) Error initializing GAHP\n",
-							 procID.cluster, procID.proc );
-
-					jobAd->Assign( ATTR_HOLD_REASON,
-								   "Failed to initialize GAHP" );
-					gmState = GM_HOLD;
-					break;
-				}
-
-				gahp->setDelegProxy( jobProxy );
 			}
 
 			gmState = GM_START;
@@ -438,12 +409,16 @@ void INFNBatchJob::doEvaluateState()
 			errorString = "";
 			if ( condorState == COMPLETED ) {
 				gmState = GM_DONE_COMMIT;
+			} else if (remoteJobId == nullptr && remoteSandboxId == nullptr) {
+				gmState = GM_CLEAR_REQUEST;
+			} else if (!gahp->isStarted() || (m_xfer_gahp && !m_xfer_gahp->isStarted())) {
+				// Wait to see if remote gahps can be started on retry
+				// We do not want to try issuing any gahp commands if the
+				// gahp(s) aren't running.
 			} else if ( remoteJobId != NULL ) {
 				gmState = GM_SUBMITTED;
 			} else if ( remoteSandboxId != NULL ) {
 				gmState = GM_TRANSFER_INPUT;
-			} else {
-				gmState = GM_CLEAR_REQUEST;
 			}
 			} break;
 		case GM_UNSUBMITTED: {
@@ -456,7 +431,7 @@ void INFNBatchJob::doEvaluateState()
 				break;
 			} else if ( condorState == COMPLETED ) {
 				gmState = GM_DELETE;
-			} else {
+			} else if (!resourceDown) {
 				gmState = GM_SAVE_SANDBOX_ID;
 			}
 			} break;
@@ -538,9 +513,12 @@ void INFNBatchJob::doEvaluateState()
 				// In 8.1, the file transfer protocol changed and we added
 				// a command to exchange Condor version strings with the
 				// FT GAHP.
+				// Also, never rename the executable during transfer, even
+				// to an older FT GAHP.
 				const char *ver_str = m_xfer_gahp->getCondorVersion();
 				if ( ver_str && ver_str[0] ) {
 					m_filetrans->setPeerVersion( ver_str );
+					m_filetrans->setRenameExecutable(false);
 				} else {
 					CondorVersionInfo ver( 8, 0, 0 );
 					m_filetrans->setPeerVersion( ver );
@@ -568,8 +546,8 @@ void INFNBatchJob::doEvaluateState()
 			}
 
 			std::string sandbox_path;
-			rc = m_xfer_gahp->blah_download_sandbox( remoteSandboxId, gahpAd,
-													 m_sandboxPath );
+			rc = m_xfer_gahp->blah_download_sandbox( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd,
+													 sandbox_path );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -585,6 +563,9 @@ void INFNBatchJob::doEvaluateState()
 				errorString = m_xfer_gahp->getErrorString();
 				gmState = GM_CLEAR_REQUEST;
 			} else {
+				if (!m_remoteIwdSet) {
+					m_sandboxPath = sandbox_path;
+				}
 				gmState = GM_SUBMIT;
 			}
 		} break;
@@ -608,13 +589,13 @@ void INFNBatchJob::doEvaluateState()
 			}
 
 			rc = gahp->blah_job_submit( gahpAd, &job_id_string );
-			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
-				 rc == GAHPCLIENT_COMMAND_PENDING ) {
-				break;
-			}
 			lastSubmitAttempt = time(NULL);
 			if ( !myResource->GahpIsRemote() ) {
 				numSubmitAttempts++;
+			}
+			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
+				 rc == GAHPCLIENT_COMMAND_PENDING ) {
+				break;
 			}
 			if ( rc == GAHP_SUCCESS ) {
 				SetRemoteJobId( job_id_string );
@@ -627,6 +608,10 @@ void INFNBatchJob::doEvaluateState()
 				gmState = GM_SUBMIT_SAVE;
 			} else {
 				// unhandled error
+				// TODO Only request ping if failure doesn't look job-specific
+				// TODO Wait and retry command if resource is down and
+				//   eventually comes back up
+				myResource->RequestPing(nullptr);
 				dprintf( D_ALWAYS,
 						 "(%d.%d) blah_job_submit() failed: %s\n",
 						 procID.cluster, procID.proc,
@@ -705,6 +690,10 @@ void INFNBatchJob::doEvaluateState()
 					gmState = GM_SUBMITTED;
 					break;
 				} else {
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							"(%d.%d) blah_job_status() failed: %s\n",
 							procID.cluster, procID.proc, gahp->getErrorString() );
@@ -775,7 +764,7 @@ void INFNBatchJob::doEvaluateState()
 					gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 				}
 
-				rc = m_xfer_gahp->blah_download_proxy( remoteSandboxId, gahpAd );
+				rc = m_xfer_gahp->blah_download_proxy( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 					 rc == GAHPCLIENT_COMMAND_PENDING ) {
 					break;
@@ -816,6 +805,10 @@ void INFNBatchJob::doEvaluateState()
 				}
 				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_refresh_proxy() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
@@ -903,7 +896,7 @@ void INFNBatchJob::doEvaluateState()
 				gahpAd->Assign( ATTR_TRANSFER_SOCKET, new_addr );
 			}
 
-			rc = m_xfer_gahp->blah_upload_sandbox( remoteSandboxId, gahpAd );
+			rc = m_xfer_gahp->blah_upload_sandbox( m_remoteIwdSet ? m_sandboxPath.c_str() : remoteSandboxId, gahpAd );
 			if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
 				 rc == GAHPCLIENT_COMMAND_PENDING ) {
 				break;
@@ -952,6 +945,10 @@ void INFNBatchJob::doEvaluateState()
 				}
 				if ( rc != GAHP_SUCCESS ) {
 					// unhandled error
+					// TODO Only request ping if failure doesn't look job-specific
+					// TODO Wait and retry command if resource is down and
+					//   eventually comes back up
+					myResource->RequestPing(nullptr);
 					dprintf( D_ALWAYS,
 							 "(%d.%d) blah_job_cancel() failed: %s\n",
 							 procID.cluster, procID.proc, gahp->getErrorString() );
@@ -969,7 +966,7 @@ void INFNBatchJob::doEvaluateState()
 		case GM_DELETE_SANDBOX: {
 			// Clean up any files left behind by the job execution.
 
-			if ( myResource->GahpIsRemote() ) {
+			if ( myResource->GahpIsRemote() && !m_remoteIwdSet ) {
 
 				// Delete the remote sandbox
 				if ( gahpAd == NULL ) {
@@ -1026,17 +1023,14 @@ void INFNBatchJob::doEvaluateState()
 					if ( jobAd->Lookup( ATTR_X509_USER_PROXY ) && remoteJobId ) {
 						TemporaryPrivSentry sentry(PRIV_USER);
 
-						const char *job_id = NULL;
-						const char *token = NULL;
-						StringList sl( remoteJobId, "/" );
-						sl.rewind();
-						while ( (token = sl.next()) ) {
+						std::string job_id;
+						for (auto& token : StringTokenIterator(remoteJobId, "/")) {
 							job_id = token;
 						}
-						ASSERT( job_id );
+						ASSERT( !job_id.empty() );
 						std::string proxy;
 						formatstr( proxy, "%s/.blah_jobproxy_dir/%s.proxy",
-								   pw->pw_dir, job_id );
+								   pw->pw_dir, job_id.c_str() );
 						struct stat statbuf;
 						int rc = lstat( proxy.c_str(), &statbuf );
 						if ( rc < 0 ) {
@@ -1144,7 +1138,9 @@ void INFNBatchJob::doEvaluateState()
 				requestScheddUpdate( this, true );
 				break;
 			}
-			m_sandboxPath = "";
+			if (!m_remoteIwdSet) {
+				m_sandboxPath = "";
+			}
 			submitLogged = false;
 			executeLogged = false;
 			submitFailedLogged = false;
@@ -1222,6 +1218,7 @@ void INFNBatchJob::doEvaluateState()
 				FetchProxyList.erase( m_xferId );
 				m_xferId.clear();
 			}
+			resourcePingComplete = false;
 		}
 
 	} while ( reevaluate_state );
@@ -1436,11 +1433,8 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 			// CERequirements is string. Split on comma/space and lookup
 			// the resulting names in the job ad to build the goofy
 			// blahp expression.
-			StringList attr_list( cereq_str.c_str() );
 			ExprTree *new_cereq = NULL;
-			const char *next_attr = NULL;
-			attr_list.rewind();
-			while ( (next_attr = attr_list.next()) ) {
+			for (const auto& next_attr : StringTokenIterator(cereq_str)) {
 				classad::Value val;
 				jobAd->EvaluateAttr( next_attr, val );
 				classad::Literal *new_literal = classad::Literal::MakeLiteral( val );
@@ -1580,33 +1574,39 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		std::string old_value;
 		std::string new_value;
 		bool xfer_exec = true;
+		bool xfer_stdin = true;
+		bool xfer_stdout = true;
+		bool xfer_stderr = true;
 
 		submit_ad->InsertAttr( ATTR_JOB_IWD, m_sandboxPath );
 
 		jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, xfer_exec );
 		if ( xfer_exec ) {
-			//submit_ad->LookupString( ATTR_JOB_CMD, old_value );
-			//sprintf( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
-			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
+			submit_ad->LookupString( ATTR_JOB_CMD, old_value );
+			formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), condor_basename( old_value.c_str() ) );
+			//formatstr( new_value, "%s/%s", m_sandboxPath.c_str(), CONDOR_EXEC );
 			submit_ad->InsertAttr( ATTR_JOB_CMD, new_value );
 		}
 
 		old_value = "";
 		submit_ad->LookupString( ATTR_JOB_INPUT, old_value );
-		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+		jobAd->LookupBool(ATTR_TRANSFER_INPUT, xfer_stdin);
+		if ( xfer_stdin && !old_value.empty() && !nullFile( old_value.c_str() ) ) {
 			submit_ad->InsertAttr( ATTR_JOB_INPUT, condor_basename( old_value.c_str() ) );
 		}
 
 		old_value = "";
 		submit_ad->LookupString( ATTR_JOB_OUTPUT, old_value );
-		if ( !old_value.empty() && !nullFile( old_value.c_str() ) ) {
+		jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, xfer_stdout);
+		if ( xfer_stdout && !old_value.empty() && !nullFile( old_value.c_str() ) ) {
 			submit_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
 		}
 
 		new_value = "";
 		submit_ad->LookupString( ATTR_JOB_ERROR, new_value );
-		if ( !new_value.empty() && !nullFile( new_value.c_str() ) ) {
-			if ( old_value == new_value ) {
+		jobAd->LookupBool(ATTR_TRANSFER_ERROR, xfer_stderr);
+		if ( xfer_stderr && !new_value.empty() && !nullFile( new_value.c_str() ) ) {
+			if ( xfer_stdout && old_value == new_value ) {
 				submit_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
 			} else {
 				submit_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
@@ -1625,19 +1625,14 @@ ClassAd *INFNBatchJob::buildSubmitAd()
 		old_value = "";
 		submit_ad->LookupString( ATTR_TRANSFER_INPUT_FILES, old_value );
 		if ( !old_value.empty() ) {
-			StringList old_paths( NULL, "," );
-			StringList new_paths( NULL, "," );
-			const char *old_path;
-			old_paths.initializeFromString( old_value.c_str() );
-
-			old_paths.rewind();
-			while ( (old_path = old_paths.next()) ) {
-				new_paths.append( condor_basename( old_path ) );
+			std::vector<std::string> file_list = split(old_value, ",");
+			for (auto& file : file_list) {
+				// We make a copy of file, since condor_basename() will
+				// return a pointer inside the passed string
+				std::string tmp_name = file;
+				file = condor_basename( tmp_name.c_str() );
 			}
-
-			char *new_list = new_paths.print_to_string();
-			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, new_list );
-			free( new_list );
+			submit_ad->InsertAttr( ATTR_TRANSFER_INPUT_FILES, join(file_list, ",") );
 		}
 
 		submit_ad->Delete( ATTR_TRANSFER_OUTPUT_REMAPS );
@@ -1655,6 +1650,9 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		ATTR_JOB_CMD,
 		ATTR_JOB_INPUT,
 		ATTR_TRANSFER_EXECUTABLE,
+		ATTR_TRANSFER_INPUT,
+		ATTR_TRANSFER_OUTPUT,
+		ATTR_TRANSFER_ERROR,
 		ATTR_TRANSFER_INPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_FILES,
 		ATTR_TRANSFER_OUTPUT_REMAPS,
@@ -1684,17 +1682,20 @@ ClassAd *INFNBatchJob::buildTransferAd()
 
 	ClassAd *xfer_ad = new ClassAd();
 	ExprTree *next_expr;
-	const char *next_name;
 
 	std::string stdout_path;
 	std::string stderr_path;
+	bool xfer_stdout = true;
+	bool xfer_stderr = true;
+	jobAd->LookupBool(ATTR_TRANSFER_OUTPUT, xfer_stdout);
+	jobAd->LookupBool(ATTR_TRANSFER_ERROR, xfer_stderr);
 	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_path );
-	if ( !stdout_path.empty() && !nullFile( stdout_path.c_str() ) ) {
+	if ( xfer_stdout && !stdout_path.empty() && !nullFile( stdout_path.c_str() ) ) {
 		xfer_ad->InsertAttr( ATTR_JOB_OUTPUT, StdoutRemapName );
 	}
 	jobAd->LookupString( ATTR_JOB_ERROR, stderr_path );
-	if ( !stderr_path.empty() && !nullFile( stderr_path.c_str() ) ) {
-		if ( stdout_path == stderr_path ) {
+	if ( xfer_stderr && !stderr_path.empty() && !nullFile( stderr_path.c_str() ) ) {
+		if ( xfer_stdout && stdout_path == stderr_path ) {
 			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StdoutRemapName );
 		} else {
 			xfer_ad->InsertAttr( ATTR_JOB_ERROR, StderrRemapName );
@@ -1715,17 +1716,11 @@ ClassAd *INFNBatchJob::buildTransferAd()
 		}
 	}
 
-	for (auto & itr : *jobAd) {
-		next_name = itr.first.c_str();
-		if ( strncasecmp( next_name, "REMOTE_", 7 ) == 0 &&
-			 strlen( next_name ) > 7 ) {
-
-			char const *attr_name = &(next_name[7]);
-
-			ExprTree * pTree = itr.second->Copy();
-			xfer_ad->Insert( attr_name, pTree );
-		}
-	}
+	// Don't process "REMOTE_*" attributes like we do for the ad given
+	// to the blahp.
+	// This ad is used for both local and remote ends of FileTransfer.
+	// We don't want Remote_Iwd to apply to the local ad, and the ft-gahp
+	// will overwrite Iwd in the remote ad.
 
 	// TODO This may require some additional attributes to be set.
 
@@ -1738,20 +1733,16 @@ void INFNBatchJob::CreateSandboxId()
 	// Our pattern is <collector name>_<GlobalJobId>
 
 	// get condor pool name
-	// In case there are multiple collectors, strip out the spaces
 	// If there's no collector, insert a dummy name
 	char* pool_name = param( "COLLECTOR_HOST" );
-	if ( pool_name ) {
-		StringList collectors( pool_name );
-		free( pool_name );
-		pool_name = collectors.print_to_string();
-	} else {
+	if ( !pool_name ) {
 		pool_name = strdup( "NoPool" );
 	}
 
 	// The sandbox id becomes a directory on the remote side.
 	// Having ':', '?', ' ', or ',' in a path can mess up PBS and
 	// other systems, so we need to remove them.
+	// If pool_name has a list of collectors, just the first will be used.
 	for ( char *ptr = pool_name; *ptr != '\0'; ptr++ ) {
 		switch( *ptr ) {
 		case ':':

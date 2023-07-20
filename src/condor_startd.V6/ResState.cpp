@@ -27,7 +27,7 @@ ResState::ResState( Resource* res_ip )
 	r_destination = no_state;
 	r_act = idle_act;
 	r_act_was_benchmark = false;
-	m_atime = time(NULL);
+	m_atime = resmgr->now();
 	m_stime = m_atime;
 	this->rip = res_ip;
 	m_time_owner_idle = 0;
@@ -58,11 +58,11 @@ ResState::publish( ClassAd* cp )
 {
 	cp->Assign( ATTR_STATE, state_to_string(r_state) );
 
-	cp->Assign( ATTR_ENTERED_CURRENT_STATE, (int)m_stime );
+	cp->Assign( ATTR_ENTERED_CURRENT_STATE, m_stime );
 
 	cp->Assign( ATTR_ACTIVITY, activity_to_string(r_act) );
 
-	cp->Assign( ATTR_ENTERED_CURRENT_ACTIVITY, (int)m_atime );
+	cp->Assign( ATTR_ENTERED_CURRENT_ACTIVITY, m_atime );
 
 		// Conditionally publish any attributes about time spent in
 		// each of the following state/activity combinations.
@@ -83,12 +83,20 @@ ResState::publish( ClassAd* cp )
 	publishHistoryInfo(cp, drained_state, retiring_act);
 }
 
+// private function to determine what to set the activity to when the state changes to preempting
+Activity ResState::_preempting_activity()
+{
+	// wants_vacate dprintf's about what it decides and the
+	// implications on state changes...
+	if ( ! rip->preemptWasTrue() || rip->wants_vacate())
+		return vacating_act;
+	return killing_act;
+}
 
 void
 ResState::change( State new_state, Activity new_act )
 {
 	bool statechange = false, actchange = false;
-	int now;
 
 	if( new_state != r_state ) {
 		statechange = true;
@@ -124,7 +132,15 @@ ResState::change( State new_state, Activity new_act )
 				 activity_to_string(new_act) );
 	}
 
- 	now = time( NULL );
+	// we should *try* and use a consistent value for current_time when updating a bunch of slots
+	// but we don't want to use a time that's *too* late, so use the resmgr's current time if its
+	// not too far in the past.
+ 	time_t now = resmgr->now();
+	time_t actual_now = time(nullptr);
+	if ((actual_now - now) > 1) {
+		now = actual_now; 
+		//dprintf(D_ERROR | D_BACKTRACE, "Warning : ResState::change() time lag %d (%d - %d)\n", actual_now - now, actual_now, now);
+	}
 
 		// Record the time we spent in the previous state
 	updateHistoryTotals(now);
@@ -149,12 +165,9 @@ ResState::change( State new_state, Activity new_act )
 		return;
 	}
 
-		// Note our current state and activity in the classad
-	this->publish( rip->r_classad );
-
-	//PRAGMA_REMIND("this triggers an update to the collector, rethink?")
-		// We want to update the CM on every state or activity change
-	rip->update_needed(Resource::WhyFor::wf_stateChange);
+		// update our current state and activity in the classad
+		// and possibly trigger a collector update
+	rip->state_or_activity_changed(now, statechange, actchange);
 
 #if HAVE_BACKFILL
 		/*
@@ -176,31 +189,6 @@ ResState::change( State new_state, Activity new_act )
 
 	return;
 }
-
-
-void
-ResState::change( Activity new_act )
-{
-	change( r_state, new_act );
-}
-
-
-void
-ResState::change( State new_state )
-{
-	if( new_state == preempting_state ) {
-			// wants_vacate dprintf's about what it decides and the
-			// implications on state changes...
-		if( !rip->preemptWasTrue() || rip->wants_vacate() ) {
-			change( new_state, vacating_act );
-		} else {
-			change( new_state, killing_act );
-		}
-	} else {
-		change( new_state, idle_act );
-	}
-}
-
 
 int
 ResState::eval_policy( void )
@@ -389,7 +377,7 @@ ResState::eval_policy( void )
 
 
 	case unclaimed_state:
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -460,7 +448,7 @@ ResState::eval_policy( void )
 			// of job ClassAd), it may never go back to Unclaimed 
 			// state. So we need to delete the dynmaic slot in owner
 			// state.
-		if( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 #if HAVE_JOB_HOOKS
 				// If we're currently fetching we can't delete
 				// ourselves. If we do when the hook returns we won't
@@ -638,6 +626,7 @@ ResState::leave_action( State cur_s, Activity cur_a, State new_s,
 				// In fact, we should just delete the whole ClassAd
 				// and rebuild it, since we might be leaving around
 				// attributes from STARTD_JOB_ATTRS, etc.
+			resmgr->update_cur_time();
 			rip->init_classad();
 		}
 		break;
@@ -740,8 +729,10 @@ ResState::enter_action( State s, Activity a,
 			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
 			rip->r_cur->publish( rip->r_classad );
-				// Generate a preempting claim object
-			rip->r_pre = new Claim( rip );
+				// Generate a preempting claim object, but not for a pslot
+			if (!rip->is_partitionable_slot()) {
+				rip->r_pre = new Claim( rip );
+			}
 		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {
@@ -900,7 +891,7 @@ ResState::enter_action( State s, Activity a,
 		break; 	// preempting_state
 
 	case delete_state:
-		if ( Resource::DYNAMIC_SLOT == rip->get_feature() ) {
+		if (rip->is_dynamic_slot() || rip->is_broken_slot()) {
 			resmgr->removeResource( rip );
 		} else {
 			resmgr->deleteResource( rip );
@@ -1310,7 +1301,7 @@ ResState::publishHistoryInfo( ClassAd* cap, State _state, Activity _act )
 		total += (time(NULL) - m_atime);
 	}
 	if (total) {
-		cap->Assign(info.attr_name, (int)total);
+		cap->Assign(info.attr_name, total);
 		return true;
 	}
 	return false;

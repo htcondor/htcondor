@@ -17,7 +17,7 @@ job event log
     machine. The submit description file for the job requests a job
     event log with the submit command
     **log** :index:`log<single: log; submit commands>`. The log is created
-    and remains on the submit machine. Contents of the log are detailed
+    on and remains on the access point. Contents of the log are detailed
     in the :ref:`users-manual/managing-a-job:in the job event log file` section.
     Examples of events are that the job is running, that the job is placed on
     hold, or that the job completed.
@@ -64,15 +64,14 @@ job queue log
     The job queue log is a transactional representation of the current
     job queue. If the *condor_schedd* crashes, the job queue can be
     rebuilt using this log. The file name is set by configuration
-    variable ``JOB_QUEUE_LOG`` :index:`JOB_QUEUE_LOG`, and
-    defaults to ``$(SPOOL)/job_queue.log``.
+    variable :macro:`JOB_QUEUE_LOG`, and defaults to ``$(SPOOL)/job_queue.log``.
 
     Within the log, each transaction is identified with an integer value
     and followed where appropriate with other values relevant to the
     transaction. To reduce the size of the log and remove any
     transactions that are no longer relevant, a copy of the log is kept
     by renaming the log at each time interval defined by configuration
-    variable ``QUEUE_CLEAN_INTERVAL``, and then a new log is written
+    variable :macro:`QUEUE_CLEAN_INTERVAL`, and then a new log is written
     with only current and relevant transactions.
 
     Configuration variables that affect the job queue log are
@@ -121,7 +120,7 @@ event log
     The event log is an optional, chronological list of events that
     occur for all jobs and all users. The events logged are the same as
     those that would go into a job event log. The file name is set by
-    configuration variable ``EVENT_LOG`` :index:`EVENT_LOG`. The
+    configuration variable :macro:`EVENT_LOG`. The
     log is created only if this configuration variable is set.
 
     Configuration variables that affect the event log, setting details
@@ -146,7 +145,7 @@ accountant log
     To reduce the size and remove information that is no longer
     relevant, a copy of the log is made when its size hits the number of
     bytes defined by configuration variable
-    ``MAX_ACCOUNTANT_DATABASE_SIZE``, and then a new log is written in a
+    :macro:`MAX_ACCOUNTANT_DATABASE_SIZE`, and then a new log is written in a
     more compact form.
 
     Administrators can change user priorities kept in this log by using
@@ -185,7 +184,7 @@ default node log
     enforce the dependencies of the DAG.
 
     The file name is set by configuration variable
-    ``DAGMAN_DEFAULT_NODE_LOG`` :index:`DAGMAN_DEFAULT_NODE_LOG`,
+    :macro:`DAGMAN_DEFAULT_NODE_LOG`,
     and the full path name of this file must be unique while any and all
     submitted DAGs and other jobs from the submit host run. The syntax
     used in the definition of this configuration variable is different
@@ -215,8 +214,8 @@ the ``.dagman.out`` file
 
 the ``jobstate.log`` file
     This optional, machine-readable log enables automated monitoring of
-    DAG. The page :ref:`users-manual/dagman-workflows:a machine-readable
-    event history, the jobstate.log file` details this log.
+    DAG. The page :ref:`automated-workflows/dagman-jobstate-log:Machine-Readable Event History`
+    details this log.
 
 :index:`logging`
 

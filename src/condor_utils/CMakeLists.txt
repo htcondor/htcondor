@@ -87,7 +87,6 @@ stl_string_utils.h
 strcasestr.cpp
 string_list.cpp
 string_list.h
-strnewp.cpp
 strupr.cpp
 subsystem_info.cpp
 subsystem_info.h
@@ -153,7 +152,6 @@ AWSv4-utils.cpp
 AWSv4-utils.h
 AWSv4-impl.h
 backward_file_reader.cpp
-binary_search.h
 build_job_env.cpp
 build_job_env.h
 check_events.cpp
@@ -186,7 +184,6 @@ classad_usermap.cpp
 classad_visa.cpp
 classad_visa.h
 classy_counted_ptr.h
-command_name_tables.h
 command_strings.cpp
 command_strings.h
 compat_classad_list.cpp
@@ -249,13 +246,14 @@ consumption_policy.h
 copy_file.cpp
 credmon_interface.cpp
 credmon_interface.h
+cred_dir.cpp
+cred_dir.h
 cron_job.cpp
 cron_job_io.cpp
 cron_job_list.cpp
 cron_job_mgr.cpp
 cron_job_mode.cpp
 cron_job_params.cpp
-cronos.cpp
 cron_param.cpp
 dagman_utils.cpp
 dagman_utils.h
@@ -290,7 +288,6 @@ escapes.cpp
 exit_utils.cpp
 expr_analyze.cpp
 expr_analyze.h
-extArray.h
 file_modified_trigger.cpp
 file_modified_trigger.h
 filename_tools_cpp.cpp
@@ -323,8 +320,6 @@ hibernation_manager.cpp
 hibernation_manager.h
 hibernator.cpp
 hibernator.h
-hibernator.tools.cpp
-hibernator.tools.h
 historyFileFinder.cpp
 historyFileFinder.h
 history_queue.cpp
@@ -398,14 +393,11 @@ param_info.cpp
 param_info.h
 param_info_help.cpp
 param_info_tables.h
-path_utils.cpp
-path_utils.h
 perm.h
 PluginManager.h
 printf_format.cpp
 print_wrapped_text.cpp
 print_wrapped_text.h
-prioritysimplelist.h
 proc.cpp
 procd_config.cpp
 procd_config.h
@@ -531,6 +523,7 @@ if(LINUX)
 		hibernator.linux.h
 		network_adapter.linux.cpp
 		network_adapter.linux.h
+		proc_family_direct_cgroup_v1.cpp
 		proc_family_direct_cgroup_v2.cpp
 	)
 endif(LINUX)
@@ -555,18 +548,12 @@ if(WINDOWS)
 endif(WINDOWS)
 
 
-##################################################
-add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		COMMAND perl
-		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h -o ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h
-		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../condor_includes/condor_commands.h ${CMAKE_CURRENT_SOURCE_DIR}/command_table_generator.pl)
-
 add_custom_command (OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h
 		COMMAND perl
 		ARGS ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl -i ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in -o ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h -p ${PLATFORM}
 		DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/param_info.in ${CMAKE_CURRENT_SOURCE_DIR}/param_table_generator.pl)
 
-add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
+add_custom_target (utils_genparams ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
 
 if(UNIX)
 	set_source_files_properties(param_info.cpp PROPERTIES COMPILE_FLAGS -Wno-unused-parameter)
@@ -575,10 +562,6 @@ endif(UNIX)
 ############ end generate params
 # These sources depend on the generated param_info_tables.  Everything else can build in parallel
 set_source_files_properties(config.cpp condor_config.cpp param_info.cpp param_info_help.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/param_info_tables.h)
-
-# Only command_strings.cpp depends on the generator above.  Everything else can build in parallel
-set_source_files_properties(command_strings.cpp PROPERTIES OBJECT_DEPENDS  ${CMAKE_CURRENT_BINARY_DIR}/command_name_tables.h)
-
 
 # These are source files that reside in other directories that we want to
 # include in libcondor_utils. They used to be in separate libraries.
@@ -598,6 +581,7 @@ if (APPLE)
 	set_source_files_properties(../condor_io/condor_crypt.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_3des.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 	set_source_files_properties(../condor_io/condor_crypt_blowfish.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
+	set_source_files_properties(../condor_io/condor_auth_kerberos.cpp PROPERTIES COMPILE_FLAGS -Wno-deprecated-declarations)
 endif()
 
 # Build "Object" libraries, which are just a set of .o files which can later to into libraries
@@ -645,6 +629,13 @@ condor_shared_lib(condor_utils
 	$<TARGET_OBJECTS:condor_utils_objects>
 	$<TARGET_OBJECTS:condor_extra_objects>
 )
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+			target_link_libraries(condor_utils PRIVATE stdc++fs)
+        endif()
+    endif()
+endif()
 
 if ( ${PACKAGE_VERSION} MATCHES "([0-9]+)[.]([0-9]+)[.]([0-9]+)" )
 	set( UTILS_LIB_NAME "condor_utils_${CMAKE_MATCH_1}_${CMAKE_MATCH_2}_${CMAKE_MATCH_3}" )
@@ -666,8 +657,17 @@ if (LINUX OR APPLE)
 	)
    set_target_properties( condor_utils_s PROPERTIES OUTPUT_NAME "${UTILS_LIB_NAME}" )
    if (HAVE_GNU_LD)
-	target_link_libraries( condor_utils_s -Wl,--wrap,exit )
+	target_link_libraries( condor_utils_s PRIVATE -Wl,--wrap,exit )
    endif()
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+            if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+			target_link_libraries(condor_utils_s PRIVATE stdc++fs)
+            endif()
+        endif()
+    endif()
+    target_link_libraries(condor_utils_s PUBLIC ${RT_FOUND} classads)
+    target_link_libraries(condor_utils_s PUBLIC ${SECURITY_LIBS})
 endif(LINUX OR APPLE)
 
 
@@ -690,15 +690,9 @@ if ( LINUX )
   set_target_properties( condor_utils PROPERTIES LINK_FLAGS "-Wl,--wrap=dprintf" )
 endif()
 
-if (DLOPEN_VOMS_LIBS)
-	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${KRB5_FOUND} ${MUNGE_FOUND} crypto )
-else()
-	target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND} ${VOMS_FOUND} openssl crypto ${KRB5_FOUND} ${MUNGE_FOUND} )
-	if (WITH_SCITOKENS)
-		target_link_libraries(condor_utils PUBLIC SciTokens)
-	endif()
+target_link_libraries(condor_utils PUBLIC ${RT_FOUND} ${CLASSADS_FOUND})
+target_link_libraries(condor_utils PUBLIC ${SECURITY_LIBS})
 
-endif()
 if (LINUX AND LIBUUID_FOUND)
 	target_link_libraries(condor_utils PUBLIC ${LIBUUID_FOUND})
 endif()
@@ -770,6 +764,7 @@ endif()
 
 set_source_files_properties(test_log_reader.cpp PROPERTIES DEFINITIONS ENABLE_STATE_DUMP)
 
+condor_exe_test(test_classad_funcs "test_classad_funcs.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader "test_log_reader.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_reader_state "test_log_reader_state.cpp" "${CONDOR_TOOL_LIBS}")
 condor_exe_test(test_log_writer "test_log_writer.cpp" "${CONDOR_TOOL_LIBS}")

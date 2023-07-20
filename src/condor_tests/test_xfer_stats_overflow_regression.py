@@ -20,6 +20,7 @@
 
 
 from ornithology import *
+from time import sleep
 
 #-----------------------------------------------------------------------------------------
 @action
@@ -261,7 +262,7 @@ def job_shell_file(test_dir, job_python_file):
     contents = format_script(
     f"""
         #!/bin/bash
-        exec {job_python_file} $@ &>> {test_dir}/plugin.log
+        exec {job_python_file} $@ >> {test_dir}/plugin.log 2>&1
     """
     )
     write_file(job_shell_file, contents)
@@ -295,14 +296,22 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
           count=1
      )
      #Wait for job to complete. Gave a hefty amount of time due to large files being transfered
-     job_handle.wait(condition=ClusterState.all_complete,timeout=30)
+     clustId = job_handle.clusterid
+     assert job_handle.wait(condition=ClusterState.all_complete,timeout=30)
      schedd = default_condor.get_local_schedd()
      #once job is done get job ad attributes needed for test verification
-     job_ad = schedd.history(
-          constraint=None,
-          projection=["TransferInput","TransferInputStats","TransferOutputStats"],
-          match=1,
-     )
+     job_ad = []
+     for i in range(0,5):
+          hist_itr = schedd.history(
+               constraint=f"ClusterId=={clustId}",
+               projection=["TransferInput","TransferInputStats","TransferOutputStats"],
+               match=1,
+          )
+          job_ad = list(hist_itr)
+          if len(job_ad) > 0:
+              break
+          sleep(1)
+     assert len(job_ad) > 0
      #Return job ad for checking attributes
      return (request.param,job_ad)
 
@@ -310,12 +319,14 @@ def run_file_xfer_job(default_condor,test_dir,request, job_shell_file, path_to_s
 #JobSubmitMethod Tests
 class TestTransferStatsOverflowRegression:
 
-     #Test that a job submited with value < Minimum doestn't add JobSubmitMethod attr
+     #Test that a job submited with value < Minimum doesn't add JobSubmitMethod attr
      def test_transfer_stats_bytes_dont_overflow(self,run_file_xfer_job):
           passed = True
           is_0K = False
+          count = 0
           #For every classad returned (should only be 1) check statistics
           for ad in run_file_xfer_job[1]:
+               count += 1
                if "0K" in run_file_xfer_job[0]:
                     is_0K = True
                #For every statistic in TransferInputStats
@@ -346,6 +357,9 @@ class TestTransferStatsOverflowRegression:
                          elif is_0K is False and value == 0:
                               passed = False
                               print(f"Error: {stat} value is {value} for a file larger than 0 bytes. The value should not be 0.")
+          if count != 1:
+              passed = False
+              print(f"Error: history() returned {count} job ads. Expected 1 ad.")
           #Assert Pass or Fail here
           assert passed
 

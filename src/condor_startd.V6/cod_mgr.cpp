@@ -21,6 +21,7 @@
 
 #include "condor_common.h"
 #include "startd.h"
+#include <algorithm>
 
 
 CODMgr::CODMgr( Resource* my_rip )
@@ -31,12 +32,10 @@ CODMgr::CODMgr( Resource* my_rip )
 
 CODMgr::~CODMgr()
 {
-	Claim* tmp_claim;
-	claims.Rewind();
-	while( claims.Next(tmp_claim) ) {
-		delete( tmp_claim );
-		claims.DeleteCurrent();
+	for (auto claim: claims) {
+		delete claim;
 	}
+	claims.clear();
 }
 
 
@@ -48,15 +47,18 @@ CODMgr::publish( ClassAd* ad )
 		return;
 	}
 	std::string claim_names;
-	Claim* tmp_claim;
-	claims.Rewind();
-	while( claims.Next(tmp_claim) ) {
-		tmp_claim->publishCOD( ad );
-		if ( tmp_claim->codId() ) {
-			claim_names += tmp_claim->codId();
-		}
-		if( ! claims.AtEnd() ) {
+	bool first = true;
+	for (auto claim: claims) {
+		claim->publishCOD( ad );
+
+		if (first) {
+			first = false;
+		} else {
 			claim_names += ", ";
+		}
+
+		if ( claim->codId() ) {
+			claim_names += claim->codId();
 		}
 	}
 
@@ -70,28 +72,24 @@ CODMgr::publish( ClassAd* ad )
 Claim*
 CODMgr::findClaimById( const char* id )
 {
-	Claim* tmp_claim;
-	claims.Rewind();
-	while( claims.Next(tmp_claim) ) {
-		if( tmp_claim->idMatches(id) ) {
-			return tmp_claim;
+	for (auto claim: claims) {
+		if( claim->idMatches(id) ) {
+			return claim;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
 Claim*
 CODMgr::findClaimByPid( pid_t pid )
 {
-	Claim* tmp_claim;
-	claims.Rewind();
-	while( claims.Next(tmp_claim) ) {
-		if( tmp_claim->starterPidMatches(pid) ) {
-			return tmp_claim;
+	for (auto claim: claims) {
+		if( claim->starterPidMatches(pid) ) {
+			return claim;
 		}
 	}
-	return NULL;
+	return nullptr;
 }
 
 
@@ -101,7 +99,7 @@ CODMgr::addClaim( int lease_duration )
 	Claim* new_claim;
 	new_claim = new Claim( rip, CLAIM_COD, lease_duration );
 	new_claim->beginClaim();
-	claims.Append( new_claim );
+	claims.push_back( new_claim );
 	return new_claim;
 }
 
@@ -109,24 +107,17 @@ CODMgr::addClaim( int lease_duration )
 bool
 CODMgr::removeClaim( Claim* c ) 
 {
-	bool found_it = false;
-	Claim* tmp;
-	claims.Rewind();
-	while( claims.Next(tmp) ) {
-		if( tmp == c ) {
-			found_it = true;
-			claims.DeleteCurrent();
-		}
-	}
-	if( found_it ) {
-		delete c;
+	auto it = std::find(claims.begin(), claims.end(), c);
+	if (it != claims.end()) {
+		delete *it;
+		claims.erase(it);
 		rip->update_needed(Resource::WhyFor::wf_cod);
 	} else {
 		dprintf( D_ALWAYS, 
 				 "WARNING: CODMgr::removeClaim() could not find claim %s\n", 
 				 c->id() );
 	}
-	return found_it;
+	return it != claims.end();
 }
 
 
@@ -165,24 +156,22 @@ CODMgr::starterExited( Claim* c )
 int
 CODMgr::numClaims( void )
 {
-	return claims.Number();
+	return (int) claims.size();
 }
 
 
 bool
 CODMgr::hasClaims( void )
 {
-	return (claims.Number() > 0);
+	return (claims.size() > 0);
 }
 
 
 bool
 CODMgr::isRunning( void )
 {
-	Claim* tmp;
-	claims.Rewind();
-	while( claims.Next(tmp) ) {
-		if( tmp->isRunning() ) {
+	for (auto claim: claims) {
+		if( claim->isRunning() ) {
 			return true;
 		}
 	}
@@ -193,12 +182,13 @@ CODMgr::isRunning( void )
 void
 CODMgr::shutdownAllClaims( bool graceful )
 {
-	Claim* tmp;
-	claims.Rewind();
-	while( claims.Next(tmp) ) {
-		if( tmp->removeClaim(graceful) ) {
-			claims.DeleteCurrent();
-			delete( tmp );
+	auto it = claims.begin();
+	while (it != claims.end()) {
+		if( (*it)->removeClaim(graceful) ) {
+			delete(*it);
+			it = claims.erase(it);
+		} else {
+			it++;
 		}
 			// else, there was a starter which we sent a signal to,
 			// so, we'll delete it and clean up in the reaper...
@@ -315,23 +305,33 @@ CODMgr::activate( Stream* s, ClassAd* req, Claim* claim )
 
 		// finally, spawn the starter and COD job itself
 
-	int rval = claim->spawnStarter(tmp_starter, new_req_ad);
-	if( !rval ) {
+	pid_t starter_pid = claim->spawnStarter(tmp_starter, new_req_ad);
+	if( !starter_pid ) {
 			// Failed to spawn, make sure everything goes back to
 			// normal with the opportunistic claim
 		interactionLogicCODStopped();
+		delete tmp_starter;
+	} else {
+		// We delete the starter object here even though we created it successfully
+		// because this will have the side effect of removing the starter object
+		// from the list of unreaped starters.  The reaper has been written to
+		// tolerate reaping a starter for which there is no Starter object as long
+		// as there is still a claim that knows about the pid.
+		// This is not a good design, but it's been like that forever, and does not seem
+		// worth the effort to fix it.
+		delete tmp_starter;
 	}
+	tmp_starter = nullptr;
 
 	ClassAd reply;
 	reply.Assign( ATTR_RESULT,
-				  rval ? getCAResultString(CA_SUCCESS)
+			starter_pid ? getCAResultString(CA_SUCCESS)
 				       : getCAResultString(CA_FAILURE) );
 
 		// TODO any other info for the reply?
 	sendCAReply( s, "CA_ACTIVATE_CLAIM", &reply );
 
-	delete tmp_starter;
-	return rval;
+	return starter_pid;
 }
 
 

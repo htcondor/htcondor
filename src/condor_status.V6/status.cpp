@@ -26,7 +26,6 @@
 #include "get_daemon_name.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "extArray.h"
 #include "sig_install.h"
 #include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
@@ -760,25 +759,25 @@ main (int argc, char *argv[])
 	// set the constraints implied by the mode
 	if (sdo_mode == SDO_Startd_Avail && ! compactMode) {
 		// -avail shows unclaimed slots
-		sprintf (buffer, "%s == \"%s\" && Cpus > 0", ATTR_STATE, state_to_string(unclaimed_state));
+		snprintf (buffer, sizeof(buffer), "%s == \"%s\" && Cpus > 0", ATTR_STATE, state_to_string(unclaimed_state));
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
 	else if (sdo_mode == SDO_Startd_Claimed && ! compactMode) {
 		// -claimed shows claimed slots
-		sprintf (buffer, "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
+		snprintf (buffer, sizeof(buffer), "%s == \"%s\"", ATTR_STATE, state_to_string(claimed_state));
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
 	else if (sdo_mode == SDO_Startd_Cod) {
 		// -run shows claimed slots
-		sprintf (buffer, ATTR_NUM_COD_CLAIMS " > 0");
+		snprintf (buffer, sizeof(buffer), ATTR_NUM_COD_CLAIMS " > 0");
 		if (diagnose) { printf ("Adding OR constraint [%s]\n", buffer); }
 		query->addORConstraint (buffer);
 	}
 
 	if(javaMode) {
-		sprintf( buffer, "%s == TRUE", ATTR_HAS_JAVA );
+		snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_HAS_JAVA );
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -795,7 +794,7 @@ main (int argc, char *argv[])
 	}
 
 	if(absentMode) {
-	    sprintf( buffer, "%s == TRUE", ATTR_ABSENT );
+	    snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_ABSENT );
 	    if (diagnose) {
 	        printf( "Adding constraint %s\n", buffer );
 	    }
@@ -807,7 +806,7 @@ main (int argc, char *argv[])
 	}
 
 	if(vmMode) {
-		sprintf( buffer, "%s == TRUE", ATTR_HAS_VM);
+		snprintf( buffer, sizeof(buffer), "%s == TRUE", ATTR_HAS_VM);
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
 		}
@@ -828,12 +827,12 @@ main (int argc, char *argv[])
 	if (compactMode && ! (vmMode || javaMode)) {
 		if (sdo_mode == SDO_Startd_Avail) {
 			// State==Unclaimed picks up partitionable and unclaimed static, Cpus > 0 picks up only partitionable that have free memory
-			sprintf(buffer, "State == \"%s\" && Cpus > 0 && Memory > 0", state_to_string(unclaimed_state));
+			snprintf(buffer, sizeof(buffer), "State == \"%s\" && Cpus > 0 && Memory > 0", state_to_string(unclaimed_state));
 		} else if (sdo_mode == SDO_Startd_Claimed) {
 			// State==Claimed picks up static slots, NumDynamicSlots picks up partitionable slots that are partly claimed.
-			sprintf(buffer, "(State == \"%s\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)", state_to_string(claimed_state));
+			snprintf(buffer, sizeof(buffer), "(State == \"%s\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)", state_to_string(claimed_state));
 		} else {
-			sprintf(buffer, "PartitionableSlot =?= true || DynamicSlot =!= true");
+			snprintf(buffer, sizeof(buffer), "PartitionableSlot =?= true || DynamicSlot =!= true");
 		}
 		if (diagnose) {
 			printf ("Adding constraint [%s]\n", buffer);
@@ -1238,7 +1237,7 @@ main (int argc, char *argv[])
 			const char* daddr = requested_daemon->addr();
 			if (NULL == daddr) daddr = "<unknown>";
 			char info[1000];
-			sprintf(info, "%s (%s)", fullhost, daddr);
+			snprintf(info, sizeof(info), "%s (%s)", fullhost, daddr);
 			printNoCollectorContact( stderr, info, !expert );
 		} else if ((NULL != requested_daemon) && (Q_COMMUNICATION_ERROR == q)) {
 				// more helpful message for failure to connect to some daemon/subsys
@@ -2304,7 +2303,7 @@ secondPass (int argc, char *argv[])
 		if( is_dash_arg_prefix(argv[i], "sort", 2) ) {
 			i++;
 			if ( ! noSort) {
-				sprintf( buffer, "%s =!= UNDEFINED", argv[i] );
+				snprintf( buffer, sizeof(buffer), "%s =!= UNDEFINED", argv[i] );
 				query->addANDConstraint( buffer );
 			}
 			continue;
@@ -2362,11 +2361,11 @@ secondPass (int argc, char *argv[])
 			}
 
 			if (sdo_mode == SDO_Startd_Claimed) {
-				sprintf (buffer, ATTR_REMOTE_USER " == \"%s\"", argv[i]);
+				snprintf (buffer, sizeof(buffer), ATTR_REMOTE_USER " == \"%s\"", argv[i]);
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			} else {
-				sprintf(buffer, ATTR_NAME "==\"%s\" || " ATTR_MACHINE "==\"%s\"", name, name);
+				snprintf(buffer, sizeof(buffer), ATTR_NAME "==\"%s\" || " ATTR_MACHINE "==\"%s\"", name, name);
 				if (diagnose) { printf ("[%s]\n", buffer); }
 				query->addORConstraint (buffer);
 			}

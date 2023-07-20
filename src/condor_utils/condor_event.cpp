@@ -173,18 +173,6 @@ instantiateEvent (ULogEventNumber event)
 	  case ULOG_POST_SCRIPT_TERMINATED:
 		return new PostScriptTerminatedEvent;
 
-	  case ULOG_GLOBUS_SUBMIT:
-		return new GlobusSubmitEvent;
-
-	  case ULOG_GLOBUS_SUBMIT_FAILED:
-		return new GlobusSubmitFailedEvent;
-
-	  case ULOG_GLOBUS_RESOURCE_DOWN:
-		return new GlobusResourceDownEvent;
-
-	  case ULOG_GLOBUS_RESOURCE_UP:
-		return new GlobusResourceUpEvent;
-
 	case ULOG_REMOTE_ERROR:
 		return new RemoteErrorEvent;
 
@@ -254,6 +242,10 @@ instantiateEvent (ULogEventNumber event)
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		return new DataflowJobSkippedEvent;
 
+	case ULOG_GLOBUS_SUBMIT:
+	case ULOG_GLOBUS_SUBMIT_FAILED:
+	case ULOG_GLOBUS_RESOURCE_DOWN:
+	case ULOG_GLOBUS_RESOURCE_UP:
 	default:
 		dprintf( D_ALWAYS, "Unknown ULogEventNumber: %d, reading it as a FutureEvent\n", event );
 		return new FutureEvent(event);
@@ -490,20 +482,6 @@ bool ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, char * buf,
 	return true;
 }
 
-// read a line into a MyString 
-bool ULogEvent::read_optional_line(MyString & str, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
-{
-	if ( ! str.readLine(file, false)) {
-		return false;
-	}
-	if (is_sync_line(str.c_str())) {
-		got_sync_line = true;
-		return false;
-	}
-	if (chomp) { str.chomp(); }
-	return true;
-}
-
 bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/, bool want_trim /*false*/)
 {
 	if ( ! readLine(str, file, false)) {
@@ -517,25 +495,6 @@ bool ULogEvent::read_optional_line(std::string & str, FILE* file, bool & got_syn
 	if (want_chomp) { chomp(str); }
 	if (want_trim) { trim(str); }
 	return true;
-}
-
-bool ULogEvent::read_line_value(const char * prefix, MyString & val, FILE* file, bool & got_sync_line, bool chomp /*=true*/)
-{
-	val.clear();
-	MyString str;
-	if ( ! str.readLine(file, false)) {
-		return false;
-	}
-	if (is_sync_line(str.c_str())) {
-		got_sync_line = true;
-		return false;
-	}
-	if (chomp) { str.chomp(); }
-	if (starts_with(str.c_str(), prefix)) {
-		val = str.substr((int)strlen(prefix), str.length());
-		return true;
-	}
-	return false;
 }
 
 bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* file, bool & got_sync_line, bool want_chomp /*=true*/)
@@ -556,21 +515,6 @@ bool ULogEvent::read_line_value(const char * prefix, std::string & val, FILE* fi
 		return true;
 	}
 	return false;
-}
-
-
-// returns a new'ed pointer to a buffer containing the next line if there is a next line
-// and it is not a sync line. got_sync_line will be set to true if it was a sync line
-// if chomp is true, trailing \r and \n will not be returned
-// if trim is true, leading whitespace will not be returned.
-char * ULogEvent::read_optional_line(FILE* file, bool & got_sync_line, bool chomp /*=true*/, bool trim /*=false*/)
-{
-	MyString str;
-	if (read_optional_line(str, file, got_sync_line, chomp)) {
-		if (trim) { str.trim(); }
-		return str.detach_buffer();
-	}
-	return NULL;
 }
 
 
@@ -639,18 +583,6 @@ ULogEvent::toClassAd(bool event_time_utc)
 	  case ULOG_POST_SCRIPT_TERMINATED:
 		SetMyTypeName(*myad, "PostScriptTerminatedEvent");
 		break;
-	  case ULOG_GLOBUS_SUBMIT:
-		SetMyTypeName(*myad, "GlobusSubmitEvent");
-		break;
-	  case ULOG_GLOBUS_SUBMIT_FAILED:
-		SetMyTypeName(*myad, "GlobusSubmitFailedEvent");
-		break;
-	  case ULOG_GLOBUS_RESOURCE_UP:
-		SetMyTypeName(*myad, "GlobusResourceUpEvent");
-		break;
-	  case ULOG_GLOBUS_RESOURCE_DOWN:
-		SetMyTypeName(*myad, "GlobusResourceDownEvent");
-		break;
 	case ULOG_REMOTE_ERROR:
 		SetMyTypeName(*myad, "RemoteErrorEvent");
 		break;
@@ -711,6 +643,10 @@ ULogEvent::toClassAd(bool event_time_utc)
 	case ULOG_DATAFLOW_JOB_SKIPPED:
 		SetMyTypeName(*myad, "DataflowJobSkippedEvent");
 		break;
+	case ULOG_GLOBUS_SUBMIT:
+	case ULOG_GLOBUS_SUBMIT_FAILED:
+	case ULOG_GLOBUS_RESOURCE_UP:
+	case ULOG_GLOBUS_RESOURCE_DOWN:
 	default:
 		SetMyTypeName(*myad, "FutureEvent");
 		break;
@@ -895,14 +831,14 @@ static void formatUsageAd( std::string &out, ClassAd * pusageAd )
 	}
 
 	// Print table header.
-	MyString fString;
-	fString.formatstr( "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
+	std::string fString;
+	formatstr( fString, "\tPartitionable Resources : %%%ds %%%ds %%%ds %%s\n",
 		cchUse, cchReq, MAX(cchAlloc, 9) );
 	formatstr_cat( out, fString.c_str(), "Usage", "Request",
 		 cchAlloc ? "Allocated" : "", cchAssigned ? "Assigned" : "" );
 
 	// Print table.
-	fString.formatstr( "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
+	formatstr( fString, "\t   %%-%ds : %%%ds %%%ds %%%ds %%s\n",
 		cchRes + 8, cchUse, cchReq, MAX(cchAlloc, 9) );
 	for( const auto & i : useMap ) {
 		if( i.first.empty() ) { continue; }
@@ -1032,14 +968,14 @@ FutureEvent::readEvent (FILE * file, bool & got_sync_line)
 	fgetpos( file, &filep );
 
 	bool athead = true;
-	MyString line;
-	while (line.readLine(file)) {
+	std::string line;
+	while (readLine(line, file)) {
 		if (line[0] == '.' && (line == "...\n" || line == "...\r\n")) {
 			got_sync_line = true;
 			break;
 		}
 		else if (athead) {
-			line.chomp();
+			chomp(line);
 			head = line;
 			athead = false;
 		} else {
@@ -1057,7 +993,7 @@ FutureEvent::toClassAd(bool event_time_utc)
 
 	myad->Assign("EventHead", head);
 	if ( ! payload.empty()) {
-		StringTokenIterator lines(payload, 120, "\r\n");
+		StringTokenIterator lines(payload, "\r\n");
 		const std::string * str;
 		while ((str = lines.next_string())) { 
 			if ( ! myad->Insert(*str)) {
@@ -1222,414 +1158,6 @@ SubmitEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupString("Warnings", submitEventWarnings);
 }
 
-// ----- the GlobusSubmitEvent class
-GlobusSubmitEvent::GlobusSubmitEvent(void)
-{
-	eventNumber = ULOG_GLOBUS_SUBMIT;
-	rmContact = NULL;
-	jmContact = NULL;
-	restartableJM = false;
-}
-
-GlobusSubmitEvent::~GlobusSubmitEvent(void)
-{
-	delete[] rmContact;
-	delete[] jmContact;
-}
-
-bool
-GlobusSubmitEvent::formatBody( std::string &out )
-{
-	const char * unknown = "UNKNOWN";
-	const char * rm = unknown;
-	const char * jm = unknown;
-
-	int retval = formatstr_cat( out, "Job submitted to Globus\n" );
-	if (retval < 0)
-	{
-		return false;
-	}
-
-	if ( rmContact ) rm = rmContact;
-	if ( jmContact ) jm = jmContact;
-
-	retval = formatstr_cat( out, "    RM-Contact: %.8191s\n", rm );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	retval = formatstr_cat( out, "    JM-Contact: %.8191s\n", jm );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	int newjm = 0;
-	if ( restartableJM ) {
-		newjm = 1;
-	}
-	retval = formatstr_cat( out, "    Can-Restart-JM: %d\n", newjm );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	return true;
-}
-
-int GlobusSubmitEvent::readEvent (FILE *file, bool & got_sync_line)
-{
-
-	delete[] rmContact;
-	delete[] jmContact;
-	rmContact = NULL;
-	jmContact = NULL;
-	int newjm = 0;
-
-	MyString tmp;
-	if ( ! read_line_value("Job submitted to Globus", tmp, file, got_sync_line)) {
-		return 0;
-	}
-
-	if ( ! read_line_value("    RM-Contact: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	rmContact = tmp.detach_buffer();
-
-	if ( ! read_line_value("    JM-Contact: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	jmContact = tmp.detach_buffer();
-
-	if ( ! read_line_value("    Can-Restart-JM: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	if ( ! YourStringDeserializer(tmp.c_str()).deserialize_int(&newjm)) {
-		return 0;
-	}
-
-	if ( newjm ) {
-		restartableJM = true;
-	} else {
-		restartableJM = false;
-	}
-
-	return 1;
-}
-
-ClassAd*
-GlobusSubmitEvent::toClassAd(bool event_time_utc)
-{
-	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
-	if( !myad ) return NULL;
-
-	if( rmContact && rmContact[0] ) {
-		if( !myad->InsertAttr("RMContact", rmContact) ) {
-			delete myad;
-			return NULL;
-		}
-	}
-	if( jmContact && jmContact[0] ) {
-		if( !myad->InsertAttr("JMContact", jmContact) ) {
-			delete myad;
-			return NULL;
-		}
-	}
-
-	if( !myad->InsertAttr("RestartableJM", restartableJM ? true : false) ){
-		delete myad;
-		return NULL;
-	}
-
-	return myad;
-}
-
-void
-GlobusSubmitEvent::initFromClassAd(ClassAd* ad)
-{
-	ULogEvent::initFromClassAd(ad);
-
-	if( !ad ) return;
-
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("RMContact", &mallocstr);
-	if( mallocstr ) {
-		rmContact = new char[strlen(mallocstr) + 1];
-		strcpy(rmContact, mallocstr);
-		free(mallocstr);
-	}
-
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	mallocstr = NULL;
-	ad->LookupString("JMContact", &mallocstr);
-	if( mallocstr ) {
-		jmContact = new char[strlen(mallocstr) + 1];
-		strcpy(jmContact, mallocstr);
-		free(mallocstr);
-	}
-
-	int reallybool;
-	if( ad->LookupInteger("RestartableJM", reallybool) ) {
-		restartableJM = reallybool ? TRUE : FALSE;
-	}
-}
-
-// ----- the GlobusSubmitFailedEvent class
-GlobusSubmitFailedEvent::GlobusSubmitFailedEvent(void)
-{
-	eventNumber = ULOG_GLOBUS_SUBMIT_FAILED;
-	reason = NULL;
-}
-
-GlobusSubmitFailedEvent::~GlobusSubmitFailedEvent(void)
-{
-	delete[] reason;
-}
-
-bool
-GlobusSubmitFailedEvent::formatBody( std::string &out )
-{
-	const char * unknown = "UNKNOWN";
-	const char * reasonString = unknown;
-
-	int retval = formatstr_cat( out, "Globus job submission failed!\n" );
-	if (retval < 0)
-	{
-		return false;
-	}
-
-	if ( reason ) reasonString = reason;
-
-	retval = formatstr_cat( out, "    Reason: %.8191s\n", reasonString );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	return true;
-}
-
-int
-GlobusSubmitFailedEvent::readEvent (FILE *file, bool & got_sync_line)
-{
-	delete[] reason;
-	reason = NULL;
-
-	MyString tmp;
-	if ( ! read_line_value("Globus job submission failed!", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	if ( ! read_line_value("    Reason: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	reason = tmp.detach_buffer();
-
-	return 1;
-}
-
-ClassAd*
-GlobusSubmitFailedEvent::toClassAd(bool event_time_utc)
-{
-	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
-	if( !myad ) return NULL;
-
-	if( reason && reason[0] ) {
-		if( !myad->InsertAttr("Reason", reason) ) {
-			delete myad;
-			return NULL;
-		}
-	}
-
-	return myad;
-}
-
-void
-GlobusSubmitFailedEvent::initFromClassAd(ClassAd* ad)
-{
-	ULogEvent::initFromClassAd(ad);
-
-	if( !ad ) return;
-
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("Reason", &mallocstr);
-	if( mallocstr ) {
-		reason = new char[strlen(mallocstr) + 1];
-		strcpy(reason, mallocstr);
-		free(mallocstr);
-	}
-}
-
-// ----- the GlobusResourceUp class
-GlobusResourceUpEvent::GlobusResourceUpEvent(void)
-{
-	eventNumber = ULOG_GLOBUS_RESOURCE_UP;
-	rmContact = NULL;
-}
-
-GlobusResourceUpEvent::~GlobusResourceUpEvent(void)
-{
-	delete[] rmContact;
-}
-
-bool
-GlobusResourceUpEvent::formatBody( std::string &out )
-{
-	const char * unknown = "UNKNOWN";
-	const char * rm = unknown;
-
-	int retval = formatstr_cat( out, "Globus Resource Back Up\n" );
-	if (retval < 0)
-	{
-		return false;
-	}
-
-	if ( rmContact ) rm = rmContact;
-
-	retval = formatstr_cat( out, "    RM-Contact: %.8191s\n", rm );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	return true;
-}
-
-int
-GlobusResourceUpEvent::readEvent (FILE *file, bool & got_sync_line)
-{
-	delete[] rmContact;
-	rmContact = NULL;
-
-	MyString tmp;
-	if ( ! read_line_value("Globus Resource Back Up", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	if ( ! read_line_value("    RM-Contact: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	rmContact = tmp.detach_buffer();
-
-	return 1;
-}
-
-ClassAd*
-GlobusResourceUpEvent::toClassAd(bool event_time_utc)
-{
-	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
-	if( !myad ) return NULL;
-
-	if( rmContact && rmContact[0] ) {
-		if( !myad->InsertAttr("RMContact", rmContact) ) {
-			delete myad;
-			return NULL;
-		}
-	}
-
-	return myad;
-}
-
-void
-GlobusResourceUpEvent::initFromClassAd(ClassAd* ad)
-{
-	ULogEvent::initFromClassAd(ad);
-
-	if( !ad ) return;
-
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("RMContact", &mallocstr);
-	if( mallocstr ) {
-		rmContact = new char[strlen(mallocstr) + 1];
-		strcpy(rmContact, mallocstr);
-		free(mallocstr);
-	}
-}
-
-
-// ----- the GlobusResourceUp class
-GlobusResourceDownEvent::GlobusResourceDownEvent(void)
-{
-	eventNumber = ULOG_GLOBUS_RESOURCE_DOWN;
-	rmContact = NULL;
-}
-
-GlobusResourceDownEvent::~GlobusResourceDownEvent(void)
-{
-	delete[] rmContact;
-}
-
-bool
-GlobusResourceDownEvent::formatBody( std::string &out )
-{
-	const char * unknown = "UNKNOWN";
-	const char * rm = unknown;
-
-	int retval = formatstr_cat( out, "Detected Down Globus Resource\n" );
-	if (retval < 0)
-	{
-		return false;
-	}
-
-	if ( rmContact ) rm = rmContact;
-
-	retval = formatstr_cat( out, "    RM-Contact: %.8191s\n", rm );
-	if( retval < 0 ) {
-		return false;
-	}
-
-	return true;
-}
-
-int
-GlobusResourceDownEvent::readEvent (FILE *file, bool & got_sync_line)
-{
-	delete[] rmContact;
-	rmContact = NULL;
-
-	MyString tmp;
-	if ( ! read_line_value("Detected Down Globus Resource", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	if ( ! read_line_value("    RM-Contact: ", tmp, file, got_sync_line)) {
-		return 0;
-	}
-	rmContact = tmp.detach_buffer();
-
-	return 1;
-}
-
-ClassAd*
-GlobusResourceDownEvent::toClassAd(bool event_time_utc)
-{
-	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
-	if( !myad ) return NULL;
-
-	if( rmContact && rmContact[0] ) {
-		if( !myad->InsertAttr("RMContact", rmContact) ) {
-			delete myad;
-			return NULL;
-		}
-	}
-
-	return myad;
-}
-
-void
-GlobusResourceDownEvent::initFromClassAd(ClassAd* ad)
-{
-	ULogEvent::initFromClassAd(ad);
-
-	if( !ad ) return;
-
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString("RMContact", &mallocstr);
-	if( mallocstr ) {
-		rmContact = new char[strlen(mallocstr) + 1];
-		strcpy(rmContact, mallocstr);
-		free(mallocstr);
-	}
-}
-
-
 // ----- the GenericEvent class
 GenericEvent::GenericEvent(void)
 {
@@ -1656,8 +1184,8 @@ GenericEvent::formatBody( std::string &out )
 int
 GenericEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-	MyString str;
-	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= (int)sizeof(info)) {
+	std::string str;
+	if ( ! read_optional_line(str, file, got_sync_line) || str.length() >= sizeof(info)) {
 		return 0;
 	}
 	strncpy(info, str.c_str(), sizeof(info)-1);
@@ -1702,17 +1230,10 @@ GenericEvent::setInfoText(char const *str)
 // ----- the RemoteErrorEvent class
 RemoteErrorEvent::RemoteErrorEvent(void)
 {
-	error_str = NULL;
-	execute_host[0] = daemon_name[0] = '\0';
 	eventNumber = ULOG_REMOTE_ERROR;
 	critical_error = true;
 	hold_reason_code = 0;
 	hold_reason_subcode = 0;
-}
-
-RemoteErrorEvent::~RemoteErrorEvent(void)
-{
-	delete[] error_str;
 }
 
 void
@@ -1738,8 +1259,8 @@ RemoteErrorEvent::formatBody( std::string &out )
 	  out,
 	  "%s from %s on %s:\n",
 	  error_type,
-	  daemon_name,
-	  execute_host);
+	  daemon_name.c_str(),
+	  execute_host.c_str());
 
 
 
@@ -1749,7 +1270,24 @@ RemoteErrorEvent::formatBody( std::string &out )
     }
 
 	//output each line of error_str, indented by one tab
-	char *line = error_str;
+	size_t ix = 0;
+	while (ix < error_str.size()) {
+		size_t len = std::string::npos;
+		size_t eol = error_str.find('\n', ix);
+		if (eol != std::string::npos) {
+			len = eol - ix;
+		}
+		out += '\t';
+		out += error_str.substr(ix, len);
+		out += '\n';
+		if (eol != std::string::npos && error_str[eol] == '\n') {
+			eol++;
+		}
+		ix = eol;
+	}
+#if 0
+	char *cpy = strdup(error_str.c_str());
+	char *line = cpy;
 	if (line) while(*line) {
 		char *next_line = strchr(line,'\n');
 		if(next_line) *next_line = '\0';
@@ -1761,6 +1299,8 @@ RemoteErrorEvent::formatBody( std::string &out )
 		*next_line = '\n';
 		line = next_line+1;
 	}
+	free(cpy);
+#endif
 
 	if (hold_reason_code) {
 		formatstr_cat( out, "\tCode %d Subcode %d\n",
@@ -1775,7 +1315,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 {
 	char error_type[128];
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
@@ -1785,48 +1325,46 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 	// " from ", " on ", and the trailing ":" are added by format body and should be removed here.
 
 	int retval = 0;
-	line.trim();
-	int ix = line.find(" from ");
-	if (ix > 0) {
-		MyString et = line.substr(0, ix);
-		et.trim();
+	trim(line);
+	size_t ix = line.find(" from ");
+	if (ix != std::string::npos) {
+		std::string et = line.substr(0, ix);
+		trim(et);
 		strncpy(error_type, et.c_str(), sizeof(error_type) - 1);
 		line = line.substr(ix + 6, line.length());
-		line.trim();
+		trim(line);
 	} else {
 		strncpy(error_type, "Error", sizeof(error_type) - 1);
 		retval = -1;
 	}
 
 	ix = line.find(" on ");
-	if (ix <= 0) {
-		daemon_name[0] = 0;
+	if (ix == 0 || ix == std::string::npos) {
+		daemon_name.clear();
 	} else {
-		MyString dn = line.substr(0, ix);
-		dn.trim();
-		strncpy(daemon_name, dn.c_str(), sizeof(daemon_name) - 1);
+		std::string dn = line.substr(0, ix);
+		trim(dn);
+		daemon_name = dn;
 		line = line.substr(ix + 4, line.length());
-		line.trim();
+		trim(line);
 	}
 
 	// we expect to see a : after the daemon name, if we find it. remove it.
 	ix = line.length();
-	if (ix > 0 && line[ix-1] == ':') { line.truncate(ix - 1); }
+	if (ix > 0 && line[ix-1] == ':') { line.erase(ix - 1); }
 
-	strncpy(execute_host, line.c_str(), sizeof(execute_host) - 1);
+	execute_host = line;
 
 	if (retval < 0) {
 		return 0;
 	}
 
 	error_type[sizeof(error_type)-1] = '\0';
-	daemon_name[sizeof(daemon_name)-1] = '\0';
-	execute_host[sizeof(execute_host)-1] = '\0';
 
 	if(!strcmp(error_type,"Error")) critical_error = true;
 	else if(!strcmp(error_type,"Warning")) critical_error = false;
 
-	MyString lines;
+	error_str.clear();
 
 	while(!feof(file)) {
 		// see if the next line contains an optional event notes string,
@@ -1836,7 +1374,7 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 		if ( ! read_optional_line(line, file, got_sync_line) || got_sync_line) {
 			break;
 		}
-		line.chomp();
+		chomp(line);
 		const char *l = line.c_str();
 
 		if(l[0] == '\t') l++;
@@ -1848,11 +1386,10 @@ RemoteErrorEvent::readEvent(FILE *file, bool & got_sync_line)
 			continue;
 		}
 
-		if(lines.length()) lines += "\n";
-		lines += l;
+		if(error_str.length()) error_str += "\n";
+		error_str += l;
 	}
 
-	setErrorText(lines.c_str());
 	return 1;
 }
 
@@ -1862,13 +1399,13 @@ RemoteErrorEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if(*daemon_name) {
+	if(!daemon_name.empty()) {
 		myad->Assign("Daemon",daemon_name);
 	}
-	if(*execute_host) {
+	if(!execute_host.empty()) {
 		myad->Assign("ExecuteHost",execute_host);
 	}
-	if(error_str) {
+	if(!error_str.empty()) {
 		myad->Assign("ErrorMsg",error_str);
 	}
 	if(!critical_error) { //default is true
@@ -1888,17 +1425,13 @@ void
 RemoteErrorEvent::initFromClassAd(ClassAd* ad)
 {
 	ULogEvent::initFromClassAd(ad);
-	char *buf = nullptr;
 	int crit_err = 0;
 
 	if( !ad ) return;
 
-	ad->LookupString("Daemon", daemon_name, sizeof(daemon_name));
-	ad->LookupString("ExecuteHost", execute_host, sizeof(execute_host));
-	if( ad->LookupString("ErrorMsg", &buf) ) {
-		setErrorText(buf);
-		free(buf);
-	}
+	ad->LookupString("Daemon", daemon_name);
+	ad->LookupString("ExecuteHost", execute_host);
+	ad->LookupString("ErrorMsg", error_str);
 	if( ad->LookupInteger("CriticalError",crit_err) ) {
 		critical_error = (crit_err != 0);
 	}
@@ -1912,34 +1445,16 @@ RemoteErrorEvent::setCriticalError(bool f)
 	critical_error = f;
 }
 
-void
-RemoteErrorEvent::setErrorText(char const *str)
-{
-	char *s = strnewp(str);
-	delete [] error_str;
-	error_str = s;
-}
-
-void
-RemoteErrorEvent::setDaemonName(char const *str)
-{
-	if(!str) str = "";
-	strncpy(daemon_name,str,sizeof(daemon_name) - 1);
-	daemon_name[sizeof(daemon_name)-1] = '\0';
-}
-
-void
-RemoteErrorEvent::setExecuteHost(char const *str)
-{
-	if(!str) str = "";
-	strncpy(execute_host,str,sizeof(execute_host) - 1);
-	execute_host[sizeof(execute_host)-1] = '\0';
-}
-
 // ----- the ExecuteEvent class
 ExecuteEvent::ExecuteEvent(void)
 {
 	eventNumber = ULOG_EXECUTE;
+}
+
+ExecuteEvent::~ExecuteEvent(void)
+{
+	if (executeProps) delete executeProps;
+	executeProps = nullptr;
 }
 
 void
@@ -1954,6 +1469,21 @@ ExecuteEvent::getExecuteHost()
 	return executeHost.c_str();
 }
 
+void
+ExecuteEvent::setSlotName(char const *name)
+{
+	slotName = name ? name : "";
+}
+
+bool ExecuteEvent::hasProps() {
+	return executeProps && executeProps->size() > 0;
+}
+
+ClassAd & ExecuteEvent::setProp() {
+	if ( ! executeProps) executeProps = new ClassAd(); 
+	return *executeProps;
+}
+
 bool
 ExecuteEvent::formatBody( std::string &out )
 {
@@ -1965,6 +1495,17 @@ ExecuteEvent::formatBody( std::string &out )
 		return false;
 	}
 
+	if ( ! slotName.empty()) {
+		formatstr_cat(out, "\tSlotName: %s\n", slotName.c_str());
+	}
+
+	if (hasProps()) {
+		// print sorted key=value pairs for the properties
+		classad::References attrs;
+		sGetAdAttrs(attrs, *executeProps);
+		sPrintAdAttrs(out, *executeProps, attrs, "\t");
+	}
+
 	return true;
 }
 
@@ -1973,6 +1514,26 @@ ExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
 	if ( ! read_line_value("Job executing on host: ", executeHost, file, got_sync_line)) {
 		return 0;
+	}
+	ExprTree * tree = nullptr;
+	std::string line, attr;
+	// read optional SlotName : <name>
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		return 1; // OK for there to be no more lines - backwards compatibility
+	}
+	if (starts_with(line, "\tSlotName:")) {
+		slotName = strchr(line.c_str(),':') + 1,
+		trim(slotName);
+		trim_quotes(slotName, "\"");
+	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+		setProp().Insert(attr, tree);
+	}
+	if (got_sync_line) return 1;
+	// read optional other properties
+	while (read_optional_line(line, file, got_sync_line)) {
+		if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+			setProp().Insert(attr, tree);
+		}
 	}
 	return 1;
 }
@@ -1986,6 +1547,12 @@ ExecuteEvent::toClassAd(bool event_time_utc)
 	if( !executeHost.empty() ) {
 		if( !myad->Assign("ExecuteHost",executeHost) ) return NULL;
 	}
+	if( !slotName.empty()) {
+		myad->Assign("SlotName", slotName);
+	}
+	if (hasProps()) {
+		myad->Insert("ExecuteProps", executeProps->Copy());
+	}
 
 	return myad;
 }
@@ -1998,6 +1565,17 @@ ExecuteEvent::initFromClassAd(ClassAd* ad)
 	if( !ad ) return;
 
 	ad->LookupString("ExecuteHost", executeHost);
+	slotName.clear();
+	ad->LookupString("SlotName", slotName);
+
+	delete executeProps;
+	executeProps = nullptr;
+
+	ClassAd * props = nullptr;
+	ExprTree * tree = ad->Lookup("ExecuteProps");
+	if (tree && tree->isClassad(&props)) {
+		executeProps = static_cast<ClassAd*>(props->Copy());
+	}
 }
 
 
@@ -2040,7 +1618,7 @@ ExecutableErrorEvent::formatBody( std::string &out )
 int
 ExecutableErrorEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("(", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -2127,7 +1705,7 @@ CheckpointedEvent::formatBody( std::string &out )
 int
 CheckpointedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was checkpointed.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -2211,8 +1789,6 @@ JobEvictedEvent::JobEvictedEvent(void)
 	normal = false;
 	return_value = -1;
 	signal_number = -1;
-	reason = NULL;
-	core_file = NULL;
 	pusageAd = NULL;
 }
 
@@ -2220,52 +1796,7 @@ JobEvictedEvent::JobEvictedEvent(void)
 JobEvictedEvent::~JobEvictedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
-	delete[] reason;
-	delete[] core_file;
 }
-
-
-void
-JobEvictedEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
-
-const char*
-JobEvictedEvent::getReason( void ) const
-{
-	return reason;
-}
-
-
-void
-JobEvictedEvent::setCoreFile( const char* core_name )
-{
-	delete[] core_file;
-	core_file = NULL;
-	if( core_name ) {
-		core_file = strnewp( core_name );
-		if( !core_file ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-JobEvictedEvent::getCoreFile( void )
-{
-	return core_file;
-}
-
 
 int
 JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
@@ -2273,12 +1804,10 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 	int  ckpt;
 	char buffer [128];
 
-	delete [] reason;
-	reason = NULL;
-	delete [] core_file;
-	core_file = NULL;
+	reason.clear();
+	core_file.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was evicted.", line, file, got_sync_line) || 
 		 ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
@@ -2348,10 +1877,10 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			return 0;
 		}
-		line.trim();
+		trim(line);
 		const char cpre[] = "(1) Corefile in: ";
 		if (starts_with(line.c_str(), cpre)) {
-			setCoreFile( line.c_str() + strlen(cpre) );
+			core_file = line.c_str() + strlen(cpre);
 		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
@@ -2359,8 +1888,8 @@ JobEvictedEvent::readEvent( FILE *file, bool & got_sync_line )
 
 	// finally, see if there's a reason.  this is optional.
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		line.trim();
-		reason = line.detach_buffer();
+		trim(line);
+		reason = line;
 	}
 
 	return 1;
@@ -2418,8 +1947,8 @@ JobEvictedEvent::formatBody( std::string &out )
 	return false;
       }
 
-      if( core_file ) {
-	retval = formatstr_cat( out, "\t(1) Corefile in: %s\n", core_file );
+      if( !core_file.empty() ) {
+	retval = formatstr_cat( out, "\t(1) Corefile in: %s\n", core_file.c_str() );
       }
       else {
 	retval = formatstr_cat( out, "\t(0) No core file\n" );
@@ -2429,8 +1958,8 @@ JobEvictedEvent::formatBody( std::string &out )
       }
     }
 
-    if( reason ) {
-      if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+    if( !reason.empty() ) {
+      if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 	return false;
       }
     }
@@ -2505,13 +2034,13 @@ JobEvictedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	if( reason ) {
+	if( !reason.empty() ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
 		}
 	}
-	if( core_file ) {
+	if( !core_file.empty() ) {
 		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
@@ -2557,19 +2086,8 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", return_value);
 	ad->LookupInteger("TerminatedBySignal", signal_number);
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("Reason", reason);
+	ad->LookupString("CoreFile", core_file);
 }
 
 
@@ -2577,14 +2095,10 @@ JobEvictedEvent::initFromClassAd(ClassAd* ad)
 JobAbortedEvent::JobAbortedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_JOB_ABORTED;
-	reason = NULL;
 }
 
 JobAbortedEvent::~JobAbortedEvent(void)
 {
-	if( reason ) {
-		delete[] reason;
-	}
 	if( toeTag ) {
 		delete toeTag;
 	}
@@ -2601,27 +2115,6 @@ JobAbortedEvent::setToeTag( classad::ClassAd * tt ) {
 	}
 }
 
-void
-JobAbortedEvent::setReason( const char* reason_str )
-{
-	delete[] reason;
-	reason = NULL;
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-JobAbortedEvent::getReason( void ) const
-{
-	return reason;
-}
-
-
 bool
 JobAbortedEvent::formatBody( std::string &out )
 {
@@ -2629,8 +2122,8 @@ JobAbortedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job was aborted.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		}
 	}
@@ -2646,17 +2139,16 @@ JobAbortedEvent::formatBody( std::string &out )
 int
 JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete [] reason;
-	reason = NULL;
+	reason.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was aborted", line, file, got_sync_line)) {
 		return 0;
 	}
 	// try to read the reason, this is optional
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		line.trim();
-		reason = line.detach_buffer();
+		trim(line);
+		reason = line;
 	}
 
 	// Try to read the ToE tag.
@@ -2668,7 +2160,7 @@ JobAbortedEvent::readEvent (FILE *file, bool & got_sync_line)
 			}
 		}
 
-		if( line.remove_prefix( "\tJob terminated by " ) ) {
+		if( replace_str(line, "\tJob terminated by ", "") ) {
 			if( toeTag != NULL ) { delete toeTag; }
 			toeTag = new ToE::Tag();
 			if(! toeTag->readFromString( line )) {
@@ -2688,7 +2180,7 @@ JobAbortedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( reason ) {
+	if( !reason.empty() ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
@@ -2719,13 +2211,7 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("Reason", reason);
 
 	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }
@@ -2734,7 +2220,6 @@ JobAbortedEvent::initFromClassAd(ClassAd* ad)
 TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 {
 	normal = false;
-	core_file = NULL;
 	returnValue = signalNumber = -1;
 	pusageAd = NULL;
 
@@ -2747,7 +2232,6 @@ TerminatedEvent::TerminatedEvent(void) : toeTag(NULL)
 TerminatedEvent::~TerminatedEvent(void)
 {
 	if ( pusageAd ) delete pusageAd;
-	delete[] core_file;
 	if( toeTag ) { delete toeTag; }
 }
 
@@ -2758,27 +2242,6 @@ TerminatedEvent::setToeTag( classad::ClassAd * tt ) {
 		toeTag = new classad::ClassAd( * tt );
 	}
 }
-
-void
-TerminatedEvent::setCoreFile( const char* core_name )
-{
-	delete[] core_file;
-	core_file = NULL;
-	if( core_name ) {
-		core_file = strnewp( core_name );
-		if( !core_file ) {
-            EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-TerminatedEvent::getCoreFile( void )
-{
-	return core_file;
-}
-
 
 bool
 TerminatedEvent::formatBody( std::string &out, const char *header )
@@ -2797,9 +2260,9 @@ TerminatedEvent::formatBody( std::string &out, const char *header )
 			return false;
 		}
 
-		if( core_file ) {
+		if( !core_file.empty() ) {
 			retval = formatstr_cat( out, "\t(1) Corefile in: %s\n\t",
-									core_file );
+									core_file.c_str() );
 		} else {
 			retval = formatstr_cat( out, "\t(0) No core file\n\t" );
 		}
@@ -2849,7 +2312,7 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 
 	// when we get here, all of the header line will have been read
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line) ||
 		(2 != sscanf(line.c_str(), "\t(%d) %127[^\r\n]", &normalTerm, buffer))) {
 		return 0;
@@ -2868,10 +2331,10 @@ TerminatedEvent::readEventBody( FILE *file, bool & got_sync_line, const char* he
 		if ( ! read_optional_line(line, file, got_sync_line)) {
 			return 0;
 		}
-		line.trim();
+		trim(line);
 		const char cpre[] = "(1) Corefile in: ";
 		if (starts_with(line.c_str(), cpre)) {
-			setCoreFile( line.c_str() + strlen(cpre) );
+			core_file = line.c_str() + strlen(cpre);
 		} else if ( ! starts_with(line.c_str(), "(0)")) {
 			return 0; // not a valid value
 		}
@@ -3080,7 +2543,7 @@ JobTerminatedEvent::formatBody( std::string &out )
 int
 JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString str;
+	std::string str;
 	if ( ! read_line_value("Job terminated.", str, file, got_sync_line)) {
 		return 0;
 	}
@@ -3088,7 +2551,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 	int rv = TerminatedEvent::readEventBody( file, got_sync_line, "Job" );
 	if(! rv) { return rv; }
 
-	MyString line;
+	std::string line;
 	if( got_sync_line ) { return 1; }
 	if( read_optional_line( line, file, got_sync_line ) ) {
 		if(line.empty()) {
@@ -3096,7 +2559,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 				return 0;
 			}
 		}
-		if( line.remove_prefix( "\tJob terminated of its own accord at " ) ) {
+		if( replace_str(line, "\tJob terminated of its own accord at ", "") ) {
 			if( toeTag != NULL ) {
 				delete toeTag;
 			}
@@ -3125,7 +2588,7 @@ JobTerminatedEvent::readEvent (FILE *file, bool & got_sync_line)
 					}
 				}
 			}
-		} else if( line.remove_prefix( "\tJob terminated by " ) ) {
+		} else if( replace_str(line, "\tJob terminated by ", "") ) {
 			ToE::Tag tag;
 			if(! tag.readFromString( line )) {
 				return 0;
@@ -3171,9 +2634,8 @@ JobTerminatedEvent::toClassAd(bool event_time_utc)
 		}
 	}
 
-	const char* core = getCoreFile();
-	if( core ) {
-		if( !myad->InsertAttr("CoreFile", core) ) {
+	if( !core_file.empty() ) {
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3253,14 +2715,9 @@ JobTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	char* multi = NULL;
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("CoreFile", core_file);
 
+	char* multi = NULL;
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
 		free(multi);
@@ -3331,7 +2788,7 @@ JobImageSizeEvent::formatBody( std::string &out )
 int
 JobImageSizeEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString str;
+	std::string str;
 	if ( ! read_line_value("Image size of job updated: ", str, file, got_sync_line) || 
 		! YourStringDeserializer(str.c_str()).deserialize_int(&image_size_kb))
 	{
@@ -3443,7 +2900,7 @@ ShadowExceptionEvent::~ShadowExceptionEvent (void)
 int
 ShadowExceptionEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Shadow exception!", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3530,7 +2987,7 @@ JobSuspendedEvent::~JobSuspendedEvent (void)
 int
 JobSuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was suspended.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3592,7 +3049,7 @@ JobUnsuspendedEvent::~JobUnsuspendedEvent (void)
 int
 JobUnsuspendedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was unsuspended.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3627,48 +3084,15 @@ JobUnsuspendedEvent::initFromClassAd(ClassAd* ad)
 JobHeldEvent::JobHeldEvent (void)
 {
 	eventNumber = ULOG_JOB_HELD;
-	reason = NULL;
 	code = 0;
 	subcode = 0;
-}
-
-
-JobHeldEvent::~JobHeldEvent (void)
-{
-	delete[] reason;
-}
-
-
-void
-JobHeldEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
-void
-JobHeldEvent::setReasonCode(const int val)
-{
-	code = val;
-}
-
-void
-JobHeldEvent::setReasonSubCode(const int val)
-{
-	subcode = val;
 }
 
 
 const char*
 JobHeldEvent::getReason( void ) const
 {
-	return reason;
+	return reason.c_str();
 }
 
 int
@@ -3686,11 +3110,10 @@ JobHeldEvent::getReasonSubCode( void ) const
 int
 JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	delete [] reason;
-	reason = NULL;
+	reason.clear();
 	code = subcode = 0;
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was held.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3698,9 +3121,9 @@ JobHeldEvent::readEvent( FILE *file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	line.trim();
+	trim(line);
 	if (line != "Reason unspecified") {
-		reason = line.detach_buffer();
+		reason = line;
 	}
 
 	int incode = 0;
@@ -3724,8 +3147,8 @@ JobHeldEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job was held.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		}
 	} else {
@@ -3748,9 +3171,8 @@ JobHeldEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	const char* hold_reason = getReason();
-	if ( hold_reason ) {
-		if( !myad->InsertAttr(ATTR_HOLD_REASON, hold_reason) ) {
+	if ( !reason.empty() ) {
+		if( !myad->InsertAttr(ATTR_HOLD_REASON, reason) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3774,59 +3196,31 @@ JobHeldEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	int incode = 0;
-	int insubcode = 0;
-	ad->LookupString(ATTR_HOLD_REASON, &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
-	ad->LookupInteger(ATTR_HOLD_REASON_CODE, incode);
-	setReasonCode(incode);
-	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, insubcode);
-	setReasonSubCode(insubcode);
+	reason.clear();
+	code = 0;
+	subcode = 0;
+
+	ad->LookupString(ATTR_HOLD_REASON, reason);
+	ad->LookupInteger(ATTR_HOLD_REASON_CODE, code);
+	ad->LookupInteger(ATTR_HOLD_REASON_SUBCODE, subcode);
 }
 
 JobReleasedEvent::JobReleasedEvent(void)
 {
 	eventNumber = ULOG_JOB_RELEASED;
-	reason = NULL;
 }
-
-
-JobReleasedEvent::~JobReleasedEvent(void)
-{
-	delete[] reason;
-}
-
-
-void
-JobReleasedEvent::setReason( const char* reason_str )
-{
-    delete[] reason;
-    reason = NULL;
-    if( reason_str ) {
-        reason = strnewp( reason_str );
-        if( !reason ) {
-            EXCEPT( "ERROR: out of memory!" );
-        }
-    }
-}
-
 
 const char*
 JobReleasedEvent::getReason( void ) const
 {
-	return reason;
+	return reason.c_str();
 }
 
 
 int
 JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job was released.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -3834,9 +3228,9 @@ JobReleasedEvent::readEvent( FILE *file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line, true)) {
 		return 1;	// backwards compatibility
 	}
-	line.trim();
+	trim(line);
 	if (! line.empty()) {
-		reason = line.detach_buffer();
+		reason = line;
 	}
 
 	return 1;
@@ -3849,8 +3243,8 @@ JobReleasedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Job was released.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		} else {
 			return true;
@@ -3867,9 +3261,8 @@ JobReleasedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	const char* release_reason = getReason();
-	if( release_reason ) {
-		if( !myad->InsertAttr("Reason", release_reason) ) {
+	if( !reason.empty() ) {
+		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
 		}
@@ -3885,13 +3278,8 @@ JobReleasedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
+	reason.clear();
+	ad->LookupString("Reason", reason);
 }
 
 static const int seconds = 1;
@@ -3969,7 +3357,7 @@ ULogEvent::rusageToStr (const rusage &usage)
 	sys_hours = sys_secs/hours;			sys_secs %= hours;
 	sys_minutes = sys_secs/minutes;		sys_secs %= minutes;
  
-	sprintf(result, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
+	snprintf(result, 128, "Usr %d %02d:%02d:%02d, Sys %d %02d:%02d:%02d",
 			usr_days, usr_hours, usr_minutes, usr_secs,
 			sys_days, sys_hours, sys_minutes, sys_secs);
 
@@ -4006,57 +3394,80 @@ ULogEvent::strToRusage (const char* rusageStr, rusage & usage)
 // ----- the NodeExecuteEvent class
 NodeExecuteEvent::NodeExecuteEvent(void)
 {
-	executeHost = NULL;
 	eventNumber = ULOG_NODE_EXECUTE;
 	node = -1;
 }
 
-
 NodeExecuteEvent::~NodeExecuteEvent(void)
 {
-	if( executeHost ) {
-		delete[] executeHost;
-	}
+	if (executeProps) delete executeProps;
+	executeProps = nullptr;
 }
 
-void
-NodeExecuteEvent::setExecuteHost(char const *addr)
-{
-	if( executeHost ) {
-		delete[] executeHost;
-	}
-	if( addr ) {
-		executeHost = strnewp(addr);
-		ASSERT( executeHost );
-	}
-	else {
-		executeHost = NULL;
-	}
-}
 
 bool
 NodeExecuteEvent::formatBody( std::string &out )
 {
-	if( !executeHost ) {
-		setExecuteHost("");
+	int retval = formatstr_cat( out, "Node %d executing on host: %s\n", node, executeHost.c_str());
+	if (retval < 0) {
+		return false;
 	}
-	return( formatstr_cat( out, "Node %d executing on host: %s\n",
-						   node, executeHost ) >= 0 );
+
+	if ( ! slotName.empty()) {
+		formatstr_cat(out, "\tSlotName: %s\n", slotName.c_str());
+	}
+
+	if (hasProps()) {
+		// print sorted key=value pairs for the properties
+		classad::References attrs;
+		sGetAdAttrs(attrs, *executeProps);
+		sPrintAdAttrs(out, *executeProps, attrs, "\t");
+	}
+
+	return true;
 }
 
 
 int
-NodeExecuteEvent::readEvent (FILE *file, bool & /*got_sync_line*/)
+NodeExecuteEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
-	if( !line.readLine(file) ) {
+	std::string line, attr;
+	if( !readLine(line, file) ) {
 		return 0; // EOF or error
 	}
-	line.chomp();
-	setExecuteHost(line.c_str()); // allocate memory
-	int retval = sscanf(line.c_str(), "Node %d executing on host: %s",
-						&node, executeHost);
-	return retval == 2;
+	if (is_sync_line(line.c_str())) {
+		got_sync_line = true;
+		return 0;
+	}
+	chomp(line);
+	int retval = sscanf(line.c_str(), "Node %d executing on host: ", &node);
+	if (retval == 1) {
+		executeHost = strchr(line.c_str(), ':')+1;
+		trim(executeHost);
+	} else {
+		return 0;
+	}
+
+	ExprTree * tree = nullptr;
+	// read optional SlotName : <name>
+	if ( ! read_optional_line(line, file, got_sync_line)) {
+		return 1; // OK for there to be no more lines - backwards compatibility
+	}
+	if (starts_with(line, "\tSlotName:")) {
+		slotName = strchr(line.c_str(),':') + 1,
+			trim(slotName);
+		trim_quotes(slotName, "\"");
+	} else if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+		setProp().Insert(attr, tree);
+	}
+	if (got_sync_line) return 1;
+	// read optional other properties
+	while (read_optional_line(line, file, got_sync_line)) {
+		if (ParseLongFormAttrValue(line.c_str(), attr, tree)) {
+			setProp().Insert(attr, tree);
+		}
+	}
+	return 1;
 }
 
 ClassAd*
@@ -4065,13 +3476,21 @@ NodeExecuteEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( executeHost ) {
+	if( !executeHost.empty() ) {
 		if( !myad->InsertAttr("ExecuteHost",executeHost) ) return NULL;
 	}
 	if( !myad->InsertAttr("Node", node) ) {
 		delete myad;
 		return NULL;
 	}
+
+	if( !slotName.empty()) {
+		myad->Assign("SlotName", slotName);
+	}
+	if (hasProps()) {
+		myad->Insert("ExecuteProps", executeProps->Copy());
+	}
+
 
 	return myad;
 }
@@ -4083,16 +3502,38 @@ NodeExecuteEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char *mallocstr = NULL;
-	ad->LookupString("ExecuteHost", &mallocstr);
-	if( mallocstr ) {
-		setExecuteHost(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
+	ad->LookupString("ExecuteHost", executeHost);
 
 	ad->LookupInteger("Node", node);
+
+	slotName.clear();
+	ad->LookupString("SlotName", slotName);
+
+	delete executeProps;
+	executeProps = nullptr;
+
+	ClassAd * props = nullptr;
+	ExprTree * tree = ad->Lookup("ExecuteProps");
+	if (tree && tree->isClassad(&props)) {
+		executeProps = static_cast<ClassAd*>(props->Copy());
+	}
 }
+
+void
+NodeExecuteEvent::setSlotName(char const *name)
+{
+	slotName = name ? name : "";
+}
+
+bool NodeExecuteEvent::hasProps() {
+	return executeProps && executeProps->size() > 0;
+}
+
+ClassAd & NodeExecuteEvent::setProp() {
+	if ( ! executeProps) executeProps = new ClassAd(); 
+	return *executeProps;
+}
+
 
 // ----- NodeTerminatedEvent class
 NodeTerminatedEvent::NodeTerminatedEvent(void) : TerminatedEvent()
@@ -4121,7 +3562,7 @@ NodeTerminatedEvent::formatBody( std::string &out )
 int
 NodeTerminatedEvent::readEvent( FILE *file, bool & got_sync_line )
 {
-	MyString str;
+	std::string str;
 	if ( ! read_optional_line(str, file, got_sync_line) || 
 		(1 != sscanf(str.c_str(), "Node %d terminated.", &node)))
 	{
@@ -4154,9 +3595,8 @@ NodeTerminatedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	const char* core = getCoreFile();
-	if( core ) {
-		if( !myad->InsertAttr("CoreFile", core) ) {
+	if( !core_file.empty() ) {
+		if( !myad->InsertAttr("CoreFile", core_file) ) {
 			delete myad;
 			return NULL;
 		}
@@ -4235,14 +3675,9 @@ NodeTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	char* multi = NULL;
-	ad->LookupString("CoreFile", &multi);
-	if( multi ) {
-		setCoreFile(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("CoreFile", core_file);
 
+	char* multi = NULL;
 	if( ad->LookupString("RunLocalUsage", &multi) ) {
 		strToRusage(multi, run_local_rusage);
 		free(multi);
@@ -4278,17 +3713,7 @@ PostScriptTerminatedEvent::PostScriptTerminatedEvent(void) :
 	normal = false;
 	returnValue = -1;
 	signalNumber = -1;
-	dagNodeName = NULL;
 }
-
-
-PostScriptTerminatedEvent::~PostScriptTerminatedEvent(void)
-{
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-	}
-}
-
 
 bool
 PostScriptTerminatedEvent::formatBody( std::string &out )
@@ -4309,9 +3734,9 @@ PostScriptTerminatedEvent::formatBody( std::string &out )
         }
     }
 
-    if( dagNodeName ) {
+    if( !dagNodeName.empty() ) {
         if( formatstr_cat( out, "    %s%.8191s\n",
-					 dagNodeNameLabel, dagNodeName ) < 0 ) {
+					 dagNodeNameLabel, dagNodeName.c_str() ) < 0 ) {
             return false;
         }
     }
@@ -4324,12 +3749,9 @@ int
 PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 {
 		// first clear any existing DAG node name
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-	}
-    dagNodeName = NULL;
+    dagNodeName.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("POST Script terminated.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -4361,10 +3783,10 @@ PostScriptTerminatedEvent::readEvent( FILE* file, bool & got_sync_line )
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 1;
 	}
-	line.trim();
-	if (starts_with(line.c_str(), dagNodeNameLabel)) {
+	trim(line);
+	if (starts_with(line, dagNodeNameLabel)) {
 		size_t label_len = strlen( dagNodeNameLabel );
-		dagNodeName = strnewp( line.c_str() + label_len );
+		dagNodeName = line.c_str() + label_len;
 	}
 
     return 1;
@@ -4392,7 +3814,7 @@ PostScriptTerminatedEvent::toClassAd(bool event_time_utc)
 			return NULL;
 		}
 	}
-	if( dagNodeName && dagNodeName[0] ) {
+	if( !dagNodeName.empty() ) {
 		if( !myad->InsertAttr( dagNodeNameAttr, dagNodeName ) ) {
 			delete myad;
 			return NULL;
@@ -4417,17 +3839,8 @@ PostScriptTerminatedEvent::initFromClassAd(ClassAd* ad)
 	ad->LookupInteger("ReturnValue", returnValue);
 	ad->LookupInteger("TerminatedBySignal", signalNumber);
 
-	if( dagNodeName ) {
-		delete[] dagNodeName;
-		dagNodeName = NULL;
-	}
-	char* mallocstr = NULL;
-	ad->LookupString( dagNodeNameAttr, &mallocstr );
-	if( mallocstr ) {
-		dagNodeName = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	dagNodeName.clear();
+	ad->LookupString( dagNodeNameAttr, dagNodeName );
 }
 
 
@@ -4436,135 +3849,36 @@ PostScriptTerminatedEvent::initFromClassAd(ClassAd* ad)
 JobDisconnectedEvent::JobDisconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_DISCONNECTED;
-	startd_addr = NULL;
-	startd_name = NULL;
-	disconnect_reason = NULL;
-	no_reconnect_reason = NULL;
-	can_reconnect = true;
 }
-
-
-JobDisconnectedEvent::~JobDisconnectedEvent(void)
-{
-	if( startd_addr ) {
-		delete [] startd_addr;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-	if( disconnect_reason ) {
-		delete [] disconnect_reason;
-	}
-	if( no_reconnect_reason ) {
-		delete [] no_reconnect_reason;
-	}
-}
-
-
-void
-JobDisconnectedEvent::setStartdAddr( const char* startd )
-{
-	if( startd_addr ) {
-		delete[] startd_addr;
-		startd_addr = NULL;
-	}
-	if( startd ) {
-		startd_addr = strnewp( startd );
-		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobDisconnectedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobDisconnectedEvent::setDisconnectReason( const char* reason_str )
-{
-	if( disconnect_reason ) {
-		delete [] disconnect_reason;
-		disconnect_reason = NULL;
-	}
-	if( reason_str ) {
-		disconnect_reason = strnewp( reason_str );
-		if( !disconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobDisconnectedEvent::setNoReconnectReason( const char* reason_str )
-{
-	if( no_reconnect_reason ) {
-		delete [] no_reconnect_reason;
-		no_reconnect_reason = NULL;
-	}
-	if( reason_str ) {
-		no_reconnect_reason = strnewp( reason_str );
-		if( !no_reconnect_reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-		can_reconnect = false;
-	}
-}
-
 
 bool
 JobDisconnectedEvent::formatBody( std::string &out )
 {
-	if( ! disconnect_reason ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"disconnect_reason" );
+	if( disconnect_reason.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "disconnect_reason");
+		return false;
 	}
-	if( ! startd_addr ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"startd_addr" );
+	if( startd_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "startd_addr");
+		return false;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobDisconnectedEvent::formatBody() called without "
-				"startd_name" );
-	}
-	if( ! can_reconnect && ! no_reconnect_reason ) {
-		EXCEPT( "impossible: JobDisconnectedEvent::formatBody() called "
-				"without no_reconnect_reason when can_reconnect is FALSE" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
 
-	if( formatstr_cat( out, "Job disconnected, %s reconnect\n",
-					   can_reconnect ? "attempting to" : "can not" ) < 0 ) {
+	if( formatstr_cat(out, "Job disconnected, attempting to reconnect\n") < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %.8191s\n", disconnect_reason ) < 0 ) {
+	if( formatstr_cat( out, "    %.8191s\n", disconnect_reason.c_str() ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %s reconnect to %s %s\n",
-					   can_reconnect ? "Trying to" : "Can not",
-					   startd_name, startd_addr ) < 0 ) {
+	if( formatstr_cat( out, "    Trying to reconnect to %s %s\n",
+					   startd_name.c_str(), startd_addr.c_str() ) < 0 ) {
 		return false;
-	}
-	if( no_reconnect_reason ) {
-		if( formatstr_cat( out, "    %.8191s\n", no_reconnect_reason ) < 0 ) {
-			return false;
-		}
-		if( formatstr_cat( out, "    Rescheduling job\n" ) < 0 ) {
-			return false;
-		}
 	}
 	return true;
 }
@@ -4573,59 +3887,32 @@ JobDisconnectedEvent::formatBody( std::string &out )
 int
 JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
-	if(line.readLine(file) && line.replaceString("Job disconnected, ", "")) {
-		line.chomp();
-		if( line == "attempting to reconnect" ) {
-			can_reconnect = true;
-		} else if( line == "can not reconnect" ) {
-			can_reconnect = false;
-		} else {
-			return 0;
-		}
-	} else {
+	std::string line;
+		// the first line contains no useful information for us, but
+		// it better be there or we've got a parse error.
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
 
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
+	if( readLine(line, file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
-		line.chomp();
-		setDisconnectReason( line.c_str()+4 );
+		chomp(line);
+		disconnect_reason = line.c_str()+4;
 	} else {
 		return 0;
 	}
 
-	if( ! line.readLine(file) ) {
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
-	line.chomp();
-	if( line.replaceString("    Trying to reconnect to ", "") ) {
-		int i = line.FindChar( ' ' );
-		if( i > 0 ) {
-			setStartdAddr( line.c_str()+(i+1) );
-			line.truncate( i );
-			setStartdName( line.c_str() );
-		} else {
-			return 0;
-		}
-	} else if( line.replaceString("    Can not reconnect to ", "") ) {
-		if( can_reconnect ) {
-			return 0;
-		}
-		int i = line.FindChar( ' ' );
-		if( i > 0 ) {
-			setStartdAddr( line.c_str()+(i+1) );
-			line.truncate( i );
-			setStartdName( line.c_str() );
-		} else {
-			return 0;
-		}
-		if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
-			&& line[2] == ' ' && line[3] == ' ' && line[4] )
-		{
-			line.chomp();
-			setNoReconnectReason( line.c_str()+4 );
+	chomp(line);
+	if( replace_str(line, "    Trying to reconnect to ", "") ) {
+		size_t i = line.find( ' ' );
+		if( i != std::string::npos ) {
+			startd_addr = line.c_str()+(i+1);
+			line.erase( i );
+			startd_name = line.c_str();
 		} else {
 			return 0;
 		}
@@ -4640,23 +3927,21 @@ JobDisconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobDisconnectedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! disconnect_reason ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without"
-				"disconnect_reason" );
+	if( disconnect_reason.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without"
+		        "disconnect_reason");
+		return nullptr;
 	}
-	if( ! startd_addr ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"startd_addr" );
+	if( startd_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without "
+		        "startd_addr");
+		return nullptr;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"startd_name" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobDisconnectedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
-	if( ! can_reconnect && ! no_reconnect_reason ) {
-		EXCEPT( "JobDisconnectedEvent::toClassAd() called without "
-				"no_reconnect_reason when can_reconnect is FALSE" );
-	}
-
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) {
@@ -4676,21 +3961,10 @@ JobDisconnectedEvent::toClassAd(bool event_time_utc)
 		return NULL;
 	}
 
-	MyString line = "Job disconnected, ";
-	if( can_reconnect ) {
-		line += "attempting to reconnect";
-	} else {
-		line += "can not reconnect, rescheduling job";
-	}
-	if( !myad->InsertAttr("EventDescription", line.c_str()) ) {
+	std::string line = "Job disconnected, attempting to reconnect";
+	if( !myad->InsertAttr("EventDescription", line) ) {
 		delete myad;
 		return NULL;
-	}
-
-	if( no_reconnect_reason ) {
-		if( !myad->InsertAttr("NoReconnectReason", no_reconnect_reason) ) {
-			return NULL;
-		}
 	}
 
 	return myad;
@@ -4706,35 +3980,11 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "DisconnectReason", &mallocstr );
-	if( mallocstr ) {
-		setDisconnectReason( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "DisconnectReason", disconnect_reason );
 
-	ad->LookupString( "NoReconnectReason", &mallocstr );
-	if( mallocstr ) {
-		setNoReconnectReason( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdAddr", startd_addr );
 
-	ad->LookupString( "StartdAddr", &mallocstr );
-	if( mallocstr ) {
-		setStartdAddr( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
-
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		setStartdName( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 }
 
 
@@ -4743,97 +3993,34 @@ JobDisconnectedEvent::initFromClassAd( ClassAd* ad )
 JobReconnectedEvent::JobReconnectedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECTED;
-	startd_addr = NULL;
-	startd_name = NULL;
-	starter_addr = NULL;
 }
-
-
-JobReconnectedEvent::~JobReconnectedEvent(void)
-{
-	if( startd_addr ) {
-		delete [] startd_addr;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-	if( starter_addr ) {
-		delete [] starter_addr;
-	}
-}
-
-
-void
-JobReconnectedEvent::setStartdAddr( const char* startd )
-{
-	if( startd_addr ) {
-		delete[] startd_addr;
-		startd_addr = NULL;
-	}
-	if( startd ) {
-		startd_addr = strnewp( startd );
-		if( !startd_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectedEvent::setStarterAddr( const char* starter )
-{
-	if( starter_addr ) {
-		delete[] starter_addr;
-		starter_addr = NULL;
-	}
-	if( starter ) {
-		starter_addr = strnewp( starter );
-		if( !starter_addr ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
 
 bool
 JobReconnectedEvent::formatBody( std::string &out )
 {
-	if( ! startd_addr ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"startd_addr" );
+	if( startd_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "startd_addr");
+		return false;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"startd_name" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
-	if( ! starter_addr ) {
-		EXCEPT( "JobReconnectedEvent::formatBody() called without "
-				"starter_addr" );
+	if( starter_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::formatBody() called without "
+		        "starter_addr");
+		return false;
 	}
 
-	if( formatstr_cat( out, "Job reconnected to %s\n", startd_name ) < 0 ) {
+	if( formatstr_cat( out, "Job reconnected to %s\n", startd_name.c_str() ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    startd address: %s\n", startd_addr ) < 0 ) {
+	if( formatstr_cat( out, "    startd address: %s\n", startd_addr.c_str() ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    starter address: %s\n", starter_addr ) < 0 ) {
+	if( formatstr_cat( out, "    starter address: %s\n", starter_addr.c_str() ) < 0 ) {
 		return false;
 	}
 	return true;
@@ -4843,31 +4030,31 @@ JobReconnectedEvent::formatBody( std::string &out )
 int
 JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
+	std::string line;
 
-	if( line.readLine(file) &&
-		line.replaceString("Job reconnected to ", "") )
+	if( readLine(line, file) &&
+		replace_str(line, "Job reconnected to ", "") )
 	{
-		line.chomp();
-		setStartdName( line.c_str() );
+		chomp(line);
+		startd_name = line;
 	} else {
 		return 0;
 	}
 
-	if( line.readLine(file) &&
-		line.replaceString( "    startd address: ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    startd address: ", "") )
 	{
-		line.chomp();
-		setStartdAddr( line.c_str() );
+		chomp(line);
+		startd_addr = line;
 	} else {
 		return 0;
 	}
 
-	if( line.readLine(file) &&
-		line.replaceString( "    starter address: ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    starter address: ", "") )
 	{
-		line.chomp();
-		setStarterAddr( line.c_str() );
+		chomp(line);
+		starter_addr = line;
 	} else {
 		return 0;
 	}
@@ -4879,17 +4066,20 @@ JobReconnectedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobReconnectedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! startd_addr ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"startd_addr" );
+	if( startd_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "startd_addr");
+		return nullptr;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"startd_name" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
-	if( ! starter_addr ) {
-		EXCEPT( "JobReconnectedEvent::toClassAd() called without "
-				"starter_addr" );
+	if( starter_addr.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectedEvent::toClassAd() called without "
+		        "starter_addr");
+		return nullptr;
 	}
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
@@ -4926,37 +4116,11 @@ JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "StartdAddr", &mallocstr );
-	if( mallocstr ) {
-		if( startd_addr ) {
-			delete [] startd_addr;
-		}
-		startd_addr = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdAddr", startd_addr );
 
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		if( startd_name ) {
-			delete [] startd_name;
-		}
-		startd_name = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 
-	ad->LookupString( "StarterAddr", &mallocstr );
-	if( mallocstr ) {
-		if( starter_addr ) {
-			delete [] starter_addr;
-		}
-		starter_addr = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StarterAddr", starter_addr );
 }
 
 
@@ -4965,74 +4129,30 @@ JobReconnectedEvent::initFromClassAd( ClassAd* ad )
 JobReconnectFailedEvent::JobReconnectFailedEvent(void)
 {
 	eventNumber = ULOG_JOB_RECONNECT_FAILED;
-	reason = NULL;
-	startd_name = NULL;
 }
-
-
-JobReconnectFailedEvent::~JobReconnectFailedEvent(void)
-{
-	if( reason ) {
-		delete [] reason;
-	}
-	if( startd_name ) {
-		delete [] startd_name;
-	}
-}
-
-
-void
-JobReconnectFailedEvent::setReason( const char* reason_str )
-{
-	if( reason ) {
-		delete [] reason;
-		reason = NULL;
-	}
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-void
-JobReconnectFailedEvent::setStartdName( const char* name )
-{
-	if( startd_name ) {
-		delete[] startd_name;
-		startd_name = NULL;
-	}
-	if( name ) {
-		startd_name = strnewp( name );
-		if( !startd_name ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
 
 bool
 JobReconnectFailedEvent::formatBody( std::string &out )
 {
-	if( ! reason ) {
-		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
-				"reason" );
+	if( reason.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::formatBody() called without "
+		        "reason");
+		return false;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobReconnectFailedEvent::formatBody() called without "
-				"startd_name" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::formatBody() called without "
+		        "startd_name");
+		return false;
 	}
 
 	if( formatstr_cat( out, "Job reconnection failed\n" ) < 0 ) {
 		return false;
 	}
-	if( formatstr_cat( out, "    %.8191s\n", reason ) < 0 ) {
+	if( formatstr_cat( out, "    %.8191s\n", reason.c_str() ) < 0 ) {
 		return false;
 	}
 	if( formatstr_cat( out, "    Can not reconnect to %s, rescheduling job\n",
-					   startd_name ) < 0 ) {
+					   startd_name.c_str() ) < 0 ) {
 		return false;
 	}
 	return true;
@@ -5042,33 +4162,33 @@ JobReconnectFailedEvent::formatBody( std::string &out )
 int
 JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 {
-	MyString line;
+	std::string line;
 
 		// the first line contains no useful information for us, but
 		// it better be there or we've got a parse error.
-	if( ! line.readLine(file) ) {
+	if( ! readLine(line, file) ) {
 		return 0;
 	}
 
 		// 2nd line is the reason
-	if( line.readLine(file) && line[0] == ' ' && line[1] == ' '
+	if( readLine(line, file) && line[0] == ' ' && line[1] == ' '
 		&& line[2] == ' ' && line[3] == ' ' && line[4] )
 	{
-		line.chomp();
-		setReason( line.c_str()+4 );
+		chomp(line);
+		reason = line.c_str()+4;
 	} else {
 		return 0;
 	}
 
 		// 3rd line is who we tried to reconnect to
-	if( line.readLine(file) &&
-		line.replaceString( "    Can not reconnect to ", "" ) )
+	if( readLine(line, file) &&
+		replace_str(line, "    Can not reconnect to ", "") )
 	{
 			// now everything until the first ',' will be the name
-		int i = line.FindChar( ',' );
-		if( i > 0 ) {
-			line.truncate( i );
-			setStartdName( line.c_str() );
+		size_t i = line.find( ',' );
+		if( i != std::string::npos ) {
+			line.erase( i );
+			startd_name = line;
 		} else {
 			return 0;
 		}
@@ -5083,13 +4203,15 @@ JobReconnectFailedEvent::readEvent( FILE *file, bool & /*got_sync_line*/ )
 ClassAd*
 JobReconnectFailedEvent::toClassAd(bool event_time_utc)
 {
-	if( ! reason ) {
-		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
-				"reason" );
+	if( reason.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::toClassAd() called without "
+		        "reason");
+		return nullptr;
 	}
-	if( ! startd_name ) {
-		EXCEPT( "JobReconnectFailedEvent::toClassAd() called without "
-				"startd_name" );
+	if( startd_name.empty() ) {
+		dprintf(D_ALWAYS, "JobReconnectFailedEvent::toClassAd() called without "
+		        "startd_name");
+		return nullptr;
 	}
 
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
@@ -5121,27 +4243,9 @@ JobReconnectFailedEvent::initFromClassAd( ClassAd* ad )
 		return;
 	}
 
-	// this fanagling is to ensure we don't malloc a pointer then delete it
-	char* mallocstr = NULL;
-	ad->LookupString( "Reason", &mallocstr );
-	if( mallocstr ) {
-		if( reason ) {
-			delete [] reason;
-		}
-		reason = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "Reason", reason );
 
-	ad->LookupString( "StartdName", &mallocstr );
-	if( mallocstr ) {
-		if( startd_name ) {
-			delete [] startd_name;
-		}
-		startd_name = strnewp( mallocstr );
-		free( mallocstr );
-		mallocstr = NULL;
-	}
+	ad->LookupString( "StartdName", startd_name );
 }
 
 
@@ -5406,7 +4510,7 @@ JobAdInformationEvent::formatBody( std::string &out, ClassAd *jobad_arg )
 int
 JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job ad information event triggered.", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5416,7 +4520,7 @@ JobAdInformationEvent::readEvent(FILE *file, bool & got_sync_line)
 	int num_attrs = 0;
 	while (read_optional_line(line, file, got_sync_line)) {
 		if ( ! jobad->Insert(line.c_str())) {
-			// dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.Value());
+			// dprintf(D_ALWAYS,"failed to create classad; bad expr = '%s'\n", line.c_str());
 			return 0;
 		}
 		++num_attrs;
@@ -5543,7 +4647,7 @@ JobStatusUnknownEvent::formatBody( std::string &out )
 
 int JobStatusUnknownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("The job's remote status is unknown", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5587,7 +4691,7 @@ JobStatusKnownEvent::formatBody( std::string &out )
 
 int JobStatusKnownEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("The job's remote status is known again", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5634,7 +4738,7 @@ JobStageInEvent::formatBody( std::string &out )
 int
 JobStageInEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job is performing stage-in of input files", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5680,7 +4784,7 @@ JobStageOutEvent::formatBody( std::string &out )
 int
 JobStageOutEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Job is performing stage-out of output files", line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5753,7 +4857,7 @@ AttributeUpdate::readEvent(FILE *file, bool & got_sync_line)
 	if (old_value) { free(old_value); }
 	name = value = old_value = NULL;
 
-	MyString line;
+	std::string line;
 	if ( ! read_optional_line(line, file, got_sync_line)) {
 		return 0;
 	}
@@ -5850,21 +4954,15 @@ AttributeUpdate::setOldValue(const char* attr_value)
 }
 
 
-PreSkipEvent::PreSkipEvent(void) : skipEventLogNotes(0)
+PreSkipEvent::PreSkipEvent(void)
 {
 	eventNumber = ULOG_PRESKIP;
 }
 
-PreSkipEvent::~PreSkipEvent(void)
-{
-	delete [] skipEventLogNotes;
-}
-
 int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete[] skipEventLogNotes;
-	skipEventLogNotes = NULL;
-	MyString line;
+	skipEventLogNotes.clear();
+	std::string line;
 
 	// read the remainder of the event header line
 	if ( ! read_optional_line(line, file, got_sync_line)) {
@@ -5877,10 +4975,10 @@ int PreSkipEvent::readEvent (FILE *file, bool & got_sync_line)
 	}
 		// some users of this library (dagman) depend on whitespace
 		// being stripped from the beginning of the log notes field
-	line.trim();
-	skipEventLogNotes = line.detach_buffer();
+	trim(line);
+	skipEventLogNotes = line;
 
-	return ( !skipEventLogNotes || strlen(skipEventLogNotes) == 0 )?0:1;
+	return ( skipEventLogNotes.empty() )?0:1;
 }
 
 bool
@@ -5888,11 +4986,11 @@ PreSkipEvent::formatBody( std::string &out )
 {
 	int retval = formatstr_cat( out, "PRE script return value is PRE_SKIP value\n" );
 		// 
-	if (!skipEventLogNotes || retval < 0)
+	if (skipEventLogNotes.empty() || retval < 0)
 	{
 		return false;
 	}
-	retval = formatstr_cat( out, "    %.8191s\n", skipEventLogNotes );
+	retval = formatstr_cat( out, "    %.8191s\n", skipEventLogNotes.c_str() );
 	if( retval < 0 ) {
 		return false;
 	}
@@ -5904,7 +5002,7 @@ ClassAd* PreSkipEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( skipEventLogNotes && skipEventLogNotes[0] ) {
+	if( !skipEventLogNotes.empty() ) {
 		if( !myad->InsertAttr("SkipEventLogNotes",skipEventLogNotes) ) return NULL;
 	}
 	return myad;
@@ -5915,27 +5013,7 @@ void PreSkipEvent::initFromClassAd(ClassAd* ad)
 	ULogEvent::initFromClassAd(ad);
 
 	if( !ad ) return;
-	char* mallocstr = NULL;
-	ad->LookupString("SkipEventLogNotes", &mallocstr);
-	if( mallocstr ) {
-		setSkipNote(mallocstr);
-		free(mallocstr);
-		mallocstr = NULL;
-	}
-}
-
-void PreSkipEvent::setSkipNote(const char* s)
-{
-	if( skipEventLogNotes ) {
-		delete[] skipEventLogNotes;
-	}
-	if( s ) {
-		skipEventLogNotes = strnewp(s);
-		ASSERT( skipEventLogNotes );
-	}
-	else {
-		skipEventLogNotes = NULL;
-	}
+	ad->LookupString("SkipEventLogNotes", skipEventLogNotes);
 }
 
 // ----- the ClusterSubmitEvent class
@@ -6427,7 +5505,7 @@ FileTransferEvent::formatBody( std::string & out ) {
 int
 FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 	// Require an 'optional' line  because read_line_value() requires a prefix.
-	MyString eventString;
+	std::string eventString;
 	if(! read_optional_line( eventString, f, got_sync_line )) {
 		return 0;
 	}
@@ -6445,16 +5523,16 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 
 
 	// Check for an optional line.
-	MyString optionalLine;
+	std::string optionalLine;
 	if(! read_optional_line( optionalLine, f, got_sync_line )) {
 		return got_sync_line ? 1 : 0;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 
 	// Did we record the queueing delay?
-	MyString prefix = "\tSeconds spent in queue: ";
+	std::string prefix = "\tSeconds spent in queue: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		MyString value = optionalLine.substr( prefix.length(), optionalLine.length() );
+		std::string value = optionalLine.substr( prefix.length() );
 
 		char * endptr = NULL;
 		queueingDelay = strtol( value.c_str(), & endptr, 10 );
@@ -6466,21 +5544,21 @@ FileTransferEvent::readEvent( FILE * f, bool & got_sync_line ) {
 		if(! read_optional_line( optionalLine, f, got_sync_line )) {
 			return got_sync_line ? 1 : 0;
 		}
-		optionalLine.chomp();
+		chomp(optionalLine);
 	}
 
 
 	// Did we record the starter host?
 	prefix = "\tTransferring to host: ";
 	if( starts_with( optionalLine.c_str(), prefix.c_str() ) ) {
-		host = optionalLine.substr( prefix.length(), optionalLine.length() );
+		host = optionalLine.substr( prefix.length() );
 
 /*
 		// If we read an optional line, check for the next one.
 		if(! read_optional_line( optionalLine, f, got_sync_line )) {
 			return got_sync_line ? 1 : 0;
 		}
-		optionalLine.chomp();
+		chomp(optionalLine);
 */
 	}
 
@@ -6608,16 +5686,16 @@ ReserveSpaceEvent::formatBody(std::string &out)
 
 int
 ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for bytes reserved.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes reserved:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -6637,10 +5715,10 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	prefix = "\tReservation Expiration:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string expiry_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string expiry_str = optionalLine.substr(prefix.size());
 		long long expiry_long;
 		try {
 			expiry_long = stoll(expiry_str);
@@ -6662,7 +5740,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tReservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -6674,7 +5752,7 @@ ReserveSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -6740,7 +5818,7 @@ ReleaseSpaceEvent::formatBody(std::string &out)
 
 int
 ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check the reservation UUID.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
@@ -6748,7 +5826,7 @@ ReleaseSpaceEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	std::string prefix = "Reservation UUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid= optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid= optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation UUID line missing.\n");
 		return false;
@@ -6835,16 +5913,16 @@ FileCompleteEvent::formatBody(std::string &out)
 
 int
 FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for filesize in bytes.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -6866,7 +5944,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -6878,7 +5956,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -6890,7 +5968,7 @@ FileCompleteEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tUUID: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_uuid = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_uuid = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "File UUID line missing.\n");
 		return false;
@@ -6963,16 +6041,16 @@ FileUsedEvent::formatBody(std::string &out)
 
 int
 FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check the checksum value.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Checksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -6984,7 +6062,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -6996,7 +6074,7 @@ FileUsedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Reservation tag line missing.\n");
 		return false;
@@ -7084,16 +6162,16 @@ FileRemovedEvent::formatBody(std::string &out)
 
 int
 FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
-	MyString optionalLine;
+	std::string optionalLine;
 
 		// Check for filesize in bytes.
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	std::string prefix = "Bytes:";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		std::string bytes_str = optionalLine.substr(prefix.size(), optionalLine.length());
+		std::string bytes_str = optionalLine.substr(prefix.size());
 		long long bytes_long;
 		try {
 			bytes_long = stoll(bytes_str);
@@ -7113,10 +6191,10 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	if (!read_optional_line(optionalLine, fp, got_sync_line)) {
 		return false;
 	}
-	optionalLine.chomp();
+	chomp(optionalLine);
 	prefix = "\tChecksum Value: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum line missing.\n");
 		return false;
@@ -7128,7 +6206,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tChecksum Type: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_checksum_type = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_checksum_type = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "Checksum type line missing.\n");
 		return false;
@@ -7140,7 +6218,7 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 	}
 	prefix = "\tTag: ";
 	if (starts_with(optionalLine.c_str(), prefix.c_str())) {
-		m_tag = optionalLine.substr(prefix.size(), optionalLine.length());
+		m_tag = optionalLine.substr(prefix.size());
 	} else {
 		dprintf(D_FULLDEBUG, "File tag line missing.\n");
 		return false;
@@ -7153,14 +6231,10 @@ FileRemovedEvent::readEvent(FILE * fp, bool &got_sync_line) {
 DataflowJobSkippedEvent::DataflowJobSkippedEvent (void) : toeTag(NULL)
 {
 	eventNumber = ULOG_DATAFLOW_JOB_SKIPPED;
-	reason = NULL;
 }
 
 DataflowJobSkippedEvent::~DataflowJobSkippedEvent(void)
 {
-	if( reason ) {
-		delete[] reason;
-	}
 	if( toeTag ) {
 		delete toeTag;
 	}
@@ -7177,27 +6251,6 @@ DataflowJobSkippedEvent::setToeTag( classad::ClassAd * tt ) {
 	}
 }
 
-void
-DataflowJobSkippedEvent::setReason( const char* reason_str )
-{
-	delete[] reason;
-	reason = NULL;
-	if( reason_str ) {
-		reason = strnewp( reason_str );
-		if( !reason ) {
-			EXCEPT( "ERROR: out of memory!" );
-		}
-	}
-}
-
-
-const char*
-DataflowJobSkippedEvent::getReason( void ) const
-{
-	return reason;
-}
-
-
 bool
 DataflowJobSkippedEvent::formatBody( std::string &out )
 {
@@ -7205,8 +6258,8 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 	if( formatstr_cat( out, "Dataflow job was skipped.\n" ) < 0 ) {
 		return false;
 	}
-	if( reason ) {
-		if( formatstr_cat( out, "\t%s\n", reason ) < 0 ) {
+	if( !reason.empty() ) {
+		if( formatstr_cat( out, "\t%s\n", reason.c_str() ) < 0 ) {
 			return false;
 		}
 	}
@@ -7222,17 +6275,16 @@ DataflowJobSkippedEvent::formatBody( std::string &out )
 int
 DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 {
-	delete [] reason;
-	reason = NULL;
+	reason.clear();
 
-	MyString line;
+	std::string line;
 	if ( ! read_line_value("Dataflow job was skipped.", line, file, got_sync_line)) {
 		return 0;
 	}
 	// try to read the reason, this is optional
 	if (read_optional_line(line, file, got_sync_line, true)) {
-		line.trim();
-		reason = line.detach_buffer();
+		trim(line);
+		reason = line;
 	}
 
 	// Try to read the ToE tag.
@@ -7244,7 +6296,7 @@ DataflowJobSkippedEvent::readEvent (FILE *file, bool & got_sync_line)
 			}
 		}
 
-		if( line.remove_prefix( "\tJob terminated by " ) ) {
+		if( replace_str(line, "\tJob terminated by ", "") ) {
 			if( toeTag != NULL ) { delete toeTag; }
 			toeTag = new ToE::Tag();
 			if(! toeTag->readFromString( line )) {
@@ -7264,7 +6316,7 @@ DataflowJobSkippedEvent::toClassAd(bool event_time_utc)
 	ClassAd* myad = ULogEvent::toClassAd(event_time_utc);
 	if( !myad ) return NULL;
 
-	if( reason ) {
+	if( !reason.empty() ) {
 		if( !myad->InsertAttr("Reason", reason) ) {
 			delete myad;
 			return NULL;
@@ -7295,13 +6347,7 @@ DataflowJobSkippedEvent::initFromClassAd(ClassAd* ad)
 
 	if( !ad ) return;
 
-	char* multi = NULL;
-	ad->LookupString("Reason", &multi);
-	if( multi ) {
-		setReason(multi);
-		free(multi);
-		multi = NULL;
-	}
+	ad->LookupString("Reason", reason);
 
 	setToeTag( dynamic_cast<classad::ClassAd *>(ad->Lookup(ATTR_JOB_TOE)) );
 }

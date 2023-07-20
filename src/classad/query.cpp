@@ -22,7 +22,10 @@
 #include "classad/collectionBase.h"
 #include "classad/query.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 

@@ -145,7 +145,7 @@ preserve_log_file()
 	time_t clock_now;
 	struct tm *tm; 
 
-	(void)sprintf( old, "%s.old", debug_fn );
+	(void)snprintf( old, sizeof(old), "%s.old", debug_fn );
 	(void)time( &clock_now );
 	tm = localtime( &clock_now );
 	fprintf(debug_fp, "%s: ", formatTimeHeader(tm));

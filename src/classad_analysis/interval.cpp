@@ -23,15 +23,13 @@
 
 #include <iostream>
 
-using namespace std;
-
 // Interval methods
 
 bool
 Copy( Interval *src, Interval *dest )
 {
 	if( src == NULL || dest == NULL ) {
-		cerr << "Copy: tried to pass null pointer" << endl;
+		std::cerr << "Copy: tried to pass null pointer" << std::endl;
 		return false;
 	}
 	
@@ -47,7 +45,7 @@ bool
 GetLowValue ( Interval * i, classad::Value &result )
 {
 	if( i == NULL ) {
-		cerr << "GetLowValue: input interval is NULL" << endl;
+		std::cerr << "GetLowValue: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -59,7 +57,7 @@ bool
 GetHighValue ( Interval * i, classad::Value &result )
 {
 	if( i == NULL ) {
-		cerr << "GetHighValue: input interval is NULL" << endl;
+		std::cerr << "GetHighValue: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -71,8 +69,8 @@ bool
 GetLowDoubleValue ( Interval * i, double &result )
 {
 	if( i == NULL ) {
-		cerr << "GetLowDoubleValue: input interval is NULL"
-			 << endl;
+		std::cerr << "GetLowDoubleValue: input interval is NULL"
+			 << std::endl;
 		return false;
 	}
 
@@ -96,8 +94,8 @@ bool
 GetHighDoubleValue ( Interval * i, double &result )
 {
 	if( i == NULL ) {
-		cerr << "GetHighDoubleValue: input interval is NULL"
-			 << endl;
+		std::cerr << "GetHighDoubleValue: input interval is NULL"
+			 << std::endl;
 		return false;
 	}
 
@@ -122,7 +120,7 @@ bool
 Overlaps( Interval *i1, Interval *i2 )
 {
 	if( i1 == NULL || i2 == NULL ) {
-		cerr << "Overlaps: input interval is NULL" << endl;
+		std::cerr << "Overlaps: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -160,7 +158,7 @@ bool
 Precedes( Interval *i1, Interval *i2 )
 {
 	if( i1 == NULL || i2 == NULL ) {
-		cerr << "Precedes: input interval is NULL" << endl;
+		std::cerr << "Precedes: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -197,7 +195,7 @@ bool
 Consecutive( Interval *i1, Interval *i2 )
 {
 	if( i1 == NULL || i2 == NULL ) {
-		cerr << "Consecutive: input interval is NULL" << endl;
+		std::cerr << "Consecutive: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -233,7 +231,7 @@ bool
 StartsBefore( Interval *i1, Interval *i2 )
 {
 	if( i1 == NULL || i2 == NULL ) {
-		cerr << "Precedes: input interval is NULL" << endl;
+		std::cerr << "Precedes: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -268,7 +266,7 @@ bool
 EndsAfter( Interval *i1, Interval *i2 )
 {
 	if( i1 == NULL || i2 == NULL ) {
-		cerr << "Precedes: input interval is NULL" << endl;
+		std::cerr << "Precedes: input interval is NULL" << std::endl;
 		return false;
 	}
 
@@ -303,7 +301,7 @@ classad::Value::ValueType
 GetValueType( Interval * i )
 {
 	if( i == NULL ) {
-		cerr << "GetValueType: input interval is NULL" << endl;
+		std::cerr << "GetValueType: input interval is NULL" << std::endl;
 		return classad::Value::NULL_VALUE;
 	}
 	
@@ -337,7 +335,7 @@ GetValueType( Interval * i )
 }
 
 bool
-IntervalToString( Interval *i, string &buffer )
+IntervalToString( Interval *i, std::string &buffer )
 {
 	if( i == NULL ) {
 		return false;
@@ -461,7 +459,7 @@ EqualValue( classad::Value &v1, classad::Value &v2 )
 		}
 	}
 	case classad::Value::STRING_VALUE: {
-		string s1, s2;
+		std::string s1, s2;
 		(void) v1.IsStringValue( s1 );
 		(void) v2.IsStringValue( s2 );
 		if( s1.compare( s2 ) == 0 ) {
@@ -570,7 +568,7 @@ bool IndexSet::
 Init( int _size )
 {
 	if( _size <= 0 ) {
-		cerr << "IndexSet::Init: size out of range: " << _size << endl;
+		std::cerr << "IndexSet::Init: size out of range: " << _size << std::endl;
 		return false;
 	}
 
@@ -579,7 +577,7 @@ Init( int _size )
 	}
 
 	if( !( inSet = new bool[_size] ) ) {
-		cerr << "IndexSet::Init: out of memory" << endl;
+		std::cerr << "IndexSet::Init: out of memory" << std::endl;
 		return false;
 	}
 
@@ -596,7 +594,7 @@ bool IndexSet::
 Init( IndexSet &is )
 {
 	if( !is.initialized ) {
-		cerr << "IndexSet::Init: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Init: IndexSet not initialized" << std::endl;
 		return false;
 	}
 
@@ -605,7 +603,7 @@ Init( IndexSet &is )
 	}
 
 	if( !( inSet = new bool[is.size] ) ) {
-		cerr << "IndexSet::Init: out of memory" << endl;
+		std::cerr << "IndexSet::Init: out of memory" << std::endl;
 		return false;
 	}
 
@@ -625,7 +623,7 @@ AddIndex( int index )
 		return false;
 	}
 	if( index < 0 || index >= size ) {
-		cerr << "IndexSet::AddIndex: index out of range" << endl;
+		std::cerr << "IndexSet::AddIndex: index out of range" << std::endl;
 		return false;
 	}
 	else if( inSet[index] ) {
@@ -645,7 +643,7 @@ RemoveIndex( int index )
 		return false;
 	}
 	if( index < 0 || index >= size ) {
-		cerr << "IndexSet::RemoveIndex: index out of range" << endl;
+		std::cerr << "IndexSet::RemoveIndex: index out of range" << std::endl;
 		return false;
 	}
 	else if( inSet[index] ) {
@@ -695,11 +693,11 @@ bool IndexSet::
 Equals( IndexSet &is )
 {
 	if( !initialized ) {
-		cerr << "IndexSet::Equals: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Equals: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( !is.initialized ) {
-		cerr << "IndexSet::Equals: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Equals: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( size != is.size || cardinality != is.cardinality ) {
@@ -719,7 +717,7 @@ bool IndexSet::
 IsEmpty( ) const
 {
 	if( !initialized ) {
-		cerr << "IndexSet::IsEmpty: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::IsEmpty: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else {
@@ -731,11 +729,11 @@ bool IndexSet::
 HasIndex( int index )
 {
 	if( !initialized ) {
-		cerr << "IndexSet::HasIndex: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::HasIndex: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( index < 0 || index >= size ) {
-		cerr << "IndexSet::HasIndex: index out of range" << endl;
+		std::cerr << "IndexSet::HasIndex: index out of range" << std::endl;
 		return false;
 	}
 	else {
@@ -744,14 +742,13 @@ HasIndex( int index )
 }
 	
 bool IndexSet::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
-		cerr << "IndexSet::ToString: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::ToString: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else {
-		char tempBuff[32];
 		bool firstItem = true;
 		buffer += '{';
 		for( int i = 0; i < size; i++ ) {
@@ -762,8 +759,7 @@ ToString( string &buffer )
 				else {
 					firstItem = false;
 				}
-				sprintf( tempBuff, "%d", i );
-				buffer += tempBuff;
+				buffer += std::to_string(i);
 			}
 		}
 		buffer += '}';
@@ -775,11 +771,11 @@ bool IndexSet::
 Union( IndexSet &is )
 {
 	if( !initialized || !is.initialized ) {
-		cerr << "IndexSet::Union: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Union: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( size != is.size ) {
-		cerr << "IndexSet::Union: incompatible IndexSets" << endl;
+		std::cerr << "IndexSet::Union: incompatible IndexSets" << std::endl;
 		return false;
 	}
 	else {
@@ -797,11 +793,11 @@ bool IndexSet::
 Intersect( IndexSet & is )
 {
 	if( !initialized || !is.initialized ) {
-		cerr << "IndexSet::Union: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Union: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( size != is.size ) {
-		cerr << "IndexSet::Union: incompatible IndexSets" << endl;
+		std::cerr << "IndexSet::Union: incompatible IndexSets" << std::endl;
 		return false;
 	}
 	else {
@@ -821,28 +817,28 @@ bool IndexSet::
 Translate( IndexSet &is, int *map, int mapSize, int newSize, IndexSet &result )
 {
 	if( !is.initialized ) {
-		cerr << "IndexSet::Translate: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Translate: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( map == NULL ) {
-		cerr << "IndexSet::Translate: map not initialized" << endl;
+		std::cerr << "IndexSet::Translate: map not initialized" << std::endl;
 		return false;
 	}
 	else if( mapSize != is.size ) {
-		cerr << "IndexSet::Translate: map not same size as IndexSet" << endl;
+		std::cerr << "IndexSet::Translate: map not same size as IndexSet" << std::endl;
 		return false;
 	}
 	else if( newSize <=0 ) {
-		cerr << "IndexSet::Translate: newSize <=0" << endl;
+		std::cerr << "IndexSet::Translate: newSize <=0" << std::endl;
 		return false;
 	}
 	else {
 		result.Init( newSize );
 		for( int i = 0; i < is.size; i++ ) {
 			if( map[i] < 0 || map[i] >= newSize ) {
-				cerr << "IndexSet::Translate: map contains invalid index: "
+				std::cerr << "IndexSet::Translate: map contains invalid index: "
 					 << map[i] << " at element " << i
-					 << endl;
+					 << std::endl;
 				return false;
 			}
 			else if ( is.inSet[i] ) {
@@ -857,11 +853,11 @@ bool IndexSet::
 Union( IndexSet &is1, IndexSet &is2, IndexSet &result )
 {
 	if( !is1.initialized || !is2.initialized ) {
-		cerr << "IndexSet::Union: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Union: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( is1.size != is2.size ) {
-		cerr << "IndexSet::Union: incompatible IndexSets" << endl;
+		std::cerr << "IndexSet::Union: incompatible IndexSets" << std::endl;
 		return false;
 	}
 	else {
@@ -879,11 +875,11 @@ bool IndexSet::
 Intersect( IndexSet &is1, IndexSet &is2, IndexSet &result )
 {
 	if( !is1.initialized || !is2.initialized ) {
-		cerr << "IndexSet::Intersect: IndexSet not initialized" << endl;
+		std::cerr << "IndexSet::Intersect: IndexSet not initialized" << std::endl;
 		return false;
 	}
 	else if( is1.size != is2.size ) {
-		cerr << "IndexSet::Intersect: incompatible IndexSets" << endl;
+		std::cerr << "IndexSet::Intersect: incompatible IndexSets" << std::endl;
 		return false;
 	}
 	else {
@@ -934,7 +930,7 @@ bool ValueRange::
 Init( Interval *i, bool undef, bool notString )
 {
 	if( i == NULL ) {
-		cerr << "ValueRange::Init: interval is NULL" << endl;
+		std::cerr << "ValueRange::Init: interval is NULL" << std::endl;
 		return false;
 	}
 	type = GetValueType( i );
@@ -956,8 +952,8 @@ Init( Interval *i, bool undef, bool notString )
 		break;
 	}		
 	default: {
-		cerr << "ValueRange::Init: interval value unknown:"
-			 << (int)type << endl;
+		std::cerr << "ValueRange::Init: interval value unknown:"
+			 << (int)type << std::endl;
 		return false;
 	}
 	}
@@ -1117,7 +1113,7 @@ Intersect( Interval *i, bool undef, bool notString)
 		return true;
 	}
 	if( !SameType( type, GetValueType( i ) ) ) {
-		cerr << "ValueRange::Intersect: type mismatch" << endl;
+		std::cerr << "ValueRange::Intersect: type mismatch" << std::endl;
 		return false;
 	}
 	Interval *i_curr = NULL;
@@ -1192,7 +1188,7 @@ Intersect( Interval *i, bool undef, bool notString)
 	}
 	case classad::Value::STRING_VALUE: {
 		undefined = undefined && undef;
-		string s_new, s_curr;
+		std::string s_new, s_curr;
 		if( !i->lower.IsStringValue( s_new ) ) {
 			return false;
 		}
@@ -1262,8 +1258,8 @@ Intersect( Interval *i, bool undef, bool notString)
 		return true;
 	}
 	default: {
-		cerr << "ValueRange::Intersect: unexpected/unkown ValueType: "
-			 << (int)type << endl;
+		std::cerr << "ValueRange::Intersect: unexpected/unkown ValueType: "
+			 << (int)type << std::endl;
 		return false;
 	}
 	}
@@ -1298,7 +1294,7 @@ Intersect2( Interval *i1, Interval *i2, bool undef )
 	Interval *i_curr = NULL;
 	Interval *i_new = NULL;
 	if( type != tempVR.type ) {
-		cerr << "ValueRange::Intersect2: Type error" << endl;
+		std::cerr << "ValueRange::Intersect2: Type error" << std::endl;
 		return false;
 	}
 
@@ -1382,19 +1378,19 @@ Intersect2( Interval *i1, Interval *i2, bool undef )
 			}
 			else {
 					// should not reach here
-				cerr << "ValueRange::Intersect2: interval problem" << endl;
+				std::cerr << "ValueRange::Intersect2: interval problem" << std::endl;
 				return false;
 			}
 		}		
 		default: {
-			cerr << "ValueRange::Intersect2: unexpected/unkown ValueType: "
-				 << (int)type << endl;
+			std::cerr << "ValueRange::Intersect2: unexpected/unkown ValueType: "
+				 << (int)type << std::endl;
 			return false;
 		}
 		}
 	}
 		// should not reach here
-	cerr << "ValueRange::Intersect2: left while loop " << endl;
+	std::cerr << "ValueRange::Intersect2: left while loop " << std::endl;
 	return false;
 }	
 
@@ -1840,7 +1836,7 @@ Union( ValueRange *vr, int index )
 			return true;
 		}
 		interval1 = mii_curr->ival;
-		string s1, s2;
+		std::string s1, s2;
 
 		while( true ) {
 			if( !interval1->lower.IsStringValue( s1 ) ) {
@@ -1951,7 +1947,7 @@ bool ValueRange::
 IsEmpty( )
 {
 	if( !initialized ) {
-		cerr << "ValueRange::IsEmpty: ValueRange not initialized" << endl;
+		std::cerr << "ValueRange::IsEmpty: ValueRange not initialized" << std::endl;
 		return false;
 	}
 
@@ -2221,7 +2217,7 @@ BuildHyperRects( std::vector<ValueRange *> &vrs, int dimensions,
 }
 
 bool ValueRange::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
@@ -2356,21 +2352,18 @@ GetNumColumns( int &result ) const
 }
 
 bool ValueRangeTable::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
-	char tempBuf[512];
 	
-	sprintf( tempBuf, "%d", numCols );
 	buffer += "numCols = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
-	sprintf( tempBuf, "%d", numRows );
 	buffer += "numRows = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	ValueRange *vr = NULL;
@@ -2574,22 +2567,19 @@ GetLowerBound( int row, classad::Value &result ) {
 }
 
 bool ValueTable::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
-	char tempBuf[512];
 	classad::PrettyPrint pp;
 	
-	sprintf( tempBuf, "%d", numCols );
 	buffer += "numCols = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
-	sprintf( tempBuf, "%d", numRows );
 	buffer += "numRows = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	classad::Value *val = NULL;
@@ -2627,7 +2617,7 @@ IsInequality( classad::Operation::OpKind op ) {
 }
 
 bool ValueTable::
-OpToString( string &buffer, classad::Operation::OpKind op )
+OpToString( std::string &buffer, classad::Operation::OpKind op )
 {
 	switch( op ) {
 	case classad::Operation::LESS_THAN_OP: {
@@ -2780,7 +2770,7 @@ GetNumContexts( int &result ) const
 }
 
 bool HyperRect::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;

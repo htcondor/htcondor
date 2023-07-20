@@ -1,5 +1,5 @@
 # Stampede 2 is the only one of the HPC machines that's still CentOS 7.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/current/9.5.4/update/condor-9.5.4-20220207-x86_64_CentOS7-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/10.x/10.4.2/release/condor-10.4.2-x86_64_CentOS7-stripped.tar.gz
 
 # Stampede 2 doesn't declare a default value for SCRATCH in their
 # documentation.  SCRATCH has the form '/scratch/*/`whoami`', but

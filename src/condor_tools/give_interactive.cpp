@@ -31,7 +31,6 @@
 #include "condor_adtypes.h"
 #include "condor_uid.h"
 #include "daemon.h"
-#include "extArray.h"
 #include "HashTable.h"
 #include "basename.h"
 #include "condor_distribution.h"
@@ -43,8 +42,12 @@
 
 double priority = 0.00001;
 const char *pool = NULL;
-struct 	PrioEntry { std::string name; float prio; };
-static  ExtArray<PrioEntry> prioTable;
+struct 	PrioEntry { 
+	PrioEntry(const std::string &name, float prio) : name(name), prio(prio) {}
+	std::string name; 
+	float prio;
+};
+static  std::vector<PrioEntry> prioTable;
 #ifndef WIN32
 #endif
 ExprTree *rankCondStd;// no preemption or machine rank-preemption 
@@ -350,16 +353,14 @@ fetchSubmittorPrios()
 
 	i = 1;
 	while( i ) {
-    	sprintf( attrName , "Name%d", i );
-    	sprintf( attrPrio , "Priority%d", i );
+		snprintf( attrName, sizeof(attrName), "Name%d", i );
+		snprintf( attrPrio, sizeof(attrPrio), "Priority%d", i );
 
     	if( !al.LookupString( attrName, name, sizeof(name) ) || 
 			!al.LookupFloat( attrPrio, sub_priority ) )
             break;
 
-		prioTable[i-1].name = name;
-		prioTable[i-1].prio = sub_priority;
-		// printf("DEBUG: Prio   %s %f\n",name,sub_priority);
+		prioTable.emplace_back(name, sub_priority);
 		i++;
 	}
 
@@ -372,15 +373,14 @@ static int
 findSubmittor( char *name ) 
 {
 	std::string sub(name);
-	int			last = prioTable.getlast();
+	int			last = prioTable.size();
 	int			i;
 	
-	for( i = 0 ; i <= last ; i++ ) {
+	for( i = 0 ; i < last ; i++ ) {
 		if( prioTable[i].name == sub ) return i;
 	}
 
-	prioTable[i].name = sub;
-	prioTable[i].prio = 0.5;
+	prioTable.emplace_back(sub, 0.5);
 
 	return i;
 }
@@ -477,9 +477,9 @@ main(int argc, char *argv[])
 	}
 
 	// initialize some global expressions
-	sprintf (buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buffer, sizeof(buffer), "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buffer, rankCondStd);
-	sprintf (buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
+	snprintf (buffer, sizeof(buffer), "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK);
 	ParseClassAdRvalExpr (buffer, rankCondPrioPreempt);
 
 	// get PreemptionReq expression from config file

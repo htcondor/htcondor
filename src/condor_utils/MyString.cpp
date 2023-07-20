@@ -1054,13 +1054,6 @@ MyString::readLine( FILE* fp, bool append )
 	}
 }
 
-// the MyStringFpSource can just use MyString::readLine
-bool
-MyStringFpSource::readLine(MyString & str, bool append /* = false*/)
-{
-	return str.readLine(fp, append);
-}
-
 bool
 MyStringFpSource::readLine(std::string & str, bool append /* = false*/)
 {
@@ -1074,18 +1067,10 @@ MyStringFpSource::isEof()
 }
 
 
-bool
-MyStringCharSource::readLine(std::string & str, bool append /* = false*/) {
-    MyString ms(str);
-    bool rv = readLine(ms, append);
-    str = ms;
-    return rv;
-}
-
 // the MyStringCharSource scans a string buffer returning
 // whenver it sees a \n
 bool
-MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
+MyStringCharSource::readLine(std::string & str, bool append /* = false*/)
 {
 	ASSERT(ptr || ! ix);
 	char * p = ptr+ix;
@@ -1097,7 +1082,7 @@ MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
 	}
 
 	// scan for the next \n and return it plus all the chars up until it
-	int cch = 0;
+	size_t cch = 0;
 	while (p[cch] && p[cch] != '\n') ++cch;
 	if (p[cch] == '\n') ++cch;
 
@@ -1108,9 +1093,9 @@ MyStringCharSource::readLine(MyString & str, bool append /* = false*/)
 	}
 
 	if (append) {
-		str.append_str(p, cch);
+		str.append(p, cch);
 	} else {
-		str.assign_str(p, cch);
+		str.assign(p, cch);
 	}
 
 	// advance the current position past what we returned.
@@ -1122,12 +1107,6 @@ bool
 MyStringCharSource::isEof()
 {
 	return !ptr || !ptr[ix];
-}
-
-// populate a MyString from any MyStringSource
-//
-bool MyString::readLine( MyStringSource & src, bool append /*= false*/) {
-	return src.readLine(*this, append);
 }
 
 

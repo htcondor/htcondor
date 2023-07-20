@@ -30,8 +30,6 @@
 
 #include <unordered_map>
 
-using namespace std;
-
 class DagmanMetrics {
 public:
 		/** Sets the start time for the metrics.  This is not in the

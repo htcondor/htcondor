@@ -57,7 +57,7 @@ template <> void AdKeySet<ClassAd *>::print(std::string & ids, int cmax)
 		if (ids.size() > start) ids += " ";
 		if (--cmax < 0) { ids += "..."; break; }
 		ClassAd * item = *it;
-		char id[32]; sprintf(id, "%p", item);
+		char id[32]; snprintf(id, sizeof(id), "%p", item);
 		ids += id;
 	}
 }
@@ -322,7 +322,7 @@ template <class K> ClassAd * AdAggregationResults<K>::next()
 
 		// the autocluster key (or signature), is a string containing key value
 		// pairs separated by \n. So we can easily turn it into a classad.
-		StringTokenIterator iter(it->first, 100, "\n");
+		StringTokenIterator iter(it->first, "\n");
 		const char * line;
 		while ((line = iter.next())) {
 			int r = ad.Insert(line);

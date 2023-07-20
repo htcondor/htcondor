@@ -125,7 +125,7 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 		return false;
 	}
 
-	int deadline = sock->get_deadline();
+	time_t deadline = sock->get_deadline();
 	if( deadline ) {
 		deadline -= time(NULL);
 		if( deadline < 0 ) {
@@ -175,15 +175,15 @@ SharedPortClient::sendSharedPortID(char const *shared_port_id,Sock *sock)
 	return true;
 }
 
-MyString
+std::string
 SharedPortClient::myName()
 {
 	// This is purely for debugging purposes.
 	// It is who we say we are when talking to the shared port server.
-	MyString name;
+	std::string name;
 	name = get_mySubSystem()->getName();
-	if( daemonCore ) {
-		name += " ";
+	if( daemonCore && daemonCore->publicNetworkIpAddr() ) {
+		name += ' ';
 		name += daemonCore->publicNetworkIpAddr();
 	}
 	return name;

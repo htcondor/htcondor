@@ -51,6 +51,7 @@
 #include "ToE.h"
 
 #include <sstream>
+#include <charconv>
 
 extern Starter *Starter;
 extern const char* JOB_WRAPPER_FAILURE_FILE;
@@ -120,10 +121,8 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		// don't have to rely on the PATH inside the
 		// USER_JOB_WRAPPER or for exec().
 
-    bool transfer_exe = false;
-    if (!JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, transfer_exe)) {
-        transfer_exe = false;
-    }
+    bool transfer_exe = true;
+    JobAd->LookupBool(ATTR_TRANSFER_EXECUTABLE, transfer_exe);
 
     bool preserve_rel = false;
     if (!JobAd->LookupBool(ATTR_PRESERVE_RELATIVE_EXECUTABLE, preserve_rel)) {
@@ -132,23 +131,24 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
     bool relative_exe = !fullpath(JobName.c_str()) && (JobName.length() > 0);
 
-    if (relative_exe && preserve_rel && !transfer_exe) {
-        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
-    }
-	else if ( strcmp(CONDOR_EXEC,JobName.c_str()) == 0 ) {
-		formatstr( JobName, "%s%c%s",
-		                 Starter->GetWorkingDir(0),
-		                 DIR_DELIM_CHAR,
-		                 CONDOR_EXEC );
-    }
-	else if (relative_exe && job_iwd && *job_iwd) {
-		std::string full_name;
-		formatstr(full_name, "%s%c%s",
-		                  job_iwd,
-		                  DIR_DELIM_CHAR,
-		                  JobName.c_str());
-		JobName = full_name;
-
+	if (this->ShouldConvertCmdToAbsolutePath()) {
+		if (relative_exe && preserve_rel && !transfer_exe) {
+			dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
+		}
+		else if ( Starter->jic->usingFileTransfer() && transfer_exe ) {
+			formatstr( JobName, "%s%c%s",
+					Starter->GetWorkingDir(0),
+					DIR_DELIM_CHAR,
+					condor_basename(JobName.c_str()) );
+		}
+		else if (relative_exe && job_iwd && *job_iwd) {
+			std::string full_name;
+			formatstr(full_name, "%s%c%s",
+					job_iwd,
+					DIR_DELIM_CHAR,
+					JobName.c_str());
+			JobName = full_name;
+		}
 	}
 
 	if( Starter->isGridshell() ) {
@@ -397,8 +397,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		} else {
 			core_size = (size_t)core_size_ad;
 		}
-		core_size_ptr = &core_size;
+	} else {
+		// if ATTR_CORE_SIZE is unset, assume 0
+		core_size = 0;
 	}
+	core_size_ptr = &core_size;
 #endif // !defined(WIN32)
 
 	long rlimit_as_hard_limit = 0;
@@ -1205,7 +1208,7 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	args.AppendArg("/usr/bin/nsenter");
 	args.AppendArg("-t"); // target pid
 	char buf[32];
-	sprintf(buf,"%d", pid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, pid); *p = '\0';}
 	args.AppendArg(buf); // pid of running job
 
 	// get_user_[ug]id only works if uids has been initted
@@ -1217,14 +1220,14 @@ OsProc::AcceptSingSshClient(Stream *stream) {
 	if (uid < 0) uid = getuid();
 
 	args.AppendArg("-S");
-	sprintf(buf, "%d", uid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, uid); *p = '\0';}
 	args.AppendArg(buf);
 
 	int gid = (int) get_user_gid();
 	if (gid < 0) gid = getgid();
 
 	args.AppendArg("-G");
-	sprintf(buf, "%d", gid);
+	{ auto [p, ec] = std::to_chars(buf, buf + sizeof(buf) - 1, gid); *p = '\0';}
 	args.AppendArg(buf);
 
 	bool setuid = param_boolean("SINGULARITY_IS_SETUID", true);

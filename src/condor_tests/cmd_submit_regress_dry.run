@@ -39,8 +39,11 @@ my %expect;
 my %expect_warn;
 my %dont_expect;
 
+mkdir("${testname}_scratchdir$$");
+chdir("${testname}_scratchdir$$");
+
 TLOG "Creating sub files for coverage test from $testname.subs\n";
-my @subs = emit_subs("$testname.subs");
+my @subs = emit_subs("../$testname.subs");
 
 # regression test wheat.sub needs some directories to exist
 if ( ! -d "Multilevel_Thesis_WheatData") {
@@ -53,7 +56,7 @@ if ( ! -d "Multilevel_Thesis_WheatData") {
 
 
 TLOG "Loading expectations from $testname.expect\n";
-load_expectations("$testname.expect", \%expect, \%expect_warn, \%dont_expect);
+load_expectations("../$testname.expect", \%expect, \%expect_warn, \%dont_expect);
 
 # print the loaded expectations
 #

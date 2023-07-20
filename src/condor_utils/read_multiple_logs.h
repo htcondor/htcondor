@@ -29,7 +29,6 @@
 
 #include "condor_common.h"
 #include "read_user_log.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "HashTable.h"
 #include "condor_id.h"
@@ -47,15 +46,14 @@ public:
 			@param The keyword of the value we need
 			@return The value, or "" if there is an error
 		*/
-    static MyString loadValueFromSubFile(const MyString &strSubFilename,
-			const MyString &directory, const char *keyword);
+    static std::string loadValueFromSubFile(const std::string &strSubFilename,
+			const std::string &directory, const char *keyword);
 
 		/** Makes the given filename an absolute path
 			@param the name of the file (input/output)
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		 */
-	static bool makePathAbsolute(MyString &filename, CondorError &errstack);
 	static bool makePathAbsolute(std::string &filename, CondorError &errstack);
 
 		/** Initializes the given file -- creates it if it doesn't exist,
@@ -96,7 +94,6 @@ public:
 				@param filename: the file to open
 				@return: "" on success; error message on failure
 			 */
-		MyString Open( const MyString &filename );
 		std::string Open( const std::string &filename );
 
 			/** Real the next "logical" line from the file.  (This means
@@ -104,7 +101,6 @@ public:
 				@param line: a string to receive the line string
 				@return: true iff we got any data
 			 */
-		bool NextLogicalLine( MyString &line );
 		bool NextLogicalLine( std::string &line );
 
 			/** Close the file.
@@ -122,15 +118,15 @@ public:
 			@param The StringList to receive the logical lines
 			@return "" if okay, error message otherwise
 		*/
-	static MyString fileNameToLogicalLines(const MyString &filename,
+	static std::string fileNameToLogicalLines(const std::string &filename,
 				StringList &logicalLines);
 
 private:
-	    /** Read the entire contents of the given file into a MyString.
+	    /** Read the entire contents of the given file into a string.
 		 * @param The name of the file.
 		 * @return The contents of the file.
 		 */
-    static MyString readFileToString(const MyString &strFilename);
+	static std::string readFileToString(const std::string &strFilename);
 
 		/**
 		 * Get the given parameter if it is defined in the given submit file
@@ -140,7 +136,7 @@ private:
 		 * @return The parameter value defined in that line, or "" if the
 		 *   parameter is not defined.
 		 */
-	static MyString getParamFromSubmitLine(MyString &submitLine,
+	static std::string getParamFromSubmitLine(const std::string &submitLine,
 			const char *paramName);
 
 		/**
@@ -152,8 +148,8 @@ private:
 		 * @param Output string list of "logical" lines.
 		 * @return "" if okay, or else an error message.
 		 */
-	static MyString CombineLines(StringList &listIn, char continuation,
-			const MyString &filename, StringList &listOut);
+	static std::string CombineLines(StringList &listIn, char continuation,
+			const std::string &filename, StringList &listOut);
 };
 
 class ReadMultipleUserLogs
@@ -188,7 +184,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool monitorLogFile(const MyString & logfile, bool truncateIfFirst,
+	bool monitorLogFile(const std::string & logfile, bool truncateIfFirst,
 				CondorError &errstack);
 
 		/** Unmonitor the given log file
@@ -196,7 +192,7 @@ public:
 			@param a CondorError object to hold any error information
 			@return true if successful, false if failed
 		*/
-	bool unmonitorLogFile(const MyString & logfile, CondorError &errstack);
+	bool unmonitorLogFile(const std::string & logfile, CondorError &errstack);
 
 		/** Returns the number of log files we're actively monitoring
 			at the present time.
@@ -222,7 +218,7 @@ private:
 	void cleanup();
 
 	struct LogFileMonitor {
-		LogFileMonitor( const MyString &file ) : logFile(file), refCount(0),
+		LogFileMonitor( const std::string &file ) : logFile(file), refCount(0),
 					readUserLog(NULL), state(NULL), stateError(false),
 					lastLogEvent(NULL) {}
 
@@ -243,7 +239,7 @@ private:
 			// The file name corresponding to this object; if the same
 			// actual log file is registered via multiple paths, this
 			// is the first path used to register it.
-		MyString	logFile;
+		std::string logFile;
 
 			// Reference count -- how many net calls to monitor this log?
 		int			refCount;
@@ -271,13 +267,13 @@ private:
 		// Note: these should be changed to STL maps, and should
 		// also index on a combination of st_ino and st_dev (see gittrac
 		// #328). wenger 2009-07-16.
-	HashTable<MyString, LogFileMonitor *>	allLogFiles;
+	HashTable<std::string, LogFileMonitor *>	allLogFiles;
 
-	HashTable<MyString, LogFileMonitor *>	activeLogFiles;
+	HashTable<std::string, LogFileMonitor *>	activeLogFiles;
 
 	// For instantiation in programs that use this class.
 #define MULTI_LOG_HASH_INSTANCE template class \
-		HashTable<MyString, ReadMultipleUserLogs::LogFileMonitor *>
+		HashTable<std::string, ReadMultipleUserLogs::LogFileMonitor *>
 
 		/**
 		 * Read an event from a log monitor.
@@ -292,7 +288,7 @@ private:
 			@param the logTable to print (all or active only).
 		*/
 	void printLogMonitors(FILE *stream,
-				HashTable<MyString, LogFileMonitor *> logTable) const;
+				HashTable<std::string, LogFileMonitor *> logTable) const;
 
 };
 

@@ -196,7 +196,7 @@ ToolDaemonProc::StartJob()
 	// in the environment variable, "TDP_AP_PID"
 	job_env.SetEnv("TDP_LASS_ADDRESS", "ENV");
 	char pid_buf[256];
-	sprintf(pid_buf, "%d", ApplicationPid);
+	snprintf(pid_buf, sizeof(pid_buf), "%d", ApplicationPid);
 	job_env.SetEnv("TDP_AP_PID", pid_buf);
 
 		// Now, let the starter publish any env vars it wants to into

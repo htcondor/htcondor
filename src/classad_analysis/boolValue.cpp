@@ -22,8 +22,6 @@
 #include "boolValue.h"
 #include "list.h"
 
-using namespace std;
-
 // F && (T|F|U|E) = F
 // E && (T|F|U|E) = E 
 // (T|U) && F = F
@@ -230,7 +228,7 @@ IsTrueSubsetOf( BoolVector &bv, bool &result )
 }
 
 bool BoolVector::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ){
 		return false;
@@ -318,13 +316,12 @@ HasContext( int index, bool &result )
 }
 
 bool AnnotatedBoolVector::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
 	char item;
-	char tempBuf[512];
 	buffer += '[';
 	for( int i = 0; i < length; i++ ) {
 		if( i > 0) {
@@ -335,8 +332,7 @@ ToString( string &buffer )
 	}
 	buffer += ']';
 	buffer += ':';
-	sprintf( tempBuf, "%d", frequency );
-	buffer += tempBuf;
+	buffer += std::to_string(frequency);
 	buffer += ':';
 	buffer += '{';
 	bool firstItem = true;
@@ -347,8 +343,7 @@ ToString( string &buffer )
 			} else {
 				buffer += ',';
 			}
-			sprintf( tempBuf, "%d", i );
-			buffer += tempBuf;
+			buffer += std::to_string(i);
 		}
 	}
 	buffer += '}';
@@ -788,22 +783,19 @@ GenerateMinimalFalseBVList( List< BoolVector > &result )
 }
 
 bool BoolTable::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
 	char item;
-	char tempBuf[512];
 	
-	sprintf( tempBuf, "%d", numCols );
 	buffer += "numCols = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numCols);
 	buffer += "\n";
 
-	sprintf( tempBuf, "%d", numRows );
 	buffer += "numRows = ";
-	buffer += tempBuf;
+	buffer += std::to_string(numRows);
 	buffer += "\n";
 
 	for( int row = 0; row < numRows; row++ ) {
@@ -811,14 +803,12 @@ ToString( string &buffer )
 			GetChar( table[col][row], item );
 			buffer += item;
 		}
-		sprintf( tempBuf, "%d", rowTotalTrue[row] );
 		buffer += " ";
-		buffer += tempBuf;
+		buffer += std::to_string(rowTotalTrue[row]);
 		buffer += "\n";
 	}
 	for( int col = 0; col < numCols; col++ ) {
-		sprintf( tempBuf, "%d", colTotalTrue[col] );
-		buffer += tempBuf;
+		buffer += std::to_string(colTotalTrue[col]);
 	}
 	buffer += "\n";
 	return true;

@@ -20,8 +20,6 @@ include_directories(${CONDOR_SCHEDD_SRC_DIR})
 
 set( starterElements
 starter.cpp
-cgroup_limits.cpp
-cgroup.linux.cpp
 docker_proc.cpp
 find_child_proc.cpp
 has_sysadmin_cap.cpp
@@ -57,9 +55,8 @@ vm_proc.cpp
 )
 
 if (LINUX)
-	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../openstack_gahp/rapidjson.src/include")
+	include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../vendor/rapidjson.src/include")
 	list(APPEND starterElements
-		cgroup.linux.cpp  
 		../condor_startd.V6/VolumeManager.cpp
 	)
 endif(LINUX)
@@ -132,5 +129,6 @@ if (LINUX)
 	install ( FILES ${CMAKE_CURRENT_SOURCE_DIR}/exit_37.sif DESTINATION ${C_LIBEXEC} )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox )
 	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/dev )
+	install ( DIRECTORY DESTINATION ${C_LIBEXEC}/singularity_test_sandbox/proc )
 	install ( FILES ${CMAKE_CURRENT_BINARY_DIR}/exit_37 DESTINATION ${C_LIBEXEC}/singularity_test_sandbox PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endif()

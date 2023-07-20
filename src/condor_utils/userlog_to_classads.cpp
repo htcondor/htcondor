@@ -119,7 +119,7 @@ bool userlog_to_classads(const char *filename,
 
 	  // Create a reasonable looking global ID
 	  char globalid[256];
-	  sprintf(globalid,"localhost#%i.%i#%li",event->cluster,event->proc,long(eventTime));
+	  snprintf(globalid,sizeof(globalid),"localhost#%i.%i#%li",event->cluster,event->proc,long(eventTime));
 	  jobClassAd->InsertAttr("GlobalJobId",globalid);
 	}
 
@@ -413,9 +413,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason=evict_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("LastVacateReason",reason);
+	  if (!evict_event->reason.empty()) {
+	    jobClassAd->InsertAttr("LastVacateReason",evict_event->reason);
 	  }
 	}
       }
@@ -441,7 +440,7 @@ bool userlog_to_classads(const char *filename,
 
 	// Update the time attributes
 	{
-	  const char * reason=hold_event->getReason();
+	  const char * reason=hold_event->reason.c_str();
 
 	  {
 	    condor_time_t eventTime = getEventTime(event);
@@ -458,9 +457,9 @@ bool userlog_to_classads(const char *filename,
 	    jobClassAd->InsertAttr("HoldReason",reason);
 	  }
 	}
-	jobClassAd->InsertAttr("HoldReasonCode",hold_event->getReasonCode());
-      	jobClassAd->InsertAttr("HoldReasonSubCode",hold_event->getReasonSubCode());
-	if (hold_event->getReasonCode()!=1) {
+	jobClassAd->InsertAttr("HoldReasonCode",hold_event->code);
+	jobClassAd->InsertAttr("HoldReasonSubCode",hold_event->subcode);
+	if (hold_event->code!=1) {
 	  classad::Value v;
 	  int i = 0;
 	  if (jobClassAd->EvaluateExpr("NumSystemHolds+1",v) && v.IsIntegerValue(i)) {
@@ -492,9 +491,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason = rel_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("ReleaseReason",reason);
+	  if (!rel_event->reason.empty()) {
+	    jobClassAd->InsertAttr("ReleaseReason",rel_event->reason);
 	  }
 	}
       }
@@ -519,9 +517,8 @@ bool userlog_to_classads(const char *filename,
 	}
 
 	{
-	  const char * reason = abort_event->getReason();
-	  if (reason!=NULL) {
-	    jobClassAd->InsertAttr("RemoveReason",reason);
+	  if (!abort_event->reason.empty()) {
+	    jobClassAd->InsertAttr("RemoveReason",abort_event->reason);
 	  }
 	}
       }

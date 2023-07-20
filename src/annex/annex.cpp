@@ -85,11 +85,11 @@ EC2GahpClient * startOneGahpClient( const std::string & publicKeyFile, const std
 
 	args.AppendArg( "-w" );
 	int minWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MIN_NUM", 1 );
-	args.AppendArg( minWorkerCount );
+	args.AppendArg( std::to_string(minWorkerCount) );
 
 	args.AppendArg( "-m" );
 	int maxWorkerCount = param_integer( "ANNEX_GAHP_WORKER_MAX_NUM", 1 );
-	args.AppendArg( maxWorkerCount );
+	args.AppendArg( std::to_string(maxWorkerCount) );
 
 	args.AppendArg( "-d" );
 	char * gahp_debug = param( "ANNEX_GAHP_DEBUG" );

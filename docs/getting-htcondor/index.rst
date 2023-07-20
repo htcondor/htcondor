@@ -1,7 +1,7 @@
 .. _getting_htcondor:
 
-Getting HTCondor
-================
+Downloading and Installing
+==========================
 
 .. toctree::
     :maxdepth: 2
@@ -47,7 +47,7 @@ instructions corresponding to your operating system:
   Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-  Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
+  Debian 11; and Ubuntu 20.04 and 22.04.
 * :doc:`macOS <install-macos-as-root>`.  HTCondor supports macOS 10.15 and later.
 
 .. _hand_install_with_user_privileges:
@@ -64,7 +64,7 @@ misbehaving jobs.
   Enterprise Linux 7 including Red Hat, CentOS, and Scientific Linux 7;
   Enterprise Linux 8 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
   Enterprise Linux 9 including Red Hat, CentOS Stream, Alma Linux, and Rocky Linux;
-  Debian 11; and Ubuntu 18.04, 20.04, and 22.04.
+  Debian 11; and Ubuntu 20.04 and 22.04.
 
 * :doc:`macOS <install-linux-as-user>`.  HTCondor supports macOS 10.15 and later.
 

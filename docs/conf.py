@@ -40,6 +40,13 @@ extensions = [
     'jira',
 ]
 
+# When we drop el7, just put classad-attribute unconditionally
+# into extensions. It requires python3, so it doesn't 
+# work on python2 sphinxes, as found on el7.
+
+if (sys.version_info.major >= 3):
+	extensions.append('classad-attribute')
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -54,7 +61,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'HTCondor Manual'
-copyright = u'1990-2020, Center for High Throughput Computing, Computer \
+copyright = u'1990-2023, Center for High Throughput Computing, Computer \
 Sciences Department, University of Wisconsin-Madison, Madison, WI, US. \
 Licensed under the Apache License, Version 2.0.'
 
@@ -62,10 +69,8 @@ Licensed under the Apache License, Version 2.0.'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-# The short X.Y version.
-version = '10.1'
 # The full version, including alpha/beta/rc tags.
-release = '10.3.0'
+release = '10.8.0'
 
 rst_epilog = """
 .. |release_date| replace:: Month Day, 2023

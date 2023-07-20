@@ -22,7 +22,7 @@ Machine ClassAd Attributes
         A job is currently suspended
 
     ``"Vacating"``
-        A job is currently checkpointing
+        A job is currently vacating
 
     ``"Killing"``
         A job is currently being killed
@@ -164,7 +164,7 @@ Machine ClassAd Attributes
     The job run time in cpu-seconds that would be lost if graceful
     draining were initiated at the time this ClassAd was published. This
     calculation assumes that jobs will run for the full retirement time
-    and then be evicted without saving a checkpoint.
+    and then be evicted.
 
 :classad-attribute:`ExpectedMachineGracefulDrainingCompletion`
     The estimated time at which graceful draining of the machine could
@@ -205,6 +205,12 @@ Machine ClassAd Attributes
 :classad-attribute:`HasDocker`
     A boolean value set to ``True`` if the machine is capable of
     executing docker universe jobs.
+
+:classad-attribute:`DockerCachedImageSizeMb`
+    An integer value containing the number of megabytes of space used
+    by the docker image cache for cached images used by a worker node.
+    Excludes any images that may be in the cache that were not placed
+    there by HTCondor.
 
 :classad-attribute:`HasSandboxImage`
     A boolean value set to ``True`` if the machine is capable of
@@ -274,6 +280,11 @@ Machine ClassAd Attributes
 :classad-attribute:`HasSingularity`
     A boolean value set to ``True`` if the machine being advertised
     supports running jobs within Singularity containers.
+
+:classad-attribute:`HasSshd`
+    A boolean value set to ``True`` if the machine has a
+    /usr/sbin/sshd installed.  If ``False``, *condor_ssh_to_job* 
+    is unlikely to function.
 
 :classad-attribute:`HasVM`
     If the configuration triggers the detection of virtual machine
@@ -882,7 +893,7 @@ Machine ClassAd Attributes
         The machine is claimed by a remote *condor_schedd* and is
         probably running a job.
      ``"Preempting"``
-        An HTCondor job is being preempted (possibly via checkpointing)
+        An HTCondor job is being preempted
         in order to clear the machine for either a higher priority job
         or because the machine owner wants the machine back.
      ``"Drained"``

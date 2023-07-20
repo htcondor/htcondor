@@ -26,7 +26,6 @@
 #include "dc_collector.h"
 #include "internet.h"
 #include "print_wrapped_text.h"
-#include "MyString.h"
 #include "ad_printmask.h"
 #include "directory.h"
 #include "iso_dates.h"
@@ -104,46 +103,44 @@ std::vector<std::string> findHistoryFiles(const char *passedFileName)
     if ( passedFileName == NULL ) {
         return historyFiles;
     }
-    auto_free_ptr historyDir(condor_dirname(passedFileName));
+	std::string historyDir(condor_dirname(passedFileName));
     const char * historyBase = condor_basename(passedFileName);
 
-    if (historyDir) {
-        Directory dir(historyDir);
+	Directory dir(historyDir.c_str());
 
-        // We walk through directory and add matching files to vector
-         for (const char *current_filename = dir.Next(); 
-             current_filename != NULL; 
-             current_filename = dir.Next()) {
+	// We walk through directory and add matching files to vector
+	for (const char *current_filename = dir.Next(); 
+			current_filename != NULL; 
+			current_filename = dir.Next()) {
 
-            const char * current_base = condor_basename(current_filename);
-           #ifdef WIN32
-            if (MATCH == strcasecmp(historyBase, current_base)) {
-           #else
-            if (MATCH == strcmp(historyBase, current_base)) {
-           #endif
-                foundCurrent = true;
-            } else if (isHistoryBackup(current_filename, NULL, historyBase)) {
-                std::string fullFilePath;
-                dircat(historyDir, current_filename, fullFilePath);
-                historyFiles.push_back(fullFilePath);
-            }
-        }
+		const char * current_base = condor_basename(current_filename);
+#ifdef WIN32
+		if (MATCH == strcasecmp(historyBase, current_base)) {
+#else
+			if (MATCH == strcmp(historyBase, current_base)) {
+#endif
+				foundCurrent = true;
+			} else if (isHistoryBackup(current_filename, NULL, historyBase)) {
+				std::string fullFilePath;
+				dircat(historyDir.c_str(), current_filename, fullFilePath);
+				historyFiles.push_back(fullFilePath);
+			}
+		}
 
-        if (historyFiles.size() > 1) {
-            // Sort the backup files so that they are in the proper order
-            qsort_file_base = historyBase;
-            std::sort(historyFiles.begin(), historyFiles.end(), compareHistoryFilenames);
-        }
+		if (historyFiles.size() > 1) {
+			// Sort the backup files so that they are in the proper order
+			qsort_file_base = historyBase;
+			std::sort(historyFiles.begin(), historyFiles.end(), compareHistoryFilenames);
+		}
 
-        // if the base history file was found in the directory, add it to
-        // the end of the sorted vector
-        if (foundCurrent) {
-            historyFiles.push_back(passedFileName);
-        }
+		// if the base history file was found in the directory, add it to
+		// the end of the sorted vector
+		if (foundCurrent) {
+			historyFiles.push_back(passedFileName);
+		}
 
-    }
-    return historyFiles;
-}
+		return historyFiles;
+	}
 
 
 

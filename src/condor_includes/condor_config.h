@@ -21,10 +21,8 @@
 #define _CONDOR_CONFIG_H
 
 #include "condor_classad.h"
-#include "MyString.h"
 #include "string_list.h"
 #include "simplelist.h"
-#include "extArray.h"
 
 #include <vector>
 #include <string>
@@ -140,8 +138,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 } MACRO_EVAL_CONTEXT_EX;
 
 
-	extern MyString global_config_source;
-	extern MyString global_root_config_source;
+	extern std::string global_config_source;
 	extern StringList local_config_sources;
 	class Regex;
 
@@ -160,7 +157,7 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	public:
 		auto_free_ptr(char* str=NULL) : p(str) {}
 		friend void swap(auto_free_ptr& first, auto_free_ptr& second) { char*t = first.p; first.p = second.p; second.p = t; }
-		auto_free_ptr(const auto_free_ptr& that) { if (that.p) set(strdup(that.p)); else set(NULL); }
+		auto_free_ptr(const auto_free_ptr& that) { if (that.p) p = strdup(that.p); else p = nullptr; }
 		auto_free_ptr & operator=(auto_free_ptr that) { swap(*this, that); return *this; } // swap on assigment.
 		~auto_free_ptr() { clear(); }
 		void set(char*str) { clear(); p = str; }   // set a new pointer, freeing the old pointer (if any)
@@ -175,6 +172,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
+	union _param_names_sumy_key { int64_t all; struct { short int iter; short int off; short int line; short int sid; }; };
+	int param_names_for_summary(std::map<int64_t, std::string>& names);
+	const short int summary_env_source_id = 0x7FFE;
+	const short int summary_wire_source_id = 0x7FFF;
 
 	bool param_defined(const char* name);
 	// Does not check if the expanded parameter is nonempty, only that
@@ -228,17 +229,8 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	// A convenience function for use with trinary parameters.
 	bool param_false( const char * name );
 
-	const char * param_append_location(const MACRO_META * pmet, MyString & value);
 	const char * param_append_location(const MACRO_META * pmet, std::string & value);
-	const char * param_get_location(const MACRO_META * pmet, MyString & value);
 	const char * param_get_location(const MACRO_META * pmet, std::string & value);
-
-	const char * param_get_info(const char * name,
-								const char * subsys,
-								const char * local,
-								MyString & name_used,
-								const char ** pdef_value,
-								const MACRO_META **ppmet);
 
 	const char * param_get_info(const char * name,
 								const char * subsys,
@@ -328,9 +320,6 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	const MACRO_DEF_ITEM * find_macro_def_item(const char * name, MACRO_SET & set, int use);
 
 	void optimize_macros(MACRO_SET& macro_set);
-
-	/* A convenience function that calls param() with a MyString buffer. */
-	bool param(MyString &buf,char const *param_name,char const *default_value=NULL);
 
 	/* A convenience function that calls param() with a std::string buffer. */
 	bool param(std::string &buf, char const *param_name, char const *default_value=NULL);
@@ -428,9 +417,9 @@ const char * hash_iter_key(HASHITER& it);
 const char * hash_iter_value(HASHITER& it);
 int hash_iter_used_value(HASHITER& it);
 MACRO_META * hash_iter_meta(HASHITER& it);
-const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, MyString& source_name, int& line_number);
+const char * hash_iter_info(HASHITER& it, int& use_count, int& ref_count, std::string& source_name, int& line_number);
 const char * hash_iter_def_value(HASHITER& it);
-bool param_find_item (const char * name, const char * subsys, const char * local, MyString& name_found, HASHITER& it);
+bool param_find_item (const char * name, const char * subsys, const char * local, std::string& name_found, HASHITER& it);
 void foreach_param(int options, bool (*fn)(void* user, HASHITER& it), void* user);
 void foreach_param_matching(Regex & re, int options, bool (*fn)(void* user, HASHITER& it), void* user);
 
@@ -721,6 +710,7 @@ int write_config_file(const char* pathname, int options);
 	void set_debug_flags( const char * strFlags, int flags );
 	void config_insert( const char* attrName, const char* attrValue);
 	
+	bool is_piped_command(const char* filename);
 	// Process an additional chunk of file
 	void process_config_source(const char* filename, int depth, const char* sourcename, const char* host, int required);
 

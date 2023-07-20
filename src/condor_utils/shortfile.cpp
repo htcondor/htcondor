@@ -22,14 +22,14 @@ htcondor::readShortFile( const std::string & fileName, std::string & contents ) 
     }
 
     StatWrapper sw( fd );
-    unsigned long fileSize = sw.GetBuf()->st_size;
+    long fileSize = sw.GetBuf()->st_size;
 
     char * rawBuffer = (char *)malloc( fileSize + 1 );
     assert( rawBuffer != NULL );
-    unsigned long totalRead = full_read( fd, rawBuffer, fileSize );
+    long totalRead = full_read( fd, rawBuffer, fileSize );
     close( fd );
     if( totalRead != fileSize ) {
-        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %lu but got %lu.\n",
+        dprintf( D_ALWAYS, "Failed to completely read file '%s'; needed %ld but got %ld.\n",
             fileName.c_str(), fileSize, totalRead );
         free( rawBuffer );
         return false;

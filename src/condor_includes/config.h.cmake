@@ -304,9 +304,6 @@
 /* Define to 1 if the OS has support for the TCP_USER_TIMEOUT setsockopt */
 #cmakedefine HAVE_TCP_USER_TIMEOUT
 
-/* Define to 1 if the VOMS libraries need to dlopen()d */
-#cmakedefine DLOPEN_VOMS_LIBS
-
 /* Define to 1 if the OS has inotify API support */
 #cmakedefine HAVE_INOTIFY
 
@@ -315,6 +312,9 @@
 
 /* Define to 1 if the X screen saver extension header file is available */
 #cmakedefine HAVE_XSS
+
+/* Define if libcurl uses NSS */
+#cmakedefine CURL_USES_NSS 1
 
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"

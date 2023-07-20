@@ -341,11 +341,11 @@ SubsystemInfo::SubsystemInfo( const char *_name, bool _trust, SubsystemType _typ
 SubsystemInfo::~SubsystemInfo( void )
 {
 	if ( m_Name ) {
-		free( const_cast<char *>( m_Name ) );
+		free( m_Name );
 		m_Name = NULL;
 	}
 	if ( m_TempName ) {
-		free( const_cast<char *>( m_TempName ) );
+		free( m_TempName );
 		m_TempName = NULL;
 	}
 	delete m_InfoTable;
@@ -362,7 +362,7 @@ const char *
 SubsystemInfo::setName( const char *_name )
 {
 	if ( m_Name != NULL ) {
-		free( const_cast<char *>( m_Name ) );
+		free( m_Name );
 		m_Name = NULL;
 	}
 	if ( _name != NULL ) {
@@ -391,7 +391,7 @@ void
 SubsystemInfo::resetTempName( void )
 {
 	if ( m_TempName ) {
-		free( const_cast<char*>(m_TempName) );
+		free( m_TempName );
 		m_TempName = NULL;
 	}
 }
@@ -480,7 +480,7 @@ const char *
 SubsystemInfo::setLocalName( const char * _name )
 {
 	if ( m_LocalName ) {
-		free( const_cast<char *>( m_LocalName ) );
+		free( m_LocalName );
 		m_LocalName = NULL;
 	}
 	m_LocalName = strdup(_name);

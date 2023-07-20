@@ -33,8 +33,6 @@
 #include "azurejob.h"
 #include "condor_config.h"
 
-using namespace std;
-
 #define GM_INIT							0
 #define GM_START_VM						1
 #define GM_SAVE_VM_INFO					2
@@ -95,7 +93,7 @@ void AzureJobReconfig()
 bool AzureJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	string resource;
+	std::string resource;
 
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -125,9 +123,9 @@ AzureJob::AzureJob( ClassAd *classad ) :
 	m_retry_times( 0 ),
 	probeNow( false )
 {
-	string error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
-	string value;
+	std::string value;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -427,7 +425,7 @@ void AzureJob::doEvaluateState()
 					std::string vm_id;
 					std::string ip_address;
 
-					if ( m_vmParams.isEmpty() ) {
+					if ( m_vmParams.empty() ) {
 						if ( !BuildVmParams() ) {
 							myResource->CancelSubmit(this);
 							gmState = GM_HOLD;
@@ -555,38 +553,13 @@ void AzureJob::doEvaluateState()
 				// Remove all knowledge of any previous or present job
 				// submission, in both the gridmanager and the schedd.
 
-				// If we are doing a rematch, we are simply waiting around
-				// for the schedd to be updated and subsequently this globus job
-				// object to be destroyed.  So there is nothing to do.
-				if ( wantRematch ) {
-					break;
-				}
-
 				// For now, put problem jobs on hold instead of
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( !m_vmName.empty() && condorState != REMOVED
-					 && wantResubmit == 0 && doResubmit == 0 ) {
+				if (!m_vmName.empty() && condorState != REMOVED) {
 					gmState = GM_HOLD;
 					break;
-				}
-
-				// Only allow a rematch *if* we are also going to perform a resubmit
-				if ( wantResubmit || doResubmit ) {
-					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-				}
-
-				if ( wantResubmit ) {
-					wantResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-				}
-
-				if ( doResubmit ) {
-					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 				}
 
 				errorString = "";
@@ -617,24 +590,6 @@ void AzureJob::doEvaluateState()
 				if ( remoteJobState != "" ) {
 					remoteJobState = "";
 					SetRemoteJobStatus( NULL );
-				}
-
-				if ( wantRematch ) {
-					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-					// Set ad attributes so the schedd finds a new match.
-					bool dummy;
-					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-						jobAd->Assign( ATTR_JOB_MATCHED, false );
-						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-					}
-
-					// If we are rematching, we need to forget about this job
-					// cuz we wanna pull a fresh new job ad, with a fresh new match,
-					// from the all-singing schedd.
-					gmState = GM_DELETE;
-					break;
 				}
 
 				// If there are no updates to be done when we first enter this
@@ -815,7 +770,7 @@ BaseResource* AzureJob::GetResource()
 
 void AzureJob::SetRemoteJobId( const char *vm_name )
 {
-	string full_job_id;
+	std::string full_job_id;
 	if ( vm_name && vm_name[0] ) {
 		m_vmName = vm_name;
 		formatstr( full_job_id, "azure %s", vm_name );
@@ -827,7 +782,7 @@ void AzureJob::SetRemoteJobId( const char *vm_name )
 
 
 // Instance name is max 64 characters, alphanumberic, underscore, and hyphen
-string AzureJob::build_vm_name()
+std::string AzureJob::build_vm_name()
 {
 	// TODO Currently, a storage account name is derived from our
 	//   unique name, and those have max length 24 and must be
@@ -835,7 +790,7 @@ string AzureJob::build_vm_name()
 	//   Once the gahp can support using managed disks in Azure,
 	//   this naming restriction will go away.
 #if 1
-	string final_str;
+	std::string final_str;
 	formatstr( final_str, "condorc%dp%d", procID.cluster, procID.proc );
 	return final_str;
 #else
@@ -870,14 +825,14 @@ string AzureJob::build_vm_name()
 
 bool AzureJob::BuildVmParams()
 {
-	string value;
-	string name_value;
+	std::string value;
+	std::string name_value;
 
-	m_vmParams.clearAll();
+	m_vmParams.clear();
 
 	name_value = "name=";
 	name_value += m_vmName;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_LOCATION, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_LOCATION;
@@ -885,7 +840,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "location=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_IMAGE, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_IMAGE;
@@ -893,7 +848,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "image=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_SIZE, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_SIZE;
@@ -901,7 +856,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "size=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_USERNAME, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_ADMIN_USERNAME;
@@ -909,7 +864,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "adminUsername=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	if ( !jobAd->LookupString( ATTR_AZURE_ADMIN_KEY, value ) ) {
 		errorString = "Missing attribute " ATTR_AZURE_ADMIN_KEY;
@@ -917,7 +872,7 @@ bool AzureJob::BuildVmParams()
 	}
 	name_value = "key=";
 	name_value += value;
-	m_vmParams.append( name_value.c_str() );
+	m_vmParams.emplace_back(name_value);
 
 	return true;
 }

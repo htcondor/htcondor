@@ -41,8 +41,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-using namespace std;
-
 // Externs
 extern int dc_main(int, char**);
 extern int line_where_service_stopped;
@@ -50,7 +48,7 @@ extern Daemons daemons;
 
 // Static variables
 // The name of the service
-static char *SERVICE_NAME = "Condor Master";
+static const char *SERVICE_NAME = "Condor Master";
 // Handle used to communicate status info with
 // the SCM. Created by RegisterServiceCtrlHandler
 static SERVICE_STATUS_HANDLE serviceStatusHandle;
@@ -58,10 +56,10 @@ static SERVICE_STATUS_HANDLE serviceStatusHandle;
 static BOOL pauseService = FALSE;
 static BOOL runningService = FALSE;
 
-static void ErrorHandler(char *s, DWORD err)
+static void ErrorHandler(const char *s, DWORD err)
 {
-	cout << s << endl;
-	cout << "Error number: " << err << endl;
+	std::cout << s << std::endl;
+	std::cout << "Error number: " << err << std::endl;
 	ExitProcess(err);
 }
 
@@ -433,7 +431,7 @@ DWORD start_as_service()
 {
 	SERVICE_TABLE_ENTRY serviceTable[] = 
 	{ 
-	{ SERVICE_NAME,
+	{ (LPSTR) SERVICE_NAME,
 		(LPSERVICE_MAIN_FUNCTION) ServiceMain},
 	{ NULL, NULL }
 	};

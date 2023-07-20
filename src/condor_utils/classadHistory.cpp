@@ -83,7 +83,7 @@ InitJobHistoryFile(const char *history_param, const char *per_job_history_param)
     if (DoHistoryRotation) {
         dprintf(D_ALWAYS, "History file rotation is enabled.\n");
         dprintf(D_ALWAYS, "  Maximum history file size is: %zd bytes\n",
-                hri.MaxHistoryFileSize);
+                (ssize_t)hri.MaxHistoryFileSize);
         dprintf(D_ALWAYS, "  Number of rotated history files is: %d\n", 
                 hri.NumberBackupHistoryFiles);
     } else {
@@ -449,54 +449,51 @@ static int
 MaybeDeleteOneHistoryBackup(int max_backups, const char* original_filename)
 {
     int num_backups = 0;
-    char *history_dir = condor_dirname(original_filename);
+	std::string history_dir = condor_dirname(original_filename);
 
-    if (history_dir != NULL) {
-        Directory dir(history_dir);
-        const char *current_filename;
-        time_t current_time;
-        char *oldest_history_filename = NULL;
-        time_t oldest_time = 0;
+	Directory dir(history_dir.c_str());
+	const char *current_filename;
+	time_t current_time;
+	char *oldest_history_filename = NULL;
+	time_t oldest_time = 0;
 
-        // Find number of backups and oldest backup
-        for (current_filename = dir.Next(); 
-             current_filename != NULL; 
-             current_filename = dir.Next()) {
-            
-            if (IsHistoryFilename(original_filename, current_filename, &current_time)) {
-                num_backups++;
-                if (oldest_history_filename == NULL 
-                    || current_time < oldest_time) {
+	// Find number of backups and oldest backup
+	for (current_filename = dir.Next(); 
+			current_filename != NULL; 
+			current_filename = dir.Next()) {
 
-                    if (oldest_history_filename != NULL) {
-                        free(oldest_history_filename);
-                    }
-                    oldest_history_filename = strdup(current_filename);
-                    oldest_time = current_time;
-                }
-            }
-        }
+		if (IsHistoryFilename(original_filename, current_filename, &current_time)) {
+			num_backups++;
+			if (oldest_history_filename == NULL 
+					|| current_time < oldest_time) {
 
-        // If we have too many backups, delete the oldest
-        if (oldest_history_filename != NULL && num_backups >= max_backups) {
-            dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
-                    oldest_history_filename);
-            num_backups--;
+				if (oldest_history_filename != NULL) {
+					free(oldest_history_filename);
+				}
+				oldest_history_filename = strdup(current_filename);
+				oldest_time = current_time;
+			}
+		}
+	}
 
-            if (dir.Find_Named_Entry(oldest_history_filename)) {
-                if (!dir.Remove_Current_File()) {
-                    dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
-                    num_backups = 0; // prevent looping forever
-                }
-            } else {
-                dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
-                num_backups = 0; // prevent looping forever
-            }
-        }
-        free(history_dir);
-		free(oldest_history_filename);
-    }
-    return num_backups;
+	// If we have too many backups, delete the oldest
+	if (oldest_history_filename != NULL && num_backups >= max_backups) {
+		dprintf(D_ALWAYS, "Before rotation, deleting old history file %s\n",
+				oldest_history_filename);
+		num_backups--;
+
+		if (dir.Find_Named_Entry(oldest_history_filename)) {
+			if (!dir.Remove_Current_File()) {
+				dprintf(D_ALWAYS, "Failed to delete %s\n", oldest_history_filename);
+				num_backups = 0; // prevent looping forever
+			}
+		} else {
+			dprintf(D_ALWAYS, "Failed to find/delete %s\n", oldest_history_filename);
+			num_backups = 0; // prevent looping forever
+		}
+	}
+	free(oldest_history_filename);
+	return num_backups;
 }
 
 // --------------------------------------------------------------------------

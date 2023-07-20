@@ -21,8 +21,6 @@
 #include "condor_common.h"
 #include "resourceGroup.h"
 
-using namespace std;
-
 ResourceGroup::
 ResourceGroup( )
 {
@@ -81,7 +79,7 @@ GetNumberOfClassAds( int& num )
 }
 
 bool ResourceGroup::
-ToString( string& buffer )
+ToString( std::string& buffer )
 {
 	if( !initialized ) {
 		return false;

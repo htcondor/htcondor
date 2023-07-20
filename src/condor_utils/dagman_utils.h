@@ -25,7 +25,6 @@
 #include "../condor_dagman/debug.h"
 #include "condor_string.h"
 #include "env.h"
-#include "MyString.h"
 
 
 #define DAG_SUBMIT_FILE_SUFFIX ".condor.sub"
@@ -79,19 +78,20 @@ protected:
 struct SubmitDagShallowOptions
 {
     bool bSubmit;
-    MyString strRemoteSchedd;
-    MyString strScheddDaemonAdFile;
-    MyString strScheddAddressFile;
+    std::string strRemoteSchedd;
+    std::string strScheddDaemonAdFile;
+    std::string strScheddAddressFile;
     int iMaxIdle;
     int iMaxJobs;
     int iMaxPre;
     int iMaxPost;
-    MyString appendFile; // append to .condor.sub file before queue
+    std::string appendFile; // append to .condor.sub file before queue
     std::list<std::string> appendLines; // append to .condor.sub file before queue
     std::string strConfigFile;
+    std::string saveFile;
     bool dumpRescueDag;
     bool runValgrind;
-    MyString primaryDagFile;
+    std::string primaryDagFile;
     std::list<std::string> dagFiles;
     bool doRecovery;
     bool bPostRun;
@@ -99,13 +99,13 @@ struct SubmitDagShallowOptions
     int priority;
 
     // non-command line options
-    MyString strLibOut;
-    MyString strLibErr;
-    MyString strDebugLog; // the dagman.out file
-    MyString strSchedLog; // the user log of condor_dagman's events
-    MyString strSubFile;
-    MyString strRescueFile;
-    MyString strLockFile;
+    std::string strLibOut;
+    std::string strLibErr;
+    std::string strDebugLog; // the dagman.out file
+    std::string strSchedLog; // the user log of condor_dagman's events
+    std::string strSubFile;
+    std::string strRescueFile;
+    std::string strLockFile;
     bool copyToSpool;
     int iDebugLevel;
 
@@ -114,18 +114,15 @@ struct SubmitDagShallowOptions
         bSubmit = true;
         bPostRun = false;
         bPostRunSet = false;
-        strRemoteSchedd = "";
-        strScheddDaemonAdFile = "";
-        strScheddAddressFile = "";
         iMaxIdle = 0;
         iMaxJobs = 0;
         iMaxPre = 0;
         iMaxPost = 0;
-        appendFile = param( "DAGMAN_INSERT_SUB_FILE" );
+        param(appendFile, "DAGMAN_INSERT_SUB_FILE");
         strConfigFile = "";
+        saveFile = "";
         dumpRescueDag = false;
         runValgrind = false;
-        primaryDagFile = "";
         doRecovery = false;
         copyToSpool = param_boolean( "DAGMAN_COPY_TO_SPOOL", false );
         iDebugLevel = DEBUG_UNSET;
@@ -143,10 +140,10 @@ struct SubmitDagDeepOptions
     // these options come from the command line
     bool bVerbose;
     bool bForce;
-    MyString strNotification;
+    std::string strNotification;
 	std::string strDagmanPath; // path to dagman binary
     bool useDagDir;
-    MyString strOutfileDir;
+    std::string strOutfileDir;
     std::string batchName; // optional value from -batch-name argument, will be double quoted if it exists.
     std::string batchId;
     bool autoRescue;
@@ -155,6 +152,8 @@ struct SubmitDagDeepOptions
     bool recurse; // whether to recursively run condor_submit_dag on nested DAGs
     bool updateSubmit; // allow updating submit file w/o -force
     bool importEnv; // explicitly import environment into .condor.sub file
+    std::string getFromEnv; // explicitly import specified environment vars into .condor.sub file
+    std::vector<std::string> addToEnv; // explicitly add var=value envrionment info into .condor.sub file
 
     bool suppress_notification;
     std::string acctGroup;
@@ -164,7 +163,6 @@ struct SubmitDagDeepOptions
     { 
         bVerbose = false;
         bForce = false;
-        strNotification = "";
         useDagDir = false;
         autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", true );
         doRescueFrom = 0; // 0 means no rescue DAG specified
@@ -172,6 +170,8 @@ struct SubmitDagDeepOptions
         recurse = false;
         updateSubmit = false;
         importEnv = false;
+        getFromEnv = "";
+        addToEnv = {};
         suppress_notification = true;
         acctGroup = "";
         acctGroupUser = "";
@@ -197,14 +197,14 @@ public:
         std::list<std::string> &dagFileAttrLines );
 
     bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-        std::string &configFile, std::list<std::string> &attrLines, MyString &errMsg );
+        std::string &configFile, std::list<std::string> &attrLines, std::string &errMsg );
 
     bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
 
     int FindLastRescueDagNum(const char *primaryDagFile,
         bool multiDags, int maxRescueDagNum);
 
-    bool fileExists(const MyString &strFile);
+    bool fileExists(const std::string &strFile);
 
     bool ensureOutputFilesExist(const SubmitDagDeepOptions &deepOpts,
         SubmitDagShallowOptions &shallowOpts);
@@ -215,7 +215,7 @@ public:
     void RenameRescueDagsAfter(const char *primaryDagFile, bool multiDags, 
         int rescueDagNum, int maxRescueDagNum);
 
-    MyString HaltFileName( const MyString &primaryDagFile );
+    std::string HaltFileName( const std::string &primaryDagFile );
 
     void tolerant_unlink( const char *pathname );
 

@@ -68,7 +68,7 @@ class Submit(Verb):
             with submit_file.open() as f:
                 submit_data = f.read()
             submit_description = htcondor.Submit(submit_data)
-	    #Set s_method to HTC_JOB_SUBMIT
+            # Set s_method to HTC_JOB_SUBMIT
             submit_description.setSubmitMethod(JSM_HTC_JOB_SUBMIT,True)
 
             annex_name = options["annex_name"]
@@ -83,15 +83,15 @@ class Submit(Verb):
             if submit_qargs != "" and submit_qargs != "1":
                 raise ValueError("Can only submit one job at a time")
 
-            with schedd.transaction() as txn:
-                try:
-                    cluster_id = submit_description.queue(txn, 1)
-                    if annex_name is None:
-                        logger.info(f"Job {cluster_id} was submitted.")
-                    else:
-                        logger.info(f"Job {cluster_id} was submitted and will only run on the annex '{annex_name}'.")
-                except Exception as e:
-                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
+            try:
+                result = schedd.submit(submit_description, count=1)
+                cluster_id = result.cluster()
+                if annex_name is None:
+                    logger.info(f"Job {cluster_id} was submitted.")
+                else:
+                    logger.info(f"Job {cluster_id} was submitted and will only run on the annex named '{annex_name}'.")
+            except Exception as e:
+                raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
         elif options["resource"].casefold() == "slurm":
 
@@ -134,12 +134,12 @@ class Submit(Verb):
                 raise ValueError("Can only submit one job at a time. "
                     "See the job-set syntax for submitting multiple jobs.")
 
-            with schedd.transaction() as txn:
-                try:
-                    cluster_id = submit_description.queue(txn, 1)
-                    logger.info(f"Job {cluster_id} was submitted.")
-                except Exception as e:
-                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
+            try:
+                result = schedd.submit(submit_description, count=1)
+                cluster_id = result.cluster()
+                logger.info(f"Job {cluster_id} was submitted.")
+            except Exception as e:
+                raise RuntimeError(f"Error submitting job:\n{str(e)}")
 
         elif options["resource"] == "ec2":
 
@@ -158,12 +158,13 @@ class Submit(Verb):
                 raise ValueError("Can only submit one job at a time. "
                     "See the job-set syntax for submitting multiple jobs.")
 
-            with schedd.transaction() as txn:
-                try:
-                    cluster_id = submit_description.queue(txn, 1)
-                    logger.info(f"Job {cluster_id} was submitted.")
-                except Exception as e:
-                    raise RuntimeError(f"Error submitting job:\n{str(e)}")
+            try:
+                result = schedd.submit(submit_description, count=1)
+                cluster_id = result.cluster()
+                logger.info(f"Job {cluster_id} was submitted.")
+            except Exception as e:
+                raise RuntimeError(f"Error submitting job:\n{str(e)}")
+
 
 class Status(Verb):
     """
@@ -243,7 +244,7 @@ class Status(Verb):
             annex_info = ""
             target_annex_name = job_ad.get('TargetAnnexName')
             if target_annex_name is not None:
-                annex_info = " on the annex named '{target_annex_name}'"
+                annex_info = f" on the annex named '{target_annex_name}'"
 
             # Get some common numbers
             job_queue_time = datetime.now() - datetime.fromtimestamp(job_ad["QDate"])

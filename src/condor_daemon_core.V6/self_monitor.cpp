@@ -134,7 +134,6 @@ void SelfMonitorData::CollectData(void)
 bool SelfMonitorData::ExportData(ClassAd *ad, bool verbose /*=false*/) const
 {
     bool      success;
-    MyString  attribute;
 
     if (ad == NULL) {
         success = false;
@@ -324,15 +323,15 @@ void DaemonCore::Stats::Publish(ClassAd & ad, int flags) const
    if ( ! this->enabled) return;
 
    if ((flags & IF_PUBLEVEL) > 0) {
-      ad.Assign("DCStatsLifetime", (int)StatsLifetime);
+      ad.Assign("DCStatsLifetime", StatsLifetime);
       if (flags & IF_VERBOSEPUB)
-         ad.Assign("DCStatsLastUpdateTime", (int)StatsLastUpdateTime);
+         ad.Assign("DCStatsLastUpdateTime", StatsLastUpdateTime);
 
       if (flags & IF_RECENTPUB) {
-         ad.Assign("DCRecentStatsLifetime", (int)RecentStatsLifetime);
+         ad.Assign("DCRecentStatsLifetime", RecentStatsLifetime);
          if (flags & IF_VERBOSEPUB) {
-            ad.Assign("DCRecentStatsTickTime", (int)RecentStatsTickTime);
-            ad.Assign("DCRecentWindowMax", (int)RecentWindowMax);
+            ad.Assign("DCRecentStatsTickTime", RecentStatsTickTime);
+            ad.Assign("DCRecentWindowMax", RecentWindowMax);
          }
       }
    }
@@ -468,7 +467,7 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 
    stats_entry_probe<double> * probe = Pool.GetProbe< stats_entry_probe<double> >(name);
    if ( ! probe) {
-       MyString attr(name);
+       std::string attr(name);
        cleanStringForUseAsAttr(attr);
        probe = Pool.NewProbe< stats_entry_probe<double> >(name, attr.c_str(), as);
    }
@@ -506,8 +505,8 @@ double DaemonCore::Stats::AddSample(const char * name, int as, double val)
 
    stats_entry_recent<Probe> * probe = Pool.GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! probe) {
-       MyString attr;
-       attr.formatstr("Recent%s",name);
+       std::string attr;
+       formatstr(attr, "Recent%s", name);
        cleanStringForUseAsAttr(attr);
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;
        probe = Pool.NewProbe< stats_entry_recent<Probe> >(name, attr.Value()+6, as_pub);
@@ -538,8 +537,8 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
 {
    if ( ! this->enabled) return NULL;
 
-   MyString attr;
-   attr.formatstr("DC%s_%s", category, name);
+   std::string attr;
+   formatstr(attr, "DC%s_%s", category, name);
    cleanStringForUseAsAttr(attr);
 
    void * ret = NULL;
@@ -623,7 +622,7 @@ void* DaemonCore::Stats::NewProbe(const char * category, const char * name, int 
          Pool.NewProbe<stats_recent_counter_timer>(name, attr.c_str(), as);
         #if 0 // def DEBUG
          attr += "Debug";
-         Pool.AddPublish(attr.Value(), probe, NULL, 0, 
+         Pool.AddPublish(attr.c_str(), probe, NULL, 0,
                        (FN_STATS_ENTRY_PUBLISH)&stats_recent_counter_timer::PublishDebug);
         #endif
          probe->SetRecentMax(this->RecentWindowMax / this->RecentWindowQuantum);
@@ -647,7 +646,7 @@ dc_stats_auto_runtime_probe::dc_stats_auto_runtime_probe(const char * name, int 
    StatisticsPool * pool = &daemonCore->dc_stats.Pool;
    this->probe = pool->GetProbe< stats_entry_recent<Probe> >(name);
    if ( ! this->probe) {
-       MyString attr("DC_Func");
+       std::string attr("DC_Func");
        attr += name;
        cleanStringForUseAsAttr(attr);
        int as_pub = as | stats_entry_recent<Probe>::PubValueAndRecent;

@@ -23,7 +23,6 @@
 #include "condor_common.h"
 #include "condor_classad.h"
 #include "condor_daemon_core.h"
-#include "MyString.h"
 #include "HashTable.h"
 #ifdef WIN32
 #include "perm.h"
@@ -60,9 +59,9 @@ struct CatalogEntry {
 };
 
 
-typedef HashTable <MyString, FileTransfer *> TranskeyHashTable;
+typedef HashTable <std::string, FileTransfer *> TranskeyHashTable;
 typedef HashTable <int, FileTransfer *> TransThreadHashTable;
-typedef HashTable <MyString, CatalogEntry *> FileCatalogHashTable;
+typedef HashTable <std::string, CatalogEntry *> FileCatalogHashTable;
 typedef HashTable <std::string, std::string> PluginHashTable;
 
 typedef int		(Service::*FileTransferHandlerCpp)(FileTransfer *);
@@ -229,11 +228,11 @@ class FileTransfer final: public Service {
 		int hold_code;
 		int hold_subcode;
 		ClassAd stats;
-		MyString error_desc;
+		std::string error_desc;
 			// List of files we created in remote spool.
 			// This is intended to become SpooledOutputFiles.
-		MyString spooled_files;
-		MyString tcp_stats;
+		std::string spooled_files;
+		std::string tcp_stats;
 	};
 
 	FileTransferInfo GetInfo() {
@@ -335,13 +334,23 @@ class FileTransfer final: public Service {
 	void setPeerVersion( const char *peer_version );
 	void setPeerVersion( const CondorVersionInfo &peer_version );
 
+	void setRenameExecutable(bool rename_exec)
+	{ PeerRenamesExecutable = rename_exec; }
+
 	priv_state getDesiredPrivState( void ) { return desired_priv_state; };
 
 	void setTransferQueueContactInfo(char const *contact);
 
-	void InsertPluginMappings(const std::string& methods, const std::string& p);
-	void SetPluginMappings( CondorError &e, const char* path );
-	int InitializeSystemPlugins(CondorError &e);
+	void InsertPluginMappings(const std::string& methods, const std::string& p, bool supports_testing);
+		// Run a test invocation of URL schema using plugin.  Will attempt to download
+		// the URL specified by config param `schema`_TEST_URL to a temporary directory.
+	bool TestPlugin(const std::string &schema, const std::string &plugin);
+		// Run a specific file transfer plugin, specified by `path`, to determine which schemas are
+		// supported.  If `enable_testing` is true, then additionally test if the plugin is functional.
+	void SetPluginMappings( CondorError &e, const char* path, bool enable_testing );
+		// Initialize and probe the plugins from the condor configuration.  If `enable_testing`
+		// is set to true, then potentially test the plugins as well.
+	int InitializeSystemPlugins(CondorError &e, bool enable_testing);
 	int InitializeJobPlugins(const ClassAd &job, CondorError &e);
 	int AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, StringList &infiles) const;
 	std::string DetermineFileTransferPlugin( CondorError &error, const char* source, const char* dest );
@@ -360,7 +369,7 @@ class FileTransfer final: public Service {
 		// Returns false on failure and sets error_msg.
 	static bool ExpandInputFileList( ClassAd *job, std::string &error_msg );
 		// use this function when you don't want to party on the job ad like the above function does 
-	static bool ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg );
+	static bool ExpandInputFileList( char const *input_list, char const *iwd, std::string &expanded_list, std::string &error_msg );
 
 	// When downloading files, store files matching source_name as the name
 	// specified by target_name.
@@ -484,6 +493,7 @@ class FileTransfer final: public Service {
 	bool PeerDoesXferInfo{false};
 	bool PeerDoesReuseInfo{false};
 	bool PeerDoesS3Urls{false};
+	bool PeerRenamesExecutable{true};
 	bool TransferUserLog{false};
 	char* Iwd{nullptr};
 	StringList* ExceptionFiles{nullptr};
@@ -511,7 +521,7 @@ class FileTransfer final: public Service {
 	char* TransSock{nullptr};
 	char* TransKey{nullptr};
 	char* SpoolSpace{nullptr};
-	char* TmpSpoolSpace{nullptr};
+	std::string TmpSpoolSpace;
 	int user_supplied_key{false};
 	bool upload_changed_files{false};
 	int m_final_transfer_flag{false};
@@ -548,10 +558,10 @@ class FileTransfer final: public Service {
 	bool simple_init{true};
 	ReliSock *simple_sock{nullptr};
 	ReliSock *m_syscall_socket{nullptr};
-	MyString download_filename_remaps;
+	std::string download_filename_remaps;
 	bool m_use_file_catalog{true};
 	TransferQueueContactInfo m_xfer_queue_contact_info;
-	MyString m_jobid; // what job we are working on, for informational purposes
+	std::string m_jobid; // what job we are working on, for informational purposes
 	char *m_sec_session_id{nullptr};
 	std::string m_cred_dir;
 	std::string m_job_ad;
@@ -560,7 +570,7 @@ class FileTransfer final: public Service {
 	filesize_t MaxDownloadBytes{-1};
 
 	// stores the path to the proxy after one is received
-	MyString LocalProxyName;
+	std::string LocalProxyName;
 
 	// Object to manage reuse of any data locally.
 	htcondor::DataReuseDirectory *m_reuse_dir{nullptr};
@@ -578,7 +588,7 @@ class FileTransfer final: public Service {
 	void SendTransferAck(Stream *s,bool success,bool try_again,int hold_code,int hold_subcode,char const *hold_reason);
 
 	// Receive acknowledgment of success/failure after downloading files.
-	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc);
+	void GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc);
 
 	// Stash transfer success/failure info that will be propagated back to
 	// caller of file transfer operation, using GetInfo().
@@ -589,7 +599,7 @@ class FileTransfer final: public Service {
 	bool ReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes);
 
 	// Receive message indicating that the peer is ready to receive the file.
-	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc, int alive_interval);
+	bool DoReceiveTransferGoAhead(Stream *s,char const *fname,bool downloading,bool &go_ahead_always,filesize_t &peer_max_transfer_bytes,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc, int alive_interval);
 
 	// Obtain permission to receive a file download and then tell our
 	// peer to go ahead and send it.

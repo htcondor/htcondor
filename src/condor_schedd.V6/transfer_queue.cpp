@@ -38,7 +38,6 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_siz
 	m_max_queue_age(max_queue_age)
 {
 	m_gave_go_ahead = false;
-	m_notified_about_taking_too_long = false;
 	m_time_born = time(NULL);
 	m_time_go_ahead = 0;
 
@@ -152,13 +151,10 @@ TransferQueueManager::TransferQueueManager() {
 }
 
 TransferQueueManager::~TransferQueueManager() {
-	TransferQueueRequest *client = NULL;
-
-	m_xfer_queue.Rewind();
-	while( m_xfer_queue.Next( client ) ) {
+	for (TransferQueueRequest *client : m_xfer_queue) {
 		delete client;
 	}
-	m_xfer_queue.Clear();
+	m_xfer_queue.clear();
 
 	if( daemonCore && m_check_queue_timer != -1 ) {
 		daemonCore->Cancel_Timer( m_check_queue_timer );
@@ -414,7 +410,7 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 
 	ASSERT( daemonCore->Register_DataPtr( client ) );
 
-	m_xfer_queue.Append( client );
+	m_xfer_queue.push_back(client);
 
 	TransferQueueChanged();
 
@@ -424,9 +420,10 @@ TransferQueueManager::AddRequest( TransferQueueRequest *client ) {
 int
 TransferQueueManager::HandleReport( Stream *sock )
 {
-	TransferQueueRequest *client;
-	m_xfer_queue.Rewind();
-	while( m_xfer_queue.Next( client ) ) {
+	auto it = m_xfer_queue.begin();
+	while (it != m_xfer_queue.end()) {
+		TransferQueueRequest *client  = *it;
+		
 		if( client->m_sock == sock ) {
 			if( !client->ReadReport(this) ) {
 				dprintf(D_FULLDEBUG,
@@ -434,18 +431,21 @@ TransferQueueManager::HandleReport( Stream *sock )
 						client->Description());
 
 				delete client;
-				m_xfer_queue.DeleteCurrent();
+
+				// This invalidates it, but we are on our way out 
+				// anyway by now.
+				it = m_xfer_queue.erase(it);
 
 				TransferQueueChanged();
 			}
 			return KEEP_STREAM;
 		}
+		it++;
 	}
 
 		// should never get here
-	m_xfer_queue.Rewind();
 	std::string clients;
-	while( m_xfer_queue.Next( client ) ) {
+	for (TransferQueueRequest *client : m_xfer_queue) {
 		formatstr_cat(clients, " (%p) %s\n",
 					 client->m_sock,client->m_sock->peer_description());
 	}
@@ -499,10 +499,10 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 
 	iostats.bytes_sent = (double)recent_bytes_sent;
 	iostats.bytes_received = (double)recent_bytes_received;
-	iostats.file_read = (double)recent_usec_file_read/1000000;
-	iostats.file_write = (double)recent_usec_file_write/1000000;
-	iostats.net_read = (double)recent_usec_net_read/1000000;
-	iostats.net_write = (double)recent_usec_net_write/1000000;
+	iostats.file_read = (double)recent_usec_file_read   / 1'000'000;
+	iostats.file_write = (double)recent_usec_file_write / 1'000'000;
+	iostats.net_read = (double)recent_usec_net_read     / 1'000'000;
+	iostats.net_write = (double)recent_usec_net_write   / 1'000'000;
 
 	manager->AddRecentIOStats(iostats,m_up_down_queue_user);
 	return true;
@@ -744,7 +744,6 @@ TransferQueueManager::IOStatsChanged() {
 
 void
 TransferQueueManager::CheckTransferQueue() {
-	TransferQueueRequest *client = NULL;
 	int downloading = 0;
 	int uploading = 0;
 	bool clients_waiting = false;
@@ -753,8 +752,7 @@ TransferQueueManager::CheckTransferQueue() {
 
 	ClearTransferCounts();
 
-	m_xfer_queue.Rewind();
-	while( m_xfer_queue.Next(client) ) {
+	for (TransferQueueRequest *client : m_xfer_queue) {
 		if( client->m_gave_go_ahead ) {
 			GetUserRec(client->m_up_down_queue_user).running++;
 			if( client->m_downloading ) {
@@ -832,8 +830,7 @@ TransferQueueManager::CheckTransferQueue() {
 			break;
 		}
 
-		m_xfer_queue.Rewind();
-		while( m_xfer_queue.Next(client) ) {
+		for (TransferQueueRequest *client : m_xfer_queue) {
 			if( client->m_gave_go_ahead ) {
 				continue;
 			}
@@ -874,6 +871,7 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 		}
 
+		TransferQueueRequest *client = NULL;
 		client = best_client;
 		if( !client ) {
 			break;
@@ -889,8 +887,8 @@ TransferQueueManager::CheckTransferQueue() {
 					"dequeueing %s.\n",
 					client->Description() );
 
+			m_xfer_queue.erase(std::find(m_xfer_queue.begin(), m_xfer_queue.end(), client));
 			delete client;
-			m_xfer_queue.Delete(client);
 
 			TransferQueueChanged();
 		}
@@ -911,8 +909,7 @@ TransferQueueManager::CheckTransferQueue() {
 
 		// now that we have finished scheduling new transfers,
 		// examine requests that are still waiting
-	m_xfer_queue.Rewind();
-	while( m_xfer_queue.Next(client) ) {
+	for (TransferQueueRequest *client : m_xfer_queue) {
 		if( !client->m_gave_go_ahead ) {
 			clients_waiting = true;
 
@@ -943,8 +940,9 @@ TransferQueueManager::CheckTransferQueue() {
 
 	if( clients_waiting ) {
 			// queue is full; check for ancient clients
-		m_xfer_queue.Rewind();
-		while( m_xfer_queue.Next(client) ) {
+		auto it = m_xfer_queue.begin();
+		while (it != m_xfer_queue.end()) {
+			TransferQueueRequest *client  = *it;
 			if( client->m_gave_go_ahead ) {
 				int age = time(NULL) - client->m_time_go_ahead;
 				int max_queue_age = client->m_max_queue_age;
@@ -966,7 +964,8 @@ TransferQueueManager::CheckTransferQueue() {
 					notifyAboutTransfersTakingTooLong();
 
 					delete client;
-					m_xfer_queue.DeleteCurrent();
+					// This invaliates it, but we're breaking out of the loop
+					it = m_xfer_queue.erase(it);
 					TransferQueueChanged();
 						// Only delete more ancient clients if the
 						// next pass of this function finds there is pressure
@@ -974,6 +973,7 @@ TransferQueueManager::CheckTransferQueue() {
 					break;
 				}
 			}
+			it++;
 		}
 	}
 }
@@ -981,17 +981,18 @@ TransferQueueManager::CheckTransferQueue() {
 void
 TransferQueueManager::notifyAboutTransfersTakingTooLong()
 {
-	SimpleListIterator<TransferQueueRequest *> itr(m_xfer_queue);
-	TransferQueueRequest *client = NULL;
-
 	FILE *email = NULL;
 
-	while( itr.Next(client) ) {
-		if( client->m_gave_go_ahead && !client->m_notified_about_taking_too_long ) {
-			int age = time(NULL) - client->m_time_go_ahead;
-			int max_queue_age = client->m_max_queue_age;
+	static time_t lastNotifiedTime = 0;
+	time_t now = time(nullptr);
+	const time_t quiet_interval = 3600 * 24;
+
+	for (TransferQueueRequest *client: m_xfer_queue) {
+		if (client->m_gave_go_ahead && ((now - lastNotifiedTime) > quiet_interval)) {
+			time_t age = now - client->m_time_go_ahead;
+			time_t max_queue_age = client->m_max_queue_age;
 			if( max_queue_age > 0 && max_queue_age < age ) {
-				client->m_notified_about_taking_too_long = true;
+				lastNotifiedTime = now;
 				if( !email ) {
 					email = email_admin_open("file transfer took too long");
 					if( !email ) {
@@ -1003,7 +1004,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 					}
 					fprintf( email,
 							 "Below is a list of file transfers that took longer than\n"
-							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%lds.  When other transfers are waiting\n"
 							 "to start, these old transfer attempts will be aborted.\n"
 							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
 							 "but be aware that transfers which take a long time will delay other\n"
@@ -1040,7 +1041,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 								m_iostats.file_write.EMAValue(ema_horizon),
 								m_iostats.net_read.EMAValue(ema_horizon));
 					}
-					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",max_queue_age);
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%lds:\n\n",max_queue_age);
 				}
 
 				fprintf( email, "%s\n", client->SinlessDescription() );

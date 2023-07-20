@@ -59,6 +59,7 @@
 #include "zkm_base64.h"
 
 #include <algorithm>
+#include <charconv>
 #include <string>
 #include <set>
 
@@ -227,7 +228,6 @@ static char OneString[] = "1", ZeroString[] = "0";
 //static char ParallelNodeString[] = "#pArAlLeLnOdE#";
 static char UnsetString[] = "";
 
-
 static condor_params::string_value ArchMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysMacroDef = { UnsetString, 0 };
 static condor_params::string_value OpsysVerMacroDef = { UnsetString, 0 };
@@ -268,6 +268,10 @@ static condor_params::string_value RequestMemoryMacroDef = { rem, 0 };
 // The same for CPUs.
 static char rec[] = "$(RequestCPUs)";
 static condor_params::string_value RequestCPUsMacroDef = { rec, 0 };
+
+// a convenience so you can use $(JobId) in your submit description
+static char jid[] = "$(ClusterId).$(ProcId)";
+static condor_params::string_value JobIdMacroDef = { jid, 0 };
 
 // placeholder for admin defined submit templates
 static const MACRO_DEF_ITEM SubmitOptTemplates[] = {
@@ -323,6 +327,7 @@ static MACRO_DEF_ITEM SubmitMacroDefaults[] = {
 	{ "IsLinux",   &IsLinuxMacroDef },
 	{ "IsWindows", &IsWinMacroDef },
 	{ "ItemIndex", &UnliveRowMacroDef },
+	{ "JobId",     &JobIdMacroDef },
 	{ "Month",     &UnliveMonthMacroDef },
 	{ "Node",      &UnliveNodeMacroDef },
 	{ "OPSYS",           &OpsysMacroDef },
@@ -467,7 +472,7 @@ void SubmitHash::setup_submit_time_defaults(time_t stime)
 	sv->psz = &times[8];
 
 	// set SUBMIT_TIME macro value
-	sprintf(&times[12], "%lu", (unsigned long)stime);
+	{ auto [p, ec] = std::to_chars(&times[12], &times[23], (unsigned long) stime); *p = '\0';}
 	sv = allocate_live_default_string(SubmitMacroSet, UnliveSubmitTimeMacroDef, 0);
 	sv->psz = &times[12];
 }
@@ -563,7 +568,7 @@ void SubmitHash::push_error(FILE * fh, const char* format, ... ) const //CHECK_P
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -580,7 +585,7 @@ void SubmitHash::push_warning(FILE * fh, const char* format, ... ) const //CHECK
 	va_start(ap, format);
 	int cch = vprintf_length(format, ap);
 	char * message = (char*)malloc(cch + 1);
-	vsprintf ( message, format, ap );
+	vsnprintf ( message, cch + 1, format, ap );
 	va_end(ap);
 
 	if (SubmitMacroSet.errors) {
@@ -671,7 +676,7 @@ static char * trim_and_strip_quotes_in_place(char * str)
 	return p;
 }
 
-static void compress_path( MyString &path )
+static void compress_path( std::string &path )
 {
 	char	*src, *dst;
 	char *str = strdup(path.c_str());
@@ -697,14 +702,13 @@ static void compress_path( MyString &path )
 	free( str );
 }
 
-
 /* check_path_length() has been deprecated in favor of 
  * check_and_universalize_path(), which not only checks
  * the length of the path string but also, on windows, it
  * takes any network drive paths and converts them to UNC
  * paths.
  */
-int SubmitHash::check_and_universalize_path( MyString &path )
+int SubmitHash::check_and_universalize_path( std::string &path )
 {
 	(void) path;
 
@@ -728,7 +732,7 @@ int SubmitHash::check_and_universalize_path( MyString &path )
 	result = 0;
 	volume[0] = '\0';
 	if ( path[0] && (path[1]==':') ) {
-		sprintf(volume,"%c:",path[0]);
+		snprintf(volume,sizeof(volume),"%c:",path[0]);
 	}
 
 	if (volume[0] && (GetDriveType(volume)==DRIVE_REMOTE))
@@ -759,21 +763,21 @@ int SubmitHash::check_and_universalize_path( MyString &path )
 				"\tuser '%s', but you're '%s', so Condor can\n"
 			    "\tnot access it. Currently Condor only supports network\n"
 			    "\tdrives that are associated with the submitting user.\n", 
-					path.Value(), net_name, my_name);
+					path.c_str(), net_name, my_name);
 				return -1;
 			}
 		} else {
 			push_error(stderr, "Unable to get name of user associated with \n"
 				"the following network path (err=%d):"
-				"\n\t%s\n", result, path.Value());
+				"\n\t%s\n", result, path.c_str());
 			return -1;
 		}
 
-		result = WNetGetUniversalName(path.Value(), UNIVERSAL_NAME_INFO_LEVEL, 
+		result = WNetGetUniversalName(path.c_str(), UNIVERSAL_NAME_INFO_LEVEL, 
 			name_info_buf, &name_info_buf_size);
 		if ( result != NO_ERROR ) {
 			push_error(stderr, "Unable to get universal name for path (err=%d):"
-				"\n\t%s\n", result, path.Value());
+				"\n\t%s\n", result, path.c_str());
 			return -1;
 		} else {
 			uni = (UNIVERSAL_NAME_INFO*)&name_info_buf;
@@ -838,7 +842,7 @@ static bool check_directory( const char* pathname, int /*flags*/, int err )
 const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 {
 	char const *p_iwd;
-	MyString realcwd;
+	std::string realcwd;
 
 	if ( use_iwd ) {
 		ASSERT(JobIwd.length());
@@ -846,7 +850,7 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	} else if (clusterAd) {
 		// if there is a cluster ad, we NEVER want to use the current working directory
 		// instead we want to treat the saved working directory of submit as the cwd.
-		realcwd = submit_param_mystring("FACTORY.Iwd", NULL);
+		realcwd = submit_param_string("FACTORY.Iwd", NULL);
 		p_iwd = realcwd.c_str();
 	} else {
 		condor_getcwd(realcwd);
@@ -857,14 +861,14 @@ const char * SubmitHash::full_path(const char *name, bool use_iwd /*=true*/)
 	if ( name[0] == '\\' || name[0] == '/' || (name[0] && name[1] == ':') ) {
 		TempPathname = name;
 	} else {
-		TempPathname.formatstr( "%s\\%s", p_iwd, name );
+		formatstr( TempPathname, "%s\\%s", p_iwd, name );
 	}
 #else
 
 	if( name[0] == '/' ) {	/* absolute wrt whatever the root is */
-		TempPathname.formatstr( "/%s", name );
+		formatstr( TempPathname, "/%s", name );
 	} else {	/* relative to iwd which is relative to the root */
-		TempPathname.formatstr( "/%s/%s", p_iwd, name );
+		formatstr( TempPathname, "/%s/%s", p_iwd, name );
 	}
 #endif
 
@@ -999,11 +1003,14 @@ void SubmitHash::set_submit_param( const char *name, const char *value )
 	insert_macro(name, value, SubmitMacroSet, DefaultMacro, ctx);
 }
 
-MyString SubmitHash::submit_param_mystring( const char * name, const char * alt_name ) const
+std::string SubmitHash::submit_param_string( const char * name, const char * alt_name ) const
 {
+	std::string ret;
 	char * result = submit_param(name, alt_name);
-	MyString ret = result;
-	free(result);
+	if (result) {
+		ret = result;
+		free(result);
+	}
 	return ret;
 }
 
@@ -1316,8 +1323,8 @@ int SubmitHash::SetJavaVMArgs()
 	RETURN_IF_ABORT();
 
 	ArgList args;
-	MyString error_msg;
-	MyString value;
+	std::string error_msg;
+	std::string value;
 	char *args1 = submit_param(SUBMIT_KEY_JavaVMArgs); // for backward compatibility
 	char *args1_ext=submit_param(SUBMIT_KEY_JavaVMArguments1,ATTR_JOB_JAVA_VM_ARGS1);
 		// NOTE: no ATTR_JOB_JAVA_VM_ARGS2 in the following,
@@ -1348,10 +1355,10 @@ int SubmitHash::SetJavaVMArgs()
 	bool args_success = true;
 
 	if(args2) {
-		args_success = args.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_JAVA_VM_ARGS1) || job->Lookup(ATTR_JOB_JAVA_VM_ARGS2)) {
 		return 0;
 	}
@@ -1368,13 +1375,13 @@ int SubmitHash::SetJavaVMArgs()
 	// in the case when we are dumping to a file.
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if( MyCondorVersionRequiresV1 ) {
-		args_success = args.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(value, error_msg);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS1, value.c_str());
 		}
 	}
 	else {
-		args_success = args.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(value);
 		if(!value.empty()) {
 			AssignJobString(ATTR_JOB_JAVA_VM_ARGS2, value.c_str());
 		}
@@ -1396,7 +1403,7 @@ int SubmitHash::SetJavaVMArgs()
 
 int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags )
 {
-	MyString strPathname;
+	std::string strPathname;
 	StringList *list;
 
 		/* The user can disable file checks on a per job basis, in such a
@@ -1423,9 +1430,9 @@ int SubmitHash::check_open(_submit_file_role role,  const char *name, int flags 
 		   we replaced "$(NODE)" with, and replace it with "0".  Thus, 
 		   we will really only try and access the 0th file only */
 	if ( JobUniverse == CONDOR_UNIVERSE_MPI ) {
-		strPathname.replaceString("#MpInOdE#", "0");
+		replace_str(strPathname, "#MpInOdE#", "0");
 	} else if ( JobUniverse == CONDOR_UNIVERSE_PARALLEL ) {
-		strPathname.replaceString("#pArAlLeLnOdE#", "0");
+		replace_str(strPathname, "#pArAlLeLnOdE#", "0");
 	}
 
 
@@ -1484,11 +1491,11 @@ int SubmitHash::CheckStdFile(
 	_submit_file_role role,
 	const char * value, // in: filename to use, may be NULL
 	int access,         // in: desired access if checking for file accessiblity
-	MyString & file,    // out: filename, possibly fixed up.
+	std::string & file, // out: filename, possibly fixed up.
 	bool & transfer_it, // in,out: whether we expect to transfer it or not
 	bool & stream_it)   // in,out: whether we expect to stream it or not
 {
-	file = value;
+	file = value ? value : "";
 	if (file.empty())
 	{
 		transfer_it = false;
@@ -1535,7 +1542,7 @@ int SubmitHash::SetStdin()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Input, SUBMIT_KEY_Stdin));
 	if (value || ! job->Lookup(ATTR_JOB_INPUT)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_INPUT, value, O_RDONLY, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1570,7 +1577,7 @@ int SubmitHash::SetStdout()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Output, SUBMIT_KEY_Stdout));
 	if (value || ! job->Lookup(ATTR_JOB_OUTPUT)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_STDOUT, value, O_WRONLY|O_CREAT|O_TRUNC, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1605,7 +1612,7 @@ int SubmitHash::SetStderr()
 
 	auto_free_ptr value(submit_param(SUBMIT_KEY_Error, SUBMIT_KEY_Stderr));
 	if (value || ! job->Lookup(ATTR_JOB_ERROR)) {
-		MyString file;
+		std::string file;
 		if (CheckStdFile(SFR_STDERR, value, O_WRONLY|O_CREAT|O_TRUNC, file, transfer_it, stream_it) != 0) {
 			ABORT_AND_RETURN( 1 );
 		}
@@ -1630,7 +1637,7 @@ public:
 	bool m_env1=false;
 	SubmitHashEnvFilter(bool env1, const char * list=nullptr) : WhiteBlackEnvFilter(list), m_env1(env1) { };
 	virtual ~SubmitHashEnvFilter( void ) { };
-	bool operator()( const MyString &var, const MyString &val ) {
+	bool operator()( const std::string &var, const std::string &val ) {
 		if (m_env1 && !Env::IsSafeEnvV1Value(val.c_str())) {
 			// We silently filter out anything that is not expressible
 			// in the 'environment1' syntax.  This avoids breaking
@@ -1706,14 +1713,14 @@ int SubmitHash::SetEnvironment()
 	// are not already set in the envobject
 	auto_free_ptr envlist(submit_param(SUBMIT_CMD_GetEnvironment, SUBMIT_CMD_GetEnvironmentAlt));
 	if (envlist) {
-		if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
-			push_error(stderr, "\ngetenv command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
-			ABORT_AND_RETURN(1);
-		}
 		// getenv can be a boolean, or it can be a whitelist/blacklist
 		bool getenv_is_true = false;
 		if (string_is_boolean_param(envlist, getenv_is_true)) {
 			if (getenv_is_true) {
+				if (!param_boolean("SUBMIT_ALLOW_GETENV", true)) {
+					push_error(stderr, "\ngetenv = true command not allowed because administrator has set SUBMIT_ALLOW_GETENV = false\n");
+					ABORT_AND_RETURN(1);
+				}
 				SubmitHashEnvFilter envFilter(env1 && !env2);
 				env.Import(envFilter);
 			}
@@ -1753,9 +1760,9 @@ int SubmitHash::SetEnvironment()
 	if(insert_env2 && ad_contains_env1) insert_env1 = true;
 
 	if (insert_env1) {
-		MyString newenv_raw;
+		std::string newenv_raw;
 		std::string msg;
-		env_success = env.getDelimitedStringV1Raw(&newenv_raw, &msg);
+		env_success = env.getDelimitedStringV1Raw(newenv_raw, &msg);
 		if(!env_success) {
 			push_error(stderr, "failed to insert environment into job ad: %s\n", msg.c_str());
 			ABORT_AND_RETURN(1);
@@ -1813,8 +1820,7 @@ int SubmitHash::SetTDP()
 										  ATTR_SUSPEND_JOB_AT_EXEC, false, &suspend_at_exec_exists );
 	RETURN_IF_ABORT();
 
-	MyString buf;
-	MyString path;
+	std::string path;
 
 	if( tdp_cmd ) {
 		path = tdp_cmd.ptr();
@@ -1842,7 +1848,7 @@ int SubmitHash::SetTDP()
 	}
 
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 	ArgList args;
 
 	if(tdp_args1_ext && tdp_args1) {
@@ -1862,10 +1868,10 @@ int SubmitHash::SetTDP()
 	}
 
 	if( tdp_args2 ) {
-		args_success = args.AppendArgsV2Quoted(tdp_args2,&error_msg);
+		args_success = args.AppendArgsV2Quoted(tdp_args2, error_msg);
 	}
 	else if( tdp_args1 ) {
-		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1,&error_msg);
+		args_success = args.AppendArgsV1WackedOrV2Quoted(tdp_args1, error_msg);
 	} else if (job->Lookup(ATTR_TOOL_DAEMON_ARGS1) || job->Lookup(ATTR_TOOL_DAEMON_ARGS2)) {
 		return 0;
 	}
@@ -1878,16 +1884,16 @@ int SubmitHash::SetTDP()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString args_value;
+	std::string args_value;
 	bool MyCondorVersionRequiresV1 = args.InputWasV1() || args.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = args.GetArgsStringV1Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV1Raw(args_value, error_msg);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS1, args_value.c_str());
 		}
 	}
 	else if(args.Count()) {
-		args_success = args.GetArgsStringV2Raw(&args_value,&error_msg);
+		args_success = args.GetArgsStringV2Raw(args_value);
 		if(!args_value.empty()) {
 			AssignJobString(ATTR_TOOL_DAEMON_ARGS2, args_value.c_str());
 		}
@@ -1966,146 +1972,6 @@ int SubmitHash::SetRank()
 
 	return 0;
 }
-
-#if 0 // obsolete function, kept for temporary reference.
-int SubmitHash::SetUserLog()
-{
-	RETURN_IF_ABORT();
-
-	static const SimpleExprInfo logs[] = {
-		/*submit_param*/ {SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE,
-				ATTR_ULOG_FILE, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG,
-				ATTR_DAGMAN_WORKFLOW_LOG, NULL, true, false},
-		{NULL,NULL,NULL,NULL,false,false}
-	};
-
-	for(const SimpleExprInfo * si = &logs[0]; si->key; ++si) {
-		char *ulog_entry = submit_param( si->key, si->alt );
-
-		if ( ulog_entry && strcmp( ulog_entry, "" ) != 0 ) {
-
-				// Note:  I don't think the return value here can ever
-				// be NULL.  wenger 2016-10-07
-			MyString mulog(full_path(ulog_entry));
-			if ( ! mulog.empty()) {
-				if (FnCheckFile) {
-					int rval = FnCheckFile(CheckFileArg, this, SFR_LOG, mulog.Value(), O_APPEND);
-					if (rval) { ABORT_AND_RETURN( rval ); }
-				}
-
-				check_and_universalize_path(mulog);
-			}
-			AssignJobString(si->attr, mulog.Value());
-			free(ulog_entry);
-		}
-	}
-
-	RETURN_IF_ABORT();
-	bool xml_exists;
-	bool use_xml = submit_param_bool(SUBMIT_KEY_UserLogUseXML, ATTR_ULOG_USE_XML, false, &xml_exists);
-	if (xml_exists) {
-		AssignJobVal(ATTR_ULOG_USE_XML, use_xml);
-	}
-
-	return 0;
-}
-
-int SubmitHash::SetCoreSize()
-{
-	RETURN_IF_ABORT();
-	char *size = submit_param( ATTR_CORE_SIZE, SUBMIT_KEY_CoreSize ); // attr before submit key for backward compat
-	RETURN_IF_ABORT();
-
-	long coresize = 0;
-
-	if (size == NULL) {
-#if defined(WIN32) /* RLIMIT_CORE not supported */
-		size = "";
-#else
-		struct rlimit rl;
-		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
-			push_error(stderr, "getrlimit failed");
-			abort_code = 1;
-			return abort_code;
-		}
-
-		// this will effectively become the hard limit for core files when
-		// the job is executed
-		coresize = (long)rl.rlim_cur;
-#endif
-	} else {
-		coresize = atoi(size);
-		free(size);
-	}
-
-	AssignJobVal(ATTR_CORE_SIZE, coresize);
-	return 0;
-}
-
-
-int SubmitHash::SetJobLease()
-{
-	RETURN_IF_ABORT();
-
-	long lease_duration = 0;
-	auto_free_ptr tmp(submit_param( SUBMIT_KEY_JobLeaseDuration, ATTR_JOB_LEASE_DURATION ));
-	if( ! tmp ) {
-		if( universeCanReconnect(JobUniverse)) {
-				/*
-				  if the user didn't define a lease duration, but is
-				  submitting a job from a universe that supports
-				  reconnect and is NOT trying to use streaming I/O, we
-				  want to define a default of 20 minutes so that
-				  reconnectable jobs can survive schedd crashes and
-				  the like...
-				*/
-			tmp.set(param("JOB_DEFAULT_LEASE_DURATION"));
-		} else {
-				// not defined and can't reconnect, we're done.
-			return 0;
-		}
-	}
-
-	// first try parsing as an integer
-	if (tmp)
-	{
-		char *endptr = NULL;
-		lease_duration = strtol(tmp.ptr(), &endptr, 10);
-		if (endptr != tmp.ptr()) {
-			while (isspace(*endptr)) {
-				endptr++;
-			}
-		}
-		bool is_number = (endptr != tmp.ptr() && *endptr == '\0');
-		if ( ! is_number) {
-			lease_duration = 0; // set to zero to indicate it's an expression
-		} else {
-			if (lease_duration == 0) {
-				// User explicitly didn't want a lease, so we're done.
-				return 0;
-			}
-			if (lease_duration < 20) {
-				if (! already_warned_job_lease_too_small) { 
-					push_warning(stderr, "%s less than 20 seconds is not allowed, using 20 instead\n",
-							ATTR_JOB_LEASE_DURATION);
-					already_warned_job_lease_too_small = true;
-				}
-				lease_duration = 20;
-			}
-		}
-	}
-	// if lease duration was an integer, lease_duration will have the value.
-	if (lease_duration) {
-		AssignJobVal(ATTR_JOB_LEASE_DURATION, lease_duration);
-	} else if (tmp) {
-		// lease is defined but not an int, try setting it as an expression
-		AssignJobExpr(ATTR_JOB_LEASE_DURATION, tmp.ptr());
-	}
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference.
 
 int SubmitHash::SetJobStatus()
 {
@@ -2269,7 +2135,7 @@ int SubmitHash::SetLeaveInQueue()
 	RETURN_IF_ABORT();
 
 	char *erc = submit_param(SUBMIT_KEY_LeaveInQueue, ATTR_JOB_LEAVE_IN_QUEUE);
-	MyString buffer;
+	std::string buffer;
 
 	if (erc == NULL)
 	{
@@ -2281,7 +2147,8 @@ int SubmitHash::SetLeaveInQueue()
 				/* if remote spooling, leave in the queue after the job completes
 				   for up to 10 days, so user can grab the output.
 				 */
-				buffer.formatstr(
+				formatstr(
+					buffer,
 					"%s == %d && (%s =?= UNDEFINED || %s == 0 || ((time() - %s) < %d))",
 					ATTR_JOB_STATUS,
 					COMPLETED,
@@ -2311,7 +2178,6 @@ int SubmitHash::SetLeaveInQueue()
 int SubmitHash::SetNoopJob()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 
 	auto_free_ptr noop(submit_param(SUBMIT_KEY_Noop, ATTR_JOB_NOOP));
 	if (noop) {
@@ -2346,8 +2212,8 @@ const char * SubmitHash::getIWD()
 int SubmitHash::ComputeIWD()
 {
 	char	*shortname;
-	MyString	iwd;
-	MyString	cwd;
+	std::string	iwd;
+	std::string	cwd;
 
 	shortname = submit_param( SUBMIT_KEY_InitialDir, ATTR_JOB_IWD );
 	if( ! shortname ) {
@@ -2374,11 +2240,11 @@ int SubmitHash::ComputeIWD()
 			}
 			else {
 				if (clusterAd) {
-					cwd = submit_param_mystring("FACTORY.Iwd",NULL);
+					cwd = submit_param_string("FACTORY.Iwd",NULL);
 				} else {
 					condor_getcwd( cwd );
 				}
-				iwd.formatstr( "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
+				formatstr( iwd, "%s%c%s", cwd.c_str(), DIR_DELIM_CHAR, shortname );
 			}
 	} 
 	else {
@@ -2393,13 +2259,13 @@ int SubmitHash::ComputeIWD()
 	if ( ! JobIwdInitialized || ( ! clusterAd && iwd != JobIwd)) {
 
 	#if defined(WIN32)
-		if (access(iwd.Value(), F_OK|X_OK) < 0) {
-			push_error(stderr, "No such directory: %s\n", iwd.Value());
+		if (access(iwd.c_str(), F_OK|X_OK) < 0) {
+			push_error(stderr, "No such directory: %s\n", iwd.c_str());
 			ABORT_AND_RETURN(1);
 		}
 	#else
-		MyString pathname;
-		pathname.formatstr( "/%s", iwd.c_str() );
+		std::string pathname;
+		formatstr( pathname, "/%s", iwd.c_str() );
 		compress_path( pathname );
 
 		if( access(pathname.c_str(), F_OK|X_OK) < 0 ) {
@@ -2865,7 +2731,7 @@ int SubmitHash::ProcessJobsetAttributes()
 
 // check to see if the grid type is one of the allowed ones,
 // and also canonicalize it if needed
-static bool validate_gridtype(MyString & JobGridType) {
+static bool validate_gridtype(const std::string & JobGridType) {
 	if (JobGridType.empty()) {
 		return true;
 	}
@@ -2902,15 +2768,11 @@ static bool validate_gridtype(MyString & JobGridType) {
 }
 
 // the grid type is the first token of the grid resource.
-static bool extract_gridtype(const char * grid_resource, MyString & gtype) {
-	if (starts_with(grid_resource, "$$(")) {
-		gtype.clear();
-		return true; // cannot be known at this time, assumed valid
-	}
+static bool extract_gridtype(const char * grid_resource, std::string & gtype) {
 	// truncate at the first space
 	const char * pend = strchr(grid_resource, ' ');
 	if (pend) {
-		gtype.set(grid_resource, (int)(pend - grid_resource));
+		gtype.assign(grid_resource, (pend - grid_resource));
 	} else {
 		gtype = grid_resource;
 	}
@@ -3022,14 +2884,6 @@ int SubmitHash::SetGridParams()
 
 		AssignJobString(ATTR_GRID_RESOURCE, tmp);
 
-		if ( strstr(tmp,"$$") ) {
-				// We need to perform matchmaking on the job in order
-				// to fill GridResource.
-			AssignJobVal(ATTR_JOB_MATCHED, false);
-			AssignJobVal(ATTR_CURRENT_HOSTS, 0);
-			AssignJobVal(ATTR_MAX_HOSTS, 1);
-		}
-
 		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
 			push_error(stderr, "EC2 grid jobs require a service URL\n");
 			ABORT_AND_RETURN( 1 );
@@ -3056,9 +2910,7 @@ int SubmitHash::SetGridParams()
 		}
 	}
 
-	YourStringNoCase gridType(JobGridType.Value());
-
-	AssignJobVal(ATTR_WANT_CLAIMING, false);
+	YourStringNoCase gridType(JobGridType.c_str());
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
@@ -3624,26 +3476,6 @@ int SubmitHash::SetAutoAttributes()
 		}
 	}
 
-	// set a default coresize.  note that we really want to use the rlimit value from submit
-	// and not from the schedd, but we can count on the Lookup() never failing when doing late materialization.
-	if ( ! job->Lookup(ATTR_CORE_SIZE)) {
-		long coresize = 0;
-	#if defined(WIN32) /* RLIMIT_CORE not supported */
-	#else
-		struct rlimit rl;
-		if (getrlimit(RLIMIT_CORE, &rl) == -1) {
-			push_error(stderr, "getrlimit failed");
-			abort_code = 1;
-			return abort_code;
-		}
-
-		// this will effectively become the hard limit for core files when
-		// the job is executed
-		coresize = (long)rl.rlim_cur;
-	#endif
-		AssignJobVal(ATTR_CORE_SIZE, coresize);
-	}
-
 	// formerly SetPriority
 	if ( ! job->Lookup(ATTR_JOB_PRIO)) {
 		AssignJobVal(ATTR_JOB_PRIO, 0);
@@ -3755,7 +3587,6 @@ int SubmitHash::SetNotifyUser()
 {
 	RETURN_IF_ABORT();
 	bool needs_warning = false;
-	MyString buffer;
 
 	char *who = submit_param( SUBMIT_KEY_NotifyUser, ATTR_NOTIFY_USER );
 
@@ -3795,7 +3626,6 @@ int SubmitHash::SetEmailAttributes()
 
 		if ( !attr_list.isEmpty() ) {
 			char *tmp;
-			MyString buffer;
 
 			tmp = attr_list.print_to_string();
 			AssignJobString(ATTR_EMAIL_ATTRIBUTES, tmp);
@@ -3815,7 +3645,6 @@ int SubmitHash::SetEmailAttributes()
 int SubmitHash::SetCronTab()
 {
 	RETURN_IF_ABORT();
-	MyString buffer;
 		//
 		// For convienence I put all the attributes in array
 		// and just run through the ad looking for them
@@ -3844,9 +3673,9 @@ int SubmitHash::SetCronTab()
 				//
 				// We'll try to be nice and validate it first
 				//
-			MyString error;
+			std::string error;
 			if ( ! CronTab::validateParameter( param, fields[ctr].attr, error ) ) {
-				push_error( stderr, "%s\n", error.Value() );
+				push_error( stderr, "%s\n", error.c_str() );
 				ABORT_AND_RETURN( 1 );
 			}
 				//
@@ -3884,7 +3713,7 @@ int SubmitHash::SetArguments()
 	char    *args2 = submit_param( SUBMIT_KEY_Arguments2 );
 	bool allow_arguments_v1 = submit_param_bool( SUBMIT_CMD_AllowArgumentsV1, NULL, false );
 	bool args_success = true;
-	MyString error_msg;
+	std::string error_msg;
 
 	if(args2 && args1 && ! allow_arguments_v1 ) {
 		push_error(stderr, "If you wish to specify both 'arguments' and\n"
@@ -3895,10 +3724,10 @@ int SubmitHash::SetArguments()
 	}
 
 	if(args2) {
-		args_success = arglist.AppendArgsV2Quoted(args2,&error_msg);
+		args_success = arglist.AppendArgsV2Quoted(args2, error_msg);
 	}
 	else if(args1) {
-		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1,&error_msg);
+		args_success = arglist.AppendArgsV1WackedOrV2Quoted(args1, error_msg);
 	} else if (job->Lookup(ATTR_JOB_ARGUMENTS1) || job->Lookup(ATTR_JOB_ARGUMENTS2)) {
 		return 0;
 	}
@@ -3913,14 +3742,14 @@ int SubmitHash::SetArguments()
 		ABORT_AND_RETURN(1);
 	}
 
-	MyString value;
+	std::string value;
 	bool MyCondorVersionRequiresV1 = arglist.InputWasV1() || arglist.CondorVersionRequiresV1(getScheddVersion());
 	if(MyCondorVersionRequiresV1) {
-		args_success = arglist.GetArgsStringV1Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV1Raw(value, error_msg);
 		AssignJobString(ATTR_JOB_ARGUMENTS1, value.c_str());
 	}
 	else {
-		args_success = arglist.GetArgsStringV2Raw(&value,&error_msg);
+		args_success = arglist.GetArgsStringV2Raw(value);
 		AssignJobString(ATTR_JOB_ARGUMENTS2, value.c_str());
 	}
 
@@ -4279,23 +4108,23 @@ int SubmitHash::SetRemoteAttrs()
 			continue;
 		}
 
-		MyString preremote = "";
+		std::string preremote = "";
 		for(int i = 0; i < remote_depth; ++i) {
 			preremote += SUBMIT_KEY_REMOTE_PREFIX;
 		}
 
 		if(strcasecmp(key, SUBMIT_KEY_Universe) == 0 || strcasecmp(key, ATTR_JOB_UNIVERSE) == 0) {
-			MyString Univ1 = preremote + SUBMIT_KEY_Universe;
-			MyString Univ2 = preremote + ATTR_JOB_UNIVERSE;
-			MyString val = submit_param_mystring(Univ1.Value(), Univ2.Value());
-			int univ = CondorUniverseNumberEx(val.Value());
+			std::string Univ1 = preremote + SUBMIT_KEY_Universe;
+			std::string Univ2 = preremote + ATTR_JOB_UNIVERSE;
+			std::string val = submit_param_string(Univ1.c_str(), Univ2.c_str());
+			int univ = CondorUniverseNumberEx(val.c_str());
 			if(univ == 0) {
-				push_error(stderr, "Unknown universe of '%s' specified\n", val.Value());
+				push_error(stderr, "Unknown universe of '%s' specified\n", val.c_str());
 				ABORT_AND_RETURN( 1 );
 			}
-			MyString attr = preremote + ATTR_JOB_UNIVERSE;
-			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.Value(), univ);
-			AssignJobVal(attr.Value(), univ);
+			std::string attr = preremote + ATTR_JOB_UNIVERSE;
+			dprintf(D_FULLDEBUG, "Adding %s = %d\n", attr.c_str(), univ);
+			AssignJobVal(attr.c_str(), univ);
 
 		} else {
 
@@ -4307,13 +4136,13 @@ int SubmitHash::SetRemoteAttrs()
 					strcasecmp(key, item.job_expr)) {
 					continue;
 				}
-				MyString key1 = preremote + item.submit_expr;
-				MyString key2 = preremote + item.special_expr;
-				MyString key3 = preremote + item.job_expr;
-				const char * ckey1 = key1.Value();
-				const char * ckey2 = key2.Value();
+				std::string key1 = preremote + item.submit_expr;
+				std::string key2 = preremote + item.special_expr;
+				std::string key3 = preremote + item.job_expr;
+				const char * ckey1 = key1.c_str();
+				const char * ckey2 = key2.c_str();
 				if(item.special_expr == NULL) { ckey2 = NULL; }
-				const char * ckey3 = key3.Value();
+				const char * ckey3 = key3.c_str();
 				char * val = submit_param(ckey1, ckey2);
 				if( val == NULL ) {
 					val = submit_param(ckey3);
@@ -4334,17 +4163,17 @@ int SubmitHash::SetRemoteAttrs()
 int SubmitHash::SetJobMachineAttrs()
 {
 	RETURN_IF_ABORT();
-	MyString job_machine_attrs = submit_param_mystring( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
-	MyString history_len_str = submit_param_mystring( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
+	std::string job_machine_attrs = submit_param_string( SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS );
+	std::string history_len_str = submit_param_string( SUBMIT_KEY_JobMachineAttrsHistoryLength, ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH );
 
-	if( job_machine_attrs.Length() ) {
-		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.Value());
+	if( job_machine_attrs.length() ) {
+		AssignJobString(ATTR_JOB_MACHINE_ATTRS,job_machine_attrs.c_str());
 	}
-	if( history_len_str.Length() ) {
+	if( history_len_str.length() ) {
 		char *endptr=NULL;
-		long history_len = strtol(history_len_str.Value(),&endptr,10);
+		long history_len = strtol(history_len_str.c_str(),&endptr,10);
 		if( history_len > INT_MAX || history_len < 0 || *endptr) {
-			push_error(stderr, SUBMIT_KEY_JobMachineAttrsHistoryLength "=%s is out of bounds 0 to %d\n",history_len_str.Value(),INT_MAX);
+			push_error(stderr, SUBMIT_KEY_JobMachineAttrsHistoryLength "=%s is out of bounds 0 to %d\n",history_len_str.c_str(),INT_MAX);
 			ABORT_AND_RETURN( 1 );
 		}
 		AssignJobVal(ATTR_JOB_MACHINE_ATTRS_HISTORY_LENGTH, history_len);
@@ -4363,12 +4192,23 @@ static const char * check_docker_image(char * docker_image)
 	return docker_image;
 }
 
-static const char * check_container_image(char * container_image)
+static const char * check_container_image(char * container_image, bool &valid)
 {
 	// trim leading & trailing whitespace and remove surrounding "" if any.
 	container_image = trim_and_strip_quotes_in_place(container_image);
 
-	// TODO: add code here to validate docker image argument (if possible)
+	std::array<std::string, 3> invalid_prefixes {"instance://", "library://", "shub://"};
+	for (auto &prefix : invalid_prefixes) {
+		std::string image_str = container_image ? container_image : "";
+		if (image_str.starts_with(prefix)) {
+			valid = false;
+			return container_image;
+		}
+	}
+
+	if (container_image == nullptr) {
+		valid = false;
+	}
 	return container_image;
 }
 
@@ -4381,7 +4221,7 @@ int SubmitHash::SetExecutable()
 	char	*ename = NULL;
 	char	*macro_value = NULL;
 	_submit_file_role role = SFR_EXECUTABLE;
-	MyString	full_ename;
+	std::string	full_ename;
 
 	YourStringNoCase gridType(JobGridType.c_str());
 
@@ -4425,9 +4265,10 @@ int SubmitHash::SetExecutable()
 		}
 		auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
 		if (container_image) {
-			const char * image = check_container_image(container_image.ptr());
-			if (! image || ! image[0]) {
-				push_error(stderr, "'%s' is not a valid container_image\n", container_image.ptr());
+			bool valid = true;
+			const char * image = check_container_image(container_image.ptr(), valid);
+			if (! image || ! image[0] || !valid) {
+				push_error(stderr, "'%s' is not a valid container image\n", container_image.ptr());
 				ABORT_AND_RETURN(1);
 			}
 			AssignJobString(ATTR_CONTAINER_IMAGE, image);
@@ -4491,7 +4332,7 @@ int SubmitHash::SetExecutable()
 	if ( transfer_it ) {
 		full_ename = full_path( ename, false );
 	} else {
-		full_ename = ename;
+		full_ename = ename ? ename : "";
 	}
 	if ( !ignore_it ) {
 		check_and_universalize_path(full_ename);
@@ -4670,25 +4511,30 @@ int SubmitHash::SetUniverse()
 			} else {
 
 				// Otherwise, guess container image type from container image string
-				ContainerImageType image_type = image_type_from_string(container_image.ptr());
-				switch (image_type) {
-					case ContainerImageType::DockerRepo:
-						AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
-						break;
-					case ContainerImageType::SIF:
-						AssignJobVal(ATTR_WANT_SIF,true);
-						break;
-					case ContainerImageType::SandboxImage:
-						AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
-						break;
-					case ContainerImageType::Unknown:
+				if (container_image) {
+					ContainerImageType image_type = image_type_from_string(container_image.ptr());
+					switch (image_type) {
+						case ContainerImageType::DockerRepo:
+							AssignJobVal(ATTR_WANT_DOCKER_IMAGE, true);
+							break;
+						case ContainerImageType::SIF:
+							AssignJobVal(ATTR_WANT_SIF,true);
+							break;
+						case ContainerImageType::SandboxImage:
+							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+							break;
+						default:
+							// Hope for the best...
+							AssignJobVal(ATTR_WANT_SANDBOX_IMAGE, true);
+					}
+				} else {
 						push_error(stderr, SUBMIT_KEY_ContainerImage
-								" must be a directory, have a docker:: prefix, or end in .sif.\n");
+								" must be defined for container universe jobs.\n");
 						ABORT_AND_RETURN(1);
+					}
 				}
 			}
-		}
-		return 0;
+			return 0;
 	}
 
 	// "globus" or "grid" universe
@@ -4711,7 +4557,7 @@ int SubmitHash::SetUniverse()
 		if ( ! valid_grid_type) {
 			push_error(stderr, "Invalid value '%s' for grid type\n"
 				"Must be one of: condor, batch, arc, ec2, gce, or azure\n",
-				JobGridType.Value());
+				JobGridType.c_str());
 			ABORT_AND_RETURN(1);
 		}
 
@@ -4742,7 +4588,7 @@ int SubmitHash::SetUniverse()
 					when_output = getFileTransferOutputNum(vm_tmp.ptr());
 				}
 				if( when_output != FTO_ON_EXIT_OR_EVICT ) {
-					MyString err_msg;
+					std::string err_msg;
 					err_msg = "\nERROR: You explicitly requested "
 						"both VM checkpoint and VM networking. "
 						"However, VM networking is currently conflict "
@@ -4837,6 +4683,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_NextJobStartDelay, ATTR_NEXT_JOB_START_DELAY, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_KeepClaimIdle, ATTR_JOB_KEEP_CLAIM_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobAdInformationAttrs, ATTR_JOB_AD_INFORMATION_ATTRS, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_ULogExecuteEventAttrs, ATTR_ULOG_EXECUTE_EVENT_ATTRS, SimpleSubmitKeyword::f_as_string},
 	{SUBMIT_KEY_JobMaterializeMaxIdle, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr},
 	{SUBMIT_KEY_JobMaterializeMaxIdleAlt, ATTR_JOB_MATERIALIZE_MAX_IDLE, SimpleSubmitKeyword::f_as_expr | SimpleSubmitKeyword::f_alt_name},
 	{SUBMIT_KEY_DockerNetworkType, ATTR_DOCKER_NETWORK_TYPE, SimpleSubmitKeyword::f_as_string},
@@ -4844,6 +4691,7 @@ static const SimpleSubmitKeyword prunable_keywords[] = {
 	{SUBMIT_KEY_ContainerTargetDir, ATTR_CONTAINER_TARGET_DIR, SimpleSubmitKeyword::f_as_string | SimpleSubmitKeyword::f_strip_quotes},
 	{SUBMIT_KEY_TransferContainer, ATTR_TRANSFER_CONTAINER, SimpleSubmitKeyword::f_as_bool},
 	{SUBMIT_KEY_TransferPlugins, ATTR_TRANSFER_PLUGINS, SimpleSubmitKeyword::f_as_string},
+	{SUBMIT_KEY_WantIoProxy, ATTR_WANT_IO_PROXY, SimpleSubmitKeyword::f_as_bool},
 
 	// formerly SetJobMachineAttrs
 	{SUBMIT_KEY_JobMachineAttrs, ATTR_JOB_MACHINE_ATTRS, SimpleSubmitKeyword::f_as_string},
@@ -5232,7 +5080,7 @@ int SubmitHash::do_simple_commands(const SimpleSubmitKeyword * cmdtable)
 		last_one_existed = expr;
 		if ( ! expr) continue;
 
-		MyString buffer;
+		std::string buffer;
 		if (i->opts & SimpleSubmitKeyword::f_as_string) {
 			const char * str = expr;
 			if (i->opts & SimpleSubmitKeyword::f_strip_quotes) {
@@ -5797,10 +5645,10 @@ int SubmitHash::SetRequirements()
 {
 	RETURN_IF_ABORT();
 
-	MyString answer;
+	std::string answer;
 	auto_free_ptr orig(submit_param(SUBMIT_KEY_Requirements));
 	if (orig) {
-		answer.formatstr( "(%s)", orig.ptr() );
+		formatstr( answer, "(%s)", orig.ptr() );
 	} else {
 		// if the factory has a FACTORY.Requirements statement, then we use it and don't do ANY other processing
 		auto_free_ptr effective_req(submit_param("FACTORY.Requirements"));
@@ -5998,11 +5846,11 @@ int SubmitHash::SetRequirements()
 				answer += " && ";
 			}
 			answer += "TARGET.HasContainer";
+			std::string image;
 			if (job->Lookup(ATTR_DOCKER_IMAGE)) {
 				answer += "&& TARGET.HasDockerURL";
-			} else {
-				auto_free_ptr container_image(submit_param(SUBMIT_KEY_ContainerImage, ATTR_CONTAINER_IMAGE));
-				ContainerImageType image_type = image_type_from_string(container_image.ptr());
+			} else if (job->LookupString(ATTR_CONTAINER_IMAGE, image)) {
+				ContainerImageType image_type = image_type_from_string(image.c_str());
 				switch (image_type) {
 					case ContainerImageType::DockerRepo:
 						answer += "&& TARGET.HasDockerURL";
@@ -6331,7 +6179,7 @@ int SubmitHash::SetRequirements()
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
 				// xferplugs is of the form "TAR=mytarplugin; HTTP,HTTPS=myhttplugin"
-				StringTokenIterator plugs(xferplugs.c_str(), 100, ";");
+				StringTokenIterator plugs(xferplugs.c_str(), ";");
 				for (const char * plug = plugs.first(); plug != NULL; plug = plugs.next()) {
 					const char * colon = strchr(plug, '=');
 					if (colon) {
@@ -6341,34 +6189,28 @@ int SubmitHash::SetRequirements()
 				}
 
 				// check input
-				auto_free_ptr file_list(submit_param(SUBMIT_KEY_TransferInputFiles, SUBMIT_KEY_TransferInputFilesAlt));
-				if (file_list) {
-					StringList files(file_list.ptr(), ",");
+				std::string file_list;
+				if (job->LookupString(ATTR_TRANSFER_INPUT_FILES, file_list)) {
+					StringList files(file_list.c_str(), ",");
 					for (const char * file = files.first(); file; file = files.next()) {
 						if (IsUrl(file)){
-							MyString tag = getURLType(file, true);
+							std::string tag = getURLType(file, true);
 							if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 						}
 					}
 				}
 
 				// check output (only a single file this time)
-				file_list.set(submit_param(SUBMIT_KEY_OutputDestination, ATTR_OUTPUT_DESTINATION));
-				if (file_list) {
-					if (IsUrl(file_list)) {
-						MyString tag = getURLType(file_list, true);
+				if (job->LookupString(ATTR_OUTPUT_DESTINATION, file_list)) {
+					if (IsUrl(file_list.c_str())) {
+						std::string tag = getURLType(file_list.c_str(), true);
 						if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 					}
 				}
 
 				// check output remaps
-				file_list.set(submit_param(SUBMIT_KEY_TransferOutputRemaps, ATTR_TRANSFER_OUTPUT_REMAPS));
-				if (file_list) {
-					std::string remap_list(file_list.ptr());
-					if(remap_list[0] == '"') { remap_list = remap_list.substr(1); }
-					if(remap_list[remap_list.size()] == '"' ) { remap_list = remap_list.substr(0, remap_list.size() - 1); }
-
-					StringList files(remap_list.c_str(), ";");
+				if (job->LookupString(ATTR_TRANSFER_OUTPUT_REMAPS, file_list)) {
+					StringList files(file_list.c_str(), ";");
 					for (const char * file = files.first(); file; file = files.next()) {
 						std::string remap(file);
 						auto eq = remap.find("=");
@@ -6377,7 +6219,7 @@ int SubmitHash::SetRequirements()
 							trim(url);
 
 							if( IsUrl(url.c_str()) ) {
-								MyString tag = getURLType(url.c_str(), true);
+								std::string tag = getURLType(url.c_str(), true);
 								if ( ! jobmethods.count(tag.c_str())) { methods.insert(tag.c_str()); }
 							}
 						}
@@ -6474,14 +6316,14 @@ int SubmitHash::SetRequirements()
 	bool as_owner = false;
 	if (job->LookupBool(ATTR_JOB_RUNAS_OWNER, as_owner) && as_owner) {
 
-		MyString tmp_rao = " && (TARGET." ATTR_HAS_WIN_RUN_AS_OWNER;
+		std::string tmp_rao = " && (TARGET." ATTR_HAS_WIN_RUN_AS_OWNER;
 		if (RunAsOwnerCredD && !checks_credd) {
 			tmp_rao += " && (TARGET." ATTR_LOCAL_CREDD " =?= \"";
 			tmp_rao += RunAsOwnerCredD.ptr();
 			tmp_rao += "\")";
 		}
 		tmp_rao += ")";
-		answer += tmp_rao.Value();
+		answer += tmp_rao.c_str();
 	}
 #endif
 
@@ -6532,8 +6374,8 @@ int SubmitHash::SetRequirements()
 int SubmitHash::SetConcurrencyLimits()
 {
 	RETURN_IF_ABORT();
-	MyString tmp = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimits, NULL);
-	MyString tmp2 = submit_param_mystring(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
+	std::string tmp = submit_param_string(SUBMIT_KEY_ConcurrencyLimits, NULL);
+	std::string tmp2 = submit_param_string(SUBMIT_KEY_ConcurrencyLimitsExpr, NULL);
 
 	if (!tmp.empty()) {
 		if (!tmp2.empty()) {
@@ -6542,7 +6384,7 @@ int SubmitHash::SetConcurrencyLimits()
 		}
 		char *str;
 
-		tmp.lower_case();
+		lower_case(tmp);
 
 		StringList list(tmp.c_str());
 
@@ -6592,9 +6434,9 @@ int SubmitHash::SetAccountingGroup()
 		if (!group) {
 			group.set(param("NICE_USER_ACCOUNTING_GROUP_NAME"));
 		} else {
-			MyString nicegroup;
+			std::string nicegroup;
 			param(nicegroup, "NICE_USER_ACCOUNTING_GROUP_NAME");
-			if (nicegroup != group) {
+			if (nicegroup != group.ptr()) {
 				if ( ! nice_user_is_prefix) {
 					push_warning(stderr,
 						SUBMIT_KEY_NiceUser " conflicts with "  SUBMIT_KEY_AcctGroup ". "
@@ -6603,7 +6445,7 @@ int SubmitHash::SetAccountingGroup()
 					// append accounting group to nice-user group
 					nicegroup += ".";
 					nicegroup += group.ptr();
-					group.set(nicegroup.StrDup());
+					group.set(strdup(nicegroup.c_str()));
 				}
 			}
 		}
@@ -6645,8 +6487,8 @@ int SubmitHash::SetAccountingGroup()
 		AssignJobString(ATTR_ACCT_GROUP, group);
 
 		// store the AccountingGroup attribute as <group>.<user>
-		MyString submitter;
-		submitter.formatstr("%s.%s", group.ptr(), group_user);
+		std::string submitter;
+		formatstr(submitter, "%s.%s", group.ptr(), group_user);
 		AssignJobString(ATTR_ACCOUNTING_GROUP, submitter.c_str());
 	} else {
 		// If no group, this is accounting group is really a user alias, just set AccountingGroup to be the user name
@@ -6815,7 +6657,7 @@ int SubmitHash::SetVMParams()
 	if (vmtype == CONDOR_VM_UNIVERSE_XEN) {
 
 		// xen_kernel is a required parameter
-		std::string xen_kernel = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
+		std::string xen_kernel = submit_param_string(SUBMIT_KEY_VM_XEN_KERNEL, VMPARAM_XEN_KERNEL);
 		if ( ! xen_kernel.empty()) {
 			AssignJobString(VMPARAM_XEN_KERNEL, xen_kernel.c_str());
 		} else if ( ! job->LookupString(VMPARAM_XEN_KERNEL, xen_kernel)) {
@@ -6874,9 +6716,9 @@ int SubmitHash::SetVMParams()
 		}
 
 		// xen_kernel_params is a optional parameter
-		MyString xen_kernel_params = submit_param_mystring(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
+		std::string xen_kernel_params = submit_param_string(SUBMIT_KEY_VM_XEN_KERNEL_PARAMS, VMPARAM_XEN_KERNEL_PARAMS);
 		if (! xen_kernel_params.empty()) {
-			xen_kernel_params.trim_quotes("\"'");
+			trim_quotes(xen_kernel_params, "\"'");
 			AssignJobString(VMPARAM_XEN_KERNEL_PARAMS, xen_kernel_params.c_str());
 		}
 
@@ -6931,13 +6773,23 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 				return 0;
 			}
 		}
+	} else {
+		return 0;
+	}
+
+	// don't xfer if URL proto is on known never xfer list
+	std::array<std::string, 2> neverTransferPrefixes {"docker://", "oras://" };
+	for (auto &prefix : neverTransferPrefixes) {
+		std::string container_image_str = container_image.ptr();
+		if (container_image_str.starts_with(prefix)) {
+			return 0;
+		}
 	}
 
 	// otherwise, add the container image to the list of input files to be xfered
 	// if only docker_image is set, never xfer it
 	// But only if the container image exists on this disk
-	struct stat buf;
-	if (container_image.ptr() && (stat(container_image.ptr(), &buf) == 0))  {
+	if (container_image.ptr())  {
 		input_files.append(container_image.ptr());
 		if (accumulate_size_kb) {
 			*accumulate_size_kb += calc_image_size_kb(container_image.ptr());
@@ -6961,7 +6813,7 @@ int SubmitHash::process_container_input_files(StringList & input_files, long lon
 int SubmitHash::process_input_file_list(StringList * input_list, long long * accumulate_size_kb)
 {
 	int count;
-	MyString tmp;
+	std::string tmp;
 	char* tmp_ptr;
 
 	if( ! input_list->isEmpty() ) {
@@ -6989,7 +6841,9 @@ int SubmitHash::process_input_file_list(StringList * input_list, long long * acc
 }
 
 SubmitHash::ContainerImageType 
-SubmitHash::image_type_from_string(const std::string &image) const {
+SubmitHash::image_type_from_string(std::string image) const {
+
+	trim(image);
 	if (starts_with(image, "docker:")) {
 		return SubmitHash::ContainerImageType::DockerRepo;
 	}
@@ -7000,14 +6854,8 @@ SubmitHash::image_type_from_string(const std::string &image) const {
 		return SubmitHash::ContainerImageType::SandboxImage;
 	}
 
-	struct stat buf;
-	if (0 == stat(image.c_str(), &buf)) {
-		if( buf.st_mode & S_IFDIR ) {
-			return SubmitHash::ContainerImageType::SandboxImage;
-		}
-	}
-
-	return SubmitHash::ContainerImageType::Unknown;
+	// assume everything else is a directory
+	return SubmitHash::ContainerImageType::SandboxImage;
 }
 
 // SetTransferFiles also sets a global "should_transfer", which is 
@@ -7028,7 +6876,7 @@ int SubmitHash::SetTransferFiles()
 	StringList input_file_list(NULL, ",");
 	StringList output_file_list(NULL, ",");
 	ShouldTransferFiles_t should_transfer = STF_IF_NEEDED;
-	MyString output_remaps;
+	std::string output_remaps;
 
 	// check files to determine the size of the input sandbox only when we are not doing late materialization
 	long long tmpInputFilesSizeKb = 0;
@@ -7049,36 +6897,6 @@ int SubmitHash::SetTransferFiles()
 		free(macro_value); macro_value = NULL;
 	}
 	RETURN_IF_ABORT();
-
-
-#if defined( WIN32 )
-	if (JobUniverse == CONDOR_UNIVERSE_MPI) {
-		// On NT, if we're an MPI job, we need to find the
-		// mpich.dll file and automatically include that in the
-		// transfer input files
-		std::string dll_name("mpich.dll");
-
-		// first, check to make sure the user didn't already
-		// specify mpich.dll in transfer_input_files
-		if (! input_file_list.contains(dll_name.c_str())) {
-			// nothing there yet, try to find it ourselves
-			std::string dll_path = which(dll_name);
-			if (dll_path.length() == 0) {
-				// File not found, fatal error.
-				push_error(stderr, "Condor cannot find the "
-					"\"mpich.dll\" file it needs to run your MPI job.\n"
-					"Please specify the full path to this file in the "
-					"\"transfer_input_files\"\n"
-					"setting in your submit description file.\n");
-				ABORT_AND_RETURN(1);
-			}
-			// If we made it here, which() gave us a real path.
-			// so, now we just have to append that to our list of
-			// files. 
-			input_file_list.append(dll_path.c_str());
-		}
-	}
-#endif /* WIN32 */
 
 	if (process_input_file_list(&input_file_list, pInputFilesSizeKb) > 0) {
 		in_files_specified = true;
@@ -7117,7 +6935,7 @@ int SubmitHash::SetTransferFiles()
 			output_file_list.initializeFromString(macro_value);
 			for (const char * file = output_file_list.first(); file != NULL; file = output_file_list.next()) {
 				out_files_specified = true;
-				MyString buf = file;
+				std::string buf = file;
 				if (check_and_universalize_path(buf) != 0)
 				{
 					// we universalized the path, so update the string list
@@ -7155,7 +6973,7 @@ int SubmitHash::SetTransferFiles()
 	bool default_should = false;
 	bool default_when;
 	FileTransferOutput_t when_output;
-	MyString err_msg;
+	std::string err_msg;
 
 	// check to see if the user specified should_transfer_files.
 	// if they didn't check to see if the admin did. 
@@ -7374,7 +7192,7 @@ int SubmitHash::SetTransferFiles()
 		}
 
 		if (job->LookupString(ATTR_JAR_FILES, tmp)) {
-			MyString filepath;
+			std::string filepath;
 			StringList files(tmp.c_str(), ",");
 			for (const char * file = files.first(); file != NULL; file = files.next()) {
 				filepath = file;
@@ -7448,7 +7266,7 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_OUTPUT, working_name);
 
 			if(!output_remaps.empty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
+			formatstr_cat(output_remaps, "%s=%s",working_name,EscapeChars(output,";=\\",'\\').c_str());
 		}
 
 		if(error.length() && error != condor_basename(error.c_str()) &&
@@ -7469,7 +7287,7 @@ int SubmitHash::SetTransferFiles()
 			AssignJobString(ATTR_JOB_ERROR, working_name);
 
 			if(!output_remaps.empty()) output_remaps += ";";
-			output_remaps.formatstr_cat("%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
+			formatstr_cat(output_remaps, "%s=%s",working_name,EscapeChars(error,";=\\",'\\').c_str());
 		}
 	}
 
@@ -7576,7 +7394,7 @@ int SubmitHash::SetTransferFiles()
 			continue;
 		}
 		// Apply filename remaps if there are any.
-		MyString remap_fname;
+		std::string remap_fname;
 		if(filename_remap_find(output_remaps.c_str(),output_file,remap_fname)) {
 			output_file = remap_fname.c_str();
 		}
@@ -7607,7 +7425,7 @@ int SubmitHash::FixupTransferInputFiles()
 	if (ComputeIWD()) { ABORT_AND_RETURN(1); }
 
 	std::string error_msg;
-	MyString expanded_list;
+	std::string expanded_list;
 	bool success = FileTransfer::ExpandInputFileList(input_files.c_str(),JobIwd.c_str(),expanded_list,error_msg);
 	if (success) {
 		if (expanded_list != input_files) {
@@ -7615,8 +7433,8 @@ int SubmitHash::FixupTransferInputFiles()
 			job->Assign(ATTR_TRANSFER_INPUT_FILES,expanded_list.c_str());
 		}
 	} else {
-		MyString err_msg;
-		err_msg.formatstr( "\n%s\n",error_msg.c_str());
+		std::string err_msg;
+		formatstr(err_msg, "\n%s\n",error_msg.c_str());
 		print_wrapped_text( err_msg.c_str(), stderr );
 		ABORT_AND_RETURN( 1 );
 	}
@@ -7737,69 +7555,69 @@ int SubmitHash::build_oauth_service_ads (
 	ClassAdList & requests,
 	std::string & error) const
 {
-	MyString param_name;
-	MyString config_param_name;
-	MyString param_val;
+	std::string param_name;
+	std::string config_param_name;
+	std::string param_val;
 
 	error.clear();
 
 	for (auto it = unique_names.begin(); it != unique_names.end(); ++it) {
 		const char * token = it->c_str();
 		ClassAd *request_ad = new ClassAd();
-		MyString token_MyS = token;
+		std::string token_MyS = token;
 
-		MyString service_name;
-		MyString handle;
-		int starpos = token_MyS.FindChar('*');
-		if(starpos == -1) {
+		std::string service_name;
+		std::string handle;
+		size_t starpos = token_MyS.find('*');
+		if(starpos == std::string::npos) {
 			// no handle, just service
 			service_name = token_MyS;
 		} else {
 			// no split into two
-			service_name = token_MyS.substr(0,starpos);
-			handle = token_MyS.substr(starpos+1,token_MyS.length());
+			service_name.assign(token_MyS, 0, starpos);
+			handle.assign(token_MyS, starpos+1);
 		}
 		request_ad->Assign("Service", service_name);
 		if ( ! handle.empty()) { request_ad->Assign("Handle", handle); }
 
 
 		// get permissions (scopes) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_PERMISSIONS", service_name.c_str());
+		formatstr(param_name, "%s_OAUTH_PERMISSIONS", service_name.c_str());
 		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
-		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		param_val = submit_param_string(param_name.c_str(), NULL);
 		if(param_val.length() == 0) {
 			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_SCOPES", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_USER_DEFINE_SCOPES", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
 				return -1;
 			}
-			config_param_name.formatstr("%s_DEFAULT_SCOPES", service_name.c_str());
-			param_val = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_DEFAULT_SCOPES", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 		}
 		if (!param_val.empty()) { request_ad->Assign("Scopes", param_val); }
 
 		// get resource (audience) from submit file or config file if needed
-		param_name.formatstr("%s_OAUTH_RESOURCE", service_name.c_str());
+		formatstr(param_name, "%s_OAUTH_RESOURCE", service_name.c_str());
 		if (handle.length()) {
 			param_name += "_";
 			param_name += handle;
 		}
-		param_val = submit_param_mystring(param_name.c_str(), NULL);
+		param_val = submit_param_string(param_name.c_str(), NULL);
 		if (param_val.length() == 0) {
 			// not specified: is this required?
-			config_param_name.formatstr("%s_USER_DEFINE_AUDIENCE", service_name.c_str());
-			param_val  = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_USER_DEFINE_AUDIENCE", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 			if (param_val[0] == 'R') {
 				formatstr(error, "You must specify %s to use OAuth service %s.", param_name.c_str(), service_name.c_str());
 				return -1;
 			}
-			config_param_name.formatstr("%s_DEFAULT_AUDIENCE", service_name.c_str());
-			param_val = param(config_param_name.c_str());
+			formatstr(config_param_name, "%s_DEFAULT_AUDIENCE", service_name.c_str());
+			param(param_val, config_param_name.c_str());
 		}
 		if ( ! param_val.empty()) { request_ad->Assign("Audience", param_val); }
 
@@ -8085,11 +7903,11 @@ ClassAd* SubmitHash::make_job_ad (
 	FnCheckFile = check_file;
 	CheckFileArg = pv_check_arg;
 
-	strcpy(LiveNodeString,"");
-	(void)sprintf(LiveClusterString, "%d", job_id.cluster);
-	(void)sprintf(LiveProcessString, "%d", job_id.proc);
-	(void)sprintf(LiveRowString, "%d", item_index);
-	(void)sprintf(LiveStepString, "%d", step);
+	LiveNodeString[0] = '\0';
+	{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, job_id.cluster); *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveProcessString, LiveProcessString + 12, job_id.proc);    *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveRowString, LiveRowString + 12, item_index);             *p = '\0';}
+	{ auto [p, ec] = std::to_chars(LiveStepString, LiveStepString + 12, step);                 *p = '\0';}
 
 	// calling this function invalidates the job returned from the previous call
 	delete job; job = NULL;
@@ -8319,11 +8137,11 @@ int qslice::to_string(char * buf, int cch) const {
 	if ( ! (flags&1)) return 0;
 	char * p = sz;
 	*p++  = '[';
-	if (flags&2) { p += sprintf(p,"%d", start); }
+	if (flags&2) { auto [ptr, ec] = std::to_chars(p, p + 12, start); p = ptr;}
 	*p++ = ':';
-	if (flags&4) { p += sprintf(p,"%d", end); }
+	if (flags&4) { auto [ptr, ec] = std::to_chars(p, p + 12, end); p = ptr;}
 	*p++ = ':';
-	if (flags&8) { p += sprintf(p,"%d", step); }
+	if (flags&8) { auto [ptr, ec] = std::to_chars(p, p + 12, step); p = ptr;}
 	*p++ = ']';
 	*p = 0;
 	strncpy(buf, sz, cch); buf[cch-1] = 0;
@@ -9098,7 +8916,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 	// TODO: capture pseudo-ness explicitly in SetExecutable? so we don't have to keep this in sync...
 	bool pseudo = false;
 	if (found->id == idKeyExecutable) {
-		MyString sub_type;
+		std::string sub_type;
 		int uni = query_universe(sub_type);
 		if (uni == CONDOR_UNIVERSE_VM) {
 			pseudo = true;
@@ -9121,7 +8939,7 @@ void SubmitHash::fixup_rhs_for_digest(const char * key, std::string & rhs)
 
 // returns the universe and grid type, either by looking at the cached values
 // or by querying the hashtable if the cached values haven't been set yet.
-int SubmitHash::query_universe(MyString & sub_type)
+int SubmitHash::query_universe(std::string & sub_type)
 {
 	if (JobUniverse != CONDOR_UNIVERSE_MIN) {
 		if (JobUniverse == CONDOR_UNIVERSE_GRID) { sub_type = JobGridType; }
@@ -9154,17 +8972,13 @@ int SubmitHash::query_universe(MyString & sub_type)
 	}
 
 	if (uni == CONDOR_UNIVERSE_GRID) {
-		sub_type = submit_param_mystring(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
-		if (starts_with(sub_type.c_str(), "$$(")) {
-			sub_type.clear();
-		} else {
-			// truncate at the first space
-			int ix = sub_type.FindChar(' ', 0);
-			if (ix >= 0) { sub_type.truncate(ix); }
-		}
+		sub_type = submit_param_string(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
+		// truncate at the first space
+		size_t ix = sub_type.find(' ');
+		if (ix != std::string::npos) { sub_type.erase(ix); }
 	} else if (uni == CONDOR_UNIVERSE_VM) {
-		sub_type = submit_param_mystring(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
-		sub_type.lower_case();
+		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
+		lower_case(sub_type);
 	}
 
 	return uni;
@@ -9194,7 +9008,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 
 	// make sure that the ctx has the current working directory in it, in case we need
 	// to do a partial expand of $Ff(SUBMIT_FILE)
-	MyString Cwd;
+	std::string Cwd;
 	const char * old_cwd = mctx.cwd;  // so we can put the current value back.
 	if ( ! mctx.cwd) {
 		condor_getcwd(Cwd);
@@ -9222,7 +9036,7 @@ const char* SubmitHash::make_digest(std::string & out, int cluster_id, StringLis
 	}
 
 	if (cluster_id > 0) {
-		(void)sprintf(LiveClusterString, "%d", cluster_id);
+		{ auto [p, ec] = std::to_chars(LiveClusterString, LiveClusterString + 12, cluster_id); *p = '\0';}
 	} else {
 		skip_knobs.insert("Cluster");
 		skip_knobs.insert("ClusterId");

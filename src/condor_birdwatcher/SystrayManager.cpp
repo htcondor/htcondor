@@ -25,7 +25,6 @@
 
 // #define GENERATE_BIRD_LOG 1
 
-using namespace std;
 const int CONDOR_SYSTRAY_INTERNAL_EVENTS = WM_USER + 4001;
 HWND birdwatcherDLG;
 HWND parentHwnd;
@@ -159,7 +158,7 @@ LRESULT SystrayManager::onReceivedWindowsMessage(WindowsMessageReceiver *pSource
 	static int iTimerNum = 0;
 	LRESULT lRet = 0;
 	
-	string strLogMsg;
+	std::string strLogMsg;
 	switch (message)
 	{
 	case CONDOR_SYSTRAY_NOTIFY_CHANGED:
@@ -312,7 +311,7 @@ std::string makeString(int iVal)
 {
 	char psBuf[32];
 	_itoa(iVal, psBuf, 10);
-	return string(psBuf);
+	return std::string(psBuf);
 }
 
 
@@ -369,7 +368,7 @@ void SystrayManager::reloadStatus()
 	bAllIdle = true;
 	bool bAnyRunning = false;
 	
-	string strLogMsg = "Reloading " + makeString(iCpus) + " cpus: ";
+	std::string strLogMsg = "Reloading " + makeString(iCpus) + " cpus: ";
 	for (int ii = 0; ii < iCpus; ++ii)
 	{
 		TCHAR szKey[50];

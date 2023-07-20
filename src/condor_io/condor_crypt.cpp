@@ -138,10 +138,10 @@ void Condor_Crypto_State::reset() {
 		EVP_DecryptInit_ex(dec_ctx, m_cipherType, NULL, NULL, NULL);
 		EVP_CIPHER_CTX_set_key_length(dec_ctx, key_length);
 		EVP_DecryptInit_ex(dec_ctx, NULL, NULL, key_data, ivec);
+	}
 
-		if (free_key_data) {
-			free(free_key_data);
-		}
+	if (free_key_data) {
+		free(free_key_data);
 	}
 }
 
@@ -190,7 +190,7 @@ char *Condor_Crypt_Base::randomHexKey(int length)
 	ASSERT( hex );
 	int i;
 	for(i=0; i<length; i++) {
-		sprintf(hex+i*2,"%02x",bytes[i]);
+		snprintf(hex+i*2, 3, "%02x",bytes[i]);
 	}
 	free(bytes);
 	return hex;

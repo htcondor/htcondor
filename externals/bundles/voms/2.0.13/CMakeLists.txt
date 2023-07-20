@@ -136,10 +136,10 @@ if ( WITH_VOMS )
 
 		find_multiple( "vomsapi" VOMS_FOUND)
 
-		if (DLOPEN_VOMS_LIBS)
+		if (DLOPEN_SECURITY_LIBS)
 			find_so_name( LIBVOMSAPI_SO ${VOMS_FOUND} )
 			set( LIBVOMSAPI_SO ${LIBVOMSAPI_SO} PARENT_SCOPE )
-		endif(DLOPEN_VOMS_LIBS)
+		endif(DLOPEN_SECURITY_LIBS)
 
 	endif(NOT PROPER)
 

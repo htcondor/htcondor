@@ -961,10 +961,10 @@ ProcAPI::getProcInfoRaw( pid_t pid, procInfoRaw& procRaw, int &status )
 	// CPU times are given in nanoseconds.
 	procRaw.imgsize = (unsigned long)ru.ri_phys_footprint;
 	procRaw.rssize = ru.ri_resident_size;
-	procRaw.user_time_1 = ru.ri_user_time / 1000000000;
-	procRaw.user_time_2 = ru.ri_user_time % 1000000000;
-	procRaw.sys_time_1 = ru.ri_system_time / 1000000000;
-	procRaw.sys_time_2 = ru.ri_system_time % 1000000000;
+	procRaw.user_time_1 = ru.ri_user_time /  1'000'000'000;
+	procRaw.user_time_2 = ru.ri_user_time %  1'000'000'000;
+	procRaw.sys_time_1 = ru.ri_system_time / 1'000'000'000;
+	procRaw.sys_time_2 = ru.ri_system_time % 1'000'000'000;
 
 	// add in the rest
 	procRaw.pid = pid;
@@ -1639,7 +1639,7 @@ ProcAPI::GetProcessPerfData()
 
         // '2' is the 'system' , '230' is 'process'  
         // I hope these numbers don't change over time... 
-    dwStatus = GetSystemPerfData ( TEXT("230") );
+    dwStatus = GetSystemPerfData (const_cast<char *>(TEXT("230")));
 
     if( dwStatus != ERROR_SUCCESS ) {
         dprintf( D_ALWAYS,

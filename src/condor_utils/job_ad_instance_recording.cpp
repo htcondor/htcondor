@@ -83,13 +83,13 @@ initJobEpochHistoryFiles(){
 	}
 
 	//Initialize an epoch Directory
-	efi.JobEpochInstDir.set(param("JOB_EPOCH_INSTANCE_DIR"));
+	efi.JobEpochInstDir.set(param("JOB_EPOCH_HISTORY_DIR"));
 	if (efi.JobEpochInstDir.ptr()) {
 		// If param was found and not null check if it is a valid directory
 		StatInfo si(efi.JobEpochInstDir.ptr());
 		if (!si.IsDirectory()) {
 			// Not a valid directory. Log message and set data member to NULL
-			dprintf(D_ERROR, "Invalid JOB_EPOCH_INSTANCE_DIR (%s): must point to a "
+			dprintf(D_ERROR, "Invalid JOB_EPOCH_HISTORY_DIR (%s): must point to a "
 					"valid directory; disabling per-job run instance recording.\n",
 						efi.JobEpochInstDir.ptr());
 			efi.JobEpochInstDir.clear();
@@ -147,7 +147,7 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 	//Check buffer for newline char at end if no newline then add one and then add banner to buffer
 	std::string banner;
 	time_t currentTime = time(NULL); //Get current time to print in banner
-	formatstr(banner,"*** ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
+	formatstr(banner,"*** EPOCH ClusterId=%d ProcId=%d RunInstanceId=%d Owner=\"%s\" CurrentTime=%lld\n" ,
 					 info.jid.cluster, info.jid.proc, info.runId, owner.c_str(), (long long)currentTime);
 	if (info.buffer.back() != '\n') { info.buffer += '\n'; }
 	info.buffer += banner;
@@ -166,6 +166,8 @@ extractEpochInfo(const classad::ClassAd *job_ad, EpochAdInfo& info){
 */
 static void
 writeEpochAdToFile(const HistoryFileRotationInfo& fri, const EpochAdInfo& info, const char* new_path = NULL) {
+	//Set priv_condor to allow writing to condor owned locations i.e. spool directory
+	TemporaryPrivSentry tps(PRIV_CONDOR);
 	//Check if we want to rotate the file
 	MaybeRotateHistory(fri, info.buffer.length(), info.file_path.c_str(), new_path);
 	//Open file and append Job Ad to it

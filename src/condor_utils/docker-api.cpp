@@ -15,6 +15,8 @@
 #include <sstream>
 #include <string>
 
+#include <charconv>
+
 #if !defined(WIN32)
 #include <sys/un.h>
 #endif
@@ -45,8 +47,8 @@ int DockerAPI::pruneContainers() {
 	args.AppendArg( "-f");
 	args.AppendArg( "--filter=label=org.htcondorproject=True"); // must match label in create
 
-	MyString displayString;
-	args.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Running: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -340,7 +342,7 @@ int DockerAPI::createContainer(
 			formatstr( attrName, "%s%s", service, ATTR_CONTAINER_PORT_SUFFIX );
 			if( jobAd.LookupInteger( attrName, portNo ) ) {
 				runArgs.AppendArg("-p");
-				runArgs.AppendArg(portNo);
+				runArgs.AppendArg(std::to_string(portNo));
 				shouldAskForPorts = true;
 			} else {
 				// FIXME: This should actually be a hold message.
@@ -370,9 +372,9 @@ int DockerAPI::createContainer(
 	}
 
 
-	MyString args_error;
+	std::string args_error;
 	char *tmp = param("DOCKER_EXTRA_ARGUMENTS");
-	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp,&args_error)) {
+	if(!runArgs.AppendArgsV1RawOrV2Quoted(tmp, args_error)) {
 		dprintf(D_ALWAYS,"docker: failed to parse extra arguments: %s\n",
 		args_error.c_str());
 		free(tmp);
@@ -399,8 +401,8 @@ int DockerAPI::createContainer(
 
 	runArgs.AppendArgsFromArgList( args );
 
-	MyString displayString;
-	runArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	runArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Attempting to run: %s\n", displayString.c_str() );
 
 	//
@@ -464,8 +466,8 @@ int DockerAPI::startContainer(
 	startArgs.AppendArg("-a"); // start in Attached mode
 	startArgs.AppendArg(containerName);
 
-	MyString displayString;
-	startArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	startArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "Runnning: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
@@ -511,8 +513,8 @@ DockerAPI::execInContainer( const std::string &containerName,
 	execArgs.AppendArgsFromArgList(arguments);
 
 
-	MyString displayString;
-	execArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	execArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_ALWAYS, "execing: %s\n", displayString.c_str() );
 
 	FamilyInfo fi;
@@ -556,8 +558,8 @@ int DockerAPI::copyToContainer(const std::string & srcPath, // path on local fil
 	dest += containerPath;
 	args.AppendArg(dest);
 
-	MyString displayString;
-	args.GetArgsStringForLogging(&displayString);
+	std::string displayString;
+	args.GetArgsStringForLogging(displayString);
 	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
 
 	MyPopenTimer pgm;
@@ -569,8 +571,8 @@ int DockerAPI::copyToContainer(const std::string & srcPath, // path on local fil
 	int exitCode;
 	if (! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		readLine(line, pgm.output(), false); chomp(line);
 		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n",
 			displayString.c_str(), exitCode, line.c_str());
 		return -3;
@@ -603,8 +605,8 @@ int DockerAPI::copyFromContainer(const std::string &container, // container to c
 
 	args.AppendArg(destPath);
 
-	MyString displayString;
-	args.GetArgsStringForLogging(&displayString);
+	std::string displayString;
+	args.GetArgsStringForLogging(displayString);
 	dprintf(D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str());
 
 
@@ -617,8 +619,8 @@ int DockerAPI::copyFromContainer(const std::string &container, // container to c
 	int exitCode;
 	if (! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		readLine(line, pgm.output(), false); chomp(line);
 		dprintf(D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n",
 			displayString.c_str(), exitCode, line.c_str());
 		return -3;
@@ -633,7 +635,7 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 	// this should not be called with a program that is still running.
 	ASSERT(pgmIn.is_closed());
 
-	MyString line;
+	std::string line;
 	MyStringCharSource * src = NULL;
 	if (pgmIn.output_size() > 0) {
 		src = &pgmIn.output();
@@ -645,7 +647,7 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 	if (src) {
 		check_for_hung_docker = false; // if we got output, assume docker is not hung.
 		for (int ii = 0; ii < 10; ++ii) {
-			if ( ! line.readLine(*src, false)) break;
+			if ( ! readLine(line, *src, false)) break;
 			dprintf( D_ALWAYS, "%s\n", line.c_str() );
 
 			// if we got something resembling "/var/run/docker.sock: resource temporarily unavaible" 
@@ -667,8 +669,8 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 		}
 
 		infoArgs.AppendArg( "info" );
-		MyString displayString;
-		infoArgs.GetArgsStringForLogging( & displayString );
+		std::string displayString;
+		infoArgs.GetArgsStringForLogging( displayString );
 
 		MyPopenTimer pgm2;
 		if (pgm2.start_program(infoArgs, true, NULL, false) < 0) {
@@ -680,8 +682,8 @@ static int check_if_docker_offline(MyPopenTimer & pgmIn, const char * cmd_str, i
 				dprintf( D_ALWAYS, "Failed to get output from '%s' : %s.\n", displayString.c_str(), pgm2.error_str() );
 				rval = DockerAPI::docker_hung;
 			} else {
-				while (line.readLine(pgm2.output(),false)) {
-					line.chomp();
+				while (readLine(line, pgm2.output(),false)) {
+					chomp(line);
 					dprintf( D_FULLDEBUG, "[Docker Info] %s\n", line.c_str() );
 				}
 			}
@@ -705,8 +707,8 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	rmArgs.AppendArg( "-v" );  // also remove the volume
 	rmArgs.AppendArg( containerID.c_str() );
 
-	MyString displayString;
-	rmArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	rmArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	// Read from Docker's combined output and error streams.
@@ -719,8 +721,8 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 	const char * got_output = pgm.wait_and_close(default_timeout);
 
 	// On a success, Docker writes the containerID back out.
-	MyString line;
-	if ( ! got_output || ! line.readLine(pgm.output(), false)) {
+	std::string line;
+	if ( ! got_output || ! readLine(line, pgm.output(), false)) {
 		int error = pgm.error_code();
 		if( error ) {
 			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
@@ -734,8 +736,8 @@ int DockerAPI::rm( const std::string & containerID, CondorError & /* err */ ) {
 		return -3;
 	}
 
-	line.chomp(); line.trim();
-	if (line != containerID.c_str()) {
+	chomp(line); trim(line);
+	if (line != containerID) {
 		// Didn't get back the result I expected, report the error and check to see if docker is hung.
 		return check_if_docker_offline(pgm, "Docker remove", -4);
 	}
@@ -760,8 +762,8 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	args.AppendArg( "-q" );
 	args.AppendArg( image );
 
-	MyString displayString;
-	args.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	args.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -773,8 +775,8 @@ DockerAPI::rmi(const std::string &image, CondorError &err) {
 	int exitCode;
 	if ( ! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		readLine(line, pgm.output(), false); chomp(line);
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		return -3;
 	}
@@ -793,7 +795,7 @@ DockerAPI::kill(const std::string &image, int signal, CondorError &err) {
     ArgList args;
     args.AppendArg( "kill" );
     args.AppendArg( "--signal" );
-    args.AppendArg( signal );
+    args.AppendArg( std::to_string(signal) );
     return run_docker_command( args, image, default_timeout, err);
 }
 
@@ -939,8 +941,8 @@ int DockerAPI::detect( CondorError & err ) {
 		return -1;
 	infoArgs.AppendArg( "info" );
 
-	MyString displayString;
-	infoArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	infoArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -952,20 +954,20 @@ int DockerAPI::detect( CondorError & err ) {
 	int exitCode;
 	if ( ! pgm.wait_for_exit(default_timeout, &exitCode) || exitCode != 0) {
 		pgm.close_program(1);
-		MyString line;
-		line.readLine(pgm.output(), false); line.chomp();
+		std::string line;
+		readLine(line, pgm.output(), false); chomp(line);
 		dprintf( D_ALWAYS, "'%s' did not exit successfully (code %d); the first line of output was '%s'.\n", displayString.c_str(), exitCode, line.c_str());
 		dprintf( D_ALWAYS, "  Try adding condor to the docker group in /etc/group\n");
 		return -3;
 	}
 
 	if (IsFulldebug(D_ALWAYS)) {
-		MyString line;
+		std::string line;
 		do {
-			line.readLine(pgm.output(), false);
-			line.chomp();
+			readLine(line, pgm.output(), false);
+			chomp(line);
 			dprintf( D_FULLDEBUG, "[docker info] %s\n", line.c_str() );
-		} while (line.readLine(pgm.output(), false));
+		} while (readLine(line, pgm.output(), false));
 	}
 
 	return 0;
@@ -1062,8 +1064,8 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		return -1;
 	versionArgs.AppendArg( "-v" );
 
-	MyString displayString;
-	versionArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	versionArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: '%s'.\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1087,14 +1089,14 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 	}
 
 	MyStringSource * src = &pgm.output();
-	MyString line;
-	if (line.readLine(*src, false)) {
-		line.chomp();
+	std::string line;
+	if (readLine(line, *src, false)) {
+		chomp(line);
 		bool jansens = strstr( line.c_str(), "Jansens" ) != NULL;
 		bool bad_size = ! src->isEof() || line.size() > 1024 || line.size() < (int)sizeof("Docker version ");
 		if (bad_size && ! jansens) {
 			// check second line of output for the word Jansens also.
-			MyString tmp; tmp.readLine(*src, false);
+			std::string tmp; readLine(tmp, *src, false);
 			jansens = strstr( tmp.c_str(), "Jansens" ) != NULL;
 		}
 		if (jansens) {
@@ -1111,7 +1113,7 @@ int DockerAPI::version( std::string & version, CondorError & /* err */ ) {
 		return -4;
 	}
 
-	version = line.c_str();
+	version = line;
 
 	int count = sscanf(version.c_str(), "Docker version %d.%d", &DockerAPI::majorVersion, &DockerAPI::minorVersion);
 	if (count != 2) {
@@ -1147,8 +1149,8 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	free( formatArg );
 	inspectArgs.AppendArg( containerID );
 
-	MyString displayString;
-	inspectArgs.GetArgsStringForLogging( & displayString );
+	std::string displayString;
+	inspectArgs.GetArgsStringForLogging( displayString );
 	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1171,19 +1173,19 @@ int DockerAPI::inspect( const std::string & containerID, ClassAd * dockerAd, Con
 	// the error message(s).
 	std::vector<std::string> correctOutput(expected_rows);
 	if (src) {
-		MyString line;
+		std::string line;
 		int i=0;
-		while (line.readLine(*src,false)) {
-			line.chomp();
-			if (line.find("=") == -1) {
+		while (readLine(line, *src, false)) {
+			chomp(line);
+			if (line.find('=') == std::string::npos) {
 				continue;
 			}
 			//dprintf( D_FULLDEBUG, "\t [%2d] %s\n", i, line.c_str() );
 			if (i >= expected_rows) {
 				if (line.empty()) continue;
-				correctOutput.push_back(line.c_str());
+				correctOutput.push_back(line);
 			} else {
-				correctOutput[i] = line.c_str();
+				correctOutput[i] = line;
 			}
 			std::string::iterator first =
 				std::find(correctOutput[i].begin(),
@@ -1246,10 +1248,10 @@ static bool add_docker_arg(ArgList &runArgs) {
 	return true;
 }
 
-static bool docker_add_env_walker (void*pv, const MyString &var, const MyString &val) {
+static bool docker_add_env_walker (void*pv, const std::string &var, const std::string &val) {
 	ArgList* runArgs = (ArgList*)pv;
-	MyString arg;
-	arg.reserve_at_least(var.length() + val.length() + 2);
+	std::string arg;
+	arg.reserve(var.length() + val.length() + 2);
 	arg = var;
 	arg += "=";
 	arg += val;
@@ -1262,16 +1264,16 @@ static bool docker_add_env_walker (void*pv, const MyString &var, const MyString 
 // essentially this means adding each as an argument of the form -e name=value
 bool add_env_to_args_for_docker(ArgList &runArgs, const Env &env)
 {
-	dprintf(D_ALWAYS | D_VERBOSE, "adding %d environment vars to docker args\n", env.Count());
+	dprintf(D_ALWAYS | D_VERBOSE, "adding %zu environment vars to docker args\n", env.Count());
 	env.Walk(
 #if 1 // sigh
 		docker_add_env_walker,
 #else
 		// use a lamda to walk the environment and add each entry as
-		[](void*pv, const MyString &var, const MyString &val) -> bool {
+		[](void*pv, const std::string &var, const std::string &val) -> bool {
 			ArgList& runArgs = *(ArgList*)pv;
 			runArgs.AppendArg("-e");
-			MyString arg(var); arg += "="; arg += val;
+			std::string arg(var); arg += "="; arg += val;
 			runArgs.AppendArg(arg);
 			return true; // true to keep iterating
 		},
@@ -1291,8 +1293,8 @@ run_docker_command(const ArgList & a, const std::string &container, int timeout,
   args.AppendArgsFromArgList( a );
   args.AppendArg( container.c_str() );
 
-  MyString displayString;
-  args.GetArgsStringForLogging( & displayString );
+  std::string displayString;
+  args.GetArgsStringForLogging( displayString );
   dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
 
 	MyPopenTimer pgm;
@@ -1316,16 +1318,16 @@ run_docker_command(const ArgList & a, const std::string &container, int timeout,
 	}
 
 	// On a success, Docker writes the containerID back out.
-	MyString line;
-	line.readLine(pgm.output());
-	line.chomp(); line.trim();
-	if (!ignore_output && line != container.c_str()) {
+	std::string line;
+	readLine(line, pgm.output());
+	chomp(line); trim(line);
+	if (!ignore_output && line != container) {
 		// Didn't get back the result I expected, report the error and check to see if docker is hung.
-		MyString argString;
-		args.GetArgsStringForDisplay(& argString);
+		std::string argString;
+		args.GetArgsStringForDisplay(argString);
 		dprintf( D_ALWAYS, "Docker invocation '%s' failed, printing first few lines of output.\n", argString.c_str());
 		for (int ii = 0; ii < 10; ++ii) {
-			if ( ! line.readLine(pgm.output(), false)) break;
+			if ( ! readLine(line, pgm.output(), false)) break;
 			dprintf( D_ALWAYS, "%s\n", line.c_str() );
 		}
 		return -4;
@@ -1464,6 +1466,165 @@ makeHostname(ClassAd *machineAd, ClassAd *jobAd) {
 	}
 
 	return hostname;
+}
+
+// Return number of bytes used by the image cache, by running
+// docker images --format '{{.Repository}} {{.Tag]} {{.Size}}'
+int64_t 
+DockerAPI::imageCacheUsed() {
+	ArgList imageArgs;
+	if ( ! add_docker_arg(imageArgs))
+		return -1;
+
+	imageArgs.AppendArg( "images" );
+	imageArgs.AppendArg( "--format" );
+	imageArgs.AppendArg( "{{.Repository}}\n{{.Tag}}\n{{.Size}}" );
+
+	std::string displayString;
+	imageArgs.GetArgsStringForDisplay(displayString);
+	dprintf( D_FULLDEBUG, "Attempting to run: %s\n", displayString.c_str() );
+  
+	MyPopenTimer pgm;
+	if (pgm.start_program( imageArgs, false, NULL, false ) < 0) {
+		dprintf( D_ALWAYS, "Failed to run '%s'.\n", displayString.c_str() );
+		return -2;
+	}
+
+	if ( ! pgm.wait_and_close(20) || pgm.output_size() <= 0) {
+		int error = pgm.error_code();
+		if( error ) {
+			dprintf( D_ALWAYS, "Failed to read results from '%s': '%s' (%d)\n", displayString.c_str(), pgm.error_str(), error );
+			if (pgm.was_timeout()) {
+				dprintf( D_ALWAYS, "Declaring a hung docker\n");
+				return DockerAPI::docker_hung;
+			}
+		} else {
+			dprintf( D_ALWAYS, "'%s' returned nothing.\n", displayString.c_str() );
+		}
+		return -3;
+	}
+
+	std::vector<std::pair<std::string, int64_t>> image_sizes;
+	//
+	// On a success, Docker writes the containerID back out.
+	std::string image_name;
+	while (readLine(image_name, pgm.output())) {
+		std::string tag_name;
+		std::string size_str;
+
+		readLine(tag_name, pgm.output());
+		readLine(size_str, pgm.output());
+
+		// All these strings have newlines at the end.  Remove them
+		chomp(image_name);
+		chomp(tag_name);
+		chomp(size_str);
+
+		if (size_str.length() < 3) {
+			continue;
+		}
+
+		if (tag_name == "<none>") {
+			tag_name = "";
+		}
+
+		if (image_name == "<none>") {
+			// How does this happen?  Don't know, but it does
+			continue;
+		}
+
+		if (! tag_name.empty()) {
+			image_name += ':' + tag_name;
+		}
+
+		// Now pull off the suffix, probably either "KB", "MB" or "GB"
+		uint64_t factor = 1;
+		std::string suffix = size_str.substr(size_str.length() - 2, 2);
+		switch (suffix[0]) {
+			case 'K':
+				factor = 1024;
+				break;
+			case 'M':
+				factor = 1024 * 1024;
+				break;
+			case 'G':
+				factor = 1024 * 1024 * 1024;
+				break;
+			default:
+				dprintf(D_ALWAYS, "Unknown size suffix %s in docker images, size calculation may be wrong\n", suffix.c_str());
+		}
+
+		double size = 0.0;
+		sscanf(size_str.c_str(), "%lg", &size);
+		size *= factor;
+		image_sizes.emplace_back(image_name, (int64_t) size);
+	}
+
+	// sort the array by image name
+	std::sort(image_sizes.begin(), image_sizes.end());
+	
+	std::string imageFilename;
+
+	if( ! param( imageFilename, "LOG" ) ) {
+		dprintf(D_ALWAYS, "docker_image_cache_used: LOG not defined in param table, not advertising docker image usage\n");
+		return -1;
+	}
+
+	imageFilename += "/.startd_docker_images";
+
+	std::vector<std::pair<std::string, int64_t>> images_on_disk;
+
+	int lockfd = safe_open_wrapper_follow(imageFilename.c_str(), O_WRONLY|O_CREAT, 0666);
+
+	if (lockfd < 0) {
+		dprintf(D_ALWAYS, "docker_iamge_cached_usage: Can't open %s for locking: %s\n", imageFilename.c_str(), strerror(errno));
+		return -1;
+	}
+
+	FileLock lock(lockfd, NULL, imageFilename.c_str());
+	lock.obtain(READ_LOCK); // blocking
+
+	FILE *f = safe_fopen_wrapper_follow(imageFilename.c_str(), "r");
+
+	if (f) {
+		char existingImage[1024];
+		while ( fgets(existingImage, 1024, f)) {
+
+			if (strlen(existingImage) > 1) {
+				existingImage[strlen(existingImage) - 1] = '\0'; // remove newline
+			} else {
+				continue; // zero length image name, skip
+			}
+			images_on_disk.emplace_back(existingImage, 0);
+		}
+		fclose(f);
+	}
+	lock.release();
+	close(lockfd);
+
+	std::sort(images_on_disk.begin(), images_on_disk.end());
+
+	std::vector<std::pair<std::string, int64_t>> our_images;
+
+	auto pairFirstLessThan = [](const std::pair<std::string, int64_t> &a,
+								const std::pair<std::string, int64_t> &b) {
+		return a.first < b.first;
+	};
+
+	// put into our_images the pair of image name and size for those
+	// images in our cache
+	std::set_intersection(
+			image_sizes.begin(), image_sizes.end(),
+			images_on_disk.begin(), images_on_disk.end(),
+			std::back_inserter(our_images),
+			pairFirstLessThan);
+
+	int64_t our_total_size = 0;
+	for (auto &it: our_images) {
+		our_total_size += it.second;
+	}
+
+	return our_total_size;
 }
 
 int

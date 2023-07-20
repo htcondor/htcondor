@@ -189,10 +189,10 @@ void GCEResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_
 GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 	ASSERT( status_gahp );
 
-	StringList instance_id_list;
-	StringList instance_name_list;
-	StringList instance_status_list;
-	StringList instance_status_msg_list;
+	std::vector<std::string> instance_id_list;
+	std::vector<std::string> instance_name_list;
+	std::vector<std::string> instance_status_list;
+	std::vector<std::string> instance_status_msg_list;
 	int rc = status_gahp->gce_instance_list( resourceName, m_auth_file,
 											 m_account, m_project, m_zone,
 											 instance_id_list,
@@ -211,31 +211,25 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 	//
 	// We have to let a job know if we can't find a status report for it.
 	//
-	List<GCEJob> myJobs;
+	std::set<GCEJob*> myJobs;
 	GCEJob * nextJob = NULL;
-	BaseJob *nextBaseJob = NULL;
-	registeredJobs.Rewind();
-	while ( (nextBaseJob = registeredJobs.Next()) ) {
+	for (auto nextBaseJob: registeredJobs) {
 		nextJob = dynamic_cast< GCEJob * >( nextBaseJob );
 		ASSERT( nextJob );
 		if ( !nextJob->m_instanceName.empty() ) {
-			myJobs.Append( nextJob );
+			myJobs.insert(nextJob);
 		}
 	}
 
-	int job_cnt = instance_id_list.number();
-	instance_id_list.rewind();
-	instance_name_list.rewind();
-	instance_status_list.rewind();
-	instance_status_msg_list.rewind();
-	ASSERT( instance_name_list.number() == job_cnt );
-	ASSERT( instance_status_list.number() == job_cnt );
-	ASSERT( instance_status_msg_list.number() == job_cnt );
-	for( int i = 0; i < job_cnt; i++ ) {
-		std::string instance_id = instance_id_list.next();
-		std::string instance_name = instance_name_list.next();
-		std::string instance_status = instance_status_list.next();
-		std::string instance_status_msg = instance_status_msg_list.next();
+	size_t job_cnt = instance_id_list.size();
+	ASSERT( instance_name_list.size() == job_cnt );
+	ASSERT( instance_status_list.size() == job_cnt );
+	ASSERT( instance_status_msg_list.size() == job_cnt );
+	for( size_t i = 0; i < job_cnt; i++ ) {
+		std::string& instance_id = instance_id_list[i];
+		std::string& instance_name = instance_name_list[i];
+		std::string& instance_status = instance_status_list[i];
+		std::string& instance_status_msg = instance_status_msg_list[i];
 
 		// First, lookup the job using both instace_id and instance_name
 		std::string remote_job_id;
@@ -256,7 +250,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 			// TODO Can we get public DNS name?
 			job->StatusUpdate( instance_id.c_str(), instance_status.c_str(),
 							   instance_status_msg.c_str(), NULL );
-			myJobs.Delete( job );
+			myJobs.erase(job);
 			continue;
 		}
 
@@ -279,7 +273,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 			// TODO Can we get public DNS name?
 			job->StatusUpdate( instance_id.c_str(), instance_status.c_str(),
 							   instance_status_msg.c_str(), NULL );
-			myJobs.Delete( job );
+			myJobs.erase(job);
 			continue;
 		}
 
@@ -288,10 +282,9 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 		continue;
 	}
 
-	myJobs.Rewind();
-	while( ( nextJob = myJobs.Next() ) ) {
-		dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
-		nextJob->StatusUpdate( NULL, NULL, NULL, NULL );
+	for (auto job : myJobs) {
+		dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", job );
+		job->StatusUpdate( NULL, NULL, NULL, NULL );
 	}
 
 	return BSR_DONE;

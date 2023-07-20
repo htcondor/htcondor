@@ -30,13 +30,11 @@
 #include "unit_test_utils.h"
 
 #include "stl_string_utils.h"
+#include <array>
 
+static bool test_case_string_view(void);
 static bool test_sprintf_string(void);
-static bool test_sprintf_MyString(void);
 static bool test_formatstr_cat_string(void);
-static bool test_formatstr_cat_MyString(void);
-static bool test_comparison_ops_lhs_string(void);
-static bool test_comparison_ops_lhs_MyString(void);
 static bool test_lower_case_empty(void);
 static bool test_lower_case_non_empty(void);
 static bool test_upper_case_empty(void);
@@ -57,6 +55,7 @@ static bool tokenize_multiple_calls(void);
 static bool tokenize_end(void);
 static bool tokenize_empty(void);
 static bool tokenize_empty_delimiter(void);
+static bool range_base_string_token_iterator();
 static bool escape_chars_length_1();
 static bool escape_chars_empty();
 static bool escape_chars_multiple();
@@ -68,12 +67,9 @@ bool FTEST_stl_string_utils(void) {
 	
 		// driver to run the tests and all required setup
 	FunctionDriver driver;
-	driver.register_function(test_comparison_ops_lhs_string);
-	driver.register_function(test_comparison_ops_lhs_MyString);
+	driver.register_function(test_case_string_view);
 	driver.register_function(test_sprintf_string);
-	driver.register_function(test_sprintf_MyString);
 	driver.register_function(test_formatstr_cat_string);
-	driver.register_function(test_formatstr_cat_MyString);
 	driver.register_function(test_lower_case_empty);
 	driver.register_function(test_lower_case_non_empty);
 	driver.register_function(test_upper_case_empty);
@@ -94,6 +90,7 @@ bool FTEST_stl_string_utils(void) {
 	driver.register_function(tokenize_end);
 	driver.register_function(tokenize_empty);
 	driver.register_function(tokenize_empty_delimiter);
+	driver.register_function(range_base_string_token_iterator);
 	driver.register_function(escape_chars_length_1);
 	driver.register_function(escape_chars_empty);
 	driver.register_function(escape_chars_multiple);
@@ -103,6 +100,20 @@ bool FTEST_stl_string_utils(void) {
 	return driver.do_all_functions();
 }
 
+
+static bool test_case_string_view() {
+    emit_test("Test case insensitive string_view specialization");
+
+	// test that we are constexpr-correct
+	static_assert(istring_view("HELLO") == istring_view("hello"));
+
+	bool passed = istring_view("foo") != istring_view("bar");
+	if (passed) {
+		PASS;
+	} else {
+		FAIL;
+	}	
+}
 
 static bool test_sprintf_string() {
     emit_test("Test sprintf overloading for std::string");
@@ -170,72 +181,6 @@ static bool test_sprintf_string() {
 	PASS;
 }
 
-static bool test_sprintf_MyString() {
-    emit_test("Test sprintf overloading for MyString");
-
-    int nchars = 0;
-    int rchars = 0;
-    MyString dst;
-    MyString src;
-
-    nchars = STL_STRING_UTILS_FIXBUF / 2;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF - 1;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF + 1;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-    nchars = STL_STRING_UTILS_FIXBUF * 2;
-    src="";
-    for (int j = 0;  j < nchars;  ++j) src += char('0' + (j % 10));
-    rchars = formatstr(dst, "%s", src.Value());
-    if (dst != src) {
-		FAIL;        
-    }
-    if (rchars != nchars) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
 static bool test_formatstr_cat_string() {
     emit_test("Test formatstr_cat overloading for std::string");
 
@@ -245,171 +190,6 @@ static bool test_formatstr_cat_string() {
 		FAIL;        
     }
     if (r != 3) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
-static bool test_formatstr_cat_MyString() {
-    emit_test("Test formatstr_cat overloading for MyString");
-
-    MyString s = "foo";
-    int r = formatstr_cat(s, "%s", "bar");
-    if (s != "foobar") {
-		FAIL;        
-    }
-    if (r != 3) {
-		FAIL;        
-    }    
-
-	PASS;
-}
-
-static bool test_comparison_ops_lhs_string() {
-    emit_test("Test comparison operators: LHS is std::string and RHS is MyString");
-
-    std::string lhs;
-    MyString rhs;
-
-        // test operators when lhs == rhs
-    lhs = "a";
-    rhs = "a";
-    if ((lhs == rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-        // test operators when lhs < rhs
-    lhs = "a";
-    rhs = "b";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != false) {
-		FAIL;        
-    }
-
-        // test operators when lhs > rhs
-    lhs = "b";
-    rhs = "a";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-	PASS;
-}
-
-static bool test_comparison_ops_lhs_MyString() {
-    emit_test("Test comparison operators: LHS is MyString and LHS is std::string");
-
-    MyString lhs;
-    std::string rhs;
-
-        // test operators when lhs == rhs
-    lhs = "a";
-    rhs = "a";
-    if ((lhs == rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
-		FAIL;        
-    }
-
-        // test operators when lhs < rhs
-    lhs = "a";
-    rhs = "b";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != false) {
-		FAIL;        
-    }
-
-        // test operators when lhs > rhs
-    lhs = "b";
-    rhs = "a";
-    if ((lhs == rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs != rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs < rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs > rhs) != true) {
-		FAIL;        
-    }
-    if ((lhs <= rhs) != false) {
-		FAIL;        
-    }
-    if ((lhs >= rhs) != true) {
 		FAIL;        
     }
 
@@ -765,6 +545,21 @@ static bool tokenize_empty_delimiter() {
 		FAIL;
 	}
 	PASS;
+}
+
+static bool range_base_string_token_iterator() {
+	emit_test("Test range-based StringTokenIterator.");
+	const char *in = "aa bb c dd    ee ff ,,, gg";
+	std::array<std::string,7>  expected {"aa", "bb", "c", "dd", "ee", "ff", "gg"};
+
+	bool passed = std::equal(expected.begin(), expected.end(),
+			StringTokenIterator(in).begin(),
+			StringTokenIterator(in).end());
+	if (passed) {
+		PASS;
+	} else {
+		FAIL;
+	}
 }
 
 static bool escape_chars_length_1() {

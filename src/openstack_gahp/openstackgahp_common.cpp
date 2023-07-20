@@ -31,7 +31,7 @@ static std::string openstack_proxy_user;
 static std::string openstack_proxy_passwd;
 
 // List for all openstack commands
-static SimpleList<OpenstackGahpCommand*> openstack_gahp_commands;
+static std::vector<OpenstackGahpCommand*> openstack_gahp_commands;
 
 void set_openstack_proxy_server(const char* url)
 {
@@ -117,26 +117,23 @@ registerOpenstackGahpCommand(const char* command, ioCheckfn iofunc, workerfn wor
 	OpenstackGahpCommand* newcommand = new OpenstackGahpCommand(command, iofunc, workerfunc);
 	ASSERT(newcommand);
 
-	openstack_gahp_commands.Append(newcommand);
+	openstack_gahp_commands.push_back(newcommand);
 }
 
 int
 numofOpenstackCommands(void)
 {
-	return openstack_gahp_commands.Number();
+	return (int) openstack_gahp_commands.size();
 }
 
 int
 allOpenstackCommands(StringList &output)
 {
-	OpenstackGahpCommand *one_cmd = NULL;
-
-	openstack_gahp_commands.Rewind();
-	while( openstack_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : openstack_gahp_commands) {
 		output.append(one_cmd->command.c_str());
 	}
 
-	return openstack_gahp_commands.Number();
+	return (int) openstack_gahp_commands.size();
 }
 
 bool
@@ -146,12 +143,9 @@ executeIOCheckFunc(const char* cmd, char **argv, int argc)
 		return false;
 	}
 
-	OpenstackGahpCommand *one_cmd = NULL;
-
-	openstack_gahp_commands.Rewind();
-	while( openstack_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : openstack_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->iocheckfunction ) {
+				one_cmd->iocheckfunction ) {
 			return one_cmd->iocheckfunction(argv, argc);
 		}
 	}
@@ -167,12 +161,9 @@ executeWorkerFunc(const char* cmd, char **argv, int argc, std::string &output_st
 		return false;
 	}
 
-	OpenstackGahpCommand *one_cmd = NULL;
-
-	openstack_gahp_commands.Rewind();
-	while( openstack_gahp_commands.Next(one_cmd) ) {
+	for (auto one_cmd : openstack_gahp_commands) {
 		if( !strcasecmp(one_cmd->command.c_str(), cmd) &&
-			one_cmd->workerfunction ) {
+				one_cmd->workerfunction ) {
 			return one_cmd->workerfunction(argv, argc, output_string);
 		}
 	}

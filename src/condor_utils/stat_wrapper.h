@@ -20,7 +20,7 @@
 #ifndef STAT_WRAPPER_H
 #define STAT_WRAPPER_H
 
-#include "MyString.h"
+#include <string>
 
 	// Define common "struct stat" and inode types
 #if defined(HAVE_STAT64) && !defined(DARWIN)
@@ -40,7 +40,6 @@ public:
 	// Constructors & destructors
 	// The forms that supply a path or fd will perform a Stat()
 	StatWrapper( const char *path, bool do_lstat = false );
-	StatWrapper( const MyString &path, bool do_lstat = false );
 	StatWrapper( const std::string &path, bool do_lstat = false );
 	StatWrapper( int fd );
 	StatWrapper( void );
@@ -52,13 +51,10 @@ public:
 	// Methods to set the path and FD
 	// These calls do not perform a stat operation
 	void SetPath( const char *path, bool do_lstat = false );
-	void SetPath( const MyString &path, bool do_lstat = false );
 	void SetFD( int fd );
 
 	// Methods to actually perform the stat() (or lstat() or fstat() )
 	int Stat();
-	int Stat( const MyString &path,
-			  bool do_lstat = false );
 	int Stat( const char *path,
 			  bool do_lstat = false );
 	int Stat( int fd );	

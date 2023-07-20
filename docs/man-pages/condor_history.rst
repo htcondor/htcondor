@@ -13,7 +13,8 @@ Synopsis
 **condor_history** [**-name** *name*]
 [**-pool** *centralmanagerhostname[:portnumber]*] [**-backwards**]
 [**-forwards**] [**-constraint** *expr*] [**-file** *filename*]
-[**-local**] [**-startd**] [**-userlog** *filename*]
+[**-userlog** *filename*] [**-search** *path*] [**-dir | -directory**]
+[**-local**] [**-startd**] [**-epochs**]
 [**-format** *formatString AttributeName*]
 [**-autoformat[:jlhVr,tng]** *attr1 [attr2 ...]*]
 [**-l | -long | -xml | -json | -jsonl**] [**-match | -limit** *number*]
@@ -61,7 +62,7 @@ Options
  **-help**
     Display usage information and exit.
  **-name** *name*
-    Query the named *condor_schedd* daemon. if used with **-startd**, query the named *condor_startd* daemon
+    Query the named *condor_schedd* daemon. If used with **-startd**, query the named *condor_startd* daemon
  **-pool** *centralmanagerhostname[:portnumber]*
     Use the *centralmanagerhostname* as the central manager to locate
     *condor_schedd* daemons. The default is the ``COLLECTOR_HOST``, as
@@ -95,6 +96,15 @@ Options
     Read from Startd history files rather than Schedd history files.
     If used with the *-name* option, query is sent as a command to the given Startd
     which must be version 9.0 or later.
+ **-epochs[:d]**
+    Read per job run instance recording also known as job epochs instead of
+    default history file. The **-epochs** option may be followed by a colon
+    character for extra functionality:
+
+    **d** Delete job epoch files after finished reading. This option only deletes
+    epoch files store within :macro:`JOB_EPOCH_HISTORY_DIR`, and can not be used with
+    **-match**, **-limit**, or **-scanlimit**.
+
  **-file** *filename*
     Use the specified file instead of the default history file.
  **-userlog** *filename*
@@ -102,6 +112,14 @@ Options
     instead of from the default history file. A job event log does not
     contain all of the job information, so some fields in the normal
     output of *condor_history* will be blank.
+ **-search** *path*
+    Use the specified path to filename and all matching condor time rotated files
+    ``filename.YYYYMMDDTHHMMSS`` instead of the default history file. If used
+    with **-dir** option then *condor_history* will use the provided path as the
+    directory to search for specific pattern matching history files.
+ **-dir** or **-directory**
+    Search for files in a sources alternate directory configuration knob to
+    read from instead of default history file. Note: only applies to **-epochs**.
  **-format** *formatString* AttributeName
     Display jobs with a custom format. See the *condor_q* man page
     **-format** option for details.

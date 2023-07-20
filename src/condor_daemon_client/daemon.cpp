@@ -69,7 +69,7 @@ Daemon::common_init() {
 	_cmd_str = NULL;
 	m_daemon_ad_ptr = NULL;
 	char buf[200];
-	sprintf(buf,"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
+	snprintf(buf,sizeof(buf),"%s_TIMEOUT_MULTIPLIER",get_mySubSystem()->getName() );
 	Sock::set_timeout_multiplier( param_integer(buf, param_integer("TIMEOUT_MULTIPLIER", 0)) );
 	dprintf(D_DAEMONCORE, "*** TIMEOUT_MULTIPLIER :: %d\n", Sock::get_timeout_multiplier());
 	m_has_udp_command_port = true;
@@ -532,7 +532,7 @@ Daemon::connectSock(Sock *sock, int sec, CondorError* errstack, bool non_blockin
 		}
 	}
 
-	int rc = sock->connect(_addr, 0, non_blocking);
+	int rc = sock->connect(_addr, 0, non_blocking, errstack);
 	if(rc || (non_blocking && rc == CEDAR_EWOULDBLOCK)) {
 		return true;
 	}
@@ -1797,7 +1797,7 @@ char*
 Daemon::localName( void )
 {
 	char buf[100], *tmp, *my_name;
-	sprintf( buf, "%s_NAME", daemonString(_type) );
+	snprintf( buf, sizeof(buf), "%s_NAME", daemonString(_type) );
 	tmp = param( buf );
 	if( tmp ) {
 		my_name = build_valid_daemon_name( tmp );
@@ -2091,6 +2091,17 @@ Daemon::New_addr( char* str )
 
 	if( _addr ) {
 		Sinful sinful(_addr);
+
+		// Extract the alias first. This ensures that if we
+		// rewrite the sinful, we'll re-insert the alias
+		// afterwards. This is important for SSL authentication,
+		// where the alias is used to verify the daemon's host
+		// certificate.
+		const char* sinful_alias = sinful.getAlias();
+		if (sinful_alias) {
+			New_alias(strdup(sinful_alias));
+		}
+
 		char const *priv_net = sinful.getPrivateNetworkName();
 		if( priv_net ) {
 			bool using_private = false;

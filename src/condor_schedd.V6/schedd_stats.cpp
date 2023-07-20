@@ -141,6 +141,7 @@ void ScheddJobCounters::InitJobCounters(StatisticsPool &Pool, int base_verbosity
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunning,                  if_poolbasic);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningSizes,             if_poolbasic);
    SCHEDD_STATS_ADD_VAL(Pool, JobsRunningRuntimes,          if_poolbasic);
+   SCHEDD_STATS_ADD_VAL(Pool, JobsUnmaterialized,           if_poolbasic);
 
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsStarted,  IF_BASICPUB);
    //SCHEDD_STATS_PUB_DEBUG(Pool, JobsCompleted,  IF_BASICPUB);
@@ -286,16 +287,16 @@ void ScheddStatistics::Publish(ClassAd & ad, const char * config) const
 void ScheddStatistics::Publish(ClassAd & ad, int flags) const
 {
    if ((flags & IF_PUBLEVEL) > 0) {
-      ad.Assign("StatsLifetime", (int)StatsLifetime);
+      ad.Assign("StatsLifetime", StatsLifetime);
       ad.Assign("JobsSizesHistogramBuckets", default_sizes_set);
       ad.Assign("JobsRuntimesHistogramBuckets", default_lifes_set);
       if (flags & IF_VERBOSEPUB)
-         ad.Assign("StatsLastUpdateTime", (int)StatsLastUpdateTime);
+         ad.Assign("StatsLastUpdateTime", StatsLastUpdateTime);
       if (flags & IF_RECENTPUB) {
-         ad.Assign("RecentStatsLifetime", (int)RecentStatsLifetime);
+         ad.Assign("RecentStatsLifetime", RecentStatsLifetime);
          if (flags & IF_VERBOSEPUB) {
-            ad.Assign("RecentWindowMax", (int)RecentWindowMax);
-            ad.Assign("RecentStatsTickTime", (int)RecentStatsTickTime);
+            ad.Assign("RecentWindowMax", RecentWindowMax);
+            ad.Assign("RecentStatsTickTime", RecentStatsTickTime);
          }
       }
    }
@@ -535,6 +536,7 @@ void ScheddOtherStatsMgr::ResetJobsRunning()
 		po->stats.JobsRunning = 0;
 		po->stats.JobsRunningRuntimes = 0;
 		po->stats.JobsRunningSizes = 0;
+		po->stats.JobsUnmaterialized = 0;
 
 		if (po->sets.empty())
 			continue;
@@ -548,6 +550,7 @@ void ScheddOtherStatsMgr::ResetJobsRunning()
 				po2->stats.JobsRunning = 0;
 				po2->stats.JobsRunningRuntimes = 0;
 				po2->stats.JobsRunningSizes = 0;
+				po2->stats.JobsUnmaterialized = 0;
 			}
 		}
 	}

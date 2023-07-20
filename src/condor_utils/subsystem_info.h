@@ -181,8 +181,8 @@ class SubsystemInfo
 	void setIsTrusted ( bool is_trusted ) { m_trusted = is_trusted; }
 
   private:
-	const char					*m_Name;
-	const char					*m_TempName;
+	char						*m_Name;
+	char						*m_TempName;
 	bool						 m_NameValid;
 	SubsystemType				 m_Type;
 	const char					*m_TypeName;
@@ -190,7 +190,7 @@ class SubsystemInfo
 	const SubsystemInfoLookup	*m_Info;
 	const SubsystemInfoTable	*m_InfoTable;
 	const char					*m_ClassName;
-	const char					*m_LocalName;
+	char						*m_LocalName;
 
 	//Data member for if a SubSystem is a trusted system with 'root' privilages
 	bool						m_trusted;

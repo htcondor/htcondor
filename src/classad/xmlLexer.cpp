@@ -23,7 +23,9 @@
 #include "classad/lexer.h"
 #include "classad/util.h"
 
-using namespace std;
+using std::string;
+using std::pair;
+
 
 namespace classad {
 
@@ -257,7 +259,6 @@ GrabToken(void)
 bool XMLLexer::
 GrabTag(void)
 {
-	bool    have_token;
 	int     character;
 	string  complete_tag; // the tag and its attributes
 
@@ -286,10 +287,8 @@ GrabTag(void)
 
 	if (character != '>') { 
 		// We have an unclosed tag. This will not do. 
-		have_token = false;
 	} else {
 		BreakdownTag(complete_tag.c_str());
-		have_token = true;
 	}
 	return true;
 }

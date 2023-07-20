@@ -3243,8 +3243,3 @@
     Startd is no longer at old port, job must have been killed
     Can not reconnect to astro.cs.wisc.edu, rescheduling job
 ...
-022 (-01.-01.-01) 01/05 18:32:40 Job disconnected, can not reconnect
-    Socket between submit and execute hosts closed unexpectedly
-    Can not reconnect to slot1@chopin.cs.wisc.edu <128.105.121.21:49501>
-    Job does not support reconnect: JobLeaseDuration not defined
-...

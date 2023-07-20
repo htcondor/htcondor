@@ -22,6 +22,9 @@
 // and the qmgmt server (i.e. the schedd).
 
 #include "condor_common.h"
+
+#include <charconv>
+
 #include "condor_daemon_core.h"
 #include "dedicated_scheduler.h"
 #include "scheduler.h"
@@ -31,12 +34,12 @@
 extern Scheduler scheduler;
 
 int
-SetAttributeInt(int cl, int pr, const char *name, int val, SetAttributeFlags_t flags )
+SetAttributeInt(int cl, int pr, const char *name, int64_t val, SetAttributeFlags_t flags )
 {
-	char buf[100];
+	char buf[24] = { 0 };
 	int rval;
 
-	snprintf(buf,100,"%d",val);
+	std::to_chars(buf, buf+sizeof(buf)-1, val);
 	rval = SetAttribute(cl,pr,name,buf,flags);
 	return(rval);
 }
@@ -79,12 +82,12 @@ SetAttributeExpr(int cl, int pr, const char *name, const ExprTree *val, SetAttri
 }
 
 int
-SetAttributeIntByConstraint(const char *con, const char *name, int val, SetAttributeFlags_t flags)
+SetAttributeIntByConstraint(const char *con, const char *name, int64_t val, SetAttributeFlags_t flags)
 {
-	char buf[100];
+	char buf[24] = { 0 };
 	int rval;
 
-	snprintf(buf,100,"%d",val);
+	std::to_chars(buf, buf+sizeof(buf)-1, val);
 	rval = SetAttributeByConstraint(con,name,buf, flags);
 	return(rval);
 }

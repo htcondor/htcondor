@@ -20,7 +20,7 @@
 #ifndef _PROCD_CONFIG_H
 #define _PROCD_CONFIG_H
 
-#include "MyString.h"
+#include <string>
 
 std::string get_procd_address();
 

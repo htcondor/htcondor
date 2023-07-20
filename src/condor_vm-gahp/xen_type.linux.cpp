@@ -65,12 +65,10 @@ VirshType::~VirshType()
 	}
 	setVMStatus(VM_STOPPED);
 
-	XenDisk *disk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(disk) ) {
-		m_disk_list.DeleteCurrent();
+	for (auto disk : m_disk_list) {
 		delete disk;
 	}
+	m_disk_list.clear();
 }
 
 void
@@ -722,15 +720,15 @@ VirshType::Status()
 
 	    setVMStatus(VM_RUNNING);
 	    // libvirt reports cputime in nanoseconds
-	    m_cpu_time = info->cpuTime / 1000000000.0;
+	    m_cpu_time = info->cpuTime / 1'000'000'000.0;
 	    m_result_msg += "Running";
 
 	    if ( (CurrentStamp - LastStamp) > 0 )
 	    {
 	      // Old calc method because of libvirt version mismatches.
 	      // courtesy of http://people.redhat.com/~rjones/virt-top/faq.html#calccpu 
-	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1000000000.0);
-	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1000000000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
+	      percentUtilization = (1.0 * (CurrentCpuTime-LastCpuTime) ) / ((CurrentStamp - LastStamp)*info->nrVirtCpu*1'000'000'000.0);
+	      vmprintf(D_FULLDEBUG, "Computing utilization %f = (%llu) / (%d * %d * 1'000'000'000.0)\n",percentUtilization, (CurrentCpuTime-LastCpuTime), (int) (CurrentStamp - LastStamp), info->nrVirtCpu );
 	    }
 
 	    formatstr_cat( m_result_msg, " %s=%f",
@@ -1072,10 +1070,10 @@ VirshType::parseXenDiskParam(const char *format)
             lower_case(newdisk->format);
         }
         
-		m_disk_list.Append(newdisk);
+		m_disk_list.push_back(newdisk);
 	}
 
-	if( m_disk_list.Number() == 0 ) {
+	if( m_disk_list.size() == 0 ) {
 		vmprintf(D_ALWAYS, "No valid Virsh disk\n");
 		return false;
 	}
@@ -1091,9 +1089,7 @@ VirshType::makeVirshDiskString(void)
 	std::string xendisk;
 	bool first_disk = true;
 
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
+	for (auto vdisk : m_disk_list) {
 		if( !first_disk ) {
 			xendisk += "</disk>";
 		}
@@ -1137,9 +1133,7 @@ VirshType::writableXenDisk(const char* file)
 		return false;
 	}
 
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
+	for (auto vdisk : m_disk_list) {
 		if( !strcasecmp(basename(file), basename(vdisk->filename.c_str())) ) {
 			if( !strcasecmp(vdisk->permission.c_str(), "w") ||
 					!strcasecmp(vdisk->permission.c_str(), "rw")) {
@@ -1207,7 +1201,7 @@ VirshType::createCkptFiles(void)
 			Resume();
 			return false;
 		}
-		if( fprintf(fp, "%d\n", (int)current_time) < 0 ) {
+		if( fprintf(fp, "%lld\n", (long long)current_time) < 0 ) {
 			fclose(fp);
 			unlink(timestampfile.c_str());
 			vmprintf(D_ALWAYS, "failed to fprintf for checkpoint timestamp "
@@ -1342,9 +1336,7 @@ VirshType::checkCkptSuspendFile(const char* file)
 		return false;
 	}
 
-	XenDisk *vdisk = NULL;
-	m_disk_list.Rewind();
-	while( m_disk_list.Next(vdisk) ) {
+	for (auto vdisk : m_disk_list) {
 		if( !strcasecmp(vdisk->permission.c_str(), "w") ||
 				!strcasecmp(vdisk->permission.c_str(), "rw")) {
 			// this is a writable disk file
@@ -1361,8 +1353,8 @@ VirshType::checkCkptSuspendFile(const char* file)
 			// compare
 			if( disk_mtime != timestamp ) {
 				vmprintf(D_ALWAYS, "Checkpoint timestamp mismatch: "
-						"timestamp of suspend file=%d, mtime of disk file=%d\n",
-						(int)timestamp, (int)disk_mtime);
+						"timestamp of suspend file=%lld, mtime of disk file=%lld\n",
+						(long long)timestamp, (long long)disk_mtime);
 				return false;
 			}
 		}

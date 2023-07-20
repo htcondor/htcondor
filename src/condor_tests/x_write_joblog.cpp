@@ -60,9 +60,9 @@ int writeSubmitEvent(WriteUserLog &logFile)
 int writeRemoteErrorEvent(WriteUserLog &logFile)
 {
 	RemoteErrorEvent remoteerror;
-	remoteerror.setExecuteHost("<128.105.165.12:32779>");
-	remoteerror.setDaemonName("<write job log test>");
-	remoteerror.setErrorText("this is the write test error string");
+	remoteerror.execute_host = "<128.105.165.12:32779>";
+	remoteerror.daemon_name = "<write job log test>";
+	remoteerror.error_str = "this is the write test error string";
 	remoteerror.setCriticalError(true);
 	if ( !logFile.writeEvent(&remoteerror) ) {
 	        printf("Complain about bad remoteerror write\n");
@@ -123,7 +123,7 @@ int writeCheckpointedEvent(WriteUserLog &logFile)
 int writeJobAbortedEvent(WriteUserLog &logFile)
 {
 	JobAbortedEvent jobabort;
-	jobabort.setReason("cause I said so!");
+	jobabort.reason = "cause I said so!";
 	if ( !logFile.writeEvent(&jobabort) ) {
 	        printf("Complain about bad jobabort write\n");
 			exit(1);
@@ -134,8 +134,8 @@ int writeJobAbortedEvent(WriteUserLog &logFile)
 int writeJobEvictedEvent(WriteUserLog &logFile)
 {
 	JobEvictedEvent jobevicted;
-	jobevicted.setReason("It misbehaved!");
-	jobevicted.setCoreFile("corefile");
+	jobevicted.reason = "It misbehaved!";
+	jobevicted.core_file = "corefile";
 	rusage ru;
 	simulateUsage(ru);
 	jobevicted.run_local_rusage = ru;
@@ -170,7 +170,7 @@ int writeJobTerminatedEvent(WriteUserLog &logFile)
 	jobterminated.sent_bytes = 400000;
 	jobterminated.total_recvd_bytes = 800000;
 	jobterminated.total_sent_bytes = 900000;
-	jobterminated.setCoreFile( "badfilecore" );
+	jobterminated.core_file = "badfilecore";
 	jobterminated.normal = false;
 	if ( !logFile.writeEvent(&jobterminated) ) {
 	        printf("Complain about bad jobterminated write\n");
@@ -208,7 +208,7 @@ int writeNodeTerminatedEvent(WriteUserLog &logFile)
 	nodeterminated.sent_bytes = 400000;
 	nodeterminated.total_recvd_bytes = 800000;
 	nodeterminated.total_sent_bytes = 900000;
-	nodeterminated.setCoreFile( "badfilecore" );
+	nodeterminated.core_file = "badfilecore";
 
 	nodeterminated.initUsageFromAd(use);
 
@@ -227,52 +227,6 @@ int writePostScriptTerminatedEvent(WriteUserLog &logFile)
 	postscriptterminated.returnValue = 4;
 	if ( !logFile.writeEvent(&postscriptterminated) ) {
 	        printf("Complain about bad postscriptterminated write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusSubmitEvent(WriteUserLog &logFile)
-{
-	GlobusSubmitEvent globussubmitevent;
-	globussubmitevent.rmContact = strdup("ResourceManager");;
-	globussubmitevent.jmContact = strdup("JobManager");;
-	globussubmitevent.restartableJM = true;
-	if ( !logFile.writeEvent(&globussubmitevent) ) {
-	        printf("Complain about bad globussubmitevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusSubmitFailedEvent(WriteUserLog &logFile)
-{
-	GlobusSubmitFailedEvent globussubmitfailedevent;
-	globussubmitfailedevent.reason = strdup("Cause it could");;
-	if ( !logFile.writeEvent(&globussubmitfailedevent) ) {
-	        printf("Complain about bad globussubmitfailedevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusResourceUpEvent(WriteUserLog &logFile)
-{
-	GlobusResourceUpEvent globusresourceupevent;
-	globusresourceupevent.rmContact = strdup("ResourceUp");;
-	if ( !logFile.writeEvent(&globusresourceupevent) ) {
-	        printf("Complain about bad globusresourceupevent write\n");
-			exit(1);
-	}
-	return(0);
-}
-
-int writeGlobusResourceDownEvent(WriteUserLog &logFile)
-{
-	GlobusResourceDownEvent globusresourcedownevent;
-	globusresourcedownevent.rmContact = strdup("ResourceDown");;
-	if ( !logFile.writeEvent(&globusresourcedownevent) ) {
-	        printf("Complain about bad globusresourcedownevent write\n");
 			exit(1);
 	}
 	return(0);
@@ -333,9 +287,9 @@ int writeJobUnsuspendedEvent(WriteUserLog &logFile)
 int writeJobHeldEvent(WriteUserLog &logFile)
 {
 	JobHeldEvent jobheldevent;
-	jobheldevent.setReason("CauseWeCan");
-	jobheldevent.setReasonCode(404);
-	jobheldevent.setReasonSubCode(0xff);
+	jobheldevent.reason = "CauseWeCan";
+	jobheldevent.code = 404;
+	jobheldevent.subcode = 0xff;
 	if ( !logFile.writeEvent(&jobheldevent) ) {
 		printf("Complain about bad jobheldevent write\n");
 		exit(1);
@@ -346,7 +300,7 @@ int writeJobHeldEvent(WriteUserLog &logFile)
 int writeJobReleasedEvent(WriteUserLog &logFile)
 {
 	JobReleasedEvent jobreleasedevent;
-	jobreleasedevent.setReason("MessinWithYou");
+	jobreleasedevent.reason = "MessinWithYou";
 	if ( !logFile.writeEvent(&jobreleasedevent) ) {
 		printf("Complain about bad jobreleasedevent write\n");
 		exit(1);
@@ -358,7 +312,7 @@ int writeNodeExecuteEvent(WriteUserLog &logFile)
 {
 	NodeExecuteEvent nodeexecuteevent;
 	nodeexecuteevent.node = 49;
-	nodeexecuteevent.setExecuteHost("<128.105.165.12:32779>");
+	nodeexecuteevent.executeHost = "<128.105.165.12:32779>";
 	if ( !logFile.writeEvent(&nodeexecuteevent) ) {
 		printf("Complain about bad nodeexecuteevent write\n");
 		exit(1);
@@ -369,11 +323,9 @@ int writeNodeExecuteEvent(WriteUserLog &logFile)
 int writeJobDisconnectedEvent(WriteUserLog &logFile)
 {
 	JobDisconnectedEvent evt;
-	evt.setStartdAddr("<128.105.165.12:32779>");
-	evt.setStartdName("ThatMachine");
-	evt.setDisconnectReason("TL;DR");
-	//evt.setNoReconnectReason();
-	evt.setStartdAddr("<128.105.165.12:32780>");
+	evt.startd_name = "ThatMachine";
+	evt.disconnect_reason = "TL;DR";
+	evt.startd_addr = "<128.105.165.12:32780>";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobDisconnectedEvent write\n");
 		exit(1);
@@ -384,9 +336,9 @@ int writeJobDisconnectedEvent(WriteUserLog &logFile)
 int writeJobReconnectedEvent(WriteUserLog &logFile)
 {
 	JobReconnectedEvent evt;
-	evt.setStartdAddr("<128.105.165.12:32779>");
-	evt.setStartdName("ThatMachine");
-	evt.setStarterAddr("<128.105.165.12:32780>");
+	evt.startd_addr = "<128.105.165.12:32779>";
+	evt.startd_name = "ThatMachine";
+	evt.starter_addr = "<128.105.165.12:32780>";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobReconnectedEvent write\n");
 		exit(1);
@@ -397,8 +349,8 @@ int writeJobReconnectedEvent(WriteUserLog &logFile)
 int writeJobReconnectFailedEvent(WriteUserLog &logFile)
 {
 	JobReconnectFailedEvent evt;
-	evt.setStartdName("ThatMachine");
-	evt.setReason("The're just not into you");
+	evt.startd_name = "ThatMachine";
+	evt.reason = "The're just not into you";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad JobReconnectFailedEvent write\n");
 		exit(1);
@@ -511,7 +463,7 @@ int writeAttributeUpdateEvent(WriteUserLog &logFile)
 int writePreSkipEvent(WriteUserLog &logFile)
 {
 	PreSkipEvent evt;
-	evt.setSkipNote("DAGMan info");
+	evt.skipEventLogNotes = "DAGMan info";
 	if ( !logFile.writeEvent(&evt) ) {
 		printf("Complain about bad PreSkipEvent write\n");
 		exit(1);
@@ -597,10 +549,6 @@ main(int argc, const char * argv[])
 	writeNodeExecuteEvent(logFile);
 	writeNodeTerminatedEvent(logFile);
 	writePostScriptTerminatedEvent(logFile);
-	writeGlobusSubmitEvent(logFile);
-	writeGlobusSubmitFailedEvent(logFile);
-	writeGlobusResourceUpEvent(logFile);
-	writeGlobusResourceDownEvent(logFile);
 	writeRemoteErrorEvent(logFile);
 
 	writeJobDisconnectedEvent(logFile);

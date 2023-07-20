@@ -67,6 +67,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
 	m_jobs_can_offer(-1),
+	m_will_match_claimed_pslots(false),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),
@@ -448,7 +449,6 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
 		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
-		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string tmp;
@@ -514,14 +514,15 @@ ScheddNegotiate::messageReceived( DCMessenger *messenger, Sock *sock )
 		// this information out of m_reject_reason.
 		size_t pos = m_reject_reason.find('|');
 		if ( pos != std::string::npos ) {
-			MyStringTokener tok;
-			tok.Tokenize(m_reject_reason.c_str());
-			/*const char *reason =*/ tok.GetNextToken("|",false);
-			const char *ac = tok.GetNextToken("|",false);
-			const char *jobid = tok.GetNextToken("|",false);
-			if (ac && jobid) {
-				int rr_cluster, rr_proc;
+			StringTokenIterator tok(m_reject_reason, "|");
+			/*const char *reason =*/ tok.next();
+			const char *ac = tok.next();
+			if (ac) {
 				m_current_auto_cluster_id = atoi(ac);
+			}
+			const char *jobid = tok.next();
+			if (jobid) {
+				int rr_cluster, rr_proc;
 				StrIsProcId(jobid,rr_cluster,rr_proc,NULL);
 				if (rr_cluster != m_current_job_id.cluster || rr_proc != m_current_job_id.proc) {
 					m_current_resources_delivered = 0;

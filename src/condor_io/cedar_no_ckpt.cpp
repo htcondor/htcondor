@@ -627,7 +627,7 @@ ReliSock::get_file_with_permissions( filesize_t *size,
 									 DCTransferQueue *xfer_q)
 {
 	int result;
-	condor_mode_t file_mode;
+	condor_mode_t file_mode = __mode_t_dummy_value;
 
 	// Read the permissions
 	this->decode();
@@ -952,7 +952,7 @@ int relisock_gsi_put(void *arg,  void *buf, size_t size)
 }
 
 
-int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
+int Sock::special_connect(char const *host,int /*port*/,bool nonblocking,CondorError * errorStack)
 {
 	if( !host || *host != '<' ) {
 		return CEDAR_ENOCCB;
@@ -1042,11 +1042,11 @@ int Sock::special_connect(char const *host,int /*port*/,bool nonblocking)
 		return CEDAR_ENOCCB;
 	}
 
-	return do_reverse_connect(ccb_contact,nonblocking);
+	return do_reverse_connect(ccb_contact,nonblocking, errorStack);
 }
 
 int
-SafeSock::do_reverse_connect(char const *,bool)
+SafeSock::do_reverse_connect(char const *,bool,CondorError *)
 {
 	dprintf(D_ALWAYS,
 			"CCBClient: WARNING: UDP not supported by CCB."
@@ -1057,7 +1057,7 @@ SafeSock::do_reverse_connect(char const *,bool)
 }
 
 int
-ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
+ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack)
 {
 	ASSERT( !m_ccb_client.get() ); // only one reverse connect at a time!
 
@@ -1070,7 +1070,7 @@ ReliSock::do_reverse_connect(char const *ccb_contact,bool nonblocking)
 	m_ccb_client =
 		new CCBClient( ccb_contact, (ReliSock *)this );
 
-	if( !m_ccb_client->ReverseConnect(NULL,nonblocking) ) {
+	if( !m_ccb_client->ReverseConnect(errorStack, nonblocking) ) {
 		dprintf(D_ALWAYS,"Failed to reverse connect to %s via CCB.\n",
 				peer_description());
 		return 0;

@@ -20,7 +20,6 @@
 #ifndef __SHARED_PORT_CLIENT_H__
 #define __SHARED_PORT_CLIENT_H__
 
-#include "MyString.h"
 #include "reli_sock.h"
 
 class SharedPortState;
@@ -49,7 +48,7 @@ friend class SharedPortState;
 		{return m_wouldBlockPassSocketCalls;}
 
  private:
-	MyString myName();
+	std::string myName();
 	bool static SharedPortIdIsValid(char const *name);
 
 	// Some operational metrics filled in by the SharedPortState

@@ -43,7 +43,7 @@
 // are changed to a single instance.
 // return value is the length of the resulting string.
 //
-int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=true*/)
+int cleanStringForUseAsAttr(std::string &str, char chReplace/*=0*/, bool compact/*=true*/)
 {
    // have 0 mean 'remove' since we can't actually use it as a replacement char
    // we'll actually implement it by replacing invalid chars with spaces,
@@ -54,34 +54,26 @@ int cleanStringForUseAsAttr(MyString &str, char chReplace/*=0*/, bool compact/*=
    }
 
    // trim the input and replace invalid chars with chReplace
-   str.trim();
-   for (int ii = 0; ii < str.length(); ++ii) {
+   trim(str);
+   for (size_t ii = 0; ii < str.length(); ++ii) {
       char ch = str[ii];
       if (ch == '_' || (ch >= '0' && ch <= '9') || (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
          continue;
-      str.setAt(ii,chReplace);
+      str[ii] = chReplace;
       }
 
    // if compact, convert runs of chReplace with a single instance,
    // unless chReplace is ' ', then remove them entirely.
    if (compact) {
       if (chReplace == ' ')
-         str.replaceString(" ","");
+         replace_str(str, " ", "");
       else {
-         MyString tmp; tmp += chReplace; tmp += chReplace;
-         str.replaceString(tmp.c_str(), tmp.c_str()+1);
+         std::string tmp; tmp += chReplace; tmp += chReplace;
+         replace_str(str, tmp.c_str(), tmp.c_str()+1);
       }
    }
-   str.trim();
-   return str.length();
-}
-
-int cleanStringForUseAsAttr(std::string &str, char chReplace/*=0*/, bool compact/*=true*/)
-{
-	MyString my_str = str;
-	int rc = cleanStringForUseAsAttr(my_str, chReplace, compact);
-	str = my_str.c_str();
-	return rc;
+   trim(str);
+   return (int)str.length();
 }
 
 /*
@@ -275,9 +267,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
-		// This is a magic cookie, see how condor_submit sets it
-	job_ad->Assign( ATTR_CORE_SIZE, -1 );
-
 		// Are these ones really necessary?
 	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
 	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
@@ -300,7 +289,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_CURRENT_HOSTS, 0 );
 
 	job_ad->Assign( ATTR_JOB_STATUS, IDLE );
-	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, (int)time(NULL) );
+	job_ad->Assign( ATTR_ENTERED_CURRENT_STATUS, time(nullptr) );
 
 	job_ad->Assign( ATTR_JOB_PRIO, 0 );
 #ifdef NO_DEPRECATE_NICE_USER
@@ -375,7 +364,7 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 bool add_attrs_from_string_tokens(classad::References & attrs, const char * str, const char * delims=NULL)
 {
 	if (str && str[0]) {
-		StringTokenIterator it(str, 40, delims ? delims : ", \t\r\n");
+		StringTokenIterator it(str, delims ? delims : ", \t\r\n");
 		const std::string * attr;
 		while ((attr = it.next_string())) { attrs.insert(*attr); }
 		return true;

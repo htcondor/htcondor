@@ -100,8 +100,8 @@ public:
         ClassAdLogIterator operator++();
         ClassAdLogIterator operator++(int);
 
-        bool operator==(const ClassAdLogIterator &rhs);
-        bool operator!=(const ClassAdLogIterator &rhs) {return !(*this == rhs);}
+        bool operator==(const ClassAdLogIterator &rhs) const;
+        bool operator!=(const ClassAdLogIterator &rhs) const {return !(*this == rhs);}
 
         using iterator_category = std::input_iterator_tag;
         using value_type = ClassAdLogEntry *;

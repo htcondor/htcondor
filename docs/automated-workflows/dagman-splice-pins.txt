@@ -1,0 +1,132 @@
+
+:index:`CONNECT command<single: CONNECT command; DAG input file>`
+:index:`PIN_IN command<single: PIN_IN command; DAG input file>`
+:index:`PIN_OUT command<single: PIN_OUT command; DAG input file>`
+:index:`connecting DAG splices<single: connecting DAG splices; DAGMan>`
+
+DAG Splice Connections
+''''''''''''''''''''''
+
+In the "default" usage of splices described above, when one splice is
+the parent of another splice, all "terminal" nodes (nodes with no
+children) of the parent splice become parents of all "initial" nodes
+(nodes with no parents) of the child splice. The CONNECT, PIN_IN, and
+PIN_OUT commands (added in version 8.5.7) allow more flexible
+dependencies between splices. (The terms PIN_IN and PIN_OUT were
+chosen because of the hardware analogy.)
+
+The syntax for *CONNECT* is
+
+.. code-block:: condor-dagman
+
+    CONNECT OutputSpliceName InputSpliceName
+
+The syntax for *PIN_IN* is
+
+.. code-block:: condor-dagman
+
+    PIN_IN NodeName PinNumber
+
+The syntax for *PIN_OUT* is
+
+.. code-block:: condor-dagman
+
+    PIN_OUT NodeName PinNumber
+
+All output splice nodes connected to a given PIN_OUT will become
+parents of all input splice nodes connected to the corresponding
+PIN_IN. (The PIN_INs and PIN_OUTs exist only to create the correct
+parent/child dependencies between nodes. Once the DAG is parsed, there
+are no actual DAG objects corresponding to the PIN_INs and PIN_OUTs.)
+
+Any given splice can contain both PIN_IN and PIN_OUT definitions, and
+can be both an input and output splice in different CONNECT commands.
+Furthermore, a splice can appear in any number of CONNECT commands (for
+example, a given splice could be the output splice in two CONNECT
+commands that have different input splices). It is not an error for a
+splice to have PIN_IN or PIN_OUT definitions that are not associated
+with a CONNECT command - such PIN_IN and PIN_OUT commands are simply
+ignored.
+
+Note that the PIN_INs and PIN_OUTs must be defined within the relevant
+splices (this can be done with *INCLUDE* commands), not in the DAG that
+connects the splices.
+
+**There are a number of restrictions on splice connections:**
+
+-  Connections can be made only between two splices; "regular" nodes or
+   Sub-DAGs cannot be used in a CONNECT command.
+-  PIN_INs and PIN_OUTs must be numbered consecutively starting at 1.
+-  The PIN_OUTs of the output splice in a connect command must match
+   the PIN_INs of the input splice in the command.
+-  All "initial" nodes (nodes with no parents) of an input splice used
+   in a CONNECT command must be connected to a PIN_IN.
+
+Violating any of these restrictions will result in an error during the
+parsing of the DAG files.
+
+Note: it is probably desirable for any "terminal" node (a node with no
+children) in the output splice to be connected to a pin_out - but this
+is not required.
+
+**Here is a simple example:**
+
+.. code-block:: condor-dagman
+
+    # File: top.dag
+    SPLICE A spliceA.dag
+    SPLICE B spliceB.dag
+    SPLICE C spliceC.dag
+
+    CONNECT A B
+    CONNECT B C
+
+.. code-block:: condor-dagman
+
+    # File: spliceA.dag
+    JOB A1 A1.sub
+    JOB A2 A2.sub
+
+    PIN_OUT A1 1
+    PIN_OUT A2 2
+
+.. code-block:: condor-dagman
+
+    # File: spliceB.dag
+    JOB B1 B1.sub
+    JOB B2 B2.sub
+    JOB B3 B3.sub
+    JOB B4 B4.sub
+
+    PIN_IN B1 1
+    PIN_IN B2 1
+    PIN_IN B3 2
+    PIN_IN B4 2
+
+    PIN_OUT B1 1
+    PIN_OUT B2 2
+    PIN_OUT B3 3
+    PIN_OUT B4 4
+
+.. code-block:: condor-dagman
+
+    # File: spliceC.dag
+    JOB C1 C1.sub
+
+    PIN_IN C1 1
+    PIN_IN C1 2
+    PIN_IN C1 3
+    PIN_IN C1 4
+
+In this example, node A1 will be the parent of B1 and B2; node A2 will
+be the parent of B3 and B4; and nodes B1, B2, B3 and B4 will all be
+parents of C1.
+
+A diagram of the above example:
+
+.. figure:: /_images/dagman-splice-connect.png
+  :width: 600
+  :alt: Diagram of the splice connect example
+  :align: center
+
+  Diagram of the splice connect example

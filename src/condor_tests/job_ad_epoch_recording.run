@@ -45,8 +45,8 @@ $testname = "job_ad_epoch_recording";
 $dir = getcwd;
 CondorTest::debug("Path to working directory: $dir\n",1);
 
-#Used to verify configuration of JOB_EPOCH_INSTANCE_DIR
-#runCondorTool("condor_config_val -dump JOB_EPOCH_INSTANCE_DIR",\@tooloutput,2,{emit_output=>1});
+#Used to verify configuration of JOB_EPOCH_HISTORY_DIR
+#runCondorTool("condor_config_val -dump JOB_EPOCH_HISTORY_DIR",\@tooloutput,2,{emit_output=>1});
 
 @jobSubmitFiles = ();
 #Cluster Id needed to determine epoch file name
@@ -56,7 +56,7 @@ $currTestNum = 0;
 ##========================================Configure Condor=====================================================
 #testreq: personal
 my $config = <<CONDOR_TESTREQ_CONFIG;
-	JOB_EPOCH_INSTANCE_DIR = $(TEST_DIR)/epoch_ads
+	JOB_EPOCH_HISTORY_DIR = $(TEST_DIR)/epoch_ads
 CONDOR_TESTREQ_CONFIG
 #endtestreq
 ##==========================================File Creation====================================================
@@ -119,7 +119,7 @@ sub check_epoch_files{
 		while(<OUT>) {
 			chomp();
 			my $line = $_;
-			if($line =~ m/\*\*\* ClusterId=\d ProcId=\d RunInstanceId=\d/){
+			if($line =~ m/\*\*\* EPOCH ClusterId=\d ProcId=\d RunInstanceId=\d/){
 				$matches++;
 				CondorTest::debug("Found banner: $line\n",1);	
 			}

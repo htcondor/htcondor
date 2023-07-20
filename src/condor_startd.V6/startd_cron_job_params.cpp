@@ -26,7 +26,6 @@
 #include "classad_cron_job.h"
 #include "startd_cron_job.h"
 #include <list>
-using namespace std;
 
 // Override the lookup methods so that we can stuff in default values
 StartdCronJobParams::StartdCronJobParams(
@@ -43,7 +42,7 @@ StartdCronJobParams::Initialize( void )
 		return false;
 	}
 
-	MyString	slots_str;
+	std::string slots_str;
 	Lookup( "SLOTS", slots_str );
 
 	m_slots.clear();
@@ -70,13 +69,38 @@ StartdCronJobParams::Initialize( void )
 			s += "ALL";
 		}
 		else {
-			list<unsigned>::iterator iter;
+			std::list<unsigned>::iterator iter;
 			for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
 				formatstr_cat( s, "%u ", *iter );
 			}
 		}
 		dprintf( D_ALWAYS, "%s\n", s.c_str() );
 	}
+
+
+	// Set up my own metrics.
+	const char * jobName = this->GetName();
+	char * metricString = this->Lookup( "METRICS" );
+	if( metricString != NULL && metricString[0] != '\0' ) {
+		StringList pairs( metricString );
+		for( char * pair = pairs.first(); pair != NULL; pair = pairs.next() ) {
+			StringList tn( pair, ":" );
+			char * metricType = tn.first();
+			if (!metricType) continue;
+
+			char * attributeName = tn.next();
+			if(! this->addMetric( metricType, attributeName )) {
+				dprintf(    D_ALWAYS, "Unknown metric type '%s' for attribute "
+				            "'%s' in monitor '%s', ignoring.\n", metricType,
+				            attributeName, jobName );
+			} else {
+				dprintf(    D_FULLDEBUG, "Added %s as %s metric for %s job\n",
+				            attributeName, metricType, jobName );
+			}
+		}
+	}
+	if (metricString) free( metricString );
+
 
 	return true;
 };
@@ -88,7 +112,7 @@ StartdCronJobParams::InSlotList( unsigned slot ) const
 		return true;
 	}
 
-	list<unsigned>::const_iterator iter;
+	std::list<unsigned>::const_iterator iter;
 	for( iter = m_slots.begin(); iter != m_slots.end(); iter++ ) {
 		if ( slot == *iter ) {
 			return true;

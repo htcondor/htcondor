@@ -56,8 +56,8 @@ class BaseJob : public Service
 	virtual void SetRemoteJobId( const char *job_id );
 	bool SetRemoteJobStatus( const char *job_status );
 
-	void UpdateJobLeaseSent( int new_expiration_time );
-	void UpdateJobLeaseReceived( int new_expiration_time );
+	void UpdateJobLeaseSent( time_t new_expiration_time );
+	void UpdateJobLeaseReceived( time_t new_expiration_time );
 
 	void SetJobLeaseTimers();
 	virtual void JobLeaseSentExpired();
@@ -104,16 +104,12 @@ class BaseJob : public Service
 	bool deleteFromGridmanager;
 	bool deleteFromSchedd;
 
-	bool wantResubmit;
-	int doResubmit;
-	bool wantRematch;
-
 	bool resourceDown;
 	bool resourceStateKnown;
 	bool resourcePingPending;
 	bool resourcePingComplete;
 
-	int m_lastRemoteStatusUpdate;
+	time_t m_lastRemoteStatusUpdate;
 	bool m_currentStatusUnknown;
 
 	int evaluateStateTid;

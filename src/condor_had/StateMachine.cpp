@@ -679,7 +679,7 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
         char* sinfulAddress     = utilToSinful( replicationAddress );
 
         if( sinfulAddress == 0 ) {
-            sprintf( buffer,
+            snprintf( buffer, sizeof(buffer),
 					 "HADStateMachine::setReplicationDaemonSinfulString"
 					 " invalid address %s\n",
 					 replicationAddress );
@@ -714,7 +714,7 @@ HADStateMachine::setReplicationDaemonSinfulString( void )
                     "corresponding replication daemon - %s\n",
                     s.getSinful() );
             } else {
-                sprintf( buffer,
+                snprintf( buffer, sizeof(buffer),
                          "HADStateMachine::setReplicationDaemonSinfulString "
                          "host names of machine and replication daemon do "
                          "not match: %s vs. %s\n", mySinful.getSinful(), s.getSinful() );

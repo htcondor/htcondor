@@ -183,7 +183,6 @@ void
 main_init( int, char ** const)
 {
 	dprintf(D_ALWAYS, "FT-GAHP IO thread\n");
-	dprintf(D_SECURITY | D_FULLDEBUG, "FT-GAHP IO thread\n");
 
 	int stdin_pipe = -1;
 #if defined(WIN32)
@@ -795,7 +794,11 @@ download_proxy( const std::string &sid, const ClassAd &ad,
 
 	std::string tmp_str;
 	std::string proxy_path;
-	define_sandbox_path(sid, proxy_path);
+	if (sid[0] == '/') {
+		proxy_path = sid;
+	} else {
+		define_sandbox_path(sid, proxy_path);
+	}
 
 	ad.LookupString( ATTR_X509_USER_PROXY, tmp_str );
 	proxy_path += DIR_DELIM_CHAR;
@@ -886,12 +889,8 @@ destroy_sandbox(std::string sid, std::string &err)
 	dprintf(D_ALWAYS, "BOSCO: destroy, sandbox path: %s\n", iwd.c_str());
 
 	// remove (rm -rf) the sandbox dir
-	char *buff = condor_dirname( iwd.c_str() );
-	std::string parent_dir = buff;
-	free( buff );
-	buff = condor_dirname( parent_dir.c_str() );
-	std::string gparent_dir = buff;
-	free( buff );
+	std::string parent_dir  = condor_dirname(iwd.c_str());
+	std::string gparent_dir = condor_dirname( parent_dir.c_str() );
 
 	dprintf( D_FULLDEBUG, "parent_dir: %s\n", parent_dir.c_str() );
 	dprintf( D_FULLDEBUG, "gparent_dir: %s\n", gparent_dir.c_str() );
@@ -967,7 +966,7 @@ define_sandbox_path(std::string sid, std::string &path)
 
 	char c_hex_sha256[SHA256_DIGEST_LENGTH*2+1];
 	for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-		sprintf(&(c_hex_sha256[i*2]), "%02x", hash_buf[i]);
+		snprintf(&(c_hex_sha256[i*2]), 3, "%02x", hash_buf[i]);
 	}
 	c_hex_sha256[SHA256_DIGEST_LENGTH*2] = 0;
 
@@ -1016,12 +1015,16 @@ int do_command_download_sandbox(void *arg, Stream*) {
 	// first, create the directory that will be IWD.  returns the
 	// directory created.
 	std::string iwd;
-	bool success;
-	success = create_sandbox_dir(sid, iwd);
-	if (!success) {
-		// FAIL
-		write_to_pipe( ChildErrorPipe, "Failed to create sandbox" );
-		return 1;
+	bool success = true;
+	if (sid[0] == '/') {
+		iwd = sid;
+	} else {
+		success = create_sandbox_dir(sid, iwd);
+		if (!success) {
+			// FAIL
+			write_to_pipe( ChildErrorPipe, "Failed to create sandbox" );
+			return 1;
+		}
 	}
 
 	// rewrite the IWD to the newly created sandbox dir
@@ -1089,7 +1092,11 @@ int do_command_upload_sandbox(void *arg, Stream*) {
 
 	// rewrite the IWD to the actual sandbox dir
 	std::string iwd;
-	define_sandbox_path(sid, iwd);
+	if (sid[0] == '/') {
+		iwd = sid;
+	} else {
+		define_sandbox_path(sid, iwd);
+	}
 	ad.Assign(ATTR_JOB_IWD, iwd);
 	char ATTR_SANDBOX_ID[] = "SandboxId";
 	ad.Assign(ATTR_SANDBOX_ID, sid);

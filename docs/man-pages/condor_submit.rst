@@ -497,7 +497,7 @@ BASIC COMMANDS
     environment variables that the user had at submit time. Defaults to
     ``False``.  A wholesale import of the user's environment is very likely to lead
     to problems executing the job on a remote machine unless there is a shared 
-    file system for users' home directories between the submit machine and execute machine.
+    file system for users' home directories between the access point and execute machine.
     So rather than setting getenv to ``True``, it is much better to set it to a list
     of environment variables to import. 
 
@@ -557,21 +557,20 @@ BASIC COMMANDS
     name where HTCondor will write a log file of what is happening with
     this job cluster, called a job event log. For example, HTCondor will
     place a log entry into this file when and where the job begins
-    running, when the job produces a checkpoint, or moves (migrates) to
-    another machine, and when the job completes. Most users find
+    running, when it transfers files, if the job is evicted,
+    and when the job completes. Most users find
     specifying a **log** file to be handy; its use is recommended. If no
     **log** entry is specified, HTCondor does not create a log for this
     cluster. If a relative path is specified, it is relative to the
     current working directory as the job is submitted or the directory
-    specified by submit command **initialdir** on the submit machine.
+    specified by submit command **initialdir** on the access point.
 
     :index:`e-mail related to a job<single: e-mail related to a job; notification>`
     :index:`notification<single: notification; submit commands>`
  notification = <Always | Complete | Error | Never>
     Owners of HTCondor jobs are notified by e-mail when certain events
-    occur. If defined by *Always*, the owner will be notified whenever
-    the job produces a checkpoint, as well as when the job completes. If
-    defined by *Complete*, the owner will be notified when the job
+    occur. If defined by *Always* or *Complete*,
+    the owner will be notified when the job
     terminates. If defined by *Error*, the owner will only be notified
     if the job terminates abnormally, (as defined by
     ``JobSuccessExitCode``, if defined) or if the job is placed on hold
@@ -636,7 +635,7 @@ BASIC COMMANDS
     Note that the priority setting in an HTCondor submit file will be
     overridden by *condor_dagman* if the submit file is used for a node
     in a DAG, and the priority of the node within the DAG is non-zero
-    (see  :ref:`users-manual/dagman-workflows:advanced features of dagman`
+    (see  :ref:`automated-workflows/dagman-priorities:Setting Priorities for Nodes`
     for more details).
 
     :index:`queue<single: queue; submit commands>`
@@ -719,11 +718,7 @@ BASIC COMMANDS
 
     The **vanilla** universe is the default (except where the
     configuration variable ``DEFAULT_UNIVERSE``
-    :index:`DEFAULT_UNIVERSE` defines it otherwise), and is an
-    execution environment for jobs which do not use HTCondor's
-    mechanisms for taking checkpoints; these are ones that have not been
-    linked with the HTCondor libraries. Use the **vanilla** universe to
-    submit shell scripts to HTCondor.
+    :index:`DEFAULT_UNIVERSE` defines it otherwise).
 
     The **scheduler** universe is for a job that is to run on the
     machine where the job is submitted. This universe is intended for a
@@ -934,7 +929,7 @@ COMMANDS FOR MATCHMAKING
 
     For scheduler and local universe jobs, the requirements expression
     is evaluated against the ``Scheduler`` ClassAd which represents the
-    the *condor_schedd* daemon running on the submit machine, rather
+    the *condor_schedd* daemon running on the access point, rather
     than a remote machine. Like all commands in the submit description
     file, if multiple requirements commands are present, all but the
     last one are ignored. By default, *condor_submit* appends the
@@ -961,7 +956,7 @@ COMMANDS FOR MATCHMAKING
     #. Memory >= RequestMemory, if the job ClassAd attribute
        ``RequestMemory`` is defined.
     #. If Universe is set to Vanilla, FileSystemDomain is set equal to
-       the submit machine's FileSystemDomain.
+       the access point's FileSystemDomain.
 
     View the requirements of a job which has already been submitted
     (along with everything else about the job ClassAd) with the command
@@ -1097,7 +1092,7 @@ FILE TRANSFER COMMANDS
     subset of output files as specified by the submit command
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`.
     The plug-in does the transfer of files, and no files are sent back
-    to the submit machine. The HTCondor Administrator's manual has full
+    to the access point. The HTCondor Administrator's manual has full
     details.
 
     :index:`should_transfer_files<single: should_transfer_files; submit commands>`
@@ -1113,7 +1108,7 @@ FILE TRANSFER COMMANDS
     equal to *YES* will cause HTCondor to always transfer files for the
     job. *NO* disables HTCondor's file transfer mechanism. *IF_NEEDED*
     will not transfer files for the job if it is matched with a resource
-    in the same ``FileSystemDomain`` as the submit machine (and
+    in the same ``FileSystemDomain`` as the access point (and
     therefore, on a machine with the same shared file system). If the
     job is matched with a remote resource in a different
     ``FileSystemDomain``, HTCondor will transfer the necessary files.
@@ -1285,7 +1280,7 @@ FILE TRANSFER COMMANDS
  transfer_output_files = < file1,file2,file... >
     This command forms an explicit list of output files and directories
     to be transferred back from the temporary working directory on the
-    execute machine to the submit machine. If there are multiple files,
+    execute machine to the access point. If there are multiple files,
     they must be delimited with commas. Setting
     **transfer_output_files** :index:`transfer_output_files<single: transfer_output_files; submit commands>`
     to the empty string ("") means that no files are to be transferred.
@@ -1303,7 +1298,7 @@ FILE TRANSFER COMMANDS
 
     For grid universe jobs other than with grid type **condor**, to have
     files other than standard output and standard error transferred from
-    the execute machine back to the submit machine, do use
+    the execute machine back to the access point, do use
     **transfer_output_files**, listing all files to be transferred.
     These files are found on the execute machine in the working
     directory of the job.
@@ -1392,7 +1387,7 @@ FILE TRANSFER COMMANDS
     :index:`transfer_plugins<single: transfer_plugins; submit commands>`
  transfer_plugins = < tag=plugin ; tag2,tag3=plugin2 ... >
     Specifies the file transfer plugins
-    (see :ref:`admin-manual/setting-up-special-environments:enabling the transfer of files specified by a url`)
+    (see :doc:`../admin-manual/file-and-cred-transfer`)
     that should be transferred along with
     the input files prior to invoking file transfer plugins for files specified in
     *transfer_input_files*. *tag* should be a URL prefix that is used in *transfer_input_files*,
@@ -2139,11 +2134,11 @@ COMMANDS FOR THE GRID
  transfer_error = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     error output (from ``stderr``) from the job is transferred from the
-    remote machine back to the submit machine. The name of the file
+    remote machine back to the access point. The name of the file
     after transfer is given by the
     **error** :index:`error<single: error; submit commands>` command. If
     ``False``, no transfer takes place (from the remote machine to
-    submit machine), and the name of the file is given by the
+    access point), and the name of the file is given by the
     **error** :index:`error<single: error; submit commands>` command. The
     default value is ``True``.
 
@@ -2166,11 +2161,11 @@ COMMANDS FOR THE GRID
  transfer_output = <True | False>
     For jobs submitted to the grid universe only. If ``True``, then the
     output (from ``stdout``) from the job is transferred from the remote
-    machine back to the submit machine. The name of the file after
+    machine back to the access point. The name of the file after
     transfer is given by the
     **output** :index:`output<single: output; submit commands>` command. If
     ``False``, no transfer takes place (from the remote machine to
-    submit machine), and the name of the file is given by the
+    access point), and the name of the file is given by the
     **output** :index:`output<single: output; submit commands>` command. The
     default value is ``True``.
 
@@ -2492,15 +2487,8 @@ ADVANCED COMMANDS
     Should the user's program abort and produce a core file,
     **coresize** specifies the maximum size in bytes of the core file
     which the user wishes to keep. If **coresize** is not specified in
-    the command file, the system's user resource limit ``coredumpsize``
-    is used (note that ``coredumpsize`` is not an HTCondor parameter -
-    it is an operating system parameter that can be viewed with the
-    *limit* or *ulimit* command on Unix and in the Registry on Windows).
-    A value of -1 results in no limits being applied to the core file
-    size. If HTCondor is running as root, a **coresize** setting greater
-    than the system ``coredumpsize`` limit will override the system
-    setting; if HTCondor is not running as root, the system
-    ``coredumpsize`` limit will override **coresize**.
+    the command file, this is set to 0 (meaning no core will be
+    generated).
 
     :index:`cron_day_of_month<single: cron_day_of_month; submit commands>`
  cron_day_of_month = <Cron-evaluated Day>
@@ -2924,6 +2912,12 @@ ADVANCED COMMANDS
     automatically defined for **submit_event_notes**, causing the
     logged submit event to identify the DAG node job submitted.
 
+    :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
+ ulog_execute_attrs = <attribute-list>
+    A comma-seperated list of machine ClassAd attribute names. The named
+    attributes and their values are written as part of the execution event
+    in the job event log.
+
     :index:`use_oauth_services<single: use_oauth_services; submit commands>`
  use_oauth_services = <list of credential service names>
     A comma-separated list of credential-providing service names for
@@ -2944,10 +2938,13 @@ ADVANCED COMMANDS
     provided to differentiate between multiple credentials from the same
     credential service provider.
 
- +<attribute> = <value>
-    A line that begins with a '+' (plus) character instructs
-    *condor_submit* to insert the given *attribute* into the job
-    ClassAd with the given *value*. Note that setting an attribute
+ MY.<attribute> = <value> or +<attribute> = <value>
+    A macro that begins with MY. or a line that begins with a '+' (plus) character instructs
+    *condor_submit* to insert the given *attribute* (without + or MY.) into the job
+    ClassAd with the given *value*. The macro can be referenced in other submit statements
+    by using ``$(MY.<attribute>)``. A +<attribute> is converted to MY.<attribute> when the file is read.
+
+    Note that setting an job attribute in this way
     should not be used in place of one of the specific commands listed
     above. Often, the command name does not directly correspond to an
     attribute name; furthermore, many submit commands result in actions
@@ -2971,14 +2968,15 @@ and comments.
 
                 <macro_name> = <string>
 
-    Two pre-defined macros are supplied by the submit description file
+    Several pre-defined macros are supplied by the submit description file
     parser. The ``$(Cluster)`` or ``$(ClusterId)`` macro supplies the
     value of the
     :index:`ClusterId<single: ClusterId; ClassAd job attribute>`\ :index:`job ClassAd attribute<single: job ClassAd attribute; ClusterId>`
     :index:`cluster identifier<single: cluster identifier; job ID>`\ ``ClusterId`` job
     ClassAd attribute, and the ``$(Process)`` or ``$(ProcId)`` macro
-    supplies the value of the ``ProcId`` job ClassAd attribute. These
-    macros are intended to aid in the specification of input/output
+    supplies the value of the ``ProcId`` job ClassAd attribute. 
+    The ``$(JobId)`` macro supplies the full job id. It is equivalent to ``$(ClusterId).$(ProcId)``.
+    These macros are intended to aid in the specification of input/output
     files, arguments, etc., for clusters with lots of jobs, and/or could
     be used to supply an HTCondor process with its own cluster and
     process numbers on the command line.
@@ -3040,11 +3038,20 @@ and comments.
 
         D = 24
 
-    This is of limited value, as the scope of macro substitution is the
-    submit description file. Thus, either the macro is or is not defined
-    within the submit description file. If the macro is defined, then
-    the default value is useless. If the macro is not defined, then
-    there is no point in using it in a submit command.
+    This is useful for creating submit templates where values can be 
+    passed on the *condor_submit* command line, but that have a default value as well.
+    In the above example, if you give a value for E on the command line like this
+
+    .. code-block:: console
+
+        condor_submit E=99 <submit-file>
+
+    The value of 99 is used for E, resulting in
+
+    .. code-block:: text
+
+        D = 99
+
     :index:`as a literal character in a submit description file<single: as a literal character in a submit description file; $>`
 
     To use the dollar sign character ($) as a literal, without macro
@@ -3214,6 +3221,9 @@ will not be modified during
  Process
     Alternate name for the ProcId submit variable. Before HTCondor
     version 8.4 this was the only name.
+ JobId
+    Set to ``$(ClusterId).$(ProcId)`` so that it will expand to the full
+    id of the job.
  Node
     For parallel universes, set to the value #pArAlLeLnOdE# or #MpInOdE#
     depending on the parallel universe type For other universes it is
@@ -3369,8 +3379,9 @@ Examples
    ``out.0``, and ``err.0`` for the first run of this program (process
    0). Stdin, stdout, and stderr will refer to ``in.1``, ``out.1``, and
    ``err.1`` for process 1, and so forth. A log file containing entries
-   about where and when HTCondor runs, takes checkpoints, and migrates
-   processes in this cluster will be written into file ``foo.log``.
+   about where and when HTCondor runs, transfers file, if it's evicted,
+   and when it terminates, among other things, the various processes in
+   this cluster will be written into file ``foo.log``.
 
    .. code-block:: text
 

@@ -22,15 +22,11 @@
 
 #include "condor_common.h"
 #include "condor_regex.h"
-#include "extArray.h"
 #include "MyString.h"
 
-#define USE_MAPFILE_V2 1
-#ifdef USE_MAPFILE_V2
 #include "pool_allocator.h"
 class CanonicalMapList;
 typedef std::map<const YourString, CanonicalMapList*, CaseIgnLTYourString> METHOD_MAP;
-#endif
 
 typedef struct _MapFileUsage {
 	int cMethods;
@@ -50,52 +46,34 @@ class MapFile
 	~MapFile();
 
 	int
-	ParseCanonicalizationFile(const MyString filename, bool assume_hash=false, bool allow_include=true);
+	ParseCanonicalizationFile(const std::string& filename, bool assume_hash=false, bool allow_include=true);
 
 	int
 	ParseCanonicalization(MyStringSource & src, const char* srcname, bool assume_hash=false, bool allow_include=true);
 
 	int
-	ParseUsermapFile(const MyString filename, bool assume_hash=true);
+	ParseUsermapFile(const std::string& filename, bool assume_hash=true);
 
 	int
 	ParseUsermap(MyStringSource & src, const char * srcname, bool assume_hash=true);
 
 	int
-	GetCanonicalization(const std::string& method, const std::string& principal,
-						std::string &canonicalization)
-	{
-		MyString internal_canon;
-		auto retval = GetCanonicalization(MyString(method), MyString(principal), internal_canon);
-		if (!retval) {
-			canonicalization = internal_canon;
-		}
-		return retval;
-	}
+	GetCanonicalization(const std::string& method,
+	                    const std::string& principal,
+	                    std::string & canonicalization);
 
 	int
-	GetCanonicalization(const MyString& method,
-						const MyString& principal,
-						MyString & canonicalization);
+	GetUser(const std::string canonicalization,
+	        std::string & user);
 
-	int
-	GetUser(const MyString canonicalization,
-			MyString & user);
-
-#ifdef USE_MAPFILE_V2
 	bool empty() { return methods.empty(); }
 	void reserve(int cbReserve) { apool.reserve(cbReserve); } // reserve space in the allocation pool
 	void dump(FILE* fp);
-#else
-	bool empty() { return canonical_entries.length() == 0 && user_entries.length() == 0; }
-	void reserve(int /*cbReserve*/) { } // reserve space in the allocation pool
-#endif
 	int  size(MapFileUsage * pusage=NULL); // returns number of items in the map, and also usage information if pusage is non-null
 	void reset(); // remove all items, but do not free memory
 	void clear(); // clear all items and free memory
 
  private:
-#ifdef USE_MAPFILE_V2
 	ALLOCATION_POOL apool;
 	METHOD_MAP methods;
 
@@ -108,42 +86,14 @@ class MapFile
 
 	bool
 	FindMapping(CanonicalMapList* list,       // in: the mapping data set
-				const MyString & input,         // in: the input to be matched and mapped.
-				ExtArray<MyString> * groups,  // out: match groups from the input
-				const char ** pcanon);        // out: canonicalization pattern
+	            const std::string & input,         // in: the input to be matched and mapped.
+	            std::vector<std::string> * groups,  // out: match groups from the input
+	            const char ** pcanon);        // out: canonicalization pattern
 
 	void
-	PerformSubstitution(ExtArray<MyString> & groups, // in: match gropus (usually from FindMapping)
+	PerformSubstitution(std::vector<std::string> & groups, // in: match gropus (usually from FindMapping)
 						const char * pattern,        // in: canonicalization pattern
-						MyString & output);          // out: the input pattern with groups substituted is appended to this
-#else
-	struct CanonicalMapEntry {
-		MyString method;
-		MyString principal;
-		MyString canonicalization;
-		Regex regex;
-	};
-
-	ExtArray<CanonicalMapEntry> canonical_entries;
-	struct UserMapEntry {
-		MyString canonicalization;
-		MyString user;
-		Regex regex;
-	};
-
-	ExtArray<UserMapEntry> user_entries;
-
-	bool
-	PerformMapping(Regex & regex,
-				   const MyString input,
-				   const MyString pattern,
-				   MyString & output);
-
-	void
-	PerformSubstitution(ExtArray<MyString> & groups,
-						const MyString pattern,
-						MyString & output);
-#endif
+						std::string & output);          // out: the input pattern with groups substituted is appended to this
 
 	size_t
 	ParseField(const std::string & line, size_t offset, std::string & field, uint32_t * popts = NULL);

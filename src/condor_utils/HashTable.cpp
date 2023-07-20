@@ -80,11 +80,6 @@ size_t hashFunction( const std::string &key )
 	return hashFunction( key.c_str() );
 }
 
-size_t hashFunction( const MyString &key )
-{
-	return hashFunction( key.c_str() );
-}
-
 size_t hashFunction( const YourString &key )
 {
 	return hashFunction( key.Value() );

@@ -33,8 +33,6 @@
 #include "gcejob.h"
 #include "condor_config.h"
 
-using namespace std;
-
 #define GM_INIT							0
 #define GM_START_VM						1
 #define GM_SAVE_INSTANCE_ID				2
@@ -97,7 +95,7 @@ void GCEJobReconfig()
 bool GCEJobAdMatch( const ClassAd *job_ad )
 {
 	int universe;
-	string resource;
+	std::string resource;
 
 	job_ad->LookupInteger( ATTR_JOB_UNIVERSE, universe );
 	job_ad->LookupString( ATTR_GRID_RESOURCE, resource );
@@ -129,13 +127,13 @@ GCEJob::GCEJob( ClassAd *classad ) :
 	m_failure_injection(NULL),
 	probeNow( false )
 {
-	string error_string = "";
+	std::string error_string = "";
 	char *gahp_path = NULL;
 	char *gahp_log = NULL;
 	int gahp_worker_cnt = 0;
 	char *gahp_debug = NULL;
 	ArgList args;
-	string value;
+	std::string value;
 
 	remoteJobState = "";
 	gmState = GM_INIT;
@@ -260,11 +258,11 @@ GCEJob::GCEJob( ClassAd *classad ) :
 
 	args.AppendArg("-w");
 	gahp_worker_cnt = param_integer( "GCE_GAHP_WORKER_MIN_NUM", 1 );
-	args.AppendArg(gahp_worker_cnt);
+	args.AppendArg(std::to_string(gahp_worker_cnt));
 
 	args.AppendArg("-m");
 	gahp_worker_cnt = param_integer( "GCE_GAHP_WORKER_MAX_NUM", 5 );
-	args.AppendArg(gahp_worker_cnt);
+	args.AppendArg(std::to_string(gahp_worker_cnt));
 
 	args.AppendArg("-d");
 	gahp_debug = param( "GCE_GAHP_DEBUG" );
@@ -662,38 +660,13 @@ void GCEJob::doEvaluateState()
 				// Remove all knowledge of any previous or present job
 				// submission, in both the gridmanager and the schedd.
 
-				// If we are doing a rematch, we are simply waiting around
-				// for the schedd to be updated and subsequently this globus job
-				// object to be destroyed.  So there is nothing to do.
-				if ( wantRematch ) {
-					break;
-				}
-
 				// For now, put problem jobs on hold instead of
 				// forgetting about current submission and trying again.
 				// TODO: Let our action here be dictated by the user preference
 				// expressed in the job ad.
-				if ( !m_instanceId.empty() && condorState != REMOVED
-					 && wantResubmit == false && doResubmit == 0 ) {
+				if (!m_instanceId.empty() && condorState != REMOVED) {
 					gmState = GM_HOLD;
 					break;
-				}
-
-				// Only allow a rematch *if* we are also going to perform a resubmit
-				if ( wantResubmit || doResubmit ) {
-					jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-				}
-
-				if ( wantResubmit ) {
-					wantResubmit = false;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-				}
-
-				if ( doResubmit ) {
-					doResubmit = 0;
-					dprintf(D_ALWAYS, "(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 				}
 
 				errorString = "";
@@ -714,24 +687,6 @@ void GCEJob::doEvaluateState()
 				if ( remoteJobState != "" ) {
 					remoteJobState = "";
 					SetRemoteJobStatus( NULL );
-				}
-
-				if ( wantRematch ) {
-					dprintf(D_ALWAYS, "(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-					// Set ad attributes so the schedd finds a new match.
-					bool dummy;
-					if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-						jobAd->Assign( ATTR_JOB_MATCHED, false );
-						jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-					}
-
-					// If we are rematching, we need to forget about this job
-					// cuz we wanna pull a fresh new job ad, with a fresh new match,
-					// from the all-singing schedd.
-					gmState = GM_DELETE;
-					break;
 				}
 
 				// If there are no updates to be done when we first enter this
@@ -954,7 +909,7 @@ void GCEJob::SetInstanceId( const char *instance_id )
 // Use SetInstanceName() or SetInstanceId() instead.
 void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_id )
 {
-	string full_job_id;
+	std::string full_job_id;
 	if ( instance_name && instance_name[0] ) {
 		formatstr( full_job_id, "gce %s %s", m_serviceUrl.c_str(), instance_name );
 		if ( instance_id && instance_id[0] ) {
@@ -969,7 +924,7 @@ void GCEJob::GCESetRemoteJobId( const char *instance_name, const char *instance_
 
 // Instance name is max 63 characters, matching this pattern:
 //    [a-z]([-a-z0-9]*[a-z0-9])?
-string GCEJob::build_instance_name()
+std::string GCEJob::build_instance_name()
 {
 #ifdef WIN32
 	GUID guid;
@@ -979,7 +934,7 @@ string GCEJob::build_instance_name()
 	StringFromGUID2(guid, wsz, COUNTOF(wsz));
 	char uuid_str[40];
 	WideCharToMultiByte(CP_ACP, 0, wsz, -1, uuid_str, COUNTOF(uuid_str), NULL, NULL);
-	string final_str = "condor-";
+	std::string final_str = "condor-";
 	final_str += uuid_str;
 	return final_str;
 #else

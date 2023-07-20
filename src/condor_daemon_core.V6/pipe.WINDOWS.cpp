@@ -19,7 +19,7 @@
 
 #include "condor_common.h"
 #include "pipe.WINDOWS.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
 
 extern CRITICAL_SECTION Big_fat_mutex;
 
@@ -28,19 +28,19 @@ PipeEnd::PipeEnd(HANDLE handle, bool overlapped, bool nonblocking, int pipe_size
 		m_nonblocking(nonblocking), m_pipe_size(pipe_size),
 		m_registered(false), m_watched_event(NULL)
 {
-	MyString event_name;
+	std::string event_name;
 
 	// create a manual reset Event, set initially to signaled
 	// to be used for overlapped operations
-	event_name.formatstr("pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
-	m_event = CreateEvent( NULL, TRUE, TRUE, event_name.Value() );
+	formatstr(event_name, "pipe_event_%d_%x", GetCurrentProcessId(), m_handle);
+	m_event = CreateEvent( NULL, TRUE, TRUE, event_name.c_str() );
 	ASSERT(m_event);
 	
 	// create the event for waiting until a PID-watcher
 	// is done using this object
-	event_name.formatstr("pipe_watched_event_%d_%x", 
+	formatstr(event_name, "pipe_watched_event_%d_%x", 
 		GetCurrentProcessId(), m_handle);
-	m_watched_event = CreateEvent(NULL, TRUE, TRUE, event_name.Value());
+	m_watched_event = CreateEvent(NULL, TRUE, TRUE, event_name.c_str());
 	ASSERT(m_watched_event);
 }
 
@@ -330,7 +330,7 @@ int ReadPipeEnd::read_helper(void* buffer, int len)
 						bytes = 0;
 					}
 					else {
-						dprintf(D_FULLDEBUG, "GetOverlappedResult error: %d\n", GetLastError());
+						dprintf(D_ALWAYS | D_BACKTRACE, "read_helper: GetOverlappedResult error: %d\n", GetLastError());
 						return -1;
 					}
 				}
@@ -539,8 +539,13 @@ bool WritePipeEnd::complete_async_write(bool nonblocking)
 		
 		DWORD bytes;
 		if (!GetOverlappedResult(m_handle, &m_overlapped_struct, &bytes, TRUE)) {
-			dprintf(D_ALWAYS, "GetOverlappedResult error: %d\n", GetLastError());
+			dprintf(D_ALWAYS | D_BACKTRACE, "complete_async_write: GetOverlappedResult error: %d\n", GetLastError());
 			m_async_io_error = GetLastError();
+			if (m_async_io_error == ERROR_PIPE_NOT_CONNECTED || m_async_io_error == ERROR_BROKEN_PIPE) {
+				// the operation cannot complete
+				delete[] m_async_io_buf;
+				m_async_io_buf = NULL;
+			}
 
 			// return true since false indicates EWOULDBLOCK, which is not what we want
 			return true;

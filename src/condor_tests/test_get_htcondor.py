@@ -78,12 +78,12 @@ IMAGES_BY_CHANNEL = {
         "centos:7",
         "scientificlinux/sl:7",
         "rockylinux:8",
-        "almalinux:8",
-        "arm64v8/almalinux:8",
-        "ppc64le/almalinux:8",
         "rockylinux:9",
         "almalinux:9",
+        "almalinux:8",
+        "arm64v8/almalinux:8",
         "arm64v8/almalinux:9",
+        "ppc64le/almalinux:8",
     ],
 }
 

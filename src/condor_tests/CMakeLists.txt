@@ -193,7 +193,7 @@ endif ()
 		# ClassAds test suite
 		condor_pl_test (test_classad_version_comparison "Test ClassAd version comparison functions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
-		if (LINUX)
+		if (LINUX OR APPLE)
 			# test_classad_eval doesn't actually depend on ornithology at all,
 			# but run_test.pl doesn't know that, and always runs pytest with an
 			# ornithology-specific command-line flag
@@ -202,13 +202,13 @@ endif ()
 		endif()
 
 		# Ornithology - partial merge - Windows and MacOSX problems; some tests not yet reliable
-		if(LINUX)
+		if(LINUX OR APPLE)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_shadow_hook "Test shadow job hooks and their status msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_hook_status_msg "Test Starter Job Hook Status Msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_xfer_hold_codes "Test proper hold codes after xfer failure" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_job_env "Test Job Environment" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_bogus_collector "Test Bogus Collector" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			# condor_pl_test(test_hold_and_release "Submit a job, hold it, release it, run it completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_late_materialization "Test that late materialization options work correctly with each other" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -221,25 +221,19 @@ endif ()
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_python_bindings_classad "Test that the Python classad bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_python_bindings_version "Test that the Python htcondor bindings have correct version info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_collector "Test that the Python htcondor.Collector bindings behave correctly" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_dagman "Test DAGMan submission from the Python bindings" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_python_bindings_jobeventlog "tests the JobEvent class" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;${CMAKE_BINARY_DIR}/src/condor_tests/x_write_joblog.exe")
 			add_dependencies_suffix_hack(test_python_bindings_jobeventlog x_write_joblog.exe)
 
-			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_auth_protocol_token "Test TOKEN authentication" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
-# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under
-# qemu, which is where we run our ppc and arm tests.
-if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")))
-			condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-endif()
 
 			condor_pl_test(test_htcondor_cli "Test the htcondor CLI tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_toe_exit_info "Test ToE exit info" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_json_toe_when "Test JSON ToE's when" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_allowed_job_duration "test allowed_job_duration" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -250,6 +244,9 @@ endif()
 			condor_pl_test(test_container_img_declares_universe "Test declaring container image sets up universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_multifile_curl_plugin_timeout "Test multifile curl plugin correctly does timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_futile_nodes "Test DAGMan accurately sets futile nodes" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_condor_history "Test condor_history tools capabilities" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -269,7 +266,6 @@ endif()
 				# now, pending a resolution of backwards-compability issues.
 				# condor_pl_test(test_htcondor_955 "Test output_destination with standard stream names" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_xfer_stats_overflow_regression "Test TransferInputStats nested attributes don't overflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_condor_token_fetch_key "Test `condor_token_fetch -key`" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				# Sadly, Python doesn't implement a way to get disk space on Windows.
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -278,8 +274,39 @@ endif()
 				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
+		endif()
+
+		# These Ornithology tests only work on linux.
+		# That's expected for some. Others need investigation
+		# to see if we can get them working on other platforms.
+		if(LINUX)
+			# We don't see the "invalid interpreter" error
+			# message on macos.
+			condor_pl_test(test_broken_hash_bang "Test Broken Hash Bang" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			# Container universe is only available on linux.
+			condor_pl_test(test_container_uni "Test container uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64")))
+				condor_pl_test(test_singularity_sif "Test container uni with sif file" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			endif()
+			# The manifest code should work on macos, but
+			# the tests are failing.
+			condor_pl_test(test_manifest "Test manifest functionality" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			# These tests require Python 3.6 or later.
+			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
+				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			endif()
+
+			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 
+			# qemu, which is where we run our ppc and arm tests. 
+			# And strace is only available on linux.
+			if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+				condor_pl_test(test_aes_file_transfer "Test AES encrypted file transfer" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+			endif()
+
 		endif()
 	endif()
 
@@ -290,11 +317,14 @@ endif()
 	condor_pl_test(lib_procapi_pidtracking-snapshot "Fast Termination Child Cleanup Test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_procapi_pidtracking-snapshot.cmd;src/condor_tests/x_pid_tracking.pl")
 
 	condor_pl_test(classad_cache-basic "classad-cache smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	# test gives false positives on darwin and windows
 	if (LINUX)
-		# test gives false positives on darwin and windows
-		condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
-		if (${BIT_MODE} MATCHES "32")
-			condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+		# The shadow memory test fails under qemu, as qemu itself eats a lot of memory.
+		if ( (NOT ${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ppc64le") AND (NOT (${CMAKE_SYSTEM_PROCESSOR} STREQUAL "aarch64"))) 
+			condor_pl_test(shadow_mem_usage-basic "report shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+			if (${BIT_MODE} MATCHES "32")
+				condor_pl_test(shadow_s_mem_usage-basic "report small shadow memory use" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_shadow_mem_usage.pl")
+			endif()
 		endif()
 	endif(LINUX)
 
@@ -432,6 +462,7 @@ endif()
 	condor_pl_test(cmd_transform_ads "Condor_transform_ads" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(cmd_status-transform "Condor_status transform" "quick;ctest" CTEST DEPENDS "src/condor_tests/sleep.exe")
 	condor_pl_test(cmd_status-compact "Condor_status compact" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+	condor_pl_test(disable_owner_test "Disable_owner_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(max_jobs_per_owner_test "Max_jobs_per_owner_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(max_jobs_per_owner_test_group "Max_jobs_per_owner_test -group" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_transform_names_test "Job_transform_names_test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
@@ -553,6 +584,8 @@ endif()
 	add_dependencies_suffix_hack(lib_param_conditionals x_conditional_params.exe)
 	condor_pl_test(unit_test_macro_expand "config macro unit tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/NetworkTestConfigs.pm;${CMAKE_BINARY_DIR}/src/condor_tests/test_macro_expand")
 	add_dependencies(unit_test_macro_expand test_macro_expand)
+	condor_pl_test(unit_test_classad_funcs "classad function tests" "quick;ctest" CTEST DEPENDS "${CMAKE_BINARY_DIR}/src/condor_tests/test_classad_funcs")
+	add_dependencies(unit_test_macro_expand test_classad_funcs)
 	condor_pl_test(unit_test_user_mapping "MapFile parse and map unit tests" "quick;ctest" CTEST DEPENDS "src/condor_tests/NetworkTestConfigs.pm")
 	#condor_pl_test(cmd_condor_ping_basic "Basic default test of condor_ping" "quick;ctest")
 	condor_pl_test(job_aggressive_flocking "Test aggressive flocking" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
@@ -673,7 +706,6 @@ endif()
 		condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_fullremove.dag;src/condor_tests/job_dagman_fullremove.cmd;src/condor_tests/job_dagman_fullremove.pl;src/condor_tests/job_dagman_monitor.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
 	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_basic.dag;src/condor_tests/job_dagman_basic-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_premonitor.pl;src/condor_tests/job_dagman_monitor.pl")
 	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_local.dag;src/condor_tests/job_dagman_local.cmd;src/condor_tests/job_dagman_local2.cmd")
-	#condor_pl_test(job_dagman_dont_use_default_node_log "Test for DAGMAN_ALWAYS_USE_NODE_LOG" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxpostscripts.dag;src/condor_tests/job_dagman_maxpostscripts.cmd;src/condor_tests/job_dagman_maxpostscripts-checkin.template;src/condor_tests/x_dagman_boring_prescript.pl;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_dagman_readflowlog.pl")
 	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxprescripts.dag;src/condor_tests/job_dagman_maxprescripts.cmd;src/condor_tests/job_dagman_maxprescripts-node.cmd;src/condor_tests/job_dagman_maxprescripts-checkin.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl")
 

@@ -19,6 +19,7 @@
 
 #include "condor_common.h" 
 #include "condor_snutils.h"
+#include "strcasestr.h"
 #include "condor_debug.h"
 #include "condor_random_num.h"
 #include <limits>
@@ -116,7 +117,6 @@ int formatstr_cat(std::string& s, const char* format, ...) {
     return r;
 }
 
-// to replace MyString with std::string we need a compatible read-line function
 bool readLine(std::string& str, FILE *fp, bool append)
 {
 	bool first_time = true;
@@ -401,75 +401,253 @@ const char * is_attr_in_attr_list(const char * attr, const char * list)
 	return NULL;
 }
 
-#if 1
-#else
-static char *tokenBuf = NULL;
-static char *nextToken = NULL;
-
-void Tokenize(const MyString &str)
+std::vector<std::string> split(const std::string& str, const char* delim, bool trim)
 {
-	Tokenize( str.Value() );
+	int start, len;
+	std::vector<std::string> list;
+	StringTokenIterator sti(str, delim, trim);
+	while ((start = sti.next_token(len)) >= 0) {
+		list.emplace_back(&str[start], len);
+	}
+	return list;
 }
 
-void Tokenize(const std::string &str)
+std::string join(const std::vector<std::string> &list, const char* delim)
 {
-	Tokenize( str.c_str() );
+	std::string str;
+	if (!list.empty()) {
+		str = list.front();
+		for (auto it = (list.begin() + 1); it != list.end(); it++) {
+			str += delim;
+			str += *it;
+		}
+	}
+	return str;
 }
 
-void Tokenize(const char *str)
+bool contains(const std::vector<std::string> &list, const char* str)
 {
-	free( tokenBuf );
-	tokenBuf = NULL;
-	nextToken = NULL;
-	if ( str ) {
-		tokenBuf = strdup( str );
-		if ( strlen( tokenBuf ) > 0 ) {
-			nextToken = tokenBuf;
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strcmp(item.c_str(), str) == MATCH) {
+			return true;
 		}
 	}
+	return false;
 }
 
-const char *GetNextToken(const char *delim, bool skipBlankTokens)
+bool contains(const std::vector<std::string> &list, const std::string& str)
 {
-	const char *result = nextToken;
-
-	if ( !delim || strlen(delim) == 0 ) {
-		result = NULL;
-	}
-
-	if ( result != NULL ) {
-		while ( *nextToken != '\0' && index(delim, *nextToken) == NULL ) {
-			nextToken++;
-		}
-
-		if ( *nextToken != '\0' ) {
-			*nextToken = '\0';
-			nextToken++;
-		} else {
-			nextToken = NULL;
-		}
-	}
-
-	if ( skipBlankTokens && result && strlen(result) == 0 ) {
-		result = GetNextToken(delim, skipBlankTokens);
-	}
-
-	return result;
+	return contains(list, str.c_str());
 }
-#endif
 
-void join(const std::vector< std::string > &v, char const *delim, std::string &result)
+bool contains_anycase(const std::vector<std::string> &list, const char* str)
 {
-	std::vector<std::string>::const_iterator it;
-	for(it = v.begin();
-		it != v.end();
-		it++)
-	{
-		if( result.size() ) {
-			result += delim;
-		}
-		result += (*it);
+	if (!str) {
+		return false;
 	}
+
+	for (auto& item : list) {
+		if (strcasecmp(item.c_str(), str) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_anycase(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_anycase(list, str.c_str());
+}
+
+bool contains_prefix(const std::vector<std::string> &list, const char* str)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strncmp(item.c_str(), str, item.size()) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_prefix(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_prefix(list, str.c_str());
+}
+
+bool contains_prefix_anycase(const std::vector<std::string> &list, const char* str)
+{
+	if (!str) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		if (strncasecmp(item.c_str(), str, item.size()) == MATCH) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool contains_prefix_anycase(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_prefix_anycase(list, str.c_str());
+}
+
+bool
+contains_withwildcard_impl(const std::vector<std::string>& list, const char* str, bool anycase, bool prefix)
+{
+	const char *x;
+	std::string matchstart;
+	std::string matchend;
+	const char *asterisk = NULL;
+	const char *ending_asterisk = NULL;
+	bool result;
+	int temp;
+	const char *pos;
+
+	if ( !str ) {
+		return false;
+	}
+
+	for (auto& item : list) {
+		x = item.c_str();
+
+		if ( (asterisk = strchr(x,'*')) == NULL ) {
+			// There is no wildcard in this entry; just compare
+			if (anycase) {
+				temp = strcasecmp(x, str);
+			} else {
+				temp = strcmp(x, str);
+			}
+			if ( temp == MATCH ) {
+				return true;
+			}
+			continue;
+		}
+
+		// If we made it here, we know there is an asterisk in the pattern, and
+		// 'asterisk' points to ths first asterisk encountered. Now set astrisk2
+		// iff there is a second astrisk at the end of the string.
+		ending_asterisk = strrchr(x, '*');
+		if (asterisk == ending_asterisk || &asterisk[1] == ending_asterisk || ending_asterisk[1] != '\0' ) {
+			ending_asterisk = NULL;
+		}
+
+		if ( asterisk == x ) {
+			// if there is an asterisk at the start (and maybe also at the end)
+			matchstart.clear();
+			matchend = &(x[1]);
+		} else {  // if there is NOT an astrisk at the start...
+			if ( asterisk[1] == '\0' ) {
+				// asterisk solely at the end behavior.
+				matchstart = x;
+				matchstart.erase(matchstart.size()-1);
+				matchend.clear();
+				prefix = true;
+			} else {
+				// asterisk in the middle somewhere (and maybe also at the end)
+				matchstart = x;
+				matchstart.assign(x, asterisk-x);
+				matchend = &(asterisk[1]);
+			}
+		}
+		if (matchend.size() && matchend[matchend.size()-1] == '*') {
+			// asterisk at end of matchend
+			matchend.erase(matchend.size()-1);
+			prefix = true;
+		}
+
+		// at this point, we _know_ that there is an  asterisk either at the start
+		// or in the middle somewhere, and both matchstart and matchend are set
+		// appropiately with what we want.  there may optionally also still
+		// be an asterisk at the end, indicated by prefix.
+
+		result = true;
+		size_t stringchars_consumed = 0;
+		if ( matchstart.size() ) {
+			size_t matchstart_len = matchstart.size();
+			if ( anycase ) {
+				temp = strncasecmp(matchstart.c_str(), str, matchstart_len);
+			} else {
+				temp = strncmp(matchstart.c_str(), str, matchstart_len);
+			}
+			if (temp != MATCH) {
+				result = false;
+			} else {
+				// TODO can strlen(str) ever be smaller then matchstart_len?
+				stringchars_consumed = MIN(matchstart_len, strlen(str));
+			}
+		}
+		if ( matchend.size() && result == true) {
+			if (anycase) {
+				pos = strcasestr(&str[stringchars_consumed], matchend.c_str());
+			}
+			else {
+				pos = strstr(&str[stringchars_consumed], matchend.c_str());
+			}
+			if (!pos) {
+				result = false;
+			} else {
+				if (!prefix && pos[strlen(pos)] != '\0') {
+					result = false;
+				}
+			}
+		}
+		if ( result == true ) {
+			return true;
+		}
+
+	}	// end of while loop
+
+	return false;
+}
+
+bool contains_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, false, false);
+}
+
+bool contains_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), false, false);
+}
+
+bool contains_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, true, false);
+}
+
+bool contains_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), true, false);
+}
+
+bool contains_prefix_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, false, true);
+}
+
+bool contains_prefix_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), false, true);
+}
+
+bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const char* str)
+{
+	return contains_withwildcard_impl(list, str, true, true);
+}
+
+bool contains_prefix_anycase_withwildcard(const std::vector<std::string> &list, const std::string& str)
+{
+	return contains_withwildcard_impl(list, str.c_str(), true, true);
 }
 
 // scan an input string for path separators, returning a pointer into the input string that is
@@ -524,25 +702,6 @@ randomlyGenerateInsecure(std::string &str, const char *set, int len)
 	}
 }
 
-#if 0
-void
-randomlyGeneratePRNG(std::string &str, const char *set, int len)
-{
-	if (!set || len <= 0) {
-		str.clear();
-		return;
-	}
-
-	str.assign(len, '0');
-
-	auto set_len = strlen(set);
-	for (int idx = 0; idx < len; idx++) {
-		auto rand_val = get_random_int_insecure() % set_len;
-		str[idx] = set[rand_val];
-	}
-}
-#endif
-
 void
 randomlyGenerateInsecureHex(std::string &str, int len)
 {
@@ -573,18 +732,27 @@ int StringTokenIterator::next_token(int & length)
 	length = 0;
 	if ( ! str) return -1;
 
-	int ix = ixNext;
+	size_t ix = ixNext;
+	size_t ixEnd = ix;
 
-	// skip leading separators and whitespace
-	while (str[ix] && strchr(delims, str[ix])) ++ix;
+	// skip leading separators and whitespace (if trimming)
+	while (str[ix] && (strchr(delims, str[ix]) || (m_trim && isspace(str[ix])))) ++ix;
 	ixNext = ix;
+	ixEnd = ix;
 
 	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) ++ix;
-	if (ix <= ixNext)
+	while (str[ix] && !strchr(delims, str[ix])) {
+		if (!m_trim || !isspace(str[ix])) {
+			ixEnd = ix;
+		}
+		++ix;
+	}
+	if (ix <= ixNext) {
+		pastEnd = true;
 		return -1;
+	}
 
-	length = ix-ixNext;
+	length = (ixEnd - ixNext) + 1;
 	int ixStart = ixNext;
 	ixNext = ix;
 	return ixStart;
@@ -595,28 +763,10 @@ int StringTokenIterator::next_token(int & length)
 //
 const std::string * StringTokenIterator::next_string()
 {
-#if 1
 	int len;
 	int start = next_token(len);
 	if (start < 0) return NULL;
 	current.assign(str, start, len);
-#else
-	if ( ! str) return NULL;
-
-	int ix = ixNext;
-
-	// skip leading separators and whitespace
-	while (str[ix] && strchr(delims, str[ix])) ++ix;
-	ixNext = ix;
-
-	// scan for next delimiter or \0
-	while (str[ix] && !strchr(delims, str[ix])) ++ix;
-	if (ix <= ixNext)
-		return NULL;
-
-	current.assign(str, ixNext, ix-ixNext);
-	ixNext = ix;
-#endif
 	return &current;
 }
 

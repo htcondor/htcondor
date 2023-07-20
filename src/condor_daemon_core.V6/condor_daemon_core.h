@@ -42,7 +42,6 @@
 #include "condor_secman.h"
 #include "KeyCache.h"
 #include "list.h"
-#include "extArray.h"
 #include "MapFile.h"
 #ifdef WIN32
 #include "ntsysinfo.WINDOWS.h"
@@ -88,7 +87,7 @@ static const int MAX_SOCKS_INHERITED = 4;
    Magic fd to include in the 'std' array argument to Create_Process()
    which means you want a pipe automatically created and handled.
    If you do this to stdin, you get a writeable pipe end (exposed as a FILE*
-   Write pipes created like this are stored as MyString objects, which
+   Write pipes created like this are stored as string objects, which
    you can access via the Get_Pipe_Data() call.
 */
 static const int DC_STD_FD_PIPE = -10;
@@ -459,7 +458,7 @@ class DaemonCore : public Service
 	 * of daemon_core_main.C.
 	 */
     DaemonCore (int ComSize = 0, int SigSize = 0,
-                int SocSize = 0, int ReapSize = 0, int PipeSize = 0);
+                int SocSize = 0, int ReapSize = 0);
     ~DaemonCore();
     void Driver();
 
@@ -1078,9 +1077,9 @@ class DaemonCore : public Service
 	   @param std_fd
 	     The fd to identify the pipe to read: 1 for stdout, 2 for stderr.
 	   @return
-	     Pointer to a MyString object containing all the data written so far.
+	     Pointer to a string object containing all the data written so far.
 	*/
-	MyString* Read_Std_Pipe(int pid, int std_fd);
+	std::string* Read_Std_Pipe(int pid, int std_fd);
 
 	/**
 	   Write data to the given DC process's stdin pipe.
@@ -1331,7 +1330,7 @@ class DaemonCore : public Service
                pipe and register everything for you automatically. If
                you use this for stdin, you can use Write_Std_Pipe() to
                write to the stdin of the child. If you use this for
-               std(out|err) then you can get a pointer to a MyString
+               std(out|err) then you can get a pointer to a string
                with all the data written by the child using Read_Std_Pipe().
         @param nice_inc The value to be passed to nice() in the
                child.  0 < nice < 20, and greater numbers mean
@@ -1370,31 +1369,7 @@ class DaemonCore : public Service
         size_t          *core_hard_limit     = NULL,
         int             *affinity_mask       = NULL,
         char const      *daemon_sock         = NULL,
-        MyString        *err_return_msg      = NULL,
-        FilesystemRemap *remap               = NULL,
-        long            as_hard_limit        = 0l
-        );
-
-    int Create_Process (
-        const char      *name,
-        ArgList const   &arglist,
-        priv_state      priv                 /* = PRIV_UNKNOWN */,
-        int             reaper_id            /* = 1 */,
-        int             want_commanand_port  /* = TRUE */,
-        int             want_udp_comm_port   /* = TRUE */,
-        Env const       *env                 /* = NULL */,
-        const char      *cwd                 /* = NULL */,
-        FamilyInfo      *family_info         /* = NULL */,
-        Stream          *sock_inherit_list[] /* = NULL */,
-        int             std[]                /* = NULL */,
-        int             fd_inherit_list[]    /* = NULL */,
-        int             nice_inc             /* = 0 */,
-        sigset_t        *sigmask             /* = NULL */,
-        int             job_opt_mask         /* = 0 */,
-        size_t          *core_hard_limit     /* = NULL */,
-        int             *affinity_mask       /* = NULL */,
-        char const      *daemon_sock         /* = NULL */,
-        std::string     &err_return_msg,
+        std::string     *err_return_msg      = NULL,
         FilesystemRemap *remap               = NULL,
         long            as_hard_limit        = 0l
         );
@@ -1805,7 +1780,9 @@ class DaemonCore : public Service
 		// its selfAd.
 	bool SetupAdministratorSession(unsigned duration, std::string &capability);
 
-  private:      
+	void kill_immediate_children();
+
+  private:
 
 		// do and our parents/children want/have a udp comment socket?
 	bool m_wants_dc_udp;
@@ -1878,7 +1855,7 @@ class DaemonCore : public Service
 	void SetDaemonSockName( char const *sock_name );
 
     int HandleSigCommand(int command, Stream* stream);
-    int HandleReq(int socki, Stream* accepted_sock=NULL);
+    int HandleReq(size_t socki, Stream* accepted_sock=NULL);
 	int HandleReq(Stream *insock, Stream* accepted_sock=NULL);
 	int HandleReqSocketTimerHandler();
 	int HandleReqSocketHandler(Stream *stream);
@@ -1990,9 +1967,7 @@ class DaemonCore : public Service
     };
 
     void                DumpCommandTable(int, const char* = NULL);
-    int                 maxCommand;     // max number of command handlers
-    int                 nCommand;       // number of command handlers used
-    ExtArray<CommandEnt>         comTable;       // command table
+	std::vector<CommandEnt>         comTable;       // command table
     CommandEnt          m_unregisteredCommand;
 
     struct SignalEnt 
@@ -2011,9 +1986,7 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpSigTable(int, const char* = NULL);
-    int                 maxSig;      // max number of signal handlers
-    int                 nSig;        // high-water mark of entries used
-    ExtArray<SignalEnt> sigTable;    // signal table
+	std::vector<SignalEnt> sigTable;    // signal table
     volatile int        sent_signal; // TRUE if a signal handler sends a signal
 
     struct SockEnt
@@ -2036,11 +2009,9 @@ class DaemonCore : public Service
 		bool            is_command_sock;
     };
     void              DumpSocketTable(int, const char* = NULL);
-    int               maxSocket;  // number of socket handlers to start with
-    int               nSock;      // number of socket handler slots in use use
 	int				  nRegisteredSocks; // number of sockets registered, always < nSock
 	int               nPendingSockets; // number of sockets waiting on timers or any other callbacks
-    ExtArray<SockEnt> *sockTable; // socket table; grows dynamically if needed
+	std::vector<SockEnt> sockTable; // socket table; grows dynamically if needed
 
 		// number of file descriptors in use past which we should start
 		// avoiding the creation of new persistent sockets.  Do not use
@@ -2054,11 +2025,10 @@ class DaemonCore : public Service
 #else
 	typedef int PipeHandle;
 #endif
-	ExtArray<PipeHandle>* pipeHandleTable;
-	int maxPipeHandleIndex;
-	int pipeHandleTableInsert(PipeHandle);
-	void pipeHandleTableRemove(int);
-	int pipeHandleTableLookup(int, PipeHandle* = NULL);
+	std::vector<PipeHandle> pipeHandleTable;
+	size_t pipeHandleTableInsert(PipeHandle);
+	void pipeHandleTableRemove(size_t);
+	int pipeHandleTableLookup(size_t, PipeHandle* = NULL);
 	int maxPipeBuffer;
 
 	// this table is for dispatching registered pipes
@@ -2078,10 +2048,7 @@ class DaemonCore : public Service
 		bool			call_handler;
 		bool			in_handler;
     };
-    // void              DumpPipeTable(int, const char* = NULL);
-    int               maxPipe;  // number of pipe handlers to start with
-    int               nPipe;      // number of pipe handlers used
-    ExtArray<PipeEnt> *pipeTable; // pipe table; grows dynamically if needed
+	std::vector<PipeEnt> pipeTable; // pipe table; grows dynamically if needed
 
     struct ReapEnt
     {
@@ -2095,10 +2062,9 @@ class DaemonCore : public Service
         void*           data_ptr;
     };
     void                DumpReapTable(int, const char* = NULL);
-    int                 maxReap;        // max number of reaper handlers
-    int                 nReap;          // number of reaper handlers used
+    size_t              nReap;          // number of reaper handlers used
     int                 nextReapId;     // next reaper id to use
-    ExtArray<ReapEnt>  reapTable;      // reaper table
+	std::vector<ReapEnt>  reapTable;      // reaper table
     int                 defaultReaper;
 
     class PidEntry : public Service
@@ -2126,11 +2092,11 @@ class DaemonCore : public Service
         int parent_is_local;
         int reaper_id;
         int std_pipes[3];  // Pipe handles for automagic DC std pipes.
-        MyString* pipe_buf[3];  // Buffers for data written to DC std pipes.
+        std::string* pipe_buf[3];  // Buffers for data written to DC std pipes.
         int stdin_offset;
 
 		// these three data members are set/used by the DaemonKeepAlive class
-        unsigned int hung_past_this_time;   // if >0, child is hung if time() > this value
+        time_t hung_past_this_time;   // if >0, child is hung if time() > this value
         int was_not_responding;
         int got_alive_msg; // number of child alive messages received
 
@@ -2252,9 +2218,7 @@ class DaemonCore : public Service
 		// i - index of registered socket
 		// default_to_HandleCommand - true if HandleCommand() should be called
 		//                          if there is no other callback function
-		// On return, i may be modified so that when incremented,
-		// it will index the next registered socket.
-	void CallSocketHandler( int &i, bool default_to_HandleCommand );
+	void CallSocketHandler( const size_t i, bool default_to_HandleCommand );
 	static void CallSocketHandler_worker_demarshall(void *args);
 	void CallSocketHandler_worker( int i, bool default_to_HandleCommand, Stream* asock );
 	

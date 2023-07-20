@@ -315,7 +315,6 @@ FileTransfer::~FileTransfer()
 	if (UserLogFile) free(UserLogFile);
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
-	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
@@ -374,6 +373,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 {
 	char buf[ATTRLIST_MAX_EXPRESSION];
 	char *dynamic_buf = NULL;
+	std::string buffer;
 
 	jobAd = *Ad;	// save job ad
 
@@ -548,18 +548,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 	int Proc = 0;
 	Ad->LookupInteger(ATTR_CLUSTER_ID, Cluster);
 	Ad->LookupInteger(ATTR_PROC_ID, Proc);
-	m_jobid.formatstr("%d.%d",Cluster,Proc);
+	formatstr(m_jobid, "%d.%d", Cluster, Proc);
 	if ( IsServer() && Spool ) {
 
-		std::string buf;
-		SpooledJobFiles::getJobSpoolPath(Ad, buf);
-		SpoolSpace = strdup(buf.c_str());
-		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
+		SpoolSpace = strdup(buffer.c_str());
+		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
-	if ( (IsServer() || (IsClient() && simple_init)) &&
-		 (Ad->LookupString(ATTR_JOB_CMD, buf, sizeof(buf)) == 1) )
+	Ad->LookupString(ATTR_JOB_CMD, buffer);
+	if ( (IsServer() || (IsClient() && simple_init)) )
 	{
 		// TODO: If desired_priv_state isn't PRIV_UNKNOWN, shouldn't
 		//   we switch priv state for these file checks?
@@ -584,16 +582,16 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			// so we must make certain the user has permission to read
 			// this file; if so, we can record it as the Executable to send.
 #ifdef WIN32
-			// buf doesn't refer to a real file when this code is executed in the SCHEDD when spooling
+			// buffer doesn't refer to a real file when this code is executed in the SCHEDD when spooling
 			// so instead of failing here, we just don't bother with the access test in that case.
-			if ( !simple_init && perm_obj && (perm_obj->read_access(buf) != 1) ) {
+			if ( !simple_init && perm_obj && (perm_obj->read_access(buffer.c_str()) != 1) ) {
 				// we do _not_ have permission to read this file!!
 				dprintf(D_ALWAYS,
-					"FileTrans: permission denied reading %s\n",buf);
+				        "FileTrans: permission denied reading %s\n",buffer.c_str());
 				return 0;
 			}
 #endif
-			ExecFile = strdup(buf);
+			ExecFile = strdup(buffer.c_str());
 		}
 
 		// If we don't already have this on our list of things to transfer,
@@ -611,7 +609,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 			InputFiles->append(ExecFile);
 		}
 	} else if ( IsClient() && !simple_init ) {
-		ExecFile = strdup( CONDOR_EXEC );
+		ExecFile = strdup( condor_basename(buffer.c_str()) );
 	}
 
 	// Set OutputFiles to be ATTR_SPOOLED_OUTPUT_FILES if specified, otherwise
@@ -995,7 +993,7 @@ FileTransfer::Init(
 		char tempbuf[80];
 		// classad did not already have a TRANSFER_KEY, so
 		// generate a new one.  It must be unique and not guessable.
-		sprintf(tempbuf,"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
+		snprintf(tempbuf,sizeof(tempbuf),"%x#%x%x%x",++SequenceNum,(unsigned)time(NULL),
 			get_csrng_int(), get_csrng_int());
 		TransKey = strdup(tempbuf);
 		user_supplied_key = FALSE;
@@ -1045,7 +1043,7 @@ FileTransfer::Init(
 	buf[0] = '\0';
 	if ( IsServer() && upload_changed_files ) {
 		CommitFiles();
-		MyString filelist;
+		std::string filelist;
 		const char* current_file = NULL;
 		bool print_comma = false;
 			// if desired_priv_state is PRIV_UNKNOWN, the Directory
@@ -1103,7 +1101,7 @@ FileTransfer::Init(
 			// we know that filelist has at least one entry, so
 			// insert it as an attribute into the ClassAd which
 			// will get sent to our peer.
-			Ad->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES,filelist.c_str());
+			Ad->InsertAttr(ATTR_TRANSFER_INTERMEDIATE_FILES, filelist);
 			dprintf(D_FULLDEBUG,"%s=\"%s\"\n",ATTR_TRANSFER_INTERMEDIATE_FILES,
 					filelist.c_str());
 		}
@@ -1125,7 +1123,7 @@ FileTransfer::Init(
 	// if we are acting as the server side, insert this key
 	// into our hashtable if it is not already there.
 	if ( IsServer() ) {
-		MyString key(TransKey);
+		std::string key(TransKey);
 		FileTransfer *transobject;
 		if ( TranskeyTable->lookup(key,transobject) < 0 ) {
 			// this key is not in our hashtable; insert it
@@ -1266,8 +1264,8 @@ FileTransfer::FindChangedFiles()
 
 	const char *f;
 	while( (f=dir.Next()) ) {
-		// don't send back condor_exec.*
-		if ( MATCH == file_strcmp ( f, "condor_exec." ) ) {
+		// don't send back the executable
+		if ( ExecFile && MATCH == file_strcmp ( f, ExecFile ) ) {
 			dprintf ( D_FULLDEBUG, "Skipping %s\n", f );
 			continue;
 		}
@@ -1652,7 +1650,7 @@ FileTransfer::HandleCommands(int command, Stream *s)
 	dprintf(D_FULLDEBUG,
 					"FileTransfer::HandleCommands read transkey=%s\n",transkey);
 
-	MyString key(transkey);
+	std::string key(transkey);
 	free(transkey);
 	if ( (TranskeyTable == NULL) ||
 		 (TranskeyTable->lookup(key,transobject) < 0) ) {
@@ -1766,7 +1764,7 @@ FileTransfer::Reaper(int pid, int exit_status)
 	if( WIFSIGNALED(exit_status) ) {
 		transobject->Info.success = false;
 		transobject->Info.try_again = true;
-		transobject->Info.error_desc.formatstr("File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
+		formatstr(transobject->Info.error_desc, "File transfer failed (killed by signal=%d)", WTERMSIG(exit_status));
 		if( transobject->registered_xfer_pipe ) {
 			transobject->registered_xfer_pipe = false;
 			daemonCore->Cancel_Pipe(transobject->TransferPipe[0]);
@@ -1995,7 +1993,7 @@ FileTransfer::ReadTransferPipeMsg()
 	Info.success = false;
 	Info.try_again = true;
 	if( Info.error_desc.empty() ) {
-		Info.error_desc.formatstr("Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
+		formatstr(Info.error_desc,"Failed to read status report from file transfer pipe (errno %d): %s",errno,strerror(errno));
 		dprintf(D_ALWAYS,"%s\n",Info.error_desc.c_str());
 	}
 	if( registered_xfer_pipe ) {
@@ -2292,7 +2290,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	bool try_again = true;
 	int hold_code = 0;
 	int hold_subcode = 0;
-	MyString error_buf;
+	std::string error_buf;
 	int delegation_method = 0; /* 0 means this transfer is not a delegation. 1 means it is.*/
 	time_t start, elapsed;
 	int numFiles = 0;
@@ -2509,7 +2507,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
 			hold_subcode = EPERM;
 
-			error_buf.formatstr_cat(
+			formatstr_cat(error_buf,
 				" Attempt to write to illegal sandbox path: %s",
 				filename.c_str());
 
@@ -2523,17 +2521,23 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			filename = NULL_FILE;
 		}
 
+		// An old peer is sending us a renamed executable.
+		// Use the real filename from the job ad
+		if( ExecFile && IsClient() && !simple_init && !file_strcmp(filename.c_str(), CONDOR_EXEC)) {
+			filename = ExecFile;
+		}
+
 		if( !strcmp(filename.c_str(),NULL_FILE) ) {
 			fullname = filename;
 		}
 		else if( final_transfer || IsClient() ) {
-			MyString remap_filename;
+			std::string remap_filename;
 			int res = filename_remap_find(download_filename_remaps.c_str(),filename.c_str(),remap_filename,0);
 			dprintf(D_FULLDEBUG, "REMAP: res is %i -> %s !\n", res, remap_filename.c_str());
 			if (res == -1) {
 				// there was loop in the file transfer remaps, so set a good
 				// hold reason
-				error_buf.formatstr("remaps resulted in a cycle: %s", remap_filename.c_str());
+				formatstr(error_buf, "remaps resulted in a cycle: %s", remap_filename.c_str());
 				dprintf(D_ALWAYS,"REMAP: DoDownload: %s\n",error_buf.c_str());
 				download_success = false;
 				try_again = false;
@@ -2551,7 +2555,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// unless it was simply a status report (reply == 999)
 				if (IsUrl(remap_filename.c_str())) {
 					if (xfer_command != TransferCommand::Other) {
-						error_buf.formatstr("Remap of output file resulted in a URL: %s", remap_filename.c_str());
+						formatstr(error_buf, "Remap of output file resulted in a URL: %s", remap_filename.c_str());
 						dprintf(D_ALWAYS, "REMAP: DoDownload: %s\n",error_buf.c_str());
 						download_success = false;
 						try_again = false;
@@ -2580,10 +2584,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// semantic change, and one that changes a job from going
 					// on hold (after running for its duration) to succeeding.
 					if( param_boolean("ALLOW_TRANSFER_REMAP_TO_MKDIR",false) ) {
-						char * dirname = condor_dirname(remap_filename.c_str());
-						if( strcmp(dirname, ".") ) {
+						std::string dirname = condor_dirname(remap_filename.c_str());
+						if( strcmp(dirname.c_str(), ".") ) {
 							std::string path;
-                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname);
+                            formatstr(path, "%s%c%s", outputDirectory.c_str(), DIR_DELIM_CHAR, dirname.c_str());
 #if DEBUG_OUTPUT_REMAP_MKDIR_FAILURE_REPORTING
 							// So this fails on a dirA/dirB/filename remaps,
 							// which seemed like the easiest way to trigger
@@ -2627,7 +2631,6 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 								}
 							}
 						}
-						free(dirname);
 					}
 
                     formatstr(fullname,"%s%c%s",outputDirectory.c_str(),DIR_DELIM_CHAR,remap_filename.c_str());
@@ -2642,9 +2645,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			// check for write permission on this file, if we are supposed to check
 			if ( (fullname != NULL_FILE) && perm_obj && (perm_obj->write_access(fullname.c_str()) != 1) ) {
 				// we do _not_ have permission to write this file!!
-				error_buf.formatstr("Permission denied to write file %s!",
+				formatstr(error_buf, "Permission denied to write file %s!",
 				                   fullname.c_str());
-				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.Value());
+				dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.c_str());
 				download_success = false;
 				try_again = false;
 				hold_code = FILETRANSFER_HOLD_CODE::DownloadFileError;
@@ -2657,7 +2660,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 #endif
 		} else {
-			formatstr(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
@@ -2816,7 +2819,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					// that hapens further down
 					rc = 0;
 
-					error_buf.formatstr(
+					formatstr(error_buf,
 						"%s at %s failed due to remote transfer hook error: %s",
 						get_mySubSystem()->getName(),
 						s->my_ip_str(),fullname.c_str());
@@ -3183,7 +3186,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					rc = 0;
 
 					int the_error = errno;
-					error_buf.formatstr(
+					formatstr(error_buf,
 						"%s at %s failed to create directory %s: %s (errno %d)",
 						get_mySubSystem()->getName(),
 						s->my_ip_str(),fullname.c_str(),
@@ -3230,7 +3233,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// Report only the first error.
 		if( rc < 0 && all_transfers_succeeded ) {
 			all_transfers_succeeded = false;
-			error_buf.formatstr("%s at %s - |Error: receiving file %s",
+			formatstr(error_buf, "%s at %s - |Error: receiving file %s",
 			                  get_mySubSystem()->getName(),
 							  s->my_ip_str(),fullname.c_str());
 			download_success = false;
@@ -3241,10 +3244,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 				// defined state
 
 				if (rc == GET_FILE_PLUGIN_FAILED) {
-					error_buf.formatstr_cat(": %s", errstack.getFullText().c_str());
+					formatstr_cat(error_buf, ": %s", errstack.getFullText().c_str());
 				} else {
-					error_buf.replaceString("receiving","writing to");
-					error_buf.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
+					replace_str(error_buf, "receiving", "writing to");
+					formatstr_cat(error_buf, ": (errno %d) %s",the_error,strerror(the_error));
 				}
 
 				// Since there is a well-defined errno describing what just
@@ -3285,7 +3288,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 				if( rc == GET_FILE_MAX_BYTES_EXCEEDED ) {
 					try_again = false;
-					error_buf.formatstr_cat(": max total download bytes exceeded (max=%ld MB)",
+					formatstr_cat(error_buf, ": max total download bytes exceeded (max=%ld MB)",
 											(long int)(MaxDownloadBytes/1024/1024));
 					hold_code = CONDOR_HOLD_CODE::MaxTransferOutputSizeExceeded;
 					hold_subcode = 0;
@@ -3356,6 +3359,13 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			Info.stats.InsertAttr("CedarFilesCount", num_cedar_files);
 		}
 
+		std::string container_image;
+		jobAd.LookupString(ATTR_CONTAINER_IMAGE, container_image);
+
+		if (container_image == filename) {
+			Info.stats.Assign(ATTR_CONTAINER_DURATION, (time_t) thisFileStats.ConnectionTimeSeconds);
+		}
+
 		// Gather a few more statistics
 		thisFileStats.TransferSuccess = download_success;
 
@@ -3405,7 +3415,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 					hold_subcode = ETIME;
 				}
 				try_again = false;
-				error_buf.formatstr( "%s", errstack.getFullText().c_str() );
+				formatstr(error_buf, "%s", errstack.getFullText().c_str());
 			}
 		}
 	}
@@ -3417,7 +3427,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 	// Receive final report from the sender to make sure all went well.
 	bool upload_success = false;
-	MyString upload_error_buf;
+	std::string upload_error_buf;
 	bool upload_try_again = true;
 	int upload_hold_code = 0;
 	int upload_hold_subcode = 0;
@@ -3431,10 +3441,10 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			peer_ip_str = ((Sock *)s)->get_sinful_peer();
 		}
 
-		MyString download_error_buf;
-		download_error_buf.formatstr("%s failed to receive file(s) from %s",
+		std::string download_error_buf;
+		formatstr(download_error_buf, "%s failed to receive file(s) from %s",
 						  get_mySubSystem()->getName(),peer_ip_str);
-		error_buf.formatstr("%s; %s",
+		formatstr(error_buf, "%s; %s",
 						  upload_error_buf.c_str(),
 						  download_error_buf.c_str());
 		dprintf(D_ALWAYS,"DoDownload: %s\n",error_buf.c_str());
@@ -3445,7 +3455,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 
 			// store full-duplex error description, because only our side
 			// of the story was stored in above call to SendTransferAck
-		Info.error_desc = error_buf.c_str();
+		Info.error_desc = error_buf;
 
 		dprintf( D_FULLDEBUG, "DoDownload: exiting with upload errors\n" );
 		return_and_resetpriv( -1 );
@@ -3460,14 +3470,14 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 	}
 
 	if ( !final_transfer && IsServer() ) {
-		MyString buf;
+		std::string buf;
 		int fd;
 		// we just stashed all the files in the TmpSpoolSpace.
 		// write out the commit file.
 
-		buf.formatstr("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+		formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
-		if ((fd = safe_open_wrapper_follow(buf.Value(), O_WRONLY | O_CREAT | O_TRUNC |
+		if ((fd = safe_open_wrapper_follow(buf.c_str(), O_WRONLY | O_CREAT | O_TRUNC |
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
 #else
 		if ((fd = safe_open_wrapper_follow(buf.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0)
@@ -3499,11 +3509,9 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster);
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
-		std::string full_stats;
-		formatstr(full_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
+		formatstr(Info.tcp_stats, "File Transfer Download: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
 			cluster, proc, numFiles, (long long)*total_bytes_ptr, (downloadEndTime - downloadStartTime), s->peer_ip_str(), (stats ? stats : ""));
-		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, "%s", full_stats.c_str());
+		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
 
 
@@ -3511,7 +3519,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 }
 
 void
-FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,MyString &error_desc)
+FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_code,int &hold_subcode,std::string &error_desc)
 {
 	if(!PeerDoesTransferAck) {
 		success = true;
@@ -3541,7 +3549,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 		try_again = false;
 		hold_code = CONDOR_HOLD_CODE::InvalidTransferAck;
 		hold_subcode = 0;
-		error_desc.formatstr("Download acknowledgment missing attribute: %s",ATTR_RESULT);
+		formatstr(error_desc,"Download acknowledgment missing attribute: %s",ATTR_RESULT);
 		return;
 	}
 	if(result == 0) {
@@ -3563,11 +3571,7 @@ FileTransfer::GetTransferAck(Stream *s,bool &success,bool &try_again,int &hold_c
 	if(!ad.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_subcode)) {
 		hold_subcode = 0;
 	}
-	char *hold_reason_buf = NULL;
-	if(ad.LookupString(ATTR_HOLD_REASON,&hold_reason_buf)) {
-		error_desc = hold_reason_buf;
-		free(hold_reason_buf);
-	}
+	ad.LookupString(ATTR_HOLD_REASON, error_desc);
 	// If this is the condor_shadow (indicated by IsServer() == true) then update
 	// our file transfer stats to include those sent by the condor_starter
 	ClassAd* transfer_stats = dynamic_cast<ClassAd*>(ad.Lookup("TransferStats"));
@@ -3623,9 +3627,9 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 				// HTCondor code shouldn't generate newlines - but potentially file transfer
 				// plugins could!
 			if (strchr(hold_reason, '\n')) {
-				MyString hold_reason_str(hold_reason);
-				hold_reason_str.replaceString("\n", "\\n");
-				ad.InsertAttr(ATTR_HOLD_REASON, hold_reason_str.c_str());
+				std::string hold_reason_str(hold_reason);
+				replace_str(hold_reason_str, "\n", "\\n");
+				ad.InsertAttr(ATTR_HOLD_REASON, hold_reason_str);
 			} else {
 				ad.Assign(ATTR_HOLD_REASON,hold_reason);
 			}
@@ -3646,9 +3650,9 @@ FileTransfer::SendTransferAck(Stream *s,bool success,bool try_again,int hold_cod
 void
 FileTransfer::CommitFiles()
 {
-	MyString buf;
-	MyString newbuf;
-	MyString swapbuf;
+	std::string buf;
+	std::string newbuf;
+	std::string swapbuf;
 	const char *file;
 
 	if ( IsClient() ) {
@@ -3665,14 +3669,14 @@ FileTransfer::CommitFiles()
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
+	Directory tmpspool( TmpSpoolSpace.c_str(), desired_priv_state );
 
-	buf.formatstr("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+	formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.c_str(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 
-		MyString SwapSpoolSpace;
-		SwapSpoolSpace.formatstr("%s.swap",SpoolSpace);
+		std::string SwapSpoolSpace;
+		formatstr(SwapSpoolSpace,"%s.swap",SpoolSpace);
 		bool swap_dir_ready = SpooledJobFiles::createJobSwapSpoolDirectory(&jobAd,desired_priv_state);
 		if( !swap_dir_ready ) {
 			EXCEPT("Failed to create %s",SwapSpoolSpace.c_str());
@@ -3682,9 +3686,9 @@ FileTransfer::CommitFiles()
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
-			buf.formatstr("%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
-			newbuf.formatstr("%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
-			swapbuf.formatstr("%s%c%s",SwapSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
+			formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
+			formatstr(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
+			formatstr(swapbuf,"%s%c%s",SwapSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 
 				// If the target name exists, move it into the swap
 				// directory.  This serves two purposes:
@@ -4478,7 +4482,7 @@ FileTransfer::computeFileList(
 					local_output_url += outputName;
 				}
 			} else {
-				MyString remap_filename;
+				std::string remap_filename;
 				if ((1 == filename_remap_find(download_filename_remaps.c_str(), fileitem.srcName().c_str(), remap_filename, 0)) && IsUrl(remap_filename.c_str())) {
 					local_output_url = remap_filename.c_str();
 				}
@@ -4795,7 +4799,7 @@ FileTransfer::uploadFileList(
 	bool first_failed_try_again = false;
 	int first_failed_hold_code = 0;
 	int first_failed_hold_subcode = 0;
-	MyString first_failed_error_desc;
+	std::string first_failed_error_desc;
 	int first_failed_line_number = 0;
 
 	int currentUploadDeferred = 0;
@@ -4807,7 +4811,7 @@ FileTransfer::uploadFileList(
 	// use an error stack to keep track of failures when invoke plugins,
 	// perhaps more of this can be instrumented with it later.
 	CondorError errstack;
-	MyString error_desc;
+	std::string error_desc;
 
 	std::string reservation_id;
 	priv_state saved_priv = PRIV_UNKNOWN;
@@ -4855,17 +4859,26 @@ FileTransfer::uploadFileList(
 			fullname = filename;
 		}
 
-		MyString dest_filename;
+		std::string dest_filename;
 		if ( ExecFile && !simple_init && (file_strcmp(ExecFile,filename.c_str())==0 )) {
 			// this file is the job executable
 			is_the_executable = true;
-			dest_filename = CONDOR_EXEC;
+			if (PeerRenamesExecutable) {
+				// Our peer is old and expects us to rename the executable
+				dest_filename = CONDOR_EXEC;
+			} else {
+				// Strip path information and preserve the original name
+				// (in case copy_to_spool gave us an ickpt filename).
+				std::string cmd;
+				jobAd.LookupString(ATTR_JOB_CMD, cmd);
+				dest_filename = condor_basename(cmd.c_str());
+			}
 		} else {
 			// this file is _not_ the job executable
 			is_the_executable = false;
 
 			if( !dest_dir.empty() ) {
-				dest_filename.formatstr("%s%c",dest_dir.c_str(),DIR_DELIM_CHAR);
+				formatstr(dest_filename,"%s%c",dest_dir.c_str(),DIR_DELIM_CHAR);
 			}
 
 			//
@@ -4882,11 +4895,11 @@ FileTransfer::uploadFileList(
 				// query string.  Strip it out to get better base name.
 				auto idx = filename.find("?");
 				std::string tmp_filename = filename.substr(0, idx);
-				dest_filename.formatstr_cat( "%s", condor_basename(tmp_filename.c_str()) );
+				formatstr_cat(dest_filename, "%s", condor_basename(tmp_filename.c_str()));
 			} else {
 				// Strip any path information; if we wanted to keep it, it
 				// would have been set in dest_dir.
-				dest_filename.formatstr_cat( "%s", condor_basename(filename.c_str()));
+				formatstr_cat(dest_filename, "%s", condor_basename(filename.c_str()));
 			}
 
 			dprintf(D_FULLDEBUG, "DoUpload: will transfer to filename %s.\n", dest_filename.c_str() );
@@ -4902,7 +4915,7 @@ FileTransfer::uploadFileList(
 			(perm_obj->read_access(fullname.c_str()) != 1) ) {
 			// we do _not_ have permission to read this file!!
 			upload_success = false;
-			error_desc.formatstr("error reading from %s: permission denied",fullname.c_str());
+			formatstr(error_desc,"error reading from %s: permission denied",fullname.c_str());
 			do_upload_ack = true;    // tell receiver that we failed
 			do_download_ack = true;
 			try_again = false; // put job on hold
@@ -4911,7 +4924,7 @@ FileTransfer::uploadFileList(
 			return ExitDoUpload(total_bytes_ptr,numFiles,s,saved_priv,protocolState.socket_default_crypto,
 			                    upload_success,do_upload_ack,do_download_ack,
 								try_again,hold_code,hold_subcode,
-								error_desc.Value(),__LINE__);
+								error_desc.c_str(),__LINE__);
 		}
 #else
 		if (is_the_executable) {} // Done to get rid of the compiler set-but-not-used warnings.
@@ -4989,7 +5002,7 @@ FileTransfer::uploadFileList(
 			dprintf (D_FULLDEBUG, "DoUpload: Executing multifile plugin for multiple transfers.\n");
 			TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
 			if (result == TransferPluginResult::Error) {
-				error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
+				formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				if (!first_failed_file_transfer_happened) {
 					first_failed_file_transfer_happened = true;
 					first_failed_upload_success = false;
@@ -5303,7 +5316,7 @@ FileTransfer::uploadFileList(
 		if( rc < 0 ) {
 			int the_error = errno;
 			upload_success = false;
-			error_desc.formatstr("|Error: sending file %s",UrlSafePrint(fullname));
+			formatstr(error_desc,"|Error: sending file %s",UrlSafePrint(fullname));
 			if((rc == PUT_FILE_OPEN_FAILED) || (rc == PUT_FILE_PLUGIN_FAILED) || (rc == PUT_FILE_MAX_BYTES_EXCEEDED)) {
 				try_again = false; // put job on hold
 				hold_code = FILETRANSFER_HOLD_CODE::UploadFileError;
@@ -5324,18 +5337,18 @@ FileTransfer::uploadFileList(
 					// ack waiting for us to read back which we do at the end of
 					// the while loop.
 
-					error_desc.replaceString("sending","reading from");
-					error_desc.formatstr_cat(": (errno %d) %s",the_error,strerror(the_error));
+					replace_str(error_desc,"sending","reading from");
+					formatstr_cat(error_desc,": (errno %d) %s",the_error,strerror(the_error));
 					if( fail_because_mkdir_not_supported ) {
-						error_desc.formatstr_cat("- Remote condor version is too old to transfer directories.");
+						formatstr_cat(error_desc, "- Remote condor version is too old to transfer directories.");
 					}
 					if( fail_because_symlink_not_supported ) {
-						error_desc.formatstr_cat("- Transfer of symlinks to directories is not supported.");
+						formatstr_cat(error_desc, "- Transfer of symlinks to directories is not supported.");
 					}
 				} else if ( rc == PUT_FILE_MAX_BYTES_EXCEEDED ) {
 					StatInfo this_file_stat(fullname.c_str());
 					filesize_t this_file_size = this_file_stat.GetFileSize();
-					error_desc.formatstr_cat(": max total %s bytes exceeded (max=%ld MB, this file=%ld MB)",
+					formatstr_cat(error_desc, ": max total %s bytes exceeded (max=%ld MB, this file=%ld MB)",
 											 using_peer_max_transfer_bytes ? "download" : "upload",
 											 (long int)(effective_max_upload_bytes/1024/1024),
 											 (long int)(this_file_size/1024/1024));
@@ -5343,7 +5356,7 @@ FileTransfer::uploadFileList(
 					the_error = 0;
 				} else {
 					// add on the error string from the errstack used
-					error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
+					formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 				}
 
 				// We'll continue trying to transfer the rest of the files
@@ -5415,7 +5428,7 @@ FileTransfer::uploadFileList(
 			// the stdout/stderr files, since those are handled
 			// separately when building the list of files to transfer.
 
-		if( dest_filename.FindChar(DIR_DELIM_CHAR) < 0 &&
+		if( dest_filename.find(DIR_DELIM_CHAR) == std::string::npos &&
 			dest_filename != condor_basename(JobStdoutFile.c_str()) &&
 			dest_filename != condor_basename(JobStderrFile.c_str()) &&
 			(file_command != TransferCommand::Other || file_subcommand != TransferSubCommand::UploadUrl) )
@@ -5434,7 +5447,7 @@ FileTransfer::uploadFileList(
 	if (!currentUploadRequests.empty()) {
 		TransferPluginResult result = InvokeMultiUploadPlugin(currentUploadPlugin, currentUploadRequests, *s, true, errstack, upload_bytes);
 		if (result != TransferPluginResult::Success) {
-			error_desc.formatstr_cat(": %s", errstack.getFullText().c_str());
+			formatstr_cat(error_desc, ": %s", errstack.getFullText().c_str());
 			if (!first_failed_file_transfer_happened) {
 				first_failed_file_transfer_happened = true;
 				first_failed_upload_success = false;
@@ -5451,7 +5464,7 @@ FileTransfer::uploadFileList(
 	// If we had an error when parsing the data manifest, it occurred far too early for us to
 	// send a reasonable error back to the queue.  Hence, we delay looking at the error object until now.
 	if (!m_reuse_info_err.empty()) {
-		error_desc.formatstr_cat(": %s", m_reuse_info_err.getFullText().c_str());
+		formatstr_cat(error_desc, ": %s", m_reuse_info_err.getFullText().c_str());
 		if (!first_failed_file_transfer_happened) {
 			first_failed_file_transfer_happened = true;
 			first_failed_upload_success = false;
@@ -5658,7 +5671,7 @@ FileTransfer::ReceiveTransferGoAhead(
 	bool try_again = true;
 	int hold_code = 0;
 	int hold_subcode = 0;
-	MyString error_desc;
+	std::string error_desc;
 	bool result;
 	int alive_interval;
 	int old_timeout;
@@ -5702,7 +5715,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 	bool &try_again,
 	int &hold_code,
 	int &hold_subcode,
-	MyString &error_desc,
+	std::string &error_desc,
 	int alive_interval)
 {
 	int go_ahead = GO_AHEAD_UNDEFINED;
@@ -5710,7 +5723,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 	s->encode();
 
 	if( !s->put(alive_interval) || !s->end_of_message() ) {
-		error_desc.formatstr("DoReceiveTransferGoAhead: failed to send alive_interval");
+		error_desc = "DoReceiveTransferGoAhead: failed to send alive_interval";
 		return false;
 	}
 
@@ -5720,7 +5733,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 		ClassAd msg;
 		if( !getClassAd(s, msg) || !s->end_of_message() ) {
 			char const *ip = s->peer_ip_str();
-			error_desc.formatstr("Failed to receive GoAhead message from %s.",
+			formatstr(error_desc, "Failed to receive GoAhead message from %s.",
 							   ip ? ip : "(null)");
 
 			return false;
@@ -5730,7 +5743,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 		if(!msg.LookupInteger(ATTR_RESULT,go_ahead)) {
 			std::string msg_str;
 			sPrintAd(msg_str, msg);
-			error_desc.formatstr("GoAhead message missing attribute: %s.  "
+			formatstr(error_desc, "GoAhead message missing attribute: %s.  "
 							   "Full classad: [\n%s]",
 							   ATTR_RESULT,msg_str.c_str());
 			try_again = false;
@@ -5774,11 +5787,7 @@ FileTransfer::DoReceiveTransferGoAhead(
 		if(!msg.LookupInteger(ATTR_HOLD_REASON_SUBCODE,hold_subcode)) {
 			hold_subcode = 0;
 		}
-		char *hold_reason_buf = NULL;
-		if(msg.LookupString(ATTR_HOLD_REASON,&hold_reason_buf)) {
-			error_desc = hold_reason_buf;
-			free(hold_reason_buf);
-		}
+		msg.LookupString(ATTR_HOLD_REASON, error_desc);
 
 		break;
 	}
@@ -5804,9 +5813,9 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 {
 	int rc = upload_success ? 0 : -1;
 	bool download_success = false;
-	MyString error_buf;
-	MyString download_error_buf;
-	char const *error_desc = NULL;
+	std::string error_buf;
+	std::string download_error_buf;
+	char const *error_desc = "";
 
 	dprintf(D_FULLDEBUG,"DoUpload: exiting at %d\n",DoUpload_exit_line);
 
@@ -5830,14 +5839,14 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 			// go back to the state we were in before file transfer
 			s->set_crypto_mode(socket_default_crypto);
 
-			MyString error_desc_to_send;
+			std::string error_desc_to_send;
 			if(!upload_success) {
-				error_desc_to_send.formatstr("%s at %s failed to send file(s) to %s",
+				formatstr(error_desc_to_send, "%s at %s failed to send file(s) to %s",
 										   get_mySubSystem()->getName(),
 										   s->my_ip_str(),
 										   s->get_sinful_peer());
 				if(upload_error_desc) {
-					error_desc_to_send.formatstr_cat(": %s",upload_error_desc);
+					formatstr_cat(error_desc_to_send,": %s",upload_error_desc);
 				}
 			}
 			SendTransferAck(s,upload_success,try_again,hold_code,hold_subcode,
@@ -5868,21 +5877,18 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 			receiver_ip_str = "disconnected socket";
 		}
 
-		error_buf.formatstr("%s at %s failed to send file(s) to %s",
+		formatstr(error_buf, "%s at %s failed to send file(s) to %s",
 						  get_mySubSystem()->getName(),
 						  s->my_ip_str(),receiver_ip_str);
 		if(upload_error_desc) {
-			error_buf.formatstr_cat(": %s",upload_error_desc);
+			formatstr_cat(error_buf, ": %s",upload_error_desc);
 		}
 
 		if(!download_error_buf.empty()) {
-			error_buf.formatstr_cat("; %s",download_error_buf.c_str());
+			formatstr_cat(error_buf, "; %s", download_error_buf.c_str());
 		}
 
 		error_desc = error_buf.c_str();
-		if(!error_desc) {
-			error_desc = "";
-		}
 
 		if(try_again) {
 			dprintf(D_ALWAYS,"DoUpload: %s\n",error_desc);
@@ -5909,11 +5915,9 @@ FileTransfer::ExitDoUpload(const filesize_t *total_bytes_ptr, int numFiles, Reli
 		jobAd.LookupInteger(ATTR_PROC_ID, proc);
 
 		char *stats = s->get_statistics();
-		std::string full_stats;
-		formatstr(full_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
+		formatstr(Info.tcp_stats, "File Transfer Upload: JobId: %d.%d files: %d bytes: %lld seconds: %.2f dest: %s %s\n",
 			cluster, proc, numFiles, (long long)*total_bytes_ptr, (uploadEndTime - uploadStartTime), s->peer_ip_str(), (stats ? stats : ""));
-		Info.tcp_stats = full_stats.c_str();
-		dprintf(D_STATS, "%s", full_stats.c_str());
+		dprintf(D_STATS, "%s", Info.tcp_stats.c_str());
 	}
 
 	return rc;
@@ -5926,7 +5930,7 @@ FileTransfer::stopServer()
 	if (TransKey) {
 		// remove our key from the hash table
 		if ( TranskeyTable ) {
-			MyString key(TransKey);
+			std::string key(TransKey);
 			TranskeyTable->remove(key);
 			if ( TranskeyTable->getNumElements() == 0 ) {
 				// if hash table is empty, delete table as well
@@ -6102,6 +6106,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 
 	PeerDoesReuseInfo = peer_version.built_since_version(8,9,4);
 	PeerDoesS3Urls = peer_version.built_since_version(8,9,4);
+	PeerRenamesExecutable = ! peer_version.built_since_version(10, 6, 0);
 }
 
 
@@ -6110,7 +6115,7 @@ FileTransfer::setPeerVersion( const CondorVersionInfo &peer_version )
 // and filesize if they are not null.
 bool FileTransfer::LookupInFileCatalog(const char *fname, time_t *mod_time, filesize_t *filesize) {
 	CatalogEntry *entry = 0;
-	MyString fn = fname;
+	std::string fn = fname;
 	if (last_download_catalog->lookup(fn, entry) == 0) {
 		// hashtable return code zero means found (!?!)
 
@@ -6214,7 +6219,7 @@ bool FileTransfer::BuildFileCatalog(time_t spool_time, const char* iwd, FileCata
 				tmpentry->modification_time = file_iterator.GetModifyTime();
 				tmpentry->filesize = file_iterator.GetFileSize();
 			}
-			MyString fn = f;
+			std::string fn = f;
 			(*catalog)->insert(fn, tmpentry);
 		}
 	}
@@ -6259,7 +6264,7 @@ std::string FileTransfer::DetermineFileTransferPlugin( CondorError &error, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(error)) {
+		if(-1 == InitializeSystemPlugins(error, false)) {
 			return "";
 		}
 	}
@@ -6311,7 +6316,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 	if ( !plugin_table ) {
 		// this function always succeeds (sigh) but we can capture the errors
 		dprintf(D_VERBOSE, "FILETRANSFER: Building full plugin table to look for %s.\n", method.c_str());
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, false)) {
 			return TransferPluginResult::Error;
 		}
 	}
@@ -6384,7 +6389,7 @@ FileTransfer::InvokeFileTransferPlugin(CondorError &e, const char* source, const
 		drop_privs
 	);
 
-	int rc;
+	int rc = 0;
 	int timeout = param_integer( "MAX_FILE_TRANSFER_PLUGIN_LIFETIME", 72000 );
 	p_timer.wait_for_exit( timeout, & rc );
 
@@ -6555,7 +6560,8 @@ FileTransfer::InvokeMultipleFileTransferPlugin( CondorError &e,
 	input_file = safe_fopen_wrapper( input_filename.c_str(), "w" );
 	if (input_file == nullptr) {
 		dprintf( D_ALWAYS, "FILETRANSFER InvokeMultipleFileTransferPlugin: "
-					"Could not open %s for writing, aborting\n", input_filename.c_str());
+			"Could not open %s for writing (%s, errno=%d), aborting\n",
+			input_filename.c_str(), strerror(errno), errno );
 		return TransferPluginResult::Error;
 	}
 	fputs( transfer_files_string.c_str(), input_file );
@@ -6742,7 +6748,7 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	if( rc == 0 ) {
 		// If it already exists and is larger than 5 Mb, copy the contents
 		// to a .old file.
-		if( stats_file_buf.st_size > 5000000 ) {
+		if( stats_file_buf.st_size > 5'000'000 ) {
 			std::string stats_file_old_path = stats_file_path;
 			stats_file_old_path += ".old";
 			// TODO: Add a lock to prevent two starters from rotating the log
@@ -6844,7 +6850,7 @@ std::string FileTransfer::GetSupportedMethods(CondorError &e) {
 
 	// build plugin table if we haven't done so
 	if (!plugin_table) {
-		if(-1 == InitializeSystemPlugins(e)) {
+		if(-1 == InitializeSystemPlugins(e, true)) {
 			return "";
 		}
 	}
@@ -6881,13 +6887,13 @@ int FileTransfer::AddJobPluginsToInputFiles(const ClassAd &job, CondorError &e, 
 		return 0;
 	}
 
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
 			// add the plugin to the front of the input files list
-			MyString plugin_path(equals + 1);
-			plugin_path.trim();
+			std::string plugin_path(equals + 1);
+			trim(plugin_path);
 			if (! infiles.file_contains(plugin_path.c_str())) {
 				infiles.insert(plugin_path.c_str());
 			}
@@ -6912,12 +6918,12 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 	}
 
 	// start with the system table
-	if (-1 == InitializeSystemPlugins(e)) {
+	if (-1 == InitializeSystemPlugins(e, false)) {
 		return -1;
 	}
 
 	// process the user plugins
-	StringTokenIterator plugins(job_plugins, 100, ";");
+	StringTokenIterator plugins(job_plugins, ";");
 	for (const char * plug = plugins.first(); plug != NULL; plug = plugins.next()) {
 		const char * equals = strchr(plug, '=');
 		if (equals) {
@@ -6929,7 +6935,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 			trim(plugin_path);
 			std::string plugin(condor_basename(plugin_path.c_str()));
 
-			InsertPluginMappings(methods, plugin);
+			InsertPluginMappings(methods, plugin, false);
 			plugins_multifile_support[plugin] = true;
 			plugins_from_job[plugin.c_str()] = true;
 			multifile_plugins_enabled = true;
@@ -6943,7 +6949,7 @@ int FileTransfer::InitializeJobPlugins(const ClassAd &job, CondorError &e)
 }
 
 
-int FileTransfer::InitializeSystemPlugins(CondorError &e) {
+int FileTransfer::InitializeSystemPlugins(CondorError &e, bool enable_testing) {
 
 	// don't leak even if Initialize gets called more than once
 	if (plugin_table) {
@@ -6970,7 +6976,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 	char *p;
 	while ((p = plugin_list.next())) {
 		// TODO: plugin must be an absolute path (win and unix)
-		SetPluginMappings( e, p );
+		SetPluginMappings( e, p, enable_testing );
 	}
 
 	// If we have an https plug-in, this version of HTCondor also supports S3.
@@ -6988,7 +6994,7 @@ int FileTransfer::InitializeSystemPlugins(CondorError &e) {
 
 
 void
-FileTransfer::SetPluginMappings( CondorError &e, const char* path )
+FileTransfer::SetPluginMappings( CondorError &e, const char* path, bool enable_testing )
 {
     FILE* fp;
     const char *args[] = { path, "-classad", NULL};
@@ -7040,7 +7046,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 	// this is not a multifile plugin.
 	if ( multifile_plugins_enabled || !this_plugin_supports_multifile ) {
 		if (ad->LookupString( "SupportedMethods", methods)) {
-			InsertPluginMappings( methods, path );
+			InsertPluginMappings( methods, path, enable_testing );
 		}
 	}
 
@@ -7050,7 +7056,7 @@ FileTransfer::SetPluginMappings( CondorError &e, const char* path )
 
 
 void
-FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p)
+FileTransfer::InsertPluginMappings(const std::string& methods, const std::string& p, bool enable_testing)
 {
 	StringList method_list(methods.c_str());
 
@@ -7058,11 +7064,120 @@ FileTransfer::InsertPluginMappings(const std::string& methods, const std::string
 
 	method_list.rewind();
 	while((m = method_list.next())) {
+		if (enable_testing && !TestPlugin(m, p)) {
+			dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" not handled by \"%s\" due to failed test\n", m, p.c_str());
+			continue;
+		}
 		dprintf(D_FULLDEBUG, "FILETRANSFER: protocol \"%s\" handled by \"%s\"\n", m, p.c_str());
 		if ( plugin_table->insert(m, p, true) != 0 ) {
 			dprintf(D_FULLDEBUG, "FILETRANSFER: error adding protocol \"%s\" to plugin table, ignoring\n", m);
 		}
 	}
+}
+
+namespace {
+
+class AutoDeleteDirectory {
+public:
+	AutoDeleteDirectory(std::string dir, ClassAd *ad) : m_dirname(dir), m_ad(ad) {}
+
+	~AutoDeleteDirectory() {
+		if (m_dirname.empty()) {return;}
+
+		dprintf(D_FULLDEBUG, "FILETRANSFER: Cleaning up directory %s.\n", m_dirname.c_str());
+		Directory dir_obj(m_dirname.c_str());
+		if (!dir_obj.Remove_Entire_Directory()) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s contents.\n", m_dirname.c_str());
+			return;
+		}
+		if (-1 == rmdir(m_dirname.c_str())) {
+			dprintf(D_ALWAYS, "FILETRANSFER: Failed to remove directory %s: %s (errno=%d).\n",
+				m_dirname.c_str(), strerror(errno), errno);
+		}
+
+		if (m_ad) {
+			m_ad->Delete("Iwd");
+		}
+	}
+
+private:
+	std::string m_dirname;
+	ClassAd *m_ad;
+};
+
+}
+
+bool
+FileTransfer::TestPlugin(const std::string &method, const std::string &plugin)
+{
+	const std::string test_url_param = std::string(method) + "_test_url";
+	std::string test_url;
+	if (!param(test_url, test_url_param.c_str())) {
+		dprintf(D_FULLDEBUG, "FILETRANSFER: no test url defined for method %s.\n", method.c_str());
+		return true;
+	}
+
+#ifdef WIN32
+	dprintf(D_ALWAYS,
+		"WARNING - FILETRANSFER: test url defined for method %s in config, but this is not supported on Windows OS.\n",
+		method.c_str());
+	return true;
+#else
+	// If we are running as a test starter, we may not have Iwd set appropriately.
+	// In this case, create an execute directory.
+	std::string iwd, directory;
+	if (!jobAd.EvaluateAttrString("Iwd", iwd)) {
+		std::string execute_dir;
+		if (!param(execute_dir, "EXECUTE")) {
+			dprintf(D_ALWAYS, "FILETRANSFER: EXECUTE configuration variable not set; cannot test plugin.\n");
+			return false;
+		}
+		auto test_dir = execute_dir + "/test_file_transfer.XXXXXX";
+		std::unique_ptr<char, decltype(&free)> test_dir_template(strdup(test_dir.c_str()), &free);
+		{
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_CONDOR);
+			auto result = mkdtemp(test_dir_template.get());
+			if (!result) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to create temporary test directory %s: %s (errno=%d).\n",
+					test_dir_template.get(), strerror(errno), errno);
+				return false;
+			}
+			directory = std::string(result);
+		}
+		if (user_ids_are_inited()) {
+			TemporaryPrivSentry sentry_mkdir((PRIV_CONDOR_FINAL == get_priv()) ? PRIV_CONDOR_FINAL : PRIV_ROOT);
+			if (0 != chown(directory.c_str(), get_user_uid(), get_user_gid())) {
+				dprintf(D_ALWAYS, "FILETRANSFER: Failed to chown temporary test directory %s to user UID %d: %s (errno=%d).\n",
+					directory.c_str(), get_user_uid(), strerror(errno), errno);
+				return false;
+			}
+		}
+		iwd = directory;
+		jobAd.InsertAttr("Iwd", directory);
+	}
+	AutoDeleteDirectory dir_delete(directory, &jobAd);
+
+	auto fullname = iwd + DIR_DELIM_CHAR + "test_file";
+
+	classad::ClassAd testAd;
+	testAd.InsertAttr("Url", test_url);
+	testAd.InsertAttr("LocalFileName", fullname);
+	std::string testAdString;
+	classad::ClassAdUnParser unparser;
+	unparser.Unparse(testAdString, &testAd);
+
+	std::vector<std::unique_ptr<ClassAd>> result_ads;
+	CondorError err;
+	auto result = InvokeMultipleFileTransferPlugin(err, plugin, testAdString, nullptr, false, &result_ads );
+	if (result != TransferPluginResult::Success) {
+		dprintf(D_ALWAYS, "FILETRANSFER: Test URL %s download failed by plugin %s: %s\n",
+			test_url.c_str(), plugin.c_str(), err.getFullText().c_str());
+		return false;
+	}
+	dprintf(D_ALWAYS, "FILETRANSFER: Successfully downloaded test URL %s using plugin %s.\n",
+		test_url.c_str(), plugin.c_str());
+	return true;
+#endif
 }
 
 bool
@@ -7246,9 +7361,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 		file_xfer_item.setFileSize(st.GetFileSize());
 
 		if( preserveRelativePaths && (! fullpath(file_xfer_item.srcName().c_str())) ) {
-			char * dirname_raw = condor_dirname( file_xfer_item.srcName().c_str() );
-			std::string dirname(dirname_raw);
-			free(dirname_raw);
+			std::string dirname = condor_dirname( file_xfer_item.srcName().c_str() );
 
 			if( strcmp( dirname.c_str(), "." ) != 0 ) {
 				file_xfer_item.setDestDir( dirname );
@@ -7424,7 +7537,7 @@ FileTransfer::ExpandFileTransferList( char const *src_path, char const *dest_dir
 }
 
 bool
-FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MyString &expanded_list, std::string &error_msg )
+FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, std::string &expanded_list, std::string &error_msg )
 {
 	bool result = true;
 	StringList input_files(input_list,",");
@@ -7443,7 +7556,10 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 		if( !needs_expansion ) {
 				// We intentionally avoid the need to stat any of the entries
 				// that don't need to be expanded in case stat is expensive.
-			expanded_list.append_to_list(path,",");
+			if (!expanded_list.empty()) {
+				expanded_list += ',';
+			}
+			expanded_list += path;
 		}
 		else {
 			FileTransferList filelist;
@@ -7461,7 +7577,10 @@ FileTransfer::ExpandInputFileList( char const *input_list, char const *iwd, MySt
 				 filelist_it != filelist.end();
 				 filelist_it++ )
 			{
-				expanded_list.append_to_list(filelist_it->srcName(),",");
+				if (!expanded_list.empty()) {
+					expanded_list += ',';
+				}
+				expanded_list += filelist_it->srcName();
 			}
 		}
 	}
@@ -7507,7 +7626,7 @@ FileTransfer::ExpandInputFileList( ClassAd *job, std::string &error_msg ) {
 		return false;
 	}
 
-	MyString expanded_list;
+	std::string expanded_list;
 	if( !FileTransfer::ExpandInputFileList(input_files.c_str(),iwd.c_str(),expanded_list,error_msg) )
 	{
 		return false;
@@ -7546,9 +7665,6 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 
 	bool more = true;
 	while( more ) {
-		MyString fullpath;
-		fullpath.formatstr("%s%c%s",sandbox,DIR_DELIM_CHAR,pathbuf);
-
 		more = filename_split( pathbuf, dirbuf, filebuf );
 
 		if( strcmp(filebuf,"..") == 0 ) {
@@ -7568,7 +7684,10 @@ FileTransfer::LegalPathInSandbox(char const *path,char const *sandbox) {
 
 void FileTransfer::FileTransferInfo::addSpooledFile(char const *name_in_spool)
 {
-	spooled_files.append_to_list(name_in_spool);
+	if (!spooled_files.empty()) {
+		spooled_files += ',';
+	}
+	spooled_files += name_in_spool;
 }
 
 

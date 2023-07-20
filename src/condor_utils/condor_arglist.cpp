@@ -24,41 +24,6 @@
 #include "condor_string.h"
 #include "condor_attributes.h"
 
-void append_arg(char const *arg,MyString &result) {
-	if(result.length()) {
-		result += " ";
-	}
-	ASSERT(arg);
-	if(!*arg) {
-		result += "''"; //empty arg
-	}
-	while(*arg) {
-		switch(*arg) {
-		case ' ':
-		case '\t':
-		case '\n':
-		case '\r':
-		case '\'':
-			if(result.length() && result[result.length()-1] == '\'') {
-				//combine preceeding quoted section with this one,
-				//so we do not introduce a repeated quote.
-				result.truncate(result.length()-1);
-			}
-			else {
-				result += '\'';
-			}
-			if(*arg == '\'') {
-				result += '\''; //repeat the quote to escape it
-			}
-			result += *(arg++);
-			result += '\'';
-			break;
-		default:
-			result += *(arg++);
-		}
-	}
-}
-
 void append_arg(char const *arg, std::string &result) {
 	if(result.length()) {
 		result += " ";
@@ -95,39 +60,18 @@ void append_arg(char const *arg, std::string &result) {
 }
 
 void
-join_args( SimpleList<MyString> const & args_list, std::string & result, int start_arg)
+join_args(std::vector<std::string> const & args_list, std::string & result, size_t start_arg)
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg=NULL;
-	for(int i=0;it.Next(arg);i++) {
-		if(i<start_arg) continue;
-		append_arg(arg->c_str(), result);
+	size_t i = 0;
+	for (auto& arg : args_list) {
+		if(i++<start_arg) continue;
+		append_arg(arg.c_str(), result);
 	}
 }
 
-void join_args(SimpleList<MyString> const &args_list,MyString *result,int start_arg)
-{
-	SimpleListIterator<MyString> it(args_list);
-	ASSERT(result);
-	MyString *arg=NULL;
-	for(int i=0;it.Next(arg);i++) {
-		if(i<start_arg) continue;
-		append_arg(arg->c_str(),*result);
-	}
-}
-
-void join_args(char const * const *args_array,MyString *result,int start_arg) {
-	ASSERT(result);
+void join_args(char const * const *args_array,std::string& result,size_t start_arg) {
 	if(!args_array) return;
-	for(int i=0;args_array[i];i++) {
-		if(i<start_arg) continue;
-		append_arg(args_array[i],*result);
-	}
-}
-
-void join_args(char const * const *args_array,std::string& result,int start_arg) {
-	if(!args_array) return;
-	for(int i=0;args_array[i];i++) {
+	for(size_t i=0;args_array[i];i++) {
 		if(i<start_arg) continue;
 		append_arg(args_array[i], result);
 	}
@@ -135,10 +79,10 @@ void join_args(char const * const *args_array,std::string& result,int start_arg)
 
 bool split_args(
   char const *args,
-  SimpleList<MyString> *args_list,
+  std::vector<std::string>& args_list,
   std::string* error_msg)
 {
-	MyString buf = "";
+	std::string buf = "";
 	bool parsed_token = false;
 
 	if(!args) return true;
@@ -180,7 +124,7 @@ bool split_args(
 			args++; // eat whitespace
 			if(parsed_token) {
 				parsed_token = false;
-				ASSERT(args_list->Append(buf));
+				args_list.emplace_back(buf);
 				buf = "";
 			}
 			break;
@@ -192,30 +136,29 @@ bool split_args(
 		}
 	}
 	if(parsed_token) {
-		args_list->Append(buf);
+		args_list.emplace_back(buf);
 	}
 	return true;
 }
 
 static char **
-ArgListToArgsArray(SimpleList<MyString> const &args_list)
+ArgListToArgsArray(std::vector<std::string> const &args_list)
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg;
-	int i;
-	char **args_array = (char **)malloc((args_list.Number()+1)*sizeof(char*));
+	size_t i = 0;
+	char **args_array = (char **)malloc((args_list.size()+1)*sizeof(char*));
 	ASSERT(args_array);
-	for(i=0;it.Next(arg);i++) {
-		args_array[i] = strdup(arg->c_str());
+	for (const auto& arg: args_list) {
+		args_array[i] = strdup(arg.c_str());
 		ASSERT(args_array[i]);
+		i++;
 	}
 	args_array[i] = NULL;
 	return args_array;
 }
 
 bool split_args(char const *args, char ***args_array, std::string* error_msg) {
-	SimpleList<MyString> args_list;
-	if(!split_args(args,&args_list,error_msg)) {
+	std::vector<std::string> args_list;
+	if(!split_args(args,args_list,error_msg)) {
 		*args_array = NULL;
 		return false;
 	}
@@ -235,81 +178,48 @@ deleteStringArray(char **array)
 }
 
 
-int
+size_t
 ArgList::Count() const {
-	return args_list.Number();
+	return args_list.size();
 }
 void
 ArgList::Clear() {
-	args_list.Clear();
+	args_list.clear();
 	input_was_unknown_platform_v1 = false;
 }
 
 char const *
-ArgList::GetArg(int n) const {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg;
-	int i;
-	for(i=0;it.Next(arg);i++) {
-		if(i == n) return arg->c_str();
+ArgList::GetArg(size_t n) const {
+	if (n >= args_list.size()) {
+		return nullptr;
+	} else {
+		return args_list[n].c_str();
 	}
-	return NULL;
-}
-
-void
-ArgList::AppendArg(MyString arg) {
-	ASSERT(arg.c_str());
-	ASSERT(args_list.Append(arg.c_str()));
 }
 
 void
 ArgList::AppendArg(const std::string &arg) {
-	ASSERT(args_list.Append(arg.c_str()));
+	args_list.emplace_back(arg);
 }
 
 void
 ArgList::AppendArg(char const *arg) {
 	ASSERT(arg);
-	ASSERT(args_list.Append(arg));
+	args_list.emplace_back(arg);
 }
 
 void
-ArgList::AppendArg(int arg) {
-	char buf[100];
-	snprintf(buf,100,"%d",arg);
-	AppendArg(buf);
+ArgList::RemoveArg(size_t pos) {
+	if (pos < args_list.size()) {
+		args_list.erase(args_list.begin()+pos);
+	}
 }
 
 void
-ArgList::RemoveArg(int pos) {
-	MyString arg;
-	ASSERT(pos >= 0 && pos < Count());
-	args_list.Rewind();
-	for(int i=0;i <= pos;i++) {
-		args_list.Next(arg);
-	}
-	args_list.DeleteCurrent();
-}
+ArgList::InsertArg(char const *arg, size_t pos) {
+	ASSERT(pos <= Count());
 
-void
-ArgList::InsertArg(char const *arg,int pos) {
-	ASSERT(pos >= 0 && pos <= Count());
-
-	int i;
-	char **args_array = GetStringArray();
-
-	args_list.Clear();
-	for(i=0;args_array[i];i++) {
-		if(i == pos) {
-			args_list.Append(arg);
-		}
-		args_list.Append(args_array[i]);
-	}
-	if(i == pos) {
-		args_list.Append(arg);
-	}
-
-	deleteStringArray(args_array);
+	args_list.insert(args_list.begin()+pos, arg);
 }
 
 char **
@@ -318,20 +228,12 @@ ArgList::GetStringArray() const {
 }
 
 bool
-ArgList::AppendArgsV1RawOrV2Quoted(char const *args,std::string & error_msg) {
-    MyString ms;
-    bool rv = AppendArgsV1RawOrV2Quoted( args, & ms );
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
-}
-
-bool
-ArgList::AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1RawOrV2Quoted(char const *args,std::string & error_msg)
 {
 	if(IsV2QuotedString(args)) {
 			// This is actually a V2Quoted string (enclosed in double-quotes).
-		MyString v2;
-		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
+		std::string v2;
+		if(!V2QuotedToV2Raw(args,v2,error_msg)) {
 			return false;
 		}
 		return AppendArgsV2Raw(v2.c_str(),error_msg);
@@ -343,12 +245,12 @@ ArgList::AppendArgsV1RawOrV2Quoted(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1WackedOrV2Quoted(char const *args, std::string& error_msg)
 {
 	if(IsV2QuotedString(args)) {
 			// This is actually a V2Quoted string (enclosed in double-quotes).
-		MyString v2;
-		if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
+		std::string v2;
+		if(!V2QuotedToV2Raw(args,v2,error_msg)) {
 			return false;
 		}
 		return AppendArgsV2Raw(v2.c_str(),error_msg);
@@ -356,8 +258,8 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 
 		// It is a V1Wacked string.  Literal double-quotes are
 		// backwacked.
-	MyString v1;
-	if(!V1WackedToV1Raw(args,&v1,error_msg)) {
+	std::string v1;
+	if(!V1WackedToV1Raw(args,v1,error_msg)) {
 		return false;
 	}
 
@@ -365,37 +267,29 @@ ArgList::AppendArgsV1WackedOrV2Quoted(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV2Quoted(char const *args, std::string & error_msg) {
-    MyString ms;
-    bool rv = AppendArgsV2Quoted(args, &ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
-}
-
-bool
-ArgList::AppendArgsV2Quoted(char const *args,MyString *error_msg)
+ArgList::AppendArgsV2Quoted(char const *args, std::string & error_msg)
 {
 	if(!IsV2QuotedString(args)) {
 		AddErrorMessage("Expecting double-quoted input string (V2 format).",error_msg);
 		return false;
 	}
 
-	MyString v2;
-	if(!V2QuotedToV2Raw(args,&v2,error_msg)) {
+	std::string v2;
+	if(!V2QuotedToV2Raw(args,v2,error_msg)) {
 		return false;
 	}
 	return AppendArgsV2Raw(v2.c_str(),error_msg);
 }
 
 bool
-ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
+ArgList::AppendArgsV1Raw_win32(char const *args,std::string& error_msg)
 {
 	// Parse an args string in the format expected by the Windows
 	// function CommandLineToArgv().
 
 	while(*args) {
 		char const *begin_arg = args;
-		MyString buf = "";
+		std::string buf = "";
 		while(*args) {
 			if(*args == ' ' || *args == '\t' || \
 			   *args == '\n' || *args == '\r') {
@@ -446,8 +340,8 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 				}
 
 				if(*args != '"') {
-					MyString msg;
-					msg.formatstr("Unterminated quote in windows argument string starting here: %s",begin_quote);
+					std::string msg;
+					formatstr(msg, "Unterminated quote in windows argument string starting here: %s",begin_quote);
 					AddErrorMessage(msg.c_str(),error_msg);
 					return false;
 				}
@@ -455,7 +349,7 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 			}
 		}
 		if(args > begin_arg) {
-			ASSERT(args_list.Append(buf));
+			args_list.emplace_back(buf);
 		}
 		while(*args == ' ' || *args == '\t' || *args == '\n' || *args == '\r')
 		{
@@ -466,9 +360,9 @@ ArgList::AppendArgsV1Raw_win32(char const *args,MyString *error_msg)
 }
 
 bool
-ArgList::AppendArgsV1Raw_unix(char const *args,MyString *  /*error_msg*/)
+ArgList::AppendArgsV1Raw_unix(char const *args,std::string&  /*error_msg*/)
 {
-	MyString buf = "";
+	std::string buf = "";
 	bool parsed_token = false;
 
 	while(*args) {
@@ -480,7 +374,7 @@ ArgList::AppendArgsV1Raw_unix(char const *args,MyString *  /*error_msg*/)
 			args++; // eat whitespace
 			if(parsed_token) {
 				parsed_token = false;
-				ASSERT(args_list.Append(buf));
+				args_list.emplace_back(buf);
 				buf = "";
 			}
 			break;
@@ -492,22 +386,13 @@ ArgList::AppendArgsV1Raw_unix(char const *args,MyString *  /*error_msg*/)
 		}
 	}
 	if(parsed_token) {
-		args_list.Append(buf);
+		args_list.emplace_back(buf);
 	}
 	return true;
 }
 
 bool
 ArgList::AppendArgsV1Raw(char const *args, std::string &error_msg)
-{
-	MyString mystr;
-	bool rv = AppendArgsV1Raw(args, &mystr);
-	error_msg = mystr;
-	return rv;
-}
-
-bool
-ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 {
 	if(!args) return true;
 
@@ -547,16 +432,7 @@ ArgList::AppendArgsV1Raw(char const *args,MyString *error_msg)
 bool
 ArgList::AppendArgsV2Raw(char const *args,std::string &error_msg)
 {
-	return split_args(args,&args_list, &error_msg);
-}
-
-bool
-ArgList::AppendArgsV2Raw(char const *args,MyString *error_msg)
-{
-	std::string msg;
-	bool rv = split_args(args,&args_list,&msg);
-	if (error_msg) *error_msg = msg;
-	return rv;
+	return split_args(args, args_list, &error_msg);
 }
 
 void
@@ -564,30 +440,8 @@ ArgList::AppendArgsFromArgList(ArgList const &args)
 {
 	input_was_unknown_platform_v1 = args.input_was_unknown_platform_v1;
 
-	SimpleListIterator<MyString> it(args.args_list);
-	MyString *arg=NULL;
-	while(it.Next(arg)) {
-		AppendArg(arg->c_str());
-	}
-}
-
-void
-ArgList::GetArgsStringForDisplay(ClassAd const *ad,MyString *result)
-{
-	char *args1 = NULL;
-	char *args2 = NULL;
-	ASSERT(result);
-	if( ad->LookupString(ATTR_JOB_ARGUMENTS2, &args2) == 1 ) {
-		(*result) = args2;
-	}
-	else if( ad->LookupString(ATTR_JOB_ARGUMENTS1, &args1) == 1 ) {
-		(*result) = args1;
-	}
-	if(args1) {
-		free(args1);
-	}
-	if(args2) {
-		free(args2);
+	for (const auto& arg: args.args_list) {
+		AppendArg(arg);
 	}
 }
 
@@ -601,16 +455,6 @@ ArgList::GetArgsStringForDisplay(ClassAd const *ad, std::string &result)
 
 bool
 ArgList::AppendArgsFromClassAd(ClassAd const * ad, std::string & error_msg)
-{
-    MyString ms;
-    bool rv = AppendArgsFromClassAd(ad, &ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
-}
-
-
-bool
-ArgList::AppendArgsFromClassAd(ClassAd const *ad,MyString *error_msg)
 {
 	char *args1 = NULL;
 	char *args2 = NULL;
@@ -643,16 +487,7 @@ ArgList::CondorVersionRequiresV1(CondorVersionInfo const &condor_version)
 }
 
 bool
-ArgList::InsertArgsIntoClassAd( ClassAd * ad, CondorVersionInfo * condor_version, std::string & error_msg) const {
-    MyString ms;
-    bool rv = InsertArgsIntoClassAd(ad, condor_version, &ms);
-    if(! ms.empty()) { error_msg = ms; }
-    return rv;
-}
-
-
-bool
-ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyString *error_msg) const
+ArgList::InsertArgsIntoClassAd( ClassAd * ad, CondorVersionInfo * condor_version, std::string & error_msg) const
 {
 	bool has_args1 = ad->LookupExpr(ATTR_JOB_ARGUMENTS1) != NULL;
 	bool has_args2 = ad->LookupExpr(ATTR_JOB_ARGUMENTS2) != NULL;
@@ -669,8 +504,8 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 
 	if( !requires_v1 )
 	{
-		MyString args2;
-		if(!GetArgsStringV2Raw(&args2,error_msg)) return false;
+		std::string args2;
+		if(!GetArgsStringV2Raw(args2)) return false;
 		ad->Assign(ATTR_JOB_ARGUMENTS2,args2.c_str());
 	}
 	else if(has_args2) {
@@ -678,9 +513,9 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 	}
 
 	if(requires_v1) {
-		MyString args1;
+		std::string args1;
 
-		if(GetArgsStringV1Raw(&args1,error_msg)) {
+		if(GetArgsStringV1Raw(args1,error_msg)) {
 			ad->Assign(ATTR_JOB_ARGUMENTS1,args1.c_str());
 		}
 		else {
@@ -702,9 +537,7 @@ ArgList::InsertArgsIntoClassAd(ClassAd *ad,CondorVersionInfo *condor_version,MyS
 
 				ad->Delete(ATTR_JOB_ARGUMENTS1);
 				ad->Delete(ATTR_JOB_ARGUMENTS2);
-				if(error_msg) {
-					dprintf(D_FULLDEBUG,"Failed to convert arguments to V1 syntax: %s\n",error_msg->c_str());
-				}
+				dprintf(D_FULLDEBUG,"Failed to convert arguments to V1 syntax: %s\n",error_msg.c_str());
 			}
 			else {
 				// Failed to convert to V1 syntax, and the ad does not
@@ -738,41 +571,26 @@ ArgList::IsSafeArgV1Value(char const *str) const
 }
 
 bool
-ArgList::GetArgsStringV1Raw(std::string & result, std::string & error_msg) const {
-    MyString ms1(result.c_str());
-    MyString ms2;
-    bool rv = GetArgsStringV1Raw(&ms1, &ms2);
-    result = ms1;
-    if(! ms2.empty()) { error_msg = ms2; }
-    return rv;
-}
-
-bool
-ArgList::GetArgsStringV1Raw(MyString *result,MyString *error_msg) const
+ArgList::GetArgsStringV1Raw(std::string & result, std::string & error_msg) const
 {
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg=NULL;
-	ASSERT(result);
-	while(it.Next(arg)) {
-		if(!IsSafeArgV1Value(arg->c_str())) {
-			if(error_msg) {
-				error_msg->formatstr("Cannot represent '%s' in V1 arguments syntax.",arg->c_str());
-			}
+	for (const auto& arg: args_list) {
+		if(!IsSafeArgV1Value(arg.c_str())) {
+			formatstr(error_msg,"Cannot represent '%s' in V1 arguments syntax.",arg.c_str());
 			return false;
 		}
-		if(result->length()) {
-			(*result) += " ";
+		if(result.length()) {
+			result += " ";
 		}
-		(*result) += arg->c_str();
+		result += arg;
 	}
 	return true;
 }
 
 bool
-ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const
+ArgList::GetArgsStringV2Quoted(std::string& result, std::string& /*error_msg*/) const
 {
-	MyString v2_raw;
-	if(!GetArgsStringV2Raw(&v2_raw,error_msg)) {
+	std::string v2_raw;
+	if(!GetArgsStringV2Raw(v2_raw)) {
 		return false;
 	}
 	V2RawToV2Quoted(v2_raw,result);
@@ -780,10 +598,11 @@ ArgList::GetArgsStringV2Quoted(MyString *result,MyString *error_msg) const
 }
 
 bool
-ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) const
+ArgList::GetArgsStringV1WackedOrV2Quoted(std::string& result, std::string& error_msg) const
 {
-	MyString v1_raw;
-	if(GetArgsStringV1Raw(&v1_raw,NULL)) {
+	std::string v1_raw;
+	std::string ignore_err;
+	if(GetArgsStringV1Raw(v1_raw, ignore_err)) {
 		V1RawToV1Wacked(v1_raw,result);
 		return true;
 	}
@@ -793,104 +612,63 @@ ArgList::GetArgsStringV1WackedOrV2Quoted(MyString *result,MyString *error_msg) c
 }
 
 void
-ArgList::V2RawToV2Quoted(MyString const &v2_raw,MyString *result)
-{
-	result->formatstr_cat("\"%s\"",v2_raw.EscapeChars("\"",'\"').c_str());
-}
-
-void
 ArgList::V2RawToV2Quoted(std::string const &v2_raw, std::string& result)
 {
 	formatstr_cat(result, "\"%s\"", EscapeChars(v2_raw, "\"", '\"').c_str());
 }
 
 void
-ArgList::V1RawToV1Wacked(MyString const &v1_raw,MyString *result)
+ArgList::V1RawToV1Wacked(std::string const &v1_raw, std::string& result)
 {
-	(*result) += v1_raw.EscapeChars("\"",'\\');
+	result += EscapeChars(v1_raw, "\"", '\\');
 }
 
 bool
-ArgList::GetArgsStringV2Raw(std::string & result, int start_arg) const
+ArgList::GetArgsStringV2Raw(std::string & result, size_t start_arg) const
 {
 	join_args(args_list, result, start_arg);
 	return true;
 }
 
-bool
-ArgList::GetArgsStringV2Raw(MyString *result,MyString * /*error_msg*/,int start_arg) const
-{
-	join_args(args_list,result,start_arg);
-	return true;
-}
-
 void
-ArgList::GetArgsStringForDisplay(MyString *result,int start_arg) const
-{
-	GetArgsStringV2Raw(result,NULL,start_arg);
-}
-
-void
-ArgList::GetArgsStringForDisplay(std::string & result, int start_arg) const
+ArgList::GetArgsStringForDisplay(std::string & result, size_t start_arg) const
 {
 	GetArgsStringV2Raw(result, start_arg);
-}
-
-void
-ArgList::GetArgsStringForLogging( std::string & result ) const {
-    MyString ms(result);
-    GetArgsStringForLogging(& ms);
-    result = ms;
 }
 
 
 // Separate arguments with a space.  Replace whitespace in each argument
 // with their C-style escapes.
-void ArgList::GetArgsStringForLogging( MyString * result ) const {
-	ASSERT( result );
+void ArgList::GetArgsStringForLogging( std::string & result ) const {
 
-	MyString * msArg = NULL;
-	SimpleListIterator<MyString> it( args_list );
-	while( it.Next( msArg ) ) {
-		const char * arg = msArg->c_str();
+	for (const auto& msArg: args_list) {
+		const char * arg = msArg.c_str();
 
-		if( result->length() != 0 ) { * result += " "; }
+		if( result.length() != 0 ) { result += " "; }
 		while( * arg ) {
 			switch( * arg ) {
 				case ' ':
-					* result += "\\ ";
+					result += "\\ ";
 					break;
 				case '\t':
-					* result += "\\t";
+					result += "\\t";
 					break;
 				case '\v':
-					* result += "\\v";
+					result += "\\v";
 					break;
 				case '\n':
-					* result += "\\n";
+					result += "\\n";
 					break;
 				case '\r':
-					* result += "\\r";
+					result += "\\r";
 					break;
 				default:
-					* result += *arg;
+					result += *arg;
 					break;
 			}
 			++arg;
 		}
 	}
-}
-
-void
-ArgList::AddErrorMessage(char const *msg,MyString *error_buf)
-{
-	if(!error_buf) return;
-
-	if(error_buf->length()) {
-		// each message is separated by a newline
-		(*error_buf) += "\n";
-	}
-	(*error_buf) += msg;
 }
 
 ArgList::ArgList()
@@ -904,42 +682,39 @@ ArgList::~ArgList()
 }
 
 bool
-ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
+ArgList::GetArgsStringWin32(std::string& result, size_t skip_args) const
 {
-	ASSERT(result);
-	SimpleListIterator<MyString> it(args_list);
-	MyString *arg = NULL;
-	int i;
-	for(i=0;it.Next(arg);i++) {
-		if(i<skip_args) continue;
-		if(result->length()) (*result) += ' ';
+	size_t i = 0;
+	for (const auto& arg: args_list) {
+		if (i++ < skip_args) continue;
+		if(result.length()) result += ' ';
 		if(input_was_unknown_platform_v1) {
 			// In V1 arg syntax, we just pass on whatever the user entered
 			// directly to the Windows OS, assuming the user wants the
 			// OS to interpret whatever quotes, backslashes, etc., that
 			// are there.
-			(*result) += (*arg);
+			result += arg;
 		}
 		else {
 			// In V2 arg syntax, we encode arguments in a way that should
 			// be parsed correctly by Windows function CommandLineToArgv().
 
-			char const *argstr = arg->c_str();
+			char const *argstr = arg.c_str();
 			if(argstr[strcspn(argstr," \t\"")] == '\0') {
 				// No special characters in the argument.
-				(*result) += (*arg);
+				result += arg;
 			}
 			else {
 				// Special characters, so we need to quote it.
 
-				(*result) += '\"';
+				result += '\"';
 
 				while(*argstr) {
 					if(*argstr == '\\') {
 						int n = 0;
 						while(*argstr == '\\') {
 							n++;
-							(*result) += *(argstr++);
+							result += *(argstr++);
 						}
 						if(*argstr == '"' || *argstr == '\0') {
 							// To produce n backslashes followed by a
@@ -948,24 +723,24 @@ ArgList::GetArgsStringWin32(MyString *result,int skip_args) const
 							// backslashes before the terminal quote,
 							// put 2n backslashes.
 							while(n--) {
-								(*result) += '\\';
+								result += '\\';
 							}
 							if(*argstr == '"') {
-								(*result) += '\\';
-								(*result) += *(argstr++);
+								result += '\\';
+								result += *(argstr++);
 							}
 						}
 					}
 					else if(*argstr == '"') {
-						(*result) += '\\';
-						(*result) += *(argstr++);
+						result += '\\';
+						result += *(argstr++);
 					}
 					else {
-						(*result) += *(argstr++);
+						result += *(argstr++);
 					}
 				}
 
-				(*result) += '\"';
+				result += '\"';
 			}
 		}
 	}
@@ -986,10 +761,9 @@ ArgList::IsV2QuotedString(char const *str)
 }
 
 bool
-ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
+ArgList::V2QuotedToV2Raw(char const *v1_input, std::string& v2_raw, std::string& errmsg)
 {
 	if(!v1_input) return true;
-	ASSERT(v2_raw);
 
 		// allow leading whitespace
 	while(isspace(*v1_input)) {
@@ -1006,7 +780,7 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 			v1_input++;
 			if(*v1_input == '"') {
 					// Repeated (i.e. escaped) double-quote.
-				(*v2_raw) += *(v1_input++);
+				v2_raw += *(v1_input++);
 			}
 			else {
 				quote_terminated = v1_input-1;
@@ -1014,7 +788,7 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 			}
 		}
 		else {
-			(*v2_raw) += *(v1_input++);
+			v2_raw += *(v1_input++);
 		}
 	}
 
@@ -1029,42 +803,37 @@ ArgList::V2QuotedToV2Raw(char const *v1_input,MyString *v2_raw,MyString *errmsg)
 	}
 
 	if(*v1_input) {
-		if(errmsg) {
-			MyString msg;
-			msg.formatstr(
-				"Unexpected characters following double-quote.  "
-				"Did you forget to escape the double-quote by repeating it?  "
-				"Here is the quote and trailing characters: %s\n",quote_terminated);
-			AddErrorMessage(msg.c_str(),errmsg);
-		}
+		std::string msg;
+		formatstr(msg,
+			"Unexpected characters following double-quote.  "
+			"Did you forget to escape the double-quote by repeating it?  "
+			"Here is the quote and trailing characters: %s\n",quote_terminated);
+		AddErrorMessage(msg.c_str(), errmsg);
 		return false;
 	}
 	return true;
 }
 
 bool
-ArgList::V1WackedToV1Raw(char const *v1_input,MyString *v1_raw,MyString *errmsg)
+ArgList::V1WackedToV1Raw(char const *v1_input, std::string& v1_raw, std::string& errmsg)
 {
 	if(!v1_input) return true;
-	ASSERT(v1_raw);
 	ASSERT(!IsV2QuotedString(v1_input));
 
 	while(*v1_input) {
 		if(*v1_input == '"') {
-			if(errmsg) {
-				MyString msg;
-				msg.formatstr("Found illegal unescaped double-quote: %s",v1_input);
-				AddErrorMessage(msg.c_str(),errmsg);
-			}
+			std::string msg;
+			formatstr(msg, "Found illegal unescaped double-quote: %s",v1_input);
+			AddErrorMessage(msg.c_str(),errmsg);
 			return false;
 		}
 		else if(v1_input[0] == '\\' && v1_input[1] == '"') {
 			// Escaped double-quote.
 			v1_input++;
-			(*v1_raw) += *(v1_input++);
+			v1_raw += *(v1_input++);
 		}
 		else {
-			(*v1_raw) += *(v1_input++);
+			v1_raw += *(v1_input++);
 		}
 	}
 	return true;
@@ -1087,29 +856,17 @@ ArgList::SetArgV1SyntaxToCurrentPlatform()
 }
 
 bool
-ArgList::GetArgsStringSystem(std::string & result,int skip_args) const
-{
-    MyString ms(result.c_str());
-    bool rv = GetArgsStringSystem(& ms, skip_args);
-    result = ms;
-    return rv;
-}
-
-
-bool
-ArgList::GetArgsStringSystem(MyString *result,int skip_args) const
+ArgList::GetArgsStringSystem(std::string & result, size_t skip_args) const
 {
 #ifdef WIN32
 	return GetArgsStringWin32(result,skip_args);
 #else
-	SimpleListIterator<MyString> it(args_list);
-	ASSERT(result);
-	MyString *arg=NULL;
-	for(int i=0;it.Next(arg);i++) {
-		if(i<skip_args) continue;
-		result->formatstr_cat("%s\"%s\"",
-							result->empty() ? "" : " ",
-							arg->EscapeChars("\"\\$`",'\\').c_str());
+	size_t i = 0;
+	for (const auto& arg: args_list) {
+		if (i++ < skip_args) continue;
+		formatstr_cat(result, "%s\"%s\"",
+							result.empty() ? "" : " ",
+							EscapeChars(arg,"\"\\$`",'\\').c_str());
 	}
 	return true;
 #endif

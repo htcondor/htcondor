@@ -28,7 +28,10 @@
 #include "classad/util.h"
 #include <assert.h>
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
@@ -259,15 +262,13 @@ ParseThing(void)
 ExprTree *ClassAdXMLParser::
 ParseList(void)
 {
-	bool               have_token;
 	ExprTree           *tree;
 	ExprTree           *subtree;
 	XMLLexer::Token    token;
 	vector<ExprTree*>  expressions;
 
 	tree = NULL;
-	have_token = lexer.ConsumeToken(&token);
-	assert(have_token && token.tag_id == XMLLexer::tagID_List);
+	lexer.ConsumeToken(&token);
 
 	while (lexer.PeekToken(&token)) {
 		if (   token.token_type == XMLLexer::tokenType_Tag

@@ -6,7 +6,8 @@ echo "${CONTROL_PREFIX} PID $$"
 function usage() {
     echo "Usage: ${0} SYSTEM STARTD_NOCLAIM_SHUTDOWN\\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
-    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
+    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID \\"
+    echo "       PASSWORD_FILE SCHEDD_NAME \\"
     echo "       [CPUS] [MEM_MB] [GPUS]"
     echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
     echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
@@ -100,17 +101,23 @@ if [[ -z $PASSWORD_FILE ]]; then
     exit 1
 fi
 
-CPUS=${13}
+SCHEDD_NAME=${13}
+if [[ -z $SCHEDD_NAME ]]; then
+    usage
+    exit 1
+fi
+
+CPUS=${14}
 if [[ $CPUS == "None" ]]; then
     CPUS=""
 fi
 
-MEM_MB=${14}
+MEM_MB=${15}
 if [[ $MEM_MB == "None" ]]; then
     MEM_MB=""
 fi
 
-GPUS=${15}
+GPUS=${16}
 if [[ $GPUS == "None" ]]; then
     GPUS=""
 fi
@@ -128,7 +135,7 @@ BIRTH=`date +%s`
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/9.5/9.5.4/update/condor-9.5.4-20220207-x86_64_Rocky8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/10.x/10.4.2/release/condor-10.4.2-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -278,6 +285,7 @@ if [[ $GPUS ]]; then
     CONDOR_GPUS_LINE="use feature:gpus"
 fi
 
+# Using <${COLLECTOR}> is a hack, but easier than figuring out the quoting.
 echo -e "\rStep 6 of 8: configuring software (part 2)..."
 rm local/config.d/00-personal-condor
 echo "
@@ -285,7 +293,7 @@ use role:execute
 use security:recommended_v9_0
 use feature:PartitionableSLot
 
-COLLECTOR_HOST = ${COLLECTOR}
+COLLECTOR_HOST = <${COLLECTOR}>
 
 # We shouldn't ever actually need this, but it's convenient for testing.
 SHARED_PORT_PORT = 0
@@ -311,7 +319,7 @@ SEC_TOKEN_DIRECTORY = \$(LOCAL_DIR)/tokens.d
 RUNBENCHMARKS = FALSE
 
 # We definitely need CCB.
-CCB_ADDRESS = \$(COLLECTOR_HOST)
+CCB_ADDRESS = ${COLLECTOR}
 
 #
 # Commit suicide after being idle for long enough.
@@ -352,6 +360,18 @@ if defined MY.ContainerImage
     EVALSET ContainerImage strcat(\"${SIF_DIR}/\", MY.ContainerImage)
 endif
 @end
+
+#
+# Connect directly to the schedd.
+#
+STARTD_DIRECT_ATTACH_SCHEDD_NAME = ${SCHEDD_NAME}
+STARTD_DIRECT_ATTACH_SCHEDD_POOL = ${COLLECTOR}
+
+# Update slots often enough that we can do more than one job. ;)
+# The direct attach interval is the minimum interval; this interval
+# is checked every UPDATE_INTERVAL.
+STARTD_DIRECT_ATTACH_INTERVAL = 5
+UPDATE_INTERVAL = 5
 
 #
 # Subsequent configuration is machine-specific.

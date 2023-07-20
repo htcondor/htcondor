@@ -25,7 +25,6 @@
 #include "collector.h"
 #include <set>
 #include "HashTable.h"
-#include "extArray.h"
 
 //---------------------------------------------------
 
@@ -61,8 +60,8 @@ struct GeneralRecord {
 //---------------------------------------------------
 
 typedef HashTable<std::string, GeneralRecord*> AccHash;
-typedef ExtArray< int > ExtIntArray;
-typedef ExtArray< fpos_t* > ExtOffArray;
+typedef std::vector< int > ExtIntArray;
+typedef std::vector< fpos_t* > ExtOffArray;
 
 //---------------------------------------------------
 
@@ -108,7 +107,7 @@ private:
 
 	// Constants
 
-	enum { HistoryLevels=3 };
+	static const int HistoryLevels=3;
 	enum { SubmittorData, StartdData, GroupsData, SubmittorGroupsData, CkptData, DataSetCount };
 
 	// State variables - data set information

@@ -90,7 +90,7 @@ Rescue DAGs
 :mod:`htcondor.dags` can read information from a DAGMan rescue file and apply
 it to your DAG as it is being constructed.
 
-See :ref:`rescue-dags` for more information on Rescue DAGs.
+See :ref:`automated-workflows/dagman-resubmit-failed:The Rescue DAG` for more information on Rescue DAGs.
 
 .. autofunction:: rescue
 

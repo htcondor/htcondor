@@ -28,6 +28,7 @@
 #include "condor_debug.h"
 #include "tmp_dir.h"
 #include "condor_getcwd.h"
+#include "stl_string_utils.h"
 
 int TmpDir::nextObjectNum = 0;
 
@@ -104,9 +105,8 @@ TmpDir::Cd2TmpDirFile(const char *filePath, std::string &errMsg)
 
 	bool	result = true;
 
-	char *	dir = condor_dirname( filePath );
-	result = Cd2TmpDir( dir, errMsg );
-	free( dir );
+	std::string dir = condor_dirname( filePath );
+	result = Cd2TmpDir( dir.c_str(), errMsg );
 
 	return result;
 }

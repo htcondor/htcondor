@@ -161,10 +161,10 @@ bool dynuser::init_user() {
 	 
 		if ( reuse_account ) {
 	
-			MyString prefix;
+			std::string prefix;
 			char* resource_prefix = param("STARTD_RESOURCE_PREFIX");
 			if (resource_prefix != NULL) {
-				prefix.formatstr(".%s", resource_prefix);
+				formatstr(prefix, ".%s", resource_prefix);
 				free(resource_prefix);
 			}
 			else {
@@ -172,7 +172,7 @@ bool dynuser::init_user() {
 			}
 				
 			logappend = param("STARTER_LOG");
-			tmp = strstr(logappend, prefix.Value());
+			tmp = strstr(logappend, prefix.c_str());
 			
 			if ( tmp ) {
 				
@@ -521,10 +521,10 @@ void InitString( UNICODE_STRING &us, wchar_t *psz ) {
 void dynuser::createaccount() {
 	USER_INFO_1 userInfo = { accountname_t, password_t, 0,				// Name / Password
 							 USER_PRIV_USER,							// Priv Level 
-							 L"",										// Home Dir
-							 L"Dynamically created Condor account.",	// Comment
+							 (wchar_t *)L"",										// Home Dir
+							 (wchar_t *)L"Dynamically created Condor account.",	// Comment
 							 UF_SCRIPT,									// flags (req'd)
-							 L"" };										// script path
+							 (wchar_t *)L"" };										// script path
 	DWORD nParam = 0;
 
 	// this is a bad idea! We shouldn't be deleting accounts
@@ -652,7 +652,7 @@ bool dynuser::add_users_group() {
 	LOCALGROUP_MEMBERS_INFO_0 lmi;
 	wchar_t UserGroupName[255];
 	char* tmp;
-	MyString friendly_group_name("Users");
+	std::string friendly_group_name("Users");
 
 	tmp = param("DYNAMIC_RUN_ACCOUNT_LOCAL_GROUP");
 	if (tmp) {
@@ -681,12 +681,12 @@ bool dynuser::add_users_group() {
 	}
 	else if ( nerr == ERROR_ACCESS_DENIED ) {
 		EXCEPT("User %s not added to \"%s\" group, access denied.",
-			accountname, friendly_group_name.Value());
+			accountname, friendly_group_name.c_str());
 	}
 
 	// Any other error...
 	EXCEPT("Cannot add %s to \"%s\" group, unknown error (err=%d).",
-		accountname, friendly_group_name.Value(), nerr);
+		accountname, friendly_group_name.c_str(), nerr);
 	
 	return false;
 }
@@ -911,7 +911,7 @@ bool dynuser::deleteuser(char const * username ) {
 
 // this function will remove all accounts starting with user_prefix
 
-bool dynuser::cleanup_condor_users(char* user_prefix) {
+bool dynuser::cleanup_condor_users(const char* user_prefix) {
 
 	LPUSER_INFO_10 pBuf = NULL;
 	LPUSER_INFO_10 pTmpBuf;

@@ -181,14 +181,11 @@ FileLock::FileLock( const char *path , bool deleteFile, bool useLiteralPath)
 	ASSERT(path != NULL);
 #ifndef WIN32
 	if (deleteFile) {
-		char *hPath = NULL;
 		m_delete = 1;
 		if (useLiteralPath) {
 			SetPath(path);
 		} else {
-			hPath = CreateHashName(path);	
-			SetPath(hPath);
-			delete []hPath;
+			SetPath(CreateHashName(path).c_str());
 		}
 		SetPath(path, true);
 		m_init_succeeded = initLockFile(useLiteralPath);
@@ -255,9 +252,7 @@ FileLock::initLockFile(bool useLiteralPath)
 	if (m_fd < 0) {
 		if (!useLiteralPath) {
 			dprintf(D_FULLDEBUG, "FileLock::FileLock: Unable to create file path %s. Trying with default /tmp path.\n", m_path);
-			char *hPath = CreateHashName(m_orig_path, true);
-			SetPath(hPath);
-			delete []hPath;
+			SetPath(CreateHashName(m_orig_path, true).c_str());
 			m_fd = rec_touch_file(m_path, 0666, 0777 ) ;
 			if (m_fd < 0) { // /tmp does not work either ... 
 				dprintf(D_ALWAYS, "FileLock::FileLock: File locks cannot be created on local disk - will fall back on locking the actual file. \n");
@@ -374,9 +369,7 @@ FileLock::SetFdFpFile( int fd, FILE *fp, const char *file )
 		if (file == NULL) {
 			EXCEPT("FileLock::SetFdFpFile(). Programmer error: deleting lock with null filename");
 		}
-		char *nPath = CreateHashName(file);	
-		SetPath(nPath);	
-		delete []nPath;
+		SetPath(CreateHashName(file).c_str());
 		close(m_fd);	
 		m_fd = safe_open_wrapper_follow( m_path, O_RDWR | O_CREAT, 0644 );
 		if (m_fd < 0) {
@@ -712,62 +705,50 @@ FileLock::getTempPath(std::string & pathbuf)
 	return result;
 }
 
-char *
+std::string
 FileLock::CreateHashName(const char *orig, bool useDefault)
 {
-	std::string pathbuf;
-	const char *path = getTempPath(pathbuf);
 	unsigned long hash = 0;
-	char *temp_filename;
-	int c;
+	char *temp_filename = nullptr;
 	
-#if defined(PATH_MAX) && !defined(WIN32)
-	char *buffer = new char[PATH_MAX];
-	temp_filename = realpath(orig, buffer);
-	if (temp_filename == NULL) {
-		temp_filename = new char[strlen(orig)+1];
-		strcpy(temp_filename, orig);
-		delete []buffer;
+#if !defined(WIN32)
+	temp_filename = realpath(orig, nullptr);
+	if (temp_filename) {
+		orig = temp_filename;
 	}
-#else 
-	temp_filename = new char[strlen(orig)+1];
-	strcpy(temp_filename, orig);	
 #endif
-	int orig_size = strlen(temp_filename);
+	int orig_size = strlen(orig);
 	for (int i = 0 ; i < orig_size; i++){
-		c = temp_filename[i];
-		hash = c + (hash << 6) + (hash << 16) - hash;
+		hash = orig[i] + (hash << 6) + (hash << 16) - hash;
 	}
-	char hashVal[256] = {0};
-	sprintf(hashVal, "%lu", hash);
-	while (strlen(hashVal) < 5)
-		sprintf(hashVal+strlen(hashVal), "%lu", hash);
+	free(temp_filename);
 
-	int len = strlen(path) + strlen(hashVal) + 20;
+	std::string hashVal;
+	while (hashVal.length() < 5) {
+		formatstr_cat(hashVal, "%lu", hash);
+	}
 	
-	char *dest = new char[len];
+	std::string dest;
 #if !defined(WIN32)
 	if (useDefault) 
-		sprintf(dest, "%s", "/tmp/condorLocks/" );
+		dest = "/tmp/condorLocks/";
 	else 
 #endif
-		sprintf(dest, "%s", path  );
-	delete []temp_filename; 
-
-	char *destPtr = dest + strlen(dest);
-	char *hashPtr = hashVal;
+		getTempPath(dest);
 
 	// append the first 2 chars of the hash value to filename
-	*destPtr++ = *hashPtr++;
-	*destPtr++ = *hashPtr++;
+	dest += hashVal[0];
+	dest += hashVal[1];
 	// make it a directory..
-	*destPtr++ = DIR_DELIM_CHAR;
+	dest += DIR_DELIM_CHAR;
 
 	// and repeat
-	*destPtr++ = *hashPtr++;
-	*destPtr++ = *hashPtr++;
-	*destPtr++ = DIR_DELIM_CHAR;
-	 
-	sprintf(destPtr, "%s.lockc", hashVal+4);
+	dest += hashVal[2];
+	dest += hashVal[3];
+	dest += DIR_DELIM_CHAR;
+
+	dest += hashVal.substr(4);
+	dest += ".lockc";
+
 	return dest;
 }

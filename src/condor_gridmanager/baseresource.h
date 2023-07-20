@@ -27,6 +27,11 @@
 // This is the shortest time between two runs of UpdateLeases()
 #define UPDATE_LEASE_DELAY 30
 
+// Defined values for m_pingErrCode (used to set
+// ATTR_GRID_RESOURCE_UNAVAILABLE_REASON_CODE in the grid resource ad):
+#define GRU_PING_FAILED 1
+#define GRU_FAILED_TO_START_GAHP 2
+
 class BaseJob;
 class GahpClient;
 
@@ -86,7 +91,7 @@ class BaseResource : public Service
 
 	void UpdateLeases();
 	virtual void DoUpdateLeases( unsigned& update_delay, bool& update_complete,
-								 SimpleList<PROC_ID>& update_succeeded );
+	                             std::vector<PROC_ID>& update_succeeded );
 	virtual void DoUpdateSharedLease( unsigned& update_delay,
 									  bool& update_complete,
 									  bool& update_succeeded );
@@ -96,8 +101,8 @@ class BaseResource : public Service
 
 	char *resourceName;
 	int deleteMeTid;
-	List<BaseJob> registeredJobs;
-	List<BaseJob> pingRequesters;
+	std::set<BaseJob*> registeredJobs;
+	std::set<BaseJob*> pingRequesters;
 
 	bool resourceDown;
 	bool firstPingDone;
@@ -105,20 +110,22 @@ class BaseResource : public Service
 	int pingTimerId;
 	time_t lastPing;
 	time_t lastStatusChange;
+	std::string m_pingErrMsg;
+	int m_pingErrCode;
 
 	static int probeInterval;
 	static int probeDelay;
 
 	// jobs allowed to submit under jobLimit
-	List<BaseJob> submitsAllowed;
+	std::set<BaseJob*> submitsAllowed;
 	// jobs that want to submit but can't due to jobLimit
-	List<BaseJob> submitsWanted;
-	int jobLimit;			// max number of submitted jobs
+	std::deque<BaseJob*> submitsWanted;
+	size_t jobLimit;			// max number of submitted jobs
 
 	bool hasLeases;
 	int updateLeasesTimerId;
 	time_t lastUpdateLeases;
-	SimpleList<BaseJob*> leaseUpdates;
+	std::vector<BaseJob*> leaseUpdates;
 	bool updateLeasesActive;
 	bool updateLeasesCmdActive;
 	bool m_hasSharedLeases;

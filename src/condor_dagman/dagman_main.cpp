@@ -32,19 +32,12 @@
 #include "dagman_main.h"
 #include "dagman_commands.h"
 #include "condor_getcwd.h"
+#include "directory.h"
 #include "condor_version.h"
 #include "subsystem_info.h"
 #include "dagman_metrics.h"
 
 void ExitSuccess();
-
-	// From condor_utils/condor_config.C
-	// Note: these functions are declared 'extern "C"' where they're
-	// implemented; if we don't do that here we get a link failure
-	// (I think because of the name mangling).  wenger 2007-02-09.
-//extern "C" void process_config_source( char* file, const char* name,
-//			char* host, int required );
-bool is_piped_command(const char* filename);
 
 static std::string lockFileName;
 
@@ -62,20 +55,19 @@ static void Usage() {
 			"\t\t-CsdVersion <version string>\n"
 			"\t\t[-Help]\n"
 			"\t\t[-Version]\n"
-		"\t\t[-Debug <level>]\n"
+			"\t\t[-Debug <level>]\n"
 			"\t\t[-MaxIdle <int N>]\n"
 			"\t\t[-MaxJobs <int N>]\n"
 			"\t\t[-MaxPre <int N>]\n"
 			"\t\t[-MaxPost <int N>]\n"
 			"\t\t[-MaxHold <int N>]\n"
-			"\t\t(obsolete) [-NoEventChecks]\n"
-			"\t\t(obsolete) [-AllowLogError]\n"
 			"\t\t[-DontAlwaysRunPost]\n"
 			"\t\t[-AlwaysRunPost]\n"
 			"\t\t[-WaitForDebug]\n"
 			"\t\t[-UseDagDir]\n"
 			"\t\t[-AutoRescue <0|1>]\n"
 			"\t\t[-DoRescueFrom <int N>]\n"
+			"\t\t[-load_save filename]\n"
 			"\t\t[-AllowVersionMismatch]\n"
 			"\t\t[-DumpRescue]\n"
 			"\t\t[-Verbose]\n"
@@ -87,8 +79,9 @@ static void Usage() {
 			"\t\t[-Outfile_dir <directory>]\n"
 			"\t\t[-Update_submit]\n"
 			"\t\t[-Import_env]\n"
+			"\t\t[-Include_env <Variables>]\n"
+			"\t\t[-Insert_env <Key=Value>]\n"
 			"\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
 			"\twhere NAME is the name of your DAG.\n"
 			"\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
@@ -131,6 +124,8 @@ Dagman::Dagman() :
 	submitDepthFirst (false), // so Coverity is happy
 	abortOnScarySubmit (true), // so Coverity is happy
 	useDirectSubmit (true), // so Coverity is happy
+	doAppendVars (false),
+	jobInsertRetry (false),
 	pendingReportInterval (10 * 60), // 10 minutes
 	_dagmanConfigFile (NULL), // so Coverity is happy
 	autoRescue(true),
@@ -261,12 +256,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
-	   	debug_printf( DEBUG_QUIET,
-					"Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
 		_submitDagDeepOpts.suppress_notification);
@@ -287,23 +276,6 @@ Dagman::Config()
 			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
 			CheckEvents::ALLOW_DOUBLE_TERMINATE |
 			CheckEvents::ALLOW_DUPLICATE_EVENTS;
-
-		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
-		// we also allow extra runs.
-		// Note: this parameter is probably only used by CDF, and only
-		// really needed until they update all their systems to 6.7.3
-		// or later (not 6.7.3 pre-release), which fixes the "double-run"
-		// bug.
-	bool allowExtraRuns = param_boolean(
-			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
-
-	if ( allowExtraRuns ) {
-		allow_events |= CheckEvents::ALLOW_RUN_AFTER_TERM;
-		debug_printf( DEBUG_NORMAL, "Warning: "
-				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
-				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
 
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 		// all of the previous stuff.
@@ -391,6 +363,40 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_APPEND_VARS setting: %s\n",
 		doAppendVars ? "True" : "False" );
 
+	//DAGMan information to be added to node jobs job ads (expects comma seperated list)
+	//Note: If more keywords/options added please update the config knob description accordingly
+	//-Cole Bollig 2023-03-09
+	auto_free_ptr adInjectInfo(param("DAGMAN_NODE_RECORD_INFO"));
+	if (adInjectInfo) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_NODE_RECORD_INFO recording:\n");
+		StringTokenIterator list(adInjectInfo);
+		for (auto& info : list) {
+			trim(info);
+			lower_case(info);
+			//TODO: If adding more keywords consider using an unsigned int and bit mask
+			if (info.compare("retry") == MATCH) {
+				jobInsertRetry = true;
+				debug_printf(DEBUG_NORMAL, "\t-NODE Retries\n");
+			}
+		}
+	}
+
+	param(_requestedMachineAttrs,"DAGMAN_RECORD_MACHINE_ATTRS");
+	if (!_requestedMachineAttrs.empty()) {
+		debug_printf(DEBUG_NORMAL, "DAGMAN_RECORD_MACHINE_ATTRS: %s\n", _requestedMachineAttrs.c_str());
+		//Use machine attrs list to construct new job ad attributes to add to userlog
+		StringTokenIterator requestAttrs(_requestedMachineAttrs, " ,\t");
+		bool firstAttr = true;
+		_ulogMachineAttrs.clear();
+		for(auto& attr : requestAttrs) {
+			if (!firstAttr) { _ulogMachineAttrs += ","; }
+			else { firstAttr = false; }
+			_ulogMachineAttrs += "MachineAttr" + attr + "0";
+		}
+		//Also add DAGNodeName to list of attrs to put in userlog event
+		_ulogMachineAttrs += ",DAGNodeName";
+	}
+
 	abortDuplicates = param_boolean( "DAGMAN_ABORT_DUPLICATES",
 				abortDuplicates );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_ABORT_DUPLICATES setting: %s\n",
@@ -405,12 +411,6 @@ Dagman::Config()
 				pendingReportInterval );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
-
-	if ( param_boolean( "DAGMAN_OLD_RESCUE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
-	}
 
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
@@ -440,7 +440,7 @@ Dagman::Config()
 				_generateSubdagSubmits ? "True" : "False" );
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
-				0, 1000000 );
+				0, 1'000'000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
 				_maxJobHolds );
 
@@ -735,6 +735,7 @@ void main_init (int argc, char ** const argv) {
 	//
 	bool alwaysRunPostSet = false;
 	bool onlyDumpDot = false;
+	std::string loadSaveFile;
 
 	for (i = 1; i < argc; i++) {
 		// If argument is not a flag/option, assume it's a dag filename
@@ -809,17 +810,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman.maxHoldScripts = atoi( argv[i] );
-		} else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
-						"ignored; please use the DAGMAN_ALLOW_EVENTS "
-						"config parameter instead\n");
-			check_warning_strictness( DAG_STRICT_2 );
-
-		} else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -AllowLogError is "
-						"no longer supported\n" );
-			check_warning_strictness( DAG_STRICT_2 );
-
 		} else if( !strcasecmp( "-DontAlwaysRunPost", argv[i] ) ) {
 			if ( alwaysRunPostSet && dagman._runPost ) {
 				debug_printf( DEBUG_QUIET,
@@ -862,6 +852,12 @@ void main_init (int argc, char ** const argv) {
 			}
 			dagman.doRescueFrom = atoi (argv[i]);
 
+		} else if (strcasecmp("-load_save", argv[i]) == MATCH) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No save file specified");
+				Usage();
+			}
+			loadSaveFile = argv[i];
 		} else if( !strcasecmp( "-CsdVersion", argv[i] ) ) {
 			i++;
 			if( argc <= i || strcmp( argv[i], "" ) == 0 ) {
@@ -922,6 +918,23 @@ void main_init (int argc, char ** const argv) {
 		} else if( !strcasecmp( "-import_env", argv[i] ) ) {
 			dagman._submitDagDeepOpts.importEnv = true;
 
+		} else if( !strcasecmp( "-include_env", argv[i] ) ) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No environment variables passed for -include_env\n");
+				Usage();
+			}
+			if (!dagman._submitDagDeepOpts.getFromEnv.empty()) {
+				dagman._submitDagDeepOpts.getFromEnv += ",";
+			}
+			dagman._submitDagDeepOpts.getFromEnv += argv[i];
+
+		} else if( !strcasecmp( "-insert_env", argv[i] ) ) {
+			if (argc <= i+1 || argv[++i][0] == '-') {
+				debug_printf(DEBUG_SILENT, "No key=value pairs passed for -insert_env\n");
+				Usage();
+			}
+			dagman._submitDagDeepOpts.addToEnv.push_back(argv[i]);
+
 		} else if( !strcasecmp( "-priority", argv[i] ) ) {
 			++i;
 			if( i >= argc || strcmp( argv[i], "" ) == 0 ) {
@@ -929,11 +942,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman._priority = atoi(argv[i]);
-
-		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-	   		debug_printf( DEBUG_QUIET,
-						"Error: -dont_use_default_node_log is no longer allowed\n" );
-			DC_Exit( EXIT_ERROR );
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
@@ -943,6 +951,14 @@ void main_init (int argc, char ** const argv) {
 						argv[i] );
 			Usage();
 		}
+	}
+
+	if (!loadSaveFile.empty() && dagman.doRescueFrom != 0) {
+		debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from both a save file and a specified rescue file.\n");
+		Usage();
+	} else if (!loadSaveFile.empty() && dagman._doRecovery) {
+		debug_printf(DEBUG_SILENT, "Error: Cannot run DAG from a save file in recovery mode.\n");
+		Usage();
 	}
 
 	// We expect at the very least to have a dag filename specified
@@ -1297,12 +1313,45 @@ void main_init (int argc, char ** const argv) {
 	// Set nodes marked as DONE in dag file to STATUS_DONE
 	dagman.dag->SetPreDoneNodes();
 
-		//
+	if (!loadSaveFile.empty()) {
+		// Parse rescue formatted Save file. Reading from a save file
+		// and a specific rescue number is prohibited (enforced post cmd arg parsing)
+		// But if auto rescue is on and a rescue file is found prioritize
+		// specified save file for parsing. - Cole Bollig 2023-03-30
+		debug_printf(DEBUG_QUIET, "Loading saved progress from %s for DAG.\n",loadSaveFile.c_str());
+		debug_printf(DEBUG_QUIET, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
+		std::string saveDir = condor_dirname(loadSaveFile.c_str());
+		bool no_path = loadSaveFile.compare(condor_basename(loadSaveFile.c_str())) == MATCH;
+		//If path is current directory '.' but save file is not specified as ./filename
+		//then make path to save_files sub directory
+		if (saveDir.compare(".") == MATCH && no_path) {
+			std::string cwd = ".";
+			std::string subDir = condor_dirname(dagman.primaryDagFile.c_str());
+			if (subDir.compare(".") != MATCH) {
+				std::string tmp;
+				dircat(cwd.c_str(), subDir.c_str(), tmp);
+				cwd = tmp;
+			}
+			dircat(cwd.c_str(), "save_files", saveDir);
+			debug_printf(DEBUG_QUIET,"Checking %s for DAG save files.\n", saveDir.c_str());
+			std::string temp;
+			dircat(saveDir.c_str(), loadSaveFile.c_str(), temp);
+			loadSaveFile = temp;
+		}
+		//Don't munge node names because save files written via rescue code already munged
+		parseSetDoNameMunge(false);
+		//Attempt to parse the save file. Run parse with useDagDir = false because
+		//there is no point risking changing directories just to read save file (i.e. partial rescue)
+		if (!parse(dagman.dag, loadSaveFile.c_str(), false, dagman._schedd, dagman.doAppendVars)) {
+			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, true, true);
+			dagmanUtils.tolerant_unlink(lockFileName.c_str());
+			dagman.CleanUp();
+			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
+		}
+	} else if ( rescueDagNum > 0 ) {
 		// Actually parse the "new-new" style (partial DAG info only)
 		// rescue DAG here.  Note: this *must* be done after splices
 		// are lifted!
-		//
-	if ( rescueDagNum > 0 ) {
 		dagman.rescueFileToRun = dagmanUtils.RescueDagName(
 					dagman.primaryDagFile.c_str(),
 					dagman.multiDags, rescueDagNum );
@@ -1515,7 +1564,7 @@ Dagman::CheckLogFileMode( const CondorVersionInfo &submitFileVersion )
 void
 Dagman::ResolveDefaultLog()
 {
-	char *dagDir = condor_dirname( primaryDagFile.c_str() );
+	std::string dagDir = condor_dirname( primaryDagFile.c_str() );
 	const char *dagFile = condor_basename( primaryDagFile.c_str() );
 
 	std::string owner;
@@ -1524,9 +1573,8 @@ Dagman::ResolveDefaultLog()
 
 	replace_str( _defaultNodeLog, "@(DAG_DIR)", dagDir );
 	replace_str( _defaultNodeLog, "@(DAG_FILE)", dagFile );
-	string cluster( std::to_string( DAGManJobId._cluster ) );
+	std::string cluster( std::to_string( DAGManJobId._cluster ) );
 	replace_str( _defaultNodeLog, "@(CLUSTER)", cluster.c_str() );
-	free( dagDir );
 	replace_str( _defaultNodeLog, "@(OWNER)", owner.c_str() );
 	replace_str( _defaultNodeLog, "@(NODE_NAME)", nodeName.c_str() );
 

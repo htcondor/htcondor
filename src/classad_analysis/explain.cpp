@@ -21,8 +21,6 @@
 #include "condor_common.h"
 #include "explain.h"
 
-using namespace std;
-
 // Explain methods
 
 Explain::
@@ -66,13 +64,11 @@ Init( bool _match, int _numberOfMatches, IndexSet &_matchedClassAds,
 }
 
 bool MultiProfileExplain::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
-
-	char tempBuff[512];
 
 	buffer += "[";
 	buffer += "\n";
@@ -87,9 +83,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -98,9 +93,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfClassAds );
 	buffer += "numberOfClassAds = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfClassAds);
 	buffer += ";";
 	buffer += "\n";
 
@@ -147,13 +141,11 @@ Init( bool _match, int _numberOfMatches )
 }
 
 bool ProfileExplain::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
-
-	char tempBuff[512];
 
 	buffer += "[";
 	buffer += "\n";
@@ -163,9 +155,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -222,13 +213,11 @@ Init( bool _match, int _numberOfMatches, classad::Value &_newValue )
 }
 
 bool ConditionExplain::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
 	}
-
-	char tempBuff[512];
 
 	classad::ClassAdUnParser unp;
 
@@ -240,9 +229,8 @@ ToString( string &buffer )
 	buffer += ";";
 	buffer += "\n";
 
-	sprintf( tempBuff, "%d", numberOfMatches );
 	buffer += "numberOfMatches = ";
-	buffer += tempBuff;
+	buffer += std::to_string(numberOfMatches);
 	buffer += ";";
 	buffer += "\n";
 
@@ -288,7 +276,7 @@ AttributeExplain::
 }
 
 bool AttributeExplain::
-Init( string _attribute )
+Init( std::string _attribute )
 {
 	attribute = _attribute;
 	suggestion = NONE;
@@ -297,7 +285,7 @@ Init( string _attribute )
 }
 
 bool AttributeExplain::
-Init( string _attribute, classad::Value &_discreteValue )
+Init( std::string _attribute, classad::Value &_discreteValue )
 {
 	attribute = _attribute;
 	suggestion = MODIFY;
@@ -308,7 +296,7 @@ Init( string _attribute, classad::Value &_discreteValue )
 }
 
 bool AttributeExplain::
-Init( string _attribute, Interval *_intervalValue )
+Init( std::string _attribute, Interval *_intervalValue )
 {
 	attribute = _attribute;
 	suggestion = MODIFY;
@@ -322,7 +310,7 @@ Init( string _attribute, Interval *_intervalValue )
 }
 
 bool AttributeExplain::
-ToString( string &buffer )
+ToString( std::string &buffer )
 {
 	if( !initialized ) {
 		return false;
@@ -411,7 +399,7 @@ ClassAdExplain( )
 ClassAdExplain::
 ~ClassAdExplain( )
 {
-	string* attr = NULL;
+	std::string* attr = NULL;
 	undefAttrs.Rewind( );
 	while( undefAttrs.Next( attr ) ) {
 		delete attr;
@@ -424,13 +412,13 @@ ClassAdExplain::
 }
 
 bool ClassAdExplain::
-Init( List<string> &_undefAttrs, List<AttributeExplain> &_attrExplains )
+Init( List<std::string> &_undefAttrs, List<AttributeExplain> &_attrExplains )
 {
-	string attr = "";
+	std::string attr = "";
 	AttributeExplain *explain = NULL;
 	_undefAttrs.Rewind();
 	while( _undefAttrs.Next( attr ) ) {
-		if( !( undefAttrs.Append( new string( attr ) ) ) ) {
+		if( !( undefAttrs.Append( new std::string( attr ) ) ) ) {
 			return false;
 		}
 	}
@@ -445,12 +433,12 @@ Init( List<string> &_undefAttrs, List<AttributeExplain> &_attrExplains )
 }
 
 bool ClassAdExplain::
-ToString( string &buffer ) {
+ToString( std::string &buffer ) {
 	if( !initialized ) {
 		return false;
 	}
 
-	string attr = "";
+	std::string attr = "";
 	AttributeExplain *explain = NULL;
 
 	buffer += "[";

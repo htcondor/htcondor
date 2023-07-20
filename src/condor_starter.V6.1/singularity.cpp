@@ -367,6 +367,15 @@ Singularity::setup(ClassAd &machineAd,
 	}
 
 	// Setup Singularity containerization options.
+	std::string knob;
+	param(knob, "SINGULARITY_USE_PID_NAMESPACES", "auto");
+	if (!string_is_boolean_param(knob.c_str(), m_use_pid_namespaces)) {
+		// SINGULARITY_USE_PID_NAMESPACES is not explicitly set to True or False, so we set it automatically.
+		// At this point, we should have a slot attribute that says if pid namespaces supported - this
+		// slot attribute was set when the starter was run with the '-classad' option.
+		m_use_pid_namespaces = false;  // if our slotad does not have the result of our testing, go w/ false
+		machineAd.LookupBool(ATTR_HAS_SINGULARITY_PIDNAMESPACES, m_use_pid_namespaces);
+	}
 	add_containment_args(sing_args);
 
 	std::string args_error;
@@ -454,9 +463,8 @@ Singularity::retargetEnvs(Env &job_env, const std::string &target_dir, const std
 	std::list<std::string> envNames;
 	job_env.Walk(envToList, (void *)&envNames);
 	for (const std::string & name : envNames) {
-		MyString myValue;
-		job_env.GetEnv(name.c_str(), myValue);
-		std::string  value = myValue;
+		std::string value;
+		job_env.GetEnv(name, value);
 		auto index_execute_dir = value.find(execute_dir);
 		if (index_execute_dir != std::string::npos) {
 			std::string new_name = environmentPrefix() + name;
@@ -527,7 +535,7 @@ Singularity::runTest(const std::string &JobName, const ArgList &args, int orig_a
 	ArgList testArgs;
 
 	// The last orig_args_len args are the real exec + its args.  Skip those for the test
-	for (int i = 0; i < args.Count() - orig_args_len; i++) {
+	for (size_t i = 0; i < args.Count() - orig_args_len; i++) {
 		const char *arg = args.GetArg(i);
 		if ((strcmp(arg, "run") == 0) || (strcmp(arg, "exec")) == 0) {
 			// Stick a -q before test to keep the download quiet
@@ -600,10 +608,12 @@ Singularity::canRunSIF() {
 }
 
 bool
-Singularity::canRunSandbox() {
+Singularity::canRunSandbox(bool &can_use_pidnamespaces) {
 	std::string sandbox_dir;
 	param(sandbox_dir, "SINGULARITY_TEST_SANDBOX");
-	return Singularity::canRun(sandbox_dir);
+	bool result = Singularity::canRun(sandbox_dir);  // canRun() will also set m_use_pid_namespaces
+	can_use_pidnamespaces = m_use_pid_namespaces;
+	return result;
 }
 
 void

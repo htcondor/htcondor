@@ -186,8 +186,8 @@ static void setup() {
 #endif
 	
 	//Create some non-existent files
-	cut_assert_gz( sprintf(non_existent, "DoesNotExist%c", DIR_DELIM_CHAR) );
-	cut_assert_gz( sprintf(non_existent_file, "DoesNotExist%cDoesNotExist", 
+	cut_assert_gz( snprintf(non_existent, sizeof(non_existent), "DoesNotExist%c", DIR_DELIM_CHAR) );
+	cut_assert_gz( snprintf(non_existent_file, sizeof(non_existent_file), "DoesNotExist%cDoesNotExist", 
 				   DIR_DELIM_CHAR) );
 	non_existent[13] = '\0';
 	non_existent_file[25] = '\0';

@@ -13,7 +13,7 @@ be read, and most attributes can be updated.
 
 Jobs that use :mod:`htcondor.htchirp` module must have the attribute
 ``WantIOProxy`` set to ``true`` in the job ClassAd
-(``My.WantIOProxy = true`` in the submit description).
+(``want_io_proxy = true`` in the submit description).
 :mod:`htcondor.htchirp` only works for jobs run in the
 vanilla, paralllel, and java universes.
 
@@ -54,7 +54,6 @@ arguments) and returns the value from the relevant :class:`HTChirp` method.
   .. automethod:: get_job_attr_delayed
   .. automethod:: set_job_attr_delayed
   .. automethod:: ulog
-  .. automethod:: phase
   .. automethod:: read
   .. automethod:: write
   .. automethod:: rename

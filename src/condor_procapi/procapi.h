@@ -29,7 +29,6 @@
 #include "condor_pidenvid.h"
 #include "processid.h"
 #include "HashTable.h"
-#include "extArray.h"
 
 #ifndef WIN32 // all the below is for UNIX
 
@@ -73,18 +72,6 @@ typedef DWORD pid_t;
 
 #define INITIAL_SIZE    40960L    // init. size for getting pDataBlock
 #define EXTEND_SIZE	     4096L    // incremental addition to pDataBlock
-
-//LPTSTR is a point to a null-terminated windows or Unicode string.
-//TEXT() basically puts a string into unicode.
-// Here are some Windows specific strings.
-const LPTSTR NamesKey = 
-      TEXT("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Perflib");
-const LPTSTR DefaultLangId = TEXT("009");  //english!
-const LPTSTR Counters = TEXT("Counters");
-const LPTSTR Help = TEXT("Help");
-const LPTSTR LastHelp = TEXT("Last Help");
-const LPTSTR LastCounter = TEXT("Last Counter");
-const LPTSTR Slash = TEXT("\\");
 
 struct Offset {       // There will be one instance of this structure in
 	DWORD imgsize;      // the ProcAPI class - it will hold the offsets of

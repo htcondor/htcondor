@@ -33,15 +33,16 @@ class HookJobExitClient;
 /**
    The StarterHookMgr manages all the hooks that the starter invokes.
 */
-class StarterHookMgr : public HookClientMgr
+class StarterHookMgr final : public JobHookClientMgr
 {
 public:
 	StarterHookMgr();
 	~StarterHookMgr();
 
-	bool initialize(ClassAd* job_ad);
-	bool reconfig();
+	virtual bool reconfig() override;
 
+
+	virtual const std::string paramPrefix() const override {return "STARTER";}
 
 
 		/**
@@ -89,34 +90,19 @@ public:
 	int getExitHookTimeout() const { return m_hook_job_exit_timeout; };
 
 private:
-
-		/// The hook keyword defined in the job, or NULL if not present.
-	char* m_hook_keyword;
-
 		/// The path to HOOK_PREPARE_JOB, if defined.
-	char* m_hook_prepare_job;
+	std::string m_hook_prepare_job;
 		/// The path to HOOK_PREPARE_JOB_BEFORE_TRANSFER, if defined.
-	char* m_hook_prepare_job_before_transfer;
+	std::string m_hook_prepare_job_before_transfer;
 		/// The path to HOOK_UPDATE_JOB_INFO, if defined.
-	char* m_hook_update_job_info;
+	std::string m_hook_update_job_info;
 		/// The path to HOOK_JOB_EXIT, if defined.
-	char* m_hook_job_exit;
+	std::string m_hook_job_exit;
 
 	int m_hook_job_exit_timeout;
 
-		/**
-		   If the job we're running defines a hook keyword, find the
-		   validate path to the given hook.
-		   @param hook_type The hook you want the path for.
-           @param hpath Returns with hook path.  NULL if undefined or path error.
-		   @return true if hook path is good (or not defined).  false if path error.
-		*/
-	bool getHookPath(HookType hook_type, char*& hpath);
-
 		/// Clears out all the hook paths we've validated and saved.
 	void clearHookPaths( void );
-
-	int getHookTimeout(HookType hook_type, int def_value = 0);
 
 	int tryHookPrepareJob_implementation(const char *hook_path, bool after_transfer);
 };

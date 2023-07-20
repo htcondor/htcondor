@@ -21,8 +21,6 @@
 #include "condor_common.h"
 #include "condition.h"
 
-using namespace std;
-
 Condition::
 Condition( )
 {
@@ -40,7 +38,7 @@ Condition::
 }
 
 bool Condition::
-Init( const string &_attr, classad::ExprTree *_tree, bool bVal )
+Init( const std::string &_attr, classad::ExprTree *_tree, bool bVal )
 {
 	if( !( BoolExpr::Init( _tree ) ) ) {
 		return false;
@@ -55,7 +53,7 @@ Init( const string &_attr, classad::ExprTree *_tree, bool bVal )
 
 
 bool Condition::
-Init( const string &_attr, classad::Operation::OpKind _op,
+Init( const std::string &_attr, classad::Operation::OpKind _op,
 	  const classad::Value &_val, 
 	  classad::ExprTree *_tree, AttrPos _pos )
 {
@@ -88,7 +86,7 @@ InitComplex( classad::ExprTree *_tree )
 }
 
 bool Condition::
-InitComplex( const string &_attr,
+InitComplex( const std::string &_attr,
 			 classad::Operation::OpKind _op1, const classad::Value &_val1,
 			 classad::Operation::OpKind _op2, const classad::Value &_val2,
 			 classad::ExprTree *_tree )
@@ -108,7 +106,7 @@ InitComplex( const string &_attr,
 }
 
 bool Condition::
-GetAttr( string& attribute )
+GetAttr( std::string& attribute )
 {
 	if( !initialized ) {
 		return false;

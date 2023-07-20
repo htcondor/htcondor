@@ -146,40 +146,74 @@ void INFNBatchResource::PublishResourceAd( ClassAd *resource_ad )
 bool INFNBatchResource::GahpCanRefreshProxy()
 {
 	if ( !m_gahpRefreshProxyChecked && m_xfer_gahp->isStarted() ) {
-		m_gahpCanRefreshProxy = m_xfer_gahp->getCommands()->contains_anycase( "DOWNLOAD_PROXY" );
+		m_gahpCanRefreshProxy = contains_anycase(m_xfer_gahp->getCommands(), "DOWNLOAD_PROXY");
 		m_gahpRefreshProxyChecked = true;
 	}
 	return m_gahpCanRefreshProxy;
 }
 
-// we will use ec2 command "status_all" to do the Ping work
 void INFNBatchResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& ping_succeeded )
 {
-	// Since blah doesn't need a proxy, we should use Startup() to replace isInitialized()
-	if ( gahp->isStarted() == false ) {
-		dprintf( D_ALWAYS,"gahp server not up yet, delaying ping\n" );
-		ping_delay = 5;
+	ping_delay = 0;
+
+	// First, start the gahp(s).
+	// Treat failure to start as a ping failure, to be retried later.
+	if ( gahp->Startup(true) == false ) {
+		dprintf(D_ALWAYS, "Error starting %s GAHP: %s\n",
+		        m_remoteHostname.empty() ? "local" : m_remoteHostname.c_str(),
+		        gahp->getGahpStderr());
+		ping_complete = true;
+		ping_succeeded = false;
+		m_pingErrMsg = "Failed to start GAHP: ";
+		m_pingErrMsg += gahp->getGahpStderr();
+		m_pingErrCode = GRU_FAILED_TO_START_GAHP;
 		return;
 	}
-	
-	ping_delay = 0;
-	
-		// TODO Is there a meaning ping command we can perform?
-/* comment out to calm coverity
-	int rc = 0;
+	if (m_gahpIsRemote) {
+		bool already_started = m_xfer_gahp->isStarted();
+		if (m_xfer_gahp->Startup(true) == false) {
+			dprintf(D_ALWAYS, "Error starting %s transfer GAHP: %s\n",
+			        m_remoteHostname.c_str(), gahp->getGahpStderr());
+			ping_complete = true;
+			ping_succeeded = false;
+			m_pingErrMsg = "Failed to start GAHP: ";
+			m_pingErrMsg += m_xfer_gahp->getGahpStderr();
+			m_pingErrCode = GRU_FAILED_TO_START_GAHP;
+			return;
+		}
+		// Try creating the security session only when we first
+		// start up the FT GAHP.
+		// For now, failure to create the security session is
+		// not fatal. FT GAHPs older than 8.1.1 didn't have a
+		// CEDAR security session command and BOSCO had another
+		// way to authenticate FileTransfer connections.
+		if ( !already_started &&
+			 m_xfer_gahp->CreateSecuritySession() == false ) {
+			dprintf(D_ALWAYS, "Error creating security session with %s transfer GAHP\n",
+			         m_remoteHostname.c_str());
+		}
+	}
 
-	if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
+	int rc = gahp->blah_ping(m_batchType);
+
+	if (rc == GAHPCLIENT_COMMAND_NOT_SUPPORTED) {
+		// We have an older blahp that doesn't support ping.
+		// Act like the ping succeeded.
+		ping_complete = true;
+		ping_succeeded = true;
+	} else if ( rc == GAHPCLIENT_COMMAND_PENDING ) {
 		ping_complete = false;
 	} 
 	else if ( rc != 0 ) {
 		ping_complete = true;
 		ping_succeeded = false;
+		m_pingErrMsg = gahp->getErrorString();
+		m_pingErrCode = GRU_PING_FAILED;
 	} 
 	else {
-*/
 		ping_complete = true;
 		ping_succeeded = true;
-//	}
+	}
 
 	return;
 }

@@ -38,12 +38,10 @@ JobTransforms::~JobTransforms()
 void
 JobTransforms::clear_transforms_list()
 {
-	MacroStreamXFormSource *xfm = NULL;
-	transforms_list.Rewind();
-	while ( transforms_list.Next( xfm ) ) {
+	for (MacroStreamXFormSource *xfm : transforms_list) {
 		delete xfm;
 	}
-	transforms_list.Clear();
+	transforms_list.clear();
 }
 
 void 
@@ -136,11 +134,11 @@ JobTransforms::initAndReconfig()
 		// TODO
 
 		// Finally, append the xfm to the end our list (order is important here!)
-		transforms_list.Append(xfm);
+		transforms_list.push_back(xfm);
 		std::string xfm_text;
 		dprintf(D_ALWAYS, 
-			"JOB_TRANSFORM_%s setup as transform rule #%d :\n%s\n",
-			name, transforms_list.Number(), xfm->getFormattedText(xfm_text, "\t") );
+			"JOB_TRANSFORM_%s setup as transform rule #%zu :\n%s\n",
+			name, transforms_list.size(), xfm->getFormattedText(xfm_text, "\t") );
 		xfm = NULL;  // we handed the xfm pointer off to our list
 
 	} // end of while loop thru job transform names	
@@ -177,9 +175,7 @@ JobTransforms::transformJob(
 	ad->ClearAllDirtyFlags();
 
 	// Apply our ordered list of transforms to the ad, changing it in-place.
-	MacroStreamXFormSource *xfm = NULL;
-	transforms_list.Rewind();
-	while ( transforms_list.Next( xfm ) ) {
+	for (MacroStreamXFormSource *xfm : transforms_list) {
 	
 		transforms_considered++;
 

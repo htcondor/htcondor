@@ -47,11 +47,11 @@ bool FTEST_dirname(void);
 bool FTEST_fullpath(void);
 bool FTEST_flatten_and_inline(void);
 bool FTEST_stl_string_utils(void);
+bool FTEST_string_vector();
 bool FTEST_your_string(void);
 bool FTEST_tokener(void);
 bool OTEST_HashTable(void);
 bool OTEST_Regex(void);
-bool OTEST_MyString(void);
 bool OTEST_StringList(void);
 bool OTEST_Old_Classads(void);
 bool OTEST_Env(void);
@@ -83,12 +83,12 @@ const static struct {
 	map(FTEST_fullpath),
 	map(FTEST_flatten_and_inline),
 	map(FTEST_stl_string_utils),
+	map(FTEST_string_vector),
 	map(FTEST_your_string),
 	map(FTEST_tokener),
 	{"start of objects", NULL},	//placeholder to separate functions and objects
 	map(OTEST_HashTable),
 	map(OTEST_Regex),
-	map(OTEST_MyString),
 	map(OTEST_StringList),
 	map(OTEST_Old_Classads),
 	map(OTEST_Env),

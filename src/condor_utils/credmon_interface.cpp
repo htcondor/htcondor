@@ -59,10 +59,10 @@ int get_credmon_pid() {
 	   time(NULL) > _credmon_pid_timestamp + CREDMON_PID_FILE_READ_INTERVAL) {
 
 		// get pid of credmon
-		MyString cred_dir;
+		std::string cred_dir;
 		param(cred_dir, "SEC_CREDENTIAL_DIRECTORY");
-		MyString pid_path;
-		pid_path.formatstr("%s%cpid", cred_dir.c_str(), DIR_DELIM_CHAR);
+		std::string pid_path;
+		formatstr(pid_path, "%s%cpid", cred_dir.c_str(), DIR_DELIM_CHAR);
 		FILE* credmon_pidfile = fopen(pid_path.c_str(), "r");
 		if(!credmon_pidfile) {
 			dprintf(D_FULLDEBUG, "CREDMON: unable to open %s (%i)\n", pid_path.c_str(), errno);
@@ -477,13 +477,13 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 		}
 
 		// also make sure the .mark file is older than the sweep delay.
-		int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
-		int now = time(0);
-		int mtime = cred_dir.GetModifyTime();
+		time_t sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
+		time_t now = time(0);
+		time_t mtime = cred_dir.GetModifyTime();
 		if ( (now - mtime) >= sweep_delay ) {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is at least %i seconds old. Sweeping...\n", markfile, mtime, sweep_delay);
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is at least %lld seconds old. Sweeping...\n", markfile, (long long)mtime, (long long)sweep_delay);
 		} else {
-			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is less than %i seconds old. Skipping...\n", markfile, mtime, sweep_delay);
+			dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is less than %lld seconds old. Skipping...\n", markfile, (long long)mtime, (long long)sweep_delay);
 			return;
 		}
 	} else {
@@ -499,7 +499,7 @@ void process_cred_mark_dir(const char * cred_dir_name, const char *markfile) {
 	}
 
 	// delete the user's dir
-	MyString username = markfile;
+	std::string username = markfile;
 	username = username.substr(0, username.length()-5);
 	dprintf (D_FULLDEBUG, "CREDMON: CRED_DIR: %s, USERNAME: %s\n", cred_dir_name, username.c_str());
 	if ( cred_dir.Find_Named_Entry( username.c_str() ) ) {
@@ -525,12 +525,12 @@ void process_cred_mark_file(const char *src) {
 	}
 
 	int sweep_delay = param_integer("SEC_CREDENTIAL_SWEEP_DELAY", 3600);
-	int now = time(0);
-	int mtime = si.GetModifyTime();
+	time_t now = time(0);
+	time_t mtime = si.GetModifyTime();
 	if ( (now - mtime) > sweep_delay ) {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Sweeping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Sweeping...\n", src, (long long)mtime, sweep_delay);
 	} else {
-		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %i which is more than %i seconds old. Skipping...\n", src, mtime, sweep_delay);
+		dprintf(D_FULLDEBUG, "CREDMON: File %s has mtime %lld which is more than %i seconds old. Skipping...\n", src, (long long)mtime, sweep_delay);
 		return;
 	}
 
@@ -598,7 +598,7 @@ void credmon_sweep_creds() {
 #ifdef WIN32
 	// TODO: implement this.
 #else
-	MyString fullpathname;
+	std::string fullpathname;
 	dprintf(D_FULLDEBUG, "CREDMON: scandir(%s)\n", cred_dir.ptr());
 	struct dirent **namelist;
 	int n = scandir(cred_dir, &namelist, &markfilter, alphasort);
@@ -607,7 +607,7 @@ void credmon_sweep_creds() {
 			if(param_boolean("CREDD_OAUTH_MODE", false)) {
 				process_cred_mark_dir(namelist[n]->d_name);
 			} else {
-				fullpathname.formatstr("%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
+				formatstr(fullpathname, "%s%c%s", cred_dir.ptr(), DIR_DELIM_CHAR, namelist[n]->d_name);
 				priv_state priv = set_root_priv();
 				process_cred_mark_file(fullpathname.c_str());
 				set_priv(priv);

@@ -30,6 +30,7 @@
 #include "internet.h"
 #include "basename.h"
 #include "condor_config.h"
+#include "cred_dir.h"
 #include "util_lib_proto.h"
 #include "condor_attributes.h"
 #include "condor_commands.h"
@@ -70,6 +71,65 @@ const char* CHIRP_CONFIG_FILENAME = ".chirp.config";
 #	define file_contains contains
 #	define file_remove remove
 #endif
+
+
+namespace {
+
+class ShadowCredDirCreator final : public htcondor::CredDirCreator {
+public:
+	ShadowCredDirCreator(const classad::ClassAd &ad, const std::string &cred_dir)
+	: CredDirCreator(ad, cred_dir, "starter")
+	{m_creddir_user_priv = true;}
+
+	/**
+	 * Fetch the credentials from the remote shadow
+	 * - err: On error, this will be popuated with an error message
+	 * - returns: True on success
+	 */
+	bool GetCreds(CondorError &err);
+
+private:
+	// Kerberos credential management logic is quite embedded in the JIC shadow; for now,
+	// don't extract it out into the shared logic
+	virtual bool GetKerberosCredential(const std::string & /*user*/, const std::string & /*domain*/,
+		htcondor::CredData &/*cred*/, CondorError & /*err*/) override {return true;}
+
+	virtual bool GetOAuth2Credential(const std::string &service_name, const std::string &user, htcondor::CredData &cred,
+		CondorError &err) override;
+
+	std::unordered_map<std::string, std::unique_ptr<htcondor::CredData>> m_creds;
+};
+
+
+bool
+ShadowCredDirCreator::GetCreds(CondorError &err)
+{
+	dprintf(D_FULLDEBUG, "Starter is retrieving credentials from the shadow.\n");
+	if (REMOTE_CONDOR_getcreds(CredDir().c_str(), m_creds) <= 0) {
+		err.push("GetCreds", 1, "Failed to receive user credentials");
+		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		return false;
+	}
+	return true;
+}
+
+
+bool
+ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const std::string &/*user*/,
+	htcondor::CredData &cred, CondorError &err)
+{
+	auto iter = m_creds.find(service_name);
+	if (iter == m_creds.end()) {
+		err.pushf("GetOAuth2Credential", 1, "Shadow failed to provide credential for service %s",
+			service_name.c_str());
+		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
+		return false;
+	}
+	cred = *iter->second;
+	return true;
+}
+
+}
 
 JICShadow::JICShadow( const char* shadow_name ) : JobInfoCommunicator(),
 	m_wrote_chirp_config(false), m_job_update_attrs_set(false)
@@ -1012,8 +1072,8 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 	} else {
 		ClassAd * ad;
 		RemoteErrorEvent event;
-		event.setErrorText( err_msg );
-		event.setDaemonName( "starter" );
+		event.error_str = err_msg;
+		event.daemon_name = "starter";
 		event.setCriticalError( false );
 		event.setHoldReasonCode( hold_reason_code );
 		event.setHoldReasonSubCode( hold_reason_subcode );
@@ -1061,8 +1121,6 @@ JICShadow::registerStarterInfo( void )
 void
 JICShadow::publishStarterInfo( ClassAd* ad )
 {
-	char* tmp_val = NULL;
-
 	ad->Assign( ATTR_UID_DOMAIN, uid_domain );
 
 	ad->Assign( ATTR_FILE_SYSTEM_DOMAIN, fs_domain );
@@ -1074,17 +1132,28 @@ JICShadow::publishStarterInfo( ClassAd* ad )
 
 	ad->Assign(ATTR_STARTER_IP_ADDR, daemonCore->InfoCommandSinfulString() );
 
-	tmp_val = param( "ARCH" );
-	ad->Assign( ATTR_ARCH, tmp_val );
-	free( tmp_val );
-
-	tmp_val = param( "OPSYS" );
-	ad->Assign( ATTR_OPSYS, tmp_val );
-	free( tmp_val );
+	const char * sandbox_dir = Starter->GetWorkingDir(false);
+	if (sandbox_dir && sandbox_dir[0]) {
+		ad->Assign(ATTR_CONDOR_SCRATCH_DIR, sandbox_dir);
+	}
+	if (Starter->jic) {
+		ClassAd * machineAd = Starter->jic->machClassAd();
+		if( machineAd ) {
+			CopyMachineResources(*ad, *machineAd, true);
+			//Check for requested machine attrs to return for execution event
+			if (job_ad) {
+				std::string requestAttrs;
+				if (job_ad->LookupString(ATTR_ULOG_EXECUTE_EVENT_ATTRS,requestAttrs)) {
+					CopySelectAttrs(*ad, *machineAd, requestAttrs, false);
+				}
+			}
+		}
+	}
 
 	ad->Assign( ATTR_HAS_RECONNECT, true );
 
 		// Finally, publish all the DC-managed attributes.
+		// this sets CondorVersion, Address and MyAddress
 	daemonCore->publish(ad);
 }
 
@@ -1577,15 +1646,6 @@ JICShadow::initWithFileTransfer()
 	job_iwd = strdup( Starter->GetWorkingDir(0) );
 	job_ad->Assign( ATTR_JOB_IWD, job_iwd );
 
-	// Only rename the executable if it is transferred.
-	bool xferExec = true;
-	job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
-
-	if( xferExec ) {
-		dprintf( D_FULLDEBUG, "Changing the executable name\n" );
-		job_ad->Assign(ATTR_JOB_CMD,CONDOR_EXEC);
-	}
-
 		// now that we've got the iwd we're using and all our
 		// transfer-related flags set, we can finally initialize the
 		// job's standard files.  this is shared code if we're
@@ -2070,8 +2130,8 @@ JICShadow::publishUpdateAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
@@ -2126,8 +2186,8 @@ JICShadow::publishJobExitAd( ClassAd* ad )
 		ad->Assign(ATTR_SCRATCH_DIR_FILE_COUNT, file_count);
 		time_t scan_time = (time(NULL) - begin_time);
 		if (scan_time > 10) {
-			dprintf(D_ALWAYS, "It took %d seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
-				(int)(scan_time), (long long)execsz, (long long)file_count);
+			dprintf(D_ALWAYS, "It took %lld seconds to determine final DiskUsage: %lld for %lld dirs+files\n",
+				(long long)(scan_time), (long long)execsz, (long long)file_count);
 		}
 	}
 
@@ -2557,19 +2617,21 @@ JICShadow::transferCompleted( FileTransfer *ftrans )
 
 			// If we transferred the executable, make sure it
 			// has its execute bit set.
+		bool xferExec = true;
+		job_ad->LookupBool(ATTR_TRANSFER_EXECUTABLE,xferExec);
+
 		std::string cmd;
-		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) &&
-		    (cmd == CONDOR_EXEC))
+		if (job_ad->LookupString(ATTR_JOB_CMD, cmd) && xferExec)
 		{
 				// if we are running as root, the files were downloaded
 				// as PRIV_USER, so switch to that priv level to do chmod
 			priv_state saved_priv = set_priv( PRIV_USER );
 
-			if (chmod(CONDOR_EXEC, 0755) == -1) {
+			if (chmod(condor_basename(cmd.c_str()), 0755) == -1) {
 				dprintf(D_ALWAYS,
 				        "warning: unable to chmod %s to "
 				            "ensure execute bit is set: %s\n",
-				        CONDOR_EXEC,
+				        condor_basename(cmd.c_str()),
 				        strerror(errno));
 			}
 
@@ -2741,7 +2803,6 @@ JICShadow::initIOProxy( void )
 
 bool
 JICShadow::initUserCredentials() {
-#if 1 //ndef WIN32
 
 	// check to see if the job needs any OAuth services (scitokens)
 	// if so, call the function that does that.
@@ -2880,9 +2941,6 @@ JICShadow::initUserCredentials() {
 	rc = refreshSandboxCredentialsKRB();
 
 	return rc;
-#else   // WIN32
-	return true;
-#endif  // WIN32
 }
 
 #if 1 //ndef WIN32
@@ -3042,28 +3100,9 @@ JICShadow::refreshSandboxCredentialsOAuth()
 	std::string sandbox_dir_name;
 	dircat(Starter->GetWorkingDir(0), ".condor_creds", sandbox_dir_name);
 
-	// from here on out, do everything as the user.
-	TemporaryPrivSentry mysentry(PRIV_USER);
-
-	// create dir to hold creds
-	int rc = 0;
-	dprintf(D_SECURITY, "CREDS: creating %s\n", sandbox_dir_name.c_str());
-	rc = mkdir(sandbox_dir_name.c_str(), 0700);
-
-	if(rc != 0) {
-		if(errno != 17) {
-			dprintf(D_ALWAYS, "CREDS: mkdir failed %s: errno %i\n", sandbox_dir_name.c_str(), errno);
-			return false;
-		} else {
-			dprintf(D_SECURITY|D_FULLDEBUG, "CREDS: info: %s already exists.\n", sandbox_dir_name.c_str());
-		}
-	} else {
-		dprintf(D_SECURITY, "CREDS: successfully created %s\n", sandbox_dir_name.c_str());
-	}
-
-	// do syscall to receive credential wallet directly into sandbox
-	if (REMOTE_CONDOR_getcreds(sandbox_dir_name.c_str()) <= 0) {
-		dprintf(D_ALWAYS, "ERROR: Failed to receive user credentials.\n");
+	ShadowCredDirCreator creds(*job_ad, sandbox_dir_name);
+	CondorError err;
+	if (!creds.GetCreds(err) || !creds.PrepareCredDir(err)) {
 		return false;
 	}
 

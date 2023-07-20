@@ -210,7 +210,8 @@ compute_adj( char *arg )
 
 void UpdateJobAd(int cluster, int proc)
 {
-	int old_prio, new_prio;
+	int old_prio = 0;
+	int new_prio;
 	if( (GetAttributeInt(cluster, proc, ATTR_JOB_PRIO, &old_prio) < 0) ) {
 		fprintf(stderr, "Couldn't retrieve current priority for %d.%d.\n",
 				cluster, proc);
@@ -243,7 +244,7 @@ void ProcArg(const char* arg)
 		{
 			ClassAd	*ad;
 			char constraint[100];
-			sprintf(constraint, "%s == %d", ATTR_CLUSTER_ID, cluster);
+			snprintf(constraint, sizeof(constraint), "%s == %d", ATTR_CLUSTER_ID, cluster);
 			int firstTime = 1;
 			while((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 				ad->LookupInteger(ATTR_PROC_ID, proc);
@@ -291,7 +292,7 @@ void ProcArg(const char* arg)
 		ClassAd	*ad;
 		int firstTime = 1;
 		
-		sprintf(constraint, "%s == \"%s\"", ATTR_OWNER, arg);
+		snprintf(constraint, sizeof(constraint), "%s == \"%s\"", ATTR_OWNER, arg);
 
 		while ((ad = GetNextJobByConstraint(constraint, firstTime)) != NULL) {
 			ad->LookupInteger(ATTR_CLUSTER_ID, cluster);

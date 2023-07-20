@@ -52,28 +52,6 @@ const char* tfnze( int var ) {
 	return "FALSE";
 }
 
-bool vsprintfHelper(MyString* str, const char* format, ...) {
-	va_list args;
-	bool toReturn;
-
-	va_start(args, format);
-	toReturn = str->vformatstr(format, args);
-	va_end(args);
-
-	return toReturn;
-}
-
-bool vformatstr_catHelper(MyString* str, const char* format, ...) {
-	va_list args;
-	bool toReturn;
-
-	va_start(args, format);
-	toReturn = str->vformatstr_cat(format, args);
-	va_end(args);
-
-	return toReturn;
-}
-
 /* Returns the empty string when the passed string is null */
 const char* nicePrint(const char* str) {
 	if(!str)
@@ -147,7 +125,7 @@ void make_big_string(
 	if (quoted_string != NULL) {
 		*quoted_string = (char *) malloc(length + 3);
 		ASSERT( quoted_string );
-		sprintf(*quoted_string,	"\"%s\"", *string);
+		snprintf(*quoted_string, length+3, "\"%s\"", *string);
 		}
 	return;
 }
@@ -185,12 +163,6 @@ bool floats_close( double one, double two, double diff) {
 	}
 }
 
-bool strings_similar(const MyString* str1, const MyString* str2, 
-	const char* delims) 
-{
-	return strings_similar(str1->Value(), str2->Value(), delims);
-}
-
 bool strings_similar(const std::string& str1, const std::string& str2,
 	const char* delims)
 {
@@ -201,13 +173,25 @@ bool strings_similar(const char* str1, const char* str2, const char* delims)
 {
 	StringList sl1(str1, delims);
 	StringList sl2(str2, delims);
-	return sl1.number() == sl2.number() && 
-		sl1.contains_list(sl2, false) && 
-		sl2.contains_list(sl1, false);
+	if (sl1.number() != sl2.number()) {
+		return false;
+	}
+	sl1.qsort();
+	sl2.qsort();
+	sl1.rewind();
+	sl2.rewind();
+	const char* el1;
+	const char* el2;
+	while ( (el1 = sl1.next()) && (el2 = sl2.next())) {
+		if (strcmp(el1, el2) != MATCH) {
+			return false;
+		}
+	}
+	return true;
 }
 
-MyString* convert_string_array(char** str, int size, const char* delim){
-	MyString* toReturn = new MyString;
+std::string* convert_string_array(char** str, int size, const char* delim){
+	std::string* toReturn = new std::string;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
 		*toReturn+=str[i];
@@ -216,8 +200,8 @@ MyString* convert_string_array(char** str, int size, const char* delim){
 	return toReturn;
 }
 
-MyString* convert_string_array(const char** str, int size, const char* delim){
-	MyString* toReturn = new MyString;
+std::string* convert_string_array(const char** str, int size, const char* delim){
+	std::string* toReturn = new std::string;
 	
 	for(int i = 0; i < size && str[i] && str[i][0]; i++) {
 		*toReturn+=str[i];

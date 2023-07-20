@@ -24,10 +24,7 @@
 void
 StartdPluginManager::Initialize()
 {
-	StartdPlugin *plugin;
-	SimpleList<StartdPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->initialize();
 	}
 }
@@ -35,10 +32,7 @@ StartdPluginManager::Initialize()
 void
 StartdPluginManager::Shutdown()
 {
-	StartdPlugin *plugin;
-	SimpleList<StartdPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->shutdown();
 	}
 }
@@ -46,10 +40,7 @@ StartdPluginManager::Shutdown()
 void
 StartdPluginManager::Update(const ClassAd *publicAd, const ClassAd *privateAd)
 {
-	StartdPlugin *plugin;
-	SimpleList<StartdPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->update(publicAd, privateAd);
 	}
 }
@@ -57,10 +48,7 @@ StartdPluginManager::Update(const ClassAd *publicAd, const ClassAd *privateAd)
 void
 StartdPluginManager::Invalidate(const ClassAd *ad)
 {
-	StartdPlugin *plugin;
-	SimpleList<StartdPlugin *> plugins = getPlugins();
-	plugins.Rewind();
-	while (plugins.Next(plugin)) {
+	for (auto plugin: getPlugins()) {
 		plugin->invalidate(ad);
 	}
 }

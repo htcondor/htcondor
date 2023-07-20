@@ -33,6 +33,7 @@
 #include "amazongahp_common.h"
 #include "amazonCommands.h"
 #include "subsystem_info.h"
+#include <algorithm>
 
 // Globals from amazonCommand.cpp's statistitcs.
 extern int NumRequests;
@@ -356,13 +357,10 @@ Worker::Worker(int worker_id)
 
 Worker::~Worker()
 {
-	Request *request = NULL;
-
-	m_request_list.Rewind();
-	while( m_request_list.Next(request) ) {
-		m_request_list.DeleteCurrent();
+	for (auto request : m_request_list) {
 		delete request;
 	}
+	m_request_list.clear();
 
 	pthread_cond_destroy(&m_cond);
 }
@@ -370,20 +368,25 @@ Worker::~Worker()
 bool
 Worker::removeRequest(int req_id)
 {
-	Request *request = NULL;
-
-	m_request_list.Rewind();
-	while( m_request_list.Next(request) ) {
-
-		if( request->m_reqid == req_id ) {
-			// remove this request from worker request queue
-			m_request_list.DeleteCurrent();
-			delete request;
+	auto delete_matched = [req_id](const Request *r) {
+		if (r->m_reqid == req_id) {
+			delete r;
 			return true;
+		} else {
+			return false;
 		}
-	}
+	};
 
-	return false;
+	// Assume that only one matches
+	auto it = std::remove_if(m_request_list.begin(), m_request_list.end(),
+			delete_matched);
+
+	if (it == m_request_list.end()) {
+		return false; // not found
+	} else {
+		m_request_list.erase(it);
+		return true;
+	}
 }
 
 
@@ -675,7 +678,7 @@ IOProcess::newWorkerId(void)
 	int starting_worker_id = m_next_worker_id++;
 
 	while( starting_worker_id != m_next_worker_id ) {
-		if( m_next_worker_id > 990000000 ) {
+		if( m_next_worker_id > 990'000'000 ) {
 			m_next_worker_id = 1;
 			m_rotated_worker_ids = true;
 		}
@@ -710,7 +713,7 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 				request->m_raw_cmd.c_str(), worker->m_id);
 
 		request->m_worker = worker;
-		worker->m_request_list.Append(request);
+		worker->m_request_list.push_back(request);
 		worker->m_is_doing = true;
 
 		if( worker->m_is_waiting ) {
@@ -722,7 +725,7 @@ IOProcess::addRequestToWorker(Request* request, Worker* worker)
 		dprintf (D_FULLDEBUG, "Appending %s to global pending request list\n",
 				request->m_raw_cmd.c_str());
 
-		m_pending_req_list.Append(request);
+		m_pending_req_list.push_back(request);
 	}
 }
 
@@ -730,37 +733,34 @@ int
 IOProcess::numOfPendingRequest(void)
 {
 	int num = 0;
-	num = m_pending_req_list.Number();
+	num = (int) m_pending_req_list.size();
 	return num;
 }
 
 Request*
 IOProcess::popPendingRequest(void)
 {
-	Request *new_request = NULL;
 
-	m_pending_req_list.Rewind();
-	m_pending_req_list.Next(new_request);
-	if( new_request ) {
-		m_pending_req_list.DeleteCurrent();
+	if (m_pending_req_list.empty()) {
+		return nullptr;
+	} else {
+		Request *new_request = m_pending_req_list.front();
+		m_pending_req_list.erase(m_pending_req_list.begin());
+		return new_request;
 	}
-
-	return new_request;
 }
 
 Request* popRequest(Worker* worker)
 {
-	Request *new_request = NULL;
+	Request *new_request = nullptr;
 	if( !worker ) {
-		return NULL;
+		return nullptr;
 	}
 
-	worker->m_request_list.Rewind();
-	worker->m_request_list.Next(new_request);
-
-	if( new_request ) {
+	if (!worker->m_request_list.empty()) {
 		// Remove this request from worker request queue
-		worker->m_request_list.DeleteCurrent();
+		new_request = worker->m_request_list.front();
+		worker->m_request_list.erase(worker->m_request_list.begin());
 	} else {
 		if( ioprocess ) {
 			new_request = ioprocess->popPendingRequest();

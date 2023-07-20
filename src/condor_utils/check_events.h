@@ -105,25 +105,22 @@ class CheckEvents {
 
 	/** Check an event to see if it's consistent with previous events.
 		@param The event to check.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@return check_event_result_t, see above.
 	*/
-	check_event_result_t CheckAnEvent(const ULogEvent *event,
-			MyString &errorMsg);
 	check_event_result_t CheckAnEvent(const ULogEvent *event,
 			std::string &errorMsg);
 
 	/** Check all jobs when we think they're done.  Makes sure we have
 		exactly one submit event and one termanated/aborted/executable
 		error event for each job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false) (note: the error message length
 				is limited, so if there are many errors they may not all
 				show up).
 		@return check_event_result_t, see above.
 	*/
-	check_event_result_t CheckAllJobs(MyString &errorMsg);
 	check_event_result_t CheckAllJobs(std::string &errorMsg);
 
 	/** Convert a check_event_result_t to the corresponding string.
@@ -154,66 +151,66 @@ class CheckEvents {
 		@param A string containing this job's ID, etc. (to be used in
 				any error message).
 		@param The info about events we've seen for this job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobSubmit(const MyString &idStr, const JobInfo *info,
-			MyString &errorMsg, check_event_result_t &result);
+	void CheckJobSubmit(const std::string &idStr, const JobInfo *info,
+			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status of a job after an execute event.
 		@param A string containing this job's ID, etc. (to be used in
 				any error message).
 		@param The info about events we've seen for this job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobExecute(const MyString &idStr, const JobInfo *info,
-			MyString &errorMsg, check_event_result_t &result);
+	void CheckJobExecute(const std::string &idStr, const JobInfo *info,
+			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status after an event that indicates the end of a job
 		(ULOG_EXECUTABLE_ERROR, ULOG_JOB_ABORTED, or ULOG_JOB_TERMINATED).
 		@param A string containing this job's ID, etc. (to be used in
 				any error message).
 		@param The info about events we've seen for this job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobEnd(const MyString &idStr, const JobInfo *info,
-			MyString &errorMsg, check_event_result_t &result);
+	void CheckJobEnd(const std::string &idStr, const JobInfo *info,
+			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status after a ULOG_POST_SCRIPT_TERMINATED event.
 		@param A string containing this job's ID, etc. (to be used in
 				any error message).
 		@param The job's Condor ID.
 		@param The info about events we've seen for this job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckPostTerm(const MyString &idStr,
+	void CheckPostTerm(const std::string &idStr,
 			const CondorID &id, const JobInfo *info,
-			MyString &errorMsg, check_event_result_t &result);
+			std::string &errorMsg, check_event_result_t &result);
 
 	/** Check the status of all jobs at the end of a run.
 		@param A string containing this job's ID, etc. (to be used in
 				any error message).
 		@param The job's Condor ID.
 		@param The info about events we've seen for this job.
-		@param A MyString to hold an error message (only relevant if
+		@param A string to hold an error message (only relevant if
 				the result value is false and/or eventIsGood is false).
 		@param A reference to the result value (will be set only if
 				not okay).
 	*/
-	void CheckJobFinal(const MyString &idStr,
+	void CheckJobFinal(const std::string &idStr,
 			const CondorID &id, const JobInfo *info,
-			MyString &errorMsg, check_event_result_t &result);
+			std::string &errorMsg, check_event_result_t &result);
 
 		// Map Condor ID to a JobInfo object.  This hash table will have
 		// one entry for each Condor job we process.

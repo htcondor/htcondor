@@ -81,9 +81,9 @@ char *time_to_iso8601(
 
 	if (type == ISO8601_DateOnly) {
 		if (format == ISO8601_BasicFormat) {
-			sprintf(buffer, "%04d%02d%02d", year, month, day);
+			snprintf(buffer, ISO8601_DateOnlyBufferMax, "%04d%02d%02d", year, month, day);
 		} else {
-			sprintf(buffer, "%04d-%02d-%02d", year, month, day);
+			snprintf(buffer, ISO8601_DateOnlyBufferMax, "%04d-%02d-%02d", year, month, day);
 		}
 	} else {
 		// we build seconds and fractional seconds and timezone into this buffer
@@ -92,11 +92,11 @@ char *time_to_iso8601(
 		// don't print sub seconds if the value would overflow our buffer
 		if (sub_sec > 999999) { sub_sec_digits = 0; }
 		switch (sub_sec_digits) {
-			case 1: ix = sprintf(secbuf, "%02d.%01d", second, sub_sec); break;
-			case 2: ix = sprintf(secbuf, "%02d.%02d", second, sub_sec); break;
-			case 3: ix = sprintf(secbuf, "%02d.%03d", second, sub_sec); break;
-			case 6: ix = sprintf(secbuf, "%02d.%06d", second, sub_sec); break;
-			default: ix = sprintf(secbuf, "%02d", second); break;
+			case 1: ix = snprintf(secbuf, sizeof(secbuf), "%02d.%01d", second, sub_sec); break;
+			case 2: ix = snprintf(secbuf, sizeof(secbuf), "%02d.%02d", second, sub_sec); break;
+			case 3: ix = snprintf(secbuf, sizeof(secbuf), "%02d.%03d", second, sub_sec); break;
+			case 6: ix = snprintf(secbuf, sizeof(secbuf), "%02d.%06d", second, sub_sec); break;
+			default: ix = snprintf(secbuf, sizeof(secbuf), "%02d", second); break;
 		}
 		if (is_utc) {
 			secbuf[ix] = 'Z';
@@ -106,16 +106,16 @@ char *time_to_iso8601(
 		// then build up the time
 		if (type == ISO8601_TimeOnly) {
 			if (format == ISO8601_BasicFormat) {
-				sprintf(buffer, "T%02d%02d%s", hour, minute, secbuf);
+				snprintf(buffer, ISO8601_TimeOnlyBufferMax, "T%02d%02d%s", hour, minute, secbuf);
 			} else {
-				sprintf(buffer, "%02d:%02d:%s", hour, minute, secbuf);
+				snprintf(buffer, ISO8601_TimeOnlyBufferMax, "%02d:%02d:%s", hour, minute, secbuf);
 			}
 		} else {
 			if (format == ISO8601_BasicFormat) {
-				sprintf(buffer, "%04d%02d%02dT%02d%02d%s",
+				snprintf(buffer, ISO8601_DateAndTimeBufferMax, "%04d%02d%02dT%02d%02d%s",
 					year, month, day, hour, minute, secbuf);
 			} else {
-				sprintf(buffer, "%04d-%02d-%02dT%02d:%02d:%s",
+				snprintf(buffer, ISO8601_DateAndTimeBufferMax, "%04d-%02d-%02dT%02d:%02d:%s",
 					year, month, day, hour, minute, secbuf);
 			}
 		}

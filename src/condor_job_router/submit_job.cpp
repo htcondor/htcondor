@@ -118,7 +118,7 @@ ClaimJobResult claim_job(int cluster, int proc, std::string * error_details, con
 	ASSERT(proc >= 0);
 
 	// Check that the job's status is still IDLE
-	int status;
+	int status = 0;
 	if( GetAttributeInt(cluster, proc, ATTR_JOB_STATUS, &status) == -1) {
 		if(error_details) {
 			formatstr(*error_details, "Encountered problem reading current %s for %d.%d", ATTR_JOB_STATUS, cluster, proc); 
@@ -450,6 +450,10 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	filter_attrs.insert( ATTR_TOKEN_SCOPES );
 	filter_attrs.insert( ATTR_TOKEN_ID );
 
+	std::set<std::string, classad::CaseIgnLTStr> proc_attrs;
+	proc_attrs.insert(ATTR_PROC_ID);
+	proc_attrs.insert(ATTR_JOB_STATUS);
+
 	int cluster = NewCluster();
 	if( cluster < 0 ) {
 		failobj.fail("Failed to create a new cluster (%d)\n", cluster);
@@ -490,6 +494,8 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 	formatstr(leaveinqueue, "%s == %d", ATTR_JOB_STATUS, COMPLETED);
 	src.AssignExpr(ATTR_JOB_LEAVE_IN_QUEUE, leaveinqueue.c_str());
 
+	bool put_in_proc = false;
+
 	ExprTree * tree;
 	const char *lhstr = 0;
 	const char *rhstr = 0;
@@ -499,25 +505,29 @@ static bool submit_job_with_current_priv( ClassAd & src, const char * schedd_nam
 		if ( filter_attrs.find( lhstr ) != filter_attrs.end() ) {
 			continue;
 		}
+		put_in_proc = proc_attrs.find(lhstr) != proc_attrs.end();
 		rhstr = ExprTreeToString( tree );
 		if( !rhstr) { 
 			failobj.fail("Problem processing classad\n");
 			return false;
 		}
-		if( SetAttribute(cluster, proc, lhstr, rhstr) == -1 ) {
+		if( SetAttribute(cluster, put_in_proc ? proc : -1, lhstr, rhstr) == -1 ) {
 			failobj.fail("Failed to set %s = %s\n", lhstr, rhstr);
 			return false;
 		}
 	}
 
 	failobj.SetQmgr(0);
-	if( ! DisconnectQ(qmgr, true /* commit */)) {
-		failobj.fail("Failed to commit job submission\n");
+	CondorError errstack;
+	if( ! DisconnectQ(qmgr, true /* commit */, &errstack)) {
+		failobj.fail("Failed to commit job submission : %s\n", errstack.getFullText(true).c_str());
 		return false;
+	} else if ( ! errstack.empty()) {
+		dprintf(D_ALWAYS, "job submmission warning : %s\n", errstack.getFullText(true).c_str());
+		errstack.clear();
 	}
 
 	if( is_sandboxed ) {
-		CondorError errstack;
 		ClassAd * adlist[1];
 		adlist[0] = &src;
 		if( ! schedd.spoolJobFiles(1, adlist, &errstack) ) {
@@ -887,7 +897,6 @@ bool remove_job(classad::ClassAd const &ad, int cluster, int proc, char const *r
 bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
-	char removeReason[256];
 
 		// This code is copied from gridmanager basejob.C with a small
 		// amount of refactoring.
@@ -900,11 +909,8 @@ bool InitializeAbortedEvent( JobAbortedEvent *event, classad::ClassAd const &job
 			 "(%d.%d) Writing abort record to user logfile\n",
 			 cluster, proc );
 
-	removeReason[0] = '\0';
-	job_ad.EvaluateAttrString( ATTR_REMOVE_REASON, removeReason,
-						   sizeof(removeReason) - 1 );
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
 
-	event->setReason( removeReason );
 	return true;
 }
 
@@ -987,7 +993,6 @@ bool InitializeTerminateEvent( TerminatedEvent *event, classad::ClassAd const &j
 bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 {
 	int cluster, proc;
-	char holdReason[256];
 
 		// This code is copied from gridmanager basejob.C with a small
 		// amount of refactoring.
@@ -1000,15 +1005,12 @@ bool InitializeHoldEvent( JobHeldEvent *event, classad::ClassAd const &job_ad )
 			 "(%d.%d) Writing hold record to user logfile\n",
 			 cluster, proc );
 
-	holdReason[0] = '\0';
-	job_ad.EvaluateAttrString( ATTR_REMOVE_REASON, holdReason,
-						   sizeof(holdReason) - 1 );
+	job_ad.EvaluateAttrString(ATTR_REMOVE_REASON, event->reason);
 
-	event->setReason( holdReason );
 	return true;
 }
 
-bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
+bool WriteEventToUserLog( ULogEvent &event, classad::ClassAd const &ad )
 {
 	WriteUserLog ulog;
 
@@ -1022,7 +1024,7 @@ bool WriteEventToUserLog( ULogEvent const &event, classad::ClassAd const &ad )
 		return true;
 	}
 
-	int rc = ulog.writeEvent(const_cast<ULogEvent *>(&event));
+	int rc = ulog.writeEvent(&event, &ad);
 
 	if (!rc) {
 		dprintf( D_FULLDEBUG,

@@ -40,7 +40,7 @@ extern void get_mapfile_re_info(size_t *info); // pass an array of 4 elements
 extern void clear_mapfile_re_info();
 
 class YourString ystr; // most recent lookup
-MyString gmstr;   // holds the result of a mapfile lookup
+std::string gmstr;   // holds the result of a mapfile lookup
 MapFile* gmf = NULL;  // global mapfile used for lookup testing.
 bool   grequire_failed;
 double gstart_time; // start time for REQUIRE condition
@@ -286,9 +286,9 @@ int read_mapfile(const char * mapfile, bool assume_hash, bool dump_it, const cha
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -353,9 +353,9 @@ int read_gridmap(const char * mapfile, bool assume_hash, const char * user)
 			dstart = _condor_debug_get_time_double();
 			int cLookups = 0;
 			while ( ! src.isEof()) {
-				MyString input_line;
-				input_line.readLine(src); // Result ignored, we already monitor EOF
-				input_line.trim();
+				std::string input_line;
+				readLine(input_line, src); // Result ignored, we already monitor EOF
+				trim(input_line);
 				if (input_line.empty() || input_line[0] == '#') {
 					continue;
 				}
@@ -387,7 +387,7 @@ void timed_lookups(bool verbose, const char * lookup_method, StringList & users)
 	int cLookups = 0;
 	int cFailed = 0;
 	if (lookup_method) {
-		MyString meth(lookup_method);
+		std::string meth(lookup_method);
 		double dstart = _condor_debug_get_time_double();
 		for (const char * user = users.first(); user; user = users.next()) {
 			gmstr.clear();
@@ -586,9 +586,9 @@ int main( int /*argc*/, const char ** argv) {
 		MyStringFpSource src(file, true);
 		StringList users;
 		while ( ! src.isEof()) {
-			MyString line;
-			line.readLine(src); // Result ignored, we already monitor EOF
-			line.chomp();
+			std::string line;
+			readLine(line, src); // Result ignored, we already monitor EOF
+			chomp(line);
 			if (line.empty()) continue;
 			users.append(line.c_str());
 		}

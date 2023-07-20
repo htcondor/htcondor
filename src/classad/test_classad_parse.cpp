@@ -24,7 +24,10 @@
 #include "classad/classad.h"
 #include "classad/classadCache.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 using namespace classad;
 
 #define NUMELMS(aa) (int)(sizeof(aa)/sizeof((aa)[0]))
@@ -80,37 +83,37 @@ bool adsource::get_line(std::string & buffer)
 		if (*p == '?') { // special cases
 			switch (p[1]) {
 			case 'c': //?cid\0" //247,12476
-				sprintf(kvpbuf, "\"<128.104.101.22:9618>#%lld#%4d#...\"", (long long)now-(60*60*48), urand()%10000);
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"<128.104.101.22:9618>#%lld#%4d#...\"", (long long)now-(60*60*48), urand()%10000);
 				break;
 			case 'C': //?Cvmsexist\0" //248,12481
-				sprintf(kvpbuf, "ifThenElse(isUndefined(LastHeardFrom),CurrentTime,LastHeardFrom) - %lld < 3600", (long long)now-(60*60*48));
+				snprintf(kvpbuf, sizeof(kvpbuf), "ifThenElse(isUndefined(LastHeardFrom),CurrentTime,LastHeardFrom) - %lld < 3600", (long long)now-(60*60*48));
 				break;
 			case 'g': //?gjid\0" //249,12492
 				if ( ! cluster) { cluster=urand(); proc=urand()%100; }
-				sprintf(kvpbuf, "\"submit-1.chtc.wisc.edu#%u.%u#%lld\"", cluster, proc, (long long)now-(60*60*48));
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"submit-1.chtc.wisc.edu#%u.%u#%lld\"", cluster, proc, (long long)now-(60*60*48));
 				break;
 			case 'j': //?jid\0" //250,12498
 				if ( ! cluster) { cluster=urand(); proc=urand()%100; }
-				sprintf(kvpbuf, "\"%u.%u\"", cluster, proc);
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"%u.%u\"", cluster, proc);
 				break;
 			case 'M': //?MAC\0" //251,12503
-				{ int a = rand(), b = rand(); sprintf(kvpbuf, "\"%02X:%02X:%02X:%02X:%02X:%02X\"", a&0xFF, (a>>8)&0xFF, (a>>16)&0xFF, b&0xFF, (b>>8)&0xFF, (b>>16)&0xFF); }
+				{ int a = rand(), b = rand(); snprintf(kvpbuf, sizeof(kvpbuf), "\"%02X:%02X:%02X:%02X:%02X:%02X\"", a&0xFF, (a>>8)&0xFF, (a>>16)&0xFF, b&0xFF, (b>>8)&0xFF, (b>>16)&0xFF); }
 				break;
 			case 'm': //?machine\0" //252,12508
 				if ( ! machine) { machine = urand()%1000; }
-				sprintf(kvpbuf, "\"INFO-MEM-B%03d-W.ad.wisc.edu\"", machine);
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"INFO-MEM-B%03d-W.ad.wisc.edu\"", machine);
 				break;
 			case 'n': //?name\0" //252,12508
 				if ( ! machine) { machine = urand()%1000; }
-				sprintf(kvpbuf, "\"slot%d@INFO-MEM-B%03d-W.ad.wisc.edu\"", slots, machine);
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"slot%d@INFO-MEM-B%03d-W.ad.wisc.edu\"", slots, machine);
 				break;
 			case 's': {//?sin\0" //253,12517{
 				if ( ! addr) { addr = urand(); sock1 = rand(); sock2 = rand(); }
 					if ((addr&0x300)==0x300) {
-						sprintf(kvpbuf, "\"<144.92.184.%03d:%d?CCBID=128.105.244.14:9620%%3fsock%%%x_%x#5702&PrivAddr=%%3c127.0.0.1:49226%%3e&PrivNet=INFO-MEM-B%03d-W.ad.wisc.edu>\"",
+						snprintf(kvpbuf, sizeof(kvpbuf), "\"<144.92.184.%03d:%d?CCBID=128.105.244.14:9620%%3fsock%%%x_%x#5702&PrivAddr=%%3c127.0.0.1:49226%%3e&PrivNet=INFO-MEM-B%03d-W.ad.wisc.edu>\"",
 							addr&0xFF, 1000+(addr>>8)%50000, sock1, sock2&0xFFFF, addr%1000);
 					} else {
-						sprintf(kvpbuf, "\"<144.92.%d.%d:9618?sock=%x_%x\"",
+						snprintf(kvpbuf, sizeof(kvpbuf), "\"<144.92.%d.%d:9618?sock=%x_%x\"",
 							addr&0xFF, (addr>>8)&0xFF, sock1, sock2&0xFFFF);
 					}
 				}
@@ -122,7 +125,7 @@ bool adsource::get_line(std::string & buffer)
 				break;
 			case 'u': //?user\0" //255,12530
 				if ( ! user) { user = 1 + urand() % NUMELMS(users); }
-				sprintf(kvpbuf, "\"%s@submit.chtc.wisc.edu\"", users[user-1]);
+				snprintf(kvpbuf, sizeof(kvpbuf), "\"%s@submit.chtc.wisc.edu\"", users[user-1]);
 				break;
 			default: // ?min,max
 				break;
@@ -134,14 +137,14 @@ bool adsource::get_line(std::string & buffer)
 		long long hi = rhint[val_pos - rhint_index_base].hi;
 		long long val = lo;
 		if (hi > lo) { val += urand() % (hi-lo+1); }
-		sprintf(kvpbuf, "%lld", val);
+		snprintf(kvpbuf, sizeof(kvpbuf), "%lld", val);
 		p = kvpbuf;
 	} else if ((val_pos >= rhdouble_index_base) && (val_pos - rhdouble_index_base) < NUMELMS(rhdouble)) {
 		double lo = rhdouble[val_pos - rhdouble_index_base].lo;
 		double hi = rhdouble[val_pos - rhdouble_index_base].hi;
 		double val = lo;
 		if (hi > lo) { val += (1.0/RAND_MAX) * urand() * (hi-lo); }
-		sprintf(kvpbuf, "%f", val);
+		snprintf(kvpbuf, sizeof(kvpbuf), "%f", val);
 		p = kvpbuf;
 	}
 

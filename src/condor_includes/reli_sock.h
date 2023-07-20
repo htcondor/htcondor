@@ -102,12 +102,13 @@ public:
         @param s can be a hostname or sinful string
         @param port the port to connect to, ignorred if s contains port
     */
-	virtual int connect(char const *s, int port=0, 
-							bool do_not_block = false);
+	virtual int connect(char const *s, int port = 0,
+							bool do_not_block = false,
+							CondorError * errorStack = NULL);
 
 	virtual int close();
 
-	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking);
+	virtual int do_reverse_connect(char const *ccb_contact,bool nonblocking,CondorError * errorStack);
 
 	virtual void cancel_reverse_connect();
 
@@ -287,8 +288,8 @@ public:
 	bool is_closed() const {return rcv_msg.m_closed;}
 
 	// serialize and deserialize
-	const char * serialize(const char *);	// restore state from buffer
-	char * serialize() const;	// save state into buffer
+	const char * deserialize(const char *);	// restore state from buffer
+	void serialize(std::string& outbuf) const;	// save state into buffer
 
 		// Reset the message digests for header integrity.
 	void resetHeaderMD();
@@ -418,8 +419,8 @@ protected:
 	bool m_final_recv_header{false};
 	bool m_finished_send_header{false};
 	bool m_finished_recv_header{false};
-	char * serializeMsgInfo() const;
-	const char * serializeMsgInfo(const char * buf);
+	void serializeMsgInfo(std::string& outbuf) const;
+	const char * deserializeMsgInfo(const char * buf);
 
 	virtual void setTargetSharedPortID( char const *id );
 	virtual bool sendTargetSharedPortID();

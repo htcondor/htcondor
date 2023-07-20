@@ -36,7 +36,6 @@
 #include "condor_state.h"
 #include "condor_string.h"
 #include "string_list.h"
-#include "MyString.h"
 #include "condor_random_num.h"
 #include "../condor_procapi/procapi.h"
 //#include "misc_utils.h"
@@ -124,6 +123,9 @@ extern	int		disconnected_keyboard_boost;
 extern	int		startd_noclaim_shutdown;	
     // # of seconds we can go without being claimed before we "pull
     // the plug" and tell the master to shutdown.
+
+    // how often we query docker for the size of the image cache
+extern	int		docker_cached_image_size_interval;
 
 extern	char*	Name;			// The startd's name
 

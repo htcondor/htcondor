@@ -253,7 +253,7 @@ int main( int argc, char *argv[] )
 	while( 1 ) {
 		int timeout_ms = -1;
 		if(! dont_wait) {
-			int now = time(NULL);
+			time_t now = time(nullptr);
 			if( stoptime && now > stoptime ) {
 				printf( "Time expired.\n" );
 				EXIT_FAILURE;
@@ -266,7 +266,7 @@ int main( int argc, char *argv[] )
 		outcome = wful.readEvent( event, initial_scan ? 0 : timeout_ms );
 		if( outcome == ULOG_OK ) {
 			char key[1024];
-			sprintf(key,"%d.%d.%d",event->cluster,event->proc,event->subproc);
+			snprintf(key,sizeof(key),"%d.%d.%d",event->cluster,event->proc,event->subproc);
 			if( jobnum_matches( event, cluster, process, subproc ) ) {
 				if (echo_events) {
 					std::string event_str;

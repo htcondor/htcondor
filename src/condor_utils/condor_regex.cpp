@@ -69,18 +69,9 @@ Regex::compile(const char * pattern,
 	PCRE2_SIZE erroffset_pcre2 = 0;
 	re = pcre2_compile(pattern_pcre2str, PCRE2_ZERO_TERMINATED, options_param, errcode, &erroffset_pcre2, NULL);
 
-	*erroffset = static_cast<int>(erroffset_pcre2);
+	if(erroffset) { *erroffset = static_cast<int>(erroffset_pcre2); }
 
 	return (NULL != re);
-}
-
-bool
-Regex::compile(const MyString & pattern,
-			   int * errcode,
-			   int * erroffset,
-			   uint32_t options_param)
-{
-	return compile(pattern.c_str(), errcode, erroffset, options_param);
 }
 
 bool
@@ -95,7 +86,7 @@ Regex::compile(const std::string & pattern,
 
 // Make sure this is an exact copy of match() before the final purge.
 bool
-Regex::match_str(const std::string & string, std::vector<std::string> * groups) {
+Regex::match(const std::string & string, std::vector<std::string> * groups) {
 	if ( ! this->isInitialized() ) {
 		return false;
 	}
@@ -109,32 +100,19 @@ Regex::match_str(const std::string & string, std::vector<std::string> * groups) 
 	if (NULL != groups) {
 		groups->clear();
 		for (int i = 0; i < rc; i++) {
-			groups->emplace_back(
-					string.substr(static_cast<int>(ovector[i * 2]), 
+			if (ovector[i * 2] == PCRE2_UNSET) {
+				groups->emplace_back("");
+			} else {
+				groups->emplace_back(
+						string.substr(static_cast<int>(ovector[i * 2]), 
 						static_cast<int>(ovector[i * 2 + 1] - ovector[i * 2])));
+			}
 		}
 	}
 
 	pcre2_match_data_free(matchdata);
 	return rc > 0;
 }
-
-bool
-Regex::match(const MyString & string)
-{
-	if ( ! this->isInitialized() ) {
-		return false;
-	}
-
-	pcre2_match_data * matchdata = pcre2_match_data_create_from_pattern(re, NULL);
-	PCRE2_SPTR string_pcre2str = reinterpret_cast<const unsigned char *>(string.c_str());
-
-	int rc = pcre2_match(re, string_pcre2str, static_cast<PCRE2_SIZE>(string.length()), 0, options, matchdata, NULL);
-
-	pcre2_match_data_free(matchdata);
-	return rc > 0;
-}
-
 
 
 /**

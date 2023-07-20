@@ -195,7 +195,7 @@ int main( int argc, char *argv[] )
 	while (env.cend() != (it = std::find(it, env.cend(), '\0'))) {
 		// skip past null terminator
 		it++;	
-		if (& (*it)  != nullptr) {
+		if (*it != '\0') {
 			envp.push_back(& (*it));
 		}
 	}

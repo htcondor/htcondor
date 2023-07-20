@@ -2,6 +2,9 @@
 # This command takes a directory of HTCondor RPMs and creates a tarball
 # Named externals are download and extracted from existing repositories
 #
+# exit on any error
+set -e
+
 if [ $# -ne 1 ]; then
     echo 'Error: missing argument'
     echo "Usage: $(basename $0) RPMs-directory"
@@ -13,6 +16,12 @@ if [ ! -d $rpmdir ]; then
     echo "Usage: $(basename $0) RPMs-directory"
     exit 1
 fi
+
+extract_rpm() {
+    what=$1
+    where=$2
+    rpm2cpio $what | (cd $where; cpio -imd --no-absolute-filenames)
+}
 
 cmd_dir=$(dirname $0)
 
@@ -31,19 +40,19 @@ for file in $rpmdir/*.rpm; do
     elif [[ $file == */python2-* ]]; then
         # Skip Python 2 bindings
         echo Skipping $file
-    elif [[ $file == *-credmon-oauth-* ]]; then
-        # Skip oath credmon
+    elif [[ $file == *-credmon-* ]]; then
+        # Skip any credmon
         echo Skipping $file
     else
         eval $(perl -e "(\$package, \$version, \$release, \$dist, \$arch) = '$file' =~ m:^.*/(.*)-([0-9][0-9.]*)-([0-9][0-9.]*)\.([^.]+)\.([^.]+)\.rpm$:; print \"package=\$package version=\$version release=\$release dist=\$dist arch=\$arch\";")
         echo ======= $package-$version-$release.$dist.$arch.rpm =======
         echo $package-$version-$release.$dist.$arch.rpm >> tarball/Manifest.txt
-        rpm2cpio $rpmdir/$package-$version-$release.$dist.$arch.rpm | (cd tarball; cpio -imd --no-absolute-filenames)
+        extract_rpm $rpmdir/$package-$version-$release.$dist.$arch.rpm tarball
     fi
 done
 
-if [[ $dist == amzn2 ]]; then
-    arch_dist="${arch}_AmazonLinux2"
+if [[ $dist == amzn2023 ]]; then
+    arch_dist="${arch}_AmazonLinux2023"
 elif [[ $dist == el7 ]]; then
     arch_dist="${arch}_CentOS7"
 elif [[ $dist == el8 ]]; then
@@ -73,54 +82,21 @@ rm -r condor_tests-$version-$release-$arch_dist
 # Move configuration files back to example directory
 mv tarball/etc/condor/config.d/* tarball/usr/share/doc/condor*/examples/
 
-
-common_externals="condor-stash-plugin \
-    libgomp \
-    munge-libs \
-    pcre2 \
-    scitokens-cpp \
-    voms"
-
-if [[ $arch_dist =~ CentOS7 || $arch_dist =~ AmazonLinux2 ]]; then
-    el7_externals="boost169-python3 \
-        python36-chardet \
-        python36-idna \
-        python36-pysocks \
-        python36-requests \
-        python36-six \
-        python36-urllib3"
-    externals="libcgroup $common_externals $el7_externals"
-elif [[ $arch_dist =~ AlmaLinux8 ]]; then
-    externals="libcgroup $common_externals boost-python3"
-elif [[ $arch_dist =~ AlmaLinux9 ]]; then
-    externals="$common_externals boost-python3"
-elif [[ $arch_dist =~ Fedora32 ]]; then
-    externals="libcgroup $common_externals boost-python3"
+AVERSION=(${version//./ })
+MAJOR_VER=${AVERSION[0]}
+MINOR_VER=${AVERSION[1]}
+if [ "$MINOR_VER" -eq 0 ]; then
+    REPO_VERSION=$MAJOR_VER.0
+else
+    REPO_VERSION=$MAJOR_VER.x
 fi
 
-mkdir external-packages
-yumdownloader --assumeyes --downloadonly --destdir=external-packages $externals
-
 # Extract external RPMs
-for file in external-packages/*.rpm; do
-    if [[ $file == *.i686.rpm ]]; then
-        # Skip 32-bit components
-        echo Skipping $file
-    else
-        echo ======= $file =======
-        echo $file >> tarball/Manifest.txt
-        rpm2cpio $file | (cd tarball; cpio -imd --no-absolute-filenames)
-    fi
-done
-
-rm -r external-packages
-
-# Check tarball for externals (in case of download errors)
-for package in $externals; do
-    if ! grep $package tarball/Manifest.txt; then
-        echo "ERROR: external $package is missing!"
-        exit 1
-    fi
+for path in /usr/local/condor/externals/$REPO_VERSION/*.rpm; do
+    file=${path##*/}
+    echo ======= $file =======
+    echo $file >> tarball/Manifest.txt
+    extract_rpm $path tarball
 done
 
 $cmd_dir/make-tarball-links tarball

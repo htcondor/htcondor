@@ -22,7 +22,6 @@
  
  #include "condor_classad.h"
  #include "hashkey.h"
- #include "extArray.h"
  #include "generic_stats.h"
  
  class FileTransferStats

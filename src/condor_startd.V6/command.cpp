@@ -141,7 +141,7 @@ deactivate_claim(Stream *stream, Resource *rip, bool graceful)
 			// no need to exchange RELEASE_CLAIM messages.  Behave as
 			// though the schedd has already sent us RELEASE_CLAIM.
 		rip->r_cur->scheddClosedClaim();
-		rip->void_release_claim();
+		rip->release_claim();
 	}
 
 	return rval;
@@ -229,11 +229,11 @@ command_vacate_all(int cmd, Stream* )
 	switch( cmd ) {
 	case VACATE_ALL_CLAIMS:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_CLAIMS command\n" );
-		resmgr->walk( &Resource::void_retire_claim );
+		resmgr->vacate_all(false);
 		break;
 	case VACATE_ALL_FAST:
 		dprintf( D_ALWAYS, "State change: received VACATE_ALL_FAST command\n" );
-		resmgr->walk( &Resource::void_kill_claim );
+		resmgr->vacate_all(true);
 		break;
 	default:
 		EXCEPT( "Unknown command (%d) in command_vacate_all", cmd );
@@ -247,7 +247,7 @@ int
 command_pckpt_all(int, Stream* ) 
 {
 	dprintf( D_ALWAYS, "command_pckpt_all() called.\n" );
-	resmgr->walk( &Resource::void_periodic_checkpoint );
+	resmgr->checkpoint_all();
 	return TRUE;
 }
 
@@ -360,7 +360,7 @@ command_request_claim(int cmd, Stream* stream )
 	}
 
 	Claim *claim = NULL;
-	if( rip->state() == claimed_state ) {
+	if( rip->state() == claimed_state && !rip->is_partitionable_slot() ) {
 		if( rip->r_pre_pre ) {
 			claim = rip->r_pre_pre;
 		}
@@ -424,9 +424,9 @@ command_release_claim(int cmd, Stream* stream )
 	State s = rip->state();
 
 	// stash current user
-	MyString curuser;
+	std::string curuser;
 
-	if (rip->r_cur && rip->r_cur->client()) {
+	if (rip->r_cur && rip->r_cur->client() && rip->r_cur->client()->user()) {
 		curuser = rip->r_cur->client()->user();
 	}
 
@@ -945,16 +945,21 @@ return return_code;
 int
 request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 {
-		// Formerly known as "reqservice"
-
 	ClassAd	*req_classad = new ClassAd;
 	int cmd;
 	double rank = 0;
 	double oldrank = 0;
 	std::string client_addr;
+	std::string schedd_name;
 	int interval;
 	ClaimIdParser idp(id);
 	bool secure_claim_id = false;
+	bool send_claimed_ad = false;
+	bool send_leftovers = false;
+	bool claim_pslot = false;
+	bool want_matching = true;
+	int num_dslots = 1;
+	int pslot_claim_lease = 0;
 
 		// Used in ABORT macro, yuck
 	bool new_dynamic_slot = false;
@@ -983,18 +988,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 
 		// Try now to read the schedd addr and aline interval.
-		// Do _not_ abort if we fail, since older (pre v6.1.11) schedds do 
-		// not send this information until after we accept the request, and we
-		// want to make an attempt to be backwards-compatibile.
-	if ( stream->code(client_addr) ) {
-		// We got the schedd addr, we must be talking to a post 6.1.11 schedd
+	if (!stream->code(client_addr) || !stream->code(interval)) {
+		rip->dprintf( D_ALWAYS, "Can't receive schedd addr or alive interval\n" );
+		ABORT;
+	} else {
 		rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr.c_str() );
-		if( !stream->code(interval) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			ABORT;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
-		}
+		rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
+
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
 		claim->client()->setaddr( client_addr.c_str() );
@@ -1064,8 +1064,6 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 				parent->refresh_classad_resources();
 			}
 		}
-	} else {
-		rip->dprintf(D_FULLDEBUG, "Schedd using pre-v6.1.11 claim protocol\n");
 	}
 
 	if( !stream->end_of_message() ) {
@@ -1076,6 +1074,17 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		// If we include a claim id in our response, should it be
 		// encrypted? In the old protocol, it was sent in the clear.
 	req_classad->LookupBool("_condor_SECURE_CLAIM_ID", secure_claim_id);
+
+		// Should we send the claimed slot ad.
+	req_classad->LookupBool("_condor_SEND_CLAIMED_AD", send_claimed_ad);
+
+		// Should we send a pslot leftovers claim/ad when creating a
+		// new dslot?
+	req_classad->LookupBool("_condor_SEND_LEFTOVERS", send_leftovers);
+	if (send_leftovers) {
+		send_leftovers = param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
+			rip->r_has_cp == false;
+	}
 
 		// At this point, the schedd has registered this socket (stream)
 		// and likely has gone off to service other requests.  Thus, 
@@ -1093,9 +1102,68 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	bool has_cp = false;
 	consumption_map_t consumption;
-	Claim* leftover_claim = NULL; 
-	if (rip->can_create_dslot()) {
-		Resource * new_rip = create_dslot(rip, req_classad, leftover_claim);
+	Claim* pslot_claim = nullptr;
+
+	if (rip->is_partitionable_slot()) {
+		pslot_claim = rip->r_cur;
+	}
+
+	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
+		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
+		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", pslot_claim_lease);
+		req_classad->LookupBool("_condor_WANT_MATCHING", want_matching);
+	}
+
+	if (claim_pslot && rip->state() == claimed_state) {
+		rip->dprintf(D_ALWAYS, "Refusing claim of pslot that's already claimed\n");
+		refuse(stream);
+		ABORT;
+	}
+
+	if (claim_pslot) {
+		int max_pslot_claim_lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
+		if (pslot_claim_lease <= 0 || pslot_claim_lease > max_pslot_claim_lease) {
+			pslot_claim_lease = max_pslot_claim_lease;
+		}
+	}
+
+	if (claim_pslot && rip->r_has_cp) {
+		// TODO refuse claim entirely, or accept claim of single dslot or
+		//   sending to to WorkingCM?
+		rip->dprintf(D_FULLDEBUG, "Refusing claim of pslot with consumption policy\n");
+		refuse(stream);
+		ABORT;
+	}
+
+	// The client can claim at most one new dslot.
+	// This will change in the future.
+	if (num_dslots < 0 || num_dslots > 1) {
+		rip->dprintf(D_ALWAYS, "Refusing to claim %d dslots\n", num_dslots);
+		refuse(stream);
+		ABORT;
+	}
+
+	// When a pslot is already claimed, only the schedd that claimed it
+	// can do new dslot requests.
+	req_classad->LookupString(ATTR_SCHEDD_NAME, schedd_name);
+	if (rip->is_partitionable_slot() && rip->state() == claimed_state &&
+		schedd_name != rip->r_cur->client()->c_scheddName)
+	{
+		rip->dprintf(D_ALWAYS, "Refusing request from schedd %s for claimed pslot (claimed by schedd %s)\n", schedd_name.c_str(), rip->r_cur->client()->c_scheddName.c_str());
+		refuse(stream);
+		ABORT;
+	}
+
+	// If we are being claimed to go to work for another CM
+	// check here.
+	std::string workingCM;
+	if (claim_pslot) {
+		req_classad->LookupString("WorkingCM", workingCM);
+	}
+
+	if (num_dslots > 0 && rip->can_create_dslot()) {
+		Resource * new_rip = create_dslot(rip, req_classad);
 		if ( ! new_rip) {
 			refuse(stream);
 			ABORT;
@@ -1107,14 +1175,16 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 			cp_override_requested(*req_classad, *rip->r_classad, consumption);
 		}
 
-		// we don't expect these to be the same, but technically if they are not then no d-slot was created.
-		if (new_rip != rip) { new_dynamic_slot = true; }
-		rip = new_rip;
+		// we don't expect these to be the same, but technically if they are then no d-slot was created.
+		if (new_rip != rip) {
+			new_dynamic_slot = true;
+			pslot_claim = rip->r_cur;
+			rip = new_rip;
+		}
 	}
 
-
 		// Make sure we're willing to run this job at all.
-	if (!rip->willingToRun(req_classad)) {
+	if (num_dslots > 0 && !rip->willingToRun(req_classad)) {
 	    rip->dprintf(D_ALWAYS, "Request to claim resource refused.\n");
 		refuse(stream);
 		ABORT;
@@ -1128,7 +1198,10 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rank = rip->compute_rank(req_classad);
 	rip->dprintf( D_FULLDEBUG, "Rank of this claim is: %f\n", rank );
 
-	if( rip->state() == claimed_state ) {
+	if (new_dynamic_slot) {
+		rip->dprintf( D_ALWAYS, "Request accepted.\n" );
+		cmd = OK;
+	} else if (rip->state() == claimed_state) {
 			// We're currently claimed.  We might want to preempt the
 			// current claim to make way for this new one...
 		if( !rip->r_pre ) {
@@ -1253,6 +1326,30 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	rip->r_cur->setrank( rank );
 	rip->r_cur->setoldrank( oldrank );
 
+	rip->r_cur->client()->c_scheddName = schedd_name;
+
+	// Claimed for a temporary CM
+	if (claim_pslot) {
+		pslot_claim->rip()->r_cur->c_working_cm = workingCM;
+	}
+	// If the pslot was previously claimed for a temporary CM, the dslot
+	// should inherit that
+	if (new_dynamic_slot) {
+		rip->r_cur->c_working_cm = pslot_claim->rip()->r_cur->c_working_cm;
+	}
+
+	if (claim_pslot) {
+		pslot_claim->setLeaseEndtime(time(NULL) + pslot_claim_lease);
+		pslot_claim->c_want_matching = want_matching;
+	}
+
+	if (claim_pslot && new_dynamic_slot) {
+		pslot_claim->setaliveint(interval);
+		pslot_claim->client()->setaddr(client_addr.c_str());
+		pslot_claim->client()->c_scheddName = schedd_name;
+		pslot_claim->rip()->change_state(claimed_state);
+	}
+
 #if HAVE_BACKFILL
 	if( rip->state() == backfill_state ) {
 			// we're currently in Backfill, so we can't just accept
@@ -1265,13 +1362,13 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 	}
 #endif /* HAVE_BACKFILL */
 
-		// If we're still here, we're ready to accpet the claim now.
+		// If we're still here, we're ready to accept the claim now.
 		// Call this other function to actually reply to the schedd
 		// and perform the last half of the protocol.  We use the same
 		// function after the preemption has completed when the startd
 		// is finally ready to reply to the and finish the claiming
 		// process.
-	accept_request_claim( rip, secure_claim_id, leftover_claim );
+	accept_request_claim( rip, secure_claim_id, send_claimed_ad, send_leftovers ? pslot_claim : nullptr );
 
 		// We always need to return KEEP_STREAM so that daemon core
 		// doesn't try to delete the stream we've already deleted.
@@ -1310,10 +1407,8 @@ abort_accept_claim( Resource* rip, Stream* stream )
 
 
 bool
-accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim )
+accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad, Claim* leftover_claim )
 {
-	int interval = -1;
-	char *client_addr = NULL;
 	std::string RemoteOwner;
 
 		// There should not be a pre claim object now.
@@ -1322,6 +1417,9 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	Stream* stream = rip->r_cur->requestStream();
 	ASSERT( stream );
 	Sock* sock = (Sock*)stream;
+
+	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
+	rip->change_state( claimed_state );
 
 	/* 
 		Reply of 0 (NOT_OK) means claim rejected.
@@ -1333,7 +1431,24 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		Reply of 5 (REQUEST_CLAIM_LEFTOVERS_2) is the same as 3, but
 		  the claim id is encrypted.
 		Reply of 6 (REQUEST_CLAIM_PAIR_2) is no longer used
+		Reply of 7 (REQUEST_CLAIM_SLOT_AD) means claim accepted, the
+		  claimed slot ad will be sent next, and either OK or p-slot
+		  leftovers will be sent after that.
 	*/
+	stream->encode();
+	if (send_claimed_ad) {
+		rip->dprintf(D_FULLDEBUG, "Will send claimed slot ad\n");
+		if (!stream->put(REQUEST_CLAIM_SLOT_AD) ||
+		    !stream->put_secret(rip->r_cur->id()) ||
+		    !putClassAd(stream, *rip->r_classad) )
+		{
+			rip->dprintf( D_ALWAYS,
+				"Can't send claimed slot to schedd.\n" );
+			abort_accept_claim(rip, stream);
+			return false;
+		}
+	}
+
 	int cmd = OK;
 	if ( leftover_claim && leftover_claim->id() && 
 		 leftover_claim->rip()->r_classad ) 
@@ -1342,10 +1457,9 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		cmd = secure_claim_id ? REQUEST_CLAIM_LEFTOVERS_2 : REQUEST_CLAIM_LEFTOVERS;
 	}
 
-	stream->encode();
 	if( !stream->put( cmd ) ) {
 		rip->dprintf( D_ALWAYS, 
-			"Can't to send cmd %d to schedd as claim request reply.\n", cmd );
+			"Failed to send cmd %d to schedd as claim request reply.\n", cmd );
 		abort_accept_claim( rip, stream );
 		return false;
 	}
@@ -1365,8 +1479,8 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 	#endif
 
 		pad->Assign(ATTR_LAST_SLOT_NAME, rip->r_name);
-		MyString claimId(leftover_claim->id());
-		if ( !(secure_claim_id ? stream->put_secret(claimId.c_str()) : stream->put(claimId)) ||
+		const char* claimId = leftover_claim->id() ? leftover_claim->id() : "";
+		if ( !(secure_claim_id ? stream->put_secret(claimId) : stream->put(claimId)) ||
 			 !putClassAd(stream, *pad) )
 		{
 			rip->dprintf( D_ALWAYS, 
@@ -1380,38 +1494,6 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		rip->dprintf( D_ALWAYS, "Can't to send eom to schedd.\n" );
 		abort_accept_claim( rip, stream );
 		return false;
-	}
-
-		// Grab the schedd addr and alive interval if the alive interval is still
-		// unitialized (-1) which means we are talking to an old (pre v6.1.11) schedd.
-		// Normally, we want to get this information from the schedd when the claim request
-		// first arrives.  This prevents a deadlock in the claiming protocol between the
-		// schedd and startd when the startd is running on an SMP.  -Todd 1/2000
-	if ( rip->r_cur->getaliveint() == -1 ) {
-		stream->decode();
-		if( ! stream->code(client_addr) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive schedd addr.\n" );
-			abort_accept_claim( rip, stream );
-			return false;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Schedd addr = %s\n", client_addr );
-		}
-		if( !stream->code(interval) ) {
-			rip->dprintf( D_ALWAYS, "Can't receive alive interval\n" );
-			free( client_addr );
-			client_addr = NULL;
-			abort_accept_claim( rip, stream );
-			return false;
-		} else {
-			rip->dprintf( D_FULLDEBUG, "Alive interval = %d\n", interval );
-		}
-		stream->end_of_message();
-
-			// Now, store them into r_cur
-		rip->r_cur->setaliveint( interval );
-		rip->r_cur->client()->setaddr( client_addr );
-		free( client_addr );
-		client_addr = NULL;
 	}
 
 		// Figure out the hostname of our client.
@@ -1459,8 +1541,6 @@ accept_request_claim( Resource* rip, bool secure_claim_id, Claim* leftover_claim
 		// Since we're done talking to this schedd, delete the stream.
 	rip->r_cur->setRequestStream( NULL );
 
-	rip->dprintf( D_ALWAYS, "State change: claiming protocol successful\n" );
-	rip->change_state( claimed_state );
 	return true;
 }
 
@@ -1520,7 +1600,7 @@ activate_claim( Resource* rip, Stream* stream )
 
 		// Now, ask the ResMgr to recompute so we have totally
 		// up-to-date values for everything in our classad.
-	resmgr->compute_dynamic(true, rip);
+	resmgr->compute_and_refresh(rip);
 
 		// Possibly print out the ads we just got to the logs.
 	if( IsDebugLevel( D_JOB ) ) {
@@ -1620,30 +1700,21 @@ activate_claim( Resource* rip, Stream* stream )
 		// If the starter successfully spawns then ownership of the
 		// Starter object and the request classad (i.e. the job ad)
 		// will be transferred
-	if ( ! rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock)) {
+	pid_t starter_pid = rip->r_cur->spawnStarter(tmp_starter, req_classad, shadow_sock);
+	if ( ! starter_pid) {
 			// if Claim::spawnStarter fails, it calls resetClaim()
 		delete req_classad; req_classad = NULL;
 		delete tmp_starter; tmp_starter = NULL;
 		ABORT;
 	}
-	// Once we spawn the starter, we no longer own the request ad
+	// Once we spawn the starter, we no longer own the request ad or the Starter object
 	req_classad = NULL;
-
-	// keep track of the pointer to the Starter object with a new variable
-	// so we remember that we don't own it anymore.
-	// this variable will be used to know the IP of Starter later.
-	Starter* vm_starter = tmp_starter;
 	tmp_starter = NULL;
 
 	if( job_univ == CONDOR_UNIVERSE_VM ) {
-		if( resmgr->m_vmuniverse_mgr.allocVM(vm_starter->pid(), vm_classad, rip->executeDir()) 
-				== false ) {
+		if( ! resmgr->AllocVM(starter_pid, vm_classad, rip)) {
 			ABORT;
 		}
-		vm_starter = NULL;
-
-		// update VM related info
-		resmgr->walk(&Resource::update_walk_for_vm_change);
 	}
 
 		// Finally, update all these things into the resource classad.
@@ -2434,11 +2505,10 @@ command_coalesce_slots(int, Stream * stream ) {
 	// We just updated the partitionable slot's resources...
 	parent->refresh_classad_resources();
 
-	Claim * leftoverClaim = NULL;
 	dprintf( D_ALWAYS, "command_coalesce_slots(): creating coalesced slot...\n" );
 	Resource * coalescedSlot = parent; // is it possible to get here when parent is a static slot?
 	if (parent->can_create_dslot()) {
-		coalescedSlot = create_dslot(parent, requestAd, leftoverClaim);
+		coalescedSlot = create_dslot(parent, requestAd);
 	}
 	if( coalescedSlot == NULL ) {
 		dprintf( D_ALWAYS, "command_coalesce_slots(): unable to coalesce slots\n" );
@@ -2455,10 +2525,6 @@ command_coalesce_slots(int, Stream * stream ) {
 		sock->end_of_message();
 
 		return FALSE;
-	}
-
-	if( leftoverClaim != NULL ) {
-		dprintf( D_ALWAYS, "command_coalesce_slots(): unexpectedly got partitionable leftovers, ignoring.\n" );
 	}
 
 	// Assign the coalesced slot a new claim ID.  It's currently got

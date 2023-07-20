@@ -1,14 +1,12 @@
-Hooks, Startd Cron and Schedd Cron
+Hooks
 ==================================
 
 :index:`Hooks`
-:index:`Startd Cron`
-:index:`Schedd Cron`
 
 A hook is an external program or script invoked by an HTCondor
 daemon to change its behavior or implement some policy.
-There are five kinds of hooks in HTCondor: Fetch work job hooks,
-Prepare Job hooks, Job Router hooks, Startd Cron hooks and Schedd Cron.
+There are three kinds of Job hooks in HTCondor: Fetch work job hooks,
+Prepare Job hooks, and Job Router hooks.
 
 Job Hooks That Fetch Work
 -------------------------
@@ -340,6 +338,120 @@ what output is expected, and, when relevant, the exit status expected.
     Exit status of the hook
        Ignored.
 
+
+Keywords to Define Job Fetch Hooks in the HTCondor Configuration files
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+:index:`keywords<single: keywords; Job hooks>`
+
+Hooks are defined in the HTCondor configuration files by prefixing the
+name of the hook with a keyword. This way, a given machine can have
+multiple sets of hooks, each set identified by a specific keyword.
+
+Each slot on the machine can define a separate keyword for the set of
+hooks that should be used with ``SLOT<N>_JOB_HOOK_KEYWORD``
+:index:`SLOT<N>_JOB_HOOK_KEYWORD`. For example, on slot 1, the
+variable name will be called ``SLOT1_JOB_HOOK_KEYWORD``. If the
+slot-specific keyword is not defined, the *condor_startd* will use a
+global keyword as defined by ``STARTD_JOB_HOOK_KEYWORD``
+:index:`STARTD_JOB_HOOK_KEYWORD`.
+
+Once a job is fetched via ``<Keyword>_HOOK_FETCH_WORK``
+:index:`<Keyword>_HOOK_FETCH_WORK`, the *condor_startd* will
+insert the keyword used to fetch that job into the job ClassAd as
+``HookKeyword``. This way, the same keyword will be used to select the
+hooks invoked by the *condor_starter* during the actual execution of
+the job. 
+The ``STARTER_DEFAULT_JOB_HOOK_KEYWORD``
+:index:`STARTER_DEFAULT_JOB_HOOK_KEYWORD` config knob can define a default
+hook keyword to use in the event that keyword defined by the job is invalid
+or not specified.
+Alternatively, the ``STARTER_JOB_HOOK_KEYWORD``
+:index:`STARTER_JOB_HOOK_KEYWORD` can be defined to force the
+*condor_starter* to always use a given keyword for its own hooks,
+regardless of the value in the job ClassAd for the ``HookKeyword`` attribute.
+
+For example, the following configuration defines two sets of hooks, and
+on a machine with 4 slots, 3 of the slots use the global keyword for
+running work from a database-driven system, and one of the slots uses a
+custom keyword to handle work fetched from a web service.
+
+.. code-block:: condor-config
+
+      # Most slots fetch and run work from the database system.
+      STARTD_JOB_HOOK_KEYWORD = DATABASE
+
+      # Slot4 fetches and runs work from a web service.
+      SLOT4_JOB_HOOK_KEYWORD = WEB
+
+      # The database system needs to both provide work and know the reply
+      # for each attempted claim.
+      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
+      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
+      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
+
+      # The web system only needs to fetch work.
+      WEB_HOOK_DIR = /usr/local/condor/fetch/web
+      WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
+
+The keywords ``"DATABASE"`` and ``"WEB"`` are completely arbitrary, so
+each site is encouraged to use different (more specific) names as
+appropriate for their own needs.
+
+Defining the FetchWorkDelay Expression
+''''''''''''''''''''''''''''''''''''''
+
+:index:`FetchWorkDelay<single: FetchWorkDelay; Job hooks>`
+
+There are two events that trigger the *condor_startd* to attempt to
+fetch new work:
+
+-  the *condor_startd* evaluates its own state
+-  the *condor_starter* exits after completing some fetched work
+
+Even if a given compute slot is already busy running other work, it is
+possible that if it fetched new work, the *condor_startd* would prefer
+this newly fetched work (via the ``Rank`` expression) over the work it
+is currently running. However, the *condor_startd* frequently evaluates
+its own state, especially when a slot is claimed. Therefore,
+administrators can define a configuration variable which controls how
+long the *condor_startd* will wait between attempts to fetch new work.
+This variable is called ``FetchWorkDelay``
+:index:`FetchWorkDelay`.
+
+The ``FetchWorkDelay`` expression must evaluate to an integer, which
+defines the number of seconds since the last fetch attempt completed
+before the *condor_startd* will attempt to fetch more work. However, as
+a ClassAd expression (evaluated in the context of the ClassAd of the
+slot considering if it should fetch more work, and the ClassAd of the
+currently running job, if any), the length of the delay can be based on
+the current state the slot and even the currently running job.
+
+For example, a common configuration would be to always wait 5 minutes
+(300 seconds) between attempts to fetch work, unless the slot is
+Claimed/Idle, in which case the *condor_startd* should fetch
+immediately:
+
+.. code-block:: condor-config
+
+    FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
+
+If the *condor_startd* wants to fetch work, but the time since the last
+attempted fetch is shorter than the current value of the delay
+expression, the *condor_startd* will set a timer to fetch as soon as
+the delay expires.
+
+If this expression is not defined, the *condor_startd* will default to
+a five minute (300 second) delay between all attempts to fetch work.
+
+Job Hooks That Modify and Monitor Execution
+-------------------------------------------
+
+The Job ClassAd can be modified before execution, and the progress of the job can be modified
+using hooks. These hooks are executed by the *condor_starter* and can be used with or without
+using Fetch Work hooks.
+
+
    :index:`Prepare job before file transfer<single: Prepare job before file transfer; Fetch Hooks>`
 
 -  The hook defined by the configuration variable
@@ -534,110 +646,6 @@ what output is expected, and, when relevant, the exit status expected.
     Exit status of the hook
        Ignored.
 
-Keywords to Define Job Fetch Hooks in the HTCondor Configuration files
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-:index:`keywords<single: keywords; Job hooks>`
-
-Hooks are defined in the HTCondor configuration files by prefixing the
-name of the hook with a keyword. This way, a given machine can have
-multiple sets of hooks, each set identified by a specific keyword.
-
-Each slot on the machine can define a separate keyword for the set of
-hooks that should be used with ``SLOT<N>_JOB_HOOK_KEYWORD``
-:index:`SLOT<N>_JOB_HOOK_KEYWORD`. For example, on slot 1, the
-variable name will be called ``SLOT1_JOB_HOOK_KEYWORD``. If the
-slot-specific keyword is not defined, the *condor_startd* will use a
-global keyword as defined by ``STARTD_JOB_HOOK_KEYWORD``
-:index:`STARTD_JOB_HOOK_KEYWORD`.
-
-Once a job is fetched via ``<Keyword>_HOOK_FETCH_WORK``
-:index:`<Keyword>_HOOK_FETCH_WORK`, the *condor_startd* will
-insert the keyword used to fetch that job into the job ClassAd as
-``HookKeyword``. This way, the same keyword will be used to select the
-hooks invoked by the *condor_starter* during the actual execution of
-the job. 
-The ``STARTER_DEFAULT_JOB_HOOK_KEYWORD``
-:index:`STARTER_DEFAULT_JOB_HOOK_KEYWORD` config knob can define a default
-hook keyword to use in the event that keyword defined by the job is invalid
-or not specified.
-Alternatively, the ``STARTER_JOB_HOOK_KEYWORD``
-:index:`STARTER_JOB_HOOK_KEYWORD` can be defined to force the
-*condor_starter* to always use a given keyword for its own hooks,
-regardless of the value in the job ClassAd for the ``HookKeyword`` attribute.
-
-For example, the following configuration defines two sets of hooks, and
-on a machine with 4 slots, 3 of the slots use the global keyword for
-running work from a database-driven system, and one of the slots uses a
-custom keyword to handle work fetched from a web service.
-
-.. code-block:: condor-config
-
-      # Most slots fetch and run work from the database system.
-      STARTD_JOB_HOOK_KEYWORD = DATABASE
-
-      # Slot4 fetches and runs work from a web service.
-      SLOT4_JOB_HOOK_KEYWORD = WEB
-
-      # The database system needs to both provide work and know the reply
-      # for each attempted claim.
-      DATABASE_HOOK_DIR = /usr/local/condor/fetch/database
-      DATABASE_HOOK_FETCH_WORK = $(DATABASE_HOOK_DIR)/fetch_work.php
-      DATABASE_HOOK_REPLY_FETCH = $(DATABASE_HOOK_DIR)/reply_fetch.php
-
-      # The web system only needs to fetch work.
-      WEB_HOOK_DIR = /usr/local/condor/fetch/web
-      WEB_HOOK_FETCH_WORK = $(WEB_HOOK_DIR)/fetch_work.php
-
-The keywords ``"DATABASE"`` and ``"WEB"`` are completely arbitrary, so
-each site is encouraged to use different (more specific) names as
-appropriate for their own needs.
-
-Defining the FetchWorkDelay Expression
-''''''''''''''''''''''''''''''''''''''
-
-:index:`FetchWorkDelay<single: FetchWorkDelay; Job hooks>`
-
-There are two events that trigger the *condor_startd* to attempt to
-fetch new work:
-
--  the *condor_startd* evaluates its own state
--  the *condor_starter* exits after completing some fetched work
-
-Even if a given compute slot is already busy running other work, it is
-possible that if it fetched new work, the *condor_startd* would prefer
-this newly fetched work (via the ``Rank`` expression) over the work it
-is currently running. However, the *condor_startd* frequently evaluates
-its own state, especially when a slot is claimed. Therefore,
-administrators can define a configuration variable which controls how
-long the *condor_startd* will wait between attempts to fetch new work.
-This variable is called ``FetchWorkDelay``
-:index:`FetchWorkDelay`.
-
-The ``FetchWorkDelay`` expression must evaluate to an integer, which
-defines the number of seconds since the last fetch attempt completed
-before the *condor_startd* will attempt to fetch more work. However, as
-a ClassAd expression (evaluated in the context of the ClassAd of the
-slot considering if it should fetch more work, and the ClassAd of the
-currently running job, if any), the length of the delay can be based on
-the current state the slot and even the currently running job.
-
-For example, a common configuration would be to always wait 5 minutes
-(300 seconds) between attempts to fetch work, unless the slot is
-Claimed/Idle, in which case the *condor_startd* should fetch
-immediately:
-
-.. code-block:: condor-config
-
-    FetchWorkDelay = ifThenElse(State == "Claimed" && Activity == "Idle", 0, 300)
-
-If the *condor_startd* wants to fetch work, but the time since the last
-attempted fetch is shorter than the current value of the delay
-expression, the *condor_startd* will set a timer to fetch as soon as
-the delay expires.
-
-If this expression is not defined, the *condor_startd* will default to
-a five minute (300 second) delay between all attempts to fetch work.
 
 Example Hook: Specifying the Executable at Execution Time
 '''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -768,13 +776,13 @@ submit description file may cause the hooks to be invoked with
     +HookKeyword = "HOOKNAME"
 
 Adding this attribute to the job's ClassAd causes the
-*condor_job_router* daemon on the submit machine to invoke hooks
+*condor_job_router* daemon on the access point to invoke hooks
 prefixed with the defined keyword. ``HOOKNAME`` is a string chosen as an
 example; any string may be used.
 
 The job's ClassAd attribute definition of ``HookKeyword`` takes
 precedence, but if not present, hooks may be enabled by defining on the
-submit machine the configuration variable
+access point the configuration variable
 
 .. code-block:: condor-config
 
@@ -800,7 +808,7 @@ expected output. All hooks must exit successfully.
        None.
     Standard input given to the hook
        The first line will be the information on route that the job matched
-       including the route name. This information will be formated as a classad.
+       including the route name. This information will be formatted as a classad.
        If the route has a  ``TargetUniverse`` or ``GridResource`` they will be
        included in the classad. The route information classad will be followed
        by a separator line of dashes like ``------`` followed by a newline.
@@ -868,175 +876,5 @@ expected output. All hooks must exit successfully.
     Exit status of the hook
        0 for success, any non-zero value on failure.
 
-Startd Cron and Schedd Cron Daemon ClassAd Hooks
-------------------------------------------------
-
-:index:`Daemon ClassAd Hooks<single: Daemon ClassAd Hooks; Hooks>`
-:index:`Daemon ClassAd Hooks`
-:index:`Startd Cron`
-:index:`Schedd Cron`
-:index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Startd Cron functionality>`
-:index:`see Daemon ClassAd Hooks<single: see Daemon ClassAd Hooks; Schedd Cron functionality>`
-
-Overview
-''''''''
-
-The Startd Cron and Schedd Cron *Daemon ClassAd Hooks* mechanism are
-used to run executables (called jobs) directly from the *condor_startd* and *condor_schedd* daemons.
-The output from these jobs is incorporated into the machine ClassAd
-generated by the respective daemon. This mechanism and associated jobs
-have been identified by various names, including the Startd Cron,
-dynamic attributes, and a distribution of executables collectively known
-as Hawkeye.
-
-Pool management tasks can be enhanced by using a daemon's ability to
-periodically run executables. The executables are expected to generate
-ClassAd attributes as their output; these ClassAds are then incorporated
-into the machine ClassAd. Policy expressions can then reference dynamic
-attributes (created by the ClassAd hook jobs) in the machine ClassAd.
-
-Job output
-''''''''''
-
-The output of the job is incorporated into one or more ClassAds when the
-job exits. When the job outputs the special line:
-
-.. code-block:: text
-
-      - update:true
-
-the output of the job is merged into all proper ClassAds, and an update
-goes to the *condor_collector* daemon.
-
-As of version 8.3.0, it is possible for a Startd Cron job (but not a
-Schedd Cron job) to define multiple ClassAds, using the mechanism
-defined below:
-
--  An output line starting with ``'-'`` has always indicated
-   end-of-ClassAd. The ``'-'`` can now be followed by a uniqueness tag
-   to indicate the name of the ad that should be replaced by the new ad.
-   This name is joined to the name of the Startd Cron job to produced a
-   full name for the ad. This allows a single Startd Cron job to return
-   multiple ads by giving each a unique name, and to replace multiple
-   ads by using the same unique name as a previous invocation. The
-   optional uniqueness tag can also be followed by the optional keyword
-   ``update:<bool>``, which can be used to override the Startd Cron
-   configuration and suppress or force immediate updates.
-
-   In other words, the syntax is:
-
-   - [*name* ] [**update:** *bool*]
-
--  Each ad can contain one of four possible attributes to control what
-   slot ads the ad is merged into when the *condor_startd* sends
-   updates to the collector. These attributes are, in order of highest
-   to lower priority (in other words, if ``SlotMergeConstraint``
-   matches, the other attributes are not considered, and so on):
-
-   -  **SlotMergeConstraint** *expression*: the current ad is merged
-      into all slot ads for which this expression is true. The
-      expression is evaluated with the slot ad as the TARGET ad.
-   -  **SlotName|Name** *string*: the current ad is merged into all
-      slots whose ``Name`` attributes match the value of ``SlotName`` up
-      to the length of ``SlotName``.
-   -  **SlotTypeId** *integer*: the current ad is merged into all ads
-      that have the same value for their ``SlotTypeId`` attribute.
-   -  **SlotId** *integer*: the current ad is merged into all ads that
-      have the same value for their ``SlotId`` attribute.
-
-For example, if the Startd Cron job returns:
-
-.. code-block:: text
-
-      Value=1
-      SlotId=1
-      -s1
-      Value=2
-      SlotId=2
-      -s2
-      Value=10
-      - update:true
-
-it will set ``Value=10`` for all slots except slot1 and slot2. On those
-slots it will set ``Value=1`` and ``Value=2`` respectively. It will also
-send updates to the collector immediately.
-
-Configuration
-'''''''''''''
-
-Configuration variables related to Daemon ClassAd Hooks are defined in
-:ref:`admin-manual/configuration-macros:Configuration File Entries Relating to Daemon ClassAd Hooks: Startd Cron and Schedd Cron`
-
-Here is a complete configuration example. It defines all three of the
-available types of jobs: ones that use the *condor_startd*, benchmark
-jobs, and ones that use the *condor_schedd*.
-
-.. code-block:: condor-config
-
-    #
-    # Startd Cron Stuff
-    #
-    # auxiliary variable to use in identifying locations of files
-    MODULES = $(ROOT)/modules
-
-    STARTD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
-    STARTD_CRON_MAX_JOB_LOAD = 0.2
-    STARTD_CRON_JOBLIST =
-
-    # Test job
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) test
-    STARTD_CRON_TEST_MODE = OneShot
-    STARTD_CRON_TEST_RECONFIG_RERUN = True
-    STARTD_CRON_TEST_PREFIX = test_
-    STARTD_CRON_TEST_EXECUTABLE = $(MODULES)/test
-    STARTD_CRON_TEST_KILL = True
-    STARTD_CRON_TEST_ARGS = abc 123
-    STARTD_CRON_TEST_SLOTS = 1
-    STARTD_CRON_TEST_JOB_LOAD = 0.01
-
-    # job 'date'
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) date
-    STARTD_CRON_DATE_MODE = Periodic
-    STARTD_CRON_DATE_EXECUTABLE = $(MODULES)/date
-    STARTD_CRON_DATE_PERIOD = 15s
-    STARTD_CRON_DATE_JOB_LOAD = 0.01
-
-    # Job 'foo'
-    STARTD_CRON_JOBLIST = $(STARTD_CRON_JOBLIST) foo
-    STARTD_CRON_FOO_EXECUTABLE = $(MODULES)/foo
-    STARTD_CRON_FOO_PREFIX = Foo
-    STARTD_CRON_FOO_MODE = Periodic
-    STARTD_CRON_FOO_PERIOD = 10m
-    STARTD_CRON_FOO_JOB_LOAD = 0.2
-
-    #
-    # Benchmark Stuff
-    #
-    BENCHMARKS_JOBLIST = mips kflops
-
-    # MIPS benchmark
-    BENCHMARKS_MIPS_EXECUTABLE = $(LIBEXEC)/condor_mips
-    BENCHMARKS_MIPS_JOB_LOAD = 1.0
-
-    # KFLOPS benchmark
-    BENCHMARKS_KFLOPS_EXECUTABLE = $(LIBEXEC)/condor_kflops
-    BENCHMARKS_KFLOPS_JOB_LOAD = 1.0
-
-    #
-    # Schedd Cron Stuff. Unlike the Startd,
-    # a restart of the Schedd is required for changes to take effect
-    #
-    SCHEDD_CRON_CONFIG_VAL = $(RELEASE_DIR)/bin/condor_config_val
-    SCHEDD_CRON_JOBLIST =
-
-    # Test job
-    SCHEDD_CRON_JOBLIST = $(SCHEDD_CRON_JOBLIST) test
-    SCHEDD_CRON_TEST_MODE = OneShot
-    SCHEDD_CRON_TEST_RECONFIG_RERUN = True
-    SCHEDD_CRON_TEST_PREFIX = test_
-    SCHEDD_CRON_TEST_EXECUTABLE = $(MODULES)/test
-    SCHEDD_CRON_TEST_PERIOD = 5m
-    SCHEDD_CRON_TEST_KILL = True
-    SCHEDD_CRON_TEST_ARGS = abc 123
 
 :index:`Hooks`

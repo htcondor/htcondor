@@ -26,7 +26,10 @@
 #include "classad/util.h"
 #include "classad/classadCache.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
@@ -179,9 +182,8 @@ Unparse(
 		case Value::INTEGER_VALUE: {
 			long long i;
 			val.IsIntegerValue(i);
-			sprintf(tempBuf, "%lld", i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_Start);
-			buffer += tempBuf;
+			buffer += std::to_string(i);
 			add_tag(buffer, XMLLexer::tagID_Integer, XMLLexer::tagType_End);
 			break;
 		}
@@ -201,7 +203,7 @@ Unparse(
             } else if (classad_isinf(real) == 1) {
                 buffer += "INF";
             } else {
-                sprintf(tempBuf, "%1.15E", real);
+                snprintf(tempBuf, sizeof(tempBuf), "%1.15E", real);
                 buffer += tempBuf;
             }
 			add_tag(buffer, XMLLexer::tagID_Real, XMLLexer::tagType_End);

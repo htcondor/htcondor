@@ -90,9 +90,9 @@ void CondorError::deep_copy(const CondorError& copy) {
 
 void CondorError::push( const char* the_subsys, int the_code, const char* the_message ) {
 	CondorError* tmp = new CondorError();
-	tmp->_subsys = strdup(the_subsys);
+	if (the_subsys) tmp->_subsys = strdup(the_subsys);
 	tmp->_code = the_code;
-	tmp->_message = strdup(the_message);
+	if (the_message) tmp->_message = strdup(the_message);
 	tmp->_next = _next;
 	_next = tmp;
 }
@@ -106,7 +106,7 @@ void CondorError::pushf( const char* the_subsys, int the_code, const char* the_f
 	int l = vprintf_length( the_format, ap );
 	tmp->_message = (char*)malloc( l+1 );
 	if (tmp->_message)
-		vsprintf ( tmp->_message, the_format, ap );
+		vsnprintf ( tmp->_message, l+1, the_format, ap );
 	tmp->_next = _next;
 	_next = tmp;
 	va_end(ap);
@@ -129,11 +129,11 @@ CondorError::getFullText( bool want_newline ) const
 		} else {
 			printed_one = true;
 		}
-		err_ss << walk->_subsys;
+		if (walk->_subsys) err_ss << walk->_subsys;
 		err_ss << ':';
 		err_ss << walk->_code;
 		err_ss << ':';
-		err_ss << walk->_message;
+		if (walk->_message) err_ss << walk->_message;
 		walk = walk->_next;
 	}
 	return err_ss.str();

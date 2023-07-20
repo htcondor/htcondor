@@ -26,11 +26,10 @@
 #include "sig_install.h"
 #include "daemon.h"
 #include "dc_collector.h"
-#include "extArray.h"
 #include "string_list.h"
 #include "match_prefix.h"    // is_arg_colon_prefix
 #include "condor_api.h"
-#include "condor_string.h"   // for strnewp()
+#include "condor_string.h"
 #include "status_types.h"
 #include "directory.h"
 #include "format_time.h"
@@ -349,10 +348,10 @@ render_slot_id (std::string & out, ClassAd * ad, Formatter & /*fmt*/)
 			if (pat)
 				pat[0] = 0;
 		} else {
-			sprintf(outstr, "%u_?", slotid);
+			snprintf(outstr, sizeof(outstr), "%u_?", slotid);
 		}
 	} else {
-		sprintf(outstr, "%u", slotid);
+		snprintf(outstr, sizeof(outstr), "%u", slotid);
 	}
 	out = outstr;
 	return true;
@@ -365,7 +364,7 @@ format_jobid_pid (const char *jobid, Formatter & /*fmt*/)
 	static char outstr[16];
 	outstr[0] = 0;
 	if (App.job_to_pid.find(jobid) != App.job_to_pid.end()) {
-		sprintf(outstr, "%u", App.job_to_pid[jobid]);
+		snprintf(outstr, sizeof(outstr), "%u", App.job_to_pid[jobid]);
 	}
 	return outstr;
 }

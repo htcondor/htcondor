@@ -32,10 +32,7 @@ the pool for which HTCondor can use the Java Virtual Machine.
 
 If there is no output from the *condor_status* command, then HTCondor
 does not know the location details of the Java Virtual Machine on
-machines in the pool, or no machines have Java correctly installed. In
-this case, contact your system administrator or see the 
-:doc:`/admin-manual/java-support-installation` section
-for more information on getting HTCondor to work together with Java.
+machines in the pool, or no machines have Java correctly installed.
 
 A Simple Example Java Application
 ---------------------------------
@@ -78,6 +75,11 @@ submit description file works:
       arguments      = Hello
       output         = Hello.output
       error          = Hello.error
+
+      request_cpus   = 1
+      request_memory = 1024M
+      request_disk   = 10240K
+
       queue
 
 The Java universe must be explicitly selected.
@@ -108,6 +110,11 @@ submit description file becomes:
       error          = Hello.error
       should_transfer_files = YES
       when_to_transfer_output = ON_EXIT
+
+      request_cpus   = 1
+      request_memory = 1024M
+      request_disk   = 10240K
+
       queue
 
 For more information about using HTCondor's file transfer mechanisms,
@@ -409,7 +416,11 @@ given test programs:
     executable = TestChirp.class
     arguments = TestChirp
     jar_files = Chirp.jar
-    +WantIOProxy = True
+    want_io_proxy = True
+    request_cpus   = 1
+    request_memory = 1024M
+    request_disk   = 10240K
+
     queue
 
 

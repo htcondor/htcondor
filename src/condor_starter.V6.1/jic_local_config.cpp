@@ -196,10 +196,10 @@ JICLocalConfig::getAttr( bool warn, bool is_string, const char* attr,
 		return true;
 	}
 
-	sprintf( param_name, "%s_%s", key, attr );
+	snprintf( param_name, sizeof(param_name), "%s_%s", key, attr );
 	tmp = param( param_name );
 	if( ! tmp && alt_name ) {
-		sprintf( param_name, "%s_%s", key, alt_name );
+		snprintf( param_name, sizeof(param_name), "%s_%s", key, alt_name );
 		tmp = param( param_name );
 	}
 	if( ! tmp ) {
@@ -240,11 +240,11 @@ JICLocalConfig::getUniverse( void )
 	int univ = 0;
  
 		// first try the ClassAd attr name:
-	sprintf( param_name, "%s_%s", key, ATTR_JOB_UNIVERSE );
+	snprintf( param_name, sizeof(param_name), "%s_%s", key, ATTR_JOB_UNIVERSE );
 	tmp = param( param_name );
 	if( ! tmp ) {
 			// now, try just "key_universe"
-		sprintf( param_name, "%s_universe", key );
+		snprintf( param_name, sizeof(param_name), "%s_universe", key );
 		tmp = param( param_name );
 		if( ! tmp ) {
 			dprintf( D_ALWAYS, "\"%s\" not found in config file\n",

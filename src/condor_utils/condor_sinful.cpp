@@ -183,7 +183,7 @@ urlEncode(char const *str,std::string &result)
 		str += len;
 		if( *str ) {
 			char code[4];
-			sprintf(code,"%%%02x",*str);
+			snprintf(code,sizeof(code),"%%%02x",*str);
 			result += code;
 			str++;
 		}

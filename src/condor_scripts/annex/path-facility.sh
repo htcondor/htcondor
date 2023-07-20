@@ -6,7 +6,8 @@ echo "${CONTROL_PREFIX} PID $$"
 function usage() {
     echo "Usage: ${0} \\"
     echo "       JOB_NAME QUEUE_NAME COLLECTOR TOKEN_FILE LIFETIME PILOT_BIN \\"
-    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID PASSWORD_FILE \\"
+    echo "       OWNERS NODES MULTI_PILOT_BIN ALLOCATION REQUEST_ID \\"
+    echo "       PASSWORD_FILE SCHEDD_NAME \\"
     echo "       [CPUS] [MEM_MB]"
     echo "where OWNERS is a comma-separated list.  Omit CPUS and MEM_MB to get"
     echo "whole-node jobs.  NODES is ignored on non-whole-node jobs."
@@ -100,18 +101,23 @@ if [[ -z $PASSWORD_FILE ]]; then
     exit 1
 fi
 
+SCHEDD_NAME=${13}
+if [[ -z $SCHEDD_NAME ]]; then
+    usage
+    exit 1
+fi
 
 #
 # Site-specific defaults.  Should probably be set in the Python front-end
 # code, but we don't do that yet.
 #
 
-CPUS=${13}
+CPUS=${14}
 if [[ $CPUS == "None" ]]; then
     CPUS="1"
 fi
 
-MEM_MB=${14}
+MEM_MB=${15}
 if [[ $MEM_MB == "None" ]]; then
     MEM_MB="2048"
 fi
@@ -124,7 +130,7 @@ fi
 
 # The binaries must be a tarball named condor-*, and unpacking that tarball
 # must create a directory which also matches condor-*.
-WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/9.x/9.11.2/release/condor-9.11.2-x86_64_AlmaLinux8-stripped.tar.gz
+WELL_KNOWN_LOCATION_FOR_BINARIES=https://research.cs.wisc.edu/htcondor/tarball/10.x/10.4.2/release/condor-10.4.2-x86_64_AlmaLinux8-stripped.tar.gz
 
 # The configuration must be a tarball which does NOT match condor-*.  It
 # will be unpacked in the root of the directory created by unpacking the
@@ -212,16 +218,12 @@ batch_name                  = ${JOB_NAME}
 
 executable                  = path-facility.pilot
 transfer_executable         = true
-arguments                   = path-facility ${STARTD_NOCLAIM_SHUTDOWN} ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID)_\$(ProcID) ${CPUS} ${MEM_MB}
+arguments                   = path-facility ${STARTD_NOCLAIM_SHUTDOWN} ${JOB_NAME} ${COLLECTOR} ${LIFETIME} ${OWNERS} ${REQUEST_ID} \$(ClusterID)_\$(ProcID) ${CPUS} ${MEM_MB} ${SCHEDD_NAME}
 
 transfer_input_files        = ${WELL_KNOWN_LOCATION_FOR_BINARIES}, ${WELL_KNOWN_LOCATION_FOR_CONFIGURATION}, token_file, password_file
 # Transfer nothing back.
-# transfer_output_files       = \"\"
-# Debug: transfer back the log files.
-transfer_output_files       = condor-9.11.2-x86_64_AlmaLinux8-stripped/local/log
-transfer_output_remaps      = \"log = logs.\$(ClusterID).\$(ProcID)\"
-# This doesn't allow me to fetch logs by running condor_vacate_job. :(
-when_to_transfer_files      = ON_EXIT_OR_EVICT
+transfer_output_files       = \"\"
+when_to_transfer_files      = ON_EXIT
 
 output                      = out.\$(ClusterID).\$(ProcID)
 error                       = err.\$(ClusterID).\$(ProcID)

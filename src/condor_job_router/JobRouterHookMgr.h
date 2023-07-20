@@ -24,6 +24,7 @@
 #include "HookClientMgr.h"
 #include "enum_utils.h"
 #include "RoutedJob.h"
+#include <vector>
 
 #include "classad/classad_distribution.h"
 
@@ -63,7 +64,7 @@ public:
 	std::string getHookKeyword(const classad::ClassAd &ad);
 
 	// List of job ids and hooks currently running and awaiting output
-	static SimpleList<HOOK_RUN_INFO*> m_job_hook_list;
+	static std::vector<HOOK_RUN_INFO*> m_job_hook_list;
 
 private:
 	bool m_warn_cleanup;

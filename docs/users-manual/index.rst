@@ -5,16 +5,16 @@ Users' Manual
    :maxdepth: 2
    :glob:
 
-   quick-start-guide
    welcome-to-htcondor
    running-a-job-steps
    submitting-a-job
    file-transfer
+   submitting-a-remote-job
    managing-a-job
    automatic-job-management
+   when-job-wont-run
    services-for-jobs
    priorities-and-preemption
-   dagman-workflows
    job-sets
    matchmaking-with-classads
    choosing-an-htcondor-universe
@@ -26,4 +26,3 @@ Users' Manual
    self-checkpointing-applications
    time-scheduling-for-job-execution
    special-environment-considerations
-   potential-problems

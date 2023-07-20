@@ -236,13 +236,13 @@ int setupAnalysis(
 
 
 	// setup condition expressions
-    sprintf( buffer, "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    snprintf( buffer, sizeof(buffer), "MY.%s > MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
     ParseClassAdRvalExpr( buffer, stdRankCondition );
 
-    sprintf( buffer, "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
+    snprintf( buffer, sizeof(buffer), "MY.%s >= MY.%s", ATTR_RANK, ATTR_CURRENT_RANK );
     ParseClassAdRvalExpr( buffer, preemptRankCondition );
 
-	sprintf( buffer, "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO, 
+	snprintf( buffer, sizeof(buffer), "MY.%s > TARGET.%s + %f", ATTR_REMOTE_USER_PRIO,
 			ATTR_SUBMITTOR_PRIO, PriorityDelta );
 	ParseClassAdRvalExpr( buffer, preemptPrioCondition ) ;
 
@@ -349,8 +349,8 @@ int fetchSubmittorPriosFromNegotiator(DCCollector* pool, std::vector<PrioEntry> 
 	int cPrios = 0;
 	std::string name;
 	while( true ) {
-		sprintf( attrName , "Name%d", cPrios+1 );
-		sprintf( attrPrio , "Priority%d", cPrios+1 );
+		snprintf( attrName, sizeof(attrName), "Name%d", cPrios+1 );
+		snprintf( attrPrio, sizeof(attrPrio), "Priority%d", cPrios+1 );
 
 		if( !al.LookupString( attrName, name) || 
 			!al.LookupFloat( attrPrio, priority))
@@ -1199,7 +1199,7 @@ const char * doJobMatchAnalysisToBuffer(std::string & return_buf, ClassAd *reque
 	request->LookupInteger(ATTR_CLUSTER_ID, jid.cluster);
 	request->LookupInteger(ATTR_PROC_ID, jid.proc);
 	char request_id[33];
-	sprintf(request_id, "%d.%03d", jid.cluster, jid.proc);
+	snprintf(request_id, sizeof(request_id), "%d.%03d", jid.cluster, jid.proc);
 
 	int cSlots = (int)startdAds.size();
 
@@ -1384,7 +1384,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 
 	bool offline = false;
 	if (slot->LookupBool(ATTR_OFFLINE, offline) && offline) {
-		sprintf(return_buff, "%-24.24s  is offline\n", slotname.c_str());
+		snprintf(return_buff, sizeof(return_buff), "%-24.24s  is offline\n", slotname.c_str());
 		return return_buff;
 	}
 
@@ -1435,7 +1435,7 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 
 	if ( ! tabular && analStartExpr) {
 
-		sprintf(return_buff, "\n-- Slot: %s : Analyzing matches for %d Jobs in %d autoclusters\n", 
+		snprintf(return_buff, sizeof(return_buff), "\n-- Slot: %s : Analyzing matches for %d Jobs in %d autoclusters\n", 
 				slotname.c_str(), cTotalJobs, cUniqueJobs);
 
 		classad::References inline_attrs; // don't show this as 'referenced' attrs, because we display them differently.
@@ -1518,9 +1518,9 @@ const char * doSlotRunAnalysisToBuffer(ClassAd *slot, JobClusterMap & clusters, 
 	} else {
 		char fmt[sizeof("%-nnn.nnns %-4s %12d %12d %10.2f\n")];
 		int name_width = MAX(longest_slot_machine_name+7, longest_slot_name);
-		sprintf(fmt, "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
+		snprintf(fmt, sizeof(fmt), "%%-%d.%ds", MAX(name_width, 16), MAX(name_width, 16));
 		strcat(fmt, " %-4s %12d %12d %10.2f\n");
-		sprintf(return_buff, fmt, slotname.c_str(), slot_type, 
+		snprintf(return_buff, sizeof(return_buff), fmt, slotname.c_str(), slot_type, 
 				cOffConstraint, cReqConstraint, 
 				cTotalJobs ? (100.0 * cBothMatch / cTotalJobs) : 0.0);
 	}
@@ -1547,7 +1547,6 @@ void buildJobClusterMap(IdToClassaAdMap & jobs, const char * attr, JobClusterMap
 
 		int acid = -1;
 		if (job->LookupInteger(attr, acid)) {
-			//std::map<int, ClassAdListDoesNotDeleteAds>::iterator it;
 			autoclusters[acid].push_back(job);
 		} else {
 			// stick auto-clusterless jobs into the -1 slot.
@@ -1588,12 +1587,12 @@ fixSubmittorName( const char *name, int niceUser )
 
     // potential buffer overflow! Hao
 	if( strchr( name , '@' ) ) {
-		sprintf( buffer, "%s%s%s", 
+		snprintf( buffer, sizeof(buffer), "%s%s%s", 
 					niceUser ? NiceUserName : "",
 					niceUser ? "." : "",
 					name );
 	} else {
-		sprintf( buffer, "%s%s%s@%s", 
+		snprintf( buffer, sizeof(buffer), "%s%s%s@%s", 
 					niceUser ? NiceUserName : "",
 					niceUser ? "." : "",
 					name, uid_domain );
@@ -1759,7 +1758,7 @@ bool print_jobs_analysis(
 					int cluster_id = 0, proc_id = 0;
 					job->LookupInteger(ATTR_CLUSTER_ID, cluster_id);
 					job->LookupInteger(ATTR_PROC_ID, proc_id);
-					sprintf(achJobId, "%d.%d", cluster_id, proc_id);
+					snprintf(achJobId, sizeof(achJobId), "%d.%d", cluster_id, proc_id);
 
 					string owner;
 					if (summarize_with_owner) job->LookupString(ATTR_OWNER, owner);
@@ -1779,9 +1778,9 @@ bool print_jobs_analysis(
 
 					if (it->first >= 0) {
 						if (verbose) {
-							sprintf(achAutocluster, "%d:%d/%d", it->first, cJobsToInc, cIdle);
+							snprintf(achAutocluster, sizeof(achAutoCluster), "%d:%d/%d", it->first, cJobsToInc, cIdle);
 						} else {
-							sprintf(achAutocluster, "%d/%d", cJobsToInc, cIdle);
+							snprintf(achAutocluster, sizeof(achAutoCluster), "%d/%d", cJobsToInc, cIdle);
 						}
 					} else {
 						achAutocluster[0] = 0;

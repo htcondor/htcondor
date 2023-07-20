@@ -37,7 +37,7 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 		return true;
 	}
 
-	MyString full_pathname;  // this needs to have the same lifetime as path
+	std::string full_pathname;  // this needs to have the same lifetime as path
 	if (get_mySubSystem()->isType(SUBSYSTEM_TYPE_SHADOW)) {
 		static StringList allow_path_prefix_list;
 		static bool path_prefix_initialized = false;
@@ -128,9 +128,8 @@ bool allow_shadow_access(const char *path, bool init, const char *job_ad_whiteli
 			if (allow) {
 				rpath = realpath(path, nullptr);
 				if (!rpath) {
-					char *d = condor_dirname(path);
-					rpath = realpath(d, nullptr);
-					free(d);
+					std::string d = condor_dirname(path);
+					rpath = realpath(d.c_str(), nullptr);
 					if (!rpath) {
 						allow = false;
 						dprintf(D_ALWAYS,

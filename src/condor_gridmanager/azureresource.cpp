@@ -174,8 +174,8 @@ void AzureResource::DoPing( unsigned& ping_delay, bool& ping_complete, bool& pin
 AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	ASSERT( status_gahp );
 
-	StringList vm_name_list;
-	StringList vm_status_list;
+	std::vector<std::string> vm_name_list;
+	std::vector<std::string> vm_status_list;
 	int rc = status_gahp->azure_vm_list( m_auth_file,
 	                                     m_subscription,
 	                                     vm_name_list,
@@ -192,25 +192,21 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 	//
 	// We have to let a job know if we can't find a status report for it.
 	//
-	List<AzureJob> myJobs;
+	std::set<AzureJob*> myJobs;
 	AzureJob * nextJob = NULL;
-	BaseJob *nextBaseJob = NULL;
-	registeredJobs.Rewind();
-	while ( (nextBaseJob = registeredJobs.Next()) ) {
+	for (auto nextBaseJob: registeredJobs) {
 		nextJob = dynamic_cast< AzureJob * >( nextBaseJob );
 		ASSERT( nextJob );
 		if ( !nextJob->m_vmName.empty() ) {
-			myJobs.Append( nextJob );
+			myJobs.insert(nextJob);
 		}
 	}
 
-	int job_cnt = vm_name_list.number();
-	vm_name_list.rewind();
-	vm_status_list.rewind();
-	ASSERT( vm_status_list.number() == job_cnt );
-	for( int i = 0; i < job_cnt; i++ ) {
-		std::string vm_name = vm_name_list.next();
-		std::string vm_status = vm_status_list.next();
+	size_t job_cnt = vm_name_list.size();
+	ASSERT( vm_status_list.size() == job_cnt );
+	for( size_t i = 0; i < job_cnt; i++ ) {
+		std::string& vm_name = vm_name_list[i];
+		std::string& vm_status = vm_status_list[i];
 
 		// Resource names are case-insenstive. We generate lower-case
 		// names, but the gahp returns upper-case names.
@@ -233,17 +229,16 @@ AzureResource::BatchStatusResult AzureResource::StartBatchStatus() {
 			dprintf( D_FULLDEBUG, "Found job object via vm name for '%s', updating status ('%s').\n", vm_name.c_str(), vm_status.c_str() );
 			// TODO Can we get public DNS name?
 			job->StatusUpdate( vm_status.c_str() );
-			myJobs.Delete( job );
+			myJobs.erase(job);
 		} else {
 			dprintf( D_FULLDEBUG, "Found unknown vm name='%s'; skipping.\n",
 			         vm_name.c_str() );
 		}
 	}
 
-	myJobs.Rewind();
-	while( ( nextJob = myJobs.Next() ) ) {
-		dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", nextJob );
-		nextJob->StatusUpdate( NULL );
+	for (auto job : myJobs) {
+		dprintf( D_FULLDEBUG, "Informing job %p it got no status.\n", job );
+		job->StatusUpdate( NULL );
 	}
 
 	return BSR_DONE;

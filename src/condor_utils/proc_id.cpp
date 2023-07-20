@@ -21,8 +21,8 @@
 #include "condor_common.h"
 #include "proc.h"
 #include "string_list.h"
-#include "extArray.h"
-#include "MyString.h"
+#include "stl_string_utils.h"
+#include "condor_debug.h"
 
 PROC_ID
 getProcByString( const char* str )
@@ -44,10 +44,10 @@ void
 ProcIdToStr( int cluster, int proc, char *buf ) {
 	if ( proc == -1 ) {
 		// cluster ad key
-		sprintf(buf,"0%d.-1",cluster);
+		snprintf(buf,PROC_ID_STR_BUFLEN,"0%d.-1",cluster);
 	} else {
 		// proc ad key
-		sprintf(buf,"%d.%d",cluster,proc);
+		snprintf(buf,PROC_ID_STR_BUFLEN,"%d.%d",cluster,proc);
 	}
 }
 
@@ -123,11 +123,6 @@ bool StrIsProcId(const char *str, int &cluster, int &proc, const char ** pend)
 void JOB_ID_KEY::sprint(std::string & s) const
 {
 	formatstr(s,"%d.%d", this->cluster, this->proc);
-}
-
-void JOB_ID_KEY::sprint(MyString &s) const
-{
-	s.formatstr("%d.%d", this->cluster, this->proc);
 }
 
 JOB_ID_KEY::operator std::string() const

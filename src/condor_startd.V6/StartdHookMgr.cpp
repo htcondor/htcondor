@@ -216,9 +216,8 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 	hookReplyFetch(willing, job_ad, rip);
 
 	if (willing) {
-		Claim* leftover_claim = NULL;
 		if (rip->can_create_dslot()) {
-			Resource * new_rip = create_dslot(rip, job_ad, leftover_claim);
+			Resource * new_rip = create_dslot(rip, job_ad);
 			if (new_rip) { rip = new_rip; }
 			else { willing = false; }
 		}
@@ -391,10 +390,9 @@ FetchClient::hookExited(int exit_status) {
 	if (m_std_out.length()) {
 		ASSERT(m_job_ad == NULL);
 		m_job_ad = new ClassAd();
-		MyStringTokener tok;
-		tok.Tokenize(m_std_out.c_str());
+		StringTokenIterator tok(m_std_out, "\n", true);
 		const char* hook_line = NULL;
-		while ((hook_line = tok.GetNextToken("\n", true))) {
+		while ((hook_line = tok.next())) {
 			if (!m_job_ad->Insert(hook_line)) {
 				dprintf(D_ALWAYS, "Failed to insert \"%s\" into ClassAd, "
 						"ignoring invalid hook output\n", hook_line);

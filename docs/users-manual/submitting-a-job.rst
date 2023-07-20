@@ -68,8 +68,8 @@ The corresponding submit description file might look like the following
     log          = myexe.log
 
     request_cpus   = 1
-    request_memory = 1024
-    request_disk   = 10240
+    request_memory = 1024M
+    request_disk   = 10240K
 
     should_transfer_files = yes
 
@@ -80,7 +80,7 @@ The standard output for this job will go to the file
 **output** :index:`output<single: output; submit commands>` command. Likewise,
 the standard error output will go to ``errorfile``. 
 
-HTCondor will append events about the job to a log file wih the 
+HTCondor will append events about the job to a log file with the 
 requested name ``myexe.log``. When the job
 finishes, its exit conditions and resource usage will also be noted in the log file. 
 This file's contents are an excellent way to figure out what happened to jobs.
@@ -104,7 +104,7 @@ used by each instance of the job. So, ``stdout``, and ``stderr`` will refer to
 ``out.0``, and ``err.0`` for the first run of the program,
 ``out.1``, and ``err.1`` for the second run of the program,
 and so forth. A log file containing entries about when and where
-HTCondor runs, checkpoints, and migrates processes for all the 150
+HTCondor runs, transfer files, and terminates for all the 150
 queued programs will be written into the single file ``foo.log``.
 If there are 150 or more available slots in your pool, all 150 instances
 might be run at the same time, otherwise, HTCondor will run as many as
@@ -124,9 +124,9 @@ we tell HTCondor which input file to send to each instance of the program.
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
-    request_disk   = 16383
+    request_memory = 4096M
+    request_disk   = 16383K
 
     error   = err.$(Process)
     output  = out.$(Process)
@@ -318,7 +318,7 @@ file.
     or, if you wanted to put the name of the machine the job ran on
     into the output file name, you could add
 
-    .. code-block: condor-submit
+    .. code-block:: condor-submit
 
       output = output_file.$$(Name)
 
@@ -328,7 +328,7 @@ file.
     For example, if want to pass 90% of the allocated memory as an
     argument to your job, the submit file can have
 
-    .. code-block: condor-submit
+    .. code-block:: condor-submit
 
         arguments = --mem $$([ Memory * 0.9 ])
 
@@ -914,7 +914,7 @@ the machine of 0.0. The ``Rank`` attribute will only rank machines where
 the attribute is defined. Therefore, the machine with the highest
 floating point performance may not be the one given the highest rank.
 
-So, it is wise when writing a ``Rank`` expression to check if the
+So, it is wise when writing a ``Rank`` expression to    check if the
 expression's evaluation will lead to the expected resulting ranking of
 machines. This can be accomplished using the *condor_status* command
 with the *-constraint* argument. This allows the user to see a list of
@@ -1049,12 +1049,12 @@ Jobs That Require Credentials
 
 :index:`requesting OAuth credentials for a job<single: requesting OAuth credentials for a job; OAuth>`
 
-If the HTCondor pool administrator has configured the submit machine
+If the HTCondor pool administrator has configured the access point
 with one or more credential monitors,
 jobs submitted on that machine may automatically be provided with credentials
 and/or it may be possible for users to request and obtain credentials for their jobs.
 
-Suppose the administrator has configured the submit machine
+Suppose the administrator has configured the access point
 such that users may obtain credentials from a storage service called "CloudBoxDrive."
 A job that needs credentials from CloudBoxDrive
 should contain the submit command
@@ -1064,13 +1064,13 @@ should contain the submit command
     use_oauth_services = cloudboxdrive
 
 Upon submitting this job for the first time,
-the user will be directed to a webpage hosted on the submit machine
+the user will be directed to a webpage hosted on the access point
 which will guide the user through the process of obtaining a CloudBoxDrive credential.
-The credential is then stored securely on the submit machine.
+The credential is then stored securely on the access point.
 (**Note: depending on which credential monitor is used, the original
 job may have to be re-submitted at this point.**)
-(Also note that at no point is the user's *password* stored on the submit machine.)
-Once a credential is stored on the submit machine,
+(Also note that at no point is the user's *password* stored on the access point.)
+Once a credential is stored on the access point,
 as long as it remains valid,
 it is transferred securely to all subsequently submitted jobs that contain ``use_oauth_services = cloudboxdrive``.
 
@@ -1106,7 +1106,7 @@ The submit file would need to contain
 Some credential providers may also require the user to provide
 the name of the resource (or "audience") that a credential should allow access to.
 Resource naming is done using the ``<service name>_oauth_resource`` submit file command.
-For example, if our CloudBoxDrive service has servers located at some unversities
+For example, if our CloudBoxDrive service has servers located at some universities
 and the documentation says that we should pick one near us and specify it as the audience,
 the submit file might look like
 
@@ -1119,7 +1119,7 @@ the submit file might look like
 It is possible for a single job to request and/or use credentials from multiple services
 by listing each service in the ``use_oauth_services`` command.
 Suppose the nearby university has a SciTokens service that provides credentials to access the ``localstorage.myuni.edu`` machine,
-and the HTCondor pool administrator has configured the submit machine to allow users to obtain credentials from this service,
+and the HTCondor pool administrator has configured the access point to allow users to obtain credentials from this service,
 and that a user has write access to the `/foo` directory on the storage machine.
 A submit file that would result in a job that contains credentials
 that can read from CloudBoxDrive and write to the local university storage might look like
@@ -1200,8 +1200,13 @@ Jobs That Require GPUs
 
 :index:`requesting GPUs for a job<single: requesting GPUs for a job; GPUs>`
 
-A job that needs GPUs to run identifies the number of GPUs needed in the
-submit description file by adding the submit command
+:index:`Request_GPUs<single: Request_GPUS; submit commands>`
+:index:`Require_GPUs<single: Require_GPUS; submit commands>`
+
+HTCondor has built-in support for detecting machines with GPUs, and
+matching jobs that need GPUs to machines that have them.  If your
+job needs a GPU, you'll first need to tell HTCondor how many GPUs
+each job needs with the submit command: 
 
 .. code-block:: condor-submit
 
@@ -1214,18 +1219,31 @@ the job. For example, a job that needs 1 GPU uses
 
     request_GPUs = 1
 
-Because there are different capabilities among GPUs, the job might need
-to further qualify which GPU of available ones is required. Do this by
-specifying or adding a clause to an existing
-**Requirements** :index:`Requirements<single: Requirements; submit commands>` submit
-command. As an example, assume that the job needs a speed and capacity
-of a CUDA GPU that meets or exceeds the value 1.2. In the submit
-description file, place
+Because there are different capabilities among GPUs, your job might need
+to further qualify which GPU is required. The submit command
+`require_gpus` does this.  For example, to request  a CUDA GPU whose
+CUDA Capability is at least 8, add the following to your submit file:
 
 .. code-block:: condor-submit
 
     request_GPUs = 1
-    requirements = (CUDACapability >= 1.2) && $(requirements:True)
+    require_gpus = Capability >= 8.0
+
+To see which CUDA capabilities are available in your HTCondor pool,
+you can run the command
+
+.. code-block:: console
+
+      $ condor_status -af Name GPUS_Capability
+
+
+To see which GPU devices HTCondor has detected on your pool,
+you can run the command
+
+.. code-block:: console
+
+      $ condor_status -af Name GPUS_DeviceName
+
 
 Access to GPU resources by an HTCondor job needs special configuration
 of the machines that offer GPUs. Details of how to set up the
@@ -1346,9 +1364,9 @@ To give an example, the following submit file:
     executable     = foo
     arguments      = input_file.$(Process)
 
-    request_memory = 4096
     request_cpus   = 1
-    request_disk   = 16383
+    request_memory = 4096M
+    request_disk   = 16383K
 
     error   = err.$(Process)
     output  = out.$(Process)
@@ -1365,7 +1383,7 @@ To give an example, the following submit file:
 
 
 When submitted as a late materialization factory, the *submit digest* for this factory
-will contain only the submit statments that vary between jobs, and the collapsed queue statement
+will contain only the submit statements that vary between jobs, and the collapsed queue statement
 like this:
 
 .. code-block:: condor-submit
@@ -1382,7 +1400,7 @@ Materialization log events
 
 When a Late Materialization job factory is submitted to the *condor_schedd*, a ``Cluster submitted`` event
 will be written to the UserLog of the Cluster ad.  This will be the same log file used by the first job
-materialized by the factory.  To avoid confustion,
+materialized by the factory.  To avoid confusion,
 it is recommended that you use the same log file for all jobs in the factory.
 
 When the Late Materialization job factory is removed from the *condor_schedd*, a ``Cluster removed`` event

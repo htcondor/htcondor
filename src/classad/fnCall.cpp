@@ -44,7 +44,11 @@
 #include <dlfcn.h>
 #endif
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::set;
+
 
 namespace classad {
 
@@ -912,6 +916,9 @@ sumAvg(const char *name, const ArgumentList &argList,
 			if (!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
+			} else if (listElementValue.IsUndefinedValue()) {
+				--len;
+				continue;
 			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
@@ -999,6 +1006,8 @@ minMax(const char *fn, const ArgumentList &argList,
 			if(!listElement->Evaluate(state, listElementValue)) {
 				val.SetErrorValue();
 				return false;
+			} else if (listElementValue.IsUndefinedValue()) {
+				continue;
 			} else if (!listElementValue.IsNumber()) {
 				val.SetErrorValue();
 				return true;
@@ -1098,9 +1107,6 @@ listCompare(
 	if (!argList[2]->Evaluate(state, compareVal)) {
 		val.SetErrorValue();
 		return false;
-	} else if (listVal.IsUndefinedValue()) {
-		val.SetUndefinedValue();
-		return true;
 	}
 
 	// Finally, we decide what to do exactly, based on our name.
@@ -1599,7 +1605,7 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 {
 	ClassAdUnParser	unp;
 	string			buf, s, sep;
-	bool			errorFlag=false, undefFlag=false, rval=true;
+	bool			errorFlag=false, undefFlag=false, defFlag=false, rval=true;
 	bool			is_join = (0 == strcasecmp( name, "join" ));
 	int				num_args = (int)argListIn.size();
 	ArgumentList	argTemp; // in case we need it
@@ -1660,7 +1666,9 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 			convertValueToStringValue(val, stringVal);
 			if (stringVal.IsUndefinedValue()) {
 				undefFlag = true;
-				break;
+				if (is_join) { continue; }  // join keeps going
+				defFlag = false;
+				break; // strcat returns undefined
 			} else if (stringVal.IsErrorValue()) {
 				errorFlag = true;
 				result.SetErrorValue();
@@ -1676,10 +1684,11 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 				sep = s;
 				continue;
 			}
-			if (i > 1) {
+			if ( ! buf.empty()) {
 				buf += sep;
 			}
 		}
+		defFlag = true;
 		buf += s;
 	}
 
@@ -1697,8 +1706,8 @@ strCat( const char* name, const ArgumentList &argListIn, EvalState &state,
 		result.SetErrorValue( );
 		return( true );
 	} 
-	// some argument was undefined
-	if( undefFlag ) {
+	// some argument was undefined and no arguments were defined
+	if( undefFlag && ! defFlag ) {
 		result.SetUndefinedValue( );
 		return( true );
 	}
@@ -2750,13 +2759,13 @@ interval( const char* /* name */,const ArgumentList &argList,EvalState &state,
 
 	char strval[25];
 	if ( days != 0 ) {
-		sprintf(strval,"%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
+		snprintf(strval, sizeof(strval), "%d+%02d:%02d:%02d", days, abs(hours), abs(min), abs(secs) );
 	} else if ( hours != 0 ) {
-		sprintf(strval,"%d:%02d:%02d", hours, abs(min), abs(secs) );
+		snprintf(strval, sizeof(strval), "%d:%02d:%02d", hours, abs(min), abs(secs) );
 	} else if ( min != 0 ) {
-		sprintf(strval,"%d:%02d", min, abs(secs) );
+		snprintf(strval, sizeof(strval), "%d:%02d", min, abs(secs) );
 	} else {
-		sprintf(strval,"%d", secs );
+		snprintf(strval, sizeof(strval), "%d", secs );
 	}
 	result.SetStringValue(strval);
 
@@ -3064,7 +3073,6 @@ static bool regexp_helper(
 	int error_code;
 	pcre2_code * re = NULL;
 	PCRE2_SPTR pattern_pcre2 = reinterpret_cast<const unsigned char *>(pattern);
-	uint32_t group_count = 0;
 	PCRE2_SIZE *ovector = NULL;
 	bool empty_match = false;
 	uint32_t addl_opts = 0;

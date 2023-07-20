@@ -68,11 +68,11 @@ def error(msg,test_passing):
         print("{}".format(msg))
 
 #--------------------------------------------------------------------------------------------
-#Start a personal condor with JOB_EPOCH_INSTANCE_DIR set
+#Start a personal condor with JOB_EPOCH_HISTORY_DIR set
 @standup
 def condor(test_dir):
     with Condor(local_dir=test_dir / "condor",config={"SCHEDD_INTERVAL":1,
-                                                      "JOB_EPOCH_INSTANCE_DIR":"{0}".format(test_dir / epochDir),
+                                                      "JOB_EPOCH_HISTORY_DIR":"{0}".format(test_dir / epochDir),
                                                       "JOB_EPOCH_HISTORY":"{0}".format(test_dir / epochDir / "epoch_history")}) as condor:
         yield condor
 
@@ -113,19 +113,19 @@ def run_crondor_jobs(condor,test_dir,path_to_sleep):
 #"Test param":"Command for os"
 
 #Cannot test with no path because condor_history is using the parent condor tools and doesn't
-#have JOB_EPOCH_INSTANCE_DIR set and we don't want it because other jobs will write tests 
+#have JOB_EPOCH_HISTORY_DIR set and we don't want it because other jobs will write tests
 #there messing up this test. So, check condor_history -epoch for Error message
 "(file) history":"condor_history -epoch",
 "(file) history w/ cluster":"condor_history -epoch 1",
 "(file) history w/ cluster.proc":"condor_history -epoch 1.0",
 "(file) history job id mathing regression":"condor_history -epoch 2.1 1.0",
-"(dir) history":"condor_history -epoch",
-"(dir) history w/ cluster":"condor_history -epoch 1",
-"(dir) history w/ cluster.proc":"condor_history -epoch 1.0",
-"(dir) history w/ delete & limit":"condor_history -epoch:d -limit 1",
-"(dir) history w/ delete & match":"condor_history -epoch:d -match 1",
-"(dir) history w/ delete & scanlimit":"condor_history -epoch:d -scanlimit 1",
-"(dir) history w/ delete":"condor_history -epoch:d",
+"(dir) history":"condor_history -dir -epoch",
+"(dir) history w/ cluster":"condor_history -dir -epoch 1",
+"(dir) history w/ cluster.proc":"condor_history -dir -epoch 1.0",
+"(dir) history w/ delete & limit":"condor_history -dir -epoch:d -limit 1",
+"(dir) history w/ delete & match":"condor_history -dir -epoch:d -match 1",
+"(dir) history w/ delete & scanlimit":"condor_history -dir -epoch:d -scanlimit 1",
+"(dir) history w/ delete":"condor_history -dir -epoch:d",
 })
 def read_epochs(condor,test_dir,path_to_sleep,request):
     global historyTestNum
@@ -138,13 +138,7 @@ def read_epochs(condor,test_dir,path_to_sleep,request):
         if historyTestNum == 0:
             print("\nERROR: Set up failed. Cannot test history tools.")
         return False
-    #If non-history like epoch file then reconfig to not have it
-    if outputFiles[historyTestNum][:4] != "hist" and outputFiles[historyTestNum] == "base_epoch.txt":
-        config = Path(test_dir / "condor" / "condor_config")
-        rf = open(config,"a")
-        rf.write("\nJOB_EPOCH_HISTORY=\n")
-        rf.close()
-        rp = condor.run_command(["condor_reconfig"])
+
     #Split based param command line for specific test into array
     cmd = request.param.split()
     cp = condor.run_command(cmd)

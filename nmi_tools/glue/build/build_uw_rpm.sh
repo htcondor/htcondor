@@ -56,17 +56,21 @@ condor_version=$(echo condor-*.tgz | sed -e s/^condor-// -e s/.tgz$//)
 [[ $condor_version ]] || fail "Condor version string not found"
 check_version_string  condor_version
 
-# Do everything in a temp dir that will go away on errors or end of script
-tmpd=$(mktemp -d "$PWD/.tmpXXXXXX")
-trap 'rm -rf "$tmpd"' EXIT
+# Do everything in a temp dir that will go away at end of script
+tmpd=$(mktemp -d "$PWD/build-XXXXXX")
 
 cd "$tmpd"
 mkdir SOURCES BUILD BUILDROOT RPMS SPECS SRPMS
 mv "../condor-${condor_version}.tgz" "SOURCES/condor-${condor_version}.tar.gz"
 
 # copy rpm files from condor sources into the SOURCES directory
-tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm"
+tar xvfpz "SOURCES/condor-${condor_version}.tar.gz" "condor-${condor_version}/build/packaging/rpm" "condor-${condor_version}/CMakeLists.txt"
 cp -p condor-"${condor_version}"/build/packaging/rpm/* SOURCES
+
+# Extract prerelease value from top level CMake file
+PRE_RELEASE=$(grep '^set(PRE_RELEASE' condor-${condor_version}/CMakeLists.txt)
+PRE_RELEASE=${PRE_RELEASE#* } # Trim up to and including space
+PRE_RELEASE=${PRE_RELEASE%\)*} # Trim off the closing parenthesis
 rm -rf "condor-${condor_version}"
 
 # inject the version and build id into the spec file
@@ -77,10 +81,14 @@ update_spec_define () {
 update_spec_define git_build 0
 update_spec_define tarball_version "$condor_version"
 update_spec_define condor_build_id "$condor_build_id"
-# Set HTCondor base release for pre-release build
-update_spec_define condor_base_release "0.$condor_build_id"
-# Set HTCondor base release to 1 for final release.
-#update_spec_define condor_base_release "1"
+
+if [ "$PRE_RELEASE" = 'OFF' ]; then
+    # Set HTCondor base release to 1 for final release.
+    update_spec_define condor_base_release "1"
+else
+    # Set HTCondor base release for pre-release build
+    update_spec_define condor_base_release "0.$condor_build_id"
+fi
 
 VERBOSE=1
 export VERBOSE
@@ -92,4 +100,5 @@ rpmbuild -v "$buildmethod" "$@" --define="_topdir $tmpd" SOURCES/condor.spec
 
 readarray -t rpm_files < <(find ./*RPMS -name \*.rpm)
 mv "${rpm_files[@]}" "$dest_dir"
+rm -rf "$tmpd"
 ls -lh "$dest_dir"

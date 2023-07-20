@@ -239,6 +239,7 @@ const char * init_xform_default_macros();
 bool ValidateXForm (
 	MacroStreamXFormSource & xfm,  // the set of transform rules
 	XFormHash & mset,              // the hashtable used as temporary storage
+	int * step_count,              // if non-null returns the number of transform commands
 	std::string & errmsg);          // holds parse errors on failure
 
 // load a MacroStreamXFormSource from a jobrouter classad style route.

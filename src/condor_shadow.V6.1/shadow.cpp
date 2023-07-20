@@ -25,6 +25,7 @@
 #include "condor_attributes.h"   // for ATTR_ ClassAd stuff
 #include "condor_email.h"        // for email.
 #include "metric_units.h"
+#include "ShadowHookMgr.h"
 #include "store_cred.h"
 
 extern "C" char* d_format_time(double);
@@ -138,14 +139,69 @@ UniShadow::init( ClassAd* job_ad, const char* schedd_addr, const char *xfer_queu
 						  &cred_get_cred_handler,
 						  "cred_get_cred_handler", DAEMON,
 						  true /*force authentication*/ );
+
+		// Register our job hooks
+	m_hook_mgr = std::unique_ptr<ShadowHookMgr>(new ShadowHookMgr());
+	if (!m_hook_mgr->initialize(job_ad)) {
+		m_hook_mgr.reset();
+	}
 }
 
+
 void
-UniShadow::spawn( void )
+UniShadow::spawnFinish()
 {
+	hookTimerCancel();
 	if( ! remRes->activateClaim() ) {
 			// we're screwed, give up:
 		shutDown( JOB_NOT_STARTED );
+	}
+}
+
+
+void
+UniShadow::spawn()
+{
+	if (!m_hook_mgr) {
+		dprintf(D_ALWAYS, "No hook manager available; will activate claim immediately.\n");
+		spawnFinish();
+	} else {
+		auto rval = m_hook_mgr->tryHookPrepareJob();
+		if (rval == -1) {
+			dprintf(D_ALWAYS, "Prepare job hook has failed.  Will shutdown job.\n");
+			BaseShadow::log_except("Submit-side job hook execution failed");
+			shutDown(JOB_NOT_STARTED);
+		} else if (rval == 0) {
+			dprintf(D_FULLDEBUG, "No prepare job hook to run - activating job immediately.\n");
+			spawnFinish();
+		} else if (rval == 1) {
+			dprintf(D_FULLDEBUG, "Hook successfully spawned.\n");
+			m_exit_hook_timer_tid = daemonCore->Register_Timer(m_hook_mgr->getHookTimeout(HOOK_SHADOW_PREPARE_JOB, 120),
+				(TimerHandlercpp)&UniShadow::hookTimeout,
+				"hookTimeout",
+				this);
+		} else {
+			EXCEPT("Hook manager returned an invalid code\n");
+		}
+	}
+}
+
+
+void
+UniShadow::hookTimeout()
+{
+	dprintf(D_ALWAYS|D_FAILURE, "Timed out waiting for a hook to exit\n");
+	BaseShadow::log_except("Submit-side job hook execution timed out");
+	shutDown(JOB_NOT_STARTED);
+}
+
+
+void
+UniShadow::hookTimerCancel()
+{
+	if (m_exit_hook_timer_tid != -1) {
+		daemonCore->Cancel_Timer(m_exit_hook_timer_tid);
+		m_exit_hook_timer_tid = -1;
 	}
 }
 
@@ -174,6 +230,9 @@ UniShadow::logExecuteEvent( void )
 	remRes->getStartdAddress( sinful );
 	event.setExecuteHost( sinful );
 	free( sinful );
+
+	remRes->populateExecuteEvent(event.slotName, event.setProp());
+
 	if( !uLog.writeEvent(&event, getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_EXECUTE event: "
 				 "can't write to UserLog!\n" );
@@ -412,11 +471,16 @@ UniShadow::resourceDisconnected( RemoteResource* rr )
 {
 	ASSERT( rr == remRes );
 
+
+	// All of our children should be gone already, but let's be sure.
+	daemonCore->kill_immediate_children();
+
+
 	const char* txt = "Socket between submit and execute hosts "
 		"closed unexpectedly";
 	logDisconnectedEvent( txt );
 
-	int now = time(NULL);
+	time_t now = time(NULL);
 	jobAd->Assign(ATTR_JOB_DISCONNECTED_DATE, now);
 
 	if (m_lazy_queue_update) {
@@ -503,14 +567,14 @@ void
 UniShadow::logDisconnectedEvent( const char* reason )
 {
 	JobDisconnectedEvent event;
-	event.setDisconnectReason( reason );
+	event.disconnect_reason = reason;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdAddr( dc_startd->addr() );
-	event.setStartdName( dc_startd->name() );
+	event.startd_addr = dc_startd->addr();
+	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_DISCONNECTED event\n" );
@@ -527,12 +591,12 @@ UniShadow::logReconnectedEvent( void )
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdAddr( dc_startd->addr() );
-	event.setStartdName( dc_startd->name() );
+	event.startd_addr = dc_startd->addr();
+	event.startd_name = dc_startd->name();
 
 	char* starter = NULL;
 	remRes->getStarterAddress( starter );
-	event.setStarterAddr( starter );
+	event.starter_addr = starter;
 	free( starter );
 	starter = NULL;
 
@@ -547,13 +611,13 @@ UniShadow::logReconnectFailedEvent( const char* reason )
 {
 	JobReconnectFailedEvent event;
 
-	event.setReason( reason );
+	event.reason = reason;
 
 	DCStartd* dc_startd = remRes->getDCStartd();
 	if( ! dc_startd ) {
 		EXCEPT( "impossible: remRes::getDCStartd() returned NULL" );
 	}
-	event.setStartdName( dc_startd->name() );
+	event.startd_name = dc_startd->name();
 
 	if( !uLog.writeEventNoFsync(&event,getJobAd()) ) {
 		dprintf( D_ALWAYS, "Unable to log ULOG_JOB_RECONNECT_FAILED event\n" );
@@ -660,7 +724,7 @@ UniShadow::recordFileTransferStateChanges( ClassAd * jobAd, ClassAd * ftAd ) {
 	} else if( (!tq) && ti && (!toSet) ) {
 		te.setType( FileTransferEvent::IN_STARTED );
 
-		time_t now = (int)time(NULL);
+		time_t now = time(nullptr);
 		jobAd->Assign( "TransferInStarted", now );
 
 		time_t then;

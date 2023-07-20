@@ -16,6 +16,7 @@
 #define NOSERVICE
 #define NOMCX
 #define NOIME
+struct IUnknown;
 #include <Windows.h>
 #endif /* defined(WIN32) */
 #include <algorithm>
@@ -67,6 +68,7 @@ nvmlReturn_t getElapsedTimeForDevice( nvmlDevice_t d, unsigned long long * lastS
 			return r;
 	}
 	(* runningSampleCount) += sampleCount;
+	samples.resize(sampleCount);
 
 	// Samples are usually but not always in order.
 	std::sort(samples.begin(), samples.end(), compareSamples);
@@ -221,7 +223,7 @@ int main() {
 			minMaxSampleCount = maxSampleCounts[i];
 		}
 	}
-	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1000000ull)/6;
+	unsigned long long sampleIntervalMicrosec = (minMaxSampleCount * 1'000'000ull)/6;
 
 
 	time_t lastReport = time( NULL );
@@ -271,7 +273,7 @@ int main() {
 					fprintf(stdout, "SlotMergeConstraint = "
 						"StringListMember(\"CUDA%u\", AssignedGPUs)\n", i);
 				}
-				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1000000.0 );
+				fprintf( stdout, "UptimeGPUsSeconds = %.6f\n", elapsedTimes[i] / 1'000'000.0 );
 				fprintf( stdout, "UptimeGPUsMemoryPeakUsage = %llu\n", (memoryUsage[i] + (1024 * 1024) -1) / (1024 * 1024) );
 				fprintf( stdout, "- GPUsSlot%u\n", i );
 				fflush( stdout );

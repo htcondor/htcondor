@@ -35,12 +35,14 @@ std::map <std::string, ArcResource *>
     ArcResource::ResourcesByName;
 
 std::string& ArcResource::HashName( const char *resource_name,
+                                    int gahp_id,
                                     const char *proxy_subject,
                                     const std::string& token_file )
 {
 	static std::string hash_name;
 
-	formatstr( hash_name, "arc %s#%s#%s", resource_name,
+	formatstr( hash_name, "arc %s#%d#%s#%s", resource_name,
+	           gahp_id,
 	           proxy_subject ? proxy_subject : "NULL",
 	           token_file.c_str() );
 
@@ -48,14 +50,15 @@ std::string& ArcResource::HashName( const char *resource_name,
 }
 
 ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
+                                                int gahp_id,
                                                 const Proxy *proxy,
                                                 const std::string& token_file )
 {
 	ArcResource *resource = NULL;
-	const std::string &key = HashName( resource_name, proxy ? proxy->subject->fqan : "", token_file );
+	const std::string &key = HashName( resource_name, gahp_id, proxy ? proxy->subject->fqan : "", token_file );
 	auto itr = ResourcesByName.find( key );
 	if ( itr == ResourcesByName.end() ) {
-		resource = new ArcResource( resource_name, proxy, token_file );
+		resource = new ArcResource( resource_name, gahp_id, proxy, token_file );
 		ASSERT(resource);
 		resource->Reconfig();
 		ResourcesByName[key] = resource;
@@ -68,6 +71,7 @@ ArcResource *ArcResource::FindOrCreateResource( const char * resource_name,
 }
 
 ArcResource::ArcResource( const char *resource_name,
+                          int gahp_id,
                           const Proxy *proxy,
                           const std::string& token_file )
 	: BaseResource( resource_name )
@@ -75,11 +79,13 @@ ArcResource::ArcResource( const char *resource_name,
 	proxySubject = proxy ? strdup( proxy->subject->subject_name ) : nullptr;
 	proxyFQAN = proxy ? strdup( proxy->subject->fqan ) : nullptr;
 	m_tokenFile = token_file;
+	m_gahpId = gahp_id;
 
 	gahp = NULL;
 
 	std::string buff;
-	formatstr( buff, "ARC/%s#%s",
+	formatstr( buff, "ARC/%d/%s#%s",
+	           m_gahpId,
 	           (m_tokenFile.empty() && proxyFQAN) ? proxyFQAN : "",
 	           m_tokenFile.c_str() );
 
@@ -103,7 +109,7 @@ ArcResource::ArcResource( const char *resource_name,
 
 ArcResource::~ArcResource()
 {
-	ResourcesByName.erase( HashName( resourceName, proxyFQAN, m_tokenFile ) );
+	ResourcesByName.erase( HashName( resourceName, m_gahpId, proxyFQAN, m_tokenFile ) );
 	free( proxyFQAN );
 	if ( proxySubject ) {
 		free( proxySubject );
@@ -131,7 +137,7 @@ const char *ArcResource::ResourceType()
 
 const char *ArcResource::GetHashName()
 {
-	return HashName( resourceName, proxyFQAN, m_tokenFile ).c_str();
+	return HashName( resourceName, m_gahpId, proxyFQAN, m_tokenFile ).c_str();
 }
 
 void ArcResource::PublishResourceAd( ClassAd *resource_ad )
@@ -187,7 +193,7 @@ void ArcResource::DoPing( unsigned& ping_delay, bool& ping_complete,
 
 void ArcResource::DoJobStatus()
 {
-	if ( ( registeredJobs.IsEmpty() || resourceDown ) &&
+	if ( ( registeredJobs.empty() || resourceDown ) &&
 		 m_jobStatusActive == false ) {
 			// No jobs or we can't talk to the resource, so no point
 			// in polling
@@ -204,8 +210,8 @@ void ArcResource::DoJobStatus()
 
 	daemonCore->Reset_Timer( m_jobStatusTid, TIMER_NEVER );
 
-	StringList job_ids;
-	StringList job_states;
+	std::vector<std::string> job_ids;
+	std::vector<std::string> job_states;
 
 	if ( m_jobStatusActive == false ) {
 
@@ -238,19 +244,15 @@ void ArcResource::DoJobStatus()
 		}
 
 		if ( rc == HTTP_201_CREATED ) {
-			const char *next_job_id = NULL;
-			const char *next_job_state = NULL;
 			std::string key;
 
-			job_ids.rewind();
-			job_states.rewind();
-			while ( (next_job_id = job_ids.next()) && (next_job_state = job_states.next()) ) {
-
+			ASSERT(job_ids.size() == job_states.size());
+			for (size_t i = 0; i < job_ids.size(); i++) {
 				ArcJob *job = NULL;
-				formatstr( key, "arc %s %s", resourceName, next_job_id );
+				formatstr(key, "arc %s %s", resourceName, job_ids[i].c_str());
 				auto itr = BaseJob::JobsByRemoteId.find(key);
 				if ( itr != BaseJob::JobsByRemoteId.end() && (job = dynamic_cast<ArcJob*>(itr->second)) ) {
-					job->NotifyNewRemoteStatus( next_job_state );
+					job->NotifyNewRemoteStatus(job_states[i].c_str());
 				}
 			}
 

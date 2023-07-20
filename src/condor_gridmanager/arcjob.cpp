@@ -27,6 +27,7 @@
 #include "nullfile.h"
 #include "filename_tools.h"
 #include "condor_url.h"
+#include <algorithm>
 
 #include "globus_utils.h"
 #include "gridmanager.h"
@@ -180,6 +181,8 @@ int ArcJob::maxConnectFailures = 3;	// default value
 // If ARC_JOB_INFO retruns stale data, how long to wait before retrying
 int ArcJob::jobInfoInterval = 60;
 
+int ArcJob::m_arcGahpId = 0;
+
 ArcJob::ArcJob( ClassAd *classad )
 	: BaseJob( classad )
 {
@@ -226,10 +229,26 @@ ArcJob::ArcJob( ClassAd *classad )
 		error_string = "ARC_GAHP not defined";
 		goto error_exit;
 	}
-	snprintf( buff, sizeof(buff), "ARC/%s#%s",
+	snprintf( buff, sizeof(buff), "ARC/%d/%s#%s",
+	          m_arcGahpId,
 	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
 	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
+#if defined(CURL_USES_NSS)
+	// NSS as used by libcurl has a memory leak. To deal with this, we
+	// start a new arc_gahp for new jobs when the previous gahp has
+	// handled too many requests. Once the previous jobs leave the system,
+	// the old arc_gahp will quietly exit.
+	if (gahp->getNextReqId() > param_integer("ARC_GAHP_COMMAND_LIMIT", 1000)) {
+		delete gahp;
+		m_arcGahpId++;
+		snprintf(buff, sizeof(buff), "ARC/%d/%s#%s",
+		         m_arcGahpId,
+		         (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
+		          m_tokenFile.c_str());
+		gahp = new GahpClient(buff, gahp_path);
+	}
+#endif
 	gahp->setNotificationTimerId( evaluateStateTid );
 	gahp->setMode( GahpClient::normal );
 	gahp->setTimeout( gahpCallTimeout );
@@ -267,7 +286,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	}
 
 	myResource = ArcResource::FindOrCreateResource( resourceManagerString,
-	                 m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
+	                 m_arcGahpId, m_tokenFile.empty() ? jobProxy : nullptr, m_tokenFile );
 	myResource->RegisterJob( this );
 
 	buff[0] = '\0';
@@ -501,6 +520,7 @@ void ArcJob::doEvaluateState()
 				rc = gahp->arc_job_new(
 									resourceManagerString,
 									RSL,
+									!delegationId.empty(),
 									job_id,
 									job_status );
 				if ( rc == GAHPCLIENT_COMMAND_NOT_SUBMITTED ||
@@ -548,16 +568,9 @@ void ArcJob::doEvaluateState()
 			} break;
 		case GM_STAGE_IN: {
 			if ( stageList == NULL ) {
-				const char *file;
-				stageList = buildStageInList();
-				stageList->rewind();
-				while ( (file = stageList->next()) ) {
-					if ( IsUrl( file ) ) {
-						stageList->deleteCurrent();
-					}
-				}
+				stageList = buildStageInList(false);
 			}
-			if ( stageList->isEmpty() ) {
+			if ( stageList->empty() ) {
 				rc = HTTP_200_OK;
 			} else {
 				rc = gahp->arc_job_stage_in( resourceManagerString, remoteJobId,
@@ -654,6 +667,7 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) exit info gathering failed: %s\n",
 						 procID.cluster, procID.proc, errorString.c_str() );
 				gmState = GM_CANCEL;
+				break;
 			}
 
 			if ( reply.empty() ) {
@@ -674,19 +688,65 @@ void ArcJob::doEvaluateState()
 				break;
 			}
 
-			if ( info_ad.Lookup("EndTime") == nullptr && info_ad.Lookup("ComputingManagerEndTime") == nullptr ) {
+			// Element State is a list of strings, one of which is of
+			// the form "arcrest:XXX", where XXX is the job's status
+			// as reported in the rest of the REST interface.
+			// If that status isn't one of the terminal states, then
+			// we received stale data, and we should re-query after a
+			// short delay.
+			classad::ExprTree *expr = info_ad.Lookup("State");
+			if (expr == nullptr || expr->GetKind() != classad::ExprTree::EXPR_LIST_NODE) {
+				errorString = "Job exit information is missing State element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing State element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			std::string info_status;
+			std::vector<classad::ExprTree*> state_list;
+			((classad::ExprList*)expr)->GetComponents(state_list);
+			for (auto item : state_list) {
+				std::string str;
+				classad::Value value;
+				classad::Value::NumberFactor f;
+				if (item->GetKind() != classad::ExprTree::LITERAL_NODE) {
+					continue;
+				}
+				((classad::Literal*)item)->getValue(f).IsStringValue(str);
+				if (str.compare(0, 8, "arcrest:") == 0) {
+					info_status = str.substr(8);
+					break;
+				}
+			}
+			if (info_status.empty()) {
+				errorString = "Job exit information is missing arcrest element";
+				dprintf(D_ALWAYS, "(%d.%d) Job exit information is missing arcrest element\n",
+				        procID.cluster, procID.proc);
+				gmState = GM_CANCEL_CLEAN;
+				break;
+			}
+			if (info_status != REMOTE_STATE_FINISHED &&
+			    info_status != REMOTE_STATE_FAILED &&
+			    info_status != REMOTE_STATE_KILLED &&
+			    info_status != REMOTE_STATE_WIPED)
+			{
 				dprintf(D_FULLDEBUG, "(%d.%d) Job info is stale, will retry in %ds.\n", procID.cluster, procID.proc, jobInfoInterval);
 				daemonCore->Reset_Timer( evaluateStateTid, (lastJobInfoTime + jobInfoInterval) - now );
 				break;
 			}
+			if (info_status != remoteJobState) {
+				remoteJobState = info_status;
+				SetRemoteJobStatus(info_status.c_str());
+			}
 
-			if ( remoteJobState == REMOTE_STATE_FINISHED ) {
-				int exit_code = 0;
+			// With some LRMS, the job is FAILED if it has a non-zero exit
+			// code. So use the presence of an ExitCode attribute to
+			// determine whether the job ran to completion.
+			if (info_ad.LookupString("ExitCode", val)) {
+				int exit_code = atoi(val.c_str());
 				int wallclock = 0;
 				int cpu = 0;
-				if ( info_ad.LookupString("ExitCode", val ) ) {
-					exit_code = atoi(val.c_str());
-				}
+
 				if ( info_ad.LookupString("UsedTotalWallTime", val ) ) {
 					wallclock = atoi(val.c_str());
 				}
@@ -708,7 +768,7 @@ void ArcJob::doEvaluateState()
 				} else {
 					errorString = "ARC job failed for unknown reason";
 				}
-				gmState = GM_STAGE_OUT;
+				gmState = GM_CANCEL_CLEAN;
 			}
 			} break;
 		case GM_STAGE_OUT: {
@@ -716,19 +776,9 @@ void ArcJob::doEvaluateState()
 				stageList = buildStageOutList();
 			}
 			if ( stageLocalList == NULL ) {
-				const char *file;
 				stageLocalList = buildStageOutLocalList( stageList );
-				stageList->rewind();
-				stageLocalList->rewind();
-				while ( (file = stageLocalList->next()) ) {
-					ASSERT( stageList->next() );
-					if ( IsUrl( file ) ) {
-						stageList->deleteCurrent();
-						stageLocalList->deleteCurrent();
-					}
-				}
 			}
-			if ( stageList->isEmpty() ) {
+			if ( stageList->empty() ) {
 				rc = HTTP_200_OK;
 			} else {
 				rc = gahp->arc_job_stage_out( resourceManagerString,
@@ -747,8 +797,6 @@ void ArcJob::doEvaluateState()
 				dprintf( D_ALWAYS, "(%d.%d) File stage-out failed: %s\n",
 				         procID.cluster, procID.proc, gahp->getErrorString() );
 				gmState = GM_HOLD;
-			} else if ( remoteJobState != REMOTE_STATE_FINISHED ) {
-				gmState = GM_CANCEL_CLEAN;
 			} else {
 				gmState = GM_DONE_SAVE;
 			}
@@ -839,39 +887,13 @@ void ArcJob::doEvaluateState()
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
-			// If we are doing a rematch, we are simply waiting around
-			// for the schedd to be updated and subsequently this globus job
-			// object to be destroyed.  So there is nothing to do.
-			if ( wantRematch ) {
-				break;
-			}
-
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( remoteJobId != NULL
-				     && condorState != REMOVED
-					 && wantResubmit == false
-					 && doResubmit == 0 ) {
+			if (remoteJobId != NULL && condorState != REMOVED) {
 				gmState = GM_HOLD;
 				break;
-			}
-			// Only allow a rematch *if* we are also going to perform a resubmit
-			if ( wantResubmit || doResubmit ) {
-				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-			}
-			if ( wantResubmit ) {
-				wantResubmit = false;
-				dprintf(D_ALWAYS,
-						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-			}
-			if ( doResubmit ) {
-				doResubmit = 0;
-				dprintf(D_ALWAYS,
-					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 			}
 			errorString = "";
 			if ( remoteJobId != NULL ) {
@@ -886,25 +908,6 @@ void ArcJob::doEvaluateState()
 				}
 			}
 			myResource->CancelSubmit( this );
-
-			if ( wantRematch ) {
-				dprintf(D_ALWAYS,
-						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-				// Set ad attributes so the schedd finds a new match.
-				bool dummy;
-				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					jobAd->Assign( ATTR_JOB_MATCHED, false );
-					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-				}
-
-				// If we are rematching, we need to forget about this job
-				// cuz we wanna pull a fresh new job ad, with a fresh new match,
-				// from the all-singing schedd.
-				gmState = GM_DELETE;
-				break;
-			}
 
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately
@@ -1019,14 +1022,13 @@ bool AppendEnvVar(void* pv, const std::string & var, const std::string & val)
 bool ArcJob::buildJobADL()
 {
 	bool transfer_exec = true;
-	StringList *stage_list = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string attr_value;
 	std::string iwd;
 	std::string executable;
 	std::string resources;
 	std::string slot_req;
 	long int_value;
-	char *file;
 
 	RSL.clear();
 
@@ -1043,7 +1045,7 @@ bool ArcJob::buildJobADL()
 	// <Resources>
 	//   Describes the environment the job needs to run in (physical
 	//   resources, batch system parameters).
-	//   Includes special RunTimeEnvironment labels that trigger arbitrary
+	//   Includes special RuntimeEnvironment labels that trigger arbitrary
 	//   additional configuration of the execution envrionment.
 	// <DataStaging>
 	//   Describes input/output files be to staged for the job.
@@ -1070,16 +1072,16 @@ bool ArcJob::buildJobADL()
 	RSL += "</Path>";
 
 	ArgList args;
-	MyString arg_errors;
-	if(!args.AppendArgsFromClassAd(jobAd,&arg_errors)) {
+	std::string arg_errors;
+	if(!args.AppendArgsFromClassAd(jobAd,arg_errors)) {
 		dprintf(D_ALWAYS,"(%d.%d) Failed to read job arguments: %s\n",
-				procID.cluster, procID.proc, arg_errors.Value());
+				procID.cluster, procID.proc, arg_errors.c_str());
 		formatstr(errorString,"Failed to read job arguments: %s\n",
-				arg_errors.Value());
+				arg_errors.c_str());
 		RSL.clear();
 		return false;
 	}
-	for(int i=0;i<args.Count();i++) {
+	for(size_t i=0;i<args.Count();i++) {
 		RSL += "<Argument>";
 		RSL += escapeXML(args.GetArg(i));
 		RSL += "</Argument>";
@@ -1176,28 +1178,22 @@ bool ArcJob::buildJobADL()
 	}
 
 	if ( jobAd->LookupString(ATTR_ARC_RTE, attr_value) ) {
-		const char *next_rte;
-		StringList rte_list(attr_value, ",");
-		rte_list.rewind();
-		while ( (next_rte = rte_list.next()) ) {
-			const char *next_opt;
-			StringList rte_opts(next_rte, " ");
-			rte_opts.rewind();
-			next_opt = rte_opts.next();
-			if ( next_opt == nullptr ) {
-				// This shouldn't happen, but let's be safe
-				continue;
+		for (const auto& next_rte : StringTokenIterator(attr_value, ",")) {
+			bool first_time = true;
+			resources += "<RuntimeEnvironment>";
+			for (const auto& next_opt : StringTokenIterator(next_rte, " ")) {
+				if (first_time) {
+					first_time = false;
+					resources += "<Name>";
+					resources += next_opt;
+					resources += "</Name>";
+				} else {
+					resources += "<Option>";
+					resources += next_opt;
+					resources += "</Option>";
+				}
 			}
-			resources += "<RunTimeEnvironment>";
-			resources += "<Name>";
-			resources += next_opt;
-			resources += "</Name>";
-			while ( (next_opt = rte_opts.next()) ) {
-				resources += "<Option>";
-				resources += next_opt;
-				resources += "</Option>";
-			}
-			resources += "</RunTimeEnvironment>";
+			resources += "</RuntimeEnvironment>";
 		}
 	}
 
@@ -1217,14 +1213,13 @@ bool ArcJob::buildJobADL()
 		RSL += "</ng-adl:DelegationID>";
 	}
 
-	stage_list = buildStageInList();
+	stage_list = buildStageInList(true);
 
-	stage_list->rewind();
-	while ( (file = stage_list->next()) != NULL ) {
+	for (const auto& file : *stage_list) {
 		RSL += "<InputFile><Name>";
-		RSL += escapeXML(condor_basename(file));
+		RSL += escapeXML(condor_basename(file.c_str()));
 		RSL += "</Name>";
-		if ( transfer_exec && ! strcmp(executable.c_str(), file) ) {
+		if ( transfer_exec && ! strcmp(executable.c_str(), file.c_str()) ) {
 			RSL += "<IsExecutable>true</IsExecutable>";
 		}
 		RSL += "</InputFile>";
@@ -1235,10 +1230,9 @@ bool ArcJob::buildJobADL()
 
 	stage_list = buildStageOutList();
 
-	stage_list->rewind();
-	while ( (file = stage_list->next()) != NULL ) {
+	for (const auto& file : *stage_list) {
 		RSL += "<OutputFile><Name>";
-		RSL += escapeXML(condor_basename(file));
+		RSL += escapeXML(condor_basename(file.c_str()));
 		RSL += "</Name></OutputFile>";
 	}
 
@@ -1252,11 +1246,9 @@ dprintf(D_FULLDEBUG,"*** ADL='%s'\n",RSL.c_str());
 	return true;
 }
 
-StringList *ArcJob::buildStageInList()
+std::vector<std::string> *ArcJob::buildStageInList(bool with_urls)
 {
-	StringList *tmp_list = NULL;
-	StringList *stage_list = NULL;
-	char *filename = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string buf;
 	std::string iwd;
 	bool transfer = true;
@@ -1268,13 +1260,14 @@ StringList *ArcJob::buildStageInList()
 	}
 
 	jobAd->LookupString( ATTR_TRANSFER_INPUT_FILES, buf );
-	tmp_list = new StringList( buf.c_str(), "," );
+	stage_list = new std::vector<std::string>;
+	*stage_list = split(buf);
 
 	jobAd->LookupBool( ATTR_TRANSFER_EXECUTABLE, transfer );
 	if ( transfer ) {
 		GetJobExecutable( jobAd, buf );
-		if ( !tmp_list->file_contains( buf.c_str() ) ) {
-			tmp_list->append( buf.c_str() );
+		if ( !file_contains(*stage_list, buf.c_str()) ) {
+			stage_list->emplace_back(buf);
 		}
 	}
 
@@ -1283,44 +1276,44 @@ StringList *ArcJob::buildStageInList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_INPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !tmp_list->file_contains( buf.c_str() ) ) {
-				tmp_list->append( buf.c_str() );
+			if ( !file_contains(*stage_list, buf.c_str()) ) {
+				stage_list->emplace_back(buf);
 			}
 		}
 	}
 
-	stage_list = new StringList;
-
-	tmp_list->rewind();
-	while ( ( filename = tmp_list->next() ) ) {
-		if ( filename[0] == '/' || IsUrl( filename ) ) {
-			formatstr( buf, "%s", filename );
-		} else {
-			formatstr( buf, "%s%s", iwd.c_str(), filename );
-		}
-		stage_list->append( buf.c_str() );
+	if (!with_urls) {
+		auto no_urls = [](std::string& file) { return IsUrl(file.c_str()) != nullptr; };
+		stage_list->erase(std::remove_if(stage_list->begin(),
+		                                 stage_list->end(), no_urls),
+		                  stage_list->end());
 	}
 
-	delete tmp_list;
+	for (auto& filename : *stage_list) {
+		if ( filename[0] != '/' && !IsUrl(filename.c_str()) ) {
+			filename.insert(0, iwd);
+		}
+	}
 
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutList()
+std::vector<std::string> *ArcJob::buildStageOutList()
 {
-	StringList *stage_list = NULL;
+	std::vector<std::string> *stage_list = NULL;
 	std::string buf;
 	bool transfer = true;
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_FILES, buf );
-	stage_list = new StringList( buf.c_str(), "," );
+	stage_list = new std::vector<std::string>;
+	*stage_list = split(buf);
 
 	jobAd->LookupBool( ATTR_TRANSFER_OUTPUT, transfer );
 	if ( transfer && jobAd->LookupString( ATTR_JOB_OUTPUT, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDOUT_NAME ) ) {
-				stage_list->append( REMOTE_STDOUT_NAME );
+			if ( !file_contains(*stage_list, REMOTE_STDOUT_NAME) ) {
+				stage_list->emplace_back( REMOTE_STDOUT_NAME );
 			}
 		}
 	}
@@ -1330,8 +1323,8 @@ StringList *ArcJob::buildStageOutList()
 	if ( transfer && jobAd->LookupString( ATTR_JOB_ERROR, buf ) == 1) {
 		// only add to list if not NULL_FILE (i.e. /dev/null)
 		if ( ! nullFile(buf.c_str()) ) {
-			if ( !stage_list->file_contains( REMOTE_STDERR_NAME ) ) {
-				stage_list->append( REMOTE_STDERR_NAME );
+			if ( !file_contains(*stage_list, REMOTE_STDERR_NAME) ) {
+				stage_list->emplace_back( REMOTE_STDERR_NAME );
 			}
 		}
 	}
@@ -1339,12 +1332,11 @@ StringList *ArcJob::buildStageOutList()
 	return stage_list;
 }
 
-StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
+std::vector<std::string> *ArcJob::buildStageOutLocalList( std::vector<std::string> *stage_list )
 {
-	StringList *stage_local_list;
+	std::vector<std::string> *stage_local_list;
 	char *remaps = NULL;
-	MyString local_name;
-	char *remote_name;
+	std::string local_name;
 	std::string stdout_name = "";
 	std::string stderr_name = "";
 	std::string buff;
@@ -1359,36 +1351,46 @@ StringList *ArcJob::buildStageOutLocalList( StringList *stage_list )
 	jobAd->LookupString( ATTR_JOB_OUTPUT, stdout_name );
 	jobAd->LookupString( ATTR_JOB_ERROR, stderr_name );
 
-	stage_local_list = new StringList;
+	stage_local_list = new std::vector<std::string>;
 
 	jobAd->LookupString( ATTR_TRANSFER_OUTPUT_REMAPS, &remaps );
 
-	stage_list->rewind();
-	while ( (remote_name = stage_list->next()) ) {
+	for (const auto& remote_name : *stage_list) {
 			// stdout and stderr don't get remapped, and their paths
 			// are evaluated locally
-		if ( strcmp( REMOTE_STDOUT_NAME, remote_name ) == 0 ) {
-			local_name = stdout_name.c_str();
-		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name ) == 0 ) {
-			local_name = stderr_name.c_str();
-		} else if( remaps && filename_remap_find( remaps, remote_name,
+		if ( strcmp( REMOTE_STDOUT_NAME, remote_name.c_str() ) == 0 ) {
+			local_name = stdout_name;
+		} else if ( strcmp( REMOTE_STDERR_NAME, remote_name.c_str() ) == 0 ) {
+			local_name = stderr_name;
+		} else if( remaps && filename_remap_find( remaps, remote_name.c_str(),
 												  local_name ) ) {
 				// file is remapped
 		} else {
-			local_name = condor_basename( remote_name );
+			local_name = condor_basename( remote_name.c_str() );
 		}
 
-		if ( (local_name.Length() && local_name[0] == '/')
-			 || IsUrl( local_name.Value() ) ) {
+		if ( (local_name.length() && local_name[0] == '/')
+			 || IsUrl( local_name.c_str() ) ) {
 			buff = local_name;
 		} else {
-			formatstr( buff, "%s%s", iwd.c_str(), local_name.Value() );
+			formatstr( buff, "%s%s", iwd.c_str(), local_name.c_str() );
 		}
-		stage_local_list->append( buff.c_str() );
+		stage_local_list->emplace_back(buff);
 	}
 
 	if ( remaps ) {
 		free( remaps );
+	}
+
+	// Remove items from both lists where the destination file is a URL
+	size_t i = 0;
+	while (i < stage_list->size()) {
+		if (IsUrl((*stage_local_list)[i].c_str())) {
+			stage_list->erase(stage_list->begin()+i);
+			stage_local_list->erase(stage_local_list->begin()+i);
+		} else {
+			i++;
+		}
 	}
 
 	return stage_local_list;

@@ -25,7 +25,9 @@
 #include <limits.h>
 #include <math.h>
 
-using namespace std;
+using std::string;
+using std::pair;
+
 
 namespace classad {
 
@@ -398,7 +400,7 @@ void absTimeToString(const abstime_t &atime, string &buffer)
     getGMTime(&epoch_time, &tms);
     strftime(timebuf, sizeof(timebuf), "%Y-%m-%dT%H:%M:%S", &tms);
     buffer += timebuf;
-    sprintf(timebuf, "%c%02d:%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
+    snprintf(timebuf, sizeof(timebuf), "%c%02d:%02d", sign, tzsecs / 3600, (tzsecs / 60) % 60);
     buffer += timebuf;
     return;
 }
@@ -426,31 +428,31 @@ void relTimeToString(double rsecs, string &buffer)
     
     if (days) {
         if (fractional_seconds == 0) {
-            sprintf(timebuf, "%d+%02d:%02d:%02d", days, hrs, mins, (int) secs);
+            snprintf(timebuf, sizeof(timebuf), "%d+%02d:%02d:%02d", days, hrs, mins, (int) secs);
         } else {
-            sprintf(timebuf, "%d+%02d:%02d:%02g", days, hrs, mins, secs);
+            snprintf(timebuf, sizeof(timebuf), "%d+%02d:%02d:%02g", days, hrs, mins, secs);
         }
         buffer += timebuf;
     } else if (hrs) {
         if (fractional_seconds == 0) {
-            sprintf(timebuf, "%02d:%02d:%02d", hrs, mins, (int) secs);
+            snprintf(timebuf, sizeof(timebuf), "%02d:%02d:%02d", hrs, mins, (int) secs);
         } else {
-            sprintf(timebuf, "%02d:%02d:%02g", hrs, mins, secs);
+            snprintf(timebuf, sizeof(timebuf), "%02d:%02d:%02g", hrs, mins, secs);
         }
         buffer += timebuf;
     } else if (mins) {
         if (fractional_seconds == 0) {
-            sprintf(timebuf, "%02d:%02d", mins, (int) secs);
+            snprintf(timebuf, sizeof(timebuf), "%02d:%02d", mins, (int) secs);
         } else {
-            sprintf(timebuf, "%02d:%02g", mins, secs);
+            snprintf(timebuf, sizeof(timebuf), "%02d:%02g", mins, secs);
         }
         buffer += timebuf;
         return;
     } else {
         if (fractional_seconds == 0) {
-            sprintf(timebuf, "%02d", (int) secs);
+            snprintf(timebuf, sizeof(timebuf), "%02d", (int) secs);
         } else {
-            sprintf(timebuf, "%02g", secs);
+            snprintf(timebuf, sizeof(timebuf), "%02g", secs);
         }
         buffer += timebuf;
     }

@@ -52,10 +52,17 @@ introduce changes that administrators and users of sites running from an
 older HTCondor version should be aware of when planning an upgrade. Here
 is a list of items that administrators should be aware of.
 
-- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication
-  has been changed to ``$(UID_DOMAIN)``.  If you have already created IDTOKENs for 
-  use in your pool, you should configure ``TRUST_DOMAIN`` to the issuer value of a valid token.
+- The default for ``TRUST_DOMAIN``, which is used by with IDTOKEN authentication,
+  has been changed to ``$(UID_DOMAIN)``.
   :jira:`1381`
+
+  If you have already created IDTOKENs for use in your pool:
+
+  #. Log in as root on a machine with an IDTOKEN.
+  #. Run ``condor_token_list`` and retrieve the value of the ``iss`` field.
+  #. Set the HTCondor configuration ``TRUST_DOMAIN`` to that value on each
+     machine which should accept IDTOKENs;
+  #. Restart HTCondor on those machines.
 
 - Jobs that use a ``Requirements`` expression to try and match to specific a GPU should
   be changed to use the new ``require_gpus`` submit command or jobs will simply not match. If your machines
@@ -66,6 +73,8 @@ is a list of items that administrators should be aware of.
   to assume that all GPUs will have a single value for this property.  Instead the properties of
   each GPU will be advertised individually in a format that allows a job to request it run
   on a specific GPU or type of GPU.
+  See :ref:`users-manual/submitting-a-job:jobs that require gpus` for more information on
+  about the ``require_gpus`` submit command.
   :jira:`953`
 
 - We have updated to using the PCRE2 regular expression library. This library
@@ -74,7 +83,10 @@ is a list of items that administrators should be aware of.
   interpretation. However, some administrators have reported that expressions
   in their condor mapfile were rejected because they wanted to match the ``-``
   character in a character class and the ``-`` was not the last character
-  specified in the character class.
+  specified in the character class. In addition, on Enterprise Linux 7,
+  having a hyphen (``-``) in the last position after a POSIX character set
+  (such as ``[:space:]``) in a character class was flagged as an invalid range,
+  even though it should have been accepted.
   :jira:`1087`
 
 - The semantics of undefined user job policy expressions has changed.  A

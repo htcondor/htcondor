@@ -27,7 +27,17 @@
 #include <assert.h>
 #include "classad_functional_tester.h"
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+using std::map;
+using std::cin;
+using std::cout;
+using std::cerr;
+using std::ifstream;
+using std::ofstream;
+using std::endl;
+
 using namespace classad;
 
 typedef map<string, Variable *> VariableMap;

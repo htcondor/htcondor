@@ -33,6 +33,8 @@
 #include "winreg.windows.h"
 #endif
 
+#include "docker-api.h"
+
 MachAttributes::MachAttributes()
    : m_user_specified(NULL, ";"), m_user_settings_init(false), m_named_chroot()
 {
@@ -63,6 +65,8 @@ MachAttributes::MachAttributes()
 	m_load = -1.0;
 	m_owner_load = -1.0;
 	m_virt_mem = 0;
+	m_docker_cached_image_size = -1;
+	m_docker_cached_image_size_time = time(nullptr) - docker_cached_image_size_interval;
 
 		// Number of CPUs.  Since this is used heavily by the ResMgr
 		// instantiation and initialization, we need to have a real
@@ -449,17 +453,32 @@ MachAttributes::compute_config()
 			dprintf(D_FULLDEBUG, "Named chroots: %s\n", result_str.c_str() );
 			m_named_chroot = result_str;
 		}
-
 	}
 }
 
 void
 MachAttributes::compute_for_update()
 {
+
 	{  // formerly IS_UPDATE(how_much) && IS_SHARED(how_much)
 
 		m_virt_mem = sysapi_swap_space();
 		dprintf( D_FULLDEBUG, "Swap space: %lld\n", m_virt_mem );
+
+		time_t now = resmgr->now();
+		time_t interval = (now - m_docker_cached_image_size_time);
+		if (docker_cached_image_size_interval && (interval >= docker_cached_image_size_interval)) {
+			m_docker_cached_image_size_time = now;
+			int64_t size_in_bytes = DockerAPI::imageCacheUsed();
+			if (size_in_bytes >= 0) {
+				const int64_t ONEMB =  1024 * 1024;
+				m_docker_cached_image_size = (DockerAPI::imageCacheUsed() + ONEMB/2) / ONEMB;
+			} else {
+				// negative values returned above indicate failure to fetch the imageSize
+				// negative values here suppress advertise of the attribute
+				m_docker_cached_image_size = -1;
+			}
+		}
 
 #if defined(WIN32)
 		credd_test();
@@ -1271,8 +1290,6 @@ MachAttributes::publish_static(ClassAd* cp)
 		if (pav) pav->AssignToClassAd(cp);
 	}
 
-	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
-
 #else
 	// temporary attributes for raw utsname info
 	cp->Assign( ATTR_UTSNAME_SYSNAME, m_utsname_sysname );
@@ -1379,7 +1396,7 @@ MachAttributes::publish_static(ClassAd* cp)
 	// Temporary Hack until this is a fixed path
 	// the Starter will expand this magic string to the
 	// actual value
-	cp->Assign("CondorScratchDir", "#CoNdOrScRaTcHdIr#");
+	cp->Assign(ATTR_CONDOR_SCRATCH_DIR, "#CoNdOrScRaTcHdIr#");
 }
 
 // return true if the given slot has resources that are assigned to both normal and backfill
@@ -1402,11 +1419,19 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 {
 	// things that need to be refreshed periodially
 
+#ifdef WIN32
+	// we periodically probe to see if there is a valid local credd.
+	if (m_local_credd) { cp->Assign(ATTR_LOCAL_CREDD, m_local_credd); }
+#endif
+
 	// KFLOPS and MIPS are only conditionally computed; thus, only
 	// advertise them if we computed them.
 	if (m_kflops > 0) { cp->Assign( ATTR_KFLOPS, m_kflops ); }
 	if (m_mips > 0) { cp->Assign( ATTR_MIPS, m_mips ); }
 
+	if (m_docker_cached_image_size >= 0) {
+		cp->Assign(ATTR_DOCKER_CACHED_IMAGE_SIZE, m_docker_cached_image_size);
+	}
 	// publish offline ids for any of the resources
 	for (auto j(m_machres_map.begin());  j != m_machres_map.end();  ++j) {
 		string ids;
@@ -1434,7 +1459,7 @@ MachAttributes::publish_common_dynamic(ClassAd* cp)
 		} else if (k != m_machres_offline_devIds_map.end()) {
 			// we just have the static offline ids list (set at startup)
 			if ( ! k->second.empty()) {
-				join(k->second, ",", ids);
+				ids = join(k->second, ",");
 			}
 		}
 		string attr(ATTR_OFFLINE_PREFIX); attr += j->first;
@@ -1907,10 +1932,9 @@ CpuAttributes::publish_static(ClassAd* cp)
 			cp->Assign(attr, int(c_slottot_map[j->first]));          // example: set TotalSlotGPUs = 2
 			slotres_devIds_map_t::const_iterator k(c_slotres_ids_map.find(j->first));
 			if (k != c_slotres_ids_map.end()) {
-				ids.clear();
 				attr = "Assigned";
 				attr += j->first;
-				join(k->second, ",", ids);  // k->second is type slotres_assigned_ids_t which is vector<string>
+				ids = join(k->second, ",");  // k->second is type slotres_assigned_ids_t which is vector<string>
 				cp->Assign(attr, ids);   // example: AssignedGPUs = "GPU-01abcdef,GPU-02bcdefa"
 			} else {
 				continue;
@@ -1957,9 +1981,9 @@ CpuAttributes::display(int dpf_flags) const
 {
 	// dpf_flags is expected to be 0 or D_VERBOSE
 	dprintf( D_KEYBOARD | dpf_flags,
-				"Idle time: %s %-8d %s %d\n",
-				"Keyboard:", (int)c_idle, 
-				"Console:", (int)c_console_idle );
+				"Idle time: %s %-8lld %s %lld\n",
+				"Keyboard:", (long long)c_idle,
+				"Console:", (long long)c_console_idle );
 
 	dprintf( D_LOAD | dpf_flags,
 				"%s %.2f  %s %.2f  %s %.2f\n",

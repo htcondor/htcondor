@@ -30,9 +30,6 @@ In general, this release for Windows works the same as the release of
 HTCondor for Unix. However, the following items are not supported in
 this version:
 
--  The standard job universe is not present. This means transparent
-   process checkpoint/migration and remote system calls are not
-   supported.
 -  **grid** universe jobs may not be submitted from a Windows platform,
    unless the grid type is **condor**.
 -  Accessing files via a network share that requires a Kerberos ticket

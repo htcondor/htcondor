@@ -42,10 +42,12 @@
 #define ATTR_AGGREGATE_GROUP "AggregateGroup"
 #define ATTR_IP "IP"
 #define ATTR_SCALE "Scale"
+#define ATTR_LIFETIME "Lifetime"
 
 Metric::Metric():
 	derivative(false),
 	verbosity(0),
+	lifetime(-1),
     scale(1.0),
 	type(AUTO),
 	aggregate(NO_AGGREGATE),
@@ -167,6 +169,8 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 		return false;
 	}
 
+	metric_ad.EvaluateAttrInt(ATTR_LIFETIME, lifetime);
+
 	std::string target_type_str;
 	if( !evaluateOptionalString(ATTR_TARGET_TYPE,target_type_str,metric_ad,daemon_ad,regex_groups) ) return false;
 	target_type.initializeFromString(target_type_str.c_str());
@@ -220,7 +224,7 @@ Metric::evaluateDaemonAd(classad::ClassAd &metric_ad,classad::ClassAd const &dae
 				 itr++ )
 			{
 				std::vector<std::string> the_regex_groups;
-				if( re.match_str(itr->first.c_str(),&the_regex_groups) ) {
+				if( re.match(itr->first.c_str(),&the_regex_groups) ) {
 					// make a new Metric for this attribute that matched the regex
 					std::shared_ptr<Metric> metric(statsd->newMetric());
 					metric->evaluateDaemonAd(metric_ad,daemon_ad,max_verbosity,statsd,&the_regex_groups,itr->first.c_str());

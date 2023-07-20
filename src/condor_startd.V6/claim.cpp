@@ -73,6 +73,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_alive_inprogress_sock(NULL)
 	, c_lease_duration(lease_duration)
 	, c_aliveint(-1)
+	, c_lease_endtime(0)
 	, c_starter_handles_alives(false)
 	, c_startd_sends_alives(false)
 	, c_cod_keyword(NULL)
@@ -90,6 +91,7 @@ Claim::Claim( Resource* res_ip, ClaimType claim_type, int lease_duration )
 	, c_pledged_machine_max_vacate_time(0)
 	, c_cpus_usage(0)
 	, c_image_size(0)
+	, c_want_matching(true)
 {
 	//dprintf(D_ALWAYS | D_BACKTRACE, "constructing claim %p on resource %p\n", this, res_ip);
 
@@ -218,6 +220,9 @@ Claim::publish( ClassAd* cad )
 	cad->Assign( ATTR_CURRENT_RANK, c_rank );
 
 	if( c_client ) {
+		if (!c_client->c_scheddName.empty()) {
+			cad->Assign(ATTR_REMOTE_SCHEDD_NAME, c_client->c_scheddName);
+		}
 		remoteUser = c_client->user();
 		if( remoteUser ) {
 			cad->Assign( ATTR_REMOTE_USER, remoteUser );
@@ -293,6 +298,14 @@ Claim::publish( ClassAd* cad )
 	// If this claim is for vm universe, update some info about VM
 	if (c_starter_pid > 0) {
 		resmgr->m_vmuniverse_mgr.publishVMInfo(c_starter_pid, cad);
+	}
+
+	if (!c_working_cm.empty()) {
+		cad->Assign("WorkingCM", c_working_cm);
+	}
+
+	if (c_rip->is_partitionable_slot() && c_state != CLAIM_UNCLAIMED) {
+		cad->Assign(ATTR_WANT_MATCHING, c_want_matching);
 	}
 
 	publishStateTimes( cad );
@@ -798,6 +811,13 @@ Claim::setaliveint( int new_alive )
 	c_lease_duration = max_claim_alives_missed * new_alive;
 }
 
+void
+Claim::setLeaseEndtime(time_t end_time)
+{
+	// TODO reset timer if updated after timer start?
+	c_lease_endtime = end_time;
+}
+
 void Claim::cacheJobInfo( ClassAd* job )
 {
 	job->LookupInteger( ATTR_CLUSTER_ID, c_cluster );
@@ -875,8 +895,13 @@ Claim::startLeaseTimer()
 	   EXCEPT( "Claim::startLeaseTimer() called w/ c_lease_tid = %d", 
 			   c_lease_tid );
 	}
+	int when = c_lease_duration;
+	time_t now = time(nullptr);
+	if (c_lease_endtime && (c_lease_endtime < now + c_lease_duration)) {
+		when = (int)(c_lease_endtime - now);
+	}
 	c_lease_tid =
-		daemonCore->Register_Timer( c_lease_duration, 0, 
+		daemonCore->Register_Timer( when, 0,
 				(TimerHandlercpp)&Claim::leaseExpired,
 				"Claim::leaseExpired", this );
 	if( c_lease_tid == -1 ) {
@@ -958,6 +983,16 @@ void
 Claim::sendAlive()
 {
 	const char* c_addr = NULL;
+
+	if (c_rip->is_partitionable_slot()) {
+		// For a claimed pslot, assume the schedd is alive.
+		// The claim has a limited lifetime, which will eventually
+		// be hit.
+		// TODO We plan to add a variant of the ALIVE command that
+		//   includes the current pslot ad.
+		alive();
+		return;
+	}
 
 	if ( c_starter_handles_alives && isActive() ) {
 			// If the starter is dealing with the alive protocol,
@@ -1220,7 +1255,11 @@ Claim::alive( bool alive_from_schedd )
 		startLeaseTimer();
 	}
 	else {
-		daemonCore->Reset_Timer( c_lease_tid, c_lease_duration, 0 );
+		int when = c_lease_duration;
+		if (c_lease_endtime && (c_lease_endtime < time(NULL) + c_lease_duration)) {
+			when = (int)(c_lease_endtime - time(NULL));
+		}
+		daemonCore->Reset_Timer( c_lease_tid, when, 0 );
 	}
 
 		// And now push forward our send alives timer.  Plus,
@@ -1385,7 +1424,7 @@ Claim::getCODMgr( void )
 // on successful spawn, the claim will take ownership of the job classad.
 // job can be NULL in the case where we are doing a delayed spawn because of preemption
 // or when doing fetchwork.  when job is NULL, the c_ad member of this class must not be.
-int Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
+pid_t Claim::spawnStarter( Starter* starter, ClassAd * job, Stream* s)
 {
 	if( ! starter ) {
 			// Big error!
@@ -1793,11 +1832,11 @@ Claim::makeCODStarterArgs( ArgList &args )
 		// if we've got a cluster and proc for the job, append those
 	if( c_cluster >= 0 ) {
 		args.AppendArg("-job-cluster");
-		args.AppendArg(c_cluster);
+		args.AppendArg(std::to_string(c_cluster));
 	} 
 	if( c_proc >= 0 ) {
 		args.AppendArg("-job-proc");
-		args.AppendArg(c_proc);
+		args.AppendArg(std::to_string(c_proc));
 	} 
 
 		// finally, specify how the job should get its ClassAd
@@ -2325,8 +2364,8 @@ newIdString( char** id_str_ptr )
 	// contain '#'. Parsers should look for the first '>' in the
 	// string to reliably extract the startd's sinful.
 
-	formatstr( id, "%s#%d#%d#", daemonCore->publicNetworkIpAddr(),
-	           (int)startd_startup, sequence_num );
+	formatstr( id, "%s#%lld#%d#", daemonCore->publicNetworkIpAddr(),
+	           (long long)startd_startup, sequence_num );
 
 	char *keybuf = Condor_Crypt_Base::randomHexKey(SEC_SESSION_KEY_LENGTH_V9);
 	id += keybuf;
@@ -2353,9 +2392,9 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 	if( claim_type == CLAIM_OPPORTUNISTIC
 		&& param_boolean("SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION", true) )
 	{
-		MyString session_id;
-		MyString session_key;
-		MyString session_info;
+		std::string session_id;
+		std::string session_key;
+		std::string session_info;
 			// there is no sec session info yet in the claim id, so
 			// we call secSessionId with ignore_session_info=true to
 			// force it to give us the session id
@@ -2408,7 +2447,7 @@ ClaimId::ClaimId( ClaimType claim_type, char const * /*slotname*/ /*UNUSED*/ )
 
 ClaimId::~ClaimId()
 {
-	if( claimid_parser.secSessionId() ) {
+	if( claimid_parser.secSessionId()[0] != '\0' ) {
 			// Expire the session after enough time to let the final
 			// RELEASE_CLAIM command finish, in case it is still in
 			// progress.  This also allows us to more gracefully

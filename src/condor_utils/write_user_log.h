@@ -188,13 +188,13 @@ public:
 		@param was the event actually written (see above caution).
         @return false for failure, true for success
     */
-    bool writeEvent (ULogEvent *event, ClassAd *jobad = NULL,
+    bool writeEvent (ULogEvent *event, const ClassAd *jobad = NULL,
 					 bool *written = NULL );
 
 	/** This function is just like writeEvent(), but it ensures
 		that no call to fsync is made on the user log.
 	*/
-	bool writeEventNoFsync (ULogEvent *event, ClassAd *jobad = NULL,
+	bool writeEventNoFsync (ULogEvent *event, const ClassAd *jobad = NULL,
 							bool *written = NULL );
 
 	/**Control whether writeEvent() calls fsync.  This overrides the
@@ -326,16 +326,15 @@ public:
 		WriteUserLog::log_file& log,
 		bool is_global_event,
 		bool is_header_event,
-		int format_opts,
-		ClassAd *ad);
+		int format_opts);
 	void writeJobAdInfoEvent(char const *attrsToWrite,
-		WriteUserLog::log_file& log, ULogEvent *event, ClassAd *param_jobad,
+		WriteUserLog::log_file& log, ULogEvent *event, const ClassAd *param_jobad,
 		bool is_global_event, int format_opts );
 
 	std::vector<log_file*> logs;
     log_file_cache_map_t* log_file_cache;
 
-	bool doWriteGlobalEvent( ULogEvent *event, ClassAd *ad);
+	bool doWriteGlobalEvent(ULogEvent *event);
     /** Enable locking?              */  bool		m_enable_locking;
 	/** Enable fsync() after writes? */  bool       m_enable_fsync;
 

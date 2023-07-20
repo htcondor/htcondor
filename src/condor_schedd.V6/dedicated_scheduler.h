@@ -23,6 +23,7 @@
 #include "condor_classad.h"
 #include "list.h"
 #include "scheduler.h"
+#include <vector>
 
 enum AllocStatus { A_NEW, A_RUNNING, A_DYING };
 
@@ -495,7 +496,7 @@ class DedicatedScheduler : public Service {
 
 	friend class CandidateList;
 
-	SimpleList<PROC_ID> jobsToReconnect;
+	std::vector<PROC_ID> jobsToReconnect;
 	//int				checkReconnectQueue_tid;
 	
 	StringList scheduling_groups;

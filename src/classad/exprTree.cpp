@@ -27,7 +27,10 @@
 #include <sys/time.h>
 #endif
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::pair;
+
 
 namespace classad {
 
@@ -91,17 +94,15 @@ void ExprTree::debug_format_value(Value &value, double time) const {
 				break;
 			case Value::INTEGER_VALUE:
 				if(value.IsIntegerValue(intValue)) {
-					char buf[32];
-					sprintf(buf, "%lld", intValue);
-					result += buf;
+					result += std::to_string(intValue);
 					result += "\n";
 				}
 				break;
 
 			case Value::REAL_VALUE:
 				if(value.IsRealValue(doubleValue)) {
-							char buf[24];
-					sprintf(buf, "%g", doubleValue);
+					char buf[24];
+					snprintf(buf, sizeof(buf), "%g", doubleValue);
 					result += buf;
 					result += "\n";
 				}

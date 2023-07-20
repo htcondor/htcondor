@@ -27,6 +27,7 @@ FTEST_getPortFromAddr.cpp
 FTEST_host_in_domain.cpp
 FTEST_is_valid_sinful.cpp
 FTEST_stl_string_utils.cpp
+FTEST_string_vector.cpp
 FTEST_string_to_port.cpp
 FTEST_strlwr.cpp
 FTEST_strupr.cpp
@@ -42,7 +43,6 @@ OTEST_FileLock.cpp
 OTEST_HashTable.cpp
 OTEST_Regex.cpp
 OTEST_Iso_Dates.cpp
-OTEST_MyString.cpp
 OTEST_Old_Classads.cpp
 OTEST_ranger.cpp
 OTEST_StatInfo.cpp

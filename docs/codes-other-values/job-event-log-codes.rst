@@ -25,9 +25,7 @@ These are all of the events that can show up in a job log file:
 
 | **Event Number:** 003
 | **Event Name:** Job was checkpointed
-| **Event Description:** The job's complete state was written to a
-  checkpoint file. This might happen without the job being removed from a
-  machine, because the checkpointing can happen periodically.
+| **Event Description:** No longer used.
 
 | **Event Number:** 004
 | **Event Name:** Job evicted from machine
@@ -217,7 +215,7 @@ Table B.2: Event Codes in a Job Event Log
 +-------+---------------------------+---------------------------------------------------+
 | 002   | EXECUTABLE_ERROR          | Executable error                                  |
 +-------+---------------------------+---------------------------------------------------+
-| 003   | CHECKPOINTED              | Checkpointed                                      |
+| 003   | CHECKPOINTED              | no longer used                                    |
 +-------+---------------------------+---------------------------------------------------+
 | 004   | JOB_EVICTED               | Job evicted                                       |
 +-------+---------------------------+---------------------------------------------------+

@@ -42,9 +42,7 @@ void canonicalize_dir_delimiters( char *path );
 char *alternate_exec_pathname( const char *path );
 
 #include <string>
-class MyString;
 
-int filename_split( const char *path, MyString &dir, MyString &file );
 int filename_split( const char *path, std::string &dir, std::string &file );
 
 int is_relative_to_cwd( std::string &path );
@@ -62,7 +60,6 @@ a ClassAd.  A much better implementation would be to store it
 as a ClassAd within a ClassAd.  However, this will have to wait until
 new ClassAds are deployed.
 */
-int filename_remap_find( const char *input, const char *filename, MyString &output, int cur_nesting_level = 0);
 int filename_remap_find( const char *input, const char *filename, std::string &output, int cur_nesting_level = 0);
 
 void canonicalize_dir_delimiters( std::string &path );

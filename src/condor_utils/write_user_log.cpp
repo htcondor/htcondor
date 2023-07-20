@@ -169,8 +169,9 @@ WriteUserLog::initialize(const ClassAd &job_ad, bool init_user)
 
 		uninit_user_ids();
 		if ( ! init_user_ids(owner.c_str(), domain.c_str()) ) {
+			if ( ! domain.empty()) { owner += "@"; owner += domain; }
 			dprintf(D_ALWAYS,
-				"WriteUserLog::initialize: init_user_ids() failed!\n");
+				"WriteUserLog::initialize: init_user_ids(%s) failed!\n", owner.c_str());
 			return false;
 		}
 		m_init_user_ids = true;
@@ -410,7 +411,7 @@ WriteUserLog::Configure( bool force )
 	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", false );
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1'000'000, 0 );
 	}
 	if ( m_global_max_filesize == 0 ) {
 		m_global_max_rotations = 0;
@@ -467,7 +468,7 @@ WriteUserLog::Reset( void )
 	m_global_disable = true;
 	m_global_format_opts = 0;
 	m_global_count_events = false;
-	m_global_max_filesize = 1000000;
+	m_global_max_filesize = 1'000'000;
 	m_global_max_rotations = 1;
 	m_global_lock_enable = true;
 	m_global_fsync_enable = false;
@@ -1213,8 +1214,7 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 							log_file& log,
 							bool is_global_event,
 							bool is_header_event,
-							int  format_opts,
-							ClassAd *)
+							int  format_opts)
 {
 	int success;
 	int fd;
@@ -1375,16 +1375,16 @@ WriteUserLog::doWriteEvent( int fd, ULogEvent *event, int format_opts )
 }
 
 bool
-WriteUserLog::doWriteGlobalEvent( ULogEvent* event, ClassAd *ad) 
+WriteUserLog::doWriteGlobalEvent( ULogEvent* event )
 {
 	log_file log;
-	return doWriteEvent(event, log, true, false, m_global_format_opts, ad);
+	return doWriteEvent(event, log, true, false, m_global_format_opts);
 }
 
 // Return false on error, true on goodness
 bool
 WriteUserLog::writeEvent ( ULogEvent *event,
-						   ClassAd *param_jobad,
+						   const ClassAd *param_jobad,
 						   bool *written )
 {
 	// By default, no event written
@@ -1421,7 +1421,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 	// write global event
 	//TEMPTEMP -- don't try if we got a global open error
 	if ( !globalOpenError && !m_global_disable && m_global_path ) {
-		if ( ! doWriteGlobalEvent(event, param_jobad)  ) {
+		if ( ! doWriteGlobalEvent(event) ) {
 			dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent global doWriteEvent() failed on global log! The global event log will be missing an event.\n" );
 			// We *don't* want to return here, so we at least try to write
 			// to the "normal" log (see gittrac #2858).
@@ -1466,7 +1466,7 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 			}
 			int fmt_opts = m_format_opts;
 			if ((*p)->is_dag_log) { fmt_opts &= ~(ULogEvent::formatOpt::XML); }
-			if ( ! doWriteEvent(event, **p, false, false, fmt_opts, param_jobad) ) {
+			if ( ! doWriteEvent(event, **p, false, false, fmt_opts) ) {
 				dprintf( D_ALWAYS, "WARNING: WriteUserLog::writeEvent user doWriteEvent() failed on normal log %s!\n", (*p)->path.c_str() );
 				ret = false;
 			}
@@ -1493,22 +1493,15 @@ WriteUserLog::writeEvent ( ULogEvent *event,
 }
 
 void
-WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogEvent *event, ClassAd *param_jobad, bool is_global_event, int format_opts)
+WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogEvent *event, const ClassAd *param_jobad, bool is_global_event, int format_opts)
 {
-	ExprTree *tree;
 	classad::Value result;
-	char *curr;
 
 	ClassAd *eventAd = event->toClassAd((format_opts & ULogEvent::formatOpt::UTC) != 0);
 
-	StringList attrs(attrsToWrite);
-	attrs.rewind();
-	while ( eventAd && param_jobad && (curr=attrs.next()) )
-	{
-		if ( (tree=param_jobad->LookupExpr(curr)) ) {
-				// found the attribute.  now evaluate it before
-				// we put it into the eventAd.
-			if ( EvalExprToScalar(tree,param_jobad,NULL,result) ) {
+	if (eventAd && param_jobad) {
+		for (auto& curr: StringTokenIterator(attrsToWrite)) {
+			if (param_jobad->EvaluateAttr(curr, result, classad::Value::ValueType::SCALAR_EX_VALUES)) {
 					// now inserted evaluated expr
 				bool bval = false;
 				int ival;
@@ -1552,13 +1545,13 @@ WriteUserLog::writeJobAdInfoEvent(char const *attrsToWrite, log_file& log, ULogE
 		info_event.cluster = m_cluster;
 		info_event.proc = m_proc;
 		info_event.subproc = m_subproc;
-		doWriteEvent(&info_event, log, is_global_event, false, format_opts, param_jobad);
+		doWriteEvent(&info_event, log, is_global_event, false, format_opts);
 		delete eventAd;
 	}
 }
 
 bool
-WriteUserLog::writeEventNoFsync (ULogEvent *event, ClassAd *jobad,
+WriteUserLog::writeEventNoFsync (ULogEvent *event, const ClassAd *jobad,
 								 bool *written )
 {
 	bool saved_fsync_setting = getEnableFsync();
@@ -1671,7 +1664,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 {
 	int len = snprintf( event.info, COUNTOF(event.info),
 			  "Global JobLog:"
-			  " ctime=%d"
+			  " ctime=%lld"
 			  " id=%s"
 			  " sequence=%d"
 			  " size=" FILESIZE_T_FORMAT""
@@ -1680,7 +1673,7 @@ WriteUserLogHeader::GenerateEvent( GenericEvent &event )
 			  " event_off=%" PRId64""
 			  " max_rotation=%d"
 			  " creator_name=<%s>",
-			  (int) getCtime(),
+			  (long long) getCtime(),
 			  getId().c_str(),
 			  getSequence(),
 			  getSize(),

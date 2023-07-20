@@ -777,6 +777,9 @@ bool render_activity_time (long long & atime, ClassAd *al, Formatter &)
 	long long now = 0;
 	if (al->LookupInteger(ATTR_MY_CURRENT_TIME, now) || al->LookupInteger(ATTR_LAST_HEARD_FROM, now)) {
 		atime = now - atime; // format_time
+		if (atime < 0) {
+			atime = 0;
+		}
 		return true;
 	}
 	return false; // print "   [Unknown]"
@@ -834,7 +837,7 @@ bool render_elapsed_time (long long & tm, ClassAd *al , Formatter &)
 const char * format_load_avg (double fl, Formatter &)
 {
 	static char load_avg_buf[60];
-	sprintf(load_avg_buf, "%.3f", fl);
+	snprintf(load_avg_buf, sizeof(load_avg_buf), "%.3f", fl);
 	return load_avg_buf;
 }
 

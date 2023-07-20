@@ -845,7 +845,6 @@ size_t hashFuncUInt( const unsigned int& n );
 /// hash functions for a string
 size_t hashFunction( char const *key );
 size_t hashFunction( const std::string &key );
-size_t hashFunction( const MyString &key );
 size_t hashFunction( const YourString &key );
 
 size_t hashFunction( const YourStringNoCase &key );

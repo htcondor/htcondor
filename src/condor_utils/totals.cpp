@@ -21,9 +21,7 @@
 #include "condor_state.h"
 #include "enum_utils.h"
 #include "condor_attributes.h"
-#include "MyString.h"
 #include "stdio.h"
-#include "HashTable.h"
 #include "totals.h"
 #include "string_list.h"
 
@@ -32,7 +30,7 @@
 
 
 TrackTotals::
-TrackTotals (ppOption m) : allTotals(hashFunction)
+TrackTotals (ppOption m)
 {
 	ppo = m;
 	malformed = 0;
@@ -42,19 +40,17 @@ TrackTotals (ppOption m) : allTotals(hashFunction)
 TrackTotals::
 ~TrackTotals ()
 {
-	ClassTotal *ct;
-
-	allTotals.startIterations();
-	while (allTotals.iterate(ct))
+	for (auto& [key, ct] : allTotals) {
 		delete ct;
+	}
 	delete topLevelTotal;
 }
 
 int TrackTotals::
-update (ClassAd *ad, int options, const char * _key /*=NULL*/)
+update (ClassAd *ad, int options, const char * _key /*=""*/)
 {
 	ClassTotal *ct;
-	MyString	key(_key);
+	std::string key(_key ? _key : "");
 	int		   	rval;
 
 	if ( key.empty() && ! ClassTotal::makeKey(key, ad, ppo))
@@ -63,15 +59,14 @@ update (ClassAd *ad, int options, const char * _key /*=NULL*/)
 		return 0;
 	}
 
-	if (allTotals.lookup (key, ct) < 0)
+	auto itr = allTotals.find(key);
+	if (itr == allTotals.end())
 	{
 		ct = ClassTotal::makeTotalObject (ppo);
 		if (!ct) return 0;
-		if (allTotals.insert (key, ct) < 0)
-		{
-			delete ct;
-			return 0;
-		}
+		allTotals[key] = ct;
+	} else {
+		ct = itr->second;
 	}
 
 	rval = ct->update(ad, options);
@@ -107,37 +102,16 @@ bool TrackTotals::haveTotals()
 void TrackTotals::
 displayTotals (FILE *file, int keyLength)
 {
-	ClassTotal *ct=0;
-	MyString	key;
-	int k;
 	bool auto_key_length = keyLength < 0;
 	if (auto_key_length) { keyLength = 5; } // must be at least 5 for "Total"
 
 	// display totals only for meaningful modes
 	if ( ! haveTotals()) return;
 
-		
-	// sort the keys (insertion sort) so we display totals in sorted order
-	char **keys = new char* [allTotals.getNumElements()];
-	ASSERT(keys);
-	allTotals.startIterations();
-	for (k = 0; k < allTotals.getNumElements(); k++) // for each key
-	{
-		allTotals.iterate(key, ct);
-		// find the position where we want to insert the key
-		int pos;
-		for (pos = 0; pos < k && strcmp(keys[pos], key.c_str()) < 0; pos++) { }
-		if (pos < k) {
-			// if we are not inserting at the end of the array, then
-			// we must shift the elements to the right to make room;
-			// we use memmove() because it handles overlapping buffers
-			// correctly (and efficiently)
-			memmove(keys+pos+1, keys+pos, (k-pos)*sizeof(char *));
-		}
-		// insert the key in the right position in the list
-		keys[pos] = strdup(key.c_str());
-		if (auto_key_length) {
-			keyLength = MAX(keyLength, key.length());
+	// Find the longest key length
+	if (auto_key_length) {
+		for (auto& [key, ct] : allTotals) {
+			keyLength = MAX(keyLength, (int)key.length());
 		}
 	}
 
@@ -146,17 +120,14 @@ displayTotals (FILE *file, int keyLength)
 	topLevelTotal->displayHeader(file);
 	fprintf (file, "\n");
 
-	// now that our keys are sorted, display the totals in sort order
+	// display the totals
+	// The map's comparison function gives us the entries sorted by key
 	bool had_tot_keys = false;
-	for (k = 0; k < allTotals.getNumElements(); k++)
-	{
-		fprintf (file, "%*.*s", keyLength, keyLength, keys[k]);
-		allTotals.lookup(MyString(keys[k]), ct);
-		free(keys[k]);
+	for (auto& [key, ct] : allTotals) {
+		fprintf (file, "%*.*s", keyLength, keyLength, key.c_str());
 		ct->displayInfo(file);
 		had_tot_keys = true;
 	}
-	delete [] keys;
 	if (had_tot_keys) fprintf(file, "\n");
 	fprintf (file, "%*.*s", keyLength, keyLength, "Total");
 	topLevelTotal->displayInfo(file,1);
@@ -725,7 +696,7 @@ makeTotalObject (ppOption ppo)
 
 
 int ClassTotal::
-makeKey (MyString &key, ClassAd *ad, ppOption ppo)
+makeKey (std::string &key, ClassAd *ad, ppOption ppo)
 {
 	char p1[256], p2[256], buf[512];
 
@@ -738,14 +709,14 @@ makeKey (MyString &key, ClassAd *ad, ppOption ppo)
 			if (!ad->LookupString(ATTR_ARCH, p1, sizeof(p1)) || 
 				!ad->LookupString(ATTR_OPSYS, p2, sizeof(p2)))
 					return 0;
-			sprintf(buf, "%s/%s", p1, p2);
+			snprintf(buf, sizeof(buf), "%s/%s", p1, p2);
 			key = buf;
 			return 1;
 
 		case PP_STARTD_STATE:
 			if( !ad->LookupString( ATTR_ACTIVITY , p1, sizeof(p1) ) )
 				return 0;
-			sprintf( buf, "%s", p1 );
+			snprintf( buf, sizeof(buf), "%s", p1 );
 			key = buf;
 			return 1;
 
@@ -771,7 +742,7 @@ getCODInt( ClassAd* ad, const char* id, const char* attr, int alt_val )
 {
 	int rval;
 	char buf[128];
-	sprintf( buf, "%s_%s", id, attr );
+	snprintf( buf, sizeof(buf), "%s_%s", id, attr );
 	if( ad->LookupInteger(buf, rval) ) {
 		return rval;
 	}
@@ -785,7 +756,7 @@ getCODStr( ClassAd* ad, const char* id, const char* attr,
 {
 	char* tmp = NULL;
 	char buf[128];
-	sprintf( buf, "%s_%s", id, attr );
+	snprintf( buf, sizeof(buf), "%s_%s", id, attr );
 	ad->LookupString( buf, &tmp );
 	if( tmp ) {
 		return tmp;

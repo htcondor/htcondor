@@ -134,11 +134,6 @@ protected:
 	// Dump out an error
 	void derror( const char *label ) const;
 
-	// Helper methods
-	void *MemZero( const void *buf, unsigned size );
-	char *StrZero( const char *buf, unsigned size );
-	void *MemCopy( const void *dest, const void *src, unsigned size );
-
 };
 
 #endif // _NETWORK_ADAPTER_UNIX_H_

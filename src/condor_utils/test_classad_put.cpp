@@ -37,7 +37,6 @@
 #include "stream.h"
 #include <stdio.h>
 #include <stdlib.h>
-using namespace std;
 
 //{{{ DummyStream
 class DummyStream 
@@ -126,7 +125,7 @@ void DummyStream::printContents()
 {
     std::vector<char*>::iterator itr;
 
-    printf("Size of vec: %d. Printing contents.\n", testVec.size() );
+    printf("Size of vec: %zu. Printing contents.\n", testVec.size() );
 
     for(itr = testVec.begin(); itr < testVec.end(); itr++)
     {
@@ -150,7 +149,7 @@ void AttrList_setPublishServerTimeMangled2( bool publish)
 bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes )
 {
 	classad::ClassAdUnParser	unp;
-	string						buf;
+	std::string						buf;
 	const classad::ExprTree		*expr;
     bool send_server_time = false;
 
@@ -249,7 +248,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
             }
 
             //store the name for later
-            string tmpAttrName(buf);
+			std::string tmpAttrName(buf);
             buf += " = ";
             unp.Unparse( buf, expr );
             
@@ -314,7 +313,7 @@ bool putOldClassAd ( DummyStream *sock, classad::ClassAd& ad, bool excludeTypes 
 }
 //}}}
 
-char *classad_strings[] = 
+const char *classad_strings[] = 
 {
     "A = 1\n B = 2",
     "A = 1\n B = 3",
@@ -325,8 +324,9 @@ char *classad_strings[] =
 void setUpClassAds(ClassAd* c1, ClassAd* c2, ClassAd* c3, FILE* c1FP,
                     FILE* c2FP, FILE* c3FP, bool verbose)
 {
-    if(verbose)
+    if(verbose) {
         printf("Creating ClassAds\n");
+	}
 
 	c1 = new ClassAd;
 	c2 = new ClassAd;

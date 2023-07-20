@@ -1020,6 +1020,7 @@ struct SubmitJobsIterator {
 		} else {
 			job = m_hash.make_job_ad(jid, item_index, step, false, m_spool, NULL, NULL);
 		}
+		process_submit_errstack(m_hash.error_stack());
 
 		if ( ! job) {
 			THROW_EX(HTCondorInternalError, "Failed to get next job");
@@ -1438,7 +1439,10 @@ struct Schedd {
 
         CondorQ q;
 
-        q.requestServerTime(false);
+		// Existing uses of the bindings is relying on the presence of
+		// ServerTime in all of the job ads returned by the schedd.
+		// To avoid breaking this code, keep requesting it from the schedd.
+        q.requestServerTime(true);
 
         if (constraint.size())
             q.addAND(constraint.c_str());
@@ -2899,6 +2903,8 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             deep_opts.autoRescue = (value == "true") ? true : false;
         else if (key_lc == "dorescuefrom")
             deep_opts.doRescueFrom = atoi(value.c_str());
+        else if (key_lc == "load_save")
+            shallow_opts.saveFile = value;
         else if (key_lc == "allowversionmismatch")
             deep_opts.allowVerMismatch = (value == "true") ? true : false;
         else if (key_lc == "do_recurse")
@@ -2907,6 +2913,12 @@ void SetDagOptions(boost::python::dict opts, SubmitDagShallowOptions &shallow_op
             deep_opts.updateSubmit = (value == "true") ? true : false;
         else if (key_lc == "import_env")
             deep_opts.importEnv = (value == "true") ? true : false;
+        else if (key_lc == "include_env")
+            deep_opts.getFromEnv += value;
+        else if (key_lc == "insert_env") {
+            trim(value);
+            deep_opts.addToEnv.push_back(value);
+            }
         else if (key_lc == "dumprescue")
             shallow_opts.dumpRescueDag = (value == "true") ? true : false;
         else if (key_lc == "valgrind")
@@ -4133,7 +4145,7 @@ void export_schedd()
         .value("DeprovisioningComplete", ProvisionerState::DEPROVISIONING_COMPLETE)
         ;
 
-    class_<ConnectionSentry>("Transaction", "An ongoing transaction in the HTCondor schedd", no_init)
+    class_<ConnectionSentry>("Transaction", "DEPRECATED.  An ongoing transaction in the HTCondor schedd.", no_init)
         .def("__enter__", &ConnectionSentry::enter)
         .def("__exit__", &ConnectionSentry::exit)
         ;
@@ -4150,7 +4162,7 @@ void export_schedd()
         init<boost::python::object>(
             boost::python::args("self", "location_ad"),
             R"C0ND0R(
-            :param location_ad: An Ad describing the location of the remote *condor_schedd*
+            :param location_ad: A :class:`~classad.ClassAd` describing the location of the remote *condor_schedd*
                 daemon, as returned by the :meth:`Collector.locate` method, or a tuple
                 of type DaemonLocation as returned by :meth:`Schedd.location`. If the parameter is omitted,
                 the local *condor_schedd* daemon is used.
@@ -4199,6 +4211,10 @@ void export_schedd()
             ))
         .def("xquery", &Schedd::xquery,
             R"C0ND0R(
+            .. warning::
+
+                This function is deprecated.
+
             Query the *condor_schedd* daemon for job ads.
 
             .. warning::
@@ -4302,19 +4318,19 @@ void export_schedd()
             that contains the cluster ID and ClassAd of the submitted jobs.
 
             For backward compatibility, this method will also accept a :class:`~classad.ClassAd`
-            that describes a single job to submit, but use of this form of is deprecated.
-            Use submit_raw to submit raw job ClassAds.  If the deprecated form is used
+            that describes a single job to submit, but use of this form of is DEPRECATED.
+            If the deprecated form is used
             the return value will be the cluster ID, and ad_results will optionally be the
             actual job ClassAds that were submitted.
 
             :param description: The Submit description or ClassAd describing the job cluster.
-            :type description: :class:`~htcondor.Submit` (or deprecated :class:`~class.ClassAd`)
+            :type description: :class:`~htcondor.Submit` (or DEPRECATED :class:`~class.ClassAd`)
             :param int count: The number of jobs to submit to the job cluster. Defaults to ``1``.
             :param bool spool: If ``True``, jobs will be submitted in a spooling hold mode
                so that input files can be spooled to a remote *condor_schedd* daemon before starting the jobs.
                This parameter is necessary for jobs submitted to a remote *condor_schedd* that use HTCondor file transfer.
                When True, job will be left in the HOLD state until the :func:`spool` method is called.
-            :param ad_results: deprecated. If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
+            :param ad_results: DEPRECATED.  If set to a list and a raw job ClassAd is passed as the first argument, the list object will contain the job ads
                 that were submitted.
             :type ad_results: list[:class:`~classad.ClassAd`]
             :return: a :class:`SubmitResult`, containing the cluster ID, cluster ClassAd and
@@ -4391,6 +4407,8 @@ void export_schedd()
             boost::python::args("self", "ad_list"))
         .def("transaction", &Schedd::transaction, transaction_overloads(
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Start a transaction with the *condor_schedd*.
 
             Starting a new transaction while one is ongoing is an error unless the ``continue_txn``
@@ -4401,7 +4419,7 @@ void export_schedd()
             :param bool continue_txn: Set to ``True`` if you would like this transaction to extend any
                 pre-existing transaction; defaults to ``False``.  If this is not set, starting a transaction
                 inside a pre-existing transaction will cause an exception to be thrown.
-            :return: A transaction context manager object.
+            :return: A :class:`~htcondor.Transaction` object.
             )C0ND0R",
 #if BOOST_VERSION < 103400
             (boost::python::arg("flags")=0, boost::python::arg("continue_txn")=false))[boost::python::with_custodian_and_ward_postcall<1, 0>()])
@@ -4587,14 +4605,18 @@ void export_schedd()
 
             The submit description contains ``key = value`` pairs and implements the python
             dictionary protocol, including the ``get``, ``setdefault``, ``update``, ``keys``,
-            ``items``, and ``values`` methods.
+            ``items``, and ``values`` methods.  Values in the submit discription language have
+            no data type; they are all stored as strings.
             )C0ND0R", boost::python::no_init)
         .def("__init__", boost::python::raw_function(&Submit::rawInit, 1),
             R"C0ND0R(
             :param input: Submit descriptors as
-                ``key = value`` pairs in a dictionary,
-                or as keyword arguments,
-                or as a string containing the text of a submit file.
+                a string containing the text of a submit file
+                or as ``key = value`` pairs in a dictionary,
+                or as keyword arguments.
+
+                Only the single multi-line string form can contain a ``QUEUE`` statement.
+
                 For example, these calls all produce identical
                 submit descriptions:
 
@@ -4604,32 +4626,56 @@ void export_schedd()
                         """
                         executable = /bin/sleep
                         arguments = 5s
+                        log = $(ClusterId).log
                         My.CustomAttribute = "foobar"
                         """
                     )
 
-                    # we need to quote the string "foobar" correctly
-                    from_dict = htcondor.Submit({
+                    # create an empty submit object, then populate it as a dict
+                    # use of classad.quote here insures that the value is properly escaped as a classad string
+                    submit_dict = htcondor.Submit()
+                    submit_dict["executable"] = "/bin/sleep"
+                    submit_dict["arguments"] = "5s"
+                    submit_dict["log"] = "$(ClusterId).log"
+                    submit_dict["My.CustomAttribute"] = classad.quote("foobar")
+
+                    # initialize a submit object from a python dict
+                    # note that values should be strings
+                    mydict = {
                         "executable": "/bin/sleep",
                         "arguments": "5s",
+                        "log": "$(ClusterId).log",
                         "My.CustomAttribute": classad.quote("foobar"),
-                    })
+                    }
+                    from_dict = htcondor.Submit(mydict)
 
+                    # initialize a submit object from keyword arguments
                     # the **{} is a trick to get a keyword argument that contains a .
                     from_kwargs = htcondor.Submit(
-                        executable = "/bin/sleep",
-                        arguments = "5s",
-                        **{
-                            "My.CustomAttribute": classad.quote("foobar"),
-                        }
+                        executable="/bin/sleep",
+                        arguments="5s",
+                        log="$(ClusterId).log",
+                        **{ "My.CustomAttribute": classad.quote("foobar") }
                     )
 
-                If a string is used, it may include a single *condor_submit* ``QUEUE``
-                statement.
+                If a string initalizer is used, it may include a single *condor_submit* ``QUEUE``
+                statement at the end. If omitted, the submit description is initially empty.
+
                 The arguments to the ``QUEUE`` statement will be stored
-                in the ``QArgs`` member of this class and used when :meth:`Submit.queue`
-                or :meth:`Submit.queue_with_itemdata` are called.
-                If omitted, the submit description is initially empty.
+                in the ``QArgs`` member of this class and can be passed to :meth:`schedd.Submit`
+                as the itemdata iterator like this
+
+                .. code-block:: python
+
+                    sub = htcondor.Submit(
+                        """
+                        executable = /bin/sleep
+                        QUEUE arguments in (1s, 10s, 5m)
+                        """
+                    )
+                    schedd.Submit(sub, count=1, itemdata=sub.itemdata())
+
+
             :type input: dict or str
             )C0ND0R")
         .def(init<boost::python::dict>((boost::python::arg("self"), boost::python::arg("input")=boost::python::object())))
@@ -4646,7 +4692,9 @@ void export_schedd()
             boost::python::args("self", "attr"))
         .def("queue", &Submit::queue,
             R"C0ND0R(
-            Submit the current object to a remote queue.
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
+	        Submit the current object to a remote queue.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
             :type txn: :class:`Transaction`
@@ -4665,6 +4713,8 @@ void export_schedd()
             )
         .def("queue_with_itemdata", &Submit::queue_from_iter,
             R"C0ND0R(
+            This method is DEPRECATED.  Use :meth:`Schedd.submit` instead.
+
             Submit the current object to a remote queue.
 
             :param txn: An active transaction object (see :meth:`Schedd.transaction`).
@@ -4731,7 +4781,7 @@ void export_schedd()
             This is the same iterator used by *condor_submit* when processing
             ``QUEUE`` statements.
 
-            :param str queue: a submit queue statement, or the arguments to a submit queue statement.
+            :param str queue: a submit file queue statement, or the arguments to a submit file queue statement.
             :return: An iterator for the resulting items
             )C0ND0R",
             (boost::python::arg("self"), boost::python::arg("qargs")=std::string())
@@ -4739,16 +4789,14 @@ void export_schedd()
         .def("getQArgs", &Submit::getQArgs,
             R"C0ND0R(
             Returns arguments specified in the ``QUEUE`` statement passed to the constructor.
-            These are the arguments that will be used by the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods if not overridden by arguments to those methods.
+            These are the arguments that will be used by the :meth:`Submit.itemdata`
+            method if not overridden.
             )C0ND0R",
             boost::python::args("self"))
         .def("setQArgs", &Submit::setQArgs,
             R"C0ND0R(
             Sets the arguments to be used by
-            subsequent calls to the :meth:`Submit.queue`
-            and :meth:`Submit.queue_with_itemdata` methods
-            if not overridden by arguments to those methods.
+            subsequent calls to the :meth:`Submit.itemdata`.
 
             :param str args: The arguments to pass to the ``QUEUE`` statement.
             )C0ND0R",
@@ -4826,11 +4874,12 @@ void export_schedd()
                 ``schedd-address-file`` *(str)*, ``AlwaysRunPost`` *(bool)*,
                 ``maxidle`` *(int)*, ``maxjobs`` *(int)*, ``MaxPre`` *(int)*,
                 ``MaxPost`` *(int)*, ``UseDagDir`` *(bool)*, ``debug`` *(int)*,
-                ``outfile_dir`` *(str)*, ``config`` *(str)*,
-                ``batch-name`` *(str)*, ``AutoRescue`` *(bool)*,
+                ``outfile_dir`` *(str)*, ``config`` *(str)*, ``batch-name`` *(str)*,
+                ``load_save`` *(str)*, ``AutoRescue`` *(bool)*,
                 ``DoRescueFrom`` *(int)*, ``AllowVersionMismatch`` *(bool)*,
                 ``do_recurse`` *(bool)*, ``update_submit`` *(bool)*,
-                ``import_env`` *(bool)*, ``DumpRescue`` *(bool)*,
+                ``import_env`` *(bool)*, ``include_env`` *(str)*,
+                ``insert_env`` *(str)*, ``DumpRescue`` *(bool)*,
                 ``valgrind`` *(bool)*, ``priority`` *(int)*,
                 ``suppress_notification`` *(bool)*, ``DoRecov`` *(bool)*
             :return: A :class:`Submit` description for the DAG described in ``filename``

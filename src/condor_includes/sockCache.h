@@ -74,7 +74,7 @@ private:
 	struct sockEntry
 	{
 		bool		valid;
-		MyString	addr;
+		std::string	addr;
 		ReliSock	*sock;
 		int			timeStamp;
 	};

@@ -101,7 +101,7 @@ locateSharedLib(std::string libpath,std::string libname,std::string &result)
 }
 
 void
-GangliaD::initAndReconfig()
+GangliaD::initAndReconfig(const char * /*unused */)
 {
 	std::string libname;
 	std::string gmetric_path;
@@ -198,9 +198,13 @@ GangliaD::initAndReconfig()
 
 	// the interval we tell ganglia is the max time between updates
 	m_tmax = m_stats_pub_interval*2;
+	// the minimum dmax can be
+	int min_dmax = param_integer("GANGLIAD_MIN_METRIC_LIFETIME", 86400);
+	if(min_dmax < 0) { min_dmax = 86400; }
+	dprintf(D_ALWAYS,"Setting minimum calculated DMAX value to %d. Specified metric lifetimes with override this value.\n", min_dmax);
 	// the interval we tell ganglia is the lifetime of the metric
-	if( m_tmax*3 < 86400 ) {
-		m_dmax = 86400;
+	if( m_tmax*3 < (unsigned int)min_dmax ) {
+		m_dmax = min_dmax;
 	}
 	else {
 		m_dmax = m_tmax*3;
@@ -341,10 +345,10 @@ GangliaD::publishMetric(Metric const &m)
 	int slope = metric.gangliaSlope();
 
     m_ganglia_metrics_sent++;
-	dprintf(D_FULLDEBUG,"%spublishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s\n",
+	dprintf(D_FULLDEBUG,"%spublishing %s=%s, group=%s, units=%s, derivative=%d, type=%s, title=%s, desc=%s, cluster=%s, spoof_host=%s, lifetime=%d\n",
 			m_ganglia_noop ? "noop mode: " : "",
-			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(), metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str());
-
+			metric.name.c_str(), value.c_str(), metric.group.c_str(),  metric.units.c_str(), metric.derivative, metric.gangliaMetricType(), metric.title.c_str(),
+			metric.desc.c_str(), metric.cluster.c_str(), spoof_host.c_str(), metric.lifetime < 0 ? m_dmax : metric.lifetime);
 	if( !m_ganglia_noop ) {
 		bool ok = ganglia_send(
 						  m_ganglia_context,
@@ -360,7 +364,7 @@ GangliaD::publishMetric(Metric const &m)
 						  spoof_host.c_str(),
 						  metric.cluster.c_str(),
 						  m_tmax,
-						  m_dmax);
+						  metric.lifetime < 0 ? m_dmax : metric.lifetime);
 
 		if( !ok ) {
 			dprintf(D_ALWAYS,"Failed to publish %s%s\n",

@@ -193,8 +193,9 @@ struct cudaDevicePropInts
 
 
 // this is the buffer we pass to cudaGetDeviceProperties, because we don't know how big a buffer to send
-struct cudaDevicePropBuffer {
+union cudaDevicePropBuffer {
 	unsigned char props[sizeof(cudaDevicePropStrings) + sizeof(cudaDevicePropInts) + 100];
+	long long unused_to_force_alignment;
 };
 
 #define CUDA_9_AND_10 1
