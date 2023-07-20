@@ -741,9 +741,13 @@ Resource::needsPolling( void )
 
 
 // This one *only* looks at opportunistic claims
+// except for partitionable slots
 bool
 Resource::hasOppClaim( void )
 {
+	if (is_partitionable_slot()) {
+		return false;
+	}
 	State s = state();
 	if( s == claimed_state || s == preempting_state ) {
 		return true;
@@ -753,6 +757,7 @@ Resource::hasOppClaim( void )
 
 
 // This one checks if the Resource has *any* claims
+// except for paritionable slots
 bool
 Resource::hasAnyClaim( void )
 {
