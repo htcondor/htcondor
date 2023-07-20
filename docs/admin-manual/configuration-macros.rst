@@ -8526,21 +8526,13 @@ General
     ``DAGMAN_ABORT_DUPLICATES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_USE_OLD_DAG_READER`
-    As of HTCondor version 8.3.3, this variable is no longer supported.
-    Its value will always be ``False``. A setting of ``True`` will
-    result in a warning, and the setting will have no effect on how a
-    DAG input file is read. The variable was previously used to change
-    the reading of DAG input files to that of HTCondor versions prior to
-    8.0.6. **Note: users should never change this setting.**
-
 :macro-def:`DAGMAN_USE_SHARED_PORT`
     A boolean value that controls whether *condor_dagman* will attempt
     to connect to the shared port daemon. If not defined,
     ``DAGMAN_USE_SHARED_PORT`` defaults to ``False``. There is no reason
     to ever change this value; it was introduced to prevent spurious
     shared port-related error messages from appearing in ``dagman.out``
-    files. (Introduced in version 8.6.1.)
+    files.
 
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
     A boolean value that controls whether *condor_dagman* submits jobs using
@@ -8668,10 +8660,9 @@ Priority, node semantics
     scripts, the order will not be strictly depth-first, but it will
     tend to favor depth rather than breadth in executing the DAG. If
     ``DAGMAN_SUBMIT_DEPTH_FIRST`` is set to ``True``, consider also
-    setting ``DAGMAN_RETRY_SUBMIT_FIRST`` and
-    ``DAGMAN_RETRY_NODE_FIRST`` :index:`DAGMAN_RETRY_NODE_FIRST`
-    to ``True``. If not defined, ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults
-    to ``False``.
+    setting :macro:`DAGMAN_RETRY_SUBMIT_FIRST` and
+    :macro:`DAGMAN_RETRY_NODE_FIRST` to ``True``. If not defined,
+    ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults to ``False``.
 
 :macro-def:`DAGMAN_ALWAYS_RUN_POST`
     A boolean value defining whether *condor_dagman* will ignore the
@@ -8680,9 +8671,7 @@ Priority, node semantics
     PRE script causes the POST script to not be executed. Changing this
     to ``True`` will restore the previous behavior of *condor_dagman*,
     which is that a POST script is always executed, even if the PRE
-    script fails. (The default for this value had originally been
-    ``False``, was changed to ``True`` in version 7.7.2, and then was
-    changed back to ``False`` in version 8.5.4.)
+    script fails.
 
 Node job submission/removal
 '''''''''''''''''''''''''''
@@ -8696,10 +8685,9 @@ Node job submission/removal
     the CPU time *condor_dagman* spends checking files, perhaps
     fruitlessly, but increases responsiveness to nodes completing or
     failing. The legal range of values is 1 to INT_MAX. If not defined,
-    it defaults to 5 seconds. (As of version 8.4.2, the default may be
-    automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    it defaults to 5 seconds. This default may be automatically decreased
+    if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
     An integer that controls how many individual jobs *condor_dagman*
@@ -8707,10 +8695,9 @@ Node job submission/removal
     *condor_rm*). The legal range of values is 1 to 1000. If defined
     with a value less than 1, the value 1 will be used. If defined with
     a value greater than 1000, the value 1000 will be used. If not
-    defined, it defaults to 100. (As of version 8.4.2, the default may
-    be automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    defined, it defaults to 100. This default may be automatically
+    decreased if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
     **Note: The maximum rate at which DAGMan can submit jobs is
     DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL.**
@@ -8862,8 +8849,7 @@ Rescue/retry
 
 :macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
     A boolean value that controls whether *condor_dagman* writes a
-    partial or a full DAG file as a Rescue DAG. As of HTCondor version
-    7.2.2, writing a partial DAG is preferred. If not defined,
+    partial or a full DAG file as a Rescue DAG. If not defined,
     ``DAGMAN_WRITE_PARTIAL_RESCUE`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
@@ -8887,10 +8873,6 @@ Rescue/retry
     ``False``, when a node with retries fails, the node is placed at the
     tail of the queue of ready nodes. This had been the behavior of
     *condor_dagman*. If not defined, it defaults to ``False``.
-
-:macro-def:`DAGMAN_OLD_RESCUE`
-    This configuration variable is no longer used. **Note: users should
-    never change this setting.**
 
 Log files
 '''''''''
@@ -8983,17 +8965,14 @@ Log files
     The ``DAGMAN_ALLOW_EVENTS`` value is a logical bitwise OR of the
     following values:
 
-        0 = allow no bad events
-        1 = allow all bad events, except the event
-        ``"job re-run after terminated event"``
-        2 = allow terminated/aborted event combination
-        4 = allow a ``"job re-run after terminated event"`` bug
-        8 = allow garbage or orphan events
-        16 = allow an execute or terminate event before job's submit
-        event
-        32 = allow two terminated events per job, as sometimes seen with
-        grid jobs
-        64 = allow duplicated events in general
+        -  0 = allow no bad events
+        -  1 = allow all bad events, except the event ``"job re-run after terminated event"``
+        -  2 = allow terminated/aborted event combination
+        -  4 = allow a ``"job re-run after terminated event"`` bug
+        -  8 = allow garbage or orphan events
+        - 16 = allow an execute or terminate event before job's submit event
+        - 32 = allow two terminated events per job, as sometimes seen with grid jobs
+        - 64 = allow duplicated events in general
 
     The default value is 114, which allows terminated/aborted event
     combination, allows an execute and/or terminated event before job's
@@ -9009,50 +8988,6 @@ Log files
     this value should almost never be used, because the
     ``"job re-run after terminated event"`` bug breaks the semantics of
     the DAG.
-
-:macro-def:`DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`
-    This configuration variable is no longer used. The improved
-    functionality of the ``DAGMAN_ALLOW_EVENTS`` macro eliminates the
-    need for this variable. **Note: users should never change this
-    setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that controls whether *condor_dagman* aborts or
-    continues with a DAG in the rare case that HTCondor erroneously
-    executes the job within a DAG node more than once. A bug in HTCondor
-    very occasionally causes a job to run twice. Running a job twice is
-    contrary to the semantics of a DAG. The configuration macro
-    ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`` determines whether
-    *condor_dagman* considers this a fatal error or not. The default
-    value is ``False``; *condor_dagman* considers running the job more
-    than once a fatal error, logs this fact, and aborts the DAG. When
-    set to ``True``, *condor_dagman* still logs this fact, but
-    continues with the DAG.
-
-    This configuration macro is to remain at its default value except in
-    the case where a site encounters the HTCondor bug in which DAG job
-    nodes are executed twice, and where it is certain that having a DAG
-    job node run twice will not corrupt the DAG. The logged messages
-    within ``*.dagman.out`` files in the case of that a node job runs
-    twice contain the string "EVENT ERROR."
-
-:macro-def:`DAGMAN_ALWAYS_USE_NODE_LOG`
-    As of HTCondor version 8.3.1, the value must always be the default
-    value of ``True``. Attempting to set it to ``False`` results in an
-    error. This causes incompatibility with using a *condor_submit*
-    executable that is older than HTCondor version 7.9.0. **Note: users
-    should never change this setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that when ``True`` causes *condor_dagman* to read
-    events from its default node log file, as defined by
-    ``DAGMAN_DEFAULT_NODE_LOG`` :index:`DAGMAN_DEFAULT_NODE_LOG`,
-    instead of from the log file(s) defined in the node job submit
-    description files. When ``True``, *condor_dagman* will read events
-    only from the default log file, and POST script terminated events
-    will be written only to the default log file, and not to the log
-    file(s) defined in the node job submit description files. The
-    default value is ``True``.
 
 Debug output
 ''''''''''''
