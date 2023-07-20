@@ -216,9 +216,8 @@ StartdHookMgr::handleHookFetchWork(FetchClient* fetch_client)
 	hookReplyFetch(willing, job_ad, rip);
 
 	if (willing) {
-		Claim* leftover_claim = NULL;
 		if (rip->can_create_dslot()) {
-			Resource * new_rip = create_dslot(rip, job_ad, leftover_claim);
+			Resource * new_rip = create_dslot(rip, job_ad);
 			if (new_rip) { rip = new_rip; }
 			else { willing = false; }
 		}

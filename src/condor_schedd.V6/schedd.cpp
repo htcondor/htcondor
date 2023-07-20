@@ -504,6 +504,7 @@ match_rec::match_rec( char const* the_claim_id, char const* p, PROC_ID* job_id,
 	claim_requester = NULL;
 	auth_hole_id = NULL;
 	m_startd_sends_alives = false;
+	m_claim_pslot = false;
 
 	makeDescription();
 
@@ -3899,7 +3900,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
-	dprintf(D_ALWAYS | D_BACKTRACE, "Owner %s has no JobQueueUserRec\n", owner);
+	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
 	int userrec_id = nextUnusedUserRecId();
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
@@ -7572,7 +7573,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 	dprintf(D_MATCH,"Received match for job %d.%d (delivered=%d): %s\n",
 			job_id.cluster, job_id.proc, m_current_resources_delivered, slot_name);
 
-	bool scheddsAreSubmitters = false;;
+	bool scheddsAreSubmitters = false;
 	if (strncmp("AllSubmittersAt", getMatchUser(), 15) == 0) {
 		scheddsAreSubmitters = true;
 	}
@@ -7581,6 +7582,24 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		// Not a real match we can directly use.  Send it to our sidecar cm, and let
 		// it figure out the fair-share, etc.
 		return scheduler.forwardMatchToSidecarCM(claim_id, extra_claims, match_ad, slot_name);
+	}
+
+	// Claim pslots if we're configured to do so and this negotiator will
+	// make further matches on the claimed pslot for us.
+	// TODO Ignore the negotiator's willingness to match once we're smart
+	//   enough to fully manage the claimed pslot or will be instructing
+	//   the startd to send updates to an AP collector/negotiator.
+	bool claim_pslot = false;
+	if (m_will_match_claimed_pslots) {
+		bool is_pslot = false;
+		match_ad.LookupBool(ATTR_SLOT_PARTITIONABLE, is_pslot);
+		if (is_pslot) {
+			std::string slot_state;
+			match_ad.LookupString(ATTR_STATE, slot_state);
+			if (slot_state == "Unclaimed" && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+				claim_pslot = true;
+			}
+		}
 	}
 
 	const char* because = "";
@@ -7665,6 +7684,8 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		return false;
 	}
 
+	mrec->m_claim_pslot = claim_pslot;
+
 	ContactStartdArgs *args = new ContactStartdArgs( claim_id, extra_claims, startd.addr(), false );
 
 	if( !scheduler.enqueueStartdContact(args) ) {
@@ -7705,13 +7726,18 @@ Scheduler::forwardMatchToSidecarCM(const char *claim_id, const char *extra_claim
 
 	ClassAd not_a_real_job;
 	// Tell the startd which CM to report to for real work
-	not_a_real_job.Assign("WorkingCM", local_cm.ptr());
+	if (local_cm) {
+		not_a_real_job.Assign("WorkingCM", local_cm.ptr());
+	}
+
+	// Tell the startd our name, which will go into the slot ad
+	not_a_real_job.Assign(ATTR_SCHEDD_NAME, Name);
 
 	startd->asyncRequestOpportunisticClaim(
 		&not_a_real_job,
 		slot_name,
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(),
+		scheduler.aliveInterval(), true,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		20,       // overall timeout on completing claim request
 		cb);
@@ -7967,6 +7993,7 @@ Scheduler::negotiate(int command, Stream* s)
 	std::string submitter_tag;
 	ExprTree *neg_constraint = NULL;
 	bool scheddsAreSubmitters = false;
+	bool willMatchClaimedPslots = false;
 
 	s->decode();
 	if( command == NEGOTIATE ) {
@@ -7993,6 +8020,7 @@ Scheduler::negotiate(int command, Stream* s)
 		negotiate_ad.LookupInteger("JOBPRIO_MIN",consider_jobprio_min);
 		negotiate_ad.LookupInteger("JOBPRIO_MAX",consider_jobprio_max);
 		neg_constraint = negotiate_ad.Lookup(ATTR_NEGOTIATOR_JOB_CONSTRAINT);
+		negotiate_ad.LookupBool(ATTR_MATCH_CLAIMED_PSLOTS, willMatchClaimedPslots);
 		negotiate_ad.LookupBool(ATTR_SCHEDDS_ARE_SUBMITTERS, scheddsAreSubmitters);
 		if (strncmp(owner, "AllSubmittersAt", 15) == 0) {
 			scheddsAreSubmitters = true;
@@ -8252,6 +8280,8 @@ Scheduler::negotiate(int command, Stream* s)
 			remote_pool
 		);
 
+	sn->setWillMatchClaimedPslots(willMatchClaimedPslots);
+
 		// handle the rest of the negotiation protocol asynchronously
 	sn->negotiate(sock);
 
@@ -8467,6 +8497,9 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 	jobAd->Assign( ATTR_STARTER_HANDLES_ALIVES, 
 					param_boolean("STARTER_HANDLES_ALIVES",true) );
 
+	// Tell the startd our name, which will go into the slot ad
+	jobAd->Assign(ATTR_SCHEDD_NAME, Name);
+
 	// Setup to claim the slot asynchronously
 
 	classy_counted_ptr<DCMsgCallback> cb = new DCMsgCallback(
@@ -8494,7 +8527,7 @@ Scheduler::contactStartd( ContactStartdArgs* args )
 		jobAd,
 		description.c_str(),
 		daemonCore->publicNetworkIpAddr(),
-		scheduler.aliveInterval(),
+		scheduler.aliveInterval(), mrec->m_claim_pslot,
 		STARTD_CONTACT_TIMEOUT, // timeout on individual network ops
 		deadline_timeout,       // overall timeout on completing claim request
 		cb );
@@ -8546,9 +8579,22 @@ Scheduler::claimedStartd( DCMsgCallback *cb ) {
 	// local data to match.
 	// Make sure to preserve attributes from the old ad that were added
 	// outside of the startd.
+	// If the ClaimId changed, make a new match_rec with the new ClaimId
+	// and copy over all of the job-related data.
+	// For now, delete the old match_rec. Eventually, we may want to keep
+	// it around (it should be for the claimed pslot).
 	if (msg->have_claimed_slot_info()) {
-		match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
-		match->my_match_ad->Update(match->m_added_attrs);
+		if (strcmp(msg->claimed_slot_claim_id(), match->claim_id.claimId())) {
+			PROC_ID job_id(match->cluster, match->proc);
+			SetMrecJobID(match, -1, -1);
+			msg->claimed_slot_ad()->Update(match->m_added_attrs);
+			match_rec* new_match = AddMrec(msg->claimed_slot_claim_id(), match->peer, &job_id, msg->claimed_slot_ad(), match->user, match->m_pool.c_str());
+			DelMrec(match);
+			match = new_match;
+		} else {
+			match->my_match_ad->CopyFrom(*msg->claimed_slot_ad());
+			match->my_match_ad->Update(match->m_added_attrs);
+		}
 	}
 
 	match->setStatus( M_CLAIMED );
@@ -10722,12 +10768,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// attribute is read/written to the job queue log by/or
 		// shared between versions of Condor which view the type
 		// of that attribute differently, calamity would arise.
+
 	if (GetAttributeInt(job_id->cluster, job_id->proc, 
 						   ATTR_CORE_SIZE, &core_size_truncated) == 0) {
 		// make the hard limit be what is specified.
 		core_size = (size_t)core_size_truncated;
-		core_size_ptr = &core_size;
+	} else {
+		core_size = 0;
 	}
+	core_size_ptr = &core_size;
 
 		// Update the environment to point at the job ad.
 	if( wrote_job_ad && !envobject.SetEnv("_CONDOR_JOB_AD", job_ad_path.c_str()) ) {

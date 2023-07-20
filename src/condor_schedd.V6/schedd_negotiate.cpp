@@ -67,6 +67,7 @@ ScheddNegotiate::ScheddNegotiate
 	m_current_resources_requested(1),
 	m_current_resources_delivered(0),
 	m_jobs_can_offer(-1),
+	m_will_match_claimed_pslots(false),
 	m_owner(owner ? owner : ""),
 	m_remote_pool(remote_pool ? remote_pool : ""),
 	m_current_auto_cluster_id(-1),

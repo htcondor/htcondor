@@ -25,6 +25,7 @@ import htcondor
 import os,sys
 import pytest
 import subprocess
+import time
 from pathlib import Path
 
 from ornithology import *
@@ -37,20 +38,24 @@ logger.setLevel(logging.DEBUG)
 def sif_file(test_dir):
     os.mkdir("image_root")
 
-    try:
-        Path("empty.sif").unlink
-    except FileNotFoundError:
-        pass
-
     # some singularities need mksquashfs in path
     # which some linuxes have in /usr/sbin
     os.environ["PATH"] = os.environ["PATH"] + ":/usr/sbin"
 
-    r = os.system("singularity -s build empty.sif image_root")
-    if (r == 0):
-        return "empty.sif"
-    else:
-        return ""
+    for count in [0, 1, 2, 3, 4]:
+        # rarely we see this failing in batlab with "bad file descriptor"
+        # so, just retry.
+        try:
+            Path("empty.sif").unlink
+        except FileNotFoundError:
+            pass
+
+        r = os.system("singularity -s build empty.sif image_root")
+        if (r == 0):
+            return "empty.sif"
+        time.sleep(5)
+
+    assert(False)
 
 # Setup a personal condor 
 @standup

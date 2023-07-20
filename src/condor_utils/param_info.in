@@ -354,7 +354,7 @@ type=bool
 tags=vm-gahp
 
 [PROCD_ADDRESS]
-default=$(LOCK)/procd_pipe
+default=$(RUN)/procd_pipe
 win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
@@ -923,7 +923,7 @@ default=https://aai-dev.egi.eu/auth/realms/egi
 type=string
 
 [SEC_SCITOKENS_CACHE]
-default=auto
+default=$(RUN)/cache
 type=string
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
@@ -1872,6 +1872,10 @@ tags=startd,vmuniverse_mgr
 default=$(LOG)
 type=string
 tags=startd,Starter
+
+[RUN]
+default=$(LOCK)
+type=path
 
 [VM_KILLING_TIMEOUT]
 default=60

@@ -39,7 +39,7 @@ perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
 	return ret;
 }
 
-PerfCounter::PerfCounter(pid_t pid): pid(pid), fd(-1)  {
+PerfCounter::PerfCounter(pid_t pid): fd(-1)  {
 	struct perf_event_attr pe;
 
 	memset(&pe, 0, sizeof(struct perf_event_attr));

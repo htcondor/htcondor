@@ -429,9 +429,6 @@ public:
 	bool 			m_bUserSuspended;
 	bool			r_no_collector_updates;
 
-	std::string		workingCM; // if claimed for another CM, our temporary CM
-	time_t			workingCMStartTime; // when the above started
-
 	int				type( void ) { return r_attr->type(); };
 
 	char const *executeDir() { return r_attr->executeDir(); }
@@ -540,10 +537,6 @@ Arguments
 
 - req_classad - Input: The ClassAd for the job to run
 
-- leftover_claim - Output: If a partitionable slot was carved up,
-  this will hold the claim to the leftovers.  Otherwise, it will be
-  unchanged.
-
 Return
 
 Returns the Resource the job will actually be running on.  It does not need to
@@ -558,6 +551,6 @@ only if rip->can_create_dslot() is true.
 
 The job may be rejected, in which case the returned Resource will be null.
 */
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim);
+Resource * create_dslot(Resource * rip, ClassAd * req_classad);
 
 #endif /* _STARTD_RESOURCE_H */
