@@ -2559,7 +2559,7 @@ void Resource::publish_static(ClassAd* cap)
 		case PARTITIONABLE_SLOT:
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
-			if (param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+			if (param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
 				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
 				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
 			}

@@ -7536,7 +7536,7 @@ MainScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim_id, 
 		if (is_pslot) {
 			std::string slot_state;
 			match_ad.LookupString(ATTR_STATE, slot_state);
-			if (slot_state == "Unclaimed" && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+			if (slot_state == "Unclaimed" && param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
 				claim_pslot = true;
 			}
 		}

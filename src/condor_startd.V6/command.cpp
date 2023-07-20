@@ -1108,7 +1108,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 		pslot_claim = rip->r_cur;
 	}
 
-	if (rip->is_partitionable_slot() && param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+	if (rip->is_partitionable_slot() && param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
 		req_classad->LookupBool("_condor_CLAIM_PARTITIONABLE_SLOT", claim_pslot);
 		req_classad->LookupInteger("_condor_NUM_DYNAMIC_SLOTS", num_dslots);
 		req_classad->LookupInteger("_condor_PARTITIONABLE_SLOT_CLAIM_TIME", pslot_claim_lease);
