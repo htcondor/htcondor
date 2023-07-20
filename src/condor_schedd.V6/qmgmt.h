@@ -300,7 +300,7 @@ public:
 
 	JobQueueUserRec(int userrec_id, const char* _name=nullptr, const char * _domain=nullptr, unsigned char is_super=0)
 		: JobQueueBase(JOB_ID_KEY(USERRECID_qkey1,userrec_id), entry_type_userrec)
-		, name(_name?_name:""), domain(_domain?_domain:""), super(is_super)
+		, super(is_super), name(_name?_name:""), domain(_domain?_domain:"")
 	{}
 	virtual ~JobQueueUserRec() {};
 
