@@ -17,6 +17,15 @@ Release Notes:
 
 New Features:
 
+- Partitionable slots can now be directly claimed by a *condor_schedd*
+  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  While a slot is claimed, no other *condor_schedd* is able to create
+  new dynamic slots to run jobs.
+  This is controlled by the new configuration parameter
+  :macro:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS` and is disabled by
+  default.
+  :jira:`1824`
+
 - Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
   before the user was disabled are allowed to run to completion.
   :jira:`1723`
