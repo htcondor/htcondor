@@ -17,7 +17,10 @@ Release Notes:
 
 New Features:
 
-- None.
+- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
+  added to allow administrators to restrict job submission to users that have
+  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  :jira:`1934`
 
 Bugs Fixed:
 

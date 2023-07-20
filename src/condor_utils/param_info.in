@@ -3319,6 +3319,13 @@ description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
 tags=schedd
 
+[ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY]
+default=false
+type=bool
+customization=normal
+description=Restrict job submission to users that already have already been added using condor_qusers
+tags=schedd
+
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
 # default is roughly 1/2 the value of the default START_SCHEDULER_UNIVERSE expression
 default=200
