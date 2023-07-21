@@ -1776,16 +1776,16 @@ ResMgr::deleteResource( Resource* rip )
 
 // return the count of claims on this machine associated with this user
 // used to decide when to delete credentials
-int ResMgr::claims_for_this_user(const char * user)
+int ResMgr::claims_for_this_user(const std::string &user)
 {
-	if ( ! user || ! user[0]) {
+	if (user.empty()) {
 		return 0;
 	}
 	int num_matches = 0;
 
-	for (Resource * res : slots) {
+	for (const Resource *res : slots) {
 		if (res && res->r_cur && res->r_cur->client() && !res->r_cur->client()->c_user.empty()) {
-			if (MATCH == strcmp(res->r_cur->client()->c_user.c_str(), user)) {
+			if (user == res->r_cur->client()->c_user) {
 				num_matches += 1;
 			}
 		}
