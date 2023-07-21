@@ -24,7 +24,9 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed a bug in DAGMan where service nodes that finish before the DAGs
+  end would result in DAGMan crashing due to an assertion failure.
+  :jira:`1909`
 
 .. _lts-version-history-1007:
 

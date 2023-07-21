@@ -4251,9 +4251,8 @@ Dag::ProcessSuccessfulSubmit( Job *node, const CondorID &condorID )
 		// we see the submit events so that we don't accidentally exceed
 		// maxjobs (now really maxnodes) if it takes a while to see
 		// the submit events.  wenger 2006-02-10.
-	if ( node->GetType() != NodeType::SERVICE ) {
-		UpdateJobCounts( node, 1 );
-	}
+	UpdateJobCounts( node, 1 );
+
 
         // stash the job ID reported by the submit command, to compare
         // with what we see in the userlog later as a sanity-check
@@ -4361,6 +4360,8 @@ Dag::DecrementProcCount( Job *node )
 void
 Dag::UpdateJobCounts( Job *node, int change )
 {
+	// Service nodes are separate from normal jobs
+	if ( node->GetType() == NodeType::SERVICE ) { return; }
 	_numJobsSubmitted += change;
 	ASSERT( _numJobsSubmitted >= 0 );
 
