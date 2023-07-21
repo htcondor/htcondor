@@ -884,31 +884,3 @@ key files described above.
 If you need to specify a region, you may do so using ``aws_region``,
 despite the name.
 
-**Testing mode for file transfer plugins**
-
-You can use this modification to test HTCondor file transfer plugins prior to
-being inserted into the list of available URL schemas. If you wish to provide 
-some test links for file transfer plugins, you can add some modifications to 
-the condor_config file. All you need is to add:
-
-.. code-block:: condor-submit
-
-      <URL_TYPE>_TEST_URL = <url_type>://<url>
-
-Here is an example using https://google.com:
-
-.. code-block:: condor-submit
-
-      HTTPS_TEST_URL = https://google.com
-
-In the above config, HTTPS will only be available if google.com is present. To
-see the list of available url types, just run condor_starter -classad.
-The output of this command should show the line below if all your test url's worked properly:
-
-.. code-block:: condor_submit
-
-      HasFileTransferPluginMethods = "box,https,gdrive,dav,davs,http,onedrive,data,ftp,file,s3,gs"
-
-If you notice one of these types are missing, then the test url failed. Otherwise, the test url
-works properly and should work with that plugin method.
-

@@ -6260,6 +6260,13 @@ These settings affect the *condor_starter*.
     :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
     for a description of the functionality required of a plug-in.
 
+:macro-def:`<PLUGIN>_TEST_URL`
+    This configuration takes a URL to be tested against the specified
+    ``<PLUGIN>``. If this test fails, then that plugin is removed from
+    the *condor_starter* classad attribute ``HasFileTransferPluginMethods``.
+    This attribute determines what plugin capabilities the *condor_starter*
+    can utilize.
+
 :macro-def:`RUN_FILETRANSFER_PLUGINS_WITH_ROOT`
     A boolean value that affects only Unix platforms and defaults to
     ``False``, causing file transfer plug-ins invoked for a job to run
