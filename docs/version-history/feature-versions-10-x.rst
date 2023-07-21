@@ -29,7 +29,10 @@ New Features:
 
 Bugs Fixed:
 
-- None.
+- Fixed inefficiency in DAGMan setting a nodes descendants to futile status
+  which would result in DAGMan taking an extremely long time when a node fails
+  in a very large and bushy DAG.
+  :jira:`1945`
 
 Version 10.7.0
 --------------
