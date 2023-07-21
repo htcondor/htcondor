@@ -479,7 +479,7 @@ countres:
 	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	if (cred_dir_krb) {
 
-		int ResCount = resmgr->claims_for_this_user(curuser.c_str());
+		int ResCount = resmgr->claims_for_this_user(curuser);
 		if (ResCount == 0) {
 			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
 			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str());
