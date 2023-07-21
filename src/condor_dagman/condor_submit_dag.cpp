@@ -97,10 +97,6 @@ int main(int argc, char *argv[])
 		// depth-first so all of the lower-level .condor.sub files already
 		// exist when we check for log files.
 	if ( deepOpts.recurse ) {
-		if ( param_boolean( "DAGMAN_USE_OLD_DAG_READER", false ) ) {
-			fprintf( stderr, "Warning: DAGMAN_USE_OLD_DAG_READER "
-						"is no longer supported\n" );
-		}
 		tmpResult = doRecursionNew( deepOpts, shallowOpts );
 		if ( tmpResult != 0) {
 			fprintf( stderr, "Recursive submit(s) failed; exiting without "

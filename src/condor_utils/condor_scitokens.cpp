@@ -187,6 +187,7 @@ htcondor::init_scitokens()
 	if (scitoken_config_set_str_ptr) {
 		std::string cache_loc;
 		param(cache_loc, "SEC_SCITOKENS_CACHE");
+		// CRUFT: 'auto' is no longer the default value
 		if (cache_loc == "auto") {
 			if (!param(cache_loc, "RUN")) {
 				param(cache_loc, "LOCK");

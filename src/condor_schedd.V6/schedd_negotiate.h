@@ -96,6 +96,8 @@ class ScheddNegotiate: public DCMsg {
 
 	virtual ~ScheddNegotiate();
 
+	void setWillMatchClaimedPslots(bool will_match) { m_will_match_claimed_pslots = will_match; }
+
 		// Begins asynchronously processing negotiation operations
 		// sent by the negotiator.  Assumes that the initial
 		// negotiation header has already been read (the owner,
@@ -162,6 +164,8 @@ class ScheddNegotiate: public DCMsg {
 		// how many more resources can we offer to the matchmaker?
 		// If -1, then we don't limit the offered resources.
 	int m_jobs_can_offer;
+		// will matchmaker match pslots that we have claimed?
+	bool m_will_match_claimed_pslots;
 
  private:
 	std::set<int> m_rejected_auto_clusters;

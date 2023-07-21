@@ -1557,15 +1557,6 @@ Resource::do_update( void )
 	StartdPluginManager::Update(&public_ad, &private_ad);
 #endif
 
-	std::string priorState;
-
-	// If we are sending to a temporary "working" collector
-	// lie to our primary collector that we are claimed
-	// But keep the activity the same
-	if (!workingCM.empty()) {
-		public_ad.LookupString(ATTR_STATE, priorState);
-		public_ad.Assign(ATTR_STATE, "Claimed");
-	}
 		// Send class ads to owning collector(s)
 	rval = resmgr->send_update( UPDATE_STARTD_AD, &public_ad,
 								&private_ad, true );
@@ -1576,14 +1567,11 @@ Resource::do_update( void )
 	}
 
 	// If we have a temporary CM, send update there, too
-	if (!workingCM.empty()) {
-		// And resource ATTR_STATE back to the correct value for our working collector
-		public_ad.Assign(ATTR_STATE, priorState);
-
-		CollectorList *workingCollectors = CollectorList::create(workingCM.c_str());
+	if (!r_cur->c_working_cm.empty()) {
+		CollectorList *workingCollectors = CollectorList::create(r_cur->c_working_cm.c_str());
 		workingCollectors->sendUpdates(UPDATE_STARTD_AD, &public_ad, &private_ad, true);
 		delete workingCollectors;
-	} 
+	}
 
 	// We _must_ reset update_tid to -1 before we return so
 	// the class knows there is no pending update.
@@ -2566,6 +2554,13 @@ void Resource::publish_static(ClassAd* cap)
 		case PARTITIONABLE_SLOT:
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
+			if (param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
+				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
+			}
+			if (state() == claimed_state) {
+				cap->Assign(ATTR_CLAIM_END_TIME, r_cur->getLeaseEndtime());
+			}
 			break;
 		case DYNAMIC_SLOT:
 			cap->Assign(ATTR_SLOT_DYNAMIC, true);
@@ -3680,7 +3675,7 @@ Resource::compute_rank( ClassAd* req_classad ) {
 //
 // Create dynamic slot from p-slot
 //
-Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_claim)
+Resource * create_dslot(Resource * rip, ClassAd * req_classad)
 {
 	ASSERT(rip);
 	ASSERT(req_classad);
@@ -3940,17 +3935,21 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 		new_rip->init_classad();
 		new_rip->refresh_classad_slot_attrs(); 
 
-			// The new resource needs the claim from its
-			// parititionable parent
-		delete new_rip->r_cur;
-		new_rip->r_cur = rip->r_cur;
-		new_rip->r_cur->setResource( new_rip );
+			// If the pslot isn't claimed, then move its current Claim
+			// to the new dslot. Otherwise, leave the current Claim with
+			// the pslot.
+		if (rip->state() != claimed_state) {
+				// The new resource needs the claim from its
+				// parititionable parent
+			delete new_rip->r_cur;
+			new_rip->r_cur = rip->r_cur;
+			new_rip->r_cur->setResource( new_rip );
 
-			// And the partitionable parent needs a new claim
-		rip->r_cur = new Claim( rip );
+				// And the partitionable parent needs a new claim
+			rip->r_cur = new Claim( rip );
+		}
 
 			// Recompute the partitionable slot's resources
-		rip->change_state( unclaimed_state );
 			// Call update() in case we were never matched, i.e. no state change
 			// Note: update() may create a new claim if pass thru Owner state
 		rip->update_needed(Resource::WhyFor::wf_dslotCreate);
@@ -3962,26 +3961,6 @@ Resource * create_dslot(Resource * rip, ClassAd * req_classad, Claim* &leftover_
 			// One thing this doesn't update is owner load and keyboard
 			// note that compute_dynamic will refresh both the d-slot and p-slot
 		resmgr->compute_and_refresh(new_rip);
-
-			// Stash pslot claim as the "leftover_claim", which
-			// we will send back directly to the schedd iff it supports
-			// receiving partitionable slot leftover info as part of the
-			// new-style extended claiming protocol. 
-			// But don't send a leftovers claim if consumption policies
-			// are enabled, as that means the negotiator is carving up
-			// the pslot.
-		bool scheddWantsLeftovers = false;
-			// presence of this attr in request ad tells us in a 
-			// backwards/forwards compatible way if the schedd understands
-			// the claim protocol enhancement to accept leftovers
-		req_classad->LookupBool("_condor_SEND_LEFTOVERS",scheddWantsLeftovers);
-		if ( scheddWantsLeftovers && 
-			 param_boolean("CLAIM_PARTITIONABLE_LEFTOVERS",true) &&
-			 rip->r_has_cp == false )
-		{
-			leftover_claim = rip->r_cur;
-			ASSERT(leftover_claim);
-		}
 
 		return new_rip;
 	}

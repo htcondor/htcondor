@@ -125,7 +125,6 @@ JobUniverse=9
 Requirements=true
 TransferExecutable=false
 UserLog=/".+azure.log"/
-WantClaiming=false
 
 ==grid_condorc.sub
 Args="60"
@@ -138,7 +137,6 @@ ShouldTransferFiles="YES"
 StreamErr=false
 StreamOut=false
 UserLog=/".+condorc.log"/
-WantClaiming=false
 
 ==grid_ec2.sub
 Arguments=""
@@ -157,7 +155,6 @@ ImageSize=0
 JobUniverse=9
 Requirements=true
 TransferExecutable=false
-WantClaiming=false
 
 ==grid_gce.sub
 Arguments=""
@@ -175,7 +172,6 @@ JobUniverse=9
 Requirements=true
 TransferExecutable=false
 UserLog=/".+gce.log"/
-WantClaiming=false
 
 ==xfer0.sub
 Requirements=/TARGET\.HasFileTransfer.+"FTP",TARGET\.HasFileTransferPluginMethods/
