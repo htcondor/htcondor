@@ -68,7 +68,6 @@ class TransferQueueRequest {
 	                    // to a different file without notifying us.
 	bool m_downloading; // true if client wants to download a file; o.w. upload
 	bool m_gave_go_ahead; // true if we told this client to go ahead
-	bool m_notified_about_taking_too_long;
 
 	time_t m_max_queue_age; // clean transfer from queue after this time
 	                        // 0 indicates no limit
