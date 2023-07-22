@@ -17,10 +17,7 @@ Release Notes:
 
 New Features:
 
-- When the file transfer queue is growing too big, HTCondor sends email to the
-  administrator.  Prior versions of HTCondor would send an arbitrarily large number
-  of emails.  Now HTCondor will only send one email per day.
-  :jira:`1937`
+- None.
 
 Bugs Fixed:
 
