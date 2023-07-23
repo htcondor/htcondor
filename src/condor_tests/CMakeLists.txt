@@ -247,6 +247,7 @@ endif ()
 			condor_pl_test(test_condor_history "Test condor_history tools capabilities" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
