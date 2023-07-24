@@ -34,7 +34,7 @@ static Qmgr_connection connection;
 Qmgr_connection *
 ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, const char *effective_owner)
 {
-	int		rval, ok;
+	bool ok;
 	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
 
 		// do we already have a connection active?
@@ -53,7 +53,7 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 
     // no connection active as of now; create a new one
 	if( ! schedd.locate() ) {
-		ok = FALSE;
+		ok = false;
 		dprintf( D_ALWAYS, "Can't find address of queue manager\n" );
 	} else { 
 		qmgmt_sock = (ReliSock*) schedd.startCommand( cmd,
