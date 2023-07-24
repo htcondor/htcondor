@@ -2748,8 +2748,9 @@ These macros control the *condor_master*.
     call, instead of the normal call to exit(). Multiple programs to
     execute may be defined with multiple entries, each with a unique
     ``Name``. These macros have no effect on a *condor_master* unless
-    *condor_set_shutdown* is run. The ``Name`` specified as an
-    argument to the *condor_set_shutdown* program must match the
+    *condor_set_shutdown* is run, or the `-exec` argument is used with
+    *condor_off* or *condor_restart*. The ``Name`` specified as an
+    argument to the *condor_set_shutdown* program or `-exec` arg must match the
     ``Name`` portion of one of these ``MASTER_SHUTDOWN_<Name>`` macros;
     if not, the *condor_master* will log an error and ignore the
     command. If a match is found, the *condor_master* will attempt to
