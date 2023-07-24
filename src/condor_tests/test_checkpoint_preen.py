@@ -30,8 +30,10 @@ def the_condor(test_dir):
     with Condor(
         local_dir=test_dir / "condor",
         config={
+            'NUM_CPUS': 40,
             'ENABLE_URL_TRANSFERS': 'TRUE',
             'LOCAL_CLEANUP_PLUGIN': '/bin/false',
+            'MAX_CHECKPOINT_CLEANUP_PROCS': 2,
         }
     ) as the_condor:
         yield the_condor
@@ -649,6 +651,10 @@ def the_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file
         input_path = test_dir / name
         input_path.mkdir(parents=True, exist_ok=True)
 
+        count = 1
+        if "spool" not in name:
+            count = 5
+
         # If I were feeling clever, I'd rewrite TEST_CASES to include these
         # sequences as lambdas, or maybe just function references.
         if name == "check_files_local":
@@ -687,7 +693,7 @@ def the_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file
         }
         job_handle = the_condor.submit(
             description=complete_job_description,
-            count=1,
+            count=count,
         )
 
         job_handles[name] = job_handle
@@ -744,302 +750,6 @@ def the_removed_job(the_condor, the_completed_job):
     return the_completed_job
 
 
-@action
-def the_completed_job_stdout(test_dir, the_job_name, the_completed_job):
-    cluster = the_completed_job.clusterid
-    output_log_path = test_dir / f"test_job_{cluster}.out"
-
-    with open(test_dir / output_log_path) as output:
-        return output.readlines()
-
-
-@action
-def the_completed_job_stderr(test_dir, the_completed_job):
-    cluster = the_completed_job.clusterid
-    with open(test_dir / f"test_job_{cluster}.err" ) as error:
-        return error.readlines()
-
-
-#
-# These jobs are expected to go on hold when they try to checkpoint.
-#
-
-HOLD_CASES = {
-    "missing_destination": {
-        "+CheckpointDestination":       '"local://{test_dir}/missing"',
-        "transfer_plugins":             'local={plugin_shell_file}',
-    },
-    "symlink_to_dir": {
-        "executable":                   '{path_to_symlink_script}',
-        "transfer_checkpoint_files":    "s"
-    },
-}
-
-
-@action
-def hold_job_handles(test_dir, the_condor, the_job_description, plugin_shell_file, path_to_symlink_script):
-    job_handles = {}
-    for name, hold_case in HOLD_CASES.items():
-        hold_case = {key: value.format(
-            test_dir=test_dir,
-            plugin_shell_file=plugin_shell_file,
-            path_to_symlink_script=path_to_symlink_script,
-        ) for key, value in hold_case.items()}
-
-        if name == "missing_destination":
-            # Make sure this isn't a directory, since the local:// plugin
-            # creates them as needed.
-            (test_dir / "missing").touch()
-
-        complete_job_description = {
-            ** the_job_description,
-            ** hold_case,
-        }
-
-        job_handle = the_condor.submit(
-            description=complete_job_description,
-            count=1,
-        )
-
-        job_handles[name] = job_handle
-
-    yield job_handles
-
-    for job_handle in job_handles:
-        job_handles[job_handle].remove()
-
-
-@action(params={name: name for name in HOLD_CASES})
-def hold_job_pair(request, hold_job_handles):
-    return (request.param, hold_job_handles[request.param])
-
-
-@action
-def hold_job_name(hold_job_pair):
-    return hold_job_pair[0]
-
-
-@action
-def hold_job_handle(hold_job_pair):
-    return hold_job_pair[1]
-
-
-@action
-def hold_job(hold_job_handle):
-    hold_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_held,
-    )
-
-    return hold_job_handle
-
-
-#
-# These jobs are expected to fail when downloading the checkpoint.
-#
-
-FAIL_CASES = {
-    "missing_file": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
-        "transfer_plugins":             'local={plugin_shell_file}',
-        "transfer_input_files":         "{path_to_mutate_script_a}",
-    },
-    "corrupt_file": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
-        "transfer_plugins":             'local={plugin_shell_file}',
-        "transfer_input_files":         "{path_to_mutate_script_b}",
-    },
-    "corrupt_manifest": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
-        "transfer_plugins":             'local={plugin_shell_file}',
-        "transfer_input_files":         "{path_to_mutate_script_c}",
-    },
-}
-
-
-@action
-def path_to_mutate_script_a(test_dir):
-    script = f"""
-    #!/usr/bin/python3
-    import os
-
-    # Remove a file from the checkpoint.
-    os.unlink("saved-state")
-    """
-
-    path = test_dir / "a" / "mutate_checkpoint.py"
-    write_file(path, format_script(script))
-
-    return path
-
-
-@action
-def path_to_mutate_script_b(test_dir):
-    script = f"""
-    #!/usr/bin/python3
-    import os
-    from pathlib import Path
-
-    # Corrupt a checkpoint file.
-    path = Path("saved-state")
-    path.write_text("-1\\n")
-
-    """
-
-    path = test_dir / "b" / "mutate_checkpoint.py"
-    write_file(path, format_script(script))
-
-    return path
-
-
-@action
-def path_to_mutate_script_c(test_dir):
-    script = f"""
-    #!/usr/bin/python3
-    import os
-    from pathlib import Path
-
-    # Corrupt the MANIFEST hash by swapping its first two bytes.
-    path = Path("_condor_checkpoint_MANIFEST.0000")
-    contents = path.read_text().splitlines()
-    contents[-1] = contents[-1][1] + contents[-1][0] + contents[-1][2:]
-    path.write_text("\\n".join(contents) + "\\n")
-    """
-
-    path = test_dir / "c" / "mutate_checkpoint.py"
-    write_file(path, format_script(script))
-
-    return path
-
-
-@action
-def fail_job_handles(test_dir, the_condor, the_job_description,
-    plugin_shell_file,
-    path_to_mutate_script_a,
-    path_to_mutate_script_b,
-    path_to_mutate_script_c,
-):
-    job_handles = {}
-    for name, fail_case in FAIL_CASES.items():
-        fail_case = {key: value.format(
-            test_dir=test_dir,
-            plugin_shell_file=plugin_shell_file,
-            path_to_mutate_script_a=path_to_mutate_script_a,
-            path_to_mutate_script_b=path_to_mutate_script_b,
-            path_to_mutate_script_c=path_to_mutate_script_c,
-        ) for key, value in fail_case.items()}
-
-        complete_job_description = {
-            ** the_job_description,
-            ** fail_case,
-        }
-
-        job_handle = the_condor.submit(
-            description=complete_job_description,
-            count=1,
-        )
-
-        job_handles[name] = job_handle
-
-    yield job_handles
-
-    for job_handle in job_handles:
-        job_handles[job_handle].remove()
-
-
-@action(params={name: name for name in FAIL_CASES})
-def fail_job_pair(request, fail_job_handles):
-    return (request.param, fail_job_handles[request.param])
-
-
-@action
-def fail_job_name(fail_job_pair):
-    return fail_job_pair[0]
-
-
-@action
-def fail_job_handle(fail_job_pair):
-    return fail_job_pair[1]
-
-
-@action
-def fail_job(the_condor, fail_job_handle):
-    # The job will evict itself part of the way through.  To avoid a long
-    # delay waiting for the schedd to reschedule it, call condor_reschedule.
-    fail_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_running,
-        fail_condition=ClusterState.any_held,
-    )
-
-    fail_job_handle.wait(
-        timeout=60,
-        condition=ClusterState.all_idle,
-        fail_condition=ClusterState.any_held,
-    )
-
-    the_condor.run_command(['condor_reschedule'])
-
-    # Presently, from the point of view of ornithology, a job which
-    # is idle stays that way even if input transfer has started, which
-    # means we can't wait() the shadow exception, because it happens
-    # before the execute event.
-    #
-    # Thankfuly, if a state change causes a fail or success condition
-    # to fire, ClusterHandle.wait() stops immediately after reading
-    # the event which caused the state change.
-
-    # This is mildly incestuous; it should be moved into an Ornithology
-    # API and/or all but the last line of this function replace by
-    # `fail_job_handle.wait_for_event(
-    #       of_type=EventType.SHADOW_EXCEPTION,
-    #       timeout=60,
-    # )`.
-    last_event_read = fail_job_handle.state._last_event_read
-
-    countdown = 60
-    found_event = False
-    while not found_event:
-        fail_job_handle.state.read_events()
-        events = fail_job_handle.event_log.events[last_event_read + 1:]
-        for event in events:
-            last_event_read += 1
-
-            if event.type is JobEventType.SHADOW_EXCEPTION:
-                found_event = True
-                break
-
-        if not found_event:
-            countdown -= 1
-            if countdown == 0:
-                break
-            time.sleep(1)
-
-    return fail_job_handle
-
-
-#
-# Assertion functions for the tests.  From test_allowed_execute_duration.py,
-# which means we should probably drop them in Ornithology somewhere.
-#
-
-def types_in_events(types, events):
-    return any(t in [e.type for e in events] for t in types)
-
-
-def event_types_in_order(types, events):
-    t = 0
-    for i in range(0, len(events)):
-        event = events[i]
-
-        if event.type == types[t]:
-            t += 1
-            if t == len(types):
-                return True
-    else:
-        return False
-
-
 class TestCheckpointDestination:
 
     def test_checkpoint_removed(self,
@@ -1047,7 +757,7 @@ class TestCheckpointDestination:
       the_job_name, the_removed_job,
       cleanup_file):
         schedd = the_condor.get_local_schedd()
-        constraint = f'ClusterID == {the_removed_job.clusterid} && ProcID == 0'
+        constraint = f'ClusterID == {the_removed_job.clusterid}'
 
         # Make sure the job has left the queue.
         result = schedd.query(
@@ -1057,10 +767,6 @@ class TestCheckpointDestination:
         assert(len(result) == 0)
 
 
-        #
-        # FIXME: this is definitely broken -- how is the file deletion
-        # happening, or if it isn't, why aren't we noticing?
-        #
         with the_condor.use_config():
             SPOOL = htcondor.param["SPOOL"]
 
@@ -1068,8 +774,9 @@ class TestCheckpointDestination:
                 ** os.environ,
                 '_CONDOR_SPOOL': SPOOL,
                 '_CONDOR_LOCAL_CLEANUP_PLUGIN': cleanup_file.as_posix(),
+                '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
             }
-            rv = subprocess.run( ['condor_preen', '-log'],
+            rv = subprocess.run( ['condor_preen', '-d'],
                 env=preen_env, timeout=20,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True,
@@ -1081,43 +788,46 @@ class TestCheckpointDestination:
         # Get the CheckpointDestination and GlobalJobID from the history file.
         result = schedd.history(
             constraint=constraint,
-            projection=["CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
-            match=1,
+            projection=["ProcId", "CheckpointDestination", "GlobalJobID", "CheckpointNumber"],
         )
         results = [r for r in result]
-        assert(len(results) == 1)
+        if "spool" in the_job_name:
+            assert(len(results) == 1)
+        else:
+            assert(len(results) == 5)
 
-        jobAd = results[0]
-        prefix = jobAd.get("CheckpointDestination")
+        for jobAd in results:
+            prefix = jobAd.get("CheckpointDestination")
+            proc = jobAd["ProcId"]
 
-        # Did we clean up the SPOOL directory?
-        spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
-        assert(not spoolDirectory.exists())
+            # Did we clean up the SPOOL directory?
+            spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
+            assert(not spoolDirectory.exists())
 
-        if not prefix is None:
-            prefix = prefix[prefix.find("://") + 3:]
-            globalJobID = jobAd["GlobalJobID"].replace('#', '_')
-            prefix = prefix + "/" + globalJobID
-            prefix = Path(prefix)
+            if not prefix is None:
+                prefix = prefix[prefix.find("://") + 3:]
+                globalJobID = jobAd["GlobalJobID"].replace('#', '_')
+                prefix = prefix + "/" + globalJobID
+                prefix = Path(prefix)
 
-            checkpointNumber = int(jobAd["CheckpointNumber"])
-            for i in range(0, checkpointNumber):
-                path = prefix / f"{i:04}"
+                checkpointNumber = int(jobAd["CheckpointNumber"])
+                for i in range(0, checkpointNumber):
+                    path = prefix / f"{i:04}"
 
-                # Did we remove the checkpoint destination?
-                if path.exists():
+                    # Did we remove the checkpoint destination?
+                    if path.exists():
+                        # Crass empiricism.
+                        time.sleep(10)
+                    assert(not path.exists())
+
+                    # Did we remove the manifest file?
+                    manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
+                    assert(not manifest_file.exists())
+
+                # Once we've removed all of the manifest files, we should also
+                # remove the directory we used to store them.
+                checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0"
+                if checkpoint_cleanup_subdir.exists():
                     # Crass empiricism.
                     time.sleep(10)
-                assert(not path.exists())
-
-                # Did we remove the manifest file?
-                manifest_file = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0" / f"_condor_checkpoint_MANIFEST.{checkpointNumber}"
-                assert(not manifest_file.exists())
-
-            # Once we've removed all of the manifest files, we should also
-            # remove the directory we used to store them.
-            checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
-            if checkpoint_cleanup_subdir.exists():
-                # Crass empiricism.
-                time.sleep(10)
-            assert(not checkpoint_cleanup_subdir.exists())
+                assert(not checkpoint_cleanup_subdir.exists())
