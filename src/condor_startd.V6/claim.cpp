@@ -115,7 +115,7 @@ Claim::~Claim()
 	if( c_type == CLAIM_COD ) {
 		dprintf( D_FULLDEBUG, "Deleted claim %s (owner '%s')\n",
 				 c_id->id(),
-				 c_client->owner() ? c_client->owner() : "unknown" );
+				 c_client->c_owner.c_str() );
 	}
 
 	// The resources assigned to this claim must have been freed by now.
@@ -185,8 +185,27 @@ Claim::vacate()
 {
 	ASSERT( c_id );
 		// warn the client of this claim that it's being vacated
-	if( c_client && c_client->addr() && !c_schedd_closed_claim ) {
-		c_client->vacate( c_id->id() );
+	if( c_client && !c_client->c_addr.empty() && !c_schedd_closed_claim ) {
+		dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n",
+		        c_client->c_addr.c_str(), c_client->c_host.c_str());
+
+		Daemon my_schedd( DT_SCHEDD, c_client->c_addr.c_str(), NULL);
+		Sock* sock = my_schedd.startCommand(RELEASE_CLAIM, Stream::reli_sock,
+		                                    20, nullptr, nullptr, false,
+		                                    c_id->secSessionId());
+		if( ! sock ) {
+			dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n",
+			        c_client->c_addr.c_str());
+		} else {
+			if( !sock->put_secret(c_id->id()) ) {
+				dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
+			} else if( !sock->end_of_message() ) {
+				dprintf(D_ALWAYS, "Can't send EOM to client\n");
+			}
+
+			sock->close();
+			delete sock;
+		}
 	}
 
 #if HAVE_JOB_HOOKS
@@ -202,8 +221,6 @@ void
 Claim::publish( ClassAd* cad )
 {
 	std::string line;
-	char* tmp;
-	char *remoteUser;
 
 		/*
 		  NOTE: currently, we publish all of the following regardless
@@ -223,49 +240,42 @@ Claim::publish( ClassAd* cad )
 		if (!c_client->c_scheddName.empty()) {
 			cad->Assign(ATTR_REMOTE_SCHEDD_NAME, c_client->c_scheddName);
 		}
-		remoteUser = c_client->user();
-		if( remoteUser ) {
-			cad->Assign( ATTR_REMOTE_USER, remoteUser );
+		if( !c_client->c_user.empty() ) {
+			cad->Assign(ATTR_REMOTE_USER, c_client->c_user);
 		}
-		tmp = c_client->owner();
-		if( tmp ) {
-			cad->Assign( ATTR_REMOTE_OWNER, tmp );
+		if( !c_client->c_owner.empty() ) {
+			cad->Assign(ATTR_REMOTE_OWNER, c_client->c_owner);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
-			char *uidDom = NULL;
+		if( !c_client->c_acctgrp.empty() ) {
+			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
-			if ( remoteUser ) {
-				uidDom = strchr(remoteUser,'@');
+			if ( !c_client->c_user.empty() ) {
+				uidDom = strchr(c_client->c_user.c_str(), '@');
 			}
-			line = tmp;
+			line = c_client->c_acctgrp;
 			if ( uidDom ) {
 				line += uidDom;
 			}
 			cad->Assign( ATTR_ACCOUNTING_GROUP, line );
 		}
-		tmp = c_client->host();
-		if( tmp ) {
-			cad->Assign( ATTR_CLIENT_MACHINE, tmp );
+		if( !c_client->c_host.empty() ) {
+			cad->Assign(ATTR_CLIENT_MACHINE, c_client->c_host);
 		}
 
-		tmp = c_client->getConcurrencyLimits();
-		if (tmp) {
-			cad->Assign(ATTR_CONCURRENCY_LIMITS, tmp);
+		if ( !c_client->c_concurrencyLimits.empty() ) {
+			cad->Assign(ATTR_CONCURRENCY_LIMITS, c_client->c_concurrencyLimits);
 		}
 
-		int numJobPids = c_client->numPids();
-		
-		cad->Assign( ATTR_NUM_PIDS, numJobPids );
+		cad->Assign(ATTR_NUM_PIDS, c_client->c_numPids);
 
-        if ((tmp = c_client->rmtgrp())) {
-            cad->Assign(ATTR_REMOTE_GROUP, tmp);
-        }
-        if ((tmp = c_client->neggrp())) {
-            cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, tmp);
-            cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->autorg());
-        }
+		if ( !c_client->c_rmtgrp.empty() ) {
+			cad->Assign(ATTR_REMOTE_GROUP, c_client->c_rmtgrp);
+		}
+		if ( !c_client->c_neggrp.empty() ) {
+			cad->Assign(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
+			cad->Assign(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
+		}
 	}
 
 	if( (c_cluster > 0) && (c_proc >= 0) ) {
@@ -316,38 +326,32 @@ void
 Claim::publishPreemptingClaim( ClassAd* cad )
 {
 	std::string line;
-	char* tmp;
-	char *remoteUser;
 
-	if( c_client && c_client->user() ) {
+	if( c_client && !c_client->c_user.empty() ) {
 		cad->Assign( ATTR_PREEMPTING_RANK, c_rank );
 
-		remoteUser = c_client->user();
-		if( remoteUser ) {
-			cad->Assign( ATTR_PREEMPTING_USER, remoteUser );
+		if( !c_client->c_user.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_USER, c_client->c_user);
 		}
-		tmp = c_client->owner();
-		if( tmp ) {
-			cad->Assign( ATTR_PREEMPTING_OWNER, tmp );
+		if( !c_client->c_owner.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_OWNER, c_client->c_owner);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
-			char *uidDom = NULL;
+		if( !c_client->c_acctgrp.empty() ) {
+			const char *uidDom = NULL;
 				// The accountant wants to see ATTR_ACCOUNTING_GROUP 
 				// fully qualified
-			if ( remoteUser ) {
-				uidDom = strchr(remoteUser,'@');
+			if ( !c_client->c_user.empty() ) {
+				uidDom = strchr(c_client->c_user.c_str(), '@');
 			}
-			line = tmp;
+			line = c_client->c_acctgrp;
 			if ( uidDom ) {
 				line += uidDom;
 			}
 			cad->Assign( ATTR_PREEMPTING_ACCOUNTING_GROUP, line );
 		}
 
-		tmp = c_client->getConcurrencyLimits();
-		if (tmp) {
-			cad->Assign( ATTR_PREEMPTING_CONCURRENCY_LIMITS, tmp );
+		if ( !c_client->c_concurrencyLimits.empty() ) {
+			cad->Assign(ATTR_PREEMPTING_CONCURRENCY_LIMITS, c_client->c_concurrencyLimits);
 		}
 	}
 	else {
@@ -382,20 +386,17 @@ Claim::publishCOD( ClassAd* cad )
 	cad->Assign( attrn, c_entered_state );
 
 	if( c_client ) {
-		tmp = c_client->user();
-		if( tmp ) {
+		if( !c_client->c_user.empty() ) {
 			attrn = prefix + ATTR_REMOTE_USER;
-			cad->Assign( attrn, tmp );
+			cad->Assign(attrn, c_client->c_user);
 		}
-		tmp = c_client->accountingGroup();
-		if( tmp ) {
+		if( !c_client->c_acctgrp.empty() ) {
 			attrn = prefix + ATTR_ACCOUNTING_GROUP;
-			cad->Assign( attrn, tmp );
+			cad->Assign(attrn, c_client->c_acctgrp);
 		}
-		tmp = c_client->host();
-		if( tmp ) {
+		if( !c_client->c_host.empty() ) {
 			attrn = prefix + ATTR_CLIENT_MACHINE;
-			cad->Assign( attrn, tmp );
+			cad->Assign( attrn, c_client->c_host);
 		}
 	}
 
@@ -666,40 +667,31 @@ Claim::loadAccountingInfo()
 {
 		// Get a bunch of info out of the request ad that is now
 		// relevant, and store it in this Claim object
+		// TODO This code appears to update incorrectly if a claim is
+		//   reused for a job with a different owner or accounting group.
 
 		// See if the classad we got includes an ATTR_USER field,
 		// so we know who to charge for our services.  If not, we use
 		// the same user that claimed us.
-	char* tmp = NULL;
-	if( ! c_jobad->LookupString(ATTR_USER, &tmp) ) {
+	if( ! c_jobad->LookupString(ATTR_USER, c_client->c_user) ) {
 		if( c_type != CLAIM_COD ) { 
 			c_rip->dprintf( D_FULLDEBUG, "WARNING: %s not defined in "
 						  "request classad!  Using old value (%s)\n", 
-						  ATTR_USER, c_client->user() );
+						  ATTR_USER, c_client->c_user.c_str() );
 		}
 	} else {
-		c_rip->dprintf( D_FULLDEBUG, 
-						"Got RemoteUser (%s) from request classad\n", tmp ); 
-		c_client->setuser( tmp );
-		free( tmp );
-		tmp = NULL;
+		c_rip->dprintf( D_FULLDEBUG,
+		                "Got RemoteUser (%s) from request classad\n",
+		                c_client->c_user.c_str() );
 	}
 
 		// Only stash this if it's in the ad, but don't print anything
 		// if it's not.
-	if( c_jobad->LookupString(ATTR_ACCOUNTING_GROUP, &tmp) ) {
-		c_client->setAccountingGroup( tmp );
-		free( tmp );
-		tmp = NULL;
-	}
+	c_jobad->LookupString(ATTR_ACCOUNTING_GROUP, c_client->c_acctgrp);
 
-	if(!c_client->owner()) {
+	if(c_client->c_owner.empty()) {
 			// Only if Owner has never been initialized, load it now.
-		if(c_jobad->LookupString(ATTR_OWNER, &tmp)) {
-			c_client->setowner( tmp );
-			free( tmp );
-			tmp = NULL;
-		}
+		c_jobad->LookupString(ATTR_OWNER, c_client->c_owner);
 	}
 }
 
@@ -711,21 +703,13 @@ Claim::loadRequestInfo()
 	std::string limits;
 	(void) EvalString(ATTR_CONCURRENCY_LIMITS, c_jobad, c_rip->r_classad, limits);
 	if (!limits.empty()) {
-		c_client->setConcurrencyLimits(limits.c_str());
+		c_client->c_concurrencyLimits = limits;
 	}
 
-    // stash information about what accounting group match was negotiated under
-    string strval;
-    if (c_jobad->LookupString(ATTR_REMOTE_GROUP, strval)) {
-        c_client->setrmtgrp(strval.c_str());
-    }
-    if (c_jobad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, strval)) {
-        c_client->setneggrp(strval.c_str());
-    }
-    bool boolval=false;
-    if (c_jobad->LookupBool(ATTR_REMOTE_AUTOREGROUP, boolval)) {
-        c_client->setautorg(boolval);
-    }
+	// stash information about what accounting group match was negotiated under
+	c_jobad->LookupString(ATTR_REMOTE_GROUP, c_client->c_rmtgrp);
+	c_jobad->LookupString(ATTR_REMOTE_NEGOTIATING_GROUP, c_client->c_neggrp);
+	c_jobad->LookupBool(ATTR_REMOTE_AUTOREGROUP, c_client->c_autorg);
 }
 
 void
@@ -734,9 +718,8 @@ Claim::loadStatistics()
 		// Stash the ATTR_NUM_PIDS, necessary to advertise
 		// them if they exist
 	if ( c_client ) {
-		int numJobPids = 0;
-		c_jobad->LookupInteger(ATTR_NUM_PIDS, numJobPids);
-		c_client->setNumPids(numJobPids);
+		c_client->c_numPids = 0;
+		c_jobad->LookupInteger(ATTR_NUM_PIDS, c_client->c_numPids);
 	}
 }
 
@@ -1005,7 +988,7 @@ Claim::sendAlive()
 	}
 
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	if( !c_addr ) {
@@ -1065,7 +1048,7 @@ Claim::sendAliveConnectHandler(Stream *s)
 {
 	const char* c_addr = "(unknown)";
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	char *claimId = id();
@@ -1147,7 +1130,7 @@ Claim::sendAliveResponseHandler( Stream *sock )
 	const char* c_addr = "(unknown)";
 
 	if ( c_client ) {
-		c_addr = c_client->addr();
+		c_addr = c_client->c_addr.c_str();
 	}
 
 	// Now, we set the timeout on the socket to 1 second.  Since we 
@@ -1913,7 +1896,7 @@ Claim::periodicCheckpoint( void )
 bool
 Claim::ownerMatches( const char* owner )
 {
-	if( ! strcmp(c_client->owner(), owner) ) {
+	if( ! strcmp(c_client->c_owner.c_str(), owner) ) {
 		return true;
 	}
 		// TODO: handle COD_SUPER_USERS
@@ -1990,7 +1973,7 @@ Claim::finishReleaseCmd( void )
 	c_pending_cmd = -1;
 	
 	dprintf( D_ALWAYS, "Finished releasing claim %s (owner: '%s')\n", 
-			 id(), client()->owner() );  
+			 id(), client()->c_owner.c_str() );
 
 	c_rip->removeClaim( this );
 
@@ -2020,7 +2003,7 @@ Claim::finishDeactivateCmd( void )
 	c_pending_cmd = -1;
 
 	dprintf( D_ALWAYS, "Finished deactivating claim %s (owner: '%s')\n", 
-			 id(), client()->owner() );  
+			 id(), client()->c_owner.c_str() );
 
 		// also, we must reset all the attributes we're storing in
 		// this Claim object that are specific to a given activation. 
@@ -2166,179 +2149,6 @@ Claim::writeMachAdAndOverlay( Stream* stream )
 		return false;
 	}
 	return true;
-}
-
-
-///////////////////////////////////////////////////////////////////////////
-// Client
-///////////////////////////////////////////////////////////////////////////
-
-Client::Client()
-{
-	c_user = NULL;
-	c_owner = NULL;
-	c_acctgrp = NULL;
-	c_addr = NULL;
-	c_host = NULL;
-	c_concurrencyLimits = NULL;
-    c_rmtgrp = NULL;
-    c_neggrp = NULL;
-    c_autorg = false;
-	c_numPids = 0;
-}
-
-
-Client::~Client() 
-{
-	if( c_user) free( c_user );
-	if( c_owner) free( c_owner );
-	if( c_acctgrp) free( c_acctgrp );
-	if( c_addr) free( c_addr );
-	if( c_host) free( c_host );
-    if (c_rmtgrp) free(c_rmtgrp);
-    if (c_neggrp) free(c_neggrp);
-    if (c_concurrencyLimits) free(c_concurrencyLimits);
-}
-
-
-void
-Client::setuser( const char* updated_user )
-{
-	if( c_user ) {
-		free( c_user);
-	}
-	if( updated_user ) {
-		c_user = strdup( updated_user );
-	} else {
-		c_user = NULL;
-	}
-}
-
-
-void
-Client::setowner( const char* updated_owner )
-{
-	if( c_owner ) {
-		free( c_owner);
-	}
-	if( updated_owner ) {
-		c_owner = strdup( updated_owner );
-	} else {
-		c_owner = NULL;
-	}
-}
-
-
-void
-Client::setAccountingGroup( const char* grp ) 
-{
-	if( c_acctgrp ) {
-		free( c_acctgrp);
-	}
-	if( grp ) {
-		c_acctgrp = strdup( grp );
-	} else {
-		c_acctgrp = NULL;
-	}
-}
-
-void Client::setrmtgrp(const char* rmtgrp_) {
-    if (c_rmtgrp) {
-        free(c_rmtgrp);
-        c_rmtgrp = NULL;
-    }
-    if (rmtgrp_) c_rmtgrp = strdup(rmtgrp_);
-}
-
-void Client::setneggrp(const char* neggrp_) {
-    if (c_neggrp) {
-        free(c_neggrp);
-        c_neggrp = NULL;
-    }
-    if (neggrp_) c_neggrp = strdup(neggrp_);
-}
-
-void Client::setautorg(const bool autorg_) {
-    c_autorg = autorg_;
-}
-
-void
-Client::setaddr( const char* updated_addr )
-{
-	if( c_addr ) {
-		free( c_addr);
-	}
-	if( updated_addr ) {
-		c_addr = strdup( updated_addr );
-	} else {
-		c_addr = NULL;
-	}
-}
-
-
-void
-Client::sethost( const char* updated_host )
-{
-	if( c_host ) {
-		free( c_host);
-	}
-	if( updated_host ) {
-		c_host = strdup( updated_host );
-	} else {
-		c_host = NULL;
-	}
-}
-
-void
-Client::setConcurrencyLimits( const char* limits )
-{
-	if( c_concurrencyLimits ) {
-		free( c_concurrencyLimits );
-	}
-	if ( limits ) {
-		c_concurrencyLimits = strdup( limits );
-	} else {
-		c_concurrencyLimits = NULL;
-	}
-}
-
-void
-Client::setNumPids( int numJobPids )
-{
-	c_numPids = numJobPids;
-}
-
-void
-Client::vacate(char* id)
-{
-	ReliSock* sock;
-
-	if( ! (c_addr || c_host || c_owner ) ) {
-			// Client not really set, nothing to do.
-		return;
-	}
-
-	dprintf(D_FULLDEBUG, "Entered vacate_client %s %s...\n", c_addr, c_host);
-
-	ClaimIdParser cid(id);
-
-	Daemon my_schedd( DT_SCHEDD, c_addr, NULL);
-	sock = (ReliSock*)my_schedd.startCommand( RELEASE_CLAIM,
-											  Stream::reli_sock, 20,
-											  NULL, NULL, false,
-											  cid.secSessionId());
-	if( ! sock ) {
-		dprintf(D_FAILURE|D_ALWAYS, "Can't connect to schedd (%s)\n", c_addr);
-		return;
-	}
-	if( !sock->put_secret( id ) ) {
-		dprintf(D_ALWAYS, "Can't send ClaimId to client\n");
-	} else if( !sock->end_of_message() ) {
-		dprintf(D_ALWAYS, "Can't send EOM to client\n");
-	}
-
-	sock->close();
-	delete sock;
 }
 
 

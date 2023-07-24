@@ -219,6 +219,7 @@ endif ()
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -238,7 +239,6 @@ endif ()
 			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
 			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
 			condor_pl_test(test_container_img_declares_universe "Test declaring container image sets up universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -247,6 +247,7 @@ endif ()
 			condor_pl_test(test_condor_history "Test condor_history tools capabilities" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
