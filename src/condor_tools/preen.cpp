@@ -1522,6 +1522,11 @@ check_cleanup_dir() {
 	std::filesystem::path SPOOL(Spool);
 	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
 
+	if(! std::filesystem::exists( checkpointCleanup )) {
+		dprintf( D_ZKM, "Directory '%s' does not exist, ignoring.\n", checkpointCleanup.string().c_str() );
+		return false;
+	}
+
 	//
 	// We can store the iterator in a static; just be sure to increment
 	// where we exit the loop, because otherwise we'll do it again the
@@ -1545,7 +1550,7 @@ check_cleanup_dir() {
 	for( ; i != end; ++i ) {
 		const auto & entry = * i;
 		if(! entry.is_directory()) { continue; }
-
+		dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
 		ClassAd jobAd;
 		auto pathToJobAd = entry.path() / ".job.ad";
