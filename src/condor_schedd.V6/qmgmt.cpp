@@ -3794,7 +3794,7 @@ handle_q(int cmd, Stream *sock)
 
 	BeginTransaction();
 
-	bool may_fork = false;
+	bool may_fork = (cmd == QMGMT_READ_CMD);
 	ForkStatus fork_status = FORK_FAILED;
 	do {
 		/* Probably should wrap a timer around this */
