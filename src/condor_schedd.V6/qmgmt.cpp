@@ -194,9 +194,16 @@ extern  void    cleanup_ckpt_files(int, int, const char*);
 extern	bool	service_this_universe(int, ClassAd *);
 static QmgmtPeer *Q_SOCK = NULL;
 extern const std::string & attr_JobUser; // the attribute name we use for the "owner" of the job, historically ATTR_OWNER 
+extern JobQueueUserRec * get_condor_userrec();
+extern JobQueueUserRec * real_owner_is_condor(const Sock * sock);
+JobQueueUserRec * real_owner_is_condor(QmgmtPeer * qsock) {
+	return real_owner_is_condor(qsock->getReliSock());
+}
+
 extern bool ignore_domain_for_OwnerCheck;
 extern bool warn_domain_for_OwnerCheck;
 extern bool job_owner_must_be_UidDomain; // only users who are @$(UID_DOMAIN) may submit.
+extern bool allow_submit_from_known_users_only; // if false, create UseRec for new users when they submit
 
 // Hash table with an entry for every job owner that
 // has existed in the queue since this schedd has been
@@ -1317,6 +1324,37 @@ QmgmtPeer::setAllowProtectedAttrChanges(bool val)
 	return old_val;
 }
 
+#ifdef USE_JOB_QUEUE_USERREC
+bool QmgmtPeer::setEffectiveOwner(const JobQueueUserRec * urec, bool ignore_effective_super)
+{
+	not_super_effective = ignore_effective_super;
+	if (urec == this->jquser) {
+		// nothing to do
+		return true;
+	}
+	free(owner); owner = nullptr;
+	free(fquser); fquser = nullptr;
+
+	jquser = urec;
+	if ( ! jquser) {
+		return true;
+	}
+
+	const char * o = jquser->Name();
+	owner = strdup(o);
+	char * at = strrchr(owner,'@');
+	if (at) {
+		fquser = owner;
+		*at = 0;
+		owner = strdup(fquser);
+		*at = '@';
+	} else {
+		std::string user = std::string(o) + "@" + scheduler.uidDomain();
+		fquser = strdup(user.c_str());
+	}
+	return true;
+}
+#else
 // pass either unqualified owner "bob" or fully qualified "bob@chtc.wisc.edu"
 // this will set both EffectiveOwner and EffectiveUser appropriately
 bool
@@ -1349,15 +1387,24 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 	}
 	return true;
 }
+#endif
 
 bool
-QmgmtPeer::setReadOnly(bool val)
+QmgmtPeer::initAuthOwner(bool read_only, bool write_auth)
 {
-	bool old_val = readonly;
-
-	readonly = val;
-
-	return old_val;
+	readonly = read_only;
+	write_ok = write_auth;
+	if (sock) {
+		const char * user = sock->getFullyQualifiedUser();
+		if (user) {
+			jquser = scheduler.lookup_owner_const(user);
+			if ( ! jquser) {
+				jquser = real_owner_is_condor(sock);
+			}
+		}
+		real_auth_is_super = isQueueSuperUser(jquser);
+	}
+	return jquser != nullptr;
 }
 
 void
@@ -1385,6 +1432,9 @@ QmgmtPeer::unset()
 	active_cluster_num = -1;	
 	xact_start_time = 0;	// time at which the current transaction was started
 	readonly = false;
+	write_ok = false;
+	real_auth_is_super = false;
+	jquser = nullptr;
 }
 
 const char*
@@ -1429,25 +1479,27 @@ void
 InitQmgmt()
 {
 	StringList s_users;
-	char* tmp;
+	char * tmp;
 
 	std::string uid_domain;
 	param(uid_domain, "UID_DOMAIN");
 
 	qmgmt_was_initialized = true;
 
-	tmp = param( "QUEUE_SUPER_USERS" );
-	if( tmp ) {
-		s_users.initializeFromString( tmp );
-		free( tmp );
+	auto_free_ptr super(param("QUEUE_SUPER_USERS"));
+	if (super) {
+		s_users.initializeFromString(super);
 	} else {
-		s_users.initializeFromString( default_super_user );
+		s_users.initializeFromString(default_super_user);
 	}
+	super.set(s_users.print_to_string());
+	dprintf(D_ALWAYS, "config super users : %s\n", super.ptr());
 #ifdef WIN32
 	const char * process_dom_and_user = get_condor_username();
 	const char * process_user = strchr(process_dom_and_user, '/');
 	if (process_user) { ++process_user; } else { process_user = process_dom_and_user; }
-	if( ! s_users.contains(process_user) ) { s_users.append(process_user); }
+	if ( ! s_users.contains(process_user) ) { s_users.append(process_user); }
+	if ( ! s_users.contains("condor")) { s_users.append("condor"); } // because of family security sessions
 #else
 	if( ! s_users.contains(get_condor_username()) ) {
 		s_users.append( get_condor_username() );
@@ -3071,8 +3123,7 @@ grow_prio_recs( int newsize )
 
 // test an unqualified username "bob" or a fully qualfied username "bob@domain" to see
 // if it is a queue superuser
-bool
-isQueueSuperUser( const char* user )
+static bool isQueueSuperUserName( const char* user )
 {
 	if( !user || super_users.empty() ) {
 		return false;
@@ -3111,6 +3162,20 @@ isQueueSuperUser( const char* user )
 	}
 	return false;
 }
+
+bool isQueueSuperUser(const JobQueueUserRec * user)
+{
+	if ( ! user) return false;
+	if (user->IsInherentlySuper()) return true;
+	if (user->isStaleConfigSuper()) {
+		// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED ?
+		bool super = isQueueSuperUserName(user->Name());
+		const_cast<JobQueueUserRec *>(user)->setConfigSuper(super);
+	}
+	return user->IsSuperUser();
+}
+
+
 
 static void
 AddOwnerHistory(const std::string &user) {
@@ -3157,6 +3222,7 @@ QmgmtSetAllowProtectedAttrChanges(int val)
 	return old_value ? TRUE : FALSE;
 }
 
+#if 0 // untested user_is_the_new_owner version
 int
 QmgmtSetEffectiveUser(QmgmtPeer * qsock, char const *requested_owner)
 {
@@ -3188,7 +3254,7 @@ QmgmtSetEffectiveUser(QmgmtPeer * qsock, char const *requested_owner)
 	// always allow request to set effective owner to NULL,
 	// because this means set effective owner --> real owner
 	if( requested_owner && !qmgmt_all_users_trusted ) {
-		if (!isQueueSuperUser(qsock->getRealUser()))
+		if (!isQueueSuperUserName(qsock->getRealUser()))
 		{
 			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
 					"setting owner to %s when effective user is \"%s\" (not a superuser)\n",
@@ -3212,6 +3278,7 @@ QmgmtSetEffectiveUser(QmgmtPeer * qsock, char const *requested_owner)
 	}
 	return 0;
 }
+#endif
 
 int
 QmgmtSetEffectiveOwner(char const *o)
@@ -3221,11 +3288,22 @@ QmgmtSetEffectiveOwner(char const *o)
 		return -1;
 	}
 
+	#if 0 // this variant was never tested
 	if (user_is_the_new_owner) {
 		return QmgmtSetEffectiveUser(Q_SOCK, o);
 	}
+	#endif
 
 	char const *real_owner = Q_SOCK->getRealOwner();
+
+#ifdef USE_JOB_QUEUE_USERREC
+	const JobQueueUserRec * real_urec = scheduler.lookup_owner_const(real_owner);
+	bool clear_effective = !o || !o[0]; // caller wants to clear effective
+	if ( ! real_urec) {
+		real_urec = real_owner_is_condor(Q_SOCK);
+	}
+#endif
+
 	if( o && real_owner && is_same_user(o,real_owner,COMPARE_DOMAIN_DEFAULT,scheduler.uidDomain()) ) {
 		if ( ! is_same_user(o,real_owner,COMPARE_DOMAIN_FULL,scheduler.uidDomain())) {
 			dprintf(D_SECURITY, "SetEffectiveOwner security warning: "
@@ -3241,10 +3319,44 @@ QmgmtSetEffectiveOwner(char const *o)
 		o = NULL;
 	}
 
+#ifdef USE_JOB_QUEUE_USERREC
+	const JobQueueUserRec * urec = nullptr;
+	if (o) {
+		urec = scheduler.lookup_owner_const(o);
+		if ( ! urec) {
+			dprintf(D_ALWAYS, "SetEffectiveOwner security violation: No User record named %s\n", o);
+		} else if (urec == real_urec) {
+			// myself, but without superuser perms. I'll allow it.
+		} else {
+			bool is_super = real_urec && real_urec->IsSuperUser();
+			bool is_allowed_owner = SuperUserAllowedToSetOwnerTo(o);
+			if( !is_super || !is_allowed_owner)
+			{
+				if ( ! is_allowed_owner) {
+					dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+						"attempting to set owner to dis-allowed value %s\n", o);
+				} else {
+					dprintf(D_ALWAYS, "SetEffectiveOwner security violation: "
+						"setting owner to %s when active owner is non-superuser \"%s\"\n",
+						o, real_owner ? real_owner : "(null)");
+				}
+				errno = EACCES;
+				return -1;
+			}
+		}
+	} else if ( ! clear_effective) {
+		urec = real_urec;
+	}
+
+	if( !Q_SOCK->setEffectiveOwner(urec, ! clear_effective)) {
+		errno = EINVAL;
+		return -1;
+	}
+#else
 	// always allow request to set effective owner to NULL,
 	// because this means set effective owner --> real owner
 	if( o && !qmgmt_all_users_trusted ) {
-		bool is_super = isQueueSuperUser(real_owner);
+		bool is_super = isQueueSuperUserName(real_owner);
 		bool is_allowed_owner = SuperUserAllowedToSetOwnerTo( o );
 		if( !is_super || !is_allowed_owner)
 		{
@@ -3265,11 +3377,143 @@ QmgmtSetEffectiveOwner(char const *o)
 		errno = EINVAL;
 		return -1;
 	}
+#endif
 	return 0;
 }
 
 
+#ifdef USE_JOB_QUEUE_USERREC
 
+// Test if this owner matches my owner, so they're allowed to update me.
+bool
+UserCheck(const JobQueueBase *ad, const JobQueueUserRec *test_owner)
+{
+	if ( Q_SOCK->getReadOnly() ) {
+		errno = EACCES;
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
+		return false;
+	}
+
+	// check if the IP address of the peer has daemon core write permission
+	// to the schedd.  we have to explicitly check here because all queue
+	// management commands come in via one sole daemon core command which
+	// has just READ permission.
+	// TODO: can we get rid of this test? I think the note above is wrong now - tj 2023-05-12
+	if ( ! Q_SOCK->getWriteAuth()) {
+		condor_sockaddr addr = Q_SOCK->endpoint();
+		if ( !Q_SOCK->isAuthorizationInBoundingSet("WRITE") ||
+			daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getRealUser()) == FALSE )
+		{
+			// this machine does not have write permission; return failure
+			return false;
+		}
+		Q_SOCK->setWriteAuth(true);
+	}
+
+	return UserCheck2(ad, test_owner);
+}
+
+bool
+UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_super /*=false*/)
+{
+	// in the very rare event that the admin told us all users 
+	// can be trusted, let it pass
+	if ( qmgmt_all_users_trusted ) {
+		return true;
+	}
+
+	// If test_owner is NULL, then we have no idea who the user is.  We
+	// do not allow anonymous folks to mess around with the queue, so 
+	// have UserCheck fail.  Note we only call UserCheck in the first place
+	// if Q_SOCK is not null; if Q_SOCK is null, then the schedd is calling
+	// a QMGMT command internally which is allowed.
+	if ( ! test_user) {
+		dprintf(D_ALWAYS,
+			"QMGT command failed: anonymous user not permitted\n" );
+		return false;
+	}
+
+	std::string owner_buf;
+
+#if !defined(WIN32) 
+	// If we're not root or condor, only allow qmgmt writes from
+	// the UID we're running as.
+	uid_t 	my_uid = get_my_uid();
+	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
+		// if a fully-qualified username was passed, extract the name
+		const char * test_owner = name_of_user(test_user->Name(), owner_buf);
+		if( strcmp(get_real_username(), test_owner) == MATCH ) {
+			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' matches my username\n", test_owner );
+			return true;
+		} else if (not_super) {
+			errno = EACCES;
+			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s'\n",
+				test_owner, get_real_username());
+			return false;
+		} else if (isQueueSuperUser(test_user)) {
+			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user\n", test_user->Name());
+			return true;
+		} else {
+			errno = EACCES;
+			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s' or super_user\n",
+				test_owner, get_real_username());
+			return false;
+		}
+	}
+#endif
+
+	// If we don't have an Owner/User attribute (or classad) and we've
+	// gotten this far, how can we deny service?
+	if( !ad ) {
+		dprintf(D_FULLDEBUG,"OwnerCheck success, '%s' no ad\n", test_user->Name());
+		return true;
+	}
+	const JobQueueUserRec * job_user = nullptr;
+	if (ad->IsCluster() || ad->IsJob()) {
+		job_user = static_cast<const JobQueueJob*>(ad)->ownerinfo;
+	} else if (ad->IsJobSet()) {
+		job_user = static_cast<const JobQueueJobSet*>(ad)->ownerinfo;
+	} else if (ad->IsUserRec()) {
+		// when modifying UserRecs,  we allow self-modify when the not_super flag is passed
+		// but only super-users can modify otherwise
+		if (not_super) {
+			job_user = static_cast<const JobQueueUserRec*>(ad);
+		} else if (isQueueSuperUser(test_user)) {
+			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user UID_DOMAIN=%s\n",
+				test_user->Name(), scheduler.uidDomain());
+			return true;
+		} else {
+			errno = EACCES;
+			dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' is NOT super_user UID_DOMAIN=%s\n",
+				test_user->Name(), scheduler.uidDomain());
+			return false;
+		}
+	}
+
+	if ( ! job_user) {
+		dprintf(D_FULLDEBUG,"OwnerCheck success, '%s' no ad owner\n", test_user->Name());
+		return true;
+	}
+
+	if (job_user == test_user) {
+		//dprintf(D_FULLDEBUG,"OwnerCheck success, '%s' matches ad owner '%s'\n", test_user->Name(), job_user->Name());
+		return true;
+	}
+
+	if ( ! not_super && isQueueSuperUser(test_user)) {
+		dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user UID_DOMAIN=%s\n",
+			test_user->Name(), scheduler.uidDomain());
+		return true;
+	}
+
+	errno = EACCES;
+	dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' not ad owner: '%s' UID_DOMAIN=%s\n",
+		test_user->Name(), job_user->Name(), scheduler.uidDomain());
+	return false;
+}
+
+
+#else
 
 // Test if this owner matches my owner, so they're allowed to update me.
 bool
@@ -3397,6 +3641,7 @@ UserCheck2(const ClassAd *ad, const char *test_user, const char *job_user)
 	return false;
 }
 
+#endif
 
 QmgmtPeer*
 getQmgmtConnectionInfo()
@@ -3545,7 +3790,7 @@ handle_q(int cmd, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
-	Q_SOCK->setReadOnly(cmd == QMGMT_READ_CMD);
+	Q_SOCK->initAuthOwner(cmd == QMGMT_READ_CMD, cmd == QMGMT_WRITE_CMD);
 
 	BeginTransaction();
 
@@ -3587,16 +3832,9 @@ handle_q(int cmd, Stream *sock)
 }
 
 int
-InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
+InitializeConnectionInternal(QmgmtPeer & peer, bool read_only, bool write_auth_ok)
 {
-		/*
-		  This function used to call init_user_ids(), but we don't
-		  need that anymore.  perhaps the whole thing should go
-		  away...  however, when i tried that, i got all sorts of
-		  strange link errors b/c other parts of the qmgmt code (the
-		  sender stubs, etc) seem to depend on it.  i don't have time
-		  to do more a thorough purging of it.
-		*/
+	peer.initAuthOwner(read_only, write_auth_ok);
 	return 0;
 }
 
@@ -3604,12 +3842,36 @@ InitializeConnection( const char *  /*owner*/, const char *  /*domain*/ )
 int
 NewCluster(CondorError* errstack)
 {
-
+#ifdef USE_JOB_QUEUE_USERREC
+	if (Q_SOCK) {
+		const auto urec = EffectiveUserRec(Q_SOCK);
+		bool user_check_ok = false;
+		if (urec || allow_submit_from_known_users_only) {
+			// When called from a socket authenticated to a user for which
+			// there is no UserRec urec will be null.  UserCheck will fail
+			// in UserCheck2 in that case with a message about anon users
+			user_check_ok = UserCheck(NULL, urec);
+		} else {
+			// new user, but we are willing to create UserRec on the fly, so
+			// make a dummy UserRec to pass to UserCheck, since
+			// we don't want UserCheck2 to fail at this time
+			JobQueueUserRec dummy(CONDOR_USERREC_ID, EffectiveUserName(Q_SOCK));
+			user_check_ok = UserCheck(NULL, &dummy);
+		}
+		if ( ! user_check_ok) {
+			dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
+			errno = EACCES;
+			return -1;
+		}
+	}
+#else
 	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
 		errno = EACCES;
 		return -1;
 	}
+#endif
+
 
 	int total_jobs = TotalJobsCount;
 
@@ -3633,22 +3895,34 @@ NewCluster(CondorError* errstack)
 #ifdef USE_JOB_QUEUE_USERREC
 	// if we have not seen this user before, add a JobQueueUserRec for them
 	// if we *have* seen the user before, check to see if the user is enabled
+	// note that the sock may have an EffectiveUserRec, but at this point it might
+	// be set to the *real* UserRec, so we want to use the EffectiveUserName here.
 	if (Q_SOCK) {
-		const char * user = EffectiveUser(Q_SOCK);
+		const char * user = EffectiveUserName(Q_SOCK);
 		if (user && user[0]) {
 			// lookup JobQueueUserRec, possibly adding a new UserRec to the current transaction
 			// if we create one here, it will be pending until CommitTransactionInternal
 			auto urec = scheduler.lookup_owner_const(user);
 			if ( ! urec) {
-				// TODO: make auto-create-user-rec a knob?
-				// create user a user record for a new submitter
-				// the insert_owner_const will make a pending user record
-				// which we then add to the current transaction by calling MakeUserRec
-				urec = scheduler.insert_owner_const(user);
-				if ( ! MakeUserRec(urec, true)) {
-					dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+				if (allow_submit_from_known_users_only) {
+					dprintf(D_ALWAYS, "NewCluster(): fail because no User record for %s\n", user);
+					if (errstack) {
+						errstack->pushf("SCHEDD",EACCES,"Unknown User %s. Use condor_qusers to add user before submitting jobs.", user);
+					}
 					errno = EACCES;
-					return -1;
+					return NEWJOB_ERR_DISABLED_USER;
+				} else {
+					// create user a user record for a new submitter
+					// the insert_owner_const will make a pending user record
+					// which we then add to the current transaction by calling MakeUserRec
+					urec = scheduler.insert_owner_const(user);
+					if ( ! MakeUserRec(urec, true)) {
+						dprintf(D_ALWAYS, "NewCluster(): failed to create new User record for %s\n", user);
+						errno = EACCES;
+						return -1;
+					}
+					// attach urec to Q_SOCK so we can use it for permission and various limit checks later
+					if ( ! Q_SOCK->UserRec()) { Q_SOCK->attachNewUserRec(urec); }
 				}
 			} else if ( ! urec->IsEnabled()) {
 				// We only check to see if the User is disabled if we are not creating it automatically with the submit
@@ -3656,7 +3930,6 @@ NewCluster(CondorError* errstack)
 				urec->LookupString(ATTR_DISABLE_REASON, reason);
 
 				dprintf(D_ALWAYS, "NewCluster(): rejecting attempt by disabled user %s to submit a job. %s\n", urec->Name(), reason.c_str());
-				errno = EACCES;
 				if (errstack) {
 					if (!reason.empty()) {
 						errstack->pushf("SCHEDD",EACCES,"User %s is disabled : %s", urec->Name(), reason.c_str());
@@ -3664,10 +3937,10 @@ NewCluster(CondorError* errstack)
 						errstack->pushf("SCHEDD",EACCES,"User %s is disabled", urec->Name());
 					}
 				}
+				errno = EACCES;
 				return NEWJOB_ERR_DISABLED_USER;
 			}
 			ASSERT(urec);
-			// TODO: attach urec to Q_SOCK so we can use it for permission and various limit checks?
 		}
 	}
 #endif
@@ -3713,7 +3986,7 @@ NewProc(int cluster_id)
 {
 	int				proc_id;
 
-	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
+	if( Q_SOCK && !UserCheck(NULL, EffectiveUserRec(Q_SOCK) ) ) {
 		errno = EACCES;
 		return -1;
 	}
@@ -3746,7 +4019,7 @@ NewProc(int cluster_id)
 	// the owner attribute after the submission.  The latter would allow them
 	// to bypass the job quota, but that's not necessarily a bad thing.
 	if (Q_SOCK) {
-		const char * owner = EffectiveUser(Q_SOCK);
+		const char * owner = EffectiveUserName(Q_SOCK);
 		if( owner == NULL || ! owner[0] ) {
 			// This should only happen for job submission via SOAP, but
 			// it's unclear how we can verify that.  Regardless, if we
@@ -4026,7 +4299,7 @@ int DestroyProc(int cluster_id, int proc_id)
 	}
 
 	// Only the owner can delete a proc.
-	if ( Q_SOCK && !UserCheck(ad, EffectiveUser(Q_SOCK) )) {
+	if ( Q_SOCK && !UserCheck(ad, EffectiveUserRec(Q_SOCK) )) {
 		errno = EACCES;
 		return DESTROYPROC_EACCES;
 	}
@@ -4239,19 +4512,20 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 	// setup an owner_expr expression if the OnlyMyJobs flag is set.
 	// and fixup and replace the constraint_str pointer if we have 
 	// both an input constraint and OnlyMyJobs is set.
+	// TODO: re-write this to take advantage of UserRec pointers
 	YourString owner;
 	YourString user;
 	std::string owner_expr;
 	if (flags & SetAttribute_OnlyMyJobs) {
-		user = EffectiveUser(Q_SOCK); // user is "" if no Q_SOCK
+		user = EffectiveUserName(Q_SOCK); // user is "" if no Q_SOCK
 		owner = Q_SOCK ? Q_SOCK->getOwner() : "unauthenticated";
 		if (owner == "unauthenticated") {
 			// no job will be owned by "unauthenticated" so just quit now.
 			errno = EACCES;
 			return -1;
 		}
-		bool is_super = isQueueSuperUser(user.c_str());
-		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.Value(), is_super);
+		bool is_super = isQueueSuperUserName(user.c_str());
+		dprintf(D_COMMAND | D_VERBOSE, "SetAttributeByConstraint w/ OnlyMyJobs owner = \"%s\" (isQueueSuperUser = %d)\n", owner.c_str(), is_super);
 		if (is_super) {
 			// for queue superusers, disable the OnlyMyJobs flag - they get to act on all jobs.
 			flags &= ~SetAttribute_OnlyMyJobs;
@@ -4286,6 +4560,8 @@ SetAttributeByConstraint(const char *constraint_str, const char *attr_name,
 		}
 		constraint.set(tree);
 	}
+
+	// TODO: Fix loop to implement OnlyMyjobs by comparing UserRec pointers
 
 	// loop through the job queue, setting attribute on jobs that match
 	JobQueue->StartIterateAllClassAds();
@@ -4653,8 +4929,8 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		// to an ad that has already been committed in the queue.
 
 		// Ensure the user is not changing a job they do not own.
-		if ( Q_SOCK && !UserCheck(job, EffectiveUser(Q_SOCK) )) {
-			const char *user = EffectiveUser(Q_SOCK);
+		if ( Q_SOCK && !UserCheck(job, EffectiveUserRec(Q_SOCK) )) {
+			const char *user = EffectiveUserName(Q_SOCK);
 			if (!user) {
 				user = "NULL";
 			}
@@ -4689,7 +4965,7 @@ ModifyAttrCheck(const JOB_ID_KEY_BUF &key, const char *attr_name, const char *at
 		// the direction of a non-super user (like when the shadow is forwarding chirp
 		// updates from the user).
 	#ifdef USE_JOB_QUEUE_USERREC
-		const char * auth_user = EffectiveUser(Q_SOCK);
+		const JobQueueUserRec * auth_user = EffectiveUserRec(Q_SOCK);
 	#else
 		const char * auth_user = NULL;
 		if (user_is_the_new_owner) { auth_user = EffectiveUser(Q_SOCK); }
@@ -4940,8 +5216,10 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 		}
 
 		if (IsDebugVerbose(D_SECURITY)) {
+			bool is_super = isQueueSuperUserName(sock_owner);
+			bool allowed_owner = SuperUserAllowedToSetOwnerTo(owner);
 			dprintf(D_SECURITY | D_VERBOSE, "QGMT: qmgmt_A_U_T %i, owner %s, sock_owner %s, is_Q_SU %i, SU_Allowed %i\n",
-				qmgmt_all_users_trusted, owner, sock_owner, isQueueSuperUser(sock_owner), SuperUserAllowedToSetOwnerTo(owner));
+				qmgmt_all_users_trusted, owner, sock_owner, is_super, allowed_owner);
 		}
 
 		if (!qmgmt_all_users_trusted
@@ -4950,7 +5228,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 #else
 			&& (strcmp(owner,sock_owner) != 0)
 #endif
-			&& (!isQueueSuperUser(EffectiveUser(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
+			&& (!isQueueSuperUser(EffectiveUserRec(Q_SOCK)) || !SuperUserAllowedToSetOwnerTo(owner)) ) {
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting owner to %s when active owner is \"%s\"\n",
 					owner, sock_owner);
@@ -5022,7 +5300,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 	else if (attr_id == idATTR_USER) {
 
 	#ifdef USE_JOB_QUEUE_USERREC
-		const char * sock_user = EffectiveUser(Q_SOCK);
+		const char * sock_user = EffectiveUserName(Q_SOCK);
 
 			// User is set to UNDEFINED indicating we should just pull
 			// this information from the authenticated socket.
@@ -5089,7 +5367,7 @@ SetAttribute(int cluster_id, int proc_id, const char *attr_name,
 				// SuperUserAllowedToSetOwnerTo
 			if (!qmgmt_all_users_trusted
 				&& !is_same_user(user, sock_user, COMPARE_DOMAIN_DEFAULT, scheduler.uidDomain())
-				&& !isQueueSuperUser(sock_user))
+				&& !isQueueSuperUserName(sock_user))
 			{
 				dprintf(D_ALWAYS, "SetAttribute security violation: "
 					"setting User to \"%s\" when active User is \"%s\"\n",
@@ -6318,7 +6596,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError * er
 		// new cluster and new jobset ads must have
 		// a User and an Owner attribute
 		if (jid.cluster > 0 && (jid.proc == CLUSTERID_qkey2 || jid.proc == JOBSETID_qkey2)) {
-			const char * euser = EffectiveUser(Q_SOCK);
+			const char * euser = EffectiveUserName(Q_SOCK);
 			if (euser && euser[0]) {
 				std::string obuf, ubuf, qbuf;
 				bool no_owner = GetAttributeString(jid.cluster, jid.proc, ATTR_OWNER, obuf) == -1;
@@ -6345,7 +6623,7 @@ AddSessionAttributes(const std::list<std::string> &new_ad_keys, CondorError * er
 						JobQueue->SetAttribute(jid, ATTR_USER, QuoteAdStringValue(ubuf.c_str(), qbuf));
 					}
 				} else {
-					euser = ubuf.c_str(); 
+					euser = ubuf.c_str();
 				}
 				if (no_owner) {
 					const char * owner = name_of_user(euser, obuf);
@@ -6787,7 +7065,7 @@ int CommitTransactionInternal( bool durable, CondorError * errorStack ) {
 					// minimally here, a restart of the schedd will fix things fully
 					if ( ! InitOwnerinfo(procad, owner, ownerinfo_is) && Q_SOCK) {
 						// last ditch effort, just use the socket owner as the job owner
-						const char * user = EffectiveUser(Q_SOCK);
+						const char * user = EffectiveUserName(Q_SOCK);
 						procad->ownerinfo = const_cast<OwnerInfo*>(scheduler.insert_owner_const(user));
 					}
 					ASSERT(procad->ownerinfo);
@@ -7248,13 +7526,21 @@ int QmgmtHandleSendJobsetAd(int cluster_id, ClassAd & ad, int /*flags*/, int & t
 	JOB_ID_KEY_BUF key;
 	IdToKey(cluster_id,JOBSETID_qkey2,key);
 #ifdef USE_JOB_QUEUE_USERREC
-	const char * user = EffectiveUser(Q_SOCK);
-	const OwnerInfo * owninfo = nullptr;
-	if (user && *user) { owninfo = scheduler.lookup_owner_const(user); }
-	if ( ! owninfo) {
-		dprintf(D_FULLDEBUG, "Failing remote SendJobsetAd %d because EffectiveUser %s is not found.\n", cluster_id, user);
-		terrno = EINVAL;
-		return -1;
+	const OwnerInfo * owninfo = EffectiveUserRec(Q_SOCK);
+	if ( ! owninfo || (owninfo->jid.proc == CONDOR_USERREC_ID)) {
+		if (owninfo) { 
+			dprintf(D_FULLDEBUG | D_BACKTRACE, "NewJobset %d socket owned by unreal-user %s\n",
+				cluster_id, owninfo->Name());
+		}
+		const char * user = EffectiveUserName(Q_SOCK);
+		// we can't use the built-in condor UserRec, there should be a real UserRec,
+		// possibly one created by NewCluster or by a previous submit operation
+		if (user && user[0]) { owninfo = scheduler.lookup_owner_const(user); }
+		if ( ! owninfo) {
+			dprintf(D_FULLDEBUG, "Failing remote SendJobsetAd %d because EffectiveUser %s is not found.\n", cluster_id, user);
+			terrno = EINVAL;
+			return -1;
+		}
 	}
 #else
 	const char * username = EffectiveUser(Q_SOCK);

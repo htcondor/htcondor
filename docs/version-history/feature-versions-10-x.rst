@@ -17,7 +17,20 @@ Release Notes:
 
 New Features:
 
-- None.
+- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
+  added to allow administrators to restrict job submission to users that have
+  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  :jira:`1934`
+
+- When the file transfer queue is growing too big, HTCondor sends email to the
+  administrator.  Prior versions of HTCondor would send an arbitrarily large number
+  of emails.  Now HTCondor will only send one email per day.
+  :jira:`1937`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
 
 Bugs Fixed:
 

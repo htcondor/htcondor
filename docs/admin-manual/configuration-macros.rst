@@ -4564,6 +4564,15 @@ These macros control the *condor_schedd*.
     ``MAX_JOBS_SUBMITTED``, to ensure that no one user can dominate the
     queue.
 
+:macro-def:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY`
+    This boolean value determines if a User record will be created automatically
+    when an unknown user submits a job.
+    When true, only daemons or users that have a User record in the *condor_schedd*
+    can submit jobs. When false, a User record will be added during job submission
+    for users that have never submitted a job before. The default value is false
+    which is consistent with the behavior of the *condor_schedd* before User records
+    were added.
+
 :macro-def:`MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER`
     This integer value limits the number of scheduler universe jobs that
     any given owner (user) can have running at one time. This limit will
