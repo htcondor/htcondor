@@ -1390,10 +1390,9 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 #endif
 
 bool
-QmgmtPeer::initAuthOwner(bool read_only, bool write_auth)
+QmgmtPeer::initAuthOwner(bool read_only)
 {
 	readonly = read_only;
-	write_ok = write_auth;
 	if (sock) {
 		const char * user = sock->getFullyQualifiedUser();
 		if (user) {
@@ -1432,7 +1431,6 @@ QmgmtPeer::unset()
 	active_cluster_num = -1;	
 	xact_start_time = 0;	// time at which the current transaction was started
 	readonly = false;
-	write_ok = false;
 	real_auth_is_super = false;
 	jquser = nullptr;
 }
@@ -3388,34 +3386,18 @@ QmgmtSetEffectiveOwner(char const *o)
 bool
 UserCheck(const JobQueueBase *ad, const JobQueueUserRec *test_owner)
 {
-	if ( Q_SOCK->getReadOnly() ) {
-		errno = EACCES;
-		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
-		return false;
-	}
-
-	// check if the IP address of the peer has daemon core write permission
-	// to the schedd.  we have to explicitly check here because all queue
-	// management commands come in via one sole daemon core command which
-	// has just READ permission.
-	// TODO: can we get rid of this test? I think the note above is wrong now - tj 2023-05-12
-	if ( ! Q_SOCK->getWriteAuth()) {
-		condor_sockaddr addr = Q_SOCK->endpoint();
-		if ( !Q_SOCK->isAuthorizationInBoundingSet("WRITE") ||
-			daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getRealUser()) == FALSE )
-		{
-			// this machine does not have write permission; return failure
-			return false;
-		}
-		Q_SOCK->setWriteAuth(true);
-	}
-
 	return UserCheck2(ad, test_owner);
 }
 
 bool
 UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_super /*=false*/)
 {
+	if (Q_SOCK && Q_SOCK->getReadOnly()) {
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
+		errno = EACCES;
+		return false;
+	}
+
 	// in the very rare event that the admin told us all users 
 	// can be trusted, let it pass
 	if ( qmgmt_all_users_trusted ) {
@@ -3446,17 +3428,17 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' matches my username\n", test_owner );
 			return true;
 		} else if (not_super) {
-			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s'\n",
 				test_owner, get_real_username());
+			errno = EACCES;
 			return false;
 		} else if (isQueueSuperUser(test_user)) {
 			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user\n", test_user->Name());
 			return true;
 		} else {
-			errno = EACCES;
 			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s' or super_user\n",
 				test_owner, get_real_username());
+			errno = EACCES;
 			return false;
 		}
 	}
@@ -3483,9 +3465,9 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 				test_user->Name(), scheduler.uidDomain());
 			return true;
 		} else {
-			errno = EACCES;
 			dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' is NOT super_user UID_DOMAIN=%s\n",
 				test_user->Name(), scheduler.uidDomain());
+			errno = EACCES;
 			return false;
 		}
 	}
@@ -3506,9 +3488,9 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 		return true;
 	}
 
-	errno = EACCES;
 	dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' not ad owner: '%s' UID_DOMAIN=%s\n",
 		test_user->Name(), job_user->Name(), scheduler.uidDomain());
+	errno = EACCES;
 	return false;
 }
 
@@ -3790,7 +3772,7 @@ handle_q(int cmd, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
-	Q_SOCK->initAuthOwner(cmd == QMGMT_READ_CMD, cmd == QMGMT_WRITE_CMD);
+	Q_SOCK->initAuthOwner(cmd == QMGMT_READ_CMD);
 
 	BeginTransaction();
 

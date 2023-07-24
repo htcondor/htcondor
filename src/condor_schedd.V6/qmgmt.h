@@ -57,8 +57,7 @@ class QmgmtPeer {
 		bool set(const condor_sockaddr& raddr, const char *fqOwnerAndDomain);
 		void unset();
 
-		bool initAuthOwner(bool read_only, bool write_auth_ok);
-		void setWriteAuth(bool value) { write_ok = value; }
+		bool initAuthOwner(bool read_only);
 	#ifdef USE_JOB_QUEUE_USERREC
 		bool setEffectiveOwner(const class JobQueueUserRec * urec, bool not_super_effective);
 		// used during submit when a UserRec is created as a side effect of submit
@@ -69,7 +68,6 @@ class QmgmtPeer {
 		bool setAllowProtectedAttrChanges(bool val);
 		bool getAllowProtectedAttrChanges() const { return allow_protected_attr_changes_by_superuser; }
 		bool getReadOnly() const { return readonly; }
-		bool getWriteAuth() const { return !readonly && write_ok; }
 
 		ReliSock *getReliSock() const { return sock; };
 		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };
