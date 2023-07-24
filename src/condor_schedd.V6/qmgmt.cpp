@@ -3415,35 +3415,6 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 		return false;
 	}
 
-	std::string owner_buf;
-
-#if !defined(WIN32) 
-	// If we're not root or condor, only allow qmgmt writes from
-	// the UID we're running as.
-	uid_t 	my_uid = get_my_uid();
-	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
-		// if a fully-qualified username was passed, extract the name
-		const char * test_owner = name_of_user(test_user->Name(), owner_buf);
-		if( strcmp(get_real_username(), test_owner) == MATCH ) {
-			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' matches my username\n", test_owner );
-			return true;
-		} else if (not_super) {
-			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s'\n",
-				test_owner, get_real_username());
-			errno = EACCES;
-			return false;
-		} else if (isQueueSuperUser(test_user)) {
-			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user\n", test_user->Name());
-			return true;
-		} else {
-			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s' or super_user\n",
-				test_owner, get_real_username());
-			errno = EACCES;
-			return false;
-		}
-	}
-#endif
-
 	// If we don't have an Owner/User attribute (or classad) and we've
 	// gotten this far, how can we deny service?
 	if( !ad ) {
@@ -3814,27 +3785,7 @@ int
 NewCluster(CondorError* errstack)
 {
 #ifdef USE_JOB_QUEUE_USERREC
-	if (Q_SOCK) {
-		const auto urec = EffectiveUserRec(Q_SOCK);
-		bool user_check_ok = false;
-		if (urec || allow_submit_from_known_users_only) {
-			// When called from a socket authenticated to a user for which
-			// there is no UserRec urec will be null.  UserCheck will fail
-			// in UserCheck2 in that case with a message about anon users
-			user_check_ok = UserCheck(NULL, urec);
-		} else {
-			// new user, but we are willing to create UserRec on the fly, so
-			// make a dummy UserRec to pass to UserCheck, since
-			// we don't want UserCheck2 to fail at this time
-			JobQueueUserRec dummy(CONDOR_USERREC_ID, EffectiveUserName(Q_SOCK));
-			user_check_ok = UserCheck(NULL, &dummy);
-		}
-		if ( ! user_check_ok) {
-			dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
-			errno = EACCES;
-			return -1;
-		}
-	}
+	// Nothing to do here
 #else
 	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
