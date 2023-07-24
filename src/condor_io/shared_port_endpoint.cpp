@@ -1366,7 +1366,9 @@ SharedPortEndpoint::UseSharedPort(std::string *why_not,bool already_open)
 		if (!GetDaemonSocketDir(socket_dir)) {
 			is_file_socket = true;
 			if (!GetAltDaemonSocketDir(socket_dir)) {
-				*why_not = "No DAEMON_SOCKET_DIR is available";
+				if( why_not ) {
+					*why_not = "No DAEMON_SOCKET_DIR is available";
+				}
 				cached_result = false;
 				return cached_result;
 			}
