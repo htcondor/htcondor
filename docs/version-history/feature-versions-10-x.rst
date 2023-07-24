@@ -21,6 +21,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed bug in parallel universe that would cause the *condor_schedd* to
+  assert when running with partitionable slots.
+  :jira:`1952`
+
 - Fixed inefficiency in DAGMan setting a nodes descendants to futile status
   which would result in DAGMan taking an extremely long time when a node fails
   in a very large and bushy DAG.
