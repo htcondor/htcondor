@@ -68,6 +68,7 @@ class QmgmtPeer {
 		bool setAllowProtectedAttrChanges(bool val);
 		bool getAllowProtectedAttrChanges() const { return allow_protected_attr_changes_by_superuser; }
 		bool getReadOnly() const { return readonly; }
+		bool getWriteAuth() const { return !readonly && write_ok; }
 
 		ReliSock *getReliSock() const { return sock; };
 		const CondorVersionInfo *get_peer_version() const { return sock->get_peer_version(); };

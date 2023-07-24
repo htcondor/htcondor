@@ -367,14 +367,23 @@ class Dag {
 	*/
 	inline int TotalJobsCompleted() const { return _totalJobsCompleted; }
 
-    /** @return the number of nodes ready to submit job to batch system
-     */
-    inline int NumNodesReady() const { return _readyQ->size(); }
+	/** @return the number of nodes ready to submit job to batch system
+	*/
+	inline int NumNodesReady() const { return _readyQ->size() - NumReadyServiceNodes(); }
 
-    /** @param whether to include final node, if any, in the count
-	    @return the number of nodes not ready to submit to batch system
+	/* Return the number of service nodes in the ready state
+	*/
+	inline int NumReadyServiceNodes() const {
+		int num = 0;
+		for (auto node : _service_nodes)
+			if (node->GetStatus() == Job::STATUS_READY) { ++num; }
+		return num;
+	}
+
+	/** @param whether to include final node, if any, in the count
+	@return the number of nodes not ready to submit to batch system
 	 */
-    inline int NumNodesUnready( bool includeFinal ) const {
+	inline int NumNodesUnready( bool includeFinal ) const {
 				return ( NumNodes( includeFinal )  -
 				( NumNodesDone( includeFinal ) + PreRunNodeCount() +
 				NumJobsSubmitted() + PostRunNodeCount() +
@@ -1104,7 +1113,7 @@ private:
 
 	bool _provisioner_ready = false;
 
-	std::list<Job*> _service_nodes{};
+	std::vector<Job*> _service_nodes{};
 
 	std::map<std::string, Job *>	_nodeNameHash;
 
