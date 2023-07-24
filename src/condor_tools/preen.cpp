@@ -396,21 +396,24 @@ check_spool_dir()
 		"Accountantnew.log",
 		"local_univ_execute",
 		"EventdShutdownRate.log",
-		"OfflineLog",
+		"*OfflineLog*",
 		// SCHEDD.lock: High availability lock file.  Current
 		// manual recommends putting it in the spool, so avoid it.
 		"SCHEDD.lock",
 		"lost+found",
 		};
-	for (int ix = 0; ix < (int)(sizeof(valid_list)/sizeof(valid_list[0])); ++ix) {
-		if ( ! well_known_list.contains(valid_list[ix])) well_known_list.append(valid_list[ix]);
+
+	for (auto & ix : valid_list) {
+		if ( ! well_known_list.contains(ix)) { 
+			well_known_list.append(ix);
+		}
 	}
 	
 		// Step 1: Check each file in the directory. Look for files that
 		// obviously should be here (job queue logs, shared exes, etc.) and
 		// flag them as good files. Put everything else into stale_spool_files,
 		// which we'll deal with later.
-	while( (f = dir.Next()) ) {
+	while((f = dir.Next()) ) {
 			// see if it's on the list
 		if( well_known_list.contains_withwildcard(f) ) {
 			good_file( Spool, f );

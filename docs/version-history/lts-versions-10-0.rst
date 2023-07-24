@@ -28,6 +28,17 @@ Bugs Fixed:
   end would result in DAGMan crashing due to an assertion failure.
   :jira:`1909`
 
+- When the file transfer queue is growing too big, HTCondor sends email to the
+  administrator.  Prior versions of HTCondor would send an arbitrarily large number
+  of emails.  Now HTCondor will only send one email per day.
+  :jira:`1937`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
+
+
 .. _lts-version-history-1007:
 
 Version 10.0.7
