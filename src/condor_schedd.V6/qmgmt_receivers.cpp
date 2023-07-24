@@ -50,7 +50,7 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 static std::unique_ptr<CondorError> g_transaction_error;
 
 int
-do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
+do_Q_request(QmgmtPeer &Q_PEER)
 {
 	int	request_num = -1;
 	int	rval = -1;
@@ -66,44 +66,15 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 
 	case CONDOR_InitializeConnection:
 	{
-		// once we have set read-only we can't go back to read-write
-		if (Q_PEER.getReadOnly()) {
-			return -1;
-		}
-
 		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
-		// Authenticate socket, if not already done by daemonCore
-		if( !syscall_sock->triedAuthentication() ) {
-			if( IsDebugLevel(D_SECURITY) ) {
-				auto methods = SecMan::getAuthenticationMethods(WRITE);
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
-			}
-			CondorError errstack;
-			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
-					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n",
-						 errstack.getFullText().c_str() );
-			}
-		}
-
-		InitializeConnectionInternal(Q_PEER, false, true);
+		// This is now a no-op.
 		return 0;
 	}
 
 	case CONDOR_InitializeReadOnlyConnection:
 	{
 		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
-
-		// We need to record if this is a read-only connection so that
-		// we can avoid expanding $$ in GetJobAd; simply checking if the
-		// connection is authenticated isn't sufficient, because the
-		// security session cache means that read-only connection could
-		// be authenticated by a previous authenticated connection from
-		// the same address (when using host-based security) less than
-		// the expiration period ago.
-		InitializeConnectionInternal(Q_PEER, true, false);
-
-		may_fork = true;
+		// This is now a no-op.
 		return 0;
 	}
 

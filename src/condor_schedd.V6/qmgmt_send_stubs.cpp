@@ -36,28 +36,6 @@ extern ReliSock *qmgmt_sock;
 int terrno;
 
 int
-InitializeConnection( const char * /*owner*/, const char * /* domain */ )
-{
-	CurrentSysCall = CONDOR_InitializeConnection;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-
-	return( 0 );
-}
-
-int
-InitializeReadOnlyConnection( const char * /*owner*/ )
-{
-	CurrentSysCall = CONDOR_InitializeReadOnlyConnection;
-
-	qmgmt_sock->encode();
-	neg_on_error( qmgmt_sock->code(CurrentSysCall) );
-
-	return( 0 );
-}
-
-int
 QmgmtSetAllowProtectedAttrChanges( int val )
 {
 	int	rval = -1;

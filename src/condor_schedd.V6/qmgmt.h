@@ -57,8 +57,7 @@ class QmgmtPeer {
 		bool set(const condor_sockaddr& raddr, const char *fqOwnerAndDomain);
 		void unset();
 
-		bool initAuthOwner(bool read_only, bool write_auth_ok);
-		void setWriteAuth(bool value) { write_ok = value; }
+		bool initAuthOwner(bool read_only);
 	#ifdef USE_JOB_QUEUE_USERREC
 		bool setEffectiveOwner(const class JobQueueUserRec * urec, bool not_super_effective);
 		// used during submit when a UserRec is created as a side effect of submit

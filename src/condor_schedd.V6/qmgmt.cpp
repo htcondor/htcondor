@@ -210,7 +210,7 @@ extern bool allow_submit_from_known_users_only; // if false, create UseRec for n
 // running.  Used by SuperUserAllowedToSetOwnerTo().
 static HashTable<std::string,int> owner_history(hashFunction);
 
-int		do_Q_request(QmgmtPeer &,bool &may_fork);
+int		do_Q_request(QmgmtPeer &);
 #if 0 // not used?
 void	FindPrioJob(PROC_ID &);
 #endif
@@ -1390,10 +1390,9 @@ QmgmtPeer::setEffectiveOwner(char const *o)
 #endif
 
 bool
-QmgmtPeer::initAuthOwner(bool read_only, bool write_auth)
+QmgmtPeer::initAuthOwner(bool read_only)
 {
 	readonly = read_only;
-	write_ok = write_auth;
 	if (sock) {
 		const char * user = sock->getFullyQualifiedUser();
 		if (user) {
@@ -1432,7 +1431,6 @@ QmgmtPeer::unset()
 	active_cluster_num = -1;	
 	xact_start_time = 0;	// time at which the current transaction was started
 	readonly = false;
-	write_ok = false;
 	real_auth_is_super = false;
 	jquser = nullptr;
 }
@@ -3388,34 +3386,18 @@ QmgmtSetEffectiveOwner(char const *o)
 bool
 UserCheck(const JobQueueBase *ad, const JobQueueUserRec *test_owner)
 {
-	if ( Q_SOCK->getReadOnly() ) {
-		errno = EACCES;
-		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
-		return false;
-	}
-
-	// check if the IP address of the peer has daemon core write permission
-	// to the schedd.  we have to explicitly check here because all queue
-	// management commands come in via one sole daemon core command which
-	// has just READ permission.
-	// TODO: can we get rid of this test? I think the note above is wrong now - tj 2023-05-12
-	if ( ! Q_SOCK->getWriteAuth()) {
-		condor_sockaddr addr = Q_SOCK->endpoint();
-		if ( !Q_SOCK->isAuthorizationInBoundingSet("WRITE") ||
-			daemonCore->Verify("queue management", WRITE, addr, Q_SOCK->getRealUser()) == FALSE )
-		{
-			// this machine does not have write permission; return failure
-			return false;
-		}
-		Q_SOCK->setWriteAuth(true);
-	}
-
 	return UserCheck2(ad, test_owner);
 }
 
 bool
 UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_super /*=false*/)
 {
+	if (Q_SOCK && Q_SOCK->getReadOnly()) {
+		dprintf( D_FULLDEBUG, "OwnerCheck: reject read-only client\n" );
+		errno = EACCES;
+		return false;
+	}
+
 	// in the very rare event that the admin told us all users 
 	// can be trusted, let it pass
 	if ( qmgmt_all_users_trusted ) {
@@ -3432,35 +3414,6 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 			"QMGT command failed: anonymous user not permitted\n" );
 		return false;
 	}
-
-	std::string owner_buf;
-
-#if !defined(WIN32) 
-	// If we're not root or condor, only allow qmgmt writes from
-	// the UID we're running as.
-	uid_t 	my_uid = get_my_uid();
-	if( my_uid != 0 && my_uid != get_real_condor_uid() ) {
-		// if a fully-qualified username was passed, extract the name
-		const char * test_owner = name_of_user(test_user->Name(), owner_buf);
-		if( strcmp(get_real_username(), test_owner) == MATCH ) {
-			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' matches my username\n", test_owner );
-			return true;
-		} else if (not_super) {
-			errno = EACCES;
-			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s'\n",
-				test_owner, get_real_username());
-			return false;
-		} else if (isQueueSuperUser(test_user)) {
-			dprintf(D_FULLDEBUG, "OwnerCheck success, '%s' is super_user\n", test_user->Name());
-			return true;
-		} else {
-			errno = EACCES;
-			dprintf( D_FULLDEBUG, "OwnerCheck reject, '%s' not '%s' or super_user\n",
-				test_owner, get_real_username());
-			return false;
-		}
-	}
-#endif
 
 	// If we don't have an Owner/User attribute (or classad) and we've
 	// gotten this far, how can we deny service?
@@ -3483,9 +3436,9 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 				test_user->Name(), scheduler.uidDomain());
 			return true;
 		} else {
-			errno = EACCES;
 			dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' is NOT super_user UID_DOMAIN=%s\n",
 				test_user->Name(), scheduler.uidDomain());
+			errno = EACCES;
 			return false;
 		}
 	}
@@ -3506,9 +3459,9 @@ UserCheck2(const JobQueueBase *ad, const JobQueueUserRec * test_user, bool not_s
 		return true;
 	}
 
-	errno = EACCES;
 	dprintf(D_FULLDEBUG, "OwnerCheck reject, '%s' not ad owner: '%s' UID_DOMAIN=%s\n",
 		test_user->Name(), job_user->Name(), scheduler.uidDomain());
+	errno = EACCES;
 	return false;
 }
 
@@ -3773,7 +3726,7 @@ unsetQSock()
 int
 handle_q(int cmd, Stream *sock)
 {
-	int	rval;
+	int	rval = 0;
 	bool all_good;
 
 	all_good = setQSock((ReliSock*)sock);
@@ -3790,25 +3743,22 @@ handle_q(int cmd, Stream *sock)
 	}
 	ASSERT(Q_SOCK);
 
-	Q_SOCK->initAuthOwner(cmd == QMGMT_READ_CMD, cmd == QMGMT_WRITE_CMD);
+	Q_SOCK->initAuthOwner(cmd == QMGMT_READ_CMD);
 
 	BeginTransaction();
 
-	bool may_fork = (cmd == QMGMT_READ_CMD);
 	ForkStatus fork_status = FORK_FAILED;
-	do {
-		/* Probably should wrap a timer around this */
-		rval = do_Q_request( *Q_SOCK, may_fork );
 
-		if( may_fork && fork_status == FORK_FAILED ) {
-			fork_status = schedd_forker.NewJob();
+	if (cmd == QMGMT_READ_CMD) {
+		fork_status = schedd_forker.NewJob();
+	}
 
-			if( fork_status == FORK_PARENT ) {
-				break;
-			}
-		}
-	} while(rval >= 0);
-
+	if (fork_status != FORK_PARENT) {
+		do {
+			/* Probably should wrap a timer around this */
+			rval = do_Q_request(*Q_SOCK);
+		} while(rval >= 0);
+	}
 
 	unsetQSock();
 
@@ -3832,38 +3782,10 @@ handle_q(int cmd, Stream *sock)
 }
 
 int
-InitializeConnectionInternal(QmgmtPeer & peer, bool read_only, bool write_auth_ok)
-{
-	peer.initAuthOwner(read_only, write_auth_ok);
-	return 0;
-}
-
-
-int
 NewCluster(CondorError* errstack)
 {
 #ifdef USE_JOB_QUEUE_USERREC
-	if (Q_SOCK) {
-		const auto urec = EffectiveUserRec(Q_SOCK);
-		bool user_check_ok = false;
-		if (urec || allow_submit_from_known_users_only) {
-			// When called from a socket authenticated to a user for which
-			// there is no UserRec urec will be null.  UserCheck will fail
-			// in UserCheck2 in that case with a message about anon users
-			user_check_ok = UserCheck(NULL, urec);
-		} else {
-			// new user, but we are willing to create UserRec on the fly, so
-			// make a dummy UserRec to pass to UserCheck, since
-			// we don't want UserCheck2 to fail at this time
-			JobQueueUserRec dummy(CONDOR_USERREC_ID, EffectiveUserName(Q_SOCK));
-			user_check_ok = UserCheck(NULL, &dummy);
-		}
-		if ( ! user_check_ok) {
-			dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
-			errno = EACCES;
-			return -1;
-		}
-	}
+	// Nothing to do here
 #else
 	if( Q_SOCK && !UserCheck(NULL, EffectiveUser(Q_SOCK) ) ) {
 		dprintf( D_FULLDEBUG, "NewCluser(): UserCheck failed\n" );
