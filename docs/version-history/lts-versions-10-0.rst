@@ -24,6 +24,10 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug in DAGMan where service nodes that finish before the DAGs
+  end would result in DAGMan crashing due to an assertion failure.
+  :jira:`1909`
+
 - When the file transfer queue is growing too big, HTCondor sends email to the
   administrator.  Prior versions of HTCondor would send an arbitrarily large number
   of emails.  Now HTCondor will only send one email per day.
