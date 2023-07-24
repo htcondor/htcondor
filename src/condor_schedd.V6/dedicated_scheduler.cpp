@@ -1036,6 +1036,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
+		case JOB_RECONNECT_FAILED:
 			if (!srec->removed) {
 				shutdownMpiJob( srec , true);
 			}
