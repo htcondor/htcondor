@@ -296,13 +296,6 @@ int
 main( int argc, char * argv[] ) {
 	set_mySubSystem( "TOOL", false, SUBSYSTEM_TYPE_TOOL );
 
-	// This is dumb, but easier than fighting daemon core about parsing.
-	_argc = argc;
-	_argv = (char **)malloc( argc * sizeof( char * ) );
-	for( int i = 0; i < argc; ++i ) {
-		_argv[i] = strdup( argv[i] );
-	}
-
 	// This is also dumb, but less dangerous than (a) reaching into daemon
 	// core to set a flag and (b) hoping that my command-line arguments and
 	// its command-line arguments don't conflict.
@@ -314,6 +307,21 @@ main( int argc, char * argv[] ) {
 	dcArgv[2] = strdup( "-p" );
 	dcArgv[3] = strdup(  "0" );
 	dcArgv[4] = NULL;
+
+
+	// This is dumb, but easier than fighting daemon core about parsing.
+	_argc = argc;
+	_argv = (char **)malloc( (argc + 1) * sizeof( char * ) );
+	for( int i = 0; i < argc; ++i ) {
+		_argv[i] = strdup( argv[i] );
+
+		if( argv[i][0] == '-' && argv[i][1] == 'd' ) {
+		    free(dcArgv[1]);
+		    dcArgv[1] = strdup( "-t" );
+		}
+	}
+	_argv[argc] = NULL;
+
 
 	argc = 4;
 	argv = dcArgv;
