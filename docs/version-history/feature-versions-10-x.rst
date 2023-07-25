@@ -32,6 +32,11 @@ New Features:
   ads.
   :jira:`1933`
 
+- Updated DAGMan to utilize the ``-reason`` flag to add a meassage about why
+  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  reason.
+  :jira:`1950`
+
 Bugs Fixed:
 
 - Fixed bug in parallel universe that would cause the *condor_schedd* to
