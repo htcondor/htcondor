@@ -287,14 +287,17 @@ read_secure_file(const char *fname, void **buf, size_t *len, bool as_root, int v
 	}
 
 	// now read the entire file.
+	// Some callers assume the returned buffer is NUL-terminated, so
+	// allocate an extra byte for a NUL.
 	size_t fsize = st.st_size;
-	char *fbuf = (char*)malloc(fsize);
+	char *fbuf = (char*)malloc(fsize+1);
 	if(fbuf == NULL) {
 		dprintf(D_ALWAYS,
 			"ERROR: read_secure_file(%s): malloc(%zu) failed!\n", fname, fsize);
 		fclose(fp);
 		return false;
 	}
+	fbuf[fsize] = '\0';
 
 	// actually read the data
 	size_t readsize = fread(fbuf, 1, fsize, fp);
