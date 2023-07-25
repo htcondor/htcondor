@@ -5012,8 +5012,12 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 		event.submitEventWarnings = warning;
 	}
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, job);
+	} else {
+		status = ULog->writeEventNoFsync(&event, job);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5326,8 +5330,12 @@ Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
 	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, cluster);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, cluster);
+	} else {
+		status = ULog->writeEventNoFsync(&event, cluster);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5364,8 +5372,12 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, event.next_proc_id);
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, event.next_row);
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, cluster);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, cluster);
+	} else {
+		status = ULog->writeEventNoFsync(&event, cluster);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5385,7 +5397,6 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 			// User didn't want log
 		return true;
 	}
-	ULog->setEnableFsync(do_fsync);
 
 	int code = mmRunning;
 	if ( ! cluster->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, code)) {
@@ -5421,12 +5432,21 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 			event.setPauseCode(code);
 			#endif
 		}
-		status = ULog->writeEvent(&event,cluster);
+		if (do_fsync) {
+			status = ULog->writeEvent(&event,cluster);
+		} else {
+			status = ULog->writeEventNoFsync(&event,cluster);
+		}
 	} else {
 		// factory is resumed.
 		FactoryResumedEvent event;
 		if (reason) event.setReason(reason);
-		status = ULog->writeEvent(&event,cluster);
+
+		if (do_fsync) {
+			status = ULog->writeEvent(&event,cluster);
+		} else {
+			status = ULog->writeEventNoFsync(&event,cluster);
+		}
 	}
 
 	delete ULog;

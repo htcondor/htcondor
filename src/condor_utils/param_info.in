@@ -2368,6 +2368,11 @@ default=true
 type=bool
 tags=condor_ssh_to_job
 
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
