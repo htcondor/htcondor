@@ -2365,13 +2365,11 @@ read_from_keyboard(char* buf, int maxlength, bool echo) {
 			
 	while ( ch_count < maxlength-1 ) {
 		ch = getchar();
-		if ( ch == end_char ) {
+		if ( ch == end_char || ch == EOF ) {
 			break;
 		} else if ( ch == '\b') { // backspace
 			if ( ch_count > 0 ) { ch_count--; }
 			continue;
-		} else if ( ch == '\003' ) { // CTRL-C
-			return FALSE;
 		}
 		buf[ch_count++] = (char) ch;
 	}
