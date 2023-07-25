@@ -17,6 +17,12 @@ Release Notes:
 
 New Features:
 
+- By default, the user event logs are no longer fsync'd by the schedd.  This
+  should improve the performance of the schedd, especially when the user's event
+  logs are on non-solid state disks.  There is a knob to revert to the old
+  semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
+  :jira:`1934`
+
 - A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
   added to allow administrators to restrict job submission to users that have
   already been added to the *condor_schedd* using the *condor_qusers* tool.
