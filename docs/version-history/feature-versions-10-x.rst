@@ -39,6 +39,10 @@ Bugs Fixed:
   in a very large and bushy DAG.
   :jira:`1945`
 
+- Fixed  bugs in *condor_store_cred* that could cause it to crash or
+  write incorrect data for the pool password.
+  :jira:`1587`
+
 Version 10.7.0
 --------------
 
