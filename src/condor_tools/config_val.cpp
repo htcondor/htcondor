@@ -1985,14 +1985,12 @@ static void PrintConfigSources(void)
 		// stdout, so that the output can be cleanly piped into
 		// something like xargs...
 
-	if (global_config_source.length() > 0) {
-		fprintf( stderr, "Configuration source:\n" );
-		fflush( stderr );
-		fprintf( stdout, "\t%s\n", global_config_source.c_str() );
-		fflush( stdout );
-	} else {
-		fprintf( stderr, "Can't find the configuration source.\n" );
-	}
+	fprintf( stderr, "Configuration source:\n" );
+	fflush( stderr );
+	const char * global_config = global_config_source.c_str();
+	if ( ! global_config || ! global_config[0]) { global_config = "<none>"; }
+	fprintf( stdout, "\t%s\n", global_config_source.c_str() );
+	fflush( stdout );
 
 	unsigned int numSources = local_config_sources.number();
 	if (numSources > 0) {

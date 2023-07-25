@@ -499,6 +499,7 @@ int write_config_file(const char* pathname, int options);
 	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
+	void insert_special_sources(MACRO_SET& macro_set);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;
