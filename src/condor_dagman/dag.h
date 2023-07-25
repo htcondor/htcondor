@@ -216,7 +216,7 @@ class Dag {
 	/** Remove the batch system job for the given DAG node.
 		@param The node for which to remove the job.
 	*/
-	void RemoveBatchJob(Job *node, std::string reason = "Removed by DAGMan");
+	void RemoveBatchJob(Job *node, const std::string& reason = "Removed by DAGMan");
 
 	/** Processing common to all "end-of-job proc" events.
 		@param The node the event is associated with.
@@ -528,7 +528,7 @@ class Dag {
 			read the logs.  Setting bForce to true automatically
 			implies removeCondorJobs.
     */
-    void RemoveRunningJobs ( const CondorID &dmJobId, std::string& reason, bool removeCondorJobs,
+    void RemoveRunningJobs ( const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs,
 				bool bForce );
 
     /** Remove all pre- and post-scripts that are currently running.

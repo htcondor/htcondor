@@ -583,7 +583,7 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			// we may have jobs in the queue even if we think we don't.
 			// (See gittrac #4960.) wenger 2015-04-22
 		debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-		std::string rm_reason = "DAG Abort: DAG is exiting and writing rescue file.";
+		const char* rm_reason = "DAG Abort: DAG is exiting and writing rescue file.";
 		if (dagStatus == DagStatus::DAG_STATUS_RM) {
 			rm_reason = "DAG Removed: User removed scheduler job from queue.";
 		}

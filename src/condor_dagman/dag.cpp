@@ -876,7 +876,7 @@ Dag::ProcessTerminatedEvent(const ULogEvent *event, Job *job,
 
 //---------------------------------------------------------------------------
 void
-Dag::RemoveBatchJob(Job *node, std::string reason) {
+Dag::RemoveBatchJob(Job *node, const std::string& reason) {
 
 	ArgList args;
 	std::string constraint;
@@ -2244,7 +2244,7 @@ Dag::NumNodesDone( bool includeFinal ) const
 // Note 2: We need to keep this indefinitely for the ABORT-DAG-ON case,
 // where we need to condor_rm any running node jobs, and the schedd
 // won't do it for us.  wenger 2014-10-29.
-void Dag::RemoveRunningJobs ( const CondorID &dmJobId, std::string& reason, bool removeCondorJobs,
+void Dag::RemoveRunningJobs ( const CondorID &dmJobId, const std::string& reason, bool removeCondorJobs,
 			bool bForce )
 {
 	if ( bForce ) removeCondorJobs = true;
