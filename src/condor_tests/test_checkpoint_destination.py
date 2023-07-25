@@ -95,11 +95,11 @@ def cleanup_file(test_dir):
             # store checkpoints if we remove the last checkpoint.
             SUBDIR=`dirname ${DELETE}`
             if [[ -d ${DIR}${SUBDIR} ]]; then
-                cd ${DIR}; rmdir --parents --ignore-fail-on-non-empty ${SUBDIR}
+                cd ${DIR}; rmdir -p ${SUBDIR}
                 CHECKPOINT_NUMBER=`basename ${DIR}`
-                cd ..; rmdir --ignore-fail-on-non-empty ${CHECKPOINT_NUMBER}
+                cd ..; rmdir ${CHECKPOINT_NUMBER}
                 GLOBAL_JOB_ID=$(basename $(dirname ${DIR}))
-                cd ..; rmdir --ignore-fail-on-non-empty ${GLOBAL_JOB_ID}
+                cd ..; rmdir ${GLOBAL_JOB_ID}
             fi
 
             exit 0
