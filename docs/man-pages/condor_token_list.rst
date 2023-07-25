@@ -9,7 +9,7 @@ list all available tokens for IDTOKENS auth
 Synopsis
 --------
 
-**condor_token_list**
+**condor_token_list** [**-dir** *directory*]
 
 **condor_token_list** **-help**
 
@@ -32,6 +32,9 @@ Options
 
  **-help**
     Display brief usage information and exit.
+
+ **-dir**
+ 	Read tokens from an alternate directory.
 
 Examples
 --------
