@@ -1083,7 +1083,6 @@ rm -rf %{buildroot}
 #################
 %endif
 %files
-%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt examples
 %dir %_sysconfdir/condor/
