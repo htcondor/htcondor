@@ -747,6 +747,8 @@ def the_completed_job(the_condor, the_job_handle):
 def the_removed_job(the_condor, the_completed_job):
     the_condor.run_command(['condor_qedit', the_completed_job.clusterid, 'LeaveJobInQueue', 'False'])
     the_completed_job.remove()
+    # Crass empiricism.
+    time.sleep(1)
     return the_completed_job
 
 
