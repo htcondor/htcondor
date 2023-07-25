@@ -27,6 +27,10 @@ New Features:
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
 
+- Improved output for ``htcondor dag status`` command to include more information
+  about the specified DAG.
+  :jira:`1951`
+
 - Preen now preserves all files in the spool directory matching `*OfflineLog*`
   so that central managers with multiple active collectors can have offline
   ads.

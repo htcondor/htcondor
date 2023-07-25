@@ -164,6 +164,7 @@
 #define ATTR_DAG_JOBS_COMPLETED "DAG_JobsCompleted"
 #define ATTR_DAG_STATUS "DAG_Status"
 #define ATTR_DAG_STATS "DAG_Stats"
+#define ATTR_DAG_AD_UPDATE_TIME "DAG_AdUpdateTime"
 #define ATTR_DAGMAN_MAXIDLE "DAGMan_MaxIdle"
 #define ATTR_DAGMAN_MAXJOBS "DAGMan_MaxJobs"
 #define ATTR_DAGMAN_MAXPRESCRIPTS "DAGMan_MaxPreScripts"
