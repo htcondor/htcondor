@@ -3,6 +3,10 @@
 #include "condor_config.h"
 #include "condor_uid.h"
 
+#ifndef WIN32
+#include <dlfcn.h>
+#endif
+
 #include "condor_lotman.h"
 #include <filesystem>
 #include <picojson/picojson.h>
@@ -171,6 +175,7 @@ condor_lotman::init_lotman()
 	}
 #else
 #if defined(HAVE_EXT_LOTMAN)
+    dprintf( D_FULLDEBUG, "Loading external lotman...");
 
     lotman_lot_exists_ptr = lotman_lot_exists;
     lotman_set_context_str_ptr = lotman_set_context_str;
