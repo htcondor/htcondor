@@ -43,6 +43,12 @@ New Features:
   reason.
   :jira:`1950`
 
+- Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
+  environment variables to be added into the DAGMan job propers environment either
+  by setting values explicitly or getting them from the environment the job is
+  submitted from.
+  :jira:`1955`
+
 Bugs Fixed:
 
 - Fixed bug in parallel universe that would cause the *condor_schedd* to

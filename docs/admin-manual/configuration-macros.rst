@@ -8603,11 +8603,21 @@ General
     file's ``getenv`` option. This will in turn add any found matching environment
     variables to the DAGMan proper jobs **environment**. Setting this value to
     ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
-    ``getenv`` are:
+    ``getenv`` are the following.
 
-    .. code-block:: condor-submit
-
-        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL
+    +---------------+--------------------+--------------------+--------------------+
+    |               |        PATH        |        HOME        |        USER        |
+    |               +--------------------+--------------------+--------------------+
+    | General Shell |         TZ         |        LANG        |       LC_ALL       |
+    |               +--------------------+--------------------+--------------------+
+    |               |     PYTHONPATH     |        PERL*       |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |   XDG_RUNTIME_DIR  |
+    +---------------+--------------------+--------------------+--------------------+
+    |     Misc.     |     PEGASUS_*      |                    |                    |
+    +---------------+--------------------+--------------------+--------------------+
 
 :macro-def:`DAGMAN_NODE_RECORD_INFO`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current

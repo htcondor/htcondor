@@ -3,8 +3,8 @@
 #  =======test_dagman_proper_env=======
 #   This test will check that the DAGMan proper manager
 #   job has its envrionment setting controls working correctly.
-#   With this we test -insert_env, -include_env, and the config
-#   knob DAGMAN_MANAGER_JOB_APPEND_GETENV
+#   With this we test -insert_env, -include_env, the config
+#   knob DAGMAN_MANAGER_JOB_APPEND_GETENV, and the DAG command: ENV
 #           -Cole Bollig 2023-02-21
 
 #testreq: personal
@@ -24,7 +24,7 @@ from time import time
 #Global variable for expected variables to be found in getenv in the submit file
 GETENV_VALUES = {
     #Base always added values
-    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL"],
+    "BASE":["CONDOR_CONFIG","_CONDOR_*","PATH","PYTHONPATH","PERL*","PEGASUS_*","TZ","HOME","USER","LANG","LC_ALL","BEARER_TOKEN","BEARER_TOKEN_FILE","XDG_RUNTIME_DIR"],
     #getenv added values from the above configuration
     "CONFIG":["Beer","Donuts"],
     #When config knob is set to True then getenve should be set to just true
@@ -272,6 +272,39 @@ def testPyBindings(default_condor,test_dir):
     find_getenv.extend(GETENV_VALUES["CONFIG"])
     return (dag,find_getenv,find_env)
 
+#-------------------------------------------------------------------------------------------------------
+@action
+def textENVcmd(default_condor, test_dir):
+    dag_name = "test.dag"
+    os.chdir(str(test_dir))
+    #Make and move to py bindings test case subdir
+    path = os.path.join(str(test_dir),"env_cmd")
+    if not os.path.exists(path):
+        os.mkdir(path)
+    os.chdir(path)
+    with open(dag_name,"w") as f:
+        f.write("""
+ENV GET EL_WISCORICAN SLOW_FOOD
+ENV GET COMP_SCI,BIOLOGY,MATHEMATICS
+ENV SET LOCATION='Madison, WI';AI=TRUE
+ENV SET |GEN1_POKEMON_GAMES=Blue;Red;Yellow;|GEN2_POKEMON_GAMES=Silver;Gold;Crytal;
+""")
+    cmd = ["condor_submit_dag","-f","-no_submit",dag_name]
+    p = default_condor.run_command(cmd)
+    submit = os.path.join(path, f"{dag_name}.condor.sub")
+    start = time()
+    #Loop checking for .condor.sub files to exists. If not found after 10 sec fail
+    while True:
+        if os.path.exists(submit):
+            break
+        assert time() - start < 10
+    get_env = ["EL_WISCORICAN","SLOW_FOOD","COMP_SCI","BIOLOGY","MATHEMATICS"]
+    get_env.extend(GETENV_VALUES["BASE"])
+    get_env.extend(GETENV_VALUES["CONFIG"])
+    set_env = ["LOCATION","AI","GEN1_POKEMON_GAMES","GEN2_POKEMON_GAMES"]
+    set_env.extend(BASE_ENV_VALUES)
+    return (submit, get_env, set_env)
+
 #=======================================================================================================
 class TestDAGManSetsEnv:
     def test_dagman_proper_sets_env(self,testName,testDagPaths,testGetEnv,testEnv):
@@ -342,6 +375,39 @@ class TestDAGManSetsEnv:
         assert len(found_getenv) == len(testPyBindings[1])
         #Assert that we found all expected items in environment
         assert len(found_env) == len(testPyBindings[2])
-
-
+    def test_dag_env_cmd(self, textENVcmd):
+        found_env = []
+        found_getenv = []
+        unexpected = []
+        #Make sure file exists
+        assert os.path.exists(textENVcmd[0])
+        #Read file
+        f = open(textENVcmd[0],"r")
+        for line in f:
+            line = line.strip()
+            #Read getenv line
+            if line[:6] == "getenv":
+                pos = line.find("=")
+                getenv_vals = line[pos+1:].split(",")
+                for var in getenv_vals:
+                    var = var.strip()
+                    if var in textENVcmd[1]:
+                        found_getenv.append(var)
+                    else:
+                        unexpected.append(var)
+            #Read Environment line
+            elif line[:11] == "environment":
+                env_vals = line.split("=",1)[1]
+                for info in textENVcmd[2]:
+                    if info in env_vals:
+                        found_env.append(info)
+        #Error if we found unexpected vars in getenv
+        if len(unexpected) > 0:
+            tmp = ",".join(unexpected)
+            print(f"ERROR: Unexpected env vars ({tmp}) found in getenv.")
+            assert False
+        #Assert that we found all expected items in getenv
+        assert len(found_getenv) == len(textENVcmd[1])
+        #Assert that we found all expected items in environment
+        assert len(found_env) == len(textENVcmd[2])
 

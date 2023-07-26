@@ -1,8 +1,15 @@
-Setting ClassAd attributes in the DAG file
-==========================================
+DAG Manager Job Specifications
+==============================
+
+Some DAG file commands can be used to alter information about the
+DAG manager job itself such as adding custom classad attrbutes and
+setting information in the job environment.
 
 :index:`SET_JOB_ATTR command<single: DAG input file; SET_JOB_ATTR command>`
-:index:`setting ClassAd attributes in a DAG<single: DAGMan; Setting ClassAd attributes in a DAG>`
+:index:`Setting Classad Attributes in the DAGMan Job<single: DAGMan; Setting Classad Attributes in the DAGMan Job>`
+
+Classad Attributes in the DAG Manager Job
+'''''''''''''''''''''''''''''''''''''''''
 
 The *SET_JOB_ATTR* keyword within the DAG input file specifies an
 attribute/value pair to be set in the DAGMan proper job's ClassAd.
@@ -40,3 +47,31 @@ can be overridden by specifying
     -append 'My.<attribute> = <value>'
 
 on the *condor_submit_dag* command line.
+
+:index:`ENV command<single: DAG input file; ENV command>`
+:index:`Setting DAGMan job environment variables<single: DAGMan; Setting DAGMan job environment variables>`
+
+Environment Variables in the DAG Manager Job
+''''''''''''''''''''''''''''''''''''''''''''
+
+The *ENV* keyword within the DAG input file can be used to specify
+environment variables to set into the DAGMan jobs environment or get
+from the environment that the DAGMan job was submitted from. It is
+important to know that the environment variables in the DAG manager
+jobs environment effect scripts and node jobs that rely environment
+variables since scripts and node jobs are submitted from the DAGMan
+jobs environment. The syntax is:
+
+.. code-block:: condor-dagman
+
+    ENV GET VAR-1 VAR-2 ... VAR-N
+    #  or
+    ENV SET Key=Value;Key=Value; ...
+
+The *GET* keyword takes a list of environment variables names to be added
+to the DAGMan jobs ``getenv`` command in the ``.condor.sub`` file for the DAG.
+
+The *SET* keyword takes a semi-colon delimited list of **key=value** pairs of
+information to add into DAGMan jobs ``environment`` command in the ``.condor.sub``
+file for the DAG. These added **key=value** must follow the normal HTCondor
+job environment rules.
