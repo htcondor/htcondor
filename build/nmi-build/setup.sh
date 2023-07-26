@@ -178,20 +178,24 @@ externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     chown _apt "$externals_dir"
-    (cd "$externals_dir";
-        apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
+    pushd "$externals_dir"
+    apt download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
+    if [ $VERSION_CODENAME != 'bookworm' ]; then
+        apt download libcgroup1
+    fi
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.71.0)
+        apt download libboost-python1.71.0
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
     fi
+    popd
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
