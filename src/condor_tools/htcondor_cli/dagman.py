@@ -12,6 +12,7 @@ import math
 from datetime import datetime
 from pathlib import Path
 
+from htcondor_cli.eventlog import convert_seconds_to_dhms
 from htcondor_cli.noun import Noun
 from htcondor_cli.verb import Verb
 from htcondor_cli import JobStatus
@@ -43,18 +44,14 @@ def colorize(string, color):
 
 def FormatTime(time):
     """
-    Conver integer into time display string as 'n days hh:mm:ss'
+    Convert integer into time display string as 'n days hh:mm:ss'
     """
-    days  = math.trunc(time / (60 * 60 * 24))
-    hours = round(time / (60 * 60)) % 24
-    mins  = round(time / 60) % 60
-    secs  = time % 60
+    out = convert_seconds_to_dhms(time)
+    parts = out.split("+")
     days_display = ""
-    if days == 1:
-        days_display = "1 day "
-    elif days > 1:
-        days_display = f"{days} days "
-    return f"{days_display}{hours:02.0f}:{mins:02.0f}:{secs:02.0f}"
+    if int(parts[0]) > 0:
+        days_display = f"{parts[0]} days" if int(parts[0]) > 1 else "1 day"
+    return f"{days_display}{parts[1]}"
 
 class Submit(Verb):
     """
@@ -128,14 +125,16 @@ class Status(Verb):
         # Get schedd
         schedd = htcondor.Schedd()
 
-        # Projection of attributes needed: Basic Job information
-        attributes = ["JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "JobBatchName"]
-        # DAG Node information
-        attributes.extend(["DAG_NodesTotal", "DAG_NodesDone", "DAG_NodesFailed", "DAG_NodesPostrun", "DAG_NodesPrerun", "DAG_NodesQueued", "DAG_NodesReady", "DAG_NodesUnready", "DAG_NodesFutile"])
-        # DAG job information
-        attributes.extend(["DAG_JobsSubmitted", "DAG_JobsIdle", "DAG_JobsHeld", "DAG_JobsRunning", "DAG_JobsCompleted"])
-        # General DAG information
-        attributes.extend(["DAG_InRecovery", "DAG_Status", "DAG_AdUpdateTime"])
+        attributes = [
+            # Projection of attributes needed: Basic Job information
+            "JobStartDate", "JobStatus", "EnteredCurrentStatus", "HoldReason", "JobBatchName",
+            # DAG Node information
+            "DAG_NodesTotal", "DAG_NodesDone", "DAG_NodesFailed", "DAG_NodesPostrun", "DAG_NodesPrerun", "DAG_NodesQueued", "DAG_NodesReady", "DAG_NodesUnready", "DAG_NodesFutile",
+            # DAG job information
+            "DAG_JobsSubmitted", "DAG_JobsIdle", "DAG_JobsHeld", "DAG_JobsRunning", "DAG_JobsCompleted",
+            # General DAG information
+            "DAG_InRecovery", "DAG_Status", "DAG_AdUpdateTime"
+        ]
 
         # Query schedd
         try:
@@ -167,7 +166,7 @@ class Status(Verb):
                 logger.info(colorize("         Information may be outdated. This indicates a possible issue with the DAG job.", Color.RED))
             # Check recovery
             if int(dag[0]["DAG_InRecovery"]) == 1:
-                logger.info(f"DAG {dag_id} [{dag_file}] is in recovery mode attempting to restore previous progress.")
+                logger.info(f"DAG {dag_id} [{dag_file}] is in recovery mode and attempting to restore previous progress.")
             else:
                 job_running_time = datetime.now() - datetime.fromtimestamp(dag[0]["JobStartDate"])
                 dag_state = "running"
@@ -198,6 +197,7 @@ class Status(Verb):
                 logger.info(f"\t    {self.multi(ad.get('DAG_JobsCompleted'),True)} completed.")
             if failed_jobs > 0:
                 logger.info(f"\t    {self.multi(failed_jobs,True)} failed.")
+
         # Show some information about the nodes running under this DAG
         if ad.get('DAG_NodesTotal') != None:
             bar_parts = { "success":{"char":"#", "color":Color.GREEN, "num":0},
@@ -239,6 +239,7 @@ class Status(Verb):
             if ad.get('DAG_NodesFailed', 0) > 0:
                 key = colorize(bar_parts['failure']['char'], bar_parts['failure']['color'])
                 logger.info(f"\t[{key}] {self.multi(ad.get('DAG_NodesFailed'),True)} failed.")
+
             bar_width = 50
             if sys.version_info.major >= 3:
                 bar_width = round(shutil.get_terminal_size().columns / 2) - 2
