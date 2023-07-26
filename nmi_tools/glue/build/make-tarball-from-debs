@@ -124,6 +124,12 @@ if [ $? -ne 0 ];then
     exit 1
 fi
 
+# Add in apptainer if available
+if [ -d /usr/local/condor/externals/$REPO_VERSION/apptainer ]; then
+    cp -a /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball
+    tarball/bin/apptainer --version >> tarball/Manifest.txt
+fi
+
 # Package final tarball
 mv tarball condor-$version-$release-$arch_dist-stripped
 tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped

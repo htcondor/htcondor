@@ -109,12 +109,12 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ $VERSION_CODENAME = 'focal' ] && [ "$ARCH" = 'ppc64le' ]; then
+if [ $VERSION_CODENAME = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'amzn' ]; then
+if [ $ID = 'future' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -177,6 +177,7 @@ fi
 externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+    chown _apt "$externals_dir"
     (cd "$externals_dir";
         apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
     if [ $VERSION_CODENAME = 'bullseye' ]; then
@@ -225,8 +226,23 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     apt -y clean
 fi
 
+# Install apptainer into externals directory
+if [ $ID != 'amzn' ]; then
+    mkdir -p "$externals_dir/apptainer"
+    if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+        $INSTALL cpio rpm2cpio
+    fi
+    curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
+        bash -s - "$externals_dir/apptainer"
+    rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+fi
+
 # Install pytest for BaTLab testing
-pip3 install pytest pytest-httpserver
+if [ $VERSION_CODENAME = 'bookworm' ]; then
+    pip3 install --break-system-packages pytest pytest-httpserver
+else
+    pip3 install pytest pytest-httpserver
+fi
 
 if [ $ID = 'amzn' ] || [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
