@@ -173,6 +173,21 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
+if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL wget
+    wget https://github.com/apptainer/apptainer/releases/download/v1.2.0/apptainer_1.2.0_amd64.deb
+    $INSTALL ./apptainer_1.2.0_amd64.deb
+    rm ./apptainer_1.2.0_amd64.deb
+fi
+
+if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL software-properties-common
+    add-apt-repository -y ppa:apptainer/ppa
+    apt update
+    $INSTALL apptainer
+fi
+
+
 # Include packages for tarball in the image.
 externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
@@ -232,13 +247,15 @@ fi
 
 # Install apptainer into externals directory
 if [ $ID != 'amzn' ]; then
-    mkdir -p "$externals_dir/apptainer"
-    if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-        $INSTALL cpio rpm2cpio
+    if [ $ID != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
+        mkdir -p "$externals_dir/apptainer"
+        if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+            $INSTALL cpio rpm2cpio
+        fi
+        curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
+            bash -s - "$externals_dir/apptainer"
+        rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
     fi
-    curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
-        bash -s - "$externals_dir/apptainer"
-    rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
 fi
 
 # Install pytest for BaTLab testing
