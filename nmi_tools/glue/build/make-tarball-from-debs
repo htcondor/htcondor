@@ -126,7 +126,7 @@ fi
 
 # Add in apptainer if available
 if [ -d /usr/local/condor/externals/$REPO_VERSION/apptainer ]; then
-    cp -a /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball
+    rsync -aK /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball
     tarball/bin/apptainer --version >> tarball/Manifest.txt
 fi
 
