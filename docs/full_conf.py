@@ -485,6 +485,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^maxjobs", token.Keyword, "maxjobs"),
             (r"^config", token.Keyword, "maxjobs"),
             (r"^set_job_attr", token.Keyword, "set_job_attr"),
+            (r"^env", token.Keyword, "env"),
             (r"^include", token.Keyword, "include"),
             (r"^subdag", token.Keyword, "subdag"),
             (r"^splice", token.Keyword, "splice"),
@@ -550,6 +551,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
         "maxjobs": DAGMAN_COMMON,
         "config": DAGMAN_COMMON,
         "set_job_attr": [(r"\s=\s", token.Operator)] + DAGMAN_COMMON,
+        "env": [
+            (
+                r"([\s\[])(GET|SET)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text)
+            ),
+        ] + DAGMAN_COMMON,
         "include": DAGMAN_COMMON,
         "subdag": [
             (
