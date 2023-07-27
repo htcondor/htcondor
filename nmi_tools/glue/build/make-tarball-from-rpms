@@ -119,7 +119,7 @@ chmod g-s tarball/var/lib/condor/oauth_credentials
 
 # Add in apptainer if available
 if [ -d /usr/local/condor/externals/$REPO_VERSION/apptainer ]; then
-    rsync -aK /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball
+    cp -a /usr/local/condor/externals/$REPO_VERSION/apptainer/* tarball/usr
     tarball/bin/apptainer --version >> tarball/Manifest.txt
 fi
 
