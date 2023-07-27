@@ -41,6 +41,7 @@ public:
 
 	virtual bool reconfig() override;
 
+	virtual bool useProcd() const override {return true;}
 
 	virtual const std::string paramPrefix() const override {return "STARTER";}
 

@@ -31,7 +31,9 @@ public:
 
 	virtual bool reconfig() override;
 
-	virtual const std::string paramPrefix() const override {return "STARTER";}
+	virtual bool useProcd() const override {return false;}
+
+	virtual const std::string paramPrefix() const override {return "SHADOW";}
 
 	/**
 	 * Invoke the HOOK_PREPARE_JOB as applicable and spawn it.

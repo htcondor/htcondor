@@ -394,6 +394,7 @@ class OptionalCreateProcessArgs {
     OptionalCreateProcessArgs & daemonSock(const char * daemon_sock) { this->daemon_sock = daemon_sock; return *this; }
     OptionalCreateProcessArgs & remap(FilesystemRemap * fsr) { this->_remap = fsr; return *this; }
     OptionalCreateProcessArgs & asHardLimit(long ahl) { this->as_hard_limit = ahl; return *this; }
+    OptionalCreateProcessArgs & reaperId(int id) { this->reaper_id = id; return *this; }
 
 
     // Special case for usability; may be a bad idea, but allows you to

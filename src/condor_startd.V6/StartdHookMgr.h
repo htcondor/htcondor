@@ -123,6 +123,9 @@ private:
 		*/
 	HashTable<std::string, char**> m_keyword_hook_paths;
 
+protected:
+	virtual bool useProcd() const override {return true;}
+
 };
 
 
