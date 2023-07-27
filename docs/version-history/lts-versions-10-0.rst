@@ -38,6 +38,9 @@ Bugs Fixed:
   ads.
   :jira:`1933`
 
+- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
+  :jira:`1954`
+
 
 .. _lts-version-history-1007:
 
