@@ -222,7 +222,7 @@ Requires: systemd
 BuildRequires: python-sphinx python-sphinx_rtd_theme
 %endif
 
-%if 0%{?rhel} >= 8 || 0%{?amzn}
+%if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
@@ -710,7 +710,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if 0%{?rhel} >= 9
+%if 0%{?rhel} >= 9 || 0%{?fedora}
        -DWITH_LIBCGROUP:BOOL=FALSE \
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -747,7 +747,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-%if 0%{?rhel} >= 9
+%if 0%{?rhel} >= 9 || 0%{?fedora}
        -DWITH_LIBCGROUP:BOOL=FALSE \
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -768,9 +768,10 @@ export CMAKE_PREFIX_PATH=/usr
 
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
-%if 0%{?rhel} == 9
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 make %{?_smp_mflags}
 %if %uw_build
@@ -780,9 +781,10 @@ make %{?_smp_mflags} tests
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
-%if 0%{?rhel} == 9
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
@@ -799,11 +801,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
-%if 0%{?rhel} == 9
-cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
-%else
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %endif
