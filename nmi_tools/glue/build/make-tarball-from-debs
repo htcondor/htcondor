@@ -136,5 +136,8 @@ mv tarball condor-$version-$release-$arch_dist-stripped
 tar --create --gzip --owner=0 --group=0 --numeric-owner --file=condor-$version-$release-$arch_dist-stripped.tar.gz condor-$version-$release-$arch_dist-stripped
 rm -r condor-$version-$release-$arch_dist-stripped
 
+echo ======= Manifest.txt =======
+cat tarball/Manifest.txt
+
 ls -lh condor*.tar.gz
 exit 0
