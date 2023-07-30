@@ -110,7 +110,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ $VERSION_CODENAME = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
+if [ "$VERSION_CODENAME" = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
@@ -260,7 +260,7 @@ if [ $ID != 'amzn' ]; then
 fi
 
 # Install pytest for BaTLab testing
-if [ $VERSION_CODENAME = 'bookworm' ]; then
+if [ "$VERSION_CODENAME" = 'bookworm' ]; then
     pip3 install --break-system-packages pytest pytest-httpserver
 else
     pip3 install pytest pytest-httpserver
