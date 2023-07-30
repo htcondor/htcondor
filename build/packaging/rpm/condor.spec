@@ -768,9 +768,10 @@ export CMAKE_PREFIX_PATH=/usr
 
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
+%else
 %if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 make %{?_smp_mflags}
 %if %uw_build
@@ -780,9 +781,10 @@ make %{?_smp_mflags} tests
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
+%else
 %if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
@@ -799,11 +801,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
-%if 0%{?rhel} == 9 || 0%{?fedora}
-cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
-%else
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %endif
