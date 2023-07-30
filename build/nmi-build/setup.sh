@@ -68,6 +68,7 @@ useradd --uid 20839 --gid $SUDO_GROUP --shell /bin/bash --create-home iaross
 useradd --uid 21356 --gid $SUDO_GROUP --shell /bin/bash --create-home jcpatton
 useradd --uid 20007 --gid $SUDO_GROUP --shell /bin/bash --create-home jfrey
 useradd --uid 20018 --gid $SUDO_GROUP --shell /bin/bash --create-home johnkn
+useradd --uid 25234 --gid $SUDO_GROUP --shell /bin/bash --create-home jrreuss
 useradd --uid 20020 --gid $SUDO_GROUP --shell /bin/bash --create-home matyas
 useradd --uid 20013 --gid $SUDO_GROUP --shell /bin/bash --create-home tannenba
 useradd --uid 20345 --gid $SUDO_GROUP --shell /bin/bash --create-home tim
@@ -97,7 +98,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
 fi
 
 if [ $ID = 'fedora' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.f$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.noarch.rpm"
 fi
 
 # Setup Debian based repositories
@@ -114,7 +115,7 @@ if [ $VERSION_CODENAME = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'future' ]; then
+if [ $ID = 'fedora' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -128,7 +129,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Need newer cmake on bionic
-if [ $VERSION_CODENAME = 'bionic' ]; then
+if [ "$VERSION_CODENAME" = 'bionic' ]; then
     curl -dsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
     echo 'deb https://apt.kitware.com/ubuntu/ bionic main' > /etc/apt/sources.list.d/cmake.list
     apt update
@@ -140,7 +141,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 
-if [ $VERSION_CODENAME = 'focal' ]; then
+if [ "$VERSION_CODENAME" = 'focal' ]; then
     # Need to upgrade compiler on this old platform
     $INSTALL gcc-10 g++-10
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
@@ -265,7 +266,7 @@ else
     pip3 install pytest pytest-httpserver
 fi
 
-if [ $ID = 'amzn' ] || [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
+if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
     # with sphinx on these platforms. Downgrade markupsafe and hope for the best
     pip3 install markupsafe==2.0.1
