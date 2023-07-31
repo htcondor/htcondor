@@ -3097,7 +3097,7 @@ grow_prio_recs( int newsize )
 
 	dprintf(D_FULLDEBUG,"Dynamically growing PrioRec to %d\n",newsize);
 
-	tmp = new prio_rec[newsize];
+	tmp = new prio_rec[(unsigned int)newsize];
 	if ( tmp == NULL ) {
 		EXCEPT( "grow_prio_recs: out of memory" );
 	}

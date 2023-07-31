@@ -869,8 +869,8 @@ static std::vector<ClassAd*> *matched_ads = NULL;
 bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vector<ClassAd*> &matches, int threads, bool halfMatch)
 {
 	int adCount = candidates.size();
-	static int cpu_count = 0;
-	int current_cpu_count = threads;
+	static size_t cpu_count = 0;
+	size_t current_cpu_count = threads;
 	int iterations = 0;
 	size_t matched = 0;
 
@@ -904,7 +904,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(!candidates.size())
 		return false;
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		target_pool[index].CopyFrom(*ad1);
 		match_pool[index].ReplaceLeftAd(&(target_pool[index]));
@@ -970,7 +970,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 		}
 	}
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		match_pool[index].RemoveLeftAd();
 		matched += matched_ads[index].size();
@@ -979,7 +979,7 @@ bool ParallelIsAMatch(ClassAd *ad1, std::vector<ClassAd*> &candidates, std::vect
 	if(matches.capacity() < matched)
 		matches.reserve(matched);
 
-	for(int index = 0; index < cpu_count; index++)
+	for(size_t index = 0; index < cpu_count; index++)
 	{
 		if(matched_ads[index].size())
 			matches.insert(matches.end(), matched_ads[index].begin(), matched_ads[index].end());
