@@ -69,9 +69,7 @@ Version 10.7.0
 
 Release Notes:
 
-.. HTCondor version 10.7.0 released on Month Date, 2023.
-
-- HTCondor version 10.7.0 not yet released.
+- HTCondor version 10.7.0 released on July 31, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1007`.
 
@@ -80,14 +78,14 @@ Release Notes:
 
 New Features:
 
-- Added submit command **want_io_proxy**.
-  This replaces the old command **+WantIOProxy**.
-  :jira:`1875`
-
 - A single HTCondor pool can now have multiple *condor_defrag* daemons running
   and they will not interfere with each other so long as each has
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
+
+- Added submit command **want_io_proxy**.
+  This replaces the old command **+WantIOProxy**.
+  :jira:`1875`
 
 - Apptainer is now included in the tarballs.
   :jira:`1932`
@@ -95,27 +93,27 @@ New Features:
 Bugs Fixed:
 
 - Fixed bug introduced in 10.5.0 on cgroup v1 systems where the
-  user and system cpu time measured was low by a factor of 10,000.
+  user and system CPU time measured was low by a factor of 10,000.
   :jira:`1920`
+
+- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
+  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
+  directory because of the *condor_starter* having the wrong permissions.
+  :jira:`1912`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
 
 - Fixed a bug where empty execute sandboxes failed to be cleaned up on the
-  EP when using Startd disk enforcement.
+  Execution Point when using Startd disk enforcement.
   :jira:`1821`
 
 - When using Startd disk enforcement, if a *condor_starter* running a container
-  or VM universe job is abrubtly killed (like SIGABRT) then the *condor_startd*
+  or VM universe job is abruptly killed (like SIGABRT) then the *condor_startd*
   would fail to cleanup the running docker container or VM and underlying logical
   volume.
   :jira:`1895`
-
-- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
-  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
-  directory because of the *condor_starter* having the wrong permissions.
-  :jira:`1912`
 
 Version 10.6.0
 --------------
