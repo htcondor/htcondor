@@ -1426,11 +1426,25 @@ class CheckpointCleanUpReaper : public Service {
 			return pidToPathMap[pid];
 		}
 
-		void doneSpawning() { state = POSTSPAWN; }
+		void doneSpawning() {
+			state = POSTSPAWN;
+			checkForAndHandleIfFinished();
+		}
 
 	private:
 		SpawnState state;
 		std::map<int, std::filesystem::path> pidToPathMap;
+
+		void checkForAndHandleIfFinished() {
+			if( pidToPathMap.size() == 0 && state == POSTSPAWN ) {
+				std::string buffer;
+				for( const auto & [path, message] : badPathMap ) {
+					formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
+					BadFiles->append( buffer.c_str() );
+				}
+				DC_Exit( preen_report() );
+			}
+		}
 };
 
 
@@ -1460,14 +1474,7 @@ CheckpointCleanUpReaper::handler( int pid, int status ) {
 	// a checkpoint destination isn't "bad" (unexpected) the way the rest
 	// of preen means and was intended to address.
 	//
-	if( pidToPathMap.size() == 0 && state == POSTSPAWN ) {
-		std::string buffer;
-		for( const auto & [path, message] : badPathMap ) {
-			formatstr( buffer, "%s - %s\n", path.string().c_str(), message.c_str() );
-			BadFiles->append( buffer.c_str() );
-		}
-		DC_Exit( preen_report() );
-	}
+	checkForAndHandleIfFinished();
 
 	//
 	// Otherwise, if we're not done spawning and enough space left
@@ -1543,6 +1550,9 @@ check_cleanup_dir() {
 	static std::filesystem::directory_iterator i;
 	static auto end = std::filesystem::end(i);
 
+	static std::filesystem::directory_iterator j;
+	static auto jend = std::filesystem::end(j);
+
 	// This construction means that:
 	// (a) we don't have to make sure sure to increment the iterator
 	//     at every loop exit
@@ -1551,7 +1561,7 @@ check_cleanup_dir() {
 	if( i == end ) {
 		i = std::filesystem::directory_iterator(checkpointCleanup);
 	} else {
-		++i;
+		if( j == jend ) { ++i; }
 	}
 
 	bool spawned = false;
@@ -1560,83 +1570,97 @@ check_cleanup_dir() {
 		if(! entry.is_directory()) { continue; }
 		dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
 
-		ClassAd jobAd;
-		auto pathToJobAd = entry.path() / ".job.ad";
-		FILE * fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
-		if(! fp) {
-			formatstr( message, "No .job.ad file found in %s, ignoring.", entry.path().string().c_str() );
-			dprintf( D_ALWAYS, "%s\n", message.c_str() );
-			badPathMap[entry.path()] = message;
-			continue;
+		if( j == end ) {
+			j = std::filesystem::directory_iterator(entry);
+		} else {
+			++j;
 		}
 
-		int err;
-		bool is_eof;
-		int attributesRead = InsertFromFile( fp, jobAd, is_eof, err );
-		if( attributesRead <= 0 ) {
-			formatstr( message,	"No ClassAd attributes found in file %s, ignoring.", pathToJobAd.string().c_str() );
-			dprintf( D_ALWAYS, "%s\n", message.c_str() );
-			badPathMap[entry.path()] = message;
-			continue;
-		}
+		for( ; j != jend; ++j ) {
+			const auto & jentry = * j;
+
+			ClassAd jobAd;
+			auto pathToJobAd = jentry.path() / ".job.ad";
+			FILE * fp = NULL;
+			{
+				TemporaryPrivSentry sentry(PRIV_ROOT);
+				fp = safe_fopen_wrapper( pathToJobAd.string().c_str(), "r" );
+			}
+			if(! fp) {
+				formatstr( message, "No .job.ad file found in %s, ignoring.", jentry.path().string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jentry.path()] = message;
+				continue;
+			}
+
+			int err;
+			bool is_eof;
+			int attributesRead = InsertFromFile( fp, jobAd, is_eof, err );
+			if( attributesRead <= 0 ) {
+				formatstr( message,	"No ClassAd attributes found in file %s, ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jentry.path()] = message;
+				continue;
+			}
 
 
-		int cluster = -1;
-		if(! jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster)) {
-			formatstr( message,	"Failed to find cluster ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
-			dprintf( D_ALWAYS, "%s\n", message.c_str() );
-			badPathMap[entry.path()] = message;
-			continue;
-		}
+			int cluster = -1;
+			if(! jobAd.LookupInteger(ATTR_CLUSTER_ID, cluster)) {
+				formatstr( message,	"Failed to find cluster ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jentry.path()] = message;
+				continue;
+			}
 
-		int proc = -1;
-		if(! jobAd.LookupInteger(ATTR_PROC_ID, proc)) {
-			formatstr( message, "Failed to find proc ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
-			dprintf( D_ALWAYS, "%s\n", message.c_str() );
-			badPathMap[entry.path()] = message;
-			continue;
-		}
-
-
-		std::string error;
-		int spawned_pid = -1;
-		bool rv = spawnCheckpointCleanupProcess(
-			cluster, proc, & jobAd, cleanup_reaper_id,
-			spawned_pid, error
-		);
-
-		if(! rv) {
-			formatstr( message, "Failed to spawn cleanup process for %d.%d, ignoring.", cluster, proc );
-			dprintf( D_ALWAYS, "%s\n", message.c_str() );
-			badPathMap[entry.path()] = message;
-			continue;
-		}
-
-		// We implicitly assume no duplicate PIDs here.
-		reaper.insert_or_assign( spawned_pid, entry.path() );
-		spawned = true;
+			int proc = -1;
+			if(! jobAd.LookupInteger(ATTR_PROC_ID, proc)) {
+				formatstr( message, "Failed to find proc ID in job ad (%s), ignoring.", pathToJobAd.string().c_str() );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jentry.path()] = message;
+				continue;
+			}
 
 
-		// Start a timer to kill spawned_pid if takes too long.
-		int cleanupTimeout = 300;
-		param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
-		auto * timer = new CheckpointCleanUpTimer( spawned_pid, reaper );
-		// There's no way to hand off ownership of the state object to
-		// daemon core, so it will have to delete itself.  Therefore,
-		// do NOT ever unregister this timer.  This will all change when
-		// we can register a std::function, which will be a lambda with
-		// the state in the closure, and where the closure will be owned
-		// by daemon core and deleted on timer deregistration / extinction.
-		daemonCore->Register_Timer( cleanupTimeout, TIMER_NEVER,
-			(TimerHandlercpp) & CheckpointCleanUpTimer::handler,
-			"checkpoint clean-up timer",
-			timer
-		);
+			std::string error;
+			int spawned_pid = -1;
+			bool rv = spawnCheckpointCleanupProcess(
+				cluster, proc, & jobAd, cleanup_reaper_id,
+				spawned_pid, error
+			);
 
-		// Check if we've spawned enough already and stop if we have.
-		if( reaper.size() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
-			dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
-			return spawned;
+			if(! rv) {
+				formatstr( message, "Failed to spawn cleanup process for %d.%d, ignoring.", cluster, proc );
+				dprintf( D_ALWAYS, "%s\n", message.c_str() );
+				badPathMap[jentry.path()] = message;
+				continue;
+			}
+
+			// We implicitly assume no duplicate PIDs here.
+			reaper.insert_or_assign( spawned_pid, jentry.path() );
+			spawned = true;
+
+
+			// Start a timer to kill spawned_pid if takes too long.
+			int cleanupTimeout = 300;
+			param_integer( "PREEN_CHECKPOINT_CLEANUP_TIMEOUT", 300 );
+			auto * timer = new CheckpointCleanUpTimer( spawned_pid, reaper );
+			// There's no way to hand off ownership of the state object to
+			// daemon core, so it will have to delete itself.  Therefore,
+			// do NOT ever unregister this timer.  This will all change when
+			// we can register a std::function, which will be a lambda with
+			// the state in the closure, and where the closure will be owned
+			// by daemon core and deleted on timer deregistration / extinction.
+			daemonCore->Register_Timer( cleanupTimeout, TIMER_NEVER,
+				(TimerHandlercpp) & CheckpointCleanUpTimer::handler,
+				"checkpoint clean-up timer",
+				timer
+			);
+
+			// Check if we've spawned enough already and stop if we have.
+			if( reaper.size() >= MAX_CHECKPOINT_CLEANUP_PROCS ) {
+				dprintf( D_ZKM, "Hit MAX_CHECKPOINT_CLEANUP_PROCS, pausing.\n" );
+				return spawned;
+			}
 		}
 	}
 
