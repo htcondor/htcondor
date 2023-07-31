@@ -1642,6 +1642,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Tue Jul 25 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.7-1
+- Fixed bug where held condor cron jobs would never run when released
+- Improved daemon IDTOKENS logging to make useful messages more prominent
+- Remove limit on certificate chain length in SSL authentication
+- condor_config_val -summary now works with a remote configuration query
+- Prints detailed message when condor_remote_cluster fails to fetch a URL
+- Improvements to condor_preen
+
 * Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
 - Remove limit on certificate chain length in SSL authentication
 
