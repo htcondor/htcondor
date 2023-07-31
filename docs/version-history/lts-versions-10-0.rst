@@ -24,6 +24,11 @@ New Features:
 
 Bugs Fixed:
 
+- Fixed a bug with parallel universe that would result in the startd
+  rejecting start attempts from the schedd and causing the schedd
+  to crash.
+  :jira:`1959`
+
 - Fixed a bug in DAGMan where service nodes that finish before the DAGs
   end would result in DAGMan crashing due to an assertion failure.
   :jira:`1909`
