@@ -1,3 +1,14 @@
+condor (10.7.0-1) stable; urgency=medium
+
+  * Support for Debian 12 (Bookworm)
+  * Can run defrag daemons with different policies on distinct sets of nodes
+  * Added want_io_proxy submit command
+  * Apptainer is now included in the HTCondor tarballs
+  * Fix 10.5.0 bug where reported CPU time is very low when using cgroups v1
+  * Fix 10.5.0 bug where .job.ad and .machine.ad were missing for local jobs
+
+ -- Tim Theisen <tim@cs.wisc.edu>  Mon, 31 Jul 2023 14:53:00 -0500
+
 condor (10.0.7-1) stable; urgency=medium
 
   * Fixed bug where held condor cron jobs would never run when released

@@ -1642,6 +1642,14 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 31 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.0-1
+- Support for Debian 12 (Bookworm)
+- Can run defrag daemons with different policies on distinct sets of nodes
+- Added want_io_proxy submit command
+- Apptainer is now included in the HTCondor tarballs
+- Fix 10.5.0 bug where reported CPU time is very low when using cgroups v1
+- Fix 10.5.0 bug where .job.ad and .machine.ad were missing for local jobs
+
 * Tue Jul 25 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.7-1
 - Fixed bug where held condor cron jobs would never run when released
 - Improved daemon IDTOKENS logging to make useful messages more prominent
