@@ -22,6 +22,12 @@ spawnCheckpointCleanupProcess(
 		return true;
 	}
 
+	std::string owner;
+	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: no owner attribute found!\n", cluster, proc );
+		return false;
+	}
+
 	//
 	// Create a subprocess to invoke the deletion plug-in.  Its
 	// reaper will call JobIsFinished() and JobIsFinishedDone().
@@ -134,12 +140,31 @@ spawnCheckpointCleanupProcess(
 	cleanup_process_args.push_back( buffer );
 
 
+	int uid, gid;
+	bool use_old_user_ids = user_ids_are_inited();
+	if( use_old_user_ids ) {
+		uid = get_user_uid();
+		gid = get_user_gid();
+	}
+	if(! init_user_ids( owner.c_str(), NULL )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: unable to switch to user '%s'.!\n", cluster, proc, owner.c_str() );
+		return false;
+	}
+	if(! use_old_user_ids) {
+		uid = get_user_uid();
+		gid = get_user_gid();
+	}
+
 	OptionalCreateProcessArgs cleanup_process_opts;
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
-		cleanup_process_opts.reaperID(cleanup_reaper_id)
+		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL)
 	);
+
+	if(! set_user_ids(uid, gid)) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): unable to switch back to user %d gid %d, ignoring.\n", uid, gid );
+	}
 
 
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );

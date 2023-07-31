@@ -16354,8 +16354,8 @@ Scheduler::jobIsFinishedHandler( ServiceData* data )
 		}
 	}
 
-    // This gets called on jobs with LeaveJobInQueue set, which we don't want.
-    // doCheckpointCleanUp( cluster, proc );
+	// This gets called on jobs with LeaveJobInQueue set, which we don't want.
+	// doCheckpointCleanUp( cluster, proc );
 
 	if( jobCleanupNeedsThread(cluster, proc) ) {
 		dprintf( D_FULLDEBUG, "Job cleanup for %d.%d will block, "
