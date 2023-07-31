@@ -33,6 +33,13 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 	}
 
 
+	std::string owner;
+	if(! jobAd->LookupString( ATTR_OWNER, owner )) {
+		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): no owner attribute in job, not cleaning up.\n" );
+		return false;
+	}
+
+
 	//
 	// The schedd stores spooled files in a directory tree whose first branch
 	// is the job's cluster ID modulo 1000.  This means that only the schedd
@@ -49,7 +56,6 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 
 	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
 	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
-	std::filesystem::path target_dir = checkpointCleanup / spool.filename();
 
 	std::error_code errCode;
 	if( std::filesystem::exists( checkpointCleanup ) ) {
@@ -65,8 +71,50 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 		}
 	}
 
+
+	//
+	// In order to make the directory itself removable, we need to put it
+	// in a (permanent) directory owned by the job's owner.
+	//
+	std::filesystem::path owner_dir = checkpointCleanup / owner;
+
+	// The owner-specific directory should have the same ownership
+	// as the spool directory going into it.
+	StatWrapper sw( spool.string() );
+	auto owner_uid = sw.GetBuf()->st_uid;
+	auto owner_gid = sw.GetBuf()->st_gid;
+
+	if( std::filesystem::exists( owner_dir ) ) {
+		if(! std::filesystem::is_directory( owner_dir )) {
+			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): '%s' is a file and needs to be a directory in order to do checkpoint cleanup.\n", owner_dir.string().c_str() );
+			return false;
+		}
+	} else {
+		// Sadly, std::filesystem doesn't handle ownership, and we can't
+		// create the directory as the user we want, either.
+		std::filesystem::create_directory( owner_dir, checkpointCleanup, errCode );
+		if( errCode ) {
+			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to create checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errCode.value(), errCode.message().c_str() );
+			return false;
+		}
+
+		{
+			TemporaryPrivSentry sentry(PRIV_ROOT);
+			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
+			if( rv == -1 ) {
+				dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to chown() checkpoint clean-up directory '%s' (%d: %s), will not clean up.\n", owner_dir.string().c_str(), errno, strerror(errno) );
+				return false;
+			}
+		}
+	}
+
+
+	std::filesystem::path target_dir = owner_dir / spool.filename();
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): renaming job (%d.%d) spool directory from '%s' to '%s'.\n", cluster, proc, spool.string().c_str(), target_dir.string().c_str() );
-	std::filesystem::rename( spool, target_dir, errCode );
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		std::filesystem::rename( spool, target_dir, errCode );
+	}
 	if( errCode ) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to rename job (%d.%d) spool directory (%d: %s), will not clean up.\n", cluster, proc, errCode.value(), errCode.message().c_str() );
 		return false;
@@ -75,8 +123,15 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 
 	// Drop a copy of the job ad into the directory in case this attempt
 	// to clean up fails and we need to try it again later.
+	FILE * jobAdFile = NULL;
 	std::filesystem::path jobAdPath = target_dir / ".job.ad";
-	FILE * jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
+	{
+		TemporaryPrivSentry sentry(PRIV_ROOT);
+		jobAdFile = safe_fopen_wrapper( jobAdPath.string().c_str(), "w" );
+		// It's annoying if this fails, but not fatal; the directory owner
+		// (job owner) can remove it even if it's still owned by root.
+		chown( jobAdPath.string().c_str(), owner_uid, owner_gid );
+	}
 	if( jobAdFile == NULL ) {
 		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): failed to open job ad file '%s'\n", jobAdPath.string().c_str() );
 		return false;

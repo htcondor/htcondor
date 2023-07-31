@@ -87,7 +87,8 @@ spawnCheckpointCleanupProcess(
 	std::filesystem::path spool( spoolPath );
 	std::filesystem::path SPOOL = spool.parent_path().parent_path().parent_path();
 	std::filesystem::path checkpointCleanup = SPOOL / "checkpoint-cleanup";
-	std::filesystem::path target_dir = checkpointCleanup / spool.filename();
+	std::filesystem::path owner_dir = checkpointCleanup / owner;
+	std::filesystem::path target_dir = owner_dir / spool.filename();
 
 
 	// We need this to construct the checkpoint-specific location.
@@ -144,7 +145,7 @@ spawnCheckpointCleanupProcess(
 	bool use_old_user_ids = user_ids_are_inited();
 	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
 
-	if( switch_users) {
+	if( switch_users ) {
 		if( use_old_user_ids ) {
 			uid = get_user_uid();
 			gid = get_user_gid();
@@ -160,6 +161,7 @@ spawnCheckpointCleanupProcess(
 	}
 
 	OptionalCreateProcessArgs cleanup_process_opts;
+	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): spawning as %d.%d\n", get_user_uid(), get_user_gid() );
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
