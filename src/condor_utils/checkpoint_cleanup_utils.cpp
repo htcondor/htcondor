@@ -142,17 +142,21 @@ spawnCheckpointCleanupProcess(
 
 	int uid, gid;
 	bool use_old_user_ids = user_ids_are_inited();
-	if( use_old_user_ids ) {
-		uid = get_user_uid();
-		gid = get_user_gid();
-	}
-	if(! init_user_ids( owner.c_str(), NULL )) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: unable to switch to user '%s'.!\n", cluster, proc, owner.c_str() );
-		return false;
-	}
-	if(! use_old_user_ids) {
-		uid = get_user_uid();
-		gid = get_user_gid();
+	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
+
+	if( switch_users) {
+		if( use_old_user_ids ) {
+			uid = get_user_uid();
+			gid = get_user_gid();
+		}
+		if(! init_user_ids( owner.c_str(), NULL )) {
+			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): not cleaning up job %d.%d: unable to switch to user '%s'.!\n", cluster, proc, owner.c_str() );
+			return false;
+		}
+		if(! use_old_user_ids) {
+			uid = get_user_uid();
+			gid = get_user_gid();
+		}
 	}
 
 	OptionalCreateProcessArgs cleanup_process_opts;
@@ -162,10 +166,11 @@ spawnCheckpointCleanupProcess(
 		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL)
 	);
 
-	if(! set_user_ids(uid, gid)) {
-		dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): unable to switch back to user %d gid %d, ignoring.\n", uid, gid );
+	if( switch_users ) {
+		if(! set_user_ids(uid, gid)) {
+			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): unable to switch back to user %d gid %d, ignoring.\n", uid, gid );
+		}
 	}
-
 
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
