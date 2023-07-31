@@ -75,6 +75,9 @@ Release Notes:
 
 - This version includes all the updates from :ref:`lts-version-history-1007`.
 
+- Add support for Debian 12 (bookworm).
+  :jira:`1938`
+
 New Features:
 
 - Added submit command **want_io_proxy**.
@@ -85,6 +88,9 @@ New Features:
   and they will not interfere with each other so long as each has
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
+
+- Apptainer is now included in the tarballs.
+  :jira:`1932`
 
 Bugs Fixed:
 

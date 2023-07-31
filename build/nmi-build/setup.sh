@@ -110,7 +110,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ "$VERSION_CODENAME" = 'focal' ] && [ "$ARCH" = 'ppc64le' ]; then
+if [ "$VERSION_CODENAME" = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
@@ -174,24 +174,44 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
+if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL wget
+    wget https://github.com/apptainer/apptainer/releases/download/v1.2.0/apptainer_1.2.0_amd64.deb
+    $INSTALL ./apptainer_1.2.0_amd64.deb
+    rm ./apptainer_1.2.0_amd64.deb
+fi
+
+if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL software-properties-common
+    add-apt-repository -y ppa:apptainer/ppa
+    apt update
+    $INSTALL apptainer
+fi
+
+
 # Include packages for tarball in the image.
 externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    (cd "$externals_dir";
-        apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
+    chown _apt "$externals_dir"
+    pushd "$externals_dir"
+    apt download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
+    if [ $VERSION_CODENAME != 'bookworm' ]; then
+        apt download libcgroup1
+    fi
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.71.0)
+        apt download libboost-python1.71.0
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
     fi
+    popd
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
@@ -226,8 +246,25 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     apt -y clean
 fi
 
+# Install apptainer into externals directory
+if [ $ID != 'amzn' ]; then
+    if [ $ID != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
+        mkdir -p "$externals_dir/apptainer"
+        if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+            $INSTALL cpio rpm2cpio
+        fi
+        curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
+            bash -s - "$externals_dir/apptainer"
+        rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+    fi
+fi
+
 # Install pytest for BaTLab testing
-pip3 install pytest pytest-httpserver
+if [ "$VERSION_CODENAME" = 'bookworm' ]; then
+    pip3 install --break-system-packages pytest pytest-httpserver
+else
+    pip3 install pytest pytest-httpserver
+fi
 
 if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable

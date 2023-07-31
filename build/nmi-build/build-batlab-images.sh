@@ -58,4 +58,4 @@ buildimage x86_64_Fedora38 fedora:38 &
 buildimage x86_64_Ubuntu20 ubuntu:focal &
 buildimage x86_64_Ubuntu22 ubuntu:jammy &
 wait
-tail -n 1 *.out
+tail -n 1 ./*.out
