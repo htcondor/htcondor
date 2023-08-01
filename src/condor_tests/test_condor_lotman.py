@@ -185,7 +185,7 @@ class TestLotManSpoolTracking:
         # to look at. 2 seconds should be good enough for waiting
         time.sleep(2)
 
-        # Files should be gone, let's check
+        # Files should be gone, let's check that they are
         true_dir_size, true_f_count = get_spool_size_and_count(spool_path, excluded_files=[log_name])
         assert true_dir_size == 0
         assert true_f_count == 0
