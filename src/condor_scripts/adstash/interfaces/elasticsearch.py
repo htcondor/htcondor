@@ -23,14 +23,13 @@ from operator import itemgetter
 from collections import defaultdict
 
 import elasticsearch
-from elasticsearch._version import __versionstr__ as ES_VERSIONSTR
+from elasticsearch import VERSION as ES_VERSION
 
 import adstash.convert as convert
 from adstash.utils import get_host_port
 from adstash.interfaces.generic import GenericInterface
 
 
-ES_VERSION = tuple([int(x) for x in ES_VERSIONSTR.split(".")])
 ES8 = (8,0,0)
 if ES_VERSION < (7,0,0) or ES_VERSION >= (9,0,0):
     logging.warning(f"Unsupported Elasticsearch Python library ({ES_VERSIONSTR}), proceeding anyway...")
