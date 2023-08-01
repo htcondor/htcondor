@@ -50,7 +50,7 @@ static bool QmgmtMayAccessAttribute( char const *attr_name ) {
 static std::unique_ptr<CondorError> g_transaction_error;
 
 int
-do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
+do_Q_request(QmgmtPeer &Q_PEER)
 {
 	int	request_num = -1;
 	int	rval = -1;
@@ -67,49 +67,14 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_InitializeConnection:
 	{
 		// dprintf( D_ALWAYS, "InitializeConnection()\n" );
-		bool authenticated = true;
-
-		// Authenticate socket, if not already done by daemonCore
-		if( !syscall_sock->triedAuthentication() ) {
-			if( IsDebugLevel(D_SECURITY) ) {
-				auto methods = SecMan::getAuthenticationMethods(WRITE);
-				dprintf(D_SECURITY,"Calling authenticate(%s) in qmgmt_receivers\n", methods.c_str());
-			}
-			CondorError errstack;
-			if( ! SecMan::authenticate_sock(syscall_sock, WRITE, &errstack) ) {
-					// Failed to authenticate
-				dprintf( D_ALWAYS, "SCHEDD: authentication failed: %s\n",
-						 errstack.getFullText().c_str() );
-				authenticated = false;
-			}
-		}
-
-		if ( authenticated ) {
-			InitializeConnection( syscall_sock->getOwner(),
-					syscall_sock->getDomain() );
-		} else {
-			InitializeConnection( NULL, NULL );
-		}
+		// This is now a no-op.
 		return 0;
 	}
 
 	case CONDOR_InitializeReadOnlyConnection:
 	{
 		// dprintf( D_ALWAYS, "InitializeReadOnlyConnection()\n" );
-
-		// We need to record if this is a read-only connection so that
-		// we can avoid expanding $$ in GetJobAd; simply checking if the
-		// connection is authenticated isn't sufficient, because the
-		// security session cache means that read-only connection could
-		// be authenticated by a previous authenticated connection from
-		// the same address (when using host-based security) less than
-		// the expiration period ago.
-		Q_PEER.setReadOnly(true);
-
-		// same as InitializeConnection but no authenticate()
-		InitializeConnection( NULL, NULL );
-
-		may_fork = true;
+		// This is now a no-op.
 		return 0;
 	}
 
@@ -167,12 +132,13 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 	case CONDOR_NewCluster:
 	  {
 		int terrno;
+		const char * reason = "";
 
 		if (!g_transaction_error) g_transaction_error.reset(new CondorError());
 		neg_on_error( syscall_sock->end_of_message() );;
 
 		errno = 0;
-		rval = NewCluster( );
+		rval = NewCluster(g_transaction_error.get());
 		terrno = errno;
 		dprintf(D_SYSCALLS, 
 				"\tNewCluster: rval = %d, errno = %d\n",rval,terrno );
@@ -185,10 +151,21 @@ do_Q_request(QmgmtPeer &Q_PEER, bool &may_fork)
 		neg_on_error( syscall_sock->code(rval) );
 		if( rval < 0 ) {
 			neg_on_error( syscall_sock->code(terrno) );
-		}
-		neg_on_error( syscall_sock->end_of_message() );;
 
-		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d\n",rval,terrno);
+			// Send a classad, for less backwards-incompatibility.
+			reason = "Cannot allocate a cluster id";
+			if ( ! g_transaction_error->empty()) {
+				reason = g_transaction_error->message();
+			}
+
+			ClassAd reply;
+			reply.Assign( "ErrorCode", terrno );
+			reply.Assign( "ErrorReason", reason );
+			neg_on_error( putClassAd( syscall_sock, reply ) );
+		}
+		neg_on_error( syscall_sock->end_of_message() );
+
+		dprintf(D_FULLDEBUG,"schedd: NewCluster rval %d errno %d %s\n",rval,terrno,reason);
 
 		return 0;
 	}

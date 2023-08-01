@@ -472,7 +472,10 @@ ResMgr::init_resources( void )
 	m_execution_xfm.config("JOB_EXECUTION");
 
 #ifdef LINUX
-	m_volume_mgr.reset(new VolumeManager());
+	if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
+		dprintf(D_STATUS, "Startd will not enforce disk limits via logical volume management.\n");
+		m_volume_mgr.reset(nullptr);
+	} else { m_volume_mgr.reset(new VolumeManager()); }
 #endif // LINUX
 
     stats.Init();
@@ -1773,16 +1776,16 @@ ResMgr::deleteResource( Resource* rip )
 
 // return the count of claims on this machine associated with this user
 // used to decide when to delete credentials
-int ResMgr::claims_for_this_user(const char * user)
+int ResMgr::claims_for_this_user(const std::string &user)
 {
-	if ( ! user || ! user[0]) {
+	if (user.empty()) {
 		return 0;
 	}
 	int num_matches = 0;
 
-	for (Resource * res : slots) {
-		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
-			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+	for (const Resource *res : slots) {
+		if (res && res->r_cur && res->r_cur->client() && !res->r_cur->client()->c_user.empty()) {
+			if (user == res->r_cur->client()->c_user) {
 				num_matches += 1;
 			}
 		}

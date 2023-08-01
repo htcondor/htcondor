@@ -234,7 +234,7 @@ ArcJob::ArcJob( ClassAd *classad )
 	          (m_tokenFile.empty() && jobProxy) ? jobProxy->subject->fqan : "",
 	          m_tokenFile.c_str() );
 	gahp = new GahpClient( buff, gahp_path );
-#if CURL_USES_NSS
+#if defined(CURL_USES_NSS)
 	// NSS as used by libcurl has a memory leak. To deal with this, we
 	// start a new arc_gahp for new jobs when the previous gahp has
 	// handled too many requests. Once the previous jobs leave the system,
@@ -887,39 +887,13 @@ void ArcJob::doEvaluateState()
 			// Remove all knowledge of any previous or present job
 			// submission, in both the gridmanager and the schedd.
 
-			// If we are doing a rematch, we are simply waiting around
-			// for the schedd to be updated and subsequently this globus job
-			// object to be destroyed.  So there is nothing to do.
-			if ( wantRematch ) {
-				break;
-			}
-
 			// For now, put problem jobs on hold instead of
 			// forgetting about current submission and trying again.
 			// TODO: Let our action here be dictated by the user preference
 			// expressed in the job ad.
-			if ( remoteJobId != NULL
-				     && condorState != REMOVED
-					 && wantResubmit == false
-					 && doResubmit == 0 ) {
+			if (remoteJobId != NULL && condorState != REMOVED) {
 				gmState = GM_HOLD;
 				break;
-			}
-			// Only allow a rematch *if* we are also going to perform a resubmit
-			if ( wantResubmit || doResubmit ) {
-				jobAd->LookupBool(ATTR_REMATCH_CHECK,wantRematch);
-			}
-			if ( wantResubmit ) {
-				wantResubmit = false;
-				dprintf(D_ALWAYS,
-						"(%d.%d) Resubmitting to Globus because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_GLOBUS_RESUBMIT_CHECK );
-			}
-			if ( doResubmit ) {
-				doResubmit = 0;
-				dprintf(D_ALWAYS,
-					"(%d.%d) Resubmitting to Globus (last submit failed)\n",
-						procID.cluster, procID.proc );
 			}
 			errorString = "";
 			if ( remoteJobId != NULL ) {
@@ -934,25 +908,6 @@ void ArcJob::doEvaluateState()
 				}
 			}
 			myResource->CancelSubmit( this );
-
-			if ( wantRematch ) {
-				dprintf(D_ALWAYS,
-						"(%d.%d) Requesting schedd to rematch job because %s==TRUE\n",
-						procID.cluster, procID.proc, ATTR_REMATCH_CHECK );
-
-				// Set ad attributes so the schedd finds a new match.
-				bool dummy;
-				if ( jobAd->LookupBool( ATTR_JOB_MATCHED, dummy ) != 0 ) {
-					jobAd->Assign( ATTR_JOB_MATCHED, false );
-					jobAd->Assign( ATTR_CURRENT_HOSTS, 0 );
-				}
-
-				// If we are rematching, we need to forget about this job
-				// cuz we wanna pull a fresh new job ad, with a fresh new match,
-				// from the all-singing schedd.
-				gmState = GM_DELETE;
-				break;
-			}
 
 			// If there are no updates to be done when we first enter this
 			// state, requestScheddUpdate will return done immediately

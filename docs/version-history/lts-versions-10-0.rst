@@ -7,20 +7,120 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
-.. _lts-version-history-1005:
+.. _lts-version-history-1008:
 
-Version 10.0.5
+Version 10.0.8
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.0.5 released on Month Date, 2023.
+.. HTCondor version 10.0.8 released on Month Date, 2023.
 
-- HTCondor version 10.0.5 not yet released.
+- HTCondor version 10.0.8 not yet released.
 
 New Features:
 
 - None.
+
+Bugs Fixed:
+
+- Fixed a bug with parallel universe that would result in the startd
+  rejecting start attempts from the schedd and causing the schedd
+  to crash.
+  :jira:`1959`
+
+- Fixed a bug in DAGMan where service nodes that finish before the DAGs
+  end would result in DAGMan crashing due to an assertion failure.
+  :jira:`1909`
+
+- When the file transfer queue is growing too big, HTCondor sends email to the
+  administrator.  Prior versions of HTCondor would send an arbitrarily large number
+  of emails.  Now HTCondor will only send one email per day.
+  :jira:`1937`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
+
+- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
+  :jira:`1954`
+
+
+.. _lts-version-history-1007:
+
+Version 10.0.7
+--------------
+
+Release Notes:
+
+- HTCondor version 10.0.7 released on July 25, 2023.
+
+New Features:
+
+- Improved daemon logging for IDTOKENS authentication to make useful
+  messages more prominent.
+  :jira:`1776`
+
+- The ``-summary`` option of *condor_config_val* now works with a remote
+  configuration query when the daemon being queried is version 10.0.7 or later. It behaves
+  like ``-dump`` when the daemon is older.
+  :jira:`1879`
+
+Bugs Fixed:
+
+- Fixed bug where condor cron jobs put on hold by the *condor_shadow*
+  or *condor_starter* would never start running again and stay ``IDLE``
+  when released from the ``HELD`` state.
+  :jira:`1869`
+
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
+
+- Print detailed error message when *condor_remote_cluster* fails to
+  fetch a URL.
+  :jira:`1884`
+
+- Fixed a bug that caused *condor_preen* to crash if configuration
+  parameter ``PREEN_COREFILE_MAX_SIZE`` was set to a value larger than
+  2 gigabytes.
+  :jira:`1908`
+
+- Fixed a bug where if the $(SPOOL) directory was on a separate file system
+  *condor_preen* would delete the special ``lost+found`` directory.
+  :jira:`1906`
+
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
+
+- Fixed a bug when creating the default value for :macro:`DC_DAEMON_LIST` where a
+  secondary daemon such as ``COLLECTOR01`` would not be considered a DC daemon if
+  the primary daemon was not in :macro:`DAEMON_LIST`.
+  :jira:`1900`
+
+.. _lts-version-history-1006:
+
+Version 10.0.6
+--------------
+
+Release Notes:
+
+- HTCondor version 10.0.6 released on June 22, 2023.
+
+New Features:
+
+- Added configuration parameter :macro:`AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR`,
+  which controls whether the client checks the environment variable
+  `X509_USER_PROXY` for the location of a credential to use during SSL
+  authentication with a daemon.
+  :jira:`1841`
+
+- During SSL authentication, when the client uses a proxy certificate,
+  the server now uses the End Entity certificate's subject as the
+  authenticated identity to map, instead of the proxy certificate's
+  subject.
+  :jira:`1866`
 
 Bugs Fixed:
 
@@ -39,6 +139,11 @@ Bugs Fixed:
   them correctly.
   :jira:`1799`
 
+- The submit commands **remote_initialdir**, **transfer_input**,
+  **transfer_output**, and **transfer_error** now work properly when
+  submitting a **batch** grid universe job to a remote system via ssh.
+  :jira:`1560`
+
 - Fixed bug in ``condor_pool_job_report`` script that broke the script and
   outputted error messages about invalid constraint expressions due internal
   use of ``condor_history`` specifying a file to read with ``-f`` flag instead
@@ -55,6 +160,36 @@ Bugs Fixed:
 
 - Fixed a missing library import in *condor_credmon_vault*.
   :jira:`1527`
+
+- When started on a systemd system, HTCondor will now wait for the SSSD
+  service to start.  Previously it only waited for ypbind.
+  :jira:`1829`
+
+.. _lts-version-history-1005:
+
+Version 10.0.5
+--------------
+
+Release Notes:
+
+- HTCondor version 10.0.5 released on June 9, 2023.
+
+- Renamed the ``upgrade9to10checks.py`` script to ``condor_upgrade_check``
+  to match standard HTCSS naming scheme.
+  :jira:`1828`
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fix spurious warning from ``condor_upgrade_check`` for regular expressions that contain a space.
+  :jira:`1840`
+
+- ``condor_upgrade_check`` no longer attempts to check for problems
+  for an HTCondor pool when requesting checks for an HTCondor-CE.
+  :jira:`1840`
 
 .. _lts-version-history-1004:
 

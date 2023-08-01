@@ -172,6 +172,10 @@ typedef struct macro_eval_context_ex : macro_eval_context {
 	};
 
 	int param_names_matching(Regex& re, std::vector<std::string>& names);
+	union _param_names_sumy_key { int64_t all; struct { short int iter; short int off; short int line; short int sid; }; };
+	int param_names_for_summary(std::map<int64_t, std::string>& names);
+	const short int summary_env_source_id = 0x7FFE;
+	const short int summary_wire_source_id = 0x7FFF;
 
 	bool param_defined(const char* name);
 	// Does not check if the expanded parameter is nonempty, only that
@@ -479,6 +483,7 @@ int write_config_file(const char* pathname, int options);
 	// config source file info
 	typedef struct macro_source { bool is_inside; bool is_command; short int id; int line; short int meta_id; short int meta_off; } MACRO_SOURCE;
 	void insert_source(const char * filename, MACRO_SET& macro_set, MACRO_SOURCE & source);
+	void insert_special_sources(MACRO_SET& macro_set);
 	extern const MACRO_SOURCE EnvMacro;
 	extern const MACRO_SOURCE WireMacro;
 	extern const MACRO_SOURCE DetectedMacro;

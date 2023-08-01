@@ -38,7 +38,6 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_siz
 	m_max_queue_age(max_queue_age)
 {
 	m_gave_go_ahead = false;
-	m_notified_about_taking_too_long = false;
 	m_time_born = time(NULL);
 	m_time_go_ahead = 0;
 
@@ -500,10 +499,10 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 
 	iostats.bytes_sent = (double)recent_bytes_sent;
 	iostats.bytes_received = (double)recent_bytes_received;
-	iostats.file_read = (double)recent_usec_file_read/1000000;
-	iostats.file_write = (double)recent_usec_file_write/1000000;
-	iostats.net_read = (double)recent_usec_net_read/1000000;
-	iostats.net_write = (double)recent_usec_net_write/1000000;
+	iostats.file_read = (double)recent_usec_file_read   / 1'000'000;
+	iostats.file_write = (double)recent_usec_file_write / 1'000'000;
+	iostats.net_read = (double)recent_usec_net_read     / 1'000'000;
+	iostats.net_write = (double)recent_usec_net_write   / 1'000'000;
 
 	manager->AddRecentIOStats(iostats,m_up_down_queue_user);
 	return true;
@@ -984,12 +983,16 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 {
 	FILE *email = NULL;
 
+	static time_t lastNotifiedTime = 0;
+	time_t now = time(nullptr);
+	const time_t quiet_interval = 3600 * 24;
+
 	for (TransferQueueRequest *client: m_xfer_queue) {
-		if( client->m_gave_go_ahead && !client->m_notified_about_taking_too_long ) {
-			int age = time(NULL) - client->m_time_go_ahead;
-			int max_queue_age = client->m_max_queue_age;
+		if (client->m_gave_go_ahead && ((now - lastNotifiedTime) > quiet_interval)) {
+			time_t age = now - client->m_time_go_ahead;
+			time_t max_queue_age = client->m_max_queue_age;
 			if( max_queue_age > 0 && max_queue_age < age ) {
-				client->m_notified_about_taking_too_long = true;
+				lastNotifiedTime = now;
 				if( !email ) {
 					email = email_admin_open("file transfer took too long");
 					if( !email ) {
@@ -1001,7 +1004,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 					}
 					fprintf( email,
 							 "Below is a list of file transfers that took longer than\n"
-							 "MAX_TRANSFER_QUEUE_AGE=%ds.  When other transfers are waiting\n"
+							 "MAX_TRANSFER_QUEUE_AGE=%lds.  When other transfers are waiting\n"
 							 "to start, these old transfer attempts will be aborted.\n"
 							 "To avoid this timeout, MAX_TRANSFER_QUEUE_AGE may be increased,\n"
 							 "but be aware that transfers which take a long time will delay other\n"
@@ -1038,7 +1041,7 @@ TransferQueueManager::notifyAboutTransfersTakingTooLong()
 								m_iostats.file_write.EMAValue(ema_horizon),
 								m_iostats.net_read.EMAValue(ema_horizon));
 					}
-					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%ds:\n\n",max_queue_age);
+					fprintf(email,"\n\nTransfers older than MAX_TRANSFER_QUEUE_AGE=%lds:\n\n",max_queue_age);
 				}
 
 				fprintf( email, "%s\n", client->SinlessDescription() );

@@ -454,7 +454,7 @@ lexers["condor-classad-expr"] = CondorClassAdExpressionLexer()
 
 DAGMAN_COMMON = [
     (r"\s*$", token.Text, "#pop"),
-    (r"\[|\]|\|", token.Text),
+    (r"\[|\]|\||<|>", token.Text),
     (r"ALL_NODES", token.Name.Variable.Magic),
     # examples sometimes use ... to indicate continuation
     (r"\.{3}", token.Text),
@@ -473,6 +473,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"\s+", token.Text),
             (r"^#.*?$", token.Comment.Single),
             (r"^job", token.Keyword, "job"),
+            (r"^submit-description", token.Keyword, "submit-description"),
             (r"^parent", token.Keyword, "parent"),
             (r"^script", token.Keyword, "script"),
             (r"^pre_skip", token.Keyword, "pre_skip"),
@@ -484,6 +485,7 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^maxjobs", token.Keyword, "maxjobs"),
             (r"^config", token.Keyword, "maxjobs"),
             (r"^set_job_attr", token.Keyword, "set_job_attr"),
+            (r"^env", token.Keyword, "env"),
             (r"^include", token.Keyword, "include"),
             (r"^subdag", token.Keyword, "subdag"),
             (r"^splice", token.Keyword, "splice"),
@@ -491,6 +493,8 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^pin_in", token.Keyword, "pin_in"),
             (r"^pin_out", token.Keyword, "pin_out"),
             (r"^final", token.Keyword, "final"),
+            (r"^provisioner", token.Keyword, "provisioner"),
+            (r"^service", token.Keyword, "service"),
             (r"^dot", token.Keyword, "dot"),
             (r"^node_status_file", token.Keyword, "node_status_file"),
             (r"^save_point_file", token.Keyword, "save_point_file"),
@@ -498,11 +502,24 @@ class CondorDAGManLexer(lexer.RegexLexer):
             (r"^.{3}$", token.Text),
         ],
         "job": [
-            (
-                r"([\s\[])(dir|noop|done)([\s\]])",
-                lexer.bygroups(token.Text, token.Keyword, token.Text),
-            ),
-        ] + DAGMAN_COMMON,
+            # Note: ^ is not the beginning of the substring match, but of the line.
+            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+            ( r"\s+(\S+)\s+(\S+)", token.Text, "submit-job" ),
+        ],
+        "submit-description": [
+            ( r"(\s+\S+\s+)({)", lexer.bygroups(token.Text, token.Keyword), "inline-job" ),
+        ],
+        "inline-job": [
+            ( r"([^}]+)(})", lexer.bygroups(token.Text, token.Keyword), ("#pop", "submit-job") ),
+        ],
+        "submit-job": [
+            # The option [square brackets] around the KEYWORDS are for the usage example,
+            # and aren't actually legal in DAGMan.
+            ( r"(\s+)(\[?DIR\]?)(\s+)(\S+)", lexer.bygroups(token.Text, token.Keyword, token.Text, token.Text) ),
+            ( r"(\s+)(\[?NOOP\]?)", lexer.bygroups(token.Text, token.Keyword) ),
+            ( r"(\s+)(\[?DONE\]?)", lexer.bygroups(token.Text, token.Keyword) ),
+            ( r"\s*$", token.Text, "#pop:2"),
+        ],
         "parent": [
             (
                 r"([\s\[])(child)([\s\]])",
@@ -534,6 +551,12 @@ class CondorDAGManLexer(lexer.RegexLexer):
         "maxjobs": DAGMAN_COMMON,
         "config": DAGMAN_COMMON,
         "set_job_attr": [(r"\s=\s", token.Operator)] + DAGMAN_COMMON,
+        "env": [
+            (
+                r"([\s\[])(GET|SET)([\s\]])",
+                lexer.bygroups(token.Text, token.Keyword, token.Text)
+            ),
+        ] + DAGMAN_COMMON,
         "include": DAGMAN_COMMON,
         "subdag": [
             (
@@ -556,6 +579,8 @@ class CondorDAGManLexer(lexer.RegexLexer):
                 lexer.bygroups(token.Text, token.Keyword, token.Text),
             ),
         ] + DAGMAN_COMMON,
+        "provisioner": DAGMAN_COMMON,
+        "service": DAGMAN_COMMON,
         "dot": [
             (
                 r"([\s\[])(update|dont-update|overwrite|dont-overwrite|include)([\s\]])",

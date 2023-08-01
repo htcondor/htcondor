@@ -113,6 +113,10 @@ check_forked() {
 			fi
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				12)
+					dist_version_number=12
+					dist_version="bookworm"
+				;;
 				11)
 					dist_version_number=11
 					dist_version="bullseye"
@@ -153,6 +157,7 @@ get_distribution() {
 		# platforms follow.
 		#
 		#     debian bullseye 11
+		#     debian bookworm 12
 		#     ubuntu focal
 		#     ubuntu jammy
 		#     centos 7
@@ -193,6 +198,9 @@ get_distribution() {
 			# raspbian?
 			dist_version=$(sed 's/\/.*//' /etc/debian_version | sed 's/\..*//')
 			case $dist_version in
+				12)
+					dist_version="bookworm"
+				;;
 				11)
 					dist_version="bullseye"
 				;;

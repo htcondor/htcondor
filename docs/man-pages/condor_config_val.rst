@@ -102,11 +102,13 @@ Options
  **-runset** *var*
     (edit option) Each of the configuration variables listed reverts to
     its previous value as long as the daemon continues running.
- **-summary**
+ **-summary[:detected]**
     (view option) For all configuration variables that differ from
     default value, print out the name and value. The values are grouped
     by the file that last set the variable, and in the order that they
-    were set in that file.
+    were set in that file. If the ``detected`` option is added, then variables
+    such as ``$(OPSYSANDVER)`` that are detected at runtime are included
+    in the ouput.
  **-dump**
     (view option) For all configuration variables that match *vars*,
     display the variables and their values. If no *vars* are listed,

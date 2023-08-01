@@ -409,6 +409,9 @@ const char* config_source_by_id(int source_id)
 {
 	if (source_id >= 0 && source_id < (int)ConfigMacroSet.sources.size())
 		return ConfigMacroSet.sources[source_id];
+	// these are aliases used by param_names_for_summary for sorting the sources by priority
+	if (source_id == summary_env_source_id) { return config_source_by_id(EnvMacro.id); }
+	if (source_id == summary_wire_source_id) { return config_source_by_id(WireMacro.id); }
 	return NULL;
 }
 
@@ -718,6 +721,37 @@ int param_names_matching(Regex& re, std::vector<std::string>& names) {
     return (int)names.size() - s0;
 }
 
+// return the param names that condor_config_val -summary would show (sort of)
+// A difference is, the returned names will include the obsolete param names, unlike -summary
+// this is intended for use by remote config val, where the caller can choose to ignore the obsolete names
+int param_names_for_summary(std::map<int64_t, std::string>& names)
+{
+	_param_names_sumy_key key; key.all = 0;
+	bool got_meta = false;
+	HASHITER it = hash_iter_begin(ConfigMacroSet, HASHITER_SHOW_DUPS);
+	while ( ! hash_iter_done(it)) {
+		MACRO_META * pmeta = hash_iter_meta(it);
+		if ( ! pmeta) break;
+		got_meta = true;
+		if ( ! pmeta->matches_default && ! pmeta->param_table /* && ! pmeta->inside */) {
+			// build a key that will order the names by file and line since that is what summary does
+			key.iter += 1;
+			key.off = pmeta->source_meta_off;
+			key.line = pmeta->source_line;
+			key.sid = pmeta->source_id;
+			// force Env and Wire to sort last since they win over others
+			if (key.sid == EnvMacro.id) { key.sid = summary_env_source_id; }
+			else if (key.sid == WireMacro.id) { key.sid = summary_wire_source_id; }
+
+			names[key.all] = hash_iter_key(it);
+		}
+		hash_iter_next(it);
+	}
+	hash_iter_delete(&it);
+	return got_meta;
+}
+
+
 // the generic config entry point for most call sites
 bool config()
 {
@@ -851,6 +885,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 
 	bool only_env = YourStringNoCase("ONLY_ENV") == config_source;
 	bool null_config = YourString("/dev/null") == config_source || !config_source || !config_source[0];
+
+	// even if we have no config files, we stil want the special sources like <detected> in the sources table.
+	insert_special_sources(ConfigMacroSet);
 
 	if ( ! only_env && ! null_config) {
 		// inject the directory of the root config file into the config
@@ -2221,13 +2258,8 @@ param_longlong( const char *name, long long int &value,
 		if (subsys && ! subsys[0]) subsys = NULL;
 
 		int def_valid = 0;
-		int was_truncated = false;
-		int is_long = 0;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
-		bool tbl_check_ranges = 
-			(param_range_long(name, &min_value, &max_value)==-1) 
-				? false : true;
-
+		long long tbl_default_value = param_default_long(name, subsys, &def_valid);
+		bool tbl_check_ranges = param_range_long(name, &min_value, &max_value) != -1;
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively

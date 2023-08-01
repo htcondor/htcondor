@@ -2080,13 +2080,13 @@ class DaemonCore : public Service
         HANDLE hProcess;
         HANDLE hThread;
         DWORD tid;
-        HWND hWnd;
 		LONG pipeReady;
 		PipeEnd *pipeEnd;
-		LONG deallocate;
 		HANDLE watcherEvent;
+		LONG deallocate;
 #endif
-        std::string sinful_string;
+		volatile unsigned int process_exited;   // set to true if the process has exited, set before reaper callback
+		std::string sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;

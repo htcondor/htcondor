@@ -3856,17 +3856,17 @@ JobDisconnectedEvent::formatBody( std::string &out )
 {
 	if( disconnect_reason.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "disconnect_reason");
+		        "disconnect_reason\n");
 		return false;
 	}
 	if( startd_addr.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "startd_addr");
+		        "startd_addr\n");
 		return false;
 	}
 	if( startd_name.empty() ) {
 		dprintf(D_ALWAYS, "JobDisconnectedEvent::formatBody() called without "
-		        "startd_name");
+		        "startd_name\n");
 		return false;
 	}
 

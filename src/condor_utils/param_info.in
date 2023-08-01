@@ -86,7 +86,7 @@ type=int
 
 [PREEN_COREFILE_MAX_SIZE]
 default=50000000
-type=int
+type=long
 description=Maximum size allowed for coredump files. Anything bigger gets erased. Default 50Mb.
 tags=preen
 
@@ -354,7 +354,7 @@ type=bool
 tags=vm-gahp
 
 [PROCD_ADDRESS]
-default=$(LOCK)/procd_pipe
+default=$(RUN)/procd_pipe
 win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
@@ -923,7 +923,7 @@ default=https://aai-dev.egi.eu/auth/realms/egi
 type=string
 
 [SEC_SCITOKENS_CACHE]
-default=auto
+default=$(RUN)/cache
 type=string
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
@@ -1873,6 +1873,10 @@ default=$(LOG)
 type=string
 tags=startd,Starter
 
+[RUN]
+default=$(LOCK)
+type=path
+
 [VM_KILLING_TIMEOUT]
 default=60
 type=int
@@ -2364,6 +2368,11 @@ default=true
 type=bool
 tags=condor_ssh_to_job
 
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
@@ -2579,6 +2588,10 @@ default=false
 type=bool
 
 [AUTH_SSL_ALLOW_CLIENT_PROXY]
+default=false
+type=bool
+
+[AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR]
 default=false
 type=bool
 
@@ -3313,6 +3326,13 @@ type=int
 customization=normal
 description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
+tags=schedd
+
+[ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY]
+default=false
+type=bool
+customization=normal
+description=Restrict job submission to users that already have already been added using condor_qusers
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
@@ -4392,12 +4412,6 @@ tags=defrag
 default=Cpus == TotalSlotCpus
 type=string
 customization=normal
-description=
-tags=defrag
-
-[DEFRAG_STATE_FILE]
-default=$(LOCK)/defrag_state
-type=string
 description=
 tags=defrag
 
@@ -6693,6 +6707,7 @@ default : @end
 	MAX_STORK_LOG
 	STORK_PORT
 	STORK_ARGS
+	DEFRAG_STATE_FILE
 @end
 
 [$UPGRADE.DISCARDX]

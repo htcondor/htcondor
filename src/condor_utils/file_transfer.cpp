@@ -315,7 +315,6 @@ FileTransfer::~FileTransfer()
 	if (UserLogFile) free(UserLogFile);
 	if (X509UserProxy) free(X509UserProxy);
 	if (SpoolSpace) free(SpoolSpace);
-	if (TmpSpoolSpace) free(TmpSpoolSpace);
 	if (ExceptionFiles) delete ExceptionFiles;
 	if (InputFiles) delete InputFiles;
 	if (OutputFiles) delete OutputFiles;
@@ -554,8 +553,7 @@ FileTransfer::SimpleInit(ClassAd *Ad, bool want_check_perms, bool is_server,
 
 		SpooledJobFiles::getJobSpoolPath(Ad, buffer);
 		SpoolSpace = strdup(buffer.c_str());
-		TmpSpoolSpace = (char*)malloc( strlen(SpoolSpace) + 10 );
-		sprintf(TmpSpoolSpace,"%s.tmp",SpoolSpace);
+		formatstr(TmpSpoolSpace,"%s.tmp",SpoolSpace);
 	}
 
 	Ad->LookupString(ATTR_JOB_CMD, buffer);
@@ -2662,7 +2660,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 			}
 #endif
 		} else {
-			formatstr(fullname,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,filename.c_str());
+			formatstr(fullname,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,filename.c_str());
 		}
 
 		auto iter = std::find_if(reuse_info.begin(), reuse_info.end(),
@@ -3477,7 +3475,7 @@ FileTransfer::DoDownload( filesize_t *total_bytes_ptr, ReliSock *s)
 		// we just stashed all the files in the TmpSpoolSpace.
 		// write out the commit file.
 
-		formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+		formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 #if defined(WIN32)
 		if ((fd = safe_open_wrapper_follow(buf.c_str(), O_WRONLY | O_CREAT | O_TRUNC |
 			_O_BINARY | _O_SEQUENTIAL, 0644)) < 0)
@@ -3671,9 +3669,9 @@ FileTransfer::CommitFiles()
 		saved_priv = set_priv( desired_priv_state );
 	}
 
-	Directory tmpspool( TmpSpoolSpace, desired_priv_state );
+	Directory tmpspool( TmpSpoolSpace.c_str(), desired_priv_state );
 
-	formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,COMMIT_FILENAME);
+	formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,COMMIT_FILENAME);
 	if ( access(buf.c_str(),F_OK) >= 0 ) {
 		// the commit file exists, so commit the files.
 
@@ -3688,7 +3686,7 @@ FileTransfer::CommitFiles()
 			// don't commit the commit file!
 			if ( file_strcmp(file,COMMIT_FILENAME) == MATCH )
 				continue;
-			formatstr(buf,"%s%c%s",TmpSpoolSpace,DIR_DELIM_CHAR,file);
+			formatstr(buf,"%s%c%s",TmpSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 			formatstr(newbuf,"%s%c%s",SpoolSpace,DIR_DELIM_CHAR,file);
 			formatstr(swapbuf,"%s%c%s",SwapSpoolSpace.c_str(),DIR_DELIM_CHAR,file);
 
@@ -6737,7 +6735,7 @@ int FileTransfer::RecordFileTransferStats( ClassAd &stats ) {
 	if( rc == 0 ) {
 		// If it already exists and is larger than 5 Mb, copy the contents
 		// to a .old file.
-		if( stats_file_buf.st_size > 5000000 ) {
+		if( stats_file_buf.st_size > 5'000'000 ) {
 			std::string stats_file_old_path = stats_file_path;
 			stats_file_old_path += ".old";
 			// TODO: Add a lock to prevent two starters from rotating the log

@@ -1068,6 +1068,23 @@ string.
     Returns ``ERROR`` if either argument is not a string or if an
     incorrect number of arguments are given.
 
+    :index:`stringListSubsetMatch()<single: stringListSubsetMatch(); ClassAd functions>`
+
+``Boolean stringListSubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Returns ``TRUE`` if all item in the string ``list1`` are also in the string ``list2``, as
+    delimited by the optional ``delimiter`` string.  Returns ``FALSE`` if
+    ``list1`` has any items that are not in ``list2``. Both lists are treated as sets. Empty items
+    and duplicate items are ignored. The return value is ``TRUE`` if ``list1`` is ``UNDEFINED`` or empty
+    and ``list2`` is any string value.  The return value is ``FALSE`` if ``list1`` is any string vlaue and ``list2`` is
+    ``UNDEFINED``.  The return value is ``UNDEFINED`` if both ``list1`` and ``list2`` are ``UNDEFINED``.
+    The return value is ``ERROR``, if any of the arguments are not either strings or ``UNDEFINED``
+
+    :index:`stringListISubsetMatch()<single: stringListISubsetMatch(); ClassAd functions>`
+
+``Boolean stringListISubsetMatch(String list1, String list2 [ , String delimiter ])``
+    Same as ``stringListSubsetMatch()``, but the sets are case-insensitive.
+
+
 The following three functions utilize regular expressions as defined and
 supported by the PCRE library. See
 `http://www.pcre.org <http://www.pcre.org>`_ for complete documentation

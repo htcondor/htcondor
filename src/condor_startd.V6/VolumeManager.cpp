@@ -23,10 +23,6 @@ static std::vector<std::string> ListPoolLVs(const std::string &pool_name, Condor
 VolumeManager::VolumeManager()
     : m_encrypt(param_boolean("STARTD_ENCRYPT_EXECUTE_DISK", false))
 {
-    if (!param_boolean("STARTD_ENFORCE_DISK_LIMITS", false)) {
-        dprintf(D_FULLDEBUG, "Not enforcing disk limits in the startd.\n");
-        return;
-    }
     std::string pool_name; std::string volume_group_name;
     if (!param(pool_name, "THINPOOL_NAME") || !param(volume_group_name, "THINPOOL_VOLUME_GROUP_NAME")) {
         param(m_loopback_filename, "THINPOOL_BACKING_FILE", "$(SPOOL)/startd_disk.img");

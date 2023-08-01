@@ -664,7 +664,7 @@ GahpServer::new_reqid()
 	
 	next_reqid++;
 	while (starting_reqid != next_reqid) {
-		if ( next_reqid > 990000000 ) {
+		if ( next_reqid > 990'000'000 ) {
 			next_reqid = 1;
 			rotated_reqids = true;
 		}

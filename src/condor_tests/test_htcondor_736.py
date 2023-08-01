@@ -144,7 +144,10 @@ def files_in_spool(default_condor, all_job_handles, logged_job_handle, unlogged_
             # stored atomically -- we don't have to worry about partial reads.
             if os.path.exists(job_spool_dir):
                 files_in_spool[clusterID] = os.listdir(job_spool_dir)
-                found_spool_dirs += 1
+                if (len(files_in_spool[clusterID]) > 0): 
+                    found_spool_dirs += 1
+                else:
+                    print(f"Suspiciously empty directory {job_spool_dir}")
 
         if found_spool_dirs == 2:
             return files_in_spool

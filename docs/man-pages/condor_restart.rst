@@ -11,11 +11,16 @@ Synopsis
 
 **condor_restart** [**-help | -version** ]
 
-**condor_restart** [**-debug** ] [**-graceful | -fast |
--peaceful** ] [**-pool** *centralmanagerhostname[:portnumber]*] [
+**condor_restart** [**-debug[:opts]**] ] [**-graceful | -fast |
+-peaceful | -drain** ] [**-pool** *centralmanagerhostname[:portnumber]*] [
 **-name** *hostname* | *hostname* | **-addr** *"<a.b.c.d:port>"*
 | *"<a.b.c.d:port>"* | **-constraint** *expression* | **-all** ]
-[**-daemon** *daemonname*]
+[**-daemon** *daemonname* | **-master**]
+[**-exec** *name*]
+[**-reason** *"reason-string"*]
+[**-request-id** *id*]
+[**-check** *expr*]
+[**-start** *expr*]
 
 Description
 -----------
@@ -39,6 +44,15 @@ all the child daemons of the *condor_master*, and then restart the
 start up other daemons as specified in the ``DAEMON_LIST`` configuration
 file entry.
 
+When restarting down all daemons including the *condor_master*, the **-exec**
+argument can be used to tell the master to run a configured :macro:`MASTER_SHUTDOWN_<Name>`
+script before it restarts.
+
+When the **-drain** option is chosen, draining options can be specified
+by using the optional **-reason**, **-request-id**, **-check**, and **-start**
+arguments.
+
+
 For security reasons of authentication and authorization, this command
 requires ADMINISTRATOR level of access.
 
@@ -49,9 +63,10 @@ Options
     Display usage information
  **-version**
     Display version information
- **-debug**
-    Causes debugging information to be sent to ``stderr``, based on the
-    value of the configuration variable ``TOOL_DEBUG``.
+ **-debug[:opts]**
+    Causes debugging information to be sent to ``stderr``. The debug level can be set
+    by specifying an optional *opts* value. Otherwise, the configuration variable ``TOOL_DEBUG``
+    sets the debug level.
  **-graceful**
     Gracefully shutdown daemons (the default) before restarting them
  **-fast**
@@ -59,6 +74,18 @@ Options
  **-peaceful**
     Wait indefinitely for jobs to finish before shutting down daemons,
     prior to restarting them
+ **-drain**
+    Send a *condor_drain* command with the *-exit-on-completion* option to all
+    *condor_startd* daemons that are managed by this master. Then wait for all *condor_startd*
+    daemons to exit before before restarting.
+ **-reason** *"reason-string"*
+    Use with **-drain** to set a **-reason** *"reason-string"* value for the *condor_drain* command.
+ **-request-id** *id*
+    Use with **-drain** to set a **-request-id** *id* value for the *condor_drain* command.
+ **-check** *expr*
+    Use with **-drain** to set a **-check** *expr* value for the *condor_drain* command.
+ **-start** *expr*
+    Use with **-drain** to set a **-start** *expr* value for the *condor_drain* command.
  **-pool** *centralmanagerhostname[:portnumber]*
     Specify a pool by giving the central manager's host name and an
     optional port number
@@ -75,6 +102,12 @@ Options
     *expression*
  **-all**
     Send the command to all machines in the pool
+ **-master**
+    Restart the *condor_master* after shutting down all other daemons. This will have the
+    effect of restarting all of the daemons.
+ **-exec** *name*
+    When used with **-master**, the *condor_master* will run the program configured as
+    :macro:`MASTER_SHUTDOWN_<Name>` after shutting down all other daemons.
  **-daemon** *daemonname*
     Send the command to the named daemon. Without this option, the
     command is sent to the *condor_master* daemon.

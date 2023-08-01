@@ -3,15 +3,20 @@
 Users' Quick Start Guide
 ========================
 
-To users, `HTCondor <https://htcondor.org>`_ is a batch job scheduler.  You give
-HTCondor a file with commands to tell it how to run your jobs.  HTCondor
-locates an appropriate machine for each job within the pool(s) of machines,
-packages up the job and ships it off to this Execution Point (EP) to run on.
-The jobs run, and output is returned to the machine that submitted the jobs.
+`HTCondor <https://htcondor.org>`_ is a system for dynamically sharing
+computational resources between competing computational tasks.  As an
+HTCondor user, you will describe your computational tasks as a series
+of independent, asynchronous "jobs."  You access computational resources
+managed by HTCondor by submitting (or "placing") job descriptions at an
+HTCondor "access point" (AP), also known as a "submit node."  HTCondor
+locates an appropriate machine for each job,
+packages up the job and ships it off to that machine for execution.
+Machines providing resources to HTCondor are therefore known as execution
+points (EP).
 
-Here is just enough guidance to submit and observe the successful
-completion of a first job.  It then suggests extensions that you can apply
-to your particular jobs.
+This guide covers submitting and observing the successful completion
+of a first, example job.  It then suggests extensions that you can apply to
+your own jobs.
 
 This guide presumes that
 
@@ -27,6 +32,25 @@ This guide presumes that
   interactive input.  Standard input (from the keyboard), standard output
   (seen on the display), and standard error (seen on the display) may still
   be used, but their contents will be redirected from/to files.
+
+What is a Job?
+--------------
+
+"Job" is a very specific term in HTCondor. A job is the atomic unit of work.
+A job may use multiple cores on one machine, but one job may not (in general)
+run across more than one machine.  To effectively use HTCondor, you will
+need to divide your total work (often called a workflow) into a number
+of jobs.  These atomic units of work run asynchronously with respect to each other, but 
+may be connected by input and output files.  Each job is described by a
+Job ClassAd, which is usually created by the system from a submit description file.
+HTCondor is a High Throughput system, which means it has been designed to 
+effectively manage hundreds of thousands of jobs.  Attributes of jobs that
+must be defined include the executable or script to run, the amount of memory, CPU
+and other machine resources it needs, and descriptions of the file inputs it need.
+The set of files used by a job is called the "sandbox".  There is an input sandbox,
+the input files that exist before a job starts; the output sandbox, the set of files
+created by the job; and a scratch sandbox, the set of files made as the job runs.
+
 
 A First HTCondor Job
 --------------------

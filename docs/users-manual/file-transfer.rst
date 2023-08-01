@@ -631,10 +631,10 @@ the execute machine, HTCondor has the ability to transfer files from a
 location specified by a URL for a job's input file, or from the execute
 machine to a location specified by a URL for a job's output file(s).
 This capability requires administrative set up, as described in
-the :doc:`/admin-manual/setting-up-special-environments` section.
+the :doc:`/admin-manual/file-and-cred-transfer` section.
 
-The transfer of an input file is restricted to vanilla and vm universe
-jobs only. HTCondor's file transfer mechanism must be enabled.
+URL file transfers work in most HTCondor job universes, but not grid, local
+or scheduler.  HTCondor's file transfer mechanism must be enabled.
 Therefore, the submit description file for the job will define both
 **should_transfer_files** :index:`should_transfer_files<single: should_transfer_files; submit commands>`
 and
@@ -883,3 +883,4 @@ key files described above.
 
 If you need to specify a region, you may do so using ``aws_region``,
 despite the name.
+

@@ -147,10 +147,97 @@ extern DedicatedScheduler dedicated_scheduler;
 std::string ownerinfo_attr_name;
 const std::string & attr_JobUser = ownerinfo_attr_name;
 bool user_is_the_new_owner = false;
-bool ignore_domain_mismatch_when_setting_owner = false;
+bool ignore_domain_mismatch_when_setting_owner = false; // obsolete user_is_the_new_owner knob
+
+// these knobs give fine grained control for choosing between using fully-qualified
+// names for ownership checks, or the old behavior of using unqualifed names (i.e. User vs Owner) 
+// The ideal future will have ignore=false, warn=true and must_be=false
+// But that will require that we be able to run jobs as Nobody for users from a foreign UID_DOMAIN
+// Until have have that, the most we can do is ignore=false, warn=false, and must_be=true
+// while the most backward compatible mode would be ignore=true, warn=false must_be=false
+bool ignore_domain_for_OwnerCheck = true; // do UserCheck2 ignoring the domain part of the socket
+bool warn_domain_for_OwnerCheck = true;   // dprintf if UserCheck2 succeeds, but would fail if we weren't ignoring the domain
+bool job_owner_must_be_UidDomain = false; // don't allow jobs to be placed by a socket with domain != UID_DOMAIN
+bool allow_submit_from_known_users_only = false; // if false, create UseRec for new users when they submit
+
+#ifdef USE_JOB_QUEUE_USERREC
+JobQueueUserRec CondorUserRec(CONDOR_USERREC_ID, "condor", "", true);
+JobQueueUserRec * get_condor_userrec() { return &CondorUserRec; }
+JobQueueUserRec * PersonalUserRec = nullptr;
+
+// examine the socket, and if the real owner of the socket is determined to be "condor"
+// return the CondorUserRec
+// If the real owner is the process owner, return a PersonalUserRec pointer
+// TODO: fix for USERREC_NAME_IS_FULLY_QUALIFIED
+JobQueueUserRec * real_owner_is_condor(const Sock * sock) {
+	if (sock) {
+		// TODO: check for family session??
+		// TODO: will Windows ever see "root" intended to be a super-user?
+		static bool personal_condor = ! is_root();
+		const char* real_owner = sock->getOwner();
+		if (YourString(CondorUserRec.Name()) == real_owner ||
+		#ifdef WIN32
+			YourStringNoCase("LOCAL_SYSTEM") == real_owner || YourStringNoCase("SYSTEM") == real_owner
+		#else
+			YourString("root") == real_owner ||
+			( ! personal_condor && YourString(get_condor_username()) == real_owner)
+		#endif
+			) {
+			return get_condor_userrec();
+		}
+		if ( ! PersonalUserRec && personal_condor) {
+			const char * domain = nullptr;
+		#ifdef WIN32
+			auto_free_ptr fqn(strdup(get_condor_username())); // this will be domain/user on windows
+			char * name = strchr(fqn.ptr(), '/');
+			if (name) { *name++ = 0; domain = fqn.ptr(); } else { name = fqn.ptr(); }
+		#else
+			const char * name = get_condor_username();
+		#endif
+			PersonalUserRec = new JobQueueUserRec(CONDOR_USERREC_ID, name, domain, true);
+		}
+		if (PersonalUserRec &&
+		#ifdef WIN32
+			YourString("NTSSPI") == sock->getAuthenticationMethodUsed() &&
+			YourStringNoCase(PersonalUserRec->Name()) == real_owner &&
+			YourStringNoCase(PersonalUserRec->NTDomain()) == sock->getDomain()
+		#else
+			YourString("FS") == sock->getAuthenticationMethodUsed() &&
+			YourString(PersonalUserRec->Name()) == real_owner
+		#endif
+			) {
+			return PersonalUserRec;
+		}
+	}
+	return nullptr;
+}
+inline const OwnerInfo * EffectiveUserRec(const Sock * sock) {
+	if ( ! sock) return &CondorUserRec;	 // commands from inside the schedd
+	const OwnerInfo * owni = scheduler.lookup_owner_const(sock->getOwner());
+	if (owni) return owni;
+	return real_owner_is_condor(sock);
+}
+inline const char * EffectiveUserName(const Sock * sock) {
+	if ( ! sock) return "";
+	return sock->getOwner();
+}
+
+int init_user_ids(const OwnerInfo * user) {
+	if ( ! user) { 
+		return 0;
+	}
+	if (USERREC_NAME_IS_FULLY_QUALIFIED) {
+		std::string buf;
+		const char * owner = name_of_user(user->Name(), buf);
+		return init_user_ids(owner, user->NTDomain());
+	} else {
+		return init_user_ids(user->Name(), user->NTDomain());
+	}
+}
+#else
 inline const char * EffectiveUser(const Sock * sock) {
 	if (!sock) return "";
-#if 0 // def USE_JOB_QUEUE_USERREC - disabling for now, it's ok to use Owner here in 10.5.x
+#if 0 // def USE_JOB_QUEUE_USERREC - disabling for now, it's ok to use Owner here in 10.6.x
 	return sock->getFullyQualifiedUser();
 #else
 	if (user_is_the_new_owner) {
@@ -161,6 +248,7 @@ inline const char * EffectiveUser(const Sock * sock) {
 #endif
 	return "";
 }
+#endif
 
 // priority records
 extern prio_rec *PrioRec;
@@ -2309,6 +2397,7 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) { // enable, not add
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 1);
+			DeleteUserAttribute(*urec, ATTR_DISABLE_REASON);
 		} else { // user does not exist,  we must add
 			bool add_if_not = false;
 			if (cmdAd.LookupBool("Create", add_if_not) && add_if_not) {
@@ -2324,6 +2413,10 @@ int Scheduler::act_on_user(int cmd, const std::string & username, const ClassAd&
 		if (urec) {
 			txn.BeginOrContinue(urec->jid.proc);
 			SetUserAttributeInt(*urec, ATTR_ENABLED, 0);
+			std::string reason;
+			if (cmdAd.LookupString(ATTR_DISABLE_REASON, reason)) {
+				SetUserAttributeString(*urec, ATTR_DISABLE_REASON, reason.c_str());
+			}
 		} else { // user does not exist,  we must add
 			rval = 2;
 		}
@@ -2392,7 +2485,8 @@ int Scheduler::command_act_on_user_ads(int cmd, Stream* stream)
 
 	ClassAd resultAd;
 	ReliSock* rsock = (ReliSock*)stream;
-	auto * rsock_user = EffectiveUser(rsock);
+	auto * rsock_user = EffectiveUserRec(rsock);
+	// TODO: more fine-grained user check? I think this does nothing when NULL is the first arg...
 	if ( ! UserCheck2(NULL, rsock_user) || ! isQueueSuperUser(rsock_user)) {
 		resultAd.Assign(ATTR_RESULT, EACCES);
 		resultAd.Assign(ATTR_ERROR_STRING, "Permission denied");
@@ -2774,7 +2868,7 @@ int Scheduler::command_query_job_ads(int cmd, Stream* stream)
 		}
 		// at this point owner is valid or empty.
 		// if empty, or the owner is a queue superuser show all jobs.
-		if (owner.empty() || isQueueSuperUser(owner.c_str())) {
+		if (owner.empty() || isQueueSuperUser(scheduler.lookup_owner_const(owner.c_str()))) {
 			my_jobs_expr = NULL; 
 		}
 
@@ -3457,21 +3551,11 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 	} 
 
 	if ( universe == CONDOR_UNIVERSE_GRID ) {
-		// for Globus, count jobs in UNSUBMITTED state by owner.
+		// for Grid, count jobs in UNSUBMITTED state by owner.
 		// later we make certain there is a grid manager daemon
 		// per owner.
-		int real_status = status;
-		bool want_service = service_this_universe(universe,job);
 		bool job_managed = jobExternallyManaged(job);
 		bool job_managed_done = jobManagedDone(job);
-		// if job is not already being managed : if we want matchmaking 
-		// for this job, but we have not found a 
-		// match yet, consider it "held" for purposes of the logic here.  we
-		// have no need to tell the gridmanager to deal with it until we've
-		// first found a match.
-		if ( (job_managed == false) && (want_service && cur_hosts == 0) ) {
-			status = HELD;
-		}
 		// if status is REMOVED, but the remote job id is not null,
 		// then consider the job IDLE for purposes of the logic here.  after all,
 		// the gridmanager needs to be around to finish the task of removing the job.
@@ -3509,12 +3593,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 			ASSERT(gridcounts);
 			gridcounts->UnmanagedGridJobs++;
 		}
-			// If we do not need to do matchmaking on this job (i.e.
-			// service this globus universe job), than we can bailout now.
-		if (!want_service) {
-			return 0;
-		}
-		status = real_status;	// set status back for below logic...
+
+		return 0;
 	}
 
 	if (status == IDLE || status == RUNNING || status == TRANSFERRING_OUTPUT) {
@@ -3602,6 +3682,8 @@ count_a_job(JobQueueBase* ad, const JOB_ID_KEY& /*jid*/, void*)
 bool
 service_this_universe(int universe, ClassAd* job)
 {
+	// "service" seems to to really mean find a matching resource or not...
+
 	/*  If a non-grid job is externally managed, it's been grabbed by
 		the schedd-on-the-side and we don't want to touch it.
 	 */
@@ -3609,39 +3691,11 @@ service_this_universe(int universe, ClassAd* job)
 		return false;
 	}
 
-	/* If WantMatching attribute exists, evaluate it to discover if we want
-	   to "service" this universe or not.  BTW, "service" seems to really mean
-	   find a matching resource or not.... 
-	   Note: EvalBool returns 0 if evaluation is undefined or error, and
-	   return 1 otherwise....
-	*/
-	bool want_matching;
-	if ( job->LookupBool(ATTR_WANT_MATCHING,want_matching) == 1 ) {
-		return want_matching;
-	}
-
 	/* If we made it to here, the WantMatching was not defined.  So
 	   figure out what to do based on Universe and other misc logic...
 	*/
 	switch (universe) {
 		case CONDOR_UNIVERSE_GRID:
-			{
-				// If this Globus job is already being managed, then the schedd
-				// should leave it alone... the gridmanager is dealing with it.
-				if ( jobExternallyManaged(job) ) {
-					return false;
-				}			
-				// Now if not managed, if GridResource has a "$$", then this
-				// job is at least _matchable_, so return true, else false.
-				std::string resource = "";
-				job->LookupString( ATTR_GRID_RESOURCE, resource );
-				if ( strstr( resource.c_str(), "$$" ) ) {
-					return true;
-				}
-
-				return false;
-			}
-			break;
 		case CONDOR_UNIVERSE_MPI:
 		case CONDOR_UNIVERSE_PARALLEL:
 		case CONDOR_UNIVERSE_SCHEDULER:
@@ -3811,6 +3865,7 @@ void Scheduler::mapPendingOwners()
 		uad->clearPending();
 		uad->flags |= JQU_F_DIRTY; // set dirty to force populate
 		uad->PopulateFromAd();
+		uad->setStaleConfigSuper(); // force a superuser check next time we need to know
 		OwnersInfo[uad->Name()] = uad; // on startup, newly created records will not yet be in the map
 	}
 	pendingOwners.clear();
@@ -3845,7 +3900,7 @@ Scheduler::insert_ownerinfo(const char * owner)
 {
 	OwnerInfo * Owner = find_ownerinfo(owner);
 	if (Owner) return Owner;
-	dprintf(D_ALWAYS | D_BACKTRACE, "Owner %s has no JobQueueUserRec\n", owner);
+	dprintf(D_ALWAYS, "Owner %s has no JobQueueUserRec\n", owner);
 
 	int userrec_id = nextUnusedUserRecId();
 	// the owner passed here may or may not have a full domain, (i.e. it may be a ntdomain instead of a fqdn)
@@ -4083,7 +4138,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 
 		// Note: job_ad should *NOT* be deallocated, so we don't need
 		// to worry about deleting it before every return case, etc.
-	ClassAd* job_ad = GetJobAd( job_id.cluster, job_id.proc );
+	JobQueueJob* job_ad = GetJobAd( job_id.cluster, job_id.proc );
 
 	if ( !job_ad ) {
         dprintf ( D_ALWAYS, "tried to abort %d.%d; not found.\n", 
@@ -4275,12 +4330,10 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
                      "Found record for scheduler universe job %d.%d\n",
                      job_id.cluster, job_id.proc);
             
-			std::string owner;
-			std::string domain;
-			job_ad->LookupString(ATTR_OWNER,owner);
-			job_ad->LookupString(ATTR_NT_DOMAIN,domain);
-			if (! init_user_ids(owner.c_str(), domain.c_str()) ) {
-				if (!domain.empty()) { owner += "@"; owner += domain; }
+			const OwnerInfo * owni = job_ad->ownerinfo;
+			if (! init_user_ids(owni) ) {
+				std::string owner = owni ? owni->Name() : "";
+				if (owni && owni->NTDomain()) { owner += "@"; owner += owni->NTDomain(); }
 				std::string msg;
 				dprintf(D_ALWAYS, "init_user_ids(%s) failed - putting job on hold.\n", owner.c_str());
 #ifdef WIN32
@@ -4343,7 +4396,7 @@ abort_job_myself( PROC_ID job_id, JobAction action, bool log_hold )
 			dprintf( D_FULLDEBUG, "Sending %s signal (%s, %d) to "
 					 "scheduler universe job pid=%d owner=%s\n",
 					 getJobActionString(action), sig_name, kill_sig,
-					 srec->pid, owner.c_str() );
+					 srec->pid, owni->Name() );
 			priv_state priv = set_user_priv();
 
 			scheduler.sendSignalToShadow(srec->pid,kill_sig,job_id);
@@ -4959,8 +5012,12 @@ Scheduler::WriteSubmitToUserLog( JobQueueJob* job, bool do_fsync, const char * w
 		event.submitEventWarnings = warning;
 	}
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, job);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, job);
+	} else {
+		status = ULog->writeEventNoFsync(&event, job);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5273,8 +5330,12 @@ Scheduler::WriteClusterSubmitToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	cluster->LookupString(ATTR_SUBMIT_EVENT_NOTES, event.submitEventLogNotes);
 	cluster->LookupString(ATTR_SUBMIT_EVENT_USER_NOTES, event.submitEventUserNotes);
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, cluster);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, cluster);
+	} else {
+		status = ULog->writeEventNoFsync(&event, cluster);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5311,8 +5372,12 @@ Scheduler::WriteClusterRemoveToUserLog( JobQueueCluster* cluster, bool do_fsync 
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_PROC_ID, event.next_proc_id);
 	cluster->LookupInteger(ATTR_JOB_MATERIALIZE_NEXT_ROW, event.next_row);
 
-	ULog->setEnableFsync(do_fsync);
-	bool status = ULog->writeEvent(&event, cluster);
+	bool status = false;
+	if (do_fsync) {
+		status = ULog->writeEvent(&event, cluster);
+	} else {
+		status = ULog->writeEventNoFsync(&event, cluster);
+	}
 	delete ULog;
 
 	if (!status) {
@@ -5332,7 +5397,6 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 			// User didn't want log
 		return true;
 	}
-	ULog->setEnableFsync(do_fsync);
 
 	int code = mmRunning;
 	if ( ! cluster->LookupInteger(ATTR_JOB_MATERIALIZE_PAUSED, code)) {
@@ -5368,12 +5432,21 @@ Scheduler::WriteFactoryPauseToUserLog( JobQueueCluster* cluster, int hold_code, 
 			event.setPauseCode(code);
 			#endif
 		}
-		status = ULog->writeEvent(&event,cluster);
+		if (do_fsync) {
+			status = ULog->writeEvent(&event,cluster);
+		} else {
+			status = ULog->writeEventNoFsync(&event,cluster);
+		}
 	} else {
 		// factory is resumed.
 		FactoryResumedEvent event;
 		if (reason) event.setReason(reason);
-		status = ULog->writeEvent(&event,cluster);
+
+		if (do_fsync) {
+			status = ULog->writeEvent(&event,cluster);
+		} else {
+			status = ULog->writeEventNoFsync(&event,cluster);
+		}
 	}
 
 	delete ULog;
@@ -5801,6 +5874,10 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 			break;
 	}
 
+#ifdef USE_JOB_QUEUE_USERREC
+	const OwnerInfo * sock_owner = EffectiveUserRec(rsock);
+#endif
+
 
 	// Here the protocol differs somewhat between uploading and downloading.
 	// So watch out in terms of understanding this.
@@ -5865,9 +5942,14 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// to do so.
 					// cuz only the owner of a job (or queue super user) 
 					// is allowed to transfer data to/from a job.
+			#ifdef USE_JOB_QUEUE_USERREC
+				JobQueueJob * job = GetJobAd(a_job);
+				if (job && (job->IsJob() || job->IsCluster()) && UserCheck2(job, sock_owner)) {
+			#else
 				std::string job_user;
 				GetAttributeString(a_job.cluster, a_job.proc, attr_JobUser.c_str(), job_user);
 				if (UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str())) {
+			#endif
 					jobs->emplace_back(a_job.cluster, a_job.proc);
 					formatstr_cat(job_ids_string, "%d.%d, ", a_job.cluster, a_job.proc);
 
@@ -5909,7 +5991,7 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 					// UserCheck2 failed.
 					dprintf( D_AUDIT | D_FAILURE, *rsock, "spoolJobFiles(): cannot allow"
 							" user %s to spool files for job %d.%d\n",
-							EffectiveUser(rsock), a_job.cluster, a_job.proc);
+							EffectiveUserName(rsock), a_job.cluster, a_job.proc);
 					delete jobs;
 					return FALSE;
 				}
@@ -5920,12 +6002,11 @@ Scheduler::spoolJobFiles(int mode, Stream* s)
 		case TRANSFER_DATA:
 		case TRANSFER_DATA_WITH_PERMS:
 			{
-			ClassAd * tmp_ad = GetNextJobByConstraint(constraint_string,1);
+			JobQueueJob * tmp_ad = GetNextJobByConstraint(constraint_string,1);
 			JobAdsArrayLen = 0;
 			while (tmp_ad) {
-				if ( tmp_ad->LookupInteger(ATTR_CLUSTER_ID,a_job.cluster) &&
-					tmp_ad->LookupInteger(ATTR_PROC_ID,a_job.proc) &&
-					UserCheck2(tmp_ad, EffectiveUser(rsock)) )
+				a_job = tmp_ad->jid;
+				if (UserCheck2(tmp_ad, sock_owner) )
 				{
 					jobs->emplace_back(a_job.cluster, a_job.proc);
 					JobAdsArrayLen++;
@@ -6065,7 +6146,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 {
 	ReliSock* rsock = (ReliSock*)s;
 	PROC_ID jobid;
-	ClassAd *jobad;
+	JobQueueJob *jobad;
 
 		// make sure this connection is authenticated, and we know who
 		// the user is.  also, set a timeout, since we don't want to
@@ -6114,7 +6195,7 @@ Scheduler::updateGSICred(int cmd, Stream* s)
 		// cuz only the owner of a job (or queue super user) is allowed
 		// to transfer data to/from a job.
 	bool authorized = false;
-	if (UserCheck2(jobad, EffectiveUser(rsock))) {
+	if (UserCheck2(jobad, EffectiveUserRec(rsock))) {
 		authorized = true;
 	}
 	if ( !authorized ) {
@@ -6391,6 +6472,8 @@ Scheduler::actOnJobs(int, Stream* s)
 		}
 	}
 
+	const OwnerInfo * sock_owner = EffectiveUserRec(rsock);
+
 		// read the command ClassAd + EOM
 	if( ! (getClassAd(rsock, command_ad) && rsock->end_of_message()) ) {
 		dprintf( D_AUDIT | D_FAILURE, *rsock, "Can't read command ad from tool\n" );
@@ -6471,7 +6554,7 @@ Scheduler::actOnJobs(int, Stream* s)
 	if( ! reason.empty() ) {
 			// patch up the reason they gave us to include who did
 			// it. 
-		const char *owner = EffectiveUser(rsock);
+		const char *owner = EffectiveUserName(rsock);
 		reason += " (by user "; reason += owner; reason += ")";
 	}
 
@@ -6680,20 +6763,17 @@ Scheduler::actOnJobs(int, Stream* s)
 			// Check to make sure the job's status makes sense for
 			// the command we're trying to perform
 		int status = -1;
-		std::string job_user;
+		JobQueueJob * job_ad = GetJobAd(tmp_id);
 		int on_release_status = IDLE;
 		int hold_reason_code = -1;
-		if( GetAttributeInt(tmp_id.cluster, tmp_id.proc, 
-							ATTR_JOB_STATUS, &status) < 0 ||
-			GetAttributeString(tmp_id.cluster, tmp_id.proc,
-							   attr_JobUser.c_str(), job_user) < 0)
+		if ( ! job_ad || GetAttributeInt(tmp_id.cluster, tmp_id.proc,  ATTR_JOB_STATUS, &status) < 0)
 		{
 			results.record( tmp_id, AR_NOT_FOUND );
 			jobs[i].cluster = -1;
 			continue;
 		}
 		// Check that this user is allowed to modify this job.
-		if( !UserCheck2(NULL, EffectiveUser(rsock), job_user.c_str()) ) {
+		if( !UserCheck2(job_ad, sock_owner) ) {
 			results.record( tmp_id, AR_PERMISSION_DENIED );
 			jobs[i].cluster = -1;
 			continue;
@@ -6853,7 +6933,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_HOLD_JOBS:
 			if (clusterad->factory) {
-				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
+				if (UserCheck2(clusterad, sock_owner) == false ||
 					SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmHold) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
@@ -6870,7 +6950,7 @@ Scheduler::actOnJobs(int, Stream* s)
 
 		case JA_RELEASE_JOBS:
 			if (clusterad->factory) {
-				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
+				if (UserCheck2(clusterad, sock_owner) == false ||
 					SetAttributeInt(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, mmRunning) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					// if we failed to set the pause attribute, take this cluster out of the list so we don't try
@@ -6890,7 +6970,7 @@ Scheduler::actOnJobs(int, Stream* s)
 			if (clusterad->factory) {
 				// check to see if we are allowed to pause this factory, but don't actually change it's
 				// pause state, the mmClusterRemoved pause mode is a runtime-only schedd state.
-				if (UserCheck2(clusterad, EffectiveUser(rsock)) == false ||
+				if (UserCheck2(clusterad, sock_owner) == false ||
 					SetAttribute(tmp_id.cluster, tmp_id.proc, ATTR_JOB_MATERIALIZE_PAUSED, "3", SetAttribute_QueryOnly) < 0) {
 					results.record( tmp_id, AR_PERMISSION_DENIED );
 					clusters[i].cluster = -1;
@@ -6925,7 +7005,7 @@ Scheduler::actOnJobs(int, Stream* s)
 		// Finally, let them know if the user running this command is
 		// a queue super user here
 	response_ad->Assign( ATTR_IS_QUEUE_SUPER_USER,
-			 isQueueSuperUser(EffectiveUser(rsock)) ? true : false );
+			 isQueueSuperUser(sock_owner) ? true : false );
 	
 	rsock->encode();
 	if( ! (putClassAd(rsock, *response_ad) && rsock->end_of_message()) ) {
@@ -8251,9 +8331,10 @@ Scheduler::CmdDirectAttach(int, Stream* stream)
 
 	slot_user = rsock->getFullyQualifiedUser();
 
-	if (!cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter)) {
-		slot_submitter = slot_user;
-	}
+		// If the startd doesn't set a submitter, then we'll match jobs
+		// from any submitter. But the code below ensures we only match
+		// jobs from the authenticated user identity.
+	cmd_ad.LookupString(ATTR_SUBMITTER, slot_submitter);
 
 		// TODO handle alternate submitter names
 	MainScheddNegotiate sn(0, nullptr, slot_submitter.c_str(), nullptr);
@@ -10707,12 +10788,15 @@ Scheduler::start_sched_universe_job(PROC_ID* job_id)
 		// attribute is read/written to the job queue log by/or
 		// shared between versions of Condor which view the type
 		// of that attribute differently, calamity would arise.
+
 	if (GetAttributeInt(job_id->cluster, job_id->proc, 
 						   ATTR_CORE_SIZE, &core_size_truncated) == 0) {
 		// make the hard limit be what is specified.
 		core_size = (size_t)core_size_truncated;
-		core_size_ptr = &core_size;
+	} else {
+		core_size = 0;
 	}
+	core_size_ptr = &core_size;
 
 		// Update the environment to point at the job ad.
 	if( wrote_job_ad && !envobject.SetEnv("_CONDOR_JOB_AD", job_ad_path.c_str()) ) {
@@ -12581,6 +12665,7 @@ Scheduler::jobExitCode( PROC_ID job_id, int exit_code )
 				if ( cronTab ) {
 					delete cronTab;
 					this->cronTabs->remove(job_id);
+					this->cronTabs->insert(job_id, nullptr);
 				}
 			} // CronTab
 
@@ -13074,11 +13159,17 @@ Scheduler::Init()
 			"WARNING: CONDOR_ADMIN not specified in config file" );
 	}
 
+
+	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
+	ignore_domain_for_OwnerCheck = param_boolean("IGNORE_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	warn_domain_for_OwnerCheck = param_boolean("WARN_DOMAIN_FOR_JOB_OWNER_CHECK", true);
+	job_owner_must_be_UidDomain = param_boolean("JOB_OWNER_MUST_BE_FROM_UID_DOMAIN", false);
+	allow_submit_from_known_users_only = param_boolean("ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY", false);
+
 		// UidDomain will always be defined, since config() will put
 		// in get_local_fqdn() if it's not defined in the file.
 		// See if the value of this changes, since if so, we've got
 		// work to do...
-	ignore_domain_mismatch_when_setting_owner = param_boolean("TRUST_UID_DOMAIN", false);
 	char* oldUidDomain = UidDomain;
 	UidDomain = param( "UID_DOMAIN" );
 	if( oldUidDomain ) {
@@ -13627,6 +13718,11 @@ Scheduler::Init()
 	{
 		dprintf(D_ALWAYS, "CURB_MATCHMAKING is set to an invalid expression: %s\n", curb_expr_str.c_str());
 	}
+
+	// reset the ConfigSuperUser flag on JobQueueUserRec records to "don't know"
+	// this will trigger a fixup from config the next time we try and do something as that user
+	// Note that this will have no effect on records that are inherently super
+	for (auto oi : OwnersInfo) { oi.second->setStaleConfigSuper(); }
 
 	// This is foul, but a SCHEDD_ADTYPE _MUST_ have a NUM_USERS attribute
 	// (see condor_classad/classad.C
@@ -15349,11 +15445,12 @@ Scheduler::get_job_connect_info_handler(int cmd, Stream* s) {
 int
 Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 	Sock *sock = (Sock *)s;
+	const OwnerInfo * sock_owner = nullptr;
 	ClassAd input;
 	ClassAd reply;
 	PROC_ID jobid;
 	std::string error_msg;
-	ClassAd *jobad;
+	JobQueueJob *jobad;
 	int job_status = -1;
 	match_rec *mrec = NULL;
 	std::string job_claimid_buf;
@@ -15390,6 +15487,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 			return FALSE;
 		}
 	}
+	sock_owner = EffectiveUserRec(sock);
 
 	if( !getClassAd(s, input) || !s->end_of_message() ) {
 		dprintf(D_ALWAYS,
@@ -15413,9 +15511,9 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		goto error_wrapup;
 	}
 
-	if( !UserCheck2(jobad,EffectiveUser(sock)) ) {
+	if( !sock_owner || !UserCheck2(jobad,sock_owner) ) {
 		formatstr(error_msg, "%s is not authorized for access to the starter for job %d.%d",
-						  EffectiveUser(sock), jobid.cluster, jobid.proc);
+						  EffectiveUserName(sock), jobid.cluster, jobid.proc);
 		goto error_wrapup;
 	}
 
@@ -16472,7 +16570,7 @@ Scheduler::claimLocalStartd()
 
 		// Check when we last had a negotiation cycle; if recent, return.
 	int claimlocal_interval = param_integer("SCHEDD_ASSUME_NEGOTIATOR_GONE",
-			2000000000);
+			2'000'000'000);
 	if ( time(NULL) - NegotiationRequestTime < claimlocal_interval ) {
 			// we have negotiated recently, no need to claim the local startd
 		return false;
@@ -17079,11 +17177,15 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 
 		// verify that whoever is running this command is either the
 		// queue super user or the owner of the claim
+#ifdef USE_JOB_QUEUE_USERREC
+	// we don't actually want to UserCheck2 for recycling shadows
+	// since the cmd_user will always be condor or equiv, and the match_user
+	// will never be. UserCheck2 is essentially a complex way to
+	// check to see if the cmd_user is a queue superuser.
+	// RecycleShadow is registered at DAEMON level, we should trust that.
+#else
 	char const *cmd_user = EffectiveUser(sock);
 	const char * match_user = mrec->user;
-#ifdef USE_JOB_QUEUE_USERREC
-	// UserCheck2 can handle fully qualified users
-#else
 	std::string match_owner;
 	if (user_is_the_new_owner) {
 		// UserCheck wants fully qualified users
@@ -17094,14 +17196,14 @@ Scheduler::RecycleShadow(int /*cmd*/, Stream *stream)
 			match_user = match_owner.c_str();
 		}
 	}
-#endif
 
-	if( !UserCheck2(NULL, cmd_user, match_user) ) {
+	if( !cmd_user || !UserCheck2(NULL, cmd_user, match_user) ) {
 		dprintf(D_ALWAYS,
 				"RecycleShadow() called by %s failed authorization check!\n",
-				cmd_user ? cmd_user : "(unauthenticated)");
+				cmd_user ? cmd_user->Name() : "(unauthenticated)");
 		return FALSE;
 	}
+#endif
 
 		// Now handle the exit reason specified for the existing job.
 	if( prev_job_id.cluster != -1 ) {
@@ -17695,52 +17797,44 @@ int Scheduler::reassign_slot_handler( int cmd, Stream * s ) {
 
 	// FIXME: Throttling.
 
-	ClassAd * bAd = GetJobAd( bid.cluster, bid.proc );
+	JobQueueJob * bAd = GetJobAd( bid.cluster, bid.proc );
 	if(! bAd) {
 		handleReassignSlotError( sock, "no such job (now-job)" );
 		return FALSE;
 	}
-	if(! UserCheck2( bAd, EffectiveUser(sock) )) {
+	if(! UserCheck2( bAd, EffectiveUserRec(sock) )) {
 		handleReassignSlotError( sock, "you must own the now-job" );
 		return FALSE;
 	}
 
-	int bju;
-	bAd->LookupInteger( ATTR_JOB_UNIVERSE, bju );
-	if( bju != CONDOR_UNIVERSE_VANILLA ) {
+	if( bAd->Universe() != CONDOR_UNIVERSE_VANILLA ) {
 		handleReassignSlotError( sock, "the now-job must be in the vanilla universe" );
 		return FALSE;
 	}
 
-	int bStatus;
-	bAd->LookupInteger( ATTR_JOB_STATUS, bStatus );
-	if( bStatus != IDLE ) {
+	if( bAd->Status() != IDLE ) {
 		handleReassignSlotError( sock, "the now-job must be idle" );
 		return FALSE;
 	}
 
 	for( unsigned v = 0; v < vids.size(); ++v ) {
-		ClassAd * vAd = GetJobAd( vids[v].cluster, vids[v].proc );
+		JobQueueJob * vAd = GetJobAd( vids[v].cluster, vids[v].proc );
 		if(! vAd) {
 			handleReassignSlotError( sock, "no such job (vacate-job)" );
 			return FALSE;
 		}
-		if(! UserCheck2( vAd, EffectiveUser(sock) )) {
+		if(! UserCheck2( vAd, EffectiveUserRec(sock) )) {
 			handleReassignSlotError( sock, "you must own the vacate-job" );
 			return FALSE;
 		}
 
-		int vju;
-		vAd->LookupInteger( ATTR_JOB_UNIVERSE, vju );
-		if( vju != CONDOR_UNIVERSE_VANILLA ) {
+		if( vAd->Universe() != CONDOR_UNIVERSE_VANILLA ) {
 			handleReassignSlotError( sock, "vacate-job must be in the vanilla universe" );
 			return FALSE;
 		}
 
-		int vStatus;
-		vAd->LookupInteger( ATTR_JOB_STATUS, vStatus );
 		// Assume that we want the vacate-job to finish TRANSFERRING_OUTPUT.
-		if( vStatus != RUNNING ) {
+		if( vAd->Status() != RUNNING ) {
 			handleReassignSlotError( sock, "vacate-job must be running" );
 			return FALSE;
 		}
@@ -17809,7 +17903,7 @@ Scheduler::token_request_callback(bool success, void *miscdata)
 
 
 bool
-Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const char *user, const char * new_spool_dir /*="##"*/)
+Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *output_dir, const OwnerInfo *user, const char * new_spool_dir /*="##"*/)
 {
 	dprintf(D_ALWAYS,"ExportJobs(...,'%s','%s')\n",output_dir,new_spool_dir);
 	OwnerInfo * owner = nullptr;
@@ -17845,7 +17939,7 @@ Scheduler::ExportJobs(ClassAd & result, std::set<int> & clusters, const char *ou
 	// verify the user is authorized to edit these jobs
 	if ( ! UserCheck2(jqc, user) ) {
 		result.Assign(ATTR_ERROR_STRING, "User not authorized to export given jobs");
-		dprintf(D_ALWAYS, "ExportJobs(): User %s not authorized to export jobs owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+		dprintf(D_ALWAYS, "ExportJobs(): User %s not authorized to export jobs owned by %s, aborting\n", user->Name(), jqc->ownerinfo->Name());
 		return false;
 	}
 
@@ -18014,7 +18108,7 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 				clusters.insert(atoi(id));
 			}
 		}
-		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), EffectiveUser(rsock), new_spool_dir.c_str())) {
+		if ( ! ExportJobs(resultAd, clusters, export_dir.c_str(), EffectiveUserRec(rsock), new_spool_dir.c_str())) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, SCHEDD_ERR_EXPORT_FAILED);
 		} else {
@@ -18038,7 +18132,7 @@ Scheduler::export_jobs_handler(int /*cmd*/, Stream *stream)
 
 
 bool
-Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, const char * user)
+Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, const OwnerInfo * user)
 {
 	dprintf(D_ALWAYS,"ImportExportedJobResults(%s)\n", import_dir);
 
@@ -18046,7 +18140,7 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 	formatstr(import_job_log, "%s/job_queue.log", import_dir);
 
 	TemporaryPrivSentry tps(true);
-	if ( ! init_user_ids(user, NULL) ) {
+	if ( ! init_user_ids(user) ) {
 		result.Assign(ATTR_ERROR_STRING, "Failed to init user ids");
 		dprintf(D_ALWAYS, "ImportExportedJobResults(): Failed to init user ids!\n");
 		return false;
@@ -18096,7 +18190,8 @@ Scheduler::ImportExportedJobResults(ClassAd & result, const char * import_dir, c
 			if ( clusters_checked.find(jid.cluster) == clusters_checked.end() ) {
 				if ( ! UserCheck2(job, user) ) {
 					result.Assign(ATTR_ERROR_STRING, "User not authorized to import given jobs");
-					dprintf(D_ALWAYS, "ImportExportexJobResults(): User %s not authorized to import results for job owned by %s, aborting\n", user, job->ownerinfo->Name());
+					dprintf(D_ALWAYS, "ImportExportexJobResults(): User %s not authorized to import results for job owned by %s, aborting\n",
+						user->Name(), job->ownerinfo->Name());
 					AbortTransaction();
 					return false;
 				}
@@ -18203,7 +18298,7 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 	else 
 	{
 		dprintf(D_ALWAYS,"Calling ImportExportedJobResults(%s)\n", import_dir.c_str());
-		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str(), EffectiveUser(rsock))) {
+		if ( ! ImportExportedJobResults(resultAd, import_dir.c_str(), EffectiveUserRec(rsock))) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, 1);
 		} else {
@@ -18227,7 +18322,7 @@ Scheduler::import_exported_job_results_handler(int /*cmd*/, Stream *stream)
 
 
 bool
-Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters, const char * user)
+Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters, const OwnerInfo * user)
 {
 	dprintf(D_ALWAYS,"UnexportJobs(...)\n");
 
@@ -18247,7 +18342,7 @@ Scheduler::UnexportJobs(ClassAd & result, std::set<int> & clusters, const char *
 		// verify the user is authorized to edit this job cluster
 		if ( ! UserCheck2(jqc, user) ) {
 			result.Assign(ATTR_ERROR_STRING, "User not authorized to unexport given jobs");
-			dprintf(D_ALWAYS, "UnexportJobs(): User %s not authorized to unexport job owned by %s, aborting\n", user, jqc->ownerinfo->Name());
+			dprintf(D_ALWAYS, "UnexportJobs(): User %s not authorized to unexport job owned by %s, aborting\n", user->Name(), jqc->ownerinfo->Name());
 			AbortTransaction();
 			return false;
 		}
@@ -18329,7 +18424,7 @@ Scheduler::unexport_jobs_handler(int /*cmd*/, Stream *stream)
 				clusters.insert(atoi(id));
 			}
 		}
-		if ( ! UnexportJobs(resultAd, clusters, EffectiveUser(rsock)) ) {
+		if ( ! UnexportJobs(resultAd, clusters, EffectiveUserRec(rsock)) ) {
 			resultAd.Assign(ATTR_ACTION_RESULT, NOT_OK);
 			resultAd.Assign(ATTR_ERROR_CODE, 1);
 		} else {

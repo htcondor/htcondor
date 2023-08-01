@@ -314,7 +314,7 @@
 #cmakedefine HAVE_XSS
 
 /* Define if libcurl uses NSS */
-#cmakedefine CURL_USES_NSS
+#cmakedefine CURL_USES_NSS 1
 
 /* SO-versioned names for libraries that we may need to dlopen() */
 #cmakedefine LIBCOM_ERR_SO "${LIBCOM_ERR_SO}"

@@ -222,7 +222,7 @@ Requires: systemd
 BuildRequires: python-sphinx python-sphinx_rtd_theme
 %endif
 
-%if 0%{?rhel} >= 8 || 0%{?amzn}
+%if 0%{?rhel} >= 8 || 0%{?amzn} || 0%{?fedora}
 BuildRequires: python3-sphinx python3-sphinx_rtd_theme
 %endif
 
@@ -625,7 +625,7 @@ HTCondor V9 to V10 check for for known breaking changes:
 3. The way to request GPU resources for a job
 
 %files upgrade-checks
-%_bindir/upgrade9to10checks.py
+%_bindir/condor_upgrade_check
 
 #######################
 %package all
@@ -710,7 +710,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCMAKE_SKIP_RPATH:BOOL=TRUE \
        -DCONDOR_PACKAGE_BUILD:BOOL=TRUE \
        -DCONDOR_RPMBUILD:BOOL=TRUE \
-%if 0%{?rhel} >= 9
+%if 0%{?rhel} >= 9 || 0%{?fedora}
        -DWITH_LIBCGROUP:BOOL=FALSE \
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -747,7 +747,7 @@ export CMAKE_PREFIX_PATH=/usr
        -DCONDOR_RPMBUILD:BOOL=TRUE \
        -DHAVE_BOINC:BOOL=TRUE \
        -DWITH_MANAGEMENT:BOOL=FALSE \
-%if 0%{?rhel} >= 9
+%if 0%{?rhel} >= 9 || 0%{?fedora}
        -DWITH_LIBCGROUP:BOOL=FALSE \
 %else
        -DWITH_LIBCGROUP:BOOL=TRUE \
@@ -768,9 +768,10 @@ export CMAKE_PREFIX_PATH=/usr
 
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
-%if 0%{?rhel} == 9
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 make %{?_smp_mflags}
 %if %uw_build
@@ -780,9 +781,10 @@ make %{?_smp_mflags} tests
 %install
 %if 0%{?amzn}
 cd amazon-linux-build
-%endif
-%if 0%{?rhel} == 9
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
 cd redhat-linux-build
+%endif
 %endif
 # installation happens into a temporary location, this function is
 # useful in moving files into their final locations
@@ -799,11 +801,11 @@ make install DESTDIR=%{buildroot}
 %if %uw_build
 make tests-tar-pkg
 # tarball of tests
-%if 0%{?rhel} == 9
-cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
-%else
 %if 0%{?amzn}
 cp -p %{_builddir}/%{name}-%{version}/amazon-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
+%else
+%if 0%{?rhel} == 9 || 0%{?fedora}
+cp -p %{_builddir}/%{name}-%{version}/redhat-linux-build/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %else
 cp -p %{_builddir}/%{name}-%{version}/condor_tests-*.tar.gz %{buildroot}/%{_libdir}/condor/condor_tests-%{version}.tar.gz
 %endif
@@ -1083,7 +1085,6 @@ rm -rf %{buildroot}
 #################
 %endif
 %files
-%exclude %_sbindir/openstack_gahp
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt examples
 %dir %_sysconfdir/condor/
@@ -1640,6 +1641,53 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Mon Jul 31 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.0-1
+- Support for Debian 12 (Bookworm)
+- Can run defrag daemons with different policies on distinct sets of nodes
+- Added want_io_proxy submit command
+- Apptainer is now included in the HTCondor tarballs
+- Fix 10.5.0 bug where reported CPU time is very low when using cgroups v1
+- Fix 10.5.0 bug where .job.ad and .machine.ad were missing for local jobs
+
+* Tue Jul 25 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.7-1
+- Fixed bug where held condor cron jobs would never run when released
+- Improved daemon IDTOKENS logging to make useful messages more prominent
+- Remove limit on certificate chain length in SSL authentication
+- condor_config_val -summary now works with a remote configuration query
+- Prints detailed message when condor_remote_cluster fails to fetch a URL
+- Improvements to condor_preen
+
+* Fri Jun 30 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.19-1
+- Remove limit on certificate chain length in SSL authentication
+
+* Thu Jun 29 2023 Tim Theisen <tim@cs.wisc.edu> - 10.6.0-1
+- Administrators can enable and disable job submission for a specific user
+- Work around memory leak in libcurl on EL7 when using the ARC-CE GAHP
+- Container images may now be transferred via a file transfer plugin
+- Add ClassAd stringlist subset match function
+- Add submit file macro '$(JobId)' which expands to full ID of the job
+- The job's executable is no longer renamed to 'condor_exec.exe'
+
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.6-1
+- In SSL Authentication, use the identity instead of the X.509 proxy subject
+- Can use environment variable to locate the client's SSL X.509 credential
+- ClassAd aggregate functions now tolerate undefined values
+- Fix Python binding bug where accounting ads were omitted from the result
+- The Python bindings now properly report the HTCondor version
+- remote_initial_dir works when submitting a grid batch job remotely via ssh
+- Add a ClassAd stringlist subset match function
+
+* Thu Jun 22 2023 Tim Theisen <tim@cs.wisc.edu> - 9.0.18-1
+- Can configure clients to present an X.509 proxy during SSL authentication
+- Provides script to assist updating from HTCondor version 9 to version 10
+
+* Fri Jun 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.0.5-1
+- Rename upgrade9to10checks.py script to condor_upgrade_check
+- Fix spurious warning from condor_upgrade_check about regexes with spaces
+
+* Tue Jun 06 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.1-1
+- Fix issue with grid batch jobs interacting with older Slurm versions
+
 * Mon Jun 05 2023 Tim Theisen <tim@cs.wisc.edu> - 10.5.0-1
 - Can now define DAGMan save points to be able to rerun DAGs from there
 - Expand default list of environment variables passed to the DAGMan manager

@@ -147,7 +147,6 @@ static decltype(&SSL_CTX_load_verify_locations) SSL_CTX_load_verify_locations_pt
 static decltype(&SSL_CTX_new) SSL_CTX_new_ptr = nullptr;
 static decltype(&SSL_CTX_set_cipher_list) SSL_CTX_set_cipher_list_ptr = nullptr;
 static decltype(&SSL_CTX_set_verify) SSL_CTX_set_verify_ptr = nullptr;
-static decltype(&SSL_CTX_set_verify_depth) SSL_CTX_set_verify_depth_ptr = nullptr;
 static decltype(&SSL_CTX_use_PrivateKey_file) SSL_CTX_use_PrivateKey_file_ptr = nullptr;
 static decltype(&SSL_CTX_use_certificate_chain_file) SSL_CTX_use_certificate_chain_file_ptr = nullptr;
 static decltype(&SSL_accept) SSL_accept_ptr = nullptr;
@@ -177,6 +176,11 @@ static decltype(&SSL_CIPHER_get_name) SSL_CIPHER_get_name_ptr = nullptr;
 static decltype(&SSL_get_ex_data_X509_STORE_CTX_idx) SSL_get_ex_data_X509_STORE_CTX_idx_ptr = nullptr;
 static decltype(&SSL_get_ex_data) SSL_get_ex_data_ptr = nullptr;
 static decltype(&SSL_set_ex_data) SSL_set_ex_data_ptr = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+static decltype(&SSL_get_peer_cert_chain) SSL_get_peer_cert_chain_ptr = nullptr;
+#else
+static decltype(&SSL_get0_verified_chain) SSL_get0_verified_chain_ptr = nullptr;
+#endif
 
 bool Condor_Auth_SSL::m_initTried = false;
 bool Condor_Auth_SSL::m_initSuccess = false;
@@ -247,7 +251,6 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_CTX_new_ptr = reinterpret_cast<decltype(SSL_CTX_new_ptr)>(dlsym(dl_hdl, "SSL_CTX_new"))) ||
 		 !(SSL_CTX_set_cipher_list_ptr = reinterpret_cast<decltype(SSL_CTX_set_cipher_list_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_cipher_list"))) ||
 		 !(SSL_CTX_set_verify_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify"))) ||
-		 !(SSL_CTX_set_verify_depth_ptr = reinterpret_cast<decltype(SSL_CTX_set_verify_depth_ptr)>(dlsym(dl_hdl, "SSL_CTX_set_verify_depth"))) ||
 		 !(SSL_CTX_use_PrivateKey_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_PrivateKey_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_PrivateKey_file"))) ||
 		 !(SSL_CTX_use_certificate_chain_file_ptr = reinterpret_cast<decltype(SSL_CTX_use_certificate_chain_file_ptr)>(dlsym(dl_hdl, "SSL_CTX_use_certificate_chain_file"))) ||
 		 !(SSL_accept_ptr = reinterpret_cast<decltype(SSL_accept_ptr)>(dlsym(dl_hdl, "SSL_accept"))) ||
@@ -277,8 +280,10 @@ bool Condor_Auth_SSL::Initialize()
 		 !(SSL_get_ex_data_ptr = reinterpret_cast<decltype(SSL_get_ex_data_ptr)>(dlsym(dl_hdl, "SSL_get_ex_data"))) ||
 		 !(SSL_set_ex_data_ptr = reinterpret_cast<decltype(SSL_set_ex_data_ptr)>(dlsym(dl_hdl, "SSL_set_ex_data"))) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
+		 !(SSL_get_peer_cert_chain_ptr = reinterpret_cast<decltype(SSL_get_peer_cert_chain_ptr)>(dlsym(dl_hdl, "SSL_get_peer_cert_chain"))) ||
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "SSLv23_method")))
 #else
+		 !(SSL_get0_verified_chain_ptr = reinterpret_cast<decltype(SSL_get0_verified_chain_ptr)>(dlsym(dl_hdl, "SSL_get0_verified_chain"))) ||
 		 !(SSL_method_ptr = reinterpret_cast<decltype(SSL_method_ptr)>(dlsym(dl_hdl, "TLS_method")))
 #endif
 		 ) {
@@ -308,7 +313,6 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_CTX_new_ptr = SSL_CTX_new;
 	SSL_CTX_set_cipher_list_ptr = SSL_CTX_set_cipher_list;
 	SSL_CTX_set_verify_ptr = SSL_CTX_set_verify;
-	SSL_CTX_set_verify_depth_ptr = SSL_CTX_set_verify_depth;
 	SSL_CTX_use_PrivateKey_file_ptr = SSL_CTX_use_PrivateKey_file;
 	SSL_CTX_use_certificate_chain_file_ptr = SSL_CTX_use_certificate_chain_file;
 	SSL_accept_ptr = SSL_accept;
@@ -338,6 +342,11 @@ bool Condor_Auth_SSL::Initialize()
 	SSL_get_ex_data_X509_STORE_CTX_idx_ptr = SSL_get_ex_data_X509_STORE_CTX_idx;
 	SSL_get_ex_data_ptr = SSL_get_ex_data;
 	SSL_set_ex_data_ptr = SSL_set_ex_data;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+	SSL_get_peer_cert_chain_ptr = SSL_get_peer_cert_chain;
+#else
+	SSL_get0_verified_chain_ptr = SSL_get0_verified_chain;
+#endif
 
 	m_initSuccess = true;
 #endif
@@ -1167,8 +1176,35 @@ Condor_Auth_SSL::authenticate_finish(CondorError * /*errstack*/, bool /*non_bloc
 	} else {
 		X509 *peer = SSL_get_peer_certificate_ptr(m_auth_state->m_ssl);
 		if (peer) {
-			X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
-			(*X509_free)(peer);
+			BASIC_CONSTRAINTS *bs = nullptr;
+			PROXY_CERT_INFO_EXTENSION *pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(peer, NID_proxyCertInfo, NULL, NULL);
+			if (pci) {
+				PROXY_CERT_INFO_EXTENSION_free(pci);
+				STACK_OF(X509)* chain = nullptr;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
+				chain = (*SSL_get_peer_cert_chain_ptr)(m_auth_state->m_ssl);
+#else
+				chain = (*SSL_get0_verified_chain_ptr)(m_auth_state->m_ssl);
+#endif
+				for (int n = 0; n < sk_X509_num(chain); n++) {
+					X509* cert = sk_X509_value(chain, n);
+					bs = (BASIC_CONSTRAINTS *)X509_get_ext_d2i(cert, NID_basic_constraints, NULL, NULL);
+					pci = (PROXY_CERT_INFO_EXTENSION *)X509_get_ext_d2i(cert, NID_proxyCertInfo, NULL, NULL);
+					if (!pci && !(bs && bs->ca)) {
+						X509_NAME_oneline(X509_get_subject_name(cert), subjectname, 1024);
+					}
+					if (bs) {
+						BASIC_CONSTRAINTS_free(bs);
+					}
+					if (pci) {
+						PROXY_CERT_INFO_EXTENSION_free(pci);
+					}
+				}
+				dprintf(D_SECURITY, "AUTHENTICATE: Peer's certificate is a proxy. Using identity '%s'\n", subjectname);
+			} else {
+				X509_NAME_oneline(X509_get_subject_name(peer), subjectname, 1024);
+			}
+			X509_free(peer);
 			setRemoteUser( "ssl" );
 		} else {
 			strcpy(subjectname, "unauthenticated");
@@ -1866,8 +1902,14 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 			// will auth anonymously.
 		} else if (SecMan::getTagCredentialOwner().empty()) {
 			i_need_cert = param_boolean("AUTH_SSL_REQUIRE_CLIENT_CERTIFICATE", false);
-			certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
-			keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+			const char* proxy_path=nullptr;
+			if (param_boolean("AUTH_SSL_USE_CLIENT_PROXY_ENV_VAR", false) && (proxy_path=getenv("X509_USER_PROXY"))) {
+				certfile   = strdup(proxy_path);
+				keyfile    = strdup(proxy_path);
+			} else {
+				certfile   = param( AUTH_SSL_CLIENT_CERTFILE_STR );
+				keyfile    = param( AUTH_SSL_CLIENT_KEYFILE_STR );
+			}
 		}
 	}		
 	cipherlist = param( AUTH_SSL_CIPHERLIST_STR );
@@ -1986,7 +2028,6 @@ SSL_CTX *Condor_Auth_SSL :: setup_ssl_ctx( bool is_server )
 		g_last_verify_error_index = CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_SSL, 0, const_cast<char *>("last verify error"), nullptr, nullptr, nullptr);
 
     (*SSL_CTX_set_verify_ptr)( ctx, SSL_VERIFY_PEER, verify_callback ); 
-    SSL_CTX_set_verify_depth_ptr( ctx, 4 ); // TODO arbitrary?
     if(SSL_CTX_set_cipher_list_ptr( ctx, cipherlist ) != 1 ) {
         ouch( "Error setting cipher list (no valid ciphers)\n" );
         goto setup_server_ctx_err;

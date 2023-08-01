@@ -234,7 +234,7 @@ set(blah_scripts
     scripts/kubernetes_cancel.sh scripts/kubernetes_resume.sh scripts/kubernetes_status.sh
     scripts/kubernetes_hold.sh scripts/kubernetes_submit.sh
     scripts/kubernetes_local_submit_attributes.sh
-    scripts/blah.py scripts/__init__.py
+    scripts/__init__.py
     scripts/pbs_status.py
     scripts/slurm_status.py
     scripts/lsf_status.py
@@ -248,6 +248,14 @@ install(FILES
     PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE
                 GROUP_READ GROUP_EXECUTE
                 WORLD_READ WORLD_EXECUTE
+    DESTINATION ${LIBEXEC_DIR})
+
+# But this one isn't a standalone executable
+install(FILES
+    scripts/blah.py
+    PERMISSIONS OWNER_WRITE OWNER_READ
+                GROUP_READ
+                WORLD_READ
     DESTINATION ${LIBEXEC_DIR})
 
 if(NOT CONDOR_PACKAGE_NAME)

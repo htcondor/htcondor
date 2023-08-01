@@ -225,21 +225,29 @@ WriteUserLog::initialize( const std::vector<const char *>& file, int c, int p, i
 	Configure(false);
 	size_t failed_init = 0; //Count of logs that failed to initialize
 	if ( m_userlog_enable ) {
+		bool first = true;
 		for(std::vector<const char*>::const_iterator it = file.begin();
 				it != file.end(); ++it) {
 
-            if (log_file_cache != NULL) {
-                dprintf(D_FULLDEBUG, "WriteUserLog::initialize: looking up log file %s in cache\n", *it);
-                log_file_cache_map_t::iterator f(log_file_cache->find(*it));
-                if (f != log_file_cache->end()) {
-                    dprintf(D_FULLDEBUG, "WriteUserLog::initialize: found log file %s in cache, re-using\n", *it);
-                    logs.push_back(f->second);
-                    logs.back()->refset.insert(std::make_pair(c,p));
-                    continue;
-                }
-            }
+			if (log_file_cache != NULL) {
+				dprintf(D_FULLDEBUG, "WriteUserLog::initialize: looking up log file %s in cache\n", *it);
+				log_file_cache_map_t::iterator f(log_file_cache->find(*it));
+				if (f != log_file_cache->end()) {
+					dprintf(D_FULLDEBUG, "WriteUserLog::initialize: found log file %s in cache, re-using\n", *it);
+					logs.push_back(f->second);
+					logs.back()->refset.insert(std::make_pair(c,p));
+					first = false;
+					continue;
+				}
+			}
 
 			log_file* log = new log_file(*it);
+			if (first) {
+				// The first entry in the vector is the user's userlog, which we rarely want to fsync
+				// subsequent ones are the dagman nodes.log, which we (for now) we usually want to fsync
+				log->set_should_fsync(param_boolean("ENABLE_USERLOG_FSYNC", false));
+				first = false;
+			}
 			//If last log and has dag log then set apply_mask to true
 			if (std::distance(it,file.end()) == 1 && !mask.empty()) { log->is_dag_log = true; }
 
@@ -349,7 +357,7 @@ WriteUserLog::Configure( bool force )
 	FreeGlobalResources( false );
 	m_configured = true;
 
-	m_enable_fsync = param_boolean( "ENABLE_USERLOG_FSYNC", true );
+	m_skip_fsync_this_event = false;
 	m_enable_locking = param_boolean( "ENABLE_USERLOG_LOCKING", false );
 
 	// TODO: revisit this if we let the job choose to enable or disable UTC, SUB_SECOND or ISO_DATE
@@ -411,7 +419,7 @@ WriteUserLog::Configure( bool force )
 	m_global_lock_enable = param_boolean( "EVENT_LOG_LOCKING", false );
 	m_global_max_filesize = param_integer( "EVENT_LOG_MAX_SIZE", -1 );
 	if ( m_global_max_filesize < 0 ) {
-		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1000000, 0 );
+		m_global_max_filesize = param_integer( "MAX_EVENT_LOG", 1'000'000, 0 );
 	}
 	if ( m_global_max_filesize == 0 ) {
 		m_global_max_rotations = 0;
@@ -448,8 +456,8 @@ WriteUserLog::Reset( void )
    	logs.clear();
     log_file_cache = NULL;
 
-	m_enable_fsync = true;
 	m_enable_locking = true;
+	m_skip_fsync_this_event = false;
 
 	m_global_path = NULL;
 	m_global_fd = -1;
@@ -468,7 +476,7 @@ WriteUserLog::Reset( void )
 	m_global_disable = true;
 	m_global_format_opts = 0;
 	m_global_count_events = false;
-	m_global_max_filesize = 1000000;
+	m_global_max_filesize = 1'000'000;
 	m_global_max_rotations = 1;
 	m_global_lock_enable = true;
 	m_global_fsync_enable = false;
@@ -557,13 +565,15 @@ WriteUserLog::log_file& WriteUserLog::log_file::operator=(const WriteUserLog::lo
 		path = rhs.path;
 		fd = rhs.fd;
 		lock = rhs.lock;
+		should_fsync = rhs.should_fsync;
 		rhs.copied = true;
 		user_priv_flag = rhs.user_priv_flag;
 	}
 	return *this;
 }
 WriteUserLog::log_file::log_file(const log_file& orig) : path(orig.path),
-	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag), is_dag_log(orig.is_dag_log)
+	lock(orig.lock), fd(orig.fd), copied(false), user_priv_flag(orig.user_priv_flag), 
+	is_dag_log(orig.is_dag_log), should_fsync(orig.should_fsync)
 {
 	orig.copied = true;
 }
@@ -1211,7 +1221,7 @@ WriteUserLog::writeGlobalEvent( ULogEvent &event,
 
 bool
 WriteUserLog::doWriteEvent( ULogEvent *event,
-							log_file& log,
+							const log_file& log,
 							bool is_global_event,
 							bool is_header_event,
 							int  format_opts)
@@ -1238,33 +1248,39 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		// We're seeing sporadic test suite failures where a daemon
 		// takes more than 10 seconds to write to the user log.
 		// This will help narrow down where the delay is coming from.
-	time_t before = time(NULL);
-	if (!was_locked) {lock->obtain(WRITE_LOCK);}
-	time_t after = time(NULL);
-	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): locking file took %ld seconds\n",
-				 (after-before) );
+	if (!was_locked) {
+		time_t before = time(nullptr);
+
+		lock->obtain(WRITE_LOCK);
+
+		time_t after = time(NULL);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG,
+					"UserLog::doWriteEvent(): locking file took %ld seconds\n",
+					(after-before) );
+		}
 	}
 
-	before = time(NULL);
 	int			status = 0;
 	const char	*whence;
 	if ( is_header_event ) {
+		time_t before = time(nullptr);
+
 		status = lseek( fd, 0, SEEK_SET );
 		whence = "SEEK_SET";
-	}
-	after = time(NULL);
-	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): lseek() took %ld seconds\n",
-				 (after-before) );
-	}
-	if ( status ) {
-		dprintf( D_ALWAYS,
-				 "WriteUserLog lseek(%s) failed in WriteUserLog::doWriteEvent - "
-				 "errno %d (%s)\n",
-				 whence, errno, strerror(errno) );
+
+		time_t after  = time(nullptr);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG,
+					"UserLog::doWriteEvent(): lseek() took %ld seconds\n",
+					(after-before) );
+		}
+		if ( status ) {
+			dprintf( D_ALWAYS,
+					"WriteUserLog lseek(%s) failed in WriteUserLog::doWriteEvent - "
+					"errno %d (%s)\n",
+					whence, errno, strerror(errno) );
+		}
 	}
 
 		// rotate the global event log if it is too big
@@ -1276,44 +1292,66 @@ WriteUserLog::doWriteEvent( ULogEvent *event,
 		}
 	}
 
-	before = time(NULL);
-	success = doWriteEvent( fd, event, format_opts );
-	after = time(NULL);
-	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): writing event took %ld seconds\n",
-				 (after-before) );
+	{
+		time_t before = time(nullptr);
+
+		success = doWriteEvent( fd, event, format_opts );
+
+		time_t after = time(nullptr);
+		if ( (after - before) > 5 ) {
+			dprintf( D_FULLDEBUG,
+					"UserLog::doWriteEvent(): writing event took %ld seconds\n",
+					(after-before) );
+		}
 	}
 
-	// Sync to disk *before* we release our write lock!
-	// For now, for performance, do not sync the global event log.
-	if ( (   is_global_event  && m_global_fsync_enable ) ||
-		 ( (!is_global_event) && m_enable_fsync ) ) {
-		before = time(NULL);
+	// If this is called with WriteEventNoFsync, don't fsync any file
+	// otherwise, if this is writen to the global evenlog, only
+	// fsync if a knob is set
+	// otherwise, it is either a bona-fide user log (which we don't
+	// fsync by default, or the dagman nodes.dag which we DO fsync
+
+	if (!m_skip_fsync_this_event &&
+			((is_global_event  && m_global_fsync_enable) ||
+			((!is_global_event) && log.get_should_fsync()))) {
+
+		time_t before = time(nullptr);
+
 		const char *fname;
-		if ( is_global_event ) fname = m_global_path;
-		else fname = log.path.c_str();
-		if ( condor_fdatasync( fd, fname ) != 0 ) {
+		if ( is_global_event ) {
+			fname = m_global_path;
+		} else {
+			fname = log.path.c_str();
+		}
+
+		if (condor_fdatasync(fd, fname) != 0 ) {
 		  dprintf( D_ALWAYS,
 				   "fsync() failed in WriteUserLog::writeEvent"
 				   " - errno %d (%s)\n",
 				   errno, strerror(errno) );
 			// Note:  should we set success to false here?
 		}
-		after = time(NULL);
+
+		time_t after = time(nullptr);
+
 		if ( (after - before) > 5 ) {
 			dprintf( D_FULLDEBUG,
 					 "UserLog::doWriteEvent(): fsyncing file took %ld secs\n",
 					 (after-before) );
 		}
 	}
-	before = time(NULL);
-	if (!was_locked) {lock->release();}
-	after = time(NULL);
-	if ( (after - before) > 5 ) {
-		dprintf( D_FULLDEBUG,
-				 "UserLog::doWriteEvent(): unlocking file took %ld seconds\n",
-				 (after-before) );
+
+	if (!was_locked) {
+		time_t before = time(nullptr);
+
+		lock->release();
+
+		time_t after = time(nullptr);
+		if ((after - before) > 5) {
+			dprintf( D_FULLDEBUG,
+					"UserLog::doWriteEvent(): unlocking file took %ld seconds\n",
+					(after-before) );
+		}
 	}
 	return success;
 }
@@ -1554,10 +1592,9 @@ bool
 WriteUserLog::writeEventNoFsync (ULogEvent *event, const ClassAd *jobad,
 								 bool *written )
 {
-	bool saved_fsync_setting = getEnableFsync();
-	setEnableFsync( false );
+	m_skip_fsync_this_event = true;
 	bool retval = writeEvent( event, jobad, written );
-	setEnableFsync( saved_fsync_setting );
+	m_skip_fsync_this_event = false;
 	return retval;
 }
 
@@ -1608,16 +1645,6 @@ WriteUserLog::GenerateGlobalId( std::string &id )
 ### tab-width:4 ***
 ### End: ***
 */
-
-void
-WriteUserLog::setEnableFsync(bool enabled) {
-	m_enable_fsync = enabled;
-}
-
-bool
-WriteUserLog::getEnableFsync() const {
-	return m_enable_fsync;
-}
 
 FileLockBase *
 WriteUserLog::getLock(CondorError &err) {

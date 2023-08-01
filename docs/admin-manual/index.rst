@@ -12,17 +12,18 @@ Administrators' Manual
    configuration-macros
    user-priorities-negotiation
    policy-configuration
+   daemon-cron
    security
    networking
    daemoncore
-   hooks
    logging
    monitoring
    high-availability
-   setting-up-special-environments
-   java-support-installation
+   file-and-cred-transfer 
    setting-up-vm-docker-universes
    singularity-support
    power-management
+   hooks
    windows-installer
    directories
+   setting-up-special-environments

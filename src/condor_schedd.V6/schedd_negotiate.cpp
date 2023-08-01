@@ -449,7 +449,6 @@ ScheddNegotiate::sendJobInfo(Sock *sock, bool just_sig_attrs)
 		sig_attrs.insert(ATTR_AUTO_CLUSTER_ID);
 		sig_attrs.insert(ATTR_WANT_MATCH_DIAGNOSTICS);
 		sig_attrs.insert(ATTR_WANT_PSLOT_PREEMPTION);
-		sig_attrs.insert(ATTR_WANT_CLAIMING);  // used for Condor-G matchmaking
 
 		if (IsDebugVerbose(D_MATCH)) {
 			std::string tmp;

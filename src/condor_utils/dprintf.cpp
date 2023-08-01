@@ -368,7 +368,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#else
 				int seconds = (int)clock_now;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) { micros = 0; seconds += 1; }
+				if( micros >= 1'000'000 ) { micros = 0; seconds += 1; }
 				rc = sprintf_realloc( &buf, &bufpos, &buflen, "%d.%03d ", seconds, micros / 1000 );
 				#endif
 			} else {
@@ -384,7 +384,7 @@ const char* _format_global_header(int cat_and_flags, int hdr_flags, DebugHeaderI
 				#else
 				struct tm * then = info.tm;
 				int micros = info.tv.tv_usec + 500;
-				if( micros >= 1000000 ) {
+				if( micros >= 1'000'000 ) {
 					micros = 0;
 					time_t seconds = clock_now + 1;
 					then = localtime(& seconds);
@@ -1515,9 +1515,7 @@ preserve_log_file(struct DebugFileInfo* it, bool dont_panic, time_t now)
 				*/
 		}
 		else {
-			// This absurd construction is because there's no other way to
-			// tell gcc 8 that we really do want to truncate the arguments.
-			int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old ); ++rv;
+			snprintf( msg_buf, sizeof(msg_buf), "Can't rename(%s,%s)\n", filePath.c_str(), old );
 			_condor_dprintf_exit( save_errno, msg_buf );
 		}
 	}
@@ -1625,9 +1623,7 @@ _condor_fd_panic( int line, const char* file )
 
 	if( !debug_file_ptr ) {
 		save_errno = errno;
-		// This absurd construction is because there's no other way to
-		// tell gcc 8 that we really do want to truncate the arguments.
-		int rv = snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg ); ++rv;
+		snprintf( msg_buf, sizeof(msg_buf), "Can't open \"%s\"\n%s\n", filePath.c_str(), panic_msg );
 		_condor_dprintf_exit( save_errno, msg_buf );
 	}
 		/* Seek to the end */

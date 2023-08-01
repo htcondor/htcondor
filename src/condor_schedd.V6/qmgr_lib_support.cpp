@@ -27,8 +27,6 @@
 #include "condor_attributes.h"
 #include "condor_classad.h"
 #include "daemon.h"
-#include "my_hostname.h"
-#include "my_username.h"
 
 ReliSock *qmgmt_sock = NULL;
 static Qmgr_connection connection;
@@ -36,7 +34,7 @@ static Qmgr_connection connection;
 Qmgr_connection *
 ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, const char *effective_owner)
 {
-	int		rval, ok;
+	bool ok;
 	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
 
 		// do we already have a connection active?
@@ -55,7 +53,7 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 
     // no connection active as of now; create a new one
 	if( ! schedd.locate() ) {
-		ok = FALSE;
+		ok = false;
 		dprintf( D_ALWAYS, "Can't find address of queue manager\n" );
 	} else { 
 		qmgmt_sock = (ReliSock*) schedd.startCommand( cmd,
@@ -92,59 +90,7 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 		}
 	}
 
-    // This could be a problem
-	char *username = my_username();
-	char *domain = my_domainname();
-
-	if ( !username ) {
-		dprintf(D_FULLDEBUG,"Failure getting my_username()\n");
-		delete qmgmt_sock;
-		qmgmt_sock = NULL;
-		if (domain) free(domain);
-		return( 0 );
-	}
-
 	/* Get the schedd to handle Q ops. */
-
-    /* Get rid of all the code below */
-
-    if (read_only || !qmgmt_sock->triedAuthentication()) {
-        if ( read_only ) {
-            rval = InitializeReadOnlyConnection( username );
-        } else {
-            rval = InitializeConnection( username, domain );
-        }
-
-		if (username) {
-			free(username);
-			username = NULL;
-		}
-		if (domain) {
-			free(domain);
-			domain = NULL;
-		}
-
-        if (rval < 0) {
-            delete qmgmt_sock;
-            qmgmt_sock = NULL;
-            return 0;
-        }
-
-        if ( !read_only ) {
-            if (!SecMan::authenticate_sock(qmgmt_sock, CLIENT_PERM, errstack_select)) {
-                delete qmgmt_sock;
-                qmgmt_sock = NULL;
-				if (!errstack) {
-					dprintf( D_ALWAYS, "Authentication Error: %s\n",
-							 errstack_select->getFullText().c_str() );
-				}
-                return 0;
-            }
-        }
-    }
-
-	if (username) free(username);
-	if (domain) free(domain);
 
 	if( effective_owner && *effective_owner ) {
 		if( QmgmtSetEffectiveOwner( effective_owner ) != 0 ) {

@@ -131,23 +131,24 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 
     bool relative_exe = !fullpath(JobName.c_str()) && (JobName.length() > 0);
 
-    if (relative_exe && preserve_rel && !transfer_exe) {
-        dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
-    }
-	else if ( Starter->jic->usingFileTransfer() && transfer_exe ) {
-		formatstr( JobName, "%s%c%s",
-		           Starter->GetWorkingDir(0),
-		           DIR_DELIM_CHAR,
-		           condor_basename(JobName.c_str()) );
-    }
-	else if (relative_exe && job_iwd && *job_iwd) {
-		std::string full_name;
-		formatstr(full_name, "%s%c%s",
-		                  job_iwd,
-		                  DIR_DELIM_CHAR,
-		                  JobName.c_str());
-		JobName = full_name;
-
+	if (this->ShouldConvertCmdToAbsolutePath()) {
+		if (relative_exe && preserve_rel && !transfer_exe) {
+			dprintf(D_ALWAYS, "Preserving relative executable path: %s\n", JobName.c_str());
+		}
+		else if ( Starter->jic->usingFileTransfer() && transfer_exe ) {
+			formatstr( JobName, "%s%c%s",
+					Starter->GetWorkingDir(0),
+					DIR_DELIM_CHAR,
+					condor_basename(JobName.c_str()) );
+		}
+		else if (relative_exe && job_iwd && *job_iwd) {
+			std::string full_name;
+			formatstr(full_name, "%s%c%s",
+					job_iwd,
+					DIR_DELIM_CHAR,
+					JobName.c_str());
+			JobName = full_name;
+		}
 	}
 
 	if( Starter->isGridshell() ) {
@@ -396,8 +397,11 @@ OsProc::StartJob(FamilyInfo* family_info, FilesystemRemap* fs_remap=NULL)
 		} else {
 			core_size = (size_t)core_size_ad;
 		}
-		core_size_ptr = &core_size;
+	} else {
+		// if ATTR_CORE_SIZE is unset, assume 0
+		core_size = 0;
 	}
+	core_size_ptr = &core_size;
 #endif // !defined(WIN32)
 
 	long rlimit_as_hard_limit = 0;

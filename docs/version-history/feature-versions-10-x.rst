@@ -4,16 +4,16 @@ Version 10 Feature Releases
 We release new features in these releases of HTCondor. The details of each
 version are described below.
 
-Version 10.6.0
+Version 10.8.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.6.0 released on Month Date, 2023.
+.. HTCondor version 10.8.0 released on Month Date, 2023.
 
-- HTCondor version 10.6.0 not yet released.
+- HTCondor version 10.8.0 not yet released.
 
-- This version includes all the updates from :ref:`lts-version-history-1005`.
+- This version includes all the updates from :ref:`lts-version-history-1008`.
 
 New Features:
 
@@ -26,9 +26,123 @@ New Features:
   default.
   :jira:`1824`
 
-- Users disabled in the AP are no longer allowed to submit jobs.  Jobs submitted
-  before the user was disabled are allowed to run to completion.
+- By default, the user event logs are no longer fsync'd by the schedd.  This
+  should improve the performance of the schedd, especially when the user's event
+  logs are on non-solid state disks.  There is a knob to revert to the old
+  semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
+  :jira:`1934`
+
+- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
+  added to allow administrators to restrict job submission to users that have
+  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  :jira:`1934`
+
+- When the file transfer queue is growing too big, HTCondor sends email to the
+  administrator.  Prior versions of HTCondor would send an arbitrarily large number
+  of emails.  Now HTCondor will only send one email per day.
+  :jira:`1937`
+
+- Improved output for ``htcondor dag status`` command to include more information
+  about the specified DAG.
+  :jira:`1951`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
+
+- Updated DAGMan to utilize the ``-reason`` flag to add a meassage about why
+  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  reason.
+  :jira:`1950`
+
+- Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
+  environment variables to be added into the DAGMan job propers environment either
+  by setting values explicitly or getting them from the environment the job is
+  submitted from.
+  :jira:`1955`
+
+Bugs Fixed:
+
+- Fixed bug in parallel universe that would cause the *condor_schedd* to
+  assert when running with partitionable slots.
+  :jira:`1952`
+
+- Fixed inefficiency in DAGMan setting a nodes descendants to futile status
+  which would result in DAGMan taking an extremely long time when a node fails
+  in a very large and bushy DAG.
+  :jira:`1945`
+
+Version 10.7.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.7.0 released on July 31, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1007`.
+
+- Add support for Debian 12 (bookworm).
+  :jira:`1938`
+
+New Features:
+
+- A single HTCondor pool can now have multiple *condor_defrag* daemons running
+  and they will not interfere with each other so long as each has
+  :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
+  :jira:`1903`
+
+- Added submit command **want_io_proxy**.
+  This replaces the old command **+WantIOProxy**.
+  :jira:`1875`
+
+- Apptainer is now included in the tarballs.
+  :jira:`1932`
+
+Bugs Fixed:
+
+- Fixed bug introduced in 10.5.0 on cgroup v1 systems where the
+  user and system CPU time measured was low by a factor of 10,000.
+  :jira:`1920`
+
+- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
+  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
+  directory because of the *condor_starter* having the wrong permissions.
+  :jira:`1912`
+
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
+
+- Fixed a bug where empty execute sandboxes failed to be cleaned up on the
+  Execution Point when using Startd disk enforcement.
+  :jira:`1821`
+
+- When using Startd disk enforcement, if a *condor_starter* running a container
+  or VM universe job is abruptly killed (like SIGABRT) then the *condor_startd*
+  would fail to cleanup the running docker container or VM and underlying logical
+  volume.
+  :jira:`1895`
+
+Version 10.6.0
+--------------
+
+Release Notes:
+
+- HTCondor version 10.6.0 released on June 29, 2023.
+
+- This version includes all the updates from :ref:`lts-version-history-1006`.
+
+New Features:
+
+- Added the :ref:`man-pages/condor_qusers:*condor_qusers*` command to monitor and control users at the Access Point.
+  Users disabled at the Access Point are no longer allowed to submit jobs.  Jobs submitted
+  before the user was disabled are allowed to run to completion.  When a user
+  is disabled, an optional reason string can be provided.  The reason will be
+  included in the error message from *condor_submit* when submission is refused
+  because the user is disabled.
   :jira:`1723`
+  :jira:`1835`
 
 - Mitigate a memory leak in the *arc_gahp* with libcurl when it uses
   NSS for security.
@@ -38,49 +152,38 @@ New Features:
   new configuration parameter :macro:`ARC_GAHP_COMMAND_LIMIT`.
   :jira:`1778`
 
+- Container universe jobs may now specify the *container_image* to
+  be an image transferred via a file transfer plugin.
+  :jira:`1820`
+
+- Added two new functions for using ClassAd expressions. The ``stringListSubsetMatch`` and
+  ``stringListISubsetMatch`` functions can be used to check if all of the members of a
+  stringlist are also in a target stringlist.  A single ``stringListSubsetMatch`` function
+  call can replace a whole set of ``stringListMember`` calls once the whole pool is
+  updated to 10.6.0.
+  :jira:`1817`
+
+- Added a new automatic submit file macro ``$(JobId)`` which expands to the full
+  id of the submitted job.
+  :jira:`1836`
+
 - The job's executable is no longer renamed to *condor_exec.exe* when
   the job's sandbox is transferred to the Execution Point.
   :jira:`1227`
 
 Bugs Fixed:
 
-- HTCondor no longer puts jobs using cgroup v1 into the blkio controller.
-  HTCondor never put limits on the i/o, and some kernel version panicked
-  and crashed when they had active jobs in the blkio controller.
-  :jira:`1786`
-
 - condor_restd service in the htcondor/mini container no longer crashes
   on startup due to the `en_US.UTF-8` locale being unavailable.
   :jira:`1785`
 
 - Fixed a bug that would very rarely cause *condor_wait* to hang forever.
-  :jria:`1792`
-
-- Fixed recently introduced bug where only on Enterprise Linux 7
-  system, startds with hard cgroup memory enforcement would not
-  put jobs that went over their memory usage on hold, they would
-  exit and leave the queue.
-  :jira:`1801`
-
-- Fixed a very recently introduced bug where the .job.ad and .machine.ad
-  files would not be written into the job sandbox.
-  :jira:`1737`
-
-- Forced condor_ssh_to_job to never try to use a Control Master, which would
-  break ssh_to_job.  Also raised the timeout for ssh_to_job which might
-  be needed for slow WANs.
-  :jira:`1782`
-
-- Fixed a bug on cgroup v2 systems where memory limits over 2 gigabytes would
-  not be enforced correctly.
-  :jira:`1775`
+  :jira:`1792`
 
 Version 10.5.1
 --------------
 
-.. HTCondor version 10.5.1 released on Month Date, 2023.
-
-- HTCondor version 10.5.1 not yet released.
+- HTCondor version 10.5.1 released on June 6, 2023.
 
 New Features:
 
@@ -88,8 +191,8 @@ New Features:
 
 Bugs Fixed:
 
-- For grid universe jobs of type **batch**, detecting if a SLURM
-  system is functioning now works with older versions of SLURM.
+- For grid universe jobs of type **batch**, detecting if a Slurm
+  system is functioning now works with older versions of Slurm.
   :jira:`1826`
 
 Version 10.5.0
@@ -112,7 +215,7 @@ New Features:
   in a file similar to a rescue file. These files can then be specified
   with the new *condor_submit_dag* flag ``load_save`` to re-run the
   DAG from that point of progression. For more information visit
-  :ref:`users-manual/dagman-workflows:dag save point files`.
+  :ref:`automated-workflows/dagman-save-files:dag save point files`.
   :jira:`1636`
 
 - The admin knob ``SUBMIT_ALLOW_GETENV`` when set to false, now allows
@@ -703,7 +806,7 @@ New Features:
 
 - The PREPARE_JOB and PREPARE_JOB_BEFORE_TRANSFER job hooks can now return a ``HookStatusCode`` and 
   a ``HookStatusMessage`` to give better feedback to the user.
-  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron` manual section.
   :jira:`1416`
 
 - The local issuer credmon can optionally add group authorizations to users' tokens by setting
@@ -741,7 +844,7 @@ New Features:
 - Improvements to job hooks, including configuration knob STARTER_DEFAULT_JOB_HOOK_KEYWORD,
   the new hook PREPARE_JOB_BEFORE_TRANSFER,
   and the ability to preserve stderr from job hooks into the StarterLog or StartdLog.
-  See the :ref:`admin-manual/hooks:Hooks, Startd Cron and Schedd Cron` manual section.
+  See the :ref:`admin-manual/hooks:Hooks` manual section.
   :jira:`1400`
 
 Bugs Fixed:

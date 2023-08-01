@@ -1197,7 +1197,7 @@ void MACRO_SET::push_error(FILE * fh, int code, const char* preface, const char*
 			if (message[cchPre-1] == '\n') { --cchPre; }
 			else { message[cchPre-1] = ' '; }
 		}
-		vsprintf ( message + cchPre, format, ap );
+		vsnprintf(message + cchPre, cch + 1, format, ap);
 	}
 	va_end(ap);
 
@@ -2125,15 +2125,22 @@ extern "C++" MACRO_ITEM* find_macro_item (const char *name, const char * prefix,
 	}
 }
 
-// insert a source name into the MACRO_SET's table of names
-// and initialize the MACRO_SOURCE.
-void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source)
+void insert_special_sources(MACRO_SET& set)
 {
 	if ( ! set.sources.size()) {
 		set.sources.push_back("<Detected>");
 		set.sources.push_back("<Default>");
 		set.sources.push_back("<Environment>");
 		set.sources.push_back("<Over>");
+	}
+}
+
+// insert a source name into the MACRO_SET's table of names
+// and initialize the MACRO_SOURCE.
+void insert_source(const char * filename, MACRO_SET & set, MACRO_SOURCE & source)
+{
+	if ( ! set.sources.size()) {
+		insert_special_sources(set);
 	}
 	source.line = 0;
 	source.is_inside = false;

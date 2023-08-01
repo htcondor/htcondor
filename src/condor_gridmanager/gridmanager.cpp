@@ -118,26 +118,6 @@ static int tSetAttributeString(int cluster, int proc,
 	return SetAttribute( cluster, proc, attr_name, tmp.c_str());
 }
 
-// Check if a job ad needs $$() expansion performed on it. The initial ad
-// we get is unexpanded, so we need to fetch it a second time if expansion
-// is needed. We look at the (currently unused) MustExpand attribute and
-// the resource name attribute to see if expansion is needed.
-bool MustExpandJobAd( const ClassAd *job_ad ) {
-	bool must_expand = false;
-
-	job_ad->LookupBool(ATTR_JOB_MUST_EXPAND, must_expand);
-	if ( !must_expand ) {
-		std::string resource_name;
-		if ( job_ad->LookupString( ATTR_GRID_RESOURCE, resource_name ) ) {
-			if ( strstr(resource_name.c_str(),"$$") ) {
-				must_expand = true;
-			}
-		}
-	}
-
-	return must_expand;
-}
-
 // Job objects should call this function when they have changes that need
 // to be propagated to the schedd.
 // return value of true means requested update has been committed to schedd.
@@ -404,13 +384,6 @@ UPDATE_JOBAD_signalHandler(int )
 // Call initJobExprs before using any of the expr_*
 // variables.  It is safe to repeatedly call
 // initJobExprs.
-static const char * expr_false = "FALSE";
-// Not currently used
-//static const char * expr_true = "TRUE";
-//static const char * expr_undefined = "UNDEFINED";
-	// The job is matched, or in unknown match state.
-	// definately unmatched
-static std::string expr_matched_or_undef;
 	// Job is being managed by an external process
 	// (probably this gridmanager process)
 static std::string expr_managed;
@@ -429,7 +402,6 @@ static std::string expr_schedd_job_constraint;
 static std::string expr_completely_done;
 	// Opposite of expr_completely_done
 static std::string expr_not_completely_done;
-	// Whether the job has dirty attributes
 
 static void 
 initJobExprs()
@@ -437,7 +409,6 @@ initJobExprs()
 	static bool done = false;
 	if(done) { return; }
 
-	formatstr(expr_matched_or_undef, "(%s =!= %s)", ATTR_JOB_MATCHED, expr_false);
 	formatstr(expr_managed, "(%s =?= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 	formatstr(expr_not_managed, "(%s =!= \"%s\")", ATTR_JOB_MANAGED, MANAGED_EXTERNAL);
 	formatstr(expr_not_held, "(%s != %d)", ATTR_JOB_STATUS, HELD);
@@ -536,19 +507,13 @@ doContactSchedd()
 
 		dprintf( D_FULLDEBUG, "querying for new jobs\n" );
 
-		// Make sure we grab all Globus Universe jobs (except held ones
+		// Make sure we grab all Grid Universe jobs (except held ones
 		// that we previously indicated we were done with)
 		// when we first start up in case we're recovering from a
 		// shutdown/meltdown.
 		// Otherwise, grab all jobs that are unheld and aren't marked as
-		// currently being managed and aren't marked as not matched.
+		// currently being managed.
 		// If JobManaged is undefined, equate it with false.
-		// If Matched is undefined, equate it with true.
-		// NOTE: Schedds from Condor 6.6 and earlier don't include
-		//   "(Universe==9)" in the constraint they give to the gridmanager,
-		//   so this gridmanager will pull down non-globus-universe ads,
-		//   although it won't use them. This is inefficient but not
-		//   incorrect behavior.
 		if ( firstScheddContact ) {
 			// Grab all jobs for us to manage. This expression is a
 			// derivative of the expression below for new jobs. We add
@@ -558,20 +523,18 @@ doContactSchedd()
 			// "&& Managed =!= TRUE" from the new jobs expression becomes
 			// superfluous (by boolean logic), so we drop it.
 			snprintf( expr_buf, sizeof(expr_buf),
-					 "%s && %s && ((%s && %s) || %s)",
+					 "%s && %s && (%s || %s)",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
-					 expr_matched_or_undef.c_str(),
 					 expr_not_held.c_str(),
 					 expr_managed.c_str()
 					 );
 		} else {
 			// Grab new jobs for us to manage
 			snprintf( expr_buf, sizeof(expr_buf),
-					 "%s && %s && %s && %s && %s",
+					 "%s && %s && %s && %s",
 					 expr_schedd_job_constraint.c_str(), 
 					 expr_not_completely_done.c_str(),
-					 expr_matched_or_undef.c_str(),
 					 expr_not_held.c_str(),
 					 expr_not_managed.c_str()
 					 );
@@ -580,43 +543,15 @@ doContactSchedd()
 		next_ad = GetNextJobByConstraint( expr_buf, 1 );
 		while ( next_ad != NULL ) {
 			PROC_ID procID;
-			bool job_is_matched = true; // default to true if not in ClassAd
 
 			next_ad->LookupInteger( ATTR_CLUSTER_ID, procID.cluster );
 			next_ad->LookupInteger( ATTR_PROC_ID, procID.proc );
 			bool job_is_managed = jobExternallyManaged(next_ad);
-			next_ad->LookupBool(ATTR_JOB_MATCHED,job_is_matched);
 
 			auto itr = BaseJob::JobsByProcId.find(procID);
 			if (itr == BaseJob::JobsByProcId.end()) {
 				JobType *job_type = NULL;
 				BaseJob *new_job = NULL;
-
-				// job had better be either managed or matched! (or both)
-				ASSERT( job_is_managed || job_is_matched );
-
-				if ( MustExpandJobAd( next_ad ) ) {
-					// Get the expanded ClassAd from the schedd, which
-					// has the GridResource filled in with info from
-					// the matched ad.
-					delete next_ad;
-					next_ad = NULL;
-					next_ad = GetJobAd(procID.cluster,procID.proc);
-					if ( next_ad == NULL && errno == ETIMEDOUT ) {
-						failure_line_num = __LINE__;
-						commit_transaction = false;
-						goto contact_schedd_disconnect;
-					}
-					if ( next_ad == NULL ) {
-						// We may get here if it was not possible to expand
-						// one of the $$() expressions.  We don't want to
-						// roll back the transaction and blow away the
-						// hold that the schedd just put on the job, so
-						// simply skip over this ad.
-						dprintf(D_ALWAYS,"Failed to get expanded job ClassAd from Schedd for %d.%d.  errno=%d\n",procID.cluster,procID.proc,errno);
-						goto contact_schedd_next_add_job;
-					}
-				}
 
 				// Search our job types for one that'll handle this job
 				jobTypes.Rewind();
@@ -672,7 +607,6 @@ doContactSchedd()
 
 			}
 
-contact_schedd_next_add_job:
 			next_ad = GetNextJobByConstraint( expr_buf, 0 );
 		}	// end of while next_ad
 		if ( errno == ETIMEDOUT ) {
@@ -975,10 +909,6 @@ contact_schedd_next_add_job:
 				continue;
 			}
 
-				// If wantRematch is set, send a reschedule now
-			if ( curr_job->wantRematch ) {
-				send_reschedule = true;
-			}
 			pendingScheddUpdates.remove( curr_job->procID );
 			delete curr_job;
 

@@ -1979,10 +1979,8 @@ Starter::createTempExecuteDir( void )
 #endif // LINUX
 
 	// now we can finally write .machine.ad and .job.ad into the sandbox
-	{
-		TemporaryPrivSentry sentry(PRIV_CONDOR);
-		WriteAdFiles();
-	}
+	WriteAdFiles();
+
 #if !defined(WIN32)
 	if (use_chown) {
 		priv_state p = set_root_priv();
@@ -3760,8 +3758,8 @@ Starter::removeTempExecuteDir( void )
 #ifdef LINUX
 	if (m_volume_mgr) {
 		//LVM managed... reset handle pointer to call destructor for cleanup
-		m_volume_mgr.reset();
-		return true;
+		//We can't determine if the cleanup failed or not, and need to rm the working dir
+		m_volume_mgr.reset(nullptr);
 	}
 #endif /* LINUX */
 

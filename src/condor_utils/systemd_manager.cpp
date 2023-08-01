@@ -55,7 +55,7 @@ SystemdManager::SystemdManager()
 		YourStringDeserializer tmp(tmp_val);
 		if ( ! tmp.deserialize_int(&m_watchdog_usecs))
 		{
-			m_watchdog_usecs = 1000000;
+			m_watchdog_usecs = 1'000'000;
 			dprintf(D_ALWAYS, "Unable to parse watchdog interval from systemd; assuming 1s\n");
 		}
 	}

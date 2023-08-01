@@ -502,10 +502,6 @@ STARTD:
 ``WRITE``
     All commands that relate to a *condor_schedd* daemon claiming a
     machine, starting jobs there, or stopping those jobs.
-
-    The command that *condor_checkpoint* sends to periodically
-    checkpoint all running jobs.
-
 ``READ``
     The command that *condor_preen* sends to request the current state
     of the *condor_startd* daemon.
@@ -2366,15 +2362,7 @@ HTCondor can be registered with:
     daemons. Most important for granting a machine with this access is
     that the machine will be able to join a pool since they are allowed
     to send ClassAd updates to the central manager. The machine can talk
-    to the other machines in a pool in order to submit or run jobs. In
-    addition, any machine with ``WRITE`` access can request the
-    *condor_startd* daemon to perform periodic checkpoints on an
-    executing job. After the checkpoint is completed, the job will
-    continue to execute and the machine will still be claimed by the
-    original *condor_schedd* daemon. This allows users on the machines
-    where they submitted their jobs to use the *condor_checkpoint*
-    command to get their jobs to periodically checkpoint, even if the
-    users do not have an account on the machine where the jobs execute.
+    to the other machines in a pool in order to submit or run jobs.
 
     .. note::
 

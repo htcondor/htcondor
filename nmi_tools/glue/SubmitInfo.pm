@@ -557,6 +557,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora38'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',

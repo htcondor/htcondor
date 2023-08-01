@@ -498,7 +498,7 @@ extract_idle_time(
 			return idle_time;
 		}
 		// Convert from nanoseconds to seconds
-		idle_time = nanoseconds / 1000000000;
+		idle_time = nanoseconds / 1'000'000'000;
     }
 	// CFRelease seems to be hip with taking a null object. This seems
 	// strange to me, but hey, at least I thought about it

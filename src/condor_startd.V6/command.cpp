@@ -426,8 +426,8 @@ command_release_claim(int cmd, Stream* stream )
 	// stash current user
 	std::string curuser;
 
-	if (rip->r_cur && rip->r_cur->client() && rip->r_cur->client()->user()) {
-		curuser = rip->r_cur->client()->user();
+	if (rip->r_cur && rip->r_cur->client() && !rip->r_cur->client()->c_user.empty()) {
+		curuser = rip->r_cur->client()->c_user;
 	}
 
 	//There are two cases: claim id is the current or the preempting claim
@@ -479,7 +479,7 @@ countres:
 	auto_free_ptr cred_dir_krb(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
 	if (cred_dir_krb) {
 
-		int ResCount = resmgr->claims_for_this_user(curuser.c_str());
+		int ResCount = resmgr->claims_for_this_user(curuser);
 		if (ResCount == 0) {
 			dprintf(D_FULLDEBUG, "user %s no longer has any claims, marking KRB cred for sweeping.\n", curuser.c_str());
 			credmon_mark_creds_for_sweeping(cred_dir_krb, curuser.c_str());
@@ -997,7 +997,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 			// Now, store them into r_cur or r_pre, as appropiate
 		claim->setaliveint( interval );
-		claim->client()->setaddr( client_addr.c_str() );
+		claim->client()->c_addr = client_addr;
 			// The schedd is asking us to preempt these claims to make
 			// the pslot it is really claiming bigger.  New in 8.1.6
 		int num_preempting = 0;
@@ -1345,7 +1345,7 @@ request_claim( Resource* rip, Claim *claim, char* id, Stream* stream )
 
 	if (claim_pslot && new_dynamic_slot) {
 		pslot_claim->setaliveint(interval);
-		pslot_claim->client()->setaddr(client_addr.c_str());
+		pslot_claim->client()->c_addr = client_addr;
 		pslot_claim->client()->c_scheddName = schedd_name;
 		pslot_claim->rip()->change_state(claimed_state);
 	}
@@ -1500,12 +1500,12 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 	ASSERT(sock->peer_addr().is_valid());
 	std::string hostname = get_full_hostname(sock->peer_addr());
 	if(hostname.empty()) {
-		std::string ip = sock->peer_addr().to_ip_string();
+		rip->r_cur->client()->c_host = sock->peer_addr().to_ip_string();
 		rip->dprintf( D_FULLDEBUG,
-					  "Can't find hostname of client machine %s\n", ip.c_str() );
-		rip->r_cur->client()->sethost(ip.c_str());
+		              "Can't find hostname of client machine %s\n",
+		              rip->r_cur->client()->c_host.c_str() );
 	} else {
-		rip->r_cur->client()->sethost( hostname.c_str() );
+		rip->r_cur->client()->c_host = hostname;
 	}
 
 		// Get the owner of this claim out of the request classad.
@@ -1517,24 +1517,19 @@ accept_request_claim( Resource* rip, bool secure_claim_id, bool send_claimed_ad,
 		RemoteOwner.clear();
 	}
 	if( !RemoteOwner.empty() ) {
-		rip->r_cur->client()->setowner( RemoteOwner.c_str() );
+		rip->r_cur->client()->c_owner = RemoteOwner;
 			// For now, we say the remote user is the same as the
 			// remote owner.  In the future, we might decide to leave
 			// RemoteUser undefined until the resource is busy...
-		rip->r_cur->client()->setuser( RemoteOwner.c_str() );
+		rip->r_cur->client()->c_user = RemoteOwner;
 		rip->dprintf( D_ALWAYS, "Remote owner is %s\n", RemoteOwner.c_str() );
 	} else {
 		rip->dprintf( D_ALWAYS, "Remote owner is NULL\n" );
 			// TODO: What else should we do here???
 	}		
 		// Also look for ATTR_ACCOUNTING_GROUP and stash that
-	char* acct_grp = NULL;
-	rip->r_cur->ad()->LookupString( ATTR_ACCOUNTING_GROUP, &acct_grp );
-	if( acct_grp ) {
-		rip->r_cur->client()->setAccountingGroup( acct_grp );
-		free( acct_grp );
-		acct_grp = NULL;
-	}
+	rip->r_cur->ad()->LookupString(ATTR_ACCOUNTING_GROUP,
+	                               rip->r_cur->client()->c_acctgrp);
 
 	rip->r_cur->loadRequestInfo();
 
@@ -1887,9 +1882,9 @@ caRequestCODClaim( Stream *s, char* cmd_str, ClassAd* req_ad )
 	}
 
 		// Stash some info about who made this request in the Claim  
-	claim->client()->setuser( owner );
-	claim->client()->setowner(owner );
-	claim->client()->sethost( rsock->peer_ip_str() );
+	claim->client()->c_user = owner;
+	claim->client()->c_owner = owner;
+	claim->client()->c_host = rsock->peer_ip_str();
 
 		// now, we just fill in the reply ad appropriately.  publish
 		// a complete resource ad (like what we'd send to the
@@ -2018,7 +2013,7 @@ caLocateStarter( Stream *s, char* cmd_str, ClassAd* req_ad )
 	if ( ! schedd_addr.empty() ) {
 		Client *client = claim->client();
 		if ( client ) {
-			client->setaddr(schedd_addr.c_str());
+			client->c_addr = schedd_addr;
 		}
 	}
 
@@ -2535,10 +2530,9 @@ command_coalesce_slots(int, Stream * stream ) {
 	ASSERT( sock->peer_addr().is_valid() );
 	std::string hostname = get_full_hostname( sock->peer_addr() );
 	if(! hostname.empty() ) {
-		coalescedSlot->r_cur->client()->sethost( hostname.c_str() );
+		coalescedSlot->r_cur->client()->c_host = hostname;
 	} else {
-		std::string ip = sock->peer_addr().to_ip_string();
-		coalescedSlot->r_cur->client()->sethost( ip.c_str() );
+		coalescedSlot->r_cur->client()->c_host = sock->peer_addr().to_ip_string();
 	}
 
 	// We'e ignoring consumption policy here.  (See request_claim().)  This

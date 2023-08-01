@@ -936,7 +936,7 @@ Resource::starterExited( Claim* cur_claim )
 	Activity a = activity();
 	switch( s ) {
 	case claimed_state:
-		r_cur->client()->setuser( r_cur->client()->owner() );
+		r_cur->client()->c_user = r_cur->client()->c_owner;
 		if(a == retiring_act) {
 			change_state(preempting_state);
 		}

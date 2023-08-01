@@ -61,8 +61,6 @@ static void Usage() {
 			"\t\t[-MaxPre <int N>]\n"
 			"\t\t[-MaxPost <int N>]\n"
 			"\t\t[-MaxHold <int N>]\n"
-			"\t\t(obsolete) [-NoEventChecks]\n"
-			"\t\t(obsolete) [-AllowLogError]\n"
 			"\t\t[-DontAlwaysRunPost]\n"
 			"\t\t[-AlwaysRunPost]\n"
 			"\t\t[-WaitForDebug]\n"
@@ -84,7 +82,6 @@ static void Usage() {
 			"\t\t[-Include_env <Variables>]\n"
 			"\t\t[-Insert_env <Key=Value>]\n"
 			"\t\t[-Priority <int N>]\n"
-			"\t\t[-dont_use_default_node_log] (no longer allowed)\n"
 			"\t\t[-DoRecov]\n"
 			"\twhere NAME is the name of your DAG.\n"
 			"\tdefault -Debug is -Debug %d\n", DEBUG_VERBOSE );
@@ -259,12 +256,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_DEFAULT_PRIORITY setting: %d\n",
 				_priority );
 
-	if ( !param_boolean( "DAGMAN_ALWAYS_USE_NODE_LOG", true ) ) {
-	   	debug_printf( DEBUG_QUIET,
-					"Error: setting DAGMAN_ALWAYS_USE_NODE_LOG to false is no longer allowed\n" );
-		DC_Exit( EXIT_ERROR );
-	}
-
 	_submitDagDeepOpts.suppress_notification = param_boolean(
 		"DAGMAN_SUPPRESS_NOTIFICATION",
 		_submitDagDeepOpts.suppress_notification);
@@ -285,23 +276,6 @@ Dagman::Config()
 			CheckEvents::ALLOW_EXEC_BEFORE_SUBMIT |
 			CheckEvents::ALLOW_DOUBLE_TERMINATE |
 			CheckEvents::ALLOW_DUPLICATE_EVENTS;
-
-		// If the old DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION param is set,
-		// we also allow extra runs.
-		// Note: this parameter is probably only used by CDF, and only
-		// really needed until they update all their systems to 6.7.3
-		// or later (not 6.7.3 pre-release), which fixes the "double-run"
-		// bug.
-	bool allowExtraRuns = param_boolean(
-			"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION", false );
-
-	if ( allowExtraRuns ) {
-		allow_events |= CheckEvents::ALLOW_RUN_AFTER_TERM;
-		debug_printf( DEBUG_NORMAL, "Warning: "
-				"DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION "
-				"is deprecated -- used DAGMAN_ALLOW_EVENTS instead\n" );
-		check_warning_strictness( DAG_STRICT_2 );
-	}
 
 		// Now get the new DAGMAN_ALLOW_EVENTS value -- that can override
 		// all of the previous stuff.
@@ -438,12 +412,6 @@ Dagman::Config()
 	debug_printf( DEBUG_NORMAL, "DAGMAN_PENDING_REPORT_INTERVAL setting: %d\n",
 				pendingReportInterval );
 
-	if ( param_boolean( "DAGMAN_OLD_RESCUE", false ) ) {
-		debug_printf( DEBUG_NORMAL, "Warning: DAGMAN_OLD_RESCUE is "
-					"no longer supported\n" );
-		check_warning_strictness( DAG_STRICT_1 );
-	}
-
 	autoRescue = param_boolean( "DAGMAN_AUTO_RESCUE", autoRescue );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_AUTO_RESCUE setting: %s\n",
 				autoRescue ? "True" : "False" );
@@ -472,7 +440,7 @@ Dagman::Config()
 				_generateSubdagSubmits ? "True" : "False" );
 
 	_maxJobHolds = param_integer( "DAGMAN_MAX_JOB_HOLDS", _maxJobHolds,
-				0, 1000000 );
+				0, 1'000'000 );
 	debug_printf( DEBUG_NORMAL, "DAGMAN_MAX_JOB_HOLDS setting: %d\n",
 				_maxJobHolds );
 
@@ -615,7 +583,11 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			// we may have jobs in the queue even if we think we don't.
 			// (See gittrac #4960.) wenger 2015-04-22
 		debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
+		const char* rm_reason = "DAG Abort: DAG is exiting and writing rescue file.";
+		if (dagStatus == DagStatus::DAG_STATUS_RM) {
+			rm_reason = "DAG Removed: User removed scheduler job from queue.";
+		}
+		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason,
 					removeCondorJobs, false );
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
@@ -842,17 +814,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman.maxHoldScripts = atoi( argv[i] );
-		} else if( !strcasecmp( "-NoEventChecks", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -NoEventChecks is "
-						"ignored; please use the DAGMAN_ALLOW_EVENTS "
-						"config parameter instead\n");
-			check_warning_strictness( DAG_STRICT_2 );
-
-		} else if( !strcasecmp( "-AllowLogError", argv[i] ) ) {
-			debug_printf( DEBUG_QUIET, "Warning: -AllowLogError is "
-						"no longer supported\n" );
-			check_warning_strictness( DAG_STRICT_2 );
-
 		} else if( !strcasecmp( "-DontAlwaysRunPost", argv[i] ) ) {
 			if ( alwaysRunPostSet && dagman._runPost ) {
 				debug_printf( DEBUG_QUIET,
@@ -985,11 +946,6 @@ void main_init (int argc, char ** const argv) {
 				Usage();
 			}
 			dagman._priority = atoi(argv[i]);
-
-		} else if( !strcasecmp( "-dont_use_default_node_log", argv[i] ) ) {
-	   		debug_printf( DEBUG_QUIET,
-						"Error: -dont_use_default_node_log is no longer allowed\n" );
-			DC_Exit( EXIT_ERROR );
 
 		} else if ( !strcasecmp( "-dorecov", argv[i] ) ) {
 			dagman._doRecovery = true;
@@ -1333,7 +1289,10 @@ void main_init (int argc, char ** const argv) {
 			// before (e.g., user did condor_hold, modified DAG file
 			// introducing a syntax error, and then did condor_release).
 			// (wenger 2014-10-28)
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse DAG file (%s). Was likely in recovery mode.",
+			          it.c_str());
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason, true, true );
 			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			
@@ -1391,7 +1350,10 @@ void main_init (int argc, char ** const argv) {
 		//Attempt to parse the save file. Run parse with useDagDir = false because
 		//there is no point risking changing directories just to read save file (i.e. partial rescue)
 		if (!parse(dagman.dag, loadSaveFile.c_str(), false, dagman._schedd, dagman.doAppendVars)) {
-			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, true, true);
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
+			          loadSaveFile.c_str());
+			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
 			dagmanUtils.tolerant_unlink(lockFileName.c_str());
 			dagman.CleanUp();
 			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
@@ -1434,7 +1396,10 @@ void main_init (int argc, char ** const argv) {
 			// before (e.g., user did condor_hold, modified DAG (or
 			// rescue DAG) file introducing a syntax error, and then
 			// did condor_release). (wenger 2014-10-28)
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
+			          dagman.rescueFileToRun.c_str());
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason, true, true );
 			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			

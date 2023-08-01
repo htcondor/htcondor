@@ -701,6 +701,18 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
+	match_rec *mrec = nullptr;
+
+	// There's a race condition with partitionable slots where we can get the same
+	// mrec twice, if we are claiming partitionable leftovers at the same time
+	// as we are claiming.  If there's a dup, just drop it here instead of
+	// messing up all our data structures.
+	//
+
+	if (dedicated_scheduler.all_matches_by_id->lookup(claim_id, mrec) == 0) {
+		return false;
+	}
+
 	Daemon startd(&match_ad,DT_STARTD,NULL);
 	if( !startd.addr() ) {
 		dprintf( D_ALWAYS, "Can't find address of startd in match ad:\n" );
@@ -708,7 +720,7 @@ DedicatedScheddNegotiate::scheduler_handleMatch(PROC_ID job_id,char const *claim
 		return false;
 	}
 
-	match_rec *mrec = dedicated_scheduler.AddMrec(claim_id,startd.addr(),slot_name,job_id,&match_ad,getRemotePool());
+	mrec = dedicated_scheduler.AddMrec(claim_id,startd.addr(),slot_name,job_id,&match_ad,getRemotePool());
 	if( !mrec ) {
 		return false;
 	}
@@ -1024,6 +1036,7 @@ DedicatedScheduler::reaper( int pid, int status )
 		case JOB_CKPTED:
 		case JOB_SHOULD_REQUEUE:
 		case JOB_NOT_STARTED:
+		case JOB_RECONNECT_FAILED:
 			if (!srec->removed) {
 				shutdownMpiJob( srec , true);
 			}
@@ -3723,10 +3736,7 @@ DedicatedScheduler::setScheduler( ClassAd* job_ad )
 		return false;
 	}
 
-	while( SetAttributeString(cluster, proc, ATTR_SCHEDULER,
-							  ds_name, NONDURABLE) ==  0 ) {
-		proc++;
-	}
+	SetAttributeString(cluster, proc, ATTR_SCHEDULER,ds_name, NONDURABLE);
 	return true;
 }
 
@@ -3802,7 +3812,7 @@ DedicatedScheduler::checkSanity( void )
 			// managing the sanity_tid in funny ways.  If we never had
 			// a timer in the first place, don't set it now.
 		if( sanity_tid != -1 ) {
-			daemonCore->Reset_Timer( sanity_tid, 100000000 );
+			daemonCore->Reset_Timer( sanity_tid, 100'000'000 );
 		}
 	}
 }
