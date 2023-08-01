@@ -110,12 +110,12 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ "$VERSION_CODENAME" = 'bookworm' ] && [ "$ARCH" = 'x86_64' ]; then
+if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'fedora' ]; then
+if [ $ID = 'future' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
