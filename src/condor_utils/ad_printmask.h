@@ -218,7 +218,7 @@ public:
 		memset( pvalid, '\0', cmax );
 
 		if( pdata != NULL ) { delete pdata; }
-		pdata = new classad::Value[cmax];
+		pdata = new classad::Value[(unsigned int)cmax];
 		for( int i = 0; i < cmax; ++i ) {
 			pdata[i] = rhs.pdata[i];
 			pvalid[i] = rhs.pvalid[i];
