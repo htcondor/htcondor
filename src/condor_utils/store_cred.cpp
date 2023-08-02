@@ -1861,10 +1861,10 @@ spch_cleanup:
 }
 
 
-// OBSOLETE!!! do_store_cred for LEGACY password modes only!!. 
-// use the other do_store_cred for working with Krb or OAuth creds
+// OBSOLETE!!! For LEGACY password modes only!!.
+// use do_store_cred() for working with Krb or OAuth creds
 int 
-do_store_cred(const char* user, const char* pw, int mode, Daemon* d, bool force) {
+do_store_cred_passwd(const char* user, const char* pw, int mode, Daemon* d, bool force) {
 	
 	int result;
 	int return_val;
@@ -2070,7 +2070,7 @@ do_store_cred (
 		// send out the request remotely.
 
 		// first see if we're operating on the pool password
-		// if we are just use the version of do_store_cred that handles passwords
+		// if we are just use do_store_cred_passwd(), which handles passwords
 		int domain_pos = -1;
 		if (username_is_pool_password(user, &domain_pos)) {
 			int cred_type = (mode & ~MODE_MASK);
@@ -2079,7 +2079,7 @@ do_store_cred (
 			}
 			std::string pw;
 			if (cred) pw.assign((const char *)cred, credlen);
-			return do_store_cred(user, pw.c_str(), mode, d);
+			return do_store_cred_passwd(user, pw.c_str(), mode, d);
 		}
 		if ((domain_pos <= 0) && user[0]) {
 			dprintf(D_ALWAYS, "store_cred: FAILED. user \"%s\" not in user@domain format\n", user);
