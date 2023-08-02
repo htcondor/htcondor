@@ -17,6 +17,15 @@ Release Notes:
 
 New Features:
 
+- Partitionable slots can now be directly claimed by a *condor_schedd*
+  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  While a slot is claimed, no other *condor_schedd* is able to create
+  new dynamic slots to run jobs.
+  This is controlled by the new configuration parameter
+  :macro:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS` and is disabled by
+  default.
+  :jira:`1824`
+
 - By default, the user event logs are no longer fsync'd by the schedd.  This
   should improve the performance of the schedd, especially when the user's event
   logs are on non-solid state disks.  There is a knob to revert to the old

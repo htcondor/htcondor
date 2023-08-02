@@ -3854,6 +3854,22 @@ needs.
     for leftover resources. In doing so, the *condor_schedd* can claim
     multiple dynamic slots without waiting for a negotiation cycle.
 
+:macro-def:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS`
+    A boolean variable that defaults to ``False``.
+    When set to ``True`` in the configuration of both the
+    *condor_startd* and the *condor_schedd*, and the *condor_schedd*
+    claims a partitionable slot, the partitionable slot's ``State`` will
+    change to ``Claimed`` in addition to the creation of a ``Claimed``
+    dynamic slot.
+    While the slot is ``Claimed``, no other *condor_schedd* is able
+    to create new dynamic slots to run jobs.
+
+:macro-def:`MAX_PARTITIONABLE_SLOT_CLAIM_TIME`
+    An integer that indicates the maximum amount of time that a
+    partitionable slot can be in the ``Claimed`` state before
+    returning to the Unclaimed state, expressed in seconds.
+    The default value is 3600.
+
 :macro-def:`MACHINE_RESOURCE_NAMES`
     A comma and/or space separated list of resource names that represent
     custom resources specific to a machine. These resources are further
