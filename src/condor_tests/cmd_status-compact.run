@@ -158,7 +158,6 @@ while ($counter ne 0){
 `condor_status -long > $orig_ads`;
 %Attr_old = read_attr($orig_ads);
 `condor_transform_ads -rules $rules_file -out $new_ads $orig_ads`;
-`condor_rm -all`;
 
 @content = `condor_status -ads $new_ads -compact`;
 %Attr_new = read_attr($new_ads);
@@ -178,7 +177,6 @@ unlink($new_ads);
 unlink($orig_ads);
 print "############################################################################\n";
 $option = "run";
-`condor_submit $submitfile`;
 $counter = 100;
 while ($counter ne 0){
 	if ($counter == 0){
