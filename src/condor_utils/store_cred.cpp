@@ -2060,7 +2060,9 @@ do_store_cred (
 	if ( is_root() && d == NULL ) {
 		std::string ccfile;	// we don't care about a completion file, but we have to pass this in anyway
 		if (mode >= STORE_CRED_LEGACY_PWD && mode <= STORE_CRED_LAST_MODE) {
-			return_val = store_cred_password(user, (const char *)cred, mode);
+			std::string pw;
+			if (cred) pw.assign((const char *)cred, credlen);
+			return_val = store_cred_password(user, pw.c_str(), mode);
 		} else {
 			return_val = store_cred_blob(user, mode, cred, credlen, ad, ccfile);
 		}
