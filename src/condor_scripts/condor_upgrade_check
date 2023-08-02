@@ -620,11 +620,6 @@ def main():
             if system != "HTCondor-CE" and do_check["gpu"]:
                 check_gpu_requirements()
     # Final information to direct people to help
-    #    format_print(
-    #        """For more information regarding incompatibilities visit:
-    #  https://htcondor.readthedocs.io/en/v10_0/version-history/upgrading-from-9-0-to-10-0-versions.html""",
-    #        newline=True,
-    #    )
     format_print(
         """To ask any questions regarding incompatibilities email:
   htcondor-users@cs.wisc.edu""",
