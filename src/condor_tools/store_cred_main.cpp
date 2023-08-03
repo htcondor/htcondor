@@ -70,7 +70,7 @@ bool parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[]);
 void badOption(const char* option);
 void badCommand(const char* command);
 void optionNeedsArg(const char* option, const char * type);
-bool getCredData(StoreCredOptions& options, char **cred, size_t* credlen);
+bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen);
 bool goAheadAnyways();
 
 int main(int argc, const char *argv[]) {
@@ -114,7 +114,7 @@ int main(int argc, const char *argv[]) {
 	if (options.pool_password_file != NULL) {
 		char *cred = nullptr;
 		size_t credlen = 0;
-		if (!getCredData(options, &cred, &credlen)) {
+		if (!getCredData(options, cred, credlen)) {
 			goto cleanup;
 		}
 		std::string pw(cred, credlen);
@@ -226,7 +226,7 @@ int main(int argc, const char *argv[]) {
 		case GENERIC_ADD: {
 			char* cred = nullptr;
 			size_t credlen = 0;
-			if (!getCredData(options, &cred, &credlen)) {
+			if (!getCredData(options, cred, credlen)) {
 				goto cleanup;
 			}
 
@@ -776,37 +776,37 @@ usage()
 	exit( 1 );
 };
 
-bool getCredData(StoreCredOptions& options, char **cred, size_t* credlen)
+bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen)
 {
-	*cred = nullptr;
-	*credlen = 0;
+	cred = nullptr;
+	credlen = 0;
 	int cred_type = (options.mode & CRED_TYPE_MASK);
 
 	if (options.credential_file) {
 		if (MATCH == strcmp(options.credential_file, "-")) {
 			int max_len = 1024 * 1024; // max read from stdin is 1 Mb
-			*cred = (char*)malloc(max_len+1);
+			cred = (char*)malloc(max_len+1);
 			#ifdef _WIN32
 			// disable CR+LF munging of the stdin stream, we want to treat it as binary data
 			_setmode(_fileno(stdin), _O_BINARY);
 			#endif
-			*credlen = full_read(fileno(stdin), *cred, max_len);
+			credlen = full_read(fileno(stdin), cred, max_len);
 			if (((ssize_t)credlen) < 0) {
 				fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
-				free(*cred);
+				free(cred);
 				return false;
 			}
 		} else {
 			bool read_as_root = false;
 			int verify_opts = 0;
-			if ( ! read_secure_file(options.credential_file, (void**)cred, credlen, read_as_root, verify_opts)) {
+			if ( ! read_secure_file(options.credential_file, (void**)&cred, &credlen, read_as_root, verify_opts)) {
 				fprintf(stderr, "Could not read credential from %s\n", options.credential_file);
 				return false;
 			}
 		}
 	} else if (options.pw && options.pw[0]) {
-		*cred = strdup(options.pw);
-		*credlen = strlen(options.pw);
+		cred = strdup(options.pw);
+		credlen = strlen(options.pw);
 	} else if (cred_type == STORE_CRED_USER_KRB) {
 		//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
 		return false;
@@ -814,8 +814,8 @@ bool getCredData(StoreCredOptions& options, char **cred, size_t* credlen)
 		//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
 		return false;
 	} else {
-		*cred = get_password();
-		*credlen = strlen(*cred);
+		cred = get_password();
+		credlen = strlen(cred);
 		printf("\n");
 	}
 	return true;
