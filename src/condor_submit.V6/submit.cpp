@@ -949,7 +949,7 @@ main( int argc, const char *argv[] )
 		int store_cred_result;
 		Daemon my_credd(DT_CREDD);
 		if (my_credd.locate()) {
-			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, &my_credd);
+			store_cred_result = do_store_cred_passwd(userdom.c_str(), NULL, QUERY_PWD_MODE, &my_credd);
 			if ( store_cred_result == SUCCESS ||
 							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
@@ -958,7 +958,7 @@ main( int argc, const char *argv[] )
 
 		if (!cred_is_stored) {
 			// query the schedd
-			store_cred_result = do_store_cred(userdom.c_str(), NULL, QUERY_PWD_MODE, MySchedd);
+			store_cred_result = do_store_cred_passwd(userdom.c_str(), NULL, QUERY_PWD_MODE, MySchedd);
 			if ( store_cred_result == SUCCESS ||
 							store_cred_result == FAILURE_NO_IMPERSONATE) {
 				cred_is_stored = true;
