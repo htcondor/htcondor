@@ -236,8 +236,8 @@ class ElasticsearchInterface(GenericInterface):
         existing_mappings = self.get_mappings(index)
         for outer_key in mappings:
             if outer_key not in existing_mappings:  # add anything missing
-                updated_mappings[key] = mappings[key]
-                updated_mappings = True
+                updated_mappings[outer_key] = mappings[outer_key]
+                update_mappings = True
             elif isinstance(mappings[outer_key], dict):  # update missing keys in any existing dicts
                 missing_inner_keys = set(mappings[outer_key]) - set(existing_mappings[outer_key])
                 if len(missing_inner_keys) > 0:
