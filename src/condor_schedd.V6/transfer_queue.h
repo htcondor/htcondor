@@ -92,7 +92,7 @@ class TransferQueueManager: public Service {
 
 		// Iterate through queue, pruning disconnected clients, and
 		// giving the go ahead to those that deserve it.
-	void CheckTransferQueue();
+	void CheckTransferQueue( int timerID = -1 );
 
 		// This is called to register a future call to CheckTransferQueue.
 	void TransferQueueChanged();
@@ -185,7 +185,7 @@ class TransferQueueManager: public Service {
 	void CollectUserRecGarbage(ClassAd *unpublish_ad);
 	void ClearRoundRobinRecency();
 	void ClearTransferCounts();
-	void UpdateIOStats();
+	void UpdateIOStats( int timerID = -1 );
 	void IOStatsChanged();
 	void RegisterStats(char const *user,IOStats &iostats,bool unregister=false,ClassAd *unpublish_ad=NULL);
 	void UnregisterStats(char const *user,IOStats &iostats,ClassAd *unpublish_ad) {

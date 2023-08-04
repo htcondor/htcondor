@@ -419,7 +419,7 @@ RemoteResource::dprintfSelf( int debugLevel )
 }
 
 void
-RemoteResource::attemptShutdownTimeout()
+RemoteResource::attemptShutdownTimeout( int /* timerID */ )
 {
 	m_attempt_shutdown_tid = -1;
 	attemptShutdown();
@@ -1086,7 +1086,7 @@ RemoteResource::setJobAd( ClassAd *jA )
 }
 
 void
-RemoteResource::updateFromStarterTimeout()
+RemoteResource::updateFromStarterTimeout( int /* timerID */ )
 {
 	// If we landed here, then we expected to receive an update from the starter,
 	// but it didn't arrive yet.  Even if the remote syscall sock is still connected,
@@ -1983,7 +1983,7 @@ RemoteResource::reconnect( void )
 
 
 void
-RemoteResource::attemptReconnect( void )
+RemoteResource::attemptReconnect( int /* timerID */ )
 {
 		// now that the timer went off, clear out this variable so we
 		// don't get confused later.
@@ -2537,7 +2537,7 @@ RemoteResource::updateX509Proxy(const char * filename)
 }
 
 void 
-RemoteResource::checkX509Proxy( void )
+RemoteResource::checkX509Proxy( int /* timerID */ )
 {
 	if( state != RR_EXECUTING ) {
 		dprintf(D_FULLDEBUG,"checkX509Proxy() doing nothing, because resource is not in EXECUTING state.\n");

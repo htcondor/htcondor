@@ -1273,7 +1273,7 @@ Starter::cancelKillTimer( void )
 
 
 void
-Starter::sigkillStarter( void )
+Starter::sigkillStarter( int /* timerID */ )
 {
 		// In case the kill fails for some reason, we are on a periodic
 		// timer that will keep trying.
@@ -1290,7 +1290,7 @@ Starter::sigkillStarter( void )
 }
 
 void
-Starter::softkillTimeout( void )
+Starter::softkillTimeout( int /* timerID */ )
 {
 	s_softkill_tid = -1;
 	if( active() ) {

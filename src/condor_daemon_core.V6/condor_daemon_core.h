@@ -467,7 +467,7 @@ class DaemonCore : public Service
 		*/
     void reconfig();
 
-	void refreshDNS();
+	void refreshDNS( int timerID = -1 );
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -2205,7 +2205,7 @@ class DaemonCore : public Service
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
 	int CheckProcInterface();
-	void CheckProcInterfaceFromTimer() { (void)CheckProcInterface(); }
+	void CheckProcInterfaceFromTimer( int /* timerID */ ) { (void)CheckProcInterface(); }
 
 	// misc helper functions
 	void CheckPrivState( void );

@@ -138,7 +138,7 @@ void ReconfigProxyManager()
 // string in the error parameter and return NULL.
 Proxy *
 AcquireProxy( const ClassAd *job_ad, std::string &error,
-			  TimerHandlercpp func_ptr, Service *data  )
+			  CallbackType func_ptr, Service *data  )
 {
 	if ( proxymanager_initialized == false ) {
 		error = "Internal Error: ProxyManager not initialized";
@@ -299,7 +299,7 @@ AcquireProxy( const ClassAd *job_ad, std::string &error,
 }
 
 Proxy *
-AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
+AcquireProxy( Proxy *proxy, CallbackType func_ptr, Service *data )
 {
 	proxy->num_references++;
 	if ( func_ptr ) {
@@ -320,7 +320,7 @@ AcquireProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
 // ProxyManager code will take care of that for you. If you provided a
 // notify_tid to AcquireProxy(), provide it again here.
 void
-ReleaseProxy( Proxy *proxy, TimerHandlercpp func_ptr, Service *data )
+ReleaseProxy( Proxy *proxy, CallbackType func_ptr, Service *data )
 {
 	if ( proxymanager_initialized == false || proxy == NULL ) {
 		return;

@@ -1544,7 +1544,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 }
 
 void
-Resource::do_update( void )
+Resource::do_update( int /* timerID */ )
 {
 	int rval;
 	ClassAd private_ad;
@@ -3301,7 +3301,7 @@ Resource::startTimerToEndCODLoadHack( void )
 
 
 void
-Resource::endCODLoadHack( void )
+Resource::endCODLoadHack( int /* timerID */ )
 {
 		// our timer went off, so we can clear our tid
 	r_cod_load_hack_tid = -1;
@@ -3546,7 +3546,7 @@ Resource::evalNextFetchWorkDelay(void)
 
 
 void
-Resource::tryFetchWork(void)
+Resource::tryFetchWork( int /* timerID */ )
 {
 		// First, make sure we're configured for fetching at all.
 	if (!getHookKeyword()) {

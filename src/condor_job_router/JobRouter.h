@@ -77,19 +77,19 @@ class JobRouter: public Service {
 	RoutedJob *LookupJobWithKeys(std::string const &src_key,std::string const &dest_key);
 
 	// This is called in a timer to periodically manage the jobs.
-	void Poll();
+	void Poll( int timerID = -1 );
 
 	// this is called by the job router tool to simulate routing of a set of simulated jobs
 	void SimulateRouting();
 
 	// This is called in a timer to evaluate periodic expressions for the
 	// jobs the JobRouter manages.
-	void EvalAllSrcJobPeriodicExprs();
+	void EvalAllSrcJobPeriodicExprs( int timerID = -1 );
 
 	// this is called on a timer to create/refresh IDTOKEN that will be sent along with routed jobs
-	void refreshIDTokens();
+	void refreshIDTokens( int timerID = -1 );
 
-	void config();
+	void config( int timerID = -1 );
 	void set_schedds(Scheduler* schedd, Scheduler* schedd2); // let the tool mode push simulated schedulers
 	void dump_routes(FILE* hf); // dump the routing information to the given file.
 	bool isEnabled() const { return m_enable_job_routing; }
@@ -306,7 +306,7 @@ private:
 	void GetInstanceLock();
 
 	void InitPublicAd();
-	void TimerHandler_UpdateCollector();
+	void TimerHandler_UpdateCollector( int timerID = -1 );
 	void InvalidatePublicAd();
 };
 

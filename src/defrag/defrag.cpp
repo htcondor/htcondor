@@ -633,7 +633,7 @@ Defrag::dprintf_set(const char *message, Defrag::MachineSet *m) const {
 	
 }
 
-void Defrag::poll()
+void Defrag::poll( int /* timerID */ )
 {
 	dprintf(D_FULLDEBUG,"Evaluating defragmentation policy.\n");
 
@@ -980,7 +980,7 @@ Defrag::publish(ClassAd *ad)
 }
 
 void
-Defrag::updateCollector() {
+Defrag::updateCollector( int /* timerID */ ) {
 	publish(&m_public_ad);
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_public_ad);
 }

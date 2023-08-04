@@ -1137,7 +1137,7 @@ int check_for_spool_zombies(JobQueueJob *job, const JOB_ID_KEY & /*jid*/, void *
 }
 
 void
-Scheduler::timeout()
+Scheduler::timeout( int /* timerID */ )
 {
 	static bool min_interval_timer_set = false;
 	static bool walk_job_queue_timer_set = false;
@@ -4574,7 +4574,7 @@ periodic user policy expressions.
 */
 
 void
-Scheduler::PeriodicExprHandler( void )
+Scheduler::PeriodicExprHandler( int /* timerID */ )
 {
 	PeriodicExprInterval.setStartTimeNow();
 
@@ -8757,7 +8757,7 @@ Scheduler::rescheduleContactQueue()
 }
 
 void
-Scheduler::checkContactQueue() 
+Scheduler::checkContactQueue( int /* timerID */ )
 {
 	ContactStartdArgs *args;
 
@@ -8812,7 +8812,7 @@ Scheduler::enqueueReconnectJob( PROC_ID job )
 
 
 void
-Scheduler::checkReconnectQueue( void ) 
+Scheduler::checkReconnectQueue( int /* timerID */ )
 {
 		// clear out the timer tid, since we made it here.
 	checkReconnectQueue_tid = -1;
@@ -9096,7 +9096,7 @@ Scheduler::ExpediteStartJobs() const
  * Jim B. -- Also check for SCHED_UNIVERSE jobs that need to be started.
  */
 void
-Scheduler::StartJobs()
+Scheduler::StartJobs( int /* timerID */ )
 {
 	match_rec *rec;
     
@@ -9525,7 +9525,7 @@ Scheduler::StartJob(match_rec* mrec, PROC_ID* job_id)
 //-----------------------------------------------------------------
 
 void
-Scheduler::StartJobHandler()
+Scheduler::StartJobHandler( int /* timerID */ )
 {
 	shadow_rec* srec;
 	PROC_ID* job_id=NULL;
@@ -14309,7 +14309,7 @@ Scheduler::update_local_ad_file()
 
 // This function is called by a timer when we are shutting down
 void
-Scheduler::attempt_shutdown()
+Scheduler::attempt_shutdown( int /* timerID */ )
 {
 	if ( numShadows || SchedUniverseJobsRunning || LocalUniverseJobsRunning ) {
 		if( !daemonCore->GetPeacefulShutdown() ) {
@@ -14534,7 +14534,7 @@ Scheduler::needReschedule()
 }
 
 void
-Scheduler::sendReschedule()
+Scheduler::sendReschedule( int /* timerID */ )
 {
 	// If SCHEDD_SEND_RESCHEDULE is false (eg on a CE or schedd
 	// without a negotiator, don't spam the logs with messages
@@ -15164,7 +15164,7 @@ Scheduler::handle_collector_token_request(int, Stream *stream)
 }
 
 void
-Scheduler::sendAlives()
+Scheduler::sendAlives( int /* timerID */ )
 {
 	match_rec	*mrec;
 	int		  	numsent=0;
@@ -17623,7 +17623,7 @@ Scheduler::checkSubmitRequirements( ClassAd * procAd, CondorError * errorStack )
 }
 
 void
-Scheduler::WriteRestartReport()
+Scheduler::WriteRestartReport( int /* timerID */ )
 {
 	static time_t restart_time = 0;
 	static int total_reconnects = 0;

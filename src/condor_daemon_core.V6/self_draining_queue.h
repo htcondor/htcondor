@@ -93,7 +93,7 @@ private:
 	char* name;
 	char* timer_name;
 	
-	void timerHandler( void );
+	void timerHandler( int timerID = -1 );
 
 	void registerTimer( void );
 	void cancelTimer( void );

@@ -304,7 +304,7 @@ class DedicatedScheduler : public Service {
 					   const ClassAd* match_ad,
 					   char const *remote_pool );
 
-	void			checkReconnectQueue( void );
+	void			checkReconnectQueue( int timerID = 1 );
 
 	int		rid;			// DC reaper id
 
@@ -365,12 +365,12 @@ class DedicatedScheduler : public Service {
 		*/
 	void removeAllocation( shadow_rec* srec );
 
-	void callHandleDedicatedJobs( void );
+	void callHandleDedicatedJobs( int timerID = -1 );
 
 		/** Do a number of sanity-checks, like releasing resources
 			we're holding onto and not using.
 		*/
-	void checkSanity( void );
+	void checkSanity( int timerID = -1 );
 
 		/** Check the given match record to make sure the claim hasn't
 			been unused for too long.

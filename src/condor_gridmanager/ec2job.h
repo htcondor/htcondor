@@ -49,7 +49,7 @@ public:
 	void NotifyResourceUp();
 	BaseResource *GetResource();
 
-	void ResourceLeaseExpired();
+	void ResourceLeaseExpired( int timerID = -1 );
 
 	void SetKeypairId( const char *keypair_id );
 	void SetInstanceId( const char *instance_id );

@@ -305,7 +305,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 	strlwr( batchType );
 
 	jobProxy = AcquireProxy( jobAd, error_string,
-							 (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+							 (CallbackType)&BaseJob::SetEvaluateState, this );
 	// If we're removing the job, ignore a bad/missing proxy file.
 	if ( jobProxy == NULL && error_string != "" && condorState != REMOVED) {
 		goto error_exit;
@@ -326,7 +326,7 @@ INFNBatchJob::INFNBatchJob( ClassAd *classad )
 INFNBatchJob::~INFNBatchJob()
 {
 	if ( jobProxy != NULL ) {
-		ReleaseProxy( jobProxy, (TimerHandlercpp)&BaseJob::SetEvaluateState, this );
+		ReleaseProxy( jobProxy, (CallbackType)&BaseJob::SetEvaluateState, this );
 	}
 	if ( myResource ) {
 		myResource->UnregisterJob( this );

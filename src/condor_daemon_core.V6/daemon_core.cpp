@@ -2797,7 +2797,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 }
 
 void
-DaemonCore::refreshDNS() {
+DaemonCore::refreshDNS( int /* timerID */ ) {
 #if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 		// re-initialize dns info (e.g. IP addresses of nameservers)
 	res_init();
@@ -8337,7 +8337,7 @@ class FakeCreateThreadReaperCaller: public Service {
 public:
 	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
 
-	void CallReaper();
+	void CallReaper(int timerID = -1);
 
 	int FakeThreadID() const { return m_tid; }
 
@@ -8363,7 +8363,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 }
 
 void
-FakeCreateThreadReaperCaller::CallReaper() {
+FakeCreateThreadReaperCaller::CallReaper( int /* timerID */ ) {
 	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
 	delete this;
 }

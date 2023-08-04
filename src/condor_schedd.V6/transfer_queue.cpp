@@ -743,7 +743,7 @@ TransferQueueManager::IOStatsChanged() {
 }
 
 void
-TransferQueueManager::CheckTransferQueue() {
+TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 	int downloading = 0;
 	int uploading = 0;
 	bool clients_waiting = false;
@@ -1101,7 +1101,7 @@ TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string &up_down_que
 }
 
 void
-TransferQueueManager::UpdateIOStats()
+TransferQueueManager::UpdateIOStats( int /* timerID */ )
 {
 	m_max_uploading_stat = m_max_uploads;
 	m_max_downloading_stat = m_max_downloads;

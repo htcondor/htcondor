@@ -828,7 +828,7 @@ ReplicatorStateMachine::killStuckUploadingTransferers( time_t currentTime )
  *              'm_replicationTimerId' each 'REPLICATION_INTERVAL' seconds
  */
 void
-ReplicatorStateMachine::replicationTimer( )
+ReplicatorStateMachine::replicationTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, "ReplicatorStateMachine::replicationTimer "
 					   "cancelling timer\n" );
@@ -890,7 +890,7 @@ ReplicatorStateMachine::replicationTimer( )
  *				machine with the best version
  */
 void
-ReplicatorStateMachine::versionRequestingTimer( )
+ReplicatorStateMachine::versionRequestingTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, 
 			"ReplicatorStateMachine::versionRequestingTimer started\n" );
@@ -924,7 +924,7 @@ ReplicatorStateMachine::versionRequestingTimer( )
  *              BACKUP state
  */
 void
-ReplicatorStateMachine::versionDownloadingTimer( )
+ReplicatorStateMachine::versionDownloadingTimer( int /* timerID */ )
 {
     dprintf( D_ALWAYS, 
 			"ReplicatorStateMachine::versionDownloadingTimer started\n" );
@@ -942,7 +942,7 @@ ReplicatorStateMachine::versionDownloadingTimer( )
  * Description : sends the classad update to collectors
  */
 void
-ReplicatorStateMachine::updateCollectors()
+ReplicatorStateMachine::updateCollectors( int /* timerID */ )
 {
     if (m_classAd) {
        daemonCore->sendUpdates (UPDATE_AD_GENERIC, m_classAd);

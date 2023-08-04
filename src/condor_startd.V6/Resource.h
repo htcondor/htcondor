@@ -333,7 +333,7 @@ public:
 	void	update_needed( WhyFor why );// Schedule to update the central manager.
 	void	update_walk_for_timer() { update_needed(wf_timer); } // for use with Walk where arguments are not permitted
 	void	update_walk_for_vm_change() { update_needed(wf_vmChange); } // for use with Walk where arguments are not permitted
-	void	do_update( void );			// Actually update the CM
+	void	do_update( int timerID = -1 );			// Actually update the CM
 	void    process_update_ad(ClassAd & ad, int snapshot=0); // change the update ad before we send it 
     int     update_with_ack( void );    // Actually update the CM and wait for an ACK, used when hibernating.
 	void	final_update( void );		// Send a final update to the CM
@@ -371,7 +371,7 @@ public:
 
 #if HAVE_JOB_HOOKS
 	bool	isCurrentlyFetching( void ) { return m_currently_fetching; }
-	void	tryFetchWork( void );
+	void	tryFetchWork( int timerID = -1 );
 	void	createOrUpdateFetchClaim( ClassAd* job_ad, double rank = 0 );
 	bool	spawnFetchedWork( void );
 	void	terminateFetchedWork( void );
@@ -499,8 +499,8 @@ private:
 	void	beginCODLoadHack( void );
 	double	r_pre_cod_total_load;
 	double	r_pre_cod_condor_load;
-	void 	startTimerToEndCODLoadHack( void );
-	void	endCODLoadHack( void );
+	void 	startTimerToEndCODLoadHack();
+	void	endCODLoadHack( int timerID = -1 );
 	int		eval_expr( const char* expr_name, bool fatal, bool check_vanilla );
 
 	std::string m_execute_dir;

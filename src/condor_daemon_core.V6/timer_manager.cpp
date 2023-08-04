@@ -467,7 +467,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// it and pass the service* as a parameter.
 		if ( in_timeout->handlercpp ) {
 			// typedef int (*TimerHandlercpp)()
-			((in_timeout->service)->*(in_timeout->handlercpp))();
+			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
 		} else {
 			// typedef int (*TimerHandler)()
 			(*(in_timeout->handler))();

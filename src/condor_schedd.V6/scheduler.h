@@ -488,7 +488,7 @@ class Scheduler : public Service
 	void			RegisterTimers();
 
 	// maintainence
-	void			timeout(); 
+	void			timeout( int timerID = -1 );
 	void			reconfig();
 	void			shutdown_fast();
 	void			shutdown_graceful();
@@ -502,7 +502,7 @@ class Scheduler : public Service
 	int				reschedule_negotiator(int, Stream *);
 	void			negotiationFinished( char const *owner, char const *remote_pool, bool satisfied );
 
-	void			reschedule_negotiator_timer() { reschedule_negotiator(0, NULL); }
+	void			reschedule_negotiator_timer( int /* timerID */ ) { reschedule_negotiator(0, NULL); }
 	void			release_claim(int, Stream *);
 	// I think this is actually a serious bug...
 	int				release_claim_command_handler(int i, Stream * s) { release_claim(i, s); return 0; }
@@ -510,7 +510,7 @@ class Scheduler : public Service
 	AutoCluster		autocluster;
 		// send a reschedule command to the negotiatior unless we
 		// have recently sent one and not yet heard from the negotiator
-	void			sendReschedule();
+	void			sendReschedule( int timerID = -1 );
 		// call this when state of job queue has changed in a way that
 		// requires a new round of negotiation
 	void            needReschedule();
@@ -540,7 +540,7 @@ class Scheduler : public Service
 	static int		generalJobFilesWorkerThread(void *, Stream *);
 	int				spoolJobFilesReaper(int,int);	
 	int				transferJobFilesReaper(int,int);
-	void			PeriodicExprHandler( void );
+	void			PeriodicExprHandler( int timerID = -1 );
 	void			addCronTabClassAd( JobQueueJob* );
 	void			addCronTabClusterId( int );
 	void			indexAJob(JobQueueJob* job, bool loading_job_queue=false);
@@ -578,11 +578,11 @@ class Scheduler : public Service
 	int				AlreadyMatched(PROC_ID*);
 	int				AlreadyMatched(JobQueueJob * job, int universe);
 	void			ExpediteStartJobs() const;
-	void			StartJobs();
+	void			StartJobs( int timerID = -1 );
 	void			StartJob(match_rec *rec);
-	void			sendAlives();
+	void			sendAlives( int timerID = -1 );
 	void			RecomputeAliveInterval(int cluster, int proc);
-	void			StartJobHandler();
+	void			StartJobHandler( int timerID = -1 );
 	void			addRunnableJob( shadow_rec* );
 	void			spawnShadow( shadow_rec* );
 	void			spawnLocalStarter( shadow_rec* );
@@ -604,7 +604,7 @@ class Scheduler : public Service
 	int				receive_startd_alive(int cmd, Stream *s) const;
 	void			InsertMachineAttrs( int cluster, int proc, ClassAd *machine, bool do_rotation );
 		// Public startd socket management functions
-	void            checkContactQueue();
+	void            checkContactQueue( int timerID = -1 );
 
 		/** Used to enqueue another set of information we need to use
 			to contact a startd.  This is called by both
@@ -643,7 +643,7 @@ class Scheduler : public Service
 			spawn a shadow to attempt to reconnect to.
 		*/
 	bool			enqueueReconnectJob( PROC_ID job );
-	void			checkReconnectQueue( void );
+	void			checkReconnectQueue( int timerID = -1 );
 	void			makeReconnectRecords( PROC_ID* job, const ClassAd* match_ad );
 
 	bool	spawnJobHandler( int cluster, int proc, shadow_rec* srec );
@@ -695,7 +695,7 @@ class Scheduler : public Service
 	bool canSpawnShadow();
 	int shadowsSpawnLimit();
 
-	void WriteRestartReport();
+	void WriteRestartReport( int timerID = -1 );
 
 	int				shadow_prio_recs_consistent();
 	void			mail_problem_message();
@@ -950,7 +950,7 @@ private:
 	void			scheduler_univ_job_leave_queue(PROC_ID job_id, int status, ClassAd *ad);
 	void			clean_shadow_recs();
 	void			preempt( int n, bool force_sched_jobs = false );
-	void			attempt_shutdown();
+	void			attempt_shutdown( int timerID = -1 );
 	static void		refuse( Stream* s );
 	void			tryNextJob();
 	int				jobThrottle( void );

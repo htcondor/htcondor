@@ -499,7 +499,7 @@ QmgrJobUpdater::retrieveJobUpdates( void )
 
 
 void
-QmgrJobUpdater::periodicUpdateQ( void )
+QmgrJobUpdater::periodicUpdateQ( int /* timerID */ )
 {
 		// For performance, use a NONDURABLE transaction.
 	updateJob( U_PERIODIC, NONDURABLE );
