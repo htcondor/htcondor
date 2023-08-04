@@ -458,11 +458,17 @@ do_install() {
 				set -x
 			fi
 
-			# The Amazon Linux container doesn't include ps by default.
-			if [ "${lsb_dist}" = "amzn" ]; then
-				echo -e "\n# Installing ps"a
+			# Some distros don't include ps by default.
+			case $lsb_dist in
+			amzn)
+				echo -e "\n# Installing ps"
 				$sh_c "yum install -y procps"
-			fi
+				;;
+			almalinux|rocky)
+				echo -e "\n# Installing ps"
+				$sh_c "yum install -y procps-ng"
+				;;
+			esac
 
 			repo_dist=$lsb_dist
 			case $lsb_dist in
