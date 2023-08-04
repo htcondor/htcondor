@@ -5780,8 +5780,8 @@ void DoSetAttributeCallbacks(const std::set<std::string> &jobids, int triggers)
 	// check factory clusters to see if there was a state change that justifies new job materialization
 	if (scheduler.getAllowLateMaterialize()) {
 		if (triggers & catMaterializeState) {
-			for (int factorie : factories) {
-				JobQueueCluster * cad = GetClusterAd(factorie);
+			for (int factory : factories) {
+				JobQueueCluster * cad = GetClusterAd(factory);
 				if ( ! cad) continue; // Ignore if no cluster ad (yet). this happens on submit commits.
 
 				ASSERT(cad->IsCluster());
