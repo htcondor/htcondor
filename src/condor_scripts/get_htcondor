@@ -286,16 +286,21 @@ do_token_security() {
 
 	# Ensure that the password directory exists, since the condor_master has
 	# not yet been run.
-	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_PASSWORD_DIRECTORY)"
+	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_PASSWORD_DIRECTORY)"
 
 	# So 'echo' is a shell built-in, which means no command-line to show
 	# up in 'ps' and leak the password.  You MUST do the 'echo' before the
 	# '$sh_c', because the '$sh_c' itself will show up in 'ps'.
-	echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+	# But if we're a dry run, then we need the $sh_c first.
+	if is_dry_run; then
+		$sh_c "echo -n \"${PASSWORD}\" | condor_store_cred add -c -i -"
+	else
+		echo -n "${PASSWORD}" | $sh_c "condor_store_cred add -c -i -"
+	fi
 
 	# Ensure that the tokens directory exists, since the condor_master has
 	# not yet been run.
-	$sh_c "umask 0077; mkdir -p $(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
+	$sh_c "umask 0077; mkdir -p \$(condor_config_val SEC_TOKEN_SYSTEM_DIRECTORY)"
 
 	# Now issue myself a token.
 	$sh_c "umask 0077; condor_token_create -identity condor@${CONDOR_HOST} > /etc/condor/tokens.d/condor@${CONDOR_HOST}"
