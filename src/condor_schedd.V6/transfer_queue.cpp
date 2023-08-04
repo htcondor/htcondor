@@ -37,10 +37,6 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_siz
 	m_downloading(downloading),
 	m_gave_go_ahead(false), m_max_queue_age(max_queue_age), m_time_born(time(NULL)), m_time_go_ahead(0)
 {
-	
-	
-	
-
 		// the up_down_queue_user name uniquely identifies the user and the direction of transfer
 	if( m_downloading ) {
 		m_up_down_queue_user = "D";
@@ -115,30 +111,7 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 	return true;
 }
 
-TransferQueueManager::TransferQueueManager() : m_round_robin_garbage_time(time(NULL)) {
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-
+TransferQueueManager::TransferQueueManager() : m_round_robin_garbage_time(time(nullptr)) {
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,nullptr,IF_BASICPUB|m_max_uploading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,nullptr,IF_BASICPUB|m_max_downloading_stat.PubValue);
 	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,nullptr,IF_BASICPUB|m_uploading_stat.PubDefault);

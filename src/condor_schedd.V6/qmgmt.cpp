@@ -1262,14 +1262,6 @@ ConvertOldJobAdAttrs( ClassAd *job_ad, bool startup )
 
 QmgmtPeer::QmgmtPeer() : owner(NULL), fquser(NULL), myendpoint(NULL), sock(NULL), transaction(NULL)
 {
-	
-	
-	
-	
-	
-	
-	
-
 	unset();
 }
 
