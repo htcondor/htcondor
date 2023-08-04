@@ -51,9 +51,17 @@ class PrettyPrinter {
 			startdCompact_ixCol_FreeMem( -7 ),
 			startdCompact_ixCol_ActCode( -9 ),
 			startdCompact_ixCol_MaxSlotMem( -11 ),
-			startdCompact_ixCol_JobStarts( -10 )
+			startdCompact_ixCol_JobStarts( -10 ),
+			startdCompact_ixCol_MachineSlot( -11 ),
+			startdCompact_ixCol_FreeGPUs( -12 ),
+			startdCompact_ixCol_TotGPUs( -13 ),
+			startdCompact_ixCol_OffGPUs( -14 ),
+			startdCompact_ixCol_GPUsProps( -15 ),
+			startdCompact_ixCol_GPUsPropsCaps( -16 ),
+			startdCompact_ixCol_GPUsPropsMem( -17 ),
+			startdCompact_ixCol_GPUsPropsName( -18 ),
+			startdCompact_ixCol_GPUsPropsIds( -19 )
 		{
-			// The versions of Visual Studio we use hate initializer lists. :(
 			setby.adType = NO_AD;
 			setby.argIndex = 0;
 			setby.Arg = NULL;
@@ -103,6 +111,7 @@ class PrettyPrinter {
 		void    ppSetStartdNormalCols( int width );
 		void           ppSetStateCols( int width );
 		void             ppSetRunCols( int width );
+		void            ppSetGPUsCols( int width, const char * & constr );
 		void ppSetCollectorNormalCols( int width );
 		void  ppSetCkptSrvrNormalCols( int width );
 		void   ppSetStorageNormalCols( int width );
@@ -147,13 +156,45 @@ class PrettyPrinter {
 	// For compact mode.
 	public:
 		int max_totals_subkey;
-		int startdCompact_ixCol_Platform;
-		int startdCompact_ixCol_Slots;
-		int startdCompact_ixCol_FreeCpus;
-		int startdCompact_ixCol_FreeMem;
-		int startdCompact_ixCol_ActCode;
-		int startdCompact_ixCol_MaxSlotMem;
-		int startdCompact_ixCol_JobStarts;
+		signed char startdCompact_ixCol_Platform;
+		signed char startdCompact_ixCol_Slots;
+		signed char startdCompact_ixCol_FreeCpus;
+		signed char startdCompact_ixCol_FreeMem;
+		signed char startdCompact_ixCol_ActCode;
+		signed char startdCompact_ixCol_MaxSlotMem;
+		signed char startdCompact_ixCol_JobStarts;
+		signed char startdCompact_ixCol_MachineSlot;
+		signed char startdCompact_ixCol_FreeGPUs;
+		signed char startdCompact_ixCol_TotGPUs;
+		signed char startdCompact_ixCol_OffGPUs;
+		signed char startdCompact_ixCol_GPUsProps;
+		signed char startdCompact_ixCol_GPUsPropsCaps;
+		signed char startdCompact_ixCol_GPUsPropsMem;
+		signed char startdCompact_ixCol_GPUsPropsName;
+		signed char startdCompact_ixCol_GPUsPropsIds;
 };
+
+#define PMODE_AVAIL_CONSTRAINT \
+	"State == \"Unclaimed\" && Cpus > 0 && Memory > 0"
+#define PMODE_CLAIMED_CONSTRAINT \
+	"State == \"Claimed\""
+#define PMODE_COD_CONSTRAINT \
+	ATTR_NUM_COD_CLAIMS " > 0"
+#define PMODE_GPUS_CONSTRAINT \
+	"(PartitionableSlot && AssignedGPUs isnt undefined) ?: Gpus"
+
+
+#define PMODE_STARTD_COMPACT_CONSTRAINT \
+	"PartitionableSlot =?= true || DynamicSlot =!= true"
+#define PMODE_AVAIL_COMPACT_CONSTRAINT \
+	"State == \"Unclaimed\" && Cpus > 0 && Memory > 0"
+#define PMODE_CLAIMED_COMPACT_CONSTRAINT \
+	"(State == \"Claimed\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)"
+#define PMODE_STATE_COMPACT_CONSTRAINT \
+	"PartitionableSlot =?= true || DynamicSlot =!= true"
+#define PMODE_SERVER_COMPACT_CONSTRAINT \
+	"PartitionableSlot =?= true || DynamicSlot =!= true"
+#define PMODE_GPUS_COMPACT_CONSTRAINT \
+	"AvailableGPUs isnt undefined && (size(AvailableGPUs) > 0 || (PartitionableSlot && AssignedGPUs isnt undefined))"
 
 #endif /* _CONDOR_PRETTY_PRINT_H */

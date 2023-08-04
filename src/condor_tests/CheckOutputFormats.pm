@@ -657,6 +657,7 @@ sub check_status {
 	}
 },
 'Slots' => sub {
+	if ($_[1] =~ /S$/){return 1;} # <num>S for static slots
 	return $_[1] eq $Attr_new{$_[0]-1}{NumDynamicSlots};
 },
 'Cpus' => sub {

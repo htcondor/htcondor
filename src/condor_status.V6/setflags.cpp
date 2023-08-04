@@ -28,15 +28,9 @@
 #include "prettyPrint.h"
 
 // use old diagnostic names when comparing v8.3 to v8.5
-#define USE_OLD_DIAGNOSTIC_NAMES 1
+//#define USE_OLD_DIAGNOSTIC_NAMES 1
 
 extern int  sdo_mode;
-#ifdef OLD_PF_SETUP
-extern bool explicit_format;
-extern bool using_print_format;
-extern bool disable_user_print_files; // allow command line to defeat use of default user print files.
-extern const char * mode_constraint; // constraint expression set by setMode
-#endif
 
 const char *
 getPPStyleStr (ppOption pps)
@@ -60,6 +54,7 @@ getPPStyleStr (ppOption pps)
 		case PP_STARTD_SERVER:	return "Server";
 		case PP_STARTD_RUN:		return "Run";
 		case PP_STARTD_COD:		return "COD";
+		case PP_STARTD_GPUS:	return "GPUs";
 		case PP_STARTD_STATE:	return "State";
 		case PP_STORAGE_NORMAL:	return "Storage";
 		case PP_GENERIC_NORMAL:	return "Generic";
@@ -89,25 +84,6 @@ int PrettyPrinter::setPPstyle( ppOption pps, int arg_index, const char * argv )
 			return 0;
 		}
 	}
-
-#ifdef OLD_PF_SETUP // moving this code
-	// If setting a 'normal' output, check to see if there is a user-defined normal output
-	if ( ! disable_user_print_files && ! explicit_format
-		&& !PP_IS_LONGish(pps) && pps != PP_CUSTOM && pps != ppStyle) {
-		std::string param_name("STATUS_DEFAULT_"); param_name += AdTypeToString(setby.adType); param_name += "_PRINT_FORMAT_FILE";
-		auto_free_ptr pf_file(param(param_name.c_str()));
-		if (pf_file) {
-			struct stat stat_buff;
-			if (0 != stat(pf_file.ptr(), &stat_buff)) {
-				// do nothing, this is not an error.
-			} else if (set_status_print_mask_from_stream(pf_file, true, &mode_constraint) < 0) {
-				fprintf(stderr, "Warning: default %s select file '%s' is invalid\n", AdTypeToString(setby.adType), pf_file.ptr());
-			} else {
-				using_print_format = true;
-			}
-		}
-	}
-#endif
 
 	if ( PP_IS_LONGish(pps) || (ppStyle <= pps || setby.ppArgIndex == 0) ) {
 		ppStyle = pps;
@@ -191,6 +167,7 @@ static const struct _sdo_mode_info {
 	SDO(SDO_Startd_Avail,  STARTD_AD, PP_STARTD_NORMAL),//  MODE_STARTD_AVAIL,
 	SDO(SDO_Startd_Claimed,STARTD_AD, PP_STARTD_RUN),	//  MODE_STARTD_RUN,
 	SDO(SDO_Startd_Cod,    STARTD_AD, PP_STARTD_COD),	//  MODE_STARTD_COD,
+	SDO(SDO_Startd_GPUs,   STARTD_AD, PP_STARTD_GPUS),	//  MODE_STARTD_GPUS,
 	SDO(SDO_Schedd,        SCHEDD_AD, PP_SCHEDD_NORMAL),//  MODE_SCHEDD_NORMAL,
 	SDO(SDO_Schedd_Data,   SCHEDD_AD, PP_SCHEDD_DATA),     //  MODE_SCHEDD_NORMAL,
 	SDO(SDO_Schedd_Run,    SCHEDD_AD, PP_SCHEDD_RUN),      //  MODE_SCHEDD_NORMAL,
