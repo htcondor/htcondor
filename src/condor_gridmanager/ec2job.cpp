@@ -490,7 +490,7 @@ void EC2Job::Reconfig()
 }
 
 
-void EC2Job::doEvaluateState()
+void EC2Job::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;

@@ -292,7 +292,7 @@ bool RemoteProc::ShutdownFast() {
 
 
 void
-RemoteProc::getStats() {
+RemoteProc::getStats( int /* timerID */ ) {
 	// TODO read .status.ad file and update in-memory data
 }
 

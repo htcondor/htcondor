@@ -62,7 +62,7 @@ class MpiResource : public RemoteResource {
 
 	virtual void reconnect( void );
 
-	virtual void attemptReconnect( void );
+	virtual void attemptReconnect( int timerID = -1 );
 
 	virtual bool supportsReconnect( void );
 

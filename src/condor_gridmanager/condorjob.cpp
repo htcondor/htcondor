@@ -344,7 +344,7 @@ void CondorJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void CondorJob::JobLeaseSentExpired()
+void CondorJob::JobLeaseSentExpired( int /* timerID */ )
 {
 dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,procID.proc);
 	BaseJob::JobLeaseSentExpired();
@@ -358,7 +358,7 @@ dprintf(D_FULLDEBUG,"(%d.%d) CondorJob::JobLeaseSentExpired()\n",procID.cluster,
 	}
 }
 
-void CondorJob::doEvaluateState()
+void CondorJob::doEvaluateState( int /* timerID */ )
 {
 	bool connect_failure = false;
 	int old_gm_state;

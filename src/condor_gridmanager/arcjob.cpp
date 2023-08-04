@@ -338,7 +338,7 @@ void ArcJob::Reconfig()
 	gahp->setTimeout( gahpCallTimeout );
 }
 
-void ArcJob::doEvaluateState()
+void ArcJob::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;

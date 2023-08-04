@@ -44,7 +44,7 @@ public:
 	~EC2Job();
 
 	void Reconfig();
-	void doEvaluateState();
+	void doEvaluateState( int timerID = -1 );
 	void NotifyResourceDown();
 	void NotifyResourceUp();
 	BaseResource *GetResource();
