@@ -28,19 +28,19 @@
 #include "condor_classad.h"
 #include "daemon.h"
 
-ReliSock *qmgmt_sock = NULL;
+ReliSock *qmgmt_sock = nullptr;
 static Qmgr_connection connection;
 
 Qmgr_connection *
 ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, const char *effective_owner)
 {
-	bool ok;
+	bool ok = false;
 	int cmd = read_only ? QMGMT_READ_CMD : QMGMT_WRITE_CMD;
 
 		// do we already have a connection active?
 	if( qmgmt_sock ) {
 			// yes; reject new connection (we can only handle one at a time)
-		return( NULL );
+		return( nullptr );
 	}
 
 	// set up the error handling so it will clean up automatically on
@@ -56,11 +56,11 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 		ok = false;
 		dprintf( D_ALWAYS, "Can't find address of queue manager\n" );
 	} else { 
-		qmgmt_sock = (ReliSock*) schedd.startCommand( cmd,
+		qmgmt_sock = dynamic_cast<ReliSock*>( schedd.startCommand( cmd,
 												 Stream::reli_sock,
 												 timeout,
-												 errstack_select);
-		ok = qmgmt_sock != NULL;
+												 errstack_select));
+		ok = qmgmt_sock != nullptr;
 		if( !ok && !errstack) {
 			dprintf(D_ALWAYS, "Can't connect to queue manager: %s\n",
 					errstack_select->getFullText().c_str() );
@@ -69,8 +69,8 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 
 	if( !ok ) {
 		if( qmgmt_sock ) delete qmgmt_sock;
-		qmgmt_sock = NULL;
-		return 0;
+		qmgmt_sock = nullptr;
+		return nullptr;
 	}
 
 		// If security negotiation is turned off and we are using WRITE_CMD,
@@ -81,12 +81,12 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 		if( !SecMan::authenticate_sock(qmgmt_sock, CLIENT_PERM, errstack_select ) )
 		{
 			delete qmgmt_sock;
-			qmgmt_sock = NULL;
+			qmgmt_sock = nullptr;
 			if (!errstack) {
 				dprintf( D_ALWAYS, "Authentication Error: %s\n",
 						 errstack_select->getFullText().c_str() );
 			}
-			return 0;
+			return nullptr;
 		}
 	}
 
@@ -106,8 +106,8 @@ ConnectQ(DCSchedd& schedd, int timeout, bool read_only, CondorError* errstack, c
 						 effective_owner, errno, strerror(errno) );
 			}
 			delete qmgmt_sock;
-			qmgmt_sock = NULL;
-			return 0;
+			qmgmt_sock = nullptr;
+			return nullptr;
 		}
 	}
 
@@ -127,7 +127,7 @@ DisconnectQ(Qmgr_connection *,bool commit_transactions, CondorError *errstack)
 	}
 	CloseSocket();
 	delete qmgmt_sock;
-	qmgmt_sock = NULL;
+	qmgmt_sock = nullptr;
 	return( rval >= 0 );
 }
 
@@ -136,13 +136,13 @@ void
 FreeJobAd(ClassAd *&ad)
 {
 	delete ad;
-	ad = NULL;
+	ad = nullptr;
 }
 
 int
 SendSpoolFileBytes(char const *filename)
 {
-	filesize_t	size;
+	filesize_t	size = 0;
 	qmgmt_sock->encode();
 	if (qmgmt_sock->put_file(&size, filename) < 0) {		
 		return -1;
@@ -156,18 +156,18 @@ SendSpoolFileBytes(char const *filename)
 void
 WalkJobQueue2(scan_func func, void* pv)
 {
-	ClassAd *ad;
+	ClassAd *ad = nullptr;
 	int rval = 0;
 
 	ad = GetNextJob(1);
-	while (ad != NULL && rval >= 0) {
+	while (ad != nullptr && rval >= 0) {
 		rval = func(ad, pv);
 		if (rval >= 0) {
 			FreeJobAd(ad);
 			ad = GetNextJob(0);
 		}
 	} 
-	if (ad != NULL)
+	if (ad != nullptr)
 		FreeJobAd(ad);
 }
 

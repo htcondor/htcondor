@@ -25,9 +25,9 @@
 #include "qmgmt.h"
 #include "condor_qmgr.h"
 
-JobTransforms::JobTransforms()
+JobTransforms::JobTransforms() : mset_ckpt(NULL)
 {
-	mset_ckpt = NULL;
+	
 }
 
 JobTransforms::~JobTransforms()
@@ -47,7 +47,7 @@ JobTransforms::clear_transforms_list()
 void 
 JobTransforms::initAndReconfig()
 {
-	int rval;
+	int rval = 0;
 
 	// Setup xform_utils hashtable, and record a ckpt
 	mset.clear();
@@ -65,9 +65,9 @@ JobTransforms::initAndReconfig()
 	}
 	StringList nameList( jobtransNames.c_str() );
 	nameList.rewind();
-	const char * name = NULL;
-	MacroStreamXFormSource *xfm = NULL;
-	while( (name = nameList.next()) != NULL ) {
+	const char * name = nullptr;
+	MacroStreamXFormSource *xfm = nullptr;
+	while( (name = nameList.next()) != nullptr ) {
 
 		if( strcasecmp( name, "NAMES" ) == 0 ) { continue; }  // prevent recursion!
 		std::string attributeName;
@@ -139,7 +139,7 @@ JobTransforms::initAndReconfig()
 		dprintf(D_ALWAYS, 
 			"JOB_TRANSFORM_%s setup as transform rule #%zu :\n%s\n",
 			name, transforms_list.size(), xfm->getFormattedText(xfm_text, "\t") );
-		xfm = NULL;  // we handed the xfm pointer off to our list
+		xfm = nullptr;  // we handed the xfm pointer off to our list
 
 	} // end of while loop thru job transform names	
 	if (xfm) delete xfm; 
@@ -156,7 +156,7 @@ JobTransforms::transformJob(
 	int transforms_applied = 0;
 	int transforms_considered = 0;
 	StringList attrs_changed;
-	int rval;
+	int rval = 0;
 	std::string errmsg;
 	std::string applied_names;
 
@@ -233,18 +233,18 @@ int
 JobTransforms::set_dirty_attributes(ClassAd *ad, int cluster, int proc, classad::References * attrs /*=nullptr*/)
 {
 	int num_attrs_set = 0;
-	const char *rhstr = 0;
-	ExprTree * tree;
+	const char *rhstr = nullptr;
+	ExprTree * tree = nullptr;
 
 	// make sure we don't write the ProdId attribute here
 	// If we are setting dirty attributes into a cluster ad it would be a fatal
 	// and for a proc ad, it is unnecessary
 	ad->MarkAttributeClean(ATTR_PROC_ID);
 
-	for ( classad::ClassAd::dirtyIterator it = ad->dirtyBegin();
+	for ( auto it = ad->dirtyBegin();
 		  it != ad->dirtyEnd(); ++it ) 
 	{
-		rhstr = NULL;
+		rhstr = nullptr;
 		tree = ad->Lookup( *it );
 		if ( tree ) {
 			rhstr = ExprTreeToString( tree );

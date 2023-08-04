@@ -105,12 +105,12 @@ class QmgmtPeer {
 		ReliSock *sock; 
 
 		Transaction *transaction;
-		int next_proc_num, active_cluster_num;
-		time_t xact_start_time;
+		int next_proc_num{}, active_cluster_num{};
+		time_t xact_start_time{};
 
-		bool readonly;
+		bool readonly{false};
 		bool write_ok = false;
-		bool allow_protected_attr_changes_by_superuser;
+		bool allow_protected_attr_changes_by_superuser{true};
 	#ifdef USE_JOB_QUEUE_USERREC
 		bool real_auth_is_super = false;	// real auth identifier is a super user
 		bool not_super_effective = false;	// Ignore EffectiveOwner Superuser status
