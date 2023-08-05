@@ -1,5 +1,4 @@
 #! /usr/bin/env perl
-#testreq: personal
 ##**************************************************************
 ##
 ## Copyright (C) 1990-2007, Condor Team, Computer Sciences Department,
@@ -27,6 +26,16 @@ use strict;
 use warnings;
 
 my $testname = "cmd_status-compact";
+
+# configure the personal condor that we need
+#
+#testreq: personal
+my $config = <<CONDOR_TESTREQ_CONFIG;
+	use FEATURE : PartitionableSlot
+CONDOR_TESTREQ_CONFIG
+#endtestreq
+
+
 
 # needs to specify every time before a check
 my $command_arg;

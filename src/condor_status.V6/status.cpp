@@ -396,7 +396,7 @@ public:
 	TrackGPUs () {};
 	~TrackGPUs() {};
 
-	int  ingest(ClassAd * ad);
+	int  ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline);
 	void displayGPUs(FILE * out, bool verbose) const;
 	bool haveGPUs() const { return ! gpu_props.empty(); }
 
@@ -448,7 +448,7 @@ private:
 // global GPU property ads
 TrackGPUs mainGpuInfo;
 
-int TrackGPUs::ingest(ClassAd * ad)
+int TrackGPUs::ingest(ClassAd * ad, StringList * ids_added, StringList * ids_offline)
 {
 	classad::ClassAdUnParser unparser;
 	unparser.SetOldClassAd( true, true );
@@ -504,6 +504,7 @@ int TrackGPUs::ingest(ClassAd * ad)
 				if ( ! propsAd.size()) {
 					propsAd.Update(*gpuAd);
 					++added;
+					if (ids_added) ids_added->append(gpu_id.c_str());
 				}
 			}
 
@@ -514,6 +515,8 @@ int TrackGPUs::ingest(ClassAd * ad)
 					slot_state.bit.offline = 1;
 				}
 				for (const char * offid = ol.first(); offid; offid = ol.next()) {
+					if (gpu_offline.count(offid)) continue;
+					if (ids_offline) { ids_offline->append(offid); }
 					gpu_offline.insert(offid);
 				}
 			}
@@ -594,6 +597,30 @@ static bool store_ads_callback( void * arg, ClassAd * ad ) {
 	return false;
 }
 
+static void reduce_gpu_device_name(std::string &devname)
+{
+	if (starts_with(devname, "NVIDIA ")) devname.erase(0,7);
+	if (ends_with(devname,"GB")) {
+		size_t ix = devname.size()-3;
+		if (isdigit(devname[ix])) {
+			devname.erase(ix);
+			while (isdigit(devname.back())) devname.pop_back();
+			if (devname.back() == '-') devname.pop_back();
+		}
+	}
+}
+
+static void totalize_row(struct _process_ads_info & pi, ClassAd* ad, const char * subtot_key, int options)
+{
+	TrackTotals * totals = pi.totals;
+	if (subtot_key) {
+		PrettyPrinter & thePP = * pi.pp;
+		int len = strlen(subtot_key);
+		thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
+	}
+	totals->update(ad, options, subtot_key);
+}
+
 static bool process_ads_callback(void * pv,  ClassAd* ad)
 {
 	bool done_with_ad = true;
@@ -653,7 +680,8 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 	} else {
 
 		// ingest GPU properties ads, If we added any, we may need to re-render some p-slot GPUs columns
-		bool gpu_ads_added = pi->gpusInfo && (pi->gpusInfo->ingest(ad) > 0);
+		StringList gpu_ids_added, gpu_ids_offline;
+		bool gpu_ads_added = pi->gpusInfo && (pi->gpusInfo->ingest(ad, &gpu_ids_added, &gpu_ids_offline) > 0);
 
 		// we can do normal totals now. but compact mode totals we have to do after checking the slot type
 		if (totals && ( ! pi->columns || ! compactMode)) { totals->update(ad); }
@@ -691,25 +719,45 @@ static bool process_ads_callback(void * pv,  ClassAd* ad)
 					srod.flags |= SROD_UNAVAIL_SLOT;
 			}
 			if (totals && compactMode) {
-				char keybuf[64] = " ";
-				const char * subtot_key = keybuf;
-				switch(thePP.ppTotalStyle) {
-					case PP_SUBMITTER_NORMAL: srod.getString(0, keybuf, sizeof(keybuf)-1); break;
+				std::string keybuf, devname;
+				int bk_opt = (srod.flags & SROD_BACKFILL_SLOT) ? TOTALS_OPTION_BACKFILL_SLOTS : 0;
+				if (dash_gpus) {
+					for (const char * gpuid = gpu_ids_added.first(); gpuid; gpuid = gpu_ids_added.next()) {
+						double capy=0.0;
+						long long mb=0;
+						if ( ! pi->gpusInfo->LookupFloat(gpuid, "Capability", capy)) continue;
+						formatstr(keybuf, "Capability %.1f", capy);
+						if (pi->gpusInfo->LookupInteger(gpuid, "GlobalMemoryMb", mb)) {
+							formatstr_cat(keybuf, ", %.1f GB", mb/1024.0);
+							//formatstr_cat(keybuf, ", %lld MB", mb);
+						}
+						if (pi->gpusInfo->LookupString(gpuid, "DeviceName", devname)) {
+							reduce_gpu_device_name(devname);
+							formatstr_cat(keybuf, ", %s", devname.c_str());
+						}
+						totalize_row(*pi, ad, keybuf.c_str(), bk_opt);
+					}
+				} else {
+					const char * subtot_key = nullptr;
+					switch(thePP.ppTotalStyle) {
+					case PP_SUBMITTER_NORMAL:
+						srod.getString(0, keybuf);
+						subtot_key = keybuf.c_str();
+						break;
 					case PP_SCHEDD_NORMAL:
 					case PP_SCHEDD_DATA:
-					case PP_SCHEDD_RUN: subtot_key = NULL; break;
-					case PP_STARTD_STATE: subtot_key = NULL; break; /* use activity as key */
-					default: srod.getString(thePP.startdCompact_ixCol_Platform, keybuf, sizeof(keybuf)-1); break;
-				}
-				if (subtot_key) {
-					int len = strlen(subtot_key);
-					thePP.max_totals_subkey = MAX(thePP.max_totals_subkey, len);
-				}
-				// TODO: fix this so we count claimed backfill slots as backfill state
-				if ( ! (srod.flags & SROD_BACKFILL_SLOT)) {
-					totals->update(ad, TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC, subtot_key);
+					case PP_SCHEDD_RUN:
+					case PP_STARTD_STATE:
+						subtot_key = nullptr; /* use totals default key generated from ad */
+						break;
+					default:
+						srod.getString(thePP.startdCompact_ixCol_Platform, keybuf);
+						subtot_key = keybuf.c_str();
+						break;
+					}
+					totalize_row(*pi, ad, subtot_key, bk_opt | TOTALS_OPTION_ROLLUP_PARTITIONABLE | TOTALS_OPTION_IGNORE_DYNAMIC);
 					if ((srod.flags & (SROD_PARTITIONABLE_SLOT | SROD_EXHAUSTED_SLOT | SROD_BACKFILL_SLOT)) == SROD_PARTITIONABLE_SLOT) {
-						totals->update(ad, TOTALS_OPTION_IGNORE_DYNAMIC, subtot_key);
+						totalize_row(*pi, ad, subtot_key, bk_opt | TOTALS_OPTION_IGNORE_DYNAMIC);
 					}
 				}
 			}
@@ -1284,6 +1332,8 @@ main (int argc, char *argv[])
 	// initialize the totals object
 	if (mainPP.ppStyle == PP_CUSTOM && mainPP.using_print_format) {
 		if (mainPP.pmHeadFoot & HF_NOSUMMARY) mainPP.ppTotalStyle = PP_CUSTOM;
+	} else if (dash_gpus) {
+		mainPP.ppTotalStyle = PP_STARTD_STATE;
 	} else {
 		mainPP.ppTotalStyle = mainPP.ppStyle;
 	}

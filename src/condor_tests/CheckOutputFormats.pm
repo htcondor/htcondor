@@ -670,7 +670,7 @@ sub check_status {
 },
 'Gpus' => sub {
 	my $num = sprintf("%d",$Attr_new{$_[0]-1}{TotalGpus});
-	if ($_[1] eq $num) {
+	if ($_[1] eq $num || ($num eq 0 && $_[1] eq "")) {
 		return 1;
 	} else {
 		print "        output is $_[1]\n        should be $num\n";
