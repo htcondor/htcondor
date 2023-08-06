@@ -46,6 +46,8 @@ Bugs Fixed:
 - Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
   :jira:`1954`
 
+- Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
+  :jira:`1964`
 
 .. _lts-version-history-1007:
 
