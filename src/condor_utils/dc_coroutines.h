@@ -1,10 +1,14 @@
+//
+// #include "condor_common.h"
+// #include "condor_daemon_core.h"
+// #include "dc_coroutines.h"
+//
+
 #ifndef _CONDOR_DC_COROUTINES_H
 #define _CONDOR_DC_COROUTINES_H
 
 #include <exception>
 #include <coroutine>
-
-#include "condor_daemon_core.h"
 
 namespace dc {
 
