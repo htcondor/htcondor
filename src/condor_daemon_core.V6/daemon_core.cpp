@@ -2693,6 +2693,18 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 	return res;
 }
 
+int
+DaemonCore::numRegisteredReapers() {
+	// This would be better as std::count_if() or something.
+	int rv = 0;
+	for (size_t i = 0; i < nReap; ++i) {
+		if( reapTable[i].handler || reapTable[i].handlercpp ) {
+			++rv;
+		}
+	}
+	return rv;
+}
+
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
 	const char *descrip1;
@@ -6425,7 +6437,13 @@ void CreateProcessForkit::exec() {
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
+
+		// This causes the child to exit with an indecipherable error
+		// message if the log file is only available because of an
+		// environment variable over-ride, and/or maybe just because
+		// we're a daemon core process running in -t mode, and we
+		// just closed the FD that dprintf() was using.
+		// dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {

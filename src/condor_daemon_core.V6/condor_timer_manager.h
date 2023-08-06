@@ -226,6 +226,8 @@ class TimerManager
     /// Not_Yet_Documented.
     void DumpTimerList(int, const char* = NULL );
 
+    int countTimersByDescription( const char * description );
+
     /** Not_Yet_Documented.
         @return Not_Yet_Documented
     */

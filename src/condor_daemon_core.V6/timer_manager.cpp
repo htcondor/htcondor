@@ -750,3 +750,19 @@ Timer *TimerManager::GetTimer( int id, Timer **prev )
 
 	return timer_ptr;
 }
+
+
+int
+TimerManager::countTimersByDescription( const char * description ) {
+    if( description == NULL ) { return -1; }
+    if( timer_list == NULL ) { return 0; }
+
+    int counter = 0;
+	Timer * i = timer_list;
+	for( ; i; i = i->next ) {
+    	if( 0 == strcmp(i->event_descrip, description) ) {
+    	    ++counter;
+    	}
+	}
+	return counter;
+}

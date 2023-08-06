@@ -850,7 +850,11 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Reaper (int rid);
-   
+
+
+    int numRegisteredReapers();
+    int countTimersByDescription( const char * description ) { return t.countTimersByDescription(description); }
+
 
     /** Not_Yet_Documented
         @param signal signal
