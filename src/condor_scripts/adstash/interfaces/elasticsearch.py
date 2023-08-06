@@ -87,7 +87,7 @@ class ElasticsearchInterface(GenericInterface):
                 client_options["http_auth"] = auth_tuple
             elif ES_VERSION >= ES8:
                 client_options["basic_auth"] = auth_tuple
-        
+
         if self.ca_certs is not None:
             client_options["ca_certs"] = self.ca_certs
         if self.use_https:
@@ -241,13 +241,13 @@ class ElasticsearchInterface(GenericInterface):
             elif isinstance(mappings[outer_key], dict):  # update missing keys in any existing dicts
                 missing_inner_keys = set(mappings[outer_key]) - set(existing_mappings[outer_key])
                 if len(missing_inner_keys) > 0:
-                    update_mappings = True
                     updated_mappings[outer_key] = {}
                     for inner_key in missing_inner_keys:
-                        updated_mappings[inner_key] = mappings[outer_key][inner_key]
+                        updated_mappings[outer_key][inner_key] = mappings[outer_key][inner_key]
+                update_mappings = True
         if update_mappings:
             logging.info(f"Updated mappings for index {index}")
-            logging.debug(f"{pprint.pformat(update_mappings)}")
+            logging.debug(f"{pprint.pformat(updated_mappings)}")
             if ES_VERSION < ES8:
                 client.indices.put_mapping(index=index, body=json.dumps(updated_mappings))
             elif ES_VERSION >= ES8:
@@ -256,7 +256,6 @@ class ElasticsearchInterface(GenericInterface):
                 mappings_file = log_dir / "condor_adstash_elasticsearch_last_mappings.json"
                 logging.debug(f"Writing updated mappings to {mappings_file}.")
                 json.dump(updated_mappings, open(mappings_file, "w"), indent=2)
-            
 
 
     def make_bulk_body(self, ads, metadata={}):
