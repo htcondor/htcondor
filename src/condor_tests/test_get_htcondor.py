@@ -60,7 +60,6 @@ if "THE_URL" in os.environ:
 IMAGES_BY_CHANNEL = {
     "stable": [
         "debian:11",
-        "ubuntu:18.04",
         "ubuntu:20.04",
         "ubuntu:22.04",
         "centos:7",
@@ -72,7 +71,7 @@ IMAGES_BY_CHANNEL = {
     ],
     "current": [
         "debian:11",
-        "ubuntu:18.04",
+        "debian:12",
         "ubuntu:20.04",
         "ubuntu:22.04",
         "centos:7",
@@ -129,7 +128,7 @@ TESTS = {
 
 PREFICES_BY_IMAGE = {
     "debian:11" : "apt-get update && apt-get install -y curl",
-    "ubuntu:18.04": "apt-get update && apt-get install -y curl",
+    "debian:12" : "apt-get update && apt-get install -y curl",
     "ubuntu:20.04": "apt-get update && apt-get install -y curl",
     "ubuntu:22.04": "apt-get update && apt-get install -y curl",
 }

@@ -77,50 +77,19 @@ private:
 };
 
 
-class Client
+struct Client
 {
-public:
-	Client();
-	~Client();
-
-	char*	name()	{return c_user;};	// For compatibility only
-	char*	user()	{return c_user;};
-	char*	owner()	{return c_owner;};
-	char*	accountingGroup() {return c_acctgrp;};
-	char*	host()	{return c_host;};
-	char*	addr() 	{return c_addr;};
-	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
-    char*   rmtgrp() {return c_rmtgrp;}
-    char*   neggrp() {return c_neggrp;}
-    bool    autorg() const {return c_autorg;}
-	int     numPids() const {return c_numPids;};
-
-	void	setuser(const char* user);
-	void	setowner(const char* owner);
-	void	setAccountingGroup(const char* grp);
-	void	setaddr(const char* addr);
-	void	sethost(const char* host);
-	void    setConcurrencyLimits(const char* limits);
-    void    setrmtgrp(const char* rmtgrp);
-    void    setneggrp(const char* neggrp);
-    void    setautorg(const bool autorg);
-	void    setNumPids(int numJobPids);
-
-		// send a message to the client and accountant that the claim
-		// is a being vacated
-	void	vacate( char* claim_id );
-private:
-	char	*c_owner;	// name of the owner
-	char	*c_user;	// name of the user
-	char	*c_acctgrp; // name of the accounting group, if any
-	char	*c_host;	// hostname of the clientmachine
-	char	*c_addr;	// <ip:port> of the client
-	char	*c_concurrencyLimits; // limits, if any
-    char*   c_rmtgrp;   // the submitter's accounting group
-    char*   c_neggrp;   // the negotiating accounting group
-    bool    c_autorg;   // true if negotiated via autoregroup policy
-	int     c_numPids;
-
+	std::string c_owner;      // name of the owner
+	std::string c_user;	      // name of the user
+	std::string c_acctgrp;    // name of the accounting group, if any
+	std::string c_host;	      // hostname of the clientmachine
+	std::string c_addr;	      // <ip:port> of the client
+	std::string c_concurrencyLimits; // limits, if any
+	std::string c_rmtgrp;     // the submitter's accounting group
+	std::string c_neggrp;     // the negotiating accounting group
+	std::string c_scheddName; // name of the schedd
+	bool        c_autorg{false}; // true if negotiated via autoregroup policy
+	int         c_numPids{0};
 };
 
 
@@ -209,6 +178,7 @@ public:
 	int			proc() const			{return c_proc;};
 	Stream*		requestStream()	{return c_request_stream;};
 	int			getaliveint() const	{return c_aliveint;};
+	time_t		getLeaseEndtime() const {return c_lease_endtime;};
 	ClaimState	state()			{return c_state;};
 	void		updateUsage(double & percentCpuUsage, long long & imageSize);
 	CODMgr*		getCODMgr( void );
@@ -230,6 +200,7 @@ public:
 	void setjobad(ClassAd * ad);
 	void setRequestStream(Stream* stream);	
 	void setaliveint(int alive);
+	void setLeaseEndtime(time_t end_time);
 	void disallowUnretire()     {c_may_unretire=false;}
 	void setRetirePeacefully(bool value) {c_retire_peacefully=value;}
 	void preemptIsTrue() {c_preempt_was_true=true;}
@@ -345,6 +316,7 @@ private:
 	Sock*		c_alive_inprogress_sock;	// NULL if no alive in progress
 	int			c_lease_duration; // Duration of our claim/job lease
 	int			c_aliveint;		// Alive interval for this claim
+	time_t		c_lease_endtime;	// timestamp that claim can't go beyond
 	bool		c_starter_handles_alives;  // if true, don't send alives when starter running
 	bool		c_startd_sends_alives; // set by param with override by schedd via an attribute in the job.
 
@@ -367,6 +339,11 @@ private:
 	double c_cpus_usage;    // CpusUsage from last call to updateUsage
 	long long c_image_size;	// ImageSize from last call to updateUsage
 
+ public:
+	std::string c_working_cm;	// if claimed for another CM, our temporary CM
+	bool c_want_matching;		// if claimed pslot, should negotiator do matching
+
+ private:
 		// Helper methods
 	int  finishReleaseCmd( void );
 	int  finishDeactivateCmd( void );

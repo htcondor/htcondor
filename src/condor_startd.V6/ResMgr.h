@@ -292,7 +292,7 @@ public:
 	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
 
 		// count the number of resources owned by this user
-	int			claims_for_this_user(const char * user);
+	int			claims_for_this_user(const std::string &user);
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };

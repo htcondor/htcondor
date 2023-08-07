@@ -8,7 +8,8 @@ my @testingarray = ();
 my $jobid = $ARGV[0];
 my $nodename = $ARGV[1];
 
-@NodeA = ("DAG_InRecovery = 0",
+@NodeA = ("DAG_AdUpdateTime = (.*)",
+	"DAG_InRecovery = 0",
 	"DAG_JobsCompleted = 0",
 	"DAG_JobsHeld = 0",
 	"DAG_JobsIdle = 0",
@@ -28,7 +29,8 @@ my $nodename = $ARGV[1];
 	"DAG_Status = 0");
 	#"Node NodeA succeeded");
 
-@NodeB = ("DAG_InRecovery = 0",
+@NodeB = ("DAG_AdUpdateTime = (.*)",
+	"DAG_InRecovery = 0",
 	"DAG_JobsCompleted = 1",
 	"DAG_JobsHeld = 0",
 	"DAG_JobsIdle = 0",
@@ -48,7 +50,8 @@ my $nodename = $ARGV[1];
 	"DAG_Status = 0");
 	#"Node NodeB succeeded");
 
-@NodeC = ("DAG_InRecovery = 0",
+@NodeC = ("DAG_AdUpdateTime = (.*)",
+	"DAG_InRecovery = 0",
 	"DAG_JobsCompleted = 2",
 	"DAG_JobsHeld = 0",
 	"DAG_JobsIdle = 0",

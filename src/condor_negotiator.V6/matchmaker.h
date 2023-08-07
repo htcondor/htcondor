@@ -184,7 +184,7 @@ class Matchmaker : public Service
 								 double groupQuota=INT_MAX, const char* groupName=NULL);
 
 		
-		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
+		ClassAd *matchmakingAlgorithm(const char* submitterName, const char* scheddAddr, const char* scheddName, ClassAd& request, ClassAdListDoesNotDeleteAds& startdAds,
 									  double preemptPrio, 
                                       double limitUsed, double limitUsedUnclaimed,
                                       double submitterLimit, double submitterLimitUnclaimed, 
@@ -303,6 +303,7 @@ class Matchmaker : public Service
 		// Note: these are called by trimStartdAds as required
 		int trimStartdAds_PreemptionLogic(ClassAdListDoesNotDeleteAds &startdAds) const;
 		int trimStartdAds_ShutdownLogic(ClassAdListDoesNotDeleteAds &startdAds);
+		int trimStartdAds_ClaimedPslotLogic(ClassAdListDoesNotDeleteAds &startdAds);
 
 		bool SubmitterLimitPermits(ClassAd* request, ClassAd* candidate, double used, double allowed, double pieLeft);
 		double sumSlotWeights(ClassAdListDoesNotDeleteAds &startdAds,double *minSlotWeight, ExprTree* constraint);
@@ -335,6 +336,7 @@ class Matchmaker : public Service
 		bool PublishCrossSlotPrios; // value of knob NEGOTIATOR_CROSS_SLOT_PRIOS, default of false
 		bool ConsiderPreemption; // if false, negotiation is faster (default=true)
 		bool ConsiderEarlyPreemption; // if false, do not preempt slots that still have retirement time
+		bool MatchWorkingCmSlots;
 		/// Should the negotiator inform startds of matches?
 		bool want_inform_startd;	
 		/// Should the negotiator use non-blocking connect to contact startds?

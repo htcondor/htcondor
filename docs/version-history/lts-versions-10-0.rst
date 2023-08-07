@@ -7,6 +7,46 @@ These are Long Term Support (LTS) versions of HTCondor. As usual, only bug fixes
 
 The details of each version are described below.
 
+.. _lts-version-history-1008:
+
+Version 10.0.8
+--------------
+
+Release Notes:
+
+.. HTCondor version 10.0.8 released on Month Date, 2023.
+
+- HTCondor version 10.0.8 not yet released.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed a bug with parallel universe that would result in the startd
+  rejecting start attempts from the schedd and causing the schedd
+  to crash.
+  :jira:`1959`
+
+- Fixed a bug in DAGMan where service nodes that finish before the DAGs
+  end would result in DAGMan crashing due to an assertion failure.
+  :jira:`1909`
+
+- When the file transfer queue is growing too big, HTCondor sends email to the
+  administrator.  Prior versions of HTCondor would send an arbitrarily large number
+  of emails.  Now HTCondor will only send one email per day.
+  :jira:`1937`
+
+- Preen now preserves all files in the spool directory matching `*OfflineLog*`
+  so that central managers with multiple active collectors can have offline
+  ads.
+  :jira:`1933`
+
+- Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
+  :jira:`1954`
+
+
 .. _lts-version-history-1007:
 
 Version 10.0.7
@@ -14,52 +54,50 @@ Version 10.0.7
 
 Release Notes:
 
-.. HTCondor version 10.0.7 released on Month Date, 2023.
-
-- HTCondor version 10.0.7 not yet released.
+- HTCondor version 10.0.7 released on July 25, 2023.
 
 New Features:
-
-- The ``-summary`` option of *condor_config_val* now works with a remote
-  config query when the daemon being queried is 10.0.7 or later. It behaves
-  like ``-dump`` when the daemon is older.
-  :jira:`1879`
 
 - Improved daemon logging for IDTOKENS authentication to make useful
   messages more prominent.
   :jira:`1776`
 
+- The ``-summary`` option of *condor_config_val* now works with a remote
+  configuration query when the daemon being queried is version 10.0.7 or later. It behaves
+  like ``-dump`` when the daemon is older.
+  :jira:`1879`
+
 Bugs Fixed:
-
-- Fixed a bug where if the $(SPOOL) directory was on a separate file system
-  *condor_preen* could delete the special 'lost+found' directory.
-  :jira:`1906`
-
-- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
-  the *condor_preen* tool will no longer delete that file
-  :jira:`1874`
-
-- Print detailed error message when *condor_remote_cluster* fails to
-  fetch a URL.
-  :jira:`1884`
 
 - Fixed bug where condor cron jobs put on hold by the *condor_shadow*
   or *condor_starter* would never start running again and stay ``IDLE``
   when released from the ``HELD`` state.
   :jira:`1869`
 
-- Fixed a bug when creating the default value for :macro:`DC_DAEMON_LIST` where a
-  secondary daemon such as ``COLLECTOR01`` would not be considered a DC daemon if
-  the primary daemon was not in :macro:`DAEMON_LIST`.
-  :jira:`1900`
+- Remove limit on certificate chain length in SSL authentication.
+  :jira:`1904`
+
+- Print detailed error message when *condor_remote_cluster* fails to
+  fetch a URL.
+  :jira:`1884`
 
 - Fixed a bug that caused *condor_preen* to crash if configuration
   parameter ``PREEN_COREFILE_MAX_SIZE`` was set to a value larger than
   2 gigabytes.
   :jira:`1908`
 
-- Remove limit on certificate chain length in SSL authentication.
-  :jira:`1904`
+- Fixed a bug where if the $(SPOOL) directory was on a separate file system
+  *condor_preen* would delete the special ``lost+found`` directory.
+  :jira:`1906`
+
+- If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
+  the *condor_preen* tool will no longer delete that file
+  :jira:`1874`
+
+- Fixed a bug when creating the default value for :macro:`DC_DAEMON_LIST` where a
+  secondary daemon such as ``COLLECTOR01`` would not be considered a DC daemon if
+  the primary daemon was not in :macro:`DAEMON_LIST`.
+  :jira:`1900`
 
 .. _lts-version-history-1006:
 

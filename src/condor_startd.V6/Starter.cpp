@@ -729,8 +729,6 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 	}
 
 
-	char* hostname = claim->client()->host();
-
 	args.AppendArg("condor_starter");
 	args.AppendArg("-f");
 
@@ -768,7 +766,7 @@ Starter::execDCStarter( Claim * claim, Stream* s )
 		args.AppendArg(claim->rip()->r_id_str);
 	}
 
-	args.AppendArg(hostname);
+	args.AppendArg(claim->client()->c_host);
 	execDCStarter( claim, args, NULL, NULL, s );
 
 	return s_pid;

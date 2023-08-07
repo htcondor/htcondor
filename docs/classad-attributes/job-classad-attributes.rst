@@ -2179,7 +2179,11 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
-	
+
+:classad-attribute:`DAG_AdUpdateTime`
+    A timestamp for when the DAGMan process last sent an update of internal
+    information to its job ad.
+
 The following job ClassAd attributes appear in the job ClassAd only for
 the *condor_dagman* job submitted under DAGMan. They represent job process
 information about the DAG. These values will reset when a DAG is run via

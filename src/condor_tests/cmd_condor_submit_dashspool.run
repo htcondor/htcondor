@@ -126,46 +126,19 @@ print DD "$file3";
 print "First test basic job\n";
 SimpleJob::RunCheck();
 
-print "Config file follows\n";
-#system("cat $configfile");
-
 print "Starting sleep forever job\n";
 
 my $sleepf1 = $$ . "sf1";
 open(SF1,">$sleepf1") or die "Can not create <$sleepf1>\n";
 print SF1 "$submitdashpool1";
-#system("cat $sleepf1");
 close(SF1);
 
-print "Basic condor_submit -spool job started\n";
-my $plain = 0;
-$plain = SubmitReturnCluster($sleepf1,"-spool");
-
-
-my $numberinstate = 0;
-my $result = 0;
-
-# verify it even gets running
-$numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
-
-print "\nBasic condor_submit -spool job starts to run:";
-if($numberinstate != 1) {
-	$result = 0;
-	print " Failed\n\n";
-} else {
-	$result = 1;
-	print " Passed\n\n";
-}
-#system(" condor_q");
-runToolNTimes("condor_rm $plain",1);
-CondorTest::RegisterResult($result);
 dashspoolreset();
 
 
 print "Basic condor_submit -spool job started\n";
 $plain = SubmitReturnCluster($sleepf1,"-spool");
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
-#system(" condor_q");
 $numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 
 print "\nBasic condor_submit -spool job starts to run and completes:";
@@ -176,7 +149,6 @@ if($numberinstate != 1) {
 	$result = 1;
 	print " Passed\n\n";
 }
-#system(" condor_q");
 runToolNTimes("condor_rm $plain",1);
 CondorTest::RegisterResult($result);
 dashspoolreset();
@@ -184,7 +156,6 @@ dashspoolreset();
 my $sleepf2 = $$ . "sf2";
 open(SF2,">$sleepf2") or die "Can not create <$sleepf2>\n";
 print SF2 "$submitdashpool2";
-#system("cat $sleepf2");
 close(SF2);
 
 print "Basic condor_submit -spool job started\n";
@@ -225,13 +196,11 @@ dashspoolreset();
 my $sleepf3 = $$ . "sf3";
 open(SF1,">$sleepf3") or die "Can not create <$sleepf3>\n";
 print SF1 "$submitdashpool3";
-#system("cat $sleepf3");
 
 print "Basic condor_submit -spool job started with transfer input file\n";
 $plain = SubmitReturnCluster($sleepf3,"-spool");
 
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
-#system(" condor_q");
 $numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
 
 print "\nBasic condor_submit -spool job starts to run and completes with an input file:";
@@ -242,7 +211,6 @@ if($numberinstate != 1) {
 	$result = 1;
 	print " Passed\n\n";
 }
-#system(" condor_q");
 runToolNTimes("condor_rm $plain",1,0);
 CondorTest::RegisterResult($result);
 dashspoolreset();
@@ -250,14 +218,13 @@ dashspoolreset();
 my $sleepf4 = $$ . "sf4";
 open(SF1,">$sleepf4") or die "Can not create <$sleepf4>\n";
 print SF1 "$submitdashpool4";
-#system("cat $sleepf4");
 
 print "Basic condor_submit -spool job started with transfer input file\n";
 $plain = SubmitReturnCluster($sleepf4,"-spool");
 
 $numberinstate = CondorTest::VerifyNumJobsInState("running",1,30);
-#system(" condor_q");
 $numberinstate = CondorTest::VerifyNumJobsInState("completed",1,30);
+
 # get output data
 runToolNTimes("condor_transfer_data $plain",1,1);
 $present = PresentFiles("dashspool.file1,dashspool.file2");
@@ -282,7 +249,6 @@ if($gooddata != 1) {
 	$result = 1;
 	print " Passed\n\n";
 }
-#system(" condor_q");
 runToolNTimes("condor_rm $plain",1,0);
 CondorTest::RegisterResult($result);
 

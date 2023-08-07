@@ -196,8 +196,8 @@ public:
         SubmitDagShallowOptions &shallowOpts,
         std::list<std::string> &dagFileAttrLines );
 
-    bool GetConfigAndAttrs( /* const */ std::list<std::string> &dagFiles, bool useDagDir, 
-        std::string &configFile, std::list<std::string> &attrLines, std::string &errMsg );
+    bool processDagCommands( SubmitDagDeepOptions& deepOpts, SubmitDagShallowOptions& shallowOpts,
+                             std::list<std::string> &attrLines, std::string &errMsg );
 
     bool MakePathAbsolute(std::string &filePath, std::string &errMsg);
 

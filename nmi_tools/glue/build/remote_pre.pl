@@ -37,7 +37,6 @@ GetOptions(
             'clear-externals-cache-daily' => \$opt_clear_externals_cache_daily,
 );
 
-my $installcmakecmd = "./nmi_tools/glue/build/install_cmake";
 my $cmake = undef;
 my $BaseDir = getcwd();
 #my $SrcDir = "$BaseDir/src";
@@ -143,22 +142,17 @@ print "Configure args: " . join(' ', @ARGV) . "\n";
 # absolute path to cmake.
 ######################################################################
 
-# See gt 2344 for this block of code
 if ($ENV{NMI_PLATFORM} =~ /_win/i) {
-	# Terrible hack for now. The real solution is $installcmakecmd should
-	# be a batch file which forms the same work as the unix side. And then
-	# only the else case in this 'if' gets run. This if would then appear
-	# in the definition of $installcmakecmd to point to the correct
-	# thing.
 	$cmake = "cmake";
 } else {
-	$cmake = `$installcmakecmd ${CONDOR_SCRATCH_DIR} 2>&1 | sed -n \\\$p`;
-	if ($? != 0 || !defined($cmake) || $cmake =~ m/^FAILURE:/) {
-		die "Cannot find a usable cmake install.";
+	$cmake = `which cmake3 2>&1`;
+	if ($? != 0) {
+		$cmake = `which cmake 2>&1`;
+		if ($? != 0) {
+			die "Cannot find a usable cmake install.";
+		}
 	}
 	chomp $cmake;
-	# Get just the real path from the output of the above script.
-	$cmake =~ s/SUCCESS: //g;
 }
 
 print "Using cmake: $cmake\n";
