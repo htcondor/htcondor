@@ -101,7 +101,7 @@ class ElasticsearchInterface(GenericInterface):
 
     def get_active_index(self, alias):
         client = self.get_handle()
-        indices = client.indices.get_alias(name=alias)
+        indices = client.indices.get_alias(name=alias, index=alias)
 
         # find which index is reporting as writable
         for index, alias_info in indices.items():
@@ -215,7 +215,7 @@ class ElasticsearchInterface(GenericInterface):
         client = self.get_handle()
 
         # check if index is an alias, and get the active index if so
-        if client.indices.exists_alias(name=index):
+        if client.indices.exists_alias(name=index, index=index):
             index = self.get_active_index(index)
 
         mappings = self.make_mappings()
