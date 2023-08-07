@@ -460,11 +460,7 @@ do_install() {
 
 			# Some distros don't include ps by default.
 			case $lsb_dist in
-			amzn)
-				echo -e "\n# Installing ps"
-				$sh_c "yum install -y procps"
-				;;
-			almalinux|rocky)
+			amzn|almalinux|rocky)
 				echo -e "\n# Installing ps"
 				$sh_c "yum install -y procps-ng"
 				;;
