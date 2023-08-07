@@ -47,7 +47,8 @@ Bugs Fixed:
   :jira:`1954`
 
 - Fixed a bug in **condor_adstash** that caused a "unexpected keyword argument" error to occur when
-  new attributes needed to be added to the index and when using a newer Elasticsearch Python library.
+  new attributes needed to be added to the index and when using version 8.0.0 or newer of
+  the Elasticsearch Python library.
   :jira:`1930`
 
 .. _lts-version-history-1007:
