@@ -46,10 +46,15 @@ Bugs Fixed:
 - Fixed a bug that could cause *condor_config_val* to crash when there were no configuration files.
   :jira:`1954`
 
+
+- Fixed a bug that broke the version check for older versions of the Elasticsearch Python library.
+  :jira:`1964`
+
 - Fixed a bug in **condor_adstash** that caused a "unexpected keyword argument" error to occur when
   new attributes needed to be added to the index and when using version 8.0.0 or newer of
   the Elasticsearch Python library.
   :jira:`1930`
+
 
 .. _lts-version-history-1007:
 
