@@ -815,7 +815,7 @@ sub check_status {
 			if ($machine_name =~ /02/){unless ($machine_info[3][$i] eq 'Claimed'){return 0;}}
 			if ($machine_name =~ /03/){unless ($machine_info[3][$i] eq 'Matched'){return 0;}}
 			if ($machine_name =~ /04/){unless ($machine_info[3][$i] eq 'Preempting'){return 0;}}
-			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Backfill'){return 0;}}
+			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Owner'){return 0;}}
 		}		
 		if ($summary[1][1] eq scalar (@{$machine_info[0]})-1 && $summary[1][2] eq (@{$machine_info[0]})-1){
 			for my $i (2..6){
