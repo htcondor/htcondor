@@ -73,7 +73,7 @@ $rules_file = "$option.rules";
 $rules_content = 
 "SET ClusterId 200
 DEFAULT Fooo \"test\"
-COPY JobStatus TransferIn
+COPY ExitBySignal TransferIn
 RENAME NumCkpts NumCheckPoints
 DELETE TransferInputSizeMB
 DELETE /(.+)Err/
