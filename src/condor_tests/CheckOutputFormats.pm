@@ -1104,14 +1104,15 @@ sub count_status_state {
 		$table{$key}{"Unclaimed"} = 0;
 		$table{$key}{"Matched"} = 0;
 		$table{$key}{"Preempting"} = 0;
-		$table{$key}{"Backfill"} = 0;
 		$table{$key}{"Drain"} = 0;
+		$table{$key}{"Backfill"} = 0;
+		$table{$key}{"BkIdle"} = 0;
 		for my $i (0..(scalar keys %Attr) -1){
 			if ($key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSysShortName},1,length($Attr{$i}{OpSysShortName})-2) || $key eq substr($Attr{$i}{Arch},1,length($Attr{$i}{Arch})-2)."/".substr($Attr{$i}{OpSys},1,length($Attr{$i}{OpSys})-2)){
 				$table{$key}{substr($Attr{$i}{State},1,length($Attr{$i}{State})-2)}++;
 			}
 		}
-	$table{$key}{"Total"} = $table{$key}{"Owner"} + $table{$key}{"Claimed"} + $table{$key}{"Unclaimed"} + $table{$key}{"Matched"} + $table{$key}{"Preempting"} + $table{$key}{"Backfill"} + $table{$key}{"Drain"};		
+	$table{$key}{"Total"} = $table{$key}{"Owner"} + $table{$key}{"Claimed"} + $table{$key}{"Unclaimed"} + $table{$key}{"Matched"} + $table{$key}{"Preempting"} + $table{$key}{"Drain"} + $table{$key}{"Backfill"} + $table{$key}{"BkIdle"}
 	}
 	return %table;
 }
@@ -1411,7 +1412,7 @@ sub check_heading {
 		'-globus' => sub {return $data{0} =~ /\s*ID\s+OWNER\s+STATUS\s+MANAGER\s+HOST\s+EXECUTABLE/;},
 		'-tot' => sub {print "-tot does not have a heading\n";return 1;},
 		'status_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+State\s+Activity\s+LoadAv\s+Mem\s+ActvtyTime/;},
-		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Backfill\s+Drain/;},
+		'status_summary' => sub {return $data{0} =~ /\s+Total\s+Owner\s+Claimed\s+Unclaimed\s+Matched\s+Preempting\s+Drain\s+Backfill\s+BkIdle/;},
 		'status_claimed_machine' => sub {return $data{0} =~ /\s*Name\s+OpSys\s+Arch\s+LoadAv\s+RemoteUser\s+ClientMachine/;},
 		'status_claimed_summary' => sub {return $data{0} =~ /\s*Machines\s+MIPS\s+KFLOPS\s+AvgLoadAvg/;},
 		'status_compact_machine' => sub {return $data{0} =~ /\s*Machine\s+Platform\s+Slots\s+Cpus\s+Gpus\s+TotalGb\s+FreCpu\s+FreeGb\s+CpuLoad\s+ST\s+Jobs\/Min\s+MaxSlotGb/;},
