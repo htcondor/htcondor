@@ -398,17 +398,18 @@ const char * const startdCompact_PrintFormat = "SELECT\n"
 	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
 	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
 	//	"split(CondorVersion)[1] AS Condor\n"
-	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
-	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
-	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
-	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+	ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+	ATTR_TOTAL_SLOT_CPUS " AS Cpus  PRINTF %4d\n"              // 3
+	"TotalSlotGpus        AS Gpus  PRINTF %4d\n"              // 4
+	ATTR_TOTAL_SLOT_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
 	ATTR_CPUS       " AS FreCpu PRINTF %6d\n"              // 6
 	ATTR_MEMORY     "/1024.0 AS ' FreeGb ' PRINTF %8.2f\n"   // 7
 	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 8
 	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 9
 	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 10
 	"Max(ChildMemory)/1024.0 AS MaxSlotGb   PRINTF %9.2f OR *\n" // 11
-"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+"WHERE " PMODE_STARTD_COMPACT_CONSTRAINT "\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
@@ -420,13 +421,15 @@ int PrettyPrinter::ppSetStartdCompactCols (int /*width*/, int & mach_width, cons
 		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
 	}
 
+	startdCompact_ixCol_MachineSlot = 0;
 	startdCompact_ixCol_Platform = 1;
 	startdCompact_ixCol_Slots = 2;
-	startdCompact_ixCol_FreeCpus = 6;
-	startdCompact_ixCol_FreeMem = 7; // double
-	startdCompact_ixCol_ActCode = 9;
-	startdCompact_ixCol_JobStarts = 10; // double
-	startdCompact_ixCol_MaxSlotMem = 11; // double
+	int delta=1; // set to 1 if SLOT_TYPE_COLUMN is shown
+	startdCompact_ixCol_FreeCpus = 6+delta;
+	startdCompact_ixCol_FreeMem = 7+delta; // double
+	startdCompact_ixCol_ActCode = 9+delta;
+	startdCompact_ixCol_JobStarts = 10+delta; // double
+	startdCompact_ixCol_MaxSlotMem = 11+delta; // double
 
 	mach_width = 12;
 	return 12;
@@ -469,16 +472,17 @@ const char * const serverCompact_PrintFormat = "SELECT\n"
 	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
 	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
 	//	"split(CondorVersion)[1] AS Condor\n"
-	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
-	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
-	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
-	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
-	ATTR_MIPS       " AS ' Mips  ' PRINTF %7d OR -\n"     // 6
-	ATTR_KFLOPS     " AS ' KFlops  ' PRINTF %9d OR -\n"     // 7
-	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 8
-	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 9
-	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 10
-"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+	ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+	ATTR_TOTAL_SLOT_CPUS " AS Cpus  PRINTF %4d\n"              // 4
+	"TotalSlotGpus        AS Gpus  PRINTF %4d\n"              // 5
+	ATTR_TOTAL_SLOT_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 6
+	ATTR_MIPS       " AS ' Mips  ' PRINTF %7d OR -\n"     // 7
+	ATTR_KFLOPS     " AS ' KFlops  ' PRINTF %9d OR -\n"     // 8
+	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 9
+	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 10
+	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 11
+"WHERE " PMODE_SERVER_COMPACT_CONSTRAINT "\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
@@ -492,10 +496,11 @@ void PrettyPrinter::ppSetServerCols (int width, const char * & constr)
 		}
 
 		// adjust column offsets for these
+		startdCompact_ixCol_MachineSlot = 0;
 		startdCompact_ixCol_Platform = 1;
 		startdCompact_ixCol_Slots = 2;
-		startdCompact_ixCol_ActCode = 9;
-		startdCompact_ixCol_JobStarts = 10; // double
+		startdCompact_ixCol_ActCode = 10;
+		startdCompact_ixCol_JobStarts = 11; // double
 
 		return;
 	}
@@ -517,14 +522,15 @@ const char * const stateCompact_PrintFormat = "SELECT\n"
 	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
 	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
 	//	"split(CondorVersion)[1] AS Condor\n"
-	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
-	ATTR_TOTAL_CPUS " AS Cpus  PRINTF %4d\n"              // 3
-	"TotalGpus        AS Gpus  PRINTF %4d\n"              // 4
-	ATTR_TOTAL_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 5
-	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 6
-	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 7
-	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 8
-"WHERE PartitionableSlot =?= true || DynamicSlot =!= true\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+	ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+	ATTR_TOTAL_SLOT_CPUS " AS Cpus  PRINTF %4d\n"              // 4
+	"TotalSlotGpus        AS Gpus  PRINTF %4d\n"              // 5
+	ATTR_TOTAL_SLOT_MEMORY "/1024.0 AS  ' TotalGb' PRINTF %8.2f\n" // 6
+	"TotalLoadAvg*1.0/TotalCpus AS CpuLoad PRINTF %7.2f\n" // 7
+	ATTR_ACTIVITY   " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n" // 8
+	"RecentJobStarts/20.0 AS Jobs/Min PRINTF %8.2f OR _\n" // 9
+"WHERE " PMODE_STATE_COMPACT_CONSTRAINT "\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
@@ -539,10 +545,11 @@ void PrettyPrinter::ppSetStateCols (int width)
 		}
 
 		// adjust column offsets for these
+		startdCompact_ixCol_MachineSlot = 0;
 		startdCompact_ixCol_Platform = 1;
 		startdCompact_ixCol_Slots = 2;
-		startdCompact_ixCol_ActCode = 7;
-		startdCompact_ixCol_JobStarts = 8; // double
+		startdCompact_ixCol_ActCode = 8;
+		startdCompact_ixCol_JobStarts = 9; // double
 
 		return;
 	}
@@ -567,10 +574,11 @@ const char * const claimedCompact_PrintFormat = "SELECT\n"
 	ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"       // 0
 	ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n" // 1
 	//	"split(CondorVersion)[1] AS Condor\n"
-	ATTR_NUM_DYNAMIC_SLOTS " AS Slots PRINTF %5d OR _\n"  // 2
-	"Child" ATTR_REMOTE_USER " AS Users PRINTAS UNIQUE\n" // 3
-//	"Child" ATTR_CLIENT_MACHINE " AS Hosts PRINTAS UNIQUE\n" // 4
-"WHERE (State == \"Claimed\" && DynamicSlot =!= true) || (NumDynamicSlots isnt undefined && NumDynamicSlots > 0)\n"
+	ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+	ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+	"Child" ATTR_REMOTE_USER " AS Users PRINTAS UNIQUE\n" // 4
+//	"Child" ATTR_CLIENT_MACHINE " AS Hosts PRINTAS UNIQUE\n" // 5
+"WHERE " PMODE_CLAIMED_COMPACT_CONSTRAINT "\n"
 "GROUP BY Machine\n"
 "SUMMARY STANDARD\n";
 
@@ -585,6 +593,7 @@ void PrettyPrinter::ppSetRunCols (int width)
 		}
 
 		// adjust column offsets for these
+		startdCompact_ixCol_MachineSlot = 0;
 		startdCompact_ixCol_Platform = 1;
 		startdCompact_ixCol_Slots = 2;
 
@@ -608,6 +617,63 @@ void PrettyPrinter::ppSetRunCols (int width)
 	ppSetColumn(ATTR_CONDOR_LOAD_AVG, Lbl("LoadAv"), format_load_avg, NULL, 6, true);
 	ppSetColumn(ATTR_REMOTE_USER,    -20, ! wide_display);
 	ppSetColumn(ATTR_CLIENT_MACHINE, -16, ! wide_display);
+}
+
+const char * const GPUs_PrintFormat = "SELECT\n"
+ATTR_NAME    " AS Name      WIDTH AUTO\n"               // 0
+ATTR_ACTIVITY " AS ST WIDTH 2 PRINTAS ACTIVITY_CODE\n"  // 1
+ATTR_REMOTE_USER " AS User WIDTH AUTO PRINTF %s OR _\n" // 2
+"GPUs AS GPUs PRINTF %4d\n"                             // 3
+"GPUs_GlobalMemoryMB AS GPU-Memory PRINTAS READABLE_MB OR _\n"
+"GPUs_DeviceName?:join(\",\",evalineachcontext(DeviceName,AvailableGPUs))?:CUDADeviceName  AS GPU-Name PRINTF %s OR *\n"
+//"WHERE (PartitionableSlot && AssignedGPUs isnt undefined) ?: ((Gpus?:0) > 0)\n"
+"WHERE " PMODE_GPUS_CONSTRAINT "\n"
+"SUMMARY STANDARD\n";
+
+const char * const GPUsCompact_PrintFormat = "SELECT\n"
+ATTR_MACHINE    " AS Machine      WIDTH AUTO\n"         // 0
+ATTR_OPSYS      " AS Platform     PRINTAS PLATFORM\n"   // 1 projects Arch, OpSysAndVer and OpSysShortName
+ATTR_NUM_DYNAMIC_SLOTS " AS Slot PRINTF %4d OR ' '\n" // 2
+ATTR_SLOT_TYPE  " AS s NOPREFIX PRINTAS SLOT_COUNT_TAG\n"  // 3
+//"Child" ATTR_REMOTE_USER " AS Users WIDTH 20 PRINTAS UNIQUE\n" //
+"GPUs AS FreGPU  PRINTF %6d\n"                         // 4
+"TotalSlotGPUs AS TotGPUs WIDTH 7 PRINTAS TOTAL_GPUS\n"        // 5  TOTAL_GPUS projects AssignedGPUs,OfflineGPUs
+"AssignedGPUs AS Capability PRINTAS GPUS_CAPS\n"       // 6  
+"AssignedGPUs AS GPUsMemory PRINTAS GPUS_MEM\n"        // 7  
+"AssignedGPUs AS DeviceNames PRINTAS GPUS_NAMES\n"     // 8  
+"WHERE " PMODE_GPUS_COMPACT_CONSTRAINT "\n"
+"GROUP BY Machine\n"
+"SUMMARY STANDARD\n";
+
+
+void PrettyPrinter::ppSetGPUsCols (int width, const char * & constr)
+{
+	if (compactMode) {
+		const char * tag = "GPUsCompact";
+		const char * fmt = GPUsCompact_PrintFormat;
+		if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+			fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+		}
+
+		// adjust column offsets for these
+		startdCompact_ixCol_MachineSlot = 0;
+		startdCompact_ixCol_Platform = 1;
+		startdCompact_ixCol_Slots = 2;
+		startdCompact_ixCol_FreeGPUs = 4;
+		startdCompact_ixCol_TotGPUs = 5;
+		startdCompact_ixCol_GPUsPropsCaps = 6;
+		startdCompact_ixCol_GPUsPropsMem = 7;
+		startdCompact_ixCol_GPUsPropsName = 8;
+
+		return;
+	}
+
+	const char * tag = "GPUs";
+	const char * fmt = GPUs_PrintFormat;
+	if (set_status_print_mask_from_stream(fmt, false, &constr) < 0) {
+		fprintf(stderr, "Internal error: default %s print-format is invalid !\n", tag);
+	}
+
 }
 
 void
@@ -1154,6 +1220,10 @@ void PrettyPrinter::ppInitPrintMask(ppOption pps, classad::References & proj, co
 
 		case PP_STARTD_RUN:
 		ppSetRunCols(display_width);
+		break;
+
+		case PP_STARTD_GPUS:
+		ppSetGPUsCols(display_width, constr);
 		break;
 
 		case PP_STARTD_COD:

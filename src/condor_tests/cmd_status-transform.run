@@ -211,7 +211,7 @@ Unclaimed Idle
 Claimed Retiring
 Matched Busy
 Preempting Busy
-Backfill Busy
+Owner Idle
 )";
 $rules_file = "$option.rules";
 open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
@@ -265,7 +265,7 @@ Unclaimed
 Claimed
 Matched
 Preempting
-Backfill
+Owner
 Unclaimed
 )";
 $rules_file = "$option.rules";
@@ -326,7 +326,7 @@ Unclaimed foo\@cs.wisc.edu LINUX, X86_64
 Claimed foo\@cs.wisc.edu LINUX, X86_64
 Matched foo\@cs.wisc.edu LINUX, X86_64
 Preempting foo\@cs.wisc.edu LINUX, X86_64
-Backfill foo\@cs.wisc.edu LINUX, X86_64
+Owner foo\@cs.wisc.edu LINUX, X86_64
 Unclaimed foo\@cs.wisc.edu LINUX, X86_64
 )";
 $rules_file = "$option.rules";
@@ -383,7 +383,7 @@ Unclaimed Idle
 Claimed Retiring
 Matched Busy
 Preempting Busy
-Backfill Busy
+Owner Idle
 )";
 
 $rules_file = "$option.rules";
@@ -441,7 +441,7 @@ Unclaimed Idle
 Claimed Retiring
 Matched Busy
 Preempting Busy
-Backfill Busy
+Owner Idle
 )";
 
 $rules_file = "$option.rules";
@@ -498,7 +498,7 @@ Unclaimed Idle
 Claimed Retiring
 Matched Busy
 Preempting Busy
-Backfill Busy
+Owner Idle
 )";
 
 $rules_file = "$option.rules";
