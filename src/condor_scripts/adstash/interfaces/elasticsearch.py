@@ -127,9 +127,9 @@ class ElasticsearchInterface(GenericInterface):
         for name in convert.TEXT_ATTRS:
             properties[name] = {"type": "text"}
         for name in convert.INDEXED_KEYWORD_ATTRS:
-            properties[name] = {"type": "keyword"}
+            properties[name] = {"type": "text", "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}}
         for name in convert.NOINDEX_KEYWORD_ATTRS:
-            properties[name] = {"type": "keyword", "index": "false"}
+            properties[name] = {"type": "keyword", "index": "false",  "fields": {"keyword": {"type": "keyword", "ignore_above": 256}}}
         for name in convert.FLOAT_ATTRS:
             properties[name] = {"type": "double"}
         for name in convert.INT_ATTRS:
