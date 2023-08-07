@@ -22,6 +22,7 @@ def elasticsearch_interface():
     return ElasticsearchInterface
 def opensearch_interface():
     from adstash.interfaces.opensearch import OpenSearchInterface
+    return OpenSearchInterface
 def json_file_interface():
     from adstash.interfaces.json_file import JSONFileInterface
     return JSONFileInterface
