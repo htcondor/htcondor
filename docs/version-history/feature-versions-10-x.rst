@@ -42,6 +42,17 @@ New Features:
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
 
+- Added a ``-gpus`` option to *condor_status*. With this option *condor_status*
+  will show only machines that have GPUs provisioned; and it will show information
+  about the GPU properties.
+  :jira:`1958`
+
+- The output of *condor_status* when using the ``-compact`` option has been improved
+  to show a separate row for the second and subsequent slot type for machines that have
+  multiple slot types. Also the totals now count slots that have the ``BackfillSlot``
+  attribute under the ``Backfill`` or ``BkIdle`` columns.
+  :jira:`1957`
+
 - Improved output for ``htcondor dag status`` command to include more information
   about the specified DAG.
   :jira:`1951`
@@ -73,9 +84,10 @@ Bugs Fixed:
   in a very large and bushy DAG.
   :jira:`1945`
 
-- Fixed  bugs in *condor_store_cred* that could cause it to crash or
+- Fixed bugs in *condor_store_cred* that could cause it to crash or
   write incorrect data for the pool password.
   :jira:`1587`
+
 
 Version 10.7.0
 --------------

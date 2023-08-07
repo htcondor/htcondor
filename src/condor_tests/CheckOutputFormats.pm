@@ -818,7 +818,7 @@ sub check_status {
 			if ($machine_name =~ /05/){unless ($machine_info[3][$i] eq 'Backfill'){return 0;}}
 		}		
 		if ($summary[1][1] eq scalar (@{$machine_info[0]})-1 && $summary[1][2] eq (@{$machine_info[0]})-1){
-			for my $i (3..7){
+			for my $i (2..6){
 				for my $j (1..2){
 					unless ($summary[$i][$j] eq $counter){return 0;}
 				}
@@ -945,7 +945,7 @@ sub check_status {
 			print "       FAILED: Total is not correct\n";
 			return 0;
 		} else {
-			for my $i (3..7){
+			for my $i (2..6){
 				if ($summary[$i][1] ne (scalar keys %Attr_new)/5 || $summary[$i][2] ne (scalar keys %Attr_new)/5){
 					print "        FAILED: Total of different state is incorrect\n";
 					return 0;
