@@ -113,12 +113,20 @@ New Features:
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
 
+- If a job does not define any of the periodic policy expressions (like
+  periodic_hold), HTCondor no longer sets a default value (like false) in the
+  job ad.  The system knows that if these aren't set, to take the default action.
+  This removes about 10% of the attributes in a job ad, with corresponding 
+  benefits for all consumers of the job ad.
+  :jira:`1919`
+
 - Added submit command **want_io_proxy**.
   This replaces the old command **+WantIOProxy**.
   :jira:`1875`
 
 - Apptainer is now included in the tarballs.
   :jira:`1932`
+
 
 Bugs Fixed:
 
