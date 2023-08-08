@@ -120,6 +120,13 @@ ShadowCredDirCreator::GetOAuth2Credential(const std::string &service_name, const
 {
 	auto iter = m_creds.find(service_name);
 	if (iter == m_creds.end()) {
+		// CRUFT Older shadows (before 10.8.0) replaced '*' with '_' in
+		// the service name.
+		std::string alt_name = service_name;
+		replace_str(alt_name, "*", "_");
+		iter = m_creds.find(alt_name);
+	}
+	if (iter == m_creds.end()) {
 		err.pushf("GetOAuth2Credential", 1, "Shadow failed to provide credential for service %s",
 			service_name.c_str());
 		dprintf(D_ALWAYS|D_FAILURE, "%s\n", err.message());
