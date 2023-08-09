@@ -2655,9 +2655,13 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
 		ad.LookupString("Data", b64);
 
 		// CRUFT Older shadows (before 10.8.0) put ".use" at the end of
-		// the service name (indicating the filename to write).
+		// the service name and replace '*' with '_' (indicating the
+		// filename to write).
 		if (ends_with(fname, ".use")) {
 			fname.erase(fname.size() - 4);
+			if (fname.find('*') == std::string::npos) {
+				replace_str(fname, "_", "*");
+			}
 		}
 
 		dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad with credentials for service '%s'\n",
