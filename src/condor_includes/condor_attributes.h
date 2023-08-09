@@ -836,6 +836,7 @@
 #define ATTR_TRANSFER_INPUT_REMAPS  "TransferInputRemaps"
 #define ATTR_TRANSFER_INPUT_STATS  "TransferInputStats"
 #define ATTR_TRANSFER_PLUGINS  "TransferPlugins"
+#define ATTR_WANT_TRANSFER_PLUGIN_METHODS  "WantTransferPluginMethods"
 #define ATTR_TRANSFER_INPUT_SIZE_MB  "TransferInputSizeMB"
 #define ATTR_PUBLIC_INPUT_FILES  "PublicInputFiles"
 #define ATTR_MAX_TRANSFER_INPUT_MB "MaxTransferInputMB"
