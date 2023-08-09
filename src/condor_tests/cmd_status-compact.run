@@ -147,7 +147,6 @@ open(FH,">$rules_file") || print "FAILED opening file $rules_file\n";
 print FH $rules_content;
 close(FH);
 
-`condor_submit $submitfile`;
 my $counter = 100;
 while ($counter ne 0){
 	if ($counter == 0){
@@ -185,6 +184,7 @@ if (check_heading('status_compact_machine',\%table1) && check_heading('status_su
 unlink($new_ads);
 unlink($orig_ads);
 print "############################################################################\n";
+`condor_submit $submitfile`;
 $option = "run";
 $counter = 100;
 while ($counter ne 0){

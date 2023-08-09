@@ -2654,11 +2654,15 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
 		ad.LookupString("Service", fname);
 		ad.LookupString("Data", b64);
 
-		// The service name is of the form "foo.use"
-		if (fname.size() <= 4) {
-			EXCEPT("Shadow sent an invalid service name");
+		// CRUFT Older shadows (before 10.8.0) put ".use" at the end of
+		// the service name and replace '*' with '_' (indicating the
+		// filename to write).
+		if (ends_with(fname, ".use")) {
+			fname.erase(fname.size() - 4);
+			if (fname.find('*') == std::string::npos) {
+				replace_str(fname, "_", "*");
+			}
 		}
-		fname = fname.substr(0, fname.size() - 4);
 
 		dprintf(D_SECURITY|D_FULLDEBUG, "CONDOR_getcreds: received ad with credentials for service '%s'\n",
 			fname.c_str());
@@ -2670,7 +2674,9 @@ REMOTE_CONDOR_getcreds(const char* creds_receive_dir,
 		cred->len = credlen;
 
 		if (cred->len <= 0) {
-			EXCEPT("Failed to decode credential sent by shadow!");
+			dprintf(D_ALWAYS, "Failed to decode credential sent by shadow!\n");
+			cmd = -1;
+			break;
 		}
 
 		creds[fname] = std::move(cred);

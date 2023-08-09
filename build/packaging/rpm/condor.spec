@@ -1641,6 +1641,9 @@ fi
 /bin/systemctl try-restart condor.service >/dev/null 2>&1 || :
 
 %changelog
+* Wed Aug 09 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.1-1
+- Fix performance problem detecting futile nodes in a large and bushy DAG
+
 * Mon Jul 31 2023 Tim Theisen <tim@cs.wisc.edu> - 10.7.0-1
 - Support for Debian 12 (Bookworm)
 - Can run defrag daemons with different policies on distinct sets of nodes

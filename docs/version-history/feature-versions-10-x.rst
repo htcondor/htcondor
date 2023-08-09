@@ -84,15 +84,30 @@ Bugs Fixed:
   assert when running with partitionable slots.
   :jira:`1952`
 
-- Fixed inefficiency in DAGMan setting a nodes descendants to futile status
-  which would result in DAGMan taking an extremely long time when a node fails
-  in a very large and bushy DAG.
-  :jira:`1945`
-
 - Fixed bugs in *condor_store_cred* that could cause it to crash or
   write incorrect data for the pool password.
   :jira:`1587`
 
+- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
+  if they requested an OAuth credential whose service name included
+  an asterisk.
+  :jira:`1966`
+
+Version 10.7.1
+--------------
+
+- HTCondor version 10.7.1 released on August 9, 2023.
+
+New Features:
+
+- None.
+
+Bugs Fixed:
+
+- Fixed inefficiency in DAGMan setting a nodes descendants to futile status
+  which would result in DAGMan taking an extremely long time when a node fails
+  in a very large and bushy DAG.
+  :jira:`1945`
 
 Version 10.7.0
 --------------
