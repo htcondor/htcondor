@@ -174,14 +174,14 @@ public:
 	void	final_update( void );
 	
 		// Evaluate the state of all resources.
-	void	eval_all( void );
+	void	eval_all( int timerID = -1 );
 
 		// Evaluate and send updates for all resources.
-	void	eval_and_update_all( void );
+	void	eval_and_update_all( int timerID = -1 );
 
 		// The first one is special, since we already computed
 		// everything and we don't need to recompute anything.
-	void	update_all( void );
+	void	update_all( int timerID = -1 );
 
 	void vacate_all(bool fast) {
 		if (fast) { walk( [](Resource* rip) { rip->kill_claim(); } ); }
@@ -292,7 +292,7 @@ public:
 	void		makeAdList( ClassAdList& ads, ClassAd & queryAd );
 
 		// count the number of resources owned by this user
-	int			claims_for_this_user(const char * user);
+	int			claims_for_this_user(const std::string &user);
 
 	void		markShutdown() { is_shutting_down = true; };
 	bool		isShuttingDown() const { return is_shutting_down; };
@@ -498,7 +498,7 @@ private:
 		*/
 	void check_use( void );
 
-	void sweep_timer_handler( void ) const;
+	void sweep_timer_handler( int timerID = -1 ) const;
 
 	void try_token_request();
 
@@ -523,7 +523,7 @@ private:
 	HibernationManager	*m_hibernation_manager;
 	int					m_hibernate_tid;
 	bool				m_hibernating;
-	void checkHibernate(void);
+	void checkHibernate( int timerID = -1 );
 	int	 allHibernating( std::string &state_str ) const;
 	int  startHibernateTimer();
 	void resetHibernateTimer();

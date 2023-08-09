@@ -84,10 +84,10 @@ class VMGahpServer : public Service {
 		int pipe_ready(int pipe_end);
 		int err_pipe_ready(void);
 		int err_pipe_ready_from_pipe(int) { return err_pipe_ready(); }
-		void err_pipe_ready_from_timer(void) { (void)err_pipe_ready(); }
+		void err_pipe_ready_from_timer(int /* timerID */) { (void)err_pipe_ready(); }
 		int poll();
-		void poll_from_timer() { (void)poll(); }
-		void poll_now();
+		void poll_from_timer(int /* timerID */) { (void)poll(); }
+		void poll_now( int /* timerID */);
 		void poll_real_soon();
 
 		int new_reqid(void);

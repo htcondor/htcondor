@@ -196,7 +196,7 @@ struct Credd
 		}
 
 		daemon = cook_daemon_arg(mode);
-		result = do_store_cred(user, password.c_str(), mode, daemon);
+		result = do_store_cred_passwd(user, password.c_str(), mode, daemon);
 		delete daemon; daemon = NULL;
 
 		if (store_cred_failed(result, mode, &errstr)) {
@@ -219,7 +219,7 @@ struct Credd
 		}
 
 		daemon = cook_daemon_arg(mode);
-		result = do_store_cred(user, NULL, mode, daemon);
+		result = do_store_cred_passwd(user, NULL, mode, daemon);
 		delete daemon; daemon = NULL;
 
 		if (result == FAILURE_NOT_FOUND) {
@@ -245,7 +245,7 @@ struct Credd
 		}
 
 		daemon = cook_daemon_arg(mode);
-		result = do_store_cred(user, NULL, mode, daemon);
+		result = do_store_cred_passwd(user, NULL, mode, daemon);
 		delete daemon; daemon = NULL;
 
 		if (result == FAILURE_NOT_FOUND) {

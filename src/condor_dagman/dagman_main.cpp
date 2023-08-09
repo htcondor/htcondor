@@ -583,7 +583,11 @@ void main_shutdown_rescue( int exitVal, DagStatus dagStatus,
 			// we may have jobs in the queue even if we think we don't.
 			// (See gittrac #4960.) wenger 2015-04-22
 		debug_printf( DEBUG_NORMAL, "Removing submitted jobs...\n" );
-		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId,
+		const char* rm_reason = "DAG Abort: DAG is exiting and writing rescue file.";
+		if (dagStatus == DagStatus::DAG_STATUS_RM) {
+			rm_reason = "DAG Removed: User removed scheduler job from queue.";
+		}
+		dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason,
 					removeCondorJobs, false );
 		if ( dagman.dag->NumScriptsRunning() > 0 ) {
 			debug_printf( DEBUG_NORMAL, "Removing running scripts...\n" );
@@ -1285,7 +1289,10 @@ void main_init (int argc, char ** const argv) {
 			// before (e.g., user did condor_hold, modified DAG file
 			// introducing a syntax error, and then did condor_release).
 			// (wenger 2014-10-28)
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse DAG file (%s). Was likely in recovery mode.",
+			          it.c_str());
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason, true, true );
 			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			
@@ -1343,7 +1350,10 @@ void main_init (int argc, char ** const argv) {
 		//Attempt to parse the save file. Run parse with useDagDir = false because
 		//there is no point risking changing directories just to read save file (i.e. partial rescue)
 		if (!parse(dagman.dag, loadSaveFile.c_str(), false, dagman._schedd, dagman.doAppendVars)) {
-			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, true, true);
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse save file (%s).",
+			          loadSaveFile.c_str());
+			dagman.dag->RemoveRunningJobs(dagman.DAGManJobId, rm_reason, true, true);
 			dagmanUtils.tolerant_unlink(lockFileName.c_str());
 			dagman.CleanUp();
 			debug_error(1, DEBUG_QUIET, "Failed to parse save file\n");
@@ -1386,7 +1396,10 @@ void main_init (int argc, char ** const argv) {
 			// before (e.g., user did condor_hold, modified DAG (or
 			// rescue DAG) file introducing a syntax error, and then
 			// did condor_release). (wenger 2014-10-28)
-			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, true, true );
+			std::string rm_reason;
+			formatstr(rm_reason, "Startup Error: DAGMan failed to parse rescue file (%s).",
+			          dagman.rescueFileToRun.c_str());
+			dagman.dag->RemoveRunningJobs( dagman.DAGManJobId, rm_reason, true, true );
 			dagmanUtils.tolerant_unlink( lockFileName.c_str() );
 			dagman.CleanUp();
 			

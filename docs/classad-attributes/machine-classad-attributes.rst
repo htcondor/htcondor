@@ -57,6 +57,12 @@ Machine ClassAd Attributes
     machine has the ability to hibernate, then this boolean ClassAd
     attribute will be ``True``. By default, it is ``False``.
 
+:classad-attribute:`ClaimEndTime`
+    The time at which the slot will leave the ``Claimed`` state.
+    Currently, this only applies to partitionable slots.
+    This is measured in the number of integer seconds since the Unix
+    epoch (00:00:00 UTC, Jan 1, 1970).
+
 :classad-attribute:`ClockDay`
     The day of the week, where 0 = Sunday, 1 = Monday, ..., and 6 =
     Saturday.
@@ -461,6 +467,11 @@ Machine ClassAd Attributes
 :classad-attribute:`MachineMaxVacateTime`
     An integer expression that specifies the time in seconds the machine
     will allow the job to gracefully shut down.
+
+:classad-attribute:`MaxClaimTime`
+    The maximum number of seconds that the slot may remain in the
+    `Claimed` state before returning to the `Unclaimed` state.
+    Currently, this only applies to partitionable slots.
 
 :classad-attribute:`MaxJobRetirementTime`
     When the *condor_startd* wants to kick the job off, a job which has
@@ -1135,6 +1146,9 @@ into the machine ClassAd whenever a resource is in the Claimed state:
     ``RemoteUser`` would hold the name of the entity currently using the
     resource, while ``RemoteOwner`` would hold the name of the entity
     that claimed the resource.
+
+:classad-attribute:`RemoteScheddName`
+    The name of the *condor_schedd* which claimed this resource.
 
 :classad-attribute:`PreemptingOwner`
     The name of the user who is preempting the job that is currently

@@ -518,7 +518,7 @@ Email::shouldSend( ClassAd* ad, int exit_reason, bool is_error )
 	int exitCode = 0, successExitCode = 0;
 
 	// send email if user requested it
-	int notification = NOTIFY_COMPLETE;	// default
+	int notification = NOTIFY_NEVER;	// default
 	ad->LookupInteger( ATTR_JOB_NOTIFICATION, notification );
 
 	switch( notification ) {

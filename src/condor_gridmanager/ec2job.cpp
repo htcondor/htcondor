@@ -490,7 +490,7 @@ void EC2Job::Reconfig()
 }
 
 
-void EC2Job::doEvaluateState()
+void EC2Job::doEvaluateState( int /* timerID */ )
 {
 	int old_gm_state;
 	bool reevaluate_state = true;
@@ -2410,7 +2410,7 @@ void EC2Job::SetRequestID( const char * requestID ) {
 // start trying again when the job is released.))
 //
 
-void EC2Job::ResourceLeaseExpired() {
+void EC2Job::ResourceLeaseExpired( int /* timerID */ ) {
 	errorString = "Resource was down for too long.";
 	dprintf( D_ALWAYS, "(%d.%d) Putting job on hold: resource was down for too long.\n", procID.cluster, procID.proc );
 	gmState = GM_HOLD;

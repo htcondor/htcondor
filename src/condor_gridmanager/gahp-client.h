@@ -76,7 +76,7 @@ class GahpServer : public Service {
 	bool UpdateToken(const std::string &token_file);
 	bool CreateSecuritySession();
 
-	void DeleteMe();
+	void DeleteMe( int timerID = -1 );
 
 	static const int m_buffer_size;
 	char *m_buffer;
@@ -128,7 +128,7 @@ class GahpServer : public Service {
 	void RemoveGahpClient();
 
 	void ProxyCallback();
-	void doProxyCheck();
+	void doProxyCheck( int timerID = -1 );
 	GahpProxyInfo *RegisterProxy( Proxy *proxy );
 	void UnregisterProxy( Proxy *proxy );
 
@@ -159,7 +159,7 @@ class GahpServer : public Service {
 		notification.
 		@see setPollInterval
 	*/
-	void poll();
+	void poll( int timerID = -1 );
 
 	void poll_real_soon();
 
@@ -303,7 +303,7 @@ class GenericGahpClient : public Service {
 		Gahp_Args * get_pending_result( const char *, const char * );
 		bool check_pending_timeout( const char *, const char * );
 		int reset_user_timer( int tid );
-		void reset_user_timer_alarm();
+		void reset_user_timer_alarm( int timerID = -1 );
 
 		unsigned int m_timeout;
 		mode m_mode;

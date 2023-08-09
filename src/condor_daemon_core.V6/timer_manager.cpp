@@ -467,7 +467,7 @@ TimerManager::Timeout(int * pNumFired /*= NULL*/, double * pruntime /*=NULL*/)
 		// it and pass the service* as a parameter.
 		if ( in_timeout->handlercpp ) {
 			// typedef int (*TimerHandlercpp)()
-			((in_timeout->service)->*(in_timeout->handlercpp))();
+			((in_timeout->service)->*(in_timeout->handlercpp))(in_timeout->id);
 		} else {
 			// typedef int (*TimerHandler)()
 			(*(in_timeout->handler))();
@@ -749,4 +749,20 @@ Timer *TimerManager::GetTimer( int id, Timer **prev )
 	}
 
 	return timer_ptr;
+}
+
+
+int
+TimerManager::countTimersByDescription( const char * description ) {
+    if( description == NULL ) { return -1; }
+    if( timer_list == NULL ) { return 0; }
+
+    int counter = 0;
+	Timer * i = timer_list;
+	for( ; i; i = i->next ) {
+    	if( 0 == strcmp(i->event_descrip, description) ) {
+    	    ++counter;
+    	}
+	}
+	return counter;
 }

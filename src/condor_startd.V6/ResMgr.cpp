@@ -927,7 +927,7 @@ ResMgr::send_update( int cmd, ClassAd* public_ad, ClassAd* private_ad,
 
 
 void
-ResMgr::update_all( void )
+ResMgr::update_all( int /* timerID */ )
 {
 	num_updates = 0;
 
@@ -964,7 +964,7 @@ ResMgr::update_all( void )
 
 
 void
-ResMgr::eval_and_update_all( void )
+ResMgr::eval_and_update_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -978,7 +978,7 @@ ResMgr::eval_and_update_all( void )
 
 
 void
-ResMgr::eval_all( void )
+ResMgr::eval_all( int /* timerID */ )
 {
 #if HAVE_HIBERNATION
 	if ( !hibernating () ) {
@@ -1509,7 +1509,7 @@ ResMgr::check_polling( void )
 
 
 void
-ResMgr::sweep_timer_handler( void ) const
+ResMgr::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "STARTD: calling and resetting sweep_timer_handler()\n");
 	auto_free_ptr cred_dir(param("SEC_CREDENTIAL_DIRECTORY_KRB"));
@@ -1776,16 +1776,16 @@ ResMgr::deleteResource( Resource* rip )
 
 // return the count of claims on this machine associated with this user
 // used to decide when to delete credentials
-int ResMgr::claims_for_this_user(const char * user)
+int ResMgr::claims_for_this_user(const std::string &user)
 {
-	if ( ! user || ! user[0]) {
+	if (user.empty()) {
 		return 0;
 	}
 	int num_matches = 0;
 
-	for (Resource * res : slots) {
-		if (res && res->r_cur && res->r_cur->client() && res->r_cur->client()->user()) {
-			if (MATCH == strcmp(res->r_cur->client()->user(), user)) {
+	for (const Resource *res : slots) {
+		if (res && res->r_cur && res->r_cur->client() && !res->r_cur->client()->c_user.empty()) {
+			if (user == res->r_cur->client()->c_user) {
 				num_matches += 1;
 			}
 		}
@@ -2023,7 +2023,7 @@ ResMgr::allHibernating( std::string &target ) const
 
 
 void
-ResMgr::checkHibernate( void )
+ResMgr::checkHibernate( int /* timerID */ )
 {
 
 		// If we have already issued the command to hibernate, then
@@ -2720,8 +2720,9 @@ ResMgr::checkForDrainCompletion() {
 		if(! rip->wasAcceptedWhileDraining()) {
 			// Not sure how COD and draining are supposed to interact, but
 			// the partitionable slot is never accepted-while-draining,
-			// nor claimed, nor should it block drain from completing.
+			// nor should it block drain from completing.
 			if(! rip->hasAnyClaim()) { continue; }
+			if(rip->is_partitionable_slot()) { continue; }
 			allAcceptedWhileDraining = false;
 		}
 	}

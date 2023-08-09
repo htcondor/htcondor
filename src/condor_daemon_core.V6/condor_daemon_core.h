@@ -468,7 +468,7 @@ class DaemonCore : public Service
 		*/
     void reconfig();
 
-	void refreshDNS();
+	void refreshDNS( int timerID = -1 );
 
     /** Not_Yet_Documented
         @param perm Not_Yet_Documented
@@ -851,7 +851,11 @@ class DaemonCore : public Service
         @return Not_Yet_Documented
     */
     int Cancel_Reaper (int rid);
-   
+
+
+    int numRegisteredReapers();
+    int countTimersByDescription( const char * description ) { return t.countTimersByDescription(description); }
+
 
     /** Not_Yet_Documented
         @param signal signal
@@ -2081,13 +2085,13 @@ class DaemonCore : public Service
         HANDLE hProcess;
         HANDLE hThread;
         DWORD tid;
-        HWND hWnd;
 		LONG pipeReady;
 		PipeEnd *pipeEnd;
-		LONG deallocate;
 		HANDLE watcherEvent;
+		LONG deallocate;
 #endif
-        std::string sinful_string;
+		volatile unsigned int process_exited;   // set to true if the process has exited, set before reaper callback
+		std::string sinful_string;
         int is_local;
         int parent_is_local;
         int reaper_id;
@@ -2206,7 +2210,7 @@ class DaemonCore : public Service
 	// Method to check on and possibly recover from a bad connection
 	// to the procd. Suitable to be registered as a one-shot timer.
 	int CheckProcInterface();
-	void CheckProcInterfaceFromTimer() { (void)CheckProcInterface(); }
+	void CheckProcInterfaceFromTimer( int /* timerID */ ) { (void)CheckProcInterface(); }
 
 	// misc helper functions
 	void CheckPrivState( void );

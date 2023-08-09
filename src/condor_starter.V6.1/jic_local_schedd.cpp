@@ -532,7 +532,7 @@ JICLocalSchedd::retryJobCleanup( void )
 
 
 void
-JICLocalSchedd::retryJobCleanupHandler( void )
+JICLocalSchedd::retryJobCleanupHandler( int /* timerID */ )
 {
     m_cleanup_retry_tid = -1;
     dprintf(D_ALWAYS, "Retrying job cleanup, calling allJobsDone()\n");

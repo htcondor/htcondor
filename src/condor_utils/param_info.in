@@ -2368,6 +2368,11 @@ default=true
 type=bool
 tags=condor_ssh_to_job
 
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
+
 [ENABLE_USERLOG_LOCKING]
 default=false
 type=bool
@@ -3321,6 +3326,13 @@ type=int
 customization=normal
 description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
+tags=schedd
+
+[ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY]
+default=false
+type=bool
+customization=normal
+description=Restrict job submission to users that already have already been added using condor_qusers
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
@@ -4465,6 +4477,14 @@ default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 type=string
 tags=schedd,startd,claim
+
+[ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS]
+default=false
+type=bool
+
+[MAX_PARTITIONABLE_SLOT_CLAIM_TIME]
+default=3600
+type=int
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"

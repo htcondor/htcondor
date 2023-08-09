@@ -2914,7 +2914,7 @@ ADVANCED COMMANDS
 
     :index:`ulog_execute_attrs<single: ulog_execute_attrs; submit commands>`
  ulog_execute_attrs = <attribute-list>
-    A comma-seperated list of machine ClassAd attribute names. The named
+    A comma-separated list of machine ClassAd attribute names. The named
     attributes and their values are written as part of the execution event
     in the job event log.
 

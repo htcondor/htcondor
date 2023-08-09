@@ -2693,6 +2693,18 @@ std::string DaemonCore::GetCommandsInAuthLevel(DCpermission perm,bool is_authent
 	return res;
 }
 
+int
+DaemonCore::numRegisteredReapers() {
+	// This would be better as std::count_if() or something.
+	int rv = 0;
+	for (size_t i = 0; i < nReap; ++i) {
+		if( reapTable[i].handler || reapTable[i].handlercpp ) {
+			++rv;
+		}
+	}
+	return rv;
+}
+
 void DaemonCore::DumpReapTable(int flag, const char* indent)
 {
 	const char *descrip1;
@@ -2797,7 +2809,7 @@ void DaemonCore::DumpSocketTable(int flag, const char* indent)
 }
 
 void
-DaemonCore::refreshDNS() {
+DaemonCore::refreshDNS( int /* timerID */ ) {
 #if HAVE_RESOLV_H && HAVE_DECL_RES_INIT
 		// re-initialize dns info (e.g. IP addresses of nameservers)
 	res_init();
@@ -4900,6 +4912,7 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 	int is_local = FALSE;
 	char const *destination = NULL;
 	bool target_has_dcpm = true; // is process pid a daemon core process?
+	bool target_exited = false; // has process exited already?
 
 	// sanity check on the pid.  we don't want to do something silly like
 	// kill pid -1 because the pid has not been initialized yet.
@@ -4931,8 +4944,11 @@ void DaemonCore::Send_Signal(classy_counted_ptr<DCSignalMsg> msg, bool nonblocki
 		// our table says it does _not_ have a command socket
 		target_has_dcpm = false;
 	}
+	if (pidinfo && pidinfo->process_exited) {
+		target_exited = true;
+	}
 
-	if( ProcessExitedButNotReaped(pid) ) {
+	if( target_exited || ProcessExitedButNotReaped(pid) ) {
 		msg->deliveryStatus( DCMsg::DELIVERY_FAILED );
 		dprintf(D_ALWAYS,"Send_Signal: attempt to send signal %d to process %d, which has exited but not yet been reaped.\n",sig,pid);
 		return;
@@ -6421,7 +6437,13 @@ void CreateProcessForkit::exec() {
 				msg += ' ';
 			}
 		}
-		dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
+
+		// This causes the child to exit with an indecipherable error
+		// message if the log file is only available because of an
+		// environment variable over-ride, and/or maybe just because
+		// we're a daemon core process running in -t mode, and we
+		// just closed the FD that dprintf() was using.
+		// dprintf( D_DAEMONCORE, "%s\n", msg.c_str() );
 
 			// Re-open 'em to point at /dev/null as place holders
 		if ( num_closed ) {
@@ -8172,7 +8194,6 @@ int DaemonCore::Create_Process(
 	pidtmp->hThread = piProcess.hThread;
 	pidtmp->pipeEnd = NULL;
 	pidtmp->tid = piProcess.dwThreadId;
-	pidtmp->hWnd = 0;
 	pidtmp->pipeReady = 0;
 	pidtmp->deallocate = 0;
 #endif 
@@ -8334,7 +8355,7 @@ class FakeCreateThreadReaperCaller: public Service {
 public:
 	FakeCreateThreadReaperCaller(int exit_status,int reaper_id);
 
-	void CallReaper();
+	void CallReaper(int timerID = -1);
 
 	int FakeThreadID() const { return m_tid; }
 
@@ -8360,7 +8381,7 @@ FakeCreateThreadReaperCaller::FakeCreateThreadReaperCaller(int exit_status,int r
 }
 
 void
-FakeCreateThreadReaperCaller::CallReaper() {
+FakeCreateThreadReaperCaller::CallReaper( int /* timerID */ ) {
 	daemonCore->CallReaper( m_reaper_id, "fake thread", m_tid, m_exit_status );
 	delete this;
 }
@@ -8582,7 +8603,6 @@ DaemonCore::Create_Thread(ThreadStartFunc start_func, void *arg, Stream *sock,
 	pidtmp->hThread = hThread;
 	pidtmp->pipeEnd = NULL;
 	pidtmp->tid = tid;
-	pidtmp->hWnd = 0;
 	pidtmp->deallocate = 0;
 #else
 	pidtmp->pid = tid;
@@ -9514,6 +9534,7 @@ pidWatcherThread( void* arg )
 	if ( (result < numentries) && (result >= 0) ) {
 
 		last_pidentry_exited = result;
+		InterlockedExchange(&(entry->pidentries[result]->process_exited), true);
 
 		// notify our main thread which process exited
 		// note: if it was a thread which exited, the entry's
@@ -9735,6 +9756,8 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			return FALSE;
 		}
 	}
+	// in this is not already set to true
+	pidentry->process_exited = true;
 
 	// If this process has DC-managed pipes attached to stdout or
 	// stderr and those are still open, read them one last time.
@@ -9780,7 +9803,7 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 			whatexited = "tid";
 		}
 		if ( winexit == STILL_ACTIVE ) {	// should never happen
-			EXCEPT("DaemonCore: HandleProcessExit() and %s %d still running",
+			dprintf(D_ALWAYS | D_BACKTRACE, "DaemonCore: HandleProcessExit() and %s %d STILL_ACTIVE",
 				whatexited, pid);
 		}
 		exit_status = winexit;
@@ -9815,10 +9838,10 @@ int DaemonCore::HandleProcessExit(pid_t pid, int exit_status)
 	pidTable->remove(pid);
 #ifdef WIN32
 		// close WIN32 handles
-	::CloseHandle(pidentry->hThread);
+	::CloseHandle(pidentry->hThread);  pidentry->hThread = NULL;
 	// must check hProcess cuz could be NULL if just a thread
 	if (pidentry->hProcess) {
-		::CloseHandle(pidentry->hProcess);
+		::CloseHandle(pidentry->hProcess);  pidentry->hProcess = NULL;
 	}
 #endif
 	// and delete the pidentry
@@ -10319,7 +10342,7 @@ InitCommandSockets(int tcp_port, int udp_port, DaemonCore::SockPairVec & socks, 
 bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
 {
 
-#ifndef WIN32
+//#ifndef WIN32
 	WaitpidEntry wait_entry;
 	wait_entry.child_pid = pid;
 	wait_entry.exit_status = 0; // ignored in WaitpidEntry::operator==, avoid uninit warning
@@ -10329,7 +10352,7 @@ bool DaemonCore::ProcessExitedButNotReaped(pid_t pid)
 			return true;
 		}
 	}
-#endif
+//#endif
 
 	return false;
 }
@@ -10976,6 +10999,7 @@ DaemonCore::evalExpr( ClassAd* ad, const char* param_name,
 
 DaemonCore::PidEntry::PidEntry() : pid(0),
 	new_process_group(0),
+	process_exited(false),
 	is_local(0),
 	parent_is_local(0),
 	reaper_id(0),

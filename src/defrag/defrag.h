@@ -42,7 +42,7 @@ class Defrag: public Service {
 	void config();
 	void stop();
 
-	void poll(); // do the periodic policy evaluation
+	void poll( int timerID = -1 ); // do the periodic policy evaluation
 
 	typedef std::set< std::string > MachineSet;
 
@@ -107,7 +107,7 @@ class Defrag: public Service {
 	void slotNameToDaemonName(std::string const &name,std::string &machine);
 
 	void publish(ClassAd *ad);
-	void updateCollector();
+	void updateCollector( int timerID = -1 );
 	void invalidatePublicAd();
 	void queryDrainingCost();
 

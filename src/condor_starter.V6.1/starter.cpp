@@ -2288,7 +2288,7 @@ Starter::removeDeferredJobs() {
  * return true if no errors occured
  **/
 void
-Starter::SpawnPreScript( void )
+Starter::SpawnPreScript( int /* timerID */ )
 {
 		//
 		// Unset the deferral timer so that we know that no job
@@ -3936,7 +3936,7 @@ Starter::RecordJobExitStatus(int status) {
 }
 
 void
-Starter::CheckDiskUsage(void)
+Starter::CheckDiskUsage( int /* timerID */ )
 {
 #ifdef LINUX
 		// Avoid repeatedly triggering

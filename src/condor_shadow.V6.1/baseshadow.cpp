@@ -700,7 +700,7 @@ void BaseShadow::removeJob( const char* reason )
 }
 
 void
-BaseShadow::retryJobCleanup( void )
+BaseShadow::retryJobCleanup()
 {
 	m_num_cleanup_retries++;
 	if (m_num_cleanup_retries > m_max_cleanup_retries) {
@@ -722,7 +722,7 @@ BaseShadow::retryJobCleanup( void )
 
 
 void
-BaseShadow::retryJobCleanupHandler( void )
+BaseShadow::retryJobCleanupHandler( int /* timerID */ )
 {
 	m_cleanup_retry_tid = -1;
 	dprintf(D_ALWAYS, "Retrying job cleanup, calling terminateJob()\n");

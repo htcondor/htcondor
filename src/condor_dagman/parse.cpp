@@ -655,6 +655,11 @@ bool parse(Dag *dag, const char *filename, bool useDagDir,
 			parsed_line_successfully = true;
 		}
 
+		// Allow ENV spec, but ignore it as it is parsed in dagman utils
+		else if (strcasecmp(token, "ENV") == MATCH) {
+			parsed_line_successfully = true;
+		}
+
 		// Handle a Splice spec
 		else if(strcasecmp(token, "SPLICE") == 0) {
 				// Parsed in first pass.

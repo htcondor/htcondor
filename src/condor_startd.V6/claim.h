@@ -77,53 +77,19 @@ private:
 };
 
 
-class Client
+struct Client
 {
-public:
-	Client();
-	~Client();
-
-	char*	name()	{return c_user;};	// For compatibility only
-	char*	user()	{return c_user;};
-	char*	owner()	{return c_owner;};
-	char*	accountingGroup() {return c_acctgrp;};
-	char*	host()	{return c_host;};
-	char*	addr() 	{return c_addr;};
-	char*   getConcurrencyLimits() {return c_concurrencyLimits; };
-    char*   rmtgrp() {return c_rmtgrp;}
-    char*   neggrp() {return c_neggrp;}
-    bool    autorg() const {return c_autorg;}
-	int     numPids() const {return c_numPids;};
-
-	void	setuser(const char* user);
-	void	setowner(const char* owner);
-	void	setAccountingGroup(const char* grp);
-	void	setaddr(const char* addr);
-	void	sethost(const char* host);
-	void    setConcurrencyLimits(const char* limits);
-    void    setrmtgrp(const char* rmtgrp);
-    void    setneggrp(const char* neggrp);
-    void    setautorg(const bool autorg);
-	void    setNumPids(int numJobPids);
-
-		// send a message to the client and accountant that the claim
-		// is a being vacated
-	void	vacate( char* claim_id );
-
-	std::string c_scheddName;
-
-private:
-	char	*c_owner;	// name of the owner
-	char	*c_user;	// name of the user
-	char	*c_acctgrp; // name of the accounting group, if any
-	char	*c_host;	// hostname of the clientmachine
-	char	*c_addr;	// <ip:port> of the client
-	char	*c_concurrencyLimits; // limits, if any
-    char*   c_rmtgrp;   // the submitter's accounting group
-    char*   c_neggrp;   // the negotiating accounting group
-    bool    c_autorg;   // true if negotiated via autoregroup policy
-	int     c_numPids;
-
+	std::string c_owner;      // name of the owner
+	std::string c_user;	      // name of the user
+	std::string c_acctgrp;    // name of the accounting group, if any
+	std::string c_host;	      // hostname of the clientmachine
+	std::string c_addr;	      // <ip:port> of the client
+	std::string c_concurrencyLimits; // limits, if any
+	std::string c_rmtgrp;     // the submitter's accounting group
+	std::string c_neggrp;     // the negotiating accounting group
+	std::string c_scheddName; // name of the schedd
+	bool        c_autorg{false}; // true if negotiated via autoregroup policy
+	int         c_numPids{0};
 };
 
 
@@ -183,12 +149,12 @@ public:
 		// Timer functions
 	void start_match_timer();
 	void cancel_match_timer();
-	void  match_timed_out();		// We were matched, but not claimed in time
+	void match_timed_out( int timerID = -1 );	// We were matched, but not claimed in time
 	void startLeaseTimer();
 	void cancelLeaseTimer();
-	void  leaseExpired();		// We were claimed, but didn't get a
-								// keep alive in time from the schedd
-	void sendAlive();
+	void leaseExpired( int timerID = -1 );		// We were claimed, but didn't get a
+												// keep alive in time from the schedd
+	void sendAlive( int timerID = -1 );
 	int sendAliveConnectHandler(Stream *sock);
 	int sendAliveResponseHandler( Stream *sock );
 

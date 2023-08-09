@@ -43,7 +43,7 @@ class RemoteProc : public UserProc {
 		virtual bool PublishUpdateAd( ClassAd * jobAd );
 		virtual void PublishToEnv( Env * env );
 
-		virtual void getStats();
+		virtual void getStats( int timerID = -1 );
 
 		void RemoveRemoteJob();
 		void InitWorkerArgs(ArgList &args, Env &env, const char *cmd);

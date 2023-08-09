@@ -35,12 +35,8 @@ TransferQueueRequest::TransferQueueRequest(ReliSock *sock,filesize_t sandbox_siz
 	m_sandbox_size_MB(sandbox_size/1024.0/1024.0),
 	m_fname(fname),
 	m_downloading(downloading),
-	m_max_queue_age(max_queue_age)
+	m_gave_go_ahead(false), m_max_queue_age(max_queue_age), m_time_born(time(NULL)), m_time_go_ahead(0)
 {
-	m_gave_go_ahead = false;
-	m_time_born = time(NULL);
-	m_time_go_ahead = 0;
-
 		// the up_down_queue_user name uniquely identifies the user and the direction of transfer
 	if( m_downloading ) {
 		m_up_down_queue_user = "D";
@@ -55,7 +51,7 @@ TransferQueueRequest::~TransferQueueRequest() {
 	if( m_sock ) {
 		daemonCore->Cancel_Socket( m_sock );
 		delete m_sock;
-		m_sock = NULL;
+		m_sock = nullptr;
 	}
 }
 
@@ -111,43 +107,20 @@ TransferQueueRequest::SendGoAhead(XFER_QUEUE_ENUM go_ahead,char const *reason) {
 	}
 
 	m_gave_go_ahead = true;
-	m_time_go_ahead = time(NULL);
+	m_time_go_ahead = time(nullptr);
 	return true;
 }
 
-TransferQueueManager::TransferQueueManager() {
-	m_max_uploads = 0;
-	m_max_downloads = 0;
-	m_check_queue_timer = -1;
-	m_default_max_queue_age = 0;
-	m_throttle_disk_load = false;
-	m_disk_load_low_throttle = 0;
-	m_disk_load_high_throttle = 0;
-	m_throttle_disk_load_max_concurrency = 0;
-	m_throttle_disk_load_incremented = 0;
-	m_throttle_disk_load_increment_wait = 60;
-	m_uploading = 0;
-	m_downloading = 0;
-	m_waiting_to_upload = 0;
-	m_waiting_to_download = 0;
-	m_upload_wait_time = 0;
-	m_download_wait_time = 0;
-	m_round_robin_counter = 0;
-	m_round_robin_garbage_counter = 0;
-	m_round_robin_garbage_time = time(NULL);
-	m_update_iostats_interval = 0;
-	m_update_iostats_timer = -1;
-	m_publish_flags = 0;
-
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,NULL,IF_BASICPUB|m_max_uploading_stat.PubValue);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,NULL,IF_BASICPUB|m_max_downloading_stat.PubValue);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,NULL,IF_BASICPUB|m_uploading_stat.PubDefault);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,NULL,IF_BASICPUB|m_downloading_stat.PubDefault);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,NULL,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,&m_waiting_to_download_stat,NULL,IF_BASICPUB|m_waiting_to_download_stat.PubDefault);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,&m_upload_wait_time_stat,NULL,IF_BASICPUB|m_upload_wait_time_stat.PubDefault);
-	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,&m_download_wait_time_stat,NULL,IF_BASICPUB|m_download_wait_time_stat.PubDefault);
-	RegisterStats(NULL,m_iostats);
+TransferQueueManager::TransferQueueManager() : m_round_robin_garbage_time(time(nullptr)) {
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_UPLOADING,&m_max_uploading_stat,nullptr,IF_BASICPUB|m_max_uploading_stat.PubValue);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_MAX_DOWNLOADING,&m_max_downloading_stat,nullptr,IF_BASICPUB|m_max_downloading_stat.PubValue);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_UPLOADING,&m_uploading_stat,nullptr,IF_BASICPUB|m_uploading_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_DOWNLOADING,&m_downloading_stat,nullptr,IF_BASICPUB|m_downloading_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_UPLOAD,&m_waiting_to_upload_stat,nullptr,IF_BASICPUB|m_waiting_to_upload_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_NUM_WAITING_TO_DOWNLOAD,&m_waiting_to_download_stat,nullptr,IF_BASICPUB|m_waiting_to_download_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_UPLOAD_WAIT_TIME,&m_upload_wait_time_stat,nullptr,IF_BASICPUB|m_upload_wait_time_stat.PubDefault);
+	m_stat_pool.AddProbe(ATTR_TRANSFER_QUEUE_DOWNLOAD_WAIT_TIME,&m_download_wait_time_stat,nullptr,IF_BASICPUB|m_download_wait_time_stat.PubDefault);
+	RegisterStats(nullptr,m_iostats);
 }
 
 TransferQueueManager::~TransferQueueManager() {
@@ -174,7 +147,7 @@ TransferQueueManager::parseThrottleConfig(char const *config_param,bool &enable_
 		return;
 	}
 
-	char *endptr=NULL;
+	char *endptr=nullptr;
 	low = strtod(throttle_config.c_str(),&endptr);
 	if( !endptr || !(isspace(*endptr) || *endptr == '\0') ) {
 		EXCEPT("Invalid configuration for %s: %s",config_param,throttle_config.c_str());
@@ -231,11 +204,11 @@ TransferQueueManager::InitAndReconfig() {
 	parseThrottleConfig("FILE_TRANSFER_DISK_LOAD_THROTTLE",m_throttle_disk_load,m_disk_load_low_throttle,m_disk_load_high_throttle,m_disk_throttle_short_horizon,m_disk_throttle_long_horizon,m_throttle_disk_load_increment_wait);
 
 	if( m_throttle_disk_load ) {
-		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW,&m_disk_throttle_low_stat,NULL,IF_BASICPUB|m_disk_throttle_low_stat.PubValue);
-		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_HIGH,&m_disk_throttle_high_stat,NULL,IF_BASICPUB|m_disk_throttle_high_stat.PubValue);
-		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LIMIT,&m_disk_throttle_limit_stat,NULL,IF_BASICPUB|m_disk_throttle_limit_stat.PubValue);
-		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_EXCESS,&m_disk_throttle_excess,NULL,IF_BASICPUB|m_disk_throttle_excess.PubDefault);
-		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_SHORTFALL,&m_disk_throttle_shortfall,NULL,IF_BASICPUB|m_disk_throttle_shortfall.PubDefault);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW,&m_disk_throttle_low_stat,nullptr,IF_BASICPUB|m_disk_throttle_low_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_HIGH,&m_disk_throttle_high_stat,nullptr,IF_BASICPUB|m_disk_throttle_high_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LIMIT,&m_disk_throttle_limit_stat,nullptr,IF_BASICPUB|m_disk_throttle_limit_stat.PubValue);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_EXCESS,&m_disk_throttle_excess,nullptr,IF_BASICPUB|m_disk_throttle_excess.PubDefault);
+		m_stat_pool.AddProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_SHORTFALL,&m_disk_throttle_shortfall,nullptr,IF_BASICPUB|m_disk_throttle_shortfall.PubDefault);
 	}
 	else {
 		m_stat_pool.RemoveProbe(ATTR_FILE_TRANSFER_DISK_THROTTLE_LOW);
@@ -295,11 +268,9 @@ TransferQueueManager::InitAndReconfig() {
 		}
 	}
 
-	for( QueueUserMap::iterator user_itr = m_queue_users.begin();
-		 user_itr != m_queue_users.end();
-		 ++user_itr )
+	for(auto & m_queue_user : m_queue_users)
 	{
-		user_itr->second.iostats.ConfigureEMAHorizons(ema_config);
+		m_queue_user.second.iostats.ConfigureEMAHorizons(ema_config);
 	}
 
 	m_disk_throttle_excess.ConfigureEMAHorizons(ema_config);
@@ -326,7 +297,7 @@ TransferQueueManager::RegisterHandlers() {
 
 int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 {
-	ReliSock *sock = (ReliSock *)stream;
+	auto *sock = dynamic_cast<ReliSock *>(stream);
 	ASSERT( cmd == TRANSFER_QUEUE_REQUEST );
 
 	ClassAd msg;
@@ -342,7 +313,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 	std::string fname;
 	std::string jobid;
 	std::string queue_user;
-	filesize_t sandbox_size;
+	filesize_t sandbox_size = 0;
 	if( !msg.LookupBool(ATTR_DOWNLOADING,downloading) ||
 		!msg.LookupString(ATTR_FILE_NAME,fname) ||
 		!msg.LookupString(ATTR_JOB_ID,jobid) ||
@@ -360,7 +331,7 @@ int TransferQueueManager::HandleRequest(int cmd,Stream *stream)
 		// age.  If it becomes necessary to customize the maximum age
 		// on a case-by-case basis, it should be easy to adjust.
 
-	TransferQueueRequest *client =
+	auto *client =
 		new TransferQueueRequest(
 			sock,
 			sandbox_size,
@@ -472,14 +443,14 @@ TransferQueueRequest::ReadReport(TransferQueueManager *manager) const
 		return false;
 	}
 
-	unsigned report_time;
-	unsigned report_interval_usec;
-	unsigned recent_bytes_sent;
-	unsigned recent_bytes_received;
-	unsigned recent_usec_file_read;
-	unsigned recent_usec_file_write;
-	unsigned recent_usec_net_read;
-	unsigned recent_usec_net_write;
+	unsigned report_time = 0;
+	unsigned report_interval_usec = 0;
+	unsigned recent_bytes_sent = 0;
+	unsigned recent_bytes_received = 0;
+	unsigned recent_usec_file_read = 0;
+	unsigned recent_usec_file_write = 0;
+	unsigned recent_usec_net_read = 0;
+	unsigned recent_usec_net_write = 0;
 	IOStats iostats;
 
 	int rc = sscanf(report.c_str(),"%u %u %u %u %u %u %u %u",
@@ -535,11 +506,9 @@ TransferQueueManager::SetRoundRobinRecency(const std::string &user)
 void
 TransferQueueManager::ClearRoundRobinRecency()
 {
-	for( QueueUserMap::iterator itr = m_queue_users.begin();
-		 itr != m_queue_users.end();
-		 itr++ )
+	for(auto & m_queue_user : m_queue_users)
 	{
-		itr->second.recency = 0;
+		m_queue_user.second.recency = 0;
 	}
 }
 
@@ -570,13 +539,13 @@ TransferQueueManager::CollectUserRecGarbage(ClassAd *unpublish_ad)
 		// To prevent unbounded growth, remove user records that have
 		// not been touched in the past hour.
 
-	time_t now = time(NULL);
+	time_t now = time(nullptr);
 		// use abs() here so big clock jumps do not cause long
 		// periods of no garbage collection
 	if( abs((int)(now - m_round_robin_garbage_time)) > 3600 ) {
 		int num_removed = 0;
 
-		for( QueueUserMap::iterator itr = m_queue_users.begin();
+		for( auto itr = m_queue_users.begin();
 			 itr != m_queue_users.end(); )
 		{
 			TransferQueueUser &u = itr->second;
@@ -647,7 +616,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.bytes_received.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_received,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_received,nullptr,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferFileWriteSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -655,7 +624,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.file_write.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_write,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_write,nullptr,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferNetReadSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -663,7 +632,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.net_read.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_read,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_read,nullptr,ema_flags);
 		}
 		formatstr(attr,"%s%s",user_attr.c_str(),"FileTransferMBWaitingToDownload");
 		if( unregister ) {
@@ -671,7 +640,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.download_MB_waiting.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.download_MB_waiting,NULL,flags|iostats.download_MB_waiting.PubValue);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.download_MB_waiting,nullptr,flags|iostats.download_MB_waiting.PubValue);
 		}
 	}
 	if( uploading ) {
@@ -681,7 +650,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.bytes_sent.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_sent,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.bytes_sent,nullptr,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferFileReadSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -689,7 +658,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.file_read.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_read,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.file_read,nullptr,ema_flags);
 		}
 		formatstr(attr,"%sFileTransferNetWriteSeconds",user_attr.c_str());
 		if( unregister ) {
@@ -697,7 +666,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.net_write.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_write,NULL,ema_flags);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.net_write,nullptr,ema_flags);
 		}
 		formatstr(attr,"%s%s",user_attr.c_str(),"FileTransferMBWaitingToUpload");
 		if( unregister ) {
@@ -705,7 +674,7 @@ TransferQueueManager::RegisterStats(char const *user,IOStats &iostats,bool unreg
 			iostats.upload_MB_waiting.Unpublish(*unpublish_ad,attr.c_str());
 		}
 		else {
-			m_stat_pool.AddProbe(attr.c_str(),&iostats.upload_MB_waiting,NULL,flags|iostats.upload_MB_waiting.PubValue);
+			m_stat_pool.AddProbe(attr.c_str(),&iostats.upload_MB_waiting,nullptr,flags|iostats.upload_MB_waiting.PubValue);
 		}
 	}
 }
@@ -720,14 +689,12 @@ TransferQueueManager::ClearTransferCounts()
 	m_iostats.upload_MB_waiting = 0;
 	m_iostats.download_MB_waiting = 0;
 
-	for( QueueUserMap::iterator itr = m_queue_users.begin();
-		 itr != m_queue_users.end();
-		 itr++ )
+	for(auto & m_queue_user : m_queue_users)
 	{
-		itr->second.running = 0;
-		itr->second.idle = 0;
-		itr->second.iostats.upload_MB_waiting = 0;
-		itr->second.iostats.download_MB_waiting = 0;
+		m_queue_user.second.running = 0;
+		m_queue_user.second.idle = 0;
+		m_queue_user.second.iostats.upload_MB_waiting = 0;
+		m_queue_user.second.iostats.download_MB_waiting = 0;
 	}
 }
 
@@ -743,7 +710,7 @@ TransferQueueManager::IOStatsChanged() {
 }
 
 void
-TransferQueueManager::CheckTransferQueue() {
+TransferQueueManager::CheckTransferQueue( int /* timerID */ ) {
 	int downloading = 0;
 	int uploading = 0;
 	bool clients_waiting = false;
@@ -783,13 +750,13 @@ TransferQueueManager::CheckTransferQueue() {
 				// between the high and low water mark, keep the concurrency limit as is (but at least 1)
 			if( m_throttle_disk_load_max_concurrency < 1 ) {
 				m_throttle_disk_load_max_concurrency = 1;
-				m_throttle_disk_load_incremented = time(NULL);
+				m_throttle_disk_load_incremented = time(nullptr);
 			}
 		}
 		else {
 				// below the low water mark, slowly increase the concurrency limit if we are running into it
 			if( uploading + downloading == m_throttle_disk_load_max_concurrency ) {
-				time_t now = time(NULL);
+				time_t now = time(nullptr);
 				if( m_throttle_disk_load_incremented > now ) {
 					m_throttle_disk_load_incremented = now; // clock jumped back
 				}
@@ -822,7 +789,7 @@ TransferQueueManager::CheckTransferQueue() {
 	while( uploading < m_max_uploads || m_max_uploads <= 0 ||
 		   downloading < m_max_downloads || m_max_downloads <= 0 )
 	{
-		TransferQueueRequest *best_client = NULL;
+		TransferQueueRequest *best_client = nullptr;
 		int best_recency = 0;
 		unsigned int best_running_count = 0;
 
@@ -871,7 +838,7 @@ TransferQueueManager::CheckTransferQueue() {
 			}
 		}
 
-		TransferQueueRequest *client = NULL;
+		TransferQueueRequest *client = nullptr;
 		client = best_client;
 		if( !client ) {
 			break;
@@ -914,7 +881,7 @@ TransferQueueManager::CheckTransferQueue() {
 			clients_waiting = true;
 
 			TransferQueueUser &user = GetUserRec(client->m_up_down_queue_user);
-			int age = time(NULL) - client->m_time_born;
+			int age = time(nullptr) - client->m_time_born;
 			if( client->m_downloading ) {
 				m_waiting_to_download++;
 				if( age > m_download_wait_time ) {
@@ -944,7 +911,7 @@ TransferQueueManager::CheckTransferQueue() {
 		while (it != m_xfer_queue.end()) {
 			TransferQueueRequest *client  = *it;
 			if( client->m_gave_go_ahead ) {
-				int age = time(NULL) - client->m_time_go_ahead;
+				int age = time(nullptr) - client->m_time_go_ahead;
 				int max_queue_age = client->m_max_queue_age;
 				if( max_queue_age > 0 && max_queue_age < age ) {
 						// Killing this client will not stop the current
@@ -981,7 +948,7 @@ TransferQueueManager::CheckTransferQueue() {
 void
 TransferQueueManager::notifyAboutTransfersTakingTooLong()
 {
-	FILE *email = NULL;
+	FILE *email = nullptr;
 
 	static time_t lastNotifiedTime = 0;
 	time_t now = time(nullptr);
@@ -1084,7 +1051,7 @@ IOStats::Clear() {
 }
 
 void
-IOStats::ConfigureEMAHorizons(std::shared_ptr<stats_ema_config> config) {
+IOStats::ConfigureEMAHorizons(const std::shared_ptr<stats_ema_config>& config) {
 	bytes_sent.ConfigureEMAHorizons(config);
 	bytes_received.ConfigureEMAHorizons(config);
 	file_read.ConfigureEMAHorizons(config);
@@ -1101,7 +1068,7 @@ TransferQueueManager::AddRecentIOStats(IOStats &s,const std::string &up_down_que
 }
 
 void
-TransferQueueManager::UpdateIOStats()
+TransferQueueManager::UpdateIOStats( int /* timerID */ )
 {
 	m_max_uploading_stat = m_max_uploads;
 	m_max_downloading_stat = m_max_downloads;
@@ -1221,7 +1188,7 @@ TransferQueueManager::publish_user_stats(ClassAd * ad, const char *user, int fla
 
 	const int ema_flags = flags | stats_entry_sum_ema_rate<double>::PubDefault;
 
-	QueueUserMap::iterator itr = m_queue_users.find(up_down_user);
+	auto itr = m_queue_users.find(up_down_user);
 	if (itr != m_queue_users.end()) {
 		TransferQueueUser &dn = itr->second;
 

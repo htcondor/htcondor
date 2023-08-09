@@ -73,7 +73,7 @@ protected:
     /*
       cycle() - called MESSAGES_PER_INTERVAL_FACTOR times per m_hadInterval
     */
-    void  cycle(void);
+    void  cycle( int timerID = -1 );
 
 
     /*
@@ -171,7 +171,7 @@ protected:
 	// classad-specific data members and functions
     void initializeClassAd(void);
     // timer handler
-    void updateCollectors(void);
+    void updateCollectors( int timerID = -1 );
     // updates collectors upon changing from/to leader state
     void updateCollectorsClassAd( const std::string& isHadActive );
 

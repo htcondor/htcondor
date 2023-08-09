@@ -2748,8 +2748,9 @@ These macros control the *condor_master*.
     call, instead of the normal call to exit(). Multiple programs to
     execute may be defined with multiple entries, each with a unique
     ``Name``. These macros have no effect on a *condor_master* unless
-    *condor_set_shutdown* is run. The ``Name`` specified as an
-    argument to the *condor_set_shutdown* program must match the
+    *condor_set_shutdown* is run, or the `-exec` argument is used with
+    *condor_off* or *condor_restart*. The ``Name`` specified as an
+    argument to the *condor_set_shutdown* program or `-exec` arg must match the
     ``Name`` portion of one of these ``MASTER_SHUTDOWN_<Name>`` macros;
     if not, the *condor_master* will log an error and ignore the
     command. If a match is found, the *condor_master* will attempt to
@@ -3853,6 +3854,22 @@ needs.
     for leftover resources. In doing so, the *condor_schedd* can claim
     multiple dynamic slots without waiting for a negotiation cycle.
 
+:macro-def:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS`
+    A boolean variable that defaults to ``False``.
+    When set to ``True`` in the configuration of both the
+    *condor_startd* and the *condor_schedd*, and the *condor_schedd*
+    claims a partitionable slot, the partitionable slot's ``State`` will
+    change to ``Claimed`` in addition to the creation of a ``Claimed``
+    dynamic slot.
+    While the slot is ``Claimed``, no other *condor_schedd* is able
+    to create new dynamic slots to run jobs.
+
+:macro-def:`MAX_PARTITIONABLE_SLOT_CLAIM_TIME`
+    An integer that indicates the maximum amount of time that a
+    partitionable slot can be in the ``Claimed`` state before
+    returning to the Unclaimed state, expressed in seconds.
+    The default value is 3600.
+
 :macro-def:`MACHINE_RESOURCE_NAMES`
     A comma and/or space separated list of resource names that represent
     custom resources specific to a machine. These resources are further
@@ -4563,6 +4580,15 @@ These macros control the *condor_schedd*.
     This configuration variable may be most useful in conjunction with
     ``MAX_JOBS_SUBMITTED``, to ensure that no one user can dominate the
     queue.
+
+:macro-def:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY`
+    This boolean value determines if a User record will be created automatically
+    when an unknown user submits a job.
+    When true, only daemons or users that have a User record in the *condor_schedd*
+    can submit jobs. When false, a User record will be added during job submission
+    for users that have never submitted a job before. The default value is false
+    which is consistent with the behavior of the *condor_schedd* before User records
+    were added.
 
 :macro-def:`MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER`
     This integer value limits the number of scheduler universe jobs that
@@ -6261,6 +6287,13 @@ These settings affect the *condor_starter*.
     specifying a URL. See
     :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
     for a description of the functionality required of a plug-in.
+
+:macro-def:`<PLUGIN>_TEST_URL`
+    This configuration takes a URL to be tested against the specified
+    ``<PLUGIN>``. If this test fails, then that plugin is removed from
+    the *condor_starter* classad attribute ``HasFileTransferPluginMethods``.
+    This attribute determines what plugin capabilities the *condor_starter*
+    can utilize.
 
 :macro-def:`RUN_FILETRANSFER_PLUGINS_WITH_ROOT`
     A boolean value that affects only Unix platforms and defaults to
@@ -8586,11 +8619,21 @@ General
     file's ``getenv`` option. This will in turn add any found matching environment
     variables to the DAGMan proper jobs **environment**. Setting this value to
     ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
-    ``getenv`` are:
+    ``getenv`` are the following.
 
-    .. code-block:: condor-submit
-
-        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL
+    +---------------+--------------------+--------------------+--------------------+
+    |               |        PATH        |        HOME        |        USER        |
+    |               +--------------------+--------------------+--------------------+
+    | General Shell |         TZ         |        LANG        |       LC_ALL       |
+    |               +--------------------+--------------------+--------------------+
+    |               |     PYTHONPATH     |        PERL*       |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |   XDG_RUNTIME_DIR  |
+    +---------------+--------------------+--------------------+--------------------+
+    |     Misc.     |     PEGASUS_*      |                    |                    |
+    +---------------+--------------------+--------------------+--------------------+
 
 :macro-def:`DAGMAN_NODE_RECORD_INFO`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current

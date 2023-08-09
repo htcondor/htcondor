@@ -70,6 +70,7 @@ bool parseCommandLine(StoreCredOptions *opts, int argc, const char *argv[]);
 void badOption(const char* option);
 void badCommand(const char* command);
 void optionNeedsArg(const char* option, const char * type);
+bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen);
 bool goAheadAnyways();
 
 int main(int argc, const char *argv[]) {
@@ -107,21 +108,18 @@ int main(int argc, const char *argv[]) {
 	}
 
 #if !defined(WIN32)
-	// if the -f argument was given, we just want to prompt for a password
+	// if the -f argument was given, we just want to take the password
 	// and write it to a file (in our weirdo XORed format)
 	//
 	if (options.pool_password_file != NULL) {
-		auto_free_ptr pw;
-		if (!options.pw || options.pw[0] == '\0') {
-			pw.set(get_password());
-			printf("\n");
+		char *cred = nullptr;
+		size_t credlen = 0;
+		if (!getCredData(options, cred, credlen)) {
+			goto cleanup;
 		}
-		else {
-			pw.set(strdup(options.pw));
-			//SecureZeroMemory(options.pw, MAX_PASSWORD_LENGTH + 1);
-		}
-		result = write_password_file(options.pool_password_file, pw);
-		SecureZeroMemory(pw.ptr(), strlen(pw.ptr()));
+		std::string pw(cred, credlen);
+		result = write_password_file(options.pool_password_file, pw.c_str());
+		free(cred);
 		if (result != SUCCESS) {
 			fprintf(stderr,
 			        "error writing password file: %s\n",
@@ -226,53 +224,20 @@ int main(int argc, const char *argv[]) {
 
 	switch (options.mode & MODE_MASK) {
 		case GENERIC_ADD: {
-			auto_free_ptr cred;
+			char* cred = nullptr;
 			size_t credlen = 0;
-			if (options.credential_file) {
-				if (MATCH == strcmp(options.credential_file, "-")) {
-					int max_len = 0x1000 * 0x1000; // max read from stdin is 1 Mb
-					cred.set((char*)malloc(max_len));
-					#ifdef _WIN32
-					// disable CR+LF munging of the stdin stream, we want to treat it as binary data
-					_setmode(_fileno(stdin), _O_BINARY);
-					#endif
-					credlen = full_read(fileno(stdin), cred.ptr(), max_len);
-					if (((ssize_t)credlen) < 0) {
-						fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
-						goto cleanup;
-					}
-				} else {
-					char *buf = NULL;
-					bool read_as_root = false;
-					int verify_opts = 0;
-					if ( ! read_secure_file(options.credential_file, (void**)&buf, &credlen, read_as_root, verify_opts)) {
-						fprintf(stderr, "Could not read credential from %s\n", options.credential_file);
-						result = FAILURE;
-					} else {
-						cred.set(buf);
-					}
-				}
-			} else if (options.pw && options.pw[0]) {
-				cred.set(strdup(options.pw));
-				credlen = strlen(options.pw);
-			} else if (cred_type == STORE_CRED_USER_KRB) {
-				//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
-				result = FAILURE;
-			} else if (cred_type == STORE_CRED_USER_OAUTH) {
-				//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
-				result = FAILURE;
-			} else {
-				cred.set(get_password());
-				credlen = strlen(cred);
+			if (!getCredData(options, cred, credlen)) {
+				goto cleanup;
 			}
 
-			if (cred.ptr() && credlen) {
-				result = do_store_cred(full_name, options.mode, (const unsigned char*)cred.ptr(), (int)credlen, return_ad, &cred_info, daemon);
+			if (cred && credlen) {
+				result = do_store_cred(full_name, options.mode, (const unsigned char*)cred, (int)credlen, return_ad, &cred_info, daemon);
 				if ((result == FAILURE_NOT_SECURE) && goAheadAnyways()) {
 						// if user is ok with it, send the password in the clear
-					result = do_store_cred(full_name, options.mode, (const unsigned char*)cred.ptr(), (int)credlen, return_ad, &cred_info, daemon);
+					result = do_store_cred(full_name, options.mode, (const unsigned char*)cred, (int)credlen, return_ad, &cred_info, daemon);
 				}
-				SecureZeroMemory(cred.ptr(), credlen);
+				SecureZeroMemory(cred, credlen);
+				free(cred);
 			}
 		} break;
 
@@ -810,6 +775,51 @@ usage()
 
 	exit( 1 );
 };
+
+bool getCredData(StoreCredOptions& options, char *&cred, size_t& credlen)
+{
+	cred = nullptr;
+	credlen = 0;
+	int cred_type = (options.mode & CRED_TYPE_MASK);
+
+	if (options.credential_file) {
+		if (MATCH == strcmp(options.credential_file, "-")) {
+			int max_len = 1024 * 1024; // max read from stdin is 1 Mb
+			cred = (char*)malloc(max_len+1);
+			#ifdef _WIN32
+			// disable CR+LF munging of the stdin stream, we want to treat it as binary data
+			_setmode(_fileno(stdin), _O_BINARY);
+			#endif
+			credlen = full_read(fileno(stdin), cred, max_len);
+			if (((ssize_t)credlen) < 0) {
+				fprintf(stderr, "ERROR: could read from stdin: %s\n", strerror(errno));
+				free(cred);
+				return false;
+			}
+		} else {
+			bool read_as_root = false;
+			int verify_opts = 0;
+			if ( ! read_secure_file(options.credential_file, (void**)&cred, &credlen, read_as_root, verify_opts)) {
+				fprintf(stderr, "Could not read credential from %s\n", options.credential_file);
+				return false;
+			}
+		}
+	} else if (options.pw && options.pw[0]) {
+		cred = strdup(options.pw);
+		credlen = strlen(options.pw);
+	} else if (cred_type == STORE_CRED_USER_KRB) {
+		//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
+		return false;
+	} else if (cred_type == STORE_CRED_USER_OAUTH) {
+		//TODO: run the SEC_CREDENTIAL_PRODUCER (if not root!) here?
+		return false;
+	} else {
+		cred = get_password();
+		credlen = strlen(cred);
+		printf("\n");
+	}
+	return true;
+}
 
 bool
 goAheadAnyways()

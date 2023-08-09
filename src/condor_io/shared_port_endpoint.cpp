@@ -752,7 +752,7 @@ SharedPortEndpoint::TouchSocketInterval()
 }
 #ifndef WIN32
 void
-SharedPortEndpoint::SocketCheck()
+SharedPortEndpoint::SocketCheck(int /* timerID */)
 {
 	if( !m_listening || m_full_name.empty() || !m_is_file_socket) {
 		return;
@@ -871,7 +871,7 @@ SharedPortEndpoint::InitRemoteAddress()
 }
 
 void
-SharedPortEndpoint::RetryInitRemoteAddress()
+SharedPortEndpoint::RetryInitRemoteAddress(int /* timerID */)
 {
 	const int remote_addr_retry_time = 60;
 	const int remote_addr_refresh_time = 300;

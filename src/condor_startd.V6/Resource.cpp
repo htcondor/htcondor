@@ -741,9 +741,13 @@ Resource::needsPolling( void )
 
 
 // This one *only* looks at opportunistic claims
+// except for partitionable slots
 bool
 Resource::hasOppClaim( void )
 {
+	if (is_partitionable_slot()) {
+		return false;
+	}
 	State s = state();
 	if( s == claimed_state || s == preempting_state ) {
 		return true;
@@ -753,6 +757,7 @@ Resource::hasOppClaim( void )
 
 
 // This one checks if the Resource has *any* claims
+// except for paritionable slots
 bool
 Resource::hasAnyClaim( void )
 {
@@ -931,7 +936,7 @@ Resource::starterExited( Claim* cur_claim )
 	Activity a = activity();
 	switch( s ) {
 	case claimed_state:
-		r_cur->client()->setuser( r_cur->client()->owner() );
+		r_cur->client()->c_user = r_cur->client()->c_owner;
 		if(a == retiring_act) {
 			change_state(preempting_state);
 		}
@@ -1539,7 +1544,7 @@ Resource::process_update_ad(ClassAd & public_ad, int snapshot) // change the upd
 }
 
 void
-Resource::do_update( void )
+Resource::do_update( int /* timerID */ )
 {
 	int rval;
 	ClassAd private_ad;
@@ -2554,7 +2559,7 @@ void Resource::publish_static(ClassAd* cap)
 		case PARTITIONABLE_SLOT:
 			cap->Assign(ATTR_SLOT_PARTITIONABLE, true);
 			cap->Assign(ATTR_SLOT_TYPE, "Partitionable");
-			if (param_boolean("CLAIM_PARTITIONABLE_SLOT", false)) {
+			if (param_boolean("ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS", false)) {
 				int lease = param_integer("MAX_PARTITIONABLE_SLOT_CLAIM_TIME", 3600);
 				cap->Assign(ATTR_MAX_CLAIM_TIME, lease);
 			}
@@ -3296,7 +3301,7 @@ Resource::startTimerToEndCODLoadHack( void )
 
 
 void
-Resource::endCODLoadHack( void )
+Resource::endCODLoadHack( int /* timerID */ )
 {
 		// our timer went off, so we can clear our tid
 	r_cod_load_hack_tid = -1;
@@ -3541,7 +3546,7 @@ Resource::evalNextFetchWorkDelay(void)
 
 
 void
-Resource::tryFetchWork(void)
+Resource::tryFetchWork( int /* timerID */ )
 {
 		// First, make sure we're configured for fetching at all.
 	if (!getHookKeyword()) {

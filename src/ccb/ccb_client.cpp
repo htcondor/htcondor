@@ -772,7 +772,7 @@ CCBClient::RegisterReverseConnectCallback()
 }
 
 void
-CCBClient::DeadlineExpired()
+CCBClient::DeadlineExpired(int /* timerID */)
 {
 	dprintf(D_ALWAYS,
 			"CCBClient: deadline expired for reverse connection to %s.\n",

@@ -17,66 +17,116 @@ Release Notes:
 
 New Features:
 
+- Partitionable slots can now be directly claimed by a *condor_schedd*
+  (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
+  While a slot is claimed, no other *condor_schedd* is able to create
+  new dynamic slots to run jobs.
+  This is controlled by the new configuration parameter
+  :macro:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS` and is disabled by
+  default.
+  :jira:`1824`
+
+- By default, the user event logs are no longer fsync'd by the schedd.  This
+  should improve the performance of the schedd, especially when the user's event
+  logs are on non-solid state disks.  There is a knob to revert to the old
+  semantics, ENABLE_USERLOG_FSYNC, which defaults to false.
+  :jira:`1934`
+
+- A new configuration variable :macro:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY` was
+  added to allow administrators to restrict job submission to users that have
+  already been added to the *condor_schedd* using the *condor_qusers* tool.
+  :jira:`1934`
+
 - When the file transfer queue is growing too big, HTCondor sends email to the
   administrator.  Prior versions of HTCondor would send an arbitrarily large number
   of emails.  Now HTCondor will only send one email per day.
   :jira:`1937`
+
+- Improved output for ``htcondor dag status`` command to include more information
+  about the specified DAG.
+  :jira:`1951`
 
 - Preen now preserves all files in the spool directory matching `*OfflineLog*`
   so that central managers with multiple active collectors can have offline
   ads.
   :jira:`1933`
 
+- Updated DAGMan to utilize the ``-reason`` flag to add a meassage about why
+  a job was removed when DAGMan removes managed jobs via *condor_rm* for some
+  reason.
+  :jira:`1950`
+
+- Added new DAG command ``ENV`` for DAGMan. This command allows users to specify
+  environment variables to be added into the DAGMan job propers environment either
+  by setting values explicitly or getting them from the environment the job is
+  submitted from.
+  :jira:`1955`
+
 Bugs Fixed:
 
-- None.
+- Fixed bug in parallel universe that would cause the *condor_schedd* to
+  assert when running with partitionable slots.
+  :jira:`1952`
+
+- Fixed inefficiency in DAGMan setting a nodes descendants to futile status
+  which would result in DAGMan taking an extremely long time when a node fails
+  in a very large and bushy DAG.
+  :jira:`1945`
+
+- Fixed  bugs in *condor_store_cred* that could cause it to crash or
+  write incorrect data for the pool password.
+  :jira:`1587`
 
 Version 10.7.0
 --------------
 
 Release Notes:
 
-.. HTCondor version 10.7.0 released on Month Date, 2023.
-
-- HTCondor version 10.7.0 not yet released.
+- HTCondor version 10.7.0 released on July 31, 2023.
 
 - This version includes all the updates from :ref:`lts-version-history-1007`.
 
-New Features:
+- Add support for Debian 12 (bookworm).
+  :jira:`1938`
 
-- Added submit command **want_io_proxy**.
-  This replaces the old command **+WantIOProxy**.
-  :jira:`1875`
+New Features:
 
 - A single HTCondor pool can now have multiple *condor_defrag* daemons running
   and they will not interfere with each other so long as each has
   :macro:`DEFRAG_REQUIREMENTS` that select mutually exclusive subsets of the pool.
   :jira:`1903`
 
+- Added submit command **want_io_proxy**.
+  This replaces the old command **+WantIOProxy**.
+  :jira:`1875`
+
+- Apptainer is now included in the tarballs.
+  :jira:`1932`
+
 Bugs Fixed:
 
 - Fixed bug introduced in 10.5.0 on cgroup v1 systems where the
-  user and system cpu time measured was low by a factor of 10,000.
+  user and system CPU time measured was low by a factor of 10,000.
   :jira:`1920`
+
+- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
+  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
+  directory because of the *condor_starter* having the wrong permissions.
+  :jira:`1912`
 
 - If the collector is storing offline ads via COLLECTOR_PERSISTENT_AD_LOG
   the *condor_preen* tool will no longer delete that file
   :jira:`1874`
 
 - Fixed a bug where empty execute sandboxes failed to be cleaned up on the
-  EP when using Startd disk enforcement.
+  Execution Point when using Startd disk enforcement.
   :jira:`1821`
 
 - When using Startd disk enforcement, if a *condor_starter* running a container
-  or VM universe job is abrubtly killed (like SIGABRT) then the *condor_startd*
+  or VM universe job is abruptly killed (like SIGABRT) then the *condor_startd*
   would fail to cleanup the running docker container or VM and underlying logical
   volume.
   :jira:`1895`
-
-- Fixed a bug introduced in ``V10.5.0`` of HTCondor where the ``.job.ad`` and
-  ``.machine.ad`` failed to be written to a ``local`` universe jobs scratch
-  directory because of the *condor_starter* having the wrong permissions.
-  :jira:`1912`
 
 Version 10.6.0
 --------------

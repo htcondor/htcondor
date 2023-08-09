@@ -135,7 +135,7 @@ CredDaemon::reconfig()
 }
 
 void
-CredDaemon::sweep_timer_handler( void ) const
+CredDaemon::sweep_timer_handler( int /* timerID */ ) const
 {
 	dprintf(D_FULLDEBUG, "CREDD: calling and resetting sweep_timer_handler()\n");
 
@@ -167,7 +167,7 @@ CredDaemon::initialize_classad()
 }
 
 void
-CredDaemon::update_collector()
+CredDaemon::update_collector( int /* timerID */ )
 {
 	daemonCore->sendUpdates(UPDATE_AD_GENERIC, &m_classad, NULL, true);
 }

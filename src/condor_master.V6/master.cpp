@@ -188,7 +188,7 @@ public:
 		}
 	}
 
-	void status_handler()
+	void status_handler(int /* dummy */)
 	{
 		// assume success
 		const char * status = "All daemons are responding";

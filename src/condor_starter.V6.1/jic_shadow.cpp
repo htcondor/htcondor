@@ -2421,7 +2421,7 @@ JICShadow::syscall_sock_handler(Stream *)
 
 
 void
-JICShadow::job_lease_expired() const
+JICShadow::job_lease_expired( int /* timerID */ ) const
 {
 	/* 
 	  This method is invoked by a daemoncore timer, which is set
