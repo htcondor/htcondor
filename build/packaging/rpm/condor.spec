@@ -180,6 +180,10 @@ Requires(post): python3-policycoreutils
 Requires(post): selinux-policy-targeted
 %endif
 
+%if 0%{?rhel} == 8 || 0%{?rhel} == 9
+Requires: lotman
+%endif
+
 # Require libraries that we dlopen
 # Ganglia is optional as well as nVidia and cuda libraries
 %if ! 0%{?amzn}
