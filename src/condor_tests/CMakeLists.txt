@@ -302,7 +302,7 @@ endif ()
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
 				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
-				condor_pl_test(test_job_token_transfer "Test secure token transfer from shadow to starter" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+				condor_pl_test(test_job_token_transfer "Test secure token transfer from shadow to starter" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/condor_credmon_oauth_dummy")
 			endif()
 
 			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 

@@ -20,6 +20,8 @@ USER = getuser()
 
 @standup
 def condor(test_dir):
+    credmon = Path.cwd() / "condor_credmon_oauth_dummy"
+    credmon.chmod(0o755)  # make sure the credmon is executable
     cred_dir = test_dir / "oauth_credentials"
     cred_dir.mkdir(parents=True, exist_ok=True)
     cred_dir.chmod(0o2770)
@@ -33,7 +35,7 @@ def condor(test_dir):
         config={
             "SEC_DEFAULT_ENCRYPTION":            "REQUIRED",
             "SEC_CREDENTIAL_DIRECTORY_OAUTH":    str(cred_dir),
-            "CREDMON_OAUTH":                     "$(LIBEXEC)/condor_credmon_oauth_dummy",
+            "CREDMON_OAUTH":                     str(credmon),
             "CREDMON_OAUTH_LOG":                 "$(LOG)/CredMonOAuthLog",
             "DAEMON_LIST":                       "$(DAEMON_LIST),CREDMON_OAUTH",
             "AUTO_INCLUDE_CREDD_IN_DAEMON_LIST": "True",
