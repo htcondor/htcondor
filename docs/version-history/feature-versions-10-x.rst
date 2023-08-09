@@ -9,11 +9,7 @@ Version 10.7.1
 
 Release Notes:
 
-.. HTCondor version 10.7.1 released on Month Date, 2023.
-
-- HTCondor version 10.7.1 not yet released.
-
-- This version includes all the updates from :ref:`lts-version-history-100x`.
+- HTCondor version 10.7.1 released on August 9, 2023.
 
 New Features:
 
