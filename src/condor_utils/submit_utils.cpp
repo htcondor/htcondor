@@ -539,10 +539,14 @@ SubmitHash::SubmitHash()
 	, already_warned_notification_never(false)
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
+	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
+
+	// TODO: move this to condor_submit? or expose a method on the class to set this?
+	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
 
 	mctx.init("SUBMIT", 3);
 }
@@ -2062,7 +2066,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_HOLD_CHECK, false);
 		}
 	}
@@ -2086,7 +2090,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_RELEASE_CHECK, false);
 		}
 	}
@@ -2102,7 +2106,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs  && ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_REMOVE_CHECK, false);
 		}
 	}
@@ -3933,14 +3937,14 @@ int SubmitHash::SetJobRetries()
 		// if none of these knobs are defined, then there are no retries.
 		// Just insert the default on-exit-hold and on-exit-remove expressions
 		if (erc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) { 
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK)) { 
 				AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true);
 			}
 		} else {
 			AssignJobExpr (ATTR_ON_EXIT_REMOVE_CHECK, erc.c_str());
 		}
 		if (ehc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_HOLD_CHECK) && param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_HOLD_CHECK)) {
 				AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false);
 			}
 		} else {
@@ -6174,7 +6178,8 @@ int SubmitHash::SetRequirements()
 			}
 
 
-			if ( ! checks_file_transfer_plugin_methods) {
+			// insert expressions to match on transfer plugin methods
+			{
 				classad::References methods;    // methods referened by TransferInputFiles that are not in TransferPlugins
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
@@ -6226,12 +6231,20 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				std::string wantMethods; // string list of file transfer plugins the job needs but does not supply
 				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					if (!wantMethods.empty()) wantMethods += ",";
+					wantMethods += *it;
+
+					if (checks_file_transfer_plugin_methods)
+						continue;
+
 					answer += " && stringListIMember(\"";
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 
+					// TODO: move this to ReportCommonMistakes
 					if( presignS3URLs &&
 					  (strcasecmp( it->c_str(), "s3" ) == 0 || strcasecmp( it->c_str(), "gs" ) == 0) ) {
 						bool present = true;
@@ -6251,6 +6264,12 @@ int SubmitHash::SetRequirements()
 							ABORT_AND_RETURN(1);
 						}
 					}
+				}
+
+				// TODO: someday change the above stringListIMember expressions to
+				// a single stringListISubsetMatch expression using this attribute
+				if ( ! wantMethods.empty()) {
+					AssignJobString(ATTR_WANT_TRANSFER_PLUGIN_METHODS, wantMethods.c_str());
 				}
 			}
 
