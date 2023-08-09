@@ -88,6 +88,11 @@ Bugs Fixed:
   write incorrect data for the pool password.
   :jira:`1587`
 
+- Fixed a bug with *condor_ssh_to_job* where it would fail if the Execution
+  point was behind CCB, and the command was run immediately after the job
+  started.
+  :jira:`1979`
+
 - Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
   if they requested an OAuth credential whose service name included
   an asterisk.
