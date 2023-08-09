@@ -1289,7 +1289,6 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
     if( update_ad->LookupInteger( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime ) ) {
         int committedTime = 0;
         jobAd->LookupInteger( ATTR_JOB_COMMITTED_TIME, committedTime );
-dprintf( D_ALWAYS, "committedTime %d + newlyCommittedTime %d\n", committedTime, newlyCommittedTime );
         committedTime += newlyCommittedTime;
         jobAd->Assign( ATTR_JOB_COMMITTED_TIME, committedTime );
     }
@@ -1300,7 +1299,6 @@ dprintf( D_ALWAYS, "committedTime %d + newlyCommittedTime %d\n", committedTime, 
     // for now.
     int lastCheckpointTime = -1;
     if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
-dprintf( D_ALWAYS, "last checkpoint time: %d\n", lastCheckpointTime );
         jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
     }
 
