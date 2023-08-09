@@ -93,6 +93,10 @@ Bugs Fixed:
   write incorrect data for the pool password.
   :jira:`1587`
 
+- Fixed a bug introduced in 10.5.0 that caused jobs to fail to start
+  if they requested an OAuth credential whose service name included
+  an asterisk.
+  :jira:`1966`
 
 Version 10.7.0
 --------------
