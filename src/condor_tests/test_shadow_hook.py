@@ -1,6 +1,6 @@
 #!/usr/bin/env pytest
 
-#---------------------------------------------------------------
+#-------------------------------------------------------------------------
 # Author: Joe Reuss
 #
 # Notes:
@@ -11,14 +11,19 @@
 # 3. Test that the changes a shadow hook makes are reflected in the starter
 #       but not the schedd
 # 4. Test that errors in shadow hooks are found in the shadow log
-# 5. TODO: Test that shadow hooks work when the hook keyword is in the
+# 5. Test that shadow hooks work when the hook keyword is in the
 #       config file instead of the submit file
-#---------------------------------------------------------------
+#       NOTE: This test must be the last to run, at least the last job/
+#           hook to run since it modifies the config file and the keyword
+#           in config will overwrite the other keywords
+#--------------------------------------------------------------------------
 
 import os
 import stat
 from ornithology import *
+import htcondor
 
+#===========================================================================
 #
 # Write out some job hook scripts.
 #
@@ -110,9 +115,21 @@ def write_job_hook_scripts(test_dir):
     os.chmod(script_file, st.st_mode | stat.S_IEXEC)
 
 
-# TODO: Testing shadow hooks when the keyword is defined in the config file rather
-# than the submit file (this requires fixing/implementation of this feature within
-# shadow job hooks)
+# Testing shadow hooks when the keyword is defined in the config file rather
+# than the submit file
+# NOTE: This test must be last (in terms of hooks ran)
+    filepath = test_dir / "config_hook.out"
+    script_file = test_dir / "hook_config.sh"
+    script_contents = f"""#!/bin/bash
+    echo 'This message is from the hook!' >> {filepath}
+    """
+    script = open(script_file, "w")
+    script.write(script_contents)
+    script.close()
+    st = os.stat(script_file)
+    os.chmod(script_file, st.st_mode | stat.S_IEXEC)
+
+#==============================================================================
 
 #
 # Setup a personal condor with some job hooks defined.
@@ -121,25 +138,42 @@ def write_job_hook_scripts(test_dir):
 # The "TEST" hooks will test to ensure the shadow job hook runs from condor_shadow
 # The "CHECK" hooks will test that the changes the hook makes to the classad shows up on
 #   the starter but not the schedd
+# The "CONFIG" hook will test if the shadow hook works when keyword is in the config file
+#   (in this case added in at the end since otherwise it will overwrite the other hookkeywords)
 #
 @standup
 def condor(test_dir, write_job_hook_scripts):
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            "STARTER_DEBUG": "D_FULLDEBUG",
+            "SHADOW_DEBUG": "D_FULLDEBUG",
             "SCHEDD_ENVIRONMENT" : "SPECIAL_MSG='This message is brought to you by the shadow!'",
             "HOLD_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_hold_prepare.sh",
             "IDLE_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_idle_prepare.sh",
             "TEST_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_test_prepare.sh",
             "TEST_HOOK_PREPARE_JOB_BEFORE_TRANSFER" : test_dir / "hook_starter_test_prepare.sh",
             "CHECK_HOOK_PREPARE_JOB" : test_dir / "hook_starter_check.sh",
-            "CHECK_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_check.sh"
-            #"STARTER_JOB_HOOK_KEYWORD" : "CONFIG",
+            "CHECK_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_shadow_check.sh",
+            "CONFIG_HOOK_SHADOW_PREPARE_JOB" : test_dir / "hook_config.sh",
         }
     ) as condor:
         yield condor
 
+
+#
+# Submit a job using hook config (from config file)
+#
+@action
+def submit_configjob(test_dir, condor, path_to_sleep):
+    reconfig(condor) # run reconfig (add keyword to config file)
+    config_submit = condor.submit(
+        description={"executable": path_to_sleep,
+            "arguments": "20",
+            "log": "config_hook_job_events.log",
+        }
+    )
+    config_submit.wait(condition=ClusterState.any_running,timeout=30)
+    return config_submit.query()
 
 #
 # Submit a job using the hook check
@@ -240,6 +274,12 @@ def checkjob_schedd(condor, submit_checkjob):
     schedd = Condor.query(self=condor, projection=['HookStatusMessage'])
     return schedd
 
+def reconfig(htcondor):
+    p = htcondor.run_command(["condor_config_val","LOCAL_DIR"])
+    config = os.path.join(p.stdout, "condor_config")
+    with open(config, "a") as f:
+        f.write("\nSHADOW_JOB_HOOK_KEYWORD = CONFIG\n")
+
 class TestShadowHook:
     # Methods that begin with test_* are tests.
 
@@ -266,9 +306,6 @@ class TestShadowHook:
             assert 'Really bad, going on hold' in log
 
     # Check to see that the shadow hook spawns from the shadow and runs before a starter hook
-    # FIX:
-    # shadow environment variable, if script run into file (daemonName_env) custom set env variable. Edit script
-    # to not run ps, but do echo $env_var name >> filename. Double check with starter hook that looks and does not find it
     def test_from_shadow(self, testjob):
         with open('shadow.out') as f:
             log = f.read()
@@ -299,6 +336,12 @@ class TestShadowHook:
 
     def test_hold_numholdsbyreason_was_policy(self, heldjob):
         assert heldjob["NumHoldsByReason"] == { 'HookShadowPrepareJobFailure' : 1 }
+
+    # Test that shadow hooks work when keyword is in the config file:
+    def test_keyword_in_config(self, submit_configjob):
+        with open ('config_hook.out') as f:
+            log = f.read()
+            assert 'This message is from the hook!' in log
 
     # find that the error messages are in shadow log
     def test_in_shadow_log(self, shadow_job_log):
