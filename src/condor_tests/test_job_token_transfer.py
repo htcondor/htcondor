@@ -55,8 +55,8 @@ def condor(pytestconfig, test_dir):
 
 
 @action
-def one_service_one_token(condor, test_dir):
-    outfile = test_dir / "one_service_one_token.out"
+def one_service_no_handles(condor, test_dir):
+    outfile = test_dir / "one_service_no_handles.out"
     job = condor.submit(
         {
             "executable": "/bin/cat",
@@ -64,6 +64,8 @@ def one_service_one_token(condor, test_dir):
             "should_transfer_files": "yes",
             "use_oauth_services": "dummy",
             "output": str(outfile),
+            "error": str(outfile.with_suffix(".err")),
+            "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -71,8 +73,8 @@ def one_service_one_token(condor, test_dir):
 
 
 @action
-def one_service_two_tokens(condor, test_dir):
-    outfile = test_dir / "one_service_two_tokens.out"
+def one_service_two_handles(condor, test_dir):
+    outfile = test_dir / "one_service_two_handles.out"
     job = condor.submit(
         {
             "executable": "/bin/cat",
@@ -82,6 +84,8 @@ def one_service_two_tokens(condor, test_dir):
             "dummy_oauth_permissions_A": "",
             "dummy_oauth_permissions_B": "",
             "output": str(outfile),
+            "error": str(outfile.with_suffix(".err")),
+            "log": str(outfile.with_suffix(".log")),
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
@@ -91,8 +95,8 @@ def one_service_two_tokens(condor, test_dir):
 
 class TestJobTokenTransfer:
 
-    def test_one_service_one_token(self, one_service_one_token):
-        assert one_service_one_token == "access_dummy"
+    def test_one_service_no_handles(self, one_service_no_handles):
+        assert one_service_no_handles == "access_dummy"
 
-    def test_one_service_one_token(self, one_service_two_tokens):
-        assert tuple(one_service_two_tokens) == ("access_dummy_A", "access_dummy_B")
+    def test_one_service_two_handles(self, one_service_two_handles):
+        assert tuple(one_service_no_handles) == ("access_dummy_A", "access_dummy_B")
