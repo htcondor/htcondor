@@ -17,6 +17,14 @@ Release Notes:
 
 New Features:
 
+- In an HTCondor Execution Point started by root on Linux, the default
+  for cgroups memory has changed to be enforcing.  This means that
+  jobs that use more then their provisioned memory will be put
+  on hold with an appropriate hold message. *condor_q -hold* will show
+  that message.  The previous default can be restored by setting
+  :macro:`CGROUP_MEMORY_LIMIT_POLICY` = none on the Execution points.
+  :jira:`1974`
+
 - Partitionable slots can now be directly claimed by a *condor_schedd*
   (i.e. the ``State`` of the partitionable slot changes to ``Claimed``).
   While a slot is claimed, no other *condor_schedd* is able to create

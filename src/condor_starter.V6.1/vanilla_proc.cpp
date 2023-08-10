@@ -349,7 +349,7 @@ VanillaProc::StartJob()
 		// setting cgroup memory limits
 		m_memory_limit = memory * 1024 * 1024;
 		std::string policy;
-		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "none");
+		param(policy, "CGROUP_MEMORY_LIMIT_POLICY", "hard");
 		if (policy == "hard") {
 			fi.cgroup_memory_limit = (uint64_t) memory * 1024 * 1024;
 		}
