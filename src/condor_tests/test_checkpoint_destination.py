@@ -26,92 +26,17 @@ logger.setLevel(logging.DEBUG)
 
 
 @action
-def the_condor(test_dir, cleanup_file):
+def the_condor(test_dir):
     with Condor(
         local_dir=test_dir / "condor",
         config={
-            'ENABLE_URL_TRANSFERS': 'TRUE',
-            'LOCAL_CLEANUP_PLUGIN': cleanup_file.as_posix(),
+            'ENABLE_URL_TRANSFERS':         'TRUE',
+            'LOCAL_CLEANUP_PLUGIN':         '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
+            'LOCAL_CLEANUP_PLUGIN_URL':     'local://example.vo/example.fs',
+            'LOCAL_CLEANUP_PLUGIN_PATH':    test_dir.as_posix(),
         }
     ) as the_condor:
         yield the_condor
-
-
-@action
-def cleanup_file(test_dir):
-    cleanup_file = test_dir / "local-cleanup.sh"
-    contents = format_script(
-    """
-        #!/bin/bash
-
-        function usage() {
-            echo "usage: $0 -from local://... -delete PATH"
-            exit 1
-        }
-
-        if [[ $# -lt 4 ]]; then
-            usage
-        fi
-
-        if [[ $1 != "-from" ]]; then
-            usage
-        fi
-        FROM=$2
-
-        if [[ $3 != "-delete" ]]; then
-            usage
-        fi
-        DELETE=$4
-
-        FROM_REGEX='^local://(.*)'
-        if [[ ${FROM} =~ ${FROM_REGEX} ]]; then
-            DIR=${BASH_REMATCH[1]}
-
-            DIR_REGEX='[^/]$'
-            if [[ ${DIR} =~ $DIR_REGEX ]]; then
-                DIR=${DIR}/
-            fi
-
-            DELETE_REGEX='^/(.*)'
-            if [[ ${DELETE} =~ $DELETE_REGEX ]]; then
-                DELETE=${BASH_REMATCH[1]}
-            fi
-
-            # Delete the file.
-            if ! rm -f ${DIR}${DELETE}; then
-                exit 2
-            fi
-
-            # We created directories in ${DIR} as necessary to write the
-            # checkpoint, so delete them if we just removed the last file
-            # in them.  This won't delete directories which didn't have
-            # files in them, though.
-            #
-            # Using --parents with a relative path means we delete all
-            # subdirectories of ${DIR}.  We then delete ${DIR}/.. and
-            # ${DIR}/../.. because we know we've been given a ${DIR} with
-            # a trailing global job ID and then checkpoint number.
-            #
-            # We could call `rmdir --parents` on the absolute path, but
-            # that will (surprisingly) remove the directory chosen to
-            # store checkpoints if we remove the last checkpoint.
-            SUBDIR=`dirname ${DELETE}`
-            if [[ -d ${DIR}${SUBDIR} ]]; then
-                cd ${DIR}; rmdir -p ${SUBDIR}
-                CHECKPOINT_NUMBER=`basename ${DIR}`
-                cd ..; rmdir ${CHECKPOINT_NUMBER}
-                GLOBAL_JOB_ID=$(basename $(dirname ${DIR}))
-                cd ..; rmdir ${GLOBAL_JOB_ID}
-            fi
-
-            exit 0
-        else
-            usage
-        fi
-    """
-    )
-    write_file(cleanup_file, contents)
-    return cleanup_file
 
 
 @action
@@ -136,7 +61,7 @@ def plugin_shell_file(test_dir, plugin_python_file, plugin_log_file):
 def plugin_python_file(test_dir):
     plugin_python_file = test_dir / "local.py"
     contents = format_script(
-    """
+    f"""
         #!/usr/bin/python3
 
         import os
@@ -156,6 +81,9 @@ def plugin_python_file(test_dir):
         EXIT_FAILURE = 1
         EXIT_AUTHENTICATION_REFRESH = 2
 
+        test_dir = '{test_dir.as_posix()}'
+
+""" + """
 
         def print_help(stream = sys.stderr):
             help_msg = '''Usage: {0} -infile <input-filename> -outfile <output-filename>
@@ -252,6 +180,8 @@ def plugin_python_file(test_dir):
                 start_time = time.time()
 
                 remote_file_path = self.parse_url(url)
+                remote_file_path = remote_file_path.replace( "example.vo/example.fs", test_dir )
+
                 # print(f"DEBUG: {start_time} download {remote_file_path} -> {local_file_path}")
                 file_size = Path(remote_file_path).stat().st_size
                 Path(local_file_path).parent.mkdir(parents=True,exist_ok=True)
@@ -280,6 +210,8 @@ def plugin_python_file(test_dir):
                 start_time = time.time()
 
                 remote_file_path = self.parse_url(url)
+                remote_file_path = remote_file_path.replace( "example.vo/example.fs", test_dir )
+
                 # print(f"DEBUG: {start_time} upload {remote_file_path} <- {local_file_path}")
                 file_size = Path(local_file_path).stat().st_size
                 Path(remote_file_path).parent.mkdir(parents=True,exist_ok=True)
@@ -570,7 +502,7 @@ def the_job_description(test_dir, path_to_the_job_script):
 TEST_CASES = {
     "spool": {},
     "local": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "+CheckpointDestination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
     },
     # See HTCONDOR-1220 and -1221 for some of the bugs found while hand-
@@ -578,9 +510,9 @@ TEST_CASES = {
     # output_destination -related problems and only check to make sure
     # that output_destination doesn't screw up checkpoint_destination.
     "with_output_destination": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "+CheckpointDestination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
-        "output_destination":           'local://{test_dir}/od/',
+        "output_destination":           'local://example.vo/example.fs/od/',
 
         # Absolute paths and output_destination make no sense together,
         # so put these logs where the test logic expects to find them.
@@ -588,7 +520,7 @@ TEST_CASES = {
         "error":                        "test_job_$(CLUSTER).err",
     },
     "check_files_local": {
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "+CheckpointDestination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         '{test_dir}/check_files_local/',
         "transfer_checkpoint_files":    'saved-state, a, b, c, d, e',
@@ -619,7 +551,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_1',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "+CheckpointDestination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1/d2',
         "transfer_checkpoint_files":    'saved-state, d1/d2/a',
@@ -629,7 +561,7 @@ TEST_CASES = {
         "iwd":                          '{test_dir}/HTCONDOR_1218_2',
         "transfer_output_files":        "d1",
 
-        "+CheckpointDestination":       '"local://{test_dir}/"',
+        "+CheckpointDestination":       '"local://example.vo/example.fs"',
         "transfer_plugins":             'local={plugin_shell_file}',
         "transfer_input_files":         'd1',
         "transfer_checkpoint_files":    'saved-state, d1/a',
