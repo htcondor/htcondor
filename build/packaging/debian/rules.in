@@ -110,7 +110,8 @@ override_dh_auto_clean:
 		src/condor_examples/condor_config.patched
 	-rm src/condor_tests/Condor.pm src/condor_tests/CondorPersonal.pm \\
 		src/condor_tests/CondorTest.pm src/condor_tests/CondorUtils.pm \\
-		src/condor_tests/batch_test.pl
+		src/condor_tests/batch_test.pl \\
+		src/condor_tests/condor_credmon_oauth_dummy
 	-rm src/condor_utils/param_info.c
 	# docs
 	$(MAKE) -C docs clean
