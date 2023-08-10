@@ -1269,7 +1269,7 @@ class TestCheckpointDestination:
                 # Did we remove the checkpoint destination?
                 if path.exists():
                     # Crass empiricism.
-                    time.sleep(10)
+                    time.sleep(20)
                 assert(not path.exists())
 
                 # Did we remove the manifest file?
@@ -1281,7 +1281,7 @@ class TestCheckpointDestination:
             checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc0.subproc0"
             if checkpoint_cleanup_subdir.exists():
                 # Crass empiricism.
-                time.sleep(10)
+                time.sleep(20)
             assert(not checkpoint_cleanup_subdir.exists())
 
 

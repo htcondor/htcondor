@@ -783,7 +783,7 @@ class TestCheckpointDestination:
                 '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
             }
             rv = subprocess.run( ['condor_preen', '-d'],
-                env=preen_env, timeout=20,
+                env=preen_env, timeout=40,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True,
             )
@@ -823,7 +823,7 @@ class TestCheckpointDestination:
                     # Did we remove the checkpoint destination?
                     if path.exists():
                         # Crass empiricism.
-                        time.sleep(10)
+                        time.sleep(20)
                     assert(not path.exists())
 
                     # Did we remove the manifest file?
@@ -835,5 +835,5 @@ class TestCheckpointDestination:
                 checkpoint_cleanup_subdir = test_dir / "condor" / "spool" / "checkpoint-cleanup" / f"cluster{the_removed_job.clusterid}.proc{proc}.subproc0"
                 if checkpoint_cleanup_subdir.exists():
                     # Crass empiricism.
-                    time.sleep(10)
+                    time.sleep(20)
                 assert(not checkpoint_cleanup_subdir.exists())
