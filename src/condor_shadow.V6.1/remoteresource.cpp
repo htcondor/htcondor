@@ -2041,8 +2041,9 @@ RemoteResource::locateReconnectStarter( void )
 			free( claimid );
 			return true;
 		} else {
-			EXCEPT( "impossible: locateStarter() returned success "
-					"but %s not found", ATTR_STARTER_IP_ADDR );
+			reconnect();
+			free( claimid );
+			return false;
 		}
 	}
 	
