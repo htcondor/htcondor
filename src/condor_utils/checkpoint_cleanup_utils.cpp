@@ -163,7 +163,9 @@ spawnCheckpointCleanupProcess(
 #endif /* ! defined(WINDOWS) */
 
 	OptionalCreateProcessArgs cleanup_process_opts;
+#if ! defined(WINDOWS)
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): spawning as %d.%d\n", get_user_uid(), get_user_gid() );
+#endif /* ! defined(WINDOWS) */
 	pid = daemonCore->CreateProcessNew(
 		condor_manifest.string(),
 		cleanup_process_args,
