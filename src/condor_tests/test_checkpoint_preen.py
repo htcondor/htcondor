@@ -84,7 +84,9 @@ def cleanup_file(test_dir):
             fi
 
             # Delete the file.
-            rm -f ${DIR}${DELETE}
+            if ! rm -f ${DIR}${DELETE}; then
+                exit 2
+            fi
 
             # We created directories in ${DIR} as necessary to write the
             # checkpoint, so delete them if we just removed the last file
