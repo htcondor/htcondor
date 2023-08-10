@@ -20,14 +20,26 @@ USER = getuser()
 
 
 @standup
-def condor(test_dir):
+def condor(pytestconfig, test_dir):
     logger.debug("*** BEGIN TEST DEBUGGING ***")
+
     logger.debug(f"CWD: {Path.cwd()}")
     logger.debug("CWD LS:")
     for p in Path.cwd().glob("*"):
         logger.debug(f"\t{p}{'/' if p.is_dir() else ''}")
+
+    logger.debug(f"TEST_DIR: {test_dir}")
+    logger.debug("TEST_DIR LS:")
+    for p in test_dir.glob("*"):
+        logger.debug(f"\t{p}{'/' if p.is_dir() else ''}")
+
+    logger.debug(f"INVOCATION_DIR: {pytestconfig.invocation_dir}")
+    logger.debug("INVOCATION_DIR LS:")
+    for p in pytestconfig.invocation_dir.glob("*"):
+        logger.debug(f"\t{p}{'/' if p.is_dir() else ''}")
+
     logger.debug(f"*** END TEST DEBUGGING ***")
-    credmon = Path.cwd() / "condor_credmon_oauth_dummy"
+    credmon = pytestconfig.invocation_dir / "condor_credmon_oauth_dummy"
     credmon.chmod(0o755)  # make sure the credmon is executable
     cred_dir = test_dir / "oauth_credentials"
     cred_dir.mkdir(parents=True, exist_ok=True)
