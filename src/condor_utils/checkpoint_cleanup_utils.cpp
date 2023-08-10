@@ -145,6 +145,7 @@ spawnCheckpointCleanupProcess(
 	bool use_old_user_ids = user_ids_are_inited();
 	bool switch_users = param_boolean("RUN_CLEANUP_PLUGINS_AS_OWNER", true);
 
+#if ! defined(WINDOWS)
 	if( switch_users ) {
 		if( use_old_user_ids ) {
 			uid = get_user_uid();
@@ -159,6 +160,7 @@ spawnCheckpointCleanupProcess(
 			gid = get_user_gid();
 		}
 	}
+#endif /* ! defined(WINDOWS) */
 
 	OptionalCreateProcessArgs cleanup_process_opts;
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): spawning as %d.%d\n", get_user_uid(), get_user_gid() );
@@ -168,11 +170,13 @@ spawnCheckpointCleanupProcess(
 		cleanup_process_opts.reaperID(cleanup_reaper_id).priv(PRIV_USER_FINAL)
 	);
 
+#if ! defined(WINDOWS)
 	if( switch_users ) {
 		if(! set_user_ids(uid, gid)) {
 			dprintf( D_ALWAYS, "spawnCheckpointCleanupProcess(): unable to switch back to user %d gid %d, ignoring.\n", uid, gid );
 		}
 	}
+#endif /* ! defined(WINDOWS) */
 
 	dprintf( D_ZKM, "spawnCheckpointCleanupProcess(): ... checkpoint clean-up for job %d.%d spawned as pid %d.\n", cluster, proc, pid );
 	return true;
