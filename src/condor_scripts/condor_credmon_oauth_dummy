@@ -56,7 +56,7 @@ LOG_FILE = htcondor.param.get("CREDMON_OAUTH_LOG")
 def log(msg, logfile_only=False):
     s = f"{datetime.now()} (pid:{os.getpid()}) - {msg}"
     if not logfile_only:
-        print(s)
+        print(s, file=sys.stderr)
     if LOG_FILE is not None:
         with open(LOG_FILE, "a") as f:
             print(s, file=f)
@@ -129,7 +129,7 @@ def run_credmon_loop():
 
 def main():
     try:
-        log("Dummy credmon starting up!)
+        log("Dummy credmon starting up!")
         log("Expecting SIGHUP to refresh creds or SIGTERM to exit.")
 
         htcondor.set_subsystem("CREDMON_OAUTH", htcondor.SubsystemType.Daemon)

@@ -28,6 +28,9 @@ def condor(pytestconfig, test_dir):
     cred_dir.chmod(0o2770)
     user_cred_dir = cred_dir / USER
     user_cred_dir.mkdir(parents=True, exist_ok=True)
+    secret_file = test_dir / "dummy.secret"
+    secret_file.open("w").write("dummy_secret")
+    secret_file.chmod(0o600)
     for token_name in ["dummy", "dummy_A", "dummy_B"]:
         (user_cred_dir / token_name).with_suffix(".top").open("w").write(f"refresh_{token_name}")
         (user_cred_dir / token_name).with_suffix(".use").open("w").write(f"access_{token_name}")
@@ -38,11 +41,11 @@ def condor(pytestconfig, test_dir):
             "SEC_CREDENTIAL_DIRECTORY_OAUTH":    str(cred_dir),
             "CREDMON_OAUTH":                     str(credmon),
             "CREDMON_OAUTH_LOG":                 "$(LOG)/CredMonOAuthLog",
-            "DAEMON_LIST":                       "$(DAEMON_LIST),CREDMON_OAUTH",
+            "DAEMON_LIST":                       "$(DAEMON_LIST) CREDMON_OAUTH",
             "AUTO_INCLUDE_CREDD_IN_DAEMON_LIST": "True",
             "TRUST_CREDENTIAL_DIRECTORY":        "True",
             "DUMMY_CLIENT_ID":                   "dummy_client_id",
-            "DUMMY_CLIENT_SECRET_FILE":          "$(CONFIG_ROOT)/dummy.secret",
+            "DUMMY_CLIENT_SECRET_FILE":          str(secret_file),
             "DUMMY_RETURN_URL_SUFFIX":           "/return",
             "DUMMY_AUTHORIZATION_URL":           "https://$(FULL_HOSTNAME)/auth",
             "DUMMY_TOKEN_URL":                   "https://$(FULL_HOSTNAME)/token",
