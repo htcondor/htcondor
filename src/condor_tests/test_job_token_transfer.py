@@ -89,8 +89,7 @@ def one_service_two_handles(condor, test_dir):
         }
     )
     assert job.wait(condition=ClusterState.all_terminal)
-    for line in outfile.open("r"):
-        yield line.strip()
+    return outfile.open("r").read().strip()
 
 
 class TestJobTokenTransfer:
@@ -99,4 +98,4 @@ class TestJobTokenTransfer:
         assert one_service_no_handles == "access_dummy"
 
     def test_one_service_two_handles(self, one_service_two_handles):
-        assert tuple(one_service_no_handles) == ("access_dummy_A", "access_dummy_B")
+        assert one_service_two_handles == "access_dummy_Aaccess_dummy_B"
