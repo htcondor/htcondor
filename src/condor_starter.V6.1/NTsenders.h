@@ -103,7 +103,6 @@ struct CredData;
 		std::string &filetrans_session_info,
 		std::string &filetrans_session_key);
 
-	// Why are these all C-linkage?
 	int REMOTE_CONDOR_event_notification(const ClassAd& event);
 
 #endif
