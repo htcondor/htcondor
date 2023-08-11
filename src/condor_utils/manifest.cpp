@@ -39,6 +39,8 @@
 
 #include "shortfile.h"
 
+#include "condor_url.h"
+
 namespace manifest {
 
 int
@@ -206,8 +208,11 @@ deleteFilesStoredAt(
 			continue;
 		}
 
+		std::string protocol = getURLType(checkpointDestination.c_str(), false);
+
 		ArgList args;
 		args.AppendArg(pluginFileName);
+		args.AppendArg(protocol);
 		args.AppendArg("-from");
 		args.AppendArg(checkpointDestination);
 		args.AppendArg("-delete");

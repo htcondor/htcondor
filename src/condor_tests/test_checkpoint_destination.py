@@ -1182,7 +1182,7 @@ class TestCheckpointDestination:
         assert(len(results) == 1)
 
         jobAd = results[0]
-        prefix = jobAd.get("CheckpointDestination")
+        checkpointDestination = jobAd.get("CheckpointDestination")
 
         # Did we clean up the SPOOL directory?
         with the_condor.use_config():
@@ -1190,11 +1190,9 @@ class TestCheckpointDestination:
         spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
         assert(not spoolDirectory.exists())
 
-        if not prefix is None:
-            prefix = prefix[prefix.find("://") + 3:]
+        if not checkpointDestination is None:
             globalJobID = jobAd["GlobalJobID"].replace('#', '_')
-            prefix = prefix + "/" + globalJobID
-            prefix = Path(prefix)
+            prefix = test_dir / globalJobID
 
             checkpointNumber = int(jobAd["CheckpointNumber"])
             for i in range(0, checkpointNumber):

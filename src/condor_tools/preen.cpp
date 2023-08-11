@@ -1419,7 +1419,7 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 		auto userSpecificDir = std::filesystem::directory_iterator(entry);
 		for( const auto & jobDir : userSpecificDir ) {
 			if(! jobDir.is_directory()) { continue; }
-			dprintf( D_ZKM, "Found directory %s\n", entry.path().string().c_str() );
+			dprintf( D_ZKM, "Found directory %s\n", jobDir.path().string().c_str() );
 
 			auto pathToJobAd = jobDir.path() / ".job.ad";
 			FILE * fp = NULL;

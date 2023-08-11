@@ -711,9 +711,9 @@ class TestCheckpointDestination:
             preen_env = {
                 ** os.environ,
                 '_CONDOR_SPOOL': SPOOL,
-                'LOCAL_CLEANUP_PLUGIN': '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
-                'LOCAL_CLEANUP_PLUGIN_URL': 'local://example.vo/example.fs',
-                'LOCAL_CLEANUP_PLUGIN_PATH': test_dir.as_posix(),
+                '_CONDOR_LOCAL_CLEANUP_PLUGIN': '$(LIBEXEC)/cleanup_locally_mounted_checkpoint',
+                '_CONDOR_LOCAL_CLEANUP_PLUGIN_URL': 'local://example.vo/example.fs',
+                '_CONDOR_LOCAL_CLEANUP_PLUGIN_PATH': test_dir.as_posix(),
                 '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
             }
             rv = subprocess.run( ['condor_preen', '-d'],
@@ -737,18 +737,16 @@ class TestCheckpointDestination:
             assert(len(results) == 5)
 
         for jobAd in results:
-            prefix = jobAd.get("CheckpointDestination")
+            checkpointDestination = jobAd.get("CheckpointDestination")
             proc = jobAd["ProcId"]
 
             # Did we clean up the SPOOL directory?
             spoolDirectory = Path(SPOOL) / str(the_removed_job.clusterid)
             assert(not spoolDirectory.exists())
 
-            if not prefix is None:
-                prefix = prefix[prefix.find("://") + 3:]
+            if not checkpointDestination is None:
                 globalJobID = jobAd["GlobalJobID"].replace('#', '_')
-                prefix = prefix + "/" + globalJobID
-                prefix = Path(prefix)
+                prefix = test_dir / globalJobID
 
                 checkpointNumber = int(jobAd["CheckpointNumber"])
                 for i in range(0, checkpointNumber):
