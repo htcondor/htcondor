@@ -142,9 +142,6 @@ Requires: net-tools
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
-Requires: condor-procd = %{version}-%{release}
-
-Requires: %name-blahp = %version-%release
 
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
@@ -220,6 +217,15 @@ Obsoletes: condor-bosco < 9.5.0
 # externals package discontinued as of 10.8.0
 Obsoletes: condor-externals < 10.8.0
 
+# blahp package discontinued as of 10.8.0
+Obsoletes: condor-blahp < 10.8.0
+
+# procd package discontinued as of 10.8.0
+Obsoletes: condor-procd < 10.8.0
+
+# all package discontinued as of 10.8.0
+Obsoletes: condor-all < 10.8.0
+
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
@@ -248,15 +254,6 @@ Group: Applications/System
 Development files for HTCondor
 
 %endif
-
-#######################
-%package procd
-Summary: HTCondor Process tracking Daemon
-Group: Applications/System
-
-%description procd
-A daemon for tracking child processes started by a parent.
-Part of HTCondor, but able to be stand-alone
 
 #######################
 %package kbdd
@@ -427,23 +424,6 @@ The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
 
 #######################
-%package blahp
-Summary: BLAHP daemon
-Group: System/Libraries
-BuildRequires:  docbook-style-xsl, libxslt
-Requires: %name = %version-%release
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-Requires: python3
-%else
-Requires: python >= 2.2
-%endif
-Provides: blahp = %{version}-%{release}
-Obsoletes: blahp < 9.5.0
-
-%description blahp
-%{summary}
-
-#######################
 %package -n minicondor
 Summary: Configuration for a single-node HTCondor
 Group: Applications/System
@@ -498,24 +478,6 @@ HTCondor V9 to V10 check for for known breaking changes:
 
 %files upgrade-checks
 %_bindir/condor_upgrade_check
-
-#######################
-%package all
-Summary: All condor packages in a typical installation
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-procd = %version-%release
-Requires: %name-kbdd = %version-%release
-%if ! 0%{?amzn}
-Requires: %name-vm-gahp = %version-%release
-%endif
-Requires: %name-classads = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora}
-Requires: python3-condor = %version-%release
-%endif
-
-%description all
-Include dependencies for all condor packages in a typical installation
 
 %pre
 getent group condor >/dev/null || groupadd -r condor
@@ -879,7 +841,6 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
-%files all
 %files
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt examples
@@ -1193,6 +1154,31 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
 
+###### blahp files #######
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
+
+####### procd files #######
+%_sbindir/condor_procd
+%_sbindir/gidd_alloc
+%_sbindir/procd_ctl
+%_mandir/man1/procd_ctl.1.gz
+%_mandir/man1/gidd_alloc.1.gz
+%_mandir/man1/condor_procd.1.gz
+
 #################
 %files devel
 %{_includedir}/condor/chirp_client.h
@@ -1213,15 +1199,6 @@ rm -rf %{buildroot}
 %{_mandir}/man1/condor_configure.1.gz
 %{_mandir}/man1/condor_install.1.gz
 %endif
-
-#################
-%files procd
-%_sbindir/condor_procd
-%_sbindir/gidd_alloc
-%_sbindir/procd_ctl
-%_mandir/man1/procd_ctl.1.gz
-%_mandir/man1/gidd_alloc.1.gz
-%_mandir/man1/condor_procd.1.gz
 
 #################
 %files kbdd
@@ -1356,24 +1333,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-
-%files blahp
-%config %_sysconfdir/blah.config
-%config %_sysconfdir/blparser.conf
-%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
-%dir %_sysconfdir/blahp/
-%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
-%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
-%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
-%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
-%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
-%_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
-%dir %_libexecdir/blahp
-%_libexecdir/blahp/*
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
