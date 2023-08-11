@@ -47,7 +47,7 @@ cp -pr build/packaging/debian debian
 # set default email address for build
 export DEBEMAIL=${DEBEMAIL-htcondor-admin@cs.wisc.edu}
 # if running in a condor slot, set parallelism to slot size
-export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1}"
+export DEB_BUILD_OPTIONS="parallel=${OMP_NUM_THREADS-1} terse"
 
 # Extract prerelease value from top level CMake file
 PRE_RELEASE=$(grep '^set(PRE_RELEASE' CMakeLists.txt)

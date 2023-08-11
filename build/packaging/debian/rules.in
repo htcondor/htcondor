@@ -47,7 +47,7 @@ override_dh_auto_configure:
 
 
 override_dh_auto_build: doc/build
-	dh_auto_build --parallel -- VERBOSE=1
+	dh_auto_build --parallel
 	# The tests don't get built eventhough was asked for them
 	(cd obj-*; make tests)
 	# post-fixing things that have to be done due to changes introduced by
