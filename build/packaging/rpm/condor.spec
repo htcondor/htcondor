@@ -142,7 +142,6 @@ Requires: net-tools
 
 Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
-Requires: condor-procd = %{version}-%{release}
 
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
@@ -221,6 +220,9 @@ Obsoletes: condor-externals < 10.8.0
 # blahp package discontinued as of 10.8.0
 Obsoletes: condor-blahp < 10.8.0
 
+# procd package discontinued as of 10.8.0
+Obsoletes: condor-procd < 10.8.0
+
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
@@ -249,15 +251,6 @@ Group: Applications/System
 Development files for HTCondor
 
 %endif
-
-#######################
-%package procd
-Summary: HTCondor Process tracking Daemon
-Group: Applications/System
-
-%description procd
-A daemon for tracking child processes started by a parent.
-Part of HTCondor, but able to be stand-alone
 
 #######################
 %package kbdd
@@ -488,7 +481,6 @@ HTCondor V9 to V10 check for for known breaking changes:
 Summary: All condor packages in a typical installation
 Group: Applications/System
 Requires: %name = %version-%release
-Requires: %name-procd = %version-%release
 Requires: %name-kbdd = %version-%release
 %if ! 0%{?amzn}
 Requires: %name-vm-gahp = %version-%release
@@ -1177,7 +1169,7 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
 
-###### blahp files
+###### blahp files #######
 %config %_sysconfdir/blah.config
 %config %_sysconfdir/blparser.conf
 %dir %_sysconfdir/blahp/
@@ -1193,6 +1185,14 @@ rm -rf %{buildroot}
 %_sbindir/blahpd_daemon
 %dir %_libexecdir/blahp
 %_libexecdir/blahp/*
+
+####### procd files #######
+%_sbindir/condor_procd
+%_sbindir/gidd_alloc
+%_sbindir/procd_ctl
+%_mandir/man1/procd_ctl.1.gz
+%_mandir/man1/gidd_alloc.1.gz
+%_mandir/man1/condor_procd.1.gz
 
 #################
 %files devel
@@ -1217,12 +1217,6 @@ rm -rf %{buildroot}
 
 #################
 %files procd
-%_sbindir/condor_procd
-%_sbindir/gidd_alloc
-%_sbindir/procd_ctl
-%_mandir/man1/procd_ctl.1.gz
-%_mandir/man1/gidd_alloc.1.gz
-%_mandir/man1/condor_procd.1.gz
 
 #################
 %files kbdd
