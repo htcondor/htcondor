@@ -144,8 +144,6 @@ Requires: /usr/sbin/sendmail
 Requires: condor-classads = %{version}-%{release}
 Requires: condor-procd = %{version}-%{release}
 
-Requires: %name-blahp = %version-%release
-
 # Useful tools are using the Python bindings
 Requires: python3-condor = %{version}-%{release}
 # The use the python-requests library in EPEL is based Python 3.6
@@ -219,6 +217,9 @@ Obsoletes: condor-bosco < 9.5.0
 
 # externals package discontinued as of 10.8.0
 Obsoletes: condor-externals < 10.8.0
+
+# blahp package discontinued as of 10.8.0
+Obsoletes: condor-blahp < 10.8.0
 
 %description
 HTCondor is a specialized workload management system for
@@ -425,23 +426,6 @@ Conflicts: %name-credmon-oauth
 %description credmon-vault
 The Vault credmon allows users to obtain credentials from Vault using
 htgettoken and to use those credentials securely inside running jobs.
-
-#######################
-%package blahp
-Summary: BLAHP daemon
-Group: System/Libraries
-BuildRequires:  docbook-style-xsl, libxslt
-Requires: %name = %version-%release
-%if 0%{?rhel} >= 8 || 0%{?fedora}
-Requires: python3
-%else
-Requires: python >= 2.2
-%endif
-Provides: blahp = %{version}-%{release}
-Obsoletes: blahp < 9.5.0
-
-%description blahp
-%{summary}
 
 #######################
 %package -n minicondor
@@ -1193,6 +1177,23 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %dir %_var/lib/condor/krb_credentials
 
+###### blahp files
+%config %_sysconfdir/blah.config
+%config %_sysconfdir/blparser.conf
+%dir %_sysconfdir/blahp/
+%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
+%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
+%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
+%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
+%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
+%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
+%_bindir/blahpd
+%_sbindir/blah_check_config
+%_sbindir/blahpd_daemon
+%dir %_libexecdir/blahp
+%_libexecdir/blahp/*
+
 #################
 %files devel
 %{_includedir}/condor/chirp_client.h
@@ -1356,24 +1357,6 @@ rm -rf %{buildroot}
 %config(noreplace) %_sysconfdir/condor/config.d/40-vault-credmon.conf
 %ghost %_var/lib/condor/oauth_credentials/CREDMON_COMPLETE
 %ghost %_var/lib/condor/oauth_credentials/pid
-
-%files blahp
-%config %_sysconfdir/blah.config
-%config %_sysconfdir/blparser.conf
-%_sysconfdir/rc.d/init.d/glite-ce-blah-parser
-%dir %_sysconfdir/blahp/
-%config %_sysconfdir/blahp/condor_local_submit_attributes.sh
-%config %_sysconfdir/blahp/kubernetes_local_submit_attributes.sh
-%config %_sysconfdir/blahp/lsf_local_submit_attributes.sh
-%config %_sysconfdir/blahp/nqs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/pbs_local_submit_attributes.sh
-%config %_sysconfdir/blahp/sge_local_submit_attributes.sh
-%config %_sysconfdir/blahp/slurm_local_submit_attributes.sh
-%_bindir/blahpd
-%_sbindir/blah_check_config
-%_sbindir/blahpd_daemon
-%dir %_libexecdir/blahp
-%_libexecdir/blahp/*
 
 %files -n minicondor
 %config(noreplace) %_sysconfdir/condor/config.d/00-minicondor
