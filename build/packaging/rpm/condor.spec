@@ -1201,9 +1201,6 @@ rm -rf %{buildroot}
 %endif
 
 #################
-%files procd
-
-#################
 %files kbdd
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt
