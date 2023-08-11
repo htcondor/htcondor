@@ -86,6 +86,11 @@ New Features:
   upgrading to a newer version (i.e. HTCondor ``V23``).
   :jira:`1960`
 
+- Self-checkpointing jobs may now include the time spent generating
+  successfully-stored checkpoints as part of their `CommittedTime`
+  job ad attribute.
+  :jira:`1942`
+
 Bugs Fixed:
 
 - Fixed bug in parallel universe that would cause the *condor_schedd* to
