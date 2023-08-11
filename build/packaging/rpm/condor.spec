@@ -479,9 +479,6 @@ HTCondor V9 to V10 check for for known breaking changes:
 %files upgrade-checks
 %_bindir/condor_upgrade_check
 
-%description all
-Include dependencies for all condor packages in a typical installation
-
 %pre
 getent group condor >/dev/null || groupadd -r condor
 getent passwd condor >/dev/null || \
@@ -844,7 +841,6 @@ rm -rf %{buildroot}
 #make check-seralized
 
 #################
-%files all
 %files
 %defattr(-,root,root,-)
 %doc LICENSE NOTICE.txt examples
