@@ -236,9 +236,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
         //
         List<EC2Job> myJobs;
         EC2Job * nextJob = NULL;
-		BaseJob *nextBaseJob = NULL;
-		registeredJobs.Rewind();
-		while ( (nextBaseJob = registeredJobs.Next()) ) {
+		for (auto nextBaseJob: registeredJobs) {
 			nextJob = dynamic_cast< EC2Job * >( nextBaseJob );
 			ASSERT( nextJob );
 			if ( !nextJob->m_client_token.empty() ) {
@@ -411,9 +409,7 @@ EC2Resource::BatchStatusResult EC2Resource::StartBatchStatus() {
 				// us recover jobs which crashed between requesting a spot
 				// instance and recording the request ID.
 				EC2Job * nextJob = NULL;
-				BaseJob * nextBaseJob = NULL;
-				registeredJobs.Rewind();
-				while ( (nextBaseJob = registeredJobs.Next()) ) {
+				for (auto nextBaseJob: registeredJobs) {
 					nextJob = dynamic_cast< EC2Job * >( nextBaseJob );
 					ASSERT( nextJob );
 

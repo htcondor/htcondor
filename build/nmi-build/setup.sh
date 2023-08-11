@@ -68,6 +68,7 @@ useradd --uid 20839 --gid $SUDO_GROUP --shell /bin/bash --create-home iaross
 useradd --uid 21356 --gid $SUDO_GROUP --shell /bin/bash --create-home jcpatton
 useradd --uid 20007 --gid $SUDO_GROUP --shell /bin/bash --create-home jfrey
 useradd --uid 20018 --gid $SUDO_GROUP --shell /bin/bash --create-home johnkn
+useradd --uid 25234 --gid $SUDO_GROUP --shell /bin/bash --create-home jrreuss
 useradd --uid 20020 --gid $SUDO_GROUP --shell /bin/bash --create-home matyas
 useradd --uid 20013 --gid $SUDO_GROUP --shell /bin/bash --create-home tannenba
 useradd --uid 20345 --gid $SUDO_GROUP --shell /bin/bash --create-home tim
@@ -97,7 +98,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'centos' ]; then
 fi
 
 if [ $ID = 'fedora' ]; then
-    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.f$VERSION_ID.noarch.rpm"
+    $INSTALL "https://research.cs.wisc.edu/htcondor/repo/$REPO_VERSION/htcondor-release-current.fc$VERSION_ID.noarch.rpm"
 fi
 
 # Setup Debian based repositories
@@ -109,12 +110,12 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
 fi
 
 # Use the testing repositories for unreleased software
-if [ $VERSION_CODENAME = 'focal' ] && [ "$ARCH" = 'ppc64le' ]; then
+if [ "$VERSION_CODENAME" = 'future' ] && [ "$ARCH" = 'x86_64' ]; then
     cp -p /etc/apt/sources.list.d/htcondor.list /etc/apt/sources.list.d/htcondor-test.list
     sed -i s+repo/+repo-test/+ /etc/apt/sources.list.d/htcondor-test.list
     apt update
 fi
-if [ $ID = 'amzn' ]; then
+if [ $ID = 'future' ]; then
     cp -p /etc/yum.repos.d/htcondor.repo /etc/yum.repos.d/htcondor-test.repo
     sed -i s+repo/+repo-test/+ /etc/yum.repos.d/htcondor-test.repo
     sed -i s/\\[htcondor/[htcondor-test/ /etc/yum.repos.d/htcondor-test.repo
@@ -128,7 +129,7 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
 fi
 
 # Need newer cmake on bionic
-if [ $VERSION_CODENAME = 'bionic' ]; then
+if [ "$VERSION_CODENAME" = 'bionic' ]; then
     curl -dsSL https://apt.kitware.com/keys/kitware-archive-latest.asc | apt-key add -
     echo 'deb https://apt.kitware.com/ubuntu/ bionic main' > /etc/apt/sources.list.d/cmake.list
     apt update
@@ -140,7 +141,7 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     mk-build-deps --install --tool='apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes' /tmp/debian/control
 fi
 
-if [ $VERSION_CODENAME = 'focal' ]; then
+if [ "$VERSION_CODENAME" = 'focal' ]; then
     # Need to upgrade compiler on this old platform
     $INSTALL gcc-10 g++-10
     update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 1000 --slave /usr/bin/g++ g++ /usr/bin/g++-10
@@ -173,24 +174,44 @@ if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'f
     $INSTALL 'perl(Archive::Tar)' 'perl(Data::Dumper)' 'perl(Digest::MD5)' 'perl(Digest::SHA)' 'perl(English)' 'perl(Env)' 'perl(File::Copy)' 'perl(FindBin)' 'perl(Net::Domain)' 'perl(Sys::Hostname)' 'perl(Time::HiRes)' 'perl(XML::Parser)'
 fi
 
+if [ $ID = 'debian' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL wget
+    wget https://github.com/apptainer/apptainer/releases/download/v1.2.0/apptainer_1.2.0_amd64.deb
+    $INSTALL ./apptainer_1.2.0_amd64.deb
+    rm ./apptainer_1.2.0_amd64.deb
+fi
+
+if [ $ID = 'ubuntu' ] && [ "$ARCH" = 'x86_64' ]; then
+    $INSTALL software-properties-common
+    add-apt-repository -y ppa:apptainer/ppa
+    apt update
+    $INSTALL apptainer
+fi
+
+
 # Include packages for tarball in the image.
 externals_dir="/usr/local/condor/externals/$REPO_VERSION"
 mkdir -p "$externals_dir"
 if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
-    (cd "$externals_dir";
-        apt download condor-stash-plugin libcgroup1 libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5)
+    chown _apt "$externals_dir"
+    pushd "$externals_dir"
+    apt download condor-stash-plugin libgomp1 libmunge2 libpcre2-8-0 libscitokens0 libvomsapi1v5
+    if [ $VERSION_CODENAME != 'bookworm' ]; then
+        apt download libcgroup1
+    fi
     if [ $VERSION_CODENAME = 'bullseye' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'bookworm' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     elif [ $VERSION_CODENAME = 'focal' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.71.0)
+        apt download libboost-python1.71.0
     elif [ $VERSION_CODENAME = 'jammy' ]; then
-        (cd "$externals_dir"; apt download libboost-python1.74.0)
+        apt download libboost-python1.74.0
     else
         echo "Unknown codename: $VERSION_CODENAME"
         exit 1
     fi
+    popd
 fi
 if [ $ID = 'almalinux' ] || [ $ID = 'amzn' ] || [ $ID = 'centos' ] || [ $ID = 'fedora' ]; then
     yumdownloader --downloadonly --destdir="$externals_dir" \
@@ -225,10 +246,27 @@ if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
     apt -y clean
 fi
 
-# Install pytest for BaTLab testing
-pip3 install pytest pytest-httpserver
+# Install apptainer into externals directory
+if [ $ID != 'amzn' ]; then
+    if [ $ID != 'ubuntu' ] || [ "$ARCH" != 'ppcle64' ]; then
+        mkdir -p "$externals_dir/apptainer"
+        if [ $ID = 'debian' ] || [ $ID = 'ubuntu' ]; then
+            $INSTALL cpio rpm2cpio
+        fi
+        curl -s https://raw.githubusercontent.com/apptainer/apptainer/main/tools/install-unprivileged.sh | \
+            bash -s - "$externals_dir/apptainer"
+        rm -r "$externals_dir/apptainer/$ARCH/libexec/apptainer/cni"
+    fi
+fi
 
-if [ $ID = 'amzn' ] || [ $VERSION_CODENAME = 'bullseye' ] || [ $VERSION_CODENAME = 'focal' ]; then
+# Install pytest for BaTLab testing
+if [ "$VERSION_CODENAME" = 'bookworm' ]; then
+    pip3 install --break-system-packages pytest pytest-httpserver
+else
+    pip3 install pytest pytest-httpserver
+fi
+
+if [ $ID = 'amzn' ] || [ "$VERSION_CODENAME" = 'bullseye' ] || [ "$VERSION_CODENAME" = 'focal' ]; then
     # Pip installs a updated version of markupsafe that is incompatiable
     # with sphinx on these platforms. Downgrade markupsafe and hope for the best
     pip3 install markupsafe==2.0.1

@@ -27,13 +27,12 @@
 
 class PerfCounter {
 	public:
-		PerfCounter(pid_t pid);
+		PerfCounter(pid_t);
 		virtual ~PerfCounter();
 		void start() const;
 		void stop() const;
 		long long getInsns() const;
 	private:
-		pid_t pid;
 		int fd;
 };
 

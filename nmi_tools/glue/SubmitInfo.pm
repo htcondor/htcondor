@@ -120,7 +120,6 @@ my @default_build_configure_args =
 	(
 	 '-DPROPER:BOOL'	 => 'OFF',
 	 '-D_VERBOSE:BOOL'	 => 'ON',
-	 #'-DSCRATCH_EXTERNALS:BOOL' => 'ON',
 	);
 
 ############################################################
@@ -528,7 +527,7 @@ our %submit_info = (
 	##########################################################################
 	'x86_64_Fedora'	=> {
 		'build' => {
-			'configure_args' => { @minimal_build_configure_args },
+			'configure_args' => { @default_build_configure_args },
 			'prereqs'	=> [ @default_prereqs ],
 			'xtests'	=> undef,
 		},
@@ -557,6 +556,7 @@ our %submit_info = (
 	'nmi-build:x86_64_Fedora30'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora31'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_Fedora32'		=> 'x86_64_Fedora',
+	'nmi-build:x86_64_Fedora38'		=> 'x86_64_Fedora',
 	'nmi-build:x86_64_AmazonLinux2023' => 'x86_64_Fedora',
 	
 	'x86_64_fedora_15'				=> 'x86_64_Fedora',

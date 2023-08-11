@@ -29,6 +29,7 @@ enum ppOption {
     PP_STARTD_STATE,
     PP_STARTD_RUN,
     PP_STARTD_COD,
+    PP_STARTD_GPUS,
 
     PP_SCHEDD_NORMAL,
     PP_SCHEDD_DATA,
@@ -64,6 +65,7 @@ enum {
 	SDO_Startd_Avail,	//  MODE_STARTD_AVAIL,
 	SDO_Startd_Claimed,	//  MODE_STARTD_RUN,
 	SDO_Startd_Cod,		//  MODE_STARTD_COD,
+	SDO_Startd_GPUs,	//  MODE_STARTD_GPUS,
 	SDO_Schedd,			//  MODE_SCHEDD_NORMAL,
 	SDO_Schedd_Data,	//  MODE_SCHEDD_DATA,
 	SDO_Schedd_Run,		//  MODE_SCHEDD_RUN,

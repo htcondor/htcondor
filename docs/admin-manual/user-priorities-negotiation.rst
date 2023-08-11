@@ -805,7 +805,7 @@ non-overlapping partition of the slots in the pool.  This might be for
 performance -- if you have more than 100,000 slots in the pool, you may need to
 shard this pool into several smaller setions in order to lower the time each
 negotiator spends.  Because accounting is done at the the negotiator level, you
-may want to do this to have seperate accounting and distinct fair share between
+may want to do this to have separate accounting and distinct fair share between
 different kinds of machines in your pool.  For example, let's say you have some
 GPU machines and non-GPU machines, and you want usage of the non-GPU machine to
 not "count" against the fair-share usage of GPU machines.  One way to do this

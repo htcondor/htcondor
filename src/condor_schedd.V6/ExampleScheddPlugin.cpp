@@ -21,29 +21,29 @@
 struct ExampleScheddPlugin : public ScheddPlugin
 {
 	void
-	earlyInitialize()
+	earlyInitialize() override
 	{
 		printf("EarlyInit\n");
 	}
 
 	void
-	initialize()
+	initialize() override
 	{
 		printf("Init\n");
 	}
 
 	void
-	shutdown()
+	shutdown() override
 	{
 		printf("Shutdown\n");
 	}
 
-	void update(int cmd, const ClassAd *ad)
+	void update(int cmd, const ClassAd *ad) override
 	{
 		printf("update(%d, %s)\n", cmd, ad ? "Ad" : "(NULL)");
 	}
 
-	void archive(const ClassAd *ad)
+	void archive(const ClassAd *ad) override
 	{
 		printf("archive(%s)\n", ad ? "Ad" : "(NULL)");
 	}

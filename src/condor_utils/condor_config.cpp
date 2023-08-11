@@ -886,6 +886,9 @@ real_config(const char* host, int wantsQuiet, int config_options, const char * r
 	bool only_env = YourStringNoCase("ONLY_ENV") == config_source;
 	bool null_config = YourString("/dev/null") == config_source || !config_source || !config_source[0];
 
+	// even if we have no config files, we stil want the special sources like <detected> in the sources table.
+	insert_special_sources(ConfigMacroSet);
+
 	if ( ! only_env && ! null_config) {
 		// inject the directory of the root config file into the config
 		// if no directory was supplied, "." will be used
@@ -2255,13 +2258,8 @@ param_longlong( const char *name, long long int &value,
 		if (subsys && ! subsys[0]) subsys = NULL;
 
 		int def_valid = 0;
-		int was_truncated = false;
-		int is_long = 0;
-		int tbl_default_value = param_default_integer(name, subsys, &def_valid, &is_long, &was_truncated);
-		bool tbl_check_ranges = 
-			(param_range_long(name, &min_value, &max_value)==-1) 
-				? false : true;
-
+		long long tbl_default_value = param_default_long(name, subsys, &def_valid);
+		bool tbl_check_ranges = param_range_long(name, &min_value, &max_value) != -1;
 
 		// if found in the default table, then we overwrite the arguments
 		// to this function with the defaults from the table. This effectively

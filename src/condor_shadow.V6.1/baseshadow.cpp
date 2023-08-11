@@ -272,7 +272,8 @@ BaseShadow::baseInit( ClassAd *job_ad, const char* schedd_addr, const char *xfer
 		startd->asyncRequestOpportunisticClaim(jobAd, 
 											   "description", 
 											   daemonCore->InfoCommandSinfulString(), 
-											   1200 /*alive interval*/, 
+											   1200 /*alive interval*/,
+											   false, /* don't claim pslot */
 											   20 /* net timeout*/, 
 											   100 /*total timeout*/, 
 											   cb);
@@ -808,7 +809,10 @@ BaseShadow::terminateJob( update_style_t kind ) // has a default argument of US_
 
     // Update final Job committed time
     time_t last_ckpt_time = 0;
-    jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time);
+    if(! jobAd->LookupInteger(ATTR_LAST_CKPT_TIME, last_ckpt_time)) {
+        jobAd->LookupInteger(ATTR_JOB_LAST_CHECKPOINT_TIME, last_ckpt_time);
+    }
+
     time_t current_start_time = 0;
     jobAd->LookupInteger(ATTR_JOB_CURRENT_START_DATE, current_start_time);
     time_t int_value = (last_ckpt_time > current_start_time) ?

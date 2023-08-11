@@ -213,9 +213,7 @@ GCEResource::BatchStatusResult GCEResource::StartBatchStatus() {
 	//
 	std::set<GCEJob*> myJobs;
 	GCEJob * nextJob = NULL;
-	BaseJob *nextBaseJob = NULL;
-	registeredJobs.Rewind();
-	while ( (nextBaseJob = registeredJobs.Next()) ) {
+	for (auto nextBaseJob: registeredJobs) {
 		nextJob = dynamic_cast< GCEJob * >( nextBaseJob );
 		ASSERT( nextJob );
 		if ( !nextJob->m_instanceName.empty() ) {

@@ -1,4 +1,0 @@
-Config job_dagman_dont_use_default_node_log.cfg
-Job    NODERET         job_dagman_dont_use_default_node_log.cmd
-Script PRE NODERET     job_dagman_dont_use_default_node_log.pre.sh
-Script POST NODERET    job_dagman_dont_use_default_node_log.post.sh

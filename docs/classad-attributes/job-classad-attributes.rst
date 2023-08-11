@@ -1986,6 +1986,12 @@ all attributes.
     transfer plugins are invoked. A transfer plugin supplied in this will way will be used
     even if the execute node has a file transfer plugin installed that handles that URL prefix.
 
+:classad-attribute:`WantTransferPluginMethods`
+    A string value containing a comma separated list of file transfer plugin URL prefixes
+    that are needed by the job but not supplied via the ``TransferPlugins`` attribute.
+    This attribute is intended to provide a convenient way to match against jobs that need
+    a certain transfer plugin.
+
 :classad-attribute:`TransferQueued`
     A boolean value that indicates whether the job is currently waiting
     to transfer files because of limits placed by
@@ -2179,7 +2185,11 @@ information for the DAG.
     | 3                                    | the DAG has been aborted by an       |
     |                                      | ABORT-DAG-ON specification           |
     +--------------------------------------+--------------------------------------+
-	
+
+:classad-attribute:`DAG_AdUpdateTime`
+    A timestamp for when the DAGMan process last sent an update of internal
+    information to its job ad.
+
 The following job ClassAd attributes appear in the job ClassAd only for
 the *condor_dagman* job submitted under DAGMan. They represent job process
 information about the DAG. These values will reset when a DAG is run via

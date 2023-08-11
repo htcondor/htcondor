@@ -49,7 +49,8 @@ if (BUILD_TESTING)
 			   CondorTest.pm
 			   CondorPersonal.pm
 			   CondorUtils.pm
-               run_test.pl)
+			   run_test.pl
+			   condor_credmon_oauth_dummy)
 		configure_file(${CONDOR_SCRIPTS_DIR}/${scriptFile}
 				${TEST_TARGET_DIR}/${scriptFile} COPYONLY)
 	endforeach(scriptFile)
@@ -80,7 +81,7 @@ if (BUILD_TESTING)
 		file( REMOVE ${RMV_FIRST} )
 	endif()
 
-	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl")
+	APPEND_VAR(CONDOR_TEST_HELPER_SCRIPTS "Condor.pm;CondorTest.pm;CondorPersonal.pm;CondorUtils.pm;run_test.pl;condor_credmon_oauth_dummy")
 
 	##########################################################
 	# exe test targets
@@ -148,8 +149,11 @@ if (BUILD_TESTING)
 	condor_pl_test(cmd_condor_off-master "vanilla: condor_on condor_off test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_scheddrotation "Scheduler: basic log rotation test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
 	condor_pl_test(job_test_logrotation "basic log rotation test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_sleep.pl")
+if (NOT WINDOWS)
 	condor_pl_test(fetch_work_static_slot "work fetch static smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
 	condor_pl_test(fetch_work_pslot "work fetch pslot smoke test" "quick;ctest" CTEST DEPENDS "src/condor_tests/x_fetchwork_scripts.tar.gz")
+endif ()
+
 	condor_pl_test(lib_auth_protocol-ssl "SSL authentication test" "quick;ctest" CTEST DEPENDS "src/condor_tests/lib_auth_protocol-ssl.cmd;src/condor_tests/x_sleep.pl")
 	#condor_pl_test(lib_auth_protocol-pw "PW authentication test" "quick;ctest")
 	#condor_pl_test(job_dagman_node_status_rm "Check status file shows condor_rm" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_node_status_rm.dag;src/condor_tests/job_dagman_node_status_rm_node.pl;src/condor_tests/job_dagman_node_status_rm_node.cmd;src/condor_tests/job_dagman_node_status_rm_node.template")
@@ -205,6 +209,7 @@ endif ()
 		if(LINUX OR APPLE)
 			condor_pl_test(test_run_sleep_job "Run a sleep job to completion" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_num_holds "Test Hold Aggregates" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_shadow_hook "Test shadow job hooks and their status msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_hook_status_msg "Test Starter Job Hook Status Msg" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_xfer_hold_codes "Test proper hold codes after xfer failure" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_job_env "Test Job Environment" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -218,6 +223,7 @@ endif ()
 			condor_pl_test(test_drain_policies "Test job policy and backfill/draining interactions" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_inline_submit "Test the DAGMan inline submit description feature" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_submit_description "Test the DAGMan SUBMIT-DESCRIPTION command" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_service_nodes "Test the DAGMan service nodes" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_scheduler_priority "Test that job priority is respected in scheduler universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_parallel_uni "Test parallel uni" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
@@ -237,7 +243,6 @@ endif ()
 			condor_pl_test(test_jobsets "Test jobsets" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			condor_pl_test(test_htcondor_submit_constructor "Test htcondor.Submit()" "quick;ctest"	CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
-
 			condor_pl_test(test_job_submit_method_recording "Test recording of JobSubmitMethod job attribute" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_condor_history_reads_epochs "Test condor_history ability to read epoch files" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")	
 			condor_pl_test(test_container_img_declares_universe "Test declaring container image sets up universe" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
@@ -246,6 +251,7 @@ endif ()
 			condor_pl_test(test_condor_history "Test condor_history tools capabilities" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_proper_env "Test ability to set DAGMan proper job environment" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			condor_pl_test(test_dagman_save_files "Test ability for DAGMan to write and load save point files" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+			condor_pl_test(test_dagman_futile_nodes_efficiency "Test DAGMan is not inefficiently setting nodes to futile" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
@@ -270,9 +276,11 @@ endif ()
 				condor_pl_test(test_reserve_disk "Test RESERVED_DISK underflow" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_hpc_annex_require_job "Test HPC_ANNEX_REQUIRE_JOB" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_checkpoint_destination "Test checkpoint_destination" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
+				condor_pl_test(test_checkpoint_ct "Test checkpoint CommittedTime" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_tom_directory_creation "Test transfer_output_remaps creating directories" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_plugin_timeout "Test plugin timeout" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 
+				condor_pl_test(test_ft_plugin_testing "Test file transfer plugin testing mode" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_ft_plugin_stuff "Test some file-transfer plug-in things" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 				condor_pl_test(test_pcre "Test some PCRE mapfile nonsense" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py")
 			endif()
@@ -296,6 +304,7 @@ endif ()
 			# These tests require Python 3.6 or later.
 			if (PYTHON3_VERSION_MINOR GREATER_EQUAL 6)
 				condor_pl_test(test_condor_manifest "Test MANIFEST implementation via condor_manifest tool" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py") 
+				condor_pl_test(test_job_token_transfer "Test secure token transfer from shadow to starter" "quick;ctest" CTEST DEPENDS "src/condor_tests/ornithology;src/condor_tests/conftest.py;src/condor_scripts/condor_credmon_oauth_dummy")
 			endif()
 
 			# The AES test depends on strace'ing the condor_shadow binary.  Strace isn't supported under 
@@ -704,7 +713,6 @@ endif ()
 		condor_pl_test(job_dagman_fullremove "Ensure a removed dag is completely removed" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_fullremove.dag;src/condor_tests/job_dagman_fullremove.cmd;src/condor_tests/job_dagman_fullremove.pl;src/condor_tests/job_dagman_monitor.pl;${CMAKE_BINARY_DIR}/src/condor_tests/x_read_joblog.exe")
 	condor_pl_test(job_dagman_basic "Basic one node dag" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_basic.dag;src/condor_tests/job_dagman_basic-node.cmd;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_dagman_premonitor.pl;src/condor_tests/job_dagman_monitor.pl")
 	condor_pl_test(job_dagman_local "Test local universe under DAGMan" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_local.dag;src/condor_tests/job_dagman_local.cmd;src/condor_tests/job_dagman_local2.cmd")
-	#condor_pl_test(job_dagman_dont_use_default_node_log "Test for DAGMAN_ALWAYS_USE_NODE_LOG" "dagman;quick;ctest")
 	condor_pl_test(job_dagman_maxpostscripts "Check that throttling by post scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxpostscripts.dag;src/condor_tests/job_dagman_maxpostscripts.cmd;src/condor_tests/job_dagman_maxpostscripts-checkin.template;src/condor_tests/x_dagman_boring_prescript.pl;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_dagman_readflowlog.pl")
 	condor_pl_test(job_dagman_maxprescripts "Check that throttling by pre scripts works" "dagman;quick;ctest" CTEST DEPENDS "src/condor_tests/job_dagman_maxprescripts.dag;src/condor_tests/job_dagman_maxprescripts.cmd;src/condor_tests/job_dagman_maxprescripts-node.cmd;src/condor_tests/job_dagman_maxprescripts-checkin.template;src/condor_tests/x_dagman_node-ret.pl;src/condor_tests/job_dagman_monitor.pl;src/condor_tests/x_general_server.pl;src/condor_tests/x_general_client.pl;src/condor_tests/x_dagman_readflowlog.pl")
 

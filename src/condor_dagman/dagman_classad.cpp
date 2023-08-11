@@ -198,6 +198,7 @@ DagmanClassad::Update( const Dagman &dagman )
 	int jobProcsIdle, jobProcsHeld, jobProcsRunning;
 	dagman.dag->NumJobProcStates(&jobProcsHeld,&jobProcsIdle,&jobProcsRunning);
 
+	SetAttribute( ATTR_DAG_AD_UPDATE_TIME, time(NULL)); // Set the time that update occurred
 	SetAttribute( ATTR_DAG_NODES_TOTAL, dagman.dag->NumNodes( true ) );
 	SetAttribute( ATTR_DAG_NODES_DONE, dagman.dag->NumNodesDone( true ) );
 	SetAttribute( ATTR_DAG_NODES_PRERUN, dagman.dag->PreRunNodeCount() );

@@ -505,7 +505,9 @@ int Job::SetDescendantsToFutile(Dag& dag)
 					ASSERT(child != NULL);
 					//If Status is already futile or the node is preDone don't try
 					//to set status and update counts
-					if (child->GetStatus() != Job::STATUS_FUTILE && !child->IsPreDone()) {
+					if (child->GetStatus() == Job::STATUS_FUTILE) {
+						continue;
+					} else if (!child->IsPreDone()) {
 						ASSERT(!child->CanSubmit());
 						if (child->SetStatus(Job::STATUS_FUTILE)) { count++; }
 						else {
@@ -521,7 +523,9 @@ int Job::SetDescendantsToFutile(Dag& dag)
 			ASSERT(child != NULL);
 			//If Status is already futile or the node is preDone don't try
 			//to set status and update counts
-			if (child->GetStatus() != Job::STATUS_FUTILE && !child->IsPreDone()) {
+			if (child->GetStatus() == Job::STATUS_FUTILE) {
+				return 0;
+			} else if (!child->IsPreDone()) {
 				ASSERT(!child->CanSubmit());
 				if (child->SetStatus(Job::STATUS_FUTILE)) { count++; }
 				else {

@@ -118,7 +118,9 @@ into its own job ClassAd. The attributes are fully described in
 :doc:`/classad-attributes/job-classad-attributes`. The attributes are
 
 +-----------------+------------------+------------------+
-|    DAG Info     | DAG_Status       | DAG_InRecovery   |
+|                 | DAG_Status       | DAG_InRecovery   |
+| DAG Info        +------------------+------------------+
+|                 | DAG_AdUpdateTime |                  |
 +-----------------+------------------+------------------+
 |                 | DAG_NodesTotal   | DAG_NodesDone    |
 |                 +------------------+------------------+

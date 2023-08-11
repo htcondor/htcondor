@@ -729,8 +729,10 @@ ResState::enter_action( State s, Activity a,
 			rip->r_cur->beginClaim();	
 				// Update important attributes into the classad.
 			rip->r_cur->publish( rip->r_classad );
-				// Generate a preempting claim object
-			rip->r_pre = new Claim( rip );
+				// Generate a preempting claim object, but not for a pslot
+			if (!rip->is_partitionable_slot()) {
+				rip->r_pre = new Claim( rip );
+			}
 		}
 		if (a == suspended_act) {
 			if( ! rip->r_cur->suspendClaim() ) {

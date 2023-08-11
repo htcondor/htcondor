@@ -2748,8 +2748,9 @@ These macros control the *condor_master*.
     call, instead of the normal call to exit(). Multiple programs to
     execute may be defined with multiple entries, each with a unique
     ``Name``. These macros have no effect on a *condor_master* unless
-    *condor_set_shutdown* is run. The ``Name`` specified as an
-    argument to the *condor_set_shutdown* program must match the
+    *condor_set_shutdown* is run, or the `-exec` argument is used with
+    *condor_off* or *condor_restart*. The ``Name`` specified as an
+    argument to the *condor_set_shutdown* program or `-exec` arg must match the
     ``Name`` portion of one of these ``MASTER_SHUTDOWN_<Name>`` macros;
     if not, the *condor_master* will log an error and ignore the
     command. If a match is found, the *condor_master* will attempt to
@@ -3853,6 +3854,22 @@ needs.
     for leftover resources. In doing so, the *condor_schedd* can claim
     multiple dynamic slots without waiting for a negotiation cycle.
 
+:macro-def:`ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS`
+    A boolean variable that defaults to ``False``.
+    When set to ``True`` in the configuration of both the
+    *condor_startd* and the *condor_schedd*, and the *condor_schedd*
+    claims a partitionable slot, the partitionable slot's ``State`` will
+    change to ``Claimed`` in addition to the creation of a ``Claimed``
+    dynamic slot.
+    While the slot is ``Claimed``, no other *condor_schedd* is able
+    to create new dynamic slots to run jobs.
+
+:macro-def:`MAX_PARTITIONABLE_SLOT_CLAIM_TIME`
+    An integer that indicates the maximum amount of time that a
+    partitionable slot can be in the ``Claimed`` state before
+    returning to the Unclaimed state, expressed in seconds.
+    The default value is 3600.
+
 :macro-def:`MACHINE_RESOURCE_NAMES`
     A comma and/or space separated list of resource names that represent
     custom resources specific to a machine. These resources are further
@@ -4463,6 +4480,23 @@ These macros control the *condor_schedd*.
 
             START_SCHEDULER_UNIVERSE = TotalSchedulerJobsRunning < 10
 
+:macro-def:`START_VANILLA_UNIVERSE`
+    A boolean expression that defaults to nothing.
+    When this macro is defined the *condor_schedd* uses it
+    to determine whether to start a **vanilla** universe job.
+    The *condor_schedd* uses the expression
+    when matching a job with a slot in addition to the ``Requirements``
+    expression of the job and the slot ClassAds.  The expression can
+    refer to job attributes by using the prefix ``JOB``, slot attributes
+    by using the prefix ``SLOT``, and job owner attributes by using the prefix ``OWNER``.
+
+    The following example prevents jobs owned by a user from starting when
+    that user has more than 25 held jobs
+
+    .. code-block:: condor-config
+
+            START_VANILLA_UNIVERSE = OWNER.JobsHeld <= 25
+
 
 :macro-def:`SCHEDD_USES_STARTD_FOR_LOCAL_UNIVERSE`
     A boolean value that defaults to false. When true, the
@@ -4546,6 +4580,15 @@ These macros control the *condor_schedd*.
     This configuration variable may be most useful in conjunction with
     ``MAX_JOBS_SUBMITTED``, to ensure that no one user can dominate the
     queue.
+
+:macro-def:`ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY`
+    This boolean value determines if a User record will be created automatically
+    when an unknown user submits a job.
+    When true, only daemons or users that have a User record in the *condor_schedd*
+    can submit jobs. When false, a User record will be added during job submission
+    for users that have never submitted a job before. The default value is false
+    which is consistent with the behavior of the *condor_schedd* before User records
+    were added.
 
 :macro-def:`MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER`
     This integer value limits the number of scheduler universe jobs that
@@ -6119,7 +6162,7 @@ These settings affect the *condor_starter*.
 
 :macro-def:`CGROUP_MEMORY_LIMIT_POLICY`
     A string with possible values of ``hard``, ``soft``, ``custom`` and ``none``.
-    The default value is ``none``. If set to ``hard``, when the job tries
+    The default value is ``hard``. If set to ``hard``, when the job tries
     to use more memory than the slot size, it will be put on hold with
     an appropriate message.  Also, the cgroup soft limit will set to
     90% of the hard limit to encourage the kernel to lower 
@@ -6132,6 +6175,8 @@ These settings affect the *condor_starter*.
     When set to custom, the two additional knobs CGROUP_HARD_MEMORY_LIMIT and
     CGROUP_SOFT_MEMORY_LIMIT must be set, which are classad expressions evaluated
     in the context of the machine and the job which determine the hard and soft limits.
+    Note that "soft" is only meaningful on a cgroup v1 Linux system, and should not be
+    set on a cgroup v2 system.
 
 :macro-def:`DISABLE_SWAP_FOR_JOB`
     A boolean that defaults to false.  When true, and cgroups are in effect, the
@@ -6244,6 +6289,13 @@ These settings affect the *condor_starter*.
     specifying a URL. See
     :ref:`admin-manual/file-and-cred-transfer:Custom File Transfer Plugins`
     for a description of the functionality required of a plug-in.
+
+:macro-def:`<PLUGIN>_TEST_URL`
+    This configuration takes a URL to be tested against the specified
+    ``<PLUGIN>``. If this test fails, then that plugin is removed from
+    the *condor_starter* classad attribute ``HasFileTransferPluginMethods``.
+    This attribute determines what plugin capabilities the *condor_starter*
+    can utilize.
 
 :macro-def:`RUN_FILETRANSFER_PLUGINS_WITH_ROOT`
     A boolean value that affects only Unix platforms and defaults to
@@ -7733,8 +7785,7 @@ condor_procd Configuration File Macros
     receive requests from other HTCondor daemons. On Unix, this should
     point to a file system location that can be used for a named pipe.
     On Windows, named pipes are also used but they do not exist in the
-    file system. The default setting therefore depends on the platform
-    and distribution: $(LOCK)/procd_pipe or $(RUN)/procd_pipe on Unix
+    file system. The default setting is $(RUN)/procd_pipe on Unix
     and \\\\.\\pipe\\procd_pipe on Windows.
 
 :macro-def:`USE_GID_PROCESS_TRACKING`
@@ -8526,21 +8577,13 @@ General
     ``DAGMAN_ABORT_DUPLICATES`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
-:macro-def:`DAGMAN_USE_OLD_DAG_READER`
-    As of HTCondor version 8.3.3, this variable is no longer supported.
-    Its value will always be ``False``. A setting of ``True`` will
-    result in a warning, and the setting will have no effect on how a
-    DAG input file is read. The variable was previously used to change
-    the reading of DAG input files to that of HTCondor versions prior to
-    8.0.6. **Note: users should never change this setting.**
-
 :macro-def:`DAGMAN_USE_SHARED_PORT`
     A boolean value that controls whether *condor_dagman* will attempt
     to connect to the shared port daemon. If not defined,
     ``DAGMAN_USE_SHARED_PORT`` defaults to ``False``. There is no reason
     to ever change this value; it was introduced to prevent spurious
     shared port-related error messages from appearing in ``dagman.out``
-    files. (Introduced in version 8.6.1.)
+    files.
 
 :macro-def:`DAGMAN_USE_DIRECT_SUBMIT`
     A boolean value that controls whether *condor_dagman* submits jobs using
@@ -8578,11 +8621,21 @@ General
     file's ``getenv`` option. This will in turn add any found matching environment
     variables to the DAGMan proper jobs **environment**. Setting this value to
     ``True`` will result in ``getenv = true``. The Base ``.condor.sub`` values for
-    ``getenv`` are:
+    ``getenv`` are the following.
 
-    .. code-block:: condor-submit
-
-        getenv = CONDOR_CONFIG,_CONDOR_*,PATH,PYTHONPATH,PERL*,PEGASUS_*,TZ,HOME,USER,LANG,LC_ALL
+    +---------------+--------------------+--------------------+--------------------+
+    |               |        PATH        |        HOME        |        USER        |
+    |               +--------------------+--------------------+--------------------+
+    | General Shell |         TZ         |        LANG        |       LC_ALL       |
+    |               +--------------------+--------------------+--------------------+
+    |               |     PYTHONPATH     |        PERL*       |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    HTCondor   |   CONDOR_CONFIG    |       CONDOR_*     |                    |
+    +---------------+--------------------+--------------------+--------------------+
+    |    Scitoken   |    BEARER_TOKEN    | BEAERER_TOKEN_FILE |   XDG_RUNTIME_DIR  |
+    +---------------+--------------------+--------------------+--------------------+
+    |     Misc.     |     PEGASUS_*      |                    |                    |
+    +---------------+--------------------+--------------------+--------------------+
 
 :macro-def:`DAGMAN_NODE_RECORD_INFO`
     A string that when set to ``RETRY`` will cause DAGMan to insert a nodes current
@@ -8643,6 +8696,11 @@ Throttling
     overridden by the *condor_submit_dag* **-maxpost** command line
     option.
 
+:macro-def:`DAGMAN_MAX_HOLD_SCRIPTS`
+    An integer defining the maximum number of HOLD scripts that any
+    given *condor_dagman* will run at the same time. The default value
+    0 allows any number of HOLD scripts to run.
+
 :macro-def:`DAGMAN_REMOVE_JOBS_AFTER_LIMIT_CHANGE`
     A boolean that determines if after changing some of these throttle limits,
     *condor_dagman* should forceably remove jobs to meet the new limit.
@@ -8668,10 +8726,9 @@ Priority, node semantics
     scripts, the order will not be strictly depth-first, but it will
     tend to favor depth rather than breadth in executing the DAG. If
     ``DAGMAN_SUBMIT_DEPTH_FIRST`` is set to ``True``, consider also
-    setting ``DAGMAN_RETRY_SUBMIT_FIRST`` and
-    ``DAGMAN_RETRY_NODE_FIRST`` :index:`DAGMAN_RETRY_NODE_FIRST`
-    to ``True``. If not defined, ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults
-    to ``False``.
+    setting :macro:`DAGMAN_RETRY_SUBMIT_FIRST` and
+    :macro:`DAGMAN_RETRY_NODE_FIRST` to ``True``. If not defined,
+    ``DAGMAN_SUBMIT_DEPTH_FIRST`` defaults to ``False``.
 
 :macro-def:`DAGMAN_ALWAYS_RUN_POST`
     A boolean value defining whether *condor_dagman* will ignore the
@@ -8680,9 +8737,7 @@ Priority, node semantics
     PRE script causes the POST script to not be executed. Changing this
     to ``True`` will restore the previous behavior of *condor_dagman*,
     which is that a POST script is always executed, even if the PRE
-    script fails. (The default for this value had originally been
-    ``False``, was changed to ``True`` in version 7.7.2, and then was
-    changed back to ``False`` in version 8.5.4.)
+    script fails.
 
 Node job submission/removal
 '''''''''''''''''''''''''''
@@ -8696,10 +8751,9 @@ Node job submission/removal
     the CPU time *condor_dagman* spends checking files, perhaps
     fruitlessly, but increases responsiveness to nodes completing or
     failing. The legal range of values is 1 to INT_MAX. If not defined,
-    it defaults to 5 seconds. (As of version 8.4.2, the default may be
-    automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    it defaults to 5 seconds. This default may be automatically decreased
+    if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
 :macro-def:`DAGMAN_MAX_SUBMITS_PER_INTERVAL`
     An integer that controls how many individual jobs *condor_dagman*
@@ -8707,10 +8761,9 @@ Node job submission/removal
     *condor_rm*). The legal range of values is 1 to 1000. If defined
     with a value less than 1, the value 1 will be used. If defined with
     a value greater than 1000, the value 1000 will be used. If not
-    defined, it defaults to 100. (As of version 8.4.2, the default may
-    be automatically decreased if ``DAGMAN_MAX_JOBS_IDLE``
-    :index:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
-    this will be noted in the ``dagman.out`` file.)
+    defined, it defaults to 100. This default may be automatically
+    decreased if :macro:`DAGMAN_MAX_JOBS_IDLE` is set to a small value. If so,
+    this will be noted in the ``dagman.out`` file.
 
     **Note: The maximum rate at which DAGMan can submit jobs is
     DAGMAN_MAX_SUBMITS_PER_INTERVAL / DAGMAN_USER_LOG_SCAN_INTERVAL.**
@@ -8862,8 +8915,7 @@ Rescue/retry
 
 :macro-def:`DAGMAN_WRITE_PARTIAL_RESCUE`
     A boolean value that controls whether *condor_dagman* writes a
-    partial or a full DAG file as a Rescue DAG. As of HTCondor version
-    7.2.2, writing a partial DAG is preferred. If not defined,
+    partial or a full DAG file as a Rescue DAG. If not defined,
     ``DAGMAN_WRITE_PARTIAL_RESCUE`` defaults to ``True``. **Note: users
     should rarely change this setting.**
 
@@ -8887,10 +8939,6 @@ Rescue/retry
     ``False``, when a node with retries fails, the node is placed at the
     tail of the queue of ready nodes. This had been the behavior of
     *condor_dagman*. If not defined, it defaults to ``False``.
-
-:macro-def:`DAGMAN_OLD_RESCUE`
-    This configuration variable is no longer used. **Note: users should
-    never change this setting.**
 
 Log files
 '''''''''
@@ -8983,17 +9031,14 @@ Log files
     The ``DAGMAN_ALLOW_EVENTS`` value is a logical bitwise OR of the
     following values:
 
-        0 = allow no bad events
-        1 = allow all bad events, except the event
-        ``"job re-run after terminated event"``
-        2 = allow terminated/aborted event combination
-        4 = allow a ``"job re-run after terminated event"`` bug
-        8 = allow garbage or orphan events
-        16 = allow an execute or terminate event before job's submit
-        event
-        32 = allow two terminated events per job, as sometimes seen with
-        grid jobs
-        64 = allow duplicated events in general
+        -  0 = allow no bad events
+        -  1 = allow all bad events, except the event ``"job re-run after terminated event"``
+        -  2 = allow terminated/aborted event combination
+        -  4 = allow a ``"job re-run after terminated event"`` bug
+        -  8 = allow garbage or orphan events
+        - 16 = allow an execute or terminate event before job's submit event
+        - 32 = allow two terminated events per job, as sometimes seen with grid jobs
+        - 64 = allow duplicated events in general
 
     The default value is 114, which allows terminated/aborted event
     combination, allows an execute and/or terminated event before job's
@@ -9009,50 +9054,6 @@ Log files
     this value should almost never be used, because the
     ``"job re-run after terminated event"`` bug breaks the semantics of
     the DAG.
-
-:macro-def:`DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`
-    This configuration variable is no longer used. The improved
-    functionality of the ``DAGMAN_ALLOW_EVENTS`` macro eliminates the
-    need for this variable. **Note: users should never change this
-    setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that controls whether *condor_dagman* aborts or
-    continues with a DAG in the rare case that HTCondor erroneously
-    executes the job within a DAG node more than once. A bug in HTCondor
-    very occasionally causes a job to run twice. Running a job twice is
-    contrary to the semantics of a DAG. The configuration macro
-    ``DAGMAN_IGNORE_DUPLICATE_JOB_EXECUTION`` determines whether
-    *condor_dagman* considers this a fatal error or not. The default
-    value is ``False``; *condor_dagman* considers running the job more
-    than once a fatal error, logs this fact, and aborts the DAG. When
-    set to ``True``, *condor_dagman* still logs this fact, but
-    continues with the DAG.
-
-    This configuration macro is to remain at its default value except in
-    the case where a site encounters the HTCondor bug in which DAG job
-    nodes are executed twice, and where it is certain that having a DAG
-    job node run twice will not corrupt the DAG. The logged messages
-    within ``*.dagman.out`` files in the case of that a node job runs
-    twice contain the string "EVENT ERROR."
-
-:macro-def:`DAGMAN_ALWAYS_USE_NODE_LOG`
-    As of HTCondor version 8.3.1, the value must always be the default
-    value of ``True``. Attempting to set it to ``False`` results in an
-    error. This causes incompatibility with using a *condor_submit*
-    executable that is older than HTCondor version 7.9.0. **Note: users
-    should never change this setting.**
-
-    For completeness, here is the definition for historical purposes: A
-    boolean value that when ``True`` causes *condor_dagman* to read
-    events from its default node log file, as defined by
-    ``DAGMAN_DEFAULT_NODE_LOG`` :index:`DAGMAN_DEFAULT_NODE_LOG`,
-    instead of from the log file(s) defined in the node job submit
-    description files. When ``True``, *condor_dagman* will read events
-    only from the default log file, and POST script terminated events
-    will be written only to the default log file, and not to the log
-    file(s) defined in the node job submit description files. The
-    default value is ``True``.
 
 Debug output
 ''''''''''''
@@ -10617,7 +10618,7 @@ startd cron and schedd cron.  These run executables or scripts
 directly from the *condor_startd* and *condor_schedd*
 daemons.  The output is merged into the 
 ClassAd generated by the respective daemon.  The mechanism is described
-in :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
+in :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`.
 
 These macros all include ``CRON`` because the default mode for a daemon 
 ClassAd hook is to run periodically.  A specific daemon ClassAd 
@@ -10792,7 +10793,7 @@ are probably the most common.
     resource monitor (CMRM), and its output is handled differently than
     a normal job's. A CMRM should output one ad per custom machine
     resource instance and use ``SlotMergeConstraint``\ s (see
-    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`) to specify the instance to
+    :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`) to specify the instance to
     which it applies.
 
     The ad corresponding to each custom machine resource instance should
@@ -10938,7 +10939,7 @@ are probably the most common.
     incorporate the output of the job specified by ``<JobName>``. If the
     list is not specified, any slot may. Whether or not a specific slot
     actually incorporates the output depends on the output; see
-    :ref:`admin-manual/hooks:startd cron and schedd cron daemon classad hooks`.
+    :ref:`admin-manual/daemon-cron:Startd Cron and Schedd Cron`.
 
     ``<JobName>`` is the logical name assigned for a job as defined by
     configuration variable ``STARTD_CRON_JOBLIST`` or
@@ -10977,8 +10978,9 @@ general discussion of *condor_defrag* may be found in
 :ref:`admin-manual/policy-configuration:*condor_startd* policy configuration`.
 
 :macro-def:`DEFRAG_NAME`
-    Used to give an alternative value to the ``Name`` attribute in the
-    *condor_defrag* daemon's ClassAd. This esoteric configuration macro
+    Used to give an prefix value to the ``Name`` attribute in the
+    *condor_defrag* daemon's ClassAd. Defaults to the name given in the :macro:``DAEMON_LIST``.
+    This esoteric configuration macro
     might be used in the situation where there are two *condor_defrag*
     daemons running on one machine, and each reports to the same
     *condor_collector*. Different names will distinguish the two
@@ -11038,7 +11040,8 @@ general discussion of *condor_defrag* may be found in
     This could be used to drain partial rather than whole machines.
     Beginning with version 8.9.11, only machines that have no ``DrainReason``
     or a value of ``"Defrag"`` for ``DrainReason``
-    will be checked to see if draining should be cancelled.
+    will be checked to see if draining should be cancelled.  Beginning with
+    10.7.0 The Defrag daemon will also check for its own name in the ``DrainReason``.
 
 :macro-def:`DEFRAG_RANK`
     An expression that specifies which machines are more desirable to
@@ -11112,13 +11115,6 @@ general discussion of *condor_defrag* may be found in
      fast
         Jobs are immediately hard-killed, with no chance to gracefully
         shut down.
-
-:macro-def:`DEFRAG_STATE_FILE`
-    The path to a file used to record information used by
-    *condor_defrag* when it is restarted. This should only need to be
-    modified if there will be multiple instances of the *condor_defrag*
-    daemon running on the same machine. The default is
-    ``$(LOCK)/defrag_state``.
 
 :macro-def:`DEFRAG_LOG`
     The path to the *condor_defrag* daemon's log file. The default log

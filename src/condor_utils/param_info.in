@@ -354,7 +354,7 @@ type=bool
 tags=vm-gahp
 
 [PROCD_ADDRESS]
-default=$(LOCK)/procd_pipe
+default=$(RUN)/procd_pipe
 win32_default=\\.\pipe\$Fpub(LOCK)
 type=string
 tags=master,starter
@@ -923,7 +923,7 @@ default=https://aai-dev.egi.eu/auth/realms/egi
 type=string
 
 [SEC_SCITOKENS_CACHE]
-default=auto
+default=$(RUN)/cache
 type=string
 
 [SEC_ENABLE_MATCH_PASSWORD_AUTHENTICATION]
@@ -1873,6 +1873,10 @@ default=$(LOG)
 type=string
 tags=startd,Starter
 
+[RUN]
+default=$(LOCK)
+type=path
+
 [VM_KILLING_TIMEOUT]
 default=60
 type=int
@@ -2363,6 +2367,11 @@ tags=sshd_wrapper
 default=true
 type=bool
 tags=condor_ssh_to_job
+
+[ENABLE_USERLOG_FSYNC]
+default=false
+type=bool
+tags=read_user_log
 
 [ENABLE_USERLOG_LOCKING]
 default=false
@@ -3317,6 +3326,13 @@ type=int
 customization=normal
 description=Max jobs in a single submit
 usage=Circuit breaker to prevent an excessive number of a jobs in a single submission. Use to reject one form of mistake
+tags=schedd
+
+[ALLOW_SUBMIT_FROM_KNOWN_USERS_ONLY]
+default=false
+type=bool
+customization=normal
+description=Restrict job submission to users that already have already been added using condor_qusers
 tags=schedd
 
 [MAX_RUNNING_SCHEDULER_JOBS_PER_OWNER]
@@ -4399,12 +4415,6 @@ customization=normal
 description=
 tags=defrag
 
-[DEFRAG_STATE_FILE]
-default=$(LOCK)/defrag_state
-type=string
-description=
-tags=defrag
-
 [DEFRAG_LOG]
 default=$(LOG)/DefragLog
 type=path
@@ -4467,6 +4477,14 @@ default=$(NEGOTIATOR_USE_SLOT_WEIGHTS)
 version=7.7.5
 type=string
 tags=schedd,startd,claim
+
+[ENABLE_CLAIMABLE_PARTITIONABLE_SLOTS]
+default=false
+type=bool
+
+[MAX_PARTITIONABLE_SLOT_CLAIM_TIME]
+default=3600
+type=int
 
 [MOUNT_UNDER_SCRATCH]
 default="/tmp,/var/tmp"
@@ -4714,7 +4732,7 @@ tags=starter
 
 [CGROUP_MEMORY_LIMIT_POLICY]
 aliases=
-default=none
+default=hard
 version=7.9.0
 type=string
 description=Determines whether cgroup base memory enforcement should happen
@@ -6689,6 +6707,7 @@ default : @end
 	MAX_STORK_LOG
 	STORK_PORT
 	STORK_ARGS
+	DEFRAG_STATE_FILE
 @end
 
 [$UPGRADE.DISCARDX]

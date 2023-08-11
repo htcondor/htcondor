@@ -72,10 +72,6 @@ const SetAttributeFlags_t SetAttribute_PostSubmitClusterChange = (1<<7); // spec
 // bool setQmgmtConnectionInfo(QmgmtPeer *peer);
 void unsetQmgmtConnection();
 
-
-int InitializeConnection(const char *, const char *);
-int InitializeReadOnlyConnection(const char * );
-
 /** Initiate connection to schedd job queue and begin transaction.
     @param schedd is the schedd to connect to
     @param timeout specifies the maximum time (in seconds) to wait for TCP

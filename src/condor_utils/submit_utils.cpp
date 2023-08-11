@@ -539,10 +539,14 @@ SubmitHash::SubmitHash()
 	, already_warned_notification_never(false)
 	, already_warned_require_gpus(false)
 	, UseDefaultResourceParams(true)
+	, InsertDefaultPolicyExprs(false)
 	, s_method(1)
 {
 	SubmitMacroSet.initialize(CONFIG_OPT_WANT_META | CONFIG_OPT_KEEP_DEFAULTS | CONFIG_OPT_SUBMIT_SYNTAX);
 	setup_macro_defaults();
+
+	// TODO: move this to condor_submit? or expose a method on the class to set this?
+	InsertDefaultPolicyExprs = param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false);
 
 	mctx.init("SUBMIT", 3);
 }
@@ -1973,146 +1977,6 @@ int SubmitHash::SetRank()
 	return 0;
 }
 
-#if 0 // obsolete function, kept for temporary reference.
-int SubmitHash::SetUserLog()
-{
-	RETURN_IF_ABORT();
-
-	static const SimpleExprInfo logs[] = {
-		/*submit_param*/ {SUBMIT_KEY_UserLogFile, ATTR_ULOG_FILE,
-				ATTR_ULOG_FILE, NULL, true, false},
-		/*submit_param*/ {SUBMIT_KEY_DagmanLogFile, ATTR_DAGMAN_WORKFLOW_LOG,
-				ATTR_DAGMAN_WORKFLOW_LOG, NULL, true, false},
-		{NULL,NULL,NULL,NULL,false,false}
-	};
-
-	for(const SimpleExprInfo * si = &logs[0]; si->key; ++si) {
-		char *ulog_entry = submit_param( si->key, si->alt );
-
-		if ( ulog_entry && strcmp( ulog_entry, "" ) != 0 ) {
-
-				// Note:  I don't think the return value here can ever
-				// be NULL.  wenger 2016-10-07
-			std::string mulog(full_path(ulog_entry));
-			if ( ! mulog.empty()) {
-				if (FnCheckFile) {
-					int rval = FnCheckFile(CheckFileArg, this, SFR_LOG, mulog.c_str(), O_APPEND);
-					if (rval) { ABORT_AND_RETURN( rval ); }
-				}
-
-				check_and_universalize_path(mulog);
-			}
-			AssignJobString(si->attr, mulog.c_str());
-			free(ulog_entry);
-		}
-	}
-
-	RETURN_IF_ABORT();
-	bool xml_exists;
-	bool use_xml = submit_param_bool(SUBMIT_KEY_UserLogUseXML, ATTR_ULOG_USE_XML, false, &xml_exists);
-	if (xml_exists) {
-		AssignJobVal(ATTR_ULOG_USE_XML, use_xml);
-	}
-
-	return 0;
-}
-
-int SubmitHash::SetCoreSize()
-{
-	RETURN_IF_ABORT();
-	char *size = submit_param( ATTR_CORE_SIZE, SUBMIT_KEY_CoreSize ); // attr before submit key for backward compat
-	RETURN_IF_ABORT();
-
-	long coresize = 0;
-
-	if (size == NULL) {
-#if defined(WIN32) /* RLIMIT_CORE not supported */
-		size = "";
-#else
-		struct rlimit rl;
-		if ( getrlimit( RLIMIT_CORE, &rl ) == -1) {
-			push_error(stderr, "getrlimit failed");
-			abort_code = 1;
-			return abort_code;
-		}
-
-		// this will effectively become the hard limit for core files when
-		// the job is executed
-		coresize = (long)rl.rlim_cur;
-#endif
-	} else {
-		coresize = atoi(size);
-		free(size);
-	}
-
-	AssignJobVal(ATTR_CORE_SIZE, coresize);
-	return 0;
-}
-
-
-int SubmitHash::SetJobLease()
-{
-	RETURN_IF_ABORT();
-
-	long lease_duration = 0;
-	auto_free_ptr tmp(submit_param( SUBMIT_KEY_JobLeaseDuration, ATTR_JOB_LEASE_DURATION ));
-	if( ! tmp ) {
-		if( universeCanReconnect(JobUniverse)) {
-				/*
-				  if the user didn't define a lease duration, but is
-				  submitting a job from a universe that supports
-				  reconnect and is NOT trying to use streaming I/O, we
-				  want to define a default of 20 minutes so that
-				  reconnectable jobs can survive schedd crashes and
-				  the like...
-				*/
-			tmp.set(param("JOB_DEFAULT_LEASE_DURATION"));
-		} else {
-				// not defined and can't reconnect, we're done.
-			return 0;
-		}
-	}
-
-	// first try parsing as an integer
-	if (tmp)
-	{
-		char *endptr = NULL;
-		lease_duration = strtol(tmp.ptr(), &endptr, 10);
-		if (endptr != tmp.ptr()) {
-			while (isspace(*endptr)) {
-				endptr++;
-			}
-		}
-		bool is_number = (endptr != tmp.ptr() && *endptr == '\0');
-		if ( ! is_number) {
-			lease_duration = 0; // set to zero to indicate it's an expression
-		} else {
-			if (lease_duration == 0) {
-				// User explicitly didn't want a lease, so we're done.
-				return 0;
-			}
-			if (lease_duration < 20) {
-				if (! already_warned_job_lease_too_small) { 
-					push_warning(stderr, "%s less than 20 seconds is not allowed, using 20 instead\n",
-							ATTR_JOB_LEASE_DURATION);
-					already_warned_job_lease_too_small = true;
-				}
-				lease_duration = 20;
-			}
-		}
-	}
-	// if lease duration was an integer, lease_duration will have the value.
-	if (lease_duration) {
-		AssignJobVal(ATTR_JOB_LEASE_DURATION, lease_duration);
-	} else if (tmp) {
-		// lease is defined but not an int, try setting it as an expression
-		AssignJobExpr(ATTR_JOB_LEASE_DURATION, tmp.ptr());
-	}
-	return 0;
-}
-
-#endif // above code is obsolete, kept temporarily for reference.
-
 int SubmitHash::SetJobStatus()
 {
 	RETURN_IF_ABORT();
@@ -2202,7 +2066,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_HOLD_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_HOLD_CHECK, false);
 		}
 	}
@@ -2226,7 +2090,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_PERIODIC_RELEASE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_RELEASE_CHECK, false);
 		}
 	}
@@ -2242,7 +2106,7 @@ int SubmitHash::SetPeriodicExpressions()
 	if ( ! pec)
 	{
 		/* user didn't have one, so add one */
-		if ( ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK)) {
+		if ( ! clusterAd && InsertDefaultPolicyExprs  && ! job->Lookup(ATTR_PERIODIC_REMOVE_CHECK)) {
 			AssignJobVal(ATTR_PERIODIC_REMOVE_CHECK, false);
 		}
 	}
@@ -2909,10 +2773,6 @@ static bool validate_gridtype(const std::string & JobGridType) {
 
 // the grid type is the first token of the grid resource.
 static bool extract_gridtype(const char * grid_resource, std::string & gtype) {
-	if (starts_with(grid_resource, "$$(")) {
-		gtype.clear();
-		return true; // cannot be known at this time, assumed valid
-	}
 	// truncate at the first space
 	const char * pend = strchr(grid_resource, ' ');
 	if (pend) {
@@ -3028,14 +2888,6 @@ int SubmitHash::SetGridParams()
 
 		AssignJobString(ATTR_GRID_RESOURCE, tmp);
 
-		if ( strstr(tmp,"$$") ) {
-				// We need to perform matchmaking on the job in order
-				// to fill GridResource.
-			AssignJobVal(ATTR_JOB_MATCHED, false);
-			AssignJobVal(ATTR_CURRENT_HOSTS, 0);
-			AssignJobVal(ATTR_MAX_HOSTS, 1);
-		}
-
 		if ( strcasecmp( tmp, "ec2" ) == 0 ) {
 			push_error(stderr, "EC2 grid jobs require a service URL\n");
 			ABORT_AND_RETURN( 1 );
@@ -3063,8 +2915,6 @@ int SubmitHash::SetGridParams()
 	}
 
 	YourStringNoCase gridType(JobGridType.c_str());
-
-	AssignJobVal(ATTR_WANT_CLAIMING, false);
 
 	if( (tmp = submit_param(SUBMIT_KEY_ArcRte, ATTR_ARC_RTE)) ) {
 		AssignJobString(ATTR_ARC_RTE, tmp);
@@ -3630,26 +3480,6 @@ int SubmitHash::SetAutoAttributes()
 		}
 	}
 
-	// set a default coresize.  note that we really want to use the rlimit value from submit
-	// and not from the schedd, but we can count on the Lookup() never failing when doing late materialization.
-	if ( ! job->Lookup(ATTR_CORE_SIZE)) {
-		long coresize = 0;
-	#if defined(WIN32) /* RLIMIT_CORE not supported */
-	#else
-		struct rlimit rl;
-		if (getrlimit(RLIMIT_CORE, &rl) == -1) {
-			push_error(stderr, "getrlimit failed");
-			abort_code = 1;
-			return abort_code;
-		}
-
-		// this will effectively become the hard limit for core files when
-		// the job is executed
-		coresize = (long)rl.rlim_cur;
-	#endif
-		AssignJobVal(ATTR_CORE_SIZE, coresize);
-	}
-
 	// formerly SetPriority
 	if ( ! job->Lookup(ATTR_JOB_PRIO)) {
 		AssignJobVal(ATTR_JOB_PRIO, 0);
@@ -3663,10 +3493,6 @@ int SubmitHash::SetAutoAttributes()
 	}
 	#endif
 
-	// formerly SetEncryptExecuteDir
-	if ( ! job->Lookup(ATTR_ENCRYPT_EXECUTE_DIRECTORY)) {
-		AssignJobVal(ATTR_ENCRYPT_EXECUTE_DIRECTORY, false);
-	}
 #endif
 
 	return abort_code;
@@ -4111,12 +3937,16 @@ int SubmitHash::SetJobRetries()
 		// if none of these knobs are defined, then there are no retries.
 		// Just insert the default on-exit-hold and on-exit-remove expressions
 		if (erc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK)) { AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true); }
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_REMOVE_CHECK)) { 
+				AssignJobVal(ATTR_ON_EXIT_REMOVE_CHECK, true);
+			}
 		} else {
 			AssignJobExpr (ATTR_ON_EXIT_REMOVE_CHECK, erc.c_str());
 		}
 		if (ehc.empty()) {
-			if (!job->Lookup(ATTR_ON_EXIT_HOLD_CHECK)) { AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false); }
+			if ( ! clusterAd && InsertDefaultPolicyExprs && ! job->Lookup(ATTR_ON_EXIT_HOLD_CHECK)) {
+				AssignJobVal(ATTR_ON_EXIT_HOLD_CHECK, false);
+			}
 		} else {
 			AssignJobExpr(ATTR_ON_EXIT_HOLD_CHECK, ehc.c_str());
 		}
@@ -6348,7 +6178,8 @@ int SubmitHash::SetRequirements()
 			}
 
 
-			if ( ! checks_file_transfer_plugin_methods) {
+			// insert expressions to match on transfer plugin methods
+			{
 				classad::References methods;    // methods referened by TransferInputFiles that are not in TransferPlugins
 				classad::References jobmethods; // plugin methods (like HTTP) that are supplied by the job's TransferPlugins
 
@@ -6400,12 +6231,20 @@ int SubmitHash::SetRequirements()
 					}
 				}
 
+				std::string wantMethods; // string list of file transfer plugins the job needs but does not supply
 				bool presignS3URLs = param_boolean( "SIGN_S3_URLS", true );
 				for (auto it = methods.begin(); it != methods.end(); ++it) {
+					if (!wantMethods.empty()) wantMethods += ",";
+					wantMethods += *it;
+
+					if (checks_file_transfer_plugin_methods)
+						continue;
+
 					answer += " && stringListIMember(\"";
 					answer += *it;
 					answer += "\",TARGET.HasFileTransferPluginMethods)";
 
+					// TODO: move this to ReportCommonMistakes
 					if( presignS3URLs &&
 					  (strcasecmp( it->c_str(), "s3" ) == 0 || strcasecmp( it->c_str(), "gs" ) == 0) ) {
 						bool present = true;
@@ -6425,6 +6264,12 @@ int SubmitHash::SetRequirements()
 							ABORT_AND_RETURN(1);
 						}
 					}
+				}
+
+				// TODO: someday change the above stringListIMember expressions to
+				// a single stringListISubsetMatch expression using this attribute
+				if ( ! wantMethods.empty()) {
+					AssignJobString(ATTR_WANT_TRANSFER_PLUGIN_METHODS, wantMethods.c_str());
 				}
 			}
 
@@ -9147,13 +8992,9 @@ int SubmitHash::query_universe(std::string & sub_type)
 
 	if (uni == CONDOR_UNIVERSE_GRID) {
 		sub_type = submit_param_string(SUBMIT_KEY_GridResource, ATTR_GRID_RESOURCE);
-		if (starts_with(sub_type.c_str(), "$$(")) {
-			sub_type.clear();
-		} else {
-			// truncate at the first space
-			size_t ix = sub_type.find(' ');
-			if (ix != std::string::npos) { sub_type.erase(ix); }
-		}
+		// truncate at the first space
+		size_t ix = sub_type.find(' ');
+		if (ix != std::string::npos) { sub_type.erase(ix); }
 	} else if (uni == CONDOR_UNIVERSE_VM) {
 		sub_type = submit_param_string(SUBMIT_KEY_VM_Type, ATTR_JOB_VM_TYPE);
 		lower_case(sub_type);

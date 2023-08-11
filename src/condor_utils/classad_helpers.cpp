@@ -267,9 +267,6 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 	job_ad->Assign( ATTR_JOB_REMOTE_USER_CPU, 0.0 );
 	job_ad->Assign( ATTR_JOB_REMOTE_SYS_CPU, 0.0 );
 
-		// This is a magic cookie, see how condor_submit sets it
-	job_ad->Assign( ATTR_CORE_SIZE, -1 );
-
 		// Are these ones really necessary?
 	job_ad->Assign( ATTR_JOB_EXIT_STATUS, 0 );
 	job_ad->Assign( ATTR_ON_EXIT_BY_SIGNAL, false );
@@ -334,12 +331,14 @@ ClassAd *CreateJobAd( const char *owner, int universe, const char *cmd )
 
 	job_ad->Assign( ATTR_REQUIREMENTS, true );
 
-	job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
-	job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
-	job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
+	if (param_boolean("SUBMIT_INSERT_DEFAULT_POLICY_EXPRS", false)) {
+		job_ad->Assign( ATTR_PERIODIC_HOLD_CHECK, false );
+		job_ad->Assign( ATTR_PERIODIC_REMOVE_CHECK, false );
+		job_ad->Assign( ATTR_PERIODIC_RELEASE_CHECK, false );
 
-	job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
-	job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+		job_ad->Assign( ATTR_ON_EXIT_HOLD_CHECK, false );
+		job_ad->Assign( ATTR_ON_EXIT_REMOVE_CHECK, true );
+	}
 
 	job_ad->Assign( ATTR_JOB_ARGUMENTS1, "" );
 

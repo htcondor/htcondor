@@ -912,6 +912,10 @@ startd_check_free()
 	if ( ! resmgr ) {
 		startd_exit();
 	}
+	// TODO This check ignores claimed pslots, thus we won't send a
+	//   RELEASE_CLAIM for those before shutting down.
+	//   Today, those messages would fail, as the schedd doesn't keep
+	//   track of claimed pslots. We expect this to change in the future.
 	if( ! resmgr->hasAnyClaim() ) {
 		startd_exit();
 	}
