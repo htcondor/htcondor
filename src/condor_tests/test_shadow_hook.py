@@ -168,7 +168,7 @@ def submit_configjob(test_dir, condor, path_to_sleep):
     reconfig(condor) # run reconfig (add keyword to config file)
     config_submit = condor.submit(
         description={"executable": path_to_sleep,
-            "arguments": "20",
+            "arguments": "0",
             "log": "config_hook_job_events.log",
         }
     )
