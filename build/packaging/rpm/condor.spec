@@ -223,6 +223,9 @@ Obsoletes: condor-blahp < 10.8.0
 # procd package discontinued as of 10.8.0
 Obsoletes: condor-procd < 10.8.0
 
+# all package discontinued as of 10.8.0
+Obsoletes: condor-all < 10.8.0
+
 %description
 HTCondor is a specialized workload management system for
 compute-intensive jobs. Like other full-featured batch systems, HTCondor
@@ -475,20 +478,6 @@ HTCondor V9 to V10 check for for known breaking changes:
 
 %files upgrade-checks
 %_bindir/condor_upgrade_check
-
-#######################
-%package all
-Summary: All condor packages in a typical installation
-Group: Applications/System
-Requires: %name = %version-%release
-Requires: %name-kbdd = %version-%release
-%if ! 0%{?amzn}
-Requires: %name-vm-gahp = %version-%release
-%endif
-Requires: %name-classads = %version-%release
-%if 0%{?rhel} >= 7 || 0%{?fedora}
-Requires: python3-condor = %version-%release
-%endif
 
 %description all
 Include dependencies for all condor packages in a typical installation
