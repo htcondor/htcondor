@@ -1,6 +1,7 @@
 debian/tmp/etc/* etc/
 debian/tmp/usr/bin/* usr/bin/
 debian/tmp/usr/lib/condor/*.so usr/lib/
+debian/tmp/usr/lib/libclassad*.so.*
 debian/tmp/usr/lib/condor/*.jar usr/lib/condor/
 debian/tmp/usr/lib/condor/*.class usr/lib/condor/
 debian/tmp/usr/lib/condor/condor_ssh* usr/lib/condor/
