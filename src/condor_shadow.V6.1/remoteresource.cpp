@@ -1286,6 +1286,24 @@ RemoteResource::updateFromStarter( ClassAd* update_ad )
         jobAd->Assign( ATTR_JOB_CHECKPOINT_NUMBER, checkpointNumber );
     }
 
+    // Likewise, most starter updates don't include the newly committed time.
+    int newlyCommittedTime = 0;
+    if( update_ad->LookupInteger( ATTR_JOB_NEWLY_COMMITTED_TIME, newlyCommittedTime ) ) {
+        int committedTime = 0;
+        jobAd->LookupInteger( ATTR_JOB_COMMITTED_TIME, committedTime );
+        committedTime += newlyCommittedTime;
+        jobAd->Assign( ATTR_JOB_COMMITTED_TIME, committedTime );
+    }
+
+    // ... or the time of the time of the last checkpoint.  At some point,
+    // we might decide that it's safe to trigger all of the left-over old
+    // standard universe code by using its attribute names, but let's not
+    // for now.
+    int lastCheckpointTime = -1;
+    if( update_ad->LookupInteger( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime ) ) {
+        jobAd->Assign( ATTR_JOB_LAST_CHECKPOINT_TIME, lastCheckpointTime );
+    }
+
     // these are headed for job ads in the scheduler, so rename them
     // to prevent these from colliding with similar attributes from schedd statistics
     CopyAttribute("StatsLastUpdateTimeStarter", *jobAd, "StatsLastUpdateTime", *update_ad);
@@ -2043,8 +2061,9 @@ RemoteResource::locateReconnectStarter( void )
 			free( claimid );
 			return true;
 		} else {
-			EXCEPT( "impossible: locateStarter() returned success "
-					"but %s not found", ATTR_STARTER_IP_ADDR );
+			reconnect();
+			free( claimid );
+			return false;
 		}
 	}
 	

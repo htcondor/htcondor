@@ -44,6 +44,11 @@ class GenericQuery
 	int addCustomOR (const char *);
 	int addCustomAND( const char * );
 
+	bool hasString(const int cat, const char * value);
+	bool hasStringNoCase(const int cat, const char * value);
+	bool hasCustomOR(const char * value) { return hasItem(customORConstraints, value); }
+	bool hasCustomAND(const char * value) { return hasItem(customANDConstraints, value); }
+
 	// clear constraints
 	int clearInteger (const int);
 	int clearString (const int);
@@ -91,6 +96,18 @@ class GenericQuery
     void copyStringCategory   (List<char> &, List<char> &);
     void copyIntegerCategory  (std::vector<int> &, std::vector<int> &);
     void copyFloatCategory    (std::vector<float>&, std::vector<float>&);
+	bool hasItem(List<char>& lst, const char * value) {
+		for (YourString item = lst.First(); ! item.empty(); item = lst.Next()) {
+			if (item == value) return true;
+		}
+		return false;
+	}
+	bool hasItemNoCase(List<char>& lst, const char * value) {
+		for (YourStringNoCase item = lst.First(); ! item.empty(); item = lst.Next()) {
+			if (item == value) return true;
+		}
+		return false;
+	}
 };
 
 #endif

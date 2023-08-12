@@ -32,14 +32,14 @@ struct CredData;
 
 }
 
-	int REMOTE_CONDOR_register_job_info( ClassAd *ad );
+	int REMOTE_CONDOR_register_job_info(const ClassAd& ad);
 	int REMOTE_CONDOR_register_mpi_master_info( ClassAd *ad );
-	int REMOTE_CONDOR_register_starter_info( ClassAd *ad );
+	int REMOTE_CONDOR_register_starter_info(const ClassAd& ad );
 	int REMOTE_CONDOR_get_job_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_user_info( ClassAd *ad );
 	int REMOTE_CONDOR_get_executable( char *destination );
 	int REMOTE_CONDOR_job_exit( int status, int reason, ClassAd *ad );
-	int REMOTE_CONDOR_job_termination( ClassAd *ad );
+	int REMOTE_CONDOR_job_termination(const ClassAd& ad);
 	int REMOTE_CONDOR_begin_execution( void );
 	int REMOTE_CONDOR_open( char const *path, open_flags_t flags, int mode);
 	int REMOTE_CONDOR_close( int fd );
@@ -54,7 +54,7 @@ struct CredData;
 	int REMOTE_CONDOR_get_file_info_new( char *path, char *&url );
 	int REMOTE_CONDOR_ulog_printf( int hold_reason_code, int hold_reason_subcode, char const *str, ... ) CHECK_PRINTF_FORMAT(3,4);
 	int REMOTE_CONDOR_ulog_error( int hold_reason_code, int hold_reason_subcode, char const *str );
-	int REMOTE_CONDOR_ulog( ClassAd *ad );
+	int REMOTE_CONDOR_ulog(const ClassAd& ad);
 	int REMOTE_CONDOR_get_job_attr( char *name, char *&expr );
 	int REMOTE_CONDOR_set_job_attr( char *name, char *expr );
 	int REMOTE_CONDOR_constrain( char *expr );
@@ -103,8 +103,7 @@ struct CredData;
 		std::string &filetrans_session_info,
 		std::string &filetrans_session_key);
 
-	// Why are these all C-linkage?
-	int REMOTE_CONDOR_event_notification(ClassAd * event);
+	int REMOTE_CONDOR_event_notification(const ClassAd& event);
 
 #endif
 

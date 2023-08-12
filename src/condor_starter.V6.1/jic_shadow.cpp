@@ -932,7 +932,7 @@ JICShadow::notifyExecutionExit( void ) {
 	if( shadow_version && shadow_version->built_since_version(9, 4, 1) ) {
 		ClassAd ad;
 		ad.InsertAttr( "EventType", "ActivationExecutionExit" );
-		REMOTE_CONDOR_event_notification( & ad );
+		REMOTE_CONDOR_event_notification(ad);
 	}
 }
 
@@ -1007,7 +1007,7 @@ JICShadow::notifyJobTermination( UserProc *user_proc )
 
 		user_proc->PublishUpdateAd( &ad );
 
-		rval = REMOTE_CONDOR_job_termination(&ad);
+		rval = REMOTE_CONDOR_job_termination(ad);
 	}
 
 	return rval;
@@ -1079,7 +1079,7 @@ JICShadow::notifyStarterError( const char* err_msg, bool critical, int hold_reas
 		event.setHoldReasonSubCode( hold_reason_subcode );
 		ad = event.toClassAd(true);
 		ASSERT( ad );
-		int rv = REMOTE_CONDOR_ulog( ad );
+		int rv = REMOTE_CONDOR_ulog(*ad);
 		delete ad;
 		if( rv ) {
 			dprintf( D_ALWAYS,
@@ -1109,7 +1109,7 @@ JICShadow::registerStarterInfo( void )
 
 	ClassAd starter_info;
 	publishStarterInfo( &starter_info );
-	rval = REMOTE_CONDOR_register_starter_info( &starter_info );
+	rval = REMOTE_CONDOR_register_starter_info(starter_info);
 
 	if( rval < 0 ) {
 		return false;
@@ -2268,7 +2268,7 @@ JICShadow::updateShadow( ClassAd* update_ad, bool insure_update )
 		ad->Assign(ATTR_JOBINFO_MAXINTERVAL, periodicJobUpdateTimerMaxInterval());
 
 			// Invoke the remote syscall
-		rval = (REMOTE_CONDOR_register_job_info(ad) == 0);
+		rval = (REMOTE_CONDOR_register_job_info(*ad) == 0);
 	}
 	else {
 			// If it's an older shadow, the RSC would cause it to

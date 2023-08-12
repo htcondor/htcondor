@@ -736,6 +736,7 @@ protected:
 	bool already_warned_notification_never;
 	bool already_warned_require_gpus;
 	bool UseDefaultResourceParams;
+	bool InsertDefaultPolicyExprs;
 	auto_free_ptr RunAsOwnerCredD;
 	std::string JobIwd;
 	std::string JobGridType;  // set from "GridResource" for grid universe jobs.

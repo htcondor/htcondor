@@ -15662,6 +15662,7 @@ Scheduler::get_job_connect_info_handler_implementation(int, Stream* s) {
 		DCStarter starter;
 		if( !starter.initFromClassAd(&starter_ad) ) {
 			error_msg = "Failed to read address of starter for this job";
+			retry_is_sensible = true; // maybe shadow hasn't activated starter yet?
 			goto error_wrapup;
 		}
 
