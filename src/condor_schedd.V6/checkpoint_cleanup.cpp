@@ -98,6 +98,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 			return false;
 		}
 
+#if ! defined(WINDOWS)
 		{
 			TemporaryPrivSentry sentry(PRIV_ROOT);
 			int rv = chown( owner_dir.string().c_str(), owner_uid, owner_gid );
@@ -106,6 +107,7 @@ Scheduler::doCheckpointCleanUp( int cluster, int proc, ClassAd * jobAd ) {
 				return false;
 			}
 		}
+#endif /* ! defined(WINDOWS) */
 	}
 
 

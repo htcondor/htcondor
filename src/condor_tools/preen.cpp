@@ -1491,7 +1491,8 @@ check_cleanup_dir_actual( const std::filesystem::path & checkpointCleanup ) {
 					//
 					// Until then, we'll assume the plug-in is well-behaved.
 					// daemonCore->Kill_Family( pid );
-					kill( pid, SIGTERM );
+					// kill( pid, SIGTERM );
+					daemonCore->Shutdown_Graceful( pid );
 				} else if( status != 0 ) {
 					formatstr( message, "checkpoint clean-up proc %d returned %d", pid, status );
 					dprintf( D_ZKM, "%s\n", message.c_str() );

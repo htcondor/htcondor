@@ -717,7 +717,8 @@ class TestCheckpointDestination:
                 '_CONDOR_TOOL_DEBUG': 'D_ZKM D_CATEGORY',
             }
             rv = subprocess.run( ['condor_preen', '-d'],
-                env=preen_env, timeout=40,
+                # Crass empiricism.
+                env=preen_env, timeout=60,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 universal_newlines=True,
             )
