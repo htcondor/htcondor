@@ -33,7 +33,7 @@ dc::AwaitableDeadlineReaper::~AwaitableDeadlineReaper() {
 
 
 bool
-dc::AwaitableDeadlineReaper::born( int pid, int timeout ) {
+dc::AwaitableDeadlineReaper::born( pid_t pid, int timeout ) {
 	auto [dummy, inserted] = pids.insert(pid);
 	if(! inserted) { return false; }
 	dprintf( D_ZKM, "Inserted %d into  %p\n", pid, & pids );
@@ -58,7 +58,7 @@ dc::AwaitableDeadlineReaper::reaper_id() {
 
 
 int
-dc::AwaitableDeadlineReaper::reaper( int pid, int status ) {
+dc::AwaitableDeadlineReaper::reaper( pid_t pid, int status ) {
 	ASSERT(pids.contains(pid));
 
 	// We will never hear from this process again, so forget about it.
